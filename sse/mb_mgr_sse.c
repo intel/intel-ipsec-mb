@@ -31,7 +31,7 @@
 #include <string.h>
 #include <assert.h>
 #ifdef __WIN32
-#include<intrin.h>
+#include <intrin.h>
 #endif
 
 #include "mb_mgr.h"
