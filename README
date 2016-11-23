@@ -1,0 +1,68 @@
+========================================================================
+README for Intel(R) Multi-Buffer Crypto for IPsec Library
+
+November 2016
+========================================================================
+
+
+Contents
+========
+
+- Overview
+- Package Content
+- Compilation
+- Legal Disclaimer
+
+
+Overview
+========
+Intel Multi-Buffer Crypto for IPsec Library is highly-optimized
+software implementations of the core cryptographic processing for IPsec,
+which provides industry-leading performance on a range of Intel(R) Processors.
+
+For information on how to build and use this library, see the
+Intel White Paper:
+"Fast Multi-buffer IPsec Implementations on Intel Architecture Processors".
+Jim Guilford, Sean Gulley, et. al.
+
+The easiest way to find it is to search the Internet for the title and
+Intel White Paper.
+
+
+Package Content
+===============
+
+LibTestApp - sample application using the library interface
+sse - Intel(R) SSE optimized routines
+avx - Intel(R) AVX optimized routines
+avx2 - Intel(R) AVX2 optimized routines
+avx512 - Intel(R) AVX512 optimized routines
+
+Compilation
+===========
+
+Linux
+
+Required tools:
+- GNU make
+- NASM version 2.12.02 (or newer)
+- gcc (GCC) 4.8.3 (or newer)
+
+Simply run "make" or "make all" at the top level directory to compile the library.
+To clean the library build please run "make clean".
+
+Windows
+
+<TODO>
+
+Legal Disclaimer
+================
+
+THIS SOFTWARE IS PROVIDED BY INTEL"AS IS". NO LICENSE, EXPRESS OR
+IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL PROPERTY RIGHTS
+ARE GRANTED THROUGH USE. EXCEPT AS PROVIDED IN INTEL'S TERMS AND
+CONDITIONS OF SALE, INTEL ASSUMES NO LIABILITY WHATSOEVER AND INTEL
+DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY, RELATING TO SALE AND/OR
+USE OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING TO
+FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT
+OF ANY PATENT, COPYRIGHT OR OTHER INTELLECTUAL PROPERTY RIGHT.

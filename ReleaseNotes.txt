@@ -1,0 +1,349 @@
+========================================================================
+Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
+
+November 2016
+========================================================================
+
+Nov 21, 2016
+
+Intel(R) AVX-512 Instructions
+- AVX512 multi buffer manager added (uses AVX2 implementations by default)
+- Optimized SHA1 implementation added
+Intel(R) SHA Extensions
+- SHA1, SHA224 and SHA256 implementations added for Intel(R) SSE
+General
+- NULL cipher added
+- NULL hash added
+- NASM tool chain compilation added (default)
+
+=======================================
+Feb 11, 2015
+
+Fixed, so that the job auth_tag_output_len_in_bytes takes a different 
+value for different MAC types. In particular, the valid values are(in bytes):
+SHA1 - 12
+sha224 - 14 
+SHA256 - 16 
+sha384 - 24
+SHA512 - 32
+XCBC - 12
+MD5 - 12
+
+=======================================
+Oct 24, 2011
+
+SHA_256 added to multibuffer
+------------------------
+12 Aug 2011
+
+API
+
+  The GCM API is distinct from the Multi-buffer API. This is because
+  the GCM code is an optimized single-buffer implementation. By
+  packaging them separately, the application has the option of where,
+  when, and how to call the GCM code, independent of how it is calling
+  the multi-buffer code.
+
+  For example, the application might be enqueing multi-buffer requests
+  for a separate thread to process. In this scenario, if a particular
+  packet used GCM, then the application could choose whether to call
+  the GCM routines directly, or whether to enqueue those requests and
+  have the compute thread call the GCM routines.
+
+GCM API
+
+  The GCM functions are defined as described the the header
+  files. They are simple computational routines, with no state
+  associated with them.
+
+Multi-Buffer API: Two Sets of Functions
+
+  There are two parallel interfaces, one suffixed with "_sse" and one
+  suffixed with "_avx". These are functionally equivalent. The "_sse"
+  functions work on WSM and later processors. The "_avx" functions
+  offer better performance, but they only run on processors after WSM.
+
+  The same interface object structures are used for both sets of
+  interfaces, although one cannot mix the two interfaces on the same
+  initialized object (e.g. it would be wrong to initialize with
+  init_mb_mgr_sse() and then to pass that to submit_job_avx() ). After
+  the MB_MGR structure has been initialized with one of the two
+  initialization functions (init_mb_mgr_sse() or init_mb_mgr_avx()),
+  only the corresponding functions should be used on it.
+
+  There are several ways in which an application could use these
+  interfaces.
+
+  1) Direct
+     If an application is only going to be run on a post-WSM machine,
+     it can just call the "_avx" functions directly. Conversely, if it
+     is just going to be run on WSM machines, it can call the "_sse"
+     functions directly.
+
+  2) Via Branches
+     If an application can run on both WSM and SNB and wants the
+     improved performance on SNB, then it can use some method to
+     determine if it is on SNB, and then use a conditional branch to
+     determine which function to call. E.g. this could be wrapped in a
+     macro along the lines of:
+     #define submit_job(mb_mgr) \
+        if (_use_avx) submit_job_avx(mb_mgr); \
+        else          submit_job_sse(mb_mgr)
+
+  3) Via a Function Table
+     One can embed the function addresses into a structure, call them
+     through this structure, and change the structure based on which
+     set of functions one wishes to use, e.g.
+
+        struct funcs_t {
+            init_mb_mgr_t       init_mb_mgr;
+            get_next_job_t      get_next_job;
+            submit_job_t        submit_job;
+            get_completed_job_t get_completed_job;
+            flush_job_t         flush_job;
+        };
+        
+        funcs_t funcs_sse = {
+            init_mb_mgr_sse,
+            get_next_job_sse,
+            submit_job_sse,
+            get_completed_job_sse,
+            flush_job_sse
+        };
+        funcs_t funcs_avx = {
+            init_mb_mgr_avx,
+            get_next_job_avx,
+            submit_job_avx,
+            get_completed_job_avx,
+            flush_job_avx
+        };
+        funcs_t *funcs = &funcs_sse;
+        ...
+        if (do_avx)
+            funcs = &funcs_avx;
+        ...
+        funcs->init_mb_mgr(&mb_mgr);
+
+  For simplicity in the rest of this document, the functions will be
+  refered to no suffix.
+
+API: Overview
+
+  The basic unit of work is a "job". It is represented by a
+  JOB_AES_HMAC structure. It contains all of the information needed to
+  perform encryption/decryption and SHA1/HMAC authentication on one
+  buffer for IPSec processing.
+
+  The basic paradigm is that the application needs to be able to
+  provide new jobs before old jobs have completed processing. One
+  might call this an "asynchronous" interface. 
+
+  The basic interface is that the application "submits" a job to the
+  multi-buffer manager (MB_MGR), and it may receive a completed job
+  back, or it may receive NULL. The returned job, if there is one,
+  will not be the same as the submitted job, but the jobs will be
+  returned in the same order in which they are submitted.
+
+  Since there can be a semi-arbitrary number of outstanding jobs,
+  management of the job object is handled by the MB_MGR. The
+  application gets a pointer to a new job object by calling
+  get_next_job(). It then fills in the data fields and submits it by
+  calling submit_job(). If a job is returned, then that job has been
+  completed, and the application should do whatever it needs to do in
+  order to further process that buffer. 
+
+  The job object is not explicitly returned to the MB_MGR. Rather it
+  is implicitly returned by the next call to get_next_job(). Another
+  way to put this is that the data within the job object is
+  guaranteed to be valid until the next call to get_next_job().
+
+  In order to reduce latency, there is an optional function that may
+  be called, get_completed_job(). This returns the next job if that
+  job has previously been completed. But if that job has not been
+  completed, no processing is done, and the function returns
+  NULL. This may be used to reduce the number of outstanding jobs
+  within the MB_MGR.
+
+  At times, it may be necessary to process the jobs currently within
+  the MB_MGR without providing new jobs as input. This process is
+  called "flushing", and it is invoked by calling flush_job(). If
+  there are any jobs within the MB_MGR, this will complete processing
+  on the earliest job and return it. It will only return NULL if there
+  are no jobs within the MB_MGR.
+
+  Flushing will be described in more detail below.
+
+  The presumption is that the same AES key will apply to a number of
+  buffers. For increased efficiency, it requires that the AES key
+  expansion happens as a distinct step apart from buffer
+  encryption/decryption. The expanded keys are stored in a data
+  structure (array), and this expanded key structure is used by the
+  job object.
+
+  There are two variants provided, MB_MGR and MB_MGR2. They are
+  functionally equivalent. The reason that two are provided is that
+  they differ slightly in their implementation, and so they may have
+  slightly different characteristics in terms of latency and overhead.
+
+API: Usage Skeleton
+  The basic usage is illustrated in the following pseudo_code:
+
+    init_mb_mgr(&mb_mgr);
+    ...
+    aes_keyexp_128(key, enc_exp_keys, dec_exp_keys);
+    ...
+    while (work_to_be_done) {
+        job = get_next_job(&mb_mgr);
+        // TODO: Fill in job fields
+        job = submit_job(&mb_mgr);
+        while (job) {
+            // TODO: Complete processing on job
+    	job = get_completed_job(&mb_mgr);
+        }
+    }
+
+API: Job Fields
+  The mode is determined by the fields "cipher_direction" and
+  "chain_order". The first specifies encrypt or decrypt, and the
+  second specifies whether whether the hash should be done before or
+  after the cipher operation.
+  In the current implementation, only two combinations of these are
+  supported. For encryption, these should be set to "ENCRYPT" and
+  "CIPHER_HASH", and for decryption, these should be set to "DECRYPT"
+  and "HASH_CIPHER".
+
+  The expanded keys are pointed to by "aes_enc_key_expanded" and
+  "aes_dec_key_expanded". These arrays must be aligned on a 16-byte
+  boundary. Only one of these is necessary (as determined by
+  "cipher_direction"). 
+
+  One selects AES128 vs AES256 by using the "aes_key_len_in_bytes"
+  field. The only valid values are 16 (AES128) and 32 (AES256).
+
+  One selects the AES mode (CBC versus counter-mode) using
+  "cipher_mode".
+
+  One selects the hash algorith (SHA1-HMAC, AES-XCBC, or MD5-HMAC)
+  using "hash_alg".
+
+  The data to be encrypted/decrypted is defined by
+  "src + cipher_start_src_offset_in_bytes". The length of data is
+  given by "msg_len_to_cipher_in_bytes". It must be a multiple of
+  16 bytes.
+
+  The destination for the cipher operation is given by "dst" (NOT by
+  "dst + cipher_start_src_offset_in_bytes". In many/most applications,
+  the destination pointer may overlap the source pointer. That is,
+  "dst" may be equal to "src + cipher_start_src_offset_in_bytes".
+
+  The IV for the cipher operation is given by "iv". The
+  "iv_len_in_bytes" should be 16. This pointer does not need to be
+  aligned. 
+
+  The data to be hashed is defined by
+  "src + hash_start_src_offset_in_bytes". The length of data is
+  given by "msg_len_to_hash_in_bytes".
+
+  The output of the hash operation is defined by
+  "auth_tag_output". The number of bytes written is given by
+  "auth_tag_output_len_in_bytes". Currently the only valid value for
+  this parameter is 12.
+
+  The ipad and opad are given as the result of hashing the HMAC key
+  xor'ed with the appropriate value. That is, rather than passing in
+  the HMAC key and rehashing the initial block for every buffer, the
+  hashing of the initial block is done separately, and the results of
+  this hash are used as input in the job structure.
+
+  Similar to the expanded AES keys, the premise here is that one HMAC
+  key will apply to many buffers, so we want to do that hashing once
+  and not for each buffer.
+
+  The "status" reflects the status of the returned job. It should be
+  "STS_COMPLETED". 
+
+  The "user_data" field is ignored. It can be used to attach
+  application data to the job object.
+
+Flushing Concerns
+  As long as jobs are coming in at a reasonable rate, jobs should be
+  returned at a reasonable rate. However, if there is a lull in the
+  arrival of new jobs, the last few jobs that were submitted tend to
+  stay in the MB_MGR until new jobs arrive. This might result in there
+  being an unreasonable latency for these jobs.
+
+  In this case, flush_job() should be used to complete processing on
+  these outstanding jobs and prevent them from having excessive
+  latency.
+
+  Exactly when and how to use flush_job() is up to the application,
+  and is a balancing act. The processing of flush_job() is less
+  efficient than that of submit_job(), so calling flush_job() too
+  often will lower the system efficiency. Conversely, calling
+  flush_job() too rarely may result in some jobs seeing excessive
+  latency. 
+
+  There are several strategies that the application may employ for
+  flushing. One usage model is that there is a (thread-safe) queue
+  containing work items. One or more threads puts work onto this
+  queue, and one or more processing threads removes items from this
+  queue and processes them through the MB_MGR. In this usage, a simple
+  flushing strategy is that when the processing thread wants to do
+  more work, but the queue is empty, it then proceeds to flush jobs
+  until either the queue contains more work, or the MB_MGR no longer
+  contains jobs (i.e. that flush_job() returns NULL). A variation on
+  this is that when the work queue is empty, the processing thread
+  might pause for a short time to see if any new work appears, before
+  it starts flushing.
+
+  In other usage models, there may be no such queue. An alternate
+  flushing strategy is that have a separate "flush thread" hanging
+  around. It wakes up periodically and checks to see if any work has
+  been requested since the last time it woke up. If some period of
+  time has gone by with no new work appearing, it would proceed to
+  flush the MB_MGR.
+
+AES Key Usage
+  If the AES mode is CBC, then the fields aes_enc_key_expanded or
+  aes_dec_key_expanded are using depending on whether the data is
+  being encrypted or decrypted. However, if the AES mode is CNTR
+  (counter mode), then only aes_enc_key_expanded is used, even for a
+  decrypt operation. 
+
+  The application can handle this dichotomy, or it might choose to
+  simply set both fields in all cases.
+
+Thread Safety
+  The MB_MGR and the associated functions ARE NOT thread safe. If
+  there are multiple threads that may be calling these functions
+  (e.g. a processing thread and a flushing thread), it is the
+  responsibility of the application to put in place sufficient locking
+  so that no two threads will make calls to the same MB_MGR object at
+  the same time.
+
+XMM Register Usage
+  The current implementation is designed for integration in the Linux
+  Kernel. All of the functions satisfy the Linux ABI with respect to
+  general purpose registers. However, the submit_job() and flush_job()
+  functions use XMM registers without saving/restoring any of them. It
+  is up to the application to manage the saving/restoring of XMM
+  registers itself.
+
+Auxiliary Functions
+  There are several auxiliary functions packed with MB_MGR. These may
+  be used, or the application may choose to use their own version. Two
+  of these, aes_keyexp_128() and aes_keyexp_256() expand AES keys into
+  a form that is acceptable for reference in the job structure. 
+
+  In the case of AES128, the expanded key structure should be an array
+  of 11 128-bit words, aligned on a 16-byte boundary. In the case of
+  AES256, it should be an array of 15 128-bit words, aligned on a
+  16-byte boundary. 
+
+  There is also a function, sha1(), which will compute the SHA1 digest
+  of a single 64-byte block. It can be used to compute the ipad and
+  opad digests. There is a similar function, md5(), which can be used
+  when using MD5-HMAC.
+
+  For further details on the usage of these functions, see the sample
+  test application.
