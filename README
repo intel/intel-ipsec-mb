@@ -51,10 +51,6 @@ Required tools:
 Simply run "make" or "make all" at the top level directory to compile the library.
 To clean the library build please run "make clean".
 
-Windows
-
-<TODO>
-
 Legal Disclaimer
 ================
 
