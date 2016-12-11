@@ -569,7 +569,7 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 ////////////////////////////////////////////////////////////////////////
 
 UINT32 
-QUEUE_SIZE(MB_MGR *state)
+QUEUE_SIZE(const MB_MGR *state)
 {
         int a, b;
         if (state->earliest_job < 0)

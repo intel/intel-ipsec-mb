@@ -165,21 +165,21 @@ void init_mb_mgr_avx(MB_MGR *state);
 JOB_AES_HMAC* submit_job_avx(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
 JOB_AES_HMAC* flush_job_avx(MB_MGR *state);
-UINT32 queue_size_avx(MB_MGR *state);
+UINT32 queue_size_avx(const MB_MGR *state);
 
 void init_mb_mgr_avx2(MB_MGR *state);
 //JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
 JOB_AES_HMAC* submit_job_avx2(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
 JOB_AES_HMAC* flush_job_avx2(MB_MGR *state);
-UINT32 queue_size_avx2(MB_MGR *state);
+UINT32 queue_size_avx2(const MB_MGR *state);
 
 void init_mb_mgr_avx512(MB_MGR *state);
 //JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
 JOB_AES_HMAC* submit_job_avx512(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
 JOB_AES_HMAC* flush_job_avx512(MB_MGR *state);
-UINT32 queue_size_avx512(MB_MGR *state);
+UINT32 queue_size_avx512(const MB_MGR *state);
 
 
 void init_mb_mgr_sse(MB_MGR *state);
@@ -187,7 +187,7 @@ void init_mb_mgr_sse(MB_MGR *state);
 JOB_AES_HMAC* submit_job_sse(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_sse(MB_MGR *state);
 JOB_AES_HMAC* flush_job_sse(MB_MGR *state);
-UINT32 queue_size_sse(MB_MGR *state);
+UINT32 queue_size_sse(const MB_MGR *state);
 
 typedef void          (*init_mb_mgr_t)(MB_MGR *state);
 typedef JOB_AES_HMAC* (*get_next_job_t)(MB_MGR *state);

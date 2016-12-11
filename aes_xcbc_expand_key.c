@@ -31,11 +31,11 @@
 #include "aux_funcs.h"
 #include "os.h"
 
-void aes_keyexp_128_enc_sse(void *key, void *enc_exp_keys);
-void aes_keyexp_128_enc_avx(void *key, void *enc_exp_keys);
+void aes_keyexp_128_enc_sse(const void *key, void *enc_exp_keys);
+void aes_keyexp_128_enc_avx(const void *key, void *enc_exp_keys);
 
-void aes128_ecbenc_x3_sse(void *in, void *keys, void *out1, void *out2, void *out3);
-void aes128_ecbenc_x3_avx(void *in, void *keys, void *out1, void *out2, void *out3);
+void aes128_ecbenc_x3_sse(const void *in, const void *keys, void *out1, void *out2, void *out3);
+void aes128_ecbenc_x3_avx(const void *in, const void *keys, void *out1, void *out2, void *out3);
 
 static UINT32 in[4*3] = {
         0x01010101, 0x01010101, 0x01010101, 0x01010101, 
@@ -44,7 +44,7 @@ static UINT32 in[4*3] = {
 };
 
 void 
-aes_xcbc_expand_key_sse(void *key, void *k1_exp, void *k2, void *k3)
+aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
 {
         DECLARE_ALIGNED(UINT32 keys_exp_enc[11*4], 16);
 
@@ -56,7 +56,7 @@ aes_xcbc_expand_key_sse(void *key, void *k1_exp, void *k2, void *k3)
 }
 
 void 
-aes_xcbc_expand_key_avx(void *key, void *k1_exp, void *k2, void *k3)
+aes_xcbc_expand_key_avx(const void *key, void *k1_exp, void *k2, void *k3)
 {
         DECLARE_ALIGNED(UINT32 keys_exp_enc[11*4], 16);
 
