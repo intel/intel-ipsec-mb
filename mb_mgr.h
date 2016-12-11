@@ -25,6 +25,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _MB_MGR_H_
+#define _MB_MGR_H_
 
 #include "types.h"
 #include "constants.h"
@@ -255,3 +257,5 @@ get_next_job_sse(MB_MGR *state)
 {
         return JOBS(state, state->next_job);
 }
+
+#endif /* !_MB_MGR_H_ */

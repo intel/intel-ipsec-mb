@@ -25,6 +25,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _MB_MGR_CODE_H_
+#define _MB_MGR_CODE_H_
 
 // This contains the bulk of the mb_mgr code, with #define's to build 
 // an SSE, AVX, AVX2 or AVX512 version (see mb_mgr_sse.c, mb_mgr_avx.c, etc.)
@@ -576,3 +578,5 @@ QUEUE_SIZE(MB_MGR *state)
         b = state->earliest_job / sizeof(JOB_AES_HMAC);
         return ((a-b) & (MAX_JOBS-1));
 }
+
+#endif /* !_MB_MGR_CODE_H_ */

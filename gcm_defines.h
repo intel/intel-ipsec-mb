@@ -25,6 +25,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _GCM_DEFINES_H_
+#define _GCM_DEFINES_H_
+
 typedef unsigned char u8;
 #ifdef LINUX
 typedef unsigned long int u64;
@@ -147,3 +150,5 @@ aesni_gcm_precomp_avx_gen4(gcm_data *my_ctx_data,
 void
 aesni_gcm_precomp_avx_gen2(gcm_data *my_ctx_data, 
                            u8 *hash_subkey); /* H, the Hash sub key input. Data starts on a 16-byte boundary. */
+
+#endif /* !_GCM_DEFINES_H_ */
