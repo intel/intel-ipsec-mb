@@ -132,7 +132,7 @@ typedef struct {
 ////////////////////////////////////////////////////////////////////////
 // TOP LEVEL (MB_MGR) Data structure fields
 
-typedef struct {
+typedef struct MB_MGR {
         MB_MGR_AES_OOO aes128_ooo;
         MB_MGR_AES_OOO aes192_ooo;
         MB_MGR_AES_OOO aes256_ooo;
