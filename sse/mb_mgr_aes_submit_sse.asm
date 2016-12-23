@@ -1,9 +1,9 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
-;; 
+;; Copyright (c) 2012-2017, Intel Corporation
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -98,6 +98,7 @@ SUBMIT_JOB_AES_ENC:
 	movzx	lane, BYTE(unused_lanes)
 	shr	unused_lanes, 8
 	mov	len, [job + _msg_len_to_cipher_in_bytes]
+	and	len, -16		; DOCSIS may pass size unaligned to block size
 	mov	iv, [job + _iv]
 	mov	[state + _aes_unused_lanes], unused_lanes
 

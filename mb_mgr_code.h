@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2012-2016, Intel Corporation
- * 
+ * Copyright (c) 2012-2017, Intel Corporation
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -60,6 +60,75 @@ JOB_AES_HMAC* SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC* job);
 
 ////////////////////////////////////////////////////////////////////////
 
+#define AES_BLOCK_SIZE 16
+
+/**
+ * @brief Encrypts/decrypts the last partial block for DOCSIS SEC v3.1 BPI
+ *
+ * The last partial block is encrypted/decrypted using AES CFB128.
+ * IV is always the next last ciphered block.
+ *
+ * @note It is assumed that length is bigger than one AES 128 block.
+ *
+ * @param job desriptor of performed crypto operation
+ * @return It always returns value passed in \a job
+ */
+__forceinline
+JOB_AES_HMAC *
+DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
+{
+        const void *iv = NULL;
+        UINT64 offset = 0;
+        UINT64 partial_bytes = 0;
+
+        if (job == NULL)
+                return job;
+
+        assert((job->cipher_direction == DECRYPT) || (job->status & STS_COMPLETED_AES));
+
+        partial_bytes = job->msg_len_to_cipher_in_bytes & (AES_BLOCK_SIZE - 1);
+        offset = job->msg_len_to_cipher_in_bytes & (~(AES_BLOCK_SIZE - 1));
+
+        if (!partial_bytes)
+                return job;
+
+        /* in either case IV has to be next last ciphered block */
+        if (job->cipher_direction == ENCRYPT)
+                iv = job->dst + offset - AES_BLOCK_SIZE;
+        else
+                iv = job->src + job->cipher_start_src_offset_in_bytes +
+                        offset - AES_BLOCK_SIZE;
+
+        assert(partial_bytes <= AES_BLOCK_SIZE);
+        aes_cfb_128_one(job->dst + offset,
+                        job->src + job->cipher_start_src_offset_in_bytes + offset,
+                        iv, job->aes_enc_key_expanded, partial_bytes);
+
+        return job;
+}
+
+/**
+ * @brief Encrypts/decrypts the first and only partial block for DOCSIS SEC v3.1 BPI
+ *
+ * The first partial block is encrypted/decrypted using AES CFB128.
+ *
+ * @param job desriptor of performed crypto operation
+ * @return It always returns value passed in \a job
+ */
+__forceinline
+JOB_AES_HMAC *
+DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
+{
+        assert(!(job->status & STS_COMPLETED_AES));
+        assert(job->msg_len_to_cipher_in_bytes <= AES_BLOCK_SIZE);
+        aes_cfb_128_one(job->dst,
+                        job->src + job->cipher_start_src_offset_in_bytes,
+                        job->iv, job->aes_enc_key_expanded,
+                        job->msg_len_to_cipher_in_bytes);
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
 __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
@@ -80,6 +149,14 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else { // assume 32
                         return SUBMIT_JOB_AES256_CNTR(job);
                 }
+        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
+                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                        JOB_AES_HMAC *tmp;
+
+                        tmp = SUBMIT_JOB_AES128_ENC(&state->docsis_sec_ooo, job);
+                        return DOCSIS_LAST_BLOCK(tmp);
+                } else
+                        return DOCSIS_FIRST_BLOCK(job);
         } else { // assume NUL_CIPHER
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -98,6 +175,11 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else  {// assume 32
                         return FLUSH_JOB_AES256_ENC(&state->aes256_ooo);
                 }
+        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
+                JOB_AES_HMAC *tmp;
+
+                tmp = FLUSH_JOB_AES128_ENC(&state->docsis_sec_ooo);
+                return DOCSIS_LAST_BLOCK(tmp);
         } else { // assume CNTR or NULL_CIPHER
                 return NULL;
         }
@@ -122,6 +204,13 @@ SUBMIT_JOB_AES_DEC(JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES192_CNTR(job);
                 } else { // assume 32
                         return SUBMIT_JOB_AES256_CNTR(job);
+                }
+        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
+                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                        DOCSIS_LAST_BLOCK(job);
+                        return SUBMIT_JOB_AES128_DEC(job);
+                } else {
+                        return DOCSIS_FIRST_BLOCK(job);
                 }
         } else {
                 job->status |= STS_COMPLETED_AES;
@@ -211,19 +300,22 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 
 
 __forceinline
-int _job_invalid(const JOB_AES_HMAC *job)
+int is_job_invalid(const JOB_AES_HMAC *job)
 {
         if ((job->hash_alg < SHA1) || (job->hash_alg > NULL_HASH) ||
-            (job->cipher_mode < CBC) || (job->cipher_mode > NULL_CIPHER))
+            (job->cipher_mode < CBC) || (job->cipher_mode > DOCSIS_SEC_BPI))
                 return 1;
-    
+
         if (job->cipher_mode == NULL_CIPHER) {
                 /* NULL_CIPHER only allowed in HASH_CIPHER */
                 if (job->chain_order != HASH_CIPHER)
                         return 1;
         } else {
-                if (((job->msg_len_to_cipher_in_bytes & 15) != 0) ||
-                    (job->msg_len_to_cipher_in_bytes == 0))
+                if (job->msg_len_to_cipher_in_bytes == 0)
+                        return 1;
+
+                if (job->cipher_mode != DOCSIS_SEC_BPI &&
+                    (job->msg_len_to_cipher_in_bytes & 15) != 0)
                         return 1;
         }
 
@@ -244,7 +336,7 @@ int _job_invalid(const JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *_submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
+JOB_AES_HMAC *submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
 {
         if (job->chain_order == CIPHER_HASH) {
                 // assume job->cipher_direction == ENCRYPT
@@ -266,7 +358,7 @@ JOB_AES_HMAC *_submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-void _complete_job(MB_MGR *state, JOB_AES_HMAC *job)
+void complete_job(MB_MGR *state, JOB_AES_HMAC *job)
 {
         JOB_AES_HMAC *tmp = NULL;
 
@@ -293,7 +385,7 @@ void _complete_job(MB_MGR *state, JOB_AES_HMAC *job)
         }
 }
 
-JOB_AES_HMAC* 
+JOB_AES_HMAC *
 SUBMIT_JOB(MB_MGR *state)
 {
         JOB_AES_HMAC *job = NULL;
@@ -304,11 +396,11 @@ SUBMIT_JOB(MB_MGR *state)
 
         job = JOBS(state, state->next_job);
 
-        if (_job_invalid(job)) {
+        if (is_job_invalid(job)) {
                 job->status = STS_INVALID_ARGS;
         } else {
                 job->status = STS_BEING_PROCESSED;
-                job = _submit_new_job(state, job);
+                job = submit_new_job(state, job);
         }
 
         if (state->earliest_job < 0) {
@@ -326,7 +418,7 @@ SUBMIT_JOB(MB_MGR *state)
         if (state->earliest_job == state->next_job) {
                 // Full
                 job = JOBS(state, state->earliest_job);
-                _complete_job(state, job);
+                complete_job(state, job);
                 ADV_JOBS(&state->earliest_job);
 #ifndef LINUX
                 RESTORE_XMMS(xmm_save);
@@ -346,7 +438,7 @@ SUBMIT_JOB(MB_MGR *state)
         return job;
 }
 
-JOB_AES_HMAC*
+JOB_AES_HMAC *
 FLUSH_JOB(MB_MGR *state)
 {
         JOB_AES_HMAC *job;
@@ -361,7 +453,7 @@ FLUSH_JOB(MB_MGR *state)
         SAVE_XMMS(xmm_save);
 #endif
         job = JOBS(state, state->earliest_job);
-        _complete_job(state, job);
+        complete_job(state, job);
 
         ADV_JOBS(&state->earliest_job);
 
@@ -382,23 +474,23 @@ FLUSH_JOB(MB_MGR *state)
 // AVX2 does not change the AES code, so the AVX2 version uses AVX code here
 // AVX512 uses AVX2 code at the moment
 
-JOB_AES_HMAC* 
-SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC* job)
+JOB_AES_HMAC *
+SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
+        assert((job->cipher_mode == DOCSIS_SEC_BPI) ||
+               ((job->msg_len_to_cipher_in_bytes & 15) == 0));
         assert(job->iv_len_in_bytes == 16);
         AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
                         job->aes_dec_key_expanded,
                         job->dst,
-                        job->msg_len_to_cipher_in_bytes);
+                        job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
         return (job);
 }
 
-
-JOB_AES_HMAC* 
-SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC* job)
+JOB_AES_HMAC *
+SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC *job)
 {
         assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
@@ -410,8 +502,9 @@ SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC* job)
         job->status |= STS_COMPLETED_AES;
         return (job);
 }
-JOB_AES_HMAC* 
-SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC* job)
+
+JOB_AES_HMAC *
+SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
 {
         assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
@@ -426,8 +519,8 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC* job)
 
 
 
-JOB_AES_HMAC* 
-SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC* job)
+JOB_AES_HMAC *
+SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 {
         assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
@@ -440,8 +533,8 @@ SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC* job)
         return (job);
 }
 
-JOB_AES_HMAC* 
-SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC* job)
+JOB_AES_HMAC *
+SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 {
         assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
@@ -454,8 +547,8 @@ SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC* job)
         return (job);
 }
 
-JOB_AES_HMAC* 
-SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC* job)
+JOB_AES_HMAC *
+SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 {
         assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);

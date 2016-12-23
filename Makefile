@@ -1,9 +1,9 @@
 #
 # Copyright (c) 2012-2016, Intel Corporation
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -47,8 +47,8 @@ CXXFLAGS := -DLINUX $(EXTRA_CFLAGS) $(INCLUDES) \
 CFLAGS := $(CXXFLAGS) -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
 
 ifeq ($(DEBUG),y)
-CXXFLAGS += -g -O0
-CFLAGS += -g -O0
+CXXFLAGS += -g -O0 -DDEBUG
+CFLAGS += -g -O0 -DDEBUG
 else
 CXXFLAGS += -O2 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 CFLAGS += -O2 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
@@ -78,6 +78,7 @@ lib_objs := \
 	aes256_cbc_dec_by8_avx.o \
 	aes256_cntr_by4_sse.o \
 	aes256_cntr_by8_avx.o \
+	aes_cfb_128.o \
 	aes_cbc_enc_128_x4.o \
 	aes_cbc_enc_128_x8.o \
 	aes_cbc_enc_192_x4.o \

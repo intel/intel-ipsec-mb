@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2012-2016, Intel Corporation
- * 
+ * Copyright (c) 2012-2017, Intel Corporation
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -29,7 +29,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef DEBUG
 #include <assert.h>
+#else
+#define assert(x)
+#endif
+
 #ifdef __WIN32
 #include <intrin.h>
 #endif
@@ -299,6 +304,21 @@ init_mb_mgr_sse(MB_MGR *state)
         state->aes256_ooo.job_in_lane[1] = NULL;
         state->aes256_ooo.job_in_lane[2] = NULL;
         state->aes256_ooo.job_in_lane[3] = NULL;
+
+        /* DOCSIS SEC BPI uses same settings as AES128 CBC */
+        state->docsis_sec_ooo.lens[0] = 0;
+        state->docsis_sec_ooo.lens[1] = 0;
+        state->docsis_sec_ooo.lens[2] = 0;
+        state->docsis_sec_ooo.lens[3] = 0;
+        state->docsis_sec_ooo.lens[4] = 0xFFFF;
+        state->docsis_sec_ooo.lens[5] = 0xFFFF;
+        state->docsis_sec_ooo.lens[6] = 0xFFFF;
+        state->docsis_sec_ooo.lens[7] = 0xFFFF;
+        state->docsis_sec_ooo.unused_lanes = 0xFF03020100;
+        state->docsis_sec_ooo.job_in_lane[0] = NULL;
+        state->docsis_sec_ooo.job_in_lane[1] = NULL;
+        state->docsis_sec_ooo.job_in_lane[2] = NULL;
+        state->docsis_sec_ooo.job_in_lane[3] = NULL;
 
         // Init HMAC/SHA1 out-of-order fields
         state->hmac_sha_1_ooo.lens[0] = 0;

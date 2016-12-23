@@ -1,9 +1,9 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
-;; 
+;; Copyright (c) 2012-2017, Intel Corporation
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -77,9 +77,6 @@ FIELD	_iv,				8,	8	; pointer to IV
 FIELD	_iv_len_in_bytes,		8,	8
 FIELD	_auth_tag_output,		8,	8	; pointer to hash output
 FIELD	_auth_tag_output_len_in_bytes,	8,	8
-
-;FIELD	_aad,				8,	8	; pointer to AAD
-;FIELD	_aad_len_in_bytes,		8,	8
 
 UNION	_u,	_HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
 		_AES_XCBC_spec_fields_size, _AES_XCBC_spec_fields_align
