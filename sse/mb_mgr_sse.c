@@ -147,6 +147,13 @@ JOB_AES_HMAC* flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 
 ////////////////////////////////////////////////////////////////////////
 
+extern void aes_cfb_128_one_sse(void *out, const void *in, const void *iv,
+                                const void *keys, UINT64 len);
+
+#define AES_CFB_128_ONE    aes_cfb_128_one_sse
+
+////////////////////////////////////////////////////////////////////////
+
 /* Variable to decide between SIMD or SHAxNI OOO scheduler selection. */
 enum SHA_EXTENSION_USAGE sse_sha_ext_usage = SHA_EXT_DETECT;
 

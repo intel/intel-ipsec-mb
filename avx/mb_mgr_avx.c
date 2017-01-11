@@ -136,7 +136,12 @@ JOB_AES_HMAC* flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
 #define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_AVX
 #define FLUSH_JOB_HASH     FLUSH_JOB_HASH_AVX
 
+////////////////////////////////////////////////////////////////////////
 
+extern void aes_cfb_128_one_avx(void *out, const void *in, const void *iv,
+                                const void *keys, UINT64 len);
+
+#define AES_CFB_128_ONE    aes_cfb_128_one_avx
 
 ////////////////////////////////////////////////////////////////////////
 

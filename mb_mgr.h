@@ -193,32 +193,6 @@ typedef JOB_AES_HMAC* (*submit_job_t)(MB_MGR *state);
 typedef JOB_AES_HMAC* (*get_completed_job_t)(MB_MGR *state);
 typedef JOB_AES_HMAC* (*flush_job_t)(MB_MGR *state);
 
-/**
- * @brief AES CFB 128 encrypt/decrypt up to one block
- *
- * It was implemenetd in the context of handling the first and
- * the last block of DOCSIS 3.1 BPI (AES) protocol.
- *
- * It process up 16 byte of data.
- * It doesn't load or store more than \a len bytes of data
- * from \a in to \a out respectively.
- * \a out, \a in and \a iv can be unaligned addresses.
- * \a keys has to be aligned to 16 byte boundary
- *
- * @note Current implementation uses only SSE instructions and
- *       it may introduce performance penalty when mixed with AVX code.
- *       AVX implementation of the function will come soon.
- *
- * @param out place to put cipher/plain text into
- * @param in  place to take plain/cipher text from
- * @param iv  pointer to initialization vector
- * @param keys pointer to expanded encryption keys (16 byte aligned)
- * @param len number of the bytes within the block to be encrypted/decrypted
- *        (valid range is 0 to 16)
- */
-void aes_cfb_128_one(void *out, const void *in, const void *iv,
-                     const void *keys, UINT64 len);
-
 enum SHA_EXTENSION_USAGE {
         SHA_EXT_NOT_PRESENT = 0, /* don't detect and don't use SHA extensions */
         SHA_EXT_PRESENT,  /* don't detect and use SHA extensions */

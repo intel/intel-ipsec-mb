@@ -100,7 +100,7 @@ DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
                         offset - AES_BLOCK_SIZE;
 
         assert(partial_bytes <= AES_BLOCK_SIZE);
-        aes_cfb_128_one(job->dst + offset,
+        AES_CFB_128_ONE(job->dst + offset,
                         job->src + job->cipher_start_src_offset_in_bytes + offset,
                         iv, job->aes_enc_key_expanded, partial_bytes);
 
@@ -121,7 +121,7 @@ DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
 {
         assert(!(job->status & STS_COMPLETED_AES));
         assert(job->msg_len_to_cipher_in_bytes <= AES_BLOCK_SIZE);
-        aes_cfb_128_one(job->dst,
+        AES_CFB_128_ONE(job->dst,
                         job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv, job->aes_enc_key_expanded,
                         job->msg_len_to_cipher_in_bytes);
