@@ -293,7 +293,7 @@ align 32
 ; void sha1_mult_avx(SHA1_ARGS *args, UINT32 size_in_blocks);
 ; arg 1 : rcx : pointer to args
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
-global sha1_mult_avx:function
+global sha1_mult_avx
 sha1_mult_avx:
 
 	sub	rsp, FRAMESZ

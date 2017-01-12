@@ -79,7 +79,7 @@
 
 %define IV_TMP		XSAVED3
 
-global aes_cbc_dec_256_sse:function
+global aes_cbc_dec_256_sse
 aes_cbc_dec_256_sse:
 %ifndef LINUX
 	mov	LEN, [rsp + 8*5]

@@ -66,7 +66,7 @@
 ; arg 2: rdx: pointer to expanded key array for encrypt
 ; arg 3: r8:  pointer to expanded key array for decrypt
 ;
-global aes_keyexp_128_sse:function
+global aes_keyexp_128_sse
 aes_keyexp_128_sse:
         movdqu	xmm1, [KEY]	; loading the AES key
 	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
@@ -139,7 +139,7 @@ aes_keyexp_128_sse:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-global aes_keyexp_128_avx:function
+global aes_keyexp_128_avx
 aes_keyexp_128_avx:
         vmovdqu	xmm1, [KEY]	; loading the AES key
 	vmovdqa	[EXP_ENC_KEYS + 16*0], xmm1
@@ -218,7 +218,7 @@ aes_keyexp_128_avx:
 ; arg 1: rcx: pointer to key
 ; arg 2: rdx: pointer to expanded key array for encrypt
 ;
-global aes_keyexp_128_enc_sse:function
+global aes_keyexp_128_enc_sse
 aes_keyexp_128_enc_sse:
         movdqu	xmm1, [KEY]	; loading the AES key
 	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
@@ -266,7 +266,7 @@ aes_keyexp_128_enc_sse:
 
 	ret
 
-global aes_keyexp_128_enc_avx:function
+global aes_keyexp_128_enc_avx
 aes_keyexp_128_enc_avx:
         vmovdqu	xmm1, [KEY]	; loading the AES key
 	vmovdqa	[EXP_ENC_KEYS + 16*0], xmm1

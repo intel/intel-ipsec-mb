@@ -262,7 +262,7 @@ section .text
 ;; arg 1 : STATE    : pointer args
 ;; arg 2 : INP_SIZE : size of data in blocks (assumed >= 1)
 ;;
-global sha_256_mult_avx:function
+global sha_256_mult_avx
 align 16
 sha_256_mult_avx:
 	; general registers preserved in outer calling routine

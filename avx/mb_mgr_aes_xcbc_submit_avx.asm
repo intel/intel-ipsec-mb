@@ -95,7 +95,7 @@ endstruc
 ; JOB* SUBMIT_JOB_AES_XCBC(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : state
 ; arg 2 : job
-global SUBMIT_JOB_AES_XCBC:function
+global SUBMIT_JOB_AES_XCBC
 SUBMIT_JOB_AES_XCBC:
 
         mov	rax, rsp

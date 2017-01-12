@@ -142,7 +142,7 @@ endstruc
 
 ; JOB* flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state)
 ; arg 1 : rcx : state
-global flush_job_hmac_avx512:function
+global flush_job_hmac_avx512
 flush_job_hmac_avx512:
 
 	mov	rax, rsp

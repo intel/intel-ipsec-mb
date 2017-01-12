@@ -107,7 +107,7 @@ endstruc
 
 ; JOB* FUNC(MB_MGR_HMAC_SHA_512_OOO *state)
 ; arg 1 : rcx : state
-global FUNC:function
+global FUNC
 FUNC:
 
 	mov	rax, rsp

@@ -104,7 +104,7 @@
 %define XKEY3_9		xmm15
 
 
-global aes_xcbc_mac_128_x4:function
+global aes_xcbc_mac_128_x4
 aes_xcbc_mac_128_x4:
 
 	push	rbp

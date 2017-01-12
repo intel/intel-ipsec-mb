@@ -233,7 +233,7 @@ section .text
 
 
 ;; aes_cntr_128_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
-global aes_cntr_128_avx:function
+global aes_cntr_128_avx
 aes_cntr_128_avx:
 
 %ifndef LINUX

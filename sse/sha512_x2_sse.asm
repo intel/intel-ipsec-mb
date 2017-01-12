@@ -324,7 +324,7 @@ endstruc
 ;; arg 1 : STATE    : pointer args
 ;; arg 2 : INP_SIZE : size of data in blocks (assumed >= 1)
 ;;
-global sha512_x2_sse:function
+global sha512_x2_sse
 align 32
 sha512_x2_sse:
 	; general registers preserved in outer calling routine

@@ -110,12 +110,12 @@ section .text
 %ifdef SHA224
 ;; JOB* flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state)
 ;; arg1 : state
-global flush_job_hmac_sha_224_ni_sse:function
+global flush_job_hmac_sha_224_ni_sse
 flush_job_hmac_sha_224_ni_sse:
 %else
 ;; JOB* flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state)
 ;; arg1 : state
-global flush_job_hmac_sha_256_ni_sse:function
+global flush_job_hmac_sha_256_ni_sse
 flush_job_hmac_sha_256_ni_sse:
 %endif	
 	mov	rax, rsp

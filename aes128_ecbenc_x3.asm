@@ -54,7 +54,7 @@
 %define XKEYA		xmm3
 %define XKEYB		xmm4
 
-global aes128_ecbenc_x3_sse:function
+global aes128_ecbenc_x3_sse
 aes128_ecbenc_x3_sse:
 
 %ifndef LINUX
@@ -130,7 +130,7 @@ aes128_ecbenc_x3_sse:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-global aes128_ecbenc_x3_avx:function
+global aes128_ecbenc_x3_avx
 aes128_ecbenc_x3_avx:
 
 %ifndef LINUX

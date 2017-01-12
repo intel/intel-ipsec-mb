@@ -99,7 +99,7 @@ endstruc
 ; JOB* FLUSH_JOB_AES_XCBC(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : state
 ; arg 2 : job
-global FLUSH_JOB_AES_XCBC:function
+global FLUSH_JOB_AES_XCBC
 FLUSH_JOB_AES_XCBC:
 
         mov	rax, rsp

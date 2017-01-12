@@ -225,7 +225,7 @@
 
 
 ;; aes_cbc_dec_192_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
-global aes_cbc_dec_192_avx:function
+global aes_cbc_dec_192_avx
 aes_cbc_dec_192_avx:
 
 %ifndef LINUX

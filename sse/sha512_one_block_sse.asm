@@ -340,7 +340,7 @@ PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
 ;; arg 1 : pointer to input data
 ;; arg 2 : pointer to digest
 section .text
-global FUNC:function
+global FUNC
 align 32
 FUNC:
 	push	rbx

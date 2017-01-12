@@ -224,7 +224,7 @@ extern                 ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 
 
 ;; aes_cntr_192_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
-global aes_cntr_192_avx:function
+global aes_cntr_192_avx
 aes_cntr_192_avx:
 
 %ifndef LINUX

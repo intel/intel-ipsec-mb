@@ -105,7 +105,8 @@ endstruc
 ;; It makes sure not to read more than LEN bytes from IN and
 ;; not to store more than LEN bytes to OUT.
 
-global aes_cfb_128_one_sse:function
+global aes_cfb_128_one_sse
+align 32
 aes_cfb_128_one_sse:
 %ifndef LINUX
 	mov		LEN, LEN2

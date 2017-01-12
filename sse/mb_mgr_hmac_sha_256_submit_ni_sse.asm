@@ -115,7 +115,7 @@ section .text
 ; JOB* submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : state
 ; arg 2 : job
-global submit_job_hmac_sha_224_ni_sse:function
+global submit_job_hmac_sha_224_ni_sse
 submit_job_hmac_sha_224_ni_sse:
 
 %else
@@ -123,7 +123,7 @@ submit_job_hmac_sha_224_ni_sse:
 ; JOB* submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : state
 ; arg 2 : job
-global submit_job_hmac_sha_256_ni_sse:function
+global submit_job_hmac_sha_256_ni_sse
 submit_job_hmac_sha_256_ni_sse:
 %endif
 

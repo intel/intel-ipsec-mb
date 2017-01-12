@@ -103,7 +103,7 @@
 %define XKEY3_9		xmm15
 
 
-global aes_cbc_enc_128_x4:function
+global aes_cbc_enc_128_x4
 aes_cbc_enc_128_x4:
 
 	push	rbp

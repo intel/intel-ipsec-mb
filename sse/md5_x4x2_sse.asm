@@ -407,7 +407,7 @@ rot44 equ  21
 ; arg 2 : number of blocks (>=1)
 ;
 align 32
-global md5_x4x2_sse:function
+global md5_x4x2_sse
 md5_x4x2_sse:
 
         sub     rsp, STACK_SIZE

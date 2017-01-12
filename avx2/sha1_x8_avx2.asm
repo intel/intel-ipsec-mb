@@ -368,7 +368,7 @@ align 32
 ; void sha1_x8_avx2(void *state, int num_blks)
 ; arg 1 : rcx : pointer to array[4] of pointer to input data
 ; arg 2 : rdx  : size (in blocks) ;; assumed to be >= 1
-global sha1_x8_avx2:function
+global sha1_x8_avx2
 sha1_x8_avx2:
 	sub	rsp, FRAMESZ
 

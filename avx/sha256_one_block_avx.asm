@@ -414,7 +414,7 @@ rotate_Xs
 ;; arg 1 : pointer to input data
 ;; arg 2 : pointer to digest
 section .text
-global FUNC:function
+global FUNC
 align 32
 FUNC:
 	push	rbx

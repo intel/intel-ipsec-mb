@@ -360,7 +360,7 @@ endstruc
 ;; void sha512_x4_avx2(void *STATE, const int INP_SIZE)
 ;; arg 1 : STATE    : pointer to input data
 ;; arg 2 : INP_SIZE : size of data in blocks (assumed >= 1)
-global sha512_x4_avx2:function
+global sha512_x4_avx2
 align 32
 sha512_x4_avx2:
 	; general registers preserved in outer calling routine

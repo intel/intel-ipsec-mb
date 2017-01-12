@@ -95,7 +95,7 @@ endstruc
 ; JOB* submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
-global submit_job_hmac_md5_avx:function
+global submit_job_hmac_md5_avx
 submit_job_hmac_md5_avx:
 
         mov	rax, rsp

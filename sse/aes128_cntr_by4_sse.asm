@@ -209,7 +209,7 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; aes_cntr_128_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
-global aes_cntr_128_sse:function
+global aes_cntr_128_sse
 aes_cntr_128_sse:
 
 %ifndef LINUX

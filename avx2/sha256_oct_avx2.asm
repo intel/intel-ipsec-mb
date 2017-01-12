@@ -489,7 +489,7 @@ endstruc
 ;; void sha256_oct_avx2(SHA256_ARGS *args, UINT64 bytes); 
 ;; arg 1 : STATE : pointer to array of pointers to input data
 ;; arg 2 : INP_SIZE  : size of input in blocks
-global sha256_oct_avx2:function
+global sha256_oct_avx2
 align 16
 sha256_oct_avx2:
 	; general registers preserved in outer calling routine

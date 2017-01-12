@@ -105,7 +105,7 @@ endstruc
 %define XTMP		xmm15
 
 
-global aes_cbc_enc_256_x8:function
+global aes_cbc_enc_256_x8
 aes_cbc_enc_256_x8:
 
 	sub	rsp, STACK_size

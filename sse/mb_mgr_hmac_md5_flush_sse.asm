@@ -110,7 +110,7 @@ endstruc
 
 ; JOB* flush_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state)
 ; arg 1 : rcx : state
-global flush_job_hmac_md5_sse:function
+global flush_job_hmac_md5_sse
 flush_job_hmac_md5_sse:
 
         mov	rax, rsp

@@ -89,7 +89,7 @@
 ; arg 2: rdx: pointer to expanded key array for encrypt
 ; arg 3: r8:  pointer to expanded key array for decrypt
 ;
-global aes_keyexp_256_sse:function
+global aes_keyexp_256_sse
 aes_keyexp_256_sse:
         movdqu	xmm1, [KEY]			; loading the AES key
 	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
@@ -182,7 +182,7 @@ aes_keyexp_256_sse:
 	ret
 
 
-global aes_keyexp_256_avx:function
+global aes_keyexp_256_avx
 aes_keyexp_256_avx:
         vmovdqu	xmm1, [KEY]			; loading the AES key
 	vmovdqa	[EXP_ENC_KEYS + 16*0], xmm1

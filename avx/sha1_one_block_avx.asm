@@ -248,7 +248,7 @@ ROTATE_ARGS
 ;; void sha1_one_block_avx(void *input_data, UINT32 digest[8]
 ;; arg 1 : rcx : pointer to input data
 ;; arg 2 : rdx : pointer to digest
-global sha1_one_block_avx:function
+global sha1_one_block_avx
 align 32
 sha1_one_block_avx:
 	push	rbx

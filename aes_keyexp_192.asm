@@ -109,7 +109,7 @@
 ; arg 2: rdx: pointer to expanded key array for encrypt
 ; arg 3: r8:  pointer to expanded key array for decrypt
 ;
-global aes_keyexp_192_sse:function
+global aes_keyexp_192_sse
 aes_keyexp_192_sse:
 
 %ifndef LINUX
@@ -187,7 +187,7 @@ aes_keyexp_192_sse:
 
 
 
-global aes_keyexp_192_avx:function
+global aes_keyexp_192_avx
 aes_keyexp_192_avx:
 
 %ifndef LINUX

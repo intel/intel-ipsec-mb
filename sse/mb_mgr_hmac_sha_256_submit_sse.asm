@@ -99,7 +99,7 @@ endstruc
 ; JOB* FUNC(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
-global FUNC:function
+global FUNC
 FUNC:
 
 	mov	rax, rsp
