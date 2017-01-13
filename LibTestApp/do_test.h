@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016, Intel Corporation
+ * Copyright (c) 2012-2017, Intel Corporation
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -54,6 +54,7 @@
 #undef KNOWN_ANSWER_TEST
 #undef DO_TEST
 #undef TEST_GCM
+#undef TEST_AUX_FUNC
 
 #if (TEST == TEST_AVX)
 #define init_mb_mgr       init_mb_mgr_avx
@@ -81,6 +82,7 @@
 #define KNOWN_ANSWER_TEST known_answer_test_avx
 #define DO_TEST           do_test_avx
 #define TEST_GCM          test_gcm_avx
+#define TEST_AUX_FUNC     test_aux_func_avx
 #elif (TEST == TEST_AVX2)
 #define init_mb_mgr       init_mb_mgr_avx2
 #define get_next_job      get_next_job_avx2
@@ -107,6 +109,7 @@
 #define KNOWN_ANSWER_TEST known_answer_test_avx2
 #define DO_TEST           do_test_avx2
 #define TEST_GCM          test_gcm_avx2
+#define TEST_AUX_FUNC     test_aux_func_avx2
 #else
 #define init_mb_mgr       init_mb_mgr_sse
 #define get_next_job      get_next_job_sse
@@ -133,6 +136,7 @@
 #define KNOWN_ANSWER_TEST known_answer_test_sse
 #define DO_TEST           do_test_sse
 #define TEST_GCM          test_gcm_sse
+#define TEST_AUX_FUNC     test_aux_func_sse
 #endif
 
 #if (TEST == TEST_SSE)
@@ -268,7 +272,7 @@ KNOWN_ANSWER_TEST(MB_MGR *mb_mgr)
 }
 
 int
-TEST_GCM()
+TEST_GCM(void)
 {
         UINT64 keys128[2] = {0xffeeddccbbaa9988, 0x7766554433221100};
         UINT8 plaintext[27] = "abcdefghijklmnopqrstuvwxyz";
@@ -288,6 +292,8 @@ TEST_GCM()
         UINT8 auth_test[12];
         int i;
         int OK = 1;
+
+        printf("testing GCM\n");
 
         aes_keyexp_128_enc(keys128, gdata.expanded_keys);
         aesni_gcm_precomp(&gdata, hashSubKey);
@@ -327,6 +333,34 @@ TEST_GCM()
         if (OK)
                 printf("GCM test passes\n");
         return OK;
+}
+
+void
+TEST_AUX_FUNC(void)
+{
+        // test aux functions
+        UINT128 keys[15];
+        static UINT8 buf[4096+20];
+
+        UINT32 digest1[8];
+        UINT64 digest3[8];
+        UINT32 i;
+        DECLARE_ALIGNED(UINT32 k1_exp[15*4],   16);
+        DECLARE_ALIGNED(UINT32 k2[4],          16);
+        DECLARE_ALIGNED(UINT32 k3[4],          16);
+        
+        printf("testing aux funcs\n");
+
+        sha1_one_block(buf, digest1);
+        sha224_one_block(buf, digest1);
+        sha256_one_block(buf, digest1);
+        sha384_one_block(buf, digest3);
+        sha512_one_block(buf, digest3);
+        md5_one_block(buf, digest1);
+        aes_xcbc_expand_key(buf+1, k1_exp, k2, k3);
+        aes_keyexp_128(keys, k1_exp, k1_exp);
+        aes_keyexp_192(keys, k1_exp, k1_exp);
+        aes_keyexp_256(keys, k1_exp, k1_exp);
 }
 
 void
@@ -384,43 +418,5 @@ DO_TEST(MB_MGR *mb_mgr)
         while (job = flush_job(mb_mgr)) {
         }
 
-        // test aux functions
-        UINT32 digest1[8];
-        UINT64 digest3[8];
-        UINT32 i;
-        DECLARE_ALIGNED(UINT32 k1_exp[15*4],   16);
-        DECLARE_ALIGNED(UINT32 k2[4],          16);
-        DECLARE_ALIGNED(UINT32 k3[4],          16);
-
-        printf("testing aux funcs\n");
-        sha1_one_block(buf, digest1);
-        sha224_one_block(buf, digest1);
-        sha256_one_block(buf, digest1);
-        sha384_one_block(buf, digest3);
-        sha512_one_block(buf, digest3);
-        md5_one_block(buf, digest1);
-        aes_xcbc_expand_key(buf+1, k1_exp, k2, k3);
-        aes_keyexp_128(keys, k1_exp, k1_exp);
-        aes_keyexp_192(keys, k1_exp, k1_exp);
-        aes_keyexp_256(keys, k1_exp, k1_exp);
-
-        // test GCM
-        UINT64 keys128[2] = {0xffeeddccbbaa9988, 0x7766554433221100};
-        UINT8 plaintext[27] = "abcdefghijklmnopqrstuvwxyz";
-        UINT8 ciphertext[27] = {0x62,0x02,0xc7,0x9e,0xda,0x6f,0x3c,0xfc,
-                                0xbe,0xec,0xc6,0x10,0x77,0xf3,0x46,0x4b,
-                                0x63,0xdd,0x3f,0x48,0x53,0x42,0x30,0xaa,
-                                0x80,0xbf,0x4a};
-        DECLARE_ALIGNED(UINT8 iv[16], 16) = {0xc,0xb,0xa,9,8,7,6,5,4,3,2,1, 0,0,0,1};
-        UINT8 aad[12] = {0xbb,0xaa,0x99,0x88,0x77,0x66,0x55,0x44,0x33,0x22,0x11};
-        DECLARE_ALIGNED(UINT8 hashSubKey[16], 16) = {15,14,13,12,11,10,9,8,
-                                                     7,6,5,4,3,2,1,0};
-        UINT8 auth_tag[12] = {0xf3,0x42,0x37,0xc7,0x14,0x62,0x4c,0xf6,
-                              0xbe,0xa1,0x88,0xc0};
-
-        DECLARE_ALIGNED(UINT64 exp_keys[2*11], 16);
-        UINT8 text[27];
-        UINT8 auth_test[12];
-
-        printf("testing GCM\n");
+        TEST_AUX_FUNC();
 }

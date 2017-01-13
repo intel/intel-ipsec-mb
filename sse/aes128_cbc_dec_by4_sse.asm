@@ -79,6 +79,8 @@
 
 %define IV_TMP		XSAVED3
 
+section .text
+
 global aes_cbc_dec_128_sse
 aes_cbc_dec_128_sse:
 %ifndef LINUX

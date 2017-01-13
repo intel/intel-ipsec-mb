@@ -99,6 +99,7 @@
 %endmacro
 	
 
+section .text
 
 
 ; void aes_keyexp_192(UINT128 *key,

@@ -102,6 +102,7 @@
 %define XKEY3_6		xmm14
 %define XKEY3_9		xmm15
 
+section .text
 
 global aes_cbc_enc_256_x4
 aes_cbc_enc_256_x4:

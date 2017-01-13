@@ -103,6 +103,7 @@
 %define XKEY3_6		xmm14
 %define XKEY3_9		xmm15
 
+section .text
 
 global aes_xcbc_mac_128_x4
 aes_xcbc_mac_128_x4:

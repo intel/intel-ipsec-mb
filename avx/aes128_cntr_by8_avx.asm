@@ -31,9 +31,9 @@
 section .data
 default rel
 
-global byteswap_const:data
-global ddq_add_1:data, ddq_add_2:data, ddq_add_3:data, ddq_add_4:data
-global ddq_add_5:data, ddq_add_6:data, ddq_add_7:data, ddq_add_8:data
+global byteswap_const
+global ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
+global ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 	
 align 16
 byteswap_const:	;DDQ 0x000102030405060708090A0B0C0D0E0F

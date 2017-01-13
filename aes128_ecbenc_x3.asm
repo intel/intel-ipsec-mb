@@ -54,6 +54,8 @@
 %define XKEYA		xmm3
 %define XKEYB		xmm4
 
+section .text
+
 global aes128_ecbenc_x3_sse
 aes128_ecbenc_x3_sse:
 

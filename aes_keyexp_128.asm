@@ -57,6 +57,7 @@
 %define EXP_DEC_KEYS	r8
 %endif
 
+section .text
 
 ; void aes_keyexp_128(UINT128 *key,
 ;                     UINT128 *enc_exp_keys,

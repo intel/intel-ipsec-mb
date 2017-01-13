@@ -31,8 +31,9 @@
 %define ARG1	rcx
 %endif
 
+section .text
 ; void save_xmms(UINT128 array[10])
-	global save_xmms
+global save_xmms
 save_xmms:
 	movdqa	[ARG1 + 0*16], xmm6
 	movdqa	[ARG1 + 1*16], xmm7
@@ -48,7 +49,7 @@ save_xmms:
 
 
 ; void restore_xmms(UINT128 array[10])
-	global restore_xmms
+global restore_xmms
 restore_xmms:
 	movdqa	xmm6, [ARG1 + 0*16]
 	movdqa	xmm7, [ARG1 + 1*16]
@@ -64,7 +65,7 @@ restore_xmms:
 
 
         ; void save_xmms_avx(UINT128 array[10])
-	global save_xmms_avx
+global save_xmms_avx
 save_xmms_avx:
         vmovdqa	[ARG1 + 0*16], xmm6
 	vmovdqa	[ARG1 + 1*16], xmm7
@@ -80,7 +81,7 @@ save_xmms_avx:
 
 
 ; void restore_xmms_avx(UINT128 array[10])
-	global restore_xmms_avx
+global restore_xmms_avx
 restore_xmms_avx: 
 	vmovdqa	xmm6, [ARG1 + 0*16]
 	vmovdqa	xmm7, [ARG1 + 1*16]

@@ -178,10 +178,10 @@ struct cpuid_regs {
  *    [out] out    - registers structure to store results of CPUID into
  */
 static void
-__cpuid(const unsigned leaf, const unsigned subleaf,
+__mbcpuid(const unsigned leaf, const unsigned subleaf,
         struct cpuid_regs *out)
 {
-#ifdef __WIN32
+#ifdef _WIN32
         /* Windows */
         int regs[4];
 
@@ -235,12 +235,12 @@ sha_extensions_supported(void)
         struct cpuid_regs r;
 
         /* Check highest leaf number. If less then 7 then SHA not supported. */
-        __cpuid(0x0, 0x0, &r);
+        __mbcpuid(0x0, 0x0, &r);
         if (r.eax < 0x7)
                 return 0;
         
         /* Check presence of SHA extensions in the extended feature flags */
-        __cpuid(0x7, 0x0, &r);
+        __mbcpuid(0x7, 0x0, &r);
         if (r.ebx & (1 << 29))
                 return 1;
 
