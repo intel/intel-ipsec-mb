@@ -1,6 +1,15 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+Unreleased
+========================================================================
+
+Jan, 2017
+
+General
+- Windows x64 compilation target
+- New DOCSIS SEC BPI V3.1 cipher
+
 November 2016
 ========================================================================
 

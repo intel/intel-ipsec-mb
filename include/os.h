@@ -31,10 +31,13 @@
 #ifdef LINUX
 #define DECLARE_ALIGNED(decl, alignval) \
         decl __attribute__((aligned(alignval)))
-#define __forceinline static inline __attribute__((always_inline))
+#define __forceinline \
+        static inline __attribute__((always_inline))
 #else
 #define DECLARE_ALIGNED(decl, alignval) \
         __declspec(align(alignval)) decl
+#define __forceinline \
+        static __forceinline
 #endif
 
 #endif // end ifndef __OS_H

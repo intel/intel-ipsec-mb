@@ -41,7 +41,8 @@ avx512 - Intel(R) AVX512 optimized routines
 Compilation
 ===========
 
-Linux
+Linux (64-bit only)
+-------------------
 
 Required tools:
 - GNU make
@@ -50,6 +51,21 @@ Required tools:
 
 Simply run "make" or "make all" at the top level directory to compile the library.
 To clean the library build please run "make clean".
+
+Windows (x64 only)
+------------------
+
+Required tools:
+- Microsoft (R) Visual Studio 2010:
+  - NMAKE: Microsoft (R) Program Maintenance Utility Version 10.00.30319.01
+  - CL: Microsoft (R) C/C++ Optimizing Compiler Version 16.00.30319.01 for x64
+  - LIB: Microsoft (R) Library Manager Version 10.00.30319.01
+  - LINK: Microsoft (R) Incremental Linker Version 10.00.30319.01
+- NASM version 2.12.02 (or newer)
+
+Simply run "nmake /f win_x64.mak" or "nmake /f win_x64.mak all" at the top level directory
+to compile the library. To clean the library build please run "nmake /f win_x64.mak clean".
+
 
 Legal Disclaimer
 ================

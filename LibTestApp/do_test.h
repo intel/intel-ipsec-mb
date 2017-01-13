@@ -287,7 +287,6 @@ TEST_GCM(void)
         UINT8 auth_tag[12] = {0xf3,0x42,0x37,0xc7,0x14,0x62,0x4c,0xf6,
                               0xbe,0xa1,0x88,0xc0};
         gcm_data gdata;
-        DECLARE_ALIGNED(UINT64 exp_keys[2*11], 16);
         UINT8 text[27];
         UINT8 auth_test[12];
         int i;
@@ -296,6 +295,7 @@ TEST_GCM(void)
         printf("testing GCM\n");
 
         aes_keyexp_128_enc(keys128, gdata.expanded_keys);
+
         aesni_gcm_precomp(&gdata, hashSubKey);
 
         aesni_gcm_enc(&gdata, text, plaintext, sizeof(plaintext), iv,
@@ -344,7 +344,6 @@ TEST_AUX_FUNC(void)
 
         UINT32 digest1[8];
         UINT64 digest3[8];
-        UINT32 i;
         DECLARE_ALIGNED(UINT32 k1_exp[15*4],   16);
         DECLARE_ALIGNED(UINT32 k2[4],          16);
         DECLARE_ALIGNED(UINT32 k3[4],          16);

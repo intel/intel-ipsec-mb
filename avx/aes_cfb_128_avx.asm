@@ -57,8 +57,8 @@
 %else
 %define arg1	rcx
 %define arg2	rdx
-%define arg3	rdi
-%define arg4	rsi
+%define arg3	r8
+%define arg4	r9
 %define arg5	[rsp + 5*8]
 %endif
 
@@ -73,7 +73,7 @@
 %define LEN	r11
 %endif
 
-%define TMP0	r9
+%define TMP0	rax
 %define TMP1	r10
 %define PTR0	rsp + _buffer
 
