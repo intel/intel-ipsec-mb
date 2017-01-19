@@ -24,15 +24,22 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-LIB=libIPSec_MB.a
+
+ifeq ($(AESNI_MULTI_BUFFER_LIB_PATH),)
+ROOT_DIR := $(CURDIR)
+else
+ROOT_DIR := $(AESNI_MULTI_BUFFER_LIB_PATH)
+endif
+
+LIB := libIPSec_MB.a
 
 USE_YASM ?= n
 YASM ?= yasm
 NASM ?= nasm
 
-OBJ_DIR = obj
+OBJ_DIR = $(ROOT_DIR)/obj
 
-INCLUDE_DIRS := include .
+INCLUDE_DIRS := $(ROOT_DIR)/include $(ROOT_DIR)
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
 
 CXX ?= g++
@@ -54,7 +61,7 @@ CXXFLAGS += -O2 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 CFLAGS += -O2 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
-ASM_INCLUDE_DIRS := include . avx avx2 avx512 sse
+ASM_INCLUDE_DIRS := $(ROOT_DIR)/include $(ROOT_DIR) $(ROOT_DIR)/avx $(ROOT_DIR)/avx2 $(ROOT_DIR)/avx512 $(ROOT_DIR)/sse
 
 YASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I $i)
 YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUDES)
@@ -192,21 +199,21 @@ obj2_files := $(lib_objs:%=$(OBJ_DIR)/%) $(gcm_objs:%=$(OBJ_DIR)/%)
 all: $(LIB)
 
 $(LIB): $(obj2_files)
-	ar -qcs $@ $^
+	ar -qcs $(ROOT_DIR)/$@ $^
 
 $(obj2_files): | $(OBJ_DIR)
 
-$(OBJ_DIR)/%.o:%.cpp
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/%.cpp
 	@ echo "Making object file $@ "
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:%.c
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:%.asm
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/%.asm
 	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
@@ -215,17 +222,17 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:sse/%.cpp
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/sse/%.cpp
 	@ echo "Making object file $@ "
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:sse/%.c
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/sse/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:sse/%.asm
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/sse/%.asm
 	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
@@ -234,17 +241,17 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx/%.cpp
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx/%.cpp
 	@ echo "Making object file $@ "
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx/%.c
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx/%.asm
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx/%.asm
 	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
@@ -253,17 +260,17 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx2/%.cpp
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx2/%.cpp
 	@ echo "Making object file $@ "
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx2/%.c
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx2/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx2/%.asm
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx2/%.asm
 	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
@@ -272,17 +279,17 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx512/%.cpp
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx512/%.cpp
 	@ echo "Making object file $@ "
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx512/%.c
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx512/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CXXFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx512/%.asm
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/avx512/%.asm
 	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
@@ -291,7 +298,7 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:include/%.asm
+$(OBJ_DIR)/%.o:$(ROOT_DIR)/include/%.asm
 	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
@@ -305,6 +312,6 @@ $(OBJ_DIR):
 
 .PHONY: clean
 clean:
-	rm -Rf $(obj2_files)
-	rm -Rf $(LIB)
+	@rm -Rf $(obj2_files)
+	@rm -Rf $(LIB)
 
