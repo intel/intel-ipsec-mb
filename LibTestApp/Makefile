@@ -25,17 +25,38 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 MYLIB := ../libIPSec_MB.a
-CFLAGS := -g -O2 -DLINUX -I../include -I..
+CFLAGS := -g -O3 -pipe -std=gnu11
+WCFLAGS := -Werror -Wextra -Wall
+CPPFLAGS := -DLINUX -I../include -I..
 LDFLAGS := -g
+LIBS := -lcrypto
 APP := ipsec_MB_testapp
+TEST_VEC := test_vec
 
-all: $(APP)
+TEST_VEC_SRCS := \
+	hmac_tv.c \
+	gcm_tv.c \
+	ctr_tv.c \
+	test_ecb.c \
+	benchmark.c \
+	test_vectors.c
+
+TEST_VEC_OBJS = ${TEST_VEC_SRCS:.c=.o}
+
+all: $(APP) $(TEST_VEC) $(TEST_ECB)
+
+.c.o	:
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(WCFLAGS) -c $<
 
 $(APP): main.o $(MYLIB)
 	$(CC) $(LDFLAGS) -o $@ main.o $(MYLIB)
 
-main.o: main.c do_test.h
+main.o:	main.c do_test.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
+
+$(TEST_VEC): $(TEST_VEC_OBJS) $(MYLIB)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 .PHONY: clean
 clean:
-	-rm -f main.o ipsec_MB_testapp
+	-rm -f main.o $(APP) $(TEST_VEC_OBJS) $(TEST_VEC)
