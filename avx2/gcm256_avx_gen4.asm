@@ -35,13 +35,12 @@
 ; References:
 ;       This code was derived and highly optimized from the code described in paper:
 ;               Vinodh Gopal et. al. Optimized Galois-Counter-Mode Implementation on Intel Architecture Processors. August, 2010
-;       
-;       For the shift-based reductions used in this code, we used the method described in paper:
-;               Shay Gueron, Michael E. Kounavis. Intel Carry-Less Multiplication Instruction and its Usage for Computing the GCM Mode. January, 2010.
+;       The details of the implementation is explained in:
+;               Erdinc Ozturk et. al. Enabling High-Performance Galois-Counter-Mode on Intel Architecture Processors. October, 2012.
 ;
 ; Example YASM command lines:
-;       Windows:  yasm -Xvc -f x64 -rnasm -pnasm -D "WIN_ABI" -o aesni_gcm_enc_avx_2nd_gen_core_mainfunc.obj -g cv8 aesni_gcm_enc_avx_2nd_gen_core_mainfunc.asm
-;       Linux:    yasm -f x64 -f elf64 -X gnu -g dwarf2 -D LINUX -o aesni_gcm_enc_avx_2nd_gen_core_mainfunc.o aesni_gcm_enc_avx_2nd_gen_core_mainfunc.asm
+;       Windows:  yasm -Xvc -f x64 -rnasm -pnasm -D "WIN_ABI" -o gcm_avx_4th_gen_core.obj -g cv8 gcm_avx_4th_gen_core.asm
+;       Linux:    yasm -f x64 -f elf64 -X gnu -g dwarf2 -D "LINUX" -o gcm_avx_4th_gen_core.o gcm_avx_4th_gen_core.asm
 ;
 ;
 ;
@@ -117,7 +116,7 @@
 ; need to push 4 registers into stack to maintain
 %define STACK_OFFSET 8*4
 
-%define TMP1    16*0      ; Temporary storage for AAD
+%define TMP1    16*0    ; Temporary storage for AAD
 %define TMP2    16*1    ; Temporary storage for AES State 2 (State 1 is stored in an XMM register)
 %define TMP3    16*2    ; Temporary storage for AES State 3
 %define TMP4    16*3    ; Temporary storage for AES State 4
@@ -154,48 +153,39 @@
 %define %%T4 %6
 %define %%T5 %7
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; Karatsuba    
-        vpshufd         %%T2, %%GH, 01001110b
-        vpshufd         %%T3, %%HK, 01001110b
-        vpxor           %%T2, %%T2, %%GH                ; %%T2 = (a1+a0)
-        vpxor           %%T3, %%T3, %%HK                ; %%T3 = (b1+b0)
 
         vpclmulqdq      %%T1, %%GH, %%HK, 0x11          ; %%T1 = a1*b1
-        vpclmulqdq      %%GH, %%HK, 0x00                ; %%GH = a0*b0
-        vpclmulqdq      %%T2, %%T3, 0x00                ; %%T2 = (a1+a0)*(b1+b0)
-        vpxor           %%T2, %%T2, %%GH
-        vpxor           %%T2, %%T2, %%T1                ; %%T2 = a0*b1+a1*b0
-
-        vpslldq         %%T3, %%T2, 8                   ; shift-L %%T3 2 DWs
-        vpsrldq         %%T2, %%T2, 8                   ; shift-R %%T2 2 DWs
+        vpclmulqdq      %%T2, %%GH, %%HK, 0x00          ; %%T2 = a0*b0
+        vpclmulqdq      %%T3, %%GH, %%HK, 0x01          ; %%T3 = a1*b0
+        vpclmulqdq      %%GH, %%GH, %%HK, 0x10          ; %%GH = a0*b1
         vpxor           %%GH, %%GH, %%T3
-        vpxor           %%T1, %%T1, %%T2                ; <%%T1:%%GH> = %%GH x %%HK
 
-        ;first phase of the reduction
-        vpslld  %%T2, %%GH, 31                          ; packed right shifting << 31
-        vpslld  %%T3, %%GH, 30                          ; packed right shifting shift << 30
-        vpslld  %%T4, %%GH, 25                          ; packed right shifting shift << 25
         
-        vpxor   %%T2, %%T2, %%T3                        ; xor the shifted versions
-        vpxor   %%T2, %%T2, %%T4
-        
-        vpsrldq %%T5, %%T2, 4                           ; shift-R %%T5 1 DW
-        
-        vpslldq %%T2, %%T2, 12                          ; shift-L %%T2 3 DWs    
-        vpxor   %%GH, %%GH, %%T2                        ; first phase of the reduction complete
+        vpsrldq         %%T3, %%GH, 8                   ; shift-R %%GH 2 DWs
+        vpslldq         %%GH, %%GH, 8                   ; shift-L %%GH 2 DWs
+
+        vpxor           %%T1, %%T1, %%T3
+        vpxor           %%GH, %%GH, %%T2
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;first phase of the reduction
+        vmovdqa         %%T3, [rel POLY2]
 
-        ;second phase of the reduction
-
-        vpsrld  %%T2,%%GH,1                             ; packed left shifting >> 1
-        vpsrld  %%T3,%%GH,2                             ; packed left shifting >> 2
-        vpsrld  %%T4,%%GH,7                             ; packed left shifting >> 7
-        vpxor   %%T2, %%T2, %%T3                        ; xor the shifted versions
-        vpxor   %%T2, %%T2, %%T4
+        vpclmulqdq      %%T2, %%T3, %%GH, 0x01
+        vpslldq         %%T2, %%T2, 8                    ; shift-L %%T2 2 DWs
         
-        vpxor   %%T2, %%T2, %%T5
-        vpxor   %%GH, %%GH, %%T2        
-        vpxor   %%GH, %%GH, %%T1                        ; the result is in %%GH
+        vpxor           %%GH, %%GH, %%T2                 ; first phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;second phase of the reduction          
+        vpclmulqdq      %%T2, %%T3, %%GH, 0x00
+        vpsrldq         %%T2, %%T2, 4                    ; shift-R %%T2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+        
+        vpclmulqdq      %%GH, %%T3, %%GH, 0x10
+        vpslldq         %%GH, %%GH, 4                    ; shift-L %%GH 1 DW (Shift-L 1-DW to obtain result with no shifts)
+
+        vpxor           %%GH, %%GH, %%T2                 ; second phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpxor           %%GH, %%GH, %%T1                 ; the result is in %%GH
 
                         
 %endmacro
@@ -210,55 +200,29 @@
 %define %%T5    %6
 %define %%T6    %7
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Haskey_i_k holds XORed values of the low and high parts of the Haskey_i
+        ; Haskey_i_k holds XORed values of the low and high parts of the Haskey_i
         vmovdqa  %%T5, %%HK
-
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqa  [arg1 + HashKey_k], %%T1  
-
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^2<<1 mod poly
         vmovdqa  [arg1 + HashKey_2], %%T5                       ;  [HashKey_2] = HashKey^2<<1 mod poly
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqa  [arg1 + HashKey_2_k], %%T1  
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^3<<1 mod poly
         vmovdqa  [arg1 + HashKey_3], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqa  [arg1 + HashKey_3_k], %%T1  
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^4<<1 mod poly
         vmovdqa  [arg1 + HashKey_4], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqa  [arg1 + HashKey_4_k], %%T1  
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^5<<1 mod poly
         vmovdqa  [arg1 + HashKey_5], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqa  [arg1 + HashKey_5_k], %%T1  
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^6<<1 mod poly
         vmovdqa  [arg1 + HashKey_6], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqa  [arg1 + HashKey_6_k], %%T1  
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^7<<1 mod poly
         vmovdqa  [arg1 + HashKey_7], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqa  [arg1 + HashKey_7_k], %%T1  
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^8<<1 mod poly
         vmovdqa  [arg1 + HashKey_8], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqa  [arg1 + HashKey_8_k], %%T1   
+
 %endmacro
 
 ; if a = number of total plaintext bytes
@@ -296,7 +260,7 @@
 
         mov     r11, r12
                 
-        vpxor    reg(i), reg(i)
+        vpxor    reg(i), reg(i), reg(i)
 %%_get_AAD_loop:
         vmovd    %%T1, DWORD [r10]
         vpslldq %%T1, %%T1, 12
@@ -334,7 +298,7 @@
                 
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
-                vpaddd   %%CTR, [rel ONE]           ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]     ; INCR Y0
                 vmovdqa  reg(i), %%CTR
                 vpshufb  reg(i), [rel SHUF_MASK]     ; perform a 16Byte swap
 %assign i (i+1)
@@ -343,12 +307,12 @@
 vmovdqa  %%T_key, [arg1+16*0]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
-                vpxor    reg(i),%%T_key
+                vpxor    reg(i),reg(i),%%T_key
 %assign i (i+1)
 %endrep
 
 %assign j 1
-%rep 9
+%rep 13
 vmovdqa  %%T_key, [arg1+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -370,7 +334,7 @@ vmovdqa  %%T_key, [arg1+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 vmovdqu  %%T1, [arg3 + r11]
-                vpxor    reg(i), %%T1
+                vpxor    reg(i), reg(i), %%T1
                 vmovdqu  [arg2 + r11], reg(i)            ; write back ciphertext for %%num_initial_blocks blocks
                 add     r11, 16
                 %ifidn  %%ENC_DEC, DEC
@@ -386,7 +350,7 @@ vmovdqa  %%T_key, [arg1+16*j]
         GHASH_MUL       reg(i), %%T2, %%T1, %%T3, %%T4, %%T5, %%T6
 
 %rep %%num_initial_blocks
-        vpxor    reg(j), reg(i)  
+        vpxor    reg(j), reg(j), reg(i)  
         GHASH_MUL       reg(j), %%T2, %%T1, %%T3, %%T4, %%T5, %%T6      ; apply GHASH on %%num_initial_blocks blocks
 %assign i (i+1)
 %assign j (j+1)
@@ -401,51 +365,51 @@ vmovdqa  %%T_key, [arg1+16*j]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Haskey_i_k holds XORed values of the low and high parts of the Haskey_i
-                vpaddd   %%CTR, [rel ONE]                   ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]           ; INCR Y0
                 vmovdqa  %%XMM1, %%CTR
-                vpshufb  %%XMM1, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM1, [rel SHUF_MASK]    ; perform a 16Byte swap
                 
-                vpaddd   %%CTR, [rel ONE]                   ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]           ; INCR Y0
                 vmovdqa  %%XMM2, %%CTR
-                vpshufb  %%XMM2, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM2, [rel SHUF_MASK]    ; perform a 16Byte swap
                 
-                vpaddd   %%CTR, [rel ONE]                   ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]           ; INCR Y0
                 vmovdqa  %%XMM3, %%CTR
-                vpshufb  %%XMM3, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM3, [rel SHUF_MASK]    ; perform a 16Byte swap
                 
-                vpaddd   %%CTR, [rel ONE]                   ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]           ; INCR Y0
                 vmovdqa  %%XMM4, %%CTR
-                vpshufb  %%XMM4, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM4, [rel SHUF_MASK]    ; perform a 16Byte swap
                 
-                vpaddd   %%CTR, [rel ONE]                   ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]           ; INCR Y0
                 vmovdqa  %%XMM5, %%CTR
-                vpshufb  %%XMM5, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM5, [rel SHUF_MASK]    ; perform a 16Byte swap
                 
-                vpaddd   %%CTR, [rel ONE]                   ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]           ; INCR Y0
                 vmovdqa  %%XMM6, %%CTR
-                vpshufb  %%XMM6, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM6, [rel SHUF_MASK]    ; perform a 16Byte swap
                 
-                vpaddd   %%CTR, [rel ONE]                   ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]           ; INCR Y0
                 vmovdqa  %%XMM7, %%CTR
-                vpshufb  %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM7, [rel SHUF_MASK]    ; perform a 16Byte swap
                 
-                vpaddd   %%CTR, [rel ONE]                   ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]           ; INCR Y0
                 vmovdqa  %%XMM8, %%CTR
-                vpshufb  %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM8, [rel SHUF_MASK]    ; perform a 16Byte swap
 
                 vmovdqa  %%T_key, [arg1+16*0]
-                vpxor    %%XMM1, %%T_key
-                vpxor    %%XMM2, %%T_key
-                vpxor    %%XMM3, %%T_key
-                vpxor    %%XMM4, %%T_key
-                vpxor    %%XMM5, %%T_key
-                vpxor    %%XMM6, %%T_key
-                vpxor    %%XMM7, %%T_key
-                vpxor    %%XMM8, %%T_key
+                vpxor    %%XMM1, %%XMM1, %%T_key
+                vpxor    %%XMM2, %%XMM2, %%T_key
+                vpxor    %%XMM3, %%XMM3, %%T_key
+                vpxor    %%XMM4, %%XMM4, %%T_key
+                vpxor    %%XMM5, %%XMM5, %%T_key
+                vpxor    %%XMM6, %%XMM6, %%T_key
+                vpxor    %%XMM7, %%XMM7, %%T_key
+                vpxor    %%XMM8, %%XMM8, %%T_key
         
         
 %assign i 1
-%rep    9       ; do 9 rounds
+%rep    13       ; do 13 rounds
                 vmovdqa  %%T_key, [arg1+16*i]
                 vaesenc  %%XMM1, %%T_key
                 vaesenc  %%XMM2, %%T_key
@@ -470,56 +434,56 @@ vmovdqa  %%T_key, [arg1+16*j]
                 vaesenclast      %%XMM8, %%T_key
 
                 vmovdqu  %%T1, [arg3 + r11 + 16*0]
-                vpxor    %%XMM1, %%T1
+                vpxor    %%XMM1, %%XMM1, %%T1
                 vmovdqu  [arg2 + r11 + 16*0], %%XMM1
                 %ifidn  %%ENC_DEC, DEC
                 vmovdqa  %%XMM1, %%T1
                 %endif
 
                 vmovdqu  %%T1, [arg3 + r11 + 16*1]
-                vpxor    %%XMM2, %%T1
+                vpxor    %%XMM2, %%XMM2, %%T1
                 vmovdqu  [arg2 + r11 + 16*1], %%XMM2
                 %ifidn  %%ENC_DEC, DEC
                 vmovdqa  %%XMM2, %%T1
                 %endif
 
                 vmovdqu  %%T1, [arg3 + r11 + 16*2]
-                vpxor    %%XMM3, %%T1
+                vpxor    %%XMM3, %%XMM3, %%T1
                 vmovdqu  [arg2 + r11 + 16*2], %%XMM3
                 %ifidn  %%ENC_DEC, DEC
                 vmovdqa  %%XMM3, %%T1
                 %endif
 
                 vmovdqu  %%T1, [arg3 + r11 + 16*3]
-                vpxor    %%XMM4, %%T1
+                vpxor    %%XMM4, %%XMM4, %%T1
                 vmovdqu  [arg2 + r11 + 16*3], %%XMM4
                 %ifidn  %%ENC_DEC, DEC
                 vmovdqa  %%XMM4, %%T1
                 %endif
 
                 vmovdqu  %%T1, [arg3 + r11 + 16*4]
-                vpxor    %%XMM5, %%T1
+                vpxor    %%XMM5, %%XMM5, %%T1
                 vmovdqu  [arg2 + r11 + 16*4], %%XMM5
                 %ifidn  %%ENC_DEC, DEC
                 vmovdqa  %%XMM5, %%T1
                 %endif
 
                 vmovdqu  %%T1, [arg3 + r11 + 16*5]
-                vpxor    %%XMM6, %%T1
+                vpxor    %%XMM6, %%XMM6, %%T1
                 vmovdqu  [arg2 + r11 + 16*5], %%XMM6
                 %ifidn  %%ENC_DEC, DEC
                 vmovdqa  %%XMM6, %%T1
                 %endif
 
                 vmovdqu  %%T1, [arg3 + r11 + 16*6]
-                vpxor    %%XMM7, %%T1
+                vpxor    %%XMM7, %%XMM7, %%T1
                 vmovdqu  [arg2 + r11 + 16*6], %%XMM7
                 %ifidn  %%ENC_DEC, DEC
                 vmovdqa  %%XMM7, %%T1
                 %endif
 
                 vmovdqu  %%T1, [arg3 + r11 + 16*7]
-                vpxor    %%XMM8, %%T1
+                vpxor    %%XMM8, %%XMM8, %%T1
                 vmovdqu  [arg2 + r11 + 16*7], %%XMM8
                 %ifidn  %%ENC_DEC, DEC
                 vmovdqa  %%XMM8, %%T1
@@ -528,7 +492,7 @@ vmovdqa  %%T_key, [arg1+16*j]
                 add     r11, 128
                 
                 vpshufb  %%XMM1, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpxor    %%XMM1, [rsp + TMP1]                    ; combine GHASHed value with the corresponding ciphertext
+                vpxor    %%XMM1, %%XMM1, [rsp + TMP1]            ; combine GHASHed value with the corresponding ciphertext
                 vpshufb  %%XMM2, [rel SHUF_MASK]             ; perform a 16Byte swap
                 vpshufb  %%XMM3, [rel SHUF_MASK]             ; perform a 16Byte swap
                 vpshufb  %%XMM4, [rel SHUF_MASK]             ; perform a 16Byte swap
@@ -599,7 +563,7 @@ vmovdqa  %%T_key, [arg1+16*j]
                 vpshufb %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
                 vpshufb %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
 %else
-                vpaddd  %%XMM1, %%CTR,  [rel ONEf]                  ; INCR CNT
+                vpaddd  %%XMM1, %%CTR,  [rel ONEf]          ; INCR CNT
                 vpaddd  %%XMM2, %%XMM1, [rel ONEf]
                 vpaddd  %%XMM3, %%XMM2, [rel ONEf]
                 vpaddd  %%XMM4, %%XMM3, [rel ONEf]
@@ -615,14 +579,14 @@ vmovdqa  %%T_key, [arg1+16*j]
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 
                 vmovdqu %%T1, [arg1 + 16*0]
-                vpxor   %%XMM1, %%T1
-                vpxor   %%XMM2, %%T1
-                vpxor   %%XMM3, %%T1
-                vpxor   %%XMM4, %%T1
-                vpxor   %%XMM5, %%T1
-                vpxor   %%XMM6, %%T1
-                vpxor   %%XMM7, %%T1
-                vpxor   %%XMM8, %%T1
+                vpxor   %%XMM1, %%XMM1, %%T1
+                vpxor   %%XMM2, %%XMM2, %%T1
+                vpxor   %%XMM3, %%XMM3, %%T1
+                vpxor   %%XMM4, %%XMM4, %%T1
+                vpxor   %%XMM5, %%XMM5, %%T1
+                vpxor   %%XMM6, %%XMM6, %%T1
+                vpxor   %%XMM7, %%XMM7, %%T1
+                vpxor   %%XMM8, %%XMM8, %%T1
                  
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
@@ -656,14 +620,10 @@ vmovdqa  %%T_key, [arg1+16*j]
         vmovdqa         %%T5, [arg1 + HashKey_8]
         vpclmulqdq      %%T4, %%T2, %%T5, 0x11                  ; %%T4 = a1*b1
         vpclmulqdq      %%T7, %%T2, %%T5, 0x00                  ; %%T7 = a0*b0
-
-        vpshufd         %%T6, %%T2, 01001110b
-        vpxor           %%T6, %%T2
-
-        vmovdqa         %%T5, [arg1 + HashKey_8_k]
-        vpclmulqdq      %%T6, %%T6, %%T5, 0x00                  ;
-
-                       
+        vpclmulqdq      %%T6, %%T2, %%T5, 0x01                  ; %%T6 = a1*b0
+        vpclmulqdq      %%T5, %%T2, %%T5, 0x10                  ; %%T5 = a0*b1
+        vpxor           %%T6, %%T6, %%T5
+                        
                 vmovdqu %%T1, [arg1 + 16*3]                                             
                 vaesenc %%XMM1, %%T1
                 vaesenc %%XMM2, %%T1
@@ -678,15 +638,16 @@ vmovdqa  %%T_key, [arg1+16*j]
         vmovdqa         %%T5, [arg1 + HashKey_7]
         vpclmulqdq      %%T3, %%T1, %%T5, 0x11                  
         vpxor           %%T4, %%T4, %%T3
+
         vpclmulqdq      %%T3, %%T1, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T3
-
-        vpshufd         %%T3, %%T1, 01001110b
-        vpxor           %%T3, %%T1
-        vmovdqa         %%T5, [arg1 + HashKey_7_k]                 
-        vpclmulqdq      %%T3, %%T3, %%T5, 0x10                  
+                        
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
         vpxor           %%T6, %%T6, %%T3
-                                       
+                                
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x10                  
+        vpxor           %%T6, %%T6, %%T3
+                                
                 vmovdqu %%T1, [arg1 + 16*4]                                             
                 vaesenc %%XMM1, %%T1
                 vaesenc %%XMM2, %%T1
@@ -702,15 +663,16 @@ vmovdqa  %%T_key, [arg1+16*j]
         vmovdqa         %%T5, [arg1 + HashKey_6]
         vpclmulqdq      %%T3, %%T1, %%T5, 0x11                  
         vpxor           %%T4, %%T4, %%T3
+
         vpclmulqdq      %%T3, %%T1, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T3
-
-        vpshufd         %%T3, %%T1, 01001110b
-        vpxor           %%T3, %%T1
-        vmovdqa         %%T5, [arg1 + HashKey_6_k]                 
-        vpclmulqdq      %%T3, %%T3, %%T5, 0x10                  
+                        
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
         vpxor           %%T6, %%T6, %%T3
-    
+                                
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x10                  
+        vpxor           %%T6, %%T6, %%T3
+                                        
                 vmovdqu %%T1, [arg1 + 16*5]                                             
                 vaesenc %%XMM1, %%T1
                 vaesenc %%XMM2, %%T1
@@ -726,13 +688,14 @@ vmovdqa  %%T_key, [arg1+16*j]
         vmovdqa         %%T5, [arg1 + HashKey_5]
         vpclmulqdq      %%T3, %%T1, %%T5, 0x11                  
         vpxor           %%T4, %%T4, %%T3
+
         vpclmulqdq      %%T3, %%T1, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T3
-
-        vpshufd         %%T3, %%T1, 01001110b
-        vpxor           %%T3, %%T1
-        vmovdqa         %%T5, [arg1 + HashKey_5_k]                 
-        vpclmulqdq      %%T3, %%T3, %%T5, 0x10                  
+                        
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
+        vpxor           %%T6, %%T6, %%T3
+                                
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x10                  
         vpxor           %%T6, %%T6, %%T3
                                   
                 vmovdqu %%T1, [arg1 + 16*6]                                             
@@ -749,15 +712,15 @@ vmovdqa  %%T_key, [arg1+16*j]
         vmovdqa         %%T5, [arg1 + HashKey_4]
         vpclmulqdq      %%T3, %%T1, %%T5, 0x11                  
         vpxor           %%T4, %%T4, %%T3
+
         vpclmulqdq      %%T3, %%T1, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T3
-
-        vpshufd         %%T3, %%T1, 01001110b
-        vpxor           %%T3, %%T1
-        vmovdqa         %%T5, [arg1 + HashKey_4_k]                 
-        vpclmulqdq      %%T3, %%T3, %%T5, 0x10                  
+                        
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
         vpxor           %%T6, %%T6, %%T3
-       
+                                
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x10                  
+        vpxor           %%T6, %%T6, %%T3
                                   
                 vmovdqu %%T1, [arg1 + 16*7]                                             
                 vaesenc %%XMM1, %%T1
@@ -773,13 +736,14 @@ vmovdqa  %%T_key, [arg1+16*j]
         vmovdqa         %%T5, [arg1 + HashKey_3]
         vpclmulqdq      %%T3, %%T1, %%T5, 0x11                  
         vpxor           %%T4, %%T4, %%T3
+
         vpclmulqdq      %%T3, %%T1, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T3
-
-        vpshufd         %%T3, %%T1, 01001110b
-        vpxor           %%T3, %%T1
-        vmovdqa         %%T5, [arg1 + HashKey_3_k]                 
-        vpclmulqdq      %%T3, %%T3, %%T5, 0x10                  
+                        
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
+        vpxor           %%T6, %%T6, %%T3
+                                
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x10                  
         vpxor           %%T6, %%T6, %%T3
                                 
                 vmovdqu %%T1, [arg1 + 16*8]                                             
@@ -796,14 +760,16 @@ vmovdqa  %%T_key, [arg1+16*j]
         vmovdqa         %%T5, [arg1 + HashKey_2]
         vpclmulqdq      %%T3, %%T1, %%T5, 0x11                  
         vpxor           %%T4, %%T4, %%T3
+
         vpclmulqdq      %%T3, %%T1, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T3
-
-        vpshufd         %%T3, %%T1, 01001110b
-        vpxor           %%T3, %%T1
-        vmovdqa         %%T5, [arg1 + HashKey_2_k]                 
-        vpclmulqdq      %%T3, %%T3, %%T5, 0x10                  
+                        
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
         vpxor           %%T6, %%T6, %%T3
+                                
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x10                  
+        vpxor           %%T6, %%T6, %%T3
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   
                 vmovdqu %%T5, [arg1 + 16*9]                                             
@@ -818,22 +784,63 @@ vmovdqa  %%T_key, [arg1+16*j]
 
         vmovdqa         %%T1, [rsp + TMP8]
         vmovdqa         %%T5, [arg1 + HashKey]
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x11                  
-        vpxor           %%T4, %%T4, %%T3
+        
+
         vpclmulqdq      %%T3, %%T1, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T3
-
-        vpshufd         %%T3, %%T1, 01001110b
-        vpxor           %%T3, %%T1
-        vmovdqa         %%T5, [arg1 + HashKey_k]                 
-        vpclmulqdq      %%T3, %%T3, %%T5, 0x10                  
+                        
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
         vpxor           %%T6, %%T6, %%T3
-        
-        vpxor           %%T6, %%T4
-        vpxor           %%T6, %%T7
+                                
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x10                  
+        vpxor           %%T6, %%T6, %%T3
+
+        vpclmulqdq      %%T3, %%T1, %%T5, 0x11                  
+        vpxor           %%T1, %%T4, %%T3
                                 
                 
-                vmovdqu         %%T5, [arg1 + 16*10]
+                vmovdqu %%T5, [arg1 + 16*10]
+ 		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu	%%T5, [arg1 + 16*11]
+
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu	%%T5, [arg1 + 16*12]
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu	%%T5, [arg1 + 16*13]
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu	%%T5, [arg1 + 16*14]
 
 %assign i 0
 %assign j 1
@@ -849,28 +856,26 @@ vmovdqa  %%T_key, [arg1+16*j]
 %assign i (i+1)    
 %assign j (j+1)            
 %endrep   
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	
 
-        vpslldq %%T3, %%T6, 8           ; shift-L %%T3 2 DWs
-        vpsrldq %%T6, %%T6, 8           ; shift-R %%T2 2 DWs
-        vpxor   %%T7, %%T3      
-        vpxor   %%T6, %%T4              ; accumulate the results in %%T6:%%T7
-        
-        
-        ;first phase of the reduction
-        
-        vpslld  %%T2, %%T7, 31                                  ; packed right shifting << 31
-        vpslld  %%T3, %%T7, 30                                  ; packed right shifting shift << 30
-        vpslld  %%T4, %%T7, 25                                  ; packed right shifting shift << 25
-        
-        vpxor   %%T2, %%T2, %%T3                                ; xor the shifted versions
-        vpxor   %%T2, %%T2, %%T4
-        
-        vpsrldq %%T1, %%T2, 4                                   ; shift-R %%T1 1 DW
-        
-        vpslldq %%T2, %%T2, 12                                  ; shift-L %%T2 3 DWs    
-        vpxor   %%T7, %%T2                                      ; first phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		%ifidn %%ENC_DEC, ENC
+	vpslldq	%%T3, %%T6, 8					; shift-L %%T3 2 DWs
+	vpsrldq	%%T6, %%T6, 8					; shift-R %%T2 2 DWs
+	vpxor	%%T7, %%T7, %%T3
+	vpxor	%%T1, %%T1, %%T6				; accumulate the results in %%T1:%%T7
+	 
+
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;first phase of the reduction
+	vmovdqa		%%T3, [rel POLY2]
+
+	vpclmulqdq	%%T2, %%T3, %%T7, 0x01
+	vpslldq		%%T2, %%T2, 8				; shift-L xmm2 2 DWs
+	
+	vpxor		%%T7, %%T7, %%T2			; first phase of the reduction complete
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                %ifidn %%ENC_DEC, ENC
 		vmovdqu	[arg2+r11+16*0], %%XMM1			; Write to the Ciphertext buffer	  
 		vmovdqu	[arg2+r11+16*1], %%XMM2			; Write to the Ciphertext buffer	  
 		vmovdqu	[arg2+r11+16*2], %%XMM3			; Write to the Ciphertext buffer
@@ -881,32 +886,32 @@ vmovdqa  %%T_key, [arg1+16*j]
 		vmovdqu	[arg2+r11+16*7], %%XMM8			; Write to the Ciphertext buffer
                 %endif
 
-        ;second phase of the reduction
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;second phase of the reduction		
+	vpclmulqdq	%%T2, %%T3, %%T7, 0x00
+	vpsrldq		%%T2, %%T2, 4					; shift-R xmm2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+	
+	vpclmulqdq	%%T4, %%T3, %%T7, 0x10
+	vpslldq		%%T4, %%T4, 4					; shift-L xmm0 1 DW (Shift-L 1-DW to obtain result with no shifts)
+
+	vpxor		%%T4, %%T4, %%T2				; second phase of the reduction complete
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	vpxor		%%T1, %%T1, %%T4				; the result is in %%T1
+
+		vpshufb	%%XMM1, [rel SHUF_MASK]		; perform a 16Byte swap
+		vpshufb	%%XMM2, [rel SHUF_MASK]		; perform a 16Byte swap
+		vpshufb	%%XMM3, [rel SHUF_MASK]		; perform a 16Byte swap
+		vpshufb	%%XMM4, [rel SHUF_MASK]		; perform a 16Byte swap 
+		vpshufb	%%XMM5, [rel SHUF_MASK]		; perform a 16Byte swap
+		vpshufb	%%XMM6, [rel SHUF_MASK]		; perform a 16Byte swap
+		vpshufb	%%XMM7, [rel SHUF_MASK]		; perform a 16Byte swap
+		vpshufb	%%XMM8, [rel SHUF_MASK]		; perform a 16Byte swap 
+	
+
+	vpxor	%%XMM1, %%T1        
         
-        vpsrld  %%T2,%%T7,1                                     ; packed left shifting >> 1
-        vpsrld  %%T3,%%T7,2                                     ; packed left shifting >> 2
-        vpsrld  %%T4,%%T7,7                                     ; packed left shifting >> 7
-        vpxor   %%T2, %%T2,%%T3                                 ; xor the shifted versions
-        vpxor   %%T2, %%T2,%%T4
-        
-        vpxor   %%T2, %%T2, %%T1
-        vpxor   %%T7, %%T7, %%T2      
-        vpxor   %%T6, %%T6, %%T7                                ; the result is in %%T6
-
-
-
-                vpshufb %%XMM1, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM2, [rel SHUF_MASK]
-                vpshufb %%XMM3, [rel SHUF_MASK]
-                vpshufb %%XMM4, [rel SHUF_MASK]
-                vpshufb %%XMM5, [rel SHUF_MASK]
-                vpshufb %%XMM6, [rel SHUF_MASK]
-                vpshufb %%XMM7, [rel SHUF_MASK]
-                vpshufb %%XMM8, [rel SHUF_MASK]
-        
-
-        vpxor   %%XMM1, %%T6        
-
+       
+                
 %endmacro
 
 
@@ -927,87 +932,100 @@ vmovdqa  %%T_key, [arg1+16*j]
 %define %%XMM6  %13
 %define %%XMM7  %14
 %define %%XMM8  %15
+
         ;; Karatsuba Method
-        
+
+        vmovdqa         %%T5, [arg1 + HashKey_8]
         
         vpshufd         %%T2, %%XMM1, 01001110b
-        vpxor           %%T2, %%XMM1
-        vmovdqa         %%T5, [arg1 + HashKey_8]
+        vpshufd         %%T3, %%T5, 01001110b
+        vpxor           %%T2, %%T2, %%XMM1
+        vpxor           %%T3, %%T3, %%T5
+
         vpclmulqdq      %%T6, %%XMM1, %%T5, 0x11
         vpclmulqdq      %%T7, %%XMM1, %%T5, 0x00
         
-        vmovdqa         %%T3, [arg1 + HashKey_8_k]
         vpclmulqdq      %%XMM1, %%T2, %%T3, 0x00
-
-       
+        
         ;;;;;;;;;;;;;;;;;;;;;;
 
-        
-        vpshufd         %%T2, %%XMM2, 01001110b
-        vpxor           %%T2, %%XMM2
         vmovdqa         %%T5, [arg1 + HashKey_7]
+        vpshufd         %%T2, %%XMM2, 01001110b
+        vpshufd         %%T3, %%T5, 01001110b
+        vpxor           %%T2, %%T2, %%XMM2
+        vpxor           %%T3, %%T3, %%T5
+
         vpclmulqdq      %%T4, %%XMM2, %%T5, 0x11
         vpxor           %%T6, %%T6, %%T4
         
         vpclmulqdq      %%T4, %%XMM2, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T4
         
-        vmovdqa         %%T3, [arg1 + HashKey_7_k]
         vpclmulqdq      %%T2, %%T2, %%T3, 0x00
+        
         vpxor           %%XMM1, %%XMM1, %%T2
 
         ;;;;;;;;;;;;;;;;;;;;;;
 
-        
-        vpshufd         %%T2, %%XMM3, 01001110b
-        vpxor           %%T2, %%XMM3
         vmovdqa         %%T5, [arg1 + HashKey_6]
+        vpshufd         %%T2, %%XMM3, 01001110b
+        vpshufd         %%T3, %%T5, 01001110b
+        vpxor           %%T2, %%T2, %%XMM3
+        vpxor           %%T3, %%T3, %%T5
+
         vpclmulqdq      %%T4, %%XMM3, %%T5, 0x11
         vpxor           %%T6, %%T6, %%T4
         
         vpclmulqdq      %%T4, %%XMM3, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T4
         
-        vmovdqa         %%T3, [arg1 + HashKey_6_k]
         vpclmulqdq      %%T2, %%T2, %%T3, 0x00
+        
         vpxor           %%XMM1, %%XMM1, %%T2
 
         ;;;;;;;;;;;;;;;;;;;;;;
 
-        
-        vpshufd         %%T2, %%XMM4, 01001110b
-        vpxor           %%T2, %%XMM4
         vmovdqa         %%T5, [arg1 + HashKey_5]
+        vpshufd         %%T2, %%XMM4, 01001110b
+        vpshufd         %%T3, %%T5, 01001110b
+        vpxor           %%T2, %%T2, %%XMM4
+        vpxor           %%T3, %%T3, %%T5
+
         vpclmulqdq      %%T4, %%XMM4, %%T5, 0x11
         vpxor           %%T6, %%T6, %%T4
         
         vpclmulqdq      %%T4, %%XMM4, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T4
         
-        vmovdqa         %%T3, [arg1 + HashKey_5_k]
         vpclmulqdq      %%T2, %%T2, %%T3, 0x00
+        
         vpxor           %%XMM1, %%XMM1, %%T2
 
         ;;;;;;;;;;;;;;;;;;;;;;
         
-        vpshufd         %%T2, %%XMM5, 01001110b
-        vpxor           %%T2, %%XMM5
         vmovdqa         %%T5, [arg1 + HashKey_4]
+        vpshufd         %%T2, %%XMM5, 01001110b
+        vpshufd         %%T3, %%T5, 01001110b
+        vpxor           %%T2, %%T2, %%XMM5
+        vpxor           %%T3, %%T3, %%T5
+
         vpclmulqdq      %%T4, %%XMM5, %%T5, 0x11
         vpxor           %%T6, %%T6, %%T4
         
         vpclmulqdq      %%T4, %%XMM5, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T4
         
-        vmovdqa         %%T3, [arg1 + HashKey_4_k]
         vpclmulqdq      %%T2, %%T2, %%T3, 0x00
+        
         vpxor           %%XMM1, %%XMM1, %%T2
 
         ;;;;;;;;;;;;;;;;;;;;;;
 
-        vpshufd         %%T2, %%XMM6, 01001110b
-        vpxor           %%T2, %%XMM6
         vmovdqa         %%T5, [arg1 + HashKey_3]
+        vpshufd         %%T2, %%XMM6, 01001110b
+        vpshufd         %%T3, %%T5, 01001110b
+        vpxor           %%T2, %%T2, %%XMM6
+        vpxor           %%T3, %%T3, %%T5
 
         vpclmulqdq      %%T4, %%XMM6, %%T5, 0x11
         vpxor           %%T6, %%T6, %%T4
@@ -1015,37 +1033,42 @@ vmovdqa  %%T_key, [arg1+16*j]
         vpclmulqdq      %%T4, %%XMM6, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T4
         
-        vmovdqa         %%T3, [arg1 + HashKey_3_k]
         vpclmulqdq      %%T2, %%T2, %%T3, 0x00
+        
         vpxor           %%XMM1, %%XMM1, %%T2
 
         ;;;;;;;;;;;;;;;;;;;;;;
 
-        vpshufd         %%T2, %%XMM7, 01001110b
-        vpxor           %%T2, %%XMM7
         vmovdqa         %%T5, [arg1 + HashKey_2]
+        vpshufd         %%T2, %%XMM7, 01001110b
+        vpshufd         %%T3, %%T5, 01001110b
+        vpxor           %%T2, %%T2, %%XMM7
+        vpxor           %%T3, %%T3, %%T5
+
         vpclmulqdq      %%T4, %%XMM7, %%T5, 0x11
         vpxor           %%T6, %%T6, %%T4
         
         vpclmulqdq      %%T4, %%XMM7, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T4
         
-        vmovdqa         %%T3, [arg1 + HashKey_2_k]
         vpclmulqdq      %%T2, %%T2, %%T3, 0x00
+        
         vpxor           %%XMM1, %%XMM1, %%T2
 
         ;;;;;;;;;;;;;;;;;;;;;;
-        
-        vpshufd         %%T2, %%XMM8, 01001110b
-        vpxor           %%T2, %%XMM8
+
         vmovdqa         %%T5, [arg1 + HashKey]
+        vpshufd         %%T2, %%XMM8, 01001110b
+        vpshufd         %%T3, %%T5, 01001110b
+        vpxor           %%T2, %%T2, %%XMM8
+        vpxor           %%T3, %%T3, %%T5
+
         vpclmulqdq      %%T4, %%XMM8, %%T5, 0x11
         vpxor           %%T6, %%T6, %%T4
         
         vpclmulqdq      %%T4, %%XMM8, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T4
         
-        vmovdqa         %%T3, [arg1 + HashKey_k]
         vpclmulqdq      %%T2, %%T2, %%T3, 0x00
         
         vpxor           %%XMM1, %%XMM1, %%T2
@@ -1055,49 +1078,42 @@ vmovdqa  %%T_key, [arg1+16*j]
                 
 
 
-        vpslldq         %%T4, %%T2, 8
-        vpsrldq         %%T2, %%T2, 8
+        vpslldq %%T4, %%T2, 8
+        vpsrldq %%T2, %%T2, 8
         
-        vpxor           %%T7, %%T4
-        vpxor           %%T6, %%T2                                      ; <%%T6:%%T7> holds the result of the accumulated carry-less multiplications
+        vpxor   %%T7, %%T7, %%T4
+        vpxor   %%T6, %%T6, %%T2                               ; <%%T6:%%T7> holds the result of the accumulated carry-less multiplications
         
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
-        
-        vpslld          %%T2, %%T7, 31                                  ; packed right shifting << 31
-        vpslld          %%T3, %%T7, 30                                  ; packed right shifting shift << 30
-        vpslld          %%T4, %%T7, 25                                  ; packed right shifting shift << 25
-        
-        vpxor           %%T2, %%T2, %%T3                                ; xor the shifted versions
-        vpxor           %%T2, %%T2, %%T4
-        
-        vpsrldq         %%T1, %%T2, 4                                   ; shift-R %%T1 1 DW
-        
-        vpslldq         %%T2, %%T2, 12                                  ; shift-L %%T2 3 DWs    
-        vpxor           %%T7, %%T2                                      ; first phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vmovdqa         %%T3, [rel POLY2]
 
-        ;second phase of the reduction
+        vpclmulqdq      %%T2, %%T3, %%T7, 0x01
+        vpslldq         %%T2, %%T2, 8                           ; shift-L xmm2 2 DWs
         
-        vpsrld          %%T2,%%T7,1                                     ; packed left shifting >> 1
-        vpsrld          %%T3,%%T7,2                                     ; packed left shifting >> 2
-        vpsrld          %%T4,%%T7,7                                     ; packed left shifting >> 7
-        vpxor           %%T2, %%T2,%%T3                                 ; xor the shifted versions
-        vpxor           %%T2, %%T2,%%T4
-        
-        vpxor           %%T2, %%T2, %%T1
-        vpxor           %%T7, %%T7, %%T2      
-        vpxor           %%T6, %%T6, %%T7                                ; the result is in %%T6
+        vpxor           %%T7, %%T7, %%T2                        ; first phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
+        ;second phase of the reduction          
+        vpclmulqdq      %%T2, %%T3, %%T7, 0x00
+        vpsrldq         %%T2, %%T2, 4                           ; shift-R %%T2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+        
+        vpclmulqdq      %%T4, %%T3, %%T7, 0x10
+        vpslldq         %%T4, %%T4, 4                           ; shift-L %%T4 1 DW (Shift-L 1-DW to obtain result with no shifts)
+
+        vpxor           %%T4, %%T4, %%T2                        ; second phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpxor           %%T6, %%T6, %%T4                        ; the result is in %%T6
 %endmacro
 
 ; Encryption of a single block
 %macro ENCRYPT_SINGLE_BLOCK 1
 %define %%XMM0  %1
 
-                vpxor    %%XMM0, [arg1+16*0]
+                vpxor    %%XMM0, %%XMM0, [arg1+16*0]
 %assign i 1
-%rep 9
+%rep 13
                 vaesenc  %%XMM0, [arg1+16*i]
 %assign i (i+1)
 %endrep
@@ -1107,7 +1123,7 @@ vmovdqa  %%T_key, [arg1+16*j]
 
 
 
-; combined for GCM encryp and decrypt functions
+; combined for GCM encrypt and decrypt functions
 ; clobbering all xmm registers
 ; clobbering r10, r11, r12, r13, r14, r15
 %macro  GCM_ENC_DEC     1
@@ -1263,7 +1279,7 @@ vmovdqa  %%T_key, [arg1+16*j]
         ; handle the last <16 Byte block seperately
         
         
-        vpaddd   xmm9, [rel ONE]                     ; INCR CNT to get Yn
+        vpaddd   xmm9, xmm9, [rel ONE]              ; INCR CNT to get Yn
         vpshufb  xmm9, [rel SHUF_MASK]
         ENCRYPT_SINGLE_BLOCK    xmm9                    ; E(K, Yn)
         
@@ -1278,21 +1294,21 @@ vmovdqa  %%T_key, [arg1+16*j]
 
         %ifidn  %%ENC_DEC, DEC
         vmovdqa  xmm2, xmm1
-        vpxor    xmm9, xmm1                              ; Plaintext XOR E(K, Yn)
+        vpxor    xmm9, xmm9, xmm1                        ; Plaintext XOR E(K, Yn)
         vmovdqu  xmm1, [r12 + ALL_F - SHIFT_MASK]        ; get the appropriate mask to mask out top 16-r13 bytes of xmm9
-        vpand    xmm9, xmm1                              ; mask out top 16-r13 bytes of xmm9
-        vpand    xmm2, xmm1
+        vpand    xmm9, xmm9, xmm1                        ; mask out top 16-r13 bytes of xmm9
+        vpand    xmm2, xmm2, xmm1
         vpshufb  xmm2, [rel SHUF_MASK]
-        vpxor    xmm14, xmm2
+        vpxor    xmm14, xmm14, xmm2
         GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6    ;GHASH computation for the last <16 Byte block
         sub     r11, r13
         add     r11, 16
         %else
-        vpxor    xmm9, xmm1                              ; Plaintext XOR E(K, Yn)
+        vpxor    xmm9, xmm9, xmm1                        ; Plaintext XOR E(K, Yn)
         vmovdqu  xmm1, [r12 + ALL_F - SHIFT_MASK]        ; get the appropriate mask to mask out top 16-r13 bytes of xmm9
-        vpand    xmm9, xmm1                              ; mask out top 16-r13 bytes of xmm9
+        vpand    xmm9, xmm9, xmm1                        ; mask out top 16-r13 bytes of xmm9
         vpshufb  xmm9, [rel SHUF_MASK]
-        vpxor    xmm14, xmm9
+        vpxor    xmm14, xmm14, xmm9
         GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6    ;GHASH computation for the last <16 Byte block
         sub     r11, r13
         add     r11, 16
@@ -1327,19 +1343,19 @@ vmovdqa  %%T_key, [arg1+16*j]
         
         shl     arg4, 3                                 ; len(C) in bits  (*128)
         vmovq    xmm1, arg4
-        vpslldq  xmm15, xmm15, 8                        ; xmm15 = len(A)|| 0x0000000000000000                   
-        vpxor    xmm15, xmm1                            ; xmm15 = len(A)||len(C)
+        vpslldq xmm15, xmm15, 8                         ; xmm15 = len(A)|| 0x0000000000000000                   
+        vpxor   xmm15, xmm15, xmm1                      ; xmm15 = len(A)||len(C)
         
-        vpxor    xmm14, xmm15
+        vpxor   xmm14, xmm15
         GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6    ; final GHASH computation
-        vpshufb  xmm14, [rel SHUF_MASK]             ; perform a 16Byte swap
+        vpshufb  xmm14, [rel SHUF_MASK]              ; perform a 16Byte swap
         
         mov     rax, arg5                               ; rax = *Y0
-        vmovdqu  xmm9, [rax]                            ; xmm9 = Y0
+        vmovdqu xmm9, [rax]                             ; xmm9 = Y0
         
         ENCRYPT_SINGLE_BLOCK    xmm9                    ; E(K, Y0)
         
-        vpxor    xmm9, xmm14
+        vpxor   xmm9, xmm9, xmm14
 
         
         
@@ -1391,12 +1407,12 @@ vmovdqa  %%T_key, [arg1+16*j]
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm_precomp_avx_gen2 
+;void   aesni_gcm256_precomp_avx_gen4
 ;        (gcm_data     *my_ctx_data, 
 ;        u8     *hash_subkey); /* H, the Hash sub key input. Data starts on a 16-byte boundary. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_precomp_avx_gen2
-aesni_gcm_precomp_avx_gen2:
+global aesni_gcm256_precomp_avx_gen4
+aesni_gcm256_precomp_avx_gen4:
         ;the number of pushes must equal STACK_OFFSET
         push    r12
         push    r13
@@ -1408,7 +1424,7 @@ aesni_gcm_precomp_avx_gen2:
 
         
         sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~63                                ; align rsp to 64 bytes
+        and     rsp, ~63                                 ; align rsp to 64 bytes
 
 %ifdef WIN_ABI  
         ; only xmm6 needs to be maintained
@@ -1430,19 +1446,19 @@ aesni_gcm_precomp_avx_gen2:
         vpshufb  xmm6, [rel SHUF_MASK]
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
         vmovdqa  xmm2, xmm6
-        vpsllq   xmm6, 1
-        vpsrlq   xmm2, 63
+        vpsllq   xmm6, xmm6, 1
+        vpsrlq   xmm2, xmm2, 63
         vmovdqa  xmm1, xmm2
         vpslldq  xmm2, xmm2, 8 
         vpsrldq  xmm1, xmm1, 8
-        vpor     xmm6, xmm2     
+        vpor     xmm6, xmm6, xmm2     
         ;reduction
         vpshufd  xmm2, xmm1, 00100100b
         vpcmpeqd xmm2, [rel TWOONE]
-        vpand    xmm2, [rel POLY]
-        vpxor    xmm6, xmm2                             ; xmm6 holds the HashKey<<1 mod poly   
+        vpand    xmm2, xmm2, [rel POLY]
+        vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly   
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-        vmovdqa  [arg1 + HashKey], xmm6                  ; store HashKey<<1 mod poly
+        vmovdqa  [arg1 + HashKey], xmm6                 ; store HashKey<<1 mod poly
 
         
         PRECOMPUTE  xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
@@ -1457,10 +1473,11 @@ aesni_gcm_precomp_avx_gen2:
         pop     r13
         pop     r12
         ret
-       
+        
+        
                 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm_enc_avx_gen2(
+;void   aesni_gcm256_enc_avx_gen4(
 ;        gcm_data        *my_ctx_data,     /* aligned to 16 Bytes */
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
@@ -1471,13 +1488,13 @@ aesni_gcm_precomp_avx_gen2:
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_enc_avx_gen2
-aesni_gcm_enc_avx_gen2:
+global aesni_gcm256_enc_avx_gen4
+aesni_gcm256_enc_avx_gen4:
         GCM_ENC_DEC     ENC
 ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm_dec_avx_gen2(
+;void   aesni_gcm256_dec_avx_gen4(
 ;        gcm_data        *my_ctx_data,     /* aligned to 16 Bytes */
 ;        u8      *out, /* Plaintext output. Decrypt in-place is allowed.  */
 ;        const   u8 *in, /* Ciphertext input */
@@ -1488,7 +1505,7 @@ ret
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_dec_avx_gen2
-aesni_gcm_dec_avx_gen2:
+global aesni_gcm256_dec_avx_gen4
+aesni_gcm256_dec_avx_gen4:
         GCM_ENC_DEC     DEC
 ret

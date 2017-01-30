@@ -348,7 +348,7 @@ vmovdqa  %%T_key, [arg1+16*0]
 %endrep
 
 %assign j 1
-%rep 9
+%rep 13
 vmovdqa  %%T_key, [arg1+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -445,7 +445,7 @@ vmovdqa  %%T_key, [arg1+16*j]
         
         
 %assign i 1
-%rep    9       ; do 9 rounds
+%rep    13       ; do 13 rounds
                 vmovdqa  %%T_key, [arg1+16*i]
                 vaesenc  %%XMM1, %%T_key
                 vaesenc  %%XMM2, %%T_key
@@ -834,6 +834,47 @@ vmovdqa  %%T_key, [arg1+16*j]
                                 
                 
                 vmovdqu         %%T5, [arg1 + 16*10]
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu		%%T5, [arg1 + 16*11]
+
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu		%%T5, [arg1 + 16*12]
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu		%%T5, [arg1 + 16*13]
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu		%%T5, [arg1 + 16*14]
 
 %assign i 0
 %assign j 1
@@ -1097,7 +1138,7 @@ vmovdqa  %%T_key, [arg1+16*j]
 
                 vpxor    %%XMM0, [arg1+16*0]
 %assign i 1
-%rep 9
+%rep 13
                 vaesenc  %%XMM0, [arg1+16*i]
 %assign i (i+1)
 %endrep
@@ -1391,12 +1432,12 @@ vmovdqa  %%T_key, [arg1+16*j]
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm_precomp_avx_gen2 
+;void   aesni_gcm256_precomp_avx_gen2 
 ;        (gcm_data     *my_ctx_data, 
 ;        u8     *hash_subkey); /* H, the Hash sub key input. Data starts on a 16-byte boundary. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_precomp_avx_gen2
-aesni_gcm_precomp_avx_gen2:
+global aesni_gcm256_precomp_avx_gen2
+aesni_gcm256_precomp_avx_gen2:
         ;the number of pushes must equal STACK_OFFSET
         push    r12
         push    r13
@@ -1471,8 +1512,8 @@ aesni_gcm_precomp_avx_gen2:
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_enc_avx_gen2
-aesni_gcm_enc_avx_gen2:
+global aesni_gcm256_enc_avx_gen2
+aesni_gcm256_enc_avx_gen2:
         GCM_ENC_DEC     ENC
 ret
 
@@ -1488,7 +1529,7 @@ ret
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_dec_avx_gen2
-aesni_gcm_dec_avx_gen2:
+global aesni_gcm256_dec_avx_gen2
+aesni_gcm256_dec_avx_gen2:
         GCM_ENC_DEC     DEC
 ret

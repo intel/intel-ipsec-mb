@@ -324,7 +324,7 @@ vmovdqa  %%T_key, [arg1+16*j]
 %endrep 
 
 
-vmovdqa  %%T_key, [arg1+16*10]
+vmovdqa  %%T_key, [arg1+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 vaesenclast      reg(i),%%T_key
@@ -1076,7 +1076,7 @@ vmovdqa  %%T_key, [arg1+16*10]
                 vaesenc  %%XMM0, [arg1+16*i]
 %assign i (i+1)
 %endrep
-                vaesenclast      %%XMM0, [arg1+16*10]
+                vaesenclast      %%XMM0, [arg1+16*i]
 %endmacro
 
 
