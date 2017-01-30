@@ -1462,9 +1462,19 @@ aesni_gcm_precomp_sse:
         ; only xmm6 needs to be maintained
         movdqa [rsp + XMM_SAVE + 0*16],xmm6
 %endif          
-        
-        movdqu  xmm6, [arg2]                            ; xmm6 = HashKey
+        mov     r12, arg2                               ; arg2 NULL then ignored
+        or      r12, r12
+        je      ._zerohash
 
+        movdqu  xmm6, [arg2]                            ; xmm6 = HashKey
+        jmp     ._ecbenc
+
+._zerohash:        
+        pxor    xmm6, xmm6                              ; xmm6 = ZERO
+        
+._ecbenc: 
+        ENCRYPT_SINGLE_BLOCK xmm6
+        
         pshufb  xmm6, [rel SHUF_MASK]
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
         movdqa  xmm2, xmm6
