@@ -72,6 +72,7 @@ NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
 LDFLAGS += -g
 
 lib_objs := \
+	aes_ecbenc.o \
 	aes128_cbc_dec_by4_sse.o \
 	aes128_cbc_dec_by8_avx.o \
 	aes128_cntr_by4_sse.o \
