@@ -39,11 +39,14 @@ CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /Gy  /fp:precise /EHsc /I.. /I..\i
 
 all: $(APP)
 
-$(APP): main.obj $(IPSECLIB)
-	$(CC) /Fe$(APP) /MT main.obj $(IPSECLIB)
+$(APP): main.obj gcm_std_vectors_test.obj $(IPSECLIB)
+	$(CC) /Fe$(APP) /MT main.obj gcm_std_vectors_test.obj $(IPSECLIB)
 
 main.obj: main.c do_test.h
 	$(CC) /c $(CFLAGS) main.c
+
+gcm_std_vectors_test.obj: gcm_std_vectors_test.c gcm_std_vectors_test.h gcm_vectors.h
+	$(CC) /c $(CFLAGS) gcm_std_vectors_test.c
 
 clean:
 	del /q main.obj $(APP)

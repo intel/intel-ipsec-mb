@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, Intel Corporation
+ * Copyright (c) 2017, Intel Corporation
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -25,51 +25,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef GCM_STD_VECTORS_TEST_H_
+#define GCM_STD_VECTORS_TEST_H_
 
-#include "mb_mgr.h"
-#include "aux_funcs.h"
-#include "gcm_std_vectors_test.h"
+enum arch_type {
+        ARCH_SSE,
+        ARCH_AVX,
+        ARCH_AVX2,
+        ARCH_AVX512,
+        ARCH_NUMOF
+};
 
-#define TEST_SSE  1
-#define TEST_AVX  2
-#define TEST_AVX2 3
+int gcm_test(int seed, const enum arch_type arch);
 
-#define TEST TEST_SSE
-#include "do_test.h"
-#undef TEST
-#define TEST TEST_AVX
-#include "do_test.h"
-#undef TEST
-#define TEST TEST_AVX2
-#include "do_test.h"
-
-int
-main(int argc, char **argv)
-{
-        MB_MGR mb_mgr;
-
-        printf("Testing SSE interface\n");
-        init_mb_mgr_sse(&mb_mgr);
-        known_answer_test_sse(&mb_mgr);
-        do_test_sse(&mb_mgr);
-        gcm_test(0, ARCH_SSE);
-        
-        printf("Testing AVX interface\n");
-        init_mb_mgr_avx(&mb_mgr);
-        known_answer_test_avx(&mb_mgr);
-        do_test_avx(&mb_mgr);
-        gcm_test(0, ARCH_AVX);
-
-        printf("Testing AVX2 interface\n");
-        init_mb_mgr_avx2(&mb_mgr);
-        known_answer_test_avx2(&mb_mgr);
-        do_test_avx2(&mb_mgr);
-        gcm_test(0, ARCH_AVX2);
-
-        printf("Test completed\n");
-
-        return 0;
-}
+#endif /* GCM_STD_VECTORS_TEST_H_ */

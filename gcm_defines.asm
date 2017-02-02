@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -35,36 +35,26 @@ section .data
 
 align 16
 
-POLY:	;DDQ	0xC2000000000000000000000000000001
-	DQ	0x0000000000000001, 0xC200000000000000
-POLY2:	;DDQ	0xC20000000000000000000001C2000000
-	DQ	0x00000001C2000000, 0xC200000000000000
-TWOONE:	;DDQ	0x00000001000000000000000000000001
-	DQ	0x0000000000000001, 0x0000000100000000
+POLY            dq     0x0000000000000001, 0xC200000000000000
+POLY2           dq     0x00000001C2000000, 0xC200000000000000
+TWOONE          dq     0x0000000000000001, 0x0000000100000000
 
 ; order of these constants should not change.
 ; more specifically, ALL_F should follow SHIFT_MASK, and ZERO should follow ALL_F
 
-SHUF_MASK:	;DDQ	0x000102030405060708090A0B0C0D0E0F
-	DQ	0x08090A0B0C0D0E0F, 0x0001020304050607
-SHIFT_MASK:	;DDQ	0x0f0e0d0c0b0a09080706050403020100
-	DQ	0x0706050403020100, 0x0f0e0d0c0b0a0908
-ALL_F:		;DDQ	0xffffffffffffffffffffffffffffffff
-	DQ	0xffffffffffffffff, 0xffffffffffffffff
-ZERO:		;DDQ	0x00000000000000000000000000000000
-	DQ	0x0000000000000000, 0x0000000000000000
-ONE:		;DDQ	0x00000000000000000000000000000001
-	DQ	0x0000000000000001, 0x0000000000000000
-ONEf:		;DDQ	0x01000000000000000000000000000000
-	DQ	0x0000000000000000, 0x0100000000000000
+SHUF_MASK       dq     0x08090A0B0C0D0E0F, 0x0001020304050607
+SHIFT_MASK      dq     0x0706050403020100, 0x0f0e0d0c0b0a0908
+ALL_F           dq     0xffffffffffffffff, 0xffffffffffffffff
+ZERO            dq     0x0000000000000000, 0x0000000000000000
+ONE             dq     0x0000000000000001, 0x0000000000000000
+ONEf            dq     0x0000000000000000, 0x0100000000000000
 
 section .text
-
 
 ;;define the fields of gcm_data struct
 ;typedef struct gcm_data
 ;{
-;        u8 expanded_keys[16*11];
+;        u8 expanded_keys[16*15];
 ;        u8 shifted_hkey_1[16];  // store HashKey <<1 mod poly here
 ;        u8 shifted_hkey_2[16];  // store HashKey^2 <<1 mod poly here
 ;        u8 shifted_hkey_3[16];  // store HashKey^3 <<1 mod poly here
@@ -83,22 +73,29 @@ section .text
 ;        u8 shifted_hkey_8_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
 ;} gcm_data;
 
-%define HashKey         16*11    ; store HashKey <<1 mod poly here
-%define HashKey_2       16*12    ; store HashKey^2 <<1 mod poly here
-%define HashKey_3       16*13    ; store HashKey^3 <<1 mod poly here
-%define HashKey_4       16*14    ; store HashKey^4 <<1 mod poly here
-%define HashKey_5       16*15    ; store HashKey^5 <<1 mod poly here
-%define HashKey_6       16*16    ; store HashKey^6 <<1 mod poly here
-%define HashKey_7       16*17    ; store HashKey^7 <<1 mod poly here
-%define HashKey_8       16*18    ; store HashKey^8 <<1 mod poly here
-%define HashKey_k       16*19    ; store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_2_k     16*20    ; store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_3_k     16*21   ; store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_4_k     16*22   ; store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_5_k     16*23   ; store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_6_k     16*24   ; store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_7_k     16*25   ; store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_8_k     16*26   ; store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey         16*15    ; store HashKey <<1 mod poly here
+%define HashKey_2       16*16    ; store HashKey^2 <<1 mod poly here
+%define HashKey_3       16*17    ; store HashKey^3 <<1 mod poly here
+%define HashKey_4       16*18    ; store HashKey^4 <<1 mod poly here
+%define HashKey_5       16*19    ; store HashKey^5 <<1 mod poly here
+%define HashKey_6       16*20    ; store HashKey^6 <<1 mod poly here
+%define HashKey_7       16*21    ; store HashKey^7 <<1 mod poly here
+%define HashKey_8       16*22    ; store HashKey^8 <<1 mod poly here
+%define HashKey_k       16*23    ; store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_2_k     16*24    ; store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_3_k     16*25   ; store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_4_k     16*26   ; store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_5_k     16*27   ; store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_6_k     16*28   ; store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_7_k     16*29   ; store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_8_k     16*30   ; store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
+%define AadHash		16*31	; store current Hash of data which has been input
+%define AadLen		16*32	; store length of input data which will not be encrypted or decrypted
+%define InLen		16*32+8	; store length of input data which will be encrypted or decrypted
+%define PBlockEncKey	16*33	; encryption key for the partial block at the end of the previous update
+%define OrigIV		16*34	; input IV
+%define CurCount	16*35	; Current counter for generation of encryption key
+%define PBlockLen	16*36	; length of partial block at the end of the previous update
 
 %define reg(q) xmm %+ q
 
@@ -115,7 +112,6 @@ section .text
     %xdefine arg7 [r14 + STACK_OFFSET + 8*7]
     %xdefine arg8 [r14 + STACK_OFFSET + 8*8]
     %xdefine arg9 [r14 + STACK_OFFSET + 8*9]
-
 %else
     %xdefine arg1 rdi
     %xdefine arg2 rsi
@@ -126,5 +122,10 @@ section .text
     %xdefine arg7 [r14 + STACK_OFFSET + 8*1]
     %xdefine arg8 [r14 + STACK_OFFSET + 8*2]
     %xdefine arg9 [r14 + STACK_OFFSET + 8*3]
-
 %endif
+
+%define	XLDR	movdqu
+%define	VXLDR	vmovdqu
+
+%define	XSTR	movdqu
+%define	VXSTR	vmovdqu

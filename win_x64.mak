@@ -167,11 +167,18 @@ lib_objs = \
 	$(OBJ_DIR)\md5_one_block.obj
 
 gcm_objs = \
-        $(OBJ_DIR)\gcm_sse.obj \
-	$(OBJ_DIR)\gcm_avx_gen2.obj \
-	$(OBJ_DIR)\gcm_avx_gen4.obj
+        $(OBJ_DIR)\gcm128_sse.obj \
+	$(OBJ_DIR)\gcm128_avx_gen2.obj \
+	$(OBJ_DIR)\gcm128_avx_gen4.obj \
+        $(OBJ_DIR)\gcm256_sse.obj \
+	$(OBJ_DIR)\gcm256_avx_gen2.obj \
+	$(OBJ_DIR)\gcm256_avx_gen4.obj
 
+!ifdef NO_GCM
+all_objs = $(lib_objs)
+!else
 all_objs = $(lib_objs) $(gcm_objs)
+!endif
 
 all: $(LIBNAME)
 

@@ -25,17 +25,18 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 MYLIB := ../libIPSec_MB.a
-CFLAGS := -g -O2 -DLINUX -I../include -I..
+CFLAGS := -g -O3 -DLINUX -I../include -I..
 LDFLAGS := -g
 APP := ipsec_MB_testapp
 
 all: $(APP)
 
-$(APP): main.o $(MYLIB)
-	$(CC) $(LDFLAGS) -o $@ main.o $(MYLIB)
+$(APP): main.o gcm_std_vectors_test.o $(MYLIB)
+	$(CC) $(LDFLAGS) -o $@ main.o gcm_std_vectors_test.o $(MYLIB)
 
 main.o: main.c do_test.h
+gcm_std_vectors_test.o: gcm_std_vectors_test.c gcm_std_vectors_test.h gcm_vectors.h
 
 .PHONY: clean
 clean:
-	-rm -f main.o ipsec_MB_testapp
+	-rm -f main.o gcm_std_vectors_test.o $(APP)

@@ -35,23 +35,19 @@ OBJ_DIR = obj
 INCLUDE_DIRS := include .
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
 
-CXX ?= g++
 CC ?= gcc
 
-CXXFLAGS := -DLINUX $(EXTRA_CFLAGS) $(INCLUDES) \
+CFLAGS := -DLINUX $(EXTRA_CFLAGS) $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
-	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels
-
-CFLAGS := $(CXXFLAGS) -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
+	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
+	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
 
 ifeq ($(DEBUG),y)
-CXXFLAGS += -g -O0 -DDEBUG
 CFLAGS += -g -O0 -DDEBUG
 else
-CXXFLAGS += -O2 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
-CFLAGS += -O2 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
+CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
 ASM_INCLUDE_DIRS := include . avx avx2 avx512 sse
@@ -185,9 +181,15 @@ lib_objs := \
 	mb_mgr_sse.o \
 	md5_one_block.o
 
-gcm_objs := gcm_sse.o gcm_avx_gen2.o gcm_avx_gen4.o
+gcm_objs := gcm128_sse.o gcm256_sse.o \
+	gcm128_avx_gen2.o gcm256_avx_gen2.o \
+	gcm128_avx_gen4.o gcm256_avx_gen4.o
 
+ifeq ($(NO_GCM), y)
+obj2_files := $(lib_objs:%=$(OBJ_DIR)/%)
+else
 obj2_files := $(lib_objs:%=$(OBJ_DIR)/%) $(gcm_objs:%=$(OBJ_DIR)/%)
+endif
 
 all: $(LIB)
 
@@ -196,14 +198,9 @@ $(LIB): $(obj2_files)
 
 $(obj2_files): | $(OBJ_DIR)
 
-$(OBJ_DIR)/%.o:%.cpp
-	@ echo "Making object file $@ "
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
-
 $(OBJ_DIR)/%.o:%.c
 	@ echo "Making object file $@ "
-	$(CC) -c $(CXXFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:%.asm
@@ -215,14 +212,9 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:sse/%.cpp
-	@ echo "Making object file $@ "
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
-
 $(OBJ_DIR)/%.o:sse/%.c
 	@ echo "Making object file $@ "
-	$(CC) -c $(CXXFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:sse/%.asm
@@ -234,14 +226,9 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx/%.cpp
-	@ echo "Making object file $@ "
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
-
 $(OBJ_DIR)/%.o:avx/%.c
 	@ echo "Making object file $@ "
-	$(CC) -c $(CXXFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx/%.asm
@@ -253,14 +240,9 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx2/%.cpp
-	@ echo "Making object file $@ "
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
-
 $(OBJ_DIR)/%.o:avx2/%.c
 	@ echo "Making object file $@ "
-	$(CC) -c $(CXXFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx2/%.asm
@@ -272,14 +254,9 @@ else
 endif
 	@ echo "--------------------------------------------------------------"
 
-$(OBJ_DIR)/%.o:avx512/%.cpp
-	@ echo "Making object file $@ "
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
-
 $(OBJ_DIR)/%.o:avx512/%.c
 	@ echo "Making object file $@ "
-	$(CC) -c $(CXXFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx512/%.asm
