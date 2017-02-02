@@ -324,7 +324,7 @@ vmovdqa  %%T_key, [arg1+16*j]
 %endrep 
 
 
-vmovdqa  %%T_key, [arg1+16*10]
+vmovdqa  %%T_key, [arg1+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 vaesenclast      reg(i),%%T_key
@@ -1076,7 +1076,7 @@ vmovdqa  %%T_key, [arg1+16*10]
                 vaesenc  %%XMM0, [arg1+16*i]
 %assign i (i+1)
 %endrep
-                vaesenclast      %%XMM0, [arg1+16*10]
+                vaesenclast      %%XMM0, [arg1+16*i]
 %endmacro
 
 
@@ -1389,9 +1389,19 @@ aesni_gcm_precomp_avx_gen4:
         ; only xmm6 needs to be maintained
         vmovdqa [rsp + XMM_SAVE + 0*16],xmm6
 %endif          
-        
-        vmovdqu  xmm6, [arg2]                            ; xmm6 = HashKey
+        mov     r12, arg2                               ; arg2 NULL then ignored
+        or      r12, r12
+        je      ._zerohash
 
+        vmovdqu  xmm6, [arg2]                           ; xmm6 = HashKey
+        jmp     ._ecbenc
+
+._zerohash:        
+        vpxor    xmm6, xmm6                             ; xmm6 = ZERO
+        
+._ecbenc:
+        ENCRYPT_SINGLE_BLOCK xmm6
+        
         vpshufb  xmm6, [rel SHUF_MASK]
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
         vmovdqa  xmm2, xmm6

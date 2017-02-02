@@ -213,7 +213,7 @@ aes_keyexp_128_avx:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; void aes_keyexp_128_enc_sse(UINT128 *key,
+; void aes_keyexp_128_enc_xxx(const UINT128 *key,
 ;                             UINT128 *enc_exp_keys);
 ;
 ; arg 1: rcx: pointer to key

@@ -64,7 +64,7 @@ section .text
 ;;define the fields of gcm_data struct
 ;typedef struct gcm_data
 ;{
-;        u8 expanded_keys[16*11];
+;        u8 expanded_keys[16*15];
 ;        u8 shifted_hkey_1[16];  // store HashKey <<1 mod poly here
 ;        u8 shifted_hkey_2[16];  // store HashKey^2 <<1 mod poly here
 ;        u8 shifted_hkey_3[16];  // store HashKey^3 <<1 mod poly here
@@ -83,22 +83,22 @@ section .text
 ;        u8 shifted_hkey_8_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
 ;} gcm_data;
 
-%define HashKey         16*11    ; store HashKey <<1 mod poly here
-%define HashKey_2       16*12    ; store HashKey^2 <<1 mod poly here
-%define HashKey_3       16*13    ; store HashKey^3 <<1 mod poly here
-%define HashKey_4       16*14    ; store HashKey^4 <<1 mod poly here
-%define HashKey_5       16*15    ; store HashKey^5 <<1 mod poly here
-%define HashKey_6       16*16    ; store HashKey^6 <<1 mod poly here
-%define HashKey_7       16*17    ; store HashKey^7 <<1 mod poly here
-%define HashKey_8       16*18    ; store HashKey^8 <<1 mod poly here
-%define HashKey_k       16*19    ; store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_2_k     16*20    ; store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_3_k     16*21   ; store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_4_k     16*22   ; store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_5_k     16*23   ; store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_6_k     16*24   ; store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_7_k     16*25   ; store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_8_k     16*26   ; store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey         16*15    ; store HashKey <<1 mod poly here
+%define HashKey_2       16*16    ; store HashKey^2 <<1 mod poly here
+%define HashKey_3       16*17    ; store HashKey^3 <<1 mod poly here
+%define HashKey_4       16*18    ; store HashKey^4 <<1 mod poly here
+%define HashKey_5       16*19    ; store HashKey^5 <<1 mod poly here
+%define HashKey_6       16*20    ; store HashKey^6 <<1 mod poly here
+%define HashKey_7       16*21    ; store HashKey^7 <<1 mod poly here
+%define HashKey_8       16*22    ; store HashKey^8 <<1 mod poly here
+%define HashKey_k       16*23    ; store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_2_k     16*24    ; store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_3_k     16*25   ; store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_4_k     16*26   ; store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_5_k     16*27   ; store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_6_k     16*28   ; store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_7_k     16*29   ; store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_8_k     16*30   ; store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
 
 %define reg(q) xmm %+ q
 

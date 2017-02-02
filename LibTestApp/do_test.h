@@ -414,7 +414,8 @@ DO_TEST(MB_MGR *mb_mgr)
                 } // end while (job)
         } // end for i
 
-        while (job = flush_job(mb_mgr)) {
+        while ((job = flush_job(mb_mgr)) != NULL) {
+                ;
         }
 
         TEST_AUX_FUNC();

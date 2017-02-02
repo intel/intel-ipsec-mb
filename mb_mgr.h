@@ -25,6 +25,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _MB_MGR_H_
+#define _MB_MGR_H_
 
 #include "types.h"
 #include "constants.h"
@@ -130,7 +132,7 @@ typedef struct {
 ////////////////////////////////////////////////////////////////////////
 // TOP LEVEL (MB_MGR) Data structure fields
 
-typedef struct {
+typedef struct MB_MGR {
         MB_MGR_AES_OOO aes128_ooo;
         MB_MGR_AES_OOO aes192_ooo;
         MB_MGR_AES_OOO aes256_ooo;
@@ -163,21 +165,21 @@ void init_mb_mgr_avx(MB_MGR *state);
 JOB_AES_HMAC* submit_job_avx(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
 JOB_AES_HMAC* flush_job_avx(MB_MGR *state);
-UINT32 queue_size_avx(MB_MGR *state);
+UINT32 queue_size_avx(const MB_MGR *state);
 
 void init_mb_mgr_avx2(MB_MGR *state);
 //JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
 JOB_AES_HMAC* submit_job_avx2(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
 JOB_AES_HMAC* flush_job_avx2(MB_MGR *state);
-UINT32 queue_size_avx2(MB_MGR *state);
+UINT32 queue_size_avx2(const MB_MGR *state);
 
 void init_mb_mgr_avx512(MB_MGR *state);
 //JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
 JOB_AES_HMAC* submit_job_avx512(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
 JOB_AES_HMAC* flush_job_avx512(MB_MGR *state);
-UINT32 queue_size_avx512(MB_MGR *state);
+UINT32 queue_size_avx512(const MB_MGR *state);
 
 
 void init_mb_mgr_sse(MB_MGR *state);
@@ -185,7 +187,7 @@ void init_mb_mgr_sse(MB_MGR *state);
 JOB_AES_HMAC* submit_job_sse(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_sse(MB_MGR *state);
 JOB_AES_HMAC* flush_job_sse(MB_MGR *state);
-UINT32 queue_size_sse(MB_MGR *state);
+UINT32 queue_size_sse(const MB_MGR *state);
 
 typedef void          (*init_mb_mgr_t)(MB_MGR *state);
 typedef JOB_AES_HMAC* (*get_next_job_t)(MB_MGR *state);
@@ -255,3 +257,5 @@ get_next_job_sse(MB_MGR *state)
 {
         return JOBS(state, state->next_job);
 }
+
+#endif /* !_MB_MGR_H_ */

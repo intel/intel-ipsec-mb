@@ -364,7 +364,7 @@ movdqa  %%T_key, [arg1+16*0]
 %endrep
 
 %assign j 1
-%rep 9
+%rep 13
 movdqa  %%T_key, [arg1+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -461,7 +461,7 @@ movdqa  %%T_key, [arg1+16*j]
         
         
 %assign i 1
-%rep    9       ; do 9 rounds
+%rep    13       ; do 13 rounds
                 movdqa  %%T_key, [arg1+16*i]
                 aesenc  %%XMM1, %%T_key
                 aesenc  %%XMM2, %%T_key
@@ -869,8 +869,47 @@ movdqa  %%T_key, [arg1+16*j]
                 aesenc  %%XMM7, %%T1
                 aesenc  %%XMM8, %%T1
 
-                
-                movdqa  %%T5, [arg1 + 16*10]
+                movdqa	%%T1, [arg1 + 16*10]
+		aesenc	%%XMM1, %%T1
+		aesenc	%%XMM2, %%T1
+		aesenc	%%XMM3, %%T1
+		aesenc	%%XMM4, %%T1
+		aesenc	%%XMM5, %%T1
+		aesenc	%%XMM6, %%T1
+		aesenc	%%XMM7, %%T1
+		aesenc	%%XMM8, %%T1
+
+		movdqa	%%T1, [arg1 + 16*11]
+		aesenc	%%XMM1, %%T1
+		aesenc	%%XMM2, %%T1
+		aesenc	%%XMM3, %%T1
+		aesenc	%%XMM4, %%T1
+		aesenc	%%XMM5, %%T1
+		aesenc	%%XMM6, %%T1
+		aesenc	%%XMM7, %%T1
+		aesenc	%%XMM8, %%T1
+
+		movdqa	%%T1, [arg1 + 16*12]
+		aesenc	%%XMM1, %%T1
+		aesenc	%%XMM2, %%T1
+		aesenc	%%XMM3, %%T1
+		aesenc	%%XMM4, %%T1
+		aesenc	%%XMM5, %%T1
+		aesenc	%%XMM6, %%T1
+		aesenc	%%XMM7, %%T1
+		aesenc	%%XMM8, %%T1
+
+		movdqa	%%T1, [arg1 + 16*13]
+		aesenc	%%XMM1, %%T1
+		aesenc	%%XMM2, %%T1
+		aesenc	%%XMM3, %%T1
+		aesenc	%%XMM4, %%T1
+		aesenc	%%XMM5, %%T1
+		aesenc	%%XMM6, %%T1
+		aesenc	%%XMM7, %%T1
+		aesenc	%%XMM8, %%T1
+
+		movdqa	%%T5, [arg1 + 16*14]        ; finish last key round
 
 %assign i 0
 %assign j 1
@@ -1146,7 +1185,7 @@ movdqa  %%T_key, [arg1+16*j]
 %define %%ST  %1
                 pxor    %%ST, [arg1+16*0]
 %assign i 1
-%rep 9
+%rep 13
                 aesenc  %%ST, [arg1+16*i]
 %assign i (i+1)
 %endrep
@@ -1439,12 +1478,12 @@ movdqa  %%T_key, [arg1+16*j]
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void	aesni_gcm_precomp_sse 
-;        (gcm_data     *my_ctx_data, 
+;void	aesni_gcm256_precomp_sse 
+;        (gcm_data     *my_ctx_data, /* H, Data starts on a 16-byte boundary. */
 ;        u8	*hash_subkey); /* H, the Hash sub key input. Data starts on a 16-byte boundary. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_precomp_sse
-aesni_gcm_precomp_sse:
+global aesni_gcm256_precomp_sse
+aesni_gcm256_precomp_sse:
         ;the number of pushes must equal STACK_OFFSET
         push    r12
         push    r13
@@ -1474,7 +1513,7 @@ aesni_gcm_precomp_sse:
         
 ._ecbenc: 
         ENCRYPT_SINGLE_BLOCK xmm6
-        
+
         pshufb  xmm6, [rel SHUF_MASK]
         ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
         movdqa  xmm2, xmm6
@@ -1519,13 +1558,13 @@ aesni_gcm_precomp_sse:
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_enc_sse
-aesni_gcm_enc_sse:
+global aesni_gcm256_enc_sse
+aesni_gcm256_enc_sse:
         GCM_ENC_DEC     ENC
 ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void	aesni_gcm_dec_sse(
+;void	aesni_gcm256_dec_sse(
 ;        gcm_data        *my_ctx_data,     /* aligned to 16 Bytes */
 ;        u8      *out, /* Plaintext output. Decrypt in-place is allowed.  */
 ;        const   u8 *in, /* Ciphertext input */
@@ -1536,7 +1575,7 @@ ret
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm_dec_sse
-aesni_gcm_dec_sse:
+global aesni_gcm256_dec_sse
+aesni_gcm256_dec_sse:
         GCM_ENC_DEC     DEC
 ret

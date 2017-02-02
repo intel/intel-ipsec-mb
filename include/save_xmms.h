@@ -25,8 +25,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _SAVE_XMMX_H_
+#define _SAVE_XMMX_H_
+
 void save_xmms(UINT128 array[10]);
 void restore_xmms(UINT128 array[10]);
 
 void save_xmms_avx(UINT128 array[10]);
 void restore_xmms_avx(UINT128 array[10]);
+
+#endif /* !_SAVE_XMMX_H_ */

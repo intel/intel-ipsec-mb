@@ -25,6 +25,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _JOB_AES_HMAC_H_
+#define _JOB_AES_HMAC_H_
+
 #include "types.h"
 
 typedef enum {
@@ -71,7 +74,7 @@ typedef enum {
         AES_256_BYTES = 32
 } AES_KEY_SIZE_BYTES;
 
-typedef struct {
+typedef struct JOB_AES_HMAC {
         const UINT32 *aes_enc_key_expanded;  /* 16-byte aligned pointer. */
         const UINT32 *aes_dec_key_expanded;
         UINT64 aes_key_len_in_bytes; /* Only 16, 24, and  32 byte (128, 192 and 256-bit) keys supported at this time. */
@@ -117,3 +120,5 @@ typedef struct {
 #define _k1_expanded             u.XCBC._k1_expanded
 #define _k2                      u.XCBC._k2
 #define _k3                      u.XCBC._k3
+
+#endif /* !_JOB_AES_HMAC_H_ */
