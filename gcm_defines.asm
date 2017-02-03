@@ -52,26 +52,33 @@ ONEf            dq     0x0000000000000000, 0x0100000000000000
 section .text
 
 ;;define the fields of gcm_data struct
-;typedef struct gcm_data
-;{
-;        u8 expanded_keys[16*15];
-;        u8 shifted_hkey_1[16];  // store HashKey <<1 mod poly here
-;        u8 shifted_hkey_2[16];  // store HashKey^2 <<1 mod poly here
-;        u8 shifted_hkey_3[16];  // store HashKey^3 <<1 mod poly here
-;        u8 shifted_hkey_4[16];  // store HashKey^4 <<1 mod poly here
-;        u8 shifted_hkey_5[16];  // store HashKey^5 <<1 mod poly here
-;        u8 shifted_hkey_6[16];  // store HashKey^6 <<1 mod poly here
-;        u8 shifted_hkey_7[16];  // store HashKey^7 <<1 mod poly here
-;        u8 shifted_hkey_8[16];  // store HashKey^8 <<1 mod poly here
-;        u8 shifted_hkey_1_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
-;        u8 shifted_hkey_2_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
-;        u8 shifted_hkey_3_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
-;        u8 shifted_hkey_4_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
-;        u8 shifted_hkey_5_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
-;        u8 shifted_hkey_6_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
-;        u8 shifted_hkey_7_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
-;        u8 shifted_hkey_8_k[16];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
-;} gcm_data;
+;struct gcm_data {
+;        uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
+;        uint8_t shifted_hkey_1[GCM_ENC_KEY_LEN];  // store HashKey <<1 mod poly here
+;        uint8_t shifted_hkey_2[GCM_ENC_KEY_LEN];  // store HashKey^2 <<1 mod poly here
+;        uint8_t shifted_hkey_3[GCM_ENC_KEY_LEN];  // store HashKey^3 <<1 mod poly here
+;        uint8_t shifted_hkey_4[GCM_ENC_KEY_LEN];  // store HashKey^4 <<1 mod poly here
+;        uint8_t shifted_hkey_5[GCM_ENC_KEY_LEN];  // store HashKey^5 <<1 mod poly here
+;        uint8_t shifted_hkey_6[GCM_ENC_KEY_LEN];  // store HashKey^6 <<1 mod poly here
+;        uint8_t shifted_hkey_7[GCM_ENC_KEY_LEN];  // store HashKey^7 <<1 mod poly here
+;        uint8_t shifted_hkey_8[GCM_ENC_KEY_LEN];  // store HashKey^8 <<1 mod poly here
+;        uint8_t shifted_hkey_1_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
+;        uint8_t shifted_hkey_2_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
+;        uint8_t shifted_hkey_3_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
+;        uint8_t shifted_hkey_4_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
+;        uint8_t shifted_hkey_5_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
+;        uint8_t shifted_hkey_6_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
+;        uint8_t shifted_hkey_7_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
+;        uint8_t shifted_hkey_8_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
+;        // init, update and finalize context data
+;        uint8_t  aad_hash[GCM_BLOCK_LEN];
+;        uint64_t aad_length;
+;        uint64_t in_length;
+;        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
+;        uint8_t  orig_IV[GCM_BLOCK_LEN];
+;        uint8_t  current_counter[GCM_BLOCK_LEN];
+;        uint64_t  partial_block_length;
+;}
 
 %define HashKey         16*15    ; store HashKey <<1 mod poly here
 %define HashKey_2       16*16    ; store HashKey^2 <<1 mod poly here

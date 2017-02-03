@@ -544,7 +544,7 @@ default rel
 %define	%%ENC_DEC	%23
 
 %assign i (8-%%num_initial_blocks)
-		movdqu	reg(i), %%XMM8 ;move AAD_HASH to temp reg
+		vmovdqu	reg(i), %%XMM8 ;move AAD_HASH to temp reg
 	        ; start AES for %%num_initial_blocks blocks
 	        vmovdqu  %%CTR, [%%GDATA + CurCount]                   ; %%CTR = Y0
 

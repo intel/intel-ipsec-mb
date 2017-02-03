@@ -36,6 +36,6 @@ enum arch_type {
         ARCH_NUMOF
 };
 
-int gcm_test(int seed, const enum arch_type arch);
+int gcm_test(const enum arch_type arch);
 
 #endif /* GCM_STD_VECTORS_TEST_H_ */

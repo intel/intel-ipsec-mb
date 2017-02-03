@@ -55,19 +55,19 @@ main(int argc, char **argv)
         init_mb_mgr_sse(&mb_mgr);
         known_answer_test_sse(&mb_mgr);
         do_test_sse(&mb_mgr);
-        gcm_test(0, ARCH_SSE);
+        gcm_test(ARCH_SSE);
         
         printf("Testing AVX interface\n");
         init_mb_mgr_avx(&mb_mgr);
         known_answer_test_avx(&mb_mgr);
         do_test_avx(&mb_mgr);
-        gcm_test(0, ARCH_AVX);
+        gcm_test(ARCH_AVX);
 
         printf("Testing AVX2 interface\n");
         init_mb_mgr_avx2(&mb_mgr);
         known_answer_test_avx2(&mb_mgr);
         do_test_avx2(&mb_mgr);
-        gcm_test(0, ARCH_AVX2);
+        gcm_test(ARCH_AVX2);
 
         printf("Test completed\n");
 
