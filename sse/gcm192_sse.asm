@@ -583,7 +583,7 @@ movdqu  %%T_key, [%%GDATA+16*0]
 %endrep
 
 %assign j 1
-%rep 13							; encrypt N blocks with 13 key rounds
+%rep 11							; encrypt N blocks with 11 key rounds
 movdqu  %%T_key, [%%GDATA+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -595,7 +595,7 @@ movdqu  %%T_key, [%%GDATA+16*j]
 %endrep
 
 
-movdqu  %%T_key, [%%GDATA+16*j]				; encrypt with last (14th) key round
+movdqu  %%T_key, [%%GDATA+16*j]				; encrypt with last (12th) key round
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 aesenclast      reg(i),%%T_key
@@ -677,7 +677,7 @@ movdqu  %%T_key, [%%GDATA+16*j]				; encrypt with last (14th) key round
 
 
 %assign i 1
-%rep    13       						; do early (13) rounds
+%rep    11       						; do early (11) rounds
                 movdqu  %%T_key, [%%GDATA+16*i]
                 aesenc  %%XMM1, %%T_key
                 aesenc  %%XMM2, %%T_key
@@ -1110,27 +1110,8 @@ movdqu  %%T_key, [%%GDATA+16*j]				; encrypt with last (14th) key round
 		aesenc	%%XMM7, %%T1
 		aesenc	%%XMM8, %%T1
 
-		movdqu	%%T1, [%%GDATA + 16*12]
-		aesenc	%%XMM1, %%T1
-		aesenc	%%XMM2, %%T1
-		aesenc	%%XMM3, %%T1
-		aesenc	%%XMM4, %%T1
-		aesenc	%%XMM5, %%T1
-		aesenc	%%XMM6, %%T1
-		aesenc	%%XMM7, %%T1
-		aesenc	%%XMM8, %%T1
 
-		movdqu	%%T1, [%%GDATA + 16*13]
-		aesenc	%%XMM1, %%T1
-		aesenc	%%XMM2, %%T1
-		aesenc	%%XMM3, %%T1
-		aesenc	%%XMM4, %%T1
-		aesenc	%%XMM5, %%T1
-		aesenc	%%XMM6, %%T1
-		aesenc	%%XMM7, %%T1
-		aesenc	%%XMM8, %%T1
-
-		movdqu	%%T5, [%%GDATA + 16*14]        ; finish last key round
+		movdqu	%%T5, [%%GDATA + 16*12]        ; finish last key round
 
 
 %assign i 0
@@ -1411,7 +1392,7 @@ movdqu  %%T_key, [%%GDATA+16*j]				; encrypt with last (14th) key round
 		movdqu	%%T1, [%%GDATA+16*0]
                 pxor    %%ST, %%T1
 %assign i 1
-%rep 13
+%rep 11
 		movdqu	%%T1, [%%GDATA+16*i]
                 aesenc  %%ST, %%T1
 %assign i (i+1)
@@ -1826,11 +1807,11 @@ movdqu  %%T_key, [%%GDATA+16*j]				; encrypt with last (14th) key round
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void	aesni_gcm256_precomp_sse
+;void	aesni_gcm192_precomp_sse
 ;        (gcm_data     *my_ctx_data);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm256_precomp_sse
-aesni_gcm256_precomp_sse:
+global aesni_gcm192_precomp_sse
+aesni_gcm192_precomp_sse:
         push    r12
         push    r13
         push    r14
@@ -1884,14 +1865,14 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_init_sse(
+;void   aesni_gcm192_init_sse(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *iv, /* Pre-counter block j0: 4 byte salt (from Security Association) concatenated with 8 byte Initialisation Vector (from IPSec ESP Payload) concatenated with 0x00000001. 16-byte pointer. */
 ;        const   u8 *aad, /* Additional Authentication Data (AAD)*/
 ;        u64     aad_len); /* Length of AAD in bytes (must be a multiple of 4 bytes). */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm256_init_sse
-aesni_gcm256_init_sse:
+global aesni_gcm192_init_sse
+aesni_gcm192_init_sse:
 	push	r12
 	push	r13
 %ifidn __OUTPUT_FORMAT__, win64
@@ -1912,14 +1893,14 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_enc_update_sse(
+;void   aesni_gcm192_enc_update_sse(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
 ;        u64     plaintext_len); /* Length of data in Bytes for encryption. must be a multiple of 16 bytes*/
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm256_enc_update_sse
-aesni_gcm256_enc_update_sse:
+global aesni_gcm192_enc_update_sse
+aesni_gcm192_enc_update_sse:
 
 	FUNC_SAVE
 
@@ -1931,14 +1912,14 @@ aesni_gcm256_enc_update_sse:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_dec_update_sse(
+;void   aesni_gcm192_dec_update_sse(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Plaintext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Cyphertext input */
 ;        u64     plaintext_len); /* Length of data in Bytes for encryption. must be a multiple of 16 bytes*/
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm256_dec_update_sse
-aesni_gcm256_dec_update_sse:
+global aesni_gcm192_dec_update_sse
+aesni_gcm192_dec_update_sse:
 
 	FUNC_SAVE
 
@@ -1950,13 +1931,13 @@ aesni_gcm256_dec_update_sse:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_enc_finalize_sse(
+;void   aesni_gcm192_enc_finalize_sse(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm256_enc_finalize_sse
-aesni_gcm256_enc_finalize_sse:
+global aesni_gcm192_enc_finalize_sse
+aesni_gcm192_enc_finalize_sse:
 
 	push r12
 
@@ -1985,13 +1966,13 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_dec_finalize_sse(
+;void   aesni_gcm192_dec_finalize_sse(
 ;	 gcm_data        *my_ctx_data,
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm256_dec_finalize_sse
-aesni_gcm256_dec_finalize_sse:
+global aesni_gcm192_dec_finalize_sse
+aesni_gcm192_dec_finalize_sse:
 
 	push r12
 
@@ -2020,7 +2001,7 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_enc_sse(
+;void   aesni_gcm192_enc_sse(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
@@ -2031,8 +2012,8 @@ ret
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm256_enc_sse
-aesni_gcm256_enc_sse:
+global aesni_gcm192_enc_sse
+aesni_gcm192_enc_sse:
 
 	FUNC_SAVE
 
@@ -2047,7 +2028,7 @@ aesni_gcm256_enc_sse:
 	ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_dec_sse(
+;void   aesni_gcm192_dec_sse(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Plaintext output. Decrypt in-place is allowed.  */
 ;        const   u8 *in, /* Ciphertext input */
@@ -2058,8 +2039,8 @@ aesni_gcm256_enc_sse:
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm256_dec_sse
-aesni_gcm256_dec_sse:
+global aesni_gcm192_dec_sse
+aesni_gcm192_dec_sse:
 
 	FUNC_SAVE
 

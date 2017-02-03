@@ -98,7 +98,6 @@ struct gcm_data {
         ;
 #endif
 
-
 /**
  * @brief GCM-AES Encryption using 128 bit keys
  *
@@ -273,14 +272,14 @@ aesni_gcm128_dec_finalize_avx_gen4(struct gcm_data *my_ctx_data,
  *
  */
 __forceinline
-void aesni_gcm128_pre_sse(uint8_t *key, struct gcm_data *gdata)
+void aesni_gcm128_pre_sse(const void *key, struct gcm_data *gdata)
 {
-        void aesni_gcm128_precomp_sse(struct gcm_data *);
+        extern void aesni_gcm128_precomp_sse(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
         //////
-        aes_keyexp_128_enc_sse(key, (uint8_t *) gdata->expanded_keys);
+        aes_keyexp_128_enc_sse(key, gdata->expanded_keys);
         aesni_gcm128_precomp_sse(gdata);
 }
 
@@ -294,14 +293,14 @@ void aesni_gcm128_pre_sse(uint8_t *key, struct gcm_data *gdata)
  * @param gdata GCM context data
  */
 __forceinline
-void aesni_gcm128_pre_avx_gen2(uint8_t *key, struct gcm_data *gdata)
+void aesni_gcm128_pre_avx_gen2(const void *key, struct gcm_data *gdata)
 {
-        void aesni_gcm128_precomp_avx_gen2(struct gcm_data *);
+        extern void aesni_gcm128_precomp_avx_gen2(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
         //////
-        aes_keyexp_128_enc_avx(key, (uint8_t *) gdata->expanded_keys);
+        aes_keyexp_128_enc_avx(key, gdata->expanded_keys);
         aesni_gcm128_precomp_avx_gen2(gdata);
 }
 
@@ -315,16 +314,150 @@ void aesni_gcm128_pre_avx_gen2(uint8_t *key, struct gcm_data *gdata)
  * @param gdata GCM context data
  */
 __forceinline
-void aesni_gcm128_pre_avx_gen4(uint8_t *key, struct gcm_data *gdata)
+void aesni_gcm128_pre_avx_gen4(const void *key, struct gcm_data *gdata)
 {
-        void aesni_gcm128_precomp_avx_gen4(struct gcm_data *);
+        extern void aesni_gcm128_precomp_avx_gen4(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
         //////
-        aes_keyexp_128_enc_avx2(key, (uint8_t *) gdata->expanded_keys);
+        aes_keyexp_128_enc_avx2(key, gdata->expanded_keys);
         aesni_gcm128_precomp_avx_gen4(gdata);
 }
+
+/**
+ * @brief pre-processes GCM192 key data (SSE version)
+ *
+ * Prefills the gcm data with key values for each round and
+ * the initial sub hash key for tag encoding
+ *
+ * @param key
+ * @param gdata GCM context data
+ *
+ */
+__forceinline
+void aesni_gcm192_pre_sse(const void *key, struct gcm_data *gdata)
+{
+        extern void aesni_gcm192_precomp_sse(struct gcm_data *);
+        //////
+        // Prefill the key values for each round of encrypting/decrypting
+        // Prefill the Sub Hash key values for encoding the tag
+        //////
+        aes_keyexp_192_enc_sse(key, gdata->expanded_keys);
+        aesni_gcm192_precomp_sse(gdata);
+}
+
+/**
+ * @brief pre-processes GCM192 key data (AVX version)
+ *
+ * Prefills the gcm data with key values for each round and
+ * the initial sub hash key for tag encoding
+ *
+ * @param key key data
+ * @param gdata GCM context data
+ */
+__forceinline
+void aesni_gcm192_pre_avx_gen2(const void *key, struct gcm_data *gdata)
+{
+        extern void aesni_gcm192_precomp_avx_gen2(struct gcm_data *);
+        //////
+        // Prefill the key values for each round of encrypting/decrypting
+        // Prefill the Sub Hash key values for encoding the tag
+        //////
+        aes_keyexp_192_enc_avx(key, gdata->expanded_keys);
+        aesni_gcm192_precomp_avx_gen2(gdata);
+}
+
+/**
+ * @brief pre-processes GCM192 key data (AVX version)
+ *
+ * Prefills the gcm data with key values for each round and
+ * the initial sub hash key for tag encoding
+ *
+ * @param key key data
+ * @param gdata GCM context data
+ */
+__forceinline
+void aesni_gcm192_pre_avx_gen4(const void *key, struct gcm_data *gdata)
+{
+        extern void aesni_gcm192_precomp_avx_gen4(struct gcm_data *);
+        //////
+        // Prefill the key values for each round of encrypting/decrypting
+        // Prefill the Sub Hash key values for encoding the tag
+        //////
+        aes_keyexp_192_enc_avx2(key, gdata->expanded_keys);
+        aesni_gcm192_precomp_avx_gen4(gdata);
+}
+
+/**
+ * @brief GCM-AES Encryption using 192 bit keys
+ *
+ * @param my_ctx_data GCM context data
+ * @param out Ciphertext output. Encrypt in-place is allowed.
+ * @param in Plaintext input.
+ * @param len Length of data in Bytes for encryption.
+ * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
+ *           concatenated with 8 byte Initialization Vector (from IPSec ESP
+ *           Payload) concatenated with 0x00000001. 16-byte pointer.
+ * @param aad Additional Authentication Data (AAD).
+ * @param aad_len Length of AAD.
+ * @param auth_tag Authenticated Tag output.
+ * @param auth_tag_len Authenticated Tag Length in bytes (must be
+ *                     a multiple of 4 bytes). Valid values are
+ *                     16 (most likely), 12 or 8.
+ */
+void
+aesni_gcm192_enc_sse(struct gcm_data *my_ctx_data,
+                     uint8_t *out, uint8_t const *in, uint64_t len,
+                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                     uint8_t *auth_tag, uint64_t auth_tag_len);
+
+void
+aesni_gcm192_enc_avx_gen2(struct gcm_data *my_ctx_data,
+                          uint8_t *out, uint8_t const *in, uint64_t len,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                          uint8_t *auth_tag, uint64_t auth_tag_len);
+
+void
+aesni_gcm192_enc_avx_gen4(struct gcm_data *my_ctx_data,
+                          uint8_t *out, uint8_t const *in, uint64_t len,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                          uint8_t *auth_tag, uint64_t auth_tag_len);
+
+/**
+ * @brief GCM-AES Decryption using 192 bit keys
+ *
+ * @param my_ctx_data GCM context data
+ * @param out Plaintext output. Decrypt in-place is allowed.
+ * @param in Ciphertext input.
+ * @param len Length of data in Bytes for decryption.
+ * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
+ *           concatenated with 8 byte Initialization Vector (from IPSec ESP
+ *           Payload) concatenated with 0x00000001. 16-byte pointer.
+ * @param aad Additional Authentication Data (AAD).
+ * @param aad_len Length of AAD.
+ * @param auth_tag Authenticated Tag output.
+ * @param auth_tag_len Authenticated Tag Length in bytes (must be
+ *                     a multiple of 4 bytes). Valid values are
+ *                     16 (most likely), 12 or 8.
+ */
+void
+aesni_gcm192_dec_sse(struct gcm_data *my_ctx_data,
+                     uint8_t *out, uint8_t const *in, uint64_t len,
+                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                     uint8_t *auth_tag, uint64_t auth_tag_len);
+
+void
+aesni_gcm192_dec_avx_gen2(struct gcm_data *my_ctx_data,
+                          uint8_t *out, uint8_t const *in, uint64_t len,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                          uint8_t *auth_tag, uint64_t auth_tag_len);
+
+void
+aesni_gcm192_dec_avx_gen4(struct gcm_data *my_ctx_data,
+                          uint8_t *out, uint8_t const *in, uint64_t len,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
  * @brief GCM-AES Encryption using 256 bit keys
@@ -498,7 +631,7 @@ aesni_gcm256_dec_finalize_avx_gen4(struct gcm_data *my_ctx_data,
  * the initial sub hash key for tag encoding
  */
 __forceinline
-void aesni_gcm256_pre_sse(uint8_t *key, struct gcm_data *gdata)
+void aesni_gcm256_pre_sse(const void *key, struct gcm_data *gdata)
 {
         struct gcm_data tmp;
         void aesni_gcm256_precomp_sse(struct gcm_data *);
@@ -517,15 +650,14 @@ void aesni_gcm256_pre_sse(uint8_t *key, struct gcm_data *gdata)
  * the initial sub hash key for tag encoding
  */
 __forceinline
-void aesni_gcm256_pre_avx_gen2(uint8_t *key, struct gcm_data *gdata)
+void aesni_gcm256_pre_avx_gen2(const void *key, struct gcm_data *gdata)
 {
-        struct gcm_data tmp;
-        void aesni_gcm256_precomp_avx_gen2(struct gcm_data *);
+        extern void aesni_gcm256_precomp_avx_gen2(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
         //////
-        aes_keyexp_256_avx(key, gdata->expanded_keys, tmp.expanded_keys);
+        aes_keyexp_256_enc_avx(key, gdata->expanded_keys);
         aesni_gcm256_precomp_avx_gen2(gdata);
 }
 
@@ -536,15 +668,14 @@ void aesni_gcm256_pre_avx_gen2(uint8_t *key, struct gcm_data *gdata)
  * the initial sub hash key for tag encoding
  */
 __forceinline
-void aesni_gcm256_pre_avx_gen4(uint8_t *key, struct gcm_data *gdata)
+void aesni_gcm256_pre_avx_gen4(const void *key, struct gcm_data *gdata)
 {
-        struct gcm_data tmp;
-        void aesni_gcm256_precomp_avx_gen4(struct gcm_data *);
+        extern void aesni_gcm256_precomp_avx_gen4(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
         //////
-        aes_keyexp_256_avx2(key, gdata->expanded_keys, tmp.expanded_keys);
+        aes_keyexp_256_enc_avx2(key, gdata->expanded_keys);
         aesni_gcm256_precomp_avx_gen4(gdata);
 }
 

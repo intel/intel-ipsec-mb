@@ -365,7 +365,7 @@ default rel
 
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; PARTIAL_BLOCK: Handles encryption/decryption and the tag partial blocks between update calls.
 ; Requires the input data be at least 1 byte long.
 ; Input: gcm_data struct* (GDATA), input text (PLAIN_CYPH_IN), input text length (PLAIN_CYPH_LEN),
@@ -557,7 +557,7 @@ vmovdqu  %%T_key, [%%GDATA+16*0]
 %endrep
 
 %assign j 1
-%rep 9
+%rep 11							; encrypt N blocks with 11 key rounds
 vmovdqu  %%T_key, [%%GDATA+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -569,7 +569,7 @@ vmovdqu  %%T_key, [%%GDATA+16*j]
 %endrep
 
 
-vmovdqu  %%T_key, [%%GDATA+16*10]
+vmovdqu  %%T_key, [%%GDATA+16*j] 			; encrypt with last (12th) key round
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 vaesenclast      reg(i),%%T_key
@@ -651,7 +651,7 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 
 
 %assign i 1
-%rep    9       ; do 9 rounds
+%rep    11       					; do early (11) rounds
                 vmovdqu  %%T_key, [%%GDATA+16*i]
                 vaesenc  %%XMM1, %%T_key
                 vaesenc  %%XMM2, %%T_key
@@ -1045,7 +1045,29 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
         vpxor           %%T1, %%T4, %%T3
 
 
-                vmovdqu %%T5, [%%GDATA + 16*10]
+		vmovdqu	%%T5, [%%GDATA + 16*10]
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+		vmovdqu	%%T5, [%%GDATA + 16*11]
+
+		vaesenc	%%XMM1, %%T5
+		vaesenc	%%XMM2, %%T5
+		vaesenc	%%XMM3, %%T5
+		vaesenc	%%XMM4, %%T5
+		vaesenc	%%XMM5, %%T5
+		vaesenc	%%XMM6, %%T5
+		vaesenc	%%XMM7, %%T5
+		vaesenc	%%XMM8, %%T5
+
+
+		vmovdqu	%%T5, [%%GDATA + 16*12]
 
 %assign i 0
 %assign j 1
@@ -1086,7 +1108,7 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 
 	vpxor		%%T7, %%T7, %%T2			; first phase of the reduction complete
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		%ifidn %%ENC_DEC, ENC
+                %ifidn %%ENC_DEC, ENC
 		VXSTR	[%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*0], %%XMM1			; Write to the Ciphertext buffer
 		VXSTR	[%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*1], %%XMM2			; Write to the Ciphertext buffer
 		VXSTR	[%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*2], %%XMM3			; Write to the Ciphertext buffer
@@ -1096,6 +1118,7 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 		VXSTR	[%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*6], %%XMM7			; Write to the Ciphertext buffer
 		VXSTR	[%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*7], %%XMM8			; Write to the Ciphertext buffer
                 %endif
+
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;second phase of the reduction
 	vpclmulqdq	%%T2, %%T3, %%T7, 0x00
@@ -1324,11 +1347,11 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 
                 vpxor    %%XMM0, %%XMM0, [%%GDATA+16*0]
 %assign i 1
-%rep 9
+%rep 11								; early key rounds (11)
                 vaesenc  %%XMM0, [%%GDATA+16*i]
 %assign i (i+1)
 %endrep
-                vaesenclast      %%XMM0, [%%GDATA+16*10]
+                vaesenclast      %%XMM0, [%%GDATA+16*i]		; final key round (12)
 %endmacro
 
 
@@ -1336,7 +1359,6 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 
 %macro FUNC_SAVE 0
 	;; Required for Update/GMC_ENC
-	;the number of pushes must equal STACK_OFFSET
 	push    r12
 	push    r13
 	push    r14
@@ -1391,7 +1413,7 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 ; Input: gcm_data struct* (GDATA), IV, Additional Authentication data (A_IN), Additional
 ; Data length (A_LEN)
 ; Output: Updated GDATA with the hash of A_IN (AadHash) and initialized other parts of GDATA.
-; Clobbers rax, r10-r13, and xmm0-xmm6
+; Clobbers rax, r10-r13 and xmm0-xmm6
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro	GCM_INIT 	4
 %define	%%GDATA		%1
@@ -1741,11 +1763,11 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm128_precomp_avx_gen4
+;void   aesni_gcm192_precomp_avx_gen4
 ;        (gcm_data     *my_ctx_data);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm128_precomp_avx_gen4
-aesni_gcm128_precomp_avx_gen4:
+global aesni_gcm192_precomp_avx_gen4
+aesni_gcm192_precomp_avx_gen4:
         push    r12
         push    r13
         push    r14
@@ -1799,14 +1821,14 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm128_init_avx_gen4(
+;void   aesni_gcm192_init_avx_gen4(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *iv, /* Pre-counter block j0: 4 byte salt (from Security Association) concatenated with 8 byte Initialisation Vector (from IPSec ESP Payload) concatenated with 0x00000001. 16-byte pointer. */
 ;        const   u8 *aad, /* Additional Authentication Data (AAD)*/
 ;        u64     aad_len); /* Length of AAD in bytes (must be a multiple of 4 bytes). */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm128_init_avx_gen4
-aesni_gcm128_init_avx_gen4:
+global aesni_gcm192_init_avx_gen4
+aesni_gcm192_init_avx_gen4:
 	push	r12
 	push	r13
 %ifidn __OUTPUT_FORMAT__, win64
@@ -1823,19 +1845,18 @@ aesni_gcm128_init_avx_gen4:
 %endif
 	pop	r13
 	pop	r12
-
 ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm128_enc_update_avx_gen4(
+;void   aesni_gcm192_enc_update_avx_gen4(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
 ;        u64     plaintext_len); /* Length of data in Bytes for encryption. must be a multiple of 16 bytes*/
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm128_enc_update_avx_gen4
-aesni_gcm128_enc_update_avx_gen4:
+global aesni_gcm192_enc_update_avx_gen4
+aesni_gcm192_enc_update_avx_gen4:
 
 	FUNC_SAVE
 
@@ -1847,14 +1868,14 @@ aesni_gcm128_enc_update_avx_gen4:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm128_dec_update_avx_gen4(
+;void   aesni_gcm192_dec_update_avx_gen4(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Plaintext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Cyphertext input */
 ;        u64     plaintext_len); /* Length of data in Bytes for encryption. must be a multiple of 16 bytes*/
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm128_dec_update_avx_gen4
-aesni_gcm128_dec_update_avx_gen4:
+global aesni_gcm192_dec_update_avx_gen4
+aesni_gcm192_dec_update_avx_gen4:
 
 	FUNC_SAVE
 
@@ -1866,13 +1887,13 @@ aesni_gcm128_dec_update_avx_gen4:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm128_enc_finalize_avx_gen4(
+;void   aesni_gcm192_enc_finalize_avx_gen4(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm128_enc_finalize_avx_gen4
-aesni_gcm128_enc_finalize_avx_gen4:
+global aesni_gcm192_enc_finalize_avx_gen4
+aesni_gcm192_enc_finalize_avx_gen4:
 
 	push r12
 
@@ -1901,13 +1922,13 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm128_dec_finalize_avx_gen4(
+;void   aesni_gcm192_dec_finalize_avx_gen4(
 ;	 gcm_data        *my_ctx_data,
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm128_dec_finalize_avx_gen4
-aesni_gcm128_dec_finalize_avx_gen4:
+global aesni_gcm192_dec_finalize_avx_gen4
+aesni_gcm192_dec_finalize_avx_gen4:
 
 	push r12
 
@@ -1936,7 +1957,7 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm128_enc_avx_gen4(
+;void   aesni_gcm192_enc_avx_gen4(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
@@ -1947,8 +1968,8 @@ ret
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm128_enc_avx_gen4
-aesni_gcm128_enc_avx_gen4:
+global aesni_gcm192_enc_avx_gen4
+aesni_gcm192_enc_avx_gen4:
 
 	FUNC_SAVE
 
@@ -1963,7 +1984,7 @@ aesni_gcm128_enc_avx_gen4:
 	ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm128_dec_avx_gen4(
+;void   aesni_gcm192_dec_avx_gen4(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Plaintext output. Decrypt in-place is allowed.  */
 ;        const   u8 *in, /* Ciphertext input */
@@ -1974,8 +1995,8 @@ aesni_gcm128_enc_avx_gen4:
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global aesni_gcm128_dec_avx_gen4
-aesni_gcm128_dec_avx_gen4:
+global aesni_gcm192_dec_avx_gen4
+aesni_gcm192_dec_avx_gen4:
 
 	FUNC_SAVE
 
