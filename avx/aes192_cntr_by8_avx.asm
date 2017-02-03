@@ -31,6 +31,7 @@
 
 extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 extern                 ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
+extern CNTR_SHIFT_MASK, CNTR_ALL_F
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
@@ -63,10 +64,57 @@ extern                 ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define p_IV	rdx
 %define p_keys	r8
 %define p_out	r9
-%define num_bytes rax
+%define num_bytes r10
 %endif
 
-%define tmp	r10
+%define tmp	r11
+
+;;;Encryption of a single block for AVX
+;;; ENCRYPT_SSE(%%by)
+%macro ENCRYPT_AVX 1
+%define %%by    %1
+        vpshufb	xcounter, xbyteswap
+        vmovdqa	xdata0, xcounter
+        vpxor   xdata0, [p_keys + 16*0]
+%assign i 1
+%rep %%by
+        aesenc  xdata0, [p_keys + 16*i]
+%assign i (i+1)
+%endrep
+;;; created keystream
+        aesenclast xdata0, [p_keys + 16*i]
+
+;;; load target
+        add     p_in, num_bytes
+        vmovdqu  xdata1, [p_in - 16]
+        
+        lea     rax, [rel CNTR_SHIFT_MASK + 16]
+        sub     rax, num_bytes
+        vmovdqu xdata2, [rax]
+        vpshufb xdata1, xdata2
+
+%%_last_xor:
+;;; xor keystream
+        vpxor   xdata0, xdata1 
+
+;;; store
+        movq    rax, xdata0     ; mov lower
+        cmp     num_bytes, 8
+        jle     %%_less_than_8_bytes_left
+
+        mov     [p_out], rax
+        add     p_out, 8
+        vpsrldq xdata0, 8       ; shift 8byte
+        vmovq   rax, xdata0     ; mov lower
+        sub     num_bytes, 8
+        
+%%_less_than_8_bytes_left:
+        mov     BYTE [p_out], al
+        add     p_out, 1
+        shr     rax, 8
+        sub     num_bytes, 1
+        jne     %%_less_than_8_bytes_left
+%endmacro
 
 %macro do_aes_load 1
 	do_aes %1, 1
@@ -238,7 +286,7 @@ aes_cntr_192_avx:
 
 	mov	tmp, num_bytes
 	and	tmp, 7*16
-	jz	mult_of_8_blks
+	jz	chk             ; x8 > or < 15 (not 7 lines)
 
 	; 1 <= tmp <= 7
 	cmp	tmp, 4*16
@@ -252,30 +300,42 @@ lt4:
 eq1:
 	do_aes_load	1
 	add	p_out, 1*16
-	and	num_bytes, ~7*16
+	and	num_bytes, ~(7*16)
 	jz	do_return2
-	jmp	main_loop2
+        
+        cmp     num_bytes, 16
+        jg      main_loop2
+	jmp	last
 
 eq2:	
 	do_aes_load	2
 	add	p_out, 2*16
-	and	num_bytes, ~7*16
+	and	num_bytes, ~(7*16)
 	jz	do_return2
-	jmp	main_loop2
+        
+        cmp     num_bytes, 16
+        jg      main_loop2
+	jmp	last
 
 eq3:	
 	do_aes_load	3
 	add	p_out, 3*16
-	and	num_bytes, ~7*16
+	and	num_bytes, ~(7*16)
 	jz	do_return2
-	jmp	main_loop2
+        
+        cmp     num_bytes, 16
+        jg      main_loop2
+	jmp	last
 
 eq4:	
 	do_aes_load	4
 	add	p_out, 4*16
-	and	num_bytes, ~7*16
+	and	num_bytes, ~(7*16)
 	jz	do_return2
-	jmp	main_loop2
+        
+        cmp     num_bytes, 16
+        jg      main_loop2
+	jmp	last
 
 gt4:
 	cmp	tmp, 6*16
@@ -285,23 +345,37 @@ gt4:
 eq5:
 	do_aes_load	5
 	add	p_out, 5*16
-	and	num_bytes, ~7*16
+	and	num_bytes, ~(7*16)
 	jz	do_return2
-	jmp	main_loop2
+        
+        cmp     num_bytes, 16
+        jg      main_loop2
+	jmp	last
 
 eq6:
 	do_aes_load	6
 	add	p_out, 6*16
-	and	num_bytes, ~7*16
+	and	num_bytes, ~(7*16)
 	jz	do_return2
-	jmp	main_loop2
+        
+        cmp     num_bytes, 16
+        jg      main_loop2
+	jmp	last
 
 eq7:
 	do_aes_load	7
 	add	p_out, 7*16
-	and	num_bytes, ~7*16
+	and	num_bytes, ~(7*16)
 	jz	do_return2
-	jmp	main_loop2
+        
+        cmp     num_bytes, 16
+        jg      main_loop2
+	jmp	last
+
+chk:
+        cmp	num_bytes, 16
+        jg      mult_of_8_blks
+        jmp     last
 
 mult_of_8_blks:
 	vmovdqa	xkey0, [p_keys + 0*16]
@@ -314,8 +388,13 @@ main_loop2:
 	do_aes_noload	8
 	add	p_out,	8*16
 	sub	num_bytes, 8*16
-	jne	main_loop2
+        jz      do_return2
+        cmp	num_bytes, 16
+	jg	main_loop2
 
+last:
+        ENCRYPT_AVX 11
+        
 do_return2:
 ; don't return updated IV
 ;	vpshufb	xcounter, xcounter, xbyteswap

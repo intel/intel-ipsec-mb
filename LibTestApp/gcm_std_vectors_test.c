@@ -431,7 +431,7 @@ static int test_gcm_std_vectors(void)
                 default:
                         is_error = -1;
                         break;
-                }
+		}
 		if (0 != is_error)
 			return is_error;
 	}
