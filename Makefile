@@ -181,9 +181,9 @@ lib_objs := \
 	mb_mgr_sse.o \
 	md5_one_block.o
 
-gcm_objs := gcm128_sse.o gcm256_sse.o \
-	gcm128_avx_gen2.o gcm256_avx_gen2.o \
-	gcm128_avx_gen4.o gcm256_avx_gen4.o
+gcm_objs := gcm128_sse.o gcm192_sse.o gcm256_sse.o \
+	gcm128_avx_gen2.o gcm192_avx_gen2.o gcm256_avx_gen2.o \
+	gcm128_avx_gen4.o gcm192_avx_gen4.o gcm256_avx_gen4.o
 
 ifeq ($(NO_GCM), y)
 obj2_files := $(lib_objs:%=$(OBJ_DIR)/%)
