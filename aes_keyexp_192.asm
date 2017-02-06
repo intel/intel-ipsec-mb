@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -263,3 +263,129 @@ aes_keyexp_192_avx:
 %endif
 
      ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; void aes_keyexp_192_enc_sse(UINT128 *key,
+;                             UINT128 *enc_exp_keys);
+;
+; arg 1: rcx: pointer to key
+; arg 2: rdx: pointer to expanded key array for encrypt
+;
+global aes_keyexp_192_enc_sse
+aes_keyexp_192_enc_sse:
+
+%ifndef LINUX
+	sub	rsp, 16*2 + 8
+	movdqa	[rsp + 0*16], xmm6
+	movdqa	[rsp + 1*16], xmm7
+%endif
+
+	movq xmm7, [KEY + 16]	; loading the AES key, 64 bits
+        movq [EXP_ENC_KEYS + 16], xmm7  ; Storing key in memory where all key expansion 
+        pshufd xmm4, xmm7, 01001111b
+        movdqu xmm1, [KEY]	; loading the AES key, 128 bits
+        movdqu [EXP_ENC_KEYS], xmm1  ; Storing key in memory where all key expansion 
+	
+        pxor xmm3, xmm3		; Set xmm3 to be all zeros. Required for the key_expansion. 
+        pxor xmm6, xmm6		; Set xmm3 to be all zeros. Required for the key_expansion. 
+
+        aeskeygenassist xmm2, xmm4, 0x1     ; Complete round key 1 and generate round key 2 
+        key_expansion_1_192_sse 24
+		key_expansion_2_192_sse 40				
+
+        aeskeygenassist xmm2, xmm4, 0x2     ; Generate round key 3 and part of round key 4
+        key_expansion_1_192_sse 48
+		key_expansion_2_192_sse 64				
+
+        aeskeygenassist xmm2, xmm4, 0x4     ; Complete round key 4 and generate round key 5
+        key_expansion_1_192_sse 72
+		key_expansion_2_192_sse 88
+		
+        aeskeygenassist xmm2, xmm4, 0x8     ; Generate round key 6 and part of round key 7
+        key_expansion_1_192_sse 96
+		key_expansion_2_192_sse 112
+		
+        aeskeygenassist xmm2, xmm4, 0x10     ; Complete round key 7 and generate round key 8 
+        key_expansion_1_192_sse 120
+		key_expansion_2_192_sse 136				
+
+        aeskeygenassist xmm2, xmm4, 0x20     ; Generate round key 9 and part of round key 10
+        key_expansion_1_192_sse 144
+		key_expansion_2_192_sse 160				
+
+        aeskeygenassist xmm2, xmm4, 0x40     ; Complete round key 10 and generate round key 11
+        key_expansion_1_192_sse 168
+		key_expansion_2_192_sse 184				
+
+        aeskeygenassist xmm2, xmm4, 0x80     ; Generate round key 12
+        key_expansion_1_192_sse 192
+
+%ifndef LINUX
+	movdqa	xmm6, [rsp + 0*16]
+	movdqa	xmm7, [rsp + 1*16]
+	add	rsp, 16*2 + 8
+%endif
+
+     ret
+
+global aes_keyexp_192_enc_avx
+aes_keyexp_192_enc_avx:
+
+%ifndef LINUX
+	sub	rsp, 16*2 + 8
+	vmovdqa	[rsp + 0*16], xmm6
+	vmovdqa	[rsp + 1*16], xmm7
+%endif
+
+	vmovq xmm7, [KEY + 16]	; loading the AES key, 64 bits
+        vmovq [EXP_ENC_KEYS + 16], xmm7  ; Storing key in memory where all key expansion 
+        vpshufd xmm4, xmm7, 01001111b
+        vmovdqu xmm1, [KEY]	; loading the AES key, 128 bits
+        vmovdqu [EXP_ENC_KEYS], xmm1  ; Storing key in memory where all key expansion 
+	
+        vpxor xmm3, xmm3, xmm3
+        vpxor xmm6, xmm6, xmm6
+
+        vaeskeygenassist xmm2, xmm4, 0x1      ; Complete round key 1 and generate round key 2 
+        key_expansion_1_192_avx 24
+		key_expansion_2_192_avx 40				
+
+        vaeskeygenassist xmm2, xmm4, 0x2     ; Generate round key 3 and part of round key 4
+        key_expansion_1_192_avx 48
+		key_expansion_2_192_avx 64				
+
+        vaeskeygenassist xmm2, xmm4, 0x4     ; Complete round key 4 and generate round key 5
+        key_expansion_1_192_avx 72
+		key_expansion_2_192_avx 88
+		
+        vaeskeygenassist xmm2, xmm4, 0x8     ; Generate round key 6 and part of round key 7
+        key_expansion_1_192_avx 96
+		key_expansion_2_192_avx 112
+		
+        vaeskeygenassist xmm2, xmm4, 0x10    ; Complete round key 7 and generate round key 8 
+        key_expansion_1_192_avx 120
+		key_expansion_2_192_avx 136				
+
+        vaeskeygenassist xmm2, xmm4, 0x20    ; Generate round key 9 and part of round key 10
+        key_expansion_1_192_avx 144
+		key_expansion_2_192_avx 160				
+
+        vaeskeygenassist xmm2, xmm4, 0x40    ; Complete round key 10 and generate round key 11
+        key_expansion_1_192_avx 168
+		key_expansion_2_192_avx 184				
+
+        vaeskeygenassist xmm2, xmm4, 0x80   ; Generate round key 12
+        key_expansion_1_192_avx 192
+
+%ifndef LINUX
+	vmovdqa	xmm6, [rsp + 0*16]
+	vmovdqa	xmm7, [rsp + 1*16]
+	add	rsp, 16*2 + 8
+%endif
+
+     ret
+

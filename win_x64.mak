@@ -170,6 +170,9 @@ gcm_objs = \
         $(OBJ_DIR)\gcm128_sse.obj \
 	$(OBJ_DIR)\gcm128_avx_gen2.obj \
 	$(OBJ_DIR)\gcm128_avx_gen4.obj \
+        $(OBJ_DIR)\gcm192_sse.obj \
+	$(OBJ_DIR)\gcm192_avx_gen2.obj \
+	$(OBJ_DIR)\gcm192_avx_gen4.obj \
         $(OBJ_DIR)\gcm256_sse.obj \
 	$(OBJ_DIR)\gcm256_avx_gen2.obj \
 	$(OBJ_DIR)\gcm256_avx_gen4.obj

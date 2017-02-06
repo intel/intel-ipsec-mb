@@ -128,6 +128,12 @@ default rel
 
 %define	LOCAL_STORAGE	16*7
 
+%ifdef GCM192_MODE
+%define NROUNDS 11
+%else
+%define NROUNDS 13
+%endif
+
 %ifidn __OUTPUT_FORMAT__, win64
 	%define	XMM_STORAGE	16*10
 %else
@@ -565,7 +571,7 @@ vmovdqu  %%T_key, [%%GDATA+16*0]
 %endrep
 
 %assign j 1
-%rep 13										; encrypt N blocks with 13 key rounds
+%rep NROUNDS					; encrypt N blocks with 13 key rounds (11 for GCM192)
 vmovdqu  %%T_key, [%%GDATA+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -577,7 +583,7 @@ vmovdqu  %%T_key, [%%GDATA+16*j]
 %endrep
 
 
-vmovdqu  %%T_key, [%%GDATA+16*j]						; encrypt with last (14th) key round
+vmovdqu  %%T_key, [%%GDATA+16*j]						; encrypt with last (14th) key round (12th for GCM192)
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 vaesenclast      reg(i),%%T_key
@@ -659,7 +665,7 @@ vmovdqu  %%T_key, [%%GDATA+16*j]						; encrypt with last (14th) key round
 
 
 %assign i 1
-%rep    13       ; do early (13) rounds
+%rep    NROUNDS       ; do early (13) rounds (11 for GCM192)
                 vmovdqu  %%T_key, [%%GDATA+16*i]
                 vaesenc  %%XMM1, %%T_key
                 vaesenc  %%XMM2, %%T_key
@@ -1072,6 +1078,7 @@ vmovdqu  %%T_key, [%%GDATA+16*j]						; encrypt with last (14th) key round
 		vaesenc	%%XMM8, %%T5
 
 		vmovdqu		%%T5, [%%GDATA + 16*12]
+%ifndef GCM192_MODE
 		vaesenc	%%XMM1, %%T5
 		vaesenc	%%XMM2, %%T5
 		vaesenc	%%XMM3, %%T5
@@ -1092,7 +1099,7 @@ vmovdqu  %%T_key, [%%GDATA+16*j]						; encrypt with last (14th) key round
 		vaesenc	%%XMM8, %%T5
 
 		vmovdqu		%%T5, [%%GDATA + 16*14]
-
+%endif
 
 %assign i 0
 %assign j 1
@@ -1372,11 +1379,11 @@ vmovdqu  %%T_key, [%%GDATA+16*j]						; encrypt with last (14th) key round
 
                 vpxor    %%XMM0, [%%GDATA+16*0]
 %assign i 1
-%rep 13									; early key rounds (13)
+%rep NROUNDS								; early key rounds (13 for GCM256, 11 for GCM192) 
                 vaesenc  %%XMM0, [%%GDATA+16*i]
 %assign i (i+1)
 %endrep
-                vaesenclast      %%XMM0, [%%GDATA+16*i]			; final key round (14)
+                vaesenclast      %%XMM0, [%%GDATA+16*i]			; final key round (14 for GCM256, 12 for GCM192)
 %endmacro
 
 
@@ -1788,11 +1795,16 @@ vmovdqu  %%T_key, [%%GDATA+16*j]						; encrypt with last (14th) key round
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_precomp_avx_gen2
+;void   aesni_gcm256_precomp_avx_gen2 / aesni_gcm192_precomp_avx_gen2
 ;        (gcm_data     *my_ctx_data);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef GCM192_MODE
+global aesni_gcm192_precomp_avx_gen2
+aesni_gcm192_precomp_avx_gen2:
+%else
 global aesni_gcm256_precomp_avx_gen2
 aesni_gcm256_precomp_avx_gen2:
+%endif
         push    r12
         push    r13
         push    r14
@@ -1845,14 +1857,19 @@ aesni_gcm256_precomp_avx_gen2:
 ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_init_avx_gen2(
+;void   aesni_gcm256_init_avx_gen2( / aesni_gcm192_init_avx_gen2(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *iv, /* Pre-counter block j0: 4 byte salt (from Security Association) concatenated with 8 byte Initialisation Vector (from IPSec ESP Payload) concatenated with 0x00000001. 16-byte pointer. */
 ;        const   u8 *aad, /* Additional Authentication Data (AAD)*/
 ;        u64     aad_len); /* Length of AAD in bytes (must be a multiple of 4 bytes). */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef GCM192_MODE
+global aesni_gcm192_init_avx_gen2
+aesni_gcm192_init_avx_gen2:
+%else
 global aesni_gcm256_init_avx_gen2
 aesni_gcm256_init_avx_gen2:
+%endif
 	push	r12
 	push	r13
 %ifidn __OUTPUT_FORMAT__, win64
@@ -1874,15 +1891,19 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_enc_update_avx_gen2(
+;void   aesni_gcm256_enc_update_avx_gen2( / aesni_gcm192_enc_update_avx_gen2(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
 ;        u64     plaintext_len); /* Length of data in Bytes for encryption. must be a multiple of 16 bytes*/
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef GCM192_MODE
+global aesni_gcm192_enc_update_avx_gen2
+aesni_gcm192_enc_update_avx_gen2:
+%else
 global aesni_gcm256_enc_update_avx_gen2
 aesni_gcm256_enc_update_avx_gen2:
-
+%endif
 	FUNC_SAVE
 
 	GCM_ENC_DEC arg1, arg2, arg3, arg4, ENC
@@ -1893,14 +1914,19 @@ aesni_gcm256_enc_update_avx_gen2:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_dec_update_avx_gen2(
+;void   aesni_gcm256_dec_update_avx_gen2( / aesni_gcm192_dec_update_avx_gen2(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Plaintext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Cyphertext input */
 ;        u64     plaintext_len); /* Length of data in Bytes for encryption. must be a multiple of 16 bytes*/
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef GCM192_MODE
+global aesni_gcm192_dec_update_avx_gen2
+aesni_gcm192_dec_update_avx_gen2:
+%else
 global aesni_gcm256_dec_update_avx_gen2
 aesni_gcm256_dec_update_avx_gen2:
+%endif
 
 	FUNC_SAVE
 
@@ -1912,13 +1938,18 @@ aesni_gcm256_dec_update_avx_gen2:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_enc_finalize_avx_gen2(
+;void   aesni_gcm256_enc_finalize_avx_gen2( / aesni_gcm192_enc_finalize_avx_gen2(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef GCM192_MODE
+global aesni_gcm192_enc_finalize_avx_gen2
+aesni_gcm192_enc_finalize_avx_gen2:
+%else
 global aesni_gcm256_enc_finalize_avx_gen2
 aesni_gcm256_enc_finalize_avx_gen2:
+%endif
 
 	push r12
 
@@ -1947,13 +1978,18 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_dec_finalize_avx_gen2(
+;void   aesni_gcm256_dec_finalize_avx_gen2( / aesni_gcm192_dec_finalize_avx_gen2(
 ;	 gcm_data        *my_ctx_data,
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef GCM192_MODE
+global aesni_gcm192_dec_finalize_avx_gen2
+aesni_gcm192_dec_finalize_avx_gen2:
+%else
 global aesni_gcm256_dec_finalize_avx_gen2
 aesni_gcm256_dec_finalize_avx_gen2:
+%endif
 
 	push r12
 
@@ -1982,7 +2018,7 @@ ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_enc_avx_gen2(
+;void   aesni_gcm256_enc_avx_gen2( / aesni_gcm192_enc_avx_gen2(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
@@ -1993,8 +2029,13 @@ ret
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef GCM192_MODE
+global aesni_gcm192_enc_avx_gen2
+aesni_gcm192_enc_avx_gen2:
+%else
 global aesni_gcm256_enc_avx_gen2
 aesni_gcm256_enc_avx_gen2:
+%endif
 
 	FUNC_SAVE
 
@@ -2009,7 +2050,7 @@ aesni_gcm256_enc_avx_gen2:
 	ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aesni_gcm256_dec_avx_gen2(
+;void   aesni_gcm256_dec_avx_gen2( / aesni_gcm192_dec_avx_gen2(
 ;        gcm_data        *my_ctx_data,
 ;        u8      *out, /* Plaintext output. Decrypt in-place is allowed.  */
 ;        const   u8 *in, /* Ciphertext input */
@@ -2020,8 +2061,13 @@ aesni_gcm256_enc_avx_gen2:
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifdef GCM192_MODE
+global aesni_gcm192_dec_avx_gen2
+aesni_gcm192_dec_avx_gen2:
+%else
 global aesni_gcm256_dec_avx_gen2
 aesni_gcm256_dec_avx_gen2:
+%endif
 
 	FUNC_SAVE
 

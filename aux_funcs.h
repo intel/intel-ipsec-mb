@@ -25,64 +25,71 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-void sha1_one_block_sse(void *data, void *digest);
-void sha224_one_block_sse(void *data, void *digest);
-void sha256_one_block_sse(void *data, void *digest);
-void sha384_one_block_sse(void *data, void *digest);
-void sha512_one_block_sse(void *data, void *digest);
-void md5_one_block_sse(void *data, void *digest);
+#ifndef _AUX_FUNCS_H_
+#define	_AUX_FUNCS_H_
 
-void aes_keyexp_128_sse(void *key,
+void sha1_one_block_sse(const void *data, void *digest);
+void sha224_one_block_sse(const void *data, void *digest);
+void sha256_one_block_sse(const void *data, void *digest);
+void sha384_one_block_sse(const void *data, void *digest);
+void sha512_one_block_sse(const void *data, void *digest);
+void md5_one_block_sse(const void *data, void *digest);
+
+void aes_keyexp_128_sse(const void *key,
                         void *enc_exp_keys,
                         void *dec_exp_keys);
 
-void aes_keyexp_192_sse(void *key,
+void aes_keyexp_192_sse(const void *key,
                         void *enc_exp_keys,
                         void *dec_exp_keys);
 
-void aes_keyexp_256_sse(void *key,
+void aes_keyexp_256_sse(const void *key,
                         void *enc_exp_keys,
                         void *dec_exp_keys);
 
 
-void aes_xcbc_expand_key_sse(void *key, 
-                             void *k1_exp, 
-                             void *k2, 
+void aes_xcbc_expand_key_sse(const void *key,
+                             void *k1_exp,
+                             void *k2,
                              void *k3);
 
-void aes_keyexp_128_enc_sse(void *key, void *enc_exp_keys);
+void aes_keyexp_128_enc_sse(const void *key, void *enc_exp_keys);
+void aes_keyexp_192_enc_sse(const void *key, void *enc_exp_keys);
+void aes_keyexp_256_enc_sse(const void *key, void *enc_exp_keys);
 
 ////////////////////////////////////////////////////////////////////////
 
 
-void sha1_one_block_avx(void *data, void *digest);
-void sha224_one_block_avx(void *data, void *digest);
-void sha256_one_block_avx(void *data, void *digest);
-void sha384_one_block_avx(void *data, void *digest);
-void sha512_one_block_avx(void *data, void *digest);
+void sha1_one_block_avx(const void *data, void *digest);
+void sha224_one_block_avx(const void *data, void *digest);
+void sha256_one_block_avx(const void *data, void *digest);
+void sha384_one_block_avx(const void *data, void *digest);
+void sha512_one_block_avx(const void *data, void *digest);
 #define md5_one_block_avx       md5_one_block_sse
 
 
 
-void aes_keyexp_128_avx(void *key,
+void aes_keyexp_128_avx(const void *key,
                         void *enc_exp_keys,
                         void *dec_exp_keys);
 
-void aes_keyexp_192_avx(void *key,
+void aes_keyexp_192_avx(const void *key,
                         void *enc_exp_keys,
                         void *dec_exp_keys);
 
-void aes_keyexp_256_avx(void *key,
+void aes_keyexp_256_avx(const void *key,
                         void *enc_exp_keys,
                         void *dec_exp_keys);
 
 
-void aes_xcbc_expand_key_avx(void *key, 
-                             void *k1_exp, 
-                             void *k2, 
+void aes_xcbc_expand_key_avx(const void *key,
+                             void *k1_exp,
+                             void *k2,
                              void *k3);
 
-void aes_keyexp_128_enc_avx(void *key, void *enc_exp_keys);
+void aes_keyexp_128_enc_avx(const void *key, void *enc_exp_keys);
+void aes_keyexp_192_enc_avx(const void *key, void *enc_exp_keys);
+void aes_keyexp_256_enc_avx(const void *key, void *enc_exp_keys);
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -98,6 +105,8 @@ void aes_keyexp_128_enc_avx(void *key, void *enc_exp_keys);
 #define aes_keyexp_256_avx2      aes_keyexp_256_avx
 #define aes_xcbc_expand_key_avx2 aes_xcbc_expand_key_avx
 #define aes_keyexp_128_enc_avx2  aes_keyexp_128_enc_avx
+#define aes_keyexp_192_enc_avx2  aes_keyexp_192_enc_avx
+#define aes_keyexp_256_enc_avx2  aes_keyexp_256_enc_avx
 
 #define sha1_one_block_avx512      sha1_one_block_avx2
 #define sha224_one_block_avx512    sha224_one_block_avx2
@@ -110,3 +119,7 @@ void aes_keyexp_128_enc_avx(void *key, void *enc_exp_keys);
 #define aes_keyexp_256_avx512      aes_keyexp_256_avx2
 #define aes_xcbc_expand_key_avx512 aes_xcbc_expand_key_avx2
 #define aes_keyexp_128_enc_avx512  aes_keyexp_128_enc_avx2
+#define aes_keyexp_192_enc_avx512  aes_keyexp_192_enc_avx2
+#define aes_keyexp_256_enc_avx512  aes_keyexp_256_enc_avx2
+
+#endif	/* !_AUX_FUNCS_H_ */
