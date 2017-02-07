@@ -514,7 +514,6 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
         AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
@@ -528,7 +527,6 @@ SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
         AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
@@ -542,7 +540,6 @@ SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
         AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
