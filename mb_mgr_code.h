@@ -306,31 +306,23 @@ int is_job_invalid(const JOB_AES_HMAC *job)
             (job->cipher_mode < CBC) || (job->cipher_mode > DOCSIS_SEC_BPI))
                 return 1;
 
-        if (job->cipher_mode == NULL_CIPHER) {
-                /* NULL_CIPHER only allowed in HASH_CIPHER */
-                if (job->chain_order != HASH_CIPHER)
-                        return 1;
-        } else {
+        if (job->cipher_mode != NULL_CIPHER) {
                 if (job->msg_len_to_cipher_in_bytes == 0)
                         return 1;
 
-                if (job->cipher_mode != DOCSIS_SEC_BPI &&
+                if (job->cipher_mode == CBC &&
                     (job->msg_len_to_cipher_in_bytes & 15) != 0)
                         return 1;
         }
 
-        if (job->hash_alg == NULL_HASH) {
-                /* NULL_HASH only allowed in CIPHER_HASH for encrypt */
-                if (job->cipher_direction == ENCRYPT && job->chain_order != CIPHER_HASH)
-                        return 1;
-                /* NULL_HASH only allowed in HASH_CIPHER for decrypt */
-                if (job->cipher_direction == DECRYPT && job->chain_order != HASH_CIPHER)
-                        return 1;
-        } else {
-                if ((job->msg_len_to_hash_in_bytes == 0) ||
-                    (job->auth_tag_output_len_in_bytes != auth_tag_len[job->hash_alg - 1]))
-                        return 1;
-        }
+        if (job->cipher_direction == ENCRYPT && job->chain_order != CIPHER_HASH)
+                return 1;
+
+        if (job->cipher_direction == DECRYPT && job->chain_order != HASH_CIPHER)
+                return 1;
+
+        if (job->auth_tag_output_len_in_bytes != auth_tag_len[job->hash_alg - 1])
+                return 1;
 
         return 0;
 }
@@ -522,7 +514,6 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
         AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
@@ -536,7 +527,6 @@ SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
         AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
@@ -550,7 +540,6 @@ SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
         assert(job->iv_len_in_bytes == 16);
         AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
@@ -566,7 +555,7 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-UINT32 
+UINT32
 QUEUE_SIZE(MB_MGR *state)
 {
         int a, b;

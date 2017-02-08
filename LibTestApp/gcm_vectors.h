@@ -32,29 +32,7 @@
 
 #include <stdint.h>
 
-typedef enum gcm_key_size {
-        BITS_128 = 16,
-        BITS_192 = 24,
-        BITS_256 = 32
-} gcm_key_size;
-
-#define KBITS(K)    (sizeof(K))
-
-// struct to hold pointers to the key, plaintext and ciphertext vectors
-typedef struct gcm_vector {
-	uint8_t*       K;          // AES Key
-	gcm_key_size Klen;         // length of key in bits
-	uint8_t*       IV;         // initial value used by GCM
-	uint64_t       IVlen;      // length of IV in bytes
-	uint8_t*       A;          // additional authenticated data
-	uint64_t       Alen;       // length of AAD in bytes
-	uint8_t*       P;          // Plain text
-	uint64_t       Plen;       // length of our plaintext
-	//outputs of encryption
-	uint8_t*       C;          // same length as PT
-	uint8_t*       T;          // Authenication tag
-	uint8_t        Tlen;       // AT length can be 0 to 128bits
-} gcm_vector;
+#include "gcm_std_vectors_test.h"
 
 ///////
 // 60-Byte Packet Encryption Using GCM-AES-128
