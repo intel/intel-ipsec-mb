@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,12 +25,13 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "memcpy.asm"
+
 ; routine to do AES128 CNTR enc/decrypt "by4"
-
-extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
-
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
+extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
+        
 %define CONCAT(a,b) a %+ b
 %define MOVDQ movdqu
 
@@ -62,11 +63,12 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %define p_IV	rdx
 %define p_keys	r8
 %define p_out	r9
-%define num_bytes rax
+%define num_bytes r10
 %endif
 
-%define tmp	r10
-
+%define p_tmp	rsp + _buffer
+%define tmp	r11
+        
 %macro do_aes_load 1
 	do_aes %1, 1
 %endmacro
@@ -74,7 +76,6 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %macro do_aes_noload 1
 	do_aes %1, 0
 %endmacro
-
 
 ; do_aes num_in_par load_keys
 ; This increments p_in, but not p_out
@@ -204,70 +205,107 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %endrep
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+struc STACK
+_buffer:	resq	2
+_rsp_save:	resq	1
+endstruc
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .text
 
 ;; aes_cntr_128_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
+align 32
 global aes_cntr_128_sse
 aes_cntr_128_sse:
 
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
 %endif
-
 	movdqa	xbyteswap, [rel byteswap_const]
 	movdqu	xcounter, [p_IV]
 	pshufb	xcounter, xbyteswap
 
 	mov	tmp, num_bytes
 	and	tmp, 3*16
-	jz	mult_of_4_blks
+	jz	chk             ; x4 > or < 15 (not 3 lines)
 
 	; 1 <= tmp <= 3
 	cmp	tmp, 2*16
 	jg	eq3
 	je	eq2
 eq1:
-	do_aes_load	1
+	do_aes_load	1	; 1 block
 	add	p_out, 1*16
-	and	num_bytes, ~3*16
-	jz	do_return2
-	jmp	main_loop2
+        jmp     chk
 
-eq2:	
-	do_aes_load	2
+eq2:
+	do_aes_load	2	; 2 blocks
 	add	p_out, 2*16
-	and	num_bytes, ~3*16
-	jz	do_return2
-	jmp	main_loop2
+        jmp      chk
 
-eq3:	
-	do_aes_load	3
+eq3:
+	do_aes_load	3	; 3 blocks
 	add	p_out, 3*16
-	and	num_bytes, ~3*16
-	jz	do_return2
-	jmp	main_loop2
+	; fall through to chk
+chk:
+        and	num_bytes, ~(3*16)
+        jz	do_return2
+        cmp	num_bytes, 16
+        jb	last
 
-mult_of_4_blks:
+	; process multiples of 4 blocks
 	movdqa	xkey0, [p_keys + 0*16]
 	movdqa	xkey3, [p_keys + 3*16]
 	movdqa	xkey6, [p_keys + 6*16]
 	movdqa	xkey9, [p_keys + 9*16]
-	
+	jmp	main_loop2
+
+align 32
 main_loop2:
-	; num_bytes is a multiple of 4 and >0
+	; num_bytes is a multiple of 4 blocks + partial bytes
 	do_aes_noload	4
 	add	p_out,	4*16
 	sub	num_bytes, 4*16
-	jne	main_loop2
+        cmp	num_bytes, 4*16
+	jae	main_loop2
+
+	test	num_bytes, 15	; partial bytes to be processed?
+	jnz	last
 
 do_return2:
-
-	; don't return updated IV
-;	pshufb	xcounter, xbyteswap
+        ; don't return updated IV
+; 	pshufb	xcounter, xbyteswap
 ;	movdqu	[p_IV], xcounter
 	ret
 
+last:
+	;; Code dealing with the partial block cases
+	; reserve 16 byte aligned buffer on the stack
+        mov	rax, rsp
+        sub	rsp, STACK_size
+        and	rsp, -16
+	mov	[rsp + _rsp_save], rax ; save SP
+
+	; copy input bytes into scratch buffer
+	memcpy_sse_16_1	p_tmp, p_in, num_bytes, tmp, rax
+	; Encryption of a single partial block (p_tmp)
+        pshufb	xcounter, xbyteswap
+        movdqa	xdata0, xcounter
+        pxor    xdata0, [p_keys + 16*0]
+%assign i 1
+%rep 9
+        aesenc  xdata0, [p_keys + 16*i]
+%assign i (i+1)
+%endrep
+	; created keystream
+        aesenclast xdata0, [p_keys + 16*i]
+	; xor keystream with the message (scratch)
+        pxor	xdata0, [p_tmp]
+	movdqa	[p_tmp], xdata0
+	; copy result into the output buffer
+	memcpy_sse_16_1	p_out, p_tmp, num_bytes, tmp, rax
+	; remove the stack frame
+	mov	rsp, [rsp + _rsp_save]	; original SP
+	jmp	do_return2

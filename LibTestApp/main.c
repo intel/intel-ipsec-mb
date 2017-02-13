@@ -31,7 +31,7 @@
 
 #include "mb_mgr.h"
 #include "aux_funcs.h"
-#include "gcm_std_vectors_test.h"
+#include "gcm_ctr_vectors_test.h"
 
 #define TEST_SSE  1
 #define TEST_AVX  2
@@ -55,18 +55,21 @@ main(int argc, char **argv)
         init_mb_mgr_sse(&mb_mgr);
         known_answer_test_sse(&mb_mgr);
         do_test_sse(&mb_mgr);
+        ctr_test(ARCH_SSE, &mb_mgr);
         gcm_test(ARCH_SSE);
         
         printf("Testing AVX interface\n");
         init_mb_mgr_avx(&mb_mgr);
         known_answer_test_avx(&mb_mgr);
         do_test_avx(&mb_mgr);
+        ctr_test(ARCH_AVX, &mb_mgr);
         gcm_test(ARCH_AVX);
 
         printf("Testing AVX2 interface\n");
         init_mb_mgr_avx2(&mb_mgr);
         known_answer_test_avx2(&mb_mgr);
         do_test_avx2(&mb_mgr);
+        ctr_test(ARCH_AVX2, &mb_mgr);
         gcm_test(ARCH_AVX2);
 
         printf("Test completed\n");

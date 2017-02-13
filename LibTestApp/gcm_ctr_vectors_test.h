@@ -25,17 +25,50 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCM_STD_VECTORS_TEST_H_
-#define GCM_STD_VECTORS_TEST_H_
+#ifndef GCM_CTR_VECTORS_TEST_H_
+#define GCM_CTR_VECTORS_TEST_H_
+
+#include <stdint.h>
 
 enum arch_type {
-        ARCH_SSE,
+        ARCH_SSE = 0,
         ARCH_AVX,
         ARCH_AVX2,
         ARCH_AVX512,
         ARCH_NUMOF
 };
 
+enum key_size {
+        BITS_128 = 16,
+        BITS_192 = 24,
+        BITS_256 = 32,
+};
+
+#define KBITS(K)    (sizeof(K))
+
+// struct to hold pointers to the key, plaintext and ciphertext vectors
+struct gcm_ctr_vector {
+	uint8_t*       K;          // AES Key
+	enum key_size  Klen;       // length of key in bits
+	uint8_t*       IV;         // initial value used by GCM
+	uint64_t       IVlen;      // length of IV in bytes
+	uint8_t*       A;          // additional authenticated data
+	uint64_t       Alen;       // length of AAD in bytes
+	uint8_t*       P;          // Plain text
+	uint64_t       Plen;       // length of our plaintext
+	//outputs of encryption
+	uint8_t*       C;          // same length as PT
+	uint8_t*       T;          // Authenication tag
+	uint8_t        Tlen;       // AT length can be 0 to 128bits
+};
+
+#define vector(N)                                                       \
+        {K##N, (KBITS(K##N)), IV##N, sizeof(IV##N), A##N, A##N##_len,   \
+                        P##N, sizeof(P##N), C##N, T##N, sizeof(T##N)}
+
 int gcm_test(const enum arch_type arch);
 
-#endif /* GCM_STD_VECTORS_TEST_H_ */
+struct MB_MGR;
+int ctr_test(const enum arch_type arch, struct MB_MGR *);
+
+#endif /* GCM_CTR_VECTORS_TEST_H_ */

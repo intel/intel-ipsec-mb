@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,8 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-; routine to do AES256 CNTR enc/decrypt "by8"
+%include "memcpy.asm"
 
+; routine to do AES256 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
 extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
@@ -63,10 +64,11 @@ extern                 ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define p_IV	rdx
 %define p_keys	r8
 %define p_out	r9
-%define num_bytes rax
+%define num_bytes r10
 %endif
 
-%define tmp	r10
+%define tmp	r11
+%define p_tmp	rsp + _buffer
 
 %macro do_aes_load 1
 	do_aes %1, 1
@@ -230,6 +232,11 @@ extern                 ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %endrep
 %endmacro
 
+struc STACK
+_buffer:	resq	2
+_rsp_save:	resq	1
+endstruc
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -237,6 +244,7 @@ extern                 ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 section .text
 
 ;; aes_cntr_256_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
+align 32
 global aes_cntr_256_avx
 aes_cntr_256_avx:
 
@@ -250,7 +258,7 @@ aes_cntr_256_avx:
 
 	mov	tmp, num_bytes
 	and	tmp, 7*16
-	jz	mult_of_8_blks
+	jz	chk             ; x8 > or < 15 (not 7 lines)
 
 	; 1 <= tmp <= 7
 	cmp	tmp, 4*16
@@ -264,30 +272,22 @@ lt4:
 eq1:
 	do_aes_load	1
 	add	p_out, 1*16
-	and	num_bytes, ~7*16
-	jz	do_return2
-	jmp	main_loop2
+	jmp	chk
 
-eq2:	
+eq2:
 	do_aes_load	2
 	add	p_out, 2*16
-	and	num_bytes, ~7*16
-	jz	do_return2
-	jmp	main_loop2
+	jmp	chk
 
-eq3:	
+eq3:
 	do_aes_load	3
 	add	p_out, 3*16
-	and	num_bytes, ~7*16
-	jz	do_return2
-	jmp	main_loop2
+	jmp	chk
 
-eq4:	
+eq4:
 	do_aes_load	4
 	add	p_out, 4*16
-	and	num_bytes, ~7*16
-	jz	do_return2
-	jmp	main_loop2
+	jmp	chk
 
 gt4:
 	cmp	tmp, 6*16
@@ -297,36 +297,42 @@ gt4:
 eq5:
 	do_aes_load	5
 	add	p_out, 5*16
-	and	num_bytes, ~7*16
-	jz	do_return2
-	jmp	main_loop2
+	jmp	chk
 
 eq6:
 	do_aes_load	6
 	add	p_out, 6*16
-	and	num_bytes, ~7*16
-	jz	do_return2
-	jmp	main_loop2
+	jmp	chk
 
 eq7:
 	do_aes_load	7
 	add	p_out, 7*16
-	and	num_bytes, ~7*16
+	; fall through to chk
+chk:
+	and	num_bytes, ~(7*16)
 	jz	do_return2
-	jmp	main_loop2
 
-mult_of_8_blks:
+        cmp	num_bytes, 16
+        jb	last
+
+	; process multiples of 8 blocks
 	vmovdqa	xkey0, [p_keys + 0*16]
 	vmovdqa	xkey4, [p_keys + 4*16]
 	vmovdqa	xkey8, [p_keys + 8*16]
 	vmovdqa	xkey12, [p_keys + 12*16]
+	jmp	main_loop2
 
+align 32
 main_loop2:
 	; num_bytes is a multiple of 8 and >0
 	do_aes_noload	8
 	add	p_out,	8*16
 	sub	num_bytes, 8*16
-	jne	main_loop2
+        cmp	num_bytes, 8*16
+	jae	main_loop2
+
+	test	num_bytes, 15	; partial bytes to be processed?
+	jnz	last
 
 do_return2:
 ; don't return updated IV
@@ -334,3 +340,32 @@ do_return2:
 ;	vmovdqu	[p_IV], xcounter
 	ret
 
+last:
+	;; Code dealing with the partial block cases
+	; reserve 16 byte aligned buffer on stack
+        mov	rax, rsp
+        sub	rsp, STACK_size
+        and	rsp, -16
+	mov	[rsp + _rsp_save], rax ; save SP
+
+	; copy input bytes into scratch buffer
+	memcpy_avx_16_1	p_tmp, p_in, num_bytes, tmp, rax
+	; Encryption of a single partial block (p_tmp)
+        vpshufb	xcounter, xbyteswap
+        vmovdqa	xdata0, xcounter
+        vpxor	xdata0, [p_keys + 16*0]
+%assign i 1
+%rep 13
+        vaesenc xdata0, [p_keys + 16*i]
+%assign i (i+1)
+%endrep
+	; created keystream
+        vaesenclast xdata0, [p_keys + 16*i]
+	; xor keystream with the message (scratch)
+        vpxor   xdata0, [p_tmp]
+	vmovdqa	[p_tmp], xdata0
+	; copy result into the output buffer
+	memcpy_avx_16_1	p_out, p_tmp, num_bytes, tmp, rax
+	; remove the stack frame
+	mov	rsp, [rsp + _rsp_save]	; original SP
+        jmp	do_return2

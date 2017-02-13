@@ -280,6 +280,12 @@ endif
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
+.PHONY: TAGS
+TAGS:
+	find ./ -name '*.[ch]' | etags -
+	find ./ -name '*.asm'  | etags -a -
+	find ./ -name '*.inc'  | etags -a -
+
 .PHONY: clean
 clean:
 	rm -Rf $(obj2_files)

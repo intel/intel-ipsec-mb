@@ -31,12 +31,13 @@ APP := ipsec_MB_testapp
 
 all: $(APP)
 
-$(APP): main.o gcm_std_vectors_test.o $(MYLIB)
-	$(CC) $(LDFLAGS) -o $@ main.o gcm_std_vectors_test.o $(MYLIB)
+$(APP): main.o gcm_test.o ctr_test.o $(MYLIB)
+	$(CC) $(LDFLAGS) -o $@ $^
 
 main.o: main.c do_test.h
-gcm_std_vectors_test.o: gcm_std_vectors_test.c gcm_std_vectors_test.h gcm_vectors.h
+gcm_test.o: gcm_test.c gcm_ctr_vectors_test.h
+ctr_test.o: ctr_test.c gcm_ctr_vectors_test.h
 
 .PHONY: clean
 clean:
-	-rm -f main.o gcm_std_vectors_test.o $(APP)
+	-rm -f main.o gcm_std_vectors_test.o ctr_test.o $(APP)
