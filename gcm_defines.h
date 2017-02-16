@@ -261,6 +261,23 @@ aesni_gcm128_dec_finalize_avx_gen2(struct gcm_data *my_ctx_data,
 void
 aesni_gcm128_dec_finalize_avx_gen4(struct gcm_data *my_ctx_data,
                                    uint8_t *auth_tag, uint64_t auth_tag_len);
+/**
+ * @brief Precomputation of HashKey constants
+ *
+ * Precomputation of HashKey<<1 mod poly constants (shifted_hkey_X and
+ * shifted_hkey_X_k).
+ *
+ * @param gdata GCM context data
+ */
+void aesni_gcm128_precomp_sse(struct gcm_data *gdata);
+void aesni_gcm128_precomp_avx_gen2(struct gcm_data *gdata);
+void aesni_gcm128_precomp_avx_gen4(struct gcm_data *gdata);
+void aesni_gcm192_precomp_sse(struct gcm_data *gdata);
+void aesni_gcm192_precomp_avx_gen2(struct gcm_data *gdata);
+void aesni_gcm192_precomp_avx_gen4(struct gcm_data *gdata);
+void aesni_gcm256_precomp_sse(struct gcm_data *gdata);
+void aesni_gcm256_precomp_avx_gen2(struct gcm_data *gdata);
+void aesni_gcm256_precomp_avx_gen4(struct gcm_data *gdata);
 
 /**
  * @brief pre-processes GCM128 key data (SSE version)
@@ -275,7 +292,6 @@ aesni_gcm128_dec_finalize_avx_gen4(struct gcm_data *my_ctx_data,
 __forceinline
 void aesni_gcm128_pre_sse(const void *key, struct gcm_data *gdata)
 {
-        extern void aesni_gcm128_precomp_sse(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
@@ -296,7 +312,6 @@ void aesni_gcm128_pre_sse(const void *key, struct gcm_data *gdata)
 __forceinline
 void aesni_gcm128_pre_avx_gen2(const void *key, struct gcm_data *gdata)
 {
-        extern void aesni_gcm128_precomp_avx_gen2(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
@@ -317,7 +332,6 @@ void aesni_gcm128_pre_avx_gen2(const void *key, struct gcm_data *gdata)
 __forceinline
 void aesni_gcm128_pre_avx_gen4(const void *key, struct gcm_data *gdata)
 {
-        extern void aesni_gcm128_precomp_avx_gen4(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
@@ -339,7 +353,6 @@ void aesni_gcm128_pre_avx_gen4(const void *key, struct gcm_data *gdata)
 __forceinline
 void aesni_gcm192_pre_sse(const void *key, struct gcm_data *gdata)
 {
-        extern void aesni_gcm192_precomp_sse(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
@@ -360,7 +373,6 @@ void aesni_gcm192_pre_sse(const void *key, struct gcm_data *gdata)
 __forceinline
 void aesni_gcm192_pre_avx_gen2(const void *key, struct gcm_data *gdata)
 {
-        extern void aesni_gcm192_precomp_avx_gen2(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
@@ -381,7 +393,6 @@ void aesni_gcm192_pre_avx_gen2(const void *key, struct gcm_data *gdata)
 __forceinline
 void aesni_gcm192_pre_avx_gen4(const void *key, struct gcm_data *gdata)
 {
-        extern void aesni_gcm192_precomp_avx_gen4(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
@@ -729,7 +740,6 @@ __forceinline
 void aesni_gcm256_pre_sse(const void *key, struct gcm_data *gdata)
 {
         struct gcm_data tmp;
-        void aesni_gcm256_precomp_sse(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
@@ -747,7 +757,6 @@ void aesni_gcm256_pre_sse(const void *key, struct gcm_data *gdata)
 __forceinline
 void aesni_gcm256_pre_avx_gen2(const void *key, struct gcm_data *gdata)
 {
-        extern void aesni_gcm256_precomp_avx_gen2(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
@@ -765,7 +774,6 @@ void aesni_gcm256_pre_avx_gen2(const void *key, struct gcm_data *gdata)
 __forceinline
 void aesni_gcm256_pre_avx_gen4(const void *key, struct gcm_data *gdata)
 {
-        extern void aesni_gcm256_precomp_avx_gen4(struct gcm_data *);
         //////
         // Prefill the key values for each round of encrypting/decrypting
         // Prefill the Sub Hash key values for encoding the tag
