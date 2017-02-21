@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012-2016, Intel Corporation
+# Copyright (c) 2012-2017, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -164,6 +164,7 @@ lib_objs := \
 	sha256_one_block_avx.o \
 	sha256_one_block_sse.o \
 	sha256_ni_x2_sse.o \
+	sha256_x16_avx512.o \
 	sha384_one_block_avx.o \
 	sha384_one_block_sse.o \
 	sha512_one_block_avx.o \
@@ -171,6 +172,7 @@ lib_objs := \
 	sha512_x2_avx.o \
 	sha512_x2_sse.o \
 	sha512_x4_avx2.o \
+	sha512_x8_avx512.o \
 	sha_256_mult_avx.o \
 	sha_256_mult_sse.o \
 	\
