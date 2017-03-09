@@ -194,6 +194,8 @@ all: $(LIBNAME)
 $(LIBNAME): $(all_objs)
 	$(LIB_TOOL) $(LIBFLAGS) /out:$@ $(all_objs)
 
+$(all_objs): $(OBJ_DIR)
+
 {.\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS) $<
 
