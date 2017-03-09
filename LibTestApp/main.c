@@ -45,6 +45,9 @@
 #undef TEST
 #define TEST TEST_AVX2
 #include "do_test.h"
+#undef TEST
+#define TEST TEST_AVX512
+#include "do_test.h"
 
 int
 main(int argc, char **argv)
@@ -71,6 +74,13 @@ main(int argc, char **argv)
         do_test_avx2(&mb_mgr);
         ctr_test(ARCH_AVX2, &mb_mgr);
         gcm_test(ARCH_AVX2);
+
+        printf("Testing AVX512 interface\n");
+        init_mb_mgr_avx512(&mb_mgr);
+        known_answer_test_avx512(&mb_mgr);
+        do_test_avx512(&mb_mgr);
+        ctr_test(ARCH_AVX512, &mb_mgr);
+        gcm_test(ARCH_AVX512);
 
         printf("Test completed\n");
 

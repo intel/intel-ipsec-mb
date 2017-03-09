@@ -116,20 +116,24 @@ lib_objs := \
 	mb_mgr_hmac_md5_submit_sse.o \
 	mb_mgr_hmac_sha_224_flush_avx.o \
 	mb_mgr_hmac_sha_224_flush_avx2.o \
+	mb_mgr_hmac_sha_224_flush_avx512.o \
 	mb_mgr_hmac_sha_224_flush_sse.o \
 	mb_mgr_hmac_sha_224_flush_ni_sse.o \
 	mb_mgr_hmac_sha_224_submit_avx.o \
 	mb_mgr_hmac_sha_224_submit_avx2.o \
+	mb_mgr_hmac_sha_224_submit_avx512.o \
 	mb_mgr_hmac_sha_224_submit_sse.o \
 	mb_mgr_hmac_sha_224_submit_ni_sse.o \
 	mb_mgr_hmac_sha_256_flush_avx.o \
 	mb_mgr_hmac_sha_256_flush_avx2.o \
 	mb_mgr_hmac_sha_256_flush_sse.o \
 	mb_mgr_hmac_sha_256_flush_ni_sse.o \
+	mb_mgr_hmac_sha_256_flush_avx512.o \
 	mb_mgr_hmac_sha_256_submit_avx.o \
 	mb_mgr_hmac_sha_256_submit_avx2.o \
 	mb_mgr_hmac_sha_256_submit_sse.o \
 	mb_mgr_hmac_sha_256_submit_ni_sse.o \
+	mb_mgr_hmac_sha_256_submit_avx512.o \
 	mb_mgr_hmac_sha_384_flush_avx.o \
 	mb_mgr_hmac_sha_384_flush_avx2.o \
 	mb_mgr_hmac_sha_384_flush_sse.o \

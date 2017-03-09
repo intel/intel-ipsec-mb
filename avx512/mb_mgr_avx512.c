@@ -86,7 +86,6 @@ JOB_AES_HMAC* flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 #define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_avx
 #define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
-// #define QUEUE_SIZE queue_size_avx512
 
 #define SUBMIT_JOB_AES_ENC SUBMIT_JOB_AES_ENC_AVX512
 #define FLUSH_JOB_AES_ENC  FLUSH_JOB_AES_ENC_AVX512
@@ -96,12 +95,12 @@ JOB_AES_HMAC* flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 
 JOB_AES_HMAC* submit_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state);
-  
-JOB_AES_HMAC* submit_job_hmac_sha_224_avx2(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_224_avx2(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_256_avx2(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_256_avx2(MB_MGR_HMAC_SHA_256_OOO *state);
+JOB_AES_HMAC* submit_job_hmac_sha_224_avx512(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
+JOB_AES_HMAC* flush_job_hmac_sha_224_avx512(MB_MGR_HMAC_SHA_256_OOO *state);
+
+JOB_AES_HMAC* submit_job_hmac_sha_256_avx512(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
+JOB_AES_HMAC* flush_job_hmac_sha_256_avx512(MB_MGR_HMAC_SHA_256_OOO *state);
 
 JOB_AES_HMAC* submit_job_hmac_sha_384_avx2(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_hmac_sha_384_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
@@ -115,10 +114,10 @@ JOB_AES_HMAC* flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
 #define SUBMIT_JOB_HMAC               submit_job_hmac_avx512
 #define FLUSH_JOB_HMAC                flush_job_hmac_avx512
-#define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx2
-#define FLUSH_JOB_HMAC_SHA_224        flush_job_hmac_sha_224_avx2
-#define SUBMIT_JOB_HMAC_SHA_256       submit_job_hmac_sha_256_avx2
-#define FLUSH_JOB_HMAC_SHA_256        flush_job_hmac_sha_256_avx2
+#define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx512
+#define FLUSH_JOB_HMAC_SHA_224        flush_job_hmac_sha_224_avx512
+#define SUBMIT_JOB_HMAC_SHA_256       submit_job_hmac_sha_256_avx512
+#define FLUSH_JOB_HMAC_SHA_256        flush_job_hmac_sha_256_avx512
 #define SUBMIT_JOB_HMAC_SHA_384       submit_job_hmac_sha_384_avx2
 #define FLUSH_JOB_HMAC_SHA_384        flush_job_hmac_sha_384_avx2
 #define SUBMIT_JOB_HMAC_SHA_512       submit_job_hmac_sha_512_avx2
@@ -260,6 +259,7 @@ init_mb_mgr_avx512(MB_MGR *state)
                 p[64-2] = 0x02;
                 p[64-1] = 0xA0;
         }
+
         // Init HMAC/SHA224 out-of-order fields
         state->hmac_sha_224_ooo.lens[0] = 0;
         state->hmac_sha_224_ooo.lens[1] = 0;
@@ -269,7 +269,16 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->hmac_sha_224_ooo.lens[5] = 0;
         state->hmac_sha_224_ooo.lens[6] = 0;
         state->hmac_sha_224_ooo.lens[7] = 0;
-        state->hmac_sha_224_ooo.unused_lanes = 0xF76543210 ; 
+        state->hmac_sha_224_ooo.lens[8] = 0;
+        state->hmac_sha_224_ooo.lens[9] = 0;
+        state->hmac_sha_224_ooo.lens[10] = 0;
+        state->hmac_sha_224_ooo.lens[11] = 0;
+        state->hmac_sha_224_ooo.lens[12] = 0;
+        state->hmac_sha_224_ooo.lens[13] = 0;
+        state->hmac_sha_224_ooo.lens[14] = 0;
+        state->hmac_sha_224_ooo.lens[15] = 0;
+        state->hmac_sha_224_ooo.unused_lanes = 0xFEDCBA9876543210;
+        state->hmac_sha_224_ooo.num_lanes_inuse = 0;
         for (j=0; j<AVX512_NUM_SHA256_LANES; j++) { // sha256 and sha224 are very similar except for digest constants and output size
                 state->hmac_sha_224_ooo.ldata[j].job_in_lane = NULL;
                 state->hmac_sha_224_ooo.ldata[j].extra_block[64] = 0x80;
@@ -285,7 +294,6 @@ init_mb_mgr_avx512(MB_MGR *state)
                 p[64-1] = 0xE0;
         }
 
-        
         // Init HMAC/SHA256 out-of-order fields
         state->hmac_sha_256_ooo.lens[0] = 0;
         state->hmac_sha_256_ooo.lens[1] = 0;
@@ -295,7 +303,16 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->hmac_sha_256_ooo.lens[5] = 0;
         state->hmac_sha_256_ooo.lens[6] = 0;
         state->hmac_sha_256_ooo.lens[7] = 0;
-        state->hmac_sha_256_ooo.unused_lanes = 0xF76543210 ;
+        state->hmac_sha_256_ooo.lens[8] = 0;
+        state->hmac_sha_256_ooo.lens[9] = 0;
+        state->hmac_sha_256_ooo.lens[10] = 0;
+        state->hmac_sha_256_ooo.lens[11] = 0;
+        state->hmac_sha_256_ooo.lens[12] = 0;
+        state->hmac_sha_256_ooo.lens[13] = 0;
+        state->hmac_sha_256_ooo.lens[14] = 0;
+        state->hmac_sha_256_ooo.lens[15] = 0;
+        state->hmac_sha_256_ooo.unused_lanes = 0xFEDCBA9876543210;
+        state->hmac_sha_256_ooo.num_lanes_inuse = 0;
         for (j=0; j<AVX512_NUM_SHA256_LANES; j++) {
                 state->hmac_sha_256_ooo.ldata[j].job_in_lane = NULL;
                 state->hmac_sha_256_ooo.ldata[j].extra_block[64] = 0x80;
@@ -310,7 +327,6 @@ init_mb_mgr_avx512(MB_MGR *state)
                 p[64-2] = 0x03; // length
                 p[64-1] = 0x00;
         }
-
 
         // Init HMAC/SHA384 out-of-order fields
         state->hmac_sha_384_ooo.lens[0] = 0;
@@ -420,8 +436,6 @@ init_mb_mgr_avx512(MB_MGR *state)
                 state->aes_xcbc_ooo.ldata[j].final_block[16] = 0x80;
                 memset(state->aes_xcbc_ooo.ldata[j].final_block + 17, 0x00, 15);
         }
-
-
 
         // Init "in order" components
         state->next_job = 0;

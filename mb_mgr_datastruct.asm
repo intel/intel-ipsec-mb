@@ -176,10 +176,11 @@ END_FIELDS
 
 START_FIELDS	; MB_MGR_HMAC_SHA_256_OOO
 ;;;	name		size	align
-FIELD	_args_sha256,		_SHA256_ARGS_size, _SHA256_ARGS_align
-FIELD	_lens_sha256,		16*2,	16
-FIELD	_unused_lanes_sha256,	8,	8
-FIELD	_ldata_sha256,		_HMAC_SHA1_LANE_DATA_size * MAX_SHA256_LANES, _HMAC_SHA1_LANE_DATA_align
+FIELD	_args_sha256,		 _SHA256_ARGS_size, _SHA256_ARGS_align
+FIELD	_lens_sha256,		 16*2,	16
+FIELD	_unused_lanes_sha256,	 8,	8
+FIELD	_ldata_sha256,		 _HMAC_SHA1_LANE_DATA_size * MAX_SHA256_LANES, _HMAC_SHA1_LANE_DATA_align
+FIELD   _num_lanes_inuse_sha256, 4,     4
 END_FIELDS
 %assign _MB_MGR_HMAC_SHA_256_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_HMAC_SHA_256_OOO_align	_STRUCT_ALIGN

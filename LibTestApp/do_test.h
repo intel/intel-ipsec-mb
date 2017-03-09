@@ -96,6 +96,28 @@
 #define KNOWN_ANSWER_TEST known_answer_test_avx2
 #define DO_TEST           do_test_avx2
 #define TEST_AUX_FUNC     test_aux_func_avx2
+#elif (TEST == TEST_AVX512)
+#define init_mb_mgr       init_mb_mgr_avx512
+#define get_next_job      get_next_job_avx512
+#define submit_job        submit_job_avx512
+#define flush_job         flush_job_avx512
+#define get_completed_job get_completed_job_avx512
+
+#define sha1_one_block      sha1_one_block_avx512
+#define sha224_one_block    sha224_one_block_avx512
+#define sha256_one_block    sha256_one_block_avx512
+#define sha384_one_block    sha384_one_block_avx512
+#define sha512_one_block    sha512_one_block_avx512
+#define md5_one_block       md5_one_block_avx512
+#define aes_keyexp_128      aes_keyexp_128_avx512
+#define aes_keyexp_192      aes_keyexp_192_avx512
+#define aes_keyexp_256      aes_keyexp_256_avx512
+#define aes_xcbc_expand_key aes_xcbc_expand_key_avx512
+#define aes_keyexp_128_enc  aes_keyexp_128_enc_avx512
+
+#define KNOWN_ANSWER_TEST known_answer_test_avx512
+#define DO_TEST           do_test_avx512
+#define TEST_AUX_FUNC     test_aux_func_avx512
 #else
 #define init_mb_mgr       init_mb_mgr_sse
 #define get_next_job      get_next_job_sse

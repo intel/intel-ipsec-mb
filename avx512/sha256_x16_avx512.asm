@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,12 +28,12 @@
 ;; Stack must be aligned to 32 bytes before call
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
-;; Windows clobbers:	
-;; Windows preserves:	
-;;			-----------------------------------------------------------	
-;; Linux clobbers:	
-;; Linux preserves:	
+;;			-----------------------------------------------------------
+;; Windows clobbers:	RAX         RDX     RSI RDI     R9  R10 R11 R12 R13 R14 R15
+;; Windows preserves:	        RCX
+;;			-----------------------------------------------------------
+;; Linux clobbers:	RAX     RCX RDX     RSI         R9  R10 R11 R12 R13 R14 R15
+;; Linux preserves:	                        RDI
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31
 
@@ -43,7 +43,7 @@
 
 ; re-use K256 from sha256_oct_avx2.asm
 extern K256
-	
+
 ;; code to compute x16 SHA256 using AVX512
 
 %macro TRANSPOSE16 18
@@ -150,74 +150,73 @@ extern K256
 ;; Can use t1 and r14 as scratch registers
 
 	vmovdqa32 %%r14, [PSHUFFLE_TRANSPOSE16_MASK1]
-	vpermi2q  %%r14, %%t0, %%r2		; r14 = {h8  g8  f8  e8   d8  c8  b8  a8   h0 g0 f0 e0	 d0 c0 b0 a0} 
+	vpermi2q  %%r14, %%t0, %%r2		; r14 = {h8  g8  f8  e8   d8  c8  b8  a8   h0 g0 f0 e0	 d0 c0 b0 a0}
 	vmovdqa32 %%t1,  [PSHUFFLE_TRANSPOSE16_MASK2]
-	vpermi2q  %%t1,  %%t0, %%r2		; t1  = {h12 g12 f12 e12  d12 c12 b12 a12  h4 g4 f4 e4	 d4 c4 b4 a4} 
+	vpermi2q  %%t1,  %%t0, %%r2		; t1  = {h12 g12 f12 e12  d12 c12 b12 a12  h4 g4 f4 e4	 d4 c4 b4 a4}
 
 	vmovdqa32 %%r2, [PSHUFFLE_TRANSPOSE16_MASK1]
-	vpermi2q  %%r2, %%r3, %%r7		; r2  = {h9  g9  f9  e9   d9  c9  b9  a9   h1 g1 f1 e1	 d1 c1 b1 a1} 
+	vpermi2q  %%r2, %%r3, %%r7		; r2  = {h9  g9  f9  e9   d9  c9  b9  a9   h1 g1 f1 e1	 d1 c1 b1 a1}
 	vmovdqa32 %%t0, [PSHUFFLE_TRANSPOSE16_MASK2]
-	vpermi2q  %%t0, %%r3, %%r7		; t0  = {h13 g13 f13 e13  d13 c13 b13 a13  h5 g5 f5 e5	 d5 c5 b5 a5} 
+	vpermi2q  %%t0, %%r3, %%r7		; t0  = {h13 g13 f13 e13  d13 c13 b13 a13  h5 g5 f5 e5	 d5 c5 b5 a5}
 
 	vmovdqa32 %%r3, [PSHUFFLE_TRANSPOSE16_MASK1]
-	vpermi2q  %%r3, %%r1, %%r5		; r3  = {h10 g10 f10 e10  d10 c10 b10 a10  h2 g2 f2 e2	 d2 c2 b2 a2} 
+	vpermi2q  %%r3, %%r1, %%r5		; r3  = {h10 g10 f10 e10  d10 c10 b10 a10  h2 g2 f2 e2	 d2 c2 b2 a2}
 	vmovdqa32 %%r7, [PSHUFFLE_TRANSPOSE16_MASK2]
-	vpermi2q  %%r7, %%r1, %%r5		; r7  = {h14 g14 f14 e14  d14 c14 b14 a14  h6 g6 f6 e6	 d6 c6 b6 a6} 
+	vpermi2q  %%r7, %%r1, %%r5		; r7  = {h14 g14 f14 e14  d14 c14 b14 a14  h6 g6 f6 e6	 d6 c6 b6 a6}
 
 	vmovdqa32 %%r1, [PSHUFFLE_TRANSPOSE16_MASK1]
-	vpermi2q  %%r1, %%r0, %%r4		; r1  = {h11 g11 f11 e11  d11 c11 b11 a11  h3 g3 f3 e3	 d3 c3 b3 a3} 
+	vpermi2q  %%r1, %%r0, %%r4		; r1  = {h11 g11 f11 e11  d11 c11 b11 a11  h3 g3 f3 e3	 d3 c3 b3 a3}
 	vmovdqa32 %%r5, [PSHUFFLE_TRANSPOSE16_MASK2]
-	vpermi2q  %%r5, %%r0, %%r4		; r5  = {h15 g15 f15 e15  d15 c15 b15 a15  h7 g7 f7 e7	 d7 c7 b7 a7} 
+	vpermi2q  %%r5, %%r0, %%r4		; r5  = {h15 g15 f15 e15  d15 c15 b15 a15  h7 g7 f7 e7	 d7 c7 b7 a7}
 
 	vmovdqa32 %%r0, [PSHUFFLE_TRANSPOSE16_MASK1]
-	vpermi2q  %%r0, %%r6, %%r10		; r0 = {p8  o8  n8  m8   l8  k8  j8  i8   p0 o0 n0 m0	 l0 k0 j0 i0} 
+	vpermi2q  %%r0, %%r6, %%r10		; r0 = {p8  o8  n8  m8   l8  k8  j8  i8   p0 o0 n0 m0	 l0 k0 j0 i0}
 	vmovdqa32 %%r4,  [PSHUFFLE_TRANSPOSE16_MASK2]
-	vpermi2q  %%r4, %%r6, %%r10		; r4  = {p12 o12 n12 m12  l12 k12 j12 i12  p4 o4 n4 m4	 l4 k4 j4 i4} 
+	vpermi2q  %%r4, %%r6, %%r10		; r4  = {p12 o12 n12 m12  l12 k12 j12 i12  p4 o4 n4 m4	 l4 k4 j4 i4}
 
 	vmovdqa32 %%r6, [PSHUFFLE_TRANSPOSE16_MASK1]
-	vpermi2q  %%r6, %%r11, %%r15		; r6  = {p9  o9  n9  m9   l9  k9  j9  i9   p1 o1 n1 m1	 l1 k1 j1 i1} 
+	vpermi2q  %%r6, %%r11, %%r15		; r6  = {p9  o9  n9  m9   l9  k9  j9  i9   p1 o1 n1 m1	 l1 k1 j1 i1}
 	vmovdqa32 %%r10, [PSHUFFLE_TRANSPOSE16_MASK2]
-	vpermi2q  %%r10, %%r11, %%r15		; r10 = {p13 o13 n13 m13  l13 k13 j13 i13  p5 o5 n5 m5	 l5 k5 j5 i5} 
+	vpermi2q  %%r10, %%r11, %%r15		; r10 = {p13 o13 n13 m13  l13 k13 j13 i13  p5 o5 n5 m5	 l5 k5 j5 i5}
 
 	vmovdqa32 %%r11, [PSHUFFLE_TRANSPOSE16_MASK1]
-	vpermi2q  %%r11, %%r9, %%r13		; r11 = {p10 o10 n10 m10  l10 k10 j10 i10  p2 o2 n2 m2	 l2 k2 j2 i2} 
+	vpermi2q  %%r11, %%r9, %%r13		; r11 = {p10 o10 n10 m10  l10 k10 j10 i10  p2 o2 n2 m2	 l2 k2 j2 i2}
 	vmovdqa32 %%r15, [PSHUFFLE_TRANSPOSE16_MASK2]
-	vpermi2q  %%r15, %%r9, %%r13		; r15 = {p14 o14 n14 m14  l14 k14 j14 i14  p6 o6 n6 m6	 l6 k6 j6 i6} 
+	vpermi2q  %%r15, %%r9, %%r13		; r15 = {p14 o14 n14 m14  l14 k14 j14 i14  p6 o6 n6 m6	 l6 k6 j6 i6}
 
 	vmovdqa32 %%r9, [PSHUFFLE_TRANSPOSE16_MASK1]
-	vpermi2q  %%r9, %%r8, %%r12		; r9  = {p11 o11 n11 m11  l11 k11 j11 i11  p3 o3 n3 m3	 l3 k3 j3 i3} 
+	vpermi2q  %%r9, %%r8, %%r12		; r9  = {p11 o11 n11 m11  l11 k11 j11 i11  p3 o3 n3 m3	 l3 k3 j3 i3}
 	vmovdqa32 %%r13, [PSHUFFLE_TRANSPOSE16_MASK2]
-	vpermi2q  %%r13, %%r8, %%r12		; r13 = {p15 o15 n15 m15  l15 k15 j15 i15  p7 o7 n7 m7	 l7 k7 j7 i7} 
+	vpermi2q  %%r13, %%r8, %%r12		; r13 = {p15 o15 n15 m15  l15 k15 j15 i15  p7 o7 n7 m7	 l7 k7 j7 i7}
 
 ;; At this point r8 and r12 can be used as scratch registers
 
-	vshuff64x2 %%r8, %%r14, %%r0, 0xEE 	; r8  = {p8  o8  n8  m8   l8  k8  j8  i8   h8 g8 f8 e8   d8 c8 b8 a8}	
-	vshuff64x2 %%r0, %%r14, %%r0, 0x44 	; r0  = {p0  o0  n0  m0   l0  k0  j0  i0   h0 g0 f0 e0   d0 c0 b0 a0}	
+	vshuff64x2 %%r8, %%r14, %%r0, 0xEE 	; r8  = {p8  o8  n8  m8   l8  k8  j8  i8   h8 g8 f8 e8   d8 c8 b8 a8}
+	vshuff64x2 %%r0, %%r14, %%r0, 0x44 	; r0  = {p0  o0  n0  m0   l0  k0  j0  i0   h0 g0 f0 e0   d0 c0 b0 a0}
 
-	vshuff64x2 %%r12, %%t1, %%r4, 0xEE 	; r12 = {p12 o12 n12 m12  l12 k12 j12 i12  h12 g12 f12 e12  d12 c12 b12 a12}	
-	vshuff64x2 %%r4, %%t1, %%r4, 0x44 	; r4  = {p4  o4  n4  m4   l4  k4  j4  i4   h4 g4 f4 e4   d4 c4 b4 a4}	
+	vshuff64x2 %%r12, %%t1, %%r4, 0xEE 	; r12 = {p12 o12 n12 m12  l12 k12 j12 i12  h12 g12 f12 e12  d12 c12 b12 a12}
+	vshuff64x2 %%r4, %%t1, %%r4, 0x44 	; r4  = {p4  o4  n4  m4   l4  k4  j4  i4   h4 g4 f4 e4   d4 c4 b4 a4}
 
-	vshuff64x2 %%r14, %%r7, %%r15, 0xEE 	; r14 = {p14 o14 n14 m14  l14 k14 j14 i14  h14 g14 f14 e14  d14 c14 b14 a14}	
-	vshuff64x2 %%t1, %%r7, %%r15, 0x44 	; t1  = {p6  o6  n6  m6   l6  k6  j6  i6   h6 g6 f6 e6   d6 c6 b6 a6}	
+	vshuff64x2 %%r14, %%r7, %%r15, 0xEE 	; r14 = {p14 o14 n14 m14  l14 k14 j14 i14  h14 g14 f14 e14  d14 c14 b14 a14}
+	vshuff64x2 %%t1, %%r7, %%r15, 0x44 	; t1  = {p6  o6  n6  m6   l6  k6  j6  i6   h6 g6 f6 e6   d6 c6 b6 a6}
 
-	vshuff64x2 %%r15, %%r5, %%r13, 0xEE 	; r15 = {p15 o15 n15 m15  l15 k15 j15 i15  h15 g15 f15 e15  d15 c15 b15 a15}	
-	vshuff64x2 %%r7, %%r5, %%r13, 0x44 	; r7  = {p7  o7  n7  m7   l7  k7  j7  i7   h7 g7 f7 e7   d7 c7 b7 a7}	
+	vshuff64x2 %%r15, %%r5, %%r13, 0xEE 	; r15 = {p15 o15 n15 m15  l15 k15 j15 i15  h15 g15 f15 e15  d15 c15 b15 a15}
+	vshuff64x2 %%r7, %%r5, %%r13, 0x44 	; r7  = {p7  o7  n7  m7   l7  k7  j7  i7   h7 g7 f7 e7   d7 c7 b7 a7}
 
-	vshuff64x2 %%r13, %%t0, %%r10, 0xEE 	; r13 = {p13 o13 n13 m13  l13 k13 j13 i13  h13 g13 f13 e13  d13 c13 b13 a13}	
-	vshuff64x2 %%r5, %%t0, %%r10, 0x44 	; r5  = {p5  o5  n5  m5   l5  k5  j5  i5   h5 g5 f5 e5   d5 c5 b5 a5}	
+	vshuff64x2 %%r13, %%t0, %%r10, 0xEE 	; r13 = {p13 o13 n13 m13  l13 k13 j13 i13  h13 g13 f13 e13  d13 c13 b13 a13}
+	vshuff64x2 %%r5, %%t0, %%r10, 0x44 	; r5  = {p5  o5  n5  m5   l5  k5  j5  i5   h5 g5 f5 e5   d5 c5 b5 a5}
 
-	vshuff64x2 %%r10, %%r3, %%r11, 0xEE 	; r10 = {p10 o10 n10 m10  l10 k10 j10 i10  h10 g10 f10 e10  d10 c10 b10 a10}	
-	vshuff64x2 %%t0, %%r3, %%r11, 0x44 	; t0  = {p2  o2  n2  m2   l2  k2  j2  i2   h2 g2 f2 e2   d2 c2 b2 a2}	
+	vshuff64x2 %%r10, %%r3, %%r11, 0xEE 	; r10 = {p10 o10 n10 m10  l10 k10 j10 i10  h10 g10 f10 e10  d10 c10 b10 a10}
+	vshuff64x2 %%t0, %%r3, %%r11, 0x44 	; t0  = {p2  o2  n2  m2   l2  k2  j2  i2   h2 g2 f2 e2   d2 c2 b2 a2}
 
-	vshuff64x2 %%r11, %%r1, %%r9, 0xEE 	; r11 = {p11 o11 n11 m11  l11 k11 j11 i11  h11 g11 f11 e11  d11 c11 b11 a11}	
-	vshuff64x2 %%r3, %%r1, %%r9, 0x44 	; r3  = {p3  o3  n3  m3   l3  k3  j3  i3   h3 g3 f3 e3   d3 c3 b3 a3}	
+	vshuff64x2 %%r11, %%r1, %%r9, 0xEE 	; r11 = {p11 o11 n11 m11  l11 k11 j11 i11  h11 g11 f11 e11  d11 c11 b11 a11}
+	vshuff64x2 %%r3, %%r1, %%r9, 0x44 	; r3  = {p3  o3  n3  m3   l3  k3  j3  i3   h3 g3 f3 e3   d3 c3 b3 a3}
 
-	vshuff64x2 %%r9, %%r2, %%r6, 0xEE 	; r9  = {p9  o9  n9  m9   l9  k9  j9  i9   h9 g9 f9 e9   d9 c9 b9 a9}	
-	vshuff64x2 %%r1, %%r2, %%r6, 0x44 	; r1  = {p1  o1  n1  m1   l1  k1  j1  i1   h1 g1 f1 e1   d1 c1 b1 a1}	
+	vshuff64x2 %%r9, %%r2, %%r6, 0xEE 	; r9  = {p9  o9  n9  m9   l9  k9  j9  i9   h9 g9 f9 e9   d9 c9 b9 a9}
+	vshuff64x2 %%r1, %%r2, %%r6, 0x44 	; r1  = {p1  o1  n1  m1   l1  k1  j1  i1   h1 g1 f1 e1   d1 c1 b1 a1}
 
-	vmovdqa32 %%r2, %%t0			; r2  = {p2  o2  n2  m2   l2  k2  j2  i2   h2 g2 f2 e2   d2 c2 b2 a2}	
-	vmovdqa32 %%r6, %%t1			; r6  = {p6  o6  n6  m6   l6  k6  j6  i6   h6 g6 f6 e6   d6 c6 b6 a6}	
-	
+	vmovdqa32 %%r2, %%t0			; r2  = {p2  o2  n2  m2   l2  k2  j2  i2   h2 g2 f2 e2   d2 c2 b2 a2}
+	vmovdqa32 %%r6, %%t1			; r6  = {p6  o6  n6  m6   l6  k6  j6  i6   h6 g6 f6 e6   d6 c6 b6 a6}
 %endmacro
 
 %define APPEND(a,b) a %+ b
@@ -225,27 +224,28 @@ extern K256
 ; Define Stack Layout
 START_FIELDS
 ;;;     name            size    align
-FIELD	_GPR_SAVE,	8*8,	8
-FIELD	_ZMM_SAVE,	10*64,	64
 FIELD	_DIGEST_SAVE,	8*64,	64
 FIELD	_rsp,		8,	8
 %assign STACK_SPACE	_FIELD_OFFSET
 
 %ifdef LINUX
 ; Linux register definitions
-%define IN	rdi
-%define DIGEST	rsi
-%define SIZE	rdx
-%define IDX	rcx
-%define TBL	r8
+     %define arg1 	rdi
+     %define arg2	rsi
+     %define arg3	rcx
+     %define arg4	rdx
 %else
-; Windows register definitions
-%define IN	rcx
-%define DIGEST	rdx
-%define SIZE	r8
-%define IDX	rdi
-%define TBL	rsi
+; Windows definitions
+     %define arg1 	rcx
+     %define arg2 	rdx
+     %define arg3	rsi
+     %define arg4	rdi
 %endif
+
+%define STATE		arg1
+%define INP_SIZE	arg2
+%define IDX		arg3
+%define TBL		arg4
 
 %define A	zmm0
 %define B	zmm1
@@ -399,8 +399,8 @@ FIELD	_rsp,		8,	8
 	vpaddd		%%WT, %%WT, %%WTp9	; Wt = Wt-16 + sigma1(Wt-2) + Wt-7
 	vpsrld		TMP6, %%WTp1, 3 	; SHR_3(Wt-15)
 	vpternlogd	TMP4, TMP5, TMP6, 0x96	; TMP4 = sigma0(Wt-15)
-	vpaddd		%%WT, %%WT, TMP4	; Wt = Wt-16 + sigma1(Wt-2) + 
-						;      Wt-7 + sigma0(Wt-15) + 
+	vpaddd		%%WT, %%WT, TMP4	; Wt = Wt-16 + sigma1(Wt-2) +
+						;      Wt-7 + sigma0(Wt-15) +
 
 	vmovdqa32	TMP6, [TBL + ((%%ROUND+1)*64)]	; Next Kt
 
@@ -435,7 +435,7 @@ FIELD	_rsp,		8,	8
 %macro MSG_SCHED_ROUND_00_15 2
 %define %%WT	 %1
 %define %%OFFSET %2
-	mov		inp0, [IN + (%%OFFSET*8)]
+	mov		inp0, [STATE + _data_ptr_sha256 + (%%OFFSET*PTR_SZ)]
 	vmovups		%%WT, [inp0+IDX]
 %endmacro
 
@@ -731,68 +731,47 @@ PSHUFFLE_TRANSPOSE16_MASK2: 	dq 0x0000000000000002
 
 	section .text
 
-;; void sha256_x16_avx3(void **input_data, UINT128 *digest[16], UINT64 size)
+;; void sha256_x16_avx512(void **input_data, UINT128 *digest[16], UINT64 size)
+;; arg 1 : pointer to SHA256 args structure
+;; arg 2 : size (in blocks) ;; assumed to be >= 1
 ;; arg 1 : rcx : pointer to array of pointers to input data
 ;; arg 2 : rdx : pointer to array of pointers to digest
 ;; arg 3 : r8  : size of input in bytes
-global sha256_x16_avx3
+global sha256_x16_avx512
 align 64
-sha256_x16_avx3:
+sha256_x16_avx512:
 	mov	rax, rsp
         sub     rsp, STACK_SPACE
 	and	rsp, ~63	; align stack to multiple of 64
 	mov	[rsp + _rsp], rax
 
-        mov     [rsp + _GPR_SAVE + 8*0], rbx
-%ifndef LINUX
-        mov     [rsp + _GPR_SAVE + 8*1], rsi
-        mov     [rsp + _GPR_SAVE + 8*2], rdi
-%endif
-        mov     [rsp + _GPR_SAVE + 8*3], rbp
-        mov     [rsp + _GPR_SAVE + 8*4], r12
-        mov     [rsp + _GPR_SAVE + 8*5], r13
-        mov     [rsp + _GPR_SAVE + 8*6], r14
-        mov     [rsp + _GPR_SAVE + 8*7], r15
-%ifndef LINUX
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*0], zmm6
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*1], zmm7
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*2], zmm8
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*3], zmm9
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*4], zmm10
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*5], zmm11
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*6], zmm12
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*7], zmm13
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*8], zmm14
-        vmovdqa32	[rsp + _ZMM_SAVE + 64*9], zmm15
-%endif
+	;; Initialize digests
+	vmovdqu32	A, [STATE + 0*SHA256_DIGEST_ROW_SIZE]
+	vmovdqu32	B, [STATE + 1*SHA256_DIGEST_ROW_SIZE]
+	vmovdqu32	C, [STATE + 2*SHA256_DIGEST_ROW_SIZE]
+	vmovdqu32	D, [STATE + 3*SHA256_DIGEST_ROW_SIZE]
+	vmovdqu32	E, [STATE + 4*SHA256_DIGEST_ROW_SIZE]
+	vmovdqu32	F, [STATE + 5*SHA256_DIGEST_ROW_SIZE]
+	vmovdqu32	G, [STATE + 6*SHA256_DIGEST_ROW_SIZE]
+	vmovdqu32	H, [STATE + 7*SHA256_DIGEST_ROW_SIZE]
 
 	lea		TBL, [rel TABLE]
-
-	;; Initialize digests
-	vmovdqa32	A, [DIGEST + 0*64]
-	vmovdqa32	B, [DIGEST + 1*64]
-	vmovdqa32	C, [DIGEST + 2*64]
-	vmovdqa32	D, [DIGEST + 3*64]
-	vmovdqa32	E, [DIGEST + 4*64]
-	vmovdqa32	F, [DIGEST + 5*64]
-	vmovdqa32	G, [DIGEST + 6*64]
-	vmovdqa32	H, [DIGEST + 7*64]
 
 	; Do we need to transpose digests???
 	; SHA1 does not, but SHA256 has been
 
 	xor IDX, IDX
 
-	;; Read in first block of input data 
+	;; Read in first block of input data
 	;; Transpose input data
-	mov	inp0, [IN + 0*8]
-	mov	inp1, [IN + 1*8]
-	mov	inp2, [IN + 2*8]
-	mov	inp3, [IN + 3*8]
-	mov	inp4, [IN + 4*8]
-	mov	inp5, [IN + 5*8]
-	mov	inp6, [IN + 6*8]
-	mov	inp7, [IN + 7*8]
+	mov	inp0, [STATE + _data_ptr_sha256 + 0*PTR_SZ]
+	mov	inp1, [STATE + _data_ptr_sha256 + 1*PTR_SZ]
+	mov	inp2, [STATE + _data_ptr_sha256 + 2*PTR_SZ]
+	mov	inp3, [STATE + _data_ptr_sha256 + 3*PTR_SZ]
+	mov	inp4, [STATE + _data_ptr_sha256 + 4*PTR_SZ]
+	mov	inp5, [STATE + _data_ptr_sha256 + 5*PTR_SZ]
+	mov	inp6, [STATE + _data_ptr_sha256 + 6*PTR_SZ]
+	mov	inp7, [STATE + _data_ptr_sha256 + 7*PTR_SZ]
 
 	vmovups	W0,[inp0+IDX]
 	vmovups	W1,[inp1+IDX]
@@ -803,14 +782,14 @@ sha256_x16_avx3:
 	vmovups	W6,[inp6+IDX]
 	vmovups	W7,[inp7+IDX]
 
-	mov	inp0, [IN + 8*8]
-	mov	inp1, [IN + 9*8]
-	mov	inp2, [IN +10*8]
-	mov	inp3, [IN +11*8]
-	mov	inp4, [IN +12*8]
-	mov	inp5, [IN +13*8]
-	mov	inp6, [IN +14*8]
-	mov	inp7, [IN +15*8]
+	mov	inp0, [STATE + _data_ptr_sha256 + 8*PTR_SZ]
+	mov	inp1, [STATE + _data_ptr_sha256 + 9*PTR_SZ]
+	mov	inp2, [STATE + _data_ptr_sha256 +10*PTR_SZ]
+	mov	inp3, [STATE + _data_ptr_sha256 +11*PTR_SZ]
+	mov	inp4, [STATE + _data_ptr_sha256 +12*PTR_SZ]
+	mov	inp5, [STATE + _data_ptr_sha256 +13*PTR_SZ]
+	mov	inp6, [STATE + _data_ptr_sha256 +14*PTR_SZ]
+	mov	inp7, [STATE + _data_ptr_sha256 +15*PTR_SZ]
 
 	vmovups	W8, [inp0+IDX]
 	vmovups	W9, [inp1+IDX]
@@ -820,8 +799,9 @@ sha256_x16_avx3:
 	vmovups	W13,[inp5+IDX]
 	vmovups	W14,[inp6+IDX]
 	vmovups	W15,[inp7+IDX]
+	jmp	lloop
 
-
+	align 32
 lloop:
 	vmovdqa32	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
@@ -860,7 +840,7 @@ lloop:
 %assign M 14
 %rep 48
 	PROCESS_LOOP  APPEND(W,J),  I
-	MSG_SCHED_ROUND_16_63  APPEND(W,J), APPEND(W,K), APPEND(W,L), APPEND(W,M)  
+	MSG_SCHED_ROUND_16_63  APPEND(W,J), APPEND(W,K), APPEND(W,L), APPEND(W,M)
 %assign I (I+1)
 %assign J ((J+1)% 16)
 %assign K ((K+1)% 16)
@@ -869,7 +849,7 @@ lloop:
 %endrep
 
 	; Check is this is the last block
-	sub 	SIZE, 1
+	sub 	INP_SIZE, 1
 	je	lastLoop
 
 	; Process last 16 rounds
@@ -917,39 +897,22 @@ lastLoop:
 
 	; Write out digest
 	; Do we need to untranspose digests???
-	vmovdqa32	[DIGEST + 0*64], A
-	vmovdqa32	[DIGEST + 1*64], B
-	vmovdqa32	[DIGEST + 2*64], C
-	vmovdqa32	[DIGEST + 3*64], D
-	vmovdqa32	[DIGEST + 4*64], E
-	vmovdqa32	[DIGEST + 5*64], F
-	vmovdqa32	[DIGEST + 6*64], G
-	vmovdqa32	[DIGEST + 7*64], H
+	vmovdqu32	[STATE + 0*SHA256_DIGEST_ROW_SIZE], A
+	vmovdqu32	[STATE + 1*SHA256_DIGEST_ROW_SIZE], B
+	vmovdqu32	[STATE + 2*SHA256_DIGEST_ROW_SIZE], C
+	vmovdqu32	[STATE + 3*SHA256_DIGEST_ROW_SIZE], D
+	vmovdqu32	[STATE + 4*SHA256_DIGEST_ROW_SIZE], E
+	vmovdqu32	[STATE + 5*SHA256_DIGEST_ROW_SIZE], F
+	vmovdqu32	[STATE + 6*SHA256_DIGEST_ROW_SIZE], G
+	vmovdqu32	[STATE + 7*SHA256_DIGEST_ROW_SIZE], H
 
-%ifndef LINUX
-        vmovdqa32	zmm6,  [rsp + _ZMM_SAVE + 64*0]
-        vmovdqa32	zmm7,  [rsp + _ZMM_SAVE + 64*1]
-        vmovdqa32	zmm8,  [rsp + _ZMM_SAVE + 64*2]
-        vmovdqa32	zmm9,  [rsp + _ZMM_SAVE + 64*3]
-        vmovdqa32	zmm10, [rsp + _ZMM_SAVE + 64*4]
-        vmovdqa32	zmm11, [rsp + _ZMM_SAVE + 64*5]
-        vmovdqa32	zmm12, [rsp + _ZMM_SAVE + 64*6]
-        vmovdqa32	zmm13, [rsp + _ZMM_SAVE + 64*7]
-        vmovdqa32	zmm14, [rsp + _ZMM_SAVE + 64*8]
-        vmovdqa32	zmm15, [rsp + _ZMM_SAVE + 64*9]
-%endif
-        mov     rbx, [rsp + _GPR_SAVE + 8*0]
-%ifndef LINUX
-        mov     rsi, [rsp + _GPR_SAVE + 8*1]
-        mov     rdi, [rsp + _GPR_SAVE + 8*2]
-%endif
-        mov     rbp, [rsp + _GPR_SAVE + 8*3]
-        mov     r12, [rsp + _GPR_SAVE + 8*4]
-        mov     r13, [rsp + _GPR_SAVE + 8*5]
-        mov     r14, [rsp + _GPR_SAVE + 8*6]
-        mov     r15, [rsp + _GPR_SAVE + 8*7]
+	; update input pointers
+%assign I 0
+%rep 16
+	add	[STATE + _data_ptr_sha256 + I*PTR_SZ], IDX
+%assign I (I+1)
+%endrep
 
         mov     rsp, [rsp + _rsp]
-
         ret
 

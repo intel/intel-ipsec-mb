@@ -104,6 +104,7 @@ typedef struct {
         DECLARE_ALIGNED(UINT16 lens[16], 16);
         UINT64 unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA256_LANES];
+        UINT32 num_lanes_inuse;
 } MB_MGR_HMAC_SHA_256_OOO;
 
 typedef struct {

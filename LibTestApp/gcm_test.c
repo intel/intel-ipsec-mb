@@ -761,7 +761,7 @@ static int check_data(uint8_t * test, uint8_t * expected, uint64_t len,
 		printf("  expected results don't match %s \t\t", data_name);
                 for (a = 0; a < len; a++) {
                         if (test[a] != expected[a]) {
-                                printf(" '%x' != '%x' at %lx of %lx\n",
+                                printf(" '%x' != '%x' at %llx of %llx\n",
                                        test[a], expected[a], a, len);
                                 break;
                         }
@@ -1170,11 +1170,22 @@ int gcm_test(const enum arch_type arch)
                 aesni_gcm256_enc = aesni_gcm256_enc_avx_gen4;
                 aesni_gcm256_dec = aesni_gcm256_dec_avx_gen4;
                 break;
+        case ARCH_AVX512:
+                aesni_gcm128_pre = aesni_gcm128_pre_avx_gen4;
+                aesni_gcm128_enc = aesni_gcm128_enc_avx_gen4;
+                aesni_gcm128_dec = aesni_gcm128_dec_avx_gen4;
+                aesni_gcm192_pre = aesni_gcm192_pre_avx_gen4;
+                aesni_gcm192_enc = aesni_gcm192_enc_avx_gen4;
+                aesni_gcm192_dec = aesni_gcm192_dec_avx_gen4;
+                aesni_gcm256_pre = aesni_gcm256_pre_avx_gen4;
+                aesni_gcm256_enc = aesni_gcm256_enc_avx_gen4;
+                aesni_gcm256_dec = aesni_gcm256_dec_avx_gen4;
+                break;
         default:
                 printf("Invalid architecture type %d selected!\n", arch);
                 return 1;
         }
-        
+
 	errors = test_gcm_std_vectors();
 
 	if (0 == errors)

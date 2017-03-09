@@ -102,18 +102,22 @@ lib_objs = \
 	$(OBJ_DIR)\mb_mgr_hmac_md5_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_224_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_224_flush_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha_224_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_224_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_224_flush_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_224_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_224_submit_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha_224_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_224_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_224_submit_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_flush_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha_256_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_flush_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_submit_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha_256_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_submit_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_384_flush_avx.obj \
