@@ -192,7 +192,7 @@ struct funcs_gcm_s func_sets_gcm[NUM_ARCHS - 1][3] = {
 };
 
 enum cache_type_e cache_type = WARM;
-uint32_t auth_tag_length_bytes[7] = {12, 14, 16, 24, 32, 12, 12};
+uint32_t auth_tag_length_bytes[8] = {12, 14, 16, 24, 32, 12, 12, 0};
 /* SHA1, SHA224, SHA256, SHA384, SHA512, XCBC, MD5 */
 uint8_t *buf = NULL;
 uint32_t index_limit;
@@ -364,10 +364,11 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
 }
 
 /* Performs test using AES_HMAC or DOCSIS */
-static void do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
+static uint64_t do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 		uint32_t num_iter)
 {
 	JOB_AES_HMAC *job;
+	JOB_AES_HMAC job_template;
 	uint32_t i;
 	static uint32_t index = 0;
 	static DECLARE_ALIGNED(uint128_t iv, 16);
@@ -376,7 +377,8 @@ static void do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 	static DECLARE_ALIGNED(uint8_t	k2[16], 16);
 	static DECLARE_ALIGNED(uint8_t	k3[16], 16);
 	uint32_t size_aes;
-	uint8_t encrypt = (params->cipher_dir == ENCRYPT);
+	uint64_t time = 0;
+	uint32_t aux;
 
 	if ((params->cipher_mode == TEST_DOCSIS8) ||
 		(params->cipher_mode == TEST_CNTR8))
@@ -384,69 +386,69 @@ static void do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 	else
 		size_aes = params->size_aes;
 
+	job_template.msg_len_to_cipher_in_bytes = size_aes;
+	job_template.msg_len_to_hash_in_bytes = size_aes + sha_size_incr;
+	job_template.hash_start_src_offset_in_bytes = 0;
+	job_template.cipher_start_src_offset_in_bytes = sha_size_incr;
+	job_template.iv = (uint8_t *) &iv;
+	job_template.iv_len_in_bytes = 16;
+
+	job_template.auth_tag_output = (uint8_t *) digest;
+
+	if (params->hash_alg == TEST_XCBC) {
+		job_template._k1_expanded = k1_expanded;
+		job_template._k2 = k2;
+		job_template._k3 = k3;
+	} else {
+		/* hash alg is SHA1 or MD5 */
+		job_template.hashed_auth_key_xor_ipad = (uint8_t *) ipad;
+		job_template.hashed_auth_key_xor_opad = (uint8_t *) opad;
+	}
+
+	job_template.cipher_direction = params->cipher_dir;
+
+	if (params->cipher_mode == TEST_NULL_CIPHER) {
+		job_template.chain_order = HASH_CIPHER;
+	} else {
+		if (job_template.cipher_direction == ENCRYPT)
+			job_template.chain_order = CIPHER_HASH;
+		else
+			job_template.chain_order = HASH_CIPHER;
+	}
+
+	job_template.aes_key_len_in_bytes = params->aes_key_size;
+	job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
+	job_template.auth_tag_output_len_in_bytes =
+		(uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
+
+	/* Translating enum to the API's one */
+	job_template.cipher_mode = translate_cipher_mode(params->cipher_mode);
+
+	time = __rdtscp(&aux);
 	for (i = 0; i < num_iter; i++) {
 		job = get_next_job(mb_mgr, arch);
+		*job = job_template;
+
 		job->aes_enc_key_expanded = job->aes_dec_key_expanded =
 			(uint32_t *) &keys[key_idxs[index]];
 
-		job->msg_len_to_cipher_in_bytes = size_aes;
-		job->msg_len_to_hash_in_bytes = size_aes + sha_size_incr;
-		job->hash_start_src_offset_in_bytes = 0;
-		job->cipher_start_src_offset_in_bytes = sha_size_incr;
 		job->src = buf + offsets[index];
 		job->dst = buf + offsets[index] + sha_size_incr;
-
-		job->iv = (uint8_t *) &iv;
-		job->iv_len_in_bytes = 16;
-
-		job->auth_tag_output = (uint8_t *) digest;
-
-		if (params->hash_alg == TEST_XCBC) {
-			job->_k1_expanded = k1_expanded;
-			job->_k2 = k2;
-			job->_k3 = k3;
-		} else {
-			/* hash alg is SHA1 or MD5 */
-			job->hashed_auth_key_xor_ipad = (uint8_t *) ipad;
-			job->hashed_auth_key_xor_opad = (uint8_t *) opad;
-		}
-
-		if (params->cipher_mode == TEST_NULL_CIPHER) {
-			job->chain_order = HASH_CIPHER;
-			if (encrypt)
-				job->cipher_direction = ENCRYPT;
-			else
-				job->cipher_direction = DECRYPT;
-		} else {
-			if (encrypt) {
-				job->cipher_direction = ENCRYPT;
-				job->chain_order = CIPHER_HASH;
-			} else {
-				job->cipher_direction = DECRYPT;
-				job->chain_order = HASH_CIPHER;
-			}
-		}
 
 		index += 2;
 		if (index >= index_limit)
 			index = 0;
 
-		job->aes_key_len_in_bytes = params->aes_key_size;
-		job->hash_alg = (JOB_HASH_ALG) params->hash_alg;
-		job->auth_tag_output_len_in_bytes =
-			(uint64_t) auth_tag_length_bytes[job->hash_alg - 1];
-
-		/* Translating enum to the API's one */
-		job->cipher_mode = translate_cipher_mode(params->cipher_mode);
 		job = submit_job(mb_mgr, arch);
-
 		while (job)
 			job = get_completed_job(mb_mgr, arch);
 	}
 
 	while ((job = flush_job(mb_mgr, arch)))
 		;
-	/* @todo functional but not readable */
+
+	time = __rdtscp(&aux) - time;
+	return time / num_iter;
 }
 
 /* Performs test using GCM */
@@ -568,15 +570,12 @@ static void process_variant(MB_MGR *mgr, uint32_t arch, struct params_s *params,
 		num_iter = ITER_SCALE / size_aes;
 		params->size_aes = size_aes;
 		for (run = 0; run < NUM_RUNS; run++) {
-			if (params->test_type == AES_GCM) {
+			if (params->test_type == AES_GCM)
 				times[run] =
 					do_test_gcm(arch, params, num_iter);
-			} else {
-				time = __rdtsc();
-				do_test(arch, mgr, params, num_iter);
-				time = __rdtsc() - time;
-				times[run] = time / num_iter;
-			}
+			else
+				times[run] =
+					do_test(arch, mgr, params, num_iter);
 		}
 		time = mean_median(&times[0], NUM_RUNS);
 		variant_ptr->avg_times[sz] = time;
@@ -590,8 +589,8 @@ static void prepare_variants(MB_MGR *mgr, uint32_t arch,
 		struct params_s *params)
 {
 	uint32_t hash_alg;
-	uint32_t h_start = SHA1;
-	uint32_t h_end = NULL_HASH;
+	uint32_t h_start = TEST_SHA1;
+	uint32_t h_end = TEST_NULL_HASH;
 	uint32_t c_mode;
 	uint32_t c_start = TEST_CBC;
 	uint32_t c_end = TEST_NULL_CIPHER;
