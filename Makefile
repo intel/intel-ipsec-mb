@@ -136,15 +136,19 @@ lib_objs := \
 	mb_mgr_hmac_sha_256_submit_avx512.o \
 	mb_mgr_hmac_sha_384_flush_avx.o \
 	mb_mgr_hmac_sha_384_flush_avx2.o \
+	mb_mgr_hmac_sha_384_flush_avx512.o \
 	mb_mgr_hmac_sha_384_flush_sse.o \
 	mb_mgr_hmac_sha_384_submit_avx.o \
 	mb_mgr_hmac_sha_384_submit_avx2.o \
+	mb_mgr_hmac_sha_384_submit_avx512.o \
 	mb_mgr_hmac_sha_384_submit_sse.o \
 	mb_mgr_hmac_sha_512_flush_avx.o \
 	mb_mgr_hmac_sha_512_flush_avx2.o \
+	mb_mgr_hmac_sha_512_flush_avx512.o \
 	mb_mgr_hmac_sha_512_flush_sse.o \
 	mb_mgr_hmac_sha_512_submit_avx.o \
 	mb_mgr_hmac_sha_512_submit_avx2.o \
+	mb_mgr_hmac_sha_512_submit_avx512.o \
 	mb_mgr_hmac_sha_512_submit_sse.o \
 	mb_mgr_hmac_submit_avx.o \
 	mb_mgr_hmac_submit_avx2.o \

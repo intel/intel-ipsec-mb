@@ -102,12 +102,11 @@ JOB_AES_HMAC* flush_job_hmac_sha_224_avx512(MB_MGR_HMAC_SHA_256_OOO *state);
 JOB_AES_HMAC* submit_job_hmac_sha_256_avx512(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_hmac_sha_256_avx512(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_384_avx2(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_384_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
+JOB_AES_HMAC* submit_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
+JOB_AES_HMAC* flush_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_512_avx2(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_512_avx2(MB_MGR_HMAC_SHA_512_OOO *state);
-
+JOB_AES_HMAC* submit_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
+JOB_AES_HMAC* flush_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state);
 
 JOB_AES_HMAC* submit_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
@@ -118,10 +117,10 @@ JOB_AES_HMAC* flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 #define FLUSH_JOB_HMAC_SHA_224        flush_job_hmac_sha_224_avx512
 #define SUBMIT_JOB_HMAC_SHA_256       submit_job_hmac_sha_256_avx512
 #define FLUSH_JOB_HMAC_SHA_256        flush_job_hmac_sha_256_avx512
-#define SUBMIT_JOB_HMAC_SHA_384       submit_job_hmac_sha_384_avx2
-#define FLUSH_JOB_HMAC_SHA_384        flush_job_hmac_sha_384_avx2
-#define SUBMIT_JOB_HMAC_SHA_512       submit_job_hmac_sha_512_avx2
-#define FLUSH_JOB_HMAC_SHA_512        flush_job_hmac_sha_512_avx2
+#define SUBMIT_JOB_HMAC_SHA_384       submit_job_hmac_sha_384_avx512
+#define FLUSH_JOB_HMAC_SHA_384        flush_job_hmac_sha_384_avx512
+#define SUBMIT_JOB_HMAC_SHA_512       submit_job_hmac_sha_512_avx512
+#define FLUSH_JOB_HMAC_SHA_512        flush_job_hmac_sha_512_avx512
 #define SUBMIT_JOB_HMAC_MD5           submit_job_hmac_md5_avx2
 #define FLUSH_JOB_HMAC_MD5            flush_job_hmac_md5_avx2
 
@@ -333,11 +332,11 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->hmac_sha_384_ooo.lens[1] = 0;
         state->hmac_sha_384_ooo.lens[2] = 0;
         state->hmac_sha_384_ooo.lens[3] = 0;
-        state->hmac_sha_384_ooo.lens[4] = 0xFFFF;
-        state->hmac_sha_384_ooo.lens[5] = 0xFFFF;
-        state->hmac_sha_384_ooo.lens[6] = 0xFFFF;
-        state->hmac_sha_384_ooo.lens[7] = 0xFFFF;
-        state->hmac_sha_384_ooo.unused_lanes = 0xFF03020100;
+        state->hmac_sha_384_ooo.lens[4] = 0;
+        state->hmac_sha_384_ooo.lens[5] = 0;
+        state->hmac_sha_384_ooo.lens[6] = 0;
+        state->hmac_sha_384_ooo.lens[7] = 0;
+        state->hmac_sha_384_ooo.unused_lanes = 0xF76543210;
         for (j=0; j< AVX512_NUM_SHA512_LANES; j++) {
                 state->hmac_sha_384_ooo.ldata[j].job_in_lane = NULL;
                 state->hmac_sha_384_ooo.ldata[j].extra_block[SHA_384_BLOCK_SIZE] = 0x80;
@@ -362,11 +361,11 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->hmac_sha_512_ooo.lens[1] = 0;
         state->hmac_sha_512_ooo.lens[2] = 0;
         state->hmac_sha_512_ooo.lens[3] = 0;
-        state->hmac_sha_512_ooo.lens[4] = 0xFFFF;
-        state->hmac_sha_512_ooo.lens[5] = 0xFFFF;
-        state->hmac_sha_512_ooo.lens[6] = 0xFFFF;
-        state->hmac_sha_512_ooo.lens[7] = 0xFFFF;
-        state->hmac_sha_512_ooo.unused_lanes = 0xFF03020100;
+        state->hmac_sha_512_ooo.lens[4] = 0;
+        state->hmac_sha_512_ooo.lens[5] = 0;
+        state->hmac_sha_512_ooo.lens[6] = 0;
+        state->hmac_sha_512_ooo.lens[7] = 0;
+        state->hmac_sha_512_ooo.unused_lanes = 0xF76543210;
         for (j=0; j< AVX512_NUM_SHA512_LANES; j++) {
                 state->hmac_sha_512_ooo.ldata[j].job_in_lane = NULL;
                 state->hmac_sha_512_ooo.ldata[j].extra_block[SHA_512_BLOCK_SIZE] = 0x80;
@@ -385,7 +384,6 @@ init_mb_mgr_avx512(MB_MGR *state)
                 p[SHA_512_BLOCK_SIZE - 2] = 0x06;
                 p[SHA_512_BLOCK_SIZE - 1] = 0x00;
         }
-
 
         // Init HMAC/MD5 out-of-order fields
         state->hmac_md5_ooo.lens[0] = 0;

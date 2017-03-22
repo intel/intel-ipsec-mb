@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,12 +28,12 @@
 ;; Stack must be aligned to 32 bytes before call
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
-;; Windows clobbers:	
-;; Windows preserves:	
-;;			-----------------------------------------------------------	
-;; Linux clobbers:	
-;; Linux preserves:	
+;;			-----------------------------------------------------------
+;; Windows clobbers:	RAX         RDX         RDI R8  R9  R10 R11 R12 R13 R14 R15
+;; Windows preserves:	    RBX RCX     RBP RSI
+;;			-----------------------------------------------------------
+;; Linux clobbers:	RAX         RDX     RSI     R8  R9  R10 R11 R12 R13 R14 R15
+;; Linux preserves:	    RBX RCX     RBP     RDI
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31
 
@@ -43,7 +43,7 @@
 %include "dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
 
-        
+
 %macro TRANSPOSE8 12
 %define %%r0 %1
 %define %%r1 %2
@@ -56,9 +56,8 @@
 %define %%t0 %9
 %define %%t1 %10
 %define %%PERM_INDEX1 %11
-%define %%PERM_INDEX2 %12	
+%define %%PERM_INDEX2 %12
 
-        
 ; each x(i) is 32 bits, 16 * 32 = 512 ==> a full digest length, 32 single precision quantities
 ; r0  = {a7 a6 a5 a4   a3 a2 a1 a0}
 ; r1  = {b7 b6 b5 b4   b3 b2 b1 b0}
@@ -70,10 +69,10 @@
 ; r7  = {h7 h6 h5 h4   h3 h2 h1 h0}
 
         ;; ;;;  will not get clobbered
-        vmovdqa32 %%PERM_INDEX1, [TRANSPOSE8_PERM_INDEX_1] ;  temp
-        vmovdqa32 %%PERM_INDEX2, [TRANSPOSE8_PERM_INDEX_2]  ; temp 
-        
-        ; process top half (r0..r3) {a...d}
+        vmovdqa32 %%PERM_INDEX1, [TRANSPOSE8_PERM_INDEX_1] ; temp
+        vmovdqa32 %%PERM_INDEX2, [TRANSPOSE8_PERM_INDEX_2] ; temp
+
+	; process top half (r0..r3) {a...d}
         vshufpd	%%t0, %%r0, %%r1, 0x00	; t0 = {b6 a6 b4 a4   b2 a2 b0 a0}
         vshufpd	%%r0, %%r0, %%r1, 0xFF	; r0 = {b7 a7 b5 a5   b3 a3 b1 a1}
         vshufpd	%%t1, %%r2, %%r3, 0x00	; t1 = {d6 c6 d4 c4   d2 c2 d0 c0}
@@ -82,7 +81,7 @@
         vmovdqa32   %%r1, %%t0		     ; r1 and r3 free
         vpermt2q    %%r1, %%PERM_INDEX1,%%t1   ; r1 = {d4 c4 b4 a4   d0 c0 b0 a0}
         vpermt2q    %%t0, %%PERM_INDEX2,%%t1   ; t0 = {d6 c6 b6 a6   d2 c2 b2 a2}
-        
+
         vmovdqa32   %%t1, %%r0		       ; t1 and r3 free
         vpermt2q    %%t1, %%PERM_INDEX1,%%r2   ; t1 = {d5 c5 b5 a5   d1 c1 b1 a1}
         vpermt2q    %%r0, %%PERM_INDEX2,%%r2   ; r0 = {d7 c7 b7 a7   d3 c3 b3 a3}
@@ -96,7 +95,7 @@
         vmovdqa32   %%r5, %%r2		     ; r5 and r7 free
         vpermt2q    %%r5, %%PERM_INDEX1,%%r3   ; r5 = {h4 g4 f4 e4   h0 g0 f0 e0}
         vpermt2q    %%r2, %%PERM_INDEX2,%%r3   ; r2 = {h6 g6 f6 e6   h2 g2 f2 e2}
-        
+
         vmovdqa32   %%r7, %%r4
         vpermt2q    %%r7, %%PERM_INDEX1,%%r6   ; r7 = {h5 g5 f5 e5   h1 g1 f1 e1}
         vpermt2q    %%r4, %%PERM_INDEX2,%%r6   ; r4 = {h7 g7 f7 e7   h3 g3 f3 e3}
@@ -112,14 +111,13 @@
         vshuff64x2  %%r4, %%r1, %%r5, 0xEE ; r4 = {h4 g4 f4 e4   d4 c4 b4 a4}
         vshuff64x2  %%r0, %%r1, %%r5, 0x44 ; r0 = {h0 g0 f0 e0   d0 c0 b0 a0}
 
-        
         vshuff64x2  %%r5, %%t1, %%r7, 0xEE ; r5 = {h5 g5 f5 e5   d5 c5 b5 a5}
         vshuff64x2  %%r1, %%t1, %%r7, 0x44 ; r1 = {h1 g1 f1 e1   d1 c1 b1 a1}
 
         ;;  will re-order input to avoid move
-        ;vmovdqa32   %%r7, %%t0	
-        
-        ; Output looks like: {r0 r1 r2 r3 r4 r5 r6 r7}
+        ;vmovdqa32   %%r7, %%t0
+
+	; Output looks like: {r0 r1 r2 r3 r4 r5 r6 r7}
         ; r0 = {h0 g0 f0 e0   d0 c0 b0 a0}
         ; r1 = {h1 g1 f1 e1   d1 c1 b1 a1}
         ; r2 = {h2 g2 f2 e2   d2 c2 b2 a2}
@@ -131,35 +129,35 @@
         ; r7 = {h7 g7 f7 e7   d7 c7 b7 a7}
 %endmacro
 
-
-        
 %define APPEND(a,b) a %+ b
 
-%define FUNC	sha512_x8_avx3
-%define VMOVDQ32  vmovdqu32
 %ifdef LINUX
 ; Linux register definitions
-%define IN	rdi
-%define DIGEST	rsi
-%define SIZE	rdx
-%define IDX	rcx
-%define TBL	r8
+%define arg1 	rdi
+%define arg2	rsi
+%define arg3	rcx
+%define arg4	rdx
 %else
-; Windows register definitions
-%define IN	rcx
-%define DIGEST	rdx
-%define SIZE	r8
-%define IDX	rdi
-%define TBL	rsi
+; Windows definitions
+%define arg1 	rcx
+%define arg2 	rdx
+%define arg3	rsi
+%define arg4	rdi
 %endif
+
+%define STATE		arg1
+%define INP_SIZE	arg2
+
+%define IDX	arg4
+%define TBL	r8
 
 ;; retaining XMM_SAVE,  because the top half of YMM registers no saving required, only bottom half, the XMM part
 %define NUM_LANES          8
 %define XMM_SAVE           (15-5)*16
 %define SZ                 8
-%define SZ8	           8 * SZ 
-%define DIGEST_SZ          8 * SZ8 
-%define DIGEST_SAVE	   NUM_LANES * DIGEST_SZ  
+%define SZ8	           8 * SZ
+%define DIGEST_SZ          8 * SZ8
+%define DIGEST_SAVE	   NUM_LANES * DIGEST_SZ
 %define RSP_SAVE           1*8
 
 
@@ -167,12 +165,10 @@
 START_FIELDS
 ;;;     name            size            align
 FIELD	_DIGEST_SAVE,	NUM_LANES*8*64,	64
-FIELD	_XMM_SAVE,	XMM_SAVE,	        16	
-FIELD	_GPR_SAVE,	8*8,	        8
+FIELD	_XMM_SAVE,	XMM_SAVE,	16
 FIELD	_RSP,		8,	        8
 %assign STACK_SPACE	_FIELD_OFFSET
 
-        
 %define inp0	r9
 %define inp1	r10
 %define inp2	r11
@@ -227,7 +223,6 @@ FIELD	_RSP,		8,	        8
 %define BIG_SIGMA_1_2 41
 
 ; define rotates for Sigma function for scheduling steps
-
 %define SMALL_SIGMA_0_0 1	; sigma0
 %define SMALL_SIGMA_0_1 8
 %define SMALL_SIGMA_0_2 7
@@ -236,7 +231,7 @@ FIELD	_RSP,		8,	        8
 %define SMALL_SIGMA_1_2 6
 
 %define SHA_MAX_ROUNDS 80
-%define SHA_ROUNDS_LESS_16 (SHA_MAX_ROUNDS - 16)	
+%define SHA_ROUNDS_LESS_16 (SHA_MAX_ROUNDS - 16)
 
 %macro ROTATE_ARGS 0
 %xdefine TMP_ H
@@ -249,8 +244,6 @@ FIELD	_RSP,		8,	        8
 %xdefine B A
 %xdefine A TMP_
 %endm
-
-
 
 ;;  CH(A, B, C) = (A&B) ^ (~A&C)
 ;; MAJ(E, F, G) = (E&F) ^ (E&G) ^ (F&G)
@@ -315,13 +308,11 @@ FIELD	_RSP,		8,	        8
         vpsrlq		TMP6, %%WTp1, SMALL_SIGMA_0_2 	; SHR_7(Wt-15)
         vpternlogq	TMP4, TMP5, TMP6, 0x96	        ; TMP4 = sigma_0(Wt-15)
 
-        vpaddq		%%WT, %%WT, TMP4	; Wt = Wt-16 + sigma_1(Wt-2) + 
+        vpaddq		%%WT, %%WT, TMP4	; Wt = Wt-16 + sigma_1(Wt-2) +
                                                 ; Wt-7 + sigma_0(Wt-15) +
-        
 %endmacro
 
-
-        section .data
+section .data
 default rel
 
 align 64
@@ -357,7 +348,7 @@ TABLE:
 	dq	0x72be5d74f27b896f, 0x72be5d74f27b896f, 0x72be5d74f27b896f, 0x72be5d74f27b896f
 	dq	0x72be5d74f27b896f, 0x72be5d74f27b896f, 0x72be5d74f27b896f, 0x72be5d74f27b896f
 	dq	0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1
-	dq	0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1  
+	dq	0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1, 0x80deb1fe3b1696b1
 	dq	0x9bdc06a725c71235, 0x9bdc06a725c71235, 0x9bdc06a725c71235, 0x9bdc06a725c71235
 	dq	0x9bdc06a725c71235, 0x9bdc06a725c71235, 0x9bdc06a725c71235, 0x9bdc06a725c71235
 	dq	0xc19bf174cf692694, 0xc19bf174cf692694, 0xc19bf174cf692694, 0xc19bf174cf692694
@@ -365,7 +356,7 @@ TABLE:
 	dq	0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2
 	dq	0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2, 0xe49b69c19ef14ad2
 	dq	0xefbe4786384f25e3, 0xefbe4786384f25e3, 0xefbe4786384f25e3, 0xefbe4786384f25e3
-	dq	0xefbe4786384f25e3, 0xefbe4786384f25e3, 0xefbe4786384f25e3, 0xefbe4786384f25e3 
+	dq	0xefbe4786384f25e3, 0xefbe4786384f25e3, 0xefbe4786384f25e3, 0xefbe4786384f25e3
 	dq	0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5
 	dq	0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5, 0x0fc19dc68b8cd5b5
 	dq	0x240ca1cc77ac9c65, 0x240ca1cc77ac9c65, 0x240ca1cc77ac9c65, 0x240ca1cc77ac9c65
@@ -373,7 +364,7 @@ TABLE:
 	dq	0x2de92c6f592b0275, 0x2de92c6f592b0275, 0x2de92c6f592b0275, 0x2de92c6f592b0275
 	dq	0x2de92c6f592b0275, 0x2de92c6f592b0275, 0x2de92c6f592b0275, 0x2de92c6f592b0275
 	dq	0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483
-	dq	0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483 
+	dq	0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483, 0x4a7484aa6ea6e483
 	dq	0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4
 	dq	0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4, 0x5cb0a9dcbd41fbd4
 	dq	0x76f988da831153b5, 0x76f988da831153b5, 0x76f988da831153b5, 0x76f988da831153b5
@@ -421,7 +412,7 @@ TABLE:
 	dq	0xd192e819d6ef5218, 0xd192e819d6ef5218, 0xd192e819d6ef5218, 0xd192e819d6ef5218
 	dq	0xd192e819d6ef5218, 0xd192e819d6ef5218, 0xd192e819d6ef5218, 0xd192e819d6ef5218
 	dq	0xd69906245565a910, 0xd69906245565a910, 0xd69906245565a910, 0xd69906245565a910
-	dq	0xd69906245565a910, 0xd69906245565a910, 0xd69906245565a910, 0xd69906245565a910 
+	dq	0xd69906245565a910, 0xd69906245565a910, 0xd69906245565a910, 0xd69906245565a910
 	dq	0xf40e35855771202a, 0xf40e35855771202a, 0xf40e35855771202a, 0xf40e35855771202a
 	dq	0xf40e35855771202a, 0xf40e35855771202a, 0xf40e35855771202a, 0xf40e35855771202a
 	dq	0x106aa07032bbd1b8, 0x106aa07032bbd1b8, 0x106aa07032bbd1b8, 0x106aa07032bbd1b8
@@ -441,11 +432,11 @@ TABLE:
 	dq	0x5b9cca4f7763e373, 0x5b9cca4f7763e373, 0x5b9cca4f7763e373, 0x5b9cca4f7763e373
 	dq	0x5b9cca4f7763e373, 0x5b9cca4f7763e373, 0x5b9cca4f7763e373, 0x5b9cca4f7763e373
 	dq	0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3
-	dq	0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3 
+	dq	0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3, 0x682e6ff3d6b2b8a3
 	dq	0x748f82ee5defb2fc, 0x748f82ee5defb2fc, 0x748f82ee5defb2fc, 0x748f82ee5defb2fc
 	dq	0x748f82ee5defb2fc, 0x748f82ee5defb2fc, 0x748f82ee5defb2fc, 0x748f82ee5defb2fc
 	dq	0x78a5636f43172f60, 0x78a5636f43172f60, 0x78a5636f43172f60, 0x78a5636f43172f60
-	dq	0x78a5636f43172f60, 0x78a5636f43172f60, 0x78a5636f43172f60, 0x78a5636f43172f60 
+	dq	0x78a5636f43172f60, 0x78a5636f43172f60, 0x78a5636f43172f60, 0x78a5636f43172f60
 	dq	0x84c87814a1f0ab72, 0x84c87814a1f0ab72, 0x84c87814a1f0ab72, 0x84c87814a1f0ab72
 	dq	0x84c87814a1f0ab72, 0x84c87814a1f0ab72, 0x84c87814a1f0ab72, 0x84c87814a1f0ab72
 	dq	0x8cc702081a6439ec, 0x8cc702081a6439ec, 0x8cc702081a6439ec, 0x8cc702081a6439ec
@@ -453,7 +444,7 @@ TABLE:
 	dq	0x90befffa23631e28, 0x90befffa23631e28, 0x90befffa23631e28, 0x90befffa23631e28
 	dq	0x90befffa23631e28, 0x90befffa23631e28, 0x90befffa23631e28, 0x90befffa23631e28
 	dq	0xa4506cebde82bde9, 0xa4506cebde82bde9, 0xa4506cebde82bde9, 0xa4506cebde82bde9
-	dq	0xa4506cebde82bde9, 0xa4506cebde82bde9, 0xa4506cebde82bde9, 0xa4506cebde82bde9 
+	dq	0xa4506cebde82bde9, 0xa4506cebde82bde9, 0xa4506cebde82bde9, 0xa4506cebde82bde9
 	dq	0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915
 	dq	0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915, 0xbef9a3f7b2c67915
 	dq	0xc67178f2e372532b, 0xc67178f2e372532b, 0xc67178f2e372532b, 0xc67178f2e372532b
@@ -461,7 +452,7 @@ TABLE:
 	dq	0xca273eceea26619c, 0xca273eceea26619c, 0xca273eceea26619c, 0xca273eceea26619c
 	dq	0xca273eceea26619c, 0xca273eceea26619c, 0xca273eceea26619c, 0xca273eceea26619c
 	dq	0xd186b8c721c0c207, 0xd186b8c721c0c207, 0xd186b8c721c0c207, 0xd186b8c721c0c207
-	dq	0xd186b8c721c0c207, 0xd186b8c721c0c207, 0xd186b8c721c0c207, 0xd186b8c721c0c207 
+	dq	0xd186b8c721c0c207, 0xd186b8c721c0c207, 0xd186b8c721c0c207, 0xd186b8c721c0c207
 	dq	0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e
 	dq	0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e, 0xeada7dd6cde0eb1e
 	dq	0xf57d4f7fee6ed178, 0xf57d4f7fee6ed178, 0xf57d4f7fee6ed178, 0xf57d4f7fee6ed178
@@ -469,7 +460,7 @@ TABLE:
 	dq	0x06f067aa72176fba, 0x06f067aa72176fba, 0x06f067aa72176fba, 0x06f067aa72176fba
 	dq	0x06f067aa72176fba, 0x06f067aa72176fba, 0x06f067aa72176fba, 0x06f067aa72176fba
 	dq	0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6
-	dq	0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6 
+	dq	0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6, 0x0a637dc5a2c898a6
 	dq	0x113f9804bef90dae, 0x113f9804bef90dae, 0x113f9804bef90dae, 0x113f9804bef90dae
 	dq	0x113f9804bef90dae, 0x113f9804bef90dae, 0x113f9804bef90dae, 0x113f9804bef90dae
 	dq	0x1b710b35131c471b, 0x1b710b35131c471b, 0x1b710b35131c471b, 0x1b710b35131c471b
@@ -477,7 +468,7 @@ TABLE:
 	dq	0x28db77f523047d84, 0x28db77f523047d84, 0x28db77f523047d84, 0x28db77f523047d84
 	dq	0x28db77f523047d84, 0x28db77f523047d84, 0x28db77f523047d84, 0x28db77f523047d84
 	dq	0x32caab7b40c72493, 0x32caab7b40c72493, 0x32caab7b40c72493, 0x32caab7b40c72493
-	dq	0x32caab7b40c72493, 0x32caab7b40c72493, 0x32caab7b40c72493, 0x32caab7b40c72493 
+	dq	0x32caab7b40c72493, 0x32caab7b40c72493, 0x32caab7b40c72493, 0x32caab7b40c72493
 	dq	0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc
 	dq	0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc, 0x3c9ebe0a15c9bebc
 	dq	0x431d67c49c100d4c, 0x431d67c49c100d4c, 0x431d67c49c100d4c, 0x431d67c49c100d4c
@@ -485,7 +476,7 @@ TABLE:
 	dq	0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6
 	dq	0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6, 0x4cc5d4becb3e42b6
 	dq	0x597f299cfc657e2a, 0x597f299cfc657e2a, 0x597f299cfc657e2a, 0x597f299cfc657e2a
-	dq	0x597f299cfc657e2a, 0x597f299cfc657e2a, 0x597f299cfc657e2a, 0x597f299cfc657e2a  
+	dq	0x597f299cfc657e2a, 0x597f299cfc657e2a, 0x597f299cfc657e2a, 0x597f299cfc657e2a
 	dq	0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec
 	dq	0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec, 0x5fcb6fab3ad6faec
 	dq	0x6c44198c4a475817, 0x6c44198c4a475817, 0x6c44198c4a475817, 0x6c44198c4a475817
@@ -493,7 +484,7 @@ TABLE:
 
 align 64
 ; this does the big endian to little endian conversion over a quad word .. ZMM
-;; shuffle on ZMM is shuffle on 4 XMM size chunks, 128 bits 
+;; shuffle on ZMM is shuffle on 4 XMM size chunks, 128 bits
 PSHUFFLE_BYTE_FLIP_MASK:
 	;ddq 0x08090a0b0c0d0e0f0001020304050607
 	dq	0x0001020304050607, 0x08090a0b0c0d0e0f
@@ -523,144 +514,95 @@ TRANSPOSE8_PERM_INDEX_2: 	dq 0x0000000000000002
                                 dq 0x000000000000000E
                                 dq 0x000000000000000F
 
-	section .text
-	
-;; void FUNC(void *input_data, UINT64 *digest[NUM_LANES], const int size)
+section .text
+
+;; void sha512_x8_avx512(void *input_data, UINT64 *digest[NUM_LANES], const int size)
 ;; arg 1 : rcx : pointer to input data
 ;; arg 2 : rdx : pointer to UINT64 digest[8][num_lanes]
 ;; arg 3 : size in message block lengths (= 128 bytes)
-global FUNC
-align 32
-FUNC:
-        and     SIZE, SIZE
-        jz      hash_done
+global sha512_x8_avx512
+align 64
+sha512_x8_avx512:
         mov	rax, rsp
         sub     rsp, STACK_SPACE
         and	rsp, ~63	; align stack to multiple of 64
         mov	[rsp + _RSP], rax
 
-        mov     [rsp + _GPR_SAVE + 8*0], rbx
-%ifndef LINUX
-        mov     [rsp + _GPR_SAVE + 8*1], rsi
-        mov     [rsp + _GPR_SAVE + 8*2], rdi
-%endif
-        mov     [rsp + _GPR_SAVE + 8*3], rbp
-        mov     [rsp + _GPR_SAVE + 8*4], r12
-        mov     [rsp + _GPR_SAVE + 8*5], r13
-        mov     [rsp + _GPR_SAVE + 8*6], r14
-        mov     [rsp + _GPR_SAVE + 8*7], r15
-%ifndef LINUX
-    ;; we only need to save XMMs6-15, no such requirement with YMMs
-    vmovdqa	[rsp + _XMM_SAVE + 0 * 16], xmm6
-    vmovdqa	[rsp + _XMM_SAVE + 1 * 16], xmm7
-    vmovdqa	[rsp + _XMM_SAVE + 2 * 16], xmm8
-    vmovdqa	[rsp + _XMM_SAVE + 3 * 16], xmm9
-    vmovdqa	[rsp + _XMM_SAVE + 4 * 16], xmm10
-    vmovdqa	[rsp + _XMM_SAVE + 5 * 16], xmm11
-    vmovdqa	[rsp + _XMM_SAVE + 6 * 16], xmm12
-    vmovdqa	[rsp + _XMM_SAVE + 7 * 16], xmm13
-    vmovdqa	[rsp + _XMM_SAVE + 8 * 16], xmm14
-    vmovdqa	[rsp + _XMM_SAVE + 9 * 16], xmm15
-%endif
-   ;; Initialize digests ; organized uint64 digest[8][num_lanes]; no transpose required
-    ;; Digest is an array of pointers to digests 
-    mov	inp0,[DIGEST+0*8]
-    mov	inp1,[DIGEST+1*8]
-    mov	inp2,[DIGEST+2*8]
-    mov	inp3,[DIGEST+3*8]
-    mov	inp4,[DIGEST+4*8]
-    mov	inp5,[DIGEST+5*8]
-    mov	inp6,[DIGEST+6*8]
-    mov inp7,[DIGEST+7*8]
-        
-    VMOVDQ32	A,    [inp0]
-    VMOVDQ32	B,    [inp1]
-    VMOVDQ32	C,    [inp2]
-    VMOVDQ32	D,    [inp3]
-    VMOVDQ32	E,    [inp4]
-    VMOVDQ32	F,    [inp5]
-    VMOVDQ32	G,    [inp6]
-    VMOVDQ32	TMP0, [inp7]
-        ;; VMOVDQ32	H,    [inp7]
-        ;;  to obtain transposed digest in A, B, C, D, E, F, G, H
-    TRANSPOSE8 A, B, C, D, E, F, G, TMP0, H, TMP1, TMP2, TMP3
-    
-    lea	TBL,[rel TABLE] 	
-    xor	IDX, IDX
-    ;; Read in input data address, saving them in registers because
-    ;; they will serve as variables, which we shall keep incrementing
-    mov	inp0, [IN + 0*8]
-    mov	inp1, [IN + 1*8]
-    mov	inp2, [IN + 2*8]
-    mov	inp3, [IN + 3*8]
-    mov	inp4, [IN + 4*8]
-    mov	inp5, [IN + 5*8]
-    mov	inp6, [IN + 6*8]
-    mov	inp7, [IN + 7*8]
+	;; Initialize digests ; organized uint64 digest[8][num_lanes]; no transpose required
+	;; Digest is an array of pointers to digests
+	vmovdqu32	A,    [STATE + 0*SHA512_DIGEST_ROW_SIZE]
+	vmovdqu32	B,    [STATE + 1*SHA512_DIGEST_ROW_SIZE]
+	vmovdqu32	C,    [STATE + 2*SHA512_DIGEST_ROW_SIZE]
+	vmovdqu32	D,    [STATE + 3*SHA512_DIGEST_ROW_SIZE]
+	vmovdqu32	E,    [STATE + 4*SHA512_DIGEST_ROW_SIZE]
+	vmovdqu32	F,    [STATE + 5*SHA512_DIGEST_ROW_SIZE]
+	vmovdqu32	G,    [STATE + 6*SHA512_DIGEST_ROW_SIZE]
+        vmovdqu32	H,    [STATE + 7*SHA512_DIGEST_ROW_SIZE]
 
+	lea	TBL,[rel TABLE]
+	xor	IDX, IDX
+	;; Read in input data address, saving them in registers because
+	;; they will serve as variables, which we shall keep incrementing
+	mov	inp0, [STATE + _data_ptr_sha512 + 0*PTR_SZ]
+	mov	inp1, [STATE + _data_ptr_sha512 + 1*PTR_SZ]
+	mov	inp2, [STATE + _data_ptr_sha512 + 2*PTR_SZ]
+	mov	inp3, [STATE + _data_ptr_sha512 + 3*PTR_SZ]
+	mov	inp4, [STATE + _data_ptr_sha512 + 4*PTR_SZ]
+	mov	inp5, [STATE + _data_ptr_sha512 + 5*PTR_SZ]
+	mov	inp6, [STATE + _data_ptr_sha512 + 6*PTR_SZ]
+	mov	inp7, [STATE + _data_ptr_sha512 + 7*PTR_SZ]
+	jmp	lloop
+
+align 32
 lloop:
-       
-    ;;  first half of 1024 (need to transpose before use)
-    vmovups	W0,[inp0 + IDX ]
-    vmovups	W1,[inp1 + IDX ]
-    vmovups	W2,[inp2 + IDX ]
-    vmovups	W3,[inp3 + IDX ]
-    vmovups	W4,[inp4 + IDX ]
-    vmovups	W5,[inp5 + IDX ]
-    vmovups	W6,[inp6 + IDX ]
-    vmovups	TMP0,[inp7 + IDX ]
-    TRANSPOSE8  W0, W1, W2, W3, W4, W5, W6, TMP0,  W7, TMP1, TMP2, TMP3	
-    ;;  second half of 1024 (need to transpose before use)
-    vmovups     W8,[inp0  + SZ8 + IDX ]
-    vmovups	W9,[inp1  + SZ8 + IDX ]
-    vmovups	W10,[inp2 + SZ8 + IDX ]
-    vmovups	W11,[inp3 + SZ8 + IDX ]
-    vmovups	W12,[inp4 + SZ8 + IDX ]
-    vmovups	W13,[inp5 + SZ8 + IDX ]
-    vmovups	W14,[inp6 + SZ8 + IDX ]
-    vmovups	TMP0,[inp7 + SZ8 + IDX ]
-    TRANSPOSE8  W8, W9, W10, W11, W12, W13, W14, TMP0,  W15, TMP1, TMP2, TMP3
+	;;  first half of 1024 (need to transpose before use)
+	vmovups	W0,  [inp0 + IDX]
+	vmovups	W1,  [inp1 + IDX]
+	vmovups	W2,  [inp2 + IDX]
+	vmovups	W3,  [inp3 + IDX]
+	vmovups	W4,  [inp4 + IDX]
+	vmovups	W5,  [inp5 + IDX]
+	vmovups	W6,  [inp6 + IDX]
+	vmovups	TMP0,[inp7 + IDX]
+	TRANSPOSE8  W0, W1, W2, W3, W4, W5, W6, TMP0,  W7, TMP1, TMP2, TMP3
+	;;  second half of 1024 (need to transpose before use)
+	vmovups	W8,  [inp0 + SZ8 + IDX]
+	vmovups	W9,  [inp1 + SZ8 + IDX]
+	vmovups	W10, [inp2 + SZ8 + IDX]
+	vmovups	W11, [inp3 + SZ8 + IDX]
+	vmovups	W12, [inp4 + SZ8 + IDX]
+	vmovups	W13, [inp5 + SZ8 + IDX]
+	vmovups	W14, [inp6 + SZ8 + IDX]
+	vmovups	TMP0,[inp7 + SZ8 + IDX]
+	TRANSPOSE8  W8, W9, W10, W11, W12, W13, W14, TMP0,  W15, TMP1, TMP2, TMP3
 
-    vmovdqa32	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
+	vmovdqa32	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
-    vmovdqa32	TMP3, [TBL]	; First K
+	vmovdqa32	TMP3, [TBL]	; First K
 
-        ; Save digests for later addition
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*0], A
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*1], B
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*2], C
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*3], D
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*4], E
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*5], F
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*6], G
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*7], H
+	; Save digests for later addition
+	vmovdqa32	[rsp + _DIGEST_SAVE + 64*0], A
+	vmovdqa32	[rsp + _DIGEST_SAVE + 64*1], B
+	vmovdqa32	[rsp + _DIGEST_SAVE + 64*2], C
+	vmovdqa32	[rsp + _DIGEST_SAVE + 64*3], D
+	vmovdqa32	[rsp + _DIGEST_SAVE + 64*4], E
+	vmovdqa32	[rsp + _DIGEST_SAVE + 64*5], F
+	vmovdqa32	[rsp + _DIGEST_SAVE + 64*6], G
+	vmovdqa32	[rsp + _DIGEST_SAVE + 64*7], H
 
-    add	IDX, 128  	; increment by message block length in bytes
-
-       
-        
+	add	IDX, 128  	; increment by message block length in bytes
 
 %assign I 0
 %rep 16
 ;;;  little endian to big endian
-     vpshufb	APPEND(W,I), APPEND(W,I), TMP2
+	vpshufb	APPEND(W,I), APPEND(W,I), TMP2
 %assign I (I+1)
 %endrep
-    ; Save digests for later addition
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*0], A
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*1], B
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*2], C
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*3], D
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*4], E
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*5], F
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*6], G
-    vmovdqa32	[rsp + _DIGEST_SAVE + 64*7], H
 
-        ; MSG Schedule for W0-W15 is now complete in registers
-        ; Process first (max-rounds -16)
-        ; Calculate next Wt+16 after processing is complete and Wt is unneeded
-
-        ; PROCESS_LOOP_00_79 APPEND(W,J), I, APPEND(W,K), APPEND(W,L), APPEND(W,M)  
+	; MSG Schedule for W0-W15 is now complete in registers
+	; Process first (max-rounds -16)
+	; Calculate next Wt+16 after processing is complete and Wt is unneeded
+	; PROCESS_LOOP_00_79 APPEND(W,J), I, APPEND(W,K), APPEND(W,L), APPEND(W,M)
 
 %assign I 0
 %assign J 0
@@ -669,7 +611,7 @@ lloop:
 %assign M 14
 %rep SHA_ROUNDS_LESS_16
         PROCESS_LOOP  APPEND(W,J),  I
-        MSG_SCHED_ROUND_16_79  APPEND(W,J), APPEND(W,K), APPEND(W,L), APPEND(W,M)  
+        MSG_SCHED_ROUND_16_79  APPEND(W,J), APPEND(W,K), APPEND(W,L), APPEND(W,M)
 %assign I (I+1)
 %assign J ((J+1)% 16)
 %assign K ((K+1)% 16)
@@ -677,7 +619,7 @@ lloop:
 %assign M ((M+1)% 16)
 %endrep
         ; Check is this is the last block
-        sub 	SIZE, 1
+        sub 	INP_SIZE, 1
         je	lastLoop
 
         ; Process last 16 rounds
@@ -701,15 +643,12 @@ lloop:
 
         jmp	lloop
 
-
-        
-
+align 32
 lastLoop:
         ; Process last 16 rounds
 %assign I SHA_ROUNDS_LESS_16
 %assign J 0
-
-%rep 16 
+%rep 16
         PROCESS_LOOP  APPEND(W,J), I
 %assign I (I+1)
 %assign J (J+1)
@@ -725,53 +664,24 @@ lastLoop:
         vpaddq		G, G, [rsp + _DIGEST_SAVE + 64*6]
         vpaddq		H, H, [rsp + _DIGEST_SAVE + 64*7]
 
-        mov	inp0,[DIGEST+0*8]
-        mov	inp1,[DIGEST+1*8]
-        mov	inp2,[DIGEST+2*8]
-        mov	inp3,[DIGEST+3*8]
-        mov	inp4,[DIGEST+4*8]
-        mov	inp5,[DIGEST+5*8]
-        mov	inp6,[DIGEST+6*8]
-        mov	inp7,[DIGEST+7*8]
+        ; Write out digest
+        ;;  results in A, B, C, D, E, F, G, H
+	vmovdqu32	[STATE + 0*SHA512_DIGEST_ROW_SIZE], A
+	vmovdqu32	[STATE + 1*SHA512_DIGEST_ROW_SIZE], B
+	vmovdqu32	[STATE + 2*SHA512_DIGEST_ROW_SIZE], C
+	vmovdqu32	[STATE + 3*SHA512_DIGEST_ROW_SIZE], D
+	vmovdqu32	[STATE + 4*SHA512_DIGEST_ROW_SIZE], E
+	vmovdqu32	[STATE + 5*SHA512_DIGEST_ROW_SIZE], F
+	vmovdqu32	[STATE + 6*SHA512_DIGEST_ROW_SIZE], G
+        vmovdqu32	[STATE + 7*SHA512_DIGEST_ROW_SIZE], H
 
-        ; Un-transpose digest and Write out
-        TRANSPOSE8 A, B, C, D, E, F, G, H, TMP0, TMP1, TMP2, TMP3
-        ;;  results in A, B, C, D, E, F, G, TMP0
-        
-        VMOVDQ32	[inp0], A
-        VMOVDQ32	[inp1], B
-        VMOVDQ32	[inp2], C
-        VMOVDQ32	[inp3], D
-        VMOVDQ32	[inp4], E
-        VMOVDQ32	[inp5], F
-        VMOVDQ32	[inp6], G
-        VMOVDQ32	[inp7], TMP0
-
-%ifndef LINUX
-    vmovdqa	xmm15, [rsp + _XMM_SAVE + 9 * 16]
-    vmovdqa	xmm14, [rsp + _XMM_SAVE + 8 * 16]
-    vmovdqa	xmm13, [rsp + _XMM_SAVE + 7 * 16]
-    vmovdqa	xmm12, [rsp + _XMM_SAVE + 6 * 16]
-    vmovdqa	xmm11, [rsp + _XMM_SAVE + 5 * 16]
-    vmovdqa	xmm10, [rsp + _XMM_SAVE + 4 * 16]
-    vmovdqa	xmm9,  [rsp + _XMM_SAVE + 3 * 16]
-    vmovdqa	xmm8,  [rsp + _XMM_SAVE + 2 * 16]
-    vmovdqa	xmm7,  [rsp + _XMM_SAVE + 1 * 16]
-    vmovdqa	xmm6,  [rsp + _XMM_SAVE + 0 * 16]
-%endif    
-
-        mov     rbx, [rsp + _GPR_SAVE + 8*0]
-%ifndef LINUX
-        mov     rsi, [rsp + _GPR_SAVE + 8*1]
-        mov     rdi, [rsp + _GPR_SAVE + 8*2]
-%endif
-        mov     rbp, [rsp + _GPR_SAVE + 8*3]
-        mov     r12, [rsp + _GPR_SAVE + 8*4]
-        mov     r13, [rsp + _GPR_SAVE + 8*5]
-        mov     r14, [rsp + _GPR_SAVE + 8*6]
-        mov     r15, [rsp + _GPR_SAVE + 8*7]
+	; update input pointers
+%assign I 0
+%rep 8
+	add	[STATE + _data_ptr_sha512 + I*PTR_SZ], IDX
+%assign I (I+1)
+%endrep
 
         mov     rsp, [rsp + _RSP]
-hash_done:
+;hash_done:
         ret
-

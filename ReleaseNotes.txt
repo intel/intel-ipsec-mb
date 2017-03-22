@@ -4,11 +4,17 @@ Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 Unreleased
 ========================================================================
 
-Jan, 2017
+Mar, 2017
 
+Intel(R) AVX-512 Instructions
+- Added optimized HMAC-SHA224 and HMAC-SHA256
+- Added optimized HMAC-SHA384 and HMAC-SHA512
 General
 - Windows x64 compilation target
 - New DOCSIS SEC BPI V3.1 cipher
+- GCM128 and GCM256 updates
+- GCM192 added
+- Library API benchmark tool added
 
 November 2016
 ========================================================================

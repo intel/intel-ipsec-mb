@@ -35,7 +35,8 @@ DCFLAGS = /O2 /Oi
 !endif
 
 CC = cl
-CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /Gy  /fp:precise /EHsc /I.. /I..\include
+# _CRT_SECURE_NO_WARNINGS disables warning C4996 about unsecure snprintf() being used
+CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /Gy /fp:precise /EHsc /I.. /I..\include
 
 all: $(APP)
 

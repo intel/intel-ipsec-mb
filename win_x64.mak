@@ -46,7 +46,7 @@ LIBFLAGS = /nologo /machine:X64 /nodefaultlib
 AS = nasm
 AFLAGS = $(DAFLAGS) -fwin64 -Xvc -DWIN_ABI -Iinclude/ -I./ -Iavx/ -Iavx2/ -Iavx512/ -Isse/
 
-lib_objs = \
+lib_objs1 = \
 	$(OBJ_DIR)\aes128_cbc_dec_by4_sse.obj \
 	$(OBJ_DIR)\aes128_cbc_dec_by8_avx.obj \
 	$(OBJ_DIR)\aes128_cntr_by4_sse.obj \
@@ -73,6 +73,38 @@ lib_objs = \
 	$(OBJ_DIR)\aes_keyexp_256.obj \
 	$(OBJ_DIR)\aes_xcbc_mac_128_x4.obj \
 	$(OBJ_DIR)\aes_xcbc_mac_128_x8.obj \
+	$(OBJ_DIR)\md5_x4x2_avx.obj \
+	$(OBJ_DIR)\md5_x4x2_sse.obj \
+	$(OBJ_DIR)\md5_x8x2_avx2.obj \
+	$(OBJ_DIR)\save_xmms.obj \
+	$(OBJ_DIR)\sha1_mult_avx.obj \
+	$(OBJ_DIR)\sha1_mult_sse.obj \
+	$(OBJ_DIR)\sha1_ni_x2_sse.obj \
+	$(OBJ_DIR)\sha1_one_block_avx.obj \
+	$(OBJ_DIR)\sha1_one_block_sse.obj \
+	$(OBJ_DIR)\sha1_x8_avx2.obj \
+	$(OBJ_DIR)\sha1_x16_avx512.obj \
+	$(OBJ_DIR)\sha224_one_block_avx.obj \
+	$(OBJ_DIR)\sha224_one_block_sse.obj \
+	$(OBJ_DIR)\sha256_oct_avx2.obj \
+	$(OBJ_DIR)\sha256_one_block_avx.obj \
+	$(OBJ_DIR)\sha256_one_block_sse.obj \
+	$(OBJ_DIR)\sha256_ni_x2_sse.obj \
+	$(OBJ_DIR)\sha256_x16_avx512.obj \
+	$(OBJ_DIR)\sha384_one_block_avx.obj \
+	$(OBJ_DIR)\sha384_one_block_sse.obj \
+	$(OBJ_DIR)\sha512_one_block_avx.obj \
+	$(OBJ_DIR)\sha512_one_block_sse.obj \
+	$(OBJ_DIR)\sha512_x2_avx.obj \
+	$(OBJ_DIR)\sha512_x2_sse.obj \
+	$(OBJ_DIR)\sha512_x4_avx2.obj \
+	$(OBJ_DIR)\sha512_x8_avx512.obj \
+	$(OBJ_DIR)\sha_256_mult_avx.obj \
+	$(OBJ_DIR)\sha_256_mult_sse.obj \
+	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
+	$(OBJ_DIR)\md5_one_block.obj
+
+lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes192_submit_avx.obj \
@@ -122,55 +154,29 @@ lib_objs = \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_256_submit_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_384_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_384_flush_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha_384_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_384_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_384_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_384_submit_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha_384_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_384_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_512_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_512_flush_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha_512_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_512_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_512_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_512_submit_avx2.obj \
+	$(OBJ_DIR)\mb_mgr_hmac_sha_512_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_sha_512_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_avx512.obj \
-	$(OBJ_DIR)\md5_x4x2_avx.obj \
-	$(OBJ_DIR)\md5_x4x2_sse.obj \
-	$(OBJ_DIR)\md5_x8x2_avx2.obj \
-	$(OBJ_DIR)\save_xmms.obj \
-	$(OBJ_DIR)\sha1_mult_avx.obj \
-	$(OBJ_DIR)\sha1_mult_sse.obj \
-	$(OBJ_DIR)\sha1_ni_x2_sse.obj \
-	$(OBJ_DIR)\sha1_one_block_avx.obj \
-	$(OBJ_DIR)\sha1_one_block_sse.obj \
-	$(OBJ_DIR)\sha1_x8_avx2.obj \
-	$(OBJ_DIR)\sha1_x16_avx512.obj \
-	$(OBJ_DIR)\sha224_one_block_avx.obj \
-	$(OBJ_DIR)\sha224_one_block_sse.obj \
-	$(OBJ_DIR)\sha256_oct_avx2.obj \
-	$(OBJ_DIR)\sha256_one_block_avx.obj \
-	$(OBJ_DIR)\sha256_one_block_sse.obj \
-	$(OBJ_DIR)\sha256_ni_x2_sse.obj \
-	$(OBJ_DIR)\sha256_x16_avx512.obj \
-	$(OBJ_DIR)\sha384_one_block_avx.obj \
-	$(OBJ_DIR)\sha384_one_block_sse.obj \
-	$(OBJ_DIR)\sha512_one_block_avx.obj \
-	$(OBJ_DIR)\sha512_one_block_sse.obj \
-	$(OBJ_DIR)\sha512_x2_avx.obj \
-	$(OBJ_DIR)\sha512_x2_sse.obj \
-	$(OBJ_DIR)\sha512_x4_avx2.obj \
-	$(OBJ_DIR)\sha512_x8_avx512.obj \
-	$(OBJ_DIR)\sha_256_mult_avx.obj \
-	$(OBJ_DIR)\sha_256_mult_sse.obj \
-	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
 	$(OBJ_DIR)\mb_mgr_avx.obj \
 	$(OBJ_DIR)\mb_mgr_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_sse.obj \
-	$(OBJ_DIR)\md5_one_block.obj
+	$(OBJ_DIR)\mb_mgr_sse.obj
 
 gcm_objs = \
         $(OBJ_DIR)\gcm128_sse.obj \
@@ -184,9 +190,9 @@ gcm_objs = \
 	$(OBJ_DIR)\gcm256_avx_gen4.obj
 
 !ifdef NO_GCM
-all_objs = $(lib_objs)
+all_objs = $(lib_objs1) $(lib_objs2)
 !else
-all_objs = $(lib_objs) $(gcm_objs)
+all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
 !endif
 
 all: $(LIBNAME)
@@ -233,6 +239,14 @@ $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
 clean:
-	del /q $(all_objs)
+	del /q $(lib_objs1)
+	del /q $(lib_objs2)
+	del /q $(gcm_objs)
 	del /q $(LIBNAME)
+
+
+
+
+
+
 
