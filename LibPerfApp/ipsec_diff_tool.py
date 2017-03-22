@@ -42,13 +42,12 @@ class Variant(object):
     results of average execution times
     """
     def __init__(self, **args):
-        self.arch = args['arch']
-        self.cipher_mode = args['cipher']
-        self.cipher_dir = args['dir']
-        self.hash_alg = args['alg']
-        self.key_size = args['keysize']
+        self.params = (args['arch'], args['cipher'], args['dir'], args['alg'],
+                       args['keysize'])
+
         self.avg_times = []
-        self.lin_func = ()
+        self.slope = None
+        self.intercept = None
 
     def set_times(self, avg_times):
         """
@@ -71,19 +70,79 @@ class Variant(object):
         sumy = sum(self.avg_times)
         sumxy = sum([x * y for x, y in zip(sizes, self.avg_times)])
         sumsqrx = sum([pow(x, 2) for x in sizes])
-        a = (n * sumxy - sumx * sumy) / float(n * sumsqrx - pow(sumx, 2))
-        b = (sumy - a * sumx) / float(n)
+        self.slope = (n * sumxy - sumx * sumy) / float(n * sumsqrx - pow(sumx, 2))
+        self.intercept = (sumy - self.slope * sumx) / float(n)
 
-        # Linear function representation y=ax+b
-        self.lin_func = (a, b)
+    def get_params_str(self):
+        """
+        Returns all parameters concatenated into one string
+        """
+        return "\t".join(i for i in self.params)
+
+    def get_lin_func_str(self):
+        """
+        Returns string having linear coefficients
+        """
+        slope = "{:.5f}".format(self.slope)
+        intercept = "{:.5f}".format(self.intercept)
+        return "{}\t{}".format(slope, intercept)
+
+class VarList(list):
+    """
+    Class used to store all test variants as a list of objects
+    """
+
+    def find_obj(self, params):
+        """
+        Finds first occurence of object containing given parameters
+        """
+        ret_val = None
+        matches = (obj for obj in self if obj.params == params)
+        try:
+            ret_val = next(matches)
+        except StopIteration:
+            pass
+        return ret_val
+
+    def compare(self, list_b, tolerance):
+        """
+        Finds variants from two data sets which are matching and compares
+        its linear regression coefficients.
+        Compares list_b against itself.
+        """
+
+        warning = False
+        print "NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE A\tINTERCEPT A\tSLOPE B\tINTERCEPT B"
+        for i, obj_a in enumerate(self):
+            obj_b = list_b.find_obj(obj_a.params)
+            if obj_b != None:
+                if obj_a.slope < 0.0:
+                    obj_a.slope = 0
+                if obj_b.slope < 0.0:
+                    obj_b.slope = 0
+                slope_bv = tolerance * obj_a.slope # border value
+                intercept_bv = tolerance * obj_a.intercept
+                diff_slope = obj_b.slope - obj_a.slope
+                diff_intercept = obj_b.intercept - obj_a.intercept
+                if (obj_a.slope > 0.001 and obj_b.slope > 0.001 and
+                        diff_slope > slope_bv) or diff_intercept > intercept_bv:
+                    warning = True
+                    print "{}\t{}\t{}\t{}".format(i + 1,
+                                                  obj_b.get_params_str(),
+                                                  obj_a.get_lin_func_str(),
+                                                  obj_b.get_lin_func_str())
+        if not warning:
+            print "No differences found."
+        return warning
 
 class Parser(object):
     """
     Class used to parse a text file contaning performance data
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, fname, verbose):
+        self.fname = fname
+        self.verbose = verbose
 
     @staticmethod
     def convert2int(in_tuple):
@@ -101,28 +160,32 @@ class Parser(object):
         for further comparision of performance
         """
 
-        v_list = []
+        v_list = VarList()
         # Reading by columns, results in list of tuples
         # Each tuple is representing a column from a text file
-        cols = zip(*(line.strip().split('\t') for line in sys.stdin))
+        with open(self.fname, 'r') as f:
+            cols = zip(*(line.strip().split('\t') for line in f))
 
         # Reading first column with payload sizes, ommiting first 5 rows
         sizes = self.convert2int(cols[0][PAR_NUM:])
-        print "Available buffer sizes:\n"
-        print sizes
-        print "========================================================"
-        print "\n\nVariants:\n"
+        if self.verbose:
+            print "Available buffer sizes:\n"
+            print sizes
+            print "========================================================"
+            print "\n\nVariants:\n"
 
         # Reading remaining columns contaning performance data
         for row in cols[1:]:
             # First rows are run options
             arch, c_mode, c_dir, h_alg, key_size = row[:PAR_NUM]
-            print arch, c_mode, c_dir, h_alg, key_size
+            if self.verbose:
+                print arch, c_mode, c_dir, h_alg, key_size
 
             # Getting average times
             avg_times = self.convert2int(row[PAR_NUM:])
-            print avg_times
-            print "------"
+            if self.verbose:
+                print avg_times
+                print "------"
 
             # Putting new object to the result list
             v_list.append(Variant(arch=arch, cipher=c_mode, dir=c_dir,
@@ -130,8 +193,9 @@ class Parser(object):
             v_list[-1].set_times(avg_times)
             # Finding linear function representation of data set
             v_list[-1].lin_reg(sizes)
-            print v_list[-1].lin_func
-            print "============\n"
+            if self.verbose:
+                print v_list[-1].lin_func
+                print "============\n"
         return v_list, sizes
 
 class DiffTool(object):
@@ -140,15 +204,59 @@ class DiffTool(object):
     """
 
     def __init__(self):
-        pass
+        self.fname_a = None
+        self.fname_b = None
+        self.tolerance = 0.05
+        self.verbose = False
 
+    @staticmethod
+    def usage():
+        """
+        Prints usage
+        """
+        print "This tool compares file_b against file_a printing out differences."
+        print "Usage:"
+        print "\tipsec_diff_tool.py [-v] file_a file_b [tol]\n"
+        print "\t-v - verbose"
+        print "\tfile_a, file_b - text files containing output from ipsec_perf tool"
+        print "\ttol - tolerance [%], default 5"
+
+    def parse_args(self):
+        """
+        Get commandline arguments
+        """
+        if len(sys.argv) < 3 or sys.argv[1] == "-h":
+            self.usage()
+            exit(1)
+        if sys.argv[1] == "-v":
+            self.verbose = True
+            self.fname_a = sys.argv[2]
+            self.fname_b = sys.argv[3]
+            if len(sys.argv) >= 5:
+                self.tolerance = 0.01 * float(sys.argv[4])
+        else:
+            self.fname_a = sys.argv[1]
+            self.fname_b = sys.argv[2]
+            if len(sys.argv) >= 4:
+                self.tolerance = 0.01 * float(sys.argv[3])
 
     def run(self):
         """
         Main method
         """
-        parser = Parser()
-        obj, sz = parser.load()
+        self.parse_args()
+
+        parser_a = Parser(self.fname_a, self.verbose)
+        parser_b = Parser(self.fname_b, self.verbose)
+        list_a, sizes_a = parser_a.load()
+        list_b, sizes_b = parser_b.load()
+        if sizes_a != sizes_b:
+            print "Error. Buffer size lists in two compared " \
+                    "data sets differ! Aborting.\n"
+            exit(1)
+        warning = list_a.compare(list_b, self.tolerance) # Compares list_b against list_a
+        if warning:
+            exit(2)
 
 if __name__ == '__main__':
     DiffTool().run()

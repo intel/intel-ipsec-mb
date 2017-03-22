@@ -48,7 +48,7 @@ or
 	make style
 
 Be aware that you will have cppcheck tool installed and checkpatch.pl
-script copied into this directory.
+script copied into one of the directories listed in $PATH.
 You can also set CPPCHECK and/or CHECKPATCH variables if you want give paths
 to this tools being placed in different directories. for ex:
 	CPPCHECK=~/tools/cppcheck make cppcheck
@@ -63,9 +63,11 @@ You can simply check list of arguments by typing:
 Usage example:
 	./ipsec_perf -c --no-avx512 --no-gcm -o 24
 
-Later you can redirect outout to ipsec_diff_tool.py for data
+Later you can pass output to ipsec_diff_tool.py for data
 analysis:
-	./ipsec_perf -c --no-avx512 --no-gcm -o 24 | ./ipsec_diff_tool.py
+	./ipsec_diff_tool.py out1.txt out2.txt 5
+
+Run ipsec_diff_tool.py -h too see help page.
 
 Legal Disclaimer
 ================
