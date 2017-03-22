@@ -111,6 +111,13 @@ class VarList(list):
         Compares list_b against itself.
         """
 
+        if tolerance is None:
+            tolerance = 5.0
+        if tolerance < 0.0:
+            print "Bad argument: Tolerance must not be less than 0%"
+            exit(1)
+        print "TOLERANCE: {:.2f}%".format(tolerance)
+
         warning = False
         print "NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE A\tINTERCEPT A\tSLOPE B\tINTERCEPT B"
         for i, obj_a in enumerate(self):
@@ -120,8 +127,8 @@ class VarList(list):
                     obj_a.slope = 0
                 if obj_b.slope < 0.0:
                     obj_b.slope = 0
-                slope_bv = tolerance * obj_a.slope # border value
-                intercept_bv = tolerance * obj_a.intercept
+                slope_bv = 0.01 * tolerance * obj_a.slope # border value
+                intercept_bv = 0.01 * tolerance * obj_a.intercept
                 diff_slope = obj_b.slope - obj_a.slope
                 diff_intercept = obj_b.intercept - obj_a.intercept
                 if (obj_a.slope > 0.001 and obj_b.slope > 0.001 and
@@ -134,6 +141,19 @@ class VarList(list):
         if not warning:
             print "No differences found."
         return warning
+
+    def printout(self):
+        """
+        Prints out readable representation of the list
+        """
+
+        print "NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE \tINTERCEPT"
+        for i, obj in enumerate(self):
+            print "{}\t{}\t{}".format(i + 1,
+                                      obj.get_params_str(),
+                                      obj.get_lin_func_str())
+
+
 
 class Parser(object):
     """
@@ -163,8 +183,14 @@ class Parser(object):
         v_list = VarList()
         # Reading by columns, results in list of tuples
         # Each tuple is representing a column from a text file
-        with open(self.fname, 'r') as f:
-            cols = zip(*(line.strip().split('\t') for line in f))
+        try:
+            f = open(self.fname, 'r')
+        except IOError:
+            print "Error reading {} file.".format(self.fname)
+            exit(1)
+        else:
+            with f:
+                cols = zip(*(line.strip().split('\t') for line in f))
 
         # Reading first column with payload sizes, ommiting first 5 rows
         sizes = self.convert2int(cols[0][PAR_NUM:])
@@ -194,7 +220,7 @@ class Parser(object):
             # Finding linear function representation of data set
             v_list[-1].lin_reg(sizes)
             if self.verbose:
-                print v_list[-1].lin_func
+                print "({}, {})".format(v_list[-1].slope, v_list[-1].intercept)
                 print "============\n"
         return v_list, sizes
 
@@ -206,8 +232,9 @@ class DiffTool(object):
     def __init__(self):
         self.fname_a = None
         self.fname_b = None
-        self.tolerance = 0.05
+        self.tolerance = None
         self.verbose = False
+        self.analyze = False
 
     @staticmethod
     def usage():
@@ -216,10 +243,16 @@ class DiffTool(object):
         """
         print "This tool compares file_b against file_a printing out differences."
         print "Usage:"
-        print "\tipsec_diff_tool.py [-v] file_a file_b [tol]\n"
+        print "\tipsec_diff_tool.py [-v] [-a] file_a file_b [tol]\n"
         print "\t-v - verbose"
+        print "\t-a - takes only one argument: name of the file to analyze"
         print "\tfile_a, file_b - text files containing output from ipsec_perf tool"
-        print "\ttol - tolerance [%], default 5"
+        print "\ttol - tolerance [%], must be >= 0, default 5\n"
+        print "Examples:"
+        print "\tipsec_diff_tool.py file01.txt file02.txt 10"
+        print "\tipsec_diff_tool.py -a file02.txt"
+        print "\tipsec_diff_tool.py -v -a file01.txt"
+
 
     def parse_args(self):
         """
@@ -228,17 +261,26 @@ class DiffTool(object):
         if len(sys.argv) < 3 or sys.argv[1] == "-h":
             self.usage()
             exit(1)
-        if sys.argv[1] == "-v":
+        if sys.argv[1] == "-a":
+            self.analyze = True
+            self.fname_a = sys.argv[2]
+        elif sys.argv[2] == "-a":
+            if sys.argv[1] == "-v":
+                self.verbose = True
+            self.analyze = True
+            self.fname_a = sys.argv[3]
+        elif sys.argv[1] == "-v":
             self.verbose = True
             self.fname_a = sys.argv[2]
             self.fname_b = sys.argv[3]
             if len(sys.argv) >= 5:
-                self.tolerance = 0.01 * float(sys.argv[4])
+                self.tolerance = float(sys.argv[4])
+
         else:
             self.fname_a = sys.argv[1]
             self.fname_b = sys.argv[2]
             if len(sys.argv) >= 4:
-                self.tolerance = 0.01 * float(sys.argv[3])
+                self.tolerance = float(sys.argv[3])
 
     def run(self):
         """
@@ -247,16 +289,20 @@ class DiffTool(object):
         self.parse_args()
 
         parser_a = Parser(self.fname_a, self.verbose)
-        parser_b = Parser(self.fname_b, self.verbose)
         list_a, sizes_a = parser_a.load()
-        list_b, sizes_b = parser_b.load()
-        if sizes_a != sizes_b:
-            print "Error. Buffer size lists in two compared " \
-                    "data sets differ! Aborting.\n"
-            exit(1)
-        warning = list_a.compare(list_b, self.tolerance) # Compares list_b against list_a
-        if warning:
-            exit(2)
+
+        if not self.analyze:
+            parser_b = Parser(self.fname_b, self.verbose)
+            list_b, sizes_b = parser_b.load()
+            if sizes_a != sizes_b:
+                print "Error. Buffer size lists in two compared " \
+                        "data sets differ! Aborting.\n"
+                exit(1)
+            warning = list_a.compare(list_b, self.tolerance) # Compares list_b against list_a
+            if warning:
+                exit(2)
+        else:
+            list_a.printout() # Takes only one file and prints it out
 
 if __name__ == '__main__':
     DiffTool().run()
