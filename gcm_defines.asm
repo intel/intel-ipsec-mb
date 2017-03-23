@@ -51,7 +51,7 @@ ONEf            dq     0x0000000000000000, 0x0100000000000000
 
 section .text
 
-;;define the fields of gcm_data struct
+;;define the fields of gcm_data and gcm_data_comp struct
 ;struct gcm_data {
 ;        uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
 ;        uint8_t shifted_hkey_1[GCM_ENC_KEY_LEN];  // store HashKey <<1 mod poly here
@@ -70,14 +70,6 @@ section .text
 ;        uint8_t shifted_hkey_6_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
 ;        uint8_t shifted_hkey_7_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
 ;        uint8_t shifted_hkey_8_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
-;        // init, update and finalize context data
-;        uint8_t  aad_hash[GCM_BLOCK_LEN];
-;        uint64_t aad_length;
-;        uint64_t in_length;
-;        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
-;        uint8_t  orig_IV[GCM_BLOCK_LEN];
-;        uint8_t  current_counter[GCM_BLOCK_LEN];
-;        uint64_t  partial_block_length;
 ;}
 
 %define HashKey         16*15    ; store HashKey <<1 mod poly here
@@ -96,13 +88,25 @@ section .text
 %define HashKey_6_k     16*28   ; store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
 %define HashKey_7_k     16*29   ; store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
 %define HashKey_8_k     16*30   ; store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
-%define AadHash		16*31	; store current Hash of data which has been input
-%define AadLen		16*32	; store length of input data which will not be encrypted or decrypted
-%define InLen		16*32+8	; store length of input data which will be encrypted or decrypted
-%define PBlockEncKey	16*33	; encryption key for the partial block at the end of the previous update
-%define OrigIV		16*34	; input IV
-%define CurCount	16*35	; Current counter for generation of encryption key
-%define PBlockLen	16*36	; length of partial block at the end of the previous update
+
+;struct gcm_data_comp {
+;        // init, update and finalize context data
+;        uint8_t  aad_hash[GCM_BLOCK_LEN];
+;        uint64_t aad_length;
+;        uint64_t in_length;
+;        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
+;        uint8_t  orig_IV[GCM_BLOCK_LEN];
+;        uint8_t  current_counter[GCM_BLOCK_LEN];
+;        uint64_t  partial_block_length;
+;}
+
+%define AadHash		16*0	; store current Hash of data which has been input
+%define AadLen		16*1	; store length of input data which will not be encrypted or decrypted
+%define InLen		16*1+8	; store length of input data which will be encrypted or decrypted
+%define PBlockEncKey	16*2	; encryption key for the partial block at the end of the previous update
+%define OrigIV		16*3	; input IV
+%define CurCount	16*4	; Current counter for generation of encryption key
+%define PBlockLen	16*5	; length of partial block at the end of the previous update
 
 %define reg(q) xmm %+ q
 
@@ -119,6 +123,7 @@ section .text
     %xdefine arg7 [r14 + STACK_OFFSET + 8*7]
     %xdefine arg8 [r14 + STACK_OFFSET + 8*8]
     %xdefine arg9 [r14 + STACK_OFFSET + 8*9]
+    %xdefine arg10 [r14 + STACK_OFFSET + 8*10]
 %else
     %xdefine arg1 rdi
     %xdefine arg2 rsi
@@ -129,6 +134,7 @@ section .text
     %xdefine arg7 [r14 + STACK_OFFSET + 8*1]
     %xdefine arg8 [r14 + STACK_OFFSET + 8*2]
     %xdefine arg9 [r14 + STACK_OFFSET + 8*3]
+    %xdefine arg10 [r14 + STACK_OFFSET + 8*4]
 %endif
 
 %define	XLDR	movdqu

@@ -368,20 +368,22 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; PARTIAL_BLOCK: Handles encryption/decryption and the tag partial blocks between update calls.
 ; Requires the input data be at least 1 byte long.
-; Input: gcm_data struct* (GDATA), input text (PLAIN_CYPH_IN), input text length (PLAIN_CYPH_LEN),
-; the current data offset (DATA_OFFSET), and whether encoding or decoding (ENC_DEC)
+; Input: gcm_data struct* (GDATA), gcm_data_comp struct* (GDATA_C), input text (PLAIN_CYPH_IN),
+; input text length (PLAIN_CYPH_LEN), the current data offset (DATA_OFFSET), and whether
+; encoding or decoding (ENC_DEC)
 ; Output: A cypher of the first partial block (CYPH_PLAIN_OUT), and updated GDATA
 ; Clobbers rax, r10, r12, r13, r15, xmm0, xmm1, xmm2, xmm3, xmm5, xmm6, xmm9, xmm10, xmm11, xmm13
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro PARTIAL_BLOCK	7
+%macro PARTIAL_BLOCK	8
 %define	%%GDATA			%1
-%define	%%CYPH_PLAIN_OUT	%2
-%define	%%PLAIN_CYPH_IN		%3
-%define	%%PLAIN_CYPH_LEN	%4
-%define	%%DATA_OFFSET		%5
-%define	%%AAD_HASH		%6
-%define	%%ENC_DEC		%7
-	mov	r13, [%%GDATA + PBlockLen]
+%define	%%GDATA_C		%2
+%define	%%CYPH_PLAIN_OUT	%3
+%define	%%PLAIN_CYPH_IN		%4
+%define	%%PLAIN_CYPH_LEN	%5
+%define	%%DATA_OFFSET		%6
+%define	%%AAD_HASH		%7
+%define	%%ENC_DEC		%8
+	mov	r13, [%%GDATA_C + PBlockLen]
 	cmp	r13, 0
 	je	%%_partial_block_done		;Leave Macro if no partial blocks
 
@@ -397,7 +399,7 @@ default rel
 %%_data_read:				;Finished reading in data
 
 
-	vmovdqu	xmm9, [%%GDATA + PBlockEncKey]	;xmm9 = my_ctx_data.partial_block_enc_key
+	vmovdqu	xmm9, [%%GDATA_C + PBlockEncKey]	;xmm9 = my_comp_data.partial_block_enc_key
 	vmovdqu	xmm13, [%%GDATA + HashKey]
 
 	lea	r12, [SHIFT_MASK]
@@ -431,12 +433,12 @@ default rel
 
 	GHASH_MUL	%%AAD_HASH, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6	;GHASH computation for the last <16 Byte block
 	xor	rax,rax
-	mov	[%%GDATA+PBlockLen], rax
+	mov	[%%GDATA_C + PBlockLen], rax
 	jmp	%%_dec_done
 %%_partial_incomplete_1:
-	add	[%%GDATA+PBlockLen], %%PLAIN_CYPH_LEN
+	add	[%%GDATA_C + PBlockLen], %%PLAIN_CYPH_LEN
 %%_dec_done:
-	vmovdqu	[%%GDATA + AadHash], %%AAD_HASH
+	vmovdqu	[%%GDATA_C + AadHash], %%AAD_HASH
 
 %else
 	vpxor	xmm9, xmm1	; Plaintext XOR E(K, Yn)
@@ -460,12 +462,12 @@ default rel
 
 	GHASH_MUL	%%AAD_HASH, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6	;GHASH computation for the last <16 Byte block
 	xor	rax,rax
-	mov	[%%GDATA+PBlockLen], rax
+	mov	[%%GDATA_C + PBlockLen], rax
 	jmp	%%_encode_done
 %%_partial_incomplete_2:
-	add [%%GDATA+PBlockLen], %%PLAIN_CYPH_LEN
+	add [%%GDATA_C + PBlockLen], %%PLAIN_CYPH_LEN
 %%_encode_done:
-	vmovdqu	[%%GDATA + AadHash], %%AAD_HASH
+	vmovdqu	[%%GDATA_C + AadHash], %%AAD_HASH
 
 	vpshufb	xmm9, [SHUF_MASK]	; shuffle xmm9 back to output as ciphertext
 	vpshufb	xmm9, xmm2
@@ -511,35 +513,36 @@ default rel
 ; %%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r14 are used as a pointer only, not modified.
 ; Updated AAD_HASH is returned in %%T3
 
-%macro INITIAL_BLOCKS 23
+%macro INITIAL_BLOCKS 24
 %define	%%GDATA			%1
-%define	%%CYPH_PLAIN_OUT	%2
-%define	%%PLAIN_CYPH_IN		%3
-%define	%%LENGTH		%4
-%define	%%DATA_OFFSET		%5
-%define	%%num_initial_blocks	%6      ; can be 0, 1, 2, 3, 4, 5, 6 or 7
-%define	%%T1		%7
-%define	%%HASH_KEY	%8
-%define	%%T3		%9
-%define	%%T4		%10
-%define	%%T5		%11
-%define	%%CTR		%12
-%define	%%XMM1		%13
-%define	%%XMM2		%14
-%define	%%XMM3		%15
-%define	%%XMM4		%16
-%define	%%XMM5		%17
-%define	%%XMM6		%18
-%define	%%XMM7		%19
-%define	%%XMM8		%20
-%define	%%T6		%21
-%define	%%T_key		%22
-%define	%%ENC_DEC	%23
+%define	%%GDATA_C		%2
+%define	%%CYPH_PLAIN_OUT	%3
+%define	%%PLAIN_CYPH_IN		%4
+%define	%%LENGTH		%5
+%define	%%DATA_OFFSET		%6
+%define	%%num_initial_blocks	%7      ; can be 0, 1, 2, 3, 4, 5, 6 or 7
+%define	%%T1		%8
+%define	%%HASH_KEY	%9
+%define	%%T3		%10
+%define	%%T4		%11
+%define	%%T5		%12
+%define	%%CTR		%13
+%define	%%XMM1		%14
+%define	%%XMM2		%15
+%define	%%XMM3		%16
+%define	%%XMM4		%17
+%define	%%XMM5		%18
+%define	%%XMM6		%19
+%define	%%XMM7		%20
+%define	%%XMM8		%21
+%define	%%T6		%22
+%define	%%T_key		%23
+%define	%%ENC_DEC	%24
 
 %assign i (8-%%num_initial_blocks)
 		vmovdqu	reg(i), %%XMM8 ;move AAD_HASH to temp reg
 		; start AES for %%num_initial_blocks blocks
-	        vmovdqu  %%CTR, [%%GDATA + CurCount]                   ; %%CTR = Y0
+	        vmovdqu  %%CTR, [%%GDATA_C + CurCount]                   ; %%CTR = Y0
 
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -1388,16 +1391,17 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GCM_INIT initializes a gcm_data struct to prepare for encoding/decoding.
-; Input: gcm_data struct* (GDATA), IV, Additional Authentication data (A_IN), Additional
-; Data length (A_LEN)
-; Output: Updated GDATA with the hash of A_IN (AadHash) and initialized other parts of GDATA.
+; Input: gcm_data struct* (GDATA), gcm_data_comp struct* (GDATA_C), IV, Additional
+; Authentication data (A_IN), Additional Data length (A_LEN)
+; Output: Updated GDATA_C with the hash of A_IN (AadHash) and initialized other parts of GDATA.
 ; Clobbers rax, r10-r13, and xmm0-xmm6
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro	GCM_INIT 	4
+%macro	GCM_INIT 	5
 %define	%%GDATA		%1
-%define	%%IV		%2
-%define	%%A_IN		%3
-%define	%%A_LEN		%4
+%define	%%GDATA_C	%2
+%define	%%IV		%3
+%define	%%A_IN		%4
+%define	%%A_LEN		%5
 %define	%%AAD_HASH	xmm0
 %define	%%SUBHASH	xmm1
 
@@ -1408,19 +1412,19 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 	vpxor	xmm2, xmm3
 	mov	r10, %%A_LEN
 
-	vmovdqu	[%%GDATA + AadHash], %%AAD_HASH		; my_ctx_data.aad hash = aad_hash
-	mov	[%%GDATA + AadLen], r10			; my_ctx_data.aad_length = aad_length
+	vmovdqu	[%%GDATA_C + AadHash], %%AAD_HASH	; my_comp_data.aad hash = aad_hash
+	mov	[%%GDATA_C + AadLen], r10		; my_comp_data.aad_length = aad_length
 	xor	r10, r10
-	mov	[%%GDATA + InLen], r10			; my_ctx_data.in_length = 0
-	mov	[%%GDATA + PBlockLen], r10		; my_ctx_data.partial_block_length = 0
-	vmovdqu	[%%GDATA + PBlockEncKey], xmm2		; my_ctx_data.partial_block_enc_key = 0
+	mov	[%%GDATA_C + InLen], r10		; my_comp_data.in_length = 0
+	mov	[%%GDATA_C + PBlockLen], r10		; my_comp_data.partial_block_length = 0
+	vmovdqu	[%%GDATA_C + PBlockEncKey], xmm2	; my_comp_data.partial_block_enc_key = 0
 	mov	r10, %%IV
 	vmovdqu	xmm2, [r10]
-	vmovdqu	[%%GDATA + OrigIV], xmm2		; my_ctx_data.orig_IV = iv
+	vmovdqu	[%%GDATA_C + OrigIV], xmm2		; my_comp_data.orig_IV = iv
 
 	vpshufb xmm2, [SHUF_MASK]
 
-	vmovdqu	[%%GDATA + CurCount], xmm2		; my_ctx_data.current_counter = iv
+	vmovdqu	[%%GDATA_C + CurCount], xmm2		; my_comp_data.current_counter = iv
 %endmacro
 
 
@@ -1428,17 +1432,18 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 ; GCM_ENC_DEC Encodes/Decodes given data. Assumes that the passed gcm_data struct has been
 ; initialized by GCM_INIT
 ; Requires the input data be at least 1 byte long because of READ_SMALL_INPUT_DATA.
-; Input: gcm_data struct* (GDATA), input text (PLAIN_CYPH_IN), input text length (PLAIN_CYPH_LEN),
-; and whether encoding or decoding (ENC_DEC)
+; Input: gcm_data struct* (GDATA), gcm_data_comp struct* (GDATA_C), input text (PLAIN_CYPH_IN),
+; input text length (PLAIN_CYPH_LEN), and whether encoding or decoding (ENC_DEC)
 ; Output: A cypher of the given plain text (CYPH_PLAIN_OUT), and updated GDATA
 ; Clobbers rax, r10-r15, and xmm0-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro	GCM_ENC_DEC 		5
+%macro	GCM_ENC_DEC 		6
 %define	%%GDATA			%1
-%define	%%CYPH_PLAIN_OUT	%2
-%define	%%PLAIN_CYPH_IN		%3
-%define	%%PLAIN_CYPH_LEN	%4
-%define	%%ENC_DEC		%5
+%define	%%GDATA_C		%2
+%define	%%CYPH_PLAIN_OUT	%3
+%define	%%PLAIN_CYPH_IN		%4
+%define	%%PLAIN_CYPH_LEN	%5
+%define	%%ENC_DEC		%6
 %define	%%DATA_OFFSET		r11
 
 ; Macro flow:
@@ -1451,12 +1456,12 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 	je	%%_multiple_of_16_bytes
 
 	xor %%DATA_OFFSET, %%DATA_OFFSET
-	add [%%GDATA+InLen], %%PLAIN_CYPH_LEN ;Update length of data processed
+	add [%%GDATA_C + InLen], %%PLAIN_CYPH_LEN ;Update length of data processed
 	vmovdqu  xmm13, [%%GDATA + HashKey]                 ; xmm13 = HashKey
-	vmovdqu xmm8, [%%GDATA + AadHash]
+	vmovdqu xmm8, [%%GDATA_C + AadHash]
 
 
-	PARTIAL_BLOCK %%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%DATA_OFFSET, xmm8, %%ENC_DEC
+	PARTIAL_BLOCK %%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%DATA_OFFSET, xmm8, %%ENC_DEC
 
 
 	mov	r13, %%PLAIN_CYPH_LEN
@@ -1485,42 +1490,42 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
         jmp     %%_initial_num_blocks_is_1
 
 %%_initial_num_blocks_is_7:
-	INITIAL_BLOCKS	%%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 7, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
+	INITIAL_BLOCKS	%%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 7, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*7
         jmp     %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_6:
-	INITIAL_BLOCKS	%%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 6, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
+	INITIAL_BLOCKS	%%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 6, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*6
         jmp     %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_5:
-	INITIAL_BLOCKS	%%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 5, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
+	INITIAL_BLOCKS	%%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 5, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*5
         jmp     %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_4:
-	INITIAL_BLOCKS	%%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 4, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
+	INITIAL_BLOCKS	%%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 4, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*4
         jmp     %%_initial_blocks_encrypted
 
 
 %%_initial_num_blocks_is_3:
-	INITIAL_BLOCKS	%%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 3, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
+	INITIAL_BLOCKS	%%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 3, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*3
         jmp     %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_2:
-	INITIAL_BLOCKS	%%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 2, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
+	INITIAL_BLOCKS	%%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 2, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*2
         jmp     %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_1:
-	INITIAL_BLOCKS	%%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 1, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
+	INITIAL_BLOCKS	%%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 1, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16
         jmp     %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_0:
-	INITIAL_BLOCKS	%%GDATA, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 0, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
+	INITIAL_BLOCKS	%%GDATA, %%GDATA_C, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 0, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
 
 
 %%_initial_blocks_encrypted:
@@ -1572,24 +1577,24 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 
 
 %%_zero_cipher_left:
-	vmovdqu	[%%GDATA + AadHash], xmm14		; my_ctx_data.aad hash = xmm14
-	vmovdqu	[%%GDATA + CurCount], xmm9		; my_ctx_data.current_counter = xmm9
+	vmovdqu	[%%GDATA_C + AadHash], xmm14		; my_comp_data.aad hash = xmm14
+	vmovdqu	[%%GDATA_C + CurCount], xmm9		; my_comp_data.current_counter = xmm9
 
         mov     r13, r10
         and     r13, 15                                 ; r13 = (%%PLAIN_CYPH_LEN mod 16)
 
         je      %%_multiple_of_16_bytes
 
-	mov	[%%GDATA + PBlockLen], r13		; my_ctx_data.partial_blck_length = r13
+	mov	[%%GDATA_C + PBlockLen], r13		; my_comp_data.partial_blck_length = r13
         ; handle the last <16 Byte block seperately
 
 
         vpaddd   xmm9, xmm9, [ONE]              ; INCR CNT to get Yn
-	vmovdqu	[%%GDATA + CurCount], xmm9
+	vmovdqu	[%%GDATA_C + CurCount], xmm9
 
         vpshufb  xmm9, [SHUF_MASK]
 	ENCRYPT_SINGLE_BLOCK	%%GDATA, xmm9                    ; E(K, Yn)
-	vmovdqu	[%%GDATA + PBlockEncKey], xmm9		; my_ctx_data.partial_block_enc_key = xmm9
+	vmovdqu	[%%GDATA_C + PBlockEncKey], xmm9	; my_comp_data.partial_block_enc_key = xmm9
 
 	cmp	%%PLAIN_CYPH_LEN, 16
 	jge	%%_large_enough_update
@@ -1624,14 +1629,14 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
         vpand    xmm2, xmm2, xmm1
         vpshufb  xmm2, [SHUF_MASK]
         vpxor    xmm14, xmm14, xmm2
-	 vmovdqu	[%%GDATA + AadHash], xmm14
+	 vmovdqu	[%%GDATA_C + AadHash], xmm14
         %else
         vpxor    xmm9, xmm9, xmm1                        ; Plaintext XOR E(K, Yn)
         vmovdqu  xmm1, [r12 + ALL_F - SHIFT_MASK]        ; get the appropriate mask to mask out top 16-r13 bytes of xmm9
         vpand    xmm9, xmm9, xmm1                        ; mask out top 16-r13 bytes of xmm9
         vpshufb  xmm9, [SHUF_MASK]
         vpxor    xmm14, xmm14, xmm9
-	vmovdqu	[%%GDATA + AadHash], xmm14
+	vmovdqu	[%%GDATA_C + AadHash], xmm14
         vpshufb  xmm9, [SHUF_MASK]               ; shuffle xmm9 back to output as ciphertext
         %endif
 
@@ -1664,19 +1669,21 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GCM_COMPLETE Finishes Encyrption/Decryption of last partial block after GCM_UPDATE finishes.
-; Input: A gcm_data struct* (GDATA) and  whether encoding or decoding (ENC_DEC).
+; Input: A gcm_data struct* (GDATA)  with a gcm_data_comp struct* (GDATA_C) and whether
+; encoding or decoding (ENC_DEC).
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
 ; Clobbers rax, r10-r12, and xmm0, xmm1, xmm5, xmm6, xmm9, xmm11, xmm14, xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro	GCM_COMPLETE		4
+%macro	GCM_COMPLETE		5
 %define	%%GDATA			%1
-%define	%%AUTH_TAG		%2
-%define	%%AUTH_TAG_LEN		%3
-%define	%%ENC_DEC		%4
+%define	%%GDATA_C		%2
+%define	%%AUTH_TAG		%3
+%define	%%AUTH_TAG_LEN		%4
+%define	%%ENC_DEC		%5
 %define	%%PLAIN_CYPH_LEN	rax
 
-	mov	r12, [%%GDATA + PBlockLen]
-	vmovdqu	xmm14, [%%GDATA+AadHash]
+	mov	r12, [%%GDATA_C + PBlockLen]
+	vmovdqu	xmm14, [%%GDATA_C + AadHash]
 	vmovdqu xmm13, [%%GDATA+HashKey]
 
 	cmp	r12, 0
@@ -1684,12 +1691,12 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
 	je %%_partial_done
 
 	GHASH_MUL xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
-	vmovdqu [%%GDATA+AadHash], xmm14
+	vmovdqu [%%GDATA_C + AadHash], xmm14
 
 %%_partial_done:
 
-	mov	r12, [%%GDATA + AadLen]			; r12 = aadLen (number of bytes)
-	mov	%%PLAIN_CYPH_LEN, [%%GDATA+InLen]
+	mov	r12, [%%GDATA_C + AadLen]		; r12 = aadLen (number of bytes)
+	mov	%%PLAIN_CYPH_LEN, [%%GDATA_C + InLen]
 
         shl     r12, 3                                  ; convert into number of bits
         vmovd    xmm15, r12d                             ; len(A) in xmm15
@@ -1703,7 +1710,7 @@ vmovdqu  %%T_key, [%%GDATA+16*10]
         GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6    ; final GHASH computation
         vpshufb  xmm14, [SHUF_MASK]              ; perform a 16Byte swap
 
-        vmovdqu xmm9, [%%GDATA + OrigIV]                             ; xmm9 = Y0
+        vmovdqu xmm9, [%%GDATA_C + OrigIV]                             ; xmm9 = Y0
 
         ENCRYPT_SINGLE_BLOCK %%GDATA, xmm9                    ; E(K, Y0)
 
@@ -1801,6 +1808,7 @@ ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aesni_gcm128_init_avx_gen4(
 ;        gcm_data        *my_ctx_data,
+;        gcm_data_comp   *my_comp_data,
 ;        u8      *iv, /* Pre-counter block j0: 4 byte salt (from Security Association) concatenated with 8 byte Initialisation Vector (from IPSec ESP Payload) concatenated with 0x00000001. 16-byte pointer. */
 ;        const   u8 *aad, /* Additional Authentication Data (AAD)*/
 ;        u64     aad_len); /* Length of AAD in bytes (must be a multiple of 4 bytes). */
@@ -1815,7 +1823,7 @@ aesni_gcm128_init_avx_gen4:
 	vmovdqu	[rsp + 0*16],xmm6
 %endif
 
-	GCM_INIT arg1, arg2, arg3, arg4
+	GCM_INIT arg1, arg2, arg3, arg4, arg5
 
 %ifidn __OUTPUT_FORMAT__, win64
 	vmovdqu	xmm6 , [rsp + 0*16]
@@ -1830,6 +1838,7 @@ ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aesni_gcm128_enc_update_avx_gen4(
 ;        gcm_data        *my_ctx_data,
+;        gcm_data_comp   *my_comp_data,
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
 ;        u64     plaintext_len); /* Length of data in Bytes for encryption. must be a multiple of 16 bytes*/
@@ -1839,7 +1848,7 @@ aesni_gcm128_enc_update_avx_gen4:
 
 	FUNC_SAVE
 
-	GCM_ENC_DEC arg1, arg2, arg3, arg4, ENC
+	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC
 
 	FUNC_RESTORE
 
@@ -1849,6 +1858,7 @@ aesni_gcm128_enc_update_avx_gen4:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aesni_gcm128_dec_update_avx_gen4(
 ;        gcm_data        *my_ctx_data,
+;        gcm_data_comp   *my_comp_data,
 ;        u8      *out, /* Plaintext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Cyphertext input */
 ;        u64     plaintext_len); /* Length of data in Bytes for encryption. must be a multiple of 16 bytes*/
@@ -1858,7 +1868,7 @@ aesni_gcm128_dec_update_avx_gen4:
 
 	FUNC_SAVE
 
-	GCM_ENC_DEC arg1, arg2, arg3, arg4, DEC
+	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC
 
 	FUNC_RESTORE
 
@@ -1868,6 +1878,7 @@ aesni_gcm128_dec_update_avx_gen4:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aesni_gcm128_enc_finalize_avx_gen4(
 ;        gcm_data        *my_ctx_data,
+;        gcm_data_comp   *my_comp_data,
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1885,7 +1896,7 @@ aesni_gcm128_enc_finalize_avx_gen4:
 	vmovdqu	[rsp + 3*16],xmm14
 	vmovdqu	[rsp + 4*16],xmm15
 %endif
-	GCM_COMPLETE	arg1, arg2, arg3, ENC
+	GCM_COMPLETE	arg1, arg2, arg3, arg4, ENC
 
 %ifidn __OUTPUT_FORMAT__, win64
 	vmovdqu	xmm15  , [rsp + 4*16]
@@ -1903,6 +1914,7 @@ ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aesni_gcm128_dec_finalize_avx_gen4(
 ;	 gcm_data        *my_ctx_data,
+;        gcm_data_comp   *my_comp_data,
 ;        u8      *auth_tag, /* Authenticated Tag output. */
 ;        u64     auth_tag_len); /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1920,7 +1932,7 @@ aesni_gcm128_dec_finalize_avx_gen4:
 	vmovdqu	[rsp + 3*16],xmm14
 	vmovdqu	[rsp + 4*16],xmm15
 %endif
-	GCM_COMPLETE	arg1, arg2, arg3, DEC
+	GCM_COMPLETE	arg1, arg2, arg3, arg4, DEC
 
 %ifidn __OUTPUT_FORMAT__, win64
 	vmovdqu	xmm15  , [rsp + 4*16]
@@ -1938,6 +1950,7 @@ ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aesni_gcm128_enc_avx_gen4(
 ;        gcm_data        *my_ctx_data,
+;        gcm_data_comp   *my_comp_data,
 ;        u8      *out, /* Ciphertext output. Encrypt in-place is allowed.  */
 ;        const   u8 *in, /* Plaintext input */
 ;        u64     plaintext_len, /* Length of data in Bytes for encryption. */
@@ -1952,11 +1965,11 @@ aesni_gcm128_enc_avx_gen4:
 
 	FUNC_SAVE
 
-	GCM_INIT arg1, arg5, arg6, arg7
+	GCM_INIT arg1, arg2, arg6, arg7, arg8
 
-	GCM_ENC_DEC  arg1, arg2, arg3, arg4, ENC
+	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC
 
-	GCM_COMPLETE arg1, arg8, arg9, ENC
+	GCM_COMPLETE arg1, arg2, arg9, arg10, ENC
 
 	FUNC_RESTORE
 
@@ -1965,6 +1978,7 @@ aesni_gcm128_enc_avx_gen4:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aesni_gcm128_dec_avx_gen4(
 ;        gcm_data        *my_ctx_data,
+;        gcm_data_comp   *my_comp_data,
 ;        u8      *out, /* Plaintext output. Decrypt in-place is allowed.  */
 ;        const   u8 *in, /* Ciphertext input */
 ;        u64     plaintext_len, /* Length of data in Bytes for encryption. */
@@ -1979,11 +1993,11 @@ aesni_gcm128_dec_avx_gen4:
 
 	FUNC_SAVE
 
-	GCM_INIT arg1, arg5, arg6, arg7
+	GCM_INIT arg1, arg2, arg6, arg7, arg8
 
-	GCM_ENC_DEC  arg1, arg2, arg3, arg4, DEC
+	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC
 
-	GCM_COMPLETE arg1, arg8, arg9, DEC
+	GCM_COMPLETE arg1, arg2, arg9, arg10, DEC
 
 	FUNC_RESTORE
 
