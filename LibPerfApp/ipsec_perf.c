@@ -805,7 +805,8 @@ static void usage(void)
 		"--no-avx: Don't do AVX\n"
 		"--no-sse: Don't do SSE\n"
 		"-o val: Use <val> for the SHA size increment, default is 24\n"
-		"--sha-ni-on: use SHA extensions\n"
+		"--shani-on: use SHA extensions, default: auto-detect\n"
+		"--shani-off: don't use SHA extensions\n"
 		"--no-gcm: do not run GCM perf tests\n"
 		"--no-aes: do not run standard AES + HMAC perf tests\n"
 		"--no-docsis: do not run DOCSIS cipher perf tests\n");
@@ -836,6 +837,8 @@ int main(int argc, char *argv[])
 			archs[ARCH_SSE] = 0;
 		} else if (strcmp(argv[i], "--shani-on") == 0) {
 			sse_sha_ext_usage = SHA_EXT_PRESENT;
+		} else if (strcmp(argv[i], "--shani-off") == 0) {
+			sse_sha_ext_usage = SHA_EXT_NOT_PRESENT;
 		} else if (strcmp(argv[i], "--no-gcm") == 0) {
 			test_types[AES_GCM] = 0;
 		} else if (strcmp(argv[i], "--no-aes") == 0) {
