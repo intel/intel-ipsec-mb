@@ -1,9 +1,9 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
-;; 
+;; Copyright (c) 2012-2017, Intel Corporation
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -29,15 +29,6 @@
 ;;	calle saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
 ;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15	
-;;
-;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
-;; Windows clobbers:	RAX     RCX RDX             R8  R9  R10 R11 
-;; Windows preserves:	    RBX         RBP RSI RDI                 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
-;; Linux clobbers:	RAX     RCX RDX     RSI RDI R8  R9  R10 R11 
-;; Linux preserves:	    RBX         RBP                         R12 R13 R14 R15
-;;			-----------------------------------------------------------
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 ;;
@@ -97,7 +88,7 @@ extern sha256_ni
 %define bswap_xmm4	xmm4
 
 struc STACK
-_gpr_save:	resq	5
+_gpr_save:	resq	4	; rbx, rbp, rsi (win), rdi (win)
 _rsp_save:	resq	1
 endstruc
 
@@ -133,10 +124,9 @@ submit_job_hmac_sha_256_ni_sse:
 
 	mov	[rsp + _gpr_save + 8*0], rbx
 	mov	[rsp + _gpr_save + 8*1], rbp
-	mov	[rsp + _gpr_save + 8*2], r12
 %ifndef LINUX
-	mov	[rsp + _gpr_save + 8*3], rsi
-	mov	[rsp + _gpr_save + 8*4], rdi
+	mov	[rsp + _gpr_save + 8*2], rsi
+	mov	[rsp + _gpr_save + 8*3], rdi
 %endif
 	mov	[rsp + _rsp_save], rax	; original SP
 
@@ -342,15 +332,12 @@ end_loop:
 %endif
 	
 return:
-
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
-	mov	r12, [rsp + _gpr_save + 8*2]
 %ifndef LINUX
-	mov	rsi, [rsp + _gpr_save + 8*3]
-	mov	rdi, [rsp + _gpr_save + 8*4]
+	mov	rsi, [rsp + _gpr_save + 8*2]
+	mov	rdi, [rsp + _gpr_save + 8*3]
 %endif
 	mov	rsp, [rsp + _rsp_save]	; original SP
-
 	ret
 
