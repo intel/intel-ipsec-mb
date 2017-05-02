@@ -572,7 +572,7 @@ static void process_variant(MB_MGR *mgr, uint32_t arch, struct params_s *params,
 		for (run = 0; run < NUM_RUNS; run++) {
 			if (params->test_type == AES_GCM)
 				times[run] =
-					do_test_gcm(arch, params, num_iter);
+					do_test_gcm(arch, params, 2 * num_iter);
 			else
 				times[run] =
 					do_test(arch, mgr, params, num_iter);

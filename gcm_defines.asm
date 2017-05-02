@@ -47,7 +47,9 @@ SHIFT_MASK      dq     0x0706050403020100, 0x0f0e0d0c0b0a0908
 ALL_F           dq     0xffffffffffffffff, 0xffffffffffffffff
 ZERO            dq     0x0000000000000000, 0x0000000000000000
 ONE             dq     0x0000000000000001, 0x0000000000000000
+TWO             dq     0x0000000000000002, 0x0000000000000000
 ONEf            dq     0x0000000000000000, 0x0100000000000000
+TWOf            dq     0x0000000000000000, 0x0200000000000000
 
 section .text
 
@@ -81,6 +83,7 @@ section .text
 ;}
 
 %define HashKey         16*15    ; store HashKey <<1 mod poly here
+%define HashKey_1       16*15    ; store HashKey <<1 mod poly here
 %define HashKey_2       16*16    ; store HashKey^2 <<1 mod poly here
 %define HashKey_3       16*17    ; store HashKey^3 <<1 mod poly here
 %define HashKey_4       16*18    ; store HashKey^4 <<1 mod poly here
@@ -96,6 +99,7 @@ section .text
 %define HashKey_6_k     16*28   ; store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
 %define HashKey_7_k     16*29   ; store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
 %define HashKey_8_k     16*30   ; store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
+
 %define AadHash		16*31	; store current Hash of data which has been input
 %define AadLen		16*32	; store length of input data which will not be encrypted or decrypted
 %define InLen		16*32+8	; store length of input data which will be encrypted or decrypted
@@ -106,33 +110,47 @@ section .text
 
 %define reg(q) xmm %+ q
 
-
-
-
 %ifdef WIN_ABI
-    %xdefine arg1 rcx
-    %xdefine arg2 rdx
-    %xdefine arg3 r8
-    %xdefine arg4 r9
-    %xdefine arg5 [r14 + STACK_OFFSET + 8*5]
-    %xdefine arg6 [r14 + STACK_OFFSET + 8*6]
-    %xdefine arg7 [r14 + STACK_OFFSET + 8*7]
-    %xdefine arg8 [r14 + STACK_OFFSET + 8*8]
-    %xdefine arg9 [r14 + STACK_OFFSET + 8*9]
+	%xdefine arg1 rcx
+	%xdefine arg2 rdx
+	%xdefine arg3 r8
+	%xdefine arg4 r9
+	%xdefine arg5 [r14 + STACK_OFFSET + 8*5]
+	%xdefine arg6 [r14 + STACK_OFFSET + 8*6]
+	%xdefine arg7 [r14 + STACK_OFFSET + 8*7]
+	%xdefine arg8 [r14 + STACK_OFFSET + 8*8]
+	%xdefine arg9 [r14 + STACK_OFFSET + 8*9]
 %else
-    %xdefine arg1 rdi
-    %xdefine arg2 rsi
-    %xdefine arg3 rdx
-    %xdefine arg4 rcx
-    %xdefine arg5 r8
-    %xdefine arg6 r9
-    %xdefine arg7 [r14 + STACK_OFFSET + 8*1]
-    %xdefine arg8 [r14 + STACK_OFFSET + 8*2]
-    %xdefine arg9 [r14 + STACK_OFFSET + 8*3]
+	%xdefine arg1 rdi
+	%xdefine arg2 rsi
+	%xdefine arg3 rdx
+	%xdefine arg4 rcx
+	%xdefine arg5 r8
+	%xdefine arg6 r9
+	%xdefine arg7 [r14 + STACK_OFFSET + 8*1]
+	%xdefine arg8 [r14 + STACK_OFFSET + 8*2]
+	%xdefine arg9 [r14 + STACK_OFFSET + 8*3]
 %endif
 
-%define	XLDR	movdqu
-%define	VXLDR	vmovdqu
+%ifdef NT_LDST
+	%define NT_LD
+	%define NT_ST
+%endif
 
-%define	XSTR	movdqu
-%define	VXSTR	vmovdqu
+;;; Use Non-temporal load/stor
+%ifdef NT_LD
+	%define	XLDR	movntdqa
+	%define	VXLDR	vmovntdqa
+%else
+	%define	XLDR	movdqu
+	%define	VXLDR	vmovdqu
+%endif
+
+;;; Use Non-temporal load/stor
+%ifdef NT_ST
+	%define	XSTR	movntdq
+	%define	VXSTR	vmovntdq
+%else
+	%define	XSTR	movdqu
+	%define	VXSTR	vmovdqu
+%endif

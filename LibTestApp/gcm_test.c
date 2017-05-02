@@ -783,6 +783,9 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 	uint8_t const IVend[] = GCM_IV_END_MARK;
 	uint64_t IV_alloc_len = 0;
 
+#ifdef DEBUG
+        printf("Testing GCM128 std vectors\n");
+#endif
 	// Allocate space for the calculated ciphertext
 	ct_test = malloc(vector->Plen);
 	if (ct_test == NULL) {
@@ -893,6 +896,9 @@ static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
 	uint8_t const IVend[] = GCM_IV_END_MARK;
 	uint64_t IV_alloc_len = 0;
 
+#ifdef DEBUG
+        printf("Testing GCM192 std vectors\n");
+#endif
 	// Allocate space for the calculated ciphertext
 	ct_test = malloc(vector->Plen);
 	// Allocate space for the calculated ciphertext
@@ -998,6 +1004,9 @@ static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
 	uint8_t const IVend[] = GCM_IV_END_MARK;
 	uint64_t IV_alloc_len = 0;
 
+#ifdef DEBUG
+        printf("Testing GCM256 std vectors\n");
+#endif
 	// Allocate space for the calculated ciphertext
 	ct_test = malloc(vector->Plen);
 	// Allocate space for the calculated ciphertext
