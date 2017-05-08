@@ -77,11 +77,11 @@
 		HASH_ALGS_GCM * KEY_SIZES_GCM)
 
 /* Typedefs used for GCM callbacks */
-typedef void (*aesni_gcm_t)(struct gcm_data *,
+typedef void (*aesni_gcm_t)(const struct gcm_key_data *, struct gcm_context_data *,
 				uint8_t *, uint8_t const *, uint64_t,
 				uint8_t *, uint8_t const *, uint64_t,
 				uint8_t *, uint64_t);
-typedef void (*aesni_gcm_pre_t)(const void *, struct gcm_data *);
+typedef void (*aesni_gcm_pre_t)(const void *, struct gcm_key_data *);
 
 /* AES_HMAC, DOCSIS callbacks */
 struct funcs_s {
@@ -171,9 +171,9 @@ enum cache_type_e {
 
 #define FUNCS_GCM(A) \
 { \
-	{aesni_gcm128_pre_##A, aesni_gcm128_enc_##A, aesni_gcm128_dec_##A}, \
-	{aesni_gcm192_pre_##A, aesni_gcm192_enc_##A, aesni_gcm192_dec_##A}, \
-	{aesni_gcm256_pre_##A, aesni_gcm256_enc_##A, aesni_gcm256_dec_##A} \
+	{aes_gcm_pre_128_##A, aes_gcm_enc_128_##A, aes_gcm_dec_128_##A}, \
+	{aes_gcm_pre_192_##A, aes_gcm_enc_192_##A, aes_gcm_dec_192_##A}, \
+	{aes_gcm_pre_256_##A, aes_gcm_enc_256_##A, aes_gcm_dec_256_##A} \
 }
 
 /* Function pointers used by AES_HMAC, AES_DOCSIS */
@@ -240,28 +240,30 @@ __forceinline JOB_AES_HMAC *flush_job(MB_MGR *mgr, const uint32_t arch)
 
 /* GCM functions take also key size argument (128, 192, 256bit) */
 __forceinline void aesni_gcm_pre(const uint32_t arch, const uint8_t key_sz,
-		uint8_t *key, struct gcm_data *gdata)
+                                 uint8_t *key, struct gcm_key_data *gdata)
 {
 	func_sets_gcm[arch][key_sz].aesni_gcm_pre(key, gdata);
 }
 
 __forceinline void aesni_gcm_enc(const uint32_t arch, const uint8_t key_sz,
-		struct gcm_data *gdata, uint8_t *out, uint8_t const *in,
-		uint64_t len, uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-		uint8_t *auth_tag, uint64_t auth_tag_len)
+                                 const struct gcm_key_data *gdata, struct gcm_context_data *ctx,
+                                 uint8_t *out, uint8_t const *in,
+                                 uint64_t len, uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                                 uint8_t *auth_tag, uint64_t auth_tag_len)
 {
-	func_sets_gcm[arch][key_sz].aesni_gcm_enc(gdata, out, in, len, iv, aad,
-			aad_len, auth_tag, auth_tag_len);
+	func_sets_gcm[arch][key_sz].aesni_gcm_enc(gdata, ctx, out, in, len, iv, aad,
+                                                  aad_len, auth_tag, auth_tag_len);
 
 }
 
 __forceinline void aesni_gcm_dec(const uint32_t arch, const uint8_t key_sz,
-		struct gcm_data *gdata, uint8_t *out, uint8_t const *in,
-		uint64_t len, uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-		uint8_t *auth_tag, uint64_t auth_tag_len)
+                                 const struct gcm_key_data *gdata, struct gcm_context_data *ctx,
+                                 uint8_t *out, uint8_t const *in,
+                                 uint64_t len, uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                                 uint8_t *auth_tag, uint64_t auth_tag_len)
 {
-	func_sets_gcm[arch][key_sz].aesni_gcm_dec(gdata, out, in, len, iv, aad,
-			aad_len, auth_tag, auth_tag_len);
+	func_sets_gcm[arch][key_sz].aesni_gcm_dec(gdata, ctx, out, in, len, iv, aad,
+                                                  aad_len, auth_tag, auth_tag_len);
 
 }
 
@@ -455,7 +457,8 @@ static uint64_t do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 static uint64_t do_test_gcm(uint32_t arch, struct params_s *params,
 		uint32_t num_iter)
 {
-	struct gcm_data gdata;
+	struct gcm_key_data gdata_key;
+	struct gcm_context_data gdata_ctx;
 	uint8_t *key;
 	static uint32_t index = 0;
 	uint8_t key_sz = params->aes_key_size / 8 - 2;
@@ -474,11 +477,11 @@ static uint64_t do_test_gcm(uint32_t arch, struct params_s *params,
 		exit(EXIT_FAILURE);
 	}
 
-	aesni_gcm_pre(arch, key_sz, key, &gdata);
+	aesni_gcm_pre(arch, key_sz, key, &gdata_key);
 	if (params->cipher_dir == ENCRYPT) {
 		time = __rdtscp(&aux);
 		for (i = 0; i < num_iter; i++) {
-			aesni_gcm_enc(arch, key_sz, &gdata,
+			aesni_gcm_enc(arch, key_sz, &gdata_key, &gdata_ctx,
 					buf + offsets[index] + sha_size_incr,
 					buf + offsets[index] + sha_size_incr,
 					size_aes, iv, aad, sizeof(aad),
@@ -491,11 +494,11 @@ static uint64_t do_test_gcm(uint32_t arch, struct params_s *params,
 	} else { /*DECRYPT*/
 		time = __rdtscp(&aux);
 		for (i = 0; i < num_iter; i++) {
-			aesni_gcm_dec(arch, key_sz, &gdata,
-					buf + offsets[index] + sha_size_incr,
-					buf + offsets[index] + sha_size_incr,
-					size_aes, iv, aad, sizeof(aad),
-					auth_tag, sizeof(auth_tag));
+			aesni_gcm_dec(arch, key_sz, &gdata_key, &gdata_ctx,
+                                      buf + offsets[index] + sha_size_incr,
+                                      buf + offsets[index] + sha_size_incr,
+                                      size_aes, iv, aad, sizeof(aad),
+                                      auth_tag, sizeof(auth_tag));
 			index += 2;
 			if (index >= index_limit)
 				index = 0;

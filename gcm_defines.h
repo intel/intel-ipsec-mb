@@ -36,7 +36,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
         /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 #define MAX_TAG_LEN (16)
         //
@@ -58,15 +57,16 @@ extern "C" {
 #define GCM_ENC_KEY_LEN  16
 #define GCM_KEY_SETS (15) /*exp key + 14 exp round keys*/
 
+
 /**
  * @brief holds intermediate key data needed to improve performance
  *
- * gcm_data hold internal key information used by gcm128 and gcm256.
+ * gcm_key_data hold internal key information used by gcm128, gcm192 and gcm256.
  */
 #ifdef __WIN32
 __declspec(align(16))
 #endif /* WIN32 */
-struct gcm_data {
+struct gcm_key_data {
         uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
         uint8_t shifted_hkey_1[GCM_ENC_KEY_LEN];  // store HashKey <<1 mod poly here
         uint8_t shifted_hkey_2[GCM_ENC_KEY_LEN];  // store HashKey^2 <<1 mod poly here
@@ -84,14 +84,6 @@ struct gcm_data {
         uint8_t shifted_hkey_6_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
         uint8_t shifted_hkey_7_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
         uint8_t shifted_hkey_8_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
-        // init, update and finalize context data
-        uint8_t  aad_hash[GCM_BLOCK_LEN];
-        uint64_t aad_length;
-        uint64_t in_length;
-        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
-        uint8_t  orig_IV[GCM_BLOCK_LEN];
-        uint8_t  current_counter[GCM_BLOCK_LEN];
-        uint64_t  partial_block_length;
 }
 #ifdef LINUX
         __attribute__ ((aligned (16)));
@@ -100,9 +92,24 @@ struct gcm_data {
 #endif
 
 /**
- * @brief GCM-AES Encryption using 128 bit keys
+ * @brief holds GCM operation context
+ */
+struct gcm_context_data {
+        // init, update and finalize context data
+        uint8_t  aad_hash[GCM_BLOCK_LEN];
+        uint64_t aad_length;
+        uint64_t in_length;
+        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
+        uint8_t  orig_IV[GCM_BLOCK_LEN];
+        uint8_t  current_counter[GCM_BLOCK_LEN];
+        uint64_t  partial_block_length;
+};
+
+/**
+ * @brief GCM-AES Encryption
  *
- * @param my_ctx_data GCM context data
+ * @param key_data GCM expanded key data
+ * @param context_data GCM operation context data
  * @param out Ciphertext output. Encrypt in-place is allowed.
  * @param in Plaintext input.
  * @param len Length of data in Bytes for encryption.
@@ -116,27 +123,68 @@ struct gcm_data {
  *                     a multiple of 4 bytes). Valid values are
  *                     16 (most likely), 12 or 8.
  */
-void aesni_gcm128_enc_sse(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_128_sse(const struct gcm_key_data *key_data,
+                    struct gcm_context_data *context_data,
+                    uint8_t *out, uint8_t const *in, uint64_t len,
+                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
 
 void
-aesni_gcm128_enc_avx_gen2(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_enc_192_sse(const struct gcm_key_data *key_data,
+                    struct gcm_context_data *context_data,
+                    uint8_t *out, uint8_t const *in, uint64_t len,
+                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_192_avx_gen2(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_192_avx_gen4(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
 
 void
-aesni_gcm128_enc_avx_gen4(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_enc_256_sse(const struct gcm_key_data *key_data,
+                    struct gcm_context_data *context_data,
+                    uint8_t *out, uint8_t const *in, uint64_t len,
+                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_256_avx_gen2(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
- * @brief GCM-AES Decryption using 128 bit keys
+ * @brief GCM-AES Decryption
  *
- * @param my_ctx_data GCM context data
+ * @param key_data GCM expanded keys data
+ * @param context_data GCM operation context data
  * @param out Plaintext output. Decrypt in-place is allowed.
  * @param in Ciphertext input.
  * @param len Length of data in Bytes for decryption.
@@ -150,27 +198,68 @@ aesni_gcm128_enc_avx_gen4(struct gcm_data *my_ctx_data,
  *                     a multiple of 4 bytes). Valid values are
  *                     16 (most likely), 12 or 8.
  */
-void aesni_gcm128_dec_sse(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_128_sse(const struct gcm_key_data *key_data,
+                    struct gcm_context_data *context_data,
+                    uint8_t *out, uint8_t const *in, uint64_t len,
+                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_128_avx_gen2(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_128_avx_gen4(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
 
 void
-aesni_gcm128_dec_avx_gen2(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_dec_192_sse(const struct gcm_key_data *key_data,
+                    struct gcm_context_data *context_data,
+                    uint8_t *out, uint8_t const *in, uint64_t len,
+                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_192_avx_gen2(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_192_avx_gen4(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
 
 void
-aesni_gcm128_dec_avx_gen4(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_dec_256_sse(const struct gcm_key_data *key_data,
+                    struct gcm_context_data *context_data,
+                    uint8_t *out, uint8_t const *in, uint64_t len,
+                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data,
+                         struct gcm_context_data *context_data,
+                         uint8_t *out, uint8_t const *in, uint64_t len,
+                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
- * @brief Start a AES-128-GCM Encryption message
+ * @brief Start a AES-GCM Encryption message
  *
- * @param my_ctx_data GCM context data
+ * @param key_data GCM expanded key data
+ * @param context_data GCM operation context data
  * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
  *           concatenated with 8 byte Initialization Vector (from IPSec ESP
  *           Payload) concatenated with 0x00000001. 16-byte pointer.
@@ -179,88 +268,238 @@ aesni_gcm128_dec_avx_gen4(struct gcm_data *my_ctx_data,
  *
  */
 void
-aesni_gcm128_init_sse(struct gcm_data *my_ctx_data,
-                      uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+aes_gcm_init_128_sse(const struct gcm_key_data *key_data,
+                     struct gcm_context_data *context_data,
+                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 void
-aesni_gcm128_init_avx_gen2(struct gcm_data *my_ctx_data,
-                           uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+aes_gcm_init_128_avx_gen2(const struct gcm_key_data *key_data,
+                          struct gcm_context_data *context_data,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 void
-aesni_gcm128_init_avx_gen4(struct gcm_data *my_ctx_data,
-                           uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+aes_gcm_init_128_avx_gen4(const struct gcm_key_data *key_data,
+                          struct gcm_context_data *context_data,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+
+void
+aes_gcm_init_192_sse(const struct gcm_key_data *key_data,
+                     struct gcm_context_data *context_data,
+                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+void
+aes_gcm_init_192_avx_gen2(const struct gcm_key_data *key_data,
+                          struct gcm_context_data *context_data,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+void
+aes_gcm_init_192_avx_gen4(const struct gcm_key_data *key_data,
+                          struct gcm_context_data *context_data,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+
+void
+aes_gcm_init_256_sse(const struct gcm_key_data *key_data,
+                     struct gcm_context_data *context_data,
+                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+void
+aes_gcm_init_256_avx_gen2(const struct gcm_key_data *key_data,
+                          struct gcm_context_data *context_data,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+void
+aes_gcm_init_256_avx_gen4(const struct gcm_key_data *key_data,
+                          struct gcm_context_data *context_data,
+                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 
 /**
- * @brief encrypt a block of a AES-128-GCM Encryption message
+ * @brief encrypt a block of a AES-GCM Encryption message
  *
- * @param my_ctx_data GCM context data
+ * @param key_data GCM expanded key data
+ * @param context_data GCM operation context data
  * @param out Ciphertext output. Encrypt in-place is allowed.
  * @param in Plaintext input.
  * @param len Length of data in Bytes for decryption.
  */
 void
-aesni_gcm128_enc_update_sse(struct gcm_data *my_ctx_data, uint8_t *out,
-                            const uint8_t *in, uint64_t len);
+aes_gcm_enc_128_update_sse(const struct gcm_key_data *key_data,
+                           struct gcm_context_data *context_data,
+                           uint8_t *out, const uint8_t *in, uint64_t len);
 void
-aesni_gcm128_enc_update_avx_gen2(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
+aes_gcm_enc_128_update_avx_gen2(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
 void
-aesni_gcm128_enc_update_avx_gen4(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
+aes_gcm_enc_128_update_avx_gen4(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
+
+void
+aes_gcm_enc_192_update_sse(const struct gcm_key_data *key_data,
+                           struct gcm_context_data *context_data,
+                           uint8_t *out, const uint8_t *in, uint64_t len);
+void
+aes_gcm_enc_192_update_avx_gen2(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
+void
+aes_gcm_enc_192_update_avx_gen4(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
+
+void
+aes_gcm_enc_256_update_sse(const struct gcm_key_data *key_data,
+                           struct gcm_context_data *context_data,
+                           uint8_t *out, const uint8_t *in, uint64_t len);
+void
+aes_gcm_enc_256_update_avx_gen2(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
+void
+aes_gcm_enc_256_update_avx_gen4(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
 
 /**
- * @brief decrypt a block of a AES-128-GCM Encryption message
+ * @brief decrypt a block of a AES-GCM Encryption message
  *
- * @param my_ctx_data GCM context data
+ * @param key_data GCM expanded key data
+ * @param context_data GCM operation context data
  * @param out Plaintext output. Decrypt in-place is allowed.
  * @param in Ciphertext input.
  * @param len Length of data in Bytes for decryption.
  */
 void
-aesni_gcm128_dec_update_sse(struct gcm_data *my_ctx_data, uint8_t *out,
-                            const uint8_t *in, uint64_t len);
+aes_gcm_dec_128_update_sse(const struct gcm_key_data *key_data,
+                           struct gcm_context_data *context_data,
+                           uint8_t *out, const uint8_t *in, uint64_t len);
 void
-aesni_gcm128_dec_update_avx_gen2(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
+aes_gcm_dec_128_update_avx_gen2(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
 void
-aesni_gcm128_dec_update_avx_gen4(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
+aes_gcm_dec_128_update_avx_gen4(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
+
+void
+aes_gcm_dec_192_update_sse(const struct gcm_key_data *key_data,
+                           struct gcm_context_data *context_data,
+                           uint8_t *out, const uint8_t *in, uint64_t len);
+void
+aes_gcm_dec_192_update_avx_gen2(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
+void
+aes_gcm_dec_192_update_avx_gen4(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
+
+void
+aes_gcm_dec_256_update_sse(const struct gcm_key_data *key_data,
+                           struct gcm_context_data *context_data,
+                           uint8_t *out, const uint8_t *in, uint64_t len);
+void
+aes_gcm_dec_256_update_avx_gen2(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
+void
+aes_gcm_dec_256_update_avx_gen4(const struct gcm_key_data *key_data,
+                                struct gcm_context_data *context_data,
+                                uint8_t *out, const uint8_t *in, uint64_t len);
 
 /**
- * @brief End encryption of a AES-128-GCM Encryption message
+ * @brief End encryption of a AES-GCM Encryption message
  *
- * @param my_ctx_data GCM context data
+ * @param key_data GCM expanded key data
+ * @param context_data GCM operation context data
  * @param auth_tag Authenticated Tag output.
  * @param auth_tag_len Authenticated Tag Length in bytes (must be
  *                     a multiple of 4 bytes). Valid values are
  *                     16 (most likely), 12 or 8.
  */
 void
-aesni_gcm128_enc_finalize_sse(struct gcm_data *my_ctx_data,
-                              uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_enc_128_finalize_sse(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             uint8_t *auth_tag, uint64_t auth_tag_len);
 void
-aesni_gcm128_enc_finalize_avx_gen2(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_enc_128_finalize_avx_gen2(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
 void
-aesni_gcm128_enc_finalize_avx_gen4(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_enc_128_finalize_avx_gen4(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+
+void
+aes_gcm_enc_192_finalize_sse(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_192_finalize_avx_gen2(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_192_finalize_avx_gen4(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+
+void
+aes_gcm_enc_256_finalize_sse(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_256_finalize_avx_gen2(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_enc_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
- * @brief End decryption of a AES-128-GCM Encryption message
+ * @brief End decryption of a AES-GCM Encryption message
  *
- * @param my_ctx_data GCM context data
+ * @param key_data GCM expanded key data
+ * @param context_data GCM operation context data
  * @param auth_tag Authenticated Tag output.
  * @param auth_tag_len Authenticated Tag Length in bytes (must be
  *                     a multiple of 4 bytes). Valid values are
  *                     16 (most likely), 12 or 8.
  */
 void
-aesni_gcm128_dec_finalize_sse(struct gcm_data *my_ctx_data,
-                              uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_dec_128_finalize_sse(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             uint8_t *auth_tag, uint64_t auth_tag_len);
 void
-aesni_gcm128_dec_finalize_avx_gen2(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_dec_128_finalize_avx_gen2(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
 void
-aesni_gcm128_dec_finalize_avx_gen4(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
+aes_gcm_dec_128_finalize_avx_gen4(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+
+void
+aes_gcm_dec_192_finalize_sse(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_192_finalize_avx_gen2(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_192_finalize_avx_gen4(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+
+void
+aes_gcm_dec_256_finalize_sse(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_256_finalize_avx_gen2(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+void
+aes_gcm_dec_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
+                                  struct gcm_context_data *context_data,
+                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+
 /**
  * @brief Precomputation of HashKey constants
  *
@@ -269,518 +508,87 @@ aesni_gcm128_dec_finalize_avx_gen4(struct gcm_data *my_ctx_data,
  *
  * @param gdata GCM context data
  */
-void aesni_gcm128_precomp_sse(struct gcm_data *gdata);
-void aesni_gcm128_precomp_avx_gen2(struct gcm_data *gdata);
-void aesni_gcm128_precomp_avx_gen4(struct gcm_data *gdata);
-void aesni_gcm192_precomp_sse(struct gcm_data *gdata);
-void aesni_gcm192_precomp_avx_gen2(struct gcm_data *gdata);
-void aesni_gcm192_precomp_avx_gen4(struct gcm_data *gdata);
-void aesni_gcm256_precomp_sse(struct gcm_data *gdata);
-void aesni_gcm256_precomp_avx_gen2(struct gcm_data *gdata);
-void aesni_gcm256_precomp_avx_gen4(struct gcm_data *gdata);
+void aes_gcm_precomp_128_sse(struct gcm_key_data *key_data);
+void aes_gcm_precomp_128_avx_gen2(struct gcm_key_data *key_data);
+void aes_gcm_precomp_128_avx_gen4(struct gcm_key_data *key_data);
+
+void aes_gcm_precomp_192_sse(struct gcm_key_data *key_data);
+void aes_gcm_precomp_192_avx_gen2(struct gcm_key_data *key_data);
+void aes_gcm_precomp_192_avx_gen4(struct gcm_key_data *key_data);
+
+void aes_gcm_precomp_256_sse(struct gcm_key_data *key_data);
+void aes_gcm_precomp_256_avx_gen2(struct gcm_key_data *key_data);
+void aes_gcm_precomp_256_avx_gen4(struct gcm_key_data *key_data);
 
 /**
- * @brief pre-processes GCM128 key data (SSE version)
+ * @brief Pre-processes GCM key data
  *
- * Prefills the gcm data with key values for each round and
+ * Prefills the gcm key data with key values for each round and
  * the initial sub hash key for tag encoding
  *
- * @param key
- * @param gdata GCM context data
+ * @param key pointer to key data
+ * @param key_data GCM expanded key data
  *
  */
 __forceinline
-void aesni_gcm128_pre_sse(const void *key, struct gcm_data *gdata)
+void aes_gcm_pre_128_sse(const void *key, struct gcm_key_data *key_data)
 {
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_128_enc_sse(key, gdata->expanded_keys);
-        aesni_gcm128_precomp_sse(gdata);
+        aes_keyexp_128_enc_sse(key, key_data->expanded_keys);
+        aes_gcm_precomp_128_sse(key_data);
 }
-
-/**
- * @brief pre-processes GCM128 key data (AVX version)
- *
- * Prefills the gcm data with key values for each round and
- * the initial sub hash key for tag encoding
- *
- * @param key key data
- * @param gdata GCM context data
- */
 __forceinline
-void aesni_gcm128_pre_avx_gen2(const void *key, struct gcm_data *gdata)
+void aes_gcm_pre_128_avx_gen2(const void *key, struct gcm_key_data *key_data)
 {
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_128_enc_avx(key, gdata->expanded_keys);
-        aesni_gcm128_precomp_avx_gen2(gdata);
+        aes_keyexp_128_enc_avx(key, key_data->expanded_keys);
+        aes_gcm_precomp_128_avx_gen2(key_data);
 }
-
-/**
- * @brief pre-processes GCM128 key data (AVX version)
- *
- * Prefills the gcm data with key values for each round and
- * the initial sub hash key for tag encoding
- *
- * @param key key data
- * @param gdata GCM context data
- */
 __forceinline
-void aesni_gcm128_pre_avx_gen4(const void *key, struct gcm_data *gdata)
+void aes_gcm_pre_128_avx_gen4(const void *key, struct gcm_key_data *key_data)
 {
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_128_enc_avx2(key, gdata->expanded_keys);
-        aesni_gcm128_precomp_avx_gen4(gdata);
+        aes_keyexp_128_enc_avx2(key, key_data->expanded_keys);
+        aes_gcm_precomp_128_avx_gen4(key_data);
 }
 
-/**
- * @brief pre-processes GCM192 key data (SSE version)
- *
- * Prefills the gcm data with key values for each round and
- * the initial sub hash key for tag encoding
- *
- * @param key
- * @param gdata GCM context data
- *
- */
 __forceinline
-void aesni_gcm192_pre_sse(const void *key, struct gcm_data *gdata)
+void aes_gcm_pre_192_sse(const void *key, struct gcm_key_data *key_data)
 {
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_192_enc_sse(key, gdata->expanded_keys);
-        aesni_gcm192_precomp_sse(gdata);
+        aes_keyexp_192_enc_sse(key, key_data->expanded_keys);
+        aes_gcm_precomp_192_sse(key_data);
 }
-
-/**
- * @brief pre-processes GCM192 key data (AVX version)
- *
- * Prefills the gcm data with key values for each round and
- * the initial sub hash key for tag encoding
- *
- * @param key key data
- * @param gdata GCM context data
- */
 __forceinline
-void aesni_gcm192_pre_avx_gen2(const void *key, struct gcm_data *gdata)
+void aes_gcm_pre_192_avx_gen2(const void *key, struct gcm_key_data *key_data)
 {
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_192_enc_avx(key, gdata->expanded_keys);
-        aesni_gcm192_precomp_avx_gen2(gdata);
+        aes_keyexp_192_enc_avx(key, key_data->expanded_keys);
+        aes_gcm_precomp_192_avx_gen2(key_data);
 }
-
-/**
- * @brief pre-processes GCM192 key data (AVX version)
- *
- * Prefills the gcm data with key values for each round and
- * the initial sub hash key for tag encoding
- *
- * @param key key data
- * @param gdata GCM context data
- */
 __forceinline
-void aesni_gcm192_pre_avx_gen4(const void *key, struct gcm_data *gdata)
+void aes_gcm_pre_192_avx_gen4(const void *key, struct gcm_key_data *key_data)
 {
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_192_enc_avx2(key, gdata->expanded_keys);
-        aesni_gcm192_precomp_avx_gen4(gdata);
+        aes_keyexp_192_enc_avx2(key, key_data->expanded_keys);
+        aes_gcm_precomp_192_avx_gen4(key_data);
 }
 
-/**
- * @brief GCM-AES Encryption using 192 bit keys
- *
- * @param my_ctx_data GCM context data
- * @param out Ciphertext output. Encrypt in-place is allowed.
- * @param in Plaintext input.
- * @param len Length of data in Bytes for encryption.
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
- */
-void
-aesni_gcm192_enc_sse(struct gcm_data *my_ctx_data,
-                     uint8_t *out, uint8_t const *in, uint64_t len,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                     uint8_t *auth_tag, uint64_t auth_tag_len);
-
-void
-aesni_gcm192_enc_avx_gen2(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
-
-void
-aesni_gcm192_enc_avx_gen4(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
-
-/**
- * @brief GCM-AES Decryption using 192 bit keys
- *
- * @param my_ctx_data GCM context data
- * @param out Plaintext output. Decrypt in-place is allowed.
- * @param in Ciphertext input.
- * @param len Length of data in Bytes for decryption.
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
- */
-void
-aesni_gcm192_dec_sse(struct gcm_data *my_ctx_data,
-                     uint8_t *out, uint8_t const *in, uint64_t len,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                     uint8_t *auth_tag, uint64_t auth_tag_len);
-
-void
-aesni_gcm192_dec_avx_gen2(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
-
-void
-aesni_gcm192_dec_avx_gen4(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
-/**
- * @brief Start a AES-192-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- *
- */
-void
-aesni_gcm192_init_sse(struct gcm_data *my_ctx_data,
-                      uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
-void
-aesni_gcm192_init_avx_gen2(struct gcm_data *my_ctx_data,
-                           uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
-void
-aesni_gcm192_init_avx_gen4(struct gcm_data *my_ctx_data,
-                           uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
-
-/**
- * @brief encrypt a block of a AES-192-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param out Ciphertext output. Encrypt in-place is allowed.
- * @param in Plaintext input.
- * @param len Length of data in Bytes for decryption.
- */
-void
-aesni_gcm192_enc_update_sse(struct gcm_data *my_ctx_data, uint8_t *out,
-                            const uint8_t *in, uint64_t len);
-void
-aesni_gcm192_enc_update_avx_gen2(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
-void
-aesni_gcm192_enc_update_avx_gen4(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
-
-/**
- * @brief decrypt a block of a AES-192-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param out Plaintext output. Decrypt in-place is allowed.
- * @param in Ciphertext input.
- * @param len Length of data in Bytes for decryption.
- */
-void
-aesni_gcm192_dec_update_sse(struct gcm_data *my_ctx_data, uint8_t *out,
-                            const uint8_t *in, uint64_t len);
-void
-aesni_gcm192_dec_update_avx_gen2(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
-void
-aesni_gcm192_dec_update_avx_gen4(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
-
-/**
- * @brief End encryption of a AES-192-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
- */
-void
-aesni_gcm192_enc_finalize_sse(struct gcm_data *my_ctx_data,
-                              uint8_t *auth_tag, uint64_t auth_tag_len);
-void
-aesni_gcm192_enc_finalize_avx_gen2(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
-void
-aesni_gcm192_enc_finalize_avx_gen4(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
-
-/**
- * @brief End decryption of a AES-192-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
- */
-void
-aesni_gcm192_dec_finalize_sse(struct gcm_data *my_ctx_data,
-                              uint8_t *auth_tag, uint64_t auth_tag_len);
-void
-aesni_gcm192_dec_finalize_avx_gen2(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
-void
-aesni_gcm192_dec_finalize_avx_gen4(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
-
-/**
- * @brief GCM-AES Encryption using 256 bit keys
- *
- * @param my_ctx_data GCM context data
- * @param out Ciphertext output. Encrypt in-place is allowed.
- * @param in Plaintext input.
- * @param len Length of data in Bytes for encryption.
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
- */
-void
-aesni_gcm256_enc_sse(struct gcm_data *my_ctx_data,
-                     uint8_t *out, uint8_t const *in, uint64_t len,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                     uint8_t *auth_tag, uint64_t auth_tag_len);
-
-void
-aesni_gcm256_enc_avx_gen2(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
-
-void
-aesni_gcm256_enc_avx_gen4(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
-
-/**
- * @brief GCM-AES Decryption using 256 bit keys
- *
- * @param my_ctx_data GCM context data
- * @param out Plaintext output. Decrypt in-place is allowed.
- * @param in Ciphertext input.
- * @param len Length of data in Bytes for decryption.
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
- */
-void
-aesni_gcm256_dec_sse(struct gcm_data *my_ctx_data,
-                     uint8_t *out, uint8_t const *in, uint64_t len,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                     uint8_t *auth_tag, uint64_t auth_tag_len);
-
-void
-aesni_gcm256_dec_avx_gen2(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
-
-void
-aesni_gcm256_dec_avx_gen4(struct gcm_data *my_ctx_data,
-                          uint8_t *out, uint8_t const *in, uint64_t len,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                          uint8_t *auth_tag, uint64_t auth_tag_len);
-
-/**
- * @brief Start a AES-256-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
- * @param aad Additional Authentication Data (AAD).
- * @param aad_len Length of AAD.
- *
- */
-void
-aesni_gcm256_init_sse(struct gcm_data *my_ctx_data,
-                      uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
-void
-aesni_gcm256_init_avx_gen2(struct gcm_data *my_ctx_data,
-                           uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
-void
-aesni_gcm256_init_avx_gen4(struct gcm_data *my_ctx_data,
-                           uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
-
-/**
- * @brief encrypt a block of a AES-256-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param out Ciphertext output. Encrypt in-place is allowed.
- * @param in Plaintext input.
- * @param len Length of data in Bytes for decryption.
- */
-void
-aesni_gcm256_enc_update_sse(struct gcm_data *my_ctx_data, uint8_t *out,
-                            const uint8_t *in, uint64_t len);
-void
-aesni_gcm256_enc_update_avx_gen2(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
-void
-aesni_gcm256_enc_update_avx_gen4(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
-
-/**
- * @brief decrypt a block of a AES-256-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param out Plaintext output. Decrypt in-place is allowed.
- * @param in Ciphertext input.
- * @param len Length of data in Bytes for decryption.
- */
-void
-aesni_gcm256_dec_update_sse(struct gcm_data *my_ctx_data, uint8_t *out,
-                            const uint8_t *in, uint64_t len);
-void
-aesni_gcm256_dec_update_avx_gen2(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
-void
-aesni_gcm256_dec_update_avx_gen4(struct gcm_data *my_ctx_data, uint8_t *out,
-                                 const uint8_t *in, uint64_t len);
-
-/**
- * @brief End encryption of a AES-256-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
- */
-void
-aesni_gcm256_enc_finalize_sse(struct gcm_data *my_ctx_data,
-                              uint8_t *auth_tag, uint64_t auth_tag_len);
-void
-aesni_gcm256_enc_finalize_avx_gen2(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
-void
-aesni_gcm256_enc_finalize_avx_gen4(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
-
-/**
- * @brief End decryption of a AES-256-GCM Encryption message
- *
- * @param my_ctx_data GCM context data
- * @param auth_tag Authenticated Tag output.
- * @param auth_tag_len Authenticated Tag Length in bytes (must be
- *                     a multiple of 4 bytes). Valid values are
- *                     16 (most likely), 12 or 8.
- */
-void
-aesni_gcm256_dec_finalize_sse(struct gcm_data *my_ctx_data,
-                              uint8_t *auth_tag, uint64_t auth_tag_len);
-void
-aesni_gcm256_dec_finalize_avx_gen2(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
-void
-aesni_gcm256_dec_finalize_avx_gen4(struct gcm_data *my_ctx_data,
-                                   uint8_t *auth_tag, uint64_t auth_tag_len);
-
-/**
- * @brief pre-processes GCM256 key data (SSE version)
- *
- * Prefills the gcm data with key values for each round and
- * the initial sub hash key for tag encoding
- */
 __forceinline
-void aesni_gcm256_pre_sse(const void *key, struct gcm_data *gdata)
+void aes_gcm_pre_256_sse(const void *key, struct gcm_key_data *key_data)
 {
-        struct gcm_data tmp;
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_256_sse(key, gdata->expanded_keys, tmp.expanded_keys);
-        aesni_gcm256_precomp_sse(gdata);
+        struct gcm_key_data tmp;
+
+        aes_keyexp_256_sse(key, key_data->expanded_keys, tmp.expanded_keys);
+        aes_gcm_precomp_256_sse(key_data);
+}
+__forceinline
+void aes_gcm_pre_256_avx_gen2(const void *key, struct gcm_key_data *key_data)
+{
+        aes_keyexp_256_enc_avx(key, key_data->expanded_keys);
+        aes_gcm_precomp_256_avx_gen2(key_data);
+}
+__forceinline
+void aes_gcm_pre_256_avx_gen4(const void *key, struct gcm_key_data *key_data)
+{
+        aes_keyexp_256_enc_avx2(key, key_data->expanded_keys);
+        aes_gcm_precomp_256_avx_gen4(key_data);
 }
 
-/**
- * @brief pre-processes GCM256 key data (AVX version)
- *
- * Prefills the gcm data with key values for each round and
- * the initial sub hash key for tag encoding
- */
-__forceinline
-void aesni_gcm256_pre_avx_gen2(const void *key, struct gcm_data *gdata)
-{
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_256_enc_avx(key, gdata->expanded_keys);
-        aesni_gcm256_precomp_avx_gen2(gdata);
-}
-
-/**
- * @brief pre-processes GCM256 key data (AVX2 version)
- *
- * Prefills the gcm data with key values for each round and
- * the initial sub hash key for tag encoding
- */
-__forceinline
-void aesni_gcm256_pre_avx_gen4(const void *key, struct gcm_data *gdata)
-{
-        //////
-        // Prefill the key values for each round of encrypting/decrypting
-        // Prefill the Sub Hash key values for encoding the tag
-        //////
-        aes_keyexp_256_enc_avx2(key, gdata->expanded_keys);
-        aesni_gcm256_precomp_avx_gen4(gdata);
-}
 
 #ifdef __cplusplus
 }

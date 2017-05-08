@@ -28,4 +28,4 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define GCM192_MODE 1
-%include "gcm256_avx_gen2.asm"
+%include "gcm_avx_gen2.asm"
