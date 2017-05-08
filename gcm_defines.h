@@ -279,6 +279,16 @@ void aesni_gcm256_precomp_sse(struct gcm_data *gdata);
 void aesni_gcm256_precomp_avx_gen2(struct gcm_data *gdata);
 void aesni_gcm256_precomp_avx_gen4(struct gcm_data *gdata);
 
+void aesni_gcm128_precomp_sse(struct gcm_data *gdata);
+void aesni_gcm128_precomp_avx_gen2(struct gcm_data *gdata);
+void aesni_gcm128_precomp_avx_gen4(struct gcm_data *gdata);
+void aesni_gcm192_precomp_sse(struct gcm_data *gdata);
+void aesni_gcm192_precomp_avx_gen2(struct gcm_data *gdata);
+void aesni_gcm192_precomp_avx_gen4(struct gcm_data *gdata);
+void aesni_gcm256_precomp_sse(struct gcm_data *gdata);
+void aesni_gcm256_precomp_avx_gen2(struct gcm_data *gdata);
+void aesni_gcm256_precomp_avx_gen4(struct gcm_data *gdata);
+
 /**
  * @brief pre-processes GCM128 key data (SSE version)
  *

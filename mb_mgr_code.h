@@ -302,40 +302,59 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 __forceinline
 int is_job_invalid(const JOB_AES_HMAC *job)
 {
-        if ((job->hash_alg < SHA1) || (job->hash_alg > NULL_HASH) ||
-            (job->cipher_mode < CBC) || (job->cipher_mode > DOCSIS_SEC_BPI))
-                return 1;
-
-        if (job->cipher_mode == NULL_CIPHER) {
-                /* NULL_CIPHER only allowed in HASH_CIPHER */
-                if (job->chain_order != HASH_CIPHER)
+        switch (job->cipher_mode) {
+        case CBC:
+                if ((job->msg_len_to_cipher_in_bytes == 0) ||
+                    (job->msg_len_to_cipher_in_bytes & 15))
                         return 1;
-        } else {
+                break;
+
+        case CNTR:
+        case DOCSIS_SEC_BPI:
                 if (job->msg_len_to_cipher_in_bytes == 0)
                         return 1;
+                break;
 
-                /* DOCSIS and CTR mode message lengths can be unaligned */
-                if (job->cipher_mode == CBC &&
-                    (job->msg_len_to_cipher_in_bytes & 15) != 0)
+        case NULL_CIPHER:
+                /* not supported copy to dst */
+                if (job->dst != (job->src + job->cipher_start_src_offset_in_bytes))
                         return 1;
+                break;
+
+        default:
+                return 1;
         }
 
-        if (job->hash_alg == NULL_HASH) {
-                if (job->cipher_direction == ENCRYPT) {
-                        /* NULL_HASH only allowed in CIPHER_HASH for encrypt */
-                        if (job->chain_order != CIPHER_HASH)
-                                return 1;
-                } else {
-                        /* NULL_HASH only allowed in HASH_CIPHER for decrypt */
-                        if (job->chain_order != HASH_CIPHER)
-                                return 1;
-                }
-        } else {
-                if ((job->msg_len_to_hash_in_bytes == 0) ||
-                    (job->auth_tag_output_len_in_bytes != auth_tag_len[job->hash_alg - 1]))
+        switch (job->hash_alg) {
+        case SHA1:
+        case SHA_224:
+        case SHA_256:
+        case SHA_384:
+        case SHA_512:
+        case AES_XCBC:
+        case MD5:
+        case NULL_HASH:
+                if (job->auth_tag_output_len_in_bytes != auth_tag_len[job->hash_alg - 1])
                         return 1;
+                break;
+
+        default:
+                return 1;
         }
 
+        switch (job->chain_order) {
+        case CIPHER_HASH:
+                if (job->cipher_direction != ENCRYPT)
+                        return 1;
+                break;
+        case HASH_CIPHER:
+                if (job->cipher_direction != DECRYPT)
+                        return 1;
+                break;
+
+        default:
+                return 1;
+        }
         return 0;
 }
 
@@ -567,7 +586,7 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-UINT32
+UINT32 
 QUEUE_SIZE(MB_MGR *state)
 {
         int a, b;
