@@ -2516,7 +2516,9 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         mov     [%%GDATA_CTX + PBlockLen], r10              ; ctx_data.partial_block_length = 0
         vmovdqu [%%GDATA_CTX + PBlockEncKey], xmm2          ; ctx_data.partial_block_enc_key = 0
         mov     r10, %%IV
-        vmovdqu xmm2, [r10]
+        vmovdqa xmm2, [rel ONEf]                            ; read 12 IV bytes and pad with 0x00000001
+        vpinsrq xmm2, [r10], 0
+        vpinsrd xmm2, [r10+8], 2
         vmovdqu [%%GDATA_CTX + OrigIV], xmm2                ; ctx_data.orig_IV = iv
 
         vpshufb xmm2, [SHUF_MASK]

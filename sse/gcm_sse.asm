@@ -1559,7 +1559,9 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 	mov	[%%GDATA_CTX + PBlockLen], r10		; ctx_data.partial_block_length = 0
 	movdqu	[%%GDATA_CTX + PBlockEncKey], xmm2	; ctx_data.partial_block_enc_key = 0
 	mov	r10, %%IV
-	movdqu	xmm2, [r10]
+        movdqa  xmm2, [rel ONEf]                        ; read 12 IV bytes and pad with 0x00000001
+        pinsrq  xmm2, [r10], 0
+        pinsrd  xmm2, [r10+8], 2
 	movdqu	[%%GDATA_CTX + OrigIV], xmm2		; ctx_data.orig_IV = iv
 
 	pshufb xmm2, [SHUF_MASK]

@@ -38,24 +38,27 @@ extern "C" {
 #endif
         /* Authenticated Tag Length in bytes. Valid values are 16 (most likely), 12 or 8. */
 #define MAX_TAG_LEN (16)
-        //
-        // IV data is limited to 16 bytes. The last DWORD (4 bytes) must be 0x1
-        //
-#define GCM_IV_LEN (16)
+        /*
+         * IV data is limited to 16 bytes as follows:
+         * 12 bytes is provided by an application - 
+         *    pre-counter block j0: 4 byte salt (from Security Association)
+         *    concatenated with 8 byte Initialization Vector (from IPSec ESP
+         *    Payload).
+         * 4 byte value 0x00000001 is padded automatically by the library -
+         *    there is no need to add these 4 bytes on an application side anymore.
+         */
 #define GCM_IV_DATA_LEN (12)
-#define GCM_IV_END_MARK {0x00, 0x00, 0x00, 0x01}
-#define GCM_IV_END_START (12)
 
-#define LONGEST_TESTED_AAD_LENGTH (2* 1024)
+#define LONGEST_TESTED_AAD_LENGTH (2 * 1024)
 
         // Key lengths of 128 and 256 supported
 #define GCM_128_KEY_LEN (16)
 #define GCM_192_KEY_LEN (24)
 #define GCM_256_KEY_LEN (32)
 
-#define GCM_BLOCK_LEN  16
-#define GCM_ENC_KEY_LEN  16
-#define GCM_KEY_SETS (15) /*exp key + 14 exp round keys*/
+#define GCM_BLOCK_LEN   16
+#define GCM_ENC_KEY_LEN 16
+#define GCM_KEY_SETS    (15) /*exp key + 14 exp round keys*/
 
 
 /**
@@ -113,9 +116,7 @@ struct gcm_context_data {
  * @param out Ciphertext output. Encrypt in-place is allowed.
  * @param in Plaintext input.
  * @param len Length of data in Bytes for encryption.
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
+ * @param iv pointer to 12 byte IV structure. Internally, library concates 0x00000001 value to it.
  * @param aad Additional Authentication Data (AAD).
  * @param aad_len Length of AAD.
  * @param auth_tag Authenticated Tag output.
@@ -188,9 +189,7 @@ aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key_data,
  * @param out Plaintext output. Decrypt in-place is allowed.
  * @param in Ciphertext input.
  * @param len Length of data in Bytes for decryption.
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
+ * @param iv pointer to 12 byte IV structure. Internally, library concates 0x00000001 value to it.
  * @param aad Additional Authentication Data (AAD).
  * @param aad_len Length of AAD.
  * @param auth_tag Authenticated Tag output.
@@ -260,9 +259,7 @@ aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data,
  *
  * @param key_data GCM expanded key data
  * @param context_data GCM operation context data
- * @param iv Pre-counter block j0: 4 byte salt (from Security Association)
- *           concatenated with 8 byte Initialization Vector (from IPSec ESP
- *           Payload) concatenated with 0x00000001. 16-byte pointer.
+ * @param iv pointer to 12 byte IV structure. Internally, library concates 0x00000001 value to it.
  * @param aad Additional Authentication Data (AAD).
  * @param aad_len Length of AAD.
  *

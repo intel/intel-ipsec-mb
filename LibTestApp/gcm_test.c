@@ -779,11 +779,8 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 	// Temporary array for the calculated vectors
 	uint8_t *ct_test = NULL;
 	uint8_t *pt_test = NULL;
-	uint8_t *IV_c = NULL;
 	uint8_t *T_test = NULL;
 	uint8_t *T2_test = NULL;
-	uint8_t const IVend[] = GCM_IV_END_MARK;
-	uint64_t IV_alloc_len = 0;
 
 #ifdef DEBUG
         printf("Testing GCM128 std vectors\n");
@@ -800,16 +797,6 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 		fprintf(stderr, "Can't allocate plaintext memory\n");
 		return 1;
 	}
-	IV_alloc_len = vector->IVlen + sizeof(IVend);
-	// Allocate space for the calculated ciphertext
-	IV_c = malloc(IV_alloc_len);
-	if (IV_c == NULL) {
-		fprintf(stderr, "Can't allocate ciphertext memory\n");
-		return 1;
-	}
-	//Add end marker to the IV data
-	memcpy(IV_c, vector->IV, vector->IVlen);
-	memcpy(&IV_c[vector->IVlen], IVend, sizeof(IVend));
 
 	T_test = malloc(vector->Tlen);
 	T2_test = malloc(vector->Tlen);
@@ -825,14 +812,14 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 	////
 	aesni_gcm128_enc(&gdata_key, &gdata_ctx,
                          ct_test, vector->P, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->C, vector->Plen,
                                "encrypted cypher text (C)");
 	is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
 
 	// test of in-place encrypt
 	memcpy(pt_test, vector->P, vector->Plen);
-	aesni_gcm128_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, IV_c,
+	aesni_gcm128_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->C, vector->Plen,
                                "encrypted cypher text(in-place)");
@@ -843,7 +830,7 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 	// Decrypt
 	////
 	aesni_gcm128_dec(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "decrypted plain text (P)");
 	// GCM decryption outputs a 16 byte tag value
@@ -853,7 +840,7 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 
 	// test in in-place decrypt
 	memcpy(ct_test, vector->C, vector->Plen);
-	aesni_gcm128_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, IV_c,
+	aesni_gcm128_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->P, vector->Plen,
                                "plain text (P) - in-place");
@@ -861,9 +848,9 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
                                "decrypted tag (T) - in-place");
 	// enc -> dec
 	aesni_gcm128_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	memset(pt_test, 0, vector->Plen);
-	aesni_gcm128_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, IV_c,
+	aesni_gcm128_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T2_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "self decrypted plain text (P)");
@@ -876,8 +863,6 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 		free(ct_test);
 	if (NULL != pt_test)
 		free(pt_test);
-	if (NULL != IV_c)
-		free(IV_c);
 	if (NULL != T_test)
 		free(T_test);
 	if (NULL != T2_test)
@@ -894,11 +879,8 @@ static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
 	// Temporary array for the calculated vectors
 	uint8_t *ct_test = NULL;
 	uint8_t *pt_test = NULL;
-	uint8_t *IV_c = NULL;
 	uint8_t *T_test = NULL;
 	uint8_t *T2_test = NULL;
-	uint8_t const IVend[] = GCM_IV_END_MARK;
-	uint64_t IV_alloc_len = 0;
 
 #ifdef DEBUG
         printf("Testing GCM192 std vectors\n");
@@ -911,16 +893,6 @@ static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
 		fprintf(stderr, "Can't allocate ciphertext or plaintext memory\n");
 		return 1;
 	}
-	IV_alloc_len = vector->IVlen + sizeof(IVend);
-	// Allocate space for the calculated ciphertext
-	IV_c = malloc(IV_alloc_len);
-	if (IV_c == NULL) {
-		fprintf(stderr, "Can't allocate ciphertext memory\n");
-		return 1;
-	}
-	//Add end marker to the IV data
-	memcpy(IV_c, vector->IV, vector->IVlen);
-	memcpy(&IV_c[vector->IVlen], IVend, sizeof(IVend));
 
 	T_test = malloc(vector->Tlen);
 	T2_test = malloc(vector->Tlen);
@@ -936,14 +908,14 @@ static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
 	////
 	memset(ct_test, 0, vector->Plen);
 	aesni_gcm192_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->C, vector->Plen,
                                "encrypted cypher text (C)");
 	is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
 
 	// test of in-place encrypt
 	memcpy(pt_test, vector->P, vector->Plen);
-	aesni_gcm192_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, IV_c,
+	aesni_gcm192_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->C, vector->Plen,
                                "encrypted cypher text(in-place)");
@@ -954,7 +926,7 @@ static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
 	// Decrypt
 	////
 	aesni_gcm192_dec(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "decrypted plain text (P)");
 	// GCM decryption outputs a 16 byte tag value
@@ -964,7 +936,7 @@ static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
 
 	// test in in-place decrypt
 	memcpy(ct_test, vector->C, vector->Plen);
-	aesni_gcm192_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, IV_c,
+	aesni_gcm192_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->P, vector->Plen,
                                "plain text (P) - in-place");
@@ -972,9 +944,9 @@ static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
                                "decrypted tag (T) - in-place");
 	// enc -> dec
 	aesni_gcm192_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	memset(pt_test, 0, vector->Plen);
-	aesni_gcm192_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, IV_c,
+	aesni_gcm192_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T2_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "self decrypted plain text (P)");
@@ -985,8 +957,6 @@ static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
 		free(ct_test);
 	if (NULL != pt_test)
 		free(pt_test);
-	if (NULL != IV_c)
-		free(IV_c);
 	if (NULL != T_test)
 		free(T_test);
 	if (NULL != T2_test)
@@ -1003,11 +973,8 @@ static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
 	// Temporary array for the calculated vectors
 	uint8_t *ct_test = NULL;
 	uint8_t *pt_test = NULL;
-	uint8_t *IV_c = NULL;
 	uint8_t *T_test = NULL;
 	uint8_t *T2_test = NULL;
-	uint8_t const IVend[] = GCM_IV_END_MARK;
-	uint64_t IV_alloc_len = 0;
 
 #ifdef DEBUG
         printf("Testing GCM256 std vectors\n");
@@ -1020,16 +987,6 @@ static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
 		fprintf(stderr, "Can't allocate ciphertext or plaintext memory\n");
 		return 1;
 	}
-	IV_alloc_len = vector->IVlen + sizeof(IVend);
-	// Allocate space for the calculated ciphertext
-	IV_c = malloc(IV_alloc_len);
-	if (IV_c == NULL) {
-		fprintf(stderr, "Can't allocate ciphertext memory\n");
-		return 1;
-	}
-	//Add end marker to the IV data
-	memcpy(IV_c, vector->IV, vector->IVlen);
-	memcpy(&IV_c[vector->IVlen], IVend, sizeof(IVend));
 
 	T_test = malloc(vector->Tlen);
 	T2_test = malloc(vector->Tlen);
@@ -1045,14 +1002,14 @@ static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
 	////
 	memset(ct_test, 0, vector->Plen);
 	aesni_gcm256_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->C, vector->Plen,
                                "encrypted cypher text (C)");
 	is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
 
 	// test of in-place encrypt
 	memcpy(pt_test, vector->P, vector->Plen);
-	aesni_gcm256_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, IV_c,
+	aesni_gcm256_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->C, vector->Plen,
                                "encrypted cypher text(in-place)");
@@ -1063,7 +1020,7 @@ static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
 	// Decrypt
 	////
 	aesni_gcm256_dec(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "decrypted plain text (P)");
 	// GCM decryption outputs a 16 byte tag value
@@ -1073,7 +1030,7 @@ static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
 
 	// test in in-place decrypt
 	memcpy(ct_test, vector->C, vector->Plen);
-	aesni_gcm256_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, IV_c,
+	aesni_gcm256_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->P, vector->Plen,
                                "plain text (P) - in-place");
@@ -1081,9 +1038,9 @@ static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
                                "decrypted tag (T) - in-place");
 	// enc -> dec
 	aesni_gcm256_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 IV_c, vector->A, vector->Alen, T_test, vector->Tlen);
+			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	memset(pt_test, 0, vector->Plen);
-	aesni_gcm256_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, IV_c,
+	aesni_gcm256_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T2_test, vector->Tlen);
 	is_error |=
                 check_data(pt_test, vector->P, vector->Plen,
@@ -1095,8 +1052,6 @@ static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
 		free(ct_test);
 	if (NULL != pt_test)
 		free(pt_test);
-	if (NULL != IV_c)
-		free(IV_c);
 	if (NULL != T_test)
 		free(T_test);
 	if (NULL != T2_test)
