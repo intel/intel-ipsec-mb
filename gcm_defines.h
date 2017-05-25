@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2012-2017, Intel Corporation
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,7 +28,7 @@
 #ifndef GCM_DEFINES_H
 #define GCM_DEFINES_H
 
-#include <stdint.h>
+#include <types.h>
 
 #include <aux_funcs.h>
 #include <os.h>
@@ -40,7 +40,7 @@ extern "C" {
 #define MAX_TAG_LEN (16)
         /*
          * IV data is limited to 16 bytes as follows:
-         * 12 bytes is provided by an application - 
+         * 12 bytes is provided by an application -
          *    pre-counter block j0: 4 byte salt (from Security Association)
          *    concatenated with 8 byte Initialization Vector (from IPSec ESP
          *    Payload).
@@ -66,46 +66,39 @@ extern "C" {
  *
  * gcm_key_data hold internal key information used by gcm128, gcm192 and gcm256.
  */
-#ifdef __WIN32
-__declspec(align(16))
-#endif /* WIN32 */
+__win_aligned(16)
 struct gcm_key_data {
-        uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
-        uint8_t shifted_hkey_1[GCM_ENC_KEY_LEN];  // store HashKey <<1 mod poly here
-        uint8_t shifted_hkey_2[GCM_ENC_KEY_LEN];  // store HashKey^2 <<1 mod poly here
-        uint8_t shifted_hkey_3[GCM_ENC_KEY_LEN];  // store HashKey^3 <<1 mod poly here
-        uint8_t shifted_hkey_4[GCM_ENC_KEY_LEN];  // store HashKey^4 <<1 mod poly here
-        uint8_t shifted_hkey_5[GCM_ENC_KEY_LEN];  // store HashKey^5 <<1 mod poly here
-        uint8_t shifted_hkey_6[GCM_ENC_KEY_LEN];  // store HashKey^6 <<1 mod poly here
-        uint8_t shifted_hkey_7[GCM_ENC_KEY_LEN];  // store HashKey^7 <<1 mod poly here
-        uint8_t shifted_hkey_8[GCM_ENC_KEY_LEN];  // store HashKey^8 <<1 mod poly here
-        uint8_t shifted_hkey_1_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
-        uint8_t shifted_hkey_2_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
-        uint8_t shifted_hkey_3_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
-        uint8_t shifted_hkey_4_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
-        uint8_t shifted_hkey_5_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
-        uint8_t shifted_hkey_6_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
-        uint8_t shifted_hkey_7_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
-        uint8_t shifted_hkey_8_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
-}
-#ifdef LINUX
-        __attribute__ ((aligned (16)));
-#else
-        ;
-#endif
+        UINT8 expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
+        UINT8 shifted_hkey_1[GCM_ENC_KEY_LEN];  // store HashKey <<1 mod poly here
+        UINT8 shifted_hkey_2[GCM_ENC_KEY_LEN];  // store HashKey^2 <<1 mod poly here
+        UINT8 shifted_hkey_3[GCM_ENC_KEY_LEN];  // store HashKey^3 <<1 mod poly here
+        UINT8 shifted_hkey_4[GCM_ENC_KEY_LEN];  // store HashKey^4 <<1 mod poly here
+        UINT8 shifted_hkey_5[GCM_ENC_KEY_LEN];  // store HashKey^5 <<1 mod poly here
+        UINT8 shifted_hkey_6[GCM_ENC_KEY_LEN];  // store HashKey^6 <<1 mod poly here
+        UINT8 shifted_hkey_7[GCM_ENC_KEY_LEN];  // store HashKey^7 <<1 mod poly here
+        UINT8 shifted_hkey_8[GCM_ENC_KEY_LEN];  // store HashKey^8 <<1 mod poly here
+        UINT8 shifted_hkey_1_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
+        UINT8 shifted_hkey_2_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
+        UINT8 shifted_hkey_3_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
+        UINT8 shifted_hkey_4_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
+        UINT8 shifted_hkey_5_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
+        UINT8 shifted_hkey_6_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
+        UINT8 shifted_hkey_7_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
+        UINT8 shifted_hkey_8_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
+} __linux_aligned(16);
 
 /**
  * @brief holds GCM operation context
  */
 struct gcm_context_data {
         // init, update and finalize context data
-        uint8_t  aad_hash[GCM_BLOCK_LEN];
-        uint64_t aad_length;
-        uint64_t in_length;
-        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
-        uint8_t  orig_IV[GCM_BLOCK_LEN];
-        uint8_t  current_counter[GCM_BLOCK_LEN];
-        uint64_t  partial_block_length;
+        UINT8  aad_hash[GCM_BLOCK_LEN];
+        UINT64 aad_length;
+        UINT64 in_length;
+        UINT8  partial_block_enc_key[GCM_BLOCK_LEN];
+        UINT8  orig_IV[GCM_BLOCK_LEN];
+        UINT8  current_counter[GCM_BLOCK_LEN];
+        UINT64  partial_block_length;
 };
 
 /**
@@ -127,59 +120,59 @@ struct gcm_context_data {
 void
 aes_gcm_enc_128_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
-                    uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                    uint8_t *auth_tag, uint64_t auth_tag_len);
+                    void *out, const void *in, UINT64 len,
+                    const void *iv, const void *aad, UINT64 aad_len,
+                    void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 
 void
 aes_gcm_enc_192_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
-                    uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                    uint8_t *auth_tag, uint64_t auth_tag_len);
+                    void *out, const void *in, UINT64 len,
+                    const void *iv, const void *aad, UINT64 aad_len,
+                    void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_192_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_192_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 
 void
 aes_gcm_enc_256_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
-                    uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                    uint8_t *auth_tag, uint64_t auth_tag_len);
+                    void *out, const void *in, UINT64 len,
+                    const void *iv, const void *aad, UINT64 aad_len,
+                    void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_256_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 
 /**
  * @brief GCM-AES Decryption
@@ -200,59 +193,59 @@ aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key_data,
 void
 aes_gcm_dec_128_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
-                    uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                    uint8_t *auth_tag, uint64_t auth_tag_len);
+                    void *out, const void *in, UINT64 len,
+                    const void *iv, const void *aad, UINT64 aad_len,
+                    void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_128_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_128_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 
 void
 aes_gcm_dec_192_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
-                    uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                    uint8_t *auth_tag, uint64_t auth_tag_len);
+                    void *out, const void *in, UINT64 len,
+                    const void *iv, const void *aad, UINT64 aad_len,
+                    void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_192_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_192_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 
 void
 aes_gcm_dec_256_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
-                    uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                    uint8_t *auth_tag, uint64_t auth_tag_len);
+                    void *out, const void *in, UINT64 len,
+                    const void *iv, const void *aad, UINT64 aad_len,
+                    void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
-                         uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
-                         uint8_t *auth_tag, uint64_t auth_tag_len);
+                         void *out, const void *in, UINT64 len,
+                         const void *iv, const void *aad, UINT64 aad_len,
+                         void *auth_tag, UINT64 auth_tag_len);
 
 /**
  * @brief Start a AES-GCM Encryption message
@@ -267,41 +260,41 @@ aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data,
 void
 aes_gcm_init_128_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                     const void *iv, const void *aad, UINT64 aad_len);
 void
 aes_gcm_init_128_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const void *iv, const void *aad, UINT64 aad_len);
 void
 aes_gcm_init_128_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const void *iv, const void *aad, UINT64 aad_len);
 
 void
 aes_gcm_init_192_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                     const void *iv, const void *aad, UINT64 aad_len);
 void
 aes_gcm_init_192_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const void *iv, const void *aad, UINT64 aad_len);
 void
 aes_gcm_init_192_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const void *iv, const void *aad, UINT64 aad_len);
 
 void
 aes_gcm_init_256_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                     const void *iv, const void *aad, UINT64 aad_len);
 void
 aes_gcm_init_256_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const void *iv, const void *aad, UINT64 aad_len);
 void
 aes_gcm_init_256_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const void *iv, const void *aad, UINT64 aad_len);
 
 /**
  * @brief encrypt a block of a AES-GCM Encryption message
@@ -315,41 +308,41 @@ aes_gcm_init_256_avx_gen4(const struct gcm_key_data *key_data,
 void
 aes_gcm_enc_128_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
-                           uint8_t *out, const uint8_t *in, uint64_t len);
+                           void *out, const void *in, UINT64 len);
 void
 aes_gcm_enc_128_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 void
 aes_gcm_enc_128_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 
 void
 aes_gcm_enc_192_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
-                           uint8_t *out, const uint8_t *in, uint64_t len);
+                           void *out, const void *in, UINT64 len);
 void
 aes_gcm_enc_192_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 void
 aes_gcm_enc_192_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 
 void
 aes_gcm_enc_256_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
-                           uint8_t *out, const uint8_t *in, uint64_t len);
+                           void *out, const void *in, UINT64 len);
 void
 aes_gcm_enc_256_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 void
 aes_gcm_enc_256_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 
 /**
  * @brief decrypt a block of a AES-GCM Encryption message
@@ -363,41 +356,41 @@ aes_gcm_enc_256_update_avx_gen4(const struct gcm_key_data *key_data,
 void
 aes_gcm_dec_128_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
-                           uint8_t *out, const uint8_t *in, uint64_t len);
+                           void *out, const void *in, UINT64 len);
 void
 aes_gcm_dec_128_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 void
 aes_gcm_dec_128_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 
 void
 aes_gcm_dec_192_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
-                           uint8_t *out, const uint8_t *in, uint64_t len);
+                           void *out, const void *in, UINT64 len);
 void
 aes_gcm_dec_192_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 void
 aes_gcm_dec_192_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 
 void
 aes_gcm_dec_256_update_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
-                           uint8_t *out, const uint8_t *in, uint64_t len);
+                           void *out, const void *in, UINT64 len);
 void
 aes_gcm_dec_256_update_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 void
 aes_gcm_dec_256_update_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
-                                uint8_t *out, const uint8_t *in, uint64_t len);
+                                void *out, const void *in, UINT64 len);
 
 /**
  * @brief End encryption of a AES-GCM Encryption message
@@ -412,41 +405,41 @@ aes_gcm_dec_256_update_avx_gen4(const struct gcm_key_data *key_data,
 void
 aes_gcm_enc_128_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *auth_tag, uint64_t auth_tag_len);
+                             void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_128_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_128_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 
 void
 aes_gcm_enc_192_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *auth_tag, uint64_t auth_tag_len);
+                             void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_192_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_192_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 
 void
 aes_gcm_enc_256_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *auth_tag, uint64_t auth_tag_len);
+                             void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_256_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_enc_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 
 /**
  * @brief End decryption of a AES-GCM Encryption message
@@ -461,41 +454,41 @@ aes_gcm_enc_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
 void
 aes_gcm_dec_128_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *auth_tag, uint64_t auth_tag_len);
+                             void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_128_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_128_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 
 void
 aes_gcm_dec_192_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *auth_tag, uint64_t auth_tag_len);
+                             void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_192_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_192_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 
 void
 aes_gcm_dec_256_finalize_sse(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *auth_tag, uint64_t auth_tag_len);
+                             void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_256_finalize_avx_gen2(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 void
 aes_gcm_dec_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
                                   struct gcm_context_data *context_data,
-                                  uint8_t *auth_tag, uint64_t auth_tag_len);
+                                  void *auth_tag, UINT64 auth_tag_len);
 
 /**
  * @brief Precomputation of HashKey constants

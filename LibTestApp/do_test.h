@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2012-2017, Intel Corporation
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -245,7 +245,7 @@ KNOWN_ANSWER_TEST(MB_MGR *mb_mgr)
 
 
         // test AES128 Dec
-        job = get_next_job(mb_mgr);
+        job = ipsec_mb_get_next_job(mb_mgr);
 
         job->aes_enc_key_expanded = enc_keys;
         job->aes_dec_key_expanded = dec_keys;
@@ -261,19 +261,19 @@ KNOWN_ANSWER_TEST(MB_MGR *mb_mgr)
         job->src = cipherCBC128;
         job->cipher_start_src_offset_in_bytes = 0;
         job->msg_len_to_cipher_in_bytes = NUMBYTES;
-        job->hash_start_src_offset_in_bytes = text - job->src;
+        job->hash_start_src_offset_in_bytes = text - (const UINT8 *) job->src;
         job->msg_len_to_hash_in_bytes = TEXTSIZE;
         job->hashed_auth_key_xor_ipad = ipad_hash;
         job->hashed_auth_key_xor_opad = opad_hash;
         job->cipher_mode = CBC;
         job->hash_alg = SHA1;
 
-        job = submit_job(mb_mgr);
+        job = ipsec_mb_submit_job(mb_mgr);
         if (job) {
                 printf("Unexpected return from submit_job\n");
                 return;
         }
-        job = flush_job(mb_mgr);
+        job = ipsec_mb_flush_job(mb_mgr);
         if (!job) {
                 printf("Unexpected null return from flush_job\n");
                 return;
@@ -306,7 +306,7 @@ TEST_AUX_FUNC(void)
         DECLARE_ALIGNED(uint32_t k1_exp[15*4],   16);
         DECLARE_ALIGNED(uint32_t k2[4],          16);
         DECLARE_ALIGNED(uint32_t k3[4],          16);
-        
+
         printf("testing aux funcs\n");
 
         sha1_one_block(buf, digest1);
@@ -339,16 +339,16 @@ DO_TEST(MB_MGR *mb_mgr)
                 job->hash_start_src_offset_in_bytes = 0;
                 job->cipher_start_src_offset_in_bytes = 20;
 
-                job->auth_tag_output = (uint8_t*) digest;
+                job->auth_tag_output = digest;
                 job->auth_tag_output_len_in_bytes = 12;
-                job->hashed_auth_key_xor_ipad = (uint8_t*)ipad;
-                job->hashed_auth_key_xor_opad = (uint8_t*)opad;
+                job->hashed_auth_key_xor_ipad = ipad;
+                job->hashed_auth_key_xor_opad = opad;
 
                 job->aes_enc_key_expanded =
-                        job->aes_dec_key_expanded = (uint32_t*) keys;
+                        job->aes_dec_key_expanded = keys;
                 job->src = buf;
                 job->dst = buf + 20;
-                job->iv = (uint8_t *) &IV;
+                job->iv = &IV;
                 job->iv_len_in_bytes = 16;
 
                 job->cipher_mode = CBC;

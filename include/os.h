@@ -29,15 +29,17 @@
 #define __OS_H
 
 #ifdef LINUX
-#define DECLARE_ALIGNED(decl, alignval) \
-        decl __attribute__((aligned(alignval)))
-#define __forceinline \
-        static inline __attribute__((always_inline))
-#else
-#define DECLARE_ALIGNED(decl, alignval) \
-        __declspec(align(alignval)) decl
-#define __forceinline \
-        static __forceinline
-#endif
+# define DECLARE_ALIGNED(decl, alignval) decl __attribute__((aligned(alignval)))
+# define __forceinline static inline __attribute__((always_inline))
+# define __unused __attribute__((unused))
+# define __linux_aligned(n) __attribute__((aligned((n))))
+# define __win_aligned(n)
+#else /* !LINUX (maybe __WIN32) */
+# define DECLARE_ALIGNED(decl, alignval) __declspec(align(alignval)) decl
+# define __forceinline static __forceinline
+# define __unused
+# define __linux_aligned(n)
+# define __win_aligned(n) __declspec(align((n)))
+#endif /* !LINUX */
 
 #endif // end ifndef __OS_H
