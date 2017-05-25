@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2012-2017, Intel Corporation
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -52,35 +52,37 @@
 int
 main(int argc, char **argv)
 {
-        MB_MGR mb_mgr;
+        DECLARE_ALIGNED(MB_MGR mb_mgr, 32);
+
+        memset(&mb_mgr, 0, sizeof(mb_mgr));
 
         printf("Testing SSE interface\n");
         init_mb_mgr_sse(&mb_mgr);
         known_answer_test_sse(&mb_mgr);
         do_test_sse(&mb_mgr);
         ctr_test(ARCH_SSE, &mb_mgr);
-        gcm_test(ARCH_SSE);
-        
+        gcm_test(ARCH_SSE, &mb_mgr);
+
         printf("Testing AVX interface\n");
         init_mb_mgr_avx(&mb_mgr);
         known_answer_test_avx(&mb_mgr);
         do_test_avx(&mb_mgr);
         ctr_test(ARCH_AVX, &mb_mgr);
-        gcm_test(ARCH_AVX);
+        gcm_test(ARCH_AVX, &mb_mgr);
 
         printf("Testing AVX2 interface\n");
         init_mb_mgr_avx2(&mb_mgr);
         known_answer_test_avx2(&mb_mgr);
         do_test_avx2(&mb_mgr);
         ctr_test(ARCH_AVX2, &mb_mgr);
-        gcm_test(ARCH_AVX2);
+        gcm_test(ARCH_AVX2, &mb_mgr);
 
         printf("Testing AVX512 interface\n");
         init_mb_mgr_avx512(&mb_mgr);
         known_answer_test_avx512(&mb_mgr);
         do_test_avx512(&mb_mgr);
         ctr_test(ARCH_AVX512, &mb_mgr);
-        gcm_test(ARCH_AVX512);
+        gcm_test(ARCH_AVX512, &mb_mgr);
 
         printf("Test completed\n");
 

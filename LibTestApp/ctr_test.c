@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2017, Intel Corporation
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -422,11 +422,6 @@ static const struct gcm_ctr_vector ctr_vectors[] = {
 typedef void (*keyexp_t)(const void *raw, void *enc, void *dec);
 
 struct handler_s {
-        init_mb_mgr_t init_mb_mgr;
-        get_next_job_t get_next_job;
-        submit_job_t submit_job;
-        get_completed_job_t get_completed_job;
-        flush_job_t flush_job;
         keyexp_t keyexp_128;
         keyexp_t keyexp_192;
         keyexp_t keyexp_256;
@@ -434,41 +429,21 @@ struct handler_s {
 
 static const struct handler_s Handlers[ARCH_NUMOF] = {
         /* [ARCH_SSE] = */ {
-                /* .init_mb_mgr       = */ init_mb_mgr_sse,
-                /* .get_next_job      = */ get_next_job_sse,
-                /* .submit_job        = */ submit_job_sse,
-                /* .get_completed_job = */ get_completed_job_sse,
-                /* .flush_job         = */ flush_job_sse,
                 /* .keyexp_128        = */ aes_keyexp_128_sse,
                 /* .keyexp_192        = */ aes_keyexp_192_sse,
                 /* .keyexp_256        = */ aes_keyexp_256_sse,
         },
         /* [ARCH_AVX] = */ {
-                /* .init_mb_mgr       = */ init_mb_mgr_avx,
-                /* .get_next_job      = */ get_next_job_avx,
-                /* .submit_job        = */ submit_job_avx,
-                /* .get_completed_job = */ get_completed_job_avx,
-                /* .flush_job         = */ flush_job_avx,
                 /* .keyexp_128        = */ aes_keyexp_128_avx,
                 /* .keyexp_192        = */ aes_keyexp_192_avx,
                 /* .keyexp_256        = */ aes_keyexp_256_avx,
         },
         /* [ARCH_AVX2] = */ {
-                /* .init_mb_mgr       = */ init_mb_mgr_avx2,
-                /* .get_next_job      = */ get_next_job_avx2,
-                /* .submit_job        = */ submit_job_avx2,
-                /* .get_completed_job = */ get_completed_job_avx2,
-                /* .flush_job         = */ flush_job_avx2,
                 /* .keyexp_128        = */ aes_keyexp_128_avx2,
                 /* .keyexp_192        = */ aes_keyexp_192_avx2,
                 /* .keyexp_256        = */ aes_keyexp_256_avx2,
         },
         /* [ARCH_AVX512] = */ {
-                /* .init_mb_mgr       = */ init_mb_mgr_avx512,
-                /* .get_next_job      = */ get_next_job_avx512,
-                /* .submit_job        = */ submit_job_avx512,
-                /* .get_completed_job = */ get_completed_job_avx512,
-                /* .flush_job         = */ flush_job_avx512,
                 /* .keyexp_128        = */ aes_keyexp_128_avx512,
                 /* .keyexp_192        = */ aes_keyexp_192_avx512,
                 /* .keyexp_256        = */ aes_keyexp_256_avx512,
@@ -533,10 +508,10 @@ test_ctr(const struct handler_s *handler,
         memset(target, -1, text_len + (sizeof(xxx) * 2));
         memset(xxx, -1, sizeof(xxx));
 
-        while ((job = handler->flush_job(mb_mgr)) != NULL)
+        while ((job = ipsec_mb_flush_job(mb_mgr)) != NULL)
                 ;
 
-        job = handler->get_next_job(mb_mgr);
+        job = ipsec_mb_get_next_job(mb_mgr);
         job->cipher_direction = dir;
         job->chain_order = order;
         job->dst = target + 16;
@@ -558,14 +533,9 @@ test_ctr(const struct handler_s *handler,
         job->auth_tag_output = NULL;
         job->auth_tag_output_len_in_bytes = 0;
 
-        job = handler->submit_job(mb_mgr);
-        if (job) {
-                printf("%d Unexpected return from submit_job\n", __LINE__);
-                goto end;
-        }
-        job = handler->flush_job(mb_mgr);
+        job = ipsec_mb_submit_job(mb_mgr);
         if (!job) {
-                printf("%d Unexpected null return from flush_job\n", __LINE__);
+                printf("%d Unexpected return from submit_job\n", __LINE__);
                 goto end;
         }
         if (job->status != STS_COMPLETED) {
@@ -588,7 +558,7 @@ test_ctr(const struct handler_s *handler,
                 goto end;
         }
         ret = 0;
-        while ((job = handler->flush_job(mb_mgr)) != NULL)
+        while ((job = ipsec_mb_flush_job(mb_mgr)) != NULL)
                 ;
  end:
         free(target);
