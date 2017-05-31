@@ -44,7 +44,8 @@ typedef enum {
         CBC = 1,
         CNTR,
         NULL_CIPHER,
-        DOCSIS_SEC_BPI
+        DOCSIS_SEC_BPI,
+        GCM,
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -60,7 +61,8 @@ typedef enum {
         SHA_512,
         AES_XCBC,
         MD5,
-        NULL_HASH
+        NULL_HASH,
+        AES_GMAC,
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -75,8 +77,8 @@ typedef enum {
 } AES_KEY_SIZE_BYTES;
 
 typedef struct JOB_AES_HMAC {
-        const UINT32 *aes_enc_key_expanded;  /* 16-byte aligned pointer. */
-        const UINT32 *aes_dec_key_expanded;
+        const void *aes_enc_key_expanded;  /* 16-byte aligned pointer. */
+        const void *aes_dec_key_expanded;
         UINT64 aes_key_len_in_bytes; /* Only 16, 24, and  32 byte (128, 192 and 256-bit) keys supported at this time. */
         const UINT8  *src; /* Input. May be cipher text or plaintext. In-place ciphering allowed. */
         UINT8   *dst; /*Output. May be cipher text or plaintext. In-place ciphering allowed, i.e. dst = src. */
@@ -84,8 +86,16 @@ typedef struct JOB_AES_HMAC {
         UINT64 msg_len_to_cipher_in_bytes; /* Max len = 65472 bytes. (IPSec case, the maximum cipher
                                             * length would be 65535 - 20 (outer IP header) - 24 (ESP
                                             * header + IV) - 12 (ICV length we agreed to support)) */
-        UINT64 hash_start_src_offset_in_bytes;
-        UINT64 msg_len_to_hash_in_bytes; /* Max len = 65496 bytes. (Max cipher len + 24 bytes ESP header) */
+        union {
+                struct {
+                        UINT64 hash_start_src_offset_in_bytes;
+                        UINT64 msg_len_to_hash_in_bytes; /* Max len = 65496 bytes. (Max cipher len + 24 bytes ESP header) */
+                };
+                struct {
+                        const void *aad;
+                        UINT64 aad_len_in_bytes;
+                };
+        };
         const UINT8 *iv; /* AES IV. */
         UINT64 iv_len_in_bytes; /* AES IV Len in bytes. */
         UINT8 *auth_tag_output; /* HMAC Tag output. This may point to a location in the src buffer (for in place)*/
@@ -111,6 +121,7 @@ typedef struct JOB_AES_HMAC {
         // by the chain _order field.
         JOB_HASH_ALG hash_alg; // SHA-1 or others...
         JOB_CHAIN_ORDER chain_order; // CIPHER_HASH or HASH_CIPHER
+        int _pad;
         void    *user_data;
         void    *user_data2;
 } JOB_AES_HMAC;

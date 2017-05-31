@@ -37,6 +37,7 @@
 
 #include "mb_mgr.h"
 #include "mb_mgr_code.h"
+#include "gcm_defines.h"
 
 /* prototypes */
 extern JOB_AES_HMAC *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
@@ -101,6 +102,106 @@ flush_job_hmac_sha_256_NI_avx(MB_MGR_HMAC_SHA_256_OOO *state)
 {
         return flush_job_hmac_sha_256_avx(state);
 }
+
+/*
+ * add GCM
+ */
+__forceinline JOB_AES_HMAC *
+submit_job_aes128_gcm_enc_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_enc_128_avx_gen2(job->aes_enc_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes192_gcm_enc_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_enc_192_avx_gen2(job->aes_enc_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes256_gcm_enc_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_enc_256_avx_gen2(job->aes_enc_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes128_gcm_dec_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_dec_128_avx_gen2(job->aes_dec_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes192_gcm_dec_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_dec_192_avx_gen2(job->aes_dec_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes256_gcm_dec_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_dec_256_avx_gen2(job->aes_dec_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
 
 /* generator */
 FUNC_GENERATE(avx)

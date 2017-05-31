@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2017, Intel Corporation
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -48,17 +48,17 @@ enum key_size {
 
 // struct to hold pointers to the key, plaintext and ciphertext vectors
 struct gcm_ctr_vector {
-	uint8_t*       K;          // AES Key
+	const uint8_t* K;          // AES Key
 	enum key_size  Klen;       // length of key in bits
-	uint8_t*       IV;         // initial value used by GCM
+	const uint8_t* IV;         // initial value used by GCM
 	uint64_t       IVlen;      // length of IV in bytes
-	uint8_t*       A;          // additional authenticated data
+	const uint8_t* A;          // additional authenticated data
 	uint64_t       Alen;       // length of AAD in bytes
-	uint8_t*       P;          // Plain text
+	const uint8_t* P;          // Plain text
 	uint64_t       Plen;       // length of our plaintext
 	//outputs of encryption
-	uint8_t*       C;          // same length as PT
-	uint8_t*       T;          // Authenication tag
+	const uint8_t* C;          // same length as PT
+	const uint8_t* T;          // Authenication tag
 	uint8_t        Tlen;       // AT length can be 0 to 128bits
 };
 
