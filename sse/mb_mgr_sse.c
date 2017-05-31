@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -40,125 +40,131 @@
 #endif
 
 #include "mb_mgr.h"
-#include "save_xmms.h"
-#include "asm.h"
-
-JOB_AES_HMAC* submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes128_enc_sse(MB_MGR_AES_OOO *state);
-
-JOB_AES_HMAC* submit_job_aes192_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes192_enc_sse(MB_MGR_AES_OOO *state);
-
-JOB_AES_HMAC* submit_job_aes256_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes256_enc_sse(MB_MGR_AES_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state);
-
-
-JOB_AES_HMAC* submit_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
-
-#define SAVE_XMMS save_xmms
-#define RESTORE_XMMS restore_xmms
-#define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse
-#define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_sse
-#define SUBMIT_JOB_AES192_ENC submit_job_aes192_enc_sse
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse
-#define FLUSH_JOB_AES192_ENC  flush_job_aes192_enc_sse
-#define SUBMIT_JOB_AES256_ENC submit_job_aes256_enc_sse
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse
-#define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_sse
-#define SUBMIT_JOB_HMAC       submit_job_hmac_sse
-#define FLUSH_JOB_HMAC        flush_job_hmac_sse
-#define SUBMIT_JOB_HMAC_NI    submit_job_hmac_ni_sse
-#define FLUSH_JOB_HMAC_NI     flush_job_hmac_ni_sse
-#define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_sse
-#define FLUSH_JOB_HMAC_SHA_224        flush_job_hmac_sha_224_sse
-#define SUBMIT_JOB_HMAC_SHA_224_NI    submit_job_hmac_sha_224_ni_sse
-#define FLUSH_JOB_HMAC_SHA_224_NI     flush_job_hmac_sha_224_ni_sse
-#define SUBMIT_JOB_HMAC_SHA_256       submit_job_hmac_sha_256_sse
-#define FLUSH_JOB_HMAC_SHA_256        flush_job_hmac_sha_256_sse
-#define SUBMIT_JOB_HMAC_SHA_256_NI    submit_job_hmac_sha_256_ni_sse
-#define FLUSH_JOB_HMAC_SHA_256_NI     flush_job_hmac_sha_256_ni_sse
-#define SUBMIT_JOB_HMAC_SHA_384       submit_job_hmac_sha_384_sse
-#define FLUSH_JOB_HMAC_SHA_384        flush_job_hmac_sha_384_sse
-#define SUBMIT_JOB_HMAC_SHA_512       submit_job_hmac_sha_512_sse
-#define FLUSH_JOB_HMAC_SHA_512        flush_job_hmac_sha_512_sse
-#define SUBMIT_JOB_HMAC_MD5   submit_job_hmac_md5_sse
-#define FLUSH_JOB_HMAC_MD5    flush_job_hmac_md5_sse
-#define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_sse
-#define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_sse
-
-#define SUBMIT_JOB_AES128_CNTR submit_job_aes128_cntr_sse
-#define SUBMIT_JOB_AES192_CNTR submit_job_aes192_cntr_sse
-#define SUBMIT_JOB_AES256_CNTR submit_job_aes256_cntr_sse
-
-#define AES_CBC_DEC_128       aes_cbc_dec_128_sse
-#define AES_CBC_DEC_192       aes_cbc_dec_192_sse
-#define AES_CBC_DEC_256       aes_cbc_dec_256_sse
-
-#define AES_CNTR_128       aes_cntr_128_sse
-#define AES_CNTR_192       aes_cntr_192_sse
-#define AES_CNTR_256       aes_cntr_256_sse
+#include "mb_mgr_code.h"
 
 ////////////////////////////////////////////////////////////////////////
-
-#define SUBMIT_JOB   submit_job_sse
-#define FLUSH_JOB    flush_job_sse
-
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse
-#define QUEUE_SIZE queue_size_sse
-
-////////////////////////////////////////////////////////////////////////
-
-#define SUBMIT_JOB_AES_ENC SUBMIT_JOB_AES_ENC_SSE
-#define FLUSH_JOB_AES_ENC  FLUSH_JOB_AES_ENC_SSE
-#define SUBMIT_JOB_AES_DEC SUBMIT_JOB_AES_DEC_SSE
-#define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_SSE
-#define FLUSH_JOB_HASH     FLUSH_JOB_HASH_SSE
-
-////////////////////////////////////////////////////////////////////////
-
-extern void aes_cfb_128_one_sse(void *out, const void *in, const void *iv,
-                                const void *keys, UINT64 len);
-
-#define AES_CFB_128_ONE    aes_cfb_128_one_sse
-
-////////////////////////////////////////////////////////////////////////
-
 /* Variable to decide between SIMD or SHAxNI OOO scheduler selection. */
 enum SHA_EXTENSION_USAGE sse_sha_ext_usage = SHA_EXT_DETECT;
 
 /* Used to decide if SHA1/SHA256 SIMD or SHA1NI OOO scheduler should be called. */
 #define HASH_USE_SHAEXT sse_sha_ext_usage
+
+////////////////////////////////////////////////////////////////////////
+
+/* prototypes */
+extern JOB_AES_HMAC *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_aes128_enc_sse(MB_MGR_AES_OOO *state);
+extern JOB_AES_HMAC *submit_job_aes192_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_aes192_enc_sse(MB_MGR_AES_OOO *state);
+extern JOB_AES_HMAC *submit_job_aes256_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_aes256_enc_sse(MB_MGR_AES_OOO *state);
+
+extern JOB_AES_HMAC *submit_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+
+#ifdef HASH_USE_SHAEXT
+extern JOB_AES_HMAC *submit_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+#endif
+
+extern JOB_AES_HMAC *submit_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state);
+extern JOB_AES_HMAC *submit_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state);
+
+
+/* proxy */
+__forceinline void
+save_xmms_sse(UINT128 array[10])
+{
+        save_xmms(array);
+}
+
+__forceinline void
+restore_xmms_sse(UINT128 array[10])
+{
+        restore_xmms(array);
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_hmac_NI_sse(MB_MGR_HMAC_SHA_1_OOO *state,
+                       JOB_AES_HMAC *job)
+{
+#ifdef HASH_USE_SHAEXT
+        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                return submit_job_hmac_ni_sse(state, job);
+#endif
+        return submit_job_hmac_sse(state, job);
+}
+
+__forceinline JOB_AES_HMAC *
+flush_job_hmac_NI_sse(MB_MGR_HMAC_SHA_1_OOO *state)
+{
+#ifdef HASH_USE_SHAEXT
+        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                return flush_job_hmac_ni_sse(state);
+#endif
+        return flush_job_hmac_sse(state);
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_hmac_sha_224_NI_sse(MB_MGR_HMAC_SHA_256_OOO *state,
+                            JOB_AES_HMAC *job)
+{
+#ifdef HASH_USE_SHAEXT
+        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                return submit_job_hmac_sha_224_ni_sse(state, job);
+#endif
+        return submit_job_hmac_sha_224_sse(state, job);
+}
+
+__forceinline JOB_AES_HMAC *
+flush_job_hmac_sha_224_NI_sse(MB_MGR_HMAC_SHA_256_OOO *state)
+{
+#ifdef HASH_USE_SHAEXT
+        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                return flush_job_hmac_sha_224_ni_sse(state);
+#endif
+        return flush_job_hmac_sha_224_sse(state);
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_hmac_sha_256_NI_sse(MB_MGR_HMAC_SHA_256_OOO *state,
+                               JOB_AES_HMAC *job)
+{
+#ifdef HASH_USE_SHAEXT
+        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                return submit_job_hmac_sha_256_ni_sse(state, job);
+#endif
+        return submit_job_hmac_sha_256_sse(state, job);
+}
+
+__forceinline JOB_AES_HMAC *
+flush_job_hmac_sha_256_NI_sse(MB_MGR_HMAC_SHA_256_OOO *state)
+{
+#ifdef HASH_USE_SHAEXT
+        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                return flush_job_hmac_sha_256_ni_sse(state);
+#endif
+        return flush_job_hmac_sha_256_sse(state);
+}
+
+/* generator */
+FUNC_GENERATE(sse)
+
+////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -238,7 +244,7 @@ sha_extensions_supported(void)
         __mbcpuid(0x0, 0x0, &r);
         if (r.eax < 0x7)
                 return 0;
-        
+
         /* Check presence of SHA extensions in the extended feature flags */
         __mbcpuid(0x7, 0x0, &r);
         if (r.ebx & (1 << 29))
@@ -247,7 +253,7 @@ sha_extensions_supported(void)
         return 0;
 }
 
-void 
+void
 init_mb_mgr_sse(MB_MGR *state)
 {
         unsigned int j;
@@ -366,7 +372,7 @@ init_mb_mgr_sse(MB_MGR *state)
                 state->hmac_sha_1_ooo.unused_lanes = 0xFF0100;
         }
 #endif /* HASH_USE_SHAEXT */
-    
+
         // Init HMAC/SHA224 out-of-order fields
         state->hmac_sha_224_ooo.lens[0] = 0;
         state->hmac_sha_224_ooo.lens[1] = 0;
@@ -444,7 +450,7 @@ init_mb_mgr_sse(MB_MGR *state)
                 state->hmac_sha_256_ooo.unused_lanes = 0xFF0100;
         }
 #endif /* HASH_USE_SHAEXT */
-    
+
         // Init HMAC/SHA384 out-of-order fields
         state->hmac_sha_384_ooo.lens[0] = 0;
         state->hmac_sha_384_ooo.lens[1] = 0;
@@ -469,7 +475,7 @@ init_mb_mgr_sse(MB_MGR *state)
                 p[SHA384_DIGEST_SIZE_IN_BYTES] = 0x80;
                 // hmac outer block length always of fixed size, it is OKey length, a whole message block length, 1024 bits,, with padding
                 // plus the length of the inner digest, which is 384 bits
-                // 1408 bits == 0x0580. The input message block needs to be converted to big endian within the sha implementation before use. 
+                // 1408 bits == 0x0580. The input message block needs to be converted to big endian within the sha implementation before use.
                 p[SHA_384_BLOCK_SIZE - 2] = 0x05;
                 p[SHA_384_BLOCK_SIZE - 1] = 0x80;
         }
@@ -498,7 +504,7 @@ init_mb_mgr_sse(MB_MGR *state)
                 p[SHA512_DIGEST_SIZE_IN_BYTES] = 0x80;
                 // hmac outer block length always of fixed size, it is OKey length, a whole message block length, 1024 bits,, with padding
                 // plus the length of the inner digest, which is 512 bits
-                // 1536 bits == 0x600. The input message block needs to be converted to big endian within the sha implementation before use. 
+                // 1536 bits == 0x600. The input message block needs to be converted to big endian within the sha implementation before use.
                 p[SHA_512_BLOCK_SIZE - 2] = 0x06;
                 p[SHA_512_BLOCK_SIZE - 1] = 0x00;
         }
@@ -556,5 +562,3 @@ init_mb_mgr_sse(MB_MGR *state)
         state->next_job = 0;
         state->earliest_job = -1;
 }
-
-#include "mb_mgr_code.h"

@@ -25,6 +25,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _MB_MGR_CODE_H_
+#define _MB_MGR_CODE_H_
+
+#include "save_xmms.h"
+#include "asm.h"
 
 // This contains the bulk of the mb_mgr code, with #define's to build 
 // an SSE, AVX, AVX2 or AVX512 version (see mb_mgr_sse.c, mb_mgr_avx.c, etc.)
@@ -37,7 +42,28 @@
 // Assume JOBS() and ADV_JOBS() from mb_mgr_code.h are available 
 
 // LENGTH IN BYTES
-static const UINT32 auth_tag_len[8] = {
+
+////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////
+
+#define AES_BLOCK_SIZE 16
+
+#ifndef LINUX
+# define XMM_BUFF(buff)
+# define SAVE_XMMS(ARCH, buff)
+# define RESTORE_XMMS(ARCH, buff)
+#else /* !LINUX */
+# define XMM_BUFF(buff)                 DECLARE_ALIGNED(UINT128 buff[10], 16)
+# define SAVE_XMMS(ARCH, buff)	        save_xmms_##ARCH(buff)
+# define RESTORE_XMMS(ARCH, buff)       restore_xmms_##ARCH(buff)
+#endif /* !LINUX */
+
+__forceinline int
+is_job_invalid(const JOB_AES_HMAC *job)
+{
+        const UINT32 auth_tag_len[] = {
+                0,  /* invalid alg */
         12, /* SHA1 */
         14, /* SHA_224 */
         16, /* SHA_256 */
@@ -47,261 +73,6 @@ static const UINT32 auth_tag_len[8] = {
         12, /* MD5 */
         0   /* NULL_HASH */
 };
-
-////////////////////////////////////////////////////////////////////////
-
-
-JOB_AES_HMAC* SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC* job);
-JOB_AES_HMAC* SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC* job);
-JOB_AES_HMAC* SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC* job);
-JOB_AES_HMAC* SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC* job);
-JOB_AES_HMAC* SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC* job);
-JOB_AES_HMAC* SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC* job);
-
-////////////////////////////////////////////////////////////////////////
-
-#define AES_BLOCK_SIZE 16
-
-/**
- * @brief Encrypts/decrypts the last partial block for DOCSIS SEC v3.1 BPI
- *
- * The last partial block is encrypted/decrypted using AES CFB128.
- * IV is always the next last ciphered block.
- *
- * @note It is assumed that length is bigger than one AES 128 block.
- *
- * @param job desriptor of performed crypto operation
- * @return It always returns value passed in \a job
- */
-__forceinline
-JOB_AES_HMAC *
-DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
-{
-        const void *iv = NULL;
-        UINT64 offset = 0;
-        UINT64 partial_bytes = 0;
-
-        if (job == NULL)
-                return job;
-
-        assert((job->cipher_direction == DECRYPT) || (job->status & STS_COMPLETED_AES));
-
-        partial_bytes = job->msg_len_to_cipher_in_bytes & (AES_BLOCK_SIZE - 1);
-        offset = job->msg_len_to_cipher_in_bytes & (~(AES_BLOCK_SIZE - 1));
-
-        if (!partial_bytes)
-                return job;
-
-        /* in either case IV has to be next last ciphered block */
-        if (job->cipher_direction == ENCRYPT)
-                iv = job->dst + offset - AES_BLOCK_SIZE;
-        else
-                iv = job->src + job->cipher_start_src_offset_in_bytes +
-                        offset - AES_BLOCK_SIZE;
-
-        assert(partial_bytes <= AES_BLOCK_SIZE);
-        AES_CFB_128_ONE(job->dst + offset,
-                        job->src + job->cipher_start_src_offset_in_bytes + offset,
-                        iv, job->aes_enc_key_expanded, partial_bytes);
-
-        return job;
-}
-
-/**
- * @brief Encrypts/decrypts the first and only partial block for DOCSIS SEC v3.1 BPI
- *
- * The first partial block is encrypted/decrypted using AES CFB128.
- *
- * @param job desriptor of performed crypto operation
- * @return It always returns value passed in \a job
- */
-__forceinline
-JOB_AES_HMAC *
-DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
-{
-        assert(!(job->status & STS_COMPLETED_AES));
-        assert(job->msg_len_to_cipher_in_bytes <= AES_BLOCK_SIZE);
-        AES_CFB_128_ONE(job->dst,
-                        job->src + job->cipher_start_src_offset_in_bytes,
-                        job->iv, job->aes_enc_key_expanded,
-                        job->msg_len_to_cipher_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return job;
-}
-
-__forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
-{
-        if (CBC == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES128_ENC(&state->aes128_ooo, job);
-                } else if (24 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES192_ENC(&state->aes192_ooo, job);
-                } else { // assume 32
-                        return SUBMIT_JOB_AES256_ENC(&state->aes256_ooo, job);
-                }
-        } else if (CNTR == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES128_CNTR(job);
-                } else if (24 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES192_CNTR(job);
-                } else { // assume 32
-                        return SUBMIT_JOB_AES256_CNTR(job);
-                }
-        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
-                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
-                        JOB_AES_HMAC *tmp;
-
-                        tmp = SUBMIT_JOB_AES128_ENC(&state->docsis_sec_ooo, job);
-                        return DOCSIS_LAST_BLOCK(tmp);
-                } else
-                        return DOCSIS_FIRST_BLOCK(job);
-        } else { // assume NUL_CIPHER
-                job->status |= STS_COMPLETED_AES;
-                return job;
-        }
-}
-
-__forceinline
-JOB_AES_HMAC *
-FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
-{
-        if (CBC == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
-                        return FLUSH_JOB_AES128_ENC(&state->aes128_ooo);
-                } else if (24 == job->aes_key_len_in_bytes) {
-                        return FLUSH_JOB_AES192_ENC(&state->aes192_ooo);
-                } else  {// assume 32
-                        return FLUSH_JOB_AES256_ENC(&state->aes256_ooo);
-                }
-        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
-                JOB_AES_HMAC *tmp;
-
-                tmp = FLUSH_JOB_AES128_ENC(&state->docsis_sec_ooo);
-                return DOCSIS_LAST_BLOCK(tmp);
-        } else { // assume CNTR or NULL_CIPHER
-                return NULL;
-        }
-}
-
-__forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_DEC(JOB_AES_HMAC *job)
-{
-        if (CBC == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES128_DEC(job);
-                } else if (24 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES192_DEC(job);
-                } else { // assume 32
-                        return SUBMIT_JOB_AES256_DEC(job);
-                }
-        } else if (CNTR == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES128_CNTR(job);
-                } else if (24 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES192_CNTR(job);
-                } else { // assume 32
-                        return SUBMIT_JOB_AES256_CNTR(job);
-                }
-        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
-                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
-                        DOCSIS_LAST_BLOCK(job);
-                        return SUBMIT_JOB_AES128_DEC(job);
-                } else {
-                        return DOCSIS_FIRST_BLOCK(job);
-                }
-        } else {
-                job->status |= STS_COMPLETED_AES;
-                return job;
-        }
-}
-
-__forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
-{
-#ifdef VERBOSE
-        printf("--------Enter SUBMIT_JOB_HASH --------------\n");
-#endif
-        switch (job->hash_alg) {
-        case SHA1:
-#ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return SUBMIT_JOB_HMAC_NI(&state->hmac_sha_1_ooo, job);
-#endif
-                return SUBMIT_JOB_HMAC(&state->hmac_sha_1_ooo, job);
-        case SHA_224:
-#ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return SUBMIT_JOB_HMAC_SHA_224_NI(&state->hmac_sha_224_ooo, job);
-#endif
-                return SUBMIT_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo, job);
-        case SHA_256:
-#ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return SUBMIT_JOB_HMAC_SHA_256_NI(&state->hmac_sha_256_ooo, job);
-#endif
-                return SUBMIT_JOB_HMAC_SHA_256(&state->hmac_sha_256_ooo, job);
-        case SHA_384:
-                return SUBMIT_JOB_HMAC_SHA_384(&state->hmac_sha_384_ooo, job);
-        case SHA_512:
-                return SUBMIT_JOB_HMAC_SHA_512(&state->hmac_sha_512_ooo, job);
-        case AES_XCBC:
-                return SUBMIT_JOB_AES_XCBC(&state->aes_xcbc_ooo, job);
-        case MD5:
-                return SUBMIT_JOB_HMAC_MD5(&state->hmac_md5_ooo, job);
-        default: // assume NULL_HASH
-                job->status |= STS_COMPLETED_HMAC;
-                return job;
-        }
-}
-
-__forceinline
-JOB_AES_HMAC *
-FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
-{
-        switch (job->hash_alg) {
-        case SHA1:
-#ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return FLUSH_JOB_HMAC_NI(&state->hmac_sha_1_ooo);
-#endif
-                return FLUSH_JOB_HMAC(&state->hmac_sha_1_ooo);
-        case SHA_224:
-#ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return FLUSH_JOB_HMAC_SHA_224_NI(&state->hmac_sha_224_ooo);
-#endif
-                return FLUSH_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo);
-        case SHA_256:
-#ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return FLUSH_JOB_HMAC_SHA_256_NI(&state->hmac_sha_256_ooo);
-#endif
-                return FLUSH_JOB_HMAC_SHA_256(&state->hmac_sha_256_ooo);
-        case SHA_384:
-                return FLUSH_JOB_HMAC_SHA_384(&state->hmac_sha_384_ooo);
-        case SHA_512:
-                return FLUSH_JOB_HMAC_SHA_512(&state->hmac_sha_512_ooo);
-        case AES_XCBC:
-                return FLUSH_JOB_AES_XCBC(&state->aes_xcbc_ooo);
-        case MD5:
-                return FLUSH_JOB_HMAC_MD5(&state->hmac_md5_ooo);
-        default: // assume NULL_HASH
-                job->status |= STS_COMPLETED_HMAC;
-                return job;
-        }
-}
-
-
-////////////////////////////////////////////////////////////////////////
-
-
-__forceinline
-int is_job_invalid(const JOB_AES_HMAC *job)
-{
         if ((job->hash_alg < SHA1) || (job->hash_alg > NULL_HASH) ||
             (job->cipher_mode < CBC) || (job->cipher_mode > DOCSIS_SEC_BPI))
                 return 1;
@@ -319,7 +90,6 @@ int is_job_invalid(const JOB_AES_HMAC *job)
                     (job->msg_len_to_cipher_in_bytes & 15) != 0)
                         return 1;
         }
-
         if (job->hash_alg == NULL_HASH) {
                 if (job->cipher_direction == ENCRYPT) {
                         /* NULL_HASH only allowed in CIPHER_HASH for encrypt */
@@ -332,247 +102,385 @@ int is_job_invalid(const JOB_AES_HMAC *job)
                 }
         } else {
                 if ((job->msg_len_to_hash_in_bytes == 0) ||
-                    (job->auth_tag_output_len_in_bytes != auth_tag_len[job->hash_alg - 1]))
+                    (job->auth_tag_output_len_in_bytes != auth_tag_len[job->hash_alg]))
                         return 1;
         }
-
         return 0;
 }
 
-__forceinline
-JOB_AES_HMAC *submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
-{
-        if (job->chain_order == CIPHER_HASH) {
-                // assume job->cipher_direction == ENCRYPT
-                job = SUBMIT_JOB_AES_ENC(state, job);
-                if (job) {
-                        job = SUBMIT_JOB_HASH(state, job);
-                        if (job && (job->chain_order == HASH_CIPHER)) {
-                                SUBMIT_JOB_AES_DEC(job);
-                        }
-                } // end if job
-        } else { // job->chain_order == HASH_CIPHER
-                // assume job->cipher_direction == DECRYPT
-                job = SUBMIT_JOB_HASH(state, job);
-                if (job && (job->chain_order == HASH_CIPHER)) {
-                        SUBMIT_JOB_AES_DEC(job);
-                }
-        }
-        return job;
-}
+#define FUNC_GENERATE_DOCSIS(ARCH)                                      \
+__forceinline JOB_AES_HMAC *                                            \
+docsis_last_block_##ARCH(JOB_AES_HMAC *job)                             \
+{                                                                       \
+        const void *iv = NULL;                                          \
+        UINT64 offset = 0;                                              \
+        UINT64 partial_bytes = 0;                                       \
+        if (job == NULL)                                                \
+                return job;                                             \
+        assert((job->cipher_direction == DECRYPT) ||                    \
+               (job->status & STS_COMPLETED_AES));                      \
+        partial_bytes = job->msg_len_to_cipher_in_bytes & (AES_BLOCK_SIZE - 1); \
+        offset = job->msg_len_to_cipher_in_bytes & (~(AES_BLOCK_SIZE - 1)); \
+        if (!partial_bytes)                                             \
+                return job;                                             \
+        if (job->cipher_direction == ENCRYPT)                           \
+                iv = job->dst + offset - AES_BLOCK_SIZE;                \
+        else                                                            \
+                iv = job->src + job->cipher_start_src_offset_in_bytes + \
+                        offset - AES_BLOCK_SIZE;                        \
+        assert(partial_bytes <= AES_BLOCK_SIZE);                        \
+        aes_cfb_128_one_##ARCH(job->dst + offset,                       \
+                               job->src + job->cipher_start_src_offset_in_bytes + offset, \
+                               iv, job->aes_enc_key_expanded, partial_bytes); \
+        return job;                                                     \
+}                                                                       \
+__forceinline JOB_AES_HMAC *                                            \
+docsis_first_block_##ARCH(JOB_AES_HMAC *job)                            \
+{                                                                       \
+        assert(!(job->status & STS_COMPLETED_AES));                     \
+        assert(job->msg_len_to_cipher_in_bytes <= AES_BLOCK_SIZE);      \
+        aes_cfb_128_one_##ARCH(job->dst,                                \
+                               job->src + job->cipher_start_src_offset_in_bytes, \
+                               job->iv, job->aes_enc_key_expanded,      \
+                               job->msg_len_to_cipher_in_bytes);        \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
 
-__forceinline
-void complete_job(MB_MGR *state, JOB_AES_HMAC *job)
-{
-        JOB_AES_HMAC *tmp = NULL;
+#define FUNC_GENERATE_AES_CBC(ARCH)                                     \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_aes128_dec_##ARCH(JOB_AES_HMAC *job)                         \
+{                                                                       \
+        assert((job->cipher_mode == DOCSIS_SEC_BPI) ||                  \
+               ((job->msg_len_to_cipher_in_bytes & 15) == 0));          \
+        assert(job->iv_len_in_bytes == 16);                             \
+        aes_cbc_dec_128_##ARCH(                                         \
+                job->src + job->cipher_start_src_offset_in_bytes,       \
+                job->iv,                                                \
+                job->aes_dec_key_expanded,                              \
+                job->dst,                                               \
+                job->msg_len_to_cipher_in_bytes & (~15));               \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_aes192_dec_##ARCH(JOB_AES_HMAC *job)                         \
+{                                                                       \
+        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);            \
+        assert(job->iv_len_in_bytes == 16);                             \
+        aes_cbc_dec_192_##ARCH(job->src + job->cipher_start_src_offset_in_bytes, \
+                               job->iv,                                 \
+                               job->aes_dec_key_expanded,               \
+                               job->dst,                                \
+                               job->msg_len_to_cipher_in_bytes);        \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_aes256_dec_##ARCH(JOB_AES_HMAC *job)                         \
+{                                                                       \
+        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);            \
+        assert(job->iv_len_in_bytes == 16);                             \
+        aes_cbc_dec_256_##ARCH(job->src + job->cipher_start_src_offset_in_bytes, \
+                               job->iv,                                 \
+                               job->aes_dec_key_expanded,               \
+                               job->dst,                                \
+                               job->msg_len_to_cipher_in_bytes);        \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
 
-        while (job->status < STS_COMPLETED) {
-                if (job->chain_order == CIPHER_HASH) {
-                        // assume job->cipher_direction == ENCRYPT
-                        tmp = FLUSH_JOB_AES_ENC(state, job);
-                        if (tmp) {
-                                tmp = SUBMIT_JOB_HASH(state, tmp);
-                        } else {
-                                tmp = FLUSH_JOB_HASH(state, job);
-                        }
-                        if (tmp && (tmp->chain_order == HASH_CIPHER)) {
-                                SUBMIT_JOB_AES_DEC(tmp);
-                        }
-                } else { // job->chain_order == HASH_CIPHER
-                        // assume job->cipher_direction == DECRYPT
-                        tmp = FLUSH_JOB_HASH(state, job);
-                        assert(tmp);
-                        if (tmp->chain_order == HASH_CIPHER) {
-                                SUBMIT_JOB_AES_DEC(tmp);
-                        }
-                }
-        }
-}
+#define FUNC_GENERATE_AES_CNTR(ARCH)                                    \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_aes128_cntr_##ARCH(JOB_AES_HMAC *job)                        \
+{                                                                       \
+        assert(job->iv_len_in_bytes == 16);                             \
+        aes_cntr_128_##ARCH(job->src + job->cipher_start_src_offset_in_bytes, \
+                            job->iv,                                    \
+                            job->aes_enc_key_expanded,                  \
+                            job->dst,                                   \
+                            job->msg_len_to_cipher_in_bytes);           \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_aes192_cntr_##ARCH(JOB_AES_HMAC *job)                        \
+{                                                                       \
+        assert(job->iv_len_in_bytes == 16);                             \
+        aes_cntr_192_##ARCH(job->src + job->cipher_start_src_offset_in_bytes, \
+                            job->iv,                                    \
+                            job->aes_enc_key_expanded,                  \
+                            job->dst,                                   \
+                            job->msg_len_to_cipher_in_bytes);           \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_aes256_cntr_##ARCH(JOB_AES_HMAC *job)                        \
+{                                                                       \
+        assert(job->iv_len_in_bytes == 16);                             \
+        aes_cntr_256_##ARCH(job->src + job->cipher_start_src_offset_in_bytes, \
+                            job->iv,                                    \
+                            job->aes_enc_key_expanded,                  \
+                            job->dst,                                   \
+                            job->msg_len_to_cipher_in_bytes);           \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
 
-JOB_AES_HMAC *
-SUBMIT_JOB(MB_MGR *state)
-{
-        JOB_AES_HMAC *job = NULL;
-#ifndef LINUX
-        DECLARE_ALIGNED(UINT128 xmm_save[10], 16);
-        SAVE_XMMS(xmm_save);
-#endif
 
-        job = JOBS(state, state->next_job);
+#define FUNC_GENERATE_JOB_CIPHER(ARCH)                                  \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_aes_enc_##ARCH(MB_MGR *state, JOB_AES_HMAC *job)             \
+{                                                                       \
+        if (CBC == job->cipher_mode) {                                  \
+                if (16 == job->aes_key_len_in_bytes) {                  \
+                        return submit_job_aes128_enc_##ARCH(&state->aes128_ooo, job); \
+                } else if (24 == job->aes_key_len_in_bytes) {           \
+                        return submit_job_aes192_enc_##ARCH(&state->aes192_ooo, job); \
+                }                                                       \
+                return submit_job_aes256_enc_##ARCH(&state->aes256_ooo, job); \
+        } else if (CNTR == job->cipher_mode) {                          \
+                if (16 == job->aes_key_len_in_bytes) {                  \
+                        return submit_job_aes128_cntr_##ARCH(job);      \
+                } else if (24 == job->aes_key_len_in_bytes) {           \
+                        return submit_job_aes192_cntr_##ARCH(job);      \
+                }                                                       \
+                return submit_job_aes256_cntr_##ARCH(job);              \
+        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {                \
+                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) { \
+                        JOB_AES_HMAC *tmp;                              \
+                        tmp = submit_job_aes128_enc_##ARCH(&state->docsis_sec_ooo, job); \
+                        return docsis_last_block_##ARCH(tmp);           \
+                }                                                       \
+                return docsis_first_block_##ARCH(job);                  \
+        }                                                               \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_aes_dec_##ARCH(JOB_AES_HMAC *job)                            \
+{                                                                       \
+        if (CBC == job->cipher_mode) {                                  \
+                if (16 == job->aes_key_len_in_bytes) {                  \
+                        return submit_job_aes128_dec_##ARCH(job);       \
+                } else if (24 == job->aes_key_len_in_bytes) {           \
+                        return submit_job_aes192_dec_##ARCH(job);       \
+                }                                                       \
+                return submit_job_aes256_dec_##ARCH(job);               \
+        } else if (CNTR == job->cipher_mode) {                          \
+                if (16 == job->aes_key_len_in_bytes) {                  \
+                        return submit_job_aes128_cntr_##ARCH(job);      \
+                } else if (24 == job->aes_key_len_in_bytes) {           \
+                        return submit_job_aes192_cntr_##ARCH(job);      \
+                }                                                       \
+                return submit_job_aes256_cntr_##ARCH(job);              \
+        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {                \
+                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) { \
+                        docsis_last_block_##ARCH(job);                  \
+                        return submit_job_aes128_dec_##ARCH(job);       \
+                }                                                       \
+                return docsis_first_block_##ARCH(job);                  \
+        }                                                               \
+        job->status |= STS_COMPLETED_AES;                               \
+        return job;                                                     \
+}                                                                       \
+__forceinline JOB_AES_HMAC *                                            \
+flush_job_aes_enc_##ARCH(MB_MGR *state, JOB_AES_HMAC *job)              \
+{                                                                       \
+        if (CBC == job->cipher_mode) {                                  \
+                if (16 == job->aes_key_len_in_bytes) {                  \
+                        return flush_job_aes128_enc_##ARCH(&state->aes128_ooo); \
+                } else if (24 == job->aes_key_len_in_bytes) {           \
+                        return flush_job_aes192_enc_##ARCH(&state->aes192_ooo); \
+                }                                                       \
+                return flush_job_aes256_enc_##ARCH(&state->aes256_ooo); \
+        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {                \
+                JOB_AES_HMAC *tmp;                                      \
+                tmp = flush_job_aes128_enc_##ARCH(&state->docsis_sec_ooo); \
+                return docsis_last_block_##ARCH(tmp);                   \
+        }                                                               \
+        return NULL;                                                    \
+}                                                                       \
 
-        if (is_job_invalid(job)) {
-                job->status = STS_INVALID_ARGS;
-        } else {
-                job->status = STS_BEING_PROCESSED;
-                job = submit_new_job(state, job);
-        }
+#define FUNC_GENERATE_JOB_HASH(ARCH)                                    \
+__forceinline JOB_AES_HMAC *                                            \
+submit_job_hash_##ARCH(MB_MGR *state, JOB_AES_HMAC *job)                \
+{                                                                       \
+        switch (job->hash_alg) {                                        \
+        case SHA1:                                                      \
+                return submit_job_hmac_NI_##ARCH(&state->hmac_sha_1_ooo, job); \
+        case SHA_224:                                                   \
+                return submit_job_hmac_sha_224_NI_##ARCH(&state->hmac_sha_224_ooo, job); \
+        case SHA_256:                                                   \
+                return submit_job_hmac_sha_256_NI_##ARCH(&state->hmac_sha_256_ooo, job); \
+        case SHA_384:                                                   \
+                return submit_job_hmac_sha_384_##ARCH(&state->hmac_sha_384_ooo, job); \
+        case SHA_512:                                                   \
+                return submit_job_hmac_sha_512_##ARCH(&state->hmac_sha_512_ooo, job); \
+        case AES_XCBC:                                                  \
+                return submit_job_aes_xcbc_##ARCH(&state->aes_xcbc_ooo, job); \
+        case MD5:                                                       \
+                return submit_job_hmac_md5_##ARCH(&state->hmac_md5_ooo, job); \
+        default:                                                        \
+                job->status |= STS_COMPLETED_HMAC;                      \
+                break;                                                  \
+        }                                                               \
+        return job;                                                     \
+}                                                                       \
+__forceinline JOB_AES_HMAC *                                            \
+flush_job_hash_##ARCH(MB_MGR *state, JOB_AES_HMAC *job)                 \
+{                                                                       \
+        switch (job->hash_alg) {                                        \
+        case SHA1:                                                      \
+                return flush_job_hmac_NI_##ARCH(&state->hmac_sha_1_ooo); \
+        case SHA_224:                                                   \
+                return flush_job_hmac_sha_224_NI_##ARCH(&state->hmac_sha_224_ooo); \
+        case SHA_256:                                                   \
+                return flush_job_hmac_sha_256_NI_##ARCH(&state->hmac_sha_256_ooo); \
+        case SHA_384:                                                   \
+                return flush_job_hmac_sha_384_##ARCH(&state->hmac_sha_384_ooo); \
+        case SHA_512:                                                   \
+                return flush_job_hmac_sha_512_##ARCH(&state->hmac_sha_512_ooo); \
+        case AES_XCBC:                                                  \
+                return flush_job_aes_xcbc_##ARCH(&state->aes_xcbc_ooo); \
+        case MD5:                                                       \
+                return flush_job_hmac_md5_##ARCH(&state->hmac_md5_ooo); \
+        default:                                                        \
+                job->status |= STS_COMPLETED_HMAC;                      \
+                break;                                                  \
+        }                                                               \
+        return job;                                                     \
+}                                                                       \
 
-        if (state->earliest_job < 0) {
-                // state was previously empty
-                state->earliest_job = state->next_job;
-                ADV_JOBS(&state->next_job);
-#ifndef LINUX
-                RESTORE_XMMS(xmm_save);
-#endif
-                return NULL;	// if we were empty, nothing to return
-        }
+#define FUNC_GENERATE_SUBMIT_NEW_JOB(ARCH)                              \
+__forceinline JOB_AES_HMAC *                                            \
+submit_new_job_##ARCH(MB_MGR *state, JOB_AES_HMAC *job)                 \
+{                                                                       \
+        if (job->chain_order == CIPHER_HASH) {                          \
+                job = submit_job_aes_enc_##ARCH(state, job);            \
+                if (job) {                                              \
+                        job = submit_job_hash_##ARCH(state, job);       \
+                        if (job && (job->chain_order == HASH_CIPHER)) { \
+                                submit_job_aes_dec_##ARCH(job);         \
+                        }                                               \
+                }                                                       \
+        } else {                                                        \
+                job = submit_job_hash_##ARCH(state, job);               \
+                if (job && (job->chain_order == HASH_CIPHER)) {         \
+                        submit_job_aes_dec_##ARCH(job);                 \
+                }                                                       \
+        }                                                               \
+        return job;                                                     \
+}                                                                       \
 
-        ADV_JOBS(&state->next_job);
+#define FUNC_GENERATE_COMPLETE_JOB(ARCH)                                \
+__forceinline void                                                      \
+complete_job_##ARCH(MB_MGR *state, JOB_AES_HMAC *job)                   \
+{                                                                       \
+        JOB_AES_HMAC *tmp = NULL;                                       \
+        while (job->status < STS_COMPLETED) {                           \
+                if (job->chain_order == CIPHER_HASH) {                  \
+                        tmp = flush_job_aes_enc_##ARCH(state, job);     \
+                        if (tmp) {                                      \
+                                tmp = submit_job_hash_##ARCH(state, tmp); \
+                        } else {                                        \
+                                tmp = flush_job_hash_##ARCH(state, job); \
+                        }                                               \
+                        if (tmp && (tmp->chain_order == HASH_CIPHER)) { \
+                                submit_job_aes_dec_##ARCH(tmp);         \
+                        }                                               \
+                } else {                                                \
+                        tmp = flush_job_hash_##ARCH(state, job);        \
+                        assert(tmp);                                    \
+                        if (tmp->chain_order == HASH_CIPHER) {          \
+                                submit_job_aes_dec_##ARCH(tmp);         \
+                        }                                               \
+                }                                                       \
+        }                                                               \
+}                                                                       \
 
-        if (state->earliest_job == state->next_job) {
-                // Full
-                job = JOBS(state, state->earliest_job);
-                complete_job(state, job);
-                ADV_JOBS(&state->earliest_job);
-#ifndef LINUX
-                RESTORE_XMMS(xmm_save);
-#endif
-                return job;
-        }
+#define _FUNC_GENERATE_SUBMIT_JOB(ARCH)                                 \
+JOB_AES_HMAC *                                                          \
+submit_job_##ARCH(MB_MGR *state)                                        \
+{                                                                       \
+        JOB_AES_HMAC *job;                                              \
+        XMM_BUFF(xmm_save);                                             \
+        SAVE_XMMS(ARCH, xmm_save);                                      \
+        job = JOBS(state, state->next_job);                             \
+        if (is_job_invalid(job)) {                                      \
+                job->status = STS_INVALID_ARGS;                         \
+        } else {                                                        \
+                job->status = STS_BEING_PROCESSED;                      \
+                job = submit_new_job_##ARCH(state, job);                \
+        }                                                               \
+        if (state->earliest_job < 0) {                                  \
+                state->earliest_job = state->next_job;                  \
+                ADV_JOBS(&state->next_job);                             \
+                RESTORE_XMMS(ARCH, xmm_save);                           \
+                return NULL;                                            \
+        }                                                               \
+        ADV_JOBS(&state->next_job);                                     \
+        if (state->earliest_job == state->next_job) {                   \
+                job = JOBS(state, state->earliest_job);                 \
+                complete_job_##ARCH(state, job);                        \
+                ADV_JOBS(&state->earliest_job);                         \
+                RESTORE_XMMS(ARCH, xmm_save);                           \
+                return job;                                             \
+        }                                                               \
+        RESTORE_XMMS(ARCH, xmm_save);                                   \
+        job = JOBS(state, state->earliest_job);                         \
+        if (job->status < STS_COMPLETED)                                \
+                return NULL;                                            \
+        ADV_JOBS(&state->earliest_job);                                 \
+        return job;                                                     \
+}                                                                       \
 
-        // not full
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
-        job = JOBS(state, state->earliest_job);
-        if (job->status < STS_COMPLETED)
-                return NULL;
+#define FUNC_GENERATE_SUBMIT_JOB(ARCH) _FUNC_GENERATE_SUBMIT_JOB(ARCH)
 
-        ADV_JOBS(&state->earliest_job);
-        return job;
-}
+#define _FUNC_GENERATE_FLUSH_JOB(ARCH)                                  \
+JOB_AES_HMAC *                                                          \
+flush_job_##ARCH(MB_MGR *state)                                         \
+{                                                                       \
+        JOB_AES_HMAC *job;                                              \
+        XMM_BUFF(xmm_save);                                             \
+        if (state->earliest_job < 0)                                    \
+                return NULL;                                            \
+        SAVE_XMMS(ARCH, xmm_save);                                      \
+        job = JOBS(state, state->earliest_job);                         \
+        complete_job_##ARCH(state, job);                                \
+        ADV_JOBS(&state->earliest_job);                                 \
+        if (state->earliest_job == state->next_job)                     \
+                state->earliest_job = -1;                               \
+        RESTORE_XMMS(ARCH, xmm_save);                                   \
+        return job;                                                     \
+}                                                                       \
 
-JOB_AES_HMAC *
-FLUSH_JOB(MB_MGR *state)
-{
-        JOB_AES_HMAC *job;
-#ifndef LINUX
-        DECLARE_ALIGNED(UINT128 xmm_save[10], 16);
-#endif
+#define FUNC_GENERATE_FLUSH_JOB(ARCH) _FUNC_GENERATE_FLUSH_JOB(ARCH)
 
-        if (state->earliest_job < 0)
-                return NULL; // empty
 
-#ifndef LINUX
-        SAVE_XMMS(xmm_save);
-#endif
-        job = JOBS(state, state->earliest_job);
-        complete_job(state, job);
+#define FUNC_GENERATE_QUEUE_SIZE(ARCH)                                  \
+UINT32                                                                  \
+queue_size_##ARCH(MB_MGR *state)                                        \
+{                                                                       \
+        int a, b;                                                       \
+        if (state->earliest_job < 0)                                    \
+                return 0;                                               \
+        a = state->next_job / sizeof(JOB_AES_HMAC);                     \
+        b = state->earliest_job / sizeof(JOB_AES_HMAC);                 \
+        return ((a-b) & (MAX_JOBS-1));                                  \
+}                                                                       \
 
-        ADV_JOBS(&state->earliest_job);
+#define FUNC_GENERATE(ARCH)                     \
+        FUNC_GENERATE_DOCSIS(ARCH)              \
+        FUNC_GENERATE_AES_CBC(ARCH)             \
+        FUNC_GENERATE_AES_CNTR(ARCH)            \
+        FUNC_GENERATE_JOB_CIPHER(ARCH)          \
+        FUNC_GENERATE_JOB_HASH(ARCH)            \
+        FUNC_GENERATE_SUBMIT_NEW_JOB(ARCH)      \
+        FUNC_GENERATE_COMPLETE_JOB(ARCH)        \
+        FUNC_GENERATE_SUBMIT_JOB(ARCH)          \
+        FUNC_GENERATE_FLUSH_JOB(ARCH)           \
+        FUNC_GENERATE_QUEUE_SIZE(ARCH)          \
 
-        if (state->earliest_job == state->next_job)
-                state->earliest_job = -1; // becomes empty
-
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
-#endif
-        return job;
-}
-
-////////////////////////////////////////////////////////////////////////
-/// Lower level "out of order" schedulers
-////////////////////////////////////////////////////////////////////////
-
-#if !defined(AVX2) && !defined(AVX512)
-// AVX2 does not change the AES code, so the AVX2 version uses AVX code here
-// AVX512 uses AVX2 code at the moment
-
-JOB_AES_HMAC *
-SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC *job)
-{
-        assert((job->cipher_mode == DOCSIS_SEC_BPI) ||
-               ((job->msg_len_to_cipher_in_bytes & 15) == 0));
-        assert(job->iv_len_in_bytes == 16);
-        AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->iv,
-                        job->aes_dec_key_expanded,
-                        job->dst,
-                        job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
-        return (job);
-}
-
-JOB_AES_HMAC *
-SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC *job)
-{
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
-        assert(job->iv_len_in_bytes == 16);
-        AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->iv,
-                        job->aes_dec_key_expanded,
-                        job->dst,
-                        job->msg_len_to_cipher_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return (job);
-}
-
-JOB_AES_HMAC *
-SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
-{
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
-        assert(job->iv_len_in_bytes == 16);
-        AES_CBC_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->iv,
-                        job->aes_dec_key_expanded,
-                        job->dst,
-                        job->msg_len_to_cipher_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return (job);
-}
-
-JOB_AES_HMAC *
-SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
-{
-        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
-        AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
-                     job->iv,
-                     job->aes_enc_key_expanded,
-                     job->dst,
-                     job->msg_len_to_cipher_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return (job);
-}
-
-JOB_AES_HMAC *
-SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
-{
-        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
-        AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
-                     job->iv,
-                     job->aes_enc_key_expanded,
-                     job->dst,
-                     job->msg_len_to_cipher_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return (job);
-}
-
-JOB_AES_HMAC *
-SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
-{
-        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
-        AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
-                     job->iv,
-                     job->aes_enc_key_expanded,
-                     job->dst,
-                     job->msg_len_to_cipher_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return (job);
-}
-
-#endif
-
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-
-UINT32
-QUEUE_SIZE(MB_MGR *state)
-{
-        int a, b;
-
-        if (state->earliest_job < 0)
-                return 0;
-        a = state->next_job / sizeof(JOB_AES_HMAC);
-        b = state->earliest_job / sizeof(JOB_AES_HMAC);
-        return ((a-b) & (MAX_JOBS-1));
-}
+#endif /* !_MB_MGR_CODE_H_ */
