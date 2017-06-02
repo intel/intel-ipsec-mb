@@ -1,0 +1,6 @@
+.*
+!.gitignore
+*.o
+*.a
+*~
+crypto_sched

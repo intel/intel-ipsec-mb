@@ -1,0 +1,13 @@
+
+The difference with master branch:
+(1) simple C header files.
+(2) GCM can be used by the MB
+(3) New job scheduler
+(4) TAG is compared at the time of DECRYPT
+(5) symbol in asm code was gathered in jump table
+
+
+Restrictions:
+(1) WINDOWS and CPP are not implemented.
+(2) MD5, SHA224, DOCSIC are not tested.
+(3) SHA-NI,AVX512 not ready.
