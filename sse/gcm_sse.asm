@@ -485,7 +485,12 @@ default rel
 	mov	[%%GDATA_CTX + PBlockLen], rax
 	jmp	%%_dec_done
 %%_partial_incomplete_1:
-	add	[%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
+%ifidn __OUTPUT_FORMAT__, win64
+        mov     rax, %%PLAIN_CYPH_LEN
+       	add     [%%GDATA_CTX + PBlockLen], rax
+%else
+       	add	[%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
+%endif
 %%_dec_done:
 	movdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -514,7 +519,12 @@ default rel
 	mov	[%%GDATA_CTX + PBlockLen], rax
 	jmp	%%_encode_done
 %%_partial_incomplete_2:
-	add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
+%ifidn __OUTPUT_FORMAT__, win64
+        mov     rax, %%PLAIN_CYPH_LEN
+       	add     [%%GDATA_CTX + PBlockLen], rax
+%else
+       	add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
+%endif
 %%_encode_done:
 	movdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -1478,7 +1488,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 ;; Start of Stack Setup
 
 %macro FUNC_SAVE 0
-	;; Required for Update/GMC_ENC
+	;; Required for Update/GCM_ENC
 	;the number of pushes must equal STACK_OFFSET
         push    r12
         push    r13
@@ -1520,7 +1530,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         movdqu xmm6 , [rsp + LOCAL_STORAGE + 0*16]
 %endif
 
-;; Required for Update/GMC_ENC
+;; Required for Update/GCM_ENC
         mov     rsp, r14
         pop     r15
         pop     r14
@@ -1598,7 +1608,12 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 	je	%%_multiple_of_16_bytes
 
 	xor	%%DATA_OFFSET, %%DATA_OFFSET
-	add	[%%GDATA_CTX + InLen], %%PLAIN_CYPH_LEN ;Update length of data processed
+%ifidn __OUTPUT_FORMAT__, win64
+       	mov	r12, %%PLAIN_CYPH_LEN
+       	add	[%%GDATA_CTX + InLen], r12 ;Update length of data processed
+%else
+       	add	[%%GDATA_CTX + InLen], %%PLAIN_CYPH_LEN ;Update length of data processed
+%endif
 	movdqu	xmm13, [%%GDATA_KEY + HashKey]                 ; xmm13 = HashKey
 	movdqu	xmm8, [%%GDATA_CTX + AadHash]
 
@@ -1954,20 +1969,24 @@ ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 global FN_NAME(init,_)
 FN_NAME(init,_):
-
 	push	r12
 	push	r13
 %ifidn __OUTPUT_FORMAT__, win64
+        push    r14
+        push    r15
+        mov     r14, rsp
 	; xmm6:xmm15 need to be maintained for Windows
 	sub	rsp, 1*16
-	movdqu	[rsp + 0*16],xmm6
+	movdqu	[rsp + 0*16], xmm6
 %endif
 
 	GCM_INIT arg1, arg2, arg3, arg4, arg5
 
 %ifidn __OUTPUT_FORMAT__, win64
 	movdqu	xmm6 , [rsp + 0*16]
-	add	rsp, 1*16
+        mov     rsp, r14
+        pop     r15
+        pop     r14
 %endif
 	pop	r13
 	pop	r12

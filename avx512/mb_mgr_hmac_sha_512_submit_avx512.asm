@@ -55,13 +55,13 @@ section .text
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
-%define reg3	rcx
-%define reg4	rdx
+%define arg3	rcx
+%define arg4	rdx
 %else
 %define arg1	rcx
 %define arg2	rdx
-%define reg3	rdi
-%define reg4	rsi
+%define arg3	rdi
+%define arg4	rsi
 %endif
 
 %define state	arg1
@@ -82,11 +82,11 @@ section .text
 %define job_rax		rax
 %define len		rax
 
-%define size_offset	reg3
-%define tmp2		reg3
+%define size_offset	arg3
+%define tmp2		arg3
 
-%define lane		reg4
-%define tmp3		reg4
+%define lane		arg4
+%define tmp3		arg4
 
 %define extra_blocks	r8
 

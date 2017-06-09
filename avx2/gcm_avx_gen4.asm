@@ -464,7 +464,12 @@ default rel
         mov     [%%GDATA_CTX + PBlockLen], rax
         jmp     %%_dec_done
 %%_partial_incomplete_1:
+%ifidn __OUTPUT_FORMAT__, win64
+        mov     rax, %%PLAIN_CYPH_LEN
+       	add     [%%GDATA_CTX + PBlockLen], rax
+%else
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
+%endif
 %%_dec_done:
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -493,7 +498,12 @@ default rel
         mov     [%%GDATA_CTX + PBlockLen], rax
         jmp     %%_encode_done
 %%_partial_incomplete_2:
+%ifidn __OUTPUT_FORMAT__, win64
+        mov     rax, %%PLAIN_CYPH_LEN
+       	add     [%%GDATA_CTX + PBlockLen], rax
+%else
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
+%endif
 %%_encode_done:
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH
 
@@ -2645,7 +2655,12 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         xor     %%DATA_OFFSET, %%DATA_OFFSET
         ;; Update length of data processed
-        add    [%%GDATA_CTX+InLen], %%PLAIN_CYPH_LEN
+%ifidn __OUTPUT_FORMAT__, win64
+        mov     rax, %%PLAIN_CYPH_LEN
+       	add     [%%GDATA_CTX + InLen], rax
+%else
+        add    [%%GDATA_CTX + InLen], %%PLAIN_CYPH_LEN
+%endif
         vmovdqu xmm13, [%%GDATA_KEY + HashKey]
         vmovdqu xmm8, [%%GDATA_CTX + AadHash]
 
@@ -3056,16 +3071,21 @@ FN_NAME(init,_):
         push    r12
         push    r13
 %ifidn __OUTPUT_FORMAT__, win64
-        ; xmm6:xmm15 need to be maintained for Windows
-        sub     rsp, 1*16
-        vmovdqu [rsp + 0*16],xmm6
+        push    r14
+        push    r15
+        mov     r14, rsp
+	; xmm6:xmm15 need to be maintained for Windows
+	sub	rsp, 1*16
+	movdqu	[rsp + 0*16], xmm6
 %endif
 
         GCM_INIT arg1, arg2, arg3, arg4, arg5
 
 %ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm6, [rsp + 0*16]
-        add     rsp, 1*16
+	movdqu	xmm6 , [rsp + 0*16]
+        mov     rsp, r14
+        pop     r15
+        pop     r14
 %endif
         pop     r13
         pop     r12

@@ -119,12 +119,12 @@ section .text
 	%xdefine arg2 rdx
 	%xdefine arg3 r8
 	%xdefine arg4 r9
-	%xdefine arg5 [r14 + STACK_OFFSET + 8*5]
-	%xdefine arg6 [r14 + STACK_OFFSET + 8*6]
-	%xdefine arg7 [r14 + STACK_OFFSET + 8*7]
-	%xdefine arg8 [r14 + STACK_OFFSET + 8*8]
-	%xdefine arg9 [r14 + STACK_OFFSET + 8*9]
-	%xdefine arg10 [r14 + STACK_OFFSET + 8*10]
+	%xdefine arg5  qword [r14 + STACK_OFFSET + 8*5]
+	%xdefine arg6  qword [r14 + STACK_OFFSET + 8*6]
+	%xdefine arg7  qword [r14 + STACK_OFFSET + 8*7]
+	%xdefine arg8  qword [r14 + STACK_OFFSET + 8*8]
+	%xdefine arg9  qword [r14 + STACK_OFFSET + 8*9]
+	%xdefine arg10 qword [r14 + STACK_OFFSET + 8*10]
 %else
 	%xdefine arg1 rdi
 	%xdefine arg2 rsi

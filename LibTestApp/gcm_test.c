@@ -739,14 +739,20 @@ typedef void (*gcm_pre_fn_t)(const void *, struct gcm_key_data *);
 static gcm_pre_fn_t aesni_gcm128_pre = NULL;
 static gcm_enc_dec_fn_t aesni_gcm128_enc = NULL;
 static gcm_enc_dec_fn_t aesni_gcm128_dec = NULL;
+static gcm_enc_dec_fn_t aesni_gcm128_enc_2 = NULL;
+static gcm_enc_dec_fn_t aesni_gcm128_dec_2 = NULL;
 
 static gcm_pre_fn_t aesni_gcm192_pre = NULL;
 static gcm_enc_dec_fn_t aesni_gcm192_enc = NULL;
 static gcm_enc_dec_fn_t aesni_gcm192_dec = NULL;
+static gcm_enc_dec_fn_t aesni_gcm192_enc_2 = NULL;
+static gcm_enc_dec_fn_t aesni_gcm192_dec_2 = NULL;
 
 static gcm_pre_fn_t aesni_gcm256_pre = NULL;
 static gcm_enc_dec_fn_t aesni_gcm256_enc = NULL;
 static gcm_enc_dec_fn_t aesni_gcm256_dec = NULL;
+static gcm_enc_dec_fn_t aesni_gcm256_enc_2 = NULL;
+static gcm_enc_dec_fn_t aesni_gcm256_dec_2 = NULL;
 
 static int check_data(uint8_t * test, uint8_t * expected, uint64_t len,
                       char *data_name)
@@ -771,7 +777,227 @@ static int check_data(uint8_t * test, uint8_t * expected, uint64_t len,
 	return is_error;
 }
 
-static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
+static void
+my_aes_gcm_enc_128_sse(const struct gcm_key_data *key,
+                       struct gcm_context_data *ctx,
+                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                       uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_128_sse(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_128_update_sse(key, ctx, out, in, len);
+        aes_gcm_enc_128_finalize_sse(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_128_sse(const struct gcm_key_data * key,
+                       struct gcm_context_data *ctx,
+                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                       uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_128_sse(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_128_update_sse(key, ctx, out, in, len);
+        aes_gcm_dec_128_finalize_sse(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_enc_192_sse(const struct gcm_key_data * key,
+                       struct gcm_context_data *ctx,
+                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                       uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_192_sse(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_192_update_sse(key, ctx, out, in, len);
+        aes_gcm_enc_192_finalize_sse(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_192_sse(const struct gcm_key_data * key,
+                       struct gcm_context_data *ctx,
+                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                       uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_192_sse(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_192_update_sse(key, ctx, out, in, len);
+        aes_gcm_dec_192_finalize_sse(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_enc_256_sse(const struct gcm_key_data * key,
+                       struct gcm_context_data *ctx,
+                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                       uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_256_sse(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_256_update_sse(key, ctx, out, in, len);
+        aes_gcm_enc_256_finalize_sse(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_256_sse(const struct gcm_key_data *key,
+                       struct gcm_context_data *ctx,
+                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                       uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_256_sse(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_256_update_sse(key, ctx, out, in, len);
+        aes_gcm_dec_256_finalize_sse(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_128_avx_gen2(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_128_update_avx_gen2(key, ctx, out, in, len);
+        aes_gcm_enc_128_finalize_avx_gen2(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_128_avx_gen2(const struct gcm_key_data * key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_128_avx_gen2(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_128_update_avx_gen2(key, ctx, out, in, len);
+        aes_gcm_dec_128_finalize_avx_gen2(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_enc_192_avx_gen2(const struct gcm_key_data * key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_192_avx_gen2(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_192_update_avx_gen2(key, ctx, out, in, len);
+        aes_gcm_enc_192_finalize_avx_gen2(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_192_avx_gen2(const struct gcm_key_data * key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_192_avx_gen2(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_192_update_avx_gen2(key, ctx, out, in, len);
+        aes_gcm_dec_192_finalize_avx_gen2(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_enc_256_avx_gen2(const struct gcm_key_data * key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_256_avx_gen2(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_256_update_avx_gen2(key, ctx, out, in, len);
+        aes_gcm_enc_256_finalize_avx_gen2(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_256_avx_gen2(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_256_update_avx_gen2(key, ctx, out, in, len);
+        aes_gcm_dec_256_finalize_avx_gen2(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_128_avx_gen4(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_128_update_avx_gen4(key, ctx, out, in, len);
+        aes_gcm_enc_128_finalize_avx_gen4(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_128_avx_gen4(const struct gcm_key_data * key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_128_avx_gen4(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_128_update_avx_gen4(key, ctx, out, in, len);
+        aes_gcm_dec_128_finalize_avx_gen4(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_enc_192_avx_gen4(const struct gcm_key_data * key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_192_avx_gen4(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_192_update_avx_gen4(key, ctx, out, in, len);
+        aes_gcm_enc_192_finalize_avx_gen4(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_192_avx_gen4(const struct gcm_key_data * key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_192_avx_gen4(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_192_update_avx_gen4(key, ctx, out, in, len);
+        aes_gcm_dec_192_finalize_avx_gen4(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_enc_256_avx_gen4(const struct gcm_key_data * key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_256_avx_gen4(key, ctx, iv, aad, aad_len);
+        aes_gcm_enc_256_update_avx_gen4(key, ctx, out, in, len);
+        aes_gcm_enc_256_finalize_avx_gen4(key, ctx, auth_tag, auth_tag_len);
+}
+
+static void
+my_aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key,
+                            struct gcm_context_data *ctx,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len)
+{
+        aes_gcm_init_256_avx_gen4(key, ctx, iv, aad, aad_len);
+        aes_gcm_dec_256_update_avx_gen4(key, ctx, out, in, len);
+        aes_gcm_dec_256_finalize_avx_gen4(key, ctx, auth_tag, auth_tag_len);
+}
+
+static int
+test_gcm_vectors(struct gcm_ctr_vector const *vector,
+                 gcm_pre_fn_t prefn,
+                 gcm_enc_dec_fn_t encfn,
+                 gcm_enc_dec_fn_t decfn)
 {
 	struct gcm_key_data gdata_key;
 	struct gcm_context_data gdata_ctx;
@@ -805,22 +1031,22 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 		return 1;
 	}
 	// This is only required once for a given key
-	aesni_gcm128_pre(vector->K, &gdata_key);
+	prefn(vector->K, &gdata_key);
 
 	////
 	// Encrypt
 	////
-	aesni_gcm128_enc(&gdata_key, &gdata_ctx,
-                         ct_test, vector->P, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
+	encfn(&gdata_key, &gdata_ctx,
+              ct_test, vector->P, vector->Plen,
+              vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->C, vector->Plen,
                                "encrypted cypher text (C)");
 	is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
 
 	// test of in-place encrypt
 	memcpy(pt_test, vector->P, vector->Plen);
-	aesni_gcm128_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T_test, vector->Tlen);
+	encfn(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, vector->IV,
+              vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->C, vector->Plen,
                                "encrypted cypher text(in-place)");
 	memset(ct_test, 0, vector->Plen);
@@ -829,8 +1055,8 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 	////
 	// Decrypt
 	////
-	aesni_gcm128_dec(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
+	decfn(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
+              vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "decrypted plain text (P)");
 	// GCM decryption outputs a 16 byte tag value
@@ -840,213 +1066,25 @@ static int test_gcm128_std_vectors(struct gcm_ctr_vector const *vector)
 
 	// test in in-place decrypt
 	memcpy(ct_test, vector->C, vector->Plen);
-	aesni_gcm128_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, vector->IV,
+	decfn(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, vector->IV,
 			 vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->P, vector->Plen,
                                "plain text (P) - in-place");
 	is_error |= check_data(T_test, vector->T, vector->Tlen,
                                "decrypted tag (T) - in-place");
 	// enc -> dec
-	aesni_gcm128_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
+	encfn(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
+              vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	memset(pt_test, 0, vector->Plen);
-	aesni_gcm128_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T2_test, vector->Tlen);
+
+	decfn(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, vector->IV,
+              vector->A, vector->Alen, T2_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "self decrypted plain text (P)");
 	is_error |= check_data(T_test, T2_test, vector->Tlen,
                                "self decrypted tag (T)");
 
 	memset(pt_test, 0, vector->Plen);
-
-	if (NULL != ct_test)
-		free(ct_test);
-	if (NULL != pt_test)
-		free(pt_test);
-	if (NULL != T_test)
-		free(T_test);
-	if (NULL != T2_test)
-		free(T2_test);
-
-	return is_error;
-}
-
-static int test_gcm192_std_vectors(struct gcm_ctr_vector const *vector)
-{
-	struct gcm_key_data gdata_key;
-	struct gcm_context_data gdata_ctx;
-	int is_error = 0;
-	// Temporary array for the calculated vectors
-	uint8_t *ct_test = NULL;
-	uint8_t *pt_test = NULL;
-	uint8_t *T_test = NULL;
-	uint8_t *T2_test = NULL;
-
-#ifdef DEBUG
-        printf("Testing GCM192 std vectors\n");
-#endif
-	// Allocate space for the calculated ciphertext
-	ct_test = malloc(vector->Plen);
-	// Allocate space for the calculated ciphertext
-	pt_test = malloc(vector->Plen);
-	if ((ct_test == NULL) || (pt_test == NULL)) {
-		fprintf(stderr, "Can't allocate ciphertext or plaintext memory\n");
-		return 1;
-	}
-
-	T_test = malloc(vector->Tlen);
-	T2_test = malloc(vector->Tlen);
-	if (T_test == NULL) {
-		fprintf(stderr, "Can't allocate tag memory\n");
-		return 1;
-	}
-	// This is only required once for a given key
-	aesni_gcm192_pre(vector->K, &gdata_key);
-
-	////
-	// Encrypt
-	////
-	memset(ct_test, 0, vector->Plen);
-	aesni_gcm192_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(ct_test, vector->C, vector->Plen,
-                               "encrypted cypher text (C)");
-	is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
-
-	// test of in-place encrypt
-	memcpy(pt_test, vector->P, vector->Plen);
-	aesni_gcm192_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(pt_test, vector->C, vector->Plen,
-                               "encrypted cypher text(in-place)");
-	memset(ct_test, 0, vector->Plen);
-	memset(T_test, 0, vector->Tlen);
-
-	////
-	// Decrypt
-	////
-	aesni_gcm192_dec(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(pt_test, vector->P, vector->Plen,
-                               "decrypted plain text (P)");
-	// GCM decryption outputs a 16 byte tag value
-        // that must be verified against the expected tag value
-	is_error |= check_data(T_test, vector->T, vector->Tlen,
-                               "decrypted tag (T)");
-
-	// test in in-place decrypt
-	memcpy(ct_test, vector->C, vector->Plen);
-	aesni_gcm192_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(ct_test, vector->P, vector->Plen,
-                               "plain text (P) - in-place");
-	is_error |= check_data(T_test, vector->T, vector->Tlen,
-                               "decrypted tag (T) - in-place");
-	// enc -> dec
-	aesni_gcm192_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
-	memset(pt_test, 0, vector->Plen);
-	aesni_gcm192_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T2_test, vector->Tlen);
-	is_error |= check_data(pt_test, vector->P, vector->Plen,
-                               "self decrypted plain text (P)");
-	is_error |= check_data(T_test, T2_test, vector->Tlen,
-                               "self decrypted tag (T)");
-
-	if (NULL != ct_test)
-		free(ct_test);
-	if (NULL != pt_test)
-		free(pt_test);
-	if (NULL != T_test)
-		free(T_test);
-	if (NULL != T2_test)
-		free(T2_test);
-
-	return is_error;
-}
-
-static int test_gcm256_std_vectors(struct gcm_ctr_vector const *vector)
-{
-	struct gcm_key_data gdata_key;
-	struct gcm_context_data gdata_ctx;
-	int is_error = 0;
-	// Temporary array for the calculated vectors
-	uint8_t *ct_test = NULL;
-	uint8_t *pt_test = NULL;
-	uint8_t *T_test = NULL;
-	uint8_t *T2_test = NULL;
-
-#ifdef DEBUG
-        printf("Testing GCM256 std vectors\n");
-#endif
-	// Allocate space for the calculated ciphertext
-	ct_test = malloc(vector->Plen);
-	// Allocate space for the calculated ciphertext
-	pt_test = malloc(vector->Plen);
-	if ((ct_test == NULL) || (pt_test == NULL)) {
-		fprintf(stderr, "Can't allocate ciphertext or plaintext memory\n");
-		return 1;
-	}
-
-	T_test = malloc(vector->Tlen);
-	T2_test = malloc(vector->Tlen);
-	if (T_test == NULL) {
-		fprintf(stderr, "Can't allocate tag memory\n");
-		return 1;
-	}
-	// This is only required once for a given key
-	aesni_gcm256_pre(vector->K, &gdata_key);
-
-	////
-	// Encrypt
-	////
-	memset(ct_test, 0, vector->Plen);
-	aesni_gcm256_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(ct_test, vector->C, vector->Plen,
-                               "encrypted cypher text (C)");
-	is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
-
-	// test of in-place encrypt
-	memcpy(pt_test, vector->P, vector->Plen);
-	aesni_gcm256_enc(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(pt_test, vector->C, vector->Plen,
-                               "encrypted cypher text(in-place)");
-	memset(ct_test, 0, vector->Plen);
-	memset(T_test, 0, vector->Tlen);
-
-	////
-	// Decrypt
-	////
-	aesni_gcm256_dec(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(pt_test, vector->P, vector->Plen,
-                               "decrypted plain text (P)");
-	// GCM decryption outputs a 16 byte tag value
-        // that must be verified against the expected tag value
-	is_error |= check_data(T_test, vector->T, vector->Tlen,
-                               "decrypted tag (T)");
-
-	// test in in-place decrypt
-	memcpy(ct_test, vector->C, vector->Plen);
-	aesni_gcm256_dec(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(ct_test, vector->P, vector->Plen,
-                               "plain text (P) - in-place");
-	is_error |= check_data(T_test, vector->T, vector->Tlen,
-                               "decrypted tag (T) - in-place");
-	// enc -> dec
-	aesni_gcm256_enc(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
-			 vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
-	memset(pt_test, 0, vector->Plen);
-	aesni_gcm256_dec(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T2_test, vector->Tlen);
-	is_error |=
-                check_data(pt_test, vector->P, vector->Plen,
-                           "self decrypted plain text (P)");
-	is_error |= check_data(T_test, T2_test, vector->Tlen,
-                               "self decrypted tag (T)");
 
 	if (NULL != ct_test)
 		free(ct_test);
@@ -1082,13 +1120,16 @@ static int test_gcm_std_vectors(void)
 #endif
                 switch (gcm_vectors[vect].Klen) {
                 case BITS_128:
-			is_error |= test_gcm128_std_vectors(&gcm_vectors[vect]);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm128_pre, aesni_gcm128_enc, aesni_gcm128_dec);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm128_pre, aesni_gcm128_enc_2, aesni_gcm128_dec_2);
                         break;
                 case BITS_192:
-                        is_error |= test_gcm192_std_vectors(&gcm_vectors[vect]);
+                        is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm192_pre, aesni_gcm192_enc, aesni_gcm192_dec);
+                        is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm192_pre, aesni_gcm192_enc_2, aesni_gcm192_dec_2);
                         break;
                 case BITS_256:
-			is_error |= test_gcm256_std_vectors(&gcm_vectors[vect]);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm256_pre, aesni_gcm256_enc, aesni_gcm256_dec);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm256_pre, aesni_gcm256_enc_2, aesni_gcm256_dec_2);
                         break;
                 default:
                         is_error = -1;
@@ -1110,45 +1151,69 @@ int gcm_test(const enum arch_type arch)
                 aesni_gcm128_pre = aes_gcm_pre_128_sse;
                 aesni_gcm128_enc = aes_gcm_enc_128_sse;
                 aesni_gcm128_dec = aes_gcm_dec_128_sse;
+                aesni_gcm128_enc_2 = my_aes_gcm_enc_128_sse;
+                aesni_gcm128_dec_2 = my_aes_gcm_dec_128_sse;
                 aesni_gcm192_pre = aes_gcm_pre_192_sse;
                 aesni_gcm192_enc = aes_gcm_enc_192_sse;
                 aesni_gcm192_dec = aes_gcm_dec_192_sse;
+                aesni_gcm192_enc_2 = my_aes_gcm_enc_192_sse;
+                aesni_gcm192_dec_2 = my_aes_gcm_dec_192_sse;
                 aesni_gcm256_pre = aes_gcm_pre_256_sse;
                 aesni_gcm256_enc = aes_gcm_enc_256_sse;
                 aesni_gcm256_dec = aes_gcm_dec_256_sse;
+                aesni_gcm256_enc_2 = my_aes_gcm_enc_256_sse;
+                aesni_gcm256_dec_2 = my_aes_gcm_dec_256_sse;
                 break;
         case ARCH_AVX:
                 aesni_gcm128_pre = aes_gcm_pre_128_avx_gen2;
                 aesni_gcm128_enc = aes_gcm_enc_128_avx_gen2;
                 aesni_gcm128_dec = aes_gcm_dec_128_avx_gen2;
+                aesni_gcm128_enc_2 = my_aes_gcm_enc_128_avx_gen2;
+                aesni_gcm128_dec_2 = my_aes_gcm_dec_128_avx_gen2;
                 aesni_gcm192_pre = aes_gcm_pre_192_avx_gen2;
                 aesni_gcm192_enc = aes_gcm_enc_192_avx_gen2;
                 aesni_gcm192_dec = aes_gcm_dec_192_avx_gen2;
+                aesni_gcm192_enc_2 = my_aes_gcm_enc_192_avx_gen2;
+                aesni_gcm192_dec_2 = my_aes_gcm_dec_192_avx_gen2;
                 aesni_gcm256_pre = aes_gcm_pre_256_avx_gen2;
                 aesni_gcm256_enc = aes_gcm_enc_256_avx_gen2;
                 aesni_gcm256_dec = aes_gcm_dec_256_avx_gen2;
+                aesni_gcm256_enc_2 = my_aes_gcm_enc_256_avx_gen2;
+                aesni_gcm256_dec_2 = my_aes_gcm_dec_256_avx_gen2;
                 break;
         case ARCH_AVX2:
                 aesni_gcm128_pre = aes_gcm_pre_128_avx_gen4;
                 aesni_gcm128_enc = aes_gcm_enc_128_avx_gen4;
                 aesni_gcm128_dec = aes_gcm_dec_128_avx_gen4;
+                aesni_gcm128_enc_2 = my_aes_gcm_enc_128_avx_gen4;
+                aesni_gcm128_dec_2 = my_aes_gcm_dec_128_avx_gen4;
                 aesni_gcm192_pre = aes_gcm_pre_192_avx_gen4;
                 aesni_gcm192_enc = aes_gcm_enc_192_avx_gen4;
                 aesni_gcm192_dec = aes_gcm_dec_192_avx_gen4;
+                aesni_gcm192_enc_2 = my_aes_gcm_enc_192_avx_gen4;
+                aesni_gcm192_dec_2 = my_aes_gcm_dec_192_avx_gen4;
                 aesni_gcm256_pre = aes_gcm_pre_256_avx_gen4;
                 aesni_gcm256_enc = aes_gcm_enc_256_avx_gen4;
                 aesni_gcm256_dec = aes_gcm_dec_256_avx_gen4;
+                aesni_gcm256_enc_2 = my_aes_gcm_enc_256_avx_gen4;
+                aesni_gcm256_dec_2 = my_aes_gcm_dec_256_avx_gen4;
                 break;
         case ARCH_AVX512:
                 aesni_gcm128_pre = aes_gcm_pre_128_avx_gen4;
                 aesni_gcm128_enc = aes_gcm_enc_128_avx_gen4;
                 aesni_gcm128_dec = aes_gcm_dec_128_avx_gen4;
+                aesni_gcm128_enc_2 = my_aes_gcm_enc_128_avx_gen4;
+                aesni_gcm128_dec_2 = my_aes_gcm_dec_128_avx_gen4;
                 aesni_gcm192_pre = aes_gcm_pre_192_avx_gen4;
                 aesni_gcm192_enc = aes_gcm_enc_192_avx_gen4;
                 aesni_gcm192_dec = aes_gcm_dec_192_avx_gen4;
+                aesni_gcm192_enc_2 = my_aes_gcm_enc_192_avx_gen4;
+                aesni_gcm192_dec_2 = my_aes_gcm_dec_192_avx_gen4;
                 aesni_gcm256_pre = aes_gcm_pre_256_avx_gen4;
                 aesni_gcm256_enc = aes_gcm_enc_256_avx_gen4;
                 aesni_gcm256_dec = aes_gcm_dec_256_avx_gen4;
+                aesni_gcm256_enc_2 = my_aes_gcm_enc_256_avx_gen4;
+                aesni_gcm256_dec_2 = my_aes_gcm_dec_256_avx_gen4;
                 break;
         default:
                 printf("Invalid architecture type %d selected!\n", arch);
