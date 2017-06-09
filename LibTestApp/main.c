@@ -49,40 +49,84 @@
 #define TEST TEST_AVX512
 #include "do_test.h"
 
+static void
+usage(const char *name)
+{
+	fprintf(stderr,
+                "Usage: %s [args], where args are zero or more\n"
+		"--no-avx512: Don't do AVX512\n"
+		"--no-avx2: Don't do AVX2\n"
+		"--no-avx: Don't do AVX\n"
+		"--no-sse: Don't do SSE\n"
+		"--shani-on: use SHA extensions, default: auto-detect\n"
+		"--shani-off: don't use SHA extensions\n", name);
+}
+
 int
 main(int argc, char **argv)
 {
+        int i, do_sse = 1, do_avx = 1, do_avx2 = 1, do_avx512 = 1;
         MB_MGR mb_mgr;
 
-        printf("Testing SSE interface\n");
-        init_mb_mgr_sse(&mb_mgr);
-        known_answer_test_sse(&mb_mgr);
-        do_test_sse(&mb_mgr);
-        ctr_test(ARCH_SSE, &mb_mgr);
-        gcm_test(ARCH_SSE);
-        
-        printf("Testing AVX interface\n");
-        init_mb_mgr_avx(&mb_mgr);
-        known_answer_test_avx(&mb_mgr);
-        do_test_avx(&mb_mgr);
-        ctr_test(ARCH_AVX, &mb_mgr);
-        gcm_test(ARCH_AVX);
+	for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "-h") == 0) {
+			usage(argv[0]);
+			return EXIT_SUCCESS;
+		} else if (strcmp(argv[i], "--no-avx512") == 0) {
+			do_avx512 = 0;
+		} else if (strcmp(argv[i], "--no-avx2") == 0) {
+			do_avx2 = 0;
+		} else if (strcmp(argv[i], "--no-avx") == 0) {
+			do_avx = 0;
+		} else if (strcmp(argv[i], "--no-sse") == 0) {
+			do_sse = 0;
+		} else if (strcmp(argv[i], "--shani-on") == 0) {
+			sse_sha_ext_usage = SHA_EXT_PRESENT;
+		} else if (strcmp(argv[i], "--shani-off") == 0) {
+			sse_sha_ext_usage = SHA_EXT_NOT_PRESENT;
+		} else {
+			usage(argv[0]);
+			return EXIT_FAILURE;
+		}
+	}
 
-        printf("Testing AVX2 interface\n");
-        init_mb_mgr_avx2(&mb_mgr);
-        known_answer_test_avx2(&mb_mgr);
-        do_test_avx2(&mb_mgr);
-        ctr_test(ARCH_AVX2, &mb_mgr);
-        gcm_test(ARCH_AVX2);
+        if (do_sse) {
+                printf("Testing SSE interface\n");
+                init_mb_mgr_sse(&mb_mgr);
+                known_answer_test_sse(&mb_mgr);
+                do_test_sse(&mb_mgr);
+                ctr_test(ARCH_SSE, &mb_mgr);
+                gcm_test(ARCH_SSE);
+        }
 
-        printf("Testing AVX512 interface\n");
-        init_mb_mgr_avx512(&mb_mgr);
-        known_answer_test_avx512(&mb_mgr);
-        do_test_avx512(&mb_mgr);
-        ctr_test(ARCH_AVX512, &mb_mgr);
-        gcm_test(ARCH_AVX512);
+        if (do_avx) {
+                printf("Testing AVX interface\n");
+                init_mb_mgr_avx(&mb_mgr);
+                known_answer_test_avx(&mb_mgr);
+                do_test_avx(&mb_mgr);
+                ctr_test(ARCH_AVX, &mb_mgr);
+                gcm_test(ARCH_AVX);
+        }
+
+        if (do_avx2) {
+                printf("Testing AVX2 interface\n");
+                init_mb_mgr_avx2(&mb_mgr);
+                known_answer_test_avx2(&mb_mgr);
+                do_test_avx2(&mb_mgr);
+                ctr_test(ARCH_AVX2, &mb_mgr);
+                gcm_test(ARCH_AVX2);
+        }
+
+        if (do_avx512) {
+                printf("Testing AVX512 interface\n");
+                init_mb_mgr_avx512(&mb_mgr);
+                known_answer_test_avx512(&mb_mgr);
+                do_test_avx512(&mb_mgr);
+                ctr_test(ARCH_AVX512, &mb_mgr);
+                gcm_test(ARCH_AVX512);
+        }
 
         printf("Test completed\n");
 
-        return 0;
+        return EXIT_SUCCESS;
 }

@@ -30,7 +30,7 @@
 ; routine to do AES256 CNTR enc/decrypt "by4"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
-extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
+extern byteswap_const, cntr_one_be, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 
 %define CONCAT(a,b) a %+ b
 %define MOVDQ movdqu
@@ -254,7 +254,9 @@ aes_cntr_256_sse:
 %endif
 
 	movdqa	xbyteswap, [rel byteswap_const]
-	movdqu	xcounter, [p_IV]
+        movdqa  xcounter, [rel cntr_one_be]     ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
+        pinsrq  xcounter, [p_IV], 0
+        pinsrd  xcounter, [p_IV + 8], 2
 	pshufb	xcounter, xbyteswap
 
 	mov	tmp, num_bytes

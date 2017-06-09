@@ -32,10 +32,10 @@
 section .data
 default rel
 
-global byteswap_const
+global byteswap_const, cntr_one_be
 global ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 global ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
-	
+
 align 16
 byteswap_const:	;DDQ 0x000102030405060708090A0B0C0D0E0F
 		DQ 0x08090A0B0C0D0E0F, 0x0001020304050607
@@ -55,6 +55,8 @@ ddq_add_7:	;DDQ 0x00000000000000000000000000000007
 		DQ 0x0000000000000007, 0x0000000000000000
 ddq_add_8:	;DDQ 0x00000000000000000000000000000008
 		DQ 0x0000000000000008, 0x0000000000000000
+cntr_one_be:                    ; initial value of BLOCK COUNTER
+                DQ 0x0000000000000000, 0x0100000000000000
 
 section .text
 
@@ -249,7 +251,9 @@ aes_cntr_128_avx:
 %endif
 
 	vmovdqa	xbyteswap, [rel byteswap_const]
-	vmovdqu	xcounter, [p_IV]
+        vmovdqa xcounter, [rel cntr_one_be]     ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
+        vpinsrq xcounter, xcounter, [p_IV], 0
+        vpinsrd xcounter, xcounter, [p_IV + 8], 2
 	vpshufb	xcounter, xcounter, xbyteswap
 
 	mov	tmp, num_bytes

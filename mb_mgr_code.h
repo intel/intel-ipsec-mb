@@ -521,12 +521,10 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
         return (job);
 }
 
-
-
 JOB_AES_HMAC *
 SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 {
-        assert(job->iv_len_in_bytes == 16);
+        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
         AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
                      job->aes_enc_key_expanded,
@@ -539,7 +537,7 @@ SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 {
-        assert(job->iv_len_in_bytes == 16);
+        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
         AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
                      job->aes_enc_key_expanded,
@@ -552,7 +550,7 @@ SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 {
-        assert(job->iv_len_in_bytes == 16);
+        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
         AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
                      job->aes_enc_key_expanded,
@@ -571,6 +569,7 @@ UINT32
 QUEUE_SIZE(MB_MGR *state)
 {
         int a, b;
+
         if (state->earliest_job < 0)
                 return 0;
         a = state->next_job / sizeof(JOB_AES_HMAC);

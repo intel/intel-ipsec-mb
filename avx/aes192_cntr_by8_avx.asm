@@ -30,8 +30,9 @@
 ; routine to do AES192 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
-extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
-extern                 ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
+extern byteswap_const, cntr_one_be
+extern ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
+extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
@@ -241,7 +242,9 @@ aes_cntr_192_avx:
 %endif
 
 	vmovdqa	xbyteswap, [rel byteswap_const]
-	vmovdqu	xcounter, [p_IV]
+        vmovdqa xcounter, [rel cntr_one_be]     ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
+        vpinsrq xcounter, xcounter, [p_IV], 0
+        vpinsrd xcounter, xcounter, [p_IV + 8], 2
 	vpshufb	xcounter, xcounter, xbyteswap
 
 	mov	tmp, num_bytes
