@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2012-2016, Intel Corporation
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -25,8 +25,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-void save_xmms(UINT128 array[10]);
-void restore_xmms(UINT128 array[10]);
+#ifndef _SAVE_XMMS_H_
+#define _SAVE_XMMS_H_
 
-void save_xmms_avx(UINT128 array[10]);
-void restore_xmms_avx(UINT128 array[10]);
+extern void save_xmms(UINT128 array[10]);
+extern void restore_xmms(UINT128 array[10]);
+
+extern void save_xmms_avx(UINT128 array[10]);
+extern void restore_xmms_avx(UINT128 array[10]);
+
+#endif /* !_SAVE_XMMS_H_ */

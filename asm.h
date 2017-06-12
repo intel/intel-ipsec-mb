@@ -1,9 +1,9 @@
 /*
  * Copyright (c) 2012-2016, Intel Corporation
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of Intel Corporation nor the names of its contributors
  *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -43,43 +43,43 @@ void aes_cbc_enc_192_x8(AES_ARGS_x8 *args, UINT64 len_in_bytes);
 void aes_cbc_enc_256_x8(AES_ARGS_x8 *args, UINT64 len_in_bytes);
 
 void aes_cbc_dec_128_avx(const void    *in,
-                         const UINT8   *IV,
+                         const void    *IV,
                          const void    *keys,
                          void          *out,
                          UINT64         len_bytes);
 
 void aes_cbc_dec_192_avx(const void    *in,
-                         const UINT8   *IV,
+                         const void    *IV,
                          const void    *keys,
                          void          *out,
                          UINT64         len_bytes);
 
 void aes_cbc_dec_256_avx(const void    *in,
-                         const UINT8   *IV,
+                         const void    *IV,
                          const void    *keys,
                          void          *out,
                          UINT64         len_bytes);
 
 void aes_cbc_dec_128_sse(const void    *in,
-                         const UINT8   *IV,
+                         const void    *IV,
                          const void    *keys,
                          void          *out,
                          UINT64         len_bytes);
 
 void aes_cbc_dec_192_sse(const void    *in,
-                         const UINT8   *IV,
+                         const void    *IV,
                          const void    *keys,
                          void          *out,
                          UINT64         len_bytes);
 
 
 void aes_cbc_dec_256_sse(const void    *in,
-                         const UINT8   *IV,
+                         const void    *IV,
                          const void    *keys,
                          void          *out,
                          UINT64         len_bytes);
 
-void aes_cntr_256_sse(const void *in,
+void aes_cntr_128_sse(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
@@ -92,13 +92,13 @@ void aes_cntr_192_sse(const void *in,
                       UINT64      len_bytes);
 
 
-void aes_cntr_128_sse(const void *in,
+void aes_cntr_256_sse(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
                       UINT64      len_bytes);
 
-void aes_cntr_256_avx(const void *in,
+void aes_cntr_128_avx(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
@@ -110,11 +110,23 @@ void aes_cntr_192_avx(const void *in,
                       void       *out,
                       UINT64      len_bytes);
 
-void aes_cntr_128_avx(const void *in,
+void aes_cntr_256_avx(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
                       UINT64      len_bytes);
+
+extern void aes_cfb_128_one_sse(void *out,
+                                const void *in,
+                                const void *iv,
+                                const void *keys,
+                                UINT64 len);
+
+extern void aes_cfb_128_one_avx(void *out,
+                                const void *in,
+                                const void *iv,
+                                const void *keys,
+                                UINT64 len);
 
 
 ////////////////////////////////////////////////////////////////////////

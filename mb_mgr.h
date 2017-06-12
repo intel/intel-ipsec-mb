@@ -25,6 +25,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _MB_MGR_H_
+#define _MB_MGR_H_
 
 #include "types.h"
 #include "constants.h"
@@ -50,7 +52,7 @@ typedef struct {
 typedef struct {
         DECLARE_ALIGNED(UINT8 final_block[2*16], 32);
         JOB_AES_HMAC *job_in_lane;
-        UINT64 final_done; 
+        UINT64 final_done;
 } XCBC_LANE_DATA;
 
 typedef struct {
@@ -67,7 +69,7 @@ typedef struct {
 
 // used for SHA1 and SHA256
 typedef struct {
-        DECLARE_ALIGNED(UINT8 extra_block[2 * SHA1_BLOCK_SIZE+8], 32); // allows ymm aligned access 
+        DECLARE_ALIGNED(UINT8 extra_block[2 * SHA1_BLOCK_SIZE+8], 32); // allows ymm aligned access
         JOB_AES_HMAC *job_in_lane;
         UINT8 outer_block[64];
         UINT32 outer_done;
@@ -152,42 +154,6 @@ typedef struct MB_MGR {
 } MB_MGR;
 
 
-
-// get_next_job returns a job object. This must be filled in and returned
-// via submit_job before get_next_job is called again.
-// After submit_job is called, one should call get_completed_job() at least
-// once (and preferably until it returns NULL).
-// get_completed_job and flush_job returns a job object. This job object ceases
-// to be usable at the next call to get_next_job
-void init_mb_mgr_avx(MB_MGR *state);
-//JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
-JOB_AES_HMAC* submit_job_avx(MB_MGR *state);
-//JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
-JOB_AES_HMAC* flush_job_avx(MB_MGR *state);
-UINT32 queue_size_avx(MB_MGR *state);
-
-void init_mb_mgr_avx2(MB_MGR *state);
-//JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
-JOB_AES_HMAC* submit_job_avx2(MB_MGR *state);
-//JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
-JOB_AES_HMAC* flush_job_avx2(MB_MGR *state);
-UINT32 queue_size_avx2(MB_MGR *state);
-
-void init_mb_mgr_avx512(MB_MGR *state);
-//JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
-JOB_AES_HMAC* submit_job_avx512(MB_MGR *state);
-//JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
-JOB_AES_HMAC* flush_job_avx512(MB_MGR *state);
-UINT32 queue_size_avx512(MB_MGR *state);
-
-
-void init_mb_mgr_sse(MB_MGR *state);
-//JOB_AES_HMAC* get_next_job_sse(MB_MGR *state);
-JOB_AES_HMAC* submit_job_sse(MB_MGR *state);
-//JOB_AES_HMAC* get_completed_job_sse(MB_MGR *state);
-JOB_AES_HMAC* flush_job_sse(MB_MGR *state);
-UINT32 queue_size_sse(MB_MGR *state);
-
 typedef void          (*init_mb_mgr_t)(MB_MGR *state);
 typedef JOB_AES_HMAC* (*get_next_job_t)(MB_MGR *state);
 typedef JOB_AES_HMAC* (*submit_job_t)(MB_MGR *state);
@@ -202,57 +168,63 @@ enum SHA_EXTENSION_USAGE {
 
 extern enum SHA_EXTENSION_USAGE sse_sha_ext_usage;
 
-#define get_completed_job_avx  get_completed_job_sse
-#define get_next_job_avx       get_next_job_sse
-
-#define get_completed_job_avx2 get_completed_job_sse
-#define get_next_job_avx2      get_next_job_sse
-
-#define get_completed_job_avx512 get_completed_job_sse
-#define get_next_job_avx512      get_next_job_sse
-
 // JOBS() and ADV_JOBS() also used in mb_mgr_code.h
 // index in JOBS array using byte offset rather than object index
-__forceinline
-JOB_AES_HMAC *JOBS(MB_MGR *state, const int offset)
+__forceinline JOB_AES_HMAC *
+JOBS(MB_MGR *state, const int offset)
 {
         char *cp = (char *)state->jobs;
 
         return (JOB_AES_HMAC *)(cp + offset);
 }
 
-__forceinline
-void ADV_JOBS(int *ptr)
+__forceinline void
+ADV_JOBS(int *ptr)
 {
         *ptr += sizeof(JOB_AES_HMAC);
         if (*ptr >= (int) (MAX_JOBS * sizeof(JOB_AES_HMAC)))
                 *ptr = 0;
 }
 
-__forceinline
-JOB_AES_HMAC *
-get_completed_job_sse(MB_MGR *state)
-{
-        JOB_AES_HMAC* job;
+// get_next_job returns a job object. This must be filled in and returned
+// via submit_job before get_next_job is called again.
+// After submit_job is called, one should call get_completed_job() at least
+// once (and preferably until it returns NULL).
+// get_completed_job and flush_job returns a job object. This job object ceases
+// to be usable at the next call to get_next_job
 
-        if (state->earliest_job < 0)
-                return NULL;
+#define FUNC_GENERATE_PTOROTYPE(ARCH)                           \
+extern void init_mb_mgr_##ARCH(MB_MGR *state);                  \
+extern JOB_AES_HMAC *submit_job_##ARCH(MB_MGR *state);          \
+extern JOB_AES_HMAC *flush_job_##ARCH(MB_MGR *state);           \
+extern UINT32 queue_size_##ARCH(MB_MGR *state);                 \
 
-        job = JOBS(state, state->earliest_job);
-        if (job->status < STS_COMPLETED)
-                return NULL;
+#define FUNC_GENERATE_API(ARCH)                                 \
+__forceinline JOB_AES_HMAC *                                    \
+get_completed_job_##ARCH(MB_MGR *state)                         \
+{                                                               \
+        JOB_AES_HMAC* job;                                      \
+        if (state->earliest_job < 0)                            \
+                return NULL;                                    \
+        job = JOBS(state, state->earliest_job);                 \
+        if (job->status < STS_COMPLETED)                        \
+                return NULL;                                    \
+        ADV_JOBS(&state->earliest_job);                         \
+        if (state->earliest_job == state->next_job)             \
+                state->earliest_job = -1;                       \
+        return job;                                             \
+}                                                               \
+                                                                \
+__forceinline JOB_AES_HMAC *                                    \
+get_next_job_##ARCH(MB_MGR *state)                              \
+{                                                               \
+        return JOBS(state, state->next_job);                    \
+}                                                               \
+FUNC_GENERATE_PTOROTYPE(ARCH)                                   \
 
-        ADV_JOBS(&state->earliest_job);
+FUNC_GENERATE_API(sse)
+FUNC_GENERATE_API(avx)
+FUNC_GENERATE_API(avx2)
+FUNC_GENERATE_API(avx512)
 
-        if (state->earliest_job == state->next_job)
-                state->earliest_job = -1;
-
-        return job;
-}
-
-__forceinline
-JOB_AES_HMAC *
-get_next_job_sse(MB_MGR *state)
-{
-        return JOBS(state, state->next_job);
-}
+#endif /* !_MB_MGR_H_ */

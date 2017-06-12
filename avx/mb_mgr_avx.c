@@ -36,116 +36,179 @@
 #endif
 
 #include "mb_mgr.h"
-#include "save_xmms.h"
-#include "asm.h"
+#include "mb_mgr_code.h"
+#include "gcm_defines.h"
 
-JOB_AES_HMAC* submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
+/* prototypes */
+extern JOB_AES_HMAC *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
+extern JOB_AES_HMAC *submit_job_aes192_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_aes192_enc_avx(MB_MGR_AES_OOO *state);
+extern JOB_AES_HMAC *submit_job_aes256_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC* submit_job_aes192_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes192_enc_avx(MB_MGR_AES_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC* submit_job_aes256_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state);
+extern JOB_AES_HMAC *submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
+extern JOB_AES_HMAC *submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC *job);
+extern JOB_AES_HMAC *flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
 
-JOB_AES_HMAC* submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
+/* proxy */
+__forceinline JOB_AES_HMAC *
+submit_job_hmac_NI_avx(MB_MGR_HMAC_SHA_1_OOO *state,
+                       JOB_AES_HMAC *job)
+{
+        return submit_job_hmac_avx(state, job);
+}
+
+__forceinline JOB_AES_HMAC *
+flush_job_hmac_NI_avx(MB_MGR_HMAC_SHA_1_OOO *state)
+{
+        return flush_job_hmac_avx(state);
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_hmac_sha_224_NI_avx(MB_MGR_HMAC_SHA_256_OOO *state,
+                               JOB_AES_HMAC *job)
+{
+        return submit_job_hmac_sha_224_avx(state, job);
+}
+
+__forceinline JOB_AES_HMAC *
+flush_job_hmac_sha_224_NI_avx(MB_MGR_HMAC_SHA_256_OOO *state)
+{
+        return flush_job_hmac_sha_224_avx(state);
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_hmac_sha_256_NI_avx(MB_MGR_HMAC_SHA_256_OOO *state,
+                               JOB_AES_HMAC *job)
+{
+        return submit_job_hmac_sha_256_avx(state, job);
+}
+
+__forceinline JOB_AES_HMAC *
+flush_job_hmac_sha_256_NI_avx(MB_MGR_HMAC_SHA_256_OOO *state)
+{
+        return flush_job_hmac_sha_256_avx(state);
+}
+
+/*
+ * add GCM
+ */
+__forceinline JOB_AES_HMAC *
+submit_job_aes128_gcm_enc_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_enc_128_avx_gen2(job->aes_enc_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes192_gcm_enc_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_enc_192_avx_gen2(job->aes_enc_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes256_gcm_enc_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_enc_256_avx_gen2(job->aes_enc_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes128_gcm_dec_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_dec_128_avx_gen2(job->aes_dec_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes192_gcm_dec_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_dec_192_avx_gen2(job->aes_dec_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+__forceinline JOB_AES_HMAC *
+submit_job_aes256_gcm_dec_avx(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        aes_gcm_dec_256_avx_gen2(job->aes_dec_key_expanded,
+                                 &ctx,
+                                 job->dst,
+                                 job->src + job->cipher_start_src_offset_in_bytes,
+                                 job->msg_len_to_cipher_in_bytes,
+                                 job->iv,
+                                 job->aad, job->aad_len_in_bytes,
+                                 job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        job->status = STS_COMPLETED;
+        return job;
+}
 
 
-#define SAVE_XMMS save_xmms_avx
-#define RESTORE_XMMS restore_xmms_avx
-#define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_avx
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_avx
-#define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_avx
-#define SUBMIT_JOB_AES192_ENC submit_job_aes192_enc_avx
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
-#define FLUSH_JOB_AES192_ENC  flush_job_aes192_enc_avx
-#define SUBMIT_JOB_AES256_ENC submit_job_aes256_enc_avx
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
-#define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_avx
-
-
-#define SUBMIT_JOB_AES128_CNTR submit_job_aes128_cntr_avx
-#define SUBMIT_JOB_AES192_CNTR submit_job_aes192_cntr_avx
-#define SUBMIT_JOB_AES256_CNTR submit_job_aes256_cntr_avx
-
-#define AES_CBC_DEC_128       aes_cbc_dec_128_avx
-#define AES_CBC_DEC_192       aes_cbc_dec_192_avx
-#define AES_CBC_DEC_256       aes_cbc_dec_256_avx
-
-#define AES_CNTR_128       aes_cntr_128_avx
-#define AES_CNTR_192       aes_cntr_192_avx
-#define AES_CNTR_256       aes_cntr_256_avx
-
-#define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
-#define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx
-
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_avx
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
-#define QUEUE_SIZE queue_size_avx
-
-#define SUBMIT_JOB_AES_ENC SUBMIT_JOB_AES_ENC_AVX
-#define FLUSH_JOB_AES_ENC  FLUSH_JOB_AES_ENC_AVX
-#define SUBMIT_JOB_AES_DEC SUBMIT_JOB_AES_DEC_AVX
-
-
-
-JOB_AES_HMAC* submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state);
-  
-JOB_AES_HMAC* submit_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state);
-
-JOB_AES_HMAC* submit_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state);
-
-
-JOB_AES_HMAC* submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
-
-#define SUBMIT_JOB_HMAC               submit_job_hmac_avx
-#define FLUSH_JOB_HMAC                flush_job_hmac_avx
-#define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx
-#define FLUSH_JOB_HMAC_SHA_224        flush_job_hmac_sha_224_avx
-#define SUBMIT_JOB_HMAC_SHA_256       submit_job_hmac_sha_256_avx
-#define FLUSH_JOB_HMAC_SHA_256        flush_job_hmac_sha_256_avx
-#define SUBMIT_JOB_HMAC_SHA_384       submit_job_hmac_sha_384_avx
-#define FLUSH_JOB_HMAC_SHA_384        flush_job_hmac_sha_384_avx
-#define SUBMIT_JOB_HMAC_SHA_512       submit_job_hmac_sha_512_avx
-#define FLUSH_JOB_HMAC_SHA_512        flush_job_hmac_sha_512_avx
-#define SUBMIT_JOB_HMAC_MD5           submit_job_hmac_md5_avx
-#define FLUSH_JOB_HMAC_MD5            flush_job_hmac_md5_avx
+/* generator */
+FUNC_GENERATE(avx)
 
 ////////////////////////////////////////////////////////////////////////
 
-#define SUBMIT_JOB   submit_job_avx
-#define FLUSH_JOB    flush_job_avx
-
-
-
-////////////////////////////////////////////////////////////////////////
-
-
-#define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_AVX
-#define FLUSH_JOB_HASH     FLUSH_JOB_HASH_AVX
-
-////////////////////////////////////////////////////////////////////////
-
-extern void aes_cfb_128_one_avx(void *out, const void *in, const void *iv,
-                                const void *keys, UINT64 len);
-
-#define AES_CFB_128_ONE    aes_cfb_128_one_avx
-
-////////////////////////////////////////////////////////////////////////
-
-void 
+void
 init_mb_mgr_avx(MB_MGR *state)
 {
         unsigned int j;
@@ -187,7 +250,6 @@ init_mb_mgr_avx(MB_MGR *state)
         state->aes192_ooo.job_in_lane[5] = NULL;
         state->aes192_ooo.job_in_lane[6] = NULL;
         state->aes192_ooo.job_in_lane[7] = NULL;
-
 
         state->aes256_ooo.lens[0] = 0;
         state->aes256_ooo.lens[1] = 0;
@@ -300,7 +362,6 @@ init_mb_mgr_avx(MB_MGR *state)
                 p[64-1] = 0x00;
         }
 
-
         // Init HMAC/SHA384 out-of-order fields
         state->hmac_sha_384_ooo.lens[0] = 0;
         state->hmac_sha_384_ooo.lens[1] = 0;
@@ -325,7 +386,7 @@ init_mb_mgr_avx(MB_MGR *state)
                 p[SHA384_DIGEST_SIZE_IN_BYTES] = 0x80;
                 // hmac outer block length always of fixed size, it is OKey length, a whole message block length, 1024 bits,, with padding
                 // plus the length of the inner digest, which is 384 bits
-                // 1408 bits == 0x0580. The input message block needs to be converted to big endian within the sha implementation before use. 
+                // 1408 bits == 0x0580. The input message block needs to be converted to big endian within the sha implementation before use.
                 p[SHA_384_BLOCK_SIZE - 2] = 0x05;
                 p[SHA_384_BLOCK_SIZE - 1] = 0x80;
         }
@@ -354,11 +415,10 @@ init_mb_mgr_avx(MB_MGR *state)
                 p[SHA512_DIGEST_SIZE_IN_BYTES] = 0x80;
                 // hmac outer block length always of fixed size, it is OKey length, a whole message block length, 1024 bits,, with padding
                 // plus the length of the inner digest, which is 512 bits
-                // 1536 bits == 0x600. The input message block needs to be converted to big endian within the sha implementation before use. 
+                // 1536 bits == 0x600. The input message block needs to be converted to big endian within the sha implementation before use.
                 p[SHA_512_BLOCK_SIZE - 2] = 0x06;
                 p[SHA_512_BLOCK_SIZE - 1] = 0x00;
         }
-
 
         // Init HMAC/MD5 out-of-order fields
         state->hmac_md5_ooo.lens[0] = 0;
@@ -409,8 +469,6 @@ init_mb_mgr_avx(MB_MGR *state)
                 memset(state->aes_xcbc_ooo.ldata[j].final_block + 17, 0x00, 15);
         }
 
-
-
         // Init "in order" components
         state->next_job = 0;
         state->earliest_job = -1;
@@ -418,4 +476,3 @@ init_mb_mgr_avx(MB_MGR *state)
 
 
 
-#include "mb_mgr_code.h"
