@@ -38,6 +38,9 @@
 #include "mb_mgr.h"
 #include "save_xmms.h"
 #include "asm.h"
+#ifndef NO_GCM
+#include "gcm_defines.h"
+#endif
 
 JOB_AES_HMAC* submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
@@ -76,6 +79,15 @@ JOB_AES_HMAC* flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 #define AES_CNTR_128       aes_cntr_128_avx
 #define AES_CNTR_192       aes_cntr_192_avx
 #define AES_CNTR_256       aes_cntr_256_avx
+
+#ifndef NO_GCM
+#define AES_GCM_DEC_128   aes_gcm_dec_128_avx_gen2
+#define AES_GCM_ENC_128   aes_gcm_enc_128_avx_gen2
+#define AES_GCM_DEC_192   aes_gcm_dec_192_avx_gen2
+#define AES_GCM_ENC_192   aes_gcm_enc_192_avx_gen2
+#define AES_GCM_DEC_256   aes_gcm_dec_256_avx_gen2
+#define AES_GCM_ENC_256   aes_gcm_enc_256_avx_gen2
+#endif
 
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx

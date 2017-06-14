@@ -128,57 +128,57 @@ void
 aes_gcm_enc_128_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 void
 aes_gcm_enc_192_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_enc_192_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_enc_192_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 void
 aes_gcm_enc_256_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_enc_256_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
@@ -201,57 +201,57 @@ void
 aes_gcm_dec_128_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_dec_128_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_dec_128_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 void
 aes_gcm_dec_192_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_dec_192_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_dec_192_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 void
 aes_gcm_dec_256_sse(const struct gcm_key_data *key_data,
                     struct gcm_context_data *context_data,
                     uint8_t *out, uint8_t const *in, uint64_t len,
-                    uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                    const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 void
 aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data,
                          struct gcm_context_data *context_data,
                          uint8_t *out, uint8_t const *in, uint64_t len,
-                         uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                         const uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
                          uint8_t *auth_tag, uint64_t auth_tag_len);
 
 /**
@@ -267,41 +267,41 @@ aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key_data,
 void
 aes_gcm_init_128_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                     const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 void
 aes_gcm_init_128_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 void
 aes_gcm_init_128_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 
 void
 aes_gcm_init_192_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                     const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 void
 aes_gcm_init_192_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 void
 aes_gcm_init_192_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 
 void
 aes_gcm_init_256_sse(const struct gcm_key_data *key_data,
                      struct gcm_context_data *context_data,
-                     uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                     const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 void
 aes_gcm_init_256_avx_gen2(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 void
 aes_gcm_init_256_avx_gen4(const struct gcm_key_data *key_data,
                           struct gcm_context_data *context_data,
-                          uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
+                          const uint8_t *iv, uint8_t const *aad, uint64_t aad_len);
 
 /**
  * @brief encrypt a block of a AES-GCM Encryption message

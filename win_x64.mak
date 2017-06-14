@@ -191,6 +191,7 @@ gcm_objs = \
 
 !ifdef NO_GCM
 all_objs = $(lib_objs1) $(lib_objs2)
+CFLAGS = $(CFLAGS) -DNO_GCM
 !else
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
 !endif

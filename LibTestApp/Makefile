@@ -24,8 +24,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-MYLIB := ../libIPSec_MB.a
-CFLAGS := -g -DLINUX -I../include -I..
+MYLIB = ../libIPSec_MB.a
+CFLAGS = -g -DLINUX -I../include -I..
 ifeq ($(DEBUG),y)
 CFLAGS += -O0 -DDEBUG
 else
@@ -45,4 +45,4 @@ ctr_test.o: ctr_test.c gcm_ctr_vectors_test.h
 
 .PHONY: clean
 clean:
-	-rm -f main.o gcm_std_vectors_test.o ctr_test.o $(APP)
+	-rm -f main.o gcm_test.o ctr_test.o $(APP)

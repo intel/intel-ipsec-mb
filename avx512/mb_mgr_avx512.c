@@ -39,6 +39,9 @@
 #include "mb_mgr.h"
 #include "save_xmms.h"
 #include "asm.h"
+#ifndef NO_GCM
+#include "gcm_defines.h"
+#endif
 
 JOB_AES_HMAC* submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
@@ -123,6 +126,15 @@ JOB_AES_HMAC* flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 #define FLUSH_JOB_HMAC_SHA_512        flush_job_hmac_sha_512_avx512
 #define SUBMIT_JOB_HMAC_MD5           submit_job_hmac_md5_avx2
 #define FLUSH_JOB_HMAC_MD5            flush_job_hmac_md5_avx2
+
+#ifndef NO_GCM
+#define AES_GCM_DEC_128   aes_gcm_dec_128_avx_gen4
+#define AES_GCM_ENC_128   aes_gcm_enc_128_avx_gen4
+#define AES_GCM_DEC_192   aes_gcm_dec_192_avx_gen4
+#define AES_GCM_ENC_192   aes_gcm_enc_192_avx_gen4
+#define AES_GCM_DEC_256   aes_gcm_dec_256_avx_gen4
+#define AES_GCM_ENC_256   aes_gcm_enc_256_avx_gen4
+#endif /* NO_GCM */
 
 ////////////////////////////////////////////////////////////////////////
 

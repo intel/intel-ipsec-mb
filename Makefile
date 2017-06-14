@@ -197,6 +197,7 @@ gcm_objs := gcm128_sse.o gcm192_sse.o gcm256_sse.o \
 
 ifeq ($(NO_GCM), y)
 obj2_files := $(lib_objs:%=$(OBJ_DIR)/%)
+CFLAGS += -DNO_GCM
 else
 obj2_files := $(lib_objs:%=$(OBJ_DIR)/%) $(gcm_objs:%=$(OBJ_DIR)/%)
 endif

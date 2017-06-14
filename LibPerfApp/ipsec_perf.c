@@ -78,9 +78,9 @@
 
 /* Typedefs used for GCM callbacks */
 typedef void (*aesni_gcm_t)(const struct gcm_key_data *, struct gcm_context_data *,
-				uint8_t *, uint8_t const *, uint64_t,
-				uint8_t *, uint8_t const *, uint64_t,
-				uint8_t *, uint64_t);
+                            uint8_t *, const uint8_t *, uint64_t,
+                            const uint8_t *, const uint8_t *, uint64_t,
+                            uint8_t *, uint64_t);
 typedef void (*aesni_gcm_pre_t)(const void *, struct gcm_key_data *);
 
 /* AES_HMAC, DOCSIS callbacks */
@@ -192,8 +192,8 @@ struct funcs_gcm_s func_sets_gcm[NUM_ARCHS - 1][3] = {
 };
 
 enum cache_type_e cache_type = WARM;
-uint32_t auth_tag_length_bytes[8] = {12, 14, 16, 24, 32, 12, 12, 0};
-/* SHA1, SHA224, SHA256, SHA384, SHA512, XCBC, MD5 */
+/* SHA1, SHA224, SHA256, SHA384, SHA512, XCBC, MD5, NULL, GMAC, GMAC, GMAC */
+const uint32_t auth_tag_length_bytes[11] = {12, 14, 16, 24, 32, 12, 12, 0, 8, 12, 16};
 uint8_t *buf = NULL;
 uint32_t index_limit;
 uint128_t *keys = NULL;
@@ -209,6 +209,8 @@ uint32_t total_variants = 0;
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
 uint8_t test_types[NUM_TYPES] = {1, 1, 1}; /* AES, DOCSIS, GCM */
+
+int use_gcm_job_api = 0;
 
 /* Those inline functions run different types of ipsec_mb library functions.
  * They run different functions depending on the chosen architecture
@@ -359,6 +361,8 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
 	case TEST_DOCSIS8:
 		c_mode = DOCSIS_SEC_BPI;
 		break;
+        case TEST_GCM:
+                c_mode = GCM;
 	default:
 		break;
 	}
@@ -366,8 +370,8 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
 }
 
 /* Performs test using AES_HMAC or DOCSIS */
-static uint64_t do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
-		uint32_t num_iter)
+static uint64_t
+do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params, uint32_t num_iter)
 {
 	JOB_AES_HMAC *job;
 	JOB_AES_HMAC job_template;
@@ -378,12 +382,13 @@ static uint64_t do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 	static DECLARE_ALIGNED(uint32_t k1_expanded[11 * 4], 16);
 	static DECLARE_ALIGNED(uint8_t	k2[16], 16);
 	static DECLARE_ALIGNED(uint8_t	k3[16], 16);
+        static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 16);
 	uint32_t size_aes;
 	uint64_t time = 0;
 	uint32_t aux;
 
 	if ((params->cipher_mode == TEST_DOCSIS8) ||
-		(params->cipher_mode == TEST_CNTR8))
+            (params->cipher_mode == TEST_CNTR8))
 		size_aes = params->size_aes + 8;
 	else
 		size_aes = params->size_aes;
@@ -418,44 +423,68 @@ static uint64_t do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 			job_template.chain_order = HASH_CIPHER;
 	}
 
-	job_template.aes_key_len_in_bytes = params->aes_key_size;
-	job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
-	job_template.auth_tag_output_len_in_bytes =
-		(uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
-
 	/* Translating enum to the API's one */
 	job_template.cipher_mode = translate_cipher_mode(params->cipher_mode);
+
+	job_template.aes_key_len_in_bytes = params->aes_key_size;
+        if (job_template.cipher_mode == GCM) {
+                uint8_t key[32];
+
+                job_template.hash_alg = AES_GMAC;
+                aesni_gcm_pre(arch, params->aes_key_size / 8 - 2, key, &gdata_key);
+                job_template.aes_enc_key_expanded = &gdata_key;
+                job_template.aes_dec_key_expanded = &gdata_key;
+                job_template.u.GCM.aad_len_in_bytes = 12;
+                job_template.iv_len_in_bytes = 12;
+        } else {
+                job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
+        }
+
+        job_template.auth_tag_output_len_in_bytes =
+                (uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
 
 	time = __rdtscp(&aux);
 	for (i = 0; i < num_iter; i++) {
 		job = get_next_job(mb_mgr, arch);
 		*job = job_template;
 
-		job->aes_enc_key_expanded = job->aes_dec_key_expanded =
-			(uint32_t *) &keys[key_idxs[index]];
-
 		job->src = buf + offsets[index];
 		job->dst = buf + offsets[index] + sha_size_incr;
-
+                if (job->cipher_mode != GCM) {
+                        job->aes_enc_key_expanded = job->aes_dec_key_expanded =
+                                (uint32_t *) &keys[key_idxs[index]];
+                } else {
+                        job->u.GCM.aad = job->src;
+                }
+                
 		index += 2;
 		if (index >= index_limit)
 			index = 0;
 
 		job = submit_job(mb_mgr, arch);
-		while (job)
+		while (job) {
+#ifdef DEBUG
+                        if (job->status != STS_COMPLETED)
+                                fprintf(stderr, "failed job, status:%d\n", job->status);
+#endif
 			job = get_completed_job(mb_mgr, arch);
+                }
 	}
 
-	while ((job = flush_job(mb_mgr, arch)))
-		;
+	while ((job = flush_job(mb_mgr, arch))) {
+#ifdef DEBUG
+                if (job->status != STS_COMPLETED)
+                        fprintf(stderr, "failed job, status:%d\n", job->status);
+#endif
+        }
 
 	time = __rdtscp(&aux) - time;
 	return time / num_iter;
 }
 
 /* Performs test using GCM */
-static uint64_t do_test_gcm(uint32_t arch, struct params_s *params,
-		uint32_t num_iter)
+static uint64_t
+do_test_gcm(uint32_t arch, struct params_s *params, uint32_t num_iter)
 {
 	struct gcm_key_data gdata_key;
 	struct gcm_context_data gdata_ctx;
@@ -573,12 +602,17 @@ static void process_variant(MB_MGR *mgr, uint32_t arch, struct params_s *params,
 		num_iter = ITER_SCALE / size_aes;
 		params->size_aes = size_aes;
 		for (run = 0; run < NUM_RUNS; run++) {
-			if (params->test_type == AES_GCM)
-				times[run] =
-					do_test_gcm(arch, params, 2 * num_iter);
-			else
+			if (params->test_type == AES_GCM) {
+                                if (use_gcm_job_api)
+                                        times[run] =
+                                                do_test(arch, mgr, params, num_iter);
+                                else
+                                        times[run] =
+                                                do_test_gcm(arch, params, 2 * num_iter);
+                        } else {
 				times[run] =
 					do_test(arch, mgr, params, num_iter);
+                        }
 		}
 		time = mean_median(&times[0], NUM_RUNS);
 		variant_ptr->avg_times[sz] = time;
@@ -588,8 +622,8 @@ static void process_variant(MB_MGR *mgr, uint32_t arch, struct params_s *params,
 }
 
 /* Sets cipher mode, hash algorithm */
-static void prepare_variants(MB_MGR *mgr, uint32_t arch,
-		struct params_s *params)
+static void
+prepare_variants(MB_MGR *mgr, uint32_t arch, struct params_s *params)
 {
 	uint32_t hash_alg;
 	uint32_t h_start = TEST_SHA1;
@@ -633,22 +667,15 @@ static void run_dir_test(MB_MGR *mgr, uint32_t arch, struct params_s *params)
 	uint32_t k; /* Key size */
 	uint32_t limit = AES_256_BYTES; /* Key size value limit */
 
-	switch (params->test_type) {
-	case AES_DOCSIS:
+	if (params->test_type == AES_DOCSIS)
 		limit = AES_128_BYTES;
-	case AES_HMAC:
-		/* Initializing MB manager for AES or AES_DOCSIS */
-		init_mb_mgr(mgr, arch);
-		break;
-	default:
-		break;
-	}
+
+        init_mb_mgr(mgr, arch);
 
 	for (dir = ENCRYPT; dir <= DECRYPT; dir++) {
 		params->cipher_dir = (JOB_CIPHER_DIRECTION) dir;
 		for (k = AES_128_BYTES; k <= limit; k += 8) {
 			params->aes_key_size = k;
-			/* mgr = NULL when GCM */
 			prepare_variants(mgr, arch, params);
 		}
 	}
@@ -785,10 +812,7 @@ static void run_tests(void)
 		for (arch = 0; arch < max_arch; arch++) {
 			if (archs[arch] == 0)
 				continue;
-			if (type == AES_GCM)
-				run_dir_test(NULL, arch, &params);
-			else
-				run_dir_test(&mb_mgr, arch, &params);
+                        run_dir_test(&mb_mgr, arch, &params);
 		}
 	}
 
@@ -812,7 +836,8 @@ static void usage(void)
 		"--shani-off: don't use SHA extensions\n"
 		"--no-gcm: do not run GCM perf tests\n"
 		"--no-aes: do not run standard AES + HMAC perf tests\n"
-		"--no-docsis: do not run DOCSIS cipher perf tests\n");
+		"--no-docsis: do not run DOCSIS cipher perf tests\n"
+		"--gcm-job-api: use JOB API for GCM perf tests (raw GCM API is default)\n");
 }
 
 int main(int argc, char *argv[])
@@ -848,6 +873,8 @@ int main(int argc, char *argv[])
 			test_types[AES_HMAC] = 0;
 		} else if (strcmp(argv[i], "--no-docsis") == 0) {
 			test_types[AES_DOCSIS] = 0;
+		} else if (strcmp(argv[i], "--gcm-job-api") == 0) {
+                        use_gcm_job_api = 1;
 		} else if ((strcmp(argv[i], "-o") == 0) && (i < argc - 1)) {
 			i++;
 			sha_size_incr = atoi(argv[i]);
