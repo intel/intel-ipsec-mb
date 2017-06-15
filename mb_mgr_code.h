@@ -597,8 +597,9 @@ void complete_job(MB_MGR *state, JOB_AES_HMAC *job)
         }
 }
 
+__forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB(MB_MGR *state)
+submit_job_and_check(MB_MGR *state, const int run_check)
 {
         JOB_AES_HMAC *job = NULL;
 #ifndef LINUX
@@ -608,8 +609,13 @@ SUBMIT_JOB(MB_MGR *state)
 
         job = JOBS(state, state->next_job);
 
-        if (is_job_invalid(job)) {
-                job->status = STS_INVALID_ARGS;
+        if (run_check) {
+                if (is_job_invalid(job)) {
+                        job->status = STS_INVALID_ARGS;
+                } else {
+                        job->status = STS_BEING_PROCESSED;
+                        job = submit_new_job(state, job);
+                }
         } else {
                 job->status = STS_BEING_PROCESSED;
                 job = submit_new_job(state, job);
@@ -648,6 +654,18 @@ SUBMIT_JOB(MB_MGR *state)
 
         ADV_JOBS(&state->earliest_job);
         return job;
+}
+
+JOB_AES_HMAC *
+SUBMIT_JOB(MB_MGR *state)
+{
+        return submit_job_and_check(state, 1);
+}
+
+JOB_AES_HMAC *
+SUBMIT_JOB_NOCHECK(MB_MGR *state)
+{
+        return submit_job_and_check(state, 0);
 }
 
 JOB_AES_HMAC *

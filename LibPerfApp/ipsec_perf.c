@@ -160,6 +160,7 @@ enum cache_type_e {
 	COLD = 1
 };
 
+#ifdef DEBUG
 #define FUNCS(A) \
 { \
 	init_mb_mgr_##A, \
@@ -168,6 +169,16 @@ enum cache_type_e {
 	get_completed_job_##A, \
 	flush_job_##A \
 }
+#else
+#define FUNCS(A) \
+{ \
+	init_mb_mgr_##A, \
+	get_next_job_##A, \
+	submit_job_nocheck_##A, \
+	get_completed_job_##A, \
+	flush_job_##A \
+}
+#endif
 
 #define FUNCS_GCM(A) \
 { \

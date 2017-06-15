@@ -140,9 +140,10 @@ JOB_AES_HMAC* flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
 ////////////////////////////////////////////////////////////////////////
 
-#define SUBMIT_JOB   submit_job_avx2
-#define FLUSH_JOB    flush_job_avx2
-#define QUEUE_SIZE   queue_size_avx2
+#define SUBMIT_JOB         submit_job_avx2
+#define FLUSH_JOB          flush_job_avx2
+#define SUBMIT_JOB_NOCHECK submit_job_nocheck_avx2
+#define QUEUE_SIZE         queue_size_avx2
 
 ////////////////////////////////////////////////////////////////////////
 

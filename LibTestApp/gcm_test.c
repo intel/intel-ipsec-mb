@@ -777,7 +777,9 @@ static int check_data(const uint8_t *test, const uint8_t * expected, uint64_t le
                 for (a = 0; a < len; a++) {
                         if (test[a] != expected[a]) {
                                 printf(" '%x' != '%x' at %llx of %llx\n",
-                                       test[a], expected[a], a, len);
+                                       test[a], expected[a],
+                                       (long long unsigned) a,
+                                       (long long unsigned) len);
                                 break;
                         }
                 }
