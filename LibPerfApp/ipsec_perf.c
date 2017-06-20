@@ -251,6 +251,22 @@ __forceinline JOB_AES_HMAC *flush_job(MB_MGR *mgr, const uint32_t arch)
 	return func_sets[arch].flush_job(mgr);
 }
 
+#ifdef USE_ARCH_HANDLER
+# define TP_GET_NEXT_JOB(mgr,arch)	MB_GET_NEXT_JOB((mgr))
+# ifdef DEBUG
+#   define TP_SUBMIT_JOB(mgr,arch)	MB_SUBMIT_JOB((mgr))
+# else
+#   define TP_SUBMIT_JOB(mgr,arch)	MB_SUBMIT_JOB_NOCHECK((mgr))
+# endif
+# define TP_GET_COMPLETED_JOB(mgr,arch)	MB_GET_COMPLETED_JOB((mgr))
+# define TP_FLUSH_JOB(mgr,arch)		MB_FLUSH_JOB((mgr))
+#else
+# define TP_GET_NEXT_JOB(mgr,arch)	get_next_job((mgr), (arch))
+# define TP_SUBMIT_JOB(mgr,arch)	submit_job((mgr), (arch))
+# define TP_GET_COMPLETED_JOB(mgr,arch)	get_completed_job((mgr), (arch))
+# define TP_FLUSH_JOB(mgr,arch)		flush_job((mgr), (arch))
+#endif
+
 /* GCM functions take also key size argument (128, 192, 256bit) */
 __forceinline void aesni_gcm_pre(const uint32_t arch, const uint8_t key_sz,
                                  uint8_t *key, struct gcm_key_data *gdata)
@@ -456,7 +472,7 @@ do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params, uint32_t num_ite
 
 	time = __rdtscp(&aux);
 	for (i = 0; i < num_iter; i++) {
-		job = get_next_job(mb_mgr, arch);
+		job = TP_GET_NEXT_JOB(mb_mgr, arch);
 		*job = job_template;
 
 		job->src = buf + offsets[index];
@@ -472,17 +488,17 @@ do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params, uint32_t num_ite
 		if (index >= index_limit)
 			index = 0;
 
-		job = submit_job(mb_mgr, arch);
+		job = TP_SUBMIT_JOB(mb_mgr, arch);
 		while (job) {
 #ifdef DEBUG
                         if (job->status != STS_COMPLETED)
                                 fprintf(stderr, "failed job, status:%d\n", job->status);
 #endif
-			job = get_completed_job(mb_mgr, arch);
+			job = TP_GET_COMPLETED_JOB(mb_mgr, arch);
                 }
 	}
 
-	while ((job = flush_job(mb_mgr, arch))) {
+	while ((job = TP_FLUSH_JOB(mb_mgr, arch))) {
 #ifdef DEBUG
                 if (job->status != STS_COMPLETED)
                         fprintf(stderr, "failed job, status:%d\n", job->status);

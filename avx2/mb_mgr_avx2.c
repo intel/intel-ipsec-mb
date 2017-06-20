@@ -430,6 +430,14 @@ init_mb_mgr_avx2(MB_MGR *state)
         // Init "in order" components
         state->next_job = 0;
         state->earliest_job = -1;
+
+        /* set handlers */
+        state->get_next           = get_next_job_avx2;
+        state->submit_job         = submit_job_avx2;
+        state->submit_job_nocheck = submit_job_nocheck_avx2;
+        state->get_completed_job  = get_completed_job_avx2;
+        state->flush_job          = flush_job_avx2;
+        state->queue_size         = queue_size_avx2;
 }
 
 

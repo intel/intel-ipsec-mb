@@ -43,6 +43,10 @@ else
 CFLAGS += -O2 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
+ifeq ($(USE_ARCH_HANDLER),y)
+CFLAGS += -DUSE_ARCH_HANDLER
+endif
+
 SOURCES := ipsec_perf.c
 OBJECTS := $(SOURCES:%.c=%.o)
 
