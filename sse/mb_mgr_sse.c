@@ -568,6 +568,14 @@ init_mb_mgr_sse(MB_MGR *state)
         // Init "in order" components
         state->next_job = 0;
         state->earliest_job = -1;
+
+        /* set handlers */
+        state->get_next           = get_next_job_sse;
+        state->submit_job         = submit_job_sse;
+        state->submit_job_nocheck = submit_job_nocheck_sse;
+        state->get_completed_job  = get_completed_job_sse;
+        state->flush_job          = flush_job_sse;
+        state->queue_size         = queue_size_sse;
 }
 
 #include "mb_mgr_code.h"

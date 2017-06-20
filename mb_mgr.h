@@ -128,6 +128,14 @@ typedef struct {
         UINT32 num_lanes_inuse;
 } MB_MGR_HMAC_MD5_OOO;
 
+struct MB_MGR;
+typedef void          (*init_mb_mgr_t)(struct MB_MGR *);
+typedef JOB_AES_HMAC* (*get_next_job_t)(struct MB_MGR *);
+typedef JOB_AES_HMAC* (*submit_job_t)(struct MB_MGR *);
+typedef JOB_AES_HMAC* (*get_completed_job_t)(struct MB_MGR *);
+typedef JOB_AES_HMAC* (*flush_job_t)(struct MB_MGR *);
+typedef UINT32 (*queue_size_t)(struct MB_MGR *);
+
 ////////////////////////////////////////////////////////////////////////
 // TOP LEVEL (MB_MGR) Data structure fields
 
@@ -149,9 +157,15 @@ typedef struct MB_MGR {
         int              earliest_job; // byte offset, -1 if none
         int              next_job;     // byte offset
         JOB_AES_HMAC     jobs[MAX_JOBS];
+
+        /* handler */
+        get_next_job_t          get_next;
+        submit_job_t            submit_job;
+        submit_job_t            submit_job_nocheck;
+        get_completed_job_t     get_completed_job;
+        flush_job_t             flush_job;
+        queue_size_t            queue_size;
 } MB_MGR;
-
-
 
 // get_next_job returns a job object. This must be filled in and returned
 // via submit_job before get_next_job is called again.
@@ -191,12 +205,6 @@ JOB_AES_HMAC* submit_job_nocheck_sse(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_sse(MB_MGR *state);
 JOB_AES_HMAC* flush_job_sse(MB_MGR *state);
 UINT32 queue_size_sse(MB_MGR *state);
-
-typedef void          (*init_mb_mgr_t)(MB_MGR *state);
-typedef JOB_AES_HMAC* (*get_next_job_t)(MB_MGR *state);
-typedef JOB_AES_HMAC* (*submit_job_t)(MB_MGR *state);
-typedef JOB_AES_HMAC* (*get_completed_job_t)(MB_MGR *state);
-typedef JOB_AES_HMAC* (*flush_job_t)(MB_MGR *state);
 
 enum SHA_EXTENSION_USAGE {
         SHA_EXT_NOT_PRESENT = 0, /* don't detect and don't use SHA extensions */
@@ -260,3 +268,13 @@ get_next_job_sse(MB_MGR *state)
 {
         return JOBS(state, state->next_job);
 }
+
+/*
+ *
+ */
+#define MB_GET_NEXT_JOB(state)		(state)->get_next((state))
+#define MB_SUBMIT_JOB(state)		(state)->submit_job((state))
+#define MB_SUBMIT_JOB_NOCHECK(state)	(state)->submit_job_nocheck((state))
+#define MB_GET_COMPLETED_JOB(state)	(state)->get_completed_job((state))
+#define MB_FLUSH_JOB(state)		(state)->flush_job((state))
+#define MB_QUEUE_SIZE(state)		(state)->queue_size((state))
