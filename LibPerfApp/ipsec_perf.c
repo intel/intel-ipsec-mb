@@ -69,15 +69,16 @@
 /* Those defines tell how many different test cases are to be performed.
  * Have to be multiplied by number of chosen architectures.
  */
-#define VARIANTS_PER_ARCH_AES (CIPHER_MODES_AES * DIRECTIONS * \
-		HASH_ALGS_AES * KEY_SIZES_AES)
-#define VARIANTS_PER_ARCH_DOCSIS (CIPHER_MODES_DOCSIS * DIRECTIONS * \
-		HASH_ALGS_DOCSIS * KEY_SIZES_DOCSIS)
-#define VARIANTS_PER_ARCH_GCM (CIPHER_MODES_GCM * DIRECTIONS * \
-		HASH_ALGS_GCM * KEY_SIZES_GCM)
+#define VARIANTS_PER_ARCH_AES (CIPHER_MODES_AES * DIRECTIONS *  \
+                               HASH_ALGS_AES * KEY_SIZES_AES)
+#define VARIANTS_PER_ARCH_DOCSIS (CIPHER_MODES_DOCSIS * DIRECTIONS *    \
+                                  HASH_ALGS_DOCSIS * KEY_SIZES_DOCSIS)
+#define VARIANTS_PER_ARCH_GCM (CIPHER_MODES_GCM * DIRECTIONS *  \
+                               HASH_ALGS_GCM * KEY_SIZES_GCM)
 
 /* Typedefs used for GCM callbacks */
-typedef void (*aesni_gcm_t)(const struct gcm_key_data *, struct gcm_context_data *,
+typedef void (*aesni_gcm_t)(const struct gcm_key_data *,
+                            struct gcm_context_data *,
                             uint8_t *, const uint8_t *, uint64_t,
                             const uint8_t *, const uint8_t *, uint64_t,
                             uint8_t *, uint64_t);
@@ -161,31 +162,31 @@ enum cache_type_e {
 };
 
 #ifdef DEBUG
-#define FUNCS(A) \
-{ \
-	init_mb_mgr_##A, \
-	get_next_job_##A, \
-	submit_job_##A, \
-	get_completed_job_##A, \
-	flush_job_##A \
-}
+#define FUNCS(A)                                \
+        {                                       \
+                init_mb_mgr_##A,                \
+                        get_next_job_##A,       \
+                        submit_job_##A,         \
+                        get_completed_job_##A,  \
+                        flush_job_##A           \
+                        }
 #else
-#define FUNCS(A) \
-{ \
-	init_mb_mgr_##A, \
-	get_next_job_##A, \
-	submit_job_nocheck_##A, \
-	get_completed_job_##A, \
-	flush_job_##A \
-}
+#define FUNCS(A)                                \
+        {                                       \
+                init_mb_mgr_##A,                \
+                        get_next_job_##A,       \
+                        submit_job_nocheck_##A, \
+                        get_completed_job_##A,  \
+                        flush_job_##A           \
+                        }
 #endif
 
-#define FUNCS_GCM(A) \
-{ \
-	{aes_gcm_pre_128_##A, aes_gcm_enc_128_##A, aes_gcm_dec_128_##A}, \
-	{aes_gcm_pre_192_##A, aes_gcm_enc_192_##A, aes_gcm_dec_192_##A}, \
-	{aes_gcm_pre_256_##A, aes_gcm_enc_256_##A, aes_gcm_dec_256_##A} \
-}
+#define FUNCS_GCM(A)                                                    \
+        {                                                               \
+                {aes_gcm_pre_128_##A, aes_gcm_enc_128_##A, aes_gcm_dec_128_##A},\
+                {aes_gcm_pre_192_##A, aes_gcm_enc_192_##A, aes_gcm_dec_192_##A},\
+                {aes_gcm_pre_256_##A, aes_gcm_enc_256_##A, aes_gcm_dec_256_##A} \
+        }
 
 /* Function pointers used by AES_HMAC, AES_DOCSIS */
 struct funcs_s func_sets[NUM_ARCHS] = {
@@ -204,7 +205,9 @@ struct funcs_gcm_s func_sets_gcm[NUM_ARCHS - 1][3] = {
 
 enum cache_type_e cache_type = WARM;
 /* SHA1, SHA224, SHA256, SHA384, SHA512, XCBC, MD5, NULL, GMAC, GMAC, GMAC */
-const uint32_t auth_tag_length_bytes[11] = {12, 14, 16, 24, 32, 12, 12, 0, 8, 12, 16};
+const uint32_t auth_tag_length_bytes[11] = {
+        12, 14, 16, 24, 32, 12, 12, 0, 8, 12, 16
+};
 uint8_t *buf = NULL;
 uint32_t index_limit;
 uint128_t *keys = NULL;
@@ -259,24 +262,30 @@ __forceinline void aesni_gcm_pre(const uint32_t arch, const uint8_t key_sz,
 }
 
 __forceinline void aesni_gcm_enc(const uint32_t arch, const uint8_t key_sz,
-                                 const struct gcm_key_data *gdata, struct gcm_context_data *ctx,
+                                 const struct gcm_key_data *gdata,
+                                 struct gcm_context_data *ctx,
                                  uint8_t *out, uint8_t const *in,
-                                 uint64_t len, uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                                 uint64_t len, uint8_t *iv,
+                                 uint8_t const *aad, uint64_t aad_len,
                                  uint8_t *auth_tag, uint64_t auth_tag_len)
 {
-	func_sets_gcm[arch][key_sz].aesni_gcm_enc(gdata, ctx, out, in, len, iv, aad,
-                                                  aad_len, auth_tag, auth_tag_len);
+	func_sets_gcm[arch][key_sz].aesni_gcm_enc(gdata, ctx, out, in, len, iv,
+                                                  aad, aad_len,
+                                                  auth_tag, auth_tag_len);
 
 }
 
 __forceinline void aesni_gcm_dec(const uint32_t arch, const uint8_t key_sz,
-                                 const struct gcm_key_data *gdata, struct gcm_context_data *ctx,
+                                 const struct gcm_key_data *gdata,
+                                 struct gcm_context_data *ctx,
                                  uint8_t *out, uint8_t const *in,
-                                 uint64_t len, uint8_t *iv, uint8_t const *aad, uint64_t aad_len,
+                                 uint64_t len, uint8_t *iv,
+                                 uint8_t const *aad, uint64_t aad_len,
                                  uint8_t *auth_tag, uint64_t auth_tag_len)
 {
-	func_sets_gcm[arch][key_sz].aesni_gcm_dec(gdata, ctx, out, in, len, iv, aad,
-                                                  aad_len, auth_tag, auth_tag_len);
+	func_sets_gcm[arch][key_sz].aesni_gcm_dec(gdata, ctx, out, in, len, iv,
+                                                  aad, aad_len,
+                                                  auth_tag, auth_tag_len);
 
 }
 
@@ -310,8 +319,8 @@ static void init_buf(enum cache_type_e ctype)
 		exit(EXIT_FAILURE);
 	}
 
-	offset_ptr = (uint64_t *) malloc(NUM_OFFSETS *
-			KEYS_PER_JOB * sizeof(uint128_t) + 0x0F);
+	offset_ptr = (uint64_t *)
+                malloc(NUM_OFFSETS * KEYS_PER_JOB * sizeof(uint128_t) + 0x0F);
 	if (!offset_ptr) {
 		fprintf(stderr, "Could not malloc keys\n");
 		free_mem();
@@ -341,9 +350,9 @@ static void init_buf(enum cache_type_e ctype)
 	} else {/* WARM */
 		for (i = 0; i < NUM_OFFSETS; i += 2) {
 			offsets[i]   = (2 * i + 0) * REGION_SIZE +
-							(rand() & 0x3F0);
+                                (rand() & 0x3F0);
 			offsets[i + 1] = (2 * i + 1) * REGION_SIZE +
-							(rand() & 0x3F0);
+                                (rand() & 0x3F0);
 			key_idxs[i]  = (2 * i + 0) * KEYS_PER_JOB;
 		}
 		index_limit = 8;
@@ -382,7 +391,8 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
 
 /* Performs test using AES_HMAC or DOCSIS */
 static uint64_t
-do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params, uint32_t num_iter)
+do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
+        const uint32_t num_iter)
 {
 	JOB_AES_HMAC *job;
 	JOB_AES_HMAC job_template;
@@ -442,7 +452,8 @@ do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params, uint32_t num_ite
                 uint8_t key[32];
 
                 job_template.hash_alg = AES_GMAC;
-                aesni_gcm_pre(arch, params->aes_key_size / 8 - 2, key, &gdata_key);
+                aesni_gcm_pre(arch, (params->aes_key_size / 8) - 2,
+                              key, &gdata_key);
                 job_template.aes_enc_key_expanded = &gdata_key;
                 job_template.aes_dec_key_expanded = &gdata_key;
                 job_template.u.GCM.aad_len_in_bytes = 12;
@@ -476,7 +487,8 @@ do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params, uint32_t num_ite
 		while (job) {
 #ifdef DEBUG
                         if (job->status != STS_COMPLETED)
-                                fprintf(stderr, "failed job, status:%d\n", job->status);
+                                fprintf(stderr, "failed job, status:%d\n",
+                                        job->status);
 #endif
 			job = get_completed_job(mb_mgr, arch);
                 }
@@ -495,7 +507,8 @@ do_test(uint32_t arch, MB_MGR *mb_mgr, struct params_s *params, uint32_t num_ite
 
 /* Performs test using GCM */
 static uint64_t
-do_test_gcm(uint32_t arch, struct params_s *params, uint32_t num_iter)
+do_test_gcm(const uint32_t arch, struct params_s *params,
+            const uint32_t num_iter)
 {
 	struct gcm_key_data gdata_key;
 	struct gcm_context_data gdata_ctx;
@@ -522,10 +535,10 @@ do_test_gcm(uint32_t arch, struct params_s *params, uint32_t num_iter)
 		time = __rdtscp(&aux);
 		for (i = 0; i < num_iter; i++) {
 			aesni_gcm_enc(arch, key_sz, &gdata_key, &gdata_ctx,
-					buf + offsets[index] + sha_size_incr,
-					buf + offsets[index] + sha_size_incr,
-					size_aes, iv, aad, sizeof(aad),
-					auth_tag, sizeof(auth_tag));
+                                      buf + offsets[index] + sha_size_incr,
+                                      buf + offsets[index] + sha_size_incr,
+                                      size_aes, iv, aad, sizeof(aad),
+                                      auth_tag, sizeof(auth_tag));
 			index += 2;
 			if (index >= index_limit)
 				index = 0;
@@ -593,48 +606,34 @@ static uint64_t mean_median(uint64_t *array, uint32_t size)
 }
 
 /* Runs test for each buffer size and stores averaged execution time */
-static void process_variant(MB_MGR *mgr, uint32_t arch, struct params_s *params,
-		struct variant_s *variant_ptr, uint32_t variant)
+static void
+process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
+                struct variant_s *variant_ptr, const uint32_t run)
 {
-	uint32_t run;
-	uint64_t time;
-	uint32_t num_iter;
-	uint32_t sizes = params->num_sizes;
+	const uint32_t sizes = params->num_sizes;
+	uint64_t *times = &variant_ptr->avg_times[run];
 	uint32_t sz;
-	uint32_t size_aes;
-	uint64_t times[NUM_RUNS];
-
-	variant_ptr->avg_times = (uint64_t *) malloc(sizes * sizeof(uint64_t));
-	fprintf(stderr, "Doing variant %u of %u\n",
-			variant + 1, total_variants);
 
 	for (sz = 0; sz < sizes; sz++) {
-		size_aes = (sz + 1) * JOB_SIZE_STEP;
-		num_iter = ITER_SCALE / size_aes;
-		params->size_aes = size_aes;
-		for (run = 0; run < NUM_RUNS; run++) {
-			if (params->test_type == AES_GCM) {
-                                if (use_gcm_job_api)
-                                        times[run] =
-                                                do_test(arch, mgr, params, num_iter);
-                                else
-                                        times[run] =
-                                                do_test_gcm(arch, params, 2 * num_iter);
-                        } else {
-				times[run] =
-					do_test(arch, mgr, params, num_iter);
-                        }
-		}
-		time = mean_median(&times[0], NUM_RUNS);
-		variant_ptr->avg_times[sz] = time;
-	}
+                const uint32_t size_aes = (sz + 1) * JOB_SIZE_STEP;
+                const uint32_t num_iter = ITER_SCALE / size_aes;
+
+                params->size_aes = size_aes;
+                if (params->test_type == AES_GCM && (!use_gcm_job_api))
+                        *times = do_test_gcm(arch, params, 2 * num_iter);
+                else
+                        *times = do_test(arch, mgr, params, num_iter);
+                times += NUM_RUNS;
+        }
+
 	variant_ptr->params = *params;
 	variant_ptr->arch = arch;
 }
 
 /* Sets cipher mode, hash algorithm */
 static void
-prepare_variants(MB_MGR *mgr, uint32_t arch, struct params_s *params)
+do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
+            const uint32_t run)
 {
 	uint32_t hash_alg;
 	uint32_t h_start = TEST_SHA1;
@@ -663,8 +662,7 @@ prepare_variants(MB_MGR *mgr, uint32_t arch, struct params_s *params)
 		params->cipher_mode = (enum test_cipher_mode_e) c_mode;
 		for (hash_alg = h_start; hash_alg <= h_end; hash_alg++) {
 			params->hash_alg = (enum test_hash_alg_e) hash_alg;
-			process_variant(mgr, arch, params,
-					variant_ptr, variant);
+			process_variant(mgr, arch, params, variant_ptr, run);
 			variant++;
 			variant_ptr++;
 		}
@@ -672,7 +670,9 @@ prepare_variants(MB_MGR *mgr, uint32_t arch, struct params_s *params)
 }
 
 /* Sets cipher direction and key size  */
-static void run_dir_test(MB_MGR *mgr, uint32_t arch, struct params_s *params)
+static void
+run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
+             const uint32_t run)
 {
 	uint32_t dir;
 	uint32_t k; /* Key size */
@@ -687,7 +687,7 @@ static void run_dir_test(MB_MGR *mgr, uint32_t arch, struct params_s *params)
 		params->cipher_dir = (JOB_CIPHER_DIRECTION) dir;
 		for (k = AES_128_BYTES; k <= limit; k += 8) {
 			params->aes_key_size = k;
-			prepare_variants(mgr, arch, params);
+			do_variants(mgr, arch, params, run);
 		}
 	}
 }
@@ -695,23 +695,30 @@ static void run_dir_test(MB_MGR *mgr, uint32_t arch, struct params_s *params)
 /* Generates output containing averaged times for each test variant */
 static void print_times(struct variant_s *variant_list, struct params_s *params)
 {
+	const uint32_t sizes = params->num_sizes;
 	uint32_t col;
 	uint32_t sz;
 
-	uint32_t sizes = params->num_sizes;
 	/* Temporary variables */
 	struct params_s par;
 	uint8_t	c_mode;
 	uint8_t c_dir;
 	uint8_t h_alg;
 
-	static const char *func_names[4] = {"SSE", "AVX", "AVX2", "AVX512"};
-	static const char *c_mode_names[7] = {"CBC", "CNTR", "CNTR+8",
-			"NULL_CIPHER", "DOCSIS", "DOCSIS+8", "GCM"};
-	static const char *c_dir_names[2] = {"ENCRYPT", "DECRYPT"};
-	static const char *h_alg_names[9] = {"SHA1", "SHA_224", "SHA_256",
-			"SHA_384", "SHA_512", "XCBC", "MD5", "NULL_HASH",
-			"GCM"};
+        const char *func_names[4] = {
+                "SSE", "AVX", "AVX2", "AVX512"
+        };
+        const char *c_mode_names[7] = {
+                "CBC", "CNTR", "CNTR+8", "NULL_CIPHER", "DOCSIS", "DOCSIS+8",
+                "GCM"
+        };
+        const char *c_dir_names[2] = {
+                "ENCRYPT", "DECRYPT"
+        };
+        const char *h_alg_names[9] = {
+                "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
+                "MD5", "NULL_HASH", "GCM"
+        };
 
 	printf("ARCH");
 	for (col = 0; col < total_variants; col++)
@@ -745,12 +752,16 @@ static void print_times(struct variant_s *variant_list, struct params_s *params)
 	}
 	printf("\n");
 	for (sz = 0; sz < sizes; sz++) {
-		printf("%d", (sz + 1) * JOB_SIZE_STEP);
-		for (col = 0; col < total_variants; col++)
-			printf("\t%llu", (unsigned long long)
-					variant_list[col].avg_times[sz]);
-		if (sz < sizes - 1)
-			printf("\n");
+                printf("%d", (sz + 1) * JOB_SIZE_STEP);
+                for (col = 0; col < total_variants; col++) {
+                        uint64_t *time_ptr =
+                                &variant_list[col].avg_times[sz * NUM_RUNS];
+                        const long long unsigned val =
+                                mean_median(time_ptr, NUM_RUNS);
+
+                        printf("\t%llu", val);
+                }
+                printf("\n");
 	}
 }
 
@@ -758,12 +769,10 @@ static void print_times(struct variant_s *variant_list, struct params_s *params)
 static void run_tests(void)
 {
 	MB_MGR mb_mgr;
-	uint32_t arch;
 	struct params_s params;
 	uint32_t num_variants[NUM_TYPES] = {0, 0, 0};
-	uint32_t variants_per_arch;
-	uint8_t max_arch;
-	uint32_t type;
+	uint32_t type, at_size, run, arch;
+	uint32_t variants_per_arch, max_arch;
 
 	params.num_sizes = JOB_SIZE / JOB_SIZE_STEP;
 
@@ -805,27 +814,43 @@ static void run_tests(void)
 		exit(EXIT_FAILURE);
 	}
 
-	variant = 0;
-	variant_ptr = variant_list;
+        at_size = NUM_RUNS * params.num_sizes * sizeof(uint64_t);
+        for (variant = 0, variant_ptr = variant_list;
+             variant < total_variants;
+             variant++, variant_ptr++) {
+                variant_ptr->avg_times = (uint64_t *) malloc(at_size);
+                if (!variant_ptr->avg_times) {
+                        fprintf(stderr, "Cannot allocate memory\n");
+                        free_mem();
+                        exit(EXIT_FAILURE);
+                }
+        }
 
-	for (type = AES_HMAC; type < NUM_TYPES; type++) {
-		if (test_types[type] == 0)
-			continue;
+        for (run = 0; run < NUM_RUNS; run++) {
+                fprintf(stderr, "Starting run %d of %d\n", run+1, NUM_RUNS);
 
-		if (type == AES_GCM)
-			max_arch = NUM_ARCHS - 1; /* No AVX512 for GCM */
-		else
-			max_arch = NUM_ARCHS;
+                variant = 0;
+                variant_ptr = variant_list;
 
-		params.num_variants = num_variants[type];
-		params.test_type = type;
-		/* Performing tests for each selected architecture */
-		for (arch = 0; arch < max_arch; arch++) {
-			if (archs[arch] == 0)
-				continue;
-                        run_dir_test(&mb_mgr, arch, &params);
-		}
-	}
+                for (type = AES_HMAC; type < NUM_TYPES; type++) {
+                        if (test_types[type] == 0)
+                                continue;
+
+                        if (type == AES_GCM)
+                                max_arch = NUM_ARCHS - 1; /* No AVX512 for GCM */
+                        else
+                                max_arch = NUM_ARCHS;
+
+                        params.num_variants = num_variants[type];
+                        params.test_type = type;
+                        /* Performing tests for each selected architecture */
+                        for (arch = 0; arch < max_arch; arch++) {
+                                if (archs[arch] == 0)
+                                        continue;
+                                run_dir_test(&mb_mgr, arch, &params, run);
+                        }
+                } /* end for type */
+        } /* end for run */
 
 	print_times(variant_list, &params);
 
@@ -899,8 +924,8 @@ int main(int argc, char *argv[])
 	init_mb_mgr_sse(&lmgr);
 	if (archs[ARCH_SSE]) {
 		fprintf(stderr, "%s SHA extensions (shani) for SSE arch\n",
-				(sse_sha_ext_usage == SHA_EXT_PRESENT) ?
-				"Using" : "Not using");
+                        (sse_sha_ext_usage == SHA_EXT_PRESENT) ?
+                        "Using" : "Not using");
 	}
 	init_buf(cache_type);
 	run_tests();
