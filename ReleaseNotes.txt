@@ -1,11 +1,24 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Not released
+v0.46 June 2017
 ========================================================================
+
+Jun 27, 2017
 
 General
 - AES GCM optimizations for AVX2
+- Change of AES GCM API: renamed and expanded keys separated from the context
+- New AES GCM API via job structure and API's
+  -  use of the interface may simplify application design at the expense of
+     slightly lower performance vs direct AES GCM API's
+- AES GCM IV automatically padded with block counter (no need for application to do it)
+- IV in AES CTR mode can be 12 bytes (no block counter); 16 byte format still allowed
+- Macros added to ease access to job API for specific architecture
+  - use of these macros can simplify application design but it may produce worse
+    performance than calling architecture job API's directly
+- Submit_job_nocheck() API added to gain some cycles by not validating job structure
+- Result stability improvements in LibPerfApp
 
 v0.45 March 2017
 ========================================================================
