@@ -30,7 +30,7 @@
 ; routine to do AES192 CNTR enc/decrypt "by4"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
-extern byteswap_const, cntr_one_be, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
+extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 
 %define CONCAT(a,b) a %+ b
 %define MOVDQ movdqu
@@ -53,17 +53,19 @@ extern byteswap_const, cntr_one_be, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %define xkeyB	xmm15
 
 %ifdef LINUX
-%define p_in	rdi
-%define p_IV	rsi
-%define p_keys	rdx
-%define p_out	rcx
+%define p_in	  rdi
+%define p_IV	  rsi
+%define p_keys	  rdx
+%define p_out	  rcx
 %define num_bytes r8
+%define p_ivlen   r9
 %else
-%define p_in	rcx
-%define p_IV	rdx
-%define p_keys	r8
-%define p_out	r9
+%define p_in	  rcx
+%define p_IV	  rdx
+%define p_keys	  r8
+%define p_out	  r9
 %define num_bytes r10
+%define p_ivlen   qword [rsp + 8*6]
 %endif
 
 %define tmp	r11
@@ -230,7 +232,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .text
 
-;; aes_cntr_192_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
+;; aes_cntr_192_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 align 32
 global aes_cntr_192_sse
 aes_cntr_192_sse:
@@ -240,9 +242,14 @@ aes_cntr_192_sse:
 %endif
 
 	movdqa	xbyteswap, [rel byteswap_const]
-        movdqa  xcounter, [rel cntr_one_be]     ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
+        test    p_ivlen, 16
+        jnz     iv_is_16_bytes
+        ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
+        mov     DWORD(tmp), 0x01000000
         pinsrq  xcounter, [p_IV], 0
         pinsrd  xcounter, [p_IV + 8], 2
+        pinsrd  xcounter, DWORD(tmp), 3
+bswap_iv:
 	pshufb	xcounter, xbyteswap
 
 	mov	tmp, num_bytes
@@ -327,3 +334,8 @@ last:
 	; remove the stack frame
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	jmp	do_return2
+
+iv_is_16_bytes:
+        ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
+        movdqu  xcounter, [p_IV]
+        jmp     bswap_iv

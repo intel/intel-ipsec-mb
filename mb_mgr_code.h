@@ -755,7 +755,8 @@ SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
                      job->iv,
                      job->aes_enc_key_expanded,
                      job->dst,
-                     job->msg_len_to_cipher_in_bytes);
+                     job->msg_len_to_cipher_in_bytes,
+                     job->iv_len_in_bytes);
         job->status |= STS_COMPLETED_AES;
         return (job);
 }
@@ -768,7 +769,8 @@ SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
                      job->iv,
                      job->aes_enc_key_expanded,
                      job->dst,
-                     job->msg_len_to_cipher_in_bytes);
+                     job->msg_len_to_cipher_in_bytes,
+                     job->iv_len_in_bytes);
         job->status |= STS_COMPLETED_AES;
         return (job);
 }
@@ -781,7 +783,8 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
                      job->iv,
                      job->aes_enc_key_expanded,
                      job->dst,
-                     job->msg_len_to_cipher_in_bytes);
+                     job->msg_len_to_cipher_in_bytes,
+                     job->iv_len_in_bytes);
         job->status |= STS_COMPLETED_AES;
         return (job);
 }

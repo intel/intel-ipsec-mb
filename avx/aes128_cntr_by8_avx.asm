@@ -32,7 +32,7 @@
 section .data
 default rel
 
-global byteswap_const, cntr_one_be
+global byteswap_const
 global ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 global ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 
@@ -55,8 +55,6 @@ ddq_add_7:	;DDQ 0x00000000000000000000000000000007
 		DQ 0x0000000000000007, 0x0000000000000000
 ddq_add_8:	;DDQ 0x00000000000000000000000000000008
 		DQ 0x0000000000000008, 0x0000000000000000
-cntr_one_be:                    ; initial value of BLOCK COUNTER
-                DQ 0x0000000000000000, 0x0100000000000000
 
 section .text
 
@@ -81,17 +79,19 @@ section .text
 %define xkeyB	xmm15
 
 %ifdef LINUX
-%define p_in	rdi
-%define p_IV	rsi
-%define p_keys	rdx
-%define p_out	rcx
+%define p_in	  rdi
+%define p_IV	  rsi
+%define p_keys	  rdx
+%define p_out	  rcx
 %define num_bytes r8
+%define p_ivlen   r9
 %else
-%define p_in	rcx
-%define p_IV	rdx
-%define p_keys	r8
-%define p_out	r9
+%define p_in	  rcx
+%define p_IV	  rdx
+%define p_keys	  r8
+%define p_out	  r9
 %define num_bytes r10
+%define p_ivlen   qword [rsp + 8*6]
 %endif
 
 %define tmp	r11
@@ -247,14 +247,19 @@ global aes_cntr_128_avx
 aes_cntr_128_avx:
 
 %ifndef LINUX
-	mov	num_bytes, [rsp + 8*5]
+	mov	num_bytes, [rsp + 8*5] ; arg5
 %endif
 
 	vmovdqa	xbyteswap, [rel byteswap_const]
-        vmovdqa xcounter, [rel cntr_one_be]     ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
-        vpinsrq xcounter, xcounter, [p_IV], 0
-        vpinsrd xcounter, xcounter, [p_IV + 8], 2
-	vpshufb	xcounter, xcounter, xbyteswap
+        test    p_ivlen, 16
+        jnz     iv_is_16_bytes
+        ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
+        mov     DWORD(tmp), 0x01000000
+        vpinsrq xcounter, [p_IV], 0
+        vpinsrd xcounter, [p_IV + 8], 2
+        vpinsrd xcounter, DWORD(tmp), 3
+bswap_iv:
+	vpshufb	xcounter, xbyteswap
 
 	mov	tmp, num_bytes
 	and	tmp, 7*16
@@ -369,3 +374,8 @@ last:
 	; remove the stack frame
 	mov	rsp, [rsp + _rsp_save]	; original SP
         jmp	do_return2
+
+iv_is_16_bytes:
+        ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
+        vmovdqu xcounter, [p_IV]
+        jmp     bswap_iv

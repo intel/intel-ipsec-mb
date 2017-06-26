@@ -576,6 +576,7 @@ test_ctr_std_vectors(struct MB_MGR *mb_mgr)
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
                 }
+
                 if (test_ctr(mb_mgr,
                              expkey, ctr_vectors[vect].Klen,
                              ctr_vectors[vect].IV, (unsigned) ctr_vectors[vect].IVlen,
@@ -584,6 +585,39 @@ test_ctr_std_vectors(struct MB_MGR *mb_mgr)
                              DECRYPT, HASH_CIPHER)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
+                }
+
+                if (ctr_vectors[vect].IVlen == 12) {
+                        /* IV in the table didn't include block counter (12 bytes).
+                         * Let's encrypt & decrypt the same but
+                         * with 16 byte IV that includes block counter.
+                         */
+                        const unsigned new_iv_len = 16;
+                        const unsigned orig_iv_len = 12;
+                        uint8_t local_iv[16];
+
+                        memcpy(local_iv, ctr_vectors[vect].IV, orig_iv_len);
+                        *((uint32_t *)&local_iv[orig_iv_len]) = 0x01000000;
+
+                        if (test_ctr(mb_mgr,
+                                     expkey, ctr_vectors[vect].Klen,
+                                     local_iv, new_iv_len,
+                                     ctr_vectors[vect].P, ctr_vectors[vect].C,
+                                     (unsigned) ctr_vectors[vect].Plen,
+                                     ENCRYPT, CIPHER_HASH)) {
+                                printf("error #%d encrypt\n", vect + 1);
+                                errors++;
+                        }
+
+                        if (test_ctr(mb_mgr,
+                                     expkey, ctr_vectors[vect].Klen,
+                                     local_iv, new_iv_len,
+                                     ctr_vectors[vect].C, ctr_vectors[vect].P,
+                                     (unsigned) ctr_vectors[vect].Plen,
+                                     DECRYPT, HASH_CIPHER)) {
+                                printf("error #%d decrypt\n", vect + 1);
+                                errors++;
+                        }
                 }
 	}
 	printf("\n");

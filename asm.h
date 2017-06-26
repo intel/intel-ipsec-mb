@@ -83,38 +83,44 @@ void aes_cntr_256_sse(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
-                      UINT64      len_bytes);
+                      UINT64      len_bytes,
+                      UINT64      IV_len);
 
 void aes_cntr_192_sse(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
-                      UINT64      len_bytes);
+                      UINT64      len_bytes,
+                      UINT64      IV_len);
 
 
 void aes_cntr_128_sse(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
-                      UINT64      len_bytes);
+                      UINT64      len_bytes,
+                      UINT64      IV_len);
 
 void aes_cntr_256_avx(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
-                      UINT64      len_bytes);
+                      UINT64      len_bytes,
+                      UINT64      IV_len);
 
 void aes_cntr_192_avx(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
-                      UINT64      len_bytes);
+                      UINT64      len_bytes,
+                      UINT64      IV_len);
 
 void aes_cntr_128_avx(const void *in,
                       const void *IV,
                       const void *keys,
                       void       *out,
-                      UINT64      len_bytes);
+                      UINT64      len_bytes,
+                      UINT64      IV_len);
 
 
 ////////////////////////////////////////////////////////////////////////
