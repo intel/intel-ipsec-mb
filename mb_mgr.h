@@ -129,6 +129,17 @@ typedef struct {
 } MB_MGR_HMAC_MD5_OOO;
 
 ////////////////////////////////////////////////////////////////////////
+// API definitions
+struct MB_MGR;
+typedef void (*init_mb_mgr_t)(struct MB_MGR *);
+typedef JOB_AES_HMAC* (*get_next_job_t)(struct MB_MGR *);
+typedef JOB_AES_HMAC* (*submit_job_t)(struct MB_MGR *);
+typedef JOB_AES_HMAC* (*get_completed_job_t)(struct MB_MGR *);
+typedef JOB_AES_HMAC* (*flush_job_t)(struct MB_MGR *);
+typedef UINT32 (*queue_size_t)(struct MB_MGR *);
+typedef void (*keyexp_t)(const void *, void *, void *);
+
+////////////////////////////////////////////////////////////////////////
 // TOP LEVEL (MB_MGR) Data structure fields
 
 typedef struct MB_MGR {
@@ -149,6 +160,17 @@ typedef struct MB_MGR {
         int              earliest_job; // byte offset, -1 if none
         int              next_job;     // byte offset
         JOB_AES_HMAC     jobs[MAX_JOBS];
+
+        /* arch handlers */
+        get_next_job_t          get_next_job;
+        submit_job_t            submit_job;
+        submit_job_t            submit_job_nocheck;
+        get_completed_job_t     get_completed_job;
+        flush_job_t             flush_job;
+        queue_size_t            queue_size;
+        keyexp_t                keyexp_128;
+        keyexp_t                keyexp_192;
+        keyexp_t                keyexp_256;
 } MB_MGR;
 
 
@@ -191,12 +213,6 @@ JOB_AES_HMAC* submit_job_nocheck_sse(MB_MGR *state);
 //JOB_AES_HMAC* get_completed_job_sse(MB_MGR *state);
 JOB_AES_HMAC* flush_job_sse(MB_MGR *state);
 UINT32 queue_size_sse(MB_MGR *state);
-
-typedef void          (*init_mb_mgr_t)(MB_MGR *state);
-typedef JOB_AES_HMAC* (*get_next_job_t)(MB_MGR *state);
-typedef JOB_AES_HMAC* (*submit_job_t)(MB_MGR *state);
-typedef JOB_AES_HMAC* (*get_completed_job_t)(MB_MGR *state);
-typedef JOB_AES_HMAC* (*flush_job_t)(MB_MGR *state);
 
 enum SHA_EXTENSION_USAGE {
         SHA_EXT_NOT_PRESENT = 0, /* don't detect and don't use SHA extensions */
@@ -260,3 +276,37 @@ get_next_job_sse(MB_MGR *state)
 {
         return JOBS(state, state->next_job);
 }
+
+/*
+ * Wrapper macros to call arch API's set up
+ * at init phase of multi-buffer manager.
+ *
+ * For example, after calling init_mb_mgr_sse(&mgr)
+ * The 'mgr' structure be set up so that:
+ *   mgr.get_next_job will point to get_next_job_sse(),
+ *   mgr.submit_job will point to submit_job_sse(),
+ *   mgr.submit_job_nocheck will point to submit_job_nocheck_sse(),
+ *   mgr.get_completed_job will point to get_completed_job_sse(),
+ *   mgr.flush_job will point to flush_job_sse(),
+ *   mgr.queue_size will point to queue_size_sse()
+ *   mgr.keyexp_128 will point to aes_keyexp_128_sse()
+ *   mgr.keyexp_192 will point to aes_keyexp_192_sse()
+ *   mgr.keyexp_256 will point to aes_keyexp_256_sse()
+ *
+ * Direct use of arch API's may result in better performance.
+ * Using below indirect interface may produce slightly worse performance but
+ * it can simplify application implementation.
+ * LibTestApp provides example of using the indirect interface.
+ */
+#define IMB_GET_NEXT_JOB(_mgr)       (_mgr)->get_next_job((_mgr))
+#define IMB_SUBMIT_JOB(_mgr)         (_mgr)->submit_job((_mgr))
+#define IMB_SUBMIT_JOB_NOCHECK(_mgr) (_mgr)->submit_job_nocheck((_mgr))
+#define IMB_GET_COMPLETED_JOB(_mgr)  (_mgr)->get_completed_job((_mgr))
+#define IMB_FLUSH_JOB(_mgr)          (_mgr)->flush_job((_mgr))
+#define IMB_QUEUE_SIZE(_mgr)         (_mgr)->queue_size((_mgr))
+#define IMB_AES_KEYEXP_128(_mgr, _raw, _enc, _dec) \
+        (_mgr)->keyexp_128((_raw), (_enc), (_dec))
+#define IMB_AES_KEYEXP_192(_mgr, _raw, _enc, _dec) \
+        (_mgr)->keyexp_192((_raw), (_enc), (_dec))
+#define IMB_AES_KEYEXP_256(_mgr, _raw, _enc, _dec) \
+        (_mgr)->keyexp_256((_raw), (_enc), (_dec))

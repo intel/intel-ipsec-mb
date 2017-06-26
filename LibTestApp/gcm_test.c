@@ -755,11 +755,6 @@ static gcm_enc_dec_fn_t aesni_gcm256_dec = NULL;
 static gcm_enc_dec_fn_t aesni_gcm256_enc_2 = NULL;
 static gcm_enc_dec_fn_t aesni_gcm256_dec_2 = NULL;
 
-static get_next_job_t get_next_job = NULL;
-static submit_job_t submit_job = NULL;
-static get_completed_job_t get_completed_job = NULL;
-static flush_job_t flush_job = NULL;
-
 static MB_MGR gcm_mgr;
 
 static int check_data(const uint8_t *test, const uint8_t * expected, uint64_t len,
@@ -1020,7 +1015,7 @@ aes_gcm_job(MB_MGR *mb_mgr,
 {
         JOB_AES_HMAC *job;
 
-        job = get_next_job(mb_mgr);
+        job = IMB_GET_NEXT_JOB(mb_mgr);
         if (!job) {
                 fprintf(stderr, "failed to get job\n");
                 return;
@@ -1045,13 +1040,13 @@ aes_gcm_job(MB_MGR *mb_mgr,
         job->cipher_direction                 =
                 (order == CIPHER_HASH) ? ENCRYPT : DECRYPT;
                 
-        job = submit_job(mb_mgr);
+        job = IMB_SUBMIT_JOB(mb_mgr);
         while (job) {
                 if (job->status != STS_COMPLETED)
                         fprintf(stderr, "failed job, status:%d\n", job->status);
-                job = get_completed_job(mb_mgr);
+                job = IMB_GET_COMPLETED_JOB(mb_mgr);
         }
-        while ((job = flush_job(mb_mgr)) != NULL) {
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 if (job->status != STS_COMPLETED)
                         fprintf(stderr, "failed job, status:%d\n", job->status);
         }
@@ -1317,10 +1312,6 @@ int gcm_test(const enum arch_type arch)
                 aesni_gcm256_enc_2 = sgl_aes_gcm_enc_256_sse;
                 aesni_gcm256_dec_2 = sgl_aes_gcm_dec_256_sse;
                 init_mb_mgr_sse(&gcm_mgr);
-                get_next_job      = get_next_job_sse;
-                submit_job        = submit_job_sse;
-                get_completed_job = get_completed_job_sse;
-                flush_job         = flush_job_sse;
                 break;
         case ARCH_AVX:
                 aesni_gcm128_pre = aes_gcm_pre_128_avx_gen2;
@@ -1339,10 +1330,6 @@ int gcm_test(const enum arch_type arch)
                 aesni_gcm256_enc_2 = sgl_aes_gcm_enc_256_avx_gen2;
                 aesni_gcm256_dec_2 = sgl_aes_gcm_dec_256_avx_gen2;
                 init_mb_mgr_avx(&gcm_mgr);
-                get_next_job      = get_next_job_avx;
-                submit_job        = submit_job_avx;
-                get_completed_job = get_completed_job_avx;
-                flush_job         = flush_job_avx;
                 break;
         case ARCH_AVX2:
                 aesni_gcm128_pre = aes_gcm_pre_128_avx_gen4;
@@ -1361,10 +1348,6 @@ int gcm_test(const enum arch_type arch)
                 aesni_gcm256_enc_2 = sgl_aes_gcm_enc_256_avx_gen4;
                 aesni_gcm256_dec_2 = sgl_aes_gcm_dec_256_avx_gen4;
                 init_mb_mgr_avx2(&gcm_mgr);
-                get_next_job      = get_next_job_avx2;
-                submit_job        = submit_job_avx2;
-                get_completed_job = get_completed_job_avx2;
-                flush_job         = flush_job_avx2;
                 break;
         case ARCH_AVX512:
                 aesni_gcm128_pre = aes_gcm_pre_128_avx_gen4;
@@ -1383,10 +1366,6 @@ int gcm_test(const enum arch_type arch)
                 aesni_gcm256_enc_2 = sgl_aes_gcm_enc_256_avx_gen4;
                 aesni_gcm256_dec_2 = sgl_aes_gcm_dec_256_avx_gen4;
                 init_mb_mgr_avx512(&gcm_mgr);
-                get_next_job      = get_next_job_avx512;
-                submit_job        = submit_job_avx512;
-                get_completed_job = get_completed_job_avx512;
-                flush_job         = flush_job_avx512;
                 break;
         default:
                 printf("Invalid architecture type %d selected!\n", arch);

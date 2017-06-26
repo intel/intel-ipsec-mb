@@ -409,63 +409,6 @@ static const struct gcm_ctr_vector ctr_vectors[] = {
 	vector(9_CTR),
 };
 
-
-typedef void (*keyexp_t)(const void *raw, void *enc, void *dec);
-
-struct handler_s {
-        init_mb_mgr_t init_mb_mgr;
-        get_next_job_t get_next_job;
-        submit_job_t submit_job;
-        get_completed_job_t get_completed_job;
-        flush_job_t flush_job;
-        keyexp_t keyexp_128;
-        keyexp_t keyexp_192;
-        keyexp_t keyexp_256;
-};
-
-static const struct handler_s Handlers[ARCH_NUMOF] = {
-        /* [ARCH_SSE] = */ {
-                /* .init_mb_mgr       = */ init_mb_mgr_sse,
-                /* .get_next_job      = */ get_next_job_sse,
-                /* .submit_job        = */ submit_job_sse,
-                /* .get_completed_job = */ get_completed_job_sse,
-                /* .flush_job         = */ flush_job_sse,
-                /* .keyexp_128        = */ aes_keyexp_128_sse,
-                /* .keyexp_192        = */ aes_keyexp_192_sse,
-                /* .keyexp_256        = */ aes_keyexp_256_sse,
-        },
-        /* [ARCH_AVX] = */ {
-                /* .init_mb_mgr       = */ init_mb_mgr_avx,
-                /* .get_next_job      = */ get_next_job_avx,
-                /* .submit_job        = */ submit_job_avx,
-                /* .get_completed_job = */ get_completed_job_avx,
-                /* .flush_job         = */ flush_job_avx,
-                /* .keyexp_128        = */ aes_keyexp_128_avx,
-                /* .keyexp_192        = */ aes_keyexp_192_avx,
-                /* .keyexp_256        = */ aes_keyexp_256_avx,
-        },
-        /* [ARCH_AVX2] = */ {
-                /* .init_mb_mgr       = */ init_mb_mgr_avx2,
-                /* .get_next_job      = */ get_next_job_avx2,
-                /* .submit_job        = */ submit_job_avx2,
-                /* .get_completed_job = */ get_completed_job_avx2,
-                /* .flush_job         = */ flush_job_avx2,
-                /* .keyexp_128        = */ aes_keyexp_128_avx2,
-                /* .keyexp_192        = */ aes_keyexp_192_avx2,
-                /* .keyexp_256        = */ aes_keyexp_256_avx2,
-        },
-        /* [ARCH_AVX512] = */ {
-                /* .init_mb_mgr       = */ init_mb_mgr_avx512,
-                /* .get_next_job      = */ get_next_job_avx512,
-                /* .submit_job        = */ submit_job_avx512,
-                /* .get_completed_job = */ get_completed_job_avx512,
-                /* .flush_job         = */ flush_job_avx512,
-                /* .keyexp_128        = */ aes_keyexp_128_avx512,
-                /* .keyexp_192        = */ aes_keyexp_192_avx512,
-                /* .keyexp_256        = */ aes_keyexp_256_avx512,
-        },
-};
-
 #ifdef _WIN32
 #define snprintf _snprintf
 #endif
@@ -504,8 +447,7 @@ hexdump(FILE *fp,
 
 
 static int
-test_ctr(const struct handler_s *handler,
-         struct MB_MGR *mb_mgr,
+test_ctr(struct MB_MGR *mb_mgr,
          const void *expkey,
          unsigned key_len,
          const void *iv,
@@ -524,10 +466,10 @@ test_ctr(const struct handler_s *handler,
         memset(target, -1, text_len + (sizeof(xxx) * 2));
         memset(xxx, -1, sizeof(xxx));
 
-        while ((job = handler->flush_job(mb_mgr)) != NULL)
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
 
-        job = handler->get_next_job(mb_mgr);
+        job = IMB_GET_NEXT_JOB(mb_mgr);
         job->cipher_direction = dir;
         job->chain_order = order;
         job->dst = target + 16;
@@ -549,12 +491,12 @@ test_ctr(const struct handler_s *handler,
         job->auth_tag_output = NULL;
         job->auth_tag_output_len_in_bytes = 0;
 
-        job = handler->submit_job(mb_mgr);
+        job = IMB_SUBMIT_JOB(mb_mgr);
         if (job) {
                 printf("%d Unexpected return from submit_job\n", __LINE__);
                 goto end;
         }
-        job = handler->flush_job(mb_mgr);
+        job = IMB_FLUSH_JOB(mb_mgr);
         if (!job) {
                 printf("%d Unexpected null return from flush_job\n", __LINE__);
                 goto end;
@@ -579,7 +521,7 @@ test_ctr(const struct handler_s *handler,
                 goto end;
         }
         ret = 0;
-        while ((job = handler->flush_job(mb_mgr)) != NULL)
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
  end:
         free(target);
@@ -587,8 +529,7 @@ test_ctr(const struct handler_s *handler,
 }
 
 static int
-test_ctr_std_vectors(const struct handler_s *handler,
-                     struct MB_MGR *mb_mgr)
+test_ctr_std_vectors(struct MB_MGR *mb_mgr)
 {
 	int const vectors_cnt = sizeof(ctr_vectors) / sizeof(ctr_vectors[0]);
 	int vect;
@@ -614,20 +555,19 @@ test_ctr_std_vectors(const struct handler_s *handler,
 
                 switch (ctr_vectors[vect].Klen) {
                 case BITS_128:
-                        handler->keyexp_128(ctr_vectors[vect].K, expkey, dust);
+                        IMB_AES_KEYEXP_128(mb_mgr, ctr_vectors[vect].K, expkey, dust);
                         break;
                 case BITS_192:
-                        handler->keyexp_192(ctr_vectors[vect].K, expkey, dust);
+                        IMB_AES_KEYEXP_192(mb_mgr, ctr_vectors[vect].K, expkey, dust);
                         break;
                 case BITS_256:
-                        handler->keyexp_256(ctr_vectors[vect].K, expkey, dust);
+                        IMB_AES_KEYEXP_256(mb_mgr, ctr_vectors[vect].K, expkey, dust);
                         break;
                 default:
                         return -1;
                 }
 
-                if (test_ctr(handler,
-                             mb_mgr,
+                if (test_ctr(mb_mgr,
                              expkey, ctr_vectors[vect].Klen,
                              ctr_vectors[vect].IV, (unsigned) ctr_vectors[vect].IVlen,
                              ctr_vectors[vect].P, ctr_vectors[vect].C,
@@ -636,8 +576,7 @@ test_ctr_std_vectors(const struct handler_s *handler,
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
                 }
-                if (test_ctr(handler,
-                             mb_mgr,
+                if (test_ctr(mb_mgr,
                              expkey, ctr_vectors[vect].Klen,
                              ctr_vectors[vect].IV, (unsigned) ctr_vectors[vect].IVlen,
                              ctr_vectors[vect].C, ctr_vectors[vect].P,
@@ -655,10 +594,9 @@ int
 ctr_test(const enum arch_type arch,
          struct MB_MGR *mb_mgr)
 {
-        const struct handler_s *handler = &Handlers[arch];
         int errors;
 
-        errors = test_ctr_std_vectors(handler, mb_mgr);
+        errors = test_ctr_std_vectors(mb_mgr);
 
 	if (0 == errors)
 		printf("...Pass\n");

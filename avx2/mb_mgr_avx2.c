@@ -425,15 +425,20 @@ init_mb_mgr_avx2(MB_MGR *state)
                 memset(state->aes_xcbc_ooo.ldata[j].final_block + 17, 0x00, 15);
         }
 
-
-
         // Init "in order" components
         state->next_job = 0;
         state->earliest_job = -1;
+
+        /* set handlers */
+        state->get_next_job       = get_next_job_avx2;
+        state->submit_job         = submit_job_avx2;
+        state->submit_job_nocheck = submit_job_nocheck_avx2;
+        state->get_completed_job  = get_completed_job_avx2;
+        state->flush_job          = flush_job_avx2;
+        state->queue_size         = queue_size_avx2;
+        state->keyexp_128         = aes_keyexp_128_avx2;
+        state->keyexp_192         = aes_keyexp_192_avx2;
+        state->keyexp_256         = aes_keyexp_256_avx2;
 }
 
-
 #include "mb_mgr_code.h"
-
-
-

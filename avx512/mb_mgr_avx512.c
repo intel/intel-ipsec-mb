@@ -451,10 +451,17 @@ init_mb_mgr_avx512(MB_MGR *state)
         // Init "in order" components
         state->next_job = 0;
         state->earliest_job = -1;
+
+        /* set handlers */
+        state->get_next_job       = get_next_job_avx512;
+        state->submit_job         = submit_job_avx512;
+        state->submit_job_nocheck = submit_job_nocheck_avx512;
+        state->get_completed_job  = get_completed_job_avx512;
+        state->flush_job          = flush_job_avx512;
+        state->queue_size         = queue_size_avx512;
+        state->keyexp_128         = aes_keyexp_128_avx512;
+        state->keyexp_192         = aes_keyexp_192_avx512;
+        state->keyexp_256         = aes_keyexp_256_avx512;
 }
 
-
 #include "mb_mgr_code.h"
-
-
-
