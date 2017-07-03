@@ -29,16 +29,16 @@ LIBNAME = libIPSec_MB.lib
 OBJ_DIR = obj
 
 !ifdef DEBUG
-DCFLAGS = /Od /DDEBUG /Zi /Yd
-DAFLAGS =
+DCFLAGS = /Od /DDEBUG /Z7
+DAFLAGS = -gcv8
 !else
 DCFLAGS = /O2 /Oi
-DAFLAGS = -g
+DAFLAGS =
 !endif
 
 CC = cl
 CFLAGS = $(EXTRA_CFLAGS) $(DCFLAGS)  /I. /Iinclude \
-	/nologo /Y- /W3 /WX- /Gm- /Gy /fp:precise /EHsc
+	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
 
 LIB_TOOL = lib
 LIBFLAGS = /nologo /machine:X64 /nodefaultlib

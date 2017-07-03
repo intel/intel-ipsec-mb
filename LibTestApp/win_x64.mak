@@ -29,19 +29,24 @@ APP = ipsec_MB_testapp
 IPSECLIB = ..\libIPSec_MB.lib
 
 !ifdef DEBUG
-DCFLAGS = /Od /DDEBUG /Zi /Yd
+DCFLAGS = /Od /DDEBUG /Z7
+DLFLAGS = /debug
 !else
 DCFLAGS = /O2 /Oi
+DLFLAGS = 
 !endif
 
 CC = cl
 # _CRT_SECURE_NO_WARNINGS disables warning C4996 about unsecure snprintf() being used
-CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /Gy /fp:precise /EHsc /I.. /I..\include
+CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc /I.. /I..\include
 
-all: $(APP)
+LNK = link
+LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
-$(APP): main.obj gcm_test.obj ctr_test.obj $(IPSECLIB)
-	$(CC) /Fe$(APP) /MT main.obj gcm_test.obj ctr_test.obj $(IPSECLIB)
+all: $(APP).exe
+
+$(APP).exe: main.obj gcm_test.obj ctr_test.obj $(IPSECLIB)
+        $(LNK) $(LFLAGS) main.obj gcm_test.obj ctr_test.obj $(IPSECLIB)
 
 main.obj: main.c do_test.h
 	$(CC) /c $(CFLAGS) main.c
@@ -53,4 +58,4 @@ ctr_test.obj: ctr_test.c gcm_ctr_vectors_test.h
 	$(CC) /c $(CFLAGS) ctr_test.c
 
 clean:
-	del /q main.obj ctr_test.obj gcm_test.obj $(APP)
+	del /q main.obj ctr_test.obj gcm_test.obj $(APP).*

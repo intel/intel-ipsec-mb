@@ -375,7 +375,11 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
+#ifdef _WIN32
+#define INVALID_PRN(_fmt, ...) fprintf(stderr, "%s():%d: " _fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
+#else
 #define INVALID_PRN(_fmt, ...) fprintf(stderr, "%s():%d: " _fmt, __func__, __LINE__, __VA_ARGS__)
+#endif
 #else
 #define INVALID_PRN(_fmt, ...)
 #endif

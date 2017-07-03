@@ -29,21 +29,26 @@ APP = ipsec_perf
 IPSECLIB = ..\libIPSec_MB.lib
 
 !ifdef DEBUG
-DCFLAGS = /Od /DDEBUG /Zi /Yd
+DCFLAGS = /Od /DDEBUG /Z7
+DLFLAGS = /debug
 !else
 DCFLAGS = /O2 /Oi
+DLFLAGS = 
 !endif
 
 CC = cl
-CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /Gy  /fp:precise /EHsc /I.. /I..\include
+CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc /I.. /I..\include
 
-all: $(APP)
+LNK = link
+LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
-$(APP): ipsec_perf.obj $(IPSECLIB)
-	$(CC) /Fe$(APP) /MT ipsec_perf.obj $(IPSECLIB)
+all: $(APP).exe
+
+$(APP).exe: ipsec_perf.obj $(IPSECLIB)
+        $(LNK) $(LFLAGS) ipsec_perf.obj $(IPSECLIB)
 
 ipsec_perf.obj: ipsec_perf.c 
 	$(CC) /c $(CFLAGS) ipsec_perf.c
 
 clean:
-	del /q ipsec_perf.obj $(APP)
+	del /q ipsec_perf.obj $(APP).exe $(APP).pdb $(APP).ilk
