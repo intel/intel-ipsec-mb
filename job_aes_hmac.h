@@ -43,8 +43,11 @@ typedef enum {
         NULL_CIPHER,
         DOCSIS_SEC_BPI,
 #ifndef NO_GCM
-        GCM
+        GCM,
 #endif /* !NO_GCM */
+#ifndef NO_ADDON
+        CIPHER_ADDON,
+#endif /* !NO_ADDON */
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -62,8 +65,11 @@ typedef enum {
         MD5,
         NULL_HASH,
 #ifndef NO_GCM
-        AES_GMAC
+        AES_GMAC,
 #endif /* !NO_GCM */
+#ifndef NO_ADDON
+        HASH_ADDON,
+#endif /* !NO_ADDON */
 } JOB_HASH_ALG;
 
 typedef enum {

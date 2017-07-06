@@ -50,7 +50,7 @@ typedef struct {
 typedef struct {
         DECLARE_ALIGNED(UINT8 final_block[2*16], 32);
         JOB_AES_HMAC *job_in_lane;
-        UINT64 final_done; 
+        UINT64 final_done;
 } XCBC_LANE_DATA;
 
 typedef struct {
@@ -67,7 +67,7 @@ typedef struct {
 
 // used for SHA1 and SHA256
 typedef struct {
-        DECLARE_ALIGNED(UINT8 extra_block[2 * SHA1_BLOCK_SIZE+8], 32); // allows ymm aligned access 
+        DECLARE_ALIGNED(UINT8 extra_block[2 * SHA1_BLOCK_SIZE+8], 32); // allows ymm aligned access
         JOB_AES_HMAC *job_in_lane;
         UINT8 outer_block[64];
         UINT32 outer_done;
@@ -171,6 +171,14 @@ typedef struct MB_MGR {
         keyexp_t                keyexp_128;
         keyexp_t                keyexp_192;
         keyexp_t                keyexp_256;
+
+#ifndef NO_ADDON
+        /* state less cipher and hash add-on */
+        struct JOB_AES_HMAC * (*cipher_addon)(struct MB_MGR *, struct JOB_AES_HMAC *);
+        struct JOB_AES_HMAC * (*hash_addon)(struct MB_MGR *, struct JOB_AES_HMAC *);
+        void *user_data_0;
+        void *user_data_1;
+#endif /* !NO_ADDON */
 } MB_MGR;
 
 
@@ -310,3 +318,18 @@ get_next_job_sse(MB_MGR *state)
         (_mgr)->keyexp_192((_raw), (_enc), (_dec))
 #define IMB_AES_KEYEXP_256(_mgr, _raw, _enc, _dec) \
         (_mgr)->keyexp_256((_raw), (_enc), (_dec))
+
+#ifndef NO_ADDON
+static inline void
+set_mb_mgr_addon(MB_MGR *state,
+                 struct JOB_AES_HMAC * (*f_cipher_addon)(struct MB_MGR *, struct JOB_AES_HMAC *),
+                 struct JOB_AES_HMAC * (*f_hash_addon)(struct MB_MGR *, struct JOB_AES_HMAC *),
+                 void *user_data_0,
+                 void *user_data_1)
+{
+        state->cipher_addon = f_cipher_addon;
+        state->hash_addon = f_hash_addon;
+        state->user_data_0 = user_data_0;
+        state->user_data_1 = user_data_1;
+}
+#endif /* !NO_ADDON */
