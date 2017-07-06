@@ -26,7 +26,7 @@
  */
 
 
-// This contains the bulk of the mb_mgr code, with #define's to build 
+// This contains the bulk of the mb_mgr code, with #define's to build
 // an SSE, AVX, AVX2 or AVX512 version (see mb_mgr_sse.c, mb_mgr_avx.c, etc.)
 
 // get_next_job() returns a job object. This must be filled in and returned
@@ -125,6 +125,62 @@ SUBMIT_JOB_AES_GCM_ENC(JOB_AES_HMAC *job)
       return job;
 }
 #endif /* !NO_GCM */
+
+#ifndef NO_ADDON
+__forceinline
+JOB_AES_HMAC *
+JOB_CIPHER_ADDON(JOB_AES_HMAC *job)
+{
+        if (!(job->status & STS_COMPLETED_AES)) {
+                if (job->cipher_func(job))
+                        job->status = STS_INTERNAL_ERROR;
+                else
+                        job->status |= STS_COMPLETED_AES;
+        }
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_CIPHER_ADDON(JOB_AES_HMAC *job)
+{
+        return JOB_CIPHER_ADDON(job);
+}
+
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_CIPHER_ADDON(JOB_AES_HMAC *job)
+{
+        return JOB_CIPHER_ADDON(job);
+}
+
+__forceinline
+JOB_AES_HMAC *
+JOB_HASH_ADDON(JOB_AES_HMAC *job)
+{
+        if (!(job->status & STS_COMPLETED_HMAC)) {
+                if (job->hash_func(job))
+                        job->status = STS_INTERNAL_ERROR;
+                else
+                        job->status |= STS_COMPLETED_HMAC;
+        }
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_HASH_ADDON(JOB_AES_HMAC *job)
+{
+        return JOB_HASH_ADDON(job);
+}
+
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_HASH_ADDON(JOB_AES_HMAC *job)
+{
+        return JOB_HASH_ADDON(job);
+}
+#endif /* NO_ADDON */
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -229,6 +285,10 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_ENC(job);
 #endif /* NO_GCM */
+#ifndef NO_ADDON
+        } else if (CIPHER_ADDON == job->cipher_mode) {
+                return SUBMIT_JOB_CIPHER_ADDON(job);
+#endif /* !NO_ADDON */
         } else { // assume NUL_CIPHER
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -252,6 +312,10 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 
                 tmp = FLUSH_JOB_AES128_ENC(&state->docsis_sec_ooo);
                 return DOCSIS_LAST_BLOCK(tmp);
+#ifndef NO_ADDON
+        } else if (CIPHER_ADDON == job->cipher_mode) {
+                return FLUSH_JOB_CIPHER_ADDON(job);
+#endif /* !NO_ADDON */
         } else { // assume CNTR or NULL_CIPHER
                 return NULL;
         }
@@ -288,6 +352,10 @@ SUBMIT_JOB_AES_DEC(JOB_AES_HMAC *job)
         } else if (GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_DEC(job);
 #endif /* NO_GCM */
+#ifndef NO_ADDON
+        } else if (CIPHER_ADDON == job->cipher_mode) {
+                return SUBMIT_JOB_CIPHER_ADDON(job);
+#endif /* !NO_ADDON */
         } else {
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -328,6 +396,10 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_AES_XCBC(&state->aes_xcbc_ooo, job);
         case MD5:
                 return SUBMIT_JOB_HMAC_MD5(&state->hmac_md5_ooo, job);
+#ifndef NO_ADDON
+        case HASH_ADDON:
+                return SUBMIT_JOB_HASH_ADDON(job);
+#endif /* !NO_ADDON */
         default: // assume NULL_HASH
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -365,6 +437,10 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_AES_XCBC(&state->aes_xcbc_ooo);
         case MD5:
                 return FLUSH_JOB_HMAC_MD5(&state->hmac_md5_ooo);
+#ifndef NO_ADDON
+        case HASH_ADDON:
+                return FLUSH_JOB_HASH_ADDON(job);
+#endif /* !NO_ADDON */
         default: // assume NULL_HASH
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
