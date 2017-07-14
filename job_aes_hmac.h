@@ -33,8 +33,8 @@ typedef enum {
         STS_COMPLETED_HMAC =  2,
         STS_COMPLETED =       3, // COMPLETED_AES | COMPLETED_HMAC
         STS_INVALID_ARGS =    4,
-        STS_INTERNAL_ERROR,
-        STS_ERROR
+        STS_INTERNAL_ERROR =  8,
+        STS_ERROR =           16,
 } JOB_STS;
 
 typedef enum {
@@ -83,6 +83,8 @@ typedef enum {
         AES_256_BYTES = 32
 } AES_KEY_SIZE_BYTES;
 
+struct MB_MGR;
+
 typedef struct JOB_AES_HMAC {
         const void *aes_enc_key_expanded;  /* 16-byte aligned pointer. */
         const void *aes_dec_key_expanded;
@@ -126,8 +128,15 @@ typedef struct JOB_AES_HMAC {
         // by the chain _order field.
         JOB_HASH_ALG hash_alg; // SHA-1 or others...
         JOB_CHAIN_ORDER chain_order; // CIPHER_HASH or HASH_CIPHER
+        int _reserved;
         void    *user_data;
         void    *user_data2;
+
+#ifndef NO_ADDON
+        /* state less cipher and hash add-on */
+        struct JOB_AES_HMAC * (*cipher_func)(struct MB_MGR *, struct JOB_AES_HMAC *);
+        struct JOB_AES_HMAC * (*hash_func)(struct MB_MGR *, struct JOB_AES_HMAC *);
+#endif /* !NO_ADDON */
 } JOB_AES_HMAC;
 
 #define hashed_auth_key_xor_ipad u.HMAC._hashed_auth_key_xor_ipad

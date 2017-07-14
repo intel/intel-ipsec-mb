@@ -132,7 +132,7 @@ JOB_AES_HMAC *
 SUBMIT_JOB_CIPHER_ADDON(MB_MGR *state,
                         JOB_AES_HMAC *job)
 {
-        return state->cipher_addon(state, job);
+        return job->cipher_func(state, job);
 }
 
 __forceinline
@@ -140,7 +140,7 @@ JOB_AES_HMAC *
 FLUSH_JOB_CIPHER_ADDON(MB_MGR *state,
                        JOB_AES_HMAC *job)
 {
-        return state->cipher_addon(state, job);
+        return job->cipher_func(state, job);
 }
 
 __forceinline
@@ -148,7 +148,7 @@ JOB_AES_HMAC *
 SUBMIT_JOB_HASH_ADDON(MB_MGR *state,
                       JOB_AES_HMAC *job)
 {
-        return state->hash_addon(state, job);
+        return job->hash_func(state, job);
 }
 
 __forceinline
@@ -156,7 +156,7 @@ JOB_AES_HMAC *
 FLUSH_JOB_HASH_ADDON(MB_MGR *state,
                      JOB_AES_HMAC *job)
 {
-        return state->hash_addon(state, job);
+        return job->hash_func(state, job);
 }
 #endif /* NO_ADDON */
 

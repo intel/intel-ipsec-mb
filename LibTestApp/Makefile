@@ -24,8 +24,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+
+
 MYLIB = ../libIPSec_MB.a
-CFLAGS = -g -DLINUX -I../include -I..
+OPENSSL = -L$(OPENSSL_DIR)/lib -lcrypto
+CFLAGS = -g -DLINUX -I../include -I.. -I$(OPENSSL_DIR)/include
 ifeq ($(DEBUG),y)
 CFLAGS += -O0 -DDEBUG
 else
@@ -36,13 +39,15 @@ APP := ipsec_MB_testapp
 
 all: $(APP)
 
-$(APP): main.o gcm_test.o ctr_test.o $(MYLIB)
-	$(CC) $(LDFLAGS) -o $@ $^
+$(APP): main.o gcm_test.o ctr_test.o addon_test.o chacha.o $(MYLIB)
+	$(CC) $(LDFLAGS) -o $@ $^ $(OPENSSL_DIR)/lib/libcrypto.a -lpthread -ldl 
 
 main.o: main.c do_test.h
 gcm_test.o: gcm_test.c gcm_ctr_vectors_test.h
 ctr_test.o: ctr_test.c gcm_ctr_vectors_test.h
+addon_test.o: addon_test.c addon_test.h
+chacha.o: chacha.c ecrypt-sync.h
 
 .PHONY: clean
 clean:
-	-rm -f main.o gcm_test.o ctr_test.o $(APP)
+	-rm -f main.o gcm_test.o ctr_test.o addon_test.o chacha.o $(APP)
