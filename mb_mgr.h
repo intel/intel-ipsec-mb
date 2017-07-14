@@ -50,7 +50,7 @@ typedef struct {
 typedef struct {
         DECLARE_ALIGNED(UINT8 final_block[2*16], 32);
         JOB_AES_HMAC *job_in_lane;
-        UINT64 final_done; 
+        UINT64 final_done;
 } XCBC_LANE_DATA;
 
 typedef struct {
@@ -67,7 +67,7 @@ typedef struct {
 
 // used for SHA1 and SHA256
 typedef struct {
-        DECLARE_ALIGNED(UINT8 extra_block[2 * SHA1_BLOCK_SIZE+8], 32); // allows ymm aligned access 
+        DECLARE_ALIGNED(UINT8 extra_block[2 * SHA1_BLOCK_SIZE+8], 32); // allows ymm aligned access
         JOB_AES_HMAC *job_in_lane;
         UINT8 outer_block[64];
         UINT32 outer_done;

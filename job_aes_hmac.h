@@ -43,8 +43,11 @@ typedef enum {
         NULL_CIPHER,
         DOCSIS_SEC_BPI,
 #ifndef NO_GCM
-        GCM
+        GCM,
 #endif /* !NO_GCM */
+#ifndef NO_ADDON
+        CIPHER_ADDON,
+#endif /* !NO_ADDON */
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -62,8 +65,11 @@ typedef enum {
         MD5,
         NULL_HASH,
 #ifndef NO_GCM
-        AES_GMAC
+        AES_GMAC,
 #endif /* !NO_GCM */
+#ifndef NO_ADDON
+        HASH_ADDON,
+#endif /* !NO_ADDON */
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -76,6 +82,8 @@ typedef enum {
         AES_192_BYTES = 24,
         AES_256_BYTES = 32
 } AES_KEY_SIZE_BYTES;
+
+struct MB_MGR;
 
 typedef struct JOB_AES_HMAC {
         const void *aes_enc_key_expanded;  /* 16-byte aligned pointer. */
@@ -120,8 +128,15 @@ typedef struct JOB_AES_HMAC {
         // by the chain _order field.
         JOB_HASH_ALG hash_alg; // SHA-1 or others...
         JOB_CHAIN_ORDER chain_order; // CIPHER_HASH or HASH_CIPHER
+        int _reserved;
         void    *user_data;
         void    *user_data2;
+
+#ifndef NO_ADDON
+        /* state less cipher and hash add-on */
+        struct JOB_AES_HMAC * (*cipher_func)(struct MB_MGR *, struct JOB_AES_HMAC *);
+        struct JOB_AES_HMAC * (*hash_func)(struct MB_MGR *, struct JOB_AES_HMAC *);
+#endif /* !NO_ADDON */
 } JOB_AES_HMAC;
 
 #define hashed_auth_key_xor_ipad u.HMAC._hashed_auth_key_xor_ipad
