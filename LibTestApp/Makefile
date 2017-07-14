@@ -27,8 +27,8 @@
 
 
 MYLIB = ../libIPSec_MB.a
-OPENSSL = -L$(OPENSSL_DIR)/lib -lcrypto
-CFLAGS = -g -DLINUX -I../include -I.. -I$(OPENSSL_DIR)/include
+CFLAGS = -g -DLINUX -I../include -I..
+
 ifeq ($(DEBUG),y)
 CFLAGS += -O0 -DDEBUG
 else
@@ -39,15 +39,14 @@ APP := ipsec_MB_testapp
 
 all: $(APP)
 
-$(APP): main.o gcm_test.o ctr_test.o addon_test.o chacha.o $(MYLIB)
-	$(CC) $(LDFLAGS) -o $@ $^ $(OPENSSL_DIR)/lib/libcrypto.a -lpthread -ldl 
+$(APP): main.o gcm_test.o ctr_test.o addon_test.o $(MYLIB)
+	$(CC) $(LDFLAGS) -o $@ $^ $(MYLIB)
 
 main.o: main.c do_test.h
 gcm_test.o: gcm_test.c gcm_ctr_vectors_test.h
 ctr_test.o: ctr_test.c gcm_ctr_vectors_test.h
 addon_test.o: addon_test.c addon_test.h
-chacha.o: chacha.c ecrypt-sync.h
 
 .PHONY: clean
 clean:
-	-rm -f main.o gcm_test.o ctr_test.o addon_test.o chacha.o $(APP)
+	-rm -f main.o gcm_test.o ctr_test.o addon_test.o $(APP)

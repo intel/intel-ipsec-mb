@@ -25,31 +25,85 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/queue.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <openssl/evp.h>
-
 #include <mb_mgr.h>
 
-#include "ecrypt-sync.h"
 #include "addon_test.h"
 
 #ifndef NO_ADDON
+
+struct cipher_attr_s {
+        const char *name;
+        JOB_CIPHER_MODE mode;
+        unsigned key_len;
+        unsigned iv_len;
+};
+
+struct auth_attr_s {
+        const char *name;
+        JOB_HASH_ALG hash;
+        unsigned tag_len;
+};
+
+struct test_vec_s {
+        uint8_t iv[16];
+        uint8_t txt[64];
+        uint8_t tag[32];
+        uint8_t verify[32];
+                
+        uint8_t enc_key[16*16];
+        uint8_t dec_key[16*16];
+        uint8_t ipad[256];
+        uint8_t opad[256];
+        const struct cipher_attr_s *cipher;
+        const struct auth_attr_s *auth;
+        
+        STAILQ_ENTRY(test_vec_s) entry;
+        unsigned seq;
+};
+
+
+static int
+cipher_encrypt(struct JOB_AES_HMAC *job)
+{
+        (void) job;
+        return 0;	/* SUCCESS */
+}
+
+static int
+cipher_decrypt(struct JOB_AES_HMAC *job)
+{
+        (void) job;
+        return 0;	/* SUCCESS */
+}
+
 static struct JOB_AES_HMAC *
 cipher_addon(struct MB_MGR *state __attribute__((unused)),
              struct JOB_AES_HMAC *job)
 {
+        struct test_vec_s *node = job->user_data;
+        
+        fprintf(stderr, "Seq:%u Cipher Addon cipher:%s auth:%s\n",
+                node->seq, node->cipher->name, node->auth->name);
 
         if (job->status & STS_COMPLETED_AES) {
                 fprintf(stderr, "%s already ciphered\n", __func__);
         } else {
+                int ret;
+
                 if (job->cipher_direction == ENCRYPT)
-                        fprintf(stderr, "%s encrypted\n", __func__);
+                        ret = cipher_encrypt(job);
                 else
-                        fprintf(stderr, "%s decrypted\n", __func__);
-                job->status |= STS_COMPLETED_AES;
+                        ret = cipher_decrypt(job);
+
+                if (ret)
+                        job->status = STS_INTERNAL_ERROR;
+                else
+                        job->status |= STS_COMPLETED_AES;
         }
         return job;
 }
@@ -58,95 +112,20 @@ static struct JOB_AES_HMAC *
 hash_addon(struct MB_MGR *state __attribute__((unused)),
            struct JOB_AES_HMAC *job)
 {
+        struct test_vec_s *node = job->user_data;
+        
+        fprintf(stderr, "Seq:%u Auth Addon cipher:%s auth:%s\n",
+                node->seq, node->cipher->name, node->auth->name);
+
         if (job->status & STS_COMPLETED_HMAC) {
                 fprintf(stderr, "%s already hashed\n", __func__);
         } else {
-                fprintf(stderr, "%s hashed\n", __func__);
                 job->status |= STS_COMPLETED_HMAC;
         }
 
         return job;
 }
 
-/*
- *
- */
-static struct JOB_AES_HMAC *
-chacha20_poly1305(struct MB_MGR *state __attribute__((unused)),
-                  struct JOB_AES_HMAC *job)
-{
-        if (job->status == STS_BEING_PROCESSED) {
-                EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-
-                if (ctx) {
-                        const EVP_CIPHER *type = EVP_chacha20_poly1305();
-                        int outl;
-
-                        if (job->cipher_direction == ENCRYPT) {
-                                fprintf(stderr, "xxx enc\n");
-                                if (!EVP_EncryptInit(ctx, type, job->aes_enc_key_expanded, job->iv)) {
-                                        fprintf(stderr, "failed enc init\n");
-                                        goto err;
-                                }
-                                fprintf(stderr, "xxx enc done init\n");
-#if 0
-                                if (!EVP_EncryptUpdate(ctx,
-                                                       NULL, &outl,
-                                                       job->u.GCM.aad, job->u.GCM.aad_len_in_bytes)) {
-                                        fprintf(stderr, "failed enc update aad\n");
-                                        goto err;
-                                }
-                                fprintf(stderr, "xxx enc done update aad\n");
-#endif
-                                if (!EVP_EncryptUpdate(ctx,
-                                                       job->dst, &outl,
-                                                       job->src + job->cipher_start_src_offset_in_bytes,
-                                                       job->msg_len_to_cipher_in_bytes)) {
-                                        fprintf(stderr, "failed enc update cipher\n");
-                                        goto err;
-                                }
-                                fprintf(stderr, "xxx enc done update cipher\n");
-                                if (!EVP_EncryptFinal(ctx, job->auth_tag_output, &outl)) {
-                                        fprintf(stderr, "failed enc final\n");
-                                        goto err;
-                                }
-                                fprintf(stderr, "xxx enc done final\n");
-                        } else {
-                                fprintf(stderr, "xxx dec\n");
-                                EVP_DecryptInit(ctx, type, job->aes_enc_key_expanded, job->iv);
-                                EVP_DecryptUpdate(ctx,
-                                                  NULL, &outl,
-                                                  job->u.GCM.aad, job->u.GCM.aad_len_in_bytes);
-                                EVP_DecryptUpdate(ctx,
-                                                  job->dst, &outl,
-                                                  job->src + job->cipher_start_src_offset_in_bytes,
-                                                  job->msg_len_to_cipher_in_bytes);
-                                EVP_DecryptFinal(ctx, job->auth_tag_output, &outl);
-                        }
-                err:
-                        EVP_CIPHER_CTX_free(ctx);
-                        job->status |= STS_COMPLETED;
-                } else {
-                        job->status |= STS_INTERNAL_ERROR;
-                }
-        }
-        return job;
-}
-
-struct cipher_attr_s {
-        const char *name;
-        JOB_CIPHER_MODE mode;
-        unsigned key_len;
-        unsigned iv_len;
-        JOB_CIPHER_DIRECTION dir;
-        JOB_CHAIN_ORDER chain_order;
-};
-
-struct auth_attr_s {
-        const char *name;
-        JOB_HASH_ALG hash;
-        unsigned tag_len;
-};
 
 static const struct auth_attr_s AUTH_ATTR[] = {
         {
@@ -188,121 +167,200 @@ static const struct auth_attr_s AUTH_ATTR[] = {
 
 static const struct cipher_attr_s  CIPHER_ATTR[] = {
         {
-                .name = "CBC128-enc",
+                .name = "CBC128",
                 .mode = CBC,
                 .key_len = 16,
                 .iv_len = 16,
-                .dir = ENCRYPT,
-                .chain_order = CIPHER_HASH,
         },
         {
-                .name = "CBC192-enc",
+                .name = "CBC192",
                 .mode = CBC,
                 .key_len = 24,
                 .iv_len = 16,
-                .dir = ENCRYPT,
-                .chain_order = CIPHER_HASH,
         },
         {
-                .name = "CBC256-enc",
+                .name = "CBC256",
                 .mode = CBC,
                 .key_len = 32,
                 .iv_len = 16,
-                .dir = ENCRYPT,
-                .chain_order = CIPHER_HASH,
         },
+        
         {
-                .name = "CBC128-dec",
-                .mode = CBC,
-                .key_len = 16,
-                .iv_len = 16,
-                .dir = DECRYPT,
-                .chain_order = HASH_CIPHER,
-        },
-        {
-                .name = "CBC192-dec",
-                .mode = CBC,
-                .key_len = 24,
-                .iv_len = 16,
-                .dir = DECRYPT,
-                .chain_order = HASH_CIPHER,
-        },
-        {
-                .name = "CBC256-dec",
-                .mode = CBC,
-                .key_len = 32,
-                .iv_len = 16,
-                .dir = DECRYPT,
-                .chain_order = HASH_CIPHER,
-        },
-
-        {
-                .name = "CTR128-enc",
-                .mode = CNTR,
-                .key_len = 16,
-                .iv_len = 8,
-                .dir = ENCRYPT,
-                .chain_order = CIPHER_HASH,
-        },
-        {
-                .name = "CTR192-enc",
-                .mode = CNTR,
-                .key_len = 24,
-                .iv_len = 8,
-                .dir = ENCRYPT,
-                .chain_order = CIPHER_HASH,
-        },
-        {
-                .name = "CTR256-enc",
-                .mode = CNTR,
-                .key_len = 32,
-                .iv_len = 8,
-                .dir = ENCRYPT,
-                .chain_order = CIPHER_HASH,
-        },
-        {
-                .name = "CTR128-dec",
-                .mode = CNTR,
-                .key_len = 16,
-                .iv_len = 8,
-                .dir = DECRYPT,
-                .chain_order = HASH_CIPHER,
-        },
-        {
-                .name = "CTR192-dec",
-                .mode = CNTR,
-                .key_len = 24,
-                .iv_len = 8,
-                .dir = DECRYPT,
-                .chain_order = HASH_CIPHER,
-        },
-        {
-                .name = "CTR256-dec",
-                .mode = CNTR,
-                .key_len = 32,
-                .iv_len = 8,
-                .dir = DECRYPT,
-                .chain_order = HASH_CIPHER,
-        },
-
-        {
-                .name = "CIPHER_ADDON-enc",
+                .name = "CIPHER_ADDON",
                 .mode = CIPHER_ADDON,
                 .key_len = 32,
                 .iv_len = 12,
-                .dir = ENCRYPT,
-                .chain_order = CIPHER_HASH,
+        },
+
+        {
+                .name = "CTR128",
+                .mode = CNTR,
+                .key_len = 16,
+                .iv_len = 8,
         },
         {
-                .name = "CIPHER_ADDON-dec",
-                .mode = CIPHER_ADDON,
+                .name = "CTR192",
+                .mode = CNTR,
+                .key_len = 24,
+                .iv_len = 8,
+        },
+        {
+                .name = "CTR256",
+                .mode = CNTR,
                 .key_len = 32,
-                .iv_len = 12,
-                .dir = DECRYPT,
-                .chain_order = HASH_CIPHER,
+                .iv_len = 8,
         },
 };
 
+#define ARRAYOF(_a)	(sizeof(_a) / sizeof(_a[0]))
+
+
+void
+addon_test(struct MB_MGR *mgr)
+{
+        STAILQ_HEAD(test_vec_head, test_vec_s) head = STAILQ_HEAD_INITIALIZER(head);
+        struct test_vec_s *node, *done;
+        struct JOB_AES_HMAC *job;
+        unsigned seq = 0;
+        
+        for (unsigned i = 0; i < ARRAYOF(CIPHER_ATTR); i++) {
+                for (unsigned j = 0; j < ARRAYOF(AUTH_ATTR); j++) {
+                        while ((job = IMB_GET_NEXT_JOB(mgr)) == NULL) {
+                                job = IMB_FLUSH_JOB(mgr);
+                                if (job->status != STS_COMPLETED)
+                                        fprintf(stderr, "failed job status:%d\n",
+                                                job->status);
+                                done = job->user_data;
+                                fprintf(stderr, "done Seq:%u Cipher:%s Auth:%s\n",
+                                        done->seq, done->cipher->name, done->auth->name);
+                                STAILQ_INSERT_TAIL(&head, done, entry);
+                        }
+                        node = malloc(sizeof(*node));
+                        node->seq = seq++;
+
+                        node->cipher = &CIPHER_ATTR[i];
+                        node->auth = &AUTH_ATTR[j];
+
+
+                        job->cipher_func = cipher_addon;
+                        job->hash_func = hash_addon;
+
+                        job->aes_enc_key_expanded = node->enc_key;
+                        job->aes_dec_key_expanded = node->dec_key;
+                        job->aes_key_len_in_bytes = node->cipher->key_len;
+                        job->src = node->txt;
+                        job->dst = node->txt;
+                        job->cipher_start_src_offset_in_bytes = 16;
+                        job->msg_len_to_cipher_in_bytes = sizeof(node->txt);
+                        job->hash_start_src_offset_in_bytes = 0;
+                        job->msg_len_to_hash_in_bytes = sizeof(node->txt) + sizeof(node->iv);
+                        job->iv = node->iv;
+                        job->iv_len_in_bytes = node->cipher->iv_len;
+                        job->auth_tag_output = node->tag;
+                        job->auth_tag_output_len_in_bytes = node->auth->tag_len;
+                                
+                        job->u.HMAC._hashed_auth_key_xor_ipad = node->ipad;
+                        job->u.HMAC._hashed_auth_key_xor_opad = node->opad;
+                        job->cipher_mode = node->cipher->mode;
+                        job->cipher_direction = ENCRYPT;
+                        job->chain_order = CIPHER_HASH;
+                        job->hash_alg = node->auth->hash;
+                        job->user_data = node;
+
+                        job = IMB_SUBMIT_JOB_NOCHECK(mgr);
+                        while (job) {
+                                if (job->status != STS_COMPLETED)
+                                        fprintf(stderr, "failed job status:%d\n",
+                                                job->status);
+                                done = job->user_data;
+                                fprintf(stderr, "done Seq:%u Cipher:%s Auth:%s\n",
+                                        done->seq, done->cipher->name, done->auth->name);
+                                STAILQ_INSERT_TAIL(&head, done, entry);
+                                
+                                job = IMB_GET_COMPLETED_JOB(mgr);
+                        }
+                }
+        }
+        while ((job = IMB_FLUSH_JOB(mgr)) != NULL) {
+                if (job->status != STS_COMPLETED)
+                        fprintf(stderr, "failed job status:%d\n",
+                                job->status);
+                done = job->user_data;
+                fprintf(stderr, "done Seq:%u Cipher:%s Auth:%s\n",
+                        done->seq, done->cipher->name, done->auth->name);
+                STAILQ_INSERT_TAIL(&head, done, entry);
+         }
+
+
+        fprintf(stderr, "XXX decrypting\n");
+
+        while ((node = STAILQ_FIRST(&head)) != NULL) {
+                STAILQ_REMOVE_HEAD(&head, entry);
+                
+                while ((job = IMB_GET_NEXT_JOB(mgr)) == NULL) {
+                        job = IMB_FLUSH_JOB(mgr);
+                        if (job->status != STS_COMPLETED)
+                                fprintf(stderr, "failed job status:%d\n",
+                                                job->status);
+                        done = job->user_data;
+                        fprintf(stderr, "done Seq:%u Cipher:%s Auth:%s\n",
+                                done->seq, done->cipher->name, done->auth->name);
+                        free(done);
+                }
+
+                job->cipher_func = cipher_addon;
+                job->hash_func = hash_addon;
+
+                job->aes_enc_key_expanded = node->enc_key;
+                job->aes_dec_key_expanded = node->dec_key;
+                job->aes_key_len_in_bytes = node->cipher->key_len;
+                job->src = node->txt;
+                job->dst = node->txt;
+                job->cipher_start_src_offset_in_bytes = 16;
+                job->msg_len_to_cipher_in_bytes = sizeof(node->txt);
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = sizeof(node->txt) + sizeof(node->iv);
+                job->iv = node->iv;
+                job->iv_len_in_bytes = node->cipher->iv_len;
+                job->auth_tag_output = node->tag;
+                job->auth_tag_output_len_in_bytes = node->auth->tag_len;
+                                
+                job->u.HMAC._hashed_auth_key_xor_ipad = node->ipad;
+                job->u.HMAC._hashed_auth_key_xor_opad = node->opad;
+                job->cipher_mode = node->cipher->mode;
+                job->cipher_direction = DECRYPT;
+                job->chain_order = HASH_CIPHER;
+                job->hash_alg = node->auth->hash;
+                job->user_data = node;
+
+                job = IMB_SUBMIT_JOB_NOCHECK(mgr);
+                while (job) {
+                        if (job->status != STS_COMPLETED)
+                                fprintf(stderr, "failed job status:%d\n",
+                                        job->status);
+                        done = job->user_data;
+                        fprintf(stderr, "done Seq:%u Cipher:%s Auth:%s\n",
+                                done->seq, done->cipher->name, done->auth->name);
+                        free(done);
+                                
+                        job = IMB_GET_COMPLETED_JOB(mgr);
+                }
+
+        }
+
+        while ((job = IMB_FLUSH_JOB(mgr)) != NULL) {
+                if (job->status != STS_COMPLETED)
+                        fprintf(stderr, "failed job status:%d\n",
+                                job->status);
+                done = job->user_data;
+                fprintf(stderr, "done Seq:%u Cipher:%s Auth:%s\n",
+                        done->seq, done->cipher->name, done->auth->name);
+                free(done);
+         }
+}
+
+
+#if 0
 static const struct cipher_attr_s *
 get_cipher_attr(void)
 {
@@ -353,14 +411,11 @@ addon_test(struct MB_MGR *state)
                 CIPHER_HASH, HASH_CIPHER,
         };
 
-        OpenSSL_add_all_algorithms();
-
         if ((pkt = calloc(1000, sizeof(*pkt))) != NULL) {
                 const struct auth_attr_s *auth_attr;
                 const struct cipher_attr_s *cipher_attr;
                 struct JOB_AES_HMAC *job;
                 unsigned loops = 10000;
-
 
                 while (loops--) {
                         struct packet_s *p = pkt;
@@ -377,8 +432,8 @@ addon_test(struct MB_MGR *state)
                                                         job->status);
                                 }
 
-                                job->cipher_func = chacha20_poly1305;
-                                job->hash_func = chacha20_poly1305;
+                                job->cipher_func = cipher_addon;
+                                job->hash_func = hash_addon;
 
                                 job->aes_enc_key_expanded = enc_keys;
                                 job->aes_dec_key_expanded = dec_keys;
@@ -420,4 +475,5 @@ addon_test(struct MB_MGR *state)
                 free(pkt);
         }
 }
+#endif
 #endif /* !NO_ADDON */

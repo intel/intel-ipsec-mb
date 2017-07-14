@@ -111,6 +111,9 @@ main(int argc, char **argv)
                 do_test_avx(&mb_mgr);
                 ctr_test(ARCH_AVX, &mb_mgr);
                 gcm_test(ARCH_AVX);
+#ifndef NO_ADDON
+                addon_test(&mb_mgr);
+#endif /* !NO_ADDON */
         }
 
         if (do_avx2) {
@@ -120,6 +123,9 @@ main(int argc, char **argv)
                 do_test_avx2(&mb_mgr);
                 ctr_test(ARCH_AVX2, &mb_mgr);
                 gcm_test(ARCH_AVX2);
+#ifndef NO_ADDON
+                addon_test(&mb_mgr);
+#endif /* !NO_ADDON */
         }
 
         if (do_avx512) {
@@ -129,6 +135,9 @@ main(int argc, char **argv)
                 do_test_avx512(&mb_mgr);
                 ctr_test(ARCH_AVX512, &mb_mgr);
                 gcm_test(ARCH_AVX512);
+#ifndef NO_ADDON
+                addon_test(&mb_mgr);
+#endif /* !NO_ADDON */
         }
 
         printf("Test completed\n");

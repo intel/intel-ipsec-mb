@@ -33,8 +33,8 @@ typedef enum {
         STS_COMPLETED_HMAC =  2,
         STS_COMPLETED =       3, // COMPLETED_AES | COMPLETED_HMAC
         STS_INVALID_ARGS =    4,
-        STS_INTERNAL_ERROR =  8,
-        STS_ERROR =           16,
+        STS_INTERNAL_ERROR,
+        STS_ERROR
 } JOB_STS;
 
 typedef enum {
