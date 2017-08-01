@@ -31,10 +31,6 @@
 #include <stdint.h>
 
 #undef init_mb_mgr
-#undef get_next_job
-#undef submit_job
-#undef flush_job
-#undef get_completed_job
 
 #undef sha1_one_block
 #undef sha224_one_block
@@ -54,10 +50,6 @@
 
 #if (TEST == TEST_AVX)
 #define init_mb_mgr       init_mb_mgr_avx
-#define get_next_job      get_next_job_avx
-#define submit_job        submit_job_avx
-#define flush_job         flush_job_avx
-#define get_completed_job get_completed_job_avx
 
 #define sha1_one_block      sha1_one_block_avx
 #define sha224_one_block    sha224_one_block_avx
@@ -76,10 +68,6 @@
 #define TEST_AUX_FUNC     test_aux_func_avx
 #elif (TEST == TEST_AVX2)
 #define init_mb_mgr       init_mb_mgr_avx2
-#define get_next_job      get_next_job_avx2
-#define submit_job        submit_job_avx2
-#define flush_job         flush_job_avx2
-#define get_completed_job get_completed_job_avx2
 
 #define sha1_one_block      sha1_one_block_avx2
 #define sha224_one_block    sha224_one_block_avx2
@@ -98,10 +86,6 @@
 #define TEST_AUX_FUNC     test_aux_func_avx2
 #elif (TEST == TEST_AVX512)
 #define init_mb_mgr       init_mb_mgr_avx512
-#define get_next_job      get_next_job_avx512
-#define submit_job        submit_job_avx512
-#define flush_job         flush_job_avx512
-#define get_completed_job get_completed_job_avx512
 
 #define sha1_one_block      sha1_one_block_avx512
 #define sha224_one_block    sha224_one_block_avx512
@@ -120,10 +104,6 @@
 #define TEST_AUX_FUNC     test_aux_func_avx512
 #else
 #define init_mb_mgr       init_mb_mgr_sse
-#define get_next_job      get_next_job_sse
-#define submit_job        submit_job_sse
-#define flush_job         flush_job_sse
-#define get_completed_job get_completed_job_sse
 
 #define sha1_one_block      sha1_one_block_sse
 #define sha224_one_block    sha224_one_block_sse
@@ -241,11 +221,11 @@ KNOWN_ANSWER_TEST(MB_MGR *mb_mgr)
 
 
         // Expand key
-        aes_keyexp_128(key128, enc_keys, dec_keys);
+        IMB_AES_KEYEXP_128(mb_mgr, key128, enc_keys, dec_keys);
 
 
         // test AES128 Dec
-        job = get_next_job(mb_mgr);
+        job = IMB_GET_NEXT_JOB(mb_mgr);
 
         job->aes_enc_key_expanded = enc_keys;
         job->aes_dec_key_expanded = dec_keys;
@@ -268,12 +248,12 @@ KNOWN_ANSWER_TEST(MB_MGR *mb_mgr)
         job->cipher_mode = CBC;
         job->hash_alg = SHA1;
 
-        job = submit_job(mb_mgr);
+        job = IMB_SUBMIT_JOB(mb_mgr);
         if (job) {
                 printf("Unexpected return from submit_job\n");
                 return;
         }
-        job = flush_job(mb_mgr);
+        job = IMB_FLUSH_JOB(mb_mgr);
         if (!job) {
                 printf("Unexpected null return from flush_job\n");
                 return;
@@ -332,7 +312,7 @@ DO_TEST(MB_MGR *mb_mgr)
         static uint8_t buf[4096+20];
 
         for (size = 32; size < 4096; size += 16) {
-                job = get_next_job(mb_mgr);
+                job = IMB_GET_NEXT_JOB(mb_mgr);
 
                 job->msg_len_to_cipher_in_bytes = size;
                 job->msg_len_to_hash_in_bytes = size + 20;
@@ -366,13 +346,13 @@ DO_TEST(MB_MGR *mb_mgr)
                         job->cipher_direction = DECRYPT;
                         job->chain_order = HASH_CIPHER;
                 }
-                job = submit_job(mb_mgr);
+                job = IMB_SUBMIT_JOB(mb_mgr);
                 while (job) {
-                        job = get_completed_job(mb_mgr);
+                        job = IMB_GET_COMPLETED_JOB(mb_mgr);
                 } // end while (job)
         } // end for i
 
-        while ((job = flush_job(mb_mgr)) != NULL) {
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
         }
 
         TEST_AUX_FUNC();

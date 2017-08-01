@@ -26,7 +26,7 @@
  */
 
 
-// This contains the bulk of the mb_mgr code, with #define's to build 
+// This contains the bulk of the mb_mgr code, with #define's to build
 // an SSE, AVX, AVX2 or AVX512 version (see mb_mgr_sse.c, mb_mgr_avx.c, etc.)
 
 // get_next_job() returns a job object. This must be filled in and returned
@@ -125,6 +125,60 @@ SUBMIT_JOB_AES_GCM_ENC(JOB_AES_HMAC *job)
       return job;
 }
 #endif /* !NO_GCM */
+
+__forceinline
+JOB_AES_HMAC *
+JOB_CUSTOM_CIPHER(JOB_AES_HMAC *job)
+{
+        if (!(job->status & STS_COMPLETED_AES)) {
+                if (job->cipher_func(job))
+                        job->status = STS_INTERNAL_ERROR;
+                else
+                        job->status |= STS_COMPLETED_AES;
+        }
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_CUSTOM_CIPHER(JOB_AES_HMAC *job)
+{
+        return JOB_CUSTOM_CIPHER(job);
+}
+
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_CUSTOM_CIPHER(JOB_AES_HMAC *job)
+{
+        return JOB_CUSTOM_CIPHER(job);
+}
+
+__forceinline
+JOB_AES_HMAC *
+JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
+{
+        if (!(job->status & STS_COMPLETED_HMAC)) {
+                if (job->hash_func(job))
+                        job->status = STS_INTERNAL_ERROR;
+                else
+                        job->status |= STS_COMPLETED_HMAC;
+        }
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
+{
+        return JOB_CUSTOM_HASH(job);
+}
+
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
+{
+        return JOB_CUSTOM_HASH(job);
+}
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -229,6 +283,8 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_ENC(job);
 #endif /* NO_GCM */
+        } else if (CUSTOM_CIPHER == job->cipher_mode) {
+                return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else { // assume NUL_CIPHER
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -252,6 +308,8 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 
                 tmp = FLUSH_JOB_AES128_ENC(&state->docsis_sec_ooo);
                 return DOCSIS_LAST_BLOCK(tmp);
+        } else if (CUSTOM_CIPHER == job->cipher_mode) {
+                return FLUSH_JOB_CUSTOM_CIPHER(job);
         } else { // assume CNTR or NULL_CIPHER
                 return NULL;
         }
@@ -288,6 +346,8 @@ SUBMIT_JOB_AES_DEC(JOB_AES_HMAC *job)
         } else if (GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_DEC(job);
 #endif /* NO_GCM */
+        } else if (CUSTOM_CIPHER == job->cipher_mode) {
+                return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else {
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -328,6 +388,8 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_AES_XCBC(&state->aes_xcbc_ooo, job);
         case MD5:
                 return SUBMIT_JOB_HMAC_MD5(&state->hmac_md5_ooo, job);
+        case CUSTOM_HASH:
+                return SUBMIT_JOB_CUSTOM_HASH(job);
         default: // assume NULL_HASH
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -365,6 +427,8 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_AES_XCBC(&state->aes_xcbc_ooo);
         case MD5:
                 return FLUSH_JOB_HMAC_MD5(&state->hmac_md5_ooo);
+        case CUSTOM_HASH:
+                return FLUSH_JOB_CUSTOM_HASH(job);
         default: // assume NULL_HASH
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -398,6 +462,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 12, /* MD5 */
                 0,  /* NULL_HASH */
                 16, /* AES_GMAC */
+                0,  /* CUSTOM HASH */
         };
 
         switch (job->cipher_mode) {
@@ -480,6 +545,9 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
 #endif /* !NO_GCM */
+        case CUSTOM_CIPHER:
+                /* no checks here */
+                break;
         default:
                 INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                 return 1;
@@ -523,6 +591,9 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  */
                 break;
 #endif /* !NO_GCM */
+        case CUSTOM_HASH:
+                /* no checks */
+                break;
         default:
                 INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                 return 1;
@@ -711,9 +782,6 @@ FLUSH_JOB(MB_MGR *state)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC *job)
 {
-        assert((job->cipher_mode == DOCSIS_SEC_BPI) ||
-               ((job->msg_len_to_cipher_in_bytes & 15) == 0));
-        assert(job->iv_len_in_bytes == 16);
         AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
                         job->aes_dec_key_expanded,
@@ -726,8 +794,6 @@ SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
-        assert(job->iv_len_in_bytes == 16);
         AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
                         job->aes_dec_key_expanded,
@@ -740,8 +806,6 @@ SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
 {
-        assert((job->msg_len_to_cipher_in_bytes & 15) == 0);
-        assert(job->iv_len_in_bytes == 16);
         AES_CBC_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
                         job->aes_dec_key_expanded,
@@ -754,7 +818,6 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
         AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
                      job->aes_enc_key_expanded,
@@ -768,7 +831,6 @@ SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
         AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
                      job->aes_enc_key_expanded,
@@ -782,7 +844,6 @@ SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
 JOB_AES_HMAC *
 SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 {
-        assert((job->iv_len_in_bytes == 16) || (job->iv_len_in_bytes == 12));
         AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
                      job->iv,
                      job->aes_enc_key_expanded,

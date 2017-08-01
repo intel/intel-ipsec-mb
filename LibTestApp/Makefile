@@ -24,8 +24,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+
+
 MYLIB = ../libIPSec_MB.a
 CFLAGS = -g -DLINUX -I../include -I..
+
 ifeq ($(DEBUG),y)
 CFLAGS += -O0 -DDEBUG
 else
@@ -36,13 +39,14 @@ APP := ipsec_MB_testapp
 
 all: $(APP)
 
-$(APP): main.o gcm_test.o ctr_test.o $(MYLIB)
-	$(CC) $(LDFLAGS) -o $@ $^
+$(APP): main.o gcm_test.o ctr_test.o customop_test.o $(MYLIB)
+	$(CC) $(LDFLAGS) -o $@ $^ $(MYLIB)
 
 main.o: main.c do_test.h
 gcm_test.o: gcm_test.c gcm_ctr_vectors_test.h
 ctr_test.o: ctr_test.c gcm_ctr_vectors_test.h
+customop_test.o: customop_test.c customop_test.h
 
 .PHONY: clean
 clean:
-	-rm -f main.o gcm_test.o ctr_test.o $(APP)
+	-rm -f main.o gcm_test.o ctr_test.o customop_test.o $(APP)
