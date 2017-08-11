@@ -374,8 +374,10 @@ des_dec_cbc_basic(const void *input, void *output, const int size,
         IMB_ASSERT(ivec != NULL);
 
         for (n = 0; n < nblocks; n++) {
-                out[n] = enc_dec_1(in[n], ks, 0 /* decrypt */) ^ iv;
-                iv = in[n];
+                uint64_t in_block = in[n];
+
+                out[n] = enc_dec_1(in_block, ks, 0 /* decrypt */) ^ iv;
+                iv = in_block;
         }
 
         /* *ivec = iv; */
