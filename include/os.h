@@ -40,4 +40,15 @@
         static __forceinline
 #endif
 
+#ifdef DEBUG
+#include <assert.h>
+#define IMB_ASSERT(x) assert(x)
+#else
+#define IMB_ASSERT(x)
+#endif
+
+#ifndef IMB_DIM
+#define IMB_DIM(x) (sizeof(x) / sizeof(x[0]))
+#endif
+
 #endif // end ifndef __OS_H

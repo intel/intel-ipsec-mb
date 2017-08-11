@@ -46,6 +46,8 @@ typedef enum {
         GCM,
 #endif /* !NO_GCM */
         CUSTOM_CIPHER,
+        DES,
+        DOCSIS_DES
 } JOB_CIPHER_MODE;
 
 typedef enum {

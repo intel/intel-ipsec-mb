@@ -45,8 +45,8 @@ LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
 all: $(APP).exe
 
-$(APP).exe: main.obj gcm_test.obj ctr_test.obj customop_test.obj $(IPSECLIB)
-        $(LNK) $(LFLAGS) main.obj gcm_test.obj ctr_test.obj customop_test.obj $(IPSECLIB)
+$(APP).exe: main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj $(IPSECLIB)
+        $(LNK) $(LFLAGS) main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj $(IPSECLIB)
 
 main.obj: main.c do_test.h
 	$(CC) /c $(CFLAGS) main.c
@@ -59,5 +59,9 @@ ctr_test.obj: ctr_test.c gcm_ctr_vectors_test.h
 
 customop_test.obj: customop_test.c customop_test.h
 	$(CC) /c $(CFLAGS) customop_test.c
+
+des_test.obj: des_test.c gcm_ctr_vectors_test.h
+	$(CC) /c $(CFLAGS) des_test.c
+
 clean:
-	del /q main.obj ctr_test.obj gcm_test.obj customop_test.obj $(APP).*
+	del /q main.obj ctr_test.obj gcm_test.obj customop_test.obj des_test.obj $(APP).*

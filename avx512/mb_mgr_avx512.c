@@ -29,11 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef DEBUG
-#include <assert.h>
-#else
-#define assert(x)
-#endif
+#include "os.h"
 
 #define AVX512
 #include "mb_mgr.h"
@@ -42,6 +38,7 @@
 #ifndef NO_GCM
 #include "gcm_defines.h"
 #endif
+#include "des.h"
 
 JOB_AES_HMAC* submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);

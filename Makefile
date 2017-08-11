@@ -189,7 +189,9 @@ lib_objs := \
 	mb_mgr_avx2.o \
 	mb_mgr_avx512.o \
 	mb_mgr_sse.o \
-	md5_one_block.o
+	md5_one_block.o \
+	des_key.o \
+	des_basic.o
 
 gcm_objs := gcm128_sse.o gcm192_sse.o gcm256_sse.o \
 	gcm128_avx_gen2.o gcm192_avx_gen2.o gcm256_avx_gen2.o \
