@@ -25,7 +25,7 @@
 
 %global githubname   intel-ipsec-mb
 %global githubver    0.46
-%global githubfull   %{githubname}-%{githubver}
+%global githubfull   %{githubname}-v%{githubver}
 
 # disable producing debuginfo for this package
 %global debug_package %{nil}
@@ -37,7 +37,7 @@ Version:            %{githubver}
 License:            BSD
 Group:              Development/Tools
 ExclusiveArch:      x86_64
-Source0:            https://github.com/01org/%{githubname}/archive/v%{githubver}.tar.gz
+Source0:            https://github.com/01org/%{githubname}/archive/%{githubname}-v%{githubver}.tar.gz
 URL:                https://github.com/01org/%{githubname}
 
 %description
@@ -57,7 +57,7 @@ For additional information please refer to:
 https://github.com/01org/%{githubname}
 
 %prep
-%autosetup -n %{githubfull}
+%setup -n %{githubfull}
 
 %build
 make %{?_smp_mflags}
