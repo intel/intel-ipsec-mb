@@ -115,7 +115,8 @@ test_des(struct MB_MGR *mb_mgr,
          unsigned text_len,
          int dir,
          int order,
-         JOB_CIPHER_MODE cipher)
+         JOB_CIPHER_MODE cipher,
+         const int in_place)
 {
         struct JOB_AES_HMAC *job;
         uint8_t padding[16];
@@ -127,14 +128,24 @@ test_des(struct MB_MGR *mb_mgr,
         memset(target, -1, text_len + (sizeof(padding) * 2));
         memset(padding, -1, sizeof(padding));
 
+        if (in_place) {
+                /* copy input text to the allocated buffer */
+                memcpy(target + sizeof(padding), in_text, text_len);
+        }
+
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->cipher_direction = dir;
         job->chain_order = order;
-        job->dst = target + 16;
-        job->src = in_text;
+        if (!in_place) {
+                job->dst = target + sizeof(padding);
+                job->src = in_text;
+        } else {
+                job->dst = target + sizeof(padding);
+                job->src = target + sizeof(padding);
+        }
         job->cipher_mode = cipher;
         job->aes_enc_key_expanded = ks;
         job->aes_dec_key_expanded = ks;
@@ -166,7 +177,7 @@ test_des(struct MB_MGR *mb_mgr,
                 printf("%d Error status:%d", __LINE__, job->status);
                 goto end;
         }
-        if (memcmp(out_text, target + 16, text_len)) {
+        if (memcmp(out_text, target + sizeof(padding), text_len)) {
                 printf("mismatched\n");
                 goto end;
         }
@@ -209,7 +220,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, cipher)) {
+                             ENCRYPT, CIPHER_HASH, cipher, 0)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
                 }
@@ -218,11 +229,28 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, cipher)) {
+                             DECRYPT, HASH_CIPHER, cipher, 0)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
                 }
 
+                if (test_des(mb_mgr, ks, 
+                             vec_tab[vect].IV,
+                             vec_tab[vect].P, vec_tab[vect].C,
+                             (unsigned) vec_tab[vect].Plen,
+                             ENCRYPT, CIPHER_HASH, cipher, 1)) {
+                        printf("error #%d encrypt in-place\n", vect + 1);
+                        errors++;
+                }
+
+                if (test_des(mb_mgr, ks,
+                             vec_tab[vect].IV,
+                             vec_tab[vect].C, vec_tab[vect].P,
+                             (unsigned) vec_tab[vect].Plen,
+                             DECRYPT, HASH_CIPHER, cipher, 1)) {
+                        printf("error #%d decrypt in-place\n", vect + 1);
+                        errors++;
+                }
 	}
 	printf("\n");
 	return errors;

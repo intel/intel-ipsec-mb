@@ -478,10 +478,8 @@ SUBMIT_JOB_AES_DEC(JOB_AES_HMAC *job)
                 return DES_CBC_DEC(job);
         } else if (DOCSIS_DES == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes >= DES_BLOCK_SIZE) {
-                        JOB_AES_HMAC *tmp;
-
-                        tmp = DES_CBC_DEC(job);
-                        return DOCSIS_DES_LAST_BLOCK(tmp);
+                        DOCSIS_DES_LAST_BLOCK(job);
+                        return DES_CBC_DEC(job);
                 } else
                         return DOCSIS_DES_FIRST_BLOCK(job);
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
