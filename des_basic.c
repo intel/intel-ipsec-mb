@@ -34,264 +34,252 @@
 #include "des_utils.h"
 #include "os.h"
 
-
-__forceinline uint64_t initial_permutation(const uint64_t in)
+__forceinline
+void permute_operation(uint32_t *pa, uint32_t *pb,
+                       const uint32_t n, const uint32_t m)
 {
-        static const uint8_t ip_table_fips46_3[] = {
-                58, 50, 42, 34, 26, 18, 10, 2,
-                60, 52, 44, 36, 28, 20, 12, 4,
-                62, 54, 46, 38, 30, 22, 14, 6,
-                64, 56, 48, 40, 32, 24, 16, 8,
-                57, 49, 41, 33, 25, 17, 9,  1,
-                59, 51, 43, 35, 27, 19, 11, 3,
-                61, 53, 45, 37, 29, 21, 13, 5,
-                63, 55, 47, 39, 31, 23, 15, 7
-        };
-        return permute_64b(reflect64(in), ip_table_fips46_3, IMB_DIM(ip_table_fips46_3));
+        register uint32_t t = (*pb ^ (*pa >> n)) & m;
+
+        *pb ^= t;
+        *pa ^= (t << n);
 }
 
-__forceinline uint64_t final_permutation(const uint64_t in)
+/* inital permutation */
+__forceinline
+void ip_z(uint32_t *pl, uint32_t *pr)
 {
-        static const uint8_t fp_table_fips46_3[] = {
-                40, 8, 48, 16, 56, 24, 64, 32,
-                39, 7, 47, 15, 55, 23, 63, 31,
-                38, 6, 46, 14, 54, 22, 62, 30,
-                37, 5, 45, 13, 53, 21, 61, 29,
-                36, 4, 44, 12, 52, 20, 60, 28,
-                35, 3, 43, 11, 51, 19, 59, 27,
-                34, 2, 42, 10, 50, 18, 58, 26,
-                33, 1, 41,  9, 49, 17, 57, 25,
-        };
+        permute_operation(pr, pl, 4, 0x0f0f0f0f);
+        permute_operation(pl, pr, 16, 0x0000ffff);
+        permute_operation(pr, pl, 2, 0x33333333);
+        permute_operation(pl, pr, 8, 0x00ff00ff);
+        permute_operation(pr, pl, 1, 0x55555555);
+}
 
-        return reflect64(permute_64b(in, fp_table_fips46_3, IMB_DIM(fp_table_fips46_3)));
+/* final permuation */
+__forceinline
+void fp_z(uint32_t *pl, uint32_t *pr)
+{
+        permute_operation(pl, pr, 1, 0x55555555);
+        permute_operation(pr, pl, 8, 0x00ff00ff);
+        permute_operation(pl, pr, 2, 0x33333333);
+        permute_operation(pr, pl, 16, 0x0000ffff);
+        permute_operation(pl, pr, 4, 0x0f0f0f0f);
 }
 
 /* 1st part of DES round
  * - permutes and exands R(32 bits) into 48 bits
  */
 __forceinline
-uint64_t e_phase(const uint32_t R)
+uint64_t e_phase(const uint64_t R)
 {
-        /* E BIT-SELECTION TABLE FIPS46-3 */
-        static const uint8_t e_table_fips46_3[] = {
-                32,  1,  2,  3,  4,  5,
-                 4,  5,  6,  7,  8,  9,
-                 8,  9, 10, 11, 12, 13,
-                12, 13, 14, 15, 16, 17,
-                16, 17, 18, 19, 20, 21,
-                20, 21, 22, 23, 24, 25,
-                24, 25, 26, 27, 28, 29,
-                28, 29, 30, 31, 32,  1
-        };
-
-        return permute_64b(R, e_table_fips46_3, IMB_DIM(e_table_fips46_3));
-}
-
-__forceinline
-uint64_t e_phase_new(const uint32_t R)
-{
-        /* E BIT-SELECTION TABLE from FIPS46-3.
-         * Modified to also do 8x6 to 8x8 expansion.
-         * Note: bit 63 will be always zero and
-         *       it's used to clear 2MSB of each byte
+        /* E phase as in FIPS46-3 and also 8x6 to 8x8 expansion.
+         *
+         * Bit selection table for this operation looks as follows:
+         *         32, 1,  2,  3,  4,  5,  X, X,
+         *         4,  5,  6,  7,  8,  9,  X, X,
+         *         8,  9,  10, 11, 12, 13, X, X,
+         *         12, 13, 14, 15, 16, 17, X, X,
+         *         16, 17, 18, 19, 20, 21, X, X,
+         *         20, 21, 22, 23, 24, 25, X, X,
+         *         24, 25, 26, 27, 28, 29, X, X,
+         *         28, 29, 30, 31, 32,  1, X, X
+         * where 'X' is bit value 0.
          */
-        static const uint8_t e_table_fips46_3_new[] = {
-                32,  1,  2,  3,  4,  5, 63, 63,
-                 4,  5,  6,  7,  8,  9, 63, 63,
-                 8,  9, 10, 11, 12, 13, 63, 63,
-                12, 13, 14, 15, 16, 17, 63, 63,
-                16, 17, 18, 19, 20, 21, 63, 63,
-                20, 21, 22, 23, 24, 25, 63, 63,
-                24, 25, 26, 27, 28, 29, 63, 63,
-                28, 29, 30, 31, 32,  1, 63, 63
-        };
-
-        return permute_64b(R, e_table_fips46_3_new, IMB_DIM(e_table_fips46_3_new));
+        return ((R << 1) & UINT64_C(0x3e)) | ((R >> 31) & UINT64_C(1)) |
+                ((R << 5) & UINT64_C(0x3f00)) |
+                ((R << 9) & UINT64_C(0x3f0000)) |
+                ((R << 13) & UINT64_C(0x3f000000)) |
+                ((R << 17) & UINT64_C(0x3f00000000)) |
+                ((R << 21) & UINT64_C(0x3f0000000000)) |
+                ((R << 25) & UINT64_C(0x3f000000000000)) |
+                ((R << 29) & UINT64_C(0x1f00000000000000)) |
+                ((R & UINT64_C(1)) << 61);
 }
 
-/* 6 bits in
- * in[5]in[0] -> row index
- * in[4]in[3]in[2]in[1] -> column
- */
-__forceinline
-uint32_t s_function(const uint8_t in, const uint8_t *s_table)
-{
-        /* bits 5:4 identify the row */
-        const int row = ((in & 1) << 5) | ((in & 0x20) >> 1);
-        /* bits 3:0 identify column */
-        const int column = reflect_4b((in >> 1) & 0xf);
+static const uint32_t sbox0p[64] = {
+        UINT32_C(0x00410100), UINT32_C(0x00010000), UINT32_C(0x40400000), UINT32_C(0x40410100),
+        UINT32_C(0x00400000), UINT32_C(0x40010100), UINT32_C(0x40010000), UINT32_C(0x40400000),
+        UINT32_C(0x40010100), UINT32_C(0x00410100), UINT32_C(0x00410000), UINT32_C(0x40000100),
+        UINT32_C(0x40400100), UINT32_C(0x00400000), UINT32_C(0x00000000), UINT32_C(0x40010000),
+        UINT32_C(0x00010000), UINT32_C(0x40000000), UINT32_C(0x00400100), UINT32_C(0x00010100),
+        UINT32_C(0x40410100), UINT32_C(0x00410000), UINT32_C(0x40000100), UINT32_C(0x00400100),
+        UINT32_C(0x40000000), UINT32_C(0x00000100), UINT32_C(0x00010100), UINT32_C(0x40410000),
+        UINT32_C(0x00000100), UINT32_C(0x40400100), UINT32_C(0x40410000), UINT32_C(0x00000000),
+        UINT32_C(0x00000000), UINT32_C(0x40410100), UINT32_C(0x00400100), UINT32_C(0x40010000),
+        UINT32_C(0x00410100), UINT32_C(0x00010000), UINT32_C(0x40000100), UINT32_C(0x00400100),
+        UINT32_C(0x40410000), UINT32_C(0x00000100), UINT32_C(0x00010100), UINT32_C(0x40400000),
+        UINT32_C(0x40010100), UINT32_C(0x40000000), UINT32_C(0x40400000), UINT32_C(0x00410000),
+        UINT32_C(0x40410100), UINT32_C(0x00010100), UINT32_C(0x00410000), UINT32_C(0x40400100),
+        UINT32_C(0x00400000), UINT32_C(0x40000100), UINT32_C(0x40010000), UINT32_C(0x00000000),
+        UINT32_C(0x00010000), UINT32_C(0x00400000), UINT32_C(0x40400100), UINT32_C(0x00410100),
+        UINT32_C(0x40000000), UINT32_C(0x40410000), UINT32_C(0x00000100), UINT32_C(0x40010100)
+};
 
-        return (uint32_t) reflect_4b(s_table[row + column]);
-}
+static const uint32_t sbox1p[64] = {
+        UINT32_C(0x08021002), UINT32_C(0x00000000), UINT32_C(0x00021000), UINT32_C(0x08020000),
+        UINT32_C(0x08000002), UINT32_C(0x00001002), UINT32_C(0x08001000), UINT32_C(0x00021000),
+        UINT32_C(0x00001000), UINT32_C(0x08020002), UINT32_C(0x00000002), UINT32_C(0x08001000),
+        UINT32_C(0x00020002), UINT32_C(0x08021000), UINT32_C(0x08020000), UINT32_C(0x00000002),
+        UINT32_C(0x00020000), UINT32_C(0x08001002), UINT32_C(0x08020002), UINT32_C(0x00001000),
+        UINT32_C(0x00021002), UINT32_C(0x08000000), UINT32_C(0x00000000), UINT32_C(0x00020002),
+        UINT32_C(0x08001002), UINT32_C(0x00021002), UINT32_C(0x08021000), UINT32_C(0x08000002),
+        UINT32_C(0x08000000), UINT32_C(0x00020000), UINT32_C(0x00001002), UINT32_C(0x08021002),
+        UINT32_C(0x00020002), UINT32_C(0x08021000), UINT32_C(0x08001000), UINT32_C(0x00021002),
+        UINT32_C(0x08021002), UINT32_C(0x00020002), UINT32_C(0x08000002), UINT32_C(0x00000000),
+        UINT32_C(0x08000000), UINT32_C(0x00001002), UINT32_C(0x00020000), UINT32_C(0x08020002),
+        UINT32_C(0x00001000), UINT32_C(0x08000000), UINT32_C(0x00021002), UINT32_C(0x08001002),
+        UINT32_C(0x08021000), UINT32_C(0x00001000), UINT32_C(0x00000000), UINT32_C(0x08000002),
+        UINT32_C(0x00000002), UINT32_C(0x08021002), UINT32_C(0x00021000), UINT32_C(0x08020000),
+        UINT32_C(0x08020002), UINT32_C(0x00020000), UINT32_C(0x00001002), UINT32_C(0x08001000),
+        UINT32_C(0x08001002), UINT32_C(0x00000002), UINT32_C(0x08020000), UINT32_C(0x00021000)
+};
 
-/* S1 primitive function */
-__forceinline uint32_t s1(const uint8_t in)
-{
-        /* Columns 0 - 15 x Rows 0 - 3 */
-        static const uint8_t s1_table_fips46_3[] = {
-                14,  4, 13, 1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9, 0,  7,
-                 0, 15,  7, 4, 14,  2, 13,  1, 10,  6, 12, 11,  9,  5, 3,  8,
-                 4,  1, 14, 8, 13,  6,  2, 11, 15, 12,  9,  7,  3, 10, 5,  0,
-                15, 12,  8, 2,  4,  9,  1,  7,  5, 11,  3, 14, 10,  0, 6, 13
-        };
+static const uint32_t sbox2p[64] = {
+        UINT32_C(0x20800000), UINT32_C(0x00808020), UINT32_C(0x00000020), UINT32_C(0x20800020),
+        UINT32_C(0x20008000), UINT32_C(0x00800000), UINT32_C(0x20800020), UINT32_C(0x00008020),
+        UINT32_C(0x00800020), UINT32_C(0x00008000), UINT32_C(0x00808000), UINT32_C(0x20000000),
+        UINT32_C(0x20808020), UINT32_C(0x20000020), UINT32_C(0x20000000), UINT32_C(0x20808000),
+        UINT32_C(0x00000000), UINT32_C(0x20008000), UINT32_C(0x00808020), UINT32_C(0x00000020),
+        UINT32_C(0x20000020), UINT32_C(0x20808020), UINT32_C(0x00008000), UINT32_C(0x20800000),
+        UINT32_C(0x20808000), UINT32_C(0x00800020), UINT32_C(0x20008020), UINT32_C(0x00808000),
+        UINT32_C(0x00008020), UINT32_C(0x00000000), UINT32_C(0x00800000), UINT32_C(0x20008020),
+        UINT32_C(0x00808020), UINT32_C(0x00000020), UINT32_C(0x20000000), UINT32_C(0x00008000),
+        UINT32_C(0x20000020), UINT32_C(0x20008000), UINT32_C(0x00808000), UINT32_C(0x20800020),
+        UINT32_C(0x00000000), UINT32_C(0x00808020), UINT32_C(0x00008020), UINT32_C(0x20808000),
+        UINT32_C(0x20008000), UINT32_C(0x00800000), UINT32_C(0x20808020), UINT32_C(0x20000000),
+        UINT32_C(0x20008020), UINT32_C(0x20800000), UINT32_C(0x00800000), UINT32_C(0x20808020),
+        UINT32_C(0x00008000), UINT32_C(0x00800020), UINT32_C(0x20800020), UINT32_C(0x00008020),
+        UINT32_C(0x00800020), UINT32_C(0x00000000), UINT32_C(0x20808000), UINT32_C(0x20000020),
+        UINT32_C(0x20800000), UINT32_C(0x20008020), UINT32_C(0x00000020), UINT32_C(0x00808000)
+};
 
-        return s_function(in, s1_table_fips46_3) << (0 * 4);
-}
+static const uint32_t sbox3p[64] = {
+        UINT32_C(0x00080201), UINT32_C(0x02000200), UINT32_C(0x00000001), UINT32_C(0x02080201),
+        UINT32_C(0x00000000), UINT32_C(0x02080000), UINT32_C(0x02000201), UINT32_C(0x00080001),
+        UINT32_C(0x02080200), UINT32_C(0x02000001), UINT32_C(0x02000000), UINT32_C(0x00000201),
+        UINT32_C(0x02000001), UINT32_C(0x00080201), UINT32_C(0x00080000), UINT32_C(0x02000000),
+        UINT32_C(0x02080001), UINT32_C(0x00080200), UINT32_C(0x00000200), UINT32_C(0x00000001),
+        UINT32_C(0x00080200), UINT32_C(0x02000201), UINT32_C(0x02080000), UINT32_C(0x00000200),
+        UINT32_C(0x00000201), UINT32_C(0x00000000), UINT32_C(0x00080001), UINT32_C(0x02080200),
+        UINT32_C(0x02000200), UINT32_C(0x02080001), UINT32_C(0x02080201), UINT32_C(0x00080000),
+        UINT32_C(0x02080001), UINT32_C(0x00000201), UINT32_C(0x00080000), UINT32_C(0x02000001),
+        UINT32_C(0x00080200), UINT32_C(0x02000200), UINT32_C(0x00000001), UINT32_C(0x02080000),
+        UINT32_C(0x02000201), UINT32_C(0x00000000), UINT32_C(0x00000200), UINT32_C(0x00080001),
+        UINT32_C(0x00000000), UINT32_C(0x02080001), UINT32_C(0x02080200), UINT32_C(0x00000200),
+        UINT32_C(0x02000000), UINT32_C(0x02080201), UINT32_C(0x00080201), UINT32_C(0x00080000),
+        UINT32_C(0x02080201), UINT32_C(0x00000001), UINT32_C(0x02000200), UINT32_C(0x00080201),
+        UINT32_C(0x00080001), UINT32_C(0x00080200), UINT32_C(0x02080000), UINT32_C(0x02000201),
+        UINT32_C(0x00000201), UINT32_C(0x02000000), UINT32_C(0x02000001), UINT32_C(0x02080200)
+};
 
-/* S2 primitive function */
-__forceinline uint32_t s2(const uint8_t in)
-{
-        /* Columns 0 - 15 x Rows 0 - 3 */
-        static const uint8_t s2_table_fips46_3[] = {
-                15,  1,  8, 14,  6, 11,  3,  4,  9, 7,  2, 13, 12, 0,  5, 10,
-                 3, 13,  4,  7, 15,  2,  8, 14, 12, 0,  1, 10,  6, 9, 11,  5,
-                 0, 14,  7, 11, 10,  4, 13,  1,  5, 8, 12,  6,  9, 3,  2, 15,
-                13,  8, 10,  1,  3, 15,  4,  2, 11, 6,  7, 12,  0, 5, 14,  9
-        };
+static const uint32_t sbox4p[64] = {
+        UINT32_C(0x01000000), UINT32_C(0x00002000), UINT32_C(0x00000080), UINT32_C(0x01002084),
+        UINT32_C(0x01002004), UINT32_C(0x01000080), UINT32_C(0x00002084), UINT32_C(0x01002000),
+        UINT32_C(0x00002000), UINT32_C(0x00000004), UINT32_C(0x01000004), UINT32_C(0x00002080),
+        UINT32_C(0x01000084), UINT32_C(0x01002004), UINT32_C(0x01002080), UINT32_C(0x00000000),
+        UINT32_C(0x00002080), UINT32_C(0x01000000), UINT32_C(0x00002004), UINT32_C(0x00000084),
+        UINT32_C(0x01000080), UINT32_C(0x00002084), UINT32_C(0x00000000), UINT32_C(0x01000004),
+        UINT32_C(0x00000004), UINT32_C(0x01000084), UINT32_C(0x01002084), UINT32_C(0x00002004),
+        UINT32_C(0x01002000), UINT32_C(0x00000080), UINT32_C(0x00000084), UINT32_C(0x01002080),
+        UINT32_C(0x01002080), UINT32_C(0x01000084), UINT32_C(0x00002004), UINT32_C(0x01002000),
+        UINT32_C(0x00002000), UINT32_C(0x00000004), UINT32_C(0x01000004), UINT32_C(0x01000080),
+        UINT32_C(0x01000000), UINT32_C(0x00002080), UINT32_C(0x01002084), UINT32_C(0x00000000),
+        UINT32_C(0x00002084), UINT32_C(0x01000000), UINT32_C(0x00000080), UINT32_C(0x00002004),
+        UINT32_C(0x01000084), UINT32_C(0x00000080), UINT32_C(0x00000000), UINT32_C(0x01002084),
+        UINT32_C(0x01002004), UINT32_C(0x01002080), UINT32_C(0x00000084), UINT32_C(0x00002000),
+        UINT32_C(0x00002080), UINT32_C(0x01002004), UINT32_C(0x01000080), UINT32_C(0x00000084),
+        UINT32_C(0x00000004), UINT32_C(0x00002084), UINT32_C(0x01002000), UINT32_C(0x01000004)
+};
 
-        return s_function(in, s2_table_fips46_3) << (1 * 4);
-}
+const uint32_t sbox5p[64] = {
+        UINT32_C(0x10000008), UINT32_C(0x00040008), UINT32_C(0x00000000), UINT32_C(0x10040400),
+        UINT32_C(0x00040008), UINT32_C(0x00000400), UINT32_C(0x10000408), UINT32_C(0x00040000),
+        UINT32_C(0x00000408), UINT32_C(0x10040408), UINT32_C(0x00040400), UINT32_C(0x10000000),
+        UINT32_C(0x10000400), UINT32_C(0x10000008), UINT32_C(0x10040000), UINT32_C(0x00040408),
+        UINT32_C(0x00040000), UINT32_C(0x10000408), UINT32_C(0x10040008), UINT32_C(0x00000000),
+        UINT32_C(0x00000400), UINT32_C(0x00000008), UINT32_C(0x10040400), UINT32_C(0x10040008),
+        UINT32_C(0x10040408), UINT32_C(0x10040000), UINT32_C(0x10000000), UINT32_C(0x00000408),
+        UINT32_C(0x00000008), UINT32_C(0x00040400), UINT32_C(0x00040408), UINT32_C(0x10000400),
+        UINT32_C(0x00000408), UINT32_C(0x10000000), UINT32_C(0x10000400), UINT32_C(0x00040408),
+        UINT32_C(0x10040400), UINT32_C(0x00040008), UINT32_C(0x00000000), UINT32_C(0x10000400),
+        UINT32_C(0x10000000), UINT32_C(0x00000400), UINT32_C(0x10040008), UINT32_C(0x00040000),
+        UINT32_C(0x00040008), UINT32_C(0x10040408), UINT32_C(0x00040400), UINT32_C(0x00000008),
+        UINT32_C(0x10040408), UINT32_C(0x00040400), UINT32_C(0x00040000), UINT32_C(0x10000408),
+        UINT32_C(0x10000008), UINT32_C(0x10040000), UINT32_C(0x00040408), UINT32_C(0x00000000),
+        UINT32_C(0x00000400), UINT32_C(0x10000008), UINT32_C(0x10000408), UINT32_C(0x10040400),
+        UINT32_C(0x10040000), UINT32_C(0x00000408), UINT32_C(0x00000008), UINT32_C(0x10040008)
+};
 
-/* S3 primitive function */
-__forceinline uint32_t s3(const uint8_t in)
-{
-        /* Columns 0 - 15 x Rows 0 - 3 */
-        static const uint8_t s3_table_fips46_3[] = {
-                10,  0,  9, 14, 6,  3, 15,  5,  1, 13, 12,  7, 11,  4,  2,  8,
-                13,  7,  0,  9, 3,  4,  6, 10,  2,  8,  5, 14, 12, 11, 15,  1,
-                13,  6,  4,  9, 8, 15,  3,  0, 11,  1,  2, 12,  5, 10, 14,  7,
-                 1, 10, 13,  0, 6,  9,  8,  7,  4, 15, 14,  3, 11,  5,  2, 12
-        };
+static const uint32_t sbox6p[64] = {
+        UINT32_C(0x00000800), UINT32_C(0x00000040), UINT32_C(0x00200040), UINT32_C(0x80200000),
+        UINT32_C(0x80200840), UINT32_C(0x80000800), UINT32_C(0x00000840), UINT32_C(0x00000000),
+        UINT32_C(0x00200000), UINT32_C(0x80200040), UINT32_C(0x80000040), UINT32_C(0x00200800),
+        UINT32_C(0x80000000), UINT32_C(0x00200840), UINT32_C(0x00200800), UINT32_C(0x80000040),
+        UINT32_C(0x80200040), UINT32_C(0x00000800), UINT32_C(0x80000800), UINT32_C(0x80200840),
+        UINT32_C(0x00000000), UINT32_C(0x00200040), UINT32_C(0x80200000), UINT32_C(0x00000840),
+        UINT32_C(0x80200800), UINT32_C(0x80000840), UINT32_C(0x00200840), UINT32_C(0x80000000),
+        UINT32_C(0x80000840), UINT32_C(0x80200800), UINT32_C(0x00000040), UINT32_C(0x00200000),
+        UINT32_C(0x80000840), UINT32_C(0x00200800), UINT32_C(0x80200800), UINT32_C(0x80000040),
+        UINT32_C(0x00000800), UINT32_C(0x00000040), UINT32_C(0x00200000), UINT32_C(0x80200800),
+        UINT32_C(0x80200040), UINT32_C(0x80000840), UINT32_C(0x00000840), UINT32_C(0x00000000),
+        UINT32_C(0x00000040), UINT32_C(0x80200000), UINT32_C(0x80000000), UINT32_C(0x00200040),
+        UINT32_C(0x00000000), UINT32_C(0x80200040), UINT32_C(0x00200040), UINT32_C(0x00000840),
+        UINT32_C(0x80000040), UINT32_C(0x00000800), UINT32_C(0x80200840), UINT32_C(0x00200000),
+        UINT32_C(0x00200840), UINT32_C(0x80000000), UINT32_C(0x80000800), UINT32_C(0x80200840),
+        UINT32_C(0x80200000), UINT32_C(0x00200840), UINT32_C(0x00200800), UINT32_C(0x80000800)
+};
 
-        return s_function(in, s3_table_fips46_3) << (2 * 4);
-}
-
-/* S4 primitive function */
-__forceinline uint32_t s4(const uint8_t in)
-{
-        /* Columns 0 - 15 x Rows 0 - 3 */
-        static const uint8_t s4_table_fips46_3[] = {
-                7 , 13, 14, 3, 0 , 6 , 9 , 10,  1 , 2, 8, 5 , 11, 12, 4 , 15,
-                13,  8, 11, 5, 6 , 15, 0 , 3 ,  4 , 7, 2, 12, 1 , 10, 14, 9,
-                10,  6, 9 , 0, 12, 11, 7 , 13,  15, 1, 3, 14, 5 , 2 , 8 , 4,
-                3 , 15, 0 , 6, 10, 1 , 13, 8 ,  9 , 4, 5, 11, 12, 7 , 2 , 14
-        };
-
-        return s_function(in, s4_table_fips46_3) << (3 * 4);
-}
-
-/* S5 primitive function */
-__forceinline uint32_t s5(const uint8_t in)
-{
-        /* Columns 0 - 15 x Rows 0 - 3 */
-        static const uint8_t s5_table_fips46_3[] = {
-                2 , 12, 4 , 1 , 7 , 10, 11, 6 , 8 , 5 , 3 , 15, 13, 0, 14, 9,
-                14, 11, 2 , 12, 4 , 7 , 13, 1 , 5 , 0 , 15, 10, 3 , 9, 8 , 6,
-                4 , 2 , 1 , 11, 10, 13, 7 , 8 , 15, 9 , 12, 5 , 6 , 3, 0 , 14,
-                11, 8 , 12,  7, 1 , 14, 2 , 13, 6 , 15, 0 , 9 , 10, 4, 5 , 3,
-        };
-
-        return s_function(in, s5_table_fips46_3) << (4 * 4);
-}
-
-/* S6 primitive function */
-__forceinline uint32_t s6(const uint8_t in)
-{
-        /* Columns 0 - 15 x Rows 0 - 3 */
-        static const uint8_t s6_table_fips46_3[] = {
-                12, 1,  10, 15, 9, 2,  6,  8,  0,  13, 3,  4,  14, 7,  5,  11,
-                10, 15, 4,  2,  7, 12, 9,  5,  6,  1,  13, 14, 0,  11, 3,  8,
-                9,  14, 15, 5,  2, 8,  12, 3,  7,  0,  4,  10, 1,  13, 11, 6,
-                4,  3,  2,  12, 9, 5,  15, 10, 11, 14, 1,  7,  6,  0,  8,  13
-        };
-
-        return s_function(in, s6_table_fips46_3) << (5 * 4);
-}
-
-/* S7 primitive function */
-__forceinline uint32_t s7(const uint8_t in)
-{
-        /* Columns 0 - 15 x Rows 0 - 3 */
-        static const uint8_t s7_table_fips46_3[] = {
-                4 , 11,  2, 14, 15,  0, 8 , 13, 3 , 12, 9, 7 , 5 , 10, 6, 1,
-                13, 0 , 11, 7 , 4 ,  9, 1 , 10, 14, 3 , 5, 12, 2 , 15, 8, 6,
-                1 , 4 , 11, 13, 12,  3, 7 , 14, 10, 15, 6, 8 , 0 , 5 , 9, 2,
-                6 , 11, 13, 8 , 1 ,  4, 10, 7 , 9 , 5 , 0, 15, 14, 2 , 3, 12
-        };
-
-        return s_function(in, s7_table_fips46_3) << (6 * 4);
-}
-
-/* S8 primitive function */
-__forceinline uint32_t s8(const uint8_t in)
-{
-        /* Columns 0 - 15 x Rows 0 - 3 */
-        static const uint8_t s8_table_fips46_3[] = {
-                13, 2 , 8 , 4, 6 , 15, 11, 1 , 10,  9 , 3 , 14, 5 , 0 , 12, 7,
-                1 , 15, 13, 8, 10, 3 , 7 , 4 , 12,  5 , 6 , 11, 0 , 14, 9 , 2,
-                7 , 11, 4 , 1, 9 , 12, 14, 2 , 0 ,  6 , 10, 13, 15, 3 , 5 , 8,
-                2 , 1 , 14, 7, 4 , 10, 8 , 13, 15,  12, 9 , 0 , 3 , 5 , 6 , 11
-        };
-
-        return s_function(in, s8_table_fips46_3) << (7 * 4);
-}
-
-/* P phase */
-__forceinline
-uint32_t p_phase(const uint32_t in)
-{
-        static const uint8_t p_table_fips46_3[] = {
-                16,  7, 20, 21,
-                29, 12, 28, 17,
-                 1, 15, 23, 26,
-                 5, 18, 31, 10,
-                 2,  8, 24, 14,
-                32, 27,  3,  9,
-                19, 13, 30,  6,
-                22, 11,  4, 25
-        };
-
-        return permute_32b(in, p_table_fips46_3, IMB_DIM(p_table_fips46_3));
-}
+static const uint32_t sbox7p[64] = {
+        UINT32_C(0x04100010), UINT32_C(0x04104000), UINT32_C(0x00004010), UINT32_C(0x00000000),
+        UINT32_C(0x04004000), UINT32_C(0x00100010), UINT32_C(0x04100000), UINT32_C(0x04104010),
+        UINT32_C(0x00000010), UINT32_C(0x04000000), UINT32_C(0x00104000), UINT32_C(0x00004010),
+        UINT32_C(0x00104010), UINT32_C(0x04004010), UINT32_C(0x04000010), UINT32_C(0x04100000),
+        UINT32_C(0x00004000), UINT32_C(0x00104010), UINT32_C(0x00100010), UINT32_C(0x04004000),
+        UINT32_C(0x04104010), UINT32_C(0x04000010), UINT32_C(0x00000000), UINT32_C(0x00104000),
+        UINT32_C(0x04000000), UINT32_C(0x00100000), UINT32_C(0x04004010), UINT32_C(0x04100010),
+        UINT32_C(0x00100000), UINT32_C(0x00004000), UINT32_C(0x04104000), UINT32_C(0x00000010),
+        UINT32_C(0x00100000), UINT32_C(0x00004000), UINT32_C(0x04000010), UINT32_C(0x04104010),
+        UINT32_C(0x00004010), UINT32_C(0x04000000), UINT32_C(0x00000000), UINT32_C(0x00104000),
+        UINT32_C(0x04100010), UINT32_C(0x04004010), UINT32_C(0x04004000), UINT32_C(0x00100010),
+        UINT32_C(0x04104000), UINT32_C(0x00000010), UINT32_C(0x00100010), UINT32_C(0x04004000),
+        UINT32_C(0x04104010), UINT32_C(0x00100000), UINT32_C(0x04100000), UINT32_C(0x04000010),
+        UINT32_C(0x00104000), UINT32_C(0x00004010), UINT32_C(0x04004010), UINT32_C(0x04100000),
+        UINT32_C(0x00000010), UINT32_C(0x04104000), UINT32_C(0x00104010), UINT32_C(0x00000000),
+        UINT32_C(0x04000000), UINT32_C(0x04100010), UINT32_C(0x00004000), UINT32_C(0x00104010)
+};
 
 __forceinline
 uint32_t fRK(const uint32_t R, const uint64_t K)
 {
         uint64_t x;
-        uint32_t y;
 
-        /* e_pahse_new(x) is equal to E() transform and expansion:
-         *     x = e_phase(R);  
-         *     x = expand_8x6_to_8x8(x);
-         * The expansion is required so that K format matches output of E().
+        /* Combined e-phase and 8x6bits to 8x8bits expansion.
+         * 32 bits -> 48 bits permutation
          */
-        x = e_phase_new(R) ^ K;
-
-        /* s-box: 48 bits -> 32 bits */
-        y = s1((uint8_t)x) |
-                s2((uint8_t)(x >> (8 * 1))) |
-                s3((uint8_t)(x >> (8 * 2))) |
-                s4((uint8_t)(x >> (8 * 3))) |
-                s5((uint8_t)(x >> (8 * 4))) |
-                s6((uint8_t)(x >> (8 * 5))) |
-                s7((uint8_t)(x >> (8 * 6))) |
-                s8((uint8_t)(x >> (8 * 7)));
-
-        /* 32 bits -> 32 bits permutation */
-        y = p_phase(y);
-
-        return y;
+        x = e_phase((uint64_t) R) ^ K;
+        
+        /* Combined s-box and p-phase.
+         *   s-box: 48 bits -> 32 bits
+         *   p-phase: 32 bits -> 32 bites permutation
+         */
+        return sbox0p[x & 0x3f] |
+                sbox1p[(x >> (8 * 1)) & 0x3f] |
+                sbox2p[(x >> (8 * 2)) & 0x3f] |
+                sbox3p[(x >> (8 * 3)) & 0x3f] |
+                sbox4p[(x >> (8 * 4)) & 0x3f] |
+                sbox5p[(x >> (8 * 5)) & 0x3f] |
+                sbox6p[(x >> (8 * 6)) & 0x3f] |
+                sbox7p[(x >> (8 * 7)) & 0x3f];
 }
 
 __forceinline
 uint64_t enc_dec_1(const uint64_t data, const uint64_t *ks, const int enc)
 {
-        uint64_t d;
         uint32_t l, r;
 
-        d = initial_permutation(data);
-        l = (uint32_t) (d);
-        r = (uint32_t) (d >> 32);
+        r = (uint32_t) (data);
+        l = (uint32_t) (data >> 32);
+        ip_z(&r, &l);
         
         if (enc) {
                 l ^= fRK(r, ks[0]);
@@ -329,9 +317,8 @@ uint64_t enc_dec_1(const uint64_t data, const uint64_t *ks, const int enc)
                 r ^= fRK(l, ks[0]);
         }
 
-        d = r | (((uint64_t) l) << 32);
-        d = final_permutation(d);
-        return d;
+        fp_z(&r, &l);
+        return ((uint64_t) l) | (((uint64_t) r) << 32);
 }
 
 void

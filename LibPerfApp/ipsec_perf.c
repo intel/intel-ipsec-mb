@@ -55,7 +55,7 @@
 #define NUM_TYPES 3 /* AES_HMAC, AES_DOCSIS, AES_GCM */
 
 #define CIPHER_MODES_AES 4	/* CBC, CNTR, CNTR+8, NULL_CIPHER */
-#define CIPHER_MODES_DOCSIS 2	/* DOCSIS, DOCSIS+8 */
+#define CIPHER_MODES_DOCSIS 4	/* AES DOCSIS, AES DOCSIS+8, DES DOCSIS, DES DOCSIS+8 */
 #define CIPHER_MODES_GCM 1	/* GCM */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 8		/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
@@ -63,7 +63,7 @@
 #define HASH_ALGS_DOCSIS 1	/* NULL_HASH */
 #define HASH_ALGS_GCM 1		/* GCM */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
-#define KEY_SIZES_DOCSIS 1	/* 16 */
+#define KEY_SIZES_DOCSIS 1	/* 16 or 8 */
 #define KEY_SIZES_GCM 3		/* 16, 24, 32 */
 
 /* Those defines tell how many different test cases are to be performed.
@@ -119,8 +119,10 @@ enum test_cipher_mode_e {
 	TEST_CNTR,
 	TEST_CNTR8, /* CNTR with increased buffer by 8, will become CNTR. */
 	TEST_NULL_CIPHER,
-	TEST_DOCSIS, /* The next DOCSIS fields will become DOCSIS_SEC_BPI */
-	TEST_DOCSIS8, /* It means: increase buffer size by 8 bytes */
+	TEST_AESDOCSIS, /* The next DOCSIS fields will become DOCSIS_SEC_BPI */
+	TEST_AESDOCSIS8, /* It means: increase buffer size by 8 bytes */
+	TEST_DESDOCSIS, /* The next DOCSIS fields will become DES_DOCSIS_SEC_BPI */
+	TEST_DESDOCSIS4, /* It means: increase buffer size by 4 bytes */
 	TEST_GCM /* Additional field used by GCM, not translated */
 };
 
@@ -377,9 +379,13 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
 	case TEST_NULL_CIPHER:
 		c_mode = NULL_CIPHER;
 		break;
-	case TEST_DOCSIS:
-	case TEST_DOCSIS8:
+	case TEST_AESDOCSIS:
+	case TEST_AESDOCSIS8:
 		c_mode = DOCSIS_SEC_BPI;
+		break;
+	case TEST_DESDOCSIS:
+	case TEST_DESDOCSIS4:
+		c_mode = DOCSIS_DES;
 		break;
         case TEST_GCM:
                 c_mode = GCM;
@@ -408,9 +414,11 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 	uint64_t time = 0;
 	uint32_t aux;
 
-	if ((params->cipher_mode == TEST_DOCSIS8) ||
+	if ((params->cipher_mode == TEST_AESDOCSIS8) ||
             (params->cipher_mode == TEST_CNTR8))
 		size_aes = params->size_aes + 8;
+	else if (params->cipher_mode == TEST_DESDOCSIS4)
+		size_aes = params->size_aes + 4;
 	else
 		size_aes = params->size_aes;
 
@@ -645,8 +653,8 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 	switch (params->test_type) {
 	case AES_DOCSIS:
 		h_start = NULL_HASH;
-		c_start = TEST_DOCSIS;
-		c_end = TEST_DOCSIS8;
+		c_start = TEST_AESDOCSIS;
+		c_end = TEST_DESDOCSIS4;
 		break;
 	case AES_GCM:
 		h_start = TEST_HASH_GCM;
@@ -708,9 +716,9 @@ static void print_times(struct variant_s *variant_list, struct params_s *params)
         const char *func_names[4] = {
                 "SSE", "AVX", "AVX2", "AVX512"
         };
-        const char *c_mode_names[7] = {
-                "CBC", "CNTR", "CNTR+8", "NULL_CIPHER", "DOCSIS", "DOCSIS+8",
-                "GCM"
+        const char *c_mode_names[9] = {
+                "CBC", "CNTR", "CNTR+8", "NULL_CIPHER", "DOCAES", "DOCAES+8",
+                "DOCDES", "DOCDES+4", "GCM"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"

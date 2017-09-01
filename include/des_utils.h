@@ -34,71 +34,6 @@
 #include "os.h"
 
 /**
- * @brief Gets selected bit value out of a 32-bit word
- *
- * @param val 32-bit word
- * @param n bit number (0 to 31) to get value of
- *
- * @return n-th bit value (0 or 1 value only)
- */
-__forceinline
-uint32_t bit_get32b(const uint32_t val, const unsigned n)
-{
-        IMB_ASSERT(n < 32);
-        return (val >> n) & UINT32_C(1);
-}
-
-/**
- * @brief Sets selected bit value in a 32-bit word
- *
- * @param val 32-bit word
- * @param n bit number (0 to 31) to get value of
- * @param b bit value (0 or 1)
- *
- * @return val with n-th bit set to value b
- */
-__forceinline
-uint32_t bit_set32b(const uint32_t val, const unsigned n, const uint32_t b)
-{
-        const uint32_t m = UINT32_C(1) << n;
-
-        IMB_ASSERT(n < 32);
-        return (val & (~m)) | (b << n);
-}
-
-/**
- * @brief Permutes bits in a 32-bit word as described by pattern
- *
- * The function goes through pattern array from index 0 to 'size' (max 31).
- * It sets output bit number 'index' to value of
- * bit number 'pattern[index] - 1' from 'in'.
- *
- * @param in 32-bit word to be permuted
- * @param pattern pointer to array defining the permutation
- * @param size is size of the permutation pattern
- *
- * @return permuted in word as described by the pattern
- */
-__forceinline
-uint32_t permute_32b(const uint32_t in, const uint8_t *pattern, const int size)
-{
-        uint32_t out = 0;
-        int n = 0;
-
-        IMB_ASSERT(size <= 32);
-        
-        for (n = 0; n < size; n++) {
-                /* '-1' is required as bit numbers in FIPS start with 1 not 0 */
-                const int m = ((int) pattern[n]) - 1; 
-                const uint32_t bit_val = bit_get32b(in, m);
-
-                out = bit_set32b(out, n, bit_val);
-        }
-
-        return out;
-}
-
-/**
  * @brief Gets selected bit value out of a 64-bit word
  *
  * @param val 64-bit word
@@ -178,25 +113,6 @@ __forceinline
 uint8_t reflect_8b(const uint8_t pb)
 {
         return reflect_tab[pb >> 4] | (reflect_tab[pb & 15] << 4);
-}
-
-__forceinline
-uint8_t reflect_4b(const uint8_t pb)
-{
-        return reflect_tab[pb & 15];
-}
-
-__forceinline
-uint64_t reflect64(const uint64_t v)
-{
-        return ((uint64_t) reflect_8b((uint8_t)(v >> (8 * 0)))) << (8 * 0) |
-                ((uint64_t) reflect_8b((uint8_t)(v >> (8 * 1)))) << (8 * 1) |
-                ((uint64_t) reflect_8b((uint8_t)(v >> (8 * 2)))) << (8 * 2) |
-                ((uint64_t) reflect_8b((uint8_t)(v >> (8 * 3)))) << (8 * 3) |
-                ((uint64_t) reflect_8b((uint8_t)(v >> (8 * 4)))) << (8 * 4) |
-                ((uint64_t) reflect_8b((uint8_t)(v >> (8 * 5)))) << (8 * 5) |
-                ((uint64_t) reflect_8b((uint8_t)(v >> (8 * 6)))) << (8 * 6) |
-                ((uint64_t) reflect_8b((uint8_t)(v >> (8 * 7)))) << (8 * 7);
 }
 
 __forceinline
