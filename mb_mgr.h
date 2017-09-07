@@ -25,6 +25,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef IMB_MB_MGR_H
+#define IMB_MB_MGR_H
+
+#include <stdlib.h>
 
 #include "types.h"
 #include "constants.h"
@@ -39,8 +43,8 @@
 typedef struct {
         AES_ARGS_x8 args;
         DECLARE_ALIGNED(UINT16 lens[8], 16);
-        UINT64 unused_lanes; // each nibble is index (0...7) of unused lanes
-        // nibble 8 is set to F as a flag
+        UINT64 unused_lanes; /* each nibble is index (0...7) of unused lanes
+                                nibble 8 is set to F as a flag */
         JOB_AES_HMAC *job_in_lane[8];
 } MB_MGR_AES_OOO;
 
@@ -56,11 +60,21 @@ typedef struct {
 typedef struct {
         AES_XCBC_ARGS_x8 args;
         DECLARE_ALIGNED(UINT16 lens[8], 16);
-        UINT64 unused_lanes; // each byte is index (0...3) of unused lanes
-        // byte 4 is set to FF as a flag
+        UINT64 unused_lanes; /* each byte is index (0...3) of unused lanes
+                                byte 4 is set to FF as a flag */
         XCBC_LANE_DATA ldata[8];
 } MB_MGR_AES_XCBC_OOO;
 
+////////////////////////////////////////////////////////////////////////
+// DES out-of-order scheduler fields
+typedef struct {
+        DES_ARGS_x16 args;
+        DECLARE_ALIGNED(UINT16 lens[16], 16);
+        UINT64 unused_lanes; // each nibble is index (0...7) of unused lanes
+        // nibble 8 is set to F as a flag
+        JOB_AES_HMAC *job_in_lane[16];
+        UINT32 num_lanes_inuse;
+} MB_MGR_DES_OOO;
 
 ////////////////////////////////////////////////////////////////////////
 // SHA-HMAC out-of-order scheduler fields
@@ -86,7 +100,6 @@ typedef struct {
         UINT32 size_offset;  // offset in extra_block to start of size field
         UINT32 start_offset; // offset to start of data
 } HMAC_SHA512_LANE_DATA;
-
 
 // unused_lanes contains a list of unused lanes stored as bytes or as
 // nibbles depending on the arch. The end of list is either FF or F.
@@ -147,6 +160,10 @@ typedef struct MB_MGR {
         MB_MGR_AES_OOO aes192_ooo;
         MB_MGR_AES_OOO aes256_ooo;
         MB_MGR_AES_OOO docsis_sec_ooo;
+        MB_MGR_DES_OOO des_enc_ooo;
+        MB_MGR_DES_OOO des_dec_ooo;
+        MB_MGR_DES_OOO docsis_des_enc_ooo;
+        MB_MGR_DES_OOO docsis_des_dec_ooo;
 
         MB_MGR_HMAC_SHA_1_OOO        hmac_sha_1_ooo;
         MB_MGR_HMAC_SHA_256_OOO      hmac_sha_224_ooo;
@@ -310,3 +327,5 @@ get_next_job_sse(MB_MGR *state)
         (_mgr)->keyexp_192((_raw), (_enc), (_dec))
 #define IMB_AES_KEYEXP_256(_mgr, _raw, _enc, _dec) \
         (_mgr)->keyexp_256((_raw), (_enc), (_dec))
+
+#endif /* IMB_MB_MGR_H */

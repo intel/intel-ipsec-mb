@@ -25,9 +25,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#ifndef _ASM_TYPES_H
-#define _ASM_TYPES_H
+#ifndef IMB_ASM_TYPES_H
+#define IMB_ASM_TYPES_H
 
 #include "os.h"
 #include "constants.h"
@@ -47,6 +46,7 @@ typedef struct {
 #define AVX512_NUM_SHA256_LANES 16
 #define AVX512_NUM_SHA512_LANES 8
 #define AVX512_NUM_MD5_LANES 32
+#define AVX512_NUM_DES_LANES 16
 
 // AVX2 with its larger register sizes (vs SSE) supports more parallelism
 
@@ -85,12 +85,10 @@ typedef struct {
         UINT8 *data_ptr[AVX512_NUM_SHA256_LANES];
 } SHA256_ARGS;
 
-
 typedef struct {
         DECLARE_ALIGNED(digest_array_SHA_512 digest, 32);
         UINT8 *data_ptr[AVX512_NUM_SHA512_LANES];
-}  SHA512_ARGS ;
-
+}  SHA512_ARGS;
 
 typedef struct {
         DECLARE_ALIGNED(digest_array_md5 digest, 32);
@@ -103,4 +101,15 @@ typedef struct {
         DECLARE_ALIGNED(UINT128 ICV[8], 32);
 } AES_XCBC_ARGS_x8;
 
-#endif /* ifdef _ASM_TYPES_H */
+typedef struct {
+        const uint8_t *in[AVX512_NUM_DES_LANES];
+        uint8_t *out[AVX512_NUM_DES_LANES];
+        const uint8_t *keys[AVX512_NUM_DES_LANES];
+        uint32_t IV[AVX512_NUM_DES_LANES * 2]; /* uint32_t is more handy here */
+        uint32_t partial_len[AVX512_NUM_DES_LANES];
+        uint32_t block_len[AVX512_NUM_DES_LANES];
+        const uint8_t *last_in[AVX512_NUM_DES_LANES];
+        uint8_t *last_out[AVX512_NUM_DES_LANES];
+} DES_ARGS_x16;
+
+#endif /* ifdef IMB_ASM_TYPES_H */

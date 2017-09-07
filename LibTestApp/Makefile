@@ -40,7 +40,7 @@ APP := ipsec_MB_testapp
 all: $(APP)
 
 $(APP): main.o gcm_test.o ctr_test.o customop_test.o des_test.o $(MYLIB)
-	$(CC) $(LDFLAGS) -o $@ $^ $(MYLIB)
+	$(CC) $(LDFLAGS) -o $@ $^
 
 main.o: main.c do_test.h
 gcm_test.o: gcm_test.c gcm_ctr_vectors_test.h

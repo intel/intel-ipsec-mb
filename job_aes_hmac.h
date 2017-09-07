@@ -25,6 +25,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef IMB_JOB_AES_HMAC_H
+#define IMB_JOB_AES_HMAC_H
+
 #include "types.h"
 
 typedef enum {
@@ -143,3 +146,5 @@ typedef struct JOB_AES_HMAC {
 #define _k1_expanded             u.XCBC._k1_expanded
 #define _k2                      u.XCBC._k2
 #define _k3                      u.XCBC._k3
+
+#endif /* IMB_JOB_AES_HMAC_H */

@@ -52,6 +52,19 @@ JOB_AES_HMAC* flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
 JOB_AES_HMAC* submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 
+#ifndef _WIN32
+JOB_AES_HMAC *submit_job_des_cbc_enc_avx512(MB_MGR_DES_OOO *state, JOB_AES_HMAC *job);
+JOB_AES_HMAC *submit_job_des_cbc_dec_avx512(MB_MGR_DES_OOO *state, JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *flush_job_des_cbc_enc_avx512(MB_MGR_DES_OOO *state);
+JOB_AES_HMAC *flush_job_des_cbc_dec_avx512(MB_MGR_DES_OOO *state);
+
+JOB_AES_HMAC *submit_job_docsis_des_enc_avx512(MB_MGR_DES_OOO *state, JOB_AES_HMAC *job);
+JOB_AES_HMAC *submit_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state, JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *flush_job_docsis_des_enc_avx512(MB_MGR_DES_OOO *state);
+JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
+#endif /* _WIN32 */
 
 #define SAVE_XMMS save_xmms_avx
 #define RESTORE_XMMS restore_xmms_avx
@@ -87,11 +100,23 @@ JOB_AES_HMAC* flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 #define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
 
+#ifndef _WIN32
+#define SUBMIT_JOB_DES_CBC_ENC submit_job_des_cbc_enc_avx512
+#define FLUSH_JOB_DES_CBC_ENC  flush_job_des_cbc_enc_avx512
+
+#define SUBMIT_JOB_DES_CBC_DEC submit_job_des_cbc_dec_avx512
+#define FLUSH_JOB_DES_CBC_DEC flush_job_des_cbc_dec_avx512
+
+#define SUBMIT_JOB_DOCSIS_DES_ENC submit_job_docsis_des_enc_avx512
+#define FLUSH_JOB_DOCSIS_DES_ENC  flush_job_docsis_des_enc_avx512
+
+#define SUBMIT_JOB_DOCSIS_DES_DEC submit_job_docsis_des_dec_avx512
+#define FLUSH_JOB_DOCSIS_DES_DEC flush_job_docsis_des_dec_avx512
+#endif /* _WIN32 */
+
 #define SUBMIT_JOB_AES_ENC SUBMIT_JOB_AES_ENC_AVX512
 #define FLUSH_JOB_AES_ENC  FLUSH_JOB_AES_ENC_AVX512
 #define SUBMIT_JOB_AES_DEC SUBMIT_JOB_AES_DEC_AVX512
-
-
 
 JOB_AES_HMAC* submit_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state);
@@ -216,7 +241,9 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->aes256_ooo.job_in_lane[6] = NULL;
         state->aes256_ooo.job_in_lane[7] = NULL;
 
-        /* DOCSIS SEC BPI uses same settings as AES128 CBC */
+        /* DOCSIS SEC BPI (AES CBC + AES CFB for partial block)
+         * uses same settings as AES128 CBC.
+         */
         state->docsis_sec_ooo.lens[0] = 0;
         state->docsis_sec_ooo.lens[1] = 0;
         state->docsis_sec_ooo.lens[2] = 0;
@@ -234,6 +261,43 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->docsis_sec_ooo.job_in_lane[5] = NULL;
         state->docsis_sec_ooo.job_in_lane[6] = NULL;
         state->docsis_sec_ooo.job_in_lane[7] = NULL;
+
+        /* DOCSIS DES (DES CBC + DES CFB for partial block) */
+        /* - separate DES OOO for encryption */
+        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
+                state->des_enc_ooo.lens[j] = 0;
+                state->des_enc_ooo.job_in_lane[j] = NULL;
+        }
+        state->des_enc_ooo.unused_lanes = 0xFEDCBA9876543210;
+        state->des_enc_ooo.num_lanes_inuse = 0;
+        memset(&state->des_enc_ooo.args, 0, sizeof(state->des_enc_ooo.args));
+
+        /* - separate DES OOO for decryption */
+        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
+                state->des_dec_ooo.lens[j] = 0;
+                state->des_dec_ooo.job_in_lane[j] = NULL;
+        }
+        state->des_dec_ooo.unused_lanes = 0xFEDCBA9876543210;
+        state->des_dec_ooo.num_lanes_inuse = 0;
+        memset(&state->des_dec_ooo.args, 0, sizeof(state->des_dec_ooo.args));
+
+        /* - separate DOCSIS DES OOO for encryption */
+        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
+                state->docsis_des_enc_ooo.lens[j] = 0;
+                state->docsis_des_enc_ooo.job_in_lane[j] = NULL;
+        }
+        state->docsis_des_enc_ooo.unused_lanes = 0xFEDCBA9876543210;
+        state->docsis_des_enc_ooo.num_lanes_inuse = 0;
+        memset(&state->docsis_des_enc_ooo.args, 0, sizeof(state->docsis_des_enc_ooo.args));
+
+        /* - separate DES OOO for decryption */
+        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
+                state->docsis_des_dec_ooo.lens[j] = 0;
+                state->docsis_des_dec_ooo.job_in_lane[j] = NULL;
+        }
+        state->docsis_des_dec_ooo.unused_lanes = 0xFEDCBA9876543210;
+        state->docsis_des_dec_ooo.num_lanes_inuse = 0;
+        memset(&state->docsis_des_dec_ooo.args, 0, sizeof(state->docsis_des_dec_ooo.args));
 
         // Init HMAC/SHA1 out-of-order fields
         state->hmac_sha_1_ooo.lens[0] = 0;

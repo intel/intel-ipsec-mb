@@ -48,6 +48,9 @@ Required tools:
 - GNU make
 - NASM version 2.12.02 (or newer)
 - gcc (GCC) 4.8.3 (or newer)
+  NOTE: Current DES and DOCSIS DES AVX512 cipher implementation requires
+  	GCC version with AVX512F and AVX512BW support.
+  	gcc (GCC) 6.3.1 has been tested to work correctly.
 
 Simply run "make" or "make all" at the top level directory to compile the library.
 To clean the library build please run "make clean".

@@ -64,7 +64,36 @@ static const uint8_t C1[] = {
         0x9f, 0x04, 0xd1, 0xb6, 0x41, 0x3d, 0x4e, 0xed
 };
 
+static const uint8_t K2[] = {
+        0x3b, 0x38, 0x98, 0x37, 0x15, 0x20, 0xf7, 0x5e
+};
+static const uint8_t IV2[] = {
+        0x02, 0xa8, 0x11, 0x77, 0x4d, 0xcd, 0xe1, 0x3b
+};
+static const uint8_t P2[] = {
+        0x05, 0xef, 0xf7, 0x00, 0xe9, 0xa1, 0x3a, 0xe5,
+        0xca, 0x0b, 0xcb, 0xd0, 0x48, 0x47, 0x64, 0xbd,
+        0x1f, 0x23, 0x1e, 0xa8, 0x1c, 0x7b, 0x64, 0xc5,
+        0x14, 0x73, 0x5a, 0xc5, 0x5e, 0x4b, 0x79, 0x63,
+        0x3b, 0x70, 0x64, 0x24, 0x11, 0x9e, 0x09, 0xdc,
+        0xaa, 0xd4, 0xac, 0xf2, 0x1b, 0x10, 0xaf, 0x3b,
+        0x33, 0xcd, 0xe3, 0x50, 0x48, 0x47, 0x15, 0x5c,
+        0xbb, 0x6f, 0x22, 0x19, 0xba, 0x9b, 0x7d, 0xf5
+
+};
+static const uint8_t C2[] = {
+        0xf3, 0x31, 0x8d, 0x01, 0x19, 0x4d, 0xa8, 0x00,
+        0xa4, 0x2c, 0x10, 0xb5, 0x33, 0xd6, 0xbc, 0x11,
+        0x97, 0x59, 0x2d, 0xcc, 0x9b, 0x5d, 0x35, 0x9a,
+        0xc3, 0x04, 0x5d, 0x07, 0x4c, 0x86, 0xbf, 0x72,
+        0xe5, 0x1a, 0x72, 0x25, 0x82, 0x22, 0x54, 0x03,
+        0xde, 0x8b, 0x7a, 0x58, 0x5c, 0x6c, 0x28, 0xdf,
+        0x41, 0x0e, 0x38, 0xd6, 0x2a, 0x86, 0xe3, 0x4f,
+        0xa2, 0x7c, 0x22, 0x39, 0x60, 0x06, 0x03, 0x6f
+};
+
 static struct des_vector vectors[] = {
+        {K2, IV2, P2, sizeof(P2), C2},
         {K1, IV1, P1, sizeof(P1), C1},
 };
 
@@ -101,22 +130,159 @@ static const uint8_t DC2[] = {
         0xef, 0xac, 0x88
 };
 
+static const uint8_t DK3[] = {
+        0xe6, 0x60, 0x0f, 0xd8, 0x85, 0x2e, 0xf5, 0xab
+};
+static const uint8_t DIV3[] = {
+        0x51, 0x47, 0x46, 0x86, 0x8a, 0x71, 0xe5, 0x77
+};
+static const uint8_t DP3[] = {
+        0xd2, 0xd1, 0x9f
+};
+static const uint8_t DC3[] = {
+        0xef, 0xac, 0x88
+};
+
 static struct des_vector docsis_vectors[] = {
-        {DK1, DIV1, DP1, sizeof(DP1), DC1},
         {DK2, DIV2, DP2, sizeof(DP2), DC2},
+        {DK3, DIV3, DP3, sizeof(DP3), DC3},
+        {DK1, DIV1, DP1, sizeof(DP1), DC1},
 };
 
 static int
-test_des(struct MB_MGR *mb_mgr,
-         const uint64_t *ks,
-         const void *iv,
-         const uint8_t *in_text,
-         const uint8_t *out_text,
-         unsigned text_len,
-         int dir,
-         int order,
-         JOB_CIPHER_MODE cipher,
-         const int in_place)
+test_des_many(struct MB_MGR *mb_mgr,
+              const uint64_t *ks,
+              const void *iv,
+              const uint8_t *in_text,
+              const uint8_t *out_text,
+              unsigned text_len,
+              int dir,
+              int order,
+              JOB_CIPHER_MODE cipher,
+              const int in_place,
+              const int num_jobs)
+{
+        struct JOB_AES_HMAC *job;
+        uint8_t padding[16];
+        uint8_t **targets = malloc(num_jobs * sizeof(void *));
+        int i, jobs_rx = 0, ret = -1;
+
+        assert(targets != NULL);
+
+        memset(padding, -1, sizeof(padding));
+
+        for (i = 0; i < num_jobs; i++) {
+                targets[i] = malloc(text_len + (sizeof(padding) * 2));
+                memset(targets[i], -1, text_len + (sizeof(padding) * 2));
+                if (in_place) {
+                        /* copy input text to the allocated buffer */
+                        memcpy(targets[i] + sizeof(padding), in_text, text_len);
+                }
+        }
+
+        /* flush the scheduler */
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                ;
+
+        for (i = 0; i < num_jobs; i++) {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job->cipher_direction = dir;
+                job->chain_order = order;
+                if (!in_place) {
+                        job->dst = targets[i] + sizeof(padding);
+                        job->src = in_text;
+                } else {
+                        job->dst = targets[i] + sizeof(padding);
+                        job->src = targets[i] + sizeof(padding);
+                }
+                job->cipher_mode = cipher;
+                job->aes_enc_key_expanded = ks;
+                job->aes_dec_key_expanded = ks;
+                job->aes_key_len_in_bytes = 8;
+                job->iv = iv;
+                job->iv_len_in_bytes = 8;
+                job->cipher_start_src_offset_in_bytes = 0;
+                job->msg_len_to_cipher_in_bytes = text_len;
+                job->user_data = (void *)((uint64_t)i);
+
+                job->hash_alg = NULL_HASH;
+                job->hashed_auth_key_xor_ipad = NULL;
+                job->hashed_auth_key_xor_opad = NULL;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = 0;
+                job->auth_tag_output = NULL;
+                job->auth_tag_output_len_in_bytes = 0;
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job != NULL) {
+                        const int num = (const int)((uint64_t)job->user_data);
+
+                        jobs_rx++;
+                        if (job->status != STS_COMPLETED) {
+                                printf("%d error status:%d, job %d", __LINE__, job->status, num);
+                                goto end;
+                        }
+                        if (memcmp(out_text, targets[num] + sizeof(padding), text_len)) {
+                                printf("%d mismatched\n",num);
+                                goto end;
+                        }
+                        if (memcmp(padding, targets[num], sizeof(padding))) {
+                                printf("%d overwrite head\n", num);
+                                goto end;
+                        }
+                        if (memcmp(padding, targets[num] + sizeof(padding) + text_len,  sizeof(padding))) {
+                                printf("%d overwrite tail\n", num);
+                                goto end;
+                        }
+                }
+        }
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                const int num = (const int)((uint64_t)job->user_data);
+
+                jobs_rx++;
+                if (job->status != STS_COMPLETED) {
+                        printf("%d Error status:%d, job %d", __LINE__, job->status, num);
+                        goto end;
+                }
+                if (memcmp(out_text, targets[num] + sizeof(padding), text_len)) {
+                        printf("%d mismatched\n",num);
+                        goto end;
+                }
+                if (memcmp(padding, targets[num], sizeof(padding))) {
+                        printf("%d overwrite head\n", num);
+                        goto end;
+                }
+                if (memcmp(padding, targets[num] + sizeof(padding) + text_len,  sizeof(padding))) {
+                        printf("%d overwrite tail\n", num);
+                        goto end;
+                }
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                goto end;
+        }
+        ret = 0;
+
+ end:
+        for (i = 0; i < num_jobs; i++)
+                free(targets[i]);
+        free(targets);
+        return ret;
+}
+
+static int
+test_des_one(struct MB_MGR *mb_mgr,
+             const uint64_t *ks,
+             const void *iv,
+             const uint8_t *in_text,
+             const uint8_t *out_text,
+             unsigned text_len,
+             int dir,
+             int order,
+             JOB_CIPHER_MODE cipher,
+             const int in_place)
 {
         struct JOB_AES_HMAC *job;
         uint8_t padding[16];
@@ -198,6 +364,26 @@ test_des(struct MB_MGR *mb_mgr,
 }
 
 static int
+test_des(struct MB_MGR *mb_mgr,
+         const uint64_t *ks,
+         const void *iv,
+         const uint8_t *in_text,
+         const uint8_t *out_text,
+         unsigned text_len,
+         int dir,
+         int order,
+         JOB_CIPHER_MODE cipher,
+         const int in_place)
+{
+        int ret = 0;
+
+        ret |= test_des_one(mb_mgr, ks, iv, in_text, out_text, text_len, dir, order, cipher, in_place);
+        ret |= test_des_many(mb_mgr, ks, iv, in_text, out_text, text_len, dir, order, cipher, in_place, 32);
+
+        return ret;
+}
+
+static int
 test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                  const struct des_vector *vec_tab, const char *banner,
                  const JOB_CIPHER_MODE cipher)
@@ -206,10 +392,10 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
         uint64_t ks[16];
 
 	printf("%s:\n", banner);
-	for (vect = 0; (vect < vec_cnt); vect++) {
+	for (vect = 0; vect < vec_cnt; vect++) {
 #ifdef DEBUG
 		printf("Standard vector %d/%d  PTLen:%d\n",
-                       vect, vec_cnt - 1,
+                       vect + 1, vec_cnt,
                        (int) vec_tab[vect].Plen);
 #else
 		printf(".");

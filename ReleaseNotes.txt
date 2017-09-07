@@ -1,6 +1,14 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+unreleased
+========================================================================
+- DES CBC cipher added (generic x86 implementation)
+- DOCSIS DES cipher added (generic x86 implementation)
+- RPM SPEC file created
+- DES CBC AVX512 implementation (for now Linux only and gcc 6.3.1+)
+- DOCSIS DES AVX512 implementation (for now Linux only and gcc 6.3.1+)
+
 v0.46 June 2017
 ========================================================================
 

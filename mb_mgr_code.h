@@ -404,15 +404,21 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (DES == job->cipher_mode) {
+#ifdef SUBMIT_JOB_DES_CBC_ENC
+                return SUBMIT_JOB_DES_CBC_ENC(&state->des_enc_ooo, job);
+#else
                 return DES_CBC_ENC(job);
+#endif /* SUBMIT_JOB_DES_CBC_ENC */
         } else if (DOCSIS_DES == job->cipher_mode) {
+#ifdef SUBMIT_JOB_DOCSIS_DES_ENC
+                return SUBMIT_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo, job);
+#else
                 if (job->msg_len_to_cipher_in_bytes >= DES_BLOCK_SIZE) {
-                        JOB_AES_HMAC *tmp;
-
-                        tmp = DES_CBC_ENC(job);
-                        return DOCSIS_DES_LAST_BLOCK(tmp);
+                        DES_CBC_ENC(job);
+                        return DOCSIS_DES_LAST_BLOCK(job);
                 } else
                         return DOCSIS_DES_FIRST_BLOCK(job);
+#endif /* SUBMIT_JOB_DOCSIS_DES_ENC */
         } else { // assume NUL_CIPHER
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -436,6 +442,14 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 
                 tmp = FLUSH_JOB_AES128_ENC(&state->docsis_sec_ooo);
                 return DOCSIS_LAST_BLOCK(tmp);
+#ifdef FLUSH_JOB_DES_CBC_ENC
+        } else if (DES == job->cipher_mode) {
+                return FLUSH_JOB_DES_CBC_ENC(&state->des_enc_ooo);
+#endif /* FLUSH_JOB_DES_CBC_ENC */
+#ifdef FLUSH_JOB_DOCSIS_DES_ENC
+        } else if (DOCSIS_DES == job->cipher_mode) {
+                return FLUSH_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo);
+#endif /* FLUSH_JOB_DOCSIS_DES_ENC */
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
         } else { // assume CNTR or NULL_CIPHER
@@ -445,7 +459,7 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_AES_DEC(JOB_AES_HMAC *job)
+SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 {
         if (CBC == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
@@ -475,19 +489,44 @@ SUBMIT_JOB_AES_DEC(JOB_AES_HMAC *job)
                 return SUBMIT_JOB_AES_GCM_DEC(job);
 #endif /* NO_GCM */
         } else if (DES == job->cipher_mode) {
+#ifdef SUBMIT_JOB_DES_CBC_DEC
+                return SUBMIT_JOB_DES_CBC_DEC(&state->des_dec_ooo, job);
+#else
+                (void) state;
                 return DES_CBC_DEC(job);
+#endif /* SUBMIT_JOB_DES_CBC_DEC */
         } else if (DOCSIS_DES == job->cipher_mode) {
+#ifdef SUBMIT_JOB_DOCSIS_DES_DEC
+                return SUBMIT_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo, job);
+#else
                 if (job->msg_len_to_cipher_in_bytes >= DES_BLOCK_SIZE) {
                         DOCSIS_DES_LAST_BLOCK(job);
                         return DES_CBC_DEC(job);
                 } else
                         return DOCSIS_DES_FIRST_BLOCK(job);
+#endif /* SUBMIT_JOB_DOCSIS_DES_DEC */
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else {
                 job->status |= STS_COMPLETED_AES;
                 return job;
         }
+}
+
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
+{
+#ifdef FLUSH_JOB_DES_CBC_DEC
+        if (DES == job->cipher_mode)
+                return FLUSH_JOB_DES_CBC_DEC(&state->des_dec_ooo);
+#endif /* FLUSH_JOB_DES_CBC_DEC */
+#ifdef FLUSH_JOB_DOCSIS_DES_DEC
+        if (DOCSIS_DES == job->cipher_mode)
+                return FLUSH_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo);
+#endif /* FLUSH_JOB_DOCSIS_DES_DEC */
+        (void) state;
+        return SUBMIT_JOB_AES_DEC(state, job);
 }
 
 __forceinline
@@ -565,9 +604,13 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_HMAC_MD5(&state->hmac_md5_ooo);
         case CUSTOM_HASH:
                 return FLUSH_JOB_CUSTOM_HASH(job);
-        default: // assume NULL_HASH
-                job->status |= STS_COMPLETED_HMAC;
-                return job;
+        default: /* assume NULL_HASH */
+                if (!(job->status & STS_COMPLETED_HMAC)) {
+                        job->status |= STS_COMPLETED_HMAC;
+                        return job;
+                }
+                /* if HMAC is complete then return NULL */
+                return NULL;
         }
 }
 
@@ -806,14 +849,14 @@ JOB_AES_HMAC *submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
                 if (job) {
                         job = SUBMIT_JOB_HASH(state, job);
                         if (job && (job->chain_order == HASH_CIPHER)) {
-                                SUBMIT_JOB_AES_DEC(job);
+                                SUBMIT_JOB_AES_DEC(state, job);
                         }
                 } // end if job
         } else { // job->chain_order == HASH_CIPHER
                 // assume job->cipher_direction == DECRYPT
                 job = SUBMIT_JOB_HASH(state, job);
                 if (job && (job->chain_order == HASH_CIPHER)) {
-                        SUBMIT_JOB_AES_DEC(job);
+                        SUBMIT_JOB_AES_DEC(state, job);
                 }
         }
         return job;
@@ -828,21 +871,20 @@ void complete_job(MB_MGR *state, JOB_AES_HMAC *job)
                 if (job->chain_order == CIPHER_HASH) {
                         // assume job->cipher_direction == ENCRYPT
                         tmp = FLUSH_JOB_AES_ENC(state, job);
-                        if (tmp) {
+                        if (tmp)
                                 tmp = SUBMIT_JOB_HASH(state, tmp);
-                        } else {
+                        else
                                 tmp = FLUSH_JOB_HASH(state, job);
-                        }
-                        if (tmp && (tmp->chain_order == HASH_CIPHER)) {
-                                SUBMIT_JOB_AES_DEC(tmp);
-                        }
+                        if (tmp && (tmp->chain_order == HASH_CIPHER))
+                                SUBMIT_JOB_AES_DEC(state, tmp);
                 } else { // job->chain_order == HASH_CIPHER
                         // assume job->cipher_direction == DECRYPT
                         tmp = FLUSH_JOB_HASH(state, job);
-                        IMB_ASSERT(tmp);
-                        if (tmp->chain_order == HASH_CIPHER) {
-                                SUBMIT_JOB_AES_DEC(tmp);
-                        }
+                        if (tmp == NULL)
+                                tmp = FLUSH_JOB_AES_DEC(state, job);
+                        else
+                                if (tmp->chain_order == HASH_CIPHER)
+                                        SUBMIT_JOB_AES_DEC(state, tmp);
                 }
         }
 }

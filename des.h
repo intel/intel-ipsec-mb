@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 
+#define DES_KEY_SCHED_SIZE (16 * 8) /* 16 rounds x 8 bytes */
+
 /**
  * @brief DES CBC encryption
  *
@@ -68,6 +70,8 @@ void des_cfb_one_basic(const void *input, void *output, const int size,
 
 /**
  * @brief DES key schedule set up
+ *
+ * \a ks buffer needs to accomodate \a DES_KEY_SCHED_SIZE (128) bytes of data.
  *
  * @param ks destination buffer to accomodate DES key schedule
  * @param key a pointer to an 8 byte DES key
