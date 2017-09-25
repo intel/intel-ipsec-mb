@@ -31,6 +31,7 @@
 #include <stdint.h>
 
 #define DES_KEY_SCHED_SIZE (16 * 8) /* 16 rounds x 8 bytes */
+#define DES_BLOCK_SIZE 8
 
 /**
  * @brief DES CBC encryption
@@ -57,16 +58,28 @@ void des_dec_cbc_basic(const void *input, void *output, const int size,
                        const uint64_t *ks, const uint64_t *ivec);
 
 /**
- * @brief DES CFB encryption/decryption of up to one block
+ * @brief DOCSIS DES encryption
  *
- * @param input source buffer with cipher text
- * @param output destination buffer for plain text
- * @param size number of bytes to decrypt (1 to 8)
+ * @param input source buffer with plain text
+ * @param output destination buffer for cipher text
+ * @param size number of bytes to encrypt
  * @param ks pointer to key schedule structure
  * @param ivec pointer to initialization vector
  */
-void des_cfb_one_basic(const void *input, void *output, const int size,
-                       const uint64_t *ks, const uint64_t *ivec);
+void docsis_des_enc_basic(const void *input, void *output, const int size,
+                          const uint64_t *ks, const uint64_t *ivec);
+
+/**
+ * @brief DOCSIS DES decryption
+ *
+ * @param input source buffer with cipher text
+ * @param output destination buffer for plain text
+ * @param size number of bytes to decrypt
+ * @param ks pointer to key schedule structure
+ * @param ivec pointer to initialization vector
+ */
+void docsis_des_dec_basic(const void *input, void *output, const int size,
+                          const uint64_t *ks, const uint64_t *ivec);
 
 /**
  * @brief DES key schedule set up

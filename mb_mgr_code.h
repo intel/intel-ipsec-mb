@@ -251,82 +251,40 @@ DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
         return job;
 }
 
-#define DES_BLOCK_SIZE 8
-
 /**
- * @brief Encrypts/decrypts the last partial block for DOCSIS DES
- *
- * The last partial block is encrypted/decrypted using DES CFB
- * IV is always the next last ciphered block.
- *
- * @note It is assumed that length is bigger than one DES block.
+ * @brief DOCSIS DES cipher encryption
  *
  * @param job desriptor of performed crypto operation
  * @return It always returns value passed in \a job
  */
 __forceinline
 JOB_AES_HMAC *
-DOCSIS_DES_LAST_BLOCK(JOB_AES_HMAC *job)
+DOCSIS_DES_ENC(JOB_AES_HMAC *job)
 {
-        const void *iv = NULL;
-        UINT64 offset = 0;
-        UINT64 partial_bytes = 0;
-        const uint64_t *ks = NULL;
-
-        if (job == NULL)
-                return job;
-
-        IMB_ASSERT((job->cipher_direction == DECRYPT) || (job->status & STS_COMPLETED_AES));
-
-        partial_bytes = job->msg_len_to_cipher_in_bytes & (DES_BLOCK_SIZE - 1);
-        offset = job->msg_len_to_cipher_in_bytes & (~(DES_BLOCK_SIZE - 1));
-
-        if (!partial_bytes)
-                return job;
-
-        /* in either case IV has to be next last ciphered block */
-        if (job->cipher_direction == ENCRYPT) {
-                iv = job->dst + offset - DES_BLOCK_SIZE;
-                ks = (const uint64_t *)job->aes_enc_key_expanded;
-        } else {
-                iv = job->src + job->cipher_start_src_offset_in_bytes +
-                        offset - DES_BLOCK_SIZE;
-                ks = (const uint64_t *)job->aes_dec_key_expanded;
-        }
-
-        IMB_ASSERT(partial_bytes <= DES_BLOCK_SIZE);
-        des_cfb_one_basic(job->src + job->cipher_start_src_offset_in_bytes + offset,
-                          job->dst + offset,
-                          (int) partial_bytes, ks, iv);
-
+        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        docsis_des_enc_basic(job->src + job->cipher_start_src_offset_in_bytes,
+                             job->dst,
+                             (int) job->msg_len_to_cipher_in_bytes,
+                             job->aes_enc_key_expanded, (const uint64_t *)job->iv);
+        job->status |= STS_COMPLETED_AES;
         return job;
 }
 
 /**
- * @brief Encrypts/decrypts the first and only partial block for DOCSIS DES
- *
- * The first partial block is encrypted/decrypted using DES CFB.
+ * @brief DOCSIS DES cipher decryption
  *
  * @param job desriptor of performed crypto operation
  * @return It always returns value passed in \a job
  */
 __forceinline
 JOB_AES_HMAC *
-DOCSIS_DES_FIRST_BLOCK(JOB_AES_HMAC *job)
+DOCSIS_DES_DEC(JOB_AES_HMAC *job)
 {
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
-        IMB_ASSERT(job->msg_len_to_cipher_in_bytes <= DES_BLOCK_SIZE);
-        if (job->cipher_direction == ENCRYPT) {
-                des_cfb_one_basic(job->src + job->cipher_start_src_offset_in_bytes,
-                                  job->dst,
-                                  (int) job->msg_len_to_cipher_in_bytes,
-                                  job->aes_enc_key_expanded, (const uint64_t *)job->iv);
-        } else {
-                des_cfb_one_basic(job->src + job->cipher_start_src_offset_in_bytes,
-                                  job->dst,
-                                  (int) job->msg_len_to_cipher_in_bytes,
-                                  job->aes_dec_key_expanded, (const uint64_t *)job->iv);
-        }
+        docsis_des_dec_basic(job->src + job->cipher_start_src_offset_in_bytes,
+                             job->dst,
+                             (int) job->msg_len_to_cipher_in_bytes,
+                             job->aes_dec_key_expanded, (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;
 }
@@ -413,11 +371,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
                 return SUBMIT_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo, job);
 #else
-                if (job->msg_len_to_cipher_in_bytes >= DES_BLOCK_SIZE) {
-                        DES_CBC_ENC(job);
-                        return DOCSIS_DES_LAST_BLOCK(job);
-                } else
-                        return DOCSIS_DES_FIRST_BLOCK(job);
+                return DOCSIS_DES_ENC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_ENC */
         } else { // assume NUL_CIPHER
                 job->status |= STS_COMPLETED_AES;
@@ -499,11 +453,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
                 return SUBMIT_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo, job);
 #else
-                if (job->msg_len_to_cipher_in_bytes >= DES_BLOCK_SIZE) {
-                        DOCSIS_DES_LAST_BLOCK(job);
-                        return DES_CBC_DEC(job);
-                } else
-                        return DOCSIS_DES_FIRST_BLOCK(job);
+                return DOCSIS_DES_DEC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_DEC */
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
