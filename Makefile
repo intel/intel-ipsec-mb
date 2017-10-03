@@ -213,10 +213,6 @@ $(LIB): $(obj2_files)
 
 $(obj2_files): | $(OBJ_DIR)
 
-# Add AVX512 compiler flags for DES
-$(OBJ_DIR)/des_x16_avx512.o : CFLAGS := $(CFLAGS) -mavx512f -mavx512bw
-$(OBJ_DIR)/mb_mgr_des_avx512.o : CFLAGS := $(CFLAGS) -mavx512f -mavx512bw
-
 $(OBJ_DIR)/%.o:%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@

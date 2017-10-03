@@ -93,8 +93,8 @@ static const uint8_t C2[] = {
 };
 
 static struct des_vector vectors[] = {
-        {K2, IV2, P2, sizeof(P2), C2},
         {K1, IV1, P1, sizeof(P1), C1},
+        {K2, IV2, P2, sizeof(P2), C2},
 };
 
 /* CM-SP-SECv3.1-I07-170111 I.7 */
@@ -144,9 +144,9 @@ static const uint8_t DC3[] = {
 };
 
 static struct des_vector docsis_vectors[] = {
+        {DK1, DIV1, DP1, sizeof(DP1), DC1},
         {DK2, DIV2, DP2, sizeof(DP2), DC2},
         {DK3, DIV3, DP3, sizeof(DP3), DC3},
-        {DK1, DIV1, DP1, sizeof(DP1), DC1},
 };
 
 static int

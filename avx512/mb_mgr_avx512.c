@@ -52,7 +52,6 @@ JOB_AES_HMAC* flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
 JOB_AES_HMAC* submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC* job);
 JOB_AES_HMAC* flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 
-#ifndef _WIN32
 JOB_AES_HMAC *submit_job_des_cbc_enc_avx512(MB_MGR_DES_OOO *state, JOB_AES_HMAC *job);
 JOB_AES_HMAC *submit_job_des_cbc_dec_avx512(MB_MGR_DES_OOO *state, JOB_AES_HMAC *job);
 
@@ -64,7 +63,6 @@ JOB_AES_HMAC *submit_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state, JOB_AES_HM
 
 JOB_AES_HMAC *flush_job_docsis_des_enc_avx512(MB_MGR_DES_OOO *state);
 JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
-#endif /* _WIN32 */
 
 #define SAVE_XMMS save_xmms_avx
 #define RESTORE_XMMS restore_xmms_avx
@@ -100,7 +98,6 @@ JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
 #define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_avx
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
 
-#ifndef _WIN32
 #define SUBMIT_JOB_DES_CBC_ENC submit_job_des_cbc_enc_avx512
 #define FLUSH_JOB_DES_CBC_ENC  flush_job_des_cbc_enc_avx512
 
@@ -112,7 +109,6 @@ JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
 
 #define SUBMIT_JOB_DOCSIS_DES_DEC submit_job_docsis_des_dec_avx512
 #define FLUSH_JOB_DOCSIS_DES_DEC flush_job_docsis_des_dec_avx512
-#endif /* _WIN32 */
 
 #define SUBMIT_JOB_AES_ENC SUBMIT_JOB_AES_ENC_AVX512
 #define FLUSH_JOB_AES_ENC  FLUSH_JOB_AES_ENC_AVX512

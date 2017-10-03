@@ -104,7 +104,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
 	$(OBJ_DIR)\md5_one_block.obj \
 	$(OBJ_DIR)\des_key.obj \
-	$(OBJ_DIR)\des_basic.obj
+	$(OBJ_DIR)\des_basic.obj \
+	$(OBJ_DIR)\des_x16_avx512.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_avx.obj \
@@ -178,6 +179,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_avx.obj \
 	$(OBJ_DIR)\mb_mgr_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_des_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_sse.obj
 
 gcm_objs = \

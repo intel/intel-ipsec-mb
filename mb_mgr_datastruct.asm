@@ -104,6 +104,46 @@ _aes_xcbc_args_keys	equ	_aes_xcbc_args + _aesxcbcarg_keys
 _aes_xcbc_args_ICV	equ	_aes_xcbc_args + _aesxcbcarg_ICV
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Define DES Out of Order Data Structures
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS	; DES_ARGS_X16
+;;	name		size	align
+FIELD	_desarg_in,	16*8,	8	; array of 16 pointers to in text
+FIELD	_desarg_out,	16*8,	8	; array of 16 pointers to out text
+FIELD	_desarg_keys,	16*8,	8	; array of 16 pointers to keys
+FIELD	_desarg_IV,	16*8,	32	; array of 16 64-bit IV's
+FIELD	_desarg_plen,	16*4,	32	; array of 16 32-bit partial lens
+FIELD	_desarg_blen,	16*4,	32	; array of 16 32-bit block lens
+FIELD	_desarg_lin,	16*8,	8	; array of 16 pointers to last (block) in text
+FIELD	_desarg_lout,	16*8,	8	; array of 16 pointers to last (block) out text
+END_FIELDS
+%assign _DES_ARGS_X16_size	_FIELD_OFFSET
+%assign _DES_ARGS_X16_align	_STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS	; MB_MGR_DES_OOO
+;;	name		size	align
+FIELD	_des_args,	_DES_ARGS_X16_size, _DES_ARGS_X16_align
+FIELD	_des_lens,	16*2,	16
+FIELD	_des_unused_lanes, 8,	8
+FIELD	_des_job_in_lane, 16*8,	8
+FIELD	_des_lanes_in_use, 8,	8
+END_FIELDS
+%assign _MB_MGR_DES_OOO_size	_FIELD_OFFSET
+%assign _MB_MGR_DES_OOO_align	_STRUCT_ALIGN
+
+_des_args_in	equ	_des_args + _desarg_in
+_des_args_out	equ	_des_args + _desarg_out
+_des_args_keys	equ	_des_args + _desarg_keys
+_des_args_IV	equ	_des_args + _desarg_IV
+_des_args_PLen	equ	_des_args + _desarg_plen
+_des_args_BLen	equ	_des_args + _desarg_blen
+_des_args_LIn	equ	_des_args + _desarg_lin
+_des_args_LOut	equ	_des_args + _desarg_lout
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define HMAC Out Of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
