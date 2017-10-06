@@ -33,6 +33,7 @@
 ;; Linux/Windows clobbers: xmm0 - xmm15
 ;;
 
+%include "os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 %include "reg_sizes.asm"
@@ -101,12 +102,12 @@ section .text
 %ifdef SHA224
 ;; JOB* flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state)
 ;; arg1 : state
-global flush_job_hmac_sha_224_ni_sse
+MKGLOBAL(flush_job_hmac_sha_224_ni_sse,function,internal)
 flush_job_hmac_sha_224_ni_sse:
 %else
 ;; JOB* flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state)
 ;; arg1 : state
-global flush_job_hmac_sha_256_ni_sse
+MKGLOBAL(flush_job_hmac_sha_256_ni_sse,function,internal)
 flush_job_hmac_sha_256_ni_sse:
 %endif	
 	mov	rax, rsp

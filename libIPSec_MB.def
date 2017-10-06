@@ -1,0 +1,145 @@
+; Copyright (c) 2017, Intel Corporation
+; 
+; Redistribution and use in source and binary forms, with or without
+; modification, are permitted provided that the following conditions are met:
+; 
+;     * Redistributions of source code must retain the above copyright notice,
+;       this list of conditions and the following disclaimer.
+;     * Redistributions in binary form must reproduce the above copyright
+;       notice, this list of conditions and the following disclaimer in the
+;       documentation and/or other materials provided with the distribution.
+;     * Neither the name of Intel Corporation nor the names of its contributors
+;       may be used to endorse or promote products derived from this software
+;       without specific prior written permission.
+; 
+; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+; DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+; FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+; DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+; SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+; CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+LIBRARY libIPSec_MB.dll
+EXPORTS
+    aes_gcm_dec_128_avx_gen2		@1
+    aes_gcm_dec_128_avx_gen4		@2
+    aes_gcm_dec_128_finalize_avx_gen2	@3
+    aes_gcm_dec_128_finalize_avx_gen4	@4
+    aes_gcm_dec_128_finalize_sse	@5
+    aes_gcm_dec_128_sse			@6
+    aes_gcm_dec_128_update_avx_gen2	@7
+    aes_gcm_dec_128_update_avx_gen4	@8
+    aes_gcm_dec_128_update_sse		@9
+    aes_gcm_dec_192_avx_gen2		@10
+    aes_gcm_dec_192_avx_gen4		@11
+    aes_gcm_dec_192_finalize_avx_gen2	@12
+    aes_gcm_dec_192_finalize_avx_gen4	@13
+    aes_gcm_dec_192_finalize_sse	@14
+    aes_gcm_dec_192_sse			@15
+    aes_gcm_dec_192_update_avx_gen2	@16
+    aes_gcm_dec_192_update_avx_gen4	@17
+    aes_gcm_dec_192_update_sse		@18
+    aes_gcm_dec_256_avx_gen2		@19
+    aes_gcm_dec_256_avx_gen4		@20
+    aes_gcm_dec_256_finalize_avx_gen2	@21
+    aes_gcm_dec_256_finalize_avx_gen4	@22
+    aes_gcm_dec_256_finalize_sse	@23
+    aes_gcm_dec_256_sse			@24
+    aes_gcm_dec_256_update_avx_gen2	@25
+    aes_gcm_dec_256_update_avx_gen4	@26
+    aes_gcm_dec_256_update_sse		@27
+    aes_gcm_enc_128_avx_gen2		@28
+    aes_gcm_enc_128_avx_gen4		@29
+    aes_gcm_enc_128_finalize_avx_gen2	@30
+    aes_gcm_enc_128_finalize_avx_gen4	@31
+    aes_gcm_enc_128_finalize_sse	@32
+    aes_gcm_enc_128_sse			@33
+    aes_gcm_enc_128_update_avx_gen2	@34
+    aes_gcm_enc_128_update_avx_gen4	@35
+    aes_gcm_enc_128_update_sse		@36
+    aes_gcm_enc_192_avx_gen2		@37
+    aes_gcm_enc_192_avx_gen4		@38
+    aes_gcm_enc_192_finalize_avx_gen2	@39
+    aes_gcm_enc_192_finalize_avx_gen4	@40
+    aes_gcm_enc_192_finalize_sse	@41
+    aes_gcm_enc_192_sse			@42
+    aes_gcm_enc_192_update_avx_gen2	@43
+    aes_gcm_enc_192_update_avx_gen4	@44
+    aes_gcm_enc_192_update_sse		@45
+    aes_gcm_enc_256_avx_gen2		@46
+    aes_gcm_enc_256_avx_gen4		@47
+    aes_gcm_enc_256_finalize_avx_gen2	@48
+    aes_gcm_enc_256_finalize_avx_gen4	@49
+    aes_gcm_enc_256_finalize_sse	@50
+    aes_gcm_enc_256_sse			@51
+    aes_gcm_enc_256_update_avx_gen2	@52
+    aes_gcm_enc_256_update_avx_gen4	@53
+    aes_gcm_enc_256_update_sse		@54
+    aes_gcm_init_128_avx_gen2		@55
+    aes_gcm_init_128_avx_gen4		@56
+    aes_gcm_init_128_sse		@57
+    aes_gcm_init_192_avx_gen2		@58
+    aes_gcm_init_192_avx_gen4		@59
+    aes_gcm_init_192_sse		@60
+    aes_gcm_init_256_avx_gen2		@61
+    aes_gcm_init_256_avx_gen4		@62
+    aes_gcm_init_256_sse		@63
+    aes_gcm_precomp_128_avx_gen2	@64
+    aes_gcm_precomp_128_avx_gen4	@65
+    aes_gcm_precomp_128_sse		@66
+    aes_gcm_precomp_192_avx_gen2	@67
+    aes_gcm_precomp_192_avx_gen4	@68
+    aes_gcm_precomp_192_sse		@69
+    aes_gcm_precomp_256_avx_gen2	@70
+    aes_gcm_precomp_256_avx_gen4	@71
+    aes_gcm_precomp_256_sse		@72
+    aes_keyexp_128_avx			@73
+    aes_keyexp_128_enc_avx		@74
+    aes_keyexp_128_enc_sse		@75
+    aes_keyexp_128_sse			@76
+    aes_keyexp_192_avx			@77
+    aes_keyexp_192_enc_avx		@78
+    aes_keyexp_192_enc_sse		@79
+    aes_keyexp_192_sse			@80
+    aes_keyexp_256_avx			@81
+    aes_keyexp_256_enc_avx		@82
+    aes_keyexp_256_enc_sse		@83
+    aes_keyexp_256_sse			@84
+    aes_xcbc_expand_key_avx		@85
+    aes_xcbc_expand_key_sse		@86
+    des_key_schedule			@87
+    flush_job_avx			@88
+    flush_job_avx2			@89
+    flush_job_avx512			@90
+    flush_job_sse			@91
+    init_mb_mgr_avx			@92
+    init_mb_mgr_avx2			@93
+    init_mb_mgr_avx512			@94
+    init_mb_mgr_sse			@95
+    md5_one_block_sse			@96
+    queue_size_avx			@97
+    queue_size_avx2			@98
+    queue_size_avx512			@99
+    queue_size_sse			@100
+    sha1_one_block_avx			@101
+    sha1_one_block_sse			@102
+    sha224_one_block_avx		@103
+    sha224_one_block_sse		@104
+    sha256_one_block_avx		@105
+    sha256_one_block_sse		@106
+    sha384_one_block_avx		@107
+    sha384_one_block_sse		@108
+    sha512_one_block_avx		@109
+    sha512_one_block_sse		@110
+    sse_sha_ext_usage			@111
+    submit_job_avx			@112
+    submit_job_avx2			@113
+    submit_job_avx512			@114
+    submit_job_nocheck_avx		@115
+    submit_job_nocheck_avx2		@116
+    submit_job_nocheck_avx512		@117
+    submit_job_nocheck_sse		@118
+    submit_job_sse			@119

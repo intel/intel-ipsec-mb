@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 
 ;; clobbers all registers except for ARG1 and rbp
 
+%include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
 %define	VMOVDQ vmovdqu ;; assume buffers not aligned 
@@ -105,7 +106,7 @@ endstruc
 %define XTMP		xmm15
 
 
-global aes_cbc_enc_128_x8
+MKGLOBAL(aes_cbc_enc_128_x8,function,internal)
 aes_cbc_enc_128_x8:
 
 	sub	rsp, STACK_size

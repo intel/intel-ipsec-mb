@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 %include "reg_sizes.asm"
@@ -103,7 +104,7 @@ endstruc
 
 ; JOB* flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state)
 ; arg 1 : rcx : state
-global flush_job_hmac_avx
+MKGLOBAL(flush_job_hmac_avx,function,internal)
 flush_job_hmac_avx:
 
         mov	rax, rsp

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,7 @@
 ;;
 ;; clobbers ymm0-15
 
+%include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
 section .data
@@ -454,7 +455,7 @@ align 32
 ; arg 1 : pointer to MD5_ARGS structure
 ; arg 2 : number of blocks (>=1)
 
-global md5_x8x2_avx2
+MKGLOBAL(md5_x8x2_avx2,function,internal)
 md5_x8x2_avx2:
 	sub	rsp, STACK_size
 

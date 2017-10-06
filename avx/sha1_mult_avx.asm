@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
 section .data
@@ -293,7 +294,7 @@ align 32
 ; void sha1_mult_avx(SHA1_ARGS *args, UINT32 size_in_blocks);
 ; arg 1 : rcx : pointer to args
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
-global sha1_mult_avx
+MKGLOBAL(sha1_mult_avx,function,internal)
 sha1_mult_avx:
 
 	sub	rsp, FRAMESZ

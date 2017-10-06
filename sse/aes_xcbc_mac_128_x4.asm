@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
 
 ;; clobbers all registers except for ARG1 and rbp
 
+%include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
 %define	MOVDQ movdqu ;; assume buffers not aligned 
@@ -105,7 +106,7 @@
 
 section .text
 
-global aes_xcbc_mac_128_x4
+MKGLOBAL(aes_xcbc_mac_128_x4,function,internal)
 aes_xcbc_mac_128_x4:
 
 	push	rbp

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 ; routine to do AES256 CBC decrypt "by8"
 
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
+%include "os.asm"
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
@@ -242,7 +243,7 @@
 section .text
 
 ;; aes_cbc_dec_256_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
-global aes_cbc_dec_256_avx
+MKGLOBAL(aes_cbc_dec_256_avx,function,internal)
 aes_cbc_dec_256_avx:
 
 %ifndef LINUX

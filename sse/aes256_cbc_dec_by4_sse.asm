@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -42,6 +42,8 @@
 ; arg 5: sp:  length in bytes (multiple of 16)
 ;
 
+%include "os.asm"
+
 %define MOVDQ	movdqu
 
 %ifdef LINUX
@@ -81,7 +83,7 @@
 
 section .text
 
-global aes_cbc_dec_256_sse
+MKGLOBAL(aes_cbc_dec_256_sse,function,internal)
 aes_cbc_dec_256_sse:
 %ifndef LINUX
 	mov	LEN, [rsp + 8*5]

@@ -25,6 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "os.asm"
+
 %ifdef LINUX
 %define KEY		rdi
 %define EXP_ENC_KEYS	rsi
@@ -110,7 +112,7 @@ section .text
 ; arg 2: rdx: pointer to expanded key array for encrypt
 ; arg 3: r8:  pointer to expanded key array for decrypt
 ;
-global aes_keyexp_192_sse
+MKGLOBAL(aes_keyexp_192_sse,function,)
 aes_keyexp_192_sse:
 
 %ifndef LINUX
@@ -188,7 +190,7 @@ aes_keyexp_192_sse:
 
 
 
-global aes_keyexp_192_avx
+MKGLOBAL(aes_keyexp_192_avx,function,)
 aes_keyexp_192_avx:
 
 %ifndef LINUX
@@ -275,7 +277,7 @@ aes_keyexp_192_avx:
 ; arg 1: rcx: pointer to key
 ; arg 2: rdx: pointer to expanded key array for encrypt
 ;
-global aes_keyexp_192_enc_sse
+MKGLOBAL(aes_keyexp_192_enc_sse,function,)
 aes_keyexp_192_enc_sse:
 
 %ifndef LINUX
@@ -332,7 +334,7 @@ aes_keyexp_192_enc_sse:
 
      ret
 
-global aes_keyexp_192_enc_avx
+MKGLOBAL(aes_keyexp_192_enc_avx,function,)
 aes_keyexp_192_enc_avx:
 
 %ifndef LINUX

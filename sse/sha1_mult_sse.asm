@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -24,6 +24,8 @@
 ;; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
+
+%include "os.asm"
 
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
@@ -292,7 +294,7 @@ align 32
 ; void sha1_mult_sse(SHA1_ARGS *args, UINT32 size_in_blocks);
 ; arg 1 : rcx : pointer to args
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
-global sha1_mult_sse
+MKGLOBAL(sha1_mult_sse,function,internal)
 sha1_mult_sse:
 
 	sub	rsp, FRAMESZ

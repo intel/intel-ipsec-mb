@@ -33,11 +33,26 @@
         decl __attribute__((aligned(alignval)))
 #define __forceinline \
         static inline __attribute__((always_inline))
+
+#if __GNUC__ >= 4
+#define IMB_DLL_EXPORT __attribute__ ((visibility ("default")))
+#define IMB_DLL_LOCAL  __attribute__ ((visibility ("hidden")))
+#else /* GNU C 4.0 and later */
+#define IMB_DLL_EXPORT
+#define IMB_DLL_LOCAL
+#endif /* different C compiler */
+
 #else
+
 #define DECLARE_ALIGNED(decl, alignval) \
         __declspec(align(alignval)) decl
 #define __forceinline \
         static __forceinline
+
+/* Windows DLL export is done via DEF file */
+#define IMB_DLL_EXPORT
+#define IMB_DLL_LOCAL
+
 #endif
 
 #ifdef DEBUG

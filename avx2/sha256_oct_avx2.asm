@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -39,6 +39,7 @@
 ;;
 ;; clobbers ymm0-15
 
+%include "os.asm"
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 
@@ -184,7 +185,7 @@ PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
 align 64
-global K256
+MKGLOBAL(K256,data,internal)
 K256:
 	dd	0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5
 	dd	0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5
@@ -489,7 +490,7 @@ endstruc
 ;; void sha256_oct_avx2(SHA256_ARGS *args, UINT64 bytes); 
 ;; arg 1 : STATE : pointer to array of pointers to input data
 ;; arg 2 : INP_SIZE  : size of input in blocks
-global sha256_oct_avx2
+MKGLOBAL(sha256_oct_avx2,function,internal)
 align 16
 sha256_oct_avx2:
 	; general registers preserved in outer calling routine

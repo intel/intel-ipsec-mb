@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -32,6 +32,8 @@
 ;void
 ; aes128_ecbenc_x3_avx(void *in, void *keys, void *out1, void *out2, void *out3);
 
+%include "os.asm"
+
 %ifdef LINUX
 %define IN	rdi	; arg 1
 %define KEYS	rsi	; arg 2
@@ -56,7 +58,7 @@
 
 section .text
 
-global aes128_ecbenc_x3_sse
+MKGLOBAL(aes128_ecbenc_x3_sse,function,internal)
 aes128_ecbenc_x3_sse:
 
 %ifndef LINUX
@@ -132,7 +134,7 @@ aes128_ecbenc_x3_sse:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-global aes128_ecbenc_x3_avx
+MKGLOBAL(aes128_ecbenc_x3_avx,function,internal)
 aes128_ecbenc_x3_avx:
 
 %ifndef LINUX

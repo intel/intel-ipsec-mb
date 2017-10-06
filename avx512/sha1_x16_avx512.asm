@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -37,6 +37,7 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31
 
+%include "os.asm"
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
@@ -401,7 +402,7 @@ align 64
 ; void sha1_mult_x16_avx3(void **input_data, UINT128 *digest, UINT32 size)
 ; arg 1 : pointer to SHA1 args structure
 ; arg 2 : size (in blocks) ;; assumed to be >= 1
-global sha1_x16_avx512
+MKGLOBAL(sha1_x16_avx512,function,internal)
 sha1_x16_avx512:
 	;; Initialize digests
 	vmovdqu32	A, [state + 0*SHA1_DIGEST_ROW_SIZE]

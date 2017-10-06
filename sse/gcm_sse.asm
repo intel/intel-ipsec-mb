@@ -111,6 +111,7 @@
 ; throughout the code, one tab and two tab indentations are used. one tab is for GHASH part, two tabs is for AES part.
 ;
 
+%include "os.asm"
 %include "reg_sizes.asm"
 %include "gcm_defines.asm"
 
@@ -1904,7 +1905,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 ;void	aes_gcm_precomp_128_sse / aes_gcm_precomp_192_sse / aes_gcm_precomp_256_sse
 ;        (struct gcm_key_data *key_data);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global FN_NAME(precomp,_)
+MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
 
         push    r12
@@ -1967,7 +1968,7 @@ ret
 ;        const   u8 *aad,
 ;        u64     aad_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global FN_NAME(init,_)
+MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
 	push	r12
 	push	r13
@@ -2001,7 +2002,7 @@ FN_NAME(init,_):
 ;        const   u8 *in,
 ;        u64     plaintext_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global FN_NAME(enc,_update_)
+MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
 
 	FUNC_SAVE
@@ -2021,7 +2022,7 @@ FN_NAME(enc,_update_):
 ;        const   u8 *in,
 ;        u64     plaintext_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global FN_NAME(dec,_update_)
+MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
 
 	FUNC_SAVE
@@ -2040,7 +2041,7 @@ FN_NAME(dec,_update_):
 ;        u8      *auth_tag,
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global FN_NAME(enc,_finalize_)
+MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
 
 	push r12
@@ -2076,7 +2077,7 @@ FN_NAME(enc,_finalize_):
 ;        u8      *auth_tag,
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global FN_NAME(dec,_finalize_)
+MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
 
 	push r12
@@ -2118,7 +2119,7 @@ FN_NAME(dec,_finalize_):
 ;        u8      *auth_tag,
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global FN_NAME(enc,_)
+MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
 
 	FUNC_SAVE
@@ -2146,7 +2147,7 @@ FN_NAME(enc,_):
 ;        u8      *auth_tag,
 ;        u64     auth_tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-global FN_NAME(dec,_)
+MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
 
 	FUNC_SAVE

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 ;;; process 4 buffers at a time, single data structure as input
 ;;; Updates In and Out pointers at end
 
+%include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
 %define	MOVDQ movdqu ;; assume buffers not aligned 
@@ -104,7 +105,7 @@
 
 section .text
 
-global aes_cbc_enc_192_x4
+MKGLOBAL(aes_cbc_enc_192_x4,function,internal)
 aes_cbc_enc_192_x4:
 
 	push	rbp

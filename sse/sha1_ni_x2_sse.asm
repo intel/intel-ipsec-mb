@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -38,6 +38,7 @@
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 
+%include "os.asm"
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 
@@ -104,7 +105,7 @@ UPPER_WORD_MASK:         ;ddq 0xFFFFFFFF000000000000000000000000
 ;; arg2 : size (in blocks) ;; assumed to be >= 1
 
 section .text
-global sha1_ni
+MKGLOBAL(sha1_ni,function,internal)
 align 32
 sha1_ni:
 	sub		rsp, frame_size

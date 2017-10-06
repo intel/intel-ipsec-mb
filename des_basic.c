@@ -321,6 +321,7 @@ uint64_t enc_dec_1(const uint64_t data, const uint64_t *ks, const int enc)
         return ((uint64_t) l) | (((uint64_t) r) << 32);
 }
 
+IMB_DLL_LOCAL
 void
 des_enc_cbc_basic(const void *input, void *output, const int size,
                   const uint64_t *ks, const uint64_t *ivec)
@@ -344,6 +345,7 @@ des_enc_cbc_basic(const void *input, void *output, const int size,
         iv = 0;
 }
 
+IMB_DLL_LOCAL
 void
 des_dec_cbc_basic(const void *input, void *output, const int size,
                   const uint64_t *ks, const uint64_t *ivec)
@@ -412,6 +414,7 @@ cfb_one_basic(const void *input, void *output, const int size,
         }
 }
 
+IMB_DLL_LOCAL
 void
 docsis_des_enc_basic(const void *input, void *output, const int size,
                      const uint64_t *ks, const uint64_t *ivec)
@@ -444,6 +447,7 @@ docsis_des_enc_basic(const void *input, void *output, const int size,
         iv = 0;
 }
 
+IMB_DLL_LOCAL
 void
 docsis_des_dec_basic(const void *input, void *output, const int size,
                      const uint64_t *ks, const uint64_t *ivec)

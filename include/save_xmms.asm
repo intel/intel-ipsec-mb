@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "os.asm"
+
 %ifdef LINUX
 %define ARG1	rdi
 %else
@@ -33,7 +35,7 @@
 
 section .text
 ; void save_xmms(UINT128 array[10])
-global save_xmms
+MKGLOBAL(save_xmms,function,internal)
 save_xmms:
 	movdqa	[ARG1 + 0*16], xmm6
 	movdqa	[ARG1 + 1*16], xmm7
@@ -49,7 +51,7 @@ save_xmms:
 
 
 ; void restore_xmms(UINT128 array[10])
-global restore_xmms
+MKGLOBAL(restore_xmms,function,internal)
 restore_xmms:
 	movdqa	xmm6, [ARG1 + 0*16]
 	movdqa	xmm7, [ARG1 + 1*16]
@@ -65,7 +67,7 @@ restore_xmms:
 
 
         ; void save_xmms_avx(UINT128 array[10])
-global save_xmms_avx
+MKGLOBAL(save_xmms_avx,function,internal)
 save_xmms_avx:
         vmovdqa	[ARG1 + 0*16], xmm6
 	vmovdqa	[ARG1 + 1*16], xmm7
@@ -81,7 +83,7 @@ save_xmms_avx:
 
 
 ; void restore_xmms_avx(UINT128 array[10])
-global restore_xmms_avx
+MKGLOBAL(restore_xmms_avx,function,internal)
 restore_xmms_avx: 
 	vmovdqa	xmm6, [ARG1 + 0*16]
 	vmovdqa	xmm7, [ARG1 + 1*16]

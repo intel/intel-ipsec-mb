@@ -41,6 +41,7 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31, K1-7 (K1-2 and K4-6 here but DES underneath clobbers K1-7).
 
+%include "os.asm"
 %include "reg_sizes.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
@@ -378,7 +379,7 @@ section .text
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
 align 64
-global submit_job_des_cbc_enc_avx512
+MKGLOBAL(submit_job_des_cbc_enc_avx512,function,internal)
 submit_job_des_cbc_enc_avx512:
         GENERIC_DES_SUBMIT DES, ENC
         ret
@@ -386,14 +387,14 @@ submit_job_des_cbc_enc_avx512:
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
 align 64
-global submit_job_des_cbc_dec_avx512
+MKGLOBAL(submit_job_des_cbc_dec_avx512,function,internal)
 submit_job_des_cbc_dec_avx512:
         GENERIC_DES_SUBMIT DES, DEC
         ret
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
 align 64
-global submit_job_docsis_des_enc_avx512
+MKGLOBAL(submit_job_docsis_des_enc_avx512,function,internal)
 submit_job_docsis_des_enc_avx512:
         GENERIC_DES_SUBMIT DOCSIS, ENC
         ret
@@ -401,35 +402,35 @@ submit_job_docsis_des_enc_avx512:
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
 align 64
-global submit_job_docsis_des_dec_avx512
+MKGLOBAL(submit_job_docsis_des_dec_avx512,function,internal)
 submit_job_docsis_des_dec_avx512:
         GENERIC_DES_SUBMIT DOCSIS, DEC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
 align 64
-global flush_job_des_cbc_enc_avx512
+MKGLOBAL(flush_job_des_cbc_enc_avx512,function,internal)
 flush_job_des_cbc_enc_avx512:
         GENERIC_DES_FLUSH DES, ENC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
 align 64
-global flush_job_des_cbc_dec_avx512
+MKGLOBAL(flush_job_des_cbc_dec_avx512,function,internal)
 flush_job_des_cbc_dec_avx512:
         GENERIC_DES_FLUSH DES, DEC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
 align 64
-global flush_job_docsis_des_enc_avx512
+MKGLOBAL(flush_job_docsis_des_enc_avx512,function,internal)
 flush_job_docsis_des_enc_avx512:
         GENERIC_DES_FLUSH DOCSIS, ENC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
 align 64
-global flush_job_docsis_des_dec_avx512
+MKGLOBAL(flush_job_docsis_des_dec_avx512,function,internal)
 flush_job_docsis_des_dec_avx512:
         GENERIC_DES_FLUSH DOCSIS, DEC
         ret

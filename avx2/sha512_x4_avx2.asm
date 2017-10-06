@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -40,6 +40,7 @@
 ;;
 ;; clobbers ymm0-15
 
+%include "os.asm"
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 
@@ -360,7 +361,7 @@ endstruc
 ;; void sha512_x4_avx2(void *STATE, const int INP_SIZE)
 ;; arg 1 : STATE    : pointer to input data
 ;; arg 2 : INP_SIZE : size of data in blocks (assumed >= 1)
-global sha512_x4_avx2
+MKGLOBAL(sha512_x4_avx2,function,internal)
 align 32
 sha512_x4_avx2:
 	; general registers preserved in outer calling routine

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,7 @@
 ;;
 ;; clobbers xmm0-15
 
+%include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
 extern MD5_TABLE
@@ -337,7 +338,7 @@ rot44 equ  21
 ; arg 2 : number of blocks (>=1)
 ;
 align 32
-global md5_x4x2_avx
+MKGLOBAL(md5_x4x2_avx,function,internal)
 md5_x4x2_avx:
 
         sub     rsp, STACK_SIZE

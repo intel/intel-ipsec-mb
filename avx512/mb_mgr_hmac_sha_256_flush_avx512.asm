@@ -40,6 +40,7 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31
 
+%include "os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 %include "reg_sizes.asm"
@@ -146,10 +147,10 @@ endstruc
 ; arg 1 : state
 align 32
 %ifdef SHA224
-global flush_job_hmac_sha_224_avx512
+MKGLOBAL(flush_job_hmac_sha_224_avx512,function,internal)
 flush_job_hmac_sha_224_avx512:
 %else
-global flush_job_hmac_sha_256_avx512
+MKGLOBAL(flush_job_hmac_sha_256_avx512,function,internal)
 flush_job_hmac_sha_256_avx512:
 %endif
 	mov	rax, rsp

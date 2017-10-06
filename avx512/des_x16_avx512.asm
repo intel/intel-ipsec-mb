@@ -46,6 +46,7 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31 and K1 to K7
 
+%include "os.asm"
 %include "reg_sizes.asm"
 %include "mb_mgr_datastruct.asm"
 %include "constants.asm"
@@ -1724,7 +1725,7 @@ section .text
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
 align 64
-global des_x16_cbc_enc_avx512
+MKGLOBAL(des_x16_cbc_enc_avx512,function,internal)
 des_x16_cbc_enc_avx512:
         GENERIC_DES_ENC DES
         ret
@@ -1732,7 +1733,7 @@ des_x16_cbc_enc_avx512:
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
 align 64
-global des_x16_cbc_dec_avx512
+MKGLOBAL(des_x16_cbc_dec_avx512,function,internal)
 des_x16_cbc_dec_avx512:
         GENERIC_DES_DEC DES
 	ret
@@ -1740,7 +1741,7 @@ des_x16_cbc_dec_avx512:
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
 align 64
-global docsis_des_x16_enc_avx512
+MKGLOBAL(docsis_des_x16_enc_avx512,function,internal)
 docsis_des_x16_enc_avx512:
         GENERIC_DES_ENC DOCSIS
 	ret
@@ -1748,7 +1749,7 @@ docsis_des_x16_enc_avx512:
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
 align 64
-global docsis_des_x16_dec_avx512
+MKGLOBAL(docsis_des_x16_dec_avx512,function,internal)
 docsis_des_x16_dec_avx512:
         GENERIC_DES_DEC DOCSIS
 	ret

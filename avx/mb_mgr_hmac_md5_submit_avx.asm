@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,6 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 %include "memcpy.asm"
@@ -95,7 +96,7 @@ endstruc
 ; JOB* submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
-global submit_job_hmac_md5_avx
+MKGLOBAL(submit_job_hmac_md5_avx,function,internal)
 submit_job_hmac_md5_avx:
 
         mov	rax, rsp

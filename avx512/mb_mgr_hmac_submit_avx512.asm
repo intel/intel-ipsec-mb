@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -40,6 +40,7 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31
 
+%include "os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 %include "reg_sizes.asm"
@@ -117,7 +118,7 @@ endstruc
 ; JOB* submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
-global submit_job_hmac_avx512
+MKGLOBAL(submit_job_hmac_avx512,function,internal)
 submit_job_hmac_avx512:
 
         mov	rax, rsp

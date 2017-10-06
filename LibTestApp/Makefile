@@ -25,22 +25,27 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+APP := ipsec_MB_testapp
 
-MYLIB = ../libIPSec_MB.a
+LIBDIR ?= ../
+LDFLAGS = -L$(LIBDIR) -fPIE -z noexecstack -z relro -z now
+LDLIBS = -lIPSec_MB
 CFLAGS = -g -DLINUX -I../include -I..
 
 ifeq ($(DEBUG),y)
 CFLAGS += -O0 -DDEBUG
+LDFLAGS += -g
 else
 CFLAGS += -O3
 endif
-LDFLAGS := -g
-APP := ipsec_MB_testapp
+
+SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c
+OBJECTS := $(SOURCES:%.c=%.o)
 
 all: $(APP)
 
-$(APP): main.o gcm_test.o ctr_test.o customop_test.o des_test.o $(MYLIB)
-	$(CC) $(LDFLAGS) -o $@ $^
+$(APP): $(OBJECTS)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 main.o: main.c do_test.h
 gcm_test.o: gcm_test.c gcm_ctr_vectors_test.h
@@ -50,4 +55,14 @@ customop_test.o: customop_test.c customop_test.h
 
 .PHONY: clean
 clean:
-	-rm -f main.o gcm_test.o ctr_test.o customop_test.o des_test.o $(APP)
+	-rm -f $(OBJECTS) $(APP)
+
+SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
+CHECKPATCH?=checkpatch.pl
+.PHONY: style
+style:
+	$(CHECKPATCH) --no-tree --no-signoff --emacs \
+		--ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING \
+		--ignore UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE \
+		--ignore GLOBAL_INITIALISERS \
+		$(SOURCES_STYLE)

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -36,13 +36,14 @@
 ;;
 ;; clobbers xmm0-15
 
+%include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
 section .data align=64
 default rel
 
 align 64
-global MD5_TABLE
+MKGLOBAL(MD5_TABLE,data,internal)
 MD5_TABLE:
         dd      0xd76aa478, 0xd76aa478, 0xd76aa478, 0xd76aa478
         dd      0xe8c7b756, 0xe8c7b756, 0xe8c7b756, 0xe8c7b756
@@ -407,7 +408,7 @@ rot44 equ  21
 ; arg 2 : number of blocks (>=1)
 ;
 align 32
-global md5_x4x2_sse
+MKGLOBAL(md5_x4x2_sse,function,internal)
 md5_x4x2_sse:
 
         sub     rsp, STACK_SIZE

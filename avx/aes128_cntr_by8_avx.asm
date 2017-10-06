@@ -25,6 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "os.asm"
 %include "memcpy.asm"
 
 ; routine to do AES128 CNTR enc/decrypt "by8"
@@ -32,9 +33,15 @@
 section .data
 default rel
 
-global byteswap_const
-global ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
-global ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
+MKGLOBAL(byteswap_const,data,internal)
+MKGLOBAL(ddq_add_1,data,internal)
+MKGLOBAL(ddq_add_2,data,internal)
+MKGLOBAL(ddq_add_3,data,internal)
+MKGLOBAL(ddq_add_4,data,internal)
+MKGLOBAL(ddq_add_5,data,internal)
+MKGLOBAL(ddq_add_6,data,internal)
+MKGLOBAL(ddq_add_7,data,internal)
+MKGLOBAL(ddq_add_8,data,internal)
 
 align 16
 byteswap_const:	;DDQ 0x000102030405060708090A0B0C0D0E0F
@@ -243,7 +250,7 @@ endstruc
 
 ;; aes_cntr_128_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
 align 32
-global aes_cntr_128_avx
+MKGLOBAL(aes_cntr_128_avx,function,internal)
 aes_cntr_128_avx:
 
 %ifndef LINUX

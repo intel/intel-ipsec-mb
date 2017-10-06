@@ -24,7 +24,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-LIB=libIPSec_MB.a
+LIB = libIPSec_MB
+VERSION = 0.47
+SO_VERSION = 0
+SHARED ?= n
 
 USE_YASM ?= n
 YASM ?= yasm
@@ -46,8 +49,22 @@ CFLAGS := -DLINUX $(EXTRA_CFLAGS) $(INCLUDES) \
 
 ifeq ($(DEBUG),y)
 CFLAGS += -g -O0 -DDEBUG
+LDFLAGS += -g
 else
-CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
+CFLAGS += -O3 -fstack-protector -D_FORTIFY_SOURCE=2
+endif
+
+# so or static build
+ifeq ($(SHARED),y)
+CFLAGS += -fPIC
+LIBNAME = $(LIB).so.$(VERSION)
+LIBPERM = 0755
+LDFLAGS += -z noexecstack -z relro -z now
+else
+CFLAGS += -fPIE
+LIBNAME = $(LIB).a
+LIBPERM = 0644
+LDFLAGS += -g
 endif
 
 ASM_INCLUDE_DIRS := include . avx avx2 avx512 sse
@@ -57,8 +74,6 @@ YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUD
 
 NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
 NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
-
-LDFLAGS += -g
 
 lib_objs := \
 	aes128_cbc_dec_by4_sse.o \
@@ -206,10 +221,16 @@ else
 obj2_files := $(lib_objs:%=$(OBJ_DIR)/%) $(gcm_objs:%=$(OBJ_DIR)/%)
 endif
 
-all: $(LIB)
+all: $(LIBNAME)
 
-$(LIB): $(obj2_files)
+$(LIBNAME): $(obj2_files)
+ifeq ($(SHARED),y)
+	$(CC) -shared -Wl,-soname,$(LIB).so.$(SO_VERSION) -o $(LIBNAME) $^ -lc
+	ln -f -s $(LIBNAME) $(LIB).so.$(SO_VERSION)
+	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB).so
+else
 	ar -qcs $@ $^
+endif
 
 $(obj2_files): | $(OBJ_DIR)
 
@@ -304,5 +325,17 @@ TAGS:
 .PHONY: clean
 clean:
 	rm -Rf $(obj2_files)
-	rm -Rf $(LIB)
+	rm -f $(LIB).a $(LIB).so*
+
+SOURCES_DIRS := . sse avx avx2 avx512 include
+SOURCES := $(foreach dir,$(SOURCES_DIRS),$(wildcard $(dir)/*.[ch]) $(wildcard $(dir)/*.asm) $(wildcard $(dir)/*.inc))
+SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
+CHECKPATCH?=checkpatch.pl
+.PHONY: style
+style:
+	$(CHECKPATCH) --no-tree --no-signoff --emacs \
+		--ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING \
+		--ignore UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE \
+		--ignore GLOBAL_INITIALISERS \
+		$(SOURCES_STYLE)
 

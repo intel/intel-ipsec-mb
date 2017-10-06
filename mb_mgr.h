@@ -198,38 +198,29 @@ typedef struct MB_MGR {
 // once (and preferably until it returns NULL).
 // get_completed_job and flush_job returns a job object. This job object ceases
 // to be usable at the next call to get_next_job
-void init_mb_mgr_avx(MB_MGR *state);
-//JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
-JOB_AES_HMAC* submit_job_avx(MB_MGR *state);
-JOB_AES_HMAC* submit_job_nocheck_avx(MB_MGR *state);
-//JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
-JOB_AES_HMAC* flush_job_avx(MB_MGR *state);
-UINT32 queue_size_avx(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_avx(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* submit_job_avx(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* submit_job_nocheck_avx(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* flush_job_avx(MB_MGR *state);
+IMB_DLL_EXPORT UINT32 queue_size_avx(MB_MGR *state);
 
-void init_mb_mgr_avx2(MB_MGR *state);
-//JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
-JOB_AES_HMAC* submit_job_avx2(MB_MGR *state);
-JOB_AES_HMAC* submit_job_nocheck_avx2(MB_MGR *state);
-//JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
-JOB_AES_HMAC* flush_job_avx2(MB_MGR *state);
-UINT32 queue_size_avx2(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_avx2(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* submit_job_avx2(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* submit_job_nocheck_avx2(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* flush_job_avx2(MB_MGR *state);
+IMB_DLL_EXPORT UINT32 queue_size_avx2(MB_MGR *state);
 
-void init_mb_mgr_avx512(MB_MGR *state);
-//JOB_AES_HMAC* get_next_job_avx(MB_MGR *state);
-JOB_AES_HMAC* submit_job_avx512(MB_MGR *state);
-JOB_AES_HMAC* submit_job_nocheck_avx512(MB_MGR *state);
-//JOB_AES_HMAC* get_completed_job_avx(MB_MGR *state);
-JOB_AES_HMAC* flush_job_avx512(MB_MGR *state);
-UINT32 queue_size_avx512(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_avx512(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* submit_job_avx512(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* submit_job_nocheck_avx512(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* flush_job_avx512(MB_MGR *state);
+IMB_DLL_EXPORT UINT32 queue_size_avx512(MB_MGR *state);
 
-
-void init_mb_mgr_sse(MB_MGR *state);
-//JOB_AES_HMAC* get_next_job_sse(MB_MGR *state);
-JOB_AES_HMAC* submit_job_sse(MB_MGR *state);
-JOB_AES_HMAC* submit_job_nocheck_sse(MB_MGR *state);
-//JOB_AES_HMAC* get_completed_job_sse(MB_MGR *state);
-JOB_AES_HMAC* flush_job_sse(MB_MGR *state);
-UINT32 queue_size_sse(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_sse(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* submit_job_sse(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* submit_job_nocheck_sse(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC* flush_job_sse(MB_MGR *state);
+IMB_DLL_EXPORT UINT32 queue_size_sse(MB_MGR *state);
 
 enum SHA_EXTENSION_USAGE {
         SHA_EXT_NOT_PRESENT = 0, /* don't detect and don't use SHA extensions */

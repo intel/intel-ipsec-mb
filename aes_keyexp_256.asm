@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -26,6 +26,7 @@
 ;;
 
 ; Routine to do AES key expansion
+%include "os.asm"
 
 ; Uses the f() function of the aeskeygenassist result
 %macro key_expansion_256_sse 0
@@ -91,7 +92,7 @@ section .text
 ; arg 2: rdx: pointer to expanded key array for encrypt
 ; arg 3: r8:  pointer to expanded key array for decrypt
 ;
-global aes_keyexp_256_sse
+MKGLOBAL(aes_keyexp_256_sse,function,)
 aes_keyexp_256_sse:
         movdqu	xmm1, [KEY]			; loading the AES key
 	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
@@ -184,7 +185,7 @@ aes_keyexp_256_sse:
 	ret
 
 
-global aes_keyexp_256_avx
+MKGLOBAL(aes_keyexp_256_avx,function,)
 aes_keyexp_256_avx:
         vmovdqu	xmm1, [KEY]			; loading the AES key
 	vmovdqa	[EXP_ENC_KEYS + 16*0], xmm1
@@ -287,7 +288,7 @@ aes_keyexp_256_avx:
 ; arg 1: rcx: pointer to key
 ; arg 2: rdx: pointer to expanded key array for encrypt
 ;
-global aes_keyexp_256_enc_sse
+MKGLOBAL(aes_keyexp_256_enc_sse,function,)
 aes_keyexp_256_enc_sse:
         movdqu	xmm1, [KEY]			; loading the AES key
 	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
@@ -351,7 +352,7 @@ aes_keyexp_256_enc_sse:
 
 	ret
 
-global aes_keyexp_256_enc_avx
+MKGLOBAL(aes_keyexp_256_enc_avx,function,)
 aes_keyexp_256_enc_avx:
         vmovdqu	xmm1, [KEY]			; loading the AES key
 	vmovdqa	[EXP_ENC_KEYS + 16*0], xmm1

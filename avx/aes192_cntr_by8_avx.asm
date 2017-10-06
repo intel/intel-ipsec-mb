@@ -25,6 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "os.asm"
 %include "memcpy.asm"
 
 ; routine to do AES192 CNTR enc/decrypt "by8"
@@ -236,7 +237,7 @@ section .text
 
 ;; aes_cntr_192_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 align 32
-global aes_cntr_192_avx
+MKGLOBAL(aes_cntr_192_avx,function,internal)
 aes_cntr_192_avx:
 
 %ifndef LINUX

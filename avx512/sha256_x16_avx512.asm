@@ -37,6 +37,7 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31
 
+%include "os.asm"
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
@@ -737,7 +738,7 @@ PSHUFFLE_TRANSPOSE16_MASK2: 	dq 0x0000000000000002
 ;; arg 1 : rcx : pointer to array of pointers to input data
 ;; arg 2 : rdx : pointer to array of pointers to digest
 ;; arg 3 : r8  : size of input in bytes
-global sha256_x16_avx512
+MKGLOBAL(sha256_x16_avx512,function,internal)
 align 64
 sha256_x16_avx512:
 	mov	rax, rsp

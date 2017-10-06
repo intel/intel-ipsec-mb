@@ -24,9 +24,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 EXE=ipsec_perf
-LIB_LOC?=..
-LIB?=$(LIB_LOC)/libIPSec_MB.a
-INCLUDE_DIRS := $(LIB_LOC) $(LIB_LOC)/include
+LIBDIR ?= ../
+LDFLAGS = -L$(LIBDIR) -fPIE -z noexecstack -z relro -z now
+LDLIBS = -lIPSec_MB
+
+INCLUDE_DIRS := $(LIBDIR) $(LIBDIR)/include
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I$i)
 
 CFLAGS := -DLINUX $(INCLUDES) \
@@ -35,12 +37,12 @@ CFLAGS := -DLINUX $(INCLUDES) \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
-LDFLAGS := -g
 
 ifeq ($(DEBUG),y)
 CFLAGS += -g -DDEBUG -O0
+LDFLAGS += -g
 else
-CFLAGS += -O2 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
+CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
 SOURCES := ipsec_perf.c
@@ -53,22 +55,22 @@ CPPCHECK ?= cppcheck
 
 all: $(EXE)
 
-$(EXE): $(OBJECTS) $(LIB)
-	$(CC) $(LDFLAGS) -o $@ $^
+$(EXE): $(OBJECTS)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
+ipsec_perf.o: ipsec_perf.c
+
+.PHONY: clean
 clean:
 	-rm -f $(OBJECTS)
 	-rm -f $(EXE)
 
+SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
+CHECKPATCH?=checkpatch.pl
+.PHONY: style
 style:
 	$(CHECKPATCH) --no-tree --no-signoff --emacs \
 		--ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING \
 		--ignore UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE \
 		--ignore GLOBAL_INITIALISERS \
-		-f ipsec_perf.c
-
-cppcheck:
-	$(CPPCHECK) \
-		--enable=warning,portability,performance,missingInclude \
-		--std=c99 --template=gcc \
-		ipsec_perf.c
+		$(SOURCES_STYLE)

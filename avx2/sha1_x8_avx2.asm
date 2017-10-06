@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 ;;
 ;; clobbers ymm0-15
 
+%include "os.asm"
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
@@ -368,7 +369,7 @@ align 32
 ; void sha1_x8_avx2(void *state, int num_blks)
 ; arg 1 : rcx : pointer to array[4] of pointer to input data
 ; arg 2 : rdx  : size (in blocks) ;; assumed to be >= 1
-global sha1_x8_avx2
+MKGLOBAL(sha1_x8_avx2,function,internal)
 sha1_x8_avx2:
 	sub	rsp, FRAMESZ
 

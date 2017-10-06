@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -39,6 +39,7 @@
 ;;
 ;; clobbers xmm0-15
 
+%include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
 ;%define DO_DBGPRINT
@@ -47,7 +48,7 @@
 section .data
 default rel
 align 64
-global K512_2
+MKGLOBAL(K512_2,data,internal)
 K512_2:
 	dq	0x428a2f98d728ae22, 0x428a2f98d728ae22
 	dq	0x7137449123ef65cd, 0x7137449123ef65cd
@@ -324,7 +325,7 @@ endstruc
 ;; arg 1 : STATE    : pointer args
 ;; arg 2 : INP_SIZE : size of data in blocks (assumed >= 1)
 ;;
-global sha512_x2_sse
+MKGLOBAL(sha512_x2_sse,function,internal)
 align 32
 sha512_x2_sse:
 	; general registers preserved in outer calling routine

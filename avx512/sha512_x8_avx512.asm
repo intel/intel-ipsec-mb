@@ -39,6 +39,7 @@
 
 ;; code to compute quad SHA512 using AVX512
 
+%include "os.asm"
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
@@ -520,7 +521,7 @@ section .text
 ;; arg 1 : rcx : pointer to input data
 ;; arg 2 : rdx : pointer to UINT64 digest[8][num_lanes]
 ;; arg 3 : size in message block lengths (= 128 bytes)
-global sha512_x8_avx512
+MKGLOBAL(sha512_x8_avx512,function,internal)
 align 64
 sha512_x8_avx512:
         mov	rax, rsp

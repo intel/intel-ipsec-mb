@@ -32,6 +32,7 @@
 ;;
 ;; Clobbers ZMM0-31
 
+%include "os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 %include "reg_sizes.asm"
@@ -122,14 +123,14 @@ endstruc
 ; JOB* flush_job_hmac_sha_384_avx512(MB_MGR_HMAC_SHA_512_OOO *state)
 ; arg 1 : state
 %define SHA_X_DIGEST_SIZE 512
-global flush_job_hmac_sha_512_avx512
+MKGLOBAL(flush_job_hmac_sha_512_avx512,function,internal)
 align 64
 flush_job_hmac_sha_512_avx512:
 %else
 ; JOB* flush_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state)
 ; arg 1 : state
 %define SHA_X_DIGEST_SIZE 384
-global flush_job_hmac_sha_384_avx512
+MKGLOBAL(flush_job_hmac_sha_384_avx512,function,internal)
 align 64
 flush_job_hmac_sha_384_avx512:
 %endif

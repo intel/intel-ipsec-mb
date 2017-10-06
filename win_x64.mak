@@ -25,15 +25,25 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+# Available build options:
+# DEBUG=y   - this option will produce library fit for debugging
+# SHARED=y  - this option will produce shared library (DLL)
+
+!ifdef SHARED
+LIBNAME = libIPSec_MB.dll
+!else
 LIBNAME = libIPSec_MB.lib
+!endif
 OBJ_DIR = obj
 
 !ifdef DEBUG
 DCFLAGS = /Od /DDEBUG /Z7
 DAFLAGS = -gcv8
+DLFLAGS = /DEBUG
 !else
 DCFLAGS = /O2 /Oi
 DAFLAGS =
+DLFLAGS = /RELEASE
 !endif
 
 CC = cl
@@ -42,6 +52,9 @@ CFLAGS = $(EXTRA_CFLAGS) $(DCFLAGS)  /I. /Iinclude \
 
 LIB_TOOL = lib
 LIBFLAGS = /nologo /machine:X64 /nodefaultlib
+
+LINK_TOOL = link
+LINKFLAGS = $(DLFLAGS) /nologo /machine:X64
 
 AS = nasm
 AFLAGS = $(DAFLAGS) -fwin64 -Xvc -DWIN_ABI -Iinclude/ -I./ -Iavx/ -Iavx2/ -Iavx512/ -Isse/
@@ -203,7 +216,11 @@ all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
 all: $(LIBNAME)
 
 $(LIBNAME): $(all_objs)
+!ifdef SHARED
+	$(LINK_TOOL) $(LINKFLAGS) /DLL /DEF:libIPSec_MB.def /OUT:$@  $(all_objs)
+!else
 	$(LIB_TOOL) $(LIBFLAGS) /out:$@ $(all_objs)
+!endif
 
 $(all_objs): $(OBJ_DIR)
 
@@ -247,7 +264,7 @@ clean:
 	del /q $(lib_objs1)
 	del /q $(lib_objs2)
 	del /q $(gcm_objs)
-	del /q $(LIBNAME)
+	del /q $(LIBNAME).*
 
 
 

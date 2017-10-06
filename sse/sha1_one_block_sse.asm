@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
+;; Copyright (c) 2012-2017, Intel Corporation
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -27,6 +27,7 @@
 
 ; SHA1 code, hybrid, rolled, interleaved
 ; Uses SSE instructions
+%include "os.asm"
 
 section .data
 default rel
@@ -255,7 +256,7 @@ ROTATE_ARGS
 ;; void sha1_one_block_sse(void *input_data, UINT32 digest[8]
 ;; arg 1 : rcx : pointer to input data
 ;; arg 2 : rdx : pointer to digest
-global sha1_one_block_sse
+MKGLOBAL(sha1_one_block_sse,function,)
 align 32
 sha1_one_block_sse:
 	push	rbx

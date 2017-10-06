@@ -25,6 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "os.asm"
 %include "memcpy.asm"
 
 ;;; Routine to do 128 bit CFB AES encrypt/decrypt operations on one block only.
@@ -104,7 +105,7 @@ endstruc
 ;;
 ;; It makes sure not to read more than LEN bytes from IN and
 ;; not to store more than LEN bytes to OUT.
-global aes_cfb_128_one_avx
+MKGLOBAL(aes_cfb_128_one_avx,function,internal)
 align 32
 aes_cfb_128_one_avx:
 %ifndef LINUX

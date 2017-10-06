@@ -32,6 +32,7 @@
 ;;
 ;; Clobbers ZMM0-31
 
+%include "os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 %include "reg_sizes.asm"
@@ -108,11 +109,11 @@ endstruc
 ; arg 2 : rdx : job
 align 64
 %ifndef SHA384
-global submit_job_hmac_sha_512_avx512
+MKGLOBAL(submit_job_hmac_sha_512_avx512,function,internal)
 %define SHA_X_DIGEST_SIZE 512
 submit_job_hmac_sha_512_avx512:
 %else
-global submit_job_hmac_sha_384_avx512
+MKGLOBAL(submit_job_hmac_sha_384_avx512,function,internal)
 %define SHA_X_DIGEST_SIZE 384
 submit_job_hmac_sha_384_avx512:
 %endif
