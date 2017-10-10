@@ -1160,20 +1160,28 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 	ct_test = malloc(vector->Plen);
 	if (ct_test == NULL) {
 		fprintf(stderr, "Can't allocate ciphertext memory\n");
-		return 1;
+		is_error = 1;
+                goto test_gcm_vectors_exit;
 	}
 	// Allocate space for the calculated ciphertext
 	pt_test = malloc(vector->Plen);
 	if (pt_test == NULL) {
 		fprintf(stderr, "Can't allocate plaintext memory\n");
-		return 1;
+		is_error = 1;
+                goto test_gcm_vectors_exit;
 	}
 
 	T_test = malloc(vector->Tlen);
-	T2_test = malloc(vector->Tlen);
-	if ((T_test == NULL) || (T2_test == NULL)) {
+	if (T_test == NULL) {
 		fprintf(stderr, "Can't allocate tag memory\n");
-		return 1;
+		is_error = 1;
+                goto test_gcm_vectors_exit;
+	}
+	T2_test = malloc(vector->Tlen);
+	if (T2_test == NULL) {
+		fprintf(stderr, "Can't allocate tag(2) memory\n");
+		is_error = 1;
+                goto test_gcm_vectors_exit;
 	}
 	// This is only required once for a given key
 	prefn(vector->K, &gdata_key);
@@ -1231,6 +1239,7 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 
 	memset(pt_test, 0, vector->Plen);
 
+ test_gcm_vectors_exit:
 	if (NULL != ct_test)
 		free(ct_test);
 	if (NULL != pt_test)

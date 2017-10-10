@@ -459,12 +459,17 @@ test_ctr(struct MB_MGR *mb_mgr,
          int order)
 {
         struct JOB_AES_HMAC *job;
-        uint8_t xxx[16];
-        uint8_t *target = malloc(text_len + (sizeof(xxx) * 2));
+        uint8_t padding[16];
+        uint8_t *target = malloc(text_len + (sizeof(padding) * 2));
         int ret = -1;
 
-        memset(target, -1, text_len + (sizeof(xxx) * 2));
-        memset(xxx, -1, sizeof(xxx));
+        if (target == NULL) {
+		fprintf(stderr, "Can't allocate buffer memory\n");
+		goto end;
+        }
+
+        memset(target, -1, text_len + (sizeof(padding) * 2));
+        memset(padding, -1, sizeof(padding));
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
@@ -510,12 +515,12 @@ test_ctr(struct MB_MGR *mb_mgr,
                 hexdump(stderr, "Target", target, text_len + 32);
                 goto end;
         }
-        if (memcmp(xxx, target, sizeof(xxx))) {
+        if (memcmp(padding, target, sizeof(padding))) {
                 printf("overwrite head\n");
                 hexdump(stderr, "Target", target, text_len + 32);
                 goto end;
         }
-        if (memcmp(xxx, target + sizeof(xxx) + text_len,  sizeof(xxx))) {
+        if (memcmp(padding, target + sizeof(padding) + text_len,  sizeof(padding))) {
                 printf("overwrite tail\n");
                 hexdump(stderr, "Target", target, text_len + 32);
                 goto end;
@@ -524,7 +529,8 @@ test_ctr(struct MB_MGR *mb_mgr,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
  end:
-        free(target);
+        if (target != NULL)
+                free(target);
         return ret;
 }
 
