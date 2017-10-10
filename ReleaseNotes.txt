@@ -1,10 +1,16 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+Unreleased
+========================================================================
+General
+- Linux SO compilation option added
+- Windows DLL compilation option added
+
 v0.47 October 2017
 ========================================================================
 
-Jun 27, 2017
+Oct 5, 2017
 
 Intel(R) AVX-512 Instructions
 - DES CBC AVX512 implementation
