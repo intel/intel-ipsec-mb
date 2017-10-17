@@ -25,7 +25,7 @@
 
 EXE=ipsec_perf
 LIBDIR ?= ../
-LDFLAGS = -L$(LIBDIR) -fPIE -z noexecstack -z relro -z now
+LDFLAGS = -L$(LIBDIR) -fPIE -z noexecstack -z relro -z now -pthread
 LDLIBS = -lIPSec_MB
 
 INCLUDE_DIRS := $(LIBDIR) $(LIBDIR)/include
@@ -36,7 +36,8 @@ CFLAGS := -DLINUX $(INCLUDES) \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
-	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
+	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
+	-pthread
 
 ifeq ($(DEBUG),y)
 CFLAGS += -g -DDEBUG -O0

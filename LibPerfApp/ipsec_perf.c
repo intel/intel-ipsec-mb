@@ -32,11 +32,14 @@
 #include <string.h>
 
 #ifdef _WIN32
+#include <windows.h>
+#include <process.h>
 #include <intrin.h>
 #define __forceinline static __forceinline
 #else
 #include <x86intrin.h>
 #define __forceinline static inline __attribute__((always_inline))
+#include <pthread.h>
 #endif
 
 #include "mb_mgr.h"
@@ -53,6 +56,7 @@
 
 #define NUM_ARCHS 4 /* SSE, AVX, AVX2, AVX512 */
 #define NUM_TYPES 3 /* AES_HMAC, AES_DOCSIS, AES_GCM */
+#define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
 #define CIPHER_MODES_AES 4	/* CBC, CNTR, CNTR+8, NULL_CIPHER */
 #define CIPHER_MODES_DOCSIS 4	/* AES DOCSIS, AES DOCSIS+8, DES DOCSIS, DES DOCSIS+8 */
@@ -218,11 +222,6 @@ uint32_t key_idxs[NUM_OFFSETS];
 uint32_t offsets[NUM_OFFSETS];
 int sha_size_incr = 24;
 
-struct variant_s *variant_ptr;
-struct variant_s *variant_list;
-uint32_t variant;
-uint32_t total_variants = 0;
-
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
 uint8_t test_types[NUM_TYPES] = {1, 1, 1}; /* AES, DOCSIS, GCM */
 
@@ -294,14 +293,6 @@ __forceinline void aesni_gcm_dec(const uint32_t arch, const uint8_t key_sz,
 /* Freeing allocated memory */
 static void free_mem(void)
 {
-	uint32_t i;
-
-	if (variant_list != NULL) {
-		/* Freeing variants list */
-		for (i = 0; i < total_variants; i++)
-			free(variant_list[i].avg_times);
-		free(variant_list);
-	}
 	if (offset_ptr != NULL)
 		free(offset_ptr);
 	if (buf != NULL)
@@ -641,7 +632,7 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 /* Sets cipher mode, hash algorithm */
 static void
 do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
-            const uint32_t run)
+            const uint32_t run, struct variant_s *variant_ptr, uint32_t *variant)
 {
 	uint32_t hash_alg;
 	uint32_t h_start = TEST_SHA1;
@@ -671,7 +662,7 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 		for (hash_alg = h_start; hash_alg <= h_end; hash_alg++) {
 			params->hash_alg = (enum test_hash_alg_e) hash_alg;
 			process_variant(mgr, arch, params, variant_ptr, run);
-			variant++;
+			(*variant)++;
 			variant_ptr++;
 		}
 	}
@@ -680,7 +671,7 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 /* Sets cipher direction and key size  */
 static void
 run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
-             const uint32_t run)
+             const uint32_t run, struct variant_s *variant_ptr, uint32_t *variant)
 {
 	uint32_t dir;
 	uint32_t k; /* Key size */
@@ -695,13 +686,14 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 		params->cipher_dir = (JOB_CIPHER_DIRECTION) dir;
 		for (k = AES_128_BYTES; k <= limit; k += 8) {
 			params->aes_key_size = k;
-			do_variants(mgr, arch, params, run);
+			do_variants(mgr, arch, params, run, variant_ptr, variant);
 		}
 	}
 }
 
 /* Generates output containing averaged times for each test variant */
-static void print_times(struct variant_s *variant_list, struct params_s *params)
+static void print_times(struct variant_s *variant_list, struct params_s *params,
+                        const uint32_t total_variants)
 {
 	const uint32_t sizes = params->num_sizes;
 	uint32_t col;
@@ -712,7 +704,6 @@ static void print_times(struct variant_s *variant_list, struct params_s *params)
 	uint8_t	c_mode;
 	uint8_t c_dir;
 	uint8_t h_alg;
-
         const char *func_names[4] = {
                 "SSE", "AVX", "AVX2", "AVX512"
         };
@@ -727,7 +718,6 @@ static void print_times(struct variant_s *variant_list, struct params_s *params)
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
                 "MD5", "NULL_HASH", "GCM"
         };
-
 	printf("ARCH");
 	for (col = 0; col < total_variants; col++)
 		printf("\t%s", func_names[variant_list[col].arch]);
@@ -774,13 +764,24 @@ static void print_times(struct variant_s *variant_list, struct params_s *params)
 }
 
 /* Prepares data structure for test variants storage, sets test configuration */
-static void run_tests(void)
+#ifdef _WIN32
+static void
+#else
+static void *
+#endif
+run_tests(void *arg)
 {
+        uint32_t i;
+        const int do_print_times = (arg == NULL) ? 0 : 1;
 	MB_MGR mb_mgr;
 	struct params_s params;
 	uint32_t num_variants[NUM_TYPES] = {0, 0, 0};
 	uint32_t type, at_size, run, arch;
 	uint32_t variants_per_arch, max_arch;
+        uint32_t variant;
+        uint32_t total_variants = 0;
+        struct variant_s *variant_ptr;
+        struct variant_s *variant_list;
 
 	params.num_sizes = JOB_SIZE / JOB_SIZE_STEP;
 
@@ -833,7 +834,6 @@ static void run_tests(void)
                         exit(EXIT_FAILURE);
                 }
         }
-
         for (run = 0; run < NUM_RUNS; run++) {
                 fprintf(stderr, "Starting run %d of %d\n", run+1, NUM_RUNS);
 
@@ -855,13 +855,23 @@ static void run_tests(void)
                         for (arch = 0; arch < max_arch; arch++) {
                                 if (archs[arch] == 0)
                                         continue;
-                                run_dir_test(&mb_mgr, arch, &params, run);
+                                run_dir_test(&mb_mgr, arch, &params, run,
+                                             variant_ptr, &variant);
                         }
                 } /* end for type */
         } /* end for run */
+	if (do_print_times == 1)
+                print_times(variant_list, &params, total_variants);
 
-	print_times(variant_list, &params);
-
+        if (variant_list != NULL) {
+		/* Freeing variants list */
+		for (i = 0; i < total_variants; i++)
+			free(variant_list[i].avg_times);
+		free(variant_list);
+	}
+#ifndef _WIN32
+        return NULL;
+#endif
 }
 
 static void usage(void)
@@ -881,15 +891,21 @@ static void usage(void)
 		"--no-gcm: do not run GCM perf tests\n"
 		"--no-aes: do not run standard AES + HMAC perf tests\n"
 		"--no-docsis: do not run DOCSIS cipher perf tests\n"
-		"--gcm-job-api: use JOB API for GCM perf tests (raw GCM API is default)\n");
+		"--gcm-job-api: use JOB API for GCM perf tests (raw GCM API is default)\n"
+                "--threads num: <num> for the number of threads to run. Max: 16\n");
 }
 
 int main(int argc, char *argv[])
 {
 	MB_MGR lmgr;
-	int i;
+	int i, num_t = 0;
+#ifdef  _WIN32
+        HANDLE threads[MAX_NUM_THREADS];
+#else
+        pthread_t tids[MAX_NUM_THREADS];
+#endif
 
-	for (i = 1; i < argc; i++) {
+        for (i = 1; i < argc; i++)
 		if (strcmp(argv[i], "-h") == 0) {
 			usage();
 			return EXIT_SUCCESS;
@@ -922,11 +938,16 @@ int main(int argc, char *argv[])
 		} else if ((strcmp(argv[i], "-o") == 0) && (i < argc - 1)) {
 			i++;
 			sha_size_incr = atoi(argv[i]);
-		} else {
+		} else if (strcmp(argv[i], "--threads") == 0) {
+                        num_t = atoi(argv[++i]);
+                        if (num_t > (MAX_NUM_THREADS + 1)) {
+                                fprintf(stderr, "Maximum number of threads: %d\n", MAX_NUM_THREADS + 1);
+                                return EXIT_FAILURE;
+                        }
+                } else {
 			usage();
 			return EXIT_FAILURE;
 		}
-	}
 
 	fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
 	init_mb_mgr_sse(&lmgr);
@@ -935,9 +956,30 @@ int main(int argc, char *argv[])
                         (sse_sha_ext_usage == SHA_EXT_PRESENT) ?
                         "Using" : "Not using");
 	}
-	init_buf(cache_type);
-	run_tests();
-	free_mem();
+        init_buf(cache_type);
+        if (num_t > 1)
+                for (i = 0; i < num_t - 1; i++) {
+#ifdef _WIN32
+                        threads[i] = (HANDLE)_beginthread(&run_tests, 0, NULL);
+#else
+                        pthread_attr_t attr;
+                        pthread_attr_init(&attr);
+                        pthread_create(&tids[i], &attr, run_tests, NULL);
+#endif
+                }
+        run_tests((void *)1);
+        if (num_t > 1) {
+#ifdef _WIN32
+                WaitForMultipleObjects(num_t, threads, FALSE, INFINITE);
+#endif
+                for (i = 0; i < num_t - 1; i++)
+#ifdef _WIN32
+                        CloseHandle(threads[i]);
+#else
+                        pthread_join(tids[i], NULL);
+#endif
+        }
+        free_mem();
 
 	return EXIT_SUCCESS;
 }
