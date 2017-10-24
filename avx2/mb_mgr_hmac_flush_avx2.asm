@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -90,15 +90,15 @@ section .text
 %define unused_lanes	r9
 %define lane_data	r9
 %define tmp2		r9
-			
+
 %define job_rax		rax
 %define	tmp1		rax
 %define size_offset	rax
 %define tmp		rax
 %define start_offset	rax
-			
+
 %define tmp3		arg1
-			
+
 %define extra_blocks	arg2
 %define p		arg2
 
@@ -142,7 +142,7 @@ flush_job_hmac_avx2:
 %assign I (I+1)
 %endrep
 
-copy_lane_data:	
+copy_lane_data:
 	; copy valid lane (idx) to empty lanes
 	vmovdqa	xmm0, [state + _lens]
 	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
@@ -156,7 +156,7 @@ copy_lane_data:
 APPEND(skip_,I):
 %assign I (I+1)
 %endrep
-	
+
 	vmovdqa	[state + _lens], xmm0
 
 	vphminposuw	xmm1, xmm0
@@ -169,7 +169,7 @@ APPEND(skip_,I):
 
 	vpbroadcastw	xmm1, xmm1
 	DBGPRINTL_XMM "FLUSH lens after shuffle", xmm1
-	
+
 	vpsubw	xmm0, xmm0, xmm1
 	vmovdqa	[state + _lens], xmm0
 	DBGPRINTL_XMM "FLUSH lens immediately after min subtraction", xmm0
@@ -230,7 +230,7 @@ proc_extra_blocks:
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
-	
+
 	align	16
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]

@@ -118,13 +118,13 @@ extern K256
 	vshufps	%%r4, %%r4, %%r5, 0xEE	; r4 = {f15 f14 e15 e14   f11 f10 e11 e10  f7 f6 e7 e6   f3 f2 e3 e2}
 	vshufps %%t1, %%r6, %%r7, 0x44	; t1 = {h13 h12 g13 g12   h9  h8  g9  g8   h5 h4 g5 g4   h1 h0 g1 g0}
 	vshufps	%%r6, %%r6, %%r7, 0xEE	; r6 = {h15 h14 g15 g14   h11 h10 g11 g10  h7 h6 g7 g6   h3 h2 g3 g2}
-                                                                                   
+
 	vshufps	%%r7, %%r2, %%t1, 0xDD	; r7 = {h13 g13 f13 e13   h9  g9  f9  e9   h5 g5 f5 e5   h1 g1 f1 e1}
 	vshufps	%%r5, %%r4, %%r6, 0x88	; r5 = {h14 g14 f14 e14   h10 g10 f10 e10  h6 g6 f6 e6   h2 g2 f2 e2}
 	vshufps	%%r4, %%r4, %%r6, 0xDD	; r4 = {h15 g15 f15 e15   h11 g11 f11 e11  h7 g7 f7 e7   h3 g3 f3 e3}
 	vshufps	%%r2, %%r2, %%t1, 0x88	; r2 = {h12 g12 f12 e12   h8  g8  f8  e8   h4 g4 f4 e4   h0 g0 f0 e0}
 
-	; use r6 in place of t0 
+	; use r6 in place of t0
 	vshufps	%%r6, %%r8, %%r9,    0x44	; r6  = {j13 j12 i13 i12   j9  j8  i9  i8   j5 j4 i5 i4   j1 j0 i1 i0}
 	vshufps	%%r8, %%r8, %%r9,    0xEE	; r8  = {j15 j14 i15 i14   j11 j10 i11 i10  j7 j6 i7 i6   j3 j2 i3 i2}
 	vshufps	%%t1, %%r10, %%r11,  0x44	; t1  = {l13 l12 k13 k12   l9  l8  k9  k8   l5 l4 k5 k4   l1 l0 k1 k0}
@@ -135,7 +135,7 @@ extern K256
 	vshufps	%%r8, %%r8, %%r10, 0xDD		; r8  = {l15 k15 j15 115   l11 k11 j11 i11  l7 k7 j7 i7   l3 k3 j3 i3}
 	vshufps	%%r6, %%r6, %%t1,  0x88		; r6  = {l12 k12 j12 112   l8  k8  j8  i8   l4 k4 j4 i4   l0 k0 j0 i0}
 
-	; use r10 in place of t0 
+	; use r10 in place of t0
 	vshufps	%%r10, %%r12, %%r13, 0x44	; r10 = {n13 n12 m13 m12   n9  n8  m9  m8   n5 n4 m5 m4   n1 n0 a1 m0}
 	vshufps	%%r12, %%r12, %%r13, 0xEE	; r12 = {n15 n14 m15 m14   n11 n10 m11 m10  n7 n6 m7 m6   n3 n2 a3 m2}
 	vshufps	%%t1, %%r14, %%r15,  0x44	; t1  = {p13 p12 013 012   p9  p8  09  08   p5 p4 05 04   p1 p0 01 00}
@@ -281,7 +281,7 @@ FIELD	_rsp,		8,	8
 %define W13	zmm29
 %define W14	zmm30
 %define W15	zmm31
-	
+
 %define inp0	r9
 %define inp1	r10
 %define inp2	r11
@@ -336,7 +336,7 @@ FIELD	_rsp,		8,	8
 	vprord		H, A, 2 		; ROR_2(A)
 	vprord		TMP2, A, 13 		; ROR_13(A)
 	vprord		TMP3, A, 22 		; ROR_22(A)
-	vmovdqa32	TMP0, A			
+	vmovdqa32	TMP0, A
 	vpternlogd	TMP0, B, C, 0xE8	; TMP0 = MAJ(A,B,C)
 	vpternlogd	H, TMP2, TMP3, 0x96	; H(T2) = SIGMA0(A)
 	vpaddd		H, H, TMP0		; H(T2) = SIGMA0(A) + MAJ(A,B,C)
@@ -351,7 +351,7 @@ FIELD	_rsp,		8,	8
 ; This is supposed to be SKL optimized assuming:
 ; vpternlog, vpaddd ports 5,8
 ; vprord ports 1,8
-; However, vprord is only working on port 8 
+; However, vprord is only working on port 8
 ;
 ; Main processing loop per round
 ; Get the msg schedule word 16 from the current, now unneccessary word
@@ -382,7 +382,7 @@ FIELD	_rsp,		8,	8
 	vprord		H, A, 2 		; ROR_2(A)
 	vpaddd		T1, T1, TMP0		; T1 = T1 + CH(E,F,G)
 	vprord		TMP2, A, 13 		; ROR_13(A)
-	vmovdqa32	TMP0, A			
+	vmovdqa32	TMP0, A
 	vprord		TMP3, A, 22 		; ROR_22(A)
 	vpaddd		T1, T1, TMP1		; T1 = T1 + SIGMA1(E)
 	vpternlogd	TMP0, B, C, 0xE8	; TMP0 = MAJ(A,B,C)
@@ -427,8 +427,8 @@ FIELD	_rsp,		8,	8
 	vpsrld		TMP6, %%WTp1, 3 	; SHR_3(Wt-15)
 	vpternlogd	TMP4, TMP5, TMP6, 0x96	; TMP4 = sigma0(Wt-15)
 
-	vpaddd		%%WT, %%WT, TMP4	; Wt = Wt-16 + sigma1(Wt-2) + 
-						;      Wt-7 + sigma0(Wt-15) + 
+	vpaddd		%%WT, %%WT, TMP4	; Wt = Wt-16 + sigma1(Wt-2) +
+						;      Wt-7 + sigma0(Wt-15) +
 %endmacro
 
 ; Note this is reading in a block of data for one lane
@@ -832,8 +832,7 @@ lloop:
 	; Process first 48 rounds
 	; Calculate next Wt+16 after processing is complete and Wt is unneeded
 
-	; PROCESS_LOOP_00_47 APPEND(W,J), I, APPEND(W,K), APPEND(W,L), APPEND(W,M)  
-
+	; PROCESS_LOOP_00_47 APPEND(W,J), I, APPEND(W,K), APPEND(W,L), APPEND(W,M)
 %assign I 0
 %assign J 0
 %assign K 1

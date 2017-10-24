@@ -1,29 +1,29 @@
-/*
- * Copyright (c) 2017, Intel Corporation
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- * 
- *     * Redistributions of source code must retain the above copyright notice,
- *       this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Intel Corporation nor the names of its contributors
- *       may be used to endorse or promote products derived from this software
- *       without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+/*****************************************************************************
+ Copyright (c) 2017, Intel Corporation
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+     * Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+     * Neither the name of Intel Corporation nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*****************************************************************************/
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -41,11 +41,11 @@
 #endif
 
 struct des_vector {
-	const uint8_t* K;          /* key */
-	const uint8_t* IV;         /* initialization vector */
-	const uint8_t* P;          /* plain text */
+	const uint8_t *K;          /* key */
+	const uint8_t *IV;         /* initialization vector */
+	const uint8_t *P;          /* plain text */
 	uint64_t       Plen;       /* plain text length */
-	const uint8_t* C;          /* cipher text - same length as plain text */
+	const uint8_t *C;          /* cipher text - same length as plain text */
 };
 
 /* CM-SP-SECv3.1-I07-170111 I.7 */
@@ -223,14 +223,15 @@ test_des_many(struct MB_MGR *mb_mgr,
                                 goto end;
                         }
                         if (memcmp(out_text, targets[num] + sizeof(padding), text_len)) {
-                                printf("%d mismatched\n",num);
+                                printf("%d mismatched\n", num);
                                 goto end;
                         }
                         if (memcmp(padding, targets[num], sizeof(padding))) {
                                 printf("%d overwrite head\n", num);
                                 goto end;
                         }
-                        if (memcmp(padding, targets[num] + sizeof(padding) + text_len,  sizeof(padding))) {
+                        if (memcmp(padding, targets[num] + sizeof(padding) + text_len,
+                                   sizeof(padding))) {
                                 printf("%d overwrite tail\n", num);
                                 goto end;
                         }
@@ -246,7 +247,7 @@ test_des_many(struct MB_MGR *mb_mgr,
                         goto end;
                 }
                 if (memcmp(out_text, targets[num] + sizeof(padding), text_len)) {
-                        printf("%d mismatched\n",num);
+                        printf("%d mismatched\n", num);
                         goto end;
                 }
                 if (memcmp(padding, targets[num], sizeof(padding))) {
@@ -290,7 +291,7 @@ test_des_one(struct MB_MGR *mb_mgr,
         int ret = -1;
 
         assert(target != NULL);
-        
+
         memset(target, -1, text_len + (sizeof(padding) * 2));
         memset(padding, -1, sizeof(padding));
 
@@ -377,8 +378,10 @@ test_des(struct MB_MGR *mb_mgr,
 {
         int ret = 0;
 
-        ret |= test_des_one(mb_mgr, ks, iv, in_text, out_text, text_len, dir, order, cipher, in_place);
-        ret |= test_des_many(mb_mgr, ks, iv, in_text, out_text, text_len, dir, order, cipher, in_place, 32);
+        ret |= test_des_one(mb_mgr, ks, iv, in_text, out_text, text_len,
+                            dir, order, cipher, in_place);
+        ret |= test_des_many(mb_mgr, ks, iv, in_text, out_text, text_len,
+                             dir, order, cipher, in_place, 32);
 
         return ret;
 }
@@ -402,7 +405,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
 #endif
                 des_key_schedule(ks, vec_tab[vect].K);
 
-                if (test_des(mb_mgr, ks, 
+                if (test_des(mb_mgr, ks,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -420,7 +423,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                         errors++;
                 }
 
-                if (test_des(mb_mgr, ks, 
+                if (test_des(mb_mgr, ks,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -459,6 +462,6 @@ des_test(const enum arch_type arch,
 		printf("...Pass\n");
 	else
 		printf("...Fail\n");
-        
+
 	return errors;
 }

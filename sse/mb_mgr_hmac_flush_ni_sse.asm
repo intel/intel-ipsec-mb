@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,13 +28,13 @@
 ;; In System V AMD64 ABI
 ;;	calle saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15	
+;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Windows clobbers:	RAX     RCX RDX             R8
 ;; Windows preserves:	    RBX         RBP RSI RDI     R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Linux clobbers:	RAX                 RSI RDI R8
 ;; Linux preserves:	    RBX RCX RDX RBP             R9  R10 R11 R12 R13 R14 R15
 ;;			-----------------------------------------------------------
@@ -82,22 +82,22 @@ section .text
 %define unused_lanes    rbx
 %define lane_data       rbx
 %define tmp2		rbx
-			
+
 %define job_rax         rax
 %define	tmp1		rax
 %define size_offset     rax
 %define tmp             rax
 %define start_offset    rax
-			
+
 %define tmp3		arg1
-			
+
 %define extra_blocks    arg2
 %define p               arg2
 
 %define tmp4		r8
 %define p2		r8
 
-; This routine clobbers rbx, rbp 
+; This routine clobbers rbx, rbp
 struc STACK
 _gpr_save:	resq	4
 _rsp_save:	resq	1
@@ -132,8 +132,8 @@ flush_job_hmac_ni_sse:
 	cmp	qword [state + _ldata + 1 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
 	cmovne	idx, [rel one]
 	DBGPRINTL64 "idx:", idx
-	
-copy_lane_data:	
+
+copy_lane_data:
 	; copy valid lane (idx) to empty lanes
 	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
 	movzx	len2, word [state + _lens + idx*2]
@@ -144,7 +144,7 @@ copy_lane_data:
 	xor	idx, 1
 	mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
 	xor	idx, 1
-	
+
 	; No need to find min length - only two lanes available
         cmp	len2, 0
         je	len_is_0
@@ -215,7 +215,7 @@ proc_extra_blocks:
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
-	
+
 	align	16
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]

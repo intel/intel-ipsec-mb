@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -63,7 +63,7 @@ _SHUF_DC00:              ;ddq 0x0b0a090803020100FFFFFFFFFFFFFFFF
 section .text
 
 
-%define	MOVDQ movdqu ;; assume buffers not aligned 
+%define	MOVDQ movdqu ;; assume buffers not aligned
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Define Macros
 
@@ -91,7 +91,7 @@ section .text
 %define SHUF_00BA	xmm10 ; shuffle xBxA -> 00BA
 %define SHUF_DC00	xmm11 ; shuffle xDxC -> DC00
 %define BYTE_FLIP_MASK	xmm12
-	
+
 %ifdef LINUX
 %define CTX	rsi	; 2nd arg
 %define INP	rdi	; 1st arg
@@ -105,10 +105,10 @@ section .text
 %define INP	rcx 	; 1st arg
 
 %define SRND	rcx	; clobbers INP
-%define c 	edi 
-%define d	esi 
+%define c 	edi
+%define d	esi
 %define e 	r8d
-	
+
 %endif
 %define TBL	rbp
 %define a eax
@@ -130,7 +130,7 @@ _XMM_SAVE:	reso	7
 _XFER:		reso	1
 endstruc
 
-%ifndef H0 
+%ifndef H0
 %define H0 0x6a09e667
 %define H1 0xbb67ae85
 %define H2 0x3c6ef372
@@ -388,10 +388,10 @@ FUNC:
 
 	sub	rsp,STACK_size
 %ifndef LINUX
-	movdqa	[rsp + _XMM_SAVE + 0*16],xmm6	
+	movdqa	[rsp + _XMM_SAVE + 0*16],xmm6
 	movdqa	[rsp + _XMM_SAVE + 1*16],xmm7
-	movdqa	[rsp + _XMM_SAVE + 2*16],xmm8	
-	movdqa	[rsp + _XMM_SAVE + 3*16],xmm9	
+	movdqa	[rsp + _XMM_SAVE + 2*16],xmm8
+	movdqa	[rsp + _XMM_SAVE + 3*16],xmm9
 	movdqa	[rsp + _XMM_SAVE + 4*16],xmm10
 	movdqa	[rsp + _XMM_SAVE + 5*16],xmm11
 	movdqa	[rsp + _XMM_SAVE + 6*16],xmm12
@@ -418,7 +418,7 @@ FUNC:
 	COPY_XMM_AND_BSWAP	X1, [INP + 1*16], BYTE_FLIP_MASK
 	COPY_XMM_AND_BSWAP	X2, [INP + 2*16], BYTE_FLIP_MASK
 	COPY_XMM_AND_BSWAP	X3, [INP + 3*16], BYTE_FLIP_MASK
-	
+
 	;; schedule 48 input dwords, by doing 3 rounds of 16 each
 	mov	SRND, 3
 align 16
@@ -509,6 +509,6 @@ done_hash:
 %endif
 	pop	rbx
 
-	ret	
-	
+	ret
+
 

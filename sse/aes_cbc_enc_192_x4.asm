@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,7 +32,7 @@
 %include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
-%define	MOVDQ movdqu ;; assume buffers not aligned 
+%define	MOVDQ movdqu ;; assume buffers not aligned
 %macro pxor2 2
 	MOVDQ	XTMP, %2
 	pxor	%1, XTMP
@@ -111,7 +111,7 @@ aes_cbc_enc_192_x4:
 	push	rbp
 
 	mov	IDX, 16
-	
+
 	mov	IN0,	[ARG + _aesarg_in + 8*0]
 	mov	IN1,	[ARG + _aesarg_in + 8*1]
 	mov	IN2,	[ARG + _aesarg_in + 8*2]
@@ -129,10 +129,10 @@ aes_cbc_enc_192_x4:
 	mov		KEYS2,	[ARG + _aesarg_keys + 8*2]
 	mov		KEYS3,	[ARG + _aesarg_keys + 8*3]
 
-	pxor		XDATA0, [ARG + _aesarg_IV + 16*0] ; plaintext XOR IV	
-	pxor		XDATA1, [ARG + _aesarg_IV + 16*1] ; plaintext XOR IV	
-	pxor		XDATA2, [ARG + _aesarg_IV + 16*2] ; plaintext XOR IV	
-	pxor		XDATA3, [ARG + _aesarg_IV + 16*3] ; plaintext XOR IV	
+	pxor		XDATA0, [ARG + _aesarg_IV + 16*0] ; plaintext XOR IV
+	pxor		XDATA1, [ARG + _aesarg_IV + 16*1] ; plaintext XOR IV
+	pxor		XDATA2, [ARG + _aesarg_IV + 16*2] ; plaintext XOR IV
+	pxor		XDATA3, [ARG + _aesarg_IV + 16*3] ; plaintext XOR IV
 
 	mov		OUT0,	[ARG + _aesarg_out + 8*0]
 	mov		OUT1,	[ARG + _aesarg_out + 8*1]
@@ -226,7 +226,7 @@ aes_cbc_enc_192_x4:
 	cmp		LEN, IDX
 	je		done
 
-main_loop:	
+main_loop:
 	pxor2		XDATA0, [IN0 + IDX]	; plaintext XOR IV
 	pxor2		XDATA1, [IN1 + IDX]	; plaintext XOR IV
 	pxor2		XDATA2, [IN2 + IDX]	; plaintext XOR IV

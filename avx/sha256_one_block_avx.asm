@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -62,8 +62,8 @@ _SHUF_DC00:              ;ddq 0x0b0a090803020100FFFFFFFFFFFFFFFF
 	dq 0xFFFFFFFFFFFFFFFF, 0x0b0a090803020100
 
 section .text
-	
-%define	VMOVDQ vmovdqu ;; assume buffers not aligned 
+
+%define	VMOVDQ vmovdqu ;; assume buffers not aligned
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Define Macros
 
@@ -96,7 +96,7 @@ section .text
 %define SHUF_00BA	xmm10 ; shuffle xBxA -> 00BA
 %define SHUF_DC00	xmm12 ; shuffle xDxC -> DC00
 %define BYTE_FLIP_MASK	xmm13
-	
+
 %ifdef LINUX
 %define CTX	rsi	; 2nd arg
 %define INP	rdi	; 1st arg
@@ -110,10 +110,10 @@ section .text
 %define INP	rcx 	; 1st arg
 
 %define SRND	rcx	; clobbers INP
-%define c 	edi 
-%define d	esi 
+%define c 	edi
+%define d	esi
 %define e 	r8d
-	
+
 %endif
 %define TBL	rbp
 %define a eax
@@ -135,7 +135,7 @@ _XMM_SAVE:	reso	7
 _XFER:		reso	1
 endstruc
 
-%ifndef H0 
+%ifndef H0
 %define H0 0x6a09e667
 %define H1 0xbb67ae85
 %define H2 0x3c6ef372
@@ -195,8 +195,7 @@ endstruc
 	xor	y1, a		; y1 = a ^ (a >> (13-2)) ^ (a >> (22-2))
 	MY_ROR	y0, 6		; y0 = S1 = (e>>6) & (e>>11) ^ (e>>25)
 	xor	y2, g		; y2 = CH = ((f^g)&e)^g
-	
-		
+
 	MY_ROR	y1, 2		; y1 = S0 = (a>>2) ^ (a>>13) ^ (a>>22)
 	add	y2, y0		; y2 = S1 + CH
 	add	y2, [rsp + _XFER + 0*4]	; y2 = k + w + S1 + CH
@@ -204,20 +203,20 @@ endstruc
 	mov	y0, a		; y0 = a
 	add	h, y2		; h = h + S1 + CH + k + w
 	mov	y2, a		; y2 = a
-	
+
 		vpsrld	XTMP2, XTMP1, 7
-		
+
 	or	y0, c		; y0 = a|c
 	add	d, h		; d = d + h + S1 + CH + k + w
 	and	y2, c		; y2 = a&c
-	
+
 		vpslld	XTMP3, XTMP1, (32-7)
-		
+
 	and	y0, b		; y0 = (a|c)&b
 	add	h, y1		; h = h + S1 + CH + k + w + S0
-	
+
 		vpor	XTMP3, XTMP3, XTMP2	; XTMP1 = W[-15] MY_ROR 7
-		
+
 	or	y0, y2		; y0 = MAJ = (a|c)&b)|(a&c)
 	add	h, y0		; h = h + S1 + CH + k + w + S0 + MAJ
 
@@ -237,14 +236,14 @@ ROTATE_ARGS
 	xor	y1, a		; y1 = a ^ (a >> (22-13)
 	MY_ROR	y0, (11-6)	; y0 = (e >> (11-6)) ^ (e >> (25-6))
 	xor	y2, g		; y2 = f^g
-	
+
 		vpsrld	XTMP4, XTMP1, 3	; XTMP4 = W[-15] >> 3
-		
+
 	MY_ROR	y1, (13-2)	; y1 = (a >> (13-2)) ^ (a >> (22-2))
 	xor	y0, e		; y0 = e ^ (e >> (11-6)) ^ (e >> (25-6))
 	and	y2, e		; y2 = (f^g)&e
 	MY_ROR	y0, 6		; y0 = S1 = (e>>6) & (e>>11) ^ (e>>25)
-		
+
 		vpslld	XTMP1, XTMP1, (32-18)
 
 	xor	y1, a		; y1 = a ^ (a >> (13-2)) ^ (a >> (22-2))
@@ -255,15 +254,15 @@ ROTATE_ARGS
 	add	y2, y0		; y2 = S1 + CH
 	add	y2, [rsp + _XFER + 1*4]	; y2 = k + w + S1 + CH
 	MY_ROR	y1, 2		; y1 = S0 = (a>>2) ^ (a>>13) ^ (a>>22)
-	
+
 		vpxor	XTMP3, XTMP3, XTMP2	; XTMP1 = W[-15] MY_ROR 7 ^ W[-15] MY_ROR 18
-		
+
 	mov	y0, a		; y0 = a
 	add	h, y2		; h = h + S1 + CH + k + w
 	mov	y2, a		; y2 = a
-	
+
 		vpxor	XTMP1, XTMP3, XTMP4	; XTMP1 = s0
-		
+
 	or	y0, c		; y0 = a|c
 	add	d, h		; d = d + h + S1 + CH + k + w
 	and	y2, c		; y2 = a&c
@@ -277,30 +276,30 @@ ROTATE_ARGS
 
 ROTATE_ARGS
 		;vmovdqa	XTMP3, XTMP2	; XTMP3 = W[-2] {BBAA}
-		
+
 	mov	y0, e		; y0 = e
 	mov	y1, a		; y1 = a
 	MY_ROR	y0, (25-11)	; y0 = e >> (25-11)
-	
+
 		;vmovdqa	XTMP4, XTMP2	; XTMP4 = W[-2] {BBAA}
-		
+
 	xor	y0, e		; y0 = e ^ (e >> (25-11))
 	MY_ROR	y1, (22-13)	; y1 = a >> (22-13)
 	mov	y2, f		; y2 = f
 	xor	y1, a		; y1 = a ^ (a >> (22-13)
 	MY_ROR	y0, (11-6)	; y0 = (e >> (11-6)) ^ (e >> (25-6))
-	
+
 		vpsrld	XTMP4, XTMP2, 10	; XTMP4 = W[-2] >> 10 {BBAA}
-		
+
 	xor	y2, g		; y2 = f^g
-	
+
 		vpsrlq	XTMP3, XTMP2, 19	; XTMP3 = W[-2] MY_ROR 19 {xBxA}
-		
+
 	xor	y0, e		; y0 = e ^ (e >> (11-6)) ^ (e >> (25-6))
 	and	y2, e		; y2 = (f^g)&e
-	
+
 		vpsrlq	XTMP2, XTMP2, 17	; XTMP2 = W[-2] MY_ROR 17 {xBxA}
-		
+
 	MY_ROR	y1, (13-2)	; y1 = (a >> (13-2)) ^ (a >> (22-2))
 	xor	y1, a		; y1 = a ^ (a >> (13-2)) ^ (a >> (22-2))
 	xor	y2, g		; y2 = CH = ((f^g)&e)^g
@@ -335,26 +334,26 @@ ROTATE_ARGS
 	xor	y0, e		; y0 = e ^ (e >> (25-11))
 	mov	y2, f		; y2 = f
 	MY_ROR	y0, (11-6)	; y0 = (e >> (11-6)) ^ (e >> (25-6))
-	
+
 		vpsrld	XTMP5, XTMP2,   10	; XTMP5 = W[-2] >> 10 {DDCC}
-		
+
 	xor	y1, a		; y1 = a ^ (a >> (22-13)
 	xor	y2, g		; y2 = f^g
-	
+
 		vpsrlq	XTMP3, XTMP2, 19	; XTMP3 = W[-2] MY_ROR 19 {xDxC}
-		
+
 	xor	y0, e		; y0 = e ^ (e >> (11-6)) ^ (e >> (25-6))
 	and	y2, e		; y2 = (f^g)&e
 	MY_ROR	y1, (13-2)	; y1 = (a >> (13-2)) ^ (a >> (22-2))
-	
+
 		vpsrlq	XTMP2, XTMP2, 17	; XTMP2 = W[-2] MY_ROR 17 {xDxC}
-		
+
 	xor	y1, a		; y1 = a ^ (a >> (13-2)) ^ (a >> (22-2))
 	MY_ROR	y0, 6		; y0 = S1 = (e>>6) & (e>>11) ^ (e>>25)
 	xor	y2, g		; y2 = CH = ((f^g)&e)^g
-	
+
 		vpxor	XTMP2, XTMP2, XTMP3
-		
+
 	MY_ROR	y1, 2		; y1 = S0 = (a>>2) ^ (a>>13) ^ (a>>22)
 	add	y2, y0		; y2 = S1 + CH
 	add	y2, [rsp + _XFER + 3*4]	; y2 = k + w + S1 + CH
@@ -371,7 +370,7 @@ ROTATE_ARGS
 	add	h, y1		; h = h + S1 + CH + k + w + S0
 	or	y0, y2		; y0 = MAJ = (a|c)&b)|(a&c)
 	add	h, y0		; h = h + S1 + CH + k + w + S0 + MAJ
-	
+
 ROTATE_ARGS
 rotate_Xs
 %endm
@@ -430,10 +429,10 @@ FUNC:
 
 	sub	rsp,STACK_size
 %ifndef LINUX
-	vmovdqa	[rsp + _XMM_SAVE + 0*16],xmm6	
+	vmovdqa	[rsp + _XMM_SAVE + 0*16],xmm6
 	vmovdqa	[rsp + _XMM_SAVE + 1*16],xmm7
-	vmovdqa	[rsp + _XMM_SAVE + 2*16],xmm8	
-	vmovdqa	[rsp + _XMM_SAVE + 3*16],xmm9	
+	vmovdqa	[rsp + _XMM_SAVE + 2*16],xmm8
+	vmovdqa	[rsp + _XMM_SAVE + 3*16],xmm9
 	vmovdqa	[rsp + _XMM_SAVE + 4*16],xmm10
 	vmovdqa	[rsp + _XMM_SAVE + 5*16],xmm11
 	vmovdqa	[rsp + _XMM_SAVE + 6*16],xmm12
@@ -461,7 +460,7 @@ FUNC:
 	COPY_XMM_AND_BSWAP	X1, [INP + 1*16], BYTE_FLIP_MASK
 	COPY_XMM_AND_BSWAP	X2, [INP + 2*16], BYTE_FLIP_MASK
 	COPY_XMM_AND_BSWAP	X3, [INP + 3*16], BYTE_FLIP_MASK
-	
+
 	;; schedule 48 input dwords, by doing 3 rounds of 16 each
 	mov	SRND, 3
 align 16
@@ -550,6 +549,6 @@ done_hash:
 %endif
 	pop	rbx
 
-	ret	
-	
+	ret
+
 

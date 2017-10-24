@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -111,7 +111,7 @@ section .text
 %define C	ymm2
 %define D	ymm3
 %define E	ymm4
-	
+
 %define F	ymm5
 %define T0	ymm6
 %define T1	ymm7
@@ -140,7 +140,7 @@ section .text
 ;; Assume stack aligned to 32 bytes before call
 ;; Therefore FRAMESIZE mod 32 must be 32-8 = 24
 %define FRAMESZ	32*16 + 24
-	
+
 %define VMOVPS	vmovups
 
 
@@ -301,7 +301,7 @@ section .text
 	vpaddd	%%regE, %%regE,%%immCNT
 	vpaddd	%%regE, %%regE,[rsp + (%%memW * 32)]
 	;vmovdqa	%%regT,%%regA
-	PROLD_nd	%%regT,5, %%regF,%%regA 
+	PROLD_nd	%%regT,5, %%regF,%%regA
 	vpaddd	%%regE, %%regE,%%regT
 	%%MAGIC	%%regF,%%regB,%%regC,%%regD,%%regT	;; FUN	= MAGIC_Fi(B,C,D)
 	PROLD	%%regB,30, %%regT
@@ -325,16 +325,16 @@ section .text
 	vpxor	W16, W16, W14
 	vpxor	W16, W16, [rsp + ((%%memW -  8) & 15) * 32]
 	vpxor	W16, W16, [rsp + ((%%memW -  3) & 15) * 32]
-	
-	;vmovdqa	%%regF, W16	
+
+	;vmovdqa	%%regF, W16
 	vpsrld	%%regF, W16, (32-1)
-	vpslld	W16, W16, 1	
+	vpslld	W16, W16, 1
 	vpor	%%regF, %%regF, W16
 	ROTATE_W
 
 	vmovdqa	[rsp + ((%%memW - 0) & 15) * 32],%%regF
 	vpaddd	%%regE, %%regE,%%regF
-	
+
 	;vmovdqa	%%regT,%%regA
 	PROLD_nd	%%regT,5, %%regF, %%regA
 	vpaddd	%%regE, %%regE,%%regT
@@ -380,7 +380,7 @@ sha1_x8_avx2:
 	vmovdqu	D, [state + 3*SHA1_DIGEST_ROW_SIZE]
 	vmovdqu	E, [state + 4*SHA1_DIGEST_ROW_SIZE]
 	DBGPRINTL_YMM "Sha1-AVX2 incoming transposed digest", A, B, C, D, E
-	
+
 	;; transpose input onto stack
 	mov	inp0,[state+_data_ptr_sha1+0*PTR_SZ]
 	mov	inp1,[state+_data_ptr_sha1+1*PTR_SZ]
@@ -515,7 +515,7 @@ lloop:
 
 	;;;;;;;;;;;;;;;;
 	;; Postamble
-	
+
 	add	rsp, FRAMESZ
 
 	ret

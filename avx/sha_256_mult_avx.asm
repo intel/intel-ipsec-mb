@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -97,7 +97,7 @@ _DATA:		resb	SZ4 * 16
 _DIGEST:	resb	SZ4 * NUM_SHA256_DIGEST_WORDS
 		resb	8 	; for alignment, must be odd multiple of 8
 endstruc
-	
+
 %define VMOVPS	vmovups
 
 ; transpose r0, r1, r2, r3, t0, t1
@@ -113,7 +113,7 @@ endstruc
 ; r1 = {d1 c1 b1 a1}
 ; r0 = {d2 c2 b2 a2}
 ; r3 = {d3 c3 b3 a3}
-; 
+;
 %macro TRANSPOSE 6
 %define %%r0 %1
 %define %%r1 %2
@@ -133,7 +133,7 @@ endstruc
 
 	vshufps	%%r0, %%r0, %%r2, 0x88	; r0 = {d2 c2 b2 a2}
 	vshufps	%%t0, %%t0, %%t1, 0x88	; t0 = {d0 c0 b0 a0}
-%endmacro	
+%endmacro
 
 
 
@@ -257,9 +257,9 @@ section .text
 ;; SHA256_ARGS:
 ;;   UINT128 digest[8];  // transposed digests
 ;;   UINT8  *data_ptr[4];
-;; 
+;;
 
-;; void sha_256_mult_avx(SHA256_ARGS *args, UINT64 num_blocks); 
+;; void sha_256_mult_avx(SHA256_ARGS *args, UINT64 num_blocks);
 ;; arg 1 : STATE    : pointer args
 ;; arg 2 : INP_SIZE : size of data in blocks (assumed >= 1)
 ;;
@@ -270,7 +270,7 @@ sha_256_mult_avx:
 	; outer calling routine saves all the XMM registers
 	sub	rsp, STACK_size
 
-	;; Load the pre-transposed incoming digest. 
+	;; Load the pre-transposed incoming digest.
 	vmovdqa	a,[STATE+0*SHA256_DIGEST_ROW_SIZE]
 	vmovdqa	b,[STATE+1*SHA256_DIGEST_ROW_SIZE]
 	vmovdqa	c,[STATE+2*SHA256_DIGEST_ROW_SIZE]
@@ -281,7 +281,7 @@ sha_256_mult_avx:
 	vmovdqa	h,[STATE+7*SHA256_DIGEST_ROW_SIZE]
 
 	lea	TBL,[rel K256_4]
-	
+
 	;; load the address of each of the 4 message lanes
 	;; getting ready to transpose input onto stack
 	mov	inp0,[STATE + _data_ptr_sha256 + 0*PTR_SZ]
@@ -315,15 +315,14 @@ lloop:
 	vpshufb	TT1, TT1, TMP
 	vpshufb	TT2, TT2, TMP
 	vpshufb	TT3, TT3, TMP
-	ROUND_00_15	TT0,(i*4+0) 
-	ROUND_00_15	TT1,(i*4+1) 
-	ROUND_00_15	TT2,(i*4+2) 
-	ROUND_00_15	TT3,(i*4+3) 
+	ROUND_00_15	TT0,(i*4+0)
+	ROUND_00_15	TT1,(i*4+1)
+	ROUND_00_15	TT2,(i*4+2)
+	ROUND_00_15	TT3,(i*4+3)
 %assign i (i+1)
 %endrep
 	add	IDX, 4*4*4
 
-	
 %assign i (i*4)
 
 	jmp	Lrounds_16_xx

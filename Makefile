@@ -331,11 +331,18 @@ SOURCES_DIRS := . sse avx avx2 avx512 include
 SOURCES := $(foreach dir,$(SOURCES_DIRS),$(wildcard $(dir)/*.[ch]) $(wildcard $(dir)/*.asm) $(wildcard $(dir)/*.inc))
 SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
 CHECKPATCH?=checkpatch.pl
+# SPACING - produces false positives with tyepdefs and *
+# CONSTANT_COMPARISON - forbids defensive programming technique
+# USE_FUNC - produces false positives for Windows target
+# INITIALISED_STATIC, LEADING_SPACE, SPLIT_STRING, CODE_INDENT,
+# PREFER_ALIGNED, UNSPECIFIED_INT, ARRAY_SIZE, GLOBAL_INITIALISERS,
+# NEW_TYPEDEFS, AVOID_EXTERNS, COMPLEX_MACRO, BLOCK_COMMENT_STYLE
+# - found obsolete in this project
 .PHONY: style
 style:
-	$(CHECKPATCH) --no-tree --no-signoff --emacs \
-		--ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING \
-		--ignore UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE \
-		--ignore GLOBAL_INITIALISERS \
-		$(SOURCES_STYLE)
+	$(CHECKPATCH) --no-tree --no-signoff --emacs --no-color \
+--ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,\
+UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,\
+NEW_TYPEDEFS,AVOID_EXTERNS,COMPLEX_MACRO,PREFER_ALIGNED,USE_FUNC,\
+CONSTANT_COMPARISON,SPACING $(SOURCES_STYLE)
 

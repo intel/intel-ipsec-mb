@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -45,7 +45,7 @@ K60_79:                  ;ddq 0xCA62C1D6CA62C1D6CA62C1D6CA62C1D6
 
 section .text
 
-%define	MOVDQ movdqu ;; assume buffers not aligned 
+%define	MOVDQ movdqu ;; assume buffers not aligned
 
 %ifdef LINUX
 %define INP	rdi ; 1st arg
@@ -61,7 +61,7 @@ section .text
 
 %define FRAMESZ 3*16 + 1*8
 %define _RSP	FRAMESZ-1*8 + rsp
-	
+
 %define a eax
 %define b ebx
 %define c REG3
@@ -72,7 +72,7 @@ section .text
 %define RND r11d
 %define g r12d
 %define h r13d
-	
+
 %define XTMP0 xmm0
 %define XTMP1 xmm1
 %define XK    xmm2
@@ -82,11 +82,11 @@ section .text
 %xdefine X2 xmm5
 %xdefine X3 xmm6
 %xdefine X4 xmm7
-	
+
 %define XFER  xmm8
 
 %define SZ 4
-	
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Define Macros
 
 %macro rotate_Xs 0
@@ -163,7 +163,7 @@ section .text
 	MAGIC_F1 %%regF,%%regB,%%regC,%%regD,%%regT
 %endmacro
 
-;; input is T1 
+;; input is T1
 %macro ROUND 1
 %define %%MAGIC	%1
 	add   e,T1
@@ -250,7 +250,7 @@ ROTATE_ARGS
 		rotate_Xs
 ROTATE_ARGS
 %endmacro
-	
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void sha1_one_block_sse(void *input_data, UINT32 digest[8]
@@ -350,7 +350,7 @@ loop1_5:
 	rotate_Xs
 	rotate_Xs
 	rotate_Xs
-	jmp	loop2_5	
+	jmp	loop2_5
 align 16
 loop2:
 
@@ -396,7 +396,7 @@ loop2_5:
 	rotate_Xs
 	rotate_Xs
 	rotate_Xs
-	jmp	loop3_5	
+	jmp	loop3_5
 align 16
 loop3:
 
@@ -433,7 +433,7 @@ loop3_5:
 	movdqa	XK, [rel K60_79]
 
 	do_4i	MAGIC_F3
-	
+
 	movdqa	XFER, XK
 	paddd	XFER, X0
 	pextrd	T1, XFER, 0
@@ -444,7 +444,7 @@ loop3_5:
 	ROUND MAGIC_F3
 	pextrd	T1, XFER, 3
 	ROUND MAGIC_F3
-	
+
 	movdqa	XFER, XK
 	paddd	XFER, X1
 	pextrd	T1, XFER, 0
@@ -455,7 +455,7 @@ loop3_5:
 	ROUND MAGIC_F3
 	pextrd	T1, XFER, 3
 	ROUND MAGIC_F3
-	
+
 	movdqa	XFER, XK
 	paddd	XFER, X2
 	pextrd	T1, XFER, 0
@@ -466,7 +466,7 @@ loop3_5:
 	ROUND MAGIC_F3
 	pextrd	T1, XFER, 3
 	ROUND MAGIC_F3
-	
+
 	movdqa	XFER, XK
 	paddd	XFER, X3
 	pextrd	T1, XFER, 0
@@ -492,7 +492,7 @@ loop3_5:
 	movdqa	xmm8, [rsp + 2 * 16]
 	movdqa	xmm7, [rsp + 1 * 16]
 	movdqa	xmm6, [rsp + 0 * 16]
-	
+
 	mov	rsp,[_RSP]
 	pop	r13
 	pop	r12
@@ -500,5 +500,5 @@ loop3_5:
 	pop	rsi
 	pop	rbx
 
-	ret	
+	ret
 

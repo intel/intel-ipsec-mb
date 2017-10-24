@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -62,27 +62,27 @@ section .text
 ; idx needs to be in rbp
 %define last_len        rbp
 %define idx             rbp
-                        
+
 %define p               r11
 %define start_offset    r11
 
 %define unused_lanes    rbx
 %define tmp4            rbx
-        
+
 %define job_rax         rax
 %define len             rax
-                        
+
 %define size_offset     reg3
 %define tmp2		reg3
-                        
+
 %define lane            reg4
 %define tmp3		reg4
-                        
+
 %define extra_blocks    r8
-                        
+
 %define tmp             r9
 %define p2              r9
-        
+
 %define lane_data       r10
 
 %endif
@@ -256,18 +256,18 @@ proc_extra_blocks:
 copy_lt64:
         ;; less than one message block of data
         ;; beginning of source block
-        ;; destination extrablock but backwards by len from where 0x80 pre-populated 
+        ;; destination extrablock but backwards by len from where 0x80 pre-populated
         ;; p2 clobbers unused_lanes, undo before exiting
         lea	p2, [lane_data + _extra_block  + 64]
         sub     p2, len
-        memcpy_avx_64_1 p2, p, len, tmp4, tmp2, xmm0, xmm1, xmm2, xmm3 
+        memcpy_avx_64_1 p2, p, len, tmp4, tmp2, xmm0, xmm1, xmm2, xmm3
         mov	unused_lanes, [state + _unused_lanes_md5]
         jmp	end_fast_copy
-        
+
 return_null:
         xor	job_rax, job_rax
         jmp	return
-        
+
         align	16
 end_loop:
         mov	job_rax, [lane_data + _job_in_lane]

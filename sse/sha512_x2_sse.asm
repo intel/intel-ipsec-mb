@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -31,10 +31,10 @@
 
 ;; Function clobbers: rax, rcx, rdx,   rbx, rsi, rdi, r9-r15; ymm0-15
 ;; Stack must be aligned to 16 bytes before call
-;; Windows clobbers:  rax         rdx             r8 r9 r10 r11    
+;; Windows clobbers:  rax         rdx             r8 r9 r10 r11
 ;; Windows preserves:     rbx rcx     rsi rdi rbp               r12 r13 r14 r15
 ;;
-;; Linux clobbers:    rax             rsi         r8 r9 r10 r11    
+;; Linux clobbers:    rax             rsi         r8 r9 r10 r11
 ;; Linux preserves:       rbx rcx rdx     rdi rbp               r12 r13 r14 r15
 ;;
 ;; clobbers xmm0-15
@@ -198,7 +198,7 @@ endstruc
 ; r0 = {a1 a0}
 ; r1 = {b1 b0}
 ;
-; output looks like 
+; output looks like
 ; r0 = {b0, a0}
 ; t0 = {b1, a1}
 
@@ -319,9 +319,9 @@ endstruc
 ;; SHA512_ARGS:
 ;;   UINT128 digest[8];  // transposed digests
 ;;   UINT8  *data_ptr[2];
-;; 
+;;
 
-;; void sha512_x2_sse(SHA512_ARGS *args, UINT64 num_blocks); 
+;; void sha512_x2_sse(SHA512_ARGS *args, UINT64 num_blocks);
 ;; arg 1 : STATE    : pointer args
 ;; arg 2 : INP_SIZE : size of data in blocks (assumed >= 1)
 ;;
@@ -332,7 +332,7 @@ sha512_x2_sse:
 	; outer calling routine saves all the XMM registers
 	sub	rsp, STACK_size
 
-	;; Load the pre-transposed incoming digest. 
+	;; Load the pre-transposed incoming digest.
 	movdqa	a,[STATE + 0 * SHA512_DIGEST_ROW_SIZE]
 	movdqa	b,[STATE + 1 * SHA512_DIGEST_ROW_SIZE]
 	movdqa	c,[STATE + 2 * SHA512_DIGEST_ROW_SIZE]
@@ -342,9 +342,9 @@ sha512_x2_sse:
 	movdqa	g,[STATE + 6 * SHA512_DIGEST_ROW_SIZE]
 	movdqa	h,[STATE + 7 * SHA512_DIGEST_ROW_SIZE]
 
-	DBGPRINTL_XMM "incoming transposed sha512 digest", a, b, c, d, e, f, g, h 
+	DBGPRINTL_XMM "incoming transposed sha512 digest", a, b, c, d, e, f, g, h
 	lea	TBL,[rel K512_2]
-	
+
 	;; load the address of each of the 2 message lanes
 	;; getting ready to transpose input onto stack
 	mov	inp0,[STATE + _data_ptr_sha512  +0*PTR_SZ]
@@ -353,7 +353,7 @@ sha512_x2_sse:
 	xor	IDX, IDX
 lloop:
 	xor	ROUND, ROUND
-	DBGPRINTL64  "lloop enter INP_SIZE ", INP_SIZE 
+	DBGPRINTL64  "lloop enter INP_SIZE ", INP_SIZE
 	DBGPRINTL64 " IDX = ", IDX
 	;; save old digest
 	movdqa	[rsp + _DIGEST + 0*SZ2], a
@@ -369,20 +369,20 @@ lloop:
 %assign i 0
 %rep 8
 	;; load up the shuffler for little-endian to big-endian format
-	movdqa	TMP, [rel PSHUFFLE_BYTE_FLIP_MASK] 
+	movdqa	TMP, [rel PSHUFFLE_BYTE_FLIP_MASK]
 	MOVPD	TT0,[inp0+IDX+i*16] ;; double precision is 64 bits
 	MOVPD	TT2,[inp1+IDX+i*16]
 	DBGPRINTL_XMM "input message block", TT0
 	TRANSPOSE	TT0, TT2, TT1
-	pshufb	TT0, TMP 
+	pshufb	TT0, TMP
 	pshufb	TT1, TMP
-	ROUND_00_15	TT0,(i*2+0) 
-	ROUND_00_15	TT1,(i*2+1) 
+	ROUND_00_15	TT0,(i*2+0)
+	ROUND_00_15	TT1,(i*2+1)
 %assign i (i+1)
 %endrep
 	DBGPRINTL "]"
-	add	IDX, 8 * 16 ;; increment by a message block 
-	
+	add	IDX, 8 * 16 ;; increment by a message block
+
 
 %assign i (i*4)
 
@@ -396,7 +396,7 @@ Lrounds_16_xx:
 
 	cmp	ROUND,ROUNDS
 	jb	Lrounds_16_xx
-   
+
 	;; add old digest
 	paddq	a, [rsp + _DIGEST + 0*SZ2]
 	paddq	b, [rsp + _DIGEST + 1*SZ2]
@@ -406,7 +406,7 @@ Lrounds_16_xx:
 	paddq	f, [rsp + _DIGEST + 5*SZ2]
 	paddq	g, [rsp + _DIGEST + 6*SZ2]
 	paddq	h, [rsp + _DIGEST + 7*SZ2]
- 
+
 	sub	INP_SIZE, 1  ;; unit is blocks
 	jne	lloop
 

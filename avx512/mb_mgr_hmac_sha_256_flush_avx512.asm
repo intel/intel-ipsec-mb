@@ -116,12 +116,12 @@ section .text
 
 %define lane_data	rbx
 %define tmp2		rbx
-	
+
 %define job_rax		rax
 %define	tmp1		rax
 %define size_offset	rax
 %define start_offset	rax
-	    
+
 %define tmp3		arg1
 
 %define extra_blocks	arg2

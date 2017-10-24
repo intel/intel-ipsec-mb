@@ -48,7 +48,7 @@ dupw:
 	dq 0x0100010001000100, 0x0100010001000100
 
 section .text
-	
+
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
@@ -60,7 +60,7 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-	
+
 %define job_rax          rax
 
 %if 1

@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,7 +32,7 @@
 ;; Windows preserves:         rcx             rbp
 ;;
 ;; Linux clobbers:    rax rbx rcx rdx rsi         r8 r9 r10 r11 r12 r13 r14 r15
-;; Linux preserves:                       rdi rbp   
+;; Linux preserves:                       rdi rbp
 ;;
 ;; clobbers ymm0-15
 
@@ -222,15 +222,14 @@ section .text
 
 ;; Temp YMM registers corresponding to the Temp XMM registers
 ;; used during the transposition of the digests
-%define Y_KTMP1	ymm12 	
-%define Y_KTMP2	ymm13 	
+%define Y_KTMP1	ymm12
+%define Y_KTMP2	ymm13
 ;; Temporary registers used during MD5 round operations
 %define Y_FUN	ymm8
 %define Y_TMP	ymm9
 %define Y_FUN2	ymm10
 %define Y_TMP2	ymm11
 
-	
 ;; YMM registers used during data fetching.
 ;; Data are stored into the stack after transposition
 %define Y_DAT0	ymm8
@@ -331,7 +330,6 @@ rot44 equ  21
 	vshufps	%%r1, %%r0, %%r2, 0x88	; r1 = {d6 c6 b6 a6   d2 c2 b2 a2}
 	vshufps	%%r0, %%r0, %%r2, 0xDD	; r0 = {d7 c7 b7 a7   d3 c3 b3 a3}
 	vshufps	%%t0, %%t0, %%t1, 0x88	; t0 = {d4 c4 b4 a4   d0 c0 b0 a0}
-	
 
 	; use r2 in place of t0
 	; process bottom half (r4..r7) {e...h}
@@ -415,7 +413,7 @@ rot44 equ  21
 ;;
 ;; A = B +ROL32((A +MAGIC(B,C,D) +data +const), nrot)
 ;;
-; macro MD5_STEP MAGIC_FUN, A,B,C,D, A2,B2,C3,D2, FUN, TMP, FUN2, TMP2, data, 
+; macro MD5_STEP MAGIC_FUN, A,B,C,D, A2,B2,C3,D2, FUN, TMP, FUN2, TMP2, data,
 ;                MD5const, nrot
 %macro MD5_STEP 16
 %define %%MAGIC_FUN	%1
@@ -534,13 +532,13 @@ md5_x8x2_avx2:
 
 %assign I (I+1)
 %endrep
-        ;; digests are already transposed 
+        ;; digests are already transposed
 	vmovdqu	Y_A,[state + 0 * MD5_DIGEST_ROW_SIZE ]
 	vmovdqu	Y_B,[state + 1 * MD5_DIGEST_ROW_SIZE ]
 	vmovdqu	Y_C,[state + 2 * MD5_DIGEST_ROW_SIZE ]
         vmovdqu	Y_D,[state + 3 * MD5_DIGEST_ROW_SIZE ]
-        
-	; Load the digest for each stream (9-16) 
+
+	; Load the digest for each stream (9-16)
 	vmovdqu	Y_A2,[state + 0 * MD5_DIGEST_ROW_SIZE + 32]
 	vmovdqu	Y_B2,[state + 1 * MD5_DIGEST_ROW_SIZE + 32]
 	vmovdqu	Y_C2,[state + 2 * MD5_DIGEST_ROW_SIZE + 32]
@@ -595,7 +593,7 @@ lloop:
 	MD5_STEP MAGIC_F, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+13*32, [TBL+13*32], rot12
 	MD5_STEP MAGIC_F, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+14*32, [TBL+14*32], rot13
 	MD5_STEP MAGIC_F, Y_B,Y_C,Y_D,Y_A, Y_B2,Y_C2,Y_D2,Y_A2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+15*32, [TBL+15*32], rot14
-                                                                                      
+
 %assign I 0
 
 	; Y_A and Y_B share the same registers with Y_DTMP1 and Y_DTMP2
@@ -642,7 +640,7 @@ lloop:
 	MD5_STEP MAGIC_G, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 2*32, [TBL+29*32], rot22
 	MD5_STEP MAGIC_G, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 7*32, [TBL+30*32], rot23
 	MD5_STEP MAGIC_G, Y_B,Y_C,Y_D,Y_A, Y_B2,Y_C2,Y_D2,Y_A2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+12*32, [TBL+31*32], rot24
-	                                                                              
+
 %assign I (I+1)
 
 	; Y_A and Y_B share the same registers with Y_DTMP1 and Y_DTMP2
@@ -699,7 +697,7 @@ lloop:
 	MD5_STEP MAGIC_H, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+12*32, [TBL+45*32], rot32
 	MD5_STEP MAGIC_H, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+15*32, [TBL+46*32], rot33
 	MD5_STEP MAGIC_H, Y_B,Y_C,Y_D,Y_A, Y_B2,Y_C2,Y_D2,Y_A2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 2*32, [TBL+47*32], rot34
-	                                                                              
+
 %assign I 0
 
 	; Y_A and Y_B share the same registers with Y_DTMP1 and Y_DTMP2
@@ -781,7 +779,7 @@ lloop:
 	vpaddd	Y_B,Y_B,[Y_BB]
 	vpaddd	Y_C,Y_C,[Y_CC]
 	vpaddd	Y_D,Y_D,[Y_DD]
-	
+
 	vpaddd	Y_A2,Y_A2,[Y_AA2]
 	vpaddd	Y_B2,Y_B2,[Y_BB2]
 	vpaddd	Y_C2,Y_C2,[Y_CC2]
@@ -812,7 +810,7 @@ lastblock:
 	MD5_STEP MAGIC_F, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+13*32, [TBL+13*32], rot12
 	MD5_STEP MAGIC_F, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+14*32, [TBL+14*32], rot13
 	MD5_STEP MAGIC_F, Y_B,Y_C,Y_D,Y_A, Y_B2,Y_C2,Y_D2,Y_A2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+15*32, [TBL+15*32], rot14
-                                                                                      
+
 	MD5_STEP MAGIC_G, Y_A,Y_B,Y_C,Y_D, Y_A2,Y_B2,Y_C2,Y_D2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 1*32, [TBL+16*32], rot21
 	MD5_STEP MAGIC_G, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 6*32, [TBL+17*32], rot22
 	MD5_STEP MAGIC_G, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+11*32, [TBL+18*32], rot23
@@ -829,7 +827,7 @@ lastblock:
 	MD5_STEP MAGIC_G, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 2*32, [TBL+29*32], rot22
 	MD5_STEP MAGIC_G, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 7*32, [TBL+30*32], rot23
 	MD5_STEP MAGIC_G, Y_B,Y_C,Y_D,Y_A, Y_B2,Y_C2,Y_D2,Y_A2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+12*32, [TBL+31*32], rot24
-	                                                                              
+
 	MD5_STEP MAGIC_H, Y_A,Y_B,Y_C,Y_D, Y_A2,Y_B2,Y_C2,Y_D2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 5*32, [TBL+32*32], rot31
 	MD5_STEP MAGIC_H, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 8*32, [TBL+33*32], rot32
 	MD5_STEP MAGIC_H, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+11*32, [TBL+34*32], rot33
@@ -846,7 +844,7 @@ lastblock:
 	MD5_STEP MAGIC_H, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+12*32, [TBL+45*32], rot32
 	MD5_STEP MAGIC_H, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+15*32, [TBL+46*32], rot33
 	MD5_STEP MAGIC_H, Y_B,Y_C,Y_D,Y_A, Y_B2,Y_C2,Y_D2,Y_A2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 2*32, [TBL+47*32], rot34
-	                                                                              
+
 	MD5_STEP MAGIC_I, Y_A,Y_B,Y_C,Y_D, Y_A2,Y_B2,Y_C2,Y_D2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 0*32, [TBL+48*32], rot41
 	MD5_STEP MAGIC_I, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 7*32, [TBL+49*32], rot42
 	MD5_STEP MAGIC_I, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+14*32, [TBL+50*32], rot43
@@ -880,13 +878,11 @@ lastblock:
 	vpaddd	Y_B,Y_B,[Y_BB]
 	vpaddd	Y_C,Y_C,[Y_CC]
 	vpaddd	Y_D,Y_D,[Y_DD]
-	
+
 	vpaddd	Y_A2,Y_A2,[Y_AA2]
 	vpaddd	Y_B2,Y_B2,[Y_BB2]
 	vpaddd	Y_C2,Y_C2,[Y_CC2]
 	vpaddd	Y_D2,Y_D2,[Y_DD2]
-
-	
 
 	vmovdqu	[state + 0*MD5_DIGEST_ROW_SIZE  ],Y_A
         vmovdqu	[state + 1*MD5_DIGEST_ROW_SIZE  ],Y_B
@@ -899,12 +895,9 @@ lastblock:
         vmovdqu	[state + 2*MD5_DIGEST_ROW_SIZE  + 32 ],Y_C2
         vmovdqu	[state + 3*MD5_DIGEST_ROW_SIZE  + 32 ],Y_D2
 
-	
 	;;;;;;;;;;;;;;;;
 	;; Postamble
 
-	
-	
 	add	rsp, STACK_size
 
         ret

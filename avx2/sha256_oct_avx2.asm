@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -225,7 +225,7 @@ section .text
 
 %define IDX     rax
 %define ROUND	rbx
-%define TBL	reg3 
+%define TBL	reg3
 
 %define inp0 r9
 %define inp1 r10
@@ -297,7 +297,7 @@ endstruc
 %define FRAMESZ	stack_frame_size
 %define _DIGEST	stack_frame.digest
 %define _YTMP	stack_frame.ytmp
-    
+
 %define YTMP0	rsp + _YTMP + 0*SZ8
 %define YTMP1	rsp + _YTMP + 1*SZ8
 %define YTMP2	rsp + _YTMP + 2*SZ8
@@ -485,9 +485,9 @@ endstruc
 ;; SHA256_ARGS:
 ;;   UINT128 digest[8];  // transposed digests
 ;;   UINT8  *data_ptr[4];
-;; 
+;;
 
-;; void sha256_oct_avx2(SHA256_ARGS *args, UINT64 bytes); 
+;; void sha256_oct_avx2(SHA256_ARGS *args, UINT64 bytes);
 ;; arg 1 : STATE : pointer to array of pointers to input data
 ;; arg 2 : INP_SIZE  : size of input in blocks
 MKGLOBAL(sha256_oct_avx2,function,internal)
@@ -497,7 +497,7 @@ sha256_oct_avx2:
 	; outer calling routine saves all the XMM registers
 	sub	rsp, FRAMESZ
 
-	;; Load the pre-transposed incoming digest. 
+	;; Load the pre-transposed incoming digest.
 	vmovdqu	a,[STATE + 0*SHA256_DIGEST_ROW_SIZE]
 	vmovdqu	b,[STATE + 1*SHA256_DIGEST_ROW_SIZE]
 	vmovdqu	c,[STATE + 2*SHA256_DIGEST_ROW_SIZE]
@@ -508,7 +508,7 @@ sha256_oct_avx2:
 	vmovdqu	h,[STATE + 7*SHA256_DIGEST_ROW_SIZE]
 
 	lea	TBL,[rel K256_8]
-    
+
 	;; load the address of each of the 4 message lanes
 	;; getting ready to transpose input onto stack
 	mov	inp0,[STATE + _data_ptr_sha256 + 0*PTR_SZ]
@@ -563,22 +563,22 @@ lloop:
 	vmovdqa	[YTMP1], TT5
 	vmovdqa	[YTMP2], TT6
 	vmovdqa	[YTMP3], TT7
-	ROUND_00_15	TT0,(i*8+0) 
+	ROUND_00_15	TT0,(i*8+0)
 	vmovdqa	TT0, [YTMP0]
-	ROUND_00_15	TT1,(i*8+1) 
+	ROUND_00_15	TT1,(i*8+1)
 	vmovdqa	TT1, [YTMP1]
-	ROUND_00_15	TT2,(i*8+2) 
+	ROUND_00_15	TT2,(i*8+2)
 	vmovdqa	TT2, [YTMP2]
-	ROUND_00_15	TT3,(i*8+3) 
+	ROUND_00_15	TT3,(i*8+3)
 	vmovdqa	TT3, [YTMP3]
-	ROUND_00_15	TT0,(i*8+4) 
-	ROUND_00_15	TT1,(i*8+5) 
-	ROUND_00_15	TT2,(i*8+6) 
-	ROUND_00_15	TT3,(i*8+7) 
+	ROUND_00_15	TT0,(i*8+4)
+	ROUND_00_15	TT1,(i*8+5)
+	ROUND_00_15	TT2,(i*8+6)
+	ROUND_00_15	TT3,(i*8+7)
 %assign i (i+1)
 %endrep
 	add	IDX, 4*4*4
-    
+
 %assign i (i*8)
 
 	jmp	Lrounds_16_xx
@@ -632,11 +632,10 @@ Lrounds_16_xx:
 	add	inp6, IDX
 	mov	[STATE + _data_ptr_sha256 + 6*8], inp6
 	add	inp7, IDX
-	mov	[STATE + _data_ptr_sha256 + 7*8], inp7	
+	mov	[STATE + _data_ptr_sha256 + 7*8], inp7
 
 	;;;;;;;;;;;;;;;;
 	;; Postamble
-    
 	add rsp, FRAMESZ
 	ret
 

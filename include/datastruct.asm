@@ -1,9 +1,9 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
-;; 
+;; Copyright (c) 2012-2017, Intel Corporation
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -39,9 +39,9 @@
 ;FIELD	_status,	4,	4	; status enumeration
 ;FIELD	_user_data,	8,	8	; pointer to user data
 ;UNION  _union,         size1,  align1, \
-	                size2,  align2, \
-	                size3,  align3, \
-	                ...
+;	                size2,  align2, \
+;	                size3,  align3, \
+;	                ...
 ;END_FIELDS
 ;%assign _JOB_AES_size	_FIELD_OFFSET
 ;%assign _JOB_AES_align	_STRUCT_ALIGN
@@ -74,21 +74,21 @@
 ; RES_DQ   16
 ; RES_Y    32
 ; RES_Z    64
-; 
+;
 ; RES_U defines a union. It's arguments are a name and two or more
 ; pairs of "size, alignment"
 ;
 ; The two assigns are only needed if this structure is being nested
 ; within another. Even if the assigns are not done, one can still use
 ; STRUCT_NAME_size as the size of the structure.
-; 
+;
 ; Note that for nesting, you still need to assign to STRUCT_NAME_size.
-; 
+;
 ; The differences between this and using "struc" directly are that each
 ; type is implicitly aligned to its natural length (although this can be
 ; over-ridden with an explicit third parameter), and that the structure
 ; is padded at the end to its overall alignment.
-; 
+;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

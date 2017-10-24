@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -31,10 +31,10 @@
 ;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
-;; Windows clobbers:	RAX     RCX RDX             R8  R9  R10 R11 
+;;			-----------------------------------------------------------
+;; Windows clobbers:	RAX     RCX RDX             R8  R9  R10 R11
 ;; Windows preserves:	    RBX         RBP RSI RDI                 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Linux clobbers:	RAX                 RSI RDI R8  R9  R10 R11
 ;; Linux preserves:	    RBX RCX RDX RBP                         R12 R13 R14 R15
 ;;			-----------------------------------------------------------
@@ -76,7 +76,7 @@ len_masks:
 	dq 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x00000000FFFF0000
 	dq 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000FFFF00000000
 	dq 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0xFFFF000000000000
-	
+
 lane_1: dq  1
 lane_2: dq  2
 lane_3: dq  3
@@ -123,9 +123,9 @@ section .text
 %define size_offset	rax
 %define tmp		rax
 %define start_offset	rax
-			
+
 %define tmp3		arg1
-			
+
 %define extra_blocks	arg2
 %define p		arg2
 
@@ -158,7 +158,6 @@ flush_job_hmac_avx512:
 
         DBGPRINTL "---------- start hmac flush avx512 -----------"
 
-	
 	mov	DWORD(num_lanes_inuse), [state + _num_lanes_inuse_sha1] ;empty?
 	cmp	num_lanes_inuse, 0
 	jz	return_null
@@ -172,7 +171,7 @@ flush_job_hmac_avx512:
 %assign I (I+1)
 %endrep
 
-copy_lane_data:	
+copy_lane_data:
 	; copy valid lane (idx) to empty lanes
 	vmovdqa	ymm0, [state + _lens]
 	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
@@ -204,7 +203,7 @@ APPEND(skip_,I):
 	mov	len2, len_upper
 	mov	idx, idx_upper	; idx would be in range 0..7
 	add	idx, 8		; to reflect that index is in 8..F range
-	
+
 use_min:
 	DBGPRINTL64 "FLUSH min_length", len2
 	DBGPRINTL64 "FLUSH min_length index ", idx
@@ -213,7 +212,7 @@ use_min:
 
 	vpbroadcastw	xmm1, xmm1
 	DBGPRINTL_XMM "FLUSH lens after shuffle", xmm1
-	
+
 	vpsubw	xmm0, xmm0, xmm1
 	vmovdqa	[state + _lens], xmm0
 	vpsubw	xmm2, xmm2, xmm1
@@ -278,7 +277,7 @@ return_null:
         DBGPRINTL "FLUSH *** ---------- return null"
 	xor	job_rax, job_rax
 	jmp	return
-	
+
 	align	16
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]
@@ -291,7 +290,7 @@ end_loop:
 	mov	[state + _unused_lanes], unused_lanes
 
 	sub	dword [state + _num_lanes_inuse_sha1], 1
-	
+
 	mov	p, [job_rax + _auth_tag_output]
 
 	; copy 12 bytes

@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,13 +28,13 @@
 ;; Stack must be aligned to 32 bytes before call
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Windows clobbers:	            RDX                     R10 R11
 ;; Windows preserves:	RAX RBX RCX     RBP RSI RDI R8  R9          R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Linux clobbers:	                        RDI         R10 R11
 ;; Linux preserves:	RAX RBX RCX RDX RBP RSI     R8  R9          R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 
@@ -121,7 +121,7 @@ sha1_ni:
 	mov		INPb, [args + _data_ptr_sha1 + 1*PTR_SZ]
 
 	add		NUM_BLKS, INP	; pointer to end of data block -> loop exit condition
-	
+
 	;; load initial digest
 	movdqu		ABCD, [args + 0*SHA1NI_DIGEST_ROW_SIZE]
 	pxor		E0, E0
@@ -224,7 +224,7 @@ loop0:
 	 sha1msg1	 MSG2b, MSG3b
 	 pxor		 MSG1b, MSG3b
 
-	
+
 	;; Rounds 16-19
 		sha1nexte	E0, MSG0
 		movdqa		E1, ABCD
@@ -238,7 +238,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E0b, 0
 	 sha1msg1	 MSG3b, MSG0b
 	 pxor		 MSG2b, MSG0b
-	
+
 	;; Rounds 20-23
 		sha1nexte	E1, MSG1
 		movdqa		E0, ABCD
@@ -252,7 +252,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E1b, 1
 	 sha1msg1	 MSG0b, MSG1b
 	 pxor		 MSG3b, MSG1b
-	
+
 	;; Rounds 24-27
 		sha1nexte	E0, MSG2
 		movdqa		E1, ABCD
@@ -266,7 +266,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E0b, 1
 	 sha1msg1	 MSG1b, MSG2b
 	 pxor		 MSG0b, MSG2b
-	
+
 	;; Rounds 28-31
 		sha1nexte	E1, MSG3
 		movdqa		E0, ABCD
@@ -294,7 +294,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E0b, 1
 	 sha1msg1	 MSG3b, MSG0b
 	 pxor		 MSG2b, MSG0b
-	
+
 	;; Rounds 36-39
 		sha1nexte	E1, MSG1
 		movdqa		E0, ABCD
@@ -308,7 +308,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E1b, 1
 	 sha1msg1	 MSG0b, MSG1b
 	 pxor		 MSG3b, MSG1b
-	
+
 	;; Rounds 40-43
 		sha1nexte	E0, MSG2
 		movdqa		E1, ABCD
@@ -322,7 +322,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E0b, 2
 	 sha1msg1	 MSG1b, MSG2b
 	 pxor		 MSG0b, MSG2b
-	
+
 	;; Rounds 44-47
 		sha1nexte	E1, MSG3
 		movdqa		E0, ABCD
@@ -350,7 +350,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E0b, 2
 	 sha1msg1	 MSG3b, MSG0b
 	 pxor		 MSG2b, MSG0b
-	
+
 	;; Rounds 52-55
 		sha1nexte	E1, MSG1
 		movdqa		E0, ABCD
@@ -364,7 +364,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E1b, 2
 	 sha1msg1	 MSG0b, MSG1b
 	 pxor		 MSG3b, MSG1b
-	
+
 	;; Rounds 56-59
 		sha1nexte	E0, MSG2
 		movdqa		E1, ABCD
@@ -378,7 +378,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E0b, 2
 	 sha1msg1	 MSG1b, MSG2b
 	 pxor		 MSG0b, MSG2b
-	
+
 	;; Rounds 60-63
 		sha1nexte	E1, MSG3
 		movdqa		E0, ABCD
@@ -406,7 +406,7 @@ loop0:
 		 sha1rnds4	 ABCDb, E0b, 3
 	 sha1msg1	 MSG3b, MSG0b
 	 pxor		 MSG2b, MSG0b
-	
+
 	;; Rounds 68-71
 		sha1nexte	E1, MSG1
 		movdqa		E0, ABCD
@@ -418,7 +418,7 @@ loop0:
 	 sha1msg2	 MSG2b, MSG1b
 		 sha1rnds4	 ABCDb, E1b, 3
 	 pxor		 MSG3b, MSG1b
-	
+
 	;; Rounds 72-75
 		sha1nexte	E0, MSG2
 		movdqa		E1, ABCD
@@ -428,7 +428,7 @@ loop0:
 		 movdqa		 E1b, ABCDb
 	 sha1msg2	 MSG3b, MSG2b
 		 sha1rnds4	 ABCDb, E0b, 3
-	
+
 	;; Rounds 76-79
 		sha1nexte	E1, MSG3
 		movdqa		E0, ABCD
@@ -437,15 +437,15 @@ loop0:
 		 movdqa		 E0b, ABCDb
 		 sha1rnds4	 ABCDb, E1b, 3
 
-	;; Need to rotate E left by 30 
+	;; Need to rotate E left by 30
 	movdqa		E1, E0
 	pslld		E0, 30
 	psrld		E1, 2
-	pxor		E0, E1 
+	pxor		E0, E1
 	 movdqa		 E1b, E0b
 	 pslld		 E0b, 30
 	 psrld		 E1b, 2
-	 pxor		 E0b, E1b 
+	 pxor		 E0b, E1b
 
 	paddd		ABCD, [rsp + frame.ABCD_SAVE]
 	paddd		E0,   [rsp + frame.E_SAVE]
@@ -475,5 +475,5 @@ loop0:
 done_hash:
 	add		rsp, frame_size
 
-	ret	
+	ret
 

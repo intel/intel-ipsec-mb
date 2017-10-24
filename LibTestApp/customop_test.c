@@ -1,29 +1,29 @@
-/*
- * Copyright (c) 2017, Intel Corporation
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright notice,
- *       this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Intel Corporation nor the names of its contributors
- *       may be used to endorse or promote products derived from this software
- *       without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+/*****************************************************************************
+ Copyright (c) 2017, Intel Corporation
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+     * Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+     * Neither the name of Intel Corporation nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*****************************************************************************/
 
 #include <assert.h>
 #include <stdio.h>
@@ -63,7 +63,7 @@ struct test_vec_s {
         uint8_t txt[64];
         uint8_t tag[32];
         uint8_t verify[32];
-                
+
         DECLARE_ALIGNED(uint8_t enc_key[16*16], 64);
         DECLARE_ALIGNED(uint8_t dec_key[16*16], 64);
         uint8_t ipad[256];
@@ -81,15 +81,15 @@ static int
 cipher_addon(struct JOB_AES_HMAC *job)
 {
         struct test_vec_s *node = job->user_data;
-        
+
         TRACE("Seq:%u Cipher Addon cipher:%s auth:%s\n",
               node->seq, node->cipher->name, node->auth->name);
 
-        if (job->cipher_direction == ENCRYPT) {
+        if (job->cipher_direction == ENCRYPT)
                 memset(job->dst, 1, job->msg_len_to_cipher_in_bytes);
-        } else {
+        else
                 memset(job->dst, 2, job->msg_len_to_cipher_in_bytes);
-        }
+
         return 0;	/* success */
 }
 
@@ -100,7 +100,7 @@ static int
 hash_addon(struct JOB_AES_HMAC *job)
 {
         struct test_vec_s *node = job->user_data;
-        
+
         TRACE("Seq:%u Auth Addon cipher:%s auth:%s\n",
               node->seq, node->cipher->name, node->auth->name);
 
@@ -228,7 +228,7 @@ customop_test(struct MB_MGR *mgr)
                 job->iv_len_in_bytes = node->cipher->iv_len;
                 job->auth_tag_output = node->tag;
                 job->auth_tag_output_len_in_bytes = node->auth->tag_len;
-                                
+
                 job->u.HMAC._hashed_auth_key_xor_ipad = node->ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = node->opad;
                 job->cipher_mode = node->cipher->mode;
@@ -244,9 +244,8 @@ customop_test(struct MB_MGR *mgr)
                 }
         }
 
-        while ((job = IMB_FLUSH_JOB(mgr)) != NULL) {
+        while ((job = IMB_FLUSH_JOB(mgr)) != NULL)
                 result |= job_check(job);
-        }
 
         /* decryption */
         for (i = 0; i < seq; i++) {
@@ -273,7 +272,7 @@ customop_test(struct MB_MGR *mgr)
                 job->iv_len_in_bytes = node->cipher->iv_len;
                 job->auth_tag_output = node->tag;
                 job->auth_tag_output_len_in_bytes = node->auth->tag_len;
-                                
+
                 job->u.HMAC._hashed_auth_key_xor_ipad = node->ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = node->opad;
                 job->cipher_mode = node->cipher->mode;
@@ -289,9 +288,8 @@ customop_test(struct MB_MGR *mgr)
                 }
         }
 
-        while ((job = IMB_FLUSH_JOB(mgr)) != NULL) {
+        while ((job = IMB_FLUSH_JOB(mgr)) != NULL)
                 result |= job_check(job);
-         }
 
         if (result)
                 fprintf(stdout, "Custom cipher/auth test failed!\n");

@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,13 +28,13 @@
 ;; Stack must be aligned to 32 bytes before call
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Windows clobbers:	        RCX RDX     RSI RDI             R11
 ;; Windows preserves:	RAX RBX         RBP         R8  R9  R10     R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Linux clobbers:	        RCX RDX     RSI RDI             R11
 ;; Linux preserves:	RAX RBX         RBP         R8  R9  R10     R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 
@@ -195,7 +195,7 @@ sha256_ni:
 	pop		NUM_BLKS
 	pop		r10
 %endif
-	
+
 %ifdef DO_DBGPRINT
 	;;	prin buffer B
 	push		r10
@@ -218,7 +218,7 @@ sha256_ni:
 	pop		NUM_BLKS
 	pop		r10
 %endif
-	
+
 .loop0:
 	;; Save digests
 	movdqa		[rsp + frame.ABEF_SAVE], STATE0
@@ -567,7 +567,7 @@ sha256_ni:
 	;; update data pointers
 	mov		[args + _data_ptr_sha256 + 0*PTR_SZ], INP
 	mov		 [args + _data_ptr_sha256 + 1*PTR_SZ], INPb
-	
+
 	; Reorder for writeback
 	pshufd		STATE0, STATE0, 0x1B	; FEBA
 	pshufd		STATE1, STATE1, 0xB1	; DCHG
@@ -597,5 +597,5 @@ done_hash:
         DBGPRINTL	"exit sha256-ni-x2"
 
 	add		rsp, frame_size
-	ret	
-	
+	ret
+

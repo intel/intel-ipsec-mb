@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -59,7 +59,7 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-	
+
 %define job_rax          rax
 
 %if 1
@@ -116,7 +116,7 @@ SUBMIT_JOB_AES_XCBC:
 	imul	lane_data, lane, _XCBC_LANE_DATA_size
 	lea	lane_data, [state + _aes_xcbc_ldata + lane_data]
 	mov	[state + _aes_xcbc_unused_lanes], unused_lanes
-	mov	len, [job + _msg_len_to_hash_in_bytes] 
+	mov	len, [job + _msg_len_to_hash_in_bytes]
 	mov	[lane_data + _xcbc_job_in_lane], job
 	mov	dword [lane_data + _xcbc_final_done], 0
 	mov	tmp, [job + _k1_expanded]
@@ -124,7 +124,7 @@ SUBMIT_JOB_AES_XCBC:
 	mov	p, [job + _src]
 	add	p, [job + _hash_start_src_offset_in_bytes]
 
-	mov	last_len, len 
+	mov	last_len, len
 
 	cmp	len, 16
 	jle	small_buffer
@@ -132,7 +132,7 @@ SUBMIT_JOB_AES_XCBC:
 	mov	[state + _aes_xcbc_args_in + lane*8], p
 	add	p, len		; set point to end of data
 
-	and	last_len, 15	; Check lsbs of msg len 
+	and	last_len, 15	; Check lsbs of msg len
 	jnz	slow_copy	; if not 16B mult, do slow copy
 
 fast_copy:
@@ -144,7 +144,7 @@ fast_copy:
 	sub	len, 16		; take last block off length
 end_fast_copy:
 
-	mov	[state + _aes_xcbc_lens + 2*lane], WORD(len) 
+	mov	[state + _aes_xcbc_lens + 2*lane], WORD(len)
 
 	pxor	xmm0, xmm0
 	shl	lane, 4	; multiply by 16
@@ -219,7 +219,7 @@ return:
 
 small_buffer:
 	; For buffers <= 16 Bytes
-	; The input data is set to final block 
+	; The input data is set to final block
 	lea	tmp, [lane_data + _xcbc_final_block] ; final block
 	mov	[state + _aes_xcbc_args_in + lane*8], tmp
 	add	p, len		; set point to end of data
@@ -233,10 +233,10 @@ slow_copy:
 	sub	p2, last_len	; adjust data pointer backwards
 	memcpy_sse_16_1 p2, p, last_len, tmp, tmp2
         movdqa	xmm0, [rel x80]	; fill reg with padding
-	movdqu	[lane_data + _xcbc_final_block + 16], xmm0 ; add padding	
-	movdqu	xmm0, [p2]	; load final block to process 
-	mov	tmp, [job + _k3] ; load K3 address 
-	movdqu	xmm1, [tmp]	; load K3 
+	movdqu	[lane_data + _xcbc_final_block + 16], xmm0 ; add padding
+	movdqu	xmm0, [p2]	; load final block to process
+	mov	tmp, [job + _k3] ; load K3 address
+	movdqu	xmm1, [tmp]	; load K3
 	pxor	xmm0, xmm1	; M[n] XOR K3
 	movdqu	[lane_data + _xcbc_final_block], xmm0	; write final block
 	jmp	end_fast_copy

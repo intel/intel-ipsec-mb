@@ -1,9 +1,9 @@
 ;;
-;; Copyright (c) 2012-2016, Intel Corporation
-;; 
+;; Copyright (c) 2012-2017, Intel Corporation
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,19 +32,19 @@
 ; These are called with 1 or more arguments, all of which are of the
 ; size/type as specified in the name. E.g.
 ;   DBGPRINT64 reg1, reg2, reg3, ...
-; 
+;
 ; There is also a macro DEBUGPRINTL that takes one argument, a string. E.g.
 ;   DBGPRINTL "hit this point in the code"
-; 
+;
 ; There are also variations on these with the "DBGPRINT" suffixed with "L", e.g.
 ; DBGPRINTL64. These take two or more arguments, where the first is a string,
 ; and the rest are of the specified type, e.g.
 ;   DBGPRINTL64 "Rindex", Rindex
 ; Essentially, this is the same as a DBGPRINTL followed by DBGPRINT64.
-; 
+;
 ; If DO_DBGPRINT is defined, then the macros write the debug information into
 ; a buffer. If DO_DBGPRINT is *not* defined, then the macros expand to nothing.
-; 
+;
 ; CAVEAT: The macros need a GPR. Currently, it uses R15. If the first register
 ; argument is R15, then it will use R14. This means that if you try
 ;   DBGPRINTL64 "text", rax, r15
@@ -54,24 +54,24 @@
 ; registers). E.g the above could be done with:
 ;   DBGPRINTL64 "test", rax
 ;   DBGPRINT64 r15
-; 
+;
 ; Note also that the macros only check for r15. Thus is you tried something
 ; like (after token expansion):
 ;   DBGPRINT32 r15d
 ; you won't get the right results. If you want to display r15d, you should
 ; print it as the 64-bit r15.
-; 
+;
 ; To actually print the data, from your C code include the file
 ; "dbgprint.h". The default buffer size is 16kB. If you want to change
 ; that, #define DBG_BUFFER_SIZE before including "dbgprint.h".
-; 
-; Then, (after your asm routine(s) have returned, call 
+;
+; Then, (after your asm routine(s) have returned, call
 ;   print_debug()    or    print_debug(file pointer)
 ; If you do not specify a file pointer, it defaults to stdout.
-; 
+;
 ; Printing the debug data also resets the write pointer to the beginning,
 ; effectively "deleting" the previous messages.
-; 
+;
 
 ;%define DO_DBGPRINT
 %ifdef DO_DBGPRINT

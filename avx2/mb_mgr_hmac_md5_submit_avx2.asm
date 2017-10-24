@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -56,30 +56,30 @@ extern md5_x8x2_avx2
 ; idx needs to be in rbp
 %define last_len        rbp
 %define idx             rbp
-                        
+
 %define p               r11
 %define start_offset    r11
 
 %define unused_lanes    rbx
 %define tmp4            rbx
-        
+
 %define job_rax         rax
 %define len             rax
-                        
+
 %define size_offset     reg3
 %define tmp2		reg3
-                        
+
 %define lane            reg4
 %define tmp3		reg4
 
 %define extra_blocks    r8
-                        
+
 %define tmp             r9
 %define p2              r9
-        
+
 %define lane_data       r10
 %define num_lanes_inuse r12
-%define len_upper       r13 
+%define len_upper       r13
 %define idx_upper       r14
 
 %endif
@@ -120,7 +120,7 @@ submit_job_hmac_md5_avx2:
         and     lane, 0xF
         shr     unused_lanes, 4
         mov     [state + _unused_lanes_md5], unused_lanes
-        add     num_lanes_inuse, 1  
+        add     num_lanes_inuse, 1
         mov     [state + _num_lanes_inuse_md5], DWORD(num_lanes_inuse)
         DBGPRINTL64 "SUBMIT ********** num_lanes_in_use", num_lanes_inuse
         imul	lane_data, lane, _HMAC_SHA1_LANE_DATA_size
@@ -128,7 +128,7 @@ submit_job_hmac_md5_avx2:
         mov	len, [job + _msg_len_to_hash_in_bytes]
         mov	tmp, len
         shr	tmp, 6	; divide by 64, len in terms of blocks
-        DBGPRINTL64 "SUBMIT job len, num_blks ", len, tmp     
+        DBGPRINTL64 "SUBMIT job len, num_blks ", len, tmp
         mov	[lane_data + _job_in_lane], job
         mov	dword [lane_data + _outer_done], 0
         mov	[state + _lens_md5 + 2*lane], WORD(tmp)
@@ -184,7 +184,7 @@ lt64_bytes:
         mov	dword [lane_data + _extra_blocks], 0
 
 ge64_bytes:
-        DBGPRINTL64 "SUBMIT md5 all lanes loaded? ********** num_lanes_in_use", num_lanes_inuse    
+        DBGPRINTL64 "SUBMIT md5 all lanes loaded? ********** num_lanes_in_use", num_lanes_inuse
         cmp	num_lanes_inuse, 0x10  ; all 16 lanes loaded?
         jne	return_null
         jmp	start_loop
@@ -204,16 +204,16 @@ start_loop:
 
         cmp len2, len_upper
         jle use_min
-             
-min_in_high: 
-       
+
+min_in_high:
+
         vmovdqa xmm1, xmm3
         mov len2, len_upper
         mov idx, idx_upper   ;; idx retrieved would be [0-7]
         or  idx, 0x8         ;; to reflect that index in 8-F
 
 use_min:
-        
+
         cmp	len2, 0
         je	len_is_0
         DBGPRINTL64 "min_length min_index ", len2, idx
@@ -278,18 +278,18 @@ proc_extra_blocks:
 copy_lt64:
         ;; less than one message block of data
         ;; beginning of source block
-        ;; destination extrablock but backwards by len from where 0x80 pre-populated 
+        ;; destination extrablock but backwards by len from where 0x80 pre-populated
         ;; p2 clobbers unused_lanes, undo before exiting
         lea	p2, [lane_data + _extra_block  + 64]
         sub     p2, len
-        memcpy_avx2_64_1 p2, p, len, tmp4, tmp2, ymm0, ymm1 
+        memcpy_avx2_64_1 p2, p, len, tmp4, tmp2, ymm0, ymm1
         mov	unused_lanes, [state + _unused_lanes_md5]
         jmp	end_fast_copy
-        
+
 return_null:
         xor	job_rax, job_rax
         jmp	return
-        
+
         align	16
 end_loop:
         mov	job_rax, [lane_data + _job_in_lane]
@@ -301,7 +301,7 @@ end_loop:
         mov	[state + _unused_lanes_md5], unused_lanes
 
         mov     DWORD(num_lanes_inuse), [state + _num_lanes_inuse_md5]
-        sub     num_lanes_inuse, 1  
+        sub     num_lanes_inuse, 1
         mov     [state + _num_lanes_inuse_md5], DWORD(num_lanes_inuse)
 
         mov	p, [job_rax + _auth_tag_output]

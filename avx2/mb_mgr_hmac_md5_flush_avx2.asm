@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -59,7 +59,7 @@ len_masks:
 	dq 0x0000000000000000, 0x0000FFFF00000000
 	;ddq 0xFFFF0000000000000000000000000000
 	dq 0x0000000000000000, 0xFFFF000000000000
-        
+
 lane_1:     dq  1
 lane_2:     dq  2
 lane_3:     dq  3
@@ -67,7 +67,7 @@ lane_4:     dq  4
 lane_5:     dq  5
 lane_6:     dq  6
 lane_7:     dq  7
-lane_8:     dq  8  
+lane_8:     dq  8
 lane_9:     dq  9
 lane_10:    dq  10
 lane_11:    dq  11
@@ -98,21 +98,21 @@ section .text
 %define unused_lanes    rbx
 %define lane_data       rbx
 %define tmp2		rbx
-                        
+
 %define job_rax         rax
 %define	tmp1		rax
 %define size_offset     rax
 %define tmp             rax
 %define start_offset    rax
-                        
+
 %define tmp3		arg1
-                        
+
 %define extra_blocks    arg2
 %define p               arg2
 
 %define tmp4		    r8
 %define num_lanes_inuse     r12
-%define len_upper           r13 
+%define len_upper           r13
 %define idx_upper           r14
 %endif
 
@@ -153,15 +153,15 @@ flush_job_hmac_md5_avx2:
         ; find a lane with a non-null job -- flush does not have to be efficient!
         mov     idx, 0
         %assign I 1
-%rep 15 
+%rep 15
         cmp     qword [state + _ldata_md5 + I * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
         cmovne  idx, [rel APPEND(lane_,I)]
 %assign I (I+1)
-%endrep   
+%endrep
 
 
-copy_lane_data:	
-        ; copy good lane (idx) to empty lanes	
+copy_lane_data:
+        ; copy good lane (idx) to empty lanes
         mov	tmp, [state + _args_data_ptr_md5 + PTR_SZ*idx]
         ;; tackle lower 8 lanes
 	vmovdqa	xmm0, [state + _lens_md5 + 0*16]  ;; lower 8 lengths
@@ -175,7 +175,7 @@ APPEND(lower_skip_,I):
 %assign I (I+1)
 %endrep
         ;; tackle upper lanes
-        vmovdqa	xmm1, [state + _lens_md5 + 1*16]  ;; upper 8 lengths 
+        vmovdqa	xmm1, [state + _lens_md5 + 1*16]  ;; upper 8 lengths
 %assign  I 0
 %rep 8
         cmp	qword [state + _ldata_md5 + (8 + I) * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
@@ -189,7 +189,7 @@ APPEND(upper_skip_,I):
 
         align	32
 start_loop0:
-        ; Find min length        
+        ; Find min length
         vphminposuw	xmm2, xmm0
         vpextrw	DWORD(len2), xmm2, 0	; min value
         vpextrw	DWORD(idx), xmm2, 1	; min index (0...7)
@@ -200,13 +200,13 @@ start_loop0:
 
         cmp len2, len_upper
         jle use_min
-             
-min_in_high:     
+
+min_in_high:
         vmovdqa xmm2, xmm3
         mov len2, len_upper
         mov idx, idx_upper
         or  idx, 0x8  ; to reflect that index in 8-F
-use_min:   
+use_min:
         and len2, len2   ; to set flags
         jz  len_is_0
         DBGPRINTL64 "min_length min_index ", len2, idx
@@ -219,7 +219,7 @@ use_min:
         vpsubw	xmm1, xmm1, xmm2
         DBGPRINTL_XMM "FLUSH md5 lens after sub upper", xmm1
         vmovdqa	[state + _lens_md5 + 1*16], xmm1
-        
+
         ; "state" and "args" are the same address, arg1
         ; len is arg2
         call	md5_x8x2_avx2
@@ -270,7 +270,7 @@ proc_extra_blocks:
 return_null:
         xor	job_rax, job_rax
         jmp	return
-        
+
         align	16
 end_loop:
         mov	job_rax, [lane_data + _job_in_lane]
@@ -281,9 +281,8 @@ end_loop:
         or	unused_lanes, idx
         mov	[state + _unused_lanes_md5], unused_lanes
 
-        
-	mov     DWORD(num_lanes_inuse), [state + _num_lanes_inuse_md5]  ;; update lanes inuse 
-	sub     num_lanes_inuse, 1  
+	mov     DWORD(num_lanes_inuse), [state + _num_lanes_inuse_md5]  ;; update lanes inuse
+	sub     num_lanes_inuse, 1
 	mov     [state + _num_lanes_inuse_md5], DWORD(num_lanes_inuse)
 
         mov	p, [job_rax + _auth_tag_output]

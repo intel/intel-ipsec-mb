@@ -37,7 +37,7 @@
 
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Windows clobbers:	RAX                         R8  R9  R10 R11
 ;; Windows preserves:	    RBX RCX RDX RBP RSI RDI                 R12 R13 R14 R15
 ;;			-----------------------------------------------------------
@@ -116,7 +116,7 @@
 %define ZTMP11  zmm29
 %define ZTMP12  zmm30
 %define ZTMP13  zmm31
-        
+
 struc STACKFRAME
 _key_sched:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
 _tmp_iv:	resq	16      ; 2 x 64 bytes
@@ -126,7 +126,7 @@ _tmp_mask:	resd	16      ; 1 x 64 bytes
 _gpr_save:	resq	4       ; r12 to r15
 _rsp_save:	resq	1
 endstruc
-	
+
 ;;; ===========================================================================
 ;;; ===========================================================================
 ;;; MACROS
@@ -274,7 +274,7 @@ endstruc
 ;;; ===========================================================================
 ;;; E PHASE
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; Expands 16x32-bit words into 16x48-bit words
 ;;; plus XOR's result with the key schedule.
 ;;; The output is adjusted to be friendly as S phase input.
@@ -317,7 +317,7 @@ endstruc
 ;;; ===========================================================================
 ;;; S-BOX
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; NOTE: clobbers k1-k6 OpMask registers
 ;;;
 ;;; IN0A [in] - zmm register; output from E-phase
@@ -357,7 +357,7 @@ endstruc
 	vpxord          %%T0, %%T0, %%T2
 	vpxord          %%OUT, %%T1, %%T3
         vmovdqu16       %%OUT{k3}, %%T0
-        
+
 	vpermw          %%T0{k1}{z}, %%IN0B, [rel S_box_flipped + 2*64]
 	vpermw          %%T1{k1}{z}, %%IN0B, [rel S_box_flipped + 3*64]
 	vpermw          %%T2{k2}{z}, %%IN0B, [rel S_box_flipped + 6*64]
@@ -394,7 +394,7 @@ endstruc
 ;;; ===========================================================================
 ;;; DES encryption/decryption round
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; Clobbers k1-k6 OpMask registers
 ;;;
 ;;; ENC_DEC [in] - ENC for encryption, DEC for decryption
@@ -463,7 +463,7 @@ endstruc
 ;;; ===========================================================================
 ;;; DATA TRANSPOSITION AT DATA INPUT
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; IN00 - IN15 [in/out]:
 ;;;          in:  IN00 - lane 0 data, IN01 - lane 1 data, ... IN15 - lane 15 data
 ;;;          out: R0 - 16 x word0, L0 - 16 x word1, ... L7 - 16 x word15
@@ -530,7 +530,7 @@ endstruc
 	vpunpckhdq      %%IN07, %%IN12, %%IN13
 	vpunpckldq      %%IN10, %%IN14, %%IN15
 	vpunpckhdq      %%IN11, %%IN14, %%IN15
-        
+
         vpunpcklqdq     %%IN12, %%K4, %%IN04
 	vpunpckhqdq     %%IN13, %%K4, %%IN04
         vpunpcklqdq     %%IN14, %%K5, %%IN05
@@ -576,11 +576,11 @@ endstruc
         vshufi64x2      %%IN11, %%H1, %%H3, 0x88    ; L5
         vshufi64x2      %%IN15, %%H1, %%H3, 0xdd    ; L7
 %endmacro
-        
+
 ;;; ===========================================================================
 ;;; DATA TRANSPOSITION AT DATA OUTPUT
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; IN00-IN15 aka R0/L0 - R7/L7 [in/out]:
 ;;;          in:  R0 - 16 x word0, L0 - 16 x word1, ... L7 - 16 x word15
 ;;;          out: R0 - lane 0 data, L0 - lane 1 data, ... L7 - lane 15 data
@@ -647,7 +647,7 @@ endstruc
 	vpunpckhdq      %%IN07, %%IN13, %%IN12
 	vpunpckldq      %%IN10, %%IN15, %%IN14
 	vpunpckhdq      %%IN11, %%IN15, %%IN14
-        
+
         vpunpcklqdq     %%IN12, %%K4, %%IN04
 	vpunpckhqdq     %%IN13, %%K4, %%IN04
         vpunpcklqdq     %%IN14, %%K5, %%IN05
@@ -697,7 +697,7 @@ endstruc
 ;;; ===========================================================================
 ;;; DATA TRANSPOSITION OF ONE DES BLOCK AT DATA INPUT
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; IN00-IN15 / R0/L0-R7/L7 [in/out]:
 ;;;          in:  IN00 - lane 0 data, IN01 - lane 1 data, ... IN15 - lane 15 data
 ;;;          out: R0 - 16 x word0, L0 - 16 x word1
@@ -748,7 +748,7 @@ endstruc
 	vpunpckldq      %%IN04, %%IN10, %%IN11
 	vpunpckldq      %%IN06, %%IN12, %%IN13
 	vpunpckldq      %%IN10, %%IN14, %%IN15
-        
+
         vpunpcklqdq     %%IN12, %%K4, %%IN04
 	vpunpckhqdq     %%IN13, %%K4, %%IN04
         vpunpcklqdq     %%IN00, %%IN06, %%IN10
@@ -762,11 +762,11 @@ endstruc
         vshufi64x2      %%H2, %%IN13, %%IN01, 0x44
         vshufi64x2      %%IN01, %%H0, %%H2, 0x88    ; L0
 %endmacro
-        
+
 ;;; ===========================================================================
 ;;; DATA TRANSPOSITION OF ONE DES BLOCK AT DATA OUTPUT
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; IN00-IN15 aka R0/L0 - R7/L7 [in/out]:
 ;;;          in:  R0 - 16 x word0, L0 - 16 x word1
 ;;;          out: R0 - lane 0 data, L0 - lane 1 data, ... L7 - lane 15 data
@@ -843,7 +843,7 @@ endstruc
 ;;; DES INITIALIZATION
 ;;; key schedule transposition and IV set up
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; STATE_KEYS [in]  - KEYS in DES OOO STATE
 ;;; STATE_IV [ in]  - IV in DES OOO STATE
 ;;; KS    [out] - place to store transposed key schedule or NULL
@@ -923,12 +923,12 @@ endstruc
         vmovdqu64       %%IV0, [%%STATE_IV + (0 * 64)]
         vmovdqu64       %%IV1, [%%STATE_IV + (1 * 64)]
 %endmacro
-        
+
 ;;; ===========================================================================
 ;;; DES FINISH
 ;;; Update in/out pointers and store IV
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; Needs: STATE & SIZE
 ;;; IV0   [in] - r512; initialization vector
 ;;; IV1   [in] - r512; initialization vector
@@ -972,7 +972,7 @@ endstruc
 ;;; T_OUT   [in] - 16 * 8 byte storage
 ;;; T_MASK  [in] - 16 * 4 byte storage
 ;;; T_IV    [in] - 16 * 8 byte storage
-;;; 
+;;;
 ;;; NOTE: clobbers OpMask registers
 %macro DES_CFB_ONE 31
 %define %%ENC_DEC %1
@@ -1062,7 +1062,7 @@ endstruc
         vmovdqu64       [%%T_OUT + (8*PTR_SZ)], %%T4
         vmovdqu64       [%%T_IV + (0*64)], %%T5
         vmovdqu64       [%%T_IV + (1*64)], %%T6
-        
+
         ;; calculate last block case mask
         ;; - first block case requires no modifications to in/out/IV
         vmovdqu64       %%T1, [STATE + _des_args_BLen]
@@ -1109,7 +1109,7 @@ endstruc
 %assign IDX (IDX + 1)
 %endrep
 
-%%_des_cfb_one_no_last_blocks:  
+%%_des_cfb_one_no_last_blocks:
         ;; Uffff ... finally let's do some DES CFB
         ;; - let's use T_IN, T_OUT, T_IV and T_MASK
 
@@ -1176,7 +1176,7 @@ endstruc
 ;;; ===========================================================================
 ;;; Converts length into mask of DES blocks
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; MASK [out] - mask8 for value; for masked 64b loads and stores (r64)
 ;;; USES: IA0, IA1 IA2
 %macro GET_MASK8 1
@@ -1211,9 +1211,9 @@ endstruc
 ;;; ===========================================================================
 ;;; DES CBC / DOCSIS DES ENCRYPT
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; DES_DOCSIS [in] - select between DES (DES CBC) and DOCSIS (DOCSIS DES)
-;;; 
+;;;
 ;;; NOTE: clobbers OpMask registers
 %macro GENERIC_DES_ENC 1
 %define %%DES_DOCSIS %1
@@ -1227,7 +1227,7 @@ endstruc
         mov             [rsp + _gpr_save + 1*8], r13
         mov             [rsp + _gpr_save + 2*8], r14
         mov             [rsp + _gpr_save + 3*8], r15
-        
+
         DES_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
 
         xor             OFFSET, OFFSET
@@ -1274,7 +1274,7 @@ endstruc
 
         ;; Transpose input
         TRANSPOSE_IN    ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
-        
+
         ;; DES CBC comes here
         vpxord          ZW0, ZW0, ZIV0 ; R0 = R0 ^ IV0
         vpxord          ZW1, ZW1, ZIV1 ; L0 = L0 ^ IV1
@@ -1355,9 +1355,9 @@ endstruc
 ;;; ===========================================================================
 ;;; DES CBC / DOCSIS DES DECRYPT
 ;;; ===========================================================================
-;;; 
+;;;
 ;;; DES_DOCSIS [in] - select between DES (DES CBC) and DOCSIS (DOCSIS DES)
-;;; 
+;;;
 ;;; NOTE: clobbers OpMask registers
 %macro GENERIC_DES_DEC 1
 %define %%DES_DOCSIS %1
@@ -1436,7 +1436,7 @@ endstruc
         vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
         vmovdqa64       ZIV0, ZTMP12
         vmovdqa64       ZIV1, ZTMP13
-        
+
 %assign RN (RN + 2)
 %assign LN (LN + 2)
 %endrep
@@ -1494,7 +1494,7 @@ endstruc
         mov             r15, [rsp + _gpr_save + 3*8]
 	mov	        rsp, [rsp + _rsp_save]	; original SP
 %endmacro
-        
+
 ;;; ========================================================
 ;;; DATA
 
@@ -1661,20 +1661,20 @@ S_box_flipped:
         dw 0x04, 0x03, 0x07, 0x0e, 0x0a, 0x05, 0x01, 0x0b
         ;; SBOX6
         dw 0x02, 0x08, 0x0c, 0x05, 0x0f, 0x03, 0x0a, 0x00
-        dw 0x04, 0x0d, 0x09, 0x06, 0x01, 0x0e, 0x06, 0x09 
+        dw 0x04, 0x0d, 0x09, 0x06, 0x01, 0x0e, 0x06, 0x09
         dw 0x0d, 0x02, 0x03, 0x0f, 0x00, 0x0c, 0x05, 0x0a
-        dw 0x07, 0x0b, 0x0e, 0x01, 0x0b, 0x07, 0x08, 0x04 
+        dw 0x07, 0x0b, 0x0e, 0x01, 0x0b, 0x07, 0x08, 0x04
         dw 0x0b, 0x06, 0x07, 0x09, 0x02, 0x08, 0x04, 0x07
-        dw 0x0d, 0x0b, 0x0a, 0x00, 0x08, 0x05, 0x01, 0x0c 
+        dw 0x0d, 0x0b, 0x0a, 0x00, 0x08, 0x05, 0x01, 0x0c
         dw 0x00, 0x0d, 0x0c, 0x0a, 0x09, 0x02, 0x0f, 0x04
-        dw 0x0e, 0x01, 0x03, 0x0f, 0x05, 0x0e, 0x06, 0x03 
+        dw 0x0e, 0x01, 0x03, 0x0f, 0x05, 0x0e, 0x06, 0x03
         ;; SBOX7
         dw 0x0b, 0x0e, 0x05, 0x00, 0x06, 0x09, 0x0a, 0x0f
-        dw 0x01, 0x02, 0x0c, 0x05, 0x0d, 0x07, 0x03, 0x0a 
+        dw 0x01, 0x02, 0x0c, 0x05, 0x0d, 0x07, 0x03, 0x0a
         dw 0x04, 0x0d, 0x09, 0x06, 0x0f, 0x03, 0x00, 0x0c
-        dw 0x02, 0x08, 0x07, 0x0b, 0x08, 0x04, 0x0e, 0x01 
+        dw 0x02, 0x08, 0x07, 0x0b, 0x08, 0x04, 0x0e, 0x01
         dw 0x08, 0x04, 0x03, 0x0f, 0x05, 0x02, 0x00, 0x0c
-        dw 0x0b, 0x07, 0x06, 0x09, 0x0e, 0x01, 0x09, 0x06 
+        dw 0x0b, 0x07, 0x06, 0x09, 0x0e, 0x01, 0x09, 0x06
         dw 0x0f, 0x08, 0x0a, 0x03, 0x0c, 0x05, 0x07, 0x0a
         dw 0x01, 0x0e, 0x0d, 0x00, 0x02, 0x0b, 0x04, 0x0d
 

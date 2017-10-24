@@ -1,47 +1,46 @@
+/*******************************************************************************
+  Copyright (c) 2012-2017, Intel Corporation
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+      * Redistributions of source code must retain the above copyright notice,
+        this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in the
+        documentation and/or other materials provided with the distribution.
+      * Neither the name of Intel Corporation nor the names of its contributors
+        may be used to endorse or promote products derived from this software
+        without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*******************************************************************************/
+
 /*
- * Copyright (c) 2012-2017, Intel Corporation
+ * This contains the bulk of the mb_mgr code, with #define's to build
+ * an SSE, AVX, AVX2 or AVX512 version (see mb_mgr_sse.c, mb_mgr_avx.c, etc.)
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * get_next_job() returns a job object. This must be filled in and returned
+ * via submit_job() before get_next_job() is called again.
  *
- *     * Redistributions of source code must retain the above copyright notice,
- *       this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Intel Corporation nor the names of its contributors
- *       may be used to endorse or promote products derived from this software
- *       without specific prior written permission.
+ * submit_job() and flush_job() returns a job object. This job object ceases
+ * to be usable at the next call to get_next_job()
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Assume JOBS() and ADV_JOBS() from mb_mgr_code.h are available
  */
 
-
-// This contains the bulk of the mb_mgr code, with #define's to build
-// an SSE, AVX, AVX2 or AVX512 version (see mb_mgr_sse.c, mb_mgr_avx.c, etc.)
-
-// get_next_job() returns a job object. This must be filled in and returned
-// via submit_job() before get_next_job() is called again.
-// submit_job() and flush_job() returns a job object. This job object ceases
-// to be usable at the next call to get_next_job()
-
-// Assume JOBS() and ADV_JOBS() from mb_mgr_code.h are available
-
-////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////
-/// Lower level "out of order" schedulers
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* Lower level "out of order" schedulers */
+/* ========================================================================= */
 
 __forceinline
 JOB_AES_HMAC *
@@ -53,7 +52,7 @@ SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC *job)
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
-        return (job);
+        return job;
 }
 
 __forceinline
@@ -66,7 +65,7 @@ SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC *job)
                         job->dst,
                         job->msg_len_to_cipher_in_bytes);
         job->status |= STS_COMPLETED_AES;
-        return (job);
+        return job;
 }
 
 __forceinline
@@ -79,7 +78,7 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
                         job->dst,
                         job->msg_len_to_cipher_in_bytes);
         job->status |= STS_COMPLETED_AES;
-        return (job);
+        return job;
 }
 
 __forceinline
@@ -93,7 +92,7 @@ SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
                      job->msg_len_to_cipher_in_bytes,
                      job->iv_len_in_bytes);
         job->status |= STS_COMPLETED_AES;
-        return (job);
+        return job;
 }
 
 __forceinline
@@ -107,7 +106,7 @@ SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
                      job->msg_len_to_cipher_in_bytes,
                      job->iv_len_in_bytes);
         job->status |= STS_COMPLETED_AES;
-        return (job);
+        return job;
 }
 
 __forceinline
@@ -121,94 +120,91 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
                      job->msg_len_to_cipher_in_bytes,
                      job->iv_len_in_bytes);
         job->status |= STS_COMPLETED_AES;
-        return (job);
+        return job;
 }
 
-////////////////////////////////////////////////////////////////////////
-/// AES-GCM
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* AES-GCM */
+/* ========================================================================= */
 
 #ifndef NO_GCM
 __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_AES_GCM_DEC(JOB_AES_HMAC *job)
 {
-      DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
 
-      if (16 == job->aes_key_len_in_bytes)
-              AES_GCM_DEC_128(job->aes_dec_key_expanded,
-                              &ctx,
-                              job->dst,
-                              job->src + job->cipher_start_src_offset_in_bytes,
-                              job->msg_len_to_cipher_in_bytes,
-                              job->iv,
-                              job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                              job->auth_tag_output, job->auth_tag_output_len_in_bytes);
-      else if (24 == job->aes_key_len_in_bytes)
-              AES_GCM_DEC_192(job->aes_dec_key_expanded,
-                              &ctx,
-                              job->dst,
-                              job->src + job->cipher_start_src_offset_in_bytes,
-                              job->msg_len_to_cipher_in_bytes,
-                              job->iv,
-                              job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                              job->auth_tag_output, job->auth_tag_output_len_in_bytes);
-      else
-              AES_GCM_DEC_256(job->aes_dec_key_expanded,
-                              &ctx,
-                              job->dst,
-                              job->src + job->cipher_start_src_offset_in_bytes,
-                              job->msg_len_to_cipher_in_bytes,
-                              job->iv,
-                              job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                              job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        if (16 == job->aes_key_len_in_bytes)
+                AES_GCM_DEC_128(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes,
+                                job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+        else if (24 == job->aes_key_len_in_bytes)
+                AES_GCM_DEC_192(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes,
+                                job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+        else
+                AES_GCM_DEC_256(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes,
+                                job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
 
-      job->status = STS_COMPLETED;
-      return job;
+        job->status = STS_COMPLETED;
+        return job;
 }
 
 __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_AES_GCM_ENC(JOB_AES_HMAC *job)
 {
-      DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
 
-      if (16 == job->aes_key_len_in_bytes)
-              AES_GCM_ENC_128(job->aes_dec_key_expanded,
-                              &ctx,
-                              job->dst,
-                              job->src + job->cipher_start_src_offset_in_bytes,
-                              job->msg_len_to_cipher_in_bytes,
-                              job->iv,
-                              job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                              job->auth_tag_output, job->auth_tag_output_len_in_bytes);
-      else if (24 == job->aes_key_len_in_bytes)
-              AES_GCM_ENC_192(job->aes_dec_key_expanded,
-                              &ctx,
-                              job->dst,
-                              job->src + job->cipher_start_src_offset_in_bytes,
-                              job->msg_len_to_cipher_in_bytes,
-                              job->iv,
-                              job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                              job->auth_tag_output, job->auth_tag_output_len_in_bytes);
-      else
-              AES_GCM_ENC_256(job->aes_dec_key_expanded,
-                              &ctx,
-                              job->dst,
-                              job->src + job->cipher_start_src_offset_in_bytes,
-                              job->msg_len_to_cipher_in_bytes,
-                              job->iv,
-                              job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                              job->auth_tag_output, job->auth_tag_output_len_in_bytes);
+        if (16 == job->aes_key_len_in_bytes)
+                AES_GCM_ENC_128(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes, job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+        else if (24 == job->aes_key_len_in_bytes)
+                AES_GCM_ENC_192(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes, job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+        else
+                AES_GCM_ENC_256(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes, job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
 
-      job->status = STS_COMPLETED;
-      return job;
+        job->status = STS_COMPLETED;
+        return job;
 }
 #endif /* !NO_GCM */
 
-////////////////////////////////////////////////////////////////////////
-/// Custom hash / cipher
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* Custom hash / cipher */
+/* ========================================================================= */
 
 __forceinline
 JOB_AES_HMAC *
@@ -264,9 +260,9 @@ FLUSH_JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
         return JOB_CUSTOM_HASH(job);
 }
 
-////////////////////////////////////////////////////////////////////////
-/// DOCSIS AES (AES128 CBC + AES128 CFB)
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* DOCSIS AES (AES128 CBC + AES128 CFB) */
+/* ========================================================================= */
 
 #define AES_BLOCK_SIZE 16
 
@@ -292,7 +288,8 @@ DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
         if (job == NULL)
                 return job;
 
-        IMB_ASSERT((job->cipher_direction == DECRYPT) || (job->status & STS_COMPLETED_AES));
+        IMB_ASSERT((job->cipher_direction == DECRYPT) ||
+                   (job->status & STS_COMPLETED_AES));
 
         partial_bytes = job->msg_len_to_cipher_in_bytes & (AES_BLOCK_SIZE - 1);
         offset = job->msg_len_to_cipher_in_bytes & (~(AES_BLOCK_SIZE - 1));
@@ -309,14 +306,16 @@ DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
 
         IMB_ASSERT(partial_bytes <= AES_BLOCK_SIZE);
         AES_CFB_128_ONE(job->dst + offset,
-                        job->src + job->cipher_start_src_offset_in_bytes + offset,
+                        job->src + job->cipher_start_src_offset_in_bytes +
+                        offset,
                         iv, job->aes_enc_key_expanded, partial_bytes);
 
         return job;
 }
 
 /**
- * @brief Encrypts/decrypts the first and only partial block for DOCSIS SEC v3.1 BPI
+ * @brief Encrypts/decrypts the first and only partial block for
+ *        DOCSIS SEC v3.1 BPI
  *
  * The first partial block is encrypted/decrypted using AES CFB128.
  *
@@ -337,9 +336,9 @@ DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
         return job;
 }
 
-////////////////////////////////////////////////////////////////////////
-/// DES and DOCSIS DES (DES CBC + DES CFB)
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* DES and DOCSIS DES (DES CBC + DES CFB) */
+/* ========================================================================= */
 
 /**
  * @brief DOCSIS DES cipher encryption
@@ -355,7 +354,8 @@ DOCSIS_DES_ENC(JOB_AES_HMAC *job)
         docsis_des_enc_basic(job->src + job->cipher_start_src_offset_in_bytes,
                              job->dst,
                              (int) job->msg_len_to_cipher_in_bytes,
-                             job->aes_enc_key_expanded, (const uint64_t *)job->iv);
+                             job->aes_enc_key_expanded,
+                             (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;
 }
@@ -374,7 +374,8 @@ DOCSIS_DES_DEC(JOB_AES_HMAC *job)
         docsis_des_dec_basic(job->src + job->cipher_start_src_offset_in_bytes,
                              job->dst,
                              (int) job->msg_len_to_cipher_in_bytes,
-                             job->aes_dec_key_expanded, (const uint64_t *)job->iv);
+                             job->aes_dec_key_expanded,
+                             (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;
 }
@@ -392,7 +393,8 @@ DES_CBC_ENC(JOB_AES_HMAC *job)
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         des_enc_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
                           job->dst,
-                          job->msg_len_to_cipher_in_bytes & (~(DES_BLOCK_SIZE - 1)),
+                          job->msg_len_to_cipher_in_bytes &
+                          (~(DES_BLOCK_SIZE - 1)),
                           job->aes_enc_key_expanded, (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;
@@ -411,15 +413,16 @@ DES_CBC_DEC(JOB_AES_HMAC *job)
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         des_dec_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
                           job->dst,
-                          job->msg_len_to_cipher_in_bytes & (~(DES_BLOCK_SIZE - 1)),
+                          job->msg_len_to_cipher_in_bytes &
+                          (~(DES_BLOCK_SIZE - 1)),
                           job->aes_dec_key_expanded, (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;
 }
 
-////////////////////////////////////////////////////////////////////////
-/// Cipher submit & flush functions
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* Cipher submit & flush functions */
+/* ========================================================================= */
 
 __forceinline
 JOB_AES_HMAC *
@@ -430,7 +433,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES128_ENC(&state->aes128_ooo, job);
                 } else if (24 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES192_ENC(&state->aes192_ooo, job);
-                } else { // assume 32
+                } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_ENC(&state->aes256_ooo, job);
                 }
         } else if (CNTR == job->cipher_mode) {
@@ -438,14 +441,15 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES128_CNTR(job);
                 } else if (24 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES192_CNTR(job);
-                } else { // assume 32
+                } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_CNTR(job);
                 }
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
                         JOB_AES_HMAC *tmp;
 
-                        tmp = SUBMIT_JOB_AES128_ENC(&state->docsis_sec_ooo, job);
+                        tmp = SUBMIT_JOB_AES128_ENC(&state->docsis_sec_ooo,
+                                                    job);
                         return DOCSIS_LAST_BLOCK(tmp);
                 } else
                         return DOCSIS_FIRST_BLOCK(job);
@@ -463,11 +467,12 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif /* SUBMIT_JOB_DES_CBC_ENC */
         } else if (DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
-                return SUBMIT_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo, job);
+                return SUBMIT_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo,
+                                                 job);
 #else
                 return DOCSIS_DES_ENC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_ENC */
-        } else { // assume NUL_CIPHER
+        } else { /* assume NUL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
         }
@@ -482,7 +487,7 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return FLUSH_JOB_AES128_ENC(&state->aes128_ooo);
                 } else if (24 == job->aes_key_len_in_bytes) {
                         return FLUSH_JOB_AES192_ENC(&state->aes192_ooo);
-                } else  {// assume 32
+                } else  { /* assume 32 */
                         return FLUSH_JOB_AES256_ENC(&state->aes256_ooo);
                 }
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
@@ -500,7 +505,7 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif /* FLUSH_JOB_DOCSIS_DES_ENC */
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
-        } else { // assume CNTR or NULL_CIPHER
+        } else { /* assume CNTR or NULL_CIPHER */
                 return NULL;
         }
 }
@@ -514,7 +519,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES128_DEC(job);
                 } else if (24 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES192_DEC(job);
-                } else { // assume 32
+                } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_DEC(job);
                 }
         } else if (CNTR == job->cipher_mode) {
@@ -522,7 +527,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES128_CNTR(job);
                 } else if (24 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES192_CNTR(job);
-                } else { // assume 32
+                } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_CNTR(job);
                 }
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
@@ -545,7 +550,8 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif /* SUBMIT_JOB_DES_CBC_DEC */
         } else if (DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
-                return SUBMIT_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo, job);
+                return SUBMIT_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo,
+                                                 job);
 #else
                 return DOCSIS_DES_DEC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_DEC */
@@ -573,9 +579,9 @@ FLUSH_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
         return SUBMIT_JOB_AES_DEC(state, job);
 }
 
-////////////////////////////////////////////////////////////////////////
-/// Hash submit & flush functions
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* Hash submit & flush functions */
+/* ========================================================================= */
 
 __forceinline
 JOB_AES_HMAC *
@@ -594,13 +600,15 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         case SHA_224:
 #ifdef HASH_USE_SHAEXT
                 if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return SUBMIT_JOB_HMAC_SHA_224_NI(&state->hmac_sha_224_ooo, job);
+                        return SUBMIT_JOB_HMAC_SHA_224_NI
+                                (&state->hmac_sha_224_ooo, job);
 #endif
                 return SUBMIT_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo, job);
         case SHA_256:
 #ifdef HASH_USE_SHAEXT
                 if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return SUBMIT_JOB_HMAC_SHA_256_NI(&state->hmac_sha_256_ooo, job);
+                        return SUBMIT_JOB_HMAC_SHA_256_NI
+                                (&state->hmac_sha_256_ooo, job);
 #endif
                 return SUBMIT_JOB_HMAC_SHA_256(&state->hmac_sha_256_ooo, job);
         case SHA_384:
@@ -613,7 +621,7 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_HMAC_MD5(&state->hmac_md5_ooo, job);
         case CUSTOM_HASH:
                 return SUBMIT_JOB_CUSTOM_HASH(job);
-        default: // assume NULL_HASH
+        default: /* assume NULL_HASH */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
         }
@@ -633,13 +641,15 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         case SHA_224:
 #ifdef HASH_USE_SHAEXT
                 if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return FLUSH_JOB_HMAC_SHA_224_NI(&state->hmac_sha_224_ooo);
+                        return FLUSH_JOB_HMAC_SHA_224_NI
+                                (&state->hmac_sha_224_ooo);
 #endif
                 return FLUSH_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo);
         case SHA_256:
 #ifdef HASH_USE_SHAEXT
                 if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
-                        return FLUSH_JOB_HMAC_SHA_256_NI(&state->hmac_sha_256_ooo);
+                        return FLUSH_JOB_HMAC_SHA_256_NI
+                                (&state->hmac_sha_256_ooo);
 #endif
                 return FLUSH_JOB_HMAC_SHA_256(&state->hmac_sha_256_ooo);
         case SHA_384:
@@ -663,15 +673,17 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 
-////////////////////////////////////////////////////////////////////////
-/// Job submit & flush functions
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* Job submit & flush functions */
+/* ========================================================================= */
 
 #ifdef DEBUG
 #ifdef _WIN32
-#define INVALID_PRN(_fmt, ...) fprintf(stderr, "%s():%d: " _fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define INVALID_PRN(_fmt, ...)                                          \
+        fprintf(stderr, "%s():%d: " _fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
 #else
-#define INVALID_PRN(_fmt, ...) fprintf(stderr, "%s():%d: " _fmt, __func__, __LINE__, __VA_ARGS__)
+#define INVALID_PRN(_fmt, ...)                                          \
+        fprintf(stderr, "%s():%d: " _fmt, __func__, __LINE__, __VA_ARGS__)
 #endif
 #else
 #define INVALID_PRN(_fmt, ...)
@@ -826,7 +838,8 @@ is_job_invalid(const JOB_AES_HMAC *job)
         case SHA_256:
         case SHA_384:
         case SHA_512:
-                if (job->auth_tag_output_len_in_bytes != auth_tag_len_max[job->hash_alg]) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_max[job->hash_alg]) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
@@ -877,7 +890,8 @@ is_job_invalid(const JOB_AES_HMAC *job)
         case HASH_CIPHER:
                 if (job->cipher_mode != NULL_CIPHER) {
                         if (job->cipher_direction != DECRYPT) {
-                                INVALID_PRN("chain_order:%d\n", job->chain_order);
+                                INVALID_PRN("chain_order:%d\n",
+                                            job->chain_order);
                                 return 1;
                         }
                 }
@@ -894,20 +908,18 @@ __forceinline
 JOB_AES_HMAC *submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
 {
         if (job->chain_order == CIPHER_HASH) {
-                // assume job->cipher_direction == ENCRYPT
+                /* assume job->cipher_direction == ENCRYPT */
                 job = SUBMIT_JOB_AES_ENC(state, job);
                 if (job) {
                         job = SUBMIT_JOB_HASH(state, job);
-                        if (job && (job->chain_order == HASH_CIPHER)) {
+                        if (job && (job->chain_order == HASH_CIPHER))
                                 SUBMIT_JOB_AES_DEC(state, job);
-                        }
-                } // end if job
-        } else { // job->chain_order == HASH_CIPHER
-                // assume job->cipher_direction == DECRYPT
+                } /* end if job */
+        } else { /* job->chain_order == HASH_CIPHER */
+                /* assume job->cipher_direction == DECRYPT */
                 job = SUBMIT_JOB_HASH(state, job);
-                if (job && (job->chain_order == HASH_CIPHER)) {
+                if (job && (job->chain_order == HASH_CIPHER))
                         SUBMIT_JOB_AES_DEC(state, job);
-                }
         }
         return job;
 }
@@ -919,7 +931,7 @@ void complete_job(MB_MGR *state, JOB_AES_HMAC *job)
 
         while (job->status < STS_COMPLETED) {
                 if (job->chain_order == CIPHER_HASH) {
-                        // assume job->cipher_direction == ENCRYPT
+                        /* assume job->cipher_direction == ENCRYPT */
                         tmp = FLUSH_JOB_AES_ENC(state, job);
                         if (tmp)
                                 tmp = SUBMIT_JOB_HASH(state, tmp);
@@ -927,8 +939,8 @@ void complete_job(MB_MGR *state, JOB_AES_HMAC *job)
                                 tmp = FLUSH_JOB_HASH(state, job);
                         if (tmp && (tmp->chain_order == HASH_CIPHER))
                                 SUBMIT_JOB_AES_DEC(state, tmp);
-                } else { // job->chain_order == HASH_CIPHER
-                        // assume job->cipher_direction == DECRYPT
+                } else { /* job->chain_order == HASH_CIPHER */
+                        /* assume job->cipher_direction == DECRYPT */
                         tmp = FLUSH_JOB_HASH(state, job);
                         if (tmp == NULL)
                                 tmp = FLUSH_JOB_AES_DEC(state, job);
@@ -946,6 +958,7 @@ submit_job_and_check(MB_MGR *state, const int run_check)
         JOB_AES_HMAC *job = NULL;
 #ifndef LINUX
         DECLARE_ALIGNED(UINT128 xmm_save[10], 16);
+
         SAVE_XMMS(xmm_save);
 #endif
 
@@ -964,19 +977,19 @@ submit_job_and_check(MB_MGR *state, const int run_check)
         }
 
         if (state->earliest_job < 0) {
-                // state was previously empty
+                /* state was previously empty */
                 state->earliest_job = state->next_job;
                 ADV_JOBS(&state->next_job);
 #ifndef LINUX
                 RESTORE_XMMS(xmm_save);
 #endif
-                return NULL;	// if we were empty, nothing to return
+                return NULL;	/* if we were empty, nothing to return */
         }
 
         ADV_JOBS(&state->next_job);
 
         if (state->earliest_job == state->next_job) {
-                // Full
+                /* Full */
                 job = JOBS(state, state->earliest_job);
                 complete_job(state, job);
                 ADV_JOBS(&state->earliest_job);
@@ -986,7 +999,7 @@ submit_job_and_check(MB_MGR *state, const int run_check)
                 return job;
         }
 
-        // not full
+        /* not full */
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -1022,7 +1035,7 @@ FLUSH_JOB(MB_MGR *state)
 #endif
 
         if (state->earliest_job < 0)
-                return NULL; // empty
+                return NULL; /* empty */
 
 #ifndef LINUX
         SAVE_XMMS(xmm_save);
@@ -1033,7 +1046,7 @@ FLUSH_JOB(MB_MGR *state)
         ADV_JOBS(&state->earliest_job);
 
         if (state->earliest_job == state->next_job)
-                state->earliest_job = -1; // becomes empty
+                state->earliest_job = -1; /* becomes empty */
 
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -1041,8 +1054,8 @@ FLUSH_JOB(MB_MGR *state)
         return job;
 }
 
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
+/* ========================================================================= */
+/* ========================================================================= */
 
 IMB_DLL_EXPORT
 UINT32

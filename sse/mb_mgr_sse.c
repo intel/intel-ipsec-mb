@@ -1,29 +1,29 @@
-/*
- * Copyright (c) 2012-2017, Intel Corporation
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright notice,
- *       this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Intel Corporation nor the names of its contributors
- *       may be used to endorse or promote products derived from this software
- *       without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+/*******************************************************************************
+  Copyright (c) 2012-2017, Intel Corporation
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+      * Redistributions of source code must retain the above copyright notice,
+        this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in the
+        documentation and/or other materials provided with the distribution.
+      * Neither the name of Intel Corporation nor the names of its contributors
+        may be used to endorse or promote products derived from this software
+        without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*******************************************************************************/
 
 
 #include <stdio.h>
@@ -43,45 +43,58 @@
 #endif
 #include "des.h"
 
-JOB_AES_HMAC* submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes128_enc_sse(MB_MGR_AES_OOO *state);
+JOB_AES_HMAC *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
+                                        JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes128_enc_sse(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC* submit_job_aes192_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes192_enc_sse(MB_MGR_AES_OOO *state);
+JOB_AES_HMAC *submit_job_aes192_enc_sse(MB_MGR_AES_OOO *state,
+                                        JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes192_enc_sse(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC* submit_job_aes256_enc_sse(MB_MGR_AES_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes256_enc_sse(MB_MGR_AES_OOO *state);
+JOB_AES_HMAC *submit_job_aes256_enc_sse(MB_MGR_AES_OOO *state,
+                                        JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes256_enc_sse(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state,
+                                  JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state,
+                                     JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_ni_sse(MB_MGR_HMAC_SHA_1_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state,
+                                          JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_sha_224_sse(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state,
+                                             JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state,
+                                          JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_sha_256_sse(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state,
+                                             JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state,
+                                          JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_sha_384_sse(MB_MGR_HMAC_SHA_512_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state,
+                                          JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_sha_512_sse(MB_MGR_HMAC_SHA_512_OOO *state);
 
-JOB_AES_HMAC* submit_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state);
+JOB_AES_HMAC *submit_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state,
+                                      JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state);
 
 
-JOB_AES_HMAC* submit_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state, JOB_AES_HMAC* job);
-JOB_AES_HMAC* flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
+JOB_AES_HMAC *submit_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state,
+                                      JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 
 #define SAVE_XMMS save_xmms
 #define RESTORE_XMMS restore_xmms
@@ -136,7 +149,7 @@ JOB_AES_HMAC* flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 #define AES_GCM_ENC_256   aes_gcm_enc_256_sse
 #endif /* NO_GCM */
 
-////////////////////////////////////////////////////////////////////////
+/* ====================================================================== */
 
 #define SUBMIT_JOB         submit_job_sse
 #define FLUSH_JOB          flush_job_sse
@@ -147,7 +160,7 @@ JOB_AES_HMAC* flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse
 #define QUEUE_SIZE queue_size_sse
 
-////////////////////////////////////////////////////////////////////////
+/* ====================================================================== */
 
 #define SUBMIT_JOB_AES_ENC SUBMIT_JOB_AES_ENC_SSE
 #define FLUSH_JOB_AES_ENC  FLUSH_JOB_AES_ENC_SSE
@@ -155,22 +168,25 @@ JOB_AES_HMAC* flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 #define SUBMIT_JOB_HASH    SUBMIT_JOB_HASH_SSE
 #define FLUSH_JOB_HASH     FLUSH_JOB_HASH_SSE
 
-////////////////////////////////////////////////////////////////////////
+/* ====================================================================== */
 
 extern void aes_cfb_128_one_sse(void *out, const void *in, const void *iv,
                                 const void *keys, UINT64 len);
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_sse
 
-////////////////////////////////////////////////////////////////////////
+/* ====================================================================== */
 
 /* Variable to decide between SIMD or SHAxNI OOO scheduler selection. */
 enum SHA_EXTENSION_USAGE sse_sha_ext_usage = SHA_EXT_DETECT;
 
-/* Used to decide if SHA1/SHA256 SIMD or SHA1NI OOO scheduler should be called. */
+/*
+ * Used to decide if SHA1/SHA256 SIMD or SHA1NI OOO scheduler should be
+ * called.
+ */
 #define HASH_USE_SHAEXT sse_sha_ext_usage
 
-////////////////////////////////////////////////////////////////////////
+/* ====================================================================== */
 
 struct cpuid_regs {
         UINT32 eax;
@@ -248,7 +264,7 @@ sha_extensions_supported(void)
         __mbcpuid(0x0, 0x0, &r);
         if (r.eax < 0x7)
                 return 0;
-        
+
         /* Check presence of SHA extensions in the extended feature flags */
         __mbcpuid(0x7, 0x0, &r);
         if (r.ebx & (1 << 29))
@@ -257,7 +273,7 @@ sha_extensions_supported(void)
         return 0;
 }
 
-void 
+void
 init_mb_mgr_sse(MB_MGR *state)
 {
         unsigned int j;
@@ -279,7 +295,7 @@ init_mb_mgr_sse(MB_MGR *state)
         }
 #endif /* HASH_USE_SHAEXT */
 
-        // Init AES out-of-order fields
+        /* Init AES out-of-order fields */
         state->aes128_ooo.lens[0] = 0;
         state->aes128_ooo.lens[1] = 0;
         state->aes128_ooo.lens[2] = 0;
@@ -337,7 +353,7 @@ init_mb_mgr_sse(MB_MGR *state)
         state->docsis_sec_ooo.job_in_lane[2] = NULL;
         state->docsis_sec_ooo.job_in_lane[3] = NULL;
 
-        // Init HMAC/SHA1 out-of-order fields
+        /* Init HMAC/SHA1 out-of-order fields */
         state->hmac_sha_1_ooo.lens[0] = 0;
         state->hmac_sha_1_ooo.lens[1] = 0;
         state->hmac_sha_1_ooo.lens[2] = 0;
@@ -347,7 +363,7 @@ init_mb_mgr_sse(MB_MGR *state)
         state->hmac_sha_1_ooo.lens[6] = 0xFFFF;
         state->hmac_sha_1_ooo.lens[7] = 0xFFFF;
         state->hmac_sha_1_ooo.unused_lanes = 0xFF03020100;
-        for (j=0; j<SSE_NUM_SHA1_LANES; j++) {
+        for (j = 0; j < SSE_NUM_SHA1_LANES; j++) {
                 state->hmac_sha_1_ooo.ldata[j].job_in_lane = NULL;
                 state->hmac_sha_1_ooo.ldata[j].extra_block[64] = 0x80;
                 memset(state->hmac_sha_1_ooo.ldata[j].extra_block + 65,
@@ -364,7 +380,7 @@ init_mb_mgr_sse(MB_MGR *state)
 
 #ifdef HASH_USE_SHAEXT
         if (HASH_USE_SHAEXT == SHA_EXT_PRESENT) {
-                // Init HMAC/SHA1 NI out-of-order fields
+                /* Init HMAC/SHA1 NI out-of-order fields */
                 state->hmac_sha_1_ooo.lens[0] = 0;
                 state->hmac_sha_1_ooo.lens[1] = 0;
                 state->hmac_sha_1_ooo.lens[2] = 0xFFFF;
@@ -376,8 +392,8 @@ init_mb_mgr_sse(MB_MGR *state)
                 state->hmac_sha_1_ooo.unused_lanes = 0xFF0100;
         }
 #endif /* HASH_USE_SHAEXT */
-    
-        // Init HMAC/SHA224 out-of-order fields
+
+        /* Init HMAC/SHA224 out-of-order fields */
         state->hmac_sha_224_ooo.lens[0] = 0;
         state->hmac_sha_224_ooo.lens[1] = 0;
         state->hmac_sha_224_ooo.lens[2] = 0;
@@ -387,7 +403,7 @@ init_mb_mgr_sse(MB_MGR *state)
         state->hmac_sha_224_ooo.lens[6] = 0xFFFF;
         state->hmac_sha_224_ooo.lens[7] = 0xFFFF;
         state->hmac_sha_224_ooo.unused_lanes = 0xFF03020100;
-        for (j=0; j<SSE_NUM_SHA256_LANES; j++) {
+        for (j = 0; j < SSE_NUM_SHA256_LANES; j++) {
                 state->hmac_sha_224_ooo.ldata[j].job_in_lane = NULL;
                 state->hmac_sha_224_ooo.ldata[j].extra_block[64] = 0x80;
                 memset(state->hmac_sha_224_ooo.ldata[j].extra_block + 65,
@@ -397,13 +413,13 @@ init_mb_mgr_sse(MB_MGR *state)
                 memset(p + 8*4 + 1,
                        0x00,
                        64 - 8*4 - 1 - 2);
-                p[7*4] = 0x80;  // digest 7 words long
-                p[64-2] = 0x02; // length in little endian = 0x02E0
+                p[7*4] = 0x80;  /* digest 7 words long */
+                p[64-2] = 0x02; /* length in little endian = 0x02E0 */
                 p[64-1] = 0xE0;
         }
 #ifdef HASH_USE_SHAEXT
         if (HASH_USE_SHAEXT == SHA_EXT_PRESENT) {
-                // Init HMAC/SHA224 NI out-of-order fields
+                /* Init HMAC/SHA224 NI out-of-order fields */
                 state->hmac_sha_224_ooo.lens[0] = 0;
                 state->hmac_sha_224_ooo.lens[1] = 0;
                 state->hmac_sha_224_ooo.lens[2] = 0xFFFF;
@@ -416,7 +432,7 @@ init_mb_mgr_sse(MB_MGR *state)
         }
 #endif /* HASH_USE_SHAEXT */
 
-        // Init HMAC/SHA_256 out-of-order fields
+        /* Init HMAC/SHA_256 out-of-order fields */
         state->hmac_sha_256_ooo.lens[0] = 0;
         state->hmac_sha_256_ooo.lens[1] = 0;
         state->hmac_sha_256_ooo.lens[2] = 0;
@@ -426,7 +442,7 @@ init_mb_mgr_sse(MB_MGR *state)
         state->hmac_sha_256_ooo.lens[6] = 0xFFFF;
         state->hmac_sha_256_ooo.lens[7] = 0xFFFF;
         state->hmac_sha_256_ooo.unused_lanes = 0xFF03020100;
-        for (j=0; j<SSE_NUM_SHA256_LANES; j++) {
+        for (j = 0; j < SSE_NUM_SHA256_LANES; j++) {
                 state->hmac_sha_256_ooo.ldata[j].job_in_lane = NULL;
                 state->hmac_sha_256_ooo.ldata[j].extra_block[64] = 0x80;
                 memset(state->hmac_sha_256_ooo.ldata[j].extra_block + 65,
@@ -435,14 +451,15 @@ init_mb_mgr_sse(MB_MGR *state)
                 p = state->hmac_sha_256_ooo.ldata[j].outer_block;
                 memset(p + 8*4 + 1,
                        0x00,
-                       64 - 8*4 - 1 - 2); // digest is 8*4 bytes long
+                       64 - 8*4 - 1 - 2); /* digest is 8*4 bytes long */
                 p[8*4] = 0x80;
-                p[64-2] = 0x03; // length of (opad (64*8) bits + 256 bits) in hex is 0x300
+                p[64-2] = 0x03; /* length of (opad (64*8) bits + 256 bits)
+                                 * in hex is 0x300 */
                 p[64-1] = 0x00;
         }
 #ifdef HASH_USE_SHAEXT
         if (HASH_USE_SHAEXT == SHA_EXT_PRESENT) {
-                // Init HMAC/SHA256 NI out-of-order fields
+                /* Init HMAC/SHA256 NI out-of-order fields */
                 state->hmac_sha_256_ooo.lens[0] = 0;
                 state->hmac_sha_256_ooo.lens[1] = 0;
                 state->hmac_sha_256_ooo.lens[2] = 0xFFFF;
@@ -454,8 +471,8 @@ init_mb_mgr_sse(MB_MGR *state)
                 state->hmac_sha_256_ooo.unused_lanes = 0xFF0100;
         }
 #endif /* HASH_USE_SHAEXT */
-    
-        // Init HMAC/SHA384 out-of-order fields
+
+        /* Init HMAC/SHA384 out-of-order fields */
         state->hmac_sha_384_ooo.lens[0] = 0;
         state->hmac_sha_384_ooo.lens[1] = 0;
         state->hmac_sha_384_ooo.lens[2] = 0xFFFF;
@@ -465,26 +482,33 @@ init_mb_mgr_sse(MB_MGR *state)
         state->hmac_sha_384_ooo.lens[6] = 0xFFFF;
         state->hmac_sha_384_ooo.lens[7] = 0xFFFF;
         state->hmac_sha_384_ooo.unused_lanes = 0xFF0100;
-        for (j=0; j< SSE_NUM_SHA512_LANES; j++) {
-                state->hmac_sha_384_ooo.ldata[j].job_in_lane = NULL;
-                state->hmac_sha_384_ooo.ldata[j].extra_block[SHA_384_BLOCK_SIZE] = 0x80;
-                memset(state->hmac_sha_384_ooo.ldata[j].extra_block + (SHA_384_BLOCK_SIZE + 1),
-                       0x00,
-                       (SHA_384_BLOCK_SIZE+7));
-                p = state->hmac_sha_384_ooo.ldata[j].outer_block;
-                memset(p + SHA384_DIGEST_SIZE_IN_BYTES  + 1,
-                       0x00,
-                       SHA_384_BLOCK_SIZE - SHA384_DIGEST_SIZE_IN_BYTES  - 1 - 2); // special end point because this length is constant
-                // mark the end
-                p[SHA384_DIGEST_SIZE_IN_BYTES] = 0x80;
-                // hmac outer block length always of fixed size, it is OKey length, a whole message block length, 1024 bits,, with padding
-                // plus the length of the inner digest, which is 384 bits
-                // 1408 bits == 0x0580. The input message block needs to be converted to big endian within the sha implementation before use. 
+        for (j = 0; j < SSE_NUM_SHA512_LANES; j++) {
+                MB_MGR_HMAC_SHA_512_OOO *ctx = &state->hmac_sha_384_ooo;
+
+                ctx->ldata[j].job_in_lane = NULL;
+                ctx->ldata[j].extra_block[SHA_384_BLOCK_SIZE] = 0x80;
+                memset(ctx->ldata[j].extra_block + (SHA_384_BLOCK_SIZE + 1),
+                       0x00, SHA_384_BLOCK_SIZE + 7);
+
+                p = ctx->ldata[j].outer_block;
+                memset(p + SHA384_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
+                       /* special end point because this length is constant */
+                       SHA_384_BLOCK_SIZE -
+                       SHA384_DIGEST_SIZE_IN_BYTES - 1 - 2);
+                p[SHA384_DIGEST_SIZE_IN_BYTES] = 0x80; /* mark the end */
+                /*
+                 * hmac outer block length always of fixed size, it is OKey
+                 * length, a whole message block length, 1024 bits, with padding
+                 * plus the length of the inner digest, which is 384 bits
+                 * 1408 bits == 0x0580. The input message block needs to be
+                 * converted to big endian within the sha implementation
+                 * before use.
+                 */
                 p[SHA_384_BLOCK_SIZE - 2] = 0x05;
                 p[SHA_384_BLOCK_SIZE - 1] = 0x80;
         }
 
-     	// Init HMAC/SHA512 out-of-order fields
+        /* Init HMAC/SHA512 out-of-order fields */
         state->hmac_sha_512_ooo.lens[0] = 0;
         state->hmac_sha_512_ooo.lens[1] = 0;
         state->hmac_sha_512_ooo.lens[2] = 0xFFFF;
@@ -494,26 +518,33 @@ init_mb_mgr_sse(MB_MGR *state)
         state->hmac_sha_512_ooo.lens[6] = 0xFFFF;
         state->hmac_sha_512_ooo.lens[7] = 0xFFFF;
         state->hmac_sha_512_ooo.unused_lanes = 0xFF0100;
-        for (j=0; j< SSE_NUM_SHA512_LANES; j++) {
-                state->hmac_sha_512_ooo.ldata[j].job_in_lane = NULL;
-                state->hmac_sha_512_ooo.ldata[j].extra_block[SHA_512_BLOCK_SIZE] = 0x80;
-                memset(state->hmac_sha_512_ooo.ldata[j].extra_block + (SHA_512_BLOCK_SIZE + 1),
-                       0x00,
-                       (SHA_512_BLOCK_SIZE+7));
-                p = state->hmac_sha_512_ooo.ldata[j].outer_block;
-                memset(p + SHA512_DIGEST_SIZE_IN_BYTES  + 1,
-                       0x00,
-                       SHA_512_BLOCK_SIZE - SHA512_DIGEST_SIZE_IN_BYTES  - 1 - 2); // special end point because this length is constant
-                // mark the end
-                p[SHA512_DIGEST_SIZE_IN_BYTES] = 0x80;
-                // hmac outer block length always of fixed size, it is OKey length, a whole message block length, 1024 bits,, with padding
-                // plus the length of the inner digest, which is 512 bits
-                // 1536 bits == 0x600. The input message block needs to be converted to big endian within the sha implementation before use. 
+        for (j = 0; j < SSE_NUM_SHA512_LANES; j++) {
+                MB_MGR_HMAC_SHA_512_OOO *ctx = &state->hmac_sha_512_ooo;
+
+                ctx->ldata[j].job_in_lane = NULL;
+                ctx->ldata[j].extra_block[SHA_512_BLOCK_SIZE] = 0x80;
+                memset(ctx->ldata[j].extra_block + (SHA_512_BLOCK_SIZE + 1),
+                       0x00, SHA_512_BLOCK_SIZE + 7);
+
+                p = ctx->ldata[j].outer_block;
+                memset(p + SHA512_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
+                       /* special end point because this length is constant */
+                       SHA_512_BLOCK_SIZE -
+                       SHA512_DIGEST_SIZE_IN_BYTES  - 1 - 2);
+                p[SHA512_DIGEST_SIZE_IN_BYTES] = 0x80; /* mark the end */
+                /*
+                 * hmac outer block length always of fixed size, it is OKey
+                 * length, a whole message block length, 1024 bits, with padding
+                 * plus the length of the inner digest, which is 512 bits
+                 * 1536 bits == 0x600. The input message block needs to be
+                 * converted to big endian within the sha implementation
+                 * before use.
+                 */
                 p[SHA_512_BLOCK_SIZE - 2] = 0x06;
                 p[SHA_512_BLOCK_SIZE - 1] = 0x00;
         }
 
-        // Init HMAC/MD5 out-of-order fields
+        /* Init HMAC/MD5 out-of-order fields */
         state->hmac_md5_ooo.lens[0] = 0;
         state->hmac_md5_ooo.lens[1] = 0;
         state->hmac_md5_ooo.lens[2] = 0;
@@ -531,22 +562,22 @@ init_mb_mgr_sse(MB_MGR *state)
         state->hmac_md5_ooo.lens[14] = 0xFFFF;
         state->hmac_md5_ooo.lens[15] = 0xFFFF;
         state->hmac_md5_ooo.unused_lanes = 0xF76543210;
-        for (j=0; j<SSE_NUM_MD5_LANES; j++) {
+        for (j = 0; j < SSE_NUM_MD5_LANES; j++) {
                 state->hmac_md5_ooo.ldata[j].job_in_lane = NULL;
                 state->hmac_md5_ooo.ldata[j].extra_block[64] = 0x80;
                 memset(state->hmac_md5_ooo.ldata[j].extra_block + 65,
                        0x00,
-                       64+7);
+                       64 + 7);
                 p = state->hmac_md5_ooo.ldata[j].outer_block;
-                memset(p + 5*4 + 1,
+                memset(p + (5 * 4) + 1,
                        0x00,
-                       64 - 5*4 - 1 - 2);
+                       64 - (5 * 4) - 1 - 2);
                 p[4*4] = 0x80;
                 p[64-7] = 0x02;
                 p[64-8] = 0x80;
         }
 
-        // Init AES/XCBC OOO fields
+        /* Init AES/XCBC OOO fields */
         state->aes_xcbc_ooo.lens[0] = 0;
         state->aes_xcbc_ooo.lens[1] = 0;
         state->aes_xcbc_ooo.lens[2] = 0;
@@ -556,13 +587,13 @@ init_mb_mgr_sse(MB_MGR *state)
         state->aes_xcbc_ooo.lens[6] = 0xFFFF;
         state->aes_xcbc_ooo.lens[7] = 0xFFFF;
         state->aes_xcbc_ooo.unused_lanes = 0xFF03020100;
-        for (j=0; j<4; j++) {
+        for (j = 0; j < 4; j++) {
                 state->aes_xcbc_ooo.ldata[j].job_in_lane = NULL;
                 state->aes_xcbc_ooo.ldata[j].final_block[16] = 0x80;
                 memset(state->aes_xcbc_ooo.ldata[j].final_block + 17, 0x00, 15);
         }
 
-        // Init "in order" components
+        /* Init "in order" components */
         state->next_job = 0;
         state->earliest_job = -1;
 

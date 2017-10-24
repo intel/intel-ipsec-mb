@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -67,7 +67,7 @@ section .text
 ; idx needs to be in rbx, rbp, r12-r15
 %define last_len	rbp
 %define idx		rbp
-	    
+
 %define p		r11
 %define start_offset	r11
 
@@ -76,15 +76,15 @@ section .text
 
 %define job_rax		rax
 %define len		rax
-	    
+
 %define size_offset	reg3
 %define tmp2		reg3
-	    
+
 %define lane		reg4
 %define tmp3		reg4
-	    
+
 %define extra_blocks	r8
-	    
+
 %define tmp		r9
 %define p2		r9
 
@@ -182,7 +182,7 @@ end_fast_copy:
      vpextrq	[state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*lane + (2*I + 1)*SHA512_DIGEST_ROW_SIZE], xmm0, 1
 %assign I (I+1)
 %endrep
-    
+
 	test	len, ~127
 	jnz	ge128_bytes
 
@@ -210,7 +210,7 @@ start_loop:
 	vpshuflw xmm1, xmm1, 0xA0
 	vpsubw	xmm0, xmm0, xmm1
 	vmovdqa	[state + _lens_sha512], xmm0
-   
+
 	; "state" and "args" are the same address, arg1
 	; len is arg2
 	call	sha512_x2_avx
@@ -238,8 +238,8 @@ proc_outer:
 %assign I 0
 %rep (SHA_X_DIGEST_SIZE / (8 * 16))
 	vmovq	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*I*SHA512_DIGEST_ROW_SIZE]
-	vpinsrq	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + (2*I + 1)*SHA512_DIGEST_ROW_SIZE], 1	 
-	vpshufb	xmm0, [rel byteswap] 
+	vpinsrq	xmm0, [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + (2*I + 1)*SHA512_DIGEST_ROW_SIZE], 1
+	vpshufb	xmm0, [rel byteswap]
 	vmovdqa	[lane_data + _outer_block_sha512 + I * 16], xmm0
 %assign I (I+1)
 %endrep
@@ -267,7 +267,7 @@ proc_extra_blocks:
 	align	16
 copy_lt128:
 	;; less than one message block of data
-	;; destination extra block but backwards by len from where 0x80 pre-populated 
+	;; destination extra block but backwards by len from where 0x80 pre-populated
 	lea	p2, [lane_data + _extra_block  + 128]
 	sub	p2, len
 	memcpy_avx_128_1 p2, p, len, tmp4, tmp2, xmm0, xmm1, xmm2, xmm3
@@ -277,7 +277,7 @@ copy_lt128:
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
-    
+
 	align	16
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane_sha512]

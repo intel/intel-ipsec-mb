@@ -32,7 +32,7 @@
 
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
-;;			-----------------------------------------------------------	
+;;			-----------------------------------------------------------
 ;; Windows clobbers:	RAX                         R8  R9  R10 R11
 ;; Windows preserves:	    RBX RCX RDX RBP RSI RDI                 R12 R13 R14 R15
 ;;			-----------------------------------------------------------
@@ -239,7 +239,7 @@ extern des_x16_cbc_dec_avx512
 ;;; ===========================================================================
 ;;; DES_DOCSIS [in] - DES or DOCSIS cipher selection
 ;;; ENC_DEC    [in] - ENCrypt or DECrypt seection
-;;; 
+;;;
 ;;; Clobbers k1, k2, k4, k5 and k6
 %macro GENERIC_DES_FLUSH 2
 %define %%DES_DOCSIS %1
@@ -298,15 +298,15 @@ extern des_x16_cbc_dec_avx512
         mov             WORD(IA0), 0xffff
         vpbroadcastw    ZTMP1, WORD(IA0)
         vmovdqu16       [STATE + _des_lens]{k6}, ZTMP1
-        
-        ;; - IV 
+
+        ;; - IV
         mov             DWORD(IA0), [STATE + _des_args_IV + IA2*4]
         mov             DWORD(IA1), [STATE + _des_args_IV + IA2*4 + (16*4)]
         vpbroadcastd    ZTMP1, DWORD(IA0)
         vpbroadcastd    ZTMP2, DWORD(IA1)
         vmovdqu32       [STATE + _des_args_IV]{k6}, ZTMP1
         vmovdqu32       [STATE + _des_args_IV + (16*4)]{k6}, ZTMP2
-        
+
         ;; schedule the processing
         ;; - find min job size
         vmovdqa         XWORD(ZTMP0), [STATE + _des_lens + 2*0]

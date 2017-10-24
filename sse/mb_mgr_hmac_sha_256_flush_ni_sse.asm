@@ -28,7 +28,7 @@
 ;; In System V AMD64 ABI
 ;;	calle saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15	
+;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 ;;
@@ -62,15 +62,15 @@ extern sha256_ni
 %define unused_lanes	rbx
 %define lane_data	rbx
 %define tmp2		rbx
-	    
+
 %define job_rax		rax
 %define	tmp1		rax
 %define size_offset	rax
 %define tmp		rax
 %define start_offset	rax
-	    
+
 %define tmp3		arg1
-	    
+
 %define extra_blocks	arg2
 %define p		arg2
 
@@ -81,7 +81,7 @@ extern sha256_ni
 %define tmp6	        r10
 
 %define bswap_xmm4	xmm4
-	
+
 struc STACK
 _gpr_save:	resq	4 ;rbx, rbp, rsi (win), rdi (win)
 _rsp_save:	resq	1
@@ -109,7 +109,7 @@ flush_job_hmac_sha_224_ni_sse:
 ;; arg1 : state
 MKGLOBAL(flush_job_hmac_sha_256_ni_sse,function,internal)
 flush_job_hmac_sha_256_ni_sse:
-%endif	
+%endif
 	mov	rax, rsp
 	sub	rsp, STACK_size
 	and	rsp, -16
@@ -134,7 +134,7 @@ flush_job_hmac_sha_256_ni_sse:
 	cmovne	idx, [rel one]
 	DBGPRINTL64 "idx:", idx
 
-copy_lane_data:	
+copy_lane_data:
 	; copy idx to empty lanes
 	mov	tmp, [state + _args_data_ptr_sha256 + PTR_SZ*idx]
 	xor	len2, len2
@@ -144,7 +144,7 @@ copy_lane_data:
 	xor	idx, 1
 	mov	[state + _args_data_ptr_sha256 + PTR_SZ*idx], tmp
 	xor	idx, 1
-	
+
 	; No need to find min length - only two lanes available
         cmp	len2, 0
         je	len_is_0
@@ -194,7 +194,7 @@ proc_outer:
         DBGPRINTL	"sha256 outer hash input words:"
         DBGPRINT_XMM xmm0
         DBGPRINT_XMM xmm1
-	
+
 	mov	tmp, [job + _auth_key_xor_opad]
 	movdqu	xmm0, [tmp]
 	movdqu	xmm1, [tmp + 4*4]
@@ -218,7 +218,7 @@ proc_extra_blocks:
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
-    
+
 	align	16
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]
@@ -247,7 +247,7 @@ end_loop:
 	;; SHA256
 	movdqu	[p], xmm0
 %endif
-	
+
 	DBGPRINTL	"auth_tag_output:"
         DBGPRINT_XMM	xmm0
 

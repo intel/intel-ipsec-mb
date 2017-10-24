@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,7 +32,7 @@
 %include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
-%define	VMOVDQ vmovdqu ;; assume buffers not aligned 
+%define	VMOVDQ vmovdqu ;; assume buffers not aligned
 
 %macro VPXOR2 2
 	vpxor	%1, %1, %2
@@ -114,7 +114,7 @@ aes_cbc_enc_128_x8:
 
 	mov	IDX, 16
 	mov	[LEN_AREA], LEN
-	
+
 	mov	IN0,	[ARG + _aesarg_in + 8*0]
 	mov	IN2,	[ARG + _aesarg_in + 8*2]
 	mov	IN4,	[ARG + _aesarg_in + 8*4]
@@ -136,14 +136,14 @@ aes_cbc_enc_128_x8:
 	VMOVDQ		XDATA7, [TMP]		; load first block of plain text
 
 
-	VPXOR2		XDATA0, [ARG + _aesarg_IV + 16*0]  ; plaintext XOR IV	
-	VPXOR2		XDATA1, [ARG + _aesarg_IV + 16*1]  ; plaintext XOR IV	
-	VPXOR2		XDATA2, [ARG + _aesarg_IV + 16*2]  ; plaintext XOR IV	
-	VPXOR2		XDATA3, [ARG + _aesarg_IV + 16*3]  ; plaintext XOR IV	
-	VPXOR2		XDATA4, [ARG + _aesarg_IV + 16*4]  ; plaintext XOR IV	
-	VPXOR2		XDATA5, [ARG + _aesarg_IV + 16*5]  ; plaintext XOR IV	
-	VPXOR2		XDATA6, [ARG + _aesarg_IV + 16*6]  ; plaintext XOR IV	
-	VPXOR2		XDATA7, [ARG + _aesarg_IV + 16*7]  ; plaintext XOR IV	
+	VPXOR2		XDATA0, [ARG + _aesarg_IV + 16*0]  ; plaintext XOR IV
+	VPXOR2		XDATA1, [ARG + _aesarg_IV + 16*1]  ; plaintext XOR IV
+	VPXOR2		XDATA2, [ARG + _aesarg_IV + 16*2]  ; plaintext XOR IV
+	VPXOR2		XDATA3, [ARG + _aesarg_IV + 16*3]  ; plaintext XOR IV
+	VPXOR2		XDATA4, [ARG + _aesarg_IV + 16*4]  ; plaintext XOR IV
+	VPXOR2		XDATA5, [ARG + _aesarg_IV + 16*5]  ; plaintext XOR IV
+	VPXOR2		XDATA6, [ARG + _aesarg_IV + 16*6]  ; plaintext XOR IV
+	VPXOR2		XDATA7, [ARG + _aesarg_IV + 16*7]  ; plaintext XOR IV
 
 	mov		KEYS0,	[ARG + _aesarg_keys + 8*0]
 	mov		KEYS1,	[ARG + _aesarg_keys + 8*1]
@@ -453,7 +453,7 @@ done:
 
 ;; XMMs are saved at a higher level
 	mov	rbp, [GPR_SAVE_AREA + 8*0]
-	
+
 	add	rsp, STACK_size
 
 	ret

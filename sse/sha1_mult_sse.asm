@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -55,7 +55,7 @@ section .text
 ;; This version is not safe to call from C/C++
 
 ;; Stack must be aligned to 16 bytes before call
-;; Windows clobbers:  rax         rdx             r8 r9 r10 r11 
+;; Windows clobbers:  rax         rdx             r8 r9 r10 r11
 ;; Windows preserves:     rbx rcx     rsi rdi rbp               r12 r13 r14 r15
 ;;
 ;; Linux clobbers:    rax             rsi         r8 r9 r10 r11
@@ -76,7 +76,7 @@ section .text
 ; r1 = {d1 c1 b1 a1}
 ; r0 = {d2 c2 b2 a2}
 ; r3 = {d3 c3 b3 a3}
-; 
+;
 %macro TRANSPOSE 6
 %define %%r0 %1
 %define %%r1 %2
@@ -100,7 +100,7 @@ section .text
 
 	shufps	%%r0, %%r2, 0x88	; r0 = {d2 c2 b2 a2}
 	shufps	%%t0, %%t1, 0x88	; t0 = {d0 c0 b0 a0}
-%endmacro	
+%endmacro
 ;;
 ;; Magic functions defined in FIPS 180-1
 ;;
@@ -224,7 +224,7 @@ section .text
 
 ;; FRAMESZ must be an odd multiple of 8
 %define FRAMESZ	16*16 + 8
-	
+
 %define MOVPS	movdqu
 
 %ifdef LINUX
@@ -259,7 +259,7 @@ section .text
 %define CC	xmm10
 %define DD	xmm11
 %define EE	xmm12
-	
+
 %define T0	xmm6
 %define T1	xmm7
 %define T2	xmm8
@@ -298,7 +298,7 @@ MKGLOBAL(sha1_mult_sse,function,internal)
 sha1_mult_sse:
 
 	sub	rsp, FRAMESZ
-	
+
 	;; Initialize digests
 	movdqa	A, [arg1 + 0*SHA1_DIGEST_ROW_SIZE]
 	movdqa	B, [arg1 + 1*SHA1_DIGEST_ROW_SIZE]
@@ -415,7 +415,7 @@ lloop:
         DBGPRINTL64 "Sha1-sse outgoing data ptrs", inp0, inp1, inp2, inp3
 	;;;;;;;;;;;;;;;;
 	;; Postamble
-	
+
 	add	rsp, FRAMESZ
 
 	ret

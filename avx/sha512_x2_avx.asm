@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -31,10 +31,10 @@
 
 ;; Function clobbers: rax, rcx, rdx,   rbx, rsi, rdi, r9-r15; ymm0-15
 ;; Stack must be aligned to 16 bytes before call
-;; Windows clobbers:  rax	  rdx		  r8 r9 r10 r11	   
+;; Windows clobbers:  rax	  rdx		  r8 r9 r10 r11
 ;; Windows preserves:	  rbx rcx     rsi rdi rbp		r12 r13 r14 r15
 ;;
-;; Linux clobbers:    rax	      rsi	  r8 r9 r10 r11	   
+;; Linux clobbers:    rax	      rsi	  r8 r9 r10 r11
 ;; Linux preserves:	  rbx rcx rdx	  rdi rbp		r12 r13 r14 r15
 ;;
 ;; clobbers xmm0-15
@@ -56,7 +56,7 @@ PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
 	dq 0x1011121314151617, 0x18191a1b1c1d1e1f
 
 section .text
-	
+
 %ifdef LINUX ; Linux definitions
 %define arg1	rdi
 %define arg2	rsi
@@ -119,7 +119,7 @@ endstruc
 ; r0 = {a1 a0}
 ; r1 = {b1 b0}
 ;
-; output looks like 
+; output looks like
 ; r0 = {b0, a0}
 ; t0 = {b1, a1}
 
@@ -216,7 +216,7 @@ endstruc
 	vpaddq	h, h, a1	; h = h + ch + W + K + maj
 	vpaddq	h, h, a2	; h = h + ch + W + K + maj + sigma0
 	ROTATE_ARGS
-  
+
 %endm
 
 
@@ -251,7 +251,7 @@ endstruc
 ;; SHA512_ARGS:
 ;;   UINT128 digest[8];	 // transposed digests
 ;;   UINT8  *data_ptr[2];
-;; 
+;;
 
 ;; void sha512_x2_avx(SHA512_ARGS *args, UINT64 msg_size_in_blocks)
 ;; arg 1 : STATE    : pointer args
@@ -265,7 +265,7 @@ sha512_x2_avx:
 
 	sub	rsp, STACK_size
 
-     ;; Load the pre-transposed incoming digest. 
+     ;; Load the pre-transposed incoming digest.
      vmovdqa	a,[STATE + 0 * SHA512_DIGEST_ROW_SIZE]
      vmovdqa	b,[STATE + 1 * SHA512_DIGEST_ROW_SIZE]
      vmovdqa	c,[STATE + 2 * SHA512_DIGEST_ROW_SIZE]
@@ -276,7 +276,7 @@ sha512_x2_avx:
      vmovdqa	h,[STATE + 7 * SHA512_DIGEST_ROW_SIZE]
 
 	lea	TBL,[rel K512_2]
-    
+
 	;; load the address of each of the 2 message lanes
 	;; getting ready to transpose input onto stack
 	mov	inp0,[STATE + _data_ptr_sha512 +0*PTR_SZ]
@@ -300,22 +300,22 @@ lloop:
 %assign i 0
 %rep 8
 	;; load up the shuffler for little-endian to big-endian format
-	vmovdqa	TMP, [rel PSHUFFLE_BYTE_FLIP_MASK] 
+	vmovdqa	TMP, [rel PSHUFFLE_BYTE_FLIP_MASK]
 	VMOVPD	TT0,[inp0+IDX+i*16] ;; double precision is 64 bits
 	VMOVPD	TT2,[inp1+IDX+i*16]
 
 	TRANSPOSE	TT0, TT2, TT1
-	vpshufb	TT0, TT0, TMP 
+	vpshufb	TT0, TT0, TMP
 	vpshufb	TT1, TT1, TMP
 
-	ROUND_00_15	TT0,(i*2+0) 
-	ROUND_00_15	TT1,(i*2+1) 
+	ROUND_00_15	TT0,(i*2+0)
+	ROUND_00_15	TT1,(i*2+1)
 %assign i (i+1)
 %endrep
 
 ;; Increment IDX by message block size == 8 (loop) * 16 (XMM width in bytes)
 	add	IDX, 8 * 16
-    
+
 %assign i (i*4)
 
 	jmp	Lrounds_16_xx
@@ -328,7 +328,7 @@ Lrounds_16_xx:
 
 	cmp	ROUND,ROUNDS
 	jb	Lrounds_16_xx
-   
+
 	;; add old digest
 	vpaddq	a, a, [rsp + _DIGEST + 0*SZ2]
 	vpaddq	b, b, [rsp + _DIGEST + 1*SZ2]
@@ -338,8 +338,8 @@ Lrounds_16_xx:
 	vpaddq	f, f, [rsp + _DIGEST + 5*SZ2]
 	vpaddq	g, g, [rsp + _DIGEST + 6*SZ2]
 	vpaddq	h, h, [rsp + _DIGEST + 7*SZ2]
- 
-	sub	INP_SIZE, 1 ;; consumed one message block 
+
+	sub	INP_SIZE, 1 ;; consumed one message block
 	jne	lloop
 
 	; write back to memory (state object) the transposed digest

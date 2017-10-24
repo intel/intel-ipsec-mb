@@ -2,7 +2,7 @@
   Copyright(c) 2011-2017 Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions 
+  modification, are permitted provided that the following conditions
   are met:
     * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
@@ -30,28 +30,28 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>		// for memcmp
+#include <string.h>		/* for memcmp() */
 
 #include <gcm_defines.h>
 #include "gcm_ctr_vectors_test.h"
 #include "mb_mgr.h"
 
-///////
-// 60-Byte Packet Encryption Using GCM-AES-128
-//   http://www.ieee802.org/1/files/public/docs2011/bn-randall-test-vectors-0511-v1.pdf
-// K:   AD7A2BD03EAC835A6F620FDCB506B345
-// IV:  12153524C0895E81B2C28465
-// AAD: D609B1F056637A0D46DF998D88E52E00
-//      B2C2846512153524C0895E81
-// P:   08000F101112131415161718191A1B1C
-//      1D1E1F202122232425262728292A2B2C
-//      2D2E2F303132333435363738393A0002
-// C:   701AFA1CC039C0D765128A665DAB6924
-//      3899BF7318CCDC81C9931DA17FBE8EDD
-//      7D17CB8B4C26FC81E3284F2B7FBA713D
-// AT:  4F8D55E7D3F06FD5A13C0C29B9D5B880
-// H:   73A23D80121DE2D5A850253FCF43120E
-///////
+/*
+ * 60-Byte Packet Encryption Using GCM-AES-128
+ *   http://www.ieee802.org/1/files/public/docs2011/bn-randall-test-vectors-0511-v1.pdf
+ * K:   AD7A2BD03EAC835A6F620FDCB506B345
+ * IV:  12153524C0895E81B2C28465
+ * AAD: D609B1F056637A0D46DF998D88E52E00
+ *      B2C2846512153524C0895E81
+ * P:   08000F101112131415161718191A1B1C
+ *      1D1E1F202122232425262728292A2B2C
+ *      2D2E2F303132333435363738393A0002
+ * C:   701AFA1CC039C0D765128A665DAB6924
+ *      3899BF7318CCDC81C9931DA17FBE8EDD
+ *      7D17CB8B4C26FC81E3284F2B7FBA713D
+ * AT:  4F8D55E7D3F06FD5A13C0C29B9D5B880
+ * H:   73A23D80121DE2D5A850253FCF43120E
+ */
 static uint8_t K1[] = {
         0xAD, 0x7A, 0x2B, 0xD0, 0x3E, 0xAC, 0x83, 0x5A,
         0x6F, 0x62, 0x0F, 0xDC, 0xB5, 0x06, 0xB3, 0x45
@@ -90,23 +90,22 @@ static uint8_t T1[] = {
         0xA1, 0x3C, 0x0C, 0x29, 0xB9, 0xD5, 0xB8, 0x80
 };
 
-
-///////
-// 54-Byte Packet Encryption Using GCM-AES-128
-//   http://www.ieee802.org/1/files/public/docs2011/bn-randall-test-vectors-0511-v1.pdf
-// K:   071B113B0CA743FECCCF3D051F737382
-// IV:  F0761E8DCD3D000176D457ED
-// AAD: E20106D7CD0DF0761E8DCD3D88E54C2A
-//      76D457ED
-// P:   08000F101112131415161718191A1B1C
-//      1D1E1F202122232425262728292A2B2C
-//      2D2E2F30313233340004
-// C:   13B4C72B389DC5018E72A171DD85A5D3
-//      752274D3A019FBCAED09A425CD9B2E1C
-//      9B72EEE7C9DE7D52B3F3
-// AT:  D6A5284F4A6D3FE22A5D6C2B960494C3
-// H:   E4E01725D724C1215C7309AD34539257
-///////
+/*
+ * 54-Byte Packet Encryption Using GCM-AES-128
+ *   http://www.ieee802.org/1/files/public/docs2011/bn-randall-test-vectors-0511-v1.pdf
+ * K:   071B113B0CA743FECCCF3D051F737382
+ * IV:  F0761E8DCD3D000176D457ED
+ * AAD: E20106D7CD0DF0761E8DCD3D88E54C2A
+ *      76D457ED
+ * P:   08000F101112131415161718191A1B1C
+ *      1D1E1F202122232425262728292A2B2C
+ *      2D2E2F30313233340004
+ * C:   13B4C72B389DC5018E72A171DD85A5D3
+ *      752274D3A019FBCAED09A425CD9B2E1C
+ *      9B72EEE7C9DE7D52B3F3
+ * AT:  D6A5284F4A6D3FE22A5D6C2B960494C3
+ * H:   E4E01725D724C1215C7309AD34539257
+ */
 static uint8_t K2[] = {
         0x07, 0x1B, 0x11, 0x3B, 0x0C, 0xA7, 0x43, 0xFE,
         0xCC, 0xCF, 0x3D, 0x05, 0x1F, 0x73, 0x73, 0x82
@@ -123,7 +122,7 @@ static uint8_t IV2[] = {
         0xF0, 0x76, 0x1E, 0x8D, 0xCD, 0x3D, 0x00, 0x01,
         0x76, 0xD4, 0x57, 0xED
 };
-//static uint8_t IV1p[] = {0, 0, 0, 1};
+/* static uint8_t IV1p[] = {0, 0, 0, 1}; */
 static uint8_t A2[] = {
         0xE2, 0x01, 0x06, 0xD7, 0xCD, 0x0D, 0xF0, 0x76,
         0x1E, 0x8D, 0xCD, 0x3D, 0x88, 0xE5, 0x4C, 0x2A,
@@ -143,22 +142,21 @@ static uint8_t T2[] = {
         0x2A, 0x5D, 0x6C, 0x2B, 0x96, 0x04, 0x94, 0xC3
 };
 
-
-///////
-// http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
-// [Keylen = 128]
-// [IVlen = 96]
-// [PTlen = 128]
-// [AADlen = 128]
-// [Taglen = 128]
-// Count = 0
-// K:   c939cc13397c1d37de6ae0e1cb7c423c
-// IV:  b3d8cc017cbb89b39e0f67e2
-// P:   c3b3c41f113a31b73d9a5cd432103069
-// AAD: 24825602bd12a984e0092d3e448eda5f
-// C:   93fe7d9e9bfd10348a5606e5cafa7354
-// AT:  0032a1dc85f1c9786925a2e71d8272dd
-///////
+/*
+ * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
+ * [Keylen = 128]
+ * [IVlen = 96]
+ * [PTlen = 128]
+ * [AADlen = 128]
+ * [Taglen = 128]
+ * Count = 0
+ * K:   c939cc13397c1d37de6ae0e1cb7c423c
+ * IV:  b3d8cc017cbb89b39e0f67e2
+ * P:   c3b3c41f113a31b73d9a5cd432103069
+ * AAD: 24825602bd12a984e0092d3e448eda5f
+ * C:   93fe7d9e9bfd10348a5606e5cafa7354
+ * AT:  0032a1dc85f1c9786925a2e71d8272dd
+ */
 static uint8_t K3[] = {
         0xc9, 0x39, 0xcc, 0x13, 0x39, 0x7c, 0x1d, 0x37,
         0xde, 0x6a, 0xe0, 0xe1, 0xcb, 0x7c, 0x42, 0x3c
@@ -185,21 +183,21 @@ static uint8_t T3[] = {
         0x69, 0x25, 0xa2, 0xe7, 0x1d, 0x82, 0x72, 0xdd
 };
 
-///////
-// http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
-// [Keylen = 128]
-// [IVlen = 96]
-// [PTlen = 256]
-// [AADlen = 128]
-// [Taglen = 128]
-// Count = 0
-// K = 298efa1ccf29cf62ae6824bfc19557fc
-// IV = 6f58a93fe1d207fae4ed2f6d
-// P = cc38bccd6bc536ad919b1395f5d63801f99f8068d65ca5ac63872daf16b93901
-// AAD = 021fafd238463973ffe80256e5b1c6b1
-// C = dfce4e9cd291103d7fe4e63351d9e79d3dfd391e3267104658212da96521b7db
-// T = 542465ef599316f73a7a560509a2d9f2
-///////
+/*
+ * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
+ * [Keylen = 128]
+ * [IVlen = 96]
+ * [PTlen = 256]
+ * [AADlen = 128]
+ * [Taglen = 128]
+ * Count = 0
+ * K = 298efa1ccf29cf62ae6824bfc19557fc
+ * IV = 6f58a93fe1d207fae4ed2f6d
+ * P = cc38bccd6bc536ad919b1395f5d63801f99f8068d65ca5ac63872daf16b93901
+ * AAD = 021fafd238463973ffe80256e5b1c6b1
+ * C = dfce4e9cd291103d7fe4e63351d9e79d3dfd391e3267104658212da96521b7db
+ * T = 542465ef599316f73a7a560509a2d9f2
+ */
 static uint8_t K4[] = {
         0x29, 0x8e, 0xfa, 0x1c, 0xcf, 0x29, 0xcf, 0x62,
         0xae, 0x68, 0x24, 0xbf, 0xc1, 0x95, 0x57, 0xfc
@@ -230,21 +228,21 @@ static uint8_t T4[] = {
         0x3a, 0x7a, 0x56, 0x05, 0x09, 0xa2, 0xd9, 0xf2
 };
 
-///////
-// http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
-// [Keylen = 128]
-// [IVlen = 96]
-// [PTlen = 256]
-// [AADlen = 128]
-// [Taglen = 128]
-// Count = 0
-// K = 298efa1ccf29cf62ae6824bfc19557fc
-// IV = 6f58a93fe1d207fae4ed2f6d
-// P = cc38bccd6bc536ad919b1395f5d63801f99f8068d65ca5ac63872daf16b93901
-// AAD = 021fafd238463973ffe80256e5b1c6b1
-// C = dfce4e9cd291103d7fe4e63351d9e79d3dfd391e3267104658212da96521b7db
-// T = 542465ef599316f73a7a560509a2d9f2
-///////
+/*
+ * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
+ * [Keylen = 128]
+ * [IVlen = 96]
+ * [PTlen = 256]
+ * [AADlen = 128]
+ * [Taglen = 128]
+ * Count = 0
+ * K = 298efa1ccf29cf62ae6824bfc19557fc
+ * IV = 6f58a93fe1d207fae4ed2f6d
+ * P = cc38bccd6bc536ad919b1395f5d63801f99f8068d65ca5ac63872daf16b93901
+ * AAD = 021fafd238463973ffe80256e5b1c6b1
+ * C = dfce4e9cd291103d7fe4e63351d9e79d3dfd391e3267104658212da96521b7db
+ * T = 542465ef599316f73a7a560509a2d9f2
+ */
 static uint8_t K5[] = {
         0x29, 0x8e, 0xfa, 0x1c, 0xcf, 0x29, 0xcf, 0x62,
         0xae, 0x68, 0x24, 0xbf, 0xc1, 0x95, 0x57, 0xfc
@@ -275,17 +273,16 @@ static uint8_t T5[] = {
         0x3a, 0x7a, 0x56, 0x05, 0x09, 0xa2, 0xd9, 0xf2
 };
 
-
-///////
-// http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
-// Test Case 2
-// K:  00000000000000000000000000000000
-// P:  00000000000000000000000000000000
-// IV: 000000000000000000000000
-// C:  0388dace60b6a392f328c2b971b2fe78
-// T:  ab6e47d42cec13bdf53a67b21257bddf
-// H:  66e94bd4ef8a2c3b884cfa59ca342b2e
-///////
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * Test Case 2
+ * K:  00000000000000000000000000000000
+ * P:  00000000000000000000000000000000
+ * IV: 000000000000000000000000
+ * C:  0388dace60b6a392f328c2b971b2fe78
+ * T:  ab6e47d42cec13bdf53a67b21257bddf
+ * H:  66e94bd4ef8a2c3b884cfa59ca342b2e
+ */
 static uint8_t K6[] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -309,23 +306,22 @@ static uint8_t T6[] = {
         0xf5, 0x3a, 0x67, 0xb2, 0x12, 0x57, 0xbd, 0xdf
 };
 
-
-///////
-// http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
-// Test Case 3
-// K:  feffe9928665731c6d6a8f9467308308
-// P:  d9313225f88406e5a55909c5aff5269a
-//     86a7a9531534f7da2e4c303d8a318a72
-//     1c3c0c95956809532fcf0e2449a6b525
-//     b16aedf5aa0de657ba637b391aafd255
-// IV: cafebabefacedbaddecaf888
-// H:  b83b533708bf535d0aa6e52980d53b78
-// C:  42831ec2217774244b7221b784d0d49c
-//     e3aa212f2c02a4e035c17e2329aca12e
-//     21d514b25466931c7d8f6a5aac84aa05
-//     1ba30b396a0aac973d58e091473f5985
-// T:  4d5c2af327cd64a62cf35abd2ba6fab4
-///////
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * Test Case 3
+ * K:  feffe9928665731c6d6a8f9467308308
+ * P:  d9313225f88406e5a55909c5aff5269a
+ *     86a7a9531534f7da2e4c303d8a318a72
+ *     1c3c0c95956809532fcf0e2449a6b525
+ *     b16aedf5aa0de657ba637b391aafd255
+ * IV: cafebabefacedbaddecaf888
+ * H:  b83b533708bf535d0aa6e52980d53b78
+ * C:  42831ec2217774244b7221b784d0d49c
+ *     e3aa212f2c02a4e035c17e2329aca12e
+ *     21d514b25466931c7d8f6a5aac84aa05
+ *     1ba30b396a0aac973d58e091473f5985
+ * T:  4d5c2af327cd64a62cf35abd2ba6fab4
+ */
 static uint8_t K7[] = {
         0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
         0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08
@@ -361,24 +357,24 @@ static uint8_t T7[] = {
         0x2c, 0xf3, 0x5a, 0xbd, 0x2b, 0xa6, 0xfa, 0xb4
 };
 
-///////
-// http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
-// Test Case 4
-// K:  feffe9928665731c6d6a8f9467308308
-// P:  d9313225f88406e5a55909c5aff5269a
-//     86a7a9531534f7da2e4c303d8a318a72
-//     1c3c0c95956809532fcf0e2449a6b525
-//     b16aedf5aa0de657ba637b39
-// A:  feedfacedeadbeeffeedfacedeadbeef
-//     abaddad2
-// IV: cafebabefacedbaddecaf888
-// H:  b83b533708bf535d0aa6e52980d53b78
-// C:  42831ec2217774244b7221b784d0d49c
-//     e3aa212f2c02a4e035c17e2329aca12e
-//     21d514b25466931c7d8f6a5aac84aa05
-//     1ba30b396a0aac973d58e091
-// T:  5bc94fbc3221a5db94fae95ae7121a47
-///////
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * Test Case 4
+ * K:  feffe9928665731c6d6a8f9467308308
+ * P:  d9313225f88406e5a55909c5aff5269a
+ *     86a7a9531534f7da2e4c303d8a318a72
+ *     1c3c0c95956809532fcf0e2449a6b525
+ *     b16aedf5aa0de657ba637b39
+ * A:  feedfacedeadbeeffeedfacedeadbeef
+ *     abaddad2
+ * IV: cafebabefacedbaddecaf888
+ * H:  b83b533708bf535d0aa6e52980d53b78
+ * C:  42831ec2217774244b7221b784d0d49c
+ *     e3aa212f2c02a4e035c17e2329aca12e
+ *     21d514b25466931c7d8f6a5aac84aa05
+ *     1ba30b396a0aac973d58e091
+ * T:  5bc94fbc3221a5db94fae95ae7121a47
+ */
 static uint8_t K8[] = {
         0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
         0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08
@@ -418,18 +414,18 @@ static uint8_t T8[] = {
         0x94, 0xfa, 0xe9, 0x5a, 0xe7, 0x12, 0x1a, 0x47
 };
 
-///////
-// http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
-// Test Case 14
-// K:  00000000000000000000000000000000
-//     00000000000000000000000000000000
-// P:  00000000000000000000000000000000
-// A:
-// IV: 000000000000000000000000
-// H:  dc95c078a2408989ad48a21492842087
-// C:  cea7403d4d606b6e074ec5d3baf39d18
-// T:  d0d1c8a799996bf0265b98b5d48ab919
-///////
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * Test Case 14
+ * K:  00000000000000000000000000000000
+ *     00000000000000000000000000000000
+ * P:  00000000000000000000000000000000
+ * A:
+ * IV: 000000000000000000000000
+ * H:  dc95c078a2408989ad48a21492842087
+ * C:  cea7403d4d606b6e074ec5d3baf39d18
+ * T:  d0d1c8a799996bf0265b98b5d48ab919
+ */
 static uint8_t K9[] = {
         0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
         0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -455,24 +451,24 @@ static uint8_t T9[] = {
         0x26, 0x5b, 0x98, 0xb5, 0xd4, 0x8a, 0xb9, 0x19
 };
 
-///////
-// http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
-// Test Case 15
-// K:  feffe9928665731c6d6a8f9467308308
-//     feffe9928665731c6d6a8f9467308308
-// P:  d9313225f88406e5a55909c5aff5269a
-//     86a7a9531534f7da2e4c303d8a318a72
-//     1c3c0c95956809532fcf0e2449a6b525
-//     b16aedf5aa0de657ba637b391aafd255
-// A:
-// IV: cafebabefacedbaddecaf888
-// H:  acbef20579b4b8ebce889bac8732dad7
-// C:  522dc1f099567d07f47f37a32a84427d
-//     643a8cdcbfe5c0c97598a2bd2555d1aa
-//     8cb08e48590dbb3da7b08b1056828838
-//     c5f61e6393ba7a0abcc9f662898015ad
-// T:  b094dac5d93471bdec1a502270e3cc6c
-///////
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * Test Case 15
+ * K:  feffe9928665731c6d6a8f9467308308
+ *     feffe9928665731c6d6a8f9467308308
+ * P:  d9313225f88406e5a55909c5aff5269a
+ *     86a7a9531534f7da2e4c303d8a318a72
+ *     1c3c0c95956809532fcf0e2449a6b525
+ *     b16aedf5aa0de657ba637b391aafd255
+ * A:
+ * IV: cafebabefacedbaddecaf888
+ * H:  acbef20579b4b8ebce889bac8732dad7
+ * C:  522dc1f099567d07f47f37a32a84427d
+ *     643a8cdcbfe5c0c97598a2bd2555d1aa
+ *     8cb08e48590dbb3da7b08b1056828838
+ *     c5f61e6393ba7a0abcc9f662898015ad
+ * T:  b094dac5d93471bdec1a502270e3cc6c
+ */
 static uint8_t K10[] =  {
         0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
         0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08,
@@ -510,25 +506,25 @@ static uint8_t T10[] = {
         0xec, 0x1a, 0x50, 0x22, 0x70, 0xe3, 0xcc, 0x6c
 };
 
-///////
-// http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
-// Test Case 16
-// K:  feffe9928665731c6d6a8f9467308308
-//     feffe9928665731c6d6a8f9467308308
-// P:  d9313225f88406e5a55909c5aff5269a
-//     86a7a9531534f7da2e4c303d8a318a72
-//     1c3c0c95956809532fcf0e2449a6b525
-//     b16aedf5aa0de657ba637b39
-// A:  feedfacedeadbeeffeedfacedeadbeef
-//     abaddad2
-// IV: cafebabefacedbaddecaf888
-// H:  acbef20579b4b8ebce889bac8732dad7
-// C:  522dc1f099567d07f47f37a32a84427d
-//     643a8cdcbfe5c0c97598a2bd2555d1aa
-//     8cb08e48590dbb3da7b08b1056828838
-//     c5f61e6393ba7a0abcc9f662
-// T:  76fc6ece0f4e1768cddf8853bb2d551b
-///////
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * Test Case 16
+ * K:  feffe9928665731c6d6a8f9467308308
+ *     feffe9928665731c6d6a8f9467308308
+ * P:  d9313225f88406e5a55909c5aff5269a
+ *     86a7a9531534f7da2e4c303d8a318a72
+ *     1c3c0c95956809532fcf0e2449a6b525
+ *     b16aedf5aa0de657ba637b39
+ * A:  feedfacedeadbeeffeedfacedeadbeef
+ *     abaddad2
+ * IV: cafebabefacedbaddecaf888
+ * H:  acbef20579b4b8ebce889bac8732dad7
+ * C:  522dc1f099567d07f47f37a32a84427d
+ *     643a8cdcbfe5c0c97598a2bd2555d1aa
+ *     8cb08e48590dbb3da7b08b1056828838
+ *     c5f61e6393ba7a0abcc9f662
+ * T:  76fc6ece0f4e1768cddf8853bb2d551b
+ */
 static uint8_t K11[] =  {
         0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
         0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08,
@@ -570,25 +566,25 @@ static uint8_t T11[] = {
         0xcd, 0xdf, 0x88, 0x53, 0xbb, 0x2d, 0x55, 0x1b
 };
 
-///////
-// http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
-// Test Case 17  -- Not supported IV length less than 12 bytes
-// K:  feffe9928665731c6d6a8f9467308308
-//     feffe9928665731c6d6a8f9467308308
-// P:  d9313225f88406e5a55909c5aff5269a
-//     86a7a9531534f7da2e4c303d8a318a72
-//     1c3c0c95956809532fcf0e2449a6b525
-//     b16aedf5aa0de657ba637b39
-// A:  feedfacedeadbeeffeedfacedeadbeef
-//     abaddad2
-// IV: cafebabefacedbad
-// H:  acbef20579b4b8ebce889bac8732dad7
-// C:  c3762df1ca787d32ae47c13bf19844cb
-//     af1ae14d0b976afac52ff7d79bba9de0
-//     feb582d33934a4f0954cc2363bc73f78
-//     62ac430e64abe499f47c9b1f
-// T:  3a337dbf46a792c45e454913fe2ea8f2
-///////
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * Test Case 17  -- Not supported IV length less than 12 bytes
+ * K:  feffe9928665731c6d6a8f9467308308
+ *     feffe9928665731c6d6a8f9467308308
+ * P:  d9313225f88406e5a55909c5aff5269a
+ *     86a7a9531534f7da2e4c303d8a318a72
+ *     1c3c0c95956809532fcf0e2449a6b525
+ *     b16aedf5aa0de657ba637b39
+ * A:  feedfacedeadbeeffeedfacedeadbeef
+ *     abaddad2
+ * IV: cafebabefacedbad
+ * H:  acbef20579b4b8ebce889bac8732dad7
+ * C:  c3762df1ca787d32ae47c13bf19844cb
+ *     af1ae14d0b976afac52ff7d79bba9de0
+ *     feb582d33934a4f0954cc2363bc73f78
+ *     62ac430e64abe499f47c9b1f
+ * T:  3a337dbf46a792c45e454913fe2ea8f2
+ */
 /* static uint8_t K12[] = { */
 /*         0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c, */
 /*         0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08, */
@@ -632,28 +628,28 @@ static uint8_t T11[] = {
 /*         0x5e, 0x45, 0x49, 0x13, 0xfe, 0x2e, 0xa8, 0xf2 */
 /* }; */
 
-///////
-// http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
-// Test Case 18 -- Not supported IV length greater than 12 bytes
-// K:  feffe9928665731c6d6a8f9467308308
-//     feffe9928665731c6d6a8f9467308308
-// P:  d9313225f88406e5a55909c5aff5269a
-//     86a7a9531534f7da2e4c303d8a318a72
-//     1c3c0c95956809532fcf0e2449a6b525
-//     b16aedf5aa0de657ba637b39
-// A:  feedfacedeadbeeffeedfacedeadbeef
-//     abaddad2
-// IV: 9313225df88406e555909c5aff5269aa
-//     6a7a9538534f7da1e4c303d2a318a728
-//     c3c0c95156809539fcf0e2429a6b5254
-//     16aedbf5a0de6a57a637b39b
-// H:  acbef20579b4b8ebce889bac8732dad7
-// C:  5a8def2f0c9e53f1f75d7853659e2a20
-//     eeb2b22aafde6419a058ab4f6f746bf4
-//     0fc0c3b780f244452da3ebf1c5d82cde
-//     a2418997200ef82e44ae7e3f
-// T:  a44a8266ee1c8eb0c8b5d4cf5ae9f19a
-///////
+/*
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * Test Case 18 -- Not supported IV length greater than 12 bytes
+ * K:  feffe9928665731c6d6a8f9467308308
+ *     feffe9928665731c6d6a8f9467308308
+ * P:  d9313225f88406e5a55909c5aff5269a
+ *     86a7a9531534f7da2e4c303d8a318a72
+ *     1c3c0c95956809532fcf0e2449a6b525
+ *     b16aedf5aa0de657ba637b39
+ * A:  feedfacedeadbeeffeedfacedeadbeef
+ *     abaddad2
+ * IV: 9313225df88406e555909c5aff5269aa
+ *     6a7a9538534f7da1e4c303d2a318a728
+ *     c3c0c95156809539fcf0e2429a6b5254
+ *     16aedbf5a0de6a57a637b39b
+ * H:  acbef20579b4b8ebce889bac8732dad7
+ * C:  5a8def2f0c9e53f1f75d7853659e2a20
+ *     eeb2b22aafde6419a058ab4f6f746bf4
+ *     0fc0c3b780f244452da3ebf1c5d82cde
+ *     a2418997200ef82e44ae7e3f
+ * T:  a44a8266ee1c8eb0c8b5d4cf5ae9f19a
+ */
 
 /*
  * https://tools.ietf.org/html/draft-mcgrew-gcm-test-01
@@ -712,8 +708,10 @@ static uint8_t C13[] = {
 };
 
 static const struct gcm_ctr_vector gcm_vectors[] = {
-	//field order {K, Klen, IV, IVlen, A, Alen, P, Plen, C, T, Tlen};
-	// original vector does not have a valid sub hash key
+	/*
+         * field order {K, Klen, IV, IVlen, A, Alen, P, Plen, C, T, Tlen};
+         * original vector does not have a valid sub hash key
+         */
 	vector(1),
 	vector(2),
 	vector(3),
@@ -728,7 +726,6 @@ static const struct gcm_ctr_vector gcm_vectors[] = {
 	/* vector(12), -- IV of less than 16bytes are not supported */
         vector(13),
 };
-
 
 typedef void (*gcm_enc_dec_fn_t)(const struct gcm_key_data *,
                                  struct gcm_context_data *,
@@ -757,8 +754,8 @@ static gcm_enc_dec_fn_t aesni_gcm256_dec_2 = NULL;
 
 static MB_MGR gcm_mgr;
 
-static int check_data(const uint8_t *test, const uint8_t * expected, uint64_t len,
-                      const char *data_name)
+static int check_data(const uint8_t *test, const uint8_t *expected,
+                      uint64_t len, const char *data_name)
 {
 	int mismatch;
 	int is_error = 0;
@@ -773,8 +770,8 @@ static int check_data(const uint8_t *test, const uint8_t * expected, uint64_t le
                         if (test[a] != expected[a]) {
                                 printf(" '%x' != '%x' at %llx of %llx\n",
                                        test[a], expected[a],
-                                       (long long unsigned) a,
-                                       (long long unsigned) len);
+                                       (unsigned long long) a,
+                                       (unsigned long long) len);
                                 break;
                         }
                 }
@@ -787,10 +784,10 @@ static int check_data(const uint8_t *test, const uint8_t * expected, uint64_t le
  *****************************************************************************/
 static void
 sgl_aes_gcm_enc_128_sse(const struct gcm_key_data *key,
-                       struct gcm_context_data *ctx,
-                       uint8_t *out, const uint8_t *in, uint64_t len,
-                       const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len)
+                        struct gcm_context_data *ctx,
+                        uint8_t *out, const uint8_t *in, uint64_t len,
+                        const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
+                        uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_128_sse(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_128_update_sse(key, ctx, out, in, len);
@@ -798,11 +795,11 @@ sgl_aes_gcm_enc_128_sse(const struct gcm_key_data *key,
 }
 
 static void
-sgl_aes_gcm_dec_128_sse(const struct gcm_key_data * key,
-                       struct gcm_context_data *ctx,
-                       uint8_t *out, const uint8_t *in, uint64_t len,
-                       const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_dec_128_sse(const struct gcm_key_data *key,
+                        struct gcm_context_data *ctx,
+                        uint8_t *out, const uint8_t *in, uint64_t len,
+                        const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
+                        uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_128_sse(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_128_update_sse(key, ctx, out, in, len);
@@ -810,11 +807,11 @@ sgl_aes_gcm_dec_128_sse(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_enc_192_sse(const struct gcm_key_data * key,
-                       struct gcm_context_data *ctx,
-                       uint8_t *out, const uint8_t *in, uint64_t len,
-                       const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_enc_192_sse(const struct gcm_key_data *key,
+                        struct gcm_context_data *ctx,
+                        uint8_t *out, const uint8_t *in, uint64_t len,
+                        const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
+                        uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_192_sse(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_192_update_sse(key, ctx, out, in, len);
@@ -822,11 +819,11 @@ sgl_aes_gcm_enc_192_sse(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_dec_192_sse(const struct gcm_key_data * key,
-                       struct gcm_context_data *ctx,
-                       uint8_t *out, const uint8_t *in, uint64_t len,
-                       const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_dec_192_sse(const struct gcm_key_data *key,
+                        struct gcm_context_data *ctx,
+                        uint8_t *out, const uint8_t *in, uint64_t len,
+                        const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
+                        uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_192_sse(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_192_update_sse(key, ctx, out, in, len);
@@ -834,11 +831,11 @@ sgl_aes_gcm_dec_192_sse(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_enc_256_sse(const struct gcm_key_data * key,
-                       struct gcm_context_data *ctx,
-                       uint8_t *out, const uint8_t *in, uint64_t len,
-                       const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_enc_256_sse(const struct gcm_key_data *key,
+                        struct gcm_context_data *ctx,
+                        uint8_t *out, const uint8_t *in, uint64_t len,
+                        const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
+                        uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_256_sse(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_256_update_sse(key, ctx, out, in, len);
@@ -847,10 +844,10 @@ sgl_aes_gcm_enc_256_sse(const struct gcm_key_data * key,
 
 static void
 sgl_aes_gcm_dec_256_sse(const struct gcm_key_data *key,
-                       struct gcm_context_data *ctx,
-                       uint8_t *out, const uint8_t *in, uint64_t len,
-                       const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len)
+                        struct gcm_context_data *ctx,
+                        uint8_t *out, const uint8_t *in, uint64_t len,
+                        const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
+                        uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_256_sse(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_256_update_sse(key, ctx, out, in, len);
@@ -859,10 +856,11 @@ sgl_aes_gcm_dec_256_sse(const struct gcm_key_data *key,
 
 static void
 sgl_aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_128_avx_gen2(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_128_update_avx_gen2(key, ctx, out, in, len);
@@ -870,11 +868,12 @@ sgl_aes_gcm_enc_128_avx_gen2(const struct gcm_key_data *key,
 }
 
 static void
-sgl_aes_gcm_dec_128_avx_gen2(const struct gcm_key_data * key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_dec_128_avx_gen2(const struct gcm_key_data *key,
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_128_avx_gen2(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_128_update_avx_gen2(key, ctx, out, in, len);
@@ -882,11 +881,12 @@ sgl_aes_gcm_dec_128_avx_gen2(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_enc_192_avx_gen2(const struct gcm_key_data * key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_enc_192_avx_gen2(const struct gcm_key_data *key,
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_192_avx_gen2(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_192_update_avx_gen2(key, ctx, out, in, len);
@@ -894,11 +894,12 @@ sgl_aes_gcm_enc_192_avx_gen2(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_dec_192_avx_gen2(const struct gcm_key_data * key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_dec_192_avx_gen2(const struct gcm_key_data *key,
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_192_avx_gen2(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_192_update_avx_gen2(key, ctx, out, in, len);
@@ -906,11 +907,12 @@ sgl_aes_gcm_dec_192_avx_gen2(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_enc_256_avx_gen2(const struct gcm_key_data * key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_enc_256_avx_gen2(const struct gcm_key_data *key,
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_256_avx_gen2(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_256_update_avx_gen2(key, ctx, out, in, len);
@@ -919,10 +921,11 @@ sgl_aes_gcm_enc_256_avx_gen2(const struct gcm_key_data * key,
 
 static void
 sgl_aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_256_avx_gen2(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_256_update_avx_gen2(key, ctx, out, in, len);
@@ -931,10 +934,11 @@ sgl_aes_gcm_dec_256_avx_gen2(const struct gcm_key_data *key,
 
 static void
 sgl_aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_128_avx_gen4(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_128_update_avx_gen4(key, ctx, out, in, len);
@@ -942,11 +946,12 @@ sgl_aes_gcm_enc_128_avx_gen4(const struct gcm_key_data *key,
 }
 
 static void
-sgl_aes_gcm_dec_128_avx_gen4(const struct gcm_key_data * key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_dec_128_avx_gen4(const struct gcm_key_data *key,
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_128_avx_gen4(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_128_update_avx_gen4(key, ctx, out, in, len);
@@ -954,11 +959,12 @@ sgl_aes_gcm_dec_128_avx_gen4(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_enc_192_avx_gen4(const struct gcm_key_data * key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_enc_192_avx_gen4(const struct gcm_key_data *key,
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_192_avx_gen4(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_192_update_avx_gen4(key, ctx, out, in, len);
@@ -966,11 +972,12 @@ sgl_aes_gcm_enc_192_avx_gen4(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_dec_192_avx_gen4(const struct gcm_key_data * key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_dec_192_avx_gen4(const struct gcm_key_data *key,
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_192_avx_gen4(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_192_update_avx_gen4(key, ctx, out, in, len);
@@ -978,11 +985,12 @@ sgl_aes_gcm_dec_192_avx_gen4(const struct gcm_key_data * key,
 }
 
 static void
-sgl_aes_gcm_enc_256_avx_gen4(const struct gcm_key_data * key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+sgl_aes_gcm_enc_256_avx_gen4(const struct gcm_key_data *key,
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_256_avx_gen4(key, ctx, iv, aad, aad_len);
         aes_gcm_enc_256_update_avx_gen4(key, ctx, out, in, len);
@@ -991,10 +999,11 @@ sgl_aes_gcm_enc_256_avx_gen4(const struct gcm_key_data * key,
 
 static void
 sgl_aes_gcm_dec_256_avx_gen4(const struct gcm_key_data *key,
-                            struct gcm_context_data *ctx,
-                            uint8_t *out, const uint8_t *in, uint64_t len,
-                            const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
-                            uint8_t *auth_tag, uint64_t auth_tag_len)
+                             struct gcm_context_data *ctx,
+                             uint8_t *out, const uint8_t *in, uint64_t len,
+                             const uint8_t *iv,
+                             const uint8_t *aad, uint64_t aad_len,
+                             uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         aes_gcm_init_256_avx_gen4(key, ctx, iv, aad, aad_len);
         aes_gcm_dec_256_update_avx_gen4(key, ctx, out, in, len);
@@ -1039,7 +1048,7 @@ aes_gcm_job(MB_MGR *mb_mgr,
         job->auth_tag_output_len_in_bytes     = auth_tag_len;
         job->cipher_direction                 =
                 (order == CIPHER_HASH) ? ENCRYPT : DECRYPT;
-                
+
         job = IMB_SUBMIT_JOB(mb_mgr);
         while (job) {
                 if (job->status != STS_COMPLETED)
@@ -1147,7 +1156,7 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 	struct gcm_key_data gdata_key;
 	struct gcm_context_data gdata_ctx;
 	int is_error = 0;
-	// Temporary array for the calculated vectors
+	/* Temporary array for the calculated vectors */
 	uint8_t *ct_test = NULL;
 	uint8_t *pt_test = NULL;
 	uint8_t *T_test = NULL;
@@ -1156,14 +1165,14 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 #ifdef DEBUG
         printf("Testing GCM128 std vectors\n");
 #endif
-	// Allocate space for the calculated ciphertext
+	/* Allocate space for the calculated ciphertext */
 	ct_test = malloc(vector->Plen);
 	if (ct_test == NULL) {
 		fprintf(stderr, "Can't allocate ciphertext memory\n");
 		is_error = 1;
                 goto test_gcm_vectors_exit;
 	}
-	// Allocate space for the calculated ciphertext
+	/* Allocate space for the calculated ciphertext */
 	pt_test = malloc(vector->Plen);
 	if (pt_test == NULL) {
 		fprintf(stderr, "Can't allocate plaintext memory\n");
@@ -1183,12 +1192,12 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 		is_error = 1;
                 goto test_gcm_vectors_exit;
 	}
-	// This is only required once for a given key
+	/* This is only required once for a given key */
 	prefn(vector->K, &gdata_key);
 
-	////
-	// Encrypt
-	////
+	/*
+         * Encrypt
+         */
 	encfn(&gdata_key, &gdata_ctx,
               ct_test, vector->P, vector->Plen,
               vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
@@ -1196,42 +1205,44 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
                                "encrypted cypher text (C)");
 	is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
 
-	// test of in-place encrypt
+	/* test of in-place encrypt */
 	memcpy(pt_test, vector->P, vector->Plen);
-	encfn(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen, vector->IV,
-              vector->A, vector->Alen, T_test, vector->Tlen);
+	encfn(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen,
+              vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->C, vector->Plen,
                                "encrypted cypher text(in-place)");
 	memset(ct_test, 0, vector->Plen);
 	memset(T_test, 0, vector->Tlen);
 
-	////
-	// Decrypt
-	////
+	/*
+         * Decrypt
+         */
 	decfn(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
               vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "decrypted plain text (P)");
-	// GCM decryption outputs a 16 byte tag value
-        // that must be verified against the expected tag value
+	/*
+         * GCM decryption outputs a 16 byte tag value
+         * that must be verified against the expected tag value
+         */
 	is_error |= check_data(T_test, vector->T, vector->Tlen,
                                "decrypted tag (T)");
 
-	// test in in-place decrypt
+	/* test in in-place decrypt */
 	memcpy(ct_test, vector->C, vector->Plen);
-	decfn(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen, vector->IV,
-			 vector->A, vector->Alen, T_test, vector->Tlen);
+	decfn(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen,
+              vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	is_error |= check_data(ct_test, vector->P, vector->Plen,
                                "plain text (P) - in-place");
 	is_error |= check_data(T_test, vector->T, vector->Tlen,
                                "decrypted tag (T) - in-place");
-	// enc -> dec
+	/* enc -> dec */
 	encfn(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
               vector->IV, vector->A, vector->Alen, T_test, vector->Tlen);
 	memset(pt_test, 0, vector->Plen);
 
-	decfn(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen, vector->IV,
-              vector->A, vector->Alen, T2_test, vector->Tlen);
+	decfn(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen,
+              vector->IV, vector->A, vector->Alen, T2_test, vector->Tlen);
 	is_error |= check_data(pt_test, vector->P, vector->Plen,
                                "self decrypted plain text (P)");
 	is_error |= check_data(T_test, T2_test, vector->Tlen,
@@ -1259,7 +1270,7 @@ static int test_gcm_std_vectors(void)
 	int is_error = 0;
 
 	printf("AES-GCM standard test vectors:\n");
-	for (vect = 0; ((vect < vectors_cnt) /*&& (1 == is_error) */ ); vect++) {
+	for (vect = 0; vect < vectors_cnt; vect++) {
 #ifdef DEBUG
 		printf("Standard vector %d/%d  Keylen:%d IVlen:%d PTLen:%d "
                        "AADlen:%d Tlen:%d\n",
@@ -1274,19 +1285,46 @@ static int test_gcm_std_vectors(void)
 #endif
                 switch (gcm_vectors[vect].Klen) {
                 case BITS_128:
-			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm128_pre, aesni_gcm128_enc, aesni_gcm128_dec);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm128_pre, aesni_gcm128_enc_2, aesni_gcm128_dec_2);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm128_pre, job_aes_gcm_enc_128, job_aes_gcm_dec_128);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm128_pre,
+                                                     aesni_gcm128_enc,
+                                                     aesni_gcm128_dec);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm128_pre,
+                                                     aesni_gcm128_enc_2,
+                                                     aesni_gcm128_dec_2);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm128_pre,
+                                                     job_aes_gcm_enc_128,
+                                                     job_aes_gcm_dec_128);
                         break;
                 case BITS_192:
-                        is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm192_pre, aesni_gcm192_enc, aesni_gcm192_dec);
-                        is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm192_pre, aesni_gcm192_enc_2, aesni_gcm192_dec_2);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm192_pre, job_aes_gcm_enc_192, job_aes_gcm_dec_192);
+                        is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm192_pre,
+                                                     aesni_gcm192_enc,
+                                                     aesni_gcm192_dec);
+                        is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm192_pre,
+                                                     aesni_gcm192_enc_2,
+                                                     aesni_gcm192_dec_2);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm192_pre,
+                                                     job_aes_gcm_enc_192,
+                                                     job_aes_gcm_dec_192);
                         break;
                 case BITS_256:
-			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm256_pre, aesni_gcm256_enc, aesni_gcm256_dec);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm256_pre, aesni_gcm256_enc_2, aesni_gcm256_dec_2);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect], aesni_gcm256_pre, job_aes_gcm_enc_256, job_aes_gcm_dec_256);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm256_pre,
+                                                     aesni_gcm256_enc,
+                                                     aesni_gcm256_dec);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm256_pre,
+                                                     aesni_gcm256_enc_2,
+                                                     aesni_gcm256_dec_2);
+			is_error |= test_gcm_vectors(&gcm_vectors[vect],
+                                                     aesni_gcm256_pre,
+                                                     job_aes_gcm_enc_256,
+                                                     job_aes_gcm_dec_256);
                         break;
                 default:
                         is_error = -1;
@@ -1303,7 +1341,7 @@ int gcm_test(const enum arch_type arch)
 {
 	int errors = 0;
 
-        switch(arch) {
+        switch (arch) {
         case ARCH_SSE:
                 aesni_gcm128_pre = aes_gcm_pre_128_sse;
                 aesni_gcm128_enc = aes_gcm_enc_128_sse;

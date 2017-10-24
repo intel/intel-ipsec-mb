@@ -1,9 +1,9 @@
 ;;
 ;; Copyright (c) 2012-2017, Intel Corporation
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
-;; 
+;;
 ;;     * Redistributions of source code must retain the above copyright notice,
 ;;       this list of conditions and the following disclaimer.
 ;;     * Redistributions in binary form must reproduce the above copyright
@@ -12,7 +12,7 @@
 ;;     * Neither the name of Intel Corporation nor the names of its contributors
 ;;       may be used to endorse or promote products derived from this software
 ;;       without specific prior written permission.
-;; 
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,7 +32,7 @@
 ;; Windows preserves:         rcx             rbp
 ;;
 ;; Linux clobbers:    rax rbx rcx rdx rsi         r8 r9 r10 r11 r12 r13 r14 r15
-;; Linux preserves:                       rdi rbp   
+;; Linux preserves:                       rdi rbp
 ;;
 ;; clobbers xmm0-15
 
@@ -297,7 +297,7 @@ rot44 equ  21
 ;;
 ;; A = B +ROL32((A +MAGIC(B,C,D) +data +const), nrot)
 ;;
-; macro MD5_STEP MAGIC_FUN, A,B,C,D, A2,B2,C3,D2, FUN, TMP, FUN2, TMP2, data, 
+; macro MD5_STEP MAGIC_FUN, A,B,C,D, A2,B2,C3,D2, FUN, TMP, FUN2, TMP2, data,
 ;                MD5const, nrot
 %macro MD5_STEP 16
 %define %%MAGIC_FUN	%1
@@ -345,7 +345,7 @@ md5_x4x2_avx:
 
         ;; each row of transposed digests is split into 2 parts, the right half stored in A, and left half in A2
 	;; Initialize digests
-	vmovdqa	A,[state + 0*16 + 0*MD5_DIGEST_ROW_SIZE] 
+	vmovdqa	A,[state + 0*16 + 0*MD5_DIGEST_ROW_SIZE]
 	vmovdqa	B,[state + 0*16 + 1*MD5_DIGEST_ROW_SIZE]
 	vmovdqa	C,[state + 0*16 + 2*MD5_DIGEST_ROW_SIZE]
 	vmovdqa	D,[state + 0*16 + 3*MD5_DIGEST_ROW_SIZE]
@@ -371,7 +371,6 @@ md5_x4x2_avx:
         ; Make ping-pong pointers to the two memory blocks
         mov     mem1, rsp
         lea     mem2, [rsp + 16*16*2]
-	
 
 ;; Load first block of data and save back to stack
 %assign I 0

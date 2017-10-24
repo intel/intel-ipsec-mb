@@ -28,7 +28,7 @@
 ;; In System V AMD64 ABI
 ;;	calle saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15	
+;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 ;;
@@ -64,23 +64,23 @@ extern sha256_ni
 ; idx needs to be in rbx, rbp, r13-r15
 %define last_len	rbp
 %define idx		rbp
-	    
+
 %define p		r11
 %define start_offset	r11
 
 %define unused_lanes	rbx
 %define tmp4		rbx
-	
+
 %define job_rax		rax
 %define len		rax
-	    
+
 %define size_offset	reg3
 %define tmp2		reg3
-	    
+
 %define lane		reg4
-	    
+
 %define extra_blocks	r8
-	    
+
 %define tmp		r9
 %define p2		r9
 
@@ -111,7 +111,7 @@ MKGLOBAL(submit_job_hmac_sha_224_ni_sse,function,internal)
 submit_job_hmac_sha_224_ni_sse:
 
 %else
-	
+
 ; JOB* submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -163,7 +163,7 @@ submit_job_hmac_sha_256_ni_sse:
 	jb	copy_lt64
 
 fast_copy:
-	add	p, len	
+	add	p, len
 	movdqu	xmm0, [p - 64 + 0*16]
 	movdqu	xmm1, [p - 64 + 1*16]
 	movdqu	xmm2, [p - 64 + 2*16]
@@ -269,7 +269,7 @@ proc_outer:
 	;; overwrite top 4 bytes with 0x80
 	mov	dword [lane_data + _outer_block + 7*4], 0x80
 %endif
-	
+
 	mov	tmp, [job + _auth_key_xor_opad]
 	movdqu	xmm0, [tmp]
 	movdqu	xmm1,  [tmp + 4*4]
@@ -291,7 +291,7 @@ proc_extra_blocks:
 copy_lt64:
 	;; less than one message block of data
 	;; beginning of source block
-	;; destination extrablock but backwards by len from where 0x80 pre-populated 
+	;; destination extrablock but backwards by len from where 0x80 pre-populated
 	;; p2 clobbers unused_lanes, undo before exit
 	lea	p2, [lane_data + _extra_block  + 64]
 	sub	p2, len
@@ -302,7 +302,7 @@ copy_lt64:
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
-    
+
 	align	16
 end_loop:
 	mov	job_rax, [lane_data + _job_in_lane]
@@ -331,7 +331,7 @@ end_loop:
 	;; SHA256
 	movdqu	[p], xmm0
 %endif
-	
+
 return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]

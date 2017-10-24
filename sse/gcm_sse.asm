@@ -2,7 +2,7 @@
 ;  Copyright(c) 2011-2017 Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
-;  modification, are permitted provided that the following conditions 
+;  modification, are permitted provided that the following conditions
 ;  are met:
 ;    * Redistributions of source code must retain the above copyright
 ;      notice, this list of conditions and the following disclaimer.
@@ -138,7 +138,6 @@
 %define NROUNDS 13
 %endif
 
-        
 default rel
 ; need to push 4 registers into stack to maintain
 %define STACK_OFFSET 8*4
@@ -1174,7 +1173,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 		aesenc	%%XMM6, %%T1
 		aesenc	%%XMM7, %%T1
 		aesenc	%%XMM8, %%T1
-        
+
 		movdqu	%%T1, [%%GDATA + 16*12]
 		aesenc	%%XMM1, %%T1
 		aesenc	%%XMM2, %%T1

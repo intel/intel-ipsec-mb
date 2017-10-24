@@ -59,7 +59,8 @@
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
 #define CIPHER_MODES_AES 4	/* CBC, CNTR, CNTR+8, NULL_CIPHER */
-#define CIPHER_MODES_DOCSIS 4	/* AES DOCSIS, AES DOCSIS+8, DES DOCSIS, DES DOCSIS+8 */
+#define CIPHER_MODES_DOCSIS 4	/* AES DOCSIS, AES DOCSIS+8, DES DOCSIS,
+                                   DES DOCSIS+8 */
 #define CIPHER_MODES_GCM 1	/* GCM */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 8		/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
@@ -121,12 +122,12 @@ enum test_type_e {
 enum test_cipher_mode_e {
 	TEST_CBC = 1,
 	TEST_CNTR,
-	TEST_CNTR8, /* CNTR with increased buffer by 8, will become CNTR. */
+	TEST_CNTR8, /* CNTR with increased buffer by 8 */
 	TEST_NULL_CIPHER,
-	TEST_AESDOCSIS, /* The next DOCSIS fields will become DOCSIS_SEC_BPI */
-	TEST_AESDOCSIS8, /* It means: increase buffer size by 8 bytes */
-	TEST_DESDOCSIS, /* The next DOCSIS fields will become DES_DOCSIS_SEC_BPI */
-	TEST_DESDOCSIS4, /* It means: increase buffer size by 4 bytes */
+	TEST_AESDOCSIS,
+	TEST_AESDOCSIS8, /* AES DOCSIS with increased buffer size by 8 */
+	TEST_DESDOCSIS,
+	TEST_DESDOCSIS4, /* DES DOCSIS with increased buffer size by 4 */
 	TEST_GCM /* Additional field used by GCM, not translated */
 };
 
@@ -168,8 +169,7 @@ enum cache_type_e {
 };
 
 #ifdef DEBUG
-#define FUNCS(A)                                \
-        {                                       \
+#define FUNCS(A) {                              \
                 init_mb_mgr_##A,                \
                         get_next_job_##A,       \
                         submit_job_##A,         \
@@ -177,8 +177,7 @@ enum cache_type_e {
                         flush_job_##A           \
                         }
 #else
-#define FUNCS(A)                                \
-        {                                       \
+#define FUNCS(A) {                              \
                 init_mb_mgr_##A,                \
                         get_next_job_##A,       \
                         submit_job_nocheck_##A, \
@@ -188,11 +187,10 @@ enum cache_type_e {
 #endif
 
 #define FUNCS_GCM(A)                                                    \
-        {                                                               \
-                {aes_gcm_pre_128_##A, aes_gcm_enc_128_##A, aes_gcm_dec_128_##A},\
-                {aes_gcm_pre_192_##A, aes_gcm_enc_192_##A, aes_gcm_dec_192_##A},\
-                {aes_gcm_pre_256_##A, aes_gcm_enc_256_##A, aes_gcm_dec_256_##A} \
-        }
+        {aes_gcm_pre_128_##A, aes_gcm_enc_128_##A, aes_gcm_dec_128_##A}, \
+        {aes_gcm_pre_192_##A, aes_gcm_enc_192_##A, aes_gcm_dec_192_##A}, \
+        {aes_gcm_pre_256_##A, aes_gcm_enc_256_##A, aes_gcm_dec_256_##A}
+
 
 /* Function pointers used by AES_HMAC, AES_DOCSIS */
 struct funcs_s func_sets[NUM_ARCHS] = {
@@ -204,9 +202,9 @@ struct funcs_s func_sets[NUM_ARCHS] = {
 
 /* Function pointers used by AES_GCM */
 struct funcs_gcm_s func_sets_gcm[NUM_ARCHS - 1][3] = {
-	FUNCS_GCM(sse),
-	FUNCS_GCM(avx_gen2), /* AVX */
-	FUNCS_GCM(avx_gen4) /* AVX2 */
+	{FUNCS_GCM(sse)},
+        {FUNCS_GCM(avx_gen2)}, /* AVX */
+        {FUNCS_GCM(avx_gen4)} /* AVX2 */
 };
 
 enum cache_type_e cache_type = WARM;
@@ -477,7 +475,7 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 } else {
                         job->u.GCM.aad = job->src;
                 }
-                
+
 		index += 2;
 		if (index >= index_limit)
 			index = 0;
@@ -632,7 +630,8 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 /* Sets cipher mode, hash algorithm */
 static void
 do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
-            const uint32_t run, struct variant_s *variant_ptr, uint32_t *variant)
+            const uint32_t run, struct variant_s **variant_ptr,
+            uint32_t *variant)
 {
 	uint32_t hash_alg;
 	uint32_t h_start = TEST_SHA1;
@@ -661,9 +660,9 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 		params->cipher_mode = (enum test_cipher_mode_e) c_mode;
 		for (hash_alg = h_start; hash_alg <= h_end; hash_alg++) {
 			params->hash_alg = (enum test_hash_alg_e) hash_alg;
-			process_variant(mgr, arch, params, variant_ptr, run);
+			process_variant(mgr, arch, params, *variant_ptr, run);
 			(*variant)++;
-			variant_ptr++;
+			(*variant_ptr)++;
 		}
 	}
 }
@@ -671,7 +670,8 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 /* Sets cipher direction and key size  */
 static void
 run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
-             const uint32_t run, struct variant_s *variant_ptr, uint32_t *variant)
+             const uint32_t run, struct variant_s **variant_ptr,
+             uint32_t *variant)
 {
 	uint32_t dir;
 	uint32_t k; /* Key size */
@@ -686,7 +686,8 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 		params->cipher_dir = (JOB_CIPHER_DIRECTION) dir;
 		for (k = AES_128_BYTES; k <= limit; k += 8) {
 			params->aes_key_size = k;
-			do_variants(mgr, arch, params, run, variant_ptr, variant);
+			do_variants(mgr, arch, params, run, variant_ptr,
+                                    variant);
 		}
 	}
 }
@@ -754,7 +755,7 @@ static void print_times(struct variant_s *variant_list, struct params_s *params,
                 for (col = 0; col < total_variants; col++) {
                         uint64_t *time_ptr =
                                 &variant_list[col].avg_times[sz * NUM_RUNS];
-                        const long long unsigned val =
+                        const unsigned long long val =
                                 mean_median(time_ptr, NUM_RUNS);
 
                         printf("\t%llu", val);
@@ -845,7 +846,8 @@ run_tests(void *arg)
                                 continue;
 
                         if (type == AES_GCM)
-                                max_arch = NUM_ARCHS - 1; /* No AVX512 for GCM */
+                                /* No AVX512 for GCM */
+                                max_arch = NUM_ARCHS - 1;
                         else
                                 max_arch = NUM_ARCHS;
 
@@ -856,7 +858,7 @@ run_tests(void *arg)
                                 if (archs[arch] == 0)
                                         continue;
                                 run_dir_test(&mb_mgr, arch, &params, run,
-                                             variant_ptr, &variant);
+                                             &variant_ptr, &variant);
                         }
                 } /* end for type */
         } /* end for run */
@@ -891,15 +893,17 @@ static void usage(void)
 		"--no-gcm: do not run GCM perf tests\n"
 		"--no-aes: do not run standard AES + HMAC perf tests\n"
 		"--no-docsis: do not run DOCSIS cipher perf tests\n"
-		"--gcm-job-api: use JOB API for GCM perf tests (raw GCM API is default)\n"
-                "--threads num: <num> for the number of threads to run. Max: 16\n");
+		"--gcm-job-api: use JOB API for GCM perf tests"
+                " (raw GCM API is default)\n"
+                "--threads num: <num> for the number of threads to run."
+                "Max: %d\n", MAX_NUM_THREADS + 1);
 }
 
 int main(int argc, char *argv[])
 {
 	MB_MGR lmgr;
 	int i, num_t = 0;
-#ifdef  _WIN32
+#ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
 #else
         pthread_t tids[MAX_NUM_THREADS];
@@ -941,7 +945,7 @@ int main(int argc, char *argv[])
 		} else if (strcmp(argv[i], "--threads") == 0) {
                         num_t = atoi(argv[++i]);
                         if (num_t > (MAX_NUM_THREADS + 1)) {
-                                fprintf(stderr, "Maximum number of threads: %d\n", MAX_NUM_THREADS + 1);
+                                fprintf(stderr, "Invalid number of threads!\n");
                                 return EXIT_FAILURE;
                         }
                 } else {
@@ -963,6 +967,7 @@ int main(int argc, char *argv[])
                         threads[i] = (HANDLE)_beginthread(&run_tests, 0, NULL);
 #else
                         pthread_attr_t attr;
+
                         pthread_attr_init(&attr);
                         pthread_create(&tids[i], &attr, run_tests, NULL);
 #endif
