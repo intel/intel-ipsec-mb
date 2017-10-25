@@ -977,12 +977,15 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
                 WaitForMultipleObjects(num_t, threads, FALSE, INFINITE);
 #endif
-                for (i = 0; i < num_t - 1; i++)
+                for (i = 0; i < num_t - 1; i++) {
+                        fprintf(stderr, "Waiting on thread %d to finish...\n",
+                                i+2);
 #ifdef _WIN32
                         CloseHandle(threads[i]);
 #else
                         pthread_join(tids[i], NULL);
 #endif
+                }
         }
         free_mem();
 
