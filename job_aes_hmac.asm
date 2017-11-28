@@ -60,6 +60,15 @@ END_FIELDS
 %assign _AES_XCBC_spec_fields_size	_FIELD_OFFSET
 %assign _AES_XCBC_spec_fields_align	_STRUCT_ALIGN
 
+START_FIELDS	; CBCMAC Specific Fields
+;;;	name				size	align
+FIELD	__aad,				8,	8	; pointer to AAD
+FIELD	__aad_len,			8,	8	; 64-bit AAD length
+END_FIELDS
+
+%assign _CBCMAC_spec_fields_size	_FIELD_OFFSET
+%assign _CBCMAC_spec_fields_align	_STRUCT_ALIGN
+
 START_FIELDS	; JOB_AES_HMAC
 
 ;;;	name				size	align
@@ -79,7 +88,8 @@ FIELD	_auth_tag_output,		8,	8	; pointer to hash output
 FIELD	_auth_tag_output_len_in_bytes,	8,	8
 
 UNION	_u,	_HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
-		_AES_XCBC_spec_fields_size, _AES_XCBC_spec_fields_align
+		_AES_XCBC_spec_fields_size, _AES_XCBC_spec_fields_align, \
+		_CBCMAC_spec_fields_size, _CBCMAC_spec_fields_align
 
 FIELD	_status,			4,	4	; JOB_STS
 FIELD	_cipher_mode,			4,	4	; JOB_CIPHER_MODE
@@ -98,4 +108,6 @@ END_FIELDS
 %assign _k1_expanded		_u + __k1_expanded
 %assign _k2			_u + __k2
 %assign _k3			_u + __k3
+%assign _cbcmac_aad	        _u + __aad
+%assign _cbcmac_aad_len	        _u + __aad_len
 

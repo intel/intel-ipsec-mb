@@ -39,7 +39,7 @@ else
 CFLAGS += -O3
 endif
 
-SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c
+SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c
 OBJECTS := $(SOURCES:%.c=%.o)
 
 all: $(APP)
@@ -51,6 +51,7 @@ main.o: main.c do_test.h
 gcm_test.o: gcm_test.c gcm_ctr_vectors_test.h
 ctr_test.o: ctr_test.c gcm_ctr_vectors_test.h
 des_test.o: des_test.c
+ccm_test.o: ccm_test.c
 customop_test.o: customop_test.c customop_test.h
 
 .PHONY: clean

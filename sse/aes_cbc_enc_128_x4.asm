@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;;; routine to do a 128 bit CBC AES encrypt
-;;; process 4 buffers at a time, single data structure as input
+;;; Routine to do a 128 bit CBC AES encryption / CBC-MAC digest computation
+;;; processes 4 buffers at a time, single data structure as input
 ;;; Updates In and Out pointers at end
 
 %include "os.asm"
@@ -51,35 +51,41 @@
 ;; arg 2: LEN : len (in units of bytes)
 
 %ifdef LINUX
-%define ARG	rdi
-%define LEN	rsi
-%define REG3	rcx
-%define REG4	rdx
+%define arg1	rdi
+%define arg2	rsi
+%define arg3	rdx
+%define arg4	rcx
 %else
-%define ARG	rcx
-%define LEN	rdx
-%define REG3	rsi
-%define REG4	rdi
+%define arg1	rcx
+%define arg2	rdx
+%define arg3	rdi             ;r8
+%define arg4	rsi             ;r9
 %endif
+
+%define ARG	arg1
+%define LEN	arg2
 
 %define IDX	rax
 
 %define IN0	r8
 %define KEYS0	rbx
-%define OUT0	r9
 
 %define IN1	r10
-%define KEYS1	REG3
-%define OUT1	r11
+%define KEYS1	arg3
 
 %define IN2	r12
-%define KEYS2	REG4
-%define OUT2	r13
+%define KEYS2	arg4
 
 %define IN3	r14
 %define KEYS3	rbp
-%define OUT3	r15
 
+%ifndef CBC_MAC
+;; No cipher text write back for CBC-MAC
+%define OUT0	r9
+%define OUT1	r11
+%define OUT2	r13
+%define OUT3	r15
+%endif
 
 %define XDATA0		xmm0
 %define XDATA1		xmm1
@@ -105,19 +111,29 @@
 
 section .text
 
+%ifdef CBC_MAC
+MKGLOBAL(aes128_cbc_mac_x4,function,internal)
+aes128_cbc_mac_x4:
+%else
 MKGLOBAL(aes_cbc_enc_128_x4,function,internal)
 aes_cbc_enc_128_x4:
-
+%endif
 	push	rbp
-
+%ifdef CBC_MAC
+        push    rbx
+        push    r12
+        push    r13
+        push    r14
+        push    r15
+%endif
 	mov	IDX, 16
 
-	mov	IN0,	[ARG + _aesarg_in + 8*0]
-	mov	IN1,	[ARG + _aesarg_in + 8*1]
-	mov	IN2,	[ARG + _aesarg_in + 8*2]
-	mov	IN3,	[ARG + _aesarg_in + 8*3]
-
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	mov	        IN0,	[ARG + _aesarg_in + 8*0]
+	mov	        IN1,	[ARG + _aesarg_in + 8*1]
+	mov	        IN2,	[ARG + _aesarg_in + 8*2]
+	mov	        IN3,	[ARG + _aesarg_in + 8*3]
 
 	MOVDQ		XDATA0, [IN0]		; load first block of plain text
 	MOVDQ		XDATA1, [IN1]		; load first block of plain text
@@ -134,10 +150,12 @@ aes_cbc_enc_128_x4:
 	pxor		XDATA2, [ARG + _aesarg_IV + 16*2] ; plaintext XOR IV
 	pxor		XDATA3, [ARG + _aesarg_IV + 16*3] ; plaintext XOR IV
 
+%ifndef CBC_MAC
 	mov		OUT0,	[ARG + _aesarg_out + 8*0]
 	mov		OUT1,	[ARG + _aesarg_out + 8*1]
 	mov		OUT2,	[ARG + _aesarg_out + 8*2]
 	mov		OUT3,	[ARG + _aesarg_out + 8*3]
+%endif
 
 	pxor		XDATA0, [KEYS0 + 16*0]		; 0. ARK
 	pxor		XDATA1, [KEYS1 + 16*0]		; 0. ARK
@@ -208,11 +226,12 @@ aes_cbc_enc_128_x4:
 	aesenclast	XDATA2, [KEYS2 + 16*10]	; 10. ENC
 	aesenclast	XDATA3, [KEYS3 + 16*10]	; 10. ENC
 
+%ifndef CBC_MAC
 	MOVDQ		[OUT0], XDATA0		; write back ciphertext
 	MOVDQ		[OUT1], XDATA1		; write back ciphertext
 	MOVDQ		[OUT2], XDATA2		; write back ciphertext
 	MOVDQ		[OUT3], XDATA3		; write back ciphertext
-
+%endif
 	cmp		LEN, IDX
 	je		done
 
@@ -221,7 +240,6 @@ main_loop:
 	pxor2		XDATA1, [IN1 + IDX]	; plaintext XOR IV
 	pxor2		XDATA2, [IN2 + IDX]	; plaintext XOR IV
 	pxor2		XDATA3, [IN3 + IDX]	; plaintext XOR IV
-
 
 	pxor		XDATA0, [KEYS0 + 16*0] 	; 0. ARK
 	pxor		XDATA1, [KEYS1 + 16*0] 	; 0. ARK
@@ -278,19 +296,20 @@ main_loop:
 	aesenclast	XDATA2, [KEYS2 + 16*10]	; 10. ENC
 	aesenclast	XDATA3, [KEYS3 + 16*10]	; 10. ENC
 
-
+%ifndef CBC_MAC
+        ;; No cipher text write back for CBC-MAC
 	MOVDQ		[OUT0 + IDX], XDATA0	; write back ciphertext
-	MOVDQ		[OUT1 + IDX], XDATA1	; write back ciphertex
-	MOVDQ		[OUT2 + IDX], XDATA2	; write back ciphertex
-	MOVDQ		[OUT3 + IDX], XDATA3	; write back ciphertex
-
+	MOVDQ		[OUT1 + IDX], XDATA1	; write back ciphertext
+	MOVDQ		[OUT2 + IDX], XDATA2	; write back ciphertext
+	MOVDQ		[OUT3 + IDX], XDATA3	; write back ciphertext
+%endif
 
 	add	IDX, 16
 	cmp	LEN, IDX
 	jne	main_loop
 
 done:
-	;; update IV
+	;; update IV / store digest for CBC-MAC
 	movdqa	[ARG + _aesarg_IV + 16*0], XDATA0
 	movdqa	[ARG + _aesarg_IV + 16*1], XDATA1
 	movdqa	[ARG + _aesarg_IV + 16*2], XDATA2
@@ -306,6 +325,8 @@ done:
 	add	IN3, LEN
 	mov	[ARG + _aesarg_in + 8*3], IN3
 
+%ifndef CBC_MAC
+        ;; No OUT pointer updates for CBC-MAC
 	add	OUT0, LEN
 	mov	[ARG + _aesarg_out + 8*0], OUT0
 	add	OUT1, LEN
@@ -314,7 +335,15 @@ done:
 	mov	[ARG + _aesarg_out + 8*2], OUT2
 	add	OUT3, LEN
 	mov	[ARG + _aesarg_out + 8*3], OUT3
+%endif
 
+%ifdef CBC_MAC
+        pop     r15
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rbx
+%endif
 	pop	rbp
 
 	ret

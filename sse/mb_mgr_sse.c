@@ -170,10 +170,11 @@ JOB_AES_HMAC *flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 
 /* ====================================================================== */
 
-extern void aes_cfb_128_one_sse(void *out, const void *in, const void *iv,
-                                const void *keys, UINT64 len);
-
 #define AES_CFB_128_ONE    aes_cfb_128_one_sse
+
+void aes128_cbc_mac_x4(AES_ARGS_x8 *args, uint64_t len);
+
+#define AES128_CBC_MAC     aes128_cbc_mac_x4
 
 /* ====================================================================== */
 
@@ -592,6 +593,14 @@ init_mb_mgr_sse(MB_MGR *state)
                 state->aes_xcbc_ooo.ldata[j].final_block[16] = 0x80;
                 memset(state->aes_xcbc_ooo.ldata[j].final_block + 17, 0x00, 15);
         }
+
+        /* Init AES-CCM auth out-of-order fields */
+        for (j = 0; j < 4; j++) {
+                state->aes_ccm_ooo.init_done[j] = 0;
+                state->aes_ccm_ooo.lens[j] = 0;
+                state->aes_ccm_ooo.job_in_lane[j] = NULL;
+        }
+        state->aes_ccm_ooo.unused_lanes = 0xF3210;
 
         /* Init "in order" components */
         state->next_job = 0;

@@ -75,6 +75,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes256_cntr_by8_avx.obj \
 	$(OBJ_DIR)\aes_cfb_128_sse.obj \
 	$(OBJ_DIR)\aes_cfb_128_avx.obj \
+	$(OBJ_DIR)\aes128_cbc_mac_x4.obj \
+	$(OBJ_DIR)\aes128_cbc_mac_x8.obj \
 	$(OBJ_DIR)\aes_cbc_enc_128_x4.obj \
 	$(OBJ_DIR)\aes_cbc_enc_128_x8.obj \
 	$(OBJ_DIR)\aes_cbc_enc_192_x4.obj \

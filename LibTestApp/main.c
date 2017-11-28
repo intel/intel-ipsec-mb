@@ -36,6 +36,7 @@
 #include "customop_test.h"
 
 extern int des_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+extern int ccm_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 
 #define TEST_SSE  1
 #define TEST_AVX  2
@@ -103,6 +104,7 @@ main(int argc, char **argv)
                 gcm_test(ARCH_SSE);
                 customop_test(&mb_mgr);
                 des_test(ARCH_SSE, &mb_mgr);
+                ccm_test(ARCH_SSE, &mb_mgr);
         }
 
         if (do_avx) {
@@ -114,6 +116,7 @@ main(int argc, char **argv)
                 gcm_test(ARCH_AVX);
                 customop_test(&mb_mgr);
                 des_test(ARCH_AVX, &mb_mgr);
+                ccm_test(ARCH_AVX, &mb_mgr);
         }
 
         if (do_avx2) {
@@ -125,6 +128,7 @@ main(int argc, char **argv)
                 gcm_test(ARCH_AVX2);
                 customop_test(&mb_mgr);
                 des_test(ARCH_AVX2, &mb_mgr);
+                ccm_test(ARCH_AVX2, &mb_mgr);
         }
 
         if (do_avx512) {
@@ -136,6 +140,7 @@ main(int argc, char **argv)
                 gcm_test(ARCH_AVX512);
                 customop_test(&mb_mgr);
                 des_test(ARCH_AVX512, &mb_mgr);
+                ccm_test(ARCH_AVX512, &mb_mgr);
         }
 
         printf("Test completed\n");

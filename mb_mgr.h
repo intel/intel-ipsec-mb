@@ -69,6 +69,21 @@ typedef struct {
 } MB_MGR_AES_XCBC_OOO;
 
 /* ========================================================================== */
+/* CBC-MAC out-of-order scheduler structure */
+
+typedef struct {
+        AES_ARGS_x8 args; /* need to re-use AES arguments */
+        DECLARE_ALIGNED(UINT16 lens[8], 16);
+        DECLARE_ALIGNED(UINT16 init_done[8], 16);
+        /* each byte is index (0...3) of unused lanes
+         * byte 4 is set to FF as a flag
+         */
+        UINT64 unused_lanes;
+        JOB_AES_HMAC *job_in_lane[8];
+        DECLARE_ALIGNED(UINT8 init_blocks[8 * (4 * 16)], 32);
+} MB_MGR_CBCMAC_OOO;
+
+/* ========================================================================== */
 /* DES out-of-order scheduler fields */
 typedef struct {
         DES_ARGS_x16 args;
@@ -182,6 +197,7 @@ typedef struct MB_MGR {
         MB_MGR_HMAC_SHA_512_OOO      hmac_sha_512_ooo;
         MB_MGR_HMAC_MD5_OOO          hmac_md5_ooo;
         MB_MGR_AES_XCBC_OOO          aes_xcbc_ooo;
+        MB_MGR_CBCMAC_OOO            aes_ccm_ooo;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */

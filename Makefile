@@ -91,6 +91,8 @@ lib_objs := \
 	aes256_cntr_by8_avx.o \
 	aes_cfb_128_sse.o \
 	aes_cfb_128_avx.o \
+	aes128_cbc_mac_x4.o \
+	aes128_cbc_mac_x8.o \
 	aes_cbc_enc_128_x4.o \
 	aes_cbc_enc_128_x8.o \
 	aes_cbc_enc_192_x4.o \

@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-;;; routine to do a 128 bit CBC AES encrypt
+;;; routine to do a 128 bit CBC AES encrypt and CBC MAC
 
 ;; clobbers all registers except for ARG1 and rbp
 
@@ -51,7 +51,7 @@
 ;; arg 2: LEN : len (in units of bytes)
 
 struc STACK
-_gpr_save:	resq	1
+_gpr_save:	resq	6
 _len:		resq	1
 endstruc
 
@@ -59,22 +59,25 @@ endstruc
 %define LEN_AREA	rsp + _len
 
 %ifdef LINUX
-%define ARG	rdi
-%define LEN	rsi
-%define REG3	rcx
-%define REG4	rdx
+%define arg1	rdi
+%define arg2	rsi
+%define arg3	rcx
+%define arg4	rdx
 %else
-%define ARG	rcx
-%define LEN	rdx
-%define REG3	rsi
-%define REG4	rdi
+%define arg1	rcx
+%define arg2	rdx
+%define arg3	rdi
+%define arg4	rsi
 %endif
+
+%define ARG     arg1
+%define LEN     arg2
 
 %define IDX	rax
 %define TMP	rbx
 
-%define KEYS0	REG3
-%define KEYS1	REG4
+%define KEYS0	arg3
+%define KEYS1	arg4
 %define KEYS2	rbp
 %define KEYS3	r8
 %define KEYS4	r9
@@ -105,22 +108,25 @@ endstruc
 %define XKEY6_9		xmm14
 %define XTMP		xmm15
 
-
+%ifdef CBC_MAC
+MKGLOBAL(aes128_cbc_mac_x8,function,internal)
+aes128_cbc_mac_x8:
+%else
 MKGLOBAL(aes_cbc_enc_128_x8,function,internal)
 aes_cbc_enc_128_x8:
-
+%endif
 	sub	rsp, STACK_size
 	mov	[GPR_SAVE_AREA + 8*0], rbp
 
 	mov	IDX, 16
 	mov	[LEN_AREA], LEN
 
-	mov	IN0,	[ARG + _aesarg_in + 8*0]
-	mov	IN2,	[ARG + _aesarg_in + 8*2]
-	mov	IN4,	[ARG + _aesarg_in + 8*4]
-	mov	IN6,	[ARG + _aesarg_in + 8*6]
-
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	mov	        IN0,	[ARG + _aesarg_in + 8*0]
+	mov	        IN2,	[ARG + _aesarg_in + 8*2]
+	mov	        IN4,	[ARG + _aesarg_in + 8*4]
+	mov	        IN6,	[ARG + _aesarg_in + 8*6]
 
 	mov		TMP, [ARG + _aesarg_in + 8*1]
 	VMOVDQ		XDATA0, [IN0]		; load first block of plain text
@@ -264,6 +270,7 @@ aes_cbc_enc_128_x8:
 	vaesenclast	XDATA6, [KEYS6 + 16*10]	; 10. ENC
 	vaesenclast	XDATA7, [KEYS7 + 16*10]	; 10. ENC
 
+%ifndef CBC_MAC
 	VMOVDQ		[TMP], XDATA0		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*1]
 	VMOVDQ		[TMP], XDATA1		; write back ciphertext
@@ -279,7 +286,7 @@ aes_cbc_enc_128_x8:
 	VMOVDQ		[TMP], XDATA6		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*7]
 	VMOVDQ		[TMP], XDATA7		; write back ciphertext
-
+%endif
 	cmp		[LEN_AREA], IDX
 	je		done
 
@@ -296,7 +303,6 @@ main_loop:
 	mov		TMP, [ARG + _aesarg_in + 8*7]
 	VPXOR2		XDATA6, [IN6 + IDX]	; load next block of plain text
 	VPXOR2		XDATA7, [TMP + IDX]	; load next block of plain text
-
 
 	VPXOR2		XDATA0, [KEYS0 + 16*0]		; 0. ARK
 	VPXOR2		XDATA1, [KEYS1 + 16*0]		; 0. ARK
@@ -399,7 +405,8 @@ main_loop:
 	vaesenclast	XDATA6, [KEYS6 + 16*10]	; 10. ENC
 	vaesenclast	XDATA7, [KEYS7 + 16*10]	; 10. ENC
 
-
+%ifndef CBC_MAC
+        ;; no ciphertext write back for CBC-MAC
 	VMOVDQ		[TMP + IDX], XDATA0		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*1]
 	VMOVDQ		[TMP + IDX], XDATA1		; write back ciphertext
@@ -415,13 +422,13 @@ main_loop:
 	VMOVDQ		[TMP + IDX], XDATA6		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*7]
 	VMOVDQ		[TMP + IDX], XDATA7		; write back ciphertext
-
+%endif
 	add	IDX, 16
 	cmp	[LEN_AREA], IDX
 	jne	main_loop
 
 done:
-	;; update IV
+	;; update IV for AES128-CBC / store digest for CBC-MAC
 	vmovdqa	[ARG + _aesarg_IV + 16*0], XDATA0
 	vmovdqa	[ARG + _aesarg_IV + 16*1], XDATA1
 	vmovdqa	[ARG + _aesarg_IV + 16*2], XDATA2
@@ -442,6 +449,7 @@ done:
 	vmovdqa	[ARG + _aesarg_in + 16*1], xmm2
 	vmovdqa	[ARG + _aesarg_in + 16*2], xmm3
 	vmovdqa	[ARG + _aesarg_in + 16*3], xmm4
+%ifndef CBC_MAC
 	vpaddq	xmm5, xmm0, [ARG + _aesarg_out + 16*0]
 	vpaddq	xmm6, xmm0, [ARG + _aesarg_out + 16*1]
 	vpaddq	xmm7, xmm0, [ARG + _aesarg_out + 16*2]
@@ -450,10 +458,17 @@ done:
 	vmovdqa	[ARG + _aesarg_out + 16*1], xmm6
 	vmovdqa	[ARG + _aesarg_out + 16*2], xmm7
 	vmovdqa	[ARG + _aesarg_out + 16*3], xmm8
+%endif
 
-;; XMMs are saved at a higher level
+        ;; XMMs are saved at a higher level
 	mov	rbp, [GPR_SAVE_AREA + 8*0]
+%ifdef CBC_MAC
+	mov	rbx, [GPR_SAVE_AREA + 8*1]
+	mov	r12, [GPR_SAVE_AREA + 8*2]
+	mov	r13, [GPR_SAVE_AREA + 8*3]
+	mov	r14, [GPR_SAVE_AREA + 8*4]
+	mov	r15, [GPR_SAVE_AREA + 8*5]
+%endif
 
 	add	rsp, STACK_size
-
 	ret

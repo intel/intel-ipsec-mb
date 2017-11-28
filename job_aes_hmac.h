@@ -50,7 +50,8 @@ typedef enum {
 #endif /* !NO_GCM */
         CUSTOM_CIPHER,
         DES,
-        DOCSIS_DES
+        DOCSIS_DES,
+        CCM128,
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -71,6 +72,7 @@ typedef enum {
         AES_GMAC,
 #endif /* !NO_GCM */
         CUSTOM_HASH,
+        AES_CCM128,
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -89,10 +91,10 @@ typedef struct JOB_AES_HMAC {
         const void *aes_dec_key_expanded;
         UINT64 aes_key_len_in_bytes; /* Only 16, 24, and  32 byte (128, 192 and
                                       * 256-bit) keys supported at this time. */
-        const UINT8  *src; /* Input. May be cipher text or plaintext.
-                            * In-place ciphering allowed. */
-        UINT8   *dst; /*Output. May be cipher text or plaintext.
-                       * In-place ciphering allowed, i.e. dst = src. */
+        const UINT8 *src; /* Input. May be cipher text or plaintext.
+                           * In-place ciphering allowed. */
+        UINT8 *dst; /*Output. May be cipher text or plaintext.
+                     * In-place ciphering allowed, i.e. dst = src. */
         UINT64 cipher_start_src_offset_in_bytes;
         UINT64 msg_len_to_cipher_in_bytes; /* Max len = 65472 bytes.
                                             * IPSec case, the maximum cipher
@@ -123,9 +125,14 @@ typedef struct JOB_AES_HMAC {
                 struct _AES_XCBC_specific_fields {
                         /* 16-byte aligned pointers */
                         const UINT32 *_k1_expanded;
-                        const UINT8  *_k2;
-                        const UINT8  *_k3;
+                        const UINT8 *_k2;
+                        const UINT8 *_k3;
                 } XCBC;
+                struct _AES_CCM_specific_fields {
+                        /* Additional Authentication Data (AAD) */
+                        const void *aad;
+                        UINT64 aad_len_in_bytes; /* Length of AAD */
+                } CCM;
 #ifndef NO_GCM
                 struct _AES_GCM_specific_fields {
                         /* Additional Authentication Data (AAD) */
@@ -142,8 +149,8 @@ typedef struct JOB_AES_HMAC {
         JOB_HASH_ALG hash_alg; /* SHA-1 or others... */
         JOB_CHAIN_ORDER chain_order; /* CIPHER_HASH or HASH_CIPHER */
 
-        void    *user_data;
-        void    *user_data2;
+        void *user_data;
+        void *user_data2;
 
         /*
          * stateless custom cipher and hash
