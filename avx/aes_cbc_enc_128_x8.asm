@@ -51,7 +51,7 @@
 ;; arg 2: LEN : len (in units of bytes)
 
 struc STACK
-_gpr_save:	resq	6
+_gpr_save:	resq	8
 _len:		resq	1
 endstruc
 
@@ -117,6 +117,17 @@ aes_cbc_enc_128_x8:
 %endif
 	sub	rsp, STACK_size
 	mov	[GPR_SAVE_AREA + 8*0], rbp
+%ifdef CBC_MAC
+	mov	[GPR_SAVE_AREA + 8*1], rbx
+	mov	[GPR_SAVE_AREA + 8*2], r12
+	mov	[GPR_SAVE_AREA + 8*3], r13
+	mov	[GPR_SAVE_AREA + 8*4], r14
+	mov	[GPR_SAVE_AREA + 8*5], r15
+%ifndef LINUX
+	mov	[GPR_SAVE_AREA + 8*6], rsi
+	mov	[GPR_SAVE_AREA + 8*7], rdi
+%endif
+%endif
 
 	mov	IDX, 16
 	mov	[LEN_AREA], LEN
@@ -468,6 +479,10 @@ done:
 	mov	r13, [GPR_SAVE_AREA + 8*3]
 	mov	r14, [GPR_SAVE_AREA + 8*4]
 	mov	r15, [GPR_SAVE_AREA + 8*5]
+%ifndef LINUX
+	mov	rsi, [GPR_SAVE_AREA + 8*6]
+	mov	rdi, [GPR_SAVE_AREA + 8*7]
+%endif
 %endif
 
 	add	rsp, STACK_size

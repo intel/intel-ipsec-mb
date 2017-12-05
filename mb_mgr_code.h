@@ -172,7 +172,7 @@ SUBMIT_JOB_AES128_CCM_CIPHER(JOB_AES_HMAC *job)
 
 static
 JOB_AES_HMAC *
-submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job)
+submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job, const unsigned max_jobs)
 {
         const unsigned aad_len_size = 2;
         unsigned lane, min_len, min_idx;
@@ -233,7 +233,7 @@ submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job)
         min_idx = 0;
         min_len = state->lens[0];
 
-        for (i = 1; i < 8; i++) {
+        for (i = 1; i < max_jobs; i++) {
                 if (min_len > state->lens[i]) {
                         min_idx = i;
                         min_len = state->lens[i];
@@ -241,7 +241,7 @@ submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job)
         }
 
         /* subtract min len from all lanes */
-        for (i = 0; i < 8; i++)
+        for (i = 0; i < max_jobs; i++)
                 state->lens[i] -= min_len;
 
         /* run the algorythmic code on selected blocks */
@@ -322,9 +322,16 @@ submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job)
         return ret_job;
 }
 
+__forceinline
+JOB_AES_HMAC *
+submit_job_aes_ccm_auth_arch(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job)
+{
+        return submit_job_aes_ccm_auth(state, job, AES_CCM_MAX_JOBS);
+}
+
 static
 JOB_AES_HMAC *
-flush_job_aes_ccm128_auth(MB_MGR_CBCMAC_OOO *state)
+flush_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, const unsigned max_jobs)
 {
         unsigned lane, min_len, min_idx;
         JOB_AES_HMAC *ret_job;
@@ -332,15 +339,15 @@ flush_job_aes_ccm128_auth(MB_MGR_CBCMAC_OOO *state)
         unsigned i;
 
         /* find 1st non null job */
-        for (lane = 0; lane < 8; lane++)
+        for (lane = 0; lane < max_jobs; lane++)
                 if (state->job_in_lane[lane] != NULL)
                         break;
-        if (lane >= 8)
+        if (lane >= max_jobs)
                 return NULL; /* no not null job */
 
  cbcmac_flush_round:
         /* copy good lane onto empty lanes */
-        for (i = 0; i < 8; i++) {
+        for (i = 0; i < max_jobs; i++) {
                 if (i == lane)
                         continue;
 
@@ -358,7 +365,7 @@ flush_job_aes_ccm128_auth(MB_MGR_CBCMAC_OOO *state)
         min_idx = lane;
         min_len = state->lens[lane];
 
-        for (i = 0; i < 8; i++) {
+        for (i = 0; i < max_jobs; i++) {
                 if (min_len > state->lens[i]) {
                         min_idx = i;
                         min_len = state->lens[i];
@@ -366,7 +373,7 @@ flush_job_aes_ccm128_auth(MB_MGR_CBCMAC_OOO *state)
         }
 
         /* subtract min len from all lanes */
-        for (i = 0; i < 8; i++)
+        for (i = 0; i < max_jobs; i++)
                 state->lens[i] -= min_len;
 
         /* run the algorythmic code on selected blocks */
@@ -448,6 +455,13 @@ flush_job_aes_ccm128_auth(MB_MGR_CBCMAC_OOO *state)
         state->job_in_lane[min_idx] = NULL;
         state->init_done[min_idx] = 0;
         return ret_job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+flush_job_aes_ccm_auth_arch(MB_MGR_CBCMAC_OOO *state)
+{
+        return flush_job_aes_ccm_auth(state, AES_CCM_MAX_JOBS);
 }
 
 /* ========================================================================= */
@@ -950,7 +964,7 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         case CUSTOM_HASH:
                 return SUBMIT_JOB_CUSTOM_HASH(job);
         case AES_CCM128:
-                return submit_job_aes_ccm_auth(&state->aes_ccm_ooo, job);
+                return SUBMIT_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo, job);
         default: /* assume NULL_HASH */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -993,7 +1007,7 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         case CUSTOM_HASH:
                 return FLUSH_JOB_CUSTOM_HASH(job);
         case AES_CCM128:
-                return flush_job_aes_ccm128_auth(&state->aes_ccm_ooo);
+                return FLUSH_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo);
         default: /* assume NULL_HASH */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
                         job->status |= STS_COMPLETED_HMAC;

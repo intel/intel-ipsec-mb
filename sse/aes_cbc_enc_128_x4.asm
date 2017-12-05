@@ -50,6 +50,10 @@
 ;; arg 1: ARG : addr of AES_ARGS_x8 structure
 ;; arg 2: LEN : len (in units of bytes)
 
+struc STACK
+_gpr_save:	resq	8
+endstruc
+
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
@@ -118,13 +122,18 @@ aes128_cbc_mac_x4:
 MKGLOBAL(aes_cbc_enc_128_x4,function,internal)
 aes_cbc_enc_128_x4:
 %endif
-	push	rbp
+	sub	rsp, STACK_size
+	mov	[rsp + _gpr_save + 8*0], rbp
 %ifdef CBC_MAC
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+	mov	[rsp + _gpr_save + 8*1], rbx
+	mov	[rsp + _gpr_save + 8*2], r12
+	mov	[rsp + _gpr_save + 8*3], r13
+	mov	[rsp + _gpr_save + 8*4], r14
+	mov	[rsp + _gpr_save + 8*5], r15
+%ifndef LINUX
+	mov	[rsp + _gpr_save + 8*6], rsi
+	mov	[rsp + _gpr_save + 8*7], rdi
+%endif
 %endif
 	mov	IDX, 16
 
@@ -338,12 +347,16 @@ done:
 %endif
 
 %ifdef CBC_MAC
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
+	mov	rbx, [rsp + _gpr_save + 8*1]
+	mov	r12, [rsp + _gpr_save + 8*2]
+	mov	r13, [rsp + _gpr_save + 8*3]
+	mov	r14, [rsp + _gpr_save + 8*4]
+	mov	r15, [rsp + _gpr_save + 8*5]
+%ifndef LINUX
+	mov	rsi, [rsp + _gpr_save + 8*6]
+	mov	rdi, [rsp + _gpr_save + 8*7]
 %endif
-	pop	rbp
-
+%endif
+	mov	rbp, [rsp + _gpr_save + 8*0]
+	add	rsp, STACK_size
 	ret

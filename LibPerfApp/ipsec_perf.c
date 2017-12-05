@@ -55,21 +55,24 @@
 #define ITER_SCALE 200000
 
 #define NUM_ARCHS 4 /* SSE, AVX, AVX2, AVX512 */
-#define NUM_TYPES 3 /* AES_HMAC, AES_DOCSIS, AES_GCM */
+#define NUM_TYPES 4 /* AES_HMAC, AES_DOCSIS, AES_GCM, AES_CCM */
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
 #define CIPHER_MODES_AES 4	/* CBC, CNTR, CNTR+8, NULL_CIPHER */
 #define CIPHER_MODES_DOCSIS 4	/* AES DOCSIS, AES DOCSIS+8, DES DOCSIS,
                                    DES DOCSIS+8 */
 #define CIPHER_MODES_GCM 1	/* GCM */
+#define CIPHER_MODES_CCM 1	/* CCM */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 8		/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
 				   MD5, NULL_HASH */
 #define HASH_ALGS_DOCSIS 1	/* NULL_HASH */
 #define HASH_ALGS_GCM 1		/* GCM */
+#define HASH_ALGS_CCM 1		/* CCM */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
 #define KEY_SIZES_DOCSIS 1	/* 16 or 8 */
 #define KEY_SIZES_GCM 3		/* 16, 24, 32 */
+#define KEY_SIZES_CCM 1		/* 16 */
 
 /* Those defines tell how many different test cases are to be performed.
  * Have to be multiplied by number of chosen architectures.
@@ -80,6 +83,8 @@
                                   HASH_ALGS_DOCSIS * KEY_SIZES_DOCSIS)
 #define VARIANTS_PER_ARCH_GCM (CIPHER_MODES_GCM * DIRECTIONS *  \
                                HASH_ALGS_GCM * KEY_SIZES_GCM)
+#define VARIANTS_PER_ARCH_CCM (CIPHER_MODES_CCM * DIRECTIONS *  \
+                               HASH_ALGS_CCM * KEY_SIZES_CCM)
 
 /* Typedefs used for GCM callbacks */
 typedef void (*aesni_gcm_t)(const struct gcm_key_data *,
@@ -113,9 +118,10 @@ enum arch_type_e {
 };
 
 enum test_type_e {
-	AES_HMAC,
-	AES_DOCSIS,
-	AES_GCM
+	TTYPE_AES_HMAC,
+	TTYPE_AES_DOCSIS,
+	TTYPE_AES_GCM,
+	TTYPE_AES_CCM
 };
 
 /* This enum will be mostly translated to JOB_CIPHER_MODE */
@@ -128,7 +134,8 @@ enum test_cipher_mode_e {
 	TEST_AESDOCSIS8, /* AES DOCSIS with increased buffer size by 8 */
 	TEST_DESDOCSIS,
 	TEST_DESDOCSIS4, /* DES DOCSIS with increased buffer size by 4 */
-	TEST_GCM /* Additional field used by GCM, not translated */
+	TEST_GCM, /* Additional field used by GCM, not translated */
+        TEST_CCM
 };
 
 /* This enum will be mostly translated to JOB_HASH_ALG */
@@ -141,7 +148,9 @@ enum test_hash_alg_e {
 	TEST_XCBC,
 	TEST_MD5,
 	TEST_NULL_HASH,
-	TEST_HASH_GCM /* Additional field used by GCM, not translated */
+	TEST_HASH_GCM, /* Additional field used by GCM, not translated */
+        TEST_CUSTOM_HASH, /* unused */
+        TEST_HASH_CCM
 };
 
 /* Struct storing cipher parameters */
@@ -192,7 +201,7 @@ enum cache_type_e {
         {aes_gcm_pre_256_##A, aes_gcm_enc_256_##A, aes_gcm_dec_256_##A}
 
 
-/* Function pointers used by AES_HMAC, AES_DOCSIS */
+/* Function pointers used by TTYPE_AES_HMAC, TTYPE_AES_DOCSIS */
 struct funcs_s func_sets[NUM_ARCHS] = {
 	FUNCS(sse),
 	FUNCS(avx),
@@ -200,7 +209,7 @@ struct funcs_s func_sets[NUM_ARCHS] = {
 	FUNCS(avx512)
 };
 
-/* Function pointers used by AES_GCM */
+/* Function pointers used by TTYPE_AES_GCM */
 struct funcs_gcm_s func_sets_gcm[NUM_ARCHS - 1][3] = {
 	{FUNCS_GCM(sse)},
         {FUNCS_GCM(avx_gen2)}, /* AVX */
@@ -208,9 +217,9 @@ struct funcs_gcm_s func_sets_gcm[NUM_ARCHS - 1][3] = {
 };
 
 enum cache_type_e cache_type = WARM;
-/* SHA1, SHA224, SHA256, SHA384, SHA512, XCBC, MD5, NULL, GMAC, GMAC, GMAC */
+/* SHA1, SHA224, SHA256, SHA384, SHA512, XCBC, MD5, NULL, GMAC, CUSTOM, CCM */
 const uint32_t auth_tag_length_bytes[11] = {
-        12, 14, 16, 24, 32, 12, 12, 0, 8, 12, 16
+        12, 14, 16, 24, 32, 12, 12, 0, 8, 0, 16
 };
 uint8_t *buf = NULL;
 uint32_t index_limit;
@@ -221,7 +230,7 @@ uint32_t offsets[NUM_OFFSETS];
 int sha_size_incr = 24;
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-uint8_t test_types[NUM_TYPES] = {1, 1, 1}; /* AES, DOCSIS, GCM */
+uint8_t test_types[NUM_TYPES] = {1, 1, 1, 1}; /* AES, DOCSIS, GCM */
 
 int use_gcm_job_api = 0;
 
@@ -378,6 +387,8 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
 		break;
         case TEST_GCM:
                 c_mode = GCM;
+        case TEST_CCM:
+                c_mode = CCM128;
 	default:
 		break;
 	}
@@ -420,14 +431,19 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 
 	job_template.auth_tag_output = (uint8_t *) digest;
 
-	if (params->hash_alg == TEST_XCBC) {
+	switch (params->hash_alg) {
+        case TEST_XCBC:
 		job_template._k1_expanded = k1_expanded;
 		job_template._k2 = k2;
 		job_template._k3 = k3;
-	} else {
+                break;
+        case TEST_HASH_CCM:
+                break;
+        default:
 		/* hash alg is SHA1 or MD5 */
 		job_template.hashed_auth_key_xor_ipad = (uint8_t *) ipad;
 		job_template.hashed_auth_key_xor_opad = (uint8_t *) opad;
+                break;
 	}
 
 	job_template.cipher_direction = params->cipher_dir;
@@ -455,6 +471,18 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 job_template.aes_dec_key_expanded = &gdata_key;
                 job_template.u.GCM.aad_len_in_bytes = 12;
                 job_template.iv_len_in_bytes = 12;
+        } else if (job_template.cipher_mode == CCM128) {
+                job_template.hash_alg = AES_CCM128;
+                job_template.msg_len_to_cipher_in_bytes = size_aes;
+                job_template.msg_len_to_hash_in_bytes = size_aes;
+                job_template.hash_start_src_offset_in_bytes = 0;
+                job_template.cipher_start_src_offset_in_bytes = 0;
+                job_template.u.CCM.aad_len_in_bytes = 8;
+                job_template.iv_len_in_bytes = 13;
+        } else if (job_template.cipher_mode == DES ||
+                   job_template.cipher_mode == DOCSIS_DES) {
+                job_template.aes_key_len_in_bytes = 8;
+                job_template.iv_len_in_bytes = 8;
         } else {
                 job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
         }
@@ -469,11 +497,15 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 
 		job->src = buf + offsets[index];
 		job->dst = buf + offsets[index] + sha_size_incr;
-                if (job->cipher_mode != GCM) {
+                if (job->cipher_mode == GCM) {
+                        job->u.GCM.aad = job->src;
+                } else if (job->cipher_mode == CCM128) {
+                        job->u.CCM.aad = job->src;
                         job->aes_enc_key_expanded = job->aes_dec_key_expanded =
                                 (uint32_t *) &keys[key_idxs[index]];
                 } else {
-                        job->u.GCM.aad = job->src;
+                        job->aes_enc_key_expanded = job->aes_dec_key_expanded =
+                                (uint32_t *) &keys[key_idxs[index]];
                 }
 
 		index += 2;
@@ -616,7 +648,7 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 const uint32_t num_iter = ITER_SCALE / size_aes;
 
                 params->size_aes = size_aes;
-                if (params->test_type == AES_GCM && (!use_gcm_job_api))
+                if (params->test_type == TTYPE_AES_GCM && (!use_gcm_job_api))
                         *times = do_test_gcm(arch, params, 2 * num_iter);
                 else
                         *times = do_test(arch, mgr, params, num_iter);
@@ -641,16 +673,22 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 	uint32_t c_end = TEST_NULL_CIPHER;
 
 	switch (params->test_type) {
-	case AES_DOCSIS:
+	case TTYPE_AES_DOCSIS:
 		h_start = NULL_HASH;
 		c_start = TEST_AESDOCSIS;
 		c_end = TEST_DESDOCSIS4;
 		break;
-	case AES_GCM:
+	case TTYPE_AES_GCM:
 		h_start = TEST_HASH_GCM;
 		h_end = TEST_HASH_GCM;
 		c_start = TEST_GCM;
 		c_end = TEST_GCM;
+		break;
+	case TTYPE_AES_CCM:
+		h_start = TEST_HASH_CCM;
+		h_end = TEST_HASH_CCM;
+		c_start = TEST_CCM;
+		c_end = TEST_CCM;
 		break;
 	default:
 		break;
@@ -677,7 +715,8 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 	uint32_t k; /* Key size */
 	uint32_t limit = AES_256_BYTES; /* Key size value limit */
 
-	if (params->test_type == AES_DOCSIS)
+	if (params->test_type == TTYPE_AES_DOCSIS ||
+            params->test_type == TTYPE_AES_CCM)
 		limit = AES_128_BYTES;
 
         init_mb_mgr(mgr, arch);
@@ -708,16 +747,16 @@ static void print_times(struct variant_s *variant_list, struct params_s *params,
         const char *func_names[4] = {
                 "SSE", "AVX", "AVX2", "AVX512"
         };
-        const char *c_mode_names[9] = {
+        const char *c_mode_names[10] = {
                 "CBC", "CNTR", "CNTR+8", "NULL_CIPHER", "DOCAES", "DOCAES+8",
-                "DOCDES", "DOCDES+4", "GCM"
+                "DOCDES", "DOCDES+4", "GCM", "CCM"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
         };
-        const char *h_alg_names[9] = {
+        const char *h_alg_names[11] = {
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
-                "MD5", "NULL_HASH", "GCM"
+                "MD5", "NULL_HASH", "GCM", "CUSTOM", "CCM128"
         };
 	printf("ARCH");
 	for (col = 0; col < total_variants; col++)
@@ -786,24 +825,28 @@ run_tests(void *arg)
 
 	params.num_sizes = JOB_SIZE / JOB_SIZE_STEP;
 
-	for (type = AES_HMAC; type < NUM_TYPES; type++) {
+	for (type = TTYPE_AES_HMAC; type < NUM_TYPES; type++) {
 		if (test_types[type] == 0)
 			continue;
 
 
 		switch (type) {
 		default:
-		case AES_HMAC:
+		case TTYPE_AES_HMAC:
 			variants_per_arch = VARIANTS_PER_ARCH_AES;
 			max_arch = NUM_ARCHS;
 			break;
-		case AES_DOCSIS:
+		case TTYPE_AES_DOCSIS:
 			variants_per_arch = VARIANTS_PER_ARCH_DOCSIS;
 			max_arch = NUM_ARCHS;
 			break;
-		case AES_GCM:
+		case TTYPE_AES_GCM:
 			variants_per_arch = VARIANTS_PER_ARCH_GCM;
 			max_arch = NUM_ARCHS - 1; /* No AVX512 for GCM */
+			break;
+		case TTYPE_AES_CCM:
+			variants_per_arch = VARIANTS_PER_ARCH_CCM;
+			max_arch = NUM_ARCHS;
 			break;
 		}
 
@@ -841,11 +884,11 @@ run_tests(void *arg)
                 variant = 0;
                 variant_ptr = variant_list;
 
-                for (type = AES_HMAC; type < NUM_TYPES; type++) {
+                for (type = TTYPE_AES_HMAC; type < NUM_TYPES; type++) {
                         if (test_types[type] == 0)
                                 continue;
 
-                        if (type == AES_GCM)
+                        if (type == TTYPE_AES_GCM)
                                 /* No AVX512 for GCM */
                                 max_arch = NUM_ARCHS - 1;
                         else
@@ -893,6 +936,7 @@ static void usage(void)
 		"--no-gcm: do not run GCM perf tests\n"
 		"--no-aes: do not run standard AES + HMAC perf tests\n"
 		"--no-docsis: do not run DOCSIS cipher perf tests\n"
+		"--no-ccm: do not run CCM cipher perf tests\n"
 		"--gcm-job-api: use JOB API for GCM perf tests"
                 " (raw GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run."
@@ -932,11 +976,13 @@ int main(int argc, char *argv[])
 		} else if (strcmp(argv[i], "--shani-off") == 0) {
 			sse_sha_ext_usage = SHA_EXT_NOT_PRESENT;
 		} else if (strcmp(argv[i], "--no-gcm") == 0) {
-			test_types[AES_GCM] = 0;
+			test_types[TTYPE_AES_GCM] = 0;
 		} else if (strcmp(argv[i], "--no-aes") == 0) {
-			test_types[AES_HMAC] = 0;
+			test_types[TTYPE_AES_HMAC] = 0;
 		} else if (strcmp(argv[i], "--no-docsis") == 0) {
-			test_types[AES_DOCSIS] = 0;
+			test_types[TTYPE_AES_DOCSIS] = 0;
+		} else if (strcmp(argv[i], "--no-ccm") == 0) {
+			test_types[TTYPE_AES_CCM] = 0;
 		} else if (strcmp(argv[i], "--gcm-job-api") == 0) {
                         use_gcm_job_api = 1;
 		} else if ((strcmp(argv[i], "-o") == 0) && (i < argc - 1)) {

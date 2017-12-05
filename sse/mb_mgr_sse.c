@@ -175,6 +175,9 @@ JOB_AES_HMAC *flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 void aes128_cbc_mac_x4(AES_ARGS_x8 *args, uint64_t len);
 
 #define AES128_CBC_MAC     aes128_cbc_mac_x4
+#define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_arch
+#define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_arch
+#define AES_CCM_MAX_JOBS 4
 
 /* ====================================================================== */
 
