@@ -51,7 +51,7 @@ typedef enum {
         CUSTOM_CIPHER,
         DES,
         DOCSIS_DES,
-        CCM128,
+        CCM,
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -72,7 +72,7 @@ typedef enum {
         AES_GMAC,
 #endif /* !NO_GCM */
         CUSTOM_HASH,
-        AES_CCM128,
+        AES_CCM,
 } JOB_HASH_ALG;
 
 typedef enum {

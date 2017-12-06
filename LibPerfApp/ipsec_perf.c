@@ -388,7 +388,7 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
         case TEST_GCM:
                 c_mode = GCM;
         case TEST_CCM:
-                c_mode = CCM128;
+                c_mode = CCM;
 	default:
 		break;
 	}
@@ -471,8 +471,8 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 job_template.aes_dec_key_expanded = &gdata_key;
                 job_template.u.GCM.aad_len_in_bytes = 12;
                 job_template.iv_len_in_bytes = 12;
-        } else if (job_template.cipher_mode == CCM128) {
-                job_template.hash_alg = AES_CCM128;
+        } else if (job_template.cipher_mode == CCM) {
+                job_template.hash_alg = AES_CCM;
                 job_template.msg_len_to_cipher_in_bytes = size_aes;
                 job_template.msg_len_to_hash_in_bytes = size_aes;
                 job_template.hash_start_src_offset_in_bytes = 0;
@@ -499,7 +499,7 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 		job->dst = buf + offsets[index] + sha_size_incr;
                 if (job->cipher_mode == GCM) {
                         job->u.GCM.aad = job->src;
-                } else if (job->cipher_mode == CCM128) {
+                } else if (job->cipher_mode == CCM) {
                         job->u.CCM.aad = job->src;
                         job->aes_enc_key_expanded = job->aes_dec_key_expanded =
                                 (uint32_t *) &keys[key_idxs[index]];

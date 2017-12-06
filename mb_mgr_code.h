@@ -963,7 +963,7 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_HMAC_MD5(&state->hmac_md5_ooo, job);
         case CUSTOM_HASH:
                 return SUBMIT_JOB_CUSTOM_HASH(job);
-        case AES_CCM128:
+        case AES_CCM:
                 return SUBMIT_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo, job);
         default: /* assume NULL_HASH */
                 job->status |= STS_COMPLETED_HMAC;
@@ -1006,7 +1006,7 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_HMAC_MD5(&state->hmac_md5_ooo);
         case CUSTOM_HASH:
                 return FLUSH_JOB_CUSTOM_HASH(job);
-        case AES_CCM128:
+        case AES_CCM:
                 return FLUSH_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo);
         default: /* assume NULL_HASH */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
@@ -1172,15 +1172,20 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case CCM128:
+        case CCM:
                 /* currently only AES-CCM-128 is only supported */
                 if (job->aes_key_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                /* nonce can be 1 to 13 (inclusive) */
+                /*
+                 * From RFC3610:
+                 *     Nonce length = 15 - L
+                 *     Valid L values are: 2 to 8
+                 * Then valid nonce lengths 13 to 7 (inclusive).
+                 */
                 if (job->iv_len_in_bytes > UINT64_C(13) ||
-                    job->iv_len_in_bytes < UINT64_C(1)) {
+                    job->iv_len_in_bytes < UINT64_C(7)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1188,7 +1193,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->hash_alg != AES_CCM128) {
+                if (job->hash_alg != AES_CCM) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1243,7 +1248,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case AES_CCM128:
+        case AES_CCM:
                 if (job->u.CCM.aad_len_in_bytes > 46) {
                         /* 3 x AES_BLOCK - 2 bytes for AAD len */
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
@@ -1254,13 +1259,14 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                /* M can be anything from 4 to 16 */
+                /* M can be any even number from 4 to 16 */
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
-                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16) ||
+                    ((job->auth_tag_output_len_in_bytes & 1) != 0)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
                 }
-                if (job->cipher_mode != CCM128) {
+                if (job->cipher_mode != CCM) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }

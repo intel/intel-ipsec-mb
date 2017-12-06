@@ -1712,16 +1712,16 @@ test_ccm(struct MB_MGR *mb_mgr,
                                 job->src = vec->packet_out;
                         }
                 }
-                job->cipher_mode = CCM128;
+                job->cipher_mode = CCM;
                 job->aes_enc_key_expanded = expkey;
                 job->aes_dec_key_expanded = expkey;
-                job->aes_key_len_in_bytes = 16; /* @todo */
+                job->aes_key_len_in_bytes = 16; /* AES-CCM-128 for now */
                 job->iv = vec->nonce;
                 job->iv_len_in_bytes = vec->nonce_len;
                 job->cipher_start_src_offset_in_bytes = vec->clear_len;
                 job->msg_len_to_cipher_in_bytes = vec->packet_len - vec->clear_len;
 
-                job->hash_alg = AES_CCM128;
+                job->hash_alg = AES_CCM;
                 job->hash_start_src_offset_in_bytes = vec->clear_len;
                 job->msg_len_to_hash_in_bytes = vec->packet_len - vec->clear_len;
                 job->auth_tag_output = auths[i] + sizeof(padding);
