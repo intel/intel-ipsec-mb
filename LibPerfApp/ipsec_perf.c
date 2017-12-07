@@ -230,7 +230,7 @@ uint32_t offsets[NUM_OFFSETS];
 int sha_size_incr = 24;
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-uint8_t test_types[NUM_TYPES] = {1, 1, 1, 1}; /* AES, DOCSIS, GCM */
+uint8_t test_types[NUM_TYPES] = {1, 1, 1, 1}; /* AES, DOCSIS, GCM, CCM */
 
 int use_gcm_job_api = 0;
 
@@ -387,8 +387,10 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
 		break;
         case TEST_GCM:
                 c_mode = GCM;
+                break;
         case TEST_CCM:
                 c_mode = CCM;
+                break;
 	default:
 		break;
 	}
@@ -439,6 +441,10 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 break;
         case TEST_HASH_CCM:
                 break;
+        case TEST_HASH_GCM:
+                break;
+        case TEST_NULL_HASH:
+                break;
         default:
 		/* hash alg is SHA1 or MD5 */
 		job_template.hashed_auth_key_xor_ipad = (uint8_t *) ipad;
@@ -459,12 +465,10 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 
 	/* Translating enum to the API's one */
 	job_template.cipher_mode = translate_cipher_mode(params->cipher_mode);
-
 	job_template.aes_key_len_in_bytes = params->aes_key_size;
         if (job_template.cipher_mode == GCM) {
                 uint8_t key[32];
 
-                job_template.hash_alg = AES_GMAC;
                 aesni_gcm_pre(arch, (params->aes_key_size / 8) - 2,
                               key, &gdata_key);
                 job_template.aes_enc_key_expanded = &gdata_key;
@@ -472,7 +476,6 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.GCM.aad_len_in_bytes = 12;
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == CCM) {
-                job_template.hash_alg = AES_CCM;
                 job_template.msg_len_to_cipher_in_bytes = size_aes;
                 job_template.msg_len_to_hash_in_bytes = size_aes;
                 job_template.hash_start_src_offset_in_bytes = 0;
@@ -483,10 +486,9 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                    job_template.cipher_mode == DOCSIS_DES) {
                 job_template.aes_key_len_in_bytes = 8;
                 job_template.iv_len_in_bytes = 8;
-        } else {
-                job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
         }
 
+        job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
         job_template.auth_tag_output_len_in_bytes =
                 (uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
 
@@ -674,7 +676,7 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
 	switch (params->test_type) {
 	case TTYPE_AES_DOCSIS:
-		h_start = NULL_HASH;
+		h_start = TEST_NULL_HASH;
 		c_start = TEST_AESDOCSIS;
 		c_end = TEST_DESDOCSIS4;
 		break;
@@ -756,7 +758,7 @@ static void print_times(struct variant_s *variant_list, struct params_s *params,
         };
         const char *h_alg_names[11] = {
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
-                "MD5", "NULL_HASH", "GCM", "CUSTOM", "CCM128"
+                "MD5", "NULL_HASH", "GCM", "CUSTOM", "CCM"
         };
 	printf("ARCH");
 	for (col = 0; col < total_variants; col++)
