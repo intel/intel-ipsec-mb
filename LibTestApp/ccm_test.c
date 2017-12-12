@@ -1663,7 +1663,7 @@ test_ccm(struct MB_MGR *mb_mgr,
 
         if (targets == NULL || auths == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
-		goto end;
+		goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
@@ -1770,6 +1770,7 @@ test_ccm(struct MB_MGR *mb_mgr,
                         free(auths[i]);
         }
 
+ end2:
         if (targets != NULL)
                 free(targets);
 

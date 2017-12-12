@@ -1,11 +1,18 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v0.48 December 2017
 ========================================================================
+
+12 Dec, 2017
+
 General
 - Linux SO compilation option added
 - Windows DLL compilation option added
+- AES CCM 128 support added
+- Multithread command line option added to LibPerfApp
+- Coding style fixes
+- Coding style target added to Makefile
 
 v0.47 October 2017
 ========================================================================
