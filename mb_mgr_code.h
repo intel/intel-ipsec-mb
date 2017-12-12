@@ -130,113 +130,153 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 /* ========================================================================= */
 
 __forceinline
-void
-aes_ccm_ctr_block(void *B0, const void *nonce, const unsigned nonce_len,
-                  const uint8_t counter)
-{
-        const unsigned L = AES_BLOCK_SIZE - 1 - nonce_len;
-        uint8_t *a = (uint8_t *)B0;
-
-        /**
-         * Current AES-CNTR implementation assumes 4 byte counter.
-         * Consequently, AES-CCM will be OK with L from 2 to 4.
-         * This limitation results in accepted nonce lengths to be
-         * within 13 to 11 range.
-         */
-
-        /*
-         * Construct IV from nonce, flags and counter of size L.
-         * job->iv points to nonce and job->iv_len_in_bytes is nonce length.
-         */
-        a[0] = (uint8_t) L - 1; /* flags = L` = L - 1 */
-        a[AES_BLOCK_SIZE - 1] = counter;
-        memcpy(&a[1], nonce, nonce_len);
-        memset(&a[1 + nonce_len], 0, L - 1);
-}
-
-/* AES-CCM cipher implemented using existing AES-CNTR code */
-__forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_AES128_CCM_CIPHER(JOB_AES_HMAC *job)
+submit_flush_job_aes_ccm(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job,
+                         const unsigned max_jobs, const int is_submit)
 {
-        uint8_t a[AES_BLOCK_SIZE];
-
-        aes_ccm_ctr_block(a, job->iv, (unsigned) job->iv_len_in_bytes,
-                          1 /* count from 1 */);
-        AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes, a,
-                     job->aes_enc_key_expanded, job->dst,
-                     job->msg_len_to_cipher_in_bytes, sizeof(a));
-        job->status |= STS_COMPLETED_AES;
-        return job;
-}
-
-static
-JOB_AES_HMAC *
-submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job, const unsigned max_jobs)
-{
+        const unsigned lane_blocks_size = 64;
         const unsigned aad_len_size = 2;
         unsigned lane, min_len, min_idx;
-        JOB_AES_HMAC *ret_job;
+        JOB_AES_HMAC *ret_job = NULL;
         uint8_t *pb = NULL;
         unsigned i;
 
-        /* get a free lane id */
-        lane = state->unused_lanes & 15;
-        state->unused_lanes >>= 4;
+        if (is_submit) {
+                /*
+                 * SUBMIT
+                 * - get a free lane id
+                 */
+                lane = state->unused_lanes & 15;
+                state->unused_lanes >>= 4;
+                pb = &state->init_blocks[lane * lane_blocks_size];
 
-        if (job->cipher_direction != ENCRYPT) {
-                /* now it is time to do the cipher */
-                SUBMIT_JOB_AES128_CCM_CIPHER(job);
-        }
+                /*
+                 * Build IV for AES-CTR-128.
+                 * - byte 0: flags with L'
+                 * - bytes 1 to 13: nonce
+                 * - zero bytes after nonce (up to byte 15)
+                 *
+                 * First AES block of init_blocks will always hold this format
+                 * throughtout job processing.
+                 */
+                const unsigned L = AES_BLOCK_SIZE - 1 -
+                        (unsigned) job->iv_len_in_bytes;
 
-        /* copy job data in and set up inital blocks */
-        pb = &state->init_blocks[lane * 64];
-        state->job_in_lane[lane] = job;
-        if (job->u.CCM.aad_len_in_bytes != 0) {
-                state->lens[lane] = (uint16_t) AES_BLOCK_SIZE +
-                        ((job->u.CCM.aad_len_in_bytes + aad_len_size + 15) &
-                         (~15));
-        } else {
+                memset(&pb[8], 0, 8);
+                pb[0] = (uint8_t) L - 1; /* flags = L` = L - 1 */
+                /* nonce 7 to 13 */
+                memcpy(&pb[1], job->iv, job->iv_len_in_bytes);
+
+                if (job->cipher_direction != ENCRYPT) {
+                        /* decrypt before authentication */
+                        pb[15] = 1;
+                        AES_CNTR_128(job->src +
+                                     job->cipher_start_src_offset_in_bytes,
+                                     pb, job->aes_enc_key_expanded, job->dst,
+                                     job->msg_len_to_cipher_in_bytes,
+                                     AES_BLOCK_SIZE);
+                }
+
+                /* copy job data in and set up inital blocks */
+                state->job_in_lane[lane] = job;
                 state->lens[lane] = AES_BLOCK_SIZE;
+                state->init_done[lane] = 0;
+                state->args.in[lane] = pb;
+                state->args.keys[lane] = job->aes_enc_key_expanded;
+                memset(&state->args.IV[lane], 0, sizeof(state->args.IV[0]));
+
+                /*
+                 * Convert AES-CTR IV into BLOCK 0 for CBC-MAC-128:
+                 * - correct flags by adding M' (AAD later)
+                 * - put message length
+                 */
+                pb[0] |= ((job->auth_tag_output_len_in_bytes - 2) >> 1) << 3;
+                pb[14] = (uint8_t) (job->msg_len_to_hash_in_bytes >> 8);
+                pb[15] = (uint8_t) job->msg_len_to_hash_in_bytes;
+
+                /* Make AAD correction and put together AAD blocks, if any */
+                if (job->u.CCM.aad_len_in_bytes != 0) {
+                        /*
+                         * - increment length by length of AAD and
+                         *   AAD length size
+                         * - add AAD present flag
+                         * - copy AAD to the lane initial blocks
+                         * - zero trailing block bytes
+                         */
+                        const unsigned aadl =
+                                (unsigned) job->u.CCM.aad_len_in_bytes +
+                                aad_len_size;
+
+                        state->lens[lane] +=
+                                (aadl + AES_BLOCK_SIZE - 1) &
+                                (~(AES_BLOCK_SIZE - 1));
+                        pb[0] |= 0x40;
+                        pb[AES_BLOCK_SIZE + 0] =
+                                (uint8_t) (job->u.CCM.aad_len_in_bytes >> 8);
+                        pb[AES_BLOCK_SIZE + 1] =
+                                (uint8_t) job->u.CCM.aad_len_in_bytes;
+                        memcpy(&pb[AES_BLOCK_SIZE + aad_len_size],
+                               job->u.CCM.aad,
+                               job->u.CCM.aad_len_in_bytes);
+                        memset(&pb[AES_BLOCK_SIZE + aadl], 0,
+                               state->lens[lane] - aadl);
+                }
+
+                /* enough jobs to start processing? */
+                if (state->unused_lanes != 0xf)
+                        return NULL;
+        } else {
+                /*
+                 * FLUSH
+                 * - find 1st non null job
+                 */
+                for (lane = 0; lane < max_jobs; lane++)
+                        if (state->job_in_lane[lane] != NULL)
+                                break;
+                if (lane >= max_jobs)
+                        return NULL; /* no not null job */
         }
-        state->init_done[lane] = 0;
-        state->args.in[lane] = pb;
-        state->args.out[lane] = NULL;
-        state->args.keys[lane] = job->aes_enc_key_expanded;
-        memset(&state->args.IV[lane], 0, sizeof(state->args.IV[0]));
 
-        /* BLOCK 0 */
-        aes_ccm_ctr_block(pb, job->iv, (unsigned) job->iv_len_in_bytes,
-                          0 /* counter = 0 */);
-        /* Correct flags by adding M and AAD presence */
-        pb[0] |= (job->u.CCM.aad_len_in_bytes ? 0x40 : 0x00) |
-                (((job->auth_tag_output_len_in_bytes - 2) >> 1) << 3);
-        /* Message length */
-        pb[14] = (uint8_t) (job->msg_len_to_hash_in_bytes >> 8);
-        pb[15] = (uint8_t) job->msg_len_to_hash_in_bytes;
+ ccm_round:
+        if (is_submit) {
+                /*
+                 * SUBMIT
+                 * - find min common length to process
+                 */
+                min_idx = 0;
+                min_len = state->lens[0];
 
-        /* AAD blocks, if any */
-        if (job->u.CCM.aad_len_in_bytes != 0) {
-                memset(&pb[AES_BLOCK_SIZE], 0, 64 - AES_BLOCK_SIZE);
-                memcpy(&pb[AES_BLOCK_SIZE + 2], job->u.CCM.aad,
-                       job->u.CCM.aad_len_in_bytes);
-                pb[AES_BLOCK_SIZE + 0] =
-                        (uint8_t) (job->u.CCM.aad_len_in_bytes >> 8);
-                pb[AES_BLOCK_SIZE + 1] = (uint8_t) job->u.CCM.aad_len_in_bytes;
-        }
+                for (i = 1; i < max_jobs; i++) {
+                        if (min_len > state->lens[i]) {
+                                min_idx = i;
+                                min_len = state->lens[i];
+                        }
+                }
+        } else {
+                /*
+                 * FLUSH
+                 * - copy good (not null) lane onto empty lanes
+                 * - find min common length to process across not null lanes
+                 */
+                min_idx = lane;
+                min_len = state->lens[lane];
 
-        /* enough jobs to start processing? */
-        if (state->unused_lanes != 0xf)
-                return NULL;
- cbcmac_round:
-        /* find min common length to process */
-        min_idx = 0;
-        min_len = state->lens[0];
+                for (i = 0; i < max_jobs; i++) {
+                        if (i == lane)
+                                continue;
 
-        for (i = 1; i < max_jobs; i++) {
-                if (min_len > state->lens[i]) {
-                        min_idx = i;
-                        min_len = state->lens[i];
+                        if (state->job_in_lane[i] != NULL) {
+                                if (min_len > state->lens[i]) {
+                                        min_idx = i;
+                                        min_len = state->lens[i];
+                                }
+                        } else {
+                                state->args.in[i] = state->args.in[lane];
+                                state->args.keys[i] = state->args.keys[lane];
+                                state->args.IV[i] = state->args.IV[lane];
+                                state->lens[i] = UINT16_MAX;
+                                state->init_done[i] = state->init_done[lane];
+                        }
                 }
         }
 
@@ -249,14 +289,18 @@ submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job, const unsig
                 AES128_CBC_MAC(&state->args, min_len);
 
         ret_job = state->job_in_lane[min_idx];
+        pb = &state->init_blocks[min_idx * lane_blocks_size];
 
         if (state->init_done[min_idx] == 0) {
-                if (ret_job->cipher_direction == ENCRYPT) {
+                /*
+                 * First block and AAD blocks are done.
+                 * Full message blocks are to do.
+                 */
+                if (ret_job->cipher_direction == ENCRYPT)
                         state->args.in[min_idx] = ret_job->src +
                                 ret_job->hash_start_src_offset_in_bytes;
-                } else {
+                else
                         state->args.in[min_idx] = ret_job->dst;
-                }
 
                 state->init_done[min_idx] = 1;
 
@@ -264,7 +308,7 @@ submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job, const unsig
                         /* first block + AAD done - process message blocks */
                         state->lens[min_idx] =
                                 ret_job->msg_len_to_hash_in_bytes & (~15);
-                        goto cbcmac_round;
+                        goto ccm_round;
                 }
         }
 
@@ -274,20 +318,24 @@ submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job, const unsig
                  * First block, AAD, message blocks are done.
                  * Partial message block is still to do.
                  */
-                pb = &state->init_blocks[min_idx * 64];
                 state->init_done[min_idx] = 2;
                 state->lens[min_idx] = AES_BLOCK_SIZE;
-                memset(pb, 0, AES_BLOCK_SIZE);
-                memcpy(pb, state->args.in[min_idx],
+                memset(&pb[AES_BLOCK_SIZE], 0, AES_BLOCK_SIZE);
+                memcpy(&pb[AES_BLOCK_SIZE], state->args.in[min_idx],
                        (size_t) ret_job->msg_len_to_hash_in_bytes & 15);
-                state->args.in[min_idx] = pb;
-                goto cbcmac_round;
+                state->args.in[min_idx] = &pb[AES_BLOCK_SIZE];
+                goto ccm_round;
         }
 
-        /* Final XOR with AES-CNTR on B_0 */
-        pb = &state->init_blocks[min_idx * 64];
-        aes_ccm_ctr_block(pb, ret_job->iv, (unsigned) ret_job->iv_len_in_bytes,
-                          0 /* counter = 0 */);
+        /*
+         * Final XOR with AES-CNTR on B_0
+         * - remove M' and AAD presence bits from flags
+         * - set counter to 0
+         */
+        pb[0] = pb[0] & 7;
+        pb[14] = 0;
+        pb[15] = 0;
+
         /*
          * Clever use of AES-CTR mode saves a few ops here.
          * What AES-CCM authentication requires us to do is:
@@ -310,158 +358,35 @@ submit_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job, const unsig
                      AES_BLOCK_SIZE /* nonce/iv len */);
 
         if (ret_job->cipher_direction == ENCRYPT) {
-                /* now it is time to do the cipher encrypt */
-                SUBMIT_JOB_AES128_CCM_CIPHER(ret_job);
+                /* encrypt after authentication */
+                pb[15] = 1; /* start from counter 1, not 0 */
+                AES_CNTR_128(ret_job->src +
+                             ret_job->cipher_start_src_offset_in_bytes,
+                             pb, ret_job->aes_enc_key_expanded, ret_job->dst,
+                             ret_job->msg_len_to_cipher_in_bytes,
+                             AES_BLOCK_SIZE);
         }
 
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         ret_job = state->job_in_lane[min_idx];
-        ret_job->status |= STS_COMPLETED_HMAC;
+        ret_job->status |= (STS_COMPLETED_HMAC|STS_COMPLETED_AES);
         state->job_in_lane[min_idx] = NULL;
         return ret_job;
-}
-
-__forceinline
-JOB_AES_HMAC *
-submit_job_aes_ccm_auth_arch(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job)
-{
-        return submit_job_aes_ccm_auth(state, job, AES_CCM_MAX_JOBS);
 }
 
 static
 JOB_AES_HMAC *
-flush_job_aes_ccm_auth(MB_MGR_CBCMAC_OOO *state, const unsigned max_jobs)
+submit_job_aes_ccm_auth_arch(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job)
 {
-        unsigned lane, min_len, min_idx;
-        JOB_AES_HMAC *ret_job;
-        uint8_t *pb = NULL;
-        unsigned i;
-
-        /* find 1st non null job */
-        for (lane = 0; lane < max_jobs; lane++)
-                if (state->job_in_lane[lane] != NULL)
-                        break;
-        if (lane >= max_jobs)
-                return NULL; /* no not null job */
-
- cbcmac_flush_round:
-        /* copy good lane onto empty lanes */
-        for (i = 0; i < max_jobs; i++) {
-                if (i == lane)
-                        continue;
-
-                if (state->job_in_lane[i] != NULL)
-                        continue;
-
-                state->args.in[i] = state->args.in[lane];
-                state->args.keys[i] = state->args.keys[lane];
-                state->args.IV[i] = state->args.IV[lane];
-                state->lens[i] = UINT16_MAX;
-                state->init_done[i] = state->init_done[lane];
-        }
-
-        /* find min common length to process */
-        min_idx = lane;
-        min_len = state->lens[lane];
-
-        for (i = 0; i < max_jobs; i++) {
-                if (min_len > state->lens[i]) {
-                        min_idx = i;
-                        min_len = state->lens[i];
-                }
-        }
-
-        /* subtract min len from all lanes */
-        for (i = 0; i < max_jobs; i++)
-                state->lens[i] -= min_len;
-
-        /* run the algorythmic code on selected blocks */
-        if (min_len != 0)
-                AES128_CBC_MAC(&state->args, min_len);
-
-        ret_job = state->job_in_lane[min_idx];
-
-        if (state->init_done[min_idx] == 0) {
-                if (ret_job->cipher_direction == ENCRYPT) {
-                        state->args.in[min_idx] = ret_job->src +
-                                ret_job->hash_start_src_offset_in_bytes;
-                } else {
-                        state->args.in[min_idx] = ret_job->dst;
-                }
-
-                state->init_done[min_idx] = 1;
-
-                if (ret_job->msg_len_to_hash_in_bytes & (~15)) {
-                        /* first block + AAD done - process message blocks */
-                        state->lens[min_idx] =
-                                ret_job->msg_len_to_hash_in_bytes & (~15);
-                        goto cbcmac_flush_round;
-                }
-
-        }
-
-        if ((state->init_done[min_idx] == 1) &&
-            (ret_job->msg_len_to_hash_in_bytes & 15)) {
-                /*
-                 * First block, AAD, message blocks are done.
-                 * Partial message block is still to do.
-                 */
-                pb = &state->init_blocks[min_idx * 64];
-                state->init_done[min_idx] = 2;
-                state->lens[min_idx] = AES_BLOCK_SIZE;
-                memset(pb, 0, AES_BLOCK_SIZE);
-                memcpy(pb, state->args.in[min_idx],
-                       (size_t) ret_job->msg_len_to_hash_in_bytes & 15);
-                state->args.in[min_idx] = pb;
-                goto cbcmac_flush_round;
-        }
-
-        /* Final XOR with AES-CNTR on B_0 */
-        pb = &state->init_blocks[min_idx * 64];
-
-        aes_ccm_ctr_block(pb, ret_job->iv, (unsigned) ret_job->iv_len_in_bytes,
-                          0 /* counter = 0 */);
-
-        /*
-         * Clever use of AES-CTR mode saves a few ops here.
-         * What AES-CCM authentication requires us to do is:
-         * AES-CCM: E(KEY,B_0) XOR IV_CBC_MAC
-         *
-         * And what AES_CTR offers is:
-         * AES_CTR: E(KEY, NONCE|COUNTER) XOR PLAIN_TEXT
-         *
-         * So if:
-         * B_0 is passed instead of NONCE|COUNTER and IV instead of PLAIN_TESXT
-         * then AES_CTR function is doing pretty much what we need.
-         * On top of it can truncate the authentication tag and copy to
-         * destination.
-         */
-        AES_CNTR_128(&state->args.IV[min_idx] /* src */,
-                     pb /* nonce/iv */,
-                     state->args.keys[min_idx],
-                     ret_job->auth_tag_output /* dst */,
-                     ret_job->auth_tag_output_len_in_bytes /* num_bytes */,
-                     AES_BLOCK_SIZE /* nonce/iv len */);
-
-        if (ret_job->cipher_direction == ENCRYPT) {
-                /* now it is time to do the cipher for real */
-                SUBMIT_JOB_AES128_CCM_CIPHER(ret_job);
-        }
-
-        /* put back processed packet into unused lanes, set job as complete */
-        state->unused_lanes = (state->unused_lanes << 4) | min_idx;
-        ret_job->status |= STS_COMPLETED_HMAC;
-        state->job_in_lane[min_idx] = NULL;
-        state->init_done[min_idx] = 0;
-        return ret_job;
+        return submit_flush_job_aes_ccm(state, job, AES_CCM_MAX_JOBS, 1);
 }
 
-__forceinline
+static
 JOB_AES_HMAC *
 flush_job_aes_ccm_auth_arch(MB_MGR_CBCMAC_OOO *state)
 {
-        return flush_job_aes_ccm_auth(state, AES_CCM_MAX_JOBS);
+        return submit_flush_job_aes_ccm(state, NULL, AES_CCM_MAX_JOBS, 0);
 }
 
 /* ========================================================================= */
