@@ -146,6 +146,9 @@ submit_flush_job_aes_ccm(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job,
                  * SUBMIT
                  * - get a free lane id
                  */
+                const unsigned L = AES_BLOCK_SIZE - 1 -
+                        (unsigned) job->iv_len_in_bytes;
+
                 lane = state->unused_lanes & 15;
                 state->unused_lanes >>= 4;
                 pb = &state->init_blocks[lane * lane_blocks_size];
@@ -159,9 +162,6 @@ submit_flush_job_aes_ccm(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job,
                  * First AES block of init_blocks will always hold this format
                  * throughtout job processing.
                  */
-                const unsigned L = AES_BLOCK_SIZE - 1 -
-                        (unsigned) job->iv_len_in_bytes;
-
                 memset(&pb[8], 0, 8);
                 pb[0] = (uint8_t) L - 1; /* flags = L` = L - 1 */
                 /* nonce 7 to 13 */
