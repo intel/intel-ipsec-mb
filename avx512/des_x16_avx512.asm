@@ -125,6 +125,8 @@ _tmp_out:	resq	16      ; 2 x 64 bytes
 _tmp_mask:	resd	16      ; 1 x 64 bytes
 _gpr_save:	resq	4       ; r12 to r15
 _rsp_save:	resq	1
+_mask_save:	resq	1
+_size_save:	resq	1
 endstruc
 
 ;;; ===========================================================================
@@ -1179,24 +1181,19 @@ endstruc
 ;;;
 ;;; MASK [out] - mask8 for value; for masked 64b loads and stores (r64)
 ;;; USES: IA0, IA1 IA2
+;;; ASSUMES: SIZE - OFFSET < 64
 %macro GET_MASK8 1
 %define %%MASK %1
-        mov             IA2, SIZE
-        sub             IA2, OFFSET
+
 %ifidn IA1, rcx
 %define myrcx IA1
 %else
 %define myrcx rcx
-        mov             IA1, rcx
+        mov     IA1, rcx
 %endif
-        ;;  min of 64 and length, x = length, y = 64
-        ;;  x = y + ((x - y) & ((x - y) >> 31))
-        sub     DWORD(IA2), 64
-        mov     DWORD(myrcx), DWORD(IA2)
-        sar     DWORD(myrcx), 31
-        and     DWORD(myrcx), DWORD(IA2)
-        add     DWORD(myrcx), 64
-        ;; - IA0 - min of 64 and remaining length
+        mov     myrcx, SIZE
+        sub     myrcx, OFFSET
+        ;; - myrcx - remaining length
         ;; - divide by 8 (DES block size)
         ;; - create bit mask of the result
         mov     DWORD(%%MASK), 1
@@ -1204,7 +1201,7 @@ endstruc
         shl     DWORD(%%MASK), BYTE(myrcx)
         sub     DWORD(%%MASK), 1
 %ifnidn IA1, rcx
-        mov             rcx, IA1
+        mov     rcx, IA1
 %endif
 %endmacro
 
@@ -1230,13 +1227,123 @@ endstruc
 
         DES_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
 
+        mov             [rsp + _size_save], SIZE
+        and             SIZE, -64
         xor             OFFSET, OFFSET
+        ;; This loop processes message in blocks of 64 bytes.
+        ;; Anything smaller than 64 bytes is handled separately after the loop.
 %%_gen_des_enc_loop:
         cmp             OFFSET, SIZE
-        jge             %%_gen_des_enc_loop_end
+        jz              %%_gen_des_enc_loop_end
+        ;; run loads
+        mov             IA0, [STATE + _des_args_in + (0*PTR_SZ)]
+        mov             IA1, [STATE + _des_args_in + (1*PTR_SZ)]
+        mov             IA2, [STATE + _des_args_in + (2*PTR_SZ)]
+        mov             INP0, [STATE + _des_args_in + (3*PTR_SZ)]
+        mov             INP1, [STATE + _des_args_in + (4*PTR_SZ)]
+        mov             INP2, [STATE + _des_args_in + (5*PTR_SZ)]
+        mov             INP3, [STATE + _des_args_in + (6*PTR_SZ)]
+        mov             INP4, [STATE + _des_args_in + (7*PTR_SZ)]
+        vmovdqu64       ZW0, [IA0 + OFFSET]
+        vmovdqu64       ZW1, [IA1 + OFFSET]
+        vmovdqu64       ZW2, [IA2 + OFFSET]
+        vmovdqu64       ZW3, [INP0 + OFFSET]
+        vmovdqu64       ZW4, [INP1 + OFFSET]
+        vmovdqu64       ZW5, [INP2 + OFFSET]
+        vmovdqu64       ZW6, [INP3 + OFFSET]
+        vmovdqu64       ZW7, [INP4 + OFFSET]
+
+        mov             IA0, [STATE + _des_args_in + (8*PTR_SZ)]
+        mov             IA1, [STATE + _des_args_in + (9*PTR_SZ)]
+        mov             IA2, [STATE + _des_args_in + (10*PTR_SZ)]
+        mov             INP0, [STATE + _des_args_in + (11*PTR_SZ)]
+        mov             INP1, [STATE + _des_args_in + (12*PTR_SZ)]
+        mov             INP2, [STATE + _des_args_in + (13*PTR_SZ)]
+        mov             INP3, [STATE + _des_args_in + (14*PTR_SZ)]
+        mov             INP4, [STATE + _des_args_in + (15*PTR_SZ)]
+        vmovdqu64       ZW8, [IA0 + OFFSET]
+        vmovdqu64       ZW9, [IA1 + OFFSET]
+        vmovdqu64       ZW10, [IA2 + OFFSET]
+        vmovdqu64       ZW11, [INP0 + OFFSET]
+        vmovdqu64       ZW12, [INP1 + OFFSET]
+        vmovdqu64       ZW13, [INP2 + OFFSET]
+        vmovdqu64       ZW14, [INP3 + OFFSET]
+        vmovdqu64       ZW15, [INP4 + OFFSET]
+
+        ;; Transpose input
+        TRANSPOSE_IN    ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+
+        ;; DES CBC ENC comes here
+        vpxord          ZW0, ZW0, ZIV0 ; R0 = R0 ^ IV0
+        vpxord          ZW1, ZW1, ZIV1 ; L0 = L0 ^ IV1
+
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep 7
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
+        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%assign RNN (RNN + 2)
+%assign LNN (LNN + 2)
+%endrep
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+
+        ;; transpose data on output
+        TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        ;; run stores
+        mov             IA0, [STATE + _des_args_out + (0*PTR_SZ)]
+        mov             IA1, [STATE + _des_args_out + (1*PTR_SZ)]
+        mov             IA2, [STATE + _des_args_out + (2*PTR_SZ)]
+        mov             INP0, [STATE + _des_args_out + (3*PTR_SZ)]
+        mov             INP1, [STATE + _des_args_out + (4*PTR_SZ)]
+        mov             INP2, [STATE + _des_args_out + (5*PTR_SZ)]
+        mov             INP3, [STATE + _des_args_out + (6*PTR_SZ)]
+        mov             INP4, [STATE + _des_args_out + (7*PTR_SZ)]
+        vmovdqu64       [IA0 + OFFSET], ZW0
+        vmovdqu64       [IA1 + OFFSET], ZW1
+        vmovdqu64       [IA2 + OFFSET], ZW2
+        vmovdqu64       [INP0 + OFFSET], ZW3
+        vmovdqu64       [INP1 + OFFSET], ZW4
+        vmovdqu64       [INP2 + OFFSET], ZW5
+        vmovdqu64       [INP3 + OFFSET], ZW6
+        vmovdqu64       [INP4 + OFFSET], ZW7
+
+        mov             IA0, [STATE + _des_args_out + (8*PTR_SZ)]
+        mov             IA1, [STATE + _des_args_out + (9*PTR_SZ)]
+        mov             IA2, [STATE + _des_args_out + (10*PTR_SZ)]
+        mov             INP0, [STATE + _des_args_out + (11*PTR_SZ)]
+        mov             INP1, [STATE + _des_args_out + (12*PTR_SZ)]
+        mov             INP2, [STATE + _des_args_out + (13*PTR_SZ)]
+        mov             INP3, [STATE + _des_args_out + (14*PTR_SZ)]
+        mov             INP4, [STATE + _des_args_out + (15*PTR_SZ)]
+        vmovdqu64       [IA0 + OFFSET], ZW8
+        vmovdqu64       [IA1 + OFFSET], ZW9
+        vmovdqu64       [IA2 + OFFSET], ZW10
+        vmovdqu64       [INP0 + OFFSET], ZW11
+        vmovdqu64       [INP1 + OFFSET], ZW12
+        vmovdqu64       [INP2 + OFFSET], ZW13
+        vmovdqu64       [INP3 + OFFSET], ZW14
+        vmovdqu64       [INP4 + OFFSET], ZW15
+
+        add             OFFSET, 64
+        jmp             %%_gen_des_enc_loop
+%%_gen_des_enc_loop_end:
+        ;; This is where we check if there is anything less than 64 bytes
+        ;; of message left for processing.
+        mov             SIZE, [rsp + _size_save]
+        cmp             OFFSET, SIZE
+        jz              %%_gen_des_enc_part_end
         ;; calculate min of bytes_left and 64, convert to qword mask
         GET_MASK8       IA0        ; IA0 = mask
+
         kmovw           k7, DWORD(IA0)
+        mov             [rsp + _mask_save], IA0
         ;; run masked loads
         mov             IA0, [STATE + _des_args_in + (0*PTR_SZ)]
         mov             IA1, [STATE + _des_args_in + (1*PTR_SZ)]
@@ -1275,14 +1382,36 @@ endstruc
         ;; Transpose input
         TRANSPOSE_IN    ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
-        ;; DES CBC comes here
+        ;; DES CBC ENC comes here
         vpxord          ZW0, ZW0, ZIV0 ; R0 = R0 ^ IV0
         vpxord          ZW1, ZW1, ZIV1 ; L0 = L0 ^ IV1
+
+        mov             IA0, [rsp + _mask_save]
+        cmp             BYTE(IA0), 0x0f
+        ja              %%_gt_4
+        jz              %%_blocks_4
+
+        cmp             BYTE(IA0), 0x03
+        ja              %%_blocks_3
+        jz              %%_blocks_2
+
+        ;; process one block and move to transpose out
 %assign RN 0
 %assign LN 1
 %assign RNN 2
 %assign LNN 3
-%rep 7
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+        jmp             %%_transpose_out
+
+%%_blocks_2:
+        ;; process two blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep 1
         DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
         vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
         vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
@@ -1291,12 +1420,118 @@ endstruc
 %assign RNN (RNN + 2)
 %assign LNN (LNN + 2)
 %endrep
-        DES_ENC_DEC     ENC, ZW14, ZW15, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqu64       ZIV0, ZW15 ; IV0 = L7
-        vmovdqu64       ZIV1, ZW14 ; IV1 = R7
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+        jmp             %%_transpose_out
 
+%%_blocks_3:
+        ;; process three blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep 2
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
+        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%assign RNN (RNN + 2)
+%assign LNN (LNN + 2)
+%endrep
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+        jmp             %%_transpose_out
+
+%%_blocks_4:
+        ;; process four blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep 3
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
+        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%assign RNN (RNN + 2)
+%assign LNN (LNN + 2)
+%endrep
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+        jmp             %%_transpose_out
+
+%%_gt_4:
+        cmp             BYTE(IA0), 0x3f
+        ja              %%_blocks_7
+        jz              %%_blocks_6
+%%_blocks_5:
+        ;; process five blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep 4
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
+        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%assign RNN (RNN + 2)
+%assign LNN (LNN + 2)
+%endrep
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+        jmp             %%_transpose_out
+
+%%_blocks_6:
+        ;; process six blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep 5
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
+        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%assign RNN (RNN + 2)
+%assign LNN (LNN + 2)
+%endrep
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+        jmp             %%_transpose_out
+
+%%_blocks_7:
+        ;; process seven blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep 6
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
+        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%assign RNN (RNN + 2)
+%assign LNN (LNN + 2)
+%endrep
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+
+%%_transpose_out:
         ;; transpose data on output
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+
         ;; run masked stores
         mov             IA0, [STATE + _des_args_out + (0*PTR_SZ)]
         mov             IA1, [STATE + _des_args_out + (1*PTR_SZ)]
@@ -1331,11 +1566,7 @@ endstruc
         vmovdqu64       [INP2 + OFFSET]{k7}, ZW13
         vmovdqu64       [INP3 + OFFSET]{k7}, ZW14
         vmovdqu64       [INP4 + OFFSET]{k7}, ZW15
-
-        add             OFFSET, 64
-        jmp             %%_gen_des_enc_loop
-
-%%_gen_des_enc_loop_end:
+%%_gen_des_enc_part_end:
 
         ;; store IV and update pointers
         DES_FINISH      ZIV0, ZIV1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4
@@ -1379,14 +1610,119 @@ endstruc
         DES_CFB_ONE     DEC, rsp + _key_sched, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, rsp + _tmp_in, rsp + _tmp_out, rsp + _tmp_iv, rsp + _tmp_mask
 %endif
 
+        mov             [rsp + _size_save], SIZE
+        and             SIZE, -64
         xor             OFFSET, OFFSET
+        ;; This loop processes message in blocks of 64 bytes.
+        ;; Anything smaller than 64 bytes is handled separately after the loop.
 %%_gen_des_dec_loop:
         cmp             OFFSET, SIZE
-        jge             %%_gen_des_dec_loop_end
+        jz              %%_gen_des_dec_loop_end
+        ;; run loads
+        mov             IA0, [STATE + _des_args_in + (0*PTR_SZ)]
+        mov             IA1, [STATE + _des_args_in + (1*PTR_SZ)]
+        mov             IA2, [STATE + _des_args_in + (2*PTR_SZ)]
+        mov             INP0, [STATE + _des_args_in + (3*PTR_SZ)]
+        mov             INP1, [STATE + _des_args_in + (4*PTR_SZ)]
+        mov             INP2, [STATE + _des_args_in + (5*PTR_SZ)]
+        mov             INP3, [STATE + _des_args_in + (6*PTR_SZ)]
+        mov             INP4, [STATE + _des_args_in + (7*PTR_SZ)]
+        vmovdqu64       ZW0, [IA0 + OFFSET]
+        vmovdqu64       ZW1, [IA1 + OFFSET]
+        vmovdqu64       ZW2, [IA2 + OFFSET]
+        vmovdqu64       ZW3, [INP0 + OFFSET]
+        vmovdqu64       ZW4, [INP1 + OFFSET]
+        vmovdqu64       ZW5, [INP2 + OFFSET]
+        vmovdqu64       ZW6, [INP3 + OFFSET]
+        vmovdqu64       ZW7, [INP4 + OFFSET]
+
+        mov             IA0, [STATE + _des_args_in + (8*PTR_SZ)]
+        mov             IA1, [STATE + _des_args_in + (9*PTR_SZ)]
+        mov             IA2, [STATE + _des_args_in + (10*PTR_SZ)]
+        mov             INP0, [STATE + _des_args_in + (11*PTR_SZ)]
+        mov             INP1, [STATE + _des_args_in + (12*PTR_SZ)]
+        mov             INP2, [STATE + _des_args_in + (13*PTR_SZ)]
+        mov             INP3, [STATE + _des_args_in + (14*PTR_SZ)]
+        mov             INP4, [STATE + _des_args_in + (15*PTR_SZ)]
+        vmovdqu64       ZW8, [IA0 + OFFSET]
+        vmovdqu64       ZW9, [IA1 + OFFSET]
+        vmovdqu64       ZW10, [IA2 + OFFSET]
+        vmovdqu64       ZW11, [INP0 + OFFSET]
+        vmovdqu64       ZW12, [INP1 + OFFSET]
+        vmovdqu64       ZW13, [INP2 + OFFSET]
+        vmovdqu64       ZW14, [INP3 + OFFSET]
+        vmovdqu64       ZW15, [INP4 + OFFSET]
+
+        ;; Transpose input
+        TRANSPOSE_IN   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+
+        ;; DES CBC DEC comes here
+%assign RN 0
+%assign LN 1
+%rep 8
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+
+        ;; transpose data on output
+        TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+
+        ;; run stores
+        mov             IA0, [STATE + _des_args_out + (0*PTR_SZ)]
+        mov             IA1, [STATE + _des_args_out + (1*PTR_SZ)]
+        mov             IA2, [STATE + _des_args_out + (2*PTR_SZ)]
+        mov             INP0, [STATE + _des_args_out + (3*PTR_SZ)]
+        mov             INP1, [STATE + _des_args_out + (4*PTR_SZ)]
+        mov             INP2, [STATE + _des_args_out + (5*PTR_SZ)]
+        mov             INP3, [STATE + _des_args_out + (6*PTR_SZ)]
+        mov             INP4, [STATE + _des_args_out + (7*PTR_SZ)]
+        vmovdqu64       [IA0 + OFFSET], ZW0
+        vmovdqu64       [IA1 + OFFSET], ZW1
+        vmovdqu64       [IA2 + OFFSET], ZW2
+        vmovdqu64       [INP0 + OFFSET], ZW3
+        vmovdqu64       [INP1 + OFFSET], ZW4
+        vmovdqu64       [INP2 + OFFSET], ZW5
+        vmovdqu64       [INP3 + OFFSET], ZW6
+        vmovdqu64       [INP4 + OFFSET], ZW7
+
+        mov             IA0, [STATE + _des_args_out + (8*PTR_SZ)]
+        mov             IA1, [STATE + _des_args_out + (9*PTR_SZ)]
+        mov             IA2, [STATE + _des_args_out + (10*PTR_SZ)]
+        mov             INP0, [STATE + _des_args_out + (11*PTR_SZ)]
+        mov             INP1, [STATE + _des_args_out + (12*PTR_SZ)]
+        mov             INP2, [STATE + _des_args_out + (13*PTR_SZ)]
+        mov             INP3, [STATE + _des_args_out + (14*PTR_SZ)]
+        mov             INP4, [STATE + _des_args_out + (15*PTR_SZ)]
+        vmovdqu64       [IA0 + OFFSET], ZW8
+        vmovdqu64       [IA1 + OFFSET], ZW9
+        vmovdqu64       [IA2 + OFFSET], ZW10
+        vmovdqu64       [INP0 + OFFSET], ZW11
+        vmovdqu64       [INP1 + OFFSET], ZW12
+        vmovdqu64       [INP2 + OFFSET], ZW13
+        vmovdqu64       [INP3 + OFFSET], ZW14
+        vmovdqu64       [INP4 + OFFSET], ZW15
+
+        add             OFFSET, 64
+        jmp             %%_gen_des_dec_loop
+%%_gen_des_dec_loop_end:
+        ;; This is where we check if there is anything less than 64 bytes
+        ;; of message left for processing.
+        mov             SIZE, [rsp + _size_save]
+        cmp             OFFSET, SIZE
+        jz              %%_gen_des_dec_part_end
         ;; calculate min of bytes_left and 64, convert to qword mask
         GET_MASK8       IA0        ; IA0 = mask
-        kmovw           k7, DWORD(IA0)
 
+        kmovw           k7, DWORD(IA0)
+        mov             [rsp + _mask_save], IA0
         ;; run masked loads
         mov             IA0, [STATE + _des_args_in + (0*PTR_SZ)]
         mov             IA1, [STATE + _des_args_in + (1*PTR_SZ)]
@@ -1423,12 +1759,133 @@ endstruc
         vmovdqu64       ZW15{k7}{z}, [INP4 + OFFSET]
 
         ;; Transpose input
-        TRANSPOSE_IN   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
+        TRANSPOSE_IN    ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
-        ;; DES CBC comes here
+        ;; DES CBC DEC comes here
+        mov             IA0, [rsp + _mask_save]
+        cmp             BYTE(IA0), 0x0f
+        ja              %%_gt_4
+        jz              %%_blocks_4
+
+        cmp             BYTE(IA0), 0x03
+        ja              %%_blocks_3
+        jz              %%_blocks_2
+        ;; process one block and move to transpose out
 %assign RN 0
 %assign LN 1
-%rep 8
+%rep 1
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+        jmp             %%_transpose_out
+
+%%_blocks_2:
+        ;; process two blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%rep 2
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+        jmp             %%_transpose_out
+
+%%_blocks_3:
+        ;; process three blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%rep 3
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+        jmp             %%_transpose_out
+
+%%_blocks_4:
+        ;; process four blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%rep 4
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+        jmp             %%_transpose_out
+
+%%_gt_4:
+        cmp             BYTE(IA0), 0x3f
+        ja              %%_blocks_7
+        jz              %%_blocks_6
+%%_blocks_5:
+        ;; process five blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%rep 5
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+        jmp             %%_transpose_out
+
+%%_blocks_6:
+        ;; process six blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%rep 6
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+        jmp             %%_transpose_out
+
+%%_blocks_7:
+        ;; process seven blocks and move to transpose out
+%assign RN 0
+%assign LN 1
+%rep 7
         vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
         vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
         DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
@@ -1441,6 +1898,7 @@ endstruc
 %assign LN (LN + 2)
 %endrep
 
+%%_transpose_out:
         ;; transpose data on output
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
@@ -1478,11 +1936,7 @@ endstruc
         vmovdqu64       [INP2 + OFFSET]{k7}, ZW13
         vmovdqu64       [INP3 + OFFSET]{k7}, ZW14
         vmovdqu64       [INP4 + OFFSET]{k7}, ZW15
-
-        add             OFFSET, 64
-        jmp             %%_gen_des_dec_loop
-
-%%_gen_des_dec_loop_end:
+%%_gen_des_dec_part_end:
 
         ;; store IV and update pointers
         DES_FINISH      ZIV0, ZIV1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4
