@@ -439,7 +439,7 @@ SUBMIT_JOB_AES_GCM_ENC(JOB_AES_HMAC *job)
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
 
         if (16 == job->aes_key_len_in_bytes)
-                AES_GCM_ENC_128(job->aes_dec_key_expanded, &ctx, job->dst,
+                AES_GCM_ENC_128(job->aes_enc_key_expanded, &ctx, job->dst,
                                 job->src +
                                 job->cipher_start_src_offset_in_bytes,
                                 job->msg_len_to_cipher_in_bytes, job->iv,
@@ -447,7 +447,7 @@ SUBMIT_JOB_AES_GCM_ENC(JOB_AES_HMAC *job)
                                 job->auth_tag_output,
                                 job->auth_tag_output_len_in_bytes);
         else if (24 == job->aes_key_len_in_bytes)
-                AES_GCM_ENC_192(job->aes_dec_key_expanded, &ctx, job->dst,
+                AES_GCM_ENC_192(job->aes_enc_key_expanded, &ctx, job->dst,
                                 job->src +
                                 job->cipher_start_src_offset_in_bytes,
                                 job->msg_len_to_cipher_in_bytes, job->iv,
@@ -455,7 +455,7 @@ SUBMIT_JOB_AES_GCM_ENC(JOB_AES_HMAC *job)
                                 job->auth_tag_output,
                                 job->auth_tag_output_len_in_bytes);
         else
-                AES_GCM_ENC_256(job->aes_dec_key_expanded, &ctx, job->dst,
+                AES_GCM_ENC_256(job->aes_enc_key_expanded, &ctx, job->dst,
                                 job->src +
                                 job->cipher_start_src_offset_in_bytes,
                                 job->msg_len_to_cipher_in_bytes, job->iv,
@@ -603,7 +603,7 @@ DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
 }
 
 /* ========================================================================= */
-/* DES and DOCSIS DES (DES CBC + DES CFB) */
+/* DES, 3DES and DOCSIS DES (DES CBC + DES CFB) */
 /* ========================================================================= */
 
 /**
@@ -686,6 +686,54 @@ DES_CBC_DEC(JOB_AES_HMAC *job)
         return job;
 }
 
+/**
+ * @brief 3DES cipher encryption
+ *
+ * @param job desriptor of performed crypto operation
+ * @return It always returns value passed in \a job
+ */
+__forceinline
+JOB_AES_HMAC *
+DES3_CBC_ENC(JOB_AES_HMAC *job)
+{
+        const void * const *ks_ptr =
+                (const void * const *)job->aes_enc_key_expanded;
+
+        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        des3_enc_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
+                           job->dst,
+                           job->msg_len_to_cipher_in_bytes &
+                           (~(DES_BLOCK_SIZE - 1)),
+                           ks_ptr[0], ks_ptr[1], ks_ptr[2],
+                           (const uint64_t *)job->iv);
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+/**
+ * @brief 3DES cipher decryption
+ *
+ * @param job desriptor of performed crypto operation
+ * @return It always returns value passed in \a job
+ */
+__forceinline
+JOB_AES_HMAC *
+DES3_CBC_DEC(JOB_AES_HMAC *job)
+{
+        const void * const *ks_ptr =
+                (const void * const *)job->aes_dec_key_expanded;
+
+        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        des3_dec_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
+                           job->dst,
+                           job->msg_len_to_cipher_in_bytes &
+                           (~(DES_BLOCK_SIZE - 1)),
+                           ks_ptr[0], ks_ptr[1], ks_ptr[2],
+                           (const uint64_t *)job->iv);
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
 /* ========================================================================= */
 /* Cipher submit & flush functions */
 /* ========================================================================= */
@@ -738,6 +786,8 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #else
                 return DOCSIS_DES_ENC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_ENC */
+        } else if (DES3 == job->cipher_mode) {
+                return DES3_CBC_ENC(job);
         } else { /* assume NUL_CIPHER or CCM */
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -821,6 +871,8 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 #else
                 return DOCSIS_DES_DEC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_DEC */
+        } else if (DES3 == job->cipher_mode) {
+                return DES3_CBC_DEC(job);
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else {
@@ -980,6 +1032,16 @@ is_job_invalid(const JOB_AES_HMAC *job)
 
         switch (job->cipher_mode) {
         case CBC:
+                if (job->cipher_direction == ENCRYPT &&
+                    job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->cipher_direction == DECRYPT &&
+                    job->aes_dec_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_key_len_in_bytes != UINT64_C(16) &&
                     job->aes_key_len_in_bytes != UINT64_C(24) &&
                     job->aes_key_len_in_bytes != UINT64_C(32)) {
@@ -1000,6 +1062,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case CNTR:
+                if (job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_key_len_in_bytes != UINT64_C(16) &&
                     job->aes_key_len_in_bytes != UINT64_C(24) &&
                     job->aes_key_len_in_bytes != UINT64_C(32)) {
@@ -1023,6 +1089,16 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 /* XXX: not copy src to dst */
                 break;
         case DOCSIS_SEC_BPI:
+                if (job->aes_enc_key_expanded == NULL) {
+                        /* it has to be set regardless of direction (AES-CFB) */
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->cipher_direction == DECRYPT &&
+                    job->aes_dec_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_key_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1038,6 +1114,17 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 break;
 #ifndef NO_GCM
         case GCM:
+                /* Same key structure used for encrypt and decrypt */
+                if (job->cipher_direction == ENCRYPT &&
+                    job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->cipher_direction == DECRYPT &&
+                    job->aes_dec_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_key_len_in_bytes != UINT64_C(16) &&
                     job->aes_key_len_in_bytes != UINT64_C(24) &&
                     job->aes_key_len_in_bytes != UINT64_C(32)) {
@@ -1066,6 +1153,16 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case DES:
+                if (job->cipher_direction == ENCRYPT &&
+                    job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->cipher_direction == DECRYPT &&
+                    job->aes_dec_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_key_len_in_bytes != UINT64_C(8)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1084,6 +1181,16 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case DOCSIS_DES:
+                if (job->cipher_direction == ENCRYPT &&
+                    job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->cipher_direction == DECRYPT &&
+                    job->aes_dec_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_key_len_in_bytes != UINT64_C(8)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1098,6 +1205,11 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case CCM:
+                if (job->aes_enc_key_expanded == NULL) {
+                        /* AES-CTR and CBC-MAC use only encryption keys */
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 /* currently only AES-CCM-128 is only supported */
                 if (job->aes_key_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
@@ -1121,6 +1233,51 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 if (job->hash_alg != AES_CCM) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
+                }
+                break;
+        case DES3:
+                if (job->aes_key_len_in_bytes != UINT64_C(8)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes == 0) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes & UINT64_C(7)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(8)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->cipher_direction == ENCRYPT) {
+                        const void * const *ks_ptr =
+                                (const void * const *)job->aes_enc_key_expanded;
+
+                        if (ks_ptr == NULL) {
+                                INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                                return 1;
+                        }
+                        if (ks_ptr[0] == NULL || ks_ptr[1] == NULL ||
+                            ks_ptr[2] == NULL) {
+                                INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                                return 1;
+                        }
+                } else {
+                        const void * const *ks_ptr =
+                                (const void * const *)job->aes_dec_key_expanded;
+
+                        if (ks_ptr == NULL) {
+                                INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                                return 1;
+                        }
+                        if (ks_ptr[0] == NULL || ks_ptr[1] == NULL ||
+                            ks_ptr[2] == NULL) {
+                                INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                                return 1;
+                        }
                 }
                 break;
         default:

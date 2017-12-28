@@ -55,7 +55,7 @@
 #define ITER_SCALE 200000
 
 #define NUM_ARCHS 4 /* SSE, AVX, AVX2, AVX512 */
-#define NUM_TYPES 5 /* AES_HMAC, AES_DOCSIS, AES_GCM, AES_CCM, DES */
+#define NUM_TYPES 6 /* AES_HMAC, AES_DOCSIS, AES_GCM, AES_CCM, DES, 3DES */
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
 #define CIPHER_MODES_AES 4	/* CBC, CNTR, CNTR+8, NULL_CIPHER */
@@ -64,6 +64,7 @@
 #define CIPHER_MODES_DES 1	/* DES */
 #define CIPHER_MODES_GCM 1	/* GCM */
 #define CIPHER_MODES_CCM 1	/* CCM */
+#define CIPHER_MODES_3DES 1	/* 3DES */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 8		/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
 				   MD5, NULL_HASH */
@@ -71,11 +72,13 @@
 #define HASH_ALGS_GCM 1		/* GCM */
 #define HASH_ALGS_CCM 1		/* CCM */
 #define HASH_ALGS_DES 1		/* NULL_HASH for DES */
+#define HASH_ALGS_3DES 1	/* NULL_HASH for 3DES */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
 #define KEY_SIZES_DOCSIS 1	/* 16 or 8 */
 #define KEY_SIZES_GCM 3		/* 16, 24, 32 */
 #define KEY_SIZES_CCM 1		/* 16 */
 #define KEY_SIZES_DES 1		/* 8 */
+#define KEY_SIZES_3DES 1	/* 8 x 3 */
 
 /* Those defines tell how many different test cases are to be performed.
  * Have to be multiplied by number of chosen architectures.
@@ -90,6 +93,8 @@
                                HASH_ALGS_CCM * KEY_SIZES_CCM)
 #define VARIANTS_PER_ARCH_DES (CIPHER_MODES_DES * DIRECTIONS *  \
                                HASH_ALGS_DES * KEY_SIZES_DES)
+#define VARIANTS_PER_ARCH_3DES (CIPHER_MODES_3DES * DIRECTIONS *  \
+                               HASH_ALGS_3DES * KEY_SIZES_3DES)
 
 /* Typedefs used for GCM callbacks */
 typedef void (*aesni_gcm_t)(const struct gcm_key_data *,
@@ -127,7 +132,8 @@ enum test_type_e {
 	TTYPE_AES_DOCSIS,
 	TTYPE_AES_GCM,
 	TTYPE_AES_CCM,
-	TTYPE_AES_DES
+	TTYPE_AES_DES,
+	TTYPE_AES_3DES
 };
 
 /* This enum will be mostly translated to JOB_CIPHER_MODE */
@@ -142,7 +148,8 @@ enum test_cipher_mode_e {
 	TEST_DESDOCSIS4, /* DES DOCSIS with increased buffer size by 4 */
 	TEST_GCM, /* Additional field used by GCM, not translated */
         TEST_CCM,
-        TEST_DES
+        TEST_DES,
+        TEST_3DES,
 };
 
 /* This enum will be mostly translated to JOB_HASH_ALG */
@@ -237,7 +244,7 @@ uint32_t offsets[NUM_OFFSETS];
 int sha_size_incr = 24;
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-uint8_t test_types[NUM_TYPES] = {1, 1, 1, 1, 1}; /* AES, DOCSIS, GCM, CCM, DES */
+uint8_t test_types[NUM_TYPES] = {1, 1, 1, 1, 1, 1}; /* AES, DOCSIS, GCM, CCM, DES, 3DES */
 
 int use_gcm_job_api = 0;
 
@@ -401,6 +408,9 @@ static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
         case TEST_DES:
                 c_mode = DES;
                 break;
+        case TEST_3DES:
+                c_mode = DES3;
+                break;
 	default:
 		break;
 	}
@@ -493,6 +503,7 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.CCM.aad_len_in_bytes = 8;
                 job_template.iv_len_in_bytes = 13;
         } else if (job_template.cipher_mode == DES ||
+                   job_template.cipher_mode == DES3 ||
                    job_template.cipher_mode == DOCSIS_DES) {
                 job_template.aes_key_len_in_bytes = 8;
                 job_template.iv_len_in_bytes = 8;
@@ -515,6 +526,13 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                         job->u.CCM.aad = job->src;
                         job->aes_enc_key_expanded = job->aes_dec_key_expanded =
                                 (uint32_t *) &keys[key_idxs[index]];
+                } else if (job->cipher_mode == DES3) {
+                        static const void *ks_ptr[3];
+
+                        ks_ptr[0] = ks_ptr[1] = ks_ptr[2] =
+                                &keys[key_idxs[index]];
+                        job->aes_enc_key_expanded =
+                                job->aes_dec_key_expanded = ks_ptr;
                 } else {
                         job->aes_enc_key_expanded = job->aes_dec_key_expanded =
                                 (uint32_t *) &keys[key_idxs[index]];
@@ -708,6 +726,12 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 		c_start = TEST_DES;
 		c_end = TEST_DES;
 		break;
+	case TTYPE_AES_3DES:
+		h_start = TEST_NULL_HASH;
+		h_end = TEST_NULL_HASH;
+		c_start = TEST_3DES;
+		c_end = TEST_3DES;
+		break;
 	default:
 		break;
 	}
@@ -735,6 +759,7 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
 	if (params->test_type == TTYPE_AES_DOCSIS ||
             params->test_type == TTYPE_AES_DES ||
+            params->test_type == TTYPE_AES_3DES ||
             params->test_type == TTYPE_AES_CCM)
 		limit = AES_128_BYTES;
 
@@ -766,9 +791,9 @@ static void print_times(struct variant_s *variant_list, struct params_s *params,
         const char *func_names[4] = {
                 "SSE", "AVX", "AVX2", "AVX512"
         };
-        const char *c_mode_names[11] = {
+        const char *c_mode_names[12] = {
                 "CBC", "CNTR", "CNTR+8", "NULL_CIPHER", "DOCAES", "DOCAES+8",
-                "DOCDES", "DOCDES+4", "GCM", "CCM", "DES"
+                "DOCDES", "DOCDES+4", "GCM", "CCM", "DES", "3DES"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
@@ -871,6 +896,10 @@ run_tests(void *arg)
 			variants_per_arch = VARIANTS_PER_ARCH_DES;
 			max_arch = NUM_ARCHS;
 			break;
+		case TTYPE_AES_3DES:
+			variants_per_arch = VARIANTS_PER_ARCH_3DES;
+			max_arch = NUM_ARCHS;
+			break;
 		}
 
 		/* Calculating number of all variants */
@@ -961,6 +990,7 @@ static void usage(void)
 		"--no-docsis: do not run DOCSIS cipher perf tests\n"
 		"--no-ccm: do not run CCM cipher perf tests\n"
 		"--no-des: do not run DES cipher perf tests\n"
+		"--no-3des: do not run 3DES cipher perf tests\n"
 		"--gcm-job-api: use JOB API for GCM perf tests"
                 " (raw GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run."
@@ -1009,6 +1039,8 @@ int main(int argc, char *argv[])
 			test_types[TTYPE_AES_CCM] = 0;
 		} else if (strcmp(argv[i], "--no-des") == 0) {
 			test_types[TTYPE_AES_DES] = 0;
+		} else if (strcmp(argv[i], "--no-3des") == 0) {
+			test_types[TTYPE_AES_3DES] = 0;
 		} else if (strcmp(argv[i], "--gcm-job-api") == 0) {
                         use_gcm_job_api = 1;
 		} else if ((strcmp(argv[i], "-o") == 0) && (i < argc - 1)) {

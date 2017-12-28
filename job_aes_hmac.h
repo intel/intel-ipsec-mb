@@ -52,6 +52,7 @@ typedef enum {
         DES,
         DOCSIS_DES,
         CCM,
+        DES3
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -87,6 +88,22 @@ typedef enum {
 } AES_KEY_SIZE_BYTES;
 
 typedef struct JOB_AES_HMAC {
+        /*
+         * For AES, aes_enc_key_expanded and aes_dec_key_expanded are
+         * expected to point to expanded keys structure.
+         * - AES-CTR and AES-CCM, only aes_enc_key_expanded is used
+         * - DOCSIS (AES-CBC + AES-CFB), both pointers are used
+         *   aes_enc_key_expanded has to be set always for the partial block
+         *
+         * For DES, aes_enc_key_expanded and aes_dec_key_expanded are
+         * expected to point to DES key schedule.
+         * - same key schedule used for enc and dec operations
+         *
+         * For 3DES, aes_enc_key_expanded and aes_dec_key_expanded are
+         * expected to point to an array of 3 pointers for
+         * the corresponding 3 key schedules.
+         * - same key schedule used for enc and dec operations
+         */
         const void *aes_enc_key_expanded;  /* 16-byte aligned pointer. */
         const void *aes_dec_key_expanded;
         UINT64 aes_key_len_in_bytes; /* Only 16, 24, and  32 byte (128, 192 and

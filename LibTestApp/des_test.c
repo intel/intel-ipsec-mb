@@ -162,6 +162,7 @@ test_des_many(struct MB_MGR *mb_mgr,
               const int in_place,
               const int num_jobs)
 {
+        const void *ks_ptr[3]; /* 3DES */
         struct JOB_AES_HMAC *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
@@ -180,6 +181,8 @@ test_des_many(struct MB_MGR *mb_mgr,
                 }
         }
 
+        ks_ptr[0] = ks_ptr[1] = ks_ptr[2] = ks; /* 3DES only */
+
         /* flush the scheduler */
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
@@ -196,8 +199,13 @@ test_des_many(struct MB_MGR *mb_mgr,
                         job->src = targets[i] + sizeof(padding);
                 }
                 job->cipher_mode = cipher;
-                job->aes_enc_key_expanded = ks;
-                job->aes_dec_key_expanded = ks;
+                if (cipher == DES3) {
+                        job->aes_enc_key_expanded = (const void *) ks_ptr;
+                        job->aes_dec_key_expanded = (const void *) ks_ptr;
+                } else {
+                        job->aes_enc_key_expanded = ks;
+                        job->aes_dec_key_expanded = ks;
+                }
                 job->aes_key_len_in_bytes = 8;
                 job->iv = iv;
                 job->iv_len_in_bytes = 8;
@@ -285,6 +293,7 @@ test_des_one(struct MB_MGR *mb_mgr,
              JOB_CIPHER_MODE cipher,
              const int in_place)
 {
+        const void *ks_ptr[3]; /* 3DES */
         struct JOB_AES_HMAC *job;
         uint8_t padding[16];
         uint8_t *target = malloc(text_len + (sizeof(padding) * 2));
@@ -300,6 +309,8 @@ test_des_one(struct MB_MGR *mb_mgr,
                 memcpy(target + sizeof(padding), in_text, text_len);
         }
 
+        ks_ptr[0] = ks_ptr[1] = ks_ptr[2] = ks; /* 3DES only */
+
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
 
@@ -314,8 +325,13 @@ test_des_one(struct MB_MGR *mb_mgr,
                 job->src = target + sizeof(padding);
         }
         job->cipher_mode = cipher;
-        job->aes_enc_key_expanded = ks;
-        job->aes_dec_key_expanded = ks;
+        if (cipher == DES3) {
+                job->aes_enc_key_expanded = (const void *) ks_ptr;
+                job->aes_dec_key_expanded = (const void *) ks_ptr;
+        } else {
+                job->aes_enc_key_expanded = ks;
+                job->aes_dec_key_expanded = ks;
+        }
         job->aes_key_len_in_bytes = 8;
         job->iv = iv;
         job->iv_len_in_bytes = 8;
@@ -445,7 +461,6 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
 	return errors;
 }
 
-
 int
 des_test(const enum arch_type arch,
          struct MB_MGR *mb_mgr)
@@ -457,6 +472,9 @@ des_test(const enum arch_type arch,
 
         errors += test_des_vectors(mb_mgr, DIM(docsis_vectors), docsis_vectors,
                                    "DOCSIS DES standard test vectors", DOCSIS_DES);
+
+        errors = test_des_vectors(mb_mgr, DIM(vectors), vectors,
+                                  "3DES standard test vectors", DES3);
 
 	if (0 == errors)
 		printf("...Pass\n");

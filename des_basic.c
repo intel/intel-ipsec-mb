@@ -501,6 +501,77 @@ des_dec_cbc_basic(const void *input, void *output, const int size,
         iv = 0;
 }
 
+IMB_DLL_LOCAL
+void
+des3_enc_cbc_basic(const void *input, void *output, const int size,
+                   const uint64_t *ks1, const uint64_t *ks2,
+                   const uint64_t *ks3, const uint64_t *ivec)
+{
+        const uint64_t *in = input;
+        uint64_t *out = output;
+        const int nblocks = size / 8;
+        int n;
+        uint64_t iv = *ivec;
+
+        IMB_ASSERT(size >= 0);
+        IMB_ASSERT(input != NULL);
+        IMB_ASSERT(output != NULL);
+        IMB_ASSERT(ks1 != NULL);
+        IMB_ASSERT(ks2 != NULL);
+        IMB_ASSERT(ks3 != NULL);
+        IMB_ASSERT(ivec != NULL);
+
+        for (n = 0; n < nblocks; n++) {
+                uint64_t t = in[n] ^ iv;
+
+                t = enc_dec_1(t, ks1, 1 /* encrypt */);
+                t = enc_dec_1(t, ks2, 0 /* decrypt */);
+                t = enc_dec_1(t, ks3, 1 /* encrypt */);
+                out[n] = iv = t;
+        }
+
+        /* *ivec = iv; */
+        iv = 0;
+}
+
+IMB_DLL_LOCAL
+void
+des3_dec_cbc_basic(const void *input, void *output, const int size,
+                   const uint64_t *ks1, const uint64_t *ks2,
+                   const uint64_t *ks3, const uint64_t *ivec)
+{
+        const uint64_t *in = input;
+        uint64_t *out = output;
+        const int nblocks = size / 8;
+        int n;
+        uint64_t iv = *ivec;
+
+        IMB_ASSERT(size >= 0);
+        IMB_ASSERT(input != NULL);
+        IMB_ASSERT(output != NULL);
+        IMB_ASSERT(ks1 != NULL);
+        IMB_ASSERT(ks2 != NULL);
+        IMB_ASSERT(ks3 != NULL);
+        IMB_ASSERT(ivec != NULL);
+
+        for (n = 0; n < nblocks; n++) {
+                uint64_t t, next_iv;
+
+                next_iv = in[n];
+                t = in[n];
+
+                t = enc_dec_1(t, ks3, 0 /* decrypt */);
+                t = enc_dec_1(t, ks2, 1 /* encrypt */);
+                t = enc_dec_1(t, ks1, 0 /* decrypt */);
+                out[n] = t ^ iv;
+
+                iv = next_iv;
+        }
+
+        /* *ivec = iv; */
+        iv = 0;
+}
+
 __forceinline
 void
 cfb_one_basic(const void *input, void *output, const int size,

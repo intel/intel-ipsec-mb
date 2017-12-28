@@ -58,6 +58,36 @@ void des_dec_cbc_basic(const void *input, void *output, const int size,
                        const uint64_t *ks, const uint64_t *ivec);
 
 /**
+ * @brief 3DES CBC encryption
+ *
+ * @param input source buffer with plain text
+ * @param output destination buffer for cipher text
+ * @param size number of bytes to encrypt (multiple of 8)
+ * @param ks1 pointer to key schedule 1 structure
+ * @param ks2 pointer to key schedule 2 structure
+ * @param ks3 pointer to key schedule 3 structure
+ * @param ivec pointer to initialization vector
+ */
+void des3_enc_cbc_basic(const void *input, void *output, const int size,
+                        const uint64_t *ks1, const uint64_t *ks2,
+                        const uint64_t *ks3, const uint64_t *ivec);
+
+/**
+ * @brief 3DES CBC decryption
+ *
+ * @param input source buffer with cipher text
+ * @param output destination buffer for plain text
+ * @param size number of bytes to decrypt (multiple of 8)
+ * @param ks1 pointer to key schedule 1 structure
+ * @param ks2 pointer to key schedule 2 structure
+ * @param ks3 pointer to key schedule 3 structure
+ * @param ivec pointer to initialization vector
+ */
+void des3_dec_cbc_basic(const void *input, void *output, const int size,
+                        const uint64_t *ks1, const uint64_t *ks2,
+                        const uint64_t *ks3, const uint64_t *ivec);
+
+/**
  * @brief DOCSIS DES encryption
  *
  * @param input source buffer with plain text
