@@ -127,7 +127,7 @@ FUNC:
 	xor	idx, idx
 %assign I 1
 %rep 3
-	cmp	qword [state + _ldata_sha512 + 1 * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
+	cmp	qword [state + _ldata_sha512 + I * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
 	cmovne	idx, [rel APPEND(lane_, I)]
 %assign I (I+1)
 %endrep
