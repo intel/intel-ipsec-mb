@@ -275,6 +275,9 @@ test_des_many(struct MB_MGR *mb_mgr,
         ret = 0;
 
  end:
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                ;
+
         for (i = 0; i < num_jobs; i++)
                 free(targets[i]);
         free(targets);
@@ -373,9 +376,10 @@ test_des_one(struct MB_MGR *mb_mgr,
                 goto end;
         }
         ret = 0;
+ end:
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
- end:
+
         free(target);
         return ret;
 }

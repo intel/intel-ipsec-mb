@@ -53,6 +53,8 @@ extern docsis_des_x16_enc_avx512
 extern docsis_des_x16_dec_avx512
 extern des_x16_cbc_enc_avx512
 extern des_x16_cbc_dec_avx512
+extern des3_x16_cbc_enc_avx512
+extern des3_x16_cbc_dec_avx512
 
 %ifdef LINUX
 %define arg1	rdi
@@ -99,7 +101,7 @@ extern des_x16_cbc_dec_avx512
 ;;; ===========================================================================
 ;;; DES/DOCSIS DES job submit
 ;;; ===========================================================================
-;;; DES_DOCSIS [in] - DES or DOCSIS cipher selection
+;;; DES_DOCSIS [in] - DES, DOCSIS or 3DES cipher selection
 ;;; ENC_DEC    [in] - ENCrypt or DECrypt seection
 %macro GENERIC_DES_SUBMIT 2
 %define %%DES_DOCSIS %1
@@ -183,19 +185,29 @@ extern des_x16_cbc_dec_avx512
 
         push            MIN_IDX
         mov             arg2, MIN_LEN
+%ifidn %%ENC_DEC, ENC
+        ;; encrypt
 %ifidn %%DES_DOCSIS, DOCSIS
-%ifidn %%ENC_DEC, ENC
         call            docsis_des_x16_enc_avx512
-%else                           ; ENC
-        call            docsis_des_x16_dec_avx512
-%endif                          ; DEC
-%else                           ; DES
-%ifidn %%ENC_DEC, ENC
-        call            des_x16_cbc_enc_avx512
-%else                           ; ENC
-        call            des_x16_cbc_dec_avx512
-%endif                          ; DEC
 %endif
+%ifidn %%DES_DOCSIS, DES
+        call            des_x16_cbc_enc_avx512
+%endif
+%ifidn %%DES_DOCSIS, 3DES
+        call            des3_x16_cbc_enc_avx512
+%endif
+%else                           ; ENC
+        ;; decrypt
+%ifidn %%DES_DOCSIS, DOCSIS
+        call            docsis_des_x16_dec_avx512
+%endif
+%ifidn %%DES_DOCSIS, DES
+        call            des_x16_cbc_dec_avx512
+%endif
+%ifidn %%DES_DOCSIS, 3DES
+        call            des3_x16_cbc_dec_avx512
+%endif
+%endif                          ; DEC
         pop             MIN_IDX
         jmp             %%_des_submit_end
 
@@ -237,8 +249,8 @@ extern des_x16_cbc_dec_avx512
 ;;; ===========================================================================
 ;;; DES/DOCSIS DES flush
 ;;; ===========================================================================
-;;; DES_DOCSIS [in] - DES or DOCSIS cipher selection
-;;; ENC_DEC    [in] - ENCrypt or DECrypt seection
+;;; DES_DOCSIS [in] - DES, DOCSIS or 3DES cipher selection
+;;; ENC_DEC    [in] - ENCrypt or DECrypt selection
 ;;;
 ;;; Clobbers k1, k2, k4, k5 and k6
 %macro GENERIC_DES_FLUSH 2
@@ -330,19 +342,29 @@ extern des_x16_cbc_dec_avx512
 
         push            MIN_IDX
         mov             arg2, MIN_LEN
+%ifidn %%ENC_DEC, ENC
+        ;; encrypt
 %ifidn %%DES_DOCSIS, DOCSIS
-%ifidn %%ENC_DEC, ENC
         call            docsis_des_x16_enc_avx512
-%else                           ; ENC
-        call            docsis_des_x16_dec_avx512
-%endif                          ; DEC
-%else                           ; DES
-%ifidn %%ENC_DEC, ENC
-        call            des_x16_cbc_enc_avx512
-%else                           ; ENC
-        call            des_x16_cbc_dec_avx512
-%endif                          ; DEC
 %endif
+%ifidn %%DES_DOCSIS, DES
+        call            des_x16_cbc_enc_avx512
+%endif
+%ifidn %%DES_DOCSIS, 3DES
+        call            des3_x16_cbc_enc_avx512
+%endif
+%else                           ; ENC
+        ;; decrypt
+%ifidn %%DES_DOCSIS, DOCSIS
+        call            docsis_des_x16_dec_avx512
+%endif
+%ifidn %%DES_DOCSIS, DES
+        call            des_x16_cbc_dec_avx512
+%endif
+%ifidn %%DES_DOCSIS, 3DES
+        call            des3_x16_cbc_dec_avx512
+%endif
+%endif                          ; DEC
         pop             MIN_IDX
         jmp             %%_des_flush_end
 
@@ -391,6 +413,7 @@ MKGLOBAL(submit_job_des_cbc_dec_avx512,function,internal)
 submit_job_des_cbc_dec_avx512:
         GENERIC_DES_SUBMIT DES, DEC
         ret
+
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
 align 64
@@ -405,6 +428,22 @@ align 64
 MKGLOBAL(submit_job_docsis_des_dec_avx512,function,internal)
 submit_job_docsis_des_dec_avx512:
         GENERIC_DES_SUBMIT DOCSIS, DEC
+        ret
+
+;;; arg 1 : pointer to DES OOO structure
+;;; arg 2 : job
+align 64
+MKGLOBAL(submit_job_3des_cbc_enc_avx512,function,internal)
+submit_job_3des_cbc_enc_avx512:
+        GENERIC_DES_SUBMIT 3DES, ENC
+        ret
+
+;;; arg 1 : pointer to DES OOO structure
+;;; arg 2 : job
+align 64
+MKGLOBAL(submit_job_3des_cbc_dec_avx512,function,internal)
+submit_job_3des_cbc_dec_avx512:
+        GENERIC_DES_SUBMIT 3DES, DEC
         ret
 
 ;;; arg 1 : pointer to DES OOO structure
@@ -433,4 +472,18 @@ align 64
 MKGLOBAL(flush_job_docsis_des_dec_avx512,function,internal)
 flush_job_docsis_des_dec_avx512:
         GENERIC_DES_FLUSH DOCSIS, DEC
+        ret
+
+;;; arg 1 : pointer to DES OOO structure
+align 64
+MKGLOBAL(flush_job_3des_cbc_enc_avx512,function,internal)
+flush_job_3des_cbc_enc_avx512:
+        GENERIC_DES_FLUSH 3DES, ENC
+        ret
+
+;;; arg 1 : pointer to DES OOO structure
+align 64
+MKGLOBAL(flush_job_3des_cbc_dec_avx512,function,internal)
+flush_job_3des_cbc_dec_avx512:
+        GENERIC_DES_FLUSH 3DES, DEC
         ret

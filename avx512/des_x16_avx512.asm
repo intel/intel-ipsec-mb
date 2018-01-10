@@ -119,6 +119,8 @@
 
 struc STACKFRAME
 _key_sched:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
+_key_sched2:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
+_key_sched3:	resq	16*16   ; 16 lanes x 16 qwords; 16 x 128 bytes = 2048
 _tmp_iv:	resq	16      ; 2 x 64 bytes
 _tmp_in:	resq	16      ; 2 x 64 bytes
 _tmp_out:	resq	16      ; 2 x 64 bytes
@@ -887,7 +889,6 @@ endstruc
 %define %%T26  %32
 %define %%T27  %33
 
-%ifnidn %%KS, NULL
         ;; set up the key schedule
         ;; - load first half of the keys & transpose
         ;; - transpose and store
@@ -919,11 +920,110 @@ endstruc
         vmovdqu64       [%%KS + (16 * 64) + (IDX * 64)], %%T %+ IDX
 %assign IDX (IDX + 1)
 %endrep
-%endif                          ; KS != NULL
+
         ;; set up IV
         ;; - they are already kept transposed so this is enough to load them
         vmovdqu64       %%IV0, [%%STATE_IV + (0 * 64)]
         vmovdqu64       %%IV1, [%%STATE_IV + (1 * 64)]
+%endmacro
+
+;;; ===========================================================================
+;;; 3DES INITIALIZATION
+;;; key schedule transposition and IV set up
+;;; ===========================================================================
+;;;
+;;; STATE_KEYS [in]  - KEYS in 3DES OOO STATE
+;;; STATE_IV [ in]  - IV in 3DES OOO STATE
+;;; KS1   [out] - place to store transposed key schedule or NULL
+;;; KS2   [out] - place to store transposed key schedule or NULL
+;;; KS3   [out] - place to store transposed key schedule or NULL
+;;; IV0   [out] - r512; initialization vector
+;;; IV1   [out] - r512; initialization vector
+;;; T0-T27 [clobbered] - temporary r512
+%macro DES3_INIT 35
+%define %%STATE_KEYS %1
+%define %%STATE_IV   %2
+%define %%KS1  %3
+%define %%KS2  %4
+%define %%KS3  %5
+%define %%IV0  %6
+%define %%IV1  %7
+%define %%T0   %8
+%define %%T1   %9
+%define %%T2   %10
+%define %%T3   %11
+%define %%T4   %12
+%define %%T5   %13
+%define %%T6   %14
+%define %%T7   %15
+%define %%T8   %16
+%define %%T9   %17
+%define %%T10  %18
+%define %%T11  %19
+%define %%T12  %20
+%define %%T13  %21
+%define %%T14  %22
+%define %%T15  %23
+%define %%T16  %24
+%define %%T17  %25
+%define %%T18  %26
+%define %%T19  %27
+%define %%T20  %28
+%define %%T21  %29
+%define %%T22  %30
+%define %%T23  %31
+%define %%T24  %32
+%define %%T25  %33
+%define %%T26  %34
+%define %%T27  %35
+
+%assign KEY_IDX 0
+%assign KS_IDX  1
+%rep 3
+        ;; set up the key schedule
+        ;; - load first half of the keys & transpose
+        ;; - transpose and store
+        ;; note: we can use IV registers as temprary ones here
+
+%assign IDX 0
+%rep 16
+        mov             IA0, [%%STATE_KEYS + (IDX*PTR_SZ)]
+        mov             IA0, [IA0 + (KEY_IDX * PTR_SZ)]
+        vmovdqu64       %%T %+ IDX, [IA0]
+%assign IDX (IDX + 1)
+%endrep
+        TRANSPOSE_IN %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
+%assign IDX 0
+%rep 16
+        vmovdqu64       [%%KS %+ KS_IDX + (IDX * 64)], %%T %+ IDX
+%assign IDX (IDX + 1)
+%endrep
+        ;; - load second half of the keys & transpose
+        ;; - transpose and store
+        ;; note: we can use IV registers as temprary ones here
+%assign IDX 0
+%rep 16
+        mov             IA0, [%%STATE_KEYS + (IDX*PTR_SZ)]
+        mov             IA0, [IA0 + (KEY_IDX * PTR_SZ)]
+        vmovdqu64       %%T %+ IDX, [IA0 + 64]
+%assign IDX (IDX + 1)
+%endrep
+        TRANSPOSE_IN %%T0, %%T1, %%T2, %%T3, %%T4, %%T5, %%T6, %%T7, %%T8, %%T9, %%T10, %%T11, %%T12, %%T13, %%T14, %%T15, %%T16, %%T17, %%T18, %%T19, %%T20, %%T21, %%T22, %%T23, %%T24, %%T25, %%T26, %%T27, %%IV0, %%IV1
+%assign IDX 0
+%rep 16
+        vmovdqu64       [%%KS %+ KS_IDX + (16 * 64) + (IDX * 64)], %%T %+ IDX
+%assign IDX (IDX + 1)
+%endrep
+
+%assign KEY_IDX (KEY_IDX + 1)
+%assign KS_IDX (KS_IDX + 1)
+%endrep                         ; KEY_IDX / KS_IDX
+
+        ;; set up IV
+        ;; - they are already kept transposed so this is enough to load them
+        vmovdqu64       %%IV0, [%%STATE_IV + (0 * 64)]
+        vmovdqu64       %%IV1, [%%STATE_IV + (1 * 64)]
+
 %endmacro
 
 ;;; ===========================================================================
@@ -1206,10 +1306,153 @@ endstruc
 %endmacro
 
 ;;; ===========================================================================
+;;; DES CBC ENCRYPT CIPHER ONLY (1 to 8 DES blocks only)
+;;; ===========================================================================
+;;;
+;;; NUM_DES_BLOCKS [in] - 1 to 8 DES blocks only
+;;; DES_KS         [in] - pointer to transposed key schedule
+;;;
+;;; NOTE: clobbers OpMask registers
+;;; REQUIRES: ZTMP0 - ZTMP13, ZW0-ZW15 (depends on NUM_DES_BLOCKS), ZIV0, ZIV1
+%macro GEN_DES_ENC_CIPHER 2
+%define %%NUM_DES_BLOCKS %1
+%define %%DES_KS         %2
+
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep %%NUM_DES_BLOCKS - 1
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, %%DES_KS, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
+        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%assign RNN (RNN + 2)
+%assign LNN (LNN + 2)
+%endrep
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, %%DES_KS, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%endmacro
+
+;;; ===========================================================================
+;;; DES CBC DECRYPT CIPHER ONLY (1 to 8 DES blocks only)
+;;; ===========================================================================
+;;;
+;;; NUM_DES_BLOCKS [in] - 1 to 8 DES blocks only
+;;; DES_KS         [in] - pointer to transposed key schedule
+;;;
+;;; NOTE: clobbers OpMask registers
+;;; REQUIRES: ZTMP0 - ZTMP13, ZW0-ZW15 (depends on NUM_DES_BLOCKS), ZIV0, ZIV1
+%macro GEN_DES_DEC_CIPHER 2
+%define %%NUM_DES_BLOCKS %1
+%define %%DES_KS         %2
+
+%assign RN 0
+%assign LN 1
+%rep %%NUM_DES_BLOCKS
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, %%DES_KS, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+%endmacro
+
+;;; ===========================================================================
+;;; 3DES CBC ENCRYPT CIPHER ONLY (1 to 8 DES blocks only)
+;;; ===========================================================================
+;;;
+;;; NUM_DES_BLOCKS [in] - 1 to 8 DES blocks only
+;;; DES_KS1        [in] - pointer to transposed key schedule 1
+;;; DES_KS2        [in] - pointer to transposed key schedule 2
+;;; DES_KS3        [in] - pointer to transposed key schedule 3
+;;;
+;;; NOTE: clobbers OpMask registers
+;;; REQUIRES: ZTMP0 - ZTMP13, ZW0-ZW15 (depends on NUM_DES_BLOCKS), ZIV0, ZIV1
+%macro GEN_3DES_ENC_CIPHER 4
+%define %%NUM_DES_BLOCKS %1
+%define %%DES_KS1        %2
+%define %%DES_KS2        %3
+%define %%DES_KS3        %4
+
+%assign RN 0
+%assign LN 1
+%assign RNN 2
+%assign LNN 3
+%rep %%NUM_DES_BLOCKS
+        ;; ENC
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, %%DES_KS1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        ;; DEC
+        DES_ENC_DEC     DEC, ZW %+ LN, ZW %+ RN, %%DES_KS2, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        ;; ENC
+        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, %%DES_KS3, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+%if (RNN < (%%NUM_DES_BLOCKS * 2))
+        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
+        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
+%else
+        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
+        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%endif
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%assign RNN (RNN + 2)
+%assign LNN (LNN + 2)
+%endrep
+
+%endmacro
+
+;;; ===========================================================================
+;;; 3DES CBC DECRYPT CIPHER ONLY (1 to 8 DES blocks only)
+;;; ===========================================================================
+;;;
+;;; NUM_DES_BLOCKS [in] - 1 to 8 DES blocks only
+;;; DES_KS1        [in] - pointer to transposed key schedule 1
+;;; DES_KS2        [in] - pointer to transposed key schedule 2
+;;; DES_KS3        [in] - pointer to transposed key schedule 3
+;;;
+;;; NOTE: clobbers OpMask registers
+;;; REQUIRES: ZTMP0 - ZTMP13, ZW0-ZW15 (depends on NUM_DES_BLOCKS), ZIV0, ZIV1
+%macro GEN_3DES_DEC_CIPHER 4
+%define %%NUM_DES_BLOCKS %1
+%define %%DES_KS1        %2
+%define %%DES_KS2        %3
+%define %%DES_KS3        %4
+
+%assign RN 0
+%assign LN 1
+%rep %%NUM_DES_BLOCKS
+        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
+        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
+        ;; DEC
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, %%DES_KS1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        ;; ENC
+        DES_ENC_DEC     ENC, ZW %+ LN, ZW %+ RN, %%DES_KS2, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        ;; DEC
+        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, %%DES_KS3, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
+        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
+        vmovdqa64       ZIV0, ZTMP12
+        vmovdqa64       ZIV1, ZTMP13
+
+%assign RN (RN + 2)
+%assign LN (LN + 2)
+%endrep
+
+%endmacro
+
+;;; ===========================================================================
 ;;; DES CBC / DOCSIS DES ENCRYPT
 ;;; ===========================================================================
 ;;;
-;;; DES_DOCSIS [in] - select between DES (DES CBC) and DOCSIS (DOCSIS DES)
+;;; DES_DOCSIS [in] - select between DES (DES CBC), DOCSIS (DOCSIS DES) and
+;;;                   3DES (3DES CBC)
 ;;;
 ;;; NOTE: clobbers OpMask registers
 %macro GENERIC_DES_ENC 1
@@ -1225,8 +1468,13 @@ endstruc
         mov             [rsp + _gpr_save + 2*8], r14
         mov             [rsp + _gpr_save + 3*8], r15
 
+%ifnidn %%DES_DOCSIS, 3DES
+        ;; DES and DOCSIS DES
         DES_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-
+%else
+        ;; 3DES
+        DES3_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+%endif
         mov             [rsp + _size_save], SIZE
         and             SIZE, -64
         xor             OFFSET, OFFSET
@@ -1277,22 +1525,11 @@ endstruc
         vpxord          ZW0, ZW0, ZIV0 ; R0 = R0 ^ IV0
         vpxord          ZW1, ZW1, ZIV1 ; L0 = L0 ^ IV1
 
-%assign RN 0
-%assign LN 1
-%assign RNN 2
-%assign LNN 3
-%rep 7
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
-        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%assign RNN (RNN + 2)
-%assign LNN (LNN + 2)
-%endrep
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
-        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_ENC_CIPHER 8, rsp + _key_sched
+%else
+        GEN_3DES_ENC_CIPHER 8, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
 
         ;; transpose data on output
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
@@ -1396,73 +1633,38 @@ endstruc
         jz              %%_blocks_2
 
         ;; process one block and move to transpose out
-%assign RN 0
-%assign LN 1
-%assign RNN 2
-%assign LNN 3
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
-        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_ENC_CIPHER 1, rsp + _key_sched
+%else
+        GEN_3DES_ENC_CIPHER 1, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_2:
         ;; process two blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%assign RNN 2
-%assign LNN 3
-%rep 1
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
-        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%assign RNN (RNN + 2)
-%assign LNN (LNN + 2)
-%endrep
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
-        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_ENC_CIPHER 2, rsp + _key_sched
+%else
+        GEN_3DES_ENC_CIPHER 2, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_3:
         ;; process three blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%assign RNN 2
-%assign LNN 3
-%rep 2
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
-        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%assign RNN (RNN + 2)
-%assign LNN (LNN + 2)
-%endrep
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
-        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_ENC_CIPHER 3, rsp + _key_sched
+%else
+        GEN_3DES_ENC_CIPHER 3, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_4:
         ;; process four blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%assign RNN 2
-%assign LNN 3
-%rep 3
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
-        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%assign RNN (RNN + 2)
-%assign LNN (LNN + 2)
-%endrep
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
-        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_ENC_CIPHER 4, rsp + _key_sched
+%else
+        GEN_3DES_ENC_CIPHER 4, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_gt_4:
@@ -1471,62 +1673,29 @@ endstruc
         jz              %%_blocks_6
 %%_blocks_5:
         ;; process five blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%assign RNN 2
-%assign LNN 3
-%rep 4
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
-        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%assign RNN (RNN + 2)
-%assign LNN (LNN + 2)
-%endrep
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
-        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_ENC_CIPHER 5, rsp + _key_sched
+%else
+        GEN_3DES_ENC_CIPHER 5, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_6:
         ;; process six blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%assign RNN 2
-%assign LNN 3
-%rep 5
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
-        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%assign RNN (RNN + 2)
-%assign LNN (LNN + 2)
-%endrep
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
-        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_ENC_CIPHER 6, rsp + _key_sched
+%else
+        GEN_3DES_ENC_CIPHER 6, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_7:
         ;; process seven blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%assign RNN 2
-%assign LNN 3
-%rep 6
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RNN, ZW %+ RNN, ZW %+ LN ; R1 = R1 ^ L0
-        vpxord          ZW %+ LNN, ZW %+ LNN, ZW %+ RN ; L1 = L1 ^ R0
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%assign RNN (RNN + 2)
-%assign LNN (LNN + 2)
-%endrep
-        DES_ENC_DEC     ENC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vmovdqa64       ZIV0, ZW %+ LN ; IV0 = L7
-        vmovdqa64       ZIV1, ZW %+ RN ; IV1 = R7
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_ENC_CIPHER 7, rsp + _key_sched
+%else
+        GEN_3DES_ENC_CIPHER 7, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
 
 %%_transpose_out:
         ;; transpose data on output
@@ -1587,7 +1756,8 @@ endstruc
 ;;; DES CBC / DOCSIS DES DECRYPT
 ;;; ===========================================================================
 ;;;
-;;; DES_DOCSIS [in] - select between DES (DES CBC) and DOCSIS (DOCSIS DES)
+;;; DES_DOCSIS [in] - select between DES (DES CBC), DOCSIS (DOCSIS DES) and
+;;;                   3DES (3DES CBC)
 ;;;
 ;;; NOTE: clobbers OpMask registers
 %macro GENERIC_DES_DEC 1
@@ -1603,7 +1773,13 @@ endstruc
         mov             [rsp + _gpr_save + 2*8], r14
         mov             [rsp + _gpr_save + 3*8], r15
 
+%ifnidn %%DES_DOCSIS, 3DES
+        ;; DES and DOCSIS
         DES_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+%else
+        ;; 3DES
+        DES3_INIT       STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+%endif
 
         ;; CFB part for DOCSIS
 %ifidn %%DES_DOCSIS, DOCSIS
@@ -1656,21 +1832,13 @@ endstruc
         ;; Transpose input
         TRANSPOSE_IN   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 
+%ifnidn %%DES_DOCSIS, 3DES
         ;; DES CBC DEC comes here
-%assign RN 0
-%assign LN 1
-%rep 8
-        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
-        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
-        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
-        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
-        vmovdqa64       ZIV0, ZTMP12
-        vmovdqa64       ZIV1, ZTMP13
-
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%endrep
+        GEN_DES_DEC_CIPHER 8, rsp + _key_sched
+%else
+        ;; 3DES CBC DEC comes here
+        GEN_3DES_DEC_CIPHER 8, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
 
         ;; transpose data on output
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
@@ -1771,74 +1939,38 @@ endstruc
         ja              %%_blocks_3
         jz              %%_blocks_2
         ;; process one block and move to transpose out
-%assign RN 0
-%assign LN 1
-%rep 1
-        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
-        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
-        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
-        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
-        vmovdqa64       ZIV0, ZTMP12
-        vmovdqa64       ZIV1, ZTMP13
-
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%endrep
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_DEC_CIPHER 1, rsp + _key_sched
+%else
+        GEN_3DES_DEC_CIPHER 1, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_2:
         ;; process two blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%rep 2
-        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
-        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
-        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
-        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
-        vmovdqa64       ZIV0, ZTMP12
-        vmovdqa64       ZIV1, ZTMP13
-
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%endrep
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_DEC_CIPHER 2, rsp + _key_sched
+%else
+        GEN_3DES_DEC_CIPHER 2, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_3:
         ;; process three blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%rep 3
-        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
-        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
-        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
-        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
-        vmovdqa64       ZIV0, ZTMP12
-        vmovdqa64       ZIV1, ZTMP13
-
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%endrep
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_DEC_CIPHER 3, rsp + _key_sched
+%else
+        GEN_3DES_DEC_CIPHER 3, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_4:
         ;; process four blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%rep 4
-        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
-        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
-        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
-        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
-        vmovdqa64       ZIV0, ZTMP12
-        vmovdqa64       ZIV1, ZTMP13
-
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%endrep
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_DEC_CIPHER 4, rsp + _key_sched
+%else
+        GEN_3DES_DEC_CIPHER 4, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_gt_4:
@@ -1847,56 +1979,29 @@ endstruc
         jz              %%_blocks_6
 %%_blocks_5:
         ;; process five blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%rep 5
-        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
-        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
-        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
-        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
-        vmovdqa64       ZIV0, ZTMP12
-        vmovdqa64       ZIV1, ZTMP13
-
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%endrep
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_DEC_CIPHER 5, rsp + _key_sched
+%else
+        GEN_3DES_DEC_CIPHER 5, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_6:
         ;; process six blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%rep 6
-        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
-        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
-        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
-        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
-        vmovdqa64       ZIV0, ZTMP12
-        vmovdqa64       ZIV1, ZTMP13
-
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%endrep
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_DEC_CIPHER 6, rsp + _key_sched
+%else
+        GEN_3DES_DEC_CIPHER 6, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
         jmp             %%_transpose_out
 
 %%_blocks_7:
         ;; process seven blocks and move to transpose out
-%assign RN 0
-%assign LN 1
-%rep 7
-        vmovdqa64       ZTMP12, ZW %+ RN        ; keep R0 as IV for the next round
-        vmovdqa64       ZTMP13, ZW %+ LN        ; keep L0 as IV for the next round
-        DES_ENC_DEC     DEC, ZW %+ RN, ZW %+ LN, rsp + _key_sched, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
-        vpxord          ZW %+ RN, ZW %+ RN, ZIV1 ; R0 = R0 ^ IV1
-        vpxord          ZW %+ LN, ZW %+ LN, ZIV0 ; L0 = L0 ^ IV0
-        vmovdqa64       ZIV0, ZTMP12
-        vmovdqa64       ZIV1, ZTMP13
-
-%assign RN (RN + 2)
-%assign LN (LN + 2)
-%endrep
+%ifnidn %%DES_DOCSIS, 3DES
+        GEN_DES_DEC_CIPHER 7, rsp + _key_sched
+%else
+        GEN_3DES_DEC_CIPHER 7, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3
+%endif
 
 %%_transpose_out:
         ;; transpose data on output
@@ -1948,6 +2053,7 @@ endstruc
         mov             r15, [rsp + _gpr_save + 3*8]
 	mov	        rsp, [rsp + _rsp_save]	; original SP
 %endmacro
+
 
 ;;; ========================================================
 ;;; DATA
@@ -2190,6 +2296,22 @@ align 64
 MKGLOBAL(des_x16_cbc_dec_avx512,function,internal)
 des_x16_cbc_dec_avx512:
         GENERIC_DES_DEC DES
+	ret
+
+;;; arg 1 : pointer to DES OOO structure
+;;; arg 2 : size in bytes
+align 64
+MKGLOBAL(des3_x16_cbc_enc_avx512,function,internal)
+des3_x16_cbc_enc_avx512:
+        GENERIC_DES_ENC 3DES
+        ret
+
+;;; arg 1 : pointer to DES OOO structure
+;;; arg 2 : size in bytes
+align 64
+MKGLOBAL(des3_x16_cbc_dec_avx512,function,internal)
+des3_x16_cbc_dec_avx512:
+        GENERIC_DES_DEC 3DES
 	ret
 
 ;;; arg 1 : pointer to DES OOO structure

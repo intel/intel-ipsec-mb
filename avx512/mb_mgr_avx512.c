@@ -63,6 +63,14 @@ JOB_AES_HMAC *submit_job_des_cbc_dec_avx512(MB_MGR_DES_OOO *state,
                                             JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_des_cbc_dec_avx512(MB_MGR_DES_OOO *state);
 
+JOB_AES_HMAC *submit_job_3des_cbc_enc_avx512(MB_MGR_DES_OOO *state,
+                                             JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_3des_cbc_enc_avx512(MB_MGR_DES_OOO *state);
+
+JOB_AES_HMAC *submit_job_3des_cbc_dec_avx512(MB_MGR_DES_OOO *state,
+                                             JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_3des_cbc_dec_avx512(MB_MGR_DES_OOO *state);
+
 JOB_AES_HMAC *submit_job_docsis_des_enc_avx512(MB_MGR_DES_OOO *state,
                                                JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_docsis_des_enc_avx512(MB_MGR_DES_OOO *state);
@@ -110,6 +118,12 @@ JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
 
 #define SUBMIT_JOB_DES_CBC_DEC submit_job_des_cbc_dec_avx512
 #define FLUSH_JOB_DES_CBC_DEC flush_job_des_cbc_dec_avx512
+
+#define SUBMIT_JOB_3DES_CBC_ENC submit_job_3des_cbc_enc_avx512
+#define FLUSH_JOB_3DES_CBC_ENC  flush_job_3des_cbc_enc_avx512
+
+#define SUBMIT_JOB_3DES_CBC_DEC submit_job_3des_cbc_dec_avx512
+#define FLUSH_JOB_3DES_CBC_DEC flush_job_3des_cbc_dec_avx512
 
 #define SUBMIT_JOB_DOCSIS_DES_ENC submit_job_docsis_des_enc_avx512
 #define FLUSH_JOB_DOCSIS_DES_ENC  flush_job_docsis_des_enc_avx512
@@ -275,7 +289,7 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->docsis_sec_ooo.job_in_lane[6] = NULL;
         state->docsis_sec_ooo.job_in_lane[7] = NULL;
 
-        /* DOCSIS DES (DES CBC + DES CFB for partial block) */
+        /* DES, 3DES and DOCSIS DES (DES CBC + DES CFB for partial block) */
         /* - separate DES OOO for encryption */
         for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
                 state->des_enc_ooo.lens[j] = 0;
@@ -293,6 +307,24 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->des_dec_ooo.unused_lanes = 0xFEDCBA9876543210;
         state->des_dec_ooo.num_lanes_inuse = 0;
         memset(&state->des_dec_ooo.args, 0, sizeof(state->des_dec_ooo.args));
+
+        /* - separate 3DES OOO for encryption */
+        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
+                state->des3_enc_ooo.lens[j] = 0;
+                state->des3_enc_ooo.job_in_lane[j] = NULL;
+        }
+        state->des3_enc_ooo.unused_lanes = 0xFEDCBA9876543210;
+        state->des3_enc_ooo.num_lanes_inuse = 0;
+        memset(&state->des3_enc_ooo.args, 0, sizeof(state->des3_enc_ooo.args));
+
+        /* - separate 3DES OOO for decryption */
+        for (j = 0; j < AVX512_NUM_DES_LANES; j++) {
+                state->des3_dec_ooo.lens[j] = 0;
+                state->des3_dec_ooo.job_in_lane[j] = NULL;
+        }
+        state->des3_dec_ooo.unused_lanes = 0xFEDCBA9876543210;
+        state->des3_dec_ooo.num_lanes_inuse = 0;
+        memset(&state->des3_dec_ooo.args, 0, sizeof(state->des3_dec_ooo.args));
 
         /* - separate DOCSIS DES OOO for encryption */
         for (j = 0; j < AVX512_NUM_DES_LANES; j++) {

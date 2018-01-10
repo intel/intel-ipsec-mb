@@ -187,6 +187,8 @@ typedef struct MB_MGR {
         MB_MGR_AES_OOO docsis_sec_ooo;
         MB_MGR_DES_OOO des_enc_ooo;
         MB_MGR_DES_OOO des_dec_ooo;
+        MB_MGR_DES_OOO des3_enc_ooo;
+        MB_MGR_DES_OOO des3_dec_ooo;
         MB_MGR_DES_OOO docsis_des_enc_ooo;
         MB_MGR_DES_OOO docsis_des_dec_ooo;
 
