@@ -104,6 +104,7 @@ lib_objs := \
 	aes_keyexp_256.o \
 	aes_xcbc_mac_128_x4.o \
 	aes_xcbc_mac_128_x8.o \
+	aes_cmac_subkey_gen.o \
 	mb_mgr_aes192_flush_avx.o \
 	mb_mgr_aes192_flush_sse.o \
 	mb_mgr_aes192_submit_avx.o \
@@ -347,4 +348,3 @@ style:
 UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,\
 NEW_TYPEDEFS,AVOID_EXTERNS,COMPLEX_MACRO,PREFER_ALIGNED,USE_FUNC,\
 CONSTANT_COMPARISON,SPACING $(SOURCES_STYLE)
-

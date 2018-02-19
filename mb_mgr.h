@@ -69,7 +69,7 @@ typedef struct {
 } MB_MGR_AES_XCBC_OOO;
 
 /* ========================================================================== */
-/* CBC-MAC out-of-order scheduler structure */
+/* AES-CCM out-of-order scheduler structure */
 
 typedef struct {
         AES_ARGS_x8 args; /* need to re-use AES arguments */
@@ -81,7 +81,22 @@ typedef struct {
         UINT64 unused_lanes;
         JOB_AES_HMAC *job_in_lane[8];
         DECLARE_ALIGNED(UINT8 init_blocks[8 * (4 * 16)], 32);
-} MB_MGR_CBCMAC_OOO;
+} MB_MGR_CCM_OOO;
+
+/* ========================================================================== */
+/* AES-CMAC out-of-order scheduler structure */
+
+typedef struct {
+        AES_ARGS_x8 args; /* need to re-use AES arguments */
+        DECLARE_ALIGNED(UINT16 lens[8], 16);
+        DECLARE_ALIGNED(UINT16 init_done[8], 16);
+        /* each byte is index (0...3) of unused lanes
+         * byte 4 is set to FF as a flag
+         */
+        UINT64 unused_lanes;
+        JOB_AES_HMAC *job_in_lane[8];
+        DECLARE_ALIGNED(UINT8 scratch[8 * 16], 32);
+} MB_MGR_CMAC_OOO;
 
 /* ========================================================================== */
 /* DES out-of-order scheduler fields */
@@ -176,6 +191,7 @@ typedef JOB_AES_HMAC *(*get_completed_job_t)(struct MB_MGR *);
 typedef JOB_AES_HMAC *(*flush_job_t)(struct MB_MGR *);
 typedef UINT32 (*queue_size_t)(struct MB_MGR *);
 typedef void (*keyexp_t)(const void *, void *, void *);
+typedef void (*cmac_subkey_gen_t)(const void *, void *, void *);
 
 /* ========================================================================== */
 /* TOP LEVEL (MB_MGR) Data structure fields */
@@ -192,14 +208,15 @@ typedef struct MB_MGR {
         MB_MGR_DES_OOO docsis_des_enc_ooo;
         MB_MGR_DES_OOO docsis_des_dec_ooo;
 
-        MB_MGR_HMAC_SHA_1_OOO        hmac_sha_1_ooo;
-        MB_MGR_HMAC_SHA_256_OOO      hmac_sha_224_ooo;
-        MB_MGR_HMAC_SHA_256_OOO      hmac_sha_256_ooo;
-        MB_MGR_HMAC_SHA_512_OOO      hmac_sha_384_ooo;
-        MB_MGR_HMAC_SHA_512_OOO      hmac_sha_512_ooo;
-        MB_MGR_HMAC_MD5_OOO          hmac_md5_ooo;
-        MB_MGR_AES_XCBC_OOO          aes_xcbc_ooo;
-        MB_MGR_CBCMAC_OOO            aes_ccm_ooo;
+        MB_MGR_HMAC_SHA_1_OOO   hmac_sha_1_ooo;
+        MB_MGR_HMAC_SHA_256_OOO hmac_sha_224_ooo;
+        MB_MGR_HMAC_SHA_256_OOO hmac_sha_256_ooo;
+        MB_MGR_HMAC_SHA_512_OOO hmac_sha_384_ooo;
+        MB_MGR_HMAC_SHA_512_OOO hmac_sha_512_ooo;
+        MB_MGR_HMAC_MD5_OOO     hmac_md5_ooo;
+        MB_MGR_AES_XCBC_OOO     aes_xcbc_ooo;
+        MB_MGR_CCM_OOO          aes_ccm_ooo;
+        MB_MGR_CMAC_OOO         aes_cmac_ooo;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -216,6 +233,7 @@ typedef struct MB_MGR {
         keyexp_t                keyexp_128;
         keyexp_t                keyexp_192;
         keyexp_t                keyexp_256;
+        cmac_subkey_gen_t       cmac_subkey_gen_128;
 } MB_MGR;
 
 /*
@@ -348,5 +366,7 @@ get_next_job_sse(MB_MGR *state)
         ((_mgr)->keyexp_192((_raw), (_enc), (_dec)))
 #define IMB_AES_KEYEXP_256(_mgr, _raw, _enc, _dec) \
         ((_mgr)->keyexp_256((_raw), (_enc), (_dec)))
+#define IMB_AES_CMAC_SUBKEY_GEN_128(_mgr, _key_exp, _k1, _k2) \
+        ((_mgr)->cmac_subkey_gen_128((_key_exp), (_k1), (_k2)))
 
 #endif /* IMB_MB_MGR_H */

@@ -131,7 +131,7 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 
 __forceinline
 JOB_AES_HMAC *
-submit_flush_job_aes_ccm(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job,
+submit_flush_job_aes_ccm(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job,
                          const unsigned max_jobs, const int is_submit)
 {
         const unsigned lane_blocks_size = 64;
@@ -377,16 +377,243 @@ submit_flush_job_aes_ccm(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job,
 
 static
 JOB_AES_HMAC *
-submit_job_aes_ccm_auth_arch(MB_MGR_CBCMAC_OOO *state, JOB_AES_HMAC *job)
+submit_job_aes_ccm_auth_arch(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job)
 {
         return submit_flush_job_aes_ccm(state, job, AES_CCM_MAX_JOBS, 1);
 }
 
 static
 JOB_AES_HMAC *
-flush_job_aes_ccm_auth_arch(MB_MGR_CBCMAC_OOO *state)
+flush_job_aes_ccm_auth_arch(MB_MGR_CCM_OOO *state)
 {
         return submit_flush_job_aes_ccm(state, NULL, AES_CCM_MAX_JOBS, 0);
+}
+/* ========================================================================= */
+/* AES-CMAC */
+/* ========================================================================= */
+
+/*
+ * Implementation follows Figure 2.3 from RFC 4493
+ *
+ * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ * +                   Algorithm AES-CMAC                              +
+ * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ * +                                                                   +
+ * +   Input    : K    ( 128-bit key )                                 +
+ * +            : M    ( message to be authenticated )                 +
+ * +            : len  ( length of the message in octets )             +
+ * +   Output   : T    ( message authentication code )                 +
+ * +                                                                   +
+ * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ * +   Constants: const_Zero is 0x00000000000000000000000000000000     +
+ * +              const_Bsize is 16                                    +
+ * +                                                                   +
+ * +   Variables: K1, K2 for 128-bit subkeys                           +
+ * +              M_i is the i-th block (i=1..ceil(len/const_Bsize))   +
+ * +              M_last is the last block xor-ed with K1 or K2        +
+ * +              n      for number of blocks to be processed          +
+ * +              r      for number of octets of last block            +
+ * +              flag   for denoting if last block is complete or not +
+ * +                                                                   +
+ * +   Step 1.  (K1,K2) := Generate_Subkey(K);                         +
+ * +   Step 2.  n := ceil(len/const_Bsize);                            +
+ * +   Step 3.  if n = 0                                               +
+ * +            then                                                   +
+ * +                 n := 1;                                           +
+ * +                 flag := false;                                    +
+ * +            else                                                   +
+ * +                 if len mod const_Bsize is 0                       +
+ * +                 then flag := true;                                +
+ * +                 else flag := false;                               +
+ * +                                                                   +
+ * +   Step 4.  if flag is true                                        +
+ * +            then M_last := M_n XOR K1;                             +
+ * +            else M_last := padding(M_n) XOR K2;                    +
+ * +   Step 5.  X := const_Zero;                                       +
+ * +   Step 6.  for i := 1 to n-1 do                                   +
+ * +                begin                                              +
+ * +                  Y := X XOR M_i;                                  +
+ * +                  X := AES-128(K,Y);                               +
+ * +                end                                                +
+ * +            Y := M_last XOR X;                                     +
+ * +            T := AES-128(K,Y);                                     +
+ * +   Step 7.  return T;                                              +
+ * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ */
+
+__forceinline
+JOB_AES_HMAC *
+submit_flush_job_aes_cmac(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job,
+                         const unsigned max_jobs, const int is_submit)
+{
+        const unsigned lane_scratch_size = 16;
+        unsigned lane, min_len, min_idx;
+        JOB_AES_HMAC *ret_job = NULL;
+        uint8_t *M_last = NULL;
+        unsigned i;
+
+        if (is_submit) {
+                /*
+                 * SUBMIT
+                 * - get a free lane id
+                 */
+                unsigned n = (unsigned) (job->msg_len_to_hash_in_bytes + 15) /
+                        AES_BLOCK_SIZE;
+                const unsigned r = (unsigned) job->msg_len_to_hash_in_bytes &
+                        (AES_BLOCK_SIZE - 1);
+                const uint64_t *p_key;
+                const uint8_t *job_src =
+                        job->src + job->hash_start_src_offset_in_bytes;
+                uint64_t *p_dst;
+                int flag;
+
+                lane = state->unused_lanes & 15;
+                state->unused_lanes >>= 4;
+
+                /* copy job into the lane */
+                state->job_in_lane[lane] = job;
+                state->args.keys[lane] = job->u.CMAC._key_expanded;
+                memset(&state->args.IV[lane], 0, sizeof(state->args.IV[0]));
+
+                M_last = &state->scratch[lane * lane_scratch_size];
+                p_dst = (uint64_t *) M_last;
+
+                if (n == 0) {
+                        /* only one partial block */
+                        state->init_done[lane] = 1;
+                        state->args.in[lane] = M_last;
+                        state->lens[lane] = AES_BLOCK_SIZE;
+                        n = 1;
+                        flag = 0;
+                } else {
+                        /* one or more blocks, potentially partial */
+                        state->init_done[lane] = 0;
+                        state->args.in[lane] = job_src;
+                        state->lens[lane] = (n - 1) * AES_BLOCK_SIZE;
+                        flag = (r == 0);
+                }
+
+                if (flag) {
+                        p_key = job->u.CMAC._skey1;
+                        memcpy(M_last, job_src + ((n - 1) * AES_BLOCK_SIZE),
+                               AES_BLOCK_SIZE);
+                } else  {
+                        p_key = job->u.CMAC._skey2;
+                        memcpy(M_last, job_src + ((n - 1) * AES_BLOCK_SIZE), r);
+                        M_last[r] = 0x80;
+                        memset(&M_last[r + 1], 0, AES_BLOCK_SIZE - r - 1);
+                }
+
+                p_dst[0] = p_dst[0] ^ p_key[0];
+                p_dst[1] = p_dst[1] ^ p_key[1];
+
+                /* enough jobs to start processing? */
+                if (state->unused_lanes != 0xf)
+                        return NULL;
+        } else {
+                /*
+                 * FLUSH
+                 * - find 1st non null job
+                 */
+                for (lane = 0; lane < max_jobs; lane++)
+                        if (state->job_in_lane[lane] != NULL)
+                                break;
+                if (lane >= max_jobs)
+                        return NULL; /* no not null job */
+        }
+
+ cmac_round:
+        if (is_submit) {
+                /*
+                 * SUBMIT
+                 * - find min common length to process
+                 */
+                min_idx = 0;
+                min_len = state->lens[0];
+
+                for (i = 1; i < max_jobs; i++) {
+                        if (min_len > state->lens[i]) {
+                                min_idx = i;
+                                min_len = state->lens[i];
+                        }
+                }
+        } else {
+                /*
+                 * FLUSH
+                 * - copy good (not null) lane onto empty lanes
+                 * - find min common length to process across not null lanes
+                 */
+                min_idx = lane;
+                min_len = state->lens[lane];
+
+                for (i = 0; i < max_jobs; i++) {
+                        if (i == lane)
+                                continue;
+
+                        if (state->job_in_lane[i] != NULL) {
+                                if (min_len > state->lens[i]) {
+                                        min_idx = i;
+                                        min_len = state->lens[i];
+                                }
+                        } else {
+                                state->args.in[i] = state->args.in[lane];
+                                state->args.keys[i] = state->args.keys[lane];
+                                state->args.IV[i] = state->args.IV[lane];
+                                state->lens[i] = UINT16_MAX;
+                                state->init_done[i] = state->init_done[lane];
+                        }
+                }
+        }
+
+        /* subtract min len from all lanes */
+        for (i = 0; i < max_jobs; i++)
+                state->lens[i] -= min_len;
+
+        /* run the algorythmic code on selected blocks */
+        if (min_len != 0)
+                AES128_CBC_MAC(&state->args, min_len);
+
+        ret_job = state->job_in_lane[min_idx];
+        M_last = &state->scratch[min_idx * lane_scratch_size];
+
+        if (state->init_done[min_idx] == 0) {
+                /*
+                 * Finish step 6
+                 * Y := M_last XOR X;
+                 * T := AES-128(K,Y);
+                 */
+                state->init_done[min_idx] = 1;
+                state->args.in[min_idx] = M_last;
+                state->lens[min_idx] = AES_BLOCK_SIZE;
+                goto cmac_round;
+        }
+
+        if (ret_job->auth_tag_output_len_in_bytes == 16)
+                memcpy(ret_job->auth_tag_output, &state->args.IV[min_idx], 16);
+        else
+                memcpy(ret_job->auth_tag_output, &state->args.IV[min_idx], 12);
+
+
+        /* put back processed packet into unused lanes, set job as complete */
+        state->unused_lanes = (state->unused_lanes << 4) | min_idx;
+        ret_job = state->job_in_lane[min_idx];
+        ret_job->status |= STS_COMPLETED_HMAC;
+        state->job_in_lane[min_idx] = NULL;
+        return ret_job;
+}
+
+static
+JOB_AES_HMAC *
+submit_job_aes_cmac_auth_arch(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job)
+{
+        return submit_flush_job_aes_cmac(state, job, AES_CMAC_MAX_JOBS, 1);
+}
+
+static
+JOB_AES_HMAC *
+flush_job_aes_cmac_auth_arch(MB_MGR_CMAC_OOO *state)
+{
+        return submit_flush_job_aes_cmac(state, NULL, AES_CMAC_MAX_JOBS, 0);
 }
 
 /* ========================================================================= */
@@ -958,6 +1185,8 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_CUSTOM_HASH(job);
         case AES_CCM:
                 return SUBMIT_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo, job);
+        case AES_CMAC:
+                return SUBMIT_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo, job);
         default: /* assume NULL_HASH */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -1001,6 +1230,8 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_CUSTOM_HASH(job);
         case AES_CCM:
                 return FLUSH_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo);
+        case AES_CMAC:
+                return FLUSH_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo);
         default: /* assume NULL_HASH */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
                         job->status |= STS_COMPLETED_HMAC;
@@ -1044,6 +1275,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 16, /* AES_GMAC */
                 0,  /* CUSTOM HASH */
                 0,  /* AES_CCM */
+                16, /* AES_CMAC */
         };
 
         switch (job->cipher_mode) {
@@ -1322,6 +1554,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
+                if (job->auth_tag_output == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
                 break;
         case NULL_HASH:
                 break;
@@ -1336,6 +1572,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 if (job->cipher_mode != GCM) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
                 }
                 /*
                  * msg_len_to_hash_in_bytes not checked against zero.
@@ -1385,6 +1625,27 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 if (job->cipher_start_src_offset_in_bytes !=
                     job->hash_start_src_offset_in_bytes) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                break;
+        case AES_CMAC:
+                if ((job->u.CMAC._key_expanded == NULL) ||
+                    (job->u.CMAC._skey1 == NULL) ||
+                    (job->u.CMAC._skey2 == NULL)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                /*
+                 * T is 128 bits but 96 bits is also allowed due to
+                 * IPsec use case (RFC 4494)
+                 */
+                if (job->auth_tag_output_len_in_bytes != UINT64_C(16) &&
+                    job->auth_tag_output_len_in_bytes != UINT64_C(12)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }

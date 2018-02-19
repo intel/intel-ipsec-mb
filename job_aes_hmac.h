@@ -74,6 +74,7 @@ typedef enum {
 #endif /* !NO_GCM */
         CUSTOM_HASH,
         AES_CCM,
+        AES_CMAC,
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -150,6 +151,11 @@ typedef struct JOB_AES_HMAC {
                         const void *aad;
                         UINT64 aad_len_in_bytes; /* Length of AAD */
                 } CCM;
+                struct _AES_CMAC_specific_fields {
+                        const void *_key_expanded; /* 16-byte aligned */
+                        const void *_skey1;
+                        const void *_skey2;
+                } CMAC;
 #ifndef NO_GCM
                 struct _AES_GCM_specific_fields {
                         /* Additional Authentication Data (AAD) */

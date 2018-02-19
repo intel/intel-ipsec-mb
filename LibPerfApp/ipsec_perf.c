@@ -66,8 +66,8 @@
 #define CIPHER_MODES_CCM 1	/* CCM */
 #define CIPHER_MODES_3DES 1	/* 3DES */
 #define DIRECTIONS 2		/* ENC, DEC */
-#define HASH_ALGS_AES 8		/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
-				   MD5, NULL_HASH */
+#define HASH_ALGS_AES 9		/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
+				   MD5, NULL_HASH, CMAC */
 #define HASH_ALGS_DOCSIS 1	/* NULL_HASH */
 #define HASH_ALGS_GCM 1		/* GCM */
 #define HASH_ALGS_CCM 1		/* CCM */
@@ -161,6 +161,7 @@ enum test_hash_alg_e {
 	TEST_SHA_512,
 	TEST_XCBC,
 	TEST_MD5,
+        TEST_HASH_CMAC, /* added here to be included in AES tests */
 	TEST_NULL_HASH,
 	TEST_HASH_GCM, /* Additional field used by GCM, not translated */
         TEST_CUSTOM_HASH, /* unused */
@@ -231,9 +232,9 @@ struct funcs_gcm_s func_sets_gcm[NUM_ARCHS - 1][3] = {
 };
 
 enum cache_type_e cache_type = WARM;
-/* SHA1, SHA224, SHA256, SHA384, SHA512, XCBC, MD5, NULL, GMAC, CUSTOM, CCM */
-const uint32_t auth_tag_length_bytes[11] = {
-        12, 14, 16, 24, 32, 12, 12, 0, 8, 0, 16
+/* As enum: SHA1, SHA224, SHA256, SHA384, SHA512, XCBC, MD5, NULL, GMAC, CUSTOM, CCM, CMAC */
+const uint32_t auth_tag_length_bytes[12] = {
+        12, 14, 16, 24, 32, 12, 12, 0, 8, 0, 16, 16
 };
 uint8_t *buf = NULL;
 uint32_t index_limit;
@@ -458,19 +459,32 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 		job_template._k1_expanded = k1_expanded;
 		job_template._k2 = k2;
 		job_template._k3 = k3;
+                job_template.hash_alg = AES_XCBC;
                 break;
         case TEST_HASH_CCM:
+                job_template.hash_alg = AES_CCM;
                 break;
         case TEST_HASH_GCM:
+                job_template.hash_alg = AES_GMAC;
                 break;
         case TEST_NULL_HASH:
+                job_template.hash_alg = NULL_HASH;
+                break;
+        case TEST_HASH_CMAC:
+		job_template.u.CMAC._key_expanded = k1_expanded;
+		job_template.u.CMAC._skey1 = k2;
+		job_template.u.CMAC._skey2 = k3;
+                job_template.hash_alg = AES_CMAC;
                 break;
         default:
-		/* hash alg is SHA1 or MD5 */
+		/* HMAC hash alg is SHA1 or MD5 */
 		job_template.hashed_auth_key_xor_ipad = (uint8_t *) ipad;
 		job_template.hashed_auth_key_xor_opad = (uint8_t *) opad;
+                job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
                 break;
 	}
+        job_template.auth_tag_output_len_in_bytes =
+                (uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
 
 	job_template.cipher_direction = params->cipher_dir;
 
@@ -508,10 +522,6 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 job_template.aes_key_len_in_bytes = 8;
                 job_template.iv_len_in_bytes = 8;
         }
-
-        job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
-        job_template.auth_tag_output_len_in_bytes =
-                (uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
 
 	time = __rdtscp(&aux);
 	for (i = 0; i < num_iter; i++) {
@@ -798,9 +808,9 @@ static void print_times(struct variant_s *variant_list, struct params_s *params,
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
         };
-        const char *h_alg_names[11] = {
+        const char *h_alg_names[12] = {
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
-                "MD5", "NULL_HASH", "GCM", "CUSTOM", "CCM"
+                "MD5", "CMAC", "NULL_HASH", "GCM", "CUSTOM", "CCM"
         };
 	printf("ARCH");
 	for (col = 0; col < total_variants; col++)

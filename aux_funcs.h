@@ -54,6 +54,8 @@ void aes_keyexp_256_enc_sse(const void *key, void *enc_exp_keys);
 void aes_cfb_128_one_sse(void *out, const void *in, const void *iv,
                          const void *keys, uint64_t len);
 
+void aes_cmac_subkey_gen_sse(const void *key_exp, void *key1, void *key2);
+
 /* AVX */
 void sha1_one_block_avx(const void *data, void *digest);
 void sha224_one_block_avx(const void *data, void *digest);
@@ -78,6 +80,8 @@ void aes_keyexp_256_enc_avx(const void *key, void *enc_exp_keys);
 void aes_cfb_128_one_avx(void *out, const void *in, const void *iv,
                          const void *keys, uint64_t len);
 
+void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1, void *key2);
+
 /* AVX2 */
 #define sha1_one_block_avx2      sha1_one_block_avx
 #define sha224_one_block_avx2    sha224_one_block_avx
@@ -93,6 +97,7 @@ void aes_cfb_128_one_avx(void *out, const void *in, const void *iv,
 #define aes_keyexp_192_enc_avx2  aes_keyexp_192_enc_avx
 #define aes_keyexp_256_enc_avx2  aes_keyexp_256_enc_avx
 #define aes_cfb_128_one_avx2     aes_cfb_128_one_avx
+#define aes_cmac_subkey_gen_avx2 aes_cmac_subkey_gen_avx
 
 /* AVX512 */
 #define sha1_one_block_avx512      sha1_one_block_avx2
@@ -109,5 +114,6 @@ void aes_cfb_128_one_avx(void *out, const void *in, const void *iv,
 #define aes_keyexp_192_enc_avx512  aes_keyexp_192_enc_avx2
 #define aes_keyexp_256_enc_avx512  aes_keyexp_256_enc_avx2
 #define aes_cfb_128_one_avx512     aes_cfb_128_one_avx2
+#define aes_cmac_subkey_gen_avx512 aes_cmac_subkey_gen_avx2
 
 #endif	/* !_AUX_FUNCS_H_ */

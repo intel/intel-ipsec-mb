@@ -47,7 +47,7 @@ DLFLAGS = /RELEASE
 !endif
 
 CC = cl
-CFLAGS = $(EXTRA_CFLAGS) $(DCFLAGS)  /I. /Iinclude \
+CFLAGS = $(EXTRA_CFLAGS) $(DCFLAGS) /I. /Iinclude \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
 
 LIB_TOOL = lib
@@ -86,6 +86,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes_keyexp_128.obj \
 	$(OBJ_DIR)\aes_keyexp_192.obj \
 	$(OBJ_DIR)\aes_keyexp_256.obj \
+	$(OBJ_DIR)\aes_cmac_subkey_gen.obj \
 	$(OBJ_DIR)\aes_xcbc_mac_128_x4.obj \
 	$(OBJ_DIR)\aes_xcbc_mac_128_x8.obj \
 	$(OBJ_DIR)\md5_x4x2_avx.obj \

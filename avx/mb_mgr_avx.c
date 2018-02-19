@@ -161,9 +161,14 @@ JOB_AES_HMAC *flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
 void aes128_cbc_mac_x8(AES_ARGS_x8 *args, uint64_t len);
 
 #define AES128_CBC_MAC     aes128_cbc_mac_x8
+
 #define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_arch
 #define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_arch
 #define AES_CCM_MAX_JOBS 8
+
+#define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_arch
+#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_arch
+#define AES_CMAC_MAX_JOBS 8
 
 /* ====================================================================== */
 
@@ -453,20 +458,29 @@ init_mb_mgr_avx(MB_MGR *state)
         }
         state->aes_ccm_ooo.unused_lanes = 0xF76543210;
 
+        /* Init AES-CMAC auth out-of-order fields */
+        for (j = 0; j < 8; j++) {
+                state->aes_cmac_ooo.init_done[j] = 0;
+                state->aes_cmac_ooo.lens[j] = 0;
+                state->aes_cmac_ooo.job_in_lane[j] = NULL;
+        }
+        state->aes_cmac_ooo.unused_lanes = 0xF76543210;
+
         /* Init "in order" components */
         state->next_job = 0;
         state->earliest_job = -1;
 
         /* set AVX handlers */
-        state->get_next_job       = get_next_job_avx;
-        state->submit_job         = submit_job_avx;
-        state->submit_job_nocheck = submit_job_nocheck_avx;
-        state->get_completed_job  = get_completed_job_avx;
-        state->flush_job          = flush_job_avx;
-        state->queue_size         = queue_size_avx;
-        state->keyexp_128         = aes_keyexp_128_avx;
-        state->keyexp_192         = aes_keyexp_192_avx;
-        state->keyexp_256         = aes_keyexp_256_avx;
+        state->get_next_job        = get_next_job_avx;
+        state->submit_job          = submit_job_avx;
+        state->submit_job_nocheck  = submit_job_nocheck_avx;
+        state->get_completed_job   = get_completed_job_avx;
+        state->flush_job           = flush_job_avx;
+        state->queue_size          = queue_size_avx;
+        state->keyexp_128          = aes_keyexp_128_avx;
+        state->keyexp_192          = aes_keyexp_192_avx;
+        state->keyexp_256          = aes_keyexp_256_avx;
+        state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_avx;
 }
 
 #include "mb_mgr_code.h"

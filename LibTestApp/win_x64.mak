@@ -43,10 +43,12 @@ CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:prec
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
+OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj
+
 all: $(APP).exe
 
-$(APP).exe: main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj $(IPSECLIB)
-        $(LNK) $(LFLAGS) main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj $(IPSECLIB)
+$(APP).exe: $(OBJS) $(IPSECLIB)
+        $(LNK) $(LFLAGS) $(OBJS) $(IPSECLIB)
 
 main.obj: main.c do_test.h
 	$(CC) /c $(CFLAGS) main.c
@@ -66,5 +68,8 @@ des_test.obj: des_test.c gcm_ctr_vectors_test.h
 ccm_test.obj: ccm_test.c gcm_ctr_vectors_test.h
 	$(CC) /c $(CFLAGS) ccm_test.c
 
+cmac_test.obj: cmac_test.c
+	$(CC) /c $(CFLAGS) cmac_test.c
+
 clean:
-	del /q main.obj ctr_test.obj gcm_test.obj customop_test.obj des_test.obj ccm_test.obj $(APP).*
+	del /q $(OBJS) $(APP).*
