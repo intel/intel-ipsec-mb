@@ -1,6 +1,13 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+Unreleased
+========================================================================
+
+General
+- AES-CMAC support added
+- 3DES support added
+
 v0.48 December 2017
 ========================================================================
 
