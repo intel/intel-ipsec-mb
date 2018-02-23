@@ -1074,6 +1074,7 @@ job_aes_gcm_enc_128(const struct gcm_key_data *key,
                     const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
+        (void) ctx; /* unused */
         aes_gcm_job(&gcm_mgr, CIPHER_HASH, key, AES_128_BYTES,
                     out, in, len,
                     iv, aad, aad_len,
@@ -1087,6 +1088,7 @@ job_aes_gcm_dec_128(const struct gcm_key_data *key,
                     const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
+        (void) ctx; /* unused */
         aes_gcm_job(&gcm_mgr, HASH_CIPHER, key, AES_128_BYTES,
                     out, in, len,
                     iv, aad, aad_len,
@@ -1100,6 +1102,7 @@ job_aes_gcm_enc_192(const struct gcm_key_data *key,
                     const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
+        (void) ctx; /* unused */
         aes_gcm_job(&gcm_mgr, CIPHER_HASH, key, AES_192_BYTES,
                     out, in, len,
                     iv, aad, aad_len,
@@ -1113,6 +1116,7 @@ job_aes_gcm_dec_192(const struct gcm_key_data *key,
                     const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
+        (void) ctx; /* unused */
         aes_gcm_job(&gcm_mgr, HASH_CIPHER, key, AES_192_BYTES,
                     out, in, len,
                     iv, aad, aad_len,
@@ -1126,6 +1130,7 @@ job_aes_gcm_enc_256(const struct gcm_key_data *key,
                     const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
+        (void) ctx; /* unused */
         aes_gcm_job(&gcm_mgr, CIPHER_HASH, key, AES_256_BYTES,
                     out, in, len,
                     iv, aad, aad_len,
@@ -1139,6 +1144,7 @@ job_aes_gcm_dec_256(const struct gcm_key_data *key,
                     const uint8_t *iv, const uint8_t *aad, uint64_t aad_len,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
+        (void) ctx; /* unused */
         aes_gcm_job(&gcm_mgr, HASH_CIPHER, key, AES_256_BYTES,
                     out, in, len,
                     iv, aad, aad_len,

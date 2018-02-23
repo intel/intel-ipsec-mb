@@ -134,7 +134,7 @@ section .text
 ;;; +                                                                   +
 ;;; +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-MKGLOBAL(aes_cmac_subkey_gen_sse,function,internal)
+MKGLOBAL(aes_cmac_subkey_gen_sse,function,)
 align 32
 aes_cmac_subkey_gen_sse:
         ;; Step 1.  L := AES-128(K, const_Zero) ;
@@ -200,7 +200,7 @@ K2_msb_is_zero_sse:
 ;;;
 ;;; See aes_cmac_subkey_gen_sse() above for operation details
 
-MKGLOBAL(aes_cmac_subkey_gen_avx,function,internal)
+MKGLOBAL(aes_cmac_subkey_gen_avx,function,)
 align 32
 aes_cmac_subkey_gen_avx:
         ;; Step 1.  L := AES-128(K, const_Zero) ;

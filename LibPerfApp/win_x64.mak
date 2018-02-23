@@ -26,7 +26,19 @@
 #
 
 APP = ipsec_perf
+INSTNAME = intel-ipsec-mb
+
+!if !defined(PREFIX)
+PREFIX = C:\Program Files
+!endif
+
+!if exist("$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib")
+IPSECLIB = "$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib"
+INCDIR = -I"$(PREFIX)\$(INSTNAME)"
+!else
 IPSECLIB = ..\libIPSec_MB.lib
+INCDIR = -I..\ -I..\include
+!endif
 
 !ifdef DEBUG
 DCFLAGS = /Od /DDEBUG /Z7
@@ -37,7 +49,7 @@ DLFLAGS =
 !endif
 
 CC = cl
-CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc /I.. /I..\include
+CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(INCDIR)
 
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)

@@ -80,7 +80,9 @@ struct test_vec_s {
 static int
 cipher_addon(struct JOB_AES_HMAC *job)
 {
+#ifdef DEBUG
         struct test_vec_s *node = job->user_data;
+#endif
 
         TRACE("Seq:%u Cipher Addon cipher:%s auth:%s\n",
               node->seq, node->cipher->name, node->auth->name);
@@ -99,7 +101,9 @@ cipher_addon(struct JOB_AES_HMAC *job)
 static int
 hash_addon(struct JOB_AES_HMAC *job)
 {
+#ifdef DEBUG
         struct test_vec_s *node = job->user_data;
+#endif
 
         TRACE("Seq:%u Auth Addon cipher:%s auth:%s\n",
               node->seq, node->cipher->name, node->auth->name);
@@ -137,7 +141,9 @@ static const struct cipher_attr_s cipher_attr_tab[] = {
 static int
 job_check(const struct JOB_AES_HMAC *job)
 {
+#ifdef DEBUG
         struct test_vec_s *done = job->user_data;
+#endif
 
         TRACE("done Seq:%u Cipher:%s Auth:%s\n",
               done->seq, done->cipher->name, done->auth->name);

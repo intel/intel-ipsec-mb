@@ -40,6 +40,8 @@
 #define DIM(x) (sizeof(x) / sizeof(x[0]))
 #endif
 
+int des_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+
 struct des_vector {
 	const uint8_t *K;          /* key */
 	const uint8_t *IV;         /* initialization vector */
@@ -470,6 +472,8 @@ des_test(const enum arch_type arch,
          struct MB_MGR *mb_mgr)
 {
         int errors;
+
+        (void) arch; /* unused */
 
         errors = test_des_vectors(mb_mgr, DIM(vectors), vectors,
                                   "DES standard test vectors", DES);

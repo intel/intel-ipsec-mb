@@ -26,11 +26,26 @@
 #
 
 APP := ipsec_MB_testapp
+INSTPATH ?= /usr/include/intel-ipsec-mb
 
-LIBDIR ?= ../
-LDFLAGS = -L$(LIBDIR) -fPIE -z noexecstack -z relro -z now
+CFLAGS = -g -DLINUX -D_GNU_SOURCE \
+	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
+	-Wcast-qual -Wundef -Wwrite-strings  \
+	-Wformat -Wformat-security \
+	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
+	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
+
+LDFLAGS = -fPIE -z noexecstack -z relro -z now
 LDLIBS = -lIPSec_MB
-CFLAGS = -g -DLINUX -I../include -I..
+
+ifneq ("$(wildcard $(INSTPATH))","")
+# library installed
+CFLAGS += -I$(INSTPATH)
+else
+# library not installed
+CFLAGS +=  -I../include -I../
+LDFLAGS += -L../
+endif
 
 ifeq ($(DEBUG),y)
 CFLAGS += -O0 -DDEBUG

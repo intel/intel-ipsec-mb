@@ -143,3 +143,5 @@ EXPORTS
     submit_job_nocheck_avx512		@117
     submit_job_nocheck_sse		@118
     submit_job_sse			@119
+    aes_cmac_subkey_gen_sse             @120
+    aes_cmac_subkey_gen_avx             @121

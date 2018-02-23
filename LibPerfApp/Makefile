@@ -24,20 +24,27 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 EXE=ipsec_perf
-LIBDIR ?= ../
-LDFLAGS = -L$(LIBDIR) -fPIE -z noexecstack -z relro -z now -pthread
-LDLIBS = -lIPSec_MB
+INSTPATH ?= /usr/include/intel-ipsec-mb
 
-INCLUDE_DIRS := $(LIBDIR) $(LIBDIR)/include
-INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I$i)
-
-CFLAGS := -DLINUX -D_GNU_SOURCE $(INCLUDES) \
+CFLAGS = -DLINUX -D_GNU_SOURCE $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-pthread
+
+LDFLAGS = -fPIE -z noexecstack -z relro -z now -pthread
+LDLIBS = -lIPSec_MB
+
+ifneq ("$(wildcard $(INSTPATH))","")
+# library installed
+CFLAGS += -I$(INSTPATH)
+else
+# library not installed
+CFLAGS +=  -I../include -I../
+LDFLAGS += -L../
+endif
 
 ifeq ($(DEBUG),y)
 CFLAGS += -g -DDEBUG -O0

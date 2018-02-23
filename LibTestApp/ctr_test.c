@@ -605,7 +605,11 @@ test_ctr_std_vectors(struct MB_MGR *mb_mgr)
                         uint8_t local_iv[16];
 
                         memcpy(local_iv, ctr_vectors[vect].IV, orig_iv_len);
-                        *((uint32_t *)&local_iv[orig_iv_len]) = 0x01000000;
+                        /* 32-bit 0x01000000 in LE */
+                        local_iv[12] = 0x00;
+                        local_iv[13] = 0x00;
+                        local_iv[14] = 0x00;
+                        local_iv[15] = 0x01;
 
                         if (test_ctr(mb_mgr,
                                      expkey, ctr_vectors[vect].Klen,
@@ -637,6 +641,8 @@ ctr_test(const enum arch_type arch,
          struct MB_MGR *mb_mgr)
 {
         int errors;
+
+        (void) arch; /* unused */
 
         errors = test_ctr_std_vectors(mb_mgr);
 

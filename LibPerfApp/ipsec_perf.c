@@ -45,8 +45,8 @@
 #include <sched.h>
 #endif
 
-#include "mb_mgr.h"
-#include "gcm_defines.h"
+#include <mb_mgr.h>
+#include <gcm_defines.h>
 
 #define BUFSIZE (512 * 1024 * 1024)
 #define JOB_SIZE (2 * 1024)

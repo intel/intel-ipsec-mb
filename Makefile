@@ -27,7 +27,13 @@
 LIB = libIPSec_MB
 VERSION = 0.49
 SO_VERSION = 0
-SHARED ?= n
+SHARED ?= y
+
+PREFIX ?= /usr
+LIB_INSTALL_DIR ?= $(PREFIX)/lib
+HDR_DIR ?= $(PREFIX)/include/intel-ipsec-mb-$(VERSION)
+INC_DIR ?= $(PREFIX)/include/intel-ipsec-mb
+NOLDCONFIG ?= n
 
 USE_YASM ?= n
 YASM ?= yasm
@@ -232,8 +238,52 @@ ifeq ($(SHARED),y)
 	ln -f -s $(LIBNAME) $(LIB).so.$(SO_VERSION)
 	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB).so
 else
-	ar -qcs $@ $^
+	$(AR) -qcs $@ $^
 endif
+
+.PHONY: install
+install: $(LIBNAME)
+	ln -f -s $(HDR_DIR) $(INC_DIR)
+	install -d $(HDR_DIR)
+	install -m 0644 include/types.h $(HDR_DIR)
+	install -m 0644 include/os.h $(HDR_DIR)
+	install -m 0644 constants.h $(HDR_DIR)
+	install -m 0644 job_aes_hmac.h $(HDR_DIR)
+	install -m 0644 asm_types.h $(HDR_DIR)
+	install -m 0644 aux_funcs.h $(HDR_DIR)
+	install -m 0644 mb_mgr.h $(HDR_DIR)
+	install -m 0644 gcm_defines.h $(HDR_DIR)
+	install -m 0644 des.h $(HDR_DIR)
+	install -d $(LIB_INSTALL_DIR)
+	install -m $(LIBPERM) $(LIBNAME) $(LIB_INSTALL_DIR)
+ifeq ($(SHARED),y)
+	cd $(LIB_INSTALL_DIR); \
+		ln -f -s $(LIB).so.$(VERSION) $(LIB).so.$(SO_VERSION); \
+		ln -f -s $(LIB).so.$(SO_VERSION) $(LIB).so
+ifneq ($(NOLDCONFIG),y)
+	ldconfig
+endif
+endif
+
+.PHONY: uninstall
+uninstall: $(LIBNAME)
+	-rm -f $(HDR_DIR)/types.h
+	-rm -f $(HDR_DIR)/os.h
+	-rm -f $(HDR_DIR)/constants.h
+	-rm -f $(HDR_DIR)/job_aes_hmac.h
+	-rm -f $(HDR_DIR)/asm_types.h
+	-rm -f $(HDR_DIR)/aux_funcs.h
+	-rm -f $(HDR_DIR)/mb_mgr.h
+	-rm -f $(HDR_DIR)/gcm_defines.h
+	-rm -f $(HDR_DIR)/des.h
+	-rm -f $(LIB_INSTALL_DIR)/$(LIBNAME)
+	-rm -f $(INC_DIR)
+	-rmdir $(HDR_DIR)
+ifeq ($(SHARED),y)
+	-rm -f $(LIB_INSTALL_DIR)/$(LIB).so.$(SO_VERSION)
+	-rm -f $(LIB_INSTALL_DIR)/$(LIB).so
+endif
+
 
 $(obj2_files): | $(OBJ_DIR)
 

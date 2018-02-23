@@ -34,6 +34,8 @@
 #include <aux_funcs.h>
 #include "gcm_ctr_vectors_test.h"
 
+int cmac_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+
 /*
  * Test vectors from https://tools.ietf.org/html/rfc4493
  */
@@ -360,6 +362,8 @@ cmac_test(const enum arch_type arch,
           struct MB_MGR *mb_mgr)
 {
         int errors = 0;
+
+        (void) arch; /* unused */
 
         errors += test_cmac_std_vectors(mb_mgr, 1);
         errors += test_cmac_std_vectors(mb_mgr, 3);

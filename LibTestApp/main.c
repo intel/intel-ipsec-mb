@@ -39,9 +39,10 @@ extern int des_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int ccm_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int cmac_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 
-#define TEST_SSE  1
-#define TEST_AVX  2
-#define TEST_AVX2 3
+#define TEST_SSE    1
+#define TEST_AVX    2
+#define TEST_AVX2   3
+#define TEST_AVX512 4
 
 #define TEST TEST_SSE
 #include "do_test.h"

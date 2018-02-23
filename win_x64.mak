@@ -27,14 +27,30 @@
 
 # Available build options:
 # DEBUG=y   - this option will produce library fit for debugging
-# SHARED=y  - this option will produce shared library (DLL)
+# DEBUG=n   - this option will produce library not fit for debugging (default)
+# SHARED=y  - this option will produce shared library (DLL) (default)
+# SHARED=n  - this option will produce static library (lib)
 
-!ifdef SHARED
-LIBNAME = libIPSec_MB.dll
+!if !defined(SHARED)
+SHARED = y
+!endif
+
+# Available installation options:
+# PREFIX=<path> - path to install the library (c:\program files\ is default)
+
+!if !defined(PREFIX)
+PREFIX = c:\Program Files
+!endif
+INSTDIR = $(PREFIX)\intel-ipsec-mb
+
+LIBBASE = libIPSec_MB
+!if "$(SHARED)" == "y"
+LIBNAME = $(LIBBASE).dll
 !else
-LIBNAME = libIPSec_MB.lib
+LIBNAME = $(LIBBASE).lib
 !endif
 OBJ_DIR = obj
+
 
 !ifdef DEBUG
 DCFLAGS = /Od /DDEBUG /Z7
@@ -219,7 +235,7 @@ all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
 all: $(LIBNAME)
 
 $(LIBNAME): $(all_objs)
-!ifdef SHARED
+!if "$(SHARED)" == "y"
 	$(LINK_TOOL) $(LINKFLAGS) /DLL /DEF:libIPSec_MB.def /OUT:$@  $(all_objs)
 !else
 	$(LIB_TOOL) $(LIBFLAGS) /out:$@ $(all_objs)
@@ -264,14 +280,45 @@ $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
 clean:
-	del /q $(lib_objs1)
-	del /q $(lib_objs2)
-	del /q $(gcm_objs)
-	del /q $(LIBNAME).*
+	-del /q $(lib_objs1)
+	-del /q $(lib_objs2)
+	-del /q $(gcm_objs)
+	-del /q $(LIBNAME).*
 
+install:
+        -md "$(INSTDIR)"
+        -copy /Y /V /A $(LIBBASE).def "$(INSTDIR)"
+        -copy /Y /V /B $(LIBBASE).exp "$(INSTDIR)"
+        -copy /Y /V /B $(LIBBASE).lib "$(INSTDIR)"
+        -copy /Y /V /A include\types.h "$(INSTDIR)"
+        -copy /Y /V /A include\os.h "$(INSTDIR)"
+        -copy /Y /V /A constants.h "$(INSTDIR)"
+        -copy /Y /V /A job_aes_hmac.h "$(INSTDIR)"
+        -copy /Y /V /A asm_types.h "$(INSTDIR)"
+        -copy /Y /V /A aux_funcs.h "$(INSTDIR)"
+        -copy /Y /V /A mb_mgr.h "$(INSTDIR)"
+        -copy /Y /V /A gcm_defines.h "$(INSTDIR)"
+        -copy /Y /V /A des.h "$(INSTDIR)"
+!if "$(SHARED)" == "y"
+        -copy /Y /V /B $(LIBBASE).dll "$(INSTDIR)"
+        -copy /Y /V /B $(LIBBASE).dll "%windir%\system32"
+!endif
 
-
-
-
-
-
+uninstall:
+!if "$(SHARED)" == "y"
+        -del /Q "%windir%\system32\$(LIBBASE).dll"
+        -del /Q "$(INSTDIR)\$(LIBBASE).dll"
+!endif
+        -del /Q "$(INSTDIR)\$(LIBBASE).def"
+        -del /Q "$(INSTDIR)\$(LIBBASE).exp"
+        -del /Q "$(INSTDIR)\$(LIBBASE).lib"
+        -del /Q "$(INSTDIR)\types.h"
+        -del /Q "$(INSTDIR)\os.h"
+        -del /Q "$(INSTDIR)\constants.h"
+        -del /Q "$(INSTDIR)\job_aes_hmac.h"
+        -del /Q "$(INSTDIR)\asm_types.h"
+        -del /Q "$(INSTDIR)\aux_funcs.h"
+        -del /Q "$(INSTDIR)\mb_mgr.h"
+        -del /Q "$(INSTDIR)\gcm_defines.h"
+        -del /Q "$(INSTDIR)\des.h"
+        -rd "$(INSTDIR)"
