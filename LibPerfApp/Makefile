@@ -31,7 +31,7 @@ LDLIBS = -lIPSec_MB
 INCLUDE_DIRS := $(LIBDIR) $(LIBDIR)/include
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I$i)
 
-CFLAGS := -DLINUX $(INCLUDES) \
+CFLAGS := -DLINUX -D_GNU_SOURCE $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
