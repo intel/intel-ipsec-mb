@@ -441,7 +441,8 @@ hexdump(FILE *fp,
 
                         if ((c < ' ') || (c > '~'))
                                 c = '.';
-                        out += snprintf(line + out, sizeof(line) - out, "%c", c);
+                        out += snprintf(line + out,
+                                        sizeof(line) - out, "%c", c);
                 }
                 fprintf(fp, "%s\n", line);
         }
@@ -522,7 +523,8 @@ test_ctr(struct MB_MGR *mb_mgr,
                 hexdump(stderr, "Target", target, text_len + 32);
                 goto end;
         }
-        if (memcmp(padding, target + sizeof(padding) + text_len,  sizeof(padding))) {
+        if (memcmp(padding, target + sizeof(padding) + text_len,
+                   sizeof(padding))) {
                 printf("overwrite tail\n");
                 hexdump(stderr, "Target", target, text_len + 32);
                 goto end;
@@ -563,13 +565,16 @@ test_ctr_std_vectors(struct MB_MGR *mb_mgr)
 
                 switch (ctr_vectors[vect].Klen) {
                 case BITS_128:
-                        IMB_AES_KEYEXP_128(mb_mgr, ctr_vectors[vect].K, expkey, dust);
+                        IMB_AES_KEYEXP_128(mb_mgr, ctr_vectors[vect].K,
+                                           expkey, dust);
                         break;
                 case BITS_192:
-                        IMB_AES_KEYEXP_192(mb_mgr, ctr_vectors[vect].K, expkey, dust);
+                        IMB_AES_KEYEXP_192(mb_mgr, ctr_vectors[vect].K,
+                                           expkey, dust);
                         break;
                 case BITS_256:
-                        IMB_AES_KEYEXP_256(mb_mgr, ctr_vectors[vect].K, expkey, dust);
+                        IMB_AES_KEYEXP_256(mb_mgr, ctr_vectors[vect].K,
+                                           expkey, dust);
                         break;
                 default:
                         return -1;
@@ -577,7 +582,8 @@ test_ctr_std_vectors(struct MB_MGR *mb_mgr)
 
                 if (test_ctr(mb_mgr,
                              expkey, ctr_vectors[vect].Klen,
-                             ctr_vectors[vect].IV, (unsigned) ctr_vectors[vect].IVlen,
+                             ctr_vectors[vect].IV,
+                             (unsigned) ctr_vectors[vect].IVlen,
                              ctr_vectors[vect].P, ctr_vectors[vect].C,
                              (unsigned) ctr_vectors[vect].Plen,
                              ENCRYPT, CIPHER_HASH)) {
@@ -587,7 +593,8 @@ test_ctr_std_vectors(struct MB_MGR *mb_mgr)
 
                 if (test_ctr(mb_mgr,
                              expkey, ctr_vectors[vect].Klen,
-                             ctr_vectors[vect].IV, (unsigned) ctr_vectors[vect].IVlen,
+                             ctr_vectors[vect].IV,
+                             (unsigned) ctr_vectors[vect].IVlen,
                              ctr_vectors[vect].C, ctr_vectors[vect].P,
                              (unsigned) ctr_vectors[vect].Plen,
                              DECRYPT, HASH_CIPHER)) {
@@ -596,7 +603,8 @@ test_ctr_std_vectors(struct MB_MGR *mb_mgr)
                 }
 
                 if (ctr_vectors[vect].IVlen == 12) {
-                        /* IV in the table didn't include block counter (12 bytes).
+                        /* IV in the table didn't
+                         * include block counter (12 bytes).
                          * Let's encrypt & decrypt the same but
                          * with 16 byte IV that includes block counter.
                          */

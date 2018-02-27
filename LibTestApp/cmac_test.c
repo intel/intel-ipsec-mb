@@ -165,7 +165,8 @@ hexdump(FILE *fp,
 
                         if ((c < ' ') || (c > '~'))
                                 c = '.';
-                        out += snprintf(line + out, sizeof(line) - out, "%c", c);
+                        out += snprintf(line + out,
+                                        sizeof(line) - out, "%c", c);
                 }
                 fprintf(fp, "%s\n", line);
         }

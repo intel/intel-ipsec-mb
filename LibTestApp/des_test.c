@@ -229,10 +229,12 @@ test_des_many(struct MB_MGR *mb_mgr,
 
                         jobs_rx++;
                         if (job->status != STS_COMPLETED) {
-                                printf("%d error status:%d, job %d", __LINE__, job->status, num);
+                                printf("%d error status:%d, job %d",
+                                       __LINE__, job->status, num);
                                 goto end;
                         }
-                        if (memcmp(out_text, targets[num] + sizeof(padding), text_len)) {
+                        if (memcmp(out_text, targets[num] + sizeof(padding),
+                                   text_len)) {
                                 printf("%d mismatched\n", num);
                                 goto end;
                         }
@@ -240,7 +242,8 @@ test_des_many(struct MB_MGR *mb_mgr,
                                 printf("%d overwrite head\n", num);
                                 goto end;
                         }
-                        if (memcmp(padding, targets[num] + sizeof(padding) + text_len,
+                        if (memcmp(padding,
+                                   targets[num] + sizeof(padding) + text_len,
                                    sizeof(padding))) {
                                 printf("%d overwrite tail\n", num);
                                 goto end;
@@ -253,10 +256,12 @@ test_des_many(struct MB_MGR *mb_mgr,
 
                 jobs_rx++;
                 if (job->status != STS_COMPLETED) {
-                        printf("%d Error status:%d, job %d", __LINE__, job->status, num);
+                        printf("%d Error status:%d, job %d",
+                               __LINE__, job->status, num);
                         goto end;
                 }
-                if (memcmp(out_text, targets[num] + sizeof(padding), text_len)) {
+                if (memcmp(out_text, targets[num] + sizeof(padding),
+                           text_len)) {
                         printf("%d mismatched\n", num);
                         goto end;
                 }
@@ -264,7 +269,8 @@ test_des_many(struct MB_MGR *mb_mgr,
                         printf("%d overwrite head\n", num);
                         goto end;
                 }
-                if (memcmp(padding, targets[num] + sizeof(padding) + text_len,  sizeof(padding))) {
+                if (memcmp(padding, targets[num] + sizeof(padding) + text_len,
+                           sizeof(padding))) {
                         printf("%d overwrite tail\n", num);
                         goto end;
                 }
@@ -373,7 +379,8 @@ test_des_one(struct MB_MGR *mb_mgr,
                 printf("overwrite head\n");
                 goto end;
         }
-        if (memcmp(padding, target + sizeof(padding) + text_len,  sizeof(padding))) {
+        if (memcmp(padding, target + sizeof(padding) + text_len,
+                   sizeof(padding))) {
                 printf("overwrite tail\n");
                 goto end;
         }
@@ -479,7 +486,8 @@ des_test(const enum arch_type arch,
                                   "DES standard test vectors", DES);
 
         errors += test_des_vectors(mb_mgr, DIM(docsis_vectors), docsis_vectors,
-                                   "DOCSIS DES standard test vectors", DOCSIS_DES);
+                                   "DOCSIS DES standard test vectors",
+                                   DOCSIS_DES);
 
         errors = test_des_vectors(mb_mgr, DIM(vectors), vectors,
                                   "3DES standard test vectors", DES3);

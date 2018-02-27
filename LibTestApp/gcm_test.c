@@ -38,7 +38,9 @@
 
 /*
  * 60-Byte Packet Encryption Using GCM-AES-128
- *   http://www.ieee802.org/1/files/public/docs2011/bn-randall-test-vectors-0511-v1.pdf
+ *    http://www.ieee802.org/1/files/public/
+ *        docs2011/bn-randall-test-vectors-0511-v1.pdf
+ *
  * K:   AD7A2BD03EAC835A6F620FDCB506B345
  * IV:  12153524C0895E81B2C28465
  * AAD: D609B1F056637A0D46DF998D88E52E00
@@ -92,7 +94,9 @@ static uint8_t T1[] = {
 
 /*
  * 54-Byte Packet Encryption Using GCM-AES-128
- *   http://www.ieee802.org/1/files/public/docs2011/bn-randall-test-vectors-0511-v1.pdf
+ *    http://www.ieee802.org/1/files/public/
+ *        docs2011/bn-randall-test-vectors-0511-v1.pdf
+ *
  * K:   071B113B0CA743FECCCF3D051F737382
  * IV:  F0761E8DCD3D000176D457ED
  * AAD: E20106D7CD0DF0761E8DCD3D88E54C2A
@@ -143,7 +147,9 @@ static uint8_t T2[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
+ * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip
+ *    gcmEncryptExtIV128.rsp
+ *
  * [Keylen = 128]
  * [IVlen = 96]
  * [PTlen = 128]
@@ -184,7 +190,9 @@ static uint8_t T3[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
+ * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip
+ *    gcmEncryptExtIV128.rsp
+ *
  * [Keylen = 128]
  * [IVlen = 96]
  * [PTlen = 256]
@@ -229,7 +237,9 @@ static uint8_t T4[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip gcmEncryptExtIV128.rsp
+ * http://csrc.nist.gov/groups/STM/cavp/gcmtestvectors.zip
+ *    gcmEncryptExtIV128.rsp
+ *
  * [Keylen = 128]
  * [IVlen = 96]
  * [PTlen = 256]
@@ -274,7 +284,9 @@ static uint8_t T5[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/
+ *    proposedmodes/gcm/gcm-revised-spec.pdf
+ *
  * Test Case 2
  * K:  00000000000000000000000000000000
  * P:  00000000000000000000000000000000
@@ -307,7 +319,9 @@ static uint8_t T6[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/
+ *    documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ *
  * Test Case 3
  * K:  feffe9928665731c6d6a8f9467308308
  * P:  d9313225f88406e5a55909c5aff5269a
@@ -358,7 +372,9 @@ static uint8_t T7[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/
+ *    documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ *
  * Test Case 4
  * K:  feffe9928665731c6d6a8f9467308308
  * P:  d9313225f88406e5a55909c5aff5269a
@@ -415,7 +431,9 @@ static uint8_t T8[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/
+ *    documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ *
  * Test Case 14
  * K:  00000000000000000000000000000000
  *     00000000000000000000000000000000
@@ -452,7 +470,9 @@ static uint8_t T9[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/
+ *    proposedmodes/gcm/gcm-revised-spec.pdf
+ *
  * Test Case 15
  * K:  feffe9928665731c6d6a8f9467308308
  *     feffe9928665731c6d6a8f9467308308
@@ -507,7 +527,9 @@ static uint8_t T10[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/
+ *    proposedmodes/gcm/gcm-revised-spec.pdf
+ *
  * Test Case 16
  * K:  feffe9928665731c6d6a8f9467308308
  *     feffe9928665731c6d6a8f9467308308
@@ -567,7 +589,9 @@ static uint8_t T11[] = {
 };
 
 /*
- * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/
+ *    proposedmodes/gcm/gcm-revised-spec.pdf
+ *
  * Test Case 17  -- Not supported IV length less than 12 bytes
  * K:  feffe9928665731c6d6a8f9467308308
  *     feffe9928665731c6d6a8f9467308308
@@ -629,7 +653,9 @@ static uint8_t T11[] = {
 /* }; */
 
 /*
- * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-revised-spec.pdf
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/
+ *    proposedmodes/gcm/gcm-revised-spec.pdf
+ *
  * Test Case 18 -- Not supported IV length greater than 12 bytes
  * K:  feffe9928665731c6d6a8f9467308308
  *     feffe9928665731c6d6a8f9467308308

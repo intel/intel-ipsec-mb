@@ -78,7 +78,7 @@ SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
 CHECKPATCH?=checkpatch.pl
 .PHONY: style
 style:
-	$(CHECKPATCH) --no-tree --no-signoff --emacs --no-color --max-line-length=100 \
+	$(CHECKPATCH) --no-tree --no-signoff --emacs --no-color \
 --ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,\
 UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,\
 AVOID_EXTERNS,USE_FUNC,CONSTANT_COMPARISON $(SOURCES_STYLE)

@@ -37,9 +37,11 @@
 
 #if defined(DEBUG)
 #if _WIN32
-#define TRACE(fmt, ...)	fprintf(stderr, "%s:%d "fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define TRACE(fmt, ...)	fprintf(stderr, "%s:%d "fmt, \
+                                __FUNCTION__, __LINE__, __VA_ARGS__)
 #else
-#define TRACE(fmt, ...)	fprintf(stderr, "%s:%d "fmt, __func__, __LINE__, __VA_ARGS__)
+#define TRACE(fmt, ...)	fprintf(stderr, "%s:%d "fmt, \
+                                __func__, __LINE__, __VA_ARGS__)
 #endif
 #else
 # define TRACE(fmt, ...)
@@ -229,7 +231,8 @@ customop_test(struct MB_MGR *mgr)
                 job->cipher_start_src_offset_in_bytes = 16;
                 job->msg_len_to_cipher_in_bytes = sizeof(node->txt);
                 job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = sizeof(node->txt) + sizeof(node->iv);
+                job->msg_len_to_hash_in_bytes =
+                        sizeof(node->txt) + sizeof(node->iv);
                 job->iv = node->iv;
                 job->iv_len_in_bytes = node->cipher->iv_len;
                 job->auth_tag_output = node->tag;
@@ -273,7 +276,8 @@ customop_test(struct MB_MGR *mgr)
                 job->cipher_start_src_offset_in_bytes = 16;
                 job->msg_len_to_cipher_in_bytes = sizeof(node->txt);
                 job->hash_start_src_offset_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = sizeof(node->txt) + sizeof(node->iv);
+                job->msg_len_to_hash_in_bytes =
+                        sizeof(node->txt) + sizeof(node->iv);
                 job->iv = node->iv;
                 job->iv_len_in_bytes = node->cipher->iv_len;
                 job->auth_tag_output = node->tag;

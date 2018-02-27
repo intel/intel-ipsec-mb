@@ -1521,7 +1521,8 @@ hexdump(FILE *fp,
 
                         if ((c < ' ') || (c > '~'))
                                 c = '.';
-                        out += snprintf(line + out, sizeof(line) - out, "%c", c);
+                        out += snprintf(line + out,
+                                        sizeof(line) - out, "%c", c);
                 }
                 fprintf(fp, "%s\n", line);
         }
@@ -1617,7 +1618,8 @@ ccm_job_ok(const struct ccm_rfc3610_vector *vec,
                            vec->clear_len, sizeof_padding)) {
                         printf("cipher overwrite tail\n");
                         hexdump(stderr, "Target", target + sizeof_padding +
-                                vec->packet_len - vec->clear_len, sizeof_padding);
+                                vec->packet_len - vec->clear_len,
+                                sizeof_padding);
                         return 0;
                 }
         }
@@ -1703,7 +1705,8 @@ test_ccm(struct MB_MGR *mb_mgr,
                 job->cipher_direction = dir;
                 job->chain_order = order;
                 if (in_place) {
-                        job->dst = targets[i] + sizeof(padding) + vec->clear_len;
+                        job->dst =
+                                targets[i] + sizeof(padding) + vec->clear_len;
                         job->src = targets[i] + sizeof(padding);
                 } else {
                         if (dir == ENCRYPT) {
@@ -1721,11 +1724,13 @@ test_ccm(struct MB_MGR *mb_mgr,
                 job->iv = vec->nonce;
                 job->iv_len_in_bytes = vec->nonce_len;
                 job->cipher_start_src_offset_in_bytes = vec->clear_len;
-                job->msg_len_to_cipher_in_bytes = vec->packet_len - vec->clear_len;
+                job->msg_len_to_cipher_in_bytes =
+                        vec->packet_len - vec->clear_len;
 
                 job->hash_alg = AES_CCM;
                 job->hash_start_src_offset_in_bytes = vec->clear_len;
-                job->msg_len_to_hash_in_bytes = vec->packet_len - vec->clear_len;
+                job->msg_len_to_hash_in_bytes =
+                        vec->packet_len - vec->clear_len;
                 job->auth_tag_output = auths[i] + sizeof(padding);
                 job->auth_tag_output_len_in_bytes = vec->auth_len;
 
@@ -1739,7 +1744,8 @@ test_ccm(struct MB_MGR *mb_mgr,
                 if (job) {
                         jobs_rx++;
                         if (num_jobs < 4) {
-                                printf("%d Unexpected return from submit_job\n", __LINE__);
+                                printf("%d Unexpected return from submit_job\n",
+                                       __LINE__);
                                 goto end;
                         }
                         if (!ccm_job_ok(vec, job, job->user_data, padding,
