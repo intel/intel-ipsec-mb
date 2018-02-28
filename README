@@ -1,7 +1,7 @@
 ========================================================================
 README for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-November 2016
+February 2018
 ========================================================================
 
 
@@ -9,8 +9,11 @@ Contents
 ========
 
 - Overview
+- Processor Extensions
+- Recommendations
 - Package Content
 - Compilation
+- Installation
 - Legal Disclaimer
 
 
@@ -27,6 +30,137 @@ Jim Guilford, Sean Gulley, et. al.
 
 The easiest way to find it is to search the Internet for the title and
 Intel White Paper.
+
+Table 1. List of supported cipher algorithms and their implementations.
++------------------------------------------------------------+
+|               |              Implementation                |
+| Encryption    +--------------------------------------------|
+|               | x86_64 | SSE    | AVX    | AVX2   | AVX512 |
+|---------------+--------+--------+--------+--------+--------|
+| AES128-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | N      |
+| AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | N      |
+| AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | N      |
+| AES128-CCM    | Y(1)   | Y  by4 | Y  by8 | N      | N      |
+| AES128-CBC    | N      | Y(2)   | Y(4)   | N      | N      |
+| AES192-CBC    | N      | Y(2)   | Y(4)   | N      | N      |
+| AES256-CBC    | N      | Y(2)   | Y(4)   | N      | N      |
+| AES128-CTR    | N      | Y  by4 | Y  by8 | N      | N      |
+| AES192-CTR    | N      | Y  by4 | Y  by8 | N      | N      |
+| AES256-CTR    | N      | Y  by4 | Y  by8 | N      | N      |
+| NULL          | Y      | N      | N      | N      | N      |
+| AES128-DOCSIS | N      | Y(3)   | Y(5)   | N      | N      |
+| DES-DOCSIS    | Y      | N      | N      | N      | Y  x16 |
+| 3DES          | Y      | N      | N      | N      | Y  x16 |
+| DES           | Y      | N      | N      | N      | Y  x16 |
++------------------------------------------------------------+
+
+Notes:
+(1)   - AES128-CCM scheduler code is implemented in C at the moment.
+        Underlaying AES128-CTR algorithm utlizes SSE and AVX.
+(2,3) - decryption is by4 and encryption is x4
+(4,5) - decryption is by8 and encryption is x8
+
+Legend:
+  byY - single buffer Y blocks at a time
+   xY - Y buffers at a time
+
+Table 2. List of supported integrity algorithms and their implementations.
++----------------------------------------------------------------+
+|                   |              Implementation                |
+| Integrity         +--------------------------------------------|
+|                   | x86_64 | SSE    | AVX    | AVX2   | AVX512 |
+|-------------------+--------+--------+--------+--------+--------|
+| AES-XCBC-96       | N      | Y   x4 | Y   x8 | N      | N      |
+| HMAC-MD5-96       | Y(1)   | Y x4x2 | Y x4x2 | Y x8x2 | N      |
+| HMAC-SHA1-96      | N      | Y(4)x4 | Y   x4 | Y   x8 | Y  x16 |
+| HMAC-SHA2-224_112 | N      | Y(4)x4 | Y   x4 | Y   x8 | Y  x16 |
+| HMAC-SHA2-256_128 | N      | Y(4)x4 | Y   x4 | Y   x8 | Y  x16 |
+| HMAC-SHA2-384_192 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 |
+| HMAC-SHA2-512_256 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 |
+| AES128-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | N      |
+| AES192-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | N      |
+| AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | N      |
+| NULL              | N      | N      | N      | N      | N      |
+| AES128-CCM        | Y(2)   | Y   x4 | Y   x8 | N      | N      |
+| AES128-CMAC-96    | Y(3)   | Y   x4 | Y   x8 | N      | N      |
++----------------------------------------------------------------+
+
+Notes:
+(1)   - MD5 over one block implemented in C
+(2,3) - AES128-CCM and AES128-CMAC scheduler code is implemented in C.
+        Underlaying AES128-CBC algorithm utlizes SSE and AVX.
+(4)   - Implementation using SHANI extentions is x2
+
+Legend:
+  byY - single buffer Y blocks at a time
+   xY - Y buffers at a time
+
+Table 3. Encryption and integrity algorithm combinations
++---------------------------------------------------------------------+
+| Encryption    | Allowed Integrity Algorithms                        |
+|---------------+-----------------------------------------------------|
+| AES128-GCM    | AES128-GMAC                                         |
+|---------------+-----------------------------------------------------|
+| AES192-GCM    | AES192-GMAC                                         |
+|---------------+-----------------------------------------------------|
+| AES256-GCM    | AES256-GMAC                                         |
+|---------------+-----------------------------------------------------|
+| AES128-CCM    | AES128-CCM                                          |
+|---------------+-----------------------------------------------------|
+| AES128-CBC,   | AES-XCBC-96,                                        |
+| AES192-CBC,   | HMAC-SHA1-96, HMAC-SHA2-224_112, HMAC-SHA2-256_128, |
+| AES256-CBC,   | HMAC-SHA2-384_192, HMAC-SHA2-512_256,               |
+| AES128-CTR,   | AES128-CMAC-96,                                     |
+| AES192-CTR,   | NULL                                                |
+| AES256-CTR,   |                                                     |
+| NULL,         |                                                     |
+| AES128-DOCSIS,|                                                     |
+| DES-DOCSIS,   |                                                     |
+| 3DES,         |                                                     |
+| DES,          |                                                     |
++---------------+-----------------------------------------------------+
+
+
+Processor Extensions
+====================
+
+Table 4. Processor extensions used in the library
++-------------------------------------------------------------------------+
+| Algorithm         | Interface | Extensions                              |
+|-------------------+-----------+-----------------------------------------|
+| HMAC-SHA1-96,     | AVX512    | AVX512F, AVX512BW, AVX512VL             |
+| HMAC-SHA2-224_112,|           |                                         |
+| HMAC-SHA2-256_128,|           |                                         |
+| HMAC-SHA2-384_192,|           |                                         |
+| HMAC-SHA2-512_256 |           |                                         |
+|-------------------+-----------+-----------------------------------------|
+| DES, 3DES,        | AVX512    | AVX512F, AVX512BW                       |
+| DOCSIS-DES        |           |                                         |
+|-------------------+-----------+-----------------------------------------|
+| HMAC-SHA1-96,     | SSE       | SHANI                                   |
+| HMAC-SHA2-224_112,|           | - presence is autodetected and library  |
+| HMAC-SHA2-256_128,|           |   falls back to SSE implementation      |
+| HMAC-SHA2-384_192,|           |   if not present                        |
+| HMAC-SHA2-512_256 |           |                                         |
+|-------------------+-----------+-----------------------------------------|
+
+
+Recommendations
+===============
+
+Legacy or to be avoided algorithms listed in the table below are implemented
+in the library in order to support legacy applications. Please use corresponding
+alternative algorithms instead.
+
++----------------------------------------------------------+
+| # | Algorithm          | Recommendation | Alternative    |
+|---+--------------------+----------------+----------------|
+| 1 | DES encryption     | Avoid          | AES encryption |
+|---+--------------------+----------------+----------------|
+| 2 | 3DES encryption    | Legacy         | AES encryption |
+|---+--------------------+----------------+----------------|
+| 3 | HMAC-MD5 integrity | Legacy         | HMAC-SHA1      |
++----------------------------------------------------------+
 
 
 Package Content
@@ -48,12 +182,17 @@ Required tools:
 - GNU make
 - NASM version 2.12.02 (or newer)
 - gcc (GCC) 4.8.3 (or newer)
-  NOTE: Current DES and DOCSIS DES AVX512 cipher implementation requires
-  	GCC version with AVX512F and AVX512BW support.
-  	gcc (GCC) 6.3.1 has been tested to work correctly.
 
-Simply run "make" or "make all" at the top level directory to compile the library.
-To clean the library build please run "make clean".
+Shared library:
+> make
+
+Static library:
+> make SHARED=n
+
+Clean the build:
+> make clean
+or
+> make clean SHARED=n
 
 Windows (x64 only)
 ------------------
@@ -66,9 +205,58 @@ Required tools:
   - LINK: Microsoft (R) Incremental Linker Version 10.00.30319.01
 - NASM version 2.12.02 (or newer)
 
-Simply run "nmake /f win_x64.mak" or "nmake /f win_x64.mak all" at the top level directory
-to compile the library. To clean the library build please run "nmake /f win_x64.mak clean".
+Shared library (DLL):
+> nmake /f win_x64.mak
 
+Static library:
+> nmake /f win_x64.mak SHARED=n
+
+Clean the build:
+> nmake /f win_x64.mak clean
+or
+> nmake /f win_x64.mak clean SHARED=n
+
+
+Installation
+============
+
+Linux (64-bit only)
+-------------------
+
+First compile the library and then install:
+> make
+> sudo make install
+
+To uninstall the library run:
+> sudo make uninstall
+
+If you want to change install location then define PREFIX
+> sudo make install PREFIX=<path>
+
+If there is no need to run ldconfig at install stage please use NOLDCONFIG=y option.
+> sudo make install NOLDCONFIG=y
+
+If library was compiled as an archive (not a default option) then install it
+using SHARED=n option:
+> sudo make install SHARED=n
+
+Windows (x64 only)
+------------------
+
+First compile the library and then install from a command prompt in
+administrator mode:
+> nmake /f win_x64.mak
+> nmake /f win_x64.mak install
+
+To uninstall the library run:
+> nmake /f win_x64.mak uninstall
+
+If you want to change install location then define PREFIX (default C:\Program Files)
+> nmake /f win_x64.mak install PREFIX=<path>
+
+If library was compiled as a static library (not a default option) then install it
+using SHARED=n option:
+> nmake /f win_x64.mak install SHARED=n
 
 Legal Disclaimer
 ================
