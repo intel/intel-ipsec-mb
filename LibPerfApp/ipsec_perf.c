@@ -48,6 +48,8 @@
 #include <mb_mgr.h>
 #include <gcm_defines.h>
 
+#include "msr.h"
+
 #define BUFSIZE (512 * 1024 * 1024)
 #define JOB_SIZE (2 * 1024)
 #define JOB_SIZE_STEP 16
@@ -83,6 +85,10 @@
 #define KEY_SIZES_CCM 1		/* 16 */
 #define KEY_SIZES_DES 1		/* 8 */
 #define KEY_SIZES_3DES 1	/* 8 x 3 */
+
+#define IA32_MSR_FIXED_CTR_CTRL      0x38D
+#define IA32_MSR_PERF_GLOBAL_CTR     0x38F
+#define IA32_MSR_CPU_UNHALTED_THREAD 0x30A
 
 /* Those defines tell how many different test cases are to be performed.
  * Have to be multiplied by number of chosen architectures.
@@ -182,6 +188,7 @@ struct params_s {
         uint32_t		size_aes;
         uint32_t		num_sizes;
         uint32_t		num_variants;
+        uint32_t                core;
 };
 
 /* This struct stores all information about performed test case */
@@ -260,6 +267,7 @@ uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
 uint8_t test_types[NUM_TYPES] = {1, 1, 1, 1, 1, 1};
 
 int use_gcm_job_api = 0;
+int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t core_mask = 0; /* bitmap of selected cores */
 
 /* Those inline functions run different types of ipsec_mb library functions.
@@ -325,6 +333,21 @@ __forceinline void aesni_gcm_dec(const uint32_t arch, const uint8_t key_sz,
 
 }
 
+/* Read unhalted cycles */
+__forceinline uint64_t read_cycles(uint32_t core)
+{
+        uint64_t val = 0;
+
+        if (msr_read(core, IA32_MSR_CPU_UNHALTED_THREAD,
+                     &val) != MACHINE_RETVAL_OK) {
+                fprintf(stderr, "Error reading cycles "
+                        "counter on core %u!\n", core);
+                exit(EXIT_FAILURE);
+        }
+
+        return val;
+}
+
 /* Get number of bits set in value */
 static int bitcount(const uint64_t val)
 {
@@ -386,8 +409,48 @@ static int set_affinity(const int cpu)
         /* Set affinity of current process to cpu */
         ret = sched_setaffinity(0, sizeof(cpuset), &cpuset);
 #endif /* _WIN32 */
-
         return ret;
+}
+
+/* Start counting unhalted cycles */
+static int start_cycles_ctr(uint32_t core)
+{
+        int ret;
+
+        if (core >= BITS(core_mask))
+                return 1;
+
+        /* Disable cycles counter */
+        ret = msr_write(core, IA32_MSR_PERF_GLOBAL_CTR, 0);
+        if (ret != MACHINE_RETVAL_OK)
+                return ret;
+
+        /* Zero cycles counter */
+        ret = msr_write(core, IA32_MSR_CPU_UNHALTED_THREAD, 0);
+        if (ret != MACHINE_RETVAL_OK)
+                return ret;
+
+        /* Enable OS and user tracking in FixedCtr1 */
+        ret = msr_write(core, IA32_MSR_FIXED_CTR_CTRL, 0x30);
+        if (ret != MACHINE_RETVAL_OK)
+                return ret;
+
+        /* Enable cycles counter */
+        return  msr_write(core, IA32_MSR_PERF_GLOBAL_CTR, (1ULL << 33));
+}
+
+/* Init MSR module */
+static int init_msr_mod(void)
+{
+        unsigned max_core_count = 0;
+#ifndef _WIN32
+        max_core_count = sysconf(_SC_NPROCESSORS_CONF);
+        if (max_core_count == 0) {
+                fprintf(stderr, "Zero processors in the system!");
+                return MACHINE_RETVAL_ERROR;
+        }
+#endif
+        return machine_init(max_core_count);
 }
 
 /* Freeing allocated memory */
@@ -601,7 +664,13 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 job_template.iv_len_in_bytes = 8;
         }
 
-        time = __rdtscp(&aux);
+#ifndef _WIN32
+        if (use_unhalted_cycles)
+                time = read_cycles(params->core);
+        else
+#endif
+                time = __rdtscp(&aux);
+
         for (i = 0; i < num_iter; i++) {
                 job = get_next_job(mb_mgr, arch);
                 *job = job_template;
@@ -648,7 +717,13 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 #endif
         }
 
-        time = __rdtscp(&aux) - time;
+#ifndef _WIN32
+        if (use_unhalted_cycles)
+                time = read_cycles(params->core) - time;
+        else
+#endif
+                time = __rdtscp(&aux) - time;
+
         return time / num_iter;
 }
 
@@ -679,7 +754,13 @@ do_test_gcm(const uint32_t arch, struct params_s *params,
 
         aesni_gcm_pre(arch, key_sz, key, &gdata_key);
         if (params->cipher_dir == ENCRYPT) {
-                time = __rdtscp(&aux);
+#ifndef _WIN32
+                if (use_unhalted_cycles)
+                        time = read_cycles(params->core);
+                else
+#endif
+                        time = __rdtscp(&aux);
+
                 for (i = 0; i < num_iter; i++) {
                         aesni_gcm_enc(arch, key_sz, &gdata_key, &gdata_ctx,
                                       buf + offsets[index] + sha_size_incr,
@@ -690,9 +771,20 @@ do_test_gcm(const uint32_t arch, struct params_s *params,
                         if (index >= index_limit)
                                 index = 0;
                 }
-                time = __rdtscp(&aux) - time;
+#ifndef _WIN32
+                if (use_unhalted_cycles)
+                        time = read_cycles(params->core) - time;
+                else
+#endif
+                        time = __rdtscp(&aux) - time;
         } else { /*DECRYPT*/
-                time = __rdtscp(&aux);
+#ifndef _WIN32
+                if (use_unhalted_cycles)
+                        time = read_cycles(params->core);
+                else
+#endif
+                        time = __rdtscp(&aux);
+
                 for (i = 0; i < num_iter; i++) {
                         aesni_gcm_dec(arch, key_sz, &gdata_key, &gdata_ctx,
                                       buf + offsets[index] + sha_size_incr,
@@ -703,7 +795,12 @@ do_test_gcm(const uint32_t arch, struct params_s *params,
                         if (index >= index_limit)
                                 index = 0;
                 }
-                time = __rdtscp(&aux) - time;
+#ifndef _WIN32
+                if (use_unhalted_cycles)
+                        time = read_cycles(params->core) - time;
+                else
+#endif
+                        time = __rdtscp(&aux) - time;
         }
 
         free(key);
@@ -956,12 +1053,22 @@ run_tests(void *arg)
         struct variant_s *variant_list;
 
         params.num_sizes = JOB_SIZE / JOB_SIZE_STEP;
+        params.core = (uint32_t)info->core;
 
         /* if cores selected then set affinity */
         if (core_mask)
                 if (set_affinity(info->core) != 0) {
                         fprintf(stderr, "Failed to set cpu "
                                 "affinity on core %d\n", info->core);
+                        free_mem();
+                        exit(EXIT_FAILURE);
+                }
+
+        /* if cycles selected then start counter */
+        if (use_unhalted_cycles)
+                if (start_cycles_ctr(params.core) != 0) {
+                        fprintf(stderr, "Failed to start cycles "
+                                "counter on core %u\n", params.core);
                         free_mem();
                         exit(EXIT_FAILURE);
                 }
@@ -1092,7 +1199,9 @@ static void usage(void)
                 " (raw GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run"
                 " Max: %d\n"
-                "--cores mask: <mask> CPU's to run threads.\n",
+                "--cores mask: <mask> CPU's to run threads\n"
+                "--unhalted-cycles: measure using unhalted cycles (requires root).\n"
+                "                   Note: RDTSC is used by default.\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -1160,6 +1269,13 @@ int main(int argc, char *argv[])
                                 fprintf(stderr, "Error converting cpu mask!\n");
                                 return EXIT_FAILURE;
                         }
+                } else if (strcmp(argv[i], "--unhalted-cycles") == 0) {
+#ifdef _WIN32
+                        fprintf(stderr, "Counting unhalted cycles not "
+                                "currently supported on Windows!\n");
+                        return EXIT_FAILURE;
+#endif
+                        use_unhalted_cycles = 1;
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -1171,6 +1287,20 @@ int main(int argc, char *argv[])
                         "core mask (0x%lx) to run %d threads!\n",
                         (unsigned long) core_mask, num_t);
                 return EXIT_FAILURE;
+        }
+
+        /* if cycles selected then init MSR module */
+        if (use_unhalted_cycles) {
+                if (core_mask == 0) {
+                        fprintf(stderr, "Must specify core mask "
+                                "when reading unhalted cycles!\n");
+                        return EXIT_FAILURE;
+                }
+
+                if (init_msr_mod() != 0) {
+                        fprintf(stderr, "Error initializing MSR module!\n");
+                        return EXIT_FAILURE;
+                }
         }
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
@@ -1224,6 +1354,10 @@ int main(int argc, char *argv[])
 #endif
                 }
         }
+
+        if (use_unhalted_cycles)
+                machine_fini();
+
         free_mem();
 
         return EXIT_SUCCESS;

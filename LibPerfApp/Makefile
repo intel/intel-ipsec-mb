@@ -53,7 +53,7 @@ else
 CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
-SOURCES := ipsec_perf.c
+SOURCES := ipsec_perf.c msr.c
 OBJECTS := $(SOURCES:%.c=%.o)
 
 CHECKPATCH ?= checkpatch.pl
@@ -66,7 +66,7 @@ all: $(EXE)
 $(EXE): $(OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-ipsec_perf.o: ipsec_perf.c
+ipsec_perf.o: $(SOURCES)
 
 .PHONY: clean
 clean:

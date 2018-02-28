@@ -56,11 +56,14 @@ LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
 all: $(APP).exe
 
-$(APP).exe: ipsec_perf.obj $(IPSECLIB)
-        $(LNK) $(LFLAGS) ipsec_perf.obj $(IPSECLIB)
+$(APP).exe: ipsec_perf.obj msr.obj $(IPSECLIB)
+        $(LNK) $(LFLAGS) ipsec_perf.obj msr.obj $(IPSECLIB)
 
-ipsec_perf.obj: ipsec_perf.c 
-	$(CC) /c $(CFLAGS) ipsec_perf.c
+ipsec_perf.obj: ipsec_perf.c
+        $(CC) /c $(CFLAGS) ipsec_perf.c
+
+msr.obj: msr.c
+        $(CC) /c $(CFLAGS) msr.c
 
 clean:
-	del /q ipsec_perf.obj $(APP).exe $(APP).pdb $(APP).ilk
+	del /q ipsec_perf.obj msr.obj $(APP).exe $(APP).pdb $(APP).ilk
