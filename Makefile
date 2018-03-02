@@ -33,6 +33,9 @@ PREFIX ?= /usr
 LIB_INSTALL_DIR ?= $(PREFIX)/lib
 HDR_DIR ?= $(PREFIX)/include/intel-ipsec-mb-$(VERSION)
 INC_DIR ?= $(PREFIX)/include/intel-ipsec-mb
+MAN_DIR = $(PREFIX)/man/man7
+MAN1 = libipsec-mb.7
+MAN2 = libipsec-mb-dev.7
 NOLDCONFIG ?= n
 
 USE_YASM ?= n
@@ -256,6 +259,9 @@ install: $(LIBNAME)
 	install -m 0644 des.h $(HDR_DIR)
 	install -d $(LIB_INSTALL_DIR)
 	install -m $(LIBPERM) $(LIBNAME) $(LIB_INSTALL_DIR)
+	install -d $(MAN_DIR)
+	install -m 0444 $(MAN1) $(MAN_DIR)
+	install -m 0444 $(MAN2) $(MAN_DIR)
 ifeq ($(SHARED),y)
 	cd $(LIB_INSTALL_DIR); \
 		ln -f -s $(LIB).so.$(VERSION) $(LIB).so.$(SO_VERSION); \
@@ -279,6 +285,8 @@ uninstall: $(LIBNAME)
 	-rm -f $(LIB_INSTALL_DIR)/$(LIBNAME)
 	-rm -f $(INC_DIR)
 	-rmdir $(HDR_DIR)
+	-rm -f $(MAN_DIR)/$(MAN1)
+	-rm -f $(MAN_DIR)/$(MAN2)
 ifeq ($(SHARED),y)
 	-rm -f $(LIB_INSTALL_DIR)/$(LIB).so.$(SO_VERSION)
 	-rm -f $(LIB_INSTALL_DIR)/$(LIB).so

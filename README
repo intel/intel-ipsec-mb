@@ -64,6 +64,12 @@ Legend:
   byY - single buffer Y blocks at a time
    xY - Y buffers at a time
 
+As an example of how to read table 1 and 2, if one uses AVX512 interface
+to perform AES128-CBC encryption then there is no native AVX512
+implementation for this cipher. In such case, the library uses best
+available implementation which is AVX for AES128-CBC.
+
+
 Table 2. List of supported integrity algorithms and their implementations.
 +----------------------------------------------------------------+
 |                   |              Implementation                |
