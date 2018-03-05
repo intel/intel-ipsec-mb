@@ -206,3 +206,8 @@ aes128_ecbenc_x3_avx:
 	vmovdqu		[OUT2], XDATA2	; write back ciphertext
 
 	ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif
+

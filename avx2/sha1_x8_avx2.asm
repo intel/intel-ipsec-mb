@@ -520,3 +520,6 @@ lloop:
 
 	ret
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

@@ -3264,3 +3264,7 @@ FN_NAME(dec,_):
         FUNC_RESTORE
 
         ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

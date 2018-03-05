@@ -104,7 +104,7 @@ endstruc
 %define XKEY6_9		xmm14
 %define XTMP		xmm15
 
-
+section .text
 MKGLOBAL(aes_xcbc_mac_128_x8,function,internal)
 aes_xcbc_mac_128_x8:
 
@@ -412,3 +412,7 @@ done:
 	add	rsp, STACK_size
 
 	ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

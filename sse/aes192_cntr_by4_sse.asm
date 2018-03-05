@@ -340,3 +340,7 @@ iv_is_16_bytes:
         ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
         movdqu  xcounter, [p_IV]
         jmp     bswap_iv
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

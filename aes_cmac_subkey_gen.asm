@@ -256,3 +256,6 @@ K2_msb_is_zero_avx:
         vmovdqu         [KEY2], XKEY2
         ret
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

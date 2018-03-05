@@ -243,3 +243,6 @@ return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

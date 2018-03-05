@@ -96,3 +96,7 @@ restore_xmms_avx:
 	vmovdqa	xmm14, [ARG1 + 8*16]
 	vmovdqa	xmm15, [ARG1 + 9*16]
 	ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

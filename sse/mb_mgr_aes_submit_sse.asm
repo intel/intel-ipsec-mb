@@ -73,6 +73,8 @@ _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
 
+section .text
+
 ; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -171,3 +173,7 @@ return:
 return_null:
 	xor	job_rax, job_rax
 	jmp	return
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

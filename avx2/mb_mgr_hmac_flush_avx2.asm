@@ -264,3 +264,6 @@ return:
 	mov	rsp, [rsp + _rsp_save]
 	ret
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

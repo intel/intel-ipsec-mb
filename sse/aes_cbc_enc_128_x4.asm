@@ -360,3 +360,7 @@ done:
 	mov	rbp, [rsp + _gpr_save + 8*0]
 	add	rsp, STACK_size
 	ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

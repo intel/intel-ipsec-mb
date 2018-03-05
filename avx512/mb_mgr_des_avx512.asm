@@ -487,3 +487,7 @@ MKGLOBAL(flush_job_3des_cbc_dec_avx512,function,internal)
 flush_job_3des_cbc_dec_avx512:
         GENERIC_DES_FLUSH 3DES, DEC
         ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

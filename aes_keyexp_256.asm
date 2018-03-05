@@ -415,3 +415,7 @@ aes_keyexp_256_enc_avx:
 	vmovdqa	[EXP_ENC_KEYS + 16*14], xmm1
 
 	ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

@@ -160,6 +160,7 @@ default rel
 
 %define	VARIABLE_OFFSET	LOCAL_STORAGE + XMM_STORAGE
 
+section .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Utility Macros
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2120,3 +2121,7 @@ FN_NAME(dec,_):
 	FUNC_RESTORE
 
 	ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

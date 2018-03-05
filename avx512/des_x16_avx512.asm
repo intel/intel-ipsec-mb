@@ -2329,3 +2329,7 @@ MKGLOBAL(docsis_des_x16_dec_avx512,function,internal)
 docsis_des_x16_dec_avx512:
         GENERIC_DES_DEC DOCSIS
 	ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

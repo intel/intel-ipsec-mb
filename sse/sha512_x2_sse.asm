@@ -434,3 +434,6 @@ Lrounds_16_xx:
 DBGPRINTL "====================== exit sha512_x2_sse code =====================\n"
 	ret
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

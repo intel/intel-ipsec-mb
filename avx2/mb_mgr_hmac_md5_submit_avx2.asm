@@ -90,6 +90,8 @@ _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
 
+section .text
+
 ; JOB* submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
@@ -331,3 +333,6 @@ return:
 
         ret
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

@@ -366,3 +366,6 @@ Lrounds_16_xx:
 	; outer calling routine restores XMM and other GP registers
 	ret
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

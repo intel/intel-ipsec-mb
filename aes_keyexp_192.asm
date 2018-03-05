@@ -385,3 +385,6 @@ aes_keyexp_192_enc_avx:
 
 	ret
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

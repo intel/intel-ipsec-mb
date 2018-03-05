@@ -730,7 +730,7 @@ PSHUFFLE_TRANSPOSE16_MASK2: 	dq 0x0000000000000002
 				dq 0x000000000000000E
 				dq 0x000000000000000F
 
-	section .text
+section .text
 
 ;; void sha256_x16_avx512(void **input_data, UINT128 *digest[16], UINT64 size)
 ;; arg 1 : pointer to SHA256 args structure
@@ -916,3 +916,6 @@ lastLoop:
         mov     rsp, [rsp + _rsp]
         ret
 
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif
