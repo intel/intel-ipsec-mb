@@ -1155,20 +1155,20 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         switch (job->hash_alg) {
         case SHA1:
 #ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                if (state->features & IMB_FEATURE_SHANI)
                         return SUBMIT_JOB_HMAC_NI(&state->hmac_sha_1_ooo, job);
 #endif
                 return SUBMIT_JOB_HMAC(&state->hmac_sha_1_ooo, job);
         case SHA_224:
 #ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                if (state->features & IMB_FEATURE_SHANI)
                         return SUBMIT_JOB_HMAC_SHA_224_NI
                                 (&state->hmac_sha_224_ooo, job);
 #endif
                 return SUBMIT_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo, job);
         case SHA_256:
 #ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                if (state->features & IMB_FEATURE_SHANI)
                         return SUBMIT_JOB_HMAC_SHA_256_NI
                                 (&state->hmac_sha_256_ooo, job);
 #endif
@@ -1200,20 +1200,20 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         switch (job->hash_alg) {
         case SHA1:
 #ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                if (state->features & IMB_FEATURE_SHANI)
                         return FLUSH_JOB_HMAC_NI(&state->hmac_sha_1_ooo);
 #endif
                 return FLUSH_JOB_HMAC(&state->hmac_sha_1_ooo);
         case SHA_224:
 #ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                if (state->features & IMB_FEATURE_SHANI)
                         return FLUSH_JOB_HMAC_SHA_224_NI
                                 (&state->hmac_sha_224_ooo);
 #endif
                 return FLUSH_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo);
         case SHA_256:
 #ifdef HASH_USE_SHAEXT
-                if (HASH_USE_SHAEXT == SHA_EXT_PRESENT)
+                if (state->features & IMB_FEATURE_SHANI)
                         return FLUSH_JOB_HMAC_SHA_256_NI
                                 (&state->hmac_sha_256_ooo);
 #endif

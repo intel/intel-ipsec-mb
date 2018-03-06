@@ -134,7 +134,7 @@ EXPORTS
     sha384_one_block_sse		@108
     sha512_one_block_avx		@109
     sha512_one_block_sse		@110
-    sse_sha_ext_usage			@111
+;    sse_sha_ext_usage			@111 ## deprecated
     submit_job_avx			@112
     submit_job_avx2			@113
     submit_job_avx512			@114
@@ -145,3 +145,5 @@ EXPORTS
     submit_job_sse			@119
     aes_cmac_subkey_gen_sse             @120
     aes_cmac_subkey_gen_avx             @121
+    alloc_mb_mgr                        @122
+    free_mb_mgr                         @123

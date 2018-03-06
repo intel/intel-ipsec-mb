@@ -39,21 +39,6 @@ extern int des_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int ccm_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int cmac_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 
-#define TEST_SSE    1
-#define TEST_AVX    2
-#define TEST_AVX2   3
-#define TEST_AVX512 4
-
-#define TEST TEST_SSE
-#include "do_test.h"
-#undef TEST
-#define TEST TEST_AVX
-#include "do_test.h"
-#undef TEST
-#define TEST TEST_AVX2
-#include "do_test.h"
-#undef TEST
-#define TEST TEST_AVX512
 #include "do_test.h"
 
 static void
@@ -73,7 +58,8 @@ int
 main(int argc, char **argv)
 {
         int i, do_sse = 1, do_avx = 1, do_avx2 = 1, do_avx512 = 1;
-        MB_MGR mb_mgr;
+        MB_MGR *p_mgr = NULL;
+        uint64_t flags = 0;
 
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
@@ -88,68 +74,75 @@ main(int argc, char **argv)
 		} else if (strcmp(argv[i], "--no-sse") == 0) {
 			do_sse = 0;
 		} else if (strcmp(argv[i], "--shani-on") == 0) {
-			sse_sha_ext_usage = SHA_EXT_PRESENT;
+                        flags &= (~IMB_FLAG_SHANI_OFF);
 		} else if (strcmp(argv[i], "--shani-off") == 0) {
-			sse_sha_ext_usage = SHA_EXT_NOT_PRESENT;
+                        flags |= IMB_FLAG_SHANI_OFF;
 		} else {
 			usage(argv[0]);
 			return EXIT_FAILURE;
 		}
 	}
 
+        p_mgr = alloc_mb_mgr(flags);
+        if (p_mgr == NULL) {
+                printf("Error allocating MB_MGR structure!\n");
+                return EXIT_FAILURE;
+        }
+
         if (do_sse) {
                 printf("Testing SSE interface\n");
-                init_mb_mgr_sse(&mb_mgr);
-                known_answer_test_sse(&mb_mgr);
-                do_test_sse(&mb_mgr);
-                ctr_test(ARCH_SSE, &mb_mgr);
+                init_mb_mgr_sse(p_mgr);
+                known_answer_test(p_mgr);
+                do_test(p_mgr);
+                ctr_test(ARCH_SSE, p_mgr);
                 gcm_test(ARCH_SSE);
-                customop_test(&mb_mgr);
-                des_test(ARCH_SSE, &mb_mgr);
-                ccm_test(ARCH_SSE, &mb_mgr);
-                cmac_test(ARCH_SSE, &mb_mgr);
+                customop_test(p_mgr);
+                des_test(ARCH_SSE, p_mgr);
+                ccm_test(ARCH_SSE, p_mgr);
+                cmac_test(ARCH_SSE, p_mgr);
         }
 
         if (do_avx) {
                 printf("Testing AVX interface\n");
-                init_mb_mgr_avx(&mb_mgr);
-                known_answer_test_avx(&mb_mgr);
-                do_test_avx(&mb_mgr);
-                ctr_test(ARCH_AVX, &mb_mgr);
+                init_mb_mgr_avx(p_mgr);
+                known_answer_test(p_mgr);
+                do_test(p_mgr);
+                ctr_test(ARCH_AVX, p_mgr);
                 gcm_test(ARCH_AVX);
-                customop_test(&mb_mgr);
-                des_test(ARCH_AVX, &mb_mgr);
-                ccm_test(ARCH_AVX, &mb_mgr);
-                cmac_test(ARCH_AVX, &mb_mgr);
+                customop_test(p_mgr);
+                des_test(ARCH_AVX, p_mgr);
+                ccm_test(ARCH_AVX, p_mgr);
+                cmac_test(ARCH_AVX, p_mgr);
         }
 
         if (do_avx2) {
                 printf("Testing AVX2 interface\n");
-                init_mb_mgr_avx2(&mb_mgr);
-                known_answer_test_avx2(&mb_mgr);
-                do_test_avx2(&mb_mgr);
-                ctr_test(ARCH_AVX2, &mb_mgr);
+                init_mb_mgr_avx2(p_mgr);
+                known_answer_test(p_mgr);
+                do_test(p_mgr);
+                ctr_test(ARCH_AVX2, p_mgr);
                 gcm_test(ARCH_AVX2);
-                customop_test(&mb_mgr);
-                des_test(ARCH_AVX2, &mb_mgr);
-                ccm_test(ARCH_AVX2, &mb_mgr);
-                cmac_test(ARCH_AVX2, &mb_mgr);
+                customop_test(p_mgr);
+                des_test(ARCH_AVX2, p_mgr);
+                ccm_test(ARCH_AVX2, p_mgr);
+                cmac_test(ARCH_AVX2, p_mgr);
         }
 
         if (do_avx512) {
                 printf("Testing AVX512 interface\n");
-                init_mb_mgr_avx512(&mb_mgr);
-                known_answer_test_avx512(&mb_mgr);
-                do_test_avx512(&mb_mgr);
-                ctr_test(ARCH_AVX512, &mb_mgr);
+                init_mb_mgr_avx512(p_mgr);
+                known_answer_test(p_mgr);
+                do_test(p_mgr);
+                ctr_test(ARCH_AVX512, p_mgr);
                 gcm_test(ARCH_AVX512);
-                customop_test(&mb_mgr);
-                des_test(ARCH_AVX512, &mb_mgr);
-                ccm_test(ARCH_AVX512, &mb_mgr);
-                cmac_test(ARCH_AVX512, &mb_mgr);
+                customop_test(p_mgr);
+                des_test(ARCH_AVX512, p_mgr);
+                ccm_test(ARCH_AVX512, p_mgr);
+                cmac_test(ARCH_AVX512, p_mgr);
         }
 
-        printf("Test completed\n");
+        free_mb_mgr(p_mgr);
 
+        printf("Test completed\n");
         return EXIT_SUCCESS;
 }

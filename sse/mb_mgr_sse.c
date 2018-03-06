@@ -187,14 +187,11 @@ void aes128_cbc_mac_x4(AES_ARGS_x8 *args, uint64_t len);
 
 /* ====================================================================== */
 
-/* Variable to decide between SIMD or SHAxNI OOO scheduler selection. */
-enum SHA_EXTENSION_USAGE sse_sha_ext_usage = SHA_EXT_DETECT;
-
 /*
  * Used to decide if SHA1/SHA256 SIMD or SHA1NI OOO scheduler should be
  * called.
  */
-#define HASH_USE_SHAEXT sse_sha_ext_usage
+#define HASH_USE_SHAEXT 1
 
 /* ====================================================================== */
 
@@ -289,21 +286,10 @@ init_mb_mgr_sse(MB_MGR *state)
         unsigned int j;
         UINT8 *p;
 
-#ifdef HASH_USE_SHAEXT
-        switch (HASH_USE_SHAEXT) {
-        case SHA_EXT_PRESENT:
-                break;
-        case SHA_EXT_NOT_PRESENT:
-                break;
-        case SHA_EXT_DETECT:
-        default:
+        state->features &= (~IMB_FEATURE_SHANI);
+        if (!(state->flags & IMB_FLAG_SHANI_OFF))
                 if (sha_extensions_supported())
-                        HASH_USE_SHAEXT = SHA_EXT_PRESENT;
-                else
-                        HASH_USE_SHAEXT = SHA_EXT_NOT_PRESENT;
-                break;
-        }
-#endif /* HASH_USE_SHAEXT */
+                        state->features |= IMB_FEATURE_SHANI;
 
         /* Init AES out-of-order fields */
         state->aes128_ooo.lens[0] = 0;
@@ -389,7 +375,7 @@ init_mb_mgr_sse(MB_MGR *state)
         }
 
 #ifdef HASH_USE_SHAEXT
-        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT) {
+        if (state->features & IMB_FEATURE_SHANI) {
                 /* Init HMAC/SHA1 NI out-of-order fields */
                 state->hmac_sha_1_ooo.lens[0] = 0;
                 state->hmac_sha_1_ooo.lens[1] = 0;
@@ -428,7 +414,7 @@ init_mb_mgr_sse(MB_MGR *state)
                 p[64-1] = 0xE0;
         }
 #ifdef HASH_USE_SHAEXT
-        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT) {
+        if (state->features & IMB_FEATURE_SHANI) {
                 /* Init HMAC/SHA224 NI out-of-order fields */
                 state->hmac_sha_224_ooo.lens[0] = 0;
                 state->hmac_sha_224_ooo.lens[1] = 0;
@@ -468,7 +454,7 @@ init_mb_mgr_sse(MB_MGR *state)
                 p[64-1] = 0x00;
         }
 #ifdef HASH_USE_SHAEXT
-        if (HASH_USE_SHAEXT == SHA_EXT_PRESENT) {
+        if (state->features & IMB_FEATURE_SHANI) {
                 /* Init HMAC/SHA256 NI out-of-order fields */
                 state->hmac_sha_256_ooo.lens[0] = 0;
                 state->hmac_sha_256_ooo.lens[1] = 0;
@@ -634,6 +620,14 @@ init_mb_mgr_sse(MB_MGR *state)
         state->keyexp_192          = aes_keyexp_192_sse;
         state->keyexp_256          = aes_keyexp_256_sse;
         state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_sse;
+        state->xcbc_keyexp         = aes_xcbc_expand_key_sse;
+        state->des_key_sched       = des_key_schedule;
+        state->sha1_one_block      = sha1_one_block_sse;
+        state->sha224_one_block    = sha224_one_block_sse;
+        state->sha256_one_block    = sha256_one_block_sse;
+        state->sha384_one_block    = sha384_one_block_sse;
+        state->sha512_one_block    = sha512_one_block_sse;
+        state->md5_one_block       = md5_one_block_sse;
 }
 
 #include "mb_mgr_code.h"

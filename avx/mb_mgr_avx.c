@@ -481,6 +481,14 @@ init_mb_mgr_avx(MB_MGR *state)
         state->keyexp_192          = aes_keyexp_192_avx;
         state->keyexp_256          = aes_keyexp_256_avx;
         state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_avx;
+        state->xcbc_keyexp         = aes_xcbc_expand_key_avx;
+        state->des_key_sched       = des_key_schedule;
+        state->sha1_one_block      = sha1_one_block_avx;
+        state->sha224_one_block    = sha224_one_block_avx;
+        state->sha256_one_block    = sha256_one_block_avx;
+        state->sha384_one_block    = sha384_one_block_avx;
+        state->sha512_one_block    = sha512_one_block_avx;
+        state->md5_one_block       = md5_one_block_avx;
 }
 
 #include "mb_mgr_code.h"
