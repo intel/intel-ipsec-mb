@@ -192,38 +192,34 @@ typedef JOB_AES_HMAC *(*flush_job_t)(struct MB_MGR *);
 typedef UINT32 (*queue_size_t)(struct MB_MGR *);
 typedef void (*keyexp_t)(const void *, void *, void *);
 typedef void (*cmac_subkey_gen_t)(const void *, void *, void *);
+typedef void (*hash_one_block_t)(const void *, void *);
+typedef void (*xcbc_keyexp_t)(const void *, void *, void *, void *);
+typedef int (*des_keysched_t)(uint64_t *, const void *);
+
+/* ========================================================================== */
+/* Multi-buffer manager flags passed to alloc_mb_mgr() */
+
+#define IMB_FLAG_SHANI_OFF (1ULL << 0) /* disable use of SHANI extension */
+
+/* ========================================================================== */
+/* Multi-buffer manager features - valid after call to init_mb_mgr() */
+
+#define IMB_FEATURE_SHANI  (1ULL << 0) /* if set SHANI extensions is used */
 
 /* ========================================================================== */
 /* TOP LEVEL (MB_MGR) Data structure fields */
-
 typedef struct MB_MGR {
-        MB_MGR_AES_OOO aes128_ooo;
-        MB_MGR_AES_OOO aes192_ooo;
-        MB_MGR_AES_OOO aes256_ooo;
-        MB_MGR_AES_OOO docsis_sec_ooo;
-        MB_MGR_DES_OOO des_enc_ooo;
-        MB_MGR_DES_OOO des_dec_ooo;
-        MB_MGR_DES_OOO des3_enc_ooo;
-        MB_MGR_DES_OOO des3_dec_ooo;
-        MB_MGR_DES_OOO docsis_des_enc_ooo;
-        MB_MGR_DES_OOO docsis_des_dec_ooo;
+        /*
+         * flags - passed to alloc_mb_mgr()
+         * features - reflects features of multi-buffer instance
+         */
+        uint64_t flags;
+        uint64_t features;
 
-        MB_MGR_HMAC_SHA_1_OOO   hmac_sha_1_ooo;
-        MB_MGR_HMAC_SHA_256_OOO hmac_sha_224_ooo;
-        MB_MGR_HMAC_SHA_256_OOO hmac_sha_256_ooo;
-        MB_MGR_HMAC_SHA_512_OOO hmac_sha_384_ooo;
-        MB_MGR_HMAC_SHA_512_OOO hmac_sha_512_ooo;
-        MB_MGR_HMAC_MD5_OOO     hmac_md5_ooo;
-        MB_MGR_AES_XCBC_OOO     aes_xcbc_ooo;
-        MB_MGR_CCM_OOO          aes_ccm_ooo;
-        MB_MGR_CMAC_OOO         aes_cmac_ooo;
-
-        /* in-order scheduler fields */
-        int              earliest_job; /* byte offset, -1 if none */
-        int              next_job;     /* byte offset */
-        JOB_AES_HMAC     jobs[MAX_JOBS];
-
-        /* arch handlers */
+        /*
+         * ARCH handlers / API
+         * Careful as changes here can break ABI compatibility
+         */
         get_next_job_t          get_next_job;
         submit_job_t            submit_job;
         submit_job_t            submit_job_nocheck;
@@ -234,6 +230,41 @@ typedef struct MB_MGR {
         keyexp_t                keyexp_192;
         keyexp_t                keyexp_256;
         cmac_subkey_gen_t       cmac_subkey_gen_128;
+        xcbc_keyexp_t           xcbc_keyexp;
+        des_keysched_t          des_key_sched;
+        hash_one_block_t        sha1_one_block;
+        hash_one_block_t        sha224_one_block;
+        hash_one_block_t        sha256_one_block;
+        hash_one_block_t        sha384_one_block;
+        hash_one_block_t        sha512_one_block;
+        hash_one_block_t        md5_one_block;
+
+        /* in-order scheduler fields */
+        int              earliest_job; /* byte offset, -1 if none */
+        int              next_job;     /* byte offset */
+        JOB_AES_HMAC     jobs[MAX_JOBS];
+
+        /* out of order managers */
+        DECLARE_ALIGNED(MB_MGR_AES_OOO aes128_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_AES_OOO aes192_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_AES_OOO aes256_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_AES_OOO docsis_sec_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_DES_OOO des_enc_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_DES_OOO des_dec_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_DES_OOO des3_enc_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_DES_OOO des3_dec_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_DES_OOO docsis_des_enc_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_DES_OOO docsis_des_dec_ooo, 64);
+
+        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_1_OOO hmac_sha_1_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_256_OOO hmac_sha_224_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_256_OOO hmac_sha_256_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_512_OOO hmac_sha_384_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_512_OOO hmac_sha_512_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_HMAC_MD5_OOO hmac_md5_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_AES_XCBC_OOO aes_xcbc_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_CCM_OOO aes_ccm_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_CMAC_OOO aes_cmac_ooo, 64);
 } MB_MGR;
 
 /*
@@ -244,6 +275,9 @@ typedef struct MB_MGR {
  * get_completed_job and flush_job returns a job object. This job object ceases
  * to be usable at the next call to get_next_job
  */
+IMB_DLL_EXPORT MB_MGR *alloc_mb_mgr(uint64_t flags);
+IMB_DLL_EXPORT void free_mb_mgr(MB_MGR *state);
+
 IMB_DLL_EXPORT void init_mb_mgr_avx(MB_MGR *state);
 IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx(MB_MGR *state);
 IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx(MB_MGR *state);
@@ -267,14 +301,6 @@ IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse(MB_MGR *state);
 IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse(MB_MGR *state);
 IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse(MB_MGR *state);
 IMB_DLL_EXPORT UINT32 queue_size_sse(MB_MGR *state);
-
-enum SHA_EXTENSION_USAGE {
-        SHA_EXT_NOT_PRESENT = 0, /* don't detect and don't use SHA extensions */
-        SHA_EXT_PRESENT,  /* don't detect and use SHA extensions */
-        SHA_EXT_DETECT,   /* default - detect & use SHA extensions if present */
-};
-
-extern enum SHA_EXTENSION_USAGE sse_sha_ext_usage;
 
 #define get_completed_job_avx  get_completed_job_sse
 #define get_next_job_avx       get_next_job_sse
@@ -360,13 +386,29 @@ get_next_job_sse(MB_MGR *state)
 #define IMB_GET_COMPLETED_JOB(_mgr)  ((_mgr)->get_completed_job((_mgr)))
 #define IMB_FLUSH_JOB(_mgr)          ((_mgr)->flush_job((_mgr)))
 #define IMB_QUEUE_SIZE(_mgr)         ((_mgr)->queue_size((_mgr)))
-#define IMB_AES_KEYEXP_128(_mgr, _raw, _enc, _dec) \
+#define IMB_AES_KEYEXP_128(_mgr, _raw, _enc, _dec)      \
         ((_mgr)->keyexp_128((_raw), (_enc), (_dec)))
-#define IMB_AES_KEYEXP_192(_mgr, _raw, _enc, _dec) \
+#define IMB_AES_KEYEXP_192(_mgr, _raw, _enc, _dec)      \
         ((_mgr)->keyexp_192((_raw), (_enc), (_dec)))
-#define IMB_AES_KEYEXP_256(_mgr, _raw, _enc, _dec) \
+#define IMB_AES_KEYEXP_256(_mgr, _raw, _enc, _dec)      \
         ((_mgr)->keyexp_256((_raw), (_enc), (_dec)))
-#define IMB_AES_CMAC_SUBKEY_GEN_128(_mgr, _key_exp, _k1, _k2) \
+#define IMB_AES_CMAC_SUBKEY_GEN_128(_mgr, _key_exp, _k1, _k2)   \
         ((_mgr)->cmac_subkey_gen_128((_key_exp), (_k1), (_k2)))
+#define IMB_AES_XCBC_KEYEXP(_mgr, _key, _k1_exp, _k2, _k3)      \
+        ((_mgr)->xcbc_keyexp((_key), (_k1_exp), (_k2), (_k3)))
+#define IMB_DES_KEYSCHED(_mgr, _ks, _key)       \
+        ((_mgr)->des_key_sched((_ks), (_key)))
+#define IMB_SHA1_ONE_BLOCK(_mgr, _data, _digest)        \
+        ((_mgr)->sha1_one_block((_data), (_digest)))
+#define IMB_SHA224_ONE_BLOCK(_mgr, _data, _digest)      \
+        ((_mgr)->sha224_one_block((_data), (_digest)))
+#define IMB_SHA256_ONE_BLOCK(_mgr, _data, _digest)      \
+        ((_mgr)->sha256_one_block((_data), (_digest)))
+#define IMB_SHA384_ONE_BLOCK(_mgr, _data, _digest)      \
+        ((_mgr)->sha384_one_block((_data), (_digest)))
+#define IMB_SHA512_ONE_BLOCK(_mgr, _data, _digest)      \
+        ((_mgr)->sha512_one_block((_data), (_digest)))
+#define IMB_MD5_ONE_BLOCK(_mgr, _data, _digest)         \
+        ((_mgr)->md5_one_block((_data), (_digest)))
 
 #endif /* IMB_MB_MGR_H */

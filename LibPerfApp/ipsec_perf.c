@@ -270,6 +270,8 @@ int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t core_mask = 0; /* bitmap of selected cores */
 
+uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
+
 /* Those inline functions run different types of ipsec_mb library functions.
  * They run different functions depending on the chosen architecture
  */
@@ -1042,7 +1044,7 @@ run_tests(void *arg)
 {
         uint32_t i;
         struct thread_info *info = (struct thread_info *)arg;
-        MB_MGR mb_mgr;
+        MB_MGR *p_mgr = NULL;
         struct params_s params;
         uint32_t num_variants[NUM_TYPES] = {0, 0, 0};
         uint32_t type, at_size, run, arch;
@@ -1051,6 +1053,13 @@ run_tests(void *arg)
         uint32_t total_variants = 0;
         struct variant_s *variant_ptr;
         struct variant_s *variant_list;
+
+        p_mgr = alloc_mb_mgr(flags);
+        if (p_mgr == NULL) {
+                fprintf(stderr, "Failed to allocate MB_MGR structure!\n");
+                free_mem();
+                exit(EXIT_FAILURE);
+        }
 
         params.num_sizes = JOB_SIZE / JOB_SIZE_STEP;
         params.core = (uint32_t)info->core;
@@ -1061,6 +1070,7 @@ run_tests(void *arg)
                         fprintf(stderr, "Failed to set cpu "
                                 "affinity on core %d\n", info->core);
                         free_mem();
+                        free_mb_mgr(p_mgr);
                         exit(EXIT_FAILURE);
                 }
 
@@ -1070,6 +1080,7 @@ run_tests(void *arg)
                         fprintf(stderr, "Failed to start cycles "
                                 "counter on core %u\n", params.core);
                         free_mem();
+                        free_mb_mgr(p_mgr);
                         exit(EXIT_FAILURE);
                 }
 
@@ -1120,6 +1131,7 @@ run_tests(void *arg)
         if (!variant_list) {
                 fprintf(stderr, "Cannot allocate memory\n");
                 free_mem();
+                free_mb_mgr(p_mgr);
                 exit(EXIT_FAILURE);
         }
 
@@ -1131,6 +1143,7 @@ run_tests(void *arg)
                 if (!variant_ptr->avg_times) {
                         fprintf(stderr, "Cannot allocate memory\n");
                         free_mem();
+                        free_mb_mgr(p_mgr);
                         exit(EXIT_FAILURE);
                 }
         }
@@ -1156,7 +1169,7 @@ run_tests(void *arg)
                         for (arch = 0; arch < max_arch; arch++) {
                                 if (archs[arch] == 0)
                                         continue;
-                                run_dir_test(&mb_mgr, arch, &params, run,
+                                run_dir_test(p_mgr, arch, &params, run,
                                              &variant_ptr, &variant);
                         }
                 } /* end for type */
@@ -1170,6 +1183,7 @@ run_tests(void *arg)
                         free(variant_list[i].avg_times);
                 free(variant_list);
         }
+        free_mb_mgr(p_mgr);
 #ifndef _WIN32
         return NULL;
 #endif
@@ -1207,7 +1221,6 @@ static void usage(void)
 
 int main(int argc, char *argv[])
 {
-        MB_MGR lmgr;
         int i, num_t = 0, core = 0;
         struct thread_info *thread_info_p = t_info;
 
@@ -1236,9 +1249,9 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--no-sse") == 0) {
                         archs[ARCH_SSE] = 0;
                 } else if (strcmp(argv[i], "--shani-on") == 0) {
-                        sse_sha_ext_usage = SHA_EXT_PRESENT;
+                        flags &= (~IMB_FLAG_SHANI_OFF);
                 } else if (strcmp(argv[i], "--shani-off") == 0) {
-                        sse_sha_ext_usage = SHA_EXT_NOT_PRESENT;
+                        flags |= IMB_FLAG_SHANI_OFF;
                 } else if (strcmp(argv[i], "--no-gcm") == 0) {
                         test_types[TTYPE_AES_GCM] = 0;
                 } else if (strcmp(argv[i], "--no-aes") == 0) {
@@ -1304,11 +1317,18 @@ int main(int argc, char *argv[])
         }
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
-        init_mb_mgr_sse(&lmgr);
         if (archs[ARCH_SSE]) {
+                MB_MGR *p_mgr = alloc_mb_mgr(flags);
+
+                if (p_mgr == NULL) {
+                        fprintf(stderr, "Error allocating MB_MGR structure!\n");
+                        return EXIT_FAILURE;
+                }
+                init_mb_mgr_sse(p_mgr);
                 fprintf(stderr, "%s SHA extensions (shani) for SSE arch\n",
-                        (sse_sha_ext_usage == SHA_EXT_PRESENT) ?
+                        (p_mgr->features & IMB_FEATURE_SHANI) ?
                         "Using" : "Not using");
+                free_mb_mgr(p_mgr);
         }
 
         memset(t_info, 0, sizeof(t_info));

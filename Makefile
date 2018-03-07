@@ -213,6 +213,7 @@ lib_objs := \
 	sha_256_mult_sse.o \
 	\
 	aes_xcbc_expand_key.o \
+	alloc.o \
 	mb_mgr_avx.o \
 	mb_mgr_avx2.o \
 	mb_mgr_avx512.o \
