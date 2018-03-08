@@ -1,7 +1,7 @@
 ========================================================================
 README for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-February 2018
+March 2018
 ========================================================================
 
 
@@ -163,7 +163,7 @@ alternative algorithms instead.
 |---+--------------------+----------------+----------------|
 | 1 | DES encryption     | Avoid          | AES encryption |
 |---+--------------------+----------------+----------------|
-| 2 | 3DES encryption    | Legacy         | AES encryption |
+| 2 | 3DES encryption    | Avoid          | AES encryption |
 |---+--------------------+----------------+----------------|
 | 3 | HMAC-MD5 integrity | Legacy         | HMAC-SHA1      |
 +----------------------------------------------------------+
