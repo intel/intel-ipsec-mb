@@ -58,6 +58,7 @@
 #define KEYS_PER_JOB 15
 #define ITER_SCALE 200000
 #define BITS(x) (sizeof(x) * 8)
+#define DIM(x) (sizeof(x)/sizeof(x[0]))
 
 #define NUM_ARCHS 4 /* SSE, AVX, AVX2, AVX512 */
 #define NUM_TYPES 6 /* AES_HMAC, AES_DOCSIS, AES_GCM, AES_CCM, DES, 3DES */
@@ -267,6 +268,7 @@ uint8_t test_types[NUM_TYPES] = {1, 1, 1, 1, 1, 1};
 
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
+uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
 uint64_t core_mask = 0; /* bitmap of selected cores */
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
@@ -347,6 +349,61 @@ __forceinline uint64_t read_cycles(uint32_t core)
         }
 
         return val;
+}
+
+/* Compare function used by qsort */
+static int compare(const void *a, const void *b)
+{
+        uint64_t x = *(const uint64_t *)a - *(const uint64_t *)b;
+
+        if (x == 0)
+                return 0;
+
+        if (x > *(const uint64_t *)a)
+                return -1;
+
+        return 1;
+}
+
+
+/* Set the cost of reading unhalted cycles using RDMSR */
+static int set_unhalted_cycle_cost(uint64_t *value)
+{
+        uint64_t time1, time2;
+
+        if (value == NULL)
+                return 1;
+
+        time1 = read_cycles(0);
+        time2 = read_cycles(0);
+
+        /* Calculate delta */
+        *value = (time2 - time1);
+
+        return 0;
+}
+
+/* Calculate the general cost of reading unhalted cycles (median) */
+static int set_avg_unhalted_cycle_cost(uint64_t *value)
+{
+        unsigned i;
+        uint64_t cycles[10];
+
+        if (value == NULL)
+                return 1;
+
+        /* Fill cycles table with read cost values */
+        for (i = 0; i < DIM(cycles); i++)
+                if (set_unhalted_cycle_cost(&cycles[i]) != 0)
+                        return 1;
+
+        /* sort array */
+        qsort(cycles, DIM(cycles), sizeof(uint64_t), compare);
+
+        /* set median cost */
+        *value = cycles[DIM(cycles)/2];
+
+        return 0;
 }
 
 /* Get number of bits set in value */
@@ -720,7 +777,7 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
-                time = read_cycles(params->core) - time;
+                time = (read_cycles(params->core) - rd_cycles_cost) - time;
         else
 #endif
                 time = __rdtscp(&aux) - time;
@@ -774,7 +831,8 @@ do_test_gcm(const uint32_t arch, struct params_s *params,
                 }
 #ifndef _WIN32
                 if (use_unhalted_cycles)
-                        time = read_cycles(params->core) - time;
+                        time = (read_cycles(params->core) -
+                                rd_cycles_cost) - time;
                 else
 #endif
                         time = __rdtscp(&aux) - time;
@@ -798,7 +856,8 @@ do_test_gcm(const uint32_t arch, struct params_s *params,
                 }
 #ifndef _WIN32
                 if (use_unhalted_cycles)
-                        time = read_cycles(params->core) - time;
+                        time = (read_cycles(params->core) -
+                                rd_cycles_cost) - time;
                 else
 #endif
                         time = __rdtscp(&aux) - time;
@@ -1313,6 +1372,14 @@ int main(int argc, char *argv[])
                         fprintf(stderr, "Error initializing MSR module!\n");
                         return EXIT_FAILURE;
                 }
+                if (set_avg_unhalted_cycle_cost(&rd_cycles_cost) != 0 ||
+                    rd_cycles_cost == 0) {
+                        fprintf(stderr, "Error calculating unhalted "
+                                "cycles read overhead!\n");
+                        return EXIT_FAILURE;
+                } else
+                        fprintf(stderr, "Unhalted cycles read cost = "
+                                "%lu cycles\n", (unsigned long)rd_cycles_cost);
         }
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
