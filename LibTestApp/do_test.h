@@ -160,8 +160,8 @@ known_answer_test(MB_MGR *mb_mgr)
         job->msg_len_to_cipher_in_bytes = NUMBYTES;
         job->hash_start_src_offset_in_bytes = text - job->src;
         job->msg_len_to_hash_in_bytes = TEXTSIZE;
-        job->hashed_auth_key_xor_ipad = ipad_hash;
-        job->hashed_auth_key_xor_opad = opad_hash;
+        job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
+        job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
         job->cipher_mode = CBC;
         job->hash_alg = SHA1;
 
@@ -195,7 +195,7 @@ static void
 test_aux_func(MB_MGR *mgr)
 {
         /* test aux functions */
-        UINT128 keys[15];
+        uint128_t keys[15];
         static uint8_t buf[4096+20];
 
         uint32_t digest1[8];
@@ -223,9 +223,9 @@ do_test(MB_MGR *mb_mgr)
 {
         uint32_t size;
         JOB_AES_HMAC *job;
-        static UINT128 IV = {0,0};
+        static uint128_t IV = {0,0};
         static uint32_t ipad[5], opad[5], digest[3];
-        UINT128 keys[15];
+        uint128_t keys[15];
         static uint8_t buf[4096+20];
 
         for (size = 32; size < 4096; size += 16) {
@@ -238,8 +238,8 @@ do_test(MB_MGR *mb_mgr)
 
                 job->auth_tag_output = (uint8_t*) digest;
                 job->auth_tag_output_len_in_bytes = 12;
-                job->hashed_auth_key_xor_ipad = (uint8_t*)ipad;
-                job->hashed_auth_key_xor_opad = (uint8_t*)opad;
+                job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t*)ipad;
+                job->u.HMAC._hashed_auth_key_xor_opad = (uint8_t*)opad;
 
                 job->aes_enc_key_expanded =
                         job->aes_dec_key_expanded = (uint32_t*) keys;

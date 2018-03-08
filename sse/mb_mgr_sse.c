@@ -29,20 +29,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "os.h"
 
 #ifdef __WIN32
 #include <intrin.h>
 #endif
 
-#include "mb_mgr.h"
+#include "intel-ipsec-mb.h"
 #include "save_xmms.h"
 #include "asm.h"
-#ifndef NO_GCM
-#include "gcm_defines.h"
-#endif
 #include "des.h"
-#include "aux_funcs.h"
 
 JOB_AES_HMAC *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
                                         JOB_AES_HMAC *job);
@@ -196,10 +191,10 @@ void aes128_cbc_mac_x4(AES_ARGS_x8 *args, uint64_t len);
 /* ====================================================================== */
 
 struct cpuid_regs {
-        UINT32 eax;
-        UINT32 ebx;
-        UINT32 ecx;
-        UINT32 edx;
+        uint32_t eax;
+        uint32_t ebx;
+        uint32_t ecx;
+        uint32_t edx;
 };
 
 /*
@@ -284,7 +279,7 @@ void
 init_mb_mgr_sse(MB_MGR *state)
 {
         unsigned int j;
-        UINT8 *p;
+        uint8_t *p;
 
         state->features &= (~IMB_FEATURE_SHANI);
         if (!(state->flags & IMB_FLAG_SHANI_OFF))

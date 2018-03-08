@@ -24,7 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 EXE=ipsec_perf
-INSTPATH ?= /usr/include/intel-ipsec-mb
+INSTPATH ?= /usr/include/intel-ipsec-mb.h
 
 CFLAGS = -DLINUX -D_GNU_SOURCE $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
@@ -37,9 +37,9 @@ CFLAGS = -DLINUX -D_GNU_SOURCE $(INCLUDES) \
 LDFLAGS = -fPIE -z noexecstack -z relro -z now -pthread
 LDLIBS = -lIPSec_MB
 
-ifneq ("$(wildcard $(INSTPATH))","")
+ifeq ("$(shell test -e $(INSTPATH) && echo -n yes)","yes")
 # library installed
-CFLAGS += -I$(INSTPATH)
+CFLAGS += 
 else
 # library not installed
 CFLAGS +=  -I../include -I../

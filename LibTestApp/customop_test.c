@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mb_mgr.h>
+#include <intel-ipsec-mb.h>
 
 #include "customop_test.h"
 

@@ -27,100 +27,61 @@
 
 /* interface to asm routines */
 
-#ifndef _ASM_H
-#define _ASM_H
+#ifndef IMB_ASM_H
+#define IMB_ASM_H
 
-#include "asm_types.h"
+#include "intel-ipsec-mb.h"
 
+/* Define interface to base asm code */
 
-/* Define interface to AES base asm code */
+/* AES-CBC */
+void aes_cbc_enc_128_x8(AES_ARGS_x8 *args, uint64_t len_in_bytes);
+void aes_cbc_enc_192_x8(AES_ARGS_x8 *args, uint64_t len_in_bytes);
+void aes_cbc_enc_256_x8(AES_ARGS_x8 *args, uint64_t len_in_bytes);
 
-#define AES_BLOCK_SIZE 16
+void aes_cbc_dec_128_avx(const void *in, const uint8_t *IV, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_cbc_dec_192_avx(const void *in, const uint8_t *IV, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_cbc_dec_256_avx(const void *in, const uint8_t *IV, const void *keys,
+                         void *out, uint64_t len_bytes);
 
-void aes_cbc_enc_128_x8(AES_ARGS_x8 *args, UINT64 len_in_bytes);
-void aes_cbc_enc_192_x8(AES_ARGS_x8 *args, UINT64 len_in_bytes);
-void aes_cbc_enc_256_x8(AES_ARGS_x8 *args, UINT64 len_in_bytes);
+void aes_cbc_dec_128_sse(const void *in, const uint8_t *IV, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_cbc_dec_192_sse(const void *in, const uint8_t *IV, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_cbc_dec_256_sse(const void *in, const uint8_t *IV, const void *keys,
+                         void *out, uint64_t len_bytes);
 
-void aes_cbc_dec_128_avx(const void    *in,
-                         const UINT8   *IV,
-                         const void    *keys,
-                         void          *out,
-                         UINT64         len_bytes);
+/* AES-CTR */
+void aes_cntr_256_sse(const void *in, const void *IV, const void *keys,
+                      void *out, uint64_t len_bytes, uint64_t IV_len);
+void aes_cntr_192_sse(const void *in, const void *IV, const void *keys,
+                      void *out, uint64_t len_bytes, uint64_t IV_len);
+void aes_cntr_128_sse(const void *in, const void *IV, const void *keys,
+                      void *out, uint64_t len_bytes, uint64_t IV_len);
 
-void aes_cbc_dec_192_avx(const void    *in,
-                         const UINT8   *IV,
-                         const void    *keys,
-                         void          *out,
-                         UINT64         len_bytes);
+void aes_cntr_256_avx(const void *in, const void *IV, const void *keys,
+                      void *out, uint64_t len_bytes, uint64_t IV_len);
+void aes_cntr_192_avx(const void *in, const void *IV, const void *keys,
+                      void *out, uint64_t len_bytes, uint64_t IV_len);
+void aes_cntr_128_avx(const void *in, const void *IV, const void *keys,
+                      void *out, uint64_t len_bytes, uint64_t IV_len);
 
-void aes_cbc_dec_256_avx(const void    *in,
-                         const UINT8   *IV,
-                         const void    *keys,
-                         void          *out,
-                         UINT64         len_bytes);
+/* AES128-CFB */
+void aes_cfb_128_one_sse(void *out, const void *in, const void *iv,
+                         const void *keys, uint64_t len);
+void aes_cfb_128_one_avx(void *out, const void *in, const void *iv,
+                         const void *keys, uint64_t len);
+#define aes_cfb_128_one_avx2   aes_cfb_128_one_avx
+#define aes_cfb_128_one_avx512 aes_cfb_128_one_avx2
 
-void aes_cbc_dec_128_sse(const void    *in,
-                         const UINT8   *IV,
-                         const void    *keys,
-                         void          *out,
-                         UINT64         len_bytes);
+/* AES128-ECBENC */
+void aes128_ecbenc_x3_sse(const void *in, void *keys,
+                          void *out1, void *out2, void *out3);
+void aes128_ecbenc_x3_avx(const void *in, void *keys,
+                          void *out1, void *out2, void *out3);
 
-void aes_cbc_dec_192_sse(const void    *in,
-                         const UINT8   *IV,
-                         const void    *keys,
-                         void          *out,
-                         UINT64         len_bytes);
-
-
-void aes_cbc_dec_256_sse(const void    *in,
-                         const UINT8   *IV,
-                         const void    *keys,
-                         void          *out,
-                         UINT64         len_bytes);
-
-void aes_cntr_256_sse(const void *in,
-                      const void *IV,
-                      const void *keys,
-                      void       *out,
-                      UINT64      len_bytes,
-                      UINT64      IV_len);
-
-void aes_cntr_192_sse(const void *in,
-                      const void *IV,
-                      const void *keys,
-                      void       *out,
-                      UINT64      len_bytes,
-                      UINT64      IV_len);
-
-
-void aes_cntr_128_sse(const void *in,
-                      const void *IV,
-                      const void *keys,
-                      void       *out,
-                      UINT64      len_bytes,
-                      UINT64      IV_len);
-
-void aes_cntr_256_avx(const void *in,
-                      const void *IV,
-                      const void *keys,
-                      void       *out,
-                      UINT64      len_bytes,
-                      UINT64      IV_len);
-
-void aes_cntr_192_avx(const void *in,
-                      const void *IV,
-                      const void *keys,
-                      void       *out,
-                      UINT64      len_bytes,
-                      UINT64      IV_len);
-
-void aes_cntr_128_avx(const void *in,
-                      const void *IV,
-                      const void *keys,
-                      void       *out,
-                      UINT64      len_bytes,
-                      UINT64      IV_len);
-
-#endif /* _ASM_H */
+#endif /* IMB_ASM_H */
 
 

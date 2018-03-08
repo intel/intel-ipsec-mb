@@ -29,8 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <mb_mgr.h>
-#include <aux_funcs.h>
+#include <intel-ipsec-mb.h>
 
 #include "gcm_ctr_vectors_test.h"
 #include "customop_test.h"

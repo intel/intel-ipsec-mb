@@ -31,7 +31,7 @@
 #define DES_UTILS_H
 
 #include <stdint.h>
-#include "os.h"
+#include "intel-ipsec-mb.h"
 
 /**
  * @brief Gets selected bit value out of a 64-bit word

@@ -28,9 +28,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "intel-ipsec-mb.h"
 #include "des.h"
 #include "des_utils.h"
-#include "os.h"
 
 /**
  * @brief Rotates 28-bit word

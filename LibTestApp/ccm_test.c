@@ -30,8 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <mb_mgr.h>
-#include <aux_funcs.h>
+#include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
 
 int ccm_test(const enum arch_type arch, struct MB_MGR *mb_mgr);

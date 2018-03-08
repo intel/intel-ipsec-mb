@@ -32,9 +32,8 @@
 #include <stdint.h>
 #include <string.h>		/* for memcmp() */
 
-#include <gcm_defines.h>
+#include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
-#include "mb_mgr.h"
 
 /*
  * 60-Byte Packet Encryption Using GCM-AES-128

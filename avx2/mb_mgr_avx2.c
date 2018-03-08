@@ -28,15 +28,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "os.h"
 
 #define AVX2
-#include "mb_mgr.h"
+#include "intel-ipsec-mb.h"
 #include "save_xmms.h"
 #include "asm.h"
-#ifndef NO_GCM
-#include "gcm_defines.h"
-#endif
 #include "des.h"
 
 JOB_AES_HMAC *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
@@ -177,7 +173,7 @@ void
 init_mb_mgr_avx2(MB_MGR *state)
 {
         unsigned int j;
-        UINT8 *p;
+        uint8_t *p;
 
         /* Init AES out-of-order fields */
         state->aes128_ooo.lens[0] = 0;

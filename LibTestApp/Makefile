@@ -26,7 +26,7 @@
 #
 
 APP := ipsec_MB_testapp
-INSTPATH ?= /usr/include/intel-ipsec-mb
+INSTPATH ?= /usr/include/intel-ipsec-mb.h
 
 CFLAGS = -g -DLINUX -D_GNU_SOURCE \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
@@ -38,9 +38,9 @@ CFLAGS = -g -DLINUX -D_GNU_SOURCE \
 LDFLAGS = -fPIE -z noexecstack -z relro -z now
 LDLIBS = -lIPSec_MB
 
-ifneq ("$(wildcard $(INSTPATH))","")
+ifeq ("$(shell test -r $(INSTPATH) && echo -n yes)","yes")
 # library installed
-CFLAGS += -I$(INSTPATH)
+CFLAGS +=
 else
 # library not installed
 CFLAGS +=  -I../include -I../

@@ -27,19 +27,11 @@
 
 
 #include <stdio.h>
-#include "types.h"
-#include "aux_funcs.h"
-#include "os.h"
+#include "intel-ipsec-mb.h"
 
-void aes_keyexp_128_enc_sse(const void *key, void *enc_exp_keys);
-void aes_keyexp_128_enc_avx(const void *key, void *enc_exp_keys);
+#include "asm.h"
 
-void aes128_ecbenc_x3_sse(const void *in, void *keys,
-                          void *out1, void *out2, void *out3);
-void aes128_ecbenc_x3_avx(const void *in, void *keys,
-                          void *out1, void *out2, void *out3);
-
-static UINT32 in[4*3] = {
+static uint32_t in[4*3] = {
         0x01010101, 0x01010101, 0x01010101, 0x01010101,
         0x02020202, 0x02020202, 0x02020202, 0x02020202,
         0x03030303, 0x03030303, 0x03030303, 0x03030303
@@ -48,7 +40,7 @@ static UINT32 in[4*3] = {
 void
 aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
 {
-        DECLARE_ALIGNED(UINT32 keys_exp_enc[11*4], 16);
+        DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
 
         aes_keyexp_128_enc_sse(key, keys_exp_enc);
 
@@ -60,7 +52,7 @@ aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
 void
 aes_xcbc_expand_key_avx(const void *key, void *k1_exp, void *k2, void *k3)
 {
-        DECLARE_ALIGNED(UINT32 keys_exp_enc[11*4], 16);
+        DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
 
         aes_keyexp_128_enc_avx(key, keys_exp_enc);
 

@@ -775,8 +775,8 @@ JOB_AES_HMAC *
 DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
 {
         const void *iv = NULL;
-        UINT64 offset = 0;
-        UINT64 partial_bytes = 0;
+        uint64_t offset = 0;
+        uint64_t partial_bytes = 0;
 
         if (job == NULL)
                 return job;
@@ -1262,7 +1262,7 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 __forceinline int
 is_job_invalid(const JOB_AES_HMAC *job)
 {
-        const UINT64 auth_tag_len_max[] = {
+        const uint64_t auth_tag_len_max[] = {
                 0,  /* INVALID selection */
                 12, /* SHA1 */
                 14, /* SHA_224 */
@@ -1732,7 +1732,7 @@ submit_job_and_check(MB_MGR *state, const int run_check)
 {
         JOB_AES_HMAC *job = NULL;
 #ifndef LINUX
-        DECLARE_ALIGNED(UINT128 xmm_save[10], 16);
+        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
 
         SAVE_XMMS(xmm_save);
 #endif
@@ -1806,7 +1806,7 @@ FLUSH_JOB(MB_MGR *state)
 {
         JOB_AES_HMAC *job;
 #ifndef LINUX
-        DECLARE_ALIGNED(UINT128 xmm_save[10], 16);
+        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
 #endif
 
         if (state->earliest_job < 0)
@@ -1833,7 +1833,7 @@ FLUSH_JOB(MB_MGR *state)
 /* ========================================================================= */
 
 IMB_DLL_EXPORT
-UINT32
+uint32_t
 QUEUE_SIZE(MB_MGR *state)
 {
         int a, b;

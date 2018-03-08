@@ -30,9 +30,6 @@
 
 #include <stdint.h>
 
-#define DES_KEY_SCHED_SIZE (16 * 8) /* 16 rounds x 8 bytes */
-#define DES_BLOCK_SIZE 8
-
 /**
  * @brief DES CBC encryption
  *
@@ -110,19 +107,5 @@ void docsis_des_enc_basic(const void *input, void *output, const int size,
  */
 void docsis_des_dec_basic(const void *input, void *output, const int size,
                           const uint64_t *ks, const uint64_t *ivec);
-
-/**
- * @brief DES key schedule set up
- *
- * \a ks buffer needs to accomodate \a DES_KEY_SCHED_SIZE (128) bytes of data.
- *
- * @param ks destination buffer to accomodate DES key schedule
- * @param key a pointer to an 8 byte DES key
- *
- * @return Operation status
- * @retval 0 success
- * @retval !0 error
- */
-int des_key_schedule(uint64_t *ks, const void *key);
 
 #endif /* IMB_DES_H */

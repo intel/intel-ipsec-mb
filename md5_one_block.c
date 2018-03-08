@@ -26,9 +26,9 @@
 *******************************************************************************/
 
 #include <stdio.h>
-#include "types.h"
+#include <stdint.h>
 
-void md5_one_block_sse(const UINT8 *data, UINT32 digest[4]);
+void md5_one_block_sse(const uint8_t *data, uint32_t digest[4]);
 
 #ifdef LINUX
 #define ROTATE(a, n) (((a) << (n)) ^ ((a) >> (32 - (n))))
@@ -68,12 +68,12 @@ void md5_one_block_sse(const UINT8 *data, UINT32 digest[4]);
                 a += b;                         \
         }
 void
-md5_one_block_sse(const UINT8 *data, UINT32 digest[4])
+md5_one_block_sse(const uint8_t *data, uint32_t digest[4])
 {
-        UINT32 a, b, c, d;
-        UINT32 w00, w01, w02, w03, w04, w05, w06, w07,
+        uint32_t a, b, c, d;
+        uint32_t w00, w01, w02, w03, w04, w05, w06, w07,
                 w08, w09, w10, w11, w12, w13, w14, w15;
-        const UINT32 *data32 = (const UINT32 *)data;
+        const uint32_t *data32 = (const uint32_t *)data;
 
         a = H0;
         b = H1;

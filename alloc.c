@@ -31,8 +31,7 @@
 #else
 #include <malloc.h> /* _aligned_malloc() and aligned_free() */
 #endif
-#include "mb_mgr.h"
-#include "os.h"
+#include "intel-ipsec-mb.h"
 
 /**
  * @brief Allocates memory for multi-buffer manager instance

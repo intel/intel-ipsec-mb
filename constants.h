@@ -25,8 +25,8 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef _CONSTANTS_H_
-#define _CONSTANTS_H_
+#ifndef IMB_CONSTANTS_H_
+#define IMB_CONSTANTS_H_
 
 /* define SHA1 constants */
 #define H0 0x67452301
@@ -75,24 +75,4 @@
 #define SHA384_H6 0xdb0c2e0d64f98fa7
 #define SHA384_H7 0x47b5481dbefa4fa4
 
-#define NUM_MD5_DIGEST_WORDS     4
-#define NUM_SHA_DIGEST_WORDS     5
-#define NUM_SHA_256_DIGEST_WORDS 8
-#define NUM_SHA_224_DIGEST_WORDS 7
-#define NUM_SHA_512_DIGEST_WORDS 8
-#define NUM_SHA_384_DIGEST_WORDS 6
-
-#define SHA384_DIGEST_WORD_SIZE   8
-#define SHA512_DIGEST_WORD_SIZE   8
-
-#define SHA384_DIGEST_SIZE_IN_BYTES \
-        (NUM_SHA_384_DIGEST_WORDS * SHA384_DIGEST_WORD_SIZE)
-#define SHA512_DIGEST_SIZE_IN_BYTES \
-        (NUM_SHA_512_DIGEST_WORDS * SHA512_DIGEST_WORD_SIZE)
-
-#define SHA1_BLOCK_SIZE 64    /* 512 bits is 64 byte blocks */
-#define SHA_256_BLOCK_SIZE 64 /* 512 bits is 64 byte blocks */
-#define SHA_384_BLOCK_SIZE 128
-#define SHA_512_BLOCK_SIZE 128
-
-#endif /* _CONSTANTS_H_ */
+#endif /* IMB_CONSTANTS_H_ */

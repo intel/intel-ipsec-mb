@@ -30,9 +30,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "intel-ipsec-mb.h"
 #include "des.h"
 #include "des_utils.h"
-#include "os.h"
 
 __forceinline
 void permute_operation(uint32_t *pa, uint32_t *pb,

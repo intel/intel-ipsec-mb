@@ -45,8 +45,7 @@
 #include <sched.h>
 #endif
 
-#include <mb_mgr.h>
-#include <gcm_defines.h>
+#include <intel-ipsec-mb.h>
 
 #include "msr.h"
 
@@ -599,9 +598,9 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
 
         switch (params->hash_alg) {
         case TEST_XCBC:
-                job_template._k1_expanded = k1_expanded;
-                job_template._k2 = k2;
-                job_template._k3 = k3;
+                job_template.u.XCBC._k1_expanded = k1_expanded;
+                job_template.u.XCBC._k2 = k2;
+                job_template.u.XCBC._k3 = k3;
                 job_template.hash_alg = AES_XCBC;
                 break;
         case TEST_HASH_CCM:
@@ -621,8 +620,8 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
-                job_template.hashed_auth_key_xor_ipad = (uint8_t *) ipad;
-                job_template.hashed_auth_key_xor_opad = (uint8_t *) opad;
+                job_template.u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
+                job_template.u.HMAC._hashed_auth_key_xor_opad = (uint8_t *) opad;
                 job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
                 break;
         }

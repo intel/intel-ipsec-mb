@@ -31,9 +31,8 @@ SHARED ?= y
 
 PREFIX ?= /usr
 LIB_INSTALL_DIR ?= $(PREFIX)/lib
-HDR_DIR ?= $(PREFIX)/include/intel-ipsec-mb-$(VERSION)
-INC_DIR ?= $(PREFIX)/include/intel-ipsec-mb
-MAN_DIR = $(PREFIX)/man/man7
+HDR_DIR ?= $(PREFIX)/include
+MAN_DIR ?= $(PREFIX)/man/man7
 MAN1 = libipsec-mb.7
 MAN2 = libipsec-mb-dev.7
 NOLDCONFIG ?= n
@@ -247,17 +246,7 @@ endif
 
 .PHONY: install
 install: $(LIBNAME)
-	ln -f -s $(HDR_DIR) $(INC_DIR)
-	install -d $(HDR_DIR)
-	install -m 0644 include/types.h $(HDR_DIR)
-	install -m 0644 include/os.h $(HDR_DIR)
-	install -m 0644 constants.h $(HDR_DIR)
-	install -m 0644 job_aes_hmac.h $(HDR_DIR)
-	install -m 0644 asm_types.h $(HDR_DIR)
-	install -m 0644 aux_funcs.h $(HDR_DIR)
-	install -m 0644 mb_mgr.h $(HDR_DIR)
-	install -m 0644 gcm_defines.h $(HDR_DIR)
-	install -m 0644 des.h $(HDR_DIR)
+	install -m 0644 intel-ipsec-mb.h $(HDR_DIR)
 	install -d $(LIB_INSTALL_DIR)
 	install -m $(LIBPERM) $(LIBNAME) $(LIB_INSTALL_DIR)
 	install -d $(MAN_DIR)
@@ -274,18 +263,8 @@ endif
 
 .PHONY: uninstall
 uninstall: $(LIBNAME)
-	-rm -f $(HDR_DIR)/types.h
-	-rm -f $(HDR_DIR)/os.h
-	-rm -f $(HDR_DIR)/constants.h
-	-rm -f $(HDR_DIR)/job_aes_hmac.h
-	-rm -f $(HDR_DIR)/asm_types.h
-	-rm -f $(HDR_DIR)/aux_funcs.h
-	-rm -f $(HDR_DIR)/mb_mgr.h
-	-rm -f $(HDR_DIR)/gcm_defines.h
-	-rm -f $(HDR_DIR)/des.h
+	-rm -f $(HDR_DIR)/intel-ipsec-mb.h
 	-rm -f $(LIB_INSTALL_DIR)/$(LIBNAME)
-	-rm -f $(INC_DIR)
-	-rmdir $(HDR_DIR)
 	-rm -f $(MAN_DIR)/$(MAN1)
 	-rm -f $(MAN_DIR)/$(MAN2)
 ifeq ($(SHARED),y)
