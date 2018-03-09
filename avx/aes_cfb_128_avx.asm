@@ -105,7 +105,7 @@ endstruc
 ;;
 ;; It makes sure not to read more than LEN bytes from IN and
 ;; not to store more than LEN bytes to OUT.
-MKGLOBAL(aes_cfb_128_one_avx,function,internal)
+MKGLOBAL(aes_cfb_128_one_avx,function,)
 align 32
 aes_cfb_128_one_avx:
 %ifndef LINUX

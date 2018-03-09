@@ -147,3 +147,5 @@ EXPORTS
     aes_cmac_subkey_gen_avx             @121
     alloc_mb_mgr                        @122
     free_mb_mgr                         @123
+    aes_cfb_128_one_sse                 @124
+    aes_cfb_128_one_avx                 @125

@@ -31,6 +31,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* 128-bit data type that is not in sdtint.h */
 typedef struct {
         uint64_t low;
@@ -761,7 +765,9 @@ IMB_DLL_EXPORT void aes_keyexp_256_enc_sse(const void *key,
                                            void *enc_exp_keys);
 IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse(const void *key_exp, void *key1,
                                             void *key2);
-
+IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
+                                        const void *iv, const void *keys,
+                                        uint64_t len);
 /* AVX */
 IMB_DLL_EXPORT void sha1_one_block_avx(const void *data, void *digest);
 IMB_DLL_EXPORT void sha224_one_block_avx(const void *data, void *digest);
@@ -785,6 +791,9 @@ IMB_DLL_EXPORT void aes_keyexp_256_enc_avx(const void *key,
                                            void *enc_exp_keys);
 IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1,
                                             void *key2);
+IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
+                                        const void *iv, const void *keys,
+                                        uint64_t len);
 
 /* AVX2 */
 #define sha1_one_block_avx2      sha1_one_block_avx
@@ -801,6 +810,7 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1,
 #define aes_keyexp_192_enc_avx2  aes_keyexp_192_enc_avx
 #define aes_keyexp_256_enc_avx2  aes_keyexp_256_enc_avx
 #define aes_cmac_subkey_gen_avx2 aes_cmac_subkey_gen_avx
+#define aes_cfb_128_one_avx2     aes_cfb_128_one_avx
 
 /* AVX512 */
 #define sha1_one_block_avx512      sha1_one_block_avx2
@@ -817,6 +827,7 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1,
 #define aes_keyexp_192_enc_avx512  aes_keyexp_192_enc_avx2
 #define aes_keyexp_256_enc_avx512  aes_keyexp_256_enc_avx2
 #define aes_cmac_subkey_gen_avx512 aes_cmac_subkey_gen_avx2
+#define aes_cfb_128_one_avx512     aes_cfb_128_one_avx2
 
 /*
  * Direct GCM API.
@@ -1400,5 +1411,9 @@ void aes_gcm_pre_256_avx_gen4(const void *key, struct gcm_key_data *key_data)
         aes_gcm_precomp_256_avx_gen4(key_data);
 }
 #endif /* !NO_GCM */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* IMB_IPSEC_MB_H */
