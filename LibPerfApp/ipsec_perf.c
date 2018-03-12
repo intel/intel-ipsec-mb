@@ -365,47 +365,6 @@ static int compare(const void *a, const void *b)
         return 1;
 }
 
-
-/* Set the cost of reading unhalted cycles using RDMSR */
-static int set_unhalted_cycle_cost(uint64_t *value)
-{
-        uint64_t time1, time2;
-
-        if (value == NULL)
-                return 1;
-
-        time1 = read_cycles(0);
-        time2 = read_cycles(0);
-
-        /* Calculate delta */
-        *value = (time2 - time1);
-
-        return 0;
-}
-
-/* Calculate the general cost of reading unhalted cycles (median) */
-static int set_avg_unhalted_cycle_cost(uint64_t *value)
-{
-        unsigned i;
-        uint64_t cycles[10];
-
-        if (value == NULL)
-                return 1;
-
-        /* Fill cycles table with read cost values */
-        for (i = 0; i < DIM(cycles); i++)
-                if (set_unhalted_cycle_cost(&cycles[i]) != 0)
-                        return 1;
-
-        /* sort array */
-        qsort(cycles, DIM(cycles), sizeof(uint64_t), compare);
-
-        /* set median cost */
-        *value = cycles[DIM(cycles)/2];
-
-        return 0;
-}
-
 /* Get number of bits set in value */
 static int bitcount(const uint64_t val)
 {
@@ -509,6 +468,46 @@ static int init_msr_mod(void)
         }
 #endif
         return machine_init(max_core_count);
+}
+
+/* Set the cost of reading unhalted cycles using RDMSR */
+static int set_unhalted_cycle_cost(const int core, uint64_t *value)
+{
+        uint64_t time1, time2;
+
+        if (value == NULL || core < 0)
+                return 1;
+
+        time1 = read_cycles(core);
+        time2 = read_cycles(core);
+
+        /* Calculate delta */
+        *value = (time2 - time1);
+
+        return 0;
+}
+
+/* Calculate the general cost of reading unhalted cycles (median) */
+static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
+{
+        unsigned i;
+        uint64_t cycles[10];
+
+        if (value == NULL || core_mask == 0 || core < 0)
+                return 1;
+
+        /* Fill cycles table with read cost values */
+        for (i = 0; i < DIM(cycles); i++)
+                if (set_unhalted_cycle_cost(core, &cycles[i]) != 0)
+                        return 1;
+
+        /* sort array */
+        qsort(cycles, DIM(cycles), sizeof(uint64_t), compare);
+
+        /* set median cost */
+        *value = cycles[DIM(cycles)/2];
+
+        return 0;
 }
 
 /* Freeing allocated memory */
@@ -677,8 +676,10 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
-                job_template.u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *) ipad;
-                job_template.u.HMAC._hashed_auth_key_xor_opad = (uint8_t *) opad;
+                job_template.u.HMAC._hashed_auth_key_xor_ipad =
+                        (uint8_t *) ipad;
+                job_template.u.HMAC._hashed_auth_key_xor_opad =
+                        (uint8_t *) opad;
                 job_template.hash_alg = (JOB_HASH_ALG) params->hash_alg;
                 break;
         }
@@ -1109,8 +1110,8 @@ run_tests(void *arg)
         uint32_t variants_per_arch, max_arch;
         uint32_t variant;
         uint32_t total_variants = 0;
-        struct variant_s *variant_ptr;
-        struct variant_s *variant_list;
+        struct variant_s *variant_ptr = NULL;
+        struct variant_s *variant_list = NULL;
 
         p_mgr = alloc_mb_mgr(flags);
         if (p_mgr == NULL) {
@@ -1127,25 +1128,36 @@ run_tests(void *arg)
                 if (set_affinity(info->core) != 0) {
                         fprintf(stderr, "Failed to set cpu "
                                 "affinity on core %d\n", info->core);
-                        free_mem();
-                        free_mb_mgr(p_mgr);
-                        exit(EXIT_FAILURE);
+                        goto exit_failure;
                 }
 
-        /* if cycles selected then start counter */
-        if (use_unhalted_cycles)
-                if (start_cycles_ctr(params.core) != 0) {
+        /* If unhalted cycles selected and this is
+           the primary thread then start counter */
+        if (use_unhalted_cycles && info->print_info) {
+                int ret;
+
+                ret = start_cycles_ctr(params.core);
+                if (ret != 0) {
                         fprintf(stderr, "Failed to start cycles "
                                 "counter on core %u\n", params.core);
-                        free_mem();
-                        free_mb_mgr(p_mgr);
-                        exit(EXIT_FAILURE);
+                        goto exit_failure;
                 }
+                /* Get average cost of reading counter */
+                ret = set_avg_unhalted_cycle_cost(params.core, &rd_cycles_cost);
+                if (ret != 0 || rd_cycles_cost == 0) {
+                        fprintf(stderr, "Error calculating unhalted "
+                                "cycles read overhead!\n");
+                        goto exit_failure;
+                } else
+                        fprintf(stderr, "Started counting unhalted cycles on "
+                                "core %d\nUnhalted cycles read cost = %lu "
+                                "cycles\n", params.core,
+                                (unsigned long)rd_cycles_cost);
+        }
 
         for (type = TTYPE_AES_HMAC; type < NUM_TYPES; type++) {
                 if (test_types[type] == 0)
                         continue;
-
 
                 switch (type) {
                 default:
@@ -1186,11 +1198,9 @@ run_tests(void *arg)
 
         variant_list = (struct variant_s *)
                 malloc(total_variants * sizeof(struct variant_s));
-        if (!variant_list) {
+        if (variant_list == NULL) {
                 fprintf(stderr, "Cannot allocate memory\n");
-                free_mem();
-                free_mb_mgr(p_mgr);
-                exit(EXIT_FAILURE);
+                goto exit_failure;
         }
 
         at_size = NUM_RUNS * params.num_sizes * sizeof(uint64_t);
@@ -1200,9 +1210,7 @@ run_tests(void *arg)
                 variant_ptr->avg_times = (uint64_t *) malloc(at_size);
                 if (!variant_ptr->avg_times) {
                         fprintf(stderr, "Cannot allocate memory\n");
-                        free_mem();
-                        free_mb_mgr(p_mgr);
-                        exit(EXIT_FAILURE);
+                        goto exit_failure;
                 }
         }
         for (run = 0; run < NUM_RUNS; run++) {
@@ -1244,7 +1252,16 @@ run_tests(void *arg)
         free_mb_mgr(p_mgr);
 #ifndef _WIN32
         return NULL;
+
+#else
+        return;
 #endif
+exit_failure:
+        if (variant_list != NULL)
+                free(variant_list);
+        free_mem();
+        free_mb_mgr(p_mgr);
+        exit(EXIT_FAILURE);
 }
 
 static void usage(void)
@@ -1372,14 +1389,6 @@ int main(int argc, char *argv[])
                         fprintf(stderr, "Error initializing MSR module!\n");
                         return EXIT_FAILURE;
                 }
-                if (set_avg_unhalted_cycle_cost(&rd_cycles_cost) != 0 ||
-                    rd_cycles_cost == 0) {
-                        fprintf(stderr, "Error calculating unhalted "
-                                "cycles read overhead!\n");
-                        return EXIT_FAILURE;
-                } else
-                        fprintf(stderr, "Unhalted cycles read cost = "
-                                "%lu cycles\n", (unsigned long)rd_cycles_cost);
         }
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
