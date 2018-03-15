@@ -278,7 +278,6 @@ $(obj2_files): | $(OBJ_DIR)
 $(OBJ_DIR)/%.o:%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:%.asm
 	@ echo "Making object file $@ "
@@ -287,12 +286,10 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -o $@ $(NASM_FLAGS) $<
 endif
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:sse/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:sse/%.asm
 	@ echo "Making object file $@ "
@@ -301,12 +298,10 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -o $@ $(NASM_FLAGS) $<
 endif
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx/%.asm
 	@ echo "Making object file $@ "
@@ -315,12 +310,10 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -o $@ $(NASM_FLAGS) $<
 endif
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx2/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx2/%.asm
 	@ echo "Making object file $@ "
@@ -329,12 +322,10 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -o $@ $(NASM_FLAGS) $<
 endif
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx512/%.c
 	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:avx512/%.asm
 	@ echo "Making object file $@ "
@@ -343,7 +334,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -o $@ $(NASM_FLAGS) $<
 endif
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR)/%.o:include/%.asm
 	@ echo "Making object file $@ "
@@ -352,7 +342,6 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -o $@ $(NASM_FLAGS) $<
 endif
-	@ echo "--------------------------------------------------------------"
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)

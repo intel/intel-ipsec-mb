@@ -35,8 +35,8 @@
 
 #define DIM(_a)	(sizeof(_a) / sizeof(_a[0]))
 
-#if defined(DEBUG)
-#if _WIN32
+#ifdef DEBUG
+#ifdef _WIN32
 #define TRACE(fmt, ...)	fprintf(stderr, "%s:%d "fmt, \
                                 __FUNCTION__, __LINE__, __VA_ARGS__)
 #else

@@ -334,9 +334,9 @@ test_cmac_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 #ifdef DEBUG
-		printf("Standard vector [%d/%d] M len, T len:%d\n",
+		printf("Standard vector [%d/%d] M len: %d, T len:%d\n",
                        vect, vectors_cnt,
-                       (int) cmac_vectors[idx].len
+                       (int) cmac_vectors[idx].len,
                        (int) cmac_vectors[idx].T_len);
 #else
 		printf(".");
