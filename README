@@ -200,6 +200,11 @@ Clean the build:
 or
 > make clean SHARED=n
 
+Build with debugging information:
+> make DEBUG=y
+
+Note: Building with debugging information is not advised for production use.
+
 Windows (x64 only)
 ------------------
 
@@ -222,6 +227,10 @@ Clean the build:
 or
 > nmake /f win_x64.mak clean SHARED=n
 
+Build with debugging information:
+> nmake /f win_x64.mak DEBUG=y
+
+Note: Building with debugging information is not advised for production use.
 
 Installation
 ============
