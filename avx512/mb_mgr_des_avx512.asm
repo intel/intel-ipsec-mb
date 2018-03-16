@@ -243,6 +243,7 @@ extern des3_x16_cbc_dec_avx512
         mov     rax, [STATE + _des_job_in_lane + MIN_IDX*8]
         mov     qword [STATE + _des_job_in_lane + MIN_IDX*8], 0
         or	dword [rax + _status], STS_COMPLETED_AES
+        vzeroupper
 %%_des_submit_return:
 %endmacro
 
@@ -386,6 +387,7 @@ extern des3_x16_cbc_dec_avx512
         ;; - clear job pointer
         mov     qword [STATE + _des_job_in_lane + MIN_IDX*8], 0
 %%_des_flush_return:
+        vzeroupper
 %endmacro
 
 ;;; ========================================================

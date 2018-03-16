@@ -300,6 +300,7 @@ end_loop:
 
 return:
         DBGPRINTL "---------- exit md5 flush -----------"
+        vzeroupper
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]

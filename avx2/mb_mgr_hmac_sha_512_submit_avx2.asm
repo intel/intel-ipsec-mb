@@ -309,8 +309,8 @@ end_loop:
 	mov	[p + 3*8], QWORD(tmp4)
 %endif
 
+        vzeroupper
 return:
-
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

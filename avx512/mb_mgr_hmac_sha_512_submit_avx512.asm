@@ -320,7 +320,7 @@ end_loop:
 %if (SHA_X_DIGEST_SIZE != 384)
 	mov	[p + 3*8], QWORD(tmp4)
 %endif
-
+        vzeroupper
 return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]

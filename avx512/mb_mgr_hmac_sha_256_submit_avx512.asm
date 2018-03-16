@@ -352,8 +352,8 @@ end_loop:
 %else
 	mov	[p + 3*4], DWORD(tmp4)
 %endif
+        vzeroupper
 return:
-
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

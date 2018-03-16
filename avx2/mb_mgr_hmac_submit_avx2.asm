@@ -297,9 +297,9 @@ end_loop:
         mov	[p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
         mov	[p + 1*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
         mov	[p + 2*SHA1_DIGEST_WORD_SIZE], DWORD(tmp3)
-        DBGPRINTL "---------- exit sha1 submit -----------"
+        vzeroupper
 return:
-
+        DBGPRINTL "---------- exit sha1 submit -----------"
         mov	rbp, [rsp + _gpr_save + 8*0]
         mov	r12, [rsp + _gpr_save + 8*1]
         mov	r13, [rsp + _gpr_save + 8*2]

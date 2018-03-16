@@ -316,8 +316,9 @@ end_loop:
         mov	[p + 1*4], DWORD(tmp2)
         mov	[p + 2*4], DWORD(tmp3)
 
+        vzeroupper
 return:
-  DBGPRINTL "---------- exit md5 submit -----------"
+        DBGPRINTL "---------- exit md5 submit -----------"
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]

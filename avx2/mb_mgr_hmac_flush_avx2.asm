@@ -255,7 +255,7 @@ end_loop:
 	mov	[p + 2*4], DWORD(tmp3)
 
 return:
-
+        vzeroupper
 	mov	rbp, [rsp + _gpr_save + 8*0]
 	mov	r12, [rsp + _gpr_save + 8*1]
 	mov	r13, [rsp + _gpr_save + 8*2]

@@ -278,6 +278,7 @@ end_loop:
 %endif
 
 return:
+        vzeroupper
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]

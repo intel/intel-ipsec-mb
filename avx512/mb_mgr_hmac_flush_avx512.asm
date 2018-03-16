@@ -306,6 +306,7 @@ end_loop:
 
 return:
         DBGPRINTL "---------- exit hmac flush avx512 -----------"
+        vzeroupper
 
         mov	rbp, [rsp + _gpr_save + 8*0]
         mov	r12, [rsp + _gpr_save + 8*1]
