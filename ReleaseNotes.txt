@@ -1,12 +1,26 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v0.49 March 2018
 ========================================================================
 
+21 Mar, 2018
+
 General
-- AES-CMAC support added
+- AES-CMAC support added (AES-CMAC-128 and AES-CMAC-96)
 - 3DES support added
+- Library compiles to SO/DLL by default
+- Install/uninstall targets added to makefiles
+- Multiple API header files consolidated into one (intel-ipsec-mb.h)
+- Unhalted cycles support added to LibPerfApp (Linux at the moment)
+- ELF stack execute protection added for assembly files
+- VZEROUPPER instruction issued after AVX2/AVX512 code to avoid
+  expensive SSE<->AVX transitions
+- MAN page added
+- README documentation extensions and updates
+- AVX512 DES performance smoothed out
+- Multi-buffer manager instance allocate and free API's added
+- Core affinity support added in LibPerfApp
 
 v0.48 December 2017
 ========================================================================
