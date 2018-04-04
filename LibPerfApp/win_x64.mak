@@ -12,7 +12,7 @@
 #     * Neither the name of Intel Corporation nor the names of its contributors
 #       may be used to endorse or promote products derived from this software
 #       without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -40,16 +40,21 @@ IPSECLIB = ..\libIPSec_MB.lib
 INCDIR = -I..\ -I..\include
 !endif
 
+!ifdef WINRING0_DIR
+EXTRA_CFLAGS = $(EXTRA_CFLAGS) /DWIN_MSR
+INCDIR = $(INCDIR) -I$(WINRING0_DIR)
+!endif
+
 !ifdef DEBUG
 DCFLAGS = /Od /DDEBUG /Z7
 DLFLAGS = /debug
 !else
 DCFLAGS = /O2 /Oi
-DLFLAGS = 
+DLFLAGS =
 !endif
 
 CC = cl
-CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(INCDIR)
+CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(INCDIR)
 
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)

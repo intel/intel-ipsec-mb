@@ -402,12 +402,17 @@ static int next_core(const uint64_t core_mask,
 static int set_affinity(const int cpu)
 {
         int ret = 0;
-#ifndef _WIN32
-        cpu_set_t cpuset;
         int num_cpus = 0;
 
         /* Get number of cpus in the system */
+#ifdef _WIN32
+        GROUP_AFFINITY NewGroupAffinity;
+
+        memset(&NewGroupAffinity, 0, sizeof(GROUP_AFFINITY));
+        num_cpus = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+#else
         num_cpus = sysconf(_SC_NPROCESSORS_CONF);
+#endif
         if (num_cpus == 0) {
                 fprintf(stderr, "Zero processors in the system!");
                 return 1;
@@ -420,12 +425,20 @@ static int set_affinity(const int cpu)
                 return 1;
         }
 
+#ifdef _WIN32
+        NewGroupAffinity.Mask = 1ULL << cpu;
+        ret = !SetThreadGroupAffinity(GetCurrentThread(),
+                                      &NewGroupAffinity, NULL);
+#else
+        cpu_set_t cpuset;
+
         CPU_ZERO(&cpuset);
         CPU_SET(cpu, &cpuset);
 
         /* Set affinity of current process to cpu */
         ret = sched_setaffinity(0, sizeof(cpuset), &cpuset);
 #endif /* _WIN32 */
+
         return ret;
 }
 
@@ -460,13 +473,16 @@ static int start_cycles_ctr(uint32_t core)
 static int init_msr_mod(void)
 {
         unsigned max_core_count = 0;
-#ifndef _WIN32
+#ifdef _WIN32
+        max_core_count = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+#else
         max_core_count = sysconf(_SC_NPROCESSORS_CONF);
+#endif
         if (max_core_count == 0) {
                 fprintf(stderr, "Zero processors in the system!");
                 return MACHINE_RETVAL_ERROR;
         }
-#endif
+
         return machine_init(max_core_count);
 }
 
@@ -1352,17 +1368,16 @@ int main(int argc, char *argv[])
                         }
                 } else if (strcmp(argv[i], "--cores") == 0) {
                         errno = 0;
+#ifdef _WIN32
+                        core_mask = _strtoui64(argv[++i], NULL, 0);
+#else
                         core_mask = strtoull(argv[++i], NULL, 0);
+#endif
                         if (errno != 0) {
                                 fprintf(stderr, "Error converting cpu mask!\n");
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--unhalted-cycles") == 0) {
-#ifdef _WIN32
-                        fprintf(stderr, "Counting unhalted cycles not "
-                                "currently supported on Windows!\n");
-                        return EXIT_FAILURE;
-#endif
                         use_unhalted_cycles = 1;
                 } else {
                         usage();

@@ -34,11 +34,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#else
+#include <windows.h>
+#ifdef WIN_MSR
+#include "OlsDef.h"
+#include "OlsApiInitExt.h"
+#include "OlsApiInit.h"
+#endif /* WIN_MSR */
 #endif
 
 #include "msr.h"
@@ -46,15 +54,68 @@
 static int *m_msr_fd = NULL;           /**< MSR driver file descriptors table */
 static unsigned m_maxcores = 0;        /**< max number of cores (size of the
                                           table above too) */
+#ifdef WIN_MSR
+union msr_data {
+        uint64_t ui64;
+        struct {
+                uint32_t low;
+                uint32_t high;
+        } ui32;
+};
+
+HMODULE hOpenLibSys = NULL;
+
+/**
+ * @brief Initialize WinRing0 driver
+ *
+ * @return Operation status
+ * @retval MACHINE_RETVAL_OK on success
+ */
+static int
+initMSRdriver(void)
+{
+        const BOOL result = InitOpenLibSys(&hOpenLibSys);
+
+        if (result == 0) {
+                hOpenLibSys = NULL;
+                fprintf(stderr, "Failed to load WinRing0 driver!\n");
+                return MACHINE_RETVAL_ERROR;
+        }
+
+        return MACHINE_RETVAL_OK;
+}
+
+/**
+ * @brief Shutdown WinRing0 driver
+ */
+static void
+deInitMSRdriver(void)
+{
+        const BOOL result = DeinitOpenLibSys(&hOpenLibSys);
+
+        if (result == 0)
+                fprintf(stderr, "Error shutting down WinRing0 driver!\n");
+
+        hOpenLibSys = NULL;
+}
+#endif /* WIN_MSR */
 
 int
 machine_init(const unsigned max_core_id)
 {
-#ifndef _WIN32
         unsigned i;
 
         if (max_core_id == 0)
                 return MACHINE_RETVAL_PARAM;
+#ifdef _WIN32
+#ifdef WIN_MSR
+        if (initMSRdriver() != MACHINE_RETVAL_OK)
+                return MACHINE_RETVAL_ERROR;
+#else
+        fprintf(stderr, "WinRing0 driver not available!\n");
+        return MACHINE_RETVAL_ERROR;
+#endif /* WIN_MSR */
+#endif /* _WIN32 */
 
         m_maxcores = max_core_id + 1;
 
@@ -71,19 +132,22 @@ machine_init(const unsigned max_core_id)
 
         for (i = 0; i < m_maxcores; i++)
                 m_msr_fd[i] = -1;
-#endif /* _WIN32 */
+
         return MACHINE_RETVAL_OK;
 }
 
 int
 machine_fini(void)
 {
-#ifndef _WIN32
-        unsigned i;
-
         ASSERT(m_msr_fd != NULL);
         if (m_msr_fd == NULL)
                 return MACHINE_RETVAL_ERROR;
+#ifdef _WIN32
+#ifdef WIN_MSR
+        deInitMSRdriver();
+#endif
+#else
+        unsigned i;
 
         /**
          * Close open file descriptors and free up table memory.
@@ -93,11 +157,11 @@ machine_fini(void)
                         close(m_msr_fd[i]);
                         m_msr_fd[i] = -1;
                 }
-
+#endif /* WIN_MSR */
         free(m_msr_fd);
         m_msr_fd = NULL;
         m_maxcores = 0;
-#endif /* _WIN32 */
+
         return MACHINE_RETVAL_OK;
 }
 
@@ -143,10 +207,12 @@ msr_read(const unsigned lcore,
          uint64_t *value)
 {
         int ret = MACHINE_RETVAL_OK;
-#ifndef _WIN32
-        int fd = -1;
-        ssize_t read_ret = 0;
-
+#ifdef _WIN32
+#ifdef WIN_MSR
+        union msr_data msr;
+        BOOL status;
+#endif
+#endif
         ASSERT(value != NULL);
         if (value == NULL)
                 return MACHINE_RETVAL_PARAM;
@@ -158,6 +224,19 @@ msr_read(const unsigned lcore,
         ASSERT(m_msr_fd != NULL);
         if (m_msr_fd == NULL)
                 return MACHINE_RETVAL_ERROR;
+#ifdef _WIN32
+#ifdef WIN_MSR
+        msr.ui64 = 0;
+        status = RdmsrTx((DWORD)reg, &(msr.ui32.low),
+                         &(msr.ui32.high), (1ULL << lcore));
+        if (status)
+                *value = msr.ui64;
+        else
+                ret = MACHINE_RETVAL_ERROR;
+#endif /* WIN_MSR */
+#else
+        int fd = -1;
+        ssize_t read_ret = 0;
 
         fd = msr_file_open(lcore);
         if (fd < 0)
@@ -165,12 +244,13 @@ msr_read(const unsigned lcore,
 
         read_ret = pread(fd, value, sizeof(value[0]), (off_t)reg);
 
-        if (read_ret != sizeof(value[0])) {
+        if (read_ret != sizeof(value[0]))
+                ret = MACHINE_RETVAL_ERROR;
+#endif /* _WIN32 */
+        if (ret != MACHINE_RETVAL_OK)
                 fprintf(stderr, "RDMSR failed for reg[0x%x] on lcore %u\n",
                         (unsigned)reg, lcore);
-                ret = MACHINE_RETVAL_ERROR;
-        }
-#endif /* _WIN32 */
+
         return ret;
 }
 
@@ -180,10 +260,12 @@ msr_write(const unsigned lcore,
           const uint64_t value)
 {
         int ret = MACHINE_RETVAL_OK;
-#ifndef _WIN32
-        int fd = -1;
-        ssize_t write_ret = 0;
-
+#ifdef _WIN32
+#ifdef WIN_MSR
+        union msr_data msr;
+        BOOL status;
+#endif
+#endif
         ASSERT(lcore < m_maxcores);
         if (lcore >= m_maxcores)
                 return MACHINE_RETVAL_PARAM;
@@ -192,18 +274,31 @@ msr_write(const unsigned lcore,
         if (m_msr_fd == NULL)
                 return MACHINE_RETVAL_ERROR;
 
+#ifdef _WIN32
+#ifdef WIN_MSR
+        msr.ui64 = value;
+        status = WrmsrTx((DWORD)reg, msr.ui32.low,
+                         msr.ui32.high, (1ULL << lcore));
+        if (!status)
+                ret = MACHINE_RETVAL_ERROR;
+#endif /* WIN_MSR */
+#else
+        int fd = -1;
+        ssize_t write_ret = 0;
+
         fd = msr_file_open(lcore);
         if (fd < 0)
                 return MACHINE_RETVAL_ERROR;
 
         write_ret = pwrite(fd, &value, sizeof(value), (off_t)reg);
 
-        if (write_ret != sizeof(value)) {
+        if (write_ret != sizeof(value))
+                ret = MACHINE_RETVAL_ERROR;
+#endif /* _WIN32 */
+        if (ret != MACHINE_RETVAL_OK)
                 fprintf(stderr, "WRMSR failed for reg[0x%x] "
                         "<- value[0x%llx] on lcore %u\n",
                         (unsigned)reg, (unsigned long long)value, lcore);
-                ret = MACHINE_RETVAL_ERROR;
-        }
-#endif /* _WIN32 */
+
         return ret;
 }
