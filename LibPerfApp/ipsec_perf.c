@@ -56,7 +56,10 @@
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
 #define NUM_RUNS 16
 #define KEYS_PER_JOB 15
-#define ITER_SCALE 200000
+
+#define ITER_SCALE_SHORT 200000
+#define ITER_SCALE_LONG  2000000
+
 #define BITS(x) (sizeof(x) * 8)
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 
@@ -272,6 +275,8 @@ uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
 uint64_t core_mask = 0; /* bitmap of selected cores */
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
+
+uint32_t iter_scale = ITER_SCALE_LONG;
 
 /* Those inline functions run different types of ipsec_mb library functions.
  * They run different functions depending on the chosen architecture
@@ -937,7 +942,7 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
         for (sz = 0; sz < sizes; sz++) {
                 const uint32_t size_aes = (sz + 1) * JOB_SIZE_STEP;
-                const uint32_t num_iter = ITER_SCALE / size_aes;
+                const uint32_t num_iter = iter_scale / size_aes;
 
                 params->size_aes = size_aes;
                 if (params->test_type == TTYPE_AES_GCM && (!use_gcm_job_api))
@@ -1306,7 +1311,8 @@ static void usage(void)
                 " Max: %d\n"
                 "--cores mask: <mask> CPU's to run threads\n"
                 "--unhalted-cycles: measure using unhalted cycles (requires root).\n"
-                "                   Note: RDTSC is used by default.\n",
+                "                   Note: RDTSC is used by default.\n"
+                "--quick: reduces number of test iterations by x10 (less precise but quicker)\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -1357,6 +1363,8 @@ int main(int argc, char *argv[])
                         test_types[TTYPE_AES_3DES] = 0;
                 } else if (strcmp(argv[i], "--gcm-job-api") == 0) {
                         use_gcm_job_api = 1;
+                } else if (strcmp(argv[i], "--quick") == 0) {
+                        iter_scale = ITER_SCALE_SHORT;
                 } else if ((strcmp(argv[i], "-o") == 0) && (i < argc - 1)) {
                         i++;
                         sha_size_incr = atoi(argv[i]);
