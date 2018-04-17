@@ -246,9 +246,10 @@ endif
 
 .PHONY: install
 install: $(LIBNAME)
+	install -d $(HDR_DIR)
 	install -m 0644 intel-ipsec-mb.h $(HDR_DIR)
 	install -d $(LIB_INSTALL_DIR)
-	install -m $(LIBPERM) $(LIBNAME) $(LIB_INSTALL_DIR)
+	install -s -m $(LIBPERM) $(LIBNAME) $(LIB_INSTALL_DIR)
 	install -d $(MAN_DIR)
 	install -m 0444 $(MAN1) $(MAN_DIR)
 	install -m 0444 $(MAN2) $(MAN_DIR)

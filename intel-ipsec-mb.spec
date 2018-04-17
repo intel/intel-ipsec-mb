@@ -24,8 +24,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %global githubname   intel-ipsec-mb
-%global githubver    0.46
-%global githubfull   %{githubname}-v%{githubver}
+%global githubver    0.49
+%global githubfull   %{githubname}-%{githubver}
 
 # disable producing debuginfo for this package
 %global debug_package %{nil}
@@ -37,8 +37,9 @@ Version:            %{githubver}
 License:            BSD
 Group:              Development/Tools
 ExclusiveArch:      x86_64
-Source0:            https://github.com/01org/%{githubname}/archive/%{githubname}-v%{githubver}.tar.gz
-URL:                https://github.com/01org/%{githubname}
+Source0:            https://github.com/intel/%{githubname}/archive/v%{githubver}.tar.gz
+URL:                https://github.com/intel/%{githubname}
+BuildRequires:      gcc, make, nasm
 
 %description
 IPSEC cryptography library optimized for Intel Architecture
@@ -54,10 +55,14 @@ ExclusiveArch:      x86_64
 IPSEC cryptography library optimized for Intel Architecture
 
 For additional information please refer to:
-https://github.com/01org/%{githubname}
+https://github.com/intel/%{githubname}
 
 %prep
-%setup -n %{githubfull}
+%autosetup -n %{githubfull}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
 
 %build
 make %{?_smp_mflags}
@@ -67,18 +72,15 @@ install -d %{buildroot}/%{_licensedir}/%{name}-%{version}
 install -m 0644 %{_builddir}/%{githubfull}/LICENSE %{buildroot}/%{_licensedir}/%{name}-%{version}
 
 # Install the library
-install -d %{buildroot}/%{_libdir}
-install -m 0644 -s %{_builddir}/%{githubfull}/libIPSec_MB.a %{buildroot}/%{_libdir}
-
-# Install the header file
+# - include directory not created in the 'install' target - workaround
 install -d %{buildroot}/%{_includedir}
-install -d %{buildroot}/%{_includedir}/%{name}-%{version}
-install -m 0644 %{_builddir}/%{githubfull}/include/types.h %{buildroot}/%{_includedir}/%{name}-%{version}
-install -m 0644 %{_builddir}/%{githubfull}/constants.h %{buildroot}/%{_includedir}/%{name}-%{version}
-install -m 0644 %{_builddir}/%{githubfull}/job_aes_hmac.h %{buildroot}/%{_includedir}/%{name}-%{version}
-install -m 0644 %{_builddir}/%{githubfull}/asm_types.h %{buildroot}/%{_includedir}/%{name}-%{version}
-install -m 0644 %{_builddir}/%{githubfull}/mb_mgr.h %{buildroot}/%{_includedir}/%{name}-%{version}
-install -m 0644 %{_builddir}/%{githubfull}/gcm_defines.h %{buildroot}/%{_includedir}/%{name}-%{version}
+make install -C %{_builddir}/%{githubfull} PREFIX=%{_buildroot} HDR_DIR=%{buildroot}/%{_includedir} LIB_INSTALL_DIR=%{buildroot}/%{_libdir} MAN_DIR=%{buildroot}/%{_mandir}/man7 NOLDCONFIG=y
+# - workaround for no strip option in the 'install target'
+rm -f %{buildroot}/%{_libdir}/libIPSec_MB.so*
+install -s -m 0755 %{_builddir}/%{githubfull}/libIPSec_MB.so.%{version} %{buildroot}/%{_libdir}
+cd %{buildroot}/%{_libdir}
+ln -s libIPSec_MB.so.%{version} libIPSec_MB.so.0
+ln -s libIPSec_MB.so.%{version} libIPSec_MB.so
 
 %files
 
@@ -86,15 +88,20 @@ install -m 0644 %{_builddir}/%{githubfull}/gcm_defines.h %{buildroot}/%{_include
 %license %{_licensedir}/%{name}-%{version}/LICENSE
 %doc README ReleaseNotes.txt
 
+%{_libdir}/libIPSec_MB.so.%{version}
+%{_libdir}/libIPSec_MB.so.0
+%{_libdir}/libIPSec_MB.so
+
+%{_mandir}/man7/libipsec-mb.7.gz
+
 %files -n intel-ipsec-mb-devel
-%{_includedir}/%{name}-%{version}/types.h
-%{_includedir}/%{name}-%{version}/constants.h
-%{_includedir}/%{name}-%{version}/job_aes_hmac.h
-%{_includedir}/%{name}-%{version}/asm_types.h
-%{_includedir}/%{name}-%{version}/gcm_defines.h
-%{_includedir}/%{name}-%{version}/mb_mgr.h
-%{_libdir}/libIPSec_MB.a
+%{_includedir}/intel-ipsec-mb.h
+%{_mandir}/man7/libipsec-mb-dev.7.gz
 
 %changelog
+* Mon Apr 16 2018 Tomasz Kantecki <tomasz.kantecki@intel.com> 0.49-1
+- update for release package v0.49
+- 01org replaced with intel in URL's
+- use of new makefile 'install' target with some workarounds
 * Fri Aug 11 2017 Tomasz Kantecki <tomasz.kantecki@intel.com> 0.46-1
 - initial version of the package
