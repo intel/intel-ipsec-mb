@@ -32,8 +32,37 @@
 %include "reg_sizes.asm"
 
 %ifndef AES_CBC_ENC_X4
+
+section .data
+default rel
+
+MKGLOBAL(len_shift_tab,data,internal)
+MKGLOBAL(len_mask_tab,data,internal)
+
+;;; The following tables must be defined together.
+;;; If modified, dependant module code must also be modified.
+
+;;; Table to shift job length into free lane
+align 16
+len_shift_tab:
+        db 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        db 0xff, 0xff, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        db 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+
+;;; Table to zero free lane before setting job length
+align 16
+len_mask_tab:
+        dw 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+        dw 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+        dw 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+        dw 0xffff, 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff
+
 %define AES_CBC_ENC_X4 aes_cbc_enc_128_x4
 %define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_sse
+%else
+extern len_mask_tab
+extern len_shift_tab
 %endif
 
 ; void AES_CBC_ENC_X4(AES_ARGS_x8 *args, UINT64 len_in_bytes);
@@ -52,6 +81,8 @@ extern AES_CBC_ENC_X4
 %define len2	arg2
 
 %define job_rax          rax
+
+%define len_tab_diff 64 ; size of len_shift_tab
 
 %if 1
 ; idx needs to be in rbp
@@ -100,14 +131,10 @@ SUBMIT_JOB_AES_ENC:
 	mov	unused_lanes, [state + _aes_unused_lanes]
 	movzx	lane, BYTE(unused_lanes)
 	shr	unused_lanes, 8
-	mov	len, [job + _msg_len_to_cipher_in_bytes]
-	and	len, -16		; DOCSIS may pass size unaligned to block size
 	mov	iv, [job + _iv]
 	mov	[state + _aes_unused_lanes], unused_lanes
 
 	mov	[state + _aes_job_in_lane + lane*8], job
-	mov	[state + _aes_lens + 2*lane], WORD(len)
-
 	mov	tmp, [job + _src]
 	add	tmp, [job + _cipher_start_src_offset_in_bytes]
 	movdqu	xmm0, [iv]
@@ -119,11 +146,21 @@ SUBMIT_JOB_AES_ENC:
 	shl	lane, 4	; multiply by 16
 	movdqa	[state + _aes_args_IV + lane], xmm0
 
+        ;; insert len into proper lane
+        mov     len, [job + _msg_len_to_cipher_in_bytes]
+        and     len, -16        ; DOCSIS may pass size unaligned to block size
+        movd    xmm1, DWORD(len)
+        lea     tmp, [rel len_shift_tab]
+        pshufb  xmm1, [tmp + lane]
+        movdqa  xmm0, [state + _aes_lens]
+        pand    xmm0, [tmp + len_tab_diff + lane]
+        por     xmm0, xmm1
+        movdqa  [state + _aes_lens], xmm0
+
 	cmp	unused_lanes, 0xff
 	jne	return_null
 
 	; Find min length
-	movdqa	xmm0, [state + _aes_lens]
 	phminposuw	xmm1, xmm0
 	pextrw	len2, xmm1, 0	; min value
 	pextrw	idx, xmm1, 1	; min index (0...3)
