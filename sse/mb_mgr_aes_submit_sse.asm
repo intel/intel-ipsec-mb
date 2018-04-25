@@ -58,11 +58,14 @@ len_mask_tab:
         dw 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
         dw 0xffff, 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff
 
+;;; Size of len_shift_tab
+;;; If modified, please update equivalent definition in 'const.inc'
+%define len_tab_diff 64
+
 %define AES_CBC_ENC_X4 aes_cbc_enc_128_x4
 %define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_sse
 %else
-extern len_mask_tab
-extern len_shift_tab
+%include "const.inc"
 %endif
 
 ; void AES_CBC_ENC_X4(AES_ARGS_x8 *args, UINT64 len_in_bytes);
@@ -81,8 +84,6 @@ extern AES_CBC_ENC_X4
 %define len2	arg2
 
 %define job_rax          rax
-
-%define len_tab_diff 64 ; size of len_shift_tab
 
 %if 1
 ; idx needs to be in rbp

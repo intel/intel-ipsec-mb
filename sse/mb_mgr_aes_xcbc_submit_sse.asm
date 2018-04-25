@@ -26,6 +26,7 @@
 ;;
 
 %include "os.asm"
+%include "const.inc"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 
@@ -39,14 +40,8 @@
 ; void AES_XCBC_X4(AES_XCBC_ARGS_x8 *args, UINT64 len_in_bytes);
 extern AES_XCBC_X4
 
-;;; Tables used to insert job length into proper lane
-extern len_mask_tab
-extern len_shift_tab
-
 section .data
 default rel
-
-%define len_tab_diff 64 ; size of len_shift_tab
 
 align 16
 x80:            ;ddq 0x00000000000000000000000000000080
