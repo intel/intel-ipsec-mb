@@ -39,8 +39,14 @@
 ; void AES_XCBC_X4(AES_XCBC_ARGS_x8 *args, UINT64 len_in_bytes);
 extern AES_XCBC_X4
 
+;;; Tables used to insert job length into proper lane
+extern len_mask_tab
+extern len_shift_tab
+
 section .data
 default rel
+
+%define len_tab_diff 64 ; size of len_shift_tab
 
 align 16
 x80:            ;ddq 0x00000000000000000000000000000080
@@ -143,19 +149,24 @@ fast_copy:
 	movdqa	[lane_data + _xcbc_final_block], xmm0
 	sub	len, 16		; take last block off length
 end_fast_copy:
-
-	mov	[state + _aes_xcbc_lens + 2*lane], WORD(len)
-
 	pxor	xmm0, xmm0
 	shl	lane, 4	; multiply by 16
 	movdqa	[state + _aes_xcbc_args_ICV + lane], xmm0
+
+        ;; insert len into proper lane
+        movd    xmm1, DWORD(len)
+        lea     tmp, [rel len_shift_tab]
+        pshufb  xmm1, [tmp + lane]
+        movdqa  xmm0, [state + _aes_xcbc_lens]
+        pand    xmm0, [tmp + len_tab_diff + lane]
+        por     xmm0, xmm1
+        movdqa  [state + _aes_xcbc_lens], xmm0
 
 	cmp	unused_lanes, 0xff
 	jne	return_null
 
 start_loop:
 	; Find min length
-	movdqa	xmm0, [state + _aes_xcbc_lens]
 	phminposuw	xmm1, xmm0
 	pextrw	len2, xmm1, 0	; min value
 	pextrw	idx, xmm1, 1	; min index (0...3)
@@ -182,6 +193,7 @@ len_is_0:
 	mov	word [state + _aes_xcbc_lens + 2*idx], 16
 	lea	tmp, [lane_data + _xcbc_final_block]
 	mov	[state + _aes_xcbc_args_in + 8*idx], tmp
+        movdqa	xmm0, [state + _aes_xcbc_lens]
 	jmp	start_loop
 
 end_loop:
