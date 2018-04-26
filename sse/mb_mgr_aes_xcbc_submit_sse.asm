@@ -149,12 +149,8 @@ end_fast_copy:
 	movdqa	[state + _aes_xcbc_args_ICV + lane], xmm0
 
         ;; insert len into proper lane
-        movd    xmm1, DWORD(len)
-        lea     tmp, [rel len_shift_tab]
-        pshufb  xmm1, [tmp + lane]
         movdqa  xmm0, [state + _aes_xcbc_lens]
-        pand    xmm0, [tmp + len_tab_diff + lane]
-        por     xmm0, xmm1
+        XPINSRW xmm0, xmm1, tmp, lane, len, 1
         movdqa  [state + _aes_xcbc_lens], xmm0
 
 	cmp	unused_lanes, 0xff

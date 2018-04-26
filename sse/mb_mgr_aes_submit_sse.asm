@@ -62,6 +62,29 @@ len_mask_tab:
 ;;; If modified, please update equivalent definition in 'const.inc'
 %define len_tab_diff 64
 
+; XPINSRW insert word into XMM register
+%macro XPINSRW 6
+
+%define %%dest     %1 ; dest XMM reg to insert word
+%define %%tmp_simd %2 ; XMM reg to clobber
+%define %%tmp_gp   %3 ; GP reg to clobber
+%define %%idx      %4 ; word index to insert value into XMM
+%define %%val      %5 ; word value to insert into idx
+%define %%scaled   %6 ; flag to set if index is already scaled
+
+%ifnidn %%scaled, 1
+        shl     %%idx, 4     ; scale idx up x16
+%endif
+        movd    %%tmp_simd, DWORD(%%val)
+        lea     %%tmp_gp, [rel len_shift_tab]
+        pshufb  %%tmp_simd, [%%tmp_gp + %%idx]
+        pand    %%dest, [%%tmp_gp + len_tab_diff + %%idx]
+        por     %%dest, %%tmp_simd
+%ifnidn %%scaled, 1
+        shr     %%idx, 4     ; reset idx
+%endif
+%endmacro
+
 %define AES_CBC_ENC_X4 aes_cbc_enc_128_x4
 %define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_sse
 %else
@@ -150,12 +173,9 @@ SUBMIT_JOB_AES_ENC:
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_cipher_in_bytes]
         and     len, -16        ; DOCSIS may pass size unaligned to block size
-        movd    xmm1, DWORD(len)
-        lea     tmp, [rel len_shift_tab]
-        pshufb  xmm1, [tmp + lane]
+
         movdqa  xmm0, [state + _aes_lens]
-        pand    xmm0, [tmp + len_tab_diff + lane]
-        por     xmm0, xmm1
+        XPINSRW xmm0, xmm1, tmp, lane, len, 1
         movdqa  [state + _aes_lens], xmm0
 
 	cmp	unused_lanes, 0xff

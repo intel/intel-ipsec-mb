@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2018, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -37,4 +37,27 @@ extern len_mask_tab
 ;;; definition in 'mb_mgr_aes_submit_sse.asm'
 %define len_tab_diff 64
 
-%endif ; end ifdef _CONST_INC_
+; XPINSRW insert word into XMM register
+%macro XPINSRW 6
+
+%define %%dest     %1 ; dest XMM reg to insert word
+%define %%tmp_simd %2 ; XMM reg to clobber
+%define %%tmp_gp   %3 ; GP reg to clobber
+%define %%idx      %4 ; word index to insert value into XMM
+%define %%val      %5 ; word value to insert into idx
+%define %%scaled   %6 ; flag to set if index is already scaled
+
+%ifnidn %%scaled, 1
+        shl     %%idx, 4     ; scale idx up x16
+%endif
+        movd    %%tmp_simd, DWORD(%%val)
+        lea     %%tmp_gp, [rel len_shift_tab]
+        pshufb  %%tmp_simd, [%%tmp_gp + %%idx]
+        pand    %%dest, [%%tmp_gp + len_tab_diff + %%idx]
+        por     %%dest, %%tmp_simd
+%ifnidn %%scaled, 1
+        shr     %%idx, 4     ; reset idx
+%endif
+%endmacro
+
+%endif ; end ifndef _CONST_INC_
