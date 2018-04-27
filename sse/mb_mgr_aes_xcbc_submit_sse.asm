@@ -150,7 +150,7 @@ end_fast_copy:
 
         ;; insert len into proper lane
         movdqa  xmm0, [state + _aes_xcbc_lens]
-        XPINSRW xmm0, xmm1, tmp, lane, len, 1
+        XPINSRW xmm0, xmm1, tmp, lane, len, no_scale
         movdqa  [state + _aes_xcbc_lens], xmm0
 
 	cmp	unused_lanes, 0xff

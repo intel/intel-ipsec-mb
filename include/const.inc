@@ -40,22 +40,29 @@ extern len_mask_tab
 ; XPINSRW insert word into XMM register
 %macro XPINSRW 6
 
-%define %%dest     %1 ; dest XMM reg to insert word
-%define %%tmp_simd %2 ; XMM reg to clobber
-%define %%tmp_gp   %3 ; GP reg to clobber
-%define %%idx      %4 ; word index to insert value into XMM
-%define %%val      %5 ; word value to insert into idx
-%define %%scaled   %6 ; flag to set if index is already scaled
+%define %%dest          %1 ; dest XMM reg to insert word
+%define %%tmp_simd      %2 ; XMM reg to clobber
+%define %%tmp_gp        %3 ; GP reg to clobber
+%define %%idx           %4 ; word index to insert value into XMM
+%define %%val           %5 ; word value to insert into idx
+%define %%scale_idx     %6 ; flag to set if index is to be scaled x16
 
-%ifnidn %%scaled, 1
+%ifidn  %%scale_idx, scale_x16
         shl     %%idx, 4     ; scale idx up x16
 %endif
+%ifnum  %%val
+        ;; immediate value passed on
+        mov     DWORD(%%tmp_gp), %%val
+        movd    %%tmp_simd, DWORD(%%tmp_gp)
+%else
+        ;; register name passed on
         movd    %%tmp_simd, DWORD(%%val)
+%endif
         lea     %%tmp_gp, [rel len_shift_tab]
         pshufb  %%tmp_simd, [%%tmp_gp + %%idx]
         pand    %%dest, [%%tmp_gp + len_tab_diff + %%idx]
         por     %%dest, %%tmp_simd
-%ifnidn %%scaled, 1
+%ifidn  %%scale_idx, scale_x16
         shr     %%idx, 4     ; reset idx
 %endif
 %endmacro

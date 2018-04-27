@@ -30,6 +30,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "reg_sizes.asm"
 %include "memcpy.asm"
+%include "const.inc"
 
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
@@ -128,7 +129,10 @@ submit_job_hmac_sse:
 
         mov	[lane_data + _job_in_lane], job
         mov	dword [lane_data + _outer_done], 0
-        mov	[state + _lens + 2*lane], WORD(tmp)
+
+        movdqa  xmm0, [state + _lens]
+        XPINSRW xmm0, xmm1, p, lane, tmp, scale_x16
+        movdqa  [state + _lens], xmm0
 
         mov	last_len, len
         and	last_len, 63
@@ -180,7 +184,10 @@ end_fast_copy:
         jnz	ge64_bytes
 
 lt64_bytes:
-        mov	[state + _lens + 2*lane], WORD(extra_blocks)
+        movdqa  xmm0, [state + _lens]
+        XPINSRW xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
+        movdqa  [state + _lens], xmm0
+
         lea	tmp, [lane_data + _extra_block + start_offset]
         mov	[state + _args_data_ptr + PTR_SZ*lane], tmp
         mov	dword [lane_data + _extra_blocks], 0
@@ -188,12 +195,12 @@ lt64_bytes:
 ge64_bytes:
         cmp	unused_lanes, 0xff
         jne	return_null
+        movdqa  xmm0, [state + _lens]
         jmp	start_loop
 
         align	16
 start_loop:
         ; Find min length
-        movdqa	xmm0, [state + _lens]
         phminposuw	xmm1, xmm0
         pextrw	len2, xmm1, 0	; min value
         pextrw	idx, xmm1, 1	; min index (0...3)
@@ -223,7 +230,11 @@ proc_outer:
         mov	dword [lane_data + _outer_done], 1
         mov	DWORD(size_offset), [lane_data + _size_offset]
         mov	qword [lane_data + _extra_block + size_offset], 0
-        mov	word [state + _lens + 2*idx], 1
+
+        movdqa  xmm1, [state + _lens]
+        XPINSRW xmm1, xmm2, tmp, idx, 1, scale_x16
+        movdqa  [state + _lens], xmm1
+
         lea	tmp, [lane_data + _outer_block]
         mov	job, [lane_data + _job_in_lane]
         mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
@@ -246,12 +257,17 @@ proc_outer:
         pextrd	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE], xmm0, 2
         pextrd	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE], xmm0, 3
         mov	[state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], DWORD(tmp)
+        movdqa  xmm0, xmm1
         jmp	start_loop
 
         align	16
 proc_extra_blocks:
         mov	DWORD(start_offset), [lane_data + _start_offset]
-        mov	[state + _lens + 2*idx], WORD(extra_blocks)
+
+        movdqa  xmm0, [state + _lens]
+        XPINSRW xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
+        movdqa  [state + _lens], xmm0
+
         lea	tmp, [lane_data + _extra_block + start_offset]
         mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
         mov	dword [lane_data + _extra_blocks], 0
