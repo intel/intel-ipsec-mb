@@ -28,14 +28,12 @@
 %ifndef _CONST_INC_
 %define _CONST_INC_
 
-;;; Tables used to insert job length into proper lane
+;;; Tables used to insert word into a SIMD register
 extern len_shift_tab
 extern len_mask_tab
 
-;;; Size of len_shift_tab
-;;; If modified, please update equivalent
-;;; definition in 'mb_mgr_aes_submit_sse.asm'
-%define len_tab_diff 64
+;;; Size of len_shift_tab defined in const.asm module
+%define len_tab_diff 128
 
 ; XPINSRW insert word into XMM register
 %macro XPINSRW 6
