@@ -30,72 +30,13 @@
 %include "mb_mgr_datastruct.asm"
 
 %include "reg_sizes.asm"
+%include "const.inc"
 
 %ifndef AES_CBC_ENC_X4
 
-section .data
-default rel
-
-MKGLOBAL(len_shift_tab,data,internal)
-MKGLOBAL(len_mask_tab,data,internal)
-
-;;; The following tables must be defined together.
-;;; If modified, dependant module code must also be modified.
-
-;;; Table to shift job length into free lane
-align 16
-len_shift_tab:
-        db 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        db 0xff, 0xff, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        db 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
-
-;;; Table to zero free lane before setting job length
-align 16
-len_mask_tab:
-        dw 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
-        dw 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
-        dw 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
-        dw 0xffff, 0xffff, 0xffff, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff
-
-;;; Size of len_shift_tab
-;;; If modified, please update equivalent definition in 'const.inc'
-%define len_tab_diff 64
-
-; XPINSRW insert word into XMM register
-%macro XPINSRW 6
-
-%define %%dest          %1 ; dest XMM reg to insert word
-%define %%tmp_simd      %2 ; XMM reg to clobber
-%define %%tmp_gp        %3 ; GP reg to clobber
-%define %%idx           %4 ; word index to insert value into XMM
-%define %%val           %5 ; word value to insert into idx
-%define %%scale_idx     %6 ; flag to set if index is to be scaled x16
-
-%ifidn  %%scale_idx, scale_x16
-        shl     %%idx, 4     ; scale idx up x16
-%endif
-%ifnum  %%val
-        ;; immediate value passed on
-        mov     DWORD(%%tmp_gp), %%val
-        movd    %%tmp_simd, DWORD(%%tmp_gp)
-%else
-        ;; register name passed on
-        movd    %%tmp_simd, DWORD(%%val)
-%endif
-        lea     %%tmp_gp, [rel len_shift_tab]
-        pshufb  %%tmp_simd, [%%tmp_gp + %%idx]
-        pand    %%dest, [%%tmp_gp + len_tab_diff + %%idx]
-        por     %%dest, %%tmp_simd
-%ifidn  %%scale_idx, scale_x16
-        shr     %%idx, 4     ; reset idx
-%endif
-%endmacro
-
 %define AES_CBC_ENC_X4 aes_cbc_enc_128_x4
 %define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_sse
-%else
-%include "const.inc"
+
 %endif
 
 ; void AES_CBC_ENC_X4(AES_ARGS_x8 *args, UINT64 len_in_bytes);

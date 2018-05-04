@@ -220,7 +220,8 @@ lib_objs := \
 	md5_one_block.o \
 	des_key.o \
 	des_basic.o \
-	des_x16_avx512.o
+	des_x16_avx512.o \
+	const.o
 
 gcm_objs := gcm128_sse.o gcm192_sse.o gcm256_sse.o \
 	gcm128_avx_gen2.o gcm192_avx_gen2.o gcm256_avx_gen2.o \
