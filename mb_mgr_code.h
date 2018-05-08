@@ -1262,7 +1262,22 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 __forceinline int
 is_job_invalid(const JOB_AES_HMAC *job)
 {
-        const uint64_t auth_tag_len_max[] = {
+        const uint64_t auth_tag_len_fips[] = {
+                0,  /* INVALID selection */
+                20, /* SHA1 */
+                14, /* SHA_224 - @todo 28 */
+                16, /* SHA_256 - @todo 32 */
+                24, /* SHA_384 - @todo 48 */
+                32, /* SHA_512 - @todo 64 */
+                12, /* AES_XCBC */
+                12, /* MD5 */
+                0,  /* NULL_HASH */
+                16, /* AES_GMAC */
+                0,  /* CUSTOM HASH */
+                0,  /* AES_CCM */
+                16, /* AES_CMAC */
+        };
+        const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
                 12, /* SHA1 */
                 14, /* SHA_224 */
@@ -1546,7 +1561,9 @@ is_job_invalid(const JOB_AES_HMAC *job)
         case SHA_384:
         case SHA_512:
                 if (job->auth_tag_output_len_in_bytes !=
-                    auth_tag_len_max[job->hash_alg]) {
+                    auth_tag_len_ipsec[job->hash_alg] &&
+                    job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_fips[job->hash_alg]) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }

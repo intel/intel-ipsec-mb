@@ -296,13 +296,24 @@ end_loop:
 	; copy 12 bytes
 	mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
 	mov	DWORD(tmp4), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp3), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE]
+	mov	DWORD(r12), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE]
 	bswap	DWORD(tmp2)
 	bswap	DWORD(tmp4)
-	bswap	DWORD(tmp3)
+	bswap	DWORD(r12)
 	mov	[p + 0*4], DWORD(tmp2)
 	mov	[p + 1*4], DWORD(tmp4)
-	mov	[p + 2*4], DWORD(tmp3)
+	mov	[p + 2*4], DWORD(r12)
+
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
+        je      return
+
+        ;; copy remaining 8 bytes to return 20 byte digest
+        mov	DWORD(r13), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE]
+        mov	DWORD(r14), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE]
+        bswap	DWORD(r13)
+        bswap	DWORD(r14)
+        mov	[p + 3*SHA1_DIGEST_WORD_SIZE], DWORD(r13)
+        mov	[p + 4*SHA1_DIGEST_WORD_SIZE], DWORD(r14)
 
 return:
         DBGPRINTL "---------- exit hmac flush avx512 -----------"

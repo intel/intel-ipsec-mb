@@ -229,13 +229,24 @@ end_loop:
 	; copy 12 bytes
 	mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
 	mov	DWORD(tmp4), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
-	mov	DWORD(tmp3), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE]
 	bswap	DWORD(tmp2)
 	bswap	DWORD(tmp4)
-	bswap	DWORD(tmp3)
 	mov	[p + 0*4], DWORD(tmp2)
 	mov	[p + 1*4], DWORD(tmp4)
-	mov	[p + 2*4], DWORD(tmp3)
+	mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE]
+	bswap	DWORD(tmp2)
+	mov	[p + 2*4], DWORD(tmp2)
+
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
+        je      return
+
+        ;; copy remaining 8 bytes to return 20 byte digest
+        mov	DWORD(tmp2),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE]
+        mov	DWORD(tmp4), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE]
+        bswap	DWORD(tmp2)
+        bswap	DWORD(tmp4)
+        mov	[p + 3*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
+        mov	[p + 4*SHA1_DIGEST_WORD_SIZE], DWORD(tmp4)
 
 return:
 

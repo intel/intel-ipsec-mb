@@ -287,6 +287,8 @@ end_loop:
 
         mov	p, [job_rax + _auth_tag_output]
 
+        vzeroupper
+
         ; copy 12 bytes
         mov	DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
         mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
@@ -297,7 +299,18 @@ end_loop:
         mov	[p + 0*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
         mov	[p + 1*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
         mov	[p + 2*SHA1_DIGEST_WORD_SIZE], DWORD(tmp3)
-        vzeroupper
+
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
+        je      return
+
+        ;; copy remaining 8 bytes to return 20 byte digest
+        mov	DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE]
+        mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE]
+        bswap	DWORD(tmp)
+        bswap	DWORD(tmp2)
+        mov	[p + 3*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
+        mov	[p + 4*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
+
 return:
         DBGPRINTL "---------- exit sha1 submit -----------"
         mov	rbp, [rsp + _gpr_save + 8*0]
