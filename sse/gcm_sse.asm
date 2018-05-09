@@ -114,6 +114,7 @@
 %include "os.asm"
 %include "reg_sizes.asm"
 %include "gcm_defines.asm"
+%include "memcpy.asm"
 
 %ifndef GCM128_MODE
 %ifndef GCM192_MODE
@@ -1881,6 +1882,11 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         cmp     r11, 12
         je      %%_T_12
 
+        cmp     r11, 8
+        je      %%_T_8
+
+        simd_store_sse r10, xmm9, r11, r12, rax
+        jmp     %%_return_T_done
 %%_T_8:
         movq    rax, xmm9
         mov     [r10], rax
@@ -1892,7 +1898,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         movd    eax, xmm9
         mov     [r10 + 8], eax
         jmp     %%_return_T_done
-
 %%_T_16:
         movdqu  [r10], xmm9
 
