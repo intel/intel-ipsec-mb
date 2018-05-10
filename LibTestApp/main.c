@@ -38,6 +38,8 @@ extern int des_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int ccm_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int cmac_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int hmac_sha1_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+extern int hmac_sha256_sha512_test(const enum arch_type arch,
+                                   struct MB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -101,6 +103,7 @@ main(int argc, char **argv)
                 ccm_test(ARCH_SSE, p_mgr);
                 cmac_test(ARCH_SSE, p_mgr);
                 hmac_sha1_test(ARCH_SSE, p_mgr);
+                hmac_sha256_sha512_test(ARCH_SSE, p_mgr);
         }
 
         if (do_avx) {
@@ -115,6 +118,7 @@ main(int argc, char **argv)
                 ccm_test(ARCH_AVX, p_mgr);
                 cmac_test(ARCH_AVX, p_mgr);
                 hmac_sha1_test(ARCH_AVX, p_mgr);
+                hmac_sha256_sha512_test(ARCH_AVX, p_mgr);
         }
 
         if (do_avx2) {
@@ -129,6 +133,7 @@ main(int argc, char **argv)
                 ccm_test(ARCH_AVX2, p_mgr);
                 cmac_test(ARCH_AVX2, p_mgr);
                 hmac_sha1_test(ARCH_AVX2, p_mgr);
+                hmac_sha256_sha512_test(ARCH_AVX2, p_mgr);
         }
 
         if (do_avx512) {
@@ -143,6 +148,7 @@ main(int argc, char **argv)
                 ccm_test(ARCH_AVX512, p_mgr);
                 cmac_test(ARCH_AVX512, p_mgr);
                 hmac_sha1_test(ARCH_AVX512, p_mgr);
+                hmac_sha256_sha512_test(ARCH_AVX512, p_mgr);
         }
 
         free_mb_mgr(p_mgr);

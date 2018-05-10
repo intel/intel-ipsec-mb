@@ -231,7 +231,15 @@ end_loop:
 
 	mov	p, [job_rax + _auth_tag_output]
 
-	; below is the code for both SHA512 & SHA384. SHA512=32 bytes and SHA384=24 bytes
+%if (SHA_X_DIGEST_SIZE != 384)
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 32
+        jne     copy_full_digest
+%else
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 24
+        jne     copy_full_digest
+%endif
+
+	;; copy 32 bytes for SHA512 / 24 bytes for SHA384
 	mov	QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
 	mov	QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE]
 	mov	QWORD(tmp6), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
@@ -249,6 +257,41 @@ end_loop:
 	mov	[p + 2*8], QWORD(tmp6)
 %if (SHA_X_DIGEST_SIZE != 384)
 	mov	[p + 3*8], QWORD(tmp5)
+%endif
+        jmp     return
+
+copy_full_digest:
+	;; copy 64 bytes for SHA512 / 48 bytes for SHA384
+	mov	QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 0*SHA512_DIGEST_ROW_SIZE]
+	mov	QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 1*SHA512_DIGEST_ROW_SIZE]
+	mov	QWORD(tmp6), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 2*SHA512_DIGEST_ROW_SIZE]
+	mov	QWORD(tmp5), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 3*SHA512_DIGEST_ROW_SIZE]
+	bswap	QWORD(tmp2)
+	bswap	QWORD(tmp4)
+	bswap	QWORD(tmp6)
+	bswap	QWORD(tmp5)
+	mov	[p + 0*8], QWORD(tmp2)
+	mov	[p + 1*8], QWORD(tmp4)
+	mov	[p + 2*8], QWORD(tmp6)
+	mov	[p + 3*8], QWORD(tmp5)
+
+	mov	QWORD(tmp2), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 4*SHA512_DIGEST_ROW_SIZE]
+	mov	QWORD(tmp4), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 5*SHA512_DIGEST_ROW_SIZE]
+%if (SHA_X_DIGEST_SIZE != 384)
+	mov	QWORD(tmp6), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 6*SHA512_DIGEST_ROW_SIZE]
+	mov	QWORD(tmp5), [state + _args_digest_sha512 + SHA512_DIGEST_WORD_SIZE*idx + 7*SHA512_DIGEST_ROW_SIZE]
+%endif
+	bswap	QWORD(tmp2)
+	bswap	QWORD(tmp4)
+%if (SHA_X_DIGEST_SIZE != 384)
+	bswap	QWORD(tmp6)
+	bswap	QWORD(tmp5)
+%endif
+	mov	[p + 4*8], QWORD(tmp2)
+	mov	[p + 5*8], QWORD(tmp4)
+%if (SHA_X_DIGEST_SIZE != 384)
+	mov	[p + 6*8], QWORD(tmp6)
+	mov	[p + 7*8], QWORD(tmp5)
 %endif
 
 return:

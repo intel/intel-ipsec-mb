@@ -54,7 +54,8 @@ else
 CFLAGS += -O3
 endif
 
-SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c cmac_test.c utils.c hmac_sha1_test.c
+SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
+	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c
 OBJECTS := $(SOURCES:%.c=%.o)
 
 all: $(APP)
@@ -69,6 +70,7 @@ des_test.o: des_test.c
 ccm_test.o: ccm_test.c utils.h
 cmac_test.o: cmac_test.c utils.h
 hmac_sha1_test.o: hmac_sha1_test.c utils.h
+hmac_sha256_sha512_test.o: hmac_sha256_sha512_test.c utils.h
 customop_test.o: customop_test.c customop_test.h
 utils.o: utils.c utils.h
 

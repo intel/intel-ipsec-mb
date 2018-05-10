@@ -1268,10 +1268,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
         const uint64_t auth_tag_len_fips[] = {
                 0,  /* INVALID selection */
                 20, /* SHA1 */
-                14, /* SHA_224 - @todo 28 */
-                16, /* SHA_256 - @todo 32 */
-                24, /* SHA_384 - @todo 48 */
-                32, /* SHA_512 - @todo 64 */
+                28, /* SHA_224 */
+                32, /* SHA_256 */
+                48, /* SHA_384 */
+                64, /* SHA_512 */
                 12, /* AES_XCBC */
                 12, /* MD5 */
                 0,  /* NULL_HASH */

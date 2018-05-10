@@ -320,6 +320,15 @@ end_loop:
 %error "Below code has been optimized for SHA256NI_DIGEST_ROW_SIZE = 32!"
 %endif
 	shl	idx, 5
+
+%ifdef SHA224
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 14
+        jne     copy_full_digest
+%else
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 16
+        jne     copy_full_digest
+%endif
+
 	movdqu	xmm0,  [state + _args_digest_sha256 + idx]
 	pshufb	xmm0, bswap_xmm4
 %ifdef SHA224
@@ -330,6 +339,23 @@ end_loop:
 %else
 	;; SHA256
 	movdqu	[p], xmm0
+%endif
+        jmp     return
+
+copy_full_digest:
+	movdqu	xmm0,  [state + _args_digest_sha256 + idx]
+	movdqu	xmm1,  [state + _args_digest_sha256 + idx + 16]
+	pshufb	xmm0, bswap_xmm4
+	pshufb	xmm1, bswap_xmm4
+%ifdef SHA224
+	;; SHA224
+	movdqu	[p], xmm0
+	movq	[p + 16], xmm1
+	pextrd	[p + 16 + 8], xmm1, 2
+%else
+	;; SHA256
+	movdqu	[p], xmm0
+	movdqu	[p + 16], xmm1
 %endif
 
 return:

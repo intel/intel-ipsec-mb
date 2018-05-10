@@ -309,12 +309,19 @@ end_loop:
 
 	mov	p, [job_rax + _auth_tag_output]
 
-	; copy SHA224=14bytes and SHA256=16bytes
+%ifdef SHA224
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 14
+        jne     copy_full_digest
+%else
+        cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 16
+        jne     copy_full_digest
+%endif
+
+	;; copy SHA224 14 bytes / SHA256 16 bytes
 	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
 	mov	DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE]
 	mov	DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE]
 	mov	DWORD(tmp5), [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE]
-
 	bswap	DWORD(tmp)
 	bswap	DWORD(tmp2)
 	bswap	DWORD(tmp4)
@@ -326,6 +333,41 @@ end_loop:
 	mov	[p + 3*4], WORD(tmp5)
 %else
 	mov	[p + 3*4], DWORD(tmp5)
+%endif
+        jmp     return
+
+copy_full_digest:
+	;; copy SHA224 28 bytes / SHA256 32 bytes
+	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
+	mov	DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 1*SHA256_DIGEST_ROW_SIZE]
+	mov	DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 2*SHA256_DIGEST_ROW_SIZE]
+	mov	DWORD(tmp5), [state + _args_digest_sha256 + 4*idx + 3*SHA256_DIGEST_ROW_SIZE]
+	bswap	DWORD(tmp)
+	bswap	DWORD(tmp2)
+	bswap	DWORD(tmp4)
+	bswap	DWORD(tmp5)
+	mov	[p + 0*4], DWORD(tmp)
+	mov	[p + 1*4], DWORD(tmp2)
+	mov	[p + 2*4], DWORD(tmp4)
+	mov	[p + 3*4], DWORD(tmp5)
+
+	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 4*SHA256_DIGEST_ROW_SIZE]
+	mov	DWORD(tmp2), [state + _args_digest_sha256 + 4*idx + 5*SHA256_DIGEST_ROW_SIZE]
+	mov	DWORD(tmp4), [state + _args_digest_sha256 + 4*idx + 6*SHA256_DIGEST_ROW_SIZE]
+%ifndef SHA224
+	mov	DWORD(tmp5), [state + _args_digest_sha256 + 4*idx + 7*SHA256_DIGEST_ROW_SIZE]
+%endif
+	bswap	DWORD(tmp)
+	bswap	DWORD(tmp2)
+	bswap	DWORD(tmp4)
+%ifndef SHA224
+	bswap	DWORD(tmp5)
+%endif
+	mov	[p + 4*4], DWORD(tmp)
+	mov	[p + 5*4], DWORD(tmp2)
+	mov	[p + 6*4], DWORD(tmp4)
+%ifndef SHA224
+	mov	[p + 7*4], DWORD(tmp5)
 %endif
 
 return:
