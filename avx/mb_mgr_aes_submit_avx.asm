@@ -30,6 +30,7 @@
 %include "mb_mgr_datastruct.asm"
 
 %include "reg_sizes.asm"
+%include "const.inc"
 
 %ifndef AES_CBC_ENC_X8
 %define AES_CBC_ENC_X8 aes_cbc_enc_128_x8
@@ -115,7 +116,10 @@ SUBMIT_JOB_AES_ENC:
 	mov	[state + _aes_unused_lanes], unused_lanes
 
 	mov	[state + _aes_job_in_lane + lane*8], job
-	mov	[state + _aes_lens + 2*lane], WORD(len)
+
+        vmovdqa xmm0, [state + _aes_lens]
+        XVPINSRW xmm0, xmm1, tmp, lane, len, scale_x16
+        vmovdqa [state + _aes_lens], xmm0
 
 	mov	tmp, [job + _src]
 	add	tmp, [job + _cipher_start_src_offset_in_bytes]

@@ -40,7 +40,9 @@ MKGLOBAL(len_mask_tab,data,internal)
 
 ;;; Table used to shuffle word to correct index
 ;;; Used by macros:
-;;;     XPINSRW
+;;;    - PINSRW_COMMON
+;;;    - XPINSRW
+;;;    - XVPINSRW
 align 16
 len_shift_tab:
         db 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

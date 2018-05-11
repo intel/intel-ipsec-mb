@@ -35,15 +35,16 @@ extern len_mask_tab
 ;;; Size of len_shift_tab defined in const.asm module
 %define len_tab_diff 128
 
-; XPINSRW insert word into XMM register
-%macro XPINSRW 6
+; PINSRW_COMMON insert word into SIMD register
+%macro PINSRW_COMMON 7
 
-%define %%dest          %1 ; dest XMM reg to insert word
-%define %%tmp_simd      %2 ; XMM reg to clobber
-%define %%tmp_gp        %3 ; GP reg to clobber
-%define %%idx           %4 ; word index to insert value into XMM
-%define %%val           %5 ; word value to insert into idx
-%define %%scale_idx     %6 ; flag to set if index is to be scaled x16
+%define %%type          %1 ; instruction type - sse or avx
+%define %%dest          %2 ; dest XMM reg to insert word
+%define %%tmp_simd      %3 ; XMM reg to clobber
+%define %%tmp_gp        %4 ; GP reg to clobber
+%define %%idx           %5 ; word index to insert value into XMM
+%define %%val           %6 ; word value to insert into idx
+%define %%scale_idx     %7 ; flag to set if index is to be scaled x16
 
 %ifidn  %%scale_idx, scale_x16
         shl     %%idx, 4     ; scale idx up x16
@@ -57,12 +58,25 @@ extern len_mask_tab
         movd    %%tmp_simd, DWORD(%%val)
 %endif
         lea     %%tmp_gp, [rel len_shift_tab]
+        ;; check type - SSE or AVX
+%ifidn  %%type, sse
         pshufb  %%tmp_simd, [%%tmp_gp + %%idx]
         pand    %%dest, [%%tmp_gp + len_tab_diff + %%idx]
         por     %%dest, %%tmp_simd
+%else
+        vpshufb %%tmp_simd, [%%tmp_gp + %%idx]
+        vpand   %%dest, [%%tmp_gp + len_tab_diff + %%idx]
+        vpor    %%dest, %%tmp_simd
+%endif
 %ifidn  %%scale_idx, scale_x16
         shr     %%idx, 4     ; reset idx
 %endif
 %endmacro
+
+;;; Call SSE macro
+%define XPINSRW PINSRW_COMMON sse,
+
+;;; Call AVX macro
+%define XVPINSRW PINSRW_COMMON avx,
 
 %endif ; end ifndef _CONST_INC_

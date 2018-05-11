@@ -32,6 +32,7 @@
 %include "reg_sizes.asm"
 
 %include "memcpy.asm"
+%include "const.inc"
 
 %ifndef AES_XCBC_X8
 %define AES_XCBC_X8 aes_xcbc_mac_128_x8
@@ -149,19 +150,19 @@ fast_copy:
 	vmovdqa	[lane_data + _xcbc_final_block], xmm0
 	sub	len, 16		; take last block off length
 end_fast_copy:
-
-	mov	[state + _aes_xcbc_lens + 2*lane], WORD(len)
-
 	vpxor	xmm0, xmm0, xmm0
 	shl	lane, 4	; multiply by 16
 	vmovdqa	[state + _aes_xcbc_args_ICV + lane], xmm0
+
+        vmovdqa xmm0, [state + _aes_xcbc_lens]
+        XVPINSRW xmm0, xmm1, tmp, lane, len, no_scale
+        vmovdqa [state + _aes_xcbc_lens], xmm0
 
 	cmp	unused_lanes, 0xf
 	jne	return_null
 
 start_loop:
 	; Find min length
-	vmovdqa	xmm0, [state + _aes_xcbc_lens]
 	vphminposuw	xmm1, xmm0
 	vpextrw	DWORD(len2), xmm1, 0	; min value
 	vpextrw	DWORD(idx), xmm1, 1	; min index (0...7)
@@ -185,7 +186,11 @@ len_is_0:
 	jne	end_loop
 
 	mov	dword [lane_data + _xcbc_final_done], 1
-	mov	word [state + _aes_xcbc_lens + 2*idx], 16
+
+        vmovdqa xmm0, [state + _aes_xcbc_lens]
+        XVPINSRW xmm0, xmm1, tmp, idx, 16, scale_x16
+        vmovdqa [state + _aes_xcbc_lens], xmm0
+
 	lea	tmp, [lane_data + _xcbc_final_block]
 	mov	[state + _aes_xcbc_args_in + 8*idx], tmp
 	jmp	start_loop
