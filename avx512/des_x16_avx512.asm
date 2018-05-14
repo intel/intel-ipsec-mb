@@ -940,7 +940,8 @@ endstruc
 ;;; IV0   [out] - r512; initialization vector
 ;;; IV1   [out] - r512; initialization vector
 ;;; T0-T27 [clobbered] - temporary r512
-%macro DES3_INIT 35
+;;; DIR   [in] - ENC/DEC (keys arranged in different order for enc/dec)
+%macro DES3_INIT 36
 %define %%STATE_KEYS %1
 %define %%STATE_IV   %2
 %define %%KS1  %3
@@ -976,9 +977,15 @@ endstruc
 %define %%T25  %33
 %define %%T26  %34
 %define %%T27  %35
+%define %%DIR  %36
 
+%ifidn %%DIR, ENC
 %assign KEY_IDX 0
+%else
+%assign KEY_IDX 2
+%endif
 %assign KS_IDX  1
+
 %rep 3
         ;; set up the key schedule
         ;; - load first half of the keys & transpose
@@ -1015,7 +1022,11 @@ endstruc
 %assign IDX (IDX + 1)
 %endrep
 
+%ifidn %%DIR, ENC
 %assign KEY_IDX (KEY_IDX + 1)
+%else
+%assign KEY_IDX (KEY_IDX - 1)
+%endif
 %assign KS_IDX (KS_IDX + 1)
 %endrep                         ; KEY_IDX / KS_IDX
 
@@ -1473,7 +1484,7 @@ endstruc
         DES_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
 %else
         ;; 3DES
-        DES3_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        DES3_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ENC
 %endif
         mov             [rsp + _size_save], SIZE
         and             SIZE, -64
@@ -1778,7 +1789,7 @@ endstruc
         DES_INIT        STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
 %else
         ;; 3DES
-        DES3_INIT       STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11
+        DES3_INIT       STATE + _des_args_keys, STATE + _des_args_IV, rsp + _key_sched, rsp + _key_sched2, rsp + _key_sched3, ZIV0, ZIV1, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, DEC
 %endif
 
         ;; CFB part for DOCSIS

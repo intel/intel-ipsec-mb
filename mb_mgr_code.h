@@ -1502,7 +1502,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case DES3:
-                if (job->aes_key_len_in_bytes != UINT64_C(8)) {
+                if (job->aes_key_len_in_bytes != UINT64_C(24)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
