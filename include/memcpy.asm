@@ -31,7 +31,7 @@
 %include "reg_sizes.asm"
 
 
-; This file defines a series of macros to copy small to medium amounts
+; This section defines a series of macros to copy small to medium amounts
 ; of data from memory to memory, where the size is variable but limited.
 ;
 ; The macros are all called as:
@@ -339,6 +339,103 @@
 %if (%%USERET != 0)
 	ret
 %endif
+%endm
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Utility macro to assist with SIMD shifting
+%macro _PSRLDQ 3
+%define %%VEC   %1
+%define %%REG   %2
+%define %%IMM   %3
+
+%ifidn %%VEC, SSE
+        psrldq  %%REG, %%IMM
+%else
+        vpsrldq %%REG, %%REG, %%IMM
+%endif
+%endm
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; This section defines a series of macros to store small to medium amounts
+; of data from SIMD registers to memory, where the size is variable but limited.
+;
+; The macros are all called as:
+; memcpy DST, SRC, SIZE, TMP, IDX
+; with the parameters defined as:
+;    DST     : register: pointer to dst (not modified)
+;    SRC     : register: src data (clobbered)
+;    SIZE    : register: length in bytes (not modified)
+;    TMP     : 64-bit temp GPR (clobbered)
+;    IDX     : 64-bit GPR to store dst index/offset (clobbered)
+;
+; The name indicates the options. The name is of the form:
+; simd_store_<VEC>
+; where <VEC> is the SIMD instruction type e.g. "sse" or "avx"
+
+
+%macro simd_store_sse 5
+        __simd_store %1,%2,%3,%4,%5,SSE
+%endm
+
+%macro simd_store_avx 5
+        __simd_store %1,%2,%3,%4,%5,AVX
+%endm
+
+%macro __simd_store 6
+%define %%DST      %1    ; register: pointer to dst (not modified)
+%define %%SRC      %2    ; register: src data (clobbered)
+%define %%SIZE     %3    ; register: length in bytes (not modified)
+%define %%TMP      %4    ; 64-bit temp GPR (clobbered)
+%define %%IDX      %5    ; 64-bit temp GPR to store dst idx (clobbered)
+%define %%SIMDTYPE %6    ; "SSE" or "AVX"
+
+%define %%PSRLDQ _PSRLDQ %%SIMDTYPE,
+
+%ifidn %%SIMDTYPE, SSE
+ %define %%MOVDQU movdqu
+ %define %%MOVQ movq
+%else
+ %define %%MOVDQU vmovdqu
+ %define %%MOVQ vmovq
+%endif
+
+        xor %%IDX, %%IDX        ; zero idx
+
+        test    %%SIZE, 16
+        jz      %%lt16
+        %%MOVDQU [%%DST], %%SRC
+        jmp     %%end
+%%lt16:
+        test    %%SIZE, 8
+        jz      %%lt8
+        %%MOVQ  [%%DST + %%IDX], %%SRC
+        %%PSRLDQ %%SRC, 8
+        add     %%IDX, 8
+%%lt8:
+        %%MOVQ %%TMP, %%SRC     ; use GPR from now on
+
+        test    %%SIZE, 4
+        jz      %%lt4
+        mov     [%%DST + %%IDX], DWORD(%%TMP)
+        shr     %%TMP, 32
+        add     %%IDX, 4
+%%lt4:
+        test    %%SIZE, 2
+        jz      %%lt2
+        mov     [%%DST + %%IDX], WORD(%%TMP)
+        shr     %%TMP, 16
+        add     %%IDX, 2
+%%lt2:
+        test    %%SIZE, 1
+        jz      %%end
+        mov     [%%DST + %%IDX], BYTE(%%TMP)
+%%end:
 %endm
 
 %endif ; ifndef __MEMCPY_ASM__

@@ -1580,9 +1580,8 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 break;
 #ifndef NO_GCM
         case AES_GMAC:
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(8) &&
-                    job->auth_tag_output_len_in_bytes != UINT64_C(12) &&
-                    job->auth_tag_output_len_in_bytes != UINT64_C(16)) {
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
                 }

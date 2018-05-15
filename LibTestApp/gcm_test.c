@@ -732,6 +732,60 @@ static uint8_t C13[] = {
         0x31, 0x5b, 0x27, 0x45, 0x21, 0x44, 0xcc, 0x77,
 };
 
+/*
+ * Test Case 14 -- GHASH output Auth Tag length of 4 bytes
+ */
+#define K14     K11
+#define P14     P11
+#define A14     A11
+#define A14_len sizeof(A14)
+#define IV14    IV11
+#define C14     C11
+static uint8_t T14[] = {
+        0x76, 0xfc, 0x6e, 0xce
+};
+
+/*
+ * Test Case 15 -- GHASH output Auth Tag length of 8 bytes
+ */
+#define K15     K11
+#define P15     P11
+#define A15     A11
+#define A15_len sizeof(A15)
+#define IV15    IV11
+#define C15     C11
+static uint8_t  T15[] = {
+        0x76, 0xfc, 0x6e, 0xce, 0x0f, 0x4e, 0x17, 0x68
+};
+
+/*
+ * Test Case 16 -- GHASH output Auth Tag length of 14 bytes
+ */
+#define K16     K11
+#define P16     P11
+#define A16     A11
+#define A16_len sizeof(A16)
+#define IV16    IV11
+#define C16     C11
+static uint8_t  T16[] = {
+        0x76, 0xfc, 0x6e, 0xce, 0x0f, 0x4e, 0x17, 0x68,
+        0xcd, 0xdf, 0x88, 0x53, 0xbb, 0x2d
+};
+
+/*
+ * Test Case 17 -- GHASH output Auth Tag length of 15 bytes
+ */
+#define K17     K11
+#define P17     P11
+#define A17     A11
+#define A17_len sizeof(A17)
+#define IV17    IV11
+#define C17     C11
+static uint8_t  T17[] = {
+        0x76, 0xfc, 0x6e, 0xce, 0x0f, 0x4e, 0x17, 0x68,
+        0xcd, 0xdf, 0x88, 0x53, 0xbb, 0x2d, 0x55
+};
+
 static const struct gcm_ctr_vector gcm_vectors[] = {
 	/*
          * field order {K, Klen, IV, IVlen, A, Alen, P, Plen, C, T, Tlen};
@@ -750,6 +804,10 @@ static const struct gcm_ctr_vector gcm_vectors[] = {
 	vector(11),
 	/* vector(12), -- IV of less than 16bytes are not supported */
         vector(13),
+        vector(14),
+        vector(15),
+        vector(16),
+        vector(17),
 };
 
 typedef void (*gcm_enc_dec_fn_t)(const struct gcm_key_data *,
