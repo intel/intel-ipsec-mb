@@ -215,7 +215,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_des_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_sse.obj \
-	$(OBJ_DIR)\alloc.obj
+	$(OBJ_DIR)\alloc.obj \
+	$(OBJ_DIR)\version.obj
 
 gcm_objs = \
         $(OBJ_DIR)\gcm128_sse.obj \

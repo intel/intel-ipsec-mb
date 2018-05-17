@@ -192,3 +192,5 @@ EXPORTS
     aes_keyexp_192_avx512		@166
     aes_keyexp_256_avx2			@167
     aes_keyexp_256_avx512		@168
+    imb_get_version_str                 @169
+    imb_get_version                     @170

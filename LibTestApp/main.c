@@ -73,6 +73,12 @@ main(int argc, char **argv)
         uint64_t flags = 0;
         int errors = 0;
 
+        /* Check version number */
+        if (imb_get_version() < IMB_VERSION(0, 50, 0))
+                printf("Library version detection unsupported!\n");
+        else
+                printf("Detected library version: %s\n", imb_get_version_str());
+
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
 			usage(argv[0]);

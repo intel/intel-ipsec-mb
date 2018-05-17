@@ -71,6 +71,13 @@ typedef struct {
 #define IMB_DLL_LOCAL
 #endif
 
+/* Library version */
+#define IMB_VERSION_STR "0.50.0"
+#define IMB_VERSION_NUM 0x3200
+
+/* Macro to translate version number */
+#define IMB_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
+
 /*
  * Custom ASSERT and DIM macros
  */
@@ -600,6 +607,23 @@ typedef struct MB_MGR {
 
 /* ========================================================================== */
 /* API definitions */
+
+/**
+ * @brief Get library version in string format
+ *
+ * @return library version string
+ */
+IMB_DLL_EXPORT const char *imb_get_version_str(void);
+
+/**
+ * @brief Get library version in numerical format
+ *
+ * Use IMB_VERSION() macro to compare this
+ * numerical version against known library version.
+ *
+ * @return library version number
+ */
+IMB_DLL_EXPORT unsigned imb_get_version(void);
 
 /*
  * get_next_job returns a job object. This must be filled in and returned

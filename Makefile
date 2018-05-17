@@ -12,7 +12,7 @@
 #     * Neither the name of Intel Corporation nor the names of its contributors
 #       may be used to endorse or promote products derived from this software
 #       without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -24,10 +24,19 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+
 LIB = libIPSec_MB
-VERSION = 0.50
-SO_VERSION = 0
 SHARED ?= y
+IMB_HDR = intel-ipsec-mb.h
+
+# Detect library version
+IMB_VERSION = $(shell grep -e "IMB_VERSION_STR" $(IMB_HDR) | cut -d'"' -f2)
+ifeq ($(IMB_VERSION),)
+$(error "Failed to detect library version!")
+endif
+
+VERSION = $(shell echo $(IMB_VERSION) | cut -d. -f1-2)
+SO_VERSION = $(shell echo $(VERSION) | cut -d. -f1)
 
 PREFIX ?= /usr
 LIB_INSTALL_DIR ?= $(PREFIX)/lib
@@ -222,7 +231,8 @@ lib_objs := \
 	des_key.o \
 	des_basic.o \
 	des_x16_avx512.o \
-	const.o
+	const.o \
+	version.o
 
 gcm_objs := gcm128_sse.o gcm192_sse.o gcm256_sse.o \
 	gcm128_avx_gen2.o gcm192_avx_gen2.o gcm256_avx_gen2.o \
@@ -249,7 +259,7 @@ endif
 .PHONY: install
 install: $(LIBNAME)
 	install -d $(HDR_DIR)
-	install -m 0644 intel-ipsec-mb.h $(HDR_DIR)
+	install -m 0644 $(IMB_HDR) $(HDR_DIR)
 	install -d $(LIB_INSTALL_DIR)
 	install -s -m $(LIBPERM) $(LIBNAME) $(LIB_INSTALL_DIR)
 	install -d $(MAN_DIR)
@@ -266,7 +276,7 @@ endif
 
 .PHONY: uninstall
 uninstall: $(LIBNAME)
-	-rm -f $(HDR_DIR)/intel-ipsec-mb.h
+	-rm -f $(HDR_DIR)/$(IMB_HDR)
 	-rm -f $(LIB_INSTALL_DIR)/$(LIBNAME)
 	-rm -f $(MAN_DIR)/$(MAN1)
 	-rm -f $(MAN_DIR)/$(MAN2)
