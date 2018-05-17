@@ -129,10 +129,18 @@ static const struct cmac_rfc4493_vector {
         { key, sub_key1, sub_key2, M, 16, T_2, 16 },
         { key, sub_key1, sub_key2, M, 40, T_3, 16 },
         { key, sub_key1, sub_key2, M, 64, T_4, 16 },
+        { key, sub_key1, sub_key2, M, 0,  T_1, 15 },
+        { key, sub_key1, sub_key2, M, 16, T_2, 15 },
+        { key, sub_key1, sub_key2, M, 40, T_3, 15 },
+        { key, sub_key1, sub_key2, M, 64, T_4, 15 },
         { key, sub_key1, sub_key2, M, 0,  T_1, 12 },
         { key, sub_key1, sub_key2, M, 16, T_2, 12 },
         { key, sub_key1, sub_key2, M, 40, T_3, 12 },
         { key, sub_key1, sub_key2, M, 64, T_4, 12 },
+        { key, sub_key1, sub_key2, M, 0,  T_1, 4 },
+        { key, sub_key1, sub_key2, M, 16, T_2, 4 },
+        { key, sub_key1, sub_key2, M, 40, T_3, 4 },
+        { key, sub_key1, sub_key2, M, 64, T_4, 4 },
 };
 
 static int

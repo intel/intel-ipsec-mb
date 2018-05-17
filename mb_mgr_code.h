@@ -590,8 +590,11 @@ submit_flush_job_aes_cmac(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job,
 
         if (ret_job->auth_tag_output_len_in_bytes == 16)
                 memcpy(ret_job->auth_tag_output, &state->args.IV[min_idx], 16);
-        else
+        else if (ret_job->auth_tag_output_len_in_bytes == 12)
                 memcpy(ret_job->auth_tag_output, &state->args.IV[min_idx], 12);
+        else
+                memcpy(ret_job->auth_tag_output, &state->args.IV[min_idx],
+                       ret_job->auth_tag_output_len_in_bytes);
 
 
         /* put back processed packet into unused lanes, set job as complete */
@@ -1656,8 +1659,8 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  * T is 128 bits but 96 bits is also allowed due to
                  * IPsec use case (RFC 4494)
                  */
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(16) &&
-                    job->auth_tag_output_len_in_bytes != UINT64_C(12)) {
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
