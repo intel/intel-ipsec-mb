@@ -618,6 +618,7 @@ init_mb_mgr_sse(MB_MGR *state)
         state->xcbc_keyexp         = aes_xcbc_expand_key_sse;
         state->des_key_sched       = des_key_schedule;
         state->sha1_one_block      = sha1_one_block_sse;
+        state->sha1                = sha1_sse;
         state->sha224_one_block    = sha224_one_block_sse;
         state->sha256_one_block    = sha256_one_block_sse;
         state->sha384_one_block    = sha384_one_block_sse;

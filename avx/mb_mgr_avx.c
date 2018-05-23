@@ -480,6 +480,7 @@ init_mb_mgr_avx(MB_MGR *state)
         state->xcbc_keyexp         = aes_xcbc_expand_key_avx;
         state->des_key_sched       = des_key_schedule;
         state->sha1_one_block      = sha1_one_block_avx;
+        state->sha1                = sha1_avx;
         state->sha224_one_block    = sha224_one_block_avx;
         state->sha256_one_block    = sha256_one_block_avx;
         state->sha384_one_block    = sha384_one_block_avx;

@@ -501,6 +501,7 @@ typedef uint32_t (*queue_size_t)(struct MB_MGR *);
 typedef void (*keyexp_t)(const void *, void *, void *);
 typedef void (*cmac_subkey_gen_t)(const void *, void *, void *);
 typedef void (*hash_one_block_t)(const void *, void *);
+typedef void (*hash_fn_t)(const void *, const uint64_t, void *);
 typedef void (*xcbc_keyexp_t)(const void *, void *, void *, void *);
 typedef int (*des_keysched_t)(uint64_t *, const void *);
 
@@ -549,6 +550,7 @@ typedef struct MB_MGR {
         hash_one_block_t        sha384_one_block;
         hash_one_block_t        sha512_one_block;
         hash_one_block_t        md5_one_block;
+        hash_fn_t               sha1;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -714,6 +716,8 @@ get_next_job_sse(MB_MGR *state)
         ((_mgr)->des_key_sched((_ks), (_key)))
 #define IMB_SHA1_ONE_BLOCK(_mgr, _data, _digest)        \
         ((_mgr)->sha1_one_block((_data), (_digest)))
+#define IMB_SHA1(_mgr, _data, _length, _digest)         \
+        ((_mgr)->sha1((_data), (_length), (_digest)))
 #define IMB_SHA224_ONE_BLOCK(_mgr, _data, _digest)      \
         ((_mgr)->sha224_one_block((_data), (_digest)))
 #define IMB_SHA256_ONE_BLOCK(_mgr, _data, _digest)      \
@@ -743,6 +747,8 @@ IMB_DLL_EXPORT int
 des_key_schedule(uint64_t *ks, const void *key);
 
 /* SSE */
+IMB_DLL_EXPORT void sha1_sse(const void *data, const uint64_t length,
+                             void *digest);
 IMB_DLL_EXPORT void sha1_one_block_sse(const void *data, void *digest);
 IMB_DLL_EXPORT void sha224_one_block_sse(const void *data, void *digest);
 IMB_DLL_EXPORT void sha256_one_block_sse(const void *data, void *digest);
@@ -769,6 +775,8 @@ IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
 /* AVX */
+IMB_DLL_EXPORT void sha1_avx(const void *data, const uint64_t length,
+                             void *digest);
 IMB_DLL_EXPORT void sha1_one_block_avx(const void *data, void *digest);
 IMB_DLL_EXPORT void sha224_one_block_avx(const void *data, void *digest);
 IMB_DLL_EXPORT void sha256_one_block_avx(const void *data, void *digest);
@@ -796,7 +804,9 @@ IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
                                         uint64_t len);
 
 /* AVX2 */
-#define sha1_one_block_avx2      sha1_one_block_avx
+IMB_DLL_EXPORT void sha1_avx2(const void *data, const uint64_t length,
+                              void *digest);
+IMB_DLL_EXPORT void sha1_one_block_avx2(const void *data, void *digest);
 #define sha224_one_block_avx2    sha224_one_block_avx
 #define sha256_one_block_avx2    sha256_one_block_avx
 #define sha384_one_block_avx2    sha384_one_block_avx
@@ -813,7 +823,9 @@ IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
 #define aes_cfb_128_one_avx2     aes_cfb_128_one_avx
 
 /* AVX512 */
-#define sha1_one_block_avx512      sha1_one_block_avx2
+IMB_DLL_EXPORT void sha1_avx512(const void *data, const uint64_t length,
+                                 void *digest);
+IMB_DLL_EXPORT void sha1_one_block_avx512(const void *data, void *digest);
 #define sha224_one_block_avx512    sha224_one_block_avx2
 #define sha256_one_block_avx512    sha256_one_block_avx2
 #define sha384_one_block_avx512    sha384_one_block_avx2

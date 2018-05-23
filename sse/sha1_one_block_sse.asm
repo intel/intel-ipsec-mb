@@ -50,8 +50,8 @@ section .text
 %ifdef LINUX
 %define INP	rdi ; 1st arg
 %define CTX     rsi ; 2nd arg
-%define REG3	ecx
-%define REG4	edx
+%define REG3	edx
+%define REG4	ecx
 %else
 %define INP	rcx ; 1st arg
 %define CTX     rdx ; 2nd arg
@@ -62,16 +62,16 @@ section .text
 %define FRAMESZ 3*16 + 1*8
 %define _RSP	FRAMESZ-1*8 + rsp
 
-%define a eax
-%define b ebx
-%define c REG3
-%define d REG4
-%define e r8d
-%define T1 r9d
-%define f  r10d
+%define a   eax
+%define b   ebx
+%define c   REG3
+%define d   REG4
+%define e   r8d
+%define T1  r9d
+%define f   r10d
 %define RND r11d
-%define g r12d
-%define h r13d
+%define g   r12d
+%define h   r13d
 
 %define XTMP0 xmm0
 %define XTMP1 xmm1
@@ -253,43 +253,46 @@ ROTATE_ARGS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void sha1_one_block_sse(void *input_data, UINT32 digest[8]
-;; arg 1 : rcx : pointer to input data
-;; arg 2 : rdx : pointer to digest
-MKGLOBAL(sha1_one_block_sse,function,)
+;; void sha1_block_sse(void *input_data, UINT32 digest[5])
+;; arg 1 : (in) pointer to one block of data
+;; arg 2 : (in/out) pointer to read/write digest
+MKGLOBAL(sha1_block_sse,function,internal)
 align 32
-sha1_one_block_sse:
+sha1_block_sse:
 	push	rbx
 	push	rsi
 	push	rdi
 	push	r12
 	push	r13
 
-	;; byte swap first 16 dwords
 	movdqa	XTMP0, [rel PSHUFFLE_BYTE_FLIP_MASK]
-	mov	rax,rsp			; copy rsp
+
+	mov	rax, rsp		; copy rsp
 	MOVDQ	X0, [INP + 0*16]
-	sub	rsp,FRAMESZ
+	sub	rsp, FRAMESZ
 	MOVDQ	X1, [INP + 1*16]
-	and	rsp,-64			; align stack frame
+	and	rsp, -64		; align stack frame
+	mov	[_RSP],rax		; save copy of rsp
 
 	movdqa	[rsp + 0 * 16], xmm6
 	movdqa	[rsp + 1 * 16], xmm7
 	movdqa	[rsp + 2 * 16], xmm8
 
+	;; load next message block
 	MOVDQ	X2, [INP + 2*16]
-	mov	[_RSP],rax		; save copy of rsp
 	MOVDQ	X3, [INP + 3*16]
-	;; load initial digest
-	mov	a,0x67452301
+
+        ;; set up a-f based on h0-h4
+	;; byte swap first 16 dwords
+	mov	a, [SZ*0 + CTX]
 	pshufb	X0, XTMP0
-	mov	b,0xefcdab89
+	mov	b, [SZ*1 + CTX]
 	pshufb	X1, XTMP0
-	mov	c,0x98badcfe
+	mov	c, [SZ*2 + CTX]
 	pshufb	X2, XTMP0
-	mov	d,0x10325476
+	mov	d, [SZ*3 + CTX]
 	pshufb	X3, XTMP0
-	mov	e,0xc3d2e1f0
+	mov	e, [SZ*4 + CTX]
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 00-19
@@ -334,9 +337,6 @@ loop1_5:
 	;; end rounds 00-19
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-
-
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 20-39
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -379,9 +379,6 @@ loop2_5:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; end rounds 20-39
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 40-59
@@ -426,10 +423,9 @@ loop3_5:
 	;; end rounds 40-59
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-
-
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 60-79
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	movdqa	XK, [rel K60_79]
 
 	do_4i	MAGIC_F3
@@ -478,22 +474,19 @@ loop3_5:
 	pextrd	T1, XFER, 3
 	ROUND MAGIC_F3
 
-	add	a,0x67452301
-	mov	[SZ*0 + CTX], a
-	add	b,0xefcdab89
-	mov	[SZ*1 + CTX], b
-	add	c,0x98badcfe
-	mov	[SZ*2 + CTX], c
-	add	d,0x10325476
-	mov	[SZ*3 + CTX], d
-	add	e,0xc3d2e1f0
-	mov	[SZ*4 + CTX], e
+        ;; update result digest h0-h4
+	add	[SZ*0 + CTX], a
+	add	[SZ*1 + CTX], b
+	add	[SZ*2 + CTX], c
+	add	[SZ*3 + CTX], d
+	add	[SZ*4 + CTX], e
 
 	movdqa	xmm8, [rsp + 2 * 16]
 	movdqa	xmm7, [rsp + 1 * 16]
 	movdqa	xmm6, [rsp + 0 * 16]
 
-	mov	rsp,[_RSP]
+	mov	rsp, [_RSP]
+
 	pop	r13
 	pop	r12
 	pop	rdi

@@ -50,8 +50,8 @@ section .text
 %ifdef LINUX
 %define INP	rdi ; 1st arg
 %define CTX     rsi ; 2nd arg
-%define REG3	ecx
-%define REG4	edx
+%define REG3	edx
+%define REG4	ecx
 %else
 %define INP	rcx ; 1st arg
 %define CTX     rdx ; 2nd arg
@@ -246,45 +246,48 @@ ROTATE_ARGS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void sha1_one_block_avx(void *input_data, UINT32 digest[8]
-;; arg 1 : rcx : pointer to input data
-;; arg 2 : rdx : pointer to digest
-MKGLOBAL(sha1_one_block_avx,function,)
+;; void sha1_block_avx(void *input_data, UINT32 digest[5])
+;; arg 1 : (in) pointer to input data
+;; arg 2 : (in/out) pointer to read/write digest
+MKGLOBAL(sha1_block_avx,function,internal)
 align 32
-sha1_one_block_avx:
+sha1_block_avx:
 	push	rbx
 	push	rsi
 	push	rdi
 	push	r12
 	push	r13
 
-	;; byte swap first 16 dwords
 	vmovdqa	XTMP0, [rel PSHUFFLE_BYTE_FLIP_MASK]
+
 	mov	rax,rsp			; copy rsp
 	VMOVDQ	X0, [INP + 0*16]
 	sub	rsp,FRAMESZ
 	VMOVDQ	X1, [INP + 1*16]
 	and	rsp,-64			; align stack frame
+	mov	[_RSP],rax		; save copy of rsp
 
 	vmovdqa	[rsp + 0 * 16], xmm6
 	vmovdqa	[rsp + 1 * 16], xmm7
 	vmovdqa	[rsp + 2 * 16], xmm8
 
+	;; load next message block
 	VMOVDQ	X2, [INP + 2*16]
-	mov	[_RSP],rax		; save copy of rsp
 	VMOVDQ	X3, [INP + 3*16]
-	;; load initial digest
-	mov	a,0x67452301
-	vpshufb	X0, XTMP0
-	mov	b,0xefcdab89
-	vpshufb	X1, XTMP0
-	mov	c,0x98badcfe
-	vpshufb	X2, XTMP0
-	mov	d,0x10325476
-	vpshufb	X3, XTMP0
-	mov	e,0xc3d2e1f0
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; set up a-f based on h0-h4
+	;; byte swap first 16 dwords
+	mov	a, [SZ*0 + CTX]
+	vpshufb	X0, XTMP0
+	mov	b, [SZ*1 + CTX]
+	vpshufb	X1, XTMP0
+	mov	c, [SZ*2 + CTX]
+	vpshufb	X2, XTMP0
+	mov	d, [SZ*3 + CTX]
+	vpshufb	X3, XTMP0
+	mov	e, [SZ*4 + CTX]
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 00-19
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	vmovdqa	XK, [rel K00_19]
@@ -326,9 +329,6 @@ loop1_5:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; end rounds 00-19
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 20-39
@@ -373,9 +373,6 @@ loop2_5:
 	;; end rounds 20-39
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-
-
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 40-59
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -419,10 +416,9 @@ loop3_5:
 	;; end rounds 40-59
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-
-
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; do rounds 60-79
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	vmovdqa	XK, [rel K60_79]
 
 	do_4i	MAGIC_F3
@@ -467,22 +463,19 @@ loop3_5:
 	vpextrd	T1, XFER, 3
 	ROUND MAGIC_F3
 
-	add	a,0x67452301
-	mov	[SZ*0 + CTX], a
-	add	b,0xefcdab89
-	mov	[SZ*1 + CTX], b
-	add	c,0x98badcfe
-	mov	[SZ*2 + CTX], c
-	add	d,0x10325476
-	mov	[SZ*3 + CTX], d
-	add	e,0xc3d2e1f0
-	mov	[SZ*4 + CTX], e
+        ;; update result digest h0-h4
+	add	[SZ*0 + CTX], a
+	add	[SZ*1 + CTX], b
+	add	[SZ*2 + CTX], c
+	add	[SZ*3 + CTX], d
+	add	[SZ*4 + CTX], e
 
 	vmovdqa	xmm8, [rsp + 2 * 16]
 	vmovdqa	xmm7, [rsp + 1 * 16]
 	vmovdqa	xmm6, [rsp + 0 * 16]
 
 	mov	rsp,[_RSP]
+
 	pop	r13
 	pop	r12
 	pop	rdi

@@ -135,6 +135,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha_256_mult_sse.obj \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
 	$(OBJ_DIR)\md5_one_block.obj \
+	$(OBJ_DIR)\sha_one_block.obj \
 	$(OBJ_DIR)\des_key.obj \
 	$(OBJ_DIR)\des_basic.obj \
 	$(OBJ_DIR)\des_x16_avx512.obj \

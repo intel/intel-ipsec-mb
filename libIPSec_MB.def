@@ -149,3 +149,9 @@ EXPORTS
     free_mb_mgr                         @123
     aes_cfb_128_one_sse                 @124
     aes_cfb_128_one_avx                 @125
+    sha1_sse                            @126
+    sha1_avx                            @127
+    sha1_avx2                           @128
+    sha1_avx512                         @129
+    sha1_one_block_avx2                 @130
+    sha1_one_block_avx512               @131

@@ -218,6 +218,7 @@ lib_objs := \
 	mb_mgr_avx512.o \
 	mb_mgr_sse.o \
 	md5_one_block.o \
+	sha_one_block.o \
 	des_key.o \
 	des_basic.o \
 	des_x16_avx512.o \
