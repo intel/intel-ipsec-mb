@@ -135,16 +135,8 @@ _XMM_SAVE:	reso	7
 _XFER:		reso	1
 endstruc
 
-%ifndef H0
-%define H0 0x6a09e667
-%define H1 0xbb67ae85
-%define H2 0x3c6ef372
-%define H3 0xa54ff53a
-%define H4 0x510e527f
-%define H5 0x9b05688c
-%define H6 0x1f83d9ab
-%define H7 0x5be0cd19
-%define FUNC sha256_one_block_avx
+%ifndef FUNC
+%define FUNC sha256_block_avx
 %endif
 
 ; rotate_Xs
@@ -440,14 +432,14 @@ FUNC:
 %endif
 
 	;; load initial digest
-	mov	a,H0
-	mov	b,H1
-	mov	c,H2
-	mov	d,H3
-	mov	e,H4
-	mov	f,H5
-	mov	g,H6
-	mov	h,H7
+	mov	a, [4*0 + CTX]
+	mov	b, [4*1 + CTX]
+	mov	c, [4*2 + CTX]
+	mov	d, [4*3 + CTX]
+	mov	e, [4*4 + CTX]
+	mov	f, [4*5 + CTX]
+	mov	g, [4*6 + CTX]
+	mov	h, [4*7 + CTX]
 
 	vmovdqa	BYTE_FLIP_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 	vmovdqa	SHUF_00BA, [rel _SHUF_00BA]
@@ -508,22 +500,14 @@ loop2:
 	sub	SRND, 1
 	jne	loop2
 
-	add	a,H0
-	add	b,H1
-	add	c,H2
-	add	d,H3
-	add	e,H4
-	add	f,H5
-	add	g,H6
-	mov	[4*0 + CTX],a
-	mov	[4*1 + CTX],b
-	mov	[4*2 + CTX],c
-	mov	[4*3 + CTX],d
-	mov	[4*4 + CTX],e
-	mov	[4*5 + CTX],f
-	mov	[4*6 + CTX],g
-	add	h,H7
-	mov	[4*7 + CTX],h
+	add	[4*0 + CTX], a
+	add	[4*1 + CTX], b
+	add	[4*2 + CTX], c
+	add	[4*3 + CTX], d
+	add	[4*4 + CTX], e
+	add	[4*5 + CTX], f
+	add	[4*6 + CTX], g
+	add	[4*7 + CTX], h
 
 done_hash:
 %ifndef LINUX

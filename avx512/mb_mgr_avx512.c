@@ -609,9 +609,13 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->sha1_one_block      = sha1_one_block_avx512;
         state->sha1                = sha1_avx512;
         state->sha224_one_block    = sha224_one_block_avx512;
+        state->sha224              = sha224_avx512;
         state->sha256_one_block    = sha256_one_block_avx512;
+        state->sha256              = sha256_avx512;
         state->sha384_one_block    = sha384_one_block_avx512;
+        state->sha384              = sha384_avx512;
         state->sha512_one_block    = sha512_one_block_avx512;
+        state->sha512              = sha512_avx512;
         state->md5_one_block       = md5_one_block_avx512;
 }
 

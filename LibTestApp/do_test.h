@@ -108,7 +108,7 @@ static unsigned char cipherCBC128[] = {
 #define NUMBYTES (NUMBLOCKS * 16)
 
 
-static void
+static int
 known_answer_test(MB_MGR *mb_mgr)
 {
         uint8_t test_buf[NUMBYTES];
@@ -168,27 +168,28 @@ known_answer_test(MB_MGR *mb_mgr)
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job) {
                 printf("Unexpected return from submit_job\n");
-                return;
+                return 1;
         }
         job = IMB_FLUSH_JOB(mb_mgr);
         if (!job) {
                 printf("Unexpected null return from flush_job\n");
-                return;
+                return 1;
         }
         for (i=0; i<NUMBYTES; i++) {
                 if (test_buf[i] != plain[i]) {
                         printf("AES128 Dec mismatch on byte %d\n", i);
-                        return;
+                        return 1;
                 }
         }
 
         for (i=0; i<12; i++) {
                 if (digest[i] != hmac12[i]) {
                         printf("HMAC/SHA1 mismatch on byte %d\n", i);
-                        return;
+                        return 1;
                 }
         }
         printf("Known answer passes\n");
+        return 0;
 }
 
 static void
@@ -218,7 +219,7 @@ test_aux_func(MB_MGR *mgr)
         IMB_AES_KEYEXP_256(mgr, keys, k1_exp, k1_exp);
 }
 
-static void
+static int
 do_test(MB_MGR *mb_mgr)
 {
         uint32_t size;
@@ -273,6 +274,8 @@ do_test(MB_MGR *mb_mgr)
         }
 
         test_aux_func(mb_mgr);
+
+        return 0;
 }
 
 #endif /* DO_TEST_H */

@@ -193,7 +193,7 @@ job_check(const struct JOB_AES_HMAC *job)
 }
 
 
-void
+int
 customop_test(struct MB_MGR *mgr)
 {
         struct test_vec_s test_tab[DIM(cipher_attr_tab) * DIM(auth_attr_tab)];
@@ -305,4 +305,6 @@ customop_test(struct MB_MGR *mgr)
                 fprintf(stdout, "Custom cipher/auth test failed!\n");
         else
                 fprintf(stdout, "Custom cipher/auth test passed\n");
+
+        return result;
 }

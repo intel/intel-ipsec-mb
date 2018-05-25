@@ -28,14 +28,6 @@
 ; This code schedules 1 blocks at a time, with 4 lanes per block
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define H0 0xcbbb9d5dc1059ed8
-%define H1 0x629a292a367cd507
-%define H2 0x9159015a3070dd17
-%define H3 0x152fecd8f70e5939
-%define H4 0x67332667ffc00b31
-%define H5 0x8eb44a8768581511
-%define H6 0xdb0c2e0d64f98fa7
-%define H7 0x47b5481dbefa4fa4
-%define FUNC sha384_one_block_sse
+%define FUNC sha384_block_sse
 
 %include "sha512_one_block_sse.asm"

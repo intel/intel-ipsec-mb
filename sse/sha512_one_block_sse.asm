@@ -32,7 +32,7 @@
 %define	MOVDQ movdqu ;; assume buffers not aligned
 
 %ifndef FUNC
-%define FUNC sha512_one_block_sse
+%define FUNC sha512_block_sse
 %endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Define Macros
@@ -100,17 +100,6 @@ _XMM_SAVE:	reso	8
 %endif
 _XFER:		reso	1
 endstruc
-
-%ifndef H0
-%define H0 0x6a09e667f3bcc908
-%define H1 0xbb67ae8584caa73b
-%define H2 0x3c6ef372fe94f82b
-%define H3 0xa54ff53a5f1d36f1
-%define H4 0x510e527fade682d1
-%define H5 0x9b05688c2b3e6c1f
-%define H6 0x1f83d9abfb41bd6b
-%define H7 0x5be0cd19137e2179
-%endif
 
 ; rotate_Xs
 ; Rotate values of symbols X0...X7
@@ -322,15 +311,6 @@ K512:
 	dq	0x4cc5d4becb3e42b6,0x597f299cfc657e2a
 	dq	0x5fcb6fab3ad6faec,0x6c44198c4a475817
 
-h0:	dq	H0
-h1:	dq	H1
-h2:	dq	H2
-h3:	dq	H3
-h4:	dq	H4
-h5:	dq	H5
-h6:	dq	H6
-h7:	dq	H7
-
 align 16
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
 	dq 0x0001020304050607, 0x08090a0b0c0d0e0f
@@ -367,14 +347,14 @@ FUNC:
 %endif
 
 	;; load initial digest
-	mov	a,[rel h0]
-	mov	b,[rel h1]
-	mov	c,[rel h2]
-	mov	d,[rel h3]
-	mov	e,[rel h4]
-	mov	f,[rel h5]
-	mov	g,[rel h6]
-	mov	h,[rel h7]
+	mov	a, [8*0 + CTX]
+	mov	b, [8*1 + CTX]
+	mov	c, [8*2 + CTX]
+	mov	d, [8*3 + CTX]
+	mov	e, [8*4 + CTX]
+	mov	f, [8*5 + CTX]
+	mov	g, [8*6 + CTX]
+	mov	h, [8*7 + CTX]
 
 	movdqa	BYTE_FLIP_MASK, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
@@ -446,22 +426,14 @@ loop2a:
 	sub	SRND, 1
 	jne	loop2
 
-	add	a,[rel h0]
-	add	b,[rel h1]
-	add	c,[rel h2]
-	add	d,[rel h3]
-	add	e,[rel h4]
-	add	f,[rel h5]
-	add	g,[rel h6]
-	mov	[8*0 + CTX],a
-	mov	[8*1 + CTX],b
-	mov	[8*2 + CTX],c
-	mov	[8*3 + CTX],d
-	mov	[8*4 + CTX],e
-	mov	[8*5 + CTX],f
-	mov	[8*6 + CTX],g
-	add	h,[rel h7]
-	mov	[8*7 + CTX],h
+	add	[8*0 + CTX], a
+	add	[8*1 + CTX], b
+	add	[8*2 + CTX], c
+	add	[8*3 + CTX], d
+	add	[8*4 + CTX], e
+	add	[8*5 + CTX], f
+	add	[8*6 + CTX], g
+	add	[8*7 + CTX], h
 
 done_hash:
 %ifndef LINUX

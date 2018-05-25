@@ -33,6 +33,7 @@
 
 #include "gcm_ctr_vectors_test.h"
 #include "customop_test.h"
+#include "utils.h"
 
 extern int des_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int ccm_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
@@ -59,9 +60,17 @@ usage(const char *name)
 int
 main(int argc, char **argv)
 {
+        const char *arch_str_tab[ARCH_NUMOF] = {
+                "SSE", "AVX", "AVX2", "AVX512"
+        };
+        enum arch_type arch_type_tab[ARCH_NUMOF] = {
+                ARCH_SSE, ARCH_AVX, ARCH_AVX2, ARCH_AVX512
+        };
+
         int i, do_sse = 1, do_avx = 1, do_avx2 = 1, do_avx512 = 1;
         MB_MGR *p_mgr = NULL;
         uint64_t flags = 0;
+        int errors = 0;
 
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
@@ -91,68 +100,55 @@ main(int argc, char **argv)
                 return EXIT_FAILURE;
         }
 
-        if (do_sse) {
-                printf("Testing SSE interface\n");
-                init_mb_mgr_sse(p_mgr);
-                known_answer_test(p_mgr);
-                do_test(p_mgr);
-                ctr_test(ARCH_SSE, p_mgr);
-                gcm_test(ARCH_SSE);
-                customop_test(p_mgr);
-                des_test(ARCH_SSE, p_mgr);
-                ccm_test(ARCH_SSE, p_mgr);
-                cmac_test(ARCH_SSE, p_mgr);
-                hmac_sha1_test(ARCH_SSE, p_mgr);
-                hmac_sha256_sha512_test(ARCH_SSE, p_mgr);
-        }
+        for (i = 0; i < ARCH_NUMOF; i++) {
+                const enum arch_type atype = arch_type_tab[i];
 
-        if (do_avx) {
-                printf("Testing AVX interface\n");
-                init_mb_mgr_avx(p_mgr);
-                known_answer_test(p_mgr);
-                do_test(p_mgr);
-                ctr_test(ARCH_AVX, p_mgr);
-                gcm_test(ARCH_AVX);
-                customop_test(p_mgr);
-                des_test(ARCH_AVX, p_mgr);
-                ccm_test(ARCH_AVX, p_mgr);
-                cmac_test(ARCH_AVX, p_mgr);
-                hmac_sha1_test(ARCH_AVX, p_mgr);
-                hmac_sha256_sha512_test(ARCH_AVX, p_mgr);
-        }
+                switch (atype) {
+                case ARCH_SSE:
+                        if (!do_sse)
+                                continue;
+                        init_mb_mgr_sse(p_mgr);
+                        break;
+                case ARCH_AVX:
+                        if (!do_avx)
+                                continue;
+                        init_mb_mgr_avx(p_mgr);
+                        break;
+                case ARCH_AVX2:
+                        if (!do_avx2)
+                                continue;
+                        init_mb_mgr_avx2(p_mgr);
+                        break;
+                case ARCH_AVX512:
+                        if (!do_avx512)
+                                continue;
+                        init_mb_mgr_avx512(p_mgr);
+                        break;
+                default:
+                        printf("Architecture type '%d' error!\n", (int) atype);
+                        continue;
+                }
 
-        if (do_avx2) {
-                printf("Testing AVX2 interface\n");
-                init_mb_mgr_avx2(p_mgr);
-                known_answer_test(p_mgr);
-                do_test(p_mgr);
-                ctr_test(ARCH_AVX2, p_mgr);
-                gcm_test(ARCH_AVX2);
-                customop_test(p_mgr);
-                des_test(ARCH_AVX2, p_mgr);
-                ccm_test(ARCH_AVX2, p_mgr);
-                cmac_test(ARCH_AVX2, p_mgr);
-                hmac_sha1_test(ARCH_AVX2, p_mgr);
-                hmac_sha256_sha512_test(ARCH_AVX2, p_mgr);
-        }
+                printf("Testing %s interface\n", arch_str_tab[i]);
 
-        if (do_avx512) {
-                printf("Testing AVX512 interface\n");
-                init_mb_mgr_avx512(p_mgr);
-                known_answer_test(p_mgr);
-                do_test(p_mgr);
-                ctr_test(ARCH_AVX512, p_mgr);
-                gcm_test(ARCH_AVX512);
-                customop_test(p_mgr);
-                des_test(ARCH_AVX512, p_mgr);
-                ccm_test(ARCH_AVX512, p_mgr);
-                cmac_test(ARCH_AVX512, p_mgr);
-                hmac_sha1_test(ARCH_AVX512, p_mgr);
-                hmac_sha256_sha512_test(ARCH_AVX512, p_mgr);
+                errors += known_answer_test(p_mgr);
+                errors += do_test(p_mgr);
+                errors += ctr_test(atype, p_mgr);
+                errors += gcm_test(atype);
+                errors += customop_test(p_mgr);
+                errors += des_test(atype, p_mgr);
+                errors += ccm_test(atype, p_mgr);
+                errors += cmac_test(atype, p_mgr);
+                errors += hmac_sha1_test(atype, p_mgr);
+                errors += hmac_sha256_sha512_test(atype, p_mgr);
         }
 
         free_mb_mgr(p_mgr);
 
-        printf("Test completed\n");
+        if (errors)
+                printf("Test completed: FAIL\n");
+        else
+                printf("Test completed: PASS\n");
+
         return EXIT_SUCCESS;
 }

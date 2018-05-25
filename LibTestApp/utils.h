@@ -28,6 +28,8 @@
 #ifndef TESTAPP_UTILS_H
 #define TESTAPP_UTILS_H
 
+#define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
+
 void hexdump(FILE *fp, const char *msg, const void *p, size_t len);
 
 #endif /* TESTAPP_UTILS_H */
