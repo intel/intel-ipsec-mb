@@ -52,10 +52,18 @@ extern len_mask_tab
 %ifnum  %%val
         ;; immediate value passed on
         mov     DWORD(%%tmp_gp), %%val
+%ifidn  %%type, sse
         movd    %%tmp_simd, DWORD(%%tmp_gp)
 %else
+        vmovd   %%tmp_simd, DWORD(%%tmp_gp)
+%endif
+%else
         ;; register name passed on
+%ifidn  %%type, sse
         movd    %%tmp_simd, DWORD(%%val)
+%else
+        vmovd   %%tmp_simd, DWORD(%%val)
+%endif
 %endif
         lea     %%tmp_gp, [rel len_shift_tab]
         ;; check type - SSE or AVX
