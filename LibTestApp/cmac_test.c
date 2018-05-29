@@ -283,6 +283,9 @@ test_cmac(struct MB_MGR *mb_mgr,
         ret = 0;
 
  end:
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                ;
+
         for (i = 0; i < num_jobs; i++) {
                 if (auths[i] != NULL)
                         free(auths[i]);

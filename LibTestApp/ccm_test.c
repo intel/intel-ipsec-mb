@@ -1438,9 +1438,27 @@ static const uint8_t packet_out_105[] = {
 #define clear_len_105 8
 #define auth_len_105  16
 
+static const uint8_t keys_106[] = {
+        0x4a, 0xe7, 0x01, 0x10, 0x3c, 0x63, 0xde, 0xca,
+        0x5b, 0x5a, 0x39, 0x39, 0xd7, 0xd0, 0x59, 0x92
+};
+static const uint8_t nonce_106[] = {
+        0x5a, 0x8a, 0xa4, 0x85, 0xc3, 0x16, 0xe9
+};
+static const uint8_t packet_out_106[] = {
+        0x02, 0x20, 0x9f, 0x55
+};
+#define clear_len_106 0
+#define auth_len_106  4
+
 #define CCM_TEST_VEC(num)                                               \
         { keys_##num, nonce_##num, sizeof(nonce_##num),                 \
                         packet_in_##num, sizeof(packet_in_##num),       \
+                        clear_len_##num, packet_out_##num,              \
+                        auth_len_##num }
+#define CCM_TEST_VEC_2(num)                                             \
+        { keys_##num, nonce_##num, sizeof(nonce_##num),                 \
+                        NULL, 0,                                        \
                         clear_len_##num, packet_out_##num,              \
                         auth_len_##num }
 
@@ -1489,6 +1507,7 @@ static const struct ccm_rfc3610_vector {
         CCM_TEST_VEC(103),
         CCM_TEST_VEC(104),
         CCM_TEST_VEC(105),
+        CCM_TEST_VEC_2(106),
 };
 
 static int
@@ -1734,6 +1753,9 @@ test_ccm(struct MB_MGR *mb_mgr,
         ret = 0;
 
  end:
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+                ;
+
         for (i = 0; i < num_jobs; i++) {
                 if (targets[i] != NULL)
                         free(targets[i]);

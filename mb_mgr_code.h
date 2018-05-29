@@ -219,7 +219,7 @@ submit_flush_job_aes_ccm(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job,
                                job->u.CCM.aad,
                                job->u.CCM.aad_len_in_bytes);
                         memset(&pb[AES_BLOCK_SIZE + aadl], 0,
-                               state->lens[lane] - aadl);
+                               state->lens[lane] - AES_BLOCK_SIZE - aadl);
                 }
 
                 /* enough jobs to start processing? */
@@ -1489,10 +1489,6 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  */
                 if (job->iv_len_in_bytes > UINT64_C(13) ||
                     job->iv_len_in_bytes < UINT64_C(7)) {
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
-                        return 1;
-                }
-                if (job->msg_len_to_cipher_in_bytes == 0) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
