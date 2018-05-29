@@ -255,6 +255,29 @@ const uint8_t digest7[digest_len7] = {
         0xbb, 0xff, 0x1a, 0x91
 };
 
+/*
+ * Test vector from https://csrc.nist.gov/csrc/media/publications/fips/198/
+ * archive/2002-03-06/documents/fips-198a.pdf
+ */
+#define test_case8  "8"
+#define key_len8    49
+#define data_len8   9
+#define digest_len8 digest96_size
+static const uint8_t key8[key_len8] = {
+        0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77,
+        0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
+        0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+        0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+        0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+        0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f,
+        0xa0
+};
+static const char data8[] = "Sample #4";
+static const uint8_t digest8[digest_len8] = {
+        0x9e, 0xa8, 0x86, 0xef, 0xe2, 0x68, 0xdb, 0xec,
+        0xce, 0x42, 0x0c, 0x75
+};
+
 #define HMAC_SHA1_TEST_VEC(num)                                         \
         { test_case##num,                                               \
                         (const uint8_t *) key##num, key_len##num,       \
@@ -278,6 +301,7 @@ static const struct hmac_sha1_rfc2202_vector {
         HMAC_SHA1_TEST_VEC(5_96),
         HMAC_SHA1_TEST_VEC(6),
         HMAC_SHA1_TEST_VEC(7),
+        HMAC_SHA1_TEST_VEC(8)
 };
 
 static int
