@@ -27,8 +27,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
-
-void md5_one_block_sse(const uint8_t *data, uint32_t digest[4]);
+#include "intel-ipsec-mb.h"
 
 #ifdef LINUX
 #define ROTATE(a, n) (((a) << (n)) ^ ((a) >> (32 - (n))))
@@ -67,8 +66,10 @@ void md5_one_block_sse(const uint8_t *data, uint32_t digest[4]);
                 a = ROTATE(a, r);               \
                 a += b;                         \
         }
+
+__forceinline
 void
-md5_one_block_sse(const uint8_t *data, uint32_t digest[4])
+md5_one_block_common(const uint8_t *data, uint32_t digest[4])
 {
         uint32_t a, b, c, d;
         uint32_t w00, w01, w02, w03, w04, w05, w06, w07,
@@ -166,4 +167,28 @@ md5_one_block_sse(const uint8_t *data, uint32_t digest[4])
         digest[1] = b + H1;
         digest[2] = c + H2;
         digest[3] = d + H3;
+}
+
+void
+md5_one_block_sse(const void *data, void *digest)
+{
+        md5_one_block_common(data, digest);
+}
+
+void
+md5_one_block_avx(const void *data, void *digest)
+{
+        md5_one_block_common(data, digest);
+}
+
+void
+md5_one_block_avx2(const void *data, void *digest)
+{
+        md5_one_block_common(data, digest);
+}
+
+void
+md5_one_block_avx512(const void *data, void *digest)
+{
+        md5_one_block_common(data, digest);
 }

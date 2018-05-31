@@ -150,6 +150,8 @@ JOB_AES_HMAC *flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 #define SUBMIT_JOB         submit_job_sse
 #define FLUSH_JOB          flush_job_sse
 #define SUBMIT_JOB_NOCHECK submit_job_nocheck_sse
+#define GET_NEXT_JOB       get_next_job_sse
+#define GET_COMPLETED_JOB  get_completed_job_sse
 
 #define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse
 #define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse

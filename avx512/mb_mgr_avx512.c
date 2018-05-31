@@ -183,6 +183,8 @@ JOB_AES_HMAC *flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 #define FLUSH_JOB          flush_job_avx512
 #define QUEUE_SIZE         queue_size_avx512
 #define SUBMIT_JOB_NOCHECK submit_job_nocheck_avx512
+#define GET_NEXT_JOB       get_next_job_avx512
+#define GET_COMPLETED_JOB  get_completed_job_avx512
 
 /* ====================================================================== */
 

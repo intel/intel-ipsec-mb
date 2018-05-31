@@ -155,3 +155,40 @@ EXPORTS
     sha1_avx512                         @129
     sha1_one_block_avx2                 @130
     sha1_one_block_avx512               @131
+    md5_one_block_avx			@132
+    md5_one_block_avx2			@133
+    md5_one_block_avx512		@134
+    sha224_one_block_avx2		@135
+    sha224_one_block_avx512		@136
+    sha256_one_block_avx2		@137
+    sha256_one_block_avx512		@138
+    sha384_one_block_avx2		@139
+    sha384_one_block_avx512		@140
+    sha512_one_block_avx2		@141
+    sha512_one_block_avx512		@142
+    get_next_job_sse                    @143
+    get_next_job_avx                    @144
+    get_next_job_avx2                   @145
+    get_next_job_avx512                 @146
+    get_completed_job_sse               @147
+    get_completed_job_avx               @148
+    get_completed_job_avx2              @149
+    get_completed_job_avx512            @150
+    aes_keyexp_128_enc_avx2		@151
+    aes_keyexp_128_enc_avx512		@152
+    aes_keyexp_192_enc_avx2		@153
+    aes_keyexp_192_enc_avx512		@154
+    aes_keyexp_256_enc_avx2		@155
+    aes_keyexp_256_enc_avx512		@156
+    aes_xcbc_expand_key_avx2		@157
+    aes_xcbc_expand_key_avx512		@158
+    aes_cmac_subkey_gen_avx2            @159
+    aes_cmac_subkey_gen_avx512          @160
+    aes_cfb_128_one_avx2                @161
+    aes_cfb_128_one_avx512              @162
+    aes_keyexp_128_avx2			@163
+    aes_keyexp_128_avx512		@164
+    aes_keyexp_192_avx2			@165
+    aes_keyexp_192_avx512		@166
+    aes_keyexp_256_avx2			@167
+    aes_keyexp_256_avx512		@168

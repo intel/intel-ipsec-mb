@@ -49,8 +49,10 @@ aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
         aes_keyexp_128_enc_sse(k1_exp, k1_exp);
 }
 
+__forceinline
 void
-aes_xcbc_expand_key_avx(const void *key, void *k1_exp, void *k2, void *k3)
+aes_xcbc_expand_key_avx_common(const void *key,
+                               void *k1_exp, void *k2, void *k3)
 {
         DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
 
@@ -59,4 +61,22 @@ aes_xcbc_expand_key_avx(const void *key, void *k1_exp, void *k2, void *k3)
         aes128_ecbenc_x3_avx(in, keys_exp_enc, k1_exp, k2, k3);
 
         aes_keyexp_128_enc_avx(k1_exp, k1_exp);
+}
+
+void
+aes_xcbc_expand_key_avx(const void *key, void *k1_exp, void *k2, void *k3)
+{
+        aes_xcbc_expand_key_avx_common(key, k1_exp, k2, k3);
+}
+
+void
+aes_xcbc_expand_key_avx2(const void *key, void *k1_exp, void *k2, void *k3)
+{
+        aes_xcbc_expand_key_avx_common(key, k1_exp, k2, k3);
+}
+
+void
+aes_xcbc_expand_key_avx512(const void *key, void *k1_exp, void *k2, void *k3)
+{
+        aes_xcbc_expand_key_avx_common(key, k1_exp, k2, k3);
 }

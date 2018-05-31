@@ -142,7 +142,8 @@ JOB_AES_HMAC *flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
 #define SUBMIT_JOB         submit_job_avx
 #define FLUSH_JOB          flush_job_avx
 #define SUBMIT_JOB_NOCHECK submit_job_nocheck_avx
-
+#define GET_NEXT_JOB       get_next_job_avx
+#define GET_COMPLETED_JOB  get_completed_job_avx
 
 /* ====================================================================== */
 

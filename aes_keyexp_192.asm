@@ -185,7 +185,11 @@ aes_keyexp_192_sse:
 
 
 MKGLOBAL(aes_keyexp_192_avx,function,)
+MKGLOBAL(aes_keyexp_192_avx2,function,)
+MKGLOBAL(aes_keyexp_192_avx512,function,)
 aes_keyexp_192_avx:
+aes_keyexp_192_avx2:
+aes_keyexp_192_avx512:
 
 %ifndef LINUX
 	sub	rsp, 16*2 + 8
@@ -329,7 +333,11 @@ aes_keyexp_192_enc_sse:
 	ret
 
 MKGLOBAL(aes_keyexp_192_enc_avx,function,)
+MKGLOBAL(aes_keyexp_192_enc_avx2,function,)
+MKGLOBAL(aes_keyexp_192_enc_avx512,function,)
 aes_keyexp_192_enc_avx:
+aes_keyexp_192_enc_avx2:
+aes_keyexp_192_enc_avx512:
 
 %ifndef LINUX
 	sub	rsp, 16*2 + 8
