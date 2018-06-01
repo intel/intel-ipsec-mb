@@ -186,7 +186,11 @@ aes_keyexp_256_sse:
 
 
 MKGLOBAL(aes_keyexp_256_avx,function,)
+MKGLOBAL(aes_keyexp_256_avx2,function,)
+MKGLOBAL(aes_keyexp_256_avx512,function,)
 aes_keyexp_256_avx:
+aes_keyexp_256_avx2:
+aes_keyexp_256_avx512:
         vmovdqu	xmm1, [KEY]			; loading the AES key
 	vmovdqa	[EXP_ENC_KEYS + 16*0], xmm1
         vmovdqa	[EXP_DEC_KEYS + 16*14], xmm1	; Storing key in memory
@@ -353,7 +357,11 @@ aes_keyexp_256_enc_sse:
 	ret
 
 MKGLOBAL(aes_keyexp_256_enc_avx,function,)
+MKGLOBAL(aes_keyexp_256_enc_avx2,function,)
+MKGLOBAL(aes_keyexp_256_enc_avx512,function,)
 aes_keyexp_256_enc_avx:
+aes_keyexp_256_enc_avx2:
+aes_keyexp_256_enc_avx512:
         vmovdqu	xmm1, [KEY]			; loading the AES key
 	vmovdqa	[EXP_ENC_KEYS + 16*0], xmm1
 

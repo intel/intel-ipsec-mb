@@ -201,8 +201,12 @@ K2_msb_is_zero_sse:
 ;;; See aes_cmac_subkey_gen_sse() above for operation details
 
 MKGLOBAL(aes_cmac_subkey_gen_avx,function,)
+MKGLOBAL(aes_cmac_subkey_gen_avx2,function,)
+MKGLOBAL(aes_cmac_subkey_gen_avx512,function,)
 align 32
 aes_cmac_subkey_gen_avx:
+aes_cmac_subkey_gen_avx2:
+aes_cmac_subkey_gen_avx512:
         ;; Step 1.  L := AES-128(K, const_Zero) ;
         vmovdqa         XL, [KEY_EXP + 16*0]        ; 0. ARK xor const_Zero
         vaesenc         XL, [KEY_EXP + 16*1]        ; 1. ENC

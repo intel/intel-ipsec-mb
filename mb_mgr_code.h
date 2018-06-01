@@ -34,11 +34,30 @@
  *
  * submit_job() and flush_job() returns a job object. This job object ceases
  * to be usable at the next call to get_next_job()
- *
- * Assume JOBS() and ADV_JOBS() from mb_mgr_code.h are available
  */
 
 #include <string.h> /* memcpy(), memset() */
+
+/*
+ * JOBS() and ADV_JOBS() moved into mb_mgr_code.h
+ * get_next_job() and get_completed_job() API's are no longer inlines.
+ * For binary compatibility they have been made proper symbols.
+ */
+__forceinline
+JOB_AES_HMAC *JOBS(MB_MGR *state, const int offset)
+{
+        char *cp = (char *)state->jobs;
+
+        return (JOB_AES_HMAC *)(cp + offset);
+}
+
+__forceinline
+void ADV_JOBS(int *ptr)
+{
+        *ptr += sizeof(JOB_AES_HMAC);
+        if (*ptr >= (int) (MAX_JOBS * sizeof(JOB_AES_HMAC)))
+                *ptr = 0;
+}
 
 /* ========================================================================= */
 /* Lower level "out of order" schedulers */
@@ -1801,21 +1820,18 @@ submit_job_and_check(MB_MGR *state, const int run_check)
         return job;
 }
 
-IMB_DLL_EXPORT
 JOB_AES_HMAC *
 SUBMIT_JOB(MB_MGR *state)
 {
         return submit_job_and_check(state, 1);
 }
 
-IMB_DLL_EXPORT
 JOB_AES_HMAC *
 SUBMIT_JOB_NOCHECK(MB_MGR *state)
 {
         return submit_job_and_check(state, 0);
 }
 
-IMB_DLL_EXPORT
 JOB_AES_HMAC *
 FLUSH_JOB(MB_MGR *state)
 {
@@ -1847,7 +1863,6 @@ FLUSH_JOB(MB_MGR *state)
 /* ========================================================================= */
 /* ========================================================================= */
 
-IMB_DLL_EXPORT
 uint32_t
 QUEUE_SIZE(MB_MGR *state)
 {
@@ -1858,4 +1873,30 @@ QUEUE_SIZE(MB_MGR *state)
         a = state->next_job / sizeof(JOB_AES_HMAC);
         b = state->earliest_job / sizeof(JOB_AES_HMAC);
         return ((a-b) & (MAX_JOBS-1));
+}
+
+JOB_AES_HMAC *
+GET_COMPLETED_JOB(MB_MGR *state)
+{
+        JOB_AES_HMAC *job;
+
+        if (state->earliest_job < 0)
+                return NULL;
+
+        job = JOBS(state, state->earliest_job);
+        if (job->status < STS_COMPLETED)
+                return NULL;
+
+        ADV_JOBS(&state->earliest_job);
+
+        if (state->earliest_job == state->next_job)
+                state->earliest_job = -1;
+
+        return job;
+}
+
+JOB_AES_HMAC *
+GET_NEXT_JOB(MB_MGR *state)
+{
+        return JOBS(state, state->next_job);
 }
