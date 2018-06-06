@@ -205,6 +205,7 @@ struct variant_s {
 struct thread_info {
         int print_info;
         int core;
+        MB_MGR *p_mgr;
 } t_info[MAX_NUM_THREADS];
 
 enum cache_type_e {
@@ -1136,13 +1137,7 @@ run_tests(void *arg)
         struct variant_s *variant_ptr = NULL;
         struct variant_s *variant_list = NULL;
 
-        p_mgr = alloc_mb_mgr(flags);
-        if (p_mgr == NULL) {
-                fprintf(stderr, "Failed to allocate MB_MGR structure!\n");
-                free_mem();
-                exit(EXIT_FAILURE);
-        }
-
+        p_mgr = info->p_mgr;
         params.num_sizes = JOB_SIZE / JOB_SIZE_STEP;
         params.core = (uint32_t)info->core;
 
@@ -1440,6 +1435,15 @@ int main(int argc, char *argv[])
                                 core = next_core(core_mask, core);
                                 thread_info_p->core = core++;
                         }
+
+                        /* Allocate MB manager for each thread */
+                        thread_info_p->p_mgr = alloc_mb_mgr(flags);
+                        if (thread_info_p->p_mgr == NULL) {
+                                fprintf(stderr, "Failed to allocate MB_MGR "
+                                        "structure for thread %d!\n", i+1);
+                                free_mem();
+                                exit(EXIT_FAILURE);
+                        }
 #ifdef _WIN32
                         threads[i] = (HANDLE)
                                 _beginthread(&run_tests, 0,
@@ -1454,6 +1458,13 @@ int main(int argc, char *argv[])
                 }
 
         thread_info_p->print_info = 1;
+        thread_info_p->p_mgr = alloc_mb_mgr(flags);
+        if (thread_info_p->p_mgr == NULL) {
+                fprintf(stderr, "Failed to allocate MB_MGR "
+                        "structure for main thread!\n");
+                free_mem();
+                exit(EXIT_FAILURE);
+        }
         if (core_mask) {
                 core = next_core(core_mask, core);
                 thread_info_p->core = core;
