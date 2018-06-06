@@ -738,9 +738,11 @@ do_test(const uint32_t arch, MB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.CCM.aad_len_in_bytes = 8;
                 job_template.iv_len_in_bytes = 13;
         } else if (job_template.cipher_mode == DES ||
-                   job_template.cipher_mode == DES3 ||
                    job_template.cipher_mode == DOCSIS_DES) {
                 job_template.aes_key_len_in_bytes = 8;
+                job_template.iv_len_in_bytes = 8;
+        } else if (job_template.cipher_mode == DES3) {
+                job_template.aes_key_len_in_bytes = 24;
                 job_template.iv_len_in_bytes = 8;
         }
 
