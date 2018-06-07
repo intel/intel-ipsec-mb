@@ -111,6 +111,7 @@ section .text
 %define p               arg2
 
 %define tmp4		    r8
+%define tmp5		    r9
 %define num_lanes_inuse     r12
 %define len_upper           r13
 %define idx_upper           r14
@@ -290,13 +291,20 @@ end_loop:
         ; copy 12 bytes
         mov	DWORD(tmp2), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 0*MD5_DIGEST_ROW_SIZE]
         mov	DWORD(tmp4), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 1*MD5_DIGEST_ROW_SIZE]
-        mov	DWORD(tmp3), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE]
+        mov	DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 2*MD5_DIGEST_ROW_SIZE]
 ;	bswap	DWORD(tmp2)
 ;	bswap	DWORD(tmp4)
 ;	bswap	DWORD(tmp3)
         mov	[p + 0*4], DWORD(tmp2)
         mov	[p + 1*4], DWORD(tmp4)
-        mov	[p + 2*4], DWORD(tmp3)
+        mov	[p + 2*4], DWORD(tmp5)
+
+	cmp	DWORD [job_rax + _auth_tag_output_len_in_bytes], 12
+	je 	return
+
+	; copy 16 bytes
+	mov	DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
+	mov	[p + 3*4], DWORD(tmp5)
 
 return:
         DBGPRINTL "---------- exit md5 flush -----------"

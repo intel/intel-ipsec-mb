@@ -1292,7 +1292,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 48, /* SHA_384 */
                 64, /* SHA_512 */
                 12, /* AES_XCBC */
-                12, /* MD5 */
+                16, /* MD5 */
                 0,  /* NULL_HASH */
                 16, /* AES_GMAC */
                 0,  /* CUSTOM HASH */
