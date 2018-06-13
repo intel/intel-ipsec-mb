@@ -1,6 +1,31 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+v0.50 June 2018
+========================================================================
+
+13 Jun, 2018
+
+General
+- Added support for compile time and runtime library version checking
+- Added support for full MD5 digest size
+- Replaced defines for API with symbols for binary compatibility
+- Added HMAC-SHA & HMAC-MD5 vectors to LibTestApp
+- Added support for zero cipher length in AES-CCM
+- Added new API's to compute SHA1, SHA224, SHA256, SHA384 and SHA512 hashes
+  to support key reduction cases where key is longer than a block size
+- Extended support for HMAC full digest sizes for HMAC-SHA1, HMAC-SHA224,
+  HMAC-SHA256, HMAC-SHA384 and HMAC-SHA512. Previously only truncated sizes
+  were supported.
+- Added AES-CMAC support for output digest size between 4 and 16 bytes
+- Added GHASH support for output digest size up to 16 bytes
+- Optimized submit job API's with store to load optimization in SSE, AVX,
+  AVX2 (excluding MD5)
+- Improved performance application accuracy by increase number of
+  test iterations
+- Extended multi-thread features of LibPerfApp Windows version to match
+  Linux version of the application
+
 v0.49 March 2018
 ========================================================================
 
