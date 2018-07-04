@@ -69,6 +69,16 @@ END_FIELDS
 %assign _CBCMAC_spec_fields_size	_FIELD_OFFSET
 %assign _CBCMAC_spec_fields_align	_STRUCT_ALIGN
 
+START_FIELDS	; AES CMAC Specific Fields
+;;;	name				size	align
+FIELD	__key_expanded,			8,	8	; ptr to exp keys
+FIELD	__skey1,			8,	8	; ptr to subkey 1
+FIELD	__skey2,			8,	8	; ptr to subkey 2
+END_FIELDS
+
+%assign _AES_CMAC_spec_fields_size	_FIELD_OFFSET
+%assign _AES_CMAC_spec_fields_align	_STRUCT_ALIGN
+
 START_FIELDS	; JOB_AES_HMAC
 
 ;;;	name				size	align
@@ -89,7 +99,8 @@ FIELD	_auth_tag_output_len_in_bytes,	8,	8
 
 UNION	_u,	_HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
 		_AES_XCBC_spec_fields_size, _AES_XCBC_spec_fields_align, \
-		_CBCMAC_spec_fields_size, _CBCMAC_spec_fields_align
+		_CBCMAC_spec_fields_size, _CBCMAC_spec_fields_align, \
+                _AES_CMAC_spec_fields_size, _AES_CMAC_spec_fields_align
 
 FIELD	_status,			4,	4	; JOB_STS
 FIELD	_cipher_mode,			4,	4	; JOB_CIPHER_MODE
@@ -110,4 +121,7 @@ END_FIELDS
 %assign _k3			_u + __k3
 %assign _cbcmac_aad	        _u + __aad
 %assign _cbcmac_aad_len	        _u + __aad_len
+%assign _key_expanded		_u + __key_expanded
+%assign _skey1			_u + __skey1
+%assign _skey2			_u + __skey2
 

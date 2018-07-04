@@ -134,6 +134,7 @@ lib_objs := \
 	mb_mgr_aes_flush_sse.o \
 	mb_mgr_aes_submit_avx.o \
 	mb_mgr_aes_submit_sse.o \
+	mb_mgr_aes_cmac_submit_flush_sse.o \
 	mb_mgr_aes_xcbc_flush_avx.o \
 	mb_mgr_aes_xcbc_flush_sse.o \
 	mb_mgr_aes_xcbc_submit_avx.o \

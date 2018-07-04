@@ -103,6 +103,27 @@ _aes_xcbc_args_in	equ	_aes_xcbc_args + _aesxcbcarg_in
 _aes_xcbc_args_keys	equ	_aes_xcbc_args + _aesxcbcarg_keys
 _aes_xcbc_args_ICV	equ	_aes_xcbc_args + _aesxcbcarg_ICV
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Define CMAC Out of Order Data Structures
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS	; MB_MGR_CMAC_OOO
+;;	name		size	align
+FIELD	_aes_cmac_args,	_AES_ARGS_X8_size, _AES_ARGS_X8_align
+FIELD	_aes_cmac_lens, 8*2,	16
+FIELD	_aes_cmac_init_done,    8*2,	16
+FIELD	_aes_cmac_unused_lanes, 8,      8
+FIELD	_aes_cmac_job_in_lane,  8*8,	8
+FIELD   _aes_cmac_scratch,  8*16,   32
+END_FIELDS
+%assign _MB_MGR_CMAC_OOO_size	_FIELD_OFFSET
+%assign _MB_MGR_CMAC_OOO_align	_STRUCT_ALIGN
+
+_aes_cmac_args_in	equ	_aes_cmac_args + _aesarg_in
+_aes_cmac_args_keys	equ	_aes_cmac_args + _aesarg_keys
+_aes_cmac_args_IV	equ	_aes_cmac_args + _aesarg_IV
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define DES Out of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

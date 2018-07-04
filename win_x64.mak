@@ -154,6 +154,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_submit_sse.obj \
+	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_submit_avx.obj \

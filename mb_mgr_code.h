@@ -624,12 +624,14 @@ submit_flush_job_aes_cmac(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job,
         return ret_job;
 }
 
+#ifndef MB_MGR_SSE
 static
 JOB_AES_HMAC *
 submit_job_aes_cmac_auth_arch(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job)
 {
         return submit_flush_job_aes_cmac(state, job, AES_CMAC_MAX_JOBS, 1);
 }
+#endif
 
 static
 JOB_AES_HMAC *

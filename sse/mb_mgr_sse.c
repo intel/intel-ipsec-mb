@@ -92,6 +92,10 @@ JOB_AES_HMAC *submit_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state,
                                       JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 
+JOB_AES_HMAC *submit_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state,
+                                           JOB_AES_HMAC *job);
+
+
 #define SAVE_XMMS save_xmms
 #define RESTORE_XMMS restore_xmms
 #define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse
@@ -179,7 +183,7 @@ void aes128_cbc_mac_x4(AES_ARGS_x8 *args, uint64_t len);
 #define AES_CCM_MAX_JOBS 4
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_arch
-#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_arch
+#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse
 #define AES_CMAC_MAX_JOBS 4
 
 /* ====================================================================== */
@@ -595,9 +599,16 @@ init_mb_mgr_sse(MB_MGR *state)
         state->aes_ccm_ooo.unused_lanes = 0xF3210;
 
         /* Init AES-CMAC auth out-of-order fields */
+        state->aes_cmac_ooo.lens[0] = 0;
+        state->aes_cmac_ooo.lens[1] = 0;
+        state->aes_cmac_ooo.lens[2] = 0;
+        state->aes_cmac_ooo.lens[3] = 0;
+        state->aes_cmac_ooo.lens[4] = 0xFFFF;
+        state->aes_cmac_ooo.lens[5] = 0xFFFF;
+        state->aes_cmac_ooo.lens[6] = 0xFFFF;
+        state->aes_cmac_ooo.lens[7] = 0xFFFF;
         for (j = 0; j < 4; j++) {
                 state->aes_cmac_ooo.init_done[j] = 0;
-                state->aes_cmac_ooo.lens[j] = 0;
                 state->aes_cmac_ooo.job_in_lane[j] = NULL;
         }
         state->aes_cmac_ooo.unused_lanes = 0xF3210;
@@ -631,5 +642,5 @@ init_mb_mgr_sse(MB_MGR *state)
         state->sha512              = sha512_sse;
         state->md5_one_block       = md5_one_block_sse;
 }
-
+#define MB_MGR_SSE
 #include "mb_mgr_code.h"
