@@ -1424,10 +1424,6 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->msg_len_to_cipher_in_bytes == 0) {
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
-                        return 1;
-                }
                 break;
 #endif /* !NO_GCM */
         case CUSTOM_CIPHER:
