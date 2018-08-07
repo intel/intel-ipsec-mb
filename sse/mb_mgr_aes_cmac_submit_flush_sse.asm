@@ -39,9 +39,31 @@
 %ifndef AES128_CBC_MAC
 %define AES128_CBC_MAC aes128_cbc_mac_x4
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_sse
+%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_sse
 %endif
 
 extern AES128_CBC_MAC
+
+section .data
+default rel
+
+align 16
+len_masks:
+	;ddq 0x0000000000000000000000000000FFFF
+	dq 0x000000000000FFFF, 0x0000000000000000
+	;ddq 0x000000000000000000000000FFFF0000
+	dq 0x00000000FFFF0000, 0x0000000000000000
+	;ddq 0x00000000000000000000FFFF00000000
+	dq 0x0000FFFF00000000, 0x0000000000000000
+	;ddq 0x0000000000000000FFFF000000000000
+	dq 0xFFFF000000000000, 0x0000000000000000
+one:	dq  1
+two:	dq  2
+three:	dq  3
+
+section .text
+
+%define APPEND(a,b) a %+ b
 
 %ifdef LINUX
 %define arg1	rdi
@@ -74,7 +96,9 @@ extern AES128_CBC_MAC
 %define tmp3             r12
 %define tmp4             r13
 %define tmp2             r14
+
 %define flag             r15
+%define good_lane        r15
 
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
@@ -82,8 +106,6 @@ struc STACK
 _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
-
-section .text
 
 ;;; ===========================================================================
 ;;; ===========================================================================
@@ -113,11 +135,13 @@ section .text
 	mov	[rsp + _gpr_save + 8*7], rdi
 %endif
 	mov	[rsp + _rsp_save], rax	; original SP
-        mov     flag, 0
 
-%ifidn %%SUBMIT_FLUSH, SUBMIT
         ;; Find free lane
  	mov	unused_lanes, [state + _aes_cmac_unused_lanes]
+
+%ifidn %%SUBMIT_FLUSH, SUBMIT
+        mov     flag, 0
+
  	mov	lane, unused_lanes
         and	lane, 0xF
  	shr	unused_lanes, 4
@@ -146,25 +170,10 @@ section .text
         ;; Check for partial block
         mov     r, len
         and     r, 0xf
-        ; DBGPRINTL64 "len", len
-        ; DBGPRINTL64 "n", n
-        ; DBGPRINTL64 "r", tmp3
 
         or      n, n   ; check one or more blocks?
-        jnz     %%_ge_one_block
+        jz      %%_lt_one_block
 
-        ;; Single partial block
-        mov     word [state + _aes_cmac_init_done + lane*2], 1
-        mov     [state + _aes_cmac_args_in + lane*8], m_last
-
-        movdqa  xmm0, [state + _aes_cmac_lens]
-        XPINSRW xmm0, xmm1, tmp2, lane, 16, scale_x16
-        movdqa  [state + _aes_cmac_lens], xmm0
-
-        mov     n, 1
-        jmp     %%_not_complete_block
-
-%%_ge_one_block:
         ;; One or more blocks, potentially partial
         mov     word [state + _aes_cmac_init_done + lane*2], 0
 
@@ -173,8 +182,7 @@ section .text
         mov     [state + _aes_cmac_args_in + lane*8], tmp2
 
         ;; len = (n-1)*16
-        mov     tmp2, n
-        sub     tmp2, 1
+        lea     tmp2, [n - 1]
         shl     tmp2, 4
         movdqa  xmm0, [state + _aes_cmac_lens]
         XPINSRW xmm0, xmm1, tmp, lane, tmp2, scale_x16
@@ -182,25 +190,7 @@ section .text
 
         ;; Set flag = (r == 0)
         or      r, r
-        jnz     %%_not_complete_block
-        mov     flag, 1
-
-        ;; Block size aligned
-        mov     tmp2, [job + _src]
-        add     tmp2, [job + _hash_start_src_offset_in_bytes]
-        mov     tmp3, n
-        sub     tmp3, 1
-        shl     tmp3, 4
-        add     tmp2, tmp3
-
-        ;; M_last = M_n XOR K1
-        mov     tmp3, [job + _skey1]
-        movdqu  xmm0, [tmp3]
-        movdqu  xmm1, [tmp2]
-        pxor    xmm0, xmm1
-        movdqa  [m_last], xmm0
-
-        jmp     %%_step_5
+        jz      %%_complete_block
 
 %%_not_complete_block:
         ;; M_last = padding(M_n) XOR K2
@@ -209,12 +199,11 @@ section .text
 
         mov     tmp, [job + _src]
         add     tmp, [job + _hash_start_src_offset_in_bytes]
-        mov     tmp3, n
-        sub     tmp3, 1
+        lea     tmp3, [n - 1]
         shl     tmp3, 4
         add     tmp, tmp3
 
-        memcpy_sse_64 m_last, tmp, r, tmp4, iv, xmm0, xmm1, xmm2, xmm3
+        memcpy_sse_16 m_last, tmp, r, tmp4, iv
 
         ;; src + n + r
         mov     byte [m_last + r], 0x80
@@ -224,13 +213,50 @@ section .text
         movdqa  [m_last], xmm0
 
 %%_step_5:
-        ; Find min length
+        ;; Find min length
         movdqa  xmm0, [state + _aes_cmac_lens]
         phminposuw xmm1, xmm0
 
         cmp	byte [state + _aes_cmac_unused_lanes], 0xf
         jne	%%_return_null
-%endif ; SUBMIT
+
+%else ; end SUBMIT
+
+        ;; Check at least one job
+        bt      unused_lanes, 19
+	jc      %%_return_null
+
+      	;; Find a lane with a non-null job
+	xor	good_lane, good_lane
+	cmp	qword [state + _aes_cmac_job_in_lane + 1*8], 0
+	cmovne	good_lane, [rel one]
+	cmp	qword [state + _aes_cmac_job_in_lane + 2*8], 0
+	cmovne	good_lane, [rel two]
+	cmp	qword [state + _aes_cmac_job_in_lane + 3*8], 0
+	cmovne	good_lane, [rel three]
+
+	; Copy good_lane to empty lanes
+	mov	tmp2, [state + _aes_cmac_args_in + good_lane*8]
+	mov	tmp3, [state + _aes_cmac_args_keys + good_lane*8]
+	shl	good_lane, 4 ; multiply by 16
+	movdqa	xmm2, [state + _aes_cmac_args_IV + good_lane]
+	movdqa	xmm0, [state + _aes_cmac_lens]
+
+%assign I 0
+%rep 4
+	cmp	qword [state + _aes_cmac_job_in_lane + I*8], 0
+	jne	APPEND(skip_,I)
+	mov	[state + _aes_cmac_args_in + I*8], tmp2
+	mov	[state + _aes_cmac_args_keys + I*8], tmp3
+	movdqa	[state + _aes_cmac_args_IV + I*16], xmm2
+	por	xmm0, [rel len_masks + 16*I]
+APPEND(skip_,I):
+%assign I (I+1)
+%endrep
+        ;; Find min length
+        phminposuw xmm1, xmm0
+
+%endif ; end FLUSH
 
 %%_cmac_round:
 	pextrw	len2, xmm1, 0	; min value
@@ -286,7 +312,7 @@ section .text
         jmp     %%_update_lanes
 
 %%_ne_16_copy:
-        memcpy_sse_64 tmp2, tmp3, tmp4, lane, iv, xmm0, xmm1, xmm2, xmm3
+        memcpy_sse_16 tmp2, tmp3, tmp4, lane, iv
 
 %%_update_lanes:
         ; Update unused lanes
@@ -318,6 +344,39 @@ section .text
 %%_return_null:
 	xor	job_rax, job_rax
 	jmp	%%_return
+
+%ifidn %%SUBMIT_FLUSH, SUBMIT
+%%_complete_block:
+        mov     flag, 1
+
+        ;; Block size aligned
+        mov     tmp2, [job + _src]
+        add     tmp2, [job + _hash_start_src_offset_in_bytes]
+        lea     tmp3, [n - 1]
+        shl     tmp3, 4
+        add     tmp2, tmp3
+
+        ;; M_last = M_n XOR K1
+        mov     tmp3, [job + _skey1]
+        movdqu  xmm0, [tmp3]
+        movdqu  xmm1, [tmp2]
+        pxor    xmm0, xmm1
+        movdqa  [m_last], xmm0
+
+        jmp     %%_step_5
+
+%%_lt_one_block:
+        ;; Single partial block
+        mov     word [state + _aes_cmac_init_done + lane*2], 1
+        mov     [state + _aes_cmac_args_in + lane*8], m_last
+
+        movdqa  xmm0, [state + _aes_cmac_lens]
+        XPINSRW xmm0, xmm1, tmp2, lane, 16, scale_x16
+        movdqa  [state + _aes_cmac_lens], xmm0
+
+        mov     n, 1
+        jmp     %%_not_complete_block
+%endif
 %endmacro
 
 
@@ -328,6 +387,12 @@ align 64
 MKGLOBAL(SUBMIT_JOB_AES_CMAC_AUTH,function,internal)
 SUBMIT_JOB_AES_CMAC_AUTH:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE SUBMIT
+
+; JOB_AES_HMAC * flush_job_aes_cmac_auth_sse(MB_MGR_CCM_OOO *state)
+; arg 1 : state
+MKGLOBAL(FLUSH_JOB_AES_CMAC_AUTH,function,internal)
+FLUSH_JOB_AES_CMAC_AUTH:
+        GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE FLUSH
 
 
 %ifdef LINUX

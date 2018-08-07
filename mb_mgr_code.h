@@ -631,7 +631,6 @@ submit_job_aes_cmac_auth_arch(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job)
 {
         return submit_flush_job_aes_cmac(state, job, AES_CMAC_MAX_JOBS, 1);
 }
-#endif
 
 static
 JOB_AES_HMAC *
@@ -639,7 +638,7 @@ flush_job_aes_cmac_auth_arch(MB_MGR_CMAC_OOO *state)
 {
         return submit_flush_job_aes_cmac(state, NULL, AES_CMAC_MAX_JOBS, 0);
 }
-
+#endif
 /* ========================================================================= */
 /* AES-GCM */
 /* ========================================================================= */
