@@ -624,7 +624,8 @@ submit_flush_job_aes_cmac(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job,
         return ret_job;
 }
 
-#ifndef MB_MGR_SSE
+#if defined MB_MGR_SSE || defined MB_MGR_AVX
+#else
 static
 JOB_AES_HMAC *
 submit_job_aes_cmac_auth_arch(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job)

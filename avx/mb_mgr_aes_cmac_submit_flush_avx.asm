@@ -36,9 +36,9 @@
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 
-%define AES128_CBC_MAC aes128_cbc_mac_x4
-%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_sse
-%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_sse
+%define AES128_CBC_MAC aes128_cbc_mac_x8
+%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_avx
+%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_avx
 
 extern AES128_CBC_MAC
 
@@ -55,9 +55,24 @@ len_masks:
 	dq 0x0000FFFF00000000, 0x0000000000000000
 	;ddq 0x0000000000000000FFFF000000000000
 	dq 0xFFFF000000000000, 0x0000000000000000
+	;ddq 0x000000000000FFFF0000000000000000
+	dq 0x0000000000000000, 0x000000000000FFFF
+	;ddq 0x00000000FFFF00000000000000000000
+	dq 0x0000000000000000, 0x00000000FFFF0000
+	;ddq 0x0000FFFF000000000000000000000000
+	dq 0x0000000000000000, 0x0000FFFF00000000
+	;ddq 0xFFFF0000000000000000000000000000
+	dq 0x0000000000000000, 0xFFFF000000000000
+dupw:
+	;ddq 0x01000100010001000100010001000100
+	dq 0x0100010001000100, 0x0100010001000100
 one:	dq  1
 two:	dq  2
 three:	dq  3
+four:	dq  4
+five:	dq  5
+six:	dq  6
+seven:	dq  7
 
 section .text
 
@@ -115,7 +130,7 @@ endstruc
 ;;; AES CMAC job submit & flush
 ;;; ===========================================================================
 ;;; SUBMIT_FLUSH [in] - SUBMIT, FLUSH job selection
-%macro GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE 1
+%macro GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_AVX 1
 %define %%SUBMIT_FLUSH %1
 
         mov	rax, rsp
@@ -154,23 +169,21 @@ endstruc
         shl     tmp, 4  ; lane*16
 
         ;; Zero IV to store digest
-        pxor    xmm0, xmm0
-        movdqa  [state + _aes_cmac_args_IV + tmp], xmm0
+        vpxor   xmm0, xmm0
+        vmovdqa [state + _aes_cmac_args_IV + tmp], xmm0
 
         lea     m_last, [state + _aes_cmac_scratch + tmp]
 
-        ;; Check at least 1 or more blocks (get n)
+        ;; Check number of blocks and for partial block
         mov     len, [job + _msg_len_to_hash_in_bytes]
-        mov     n, len
-        add     n, 0xf
-        shr     n, 4
 
-        ;; Check for partial block
-        mov     r, len
+        mov     r, len  ; set remainder
         and     r, 0xf
 
-        or      n, n   ; check one or more blocks?
-        jz      %%_lt_one_block
+        lea     n, [len + 0xf] ; set num blocks
+        shr     n, 4
+
+        jz      %%_lt_one_block ; check one or more blocks?
 
         ;; One or more blocks, potentially partial
         mov     word [state + _aes_cmac_init_done + lane*2], 0
@@ -182,9 +195,9 @@ endstruc
         ;; len = (n-1)*16
         lea     tmp2, [n - 1]
         shl     tmp2, 4
-        movdqa  xmm0, [state + _aes_cmac_lens]
-        XPINSRW xmm0, xmm1, tmp, lane, tmp2, scale_x16
-        movdqa  [state + _aes_cmac_lens], xmm0
+        vmovdqa xmm0, [state + _aes_cmac_lens]
+        XVPINSRW xmm0, xmm1, tmp, lane, tmp2, scale_x16
+        vmovdqa [state + _aes_cmac_lens], xmm0
 
         ;; Set flag = (r == 0)
         or      r, r
@@ -192,8 +205,8 @@ endstruc
 
 %%_not_complete_block:
         ;; M_last = padding(M_n) XOR K2
-        pxor    xmm1, xmm1 ; zero *M_last
-        movdqa  [m_last], xmm1
+        vpxor   xmm1, xmm1 ; zero *M_last
+        vmovdqa [m_last], xmm1
 
         mov     tmp, [job + _src]
         add     tmp, [job + _hash_start_src_offset_in_bytes]
@@ -201,74 +214,82 @@ endstruc
         shl     tmp3, 4
         add     tmp, tmp3
 
-        memcpy_sse_16 m_last, tmp, r, tmp4, iv
+        memcpy_avx_16 m_last, tmp, r, tmp4, iv
 
         ;; src + n + r
         mov     byte [m_last + r], 0x80
         mov     tmp3, [job + _skey2]
-        movdqu  xmm0, [tmp3]
-        pxor    xmm0, [m_last]
-        movdqa  [m_last], xmm0
+        vmovdqu xmm0, [tmp3]
+        vpxor   xmm0, [m_last]
+        vmovdqa [m_last], xmm0
 
 %%_step_5:
         ;; Find min length
-        movdqa  xmm0, [state + _aes_cmac_lens]
-        phminposuw xmm1, xmm0
+        vmovdqa xmm0, [state + _aes_cmac_lens]
+        vphminposuw xmm1, xmm0
 
-        cmp	byte [state + _aes_cmac_unused_lanes], 0xf
-        jne	%%_return_null
+        cmp     byte [state + _aes_cmac_unused_lanes], 0xf
+        jne     %%_return_null
 
 %else ; end SUBMIT
 
         ;; Check at least one job
-        bt      unused_lanes, 19
-	jc      %%_return_null
+        bt      unused_lanes, 35
+        jc      %%_return_null
 
-      	;; Find a lane with a non-null job
-	xor	good_lane, good_lane
-	cmp	qword [state + _aes_cmac_job_in_lane + 1*8], 0
-	cmovne	good_lane, [rel one]
-	cmp	qword [state + _aes_cmac_job_in_lane + 2*8], 0
-	cmovne	good_lane, [rel two]
-	cmp	qword [state + _aes_cmac_job_in_lane + 3*8], 0
-	cmovne	good_lane, [rel three]
+        ;; Find a lane with a non-null job
+        xor     good_lane, good_lane
+        cmp     qword [state + _aes_cmac_job_in_lane + 1*8], 0
+        cmovne  good_lane, [rel one]
+        cmp     qword [state + _aes_cmac_job_in_lane + 2*8], 0
+        cmovne  good_lane, [rel two]
+        cmp     qword [state + _aes_cmac_job_in_lane + 3*8], 0
+        cmovne  good_lane, [rel three]
+        cmp     qword [state + _aes_cmac_job_in_lane + 4*8], 0
+        cmovne  good_lane, [rel four]
+        cmp     qword [state + _aes_cmac_job_in_lane + 5*8], 0
+        cmovne  good_lane, [rel five]
+        cmp     qword [state + _aes_cmac_job_in_lane + 6*8], 0
+        cmovne  good_lane, [rel six]
+        cmp     qword [state + _aes_cmac_job_in_lane + 7*8], 0
+        cmovne  good_lane, [rel seven]
 
-	; Copy good_lane to empty lanes
-	mov	tmp2, [state + _aes_cmac_args_in + good_lane*8]
-	mov	tmp3, [state + _aes_cmac_args_keys + good_lane*8]
-	shl	good_lane, 4 ; multiply by 16
-	movdqa	xmm2, [state + _aes_cmac_args_IV + good_lane]
-	movdqa	xmm0, [state + _aes_cmac_lens]
+        ; Copy good_lane to empty lanes
+        mov     tmp2, [state + _aes_cmac_args_in + good_lane*8]
+        mov     tmp3, [state + _aes_cmac_args_keys + good_lane*8]
+        shl     good_lane, 4 ; multiply by 16
+        vmovdqa xmm2, [state + _aes_cmac_args_IV + good_lane]
+        vmovdqa xmm0, [state + _aes_cmac_lens]
 
 %assign I 0
-%rep 4
-	cmp	qword [state + _aes_cmac_job_in_lane + I*8], 0
-	jne	APPEND(skip_,I)
-	mov	[state + _aes_cmac_args_in + I*8], tmp2
-	mov	[state + _aes_cmac_args_keys + I*8], tmp3
-	movdqa	[state + _aes_cmac_args_IV + I*16], xmm2
-	por	xmm0, [rel len_masks + 16*I]
+%rep 8
+        cmp     qword [state + _aes_cmac_job_in_lane + I*8], 0
+        jne     APPEND(skip_,I)
+        mov     [state + _aes_cmac_args_in + I*8], tmp2
+        mov     [state + _aes_cmac_args_keys + I*8], tmp3
+        vmovdqa [state + _aes_cmac_args_IV + I*16], xmm2
+        vpor    xmm0, [rel len_masks + 16*I]
 APPEND(skip_,I):
 %assign I (I+1)
 %endrep
         ;; Find min length
-        phminposuw xmm1, xmm0
+        vphminposuw xmm1, xmm0
 
 %endif ; end FLUSH
 
 %%_cmac_round:
-	pextrw	len2, xmm1, 0	; min value
-	pextrw	idx, xmm1, 1	; min index (0...3)
-        cmp	len2, 0
-	je	%%_len_is_0
-        pshuflw	xmm1, xmm1, 0
-	psubw	xmm0, xmm1
-	movdqa	[state + _aes_cmac_lens], xmm0
+        vpextrw DWORD(len2), xmm1, 0   ; min value
+        vpextrw DWORD(idx), xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      %%_len_is_0
+        vpshufb xmm1, xmm1, [rel dupw]   ; duplicate words across all lanes
+        vpsubw  xmm0, xmm1
+	vmovdqa [state + _aes_cmac_lens], xmm0
 
         ; "state" and "args" are the same address, arg1
-	; len2 is arg2
-	call    AES128_CBC_MAC
-	; state and idx are intact
+        ; len2 is arg2
+        call    AES128_CBC_MAC
+        ; state and idx are intact
 
 %%_len_is_0:
         ; Check if job complete
@@ -278,11 +299,11 @@ APPEND(skip_,I):
         ; Finish step 6
         mov     word [state + _aes_cmac_init_done + idx*2], 1
 
-        movdqa  xmm0, [state + _aes_cmac_lens]
-        XPINSRW xmm0, xmm1, tmp3, idx, 16, scale_x16
-        movdqa  [state + _aes_cmac_lens], xmm0
+        vmovdqa xmm0, [state + _aes_cmac_lens]
+        XVPINSRW xmm0, xmm1, tmp3, idx, 16, scale_x16
+        vmovdqa [state + _aes_cmac_lens], xmm0
 
-        phminposuw xmm1, xmm0 ; find min length
+        vphminposuw xmm1, xmm0 ; find min length
 
         mov     tmp3, idx
         shl     tmp3, 4  ; idx*16
@@ -305,12 +326,12 @@ APPEND(skip_,I):
         jne     %%_ne_16_copy
 
         ;; 16 byte AT copy
-        movdqu  xmm0, [tmp3]
-        movdqu  [tmp2], xmm0
+        vmovdqa xmm0, [tmp3]
+        vmovdqu [tmp2], xmm0
         jmp     %%_update_lanes
 
 %%_ne_16_copy:
-        memcpy_sse_16 tmp2, tmp3, tmp4, lane, iv
+        memcpy_avx_16 tmp2, tmp3, tmp4, lane, iv
 
 %%_update_lanes:
         ; Update unused lanes
@@ -356,10 +377,10 @@ APPEND(skip_,I):
 
         ;; M_last = M_n XOR K1
         mov     tmp3, [job + _skey1]
-        movdqu  xmm0, [tmp3]
-        movdqu  xmm1, [tmp2]
-        pxor    xmm0, xmm1
-        movdqa  [m_last], xmm0
+        vmovdqu xmm0, [tmp3]
+        vmovdqu xmm1, [tmp2]
+        vpxor   xmm0, xmm1
+        vmovdqa [m_last], xmm0
 
         jmp     %%_step_5
 
@@ -368,9 +389,9 @@ APPEND(skip_,I):
         mov     word [state + _aes_cmac_init_done + lane*2], 1
         mov     [state + _aes_cmac_args_in + lane*8], m_last
 
-        movdqa  xmm0, [state + _aes_cmac_lens]
-        XPINSRW xmm0, xmm1, tmp2, lane, 16, scale_x16
-        movdqa  [state + _aes_cmac_lens], xmm0
+        vmovdqa xmm0, [state + _aes_cmac_lens]
+        XVPINSRW xmm0, xmm1, tmp2, lane, 16, scale_x16
+        vmovdqa [state + _aes_cmac_lens], xmm0
 
         mov     n, 1
         jmp     %%_not_complete_block
@@ -379,18 +400,18 @@ APPEND(skip_,I):
 
 
 align 64
-; JOB_AES_HMAC * submit_job_aes_cmac_auth_sse(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job)
+; JOB_AES_HMAC * submit_job_aes_cmac_auth_avx(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CMAC_AUTH,function,internal)
 SUBMIT_JOB_AES_CMAC_AUTH:
-        GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE SUBMIT
+        GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_AVX SUBMIT
 
-; JOB_AES_HMAC * flush_job_aes_cmac_auth_sse(MB_MGR_CCM_OOO *state)
+; JOB_AES_HMAC * flush_job_aes_cmac_auth_avx(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CMAC_AUTH,function,internal)
 FLUSH_JOB_AES_CMAC_AUTH:
-        GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE FLUSH
+        GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_AVX FLUSH
 
 
 %ifdef LINUX
