@@ -186,7 +186,6 @@ void aes128_cbc_mac_x4(AES_ARGS_x8 *args, uint64_t len);
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_sse
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse
-#define AES_CMAC_MAX_JOBS 4
 
 /* ====================================================================== */
 
@@ -644,5 +643,5 @@ init_mb_mgr_sse(MB_MGR *state)
         state->sha512              = sha512_sse;
         state->md5_one_block       = md5_one_block_sse;
 }
-#define MB_MGR_SSE
+
 #include "mb_mgr_code.h"

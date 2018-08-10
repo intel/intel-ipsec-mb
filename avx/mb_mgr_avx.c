@@ -171,7 +171,6 @@ void aes128_cbc_mac_x8(AES_ARGS_x8 *args, uint64_t len);
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_avx
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_avx
-#define AES_CMAC_MAX_JOBS 8
 
 /* ====================================================================== */
 
@@ -499,5 +498,4 @@ init_mb_mgr_avx(MB_MGR *state)
         state->md5_one_block       = md5_one_block_avx;
 }
 
-#define MB_MGR_AVX
 #include "mb_mgr_code.h"
