@@ -57,6 +57,7 @@
 #define NUM_RUNS 16
 #define KEYS_PER_JOB 15
 
+#define ITER_SCALE_SMOKE 2048
 #define ITER_SCALE_SHORT 200000
 #define ITER_SCALE_LONG  2000000
 
@@ -945,7 +946,8 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
         for (sz = 0; sz < sizes; sz++) {
                 const uint32_t size_aes = (sz + 1) * JOB_SIZE_STEP;
-                const uint32_t num_iter = iter_scale / size_aes;
+                const uint32_t num_iter =
+                        (iter_scale >= size_aes) ? (iter_scale / size_aes) : 1;
 
                 params->size_aes = size_aes;
                 if (params->test_type == TTYPE_AES_GCM && (!use_gcm_job_api))
@@ -1237,6 +1239,9 @@ run_tests(void *arg)
                 variant = 0;
                 variant_ptr = variant_list;
 
+                if (iter_scale == ITER_SCALE_SMOKE && run != 0)
+                        continue;
+
                 for (type = TTYPE_AES_HMAC; type < NUM_TYPES; type++) {
                         if (test_types[type] == 0)
                                 continue;
@@ -1258,7 +1263,7 @@ run_tests(void *arg)
                         }
                 } /* end for type */
         } /* end for run */
-        if (info->print_info == 1)
+        if (info->print_info == 1 && iter_scale != ITER_SCALE_SMOKE)
                 print_times(variant_list, &params, total_variants);
 
         if (variant_list != NULL) {
@@ -1309,7 +1314,8 @@ static void usage(void)
                 "--cores mask: <mask> CPU's to run threads\n"
                 "--unhalted-cycles: measure using unhalted cycles (requires root).\n"
                 "                   Note: RDTSC is used by default.\n"
-                "--quick: reduces number of test iterations by x10 (less precise but quicker)\n",
+                "--quick: reduces number of test iterations by x10 (less precise but quicker)\n"
+                "--smoke: very quick, unprecise and without print out (for validation only)\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -1362,6 +1368,8 @@ int main(int argc, char *argv[])
                         use_gcm_job_api = 1;
                 } else if (strcmp(argv[i], "--quick") == 0) {
                         iter_scale = ITER_SCALE_SHORT;
+                } else if (strcmp(argv[i], "--smoke") == 0) {
+                        iter_scale = ITER_SCALE_SMOKE;
                 } else if ((strcmp(argv[i], "-o") == 0) && (i < argc - 1)) {
                         i++;
                         sha_size_incr = atoi(argv[i]);
