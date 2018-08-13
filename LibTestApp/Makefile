@@ -56,7 +56,7 @@ endif
 
 SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
-	hmac_md5_test.c
+	hmac_md5_test.c aes_test.c
 OBJECTS := $(SOURCES:%.c=%.o)
 
 all: $(APP)
@@ -73,6 +73,7 @@ cmac_test.o: cmac_test.c utils.h
 hmac_sha1_test.o: hmac_sha1_test.c utils.h
 hmac_md5_test.o: hmac_md5_test.c utils.h
 hmac_sha256_sha512_test.o: hmac_sha256_sha512_test.c utils.h
+aes_test.o: aes_test.c gcm_ctr_vectors_test.h utils.h
 customop_test.o: customop_test.c customop_test.h
 utils.o: utils.c utils.h
 

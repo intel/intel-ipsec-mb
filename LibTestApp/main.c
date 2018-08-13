@@ -42,6 +42,7 @@ extern int hmac_sha1_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int hmac_sha256_sha512_test(const enum arch_type arch,
                                    struct MB_MGR *mb_mgr);
 extern int hmac_md5_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+extern int aes_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -149,6 +150,7 @@ main(int argc, char **argv)
                 errors += hmac_sha1_test(atype, p_mgr);
                 errors += hmac_sha256_sha512_test(atype, p_mgr);
                 errors += hmac_md5_test(atype, p_mgr);
+                errors += aes_test(atype, p_mgr);
         }
 
         free_mb_mgr(p_mgr);
