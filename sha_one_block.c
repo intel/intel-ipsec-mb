@@ -243,7 +243,7 @@ sha_generic(const void *data, const uint64_t length, void *digest,
                 uint32_t digest1[NUM_SHA_256_DIGEST_WORDS];
                 uint64_t digest2[NUM_SHA_512_DIGEST_WORDS];
         } local_digest;
-        void *ld = (void *) &local_digest.digest1[0];
+        void *ld = (void *) &local_digest;
         const uint8_t *inp = (const uint8_t *) data;
         uint64_t idx, r;
 
