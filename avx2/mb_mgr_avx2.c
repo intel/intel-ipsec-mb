@@ -499,6 +499,7 @@ init_mb_mgr_avx2(MB_MGR *state)
         state->sha512_one_block    = sha512_one_block_avx2;
         state->sha512              = sha512_avx2;
         state->md5_one_block       = md5_one_block_avx2;
+        state->aes128_cfb_one      = aes_cfb_128_one_avx2;
 }
 
 #include "mb_mgr_code.h"

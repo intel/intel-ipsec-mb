@@ -520,6 +520,8 @@ typedef void (*hash_one_block_t)(const void *, void *);
 typedef void (*hash_fn_t)(const void *, const uint64_t, void *);
 typedef void (*xcbc_keyexp_t)(const void *, void *, void *, void *);
 typedef int (*des_keysched_t)(uint64_t *, const void *);
+typedef void (*aes128_cfb_t)(void *, const void *, const void *, const void *,
+                             uint64_t);
 
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
@@ -576,6 +578,7 @@ typedef struct MB_MGR {
         hash_fn_t               sha256;
         hash_fn_t               sha384;
         hash_fn_t               sha512;
+        aes128_cfb_t            aes128_cfb_one;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -729,6 +732,8 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
         ((_mgr)->sha512((_data), (_length), (_digest)))
 #define IMB_MD5_ONE_BLOCK(_mgr, _data, _digest)         \
         ((_mgr)->md5_one_block((_data), (_digest)))
+#define IMB_AES128_CFB_ONE(_mgr, _out, _in, _iv, _enc, _len)      \
+        ((_mgr)->aes128_cfb_one((_out), (_in), (_iv), (_enc), (_len)))
 
 /* Auxiliary functions */
 

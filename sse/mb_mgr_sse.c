@@ -642,6 +642,7 @@ init_mb_mgr_sse(MB_MGR *state)
         state->sha512_one_block    = sha512_one_block_sse;
         state->sha512              = sha512_sse;
         state->md5_one_block       = md5_one_block_sse;
+        state->aes128_cfb_one      = aes_cfb_128_one_sse;
 }
 
 #include "mb_mgr_code.h"
