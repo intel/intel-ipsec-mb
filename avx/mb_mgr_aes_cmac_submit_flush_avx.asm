@@ -205,8 +205,10 @@ endstruc
 
 %%_not_complete_block:
         ;; M_last = padding(M_n) XOR K2
-        vpxor   xmm1, xmm1 ; zero *M_last
-        vmovdqa [m_last], xmm1
+        lea     tmp, [rel padding_0x80_tab16 + 16]
+        sub     tmp, r
+        vmovdqu xmm0, [tmp]
+        vmovdqa [m_last], xmm0
 
         mov     tmp, [job + _src]
         add     tmp, [job + _hash_start_src_offset_in_bytes]
@@ -217,10 +219,10 @@ endstruc
         memcpy_avx_16 m_last, tmp, r, tmp4, iv
 
         ;; src + n + r
-        mov     byte [m_last + r], 0x80
         mov     tmp3, [job + _skey2]
+        vmovdqa xmm1, [m_last]
         vmovdqu xmm0, [tmp3]
-        vpxor   xmm0, [m_last]
+        vpxor   xmm0, xmm1
         vmovdqa [m_last], xmm0
 
 %%_step_5:

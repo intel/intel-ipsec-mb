@@ -32,6 +32,9 @@
 extern len_shift_tab
 extern len_mask_tab
 
+;;; Table to do 0x80 byte shift for padding prefix
+extern padding_0x80_tab16
+
 ;;; Size of len_shift_tab defined in const.asm module
 %define len_tab_diff 128
 
