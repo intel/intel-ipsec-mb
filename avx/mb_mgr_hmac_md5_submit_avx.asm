@@ -30,6 +30,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "memcpy.asm"
 %include "reg_sizes.asm"
+%include "const.inc"
 
 extern md5_x4x2_avx
 
@@ -128,7 +129,11 @@ submit_job_hmac_md5_avx:
 
         mov	[lane_data + _job_in_lane], job
         mov	dword [lane_data + _outer_done], 0
-        mov	[state + _lens_md5 + 2*lane], WORD(tmp)
+
+        ;; insert len into proper lane
+        vmovdqa xmm0, [state + _lens_md5]
+        XVPINSRW xmm0, xmm1, p, lane, tmp, scale_x16
+        vmovdqa [state + _lens_md5], xmm0
 
         mov	last_len, len
         and	last_len, 63
@@ -179,7 +184,10 @@ end_fast_copy:
         jnz	ge64_bytes
 
 lt64_bytes:
-        mov	[state + _lens_md5 + 2*lane], WORD(extra_blocks)
+        vmovdqa xmm0, [state + _lens_md5]
+        XVPINSRW xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
+        vmovdqa [state + _lens_md5], xmm0
+
         lea	tmp, [lane_data + _extra_block + start_offset]
         mov	[state + _args_data_ptr_md5 + PTR_SZ*lane], tmp
         mov	dword [lane_data + _extra_blocks], 0
@@ -222,7 +230,11 @@ proc_outer:
         mov	dword [lane_data + _outer_done], 1
         mov	DWORD(size_offset), [lane_data + _size_offset]
         mov	qword [lane_data + _extra_block + size_offset], 0
-        mov	word [state + _lens_md5 + 2*idx], 1
+
+        vmovdqa xmm0, [state + _lens_md5]
+        XVPINSRW xmm0, xmm1, tmp, idx, 1, scale_x16
+        vmovdqa [state + _lens_md5], xmm0
+
         lea	tmp, [lane_data + _outer_block]
         mov	job, [lane_data + _job_in_lane]
         mov	[state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
@@ -245,7 +257,11 @@ proc_outer:
         align	16
 proc_extra_blocks:
         mov	DWORD(start_offset), [lane_data + _start_offset]
-        mov	[state + _lens_md5 + 2*idx], WORD(extra_blocks)
+
+        vmovdqa xmm0, [state + _lens_md5]
+        XVPINSRW xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
+        vmovdqa [state + _lens_md5], xmm0
+
         lea	tmp, [lane_data + _extra_block + start_offset]
         mov	[state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
         mov	dword [lane_data + _extra_blocks], 0
