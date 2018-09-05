@@ -38,7 +38,7 @@ extern padding_0x80_tab16
 ;;; Size of len_shift_tab defined in const.asm module
 %define len_tab_diff 128
 
-; PINSRW_COMMON insert word into SIMD register
+; PINSRW_COMMON insert word into 128 bit SIMD register
 %macro PINSRW_COMMON 7
 
 %define %%type          %1 ; instruction type - sse or avx
@@ -89,5 +89,27 @@ extern padding_0x80_tab16
 
 ;;; Call AVX macro
 %define XVPINSRW PINSRW_COMMON avx,
+
+
+;;; VPINSRW_M256 insert word into 32 byte memory range
+%macro VPINSRW_M256 8
+
+%define %%mem_addr      %1 ; 16 byte aligned memory address to insert word
+%define %%tmp_simd1     %2 ; XMM reg to clobber
+%define %%tmp_simd2     %3 ; XMM reg to clobber
+%define %%tmp_gp        %4 ; GP reg to clobber
+%define %%offset        %5 ; GP reg used to store offset
+%define %%idx           %6 ; word index to insert value
+%define %%val           %7 ; word value to insert into idx
+%define %%scale_idx     %8 ; flag to set if index is to be scaled x16
+
+        mov     %%offset, %%idx
+        and     %%offset, 0x8   ; set offset 0 or 8
+        and     %%idx, 0x7      ; remove offset from idx
+        vmovdqa %%tmp_simd1, [%%mem_addr + %%offset*2]
+        XVPINSRW %%tmp_simd1, %%tmp_simd2, %%tmp_gp, %%idx, %%val, %%scale_idx
+        vmovdqa [%%mem_addr + %%offset*2], %%tmp_simd1
+        or      %%idx, %%offset ; reset offset
+%endmacro
 
 %endif ; end ifndef _CONST_INC_
