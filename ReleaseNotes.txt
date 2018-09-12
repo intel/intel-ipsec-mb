@@ -1,6 +1,28 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+v0.51 September 2018
+========================================================================
+
+13 Sep, 2018
+
+General
+- AES-CMAC performance optimizations
+- Implemented store to load optimizations in
+  - AES-CMAC submit and flush jobs for SSE and AVX
+  - HMAC-MD5, HMAC-SHA submit jobs for AVX
+  - HMAC-MD5 submit job for AVX2
+- Added zero-sized message support in GCM
+- Stack execution flag disabled in new asm modules
+
+LibTestApp
+- Added AES vectors
+- Added DOCSIS AES vectors
+- Added CFB validation
+
+LibPerfApp
+- Smoke test option added
+
 v0.50 June 2018
 ========================================================================
 
