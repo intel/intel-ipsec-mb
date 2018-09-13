@@ -24,7 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %global githubname   intel-ipsec-mb
-%global githubver    0.49
+%global githubver    0.51
 %global githubfull   %{githubname}-%{githubver}
 
 # disable producing debuginfo for this package
@@ -99,6 +99,9 @@ ln -s libIPSec_MB.so.%{version} libIPSec_MB.so
 %{_mandir}/man7/libipsec-mb-dev.7.gz
 
 %changelog
+* Thu Sep 13 2018 Marcel Cornu <marcel.d.cornu@intel.com> 0.51-1
+- Update for release package v0.51
+
 * Mon Apr 16 2018 Tomasz Kantecki <tomasz.kantecki@intel.com> 0.49-1
 - update for release package v0.49
 - 01org replaced with intel in URL's
