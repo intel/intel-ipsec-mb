@@ -52,7 +52,7 @@ NASM ?= nasm
 
 OBJ_DIR = obj
 
-INCLUDE_DIRS := include .
+INCLUDE_DIRS := include . no-aesni
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
 
 CC ?= gcc
@@ -221,13 +221,13 @@ lib_objs := \
 	sha512_x8_avx512.o \
 	sha_256_mult_avx.o \
 	sha_256_mult_sse.o \
-	\
 	aes_xcbc_expand_key.o \
 	alloc.o \
 	mb_mgr_avx.o \
 	mb_mgr_avx2.o \
 	mb_mgr_avx512.o \
 	mb_mgr_sse.o \
+	mb_mgr_sse_no_aesni.o \
 	md5_one_block.o \
 	sha_one_block.o \
 	des_key.o \
@@ -351,6 +351,18 @@ else
 endif
 
 $(OBJ_DIR)/%.o:include/%.asm
+	@ echo "Making object file $@ "
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -o $@ $(NASM_FLAGS) $<
+endif
+
+$(OBJ_DIR)/%.o:no-aesni/%.c
+	@ echo "Making object file $@ "
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o:no-aesni/%.asm
 	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@

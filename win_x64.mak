@@ -63,7 +63,7 @@ DLFLAGS = /RELEASE
 !endif
 
 CC = cl
-CFLAGS = $(EXTRA_CFLAGS) $(DCFLAGS) /I. /Iinclude \
+CFLAGS = $(EXTRA_CFLAGS) $(DCFLAGS) /I. /Iinclude /Ino-aesni \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
 
 LIB_TOOL = lib
@@ -217,6 +217,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_des_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_sse.obj \
+	$(OBJ_DIR)\mb_mgr_sse_no_aesni.obj \
 	$(OBJ_DIR)\alloc.obj \
 	$(OBJ_DIR)\version.obj
 
@@ -277,6 +278,12 @@ $(all_objs): $(OBJ_DIR)
 	$(CC) /Fo$@ /c $(CFLAGS) $<
 
 {avx512\}.asm{$(OBJ_DIR)}.obj:
+	$(AS) -o $@ $(AFLAGS) $<
+
+{no-aesni\}.c{$(OBJ_DIR)}.obj:
+	$(CC) /Fo$@ /c $(CFLAGS) $<
+
+{no-aesni\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -o $@ $(AFLAGS) $<
 
 {include\}.asm{$(OBJ_DIR)}.obj:
