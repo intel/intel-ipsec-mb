@@ -124,22 +124,31 @@ lib_objs := \
 	aes_cmac_subkey_gen.o \
 	mb_mgr_aes192_flush_avx.o \
 	mb_mgr_aes192_flush_sse.o \
+	mb_mgr_aes192_flush_sse_no_aesni.o \
 	mb_mgr_aes192_submit_avx.o \
 	mb_mgr_aes192_submit_sse.o \
+	mb_mgr_aes192_submit_sse_no_aesni.o \
 	mb_mgr_aes256_flush_avx.o \
 	mb_mgr_aes256_flush_sse.o \
+	mb_mgr_aes256_flush_sse_no_aesni.o \
 	mb_mgr_aes256_submit_avx.o \
 	mb_mgr_aes256_submit_sse.o \
+	mb_mgr_aes256_submit_sse_no_aesni.o \
 	mb_mgr_aes_flush_avx.o \
 	mb_mgr_aes_flush_sse.o \
+	mb_mgr_aes_flush_sse_no_aesni.o \
 	mb_mgr_aes_submit_avx.o \
 	mb_mgr_aes_submit_sse.o \
+	mb_mgr_aes_submit_sse_no_aesni.o \
 	mb_mgr_aes_cmac_submit_flush_sse.o \
+	mb_mgr_aes_cmac_submit_flush_sse_no_aesni.o \
 	mb_mgr_aes_cmac_submit_flush_avx.o\
 	mb_mgr_aes_xcbc_flush_avx.o \
 	mb_mgr_aes_xcbc_flush_sse.o \
+	mb_mgr_aes_xcbc_flush_sse_no_aesni.o \
 	mb_mgr_aes_xcbc_submit_avx.o \
 	mb_mgr_aes_xcbc_submit_sse.o \
+	mb_mgr_aes_xcbc_submit_sse_no_aesni.o \
 	mb_mgr_hmac_flush_avx.o \
 	mb_mgr_hmac_flush_avx2.o \
 	mb_mgr_hmac_flush_sse.o \

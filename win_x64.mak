@@ -144,22 +144,31 @@ lib_objs1 = \
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes192_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes192_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes192_submit_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes192_submit_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_flush_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes256_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_submit_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes256_submit_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_flush_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_submit_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes_submit_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_sse_no_aesni.obj \
         $(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes_xcbc_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_submit_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_submit_sse.obj \
+        $(OBJ_DIR)\mb_mgr_aes_xcbc_submit_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_flush_sse.obj \

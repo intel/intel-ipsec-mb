@@ -36,9 +36,13 @@
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
 
+%ifndef AES128_CBC_MAC
+
 %define AES128_CBC_MAC aes128_cbc_mac_x4
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_sse
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_sse
+
+%endif
 
 extern AES128_CBC_MAC
 
