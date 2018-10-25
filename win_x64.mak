@@ -77,33 +77,44 @@ AFLAGS = $(DAFLAGS) -fwin64 -Xvc -DWIN_ABI -Iinclude/ -I./ -Iavx/ -Iavx2/ -Iavx5
 
 lib_objs1 = \
 	$(OBJ_DIR)\aes128_cbc_dec_by4_sse.obj \
+        $(OBJ_DIR)\aes128_cbc_dec_by4_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes128_cbc_dec_by8_avx.obj \
 	$(OBJ_DIR)\aes128_cntr_by4_sse.obj \
+        $(OBJ_DIR)\aes128_cntr_by4_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_avx.obj \
 	$(OBJ_DIR)\aes128_ecbenc_x3.obj \
 	$(OBJ_DIR)\aes192_cbc_dec_by4_sse.obj \
+        $(OBJ_DIR)\aes192_cbc_dec_by4_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes192_cbc_dec_by8_avx.obj \
 	$(OBJ_DIR)\aes192_cntr_by4_sse.obj \
+        $(OBJ_DIR)\aes192_cntr_by4_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes192_cntr_by8_avx.obj \
 	$(OBJ_DIR)\aes256_cbc_dec_by4_sse.obj \
+        $(OBJ_DIR)\aes256_cbc_dec_by4_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes256_cbc_dec_by8_avx.obj \
 	$(OBJ_DIR)\aes256_cntr_by4_sse.obj \
+        $(OBJ_DIR)\aes256_cntr_by4_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes256_cntr_by8_avx.obj \
 	$(OBJ_DIR)\aes_cfb_128_sse.obj \
 	$(OBJ_DIR)\aes_cfb_128_avx.obj \
 	$(OBJ_DIR)\aes128_cbc_mac_x4.obj \
+        $(OBJ_DIR)\aes128_cbc_mac_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes128_cbc_mac_x8.obj \
 	$(OBJ_DIR)\aes_cbc_enc_128_x4.obj \
+        $(OBJ_DIR)\aes_cbc_enc_128_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes_cbc_enc_128_x8.obj \
 	$(OBJ_DIR)\aes_cbc_enc_192_x4.obj \
+        $(OBJ_DIR)\aes_cbc_enc_192_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes_cbc_enc_192_x8.obj \
 	$(OBJ_DIR)\aes_cbc_enc_256_x4.obj \
+        $(OBJ_DIR)\aes_cbc_enc_256_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes_cbc_enc_256_x8.obj \
 	$(OBJ_DIR)\aes_keyexp_128.obj \
 	$(OBJ_DIR)\aes_keyexp_192.obj \
 	$(OBJ_DIR)\aes_keyexp_256.obj \
 	$(OBJ_DIR)\aes_cmac_subkey_gen.obj \
 	$(OBJ_DIR)\aes_xcbc_mac_128_x4.obj \
+        $(OBJ_DIR)\aes_xcbc_mac_128_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes_xcbc_mac_128_x8.obj \
 	$(OBJ_DIR)\md5_x4x2_avx.obj \
 	$(OBJ_DIR)\md5_x4x2_sse.obj \

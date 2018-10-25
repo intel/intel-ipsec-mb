@@ -25,6 +25,5 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_ENC_X4 aes_cbc_enc_128_x4_no_aesni
-%define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_sse_no_aesni
-%include "mb_mgr_aes_submit_sse.asm"
+%define AES_CNTR_128 aes_cntr_128_sse_no_aesni
+%include "aes128_cntr_by4_sse.asm"

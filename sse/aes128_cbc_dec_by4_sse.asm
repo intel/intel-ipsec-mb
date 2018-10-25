@@ -43,6 +43,10 @@
 ;
 %include "os.asm"
 
+%ifndef AES_CBC_DEC_128
+%define AES_CBC_DEC_128 aes_cbc_dec_128_sse
+%endif
+
 %define MOVDQ	movdqu
 
 %ifdef LINUX
@@ -82,8 +86,8 @@
 
 section .text
 
-MKGLOBAL(aes_cbc_dec_128_sse,function,internal)
-aes_cbc_dec_128_sse:
+MKGLOBAL(AES_CBC_DEC_128,function,internal)
+AES_CBC_DEC_128:
 %ifndef LINUX
 	mov	LEN, [rsp + 8*5]
 %endif

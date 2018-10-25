@@ -36,17 +36,17 @@
 #include "asm.h"
 #include "des.h"
 
-JOB_AES_HMAC *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes128_enc_sse(MB_MGR_AES_OOO *state);
+JOB_AES_HMAC *submit_job_aes128_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
+                                                 JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes128_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes192_enc_sse(MB_MGR_AES_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes192_enc_sse(MB_MGR_AES_OOO *state);
+JOB_AES_HMAC *submit_job_aes192_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
+                                                 JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes192_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes256_enc_sse(MB_MGR_AES_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes256_enc_sse(MB_MGR_AES_OOO *state);
+JOB_AES_HMAC *submit_job_aes256_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
+                                                 JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes256_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
 
 JOB_AES_HMAC *submit_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state,
                                   JOB_AES_HMAC *job);
@@ -72,26 +72,26 @@ JOB_AES_HMAC *submit_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state,
                                       JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_hmac_md5_sse(MB_MGR_HMAC_MD5_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state,
-                                      JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
+JOB_AES_HMAC *submit_job_aes_xcbc_sse_no_aesni(MB_MGR_AES_XCBC_OOO *state,
+                                               JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes_xcbc_sse_no_aesni(MB_MGR_AES_XCBC_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state,
-                                           JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
+JOB_AES_HMAC *submit_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state,
+                                                    JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state);
 
 
 #define SAVE_XMMS save_xmms
 #define RESTORE_XMMS restore_xmms
-#define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse
-#define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_sse
-#define SUBMIT_JOB_AES192_ENC submit_job_aes192_enc_sse
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse
-#define FLUSH_JOB_AES192_ENC  flush_job_aes192_enc_sse
-#define SUBMIT_JOB_AES256_ENC submit_job_aes256_enc_sse
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse
-#define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_sse
+#define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse_no_aesni
+#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse_no_aesni
+#define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_sse_no_aesni
+#define SUBMIT_JOB_AES192_ENC submit_job_aes192_enc_sse_no_aesni
+#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse_no_aesni
+#define FLUSH_JOB_AES192_ENC  flush_job_aes192_enc_sse_no_aesni
+#define SUBMIT_JOB_AES256_ENC submit_job_aes256_enc_sse_no_aesni
+#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse_no_aesni
+#define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_sse_no_aesni
 #define SUBMIT_JOB_HMAC       submit_job_hmac_sse
 #define FLUSH_JOB_HMAC        flush_job_hmac_sse
 #define SUBMIT_JOB_HMAC_NI    submit_job_hmac_sse
@@ -110,20 +110,20 @@ JOB_AES_HMAC *flush_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
 #define FLUSH_JOB_HMAC_SHA_512        flush_job_hmac_sha_512_sse
 #define SUBMIT_JOB_HMAC_MD5   submit_job_hmac_md5_sse
 #define FLUSH_JOB_HMAC_MD5    flush_job_hmac_md5_sse
-#define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_sse
-#define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_sse
+#define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_sse_no_aesni
+#define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_sse_no_aesni
 
 #define SUBMIT_JOB_AES128_CNTR submit_job_aes128_cntr_sse
 #define SUBMIT_JOB_AES192_CNTR submit_job_aes192_cntr_sse
 #define SUBMIT_JOB_AES256_CNTR submit_job_aes256_cntr_sse
 
-#define AES_CBC_DEC_128       aes_cbc_dec_128_sse
-#define AES_CBC_DEC_192       aes_cbc_dec_192_sse
-#define AES_CBC_DEC_256       aes_cbc_dec_256_sse
+#define AES_CBC_DEC_128       aes_cbc_dec_128_sse_no_aesni
+#define AES_CBC_DEC_192       aes_cbc_dec_192_sse_no_aesni
+#define AES_CBC_DEC_256       aes_cbc_dec_256_sse_no_aesni
 
-#define AES_CNTR_128       aes_cntr_128_sse
-#define AES_CNTR_192       aes_cntr_192_sse
-#define AES_CNTR_256       aes_cntr_256_sse
+#define AES_CNTR_128       aes_cntr_128_sse_no_aesni
+#define AES_CNTR_192       aes_cntr_192_sse_no_aesni
+#define AES_CNTR_256       aes_cntr_256_sse_no_aesni
 
 #ifndef NO_GCM
 #define AES_GCM_DEC_128   aes_gcm_dec_128_sse
@@ -142,9 +142,9 @@ JOB_AES_HMAC *flush_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
 #define GET_NEXT_JOB       get_next_job_sse_no_aesni
 #define GET_COMPLETED_JOB  get_completed_job_sse_no_aesni
 
-#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse
-#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse
-#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse
+#define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse_no_aesni
+#define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse_no_aesni
+#define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse_no_aesni
 #define QUEUE_SIZE queue_size_sse_no_aesni
 
 /* ====================================================================== */
@@ -159,16 +159,16 @@ JOB_AES_HMAC *flush_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_sse
 
-void aes128_cbc_mac_x4(AES_ARGS_x8 *args, uint64_t len);
+void aes128_cbc_mac_x4_no_aesni(AES_ARGS_x8 *args, uint64_t len);
 
-#define AES128_CBC_MAC     aes128_cbc_mac_x4
+#define AES128_CBC_MAC     aes128_cbc_mac_x4_no_aesni
 
 #define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_arch
 #define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_arch
 #define AES_CCM_MAX_JOBS 4
 
-#define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_sse
-#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse
+#define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_sse_no_aesni
+#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse_no_aesni
 
 /* ====================================================================== */
 

@@ -94,32 +94,43 @@ NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
 
 lib_objs := \
 	aes128_cbc_dec_by4_sse.o \
+	aes128_cbc_dec_by4_sse_no_aesni.o \
 	aes128_cbc_dec_by8_avx.o \
 	aes128_cntr_by4_sse.o \
+	aes128_cntr_by4_sse_no_aesni.o \
 	aes128_cntr_by8_avx.o \
 	aes128_ecbenc_x3.o \
 	aes192_cbc_dec_by4_sse.o \
+	aes192_cbc_dec_by4_sse_no_aesni.o \
 	aes192_cbc_dec_by8_avx.o \
 	aes192_cntr_by4_sse.o \
+	aes192_cntr_by4_sse_no_aesni.o \
 	aes192_cntr_by8_avx.o \
 	aes256_cbc_dec_by4_sse.o \
+	aes256_cbc_dec_by4_sse_no_aesni.o \
 	aes256_cbc_dec_by8_avx.o \
 	aes256_cntr_by4_sse.o \
+	aes256_cntr_by4_sse_no_aesni.o \
 	aes256_cntr_by8_avx.o \
 	aes_cfb_128_sse.o \
 	aes_cfb_128_avx.o \
 	aes128_cbc_mac_x4.o \
+	aes128_cbc_mac_x4_no_aesni.o \
 	aes128_cbc_mac_x8.o \
 	aes_cbc_enc_128_x4.o \
+	aes_cbc_enc_128_x4_no_aesni.o \
 	aes_cbc_enc_128_x8.o \
 	aes_cbc_enc_192_x4.o \
+	aes_cbc_enc_192_x4_no_aesni.o \
 	aes_cbc_enc_192_x8.o \
 	aes_cbc_enc_256_x4.o \
+	aes_cbc_enc_256_x4_no_aesni.o \
 	aes_cbc_enc_256_x8.o \
 	aes_keyexp_128.o \
 	aes_keyexp_192.o \
 	aes_keyexp_256.o \
 	aes_xcbc_mac_128_x4.o \
+	aes_xcbc_mac_128_x4_no_aesni.o \
 	aes_xcbc_mac_128_x8.o \
 	aes_cmac_subkey_gen.o \
 	mb_mgr_aes192_flush_avx.o \

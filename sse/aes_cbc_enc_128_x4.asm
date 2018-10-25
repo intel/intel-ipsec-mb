@@ -115,12 +115,26 @@ endstruc
 
 section .text
 
+%ifndef AES_CBC_ENC_X4
+
 %ifdef CBC_MAC
 MKGLOBAL(aes128_cbc_mac_x4,function,internal)
 aes128_cbc_mac_x4:
 %else
 MKGLOBAL(aes_cbc_enc_128_x4,function,internal)
 aes_cbc_enc_128_x4:
+%endif
+
+%else ;; AES_CBC_ENC_X4 already defined
+
+%ifdef CBC_MAC
+MKGLOBAL(aes128_cbc_mac_x4_no_aesni,function,internal)
+aes128_cbc_mac_x4_no_aesni:
+%else
+MKGLOBAL(aes_cbc_enc_128_x4_no_aesni,function,internal)
+aes_cbc_enc_128_x4_no_aesni:
+%endif
+
 %endif
 	sub	rsp, STACK_size
 	mov	[rsp + _gpr_save + 8*0], rbp

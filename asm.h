@@ -53,6 +53,16 @@ void aes_cbc_dec_192_sse(const void *in, const uint8_t *IV, const void *keys,
 void aes_cbc_dec_256_sse(const void *in, const uint8_t *IV, const void *keys,
                          void *out, uint64_t len_bytes);
 
+void aes_cbc_dec_128_sse_no_aesni(const void *in, const uint8_t *IV,
+                                  const void *keys, void *out,
+                                  uint64_t len_bytes);
+void aes_cbc_dec_192_sse_no_aesni(const void *in, const uint8_t *IV,
+                                  const void *keys, void *out,
+                                  uint64_t len_bytes);
+void aes_cbc_dec_256_sse_no_aesni(const void *in, const uint8_t *IV,
+                                  const void *keys, void *out,
+                                  uint64_t len_bytes);
+
 /* AES-CTR */
 void aes_cntr_256_sse(const void *in, const void *IV, const void *keys,
                       void *out, uint64_t len_bytes, uint64_t IV_len);
@@ -60,6 +70,14 @@ void aes_cntr_192_sse(const void *in, const void *IV, const void *keys,
                       void *out, uint64_t len_bytes, uint64_t IV_len);
 void aes_cntr_128_sse(const void *in, const void *IV, const void *keys,
                       void *out, uint64_t len_bytes, uint64_t IV_len);
+
+void aes_cntr_256_sse_no_aesni(const void *in, const void *IV, const void *keys,
+                               void *out, uint64_t len_bytes, uint64_t IV_len);
+void aes_cntr_192_sse_no_aesni(const void *in, const void *IV, const void *keys,
+                               void *out, uint64_t len_bytes, uint64_t IV_len);
+void aes_cntr_128_sse_no_aesni(const void *in, const void *IV, const void *keys,
+                               void *out, uint64_t len_bytes, uint64_t IV_len);
+
 
 void aes_cntr_256_avx(const void *in, const void *IV, const void *keys,
                       void *out, uint64_t len_bytes, uint64_t IV_len);

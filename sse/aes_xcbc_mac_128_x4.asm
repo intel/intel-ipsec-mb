@@ -34,6 +34,11 @@
 %include "os.asm"
 %include "mb_mgr_datastruct.asm"
 
+
+%ifndef AES_XCBC_X4
+%define AES_XCBC_X4 aes_xcbc_mac_128_x4
+%endif
+
 %define	MOVDQ movdqu ;; assume buffers not aligned
 %macro pxor2 2
 	MOVDQ	XTMP, %2
@@ -106,8 +111,8 @@
 
 section .text
 
-MKGLOBAL(aes_xcbc_mac_128_x4,function,internal)
-aes_xcbc_mac_128_x4:
+MKGLOBAL(AES_XCBC_X4,function,internal)
+AES_XCBC_X4:
 
 	push	rbp
 

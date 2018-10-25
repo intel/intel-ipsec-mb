@@ -31,6 +31,10 @@
 ; routine to do AES192 CNTR enc/decrypt "by4"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
+%ifndef AES_CNTR_192
+%define AES_CNTR_192 aes_cntr_192_sse
+%endif
+
 extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 
 %define CONCAT(a,b) a %+ b
@@ -235,8 +239,8 @@ section .text
 
 ;; aes_cntr_192_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 align 32
-MKGLOBAL(aes_cntr_192_sse,function,internal)
-aes_cntr_192_sse:
+MKGLOBAL(AES_CNTR_192,function,internal)
+AES_CNTR_192:
 
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
