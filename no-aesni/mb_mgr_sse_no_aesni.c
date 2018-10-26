@@ -157,7 +157,7 @@ JOB_AES_HMAC *flush_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state);
 
 /* ====================================================================== */
 
-#define AES_CFB_128_ONE    aes_cfb_128_one_sse
+#define AES_CFB_128_ONE    aes_cfb_128_one_sse_no_aesni
 
 void aes128_cbc_mac_x4_no_aesni(AES_ARGS_x8 *args, uint64_t len);
 
@@ -484,7 +484,7 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         state->sha512_one_block    = sha512_one_block_sse;
         state->sha512              = sha512_sse;
         state->md5_one_block       = md5_one_block_sse;
-        state->aes128_cfb_one      = aes_cfb_128_one_sse;
+        state->aes128_cfb_one      = aes_cfb_128_one_sse_no_aesni;
 }
 
 #include "mb_mgr_code.h"

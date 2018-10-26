@@ -49,6 +49,10 @@
 ;; Linux/Windows clobbers: xmm0
 ;;
 
+%ifndef AES_CFB_128_ONE
+%define AES_CFB_128_ONE aes_cfb_128_one_sse
+%endif
+
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
@@ -106,9 +110,9 @@ endstruc
 ;; It makes sure not to read more than LEN bytes from IN and
 ;; not to store more than LEN bytes to OUT.
 
-MKGLOBAL(aes_cfb_128_one_sse,function,)
+MKGLOBAL(AES_CFB_128_ONE,function,)
 align 32
-aes_cfb_128_one_sse:
+AES_CFB_128_ONE:
 %ifndef LINUX
 	mov		LEN, LEN2
 %endif

@@ -113,6 +113,7 @@ lib_objs := \
 	aes256_cntr_by4_sse_no_aesni.o \
 	aes256_cntr_by8_avx.o \
 	aes_cfb_128_sse.o \
+	aes_cfb_128_sse_no_aesni.o \
 	aes_cfb_128_avx.o \
 	aes128_cbc_mac_x4.o \
 	aes128_cbc_mac_x4_no_aesni.o \

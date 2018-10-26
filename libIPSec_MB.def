@@ -194,3 +194,4 @@ EXPORTS
     aes_keyexp_256_avx512		@168
     imb_get_version_str                 @169
     imb_get_version                     @170
+    aes_cfb_128_one_sse_no_aesni        @171
