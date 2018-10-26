@@ -31,7 +31,6 @@
 #include <string.h>
 
 #include "intel-ipsec-mb.h"
-#include "mb_mgr_sse_no_aesni.h"
 #include "save_xmms.h"
 #include "asm.h"
 #include "des.h"
@@ -461,11 +460,11 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         state->earliest_job = -1;
 
         /* set SSE NO AESNI handlers */
-        state->get_next_job        = get_next_job_sse;
-        state->submit_job          = submit_job_sse;
-        state->submit_job_nocheck  = submit_job_nocheck_sse;
-        state->get_completed_job   = get_completed_job_sse;
-        state->flush_job           = flush_job_sse;
+        state->get_next_job        = get_next_job_sse_no_aesni;
+        state->submit_job          = submit_job_sse_no_aesni;
+        state->submit_job_nocheck  = submit_job_nocheck_sse_no_aesni;
+        state->get_completed_job   = get_completed_job_sse_no_aesni;
+        state->flush_job           = flush_job_sse_no_aesni;
         state->queue_size          = queue_size_sse;
         state->keyexp_128          = aes_keyexp_128_sse;
         state->keyexp_192          = aes_keyexp_192_sse;

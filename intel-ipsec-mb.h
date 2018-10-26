@@ -671,6 +671,14 @@ IMB_DLL_EXPORT uint32_t queue_size_sse(MB_MGR *state);
 IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse(MB_MGR *state);
 IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
 
+IMB_DLL_EXPORT void init_mb_mgr_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT uint32_t queue_size_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse_no_aesni(MB_MGR *state);
+
 /*
  * Wrapper macros to call arch API's set up
  * at init phase of multi-buffer manager.

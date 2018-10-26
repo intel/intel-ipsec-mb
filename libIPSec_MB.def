@@ -194,4 +194,11 @@ EXPORTS
     aes_keyexp_256_avx512		@168
     imb_get_version_str                 @169
     imb_get_version                     @170
-    aes_cfb_128_one_sse_no_aesni        @171
+    init_mb_mgr_sse_no_aesni            @171
+    submit_job_sse_no_aesni             @172
+    submit_job_nocheck_sse_no_aesni     @173
+    flush_job_sse_no_aesni              @174
+    queue_size_sse_no_aesni             @175
+    get_completed_job_sse_no_aesni      @176
+    get_next_job_sse_no_aesni           @177
+    aes_cfb_128_one_sse_no_aesni        @178
