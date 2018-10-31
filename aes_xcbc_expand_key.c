@@ -49,6 +49,19 @@ aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
         aes_keyexp_128_enc_sse(k1_exp, k1_exp);
 }
 
+void
+aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp,
+                                 void *k2, void *k3)
+{
+        DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
+
+        aes_keyexp_128_enc_sse_no_aesni(key, keys_exp_enc);
+
+        aes128_ecbenc_x3_sse_no_aesni(in, keys_exp_enc, k1_exp, k2, k3);
+
+        aes_keyexp_128_enc_sse_no_aesni(k1_exp, k1_exp);
+}
+
 __forceinline
 void
 aes_xcbc_expand_key_avx_common(const void *key,

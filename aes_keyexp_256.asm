@@ -184,6 +184,97 @@ aes_keyexp_256_sse:
 
 	ret
 
+MKGLOBAL(aes_keyexp_256_sse_no_aesni,function,)
+aes_keyexp_256_sse_no_aesni:
+        movdqu	xmm1, [KEY]			; loading the AES key
+	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
+        movdqa	[EXP_DEC_KEYS + 16*14], xmm1	; Storing key in memory
+
+        movdqu	xmm4, [KEY+16]			; loading the AES key
+	movdqa	[EXP_ENC_KEYS + 16*1], xmm4
+        aesimc	xmm0, xmm4
+        movdqa	[EXP_DEC_KEYS + 16*13], xmm0	; Storing key in memory
+
+        pxor xmm3, xmm3				; Required for the key_expansion.
+
+        aeskeygenassist xmm2, xmm4, 0x1		; Generating round key 2
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*2], xmm1
+	aesimc	xmm5, xmm1
+	movdqa	[EXP_DEC_KEYS + 16*12], xmm5
+
+        aeskeygenassist xmm2, xmm1, 0x1		; Generating round key 3
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*3], xmm4
+        aesimc	xmm0, xmm4
+	movdqa	[EXP_DEC_KEYS + 16*11], xmm0
+
+        aeskeygenassist xmm2, xmm4, 0x2		; Generating round key 4
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*4], xmm1
+        aesimc	xmm5, xmm1
+	movdqa	[EXP_DEC_KEYS + 16*10], xmm5
+
+        aeskeygenassist xmm2, xmm1, 0x2		; Generating round key 5
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*5], xmm4
+        aesimc	xmm0, xmm4
+	movdqa	[EXP_DEC_KEYS + 16*9], xmm0
+
+        aeskeygenassist xmm2, xmm4, 0x4		; Generating round key 6
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*6], xmm1
+        aesimc	xmm5, xmm1
+	movdqa	[EXP_DEC_KEYS + 16*8], xmm5
+
+        aeskeygenassist xmm2, xmm1, 0x4		; Generating round key 7
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*7], xmm4
+        aesimc xmm0, xmm4
+	movdqa	[EXP_DEC_KEYS + 16*7], xmm0
+
+        aeskeygenassist xmm2, xmm4, 0x8		; Generating round key 8
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*8], xmm1
+        aesimc	xmm5, xmm1
+	movdqa	[EXP_DEC_KEYS + 16*6], xmm5
+
+        aeskeygenassist xmm2, xmm1, 0x8		; Generating round key 9
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*9], xmm4
+        aesimc	xmm0, xmm4
+	movdqa	[EXP_DEC_KEYS + 16*5], xmm0
+
+        aeskeygenassist xmm2, xmm4, 0x10	; Generating round key 10
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*10], xmm1
+        aesimc	xmm5, xmm1
+	movdqa	[EXP_DEC_KEYS + 16*4], xmm5
+
+        aeskeygenassist xmm2, xmm1, 0x10	; Generating round key 11
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*11], xmm4
+        aesimc	xmm0, xmm4
+	movdqa	[EXP_DEC_KEYS + 16*3], xmm0
+
+        aeskeygenassist xmm2, xmm4, 0x20	; Generating round key 12
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*12], xmm1
+        aesimc	xmm5, xmm1
+	movdqa	[EXP_DEC_KEYS + 16*2], xmm5
+
+        aeskeygenassist xmm2, xmm1, 0x20	; Generating round key 13
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*13], xmm4
+        aesimc	xmm0, xmm4
+	movdqa	[EXP_DEC_KEYS + 16*1], xmm0
+
+        aeskeygenassist xmm2, xmm4, 0x40	; Generating round key 14
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*14], xmm1
+	movdqa	[EXP_DEC_KEYS + 16*0], xmm1
+
+	ret
 
 MKGLOBAL(aes_keyexp_256_avx,function,)
 MKGLOBAL(aes_keyexp_256_avx2,function,)
@@ -294,6 +385,70 @@ aes_keyexp_256_avx512:
 ;
 MKGLOBAL(aes_keyexp_256_enc_sse,function,)
 aes_keyexp_256_enc_sse:
+        movdqu	xmm1, [KEY]			; loading the AES key
+	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
+
+        movdqu	xmm4, [KEY+16]			; loading the AES key
+	movdqa	[EXP_ENC_KEYS + 16*1], xmm4
+
+        pxor xmm3, xmm3				; Required for the key_expansion.
+
+        aeskeygenassist xmm2, xmm4, 0x1		; Generating round key 2
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*2], xmm1
+
+        aeskeygenassist xmm2, xmm1, 0x1		; Generating round key 3
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*3], xmm4
+
+        aeskeygenassist xmm2, xmm4, 0x2		; Generating round key 4
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*4], xmm1
+
+        aeskeygenassist xmm2, xmm1, 0x2		; Generating round key 5
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*5], xmm4
+
+        aeskeygenassist xmm2, xmm4, 0x4		; Generating round key 6
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*6], xmm1
+
+        aeskeygenassist xmm2, xmm1, 0x4		; Generating round key 7
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*7], xmm4
+
+        aeskeygenassist xmm2, xmm4, 0x8		; Generating round key 8
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*8], xmm1
+
+        aeskeygenassist xmm2, xmm1, 0x8		; Generating round key 9
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*9], xmm4
+
+        aeskeygenassist xmm2, xmm4, 0x10	; Generating round key 10
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*10], xmm1
+
+        aeskeygenassist xmm2, xmm1, 0x10	; Generating round key 11
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*11], xmm4
+
+        aeskeygenassist xmm2, xmm4, 0x20	; Generating round key 12
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*12], xmm1
+
+        aeskeygenassist xmm2, xmm1, 0x20	; Generating round key 13
+        key_expansion_256_sse_2
+	movdqa	[EXP_ENC_KEYS + 16*13], xmm4
+
+        aeskeygenassist xmm2, xmm4, 0x40	; Generating round key 14
+        key_expansion_256_sse
+	movdqa	[EXP_ENC_KEYS + 16*14], xmm1
+
+	ret
+
+MKGLOBAL(aes_keyexp_256_enc_sse_no_aesni,function,)
+aes_keyexp_256_enc_sse_no_aesni:
         movdqu	xmm1, [KEY]			; loading the AES key
 	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
 

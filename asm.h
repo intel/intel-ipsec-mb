@@ -89,6 +89,8 @@ void aes_cntr_128_avx(const void *in, const void *IV, const void *keys,
 /* AES128-ECBENC */
 void aes128_ecbenc_x3_sse(const void *in, void *keys,
                           void *out1, void *out2, void *out3);
+void aes128_ecbenc_x3_sse_no_aesni(const void *in, void *keys,
+                                   void *out1, void *out2, void *out3);
 void aes128_ecbenc_x3_avx(const void *in, void *keys,
                           void *out1, void *out2, void *out3);
 

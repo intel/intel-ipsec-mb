@@ -182,7 +182,81 @@ aes_keyexp_192_sse:
 
 	ret
 
+MKGLOBAL(aes_keyexp_192_sse_no_aesni,function,)
+aes_keyexp_192_sse_no_aesni:
 
+%ifndef LINUX
+	sub	rsp, 16*2 + 8
+	movdqa	[rsp + 0*16], xmm6
+	movdqa	[rsp + 1*16], xmm7
+%endif
+
+	movq xmm7, [KEY + 16]	; loading the AES key, 64 bits
+        movq [EXP_ENC_KEYS + 16], xmm7  ; Storing key in memory where all key expansion
+        pshufd xmm4, xmm7, 01001111b
+        movdqu xmm1, [KEY]	; loading the AES key, 128 bits
+        movdqu [EXP_ENC_KEYS], xmm1  ; Storing key in memory where all key expansion
+        movdqa [EXP_DEC_KEYS + 16*0], xmm1
+        movdqa [EXP_DEC_KEYS + 16*12], xmm1
+
+        pxor xmm3, xmm3		; Set xmm3 to be all zeros. Required for the key_expansion
+        pxor xmm6, xmm6		; Set xmm3 to be all zeros. Required for the key_expansion
+
+        aeskeygenassist xmm2, xmm4, 0x1     ; Complete round key 1 and generate round key 2
+        key_expansion_1_192_sse 24
+		key_expansion_2_192_sse 40
+
+        aeskeygenassist xmm2, xmm4, 0x2     ; Generate round key 3 and part of round key 4
+        key_expansion_1_192_sse 48
+		key_expansion_2_192_sse 64
+
+        aeskeygenassist xmm2, xmm4, 0x4     ; Complete round key 4 and generate round key 5
+        key_expansion_1_192_sse 72
+		key_expansion_2_192_sse 88
+
+        aeskeygenassist xmm2, xmm4, 0x8     ; Generate round key 6 and part of round key 7
+        key_expansion_1_192_sse 96
+		key_expansion_2_192_sse 112
+
+        aeskeygenassist xmm2, xmm4, 0x10     ; Complete round key 7 and generate round key 8
+        key_expansion_1_192_sse 120
+		key_expansion_2_192_sse 136
+
+        aeskeygenassist xmm2, xmm4, 0x20     ; Generate round key 9 and part of round key 10
+        key_expansion_1_192_sse 144
+		key_expansion_2_192_sse 160
+
+        aeskeygenassist xmm2, xmm4, 0x40     ; Complete round key 10 and generate round key 11
+        key_expansion_1_192_sse 168
+		key_expansion_2_192_sse 184
+
+        aeskeygenassist xmm2, xmm4, 0x80     ; Generate round key 12
+        key_expansion_1_192_sse 192
+
+;;;  we have already saved the 12 th key, which is pure input on the
+;;;  ENC key path
+	movdqa  xmm0, [EXP_ENC_KEYS + 16 * 12]
+	movdqa [EXP_DEC_KEYS + 16*0], xmm0
+;;;  generate remaining decrypt keys
+	key_dec_192_sse 1
+	key_dec_192_sse 2
+	key_dec_192_sse 3
+	key_dec_192_sse 4
+	key_dec_192_sse 5
+	key_dec_192_sse 6
+	key_dec_192_sse 7
+	key_dec_192_sse 8
+	key_dec_192_sse 9
+	key_dec_192_sse 10
+	key_dec_192_sse 11
+
+%ifndef LINUX
+	movdqa	xmm6, [rsp + 0*16]
+	movdqa	xmm7, [rsp + 1*16]
+	add	rsp, 16*2 + 8
+%endif
+
+	ret
 
 MKGLOBAL(aes_keyexp_192_avx,function,)
 MKGLOBAL(aes_keyexp_192_avx2,function,)
@@ -277,6 +351,63 @@ aes_keyexp_192_avx512:
 ;
 MKGLOBAL(aes_keyexp_192_enc_sse,function,)
 aes_keyexp_192_enc_sse:
+
+%ifndef LINUX
+	sub	rsp, 16*2 + 8
+	movdqa	[rsp + 0*16], xmm6
+	movdqa	[rsp + 1*16], xmm7
+%endif
+
+	movq xmm7, [KEY + 16]	; loading the AES key, 64 bits
+        movq [EXP_ENC_KEYS + 16], xmm7  ; Storing key in memory where all key expansion
+        pshufd xmm4, xmm7, 01001111b
+        movdqu xmm1, [KEY]	; loading the AES key, 128 bits
+        movdqu [EXP_ENC_KEYS], xmm1  ; Storing key in memory where all key expansion
+
+        pxor xmm3, xmm3		; Set xmm3 to be all zeros. Required for the key_expansion.
+        pxor xmm6, xmm6		; Set xmm3 to be all zeros. Required for the key_expansion.
+
+        aeskeygenassist xmm2, xmm4, 0x1     ; Complete round key 1 and generate round key 2
+        key_expansion_1_192_sse 24
+		key_expansion_2_192_sse 40
+
+        aeskeygenassist xmm2, xmm4, 0x2     ; Generate round key 3 and part of round key 4
+        key_expansion_1_192_sse 48
+		key_expansion_2_192_sse 64
+
+        aeskeygenassist xmm2, xmm4, 0x4     ; Complete round key 4 and generate round key 5
+        key_expansion_1_192_sse 72
+		key_expansion_2_192_sse 88
+
+        aeskeygenassist xmm2, xmm4, 0x8     ; Generate round key 6 and part of round key 7
+        key_expansion_1_192_sse 96
+		key_expansion_2_192_sse 112
+
+        aeskeygenassist xmm2, xmm4, 0x10     ; Complete round key 7 and generate round key 8
+        key_expansion_1_192_sse 120
+		key_expansion_2_192_sse 136
+
+        aeskeygenassist xmm2, xmm4, 0x20     ; Generate round key 9 and part of round key 10
+        key_expansion_1_192_sse 144
+		key_expansion_2_192_sse 160
+
+        aeskeygenassist xmm2, xmm4, 0x40     ; Complete round key 10 and generate round key 11
+        key_expansion_1_192_sse 168
+		key_expansion_2_192_sse 184
+
+        aeskeygenassist xmm2, xmm4, 0x80     ; Generate round key 12
+        key_expansion_1_192_sse 192
+
+%ifndef LINUX
+	movdqa	xmm6, [rsp + 0*16]
+	movdqa	xmm7, [rsp + 1*16]
+	add	rsp, 16*2 + 8
+%endif
+
+	ret
+
+MKGLOBAL(aes_keyexp_192_enc_sse_no_aesni,function,)
+aes_keyexp_192_enc_sse_no_aesni:
 
 %ifndef LINUX
 	sub	rsp, 16*2 + 8

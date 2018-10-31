@@ -190,6 +190,62 @@ K2_msb_is_zero_sse:
         movdqu          [KEY2], XKEY2
 	ret
 
+MKGLOBAL(aes_cmac_subkey_gen_sse_no_aesni,function,)
+align 32
+aes_cmac_subkey_gen_sse_no_aesni:
+        ;; Step 1.  L := AES-128(K, const_Zero) ;
+        movdqa          XL, [KEY_EXP + 16*0]    ; 0. ARK xor const_Zero
+	aesenc		XL, [KEY_EXP + 16*1]	; 1. ENC
+	aesenc		XL, [KEY_EXP + 16*2]	; 2. ENC
+	aesenc		XL, [KEY_EXP + 16*3]	; 3. ENC
+	aesenc		XL, [KEY_EXP + 16*4]	; 4. ENC
+	aesenc		XL, [KEY_EXP + 16*5]	; 5. ENC
+	aesenc		XL, [KEY_EXP + 16*6]	; 6. ENC
+	aesenc		XL, [KEY_EXP + 16*7]	; 7. ENC
+	aesenc		XL, [KEY_EXP + 16*8]	; 8. ENC
+	aesenc		XL, [KEY_EXP + 16*9]	; 9. ENC
+	aesenclast	XL, [KEY_EXP + 16*10]	; 10. ENC
+
+        ;; Step 2.  if MSB(L) is equal to 0
+        ;;          then    K1 := L << 1 ;
+        ;;          else    K1 := (L << 1) XOR const_Rb ;
+        pshufb          XL, [rel byteswap_const]
+        movdqa          XKEY1, XL
+        psllq           XKEY1, 1
+        ptest           XL, [rel xmm_bit63]
+        jz              K1_no_carry_bit_sse2
+        ;; set carry bit
+        por             XKEY1, [rel xmm_bit64]
+K1_no_carry_bit_sse2:
+        ptest           XL, [rel xmm_bit127]
+        jz              K1_msb_is_zero_sse2
+        ;; XOR const_Rb
+        pxor            XKEY1, [rel const_Rb]
+K1_msb_is_zero_sse2:
+
+        ;; Step 3.  if MSB(K1) is equal to 0
+        ;;          then    K2 := K1 << 1 ;
+        ;;          else    K2 := (K1 << 1) XOR const_Rb ;
+        movdqa          XKEY2, XKEY1
+        psllq           XKEY2, 1
+        ptest           XKEY1, [rel xmm_bit63]
+        jz              K2_no_carry_bit_sse2
+        ;; set carry bit
+        por             XKEY2, [rel xmm_bit64]
+K2_no_carry_bit_sse2:
+        ptest           XKEY1, [rel xmm_bit127]
+        jz              K2_msb_is_zero_sse2
+        ;; XOR const_Rb
+        pxor            XKEY2, [rel const_Rb]
+K2_msb_is_zero_sse2:
+
+        ;; Step 4.  return K1, K2
+        pshufb          XKEY1, [rel byteswap_const]
+        pshufb          XKEY2, [rel byteswap_const]
+        movdqu          [KEY1], XKEY1
+        movdqu          [KEY2], XKEY2
+	ret
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1, void *key2)

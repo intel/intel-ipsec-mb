@@ -779,20 +779,40 @@ IMB_DLL_EXPORT void sha512_one_block_sse(const void *data, void *digest);
 IMB_DLL_EXPORT void md5_one_block_sse(const void *data, void *digest);
 IMB_DLL_EXPORT void aes_keyexp_128_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
+IMB_DLL_EXPORT void aes_keyexp_128_sse_no_aesni(const void *key,
+                                                void *enc_exp_keys,
+                                                void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_192_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
+IMB_DLL_EXPORT void aes_keyexp_192_sse_no_aesni(const void *key,
+                                                void *enc_exp_keys,
+                                                void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_256_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
+IMB_DLL_EXPORT void aes_keyexp_256_sse_no_aesni(const void *key,
+                                                void *enc_exp_keys,
+                                                void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_xcbc_expand_key_sse(const void *key, void *k1_exp,
                                             void *k2, void *k3);
+IMB_DLL_EXPORT void aes_xcbc_expand_key_sse_no_aesni(const void *key,
+                                                     void *k1_exp, void *k2,
+                                                     void *k3);
 IMB_DLL_EXPORT void aes_keyexp_128_enc_sse(const void *key,
                                            void *enc_exp_keys);
+IMB_DLL_EXPORT void aes_keyexp_128_enc_sse_no_aesni(const void *key,
+                                                    void *enc_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_192_enc_sse(const void *key,
                                            void *enc_exp_keys);
+IMB_DLL_EXPORT void aes_keyexp_192_enc_sse_no_aesni(const void *key,
+                                                    void *enc_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_256_enc_sse(const void *key,
                                            void *enc_exp_keys);
+IMB_DLL_EXPORT void aes_keyexp_256_enc_sse_no_aesni(const void *key,
+                                                    void *enc_exp_keys);
 IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse(const void *key_exp, void *key1,
                                             void *key2);
+IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse_no_aesni(const void *key_exp,
+                                                     void *key1, void *key2);
 IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);

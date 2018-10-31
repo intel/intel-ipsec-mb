@@ -131,6 +131,79 @@ aes128_ecbenc_x3_sse:
 
 	ret
 
+MKGLOBAL(aes128_ecbenc_x3_sse_no_aesni,function,internal)
+aes128_ecbenc_x3_sse_no_aesni:
+
+%ifndef LINUX
+	mov		OUT2, [rsp + 5*8]
+%endif
+
+	movdqu		XDATA0, [IN + 0*16]	; load first block of plain text
+	movdqu		XDATA1, [IN + 1*16]	; load second block of plain text
+	movdqu		XDATA2, [IN + 2*16]	; load third block of plain text
+
+	movdqa		XKEYA, [KEYS + 16*0]
+
+	movdqa		XKEYB, [KEYS + 16*1]
+	pxor		XDATA0, XKEYA	; 0. ARK
+	pxor		XDATA1, XKEYA	; 0. ARK
+	pxor		XDATA2, XKEYA	; 0. ARK
+
+	movdqa		XKEYA, [KEYS + 16*2]
+	aesenc		XDATA0, XKEYB	; 1. ENC
+	aesenc		XDATA1, XKEYB	; 1. ENC
+	aesenc		XDATA2, XKEYB	; 1. ENC
+
+	movdqa		XKEYB, [KEYS + 16*3]
+	aesenc		XDATA0, XKEYA	; 2. ENC
+	aesenc		XDATA1, XKEYA	; 2. ENC
+	aesenc		XDATA2, XKEYA	; 2. ENC
+
+	movdqa		XKEYA, [KEYS + 16*4]
+	aesenc		XDATA0, XKEYB	; 3. ENC
+	aesenc		XDATA1, XKEYB	; 3. ENC
+	aesenc		XDATA2, XKEYB	; 3. ENC
+
+	movdqa		XKEYB, [KEYS + 16*5]
+	aesenc		XDATA0, XKEYA	; 4. ENC
+	aesenc		XDATA1, XKEYA	; 4. ENC
+	aesenc		XDATA2, XKEYA	; 4. ENC
+
+	movdqa		XKEYA, [KEYS + 16*6]
+	aesenc		XDATA0, XKEYB	; 5. ENC
+	aesenc		XDATA1, XKEYB	; 5. ENC
+	aesenc		XDATA2, XKEYB	; 5. ENC
+
+	movdqa		XKEYB, [KEYS + 16*7]
+	aesenc		XDATA0, XKEYA	; 6. ENC
+	aesenc		XDATA1, XKEYA	; 6. ENC
+	aesenc		XDATA2, XKEYA	; 6. ENC
+
+	movdqa		XKEYA, [KEYS + 16*8]
+	aesenc		XDATA0, XKEYB	; 7. ENC
+	aesenc		XDATA1, XKEYB	; 7. ENC
+	aesenc		XDATA2, XKEYB	; 7. ENC
+
+	movdqa		XKEYB, [KEYS + 16*9]
+	aesenc		XDATA0, XKEYA	; 8. ENC
+	aesenc		XDATA1, XKEYA	; 8. ENC
+	aesenc		XDATA2, XKEYA	; 8. ENC
+
+	movdqa		XKEYA, [KEYS + 16*10]
+	aesenc		XDATA0, XKEYB	; 9. ENC
+	aesenc		XDATA1, XKEYB	; 9. ENC
+	aesenc		XDATA2, XKEYB	; 9. ENC
+
+	aesenclast	XDATA0, XKEYA	; 10. ENC
+	aesenclast	XDATA1, XKEYA	; 10. ENC
+	aesenclast	XDATA2, XKEYA	; 10. ENC
+
+	movdqu		[OUT0], XDATA0	; write back ciphertext
+	movdqu		[OUT1], XDATA1	; write back ciphertext
+	movdqu		[OUT2], XDATA2	; write back ciphertext
+
+	ret
+
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
