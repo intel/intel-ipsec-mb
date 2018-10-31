@@ -125,12 +125,12 @@ JOB_AES_HMAC *flush_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state);
 #define AES_CNTR_256       aes_cntr_256_sse_no_aesni
 
 #ifndef NO_GCM
-#define AES_GCM_DEC_128   aes_gcm_dec_128_sse
-#define AES_GCM_ENC_128   aes_gcm_enc_128_sse
-#define AES_GCM_DEC_192   aes_gcm_dec_192_sse
-#define AES_GCM_ENC_192   aes_gcm_enc_192_sse
-#define AES_GCM_DEC_256   aes_gcm_dec_256_sse
-#define AES_GCM_ENC_256   aes_gcm_enc_256_sse
+#define AES_GCM_DEC_128   aes_gcm_dec_128_sse_no_aesni
+#define AES_GCM_ENC_128   aes_gcm_enc_128_sse_no_aesni
+#define AES_GCM_DEC_192   aes_gcm_dec_192_sse_no_aesni
+#define AES_GCM_ENC_192   aes_gcm_enc_192_sse_no_aesni
+#define AES_GCM_DEC_256   aes_gcm_dec_256_sse_no_aesni
+#define AES_GCM_ENC_256   aes_gcm_enc_256_sse_no_aesni
 #endif /* NO_GCM */
 
 /* ====================================================================== */

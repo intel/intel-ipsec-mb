@@ -202,3 +202,27 @@ EXPORTS
     get_completed_job_sse_no_aesni      @176
     get_next_job_sse_no_aesni           @177
     aes_cfb_128_one_sse_no_aesni        @178
+    aes_gcm_dec_128_finalize_sse_no_aesni       @179
+    aes_gcm_dec_128_sse_no_aesni                @180
+    aes_gcm_dec_128_update_sse_no_aesni         @181
+    aes_gcm_dec_192_finalize_sse_no_aesni       @182
+    aes_gcm_dec_192_sse_no_aesni                @183
+    aes_gcm_dec_192_update_sse_no_aesni         @184
+    aes_gcm_dec_256_finalize_sse_no_aesni       @185
+    aes_gcm_dec_256_sse_no_aesni                @186
+    aes_gcm_dec_256_update_sse_no_aesni         @187
+    aes_gcm_enc_128_finalize_sse_no_aesni       @188
+    aes_gcm_enc_128_sse_no_aesni                @189
+    aes_gcm_enc_128_update_sse_no_aesni         @190
+    aes_gcm_enc_192_finalize_sse_no_aesni       @191
+    aes_gcm_enc_192_sse_no_aesni                @192
+    aes_gcm_enc_192_update_sse_no_aesni         @193
+    aes_gcm_enc_256_finalize_sse_no_aesni       @194
+    aes_gcm_enc_256_sse_no_aesni                @195
+    aes_gcm_enc_256_update_sse_no_aesni         @196
+    aes_gcm_init_128_sse_no_aesni               @197
+    aes_gcm_init_192_sse_no_aesni               @198
+    aes_gcm_init_256_sse_no_aesni               @199
+    aes_gcm_precomp_128_sse_no_aesni            @200
+    aes_gcm_precomp_192_sse_no_aesni            @201
+    aes_gcm_precomp_256_sse_no_aesni            @202

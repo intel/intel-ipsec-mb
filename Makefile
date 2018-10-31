@@ -259,7 +259,8 @@ lib_objs := \
 
 gcm_objs := gcm128_sse.o gcm192_sse.o gcm256_sse.o \
 	gcm128_avx_gen2.o gcm192_avx_gen2.o gcm256_avx_gen2.o \
-	gcm128_avx_gen4.o gcm192_avx_gen4.o gcm256_avx_gen4.o
+	gcm128_avx_gen4.o gcm192_avx_gen4.o gcm256_avx_gen4.o \
+	gcm128_sse_no_aesni.o gcm192_sse_no_aesni.o gcm256_sse_no_aesni.o
 
 ifeq ($(NO_GCM), y)
 obj2_files := $(lib_objs:%=$(OBJ_DIR)/%)

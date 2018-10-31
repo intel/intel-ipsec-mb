@@ -124,18 +124,24 @@
 %endif
 %endif
 
+%ifdef NO_AESNI
+%define SSE sse_no_aesni
+%else
+%define SSE sse
+%endif
+
 %ifdef GCM128_MODE
-%define FN_NAME(x,y) aes_gcm_ %+ x %+ _128 %+ y %+ sse
+%define FN_NAME(x,y) aes_gcm_ %+ x %+ _128 %+ y %+ SSE
 %define NROUNDS 9
 %endif
 
 %ifdef GCM192_MODE
-%define FN_NAME(x,y) aes_gcm_ %+ x %+ _192 %+ y %+ sse
+%define FN_NAME(x,y) aes_gcm_ %+ x %+ _192 %+ y %+ SSE
 %define NROUNDS 11
 %endif
 
 %ifdef GCM256_MODE
-%define FN_NAME(x,y) aes_gcm_ %+ x %+ _256 %+ y %+ sse
+%define FN_NAME(x,y) aes_gcm_ %+ x %+ _256 %+ y %+ SSE
 %define NROUNDS 13
 %endif
 

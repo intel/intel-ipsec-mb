@@ -251,7 +251,10 @@ gcm_objs = \
 	$(OBJ_DIR)\gcm192_avx_gen4.obj \
         $(OBJ_DIR)\gcm256_sse.obj \
 	$(OBJ_DIR)\gcm256_avx_gen2.obj \
-	$(OBJ_DIR)\gcm256_avx_gen4.obj
+	$(OBJ_DIR)\gcm256_avx_gen4.obj \
+        $(OBJ_DIR)\gcm128_sse_no_aesni.obj \
+	$(OBJ_DIR)\gcm192_sse_no_aesni.obj \
+	$(OBJ_DIR)\gcm256_sse_no_aesni.obj
 
 !ifdef NO_GCM
 all_objs = $(lib_objs1) $(lib_objs2)
