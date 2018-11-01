@@ -51,7 +51,8 @@ usage(const char *name)
 {
 	fprintf(stderr,
                 "Usage: %s [args], where args are zero or more\n"
-		"--no-avx512: Don't do AVX512\n"
+                "--no-aesni-emu: Don't do AESNI emulation\n"
+                "--no-avx512: Don't do AVX512\n"
 		"--no-avx2: Don't do AVX2\n"
 		"--no-avx: Don't do AVX\n"
 		"--no-sse: Don't do SSE\n"
@@ -63,13 +64,14 @@ int
 main(int argc, char **argv)
 {
         const char *arch_str_tab[ARCH_NUMOF] = {
-                "SSE", "AVX", "AVX2", "AVX512"
+                "SSE", "AVX", "AVX2", "AVX512", "NO_AESNI"
         };
         enum arch_type arch_type_tab[ARCH_NUMOF] = {
-                ARCH_SSE, ARCH_AVX, ARCH_AVX2, ARCH_AVX512
+                ARCH_SSE, ARCH_AVX, ARCH_AVX2, ARCH_AVX512, ARCH_NO_AESNI
         };
 
         int i, do_sse = 1, do_avx = 1, do_avx2 = 1, do_avx512 = 1;
+        int do_aesni_emu = 1;
         MB_MGR *p_mgr = NULL;
         uint64_t flags = 0;
         int errors = 0;
@@ -84,6 +86,8 @@ main(int argc, char **argv)
 		if (strcmp(argv[i], "-h") == 0) {
 			usage(argv[0]);
 			return EXIT_SUCCESS;
+		} else if (strcmp(argv[i], "--no-aesni-emu") == 0) {
+			do_aesni_emu = 0;
 		} else if (strcmp(argv[i], "--no-avx512") == 0) {
 			do_avx512 = 0;
 		} else if (strcmp(argv[i], "--no-avx2") == 0) {
@@ -131,6 +135,11 @@ main(int argc, char **argv)
                         if (!do_avx512)
                                 continue;
                         init_mb_mgr_avx512(p_mgr);
+                        break;
+                case ARCH_NO_AESNI:
+                        if (!do_aesni_emu)
+                                continue;
+                        init_mb_mgr_sse_no_aesni(p_mgr);
                         break;
                 default:
                         printf("Architecture type '%d' error!\n", (int) atype);
