@@ -79,8 +79,17 @@ END_FIELDS
 %assign _AES_CMAC_spec_fields_size	_FIELD_OFFSET
 %assign _AES_CMAC_spec_fields_align	_STRUCT_ALIGN
 
-START_FIELDS	; JOB_AES_HMAC
+START_FIELDS	; GCM Specific Fields
+;;;	name				size	align
+FIELD	__gcm_aad,			8,	8	; pointer to AAD
+FIELD	__gcm_aad_len,			8,	8	; 64-bit AAD length
+END_FIELDS
 
+%assign _GCM_spec_fields_size	_FIELD_OFFSET
+%assign _GCM_spec_fields_align	_STRUCT_ALIGN
+
+
+START_FIELDS	; JOB_AES_HMAC
 ;;;	name				size	align
 FIELD	_aes_enc_key_expanded,		8,	8	; pointer to exp enc keys
 FIELD	_aes_dec_key_expanded,		8,	8	; pointer to exp dec keys
@@ -100,7 +109,8 @@ FIELD	_auth_tag_output_len_in_bytes,	8,	8
 UNION	_u,	_HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
 		_AES_XCBC_spec_fields_size, _AES_XCBC_spec_fields_align, \
 		_CBCMAC_spec_fields_size, _CBCMAC_spec_fields_align, \
-                _AES_CMAC_spec_fields_size, _AES_CMAC_spec_fields_align
+                _AES_CMAC_spec_fields_size, _AES_CMAC_spec_fields_align, \
+                _GCM_spec_fields_size, _GCM_spec_fields_align
 
 FIELD	_status,			4,	4	; JOB_STS
 FIELD	_cipher_mode,			4,	4	; JOB_CIPHER_MODE
@@ -124,4 +134,6 @@ END_FIELDS
 %assign _key_expanded		_u + __key_expanded
 %assign _skey1			_u + __skey1
 %assign _skey2			_u + __skey2
+%assign _gcm_aad	        _u + __gcm_aad
+%assign _gcm_aad_len	        _u + __gcm_aad_len
 

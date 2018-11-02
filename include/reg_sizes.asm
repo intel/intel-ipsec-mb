@@ -71,6 +71,22 @@
 %define zmm13x xmm13
 %define zmm14x xmm14
 %define zmm15x xmm15
+%define zmm16x xmm16
+%define zmm17x xmm17
+%define zmm18x xmm18
+%define zmm19x xmm19
+%define zmm20x xmm20
+%define zmm21x xmm21
+%define zmm22x xmm22
+%define zmm23x xmm23
+%define zmm24x xmm24
+%define zmm25x xmm25
+%define zmm26x xmm26
+%define zmm27x xmm27
+%define zmm28x xmm28
+%define zmm29x xmm29
+%define zmm30x xmm30
+%define zmm31x xmm31
 
 %define ymm0x xmm0
 %define ymm1x xmm1
@@ -89,6 +105,23 @@
 %define ymm14x xmm14
 %define ymm15x xmm15
 
+%define xmm0x xmm0
+%define xmm1x xmm1
+%define xmm2x xmm2
+%define xmm3x xmm3
+%define xmm4x xmm4
+%define xmm5x xmm5
+%define xmm6x xmm6
+%define xmm7x xmm7
+%define xmm8x xmm8
+%define xmm9x xmm9
+%define xmm10x xmm10
+%define xmm11x xmm11
+%define xmm12x xmm12
+%define xmm13x xmm13
+%define xmm14x xmm14
+%define xmm15x xmm15
+
 %define zmm0y ymm0
 %define zmm1y ymm1
 %define zmm2y ymm2
@@ -105,7 +138,73 @@
 %define zmm13y ymm13
 %define zmm14y ymm14
 %define zmm15y ymm15
+%define zmm16y ymm16
+%define zmm17y ymm17
+%define zmm18y ymm18
+%define zmm19y ymm19
+%define zmm20y ymm20
+%define zmm21y ymm21
+%define zmm22y ymm22
+%define zmm23y ymm23
+%define zmm24y ymm24
+%define zmm25y ymm25
+%define zmm26y ymm26
+%define zmm27y ymm27
+%define zmm28y ymm28
+%define zmm29y ymm29
+%define zmm30y ymm30
+%define zmm31y ymm31
 
+%define xmm0y ymm0
+%define xmm1y ymm1
+%define xmm2y ymm2
+%define xmm3y ymm3
+%define xmm4y ymm4
+%define xmm5y ymm5
+%define xmm6y ymm6
+%define xmm7y ymm7
+%define xmm8y ymm8
+%define xmm9y ymm9
+%define xmm10y ymm10
+%define xmm11y ymm11
+%define xmm12y ymm12
+%define xmm13y ymm13
+%define xmm14y ymm14
+%define xmm15y ymm15
+
+%define xmm0z zmm0
+%define xmm1z zmm1
+%define xmm2z zmm2
+%define xmm3z zmm3
+%define xmm4z zmm4
+%define xmm5z zmm5
+%define xmm6z zmm6
+%define xmm7z zmm7
+%define xmm8z zmm8
+%define xmm9z zmm9
+%define xmm10z zmm10
+%define xmm11z zmm11
+%define xmm12z zmm12
+%define xmm13z zmm13
+%define xmm14z zmm14
+%define xmm15z zmm15
+
+%define ymm0z zmm0
+%define ymm1z zmm1
+%define ymm2z zmm2
+%define ymm3z zmm3
+%define ymm4z zmm4
+%define ymm5z zmm5
+%define ymm6z zmm6
+%define ymm7z zmm7
+%define ymm8z zmm8
+%define ymm9z zmm9
+%define ymm10z zmm10
+%define ymm11z zmm11
+%define ymm12z zmm12
+%define ymm13z zmm13
+%define ymm14z zmm14
+%define ymm15z zmm15
 
 %define DWORD(reg) reg %+ d
 %define WORD(reg)  reg %+ w
@@ -113,3 +212,4 @@
 
 %define XWORD(reg) reg %+ x
 %define YWORD(reg) reg %+ y
+%define ZWORD(reg) reg %+ z

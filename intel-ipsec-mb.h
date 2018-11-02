@@ -504,6 +504,47 @@ typedef struct {
         uint32_t num_lanes_inuse;
 } MB_MGR_HMAC_MD5_OOO;
 
+
+/* GCM out-of-order scheduler fields */
+#define GCM_BLOCK_LEN   16
+
+/**
+ * @brief holds GCM operation context
+ */
+struct gcm_context_data {
+        /* init, update and finalize context data */
+        uint8_t  aad_hash[GCM_BLOCK_LEN];
+        uint64_t aad_length;
+        uint64_t in_length;
+        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
+        uint8_t  orig_IV[GCM_BLOCK_LEN];
+        uint8_t  current_counter[GCM_BLOCK_LEN];
+        uint64_t partial_block_length;
+};
+
+/**
+ * @brief GCM argument data per lane
+ */
+struct GCM_ARGS {
+        struct gcm_context_data *ctx[4];
+        const void *keys[4];
+        uint8_t *out[4];
+        const uint8_t *in[4];
+        void *tag[4];
+        uint64_t tag_len[4];
+};
+
+/**
+ * @brief GCM multi-buffer manager structure
+ */
+typedef struct {
+        struct GCM_ARGS args;
+        struct gcm_context_data ctxs[4];
+        uint64_t lens[4];
+        JOB_AES_HMAC *job_in_lane[4];
+        uint64_t unused_lanes;
+} MB_MGR_GCM_OOO;
+
 /* ========================================================================== */
 /* API data type definitions */
 struct MB_MGR;
@@ -606,6 +647,13 @@ typedef struct MB_MGR {
         DECLARE_ALIGNED(MB_MGR_AES_XCBC_OOO aes_xcbc_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_CCM_OOO aes_ccm_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_CMAC_OOO aes_cmac_ooo, 64);
+
+        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm128_enc_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm192_enc_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm256_enc_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm128_dec_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm192_dec_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm256_dec_ooo, 64);
 } MB_MGR;
 
 /* ========================================================================== */
@@ -958,7 +1006,7 @@ IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
 #define GCM_192_KEY_LEN (24)
 #define GCM_256_KEY_LEN (32)
 
-#define GCM_BLOCK_LEN   16
+/* #define GCM_BLOCK_LEN   16 */
 #define GCM_ENC_KEY_LEN 16
 #define GCM_KEY_SETS    (15) /*exp key + 14 exp round keys*/
 
@@ -968,19 +1016,20 @@ IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
  * gcm_key_data hold internal key information used by gcm128, gcm192 and gcm256.
  */
 #ifdef __WIN32
-__declspec(align(16))
+__declspec(align(64))
 #endif /* WIN32 */
 struct gcm_key_data {
         uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
+        uint8_t padding[GCM_ENC_KEY_LEN];        /* To align HashKey to 64 */
         /* storage for HashKey mod poly */
-        uint8_t shifted_hkey_1[GCM_ENC_KEY_LEN]; /* HashKey<<1 mod poly */
-        uint8_t shifted_hkey_2[GCM_ENC_KEY_LEN]; /* HashKey^2<<1 mod poly */
-        uint8_t shifted_hkey_3[GCM_ENC_KEY_LEN]; /* HashKey^3<<1 mod poly */
-        uint8_t shifted_hkey_4[GCM_ENC_KEY_LEN]; /* HashKey^4<<1 mod poly */
-        uint8_t shifted_hkey_5[GCM_ENC_KEY_LEN]; /* HashKey^5<<1 mod poly */
-        uint8_t shifted_hkey_6[GCM_ENC_KEY_LEN]; /* HashKey^6<<1 mod poly */
-        uint8_t shifted_hkey_7[GCM_ENC_KEY_LEN]; /* HashKey^7<<1 mod poly */
         uint8_t shifted_hkey_8[GCM_ENC_KEY_LEN]; /* HashKey^8<<1 mod poly */
+        uint8_t shifted_hkey_7[GCM_ENC_KEY_LEN]; /* HashKey^7<<1 mod poly */
+        uint8_t shifted_hkey_6[GCM_ENC_KEY_LEN]; /* HashKey^6<<1 mod poly */
+        uint8_t shifted_hkey_5[GCM_ENC_KEY_LEN]; /* HashKey^5<<1 mod poly */
+        uint8_t shifted_hkey_4[GCM_ENC_KEY_LEN]; /* HashKey^4<<1 mod poly */
+        uint8_t shifted_hkey_3[GCM_ENC_KEY_LEN]; /* HashKey^3<<1 mod poly */
+        uint8_t shifted_hkey_2[GCM_ENC_KEY_LEN]; /* HashKey^2<<1 mod poly */
+        uint8_t shifted_hkey_1[GCM_ENC_KEY_LEN]; /* HashKey<<1 mod poly */
         /*
          * Storage for XOR of High 64 bits and low 64 bits of HashKey mod poly.
          * This is needed for Karatsuba purposes.
@@ -995,24 +1044,10 @@ struct gcm_key_data {
         uint8_t shifted_hkey_8_k[GCM_ENC_KEY_LEN]; /* HashKey^8<<1 mod poly */
 }
 #ifdef LINUX
-__attribute__((aligned(16)));
+__attribute__((aligned(64)));
 #else
 ;
 #endif
-
-/**
- * @brief holds GCM operation context
- */
-struct gcm_context_data {
-        /* init, update and finalize context data */
-        uint8_t  aad_hash[GCM_BLOCK_LEN];
-        uint64_t aad_length;
-        uint64_t in_length;
-        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
-        uint8_t  orig_IV[GCM_BLOCK_LEN];
-        uint8_t  current_counter[GCM_BLOCK_LEN];
-        uint64_t  partial_block_length;
-};
 
 /**
  * @brief GCM-AES Encryption

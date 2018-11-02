@@ -32,30 +32,128 @@
 ;       James Guilford
 
 section .data
+default rel
 
 align 16
+POLY:   dq     0x0000000000000001, 0xC200000000000000
 
-POLY            dq     0x0000000000000001, 0xC200000000000000
-POLY2           dq     0x00000001C2000000, 0xC200000000000000
-TWOONE          dq     0x0000000000000001, 0x0000000100000000
+align 64
+POLY2:
+        dq     0x00000001C2000000, 0xC200000000000000
+        dq     0x00000001C2000000, 0xC200000000000000
+        dq     0x00000001C2000000, 0xC200000000000000
+        dq     0x00000001C2000000, 0xC200000000000000
 
-; order of these constants should not change.
-; more specifically, ALL_F should follow SHIFT_MASK, and ZERO should follow ALL_F
+align 16
+TWOONE: dq     0x0000000000000001, 0x0000000100000000
 
-SHUF_MASK       dq     0x08090A0B0C0D0E0F, 0x0001020304050607
-SHIFT_MASK      dq     0x0706050403020100, 0x0f0e0d0c0b0a0908
-ALL_F           dq     0xffffffffffffffff, 0xffffffffffffffff
-ZERO            dq     0x0000000000000000, 0x0000000000000000
-ONE             dq     0x0000000000000001, 0x0000000000000000
-TWO             dq     0x0000000000000002, 0x0000000000000000
-ONEf            dq     0x0000000000000000, 0x0100000000000000
-TWOf            dq     0x0000000000000000, 0x0200000000000000
+;;; @note Order of these constants should not change.
+;;; More specifically, ALL_F should follow SHIFT_MASK, and ZERO should follow ALL_F
+align 64
+SHUF_MASK:
+        dq     0x08090A0B0C0D0E0F, 0x0001020304050607
+        dq     0x08090A0B0C0D0E0F, 0x0001020304050607
+        dq     0x08090A0B0C0D0E0F, 0x0001020304050607
+        dq     0x08090A0B0C0D0E0F, 0x0001020304050607
+
+align 16
+SHIFT_MASK:
+        dq     0x0706050403020100, 0x0f0e0d0c0b0a0908
+
+ALL_F:
+        dq     0xffffffffffffffff, 0xffffffffffffffff
+
+ZERO:
+        dq     0x0000000000000000, 0x0000000000000000
+
+align 16
+ONE:
+        dq     0x0000000000000001, 0x0000000000000000
+
+align 16
+TWO:
+        dq     0x0000000000000002, 0x0000000000000000
+
+align 16
+ONEf:
+        dq     0x0000000000000000, 0x0100000000000000
+
+align 16
+TWOf:
+        dq     0x0000000000000000, 0x0200000000000000
+
+align 64
+ddq_add_5678:
+        dq	0x0000000000000005, 0x0000000000000000
+        dq	0x0000000000000006, 0x0000000000000000
+        dq	0x0000000000000007, 0x0000000000000000
+        dq	0x0000000000000008, 0x0000000000000000
+
+align 64
+ddq_add_1234:
+        dq	0x0000000000000001, 0x0000000000000000
+        dq	0x0000000000000002, 0x0000000000000000
+        dq	0x0000000000000003, 0x0000000000000000
+        dq	0x0000000000000004, 0x0000000000000000
+
+align 64
+ddq_add_4444:
+        dq	0x0000000000000004, 0x0000000000000000
+        dq	0x0000000000000004, 0x0000000000000000
+        dq	0x0000000000000004, 0x0000000000000000
+        dq	0x0000000000000004, 0x0000000000000000
+
+align 64
+ddq_addbe_4444:
+        dq	0x0000000000000000, 0x0400000000000000
+        dq	0x0000000000000000, 0x0400000000000000
+        dq	0x0000000000000000, 0x0400000000000000
+        dq	0x0000000000000000, 0x0400000000000000
+
+align 64
+ddq_add_8888:
+        dq	0x0000000000000008, 0x0000000000000000
+        dq	0x0000000000000008, 0x0000000000000000
+        dq	0x0000000000000008, 0x0000000000000000
+        dq	0x0000000000000008, 0x0000000000000000
+
+align 64
+ddq_addbe_8888:
+        dq	0x0000000000000000, 0x0800000000000000
+        dq	0x0000000000000000, 0x0800000000000000
+        dq	0x0000000000000000, 0x0800000000000000
+        dq	0x0000000000000000, 0x0800000000000000
+
+align 64
+index_to_lane4:
+        dq	0x0000000000000000, 0x0000000000000001
+        dq	0x0000000000000002, 0x0000000000000003
+        dq	0x0000000000000000, 0x0000000000000000
+        dq	0x0000000000000000, 0x0000000000000000
+
+align 64
+byte_len_to_mask_table:
+        dw      0x0000, 0x0001, 0x0003, 0x0007,
+        dw      0x000f, 0x001f, 0x003f, 0x007f,
+        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
+        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
+        dw      0xffff
+
+
+;;; @note these 2 need to be next one another
+;;; - they are used to map lane index onto coresponding bit mask and
+;;;   NOT version of the bitmask
+index_to_lane4_mask:
+        dw      0x0001, 0x0002, 0x0004, 0x0008
+index_to_lane4_not_mask:
+        dw      0x000e, 0x000d, 0x000b, 0x0007
 
 section .text
 
 ;;define the fields of gcm_key_data struct
 ;; struct gcm_key_data {
 ;;         uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
+;;         uint8_t padding[GCM_ENC_KEY_LEN];
 ;;         uint8_t shifted_hkey_1[GCM_ENC_KEY_LEN];  // store HashKey <<1 mod poly here
 ;;         uint8_t shifted_hkey_2[GCM_ENC_KEY_LEN];  // store HashKey^2 <<1 mod poly here
 ;;         uint8_t shifted_hkey_3[GCM_ENC_KEY_LEN];  // store HashKey^3 <<1 mod poly here
@@ -73,24 +171,25 @@ section .text
 ;;         uint8_t shifted_hkey_7_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
 ;;         uint8_t shifted_hkey_8_k[GCM_ENC_KEY_LEN];  // store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
 ;; }
-
-%define HashKey         (16*15)   ; store HashKey <<1 mod poly here
-%define HashKey_1       (16*15)   ; store HashKey <<1 mod poly here
-%define HashKey_2       (16*16)   ; store HashKey^2 <<1 mod poly here
-%define HashKey_3       (16*17)   ; store HashKey^3 <<1 mod poly here
-%define HashKey_4       (16*18)   ; store HashKey^4 <<1 mod poly here
+%define Padding         (16*15)
+%define HashKey_8       (16*16)   ; store HashKey^8 <<1 mod poly here
+%define HashKey_7       (16*17)   ; store HashKey^7 <<1 mod poly here
+%define HashKey_6       (16*18)   ; store HashKey^6 <<1 mod poly here
 %define HashKey_5       (16*19)   ; store HashKey^5 <<1 mod poly here
-%define HashKey_6       (16*20)   ; store HashKey^6 <<1 mod poly here
-%define HashKey_7       (16*21)   ; store HashKey^7 <<1 mod poly here
-%define HashKey_8       (16*22)   ; store HashKey^8 <<1 mod poly here
-%define HashKey_k       (16*23)   ; store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_2_k     (16*24)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_3_k     (16*25)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_4_k     (16*26)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_5_k     (16*27)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_6_k     (16*28)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_7_k     (16*29)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
-%define HashKey_8_k     (16*30)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_4       (16*20)   ; store HashKey^4 <<1 mod poly here
+%define HashKey_3       (16*21)   ; store HashKey^3 <<1 mod poly here
+%define HashKey_2       (16*22)   ; store HashKey^2 <<1 mod poly here
+%define HashKey_1       (16*23)   ; store HashKey <<1 mod poly here
+%define HashKey         (16*23)   ; store HashKey <<1 mod poly here
+%define HashKey_k       (16*24)   ; store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_1_k     (16*24)   ; store XOR of High 64 bits and Low 64 bits of  HashKey <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_2_k     (16*25)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^2 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_3_k     (16*26)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^3 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_4_k     (16*27)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^4 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_5_k     (16*28)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^5 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_6_k     (16*29)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^6 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_7_k     (16*30)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^7 <<1 mod poly here (for Karatsuba purposes)
+%define HashKey_8_k     (16*31)   ; store XOR of High 64 bits and Low 64 bits of  HashKey^8 <<1 mod poly here (for Karatsuba purposes)
 
 ;;define the fields of gcm_context_data struct
 ;; struct gcm_context_data {
@@ -145,18 +244,22 @@ section .text
 
 ;;; Use Non-temporal load/stor
 %ifdef NT_LD
-	%define	XLDR	movntdqa
-	%define	VXLDR	vmovntdqa
+	%define	XLDR	 movntdqa
+	%define	VXLDR	 vmovntdqa
+	%define	VX512LDR vmovntdqa
 %else
-	%define	XLDR	movdqu
-	%define	VXLDR	vmovdqu
+	%define	XLDR	 movdqu
+	%define	VXLDR	 vmovdqu
+	%define	VX512LDR vmovdqu64
 %endif
 
 ;;; Use Non-temporal load/stor
 %ifdef NT_ST
-	%define	XSTR	movntdq
-	%define	VXSTR	vmovntdq
+	%define	XSTR	 movntdq
+	%define	VXSTR	 vmovntdq
+	%define	VX512STR vmovntdq
 %else
-	%define	XSTR	movdqu
-	%define	VXSTR	vmovdqu
+	%define	XSTR	 movdqu
+	%define	VXSTR	 vmovdqu
+	%define	VX512STR vmovdqu64
 %endif
