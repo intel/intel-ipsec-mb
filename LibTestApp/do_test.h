@@ -252,17 +252,28 @@ do_test(MB_MGR *mb_mgr)
                 job->cipher_mode = CBC;
                 job->hash_alg = SHA1;
 
-                if (rand() & 1)
+                if (rand() & 2)
                         job->aes_key_len_in_bytes = 16;
                 else
                         job->aes_key_len_in_bytes = 32;
 
-                if (rand() & 1) {
+                switch (rand() % 4) {
+		case 0:
+                        job->cipher_direction = ENCRYPT;
+                        job->chain_order = HASH_CIPHER;
+			break;
+		case 1:
                         job->cipher_direction = ENCRYPT;
                         job->chain_order = CIPHER_HASH;
-                } else {
-                        job->cipher_direction = DECRYPT;
-                        job->chain_order = HASH_CIPHER;
+			break;
+                case 2:
+			job->cipher_direction = DECRYPT;
+			job->chain_order = CIPHER_HASH;
+			break;
+		case 3:
+			job->cipher_direction = DECRYPT;
+			job->chain_order = HASH_CIPHER;
+			break;
                 }
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 while (job) {

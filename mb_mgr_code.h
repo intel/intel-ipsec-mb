@@ -756,7 +756,6 @@ DES3_CBC_DEC(JOB_AES_HMAC *job)
 /* ========================================================================= */
 /* Cipher submit & flush functions */
 /* ========================================================================= */
-
 __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
@@ -1454,49 +1453,55 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                 return 1;
         }
-
-        switch (job->chain_order) {
-        case CIPHER_HASH:
-                if (job->cipher_direction != ENCRYPT) {
-                        INVALID_PRN("chain_order:%d\n", job->chain_order);
-                        return 1;
-                }
-                break;
-        case HASH_CIPHER:
-                if (job->cipher_mode != NULL_CIPHER) {
-                        if (job->cipher_direction != DECRYPT) {
-                                INVALID_PRN("chain_order:%d\n",
-                                            job->chain_order);
-                                return 1;
-                        }
-                }
-                break;
-        default:
-                INVALID_PRN("chain_order:%d\n", job->chain_order);
-                return 1;
-        }
-
         return 0;
+}
+
+__forceinline
+JOB_AES_HMAC *SUBMIT_JOB_AES(MB_MGR *state, JOB_AES_HMAC *job)
+{
+	if (job->cipher_direction == ENCRYPT)
+		job = SUBMIT_JOB_AES_ENC(state, job);
+	else
+		job = SUBMIT_JOB_AES_DEC(state, job);
+
+	return job;
+}
+
+__forceinline
+JOB_AES_HMAC *FLUSH_JOB_AES(MB_MGR *state, JOB_AES_HMAC *job)
+{
+	if (job->cipher_direction == ENCRYPT)
+		job = FLUSH_JOB_AES_ENC(state, job);
+	else
+		job = FLUSH_JOB_AES_DEC(state, job);
+
+	return job;
+}
+
+/* submit a half-completed job, based on the status */
+__forceinline
+JOB_AES_HMAC *RESUBMIT_JOB(MB_MGR *state, JOB_AES_HMAC *job)
+{
+	while (job != NULL && job->status < STS_COMPLETED) {
+		if (job->status == STS_COMPLETED_HMAC)
+			job = SUBMIT_JOB_AES(state, job);
+		else if (job->status == STS_COMPLETED_AES)
+			job = SUBMIT_JOB_HASH(state, job);
+	}
+	return job;
 }
 
 __forceinline
 JOB_AES_HMAC *submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
 {
-        if (job->chain_order == CIPHER_HASH) {
-                /* assume job->cipher_direction == ENCRYPT */
-                job = SUBMIT_JOB_AES_ENC(state, job);
-                if (job) {
-                        job = SUBMIT_JOB_HASH(state, job);
-                        if (job && (job->chain_order == HASH_CIPHER))
-                                SUBMIT_JOB_AES_DEC(state, job);
-                } /* end if job */
-        } else { /* job->chain_order == HASH_CIPHER */
-                /* assume job->cipher_direction == DECRYPT */
-                job = SUBMIT_JOB_HASH(state, job);
-                if (job && (job->chain_order == HASH_CIPHER))
-                        SUBMIT_JOB_AES_DEC(state, job);
-        }
-        return job;
+	if (job->chain_order == CIPHER_HASH) {
+		job = SUBMIT_JOB_AES(state, job);
+	} else {
+		job = SUBMIT_JOB_HASH(state, job);
+	}
+
+	job = RESUBMIT_JOB(state, job);
+	return job;
 }
 
 __forceinline
@@ -1506,22 +1511,17 @@ void complete_job(MB_MGR *state, JOB_AES_HMAC *job)
 
         while (job->status < STS_COMPLETED) {
                 if (job->chain_order == CIPHER_HASH) {
-                        /* assume job->cipher_direction == ENCRYPT */
-                        tmp = FLUSH_JOB_AES_ENC(state, job);
-                        if (tmp)
-                                tmp = SUBMIT_JOB_HASH(state, tmp);
-                        else
-                                tmp = FLUSH_JOB_HASH(state, job);
-                        if (tmp && (tmp->chain_order == HASH_CIPHER))
-                                SUBMIT_JOB_AES_DEC(state, tmp);
-                } else { /* job->chain_order == HASH_CIPHER */
-                        /* assume job->cipher_direction == DECRYPT */
+                        tmp = FLUSH_JOB_AES(state, job);
+			if (tmp == NULL)
+				tmp = FLUSH_JOB_HASH(state, job);
+
+			RESUBMIT_JOB(state, tmp);
+                } else {
                         tmp = FLUSH_JOB_HASH(state, job);
                         if (tmp == NULL)
-                                tmp = FLUSH_JOB_AES_DEC(state, job);
-                        else
-                                if (tmp->chain_order == HASH_CIPHER)
-                                        SUBMIT_JOB_AES_DEC(state, tmp);
+                                tmp = FLUSH_JOB_AES(state, job);
+
+			RESUBMIT_JOB(state, tmp);
                 }
         }
 }
