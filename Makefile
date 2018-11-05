@@ -255,7 +255,8 @@ lib_objs := \
 	des_basic.o \
 	des_x16_avx512.o \
 	const.o \
-	version.o
+	version.o \
+	aesni_emu.o
 
 gcm_objs := gcm128_sse.o gcm192_sse.o gcm256_sse.o \
 	gcm128_avx_gen2.o gcm192_avx_gen2.o gcm256_avx_gen2.o \
@@ -407,7 +408,7 @@ clean:
 	rm -Rf $(obj2_files)
 	rm -f $(LIB).a $(LIB).so*
 
-SOURCES_DIRS := . sse avx avx2 avx512 include
+SOURCES_DIRS := . sse avx avx2 avx512 include no-aesni
 SOURCES := $(foreach dir,$(SOURCES_DIRS),$(wildcard $(dir)/*.[ch]) $(wildcard $(dir)/*.asm) $(wildcard $(dir)/*.inc))
 SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
 CHECKPATCH?=checkpatch.pl
