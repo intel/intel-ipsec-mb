@@ -25,5 +25,6 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%include "aesni_emu.inc"
 %define AES_CBC_DEC_256 aes_cbc_dec_256_sse_no_aesni
 %include "aes256_cbc_dec_by4_sse.asm"

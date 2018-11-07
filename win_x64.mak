@@ -51,20 +51,24 @@ LIBNAME = $(LIBBASE).lib
 !endif
 OBJ_DIR = obj
 
-
 !ifdef DEBUG
-DCFLAGS = /Od /DDEBUG /Z7
+OPT = /Od
+DCFLAGS = /DDEBUG /Z7
 DAFLAGS = -gcv8
 DLFLAGS = /DEBUG
 !else
-DCFLAGS = /O2 /Oi
+OPT = /O2 /Oi
+DCFLAGS =
 DAFLAGS =
 DLFLAGS = /RELEASE
 !endif
 
 CC = cl
-CFLAGS = $(EXTRA_CFLAGS) $(DCFLAGS) /I. /Iinclude /Ino-aesni \
+CFLAGS_ALL = $(EXTRA_CFLAGS) /I. /Iinclude /Ino-aesni \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
+
+CFLAGS = $(CFLAGS_ALL) $(OPT) $(DCFLAGS)
+CFLAGS_NO_SIMD = $(CFLAGS_ALL) /Od $(DCFLAGS)
 
 LIB_TOOL = lib
 LIBFLAGS = /nologo /machine:X64 /nodefaultlib
@@ -309,7 +313,7 @@ $(all_objs): $(OBJ_DIR)
 	$(AS) -o $@ $(AFLAGS) $<
 
 {no-aesni\}.c{$(OBJ_DIR)}.obj:
-	$(CC) /Fo$@ /c $(CFLAGS) $<
+	$(CC) /Fo$@ /c $(CFLAGS_NO_SIMD) $<
 
 {no-aesni\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -o $@ $(AFLAGS) $<
