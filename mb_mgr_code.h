@@ -409,85 +409,6 @@ flush_job_aes_ccm_auth_arch(MB_MGR_CCM_OOO *state)
 }
 
 /* ========================================================================= */
-/* AES-GCM */
-/* ========================================================================= */
-
-#ifndef NO_GCM
-__forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_GCM_DEC(JOB_AES_HMAC *job)
-{
-        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
-
-        if (16 == job->aes_key_len_in_bytes)
-                AES_GCM_DEC_128(job->aes_dec_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes,
-                                job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-        else if (24 == job->aes_key_len_in_bytes)
-                AES_GCM_DEC_192(job->aes_dec_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes,
-                                job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-        else
-                AES_GCM_DEC_256(job->aes_dec_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes,
-                                job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-
-        job->status = STS_COMPLETED;
-        return job;
-}
-
-__forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_GCM_ENC(JOB_AES_HMAC *job)
-{
-        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
-
-        if (16 == job->aes_key_len_in_bytes)
-                AES_GCM_ENC_128(job->aes_enc_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes, job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-        else if (24 == job->aes_key_len_in_bytes)
-                AES_GCM_ENC_192(job->aes_enc_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes, job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-        else
-                AES_GCM_ENC_256(job->aes_enc_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes, job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-
-        job->status = STS_COMPLETED;
-        return job;
-}
-#endif /* !NO_GCM */
-
-/* ========================================================================= */
 /* Custom hash / cipher */
 /* ========================================================================= */
 
@@ -787,7 +708,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return DOCSIS_FIRST_BLOCK(job);
 #ifndef NO_GCM
         } else if (GCM == job->cipher_mode) {
-                return SUBMIT_JOB_AES_GCM_ENC(job);
+                return SUBMIT_JOB_AES_GCM_ENC(state, job);
 #endif /* NO_GCM */
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
@@ -828,6 +749,10 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else  { /* assume 32 */
                         return FLUSH_JOB_AES256_ENC(&state->aes256_ooo);
                 }
+#ifndef NO_GCM
+        } else if (GCM == job->cipher_mode) {
+                return FLUSH_JOB_AES_GCM_ENC(state, job);
+#endif /* NO_GCM */
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
                 JOB_AES_HMAC *tmp;
 
@@ -881,7 +806,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 }
 #ifndef NO_GCM
         } else if (GCM == job->cipher_mode) {
-                return SUBMIT_JOB_AES_GCM_DEC(job);
+                return SUBMIT_JOB_AES_GCM_DEC(state, job);
 #endif /* NO_GCM */
         } else if (DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DES_CBC_DEC
@@ -916,6 +841,10 @@ __forceinline
 JOB_AES_HMAC *
 FLUSH_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 {
+#ifndef NO_GCM
+        if (GCM == job->cipher_mode)
+                return FLUSH_JOB_AES_GCM_DEC(state, job);
+#endif /* NO_GCM */
 #ifdef FLUSH_JOB_DES_CBC_DEC
         if (DES == job->cipher_mode)
                 return FLUSH_JOB_DES_CBC_DEC(&state->des_dec_ooo);

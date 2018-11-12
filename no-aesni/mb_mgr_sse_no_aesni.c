@@ -131,6 +131,11 @@ JOB_AES_HMAC *flush_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state);
 #define AES_GCM_ENC_192   aes_gcm_enc_192_sse_no_aesni
 #define AES_GCM_DEC_256   aes_gcm_dec_256_sse_no_aesni
 #define AES_GCM_ENC_256   aes_gcm_enc_256_sse_no_aesni
+
+#define SUBMIT_JOB_AES_GCM_DEC submit_job_aes_gcm_dec_sse_no_aesni
+#define FLUSH_JOB_AES_GCM_DEC  flush_job_aes_gcm_dec_sse_no_aesni
+#define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_sse_no_aesni
+#define FLUSH_JOB_AES_GCM_ENC  flush_job_aes_gcm_enc_sse_no_aesni
 #endif /* NO_GCM */
 
 /* ====================================================================== */
@@ -168,6 +173,102 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS_x8 *args, uint64_t len);
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_sse_no_aesni
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse_no_aesni
+
+/* ====================================================================== */
+
+/*
+ * GCM submit / flush API for SSE arch without AESNI
+ */
+#ifndef NO_GCM
+static JOB_AES_HMAC *
+submit_job_aes_gcm_dec_sse_no_aesni(MB_MGR *state, JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        (void) state;
+
+        if (16 == job->aes_key_len_in_bytes)
+                AES_GCM_DEC_128(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes,
+                                job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+        else if (24 == job->aes_key_len_in_bytes)
+                AES_GCM_DEC_192(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes,
+                                job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+        else /* assume 32 bytes */
+                AES_GCM_DEC_256(job->aes_dec_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes,
+                                job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+static JOB_AES_HMAC *
+flush_job_aes_gcm_dec_sse_no_aesni(MB_MGR *state, JOB_AES_HMAC *job)
+{
+        (void) state;
+        (void) job;
+        return NULL;
+}
+
+static JOB_AES_HMAC *
+submit_job_aes_gcm_enc_sse_no_aesni(MB_MGR *state, JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
+        (void) state;
+
+        if (16 == job->aes_key_len_in_bytes)
+                AES_GCM_ENC_128(job->aes_enc_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes, job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+        else if (24 == job->aes_key_len_in_bytes)
+                AES_GCM_ENC_192(job->aes_enc_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes, job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+        else /* assume 32 bytes */
+                AES_GCM_ENC_256(job->aes_enc_key_expanded, &ctx, job->dst,
+                                job->src +
+                                job->cipher_start_src_offset_in_bytes,
+                                job->msg_len_to_cipher_in_bytes, job->iv,
+                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
+                                job->auth_tag_output,
+                                job->auth_tag_output_len_in_bytes);
+
+        job->status = STS_COMPLETED;
+        return job;
+}
+
+static JOB_AES_HMAC *
+flush_job_aes_gcm_enc_sse_no_aesni(MB_MGR *state, JOB_AES_HMAC *job)
+{
+        (void) state;
+        (void) job;
+        return NULL;
+}
+#endif /* NO_GCM */
 
 /* ====================================================================== */
 
