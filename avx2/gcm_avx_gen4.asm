@@ -199,7 +199,7 @@ default rel
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
-        vmovdqu         %%T3, [POLY2]
+        vmovdqa         %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%GH, 0x01
         vpslldq         %%T2, %%T2, 8                    ; shift-L %%T2 2 DWs
@@ -342,51 +342,182 @@ default rel
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CALC_AAD_HASH   14
+%macro  CALC_AAD_HASH   15
 %define %%A_IN          %1
 %define %%A_LEN         %2
 %define %%AAD_HASH      %3
-%define %%HASH_KEY      %4
-%define %%XTMP1         %5      ; xmm temp reg 5
-%define %%XTMP2         %6
-%define %%XTMP3         %7
-%define %%XTMP4         %8
-%define %%XTMP5         %9      ; xmm temp reg 5
-%define %%T1            %10     ; temp reg 1
-%define %%T2            %11
-%define %%T3            %12
-%define %%T4            %13
-%define %%T5            %14     ; temp reg 5
+%define %%GDATA_KEY     %4
+%define %%XTMP0         %5      ; xmm temp reg 5
+%define %%XTMP1         %6      ; xmm temp reg 5
+%define %%XTMP2         %7
+%define %%XTMP3         %8
+%define %%XTMP4         %9
+%define %%XTMP5         %10     ; xmm temp reg 5
+%define %%T1            %11     ; temp reg 1
+%define %%T2            %12
+%define %%T3            %13
+%define %%T4            %14
+%define %%T5            %15     ; temp reg 5
 
 
         mov     %%T1, %%A_IN            ; T1 = AAD
         mov     %%T2, %%A_LEN           ; T2 = aadLen
         vpxor   %%AAD_HASH, %%AAD_HASH
 
+%%_get_AAD_loop128:
+        cmp     %%T2, 128
+        jl      %%_exit_AAD_loop128
+
+        vmovdqu         %%XTMP0, [%%T1 + 16*0]
+        vpshufb         %%XTMP0, [rel SHUF_MASK]
+
+        vpxor           %%XTMP0, %%AAD_HASH
+
+        vmovdqu         %%XTMP5, [%%GDATA_KEY + HashKey_8]
+        vpclmulqdq      %%XTMP1, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = a1*b1
+        vpclmulqdq      %%XTMP2, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = a0*b0
+        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = a1*b0
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10                 ; %%T4 = a0*b1
+        vpxor           %%XTMP3, %%XTMP3, %%XTMP4                       ; %%T3 = a1*b0 + a0*b1
+
+%assign i 1
+%assign j 7
+%rep 7
+        vmovdqu         %%XTMP0, [%%T1 + 16*i]
+        vpshufb         %%XTMP0, [rel SHUF_MASK]
+
+        vmovdqu         %%XTMP5, [%%GDATA_KEY + HashKey_ %+ j]
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = T1 + a1*b1
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP4
+
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = T2 + a0*b0
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
+
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = T3 + a1*b0 + a0*b1
+        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10
+        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
+%assign i (i + 1)
+%assign j (j - 1)
+%endrep
+
+        vpslldq         %%XTMP4, %%XTMP3, 8                             ; shift-L 2 DWs
+        vpsrldq         %%XTMP3, %%XTMP3, 8                             ; shift-R 2 DWs
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP3                       ; accumulate the results in %%T1(M):%%T2(L)
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;first phase of the reduction
+        vmovdqa         %%XTMP5, [rel POLY2]
+        vpclmulqdq      %%XTMP0, %%XTMP5, %%XTMP2, 0x01
+        vpslldq         %%XTMP0, %%XTMP0, 8                             ; shift-L xmm2 2 DWs
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP0                       ; first phase of the reduction complete
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;second phase of the reduction
+        vpclmulqdq      %%XTMP3, %%XTMP5, %%XTMP2, 0x00
+        vpsrldq         %%XTMP3, %%XTMP3, 4                             ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+
+        vpclmulqdq      %%XTMP4, %%XTMP5, %%XTMP2, 0x10
+        vpslldq         %%XTMP4, %%XTMP4, 4                             ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
+
+        vpxor           %%XTMP4, %%XTMP4, %%XTMP3                       ; second phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpxor           %%AAD_HASH, %%XTMP1, %%XTMP4                    ; the result is in %%T1
+
+        sub     %%T2, 128
+        je      %%_CALC_AAD_done
+
+        add     %%T1, 128
+        jmp     %%_get_AAD_loop128
+
+%%_exit_AAD_loop128:
         cmp     %%T2, 16
         jl      %%_get_small_AAD_block
 
-%%_get_AAD_loop16:
+        ;; calculate hash_key position to start with
+        mov     %%T3, %%T2
+        and     %%T3, -16       ; 1 to 7 blocks possible here
+        neg     %%T3
+        add     %%T3, HashKey_1 + 16
+        lea     %%T3, [%%GDATA_KEY + %%T3]
 
-        vmovdqu %%XTMP1, [%%T1]
-        ;byte-reflect the AAD data
-        vpshufb %%XTMP1, [SHUF_MASK]
-        vpxor   %%AAD_HASH, %%XTMP1
-        GHASH_MUL       %%AAD_HASH, %%HASH_KEY, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
+        vmovdqu         %%XTMP0, [%%T1]
+        vpshufb         %%XTMP0, [rel SHUF_MASK]
 
+        vpxor           %%XTMP0, %%AAD_HASH
+
+        vmovdqu         %%XTMP5, [%%T3]
+        vpclmulqdq      %%XTMP1, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = a1*b1
+        vpclmulqdq      %%XTMP2, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = a0*b0
+        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = a1*b0
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10                 ; %%T4 = a0*b1
+        vpxor           %%XTMP3, %%XTMP3, %%XTMP4                       ; %%T3 = a1*b0 + a0*b1
+
+        add     %%T3, 16        ; move to next hashkey
+        add     %%T1, 16        ; move to next data block
         sub     %%T2, 16
+        cmp     %%T2, 16
+        jl      %%_AAD_reduce
+
+%%_AAD_blocks:
+        vmovdqu         %%XTMP0, [%%T1]
+        vpshufb         %%XTMP0, [rel SHUF_MASK]
+
+        vmovdqu         %%XTMP5, [%%T3]
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = T1 + a1*b1
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP4
+
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = T2 + a0*b0
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
+
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = T3 + a1*b0 + a0*b1
+        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
+        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10
+        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
+
+        add     %%T3, 16        ; move to next hashkey
+        add     %%T1, 16
+        sub     %%T2, 16
+        cmp     %%T2, 16
+        jl      %%_AAD_reduce
+        jmp     %%_AAD_blocks
+
+%%_AAD_reduce:
+        vpslldq         %%XTMP4, %%XTMP3, 8                             ; shift-L 2 DWs
+        vpsrldq         %%XTMP3, %%XTMP3, 8                             ; shift-R 2 DWs
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
+        vpxor           %%XTMP1, %%XTMP1, %%XTMP3                       ; accumulate the results in %%T1(M):%%T2(L)
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;first phase of the reduction
+        vmovdqa         %%XTMP5, [rel POLY2]
+        vpclmulqdq      %%XTMP0, %%XTMP5, %%XTMP2, 0x01
+        vpslldq         %%XTMP0, %%XTMP0, 8                             ; shift-L xmm2 2 DWs
+        vpxor           %%XTMP2, %%XTMP2, %%XTMP0                       ; first phase of the reduction complete
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;second phase of the reduction
+        vpclmulqdq      %%XTMP3, %%XTMP5, %%XTMP2, 0x00
+        vpsrldq         %%XTMP3, %%XTMP3, 4                             ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+
+        vpclmulqdq      %%XTMP4, %%XTMP5, %%XTMP2, 0x10
+        vpslldq         %%XTMP4, %%XTMP4, 4                             ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
+
+        vpxor           %%XTMP4, %%XTMP4, %%XTMP3                       ; second phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpxor           %%AAD_HASH, %%XTMP1, %%XTMP4                    ; the result is in %%T1
+
+        or      %%T2, %%T2
         je      %%_CALC_AAD_done
 
-        add     %%T1, 16
-        cmp     %%T2, 16
-        jge     %%_get_AAD_loop16
-
 %%_get_small_AAD_block:
+        vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey]
         READ_SMALL_DATA_INPUT   %%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
         ;byte-reflect the AAD data
-        vpshufb %%XTMP1, [SHUF_MASK]
-        vpxor   %%AAD_HASH, %%XTMP1
-        GHASH_MUL       %%AAD_HASH, %%HASH_KEY, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
+        vpshufb         %%XTMP1, [rel SHUF_MASK]
+        vpxor           %%AAD_HASH, %%XTMP1
+        GHASH_MUL       %%AAD_HASH, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
 
 %%_CALC_AAD_done:
 
@@ -432,7 +563,7 @@ default rel
         vmovdqu xmm9, [%%GDATA_CTX + PBlockEncKey]  ;xmm9 = my_ctx_data.partial_block_enc_key
         vmovdqu xmm13, [%%GDATA_KEY + HashKey]
 
-        lea     r12, [SHIFT_MASK]
+        lea     r12, [rel SHIFT_MASK]
 
         add     r12, r13                        ; adjust the shuffle mask pointer to be able to shift r13 bytes (16-r13 is the number of bytes in plaintext mod 16)
         vmovdqu xmm2, [r12]                     ; get the appropriate shuffle mask
@@ -453,7 +584,7 @@ default rel
         vpand   xmm9, xmm1                      ; mask out bottom r13 bytes of xmm9
 
         vpand   xmm3, xmm1
-        vpshufb xmm3, [SHUF_MASK]
+        vpshufb xmm3, [rel SHUF_MASK]
         vpshufb xmm3, xmm2
         vpxor   %%AAD_HASH, xmm3
 
@@ -488,7 +619,7 @@ default rel
         vmovdqu xmm1, [r12 + ALL_F-SHIFT_MASK]  ; get the appropriate mask to mask out bottom r13 bytes of xmm9
         vpand   xmm9, xmm1                      ; mask out bottom r13  bytes of xmm9
 
-        vpshufb xmm9, [SHUF_MASK]
+        vpshufb xmm9, [rel SHUF_MASK]
         vpshufb xmm9, xmm2
         vpxor   %%AAD_HASH, xmm9
 
@@ -509,7 +640,7 @@ default rel
 %%_encode_done:
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH
 
-        vpshufb xmm9, [SHUF_MASK]       ; shuffle xmm9 back to output as ciphertext
+        vpshufb xmm9, [rel SHUF_MASK]       ; shuffle xmm9 back to output as ciphertext
         vpshufb xmm9, xmm2
 %endif
 
@@ -620,9 +751,9 @@ default rel
 
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
-                vpaddd   %%CTR, %%CTR, [ONE]     ; INCR Y0
+                vpaddd   %%CTR, %%CTR, [rel ONE]     ; INCR Y0
                 vmovdqa  reg(i), %%CTR
-                vpshufb  reg(i), [SHUF_MASK]     ; perform a 16Byte swap
+                vpshufb  reg(i), [rel SHUF_MASK]     ; perform a 16Byte swap
 %assign i (i+1)
 %endrep
 
@@ -669,7 +800,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                     vmovdqa  reg(i), %%T1
                 %endif
                 ;; Prepare ciphertext for GHASH computations
-                vpshufb  reg(i), [SHUF_MASK]
+                vpshufb  reg(i), [rel SHUF_MASK]
 %assign i (i+1)
 %endrep
 
@@ -689,24 +820,24 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 ;; Haskey_i_k holds XORed values of the low and high parts of
                 ;; the Haskey_i
-                vpaddd   %%XMM1, %%CTR, [ONE]   ; INCR Y0
-                vpaddd   %%XMM2, %%CTR, [TWO]   ; INCR Y0
-                vpaddd   %%XMM3, %%XMM1, [TWO]  ; INCR Y0
-                vpaddd   %%XMM4, %%XMM2, [TWO]  ; INCR Y0
-                vpaddd   %%XMM5, %%XMM3, [TWO]  ; INCR Y0
-                vpaddd   %%XMM6, %%XMM4, [TWO]  ; INCR Y0
-                vpaddd   %%XMM7, %%XMM5, [TWO]  ; INCR Y0
-                vpaddd   %%XMM8, %%XMM6, [TWO]  ; INCR Y0
+                vpaddd   %%XMM1, %%CTR, [rel ONE]   ; INCR Y0
+                vpaddd   %%XMM2, %%CTR, [rel TWO]   ; INCR Y0
+                vpaddd   %%XMM3, %%XMM1, [rel TWO]  ; INCR Y0
+                vpaddd   %%XMM4, %%XMM2, [rel TWO]  ; INCR Y0
+                vpaddd   %%XMM5, %%XMM3, [rel TWO]  ; INCR Y0
+                vpaddd   %%XMM6, %%XMM4, [rel TWO]  ; INCR Y0
+                vpaddd   %%XMM7, %%XMM5, [rel TWO]  ; INCR Y0
+                vpaddd   %%XMM8, %%XMM6, [rel TWO]  ; INCR Y0
                 vmovdqa  %%CTR, %%XMM8
 
-                vpshufb  %%XMM1, [SHUF_MASK]    ; perform a 16Byte swap
-                vpshufb  %%XMM2, [SHUF_MASK]    ; perform a 16Byte swap
-                vpshufb  %%XMM3, [SHUF_MASK]    ; perform a 16Byte swap
-                vpshufb  %%XMM4, [SHUF_MASK]    ; perform a 16Byte swap
-                vpshufb  %%XMM5, [SHUF_MASK]    ; perform a 16Byte swap
-                vpshufb  %%XMM6, [SHUF_MASK]    ; perform a 16Byte swap
-                vpshufb  %%XMM7, [SHUF_MASK]    ; perform a 16Byte swap
-                vpshufb  %%XMM8, [SHUF_MASK]    ; perform a 16Byte swap
+                vpshufb  %%XMM1, [rel SHUF_MASK]    ; perform a 16Byte swap
+                vpshufb  %%XMM2, [rel SHUF_MASK]    ; perform a 16Byte swap
+                vpshufb  %%XMM3, [rel SHUF_MASK]    ; perform a 16Byte swap
+                vpshufb  %%XMM4, [rel SHUF_MASK]    ; perform a 16Byte swap
+                vpshufb  %%XMM5, [rel SHUF_MASK]    ; perform a 16Byte swap
+                vpshufb  %%XMM6, [rel SHUF_MASK]    ; perform a 16Byte swap
+                vpshufb  %%XMM7, [rel SHUF_MASK]    ; perform a 16Byte swap
+                vpshufb  %%XMM8, [rel SHUF_MASK]    ; perform a 16Byte swap
 
                 vmovdqu  %%T_key, [%%GDATA_KEY+16*0]
                 vpxor    %%XMM1, %%XMM1, %%T_key
@@ -998,7 +1129,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ; First phase of the reduction
-        vmovdqu         %%T3, [POLY2]
+        vmovdqa         %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%T4, 0x01
         vpslldq         %%T2, %%T2, 8             ; shift-L xmm2 2 DWs
@@ -1104,16 +1235,16 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 sub     %%LENGTH, 128-16
                 add     %%DATA_OFFSET, 128-16
 
-                vpshufb  %%XMM1, [SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM1, [rel SHUF_MASK]             ; perform a 16Byte swap
                 ;; Combine GHASHed value with the corresponding ciphertext
                 vpxor    %%XMM1, %%XMM1, %%T3
-                vpshufb  %%XMM2, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM3, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM4, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM5, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM6, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM7, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb  %%XMM8, [SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM2, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM3, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM4, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM5, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM6, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb  %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1318,7 +1449,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;;      %%LENGTH is always less than 16.
         ;;      No PLAIN_CYPH_LEN argument available in this macro.
         ENCRYPT_FINAL_PARTIAL_BLOCK reg(i), %%T1, %%T3, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, LT16, %%ENC_DEC, %%DATA_OFFSET
-        vpshufb  reg(i), [SHUF_MASK]
+        vpshufb  reg(i), [rel SHUF_MASK]
 
 %ifidn %%INSTANCE_TYPE, multi_call
 %assign i (8-%%num_initial_blocks)
@@ -1409,7 +1540,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; First phase of the reduction
-        vmovdqu         %%T3, [POLY2]
+        vmovdqa         %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%T4, 0x01
         ;; shift-L xmm2 2 DWs
@@ -1511,8 +1642,8 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu [rsp + TMP8], %%XMM8
 
 %ifidn %%loop_idx, in_order
-                vpaddd  %%XMM1, %%CTR,  [ONE]           ; INCR CNT
-                vmovdqu %%T5, [TWO]
+                vpaddd  %%XMM1, %%CTR,  [rel ONE]           ; INCR CNT
+                vmovdqa %%T5, [rel TWO]
                 vpaddd  %%XMM2, %%CTR, %%T5
                 vpaddd  %%XMM3, %%XMM1, %%T5
                 vpaddd  %%XMM4, %%XMM2, %%T5
@@ -1522,7 +1653,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vpaddd  %%XMM8, %%XMM6, %%T5
                 vmovdqa %%CTR, %%XMM8
 
-                vmovdqu %%T5, [SHUF_MASK]
+                vmovdqa %%T5, [rel SHUF_MASK]
                 vpshufb %%XMM1, %%T5             ; perform a 16Byte swap
                 vpshufb %%XMM2, %%T5             ; perform a 16Byte swap
                 vpshufb %%XMM3, %%T5             ; perform a 16Byte swap
@@ -1532,8 +1663,8 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vpshufb %%XMM7, %%T5             ; perform a 16Byte swap
                 vpshufb %%XMM8, %%T5             ; perform a 16Byte swap
 %else
-                vpaddd  %%XMM1, %%CTR,  [ONEf]          ; INCR CNT
-                vmovdqu %%T5, [TWOf]
+                vpaddd  %%XMM1, %%CTR,  [rel ONEf]          ; INCR CNT
+                vmovdqa %%T5, [rel TWOf]
                 vpaddd  %%XMM2, %%CTR,  %%T5
                 vpaddd  %%XMM3, %%XMM1, %%T5
                 vpaddd  %%XMM4, %%XMM2, %%T5
@@ -1884,7 +2015,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
-        vmovdqu         %%T3, [POLY2]
+        vmovdqa         %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%T7, 0x01
         vpslldq         %%T2, %%T2, 8                           ; shift-L xmm2 2 DWs
@@ -1920,14 +2051,14 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vpxor           %%T1, %%T1, %%T4                                ; the result is in %%T1
 
-                vpshufb %%XMM1, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM2, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM3, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM4, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM5, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM6, [SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM7, [SHUF_MASK]             ; perform a 16Byte swap
-        vpshufb %%XMM8, [SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM1, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM2, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM3, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM4, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM5, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM6, [rel SHUF_MASK]             ; perform a 16Byte swap
+                vpshufb %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
+        vpshufb %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
 
 
         vpxor   %%XMM1, %%T1
@@ -2108,7 +2239,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
-        vmovdqu         %%T3, [POLY2]
+        vmovdqa         %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%T7, 0x01
         vpslldq         %%T2, %%T2, 8                           ; shift-L xmm2 2 DWs
@@ -2286,7 +2417,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
-        vmovdqu         %%T3, [POLY2]
+        vmovdqa         %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%T7, 0x01
         vpslldq         %%T2, %%T2, 8                           ; shift-L xmm2 2 DWs
@@ -2502,16 +2633,13 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %define %%A_IN          %4
 %define %%A_LEN         %5
 %define %%AAD_HASH      xmm14
-%define %%SUBHASH       xmm1
 
-
-        vmovdqu %%SUBHASH, [%%GDATA_KEY + HashKey]
 
         mov     r10, %%A_LEN
         cmp     r10, 0
         je      %%_aad_is_zero
 
-        CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%SUBHASH, xmm2, xmm3, xmm4, xmm5, xmm6, r10, r11, r12, r13, rax
+        CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, r10, r11, r12, r13, rax
         jmp     %%_after_aad
 
 %%_aad_is_zero:
@@ -2533,7 +2661,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vpinsrd xmm2, [r10+8], 2
         vmovdqu [%%GDATA_CTX + OrigIV], xmm2                ; ctx_data.orig_IV = iv
 
-        vpshufb xmm2, [SHUF_MASK]
+        vpshufb xmm2, [rel SHUF_MASK]
 
         vmovdqu [%%GDATA_CTX + CurCount], xmm2              ; ctx_data.current_counter = iv
 %endmacro
@@ -2835,19 +2963,19 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         cmp     r13, 128
         jge     %%_encrypt_by_8_new
 
-        vpshufb xmm9, [SHUF_MASK]
+        vpshufb xmm9, [rel SHUF_MASK]
         jmp     %%_encrypt_by_8_parallel_done
 
 %%_encrypt_by_8:
-        vpshufb xmm9, [SHUF_MASK]
+        vpshufb xmm9, [rel SHUF_MASK]
         add     r15b, 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, in_order, %%ENC_DEC, full
-        vpshufb  xmm9, [SHUF_MASK]
+        vpshufb  xmm9, [rel SHUF_MASK]
         add     %%DATA_OFFSET, 128
         sub     r13, 128
         cmp     r13, 128
         jge     %%_encrypt_by_8_new
-        vpshufb  xmm9, [SHUF_MASK]
+        vpshufb  xmm9, [rel SHUF_MASK]
 
 
 %%_encrypt_by_8_parallel_done:
@@ -2871,7 +2999,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %%_encrypt_final_partial:
 
-        vpshufb  xmm8, [SHUF_MASK]
+        vpshufb  xmm8, [rel SHUF_MASK]
         mov     [%%GDATA_CTX + PBlockLen], r13
         vmovdqu [%%GDATA_CTX + PBlockEncKey], xmm8
 
@@ -2879,7 +3007,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;;                            GDATA,  KEY,   T1,    T2
         ENCRYPT_FINAL_PARTIAL_BLOCK xmm8, xmm0, xmm10, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET
 
-        vpshufb  xmm8, [SHUF_MASK]
+        vpshufb  xmm8, [rel SHUF_MASK]
 
 
 %%_encrypt_done:
@@ -2966,7 +3094,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         vpxor   xmm14, xmm15
         GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
-        vpshufb  xmm14, [SHUF_MASK]         ; perform a 16Byte swap
+        vpshufb  xmm14, [rel SHUF_MASK]         ; perform a 16Byte swap
 
         vpxor   xmm9, xmm9, xmm14
 
@@ -3043,8 +3171,8 @@ FN_NAME(precomp,_):
         vpor     xmm6, xmm6, xmm2
         ;reduction
         vpshufd  xmm2, xmm1, 00100100b
-        vpcmpeqd xmm2, [TWOONE]
-        vpand    xmm2, xmm2, [POLY]
+        vpcmpeqd xmm2, [rel TWOONE]
+        vpand    xmm2, xmm2, [rel POLY]
         vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vmovdqu  [arg1 + HashKey], xmm6                 ; store HashKey<<1 mod poly
