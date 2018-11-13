@@ -65,11 +65,17 @@ CFLAGS := -DLINUX $(EXTRA_CFLAGS) $(INCLUDES) \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
 
 ifeq ($(DEBUG),y)
-CFLAGS += -g -O0 -DDEBUG
+CFLAGS += -g -DDEBUG
+OPT = -O0
 LDFLAGS += -g
 else
-CFLAGS += -O3 -fstack-protector -D_FORTIFY_SOURCE=2
+OPT = -O3
+CFLAGS += -fstack-protector -D_FORTIFY_SOURCE=2
 endif
+
+# prevent SIMD optimizations for non-aesni modules
+CFLAGS_NO_SIMD = $(CFLAGS) -O1
+CFLAGS += $(OPT)
 
 # so or static build
 ifeq ($(SHARED),y)
@@ -384,7 +390,7 @@ endif
 
 $(OBJ_DIR)/%.o:no-aesni/%.c
 	@ echo "Making object file $@ "
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS_NO_SIMD) $< -o $@
 
 $(OBJ_DIR)/%.o:no-aesni/%.asm
 	@ echo "Making object file $@ "
