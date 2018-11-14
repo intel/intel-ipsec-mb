@@ -321,11 +321,9 @@ endif
 $(obj2_files): | $(OBJ_DIR)
 
 $(OBJ_DIR)/%.o:%.c
-	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:%.asm
-	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
@@ -333,11 +331,9 @@ else
 endif
 
 $(OBJ_DIR)/%.o:sse/%.c
-	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:sse/%.asm
-	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
@@ -345,11 +341,9 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx/%.c
-	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx/%.asm
-	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
@@ -357,11 +351,9 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx2/%.c
-	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx2/%.asm
-	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
@@ -369,11 +361,9 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx512/%.c
-	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx512/%.asm
-	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
@@ -381,7 +371,6 @@ else
 endif
 
 $(OBJ_DIR)/%.o:include/%.asm
-	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
@@ -389,11 +378,9 @@ else
 endif
 
 $(OBJ_DIR)/%.o:no-aesni/%.c
-	@ echo "Making object file $@ "
 	$(CC) -c $(CFLAGS_NO_SIMD) $< -o $@
 
 $(OBJ_DIR)/%.o:no-aesni/%.asm
-	@ echo "Making object file $@ "
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
@@ -414,21 +401,35 @@ clean:
 	rm -Rf $(obj2_files)
 	rm -f $(LIB).a $(LIB).so*
 
+CHECKPATCH ?= checkpatch.pl
+# checkpatch ignore settings:
+#   SPACING - produces false positives with tyepdefs and *
+#   CONSTANT_COMPARISON - forbids defensive programming technique
+#   USE_FUNC - produces false positives for Windows target
+#   INITIALISED_STATIC, LEADING_SPACE, SPLIT_STRING, CODE_INDENT,
+#   PREFER_ALIGNED, UNSPECIFIED_INT, ARRAY_SIZE, GLOBAL_INITIALISERS,
+#   NEW_TYPEDEFS, AVOID_EXTERNS, COMPLEX_MACRO, BLOCK_COMMENT_STYLE
+#     - found obsolete in this project
+#
+# NOTE: these flags cannot be broken into multiple lines due to
+#       spaces injected by make
+CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,NEW_TYPEDEFS,AVOID_EXTERNS,COMPLEX_MACRO,PREFER_ALIGNED,USE_FUNC,CONSTANT_COMPARISON,SPACING
+
+%.c_style_check : %.c
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+
+%.h_style_check : %.h
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+
+%.asm_style_check : %.asm
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+
+%.inc_style_check : %.inc
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+
 SOURCES_DIRS := . sse avx avx2 avx512 include no-aesni
 SOURCES := $(foreach dir,$(SOURCES_DIRS),$(wildcard $(dir)/*.[ch]) $(wildcard $(dir)/*.asm) $(wildcard $(dir)/*.inc))
-SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
-CHECKPATCH?=checkpatch.pl
-# SPACING - produces false positives with tyepdefs and *
-# CONSTANT_COMPARISON - forbids defensive programming technique
-# USE_FUNC - produces false positives for Windows target
-# INITIALISED_STATIC, LEADING_SPACE, SPLIT_STRING, CODE_INDENT,
-# PREFER_ALIGNED, UNSPECIFIED_INT, ARRAY_SIZE, GLOBAL_INITIALISERS,
-# NEW_TYPEDEFS, AVOID_EXTERNS, COMPLEX_MACRO, BLOCK_COMMENT_STYLE
-# - found obsolete in this project
+SOURCES_STYLE := $(foreach infile,$(SOURCES),$(infile)_style_check)
+
 .PHONY: style
-style:
-	$(CHECKPATCH) --no-tree --no-signoff --emacs --no-color \
---ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,\
-UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,\
-NEW_TYPEDEFS,AVOID_EXTERNS,COMPLEX_MACRO,PREFER_ALIGNED,USE_FUNC,\
-CONSTANT_COMPARISON,SPACING $(SOURCES_STYLE)
+style: $(SOURCES_STYLE)
