@@ -28,6 +28,8 @@
 %ifndef _AESNI_EMU_INC_
 %define _AESNI_EMU_INC_
 
+%include "reg_sizes.asm"
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utility macros and defines to assist AESNI translation macros
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -66,19 +68,19 @@
         mov     rax, rsp
         sub	rsp, RES_STACK_SZ
         and     rsp, -16
-%assign i 0
+%assign gp_regs_i 0
 %rep    NUM_GP_REGS
-        mov	[rsp + 8*i], GP(i)
-%assign i i+1
+        mov	[rsp + 8*gp_regs_i], GP(gp_regs_i)
+%assign gp_regs_i gp_regs_i+1
 %endrep
 %endmacro
 
 ;; Restore GP registers and stack pointer
 %macro RESTORE_GP_REGS 0
-%assign i 0
+%assign gp_regs_i 0
 %rep    NUM_GP_REGS
-        mov	GP(i), [rsp + 8*i]
-%assign i i+1
+        mov	GP(gp_regs_i), [rsp + 8*gp_regs_i]
+%assign gp_regs_i gp_regs_i+1
 %endrep
         mov     rsp, rax
         pop     rax
@@ -107,30 +109,27 @@
 
 ;; Check if key is reg or ptr
 %assign IS_REG 0
-%assign i 0
+%assign x 0
 %rep    16
-%ifidni %%key, XMM(i)
+%ifidni %%key, XMM(x)
        %assign IS_REG 1
        %exitrep
 %endif
-%assign i i+1
+%assign x x+1
 %endrep
         ;; save GP registers to stack
         SAVE_GP_REGS
 
-;; move XMM registers to stack
-%if IS_REG
-        ;; move 32 bytes on stack for src_dst and key
+        ;; move function args onto stack before function call
         movdqa  [rsp + ARG1_OFFSET], %%src_dst
+%if IS_REG
         movdqa  [rsp + ARG2_OFFSET], %%key
+%else
+        movdqu  %%src_dst, %%key
+        movdqa  [rsp + ARG2_OFFSET], %%src_dst
+%endif
         lea     %%arg1, [rsp + ARG1_OFFSET]
         lea     %%arg2, [rsp + ARG2_OFFSET]
-%else
-        ;; move 16 bytes on stack for src_dst
-        movdqa  [rsp + ARG1_OFFSET], %%src_dst
-        lea     %%arg1, [rsp + ARG1_OFFSET]
-        lea     %%arg2, %%key
-%endif
 
         ;; move 8 bit imm rcon for aeskeygenassist
 %ifnum  %%imm
@@ -204,12 +203,14 @@
 ;; AESNI defines
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%ifndef NO_AESNI_RENAME
 %define aesenc          EMULATE_AESENC
 %define aesenclast      EMULATE_AESENCLAST
 %define aesdec          EMULATE_AESDEC
 %define aesdeclast      EMULATE_AESDECLAST
 %define aesimc          EMULATE_AESIMC
 %define aeskeygenassist EMULATE_AESKEYGENASSIST
+%endif
 
 extern emulate_AESENC
 extern emulate_AESENCLAST

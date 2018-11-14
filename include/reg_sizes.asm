@@ -27,6 +27,9 @@
 
 ; define d and w variants for registers
 
+%ifndef _REG_SIZES_ASM_
+%define _REG_SIZES_ASM_
+
 %define	raxd	eax
 %define raxw	ax
 %define raxb	al
@@ -213,3 +216,5 @@
 %define XWORD(reg) reg %+ x
 %define YWORD(reg) reg %+ y
 %define ZWORD(reg) reg %+ z
+
+%endif ;; _REG_SIZES_ASM_

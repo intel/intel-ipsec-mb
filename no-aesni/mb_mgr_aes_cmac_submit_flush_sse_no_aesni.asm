@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES128_CBC_MAC aes128_cbc_mac_x4
+%define AES128_CBC_MAC aes128_cbc_mac_x4_no_aesni
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_sse_no_aesni
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_sse_no_aesni
 %include "mb_mgr_aes_cmac_submit_flush_sse.asm"

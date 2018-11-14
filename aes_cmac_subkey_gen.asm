@@ -26,6 +26,8 @@
 ;;
 
 %include "os.asm"
+%define NO_AESNI_RENAME
+%include "aesni_emu.inc"
 
 ;;; Routines to generate subkeys for AES-CMAC.
 ;;; See RFC 4493 for more details.
@@ -195,16 +197,16 @@ align 32
 aes_cmac_subkey_gen_sse_no_aesni:
         ;; Step 1.  L := AES-128(K, const_Zero) ;
         movdqa          XL, [KEY_EXP + 16*0]    ; 0. ARK xor const_Zero
-	aesenc		XL, [KEY_EXP + 16*1]	; 1. ENC
-	aesenc		XL, [KEY_EXP + 16*2]	; 2. ENC
-	aesenc		XL, [KEY_EXP + 16*3]	; 3. ENC
-	aesenc		XL, [KEY_EXP + 16*4]	; 4. ENC
-	aesenc		XL, [KEY_EXP + 16*5]	; 5. ENC
-	aesenc		XL, [KEY_EXP + 16*6]	; 6. ENC
-	aesenc		XL, [KEY_EXP + 16*7]	; 7. ENC
-	aesenc		XL, [KEY_EXP + 16*8]	; 8. ENC
-	aesenc		XL, [KEY_EXP + 16*9]	; 9. ENC
-	aesenclast	XL, [KEY_EXP + 16*10]	; 10. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*1]	; 1. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*2]	; 2. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*3]	; 3. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*4]	; 4. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*5]	; 5. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*6]	; 6. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*7]	; 7. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*8]	; 8. ENC
+	EMULATE_AESENC	XL, [KEY_EXP + 16*9]	; 9. ENC
+	EMULATE_AESENCLAST XL, [KEY_EXP + 16*10]; 10. ENC
 
         ;; Step 2.  if MSB(L) is equal to 0
         ;;          then    K1 := L << 1 ;

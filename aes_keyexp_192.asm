@@ -26,6 +26,8 @@
 ;;
 
 %include "os.asm"
+%define NO_AESNI_RENAME
+%include "aesni_emu.inc"
 
 %ifdef LINUX
 %define KEY		rdi
@@ -65,6 +67,12 @@
 %macro key_dec_192_sse 1
   	movdqa  xmm0, [EXP_ENC_KEYS + 16 * %1]
 	aesimc	xmm1, xmm0
+	movdqa [EXP_DEC_KEYS + 16 * (12 - %1)], xmm1
+%endmacro
+
+%macro key_dec_192_sse_no_aesni 1
+  	movdqa  xmm0, [EXP_ENC_KEYS + 16 * %1]
+	EMULATE_AESIMC	xmm1, xmm0
 	movdqa [EXP_DEC_KEYS + 16 * (12 - %1)], xmm1
 %endmacro
 
@@ -202,35 +210,35 @@ aes_keyexp_192_sse_no_aesni:
         pxor xmm3, xmm3		; Set xmm3 to be all zeros. Required for the key_expansion
         pxor xmm6, xmm6		; Set xmm3 to be all zeros. Required for the key_expansion
 
-        aeskeygenassist xmm2, xmm4, 0x1     ; Complete round key 1 and generate round key 2
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x1     ; Complete round key 1 and generate round key 2
         key_expansion_1_192_sse 24
 		key_expansion_2_192_sse 40
 
-        aeskeygenassist xmm2, xmm4, 0x2     ; Generate round key 3 and part of round key 4
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x2     ; Generate round key 3 and part of round key 4
         key_expansion_1_192_sse 48
 		key_expansion_2_192_sse 64
 
-        aeskeygenassist xmm2, xmm4, 0x4     ; Complete round key 4 and generate round key 5
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x4     ; Complete round key 4 and generate round key 5
         key_expansion_1_192_sse 72
 		key_expansion_2_192_sse 88
 
-        aeskeygenassist xmm2, xmm4, 0x8     ; Generate round key 6 and part of round key 7
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x8     ; Generate round key 6 and part of round key 7
         key_expansion_1_192_sse 96
 		key_expansion_2_192_sse 112
 
-        aeskeygenassist xmm2, xmm4, 0x10     ; Complete round key 7 and generate round key 8
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x10     ; Complete round key 7 and generate round key 8
         key_expansion_1_192_sse 120
 		key_expansion_2_192_sse 136
 
-        aeskeygenassist xmm2, xmm4, 0x20     ; Generate round key 9 and part of round key 10
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x20     ; Generate round key 9 and part of round key 10
         key_expansion_1_192_sse 144
 		key_expansion_2_192_sse 160
 
-        aeskeygenassist xmm2, xmm4, 0x40     ; Complete round key 10 and generate round key 11
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x40     ; Complete round key 10 and generate round key 11
         key_expansion_1_192_sse 168
 		key_expansion_2_192_sse 184
 
-        aeskeygenassist xmm2, xmm4, 0x80     ; Generate round key 12
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x80     ; Generate round key 12
         key_expansion_1_192_sse 192
 
 ;;;  we have already saved the 12 th key, which is pure input on the
@@ -238,17 +246,17 @@ aes_keyexp_192_sse_no_aesni:
 	movdqa  xmm0, [EXP_ENC_KEYS + 16 * 12]
 	movdqa [EXP_DEC_KEYS + 16*0], xmm0
 ;;;  generate remaining decrypt keys
-	key_dec_192_sse 1
-	key_dec_192_sse 2
-	key_dec_192_sse 3
-	key_dec_192_sse 4
-	key_dec_192_sse 5
-	key_dec_192_sse 6
-	key_dec_192_sse 7
-	key_dec_192_sse 8
-	key_dec_192_sse 9
-	key_dec_192_sse 10
-	key_dec_192_sse 11
+	key_dec_192_sse_no_aesni 1
+	key_dec_192_sse_no_aesni 2
+	key_dec_192_sse_no_aesni 3
+	key_dec_192_sse_no_aesni 4
+	key_dec_192_sse_no_aesni 5
+	key_dec_192_sse_no_aesni 6
+	key_dec_192_sse_no_aesni 7
+	key_dec_192_sse_no_aesni 8
+	key_dec_192_sse_no_aesni 9
+	key_dec_192_sse_no_aesni 10
+	key_dec_192_sse_no_aesni 11
 
 %ifndef LINUX
 	movdqa	xmm6, [rsp + 0*16]
@@ -424,35 +432,35 @@ aes_keyexp_192_enc_sse_no_aesni:
         pxor xmm3, xmm3		; Set xmm3 to be all zeros. Required for the key_expansion.
         pxor xmm6, xmm6		; Set xmm3 to be all zeros. Required for the key_expansion.
 
-        aeskeygenassist xmm2, xmm4, 0x1     ; Complete round key 1 and generate round key 2
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x1     ; Complete round key 1 and generate round key 2
         key_expansion_1_192_sse 24
 		key_expansion_2_192_sse 40
 
-        aeskeygenassist xmm2, xmm4, 0x2     ; Generate round key 3 and part of round key 4
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x2     ; Generate round key 3 and part of round key 4
         key_expansion_1_192_sse 48
 		key_expansion_2_192_sse 64
 
-        aeskeygenassist xmm2, xmm4, 0x4     ; Complete round key 4 and generate round key 5
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x4     ; Complete round key 4 and generate round key 5
         key_expansion_1_192_sse 72
 		key_expansion_2_192_sse 88
 
-        aeskeygenassist xmm2, xmm4, 0x8     ; Generate round key 6 and part of round key 7
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x8     ; Generate round key 6 and part of round key 7
         key_expansion_1_192_sse 96
 		key_expansion_2_192_sse 112
 
-        aeskeygenassist xmm2, xmm4, 0x10     ; Complete round key 7 and generate round key 8
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x10     ; Complete round key 7 and generate round key 8
         key_expansion_1_192_sse 120
 		key_expansion_2_192_sse 136
 
-        aeskeygenassist xmm2, xmm4, 0x20     ; Generate round key 9 and part of round key 10
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x20     ; Generate round key 9 and part of round key 10
         key_expansion_1_192_sse 144
 		key_expansion_2_192_sse 160
 
-        aeskeygenassist xmm2, xmm4, 0x40     ; Complete round key 10 and generate round key 11
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x40     ; Complete round key 10 and generate round key 11
         key_expansion_1_192_sse 168
 		key_expansion_2_192_sse 184
 
-        aeskeygenassist xmm2, xmm4, 0x80     ; Generate round key 12
+        EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x80     ; Generate round key 12
         key_expansion_1_192_sse 192
 
 %ifndef LINUX
