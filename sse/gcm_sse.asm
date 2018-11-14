@@ -368,57 +368,212 @@ default rel
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro	CALC_AAD_HASH	14
-%define	%%A_IN		%1
-%define	%%A_LEN		%2
-%define	%%AAD_HASH	%3
-%define	%%HASH_KEY	%4
-%define	%%XTMP1		%5	; xmm temp reg 5
-%define	%%XTMP2		%6
-%define	%%XTMP3		%7
-%define	%%XTMP4		%8
-%define	%%XTMP5		%9	; xmm temp reg 5
-%define	%%T1		%10	; temp reg 1
-%define	%%T2		%11
-%define	%%T3		%12
-%define	%%T4		%13
-%define	%%T5		%14	; temp reg 5
+%macro  CALC_AAD_HASH   15
+%define %%A_IN          %1
+%define %%A_LEN         %2
+%define %%AAD_HASH      %3
+%define %%GDATA_KEY     %4
+%define %%XTMP0         %5      ; xmm temp reg 5
+%define %%XTMP1         %6      ; xmm temp reg 5
+%define %%XTMP2         %7
+%define %%XTMP3         %8
+%define %%XTMP4         %9
+%define %%XTMP5         %10     ; xmm temp reg 5
+%define %%T1            %11     ; temp reg 1
+%define %%T2            %12
+%define %%T3            %13
+%define %%T4            %14
+%define %%T5            %15     ; temp reg 5
 
 
-	mov	%%T1, %%A_IN		; T1 = AAD
-	mov	%%T2, %%A_LEN		; T2 = aadLen
-	pxor	%%AAD_HASH, %%AAD_HASH
+        mov     %%T1, %%A_IN            ; T1 = AAD
+        mov     %%T2, %%A_LEN           ; T2 = aadLen
+        pxor    %%AAD_HASH, %%AAD_HASH
 
-	cmp	%%T2, 16
-	jl	%%_get_small_AAD_block
+%%_get_AAD_loop128:
+        cmp     %%T2, 128
+        jl      %%_exit_AAD_loop128
 
-%%_get_AAD_loop16:
+        movdqu          %%XTMP0, [%%T1 + 16*0]
+        pshufb          %%XTMP0, [rel SHUF_MASK]
 
-	movdqu	%%XTMP1, [%%T1]
-	;byte-reflect the AAD data
-	pshufb	%%XTMP1, [SHUF_MASK]
-	pxor	%%AAD_HASH, %%XTMP1
-	GHASH_MUL	%%AAD_HASH, %%HASH_KEY, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
+        pxor            %%XTMP0, %%AAD_HASH
 
-	sub	%%T2, 16
-	je	%%_CALC_AAD_done
+        movdqu          %%XTMP5, [%%GDATA_KEY + HashKey_8]
+        movdqa          %%XTMP1, %%XTMP0
+        movdqa          %%XTMP2, %%XTMP0
+        movdqa          %%XTMP3, %%XTMP0
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP1, %%XTMP5, 0x11                 ; %%T1 = a1*b1
+        pclmulqdq       %%XTMP2, %%XTMP5, 0x00                 ; %%T2 = a0*b0
+        pclmulqdq       %%XTMP3, %%XTMP5, 0x01                 ; %%T3 = a1*b0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x10                 ; %%T4 = a0*b1
+        pxor            %%XTMP3, %%XTMP4                       ; %%T3 = a1*b0 + a0*b1
 
-	add	%%T1, 16
-	cmp	%%T2, 16
-	jge	%%_get_AAD_loop16
+%assign i 1
+%assign j 7
+%rep 7
+        movdqu          %%XTMP0, [%%T1 + 16*i]
+        pshufb          %%XTMP0, [rel SHUF_MASK]
+
+        movdqu          %%XTMP5, [%%GDATA_KEY + HashKey_ %+ j]
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x11                          ; %%T1 = T1 + a1*b1
+        pxor            %%XTMP1, %%XTMP4
+
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x00                          ; %%T2 = T2 + a0*b0
+        pxor            %%XTMP2, %%XTMP4
+
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x01                          ; %%T3 = T3 + a1*b0 + a0*b1
+        pxor            %%XTMP3, %%XTMP4
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x10
+        pxor            %%XTMP3, %%XTMP4
+%assign i (i + 1)
+%assign j (j - 1)
+%endrep
+
+        movdqa          %%XTMP4, %%XTMP3
+        pslldq          %%XTMP4, 8                                      ; shift-L 2 DWs
+        psrldq          %%XTMP3, 8                                      ; shift-R 2 DWs
+        pxor            %%XTMP2, %%XTMP4
+        pxor            %%XTMP1, %%XTMP3                                ; accumulate the results in %%T1(M):%%T2(L)
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;first phase of the reduction
+        movdqa          %%XTMP5, [rel POLY2]
+        movdqa          %%XTMP0, %%XTMP5
+        pclmulqdq       %%XTMP0, %%XTMP2, 0x01
+        pslldq          %%XTMP0, 8                                      ; shift-L xmm2 2 DWs
+        pxor            %%XTMP2, %%XTMP0                                ; first phase of the reduction complete
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;second phase of the reduction
+        movdqa          %%XTMP3, %%XTMP5
+        pclmulqdq       %%XTMP3, %%XTMP2, 0x00
+        psrldq          %%XTMP3, 4                                      ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+
+        movdqa          %%XTMP4, %%XTMP5
+        pclmulqdq       %%XTMP4, %%XTMP2, 0x10
+        pslldq          %%XTMP4, 4                                      ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
+
+        pxor            %%XTMP4, %%XTMP3                                ; second phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        movdqa          %%AAD_HASH, %%XTMP1
+        pxor            %%AAD_HASH, %%XTMP4                             ; the result is in %%T1
+
+        sub     %%T2, 128
+        je      %%_CALC_AAD_done
+
+        add     %%T1, 128
+        jmp     %%_get_AAD_loop128
+
+%%_exit_AAD_loop128:
+        cmp     %%T2, 16
+        jl      %%_get_small_AAD_block
+
+        ;; calculate hash_key position to start with
+        mov     %%T3, %%T2
+        and     %%T3, -16       ; 1 to 7 blocks possible here
+        neg     %%T3
+        add     %%T3, HashKey_1 + 16
+        lea     %%T3, [%%GDATA_KEY + %%T3]
+
+        movdqu          %%XTMP0, [%%T1]
+        pshufb          %%XTMP0, [rel SHUF_MASK]
+
+        pxor            %%XTMP0, %%AAD_HASH
+
+        movdqu          %%XTMP5, [%%T3]
+        movdqa          %%XTMP1, %%XTMP0
+        movdqa          %%XTMP2, %%XTMP0
+        movdqa          %%XTMP3, %%XTMP0
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP1, %%XTMP5, 0x11                 ; %%T1 = a1*b1
+        pclmulqdq       %%XTMP2, %%XTMP5, 0x00                 ; %%T2 = a0*b0
+        pclmulqdq       %%XTMP3, %%XTMP5, 0x01                 ; %%T3 = a1*b0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x10                 ; %%T4 = a0*b1
+        pxor            %%XTMP3, %%XTMP4                       ; %%T3 = a1*b0 + a0*b1
+
+        add     %%T3, 16        ; move to next hashkey
+        add     %%T1, 16        ; move to next data block
+        sub     %%T2, 16
+        cmp     %%T2, 16
+        jl      %%_AAD_reduce
+
+%%_AAD_blocks:
+        movdqu          %%XTMP0, [%%T1]
+        pshufb          %%XTMP0, [rel SHUF_MASK]
+
+        movdqu          %%XTMP5, [%%T3]
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x11                 ; %%T1 = T1 + a1*b1
+        pxor            %%XTMP1, %%XTMP4
+
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x00                 ; %%T2 = T2 + a0*b0
+        pxor            %%XTMP2, %%XTMP4
+
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x01                 ; %%T3 = T3 + a1*b0 + a0*b1
+        pxor            %%XTMP3, %%XTMP4
+        movdqa          %%XTMP4, %%XTMP0
+        pclmulqdq       %%XTMP4, %%XTMP5, 0x10
+        pxor            %%XTMP3, %%XTMP4
+
+        add     %%T3, 16        ; move to next hashkey
+        add     %%T1, 16
+        sub     %%T2, 16
+        cmp     %%T2, 16
+        jl      %%_AAD_reduce
+        jmp     %%_AAD_blocks
+
+%%_AAD_reduce:
+        movdqa          %%XTMP4, %%XTMP3
+        pslldq          %%XTMP4, 8                             ; shift-L 2 DWs
+        psrldq          %%XTMP3, 8                             ; shift-R 2 DWs
+        pxor            %%XTMP2, %%XTMP4
+        pxor            %%XTMP1, %%XTMP3                       ; accumulate the results in %%T1(M):%%T2(L)
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;first phase of the reduction
+        movdqa          %%XTMP5, [rel POLY2]
+        movdqa          %%XTMP0, %%XTMP5
+        pclmulqdq       %%XTMP0, %%XTMP2, 0x01
+        pslldq          %%XTMP0, 8                             ; shift-L xmm2 2 DWs
+        pxor            %%XTMP2, %%XTMP0                       ; first phase of the reduction complete
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;second phase of the reduction
+        movdqa          %%XTMP3, %%XTMP5
+        pclmulqdq       %%XTMP3, %%XTMP2, 0x00
+        psrldq          %%XTMP3, 4                             ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+
+        movdqa          %%XTMP4, %%XTMP5
+        pclmulqdq       %%XTMP4, %%XTMP2, 0x10
+        pslldq          %%XTMP4, 4                             ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
+
+        pxor            %%XTMP4, %%XTMP3                       ; second phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        movdqa          %%AAD_HASH, %%XTMP1
+        pxor            %%AAD_HASH, %%XTMP4                    ; the result is in %%T1
+
+        or      %%T2, %%T2
+        je      %%_CALC_AAD_done
 
 %%_get_small_AAD_block:
-	READ_SMALL_DATA_INPUT	%%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
-	;byte-reflect the AAD data
-	pshufb	%%XTMP1, [SHUF_MASK]
-	pxor	%%AAD_HASH, %%XTMP1
-	GHASH_MUL	%%AAD_HASH, %%HASH_KEY, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
+        movdqu          %%XTMP0, [%%GDATA_KEY + HashKey]
+        READ_SMALL_DATA_INPUT   %%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
+        ;byte-reflect the AAD data
+        pshufb          %%XTMP1, [rel SHUF_MASK]
+        pxor            %%AAD_HASH, %%XTMP1
+        GHASH_MUL       %%AAD_HASH, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
 
 %%_CALC_AAD_done:
 
 %endmacro ; CALC_AAD_HASH
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; PARTIAL_BLOCK: Handles encryption/decryption and the tag partial blocks between update calls.
@@ -1560,12 +1715,8 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 %define %%A_IN		%4
 %define %%A_LEN		%5
 %define %%AAD_HASH	xmm0
-%define %%SUBHASH	xmm1
 
-
-        movdqu  %%SUBHASH, [%%GDATA_KEY + HashKey]
-
-	CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%SUBHASH, xmm2, xmm3, xmm4, xmm5, xmm6, r10, r11, r12, r13, rax
+	CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, r10, r11, r12, r13, rax
 	pxor	xmm2, xmm3
 	mov	r10, %%A_LEN
 
