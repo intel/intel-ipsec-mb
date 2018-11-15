@@ -34,6 +34,7 @@
 #include "save_xmms.h"
 #include "asm.h"
 #include "des.h"
+#include "gcm.h"
 
 JOB_AES_HMAC *submit_job_aes128_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
                                                  JOB_AES_HMAC *job);

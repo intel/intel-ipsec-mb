@@ -34,6 +34,7 @@
 #include "save_xmms.h"
 #include "asm.h"
 #include "des.h"
+#include "gcm.h"
 
 JOB_AES_HMAC *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
                                         JOB_AES_HMAC *job);
@@ -175,49 +176,6 @@ JOB_AES_HMAC *flush_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
 #define FLUSH_JOB_HMAC_MD5            flush_job_hmac_md5_avx2
 
 #ifndef NO_GCM
-IMB_DLL_LOCAL void
-aes_gcm_enc_128_avx512(const struct gcm_key_data *key_data,
-                       struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
-                       const uint8_t *iv,
-                       uint8_t const *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len);
-IMB_DLL_LOCAL void
-aes_gcm_enc_192_avx512(const struct gcm_key_data *key_data,
-                       struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
-                       const uint8_t *iv,
-                       uint8_t const *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len);
-IMB_DLL_LOCAL void
-aes_gcm_enc_256_avx512(const struct gcm_key_data *key_data,
-                       struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
-                       const uint8_t *iv,
-                       uint8_t const *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len);
-IMB_DLL_LOCAL void
-aes_gcm_dec_128_avx512(const struct gcm_key_data *key_data,
-                       struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
-                       const uint8_t *iv,
-                       uint8_t const *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len);
-IMB_DLL_LOCAL void
-aes_gcm_dec_192_avx512(const struct gcm_key_data *key_data,
-                       struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
-                       const uint8_t *iv,
-                       uint8_t const *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len);
-IMB_DLL_LOCAL void
-aes_gcm_dec_256_avx512(const struct gcm_key_data *key_data,
-                       struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
-                       const uint8_t *iv,
-                       uint8_t const *aad, uint64_t aad_len,
-                       uint8_t *auth_tag, uint64_t auth_tag_len);
-
 #define AES_GCM_DEC_128   aes_gcm_dec_128_avx512
 #define AES_GCM_ENC_128   aes_gcm_enc_128_avx512
 #define AES_GCM_DEC_192   aes_gcm_dec_192_avx512
@@ -769,6 +727,35 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->sha512              = sha512_avx512;
         state->md5_one_block       = md5_one_block_avx512;
         state->aes128_cfb_one      = aes_cfb_128_one_avx512;
+#ifndef NO_GCM
+        state->gcm128_enc          = aes_gcm_enc_128_avx512;
+        state->gcm192_enc          = aes_gcm_enc_192_avx512;
+        state->gcm256_enc          = aes_gcm_enc_256_avx512;
+        state->gcm128_dec          = aes_gcm_dec_128_avx512;
+        state->gcm192_dec          = aes_gcm_dec_192_avx512;
+        state->gcm256_dec          = aes_gcm_dec_256_avx512;
+        state->gcm128_init         = aes_gcm_init_128_avx512;
+        state->gcm192_init         = aes_gcm_init_192_avx512;
+        state->gcm256_init         = aes_gcm_init_256_avx512;
+        state->gcm128_enc_update   = aes_gcm_enc_128_update_avx512;
+        state->gcm192_enc_update   = aes_gcm_enc_192_update_avx512;
+        state->gcm256_enc_update   = aes_gcm_enc_256_update_avx512;
+        state->gcm128_dec_update   = aes_gcm_dec_128_update_avx512;
+        state->gcm192_dec_update   = aes_gcm_dec_192_update_avx512;
+        state->gcm256_dec_update   = aes_gcm_dec_256_update_avx512;
+        state->gcm128_enc_finalize = aes_gcm_enc_128_finalize_avx512;
+        state->gcm192_enc_finalize = aes_gcm_enc_192_finalize_avx512;
+        state->gcm256_enc_finalize = aes_gcm_enc_256_finalize_avx512;
+        state->gcm128_dec_finalize = aes_gcm_dec_128_finalize_avx512;
+        state->gcm192_dec_finalize = aes_gcm_dec_192_finalize_avx512;
+        state->gcm256_dec_finalize = aes_gcm_dec_256_finalize_avx512;
+        state->gcm128_precomp      = aes_gcm_precomp_128_avx512;
+        state->gcm192_precomp      = aes_gcm_precomp_192_avx512;
+        state->gcm256_precomp      = aes_gcm_precomp_256_avx512;
+        state->gcm128_pre          = aes_gcm_pre_128_avx512;
+        state->gcm192_pre          = aes_gcm_pre_192_avx512;
+        state->gcm256_pre          = aes_gcm_pre_256_avx512;
+#endif
 }
 
 #include "mb_mgr_code.h"

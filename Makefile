@@ -264,7 +264,7 @@ lib_objs := \
 	version.o \
 	aesni_emu.o
 
-gcm_objs := gcm128_sse.o gcm192_sse.o gcm256_sse.o \
+gcm_objs := gcm.o gcm128_sse.o gcm192_sse.o gcm256_sse.o \
 	gcm128_avx_gen2.o gcm192_avx_gen2.o gcm256_avx_gen2.o \
 	gcm128_avx_gen4.o gcm192_avx_gen4.o gcm256_avx_gen4.o \
 	gcm128_sse_no_aesni.o gcm192_sse_no_aesni.o gcm256_sse_no_aesni.o \

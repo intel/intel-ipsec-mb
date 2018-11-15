@@ -248,6 +248,7 @@ lib_objs2 = \
         $(OBJ_DIR)\aesni_emu.obj
 
 gcm_objs = \
+	$(OBJ_DIR)\gcm.obj \
         $(OBJ_DIR)\gcm128_sse.obj \
 	$(OBJ_DIR)\gcm128_avx_gen2.obj \
 	$(OBJ_DIR)\gcm128_avx_gen4.obj \
