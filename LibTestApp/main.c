@@ -56,6 +56,7 @@ usage(const char *name)
 		"--no-avx2: Don't do AVX2\n"
 		"--no-avx: Don't do AVX\n"
 		"--no-sse: Don't do SSE\n"
+                "--no-gcm: Don't run GCM tests\n"
 		"--shani-on: use SHA extensions, default: auto-detect\n"
 		"--shani-off: don't use SHA extensions\n", name);
 }
@@ -71,7 +72,7 @@ main(int argc, char **argv)
         };
 
         int i, do_sse = 1, do_avx = 1, do_avx2 = 1, do_avx512 = 1;
-        int do_aesni_emu = 1;
+        int do_aesni_emu = 1, do_gcm = 1;
         MB_MGR *p_mgr = NULL;
         uint64_t flags = 0;
         int errors = 0;
@@ -100,6 +101,8 @@ main(int argc, char **argv)
                         flags &= (~IMB_FLAG_SHANI_OFF);
 		} else if (strcmp(argv[i], "--shani-off") == 0) {
                         flags |= IMB_FLAG_SHANI_OFF;
+		} else if (strcmp(argv[i], "--no-gcm") == 0) {
+                        do_gcm = 0;
 		} else {
 			usage(argv[0]);
 			return EXIT_FAILURE;
@@ -151,7 +154,8 @@ main(int argc, char **argv)
                 errors += known_answer_test(p_mgr);
                 errors += do_test(p_mgr);
                 errors += ctr_test(atype, p_mgr);
-                errors += gcm_test(atype);
+                if (do_gcm)
+                        errors += gcm_test(atype);
                 errors += customop_test(p_mgr);
                 errors += des_test(atype, p_mgr);
                 errors += ccm_test(atype, p_mgr);
