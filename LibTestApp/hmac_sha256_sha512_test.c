@@ -858,7 +858,7 @@ test_hmac_shax(struct MB_MGR *mb_mgr,
         default:
                 fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
                         sha_type);
-                goto end;
+                goto end2;
         }
 
         memset(padding, -1, sizeof(padding));
