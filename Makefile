@@ -262,6 +262,7 @@ lib_objs := \
 	des_x16_avx512.o \
 	const.o \
 	version.o \
+	cpu_feature.o \
 	aesni_emu.o
 
 gcm_objs := gcm.o gcm128_sse.o gcm192_sse.o gcm256_sse.o \

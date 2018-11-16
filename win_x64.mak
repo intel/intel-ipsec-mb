@@ -245,6 +245,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_sse_no_aesni.obj \
 	$(OBJ_DIR)\alloc.obj \
 	$(OBJ_DIR)\version.obj \
+	$(OBJ_DIR)\cpu_feature.obj \
         $(OBJ_DIR)\aesni_emu.obj
 
 gcm_objs = \

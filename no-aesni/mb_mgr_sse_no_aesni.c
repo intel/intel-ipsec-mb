@@ -35,6 +35,9 @@
 #include "asm.h"
 #include "des.h"
 #include "gcm.h"
+#include "noaesni.h"
+
+/* ====================================================================== */
 
 JOB_AES_HMAC *submit_job_aes128_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
                                                  JOB_AES_HMAC *job);
@@ -174,6 +177,7 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS_x8 *args, uint64_t len);
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_sse_no_aesni
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse_no_aesni
+
 
 /* ====================================================================== */
 

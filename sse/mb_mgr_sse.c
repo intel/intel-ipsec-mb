@@ -30,14 +30,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __WIN32
-#include <intrin.h>
-#endif
-
 #include "intel-ipsec-mb.h"
 #include "save_xmms.h"
 #include "asm.h"
 #include "des.h"
+#include "cpu_feature.h"
+#include "noaesni.h"
 
 JOB_AES_HMAC *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
                                         JOB_AES_HMAC *job);
@@ -200,92 +198,6 @@ void aes128_cbc_mac_x4(AES_ARGS_x8 *args, uint64_t len);
  */
 #define HASH_USE_SHAEXT 1
 
-/* ====================================================================== */
-
-struct cpuid_regs {
-        uint32_t eax;
-        uint32_t ebx;
-        uint32_t ecx;
-        uint32_t edx;
-};
-
-/*
- * A C wrapper for CPUID opcode
- *
- * Parameters:
- *    [in] leaf    - CPUID leaf number (EAX)
- *    [in] subleaf - CPUID sub-leaf number (ECX)
- *    [out] out    - registers structure to store results of CPUID into
- */
-static void
-__mbcpuid(const unsigned leaf, const unsigned subleaf,
-        struct cpuid_regs *out)
-{
-#ifdef _WIN32
-        /* Windows */
-        int regs[4];
-
-        __cpuidex(regs, leaf, subleaf);
-        out->eax = regs[0];
-        out->ebx = regs[1];
-        out->ecx = regs[2];
-        out->edx = regs[3];
-#else
-        /* Linux */
-#ifdef __x86_64__
-        asm volatile("mov %4, %%eax\n\t"
-                     "mov %5, %%ecx\n\t"
-                     "cpuid\n\t"
-                     "mov %%eax, %0\n\t"
-                     "mov %%ebx, %1\n\t"
-                     "mov %%ecx, %2\n\t"
-                     "mov %%edx, %3\n\t"
-                     : "=g" (out->eax), "=g" (out->ebx), "=g" (out->ecx),
-                       "=g" (out->edx)
-                     : "g" (leaf), "g" (subleaf)
-                     : "%eax", "%ebx", "%ecx", "%edx");
-#else
-        asm volatile("push %%ebx\n\t"
-                     "mov %4, %%eax\n\t"
-                     "mov %5, %%ecx\n\t"
-                     "cpuid\n\t"
-                     "mov %%eax, %0\n\t"
-                     "mov %%ebx, %1\n\t"
-                     "mov %%ecx, %2\n\t"
-                     "mov %%edx, %3\n\t"
-                     "pop %%ebx\n\t"
-                     : "=g" (out->eax), "=g" (out->ebx), "=g" (out->ecx),
-                       "=g" (out->edx)
-                     : "g" (leaf), "g" (subleaf)
-                     : "%eax", "%ecx", "%edx");
-#endif
-#endif /* Linux */
-}
-
-/*
- * Uses CPUID instruction to detected presence of SHA extensions.
- *
- * Return value:
- *     0 - SHA extensions not present
- *     1 - SHA extensions present
- */
-static int
-sha_extensions_supported(void)
-{
-        struct cpuid_regs r;
-
-        /* Check highest leaf number. If less then 7 then SHA not supported. */
-        __mbcpuid(0x0, 0x0, &r);
-        if (r.eax < 0x7)
-                return 0;
-
-        /* Check presence of SHA extensions in the extended feature flags */
-        __mbcpuid(0x7, 0x0, &r);
-        if (r.ebx & (1 << 29))
-                return 1;
-
-        return 0;
-}
 
 /* ====================================================================== */
 
@@ -391,10 +303,13 @@ init_mb_mgr_sse(MB_MGR *state)
         unsigned int j;
         uint8_t *p;
 
-        state->features &= (~IMB_FEATURE_SHANI);
-        if (!(state->flags & IMB_FLAG_SHANI_OFF))
-                if (sha_extensions_supported())
-                        state->features |= IMB_FEATURE_SHANI;
+        state->features = cpu_feature_adjust(state->flags,
+                                             cpu_feature_detect());
+
+        if (!(state->features & IMB_FEATURE_AESNI)) {
+                init_mb_mgr_sse_no_aesni(state);
+                return;
+        }
 
         /* Init AES out-of-order fields */
         state->aes128_ooo.lens[0] = 0;

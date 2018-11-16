@@ -33,6 +33,8 @@
 #include "save_xmms.h"
 #include "asm.h"
 #include "des.h"
+#include "cpu_feature.h"
+#include "noaesni.h"
 
 JOB_AES_HMAC *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
                                         JOB_AES_HMAC *job);
@@ -280,6 +282,14 @@ init_mb_mgr_avx(MB_MGR *state)
 {
         unsigned int j;
         uint8_t *p;
+
+        state->features = cpu_feature_adjust(state->flags,
+                                             cpu_feature_detect());
+
+        if (!(state->features & IMB_FEATURE_AESNI)) {
+                init_mb_mgr_sse_no_aesni(state);
+                return;
+        }
 
         /* Init AES out-of-order fields */
         state->aes128_ooo.lens[0] = 0;

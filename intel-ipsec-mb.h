@@ -649,11 +649,30 @@ typedef void (*aes_gcm_pre_t)(const void *, struct gcm_key_data *);
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
 #define IMB_FLAG_SHANI_OFF (1ULL << 0) /* disable use of SHANI extension */
+#define IMB_FLAG_AESNI_OFF (1ULL << 1) /* disable use of AESNI extension */
 
 /* ========================================================================== */
-/* Multi-buffer manager features - valid after call to init_mb_mgr() */
+/* Multi-buffer manager detected features
+ * - if bit is set then hardware supports given extension
+ * - valid after call to init_mb_mgr() or alloc_mb_mgr()
+ * - some HW supported features can be disabled via IMB_FLAG_xxx (see above)
+ */
 
-#define IMB_FEATURE_SHANI  (1ULL << 0) /* if set SHANI extensions is used */
+#define IMB_FEATURE_SHANI      (1ULL << 0)
+#define IMB_FEATURE_AESNI      (1ULL << 1)
+#define IMB_FEATURE_PCLMULQDQ  (1ULL << 2)
+#define IMB_FEATURE_CMOV       (1ULL << 3)
+#define IMB_FEATURE_SSE4_2     (1ULL << 4)
+#define IMB_FEATURE_AVX        (1ULL << 5)
+#define IMB_FEATURE_AVX2       (1ULL << 6)
+#define IMB_FEATURE_AVX512F    (1ULL << 7)
+#define IMB_FEATURE_AVX512DQ   (1ULL << 8)
+#define IMB_FEATURE_AVX512CD   (1ULL << 9)
+#define IMB_FEATURE_AVX512BW   (1ULL << 10)
+#define IMB_FEATURE_AVX512VL   (1ULL << 11)
+#define IMB_FEATURE_AVX512_SKX (IMB_FEATURE_AVX512F | IMB_FEATURE_AVX512DQ | \
+                                IMB_FEATURE_AVX512CD | IMB_FEATURE_AVX512BW | \
+                                IMB_FEATURE_AVX512VL)
 
 /* ========================================================================== */
 /* TOP LEVEL (MB_MGR) Data structure fields */
@@ -827,14 +846,6 @@ IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse(MB_MGR *state);
 IMB_DLL_EXPORT uint32_t queue_size_sse(MB_MGR *state);
 IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse(MB_MGR *state);
 IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
-
-IMB_DLL_EXPORT void init_mb_mgr_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse_no_aesni(MB_MGR *state);
 
 /*
  * Wrapper macros to call arch API's set up
@@ -1022,47 +1033,23 @@ IMB_DLL_EXPORT void sha512_one_block_sse(const void *data, void *digest);
 IMB_DLL_EXPORT void md5_one_block_sse(const void *data, void *digest);
 IMB_DLL_EXPORT void aes_keyexp_128_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_128_sse_no_aesni(const void *key,
-                                                void *enc_exp_keys,
-                                                void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_192_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_192_sse_no_aesni(const void *key,
-                                                void *enc_exp_keys,
-                                                void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_256_sse(const void *key, void *enc_exp_keys,
                                        void *dec_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_256_sse_no_aesni(const void *key,
-                                                void *enc_exp_keys,
-                                                void *dec_exp_keys);
 IMB_DLL_EXPORT void aes_xcbc_expand_key_sse(const void *key, void *k1_exp,
                                             void *k2, void *k3);
-IMB_DLL_EXPORT void aes_xcbc_expand_key_sse_no_aesni(const void *key,
-                                                     void *k1_exp, void *k2,
-                                                     void *k3);
 IMB_DLL_EXPORT void aes_keyexp_128_enc_sse(const void *key,
                                            void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_128_enc_sse_no_aesni(const void *key,
-                                                    void *enc_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_192_enc_sse(const void *key,
                                            void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_192_enc_sse_no_aesni(const void *key,
-                                                    void *enc_exp_keys);
 IMB_DLL_EXPORT void aes_keyexp_256_enc_sse(const void *key,
                                            void *enc_exp_keys);
-IMB_DLL_EXPORT void aes_keyexp_256_enc_sse_no_aesni(const void *key,
-                                                    void *enc_exp_keys);
 IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse(const void *key_exp, void *key1,
                                             void *key2);
-IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse_no_aesni(const void *key_exp,
-                                                     void *key1, void *key2);
 IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
-IMB_DLL_EXPORT void aes_cfb_128_one_sse_no_aesni(void *out, const void *in,
-                                                 const void *iv,
-                                                 const void *keys,
-                                                 uint64_t len);
 
 /* AVX */
 IMB_DLL_EXPORT void sha1_avx(const void *data, const uint64_t length,

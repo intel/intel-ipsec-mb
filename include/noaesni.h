@@ -25,60 +25,41 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#include <stdint.h>
-#ifdef LINUX
-#include <stdlib.h> /* posix_memalign() and free() */
-#else
-#include <malloc.h> /* _aligned_malloc() and aligned_free() */
-#endif
 #include "intel-ipsec-mb.h"
-#include "cpu_feature.h"
 
-/**
- * @brief Allocates memory for multi-buffer manager instance
- *
- * For binary compatibility between library versions
- * it is recommended to use this API.
- *
- * @param flags multi-buffer manager flags
- *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extenstions,
- *                          currently SHANI is only available for SSE
- *
- * @return Pointer to allocated memory for MB_MGR structure
- * @retval NULL on allocation error
- */
-MB_MGR *alloc_mb_mgr(uint64_t flags)
-{
-        const size_t alignment = 64;
-        const size_t size = sizeof(MB_MGR);
-        MB_MGR *ptr = NULL;
+#ifndef NOAESNI_H
+#define NOAESNI_H
 
-#ifdef LINUX
-        if (posix_memalign((void **)&ptr, alignment, size))
-                return NULL;
-#else
-        ptr = _aligned_malloc(size, alignment);
-#endif
-        if (ptr != NULL) {
-                ptr->flags = flags; /* save the flags for future use in init */
-                ptr->features = cpu_feature_adjust(flags, cpu_feature_detect());
-        }
-        IMB_ASSERT(ptr != NULL);
-        return ptr;
-}
+IMB_DLL_EXPORT void init_mb_mgr_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT uint32_t queue_size_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse_no_aesni(MB_MGR *state);
 
-/**
- * @brief Frees memory allocated previously by alloc_mb_mgr()
- *
- * @param ptr a pointer to allocated MB_MGR structure
- *
- */
-void free_mb_mgr(MB_MGR *ptr)
-{
-        IMB_ASSERT(ptr != NULL);
-#ifdef LINUX
-        free(ptr);
-#else
-        _aligned_free(ptr);
-#endif
-}
+IMB_DLL_EXPORT void
+aes_keyexp_128_sse_no_aesni(const void *key, void *enc_exp_keys,
+                            void *dec_exp_keys);
+IMB_DLL_EXPORT void
+aes_keyexp_192_sse_no_aesni(const void *key, void *enc_exp_keys,
+                            void *dec_exp_keys);
+IMB_DLL_EXPORT void
+aes_keyexp_256_sse_no_aesni(const void *key, void *enc_exp_keys,
+                            void *dec_exp_keys);
+IMB_DLL_EXPORT void
+aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp, void *k2,
+                                 void *k3);
+IMB_DLL_EXPORT void
+aes_keyexp_128_enc_sse_no_aesni(const void *key, void *enc_exp_keys);
+IMB_DLL_EXPORT void
+aes_keyexp_192_enc_sse_no_aesni(const void *key, void *enc_exp_keys);
+IMB_DLL_EXPORT void
+aes_keyexp_256_enc_sse_no_aesni(const void *key, void *enc_exp_keys);
+IMB_DLL_EXPORT void
+aes_cmac_subkey_gen_sse_no_aesni(const void *key_exp, void *key1, void *key2);
+IMB_DLL_EXPORT void
+aes_cfb_128_one_sse_no_aesni(void *out, const void *in, const void *iv,
+                             const void *keys, uint64_t len);
+
+#endif /* NOAESNI_H */

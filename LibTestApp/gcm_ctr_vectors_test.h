@@ -67,9 +67,9 @@ struct gcm_ctr_vector {
         {K##N, (KBITS(K##N)), IV##N, sizeof(IV##N), A##N, A##N##_len,   \
                         P##N, sizeof(P##N), C##N, T##N, sizeof(T##N)}
 
-int gcm_test(const enum arch_type arch);
-
 struct MB_MGR;
+
+extern int gcm_test(MB_MGR *p_mgr);
 int ctr_test(const enum arch_type arch, struct MB_MGR *);
 
 #endif /* GCM_CTR_VECTORS_TEST_H_ */

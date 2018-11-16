@@ -25,60 +25,28 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#include <stdint.h>
-#ifdef LINUX
-#include <stdlib.h> /* posix_memalign() and free() */
-#else
-#include <malloc.h> /* _aligned_malloc() and aligned_free() */
-#endif
 #include "intel-ipsec-mb.h"
-#include "cpu_feature.h"
+
+#ifndef CPU_FEATURE_H
+#define CPU_FEATURE_H
 
 /**
- * @brief Allocates memory for multi-buffer manager instance
+ * @brief Detects hardware features and returns their status
  *
- * For binary compatibility between library versions
- * it is recommended to use this API.
- *
- * @param flags multi-buffer manager flags
- *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extenstions,
- *                          currently SHANI is only available for SSE
- *
- * @return Pointer to allocated memory for MB_MGR structure
- * @retval NULL on allocation error
+ * @return Bitmask representing presence of CPU features/extensions,
+ *         see intel-ipsec-mb.h IMB_FEATURE_xyz definitions for details.
  */
-MB_MGR *alloc_mb_mgr(uint64_t flags)
-{
-        const size_t alignment = 64;
-        const size_t size = sizeof(MB_MGR);
-        MB_MGR *ptr = NULL;
-
-#ifdef LINUX
-        if (posix_memalign((void **)&ptr, alignment, size))
-                return NULL;
-#else
-        ptr = _aligned_malloc(size, alignment);
-#endif
-        if (ptr != NULL) {
-                ptr->flags = flags; /* save the flags for future use in init */
-                ptr->features = cpu_feature_adjust(flags, cpu_feature_detect());
-        }
-        IMB_ASSERT(ptr != NULL);
-        return ptr;
-}
+IMB_DLL_LOCAL uint64_t cpu_feature_detect(void);
 
 /**
- * @brief Frees memory allocated previously by alloc_mb_mgr()
+ * @brief Modifies CPU \a features mask based on requested \a flags
  *
- * @param ptr a pointer to allocated MB_MGR structure
+ * @param flags bitmask describing CPU feature adjustments
+ * @param features bitmask describing present CPU features
  *
+ * @return \a features with applied modifications on them via \a flags
  */
-void free_mb_mgr(MB_MGR *ptr)
-{
-        IMB_ASSERT(ptr != NULL);
-#ifdef LINUX
-        free(ptr);
-#else
-        _aligned_free(ptr);
-#endif
-}
+IMB_DLL_LOCAL uint64_t
+cpu_feature_adjust(const uint64_t flags, uint64_t features);
+
+#endif /* CPU_FEATURE_H */

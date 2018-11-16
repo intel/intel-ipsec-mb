@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include "intel-ipsec-mb.h"
 #include "gcm.h"
+#include "noaesni.h"
 
 /**
  * @brief Pre-processes GCM key data

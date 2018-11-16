@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include "intel-ipsec-mb.h"
 
+#include "noaesni.h"
 #include "asm.h"
 
 static uint32_t in[4*3] = {
