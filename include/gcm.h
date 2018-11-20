@@ -33,6 +33,165 @@
 #define _GCM_H_
 
 /*
+ * AVX512+VAES+VPCLMULQDQ GCM API
+ * - intentionally this is not exposed in intel-ipsec-mb.h
+ * - available through IMB_GCM_xxx() macros from intel-ipsec-mb.h
+ */
+IMB_DLL_EXPORT void
+aes_gcm_enc_128_vaes_avx512(const struct gcm_key_data *key_data,
+                            struct gcm_context_data *context_data,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            const uint8_t *iv,
+                            uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_enc_192_vaes_avx512(const struct gcm_key_data *key_data,
+                            struct gcm_context_data *context_data,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            const uint8_t *iv,
+                            uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_enc_256_vaes_avx512(const struct gcm_key_data *key_data,
+                            struct gcm_context_data *context_data,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            const uint8_t *iv,
+                            uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_128_vaes_avx512(const struct gcm_key_data *key_data,
+                            struct gcm_context_data *context_data,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            const uint8_t *iv,
+                            uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_192_vaes_avx512(const struct gcm_key_data *key_data,
+                            struct gcm_context_data *context_data,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            const uint8_t *iv,
+                            uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_256_vaes_avx512(const struct gcm_key_data *key_data,
+                            struct gcm_context_data *context_data,
+                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            const uint8_t *iv,
+                            uint8_t const *aad, uint64_t aad_len,
+                            uint8_t *auth_tag, uint64_t auth_tag_len);
+
+IMB_DLL_EXPORT void
+aes_gcm_init_128_vaes_avx512(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             const uint8_t *iv, uint8_t const *aad,
+                             uint64_t aad_len);
+IMB_DLL_EXPORT void
+aes_gcm_init_192_vaes_avx512(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             const uint8_t *iv, uint8_t const *aad,
+                             uint64_t aad_len);
+IMB_DLL_EXPORT void
+aes_gcm_init_256_vaes_avx512(const struct gcm_key_data *key_data,
+                             struct gcm_context_data *context_data,
+                             const uint8_t *iv, uint8_t const *aad,
+                             uint64_t aad_len);
+IMB_DLL_EXPORT void
+aes_gcm_enc_128_update_vaes_avx512(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *out, const uint8_t *in,
+                                   uint64_t len);
+IMB_DLL_EXPORT void
+aes_gcm_enc_192_update_vaes_avx512(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *out, const uint8_t *in,
+                                   uint64_t len);
+IMB_DLL_EXPORT void
+aes_gcm_enc_256_update_vaes_avx512(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *out, const uint8_t *in,
+                                   uint64_t len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_128_update_vaes_avx512(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *out, const uint8_t *in,
+                                   uint64_t len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_192_update_vaes_avx512(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *out, const uint8_t *in,
+                                   uint64_t len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_256_update_vaes_avx512(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *out, const uint8_t *in,
+                                   uint64_t len);
+IMB_DLL_EXPORT void
+aes_gcm_enc_128_finalize_vaes_avx512(const struct gcm_key_data *key_data,
+                                     struct gcm_context_data *context_data,
+                                     uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_enc_192_finalize_vaes_avx512(const struct gcm_key_data *key_data,
+                                     struct gcm_context_data *context_data,
+                                     uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_enc_256_finalize_vaes_avx512(const struct gcm_key_data *key_data,
+                                     struct gcm_context_data *context_data,
+                                     uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_128_finalize_vaes_avx512(const struct gcm_key_data *key_data,
+                                     struct gcm_context_data *context_data,
+                                     uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_192_finalize_vaes_avx512(const struct gcm_key_data *key_data,
+                                     struct gcm_context_data *context_data,
+                                     uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_dec_256_finalize_vaes_avx512(const struct gcm_key_data *key_data,
+                                     struct gcm_context_data *context_data,
+                                     uint8_t *auth_tag, uint64_t auth_tag_len);
+IMB_DLL_EXPORT void
+aes_gcm_precomp_128_vaes_avx512(struct gcm_key_data *key_data);
+IMB_DLL_EXPORT void
+aes_gcm_precomp_192_vaes_avx512(struct gcm_key_data *key_data);
+IMB_DLL_EXPORT void
+aes_gcm_precomp_256_vaes_avx512(struct gcm_key_data *key_data);
+
+IMB_DLL_EXPORT void
+aes_gcm_pre_128_vaes_avx512(const void *key, struct gcm_key_data *key_data);
+IMB_DLL_EXPORT void
+aes_gcm_pre_192_vaes_avx512(const void *key, struct gcm_key_data *key_data);
+IMB_DLL_EXPORT void
+aes_gcm_pre_256_vaes_avx512(const void *key, struct gcm_key_data *key_data);
+
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_enc_128_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_enc_192_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_enc_256_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
+
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_dec_128_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_dec_192_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_dec_256_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
+
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_enc_128_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_enc_192_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_enc_256_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
+
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_dec_128_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_dec_192_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
+IMB_DLL_LOCAL JOB_AES_HMAC *
+aes_gcm_dec_256_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
+
+/*
  * AVX512 GCM API
  * - intentionally this is not exposed in intel-ipsec-mb.h
  * - available through IMB_GCM_xxx() macros from intel-ipsec-mb.h

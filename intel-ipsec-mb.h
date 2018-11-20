@@ -673,6 +673,8 @@ typedef void (*aes_gcm_pre_t)(const void *, struct gcm_key_data *);
 #define IMB_FEATURE_AVX512_SKX (IMB_FEATURE_AVX512F | IMB_FEATURE_AVX512DQ | \
                                 IMB_FEATURE_AVX512CD | IMB_FEATURE_AVX512BW | \
                                 IMB_FEATURE_AVX512VL)
+#define IMB_FEATURE_VAES       (1ULL << 12)
+#define IMB_FEATURE_VPCLMULQDQ (1ULL << 13)
 
 /* ========================================================================== */
 /* TOP LEVEL (MB_MGR) Data structure fields */

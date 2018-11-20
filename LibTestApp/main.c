@@ -78,6 +78,8 @@ print_hw_features(void)
                 { IMB_FEATURE_AVX, "AVX" },
                 { IMB_FEATURE_AVX2, "AVX2" },
                 { IMB_FEATURE_AVX512_SKX, "AVX512(SKX)" },
+                { IMB_FEATURE_VAES, "VAES" },
+                { IMB_FEATURE_VPCLMULQDQ, "VPCLMULQDQ" },
         };
         MB_MGR *p_mgr = NULL;
         unsigned i;
