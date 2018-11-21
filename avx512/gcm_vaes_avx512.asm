@@ -742,11 +742,12 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqa %%T3, reg(i)
 %assign i (i+1)
 %endif
+%if %%num_initial_blocks>1
 %rep %%num_initial_blocks-1
         vmovdqu [rsp + TMP %+ i], reg(i)
 %assign i (i+1)
 %endrep
-
+%endif
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 ;; Haskey_i_k holds XORed values of the low and high parts of
                 ;; the Haskey_i
@@ -1426,6 +1427,12 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %else
 %assign rep_count (%%num_initial_blocks-1)
 %endif
+
+%if rep_count < 0
+        ;; fix for negative rep_count
+%assign rep_count 0
+%endif
+
 %rep rep_count
 
         vmovdqu         %%T5, [%%GDATA_KEY + HashKey_ %+ k]
