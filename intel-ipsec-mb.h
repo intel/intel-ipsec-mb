@@ -209,8 +209,13 @@ typedef enum {
         AES_GMAC,
 #endif /* !NO_GCM */
         CUSTOM_HASH,
-        AES_CCM,
-        AES_CMAC,
+        AES_CCM,         /* AES128-CCM */
+        AES_CMAC,        /* AES128-CMAC */
+        PLAIN_SHA1,      /* SHA1 */
+        PLAIN_SHA_224,   /* SHA224 */
+        PLAIN_SHA_256,   /* SHA256 */
+        PLAIN_SHA_384,   /* SHA384 */
+        PLAIN_SHA_512,   /* SHA512 */
 } JOB_HASH_ALG;
 
 typedef enum {

@@ -236,7 +236,8 @@ void sha_generic_write_digest(void *dst, const void *src, const int sha_type)
 __forceinline
 void
 sha_generic(const void *data, const uint64_t length, void *digest,
-            const int is_avx, const int sha_type, const uint64_t blk_size)
+            const int is_avx, const int sha_type, const uint64_t blk_size,
+            const uint64_t pad_size)
 {
         uint8_t cb[SHA_512_BLOCK_SIZE]; /* biggest possible */
         union {
@@ -261,7 +262,7 @@ sha_generic(const void *data, const uint64_t length, void *digest,
         memcpy(cb, &inp[idx], r);
         cb[r] = 0x80;
 
-        if (r >= (blk_size - 8)) {
+        if (r >= (blk_size - pad_size)) {
                 /* length will be encoded in the next block */
                 sha_generic_one_block(cb, ld, is_avx, sha_type);
                 memset(cb, 0, sizeof(cb));
@@ -316,22 +317,26 @@ void sha1_one_block_avx512(const void *data, void *digest)
 
 void sha1_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 1, SHA1_BLOCK_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 1, SHA1_BLOCK_SIZE,
+                    SHA1_PAD_SIZE);
 }
 
 void sha1_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 1, SHA1_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 1, SHA1_BLOCK_SIZE,
+                    SHA1_PAD_SIZE);
 }
 
 void sha1_avx2(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 1, SHA1_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 1, SHA1_BLOCK_SIZE,
+                    SHA1_PAD_SIZE);
 }
 
 void sha1_avx512(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 1, SHA1_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 1, SHA1_BLOCK_SIZE,
+                    SHA1_PAD_SIZE);
 }
 
 /* ========================================================================== */
@@ -363,22 +368,26 @@ void sha224_one_block_avx512(const void *data, void *digest)
  */
 void sha224_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 224, SHA_256_BLOCK_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 224, SHA_256_BLOCK_SIZE,
+                    SHA224_PAD_SIZE);
 }
 
 void sha224_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 224, SHA_256_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 224, SHA_256_BLOCK_SIZE,
+                    SHA224_PAD_SIZE);
 }
 
 void sha224_avx2(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 224, SHA_256_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 224, SHA_256_BLOCK_SIZE,
+                    SHA224_PAD_SIZE);
 }
 
 void sha224_avx512(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 224, SHA_256_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 224, SHA_256_BLOCK_SIZE,
+                    SHA224_PAD_SIZE);
 }
 
 /* ========================================================================== */
@@ -410,22 +419,26 @@ void sha256_one_block_avx512(const void *data, void *digest)
  */
 void sha256_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 256, SHA_256_BLOCK_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 256, SHA_256_BLOCK_SIZE,
+                    SHA256_PAD_SIZE);
 }
 
 void sha256_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 256, SHA_256_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 256, SHA_256_BLOCK_SIZE,
+                    SHA256_PAD_SIZE);
 }
 
 void sha256_avx2(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 256, SHA_256_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 256, SHA_256_BLOCK_SIZE,
+                    SHA256_PAD_SIZE);
 }
 
 void sha256_avx512(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 256, SHA_256_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 256, SHA_256_BLOCK_SIZE,
+                    SHA256_PAD_SIZE);
 }
 
 /* ========================================================================== */
@@ -457,22 +470,26 @@ void sha384_one_block_avx512(const void *data, void *digest)
  */
 void sha384_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 384, SHA_384_BLOCK_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 384, SHA_384_BLOCK_SIZE,
+                    SHA384_PAD_SIZE);
 }
 
 void sha384_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 384, SHA_384_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 384, SHA_384_BLOCK_SIZE,
+                    SHA384_PAD_SIZE);
 }
 
 void sha384_avx2(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 384, SHA_384_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 384, SHA_384_BLOCK_SIZE,
+                    SHA384_PAD_SIZE);
 }
 
 void sha384_avx512(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 384, SHA_384_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 384, SHA_384_BLOCK_SIZE,
+                    SHA384_PAD_SIZE);
 }
 
 /* ========================================================================== */
@@ -504,20 +521,24 @@ void sha512_one_block_avx512(const void *data, void *digest)
  */
 void sha512_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 512, SHA_512_BLOCK_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 512, SHA_512_BLOCK_SIZE,
+                    SHA512_PAD_SIZE);
 }
 
 void sha512_avx(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 512, SHA_512_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 512, SHA_512_BLOCK_SIZE,
+                    SHA512_PAD_SIZE);
 }
 
 void sha512_avx2(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 512, SHA_512_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 512, SHA_512_BLOCK_SIZE,
+                    SHA512_PAD_SIZE);
 }
 
 void sha512_avx512(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 1 /* AVX */, 512, SHA_512_BLOCK_SIZE);
+        sha_generic(data, length, digest, 1 /* AVX */, 512, SHA_512_BLOCK_SIZE,
+                    SHA512_PAD_SIZE);
 }

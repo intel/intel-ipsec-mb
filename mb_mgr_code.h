@@ -907,6 +907,36 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo, job);
         case AES_CMAC:
                 return SUBMIT_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo, job);
+        case PLAIN_SHA1:
+                IMB_SHA1(state,
+                         job->src + job->hash_start_src_offset_in_bytes,
+                         job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
+        case PLAIN_SHA_224:
+                IMB_SHA224(state,
+                           job->src + job->hash_start_src_offset_in_bytes,
+                           job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
+        case PLAIN_SHA_256:
+                IMB_SHA256(state,
+                           job->src + job->hash_start_src_offset_in_bytes,
+                           job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
+        case PLAIN_SHA_384:
+                IMB_SHA384(state,
+                           job->src + job->hash_start_src_offset_in_bytes,
+                           job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
+        case PLAIN_SHA_512:
+                IMB_SHA512(state,
+                           job->src + job->hash_start_src_offset_in_bytes,
+                           job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
         default: /* assume NULL_HASH */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -992,7 +1022,9 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 12, /* AES_XCBC */
                 16, /* MD5 */
                 0,  /* NULL_HASH */
+#ifndef NO_GCM
                 16, /* AES_GMAC */
+#endif
                 0,  /* CUSTOM HASH */
                 0,  /* AES_CCM */
                 16, /* AES_CMAC */
@@ -1007,10 +1039,17 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 12, /* AES_XCBC */
                 12, /* MD5 */
                 0,  /* NULL_HASH */
+#ifndef NO_GCM
                 16, /* AES_GMAC */
+#endif
                 0,  /* CUSTOM HASH */
                 0,  /* AES_CCM */
                 16, /* AES_CMAC */
+                20, /* PLAIN_SHA1 */
+                28, /* PLAIN_SHA_224 */
+                32, /* PLAIN_SHA_256 */
+                48, /* PLAIN_SHA_384 */
+                64, /* PLAIN_SHA_512 */
         };
 
         switch (job->cipher_mode) {
@@ -1370,6 +1409,25 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  */
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                break;
+        case PLAIN_SHA1:
+        case PLAIN_SHA_224:
+        case PLAIN_SHA_256:
+        case PLAIN_SHA_384:
+        case PLAIN_SHA_512:
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->src == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
