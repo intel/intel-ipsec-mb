@@ -330,10 +330,10 @@ end_loop:
 	mov	DWORD(tmp3), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
 	mov	[p + 3*4], DWORD(tmp3)
 
-        vzeroupper
 return:
         DBGPRINTL "---------- exit md5 submit -----------"
 
+        vzeroupper
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]
