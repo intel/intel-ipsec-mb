@@ -300,19 +300,19 @@ $(all_objs): $(OBJ_DIR)
 	$(AS) -o $@ $(AFLAGS) $<
 
 {avx\}.c{$(OBJ_DIR)}.obj:
-	$(CC) /Fo$@ /c $(CFLAGS) $<
+	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
 
 {avx\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -o $@ $(AFLAGS) $<
 
 {avx2\}.c{$(OBJ_DIR)}.obj:
-	$(CC) /Fo$@ /c $(CFLAGS) $<
+	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
 
 {avx2\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -o $@ $(AFLAGS) $<
 
 {avx512\}.c{$(OBJ_DIR)}.obj:
-	$(CC) /Fo$@ /c $(CFLAGS) $<
+	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
 
 {avx512\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -o $@ $(AFLAGS) $<
