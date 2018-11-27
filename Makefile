@@ -333,7 +333,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:sse/%.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -march=nehalem -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:sse/%.asm
 ifeq ($(USE_YASM),y)
@@ -343,7 +343,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx/%.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -march=sandybridge -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx/%.asm
 ifeq ($(USE_YASM),y)
@@ -353,7 +353,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx2/%.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -march=haswell -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx2/%.asm
 ifeq ($(USE_YASM),y)
@@ -363,7 +363,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx512/%.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -march=broadwell -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx512/%.asm
 ifeq ($(USE_YASM),y)
