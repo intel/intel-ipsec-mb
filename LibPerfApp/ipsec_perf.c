@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
 
 #ifdef _WIN32
 #include <windows.h>
@@ -52,7 +53,7 @@
 #define BUFSIZE (512 * 1024 * 1024)
 #define JOB_SIZE (2 * 1024)
 #define JOB_SIZE_STEP 16
-#define REGION_SIZE (JOB_SIZE + 3003)
+#define REGION_SIZE (JOB_SIZE + 2048)
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
 #define NUM_RUNS 16
 #define KEYS_PER_JOB 15
@@ -410,45 +411,61 @@ static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
 /* Freeing allocated memory */
 static void free_mem(void)
 {
+#ifdef LINUX
         if (offset_ptr != NULL)
                 free(offset_ptr);
+
         if (buf != NULL)
                 free(buf);
+#else
+        if (offset_ptr != NULL)
+                _aligned_free(offset_ptr);
+
+        if (buf != NULL)
+                _aligned_free(buf);
+#endif
 }
 
 /* Input buffer initialization */
 static void init_buf(enum cache_type_e ctype)
 {
+        const size_t bufs_size = BUFSIZE + REGION_SIZE;
+        const size_t keys_size = NUM_OFFSETS * KEYS_PER_JOB * sizeof(uint128_t);
+        const size_t alignment = 64;
         uint32_t tmp_off;
-        uint64_t offset;
         int i;
 
-        buf = (uint8_t *) malloc(BUFSIZE + REGION_SIZE);
+#ifdef LINUX
+        buf = (uint8_t *) memalign(alignment, bufs_size);
+#else
+        buf = (uint8_t *) _aligned_malloc(bufs_size, alignment);
+#endif
         if (!buf) {
                 fprintf(stderr, "Could not malloc buf\n");
                 exit(EXIT_FAILURE);
         }
 
-        offset_ptr = (uint64_t *)
-                malloc(NUM_OFFSETS * KEYS_PER_JOB * sizeof(uint128_t) + 0x0F);
+#ifdef LINUX
+        offset_ptr = (uint64_t *) memalign(alignment, keys_size);
+#else
+        offset_ptr = (uint64_t *) _aligned_malloc(keys_size, alignment);
+#endif
         if (!offset_ptr) {
                 fprintf(stderr, "Could not malloc keys\n");
                 free_mem();
                 exit(EXIT_FAILURE);
         }
 
-        offset = (uint64_t) offset_ptr;
-        keys = (uint128_t *) ((offset + 0x0F) & ~0x0F); /* align to 16 bytes */
+        keys = (uint128_t *) offset_ptr;
 
         if (ctype == COLD) {
                 for (i = 0; i < NUM_OFFSETS; i++) {
-                        offsets[i] = i * REGION_SIZE + (rand() & 0x3F0);
+                        offsets[i] = i * REGION_SIZE + (rand() & 0x3C0);
                         key_idxs[i] = i * KEYS_PER_JOB;
                 }
                 for (i = NUM_OFFSETS - 1; i >= 0; i--) {
-                        offset = rand();
-                        offset *= i;
-                        offset /= RAND_MAX;
+                        const uint64_t offset = (rand() * i) / RAND_MAX;
+
                         tmp_off = offsets[offset];
                         offsets[offset] = offsets[i];
                         offsets[i] = tmp_off;
@@ -460,9 +477,9 @@ static void init_buf(enum cache_type_e ctype)
         } else {/* WARM */
                 for (i = 0; i < NUM_OFFSETS; i += 2) {
                         offsets[i]   = (2 * i + 0) * REGION_SIZE +
-                                (rand() & 0x3F0);
+                                (rand() & 0x3C0);
                         offsets[i + 1] = (2 * i + 1) * REGION_SIZE +
-                                (rand() & 0x3F0);
+                                (rand() & 0x3C0);
                         key_idxs[i]  = (2 * i + 0) * KEYS_PER_JOB;
                 }
                 index_limit = 8;
@@ -527,7 +544,7 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
         static DECLARE_ALIGNED(uint32_t k1_expanded[11 * 4], 16);
         static DECLARE_ALIGNED(uint8_t	k2[16], 16);
         static DECLARE_ALIGNED(uint8_t	k3[16], 16);
-        static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 16);
+        static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
         uint32_t size_aes;
         uint64_t time = 0;
         uint32_t aux;
@@ -704,8 +721,8 @@ static uint64_t
 do_test_gcm(struct params_s *params,
             const uint32_t num_iter, MB_MGR *mb_mgr)
 {
-        struct gcm_key_data gdata_key;
-        struct gcm_context_data gdata_ctx;
+        static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
+        static DECLARE_ALIGNED(struct gcm_context_data gdata_ctx, 64);
         uint8_t *key;
         static uint32_t index = 0;
         uint32_t size_aes = params->size_aes;
@@ -1416,7 +1433,10 @@ int main(int argc, char *argv[])
         }
 
         memset(t_info, 0, sizeof(t_info));
+
+        srand(ITER_SCALE_LONG + ITER_SCALE_SHORT + ITER_SCALE_SMOKE);
         init_buf(cache_type);
+
         if (num_t > 1)
                 for (i = 0; i < num_t - 1; i++, thread_info_p++) {
                         /* Set core if selected */
