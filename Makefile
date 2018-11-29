@@ -77,6 +77,18 @@ endif
 CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
 
+# Set architectural optimizations for GCC/CC
+ifeq ($(CC),$(filter $(CC),gcc cc))
+GCC_VERSION = $(shell $(CC) -dumpversion | cut -d. -f1)
+GCC_GE_V5 = $(shell [ $(GCC_VERSION) -ge 5 ] && echo true)
+ifeq ($(GCC_GE_V5),true)
+OPT_SSE = -march=nehalem
+OPT_AVX = -march=sandybridge
+OPT_AVX2 = -march=haswell
+OPT_AVX512 = -march=broadwell
+endif
+endif
+
 # so or static build
 ifeq ($(SHARED),y)
 CFLAGS += -fPIC
@@ -333,7 +345,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:sse/%.c
-	$(CC) -march=nehalem -c $(CFLAGS) $< -o $@
+	$(CC) $(OPT_SSE) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:sse/%.asm
 ifeq ($(USE_YASM),y)
@@ -343,7 +355,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx/%.c
-	$(CC) -march=sandybridge -c $(CFLAGS) $< -o $@
+	$(CC) $(OPT_AVX) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx/%.asm
 ifeq ($(USE_YASM),y)
@@ -353,7 +365,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx2/%.c
-	$(CC) -march=haswell -c $(CFLAGS) $< -o $@
+	$(CC) $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx2/%.asm
 ifeq ($(USE_YASM),y)
@@ -363,7 +375,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx512/%.c
-	$(CC) -march=broadwell -c $(CFLAGS) $< -o $@
+	$(CC) $(OPT_AVX512) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx512/%.asm
 ifeq ($(USE_YASM),y)

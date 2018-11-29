@@ -174,11 +174,13 @@ alternative algorithms instead.
 Package Content
 ===============
 
-LibTestApp - sample application using the library interface
+LibTestApp - Library test application
+LibPerfApp - Library performance application
 sse - Intel(R) SSE optimized routines
 avx - Intel(R) AVX optimized routines
 avx2 - Intel(R) AVX2 optimized routines
 avx512 - Intel(R) AVX512 optimized routines
+no-aesni - Non-AESNI accelerated routines
 
 Compilation
 ===========
