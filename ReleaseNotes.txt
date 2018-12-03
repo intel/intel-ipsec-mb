@@ -1,6 +1,31 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+v0.52 December 2018
+========================================================================
+
+03 Dec, 2018
+
+General
+- Added AESNI emulation implementation
+- Added AES-GCM multi-buffer implementation for AVX512
+- Added flexible job chain order support
+- GCM submit and flush functions moved into architecture MB manager modules
+- AVX512/AVX2/AVX/SSE AAD GHASH computation performance improvement
+- GCM API's added to MB_MGR structure
+- Added plain SHA support in JOB API
+- Added architectural compiler optimizations for GCC/CC
+
+LibTestApp
+- Added option not to run GCM tests
+- Added AESNI emulation tests
+- Added plain SHA tests
+- Updated to take advantage of new GCM macros
+
+LibPerfApp
+- Buffer alignment update
+- Updated to take advantage of new GCM macros
+
 v0.51 September 2018
 ========================================================================
 
