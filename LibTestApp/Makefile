@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012-2018, Intel Corporation
+# Copyright (c) 2012-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -56,7 +56,7 @@ endif
 
 SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
-	hmac_md5_test.c aes_test.c sha_test.c
+	hmac_md5_test.c aes_test.c sha_test.c api_test.c
 OBJECTS := $(SOURCES:%.c=%.o)
 
 all: $(APP)
@@ -77,6 +77,7 @@ aes_test.o: aes_test.c gcm_ctr_vectors_test.h utils.h
 customop_test.o: customop_test.c customop_test.h
 utils.o: utils.c utils.h
 sha_test.o: sha_test.c utils.h
+api_test.o: api_test.c gcm_ctr_vectors_test.h
 
 .PHONY: clean
 clean:

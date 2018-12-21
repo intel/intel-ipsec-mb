@@ -1054,6 +1054,18 @@ is_job_invalid(const JOB_AES_HMAC *job)
 
         switch (job->cipher_mode) {
         case CBC:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->cipher_direction == ENCRYPT &&
                     job->aes_enc_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
@@ -1084,6 +1096,18 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case CNTR:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_enc_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1111,6 +1135,18 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 /* XXX: not copy src to dst */
                 break;
         case DOCSIS_SEC_BPI:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_enc_key_expanded == NULL) {
                         /* it has to be set regardless of direction (AES-CFB) */
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
@@ -1136,6 +1172,18 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 break;
 #ifndef NO_GCM
         case GCM:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 /* Same key structure used for encrypt and decrypt */
                 if (job->cipher_direction == ENCRYPT &&
                     job->aes_enc_key_expanded == NULL) {
@@ -1171,6 +1219,18 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case DES:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->cipher_direction == ENCRYPT &&
                     job->aes_enc_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
@@ -1199,6 +1259,18 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case DOCSIS_DES:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->cipher_direction == ENCRYPT &&
                     job->aes_enc_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
@@ -1223,12 +1295,28 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case CCM:
+                if (job->msg_len_to_cipher_in_bytes != 0) {
+                        if (job->src == NULL) {
+                                INVALID_PRN("cipher_mode:%d\n",
+                                            job->cipher_mode);
+                                return 1;
+                        }
+                        if (job->dst == NULL) {
+                                INVALID_PRN("cipher_mode:%d\n",
+                                            job->cipher_mode);
+                                return 1;
+                        }
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_enc_key_expanded == NULL) {
                         /* AES-CTR and CBC-MAC use only encryption keys */
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                /* currently only AES-CCM-128 is only supported */
+                /* currently only AES-CCM-128 is supported */
                 if (job->aes_key_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1250,6 +1338,18 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case DES3:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->aes_key_len_in_bytes != UINT64_C(24)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1311,6 +1411,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
         case SHA_256:
         case SHA_384:
         case SHA_512:
+                if (job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
                 if (job->auth_tag_output_len_in_bytes !=
                     auth_tag_len_ipsec[job->hash_alg] &&
                     job->auth_tag_output_len_in_bytes !=
@@ -1331,6 +1435,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 break;
 #ifndef NO_GCM
         case AES_GMAC:
+                if (job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
@@ -1358,6 +1466,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case AES_CCM:
+                if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
                 if (job->u.CCM.aad_len_in_bytes > 46) {
                         /* 3 x AES_BLOCK - 2 bytes for AAD len */
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
@@ -1397,6 +1509,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case AES_CMAC:
+                if (job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
                 if ((job->u.CMAC._key_expanded == NULL) ||
                     (job->u.CMAC._skey1 == NULL) ||
                     (job->u.CMAC._skey2 == NULL)) {
