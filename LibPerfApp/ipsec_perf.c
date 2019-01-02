@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright(c) 2017-2018, Intel Corporation All rights reserved.
+  Copyright(c) 2017-2019, Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -51,9 +51,9 @@
 #include "msr.h"
 
 #define BUFSIZE (512 * 1024 * 1024)
-#define JOB_SIZE (2 * 1024)
+#define JOB_SIZE_MAX (2 * 1024)
 #define JOB_SIZE_STEP 16
-#define REGION_SIZE (JOB_SIZE + 2048)
+#define REGION_SIZE (JOB_SIZE_MAX + 2048)
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
 #define NUM_RUNS 16
 #define KEYS_PER_JOB 15
@@ -203,7 +203,10 @@ uint128_t *keys = NULL;
 uint64_t *offset_ptr = NULL;
 uint32_t key_idxs[NUM_OFFSETS];
 uint32_t offsets[NUM_OFFSETS];
-int sha_size_incr = 24;
+uint32_t sha_size_incr = 24;
+
+uint32_t job_size_start = 0;
+uint32_t job_iter = 0;
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
 /* AES, DOCSIS, GCM, CCM, DES, 3DES */
@@ -233,25 +236,16 @@ __forceinline uint64_t read_cycles(uint32_t core)
         return val;
 }
 
-/* Compare function used by qsort */
-static int compare(const void *a, const void *b)
+/* Method used by qsort to compare 2 values */
+static int compare_uint64_t(const void *a, const void *b)
 {
-        uint64_t x = *(const uint64_t *)a - *(const uint64_t *)b;
-
-        if (x == 0)
-                return 0;
-
-        if (x > *(const uint64_t *)a)
-                return -1;
-
-        return 1;
+        return (int)(int64_t)(*(const uint64_t *)a - *(const uint64_t *)b);
 }
 
 /* Get number of bits set in value */
-static int bitcount(const uint64_t val)
+static unsigned bitcount(const uint64_t val)
 {
-        unsigned i;
-        int bits = 0;
+        unsigned i, bits = 0;
 
         for (i = 0; i < BITS(val); i++)
                 if (val & (1ULL << i))
@@ -400,7 +394,7 @@ static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
                         return 1;
 
         /* sort array */
-        qsort(cycles, DIM(cycles), sizeof(uint64_t), compare);
+        qsort(cycles, DIM(cycles), sizeof(uint64_t), compare_uint64_t);
 
         /* set median cost */
         *value = cycles[DIM(cycles)/2];
@@ -881,13 +875,6 @@ do_test_gcm(struct params_s *params,
         return time / num_iter;
 }
 
-
-/* Method used by qsort to compare 2 values */
-static int compare_uint64_t(const void *a, const void *b)
-{
-        return (int)(int64_t)(*(const uint64_t *)a - *(const uint64_t *)b);
-}
-
 /* Computes mean of set of times after dropping bottom and top quarters */
 static uint64_t mean_median(uint64_t *array, uint32_t size)
 {
@@ -933,15 +920,22 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         uint32_t sz;
 
         for (sz = 0; sz < sizes; sz++) {
-                const uint32_t size_aes = (sz + 1) * JOB_SIZE_STEP;
+                const uint32_t size_aes = job_size_start + (sz * JOB_SIZE_STEP);
                 const uint32_t num_iter =
                         (iter_scale >= size_aes) ? (iter_scale / size_aes) : 1;
 
                 params->size_aes = size_aes;
-                if (params->test_type == TTYPE_AES_GCM && (!use_gcm_job_api))
-                        *times = do_test_gcm(params, 2 * num_iter, mgr);
-                else
-                        *times = do_test(mgr, params, num_iter);
+                if (params->test_type == TTYPE_AES_GCM && (!use_gcm_job_api)) {
+                        if (job_iter == 0)
+                                *times = do_test_gcm(params, 2 * num_iter, mgr);
+                        else
+                                *times = do_test_gcm(params, job_iter, mgr);
+                } else {
+                        if (job_iter == 0)
+                                *times = do_test(mgr, params, num_iter);
+                        else
+                                *times = do_test(mgr, params, job_iter);
+                }
                 times += NUM_RUNS;
         }
 
@@ -1108,7 +1102,7 @@ static void print_times(struct variant_s *variant_list, struct params_s *params,
         }
         printf("\n");
         for (sz = 0; sz < sizes; sz++) {
-                printf("%d", (sz + 1) * JOB_SIZE_STEP);
+                printf("%d", job_size_start + (sz * JOB_SIZE_STEP));
                 for (col = 0; col < total_variants; col++) {
                         uint64_t *time_ptr =
                                 &variant_list[col].avg_times[sz * NUM_RUNS];
@@ -1142,7 +1136,15 @@ run_tests(void *arg)
         struct variant_s *variant_list = NULL;
 
         p_mgr = info->p_mgr;
-        params.num_sizes = JOB_SIZE / JOB_SIZE_STEP;
+        if (job_size_start == 0) {
+                /* Unmodified through command line parameters. Use defaults. */
+                params.num_sizes = JOB_SIZE_MAX / JOB_SIZE_STEP;
+                job_size_start = JOB_SIZE_STEP;
+        } else {
+                /* Test only selected size */
+                params.num_sizes = 1;
+        }
+
         params.core = (uint32_t)info->core;
 
         /* if cores selected then set affinity */
@@ -1312,14 +1314,71 @@ static void usage(void)
                 "--cores mask: <mask> CPU's to run threads\n"
                 "--unhalted-cycles: measure using unhalted cycles (requires root).\n"
                 "                   Note: RDTSC is used by default.\n"
-                "--quick: reduces number of test iterations by x10 (less precise but quicker)\n"
-                "--smoke: very quick, unprecise and without print out (for validation only)\n",
+                "--quick: reduces number of test iterations by x10\n"
+                "         (less precise but quicker)\n"
+                "--smoke: very quick, unprecise and without print out\n"
+                "         (for validation only)\n"
+                "--job-size: size of the cipher & MAC job in bytes\n"
+                "            (-o still applies for MAC)\n"
+                "--job-iter: number of tests iterations for each job size\n",
                 MAX_NUM_THREADS + 1);
+}
+
+static int
+get_next_num_arg(const char * const *argv, const int index, const int argc,
+                 void *dst, const size_t dst_size)
+{
+        char *endptr = NULL;
+        uint64_t val;
+
+        if (dst == NULL || argv == NULL || index < 0 || argc < 0) {
+                fprintf(stderr, "%s() internal error!\n", __func__);
+                exit(EXIT_FAILURE);
+        }
+
+        if (index >= (argc - 1)) {
+                fprintf(stderr, "'%s' requires an argument!\n", argv[index]);
+                exit(EXIT_FAILURE);
+        }
+
+#ifdef _WIN32
+        val = _strtoui64(argv[index + 1], &endptr, 0);
+#else
+        val = strtoull(argv[index + 1], &endptr, 0);
+#endif
+        if (endptr == argv[index + 1] || (endptr != NULL && *endptr != '\0')) {
+                fprintf(stderr, "Error converting '%s' as value for '%s'!\n",
+                        argv[index + 1], argv[index]);
+                exit(EXIT_FAILURE);
+        }
+
+        switch (dst_size) {
+        case (sizeof(uint8_t)):
+                *((uint8_t *)dst) = (uint8_t) val;
+                break;
+        case (sizeof(uint16_t)):
+                *((uint16_t *)dst) = (uint16_t) val;
+                break;
+        case (sizeof(uint32_t)):
+                *((uint32_t *)dst) = (uint32_t) val;
+                break;
+        case (sizeof(uint64_t)):
+                *((uint64_t *)dst) = val;
+                break;
+        default:
+                fprintf(stderr, "%s() invalid dst_size %u!\n",
+                        __func__, (unsigned) dst_size);
+                exit(EXIT_FAILURE);
+                break;
+        }
+
+        return index + 1;
 }
 
 int main(int argc, char *argv[])
 {
-        int i, num_t = 0, core = 0;
+        uint32_t num_t = 0;
+        int i, core = 0;
         struct thread_info *thread_info_p = t_info;
 
 #ifdef _WIN32
@@ -1368,26 +1427,35 @@ int main(int argc, char *argv[])
                         iter_scale = ITER_SCALE_SHORT;
                 } else if (strcmp(argv[i], "--smoke") == 0) {
                         iter_scale = ITER_SCALE_SMOKE;
-                } else if ((strcmp(argv[i], "-o") == 0) && (i < argc - 1)) {
-                        i++;
-                        sha_size_incr = atoi(argv[i]);
+                } else if (strcmp(argv[i], "-o") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &sha_size_incr,
+                                             sizeof(sha_size_incr));
+                } else if (strcmp(argv[i], "--job-size") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &job_size_start,
+                                             sizeof(job_size_start));
+                        if (job_size_start > JOB_SIZE_MAX) {
+                                fprintf(stderr,
+                                        "Invalid job size %u (max %u)!\n",
+                                        (unsigned) job_size_start,
+                                        JOB_SIZE_MAX);
+                                return EXIT_FAILURE;
+                        }
+                } else if (strcmp(argv[i], "--job-iter") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &job_iter, sizeof(job_iter));
                 } else if (strcmp(argv[i], "--threads") == 0) {
-                        num_t = atoi(argv[++i]);
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &num_t, sizeof(num_t));
                         if (num_t > (MAX_NUM_THREADS + 1)) {
                                 fprintf(stderr, "Invalid number of threads!\n");
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--cores") == 0) {
-                        errno = 0;
-#ifdef _WIN32
-                        core_mask = _strtoui64(argv[++i], NULL, 0);
-#else
-                        core_mask = strtoull(argv[++i], NULL, 0);
-#endif
-                        if (errno != 0) {
-                                fprintf(stderr, "Error converting cpu mask!\n");
-                                return EXIT_FAILURE;
-                        }
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &core_mask,
+                                             sizeof(core_mask));
                 } else if (strcmp(argv[i], "--unhalted-cycles") == 0) {
                         use_unhalted_cycles = 1;
                 } else {
@@ -1437,8 +1505,10 @@ int main(int argc, char *argv[])
         srand(ITER_SCALE_LONG + ITER_SCALE_SHORT + ITER_SCALE_SMOKE);
         init_buf(cache_type);
 
-        if (num_t > 1)
-                for (i = 0; i < num_t - 1; i++, thread_info_p++) {
+        if (num_t > 1) {
+                uint32_t n;
+
+                for (n = 0; n < (num_t - 1); n++, thread_info_p++) {
                         /* Set core if selected */
                         if (core_mask) {
                                 core = next_core(core_mask, core);
@@ -1449,22 +1519,24 @@ int main(int argc, char *argv[])
                         thread_info_p->p_mgr = alloc_mb_mgr(flags);
                         if (thread_info_p->p_mgr == NULL) {
                                 fprintf(stderr, "Failed to allocate MB_MGR "
-                                        "structure for thread %d!\n", i+1);
+                                        "structure for thread %u!\n",
+                                        (unsigned)(n + 1));
                                 free_mem();
                                 exit(EXIT_FAILURE);
                         }
 #ifdef _WIN32
-                        threads[i] = (HANDLE)
+                        threads[n] = (HANDLE)
                                 _beginthread(&run_tests, 0,
                                              (void *)thread_info_p);
 #else
                         pthread_attr_t attr;
 
                         pthread_attr_init(&attr);
-                        pthread_create(&tids[i], &attr, run_tests,
+                        pthread_create(&tids[n], &attr, run_tests,
                                        (void *)thread_info_p);
 #endif
                 }
+        }
 
         thread_info_p->print_info = 1;
         thread_info_p->p_mgr = alloc_mb_mgr(flags);
@@ -1481,16 +1553,18 @@ int main(int argc, char *argv[])
 
         run_tests((void *)thread_info_p);
         if (num_t > 1) {
+                uint32_t n;
+
 #ifdef _WIN32
                 WaitForMultipleObjects(num_t, threads, FALSE, INFINITE);
 #endif
-                for (i = 0; i < num_t - 1; i++) {
-                        fprintf(stderr, "Waiting on thread %d to finish...\n",
-                                i+2);
+                for (n = 0; n < (num_t - 1); n++) {
+                        fprintf(stderr, "Waiting on thread %u to finish...\n",
+                                (unsigned)(n + 2));
 #ifdef _WIN32
-                        CloseHandle(threads[i]);
+                        CloseHandle(threads[n]);
 #else
-                        pthread_join(tids[i], NULL);
+                        pthread_join(tids[n], NULL);
 #endif
                 }
         }
