@@ -65,7 +65,6 @@
 #define BITS(x) (sizeof(x) * 8)
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 
-#define NUM_ARCHS 4 /* SSE, AVX, AVX2, AVX512 */
 #define NUM_TYPES 6 /* AES_HMAC, AES_DOCSIS, AES_GCM, AES_CCM, DES, 3DES */
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
@@ -115,7 +114,15 @@ enum arch_type_e {
         ARCH_SSE = 0,
         ARCH_AVX,
         ARCH_AVX2,
-        ARCH_AVX512
+        ARCH_AVX512,
+        NUM_ARCHS
+};
+
+const char *arch_strings[NUM_ARCHS] = {
+        "SSE",
+        "AVX",
+        "AVX2",
+        "AVX512"
 };
 
 enum test_type_e {
@@ -1375,11 +1382,56 @@ get_next_num_arg(const char * const *argv, const int index, const int argc,
         return index + 1;
 }
 
+static int
+detect_arch(unsigned int arch_support[NUM_ARCHS])
+{
+        const uint64_t detect_sse =
+                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx =
+                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
+        const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        MB_MGR *p_mgr = NULL;
+        enum arch_type_e arch_id;
+
+        if (arch_support == NULL) {
+                fprintf(stderr, "Array not passed correctly\n");
+                return -1;
+        }
+
+        for (arch_id = ARCH_SSE; arch_id < NUM_ARCHS; arch_id++)
+                arch_support[arch_id] = 1;
+
+        p_mgr = alloc_mb_mgr(0);
+        if (p_mgr == NULL) {
+                fprintf(stderr, "Architecture detect error!\n");
+                return -1;
+        }
+
+        if ((p_mgr->features & detect_avx512) != detect_avx512)
+                arch_support[ARCH_AVX512] = 0;
+
+        if ((p_mgr->features & detect_avx2) != detect_avx2)
+                arch_support[ARCH_AVX2] = 0;
+
+        if ((p_mgr->features & detect_avx) != detect_avx)
+                arch_support[ARCH_AVX] = 0;
+
+        if ((p_mgr->features & detect_sse) != detect_sse)
+                arch_support[ARCH_SSE] = 0;
+
+        free_mb_mgr(p_mgr);
+
+        return 0;
+}
+
 int main(int argc, char *argv[])
 {
         uint32_t num_t = 0;
         int i, core = 0;
         struct thread_info *thread_info_p = t_info;
+        unsigned int arch_id;
+        unsigned int arch_support[NUM_ARCHS];
 
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
@@ -1482,6 +1534,19 @@ int main(int argc, char *argv[])
                 if (init_msr_mod() != 0) {
                         fprintf(stderr, "Error initializing MSR module!\n");
                         return EXIT_FAILURE;
+                }
+        }
+
+        if (detect_arch(arch_support) < 0)
+                return EXIT_FAILURE;
+
+        /* disable tests depending on instruction sets supported */
+        for (arch_id = 0; arch_id < NUM_ARCHS; arch_id++) {
+                if (archs[arch_id] == 1 && arch_support[arch_id] == 0) {
+                        archs[arch_id] = 0;
+                        fprintf(stderr,
+                                "%s not supported. Disabling %s tests\n",
+                                arch_strings[arch_id], arch_strings[arch_id]);
                 }
         }
 
