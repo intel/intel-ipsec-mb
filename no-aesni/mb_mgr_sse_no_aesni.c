@@ -590,6 +590,35 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         state->sha512              = sha512_sse;
         state->md5_one_block       = md5_one_block_sse;
         state->aes128_cfb_one      = aes_cfb_128_one_sse_no_aesni;
+#ifndef NO_GCM
+        state->gcm128_enc          = aes_gcm_enc_128_sse_no_aesni;
+        state->gcm192_enc          = aes_gcm_enc_192_sse_no_aesni;
+        state->gcm256_enc          = aes_gcm_enc_256_sse_no_aesni;
+        state->gcm128_dec          = aes_gcm_dec_128_sse_no_aesni;
+        state->gcm192_dec          = aes_gcm_dec_192_sse_no_aesni;
+        state->gcm256_dec          = aes_gcm_dec_256_sse_no_aesni;
+        state->gcm128_init         = aes_gcm_init_128_sse_no_aesni;
+        state->gcm192_init         = aes_gcm_init_192_sse_no_aesni;
+        state->gcm256_init         = aes_gcm_init_256_sse_no_aesni;
+        state->gcm128_enc_update   = aes_gcm_enc_128_update_sse_no_aesni;
+        state->gcm192_enc_update   = aes_gcm_enc_192_update_sse_no_aesni;
+        state->gcm256_enc_update   = aes_gcm_enc_256_update_sse_no_aesni;
+        state->gcm128_dec_update   = aes_gcm_dec_128_update_sse_no_aesni;
+        state->gcm192_dec_update   = aes_gcm_dec_192_update_sse_no_aesni;
+        state->gcm256_dec_update   = aes_gcm_dec_256_update_sse_no_aesni;
+        state->gcm128_enc_finalize = aes_gcm_enc_128_finalize_sse_no_aesni;
+        state->gcm192_enc_finalize = aes_gcm_enc_192_finalize_sse_no_aesni;
+        state->gcm256_enc_finalize = aes_gcm_enc_256_finalize_sse_no_aesni;
+        state->gcm128_dec_finalize = aes_gcm_dec_128_finalize_sse_no_aesni;
+        state->gcm192_dec_finalize = aes_gcm_dec_192_finalize_sse_no_aesni;
+        state->gcm256_dec_finalize = aes_gcm_dec_256_finalize_sse_no_aesni;
+        state->gcm128_precomp      = aes_gcm_precomp_128_sse_no_aesni;
+        state->gcm192_precomp      = aes_gcm_precomp_192_sse_no_aesni;
+        state->gcm256_precomp      = aes_gcm_precomp_256_sse_no_aesni;
+        state->gcm128_pre          = aes_gcm_pre_128_sse_no_aesni;
+        state->gcm192_pre          = aes_gcm_pre_192_sse_no_aesni;
+        state->gcm256_pre          = aes_gcm_pre_256_sse_no_aesni;
+#endif
 }
 
 #include "mb_mgr_code.h"
