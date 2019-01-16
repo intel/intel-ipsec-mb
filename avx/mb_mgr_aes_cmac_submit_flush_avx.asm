@@ -293,6 +293,7 @@ APPEND(skip_,I):
         call    AES128_CBC_MAC
         ; state and idx are intact
 
+        vmovdqa xmm0, [state + _aes_cmac_lens]  ; preload lens
 %%_len_is_0:
         ; Check if job complete
         test    word [state + _aes_cmac_init_done + idx*2], 0xffff
@@ -301,7 +302,6 @@ APPEND(skip_,I):
         ; Finish step 6
         mov     word [state + _aes_cmac_init_done + idx*2], 1
 
-        vmovdqa xmm0, [state + _aes_cmac_lens]
         XVPINSRW xmm0, xmm1, tmp3, idx, 16, scale_x16
         vmovdqa [state + _aes_cmac_lens], xmm0
 
