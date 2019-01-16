@@ -49,18 +49,27 @@
 %define GP12 r13
 %define GP13 r14
 %define GP14 r15
-%define NUM_GP_REGS 15
+%define NUM_GP_REGS  15
+%define NUM_XMM_REGS 16
 
-%define ARG1_OFFSET 8*16
-%define ARG2_OFFSET 8*18
+%define GP_SZ   8
+%define XMM_SZ  16
+%define ARG_SZ  16
+
+;; 8 extra bytes added to align to 16 bytes
+%define XMM_OFFSET ((NUM_GP_REGS + 1) * GP_SZ)
+;; ARG1 placed in the stack after all GP and XMM registers
+%define ARG1_OFFSET (XMM_OFFSET + (NUM_XMM_REGS * XMM_SZ))
+;; ARG2 placed in the stack after all GP and XMM registers and ARG1
+%define ARG2_OFFSET (ARG1_OFFSET + ARG_SZ)
 
 %define GP(x) GP %+ x
 %define XMM(x) xmm  %+ x
 
-;; Reserve enough stack space to store all GP
+;; Reserve enough stack space to store all GP and XMM
 ;; registers and emulation function arguments
 ;; e.g. void emulate_AESXXX(xmm_reg *dst, xmm_reg *src);
-%define RES_STACK_SZ (ARG2_OFFSET + 16)
+%define RES_STACK_SZ (ARG2_OFFSET + ARG_SZ)
 
 ;; Allocate stack space and save GP registers
 %macro SAVE_GP_REGS 0
@@ -110,7 +119,7 @@
 ;; Check if key is reg or ptr
 %assign IS_REG 0
 %assign x 0
-%rep    16
+%rep    NUM_XMM_REGS
 %ifidni %%key, XMM(x)
        %assign IS_REG 1
        %exitrep
@@ -136,6 +145,13 @@
         mov     BYTE(%%arg3), %%imm
 %endif
 
+;; save XMM registers to stack, as some compilers may use them in "func"
+%assign reg_idx 0
+%rep NUM_XMM_REGS
+	movdqa	[rsp + XMM_OFFSET + (reg_idx * XMM_SZ)], XMM(reg_idx)
+%assign reg_idx reg_idx + 1
+%endrep
+
 ;; reserve space on stack for up to 4 arguments on the stack (windows only)
 %ifndef LINUX
         sub     rsp, 32
@@ -145,6 +161,15 @@
 %ifndef LINUX
         add     rsp, 32
 %endif
+
+;; restore XMM registers from stack
+%assign reg_idx 0
+%rep NUM_XMM_REGS
+	movdqa	XMM(reg_idx), [rsp + XMM_OFFSET + (reg_idx * XMM_SZ)]
+%assign reg_idx reg_idx + 1
+%endrep
+
+	;; Destination XMM gets overwritten with result from func
         movdqa  %%src_dst, [rsp + ARG1_OFFSET]
 
         RESTORE_GP_REGS
