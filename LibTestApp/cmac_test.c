@@ -105,6 +105,18 @@ static const uint8_t T_4[16] = {
         0xfc, 0x49, 0x74, 0x17, 0x79, 0x36, 0x3c, 0xfe
 };
 
+/*
+ *  Custom Vector
+ *
+ *  Example 5: len = 8
+ *  M              6bc1bee2 2e409f96
+ *  AES-CMAC       dc87cdcf 77a2f182 9e012c4d 31af2f8b
+ */
+static const uint8_t T_5[16] = {
+        0xdc, 0x87, 0xcd, 0xcf, 0x77, 0xa2, 0xf1, 0x82,
+        0x9e, 0x01, 0x2c, 0x4d, 0x31, 0xaf, 0x2f, 0x8b
+};
+
 static const uint8_t M[64] = {
         0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96,
         0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a,
@@ -141,6 +153,7 @@ static const struct cmac_rfc4493_vector {
         { key, sub_key1, sub_key2, M, 16, T_2, 4 },
         { key, sub_key1, sub_key2, M, 40, T_3, 4 },
         { key, sub_key1, sub_key2, M, 64, T_4, 4 },
+        { key, sub_key1, sub_key2, M, 8,  T_5, 16 },
 };
 
 static int
@@ -235,6 +248,9 @@ test_cmac(struct MB_MGR *mb_mgr,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
 
+        /**
+         * Submit all jobs then flush any outstanding jobs
+         */
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->cipher_direction = dir;
@@ -280,6 +296,50 @@ test_cmac(struct MB_MGR *mb_mgr,
                 printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
                 goto end;
         }
+
+        /**
+         * Submit each job and flush immediately
+         */
+        for (i = 0; i < num_jobs; i++) {
+                struct JOB_AES_HMAC *first_job = NULL;
+
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                first_job = job;
+
+                job->cipher_direction = dir;
+                job->chain_order = HASH_CIPHER;
+                job->cipher_mode = NULL_CIPHER;
+
+                job->hash_alg = AES_CMAC;
+                job->src = vec->M;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = vec->len;
+                job->auth_tag_output = auths[i] + sizeof(padding);
+                job->auth_tag_output_len_in_bytes = vec->T_len;
+
+                job->u.CMAC._key_expanded = expkey;
+                job->u.CMAC._skey1 = skey1;
+                job->u.CMAC._skey2 = skey2;
+
+                job->user_data = auths[i];
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job != NULL) {
+                        printf("Recieved job, expected NULL\n");
+                        goto end;
+                }
+
+                while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                        if (job != first_job) {
+                                printf("Invalid return job recieved\n");
+                                goto end;
+                        }
+                        if (!cmac_job_ok(vec, job, job->user_data, padding,
+                                         sizeof(padding)))
+                                goto end;
+                }
+        }
+
         ret = 0;
 
  end:
