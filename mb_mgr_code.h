@@ -731,7 +731,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #else
                 return DES3_CBC_ENC(job);
 #endif
-        } else { /* assume NUL_CIPHER or CCM */
+        } else { /* assume CCM or NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
         }
@@ -831,7 +831,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else {
-                /* assume NULL cipher or CCM */
+                /* assume CCM or NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
         }
@@ -1129,10 +1129,11 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case NULL_CIPHER:
-                /* NULL_CIPHER only allowed in HASH_CIPHER */
-                if (job->chain_order != HASH_CIPHER)
-                        return 1;
-                /* XXX: not copy src to dst */
+                /*
+                 * No checks required for this mode
+                 * @note NULL cipher doesn't perform memory copy operation
+                 *       from source to destination
+                 */
                 break;
         case DOCSIS_SEC_BPI:
                 if (job->src == NULL) {
