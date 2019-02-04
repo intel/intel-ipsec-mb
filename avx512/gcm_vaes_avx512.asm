@@ -173,6 +173,103 @@ default rel
 ; Utility Macros
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; ===========================================================================
+;;; ===========================================================================
+;;; Horizontal XOR - 4 x 128bits xored together
+%macro VHPXORI4x128 2
+%define %%REG   %1              ; [in/out] zmm512 4x128bits to xor; i128 on output
+%define %%TMP   %2              ; temporary register
+        vextracti64x4   YWORD(%%TMP), %%REG, 1
+        vpxorq          YWORD(%%REG), YWORD(%%REG), YWORD(%%TMP)
+        vextracti32x4   XWORD(%%TMP), YWORD(%%REG), 1
+        vpxorq          XWORD(%%REG), XWORD(%%REG), XWORD(%%TMP)
+%endmacro                       ; VHPXORI4x128
+
+;;; ===========================================================================
+;;; ===========================================================================
+;;; schoolbook multiply - 1st step
+%macro VCLMUL_STEP1 6
+%define %%KP    %1              ; [in] key pointer
+%define %%HI    %2              ; [in] previous blocks 4 to 7
+%define %%TMP   %3
+%define %%TH    %4              ; [out] tmp high
+%define %%TM    %5              ; [out] tmp medium
+%define %%TL    %6              ; [out] tmp low
+        vmovdqu64       %%TMP, [%%KP + HashKey_4]
+        vpclmulqdq      %%TH, %%HI, %%TMP, 0x11     ; %%T5 = a1*b1
+        vpclmulqdq      %%TL, %%HI, %%TMP, 0x00     ; %%T7 = a0*b0
+        vpclmulqdq      %%TM, %%HI, %%TMP, 0x01     ; %%T6 = a1*b0
+        vpclmulqdq      %%TMP, %%HI, %%TMP, 0x10    ; %%T4 = a0*b1
+        vpxorq          %%TM, %%TM, %%TMP           ; [%%TH : %%TM : %%TL]
+%endmacro                       ; VCLMUL_STEP1
+
+;;; ===========================================================================
+;;; ===========================================================================
+;;; schoolbook multiply - 2nd step
+%macro VCLMUL_STEP2 9
+%define %%KP    %1              ; [in] key pointer
+%define %%HI    %2              ; [out] high 128b of hash to reduce
+%define %%LO    %3              ; [in/out] previous blocks 0 to 3; low 128b of hash to reduce
+%define %%TMP0  %4
+%define %%TMP1  %5
+%define %%TMP2  %6
+%define %%TH    %7              ; [in] tmp high
+%define %%TM    %8              ; [in] tmp medium
+%define %%TL    %9              ; [in] tmp low
+
+        vmovdqu64       %%TMP0, [%%KP + HashKey_8]
+        vpclmulqdq      %%TMP1, %%LO, %%TMP0, 0x10     ; %%TMP1 = a0*b1
+        vpclmulqdq      %%TMP2, %%LO, %%TMP0, 0x11     ; %%TMP2 = a1*b1
+        vpxorq          %%TH, %%TH, %%TMP2
+        vpclmulqdq      %%TMP2, %%LO, %%TMP0, 0x00     ; %%TMP2 = a0*b0
+        vpxorq          %%TL, %%TL, %%TMP2
+        vpclmulqdq      %%TMP0, %%LO, %%TMP0, 0x01     ; %%TMP0 = a1*b0
+        vpternlogq      %%TM, %%TMP1, %%TMP0, 0x96     ; %%TM = TM xor TMP1 xor TMP0
+
+        ;; finish multiplications
+        vpsrldq         %%TMP2, %%TM, 8
+        vpxorq          %%HI, %%TH, %%TMP2
+        vpslldq         %%TMP2, %%TM, 8
+        vpxorq          %%LO, %%TL, %%TMP2
+
+        ;; xor 128bit words horizontally and compute [(X8*H1) + (X7*H2) + ... ((X1+Y0)*H8]
+        ;; note: (X1+Y0) handled elsewhere
+        VHPXORI4x128    %%HI, %%TMP2
+        VHPXORI4x128    %%LO, %%TMP1
+        ;; HIx holds top 128 bits
+        ;; LOx holds low 128 bits
+        ;; - further reductions to follow
+%endmacro                       ; VCLMUL_STEP2
+
+;;; ===========================================================================
+;;; ===========================================================================
+;;; AVX512 reduction macro
+%macro VCLMUL_REDUCE 6
+%define %%OUT   %1        ;; [out] zmm/ymm/xmm: result (must not be %%TMP1 or %%HI128)
+%define %%POLY  %2        ;; [in] zmm/ymm/xmm: polynomial
+%define %%HI128 %3        ;; [in] zmm/ymm/xmm: high 128b of hash to reduce
+%define %%LO128 %4        ;; [in] zmm/ymm/xmm: low 128b of hash to reduce
+%define %%TMP0  %5        ;; [in] zmm/ymm/xmm: temporary register
+%define %%TMP1  %6        ;; [in] zmm/ymm/xmm: temporary register
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; first phase of the reduction
+        vpclmulqdq      %%TMP0, %%POLY, %%LO128, 0x01
+        vpslldq         %%TMP0, %%TMP0, 8               ; shift-L xmm2 2 DWs
+        vpxorq          %%TMP0, %%LO128, %%TMP0         ; first phase of the reduction complete
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; second phase of the reduction
+        vpclmulqdq      %%TMP1, %%POLY, %%TMP0, 0x00
+        vpsrldq         %%TMP1, %%TMP1, 4               ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+
+        vpclmulqdq      %%OUT, %%POLY, %%TMP0, 0x10
+        vpslldq         %%OUT, %%OUT, 4                 ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
+
+        vpternlogq      %%OUT, %%TMP1, %%HI128, 0x96    ; OUT (GHASH) = OUT xor TMP1 xor HI128(HI)
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%endmacro
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GHASH_MUL MACRO to implement: Data*HashKey mod (128,127,126,121,0)
 ; Input: A and B (128-bits each, bit-reflected)
@@ -219,9 +316,9 @@ default rel
         vpclmulqdq      %%GH, %%T3, %%GH, 0x10
         vpslldq         %%GH, %%GH, 4                    ; shift-L %%GH 1 DW (Shift-L 1-DW to obtain result with no shifts)
 
-        vpxor           %%GH, %%GH, %%T2                 ; second phase of the reduction complete
+        ; second phase of the reduction complete, the result is in %%GH
+        vpternlogq      %%GH, %%T1, %%T2, 0x96           ; GH = GH xor T1 xor T2
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%GH, %%GH, %%T1                 ; the result is in %%GH
 %endmacro
 
 
@@ -309,7 +406,7 @@ default rel
 %else
         kmovw           k1, [%%TMP1 + %%LENGTH*2]
 %endif
-        vmovdqu8        XWORD(%%OUTPUT){k1}{z}, [%%INPUT]
+        vmovdqu8        %%OUTPUT{k1}{z}, [%%INPUT]
 
 %endmacro ; READ_SMALL_DATA_INPUT
 
@@ -319,180 +416,146 @@ default rel
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CALC_AAD_HASH   13
+%macro  CALC_AAD_HASH   17
 %define %%A_IN          %1
 %define %%A_LEN         %2
-%define %%AAD_HASH      %3
+%define %%AAD_HASH      %3      ; xmm output register
 %define %%GDATA_KEY     %4
-%define %%XTMP0         %5      ; xmm temp reg 5
-%define %%XTMP1         %6      ; xmm temp reg 5
-%define %%XTMP2         %7
-%define %%XTMP3         %8
-%define %%XTMP4         %9
-%define %%XTMP5         %10     ; xmm temp reg 5
-%define %%T1            %11     ; temp reg 1
-%define %%T2            %12
-%define %%T3            %13
+%define %%ZT0         %5      ; zmm temp reg 0
+%define %%ZT1         %6      ; zmm temp reg 1
+%define %%ZT2         %7
+%define %%ZT3         %8
+%define %%ZT4         %9
+%define %%ZT5         %10     ; zmm temp reg 5
+%define %%ZT6         %11     ; zmm temp reg 6
+%define %%ZT7         %12     ; zmm temp reg 7
+%define %%ZT8         %13     ; zmm temp reg 8
+%define %%ZT9         %14     ; zmm temp reg 9
+%define %%T1            %15     ; temp reg 1
+%define %%T2            %16
+%define %%T3            %17
 
+%define %%SHFMSK %%ZT9
+%define %%POLY   %%ZT8
+%define %%TH     %%ZT7
+%define %%TM     %%ZT6
+%define %%TL     %%ZT5
 
-        mov     %%T1, %%A_IN            ; T1 = AAD
-        mov     %%T2, %%A_LEN           ; T2 = aadLen
-        vpxor   %%AAD_HASH, %%AAD_HASH
+        mov             %%T1, %%A_IN            ; T1 = AAD
+        mov             %%T2, %%A_LEN           ; T2 = aadLen
+        vpxor           %%AAD_HASH, %%AAD_HASH
+
+        vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
+        vmovdqa64       %%POLY, [rel POLY2]
 
 %%_get_AAD_loop128:
-        cmp     %%T2, 128
-        jl      %%_exit_AAD_loop128
+        cmp             %%T2, 128
+        jl              %%_exit_AAD_loop128
 
-        vmovdqu         %%XTMP0, [%%T1 + 16*0]
-        vpshufb         %%XTMP0, [rel SHUF_MASK]
+        vmovdqu64       %%ZT2, [%%T1 + 64*0]  ; LO blocks (0-3)
+        vmovdqu64       %%ZT1, [%%T1 + 64*1]  ; HI blocks (4-7)
+        vpshufb         %%ZT2, %%SHFMSK
+        vpshufb         %%ZT1, %%SHFMSK
 
-        vpxor           %%XTMP0, %%AAD_HASH
+        vpxorq          %%ZT2, %%ZT2, ZWORD(%%AAD_HASH)
 
-        vmovdqu         %%XTMP5, [%%GDATA_KEY + HashKey_8]
-        vpclmulqdq      %%XTMP1, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = a1*b1
-        vpclmulqdq      %%XTMP2, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = a0*b0
-        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = a1*b0
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10                 ; %%T4 = a0*b1
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4                       ; %%T3 = a1*b0 + a0*b1
+        VCLMUL_STEP1    %%GDATA_KEY, %%ZT1, %%ZT0, %%TH, %%TM, %%TL
+        VCLMUL_STEP2    %%GDATA_KEY, %%ZT1, %%ZT2, %%ZT0, %%ZT3, %%ZT4, %%TH, %%TM, %%TL
 
-%assign i 1
-%assign j 7
-%rep 7
-        vmovdqu         %%XTMP0, [%%T1 + 16*i]
-        vpshufb         %%XTMP0, [rel SHUF_MASK]
+        ;; result in %%ZT1(H):%%ZT2(L)
+        ;; reduce and put the result in AAD_HASH
+        VCLMUL_REDUCE   %%AAD_HASH, XWORD(%%POLY), XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT0), XWORD(%%ZT3)
 
-        vmovdqu         %%XTMP5, [%%GDATA_KEY + HashKey_ %+ j]
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = T1 + a1*b1
-        vpxor           %%XTMP1, %%XTMP1, %%XTMP4
+        sub             %%T2, 128
+        je              %%_CALC_AAD_done
 
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = T2 + a0*b0
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
-
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = T3 + a1*b0 + a0*b1
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
-%assign i (i + 1)
-%assign j (j - 1)
-%endrep
-
-        vpslldq         %%XTMP4, %%XTMP3, 8                             ; shift-L 2 DWs
-        vpsrldq         %%XTMP3, %%XTMP3, 8                             ; shift-R 2 DWs
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
-        vpxor           %%XTMP1, %%XTMP1, %%XTMP3                       ; accumulate the results in %%T1(M):%%T2(L)
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;first phase of the reduction
-        vmovdqa         %%XTMP5, [rel POLY2]
-        vpclmulqdq      %%XTMP0, %%XTMP5, %%XTMP2, 0x01
-        vpslldq         %%XTMP0, %%XTMP0, 8                             ; shift-L xmm2 2 DWs
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP0                       ; first phase of the reduction complete
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;second phase of the reduction
-        vpclmulqdq      %%XTMP3, %%XTMP5, %%XTMP2, 0x00
-        vpsrldq         %%XTMP3, %%XTMP3, 4                             ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
-
-        vpclmulqdq      %%XTMP4, %%XTMP5, %%XTMP2, 0x10
-        vpslldq         %%XTMP4, %%XTMP4, 4                             ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
-
-        vpxor           %%XTMP4, %%XTMP4, %%XTMP3                       ; second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%AAD_HASH, %%XTMP1, %%XTMP4                    ; the result is in %%T1
-
-        sub     %%T2, 128
-        je      %%_CALC_AAD_done
-
-        add     %%T1, 128
-        jmp     %%_get_AAD_loop128
+        add             %%T1, 128
+        jmp             %%_get_AAD_loop128
 
 %%_exit_AAD_loop128:
-        cmp     %%T2, 16
-        jl      %%_get_small_AAD_block
-
         ;; calculate hash_key position to start with
-        mov     %%T3, %%T2
-        and     %%T3, -16       ; 1 to 7 blocks possible here
-        neg     %%T3
-        add     %%T3, HashKey_1 + 16
-        lea     %%T3, [%%GDATA_KEY + %%T3]
+        mov             %%T3, %%T2
+        add             %%T3, 15
+        and             %%T3, -16       ; 1 to 8 blocks possible here
+        neg             %%T3
+        add             %%T3, HashKey_1 + 16
+        lea             %%T3, [%%GDATA_KEY + %%T3]
 
-        vmovdqu         %%XTMP0, [%%T1]
-        vpshufb         %%XTMP0, [rel SHUF_MASK]
+        ;; load and broadcast hash key
+        vbroadcastf64x2 %%ZT5, [%%T3]
 
-        vpxor           %%XTMP0, %%AAD_HASH
+        ;; load, broadcast and shuffle TEXT
+        cmp             %%T2, 16
+        jl              %%_AAD_rd_partial_block
+        vbroadcastf64x2 %%ZT0, [%%T1]
+        add             %%T3, 16        ; move to next hashkey
+        add             %%T1, 16        ; move to next data block
+        sub             %%T2, 16
+        jmp             %%_AAD_rd_partial_block_end
+%%_AAD_rd_partial_block:
+        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T3
+        vshufi64x2      %%ZT0, %%ZT0, %%ZT0, 0
+        xor             %%T2, %%T2
+%%_AAD_rd_partial_block_end:
+        vpshufb         %%ZT0, %%SHFMSK
 
-        vmovdqu         %%XTMP5, [%%T3]
-        vpclmulqdq      %%XTMP1, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = a1*b1
-        vpclmulqdq      %%XTMP2, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = a0*b0
-        vpclmulqdq      %%XTMP3, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = a1*b0
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10                 ; %%T4 = a0*b1
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4                       ; %%T3 = a1*b0 + a0*b1
+        ;; current AAD needs to be broadcasted across ZMM then XOR with TEXT
+        vshufi64x2      ZWORD(%%AAD_HASH), ZWORD(%%AAD_HASH), ZWORD(%%AAD_HASH), 0
+        vpxorq          %%ZT0, ZWORD(%%AAD_HASH)
 
-        add     %%T3, 16        ; move to next hashkey
-        add     %%T1, 16        ; move to next data block
-        sub     %%T2, 16
-        cmp     %%T2, 16
-        jl      %%_AAD_reduce
+        vpermilpd       %%ZT5, %%ZT5, 0110_1001b        ; => [ MM LH ]
+        vpermilpd       %%ZT0, %%ZT0, 1001_1001b        ; => [ MM LH ]
+        vpclmulqdq      %%ZT1, %%ZT0, %%ZT5, 0x00       ; all 64-bit words permuted above
+        ;; from here ZT1 will carry results of 4 multiplies
 
 %%_AAD_blocks:
-        vmovdqu         %%XTMP0, [%%T1]
-        vpshufb         %%XTMP0, [rel SHUF_MASK]
+        or              %%T2, %%T2
+        jz              %%_AAD_reduce
 
-        vmovdqu         %%XTMP5, [%%T3]
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x11                 ; %%T1 = T1 + a1*b1
-        vpxor           %%XTMP1, %%XTMP1, %%XTMP4
+        ;; load and broadcast hash key
+        vbroadcastf64x2 %%ZT5, [%%T3]
 
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x00                 ; %%T2 = T2 + a0*b0
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
+        ;; load, broadcast and shuffle TEXT
+        cmp             %%T2, 16
+        jl              %%_AAD_rd_partial_block2
+        vbroadcastf64x2 %%ZT0, [%%T1]
+        add             %%T3, 16        ; move to next hashkey
+        add             %%T1, 16
+        sub             %%T2, 16
+        jmp             %%_AAD_rd_partial_block_end2
+%%_AAD_rd_partial_block2:
+        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T3
+        vshufi64x2      %%ZT0, %%ZT0, %%ZT0, 0
+        xor             %%T2, %%T2
+%%_AAD_rd_partial_block_end2:
+        vpshufb         %%ZT0, %%SHFMSK
 
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x01                 ; %%T3 = T3 + a1*b0 + a0*b1
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
-        vpclmulqdq      %%XTMP4, %%XTMP0, %%XTMP5, 0x10
-        vpxor           %%XTMP3, %%XTMP3, %%XTMP4
+        vpermilpd       %%ZT5, %%ZT5, 0110_1001b        ; => [ MM LH ]
+        vpermilpd       %%ZT0, %%ZT0, 1001_1001b        ; => [ MM LH ]
+        vpclmulqdq      %%ZT2, %%ZT0, %%ZT5, 0x00       ; all 64-bit words permuted above
+        vpxorq          %%ZT1, %%ZT1, %%ZT2
 
-        add     %%T3, 16        ; move to next hashkey
-        add     %%T1, 16
-        sub     %%T2, 16
-        cmp     %%T2, 16
-        jl      %%_AAD_reduce
-        jmp     %%_AAD_blocks
+        jmp             %%_AAD_blocks
 
 %%_AAD_reduce:
-        vpslldq         %%XTMP4, %%XTMP3, 8                             ; shift-L 2 DWs
-        vpsrldq         %%XTMP3, %%XTMP3, 8                             ; shift-R 2 DWs
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP4
-        vpxor           %%XTMP1, %%XTMP1, %%XTMP3                       ; accumulate the results in %%T1(M):%%T2(L)
+        ;; ZT1 here looks as follows
+        ;; [127..  0] sum of hi 64-bit word multiplies
+        ;; [255..128] sum of lo 64-bit word multiplies
+        ;; [383..256] sum of med 64-bit word multiplies (hi hash key with lo text)
+        ;; [511..384] sum of med 64-bit word multiplies (lo hash key with hi text)
+        ;; - medium 128-bit words need to be xor'ed
+        ;; - then the med results needs to be added to lo and hi words accordingly
+        vextracti32x4   XWORD(%%ZT2), %%ZT1, 1
+        vextracti32x4   XWORD(%%ZT3), %%ZT1, 2
+        vextracti32x4   XWORD(%%ZT4), %%ZT1, 3
+        vpxorq          XWORD(%%ZT3), XWORD(%%ZT3), XWORD(%%ZT4)
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;first phase of the reduction
-        vmovdqa         %%XTMP5, [rel POLY2]
-        vpclmulqdq      %%XTMP0, %%XTMP5, %%XTMP2, 0x01
-        vpslldq         %%XTMP0, %%XTMP0, 8                             ; shift-L xmm2 2 DWs
-        vpxor           %%XTMP2, %%XTMP2, %%XTMP0                       ; first phase of the reduction complete
+        vpslldq         XWORD(%%ZT4), XWORD(%%ZT3), 8                             ; shift-L 2 DWs
+        vpsrldq         XWORD(%%ZT3), XWORD(%%ZT3), 8                             ; shift-R 2 DWs
+        vpxor           XWORD(%%ZT2), XWORD(%%ZT2), XWORD(%%ZT4)
+        vpxor           XWORD(%%ZT1), XWORD(%%ZT1), XWORD(%%ZT3)                  ; accumulate the results in %%T1(M):%%T2(L)
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;second phase of the reduction
-        vpclmulqdq      %%XTMP3, %%XTMP5, %%XTMP2, 0x00
-        vpsrldq         %%XTMP3, %%XTMP3, 4                             ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
-
-        vpclmulqdq      %%XTMP4, %%XTMP5, %%XTMP2, 0x10
-        vpslldq         %%XTMP4, %%XTMP4, 4                             ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
-
-        vpxor           %%XTMP4, %%XTMP4, %%XTMP3                       ; second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%AAD_HASH, %%XTMP1, %%XTMP4                    ; the result is in %%T1
-
-        or      %%T2, %%T2
-        je      %%_CALC_AAD_done
-
-%%_get_small_AAD_block:
-        vmovdqu         %%XTMP0, [%%GDATA_KEY + HashKey]
-        READ_SMALL_DATA_INPUT   %%XTMP1, %%T1, %%T2, %%T3
-        ;byte-reflect the AAD data
-        vpshufb         %%XTMP1, [rel SHUF_MASK]
-        vpxor           %%AAD_HASH, %%XTMP1
-        GHASH_MUL       %%AAD_HASH, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
+        VCLMUL_REDUCE   %%AAD_HASH, XWORD(%%POLY), XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT0), XWORD(%%ZT3)
 
 %%_CALC_AAD_done:
 
@@ -2594,7 +2657,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %define %%AAD_HASH      xmm14
 
-        CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, %%GPR1, %%GPR2, %%GPR3
+        CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, %%GPR1, %%GPR2, %%GPR3
 
         mov     %%GPR1, %%A_LEN
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH         ; ctx_data.aad hash = aad_hash
@@ -3107,74 +3170,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 ;;; ===========================================================================
 ;;; ===========================================================================
-;;; Horizontal XOR - 4 x 128bits xored together
-%macro VHPXORI4x128 2
-%define %%REG   %1              ; [in/out] zmm512 4x128bits to xor; i128 on output
-%define %%TMP   %2              ; temporary register
-        vextracti64x4   YWORD(%%TMP), %%REG, 1
-        vpxorq          YWORD(%%REG), YWORD(%%REG), YWORD(%%TMP)
-        vextracti32x4   XWORD(%%TMP), YWORD(%%REG), 1
-        vpxorq          XWORD(%%REG), XWORD(%%REG), XWORD(%%TMP)
-%endmacro                       ; VHPXORI4x128
-
-;;; ===========================================================================
-;;; ===========================================================================
-;;; schoolbook multiply - 1st step
-%macro CLMUL_INIT 6
-%define %%KP    %1              ; [in] key pointer
-%define %%HI    %2              ; [in] previous blocks 4 to 7
-%define %%TMP   %3
-%define %%TH    %4              ; [out] tmp high
-%define %%TM    %5              ; [out] tmp medium
-%define %%TL    %6              ; [out] tmp low
-        vmovdqu64       %%TMP, [%%KP + HashKey_4]
-        vpclmulqdq      %%TH, %%HI, %%TMP, 0x11     ; %%T5 = a1*b1
-        vpclmulqdq      %%TL, %%HI, %%TMP, 0x00     ; %%T7 = a0*b0
-        vpclmulqdq      %%TM, %%HI, %%TMP, 0x01     ; %%T6 = a1*b0
-        vpclmulqdq      %%TMP, %%HI, %%TMP, 0x10    ; %%T4 = a0*b1
-        vpxorq          %%TM, %%TM, %%TMP           ; [%%TH : %%TM : %%TL]
-%endmacro                       ; CLMUL_INIT
-
-;;; ===========================================================================
-;;; ===========================================================================
-;;; schoolbook multiply - 2nd step
-%macro CLMUL_STEP 9
-%define %%KP    %1              ; [in] key pointer
-%define %%HI    %2              ; [out] high 128b of hash to reduce
-%define %%LO    %3              ; [in/out] previous blocks 0 to 3; low 128b of hash to reduce
-%define %%TMP0  %4
-%define %%TMP1  %5
-%define %%TMP2  %6
-%define %%TH    %7              ; [in] tmp high
-%define %%TM    %8              ; [in] tmp medium
-%define %%TL    %9              ; [in] tmp low
-
-        vmovdqu64       %%TMP0, [%%KP + HashKey_8]
-        vpclmulqdq      %%TMP1, %%LO, %%TMP0, 0x10     ; %%TMP1 = a0*b1
-        vpclmulqdq      %%TMP2, %%LO, %%TMP0, 0x11     ; %%TMP2 = a1*b1
-        vpxorq          %%TH, %%TH, %%TMP2
-        vpclmulqdq      %%TMP2, %%LO, %%TMP0, 0x00     ; %%TMP2 = a0*b0
-        vpxorq          %%TL, %%TL, %%TMP2
-        vpclmulqdq      %%TMP0, %%LO, %%TMP0, 0x01     ; %%TMP0 = a1*b0
-        vpternlogq      %%TM, %%TMP1, %%TMP0, 0x96     ; %%TM = TM xor TMP1 xor TMP0
-
-        ;; finish multiplications
-        vpsrldq         %%TMP2, %%TM, 8
-        vpxorq          %%HI, %%TH, %%TMP2
-        vpslldq         %%TMP2, %%TM, 8
-        vpxorq          %%LO, %%TL, %%TMP2
-
-        ;; xor 128bit words horizontally and compute [(X8*H1) + (X7*H2) + ... ((X1+Y0)*H8]
-        ;; note: (X1+Y0) handled elsewhere
-        VHPXORI4x128    %%HI, %%TMP2
-        VHPXORI4x128    %%LO, %%TMP1
-        ;; HIx holds top 128 bits
-        ;; LOx holds low 128 bits
-        ;; - further reductions to follow
-%endmacro                       ; CLMUL_STEP
-
-;;; ===========================================================================
-;;; ===========================================================================
 ;;; Encrypt the initial 8 blocks from 4 lanes and apply ghash on the ciphertext
 %macro INITIAL_BLOCKS_x4 33
 %define %%IN                    %1      ; pointer to array of pointers to input text
@@ -3479,7 +3474,8 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         mov             %%INP3, [%%IN + 8*3]
 
         ;; =====================================================================
-        CLMUL_INIT %%KEYP0, %%PREVHI0, %%T4, %%TH, %%TM, %%TL
+        VCLMUL_STEP1 %%KEYP0, %%PREVHI0, %%T4, %%TH, %%TM, %%TL
+
                 AESROUND4x128 %%L0B03, %%L0B47, %%L1B03, %%L1B47, \
                         %%L2B03, %%L2B47, %%L3B03, %%L3B47, \
                         %%T0, %%T1, %%T2, %%T3, \
@@ -3487,7 +3483,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                         %%TEXTL0B03, %%TEXTL0B47, %%TEXTL1B03, %%TEXTL1B47, \
                         %%TEXTL2B03, %%TEXTL2B47, %%TEXTL3B03, %%TEXTL3B47
 
-        CLMUL_STEP %%KEYP0, %%PREVHI0, %%PREVLO0, %%T4, %%T8, %%T9, %%TH, %%TM, %%TL
+        VCLMUL_STEP2 %%KEYP0, %%PREVHI0, %%PREVLO0, %%T4, %%T8, %%T9, %%TH, %%TM, %%TL
 
                 AESROUND4x128 %%L0B03, %%L0B47, %%L1B03, %%L1B47, \
                         %%L2B03, %%L2B47, %%L3B03, %%L3B47, \
@@ -3498,7 +3494,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;; =====================================================================
 
-        CLMUL_INIT %%KEYP1, %%PREVHI1, %%T4, %%TH, %%TM, %%TL
+        VCLMUL_STEP1 %%KEYP1, %%PREVHI1, %%T4, %%TH, %%TM, %%TL
 
                 AESROUND4x128 %%L0B03, %%L0B47, %%L1B03, %%L1B47, \
                         %%L2B03, %%L2B47, %%L3B03, %%L3B47, \
@@ -3507,7 +3503,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                         %%TEXTL0B03, %%TEXTL0B47, %%TEXTL1B03, %%TEXTL1B47, \
                         %%TEXTL2B03, %%TEXTL2B47, %%TEXTL3B03, %%TEXTL3B47
 
-        CLMUL_STEP %%KEYP1, %%PREVHI1, %%PREVLO1, %%T4, %%T8, %%T9, %%TH, %%TM, %%TL
+        VCLMUL_STEP2 %%KEYP1, %%PREVHI1, %%PREVLO1, %%T4, %%T8, %%T9, %%TH, %%TM, %%TL
 
                 AESROUND4x128 %%L0B03, %%L0B47, %%L1B03, %%L1B47, \
                         %%L2B03, %%L2B47, %%L3B03, %%L3B47, \
@@ -3522,7 +3518,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;; =====================================================================
 
-        CLMUL_INIT %%KEYP2, %%PREVHI2, %%T4, %%T5, %%T6, %%T7
+        VCLMUL_STEP1 %%KEYP2, %%PREVHI2, %%T4, %%T5, %%T6, %%T7
 
                 AESROUND4x128 %%L0B03, %%L0B47, %%L1B03, %%L1B47, \
                         %%L2B03, %%L2B47, %%L3B03, %%L3B47, \
@@ -3531,7 +3527,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                         %%TEXTL0B03, %%TEXTL0B47, %%TEXTL1B03, %%TEXTL1B47, \
                         %%TEXTL2B03, %%TEXTL2B47, %%TEXTL3B03, %%TEXTL3B47
 
-        CLMUL_STEP %%KEYP2, %%PREVHI2, %%PREVLO2, %%T4, %%T8, %%T9, %%T5, %%T6, %%T7
+        VCLMUL_STEP2 %%KEYP2, %%PREVHI2, %%PREVLO2, %%T4, %%T8, %%T9, %%T5, %%T6, %%T7
 
                 AESROUND4x128 %%L0B03, %%L0B47, %%L1B03, %%L1B47, \
                         %%L2B03, %%L2B47, %%L3B03, %%L3B47, \
@@ -3546,7 +3542,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;; =====================================================================
 
-        CLMUL_INIT %%KEYP3, %%PREVHI3, %%T4, %%T5, %%T6, %%T7
+        VCLMUL_STEP1 %%KEYP3, %%PREVHI3, %%T4, %%T5, %%T6, %%T7
 
                 AESROUND4x128 %%L0B03, %%L0B47, %%L1B03, %%L1B47, \
                         %%L2B03, %%L2B47, %%L3B03, %%L3B47, \
@@ -3555,7 +3551,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                         %%TEXTL0B03, %%TEXTL0B47, %%TEXTL1B03, %%TEXTL1B47, \
                         %%TEXTL2B03, %%TEXTL2B47, %%TEXTL3B03, %%TEXTL3B47
 
-        CLMUL_STEP %%KEYP3, %%PREVHI3, %%PREVLO3, %%T4, %%T8, %%T9, %%T5, %%T6, %%T7
+        VCLMUL_STEP2 %%KEYP3, %%PREVHI3, %%PREVLO3, %%T4, %%T8, %%T9, %%T5, %%T6, %%T7
 
                 AESROUND4x128 %%L0B03, %%L0B47, %%L1B03, %%L1B47, \
                         %%L2B03, %%L2B47, %%L3B03, %%L3B47, \
@@ -3744,8 +3740,8 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; =====================================================================
         ;; lane 0, 8 blocks
 
-        CLMUL_INIT      %%KEYP0, %%L0B47, %%T4, %%TH, %%TM, %%TL
-        CLMUL_STEP      %%KEYP0, %%L0B47, %%L0B03, \
+        VCLMUL_STEP1    %%KEYP0, %%L0B47, %%T4, %%TH, %%TM, %%TL
+        VCLMUL_STEP2    %%KEYP0, %%L0B47, %%L0B03, \
                         %%T4, %%T8, %%T9, \
                         %%TH, %%TM, %%TL
 
@@ -3755,8 +3751,8 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; =====================================================================
         ;; lane 1, 8 blocks
 
-        CLMUL_INIT      %%KEYP1, %%L1B47, %%T4, %%TH, %%TM, %%TL
-        CLMUL_STEP      %%KEYP1, %%L1B47, %%L1B03, \
+        VCLMUL_STEP1    %%KEYP1, %%L1B47, %%T4, %%TH, %%TM, %%TL
+        VCLMUL_STEP2    %%KEYP1, %%L1B47, %%L1B03, \
                         %%T4, %%T8, %%T9, \
                         %%TH, %%TM, %%TL
 
@@ -3766,8 +3762,8 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; =====================================================================
         ;; lane 2, 8 blocks
 
-        CLMUL_INIT      %%KEYP2, %%L2B47, %%T4, %%TH, %%TM, %%TL
-        CLMUL_STEP      %%KEYP2, %%L2B47, %%L2B03, \
+        VCLMUL_STEP1    %%KEYP2, %%L2B47, %%T4, %%TH, %%TM, %%TL
+        VCLMUL_STEP2    %%KEYP2, %%L2B47, %%L2B03, \
                         %%T4, %%T8, %%T9, \
                         %%TH, %%TM, %%TL
 
@@ -3777,8 +3773,8 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; =====================================================================
         ;; lane 3, 8 blocks
 
-        CLMUL_INIT      %%KEYP3, %%L3B47, %%T4, %%TH, %%TM, %%TL
-        CLMUL_STEP      %%KEYP3, %%L3B47, %%L3B03, \
+        VCLMUL_STEP1    %%KEYP3, %%L3B47, %%T4, %%TH, %%TM, %%TL
+        VCLMUL_STEP2    %%KEYP3, %%L3B47, %%L3B03, \
                         %%T4, %%T8, %%T9, \
                         %%TH, %%TM, %%TL
 
