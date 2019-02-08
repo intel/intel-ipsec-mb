@@ -270,6 +270,92 @@ default rel
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %endmacro
 
+;;; ===========================================================================
+;;; ===========================================================================
+;;; AVX512 VPCLMULQDQ SINGLE BLOCK GHASH MUL
+%macro VCLMUL_1BLOCK 10
+%define %%OUT         %1  ;; [in/out] zmm intermediate result
+%define %%AAD_HASH    %2  ;; [in] xmm register with current hash value
+%define %%GDATA       %3  ;; [in] pointer to hash key table
+%define %%HKEY_OFFSET %4  ;; [in] offset to hash key table
+%define %%TEXT        %5  ;; [in] pointer to data or an xmm register
+%define %%TEXT_SRC    %6  ;; [in] selects source of the text (text_mem or text_zmm)
+%define %%FIRST_BLOCK %7  ;; [in] selects which block is processed (first or not_first)
+%define %%SHFMSK      %8  ;; [in] byte shuffle mask (zmm register expected)
+%define %%LT0         %9  ;; [clobbered] temporary zmm
+%define %%LT1         %10 ;; [clobbered] temporary zmm
+
+        ;; load, broadcast and permute the hash key
+        vbroadcastf64x2 %%LT1, [%%GDATA + %%HKEY_OFFSET]
+        ;; 0110_1001b => [ Med Med Low High ] multiply products
+        ;; - see vpermilpd further down and VCLMUL_1BLOCK_GATHER for details
+        vpermilpd       %%LT1, %%LT1, 0110_1001b        ; => [ MM LH ]
+
+%ifidn %%FIRST_BLOCK, first
+        ;; current AAD needs to be broadcasted across ZMM then XOR with TEXT
+        ;; use %%OUT for broadcasted AAD
+        vmovdqa64       XWORD(%%OUT), %%AAD_HASH
+        vshufi64x2      %%OUT, %%OUT, %%OUT, 0
+%endif
+
+        ;; load and shuffle the text
+%ifidn %%TEXT_SRC, text_mem
+        vbroadcastf64x2 %%LT0, [%%TEXT]
+%else
+        vshufi64x2      %%LT0, %%TEXT, %%TEXT, 0
+%endif
+        vpshufb         %%LT0, %%SHFMSK
+
+%ifidn %%FIRST_BLOCK, first
+        ;; xor current hash with the 1st text block
+        vpxorq          %%LT0, %%LT0, %%OUT
+%endif
+        ;; 1001_1001b => [ Med Med Low High ] multiply products
+        ;; - see vpermilpd above and VCLMUL_1BLOCK_GATHER for details
+        vpermilpd       %%LT0, %%LT0, 1001_1001b
+%ifidn %%FIRST_BLOCK, first
+        ;; put result directly into OUT
+        vpclmulqdq      %%OUT, %%LT0, %%LT1, 0x00       ; all 64-bit words permuted above
+%else
+        ;; xor CLMUL result with OUT and put result into OUT
+        vpclmulqdq      %%LT0, %%LT0, %%LT1, 0x00       ; all 64-bit words permuted above
+        vpxorq          %%OUT, %%LT0, %%OUT
+%endif
+%endmacro
+
+;;; ===========================================================================
+;;; ===========================================================================
+;;; AVX512 VPCLMULQDQ GATHER GHASH result for further reduction
+;;;
+;;; %%IN here looks as follows
+;;; [127..  0] sum of hi 64-bit word multiplies (hi hash key with hi text)
+;;; [255..128] sum of lo 64-bit word multiplies (lo hash key with lo text)
+;;; [383..256] sum of med 64-bit word multiplies (hi hash key with lo text)
+;;; [511..384] sum of med 64-bit word multiplies (lo hash key with hi text)
+;;;
+;;; - medium 128-bit words need to be xor'ed together
+;;; - then the med results need to be added to lo and hi words accordingly
+;;;
+%macro VCLMUL_1BLOCK_GATHER 6
+%define %%OUTH        %1  ;; [out] xmm result high 128 bits
+%define %%OUTL        %2  ;; [out] xmm result low 128 bits
+%define %%IN          %3  ;; [in] zmm intermediate result
+%define %%LT1         %4  ;; [clobbered] temporary zmm
+%define %%LT2         %5  ;; [clobbered] temporary zmm
+%define %%LT3         %6  ;; [clobbered] temporary zmm
+
+        vextracti32x4   XWORD(%%LT1), %%IN, 1
+        vextracti32x4   XWORD(%%LT2), %%IN, 2
+        vextracti32x4   XWORD(%%LT3), %%IN, 3
+        vpxorq          XWORD(%%LT2), XWORD(%%LT2), XWORD(%%LT3)
+
+        vpslldq         XWORD(%%LT3), XWORD(%%LT2), 8                   ; shift-L 2 DWs
+        vpsrldq         XWORD(%%LT2), XWORD(%%LT2), 8                   ; shift-R 2 DWs
+        ;; accumulate the results in %%OUTH:%%OUTL
+        vpxorq          %%OUTH, XWORD(%%LT2), XWORD(%%IN)
+        vpxorq          %%OUTL, XWORD(%%LT3), XWORD(%%LT1)
+%endmacro
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GHASH_MUL MACRO to implement: Data*HashKey mod (128,127,126,121,0)
 ; Input: A and B (128-bits each, bit-reflected)
@@ -416,7 +502,7 @@ default rel
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CALC_AAD_HASH   17
+%macro  CALC_AAD_HASH   18
 %define %%A_IN          %1
 %define %%A_LEN         %2
 %define %%AAD_HASH      %3      ; xmm output register
@@ -434,6 +520,7 @@ default rel
 %define %%T1            %15     ; temp reg 1
 %define %%T2            %16
 %define %%T3            %17
+%define %%T4            %18
 
 %define %%SHFMSK %%ZT9
 %define %%POLY   %%ZT8
@@ -473,6 +560,9 @@ default rel
         jmp             %%_get_AAD_loop128
 
 %%_exit_AAD_loop128:
+        or              %%T2, %%T2
+        jz              %%_CALC_AAD_done
+
         ;; calculate hash_key position to start with
         mov             %%T3, %%T2
         add             %%T3, 15
@@ -481,82 +571,58 @@ default rel
         add             %%T3, HashKey_1 + 16
         lea             %%T3, [%%GDATA_KEY + %%T3]
 
-        ;; load and broadcast hash key
-        vbroadcastf64x2 %%ZT5, [%%T3]
-
         ;; load, broadcast and shuffle TEXT
         cmp             %%T2, 16
         jl              %%_AAD_rd_partial_block
-        vbroadcastf64x2 %%ZT0, [%%T1]
+
+        VCLMUL_1BLOCK   %%ZT1, %%AAD_HASH, %%T3, 0, \
+                        %%T1, text_mem, first, \
+                        %%SHFMSK, %%ZT5, %%ZT6
+
         add             %%T3, 16        ; move to next hashkey
         add             %%T1, 16        ; move to next data block
         sub             %%T2, 16
-        jmp             %%_AAD_rd_partial_block_end
+        jmp             %%_AAD_blocks
+
 %%_AAD_rd_partial_block:
-        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T3
-        vshufi64x2      %%ZT0, %%ZT0, %%ZT0, 0
-        xor             %%T2, %%T2
-%%_AAD_rd_partial_block_end:
-        vpshufb         %%ZT0, %%SHFMSK
-
-        ;; current AAD needs to be broadcasted across ZMM then XOR with TEXT
-        vshufi64x2      ZWORD(%%AAD_HASH), ZWORD(%%AAD_HASH), ZWORD(%%AAD_HASH), 0
-        vpxorq          %%ZT0, ZWORD(%%AAD_HASH)
-
-        vpermilpd       %%ZT5, %%ZT5, 0110_1001b        ; => [ MM LH ]
-        vpermilpd       %%ZT0, %%ZT0, 1001_1001b        ; => [ MM LH ]
-        vpclmulqdq      %%ZT1, %%ZT0, %%ZT5, 0x00       ; all 64-bit words permuted above
-        ;; from here ZT1 will carry results of 4 multiplies
+        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T4
+        VCLMUL_1BLOCK   %%ZT1, %%AAD_HASH, %%T3, 0, \
+                        %%ZT0, text_zmm, first, \
+                        %%SHFMSK, %%ZT5, %%ZT6
+        jmp             %%_AAD_reduce
 
 %%_AAD_blocks:
         or              %%T2, %%T2
         jz              %%_AAD_reduce
 
-        ;; load and broadcast hash key
-        vbroadcastf64x2 %%ZT5, [%%T3]
-
-        ;; load, broadcast and shuffle TEXT
         cmp             %%T2, 16
-        jl              %%_AAD_rd_partial_block2
-        vbroadcastf64x2 %%ZT0, [%%T1]
+        jl              %%_AAD_rd_partial_block_2
+
+        VCLMUL_1BLOCK   %%ZT1, %%AAD_HASH, %%T3, 0, \
+                        %%T1, text_mem, not_first, \
+                        %%SHFMSK, %%ZT5, %%ZT6
+
         add             %%T3, 16        ; move to next hashkey
         add             %%T1, 16
         sub             %%T2, 16
-        jmp             %%_AAD_rd_partial_block_end2
-%%_AAD_rd_partial_block2:
-        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T3
-        vshufi64x2      %%ZT0, %%ZT0, %%ZT0, 0
-        xor             %%T2, %%T2
-%%_AAD_rd_partial_block_end2:
-        vpshufb         %%ZT0, %%SHFMSK
-
-        vpermilpd       %%ZT5, %%ZT5, 0110_1001b        ; => [ MM LH ]
-        vpermilpd       %%ZT0, %%ZT0, 1001_1001b        ; => [ MM LH ]
-        vpclmulqdq      %%ZT2, %%ZT0, %%ZT5, 0x00       ; all 64-bit words permuted above
-        vpxorq          %%ZT1, %%ZT1, %%ZT2
-
         jmp             %%_AAD_blocks
 
+%%_AAD_rd_partial_block_2:
+        READ_SMALL_DATA_INPUT \
+                        XWORD(%%ZT0), %%T1, %%T2, %%T4
+
+        VCLMUL_1BLOCK   %%ZT1, %%AAD_HASH, %%T3, 0, \
+                        %%ZT0, text_zmm, not_first, \
+                        %%SHFMSK, %%ZT5, %%ZT6
+
 %%_AAD_reduce:
-        ;; ZT1 here looks as follows
-        ;; [127..  0] sum of hi 64-bit word multiplies
-        ;; [255..128] sum of lo 64-bit word multiplies
-        ;; [383..256] sum of med 64-bit word multiplies (hi hash key with lo text)
-        ;; [511..384] sum of med 64-bit word multiplies (lo hash key with hi text)
-        ;; - medium 128-bit words need to be xor'ed
-        ;; - then the med results needs to be added to lo and hi words accordingly
-        vextracti32x4   XWORD(%%ZT2), %%ZT1, 1
-        vextracti32x4   XWORD(%%ZT3), %%ZT1, 2
-        vextracti32x4   XWORD(%%ZT4), %%ZT1, 3
-        vpxorq          XWORD(%%ZT3), XWORD(%%ZT3), XWORD(%%ZT4)
+        ;; accumulate the results in %%ZT0(H):%%ZT2(L)
+        VCLMUL_1BLOCK_GATHER \
+                        XWORD(%%ZT0), XWORD(%%ZT2), %%ZT1, %%ZT5, %%ZT6, %%ZT7
 
-        vpslldq         XWORD(%%ZT4), XWORD(%%ZT3), 8                             ; shift-L 2 DWs
-        vpsrldq         XWORD(%%ZT3), XWORD(%%ZT3), 8                             ; shift-R 2 DWs
-        vpxor           XWORD(%%ZT2), XWORD(%%ZT2), XWORD(%%ZT4)
-        vpxor           XWORD(%%ZT1), XWORD(%%ZT1), XWORD(%%ZT3)                  ; accumulate the results in %%T1(M):%%T2(L)
-
-        VCLMUL_REDUCE   %%AAD_HASH, XWORD(%%POLY), XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT0), XWORD(%%ZT3)
-
+        VCLMUL_REDUCE   %%AAD_HASH, XWORD(%%POLY), \
+                        XWORD(%%ZT0), XWORD(%%ZT2), \
+                        XWORD(%%ZT5), XWORD(%%ZT6)
 %%_CALC_AAD_done:
 
 %endmacro ; CALC_AAD_HASH
@@ -2657,7 +2723,9 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %define %%AAD_HASH      xmm14
 
-        CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, %%GPR1, %%GPR2, %%GPR3
+        CALC_AAD_HASH   %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
+                        zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                        %%GPR1, %%GPR2, %%GPR3, rax
 
         mov     %%GPR1, %%A_LEN
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH         ; ctx_data.aad hash = aad_hash
@@ -4548,7 +4616,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; IV            %3
         ;; A_IN          %4
         ;; A_LEN         %5
-        ;; r10 to 12 - temporary GPR's
+        ;; r10-r12 - temporary GPR's
         GCM_INIT        r9, %%LCTX, r13, r14, rax, r10, r11, r12
 
         ;; check if all lanes populated
