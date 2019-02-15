@@ -275,13 +275,13 @@ default rel
 ;;; AVX512 VPCLMULQDQ SINGLE BLOCK GHASH MUL
 %macro VCLMUL_1BLOCK 10
 %define %%OUT         %1  ;; [in/out] zmm intermediate result
-%define %%AAD_HASH    %2  ;; [in] xmm register with current hash value
+%define %%AAD_HASH    %2  ;; [in] xmm register with current hash value or 'no_aad'
 %define %%GDATA       %3  ;; [in] pointer to hash key table
 %define %%HKEY_OFFSET %4  ;; [in] offset to hash key table
 %define %%TEXT        %5  ;; [in] pointer to data or an xmm register
 %define %%TEXT_SRC    %6  ;; [in] selects source of the text (text_mem or text_zmm)
 %define %%FIRST_BLOCK %7  ;; [in] selects which block is processed (first or not_first)
-%define %%SHFMSK      %8  ;; [in] byte shuffle mask (zmm register expected)
+%define %%SHFMSK      %8  ;; [in] ZMM register with byte shuffle mask or 'no_shuffle'
 %define %%LT0         %9  ;; [clobbered] temporary zmm
 %define %%LT1         %10 ;; [clobbered] temporary zmm
 
@@ -292,11 +292,13 @@ default rel
         vpermilpd       %%LT1, %%LT1, 0110_1001b        ; => [ MM LH ]
 
 %ifidn %%FIRST_BLOCK, first
+%ifnidn %%AAD_HASH, no_aad
         ;; current AAD needs to be broadcasted across ZMM then XOR with TEXT
         ;; use %%OUT for broadcasted AAD
         vmovdqa64       XWORD(%%OUT), %%AAD_HASH
         vshufi64x2      %%OUT, %%OUT, %%OUT, 0
-%endif
+%endif                          ; !no_aad
+%endif                          ; first block
 
         ;; load and shuffle the text
 %ifidn %%TEXT_SRC, text_mem
@@ -304,11 +306,16 @@ default rel
 %else
         vshufi64x2      %%LT0, %%TEXT, %%TEXT, 0
 %endif
+
+%ifnidn %%SHFMSK, no_shuffle
         vpshufb         %%LT0, %%SHFMSK
+%endif
 
 %ifidn %%FIRST_BLOCK, first
+%ifnidn %%AAD_HASH, no_aad
         ;; xor current hash with the 1st text block
         vpxorq          %%LT0, %%LT0, %%OUT
+%endif
 %endif
         ;; 1001_1001b => [ Med Med Low High ] multiply products
         ;; - see vpermilpd above and VCLMUL_1BLOCK_GATHER for details
@@ -470,7 +477,6 @@ default rel
         vpxor    %%T1, %%T5
         vmovdqu  [%%GDATA + HashKey_8_k], %%T1
 %endmacro
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; READ_SMALL_DATA_INPUT: Packs xmm register with data when data input is less than 16 bytes.
