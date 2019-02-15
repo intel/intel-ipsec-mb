@@ -42,6 +42,7 @@
 %include "dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
 %include "transpose_avx512.asm"
+%include "reg_sizes.asm"
 
 section .data
 default rel
@@ -196,15 +197,37 @@ section .text
 	vprold		%%WT, %%WT, 1
 %endmacro
 
-; Note this is reading in a block of data for one lane
-; When all 16 are read, the data must be transposed to build msg schedule
-%macro MSG_SCHED_ROUND_00_15 2
-%define %%WT	 %1
-%define %%OFFSET %2
-	mov		inp0, [state + _data_ptr_sha1 + (%%OFFSET*PTR_SZ)]
-	vmovups		%%WT, [inp0+IDX]
-%endmacro
 
+; Note this is reading in two blocks of data from each lane,
+; in preparation for the upcoming needed transpose to build msg schedule.
+; Each register will contain 32 bytes from one lane plus 32 bytes
+; from another lane.
+; The first 8 registers will contain the first 32 bytes of all lanes,
+; where register X (0 <= X <= 7) will contain bytes 0-31 from lane X in the first half
+; and 0-31 bytes from lane X+8 in the second half.
+; The last 8 registers will contain the last 32 bytes of all lanes,
+; where register Y (8 <= Y <= 15) wil contain bytes 32-63 from lane Y-8 in the first half
+; and 32-63 bytes from lane Y in the second half.
+; This method helps reducing the number of shuffles required to transpose the data.
+%macro MSG_SCHED_ROUND_00_15 6
+%define %%Wt         %1 ; [out] zmm register to load the next block
+%define %%LANE_IDX   %2 ; [in] lane index (0-15)
+%define %%BASE_PTR   %3 ; [in] base address of the input data
+%define %%OFFSET_PTR %4 ; [in] offset to get next block of data from the lane
+%define %%TMP1       %5 ; [clobbered] temporary gp register
+%define %%TMP2       %6 ; [clobbered] temporary gp register
+%if (%%LANE_IDX < 8)
+	mov	      %%TMP1,	   [%%BASE_PTR + %%LANE_IDX*PTR_SZ]
+	mov	      %%TMP2,      [%%BASE_PTR + (%%LANE_IDX+8)*PTR_SZ]
+	vmovups       YWORD(%%Wt), [%%TMP1+%%OFFSET_PTR]
+	vinserti64x4  %%Wt, %%Wt,  [%%TMP2+%%OFFSET_PTR], 0x01
+%else
+	mov	     %%TMP1,      [%%BASE_PTR + (%%LANE_IDX-8)*PTR_SZ]
+	mov	     %%TMP2,      [%%BASE_PTR + %%LANE_IDX*PTR_SZ]
+	vmovups      YWORD(%%Wt), [%%TMP1+%%OFFSET_PTR+32]
+	vinserti64x4 %%Wt, %%Wt,  [%%TMP2+%%OFFSET_PTR+32], 0x01
+%endif
+%endmacro
 
 align 64
 ; void sha1_mult_x16_avx3(void **input_data, UINT128 *digest, UINT32 size)
@@ -223,7 +246,12 @@ sha1_x16_avx512:
 
 	xor IDX, IDX
 
-	;; transpose input onto stack
+	;; Load first blocks of data into ZMM registers before
+	;; performing a 16x16 32-bit transpose.
+	;; To speed up the transpose, data is loaded in chunks of 32 bytes,
+	;; interleaving data between lane X and lane X+8.
+	;; This way, final shuffles between top half and bottom half
+	;; of the matrix are avoided.
 	mov	inp0, [state + _data_ptr_sha1 + 0*PTR_SZ]
 	mov	inp1, [state + _data_ptr_sha1 + 1*PTR_SZ]
 	mov	inp2, [state + _data_ptr_sha1 + 2*PTR_SZ]
@@ -233,14 +261,10 @@ sha1_x16_avx512:
 	mov	inp6, [state + _data_ptr_sha1 + 6*PTR_SZ]
 	mov	inp7, [state + _data_ptr_sha1 + 7*PTR_SZ]
 
-	vmovups	W0,[inp0+IDX]
-	vmovups	W1,[inp1+IDX]
-	vmovups	W2,[inp2+IDX]
-	vmovups	W3,[inp3+IDX]
-	vmovups	W4,[inp4+IDX]
-	vmovups	W5,[inp5+IDX]
-	vmovups	W6,[inp6+IDX]
-	vmovups	W7,[inp7+IDX]
+	TRANSPOSE16_U32_LOAD_FIRST8 W0, W1, W2,  W3,  W4,  W5,  W6,  W7, \
+				    W8, W9, W10, W11, W12, W13, W14, W15, \
+				    inp0, inp1, inp2, inp3, inp4, inp5, \
+				    inp6, inp7, IDX
 
 	mov	inp0, [state + _data_ptr_sha1 + 8*PTR_SZ]
 	mov	inp1, [state + _data_ptr_sha1 + 9*PTR_SZ]
@@ -251,15 +275,10 @@ sha1_x16_avx512:
 	mov	inp6, [state + _data_ptr_sha1 +14*PTR_SZ]
 	mov	inp7, [state + _data_ptr_sha1 +15*PTR_SZ]
 
-	vmovups	W8, [inp0+IDX]
-	vmovups	W9, [inp1+IDX]
-	vmovups	W10,[inp2+IDX]
-	vmovups	W11,[inp3+IDX]
-	vmovups	W12,[inp4+IDX]
-	vmovups	W13,[inp5+IDX]
-	vmovups	W14,[inp6+IDX]
-	vmovups	W15,[inp7+IDX]
-
+	TRANSPOSE16_U32_LOAD_LAST8 W0, W1, W2,  W3,  W4,  W5,  W6,  W7, \
+				   W8, W9, W10, W11, W12, W13, W14, W15, \
+				   inp0, inp1, inp2, inp3, inp4, inp5, \
+				   inp6, inp7, IDX
 lloop:
 	vmovdqa32	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
@@ -316,7 +335,7 @@ lloop:
 %assign J 0
 %rep 16
 	PROCESS_LOOP  APPEND(W,J),  I
-	MSG_SCHED_ROUND_00_15 APPEND(W,J), J
+	MSG_SCHED_ROUND_00_15 APPEND(W,J), J, state + _data_ptr_sha1, IDX, inp0, inp1
 %assign J (J+1)
 %endrep
 
