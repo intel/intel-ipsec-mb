@@ -496,13 +496,12 @@ default rel
 
 %endmacro ; READ_SMALL_DATA_INPUT
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of the data which will not be encrypted.
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CALC_AAD_HASH   18
+%macro  CALC_AAD_HASH   17
 %define %%A_IN          %1
 %define %%A_LEN         %2
 %define %%AAD_HASH      %3      ; xmm output register
@@ -520,7 +519,6 @@ default rel
 %define %%T1            %15     ; temp reg 1
 %define %%T2            %16
 %define %%T3            %17
-%define %%T4            %18
 
 %define %%SHFMSK %%ZT9
 %define %%POLY   %%ZT8
@@ -585,7 +583,11 @@ default rel
         jmp             %%_AAD_blocks
 
 %%_AAD_rd_partial_block:
-        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T4
+        ;; need T3 as temporary register for partial read
+        ;; save in ZT3 and restore later
+        vmovq           XWORD(%%ZT3), %%T3
+        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T3
+        vmovq           %%T3, XWORD(%%ZT3)
         VCLMUL_1BLOCK   %%ZT1, %%AAD_HASH, %%T3, 0, \
                         %%ZT0, text_zmm, first, \
                         %%SHFMSK, %%ZT5, %%ZT6
@@ -608,8 +610,12 @@ default rel
         jmp             %%_AAD_blocks
 
 %%_AAD_rd_partial_block_2:
+        ;; need T3 as temporary register for partial read
+        ;; save in ZT3 and restore later
+        vmovq           XWORD(%%ZT3), %%T3
         READ_SMALL_DATA_INPUT \
-                        XWORD(%%ZT0), %%T1, %%T2, %%T4
+                        XWORD(%%ZT0), %%T1, %%T2, %%T3
+        vmovq           %%T3, XWORD(%%ZT3)
 
         VCLMUL_1BLOCK   %%ZT1, %%AAD_HASH, %%T3, 0, \
                         %%ZT0, text_zmm, not_first, \
@@ -2725,7 +2731,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         CALC_AAD_HASH   %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
                         zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                        %%GPR1, %%GPR2, %%GPR3, rax
+                        %%GPR1, %%GPR2, %%GPR3
 
         mov     %%GPR1, %%A_LEN
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH         ; ctx_data.aad hash = aad_hash
