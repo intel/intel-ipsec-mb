@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2018, Intel Corporation All rights reserved.
+;  Copyright(c) 2018-2019, Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -479,10 +479,10 @@ default rel
 ; Output: The packed xmm register (OUTPUT).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro READ_SMALL_DATA_INPUT    4
-%define %%OUTPUT                %1 ; %%OUTPUT is an xmm register
-%define %%INPUT                 %2
-%define %%LENGTH                %3
-%define %%TMP1                  %4
+%define %%OUTPUT        %1 ; [out] xmm register
+%define %%INPUT         %2 ; [in] buffer pointer to read from
+%define %%LENGTH        %3 ; [in] number of bytes to read
+%define %%TMP1          %4 ; [clobbered]
 
         lea             %%TMP1, [rel byte_len_to_mask_table]
 %ifidn __OUTPUT_FORMAT__, win64
