@@ -122,6 +122,8 @@ section .text
 %define TMP0	zmm11
 %define TMP1	zmm12
 %define TMP2	zmm13
+%define TMP3	zmm14
+%define TMP4	zmm15
 
 %define W0	zmm16
 %define W1	zmm17
@@ -263,7 +265,7 @@ lloop:
 
 	add	IDX, 64
 
-	TRANSPOSE16_U32 W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11, W12, W13, W14, W15, TMP0, TMP1
+	TRANSPOSE16_U32 W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11, W12, W13, W14, W15, TMP0, TMP1, TMP3, TMP4
 	DBGPRINTL_ZMM "Sha1-AVX512 incoming transposed input", W0, W1, W2, W3, W4, W6, W7, W8, W9, W10, W11, W12, W13, W14, W15
 
 %assign I 0

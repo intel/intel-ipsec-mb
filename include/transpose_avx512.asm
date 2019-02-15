@@ -50,7 +50,7 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 				dq 0x000000000000000E
 				dq 0x000000000000000F
 
-%macro TRANSPOSE16_U32 18
+%macro TRANSPOSE16_U32 20
 %define %%r0 %1
 %define %%r1 %2
 %define %%r2 %3
@@ -69,6 +69,8 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 %define %%r15 %16
 %define %%t0 %17
 %define %%t1 %18
+%define %%m0 %19
+%define %%m1 %20
 
 ; r0  = {a15 a14 a13 a12   a11 a10 a9 a8   a7 a6 a5 a4   a3 a2 a1 a0}
 ; r1  = {b15 b14 b13 b12   b11 b10 b9 b8   b7 b6 b5 b4   b3 b2 b1 b0}
@@ -127,6 +129,10 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 	vshufps	%%r4, %%r4, %%r6, 0xDD	; r4 = {h15 g15 f15 e15   h11 g11 f11 e11  h7 g7 f7 e7   h3 g3 f3 e3}
 	vshufps	%%r2, %%r2, %%t1, 0x88	; r2 = {h12 g12 f12 e12   h8  g8  f8  e8   h4 g4 f4 e4   h0 g0 f0 e0}
 
+	; Load permute masks
+	vmovdqa64	%%m0, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa64	%%m1, [PSHUFFLE_TRANSPOSE_MASK2]
+
 	; use r6 in place of t0
 	vshufps	%%r6, %%r8, %%r9,    0x44	; r6  = {j13 j12 i13 i12   j9  j8  i9  i8   j5 j4 i5 i4   j1 j0 i1 i0}
 	vshufps	%%r8, %%r8, %%r9,    0xEE	; r8  = {j15 j14 i15 i14   j11 j10 i11 i10  j7 j6 i7 i6   j3 j2 i3 i2}
@@ -153,44 +159,44 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 ;; t0, r3, r1, r0, r2, r7, r5, r4, r6, r11, r9, r8, r10, r15, r13, r12
 ;; Can use t1 and r14 as scratch registers
 
-	vmovdqa32 %%r14, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa32 %%r14, %%m0
 	vpermi2q  %%r14, %%t0, %%r2		; r14 = {h8  g8  f8  e8   d8  c8  b8  a8   h0 g0 f0 e0	 d0 c0 b0 a0}
-	vmovdqa32 %%t1,  [PSHUFFLE_TRANSPOSE_MASK2]
+	vmovdqa32 %%t1,  %%m1
 	vpermi2q  %%t1,  %%t0, %%r2		; t1  = {h12 g12 f12 e12  d12 c12 b12 a12  h4 g4 f4 e4	 d4 c4 b4 a4}
 
-	vmovdqa32 %%r2, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa32 %%r2, %%m0
 	vpermi2q  %%r2, %%r3, %%r7		; r2  = {h9  g9  f9  e9   d9  c9  b9  a9   h1 g1 f1 e1	 d1 c1 b1 a1}
-	vmovdqa32 %%t0, [PSHUFFLE_TRANSPOSE_MASK2]
+	vmovdqa32 %%t0, %%m1
 	vpermi2q  %%t0, %%r3, %%r7		; t0  = {h13 g13 f13 e13  d13 c13 b13 a13  h5 g5 f5 e5	 d5 c5 b5 a5}
 
-	vmovdqa32 %%r3, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa32 %%r3, %%m0
 	vpermi2q  %%r3, %%r1, %%r5		; r3  = {h10 g10 f10 e10  d10 c10 b10 a10  h2 g2 f2 e2	 d2 c2 b2 a2}
-	vmovdqa32 %%r7, [PSHUFFLE_TRANSPOSE_MASK2]
+	vmovdqa32 %%r7, %%m1
 	vpermi2q  %%r7, %%r1, %%r5		; r7  = {h14 g14 f14 e14  d14 c14 b14 a14  h6 g6 f6 e6	 d6 c6 b6 a6}
 
-	vmovdqa32 %%r1, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa32 %%r1, %%m0
 	vpermi2q  %%r1, %%r0, %%r4		; r1  = {h11 g11 f11 e11  d11 c11 b11 a11  h3 g3 f3 e3	 d3 c3 b3 a3}
-	vmovdqa32 %%r5, [PSHUFFLE_TRANSPOSE_MASK2]
+	vmovdqa32 %%r5, %%m1
 	vpermi2q  %%r5, %%r0, %%r4		; r5  = {h15 g15 f15 e15  d15 c15 b15 a15  h7 g7 f7 e7	 d7 c7 b7 a7}
 
-	vmovdqa32 %%r0, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa32 %%r0, %%m0
 	vpermi2q  %%r0, %%r6, %%r10		; r0 = {p8  o8  n8  m8   l8  k8  j8  i8   p0 o0 n0 m0	 l0 k0 j0 i0}
-	vmovdqa32 %%r4,  [PSHUFFLE_TRANSPOSE_MASK2]
+	vmovdqa32 %%r4,  %%m1
 	vpermi2q  %%r4, %%r6, %%r10		; r4  = {p12 o12 n12 m12  l12 k12 j12 i12  p4 o4 n4 m4	 l4 k4 j4 i4}
 
-	vmovdqa32 %%r6, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa32 %%r6, %%m0
 	vpermi2q  %%r6, %%r11, %%r15		; r6  = {p9  o9  n9  m9   l9  k9  j9  i9   p1 o1 n1 m1	 l1 k1 j1 i1}
-	vmovdqa32 %%r10, [PSHUFFLE_TRANSPOSE_MASK2]
+	vmovdqa32 %%r10, %%m1
 	vpermi2q  %%r10, %%r11, %%r15		; r10 = {p13 o13 n13 m13  l13 k13 j13 i13  p5 o5 n5 m5	 l5 k5 j5 i5}
 
-	vmovdqa32 %%r11, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa32 %%r11, %%m0
 	vpermi2q  %%r11, %%r9, %%r13		; r11 = {p10 o10 n10 m10  l10 k10 j10 i10  p2 o2 n2 m2	 l2 k2 j2 i2}
-	vmovdqa32 %%r15, [PSHUFFLE_TRANSPOSE_MASK2]
+	vmovdqa32 %%r15, %%m1
 	vpermi2q  %%r15, %%r9, %%r13		; r15 = {p14 o14 n14 m14  l14 k14 j14 i14  p6 o6 n6 m6	 l6 k6 j6 i6}
 
-	vmovdqa32 %%r9, [PSHUFFLE_TRANSPOSE_MASK1]
+	vmovdqa32 %%r9, %%m0
 	vpermi2q  %%r9, %%r8, %%r12		; r9  = {p11 o11 n11 m11  l11 k11 j11 i11  p3 o3 n3 m3	 l3 k3 j3 i3}
-	vmovdqa32 %%r13, [PSHUFFLE_TRANSPOSE_MASK2]
+	vmovdqa32 %%r13, %%m1
 	vpermi2q  %%r13, %%r8, %%r12		; r13 = {p15 o15 n15 m15  l15 k15 j15 i15  p7 o7 n7 m7	 l7 k7 j7 i7}
 
 ;; At this point r8 and r12 can be used as scratch registers
