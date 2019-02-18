@@ -108,8 +108,6 @@ PSHUFFLE_TRANSPOSE16_MASK2: 	dq 0x0000000000000002
 
 section .text
 
-%define PTR_SIZE 8
-
 %macro TRANSPOSE16 18
 %define %%r0 %1
 %define %%r1 %2
@@ -393,7 +391,7 @@ section .text
 %macro MSG_SCHED_ROUND_00_15 2
 %define %%WT	 %1
 %define %%OFFSET %2
-	mov		inp0, [state + _data_ptr_sha1 + (%%OFFSET*PTR_SIZE)]
+	mov		inp0, [state + _data_ptr_sha1 + (%%OFFSET*PTR_SZ)]
 	vmovups		%%WT, [inp0+IDX]
 %endmacro
 
@@ -416,14 +414,14 @@ sha1_x16_avx512:
 	xor IDX, IDX
 
 	;; transpose input onto stack
-	mov	inp0, [state + _data_ptr_sha1 + 0*PTR_SIZE]
-	mov	inp1, [state + _data_ptr_sha1 + 1*PTR_SIZE]
-	mov	inp2, [state + _data_ptr_sha1 + 2*PTR_SIZE]
-	mov	inp3, [state + _data_ptr_sha1 + 3*PTR_SIZE]
-	mov	inp4, [state + _data_ptr_sha1 + 4*PTR_SIZE]
-	mov	inp5, [state + _data_ptr_sha1 + 5*PTR_SIZE]
-	mov	inp6, [state + _data_ptr_sha1 + 6*PTR_SIZE]
-	mov	inp7, [state + _data_ptr_sha1 + 7*PTR_SIZE]
+	mov	inp0, [state + _data_ptr_sha1 + 0*PTR_SZ]
+	mov	inp1, [state + _data_ptr_sha1 + 1*PTR_SZ]
+	mov	inp2, [state + _data_ptr_sha1 + 2*PTR_SZ]
+	mov	inp3, [state + _data_ptr_sha1 + 3*PTR_SZ]
+	mov	inp4, [state + _data_ptr_sha1 + 4*PTR_SZ]
+	mov	inp5, [state + _data_ptr_sha1 + 5*PTR_SZ]
+	mov	inp6, [state + _data_ptr_sha1 + 6*PTR_SZ]
+	mov	inp7, [state + _data_ptr_sha1 + 7*PTR_SZ]
 
 	vmovups	W0,[inp0+IDX]
 	vmovups	W1,[inp1+IDX]
@@ -434,14 +432,14 @@ sha1_x16_avx512:
 	vmovups	W6,[inp6+IDX]
 	vmovups	W7,[inp7+IDX]
 
-	mov	inp0, [state + _data_ptr_sha1 + 8*PTR_SIZE]
-	mov	inp1, [state + _data_ptr_sha1 + 9*PTR_SIZE]
-	mov	inp2, [state + _data_ptr_sha1 +10*PTR_SIZE]
-	mov	inp3, [state + _data_ptr_sha1 +11*PTR_SIZE]
-	mov	inp4, [state + _data_ptr_sha1 +12*PTR_SIZE]
-	mov	inp5, [state + _data_ptr_sha1 +13*PTR_SIZE]
-	mov	inp6, [state + _data_ptr_sha1 +14*PTR_SIZE]
-	mov	inp7, [state + _data_ptr_sha1 +15*PTR_SIZE]
+	mov	inp0, [state + _data_ptr_sha1 + 8*PTR_SZ]
+	mov	inp1, [state + _data_ptr_sha1 + 9*PTR_SZ]
+	mov	inp2, [state + _data_ptr_sha1 +10*PTR_SZ]
+	mov	inp3, [state + _data_ptr_sha1 +11*PTR_SZ]
+	mov	inp4, [state + _data_ptr_sha1 +12*PTR_SZ]
+	mov	inp5, [state + _data_ptr_sha1 +13*PTR_SZ]
+	mov	inp6, [state + _data_ptr_sha1 +14*PTR_SZ]
+	mov	inp7, [state + _data_ptr_sha1 +15*PTR_SZ]
 
 	vmovups	W8, [inp0+IDX]
 	vmovups	W9, [inp1+IDX]
@@ -555,14 +553,14 @@ lastLoop:
 	DBGPRINTL_ZMM "Sha1-AVX512 outgoing transposed digest", A, B, C, D, E
 
 	;; update input pointers
-	mov	inp0, [state + _data_ptr_sha1 + 0*PTR_SIZE]
-	mov	inp1, [state + _data_ptr_sha1 + 1*PTR_SIZE]
-	mov	inp2, [state + _data_ptr_sha1 + 2*PTR_SIZE]
-	mov	inp3, [state + _data_ptr_sha1 + 3*PTR_SIZE]
-	mov	inp4, [state + _data_ptr_sha1 + 4*PTR_SIZE]
-	mov	inp5, [state + _data_ptr_sha1 + 5*PTR_SIZE]
-	mov	inp6, [state + _data_ptr_sha1 + 6*PTR_SIZE]
-	mov	inp7, [state + _data_ptr_sha1 + 7*PTR_SIZE]
+	mov	inp0, [state + _data_ptr_sha1 + 0*PTR_SZ]
+	mov	inp1, [state + _data_ptr_sha1 + 1*PTR_SZ]
+	mov	inp2, [state + _data_ptr_sha1 + 2*PTR_SZ]
+	mov	inp3, [state + _data_ptr_sha1 + 3*PTR_SZ]
+	mov	inp4, [state + _data_ptr_sha1 + 4*PTR_SZ]
+	mov	inp5, [state + _data_ptr_sha1 + 5*PTR_SZ]
+	mov	inp6, [state + _data_ptr_sha1 + 6*PTR_SZ]
+	mov	inp7, [state + _data_ptr_sha1 + 7*PTR_SZ]
 	add	inp0, IDX
 	add	inp1, IDX
 	add	inp2, IDX
@@ -571,23 +569,23 @@ lastLoop:
 	add	inp5, IDX
 	add	inp6, IDX
 	add	inp7, IDX
-	mov	[state + _data_ptr_sha1 + 0*PTR_SIZE], inp0
-	mov	[state + _data_ptr_sha1 + 1*PTR_SIZE], inp1
-	mov	[state + _data_ptr_sha1 + 2*PTR_SIZE], inp2
-	mov	[state + _data_ptr_sha1 + 3*PTR_SIZE], inp3
-	mov	[state + _data_ptr_sha1 + 4*PTR_SIZE], inp4
-	mov	[state + _data_ptr_sha1 + 5*PTR_SIZE], inp5
-	mov	[state + _data_ptr_sha1 + 6*PTR_SIZE], inp6
-	mov	[state + _data_ptr_sha1 + 7*PTR_SIZE], inp7
+	mov	[state + _data_ptr_sha1 + 0*PTR_SZ], inp0
+	mov	[state + _data_ptr_sha1 + 1*PTR_SZ], inp1
+	mov	[state + _data_ptr_sha1 + 2*PTR_SZ], inp2
+	mov	[state + _data_ptr_sha1 + 3*PTR_SZ], inp3
+	mov	[state + _data_ptr_sha1 + 4*PTR_SZ], inp4
+	mov	[state + _data_ptr_sha1 + 5*PTR_SZ], inp5
+	mov	[state + _data_ptr_sha1 + 6*PTR_SZ], inp6
+	mov	[state + _data_ptr_sha1 + 7*PTR_SZ], inp7
 
-	mov	inp0, [state + _data_ptr_sha1 + 8*PTR_SIZE]
-	mov	inp1, [state + _data_ptr_sha1 + 9*PTR_SIZE]
-	mov	inp2, [state + _data_ptr_sha1 + 10*PTR_SIZE]
-	mov	inp3, [state + _data_ptr_sha1 + 11*PTR_SIZE]
-	mov	inp4, [state + _data_ptr_sha1 + 12*PTR_SIZE]
-	mov	inp5, [state + _data_ptr_sha1 + 13*PTR_SIZE]
-	mov	inp6, [state + _data_ptr_sha1 + 14*PTR_SIZE]
-	mov	inp7, [state + _data_ptr_sha1 + 15*PTR_SIZE]
+	mov	inp0, [state + _data_ptr_sha1 + 8*PTR_SZ]
+	mov	inp1, [state + _data_ptr_sha1 + 9*PTR_SZ]
+	mov	inp2, [state + _data_ptr_sha1 + 10*PTR_SZ]
+	mov	inp3, [state + _data_ptr_sha1 + 11*PTR_SZ]
+	mov	inp4, [state + _data_ptr_sha1 + 12*PTR_SZ]
+	mov	inp5, [state + _data_ptr_sha1 + 13*PTR_SZ]
+	mov	inp6, [state + _data_ptr_sha1 + 14*PTR_SZ]
+	mov	inp7, [state + _data_ptr_sha1 + 15*PTR_SZ]
 	add	inp0, IDX
 	add	inp1, IDX
 	add	inp2, IDX
@@ -596,14 +594,14 @@ lastLoop:
 	add	inp5, IDX
 	add	inp6, IDX
 	add	inp7, IDX
-	mov	[state + _data_ptr_sha1 + 8*PTR_SIZE], inp0
-	mov	[state + _data_ptr_sha1 + 9*PTR_SIZE], inp1
-	mov	[state + _data_ptr_sha1 + 10*PTR_SIZE], inp2
-	mov	[state + _data_ptr_sha1 + 11*PTR_SIZE], inp3
-	mov	[state + _data_ptr_sha1 + 12*PTR_SIZE], inp4
-	mov	[state + _data_ptr_sha1 + 13*PTR_SIZE], inp5
-	mov	[state + _data_ptr_sha1 + 14*PTR_SIZE], inp6
-	mov	[state + _data_ptr_sha1 + 15*PTR_SIZE], inp7
+	mov	[state + _data_ptr_sha1 + 8*PTR_SZ], inp0
+	mov	[state + _data_ptr_sha1 + 9*PTR_SZ], inp1
+	mov	[state + _data_ptr_sha1 + 10*PTR_SZ], inp2
+	mov	[state + _data_ptr_sha1 + 11*PTR_SZ], inp3
+	mov	[state + _data_ptr_sha1 + 12*PTR_SZ], inp4
+	mov	[state + _data_ptr_sha1 + 13*PTR_SZ], inp5
+	mov	[state + _data_ptr_sha1 + 14*PTR_SZ], inp6
+	mov	[state + _data_ptr_sha1 + 15*PTR_SZ], inp7
 
 	ret
 
