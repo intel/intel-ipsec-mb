@@ -452,26 +452,23 @@ sha512_x8_avx512:
 
 align 32
 lloop:
-	;;  first half of 1024 (need to transpose before use)
-	vmovups	W0,  [inp0 + IDX]
-	vmovups	W1,  [inp1 + IDX]
-	vmovups	W2,  [inp2 + IDX]
-	vmovups	W3,  [inp3 + IDX]
-	vmovups	W4,  [inp4 + IDX]
-	vmovups	W5,  [inp5 + IDX]
-	vmovups	W6,  [inp6 + IDX]
-	vmovups	TMP0,[inp7 + IDX]
-	TRANSPOSE8_U64  W0, W1, W2, W3, W4, W5, W6, TMP0,  W7, TMP1, TMP2, TMP3
-	;;  second half of 1024 (need to transpose before use)
-	vmovups	W8,  [inp0 + SZ8 + IDX]
-	vmovups	W9,  [inp1 + SZ8 + IDX]
-	vmovups	W10, [inp2 + SZ8 + IDX]
-	vmovups	W11, [inp3 + SZ8 + IDX]
-	vmovups	W12, [inp4 + SZ8 + IDX]
-	vmovups	W13, [inp5 + SZ8 + IDX]
-	vmovups	W14, [inp6 + SZ8 + IDX]
-	vmovups	TMP0,[inp7 + SZ8 + IDX]
-	TRANSPOSE8_U64  W8, W9, W10, W11, W12, W13, W14, TMP0,  W15, TMP1, TMP2, TMP3
+	;; Load 64-byte blocks of data into ZMM registers before
+	;; performing a 8x8 64-bit transpose.
+	;; To speed up the transpose, data is loaded in chunks of 32 bytes,
+	;; interleaving data between lane X and lane X+4.
+	;; This way, final shuffles between top half and bottom half
+	;; of the matrix are avoided.
+	TRANSPOSE8_U64_LOAD8 W0, W1, W2, W3, W4, W5, W6, W7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, \
+			     inp6, inp7, IDX
+
+	TRANSPOSE8_U64 W0, W1, W2, W3, W4, W5, W6, W7, TMP0, TMP1, TMP2, TMP3
+	;;  Load next 512 bytes
+	TRANSPOSE8_U64_LOAD8 W8, W9, W10, W11, W12, W13, W14, W15, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, \
+			     inp6, inp7, IDX+SZ8
+
+	TRANSPOSE8_U64 W8, W9, W10, W11, W12, W13, W14, W15, TMP0, TMP1, TMP2, TMP3
 
 	vmovdqa32	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
 

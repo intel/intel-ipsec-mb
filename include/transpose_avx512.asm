@@ -153,6 +153,9 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 %define %%addr6 %23
 %define %%addr7 %24
 %define %%ptr_offset %25
+
+; Expected output data
+;
 ; r0  = {i7  i6  i5  i4    i3  i2  i1 i0   a7  a6  a5  a4    a3  a2  a1 a0}
 ; r1  = {j7  j6  j5  j4    j3  j2  j1 j0   b7  b6  b5  b4    b3  b2  b1 b0}
 ; r2  = {k7  k6  k5  k4    k3  k2  k1 k0   c7  c6  c5  c4    c3  c2  c1 c0}
@@ -355,6 +358,69 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 
 %endmacro
 
+; LOAD ALL 8 LANES FOR 8x8 64-BIT TRANSPOSE
+;
+; r0-r7       [out] zmm registers which will contain the data to be transposed
+; addr0-addr7 [in]  pointers to the next 64-byte block of data to be fetch for all 8 lanes
+; ptr_offset  [in] offset to be applied on all pointers (addr0-addr7)
+%macro TRANSPOSE8_U64_LOAD8 17
+%define %%r0 %1
+%define %%r1 %2
+%define %%r2 %3
+%define %%r3 %4
+%define %%r4 %5
+%define %%r5 %6
+%define %%r6 %7
+%define %%r7 %8
+%define %%addr0 %9
+%define %%addr1 %10
+%define %%addr2 %11
+%define %%addr3 %12
+%define %%addr4 %13
+%define %%addr5 %14
+%define %%addr6 %15
+%define %%addr7 %16
+%define %%ptr_offset %17
+
+; Expected output data
+;
+; r0 = {e3 e2 e1 e0  a3 a2 a1 a0}
+; r1 = {f3 f2 f1 f0  b3 b2 b1 b0}
+; r2 = {g3 g2 g1 g0  c3 c2 c1 c0}
+; r3 = {h3 h2 h1 h0  d3 d2 d1 d0}
+; r4 = {e7 e6 e5 e4  a7 a6 a5 a4}
+; r5 = {f7 f6 f5 f4  b7 b6 b5 b4}
+; r6 = {g7 g6 g5 g4  c7 c6 c5 c4}
+; r7 = {h7 h6 h5 h4  d7 d6 d5 d4}
+
+	vmovups	YWORD(%%r0),[%%addr0+%%ptr_offset]
+	vmovups	YWORD(%%r1),[%%addr1+%%ptr_offset]
+	vmovups	YWORD(%%r2),[%%addr2+%%ptr_offset]
+	vmovups	YWORD(%%r3),[%%addr3+%%ptr_offset]
+	vmovups	YWORD(%%r4),[%%addr0+%%ptr_offset+32]
+	vmovups	YWORD(%%r5),[%%addr1+%%ptr_offset+32]
+	vmovups	YWORD(%%r6),[%%addr2+%%ptr_offset+32]
+	vmovups	YWORD(%%r7),[%%addr3+%%ptr_offset+32]
+
+	vinserti64x4 %%r0, %%r0, [%%addr4+%%ptr_offset], 0x01
+	vinserti64x4 %%r1, %%r1, [%%addr5+%%ptr_offset], 0x01
+	vinserti64x4 %%r2, %%r2, [%%addr6+%%ptr_offset], 0x01
+	vinserti64x4 %%r3, %%r3, [%%addr7+%%ptr_offset], 0x01
+	vinserti64x4 %%r4, %%r4, [%%addr4+%%ptr_offset+32], 0x01
+	vinserti64x4 %%r5, %%r5, [%%addr5+%%ptr_offset+32], 0x01
+	vinserti64x4 %%r6, %%r6, [%%addr6+%%ptr_offset+32], 0x01
+	vinserti64x4 %%r7, %%r7, [%%addr7+%%ptr_offset+32], 0x01
+
+%endmacro
+
+; 8x8 64-BIT TRANSPOSE
+;
+; Before calling this macro, TRANSPOSE8_U64_LOAD8 must be called.
+;
+; r0-r3          [in/out]    zmm registers containing bytes 0-31 of each 64B block (e.g. zmm0 = [e3-e0 a3-a0])
+; r4-r7          [in/out]    zmm registers containing bytes 32-63 of each 64B block (e.g. zmm4 = [e4-e7 a4-a7])
+; t0-t1          [clobbered] zmm temporary registers
+; PERM_INDEX1-2  [clobbered] zmm registers for shuffle mask storing
 %macro TRANSPOSE8_U64 12
 %define %%r0 %1
 %define %%r1 %2
@@ -369,75 +435,63 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 %define %%PERM_INDEX1 %11
 %define %%PERM_INDEX2 %12
 
-; each x(i) is 32 bits, 16 * 32 = 512 ==> a full digest length, 32 single precision quantities
-; r0  = {a7 a6 a5 a4   a3 a2 a1 a0}
-; r1  = {b7 b6 b5 b4   b3 b2 b1 b0}
-; r2  = {c7 c6 c5 c4   c3 c2 c1 c0}
-; r3  = {d7 d6 d5 d4   d3 d2 d1 d0}
-; r4  = {e7 e6 e5 e4   e3 e2 e1 e0}
-; r5  = {f7 f6 f5 f4   f3 f2 f1 f0}
-; r6  = {g7 g6 g5 g4   g3 g2 g1 g0}
-; r7  = {h7 h6 h5 h4   h3 h2 h1 h0}
+; each x(i) is 64 bits, 8 * 64 = 512 ==> a full digest length, 64-bit double precision quantities
+
+; Input data
+;
+; r0 = {e3 e2 e1 e0  a3 a2 a1 a0}
+; r1 = {f3 f2 f1 f0  b3 b2 b1 b0}
+; r2 = {g3 g2 g1 g0  c3 c2 c1 c0}
+; r3 = {h3 h2 h1 h0  d3 d2 d1 d0}
+; r4 = {e7 e6 e5 e4  a7 a6 a5 a4}
+; r5 = {f7 f6 f5 f4  b7 b6 b5 b4}
+; r6 = {g7 g6 g5 g4  c7 c6 c5 c4}
+; r7 = {h7 h6 h5 h4  d7 d6 d5 d4}
+;
+; Expected output data
+;
+; r0 = {h0 g0 f0 e0  d0 c0 b0 a0}
+; r1 = {h1 g1 f1 e1  d1 c1 b1 a1}
+; r2 = {h2 g2 f2 e2  d2 c2 b2 a2}
+; r3 = {h3 g3 f3 e3  d3 c3 b3 a3}
+; r4 = {h4 g4 f4 e4  d4 c4 b4 a4}
+; r5 = {h5 g5 f5 e5  d5 c5 b5 a5}
+; r6 = {h6 g6 f6 e6  d6 c6 b6 a6}
+; r7 = {h7 g7 f7 e7  d7 c7 b7 a7}
 
         ;; ;;;  will not get clobbered
         vmovdqa32 %%PERM_INDEX1, [PSHUFFLE_TRANSPOSE_MASK1] ; temp
         vmovdqa32 %%PERM_INDEX2, [PSHUFFLE_TRANSPOSE_MASK2] ; temp
 
-	; process top half (r0..r3) {a...d}
-        vshufpd	%%t0, %%r0, %%r1, 0x00	; t0 = {b6 a6 b4 a4   b2 a2 b0 a0}
-        vshufpd	%%r0, %%r0, %%r1, 0xFF	; r0 = {b7 a7 b5 a5   b3 a3 b1 a1}
-        vshufpd	%%t1, %%r2, %%r3, 0x00	; t1 = {d6 c6 d4 c4   d2 c2 d0 c0}
-        vshufpd	%%r2, %%r2, %%r3, 0xFF	; r2 = {d7 c7 d5 c5   d3 c3 d1 c1}
+        ; process top half (r0..r3)
+        vshufpd	%%t0, %%r0, %%r1, 0x00	; t0 = {f2 e2 f0 e0  b2 a2 b0 a0}
+        vshufpd	%%r1, %%r0, %%r1, 0xFF	; r0 = {f3 e3 f1 e1  b3 a3 b1 a1}
+        vshufpd	%%t1, %%r2, %%r3, 0x00	; t1 = {h2 g2 h0 g0  d2 c2 d0 c0}
+        vshufpd	%%r2, %%r2, %%r3, 0xFF	; r2 = {h3 g3 h1 g1  d3 c3 d1 c1}
 
-        vmovdqa32   %%r1, %%t0		     ; r1 and r3 free
-        vpermt2q    %%r1, %%PERM_INDEX1,%%t1   ; r1 = {d4 c4 b4 a4   d0 c0 b0 a0}
-        vpermt2q    %%t0, %%PERM_INDEX2,%%t1   ; t0 = {d6 c6 b6 a6   d2 c2 b2 a2}
+        vmovdqa32   %%r3, %%r1
+        vpermt2q    %%r1, %%PERM_INDEX1,%%r2   ; r1 = {h1 g1 f1 e1  d1 c1 b1 a1}
+        vpermt2q    %%r3, %%PERM_INDEX2,%%r2   ; r3 = {h3 g3 f3 e3  d3 c3 b3 a3}
 
-        vmovdqa32   %%t1, %%r0		       ; t1 and r3 free
-        vpermt2q    %%t1, %%PERM_INDEX1,%%r2   ; t1 = {d5 c5 b5 a5   d1 c1 b1 a1}
-        vpermt2q    %%r0, %%PERM_INDEX2,%%r2   ; r0 = {d7 c7 b7 a7   d3 c3 b3 a3}
+        vmovdqa32   %%r0, %%t0
+        vmovdqa32   %%r2, %%t0
+        vpermt2q    %%r0, %%PERM_INDEX1,%%t1   ; r0 = {h0 g0 f0 e0  d0 c0 b0 a0}
+        vpermt2q    %%r2, %%PERM_INDEX2,%%t1   ; r2 = {h2 g2 f2 e2  d2 c2 b2 a2}
 
-        ;; Likewise for top half ; r2 and r3 free
-        vshufpd	%%r2, %%r4, %%r5, 0x00	; r2 = {f6 e6 f4 e4   f2 e2 f0 e0}
-        vshufpd	%%r4, %%r4, %%r5, 0xFF	; r4 = {f7 e7 f5 e5   f3 e3 f1 e1}
-        vshufpd	%%r3, %%r6, %%r7, 0x00	; r3 = {h6 g6 h4 g4   h2 g2 h0 g0}
-        vshufpd	%%r6, %%r6, %%r7, 0xFF	; r6 = {h7 g7 h5 g5   h3 g3 h1 g1}
+        ; process top bottom (r4..r7)
+        vshufpd	%%t0, %%r4, %%r5, 0x00	; t0 = {f6 e6 f4 e4  b6 a6 b4 a4}
+        vshufpd	%%r5, %%r4, %%r5, 0xFF	; r0 = {f7 e7 f5 e5  b7 a7 b5 a5}
+        vshufpd	%%t1, %%r6, %%r7, 0x00	; t1 = {h6 g6 h4 g4  d6 c6 d4 c4}
+        vshufpd	%%r6, %%r6, %%r7, 0xFF	; r2 = {h7 g7 h5 g5  d7 c7 d5 c5}
 
-        vmovdqa32   %%r5, %%r2		     ; r5 and r7 free
-        vpermt2q    %%r5, %%PERM_INDEX1,%%r3   ; r5 = {h4 g4 f4 e4   h0 g0 f0 e0}
-        vpermt2q    %%r2, %%PERM_INDEX2,%%r3   ; r2 = {h6 g6 f6 e6   h2 g2 f2 e2}
+        vmovdqa32   %%r7, %%r5
+        vpermt2q    %%r5, %%PERM_INDEX1,%%r6   ; r5 = {h5 g5 f5 e5  d5 c5 b5 a5}
+        vpermt2q    %%r7, %%PERM_INDEX2,%%r6   ; r7 = {h7 g7 f7 e7  d7 c7 b7 a7}
 
-        vmovdqa32   %%r7, %%r4
-        vpermt2q    %%r7, %%PERM_INDEX1,%%r6   ; r7 = {h5 g5 f5 e5   h1 g1 f1 e1}
-        vpermt2q    %%r4, %%PERM_INDEX2,%%r6   ; r4 = {h7 g7 f7 e7   h3 g3 f3 e3}
-
-;;;  free r3, r6
-        vshuff64x2  %%r6, %%t0, %%r2, 0xEE ; r6 = {h6 g6 f6 e6   d6 c6 b6 a6}
-        vshuff64x2  %%r2, %%t0, %%r2, 0x44 ; r2 = {h2 g2 f2 e2   d2 c2 b2 a2}
-
-;;; t0 and r3 free
-        vshuff64x2  %%r3, %%r0, %%r4, 0x44 ; r3 = {h3 g3 f3 e3   d3 c3 b3 a3}
-        vshuff64x2  %%t0, %%r0, %%r4, 0xEE ; t0 = {h7 g7 f7 e7   d7 c7 b7 a7}
-
-        vshuff64x2  %%r4, %%r1, %%r5, 0xEE ; r4 = {h4 g4 f4 e4   d4 c4 b4 a4}
-        vshuff64x2  %%r0, %%r1, %%r5, 0x44 ; r0 = {h0 g0 f0 e0   d0 c0 b0 a0}
-
-        vshuff64x2  %%r5, %%t1, %%r7, 0xEE ; r5 = {h5 g5 f5 e5   d5 c5 b5 a5}
-        vshuff64x2  %%r1, %%t1, %%r7, 0x44 ; r1 = {h1 g1 f1 e1   d1 c1 b1 a1}
-
-        ;;  will re-order input to avoid move
-        ;vmovdqa32   %%r7, %%t0
-
-	; Output looks like: {r0 r1 r2 r3 r4 r5 r6 r7}
-        ; r0 = {h0 g0 f0 e0   d0 c0 b0 a0}
-        ; r1 = {h1 g1 f1 e1   d1 c1 b1 a1}
-        ; r2 = {h2 g2 f2 e2   d2 c2 b2 a2}
-        ; r3 = {h3 g3 f3 e3   d3 c3 b3 a3}
-        ; r4 = {h4 g4 f4 e4   d4 c4 b4 a4}
-        ; r5 = {h5 g5 f5 e5   d5 c5 b5 a5}
-        ; r6 = {h6 g6 f6 e6   d6 c6 b6 a6}
-        ; temp
-        ; r7 = {h7 g7 f7 e7   d7 c7 b7 a7}
+        vmovdqa32   %%r4, %%t0
+        vmovdqa32   %%r6, %%t0
+        vpermt2q    %%r4, %%PERM_INDEX1,%%t1   ; r4 = {h4 g4 f4 e4  d4 c4 b4 a4}
+        vpermt2q    %%r6, %%PERM_INDEX2,%%t1   ; r6 = {h6 g6 f6 e6  d6 c6 b6 a6}
 %endmacro
 
 %endif ;; _TRANSPOSE_AVX512_ASM_
