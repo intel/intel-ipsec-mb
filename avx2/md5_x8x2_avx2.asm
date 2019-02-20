@@ -412,14 +412,9 @@ md5_x8x2_avx2:
 
 %assign I 0
 %rep 2
-	vmovdqu	Y_DAT0,[inp0+IDX+I*32]
-	vmovdqu	Y_DAT1,[inp1+IDX+I*32]
-	vmovdqu	Y_DAT2,[inp2+IDX+I*32]
-	vmovdqu	Y_DAT3,[inp3+IDX+I*32]
-	vmovdqu	Y_DAT4,[inp4+IDX+I*32]
-	vmovdqu	Y_DAT5,[inp5+IDX+I*32]
-	vmovdqu	Y_DAT6,[inp6+IDX+I*32]
-	vmovdqu	Y_DAT7,[inp7+IDX+I*32]
+	TRANSPOSE8_U32_LOAD8 Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, inp6, inp7, IDX+I*32
+
 	TRANSPOSE8_U32	Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, Y_DTMP1, Y_DTMP2
 	vmovdqa	[DPTR1+_DATA+(I*8+0)*32],Y_DAT0
 	vmovdqa	[DPTR1+_DATA+(I*8+1)*32],Y_DAT1
@@ -445,15 +440,9 @@ md5_x8x2_avx2:
 
 %assign I 0
 %rep 2
+	TRANSPOSE8_U32_LOAD8 Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, inp6, inp7, IDX+I*32
 
-	vmovdqu	Y_DAT0,[inp0+IDX+I*32]
-	vmovdqu	Y_DAT1,[inp1+IDX+I*32]
-	vmovdqu	Y_DAT2,[inp2+IDX+I*32]
-	vmovdqu	Y_DAT3,[inp3+IDX+I*32]
-	vmovdqu	Y_DAT4,[inp4+IDX+I*32]
-	vmovdqu	Y_DAT5,[inp5+IDX+I*32]
-	vmovdqu	Y_DAT6,[inp6+IDX+I*32]
-	vmovdqu	Y_DAT7,[inp7+IDX+I*32]
 	TRANSPOSE8_U32	Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, Y_DTMP1, Y_DTMP2
 	vmovdqa	[DPTR1+_DATA+((I+2)*8+0)*32],Y_DAT0
 	vmovdqa	[DPTR1+_DATA+((I+2)*8+1)*32],Y_DAT1
@@ -535,14 +524,9 @@ lloop:
 	vmovdqa  [rsp + _TMPDIGEST + 0*32], Y_A
 	vmovdqa  [rsp + _TMPDIGEST + 1*32], Y_B
 
-	vmovdqu	Y_DAT0,[inp0+IDX+I*32]
-	vmovdqu	Y_DAT1,[inp1+IDX+I*32]
-	vmovdqu	Y_DAT2,[inp2+IDX+I*32]
-	vmovdqu	Y_DAT3,[inp3+IDX+I*32]
-	vmovdqu	Y_DAT4,[inp4+IDX+I*32]
-	vmovdqu	Y_DAT5,[inp5+IDX+I*32]
-	vmovdqu	Y_DAT6,[inp6+IDX+I*32]
-	vmovdqu	Y_DAT7,[inp7+IDX+I*32]
+	TRANSPOSE8_U32_LOAD8 Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, inp6, inp7, IDX+I*32
+
 	TRANSPOSE8_U32	Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, Y_DTMP1, Y_DTMP2
 	vmovdqa	[DPTR2+_DATA+(I*8+0)*32],Y_DAT0
 	vmovdqa	[DPTR2+_DATA+(I*8+1)*32],Y_DAT1
@@ -582,14 +566,9 @@ lloop:
 	vmovdqa  [rsp + _TMPDIGEST + 0*32], Y_A
 	vmovdqa  [rsp + _TMPDIGEST + 1*32], Y_B
 
-	vmovdqu	Y_DAT0,[inp0+IDX+I*32]
-	vmovdqu	Y_DAT1,[inp1+IDX+I*32]
-	vmovdqu	Y_DAT2,[inp2+IDX+I*32]
-	vmovdqu	Y_DAT3,[inp3+IDX+I*32]
-	vmovdqu	Y_DAT4,[inp4+IDX+I*32]
-	vmovdqu	Y_DAT5,[inp5+IDX+I*32]
-	vmovdqu	Y_DAT6,[inp6+IDX+I*32]
-	vmovdqu	Y_DAT7,[inp7+IDX+I*32]
+	TRANSPOSE8_U32_LOAD8 Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, inp6, inp7, IDX+I*32
+
 	TRANSPOSE8_U32	Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, Y_DTMP1, Y_DTMP2
 	vmovdqa	[DPTR2+_DATA+(I*8+0)*32],Y_DAT0
 	vmovdqa	[DPTR2+_DATA+(I*8+1)*32],Y_DAT1
@@ -639,14 +618,9 @@ lloop:
 	vmovdqa  [rsp + _TMPDIGEST + 0*32], Y_A
 	vmovdqa  [rsp + _TMPDIGEST + 1*32], Y_B
 
-	vmovdqu	Y_DAT0,[inp0+IDX+I*32]
-	vmovdqu	Y_DAT1,[inp1+IDX+I*32]
-	vmovdqu	Y_DAT2,[inp2+IDX+I*32]
-	vmovdqu	Y_DAT3,[inp3+IDX+I*32]
-	vmovdqu	Y_DAT4,[inp4+IDX+I*32]
-	vmovdqu	Y_DAT5,[inp5+IDX+I*32]
-	vmovdqu	Y_DAT6,[inp6+IDX+I*32]
-	vmovdqu	Y_DAT7,[inp7+IDX+I*32]
+	TRANSPOSE8_U32_LOAD8 Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, inp6, inp7, IDX+I*32
+
 	TRANSPOSE8_U32	Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, Y_DTMP1, Y_DTMP2
 	vmovdqa	[DPTR2+_DATA+((I+2)*8+0)*32],Y_DAT0
 	vmovdqa	[DPTR2+_DATA+((I+2)*8+1)*32],Y_DAT1
@@ -685,14 +659,9 @@ lloop:
 	vmovdqa  [rsp + _TMPDIGEST + 0*32], Y_A
 	vmovdqa  [rsp + _TMPDIGEST + 1*32], Y_B
 
-	vmovdqu	Y_DAT0,[inp0+IDX+I*32]
-	vmovdqu	Y_DAT1,[inp1+IDX+I*32]
-	vmovdqu	Y_DAT2,[inp2+IDX+I*32]
-	vmovdqu	Y_DAT3,[inp3+IDX+I*32]
-	vmovdqu	Y_DAT4,[inp4+IDX+I*32]
-	vmovdqu	Y_DAT5,[inp5+IDX+I*32]
-	vmovdqu	Y_DAT6,[inp6+IDX+I*32]
-	vmovdqu	Y_DAT7,[inp7+IDX+I*32]
+	TRANSPOSE8_U32_LOAD8 Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, inp6, inp7, IDX+I*32
+
 	TRANSPOSE8_U32	Y_DAT0, Y_DAT1, Y_DAT2, Y_DAT3, Y_DAT4, Y_DAT5, Y_DAT6, Y_DAT7, Y_DTMP1, Y_DTMP2
 	vmovdqa	[DPTR2+_DATA+((I+2)*8+0)*32],Y_DAT0
 	vmovdqa	[DPTR2+_DATA+((I+2)*8+1)*32],Y_DAT1

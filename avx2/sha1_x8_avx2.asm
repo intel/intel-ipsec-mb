@@ -331,14 +331,10 @@ lloop:
 	vmovdqa	F, [rel PSHUFFLE_BYTE_FLIP_MASK]
 %assign I 0
 %rep 2
-	VMOVPS	T0,[inp0+IDX]
-	VMOVPS	T1,[inp1+IDX]
-	VMOVPS	T2,[inp2+IDX]
-	VMOVPS	T3,[inp3+IDX]
-	VMOVPS	T4,[inp4+IDX]
-	VMOVPS	T5,[inp5+IDX]
-	VMOVPS	T6,[inp6+IDX]
-	VMOVPS	T7,[inp7+IDX]
+	TRANSPOSE8_U32_LOAD8 T0, T1, T2, T3, T4, T5, T6, T7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, \
+			     inp6, inp7, IDX
+
 	TRANSPOSE8_U32	T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
 	DBGPRINTL_YMM "Sha1-AVX2 incoming transposed input", T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
 	vpshufb	T0, T0, F

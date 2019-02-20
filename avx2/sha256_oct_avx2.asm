@@ -472,14 +472,10 @@ lloop:
 	DBGPRINTL_YMM "transposed digest ", a,b,c,d,e,f,g,h
 %assign i 0
 %rep 2
-	VMOVPS	TT0,[inp0+IDX+i*32]
-	VMOVPS	TT1,[inp1+IDX+i*32]
-	VMOVPS	TT2,[inp2+IDX+i*32]
-	VMOVPS	TT3,[inp3+IDX+i*32]
-	VMOVPS	TT4,[inp4+IDX+i*32]
-	VMOVPS	TT5,[inp5+IDX+i*32]
-	VMOVPS	TT6,[inp6+IDX+i*32]
-	VMOVPS	TT7,[inp7+IDX+i*32]
+	TRANSPOSE8_U32_LOAD8 TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7, \
+			     inp0, inp1, inp2, inp3, inp4, inp5, \
+			     inp6, inp7, IDX+i*32
+
 	vmovdqa	[YTMP0], g
 	vmovdqa	[YTMP1], h
 	TRANSPOSE8_U32	TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7,   TMP0, TMP1
