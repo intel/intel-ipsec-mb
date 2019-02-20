@@ -71,7 +71,6 @@
 #define BITS(x) (sizeof(x) * 8)
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 
-#define NUM_TYPES 6 /* AES_HMAC, AES_DOCSIS, AES_GCM, AES_CCM, DES, 3DES */
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
 #define CIPHER_MODES_AES 4	/* CBC, CNTR, CNTR+8, NULL_CIPHER */
@@ -130,7 +129,9 @@ enum test_type_e {
         TTYPE_AES_GCM,
         TTYPE_AES_CCM,
         TTYPE_AES_DES,
-        TTYPE_AES_3DES
+        TTYPE_AES_3DES,
+        TTYPE_CUSTOM,
+        NUM_TTYPES
 };
 
 /* This enum will be mostly translated to JOB_CIPHER_MODE */
@@ -179,8 +180,15 @@ struct params_s {
         uint32_t                core;
 };
 
+struct custom_job_params {
+        enum test_cipher_mode_e cipher_mode;
+        enum test_hash_alg_e    hash_alg;
+        uint32_t                aes_key_size;
+};
+
 union params {
-        enum arch_type_e arch_type;
+        enum arch_type_e         arch_type;
+        struct custom_job_params job_params;
 };
 
 struct str_value_mapping {
@@ -193,6 +201,213 @@ struct str_value_mapping arch_str_map[] = {
         {.name = "AVX",    .values.arch_type = ARCH_AVX },
         {.name = "AVX2",   .values.arch_type = ARCH_AVX2 },
         {.name = "AVX512", .values.arch_type = ARCH_AVX512 }
+};
+
+struct str_value_mapping cipher_algo_str_map[] = {
+        {
+                .name = "aes-cbc-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_CBC,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-cbc-192",
+                .values.job_params = {
+                        .cipher_mode = TEST_CBC,
+                        .aes_key_size = AES_192_BYTES
+                }
+        },
+        {
+                .name = "aes-cbc-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_CBC,
+                        .aes_key_size = AES_256_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-192",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR,
+                        .aes_key_size = AES_192_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR,
+                        .aes_key_size = AES_256_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr8-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR8,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr8-192",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR8,
+                        .aes_key_size = AES_192_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr8-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR8,
+                        .aes_key_size = AES_256_BYTES
+                }
+        },
+        {
+                .name = "aes-docsis",
+                .values.job_params = {
+                        .cipher_mode = TEST_AESDOCSIS,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-docsis8",
+                .values.job_params = {
+                        .cipher_mode = TEST_AESDOCSIS8,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "des-docsis",
+                .values.job_params = {
+                        .cipher_mode = TEST_DESDOCSIS,
+                        .aes_key_size = 8
+                }
+        },
+        {
+                .name = "des-docsis4",
+                .values.job_params = {
+                        .cipher_mode = TEST_DESDOCSIS4,
+                        .aes_key_size = 8
+                }
+        },
+        {
+                .name = "des-cbc",
+                .values.job_params = {
+                        .cipher_mode = TEST_DES,
+                        .aes_key_size = 8
+                }
+        },
+        {
+                .name = "3des-cbc",
+                .values.job_params = {
+                        .cipher_mode = TEST_3DES,
+                        .aes_key_size = 8
+                }
+        },
+        {
+                .name = "null",
+                .values.job_params = {
+                        .cipher_mode = TEST_NULL_CIPHER,
+                        .aes_key_size = 0
+                }
+        }
+};
+
+struct str_value_mapping hash_algo_str_map[] = {
+        {
+                .name = "sha1-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA1
+                }
+        },
+        {
+                .name = "sha224-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA_224
+                }
+        },
+        {
+                .name = "sha256-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA_256
+                }
+        },
+        {
+                .name = "sha384-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA_384
+                }
+        },
+        {
+                .name = "sha512-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_SHA_512
+                }
+        },
+        {
+                .name = "aes-xcbc",
+                .values.job_params = {
+                        .hash_alg = TEST_XCBC
+                }
+        },
+        {
+                .name = "md5-hmac",
+                .values.job_params = {
+                        .hash_alg = TEST_MD5
+                }
+        },
+        {
+                .name = "aes-cmac",
+                .values.job_params = {
+                        .hash_alg = TEST_HASH_CMAC
+                }
+        },
+        {
+                .name = "null",
+                .values.job_params = {
+                        .hash_alg = TEST_NULL_HASH
+                }
+        }
+};
+
+struct str_value_mapping aead_algo_str_map[] = {
+        {
+                .name = "aes-gcm-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_GCM,
+                        .hash_alg = TEST_HASH_GCM,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-gcm-192",
+                .values.job_params = {
+                        .cipher_mode = TEST_GCM,
+                        .hash_alg = TEST_HASH_GCM,
+                        .aes_key_size = AES_192_BYTES
+                }
+        },
+        {
+                .name = "aes-gcm-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_GCM,
+                        .hash_alg = TEST_HASH_GCM,
+                        .aes_key_size = AES_256_BYTES
+                }
+        },
+        {
+                .name = "aes-ccm-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_CCM,
+                        .hash_alg = TEST_HASH_CCM,
+                        .aes_key_size = AES_128_BYTES
+                }
+        }
 };
 
 /* This struct stores all information about performed test case */
@@ -233,9 +448,15 @@ uint32_t job_iter = 0;
 uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
 uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
 
+struct custom_job_params custom_job_params = {
+        .cipher_mode  = TEST_NULL_CIPHER,
+        .hash_alg     = TEST_NULL_HASH,
+        .aes_key_size = 0
+};
+
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-/* AES, DOCSIS, GCM, CCM, DES, 3DES */
-uint8_t test_types[NUM_TYPES] = {1, 1, 1, 1, 1, 1};
+/* AES, DOCSIS, GCM, CCM, DES, 3DES, CUSTOM */
+uint8_t test_types[NUM_TTYPES] = {1, 1, 1, 1, 1, 1, 0};
 
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
@@ -1040,6 +1261,12 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 c_start = TEST_3DES;
                 c_end = TEST_3DES;
                 break;
+        case TTYPE_CUSTOM:
+                h_start = params->hash_alg;
+                h_end = params->hash_alg;
+                c_start = params->cipher_mode;
+                c_end = params->cipher_mode;
+                break;
         default:
                 break;
         }
@@ -1085,6 +1312,15 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         case 3:
                 init_mb_mgr_avx512(mgr);
                 break;
+        }
+
+        if (params->test_type == TTYPE_CUSTOM) {
+                params->cipher_dir = ENCRYPT;
+                params->aes_key_size = custom_job_params.aes_key_size;
+                params->cipher_mode = custom_job_params.cipher_mode;
+                params->hash_alg = custom_job_params.hash_alg;
+                do_variants(mgr, arch, params, run, variant_ptr, variant);
+                return;
         }
 
         for (dir = ENCRYPT; dir <= DECRYPT; dir++) {
@@ -1181,7 +1417,7 @@ run_tests(void *arg)
         struct thread_info *info = (struct thread_info *)arg;
         MB_MGR *p_mgr = NULL;
         struct params_s params;
-        uint32_t num_variants[NUM_TYPES] = {0, 0, 0};
+        uint32_t num_variants[NUM_TTYPES] = {0};
         uint32_t type, at_size, run, arch;
         uint32_t variants_per_arch, max_arch;
         uint32_t variant;
@@ -1233,7 +1469,7 @@ run_tests(void *arg)
                                 (unsigned long)rd_cycles_cost);
         }
 
-        for (type = TTYPE_AES_HMAC; type < NUM_TYPES; type++) {
+        for (type = TTYPE_AES_HMAC; type < NUM_TTYPES; type++) {
                 if (test_types[type] == 0)
                         continue;
 
@@ -1261,6 +1497,10 @@ run_tests(void *arg)
                         break;
                 case TTYPE_AES_3DES:
                         variants_per_arch = VARIANTS_PER_ARCH_3DES;
+                        max_arch = NUM_ARCHS;
+                        break;
+                case TTYPE_CUSTOM:
+                        variants_per_arch = 1;
                         max_arch = NUM_ARCHS;
                         break;
                 }
@@ -1305,7 +1545,7 @@ run_tests(void *arg)
                 if (iter_scale == ITER_SCALE_SMOKE && run != 0)
                         continue;
 
-                for (type = TTYPE_AES_HMAC; type < NUM_TYPES; type++) {
+                for (type = TTYPE_AES_HMAC; type < NUM_TTYPES; type++) {
                         if (test_types[type] == 0)
                                 continue;
 
@@ -1355,6 +1595,9 @@ static void usage(void)
                 "-c: Use cold cache, it uses warm as default\n"
                 "-w: Use warm cache\n"
                 "--arch: run only tests on specified architecture (SSE/AVX/AVX2/AVX512)\n"
+                "--cipher-algo: Select cipher algorithm to run on the custom test\n"
+                "--hash-algo: Select hash algorithm to run on the custom test\n"
+                "--aead-algo: Select AEAD algorithm to run on the custom test\n"
                 "--no-avx512: Don't do AVX512\n"
                 "--no-avx2: Don't do AVX2\n"
                 "--no-avx: Don't do AVX\n"
@@ -1519,6 +1762,9 @@ int main(int argc, char *argv[])
         unsigned int arch_id;
         unsigned int arch_support[NUM_ARCHS];
         const union params *values;
+        unsigned int cipher_algo_set = 0;
+        unsigned int hash_algo_set = 0;
+        unsigned int aead_algo_set = 0;
 
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
@@ -1580,6 +1826,48 @@ int main(int argc, char *argv[])
                         memset(archs, 0, sizeof(archs));
                         archs[values->arch_type] = 1;
                         i++;
+                } else if (strcmp(argv[i], "--cipher-algo") == 0) {
+                        values = check_string_arg(argv[i], argv[i+1],
+                                        cipher_algo_str_map,
+                                        DIM(cipher_algo_str_map));
+                        if (values == NULL)
+                                return EXIT_FAILURE;
+
+                        custom_job_params.cipher_mode =
+                                        values->job_params.cipher_mode;
+                        custom_job_params.aes_key_size =
+                                        values->job_params.aes_key_size;
+                        test_types[TTYPE_CUSTOM] = 1;
+                        cipher_algo_set = 1;
+                        i++;
+                } else if (strcmp(argv[i], "--hash-algo") == 0) {
+                        values = check_string_arg(argv[i], argv[i+1],
+                                        hash_algo_str_map,
+                                        DIM(hash_algo_str_map));
+                        if (values == NULL)
+                                return EXIT_FAILURE;
+
+                        custom_job_params.hash_alg =
+                                        values->job_params.hash_alg;
+                        test_types[TTYPE_CUSTOM] = 1;
+                        hash_algo_set = 1;
+                        i++;
+                } else if (strcmp(argv[i], "--aead-algo") == 0) {
+                        values = check_string_arg(argv[i], argv[i+1],
+                                        aead_algo_str_map,
+                                        DIM(aead_algo_str_map));
+                        if (values == NULL)
+                                return EXIT_FAILURE;
+
+                        custom_job_params.cipher_mode =
+                                        values->job_params.cipher_mode;
+                        custom_job_params.aes_key_size =
+                                        values->job_params.aes_key_size;
+                        custom_job_params.hash_alg =
+                                        values->job_params.hash_alg;
+                        test_types[TTYPE_CUSTOM] = 1;
+                        aead_algo_set = 1;
+                        i++;
                 } else if (strcmp(argv[i], "-o") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &sha_size_incr,
@@ -1629,7 +1917,19 @@ int main(int argc, char *argv[])
                         return EXIT_FAILURE;
                 }
 
-        if (test_types[TTYPE_AES_CCM]) {
+        if (test_types[TTYPE_CUSTOM]) {
+		/* Disable all other tests when custom test is selected */
+                memset(test_types, 0, sizeof(test_types));
+                test_types[TTYPE_CUSTOM] = 1;
+                if (aead_algo_set && (cipher_algo_set || hash_algo_set)) {
+                        fprintf(stderr, "AEAD algorithm cannot be used "
+                                        "combined with another cipher/hash "
+                                        "algorithm\n");
+                        return EXIT_FAILURE;
+                }
+        }
+        if (test_types[TTYPE_AES_CCM] ||
+                        custom_job_params.cipher_mode == TEST_CCM) {
                 if (ccm_aad_size > CCM_AAD_SIZE_MAX) {
                         fprintf(stderr, "AAD cannot be higher than %u in CCM\n",
                                 CCM_AAD_SIZE_MAX);
@@ -1641,7 +1941,9 @@ int main(int argc, char *argv[])
                 if (test_types[TTYPE_AES_HMAC] ||
                                 test_types[TTYPE_AES_DOCSIS] ||
                                 test_types[TTYPE_AES_DES] ||
-                                test_types[TTYPE_AES_3DES]) {
+                                test_types[TTYPE_AES_3DES] ||
+                                (test_types[TTYPE_CUSTOM] &&
+                                 aead_algo_set == 0)) {
                         fprintf(stderr, "Buffer size cannot be 0 unless only "
                                         "an AEAD algorithm is tested\n");
                         return EXIT_FAILURE;
@@ -1686,10 +1988,12 @@ int main(int argc, char *argv[])
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
 
-        if (test_types[TTYPE_AES_GCM])
+        if (test_types[TTYPE_AES_GCM] ||
+                        (custom_job_params.cipher_mode == TEST_GCM))
                 fprintf(stderr, "GCM AAD = %"PRIu64"\n", gcm_aad_size);
 
-        if (test_types[TTYPE_AES_CCM])
+        if (test_types[TTYPE_AES_CCM] ||
+                        (custom_job_params.cipher_mode == TEST_CCM))
                 fprintf(stderr, "CCM AAD = %"PRIu64"\n", ccm_aad_size);
 
         if (archs[ARCH_SSE]) {
