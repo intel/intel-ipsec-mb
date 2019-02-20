@@ -43,7 +43,7 @@
 %include "os.asm"
 ;%define DO_DBGPRINT
 %include "dbgprint.asm"
-
+%include "transpose_avx2.asm"
 %include "mb_mgr_datastruct.asm"
 
 section .data
@@ -201,45 +201,6 @@ endstruc
 %define _DIGEST stack_frame.digest
 
 %define VMOVPD	vmovupd
-
-; operates on YMMs
-; transpose r0, r1, r2, r3, t0, t1
-; "transpose" data in {r0..r3} using temps {t0..t3}
-; Input looks like: {r0 r1 r2 r3}
-; r0 = {a7 a6 a5 a4 a3 a2 a1 a0}
-; r1 = {b7 b6 b5 b4 b3 b2 b1 b0}
-; r2 = {c7 c6 c5 c4 c3 c2 c1 c0}
-; r3 = {d7 d6 d5 d4 d3 d2 d1 d0}
-;
-; output looks like: {t0 r1 r0 r3}
-; t0 = {d1 d0 c1 c0 b1 b0 a1 a0}
-; r1 = {d3 d2 c3 c2 b3 b2 a3 a2}
-; r0 = {d5 d4 c5 c4 b5 b4 a5 a4}
-; r3 = {d7 d6 c7 c6 b7 b6 a7 a6}
-;
-%macro TRANSPOSE 6
-%define %%r0 %1
-%define %%r1 %2
-%define %%r2 %3
-%define %%r3 %4
-%define %%t0 %5
-%define %%t1 %6
-	; vshufps does not cross the mid-way boundary and hence is cheaper
-	vshufps	%%t0, %%r0, %%r1, 0x44	; t0 = {b5 b4 a5 a4 b1 b0 a1 a0}
-	vshufps	%%r0, %%r0, %%r1, 0xEE	; r0 = {b7 b6 a7 a6 b3 b2 a3 a2}
-
-	vshufps	%%t1, %%r2, %%r3, 0x44	; t1 = {d5 d4 c5 c4 d1 d0 c1 c0}
-	vshufps	%%r2, %%r2, %%r3, 0xEE	; r2 = {d7 d6 c7 c6 d3 d2 c3 c2}
-
-	vperm2f128 %%r1, %%r0, %%r2, 0x20; r1 = {d3 d2 c3 c2 b3 b2 a3 a2}
-
-	vperm2f128 %%r3, %%r0, %%r2, 0x31; r3 = {d7 d6 c7 c6 b7 b6 a7 a6}
-
-	vperm2f128 %%r0, %%t0, %%t1, 0x31; r0 = {d5 d4 c5 c4 b5 b4 a5 a4}
-
-	; now ok to clobber t0
-	vperm2f128 %%t0, %%t0, %%t1, 0x20; t0 = {d1 d0 c1 c0 b1 b0 a1 a0}
-%endmacro
 
 
 %macro ROTATE_ARGS 0
@@ -409,7 +370,7 @@ lloop:
 	VMOVPD	TT1,[inp1+IDX+i*32]
 	VMOVPD	TT4,[inp2+IDX+i*32]
 	VMOVPD	TT3,[inp3+IDX+i*32]
-	TRANSPOSE	TT2, TT1, TT4, TT3, TT0, TT5
+	TRANSPOSE4_U64	TT2, TT1, TT4, TT3, TT0, TT5
 	DBGPRINTL_YMM "sha512-avx2 Incoming data", TT1, TT2, TT3, TT4
 	vpshufb	TT0, TT0, TMP
 	vpshufb	TT1, TT1, TMP
