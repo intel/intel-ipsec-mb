@@ -146,43 +146,73 @@
 	vshufps	%%r4, %%t0, %%t1, 0x88	; r4 = {h4 g4 f4 e4   d4 c4 b4 a4}
 %endmacro
 
-; operates on YMMs
-; transpose r0, r1, r2, r3, t0, t1
-; "transpose" data in {r0..r3} using temps {t0..t1}
-; Input looks like: {r0 r1 r2 r3}
-; r0 = {a7 a6 a5 a4 a3 a2 a1 a0}
-; r1 = {b7 b6 b5 b4 b3 b2 b1 b0}
-; r2 = {c7 c6 c5 c4 c3 c2 c1 c0}
-; r3 = {d7 d6 d5 d4 d3 d2 d1 d0}
+; LOAD ALL 4 LANES FOR 4x4 64-BIT TRANSPOSE
 ;
-; output looks like: {t0 r1 r0 r3}
-; t0 = {d1 d0 c1 c0 b1 b0 a1 a0}
-; r1 = {d3 d2 c3 c2 b3 b2 a3 a2}
-; r0 = {d5 d4 c5 c4 b5 b4 a5 a4}
-; r3 = {d7 d6 c7 c6 b7 b6 a7 a6}
-;
-%macro TRANSPOSE4_U64 6
+; r0-r3 [out] ymm registers which will contain the data to be transposed
+; addr0-addr3 [in] pointers to the next 32-byte block of data to be fetch for the 4 lanes
+; ptr_offset  [in] offset to be applied on all pointers (addr0-addr3)
+%macro TRANSPOSE4_U64_LOAD4 9
 %define %%r0 %1
 %define %%r1 %2
 %define %%r2 %3
 %define %%r3 %4
-%define %%t0 %5
-%define %%t1 %6
+%define %%addr0 %5
+%define %%addr1 %6
+%define %%addr2 %7
+%define %%addr3 %8
+%define %%ptr_offset %9
+
+; Expected output data
+;
+; r0 = {c1 c0 a1 a0}
+; r1 = {d1 d0 b1 b0}
+; r2 = {c3 c2 a3 a2}
+; r3 = {d3 d2 b3 b2}
+
+	vmovupd	XWORD(%%r0),[%%addr0+%%ptr_offset]
+	vmovupd	XWORD(%%r1),[%%addr1+%%ptr_offset]
+	vmovupd	XWORD(%%r2),[%%addr0+%%ptr_offset+16]
+	vmovupd	XWORD(%%r3),[%%addr1+%%ptr_offset+16]
+
+	vinserti128 %%r0, %%r0, [%%addr2+%%ptr_offset], 0x01
+	vinserti128 %%r1, %%r1, [%%addr3+%%ptr_offset], 0x01
+	vinserti128 %%r2, %%r2, [%%addr2+%%ptr_offset+16], 0x1
+	vinserti128 %%r3, %%r3, [%%addr3+%%ptr_offset+16], 0x01
+
+%endmacro
+
+; 4x4 64-BIT TRANSPOSE
+;
+; Before calling this macro, TRANSPOSE4_U64_LOAD4 must be called.
+;
+; This macro takes 4 registers as input (r0-r3)
+; and transposes their content (64-bit elements)
+; outputing the data in registers (o0,r1,o2,r3),
+; using two additional registers
+%macro TRANSPOSE4_U64 6
+%define %%r0 %1 ; [in]     ymm register for row 0 input (c0-c1 a1-a0)
+%define %%r1 %2 ; [in/out] ymm register for row 1 input (d0-d1 b1-b0) and output
+%define %%r2 %3 ; [in]     ymm register for row 2 input (c3-c2 a3-a2)
+%define %%r3 %4 ; [in/out] ymm register for row 3 input (d3-d2 b3-b2) and output
+%define %%o0 %5 ; [out]    ymm register for row 0 output
+%define %%o2 %6 ; [out]    ymm register for row 2 output
+; Input looks like: {r0 r1 r2 r3}
+; r0 = {c1 c0 a1 a0}
+; r1 = {d1 d0 b1 b0}
+; r2 = {c3 c2 a3 a2}
+; r3 = {d3 d2 b3 b2}
+;
+; output looks like: {o0 r1 o2 r3}
+; o0 = {d0 c0 b0 a0}
+; r1 = {d1 c1 b1 a1}
+; o2 = {d2 c2 b2 a2}
+; r3 = {d3 c3 b3 a3}
 	; vshufps does not cross the mid-way boundary and hence is cheaper
-	vshufps	%%t0, %%r0, %%r1, 0x44	; t0 = {b5 b4 a5 a4 b1 b0 a1 a0}
-	vshufps	%%r0, %%r0, %%r1, 0xEE	; r0 = {b7 b6 a7 a6 b3 b2 a3 a2}
+	vshufps	%%o0, %%r0, %%r1, 0x44	; o0 = {d0 c0 b0 a0}
+	vshufps	%%r1, %%r0, %%r1, 0xEE	; r1 = {d1 d0 b1 b0}
 
-	vshufps	%%t1, %%r2, %%r3, 0x44	; t1 = {d5 d4 c5 c4 d1 d0 c1 c0}
-	vshufps	%%r2, %%r2, %%r3, 0xEE	; r2 = {d7 d6 c7 c6 d3 d2 c3 c2}
-
-	vperm2f128 %%r1, %%r0, %%r2, 0x20; r1 = {d3 d2 c3 c2 b3 b2 a3 a2}
-
-	vperm2f128 %%r3, %%r0, %%r2, 0x31; r3 = {d7 d6 c7 c6 b7 b6 a7 a6}
-
-	vperm2f128 %%r0, %%t0, %%t1, 0x31; r0 = {d5 d4 c5 c4 b5 b4 a5 a4}
-
-	; now ok to clobber t0
-	vperm2f128 %%t0, %%t0, %%t1, 0x20; t0 = {d1 d0 c1 c0 b1 b0 a1 a0}
+	vshufps	%%o2, %%r2, %%r3, 0x44	; o1 = {d2 c2 b2 a2}
+	vshufps	%%r3, %%r2, %%r3, 0xEE	; r3 = {d3 c3 b3 a3}
 %endmacro
 
 %endif ;; _TRANSPOSE_AVX2_ASM_

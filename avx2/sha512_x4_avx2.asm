@@ -200,9 +200,6 @@ endstruc
 
 %define _DIGEST stack_frame.digest
 
-%define VMOVPD	vmovupd
-
-
 %macro ROTATE_ARGS 0
 %xdefine TMP_ h
 %xdefine h g
@@ -366,12 +363,11 @@ lloop:
 %rep 4
 	;; load up the shuffler for little-endian to big-endian format
 	vmovdqa	TMP, [PSHUFFLE_BYTE_FLIP_MASK]
-	VMOVPD	TT2,[inp0+IDX+i*32]
-	VMOVPD	TT1,[inp1+IDX+i*32]
-	VMOVPD	TT4,[inp2+IDX+i*32]
-	VMOVPD	TT3,[inp3+IDX+i*32]
-	TRANSPOSE4_U64	TT2, TT1, TT4, TT3, TT0, TT5
-	DBGPRINTL_YMM "sha512-avx2 Incoming data", TT1, TT2, TT3, TT4
+
+	TRANSPOSE4_U64_LOAD4 TT4, TT1, TT5, TT3, inp0, inp1, inp2, inp3, IDX+i*32
+
+	TRANSPOSE4_U64 TT4, TT1, TT5, TT3, TT0, TT2
+	DBGPRINTL_YMM "sha512-avx2 Incoming data", TT0, TT1, TT2, TT3
 	vpshufb	TT0, TT0, TMP
 	vpshufb	TT1, TT1, TMP
 	vpshufb	TT2, TT2, TMP
