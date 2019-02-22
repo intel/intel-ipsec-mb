@@ -228,7 +228,7 @@ uint32_t key_idxs[NUM_OFFSETS];
 uint32_t offsets[NUM_OFFSETS];
 uint32_t sha_size_incr = 24;
 
-uint32_t job_size_start = 0;
+uint32_t job_size_start = UINT32_MAX;
 uint32_t job_iter = 0;
 uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
 uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
@@ -955,8 +955,7 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
         for (sz = 0; sz < sizes; sz++) {
                 const uint32_t size_aes = job_size_start + (sz * JOB_SIZE_STEP);
-                const uint32_t num_iter =
-                        (iter_scale >= size_aes) ? (iter_scale / size_aes) : 1;
+                uint32_t num_iter;
 
                 params->aad_size = 0;
                 if (params->cipher_mode == TEST_GCM)
@@ -964,6 +963,20 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
                 if (params->cipher_mode == TEST_CCM)
                         params->aad_size = ccm_aad_size;
+
+                /*
+                 * If job size == 0, check AAD size
+                 * (only allowed for GCM/CCM)
+                 */
+                if (size_aes == 0 && params->aad_size != 0)
+                        num_iter = (iter_scale >= (uint32_t)params->aad_size) ?
+                                   (iter_scale / (uint32_t)params->aad_size) :
+                                   1;
+                else if (size_aes != 0)
+                        num_iter = (iter_scale >= size_aes) ?
+                                   (iter_scale / size_aes) : 1;
+                else
+                        num_iter = iter_scale;
 
                 params->size_aes = size_aes;
                 if (params->cipher_mode == TEST_GCM && (!use_gcm_job_api)) {
@@ -1177,7 +1190,7 @@ run_tests(void *arg)
         struct variant_s *variant_list = NULL;
 
         p_mgr = info->p_mgr;
-        if (job_size_start == 0) {
+        if (job_size_start == UINT32_MAX) {
                 /* Unmodified through command line parameters. Use defaults. */
                 params.num_sizes = JOB_SIZE_MAX / JOB_SIZE_STEP;
                 job_size_start = JOB_SIZE_STEP;
@@ -1620,6 +1633,17 @@ int main(int argc, char *argv[])
                 if (ccm_aad_size > CCM_AAD_SIZE_MAX) {
                         fprintf(stderr, "AAD cannot be higher than %u in CCM\n",
                                 CCM_AAD_SIZE_MAX);
+                        return EXIT_FAILURE;
+                }
+        }
+
+        if (job_size_start == 0) {
+                if (test_types[TTYPE_AES_HMAC] ||
+                                test_types[TTYPE_AES_DOCSIS] ||
+                                test_types[TTYPE_AES_DES] ||
+                                test_types[TTYPE_AES_3DES]) {
+                        fprintf(stderr, "Buffer size cannot be 0 unless only "
+                                        "an AEAD algorithm is tested\n");
                         return EXIT_FAILURE;
                 }
         }
