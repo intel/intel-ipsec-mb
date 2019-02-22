@@ -29,7 +29,7 @@
 ;;; process 4 buffers at a time, single data structure as input
 ;;; Updates In and Out pointers at end
 
-%include "os.asm"
+%include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
 
 %define	MOVDQ movdqu ;; assume buffers not aligned

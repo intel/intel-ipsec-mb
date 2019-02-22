@@ -25,9 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "os.asm"
+%include "include/os.asm"
 %define NO_AESNI_RENAME
-%include "aesni_emu.inc"
+%include "include/aesni_emu.inc"
 
 %ifdef LINUX
 %define KEY		rdi

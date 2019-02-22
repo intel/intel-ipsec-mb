@@ -27,4 +27,4 @@
 
 %define AES_CBC_ENC_X4 aes_cbc_enc_256_x4_no_aesni
 %define SUBMIT_JOB_AES_ENC submit_job_aes256_enc_sse_no_aesni
-%include "mb_mgr_aes_submit_sse.asm"
+%include "sse/mb_mgr_aes_submit_sse.asm"

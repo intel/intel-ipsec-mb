@@ -28,7 +28,7 @@
 %ifndef __MEMCPY_ASM__
 %define __MEMCPY_ASM__
 
-%include "reg_sizes.asm"
+%include "include/reg_sizes.asm"
 
 
 ; This section defines a series of macros to copy small to medium amounts

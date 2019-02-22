@@ -25,4 +25,4 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 %define SHA224
-%include "mb_mgr_hmac_sha_256_flush_avx512.asm"
+%include "avx512/mb_mgr_hmac_sha_256_flush_avx512.asm"

@@ -29,7 +29,7 @@
 
 ;; clobbers all registers except for ARG1 and rbp
 
-%include "os.asm"
+%include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
 
 %define	VMOVDQ vmovdqu ;; assume buffers not aligned

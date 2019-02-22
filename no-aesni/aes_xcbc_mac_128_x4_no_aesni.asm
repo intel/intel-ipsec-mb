@@ -25,6 +25,6 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "aesni_emu.inc"
+%include "include/aesni_emu.inc"
 %define AES_XCBC_X4 aes_xcbc_mac_128_x4_no_aesni
-%include "aes_xcbc_mac_128_x4.asm"
+%include "sse/aes_xcbc_mac_128_x4.asm"

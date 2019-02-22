@@ -39,7 +39,7 @@
 ;;
 ;; clobbers xmm0-15
 
-%include "os.asm"
+%include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
 extern K512_2
 

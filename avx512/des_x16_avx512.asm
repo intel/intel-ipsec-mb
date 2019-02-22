@@ -46,12 +46,12 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31 and K1 to K7
 
-%include "os.asm"
-%include "reg_sizes.asm"
+%include "include/os.asm"
+%include "include/reg_sizes.asm"
 %include "mb_mgr_datastruct.asm"
 %include "constants.asm"
 ;%define DO_DBGPRINT
-%include "dbgprint.asm"
+%include "include/dbgprint.asm"
 
 %ifdef LINUX
 %define arg1	rdi

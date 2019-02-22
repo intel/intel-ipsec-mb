@@ -27,4 +27,4 @@
 
 %define AES_XCBC_X4 aes_xcbc_mac_128_x4_no_aesni
 %define SUBMIT_JOB_AES_XCBC submit_job_aes_xcbc_sse_no_aesni
-%include "mb_mgr_aes_xcbc_submit_sse.asm"
+%include "sse/mb_mgr_aes_xcbc_submit_sse.asm"

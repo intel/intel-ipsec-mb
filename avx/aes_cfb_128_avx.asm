@@ -25,8 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "os.asm"
-%include "memcpy.asm"
+%include "include/os.asm"
+%include "include/memcpy.asm"
 
 ;;; Routine to do 128 bit CFB AES encrypt/decrypt operations on one block only.
 ;;; It processes only one buffer at a time.

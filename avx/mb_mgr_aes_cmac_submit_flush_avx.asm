@@ -26,15 +26,15 @@
 ;;
 
 
-%include "os.asm"
+%include "include/os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 
-%include "reg_sizes.asm"
-%include "memcpy.asm"
-%include "const.inc"
+%include "include/reg_sizes.asm"
+%include "include/memcpy.asm"
+%include "include/const.inc"
 ;%define DO_DBGPRINT
-%include "dbgprint.asm"
+%include "include/dbgprint.asm"
 
 %define AES128_CBC_MAC aes128_cbc_mac_x8
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_avx

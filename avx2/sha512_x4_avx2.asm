@@ -40,10 +40,11 @@
 ;;
 ;; clobbers ymm0-15
 
-%include "os.asm"
+%include "include/os.asm"
 ;%define DO_DBGPRINT
-%include "dbgprint.asm"
-%include "transpose_avx2.asm"
+%include "include/dbgprint.asm"
+%include "include/transpose_avx2.asm"
+%include "include/dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
 
 section .data

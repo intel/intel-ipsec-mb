@@ -30,4 +30,4 @@
 
 %define FUNC sha384_block_avx
 
-%include "sha512_one_block_avx.asm"
+%include "avx/sha512_one_block_avx.asm"

@@ -38,11 +38,11 @@
 ;;
 ;; clobbers xmm0-15
 
-%include "os.asm"
+%include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
 
 ;%define DO_DBGPRINT
-%include "dbgprint.asm"
+%include "include/dbgprint.asm"
 
 section .data
 default rel

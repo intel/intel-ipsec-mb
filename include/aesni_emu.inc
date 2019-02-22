@@ -28,7 +28,7 @@
 %ifndef _AESNI_EMU_INC_
 %define _AESNI_EMU_INC_
 
-%include "reg_sizes.asm"
+%include "include/reg_sizes.asm"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utility macros and defines to assist AESNI translation macros

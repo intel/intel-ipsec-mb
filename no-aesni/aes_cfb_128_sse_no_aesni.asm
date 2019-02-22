@@ -25,6 +25,6 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "aesni_emu.inc"
+%include "include/aesni_emu.inc"
 %define AES_CFB_128_ONE aes_cfb_128_one_sse_no_aesni
-%include "aes_cfb_128_sse.asm"
+%include "sse/aes_cfb_128_sse.asm"

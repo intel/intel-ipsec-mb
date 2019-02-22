@@ -28,7 +28,7 @@
 %ifndef _TRANSPOSE_AVX512_ASM_
 %define _TRANSPOSE_AVX512_ASM_
 
-%include "reg_sizes.asm"
+%include "include/reg_sizes.asm"
 
 section .data
 default rel

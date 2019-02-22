@@ -25,12 +25,12 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "os.asm"
+%include "include/os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
-%include "reg_sizes.asm"
-%include "memcpy.asm"
-%include "const.inc"
+%include "include/reg_sizes.asm"
+%include "include/memcpy.asm"
+%include "include/const.inc"
 
 extern sha_256_mult_sse
 

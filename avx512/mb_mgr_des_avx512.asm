@@ -41,13 +41,13 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31, K1-7 (K1-2 and K4-6 here but DES underneath clobbers K1-7).
 
-%include "os.asm"
-%include "reg_sizes.asm"
+%include "include/os.asm"
+%include "include/reg_sizes.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 %include "constants.asm"
 ;%define DO_DBGPRINT
-%include "dbgprint.asm"
+%include "include/dbgprint.asm"
 
 extern docsis_des_x16_enc_avx512
 extern docsis_des_x16_dec_avx512

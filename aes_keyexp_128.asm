@@ -26,9 +26,9 @@
 ;;
 
 ; Routine to do AES key expansion
-%include "os.asm"
+%include "include/os.asm"
 %define NO_AESNI_RENAME
-%include "aesni_emu.inc"
+%include "include/aesni_emu.inc"
 
 %macro key_expansion_128_sse 0
 	;; Assumes the xmm3 includes all zeros at this point.

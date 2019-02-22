@@ -41,7 +41,7 @@
 ; arg 4: OUT:  pointer to output (plain text)
 ; arg 5: LEN:  length in bytes (multiple of 16)
 ;
-%include "os.asm"
+%include "include/os.asm"
 
 %ifndef AES_CBC_DEC_128
 %define AES_CBC_DEC_128 aes_cbc_dec_128_sse

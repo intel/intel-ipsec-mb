@@ -110,10 +110,10 @@
 ; throughout the code, one tab and two tab indentations are used. one tab is for GHASH part, two tabs is for AES part.
 ;
 
-%include "os.asm"
-%include "reg_sizes.asm"
+%include "include/os.asm"
+%include "include/reg_sizes.asm"
 %include "gcm_defines.asm"
-%include "memcpy.asm"
+%include "include/memcpy.asm"
 
 %ifndef GCM128_MODE
 %ifndef GCM192_MODE

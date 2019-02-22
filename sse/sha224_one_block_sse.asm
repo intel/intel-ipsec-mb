@@ -30,4 +30,4 @@
 
 %define FUNC sha224_block_sse
 
-%include "sha256_one_block_sse.asm"
+%include "sse/sha256_one_block_sse.asm"

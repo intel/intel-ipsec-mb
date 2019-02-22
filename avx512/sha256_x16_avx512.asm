@@ -37,12 +37,12 @@
 ;;			-----------------------------------------------------------
 ;; Clobbers ZMM0-31
 
-%include "os.asm"
+%include "include/os.asm"
 ;%define DO_DBGPRINT
-%include "dbgprint.asm"
+%include "include/dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
-%include "transpose_avx512.asm"
-%include "reg_sizes.asm"
+%include "include/transpose_avx512.asm"
+%include "include/reg_sizes.asm"
 
 ; re-use K256 from sha256_oct_avx2.asm
 extern K256

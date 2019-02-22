@@ -38,9 +38,9 @@
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 
-%include "os.asm"
+%include "include/os.asm"
 ;%define DO_DBGPRINT
-%include "dbgprint.asm"
+%include "include/dbgprint.asm"
 
 %include "mb_mgr_datastruct.asm"
 

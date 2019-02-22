@@ -26,9 +26,9 @@
 ;;
 
 ; Routine to do AES key expansion
-%include "os.asm"
+%include "include/os.asm"
 %define NO_AESNI_RENAME
-%include "aesni_emu.inc"
+%include "include/aesni_emu.inc"
 
 ; Uses the f() function of the aeskeygenassist result
 %macro key_expansion_256_sse 0

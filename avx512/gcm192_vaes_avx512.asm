@@ -28,4 +28,4 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define GCM192_MODE 1
-%include "gcm_vaes_avx512.asm"
+%include "avx512/gcm_vaes_avx512.asm"

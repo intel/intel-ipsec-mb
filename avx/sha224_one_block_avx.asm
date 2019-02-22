@@ -30,4 +30,4 @@
 
 %define FUNC sha224_block_avx
 
-%include "sha256_one_block_avx.asm"
+%include "avx/sha256_one_block_avx.asm"

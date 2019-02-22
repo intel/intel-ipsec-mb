@@ -27,7 +27,7 @@
 
 ; SHA1 code, hybrid, rolled, interleaved
 ; Uses SSE instructions
-%include "os.asm"
+%include "include/os.asm"
 
 section .data
 default rel

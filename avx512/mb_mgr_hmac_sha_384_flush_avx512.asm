@@ -26,4 +26,4 @@
 ;;
 
 %define SHA384
-%include "mb_mgr_hmac_sha_512_flush_avx512.asm"
+%include "avx512/mb_mgr_hmac_sha_512_flush_avx512.asm"

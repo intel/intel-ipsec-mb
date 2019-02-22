@@ -28,7 +28,7 @@
 ; routine to do AES256 CBC decrypt "by8"
 
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
-%include "os.asm"
+%include "include/os.asm"
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu

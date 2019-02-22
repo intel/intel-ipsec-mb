@@ -28,4 +28,4 @@
 %define FUNC flush_job_hmac_sha_224_sse
 %define SHA224
 
-%include "mb_mgr_hmac_sha_256_flush_sse.asm"
+%include "sse/mb_mgr_hmac_sha_256_flush_sse.asm"

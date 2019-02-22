@@ -27,7 +27,7 @@
 
 ; This code schedules 1 blocks at a time, with 4 lanes per block
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%include "os.asm"
+%include "include/os.asm"
 
 section .data
 default rel

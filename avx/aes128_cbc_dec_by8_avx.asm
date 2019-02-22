@@ -29,7 +29,7 @@
 
 ;; clobbers xmm0-15
 
-%include "os.asm"
+%include "include/os.asm"
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu

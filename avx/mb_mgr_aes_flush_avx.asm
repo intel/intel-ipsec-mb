@@ -25,11 +25,11 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "os.asm"
+%include "include/os.asm"
 %include "job_aes_hmac.asm"
 %include "mb_mgr_datastruct.asm"
 
-%include "reg_sizes.asm"
+%include "include/reg_sizes.asm"
 
 %ifndef AES_CBC_ENC_X8
 %define AES_CBC_ENC_X8 aes_cbc_enc_128_x8

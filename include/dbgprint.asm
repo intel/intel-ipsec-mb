@@ -72,6 +72,8 @@
 ; Printing the debug data also resets the write pointer to the beginning,
 ; effectively "deleting" the previous messages.
 ;
+%ifndef DBGPRINT_ASM_INCLUDED
+%define DBGPRINT_ASM_INCLUDED
 
 ;%define DO_DBGPRINT
 %ifdef DO_DBGPRINT
@@ -407,3 +409,5 @@ section .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %endif ; ifdef 0 ; OLD
+
+%endif ; DBGPRINT_ASM_INCLUDED

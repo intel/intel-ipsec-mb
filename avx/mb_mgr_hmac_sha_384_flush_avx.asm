@@ -28,4 +28,4 @@
 %define FUNC flush_job_hmac_sha_384_avx
 %define SHA_X_DIGEST_SIZE 384
 
-%include "mb_mgr_hmac_sha_512_flush_avx.asm"
+%include "avx/mb_mgr_hmac_sha_512_flush_avx.asm"
