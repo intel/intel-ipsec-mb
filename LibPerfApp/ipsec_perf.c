@@ -118,13 +118,6 @@ enum arch_type_e {
         NUM_ARCHS
 };
 
-const char *arch_strings[NUM_ARCHS] = {
-        "SSE",
-        "AVX",
-        "AVX2",
-        "AVX512"
-};
-
 enum test_type_e {
         TTYPE_AES_HMAC,
         TTYPE_AES_DOCSIS,
@@ -177,6 +170,22 @@ struct params_s {
         uint32_t		num_sizes;
         uint32_t		num_variants;
         uint32_t                core;
+};
+
+union params {
+        enum arch_type_e arch_type;
+};
+
+struct str_value_mapping {
+        const char      *name;
+        union params    values;
+};
+
+struct str_value_mapping arch_str_map[] = {
+        {.name = "SSE",    .values.arch_type = ARCH_SSE },
+        {.name = "AVX",    .values.arch_type = ARCH_AVX },
+        {.name = "AVX2",   .values.arch_type = ARCH_AVX2 },
+        {.name = "AVX512", .values.arch_type = ARCH_AVX512 }
 };
 
 /* This struct stores all information about performed test case */
@@ -1227,6 +1236,11 @@ run_tests(void *arg)
                 total_variants += num_variants[type];
         }
 
+        if (total_variants == 0) {
+                fprintf(stderr, "No tests to be run\n");
+                goto exit;
+        }
+
         variant_list = (struct variant_s *)
                 malloc(total_variants * sizeof(struct variant_s));
         if (variant_list == NULL) {
@@ -1273,6 +1287,7 @@ run_tests(void *arg)
         if (info->print_info == 1 && iter_scale != ITER_SCALE_SMOKE)
                 print_times(variant_list, &params, total_variants);
 
+exit:
         if (variant_list != NULL) {
                 /* Freeing variants list */
                 for (i = 0; i < total_variants; i++)
@@ -1301,6 +1316,7 @@ static void usage(void)
                 "-h: print this message\n"
                 "-c: Use cold cache, it uses warm as default\n"
                 "-w: Use warm cache\n"
+                "--arch: run only tests on specified architecture (SSE/AVX/AVX2/AVX512)\n"
                 "--no-avx512: Don't do AVX512\n"
                 "--no-avx2: Don't do AVX2\n"
                 "--no-avx: Don't do AVX\n"
@@ -1425,6 +1441,37 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
         return 0;
 }
 
+/*
+ * Check string argument is supported and if it is, return values associated
+ * with it.
+ */
+static const union params *
+check_string_arg(const char *param, const char *arg,
+                 const struct str_value_mapping *map,
+                 const unsigned int num_avail_opts)
+{
+        unsigned int i;
+
+        if (arg == NULL) {
+                fprintf(stderr, "%s requires an argument\n", param);
+                goto exit;
+        }
+
+        for (i = 0; i < num_avail_opts; i++)
+                if (strcmp(arg, map[i].name) == 0)
+                        return &(map[i].values);
+
+        /* Argument is not listed in the available options */
+        fprintf(stderr, "Invalid argument for %s\n", param);
+exit:
+        fprintf(stderr, "Accepted arguments: ");
+        for (i = 0; i < num_avail_opts; i++)
+                fprintf(stderr, "%s ", map[i].name);
+        fprintf(stderr, "\n");
+
+        return NULL;
+}
+
 int main(int argc, char *argv[])
 {
         uint32_t num_t = 0;
@@ -1432,6 +1479,7 @@ int main(int argc, char *argv[])
         struct thread_info *thread_info_p = t_info;
         unsigned int arch_id;
         unsigned int arch_support[NUM_ARCHS];
+        const union params *values;
 
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
@@ -1479,6 +1527,20 @@ int main(int argc, char *argv[])
                         iter_scale = ITER_SCALE_SHORT;
                 } else if (strcmp(argv[i], "--smoke") == 0) {
                         iter_scale = ITER_SCALE_SMOKE;
+                } else if (strcmp(argv[i], "--arch") == 0) {
+                        values = check_string_arg(argv[i], argv[i+1],
+                                             arch_str_map,
+                                             DIM(arch_str_map));
+                        if (values == NULL)
+                                return EXIT_FAILURE;
+
+                        /*
+                         * Disable all the other architectures
+                         * and enable only the specified
+                         */
+                        memset(archs, 0, sizeof(archs));
+                        archs[values->arch_type] = 1;
+                        i++;
                 } else if (strcmp(argv[i], "-o") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &sha_size_incr,
@@ -1546,7 +1608,8 @@ int main(int argc, char *argv[])
                         archs[arch_id] = 0;
                         fprintf(stderr,
                                 "%s not supported. Disabling %s tests\n",
-                                arch_strings[arch_id], arch_strings[arch_id]);
+                                arch_str_map[arch_id].name,
+                                arch_str_map[arch_id].name);
                 }
         }
 
