@@ -184,6 +184,7 @@ struct custom_job_params {
         enum test_cipher_mode_e cipher_mode;
         enum test_hash_alg_e    hash_alg;
         uint32_t                aes_key_size;
+        JOB_CIPHER_DIRECTION    cipher_dir;
 };
 
 union params {
@@ -410,6 +411,11 @@ struct str_value_mapping aead_algo_str_map[] = {
         }
 };
 
+struct str_value_mapping cipher_dir_str_map[] = {
+        {.name = "encrypt", .values.job_params.cipher_dir = ENCRYPT},
+        {.name = "decrypt", .values.job_params.cipher_dir = DECRYPT}
+};
+
 /* This struct stores all information about performed test case */
 struct variant_s {
         uint32_t arch;
@@ -451,7 +457,8 @@ uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
 struct custom_job_params custom_job_params = {
         .cipher_mode  = TEST_NULL_CIPHER,
         .hash_alg     = TEST_NULL_HASH,
-        .aes_key_size = 0
+        .aes_key_size = 0,
+        .cipher_dir   = ENCRYPT
 };
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
@@ -1315,7 +1322,7 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         }
 
         if (params->test_type == TTYPE_CUSTOM) {
-                params->cipher_dir = ENCRYPT;
+                params->cipher_dir = custom_job_params.cipher_dir;
                 params->aes_key_size = custom_job_params.aes_key_size;
                 params->cipher_mode = custom_job_params.cipher_mode;
                 params->hash_alg = custom_job_params.hash_alg;
@@ -1596,6 +1603,8 @@ static void usage(void)
                 "-w: Use warm cache\n"
                 "--arch: run only tests on specified architecture (SSE/AVX/AVX2/AVX512)\n"
                 "--cipher-algo: Select cipher algorithm to run on the custom test\n"
+                "--cipher-dir: Select cipher direction to run on the custom test  "
+                               "(encrypt/decrypt) (default = encrypt)\n"
                 "--hash-algo: Select hash algorithm to run on the custom test\n"
                 "--aead-algo: Select AEAD algorithm to run on the custom test\n"
                 "--no-avx512: Don't do AVX512\n"
@@ -1765,6 +1774,7 @@ int main(int argc, char *argv[])
         unsigned int cipher_algo_set = 0;
         unsigned int hash_algo_set = 0;
         unsigned int aead_algo_set = 0;
+        unsigned int cipher_dir_set = 0;
 
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
@@ -1839,6 +1849,17 @@ int main(int argc, char *argv[])
                                         values->job_params.aes_key_size;
                         test_types[TTYPE_CUSTOM] = 1;
                         cipher_algo_set = 1;
+                        i++;
+                } else if (strcmp(argv[i], "--cipher-dir") == 0) {
+                        values = check_string_arg(argv[i], argv[i+1],
+                                        cipher_dir_str_map,
+                                        DIM(cipher_dir_str_map));
+                        if (values == NULL)
+                                return EXIT_FAILURE;
+
+                        custom_job_params.cipher_dir =
+                                        values->job_params.cipher_dir;
+                        cipher_dir_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "--hash-algo") == 0) {
                         values = check_string_arg(argv[i], argv[i+1],
@@ -1928,6 +1949,13 @@ int main(int argc, char *argv[])
                         return EXIT_FAILURE;
                 }
         }
+
+        if (cipher_algo_set == 0 && aead_algo_set == 0 && cipher_dir_set) {
+                fprintf(stderr, "--cipher-dir can only be used with "
+                                "--cipher-algo or --aead-algo\n");
+                return EXIT_FAILURE;
+        }
+
         if (test_types[TTYPE_AES_CCM] ||
                         custom_job_params.cipher_mode == TEST_CCM) {
                 if (ccm_aad_size > CCM_AAD_SIZE_MAX) {
