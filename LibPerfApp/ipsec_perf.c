@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <string.h>
 #include <errno.h>
 #include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
@@ -57,6 +58,11 @@
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
 #define NUM_RUNS 16
 #define KEYS_PER_JOB 15
+
+#define AAD_SIZE_MAX JOB_SIZE_MAX
+#define CCM_AAD_SIZE_MAX 46
+#define DEFAULT_GCM_AAD_SIZE 12
+#define DEFAULT_CCM_AAD_SIZE 8
 
 #define ITER_SCALE_SMOKE 2048
 #define ITER_SCALE_SHORT 200000
@@ -167,6 +173,7 @@ struct params_s {
         enum test_hash_alg_e	hash_alg;
         uint32_t		aes_key_size;
         uint32_t		size_aes;
+        uint64_t		aad_size;
         uint32_t		num_sizes;
         uint32_t		num_variants;
         uint32_t                core;
@@ -223,6 +230,8 @@ uint32_t sha_size_incr = 24;
 
 uint32_t job_size_start = 0;
 uint32_t job_iter = 0;
+uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
+uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
 /* AES, DOCSIS, GCM, CCM, DES, 3DES */
@@ -641,14 +650,14 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 }
                 job_template.aes_enc_key_expanded = &gdata_key;
                 job_template.aes_dec_key_expanded = &gdata_key;
-                job_template.u.GCM.aad_len_in_bytes = 12;
+                job_template.u.GCM.aad_len_in_bytes = params->aad_size;
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == CCM) {
                 job_template.msg_len_to_cipher_in_bytes = size_aes;
                 job_template.msg_len_to_hash_in_bytes = size_aes;
                 job_template.hash_start_src_offset_in_bytes = 0;
                 job_template.cipher_start_src_offset_in_bytes = 0;
-                job_template.u.CCM.aad_len_in_bytes = 8;
+                job_template.u.CCM.aad_len_in_bytes = params->aad_size;
                 job_template.iv_len_in_bytes = 13;
         } else if (job_template.cipher_mode == DES ||
                    job_template.cipher_mode == DOCSIS_DES) {
@@ -737,7 +746,7 @@ do_test_gcm(struct params_s *params,
         static uint32_t index = 0;
         uint32_t size_aes = params->size_aes;
         uint32_t i;
-        uint8_t aad[12];
+        uint8_t *aad = NULL;
         uint8_t auth_tag[12];
         DECLARE_ALIGNED(uint8_t iv[16], 16);
         uint64_t time = 0;
@@ -746,6 +755,14 @@ do_test_gcm(struct params_s *params,
         key = (uint8_t *) malloc(sizeof(uint8_t) * params->aes_key_size);
         if (!key) {
                 fprintf(stderr, "Could not malloc key\n");
+                free_mem();
+                exit(EXIT_FAILURE);
+        }
+
+        aad = (uint8_t *) malloc(sizeof(uint8_t) * params->aad_size);
+        if (!aad) {
+                free(key);
+                fprintf(stderr, "Could not malloc AAD\n");
                 free_mem();
                 exit(EXIT_FAILURE);
         }
@@ -780,7 +797,7 @@ do_test_gcm(struct params_s *params,
                                                    buf + offsets[index]
                                                    + sha_size_incr,
                                                    size_aes, iv,
-                                                   aad, sizeof(aad),
+                                                   aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
                                 index += 2;
                                 if (index >= index_limit)
@@ -795,7 +812,7 @@ do_test_gcm(struct params_s *params,
                                                    buf + offsets[index]
                                                    + sha_size_incr,
                                                    size_aes, iv,
-                                                   aad, sizeof(aad),
+                                                   aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
                                 index += 2;
                                 if (index >= index_limit)
@@ -810,7 +827,7 @@ do_test_gcm(struct params_s *params,
                                                    buf + offsets[index]
                                                    + sha_size_incr,
                                                    size_aes, iv,
-                                                   aad, sizeof(aad),
+                                                   aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
                                 index += 2;
                                 if (index >= index_limit)
@@ -841,7 +858,7 @@ do_test_gcm(struct params_s *params,
                                                    buf + offsets[index]
                                                    + sha_size_incr,
                                                    size_aes, iv,
-                                                   aad, sizeof(aad),
+                                                   aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
                                 index += 2;
                                 if (index >= index_limit)
@@ -856,7 +873,7 @@ do_test_gcm(struct params_s *params,
                                                    buf + offsets[index]
                                                    + sha_size_incr,
                                                    size_aes, iv,
-                                                   aad, sizeof(aad),
+                                                   aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
                                 index += 2;
                                 if (index >= index_limit)
@@ -871,7 +888,7 @@ do_test_gcm(struct params_s *params,
                                                    buf + offsets[index]
                                                    + sha_size_incr,
                                                    size_aes, iv,
-                                                   aad, sizeof(aad),
+                                                   aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
                                 index += 2;
                                 if (index >= index_limit)
@@ -888,6 +905,7 @@ do_test_gcm(struct params_s *params,
         }
 
         free(key);
+        free(aad);
         return time / num_iter;
 }
 
@@ -940,8 +958,15 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 const uint32_t num_iter =
                         (iter_scale >= size_aes) ? (iter_scale / size_aes) : 1;
 
+                params->aad_size = 0;
+                if (params->cipher_mode == TEST_GCM)
+                        params->aad_size = gcm_aad_size;
+
+                if (params->cipher_mode == TEST_CCM)
+                        params->aad_size = ccm_aad_size;
+
                 params->size_aes = size_aes;
-                if (params->test_type == TTYPE_AES_GCM && (!use_gcm_job_api)) {
+                if (params->cipher_mode == TEST_GCM && (!use_gcm_job_api)) {
                         if (job_iter == 0)
                                 *times = do_test_gcm(params, 2 * num_iter, mgr);
                         else
@@ -1343,6 +1368,7 @@ static void usage(void)
                 "         (for validation only)\n"
                 "--job-size: size of the cipher & MAC job in bytes\n"
                 "            (-o still applies for MAC)\n"
+                "--aad-size: size of AAD for AEAD algorithms\n"
                 "--job-iter: number of tests iterations for each job size\n",
                 MAX_NUM_THREADS + 1);
 }
@@ -1529,8 +1555,8 @@ int main(int argc, char *argv[])
                         iter_scale = ITER_SCALE_SMOKE;
                 } else if (strcmp(argv[i], "--arch") == 0) {
                         values = check_string_arg(argv[i], argv[i+1],
-                                             arch_str_map,
-                                             DIM(arch_str_map));
+                                                  arch_str_map,
+                                                  DIM(arch_str_map));
                         if (values == NULL)
                                 return EXIT_FAILURE;
 
@@ -1556,6 +1582,19 @@ int main(int argc, char *argv[])
                                         JOB_SIZE_MAX);
                                 return EXIT_FAILURE;
                         }
+                } else if (strcmp(argv[i], "--aad-size") == 0) {
+                        /* Get AAD size for both GCM and CCM */
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &gcm_aad_size,
+                                             sizeof(gcm_aad_size));
+                        if (gcm_aad_size > AAD_SIZE_MAX) {
+                                fprintf(stderr,
+                                        "Invalid AAD size %u (max %u)!\n",
+                                        (unsigned) gcm_aad_size,
+                                        AAD_SIZE_MAX);
+                                return EXIT_FAILURE;
+                        }
+                        ccm_aad_size = gcm_aad_size;
                 } else if (strcmp(argv[i], "--job-iter") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &job_iter, sizeof(job_iter));
@@ -1576,6 +1615,14 @@ int main(int argc, char *argv[])
                         usage();
                         return EXIT_FAILURE;
                 }
+
+        if (test_types[TTYPE_AES_CCM]) {
+                if (ccm_aad_size > CCM_AAD_SIZE_MAX) {
+                        fprintf(stderr, "AAD cannot be higher than %u in CCM\n",
+                                CCM_AAD_SIZE_MAX);
+                        return EXIT_FAILURE;
+                }
+        }
 
         /* Check num cores >= number of threads */
         if ((core_mask != 0 && num_t != 0) && (num_t > bitcount(core_mask))) {
@@ -1614,6 +1661,13 @@ int main(int argc, char *argv[])
         }
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
+
+        if (test_types[TTYPE_AES_GCM])
+                fprintf(stderr, "GCM AAD = %"PRIu64"\n", gcm_aad_size);
+
+        if (test_types[TTYPE_AES_CCM])
+                fprintf(stderr, "CCM AAD = %"PRIu64"\n", ccm_aad_size);
+
         if (archs[ARCH_SSE]) {
                 MB_MGR *p_mgr = alloc_mb_mgr(flags);
 
