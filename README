@@ -213,11 +213,12 @@ Windows (x64 only)
 ------------------
 
 Required tools:
-- Microsoft (R) Visual Studio 2010:
-  - NMAKE: Microsoft (R) Program Maintenance Utility Version 10.00.30319.01
-  - CL: Microsoft (R) C/C++ Optimizing Compiler Version 16.00.30319.01 for x64
-  - LIB: Microsoft (R) Library Manager Version 10.00.30319.01
-  - LINK: Microsoft (R) Incremental Linker Version 10.00.30319.01
+- Microsoft (R) Visual Studio 2015:
+  - NMAKE: Microsoft (R) Program Maintenance Utility Version 14.00.24210.0
+  - CL: Microsoft (R) C/C++ Optimizing Compiler Version 19.00.24215.1 for x64
+  - LIB: Microsoft (R) Library Manager Version 14.00.24215.1
+  - LINK: Microsoft (R) Incremental Linker Version 14.00.24215.1
+  - Note: Building on later versions should work but is not verified
 - NASM version 2.13.03 (or newer)
 
 Shared library (DLL):
