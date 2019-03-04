@@ -4539,20 +4539,14 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         mov     r13, %%PLAIN_CYPH_LEN
 
         ;; Determine how many blocks to process in INITIAL
-        mov     r12, r13
+        ;; - round up number of blocks for INITIAL in case of partial block
+        mov     r12, %%PLAIN_CYPH_LEN
+        add     r12, 15
         shr     r12, 4
-        and     r12, 7
-
-        ;; Process one additional block in INITIAL if there is a partial block
-        mov     r10, r13
-        and     r10, 0xf
-        add     r10, 0xf
-        shr     r10, 4          ; 0 - if 4LSB of length are all zero, 1 - otherwise
-        add     r12, r10        ; process an additional INITIAL block if r10 is not zero
 
         GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
-                r13, r12, xmm9, xmm14, multi_call
+                r13, r12, xmm9, xmm14, single_call
 
 %%_ghash_done_x4:
         vmovdqu         [%%GDATA_CTX + CurCount], xmm9  ; current_counter = xmm9
@@ -4563,7 +4557,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 ;;; COMPLETE
 
         ;; Start AES as early as possible
-        vmovdqu         xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
+        vmovdqu64       xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
         ENCRYPT_SINGLE_BLOCK %%GDATA_KEY, xmm9  ; E(K, Y0)
 
         ;; If the GCM function is called as a single function call rather
@@ -4571,17 +4565,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; can remove a write to read dependency on AadHash.
         vmovdqa64       xmm14, xmm17    ; xmm14 = AadHash
         vmovdqa64       xmm13, xmm16    ; load HashKey
-
-        ;; Encrypt the final partial block. If we did this as a single call then
-        ;; the partial block was handled in the main GCM_ENC_DEC macro.
-	cmp	        qword [%%GDATA_CTX + PBlockLen], 0
-	je              %%_partial_done_x4
-
-        ;; xmm14: hash value [in/out]
-        ;; xmm13: hash key [in]
-        ;; xmm0, xmm10, xmm11, xmm5, xmm6 - temporary registers
-	GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
-        vmovdqa64       xmm17, xmm14                     ; AadHash = xmm14
 
 %%_partial_done_x4:
         mov             %%GPR, [%%GDATA_CTX + AadLen]    ; aadLen (number of bytes)
@@ -4601,7 +4584,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         mov             %%AUTH_TAG, [%%STATE + _gcm_args_tag + %%IDX*8]
 
         ;; XOR current hash value with the next block xmm15
-        vpxor           xmm14, xmm15
+        vpxorq          xmm14, xmm15
 
         ;; xmm14: hash value [in/out]
         ;; xmm13: hash key [in]
@@ -4609,7 +4592,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
         vpshufb         xmm14, [rel SHUF_MASK]         ; perform a 16Byte swap
 
-        vpxor           xmm9, xmm9, xmm14
+        vpxorq          xmm9, xmm9, xmm14
 
 %%_return_T:
         vmovdqu8        [%%AUTH_TAG]{k1}, xmm9         ; store TAG
