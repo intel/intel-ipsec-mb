@@ -419,23 +419,23 @@ default rel
         vpclmulqdq      %%T2, %%GH, %%HK, 0x00          ; %%T2 = a0*b0
         vpclmulqdq      %%T3, %%GH, %%HK, 0x01          ; %%T3 = a1*b0
         vpclmulqdq      %%GH, %%GH, %%HK, 0x10          ; %%GH = a0*b1
-        vpxor           %%GH, %%GH, %%T3
+        vpxorq          %%GH, %%GH, %%T3
 
 
         vpsrldq         %%T3, %%GH, 8                   ; shift-R %%GH 2 DWs
         vpslldq         %%GH, %%GH, 8                   ; shift-L %%GH 2 DWs
 
-        vpxor           %%T1, %%T1, %%T3
-        vpxor           %%GH, %%GH, %%T2
+        vpxorq          %%T1, %%T1, %%T3
+        vpxorq          %%GH, %%GH, %%T2
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
-        vmovdqu         %%T3, [rel POLY2]
+        vmovdqu64       %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%GH, 0x01
         vpslldq         %%T2, %%T2, 8                    ; shift-L %%T2 2 DWs
 
-        vpxor           %%GH, %%GH, %%T2                 ; first phase of the reduction complete
+        vpxorq          %%GH, %%GH, %%T2                 ; first phase of the reduction complete
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;second phase of the reduction
         vpclmulqdq      %%T2, %%T3, %%GH, 0x00
@@ -1358,7 +1358,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %%_initial_blocks_done:
 
 
-%endmacro
+%endmacro                       ; INITIAL_BLOCKS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; INITIAL_BLOCKS_PARTIAL macro with support for a partial final block.
@@ -2670,13 +2670,13 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %define %%GDATA %1
 %define %%XMM0  %2
 
-                vpxor    %%XMM0, %%XMM0, [%%GDATA+16*0]
+                vpxorq          %%XMM0, %%XMM0, [%%GDATA+16*0]
 %assign i 1
 %rep NROUNDS
-                vaesenc  %%XMM0, [%%GDATA+16*i]
+                vaesenc         %%XMM0, [%%GDATA+16*i]
 %assign i (i+1)
 %endrep
-                vaesenclast      %%XMM0, [%%GDATA+16*i]
+                vaesenclast     %%XMM0, [%%GDATA+16*i]
 %endmacro
 
 
