@@ -1360,179 +1360,291 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %endmacro
 
-;;; INITIAL_BLOCKS macro with support for a partial final block.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; INITIAL_BLOCKS_PARTIAL macro with support for a partial final block.
+;;; It may look similar to INITIAL_BLOCKS but its usage is different:
+;;; - It is not meant to cipher counter blocks for the main by8 loop.
+;;;   Just ciphers amount of blocks and ghashes them.
+;;; - Small packets (<128 bytes) - single or multi call
+;;; - Remaining data chunks below 128 bytes (multi buffer code)
+;;;
 ;;; num_initial_blocks is expected to include the partial final block
-;;;     in the count.
-%macro INITIAL_BLOCKS_PARTIAL 25
-%define %%GDATA_KEY             %1
-%define %%GDATA_CTX             %2
-%define %%CYPH_PLAIN_OUT        %3
-%define %%PLAIN_CYPH_IN         %4
-%define %%LENGTH                %5
-%define %%DATA_OFFSET           %6
-%define %%num_initial_blocks    %7  ; can be 1, 2, 3, 4, 5, 6 or 7 (not 0)
-%define %%T1                    %8
-%define %%T2                    %9
-%define %%T3                    %10 ; [out] hash value
-%define %%T4                    %11
-%define %%T5                    %12
-%define %%CTR                   %13
-%define %%XMM1                  %14
-%define %%XMM2                  %15
-%define %%XMM3                  %16
-%define %%XMM4                  %17
-%define %%XMM5                  %18
-%define %%XMM6                  %19
-%define %%XMM7                  %20
+;;; in the count.
+%macro INITIAL_BLOCKS_PARTIAL 24
+%define %%GDATA_KEY             %1  ; [in] key pointer
+%define %%GDATA_CTX             %2  ; [in] context pointer
+%define %%CYPH_PLAIN_OUT        %3  ; [in] text out pointer
+%define %%PLAIN_CYPH_IN         %4  ; [in] text out pointer
+%define %%LENGTH                %5  ; [in/clobbered] length in bytes
+%define %%DATA_OFFSET           %6  ; [in/out] current data offset (updated)
+%define %%num_initial_blocks    %7  ; can only be 1, 2, 3, 4, 5, 6, 7 or 8 (not 0)
+%define %%ZT1                   %8  ; [clobbered]
+%define %%ZT2                   %9  ; [clobbered]
+%define %%ZT3                   %10 ; [out] hash value
+%define %%ZT4                   %11 ; [clobbered]
+%define %%ZT5                   %12 ; [clobbered]
+%define %%CTR                   %13 ; [in/out] current counter value
+%define %%XMM1                  %14 ; [clobbered]
+%define %%XMM2                  %15 ; [clobbered]
+%define %%XMM3                  %16 ; [clobbered]
+%define %%XMM4                  %17 ; [clobbered]
+%define %%XMM5                  %18 ; [clobbered]
+%define %%XMM6                  %19 ; [clobbered]
+%define %%XMM7                  %20 ; [clobbered]
 %define %%XMM8                  %21 ; [in] hash value
-%define %%T6                    %22
-%define %%T_key                 %23
-%define %%ENC_DEC               %24
-%define %%INSTANCE_TYPE         %25
+%define %%ZT6                   %22 ; [clobbered]
+%define %%ENC_DEC               %23 ; [in] cipher direction (ENC/DEC)
+%define %%INSTANCE_TYPE         %24 ; [in] multi_call or single_call
 
-                ;; Move AAD_HASH to temp reg
-                vmovdqu  %%T2, %%XMM8
+%define %%IA0 r12
+%define %%IA1 rax
 
-%assign i (9-%%num_initial_blocks)
-%rep %%num_initial_blocks
-                ;; Compute AES counters
-                vpaddd   %%CTR, %%CTR, [rel ONE]     ; INCR Y0
-                vmovdqa  reg(i), %%CTR
-                vpshufb  reg(i), [rel SHUF_MASK]     ; perform a 16Byte swap
-%assign i (i+1)
+%define %%T1 XWORD(%%ZT1)
+%define %%T2 XWORD(%%ZT2)
+%define %%T3 XWORD(%%ZT3)
+%define %%T4 XWORD(%%ZT4)
+%define %%T5 XWORD(%%ZT5)
+%define %%T6 XWORD(%%ZT6)
+
+        ;; Move AAD_HASH to temp reg (%%T2)
+        vmovdqa64       %%T2, %%XMM8
+
+        ;; prepare AES counter blocks
+%if %%num_initial_blocks == 1
+        vpaddd          %%T3, %%CTR, [rel ONE]
+%elif %%num_initial_blocks == 2
+        vshufi64x2      YWORD(%%ZT3), YWORD(%%CTR), YWORD(%%CTR), 0
+        vpaddd          YWORD(%%ZT3), YWORD(%%ZT3), [rel ddq_add_1234]
+%else
+        vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
+        vpaddd          %%ZT3, ZWORD(%%CTR), [rel ddq_add_1234]
+        vpaddd          %%ZT4, ZWORD(%%CTR), [rel ddq_add_5678]
+%endif
+
+        ;; get load/store mask
+        lea             %%IA0, [rel byte64_len_to_mask_table]
+        mov             %%IA1, %%LENGTH
+%if %%num_initial_blocks > 4
+        sub             %%IA1, 64
+%endif
+        kmovq           k1, [%%IA0 + %%IA1*8]
+
+        ;; extract new counter value (%%T3)
+        ;; shuffle the counters for AES rounds
+%if %%num_initial_blocks == 1
+        vmovdqa64       %%CTR, %%T3
+        vpshufb         %%T3, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 2
+        vextracti32x4   %%CTR, YWORD(%%ZT3), (%%num_initial_blocks - 1)
+        vpshufb         YWORD(%%ZT3), [rel SHUF_MASK]
+%elif %%num_initial_blocks <= 4
+        vextracti32x4   %%CTR, %%ZT3, (%%num_initial_blocks - 1)
+        vpshufb         %%ZT3, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 5
+        vmovdqa64       %%CTR, %%T4
+        vpshufb         %%ZT3, [rel SHUF_MASK]
+        vpshufb         %%T4, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 6
+        vextracti32x4   %%CTR, YWORD(%%ZT4), (%%num_initial_blocks - 5)
+        vpshufb         %%ZT3, [rel SHUF_MASK]
+        vpshufb         YWORD(%%ZT4), [rel SHUF_MASK]
+%else
+        vextracti32x4   %%CTR, %%ZT4, (%%num_initial_blocks - 5)
+        vpshufb         %%ZT3, [rel SHUF_MASK]
+        vpshufb         %%ZT4, [rel SHUF_MASK]
+%endif
+
+        ;; load plain/cipher text
+%if %%num_initial_blocks == 1
+        vmovdqu8        %%T5{k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+%elif %%num_initial_blocks == 2
+        vmovdqu8        YWORD(%%ZT5){k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+%elif %%num_initial_blocks <= 4
+        vmovdqu8        %%ZT5{k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+%elif %%num_initial_blocks == 5
+        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%T6{k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+%elif %%num_initial_blocks == 6
+        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        YWORD(%%ZT6){k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+%else
+        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%ZT6{k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+%endif
+
+        ;; AES rounds and XOR with plain/cipher text
+%assign j 0
+%rep (NROUNDS + 2)
+        AESROUND_1_TO_8_BLOCKS \
+                        %%ZT3, %%ZT4, %%ZT1, %%GDATA_KEY, j, \
+                        %%ZT5, %%ZT6, %%num_initial_blocks
+%assign j (j + 1)
 %endrep
 
-vmovdqu  %%T_key, [%%GDATA_KEY+16*0]
-%assign i (9-%%num_initial_blocks)
-%rep %%num_initial_blocks
-                ; Start AES for %%num_initial_blocks blocks
-                vpxor    reg(i),reg(i),%%T_key
-%assign i (i+1)
-%endrep
+        ;; retrieve the last cipher counter block (partially XOR'ed with text)
+        ;; - this is needed for partial block cases
+%if %%num_initial_blocks == 1
+        vmovdqa64       %%T1, %%T3
+%elif %%num_initial_blocks == 2
+        vextracti32x4   %%T1, YWORD(%%ZT3), (%%num_initial_blocks - 1)
+%elif %%num_initial_blocks <= 4
+        ;; Blocks 3 and 4
+        vextracti32x4   %%T1, %%ZT3, (%%num_initial_blocks - 1)
+%elif %%num_initial_blocks == 5
+        vmovdqa64       %%T1, %%T4
+%elif %%num_initial_blocks == 6
+        vextracti32x4   %%T1, YWORD(%%ZT4), (%%num_initial_blocks - 5)
+%else
+        ;; Blocks 7 and 8
+        vextracti32x4   %%T1, %%ZT4, (%%num_initial_blocks - 5)
+%endif
 
-%assign j 1
-%rep NROUNDS
-vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
-%assign i (9-%%num_initial_blocks)
-%rep %%num_initial_blocks
-                vaesenc  reg(i),%%T_key
-%assign i (i+1)
-%endrep
+        ;; write cipher/plain text back to output and
+        ;; zero bytes outside the mask before hashing
+%if %%num_initial_blocks == 1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, %%T3
+        vmovdqu8        %%T3{k1}{z}, %%T3
+%elif %%num_initial_blocks == 2
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, YWORD(%%ZT3)
+        vmovdqu8        YWORD(%%ZT3){k1}{z}, YWORD(%%ZT3)
+%elif %%num_initial_blocks <= 4
+        ;; Blocks 3 and 4
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, %%ZT3
+        vmovdqu8        %%ZT3{k1}{z}, %%ZT3
+%elif %%num_initial_blocks == 5
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT3
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{k1}, %%T4
+        vmovdqu8        %%T4{k1}{z}, %%T4
+%elif %%num_initial_blocks == 6
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT3
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{k1}, YWORD(%%ZT4)
+        vmovdqu8        YWORD(%%ZT4){k1}{z}, YWORD(%%ZT4)
+%else
+        ;; Blocks 7 and 8
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT3
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{k1}, %%ZT4
+        vmovdqu8        %%ZT4{k1}{z}, %%ZT4
+%endif
 
-%assign j (j+1)
-%endrep
+        ;; Shuffle the cipher text blocks for hashing part
+        ;; ZT5 and ZT6 are expected outputs with blocks for hashing
+%ifidn  %%ENC_DEC, DEC
+        ;; Decrypt case
+        ;; - cipher blocks are in ZT5 & ZT6
+%if %%num_initial_blocks == 1
+        vpshufb         %%T5, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 2
+        vpshufb         YWORD(%%ZT5), [rel SHUF_MASK]
+%elif %%num_initial_blocks <= 4
+        vpshufb         %%ZT5, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 5
+        vpshufb         %%ZT5, [rel SHUF_MASK]
+        vpshufb         %%T6, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 6
+        vpshufb         %%ZT5, [rel SHUF_MASK]
+        vpshufb         YWORD(%%ZT6), [rel SHUF_MASK]
+%else
+        vpshufb         %%ZT5, [rel SHUF_MASK]
+        vpshufb         %%ZT6, [rel SHUF_MASK]
+%endif
+%else
+        ;; Encrypt case
+        ;; - cipher blocks are in ZT3 & ZT4
+%if %%num_initial_blocks == 1
+        vpshufb         %%T5, %%T3, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 2
+        vpshufb         YWORD(%%ZT5), YWORD(%%ZT3), [rel SHUF_MASK]
+%elif %%num_initial_blocks <= 4
+        vpshufb         %%ZT5, %%ZT3, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 5
+        vpshufb         %%ZT5, %%ZT3, [rel SHUF_MASK]
+        vpshufb         %%T6, %%T4, [rel SHUF_MASK]
+%elif %%num_initial_blocks == 6
+        vpshufb         %%ZT5, %%ZT3, [rel SHUF_MASK]
+        vpshufb         YWORD(%%ZT6), YWORD(%%ZT4), [rel SHUF_MASK]
+%else
+        vpshufb         %%ZT5, %%ZT3, [rel SHUF_MASK]
+        vpshufb         %%ZT6, %%ZT4, [rel SHUF_MASK]
+%endif
+%endif                          ; Encrypt
 
-
-vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
-%assign i (9-%%num_initial_blocks)
-%rep %%num_initial_blocks
-                vaesenclast      reg(i),%%T_key
-%assign i (i+1)
-%endrep
+        ;; Convention was:
+        ;; - xmm8 is the last block
+        ;; - xmm1 is the first block (if %%num_initial_blocks is 8)
+        ;; After last changes we only need to extract the last block
+        ;; for partials and multi_call cases
+        ;; At the moment xmm1 to xmm7 are unused but xmm8 is still
+        ;; required to be set up to contain the last block
+%if %%num_initial_blocks <= 4
+        vextracti32x4   reg(8), %%ZT5, %%num_initial_blocks - 1
+%else
+        vextracti32x4   reg(8), %%ZT6, %%num_initial_blocks - 5
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Hash all but the last block of data
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%assign i (9-%%num_initial_blocks)
-%rep %%num_initial_blocks-1
-                ;; Encrypt the message for all but the last block
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-                vpxor    reg(i), reg(i), %%T1
-                ;; write back ciphertext for %%num_initial_blocks blocks
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], reg(i)
-                add     %%DATA_OFFSET, 16
-%ifidn  %%ENC_DEC, DEC
-                vmovdqa  reg(i), %%T1
-%endif
-                ;; Prepare ciphertext for GHASH computations
-                vpshufb  reg(i), [rel SHUF_MASK]
-%assign i (i+1)
-%endrep
-
+        ;; update data offset
 %if %%num_initial_blocks > 1
-                ;; The final block of data may be <16B
-                sub      %%LENGTH, 16*(%%num_initial_blocks-1)
+        ;; The final block of data may be <16B
+        add     %%DATA_OFFSET, 16 * (%%num_initial_blocks - 1)
+        sub     %%LENGTH, 16 * (%%num_initial_blocks - 1)
 %endif
 
 %if %%num_initial_blocks < 8
-                ;; NOTE: the 'jl' is always taken for num_initial_blocks = 8.
-                ;;      This is run in the context of GCM_ENC_DEC_SMALL for length < 128.
-                cmp      %%LENGTH, 16
-                jl       %%_small_initial_partial_block
+        ;; NOTE: the 'jl' is always taken for num_initial_blocks = 8.
+        ;;      This is run in the context of GCM_ENC_DEC_SMALL for length < 128.
+        cmp     %%LENGTH, 16
+        jl      %%_small_initial_partial_block
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Handle a full length final block - encrypt and hash all blocks
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-                sub      %%LENGTH, 16
-	        mov	[%%GDATA_CTX + PBlockLen], %%LENGTH
-
-                ;; Encrypt the message
-                VXLDR  %%T1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-                vpxor    reg(i), reg(i), %%T1
-                ;; write back ciphertext for %%num_initial_blocks blocks
-                VXSTR  [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], reg(i)
-                add     %%DATA_OFFSET, 16
-%ifidn  %%ENC_DEC, DEC
-                vmovdqa  reg(i), %%T1
-%endif
-                ;; Prepare ciphertext for GHASH computations
-                vpshufb  reg(i), [rel SHUF_MASK]
+        sub     %%LENGTH, 16
+        add     %%DATA_OFFSET, 16
+	mov	[%%GDATA_CTX + PBlockLen], %%LENGTH
 
         ;; Hash all of the data
-%assign i (8-%%num_initial_blocks)
-%assign j (9-%%num_initial_blocks)
+%assign j (9 - %%num_initial_blocks)
 %assign k (%%num_initial_blocks)
-%assign last_block_to_hash 0
-
-%if(%%num_initial_blocks>last_block_to_hash)
-        ;; Hash in AES state
-        vpxor %%T2, reg(j)
+%assign i 0
 
         ;; T2 - incoming AAD hash
-        ;; reg(i) holds ciphertext
-        ;; T5 - hash key
-        ;; T6 - updated xor
-        ;; reg(1)/xmm1 should now be available for tmp use
-        vmovdqu         %%T5, [%%GDATA_KEY + HashKey_ %+ k]
-        vpclmulqdq      %%T1, %%T2, %%T5, 0x11             ; %%T4 = a1*b1
-        vpclmulqdq      %%T4, %%T2, %%T5, 0x00             ; %%T4 = a0*b0
-        vpclmulqdq      %%T6, %%T2, %%T5, 0x01             ; %%T6 = a1*b0
-        vpclmulqdq      %%T5, %%T2, %%T5, 0x10             ; %%T5 = a0*b1
-        vpxor           %%T6, %%T6, %%T5
-%endif
+        ;; ZT5, ZT6 - hold ciphertext
+        ;; ZT1 - updated xor
+        ;; ZT3, ZT4 - temporary registers
 
-%assign i (i+1)
-%assign j (j+1)
-%assign k (k-1)
-%assign rep_count (%%num_initial_blocks-1)
+        ;; Hash in AES state
+        vpxorq          %%ZT5, %%ZT5, %%ZT2
+
+        VCLMUL_1BLOCK_DATAPREP \
+                        regz(1), %%ZT5, i
+
+        VCLMUL_1BLOCK   %%ZT1, no_aad, %%GDATA_KEY, HashKey_ %+ k, \
+                        regz(1), text_ready, first, no_shuffle, %%ZT3, %%ZT4
+
+%assign rep_count (%%num_initial_blocks - 1)
 %rep rep_count
-
-        vmovdqu         %%T5, [%%GDATA_KEY + HashKey_ %+ k]
-        vpclmulqdq      %%T3, reg(j), %%T5, 0x11
-        vpxor           %%T1, %%T1, %%T3
-
-        vpclmulqdq      %%T3, reg(j), %%T5, 0x00
-        vpxor           %%T4, %%T4, %%T3
-
-        vpclmulqdq      %%T3, reg(j), %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, reg(j), %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-%assign i (i+1)
-%assign j (j+1)
-%assign k (k-1)
+%assign j (j + 1)
+%assign k (k - 1)
+%assign i (i + 1)
+%if i < 4
+        ;; take blocks from ZT5
+        VCLMUL_1BLOCK_DATAPREP \
+                        regz(1), %%ZT5, i
+%else
+        ;; take blocks from ZT6
+        VCLMUL_1BLOCK_DATAPREP \
+                        regz(1), %%ZT6, i - 4
+%endif
+        VCLMUL_1BLOCK   %%ZT1, no_aad, %%GDATA_KEY, HashKey_ %+ k, \
+                        regz(1), text_ready, not_first, no_shuffle, %%ZT3, %%ZT4
 %endrep
 
-        ;; Record that a reduction is needed
-        mov      r12, 1
-
-        jmp      %%_small_initial_compute_hash
-
-
+        ;; reduction is needed
+        jmp             %%_small_initial_compute_reduction
 %endif                          ; %if %%num_initial_blocks < 8
 
 %%_small_initial_partial_block:
@@ -1546,137 +1658,91 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; series of call we need to leave the last block if it's
         ;; less than a full block of data.
 
-	mov	[%%GDATA_CTX + PBlockLen], %%LENGTH
-        vmovdqu [%%GDATA_CTX + PBlockEncKey], reg(i)
-        ;; Handle a partial final block
-        ;;                            GDATA,    KEY,   T1,   T2
-        ;; r13 - length
-        ;; LT16 - indicates type of read and that the buffer is less than 16 bytes long
-        ;;      NOTE: could be replaced with %%LENGTH but at this point
-        ;;      %%LENGTH is always less than 16.
-        ;;      No PLAIN_CYPH_LEN argument available in this macro.
-        ENCRYPT_FINAL_PARTIAL_BLOCK reg(i), %%T1, %%T3, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, LT16, %%ENC_DEC, %%DATA_OFFSET
-        vpshufb  reg(i), [rel SHUF_MASK]
+	mov	        [%%GDATA_CTX + PBlockLen], %%LENGTH
+        ;; %%T1 is ciphered counter block
+        vmovdqu64       [%%GDATA_CTX + PBlockEncKey], %%T1
 
 %ifidn %%INSTANCE_TYPE, multi_call
-%assign i (8-%%num_initial_blocks)
-%assign j (9-%%num_initial_blocks)
-%assign k (%%num_initial_blocks-1)
+%assign rep_count (%%num_initial_blocks - 2)
+%assign k (%%num_initial_blocks - 1)
 %assign last_block_to_hash 1
 %else
-%assign i (8-%%num_initial_blocks)
-%assign j (9-%%num_initial_blocks)
+%assign rep_count (%%num_initial_blocks - 1)
 %assign k (%%num_initial_blocks)
 %assign last_block_to_hash 0
 %endif
 
-%if(%%num_initial_blocks>last_block_to_hash)
-        ;; Record that a reduction is needed
-        mov            r12, 1
-        ;; Hash in AES state
-        vpxor          %%T2, reg(j)
+%if (%%num_initial_blocks > last_block_to_hash)
+
+%assign j (9 - %%num_initial_blocks)
+%assign i 0
 
         ;; T2 - incoming AAD hash
-        ;; reg(i) holds ciphertext
-        ;; T5 - hash key
-        ;; T6 - updated xor
-        ;; reg(1)/xmm1 should now be available for tmp use
-        vmovdqu         %%T5, [%%GDATA_KEY + HashKey_ %+ k]
-        vpclmulqdq      %%T1, %%T2, %%T5, 0x11             ; %%T4 = a1*b1
-        vpclmulqdq      %%T4, %%T2, %%T5, 0x00             ; %%T4 = a0*b0
-        vpclmulqdq      %%T6, %%T2, %%T5, 0x01             ; %%T6 = a1*b0
-        vpclmulqdq      %%T5, %%T2, %%T5, 0x10             ; %%T5 = a0*b1
-        vpxor           %%T6, %%T6, %%T5
+        ;; ZT5, ZT6 - hold ciphertext
+        ;; ZT1 - updated xor
+        ;; ZT3, ZT4 - temporary registers
+        ;; Hash in AES state
+        vpxorq          %%ZT5, %%ZT5, %%ZT2
+
+        VCLMUL_1BLOCK_DATAPREP \
+                        regz(1), %%ZT5, i
+
+        VCLMUL_1BLOCK   %%ZT1, no_aad, %%GDATA_KEY, HashKey_ %+ k, \
+                        regz(1), text_ready, first, no_shuffle, %%ZT3, %%ZT4
+
+%if rep_count > 0
+        ;; rule out negative cases or zero
+%rep rep_count
+%assign j (j+1)
+%assign k (k-1)
+%assign i (i + 1)
+%if i < 4
+        ;; take blocks from ZT5
+        VCLMUL_1BLOCK_DATAPREP \
+                        regz(1), %%ZT5, i
+%else
+        ;; take blocks from ZT6
+        VCLMUL_1BLOCK_DATAPREP \
+                        regz(1), %%ZT6, i - 4
+%endif
+        VCLMUL_1BLOCK   %%ZT1, no_aad, %%GDATA_KEY, HashKey_ %+ k, \
+                        regz(1), text_ready, not_first, no_shuffle, %%ZT3, %%ZT4
+%endrep
+%endif                       ; rep_count > 0
+
+        ;; reduction is required - just fall through no jmp needed
 %else
         ;; Record that a reduction is not needed -
         ;; In this case no hashes are computed because there
         ;; is only one initial block and it is < 16B in length.
-        xor             r12, r12
+        ;; We only need to check if a reduction is needed if
+        ;; initial_blocks == 1 and init/update/final is being used.
+        ;; In this case we may just have a partial block, and that
+        ;; gets hashed in finalize.
+
+        ;; The hash should end up in T3. The only way we should get here is if
+        ;; there is a partial block of data, so xor that into the hash.
+        vpxorq          %%T3, %%T2, reg(8)
+
+        ;; The result is in %%T3
+        jmp             %%_after_reduction
 %endif
-
-%assign i (i+1)
-%assign j (j+1)
-%assign k (k-1)
-%ifidn %%INSTANCE_TYPE, multi_call
-%assign rep_count (%%num_initial_blocks-2)
-%%_multi_call_hash:
-%else
-%assign rep_count (%%num_initial_blocks-1)
-%endif
-
-%if rep_count < 0
-        ;; fix for negative rep_count
-%assign rep_count 0
-%endif
-
-%rep rep_count
-
-        vmovdqu         %%T5, [%%GDATA_KEY + HashKey_ %+ k]
-        vpclmulqdq      %%T3, reg(j), %%T5, 0x11
-        vpxor           %%T1, %%T1, %%T3
-
-        vpclmulqdq      %%T3, reg(j), %%T5, 0x00
-        vpxor           %%T4, %%T4, %%T3
-
-        vpclmulqdq      %%T3, reg(j), %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, reg(j), %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-%assign i (i+1)
-%assign j (j+1)
-%assign k (k-1)
-%endrep
-
-%%_small_initial_compute_hash:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Ghash reduction
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%if(%%num_initial_blocks=1)
-%ifidn %%INSTANCE_TYPE, multi_call
-        ;; We only need to check if a reduction is needed if
-        ;; initial_blocks == 1 and init/update/final is being used.
-        ;; In this case we may just have a partial block, and that
-        ;; gets hashed in finalize.
-        ;; cmp     r12, 0
-        or      r12, r12
-        je      %%_no_reduction_needed
-%endif
-%endif
+%%_small_initial_compute_reduction:
 
-        vpsrldq %%T3, %%T6, 8          ; shift-R %%T2 2 DWs
-        vpslldq %%T6, %%T6, 8          ; shift-L %%T3 2 DWs
-        vpxor   %%T1, %%T1, %%T3       ; accumulate the results in %%T1:%%T4
-        vpxor   %%T4, %%T6, %%T4
+        ;; gather result from ZT1 into T1:T4
+        VCLMUL_1BLOCK_GATHER %%T1, %%T4, %%ZT1, %%ZT4, %%ZT5, %%ZT6
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; First phase of the reduction
-        vmovdqu         %%T3, [rel POLY2]
-
-        vpclmulqdq      %%T2, %%T3, %%T4, 0x01
-        ;; shift-L xmm2 2 DWs
-        vpslldq         %%T2, %%T2, 8
-        vpxor           %%T4, %%T4, %%T2
-
-        ;; First phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; Second phase of the reduction
-
-        vpclmulqdq      %%T2, %%T3, %%T4, 0x00
-        ;; Shift-R xmm2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
-        vpsrldq         %%T2, %%T2, 4
-
-        vpclmulqdq      %%T4, %%T3, %%T4, 0x10
-        ;; Shift-L xmm0 1 DW (Shift-L 1-DW to obtain result with no shifts)
-        vpslldq         %%T4, %%T4, 4
-
-        vpxor           %%T4, %%T4, %%T2
-        ;; Second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%T3, %%T1, %%T4
+        ;; [out] T3 - hash output
+        ;; [in]  T3 - polynomial
+        ;; [in]  T1 - high, T4 - low
+        ;; [clobbered] T5, T6 - temporary
+        vmovdqu64       %%T3, [rel POLY2]
+        VCLMUL_REDUCE   %%T3, %%T3, %%T1, %%T4, %%T5, %%T6
 
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; If using init/update/finalize, we need to xor any partial block data
@@ -1685,30 +1751,12 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; NOTE: for %%num_initial_blocks = 0 the xor never takes place
 %if %%num_initial_blocks != 8
         ;; NOTE: for %%num_initial_blocks = 8, %%LENGTH, stored in [PBlockLen] is never zero
-        cmp             qword [%%GDATA_CTX + PBlockLen], 0
-        je              %%_no_partial_block_xor
+        or              %%LENGTH, %%LENGTH
+        je              %%_after_reduction
 %endif                          ; %%num_initial_blocks != 8
-        vpxor           %%T3, %%T3, reg(8)
-%%_no_partial_block_xor:
+        vpxorq          %%T3, %%T3, reg(8)
 %endif                          ; %%num_initial_blocks > 1
 %endif                          ; %%INSTANCE_TYPE, multi_call
-
-%if(%%num_initial_blocks=1)
-%ifidn %%INSTANCE_TYPE, multi_call
-        ;; NOTE: %%_no_reduction_needed case only valid for
-        ;;      multi_call with initial_blocks = 1.
-        ;; Look for comment above around '_no_reduction_needed'
-        ;; The jmp below is obsolete as the code will fall through.
-
-        ;; The result is in %%T3
-        jmp             %%_after_reduction
-
-%%_no_reduction_needed:
-        ;; The hash should end up in T3. The only way we should get here is if
-        ;; there is a partial block of data, so xor that into the hash.
-        vpxor            %%T3, %%T2, reg(8)
-%endif                          ; %%INSTANCE_TYPE = multi_call
-%endif                          ; %%num_initial_blocks=1
 
 %%_after_reduction:
         ;; Final hash is now in T3
@@ -2852,65 +2900,65 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; xmm0  - T_key
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 8, \
-                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                zmm12, zmm13, zmm14, zmm15, zmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
-                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+                zmm10, %%ENC_DEC, %%INSTANCE_TYPE
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_7:
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 7, \
-                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                zmm12, zmm13, zmm14, zmm15, zmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
-                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+                zmm10, %%ENC_DEC, %%INSTANCE_TYPE
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_6:
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 6, \
-                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                zmm12, zmm13, zmm14, zmm15, zmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
-                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+                zmm10, %%ENC_DEC, %%INSTANCE_TYPE
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_5:
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 5, \
-                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                zmm12, zmm13, zmm14, zmm15, zmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
-                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+                zmm10, %%ENC_DEC, %%INSTANCE_TYPE
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_4:
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 4, \
-                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                zmm12, zmm13, zmm14, zmm15, zmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
-                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+                zmm10, %%ENC_DEC, %%INSTANCE_TYPE
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_3:
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 3, \
-                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                zmm12, zmm13, zmm14, zmm15, zmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
-                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+                zmm10, %%ENC_DEC, %%INSTANCE_TYPE
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_2:
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 2, \
-                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                zmm12, zmm13, zmm14, zmm15, zmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
-                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+                zmm10, %%ENC_DEC, %%INSTANCE_TYPE
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_1:
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 1, \
-                xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
+                zmm12, zmm13, zmm14, zmm15, zmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
-                xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
+                zmm10, %%ENC_DEC, %%INSTANCE_TYPE
 %%_small_initial_blocks_encrypted:
 
 %endmacro                       ; GCM_ENC_DEC_SMALL

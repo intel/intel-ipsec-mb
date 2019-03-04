@@ -139,6 +139,41 @@ byte_len_to_mask_table:
         dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
         dw      0xffff
 
+align 64
+byte64_len_to_mask_table:
+        dq      0x0000000000000000, 0x0000000000000001
+        dq      0x0000000000000003, 0x0000000000000007
+        dq      0x000000000000000f, 0x000000000000001f
+        dq      0x000000000000003f, 0x000000000000007f
+        dq      0x00000000000000ff, 0x00000000000001ff
+        dq      0x00000000000003ff, 0x00000000000007ff
+        dq      0x0000000000000fff, 0x0000000000001fff
+        dq      0x0000000000003fff, 0x0000000000007fff
+        dq      0x000000000000ffff, 0x000000000001ffff
+        dq      0x000000000003ffff, 0x000000000007ffff
+        dq      0x00000000000fffff, 0x00000000001fffff
+        dq      0x00000000003fffff, 0x00000000007fffff
+        dq      0x0000000000ffffff, 0x0000000001ffffff
+        dq      0x0000000003ffffff, 0x0000000007ffffff
+        dq      0x000000000fffffff, 0x000000001fffffff
+        dq      0x000000003fffffff, 0x000000007fffffff
+        dq      0x00000000ffffffff, 0x00000001ffffffff
+        dq      0x00000003ffffffff, 0x00000007ffffffff
+        dq      0x0000000fffffffff, 0x0000001fffffffff
+        dq      0x0000003fffffffff, 0x0000007fffffffff
+        dq      0x000000ffffffffff, 0x000001ffffffffff
+        dq      0x000003ffffffffff, 0x000007ffffffffff
+        dq      0x00000fffffffffff, 0x00001fffffffffff
+        dq      0x00003fffffffffff, 0x00007fffffffffff
+        dq      0x0000ffffffffffff, 0x0001ffffffffffff
+        dq      0x0003ffffffffffff, 0x0007ffffffffffff
+        dq      0x000fffffffffffff, 0x001fffffffffffff
+        dq      0x003fffffffffffff, 0x007fffffffffffff
+        dq      0x00ffffffffffffff, 0x01ffffffffffffff
+        dq      0x03ffffffffffffff, 0x07ffffffffffffff
+        dq      0x0fffffffffffffff, 0x1fffffffffffffff
+        dq      0x3fffffffffffffff, 0x7fffffffffffffff
+        dq      0xffffffffffffffff
 
 ;;; @note these 2 need to be next one another
 ;;; - they are used to map lane index onto coresponding bit mask and
@@ -212,6 +247,8 @@ section .text
 %define PBlockLen	(16*5)	  ; length of partial block at the end of the previous update
 
 %define reg(q) xmm %+ q
+%define regy(q) ymm %+ q
+%define regz(q) zmm %+ q
 
 %ifdef WIN_ABI
 	%xdefine arg1 rcx
