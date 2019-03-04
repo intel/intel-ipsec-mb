@@ -2619,17 +2619,14 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 ;;;     Any other value passed here will result in 16 byte read
 ;;;     code path.
 ;;; TBD: Remove HASH from the instantiation
-%macro  ENCRYPT_FINAL_PARTIAL_BLOCK 8
+%macro  ENCRYPT_FINAL_PARTIAL_BLOCK 7
 %define %%KEY             %1
 %define %%T1              %2
-%define %%T2              %3
-%define %%CYPH_PLAIN_OUT  %4
-%define %%PLAIN_CYPH_IN   %5
-%define %%PLAIN_CYPH_LEN  %6
-%define %%ENC_DEC         %7
-%define %%DATA_OFFSET     %8
-
-        lea      r10, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+%define %%CYPH_PLAIN_OUT  %3
+%define %%PLAIN_CYPH_IN   %4
+%define %%PLAIN_CYPH_LEN  %5
+%define %%ENC_DEC         %6
+%define %%DATA_OFFSET     %7
 
         ;; T1            - packed output
         ;; r10           - input data address
@@ -2637,29 +2634,21 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; rax           - temp registers
         ;; out:
         ;; k1            - valid byte mask
-        READ_SMALL_DATA_INPUT   %%T1, r10, r13, rax
+        READ_SMALL_DATA_INPUT   %%T1, %%PLAIN_CYPH_IN+%%DATA_OFFSET, r13, rax
 
         ;; At this point T1 contains the partial block data
-%ifidn  %%ENC_DEC, DEC
         ;; Plaintext XOR E(K, Yn)
-        ;; Set aside the ciphertext
-        ;; Get the appropriate mask to mask out top 16-r13 bytes of ciphertext
-        vmovdqu8 %%T2{k1}{z}, %%T1
-        vpxor    %%KEY, %%KEY, %%T1
-%else
-        ;; Plaintext XOR E(K, Yn)
-        ;; Get the appropriate mask to mask out top 16-r13 bytes of %%KEY
-        vpxor    %%KEY, %%KEY, %%T1
-%endif
-        vmovdqu8 %%KEY{k1}{z}, %%KEY
+        vpxorq          %%KEY, %%KEY, %%T1
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Output r13 Bytes
-        vmovdqu8 [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, %%KEY
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, %%KEY
 
 %ifidn  %%ENC_DEC, DEC
         ;; If decrypt, restore the ciphertext into %%KEY
-        vmovdqa %%KEY, %%T2
+        vmovdqa64       %%KEY, %%T1
+%else
+        vmovdqu8        %%KEY{k1}{z}, %%KEY
 %endif
 %endmacro                       ; ENCRYPT_FINAL_PARTIAL_BLOCK
 
@@ -3217,7 +3206,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         ;; xmm8  - Final encrypted counter - need to hash with partial or full block ciphertext
         ;;                            GDATA,  KEY,   T1,    T2
-        ENCRYPT_FINAL_PARTIAL_BLOCK xmm8, xmm0, xmm10, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET
+        ENCRYPT_FINAL_PARTIAL_BLOCK xmm8, xmm0, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET
 
         vpshufb  xmm8, [rel SHUF_MASK]
 
