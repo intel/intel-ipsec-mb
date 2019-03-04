@@ -3284,6 +3284,132 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %endmacro                       ; AESROUND4x128
 
 ;;; ===========================================================================
+;;; AESROUND_1_TO_8_BLOCKS macro
+;;; - 1 lane, 1 to 8 blocks per lane
+;;; - it handles special cases: the last and zero rounds
+;;; Uses NROUNDS macro defined at the top of the file to check the last round
+%macro AESROUND_1_TO_8_BLOCKS 8
+%define %%L0B03 %1      ; [in/out] zmm; blocks 0 to 3
+%define %%L0B47 %2      ; [in/out] zmm; blocks 4 to 7
+%define %%TMP0  %3      ; [clobbered] zmm
+%define %%KP    %4      ; [in] expanded key pointer
+%define %%ROUND %5      ; [in] round number
+%define %%D0L   %6      ; [in] zmm or no_data; plain/cipher text blocks 0-3
+%define %%D0H   %7      ; [in] zmm or no_data; plain/cipher text blocks 4-7
+%define %%NUMBL %8      ; [in] number of blocks; numerical value
+
+%if (%%NUMBL == 1)
+        ;; don't load the key
+%elif (%%NUMBL == 2)
+        vbroadcastf64x2 YWORD(%%TMP0), [%%KP + 16*(%%ROUND)]
+%else
+        vbroadcastf64x2 %%TMP0, [%%KP + 16*(%%ROUND)]
+%endif
+
+;;; === first AES round
+%if (%%ROUND < 1)
+        ;;  round 0
+%if (%%NUMBL > 6)
+        ;; 7, 8 blocks
+        vpxorq          %%L0B03, %%L0B03, %%TMP0
+        vpxorq          %%L0B47, %%L0B47, %%TMP0
+%elif (%%NUMBL == 6)
+        ;; 6 blocks
+        vpxorq          %%L0B03, %%L0B03, %%TMP0
+        vpxorq          YWORD(%%L0B47), YWORD(%%L0B47), YWORD(%%TMP0)
+%elif (%%NUMBL == 5)
+        ;; 5 blocks
+        vpxorq          %%L0B03, %%L0B03, %%TMP0
+        vpxorq          XWORD(%%L0B47), XWORD(%%L0B47), XWORD(%%TMP0)
+%elif (%%NUMBL > 2)
+        ;; 3, 4 blocks
+        vpxorq          %%L0B03, %%L0B03, %%TMP0
+%elif (%%NUMBL == 2)
+        ;; 2 blocks
+        vpxorq          YWORD(%%L0B03), YWORD(%%L0B03), YWORD(%%TMP0)
+%else
+        ;; 1 block
+        vpxorq          XWORD(%%L0B03), XWORD(%%L0B03), [%%KP + 16*(%%ROUND)]
+%endif                  ; NUM BLOCKS
+%endif                  ; ROUND 0
+
+;;; === middle AES rounds
+%if (%%ROUND >= 1 && %%ROUND <= NROUNDS)
+        ;; rounds 1 to 9/11/13
+%if (%%NUMBL > 6)
+        ;; 7, 8 blocks
+        vaesenc         %%L0B03, %%L0B03, %%TMP0
+        vaesenc         %%L0B47, %%L0B47, %%TMP0
+%elif (%%NUMBL == 6)
+        ;; 6 blocks
+        vaesenc         %%L0B03, %%L0B03, %%TMP0
+        vaesenc         YWORD(%%L0B47), YWORD(%%L0B47), YWORD(%%TMP0)
+%elif (%%NUMBL == 5)
+        ;; 5 blocks
+        vaesenc         %%L0B03, %%L0B03, %%TMP0
+        vaesenc         XWORD(%%L0B47), XWORD(%%L0B47), XWORD(%%TMP0)
+%elif (%%NUMBL > 2)
+        ;; 3, 4 blocks
+        vaesenc         %%L0B03, %%L0B03, %%TMP0
+%elif (%%NUMBL == 2)
+        ;; 2 blocks
+        vaesenc         YWORD(%%L0B03), YWORD(%%L0B03), YWORD(%%TMP0)
+%else
+        ;; 1 block
+        vaesenc         XWORD(%%L0B03), XWORD(%%L0B03), [%%KP + 16*(%%ROUND)]
+%endif                  ; NUM BLOCKS
+%endif                  ; rounds 1 to 9/11/13
+
+;;; === last AES round
+%if (%%ROUND > NROUNDS)
+        ;; the last round - mix enclast with text xor's
+%if (%%NUMBL > 6)
+        ;; 7, 8 blocks
+        vaesenclast     %%L0B03, %%L0B03, %%TMP0
+        vaesenclast     %%L0B47, %%L0B47, %%TMP0
+%elif (%%NUMBL == 6)
+        ;; 6 blocks
+        vaesenclast     %%L0B03, %%L0B03, %%TMP0
+        vaesenclast     YWORD(%%L0B47), YWORD(%%L0B47), YWORD(%%TMP0)
+%elif (%%NUMBL == 5)
+        ;; 5 blocks
+        vaesenclast     %%L0B03, %%L0B03, %%TMP0
+        vaesenclast     XWORD(%%L0B47), XWORD(%%L0B47), XWORD(%%TMP0)
+%elif (%%NUMBL > 2)
+        ;; 3, 4 blocks
+        vaesenclast     %%L0B03, %%L0B03, %%TMP0
+%elif (%%NUMBL == 2)
+        ;; 2 blocks
+        vaesenclast     YWORD(%%L0B03), YWORD(%%L0B03), YWORD(%%TMP0)
+%else
+        ;; 1 block
+        vaesenclast     XWORD(%%L0B03), XWORD(%%L0B03), [%%KP + 16*(%%ROUND)]
+%endif                  ; NUM BLOCKS
+
+;;; === XOR with data
+%ifnidn %%D0L, no_data
+%if (%%NUMBL == 1)
+        vpxorq          XWORD(%%L0B03), XWORD(%%L0B03), XWORD(%%D0L)
+%elif (%%NUMBL == 2)
+        vpxorq          YWORD(%%L0B03), YWORD(%%L0B03), YWORD(%%D0L)
+%else
+        vpxorq          %%L0B03, %%L0B03, %%D0L
+%endif
+%endif                          ; !no_data
+%ifnidn %%D0H, no_data
+%if (%%NUMBL == 5)
+        vpxorq          XWORD(%%L0B47), XWORD(%%L0B47), XWORD(%%D0H)
+%elif (%%NUMBL == 6)
+        vpxorq          YWORD(%%L0B47), YWORD(%%L0B47), YWORD(%%D0H)
+%elif (%%NUMBL > 6)
+        vpxorq          %%L0B47, %%L0B47, %%D0H
+%endif
+%endif                  ; !no_data
+%endif                  ; The last round
+
+%endmacro               ; AESROUND_1_TO_8_BLOCKS
+
+;;; ===========================================================================
 ;;; ===========================================================================
 ;;; Encrypt the initial 8 blocks from 4 lanes and apply ghash on the ciphertext
 %macro INITIAL_BLOCKS_x4 33
