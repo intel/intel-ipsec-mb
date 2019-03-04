@@ -341,6 +341,32 @@ default rel
 
 ;;; ===========================================================================
 ;;; ===========================================================================
+;;; SINGLE BLOCK GHASH MUL PREPARE DATA BLOCK
+;;; get the blocks ready for hashing
+;;; - extract block
+;;; - replicate block across whole ZMM register
+;;; - permute 64-bit words for CLMUL
+%macro VCLMUL_1BLOCK_DATAPREP 3
+%define %%OUT         %1  ;; [out] zmm
+%define %%IN          %2  ;; [in] zmm
+%define %%INDEX       %3  ;; [in] 0 to 3
+
+%if %%INDEX == 0
+        vshufi64x2      %%OUT, %%IN, %%IN, 0000_0000b
+%elif %%INDEX == 1
+        vshufi64x2      %%OUT, %%IN, %%IN, 0101_0101b
+%elif %%INDEX == 2
+        vshufi64x2      %%OUT, %%IN, %%IN, 1010_1010b
+%else
+        vshufi64x2      %%OUT, %%IN, %%IN, 1111_1111b
+%endif
+        ;; 1001_1001b => [ Med Med Low High ] multiply products
+        ;; - see vpermilpd above and VCLMUL_1BLOCK_GATHER for details
+        vpermilpd       %%OUT, %%OUT, 1001_1001b
+%endmacro
+
+;;; ===========================================================================
+;;; ===========================================================================
 ;;; AVX512 VPCLMULQDQ GATHER GHASH result for further reduction
 ;;;
 ;;; %%IN here looks as follows
