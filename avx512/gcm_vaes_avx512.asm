@@ -279,7 +279,7 @@ default rel
 %define %%GDATA       %3  ;; [in] pointer to hash key table
 %define %%HKEY_OFFSET %4  ;; [in] offset to hash key table
 %define %%TEXT        %5  ;; [in] pointer to data or an xmm register
-%define %%TEXT_SRC    %6  ;; [in] selects source of the text (text_mem or text_zmm)
+%define %%TEXT_SRC    %6  ;; [in] selects source of the text (text_mem, text_zmm, text_ready)
 %define %%FIRST_BLOCK %7  ;; [in] selects which block is processed (first or not_first)
 %define %%SHFMSK      %8  ;; [in] ZMM register with byte shuffle mask or 'no_shuffle'
 %define %%LT0         %9  ;; [clobbered] temporary zmm
@@ -300,13 +300,18 @@ default rel
 %endif                          ; !no_aad
 %endif                          ; first block
 
-        ;; load and shuffle the text
+        ;; load and broadcast the text block
 %ifidn %%TEXT_SRC, text_mem
         vbroadcastf64x2 %%LT0, [%%TEXT]
-%else
-        vshufi64x2      %%LT0, %%TEXT, %%TEXT, 0
+%endif
+%ifidn %%TEXT_SRC, text_zmm
+        vshufi64x2      %%LT0, %%TEXT, %%TEXT, 0000_0000b
+%endif
+%ifidn %%TEXT_SRC, text_ready
+        vmovdqa64       %%LT0, %%TEXT
 %endif
 
+        ;; shuffle the text block
 %ifnidn %%SHFMSK, no_shuffle
         vpshufb         %%LT0, %%SHFMSK
 %endif
@@ -317,9 +322,13 @@ default rel
         vpxorq          %%LT0, %%LT0, %%OUT
 %endif
 %endif
+
+%ifnidn %%TEXT_SRC, text_ready
         ;; 1001_1001b => [ Med Med Low High ] multiply products
         ;; - see vpermilpd above and VCLMUL_1BLOCK_GATHER for details
         vpermilpd       %%LT0, %%LT0, 1001_1001b
+%endif
+
 %ifidn %%FIRST_BLOCK, first
         ;; put result directly into OUT
         vpclmulqdq      %%OUT, %%LT0, %%LT1, 0x00       ; all 64-bit words permuted above
