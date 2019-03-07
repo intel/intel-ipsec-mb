@@ -2602,46 +2602,28 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Handle encryption of the final partial block
-;;; IN:
-;;;   r13  - Number of bytes to read
-;;; MODIFIES:
-;;;   KEY  - Key for encrypting the partial block
-;;;   HASH - Current hash value
-;;; SMASHES:
-;;;   r10, r12, r15, rax
-;;;   T1, T2
-;;; Note:
-;;;   PLAIN_CYPH_LEN, %7, is passed only to determine
-;;;   if buffer is big enough to do a 16 byte read & shift.
-;;;     'LT16' is passed here only if buffer is known to be smaller
-;;;     than 16 bytes.
-;;;     Any other value passed here will result in 16 byte read
-;;;     code path.
-;;; TBD: Remove HASH from the instantiation
-%macro  ENCRYPT_FINAL_PARTIAL_BLOCK 7
-%define %%KEY             %1
-%define %%T1              %2
-%define %%CYPH_PLAIN_OUT  %3
-%define %%PLAIN_CYPH_IN   %4
-%define %%PLAIN_CYPH_LEN  %5
-%define %%ENC_DEC         %6
-%define %%DATA_OFFSET     %7
+;;; %%KEY - on output contains cipher text block for GHASH
+;;;       - on input it contains encrypter counter block
+%macro  ENCRYPT_FINAL_PARTIAL_BLOCK 8
+%define %%KEY             %1    ; [in/out] XMM with encrypted counter block/cipher text
+%define %%T1              %2    ; [clobbered] XMM temporary
+%define %%CYPH_PLAIN_OUT  %3    ; [in] pointer to output buffer
+%define %%PLAIN_CYPH_IN   %4    ; [in] pointer to input buffer
+%define %%LENGTH          %5    ; [in] number of bytes in partial block
+%define %%ENC_DEC         %6    ; [in] ENC/DEC selection
+%define %%DATA_OFFSET     %7    ; [in] data offset from start of the buffer
+%define %%IA0             %8    ; [clobbered] GP temporary register
 
-        ;; T1            - packed output
-        ;; r10           - input data address
-        ;; r13           - input data length
-        ;; rax           - temp registers
-        ;; out:
-        ;; k1            - valid byte mask
-        READ_SMALL_DATA_INPUT   %%T1, %%PLAIN_CYPH_IN+%%DATA_OFFSET, r13, rax
+        ;; On output it sets k1 with valid byte bit mask
+        READ_SMALL_DATA_INPUT   %%T1, %%PLAIN_CYPH_IN+%%DATA_OFFSET, %%LENGTH, %%IA0
 
         ;; At this point T1 contains the partial block data
-        ;; Plaintext XOR E(K, Yn)
+        ;; Plain/cipher text XOR E(K, Yn)
         vpxorq          %%KEY, %%KEY, %%T1
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; Output r13 Bytes
+        ;; Output %%LENGTH bytes
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, %%KEY
 
 %ifidn  %%ENC_DEC, DEC
@@ -3205,8 +3187,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu [%%GDATA_CTX + PBlockEncKey], xmm8
 
         ;; xmm8  - Final encrypted counter - need to hash with partial or full block ciphertext
-        ;;                            GDATA,  KEY,   T1,    T2
-        ENCRYPT_FINAL_PARTIAL_BLOCK xmm8, xmm0, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET
+        ENCRYPT_FINAL_PARTIAL_BLOCK xmm8, xmm0, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%ENC_DEC, %%DATA_OFFSET, rax
 
         vpshufb  xmm8, [rel SHUF_MASK]
 
