@@ -312,7 +312,11 @@ typedef struct JOB_AES_HMAC {
         JOB_CIPHER_MODE cipher_mode; /* CBC, CNTR, DES, GCM etc. */
         JOB_CIPHER_DIRECTION cipher_direction; /* Encrypt/decrypt */
         JOB_HASH_ALG hash_alg; /* SHA-1 or others... */
-        JOB_CHAIN_ORDER chain_order; /* CIPHER_HASH or HASH_CIPHER */
+        JOB_CHAIN_ORDER chain_order; /* CIPHER_HASH or HASH_CIPHER.
+                                      * For AES-CCM, when encrypting,
+                                      * HASH_CIPHER must be selected,
+                                      * and when decrypting,
+                                      * CIPHER_HASH must be selected. */
 
         void *user_data;
         void *user_data2;

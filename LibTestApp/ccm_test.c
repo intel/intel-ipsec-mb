@@ -1893,7 +1893,7 @@ test_ccm(struct MB_MGR *mb_mgr,
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         int i = 0, jobs_rx = 0, ret = -1;
-        const int order = (dir == ENCRYPT) ? CIPHER_HASH : HASH_CIPHER;
+        const int order = (dir == ENCRYPT) ? HASH_CIPHER : CIPHER_HASH;
 
         if (targets == NULL || auths == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");

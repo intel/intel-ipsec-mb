@@ -1,6 +1,13 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+v0.53
+========================================================================
+
+General
+- CCM chain order expected to be HASH_CIPHER for encryption and
+  CIPHER_HASH for decryption
+
 v0.52 December 2018
 ========================================================================
 

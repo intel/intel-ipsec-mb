@@ -150,8 +150,37 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 
 __forceinline
 JOB_AES_HMAC *
-submit_flush_job_aes_ccm(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job,
-                         const unsigned max_jobs, const int is_submit)
+submit_job_aes_ccm_cipher(JOB_AES_HMAC *job)
+{
+        DECLARE_ALIGNED(uint8_t IV[AES_BLOCK_SIZE], 16) = {0};
+        const unsigned L = AES_BLOCK_SIZE - 1 -
+                (unsigned) job->iv_len_in_bytes;
+
+        /*
+         * Build IV for AES-CTR-128.
+         * - byte 0: flags with L'
+         * - bytes 1 to 13: nonce
+         * - zero bytes after nonce (up to byte 15)
+         */
+        IV[0] = (uint8_t) L - 1; /* flags = L' = L - 1 */
+        /* nonce 7 to 13 byte long */
+        memcpy(&IV[1], job->iv, job->iv_len_in_bytes);
+
+        IV[15] = 1;
+        AES_CNTR_128(job->src +
+                     job->cipher_start_src_offset_in_bytes,
+                     IV, job->aes_enc_key_expanded, job->dst,
+                     job->msg_len_to_cipher_in_bytes,
+                     AES_BLOCK_SIZE);
+
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+submit_flush_job_aes_ccm_auth(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job,
+                              const unsigned max_jobs, const int is_submit)
 {
         const unsigned lane_blocks_size = 64;
         const unsigned aad_len_size = 2;
@@ -172,30 +201,6 @@ submit_flush_job_aes_ccm(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job,
                 state->unused_lanes >>= 4;
                 pb = &state->init_blocks[lane * lane_blocks_size];
 
-                /*
-                 * Build IV for AES-CTR-128.
-                 * - byte 0: flags with L'
-                 * - bytes 1 to 13: nonce
-                 * - zero bytes after nonce (up to byte 15)
-                 *
-                 * First AES block of init_blocks will always hold this format
-                 * throughtout job processing.
-                 */
-                memset(&pb[8], 0, 8);
-                pb[0] = (uint8_t) L - 1; /* flags = L` = L - 1 */
-                /* nonce 7 to 13 */
-                memcpy(&pb[1], job->iv, job->iv_len_in_bytes);
-
-                if (job->cipher_direction != ENCRYPT) {
-                        /* decrypt before authentication */
-                        pb[15] = 1;
-                        AES_CNTR_128(job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     pb, job->aes_enc_key_expanded, job->dst,
-                                     job->msg_len_to_cipher_in_bytes,
-                                     AES_BLOCK_SIZE);
-                }
-
                 /* copy job data in and set up inital blocks */
                 state->job_in_lane[lane] = job;
                 state->lens[lane] = AES_BLOCK_SIZE;
@@ -205,11 +210,17 @@ submit_flush_job_aes_ccm(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job,
                 memset(&state->args.IV[lane], 0, sizeof(state->args.IV[0]));
 
                 /*
-                 * Convert AES-CTR IV into BLOCK 0 for CBC-MAC-128:
-                 * - correct flags by adding M' (AAD later)
-                 * - put message length
+                 * Build Block 0 for CBC-MAC-128:
+                 * - byte 0: flags with L' and M' (AAD later)
+                 * - bytes 1 to 13: nonce
+                 * - zero bytes after nonce (up to byte 13)
+                 * - bytes 14 & 15 (message length)
                  */
+                memset(&pb[8], 0, 8);
+                pb[0] = (uint8_t) L - 1; /* flags = L` = L - 1 */
                 pb[0] |= ((job->auth_tag_output_len_in_bytes - 2) >> 1) << 3;
+                /* nonce 7 to 13 byte long */
+                memcpy(&pb[1], job->iv, job->iv_len_in_bytes);
                 pb[14] = (uint8_t) (job->msg_len_to_hash_in_bytes >> 8);
                 pb[15] = (uint8_t) job->msg_len_to_hash_in_bytes;
 
@@ -376,20 +387,10 @@ submit_flush_job_aes_ccm(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job,
                      ret_job->auth_tag_output_len_in_bytes /* num_bytes */,
                      AES_BLOCK_SIZE /* nonce/iv len */);
 
-        if (ret_job->cipher_direction == ENCRYPT) {
-                /* encrypt after authentication */
-                pb[15] = 1; /* start from counter 1, not 0 */
-                AES_CNTR_128(ret_job->src +
-                             ret_job->cipher_start_src_offset_in_bytes,
-                             pb, ret_job->aes_enc_key_expanded, ret_job->dst,
-                             ret_job->msg_len_to_cipher_in_bytes,
-                             AES_BLOCK_SIZE);
-        }
-
         /* put back processed packet into unused lanes, set job as complete */
         state->unused_lanes = (state->unused_lanes << 4) | min_idx;
         ret_job = state->job_in_lane[min_idx];
-        ret_job->status |= (STS_COMPLETED_HMAC|STS_COMPLETED_AES);
+        ret_job->status |= STS_COMPLETED_HMAC;
         state->job_in_lane[min_idx] = NULL;
         return ret_job;
 }
@@ -398,14 +399,21 @@ static
 JOB_AES_HMAC *
 submit_job_aes_ccm_auth_arch(MB_MGR_CCM_OOO *state, JOB_AES_HMAC *job)
 {
-        return submit_flush_job_aes_ccm(state, job, AES_CCM_MAX_JOBS, 1);
+        return submit_flush_job_aes_ccm_auth(state, job, AES_CCM_MAX_JOBS, 1);
 }
 
 static
 JOB_AES_HMAC *
 flush_job_aes_ccm_auth_arch(MB_MGR_CCM_OOO *state)
 {
-        return submit_flush_job_aes_ccm(state, NULL, AES_CCM_MAX_JOBS, 0);
+        return submit_flush_job_aes_ccm_auth(state, NULL, AES_CCM_MAX_JOBS, 0);
+}
+
+static
+JOB_AES_HMAC *
+submit_job_aes_ccm_cipher_arch(JOB_AES_HMAC *job)
+{
+        return submit_job_aes_ccm_cipher(job);
 }
 
 /* ========================================================================= */
@@ -731,7 +739,9 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #else
                 return DES3_CBC_ENC(job);
 #endif
-        } else { /* assume CCM or NULL_CIPHER */
+        } else if (CCM == job->cipher_mode) {
+                return SUBMIT_JOB_AES_CCM_CIPHER(job);
+        } else { /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
         }
@@ -830,8 +840,10 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
+        } else if (CCM == job->cipher_mode) {
+                return SUBMIT_JOB_AES_CCM_CIPHER(job);
         } else {
-                /* assume CCM or NULL_CIPHER */
+                /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
         }
