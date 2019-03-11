@@ -937,7 +937,7 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
-        default: /* assume NULL_HASH */
+        default: /* assume GCM or NULL_HASH */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
         }
@@ -982,7 +982,7 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo);
         case AES_CMAC:
                 return FLUSH_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo);
-        default: /* assume NULL_HASH */
+        default: /* assume GCM or NULL_HASH */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
                         job->status |= STS_COMPLETED_HMAC;
                         return job;
