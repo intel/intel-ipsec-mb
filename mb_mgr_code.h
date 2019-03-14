@@ -858,7 +858,7 @@ FLUSH_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_DEC */
         (void) state;
-        return SUBMIT_JOB_AES_DEC(state, job);
+        return NULL;
 }
 
 /* ========================================================================= */
