@@ -44,6 +44,7 @@ extern int hmac_sha256_sha512_test(const enum arch_type arch,
 extern int hmac_md5_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int aes_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int sha_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+extern int chained_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 
 #include "do_test.h"
@@ -285,6 +286,7 @@ main(int argc, char **argv)
                 errors += hmac_md5_test(atype, p_mgr);
                 errors += aes_test(atype, p_mgr);
                 errors += sha_test(atype, p_mgr);
+                errors += chained_test(atype, p_mgr);
                 errors += api_test(atype, p_mgr);
                 free_mb_mgr(p_mgr);
         }
