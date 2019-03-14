@@ -83,6 +83,8 @@ const struct test_set {
 
 };
 
+const char *place_str[] = {"out-of-place", "in-place"};
+
 /* AES-CBC + SHA1-HMAC test vectors */
 
 /*  128-bit */
@@ -217,6 +219,7 @@ test_chained_many(struct MB_MGR *mb_mgr,
                   JOB_HASH_ALG hash,
                   const void *ipad_hash,
                   const void *opad_hash,
+                  const unsigned in_place,
                   const unsigned num_jobs)
 {
         struct JOB_AES_HMAC *job;
@@ -264,8 +267,10 @@ test_chained_many(struct MB_MGR *mb_mgr,
                         goto end;
                 }
                 memset(targets[i], -1, text_len + (sizeof(padding) * 2));
-                /* copy input text to the allocated buffer */
-                memcpy(targets[i] + sizeof(padding), in_text, text_len);
+                if (in_place) {
+                        /* copy input text to the allocated buffer */
+                        memcpy(targets[i] + sizeof(padding), in_text, text_len);
+                }
 
                 auths[i] = malloc(digest_size + (sizeof(padding) * 2));
                 if (auths[i] == NULL) {
@@ -283,8 +288,13 @@ test_chained_many(struct MB_MGR *mb_mgr,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->cipher_direction = dir;
                 job->chain_order = order;
-                job->dst = targets[i] + sizeof(padding);
-                job->src = targets[i] + sizeof(padding);
+                if (in_place) {
+                        job->dst = targets[i] + sizeof(padding);
+                        job->src = targets[i] + sizeof(padding);
+                } else {
+                        job->dst = targets[i] + sizeof(padding);
+                        job->src = in_text;
+                }
                 job->cipher_mode = cipher;
                 job->aes_enc_key_expanded = enc_keys;
                 job->aes_dec_key_expanded = dec_keys;
@@ -299,7 +309,25 @@ test_chained_many(struct MB_MGR *mb_mgr,
                 job->hash_alg = hash;
                 job->auth_tag_output = auths[i] + sizeof(padding);
                 job->auth_tag_output_len_in_bytes = digest_size;
-                job->hash_start_src_offset_in_bytes = 0;
+                /*
+                 * If operation is out of place and hash operation is done
+                 * after encryption/decryption, hash operation needs to be
+                 * done in the destination buffer.
+                 * Since hash_start_src_offset_in_bytes refers to the offset
+                 * in the source buffer, this offset is set to point at
+                 * the destination buffer.
+                 */
+                if (!in_place && (job->chain_order == CIPHER_HASH)) {
+                        const uintptr_t u_src = (const uintptr_t) job->src;
+                        const uintptr_t u_dst = (const uintptr_t) job->dst;
+                        const uintptr_t offset = (u_dst > u_src) ?
+                                        (u_dst - u_src) :
+                                        (UINTPTR_MAX - u_src + u_dst + 1);
+
+                        job->hash_start_src_offset_in_bytes = (uint64_t)offset;
+                } else {
+                        job->hash_start_src_offset_in_bytes = 0;
+                }
                 job->msg_len_to_hash_in_bytes = text_len;
                 job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
                 job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
@@ -363,8 +391,7 @@ test_chained_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
         uint8_t *hash_key = NULL;
         DECLARE_ALIGNED(uint8_t ipad_hash[128], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[128], 16);
-        unsigned hash_key_len;
-        unsigned i;
+        unsigned hash_key_len, i;
 
         buf = malloc(hash_block_size);
         if (buf == NULL) {
@@ -429,16 +456,23 @@ test_chained_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad_hash);
 
                 for (i = 0; i < DIM(test_sets); i++) {
-                        if (test_chained_many(mb_mgr, enc_keys, dec_keys,
-                                              &vec_tab[vect],
-                                              test_sets[i].dir,
-                                              test_sets[i].order,
-                                              cipher, hash,
-                                              ipad_hash, opad_hash,
-                                              num_jobs)) {
-                                printf("error #%d %s\n", vect + 1,
-                                       test_sets[i].set_name);
-                                errors++;
+                        unsigned in_place;
+
+                        for (in_place = 0; in_place < DIM(place_str);
+                             in_place++) {
+                                if (test_chained_many(mb_mgr,
+                                                      enc_keys, dec_keys,
+                                                      &vec_tab[vect],
+                                                      test_sets[i].dir,
+                                                      test_sets[i].order,
+                                                      cipher, hash,
+                                                      ipad_hash, opad_hash,
+                                                      in_place,  num_jobs)) {
+                                        printf("error #%d %s %s\n", vect + 1,
+                                               test_sets[i].set_name,
+                                               place_str[in_place]);
+                                        errors++;
+                                }
                         }
                 }
         }
