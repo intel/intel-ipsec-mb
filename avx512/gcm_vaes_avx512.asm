@@ -700,92 +700,93 @@ default rel
 %define %%AAD_HASH              %7
 %define %%ENC_DEC               %8
 
-        mov     r13, [%%GDATA_CTX + PBlockLen]
-        cmp     r13, 0
-        je      %%_partial_block_done           ;Leave Macro if no partial blocks
+%define %%LENGTH        r13
+%define %%IA0           rax
+%define %%IA1           r12
 
-        cmp     %%PLAIN_CYPH_LEN, 16            ;Read in input data without over reading
-        jl      %%_fewer_than_16_bytes
-        VXLDR   xmm1, [%%PLAIN_CYPH_IN]         ;If more than 16 bytes of data, just fill the xmm register
-        jmp     %%_data_read
+        mov             %%LENGTH, [%%GDATA_CTX + PBlockLen]
+        or              %%LENGTH, %%LENGTH
+        je              %%_partial_block_done           ;Leave Macro if no partial blocks
 
-%%_fewer_than_16_bytes:
-        lea     r10, [%%PLAIN_CYPH_IN]
-        READ_SMALL_DATA_INPUT   xmm1, r10, %%PLAIN_CYPH_LEN, rax, k1
+        READ_SMALL_DATA_INPUT   xmm1, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%IA0, k1
 
-%%_data_read:                           ;Finished reading in data
+        ;; xmm9 = my_ctx_data.partial_block_enc_key
+        vmovdqu64       xmm9, [%%GDATA_CTX + PBlockEncKey]
+        vmovdqu64       xmm13, [%%GDATA_KEY + HashKey]
 
-        vmovdqu xmm9, [%%GDATA_CTX + PBlockEncKey]  ;xmm9 = my_ctx_data.partial_block_enc_key
-        vmovdqu xmm13, [%%GDATA_KEY + HashKey]
-
-        lea     r12, [rel SHIFT_MASK]
-
-        add     r12, r13                        ; adjust the shuffle mask pointer to be able to shift r13 bytes (16-r13 is the number of bytes in plaintext mod 16)
-        vmovdqu xmm2, [r12]                     ; get the appropriate shuffle mask
-        vpshufb xmm9, xmm2                      ;shift right r13 bytes
+        ;; adjust the shuffle mask pointer to be able to shift right %%LENGTH bytes
+        ;; (16 - %%LENGTH) is the number of bytes in plaintext mod 16)
+        lea             %%IA0, [rel SHIFT_MASK]
+        add             %%IA0, %%LENGTH
+        vmovdqu64       xmm2, [%%IA0]   ; shift right shuffle mask
+        vpshufb         xmm9, xmm2
 
 %ifidn  %%ENC_DEC, DEC
-        vmovdqa xmm3, xmm1
+        ;;  keep copy of cipher text in xmm3
+        vmovdqa64       xmm3, xmm1
 %endif
-        vpxor   xmm9, xmm1                      ; Cyphertext XOR E(K, Yn)
+        vpxorq          xmm9, xmm1      ; Cyphertext XOR E(K, Yn)
 
-        mov     r15, %%PLAIN_CYPH_LEN
-        add     r15, r13
-        sub     r15, 16                         ;Set r15 to be the amount of data left in CYPH_PLAIN_IN after filling the block
-        jge     %%_no_extra_mask                ;Determine if if partial block is not being filled and shift mask accordingly
-        sub     r12, r15
+        ;; Set %%IA1 to be the amount of data left in CYPH_PLAIN_IN after filling the block
+        ;; Determine if partial block is not being filled and shift mask accordingly
+        mov             %%IA1, %%PLAIN_CYPH_LEN
+        add             %%IA1, %%LENGTH
+        sub             %%IA1, 16
+        jge             %%_no_extra_mask
+        sub             %%IA0, %%IA1
 %%_no_extra_mask:
-
-        vmovdqu xmm1, [r12 + ALL_F - SHIFT_MASK]; get the appropriate mask to mask out bottom r13 bytes of xmm9
-        vpand   xmm9, xmm1                      ; mask out bottom r13 bytes of xmm9
+        ;; get the appropriate mask to mask out bottom %%LENGTH bytes of xmm9
+        ;; - mask out bottom %%LENGTH bytes of xmm9
+        vmovdqu64       xmm1, [%%IA0 + ALL_F - SHIFT_MASK]
+        vpand           xmm9, xmm1
 
 %ifidn  %%ENC_DEC, DEC
-        vpand   xmm3, xmm1
-        vpshufb xmm3, [rel SHUF_MASK]
-        vpshufb xmm3, xmm2
-        vpxor   %%AAD_HASH, xmm3
+        vpand           xmm3, xmm1
+        vpshufb         xmm3, [rel SHUF_MASK]
+        vpshufb         xmm3, xmm2
+        vpxorq          %%AAD_HASH, xmm3
 %else
-        vpshufb xmm9, [rel SHUF_MASK]
-        vpshufb xmm9, xmm2
-        vpxor   %%AAD_HASH, xmm9
+        vpshufb         xmm9, [rel SHUF_MASK]
+        vpshufb         xmm9, xmm2
+        vpxorq          %%AAD_HASH, xmm9
 %endif
-        cmp     r15,0
-        jl      %%_partial_incomplete
+        cmp             %%IA1, 0
+        jl              %%_partial_incomplete
 
-        GHASH_MUL       %%AAD_HASH, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6       ;GHASH computation for the last <16 Byte block
-        xor     rax,rax
-        mov     [%%GDATA_CTX + PBlockLen], rax
-        jmp     %%_enc_dec_done
+        ;; GHASH computation for the last <16 Byte block
+        GHASH_MUL       %%AAD_HASH, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
+
+        mov             qword [%%GDATA_CTX + PBlockLen], 0
+
+        ;;  Set %%IA1 to be the number of bytes to write out
+        mov             %%IA0, %%LENGTH
+        mov             %%LENGTH, 16
+        sub             %%LENGTH, %%IA0
+        jmp             %%_enc_dec_done
+
 %%_partial_incomplete:
 %ifidn __OUTPUT_FORMAT__, win64
-        mov     rax, %%PLAIN_CYPH_LEN
-       	add     [%%GDATA_CTX + PBlockLen], rax
+        mov             %%IA0, %%PLAIN_CYPH_LEN
+       	add             [%%GDATA_CTX + PBlockLen], %%IA0
 %else
-        add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
+        add             [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
 %endif
+        mov             %%LENGTH, %%PLAIN_CYPH_LEN
+
 %%_enc_dec_done:
-        vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH
+        ;; output encrypted Bytes
+
+        lea             %%IA0, [rel byte_len_to_mask_table]
+        kmovw           k1, [%%IA0 + %%LENGTH*2]
+        vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASH
 
 %ifidn  %%ENC_DEC, ENC
-        vpshufb xmm9, [rel SHUF_MASK]       ; shuffle xmm9 back to output as ciphertext
-        vpshufb xmm9, xmm2
+        ;; shuffle xmm9 back to output as ciphertext
+        vpshufb         xmm9, [rel SHUF_MASK]
+        vpshufb         xmm9, xmm2
 %endif
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; output encrypted Bytes
-        cmp     r15,0
-        jl      %%_partial_fill
-        mov     r12, r13
-        mov     r13, 16
-        sub     r13, r12                        ; Set r13 to be the number of bytes to write out
-        jmp     %%_count_set
-%%_partial_fill:
-        mov     r13, %%PLAIN_CYPH_LEN
-%%_count_set:
-        lea             rax, [rel byte_len_to_mask_table]
-        kmovw           k1, [rax + r13*2]
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, xmm9
-        add             %%DATA_OFFSET, r13
+        add             %%DATA_OFFSET, %%LENGTH
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK
 
