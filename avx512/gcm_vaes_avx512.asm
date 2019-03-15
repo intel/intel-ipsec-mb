@@ -2663,14 +2663,11 @@ default rel
 %define %%ENC_DEC           %6
 %define %%DATA_OFFSET       %7
 %define %%LENGTH            %8  ; assumed r13
-%define %%NUM_BLOCKS        %9
+%define %%NUM_BLOCKS        %9  ; 1 to 8
 %define %%CTR               %10 ; assumed xmm9
 %define %%HASH_OUT          %11 ; assumed xmm14
 %define %%INSTANCE_TYPE     %12
 
-        ;; NOTE: the check below is obsolete in current implementation. The check is already done in GCM_ENC_DEC.
-        ;; cmp     %%NUM_BLOCKS, 0
-        ;; je      %%_small_initial_blocks_encrypted
         cmp     %%NUM_BLOCKS, 8
         je      %%_small_initial_num_blocks_is_8
         cmp     %%NUM_BLOCKS, 7
