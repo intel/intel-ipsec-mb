@@ -514,27 +514,34 @@ default rel
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; READ_SMALL_DATA_INPUT: Packs xmm register with data when data input is less than 16 bytes.
-; Returns 0 if data has length 0.
-; Input: The input data (INPUT), that data's length (LENGTH).
-; Output: The packed xmm register (OUTPUT).
+;;; READ_SMALL_DATA_INPUT
+;;; Packs xmm register with data when data input is less or equal to 16 bytes
+;;; Returns 0 if data has length 0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro READ_SMALL_DATA_INPUT    4
+%macro READ_SMALL_DATA_INPUT    5
 %define %%OUTPUT        %1 ; [out] xmm register
 %define %%INPUT         %2 ; [in] buffer pointer to read from
 %define %%LENGTH        %3 ; [in] number of bytes to read
 %define %%TMP1          %4 ; [clobbered]
+%define %%MASK          %5 ; [out] k1 to k7 register to store the partial block mask
 
+        cmp             %%LENGTH, 16
+        jge             %%_read_small_data_ge16
         lea             %%TMP1, [rel byte_len_to_mask_table]
 %ifidn __OUTPUT_FORMAT__, win64
         add             %%TMP1, %%LENGTH
         add             %%TMP1, %%LENGTH
-        kmovw           k1, [%%TMP1]
+        kmovw           %%MASK, [%%TMP1]
 %else
-        kmovw           k1, [%%TMP1 + %%LENGTH*2]
+        kmovw           %%MASK, [%%TMP1 + %%LENGTH*2]
 %endif
-        vmovdqu8        %%OUTPUT{k1}{z}, [%%INPUT]
-
+        vmovdqu8        %%OUTPUT{%%MASK}{z}, [%%INPUT]
+        jmp             %%_read_small_data_end
+%%_read_small_data_ge16:
+        VX512LDR        %%OUTPUT, [%%INPUT]
+        mov             %%TMP1, 0xffff
+        kmovq           %%MASK, %%TMP1
+%%_read_small_data_end:
 %endmacro ; READ_SMALL_DATA_INPUT
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -627,7 +634,7 @@ default rel
         ;; need T3 as temporary register for partial read
         ;; save in ZT3 and restore later
         vmovq           XWORD(%%ZT3), %%T3
-        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T3
+        READ_SMALL_DATA_INPUT   XWORD(%%ZT0), %%T1, %%T2, %%T3, k1
         vmovq           %%T3, XWORD(%%ZT3)
         VCLMUL_1BLOCK   %%ZT1, %%AAD_HASH, %%T3, 0, \
                         %%ZT0, text_zmm, first, \
@@ -655,7 +662,7 @@ default rel
         ;; save in ZT3 and restore later
         vmovq           XWORD(%%ZT3), %%T3
         READ_SMALL_DATA_INPUT \
-                        XWORD(%%ZT0), %%T1, %%T2, %%T3
+                        XWORD(%%ZT0), %%T1, %%T2, %%T3, k1
         vmovq           %%T3, XWORD(%%ZT3)
 
         VCLMUL_1BLOCK   %%ZT1, %%AAD_HASH, %%T3, 0, \
@@ -704,7 +711,7 @@ default rel
 
 %%_fewer_than_16_bytes:
         lea     r10, [%%PLAIN_CYPH_IN]
-        READ_SMALL_DATA_INPUT   xmm1, r10, %%PLAIN_CYPH_LEN, rax
+        READ_SMALL_DATA_INPUT   xmm1, r10, %%PLAIN_CYPH_LEN, rax, k1
 
 %%_data_read:                           ;Finished reading in data
 
@@ -2617,7 +2624,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %define %%IA0             %8    ; [clobbered] GP temporary register
 
         ;; On output it sets k1 with valid byte bit mask
-        READ_SMALL_DATA_INPUT   %%T1, %%PLAIN_CYPH_IN+%%DATA_OFFSET, %%LENGTH, %%IA0
+        READ_SMALL_DATA_INPUT   %%T1, %%PLAIN_CYPH_IN+%%DATA_OFFSET, %%LENGTH, %%IA0, k1
 
         ;; At this point T1 contains the partial block data
         ;; Plain/cipher text XOR E(K, Yn)
