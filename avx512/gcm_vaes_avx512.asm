@@ -1621,7 +1621,7 @@ default rel
 %define %%T4                    %8 ; [clobbered] temporary XMM
 %define %%T5                    %9 ; [clobbered] temporary XMM
 %define %%T6                    %10 ; [clobbered] temporary XMM
-%define %%CTR                   %11 ; [in/out] last counter block
+%define %%CTR                   %11 ; [in/out] ZMM last counter block (b-casted across ZMM)
 %define %%XMM1                  %12 ; [in/out] cipher block to ghash
 %define %%XMM2                  %13 ; [in/out] cipher block to ghash
 %define %%XMM3                  %14 ; [in/out] cipher block to ghash
@@ -1666,17 +1666,15 @@ default rel
 %ifidn %%loop_idx, in_order
         ;; %%CTR is shuffled outside the scope of this macro
         ;; it has to be kept in unshuffled form
-        vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_1234]
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_5678]
-        vextracti32x4   %%CTR, %%ZT2, 3
+        vpaddd          %%ZT1, %%CTR, [rel ddq_add_1234]
+        vpaddd          %%ZT2, %%CTR, [rel ddq_add_5678]
+        vshufi64x2      %%CTR, %%ZT2, %%ZT2, 1111_1111b
         vpshufb         %%ZT1, [rel SHUF_MASK]
         vpshufb         %%ZT2, [rel SHUF_MASK]
 %else
-        vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_addbe_1234]
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_addbe_5678]
-        vextracti32x4   %%CTR, %%ZT2, 3
+        vpaddd          %%ZT1, %%CTR, [rel ddq_addbe_1234]
+        vpaddd          %%ZT2, %%CTR, [rel ddq_addbe_5678]
+        vshufi64x2      %%CTR, %%ZT2, %%ZT2, 1111_1111b
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2712,6 +2710,8 @@ default rel
         vextracti32x4   xmm7, %%ZTMP1, 2
         vextracti32x4   xmm8, %%ZTMP1, 3
 
+        vshufi64x2      %%CTR_BLOCKz, %%CTR_BLOCKz, %%CTR_BLOCKz, 0
+
         ;; The entire message was encrypted processed in initial and now need to be hashed
         or              %%LENGTH, %%LENGTH
         je              %%_encrypt_done
@@ -2726,7 +2726,7 @@ default rel
         ;; that the carry is handled correctly.
         vmovd           r15d, %%CTR_BLOCKx
         and             r15d, 255
-        vpshufb         %%CTR_BLOCKx, [rel SHUF_MASK]
+        vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
 
 %%_encrypt_by_8_new:
         cmp             r15d, (255 - 8)
@@ -2736,29 +2736,29 @@ default rel
         add             r15b, 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKx, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
+                %%CTR_BLOCKz, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
                 out_order, %%ENC_DEC, full
         add             %%DATA_OFFSET, 128
         sub             %%LENGTH, 128
         cmp             %%LENGTH, 128
         jge             %%_encrypt_by_8_new
 
-        vpshufb         %%CTR_BLOCKx, [rel SHUF_MASK]
+        vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
         jmp             %%_encrypt_by_8_parallel_done
 
 %%_encrypt_by_8:
-        vpshufb         %%CTR_BLOCKx, [rel SHUF_MASK]
+        vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
         add             r15b, 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKx, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
+                %%CTR_BLOCKz, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
                 in_order, %%ENC_DEC, full
-        vpshufb         %%CTR_BLOCKx, [rel SHUF_MASK]
+        vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
         add             %%DATA_OFFSET, 128
         sub             %%LENGTH, 128
         cmp             %%LENGTH, 128
         jge             %%_encrypt_by_8_new
-        vpshufb         %%CTR_BLOCKx, [rel SHUF_MASK]
+        vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
 
 %%_encrypt_by_8_parallel_done:
         ;; Test to see if we need a by 8 with partial block. At this point
@@ -2774,7 +2774,7 @@ default rel
         ;; Process parallel buffers with a final partial block.
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKx, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
+                %%CTR_BLOCKz, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
                 in_order, %%ENC_DEC, partial
 
         add             %%DATA_OFFSET, (128 - 16)
