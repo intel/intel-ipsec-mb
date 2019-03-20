@@ -1608,9 +1608,9 @@ default rel
 ;;; - operates on single stream
 ;;; - encrypts 8 blocks at a time
 ;;; - ghash the 8 previously encrypted ciphertext blocks
-;;; For partial block case, XMM8 on output contains shuffled and encrypted
+;;; For partial block case, AES_PARTIAL_BLOCK on output contains encrypted
 ;;; counter block.
-%macro  GHASH_8_ENCRYPT_8_PARALLEL 23
+%macro  GHASH_8_ENCRYPT_8_PARALLEL 21
 %define %%GDATA                 %1 ; [in] key pointer
 %define %%CYPH_PLAIN_OUT        %2 ; [in] pointer to output buffer
 %define %%PLAIN_CYPH_IN         %3 ; [in] pointer to input buffer
@@ -1622,20 +1622,17 @@ default rel
 %define %%T5                    %9 ; [clobbered] temporary XMM
 %define %%T6                    %10 ; [clobbered] temporary XMM
 %define %%CTR                   %11 ; [in/out] ZMM last counter block (b-casted across ZMM)
-%define %%XMM1                  %12 ; [in/out] cipher block to ghash
-%define %%XMM2                  %13 ; [in/out] cipher block to ghash
-%define %%XMM3                  %14 ; [in/out] cipher block to ghash
-%define %%XMM4                  %15 ; [in/out] cipher block to ghash
-%define %%XMM5                  %16 ; [in/out] cipher block to ghash
-%define %%XMM6                  %17 ; [in/out] cipher block to ghash
-%define %%XMM7                  %18 ; [in/out] cipher block to ghash
-%define %%XMM8                  %19 ; [in/out] cipher block to ghash
-%define %%T7                    %20 ; [clobbered] temporary XMM
-%define %%loop_idx              %21 ; [in] counter block prep selection "add+shuffle" or "add"
-%define %%ENC_DEC               %22 ; [in] cipher direction
-%define %%FULL_PARTIAL          %23 ; [in] last block type selection "full" or "partial"
+%define %%GHASHIN_AESOUT_B03    %12 ; [in/out] ZMM ghash in / aes out blocks 0 to 3
+%define %%GHASHIN_AESOUT_B47    %13 ; [in/out] ZMM ghash in / aes out blocks 4 to 7
+%define %%AES_PARTIAL_BLOCK     %14 ; [out] XMM partial block (AES + shuffle)
+%define %%T7                    %15 ; [clobbered] temporary XMM
+%define %%loop_idx              %16 ; [in] counter block prep selection "add+shuffle" or "add"
+%define %%ENC_DEC               %17 ; [in] cipher direction
+%define %%FULL_PARTIAL          %18 ; [in] last block type selection "full" or "partial"
+%define %%IA0                   %19 ; [clobbered] GP register
+%define %%IA1                   %20 ; [clobbered] GP register
+%define %%LENGTH                %21 ; [in] length
 
-%define %%IA0   rax             ; temporary GP register
 %define %%ZT1   regz(16)        ; temporary ZMM used for cipher
 %define %%ZT2   regz(17)        ; temporary ZMM used for cipher
 %define %%ZT3   regz(18)        ; temporary ZMM used for cipher
@@ -1652,14 +1649,8 @@ default rel
 %define %%ZT17  regz(28)        ; temporary ZMM used for ghash
 
         ;; keep the cipher blocks for further GHASH
-        vinserti64x2    %%ZT10, %%XMM1, 0
-        vinserti64x2    %%ZT10, %%XMM2, 1
-        vinserti64x2    %%ZT10, %%XMM3, 2
-        vinserti64x2    %%ZT10, %%XMM4, 3
-        vinserti64x2    %%ZT11, %%XMM5, 0
-        vinserti64x2    %%ZT11, %%XMM6, 1
-        vinserti64x2    %%ZT11, %%XMM7, 2
-        vinserti64x2    %%ZT11, %%XMM8, 3
+        vmovdqa64       %%ZT10, %%GHASHIN_AESOUT_B03
+        vmovdqa64       %%ZT11, %%GHASHIN_AESOUT_B47
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; populate counter blocks
@@ -1683,8 +1674,10 @@ default rel
         vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
         vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
 %else
-        mov             %%IA0, 0x0000_ffff_ffff_ffff
-        kmovq           k1, %%IA0
+        lea             %%IA0, [rel byte64_len_to_mask_table]
+        mov             %%IA1, %%LENGTH
+        sub             %%IA1, 64
+        kmovq           k1, [%%IA0 + 8*%%IA1]
         vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
         vmovdqu8        %%ZT5{k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
 %endif
@@ -1753,8 +1746,12 @@ default rel
 %ifnidn %%FULL_PARTIAL, full
         ;; for partial block we need encrypted & shuffled counter block
         vpxorq          %%ZT3, %%ZT2, %%ZT5
-        vextracti32x4   XWORD(%%ZT3), %%ZT3, 3
-        vpshufb         XWORD(%%ZT3), [rel SHUF_MASK]
+        vextracti32x4   %%AES_PARTIAL_BLOCK, %%ZT3, 3
+%ifidn %%ENC_DEC, ENC
+        vmovdqu8        %%ZT2{k1}{z}, %%ZT2
+%else
+        vmovdqu8        %%ZT5{k1}{z}, %%ZT5
+%endif
 %endif
 
 %ifidn %%ENC_DEC, ENC
@@ -1766,23 +1763,13 @@ default rel
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; extract shuffled cipher text blocks for GHASH
-        vextracti32x4   %%XMM1, %%ZT1, 0
-        vextracti32x4   %%XMM2, %%ZT1, 1
-        vextracti32x4   %%XMM3, %%ZT1, 2
-        vextracti32x4   %%XMM4, %%ZT1, 3
-        vextracti32x4   %%XMM5, %%ZT2, 0
-        vextracti32x4   %%XMM6, %%ZT2, 1
-        vextracti32x4   %%XMM7, %%ZT2, 2
-%ifidn %%FULL_PARTIAL, full
-        vextracti32x4   %%XMM8, %%ZT2, 3
-%else
-        vmovdqa64       %%XMM8, XWORD(%%ZT3)
-%endif
+        ;; copy shuffled cipher text blocks for GHASH
+        vmovdqa64       %%GHASHIN_AESOUT_B03, %%ZT1
+        vmovdqa64       %%GHASHIN_AESOUT_B47, %%ZT2
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; XOR current GHASH value into block 0
-        vpxorq          %%XMM1, %%T1
+        vpxorq          %%GHASHIN_AESOUT_B03, ZWORD(%%T1)
 
 %endmacro                       ; GHASH_8_ENCRYPT_8_PARALLEL
 
@@ -2159,41 +2146,6 @@ default rel
 %endmacro
 
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Handle encryption of the final partial block
-;;; %%KEY - on output contains cipher text block for GHASH
-;;;       - on input it contains encrypter counter block
-%macro  ENCRYPT_FINAL_PARTIAL_BLOCK 8
-%define %%KEY             %1    ; [in/out] XMM with encrypted counter block/cipher text
-%define %%T1              %2    ; [clobbered] XMM temporary
-%define %%CYPH_PLAIN_OUT  %3    ; [in] pointer to output buffer
-%define %%PLAIN_CYPH_IN   %4    ; [in] pointer to input buffer
-%define %%LENGTH          %5    ; [in] number of bytes in partial block
-%define %%ENC_DEC         %6    ; [in] ENC/DEC selection
-%define %%DATA_OFFSET     %7    ; [in] data offset from start of the buffer
-%define %%IA0             %8    ; [clobbered] GP temporary register
-
-        ;; On output it sets k1 with valid byte bit mask
-        READ_SMALL_DATA_INPUT   %%T1, %%PLAIN_CYPH_IN+%%DATA_OFFSET, %%LENGTH, %%IA0, k1
-
-        ;; At this point T1 contains the partial block data
-        ;; Plain/cipher text XOR E(K, Yn)
-        vpxorq          %%KEY, %%KEY, %%T1
-
-        ;; Output %%LENGTH bytes
-        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, %%KEY
-
-%ifidn  %%ENC_DEC, DEC
-        ;; If decrypt, restore the ciphertext into %%KEY
-        vmovdqa64       %%KEY, %%T1
-%else
-        vmovdqu8        %%KEY{k1}{z}, %%KEY
-%endif
-%endmacro                       ; ENCRYPT_FINAL_PARTIAL_BLOCK
-
-
-
 ; Encryption of a single block
 %macro  ENCRYPT_SINGLE_BLOCK 2
 %define %%GDATA %1
@@ -2517,6 +2469,10 @@ default rel
 %define %%IA0               r10
 %define %%IA1               r12
 
+%define %%GHASH_IN_AES_OUT_B03  zmm1
+%define %%GHASH_IN_AES_OUT_B47  zmm2
+%define %%AES_PARTIAL_BLOCK     xmm8
+
 %define %%ZTMP0             zmm0
 %define %%ZTMP1             zmm10
 %define %%ZTMP2             zmm11
@@ -2697,24 +2653,15 @@ default rel
                 %%IA0, %%IA1, %%ENC_DEC
 
 %%_initial_blocks_encrypted:
-        ;; extract 8 cipher blocks from ZTMP0/ZTMP1 into xmm1-xmm8
-        ;;   @todo This is temporary to keep compatibility with
-        ;;         GHASH_8_ENCRYPT_8_PARALLEL macro - to be changed and
-        ;;         optimized in the next steps
-        vextracti32x4   xmm1, %%ZTMP0, 0
-        vextracti32x4   xmm2, %%ZTMP0, 1
-        vextracti32x4   xmm3, %%ZTMP0, 2
-        vextracti32x4   xmm4, %%ZTMP0, 3
-        vextracti32x4   xmm5, %%ZTMP1, 0
-        vextracti32x4   xmm6, %%ZTMP1, 1
-        vextracti32x4   xmm7, %%ZTMP1, 2
-        vextracti32x4   xmm8, %%ZTMP1, 3
-
-        vshufi64x2      %%CTR_BLOCKz, %%CTR_BLOCKz, %%CTR_BLOCKz, 0
+        ;; move cipher blocks from intial blocks to input of by8 macro
+        vmovdqa64       %%GHASH_IN_AES_OUT_B03, %%ZTMP0
+        vmovdqa64       %%GHASH_IN_AES_OUT_B47, %%ZTMP1
 
         ;; The entire message was encrypted processed in initial and now need to be hashed
         or              %%LENGTH, %%LENGTH
         je              %%_encrypt_done
+
+        vshufi64x2      %%CTR_BLOCKz, %%CTR_BLOCKz, %%CTR_BLOCKz, 0
 
         ;; Process 7 full blocks plus a partial block
         cmp             %%LENGTH, 128
@@ -2736,8 +2683,9 @@ default rel
         add             r15b, 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKz, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
-                out_order, %%ENC_DEC, full
+                %%CTR_BLOCKz, %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, \
+                %%AES_PARTIAL_BLOCK, %%XTMP5, out_order, %%ENC_DEC, full, \
+                %%IA0, %%IA1, %%LENGTH
         add             %%DATA_OFFSET, 128
         sub             %%LENGTH, 128
         cmp             %%LENGTH, 128
@@ -2751,8 +2699,9 @@ default rel
         add             r15b, 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKz, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
-                in_order, %%ENC_DEC, full
+                %%CTR_BLOCKz, %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, \
+                %%AES_PARTIAL_BLOCK, %%XTMP5, in_order, %%ENC_DEC, full, \
+                %%IA0, %%IA1, %%LENGTH
         vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
         add             %%DATA_OFFSET, 128
         sub             %%LENGTH, 128
@@ -2774,24 +2723,32 @@ default rel
         ;; Process parallel buffers with a final partial block.
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKz, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, %%XTMP5, \
-                in_order, %%ENC_DEC, partial
+                %%CTR_BLOCKz, %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, \
+                %%AES_PARTIAL_BLOCK, %%XTMP5, in_order, %%ENC_DEC, partial, \
+                %%IA0, %%IA1, %%LENGTH
 
         add             %%DATA_OFFSET, (128 - 16)
         sub             %%LENGTH, (128 - 16)
 
 %%_encrypt_final_partial:
-        vpshufb         xmm8, [rel SHUF_MASK]
         mov             [%%GDATA_CTX + PBlockLen], %%LENGTH
-        vmovdqu         [%%GDATA_CTX + PBlockEncKey], xmm8
-        ;; xmm8  - Final encrypted counter - need to hash with partial or full block ciphertext
-        ENCRYPT_FINAL_PARTIAL_BLOCK xmm8, %%XTMP0, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
-                %%LENGTH, %%ENC_DEC, %%DATA_OFFSET, %%IA0
-        vpshufb         xmm8, [rel SHUF_MASK]
+        vmovdqu         [%%GDATA_CTX + PBlockEncKey], %%AES_PARTIAL_BLOCK
 
 %%_encrypt_done:
         ;; GHASH last cipher text blocks in xmm1-xmm8
         ;; - if block 8th is partial in a multi-call path then skip the block
+
+        ;; @todo temporary prep of xmm1 - xmm8 (mind the order of operations)
+        vextracti32x4   xmm8, %%GHASH_IN_AES_OUT_B47, 3
+        vextracti32x4   xmm7, %%GHASH_IN_AES_OUT_B47, 2
+        vextracti32x4   xmm6, %%GHASH_IN_AES_OUT_B47, 1
+        vextracti32x4   xmm5, %%GHASH_IN_AES_OUT_B47, 0
+
+        vextracti32x4   xmm4, %%GHASH_IN_AES_OUT_B03, 3
+        vextracti32x4   xmm3, %%GHASH_IN_AES_OUT_B03, 2
+        vextracti32x4   xmm2, %%GHASH_IN_AES_OUT_B03, 1
+        vextracti32x4   xmm1, %%GHASH_IN_AES_OUT_B03, 0
+
 %ifidn %%INSTANCE_TYPE, multi_call
         cmp             qword [%%GDATA_CTX + PBlockLen], 0
         jz              %%_hash_last_8
