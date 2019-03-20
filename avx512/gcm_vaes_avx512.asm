@@ -1603,35 +1603,46 @@ default rel
 
 
 
-; encrypt 8 blocks at a time
-; ghash the 8 previously encrypted ciphertext blocks
-; %%GDATA (KEY), %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN are used as pointers only, not modified
-; %%DATA_OFFSET is the data offset value
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Main GCM macro stitching cipher with GHASH
+;;; - operates on single stream
+;;; - encrypts 8 blocks at a time
+;;; - ghash the 8 previously encrypted ciphertext blocks
+;;; For partial block case, XMM8 on output contains shuffled and encrypted
+;;; counter block.
 %macro  GHASH_8_ENCRYPT_8_PARALLEL 23
-%define %%GDATA                 %1
-%define %%CYPH_PLAIN_OUT        %2
-%define %%PLAIN_CYPH_IN         %3
-%define %%DATA_OFFSET           %4
-%define %%T1    %5
-%define %%T2    %6
-%define %%T3    %7
-%define %%T4    %8
-%define %%T5    %9
-%define %%T6    %10
-%define %%CTR   %11
-%define %%XMM1  %12
-%define %%XMM2  %13
-%define %%XMM3  %14
-%define %%XMM4  %15
-%define %%XMM5  %16
-%define %%XMM6  %17
-%define %%XMM7  %18
-%define %%XMM8  %19
-%define %%T7    %20
-%define %%loop_idx      %21
-%define %%ENC_DEC       %22
-%define %%FULL_PARTIAL  %23
+%define %%GDATA                 %1 ; [in] key pointer
+%define %%CYPH_PLAIN_OUT        %2 ; [in] pointer to output buffer
+%define %%PLAIN_CYPH_IN         %3 ; [in] pointer to input buffer
+%define %%DATA_OFFSET           %4 ; [in] data offset
+%define %%T1                    %5 ; [clobbered] temporary XMM
+%define %%T2                    %6 ; [clobbered] temporary XMM
+%define %%T3                    %7 ; [clobbered] temporary XMM
+%define %%T4                    %8 ; [clobbered] temporary XMM
+%define %%T5                    %9 ; [clobbered] temporary XMM
+%define %%T6                    %10 ; [clobbered] temporary XMM
+%define %%CTR                   %11 ; [in/out] last counter block
+%define %%XMM1                  %12 ; [in/out] cipher block to ghash
+%define %%XMM2                  %13 ; [in/out] cipher block to ghash
+%define %%XMM3                  %14 ; [in/out] cipher block to ghash
+%define %%XMM4                  %15 ; [in/out] cipher block to ghash
+%define %%XMM5                  %16 ; [in/out] cipher block to ghash
+%define %%XMM6                  %17 ; [in/out] cipher block to ghash
+%define %%XMM7                  %18 ; [in/out] cipher block to ghash
+%define %%XMM8                  %19 ; [in/out] cipher block to ghash
+%define %%T7                    %20 ; [clobbered] temporary XMM
+%define %%loop_idx              %21 ; [in] counter block prep selection "add+shuffle" or "add"
+%define %%ENC_DEC               %22 ; [in] cipher direction
+%define %%FULL_PARTIAL          %23 ; [in] last block type selection "full" or "partial"
 
+%define %%IA0   rax             ; temporary GP register
+%define %%ZT1   regz(16)        ; temporary ZMM used for cipher
+%define %%ZT2   regz(17)        ; temporary ZMM used for cipher
+%define %%ZT3   regz(18)        ; temporary ZMM used for cipher
+%define %%ZT4   regz(19)        ; temporary ZMM used for cipher
+%define %%ZT5   regz(20)        ; temporary ZMM used for cipher
+
+        ;; keep cipher blocks on the stack frame for further GHASH
         vmovdqa %%T2, %%XMM1
         vmovdqu [rsp + TMP2], %%XMM2
         vmovdqu [rsp + TMP3], %%XMM3
@@ -1641,78 +1652,53 @@ default rel
         vmovdqu [rsp + TMP7], %%XMM7
         vmovdqu [rsp + TMP8], %%XMM8
 
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; populate counter blocks
 %ifidn %%loop_idx, in_order
-                vpaddd  %%XMM1, %%CTR,  [rel ONE]           ; INCR CNT
-                vmovdqu %%T5, [rel TWO]
-                vpaddd  %%XMM2, %%CTR, %%T5
-                vpaddd  %%XMM3, %%XMM1, %%T5
-                vpaddd  %%XMM4, %%XMM2, %%T5
-                vpaddd  %%XMM5, %%XMM3, %%T5
-                vpaddd  %%XMM6, %%XMM4, %%T5
-                vpaddd  %%XMM7, %%XMM5, %%T5
-                vpaddd  %%XMM8, %%XMM6, %%T5
-                vmovdqa %%CTR, %%XMM8
-
-                vmovdqu %%T5, [rel SHUF_MASK]
-                vpshufb %%XMM1, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM2, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM3, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM4, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM5, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM6, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM7, %%T5             ; perform a 16Byte swap
-                vpshufb %%XMM8, %%T5             ; perform a 16Byte swap
+        ;; %%CTR is shuffled outside the scope of this macro
+        ;; it has to be kept in unshuffled form
+        vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
+        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_1234]
+        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_5678]
+        vextracti32x4   %%CTR, %%ZT2, 3
+        vpshufb         %%ZT1, [rel SHUF_MASK]
+        vpshufb         %%ZT2, [rel SHUF_MASK]
 %else
-                vpaddd  %%XMM1, %%CTR,  [rel ONEf]          ; INCR CNT
-                vmovdqu %%T5, [rel TWOf]
-                vpaddd  %%XMM2, %%CTR,  %%T5
-                vpaddd  %%XMM3, %%XMM1, %%T5
-                vpaddd  %%XMM4, %%XMM2, %%T5
-                vpaddd  %%XMM5, %%XMM3, %%T5
-                vpaddd  %%XMM6, %%XMM4, %%T5
-                vpaddd  %%XMM7, %%XMM5, %%T5
-                vpaddd  %%XMM8, %%XMM6, %%T5
-                vmovdqa %%CTR, %%XMM8
+        vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
+        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_addbe_1234]
+        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_addbe_5678]
+        vextracti32x4   %%CTR, %%ZT2, 3
 %endif
 
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; load/store mask (partial case) and load the text data
+%ifidn %%FULL_PARTIAL, full
+        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+%else
+        mov             %%IA0, 0x0000_ffff_ffff_ffff
+        kmovq           k1, %%IA0
+        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%ZT5{k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+%endif
 
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 0, \
+                %%ZT4, %%ZT5, 8
 
-                vmovdqu %%T1, [%%GDATA + 16*0]
-                vpxor   %%XMM1, %%XMM1, %%T1
-                vpxor   %%XMM2, %%XMM2, %%T1
-                vpxor   %%XMM3, %%XMM3, %%T1
-                vpxor   %%XMM4, %%XMM4, %%T1
-                vpxor   %%XMM5, %%XMM5, %%T1
-                vpxor   %%XMM6, %%XMM6, %%T1
-                vpxor   %%XMM7, %%XMM7, %%T1
-                vpxor   %%XMM8, %%XMM8, %%T1
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 1, \
+                %%ZT4, %%ZT5, 8
 
-                vmovdqu %%T1, [%%GDATA + 16*1]
-                vaesenc %%XMM1, %%T1
-                vaesenc %%XMM2, %%T1
-                vaesenc %%XMM3, %%T1
-                vaesenc %%XMM4, %%T1
-                vaesenc %%XMM5, %%T1
-                vaesenc %%XMM6, %%T1
-                vaesenc %%XMM7, %%T1
-                vaesenc %%XMM8, %%T1
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 2, \
+                %%ZT4, %%ZT5, 8
 
-
-                vmovdqu %%T1, [%%GDATA + 16*2]
-                vaesenc %%XMM1, %%T1
-                vaesenc %%XMM2, %%T1
-                vaesenc %%XMM3, %%T1
-                vaesenc %%XMM4, %%T1
-                vaesenc %%XMM5, %%T1
-                vaesenc %%XMM6, %%T1
-                vaesenc %%XMM7, %%T1
-                vaesenc %%XMM8, %%T1
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         vmovdqu         %%T5, [%%GDATA + HashKey_8]
         vpclmulqdq      %%T4, %%T2, %%T5, 0x11                  ; %%T4 = a1*b1
@@ -1721,15 +1707,9 @@ default rel
         vpclmulqdq      %%T5, %%T2, %%T5, 0x10                  ; %%T5 = a0*b1
         vpxor           %%T6, %%T6, %%T5
 
-                vmovdqu %%T1, [%%GDATA + 16*3]
-                vaesenc %%XMM1, %%T1
-                vaesenc %%XMM2, %%T1
-                vaesenc %%XMM3, %%T1
-                vaesenc %%XMM4, %%T1
-                vaesenc %%XMM5, %%T1
-                vaesenc %%XMM6, %%T1
-                vaesenc %%XMM7, %%T1
-                vaesenc %%XMM8, %%T1
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 3, \
+                %%ZT4, %%ZT5, 8
 
         vmovdqu         %%T1, [rsp + TMP2]
         vmovdqu         %%T5, [%%GDATA + HashKey_7]
@@ -1745,15 +1725,9 @@ default rel
         vpclmulqdq      %%T3, %%T1, %%T5, 0x10
         vpxor           %%T6, %%T6, %%T3
 
-                vmovdqu %%T1, [%%GDATA + 16*4]
-                vaesenc %%XMM1, %%T1
-                vaesenc %%XMM2, %%T1
-                vaesenc %%XMM3, %%T1
-                vaesenc %%XMM4, %%T1
-                vaesenc %%XMM5, %%T1
-                vaesenc %%XMM6, %%T1
-                vaesenc %%XMM7, %%T1
-                vaesenc %%XMM8, %%T1
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 4, \
+                %%ZT4, %%ZT5, 8
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vmovdqu         %%T1, [rsp + TMP3]
@@ -1770,16 +1744,9 @@ default rel
         vpclmulqdq      %%T3, %%T1, %%T5, 0x10
         vpxor           %%T6, %%T6, %%T3
 
-                vmovdqu %%T1, [%%GDATA + 16*5]
-                vaesenc %%XMM1, %%T1
-                vaesenc %%XMM2, %%T1
-                vaesenc %%XMM3, %%T1
-                vaesenc %%XMM4, %%T1
-                vaesenc %%XMM5, %%T1
-                vaesenc %%XMM6, %%T1
-                vaesenc %%XMM7, %%T1
-                vaesenc %%XMM8, %%T1
-
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 5, \
+                %%ZT4, %%ZT5, 8
 
         vmovdqu         %%T1, [rsp + TMP4]
         vmovdqu         %%T5, [%%GDATA + HashKey_5]
@@ -1795,15 +1762,9 @@ default rel
         vpclmulqdq      %%T3, %%T1, %%T5, 0x10
         vpxor           %%T6, %%T6, %%T3
 
-                vmovdqu %%T1, [%%GDATA + 16*6]
-                vaesenc %%XMM1, %%T1
-                vaesenc %%XMM2, %%T1
-                vaesenc %%XMM3, %%T1
-                vaesenc %%XMM4, %%T1
-                vaesenc %%XMM5, %%T1
-                vaesenc %%XMM6, %%T1
-                vaesenc %%XMM7, %%T1
-                vaesenc %%XMM8, %%T1
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 6, \
+                %%ZT4, %%ZT5, 8
 
         vmovdqu         %%T1, [rsp + TMP5]
         vmovdqu         %%T5, [%%GDATA + HashKey_4]
@@ -1819,15 +1780,9 @@ default rel
         vpclmulqdq      %%T3, %%T1, %%T5, 0x10
         vpxor           %%T6, %%T6, %%T3
 
-                vmovdqu %%T1, [%%GDATA + 16*7]
-                vaesenc %%XMM1, %%T1
-                vaesenc %%XMM2, %%T1
-                vaesenc %%XMM3, %%T1
-                vaesenc %%XMM4, %%T1
-                vaesenc %%XMM5, %%T1
-                vaesenc %%XMM6, %%T1
-                vaesenc %%XMM7, %%T1
-                vaesenc %%XMM8, %%T1
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 7, \
+                %%ZT4, %%ZT5, 8
 
         vmovdqu         %%T1, [rsp + TMP6]
         vmovdqu         %%T5, [%%GDATA + HashKey_3]
@@ -1843,15 +1798,9 @@ default rel
         vpclmulqdq      %%T3, %%T1, %%T5, 0x10
         vpxor           %%T6, %%T6, %%T3
 
-                vmovdqu %%T1, [%%GDATA + 16*8]
-                vaesenc %%XMM1, %%T1
-                vaesenc %%XMM2, %%T1
-                vaesenc %%XMM3, %%T1
-                vaesenc %%XMM4, %%T1
-                vaesenc %%XMM5, %%T1
-                vaesenc %%XMM6, %%T1
-                vaesenc %%XMM7, %%T1
-                vaesenc %%XMM8, %%T1
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 8, \
+                %%ZT4, %%ZT5, 8
 
         vmovdqu         %%T1, [rsp + TMP7]
         vmovdqu         %%T5, [%%GDATA + HashKey_2]
@@ -1867,17 +1816,11 @@ default rel
         vpclmulqdq      %%T3, %%T1, %%T5, 0x10
         vpxor           %%T6, %%T6, %%T3
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-                vmovdqu %%T5, [%%GDATA + 16*9]
-                vaesenc %%XMM1, %%T5
-                vaesenc %%XMM2, %%T5
-                vaesenc %%XMM3, %%T5
-                vaesenc %%XMM4, %%T5
-                vaesenc %%XMM5, %%T5
-                vaesenc %%XMM6, %%T5
-                vaesenc %%XMM7, %%T5
-                vaesenc %%XMM8, %%T5
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 9, \
+                %%ZT4, %%ZT5, 8
 
         vmovdqu         %%T1, [rsp + TMP8]
         vmovdqu         %%T5, [%%GDATA + HashKey]
@@ -1895,174 +1838,97 @@ default rel
         vpclmulqdq      %%T3, %%T1, %%T5, 0x11
         vpxor           %%T1, %%T4, %%T3
 
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 10, \
+                %%ZT4, %%ZT5, 8
 
-                vmovdqu %%T5, [%%GDATA + 16*10]
- %ifndef GCM128_MODE            ; GCM192 or GCM256
-                vaesenc %%XMM1, %%T5
-                vaesenc %%XMM2, %%T5
-                vaesenc %%XMM3, %%T5
-                vaesenc %%XMM4, %%T5
-                vaesenc %%XMM5, %%T5
-                vaesenc %%XMM6, %%T5
-                vaesenc %%XMM7, %%T5
-                vaesenc %%XMM8, %%T5
+%ifndef GCM128_MODE
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 11, \
+                %%ZT4, %%ZT5, 8
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 12, \
+                %%ZT4, %%ZT5, 8
 
-                vmovdqu %%T5, [%%GDATA + 16*11]
-                vaesenc %%XMM1, %%T5
-                vaesenc %%XMM2, %%T5
-                vaesenc %%XMM3, %%T5
-                vaesenc %%XMM4, %%T5
-                vaesenc %%XMM5, %%T5
-                vaesenc %%XMM6, %%T5
-                vaesenc %%XMM7, %%T5
-                vaesenc %%XMM8, %%T5
-
-                vmovdqu %%T5, [%%GDATA + 16*12]
-%endif
 %ifdef GCM256_MODE
-                vaesenc %%XMM1, %%T5
-                vaesenc %%XMM2, %%T5
-                vaesenc %%XMM3, %%T5
-                vaesenc %%XMM4, %%T5
-                vaesenc %%XMM5, %%T5
-                vaesenc %%XMM6, %%T5
-                vaesenc %%XMM7, %%T5
-                vaesenc %%XMM8, %%T5
-
-                vmovdqu %%T5, [%%GDATA + 16*13]
-                vaesenc %%XMM1, %%T5
-                vaesenc %%XMM2, %%T5
-                vaesenc %%XMM3, %%T5
-                vaesenc %%XMM4, %%T5
-                vaesenc %%XMM5, %%T5
-                vaesenc %%XMM6, %%T5
-                vaesenc %%XMM7, %%T5
-                vaesenc %%XMM8, %%T5
-
-                vmovdqu %%T5, [%%GDATA + 16*14]
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 13, \
+                %%ZT4, %%ZT5, 8
+        AESROUND_1_TO_8_BLOCKS \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 14, \
+                %%ZT4, %%ZT5, 8
 %endif                          ; GCM256
-
-%assign i 0
-%assign j 1
-%rep 8
-
-        ;; SNP TBD: This is pretty ugly - consider whether just XORing the
-        ;; data in after vaesenclast is simpler and performant. Would
-        ;; also have to ripple it through partial block and ghash_mul_8.
+%endif                          ; !GCM128
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; store the text data
 %ifidn %%FULL_PARTIAL, full
-    %ifdef  NT_LD
-        VXLDR   %%T2, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-        vpxor   %%T2, %%T2, %%T5
-    %else
-        vpxor   %%T2, %%T5, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-    %endif
-
-    %ifidn %%ENC_DEC, ENC
-        vaesenclast     reg(j), reg(j), %%T2
-    %else
-        vaesenclast     %%T3, reg(j), %%T2
-        vpxor   reg(j), %%T2, %%T5
-        VXSTR [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*i], %%T3
-    %endif
-
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64], %%ZT2
 %else
-    ; Don't read the final data during partial block processing
-    %ifdef  NT_LD
-        %if (i<7)
-            VXLDR   %%T2, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-            vpxor   %%T2, %%T2, %%T5
-        %else
-            ;; Stage the key directly in T2 rather than hash it with plaintext
-            vmovdqu %%T2, %%T5
-        %endif
-    %else
-        %if (i<7)
-            vpxor   %%T2, %%T5, [%%PLAIN_CYPH_IN+%%DATA_OFFSET+16*i]
-        %else
-            ;; Stage the key directly in T2 rather than hash it with plaintext
-            vmovdqu %%T2, %%T5
-        %endif
-    %endif
-
-    %ifidn %%ENC_DEC, ENC
-        vaesenclast     reg(j), reg(j), %%T2
-    %else
-        %if (i<7)
-            vaesenclast     %%T3, reg(j), %%T2
-            vpxor   reg(j), %%T2, %%T5
-            ;; Do not read the data since it could fault
-            VXSTR [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*i], %%T3
-        %else
-            vaesenclast     reg(j), reg(j), %%T2
-        %endif
-    %endif
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{k1}, %%ZT2
 %endif
 
-%assign i (i+1)
-%assign j (j+1)
-%endrep
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        vpslldq         %%T3, %%T6, 8           ; shift-L %%T3 2 DWs
+        vpsrldq         %%T6, %%T6, 8           ; shift-R %%T2 2 DWs
+        vpxor           %%T7, %%T7, %%T3
+        vpxor           %%T1, %%T1, %%T6        ; accumulate the results in %%T1:%%T7
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-        vpslldq %%T3, %%T6, 8                                   ; shift-L %%T3 2 DWs
-        vpsrldq %%T6, %%T6, 8                                   ; shift-R %%T2 2 DWs
-        vpxor   %%T7, %%T7, %%T3
-        vpxor   %%T1, %%T1, %%T6                                ; accumulate the results in %%T1:%%T7
-
-
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
         vmovdqu         %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%T7, 0x01
-        vpslldq         %%T2, %%T2, 8                           ; shift-L xmm2 2 DWs
+        vpslldq         %%T2, %%T2, 8           ; shift-L xmm2 2 DWs
 
-        vpxor           %%T7, %%T7, %%T2                        ; first phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpxor           %%T7, %%T7, %%T2        ; first phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    %ifidn %%ENC_DEC, ENC
-        ; Write to the Ciphertext buffer
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*0], %%XMM1
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*1], %%XMM2
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*2], %%XMM3
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*3], %%XMM4
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*4], %%XMM5
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*5], %%XMM6
-        VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*6], %%XMM7
-        %ifidn %%FULL_PARTIAL, full
-            ;; Avoid writing past the buffer if handling a partial block
-            VXSTR   [%%CYPH_PLAIN_OUT+%%DATA_OFFSET+16*7], %%XMM8
-        %endif
-    %endif
+%ifnidn %%FULL_PARTIAL, full
+        ;; for partial block we need encrypted & shuffled counter block
+        vpxorq          %%ZT3, %%ZT2, %%ZT5
+        vextracti32x4   XWORD(%%ZT3), %%ZT3, 3
+        vpshufb         XWORD(%%ZT3), [rel SHUF_MASK]
+%endif
 
+%ifidn %%ENC_DEC, ENC
+        vpshufb         %%ZT1, [rel SHUF_MASK]
+        vpshufb         %%ZT2, [rel SHUF_MASK]
+%else
+        vpshufb         %%ZT1, %%ZT4, [rel SHUF_MASK]
+        vpshufb         %%ZT2, %%ZT5, [rel SHUF_MASK]
+%endif
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;second phase of the reduction
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; second phase of the reduction
         vpclmulqdq      %%T2, %%T3, %%T7, 0x00
-        vpsrldq         %%T2, %%T2, 4                                   ; shift-R xmm2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+        vpsrldq         %%T2, %%T2, 4           ; shift-R only 1-DW to obtain 2-DWs shift-R
 
         vpclmulqdq      %%T4, %%T3, %%T7, 0x10
-        vpslldq         %%T4, %%T4, 4                                   ; shift-L xmm0 1 DW (Shift-L 1-DW to obtain result with no shifts)
+        vpslldq         %%T4, %%T4, 4           ; shift-L 1-DW to obtain result with no shifts
 
-        vpxor           %%T4, %%T4, %%T2                                ; second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%T1, %%T1, %%T4                                ; the result is in %%T1
+        vpxor           %%T4, %%T4, %%T2        ; second phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpxor           %%T1, %%T1, %%T4        ; the result is in %%T1
 
-                vpshufb %%XMM1, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM2, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM3, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM4, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM5, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM6, [rel SHUF_MASK]             ; perform a 16Byte swap
-                vpshufb %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
-        vpshufb %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
+        ;; extract shuffled cipher text blocks for GHASH
+        vextracti32x4   %%XMM1, %%ZT1, 0
+        vextracti32x4   %%XMM2, %%ZT1, 1
+        vextracti32x4   %%XMM3, %%ZT1, 2
+        vextracti32x4   %%XMM4, %%ZT1, 3
+        vextracti32x4   %%XMM5, %%ZT2, 0
+        vextracti32x4   %%XMM6, %%ZT2, 1
+        vextracti32x4   %%XMM7, %%ZT2, 2
+%ifidn %%FULL_PARTIAL, full
+        vextracti32x4   %%XMM8, %%ZT2, 3
+%else
+        vmovdqa64       %%XMM8, XWORD(%%ZT3)
+%endif
 
-
-        vpxor   %%XMM1, %%T1
-
+        ;; XOR current GHASH value into block 0
+        vpxorq          %%XMM1, %%T1
 
 %endmacro                       ; GHASH_8_ENCRYPT_8_PARALLEL
 
