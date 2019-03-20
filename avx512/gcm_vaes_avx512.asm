@@ -1642,15 +1642,24 @@ default rel
 %define %%ZT4   regz(19)        ; temporary ZMM used for cipher
 %define %%ZT5   regz(20)        ; temporary ZMM used for cipher
 
-        ;; keep cipher blocks on the stack frame for further GHASH
-        vmovdqa %%T2, %%XMM1
-        vmovdqu [rsp + TMP2], %%XMM2
-        vmovdqu [rsp + TMP3], %%XMM3
-        vmovdqu [rsp + TMP4], %%XMM4
-        vmovdqu [rsp + TMP5], %%XMM5
-        vmovdqu [rsp + TMP6], %%XMM6
-        vmovdqu [rsp + TMP7], %%XMM7
-        vmovdqu [rsp + TMP8], %%XMM8
+%define %%ZT10  regz(21)        ; temporary ZMM used for ghash
+%define %%ZT11  regz(22)        ; temporary ZMM used for ghash
+%define %%ZT12  regz(23)        ; temporary ZMM used for ghash
+%define %%ZT13  regz(24)        ; temporary ZMM used for ghash
+%define %%ZT14  regz(25)        ; temporary ZMM used for ghash
+%define %%ZT15  regz(26)        ; temporary ZMM used for ghash
+%define %%ZT16  regz(27)        ; temporary ZMM used for ghash
+%define %%ZT17  regz(28)        ; temporary ZMM used for ghash
+
+        ;; keep the cipher blocks for further GHASH
+        vinserti64x2    %%ZT10, %%XMM1, 0
+        vinserti64x2    %%ZT10, %%XMM2, 1
+        vinserti64x2    %%ZT10, %%XMM3, 2
+        vinserti64x2    %%ZT10, %%XMM4, 3
+        vinserti64x2    %%ZT11, %%XMM5, 0
+        vinserti64x2    %%ZT11, %%XMM6, 1
+        vinserti64x2    %%ZT11, %%XMM7, 2
+        vinserti64x2    %%ZT11, %%XMM8, 3
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; populate counter blocks
@@ -1683,182 +1692,53 @@ default rel
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; stitch AES rounds with GHASH
 
+%assign aes_round 0
+%assign hash_index 0
+
+%rep (((NROUNDS + 2) / 3) + 1)
+
+        ;; === 3 x AES ROUND
+%rep 3
+%if aes_round < (NROUNDS + 2)
         AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 0, \
+                %%ZT1, %%ZT2, %%ZT3, %%GDATA, aes_round, \
                 %%ZT4, %%ZT5, 8
+%assign aes_round (aes_round + 1)
+%endif                          ; aes_round < (NROUNDS + 2)
+%endrep                         ; 3 x AES ROUND
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; === GHASH on 8 blocks
+%if hash_index == 0
+        ;; GHASH - 1st round
+        ;; [in] ZT11 - high blocks
+        ;; [out] ZT12, ZT13, ZT14 - low, medium and high sums
+        ;; [clobbered] ZT15
+        VCLMUL_STEP1    %%GDATA, %%ZT11, %%ZT15, %%ZT12, %%ZT13, %%ZT14
+%assign hash_index (hash_index + 1)
+%elif hash_index == 1
+        ;; GHASH - 2nd round
+        ;; [in] ZT11 - high blocks
+        ;; [in] ZT10 - low blocks
+        ;; [in] ZT12, ZT13, ZT14 - low, medium and high sums
+        ;; [clobbered] ZT15, ZT16, ZT17
+        ;; [out] ZT11, ZT10 - high and low sums for further reduction
+        VCLMUL_STEP2    %%GDATA, %%ZT11, %%ZT10, %%ZT15, %%ZT16, %%ZT17, %%ZT12, %%ZT13, %%ZT14
+%assign hash_index (hash_index + 1)
+%elif hash_index == 2
+        ;; GHASH - reduction
+        ;; [out] T1 - ghash result
+        ;; [in]  T2 - polynomial
+        ;; [in]  ZT11 - high, ZT10 - low
+        ;; [clobbered] ZT15, ZT16 - temporary
+        vmovdqu64       %%T2, [rel POLY2]
+        VCLMUL_REDUCE   %%T1, %%T2, XWORD(%%ZT11), XWORD(%%ZT10), XWORD(%%ZT15), XWORD(%%ZT16)
+%assign hash_index (hash_index + 1)
+%endif
 
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 1, \
-                %%ZT4, %%ZT5, 8
+%endrep                         ; stitched AES and GHASH loop
 
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 2, \
-                %%ZT4, %%ZT5, 8
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        vmovdqu         %%T5, [%%GDATA + HashKey_8]
-        vpclmulqdq      %%T4, %%T2, %%T5, 0x11                  ; %%T4 = a1*b1
-        vpclmulqdq      %%T7, %%T2, %%T5, 0x00                  ; %%T7 = a0*b0
-        vpclmulqdq      %%T6, %%T2, %%T5, 0x01                  ; %%T6 = a1*b0
-        vpclmulqdq      %%T5, %%T2, %%T5, 0x10                  ; %%T5 = a0*b1
-        vpxor           %%T6, %%T6, %%T5
-
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 3, \
-                %%ZT4, %%ZT5, 8
-
-        vmovdqu         %%T1, [rsp + TMP2]
-        vmovdqu         %%T5, [%%GDATA + HashKey_7]
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x11
-        vpxor           %%T4, %%T4, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 4, \
-                %%ZT4, %%ZT5, 8
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vmovdqu         %%T1, [rsp + TMP3]
-        vmovdqu         %%T5, [%%GDATA + HashKey_6]
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x11
-        vpxor           %%T4, %%T4, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 5, \
-                %%ZT4, %%ZT5, 8
-
-        vmovdqu         %%T1, [rsp + TMP4]
-        vmovdqu         %%T5, [%%GDATA + HashKey_5]
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x11
-        vpxor           %%T4, %%T4, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 6, \
-                %%ZT4, %%ZT5, 8
-
-        vmovdqu         %%T1, [rsp + TMP5]
-        vmovdqu         %%T5, [%%GDATA + HashKey_4]
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x11
-        vpxor           %%T4, %%T4, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 7, \
-                %%ZT4, %%ZT5, 8
-
-        vmovdqu         %%T1, [rsp + TMP6]
-        vmovdqu         %%T5, [%%GDATA + HashKey_3]
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x11
-        vpxor           %%T4, %%T4, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 8, \
-                %%ZT4, %%ZT5, 8
-
-        vmovdqu         %%T1, [rsp + TMP7]
-        vmovdqu         %%T5, [%%GDATA + HashKey_2]
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x11
-        vpxor           %%T4, %%T4, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 9, \
-                %%ZT4, %%ZT5, 8
-
-        vmovdqu         %%T1, [rsp + TMP8]
-        vmovdqu         %%T5, [%%GDATA + HashKey]
-
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x01
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x10
-        vpxor           %%T6, %%T6, %%T3
-
-        vpclmulqdq      %%T3, %%T1, %%T5, 0x11
-        vpxor           %%T1, %%T4, %%T3
-
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 10, \
-                %%ZT4, %%ZT5, 8
-
-%ifndef GCM128_MODE
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 11, \
-                %%ZT4, %%ZT5, 8
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 12, \
-                %%ZT4, %%ZT5, 8
-
-%ifdef GCM256_MODE
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 13, \
-                %%ZT4, %%ZT5, 8
-        AESROUND_1_TO_8_BLOCKS \
-                %%ZT1, %%ZT2, %%ZT3, %%GDATA, 14, \
-                %%ZT4, %%ZT5, 8
-%endif                          ; GCM256
-%endif                          ; !GCM128
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store the text data
 %ifidn %%FULL_PARTIAL, full
@@ -1870,21 +1750,7 @@ default rel
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        vpslldq         %%T3, %%T6, 8           ; shift-L %%T3 2 DWs
-        vpsrldq         %%T6, %%T6, 8           ; shift-R %%T2 2 DWs
-        vpxor           %%T7, %%T7, %%T3
-        vpxor           %%T1, %%T1, %%T6        ; accumulate the results in %%T1:%%T7
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;first phase of the reduction
-        vmovdqu         %%T3, [rel POLY2]
-
-        vpclmulqdq      %%T2, %%T3, %%T7, 0x01
-        vpslldq         %%T2, %%T2, 8           ; shift-L xmm2 2 DWs
-
-        vpxor           %%T7, %%T7, %%T2        ; first phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; prep encrypted blocks for the next ghash round
 
 %ifnidn %%FULL_PARTIAL, full
         ;; for partial block we need encrypted & shuffled counter block
@@ -1902,17 +1768,6 @@ default rel
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; second phase of the reduction
-        vpclmulqdq      %%T2, %%T3, %%T7, 0x00
-        vpsrldq         %%T2, %%T2, 4           ; shift-R only 1-DW to obtain 2-DWs shift-R
-
-        vpclmulqdq      %%T4, %%T3, %%T7, 0x10
-        vpslldq         %%T4, %%T4, 4           ; shift-L 1-DW to obtain result with no shifts
-
-        vpxor           %%T4, %%T4, %%T2        ; second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%T1, %%T1, %%T4        ; the result is in %%T1
-
         ;; extract shuffled cipher text blocks for GHASH
         vextracti32x4   %%XMM1, %%ZT1, 0
         vextracti32x4   %%XMM2, %%ZT1, 1
@@ -1927,6 +1782,7 @@ default rel
         vmovdqa64       %%XMM8, XWORD(%%ZT3)
 %endif
 
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; XOR current GHASH value into block 0
         vpxorq          %%XMM1, %%T1
 
