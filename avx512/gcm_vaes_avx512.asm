@@ -145,25 +145,29 @@
 section .text
 default rel
 
-;; need to push 4 registers into stack to maintain
-%define STACK_OFFSET   8*4
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Stack frame definition
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %ifidn __OUTPUT_FORMAT__, win64
-        %define XMM_STORAGE     16*10
+        %define XMM_STORAGE     (10*16) ; space for 10 XMM registers
+        %define GP_STORAGE      (10*8)  ; space for 9 GP registers + 1 for alignment
 %else
         %define XMM_STORAGE     0
+        %define GP_STORAGE      (8*8)   ; space for 7 GP registers + 1 for alignment
 %endif
+%define LOCAL_STORAGE           (2*8)   ; space for 1 GP register + 1 for alignment
 
-%define LOCAL_STORAGE   0
-%define VARIABLE_OFFSET LOCAL_STORAGE + XMM_STORAGE
+;;; sequence is (bottom-up): GP, XMM, local
+%define STACK_GP_OFFSET         0
+%define STACK_XMM_OFFSET        (STACK_GP_OFFSET + GP_STORAGE)
+%define STACK_LOCAL_OFFSET      (STACK_XMM_OFFSET + XMM_STORAGE)
+%define STACK_FRAME_SIZE        (STACK_LOCAL_OFFSET + LOCAL_STORAGE)
 
-%define LOCAL_STORAGE_AVX512 2*8  ; temporary storage
-%define STACK_SIZE_GP_AVX512 10*8 ; up to 10 GP registers (5 GP + 3 reserve places for the algorithmic code)
-%define STACK_OFFSET_AVX512    (LOCAL_STORAGE_AVX512 + XMM_STORAGE)
-%define VARIABLE_OFFSET_AVX512 (LOCAL_STORAGE_AVX512 + XMM_STORAGE + STACK_SIZE_GP_AVX512)
+;; for compatibility with stack argument definitions in gcm_defines.asm
+%define STACK_OFFSET 0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Utility Macros
+;;; Utility Macros
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; ===========================================================================
@@ -1614,44 +1618,36 @@ default rel
 ;;; - ghash the 8 previously encrypted ciphertext blocks
 ;;; For partial block case and multi_call , AES_PARTIAL_BLOCK on output
 ;;; contains encrypted counter block.
-%macro  GHASH_8_ENCRYPT_8_PARALLEL 22
-%define %%GDATA                 %1 ; [in] key pointer
-%define %%CYPH_PLAIN_OUT        %2 ; [in] pointer to output buffer
-%define %%PLAIN_CYPH_IN         %3 ; [in] pointer to input buffer
-%define %%DATA_OFFSET           %4 ; [in] data offset
-%define %%T1                    %5 ; [clobbered] temporary XMM
-%define %%T2                    %6 ; [clobbered] temporary XMM
-%define %%T3                    %7 ; [clobbered] temporary XMM
-%define %%T4                    %8 ; [clobbered] temporary XMM
-%define %%T5                    %9 ; [clobbered] temporary XMM
-%define %%T6                    %10 ; [clobbered] temporary XMM
-%define %%CTR                   %11 ; [in/out] ZMM last counter block (b-casted across ZMM)
-%define %%GHASHIN_AESOUT_B03    %12 ; [in/out] ZMM ghash in / aes out blocks 0 to 3
-%define %%GHASHIN_AESOUT_B47    %13 ; [in/out] ZMM ghash in / aes out blocks 4 to 7
-%define %%AES_PARTIAL_BLOCK     %14 ; [out] XMM partial block (AES)
-%define %%T7                    %15 ; [clobbered] temporary XMM
-%define %%loop_idx              %16 ; [in] counter block prep selection "add+shuffle" or "add"
-%define %%ENC_DEC               %17 ; [in] cipher direction
-%define %%FULL_PARTIAL          %18 ; [in] last block type selection "full" or "partial"
-%define %%IA0                   %19 ; [clobbered] temporary GP register
-%define %%IA1                   %20 ; [clobbered] temporary GP register
-%define %%LENGTH                %21 ; [in] length
-%define %%INSTANCE_TYPE         %22 ; [in] 'single_call' or 'multi_call' selection
-
-%define %%ZT1   regz(16)        ; temporary ZMM used for cipher
-%define %%ZT2   regz(17)        ; temporary ZMM used for cipher
-%define %%ZT3   regz(18)        ; temporary ZMM used for cipher
-%define %%ZT4   regz(19)        ; temporary ZMM used for cipher
-%define %%ZT5   regz(20)        ; temporary ZMM used for cipher
-
-%define %%ZT10  regz(21)        ; temporary ZMM used for ghash
-%define %%ZT11  regz(22)        ; temporary ZMM used for ghash
-%define %%ZT12  regz(23)        ; temporary ZMM used for ghash
-%define %%ZT13  regz(24)        ; temporary ZMM used for ghash
-%define %%ZT14  regz(25)        ; temporary ZMM used for ghash
-%define %%ZT15  regz(26)        ; temporary ZMM used for ghash
-%define %%ZT16  regz(27)        ; temporary ZMM used for ghash
-%define %%ZT17  regz(28)        ; temporary ZMM used for ghash
+%macro  GHASH_8_ENCRYPT_8_PARALLEL 29
+%define %%GDATA                 %1  ; [in] key pointer
+%define %%CYPH_PLAIN_OUT        %2  ; [in] pointer to output buffer
+%define %%PLAIN_CYPH_IN         %3  ; [in] pointer to input buffer
+%define %%DATA_OFFSET           %4  ; [in] data offset
+%define %%CTR                   %5  ; [in/out] ZMM last counter block (b-casted across ZMM)
+%define %%GHASHIN_AESOUT_B03    %6  ; [in/out] ZMM ghash in / aes out blocks 0 to 3
+%define %%GHASHIN_AESOUT_B47    %7  ; [in/out] ZMM ghash in / aes out blocks 4 to 7
+%define %%AES_PARTIAL_BLOCK     %8  ; [out] XMM partial block (AES)
+%define %%loop_idx              %9  ; [in] counter block prep selection "add+shuffle" or "add"
+%define %%ENC_DEC               %10 ; [in] cipher direction
+%define %%FULL_PARTIAL          %11 ; [in] last block type selection "full" or "partial"
+%define %%IA0                   %12 ; [clobbered] temporary GP register
+%define %%IA1                   %13 ; [clobbered] temporary GP register
+%define %%LENGTH                %14 ; [in] length
+%define %%INSTANCE_TYPE         %15 ; [in] 'single_call' or 'multi_call' selection
+%define %%ZT1                   %16 ; [clobbered] temporary ZMM (cipher)
+%define %%ZT2                   %17 ; [clobbered] temporary ZMM (cipher)
+%define %%ZT3                   %18 ; [clobbered] temporary ZMM (cipher)
+%define %%ZT4                   %19 ; [clobbered] temporary ZMM (cipher)
+%define %%ZT5                   %20 ; [clobbered] temporary ZMM (cipher)
+%define %%ZT10                  %21 ; [clobbered] temporary ZMM (ghash)
+%define %%ZT11                  %22 ; [clobbered] temporary ZMM (ghash)
+%define %%ZT12                  %23 ; [clobbered] temporary ZMM (ghash)
+%define %%ZT13                  %24 ; [clobbered] temporary ZMM (ghash)
+%define %%ZT14                  %25 ; [clobbered] temporary ZMM (ghash)
+%define %%ZT15                  %26 ; [clobbered] temporary ZMM (ghash)
+%define %%ZT16                  %27 ; [clobbered] temporary ZMM (ghash)
+%define %%ZT17                  %28 ; [clobbered] temporary ZMM (ghash)
+%define %%MASKREG               %29 ; [clobbered] mask register for partial loads/stores
 
         ;; keep the cipher blocks for further GHASH
         vmovdqa64       %%ZT10, %%GHASHIN_AESOUT_B03
@@ -1682,9 +1678,9 @@ default rel
         lea             %%IA0, [rel byte64_len_to_mask_table]
         mov             %%IA1, %%LENGTH
         sub             %%IA1, 64
-        kmovq           k1, [%%IA0 + 8*%%IA1]
+        kmovq           %%MASKREG, [%%IA0 + 8*%%IA1]
         vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-        vmovdqu8        %%ZT5{k1}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+        vmovdqu8        %%ZT5{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1724,12 +1720,13 @@ default rel
 %assign hash_index (hash_index + 1)
 %elif hash_index == 2
         ;; GHASH - reduction
-        ;; [out] T1 - ghash result
-        ;; [in]  T2 - polynomial
+        ;; [out] ZT13 - ghash result
+        ;; [in]  ZT12 - polynomial
         ;; [in]  ZT11 - high, ZT10 - low
         ;; [clobbered] ZT15, ZT16 - temporary
-        vmovdqu64       %%T2, [rel POLY2]
-        VCLMUL_REDUCE   %%T1, %%T2, XWORD(%%ZT11), XWORD(%%ZT10), XWORD(%%ZT15), XWORD(%%ZT16)
+        vmovdqu64       XWORD(%%ZT12), [rel POLY2]
+        VCLMUL_REDUCE   XWORD(%%ZT13), XWORD(%%ZT12), XWORD(%%ZT11), XWORD(%%ZT10), \
+                        XWORD(%%ZT15), XWORD(%%ZT16)
 %assign hash_index (hash_index + 1)
 %endif
 
@@ -1742,7 +1739,7 @@ default rel
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64], %%ZT2
 %else
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{k1}, %%ZT2
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{%%MASKREG}, %%ZT2
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1756,9 +1753,9 @@ default rel
 %endif
         ;; for GHASH computation purpose clear the top bytes of the partial block
 %ifidn %%ENC_DEC, ENC
-        vmovdqu8        %%ZT2{k1}{z}, %%ZT2
+        vmovdqu8        %%ZT2{%%MASKREG}{z}, %%ZT2
 %else
-        vmovdqu8        %%ZT5{k1}{z}, %%ZT5
+        vmovdqu8        %%ZT5{%%MASKREG}{z}, %%ZT5
 %endif
 %endif
 
@@ -1777,8 +1774,8 @@ default rel
         vmovdqa64       %%GHASHIN_AESOUT_B47, %%ZT2
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; XOR current GHASH value (T1) into block 0
-        vpxorq          %%GHASHIN_AESOUT_B03, ZWORD(%%T1)
+        ;; XOR current GHASH value (ZT13) into block 0
+        vpxorq          %%GHASHIN_AESOUT_B03, %%ZT13
 
 %endmacro                       ; GHASH_8_ENCRYPT_8_PARALLEL
 
@@ -1843,7 +1840,8 @@ default rel
 %endmacro                       ; GHASH_LAST_7
 
 
-; Encryption of a single block
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Encryption of a single block
 %macro  ENCRYPT_SINGLE_BLOCK 2
 %define %%GDATA %1
 %define %%XMM0  %2
@@ -1858,124 +1856,75 @@ default rel
 %endmacro
 
 
-;; Start of Stack Setup
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Save register content for the caller
 %macro FUNC_SAVE 0
-        ;; Required for Update/GMC_ENC
-        ;the number of pushes must equal STACK_OFFSET
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        mov     r14, rsp
-
-        sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~63
-
-%ifidn __OUTPUT_FORMAT__, win64
-        ; xmm6:xmm15 need to be maintained for Windows
-        vmovdqu [rsp + LOCAL_STORAGE + 0*16],xmm6
-        vmovdqu [rsp + LOCAL_STORAGE + 1*16],xmm7
-        vmovdqu [rsp + LOCAL_STORAGE + 2*16],xmm8
-        vmovdqu [rsp + LOCAL_STORAGE + 3*16],xmm9
-        vmovdqu [rsp + LOCAL_STORAGE + 4*16],xmm10
-        vmovdqu [rsp + LOCAL_STORAGE + 5*16],xmm11
-        vmovdqu [rsp + LOCAL_STORAGE + 6*16],xmm12
-        vmovdqu [rsp + LOCAL_STORAGE + 7*16],xmm13
-        vmovdqu [rsp + LOCAL_STORAGE + 8*16],xmm14
-        vmovdqu [rsp + LOCAL_STORAGE + 9*16],xmm15
-%endif
-%endmacro
-
-
-%macro FUNC_RESTORE 0
-
-%ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm15, [rsp + LOCAL_STORAGE + 9*16]
-        vmovdqu xmm14, [rsp + LOCAL_STORAGE + 8*16]
-        vmovdqu xmm13, [rsp + LOCAL_STORAGE + 7*16]
-        vmovdqu xmm12, [rsp + LOCAL_STORAGE + 6*16]
-        vmovdqu xmm11, [rsp + LOCAL_STORAGE + 5*16]
-        vmovdqu xmm10, [rsp + LOCAL_STORAGE + 4*16]
-        vmovdqu xmm9, [rsp + LOCAL_STORAGE + 3*16]
-        vmovdqu xmm8, [rsp + LOCAL_STORAGE + 2*16]
-        vmovdqu xmm7, [rsp + LOCAL_STORAGE + 1*16]
-        vmovdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]
-%endif
-;; Required for Update/GMC_ENC
-        mov     rsp, r14
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-%endmacro
-
-%macro FUNC_SAVE_AVX512 0
         ;; Required for Update/GMC_ENC
         ;the number of pushes must equal STACK_OFFSET
         mov     rax, rsp
 
-        sub     rsp, VARIABLE_OFFSET_AVX512
+        sub     rsp, STACK_FRAME_SIZE
         and     rsp, ~63
 
-        mov     [rsp + STACK_OFFSET_AVX512 + 0*8], r12
-        mov     [rsp + STACK_OFFSET_AVX512 + 1*8], r13
-        mov     [rsp + STACK_OFFSET_AVX512 + 2*8], r14
-        mov     [rsp + STACK_OFFSET_AVX512 + 3*8], r15
-        mov     [rsp + STACK_OFFSET_AVX512 + 4*8], rax ; stack
+        mov     [rsp + STACK_GP_OFFSET + 0*8], r12
+        mov     [rsp + STACK_GP_OFFSET + 1*8], r13
+        mov     [rsp + STACK_GP_OFFSET + 2*8], r14
+        mov     [rsp + STACK_GP_OFFSET + 3*8], r15
+        mov     [rsp + STACK_GP_OFFSET + 4*8], rax ; stack
         mov     r14, rax                               ; r14 is used to retrieve stack args
-        mov     [rsp + STACK_OFFSET_AVX512 + 5*8], rbp
-        mov     [rsp + STACK_OFFSET_AVX512 + 6*8], rbx
+        mov     [rsp + STACK_GP_OFFSET + 5*8], rbp
+        mov     [rsp + STACK_GP_OFFSET + 6*8], rbx
 %ifidn __OUTPUT_FORMAT__, win64
-        mov     [rsp + STACK_OFFSET_AVX512 + 7*8], rdi
-        mov     [rsp + STACK_OFFSET_AVX512 + 8*8], rsi
+        mov     [rsp + STACK_GP_OFFSET + 7*8], rdi
+        mov     [rsp + STACK_GP_OFFSET + 8*8], rsi
 %endif
 
 %ifidn __OUTPUT_FORMAT__, win64
         ; xmm6:xmm15 need to be maintained for Windows
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 0*16], xmm6
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 1*16], xmm7
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 2*16], xmm8
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 3*16], xmm9
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 4*16], xmm10
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 5*16], xmm11
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 6*16], xmm12
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 7*16], xmm13
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 8*16], xmm14
-        vmovdqu [rsp + LOCAL_STORAGE_AVX512 + 9*16], xmm15
+        vmovdqu [rsp + STACK_XMM_OFFSET + 0*16], xmm6
+        vmovdqu [rsp + STACK_XMM_OFFSET + 1*16], xmm7
+        vmovdqu [rsp + STACK_XMM_OFFSET + 2*16], xmm8
+        vmovdqu [rsp + STACK_XMM_OFFSET + 3*16], xmm9
+        vmovdqu [rsp + STACK_XMM_OFFSET + 4*16], xmm10
+        vmovdqu [rsp + STACK_XMM_OFFSET + 5*16], xmm11
+        vmovdqu [rsp + STACK_XMM_OFFSET + 6*16], xmm12
+        vmovdqu [rsp + STACK_XMM_OFFSET + 7*16], xmm13
+        vmovdqu [rsp + STACK_XMM_OFFSET + 8*16], xmm14
+        vmovdqu [rsp + STACK_XMM_OFFSET + 9*16], xmm15
 %endif
 %endmacro
 
 
-%macro FUNC_RESTORE_AVX512 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Restore register content for the caller
+%macro FUNC_RESTORE 0
 
 %ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm15, [rsp + LOCAL_STORAGE_AVX512 + 9*16]
-        vmovdqu xmm14, [rsp + LOCAL_STORAGE_AVX512 + 8*16]
-        vmovdqu xmm13, [rsp + LOCAL_STORAGE_AVX512 + 7*16]
-        vmovdqu xmm12, [rsp + LOCAL_STORAGE_AVX512 + 6*16]
-        vmovdqu xmm11, [rsp + LOCAL_STORAGE_AVX512 + 5*16]
-        vmovdqu xmm10, [rsp + LOCAL_STORAGE_AVX512 + 4*16]
-        vmovdqu xmm9, [rsp + LOCAL_STORAGE_AVX512 + 3*16]
-        vmovdqu xmm8, [rsp + LOCAL_STORAGE_AVX512 + 2*16]
-        vmovdqu xmm7, [rsp + LOCAL_STORAGE_AVX512 + 1*16]
-        vmovdqu xmm6, [rsp + LOCAL_STORAGE_AVX512 + 0*16]
+        vmovdqu xmm15, [rsp + STACK_XMM_OFFSET + 9*16]
+        vmovdqu xmm14, [rsp + STACK_XMM_OFFSET + 8*16]
+        vmovdqu xmm13, [rsp + STACK_XMM_OFFSET + 7*16]
+        vmovdqu xmm12, [rsp + STACK_XMM_OFFSET + 6*16]
+        vmovdqu xmm11, [rsp + STACK_XMM_OFFSET + 5*16]
+        vmovdqu xmm10, [rsp + STACK_XMM_OFFSET + 4*16]
+        vmovdqu xmm9, [rsp + STACK_XMM_OFFSET + 3*16]
+        vmovdqu xmm8, [rsp + STACK_XMM_OFFSET + 2*16]
+        vmovdqu xmm7, [rsp + STACK_XMM_OFFSET + 1*16]
+        vmovdqu xmm6, [rsp + STACK_XMM_OFFSET + 0*16]
 %endif
 
-;; Required for Update/GMC_ENC
-        mov     rbp, [rsp + STACK_OFFSET_AVX512 + 5*8]
-        mov     rbx, [rsp + STACK_OFFSET_AVX512 + 6*8]
+        ;; Required for Update/GMC_ENC
+        mov     rbp, [rsp + STACK_GP_OFFSET + 5*8]
+        mov     rbx, [rsp + STACK_GP_OFFSET + 6*8]
 %ifidn __OUTPUT_FORMAT__, win64
-        mov     rdi, [rsp + STACK_OFFSET_AVX512 + 7*8]
-        mov     rsi, [rsp + STACK_OFFSET_AVX512 + 8*8]
+        mov     rdi, [rsp + STACK_GP_OFFSET + 7*8]
+        mov     rsi, [rsp + STACK_GP_OFFSET + 8*8]
 %endif
-        mov     r12, [rsp + STACK_OFFSET_AVX512 + 0*8]
-        mov     r13, [rsp + STACK_OFFSET_AVX512 + 1*8]
-        mov     r14, [rsp + STACK_OFFSET_AVX512 + 2*8]
-        mov     r15, [rsp + STACK_OFFSET_AVX512 + 3*8]
-        mov     rsp, [rsp + STACK_OFFSET_AVX512 + 4*8] ; stack
+        mov     r12, [rsp + STACK_GP_OFFSET + 0*8]
+        mov     r13, [rsp + STACK_GP_OFFSET + 1*8]
+        mov     r14, [rsp + STACK_GP_OFFSET + 2*8]
+        mov     r15, [rsp + STACK_GP_OFFSET + 3*8]
+        mov     rsp, [rsp + STACK_GP_OFFSET + 4*8] ; stack
 %endmacro
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GCM_INIT initializes a gcm_context_data struct to prepare for encoding/decoding.
@@ -2158,10 +2107,6 @@ default rel
 
 %define %%DATA_OFFSET       r11
 %define %%LENGTH            r13
-%define %%AAD_HASHz         zmm14
-%define %%AAD_HASHx         xmm14
-%define %%CTR_BLOCKz        zmm9
-%define %%CTR_BLOCKx        xmm9
 
 %define %%IA0               r10
 %define %%IA1               r12
@@ -2169,34 +2114,32 @@ default rel
 %define %%GHASH_IN_AES_OUT_B03  zmm1
 %define %%GHASH_IN_AES_OUT_B47  zmm2
 %define %%AES_PARTIAL_BLOCK     xmm8
+%define %%CTR_BLOCKz        zmm9
+%define %%CTR_BLOCKx        xmm9
+%define %%AAD_HASHz         zmm14
+%define %%AAD_HASHx         xmm14
+
 
 %define %%ZTMP0             zmm0
-%define %%ZTMP1             zmm10
-%define %%ZTMP2             zmm11
-%define %%ZTMP3             zmm12
-%define %%ZTMP4             zmm13
-%define %%ZTMP5             zmm15
-%define %%ZTMP6             zmm16
-%define %%ZTMP7             zmm17
-%define %%ZTMP8             zmm18
-%define %%ZTMP9             zmm19
+%define %%ZTMP1             zmm3
+%define %%ZTMP2             zmm4
+%define %%ZTMP3             zmm5
+%define %%ZTMP4             zmm6
+%define %%ZTMP5             zmm7
+%define %%ZTMP6             zmm10
+%define %%ZTMP7             zmm11
+%define %%ZTMP8             zmm12
+%define %%ZTMP9             zmm13
+%define %%ZTMP10            zmm15
+%define %%ZTMP11            zmm16
+%define %%ZTMP12            zmm17
 
-%define %%XTMP0             XWORD(%%ZTMP0)
-%define %%XTMP1             XWORD(%%ZTMP1)
-%define %%XTMP2             XWORD(%%ZTMP2)
-%define %%XTMP3             XWORD(%%ZTMP3)
-%define %%XTMP4             XWORD(%%ZTMP4)
-%define %%XTMP5             XWORD(%%ZTMP5)
-%define %%XTMP6             XWORD(%%ZTMP6)
-%define %%XTMP7             XWORD(%%ZTMP7)
-%define %%XTMP8             XWORD(%%ZTMP8)
-%define %%XTMP9             XWORD(%%ZTMP9)
+%define %%MASKREG           k1
 
-; Macro flow:
-; calculate the number of 16byte blocks in the message
-; process (number of 16byte blocks) mod 8 '%%_initial_num_blocks_is_# .. %%_initial_blocks_encrypted'
-; process 8 16 byte blocks at a time until all are done '%%_encrypt_by_8_new .. %%_eight_cipher_left'
-; if there is a block of less tahn 16 bytes process it '%%_zero_cipher_left .. %%_multiple_of_16_bytes'
+;;; Macro flow:
+;;; - calculate the number of 16byte blocks in the message
+;;; - process (number of 16byte blocks) mod 8 '%%_initial_num_blocks_is_# .. %%_initial_blocks_encrypted'
+;;; - process 8 16 byte blocks at a time until all are done in %%_encrypt_by_8_new
 
 %ifidn __OUTPUT_FORMAT__, win64
         cmp             %%PLAIN_CYPH_LEN, 0
@@ -2378,10 +2321,12 @@ default rel
 
         add             r15b, 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
-                %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKz, %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, \
-                %%AES_PARTIAL_BLOCK, %%XTMP5, out_order, %%ENC_DEC, full, \
-                %%IA0, %%IA1, %%LENGTH, %%INSTANCE_TYPE
+                %%DATA_OFFSET, %%CTR_BLOCKz, \
+                %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, %%AES_PARTIAL_BLOCK, \
+                out_order, %%ENC_DEC, full, %%IA0, %%IA1, %%LENGTH, %%INSTANCE_TYPE, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%MASKREG
+
         add             %%DATA_OFFSET, 128
         sub             %%LENGTH, 128
         cmp             %%LENGTH, 128
@@ -2394,10 +2339,11 @@ default rel
         vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
         add             r15b, 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
-                %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKz, %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, \
-                %%AES_PARTIAL_BLOCK, %%XTMP5, in_order, %%ENC_DEC, full, \
-                %%IA0, %%IA1, %%LENGTH, %%INSTANCE_TYPE
+                %%DATA_OFFSET, %%CTR_BLOCKz, \
+                %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, %%AES_PARTIAL_BLOCK, \
+                in_order, %%ENC_DEC, full, %%IA0, %%IA1, %%LENGTH, %%INSTANCE_TYPE, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%MASKREG
         vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
         add             %%DATA_OFFSET, 128
         sub             %%LENGTH, 128
@@ -2418,10 +2364,11 @@ default rel
         ;;  - here it would require to account for byte overflow
 
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
-                %%DATA_OFFSET, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%AAD_HASHx, \
-                %%CTR_BLOCKz, %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, \
-                %%AES_PARTIAL_BLOCK, %%XTMP5, in_order, %%ENC_DEC, partial, \
-                %%IA0, %%IA1, %%LENGTH, %%INSTANCE_TYPE
+                %%DATA_OFFSET, %%CTR_BLOCKz, \
+                %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, %%AES_PARTIAL_BLOCK, \
+                in_order, %%ENC_DEC, partial, %%IA0, %%IA1, %%LENGTH, %%INSTANCE_TYPE, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%MASKREG
 
         add             %%DATA_OFFSET, (128 - 16)
         sub             %%LENGTH, (128 - 16)
@@ -2443,7 +2390,7 @@ default rel
 
         GHASH_LAST_7 %%GDATA_KEY, %%GHASH_IN_AES_OUT_B47, %%GHASH_IN_AES_OUT_B03, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
-                %%AAD_HASHx, k2, %%IA0
+                %%AAD_HASHx, %%MASKREG, %%IA0
 
         ;; XOR the partial word into the hash
         vpxorq          %%AAD_HASHx, %%AAD_HASHx, XWORD(%%ZTMP7)
@@ -3847,13 +3794,15 @@ default rel
 %define %%ENC_DEC               %4
 
 %%_gcm_finalize_4x128:
-        mov     [rsp + 0*8], %%IDX ; save %IDX as it will get clobbered
+        ;;  save %IDX as it will get clobbered
+        mov     [rsp + STACK_LOCAL_OFFSET + 0*8], %%IDX
         and     %%LEN, -128
         mov     arg2, %%LEN
         GCM_ENC_DEC_4x128 %%STATE, arg2, %%ENC_DEC
 
 %%_gcm_complete_min_lane:
-        mov     arg2, [rsp + 0*8] ; restore %%IDX
+        ;;  restore %%IDX
+        mov     arg2, [rsp + STACK_LOCAL_OFFSET + 0*8]
         GCM_COMPLETE_x4 %%STATE, arg2, %%ENC_DEC
 %endmacro ; GCM_FINALIZE_x4
 ;;; ===========================================================================
@@ -4164,22 +4113,7 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-
-        mov     r14, rsp
-
-
-
-        sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~63                                 ; align rsp to 64 bytes
-
-%ifidn __OUTPUT_FORMAT__, win64
-        ; only xmm6 needs to be maintained
-        vmovdqu [rsp + LOCAL_STORAGE + 0*16],xmm6
-%endif
+        FUNC_SAVE
 
         vpxor   xmm6, xmm6
         ENCRYPT_SINGLE_BLOCK    arg1, xmm6              ; xmm6 = HashKey
@@ -4204,15 +4138,7 @@ FN_NAME(precomp,_):
 
         PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
-%ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]
-%endif
-        mov     rsp, r14
-
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
+        FUNC_RESTORE
         ret
 
 
@@ -4226,29 +4152,10 @@ FN_NAME(precomp,_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
-        push    r12
-        push    r13
-%ifidn __OUTPUT_FORMAT__, win64
-        push    r14
-        push    r15
-        mov     r14, rsp
-	; xmm6:xmm15 need to be maintained for Windows
-	sub	rsp, 1*16
-	movdqu	[rsp + 0*16], xmm6
-%endif
-
+        FUNC_SAVE
         GCM_INIT arg1, arg2, arg3, arg4, arg5, r10, r11, r12
-
-%ifidn __OUTPUT_FORMAT__, win64
-	movdqu	xmm6 , [rsp + 0*16]
-        mov     rsp, r14
-        pop     r15
-        pop     r14
-%endif
-        pop     r13
-        pop     r12
+        FUNC_RESTORE
         ret
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_update_vaes_avx512 / aes_gcm_enc_192_update_vaes_avx512 /
@@ -4261,15 +4168,10 @@ FN_NAME(init,_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
-
         FUNC_SAVE
-
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC, multi_call
-
         FUNC_RESTORE
-
         ret
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_update_vaes_avx512 / aes_gcm_dec_192_update_vaes_avx512 /
@@ -4282,11 +4184,8 @@ FN_NAME(enc,_update_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
-
         FUNC_SAVE
-
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC, multi_call
-
         FUNC_RESTORE
         ret
 
@@ -4300,32 +4199,10 @@ FN_NAME(dec,_update_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
-
-        push r12
-
-%ifidn __OUTPUT_FORMAT__, win64
-        ; xmm6:xmm15 need to be maintained for Windows
-        sub     rsp, 5*16
-        vmovdqu [rsp + 0*16], xmm6
-        vmovdqu [rsp + 1*16], xmm9
-        vmovdqu [rsp + 2*16], xmm11
-        vmovdqu [rsp + 3*16], xmm14
-        vmovdqu [rsp + 4*16], xmm15
-%endif
+        FUNC_SAVE
         GCM_COMPLETE    arg1, arg2, arg3, arg4, ENC, multi_call
-
-%ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm15, [rsp + 4*16]
-        vmovdqu xmm14, [rsp + 3*16]
-        vmovdqu xmm11, [rsp + 2*16]
-        vmovdqu xmm9, [rsp + 1*16]
-        vmovdqu xmm6, [rsp + 0*16]
-        add     rsp, 5*16
-%endif
-
-        pop r12
-ret
-
+        FUNC_RESTORE
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_finalize_vaes_avx512 / aes_gcm_dec_192_finalize_vaes_avx512
@@ -4337,32 +4214,10 @@ ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
-
-        push r12
-
-%ifidn __OUTPUT_FORMAT__, win64
-        ; xmm6:xmm15 need to be maintained for Windows
-        sub     rsp, 5*16
-        vmovdqu [rsp + 0*16], xmm6
-        vmovdqu [rsp + 1*16], xmm9
-        vmovdqu [rsp + 2*16], xmm11
-        vmovdqu [rsp + 3*16], xmm14
-        vmovdqu [rsp + 4*16], xmm15
-%endif
+        FUNC_SAVE
         GCM_COMPLETE    arg1, arg2, arg3, arg4, DEC, multi_call
-
-%ifidn __OUTPUT_FORMAT__, win64
-        vmovdqu xmm15, [rsp + 4*16]
-        vmovdqu xmm14, [rsp + 3*16]
-        vmovdqu xmm11, [rsp + 2*16]
-        vmovdqu xmm9, [rsp + 1*16]
-        vmovdqu xmm6, [rsp + 0*16]
-        add     rsp, 5*16
-%endif
-
-        pop r12
+        FUNC_RESTORE
         ret
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_vaes_avx512 / aes_gcm_enc_192_vaes_avx512 / aes_gcm_enc_256_vaes_avx512
@@ -4381,15 +4236,10 @@ MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
 
         FUNC_SAVE
-
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12
-
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
-
         GCM_COMPLETE arg1, arg2, arg9, arg10, ENC, single_call
-
         FUNC_RESTORE
-
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4409,15 +4259,10 @@ MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
 
         FUNC_SAVE
-
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12
-
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
-
         GCM_COMPLETE arg1, arg2, arg9, arg10, DEC, single_call
-
         FUNC_RESTORE
-
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4427,14 +4272,12 @@ FN_NAME(dec,_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_submit_),function,internal)
 FN_NAME(enc,_submit_):
-        FUNC_SAVE_AVX512
-
+        FUNC_SAVE
         ;; arg1 - [in] state
         ;; arg2 - [in] job / [out] index
         ;; arg3 - [out] length
         GCM_SUBMIT_MB arg1, arg2, arg3, ENC
-
-        FUNC_RESTORE_AVX512
+        FUNC_RESTORE
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4444,8 +4287,7 @@ FN_NAME(enc,_submit_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_flush_),function,internal)
 FN_NAME(enc,_flush_):
-        FUNC_SAVE_AVX512
-
+        FUNC_SAVE
         ;; arg1 - [in] state
         ;; arg2 - [out] index
         ;; arg3 - [out] length
@@ -4456,8 +4298,7 @@ FN_NAME(enc,_flush_):
         ;; arg2 - min_lane_idx
         ;; arg3 - min_len
         GCM_FINALIZE_x4 arg1, arg2, arg3, ENC
-
-        FUNC_RESTORE_AVX512
+        FUNC_RESTORE
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4467,14 +4308,12 @@ FN_NAME(enc,_flush_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_submit_),function,internal)
 FN_NAME(dec,_submit_):
-        FUNC_SAVE_AVX512
-
+        FUNC_SAVE
         ;; arg1 - [in] state
         ;; arg2 - [in] job / [out] index
         ;; arg3 - [out] length
         GCM_SUBMIT_MB arg1, arg2, arg3, DEC
-
-        FUNC_RESTORE_AVX512
+        FUNC_RESTORE
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4484,8 +4323,7 @@ FN_NAME(dec,_submit_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_flush_),function,internal)
 FN_NAME(dec,_flush_):
-        FUNC_SAVE_AVX512
-
+        FUNC_SAVE
         ;; arg1 - [in] state
         ;; arg2 - [out] index
         ;; arg3 - [out] length
@@ -4497,7 +4335,7 @@ FN_NAME(dec,_flush_):
         ;; arg3 - min_len
         GCM_FINALIZE_x4 arg1, arg2, arg3, DEC
 
-        FUNC_RESTORE_AVX512
+        FUNC_RESTORE
         ret
 
 
