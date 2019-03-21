@@ -145,7 +145,7 @@
 section .text
 default rel
 
-; need to push 4 registers into stack to maintain
+;; need to push 4 registers into stack to maintain
 %define STACK_OFFSET   8*4
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -154,14 +154,7 @@ default rel
         %define XMM_STORAGE     0
 %endif
 
-%define TMP2    16*0    ; Temporary storage for AES State 2 (State 1 is stored in an XMM register)
-%define TMP3    16*1    ; Temporary storage for AES State 3
-%define TMP4    16*2    ; Temporary storage for AES State 4
-%define TMP5    16*3    ; Temporary storage for AES State 5
-%define TMP6    16*4    ; Temporary storage for AES State 6
-%define TMP7    16*5    ; Temporary storage for AES State 7
-%define TMP8    16*6    ; Temporary storage for AES State 8
-%define LOCAL_STORAGE   16*7
+%define LOCAL_STORAGE   0
 %define VARIABLE_OFFSET LOCAL_STORAGE + XMM_STORAGE
 
 %define LOCAL_STORAGE_AVX512 2*8  ; temporary storage
