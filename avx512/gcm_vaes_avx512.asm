@@ -1773,198 +1773,25 @@ default rel
 
 %endmacro                       ; GHASH_8_ENCRYPT_8_PARALLEL
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GHASH the last 8 ciphertext blocks.
+%macro  GHASH_LAST_8 10
+%define %%GDATA         %1      ; [in] key pointer
+%define %%BL47          %2      ; [in/clobbered] ZMM AES blocks 4 to 7
+%define %%BL03          %3      ; [in/cloberred] ZMM AES blocks 0 to 3
+%define %%ZTH           %4      ; [cloberred] ZMM temporary
+%define %%ZTM           %5      ; [cloberred] ZMM temporary
+%define %%ZTL           %6      ; [cloberred] ZMM temporary
+%define %%ZT01          %7      ; [cloberred] ZMM temporary
+%define %%ZT02          %8      ; [cloberred] ZMM temporary
+%define %%ZT03          %9      ; [cloberred] ZMM temporary
+%define %%AAD_HASH      %10     ; [out] XMM hash value
 
-; GHASH the last 4 ciphertext blocks.
-%macro  GHASH_LAST_8 16
-%define %%GDATA %1
-%define %%T1    %2
-%define %%T2    %3
-%define %%T3    %4
-%define %%T4    %5
-%define %%T5    %6
-%define %%T6    %7
-%define %%T7    %8
-%define %%XMM1  %9
-%define %%XMM2  %10
-%define %%XMM3  %11
-%define %%XMM4  %12
-%define %%XMM5  %13
-%define %%XMM6  %14
-%define %%XMM7  %15
-%define %%XMM8  %16
-
-        ;; Karatsuba Method
-
-        vmovdqu         %%T5, [%%GDATA + HashKey_8]
-
-        vpshufd         %%T2, %%XMM1, 01001110b
-        vpshufd         %%T3, %%T5, 01001110b
-        vpxor           %%T2, %%T2, %%XMM1
-        vpxor           %%T3, %%T3, %%T5
-
-        vpclmulqdq      %%T6, %%XMM1, %%T5, 0x11
-        vpclmulqdq      %%T7, %%XMM1, %%T5, 0x00
-
-        vpclmulqdq      %%XMM1, %%T2, %%T3, 0x00
-
-        ;;;;;;;;;;;;;;;;;;;;;;
-
-        vmovdqu         %%T5, [%%GDATA + HashKey_7]
-        vpshufd         %%T2, %%XMM2, 01001110b
-        vpshufd         %%T3, %%T5, 01001110b
-        vpxor           %%T2, %%T2, %%XMM2
-        vpxor           %%T3, %%T3, %%T5
-
-        vpclmulqdq      %%T4, %%XMM2, %%T5, 0x11
-        vpxor           %%T6, %%T6, %%T4
-
-        vpclmulqdq      %%T4, %%XMM2, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T4
-
-        vpclmulqdq      %%T2, %%T2, %%T3, 0x00
-
-        vpxor           %%XMM1, %%XMM1, %%T2
-
-        ;;;;;;;;;;;;;;;;;;;;;;
-
-        vmovdqu         %%T5, [%%GDATA + HashKey_6]
-        vpshufd         %%T2, %%XMM3, 01001110b
-        vpshufd         %%T3, %%T5, 01001110b
-        vpxor           %%T2, %%T2, %%XMM3
-        vpxor           %%T3, %%T3, %%T5
-
-        vpclmulqdq      %%T4, %%XMM3, %%T5, 0x11
-        vpxor           %%T6, %%T6, %%T4
-
-        vpclmulqdq      %%T4, %%XMM3, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T4
-
-        vpclmulqdq      %%T2, %%T2, %%T3, 0x00
-
-        vpxor           %%XMM1, %%XMM1, %%T2
-
-        ;;;;;;;;;;;;;;;;;;;;;;
-
-        vmovdqu         %%T5, [%%GDATA + HashKey_5]
-        vpshufd         %%T2, %%XMM4, 01001110b
-        vpshufd         %%T3, %%T5, 01001110b
-        vpxor           %%T2, %%T2, %%XMM4
-        vpxor           %%T3, %%T3, %%T5
-
-        vpclmulqdq      %%T4, %%XMM4, %%T5, 0x11
-        vpxor           %%T6, %%T6, %%T4
-
-        vpclmulqdq      %%T4, %%XMM4, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T4
-
-        vpclmulqdq      %%T2, %%T2, %%T3, 0x00
-
-        vpxor           %%XMM1, %%XMM1, %%T2
-
-        ;;;;;;;;;;;;;;;;;;;;;;
-
-        vmovdqu         %%T5, [%%GDATA + HashKey_4]
-        vpshufd         %%T2, %%XMM5, 01001110b
-        vpshufd         %%T3, %%T5, 01001110b
-        vpxor           %%T2, %%T2, %%XMM5
-        vpxor           %%T3, %%T3, %%T5
-
-        vpclmulqdq      %%T4, %%XMM5, %%T5, 0x11
-        vpxor           %%T6, %%T6, %%T4
-
-        vpclmulqdq      %%T4, %%XMM5, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T4
-
-        vpclmulqdq      %%T2, %%T2, %%T3, 0x00
-
-        vpxor           %%XMM1, %%XMM1, %%T2
-
-        ;;;;;;;;;;;;;;;;;;;;;;
-
-        vmovdqu         %%T5, [%%GDATA + HashKey_3]
-        vpshufd         %%T2, %%XMM6, 01001110b
-        vpshufd         %%T3, %%T5, 01001110b
-        vpxor           %%T2, %%T2, %%XMM6
-        vpxor           %%T3, %%T3, %%T5
-
-        vpclmulqdq      %%T4, %%XMM6, %%T5, 0x11
-        vpxor           %%T6, %%T6, %%T4
-
-        vpclmulqdq      %%T4, %%XMM6, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T4
-
-        vpclmulqdq      %%T2, %%T2, %%T3, 0x00
-
-        vpxor           %%XMM1, %%XMM1, %%T2
-
-        ;;;;;;;;;;;;;;;;;;;;;;
-
-        vmovdqu         %%T5, [%%GDATA + HashKey_2]
-        vpshufd         %%T2, %%XMM7, 01001110b
-        vpshufd         %%T3, %%T5, 01001110b
-        vpxor           %%T2, %%T2, %%XMM7
-        vpxor           %%T3, %%T3, %%T5
-
-        vpclmulqdq      %%T4, %%XMM7, %%T5, 0x11
-        vpxor           %%T6, %%T6, %%T4
-
-        vpclmulqdq      %%T4, %%XMM7, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T4
-
-        vpclmulqdq      %%T2, %%T2, %%T3, 0x00
-
-        vpxor           %%XMM1, %%XMM1, %%T2
-
-        ;;;;;;;;;;;;;;;;;;;;;;
-
-        vmovdqu         %%T5, [%%GDATA + HashKey]
-        vpshufd         %%T2, %%XMM8, 01001110b
-        vpshufd         %%T3, %%T5, 01001110b
-        vpxor           %%T2, %%T2, %%XMM8
-        vpxor           %%T3, %%T3, %%T5
-
-        vpclmulqdq      %%T4, %%XMM8, %%T5, 0x11
-        vpxor           %%T6, %%T6, %%T4
-
-        vpclmulqdq      %%T4, %%XMM8, %%T5, 0x00
-        vpxor           %%T7, %%T7, %%T4
-
-        vpclmulqdq      %%T2, %%T2, %%T3, 0x00
-
-        vpxor           %%XMM1, %%XMM1, %%T2
-        vpxor           %%XMM1, %%XMM1, %%T6
-        vpxor           %%T2, %%XMM1, %%T7
-
-
-
-
-        vpslldq %%T4, %%T2, 8
-        vpsrldq %%T2, %%T2, 8
-
-        vpxor   %%T7, %%T7, %%T4
-        vpxor   %%T6, %%T6, %%T2                               ; <%%T6:%%T7> holds the result of the accumulated carry-less multiplications
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;first phase of the reduction
-        vmovdqu         %%T3, [rel POLY2]
-
-        vpclmulqdq      %%T2, %%T3, %%T7, 0x01
-        vpslldq         %%T2, %%T2, 8                           ; shift-L xmm2 2 DWs
-
-        vpxor           %%T7, %%T7, %%T2                        ; first phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-        ;second phase of the reduction
-        vpclmulqdq      %%T2, %%T3, %%T7, 0x00
-        vpsrldq         %%T2, %%T2, 4                           ; shift-R %%T2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
-
-        vpclmulqdq      %%T4, %%T3, %%T7, 0x10
-        vpslldq         %%T4, %%T4, 4                           ; shift-L %%T4 1 DW (Shift-L 1-DW to obtain result with no shifts)
-
-        vpxor           %%T4, %%T4, %%T2                        ; second phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        vpxor           %%T6, %%T6, %%T4                        ; the result is in %%T6
+        VCLMUL_STEP1    %%GDATA, %%BL47, %%ZT01, %%ZTH, %%ZTM, %%ZTL
+        VCLMUL_STEP2    %%GDATA, %%BL47, %%BL03, %%ZT01, %%ZT02, %%ZT03, %%ZTH, %%ZTM, %%ZTL
+        vmovdqa64       XWORD(%%ZT03), [rel POLY2]
+        VCLMUL_REDUCE   %%AAD_HASH, XWORD(%%ZT03), XWORD(%%BL47), XWORD(%%BL03), \
+                XWORD(%%ZT01), XWORD(%%ZT02)
 %endmacro
 
 
@@ -2732,11 +2559,14 @@ default rel
 
 %%_encrypt_final_partial:
         mov             [%%GDATA_CTX + PBlockLen], %%LENGTH
-        vmovdqu         [%%GDATA_CTX + PBlockEncKey], %%AES_PARTIAL_BLOCK
+        vmovdqu64       [%%GDATA_CTX + PBlockEncKey], %%AES_PARTIAL_BLOCK
 
 %%_encrypt_done:
         ;; GHASH last cipher text blocks in xmm1-xmm8
         ;; - if block 8th is partial in a multi-call path then skip the block
+%ifidn %%INSTANCE_TYPE, multi_call
+        cmp             qword [%%GDATA_CTX + PBlockLen], 0
+        jz              %%_hash_last_8
 
         ;; @todo temporary prep of xmm1 - xmm8 (mind the order of operations)
         vextracti32x4   xmm8, %%GHASH_IN_AES_OUT_B47, 3
@@ -2749,9 +2579,6 @@ default rel
         vextracti32x4   xmm2, %%GHASH_IN_AES_OUT_B03, 1
         vextracti32x4   xmm1, %%GHASH_IN_AES_OUT_B03, 0
 
-%ifidn %%INSTANCE_TYPE, multi_call
-        cmp             qword [%%GDATA_CTX + PBlockLen], 0
-        jz              %%_hash_last_8
         GHASH_LAST_7 %%GDATA_KEY, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, \
                 %%AAD_HASHx, %%XTMP5, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
         ;; XOR the partial word into the hash
@@ -2759,8 +2586,8 @@ default rel
         jmp             %%_ghash_done
 %%_hash_last_8:
 %endif
-        GHASH_LAST_8 %%GDATA_KEY, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, \
-                %%AAD_HASHx, %%XTMP5, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
+        GHASH_LAST_8 %%GDATA_KEY, %%GHASH_IN_AES_OUT_B47, %%GHASH_IN_AES_OUT_B03, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%AAD_HASHx
 %%_ghash_done:
         vmovdqu64       [%%GDATA_CTX + CurCount], %%CTR_BLOCKx
         vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASHx
