@@ -689,51 +689,76 @@ default rel
 
 %endmacro ; CALC_AAD_HASH
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; PARTIAL_BLOCK: Handles encryption/decryption and the tag partial blocks between update calls.
-; Requires the input data be at least 1 byte long.
-; Input: gcm_key_data * (GDATA_KEY), gcm_context_data *(GDATA_CTX), input text (PLAIN_CYPH_IN),
-; input text length (PLAIN_CYPH_LEN), the current data offset (DATA_OFFSET),
-; and whether encoding or decoding (ENC_DEC)
-; Output: A cypher of the first partial block (CYPH_PLAIN_OUT), and updated GDATA_CTX
-; Clobbers rax, r10, r12, r13, r15, xmm0, xmm1, xmm2, xmm3, xmm5, xmm6, xmm9, xmm10, xmm11, xmm13
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro PARTIAL_BLOCK    8
-%define %%GDATA_KEY             %1
-%define %%GDATA_CTX             %2
-%define %%CYPH_PLAIN_OUT        %3
-%define %%PLAIN_CYPH_IN         %4
-%define %%PLAIN_CYPH_LEN        %5
-%define %%DATA_OFFSET           %6
-%define %%AAD_HASH              %7
-%define %%ENC_DEC               %8
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; PARTIAL_BLOCK
+;;; Handles encryption/decryption and the tag partial blocks between
+;;; update calls.
+;;; Requires the input data be at least 1 byte long.
+;;; Output:
+;;; A cipher/plain of the first partial block (CYPH_PLAIN_OUT),
+;;; AAD_HASH and updated GDATA_CTX
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro PARTIAL_BLOCK 22
+%define %%GDATA_KEY             %1 ; [in] key pointer
+%define %%GDATA_CTX             %2 ; [in] context pointer
+%define %%CYPH_PLAIN_OUT        %3 ; [in] output buffer
+%define %%PLAIN_CYPH_IN         %4 ; [in] input buffer
+%define %%PLAIN_CYPH_LEN        %5 ; [in] buffer length
+%define %%DATA_OFFSET           %6 ; [in/out] data offset (gets updated)
+%define %%AAD_HASH              %7 ; [out] updated GHASH value
+%define %%ENC_DEC               %8 ; [in] cipher direction
+%define %%GPTMP0                %9 ; [clobbered] GP temporary register
+%define %%GPTMP1                %10 ; [clobbered] GP temporary register
+%define %%GPTMP2                %11 ; [clobbered] GP temporary register
+%define %%ZTMP0                 %12 ; [clobbered] ZMM temporary register
+%define %%ZTMP1                 %13 ; [clobbered] ZMM temporary register
+%define %%ZTMP2                 %14 ; [clobbered] ZMM temporary register
+%define %%ZTMP3                 %15 ; [clobbered] ZMM temporary register
+%define %%ZTMP4                 %16 ; [clobbered] ZMM temporary register
+%define %%ZTMP5                 %17 ; [clobbered] ZMM temporary register
+%define %%ZTMP6                 %18 ; [clobbered] ZMM temporary register
+%define %%ZTMP7                 %19 ; [clobbered] ZMM temporary register
+%define %%ZTMP8                 %20 ; [clobbered] ZMM temporary register
+%define %%ZTMP9                 %21 ; [clobbered] ZMM temporary register
+%define %%MASKREG               %22 ; [clobbered] mask temporary register
 
-%define %%LENGTH        r13
-%define %%IA0           rax
-%define %%IA1           r12
+%define %%XTMP0 XWORD(%%ZTMP0)
+%define %%XTMP1 XWORD(%%ZTMP1)
+%define %%XTMP2 XWORD(%%ZTMP2)
+%define %%XTMP3 XWORD(%%ZTMP3)
+%define %%XTMP4 XWORD(%%ZTMP4)
+%define %%XTMP5 XWORD(%%ZTMP5)
+%define %%XTMP6 XWORD(%%ZTMP6)
+%define %%XTMP7 XWORD(%%ZTMP7)
+%define %%XTMP8 XWORD(%%ZTMP8)
+%define %%XTMP9 XWORD(%%ZTMP9)
+
+%define %%LENGTH        %%GPTMP0
+%define %%IA0           %%GPTMP1
+%define %%IA1           %%GPTMP2
 
         mov             %%LENGTH, [%%GDATA_CTX + PBlockLen]
         or              %%LENGTH, %%LENGTH
         je              %%_partial_block_done           ;Leave Macro if no partial blocks
 
-        READ_SMALL_DATA_INPUT   xmm1, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%IA0, k1
+        READ_SMALL_DATA_INPUT   %%XTMP0, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%IA0, %%MASKREG
 
-        ;; xmm9 = my_ctx_data.partial_block_enc_key
-        vmovdqu64       xmm9, [%%GDATA_CTX + PBlockEncKey]
-        vmovdqu64       xmm13, [%%GDATA_KEY + HashKey]
+        ;; XTMP1 = my_ctx_data.partial_block_enc_key
+        vmovdqu64       %%XTMP1, [%%GDATA_CTX + PBlockEncKey]
+        vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey]
 
         ;; adjust the shuffle mask pointer to be able to shift right %%LENGTH bytes
         ;; (16 - %%LENGTH) is the number of bytes in plaintext mod 16)
         lea             %%IA0, [rel SHIFT_MASK]
         add             %%IA0, %%LENGTH
-        vmovdqu64       xmm2, [%%IA0]   ; shift right shuffle mask
-        vpshufb         xmm9, xmm2
+        vmovdqu64       %%XTMP3, [%%IA0]   ; shift right shuffle mask
+        vpshufb         %%XTMP1, %%XTMP3
 
 %ifidn  %%ENC_DEC, DEC
-        ;;  keep copy of cipher text in xmm3
-        vmovdqa64       xmm3, xmm1
+        ;;  keep copy of cipher text in %%XTMP4
+        vmovdqa64       %%XTMP4, %%XTMP0
 %endif
-        vpxorq          xmm9, xmm1      ; Cyphertext XOR E(K, Yn)
+        vpxorq          %%XTMP1, %%XTMP0      ; Cyphertext XOR E(K, Yn)
 
         ;; Set %%IA1 to be the amount of data left in CYPH_PLAIN_IN after filling the block
         ;; Determine if partial block is not being filled and shift mask accordingly
@@ -743,26 +768,26 @@ default rel
         jge             %%_no_extra_mask
         sub             %%IA0, %%IA1
 %%_no_extra_mask:
-        ;; get the appropriate mask to mask out bottom %%LENGTH bytes of xmm9
-        ;; - mask out bottom %%LENGTH bytes of xmm9
-        vmovdqu64       xmm1, [%%IA0 + ALL_F - SHIFT_MASK]
-        vpand           xmm9, xmm1
+        ;; get the appropriate mask to mask out bottom %%LENGTH bytes of %%XTMP1
+        ;; - mask out bottom %%LENGTH bytes of %%XTMP1
+        vmovdqu64       %%XTMP0, [%%IA0 + ALL_F - SHIFT_MASK]
+        vpand           %%XTMP1, %%XTMP0
 
 %ifidn  %%ENC_DEC, DEC
-        vpand           xmm3, xmm1
-        vpshufb         xmm3, [rel SHUF_MASK]
-        vpshufb         xmm3, xmm2
-        vpxorq          %%AAD_HASH, xmm3
+        vpand           %%XTMP4, %%XTMP0
+        vpshufb         %%XTMP4, [rel SHUF_MASK]
+        vpshufb         %%XTMP4, %%XTMP3
+        vpxorq          %%AAD_HASH, %%XTMP4
 %else
-        vpshufb         xmm9, [rel SHUF_MASK]
-        vpshufb         xmm9, xmm2
-        vpxorq          %%AAD_HASH, xmm9
+        vpshufb         %%XTMP1, [rel SHUF_MASK]
+        vpshufb         %%XTMP1, %%XTMP3
+        vpxorq          %%AAD_HASH, %%XTMP1
 %endif
         cmp             %%IA1, 0
         jl              %%_partial_incomplete
 
         ;; GHASH computation for the last <16 Byte block
-        GHASH_MUL       %%AAD_HASH, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
+        GHASH_MUL       %%AAD_HASH, %%XTMP2, %%XTMP5, %%XTMP6, %%XTMP7, %%XTMP8, %%XTMP9
 
         mov             qword [%%GDATA_CTX + PBlockLen], 0
 
@@ -785,15 +810,15 @@ default rel
         ;; output encrypted Bytes
 
         lea             %%IA0, [rel byte_len_to_mask_table]
-        kmovw           k1, [%%IA0 + %%LENGTH*2]
+        kmovw           %%MASKREG, [%%IA0 + %%LENGTH*2]
         vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASH
 
 %ifidn  %%ENC_DEC, ENC
-        ;; shuffle xmm9 back to output as ciphertext
-        vpshufb         xmm9, [rel SHUF_MASK]
-        vpshufb         xmm9, xmm2
+        ;; shuffle XTMP1 back to output as ciphertext
+        vpshufb         %%XTMP1, [rel SHUF_MASK]
+        vpshufb         %%XTMP1, %%XTMP3
 %endif
-        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, xmm9
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{%%MASKREG}, %%XTMP1
         add             %%DATA_OFFSET, %%LENGTH
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK
@@ -2105,36 +2130,42 @@ default rel
 %define %%ENC_DEC           %6  ; [in] cipher direction
 %define %%INSTANCE_TYPE     %7  ; [in] 'single_call' or 'multi_call' selection
 
-%define %%DATA_OFFSET       r11
-%define %%LENGTH            r13
-
 %define %%IA0               r10
 %define %%IA1               r12
+%define %%IA2               r13
+%define %%IA3               r15
+%define %%IA4               r11
+
+%define %%LENGTH            %%IA2
+%define %%CTR_CHECK         %%IA3
+%define %%DATA_OFFSET       %%IA4
 
 %define %%GHASH_IN_AES_OUT_B03  zmm1
 %define %%GHASH_IN_AES_OUT_B47  zmm2
+
+%define %%GCM_INIT_CTR_BLOCK    xmm2 ; hardcoded in GCM_INIT for now
+
 %define %%AES_PARTIAL_BLOCK     xmm8
-%define %%CTR_BLOCKz        zmm9
-%define %%CTR_BLOCKx        xmm9
-%define %%AAD_HASHz         zmm14
-%define %%AAD_HASHx         xmm14
+%define %%CTR_BLOCKz            zmm9
+%define %%CTR_BLOCKx            xmm9
+%define %%AAD_HASHz             zmm14
+%define %%AAD_HASHx             xmm14
 
+%define %%ZTMP0                 zmm0
+%define %%ZTMP1                 zmm3
+%define %%ZTMP2                 zmm4
+%define %%ZTMP3                 zmm5
+%define %%ZTMP4                 zmm6
+%define %%ZTMP5                 zmm7
+%define %%ZTMP6                 zmm10
+%define %%ZTMP7                 zmm11
+%define %%ZTMP8                 zmm12
+%define %%ZTMP9                 zmm13
+%define %%ZTMP10                zmm15
+%define %%ZTMP11                zmm16
+%define %%ZTMP12                zmm17
 
-%define %%ZTMP0             zmm0
-%define %%ZTMP1             zmm3
-%define %%ZTMP2             zmm4
-%define %%ZTMP3             zmm5
-%define %%ZTMP4             zmm6
-%define %%ZTMP5             zmm7
-%define %%ZTMP6             zmm10
-%define %%ZTMP7             zmm11
-%define %%ZTMP8             zmm12
-%define %%ZTMP9             zmm13
-%define %%ZTMP10            zmm15
-%define %%ZTMP11            zmm16
-%define %%ZTMP12            zmm17
-
-%define %%MASKREG           k1
+%define %%MASKREG               k1
 
 ;;; Macro flow:
 ;;; - calculate the number of 16byte blocks in the message
@@ -2164,12 +2195,14 @@ default rel
         ;; Used for the update flow - if there was a previous partial
         ;; block fill the remaining bytes here.
         PARTIAL_BLOCK %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
-                %%PLAIN_CYPH_LEN, %%DATA_OFFSET, %%AAD_HASHx, %%ENC_DEC
+                %%PLAIN_CYPH_LEN, %%DATA_OFFSET, %%AAD_HASHx, %%ENC_DEC, \
+                %%IA0, %%IA1, %%IA2, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%MASKREG
 %endif
 
-        ;;  lift CTR set from initial_blocks to here
+        ;;  lift counter block from GCM_INIT to here
 %ifidn %%INSTANCE_TYPE, single_call
-        vmovdqu64       %%CTR_BLOCKx, xmm2
+        vmovdqu64       %%CTR_BLOCKx, %%GCM_INIT_CTR_BLOCK
 %else
         vmovdqu64       %%CTR_BLOCKx, [%%GDATA_CTX + CurCount]
 %endif
@@ -2308,18 +2341,19 @@ default rel
         jl              %%_encrypt_by_8_partial
 
 %%_encrypt_by_8_parallel:
-        ;; in_order vs. out_order is an optimization to increment the counter without shuffling
-        ;; it back into little endian. r15d keeps track of when we need to increment in order so
+        ;; in_order vs. out_order is an optimization to increment the counter
+        ;; without shuffling it back into little endian.
+        ;; %%CTR_CHECK keeps track of when we need to increment in order so
         ;; that the carry is handled correctly.
-        vmovd           r15d, %%CTR_BLOCKx
-        and             r15d, 255
+        vmovd           DWORD(%%CTR_CHECK), %%CTR_BLOCKx
+        and             DWORD(%%CTR_CHECK), 255
         vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
 
 %%_encrypt_by_8_new:
-        cmp             r15d, (255 - 8)
+        cmp             DWORD(%%CTR_CHECK), (255 - 8)
         jg              %%_encrypt_by_8
 
-        add             r15b, 8
+        add             BYTE(%%CTR_CHECK), 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%CTR_BLOCKz, \
                 %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, %%AES_PARTIAL_BLOCK, \
@@ -2337,7 +2371,7 @@ default rel
 
 %%_encrypt_by_8:
         vpshufb         %%CTR_BLOCKz, [rel SHUF_MASK]
-        add             r15b, 8
+        add             BYTE(%%CTR_CHECK), 8
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%CTR_BLOCKz, \
                 %%GHASH_IN_AES_OUT_B03, %%GHASH_IN_AES_OUT_B47, %%AES_PARTIAL_BLOCK, \
