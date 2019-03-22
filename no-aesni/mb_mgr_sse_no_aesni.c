@@ -83,6 +83,10 @@ JOB_AES_HMAC *submit_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state,
                                                     JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state);
 
+JOB_AES_HMAC *submit_job_aes_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state,
+                                           JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *flush_job_aes_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
 
 #define SAVE_XMMS save_xmms
 #define RESTORE_XMMS restore_xmms
@@ -172,9 +176,8 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS_x8 *args, uint64_t len);
 #define AES128_CBC_MAC     aes128_cbc_mac_x4_no_aesni
 
 #define SUBMIT_JOB_AES_CCM_CIPHER  submit_job_aes_ccm_cipher_arch
-#define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_arch
-#define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_arch
-#define AES_CCM_MAX_JOBS 4
+#define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_sse_no_aesni
+#define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_sse_no_aesni
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_sse_no_aesni
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse_no_aesni
@@ -545,6 +548,8 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
                 state->aes_ccm_ooo.lens[j] = 0;
                 state->aes_ccm_ooo.job_in_lane[j] = NULL;
         }
+        for (; j < 8; j++)
+                state->aes_ccm_ooo.lens[j] = 0xFFFF;
         state->aes_ccm_ooo.unused_lanes = 0xF3210;
 
         /* Init AES-CMAC auth out-of-order fields */

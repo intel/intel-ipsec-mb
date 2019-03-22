@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2019, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -123,6 +123,26 @@ END_FIELDS
 _aes_cmac_args_in	equ	_aes_cmac_args + _aesarg_in
 _aes_cmac_args_keys	equ	_aes_cmac_args + _aesarg_keys
 _aes_cmac_args_IV	equ	_aes_cmac_args + _aesarg_IV
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Define CCM Out of Order Data Structures
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS	; MB_MGR_CCM_OOO
+;;	name		size	align
+FIELD	_aes_ccm_args,	_AES_ARGS_X8_size, _AES_ARGS_X8_align
+FIELD	_aes_ccm_lens, 8*2,	16
+FIELD	_aes_ccm_init_done,    8*2,	16
+FIELD	_aes_ccm_unused_lanes, 8,      8
+FIELD	_aes_ccm_job_in_lane,  8*8,	8
+FIELD   _aes_ccm_init_blocks,  8*4*16,   32
+END_FIELDS
+%assign _MB_MGR_CCM_OOO_size	_FIELD_OFFSET
+%assign _MB_MGR_CCM_OOO_align	_STRUCT_ALIGN
+
+_aes_ccm_args_in	equ	_aes_ccm_args + _aesarg_in
+_aes_ccm_args_keys	equ	_aes_ccm_args + _aesarg_keys
+_aes_ccm_args_IV	equ	_aes_ccm_args + _aesarg_IV
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define DES Out of Order Data Structures
