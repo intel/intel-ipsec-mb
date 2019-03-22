@@ -99,7 +99,6 @@ section .text
 %define tmp4             r13
 %define tmp2             r14
 
-%define flag             r15
 %define good_lane        r15
 
 ; STACK_SPACE needs to be an odd multiple of 8
@@ -142,7 +141,6 @@ endstruc
  	mov	unused_lanes, [state + _aes_cmac_unused_lanes]
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
-        mov     flag, 0
 
  	mov	lane, unused_lanes
         and	lane, 0xF
@@ -190,7 +188,6 @@ endstruc
         XPINSRW xmm0, xmm1, tmp, lane, tmp2, scale_x16
         movdqa  [state + _aes_cmac_lens], xmm0
 
-        ;; Set flag = (r == 0)
         or      r, r
         jz      %%_complete_block
 
@@ -351,7 +348,6 @@ APPEND(skip_,I):
 
 %ifidn %%SUBMIT_FLUSH, SUBMIT
 %%_complete_block:
-        mov     flag, 1
 
         ;; Block size aligned
         mov     tmp2, [job + _src]
