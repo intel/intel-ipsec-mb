@@ -1954,19 +1954,15 @@ default rel
 %define %%MASKREG       %12     ; [clobbered] mask register to use for loads
 %define %%IA0           %13     ; [clobbered] GP temporary register
 
-        mov             %%IA0, 0x0000_ffff_ffff_ffff
-        kmovq           %%MASKREG, %%IA0
-        vmovdqu8        %%ZT04{%%MASKREG}{z}, [%%GDATA + HashKey_3]
-        vmovdqu8        %%BL47{%%MASKREG}{z}, %%BL47
-        VCLMUL_STEP1    %%GDATA, %%BL47, %%ZT01, %%ZTH, %%ZTM, %%ZTL, %%ZT04
+        vmovdqa64       XWORD(%%ZT04), [rel POLY2]
 
-        vmovdqu64       %%ZT04, [%%GDATA + HashKey_7]
-        VCLMUL_STEP2    %%GDATA, %%BL47, %%BL03, \
-                %%ZT01, %%ZT02, %%ZT03, %%ZTH, \
-                %%ZTM, %%ZTL, %%ZT04
+        VCLMUL_1_TO_8_STEP1 %%GDATA, %%BL47, %%ZT01, %%ZT02, %%ZTH, %%ZTM, %%ZTL, 7
 
-        vmovdqa64       XWORD(%%ZT03), [rel POLY2]
-        VCLMUL_REDUCE   %%AAD_HASH, XWORD(%%ZT03), XWORD(%%BL47), XWORD(%%BL03), \
+        VCLMUL_1_TO_8_STEP2 %%GDATA, %%BL47, %%BL03, \
+                %%ZT01, %%ZT02, %%ZT03, \
+                %%ZTH, %%ZTM, %%ZTL, 7
+
+        VCLMUL_REDUCE   %%AAD_HASH, XWORD(%%ZT04), XWORD(%%BL47), XWORD(%%BL03), \
                 XWORD(%%ZT01), XWORD(%%ZT02)
 %endmacro                       ; GHASH_LAST_7
 
