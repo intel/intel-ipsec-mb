@@ -174,57 +174,68 @@ default rel
 ;;; ===========================================================================
 ;;; Horizontal XOR - 4 x 128bits xored together
 %macro VHPXORI4x128 2
-%define %%REG   %1              ; [in/out] zmm512 4x128bits to xor; i128 on output
-%define %%TMP   %2              ; temporary register
+%define %%REG   %1      ; [in/out] ZMM with 4x128bits to xor; 128bit output
+%define %%TMP   %2      ; [clobbered] ZMM temporary register
         vextracti64x4   YWORD(%%TMP), %%REG, 1
         vpxorq          YWORD(%%REG), YWORD(%%REG), YWORD(%%TMP)
         vextracti32x4   XWORD(%%TMP), YWORD(%%REG), 1
         vpxorq          XWORD(%%REG), XWORD(%%REG), XWORD(%%TMP)
-%endmacro                       ; VHPXORI4x128
+%endmacro               ; VHPXORI4x128
+
+;;; ===========================================================================
+;;; ===========================================================================
+;;; Horizontal XOR - 2 x 128bits xored together
+%macro VHPXORI2x128 2
+%define %%REG   %1      ; [in/out] YMM/ZMM with 2x128bits to xor; 128bit output
+%define %%TMP   %2      ; [clobbered] XMM/YMM/ZMM temporary register
+        vextracti32x4   XWORD(%%TMP), %%REG, 1
+        vpxorq          XWORD(%%REG), XWORD(%%REG), XWORD(%%TMP)
+%endmacro               ; VHPXORI2x128
 
 ;;; ===========================================================================
 ;;; ===========================================================================
 ;;; schoolbook multiply - 1st step
 %macro VCLMUL_STEP1 6-7
-%define %%KP    %1              ; [in] key pointer
-%define %%HI    %2              ; [in] previous blocks 4 to 7
-%define %%TMP   %3
-%define %%TH    %4              ; [out] tmp high
-%define %%TM    %5              ; [out] tmp medium
-%define %%TL    %6              ; [out] tmp low
-%define %%HKEY  %7              ; [in] optional hash key to start multiply with
+%define %%KP    %1      ; [in] key pointer
+%define %%HI    %2      ; [in] previous blocks 4 to 7
+%define %%TMP   %3      ; [clobbered] ZMM/YMM/XMM temporary
+%define %%TH    %4      ; [out] high product
+%define %%TM    %5      ; [out] medium product
+%define %%TL    %6      ; [out] low product
+%define %%HKEY  %7      ; [in/optional] hash key for multiplication
 
 %if %0 == 6
         vmovdqu64       %%TMP, [%%KP + HashKey_4]
 %else
-        vmovdqu64       %%TMP, %%HKEY
+        vmovdqa64       %%TMP, %%HKEY
 %endif
         vpclmulqdq      %%TH, %%HI, %%TMP, 0x11     ; %%T5 = a1*b1
         vpclmulqdq      %%TL, %%HI, %%TMP, 0x00     ; %%T7 = a0*b0
         vpclmulqdq      %%TM, %%HI, %%TMP, 0x01     ; %%T6 = a1*b0
         vpclmulqdq      %%TMP, %%HI, %%TMP, 0x10    ; %%T4 = a0*b1
         vpxorq          %%TM, %%TM, %%TMP           ; [%%TH : %%TM : %%TL]
-%endmacro                       ; VCLMUL_STEP1
+%endmacro               ; VCLMUL_STEP1
 
 ;;; ===========================================================================
 ;;; ===========================================================================
 ;;; schoolbook multiply - 2nd step
-%macro VCLMUL_STEP2 9-10
-%define %%KP    %1              ; [in] key pointer
-%define %%HI    %2              ; [out] high 128b of hash to reduce
-%define %%LO    %3              ; [in/out] previous blocks 0 to 3; low 128b of hash to reduce
-%define %%TMP0  %4
-%define %%TMP1  %5
-%define %%TMP2  %6
-%define %%TH    %7              ; [in] tmp high
-%define %%TM    %8              ; [in] tmp medium
-%define %%TL    %9              ; [in] tmp low
-%define %%HKEY  %10             ; [in] optional hash key to start multiply with
+%macro VCLMUL_STEP2 9-11
+%define %%KP    %1      ; [in] key pointer
+%define %%HI    %2      ; [out] ghash high 128 bits
+%define %%LO    %3      ; [in/out] cipher text blocks 0-3 (in); ghash low 128 bits (out)
+%define %%TMP0  %4      ; [clobbered] ZMM/YMM/XMM temporary
+%define %%TMP1  %5      ; [clobbered] ZMM/YMM/XMM temporary
+%define %%TMP2  %6      ; [clobbered] ZMM/YMM/XMM temporary
+%define %%TH    %7      ; [in] high product
+%define %%TM    %8      ; [in] medium product
+%define %%TL    %9      ; [in] low product
+%define %%HKEY  %10     ; [in/optional] hash key for multiplication
+%define %%HXOR  %11     ; [in/optional] type of horizontal xor (4 - 4x128; 2 - 2x128; 1 - none)
 
 %if %0 == 9
         vmovdqu64       %%TMP0, [%%KP + HashKey_8]
 %else
-        vmovdqu64       %%TMP0, %%HKEY
+        vmovdqa64       %%TMP0, %%HKEY
 %endif
         vpclmulqdq      %%TMP1, %%LO, %%TMP0, 0x10     ; %%TMP1 = a0*b1
         vpclmulqdq      %%TMP2, %%LO, %%TMP0, 0x11     ; %%TMP2 = a1*b1
@@ -242,41 +253,139 @@ default rel
 
         ;; xor 128bit words horizontally and compute [(X8*H1) + (X7*H2) + ... ((X1+Y0)*H8]
         ;; note: (X1+Y0) handled elsewhere
+%if %0 < 11
         VHPXORI4x128    %%HI, %%TMP2
         VHPXORI4x128    %%LO, %%TMP1
+%else
+%if %%HXOR == 4
+        VHPXORI4x128    %%HI, %%TMP2
+        VHPXORI4x128    %%LO, %%TMP1
+%elif %%HXOR == 2
+        VHPXORI2x128    %%HI, %%TMP2
+        VHPXORI2x128    %%LO, %%TMP1
+%endif                          ; HXOR
+        ;; for HXOR == 1 there is nothing to be done
+%endif                          ; !(%0 < 11)
         ;; HIx holds top 128 bits
         ;; LOx holds low 128 bits
         ;; - further reductions to follow
-%endmacro                       ; VCLMUL_STEP2
+%endmacro               ; VCLMUL_STEP2
 
 ;;; ===========================================================================
 ;;; ===========================================================================
 ;;; AVX512 reduction macro
 %macro VCLMUL_REDUCE 6
-%define %%OUT   %1        ;; [out] zmm/ymm/xmm: result (must not be %%TMP1 or %%HI128)
-%define %%POLY  %2        ;; [in] zmm/ymm/xmm: polynomial
-%define %%HI128 %3        ;; [in] zmm/ymm/xmm: high 128b of hash to reduce
-%define %%LO128 %4        ;; [in] zmm/ymm/xmm: low 128b of hash to reduce
-%define %%TMP0  %5        ;; [in] zmm/ymm/xmm: temporary register
-%define %%TMP1  %6        ;; [in] zmm/ymm/xmm: temporary register
+%define %%OUT   %1      ; [out] zmm/ymm/xmm: result (must not be %%TMP1 or %%HI128)
+%define %%POLY  %2      ; [in] zmm/ymm/xmm: polynomial
+%define %%HI128 %3      ; [in] zmm/ymm/xmm: high 128b of hash to reduce
+%define %%LO128 %4      ; [in] zmm/ymm/xmm: low 128b of hash to reduce
+%define %%TMP0  %5      ; [in] zmm/ymm/xmm: temporary register
+%define %%TMP1  %6      ; [in] zmm/ymm/xmm: temporary register
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; first phase of the reduction
         vpclmulqdq      %%TMP0, %%POLY, %%LO128, 0x01
-        vpslldq         %%TMP0, %%TMP0, 8               ; shift-L xmm2 2 DWs
-        vpxorq          %%TMP0, %%LO128, %%TMP0         ; first phase of the reduction complete
+        vpslldq         %%TMP0, %%TMP0, 8       ; shift-L 2 DWs
+        vpxorq          %%TMP0, %%LO128, %%TMP0 ; first phase of the reduction complete
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; second phase of the reduction
         vpclmulqdq      %%TMP1, %%POLY, %%TMP0, 0x00
-        vpsrldq         %%TMP1, %%TMP1, 4               ; shift-R 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+        vpsrldq         %%TMP1, %%TMP1, 4       ; shift-R only 1-DW to obtain 2-DWs shift-R
 
         vpclmulqdq      %%OUT, %%POLY, %%TMP0, 0x10
-        vpslldq         %%OUT, %%OUT, 4                 ; shift-L 1 DW (Shift-L 1-DW to obtain result with no shifts)
+        vpslldq         %%OUT, %%OUT, 4         ; shift-L 1-DW to obtain result with no shifts
 
-        vpternlogq      %%OUT, %%TMP1, %%HI128, 0x96    ; OUT (GHASH) = OUT xor TMP1 xor HI128(HI)
+        vpternlogq      %%OUT, %%TMP1, %%HI128, 0x96    ; OUT/GHASH = OUT xor TMP1 xor HI128
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %endmacro
+
+;;; ===========================================================================
+;;; ===========================================================================
+;;; schoolbook multiply (1 to 8 blocks) - 1st step
+%macro VCLMUL_1_TO_8_STEP1 8
+%define %%KP      %1    ; [in] key pointer
+%define %%HI      %2    ; [in] ZMM ciphered blocks 4 to 7
+%define %%TMP1    %3    ; [clobbered] ZMM temporary
+%define %%TMP2    %4    ; [clobbered] ZMM temporary
+%define %%TH      %5    ; [out] ZMM high product
+%define %%TM      %6    ; [out] ZMM medium product
+%define %%TL      %7    ; [out] ZMM low product
+%define %%NBLOCKS %8    ; [in] number of blocks to ghash (0 to 8)
+
+%if %%NBLOCKS == 8
+        VCLMUL_STEP1    %%KP, %%HI, %%TMP1, %%TH, %%TM, %%TL
+%elif  %%NBLOCKS == 7
+        vmovdqu64       %%TMP2, [%%KP + HashKey_3]
+        vmovdqa64       %%TMP1, [rel mask_out_top_block]
+        vpandq          %%TMP2, %%TMP1
+        vpandq          %%HI, %%TMP1
+        VCLMUL_STEP1    NULL, %%HI, %%TMP1, %%TH, %%TM, %%TL, %%TMP2
+%elif  %%NBLOCKS == 6
+        vmovdqu64       YWORD(%%TMP2), [%%KP + HashKey_2]
+        VCLMUL_STEP1    NULL, YWORD(%%HI), YWORD(%%TMP1), \
+                YWORD(%%TH), YWORD(%%TM), YWORD(%%TL), YWORD(%%TMP2)
+%elif  %%NBLOCKS == 5
+        vmovdqu64       XWORD(%%TMP2), [%%KP + HashKey_1]
+        VCLMUL_STEP1    NULL, XWORD(%%HI), XWORD(%%TMP1), \
+                XWORD(%%TH), XWORD(%%TM), XWORD(%%TL), XWORD(%%TMP2)
+%else
+        vpxorq          %%TH, %%TH
+        vpxorq          %%TM, %%TM
+        vpxorq          %%TL, %%TL
+%endif
+%endmacro               ; VCLMUL_1_TO_8_STEP1
+
+;;; ===========================================================================
+;;; ===========================================================================
+;;; schoolbook multiply (1 to 8 blocks) - 2nd step
+%macro VCLMUL_1_TO_8_STEP2 10
+%define %%KP      %1    ; [in] key pointer
+%define %%HI      %2    ; [out] ZMM ghash high 128bits
+%define %%LO      %3    ; [in/out] ZMM ciphered blocks 0 to 3 (in); ghash low 128bits (out)
+%define %%TMP0    %4    ; [clobbered] ZMM temporary
+%define %%TMP1    %5    ; [clobbered] ZMM temporary
+%define %%TMP2    %6    ; [clobbered] ZMM temporary
+%define %%TH      %7    ; [in/clobbered] ZMM high sum
+%define %%TM      %8    ; [in/clobbered] ZMM medium sum
+%define %%TL      %9    ; [in/clobbered] ZMM low sum
+%define %%NBLOCKS %10   ; [in] number of blocks to ghash (0 to 8)
+
+%if %%NBLOCKS == 8
+        VCLMUL_STEP2    %%KP, %%HI, %%LO, %%TMP0, %%TMP1, %%TMP2, %%TH, %%TM, %%TL
+%elif %%NBLOCKS == 7
+        vmovdqu64       %%TMP2, [%%KP + HashKey_7]
+        VCLMUL_STEP2    NULL, %%HI, %%LO, %%TMP0, %%TMP1, %%TMP2, %%TH, %%TM, %%TL, %%TMP2, 4
+%elif %%NBLOCKS == 6
+        vmovdqu64       %%TMP2, [%%KP + HashKey_6]
+        VCLMUL_STEP2    NULL, %%HI, %%LO, %%TMP0, %%TMP1, %%TMP2, %%TH, %%TM, %%TL, %%TMP2, 4
+%elif %%NBLOCKS == 5
+        vmovdqu64       %%TMP2, [%%KP + HashKey_5]
+        VCLMUL_STEP2    NULL, %%HI, %%LO, %%TMP0, %%TMP1, %%TMP2, %%TH, %%TM, %%TL, %%TMP2, 4
+%elif %%NBLOCKS == 4
+        vmovdqu64       %%TMP2, [%%KP + HashKey_4]
+        VCLMUL_STEP2    NULL, %%HI, %%LO, %%TMP0, %%TMP1, %%TMP2, %%TH, %%TM, %%TL, %%TMP2, 4
+%elif %%NBLOCKS == 3
+        vmovdqu64       %%TMP2, [%%KP + HashKey_3]
+        vmovdqa64       %%TMP1, [rel mask_out_top_block]
+        vpandq          %%TMP2, %%TMP1
+        vpandq          %%LO, %%TMP1
+        VCLMUL_STEP2    NULL, %%HI, %%LO, %%TMP0, %%TMP1, %%TMP2, %%TH, %%TM, %%TL, %%TMP2, 4
+%elif %%NBLOCKS == 2
+        vmovdqu64       YWORD(%%TMP2), [%%KP + HashKey_2]
+        VCLMUL_STEP2    NULL, YWORD(%%HI), YWORD(%%LO), \
+                YWORD(%%TMP0), YWORD(%%TMP1), YWORD(%%TMP2), \
+                YWORD(%%TH), YWORD(%%TM), YWORD(%%TL), YWORD(%%TMP2), 2
+%elif %%NBLOCKS == 1
+        vmovdqu64       XWORD(%%TMP2), [%%KP + HashKey_1]
+        VCLMUL_STEP2    NULL, XWORD(%%HI), XWORD(%%LO), \
+                XWORD(%%TMP0), XWORD(%%TMP1), XWORD(%%TMP2), \
+                XWORD(%%TH), XWORD(%%TM), XWORD(%%TL), XWORD(%%TMP2), 1
+%else
+        vpxorq          %%HI, %%HI
+        vpxorq          %%LO, %%LO
+%endif
+%endmacro               ; VCLMUL_1_TO_8_STEP2
 
 ;;; ===========================================================================
 ;;; ===========================================================================

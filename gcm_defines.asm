@@ -189,6 +189,13 @@ byte64_len_to_mask_table:
         dq      0x3fffffffffffffff, 0x7fffffffffffffff
         dq      0xffffffffffffffff
 
+align 64
+mask_out_top_block:
+        dq      0xffffffffffffffff, 0xffffffffffffffff
+        dq      0xffffffffffffffff, 0xffffffffffffffff
+        dq      0xffffffffffffffff, 0xffffffffffffffff
+        dq      0x0000000000000000, 0x0000000000000000
+
 ;;; @note these 2 need to be next one another
 ;;; - they are used to map lane index onto coresponding bit mask and
 ;;;   NOT version of the bitmask
