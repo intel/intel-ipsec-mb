@@ -516,11 +516,11 @@ default rel
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; GHASH_MUL MACRO to implement: Data*HashKey mod (128,127,126,121,0)
-; Input: A and B (128-bits each, bit-reflected)
-; Output: C = A*B*x mod poly, (i.e. >>1 )
-; To compute GH = GH*HashKey mod poly, give HK = HashKey<<1 mod poly as input
-; GH = GH * HK * x mod poly which is equivalent to GH*HashKey mod poly.
+;;; GHASH_MUL MACRO to implement: Data*HashKey mod (128,127,126,121,0)
+;;; Input: A and B (128-bits each, bit-reflected)
+;;; Output: C = A*B*x mod poly, (i.e. >>1 )
+;;; To compute GH = GH*HashKey mod poly, give HK = HashKey<<1 mod poly as input
+;;; GH = GH * HK * x mod poly which is equivalent to GH*HashKey mod poly.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro  GHASH_MUL  7
 %define %%GH %1         ; 16 Bytes
@@ -530,46 +530,46 @@ default rel
 %define %%T3 %5
 %define %%T4 %6
 %define %%T5 %7
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        vpclmulqdq      %%T1, %%GH, %%HK, 0x11          ; %%T1 = a1*b1
-        vpclmulqdq      %%T2, %%GH, %%HK, 0x00          ; %%T2 = a0*b0
-        vpclmulqdq      %%T3, %%GH, %%HK, 0x01          ; %%T3 = a1*b0
-        vpclmulqdq      %%GH, %%GH, %%HK, 0x10          ; %%GH = a0*b1
+        vpclmulqdq      %%T1, %%GH, %%HK, 0x11  ; %%T1 = a1*b1
+        vpclmulqdq      %%T2, %%GH, %%HK, 0x00  ; %%T2 = a0*b0
+        vpclmulqdq      %%T3, %%GH, %%HK, 0x01  ; %%T3 = a1*b0
+        vpclmulqdq      %%GH, %%GH, %%HK, 0x10  ; %%GH = a0*b1
         vpxorq          %%GH, %%GH, %%T3
 
 
-        vpsrldq         %%T3, %%GH, 8                   ; shift-R %%GH 2 DWs
-        vpslldq         %%GH, %%GH, 8                   ; shift-L %%GH 2 DWs
+        vpsrldq         %%T3, %%GH, 8           ; shift-R %%GH 2 DWs
+        vpslldq         %%GH, %%GH, 8           ; shift-L %%GH 2 DWs
 
         vpxorq          %%T1, %%T1, %%T3
         vpxorq          %%GH, %%GH, %%T2
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
         vmovdqu64       %%T3, [rel POLY2]
 
         vpclmulqdq      %%T2, %%T3, %%GH, 0x01
-        vpslldq         %%T2, %%T2, 8                    ; shift-L %%T2 2 DWs
+        vpslldq         %%T2, %%T2, 8           ; shift-L %%T2 2 DWs
 
-        vpxorq          %%GH, %%GH, %%T2                 ; first phase of the reduction complete
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpxorq          %%GH, %%GH, %%T2        ; first phase of the reduction complete
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;second phase of the reduction
         vpclmulqdq      %%T2, %%T3, %%GH, 0x00
-        vpsrldq         %%T2, %%T2, 4                    ; shift-R %%T2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
+        vpsrldq         %%T2, %%T2, 4           ; shift-R only 1-DW to obtain 2-DWs shift-R
 
         vpclmulqdq      %%GH, %%T3, %%GH, 0x10
-        vpslldq         %%GH, %%GH, 4                    ; shift-L %%GH 1 DW (Shift-L 1-DW to obtain result with no shifts)
+        vpslldq         %%GH, %%GH, 4           ; Shift-L 1-DW to obtain result with no shifts
 
         ; second phase of the reduction complete, the result is in %%GH
-        vpternlogq      %%GH, %%T1, %%T2, 0x96           ; GH = GH xor T1 xor T2
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vpternlogq      %%GH, %%T1, %%T2, 0x96  ; GH = GH xor T1 xor T2
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %endmacro
 
-
-; In PRECOMPUTE, the commands filling Hashkey_i_k are not required for avx512
-; functions, but are kept to allow users to switch cpu architectures between calls
-; of pre, init, update, and finalize.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; In PRECOMPUTE, the commands filling Hashkey_i_k are not required for avx512
+;;; functions, but are kept to allow users to switch cpu architectures between calls
+;;; of pre, init, update, and finalize.
 %macro  PRECOMPUTE 8
 %define %%GDATA %1
 %define %%HK    %2
