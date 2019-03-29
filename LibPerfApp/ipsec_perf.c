@@ -38,6 +38,7 @@
 #include <windows.h>
 #include <process.h>
 #include <intrin.h>
+#define strdup _strdup
 #define __forceinline static __forceinline
 #else
 #include <x86intrin.h>
@@ -53,14 +54,15 @@
 
 #define BUFSIZE (512 * 1024 * 1024)
 #define JOB_SIZE_TOP (16 * 1024)
-#define JOB_SIZE_MAX (2 * 1024)
-#define JOB_SIZE_STEP 16
+#define DEFAULT_JOB_SIZE_MIN 16
+#define DEFAULT_JOB_SIZE_MAX (2 * 1024)
+#define DEFAULT_JOB_SIZE_STEP 16
 #define REGION_SIZE (JOB_SIZE_TOP + 2048)
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
 #define NUM_RUNS 16
 #define KEYS_PER_JOB 15
 
-#define AAD_SIZE_MAX JOB_SIZE_MAX
+#define AAD_SIZE_MAX JOB_SIZE_TOP
 #define CCM_AAD_SIZE_MAX 46
 #define DEFAULT_GCM_AAD_SIZE 12
 #define DEFAULT_CCM_AAD_SIZE 8
@@ -450,7 +452,16 @@ uint32_t key_idxs[NUM_OFFSETS];
 uint32_t offsets[NUM_OFFSETS];
 uint32_t sha_size_incr = 24;
 
-uint32_t job_size_start = UINT32_MAX;
+enum range {
+        RANGE_MIN = 0,
+        RANGE_STEP,
+        RANGE_MAX,
+        NUM_RANGE
+};
+
+uint32_t job_sizes[NUM_RANGE] = {DEFAULT_JOB_SIZE_MIN,
+                                 DEFAULT_JOB_SIZE_STEP,
+                                 DEFAULT_JOB_SIZE_MAX};
 uint32_t job_iter = 0;
 uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
 uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
@@ -1183,7 +1194,8 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         uint32_t sz;
 
         for (sz = 0; sz < sizes; sz++) {
-                const uint32_t size_aes = job_size_start + (sz * JOB_SIZE_STEP);
+                const uint32_t size_aes = job_sizes[RANGE_MIN] +
+                                        (sz * job_sizes[RANGE_STEP]);
                 uint32_t num_iter;
 
                 params->aad_size = 0;
@@ -1400,7 +1412,8 @@ static void print_times(struct variant_s *variant_list, struct params_s *params,
         }
         printf("\n");
         for (sz = 0; sz < sizes; sz++) {
-                printf("%d", job_size_start + (sz * JOB_SIZE_STEP));
+                printf("%d", job_sizes[RANGE_MIN] +
+                             (sz * job_sizes[RANGE_STEP]));
                 for (col = 0; col < total_variants; col++) {
                         uint64_t *time_ptr =
                                 &variant_list[col].avg_times[sz * NUM_RUNS];
@@ -1432,16 +1445,13 @@ run_tests(void *arg)
         uint32_t total_variants = 0;
         struct variant_s *variant_ptr = NULL;
         struct variant_s *variant_list = NULL;
+        const uint32_t min_size = job_sizes[RANGE_MIN];
+        const uint32_t max_size = job_sizes[RANGE_MAX];
+        const uint32_t step_size = job_sizes[RANGE_STEP];
 
         p_mgr = info->p_mgr;
-        if (job_size_start == UINT32_MAX) {
-                /* Unmodified through command line parameters. Use defaults. */
-                params.num_sizes = JOB_SIZE_MAX / JOB_SIZE_STEP;
-                job_size_start = JOB_SIZE_STEP;
-        } else {
-                /* Test only selected size */
-                params.num_sizes = 1;
-        }
+
+        params.num_sizes = ((max_size - min_size) / step_size) + 1;
 
         params.core = (uint32_t)info->core;
 
@@ -1632,7 +1642,10 @@ static void usage(void)
                 "         (less precise but quicker)\n"
                 "--smoke: very quick, unprecise and without print out\n"
                 "         (for validation only)\n"
-                "--job-size: size of the cipher & MAC job in bytes\n"
+                "--job-size: size of the cipher & MAC job in bytes. It can be:\n"
+                "            - single value: test single size\n"
+                "            - range: test multiple sizes with following format"
+                " min:step:max (e.g. 16:16:256)\n"
                 "            (-o still applies for MAC)\n"
                 "--aad-size: size of AAD for AEAD algorithms\n"
                 "--job-iter: number of tests iterations for each job size\n",
@@ -1762,6 +1775,77 @@ exit:
         fprintf(stderr, "\n");
 
         return NULL;
+}
+
+static int
+parse_range(const char * const *argv, const int index, const int argc,
+            uint32_t range_values[NUM_RANGE])
+{
+        char *token;
+        uint32_t number;
+        unsigned int i;
+
+
+        if (range_values == NULL || argv == NULL || index < 0 || argc < 0) {
+                fprintf(stderr, "%s() internal error!\n", __func__);
+                exit(EXIT_FAILURE);
+        }
+
+        if (index >= (argc - 1)) {
+                fprintf(stderr, "'%s' requires an argument!\n", argv[index]);
+                exit(EXIT_FAILURE);
+        }
+
+        char *copy_arg = strdup(argv[index + 1]);
+
+        if (copy_arg == NULL) {
+                fprintf(stderr, "%s() internal error!\n", __func__);
+                exit(EXIT_FAILURE);
+        }
+
+        errno = 0;
+        token = strtok(copy_arg, ":");
+
+        /* Try parsing range (minimum, step and maximum values) */
+        for (i = 0; i < NUM_RANGE; i++) {
+                if (token == NULL)
+                        goto no_range;
+
+                number = strtoul(token, NULL, 10);
+
+                if (errno != 0)
+                        goto no_range;
+
+                range_values[i] = number;
+                token = strtok(NULL, ":");
+        }
+
+        if (token != NULL)
+                goto no_range;
+
+        if (range_values[RANGE_MAX] < range_values[RANGE_MIN]) {
+                fprintf(stderr, "Maximum value of range cannot be lower "
+                        "than minimum value\n");
+                exit(EXIT_FAILURE);
+        }
+
+        if (range_values[RANGE_STEP] == 0) {
+                fprintf(stderr, "Step value in range cannot be 0\n");
+                exit(EXIT_FAILURE);
+        }
+
+        goto end_range;
+no_range:
+        /* Try parsing as single value */
+        get_next_num_arg(argv, index, argc, &job_sizes[RANGE_MIN],
+                     sizeof(job_sizes[RANGE_MIN]));
+
+        job_sizes[RANGE_MAX] = job_sizes[RANGE_MIN];
+
+end_range:
+        free(copy_arg);
+        return (index + 1);
+
 }
 
 int main(int argc, char *argv[])
@@ -1895,14 +1979,14 @@ int main(int argc, char *argv[])
                                              argc, &sha_size_incr,
                                              sizeof(sha_size_incr));
                 } else if (strcmp(argv[i], "--job-size") == 0) {
-                        i = get_next_num_arg((const char * const *)argv, i,
-                                             argc, &job_size_start,
-                                             sizeof(job_size_start));
-                        if (job_size_start > JOB_SIZE_TOP) {
+                        /* Try parsing the argument as a range first */
+                        i = parse_range((const char * const *)argv, i, argc,
+                                          job_sizes);
+                        if (job_sizes[RANGE_MAX] > JOB_SIZE_TOP) {
                                 fprintf(stderr,
-                                        "Invalid job size %u (max %u)!\n",
-                                        (unsigned) job_size_start,
-                                        JOB_SIZE_TOP);
+                                       "Invalid job size %u (max %u)\n",
+                                       (unsigned) job_sizes[RANGE_MAX],
+                                       JOB_SIZE_TOP);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--aad-size") == 0) {
@@ -1966,7 +2050,7 @@ int main(int argc, char *argv[])
                 }
         }
 
-        if (job_size_start == 0) {
+        if (job_sizes[RANGE_MIN] == 0) {
                 if (test_types[TTYPE_AES_HMAC] ||
                                 test_types[TTYPE_AES_DOCSIS] ||
                                 test_types[TTYPE_AES_DES] ||

@@ -54,7 +54,8 @@ DLFLAGS =
 !endif
 
 CC = cl
-CFLAGS = /nologo $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(INCDIR)
+# _CRT_SECURE_NO_WARNINGS disables warning C4996 about unsecure strtok() being used
+CFLAGS = /nologo  /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(INCDIR)
 
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)
