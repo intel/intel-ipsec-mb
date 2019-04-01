@@ -438,4 +438,147 @@
 %%end:
 %endm
 
+; This section defines a series of macros to load small to medium amounts
+; (from 0 to 16 bytes) of data from memory to SIMD registers,
+; where the size is variable but limited.
+;
+; The macros are all called as:
+; simd_load DST, SRC, SIZE
+; with the parameters defined as:
+;    DST     : register: destination XMM register
+;    SRC     : register: pointer to src data (not modified)
+;    SIZE    : register: length in bytes (not modified)
+;
+; The name indicates the options. The name is of the form:
+; simd_load_<VEC>_<SZ><ZERO>
+; where:
+; <VEC> is either "sse" or "avx"
+; <SZ> is either "15" or "16" and defines largest value of SIZE
+; <ZERO> is blank or "_1". If "_1" then the min SIZE is 1 (otherwise 0)
+;
+; For example:
+; simd_load_sse_16		: SSE, 0 <= size <= 16
+; simd_load_avx_15_1	        : AVX, 1 <= size <= 15
+
+%macro simd_load_sse_15_1 3
+        __simd_load %1,%2,%3,0,0,SSE
+%endm
+%macro simd_load_sse_15 3
+        __simd_load %1,%2,%3,1,0,SSE
+%endm
+%macro simd_load_sse_16_1 3
+        __simd_load %1,%2,%3,0,1,SSE
+%endm
+%macro simd_load_sse_16 3
+        __simd_load %1,%2,%3,1,1,SSE
+%endm
+
+%macro simd_load_avx_15_1 3
+        __simd_load %1,%2,%3,0,0,AVX
+%endm
+%macro simd_load_avx_15 3
+        __simd_load %1,%2,%3,1,0,AVX
+%endm
+%macro simd_load_avx_16_1 3
+        __simd_load %1,%2,%3,0,1,AVX
+%endm
+%macro simd_load_avx_16 3
+        __simd_load %1,%2,%3,1,1,AVX
+%endm
+
+%macro __simd_load 6
+%define %%DST       %1    ; [out] destination XMM register
+%define %%SRC       %2    ; [in] pointer to src data
+%define %%SIZE      %3    ; [in] length in bytes (0-16 bytes)
+%define %%ACCEPT_0  %4    ; 0 = min length = 1, 1 = min length = 0
+%define %%ACCEPT_16 %5    ; 0 = max length = 15 , 1 = max length = 16
+%define %%SIMDTYPE  %6    ; "SSE" or "AVX"
+
+%ifidn %%SIMDTYPE, SSE
+ %define %%MOVDQU movdqu
+ %define %%PINSRB pinsrb
+ %define %%PINSRQ pinsrq
+ %define %%PXOR   pxor
+%else
+ %define %%MOVDQU vmovdqu
+ %define %%PINSRB vpinsrb
+ %define %%PINSRQ vpinsrq
+ %define %%PXOR   vpxor
+%endif
+
+%if (%%ACCEPT_16 != 0)
+        test    %%SIZE, 16
+        jne     %%_skip_16
+        %%MOVDQU %%DST, [%%SRC]
+        jmp     %%end_load
+
+%%_skip_16:
+%endif
+        %%PXOR  %%DST, %%DST ; clear XMM register
+%if (%%ACCEPT_0 != 0)
+        or      %%SIZE, %%SIZE
+        je      %%end_load
+%endif
+        cmp     %%SIZE, 1
+        je      %%_size_1
+        cmp     %%SIZE, 2
+        je      %%_size_2
+        cmp     %%SIZE, 3
+        je      %%_size_3
+        cmp     %%SIZE, 4
+        je      %%_size_4
+        cmp     %%SIZE, 5
+        je      %%_size_5
+        cmp     %%SIZE, 6
+        je      %%_size_6
+        cmp     %%SIZE, 7
+        je      %%_size_7
+        cmp     %%SIZE, 8
+        je      %%_size_8
+        cmp     %%SIZE, 9
+        je      %%_size_9
+        cmp     %%SIZE, 10
+        je      %%_size_10
+        cmp     %%SIZE, 11
+        je      %%_size_11
+        cmp     %%SIZE, 12
+        je      %%_size_12
+        cmp     %%SIZE, 13
+        je      %%_size_13
+        cmp     %%SIZE, 14
+        je      %%_size_14
+
+%%_size_15:
+        %%PINSRB %%DST, [%%SRC + 14], 14
+%%_size_14:
+        %%PINSRB %%DST, [%%SRC + 13], 13
+%%_size_13:
+        %%PINSRB %%DST, [%%SRC + 12], 12
+%%_size_12:
+        %%PINSRB %%DST, [%%SRC + 11], 11
+%%_size_11:
+        %%PINSRB %%DST, [%%SRC + 10], 10
+%%_size_10:
+        %%PINSRB %%DST, [%%SRC + 9], 9
+%%_size_9:
+        %%PINSRB %%DST, [%%SRC + 8], 8
+%%_size_8:
+        %%PINSRQ %%DST, [%%SRC], 0
+        jmp    %%end_load
+%%_size_7:
+        %%PINSRB %%DST, [%%SRC + 6], 6
+%%_size_6:
+        %%PINSRB %%DST, [%%SRC + 5], 5
+%%_size_5:
+        %%PINSRB %%DST, [%%SRC + 4], 4
+%%_size_4:
+        %%PINSRB %%DST, [%%SRC + 3], 3
+%%_size_3:
+        %%PINSRB %%DST, [%%SRC + 2], 2
+%%_size_2:
+        %%PINSRB %%DST, [%%SRC + 1], 1
+%%_size_1:
+        %%PINSRB %%DST, [%%SRC + 0], 0
+%%end_load:
+%endm
 %endif ; ifndef __MEMCPY_ASM__
