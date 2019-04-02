@@ -486,7 +486,7 @@ uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 uint32_t iter_scale = ITER_SCALE_LONG;
 
 /* Read unhalted cycles */
-__forceinline uint64_t read_cycles(uint32_t core)
+__forceinline uint64_t read_cycles(const uint32_t core)
 {
         uint64_t val = 0;
 
@@ -583,7 +583,7 @@ static int set_affinity(const int cpu)
 }
 
 /* Start counting unhalted cycles */
-static int start_cycles_ctr(uint32_t core)
+static int start_cycles_ctr(const uint32_t core)
 {
         int ret;
 
@@ -685,7 +685,7 @@ static void free_mem(void)
 }
 
 /* Input buffer initialization */
-static void init_buf(enum cache_type_e ctype)
+static void init_buf(const enum cache_type_e ctype)
 {
         const size_t bufs_size = BUFSIZE + REGION_SIZE;
         const size_t keys_size = NUM_OFFSETS * KEYS_PER_JOB * sizeof(uint128_t);
@@ -744,7 +744,8 @@ static void init_buf(enum cache_type_e ctype)
 /* This function translates enum test_ciper_mode_e to be used by ipsec_mb
  * library
  */
-static JOB_CIPHER_MODE translate_cipher_mode(enum test_cipher_mode_e test_mode)
+static JOB_CIPHER_MODE
+translate_cipher_mode(const enum test_cipher_mode_e test_mode)
 {
         JOB_CIPHER_MODE c_mode = NULL_CIPHER;
 
