@@ -52,9 +52,10 @@
 #include "msr.h"
 
 #define BUFSIZE (512 * 1024 * 1024)
+#define JOB_SIZE_TOP (16 * 1024)
 #define JOB_SIZE_MAX (2 * 1024)
 #define JOB_SIZE_STEP 16
-#define REGION_SIZE (JOB_SIZE_MAX + 2048)
+#define REGION_SIZE (JOB_SIZE_TOP + 2048)
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
 #define NUM_RUNS 16
 #define KEYS_PER_JOB 15
@@ -722,12 +723,12 @@ static void init_buf(enum cache_type_e ctype)
                 }
                 index_limit = NUM_OFFSETS;
         } else {/* WARM */
-                for (i = 0; i < NUM_OFFSETS; i += 2) {
-                        offsets[i]   = (2 * i + 0) * REGION_SIZE +
+                for (i = 0; (i + 1) < NUM_OFFSETS; i += 2) {
+                        offsets[i] = ((i + 0) * REGION_SIZE) +
                                 (rand() & 0x3C0);
-                        offsets[i + 1] = (2 * i + 1) * REGION_SIZE +
+                        offsets[i + 1] = ((i + 1) * REGION_SIZE) +
                                 (rand() & 0x3C0);
-                        key_idxs[i]  = (2 * i + 0) * KEYS_PER_JOB;
+                        key_idxs[i]  = (i + 0) * KEYS_PER_JOB;
                 }
                 index_limit = 8;
         }
@@ -1897,11 +1898,11 @@ int main(int argc, char *argv[])
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &job_size_start,
                                              sizeof(job_size_start));
-                        if (job_size_start > JOB_SIZE_MAX) {
+                        if (job_size_start > JOB_SIZE_TOP) {
                                 fprintf(stderr,
                                         "Invalid job size %u (max %u)!\n",
                                         (unsigned) job_size_start,
-                                        JOB_SIZE_MAX);
+                                        JOB_SIZE_TOP);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--aad-size") == 0) {
