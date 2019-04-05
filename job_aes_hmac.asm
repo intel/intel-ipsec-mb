@@ -74,6 +74,7 @@ START_FIELDS	; AES CMAC Specific Fields
 FIELD	__key_expanded,			8,	8	; ptr to exp keys
 FIELD	__skey1,			8,	8	; ptr to subkey 1
 FIELD	__skey2,			8,	8	; ptr to subkey 2
+FIELD   __msg_len_to_hash_in_bits,      8,      8       ; msg len
 END_FIELDS
 
 %assign _AES_CMAC_spec_fields_size	_FIELD_OFFSET
@@ -124,16 +125,17 @@ END_FIELDS
 %assign _JOB_AES_HMAC_size	_FIELD_OFFSET
 %assign _JOB_AES_HMAC_align	_STRUCT_ALIGN
 
-%assign _auth_key_xor_ipad	_u + __auth_key_xor_ipad
-%assign _auth_key_xor_opad	_u + __auth_key_xor_opad
-%assign _k1_expanded		_u + __k1_expanded
-%assign _k2			_u + __k2
-%assign _k3			_u + __k3
-%assign _cbcmac_aad	        _u + __aad
-%assign _cbcmac_aad_len	        _u + __aad_len
-%assign _key_expanded		_u + __key_expanded
-%assign _skey1			_u + __skey1
-%assign _skey2			_u + __skey2
-%assign _gcm_aad	        _u + __gcm_aad
-%assign _gcm_aad_len	        _u + __gcm_aad_len
+%assign _auth_key_xor_ipad              _u + __auth_key_xor_ipad
+%assign _auth_key_xor_opad	        _u + __auth_key_xor_opad
+%assign _k1_expanded		        _u + __k1_expanded
+%assign _k2			        _u + __k2
+%assign _k3			        _u + __k3
+%assign _cbcmac_aad	                _u + __aad
+%assign _cbcmac_aad_len	                _u + __aad_len
+%assign _key_expanded		        _u + __key_expanded
+%assign _skey1			        _u + __skey1
+%assign _skey2			        _u + __skey2
+%assign _cmac_msg_len_to_hash_in_bits   _u + __msg_len_to_hash_in_bits
+%assign _gcm_aad	                _u + __gcm_aad
+%assign _gcm_aad_len	                _u + __gcm_aad_len
 
