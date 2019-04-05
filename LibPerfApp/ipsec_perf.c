@@ -97,8 +97,8 @@
 #define CIPHER_MODES_CCM 1	/* CCM */
 #define CIPHER_MODES_3DES 1	/* 3DES */
 #define DIRECTIONS 2		/* ENC, DEC */
-#define HASH_ALGS_AES 9		/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
-                                   MD5, NULL_HASH, CMAC */
+#define HASH_ALGS_AES 10	/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
+                                   MD5, NULL_HASH, CMAC, CMAC_BITLEN */
 #define HASH_ALGS_DOCSIS 1	/* NULL_HASH */
 #define HASH_ALGS_GCM 1		/* GCM */
 #define HASH_ALGS_CCM 1		/* CCM */
@@ -176,6 +176,7 @@ enum test_hash_alg_e {
         TEST_XCBC,
         TEST_MD5,
         TEST_HASH_CMAC, /* added here to be included in AES tests */
+        TEST_HASH_CMAC_BITLEN,
         TEST_NULL_HASH,
         TEST_HASH_GCM, /* Additional field used by GCM, not translated */
         TEST_CUSTOM_HASH, /* unused */
@@ -389,7 +390,14 @@ struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = TEST_NULL_HASH
                 }
-        }
+        },
+        {
+                .name = "aes-cmac-bitlen",
+                .values.job_params = {
+                        .hash_alg = TEST_HASH_CMAC_BITLEN
+                }
+        },
+
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -452,10 +460,28 @@ enum cache_type_e {
 };
 
 enum cache_type_e cache_type = WARM;
-/* As enum: SHA1, SHA224, SHA256, SHA384, SHA512,
-   XCBC, MD5, NULL, GMAC, CUSTOM, CCM, CMAC */
-const uint32_t auth_tag_length_bytes[12] = {
-        12, 14, 16, 24, 32, 12, 12, 0, 8, 0, 16, 16
+
+const uint32_t auth_tag_length_bytes[18] = {
+                12, /* SHA1 */
+                14, /* SHA_224 */
+                16, /* SHA_256 */
+                24, /* SHA_384 */
+                32, /* SHA_512 */
+                12, /* AES_XCBC */
+                12, /* MD5 */
+                0,  /* NULL_HASH */
+#ifndef NO_GCM
+                16, /* AES_GMAC */
+#endif
+                0,  /* CUSTOM HASH */
+                0,  /* AES_CCM */
+                16, /* AES_CMAC */
+                20, /* PLAIN_SHA1 */
+                28, /* PLAIN_SHA_224 */
+                32, /* PLAIN_SHA_256 */
+                48, /* PLAIN_SHA_384 */
+                64, /* PLAIN_SHA_512 */
+                4,  /* AES_CMAC_BITLEN (3GPP) */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -941,6 +967,14 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.CMAC._skey1 = k2;
                 job_template.u.CMAC._skey2 = k3;
                 job_template.hash_alg = AES_CMAC;
+                break;
+        case TEST_HASH_CMAC_BITLEN:
+                job_template.u.CMAC_BITLEN._key_expanded = k1_expanded;
+                job_template.u.CMAC_BITLEN._skey1 = k2;
+                job_template.u.CMAC_BITLEN._skey2 = k3;
+                job_template.u.CMAC_BITLEN.msg_len_to_hash_in_bits =
+                        (job_template.msg_len_to_hash_in_bytes * 8) - 4;
+                job_template.hash_alg = AES_CMAC_BITLEN;
                 break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
@@ -1474,9 +1508,10 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
         };
-        const char *h_alg_names[12] = {
+        const char *h_alg_names[13] = {
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
-                "MD5", "CMAC", "NULL_HASH", "GCM", "CUSTOM", "CCM"
+                "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "GCM", "CUSTOM",
+                "CCM"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
