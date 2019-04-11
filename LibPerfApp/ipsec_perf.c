@@ -52,14 +52,27 @@
 
 #include "msr.h"
 
+/* memory size for test buffers */
 #define BUFSIZE (512 * 1024 * 1024)
+/* maximum size of a test buffer */
 #define JOB_SIZE_TOP (16 * 1024)
+/* min size of a buffer when testing range of buffers */
 #define DEFAULT_JOB_SIZE_MIN 16
+/* max size of a buffer when testing range of buffers */
 #define DEFAULT_JOB_SIZE_MAX (2 * 1024)
+/* number of bytes to increase buffer size when testing range of buffers */
 #define DEFAULT_JOB_SIZE_STEP 16
-#define REGION_SIZE (JOB_SIZE_TOP + 2048)
+/* max offset applied to a buffer - this is to avoid collisions in L1 */
+#define MAX_BUFFER_OFFSET 4096
+/* max value of sha_size_incr */
+#define MAX_SHA_SIZE_INCR  128
+/* region size for one buffer rounded up to 4K page size */
+#define REGION_SIZE (((JOB_SIZE_TOP + (MAX_BUFFER_OFFSET + \
+                                       MAX_SHA_SIZE_INCR)) + 4095) & (~4095))
+/* number of test buffers */
 #define NUM_OFFSETS (BUFSIZE / REGION_SIZE)
 #define NUM_RUNS 16
+/* maximum number of 128-bit expanded keys */
 #define KEYS_PER_JOB 15
 
 #define AAD_SIZE_MAX JOB_SIZE_TOP
@@ -444,9 +457,7 @@ enum cache_type_e cache_type = WARM;
 const uint32_t auth_tag_length_bytes[12] = {
         12, 14, 16, 24, 32, 12, 12, 0, 8, 0, 16, 16
 };
-uint8_t *buf = NULL;
 uint32_t index_limit;
-uint128_t *keys = NULL;
 uint32_t key_idxs[NUM_OFFSETS];
 uint32_t offsets[NUM_OFFSETS];
 uint32_t sha_size_incr = 24;
@@ -667,8 +678,21 @@ static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
 }
 
 /* Freeing allocated memory */
-static void free_mem(void)
+static void free_mem(uint8_t **p_buffer, uint128_t **p_keys)
 {
+        uint128_t *keys = NULL;
+        uint8_t *buf = NULL;
+
+        if (p_keys != NULL) {
+                keys = *p_keys;
+                *p_keys = NULL;
+        }
+
+        if (p_buffer != NULL) {
+                buf = *p_buffer;
+                *p_buffer = NULL;
+        }
+
 #ifdef LINUX
         if (keys != NULL)
                 free(keys);
@@ -684,13 +708,58 @@ static void free_mem(void)
 #endif
 }
 
-/* Input buffer initialization */
-static void init_buf(const enum cache_type_e ctype)
+static const void *
+get_key_pointer(const uint32_t index, const uint128_t *p_keys)
 {
-        const size_t bufs_size = BUFSIZE + REGION_SIZE;
-        const size_t keys_size = NUM_OFFSETS * KEYS_PER_JOB * sizeof(uint128_t);
+        return (const void *) &p_keys[key_idxs[index]];
+}
+
+static uint8_t *get_src_buffer(const uint32_t index, uint8_t *p_buffer)
+{
+        return &p_buffer[offsets[index]];
+}
+
+static uint8_t *get_dst_buffer(const uint32_t index, uint8_t *p_buffer)
+{
+        return &p_buffer[offsets[index] + sha_size_incr];
+}
+
+static uint32_t get_next_index(uint32_t index)
+{
+        if (++index >= index_limit)
+                index = 0;
+        return index;
+}
+
+static void init_buf(void *pb, const size_t length)
+{
+        const size_t n = length / sizeof(uint64_t);
+        size_t i = 0;
+
+        if (pb == NULL)
+                return;
+
+        for (i = 0; i < n; i++)
+                ((uint64_t *)pb)[i] = (uint64_t) rand();
+}
+
+/*
+ * Packet and key memory allocation and initialization.
+ * init_offsets() needs to be called prior to that so that
+ * index_limit is set up accordingly to hot/cold selection.
+ */
+static void init_mem(uint8_t **p_buffer, uint128_t **p_keys)
+{
+        const size_t bufs_size = index_limit * REGION_SIZE;
+        const size_t keys_size = index_limit * KEYS_PER_JOB * sizeof(uint128_t);
         const size_t alignment = 64;
-        int i;
+        uint8_t *buf = NULL;
+        uint128_t *keys = NULL;
+
+        if (p_keys == NULL || p_buffer == NULL) {
+                fprintf(stderr, "Internal buffer allocation error!\n");
+                exit(EXIT_FAILURE);
+        }
 
 #ifdef LINUX
         buf = (uint8_t *) memalign(alignment, bufs_size);
@@ -709,39 +778,68 @@ static void init_buf(const enum cache_type_e ctype)
 #endif
         if (!keys) {
                 fprintf(stderr, "Could not allocate memory for keys!\n");
-                free_mem();
+                free_mem(&buf, &keys);
                 exit(EXIT_FAILURE);
         }
 
+        *p_keys = keys;
+        *p_buffer = buf;
+
+        init_buf(buf, bufs_size);
+        init_buf(keys, keys_size);
+}
+
+/*
+ * Initialize packet buffer and keys offsets from
+ * the start of the respective buffers
+ */
+static void init_offsets(const enum cache_type_e ctype)
+{
         if (ctype == COLD) {
+                uint32_t i;
+
                 for (i = 0; i < NUM_OFFSETS; i++) {
-                        offsets[i] = i * REGION_SIZE + (rand() & 0x3C0);
+                        offsets[i] = (i * REGION_SIZE) + (rand() & 0x3C0);
                         key_idxs[i] = i * KEYS_PER_JOB;
                 }
-                for (i = NUM_OFFSETS - 1; i >= 0; i--) {
-                        const uint64_t offset = (rand() * i) / RAND_MAX;
-                        uint32_t tmp_off = offsets[offset];
 
-                        offsets[offset] = offsets[i];
-                        offsets[i] = tmp_off;
-                        tmp_off = key_idxs[offset];
-                        key_idxs[offset] = key_idxs[i];
-                        key_idxs[i] = tmp_off;
+                /* swap the entries at random */
+                for (i = 0; i < NUM_OFFSETS; i++) {
+                        const uint32_t swap_idx = (rand() % NUM_OFFSETS);
+                        const uint32_t tmp_offset = offsets[swap_idx];
+                        const uint32_t tmp_keyidx = key_idxs[swap_idx];
+
+                        offsets[swap_idx] = offsets[i];
+                        key_idxs[swap_idx] = key_idxs[i];
+                        offsets[i] = tmp_offset;
+                        key_idxs[i] = tmp_keyidx;
                 }
+
                 index_limit = NUM_OFFSETS;
-        } else {/* WARM */
-                for (i = 0; (i + 1) < NUM_OFFSETS; i += 2) {
-                        offsets[i] = ((i + 0) * REGION_SIZE) +
-                                (rand() & 0x3C0);
-                        offsets[i + 1] = ((i + 1) * REGION_SIZE) +
-                                (rand() & 0x3C0);
-                        key_idxs[i]  = (i + 0) * KEYS_PER_JOB;
+        } else { /* WARM */
+                uint32_t i;
+
+                index_limit = 16;
+
+                for (i = 0; i < index_limit; i++) {
+                        /*
+                         * Each buffer starts at different offset from
+                         * start of the page.
+                         * The most optimum determined difference between
+                         * offsets is 4 cache lines.
+                         */
+                        const uint32_t offset_step = (4 * 64);
+                        const uint32_t L1_way_size = 4096;
+
+                        key_idxs[i] = i * KEYS_PER_JOB;
+                        offsets[i] = i * REGION_SIZE +
+                                ((i * offset_step) & (L1_way_size - 1));
                 }
-                index_limit = 8;
         }
 }
 
-/* This function translates enum test_ciper_mode_e to be used by ipsec_mb
+/*
+ * This function translates enum test_ciper_mode_e to be used by ipsec_mb
  * library
  */
 static JOB_CIPHER_MODE
@@ -789,7 +887,7 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
 /* Performs test using AES_HMAC or DOCSIS */
 static uint64_t
 do_test(MB_MGR *mb_mgr, struct params_s *params,
-        const uint32_t num_iter)
+        const uint32_t num_iter, uint8_t *p_buffer, uint128_t *p_keys)
 {
         JOB_AES_HMAC *job;
         JOB_AES_HMAC job_template;
@@ -916,30 +1014,29 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 *job = job_template;
 
-                job->src = buf + offsets[index];
-                job->dst = buf + offsets[index] + sha_size_incr;
+                job->src = get_src_buffer(index, p_buffer);
+                job->dst = get_dst_buffer(index, p_buffer);
                 if (job->cipher_mode == GCM) {
                         job->u.GCM.aad = job->src;
                 } else if (job->cipher_mode == CCM) {
                         job->u.CCM.aad = job->src;
                         job->aes_enc_key_expanded = job->aes_dec_key_expanded =
-                                (uint32_t *) &keys[key_idxs[index]];
+                                (const uint32_t *) get_key_pointer(index,
+                                                                   p_keys);
                 } else if (job->cipher_mode == DES3) {
                         static const void *ks_ptr[3];
 
                         ks_ptr[0] = ks_ptr[1] = ks_ptr[2] =
-                                &keys[key_idxs[index]];
+                                get_key_pointer(index, p_keys);
                         job->aes_enc_key_expanded =
                                 job->aes_dec_key_expanded = ks_ptr;
                 } else {
                         job->aes_enc_key_expanded = job->aes_dec_key_expanded =
-                                (uint32_t *) &keys[key_idxs[index]];
+                                (const uint32_t *) get_key_pointer(index,
+                                                                   p_keys);
                 }
 
-                index += 2;
-                if (index >= index_limit)
-                        index = 0;
-
+                index = get_next_index(index);
 #ifdef DEBUG
                 job = IMB_SUBMIT_JOB(mb_mgr);
 #else
@@ -975,7 +1072,8 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
 /* Performs test using GCM */
 static uint64_t
 do_test_gcm(struct params_s *params,
-            const uint32_t num_iter, MB_MGR *mb_mgr)
+            const uint32_t num_iter, MB_MGR *mb_mgr,
+            uint8_t *p_buffer, uint128_t *p_keys)
 {
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
         static DECLARE_ALIGNED(struct gcm_context_data gdata_ctx, 64);
@@ -992,7 +1090,7 @@ do_test_gcm(struct params_s *params,
         key = (uint8_t *) malloc(sizeof(uint8_t) * params->aes_key_size);
         if (!key) {
                 fprintf(stderr, "Could not malloc key\n");
-                free_mem();
+                free_mem(&p_buffer, &p_keys);
                 exit(EXIT_FAILURE);
         }
 
@@ -1000,7 +1098,7 @@ do_test_gcm(struct params_s *params,
         if (!aad) {
                 free(key);
                 fprintf(stderr, "Could not malloc AAD\n");
-                free_mem();
+                free_mem(&p_buffer, &p_keys);
                 exit(EXIT_FAILURE);
         }
 
@@ -1027,48 +1125,42 @@ do_test_gcm(struct params_s *params,
 
                 if (params->aes_key_size == AES_128_BYTES) {
                         for (i = 0; i < num_iter; i++) {
+                                uint8_t *pb = get_dst_buffer(index, p_buffer);
+
                                 IMB_AES128_GCM_ENC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
+                                                   pb,
+                                                   pb,
                                                    size_aes, iv,
                                                    aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
-                                index += 2;
-                                if (index >= index_limit)
-                                        index = 0;
+                                index = get_next_index(index);
                         }
                 } else if (params->aes_key_size == AES_192_BYTES) {
                         for (i = 0; i < num_iter; i++) {
+                                uint8_t *pb = get_dst_buffer(index, p_buffer);
+
                                 IMB_AES192_GCM_ENC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
+                                                   pb,
+                                                   pb,
                                                    size_aes, iv,
                                                    aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
-                                index += 2;
-                                if (index >= index_limit)
-                                        index = 0;
+                                index = get_next_index(index);
                         }
                 } else { /* 256 */
                         for (i = 0; i < num_iter; i++) {
+                                uint8_t *pb = get_dst_buffer(index, p_buffer);
+
                                 IMB_AES256_GCM_ENC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
+                                                   pb,
+                                                   pb,
                                                    size_aes, iv,
                                                    aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
-                                index += 2;
-                                if (index >= index_limit)
-                                        index = 0;
+                                index = get_next_index(index);
                         }
                 }
 #ifndef _WIN32
@@ -1088,48 +1180,42 @@ do_test_gcm(struct params_s *params,
 
                 if (params->aes_key_size == AES_128_BYTES) {
                         for (i = 0; i < num_iter; i++) {
+                                uint8_t *pb = get_dst_buffer(index, p_buffer);
+
                                 IMB_AES128_GCM_DEC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
+                                                   pb,
+                                                   pb,
                                                    size_aes, iv,
                                                    aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
-                                index += 2;
-                                if (index >= index_limit)
-                                        index = 0;
+                                index = get_next_index(index);
                         }
                 } else if (params->aes_key_size == AES_192_BYTES) {
                         for (i = 0; i < num_iter; i++) {
+                                uint8_t *pb = get_dst_buffer(index, p_buffer);
+
                                 IMB_AES192_GCM_DEC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
+                                                   pb,
+                                                   pb,
                                                    size_aes, iv,
                                                    aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
-                                index += 2;
-                                if (index >= index_limit)
-                                        index = 0;
+                                index = get_next_index(index);
                         }
                 } else { /* 256 */
                         for (i = 0; i < num_iter; i++) {
+                                uint8_t *pb = get_dst_buffer(index, p_buffer);
+
                                 IMB_AES256_GCM_DEC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
-                                                   buf + offsets[index]
-                                                   + sha_size_incr,
+                                                   pb,
+                                                   pb,
                                                    size_aes, iv,
                                                    aad, params->aad_size,
                                                    auth_tag, sizeof(auth_tag));
-                                index += 2;
-                                if (index >= index_limit)
-                                        index = 0;
+                                index = get_next_index(index);
                         }
                 }
 #ifndef _WIN32
@@ -1147,9 +1233,11 @@ do_test_gcm(struct params_s *params,
 }
 
 /* Computes mean of set of times after dropping bottom and top quarters */
-static uint64_t mean_median(uint64_t *array, uint32_t size)
+static uint64_t
+mean_median(uint64_t *array, uint32_t size,
+            uint8_t *p_buffer, uint128_t *p_keys)
 {
-        uint32_t quarter = size / 4;
+        const uint32_t quarter = size / 4;
         uint32_t i;
         uint64_t sum;
 
@@ -1169,8 +1257,8 @@ static uint64_t mean_median(uint64_t *array, uint32_t size)
 
 
         if ((size == 0) || (size & 0x80000000)) {
-                fprintf(stderr, "not enough data points\n");
-                free_mem();
+                fprintf(stderr, "Not enough data points!\n");
+                free_mem(&p_buffer, &p_keys);
                 exit(EXIT_FAILURE);
         }
         sum = 0;
@@ -1184,7 +1272,8 @@ static uint64_t mean_median(uint64_t *array, uint32_t size)
 /* Runs test for each buffer size and stores averaged execution time */
 static void
 process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
-                struct variant_s *variant_ptr, const uint32_t run)
+                struct variant_s *variant_ptr, const uint32_t run,
+                uint8_t *p_buffer, uint128_t *p_keys)
 {
         const uint32_t sizes = params->num_sizes;
         uint64_t *times = &variant_ptr->avg_times[run];
@@ -1219,14 +1308,18 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 params->size_aes = size_aes;
                 if (params->cipher_mode == TEST_GCM && (!use_gcm_job_api)) {
                         if (job_iter == 0)
-                                *times = do_test_gcm(params, 2 * num_iter, mgr);
+                                *times = do_test_gcm(params, 2 * num_iter, mgr,
+                                                     p_buffer, p_keys);
                         else
-                                *times = do_test_gcm(params, job_iter, mgr);
+                                *times = do_test_gcm(params, job_iter, mgr,
+                                                     p_buffer, p_keys);
                 } else {
                         if (job_iter == 0)
-                                *times = do_test(mgr, params, num_iter);
+                                *times = do_test(mgr, params, num_iter,
+                                                 p_buffer, p_keys);
                         else
-                                *times = do_test(mgr, params, job_iter);
+                                *times = do_test(mgr, params, job_iter,
+                                                 p_buffer, p_keys);
                 }
                 times += NUM_RUNS;
         }
@@ -1239,7 +1332,7 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 static void
 do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
             const uint32_t run, struct variant_s **variant_ptr,
-            uint32_t *variant)
+            uint32_t *variant, uint8_t *p_buffer, uint128_t *p_keys)
 {
         uint32_t hash_alg;
         uint32_t h_start = TEST_SHA1;
@@ -1292,7 +1385,8 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 params->cipher_mode = (enum test_cipher_mode_e) c_mode;
                 for (hash_alg = h_start; hash_alg <= h_end; hash_alg++) {
                         params->hash_alg = (enum test_hash_alg_e) hash_alg;
-                        process_variant(mgr, arch, params, *variant_ptr, run);
+                        process_variant(mgr, arch, params, *variant_ptr, run,
+                                        p_buffer, p_keys);
                         (*variant)++;
                         (*variant_ptr)++;
                 }
@@ -1303,7 +1397,7 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 static void
 run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
              const uint32_t run, struct variant_s **variant_ptr,
-             uint32_t *variant)
+             uint32_t *variant, uint8_t *p_buffer, uint128_t *p_keys)
 {
         uint32_t dir;
         uint32_t k; /* Key size */
@@ -1336,7 +1430,8 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 params->aes_key_size = custom_job_params.aes_key_size;
                 params->cipher_mode = custom_job_params.cipher_mode;
                 params->hash_alg = custom_job_params.hash_alg;
-                do_variants(mgr, arch, params, run, variant_ptr, variant);
+                do_variants(mgr, arch, params, run, variant_ptr,
+                            variant, p_buffer, p_keys);
                 return;
         }
 
@@ -1345,14 +1440,15 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 for (k = AES_128_BYTES; k <= limit; k += 8) {
                         params->aes_key_size = k;
                         do_variants(mgr, arch, params, run, variant_ptr,
-                                    variant);
+                                    variant, p_buffer, p_keys);
                 }
         }
 }
 
 /* Generates output containing averaged times for each test variant */
-static void print_times(struct variant_s *variant_list, struct params_s *params,
-                        const uint32_t total_variants)
+static void
+print_times(struct variant_s *variant_list, struct params_s *params,
+            const uint32_t total_variants, uint8_t *p_buffer, uint128_t *p_keys)
 {
         const uint32_t sizes = params->num_sizes;
         uint32_t col;
@@ -1415,7 +1511,8 @@ static void print_times(struct variant_s *variant_list, struct params_s *params,
                         uint64_t *time_ptr =
                                 &variant_list[col].avg_times[sz * NUM_RUNS];
                         const unsigned long long val =
-                                mean_median(time_ptr, NUM_RUNS);
+                                mean_median(time_ptr, NUM_RUNS,
+                                            p_buffer, p_keys);
 
                         printf("\t%llu", val);
                 }
@@ -1445,6 +1542,8 @@ run_tests(void *arg)
         const uint32_t min_size = job_sizes[RANGE_MIN];
         const uint32_t max_size = job_sizes[RANGE_MAX];
         const uint32_t step_size = job_sizes[RANGE_STEP];
+        uint8_t *buf = NULL;
+        uint128_t *keys = NULL;
 
         p_mgr = info->p_mgr;
 
@@ -1483,6 +1582,8 @@ run_tests(void *arg)
                                 "cycles\n", params.core,
                                 (unsigned long)rd_cycles_cost);
         }
+
+        init_mem(&buf, &keys);
 
         for (type = TTYPE_AES_HMAC; type < NUM_TTYPES; type++) {
                 if (test_types[type] == 0)
@@ -1573,12 +1674,12 @@ run_tests(void *arg)
                                 if (archs[arch] == 0)
                                         continue;
                                 run_dir_test(p_mgr, arch, &params, run,
-                                             &variant_ptr, &variant);
+                                             &variant_ptr, &variant, buf, keys);
                         }
                 } /* end for type */
         } /* end for run */
         if (info->print_info == 1 && iter_scale != ITER_SCALE_SMOKE)
-                print_times(variant_list, &params, total_variants);
+                print_times(variant_list, &params, total_variants, buf, keys);
 
 exit:
         if (variant_list != NULL) {
@@ -1587,6 +1688,7 @@ exit:
                         free(variant_list[i].avg_times);
                 free(variant_list);
         }
+        free_mem(&buf, &keys);
         free_mb_mgr(p_mgr);
 #ifndef _WIN32
         return NULL;
@@ -1597,7 +1699,7 @@ exit:
 exit_failure:
         if (variant_list != NULL)
                 free(variant_list);
-        free_mem();
+        free_mem(&buf, &keys);
         free_mb_mgr(p_mgr);
         exit(EXIT_FAILURE);
 }
@@ -1857,7 +1959,6 @@ int main(int argc, char *argv[])
         unsigned int hash_algo_set = 0;
         unsigned int aead_algo_set = 0;
         unsigned int cipher_dir_set = 0;
-
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
 #else
@@ -2121,9 +2222,9 @@ int main(int argc, char *argv[])
         }
 
         memset(t_info, 0, sizeof(t_info));
+        init_offsets(cache_type);
 
         srand(ITER_SCALE_LONG + ITER_SCALE_SHORT + ITER_SCALE_SMOKE);
-        init_buf(cache_type);
 
         if (num_t > 1) {
                 uint32_t n;
@@ -2141,7 +2242,6 @@ int main(int argc, char *argv[])
                                 fprintf(stderr, "Failed to allocate MB_MGR "
                                         "structure for thread %u!\n",
                                         (unsigned)(n + 1));
-                                free_mem();
                                 exit(EXIT_FAILURE);
                         }
 #ifdef _WIN32
@@ -2163,7 +2263,6 @@ int main(int argc, char *argv[])
         if (thread_info_p->p_mgr == NULL) {
                 fprintf(stderr, "Failed to allocate MB_MGR "
                         "structure for main thread!\n");
-                free_mem();
                 exit(EXIT_FAILURE);
         }
         if (core_mask) {
@@ -2191,8 +2290,6 @@ int main(int argc, char *argv[])
 
         if (use_unhalted_cycles)
                 machine_fini();
-
-        free_mem();
 
         return EXIT_SUCCESS;
 }
