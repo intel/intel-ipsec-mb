@@ -311,7 +311,6 @@ typedef struct JOB_AES_HMAC {
         JOB_STS status;
         JOB_CIPHER_MODE cipher_mode; /* CBC, CNTR, DES, GCM etc. */
         JOB_CIPHER_DIRECTION cipher_direction; /* Encrypt/decrypt */
-        /* Ignored as the direction is implied by the chain _order field. */
         JOB_HASH_ALG hash_alg; /* SHA-1 or others... */
         JOB_CHAIN_ORDER chain_order; /* CIPHER_HASH or HASH_CIPHER */
 
