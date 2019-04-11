@@ -447,7 +447,6 @@ const uint32_t auth_tag_length_bytes[12] = {
 uint8_t *buf = NULL;
 uint32_t index_limit;
 uint128_t *keys = NULL;
-uint64_t *offset_ptr = NULL;
 uint32_t key_idxs[NUM_OFFSETS];
 uint32_t offsets[NUM_OFFSETS];
 uint32_t sha_size_incr = 24;
@@ -671,14 +670,14 @@ static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
 static void free_mem(void)
 {
 #ifdef LINUX
-        if (offset_ptr != NULL)
-                free(offset_ptr);
+        if (keys != NULL)
+                free(keys);
 
         if (buf != NULL)
                 free(buf);
 #else
-        if (offset_ptr != NULL)
-                _aligned_free(offset_ptr);
+        if (keys != NULL)
+                _aligned_free(keys);
 
         if (buf != NULL)
                 _aligned_free(buf);
@@ -691,7 +690,6 @@ static void init_buf(enum cache_type_e ctype)
         const size_t bufs_size = BUFSIZE + REGION_SIZE;
         const size_t keys_size = NUM_OFFSETS * KEYS_PER_JOB * sizeof(uint128_t);
         const size_t alignment = 64;
-        uint32_t tmp_off;
         int i;
 
 #ifdef LINUX
@@ -705,17 +703,15 @@ static void init_buf(enum cache_type_e ctype)
         }
 
 #ifdef LINUX
-        offset_ptr = (uint64_t *) memalign(alignment, keys_size);
+        keys = (uint128_t *) memalign(alignment, keys_size);
 #else
-        offset_ptr = (uint64_t *) _aligned_malloc(keys_size, alignment);
+        keys = (uint128_t *) _aligned_malloc(keys_size, alignment);
 #endif
-        if (!offset_ptr) {
-                fprintf(stderr, "Could not malloc keys\n");
+        if (!keys) {
+                fprintf(stderr, "Could not allocate memory for keys!\n");
                 free_mem();
                 exit(EXIT_FAILURE);
         }
-
-        keys = (uint128_t *) offset_ptr;
 
         if (ctype == COLD) {
                 for (i = 0; i < NUM_OFFSETS; i++) {
@@ -724,8 +720,8 @@ static void init_buf(enum cache_type_e ctype)
                 }
                 for (i = NUM_OFFSETS - 1; i >= 0; i--) {
                         const uint64_t offset = (rand() * i) / RAND_MAX;
+                        uint32_t tmp_off = offsets[offset];
 
-                        tmp_off = offsets[offset];
                         offsets[offset] = offsets[i];
                         offsets[i] = tmp_off;
                         tmp_off = key_idxs[offset];
