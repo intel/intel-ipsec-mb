@@ -31,6 +31,7 @@
 ;;; Tables used to insert word into a SIMD register
 extern len_shift_tab
 extern len_mask_tab
+extern shift_tab_16
 
 ;;; Table to do 0x80 byte shift for padding prefix
 extern padding_0x80_tab16
@@ -111,5 +112,52 @@ extern padding_0x80_tab16
         vmovdqa [%%mem_addr + %%offset*2], %%tmp_simd1
         or      %%idx, %%offset ; reset offset
 %endmacro
+
+;;; PSLB_COMMON shift bytes 128 bit SIMD register
+%macro PSLB_COMMON 6
+
+%define %%type          %1 ; [in] instruction type - sse or avx
+%define %%dir           %2 ; [in] shift direction - left or right
+%define %%reg           %3 ; [in/out] XMM reg to shift bytes
+%define %%num           %4 ; [in] GP reg containing number of bytes to shift
+%define %%shuf_tab      %5 ; [out] XMM reg to store shuffle table
+%define %%tmp_gp        %6 ; [clobbered] GP reg to clobber
+
+        ;; load shift table into %%shuf_tab
+        lea     %%tmp_gp, [rel shift_tab_16 + 16]
+%ifidn %%dir, left
+        sub     %%tmp_gp, %%num
+%else
+        add     %%tmp_gp, %%num
+%endif
+
+%ifidn  %%type, sse
+        movdqu  %%shuf_tab, [%%tmp_gp]
+        pshufb  %%reg, %%shuf_tab
+%else
+        vmovdqu %%shuf_tab, [%%tmp_gp]
+        vpshufb %%reg, %%shuf_tab
+%endif
+%endmacro
+
+;;; Call SSE left shift macro
+%macro XPSLLB 4
+        PSLB_COMMON sse, left, %1,%2,%3,%4
+%endm
+
+;;; Call SSE right shift macro
+%macro XPSRLB 4
+        PSLB_COMMON sse, right, %1,%2,%3,%4
+%endm
+
+;;; Call AVX left shift macro
+%macro XVPSLLB 4
+        PSLB_COMMON avx, left, %1,%2,%3,%4
+%endm
+
+;;; Call AVX right shift macro
+%macro XVPSRLB 4
+        PSLB_COMMON avx, right, %1,%2,%3,%4
+%endm
 
 %endif ; end ifndef _CONST_INC_
