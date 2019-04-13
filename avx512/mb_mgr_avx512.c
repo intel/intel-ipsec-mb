@@ -105,6 +105,9 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 #define AES_CNTR_256       aes_cntr_256_avx
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
 
+#define SUBMIT_JOB_PON_ENC submit_job_pon_enc_avx
+#define SUBMIT_JOB_PON_DEC submit_job_pon_dec_avx
+
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx
 

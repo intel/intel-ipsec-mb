@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012-2018, Intel Corporation
+# Copyright (c) 2012-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -155,6 +155,7 @@ asm_noaesni_lib_objs := \
 	aes192_cntr_by4_sse_no_aesni.o \
 	aes256_cntr_by4_sse_no_aesni.o \
 	aes128_cntr_ccm_by4_sse_no_aesni.o \
+	pon_sse_no_aesni.o \
 	aes_cfb_128_sse_no_aesni.o \
 	aes128_cbc_mac_x4_no_aesni.o \
 	aes_xcbc_mac_128_x4_no_aesni.o \
@@ -179,6 +180,7 @@ asm_sse_lib_objs := \
 	aes_cbc_enc_128_x4.o \
 	aes_cbc_enc_192_x4.o \
 	aes_cbc_enc_256_x4.o \
+	pon_sse.o \
 	aes128_cntr_by4_sse.o \
 	aes192_cntr_by4_sse.o \
 	aes256_cntr_by4_sse.o \
@@ -236,6 +238,7 @@ asm_avx_lib_objs := \
 	aes128_cbc_dec_by8_avx.o \
 	aes192_cbc_dec_by8_avx.o \
 	aes256_cbc_dec_by8_avx.o \
+	pon_avx.o \
 	aes128_cntr_by8_avx.o \
 	aes192_cntr_by8_avx.o \
 	aes256_cntr_by8_avx.o \

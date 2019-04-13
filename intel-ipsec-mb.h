@@ -188,7 +188,8 @@ typedef enum {
         DES,
         DOCSIS_DES,
         CCM,
-        DES3
+        DES3,
+        PON_AES_CNTR
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -217,6 +218,7 @@ typedef enum {
         PLAIN_SHA_384,   /* SHA384 */
         PLAIN_SHA_512,   /* SHA512 */
         AES_CMAC_BITLEN, /* 128-EIA2 (3GPP) */
+        PON_CRC_BIP
 } JOB_HASH_ALG;
 
 typedef enum {

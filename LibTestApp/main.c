@@ -1,5 +1,5 @@
 /*****************************************************************************
- Copyright (c) 2012-2018, Intel Corporation
+ Copyright (c) 2012-2019, Intel Corporation
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -46,6 +46,7 @@ extern int aes_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int sha_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int chained_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+extern int pon_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -275,6 +276,7 @@ main(int argc, char **argv)
                 errors += known_answer_test(p_mgr);
                 errors += do_test(p_mgr);
                 errors += ctr_test(atype, p_mgr);
+                errors += pon_test(atype, p_mgr);
                 if (do_gcm)
                         errors += gcm_test(p_mgr);
                 errors += customop_test(p_mgr);

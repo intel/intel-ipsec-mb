@@ -96,6 +96,7 @@
 #define CIPHER_MODES_GCM 1	/* GCM */
 #define CIPHER_MODES_CCM 1	/* CCM */
 #define CIPHER_MODES_3DES 1	/* 3DES */
+#define CIPHER_MODES_PON 1	/* PON */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 10	/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
                                    MD5, NULL_HASH, CMAC, CMAC_BITLEN */
@@ -104,12 +105,14 @@
 #define HASH_ALGS_CCM 1		/* CCM */
 #define HASH_ALGS_DES 1		/* NULL_HASH for DES */
 #define HASH_ALGS_3DES 1	/* NULL_HASH for 3DES */
+#define HASH_ALGS_PON 1	        /* CRC32/BIP for PON */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
 #define KEY_SIZES_DOCSIS 1	/* 16 or 8 */
 #define KEY_SIZES_GCM 3		/* 16, 24, 32 */
 #define KEY_SIZES_CCM 1		/* 16 */
 #define KEY_SIZES_DES 1		/* 8 */
 #define KEY_SIZES_3DES 1	/* 8 x 3 */
+#define KEY_SIZES_PON 1		/* 16 */
 
 #define IA32_MSR_FIXED_CTR_CTRL      0x38D
 #define IA32_MSR_PERF_GLOBAL_CTR     0x38F
@@ -130,6 +133,8 @@
                                HASH_ALGS_DES * KEY_SIZES_DES)
 #define VARIANTS_PER_ARCH_3DES (CIPHER_MODES_3DES * DIRECTIONS *  \
                                 HASH_ALGS_3DES * KEY_SIZES_3DES)
+#define VARIANTS_PER_ARCH_PON (CIPHER_MODES_PON * DIRECTIONS *  \
+                                HASH_ALGS_PON * KEY_SIZES_PON)
 
 enum arch_type_e {
         ARCH_SSE = 0,
@@ -146,6 +151,7 @@ enum test_type_e {
         TTYPE_AES_CCM,
         TTYPE_AES_DES,
         TTYPE_AES_3DES,
+        TTYPE_PON,
         TTYPE_CUSTOM,
         NUM_TTYPES
 };
@@ -164,6 +170,7 @@ enum test_cipher_mode_e {
         TEST_CCM,
         TEST_DES,
         TEST_3DES,
+        TEST_PON_CNTR,
 };
 
 /* This enum will be mostly translated to JOB_HASH_ALG */
@@ -180,7 +187,8 @@ enum test_hash_alg_e {
         TEST_NULL_HASH,
         TEST_HASH_GCM, /* Additional field used by GCM, not translated */
         TEST_CUSTOM_HASH, /* unused */
-        TEST_HASH_CCM
+        TEST_HASH_CCM,
+        TEST_PON_CRC_BIP,
 };
 
 /* Struct storing cipher parameters */
@@ -397,7 +405,6 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_HASH_CMAC_BITLEN
                 }
         },
-
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -432,7 +439,15 @@ struct str_value_mapping aead_algo_str_map[] = {
                         .hash_alg = TEST_HASH_CCM,
                         .aes_key_size = AES_128_BYTES
                 }
-        }
+        },
+        {
+                .name = "pon-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_PON_CNTR,
+                        .hash_alg = TEST_PON_CRC_BIP,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
 };
 
 struct str_value_mapping cipher_dir_str_map[] = {
@@ -461,7 +476,7 @@ enum cache_type_e {
 
 enum cache_type_e cache_type = WARM;
 
-const uint32_t auth_tag_length_bytes[18] = {
+const uint32_t auth_tag_length_bytes[19] = {
                 12, /* SHA1 */
                 14, /* SHA_224 */
                 16, /* SHA_256 */
@@ -482,6 +497,7 @@ const uint32_t auth_tag_length_bytes[18] = {
                 48, /* PLAIN_SHA_384 */
                 64, /* PLAIN_SHA_512 */
                 4,  /* AES_CMAC_BITLEN (3GPP) */
+                8,  /* PON */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -510,8 +526,8 @@ struct custom_job_params custom_job_params = {
 };
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-/* AES, DOCSIS, GCM, CCM, DES, 3DES, CUSTOM */
-uint8_t test_types[NUM_TTYPES] = {1, 1, 1, 1, 1, 1, 0};
+/* AES, DOCSIS, GCM, CCM, DES, 3DES, PON, CUSTOM */
+uint8_t test_types[NUM_TTYPES] = {1, 1, 1, 1, 1, 1, 1, 0};
 
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
@@ -904,6 +920,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_3DES:
                 c_mode = DES3;
                 break;
+        case TEST_PON_CNTR:
+                c_mode = PON_AES_CNTR;
+                break;
         default:
                 break;
         }
@@ -975,6 +994,11 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.CMAC_BITLEN.msg_len_to_hash_in_bits =
                         (job_template.msg_len_to_hash_in_bytes * 8) - 4;
                 job_template.hash_alg = AES_CMAC_BITLEN;
+                break;
+        case TEST_PON_CRC_BIP:
+                job_template.hash_alg = PON_CRC_BIP;
+                job_template.msg_len_to_hash_in_bytes = size_aes + 8;
+                job_template.cipher_start_src_offset_in_bytes = 8;
                 break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
@@ -1410,6 +1434,12 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 c_start = TEST_3DES;
                 c_end = TEST_3DES;
                 break;
+        case TTYPE_PON:
+                h_start = TEST_PON_CRC_BIP;
+                h_end = TEST_PON_CRC_BIP;
+                c_start = TEST_PON_CNTR;
+                c_end = TEST_PON_CNTR;
+                break;
         case TTYPE_CUSTOM:
                 h_start = params->hash_alg;
                 h_end = params->hash_alg;
@@ -1445,6 +1475,7 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         if (params->test_type == TTYPE_AES_DOCSIS ||
             params->test_type == TTYPE_AES_DES ||
             params->test_type == TTYPE_AES_3DES ||
+            params->test_type == TTYPE_PON ||
             params->test_type == TTYPE_AES_CCM)
                 limit = AES_128_BYTES;
 
@@ -1501,17 +1532,17 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         const char *func_names[4] = {
                 "SSE", "AVX", "AVX2", "AVX512"
         };
-        const char *c_mode_names[12] = {
+        const char *c_mode_names[13] = {
                 "CBC", "CNTR", "CNTR+8", "NULL_CIPHER", "DOCAES", "DOCAES+8",
-                "DOCDES", "DOCDES+4", "GCM", "CCM", "DES", "3DES"
+                "DOCDES", "DOCDES+4", "GCM", "CCM", "DES", "3DES", "PON"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
         };
-        const char *h_alg_names[13] = {
+        const char *h_alg_names[14] = {
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
                 "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "GCM", "CUSTOM",
-                "CCM"
+                "CCM", "BIP-CRC32"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
@@ -1655,6 +1686,10 @@ run_tests(void *arg)
                         variants_per_arch = VARIANTS_PER_ARCH_3DES;
                         max_arch = NUM_ARCHS;
                         break;
+                case TTYPE_PON:
+                        variants_per_arch = VARIANTS_PER_ARCH_PON;
+                        max_arch = NUM_ARCHS;
+                        break;
                 case TTYPE_CUSTOM:
                         variants_per_arch = 1;
                         max_arch = NUM_ARCHS;
@@ -1770,6 +1805,7 @@ static void usage(void)
                 "--no-ccm: do not run CCM cipher perf tests\n"
                 "--no-des: do not run DES cipher perf tests\n"
                 "--no-3des: do not run 3DES cipher perf tests\n"
+                "--no-pon: do not run PON cipher perf tests\n"
                 "--gcm-job-api: use JOB API for GCM perf tests"
                 " (raw GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run"
@@ -2039,6 +2075,8 @@ int main(int argc, char *argv[])
                         test_types[TTYPE_AES_DES] = 0;
                 } else if (strcmp(argv[i], "--no-3des") == 0) {
                         test_types[TTYPE_AES_3DES] = 0;
+                } else if (strcmp(argv[i], "--no-pon") == 0) {
+                        test_types[TTYPE_PON] = 0;
                 } else if (strcmp(argv[i], "--gcm-job-api") == 0) {
                         use_gcm_job_api = 1;
                 } else if (strcmp(argv[i], "--quick") == 0) {

@@ -115,6 +115,16 @@ void aes128_ecbenc_x3_sse_no_aesni(const void *in, void *keys,
 void aes128_ecbenc_x3_avx(const void *in, void *keys,
                           void *out1, void *out2, void *out3);
 
+/* stitched AES128-CNTR, CRC32 and BIP */
+JOB_AES_HMAC *submit_job_pon_enc_avx(JOB_AES_HMAC *job);
+JOB_AES_HMAC *submit_job_pon_dec_avx(JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *submit_job_pon_enc_sse(JOB_AES_HMAC *job);
+JOB_AES_HMAC *submit_job_pon_dec_sse(JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *submit_job_pon_enc_sse_no_aesni(JOB_AES_HMAC *job);
+JOB_AES_HMAC *submit_job_pon_dec_sse_no_aesni(JOB_AES_HMAC *job);
+
 #endif /* IMB_ASM_H */
 
 
