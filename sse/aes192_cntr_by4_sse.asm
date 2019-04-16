@@ -42,6 +42,7 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 
 %define xdata0	xmm0
 %define xdata1	xmm1
+%define xpart	xmm1
 %define xdata2	xmm2
 %define xdata3	xmm3
 %define xdata4	xmm4
@@ -74,7 +75,6 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %endif
 
 %define tmp	r11
-%define p_tmp	rsp + _buffer
 
 %macro do_aes_load 1
 	do_aes %1, 1
@@ -227,11 +227,6 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %endrep
 %endmacro
 
-struc STACK
-_buffer:	resq	2
-_rsp_save:	resq	1
-endstruc
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -305,22 +300,12 @@ main_loop2:
 	jnz	last
 
 do_return2:
-	; don't return updated IV
-;	pshufb	xcounter, xbyteswap
-;	movdqu	[p_IV], xcounter
 	ret
 
 last:
-	;; Code dealing with the partial block cases
-	; reserve 16 byte aligned buffer on stack
-        mov	rax, rsp
-        sub	rsp, STACK_size
-        and	rsp, -16
-	mov	[rsp + _rsp_save], rax ; save SP
-
-	; copy input bytes into scratch buffer
-	memcpy_sse_16_1	p_tmp, p_in, num_bytes, tmp, rax
-	; Encryption of a single partial block (p_tmp)
+	; load partial block into XMM register
+	simd_load_sse_15_1 xpart, p_in, num_bytes
+	; Encryption of a single partial block
         pshufb	xcounter, xbyteswap
         movdqa	xdata0, xcounter
         pxor    xdata0, [p_keys + 16*0]
@@ -332,12 +317,9 @@ last:
 	; created keystream
         aesenclast xdata0, [p_keys + 16*i]
 	; xor keystream with the message (scratch)
-        pxor   	xdata0, [p_tmp]
-	movdqa	[p_tmp], xdata0
+        pxor	xdata0, xpart
 	; copy result into the output buffer
-	memcpy_sse_16_1	p_out, p_tmp, num_bytes, tmp, rax
-	; remove the stack frame
-	mov	rsp, [rsp + _rsp_save]	; original SP
+	simd_store_sse p_out, xdata0, num_bytes, tmp, rax
 	jmp	do_return2
 
 iv_is_16_bytes:
