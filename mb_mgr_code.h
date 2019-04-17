@@ -145,46 +145,6 @@ SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
 }
 
 /* ========================================================================= */
-/* AES-CCM */
-/* ========================================================================= */
-
-__forceinline
-JOB_AES_HMAC *
-submit_job_aes_ccm_cipher(JOB_AES_HMAC *job)
-{
-        DECLARE_ALIGNED(uint8_t IV[AES_BLOCK_SIZE], 16) = {0};
-        const unsigned L = AES_BLOCK_SIZE - 1 -
-                (unsigned) job->iv_len_in_bytes;
-
-        /*
-         * Build IV for AES-CTR-128.
-         * - byte 0: flags with L'
-         * - bytes 1 to 13: nonce
-         * - zero bytes after nonce (up to byte 15)
-         */
-        IV[0] = (uint8_t) L - 1; /* flags = L' = L - 1 */
-        /* nonce 7 to 13 byte long */
-        memcpy(&IV[1], job->iv, job->iv_len_in_bytes);
-
-        IV[15] = 1;
-        AES_CNTR_128(job->src +
-                     job->cipher_start_src_offset_in_bytes,
-                     IV, job->aes_enc_key_expanded, job->dst,
-                     job->msg_len_to_cipher_in_bytes,
-                     AES_BLOCK_SIZE);
-
-        job->status |= STS_COMPLETED_AES;
-        return job;
-}
-
-static
-JOB_AES_HMAC *
-submit_job_aes_ccm_cipher_arch(JOB_AES_HMAC *job)
-{
-        return submit_job_aes_ccm_cipher(job);
-}
-
-/* ========================================================================= */
 /* Custom hash / cipher */
 /* ========================================================================= */
 
@@ -508,7 +468,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 return DES3_CBC_ENC(job);
 #endif
         } else if (CCM == job->cipher_mode) {
-                return SUBMIT_JOB_AES_CCM_CIPHER(job);
+                return AES_CNTR_CCM_128(job);
         } else { /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -609,7 +569,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (CCM == job->cipher_mode) {
-                return SUBMIT_JOB_AES_CCM_CIPHER(job);
+                return AES_CNTR_CCM_128(job);
         } else {
                 /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
