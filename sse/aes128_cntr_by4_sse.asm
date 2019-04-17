@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2019, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -26,6 +26,7 @@
 ;;
 
 %include "include/os.asm"
+%include "job_aes_hmac.asm"
 %include "include/memcpy.asm"
 
 ; routine to do AES128 CNTR enc/decrypt "by4"
@@ -35,7 +36,7 @@
 %define AES_CNTR_128 aes_cntr_128_sse
 %endif
 
-extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
+extern byteswap_const, set_byte15, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 
 %define CONCAT(a,b) a %+ b
 %define MOVDQ movdqu
@@ -58,6 +59,24 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %define xkeyA	xmm14
 %define xkeyB	xmm15
 
+%ifdef CNTR_CCM_SSE
+%ifdef LINUX
+%define job	  rdi
+%define p_in	  rsi
+%define p_keys	  rdx
+%define p_out	  rcx
+%define num_bytes r8
+%define p_ivlen   r9
+%else ;; LINUX
+%define job	  rcx
+%define p_in	  rdx
+%define p_keys	  r8
+%define p_out	  r9
+%define num_bytes r10
+%define p_ivlen   rax
+%endif ;; LINUX
+%define p_IV    r11
+%else ;; CNTR_CCM_SSE
 %ifdef LINUX
 %define p_in	  rdi
 %define p_IV	  rsi
@@ -65,16 +84,18 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %define p_out	  rcx
 %define num_bytes r8
 %define p_ivlen   r9
-%else
+%else ;; LINUX
 %define p_in	  rcx
 %define p_IV	  rdx
 %define p_keys	  r8
 %define p_out	  r9
 %define num_bytes r10
 %define p_ivlen   qword [rsp + 8*6]
-%endif
+%endif ;; LINUX
+%endif ;; CNTR_CCM_SSE
 
 %define tmp	r11
+%define flags   r11
 
 %macro do_aes_load 1
 	do_aes %1, 1
@@ -217,11 +238,75 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .text
 
-;; aes_cntr_128_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 align 32
+%ifdef CNTR_CCM_SSE
+; JOB_AES_HMAC * aes_cntr_ccm_128_sse(JOB_AES_HMAC *job)
+; arg 1 : job
+MKGLOBAL(AES_CNTR_CCM_128,function,internal)
+AES_CNTR_CCM_128:
+%else
+;; aes_cntr_128_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 MKGLOBAL(AES_CNTR_128,function,internal)
 AES_CNTR_128:
+%endif ;; CNTR_CCM_SSE
 
+%ifdef CNTR_CCM_SSE
+        mov     p_in, [job + _src]
+        add     p_in, [job + _cipher_start_src_offset_in_bytes]
+        mov     p_ivlen, [job + _iv_len_in_bytes]
+        mov	num_bytes, [job + _msg_len_to_cipher_in_bytes]
+        mov     p_keys, [job + _aes_enc_key_expanded]
+        mov     p_out, [job + _dst]
+
+	movdqa	xbyteswap, [rel byteswap_const]
+        ;; Prepare IV ;;
+
+        ;; Byte 0: flags with L'
+        ;; Calculate L' = 15 - Nonce length - 1 = 14 - IV length
+        mov     flags, 14
+        sub     flags, p_ivlen
+        movd    xcounter, DWORD(flags)
+        ;; Bytes 1 - 13: Nonce (7 - 13 bytes long)
+
+        ;; Bytes 1 - 7 are always copied (first 7 bytes)
+        mov     p_IV, [job + _iv]
+        pinsrb	xcounter, [p_IV], 1
+        pinsrw	xcounter, [p_IV + 1], 1
+        pinsrd  xcounter, [p_IV + 3], 1
+
+        cmp     p_ivlen, 7
+        je      _finish_nonce_move
+
+        cmp     p_ivlen, 8
+        je      _iv_length_8
+        cmp     p_ivlen, 9
+        je      _iv_length_9
+        cmp     p_ivlen, 10
+        je      _iv_length_10
+        cmp     p_ivlen, 11
+        je      _iv_length_11
+        cmp     p_ivlen, 12
+        je      _iv_length_12
+
+        ;; Bytes 8 - 13
+_iv_length_13:
+        pinsrb 	xcounter, [p_IV + 12], 13
+_iv_length_12:
+        pinsrb 	xcounter, [p_IV + 11], 12
+_iv_length_11:
+        pinsrd	xcounter, [p_IV + 7], 2
+        jmp     _finish_nonce_move
+_iv_length_10:
+        pinsrb	xcounter, [p_IV + 9], 10
+_iv_length_9:
+        pinsrb	xcounter, [p_IV + 8], 9
+_iv_length_8:
+        pinsrb	xcounter, [p_IV + 7], 8
+
+_finish_nonce_move:
+        ; last byte = 1
+        por     xcounter, [rel set_byte15]
+%else ;; CNTR_CCM_SSE
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5] ; arg5
 %endif
@@ -234,6 +319,7 @@ AES_CNTR_128:
         pinsrq  xcounter, [p_IV], 0
         pinsrd  xcounter, [p_IV + 8], 2
         pinsrd  xcounter, DWORD(tmp), 3
+%endif ;; CNTR_CCM_SSE
 bswap_iv:
 	pshufb	xcounter, xbyteswap
 
@@ -285,6 +371,10 @@ main_loop2:
 	jnz	last
 
 do_return2:
+%ifdef CNTR_CCM_SSE
+	mov	rax, job
+	or	dword [rax + _status], STS_COMPLETED_AES
+%endif
 	ret
 
 last:

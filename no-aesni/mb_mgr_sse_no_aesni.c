@@ -131,6 +131,7 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
 #define AES_CNTR_128       aes_cntr_128_sse_no_aesni
 #define AES_CNTR_192       aes_cntr_192_sse_no_aesni
 #define AES_CNTR_256       aes_cntr_256_sse_no_aesni
+#define AES_CNTR_CCM_128   aes_cntr_ccm_128_sse_no_aesni
 
 #ifndef NO_GCM
 #define AES_GCM_DEC_128   aes_gcm_dec_128_sse_no_aesni

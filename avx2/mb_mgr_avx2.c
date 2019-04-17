@@ -80,6 +80,7 @@ JOB_AES_HMAC *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 #define AES_CNTR_128       aes_cntr_128_avx
 #define AES_CNTR_192       aes_cntr_192_avx
 #define AES_CNTR_256       aes_cntr_256_avx
+#define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
 
 #ifndef NO_GCM
 #define AES_GCM_DEC_128   aes_gcm_dec_128_avx_gen4

@@ -104,6 +104,7 @@ JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
 #define AES_CNTR_128       aes_cntr_128_avx
 #define AES_CNTR_192       aes_cntr_192_avx
 #define AES_CNTR_256       aes_cntr_256_avx
+#define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
 
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx

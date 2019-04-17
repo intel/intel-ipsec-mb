@@ -86,6 +86,13 @@ void aes_cntr_192_avx(const void *in, const void *IV, const void *keys,
 void aes_cntr_128_avx(const void *in, const void *IV, const void *keys,
                       void *out, uint64_t len_bytes, uint64_t IV_len);
 
+/* AES-CCM */
+JOB_AES_HMAC *aes_cntr_ccm_128_sse(JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *aes_cntr_ccm_128_sse_no_aesni(JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *aes_cntr_ccm_128_avx(JOB_AES_HMAC *job);
+
 /* AES128-ECBENC */
 void aes128_ecbenc_x3_sse(const void *in, void *keys,
                           void *out1, void *out2, void *out3);
