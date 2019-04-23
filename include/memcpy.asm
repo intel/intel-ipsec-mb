@@ -508,7 +508,7 @@
 
 %if (%%ACCEPT_16 != 0)
         test    %%SIZE, 16
-        jne     %%_skip_16
+        jz      %%_skip_16
         %%MOVDQU %%DST, [%%SRC]
         jmp     %%end_load
 
