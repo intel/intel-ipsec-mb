@@ -78,6 +78,8 @@ JOB_AES_HMAC *submit_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state,
                                                JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
 
+JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
+
 #define SAVE_XMMS save_xmms_avx
 #define RESTORE_XMMS restore_xmms_avx
 #define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_avx
@@ -92,10 +94,7 @@ JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
 #define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_avx
 
-#define SUBMIT_JOB_AES128_CNTR submit_job_aes128_cntr_avx
-#define SUBMIT_JOB_AES192_CNTR submit_job_aes192_cntr_avx
-#define SUBMIT_JOB_AES256_CNTR submit_job_aes256_cntr_avx
-
+#define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx512
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx
@@ -379,6 +378,23 @@ static JOB_AES_HMAC *(*flush_job_aes_gcm_dec_avx512)
         (MB_MGR *state, JOB_AES_HMAC *job) = plain_flush_gcm_dec_avx512;
 
 #endif /* NO_GCM */
+
+static JOB_AES_HMAC *(*submit_job_aes_cntr_avx512)
+        (JOB_AES_HMAC *job) = submit_job_aes_cntr_avx;
+
+static JOB_AES_HMAC *
+vaes_submit_cntr_avx512(JOB_AES_HMAC *job)
+{
+        if (16 == job->aes_key_len_in_bytes)
+                aes_cntr_128_submit_vaes_avx512(job);
+        else if (24 == job->aes_key_len_in_bytes)
+                aes_cntr_192_submit_vaes_avx512(job);
+        else /* assume 32 bytes */
+                aes_cntr_256_submit_vaes_avx512(job);
+
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
 
 /* ====================================================================== */
 
@@ -846,6 +862,8 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->sha512              = sha512_avx512;
         state->md5_one_block       = md5_one_block_avx512;
         state->aes128_cfb_one      = aes_cfb_128_one_avx512;
+        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES)
+                submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;
 #ifndef NO_GCM
         if ((state->features & (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) ==
             (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) {

@@ -102,48 +102,6 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
         return job;
 }
 
-__forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES128_CNTR(JOB_AES_HMAC *job)
-{
-        AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
-                     job->iv,
-                     job->aes_enc_key_expanded,
-                     job->dst,
-                     job->msg_len_to_cipher_in_bytes,
-                     job->iv_len_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return job;
-}
-
-__forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES192_CNTR(JOB_AES_HMAC *job)
-{
-        AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
-                     job->iv,
-                     job->aes_enc_key_expanded,
-                     job->dst,
-                     job->msg_len_to_cipher_in_bytes,
-                     job->iv_len_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return job;
-}
-
-__forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES256_CNTR(JOB_AES_HMAC *job)
-{
-        AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
-                     job->iv,
-                     job->aes_enc_key_expanded,
-                     job->dst,
-                     job->msg_len_to_cipher_in_bytes,
-                     job->iv_len_in_bytes);
-        job->status |= STS_COMPLETED_AES;
-        return job;
-}
-
 /* ========================================================================= */
 /* Custom hash / cipher */
 /* ========================================================================= */
@@ -426,13 +384,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES256_ENC(&state->aes256_ooo, job);
                 }
         } else if (CNTR == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES128_CNTR(job);
-                } else if (24 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES192_CNTR(job);
-                } else { /* assume 32 */
-                        return SUBMIT_JOB_AES256_CNTR(job);
-                }
+                return SUBMIT_JOB_AES_CNTR(job);
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
                         JOB_AES_HMAC *tmp;
@@ -528,13 +480,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES256_DEC(job);
                 }
         } else if (CNTR == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES128_CNTR(job);
-                } else if (24 == job->aes_key_len_in_bytes) {
-                        return SUBMIT_JOB_AES192_CNTR(job);
-                } else { /* assume 32 */
-                        return SUBMIT_JOB_AES256_CNTR(job);
-                }
+                return SUBMIT_JOB_AES_CNTR(job);
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
                         DOCSIS_LAST_BLOCK(job);

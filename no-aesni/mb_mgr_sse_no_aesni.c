@@ -88,6 +88,8 @@ JOB_AES_HMAC *submit_job_aes_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state,
 
 JOB_AES_HMAC *flush_job_aes_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
 
+JOB_AES_HMAC *submit_job_aes_cntr_sse_no_aesni(JOB_AES_HMAC *job);
+
 #define SAVE_XMMS save_xmms
 #define RESTORE_XMMS restore_xmms
 #define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse_no_aesni
@@ -120,9 +122,7 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_sse_no_aesni
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_sse_no_aesni
 
-#define SUBMIT_JOB_AES128_CNTR submit_job_aes128_cntr_sse
-#define SUBMIT_JOB_AES192_CNTR submit_job_aes192_cntr_sse
-#define SUBMIT_JOB_AES256_CNTR submit_job_aes256_cntr_sse
+#define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse_no_aesni
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_sse_no_aesni
 #define AES_CBC_DEC_192       aes_cbc_dec_192_sse_no_aesni
@@ -278,6 +278,35 @@ flush_job_aes_gcm_enc_sse_no_aesni(MB_MGR *state, JOB_AES_HMAC *job)
         return NULL;
 }
 #endif /* NO_GCM */
+
+JOB_AES_HMAC *
+submit_job_aes_cntr_sse_no_aesni(JOB_AES_HMAC *job)
+{
+        if (16 == job->aes_key_len_in_bytes)
+                AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
+                             job->iv,
+                             job->aes_enc_key_expanded,
+                             job->dst,
+                             job->msg_len_to_cipher_in_bytes,
+                             job->iv_len_in_bytes);
+        else if (24 == job->aes_key_len_in_bytes)
+                AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
+                             job->iv,
+                             job->aes_enc_key_expanded,
+                             job->dst,
+                             job->msg_len_to_cipher_in_bytes,
+                             job->iv_len_in_bytes);
+        else /* assume 32 bytes */
+                AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
+                             job->iv,
+                             job->aes_enc_key_expanded,
+                             job->dst,
+                             job->msg_len_to_cipher_in_bytes,
+                             job->iv_len_in_bytes);
+
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
 
 /* ====================================================================== */
 

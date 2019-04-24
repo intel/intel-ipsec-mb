@@ -86,6 +86,10 @@ void aes_cntr_192_avx(const void *in, const void *IV, const void *keys,
 void aes_cntr_128_avx(const void *in, const void *IV, const void *keys,
                       void *out, uint64_t len_bytes, uint64_t IV_len);
 
+void aes_cntr_128_submit_vaes_avx512(JOB_AES_HMAC *job);
+void aes_cntr_192_submit_vaes_avx512(JOB_AES_HMAC *job);
+void aes_cntr_256_submit_vaes_avx512(JOB_AES_HMAC *job);
+
 /* AES-CCM */
 JOB_AES_HMAC *aes_cntr_ccm_128_sse(JOB_AES_HMAC *job);
 

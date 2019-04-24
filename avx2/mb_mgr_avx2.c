@@ -53,6 +53,7 @@ JOB_AES_HMAC *submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state,
                                       JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 
+JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
 #define SAVE_XMMS save_xmms_avx
 #define RESTORE_XMMS restore_xmms_avx
@@ -68,10 +69,7 @@ JOB_AES_HMAC *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
 #define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_avx
 
-#define SUBMIT_JOB_AES128_CNTR submit_job_aes128_cntr_avx
-#define SUBMIT_JOB_AES192_CNTR submit_job_aes192_cntr_avx
-#define SUBMIT_JOB_AES256_CNTR submit_job_aes256_cntr_avx
-
+#define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx
