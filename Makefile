@@ -119,13 +119,18 @@ NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
 NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
 
 # warning messages
-
 SAFE_PARAM_MSG1="SAFE_PARAM option not set."
 SAFE_PARAM_MSG2="Input parameters will not be checked."
 SAFE_DATA_MSG1="SAFE_DATA option not set."
 SAFE_DATA_MSG2="Stack and registers containing sensitive information, \
 		such keys or IV will not be cleared \
 		at the end of function calls."
+
+ifeq ($(GCM_BIG_DATA),y)
+CFLAGS += -DGCM_BIG_DATA
+NASM_FLAGS += -DGCM_BIG_DATA
+YASM_FLAGS += -DGCM_BIG_DATA
+endif
 
 #
 # List of C modules (any origin)
@@ -570,6 +575,36 @@ clean:
 	rm -Rf $(target_obj_files)
 	rm -Rf $(dep_target_files)
 	rm -f $(LIB).a $(LIB).so*
+
+.PHONY: help
+help:
+	@echo "Available build options:"
+	@echo "DEBUG=n (default)"
+	@echo "          - this option will produce library not fit for debugging"
+	@echo "SHARED=y (default)"
+	@echo "          - this option will produce shared library"
+	@echo "DEBUG=y   - this option will produce library fit for debugging"
+	@echo "SHARED=n  - this option will produce static library"
+	@echo "SAFE_DATA=n (default)"
+	@echo "          - Sensitive data not cleared from registers and memory"
+	@echo "            at operation end"
+	@echo "SAFE_DATA=y"
+	@echo "          - Sensitive data cleared from registers and memory"
+	@echo "            at operation end"
+	@echo "SAFE_PARAM=n (default)"
+	@echo "          - API input parameters not checked"
+	@echo "SAFE_PARAM=y"
+	@echo "          - API input parameters checked"
+	@echo "GCM_BIG_DATA=n (default)"
+	@echo "          - Smaller GCM key structure with good performance level (VAES)"
+	@echo "            for packet processing applications (buffers size < 2K)"
+	@echo "          - 8 ghash keys used on SSE, AVX, AVX2 and AVX512"
+	@echo "          - 48 ghash keys used on AVX512 with VAES and VPCLMULQDQ"
+	@echo "GCM_BIG_DATA=y"
+	@echo "          - Better performing VAES GCM on big buffers using more ghash keys."
+	@echo "            This option results in a much bigger gcm_key structure (>2K)."
+	@echo "            It only takes effect on platforms with VAES and VPCLMULQDQ."
+
 
 CHECKPATCH ?= checkpatch.pl
 # checkpatch ignore settings:

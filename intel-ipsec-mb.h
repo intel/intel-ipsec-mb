@@ -600,27 +600,28 @@ __declspec(align(64))
 struct gcm_key_data {
         uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
         uint8_t padding[GCM_ENC_KEY_LEN];        /* To align HashKey to 64 */
-        /* storage for HashKey mod poly */
-        uint8_t shifted_hkey_8[GCM_ENC_KEY_LEN]; /* HashKey^8<<1 mod poly */
-        uint8_t shifted_hkey_7[GCM_ENC_KEY_LEN]; /* HashKey^7<<1 mod poly */
-        uint8_t shifted_hkey_6[GCM_ENC_KEY_LEN]; /* HashKey^6<<1 mod poly */
-        uint8_t shifted_hkey_5[GCM_ENC_KEY_LEN]; /* HashKey^5<<1 mod poly */
-        uint8_t shifted_hkey_4[GCM_ENC_KEY_LEN]; /* HashKey^4<<1 mod poly */
-        uint8_t shifted_hkey_3[GCM_ENC_KEY_LEN]; /* HashKey^3<<1 mod poly */
-        uint8_t shifted_hkey_2[GCM_ENC_KEY_LEN]; /* HashKey^2<<1 mod poly */
-        uint8_t shifted_hkey_1[GCM_ENC_KEY_LEN]; /* HashKey<<1 mod poly */
+        /* Storage for precomputed hash keys */
+#ifdef GCM_BIG_DATA
+        /*
+         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+         * (Hashkey^128<<1 mod poly)
+         */
+        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 128];
+#else
+        /*
+         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+         * (Hashkey^48<<1 mod poly)
+         */
+        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 48];
+#endif
         /*
          * Storage for XOR of High 64 bits and low 64 bits of HashKey mod poly.
          * This is needed for Karatsuba purposes.
+         *
+         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+         * (Hashkey^128<<1 mod poly)
          */
-        uint8_t shifted_hkey_1_k[GCM_ENC_KEY_LEN]; /* HashKey<<1 mod poly */
-        uint8_t shifted_hkey_2_k[GCM_ENC_KEY_LEN]; /* HashKey^2<<1 mod poly */
-        uint8_t shifted_hkey_3_k[GCM_ENC_KEY_LEN]; /* HashKey^3<<1 mod poly */
-        uint8_t shifted_hkey_4_k[GCM_ENC_KEY_LEN]; /* HashKey^4<<1 mod poly */
-        uint8_t shifted_hkey_5_k[GCM_ENC_KEY_LEN]; /* HashKey^5<<1 mod poly */
-        uint8_t shifted_hkey_6_k[GCM_ENC_KEY_LEN]; /* HashKey^6<<1 mod poly */
-        uint8_t shifted_hkey_7_k[GCM_ENC_KEY_LEN]; /* HashKey^7<<1 mod poly */
-        uint8_t shifted_hkey_8_k[GCM_ENC_KEY_LEN]; /* HashKey^8<<1 mod poly */
+        uint8_t shifted_hkey_k[GCM_ENC_KEY_LEN * 8]; /* HashKey<<1 mod poly */
 }
 #ifdef LINUX
 __attribute__((aligned(64)));

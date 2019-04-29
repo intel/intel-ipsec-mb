@@ -215,6 +215,9 @@ Build with debugging information:
 
 Note: Building with debugging information is not advised for production use.
 
+For more build options and their explanation run:
+> make help
+
 Windows (x64 only)
 ------------------
 
@@ -247,6 +250,9 @@ Build with debugging information:
 > nmake /f win_x64.mak DEBUG=y
 
 Note: Building with debugging information is not advised for production use.
+
+For more build options and their explanation run:
+> nmake /f win_x64.mak help
 
 Safety options
 ==============

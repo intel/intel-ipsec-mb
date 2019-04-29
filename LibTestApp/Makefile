@@ -54,6 +54,10 @@ else
 CFLAGS += -O3
 endif
 
+ifeq ($(GCM_BIG_DATA),y)
+CFLAGS += -DGCM_BIG_DATA
+endif
+
 SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
 	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \

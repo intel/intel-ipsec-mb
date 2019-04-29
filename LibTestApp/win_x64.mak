@@ -48,9 +48,15 @@ DCFLAGS = /O2 /Oi
 DLFLAGS =
 !endif
 
+!if "$(GCM_BIG_DATA)" == "y"
+GCM_CFLAGS = /DGCM_BIG_DATA
+!else
+GCM_CFLAGS =
+!endif
+
 CC = cl
 # _CRT_SECURE_NO_WARNINGS disables warning C4996 about unsecure snprintf() being used
-CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(INCDIR)
+CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(GCM_CFLAGS) $(INCDIR)
 
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)
