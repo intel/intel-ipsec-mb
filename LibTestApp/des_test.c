@@ -422,6 +422,7 @@ test_des_many(struct MB_MGR *mb_mgr,
 
 static int
 test_des_one(struct MB_MGR *mb_mgr,
+             const enum arch_type arch,
              const uint64_t *ks,
              const uint64_t *ks2,
              const uint64_t *ks3,
@@ -485,15 +486,26 @@ test_des_one(struct MB_MGR *mb_mgr,
 
         job->hash_alg = NULL_HASH;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job) {
-                printf("%d Unexpected return from submit_job\n", __LINE__);
-                goto end;
-        }
-        job = IMB_FLUSH_JOB(mb_mgr);
-        if (!job) {
-                printf("%d Unexpected null return from flush_job\n", __LINE__);
-                goto end;
+        if (arch == ARCH_AVX512) {
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job) {
+                        printf("%d Unexpected return from submit_job\n",
+                               __LINE__);
+                        goto end;
+                }
+                job = IMB_FLUSH_JOB(mb_mgr);
+                if (!job) {
+                        printf("%d Unexpected null return from flush_job\n",
+                               __LINE__);
+                        goto end;
+                }
+        } else {
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (!job) {
+                        printf("%d Unexpected null return from submit_job\n",
+                               __LINE__);
+                        goto end;
+                }
         }
         if (job->status != STS_COMPLETED) {
                 printf("%d Error status:%d", __LINE__, job->status);
@@ -523,6 +535,7 @@ test_des_one(struct MB_MGR *mb_mgr,
 
 static int
 test_des(struct MB_MGR *mb_mgr,
+         const enum arch_type arch,
          const uint64_t *ks,
          const uint64_t *ks2,
          const uint64_t *ks3,
@@ -539,22 +552,22 @@ test_des(struct MB_MGR *mb_mgr,
 
         if (cipher == DES3) {
                 if (ks2 == NULL && ks3 == NULL) {
-                        ret |= test_des_one(mb_mgr, ks, ks, ks, iv, in_text,
-                                            out_text, text_len, dir, order,
-                                            cipher, in_place);
+                        ret |= test_des_one(mb_mgr, arch, ks, ks, ks, iv,
+                                            in_text, out_text, text_len, dir,
+                                            order, cipher, in_place);
                         ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text,
                                              out_text, text_len, dir, order,
                                              cipher, in_place, 32);
                 } else {
-                        ret |= test_des_one(mb_mgr, ks, ks2, ks3, iv, in_text,
-                                            out_text, text_len, dir, order,
-                                            cipher, in_place);
+                        ret |= test_des_one(mb_mgr, arch, ks, ks2, ks3, iv,
+                                            in_text, out_text, text_len, dir,
+                                            order, cipher, in_place);
                         ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text,
                                              out_text, text_len, dir, order,
                                              cipher, in_place, 32);
                 }
         } else {
-                ret |= test_des_one(mb_mgr, ks, NULL, NULL, iv, in_text,
+                ret |= test_des_one(mb_mgr, arch, ks, NULL, NULL, iv, in_text,
                                     out_text, text_len, dir, order, cipher,
                                     in_place);
                 ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text,
@@ -565,7 +578,8 @@ test_des(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
+test_des_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
+                 const int vec_cnt,
                  const struct des_vector *vec_tab, const char *banner,
                  const JOB_CIPHER_MODE cipher)
 {
@@ -583,7 +597,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
 #endif
                 des_key_schedule(ks, vec_tab[vect].K);
 
-                if (test_des(mb_mgr, ks, NULL, NULL,
+                if (test_des(mb_mgr, arch, ks, NULL, NULL,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -592,7 +606,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                         errors++;
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL,
+                if (test_des(mb_mgr, arch, ks, NULL, NULL,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
@@ -601,7 +615,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                         errors++;
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL,
+                if (test_des(mb_mgr, arch, ks, NULL, NULL,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -610,7 +624,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                         errors++;
                 }
 
-                if (test_des(mb_mgr, ks, NULL, NULL,
+                if (test_des(mb_mgr, arch, ks, NULL, NULL,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
@@ -624,7 +638,8 @@ test_des_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
 }
 
 static int
-test_des3_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
+test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
+                  const int vec_cnt,
                   const struct des3_vector *vec_tab, const char *banner)
 {
 	int vect, errors = 0;
@@ -645,7 +660,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                 des_key_schedule(ks2, vec_tab[vect].K2);
                 des_key_schedule(ks3, vec_tab[vect].K3);
 
-                if (test_des(mb_mgr, ks1, ks2, ks3,
+                if (test_des(mb_mgr, arch, ks1, ks2, ks3,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -654,7 +669,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                         errors++;
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3,
+                if (test_des(mb_mgr, arch, ks1, ks2, ks3,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
@@ -663,7 +678,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                         errors++;
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3,
+                if (test_des(mb_mgr, arch, ks1, ks2, ks3,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -672,7 +687,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                         errors++;
                 }
 
-                if (test_des(mb_mgr, ks1, ks2, ks3,
+                if (test_des(mb_mgr, arch, ks1, ks2, ks3,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
@@ -691,20 +706,20 @@ des_test(const enum arch_type arch,
 {
         int errors;
 
-        (void) arch; /* unused */
-
-        errors = test_des_vectors(mb_mgr, DIM(vectors), vectors,
+        errors = test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
                                   "DES standard test vectors", DES);
 
-        errors += test_des_vectors(mb_mgr, DIM(docsis_vectors), docsis_vectors,
+        errors += test_des_vectors(mb_mgr, arch, DIM(docsis_vectors),
+                                   docsis_vectors,
                                    "DOCSIS DES standard test vectors",
                                    DOCSIS_DES);
 
-        errors += test_des_vectors(mb_mgr, DIM(vectors), vectors,
+        errors += test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
                                   "3DES (single key) standard test vectors",
                                    DES3);
 
-        errors += test_des3_vectors(mb_mgr, DIM(des3_vectors), des3_vectors,
+        errors += test_des3_vectors(mb_mgr, arch, DIM(des3_vectors),
+                                    des3_vectors,
                                     "3DES (multiple keys) test vectors");
 
 	if (0 == errors)

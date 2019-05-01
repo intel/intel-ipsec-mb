@@ -918,17 +918,17 @@ test_ctr(struct MB_MGR *mb_mgr,
         job->hash_alg = NULL_HASH;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job) {
-                printf("%d Unexpected return from submit_job\n", __LINE__);
-                goto end;
-        }
-        job = IMB_FLUSH_JOB(mb_mgr);
         if (!job) {
-                printf("%d Unexpected null return from flush_job\n", __LINE__);
+                printf("%d Unexpected null return from submit_job\n", __LINE__);
                 goto end;
         }
         if (job->status != STS_COMPLETED) {
                 printf("%d Error status:%d", __LINE__, job->status);
+                goto end;
+        }
+        job = IMB_FLUSH_JOB(mb_mgr);
+        if (job) {
+                printf("%u Unexpected return from flush_job\n", __LINE__);
                 goto end;
         }
         if (memcmp(out_text, target + 16, text_len)) {

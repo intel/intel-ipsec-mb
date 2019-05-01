@@ -1437,12 +1437,13 @@ submit_job_and_check(MB_MGR *state, const int run_check)
 
         if (state->earliest_job < 0) {
                 /* state was previously empty */
-                state->earliest_job = state->next_job;
+                if (job == NULL)
+                        state->earliest_job = state->next_job;
                 ADV_JOBS(&state->next_job);
 #ifndef LINUX
                 RESTORE_XMMS(xmm_save);
 #endif
-                return NULL;	/* if we were empty, nothing to return */
+                return job;
         }
 
         ADV_JOBS(&state->next_job);

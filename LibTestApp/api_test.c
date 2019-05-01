@@ -56,10 +56,16 @@ test_job_api(struct MB_MGR *mb_mgr)
         /* ======== test 2 : invalid cipher and mac */
         memset(job, 0, sizeof(*job));
         job_next = IMB_SUBMIT_JOB(mb_mgr);
-        if (job_next != NULL) {
-                /* MB MGR was empty so it should return NULL */
-                printf("%s: test 2, unexpected submit_job() != NULL\n",
-                       __func__);
+        if (job != job_next) {
+                /* Invalid job should be returned straight away */
+                printf("%s: test 2, unexpected job != job_next\n", __func__);
+                return 1;
+        }
+        printf(".");
+        if (job_next->status != STS_INVALID_ARGS) {
+                /* Invalid job is returned, and status should be INVALID_ARGS */
+                printf("%s: test 2, unexpected job->status != "
+                       "STS_INVALID_ARGS\n", __func__);
                 return 1;
         }
 	printf(".");
@@ -73,29 +79,14 @@ test_job_api(struct MB_MGR *mb_mgr)
         }
 	printf(".");
 
-        if (job->status != STS_INVALID_ARGS) {
-                /* job wasn't returned but its status is set at this stage */
-                printf("%s: test 2, unexpected job->status != "
-                       "STS_INVALID_ARGS\n", __func__);
+        job = IMB_GET_COMPLETED_JOB(mb_mgr);
+        if (job) {
+                /* there should not be any completed jobs left */
+                printf("%s: test 2, unexpected completed job\n",
+                       __func__);
                 return 1;
         }
-	printf(".");
-
-        job_next = IMB_GET_COMPLETED_JOB(mb_mgr);
-        if (job_next != job) {
-                /* the completed job should be the same as the submitted one */
-                printf("%s: test 2, unexpected job_ret != job\n", __func__);
-                return 1;
-        }
-	printf(".");
-
-        if (job_next->status != STS_INVALID_ARGS) {
-                /* let's check job status again now */
-                printf("%s: test 2, unexpected job_ret->status != "
-                       "STS_INVALID_ARGS\n", __func__);
-                return 1;
-        }
-	printf(".");
+        printf(".");
 
         /* clean up */
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
