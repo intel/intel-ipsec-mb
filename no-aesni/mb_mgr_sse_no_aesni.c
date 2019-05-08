@@ -286,6 +286,7 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
 {
         unsigned int j;
         uint8_t *p;
+        size_t size;
 
         /* Init AES out-of-order fields */
         state->aes128_ooo.lens[0] = 0;
@@ -382,14 +383,15 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         state->hmac_sha_224_ooo.unused_lanes = 0xFF03020100;
         for (j = 0; j < SSE_NUM_SHA256_LANES; j++) {
                 state->hmac_sha_224_ooo.ldata[j].job_in_lane = NULL;
-                state->hmac_sha_224_ooo.ldata[j].extra_block[64] = 0x80;
-                memset(state->hmac_sha_224_ooo.ldata[j].extra_block + 65,
-                       0x00,
-                       64+7);
+
+                p = state->hmac_sha_224_ooo.ldata[j].extra_block;
+                size = sizeof(state->hmac_sha_224_ooo.ldata[j].extra_block);
+                memset (p, 0x00, size);
+                p[64] = 0x80;
+
                 p = state->hmac_sha_224_ooo.ldata[j].outer_block;
-                memset(p + 8*4 + 1,
-                       0x00,
-                       64 - 8*4 - 1 - 2);
+                size = sizeof(state->hmac_sha_224_ooo.ldata[j].outer_block);
+                memset(p, 0x00, size);
                 p[7*4] = 0x80;  /* digest 7 words long */
                 p[64-2] = 0x02; /* length in little endian = 0x02E0 */
                 p[64-1] = 0xE0;
@@ -513,14 +515,15 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         state->hmac_md5_ooo.unused_lanes = 0xF76543210;
         for (j = 0; j < SSE_NUM_MD5_LANES; j++) {
                 state->hmac_md5_ooo.ldata[j].job_in_lane = NULL;
-                state->hmac_md5_ooo.ldata[j].extra_block[64] = 0x80;
-                memset(state->hmac_md5_ooo.ldata[j].extra_block + 65,
-                       0x00,
-                       64 + 7);
+
+                p = state->hmac_md5_ooo.ldata[j].extra_block;
+                size = sizeof(state->hmac_md5_ooo.ldata[j].extra_block);
+                memset (p, 0x00, size);
+                p[64] = 0x80;
+
                 p = state->hmac_md5_ooo.ldata[j].outer_block;
-                memset(p + (5 * 4) + 1,
-                       0x00,
-                       64 - (5 * 4) - 1 - 2);
+                size = sizeof(state->hmac_md5_ooo.ldata[j].outer_block);
+                memset(p, 0x00, size);
                 p[4*4] = 0x80;
                 p[64-7] = 0x02;
                 p[64-8] = 0x80;
@@ -543,12 +546,8 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         }
 
         /* Init AES-CCM auth out-of-order fields */
-        for (j = 0; j < 4; j++) {
-                state->aes_ccm_ooo.init_done[j] = 0;
-                state->aes_ccm_ooo.lens[j] = 0;
-                state->aes_ccm_ooo.job_in_lane[j] = NULL;
-        }
-        for (; j < 8; j++)
+        memset(&state->aes_ccm_ooo, 0, sizeof(MB_MGR_CCM_OOO));
+        for (j = 4; j < 8; j++)
                 state->aes_ccm_ooo.lens[j] = 0xFFFF;
         state->aes_ccm_ooo.unused_lanes = 0xF3210;
 

@@ -201,6 +201,7 @@ customop_test(struct MB_MGR *mgr)
         unsigned i, j, seq;
         int result = 0;
 
+        memset(test_tab, 0, sizeof(test_tab));
         for (i = 0, seq = 0; i < DIM(cipher_attr_tab); i++) {
                 for (j = 0; j < DIM(auth_attr_tab); j++) {
                         assert(seq < DIM(test_tab));
