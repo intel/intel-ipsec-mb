@@ -35,31 +35,29 @@ Table 1. List of supported cipher algorithms and their implementations.
 +---------------------------------------------------------------------+
 |               |                   Implementation                    |
 | Encryption    +-----------------------------------------------------|
-|               | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(6)|
+|               | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(5)|
 |---------------+--------+--------+--------+--------+--------+--------|
 | AES128-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
 | AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
 | AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
-| AES128-CCM    | Y(1)   | Y  by4 | Y  by8 | N      | N      | N      |
-| AES128-CBC    | N      | Y(2)   | Y(4)   | N      | N      | N      |
-| AES192-CBC    | N      | Y(2)   | Y(4)   | N      | N      | N      |
-| AES256-CBC    | N      | Y(2)   | Y(4)   | N      | N      | N      |
+| AES128-CCM    | N      | Y  by4 | Y  by8 | N      | N      | N      |
+| AES128-CBC    | N      | Y(1)   | Y(3)   | N      | N      | N      |
+| AES192-CBC    | N      | Y(1)   | Y(3)   | N      | N      | N      |
+| AES256-CBC    | N      | Y(1)   | Y(3)   | N      | N      | N      |
 | AES128-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by8  |
 | AES192-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by8  |
 | AES256-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by8  |
 | NULL          | Y      | N      | N      | N      | N      | N      |
-| AES128-DOCSIS | N      | Y(3)   | Y(5)   | N      | N      | N      |
+| AES128-DOCSIS | N      | Y(2)   | Y(4)   | N      | N      | N      |
 | DES-DOCSIS    | Y      | N      | N      | N      | Y  x16 | N      |
 | 3DES          | Y      | N      | N      | N      | Y  x16 | N      |
 | DES           | Y      | N      | N      | N      | Y  x16 | N      |
 +---------------------------------------------------------------------+
 
 Notes:
-(1)   - AES128-CCM scheduler code is implemented in C at the moment.
-        Underlaying AES128-CTR algorithm utlizes SSE and AVX.
-(2,3) - decryption is by4 and encryption is x4
-(4,5) - decryption is by8 and encryption is x8
-(6)   - AVX512 plus VAES and VPCLMULQDQ extensions
+(1,2) - decryption is by4 and encryption is x4
+(3,4) - decryption is by8 and encryption is x8
+(5)   - AVX512 plus VAES and VPCLMULQDQ extensions
 
 Legend:
   byY - single buffer Y blocks at a time
@@ -75,29 +73,27 @@ Table 2. List of supported integrity algorithms and their implementations.
 +-------------------------------------------------------------------------+
 |                   |                   Implementation                    |
 | Integrity         +-----------------------------------------------------|
-|                   | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(4)|
+|                   | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(3)|
 |-------------------+--------+--------+--------+--------+--------+--------|
 | AES-XCBC-96       | N      | Y   x4 | Y   x8 | N      | N      | N      |
 | HMAC-MD5-96       | Y(1)   | Y x4x2 | Y x4x2 | Y x8x2 | N      | N      |
-| HMAC-SHA1-96      | N      | Y(3)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
-| HMAC-SHA2-224_112 | N      | Y(3)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
-| HMAC-SHA2-256_128 | N      | Y(3)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
+| HMAC-SHA1-96      | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
+| HMAC-SHA2-224_112 | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
+| HMAC-SHA2-256_128 | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
 | HMAC-SHA2-384_192 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
 | HMAC-SHA2-512_256 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
 | AES128-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
 | AES192-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
 | AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
 | NULL              | N      | N      | N      | N      | N      | N      |
-| AES128-CCM        | Y(2)   | Y   x4 | Y   x8 | N      | N      | N      |
+| AES128-CCM        | N      | Y   x4 | Y   x8 | N      | N      | N      |
 | AES128-CMAC-96    | Y      | Y   x4 | Y   x8 | N      | N      | N      |
 +-------------------------------------------------------------------------+
 
 Notes:
 (1)   - MD5 over one block implemented in C
-(2)   - AES128-CCM scheduler code is implemented in C.
-        Underlaying AES128-CBC algorithm utlizes SSE and AVX.
-(3)   - Implementation using SHANI extentions is x2
-(4)   - AVX512 plus VAES and VPCLMULQDQ extensions
+(2)   - Implementation using SHANI extentions is x2
+(3)   - AVX512 plus VAES and VPCLMULQDQ extensions
 
 Legend:
   byY - single buffer Y blocks at a time
