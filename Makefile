@@ -127,7 +127,9 @@ c_lib_objs := \
 	des_basic.o \
 	version.o \
 	cpu_feature.o \
-	aesni_emu.o
+	aesni_emu.o \
+	zuc_sse_top.o \
+	zuc_avx_top.o
 
 #
 # List of ASM modules (root directory/common)
@@ -139,7 +141,8 @@ asm_generic_lib_objs := \
 	aes_cmac_subkey_gen.o \
 	save_xmms.o \
 	const.o \
-	aes128_ecbenc_x3.o
+	aes128_ecbenc_x3.o \
+	zuc_common.o
 
 #
 # List of ASM modules (no-aesni directory)
@@ -201,6 +204,7 @@ asm_sse_lib_objs := \
 	sha_256_mult_sse.o \
 	sha1_ni_x2_sse.o \
 	sha256_ni_x2_sse.o \
+	zuc_sse.o \
 	mb_mgr_aes_flush_sse.o \
 	mb_mgr_aes_submit_sse.o \
 	mb_mgr_aes192_flush_sse.o \
@@ -258,6 +262,7 @@ asm_avx_lib_objs := \
 	sha384_one_block_avx.o \
 	sha512_one_block_avx.o \
 	sha512_x2_avx.o \
+	zuc_avx.o \
 	mb_mgr_aes_flush_avx.o \
 	mb_mgr_aes_submit_avx.o \
 	mb_mgr_aes192_flush_avx.o \

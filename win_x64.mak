@@ -158,6 +158,11 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha512_x8_avx512.obj \
 	$(OBJ_DIR)\sha_256_mult_avx.obj \
 	$(OBJ_DIR)\sha_256_mult_sse.obj \
+	$(OBJ_DIR)\zuc_common.obj \
+	$(OBJ_DIR)\zuc_sse_top.obj \
+	$(OBJ_DIR)\zuc_avx_top.obj \
+	$(OBJ_DIR)\zuc_sse.obj \
+	$(OBJ_DIR)\zuc_avx.obj \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
 	$(OBJ_DIR)\md5_one_block.obj \
 	$(OBJ_DIR)\sha_one_block.obj \

@@ -31,6 +31,8 @@
 
 #define AVX2
 #include "intel-ipsec-mb.h"
+#include "include/zuc_internal.h"
+
 #include "save_xmms.h"
 #include "asm.h"
 #include "des.h"
@@ -633,6 +635,11 @@ init_mb_mgr_avx2(MB_MGR *state)
         state->sha512              = sha512_avx2;
         state->md5_one_block       = md5_one_block_avx2;
         state->aes128_cfb_one      = aes_cfb_128_one_avx2;
+
+        state->eea3_1_buffer       = zuc_eea3_1_buffer_avx;
+        state->eea3_4_buffer       = zuc_eea3_4_buffer_avx;
+        state->eea3_n_buffer       = zuc_eea3_n_buffer_avx;
+        state->eia3_1_buffer       = zuc_eia3_1_buffer_avx;
 #ifndef NO_GCM
         state->gcm128_enc          = aes_gcm_enc_128_avx_gen4;
         state->gcm192_enc          = aes_gcm_enc_192_avx_gen4;

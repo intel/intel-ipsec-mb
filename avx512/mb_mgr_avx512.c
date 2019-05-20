@@ -31,6 +31,8 @@
 
 #define AVX512
 #include "intel-ipsec-mb.h"
+#include "include/zuc_internal.h"
+
 #include "save_xmms.h"
 #include "asm.h"
 #include "des.h"
@@ -897,6 +899,12 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->sha512              = sha512_avx512;
         state->md5_one_block       = md5_one_block_avx512;
         state->aes128_cfb_one      = aes_cfb_128_one_avx512;
+
+        state->eea3_1_buffer       = zuc_eea3_1_buffer_avx;
+        state->eea3_4_buffer       = zuc_eea3_4_buffer_avx;
+        state->eea3_n_buffer       = zuc_eea3_n_buffer_avx;
+        state->eia3_1_buffer       = zuc_eia3_1_buffer_avx;
+
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES)
                 submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;
 #ifndef NO_GCM
