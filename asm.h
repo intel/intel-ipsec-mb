@@ -46,6 +46,16 @@ void aes_cbc_dec_192_avx(const void *in, const uint8_t *IV, const void *keys,
 void aes_cbc_dec_256_avx(const void *in, const uint8_t *IV, const void *keys,
                          void *out, uint64_t len_bytes);
 
+void aes_cbc_dec_128_vaes_avx512(const void *in, const uint8_t *IV,
+                                 const void *keys, void *out,
+                                 uint64_t len_bytes);
+void aes_cbc_dec_192_vaes_avx512(const void *in, const uint8_t *IV,
+                                 const void *keys, void *out,
+                                 uint64_t len_bytes);
+void aes_cbc_dec_256_vaes_avx512(const void *in, const uint8_t *IV,
+                                 const void *keys, void *out,
+                                 uint64_t len_bytes);
+
 void aes_cbc_dec_128_sse(const void *in, const uint8_t *IV, const void *keys,
                          void *out, uint64_t len_bytes);
 void aes_cbc_dec_192_sse(const void *in, const uint8_t *IV, const void *keys,

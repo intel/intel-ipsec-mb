@@ -96,9 +96,9 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx512
 
-#define AES_CBC_DEC_128       aes_cbc_dec_128_avx
-#define AES_CBC_DEC_192       aes_cbc_dec_192_avx
-#define AES_CBC_DEC_256       aes_cbc_dec_256_avx
+#define AES_CBC_DEC_128       aes_cbc_dec_128_avx512
+#define AES_CBC_DEC_192       aes_cbc_dec_192_avx512
+#define AES_CBC_DEC_256       aes_cbc_dec_256_avx512
 
 #define AES_CNTR_128       aes_cntr_128_avx
 #define AES_CNTR_192       aes_cntr_192_avx
@@ -398,6 +398,19 @@ vaes_submit_cntr_avx512(JOB_AES_HMAC *job)
 
 /* ====================================================================== */
 
+static void
+(*aes_cbc_dec_128_avx512) (const void *in, const uint8_t *IV,
+                           const void *keys, void *out,
+                           uint64_t len_bytes) = aes_cbc_dec_128_avx;
+static void
+(*aes_cbc_dec_192_avx512) (const void *in, const uint8_t *IV,
+                           const void *keys, void *out,
+                           uint64_t len_bytes) = aes_cbc_dec_192_avx;
+static void
+(*aes_cbc_dec_256_avx512) (const void *in, const uint8_t *IV,
+                           const void *keys, void *out,
+                           uint64_t len_bytes) = aes_cbc_dec_256_avx;
+
 void
 init_mb_mgr_avx512(MB_MGR *state)
 {
@@ -411,6 +424,11 @@ init_mb_mgr_avx512(MB_MGR *state)
         if (!(state->features & IMB_FEATURE_AESNI)) {
                 init_mb_mgr_sse_no_aesni(state);
                 return;
+        }
+        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
+                aes_cbc_dec_128_avx512 = aes_cbc_dec_128_vaes_avx512;
+                aes_cbc_dec_192_avx512 = aes_cbc_dec_192_vaes_avx512;
+                aes_cbc_dec_256_avx512 = aes_cbc_dec_256_vaes_avx512;
         }
 
         /* Init AES out-of-order fields */
