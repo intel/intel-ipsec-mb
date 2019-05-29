@@ -174,7 +174,7 @@ default rel
 ;;;   - the last 8th block can be partial (lengths between 129 and 239)
 ;;;   - partial block ciphering is handled within this macro
 
-%macro INITIAL_BLOCKS 26
+%macro INITIAL_BLOCKS 18
 %define %%KEY                   %1      ; [in] pointer to key
 %define %%CYPH_PLAIN_OUT        %2      ; [in] output buffer
 %define %%PLAIN_CYPH_IN         %3      ; [in] input buffer
@@ -188,29 +188,16 @@ default rel
 %define %%ZT2                   %11     ; [clobbered] ZMM temporary
 %define %%ZT3                   %12     ; [clobbered] ZMM temporary
 %define %%ZT4                   %13     ; [clobbered] ZMM temporary
-%define %%ZT5                   %14     ; [clobbered] ZMM temporary
-%define %%ZT6                   %15     ; [clobbered] ZMM temporary
-%define %%ZT7                   %16     ; [clobbered] ZMM temporary
-%define %%ZT8                   %17     ; [clobbered] ZMM temporary
-%define %%ZT9                   %18     ; [clobbered] ZMM temporary
-%define %%ZT10                  %19     ; [clobbered] ZMM temporary
-%define %%ZT11                  %20     ; [clobbered] ZMM temporary
-%define %%ZT12                  %21     ; [clobbered] ZMM temporary
-%define %%IA0                   %22     ; [clobbered] GP temporary
-%define %%IA1                   %23     ; [clobbered] GP temporary
-%define %%MASKREG               %24     ; [clobbered] mask register
-%define %%SHUFREG               %25     ; [in] ZMM register with shuffle mask
-%define %%NROUNDS               %26     ; [in] number of rounds; numerical value
+%define %%IA0                   %14     ; [clobbered] GP temporary
+%define %%IA1                   %15     ; [clobbered] GP temporary
+%define %%MASKREG               %16     ; [clobbered] mask register
+%define %%SHUFREG               %17     ; [in] ZMM register with shuffle mask
+%define %%NROUNDS               %18     ; [in] number of rounds; numerical value
 
 %define %%T1 XWORD(%%ZT1)
 %define %%T2 XWORD(%%ZT2)
 %define %%T3 XWORD(%%ZT3)
 %define %%T4 XWORD(%%ZT4)
-%define %%T5 XWORD(%%ZT5)
-%define %%T6 XWORD(%%ZT6)
-%define %%T7 XWORD(%%ZT7)
-%define %%T8 XWORD(%%ZT8)
-%define %%T9 XWORD(%%ZT9)
 
 %if %%num_initial_blocks > 0
         ;; get load/store mask
@@ -221,91 +208,91 @@ default rel
 
         ;; load plain/cipher text
 %if %%num_initial_blocks == 1
-        vmovdqu8        %%T5, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%T3, [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks == 2
-        vmovdqu8        YWORD(%%ZT5), [%%PLAIN_CYPH_IN]
+        vmovdqu8        YWORD(%%ZT3), [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks == 3
-        vmovdqu8        %%ZT5{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks == 4
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks == 5
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%T6, [%%PLAIN_CYPH_IN + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%T4, [%%PLAIN_CYPH_IN + 64]
 %elif %%num_initial_blocks == 6
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        YWORD(%%ZT6), [%%PLAIN_CYPH_IN + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
+        vmovdqu8        YWORD(%%ZT4), [%%PLAIN_CYPH_IN + 64]
 %else
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
 %endif
 
         ;; prepare AES counter blocks
 %if %%num_initial_blocks > 1
 %if %%num_initial_blocks == 2
-        vshufi64x2      YWORD(%%ZT3), YWORD(%%CTR), YWORD(%%CTR), 0
-        vpaddd          YWORD(%%ZT3), YWORD(%%ZT3), [rel ddq_add_0123]
+        vshufi64x2      YWORD(%%ZT1), YWORD(%%CTR), YWORD(%%CTR), 0
+        vpaddd          YWORD(%%ZT1), YWORD(%%ZT1), [rel ddq_add_0123]
 %else
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT3, ZWORD(%%CTR), [rel ddq_add_0123]
-        vpaddd          %%ZT4, ZWORD(%%CTR), [rel ddq_add_4567]
+        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0123]
+        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4567]
 %endif
 %endif
 
-        ;; extract new counter value (%%T3)
+        ;; extract new counter value (%%T1)
         ;; shuffle the counters for AES rounds
 %if %%num_initial_blocks == 1
-        vpshufb         %%T3, %%CTR, XWORD(%%SHUFREG)
+        vpshufb         %%T1, %%CTR, XWORD(%%SHUFREG)
 %elif %%num_initial_blocks == 2
-        vextracti32x4   %%CTR, YWORD(%%ZT3), 1
-        vpshufb         YWORD(%%ZT3), YWORD(%%SHUFREG)
+        vextracti32x4   %%CTR, YWORD(%%ZT1), 1
+        vpshufb         YWORD(%%ZT1), YWORD(%%SHUFREG)
 %elif %%num_initial_blocks <= 4
-        vextracti32x4   %%CTR, %%ZT3, (%%num_initial_blocks - 1)
-        vpshufb         %%ZT3, %%SHUFREG
+        vextracti32x4   %%CTR, %%ZT1, (%%num_initial_blocks - 1)
+        vpshufb         %%ZT1, %%SHUFREG
 %elif %%num_initial_blocks == 5
-        vmovdqa64       %%CTR, %%T4
-        vpshufb         %%ZT3, %%SHUFREG
-        vpshufb         %%T4, XWORD(%%SHUFREG)
+        vmovdqa64       %%CTR, %%T2
+        vpshufb         %%ZT1, %%SHUFREG
+        vpshufb         %%T2, XWORD(%%SHUFREG)
 %elif %%num_initial_blocks == 6
-        vextracti32x4   %%CTR, YWORD(%%ZT4), 1
-        vpshufb         %%ZT3, %%SHUFREG
-        vpshufb         YWORD(%%ZT4), YWORD(%%SHUFREG)
+        vextracti32x4   %%CTR, YWORD(%%ZT2), 1
+        vpshufb         %%ZT1, %%SHUFREG
+        vpshufb         YWORD(%%ZT2), YWORD(%%SHUFREG)
 %else ; num initial blocks = 7
-        vextracti32x4   %%CTR, %%ZT4, 2
-        vpshufb         %%ZT3, %%SHUFREG
-        vpshufb         %%ZT4, %%SHUFREG
+        vextracti32x4   %%CTR, %%ZT2, 2
+        vpshufb         %%ZT1, %%SHUFREG
+        vpshufb         %%ZT2, %%SHUFREG
 %endif
 
         ;; AES rounds and XOR with plain/cipher text
 %assign j 0
 %rep (%%NROUNDS + 2)
         AESROUND_1_TO_8_BLOCKS \
-                        %%ZT3, %%ZT4, ZKEY %+ j, j, \
-                        %%ZT5, %%ZT6, %%num_initial_blocks, \
+                        %%ZT1, %%ZT2, ZKEY %+ j, j, \
+                        %%ZT3, %%ZT4, %%num_initial_blocks, \
                         %%NROUNDS
 %assign j (j + 1)
 %endrep
 
         ;; write cipher/plain text back to output
 %if %%num_initial_blocks == 1
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%T3
+        vmovdqu8        [%%CYPH_PLAIN_OUT], %%T1
 %elif %%num_initial_blocks == 2
-        vmovdqu8        [%%CYPH_PLAIN_OUT], YWORD(%%ZT3)
+        vmovdqu8        [%%CYPH_PLAIN_OUT], YWORD(%%ZT1)
 %elif %%num_initial_blocks == 3
         ;; Blocks 3
-        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%ZT3
+        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%ZT1
 %elif %%num_initial_blocks == 4
         ;; Blocks 4
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT3
+        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
 %elif %%num_initial_blocks == 5
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%T4
+        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%T2
 %elif %%num_initial_blocks == 6
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], YWORD(%%ZT4)
+        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], YWORD(%%ZT2)
 %else
         ;; Blocks 7
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%ZT4
+        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%ZT2
 %endif
 
         ;; adjust data offset and length
@@ -338,8 +325,8 @@ default rel
 %endif
         kmovq           %%MASKREG, %%IA0
         ;; load plain or cipher text
-        vmovdqu8        %%ZT1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-        vmovdqu8        %%ZT2{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
 
         ;; prepare next counter blocks
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
@@ -351,21 +338,21 @@ default rel
         vpaddd          %%CTR_58, ZWORD(%%CTR), [rel ddq_add_4567]
 %endif
 
-        vpshufb         %%ZT3, %%CTR_14, %%SHUFREG
-        vpshufb         %%ZT4, %%CTR_58, %%SHUFREG
+        vpshufb         %%ZT1, %%CTR_14, %%SHUFREG
+        vpshufb         %%ZT2, %%CTR_58, %%SHUFREG
 
         ;; AES rounds and XOR with plain/cipher text
 %assign j 0
 %rep (%%NROUNDS + 2)
         AESROUND_1_TO_8_BLOCKS \
-                        %%ZT3, %%ZT4, ZKEY %+ j, j, \
-                        %%ZT1, %%ZT2, 8, %%NROUNDS
+                        %%ZT1, %%ZT2, ZKEY %+ j, j, \
+                        %%ZT3, %%ZT4, 8, %%NROUNDS
 %assign j (j + 1)
 %endrep
 
         ;; write cipher/plain text back to output
-        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{%%MASKREG}, %%ZT4
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{%%MASKREG}, %%ZT2
 
         ;; check if there is partial block
         cmp             %%LENGTH, 128
@@ -391,7 +378,7 @@ default rel
 ;;;
 ;;; num_initial_blocks is expected to include the partial final block
 ;;; in the count.
-%macro INITIAL_BLOCKS_PARTIAL 16
+%macro INITIAL_BLOCKS_PARTIAL 15
 %define %%KEY                   %1  ; [in] key pointer
 %define %%CYPH_PLAIN_OUT        %2  ; [in] text out pointer
 %define %%PLAIN_CYPH_IN         %3  ; [in] text out pointer
@@ -402,18 +389,16 @@ default rel
 %define %%ZT2                   %8  ; [clobbered] ZMM temporary
 %define %%ZT3                   %9  ; [clobbered] ZMM temporary
 %define %%ZT4                   %10 ; [clobbered] ZMM temporary
-%define %%ZT5                   %11 ; [clobbered] ZMM temporary
-%define %%IA0                   %12 ; [clobbered] GP temporary
-%define %%IA1                   %13 ; [clobbered] GP temporary
-%define %%MASKREG               %14 ; [clobbered] mask register
-%define %%SHUFREG               %15 ; [in] ZMM register with shuffle mask
-%define %%NROUNDS               %16 ; [in] number of rounds; numerical value
+%define %%IA0                   %11 ; [clobbered] GP temporary
+%define %%IA1                   %12 ; [clobbered] GP temporary
+%define %%MASKREG               %13 ; [clobbered] mask register
+%define %%SHUFREG               %14 ; [in] ZMM register with shuffle mask
+%define %%NROUNDS               %15 ; [in] number of rounds; numerical value
 
 %define %%T1 XWORD(%%ZT1)
 %define %%T2 XWORD(%%ZT2)
 %define %%T3 XWORD(%%ZT3)
 %define %%T4 XWORD(%%ZT4)
-%define %%T5 XWORD(%%ZT5)
 
         ;; get load/store mask
         lea             %%IA0, [rel byte64_len_to_mask_table]
@@ -425,80 +410,80 @@ default rel
 
         ;; load plain/cipher text
 %if %%num_initial_blocks == 1
-        vmovdqu8        %%T4{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%T3{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks == 2
-        vmovdqu8        YWORD(%%ZT4){%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
+        vmovdqu8        YWORD(%%ZT3){%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks <= 4
-        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks == 5
-        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%T5{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%T4{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
 %elif %%num_initial_blocks == 6
-        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN]
-        vmovdqu8        YWORD(%%ZT5){%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
+        vmovdqu8        YWORD(%%ZT4){%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
 %else
-        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT5{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
+        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
 %endif
 
         ;; prepare AES counter blocks
 %if %%num_initial_blocks > 1
 %if %%num_initial_blocks == 2
-        vshufi64x2      YWORD(%%ZT2), YWORD(%%CTR), YWORD(%%CTR), 0
-        vpaddd          YWORD(%%ZT2), YWORD(%%ZT2), [rel ddq_add_0123]
+        vshufi64x2      YWORD(%%ZT1), YWORD(%%CTR), YWORD(%%CTR), 0
+        vpaddd          YWORD(%%ZT1), YWORD(%%ZT1), [rel ddq_add_0123]
 %else
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_0123]
-        vpaddd          %%ZT3, ZWORD(%%CTR), [rel ddq_add_4567]
+        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0123]
+        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4567]
 %endif
 %endif
 
         ;; shuffle the counters for AES rounds
 %if %%num_initial_blocks == 1
-        vpshufb         %%T2, %%CTR, XWORD(%%SHUFREG)
+        vpshufb         %%T1, %%CTR, XWORD(%%SHUFREG)
 %elif %%num_initial_blocks == 2
-        vpshufb         YWORD(%%ZT2), YWORD(%%SHUFREG)
+        vpshufb         YWORD(%%ZT1), YWORD(%%SHUFREG)
 %elif %%num_initial_blocks <= 4
-        vpshufb         %%ZT2, %%SHUFREG
+        vpshufb         %%ZT1, %%SHUFREG
 %elif %%num_initial_blocks == 5
-        vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         %%T3, XWORD(%%SHUFREG)
+        vpshufb         %%ZT1, %%SHUFREG
+        vpshufb         %%T2, XWORD(%%SHUFREG)
 %elif %%num_initial_blocks == 6
-        vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         YWORD(%%ZT3), YWORD(%%SHUFREG)
+        vpshufb         %%ZT1, %%SHUFREG
+        vpshufb         YWORD(%%ZT2), YWORD(%%SHUFREG)
 %else
+        vpshufb         %%ZT1, %%SHUFREG
         vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         %%ZT3, %%SHUFREG
 %endif
 
         ;; AES rounds and XOR with plain/cipher text
 %assign j 0
 %rep (%%NROUNDS + 2)
         AESROUND_1_TO_8_BLOCKS \
-                        %%ZT2, %%ZT3, ZKEY %+ j, j, \
-                        %%ZT4, %%ZT5, %%num_initial_blocks, \
+                        %%ZT1, %%ZT2, ZKEY %+ j, j, \
+                        %%ZT3, %%ZT4, %%num_initial_blocks, \
                         %%NROUNDS
 %assign j (j + 1)
 %endrep
 
         ;; write cipher/plain text back to output and
 %if %%num_initial_blocks == 1
-        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%T2
+        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%T1
 %elif %%num_initial_blocks == 2
-        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, YWORD(%%ZT2)
+        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, YWORD(%%ZT1)
 %elif %%num_initial_blocks <= 4
         ;; Blocks 3 and 4
-        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%ZT2
+        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%ZT1
 %elif %%num_initial_blocks == 5
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%T3
+        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%T2
 %elif %%num_initial_blocks == 6
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, YWORD(%%ZT3)
+        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, YWORD(%%ZT2)
 %else
         ;; Blocks 7 and 8
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%ZT3
+        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%ZT2
 %endif
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
@@ -509,7 +494,7 @@ default rel
 ;;; Main CNTR macro
 ;;; - operates on single stream
 ;;; - encrypts 8 blocks at a time
-%macro  ENCRYPT_8_PARALLEL 19
+%macro  ENCRYPT_8_PARALLEL 18
 %define %%KEY                   %1  ; [in] key pointer
 %define %%CYPH_PLAIN_OUT        %2  ; [in] pointer to output buffer
 %define %%PLAIN_CYPH_IN         %3  ; [in] pointer to input buffer
@@ -524,24 +509,23 @@ default rel
 %define %%ZT2                   %12 ; [clobbered] temporary ZMM (cipher)
 %define %%ZT3                   %13 ; [clobbered] temporary ZMM (cipher)
 %define %%ZT4                   %14 ; [clobbered] temporary ZMM (cipher)
-%define %%ZT5                   %15 ; [clobbered] temporary ZMM (cipher)
-%define %%MASKREG               %16 ; [clobbered] mask register for partial loads/stores
-%define %%SHUFREG               %17 ; [in] ZMM register with shuffle mask
-%define %%ADD8REG               %18 ; [in] ZMM register with increment by 8 mask
-%define %%NROUNDS               %19 ; [in] number of rounds; numerical value
+%define %%MASKREG               %15 ; [clobbered] mask register for partial loads/stores
+%define %%SHUFREG               %16 ; [in] ZMM register with shuffle mask
+%define %%ADD8REG               %17 ; [in] ZMM register with increment by 8 mask
+%define %%NROUNDS               %18 ; [in] number of rounds; numerical value
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; load/store mask (partial case) and load the text data
 %ifidn %%FULL_PARTIAL, full
-        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
 %else
         lea             %%IA0, [rel byte64_len_to_mask_table]
         mov             %%IA1, %%LENGTH
         sub             %%IA1, 64
         kmovq           %%MASKREG, [%%IA0 + 8*%%IA1]
-        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-        vmovdqu8        %%ZT5{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+        vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -557,7 +541,7 @@ default rel
 %rep (%%NROUNDS + 2)
         AESROUND_1_TO_8_BLOCKS \
                         %%ZT1, %%ZT2, ZKEY %+ j, j, \
-                        %%ZT4, %%ZT5, 8, %%NROUNDS
+                        %%ZT3, %%ZT4, 8, %%NROUNDS
 %assign j (j + 1)
 %endrep
 
@@ -611,7 +595,7 @@ default rel
 ;;; - number of blocks in the message comes as argument
 ;;; - depending on the number of blocks an optimized variant of
 ;;;   INITIAL_BLOCKS_PARTIAL is invoked
-%macro  CNTR_ENC_DEC_SMALL   16
+%macro  CNTR_ENC_DEC_SMALL   15
 %define %%KEY               %1  ; [in] key pointer
 %define %%CYPH_PLAIN_OUT    %2  ; [in] output buffer
 %define %%PLAIN_CYPH_IN     %3  ; [in] input buffer
@@ -622,12 +606,11 @@ default rel
 %define %%ZTMP2             %8  ; [clobbered] ZMM register
 %define %%ZTMP3             %9  ; [clobbered] ZMM register
 %define %%ZTMP4             %10 ; [clobbered] ZMM register
-%define %%ZTMP5             %11 ; [clobbered] ZMM register
-%define %%IA0               %12 ; [clobbered] GP register
-%define %%IA1               %13 ; [clobbered] GP register
-%define %%MASKREG           %14 ; [clobbered] mask register
-%define %%SHUFREG           %15 ; [in] ZMM register with shuffle mask
-%define %%NROUNDS           %16 ; [in] number of rounds; numerical value
+%define %%IA0               %11 ; [clobbered] GP register
+%define %%IA1               %12 ; [clobbered] GP register
+%define %%MASKREG           %13 ; [clobbered] mask register
+%define %%SHUFREG           %14 ; [in] ZMM register with shuffle mask
+%define %%NROUNDS           %15 ; [in] number of rounds; numerical value
 
         cmp     %%NUM_BLOCKS, 8
         je      %%_small_initial_num_blocks_is_8
@@ -651,7 +634,7 @@ default rel
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 8, \
                 %%CTR, \
-                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp     %%_small_initial_blocks_encrypted
 
@@ -659,7 +642,7 @@ default rel
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 7, \
                 %%CTR, \
-                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp     %%_small_initial_blocks_encrypted
 
@@ -667,7 +650,7 @@ default rel
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 6, \
                 %%CTR, \
-                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp     %%_small_initial_blocks_encrypted
 
@@ -675,7 +658,7 @@ default rel
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 5, \
                 %%CTR, \
-                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp     %%_small_initial_blocks_encrypted
 
@@ -683,7 +666,7 @@ default rel
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 4, \
                 %%CTR, \
-                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp     %%_small_initial_blocks_encrypted
 
@@ -691,7 +674,7 @@ default rel
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 3, \
                 %%CTR, \
-                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp     %%_small_initial_blocks_encrypted
 
@@ -699,7 +682,7 @@ default rel
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 2, \
                 %%CTR, \
-                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp     %%_small_initial_blocks_encrypted
 
@@ -707,7 +690,7 @@ default rel
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 1, \
                 %%CTR, \
-                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
 %%_small_initial_blocks_encrypted:
 
@@ -741,16 +724,8 @@ default rel
 %define %%ZTMP1                 zmm4
 %define %%ZTMP2                 zmm5
 %define %%ZTMP3                 zmm6
-%define %%ZTMP4                 zmm7
-%define %%ZTMP5                 zmm8
-%define %%ZTMP6                 zmm9
-%define %%ZTMP7                 zmm10
-%define %%ZTMP8                 zmm11
-%define %%ZTMP9                 zmm12
-%define %%ZTMP10                zmm13
-%define %%ZTMP11                zmm14
-%define %%SHUFREG               zmm15
-%define %%ADD8REG               zmm16
+%define %%SHUFREG               zmm7
+%define %%ADD8REG               zmm8
 
 %define %%MASKREG               k1
 
@@ -819,7 +794,7 @@ default rel
                 %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, \
                 %%IA1, %%CTR_BLOCKx, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA2, %%MASKREG, %%SHUFREG, %%NROUNDS
 
         jmp     %%_enc_dec_done
@@ -846,64 +821,56 @@ default rel
 %%_initial_num_blocks_is_7:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 7, %%CTR_BLOCKx, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
-                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp             %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_6:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 6, %%CTR_BLOCKx, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
-                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11,\
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp             %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_5:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 5, %%CTR_BLOCKx, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
-                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp             %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_4:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 4, %%CTR_BLOCKx, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
-                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp             %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_3:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 3, %%CTR_BLOCKx, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
-                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp             %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_2:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 2, %%CTR_BLOCKx, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
-                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp             %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_1:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 1, %%CTR_BLOCKx, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
-                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
         jmp             %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_0:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%LENGTH, %%DATA_OFFSET, 0, %%CTR_BLOCKx, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
-                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
 
 %%_initial_blocks_encrypted:
@@ -919,7 +886,7 @@ default rel
         ENCRYPT_8_PARALLEL  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
                 full, %%IA0, %%IA1, %%LENGTH, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%MASKREG, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%MASKREG, \
                 %%SHUFREG, %%ADD8REG, %%NROUNDS
         add             %%DATA_OFFSET, 128
         sub             %%LENGTH, 128
@@ -937,7 +904,7 @@ default rel
         ENCRYPT_8_PARALLEL  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%CTR_BLOCK_14, %%CTR_BLOCK_58, \
                 partial, %%IA0, %%IA1, %%LENGTH, \
-                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%MASKREG, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%MASKREG, \
                 %%SHUFREG, %%ADD8REG, %%NROUNDS
 
 %%_enc_dec_done:
