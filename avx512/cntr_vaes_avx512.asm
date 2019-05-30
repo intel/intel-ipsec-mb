@@ -200,20 +200,14 @@ default rel
 %define %%T4 XWORD(%%ZT4)
 
 %if %%num_initial_blocks > 0
-        ;; get load/store mask
-%if (%%num_initial_blocks == 3) || (%%num_initial_blocks == 7)
-        mov             %%IA0, 0x0000_ffff_ffff_ffff
-        kmovq           %%MASKREG, %%IA0
-%endif
-
         ;; load plain/cipher text
 %if %%num_initial_blocks == 1
         vmovdqu8        %%T3, [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks == 2
         vmovdqu8        YWORD(%%ZT3), [%%PLAIN_CYPH_IN]
-%elif %%num_initial_blocks == 3
-        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
-%elif %%num_initial_blocks == 4
+%elif %%num_initial_blocks <= 4
+        ; loading 4 full blocks even if only 3 are needed,
+        ; since following data is valid
         vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
 %elif %%num_initial_blocks == 5
         vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
@@ -222,8 +216,10 @@ default rel
         vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
         vmovdqu8        YWORD(%%ZT4), [%%PLAIN_CYPH_IN + 64]
 %else
+        ; loading 8 full blocks even if only 7 are needed,
+        ; since following data is valid
         vmovdqu8        %%ZT3, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
+        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + 64]
 %endif
 
         ;; prepare AES counter blocks
@@ -279,7 +275,8 @@ default rel
         vmovdqu8        [%%CYPH_PLAIN_OUT], YWORD(%%ZT1)
 %elif %%num_initial_blocks == 3
         ;; Blocks 3
-        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT], YWORD(%%ZT1)
+        vextracti64x2   [%%CYPH_PLAIN_OUT + 32], %%ZT1, 2
 %elif %%num_initial_blocks == 4
         ;; Blocks 4
         vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
@@ -292,7 +289,8 @@ default rel
 %else
         ;; Blocks 7
         vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%ZT2
+        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], YWORD(%%ZT2)
+        vextracti64x2   [%%CYPH_PLAIN_OUT + 96], %%ZT1, 2
 %endif
 
         ;; adjust data offset and length
