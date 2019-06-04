@@ -28,4 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %define GCM256_MODE 1
+;; single buffer implementation
 %include "avx512/gcm_vaes_avx512.asm"
+;; multi buffer implementation
+%include "avx512/gcm_vaes_mb_avx512.asm"
