@@ -107,6 +107,51 @@ JOB_AES_HMAC *aes_cntr_ccm_128_sse_no_aesni(JOB_AES_HMAC *job);
 
 JOB_AES_HMAC *aes_cntr_ccm_128_avx(JOB_AES_HMAC *job);
 
+/* AES-ECB */
+void aes_ecb_enc_256_sse(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_ecb_enc_192_sse(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_ecb_enc_128_sse(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+
+void aes_ecb_enc_256_sse_no_aesni(const void *in, const void *keys,
+                                  void *out, uint64_t len_bytes);
+void aes_ecb_enc_192_sse_no_aesni(const void *in, const void *keys,
+                                  void *out, uint64_t len_bytes);
+void aes_ecb_enc_128_sse_no_aesni(const void *in, const void *keys,
+                                  void *out, uint64_t len_bytes);
+
+
+void aes_ecb_enc_256_avx(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_ecb_enc_192_avx(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_ecb_enc_128_avx(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+
+void aes_ecb_dec_256_sse(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_ecb_dec_192_sse(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_ecb_dec_128_sse(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+
+void aes_ecb_dec_256_sse_no_aesni(const void *in, const void *keys,
+                                  void *out, uint64_t len_bytes);
+void aes_ecb_dec_192_sse_no_aesni(const void *in, const void *keys,
+                                  void *out, uint64_t len_bytes);
+void aes_ecb_dec_128_sse_no_aesni(const void *in, const void *keys,
+                                  void *out, uint64_t len_bytes);
+
+
+void aes_ecb_dec_256_avx(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_ecb_dec_192_avx(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+void aes_ecb_dec_128_avx(const void *in, const void *keys,
+                         void *out, uint64_t len_bytes);
+
 /* AES128-ECBENC */
 void aes128_ecbenc_x3_sse(const void *in, void *keys,
                           void *out1, void *out2, void *out3);

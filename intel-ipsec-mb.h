@@ -189,7 +189,8 @@ typedef enum {
         DOCSIS_DES,
         CCM,
         DES3,
-        PON_AES_CNTR
+        PON_AES_CNTR,
+        ECB
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -236,7 +237,7 @@ typedef struct JOB_AES_HMAC {
         /*
          * For AES, aes_enc_key_expanded and aes_dec_key_expanded are
          * expected to point to expanded keys structure.
-         * - AES-CTR and AES-CCM, only aes_enc_key_expanded is used
+         * - AES-CTR, AES-ECB and AES-CCM, only aes_enc_key_expanded is used
          * - DOCSIS (AES-CBC + AES-CFB), both pointers are used
          *   aes_enc_key_expanded has to be set always for the partial block
          *

@@ -94,6 +94,13 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_avx
 #define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_avx
 
+#define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_avx
+#define SUBMIT_JOB_AES_ECB_128_DEC submit_job_aes_ecb_128_dec_avx
+#define SUBMIT_JOB_AES_ECB_192_ENC submit_job_aes_ecb_192_enc_avx
+#define SUBMIT_JOB_AES_ECB_192_DEC submit_job_aes_ecb_192_dec_avx
+#define SUBMIT_JOB_AES_ECB_256_ENC submit_job_aes_ecb_256_enc_avx
+#define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_avx
+
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx512
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx512
@@ -104,6 +111,13 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 #define AES_CNTR_192       aes_cntr_192_avx
 #define AES_CNTR_256       aes_cntr_256_avx
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
+
+#define AES_ECB_ENC_128       aes_ecb_enc_128_avx
+#define AES_ECB_ENC_192       aes_ecb_enc_192_avx
+#define AES_ECB_ENC_256       aes_ecb_enc_256_avx
+#define AES_ECB_DEC_128       aes_ecb_dec_128_avx
+#define AES_ECB_DEC_192       aes_ecb_dec_192_avx
+#define AES_ECB_DEC_256       aes_ecb_dec_256_avx
 
 #define SUBMIT_JOB_PON_ENC submit_job_pon_enc_avx
 #define SUBMIT_JOB_PON_DEC submit_job_pon_dec_avx

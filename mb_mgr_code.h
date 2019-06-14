@@ -102,6 +102,78 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
         return job;
 }
 
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_AES_ECB_128_ENC(JOB_AES_HMAC *job)
+{
+        AES_ECB_ENC_128(job->src + job->cipher_start_src_offset_in_bytes,
+                        job->aes_enc_key_expanded,
+                        job->dst,
+                        job->msg_len_to_cipher_in_bytes & (~15));
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_AES_ECB_192_ENC(JOB_AES_HMAC *job)
+{
+        AES_ECB_ENC_192(job->src + job->cipher_start_src_offset_in_bytes,
+                        job->aes_enc_key_expanded,
+                        job->dst,
+                        job->msg_len_to_cipher_in_bytes & (~15));
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_AES_ECB_256_ENC(JOB_AES_HMAC *job)
+{
+        AES_ECB_ENC_256(job->src + job->cipher_start_src_offset_in_bytes,
+                        job->aes_enc_key_expanded,
+                        job->dst,
+                        job->msg_len_to_cipher_in_bytes & (~15));
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_AES_ECB_128_DEC(JOB_AES_HMAC *job)
+{
+        AES_ECB_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
+                        job->aes_dec_key_expanded,
+                        job->dst,
+                        job->msg_len_to_cipher_in_bytes & (~15));
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_AES_ECB_192_DEC(JOB_AES_HMAC *job)
+{
+        AES_ECB_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
+                        job->aes_dec_key_expanded,
+                        job->dst,
+                        job->msg_len_to_cipher_in_bytes & (~15));
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_AES_ECB_256_DEC(JOB_AES_HMAC *job)
+{
+        AES_ECB_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
+                        job->aes_dec_key_expanded,
+                        job->dst,
+                        job->msg_len_to_cipher_in_bytes & (~15));
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
 /* ========================================================================= */
 /* Custom hash / cipher */
 /* ========================================================================= */
@@ -385,6 +457,14 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 }
         } else if (CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);
+        } else if (ECB == job->cipher_mode) {
+                if (16 == job->aes_key_len_in_bytes) {
+                        return SUBMIT_JOB_AES_ECB_128_ENC(job);
+                } else if (24 == job->aes_key_len_in_bytes) {
+                        return SUBMIT_JOB_AES_ECB_192_ENC(job);
+                } else { /* assume 32 */
+                        return SUBMIT_JOB_AES_ECB_256_ENC(job);
+                }
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
                         JOB_AES_HMAC *tmp;
@@ -464,7 +544,7 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif /* FLUSH_JOB_DOCSIS_DES_ENC */
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
-        } else { /* assume CNTR, CCM or NULL_CIPHER */
+        } else { /* assume CNTR, ECB, CCM or NULL_CIPHER */
                 return NULL;
         }
 }
@@ -483,6 +563,14 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 }
         } else if (CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);
+        } else if (ECB == job->cipher_mode) {
+                if (16 == job->aes_key_len_in_bytes) {
+                        return SUBMIT_JOB_AES_ECB_128_DEC(job);
+                } else if (24 == job->aes_key_len_in_bytes) {
+                        return SUBMIT_JOB_AES_ECB_192_DEC(job);
+                } else { /* assume 32 */
+                        return SUBMIT_JOB_AES_ECB_256_DEC(job);
+                }
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
                         DOCSIS_LAST_BLOCK(job);
@@ -788,6 +876,38 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                break;
+        case ECB:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->aes_key_len_in_bytes != UINT64_C(16) &&
+                    job->aes_key_len_in_bytes != UINT64_C(24) &&
+                    job->aes_key_len_in_bytes != UINT64_C(32)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes == 0) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes & UINT64_C(15)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(0)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }

@@ -154,6 +154,7 @@ asm_noaesni_lib_objs := \
 	aes128_cntr_by4_sse_no_aesni.o \
 	aes192_cntr_by4_sse_no_aesni.o \
 	aes256_cntr_by4_sse_no_aesni.o \
+	aes_ecb_by4_sse_no_aesni.o \
 	aes128_cntr_ccm_by4_sse_no_aesni.o \
 	pon_sse_no_aesni.o \
 	aes_cfb_128_sse_no_aesni.o \
@@ -184,6 +185,7 @@ asm_sse_lib_objs := \
 	aes128_cntr_by4_sse.o \
 	aes192_cntr_by4_sse.o \
 	aes256_cntr_by4_sse.o \
+	aes_ecb_by4_sse.o \
 	aes128_cntr_ccm_by4_sse.o \
 	aes_cfb_128_sse.o \
 	aes128_cbc_mac_x4.o \
@@ -243,6 +245,7 @@ asm_avx_lib_objs := \
 	aes192_cntr_by8_avx.o \
 	aes256_cntr_by8_avx.o \
 	aes128_cntr_ccm_by8_avx.o \
+	aes_ecb_by4_avx.o \
 	aes_cfb_128_avx.o \
 	aes128_cbc_mac_x8.o \
 	aes_xcbc_mac_128_x8.o \
