@@ -134,6 +134,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\md5_x4x2_sse.obj \
 	$(OBJ_DIR)\md5_x8x2_avx2.obj \
 	$(OBJ_DIR)\save_xmms.obj \
+	$(OBJ_DIR)\clear_regs_mem.obj \
 	$(OBJ_DIR)\sha1_mult_avx.obj \
 	$(OBJ_DIR)\sha1_mult_sse.obj \
 	$(OBJ_DIR)\sha1_ni_x2_sse.obj \
