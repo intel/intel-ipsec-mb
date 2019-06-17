@@ -55,7 +55,7 @@ CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:prec
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
-OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj
+OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj
 
 all: $(APP).exe
 
@@ -95,8 +95,11 @@ hmac_sha256_sha512_test.obj: hmac_sha256_sha512_test.c utils.h
 hmac_md5_test.obj: hmac_md5_test.c utils.h
 	$(CC) /c $(CFLAGS) hmac_md5_test.c
 
-hmac_aes_test.obj: aes_test.c utils.h
+aes_test.obj: aes_test.c utils.h
 	$(CC) /c $(CFLAGS) aes_test.c
+
+ecb_test.obj: ecb_test.c utils.h
+	$(CC) /c $(CFLAGS) ecb_test.c
 
 utils.obj: utils.c
 	$(CC) /c $(CFLAGS) utils.c

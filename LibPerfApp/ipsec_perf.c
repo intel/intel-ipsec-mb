@@ -89,7 +89,7 @@
 
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
-#define CIPHER_MODES_AES 4	/* CBC, CNTR, CNTR+8, NULL_CIPHER */
+#define CIPHER_MODES_AES 5	/* CBC, CNTR, CNTR+8, ECB, NULL_CIPHER */
 #define CIPHER_MODES_DOCSIS 4	/* AES DOCSIS, AES DOCSIS+8, DES DOCSIS,
                                    DES DOCSIS+8 */
 #define CIPHER_MODES_DES 1	/* DES */
@@ -161,6 +161,7 @@ enum test_cipher_mode_e {
         TEST_CBC = 1,
         TEST_CNTR,
         TEST_CNTR8, /* CNTR with increased buffer by 8 */
+        TEST_ECB,
         TEST_NULL_CIPHER,
         TEST_AESDOCSIS,
         TEST_AESDOCSIS8, /* AES DOCSIS with increased buffer size by 8 */
@@ -290,6 +291,27 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 .name = "aes-ctr8-256",
                 .values.job_params = {
                         .cipher_mode = TEST_CNTR8,
+                        .aes_key_size = AES_256_BYTES
+                }
+        },
+        {
+                .name = "aes-ecb-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_ECB,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-ecb-192",
+                .values.job_params = {
+                        .cipher_mode = TEST_ECB,
+                        .aes_key_size = AES_192_BYTES
+                }
+        },
+        {
+                .name = "aes-ecb-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_ECB,
                         .aes_key_size = AES_256_BYTES
                 }
         },
@@ -896,6 +918,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_CNTR:
         case TEST_CNTR8:
                 c_mode = CNTR;
+                break;
+        case TEST_ECB:
+                c_mode = ECB;
                 break;
         case TEST_NULL_CIPHER:
                 c_mode = NULL_CIPHER;
