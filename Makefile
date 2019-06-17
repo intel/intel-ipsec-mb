@@ -73,6 +73,14 @@ OPT = -O3
 CFLAGS += -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
+ifeq ($(SAFE_DATA),y)
+CFLAGS += -DSAFE_DATA
+endif
+
+ifeq ($(SAFE_PARAM),y)
+CFLAGS += -DSAFE_PARAM
+endif
+
 # prevent SIMD optimizations for non-aesni modules
 CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
@@ -109,6 +117,15 @@ YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUD
 
 NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
 NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
+
+# warning messages
+
+SAFE_PARAM_MSG1="SAFE_PARAM option not set."
+SAFE_PARAM_MSG2="Input parameters will not be checked."
+SAFE_DATA_MSG1="SAFE_DATA option not set."
+SAFE_DATA_MSG2="Stack and registers containing sensitive information, \
+		such keys or IV will not be cleared \
+		at the end of function calls."
 
 #
 # List of C modules (any origin)
@@ -402,6 +419,12 @@ ifeq ($(SHARED),y)
 	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB).so
 else
 	$(AR) -qcs $@ $^
+endif
+ifneq ($(SAFE_PARAM), y)
+	@echo "NOTE:" $(SAFE_PARAM_MSG1) $(SAFE_PARAM_MSG2)
+endif
+ifneq ($(SAFE_DATA), y)
+	@echo "NOTE:" $(SAFE_DATA_MSG1) $(SAFE_DATA_MSG2)
 endif
 
 .PHONY: install

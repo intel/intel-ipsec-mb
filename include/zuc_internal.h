@@ -49,6 +49,10 @@
 #define NUM_LFSR_STATES                     (16)
 #define ZUC_WORD                            (32)
 
+/* Range of input data for ZUC is from 1 to 65504 bits */
+#define ZUC_MIN_LEN     1
+#define ZUC_MAX_LEN     65504
+
 #ifdef DEBUG
 #ifdef _WIN32
 #define DEBUG_PRINT(_fmt, ...) \

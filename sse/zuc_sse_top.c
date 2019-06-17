@@ -37,12 +37,14 @@
 
 #include "include/zuc_internal.h"
 #include "include/save_xmms.h"
+#include "include/clear_regs_mem.h"
 #include "intel-ipsec-mb.h"
 
 #define SAVE_XMMS       save_xmms
 #define RESTORE_XMMS    restore_xmms
 
-void zuc_eea3_1_buffer_sse(const void *pKey,
+static inline
+void _zuc_eea3_1_buffer_sse(const void *pKey,
                            const void *pIv,
                            const void *pBufferIn,
                            void *pBufferOut,
@@ -53,11 +55,6 @@ void zuc_eea3_1_buffer_sse(const void *pKey,
         /* buffer to store 64 bytes of keystream */
         DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
         DECLARE_ALIGNED(uint8_t tempDst[64], 64);
-#ifndef LINUX
-        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 
         const uint64_t *pIn64 = NULL;
         const uint8_t *pIn8 = NULL;
@@ -109,24 +106,21 @@ void zuc_eea3_1_buffer_sse(const void *pKey,
                        numBytesLeftOver);
 
         }
-#ifndef LINUX
-        RESTORE_XMMS(xmm_save);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(keyStream, sizeof(keyStream));
+        clear_mem(&zucState, sizeof(zucState));
 #endif
 }
 
-
-void zuc_eea3_4_buffer_sse(const void *pKey[4], const void *pIv[4],
-                           const void *pBufferIn[4], void *pBufferOut[4],
-                           const uint32_t length[4])
+static inline
+void _zuc_eea3_4_buffer_sse(const void *pKey[4], const void *pIv[4],
+                            const void *pBufferIn[4], void *pBufferOut[4],
+                            const uint32_t length[4])
 {
 
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-#ifndef LINUX
-        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
 
         unsigned int i = 0;
         /* Calculate the minimum input packet size */
@@ -304,6 +298,88 @@ void zuc_eea3_4_buffer_sse(const void *pKey[4], const void *pIv[4],
                         }
                 }
         }
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(keyStr1, sizeof(keyStr1));
+        clear_mem(keyStr2, sizeof(keyStr2));
+        clear_mem(keyStr3, sizeof(keyStr3));
+        clear_mem(keyStr4, sizeof(keyStr4));
+        clear_mem(&singlePktState, sizeof(singlePktState));
+        clear_mem(&state, sizeof(state));
+        clear_mem(&keys, sizeof(keys));
+        clear_mem(&ivs, sizeof(ivs));
+#endif
+}
+
+void zuc_eea3_1_buffer_sse(const void *pKey,
+                           const void *pIv,
+                           const void *pBufferIn,
+                           void *pBufferOut,
+                           const uint32_t length)
+{
+#ifndef LINUX
+        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
+
+        SAVE_XMMS(xmm_save);
+#endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
+            pBufferOut == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (length < ZUC_MIN_LEN || length > ZUC_MAX_LEN)
+                return;
+#endif
+
+        _zuc_eea3_1_buffer_sse(pKey, pIv, pBufferIn, pBufferOut, length);
+
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_sse();
+#endif
+#ifndef LINUX
+        RESTORE_XMMS(xmm_save);
+#endif
+}
+
+void zuc_eea3_4_buffer_sse(const void *pKey[4], const void *pIv[4],
+                           const void *pBufferIn[4], void *pBufferOut[4],
+                           const uint32_t length[4])
+{
+#ifndef LINUX
+        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
+
+        SAVE_XMMS(xmm_save);
+#endif
+#ifdef SAFE_PARAM
+        unsigned int i;
+
+        /* Check for NULL pointers */
+        if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
+            pBufferOut == NULL)
+                return;
+
+        for (i = 0; i < 4; i++) {
+                if (pKey[i] == NULL || pIv[i] == NULL ||
+                    pBufferIn[i] == NULL || pBufferOut[i] == NULL)
+                        return;
+
+                /* Check input data is in range of supported length */
+                if (length[i] < ZUC_MIN_LEN || length[i] > ZUC_MAX_LEN)
+                        return;
+        }
+#endif
+
+        _zuc_eea3_4_buffer_sse(pKey, pIv, pBufferIn, pBufferOut, length);
+
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_sse();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -321,28 +397,51 @@ void zuc_eea3_n_buffer_sse(const void *pKey[], const void *pIv[],
         SAVE_XMMS(xmm_save);
 #endif
 
-        int i =0;
-        int packetCount = numBuffers;
+        unsigned int i;
+        unsigned int packetCount = numBuffers;
+
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
+            pBufferOut == NULL)
+                return;
+
+        for (i = 0; i < numBuffers; i++) {
+                if (pKey[i] == NULL || pIv[i] == NULL ||
+                    pBufferIn[i] == NULL || pBufferOut[i] == NULL)
+                        return;
+
+                /* Check input data is in range of supported length */
+                if (length[i] < ZUC_MIN_LEN || length[i] > ZUC_MAX_LEN)
+                        return;
+        }
+#endif
+        i = 0;
 
         while(packetCount >= 4) {
                 packetCount -=4;
-                zuc_eea3_4_buffer_sse(&pKey[i],
-                                      &pIv[i],
-                                      &pBufferIn[i],
-                                      &pBufferOut[i],
-                                      &length[i]);
+                _zuc_eea3_4_buffer_sse(&pKey[i],
+                                       &pIv[i],
+                                       &pBufferIn[i],
+                                       &pBufferOut[i],
+                                       &length[i]);
                 i+=4;
         }
 
         while(packetCount--) {
-                zuc_eea3_1_buffer_sse(pKey[i],
-                                      pIv[i],
-                                      pBufferIn[i],
-                                      pBufferOut[i],
-                                      length[i]);
+                _zuc_eea3_1_buffer_sse(pKey[i],
+                                       pIv[i],
+                                       pBufferIn[i],
+                                       pBufferOut[i],
+                                       length[i]);
                 i++;
         }
 
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_sse();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -380,6 +479,16 @@ void zuc_eia3_1_buffer_sse(const void *pKey,
         uint32_t T = 0;
         const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
 
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pKey == NULL || pIv == NULL || pBufferIn == NULL || pMacI == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (lengthInBits < ZUC_MIN_LEN || lengthInBits > ZUC_MAX_LEN)
+                return;
+#endif
+
         memset(&zucState, 0, sizeof(ZucState_t));
 
         asm_ZucInitialization(pKey, pIv, &(zucState));
@@ -413,6 +522,14 @@ void zuc_eia3_1_buffer_sse(const void *pKey,
         /* save the final MAC-I result */
         uint32_t keyBlock = keyStream[L - 1];
         *pMacI = bswap4(T ^ keyBlock);
+
+#ifdef SAFE_DATA
+        /* Clear sensitive data (in registers and stack) */
+        clear_mem(keyStream, sizeof(keyStream));
+        clear_mem(&zucState, sizeof(zucState));
+        clear_gps();
+        clear_xmms_sse();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
