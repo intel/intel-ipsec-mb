@@ -266,21 +266,13 @@ int validate_zuc_EEA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
         int retTmp, ret = 0;
         uint32_t byteLength;
         uint32_t bitResidue;
-        union IV_t {
-                uint8_t IVb[ZUC_IV_LEN_IN_BYTES];
-                uint32_t IVw[ZUC_IV_LEN_IN_BYTES / sizeof(uint32_t)];
-                uint64_t IVl[ZUC_IV_LEN_IN_BYTES / sizeof(uint64_t)];
-        } IVprep;
 
         for (i = 0; i < NUM_ZUC_EEA3_TESTS; i++) {
                 memcpy(pKeys, testEEA3_vectors[i].CK, ZUC_KEY_LEN_IN_BYTES);
-                IVprep.IVl[0] = IVprep.IVl[1] = 0;
-                IVprep.IVw[2] = IVprep.IVw[0] =
-                    bswap4(testEEA3_vectors[i].count);
-                IVprep.IVb[4] = IVprep.IVb[12] =
-                    (testEEA3_vectors[i].Bearer << 3) |
-                    (testEEA3_vectors[i].Direction << 2);
-                memcpy(pIV, IVprep.IVb, ZUC_IV_LEN_IN_BYTES);
+                zuc_eea3_iv_gen(testEEA3_vectors[i].count,
+                                testEEA3_vectors[i].Bearer,
+                                testEEA3_vectors[i].Direction,
+                                pIV);
                 byteLength = (testEEA3_vectors[i].length_in_bits + 7) / 8;
                 memcpy(pSrcData, testEEA3_vectors[i].plaintext, byteLength);
                 IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData, pDstData,
@@ -330,14 +322,8 @@ int validate_zuc_EEA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
 int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                              uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV)
 {
-
         uint32_t i, j, packetLen[4], bitResidue, byteResidue;
         int retTmp, ret = 0;
-        union IV_t {
-                uint8_t IVb[ZUC_IV_LEN_IN_BYTES];
-                uint32_t IVw[ZUC_IV_LEN_IN_BYTES / sizeof(uint32_t)];
-                uint64_t IVl[ZUC_IV_LEN_IN_BYTES / sizeof(uint64_t)];
-        } IVprep;
 
         for (i = 0; i < NUM_ZUC_EEA3_TESTS; i++) {
                 for (j = 0; j < 4; j++) {
@@ -345,13 +331,10 @@ int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                             (testEEA3_vectors[i].length_in_bits + 7) / 8;
                         memcpy(pKeys[j], testEEA3_vectors[i].CK,
                                ZUC_KEY_LEN_IN_BYTES);
-                        IVprep.IVl[0] = IVprep.IVl[1] = 0;
-                        IVprep.IVw[2] = IVprep.IVw[0] =
-                            bswap4(testEEA3_vectors[i].count);
-                        IVprep.IVb[4] = IVprep.IVb[12] =
-                            (testEEA3_vectors[i].Bearer << 3) |
-                            (testEEA3_vectors[i].Direction << 2);
-                        memcpy(pIV[j], IVprep.IVb, ZUC_IV_LEN_IN_BYTES);
+                        zuc_eea3_iv_gen(testEEA3_vectors[i].count,
+                                        testEEA3_vectors[i].Bearer,
+                                        testEEA3_vectors[i].Direction,
+                                        pIV[j]);
                         memcpy(pSrcData[j], testEEA3_vectors[i].plaintext,
                                packetLen[j]);
                 }
@@ -466,24 +449,16 @@ int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         uint32_t i, j, bitResidue, byteResidue;
         int retTmp, ret = 0;
         uint32_t packetLen[MAXBUFS];
-        union IV_t {
-                uint8_t IVb[ZUC_IV_LEN_IN_BYTES];
-                uint32_t IVw[ZUC_IV_LEN_IN_BYTES / sizeof(uint32_t)];
-                uint64_t IVl[ZUC_IV_LEN_IN_BYTES / sizeof(uint64_t)];
-        } IVprep;
 
         assert(numBuffs > 0);
         for (i = 0; i < NUM_ZUC_EEA3_TESTS; i++) {
                 for (j = 0; j <= (numBuffs - 1); j++) {
                         memcpy(pKeys[j], testEEA3_vectors[i].CK,
                                ZUC_KEY_LEN_IN_BYTES);
-                        IVprep.IVl[0] = IVprep.IVl[1] = 0;
-                        IVprep.IVw[2] = IVprep.IVw[0] =
-                            bswap4(testEEA3_vectors[i].count);
-                        IVprep.IVb[4] = IVprep.IVb[12] =
-                            (testEEA3_vectors[i].Bearer << 3) |
-                            (testEEA3_vectors[i].Direction << 2);
-                        memcpy(pIV[j], IVprep.IVb, ZUC_IV_LEN_IN_BYTES);
+                        zuc_eea3_iv_gen(testEEA3_vectors[i].count,
+                                        testEEA3_vectors[i].Bearer,
+                                        testEEA3_vectors[i].Direction,
+                                        pIV[j]);
                         memcpy(pSrcData[j], testEEA3_vectors[i].plaintext,
                                (testEEA3_vectors[i].length_in_bits + 7) / 8);
                         packetLen[j] =
@@ -602,22 +577,14 @@ int validate_zuc_EIA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
         uint32_t i;
         int retTmp, ret = 0;
         uint32_t byteLength;
-        union IV_t {
-                uint8_t IVb[ZUC_IV_LEN_IN_BYTES];
-                uint32_t IVw[ZUC_IV_LEN_IN_BYTES / sizeof(uint32_t)];
-                uint64_t IVl[ZUC_IV_LEN_IN_BYTES / sizeof(uint64_t)];
-        } IVprep;
+
         for (i = 0; i < NUM_ZUC_EIA3_TESTS; i++) {
                 memcpy(pKeys, testEIA3_vectors[i].CK, ZUC_KEY_LEN_IN_BYTES);
-                IVprep.IVl[0] = IVprep.IVl[1] = 0;
-                IVprep.IVw[2] = IVprep.IVw[0] =
-                    bswap4(testEIA3_vectors[i].count);
-                IVprep.IVb[8] ^= (testEIA3_vectors[i].Direction << 7);
-                IVprep.IVb[4] = IVprep.IVb[12] =
-                    (testEIA3_vectors[i].Bearer << 3);
-                IVprep.IVb[14] ^= (testEIA3_vectors[i].Direction << 7);
 
-                memcpy(pIV, IVprep.IVb, ZUC_IV_LEN_IN_BYTES);
+                zuc_eia3_iv_gen(testEIA3_vectors[i].count,
+                                testEIA3_vectors[i].Bearer,
+                                testEIA3_vectors[i].Direction,
+                                pIV);
                 byteLength = (testEIA3_vectors[i].length_in_bits + 7) / 8;
                 memcpy(pSrcData, testEIA3_vectors[i].message, byteLength);
                 IMB_ZUC_EIA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData,

@@ -146,7 +146,8 @@ c_lib_objs := \
 	cpu_feature.o \
 	aesni_emu.o \
 	zuc_sse_top.o \
-	zuc_avx_top.o
+	zuc_avx_top.o \
+	zuc_iv.o
 
 #
 # List of ASM modules (root directory/common)

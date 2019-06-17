@@ -1698,6 +1698,27 @@ IMB_DLL_EXPORT void aes_gcm_pre_256_avx_gen4(const void *key,
                                              struct gcm_key_data *key_data);
 #endif /* !NO_GCM */
 
+/**
+ * @brief Generation of ZUC Initialization Vectors (for EEA3 and EIA3)
+ *
+ * @param [in]  count  COUNT (4 bytes in Little Ending)
+ * @param [in]  bearer BEARER (5 bits)
+ * @param [in]  dir    DIRECTION (1 bit)
+ * @param [out] iv_ptr Pointer to generated IV (16 bytes)
+ *
+ * @return
+ *      - 0 if success
+ *      - 1 if one or more parameters are wrong
+ */
+IMB_DLL_EXPORT int zuc_eea3_iv_gen(const uint32_t count,
+                                   const uint8_t bearer,
+                                   const uint8_t dir,
+                                   void *iv_ptr);
+IMB_DLL_EXPORT int zuc_eia3_iv_gen(const uint32_t count,
+                                   const uint8_t bearer,
+                                   const uint8_t dir,
+                                   void *iv_ptr);
+
 #ifdef __cplusplus
 }
 #endif
