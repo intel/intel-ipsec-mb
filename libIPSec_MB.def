@@ -302,3 +302,6 @@ EXPORTS
     aes_gcm_precomp_256_vaes_avx512             @276
     zuc_eea3_iv_gen                             @277
     zuc_eia3_iv_gen                             @278
+    kasumi_key_sched_size                       @279
+    kasumi_init_f8_key_sched                    @280
+    kasumi_init_f9_key_sched                    @281

@@ -28,6 +28,8 @@
 #ifndef SAVE_XMMS_H
 #define SAVE_XMMS_H
 
+#include "intel-ipsec-mb.h"
+
 void save_xmms(uint128_t array[10]);
 void restore_xmms(uint128_t array[10]);
 

@@ -130,6 +130,11 @@ typedef struct {
 #define SHA_384_BLOCK_SIZE 128
 #define SHA_512_BLOCK_SIZE 128
 
+#define KASUMI_KEY_SIZE         16
+#define KASUMI_IV_SIZE          8
+#define KASUMI_BLOCK_SIZE       8
+#define KASUMI_DIGEST_SIZE      4
+
 /* Number of lanes AVX512, AVX2, AVX and SSE */
 #define AVX512_NUM_SHA1_LANES   16
 #define AVX512_NUM_SHA256_LANES 16
@@ -525,6 +530,20 @@ typedef struct {
 } MB_MGR_HMAC_MD5_OOO;
 
 
+/* KASUMI */
+
+/* 64 precomputed words for key schedule */
+#define KASUMI_KEY_SCHEDULE_SIZE  64
+
+/**
+ * Structure to maintain internal key scheduling
+ */
+typedef struct kasumi_key_sched_s {
+    /* Kasumi internal scheduling */
+    uint16_t sk16[KASUMI_KEY_SCHEDULE_SIZE];      /* key schedule */
+    uint16_t msk16[KASUMI_KEY_SCHEDULE_SIZE];     /* modified key schedule */
+} kasumi_key_sched_t;
+
 /* GCM data structures */
 #define GCM_BLOCK_LEN   16
 
@@ -680,6 +699,38 @@ typedef void (*zuc_eea3_n_buffer_t)(const void * const *, const void * const *,
 typedef void (*zuc_eia3_1_buffer_t)(const void *, const void *, const void *,
                                     const uint32_t, uint32_t *);
 
+typedef void (*kasumi_f8_1_buffer_t)(kasumi_key_sched_t *,
+                                     uint64_t, uint8_t *, uint8_t *,
+                                     uint32_t);
+typedef void (*kasumi_f8_1_buffer_bit_t)(kasumi_key_sched_t *,
+                                         uint64_t, uint8_t *, uint8_t *,
+                                         uint32_t, uint32_t);
+typedef void (*kasumi_f8_2_buffer_t)(kasumi_key_sched_t *,
+                                     uint64_t,  uint64_t,
+                                     uint8_t *, uint8_t *, uint32_t,
+                                     uint8_t *, uint8_t *, uint32_t);
+typedef void (*kasumi_f8_3_buffer_t)(kasumi_key_sched_t *,
+                                     uint64_t,  uint64_t, uint64_t,
+                                     uint8_t *, uint8_t *,
+                                     uint8_t *, uint8_t *,
+                                     uint8_t *, uint8_t *, uint32_t);
+typedef void (*kasumi_f8_4_buffer_t)(kasumi_key_sched_t *,
+                                     uint64_t,  uint64_t, uint64_t,  uint64_t,
+                                     uint8_t *, uint8_t *,
+                                     uint8_t *, uint8_t *,
+                                     uint8_t *, uint8_t *,
+                                     uint8_t *, uint8_t *, uint32_t);
+typedef void (*kasumi_f8_n_buffer_t)(kasumi_key_sched_t *,
+                                     uint64_t *, uint8_t **,
+                                     uint8_t **, uint32_t *,
+                                     uint32_t);
+typedef void (*kasumi_f9_1_buffer_user_t)(kasumi_key_sched_t *,
+                                          uint64_t, uint8_t *,
+                                          uint32_t, uint8_t *,
+                                          uint32_t);
+typedef void (*kasumi_f9_1_buffer_t)(kasumi_key_sched_t *, uint8_t *,
+                                     uint32_t, uint8_t *);
+
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
@@ -790,6 +841,15 @@ typedef struct MB_MGR {
         zuc_eea3_4_buffer_t eea3_4_buffer;
         zuc_eea3_n_buffer_t eea3_n_buffer;
         zuc_eia3_1_buffer_t eia3_1_buffer;
+
+        kasumi_f8_1_buffer_t      f8_1_buffer;
+        kasumi_f8_1_buffer_bit_t  f8_1_buffer_bit;
+        kasumi_f8_2_buffer_t      f8_2_buffer;
+        kasumi_f8_3_buffer_t      f8_3_buffer;
+        kasumi_f8_4_buffer_t      f8_4_buffer;
+        kasumi_f8_n_buffer_t      f8_n_buffer;
+        kasumi_f9_1_buffer_t      f9_1_buffer;
+        kasumi_f9_1_buffer_user_t f9_1_buffer_user;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1072,6 +1132,170 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
 #define IMB_ZUC_EIA3_1_BUFFER(_mgr, _key, _iv, _in, _len, _tag) \
         ((_mgr)->eia3_1_buffer((_key), (_iv), (_in), (_len), (_tag)))
 
+/* KASUMI F8/F9 functions */
+
+/**
+ * @brief Kasumi byte-level f8 operation on a single buffer
+ *
+ * This function performs kasumi f8 operation on a single buffer. The key has
+ * already been scheduled with kasumi_init_f8_key_sched().
+ * No extra bits are modified.
+ *
+ * @param [in]  ctx     Context where the scheduled keys are stored
+ * @param [in]  iv      Initialization vector
+ * @param [in]  in      Input buffer
+ * @param [out] out     Output buffer
+ * @param [in]  len     Length in BYTES
+ *
+ ******************************************************************************/
+#define IMB_KASUMI_F8_1_BUFFER(_mgr, _ctx, _iv, _in, _out, _len) \
+        ((_mgr)->f8_1_buffer((_ctx), (_iv), (_in), (_out), (_len)))
+
+/**
+ * @brief Kasumi bit-level f8 operation on a single buffer
+ *
+ * This function performs kasumi f8 operation on a single buffer. The key has
+ * already been scheduled with kasumi_init_f8_key_sched().
+ * No extra bits are modified.
+ *
+ * @param [in]  ctx     Context where the scheduled keys are stored
+ * @param [in]  iv      Initialization vector
+ * @param [in]  in      Input buffer
+ * @param [out] out     Output buffer
+ * @param [in]  len     Length in BITS
+ * @param [in]  offset  Offset in BITS from begin of input buffer
+ *
+ ******************************************************************************/
+#define IMB_KASUMI_F8_1_BUFFER_BIT(_mgr, _ctx, _iv, _in, _out, _len, _offset) \
+        ((_mgr)->f8_1_buffer_bit((_ctx), (_iv), (_in), (_out), (_len), \
+                                 (_offset)))
+
+/**
+ * @brief Kasumi byte-level f8 operation in parallel on two buffers
+ *
+ * This function performs kasumi f8 operation on a two buffers.
+ * They will be processed with the same key, which has already been scheduled
+ * with sso_kasumi_init_f8_key_sched().
+ *
+ * @param [in]  ctx     Context where the scheduled keys are stored
+ * @param [in]  iv1     Initialization vector for buffer in1
+ * @param [in]  iv2     Initialization vector for buffer in2
+ * @param [in]  in1     Input buffer 1
+ * @param [out] out1    Output buffer 1
+ * @param [in]  len1    Length in BYTES of input buffer 1
+ * @param [in]  in2     Input buffer 2
+ * @param [out] out2    Output buffer 2
+ * @param [in]  len2    Length in BYTES of input buffer 2
+ *
+ ******************************************************************************/
+#define IMB_KASUMI_F8_2_BUFFER(_mgr, _ctx, _iv1, _iv2, _in1, _out1, _len1, \
+                               _in2, _out2, _len2) \
+        ((_mgr)->f8_2_buffer((_ctx), (_iv1), (_iv2), (_in1), (_out1), (_len1), \
+                             (_in2), (_out2), (_len2)))
+/**
+ * @brief kasumi byte-level f8 operation in parallel on three buffers
+ *
+ * This function performs kasumi f8 operation on a three buffers.
+ * They must all have the same length and they will be processed with the same
+ * key, which has already been scheduled with sso_kasumi_init_f8_key_sched().
+ *
+ * @param [in]  ctx     Context where the scheduled keys are stored
+ * @param [in]  iv1     Initialization vector for buffer in1
+ * @param [in]  iv2     Initialization vector for buffer in2
+ * @param [in]  iv3     Initialization vector for buffer in3
+ * @param [in]  in1     Input buffer 1
+ * @param [out] out1    Output buffer 1
+ * @param [in]  in2     Input buffer 2
+ * @param [out] out2    Output buffer 2
+ * @param [in]  in3     Input buffer 3
+ * @param [out] out3    Output buffer 3
+ * @param [in]  len     Common length in bytes for all buffers
+ *
+ ******************************************************************************/
+#define IMB_KASUMI_F8_3_BUFFER(_mgr, _ctx, _iv1, _iv2, _iv3, _in1, _out1, \
+                               _in2, _out2, _in3, _out3, _len) \
+        ((_mgr)->f8_3_buffer((_ctx), (_iv1), (_iv2), (_iv3), (_in1), (_out1), \
+                             (_in2), (_out2), (_in3), (_out3), (_len)))
+/**
+ * @brief kasumi byte-level f8 operation in parallel on four buffers
+ *
+ * This function performs kasumi f8 operation on four buffers.
+ * They must all have the same length and they will be processed with the same
+ * key, which has already been scheduled with sso_kasumi_init_f8_key_sched().
+ *
+ * @param [in]  ctx     Context where the scheduled keys are stored
+ * @param [in]  iv1     Initialization vector for buffer in1
+ * @param [in]  iv2     Initialization vector for buffer in2
+ * @param [in]  iv3     Initialization vector for buffer in3
+ * @param [in]  iv4     Initialization vector for buffer in4
+ * @param [in]  in1     Input buffer 1
+ * @param [out] out1    Output buffer 1
+ * @param [in]  in2     Input buffer 2
+ * @param [out] out2    Output buffer 2
+ * @param [in]  in3     Input buffer 3
+ * @param [out] out3    Output buffer 3
+ * @param [in]  in4     Input buffer 4
+ * @param [out] out4    Output buffer 4
+ * @param [in]  len     Common length in bytes for all buffers
+ *
+ ******************************************************************************/
+#define IMB_KASUMI_F8_4_BUFFER(_mgr, _ctx, _iv1, _iv2, _iv3, _iv4, \
+                               _in1, _out1, _in2, _out2, _in3, _out3, \
+                               _in4, _out4, _len) \
+        ((_mgr)->f8_4_buffer((_ctx), (_iv1), (_iv2), (_iv3), (_iv4), \
+                             (_in1), (_out1), (_in2), (_out2), \
+                             (_in3), (_out3), (_in4), (_out4), (_len)))
+/**
+ * @brief Kasumi f8 operation on N buffers
+ *
+ * All input buffers can have different lengths and they will be processed
+ * with the same key, which has already been scheduled
+ * with kasumi_init_f8_key_sched().
+ *
+ * @param [in]  ctx     Context where the scheduled keys are stored
+ * @param [in]  iv      Array of IV values
+ * @param [in]  in      Array of input buffers
+ * @param [out] out     Array of output buffers
+ * @param [in]  len     Array of corresponding input buffer lengths in BITS
+ * @param [in]  count   Number of input buffers
+ */
+#define IMB_KASUMI_F8_N_BUFFER(_mgr, _ctx, _iv, _in, _out, _len, _count) \
+        ((_mgr)->f8_n_buffer((_ctx), (_iv), (_in), (_out), (_len), \
+                             (_count)))
+/**
+ * @brief Kasumi bit-level f9 operation on a single buffer.
+ *
+ * The first QWORD of in represents the COUNT and FRESH, the last QWORD
+ * represents the DIRECTION and PADDING. (See 3GPP TS 35.201 v10.0 section 4)
+ *
+ * The key has already been scheduled with kasumi_init_f9_key_sched().
+ *
+ * @param [in]  ctx     Context where the scheduled keys are stored
+ * @param [in]  in      Input buffer
+ * @param [in]  len     Length in BYTES of the data to be hashed
+ * @param [out] tag     Computed digest
+ *
+ */
+#define IMB_KASUMI_F9_1_BUFFER(_mgr, _ctx,  _in, _len, _tag) \
+        ((_mgr)->f9_1_buffer((_ctx), (_in), (_len), (_tag)))
+
+/**
+ * @brief Kasumi bit-level f9 operation on a single buffer.
+ *
+ * The key has already been scheduled with kasumi_init_f9_key_sched().
+ *
+ * @param [in]  ctx     Context where the scheduled keys are stored
+ * @param [in]  iv      Initialization vector
+ * @param [in]  in      Input buffer
+ * @param [in]  len     Length in BITS of the data to be hashed
+ * @param [out] tag     Computed digest
+ * @param [in]  dir     Direction bit
+ *
+ */
+#define IMB_KASUMI_F9_1_BUFFER_USER(_mgr, _ctx, _iv, _in, _len, _tag, _dir) \
+        ((_mgr)->f9_1_buffer_user((_ctx), (_iv), (_in), (_len), \
+                                  (_tag), (_dir)))
+
 /* Auxiliary functions */
 
 /**
@@ -1088,6 +1312,15 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  */
 IMB_DLL_EXPORT int
 des_key_schedule(uint64_t *ks, const void *key);
+
+IMB_DLL_EXPORT uint32_t
+kasumi_key_sched_size(void);
+
+IMB_DLL_EXPORT uint32_t
+kasumi_init_f8_key_sched(const uint8_t * const pKey, kasumi_key_sched_t *pCtx);
+
+IMB_DLL_EXPORT uint32_t
+kasumi_init_f9_key_sched(const uint8_t * const pKey, kasumi_key_sched_t *pCtx);
 
 /* SSE */
 IMB_DLL_EXPORT void sha1_sse(const void *data, const uint64_t length,

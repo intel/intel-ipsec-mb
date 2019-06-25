@@ -150,6 +150,9 @@ c_lib_objs := \
 	version.o \
 	cpu_feature.o \
 	aesni_emu.o \
+	kasumi_avx.o \
+	kasumi_key.o \
+	kasumi_sse.o \
 	zuc_sse_top.o \
 	zuc_avx_top.o \
 	zuc_iv.o

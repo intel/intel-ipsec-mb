@@ -191,6 +191,9 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha512_x8_avx512.obj \
 	$(OBJ_DIR)\sha_256_mult_avx.obj \
 	$(OBJ_DIR)\sha_256_mult_sse.obj \
+	$(OBJ_DIR)\kasumi_avx.obj \
+	$(OBJ_DIR)\kasumi_key.obj \
+	$(OBJ_DIR)\kasumi_sse.obj \
 	$(OBJ_DIR)\zuc_common.obj \
 	$(OBJ_DIR)\zuc_sse_top.obj \
 	$(OBJ_DIR)\zuc_avx_top.obj \

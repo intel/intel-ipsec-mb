@@ -31,6 +31,7 @@
 
 #define AVX512
 #include "intel-ipsec-mb.h"
+#include "include/kasumi_internal.h"
 #include "include/zuc_internal.h"
 
 #include "save_xmms.h"
@@ -955,6 +956,15 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->eea3_4_buffer       = zuc_eea3_4_buffer_avx;
         state->eea3_n_buffer       = zuc_eea3_n_buffer_avx;
         state->eia3_1_buffer       = zuc_eia3_1_buffer_avx;
+
+        state->f8_1_buffer         = kasumi_f8_1_buffer_avx;
+        state->f8_1_buffer_bit     = kasumi_f8_1_buffer_bit_avx;
+        state->f8_2_buffer         = kasumi_f8_2_buffer_avx;
+        state->f8_3_buffer         = kasumi_f8_3_buffer_avx;
+        state->f8_4_buffer         = kasumi_f8_4_buffer_avx;
+        state->f8_n_buffer         = kasumi_f8_n_buffer_avx;
+        state->f9_1_buffer         = kasumi_f9_1_buffer_avx;
+        state->f9_1_buffer_user    = kasumi_f9_1_buffer_user_avx;
 
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES)
                 submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;

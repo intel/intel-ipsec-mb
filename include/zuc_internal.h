@@ -43,6 +43,7 @@
 
 #include "intel-ipsec-mb.h"
 #include "immintrin.h"
+#include "include/wireless_common.h"
 
 /* 64 bytes of Keystream will be generated */
 #define ZUC_KEYSTR_LEN                      (64)
@@ -64,17 +65,6 @@
 #else
 #define DEBUG_PRINT(_fmt, ...)
 #endif
-
-
-__forceinline
-uint32_t bswap4(const uint32_t val)
-{
-        return ((val >> 24) |             /**< A*/
-                ((val & 0xff0000) >> 8) | /**< B*/
-                ((val & 0xff00) << 8) |   /**< C*/
-                (val << 24));             /**< D*/
-}
-
 
 /**
  ******************************************************************************
