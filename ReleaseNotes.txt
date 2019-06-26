@@ -1,12 +1,59 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-v0.53
+Not Released
 ========================================================================
 
-General
-- CCM chain order expected to be HASH_CIPHER for encryption and
-  CIPHER_HASH for decryption
+Library
+- AES-CCM performance optimizations done
+  - full assembly implementation
+  - authentication decoupled from cipher
+  - CCM chain order expected to be HASH_CIPHER for encryption and
+    CIPHER_HASH for decryption
+- AES-CTR implementation for VAES added
+- AES-CBC decrypt implementation for VAES added
+- Single buffer AES-GCM performance improvements added for VPCLMULQDQ + VAES
+- Multi-buffer AES-GCM implementation added for VPCLMULQDQ + VAES
+- Data transposition optimizations and unification across the library
+  implemented
+- Generation of make dependency files for Linux added
+- AES-ECB implementation added
+- PON specific stitched algorithm implementation added
+  - stitched AES-CTR-128 with CRC32 and BIP (running 32-bit XOR)
+- AES-CMAC-128 implementation for bit length messages added
+- ZUC-EEA3 and ZUC-EIA3 implementation added
+
+LibTestApp
+- New API tests added
+- CMAC test vectors extended
+- New chained operation tests added
+- Out-of-place chained operation tests added
+- AES-ECB tests added
+- PON algorithm tests added
+- Extra AES-CTR test vectors added
+- Extra AES-CBC test vectors added
+- AES-CMAC-128 bit length message tests added
+- CPU capability detection used to disable tests if instruction not present
+- ZUC-EEA3 and ZUC-EIA3 tests added
+
+LibPerfApp
+- Job size and number of iterations options added
+- Single architecture test option added
+- AAD size option added
+- Allow zero length source buffer option added
+- Custom performance test combination added:
+  cipher-algo, hash-algo and aead-algo arguments.
+- Cipher direction option added
+- The maximum buffer size extended from 2K to 16K
+- Support for user defined range of job sizes added
+
+Fixes
+- Uninitialized memory reported by Valgrind fixed
+- Flush decryption job fixed (issue #33)
+- NULL_CIPHER order check removed (issue #30)
+- Save XMM registers when emulating AES fixed (issue #28)
+- SSE & AVX AES-CMAC fixed (issue #27)
+- Missing GCM pointers fixed for AES-NI emulation (issue #29)
 
 v0.52 December 2018
 ========================================================================

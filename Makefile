@@ -35,7 +35,7 @@ ifeq ($(IMB_VERSION),)
 $(error "Failed to detect library version!")
 endif
 
-VERSION = $(shell echo $(IMB_VERSION) | cut -d. -f1-2)
+VERSION = $(shell echo $(IMB_VERSION) | cut -d. -f1-3)
 SO_VERSION = $(shell echo $(VERSION) | cut -d. -f1)
 
 PREFIX ?= /usr
