@@ -33,6 +33,8 @@
 %include "job_aes_hmac.asm"
 %include "include/memcpy.asm"
 
+%include "include/aes_common.asm"
+
 section .data
 default rel
 
@@ -237,59 +239,12 @@ default rel
 %define %%T7 XWORD(%%ZT7)
 %define %%T8 XWORD(%%ZT8)
 
+
+
 %if %%num_initial_blocks > 0
         ;; load plain/cipher text
-%if %%num_initial_blocks == 1
-        vmovdqu8        %%T5, [%%PLAIN_CYPH_IN]
-%elif %%num_initial_blocks == 2
-        vmovdqu8        YWORD(%%ZT5), [%%PLAIN_CYPH_IN]
-%elif %%num_initial_blocks <= 4
-        ; loading 4 full blocks even if only 3 are needed,
-        ; since following data is valid
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-%elif %%num_initial_blocks == 5
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%T6, [%%PLAIN_CYPH_IN + 64]
-%elif %%num_initial_blocks == 6
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        YWORD(%%ZT6), [%%PLAIN_CYPH_IN + 64]
-%elif %%num_initial_blocks <= 8
-        ; loading 8 full blocks even if only 7 are needed,
-        ; since following data is valid
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-%elif %%num_initial_blocks == 9
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%T7, [%%PLAIN_CYPH_IN + 128]
-%elif %%num_initial_blocks == 10
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        YWORD(%%ZT7), [%%PLAIN_CYPH_IN + 128]
-%elif %%num_initial_blocks <= 12
-        ; loading 12 full blocks even if only 11 are needed,
-        ; since following data is valid
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%ZT7, [%%PLAIN_CYPH_IN + 128]
-%elif %%num_initial_blocks == 13
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%ZT7, [%%PLAIN_CYPH_IN + 128]
-        vmovdqu8        %%T8, [%%PLAIN_CYPH_IN + 192]
-%elif %%num_initial_blocks == 14
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%ZT7, [%%PLAIN_CYPH_IN + 128]
-        vmovdqu8        YWORD(%%ZT8), [%%PLAIN_CYPH_IN + 192]
-%else ; num_initial_blocks == 15
-        ; loading 16 full blocks even though only 15 are needed,
-        ; since following data is valid
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%ZT7, [%%PLAIN_CYPH_IN + 128]
-        vmovdqu8        %%ZT8, [%%PLAIN_CYPH_IN + 192]
-%endif
+        ZMM_LOAD_BLOCKS_0_16 %%num_initial_blocks, %%PLAIN_CYPH_IN, 0, \
+                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, load_4_instead_of_3
 
         ;; prepare AES counter blocks
 %if %%num_initial_blocks > 1
@@ -386,7 +341,7 @@ default rel
         ;; AES rounds and XOR with plain/cipher text
 %assign j 0
 %rep (%%NROUNDS + 2)
-        AESROUND_1_TO_16_BLOCKS \
+        ZMM_AESENC_ROUND_BLOCKS_0_16 \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, ZKEY %+ j, j, \
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%num_initial_blocks, \
                         %%NROUNDS
@@ -394,66 +349,8 @@ default rel
 %endrep
 
         ;; write cipher/plain text back to output
-%if %%num_initial_blocks == 1
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%T1
-%elif %%num_initial_blocks == 2
-        vmovdqu8        [%%CYPH_PLAIN_OUT], YWORD(%%ZT1)
-%elif %%num_initial_blocks == 3
-        ;; Blocks 3
-        vmovdqu8        [%%CYPH_PLAIN_OUT], YWORD(%%ZT1)
-        vextracti64x2   [%%CYPH_PLAIN_OUT + 32], %%ZT1, 2
-%elif %%num_initial_blocks == 4
-        ;; Blocks 4
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-%elif %%num_initial_blocks == 5
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%T2
-%elif %%num_initial_blocks == 6
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], YWORD(%%ZT2)
-%elif %%num_initial_blocks == 7
-        ;; Blocks 7
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], YWORD(%%ZT2)
-        vextracti64x2   [%%CYPH_PLAIN_OUT + 96], %%ZT2, 2
-%elif %%num_initial_blocks == 8
-        ;; Blocks 8
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-%elif %%num_initial_blocks == 9
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], %%T3
-%elif %%num_initial_blocks == 10
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], YWORD(%%ZT3)
-%elif %%num_initial_blocks == 11
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], YWORD(%%ZT3)
-        vextracti64x2   [%%CYPH_PLAIN_OUT + 160], %%ZT3, 2
-%elif %%num_initial_blocks == 12
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], %%ZT3
-%elif %%num_initial_blocks == 13
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 192], %%T4
-%elif %%num_initial_blocks == 14
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 192], YWORD(%%ZT4)
-%elif %%num_initial_blocks == 15
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 192], YWORD(%%ZT4)
-        vextracti64x2   [%%CYPH_PLAIN_OUT + 224], %%ZT4, 2
-%endif
+        ZMM_STORE_BLOCKS_0_16 %%num_initial_blocks, %%CYPH_PLAIN_OUT, 0, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4
 
         ;; adjust data offset and length
         sub             %%LENGTH, (%%num_initial_blocks * 16)
@@ -512,7 +409,7 @@ default rel
         ;; AES rounds and XOR with plain/cipher text
 %assign j 0
 %rep (%%NROUNDS + 2)
-        AESROUND_1_TO_16_BLOCKS \
+        ZMM_AESENC_ROUND_BLOCKS_0_16 \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, ZKEY %+ j, j, \
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, 16, %%NROUNDS
 %assign j (j + 1)
@@ -591,53 +488,13 @@ default rel
         kmovq           %%MASKREG, [%%IA0 + %%IA1*8]
 
         ;; load plain/cipher text
-%if %%num_initial_blocks == 1
-        vmovdqu8        %%T5{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
-%elif %%num_initial_blocks == 2
-        vmovdqu8        YWORD(%%ZT5){%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
-%elif %%num_initial_blocks <= 4
-        vmovdqu8        %%ZT5{%%MASKREG}{z}, [%%PLAIN_CYPH_IN]
-%elif %%num_initial_blocks == 5
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%T6{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
-%elif %%num_initial_blocks == 6
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        YWORD(%%ZT6){%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
-%elif %%num_initial_blocks <= 8
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 64]
-%elif %%num_initial_blocks == 9
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%T7{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 128]
-%elif %%num_initial_blocks == 10
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        YWORD(%%ZT7){%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 128]
-%elif %%num_initial_blocks <= 12
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%ZT7{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 128]
-%elif %%num_initial_blocks == 13
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%ZT7, [%%PLAIN_CYPH_IN + 128]
-        vmovdqu8        %%T8, [%%PLAIN_CYPH_IN + 192]
-%elif %%num_initial_blocks == 14
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%ZT7, [%%PLAIN_CYPH_IN + 128]
-        vmovdqu8        YWORD(%%ZT8){%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 192]
-%else
-        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN]
-        vmovdqu8        %%ZT6, [%%PLAIN_CYPH_IN + 64]
-        vmovdqu8        %%ZT7, [%%PLAIN_CYPH_IN + 128]
-        vmovdqu8        %%ZT8{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + 192]
-%endif
+        ZMM_LOAD_MASKED_BLOCKS_0_16 %%num_initial_blocks, %%PLAIN_CYPH_IN, 0, \
+                        %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%MASKREG
 
         ;; prepare AES counter blocks
-%if %%num_initial_blocks > 1
-%if %%num_initial_blocks == 2
+%if %%num_initial_blocks == 1
+        vmovdqa64       XWORD(%%ZT1), XWORD(%%CTR)
+%elif %%num_initial_blocks == 2
         vshufi64x2      YWORD(%%ZT1), YWORD(%%CTR), YWORD(%%CTR), 0
         vpaddd          YWORD(%%ZT1), YWORD(%%ZT1), [rel ddq_add_0_3]
 %elif %%num_initial_blocks <= 4
@@ -659,57 +516,17 @@ default rel
         vpaddd          %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
         vpaddd          %%ZT4, ZWORD(%%CTR), [rel ddq_add_12_15]
 %endif
-%endif
 
         ;; shuffle the counters for AES rounds
-%if %%num_initial_blocks == 1
-        vpshufb         %%T1, %%CTR, XWORD(%%SHUFREG)
-%elif %%num_initial_blocks == 2
-        vpshufb         YWORD(%%ZT1), YWORD(%%SHUFREG)
-%elif %%num_initial_blocks <= 4
-        vpshufb         %%ZT1, %%SHUFREG
-%elif %%num_initial_blocks == 5
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         %%T2, XWORD(%%SHUFREG)
-%elif %%num_initial_blocks == 6
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         YWORD(%%ZT2), YWORD(%%SHUFREG)
-%elif %%num_initial_blocks <= 8
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         %%ZT2, %%SHUFREG
-%elif %%num_initial_blocks = 9
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         %%T3, XWORD(%%SHUFREG)
-%elif %%num_initial_blocks = 10
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         YWORD(%%ZT3), YWORD(%%SHUFREG)
-%elif %%num_initial_blocks <= 12
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         %%ZT3, %%SHUFREG
-%elif %%num_initial_blocks = 13
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         %%ZT3, %%SHUFREG
-        vpshufb         %%T4, XWORD(%%SHUFREG)
-%elif %%num_initial_blocks = 14
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         %%ZT3, %%SHUFREG
-        vpshufb         YWORD(%%ZT4), YWORD(%%SHUFREG)
-%else
-        vpshufb         %%ZT1, %%SHUFREG
-        vpshufb         %%ZT2, %%SHUFREG
-        vpshufb         %%ZT3, %%SHUFREG
-        vpshufb         %%ZT4, %%SHUFREG
-%endif
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%num_initial_blocks, vpshufb, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        %%SHUFREG, %%SHUFREG, %%SHUFREG, %%SHUFREG
 
         ;; AES rounds and XOR with plain/cipher text
 %assign j 0
 %rep (%%NROUNDS + 2)
-        AESROUND_1_TO_16_BLOCKS \
+        ZMM_AESENC_ROUND_BLOCKS_0_16 \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, ZKEY %+ j, j, \
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%num_initial_blocks, \
                         %%NROUNDS
@@ -717,51 +534,8 @@ default rel
 %endrep
 
         ;; write cipher/plain text back to output
-%if %%num_initial_blocks == 1
-        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%T1
-%elif %%num_initial_blocks == 2
-        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, YWORD(%%ZT1)
-%elif %%num_initial_blocks <= 4
-        ;; Blocks 3 and 4
-        vmovdqu8        [%%CYPH_PLAIN_OUT]{%%MASKREG}, %%ZT1
-%elif %%num_initial_blocks == 5
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%T2
-%elif %%num_initial_blocks == 6
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, YWORD(%%ZT2)
-%elif %%num_initial_blocks <= 8
-        ;; Blocks 7 and 8
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64]{%%MASKREG}, %%ZT2
-%elif %%num_initial_blocks == 9
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128]{%%MASKREG}, %%T3
-%elif %%num_initial_blocks == 10
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128]{%%MASKREG}, YWORD(%%ZT3)
-%elif %%num_initial_blocks <= 12
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128]{%%MASKREG}, %%ZT3
-%elif %%num_initial_blocks == 13
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 192]{%%MASKREG}, %%T4
-%elif %%num_initial_blocks == 14
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 192]{%%MASKREG}, YWORD(%%ZT4)
-%else
-        vmovdqu8        [%%CYPH_PLAIN_OUT], %%ZT1
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 64], %%ZT2
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 128], %%ZT3
-        vmovdqu8        [%%CYPH_PLAIN_OUT + 192]{%%MASKREG}, %%ZT4
-%endif
+        ZMM_STORE_MASKED_BLOCKS_0_16 %%num_initial_blocks, %%CYPH_PLAIN_OUT, 0, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%MASKREG
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
 
@@ -830,7 +604,7 @@ default rel
 
 %assign j 0
 %rep (%%NROUNDS + 2)
-        AESROUND_1_TO_16_BLOCKS \
+        ZMM_AESENC_ROUND_BLOCKS_0_16 \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, ZKEY %+ j, j, \
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, 16, %%NROUNDS
 %assign j (j + 1)
@@ -1468,248 +1242,6 @@ default rel
 %%_enc_dec_done:
 
 %endmacro                       ; CNTR_ENC_DEC
-
-;;; ===========================================================================
-;;; AESROUND_1_TO_16_BLOCKS macro
-;;; - 1 lane, 1 to 16 blocks per lane
-;;; - it handles special cases: the last and zero rounds
-;;; Uses NROUNDS macro defined at the top of the file to check the last round
-%macro AESROUND_1_TO_16_BLOCKS 12
-%define %%L0B0_3   %1      ; [in/out] zmm; blocks 0 to 3
-%define %%L0B4_7   %2      ; [in/out] zmm; blocks 4 to 7
-%define %%L0B8_11  %3      ; [in/out] zmm; blocks 8 to 11
-%define %%L0B12_15 %4      ; [in/out] zmm; blocks 12 to 15
-%define %%KEY      %5      ; [in] zmm containing round key
-%define %%ROUND    %6      ; [in] round number
-%define %%D0_3     %7      ; [in] zmm or no_data; plain/cipher text blocks 0-3
-%define %%D4_7     %8      ; [in] zmm or no_data; plain/cipher text blocks 4-7
-%define %%D8_11    %9      ; [in] zmm or no_data; plain/cipher text blocks 8-11
-%define %%D12_15   %10     ; [in] zmm or no_data; plain/cipher text blocks 12-15
-%define %%NUMBL    %11     ; [in] number of blocks; numerical value
-%define %%NROUNDS  %12     ; [in] number of rounds; numerical value
-
-;;; === first AES round
-%if (%%ROUND < 1)
-        ;;  round 0
-
-%if (%%NUMBL > 14)
-        ;; 15, 16 blocks
-        vpxorq          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vpxorq          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vpxorq          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vpxorq          %%L0B12_15, %%L0B12_15, %%KEY
-%elif (%%NUMBL == 14)
-        ;; 14 blocks
-        vpxorq          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vpxorq          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vpxorq          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vpxorq          YWORD(%%L0B12_15), YWORD(%%L0B12_15), YWORD(%%KEY)
-%elif (%%NUMBL == 13)
-        ;; 13 blocks
-        vpxorq          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vpxorq          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vpxorq          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vpxorq          XWORD(%%L0B12_15), XWORD(%%L0B12_15), XWORD(%%KEY)
-%elif (%%NUMBL == 12) || (%%NUMBL == 11)
-        ;; 11, 12 blocks
-        vpxorq          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vpxorq          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vpxorq          %%L0B8_11,  %%L0B8_11,  %%KEY
-%elif (%%NUMBL == 10)
-        ;; 10 blocks
-        vpxorq          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vpxorq          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vpxorq          YWORD(%%L0B8_11),  YWORD(%%L0B8_11),  YWORD(%%KEY)
-%elif (%%NUMBL == 9)
-        ;; 9 blocks
-        vpxorq          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vpxorq          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vpxorq          XWORD(%%L0B8_11),  XWORD(%%L0B8_11),  XWORD(%%KEY)
-%elif (%%NUMBL > 6)
-        ;; 7, 8 blocks
-        vpxorq          %%L0B0_3, %%L0B0_3, %%KEY
-        vpxorq          %%L0B4_7, %%L0B4_7, %%KEY
-%elif (%%NUMBL == 6)
-        ;; 6 blocks
-        vpxorq          %%L0B0_3, %%L0B0_3, %%KEY
-        vpxorq          YWORD(%%L0B4_7), YWORD(%%L0B4_7), YWORD(%%KEY)
-%elif (%%NUMBL == 5)
-        ;; 5 blocks
-        vpxorq          %%L0B0_3, %%L0B0_3, %%KEY
-        vpxorq          XWORD(%%L0B4_7), XWORD(%%L0B4_7), XWORD(%%KEY)
-%elif (%%NUMBL > 2)
-        ;; 3, 4 blocks
-        vpxorq          %%L0B0_3, %%L0B0_3, %%KEY
-%elif (%%NUMBL == 2)
-        ;; 2 blocks
-        vpxorq          YWORD(%%L0B0_3), YWORD(%%L0B0_3), YWORD(%%KEY)
-%else
-        ;; 1 block
-        vpxorq          XWORD(%%L0B0_3), XWORD(%%L0B0_3), XWORD(%%KEY)
-%endif                  ; NUM BLOCKS
-%endif                  ; ROUND 0
-
-;;; === middle AES rounds
-%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
-        ;; rounds 1 to 9/11/13
-%if (%%NUMBL > 14)
-        ;; 15, 16 blocks
-        vaesenc          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenc          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenc          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vaesenc          %%L0B12_15, %%L0B12_15, %%KEY
-%elif (%%NUMBL == 14)
-        ;; 14 blocks
-        vaesenc          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenc          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenc          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vaesenc          YWORD(%%L0B12_15), YWORD(%%L0B12_15), YWORD(%%KEY)
-%elif (%%NUMBL == 13)
-        ;; 13 blocks
-        vaesenc          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenc          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenc          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vaesenc          XWORD(%%L0B12_15), XWORD(%%L0B12_15), XWORD(%%KEY)
-%elif (%%NUMBL == 12) || (%%NUMBL == 11)
-        ;; 11, 12 blocks
-        vaesenc          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenc          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenc          %%L0B8_11,  %%L0B8_11,  %%KEY
-%elif (%%NUMBL == 10)
-        ;; 10 blocks
-        vaesenc          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenc          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenc          YWORD(%%L0B8_11),  YWORD(%%L0B8_11),  YWORD(%%KEY)
-%elif (%%NUMBL == 9)
-        ;; 9 blocks
-        vaesenc          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenc          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenc          XWORD(%%L0B8_11),  XWORD(%%L0B8_11),  XWORD(%%KEY)
-%elif (%%NUMBL > 6)
-        ;; 7, 8 blocks
-        vaesenc         %%L0B0_3, %%L0B0_3, %%KEY
-        vaesenc         %%L0B4_7, %%L0B4_7, %%KEY
-%elif (%%NUMBL == 6)
-        ;; 6 blocks
-        vaesenc         %%L0B0_3, %%L0B0_3, %%KEY
-        vaesenc         YWORD(%%L0B4_7), YWORD(%%L0B4_7), YWORD(%%KEY)
-%elif (%%NUMBL == 5)
-        ;; 5 blocks
-        vaesenc         %%L0B0_3, %%L0B0_3, %%KEY
-        vaesenc         XWORD(%%L0B4_7), XWORD(%%L0B4_7), XWORD(%%KEY)
-%elif (%%NUMBL > 2)
-        ;; 3, 4 blocks
-        vaesenc         %%L0B0_3, %%L0B0_3, %%KEY
-%elif (%%NUMBL == 2)
-        ;; 2 blocks
-        vaesenc         YWORD(%%L0B0_3), YWORD(%%L0B0_3), YWORD(%%KEY)
-%else
-        ;; 1 block
-        vaesenc         XWORD(%%L0B0_3), XWORD(%%L0B0_3), XWORD(%%KEY)
-%endif                  ; NUM BLOCKS
-%endif                  ; rounds 1 to 9/11/13
-
-;;; === last AES round
-%if (%%ROUND > %%NROUNDS)
-        ;; the last round - mix enclast with text xor's
-%if (%%NUMBL > 14)
-        ;; 15, 16 blocks
-        vaesenclast          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenclast          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenclast          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vaesenclast          %%L0B12_15, %%L0B12_15, %%KEY
-%elif (%%NUMBL == 14)
-        ;; 14 blocks
-        vaesenclast          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenclast          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenclast          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vaesenclast          YWORD(%%L0B12_15), YWORD(%%L0B12_15), YWORD(%%KEY)
-%elif (%%NUMBL == 13)
-        ;; 13 blocks
-        vaesenclast          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenclast          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenclast          %%L0B8_11,  %%L0B8_11,  %%KEY
-        vaesenclast          XWORD(%%L0B12_15), XWORD(%%L0B12_15), XWORD(%%KEY)
-%elif (%%NUMBL == 12) || (%%NUMBL == 11)
-        ;; 11, 12 blocks
-        vaesenclast          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenclast          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenclast          %%L0B8_11,  %%L0B8_11,  %%KEY
-%elif (%%NUMBL == 10)
-        ;; 10 blocks
-        vaesenclast          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenclast          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenclast          YWORD(%%L0B8_11),  YWORD(%%L0B8_11),  YWORD(%%KEY)
-%elif (%%NUMBL == 9)
-        ;; 9 blocks
-        vaesenclast          %%L0B0_3,   %%L0B0_3,   %%KEY
-        vaesenclast          %%L0B4_7,   %%L0B4_7,   %%KEY
-        vaesenclast          XWORD(%%L0B8_11),  XWORD(%%L0B8_11),  XWORD(%%KEY)
-%elif (%%NUMBL > 6)
-        ;; 7, 8 blocks
-        vaesenclast     %%L0B0_3, %%L0B0_3, %%KEY
-        vaesenclast     %%L0B4_7, %%L0B4_7, %%KEY
-%elif (%%NUMBL == 6)
-        ;; 6 blocks
-        vaesenclast     %%L0B0_3, %%L0B0_3, %%KEY
-        vaesenclast     YWORD(%%L0B4_7), YWORD(%%L0B4_7), YWORD(%%KEY)
-%elif (%%NUMBL == 5)
-        ;; 5 blocks
-        vaesenclast     %%L0B0_3, %%L0B0_3, %%KEY
-        vaesenclast     XWORD(%%L0B4_7), XWORD(%%L0B4_7), XWORD(%%KEY)
-%elif (%%NUMBL > 2)
-        ;; 3, 4 blocks
-        vaesenclast     %%L0B0_3, %%L0B0_3, %%KEY
-%elif (%%NUMBL == 2)
-        ;; 2 blocks
-        vaesenclast     YWORD(%%L0B0_3), YWORD(%%L0B0_3), YWORD(%%KEY)
-%else
-        ;; 1 block
-        vaesenclast     XWORD(%%L0B0_3), XWORD(%%L0B0_3), XWORD(%%KEY)
-%endif                  ; NUM BLOCKS
-
-;;; === XOR with data
-%ifnidn %%D0_3, no_data
-%if (%%NUMBL == 1)
-        vpxorq          XWORD(%%L0B0_3), XWORD(%%L0B0_3), XWORD(%%D0_3)
-%elif (%%NUMBL == 2)
-        vpxorq          YWORD(%%L0B0_3), YWORD(%%L0B0_3), YWORD(%%D0_3)
-%else
-        vpxorq          %%L0B0_3, %%L0B0_3, %%D0_3
-%endif
-%endif                          ; !no_data
-%ifnidn %%D4_7, no_data
-%if (%%NUMBL == 5)
-        vpxorq          XWORD(%%L0B4_7), XWORD(%%L0B4_7), XWORD(%%D4_7)
-%elif (%%NUMBL == 6)
-        vpxorq          YWORD(%%L0B4_7), YWORD(%%L0B4_7), YWORD(%%D4_7)
-%elif (%%NUMBL > 6)
-        vpxorq          %%L0B4_7, %%L0B4_7, %%D4_7
-%endif
-%endif                  ; !no_data
-%ifnidn %%D8_11, no_data
-%if (%%NUMBL == 8)
-        vpxorq          XWORD(%%L0B8_11), XWORD(%%L0B8_11), XWORD(%%D8_11)
-%elif (%%NUMBL == 9)
-        vpxorq          YWORD(%%L0B8_11), YWORD(%%L0B8_11), YWORD(%%D8_11)
-%elif (%%NUMBL > 9)
-        vpxorq          %%L0B8_11, %%L0B8_11, %%D8_11
-%endif
-%endif                  ; !no_data
-%ifnidn %%D12_15, no_data
-%if (%%NUMBL == 12)
-        vpxorq          XWORD(%%L0B12_15), XWORD(%%L0B12_15), XWORD(%%D12_15)
-%elif (%%NUMBL == 13)
-        vpxorq          YWORD(%%L0B12_15), YWORD(%%L0B12_15), YWORD(%%D12_15)
-%elif (%%NUMBL > 13)
-        vpxorq          %%L0B12_15, %%L0B12_15, %%D12_15
-%endif
-%endif                  ; !no_data
-%endif                  ; The last round
-
-%endmacro               ; AESROUND_1_TO_16_BLOCKS
-
-;;; ===========================================================================
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void aes_cntr_128_submit_vaes_avx512 (JOB_AES_HMAC *job)
