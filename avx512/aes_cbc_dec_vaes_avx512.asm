@@ -27,6 +27,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
+%include "include/aes_common.asm"
 
 %define zIV        zmm0
 %define zBLK_0_3   zmm1
@@ -70,10 +71,14 @@
 
 %define tmp        r10
 
-;; macro to preload keys
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; macro to preload keys
+;;; - uses ZKEY[0-14] registers (ZMM)
 %macro LOAD_KEYS 2
-%define %%KEYS          %1
-%define %%NROUNDS       %2
+%define %%KEYS          %1      ; [in] key pointer
+%define %%NROUNDS       %2      ; [in] numerical value, number of AES rounds
+                                ;      excluding 1st and last rounds.
+                                ;      Example: AES-128 -> value 9
 
 %assign i 0
 %rep (%%NROUNDS + 2)
@@ -82,203 +87,6 @@
 %endrep
 
 %endmacro
-
-;;; ===========================================================================
-;;; AESDEC_ROUND_1_TO_16_BLOCKS macro to perform a single round of aesdec
-;;; - 1 lane, 1 to 16 blocks per lane
-;;; - it handles special cases: the last and zero rounds
-%macro AESDEC_ROUND_1_TO_16_BLOCKS 8
-%define %%BLK_0_3   %1      ; [in/out] zmm; cipher text blocks 0-3
-%define %%BLK_4_7   %2      ; [in/out] zmm; cipher text blocks 4-7
-%define %%BLK_8_11  %3      ; [in/out] zmm; cipher text blocks 8-11
-%define %%BLK_12_15 %4      ; [in/out] zmm; cipher text blocks 12-15
-%define %%NUMBL     %5      ; [in] number of blocks; numerical value
-%define %%ROUND     %6      ; [in] round number
-%define %%KEY       %7      ; [in] ZMM containing round keys
-%define %%NROUNDS   %8      ; [in] number of rounds; numerical value
-
-
-;;; === first AES round
-%if (%%ROUND < 1)
-        ;;  round 0
-%if (%%NUMBL > 14)
-        ;; 15, 16 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vpxorq          %%BLK_8_11, %%BLK_8_11, %%KEY
-        vpxorq          %%BLK_12_15, %%BLK_12_15, %%KEY
-%elif (%%NUMBL == 14)
-        ;; 14 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vpxorq          %%BLK_8_11, %%BLK_8_11, %%KEY
-        vpxorq          YWORD(%%BLK_12_15), YWORD(%%BLK_12_15), YWORD(%%KEY)
-%elif (%%NUMBL == 13)
-        ;; 13 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vpxorq          %%BLK_8_11, %%BLK_8_11, %%KEY
-        vpxorq          XWORD(%%BLK_12_15), XWORD(%%BLK_12_15), XWORD(%%KEY)
-%elif (%%NUMBL == 12) || (%%NUMBL == 11)
-        ;; 11, 12 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vpxorq          %%BLK_8_11, %%BLK_8_11, %%KEY
-%elif (%%NUMBL == 10)
-        ;; 10 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vpxorq          YWORD(%%BLK_8_11), YWORD(%%BLK_8_11), YWORD(%%KEY)
-%elif (%%NUMBL == 9)
-        ;; 9 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vpxorq          XWORD(%%BLK_8_11), XWORD(%%BLK_8_11), XWORD(%%KEY)
-%elif (%%NUMBL > 6)
-        ;; 7, 8 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          %%BLK_4_7, %%BLK_4_7, %%KEY
-%elif (%%NUMBL == 6)
-        ;; 6 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          YWORD(%%BLK_4_7), YWORD(%%BLK_4_7), YWORD(%%KEY)
-%elif (%%NUMBL == 5)
-        ;; 5 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vpxorq          XWORD(%%BLK_4_7), XWORD(%%BLK_4_7), XWORD(%%KEY)
-%elif (%%NUMBL > 2)
-        ;; 3, 4 blocks
-        vpxorq          %%BLK_0_3, %%BLK_0_3, %%KEY
-%elif (%%NUMBL == 2)
-        ;; 2 blocks
-        vpxorq          YWORD(%%BLK_0_3), YWORD(%%BLK_0_3), YWORD(%%KEY)
-%else
-        ;; 1 block
-        vpxorq          XWORD(%%BLK_0_3), XWORD(%%BLK_0_3), XWORD(%%KEY)
-%endif                  ; NUM BLOCKS
-%endif                  ; ROUND 0
-
-;;; === middle AES rounds
-%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
-        ;; rounds 1 to 9/11/13
-%if (%%NUMBL > 14)
-        ;; 15, 16 blocks
-        vaesdec          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdec          %%BLK_8_11, %%BLK_8_11, %%KEY
-        vaesdec          %%BLK_12_15, %%BLK_12_15, %%KEY
-%elif (%%NUMBL == 14)
-        ;; 14 blocks
-        vaesdec          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdec          %%BLK_8_11, %%BLK_8_11, %%KEY
-        vaesdec          YWORD(%%BLK_12_15), YWORD(%%BLK_12_15), YWORD(%%KEY)
-%elif (%%NUMBL == 13)
-        ;; 13 blocks
-        vaesdec          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdec          %%BLK_8_11, %%BLK_8_11, %%KEY
-        vaesdec          XWORD(%%BLK_12_15), XWORD(%%BLK_12_15), XWORD(%%KEY)
-%elif (%%NUMBL == 12) || (%%NUMBL == 11)
-        ;; 11, 12 blocks
-        vaesdec          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdec          %%BLK_8_11, %%BLK_8_11, %%KEY
-%elif (%%NUMBL == 10)
-        ;; 10 blocks
-        vaesdec          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdec          YWORD(%%BLK_8_11), YWORD(%%BLK_8_11), YWORD(%%KEY)
-%elif (%%NUMBL == 9)
-        ;; 9 blocks
-        vaesdec          %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec          %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdec          XWORD(%%BLK_8_11), XWORD(%%BLK_8_11), XWORD(%%KEY)
-%elif (%%NUMBL > 6)
-        ;; 7, 8 blocks
-        vaesdec         %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec         %%BLK_4_7, %%BLK_4_7, %%KEY
-%elif (%%NUMBL == 6)
-        ;; 6 blocks
-        vaesdec         %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec         YWORD(%%BLK_4_7), YWORD(%%BLK_4_7), YWORD(%%KEY)
-%elif (%%NUMBL == 5)
-        ;; 5 blocks
-        vaesdec         %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdec         XWORD(%%BLK_4_7), XWORD(%%BLK_4_7), XWORD(%%KEY)
-%elif (%%NUMBL > 2)
-        ;; 3, 4 blocks
-        vaesdec         %%BLK_0_3, %%BLK_0_3, %%KEY
-%elif (%%NUMBL == 2)
-        ;; 2 blocks
-        vaesdec         YWORD(%%BLK_0_3), YWORD(%%BLK_0_3), YWORD(%%KEY)
-%else
-        ;; 1 block
-        vaesdec         XWORD(%%BLK_0_3), XWORD(%%BLK_0_3), XWORD(%%KEY)
-%endif                  ; NUM BLOCKS
-%endif                  ; rounds 1 to 9/11/13
-
-;;; === last AES round
-%if (%%ROUND > %%NROUNDS)
-%if (%%NUMBL > 14)
-        ;; 15, 16 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdeclast     %%BLK_8_11, %%BLK_8_11, %%KEY
-        vaesdeclast     %%BLK_12_15, %%BLK_12_15, %%KEY
-%elif (%%NUMBL == 14)
-        ;; 14 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdeclast     %%BLK_8_11, %%BLK_8_11, %%KEY
-        vaesdeclast     YWORD(%%BLK_12_15), YWORD(%%BLK_12_15), YWORD(%%KEY)
-%elif (%%NUMBL == 13)
-        ;; 13 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdeclast     %%BLK_8_11, %%BLK_8_11, %%KEY
-        vaesdeclast     XWORD(%%BLK_12_15), XWORD(%%BLK_12_15), XWORD(%%KEY)
-%elif (%%NUMBL == 12) || (%%NUMBL == 11)
-        ;; 11, 12 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdeclast     %%BLK_8_11, %%BLK_8_11, %%KEY
-%elif (%%NUMBL == 10)
-        ;; 10 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdeclast     YWORD(%%BLK_8_11),  YWORD(%%BLK_8_11),  YWORD(%%KEY)
-%elif (%%NUMBL == 9)
-        ;; 9 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     %%BLK_4_7, %%BLK_4_7, %%KEY
-        vaesdeclast     XWORD(%%BLK_8_11),  XWORD(%%BLK_8_11),  XWORD(%%KEY)
-%elif (%%NUMBL > 6)
-        ;; 7, 8 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     %%BLK_4_7, %%BLK_4_7, %%KEY
-%elif (%%NUMBL == 6)
-        ;; 6 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     YWORD(%%BLK_4_7), YWORD(%%BLK_4_7), YWORD(%%KEY)
-%elif (%%NUMBL == 5)
-        ;; 5 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-        vaesdeclast     XWORD(%%BLK_4_7), XWORD(%%BLK_4_7), XWORD(%%KEY)
-%elif (%%NUMBL > 2)
-        ;; 3, 4 blocks
-        vaesdeclast     %%BLK_0_3, %%BLK_0_3, %%KEY
-%elif (%%NUMBL == 2)
-        ;; 2 blocks
-        vaesdeclast     YWORD(%%BLK_0_3), YWORD(%%BLK_0_3), YWORD(%%KEY)
-%else
-        ;; 1 block
-        vaesdeclast     XWORD(%%BLK_0_3), XWORD(%%BLK_0_3), XWORD(%%KEY)
-%endif                  ; NUM BLOCKS
-%endif                  ; The last round
-
-%endmacro               ; AESROUND_1_TO_16_BLOCKS
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; This macro is used to "cool down" pipeline after DECRYPT_16_PARALLEL macro
@@ -301,72 +109,10 @@
 %define %%IA0                   %13     ; [clobbered] GP temporary
 %define %%NROUNDS               %14     ; [in] number of rounds; numerical value
 
-%define %%xCIPHER_PLAIN_0_3   XWORD(%%CIPHER_PLAIN_0_3)
-%define %%xCIPHER_PLAIN_4_7   XWORD(%%CIPHER_PLAIN_4_7)
-%define %%xCIPHER_PLAIN_8_11  XWORD(%%CIPHER_PLAIN_8_11)
-%define %%xCIPHER_PLAIN_12_15 XWORD(%%CIPHER_PLAIN_12_15)
-%define %%T1 XWORD(%%ZT1)
-%define %%T2 XWORD(%%ZT2)
-%define %%T3 XWORD(%%ZT3)
-%define %%T4 XWORD(%%ZT4)
-
         ;; load plain/cipher text
-%if %%num_final_blocks == 1
-        vmovdqu8        %%xCIPHER_PLAIN_0_3, [%%CIPH_IN]
-%elif %%num_final_blocks == 2
-        vmovdqu8        YWORD(%%CIPHER_PLAIN_0_3), [%%CIPH_IN]
-%elif %%num_final_blocks == 3
-        vmovdqu8        YWORD(%%CIPHER_PLAIN_0_3), [%%CIPH_IN]
-        vinserti64x2    %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_0_3, [%%CIPH_IN + 32], 2
-%elif %%num_final_blocks == 4
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-%elif %%num_final_blocks == 5
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%xCIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-%elif %%num_final_blocks == 6
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        YWORD(%%CIPHER_PLAIN_4_7), [%%CIPH_IN + 64]
-%elif %%num_final_blocks == 7
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        YWORD(%%CIPHER_PLAIN_4_7), [%%CIPH_IN + 64]
-        vinserti64x2    %%CIPHER_PLAIN_4_7, %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 96], 2
-%elif %%num_final_blocks == 8
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-%elif %%num_final_blocks == 9
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-        vmovdqu8        %%xCIPHER_PLAIN_8_11, [%%CIPH_IN + 128]
-%elif %%num_final_blocks == 10
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-        vmovdqu8        YWORD(%%CIPHER_PLAIN_8_11), [%%CIPH_IN + 128]
-%elif %%num_final_blocks == 11
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-        vmovdqu8        YWORD(%%CIPHER_PLAIN_8_11), [%%CIPH_IN + 128]
-        vinserti64x2    %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_8_11, [%%CIPH_IN + 160], 2
-%elif %%num_final_blocks == 12
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-        vmovdqu8        %%CIPHER_PLAIN_8_11, [%%CIPH_IN + 128]
-%elif %%num_final_blocks == 13
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-        vmovdqu8        %%CIPHER_PLAIN_8_11, [%%CIPH_IN + 128]
-        vmovdqu8        %%CIPHER_PLAIN_12_15, [%%CIPH_IN + 192]
-%elif %%num_final_blocks == 14
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-        vmovdqu8        %%CIPHER_PLAIN_8_11, [%%CIPH_IN + 128]
-        vmovdqu8        YWORD(%%CIPHER_PLAIN_12_15), [%%CIPH_IN + 192]
-%else   ; 15 blocks
-        vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
-        vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
-        vmovdqu8        %%CIPHER_PLAIN_8_11, [%%CIPH_IN + 128]
-        vmovdqu8        YWORD(%%CIPHER_PLAIN_12_15), [%%CIPH_IN + 192]
-        vinserti64x2    %%CIPHER_PLAIN_12_15, [%%CIPH_IN + 224], 2
-%endif
+        ZMM_LOAD_BLOCKS_0_16 %%num_final_blocks, %%CIPH_IN, 0, \
+                %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+                %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
 
         ;; Prepare final cipher text blocks to
         ;; be XOR'd later after AESDEC
@@ -418,9 +164,10 @@
         ;; AES rounds
 %assign j 0
 %rep (%%NROUNDS + 2)
-        AESDEC_ROUND_1_TO_16_BLOCKS %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
-                                    %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15, \
-                                    %%num_final_blocks, j, ZKEY %+ j, %%NROUNDS
+     ZMM_AESDEC_ROUND_BLOCKS_0_16 %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+                        %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15, \
+                        ZKEY %+ j, j, no_data, no_data, no_data, no_data, \
+                        %%num_final_blocks, %%NROUNDS
 %assign j (j + 1)
 %endrep
 
@@ -437,65 +184,9 @@
 %endif
 
         ;; write plain text back to output
-%if %%num_final_blocks == 1
-        vmovdqu8        [%%PLAIN_OUT], %%xCIPHER_PLAIN_0_3
-%elif %%num_final_blocks == 2
-        vmovdqu8        [%%PLAIN_OUT], YWORD(%%CIPHER_PLAIN_0_3)
-%elif %%num_final_blocks == 3
-        ;; Blocks 3
-        vmovdqu8        [%%PLAIN_OUT], YWORD(%%CIPHER_PLAIN_0_3)
-        vextracti64x2   [%%PLAIN_OUT + 32], %%CIPHER_PLAIN_0_3, 2
-%elif %%num_final_blocks == 4
-        ;; Blocks 4
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-%elif %%num_final_blocks == 5
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%xCIPHER_PLAIN_4_7
-%elif %%num_final_blocks == 6
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], YWORD(%%CIPHER_PLAIN_4_7)
-%elif %%num_final_blocks == 7
-        ;; Blocks 7
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], YWORD(%%CIPHER_PLAIN_4_7)
-        vextracti64x2   [%%PLAIN_OUT + 96], %%CIPHER_PLAIN_4_7, 2
-%elif %%num_final_blocks == 8
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
-%elif %%num_final_blocks == 9
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
-        vmovdqu8        [%%PLAIN_OUT + 128], %%xCIPHER_PLAIN_8_11
-%elif %%num_final_blocks == 10
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
-        vmovdqu8        [%%PLAIN_OUT + 128], YWORD(%%CIPHER_PLAIN_8_11)
-%elif %%num_final_blocks == 11
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
-        vmovdqu8        [%%PLAIN_OUT + 128], YWORD(%%CIPHER_PLAIN_8_11)
-        vextracti64x2   [%%PLAIN_OUT + 160], %%CIPHER_PLAIN_8_11, 2
-%elif %%num_final_blocks == 12
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
-        vmovdqu8        [%%PLAIN_OUT + 128], %%CIPHER_PLAIN_8_11
-%elif %%num_final_blocks == 13
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
-        vmovdqu8        [%%PLAIN_OUT + 128], %%CIPHER_PLAIN_8_11
-        vmovdqu8        [%%PLAIN_OUT + 192], %%xCIPHER_PLAIN_12_15
-%elif %%num_final_blocks == 14
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
-        vmovdqu8        [%%PLAIN_OUT + 128], %%CIPHER_PLAIN_8_11
-        vmovdqu8        [%%PLAIN_OUT + 192], YWORD(%%CIPHER_PLAIN_12_15)
-%elif %%num_final_blocks == 15
-        vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
-        vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
-        vmovdqu8        [%%PLAIN_OUT + 128], %%CIPHER_PLAIN_8_11
-        vmovdqu8        [%%PLAIN_OUT + 192], YWORD(%%CIPHER_PLAIN_12_15)
-        vextracti64x2   [%%PLAIN_OUT + 224], %%CIPHER_PLAIN_12_15, 2
-%endif
+        ZMM_STORE_BLOCKS_0_16 %%num_final_blocks, %%PLAIN_OUT, 0, \
+                %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+                %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
 
 %endmacro       ; FINAL_BLOCKS
 
@@ -536,9 +227,10 @@
         ;; AES rounds
 %assign j 0
 %rep (%%NROUNDS + 2)
-        AESDEC_ROUND_1_TO_16_BLOCKS %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
-                                    %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15, \
-                                    16, j, ZKEY %+ j, %%NROUNDS
+        ZMM_AESDEC_ROUND_BLOCKS_0_16 %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+                        %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15, \
+                        ZKEY %+ j, j, no_data, no_data, no_data, no_data, \
+                        16, %%NROUNDS
 %assign j (j + 1)
 %endrep
 

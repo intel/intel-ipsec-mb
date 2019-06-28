@@ -247,7 +247,8 @@
 ;;; ===========================================================================
 ;;; Handles AES encryption rounds
 ;;; It handles special cases: the last and first rounds
-;;; Uses NROUNDS parameter to check what needs to be done for the current round.
+;;; Optionally, it performs XOR with data after the last AES round.
+;;; Uses NROUNDS parameterto check what needs to be done for the current round.
 ;;; If 3 blocks are trailing then operation on whole ZMM is performed (4 blocks).
 %macro ZMM_AESENC_ROUND_BLOCKS_0_16 12
 %define %%L0B0_3   %1      ; [in/out] zmm; blocks 0 to 3
@@ -307,5 +308,68 @@
 
 %endmacro
 
+;;; ===========================================================================
+;;; Handles AES decryption rounds
+;;; It handles special cases: the last and first rounds
+;;; Optionally, it performs XOR with data after the last AES round.
+;;; Uses NROUNDS parameter to check what needs to be done for the current round.
+;;; If 3 blocks are trailing then operation on whole ZMM is performed (4 blocks).
+%macro ZMM_AESDEC_ROUND_BLOCKS_0_16 12
+%define %%L0B0_3   %1      ; [in/out] zmm; blocks 0 to 3
+%define %%L0B4_7   %2      ; [in/out] zmm; blocks 4 to 7
+%define %%L0B8_11  %3      ; [in/out] zmm; blocks 8 to 11
+%define %%L0B12_15 %4      ; [in/out] zmm; blocks 12 to 15
+%define %%KEY      %5      ; [in] zmm containing round key
+%define %%ROUND    %6      ; [in] round number
+%define %%D0_3     %7      ; [in] zmm or no_data; cipher text blocks 0-3
+%define %%D4_7     %8      ; [in] zmm or no_data; cipher text blocks 4-7
+%define %%D8_11    %9      ; [in] zmm or no_data; cipher text blocks 8-11
+%define %%D12_15   %10     ; [in] zmm or no_data; cipher text blocks 12-15
+%define %%NUMBL    %11     ; [in] number of blocks; numerical value
+%define %%NROUNDS  %12     ; [in] number of rounds; numerical value
+
+;;; === first AES round
+%if (%%ROUND < 1)
+        ;;  round 0
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vpxorq, \
+                        %%L0B0_3, %%L0B4_7, %%L0B8_11, %%L0B12_15, \
+                        %%L0B0_3, %%L0B4_7, %%L0B8_11, %%L0B12_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; ROUND 0
+
+;;; === middle AES rounds
+%if (%%ROUND >= 1 && %%ROUND <= %%NROUNDS)
+        ;; rounds 1 to 9/11/13
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vaesdec, \
+                        %%L0B0_3, %%L0B4_7, %%L0B8_11, %%L0B12_15, \
+                        %%L0B0_3, %%L0B4_7, %%L0B8_11, %%L0B12_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY
+%endif                  ; rounds 1 to 9/11/13
+
+;;; === last AES round
+%if (%%ROUND > %%NROUNDS)
+        ;; the last round - mix enclast with text xor's
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vaesdeclast, \
+                        %%L0B0_3, %%L0B4_7, %%L0B8_11, %%L0B12_15, \
+                        %%L0B0_3, %%L0B4_7, %%L0B8_11, %%L0B12_15, \
+                        %%KEY, %%KEY, %%KEY, %%KEY
+
+;;; === XOR with data
+%ifnidn %%D0_3, no_data
+%ifnidn %%D4_7, no_data
+%ifnidn %%D8_11, no_data
+%ifnidn %%D12_15, no_data
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUMBL, vpxorq, \
+                        %%L0B0_3, %%L0B4_7, %%L0B8_11, %%L0B12_15, \
+                        %%L0B0_3, %%L0B4_7, %%L0B8_11, %%L0B12_15, \
+                        %%D0_3, %%D4_7, %%D8_11, %%D12_15
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+%endif                          ; !no_data
+
+%endif                  ; The last round
+
+%endmacro
 
 %endif ;; _AES_COMMON_ASM
