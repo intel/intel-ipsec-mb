@@ -1220,10 +1220,13 @@ default rel
         add     r12, 15
         shr     r12, 4
 
+        vmovdqa64       zmm27, [rel SHUF_MASK]
+
         GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
                 r13, r12, xmm9, xmm17, single_call, \
-                zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, zmm24, zmm25, zmm26, %%GPR, r15, k1
+                zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, zmm24, zmm25, zmm26, \
+                %%GPR, r15, k1, zmm27
 
 %%_ghash_done_x4:
         vmovdqu         [%%GDATA_CTX + CurCount], xmm9  ; current_counter = xmm9
