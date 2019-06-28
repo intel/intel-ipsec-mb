@@ -345,11 +345,11 @@ typedef struct JOB_AES_HMAC {
  * Argument structures for various algorithms
  */
 typedef struct {
-        const uint8_t *in[8];
-        uint8_t *out[8];
-        const uint32_t *keys[8];
-        DECLARE_ALIGNED(uint128_t IV[8], 32);
-} AES_ARGS_x8;
+        const uint8_t *in[16];
+        uint8_t *out[16];
+        const uint32_t *keys[16];
+        DECLARE_ALIGNED(uint128_t IV[16], 64);
+} AES_ARGS;
 
 typedef struct {
         DECLARE_ALIGNED(uint32_t digest[SHA1_DIGEST_SZ], 32);
@@ -390,13 +390,14 @@ typedef struct {
 
 /* AES out-of-order scheduler fields */
 typedef struct {
-        AES_ARGS_x8 args;
-        DECLARE_ALIGNED(uint16_t lens[8], 16);
-        /* each nibble is index (0...7) of an unused lane,
+        AES_ARGS args;
+        DECLARE_ALIGNED(uint16_t lens[16], 16);
+        /* each nibble is index (0...15) of an unused lane,
          * the last nibble is set to F as a flag
          */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[8];
+        JOB_AES_HMAC *job_in_lane[16];
+        uint64_t num_lanes_inuse;
 } MB_MGR_AES_OOO;
 
 /* AES XCBC out-of-order scheduler fields */
@@ -418,7 +419,7 @@ typedef struct {
 
 /* AES-CCM out-of-order scheduler structure */
 typedef struct {
-        AES_ARGS_x8 args; /* need to re-use AES arguments */
+        AES_ARGS args; /* need to re-use AES arguments */
         DECLARE_ALIGNED(uint16_t lens[8], 16);
         DECLARE_ALIGNED(uint16_t init_done[8], 16);
         /* each byte is index (0...3) of unused lanes
@@ -432,7 +433,7 @@ typedef struct {
 
 /* AES-CMAC out-of-order scheduler structure */
 typedef struct {
-        AES_ARGS_x8 args; /* need to re-use AES arguments */
+        AES_ARGS args; /* need to re-use AES arguments */
         DECLARE_ALIGNED(uint16_t lens[8], 16);
         DECLARE_ALIGNED(uint16_t init_done[8], 16);
         /* each byte is index (0...3) of unused lanes
@@ -453,7 +454,7 @@ typedef struct {
          */
         uint64_t unused_lanes;
         JOB_AES_HMAC *job_in_lane[16];
-        uint32_t num_lanes_inuse;
+        uint64_t num_lanes_inuse;
 } MB_MGR_DES_OOO;
 
 

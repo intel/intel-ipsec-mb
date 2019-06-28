@@ -39,7 +39,7 @@
 
 %endif
 
-; void AES_CBC_ENC_X4(AES_ARGS_x8 *args, UINT64 len_in_bytes);
+; void AES_CBC_ENC_X4(AES_ARGS *args, UINT64 len_in_bytes);
 extern AES_CBC_ENC_X4
 
 %ifdef LINUX

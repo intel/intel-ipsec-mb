@@ -232,7 +232,7 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_avx512
 
-void aes128_cbc_mac_x8(AES_ARGS_x8 *args, uint64_t len);
+void aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
 
 #define AES128_CBC_MAC     aes128_cbc_mac_x8
 
@@ -451,81 +451,45 @@ init_mb_mgr_avx512(MB_MGR *state)
         }
 
         /* Init AES out-of-order fields */
-        state->aes128_ooo.lens[0] = 0;
-        state->aes128_ooo.lens[1] = 0;
-        state->aes128_ooo.lens[2] = 0;
-        state->aes128_ooo.lens[3] = 0;
-        state->aes128_ooo.lens[4] = 0;
-        state->aes128_ooo.lens[5] = 0;
-        state->aes128_ooo.lens[6] = 0;
-        state->aes128_ooo.lens[7] = 0;
+        memset(state->aes128_ooo.lens, 0xFF,
+               sizeof(state->aes128_ooo.lens));
+        memset(&state->aes128_ooo.lens[0], 0,
+               sizeof(state->aes128_ooo.lens[0]) * 8);
+        memset(state->aes128_ooo.job_in_lane, 0,
+               sizeof(state->aes128_ooo.job_in_lane));
         state->aes128_ooo.unused_lanes = 0xF76543210;
-        state->aes128_ooo.job_in_lane[0] = NULL;
-        state->aes128_ooo.job_in_lane[1] = NULL;
-        state->aes128_ooo.job_in_lane[2] = NULL;
-        state->aes128_ooo.job_in_lane[3] = NULL;
-        state->aes128_ooo.job_in_lane[4] = NULL;
-        state->aes128_ooo.job_in_lane[5] = NULL;
-        state->aes128_ooo.job_in_lane[6] = NULL;
-        state->aes128_ooo.job_in_lane[7] = NULL;
+        state->aes128_ooo.num_lanes_inuse = 0;
 
-        state->aes192_ooo.lens[0] = 0;
-        state->aes192_ooo.lens[1] = 0;
-        state->aes192_ooo.lens[2] = 0;
-        state->aes192_ooo.lens[3] = 0;
-        state->aes192_ooo.lens[4] = 0;
-        state->aes192_ooo.lens[5] = 0;
-        state->aes192_ooo.lens[6] = 0;
-        state->aes192_ooo.lens[7] = 0;
+        memset(state->aes192_ooo.lens, 0xFF,
+               sizeof(state->aes192_ooo.lens));
+        memset(&state->aes192_ooo.lens[0], 0,
+               sizeof(state->aes192_ooo.lens[0]) * 8);
+        memset(state->aes192_ooo.job_in_lane, 0,
+               sizeof(state->aes192_ooo.job_in_lane));
         state->aes192_ooo.unused_lanes = 0xF76543210;
-        state->aes192_ooo.job_in_lane[0] = NULL;
-        state->aes192_ooo.job_in_lane[1] = NULL;
-        state->aes192_ooo.job_in_lane[2] = NULL;
-        state->aes192_ooo.job_in_lane[3] = NULL;
-        state->aes192_ooo.job_in_lane[4] = NULL;
-        state->aes192_ooo.job_in_lane[5] = NULL;
-        state->aes192_ooo.job_in_lane[6] = NULL;
-        state->aes192_ooo.job_in_lane[7] = NULL;
+        state->aes192_ooo.num_lanes_inuse = 0;
 
-
-        state->aes256_ooo.lens[0] = 0;
-        state->aes256_ooo.lens[1] = 0;
-        state->aes256_ooo.lens[2] = 0;
-        state->aes256_ooo.lens[3] = 0;
-        state->aes256_ooo.lens[4] = 0;
-        state->aes256_ooo.lens[5] = 0;
-        state->aes256_ooo.lens[6] = 0;
-        state->aes256_ooo.lens[7] = 0;
+        memset(&state->aes256_ooo.lens, 0xFF,
+               sizeof(state->aes256_ooo.lens));
+        memset(&state->aes256_ooo.lens[0], 0,
+               sizeof(state->aes256_ooo.lens[0]) * 8);
+        memset(state->aes256_ooo.job_in_lane, 0,
+               sizeof(state->aes256_ooo.job_in_lane));
         state->aes256_ooo.unused_lanes = 0xF76543210;
-        state->aes256_ooo.job_in_lane[0] = NULL;
-        state->aes256_ooo.job_in_lane[1] = NULL;
-        state->aes256_ooo.job_in_lane[2] = NULL;
-        state->aes256_ooo.job_in_lane[3] = NULL;
-        state->aes256_ooo.job_in_lane[4] = NULL;
-        state->aes256_ooo.job_in_lane[5] = NULL;
-        state->aes256_ooo.job_in_lane[6] = NULL;
-        state->aes256_ooo.job_in_lane[7] = NULL;
+        state->aes256_ooo.num_lanes_inuse = 0;
 
         /* DOCSIS SEC BPI (AES CBC + AES CFB for partial block)
          * uses same settings as AES128 CBC.
          */
-        state->docsis_sec_ooo.lens[0] = 0;
-        state->docsis_sec_ooo.lens[1] = 0;
-        state->docsis_sec_ooo.lens[2] = 0;
-        state->docsis_sec_ooo.lens[3] = 0;
-        state->docsis_sec_ooo.lens[4] = 0;
-        state->docsis_sec_ooo.lens[5] = 0;
-        state->docsis_sec_ooo.lens[6] = 0;
-        state->docsis_sec_ooo.lens[7] = 0;
+        memset(state->docsis_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis_sec_ooo.lens));
+        memset(&state->docsis_sec_ooo.lens[0], 0,
+               sizeof(state->docsis_sec_ooo.lens[0]) * 8);
+        memset(state->docsis_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis_sec_ooo.job_in_lane));
         state->docsis_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis_sec_ooo.job_in_lane[0] = NULL;
-        state->docsis_sec_ooo.job_in_lane[1] = NULL;
-        state->docsis_sec_ooo.job_in_lane[2] = NULL;
-        state->docsis_sec_ooo.job_in_lane[3] = NULL;
-        state->docsis_sec_ooo.job_in_lane[4] = NULL;
-        state->docsis_sec_ooo.job_in_lane[5] = NULL;
-        state->docsis_sec_ooo.job_in_lane[6] = NULL;
-        state->docsis_sec_ooo.job_in_lane[7] = NULL;
+        state->docsis_sec_ooo.num_lanes_inuse = 0;
+
 
         /* DES, 3DES and DOCSIS DES (DES CBC + DES CFB for partial block) */
         /* - separate DES OOO for encryption */

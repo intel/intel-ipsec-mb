@@ -39,15 +39,15 @@
 %endm
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; struct AES_ARGS_x8 {
+;; struct AES_ARGS {
 ;;     void*    in[8];
 ;;     void*    out[8];
 ;;     UINT128* keys[8];
 ;;     UINT128  IV[8];
 ;; }
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void aes_cbc_enc_256_x8(AES_ARGS_x8 *args, UINT64 len);
-;; arg 1: ARG : addr of AES_ARGS_x8 structure
+;; void aes_cbc_enc_256_x8(AES_ARGS *args, UINT64 len);
+;; arg 1: ARG : addr of AES_ARGS structure
 ;; arg 2: LEN : len (in units of bytes)
 
 struc STACK

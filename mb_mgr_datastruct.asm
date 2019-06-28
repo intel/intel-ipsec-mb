@@ -40,10 +40,10 @@
 
 START_FIELDS	; AES_ARGS_X8
 ;;	name		size	align
-FIELD	_aesarg_in,	8*8,	8	; array of 8 pointers to in text
-FIELD	_aesarg_out,	8*8,	8	; array of 8 pointers to out text
-FIELD	_aesarg_keys,	8*8,	8	; array of 8 pointers to keys
-FIELD	_aesarg_IV,	16*8,	32	; array of 8 128-bit IV's
+FIELD	_aesarg_in,	8*16,	8	; array of 16 pointers to in text
+FIELD	_aesarg_out,	8*16,	8	; array of 16 pointers to out text
+FIELD	_aesarg_keys,	8*16,	8	; array of 16 pointers to keys
+FIELD	_aesarg_IV,	16*16,	64	; array of 16 128-bit IV's
 END_FIELDS
 %assign _AES_ARGS_X8_size	_FIELD_OFFSET
 %assign _AES_ARGS_X8_align	_STRUCT_ALIGN
@@ -53,9 +53,10 @@ END_FIELDS
 START_FIELDS	; MB_MGR_AES_OOO
 ;;	name		size	align
 FIELD	_aes_args,	_AES_ARGS_X8_size, _AES_ARGS_X8_align
-FIELD	_aes_lens,	16,	16
+FIELD	_aes_lens,      16*2,	16
 FIELD	_aes_unused_lanes, 8,	8
-FIELD	_aes_job_in_lane, 8*8,	8
+FIELD	_aes_job_in_lane, 16*8,	8
+FIELD	_aes_lanes_in_use, 8,	8
 END_FIELDS
 %assign _MB_MGR_AES_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_AES_OOO_align	_STRUCT_ALIGN
