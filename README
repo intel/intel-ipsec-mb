@@ -55,6 +55,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | DES-DOCSIS    | Y      | N      | N      | N      | Y  x16 | N      |
 | 3DES          | Y      | N      | N      | N      | Y  x16 | N      |
 | DES           | Y      | N      | N      | N      | Y  x16 | N      |
+| ZUC-EEA3      | N      | Y      | Y      | N      | N      | N      |
 +---------------------------------------------------------------------+
 
 Notes:
@@ -91,6 +92,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | NULL              | N      | N      | N      | N      | N      | N      |
 | AES128-CCM        | N      | Y   x4 | Y   x8 | N      | N      | N      |
 | AES128-CMAC-96    | Y      | Y   x4 | Y   x8 | N      | N      | N      |
+| ZUC-EIA3          | N      | Y      | Y      | N      | N      | N      |
 +-------------------------------------------------------------------------+
 
 Notes:
@@ -128,6 +130,8 @@ Table 3. Encryption and integrity algorithm combinations
 | DES-DOCSIS,   |                                                     |
 | 3DES,         |                                                     |
 | DES,          |                                                     |
+|---------------+-----------------------------------------------------|
+| ZUC-EEA3      | ZUC-EIA3                                            |
 +---------------+-----------------------------------------------------+
 
 
@@ -234,10 +238,39 @@ Clean the build:
 or
 > nmake /f win_x64.mak clean SHARED=n
 
+Build with additional safety features:
+ - SAFE_DATA clears sensitive information stored in stack/registers
+ - SAFE_PARAM adds extra checks on input parameters
+> nmake /f win_x64.mak SAFE_DATA=y SAFE_PARAM=y
+
 Build with debugging information:
 > nmake /f win_x64.mak DEBUG=y
 
 Note: Building with debugging information is not advised for production use.
+
+Safety options
+==============
+
+There are two build options that can be enabled to increase safety in the code and
+protecting external functions from incorrect input data.
+These options are disabled by default, due to
+the performance impact associated to the extra code added.
+These options (explained below) can be enabled when building the library,
+by setting the parameter equal to "y" (e.g. make SAFE_DATA=y).
+No specific code has been added, and no specific validation or security tests have been performed
+to protect against or check for side-channel attacks.
+
+SAFE_DATA
+---------
+
+Stack and registers containing sensitive information, such as keys or IVs,
+are cleared upon completion of a function call.
+
+SAFE_PARAM
+----------
+
+Input parameters are checked, looking generally for NULL pointers
+or an incorrect input length.
 
 Installation
 ============

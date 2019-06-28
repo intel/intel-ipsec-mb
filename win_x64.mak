@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017-2018, Intel Corporation
+# Copyright (c) 2017-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -26,10 +26,13 @@
 #
 
 # Available build options:
-# DEBUG=y   - this option will produce library fit for debugging
-# DEBUG=n   - this option will produce library not fit for debugging (default)
-# SHARED=y  - this option will produce shared library (DLL) (default)
-# SHARED=n  - this option will produce static library (lib)
+# DEBUG=y   	- this option will produce library fit for debugging
+# DEBUG=n   	- this option will produce library not fit for debugging (default)
+# SHARED=y  	- this option will produce shared library (DLL) (default)
+# SHARED=n  	- this option will produce static library (lib)
+# SAFE_DATA=y   - this option will clear memory and registers containing
+# 		  sensitive information (e.g. keys, IVs)
+# SAFE_PARAM=y  - this option will add extra input parameter checks
 
 !if !defined(SHARED)
 SHARED = y
@@ -63,6 +66,14 @@ DAFLAGS =
 DLFLAGS = /RELEASE
 !endif
 
+!if "$(SAFE_DATA)" == "y"
+DCFLAGS = $(DCFLAGS) /DSAFE_DATA
+!endif
+
+!if "$(SAFE_PARAM)" == "y"
+DCFLAGS = $(DCFLAGS) /DSAFE_PARAM
+!endif
+
 CC = cl
 CFLAGS_ALL = $(EXTRA_CFLAGS) /I. /Iinclude /Ino-aesni \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
@@ -78,6 +89,15 @@ LINKFLAGS = $(DLFLAGS) /nologo /machine:X64
 
 AS = nasm
 AFLAGS = $(DAFLAGS) -fwin64 -Xvc -DWIN_ABI -Iinclude/ -I./ -Iavx/ -Iavx2/ -Iavx512/ -Isse/
+
+# warning messages
+
+SAFE_PARAM_MSG1=SAFE_PARAM option not set.
+SAFE_PARAM_MSG2=Input parameters will not be checked.
+SAFE_DATA_MSG1=SAFE_DATA option not set.
+SAFE_DATA_MSG2=Stack and registers containing sensitive information, \
+		such keys or IV will not be cleared \
+		at the end of function calls.
 
 lib_objs1 = \
 	$(OBJ_DIR)\aes128_cbc_dec_by4_sse.obj \
@@ -134,6 +154,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\md5_x4x2_sse.obj \
 	$(OBJ_DIR)\md5_x8x2_avx2.obj \
 	$(OBJ_DIR)\save_xmms.obj \
+	$(OBJ_DIR)\clear_regs_mem.obj \
 	$(OBJ_DIR)\sha1_mult_avx.obj \
 	$(OBJ_DIR)\sha1_mult_sse.obj \
 	$(OBJ_DIR)\sha1_ni_x2_sse.obj \
@@ -158,6 +179,12 @@ lib_objs1 = \
 	$(OBJ_DIR)\sha512_x8_avx512.obj \
 	$(OBJ_DIR)\sha_256_mult_avx.obj \
 	$(OBJ_DIR)\sha_256_mult_sse.obj \
+	$(OBJ_DIR)\zuc_common.obj \
+	$(OBJ_DIR)\zuc_sse_top.obj \
+	$(OBJ_DIR)\zuc_avx_top.obj \
+	$(OBJ_DIR)\zuc_sse.obj \
+	$(OBJ_DIR)\zuc_avx.obj \
+	$(OBJ_DIR)\zuc_iv.obj \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
 	$(OBJ_DIR)\md5_one_block.obj \
 	$(OBJ_DIR)\sha_one_block.obj \
@@ -297,6 +324,12 @@ $(LIBNAME): $(all_objs)
 	$(LINK_TOOL) $(LINKFLAGS) /DLL /DEF:libIPSec_MB.def /OUT:$@  $(all_objs)
 !else
 	$(LIB_TOOL) $(LIBFLAGS) /out:$@ $(all_objs)
+!endif
+!if "$(SAFE_PARAM)" != "y"
+	@echo NOTE:  $(SAFE_PARAM_MSG1) $(SAFE_PARAM_MSG2)
+!endif
+!if "$(SAFE_DATA)" != "y"
+	@echo NOTE:  $(SAFE_DATA_MSG1) $(SAFE_DATA_MSG2)
 !endif
 
 $(all_objs): $(OBJ_DIR)

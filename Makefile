@@ -73,6 +73,14 @@ OPT = -O3
 CFLAGS += -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
+ifeq ($(SAFE_DATA),y)
+CFLAGS += -DSAFE_DATA
+endif
+
+ifeq ($(SAFE_PARAM),y)
+CFLAGS += -DSAFE_PARAM
+endif
+
 # prevent SIMD optimizations for non-aesni modules
 CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
@@ -110,6 +118,15 @@ YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUD
 NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
 NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
 
+# warning messages
+
+SAFE_PARAM_MSG1="SAFE_PARAM option not set."
+SAFE_PARAM_MSG2="Input parameters will not be checked."
+SAFE_DATA_MSG1="SAFE_DATA option not set."
+SAFE_DATA_MSG2="Stack and registers containing sensitive information, \
+		such keys or IV will not be cleared \
+		at the end of function calls."
+
 #
 # List of C modules (any origin)
 #
@@ -127,7 +144,10 @@ c_lib_objs := \
 	des_basic.o \
 	version.o \
 	cpu_feature.o \
-	aesni_emu.o
+	aesni_emu.o \
+	zuc_sse_top.o \
+	zuc_avx_top.o \
+	zuc_iv.o
 
 #
 # List of ASM modules (root directory/common)
@@ -138,8 +158,10 @@ asm_generic_lib_objs := \
 	aes_keyexp_256.o \
 	aes_cmac_subkey_gen.o \
 	save_xmms.o \
+	clear_regs_mem.o \
 	const.o \
-	aes128_ecbenc_x3.o
+	aes128_ecbenc_x3.o \
+	zuc_common.o
 
 #
 # List of ASM modules (no-aesni directory)
@@ -201,6 +223,7 @@ asm_sse_lib_objs := \
 	sha_256_mult_sse.o \
 	sha1_ni_x2_sse.o \
 	sha256_ni_x2_sse.o \
+	zuc_sse.o \
 	mb_mgr_aes_flush_sse.o \
 	mb_mgr_aes_submit_sse.o \
 	mb_mgr_aes192_flush_sse.o \
@@ -258,6 +281,7 @@ asm_avx_lib_objs := \
 	sha384_one_block_avx.o \
 	sha512_one_block_avx.o \
 	sha512_x2_avx.o \
+	zuc_avx.o \
 	mb_mgr_aes_flush_avx.o \
 	mb_mgr_aes_submit_avx.o \
 	mb_mgr_aes192_flush_avx.o \
@@ -396,6 +420,12 @@ ifeq ($(SHARED),y)
 	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB).so
 else
 	$(AR) -qcs $@ $^
+endif
+ifneq ($(SAFE_PARAM), y)
+	@echo "NOTE:" $(SAFE_PARAM_MSG1) $(SAFE_PARAM_MSG2)
+endif
+ifneq ($(SAFE_DATA), y)
+	@echo "NOTE:" $(SAFE_DATA_MSG1) $(SAFE_DATA_MSG2)
 endif
 
 .PHONY: install

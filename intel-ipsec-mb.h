@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2012-2018, Intel Corporation
+  Copyright (c) 2012-2019, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -663,6 +663,18 @@ typedef void (*aes_gcm_enc_dec_finalize_t)(const struct gcm_key_data *,
 typedef void (*aes_gcm_precomp_t)(struct gcm_key_data *);
 typedef void (*aes_gcm_pre_t)(const void *, struct gcm_key_data *);
 
+typedef void (*zuc_eea3_1_buffer_t)(const void *, const void *, const void *,
+                                    void *, const uint32_t);
+
+typedef void (*zuc_eea3_4_buffer_t)(const void **, const void **, const void **,
+                                    void **, const uint32_t *);
+
+typedef void (*zuc_eea3_n_buffer_t)(const void **, const void **, const void **,
+                                    void **, const uint32_t *, const uint32_t);
+
+typedef void (*zuc_eia3_1_buffer_t)(const void *, const void *, const void *,
+                                    const uint32_t, uint32_t *);
+
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
@@ -768,6 +780,11 @@ typedef struct MB_MGR {
         aes_gcm_pre_t           gcm128_pre;
         aes_gcm_pre_t           gcm192_pre;
         aes_gcm_pre_t           gcm256_pre;
+
+        zuc_eea3_1_buffer_t eea3_1_buffer;
+        zuc_eea3_4_buffer_t eea3_4_buffer;
+        zuc_eea3_n_buffer_t eea3_n_buffer;
+        zuc_eia3_1_buffer_t eia3_1_buffer;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1016,6 +1033,39 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
         ((_mgr)->gcm192_pre((_key_in), (_key_exp)))
 #define IMB_AES256_GCM_PRE(_mgr, _key_in, _key_exp)     \
         ((_mgr)->gcm256_pre((_key_in), (_key_exp)))
+
+/* ZUC EEA3/EIA3 functions */
+
+/**
+ * @brief ZUC EEA3 Confidentiality functions
+ *
+ * @param mgr   Pointer to multi-buffer structure
+ * @param key   Pointer to key
+ * @param iv    Pointer to 16-byte IV
+ * @param in    Pointer to Plaintext/Ciphertext input.
+ * @param out   Pointer to Ciphertext/Plaintext output.
+ * @param len   Length of input data in bytes.
+ */
+#define IMB_ZUC_EEA3_1_BUFFER(_mgr, _key, _iv, _in, _out, _len) \
+        ((_mgr)->eea3_1_buffer((_key), (_iv), (_in), (_out), (_len)))
+#define IMB_ZUC_EEA3_4_BUFFER(_mgr, _key, _iv, _in, _out, _len) \
+        ((_mgr)->eea3_4_buffer((_key), (_iv), (_in), (_out), (_len)))
+#define IMB_ZUC_EEA3_N_BUFFER(_mgr, _key, _iv, _in, _out, _len, _num) \
+        ((_mgr)->eea3_n_buffer((_key), (_iv), (_in), (_out), (_len), (_num)))
+
+
+/**
+ * @brief ZUC EIA3 Integrity function
+ *
+ * @param mgr   Pointer to multi-buffer structure
+ * @param key   Pointer to key
+ * @param iv    Pointer to 16-byte IV
+ * @param in    Pointer to Plaintext/Ciphertext input.
+ * @param len   Length of input data in bits.
+ * @param tag   Pointer to Authenticated Tag output (4 bytes)
+ */
+#define IMB_ZUC_EIA3_1_BUFFER(_mgr, _key, _iv, _in, _len, _tag) \
+        ((_mgr)->eia3_1_buffer((_key), (_iv), (_in), (_len), (_tag)))
 
 /* Auxiliary functions */
 
@@ -1647,6 +1697,27 @@ IMB_DLL_EXPORT void aes_gcm_pre_256_avx_gen2(const void *key,
 IMB_DLL_EXPORT void aes_gcm_pre_256_avx_gen4(const void *key,
                                              struct gcm_key_data *key_data);
 #endif /* !NO_GCM */
+
+/**
+ * @brief Generation of ZUC Initialization Vectors (for EEA3 and EIA3)
+ *
+ * @param [in]  count  COUNT (4 bytes in Little Ending)
+ * @param [in]  bearer BEARER (5 bits)
+ * @param [in]  dir    DIRECTION (1 bit)
+ * @param [out] iv_ptr Pointer to generated IV (16 bytes)
+ *
+ * @return
+ *      - 0 if success
+ *      - 1 if one or more parameters are wrong
+ */
+IMB_DLL_EXPORT int zuc_eea3_iv_gen(const uint32_t count,
+                                   const uint8_t bearer,
+                                   const uint8_t dir,
+                                   void *iv_ptr);
+IMB_DLL_EXPORT int zuc_eia3_iv_gen(const uint32_t count,
+                                   const uint8_t bearer,
+                                   const uint8_t dir,
+                                   void *iv_ptr);
 
 #ifdef __cplusplus
 }

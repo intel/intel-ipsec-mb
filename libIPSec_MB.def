@@ -300,3 +300,5 @@ EXPORTS
     aes_gcm_precomp_128_vaes_avx512             @274
     aes_gcm_precomp_192_vaes_avx512             @275
     aes_gcm_precomp_256_vaes_avx512             @276
+    zuc_eea3_iv_gen                             @277
+    zuc_eia3_iv_gen                             @278
