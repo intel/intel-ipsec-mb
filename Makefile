@@ -341,6 +341,13 @@ asm_avx512_lib_objs := \
 	des_x16_avx512.o \
 	cntr_vaes_avx512.o \
 	aes_cbc_dec_vaes_avx512.o \
+	aes_cbc_enc_vaes_avx512.o \
+	mb_mgr_aes_submit_avx512.o \
+	mb_mgr_aes_flush_avx512.o \
+	mb_mgr_aes192_submit_avx512.o \
+	mb_mgr_aes192_flush_avx512.o \
+	mb_mgr_aes256_submit_avx512.o \
+	mb_mgr_aes256_flush_avx512.o \
 	mb_mgr_hmac_flush_avx512.o \
 	mb_mgr_hmac_submit_avx512.o \
 	mb_mgr_hmac_sha_224_flush_avx512.o \

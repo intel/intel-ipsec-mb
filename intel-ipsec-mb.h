@@ -349,6 +349,7 @@ typedef struct {
         uint8_t *out[16];
         const uint32_t *keys[16];
         DECLARE_ALIGNED(uint128_t IV[16], 64);
+        DECLARE_ALIGNED(uint128_t key_tab[15][16], 64);
 } AES_ARGS;
 
 typedef struct {

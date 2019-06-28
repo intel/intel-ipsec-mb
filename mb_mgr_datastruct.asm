@@ -35,24 +35,25 @@
 %define MAX_AES_JOBS		128
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Define AES_ARGS_X8 and AES Out of Order Data Structures
+;;;; Define AES_ARGS and AES Out of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-START_FIELDS	; AES_ARGS_X8
-;;	name		size	align
-FIELD	_aesarg_in,	8*16,	8	; array of 16 pointers to in text
-FIELD	_aesarg_out,	8*16,	8	; array of 16 pointers to out text
-FIELD	_aesarg_keys,	8*16,	8	; array of 16 pointers to keys
-FIELD	_aesarg_IV,	16*16,	64	; array of 16 128-bit IV's
+START_FIELDS	; AES_ARGS
+;;	name		size	  align
+FIELD	_aesarg_in,	8*16,	  8	; array of 16 pointers to in text
+FIELD	_aesarg_out,	8*16,	  8	; array of 16 pointers to out text
+FIELD	_aesarg_keys,	8*16,	  8	; array of 16 pointers to keys
+FIELD	_aesarg_IV,	16*16,	  64	; array of 16 128-bit IV's
+FIELD	_aesarg_key_tab,16*16*15, 64	; array of 128-bit round keys
 END_FIELDS
-%assign _AES_ARGS_X8_size	_FIELD_OFFSET
-%assign _AES_ARGS_X8_align	_STRUCT_ALIGN
+%assign _AES_ARGS_size	_FIELD_OFFSET
+%assign _AES_ARGS_align	_STRUCT_ALIGN
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 START_FIELDS	; MB_MGR_AES_OOO
 ;;	name		size	align
-FIELD	_aes_args,	_AES_ARGS_X8_size, _AES_ARGS_X8_align
+FIELD	_aes_args,	_AES_ARGS_size, _AES_ARGS_align
 FIELD	_aes_lens,      16*2,	16
 FIELD	_aes_unused_lanes, 8,	8
 FIELD	_aes_job_in_lane, 16*8,	8
@@ -65,6 +66,7 @@ _aes_args_in	equ	_aes_args + _aesarg_in
 _aes_args_out	equ	_aes_args + _aesarg_out
 _aes_args_keys	equ	_aes_args + _aesarg_keys
 _aes_args_IV	equ	_aes_args + _aesarg_IV
+_aes_args_key_tab       equ     _aes_args + _aesarg_key_tab
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define XCBC Out of Order Data Structures
@@ -111,7 +113,7 @@ _aes_xcbc_args_ICV	equ	_aes_xcbc_args + _aesxcbcarg_ICV
 
 START_FIELDS	; MB_MGR_CMAC_OOO
 ;;	name		size	align
-FIELD	_aes_cmac_args,	_AES_ARGS_X8_size, _AES_ARGS_X8_align
+FIELD	_aes_cmac_args,	_AES_ARGS_size, _AES_ARGS_align
 FIELD	_aes_cmac_lens, 8*2,	16
 FIELD	_aes_cmac_init_done,    8*2,	16
 FIELD	_aes_cmac_unused_lanes, 8,      8
@@ -131,7 +133,7 @@ _aes_cmac_args_IV	equ	_aes_cmac_args + _aesarg_IV
 
 START_FIELDS	; MB_MGR_CCM_OOO
 ;;	name		size	align
-FIELD	_aes_ccm_args,	_AES_ARGS_X8_size, _AES_ARGS_X8_align
+FIELD	_aes_ccm_args,	_AES_ARGS_size, _AES_ARGS_align
 FIELD	_aes_ccm_lens, 8*2,	16
 FIELD	_aes_ccm_init_done,    8*2,	16
 FIELD	_aes_ccm_unused_lanes, 8,      8

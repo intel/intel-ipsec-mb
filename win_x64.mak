@@ -205,6 +205,13 @@ lib_objs1 = \
 	$(OBJ_DIR)\des_x16_avx512.obj \
 	$(OBJ_DIR)\cntr_vaes_avx512.obj \
         $(OBJ_DIR)\aes_cbc_dec_vaes_avx512.obj \
+        $(OBJ_DIR)\aes_cbc_enc_vaes_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes_submit_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes_flush_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes192_submit_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes192_flush_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes256_submit_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes256_flush_avx512.obj \
         $(OBJ_DIR)\const.obj
 
 lib_objs2 = \
