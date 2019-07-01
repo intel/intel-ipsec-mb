@@ -44,7 +44,7 @@
 #include "zuc_test_vectors.h"
 #include "gcm_ctr_vectors_test.h"
 
-#define MAXBUFS 16
+#define MAXBUFS 9
 #define PASS_STATUS 0
 #define FAIL_STATUS -1
 
@@ -73,7 +73,7 @@ static void byte_hexdump(const char *message, const uint8_t *ptr, int len);
  * pSrcData = pointers to the new source buffers
  * numOfBuffs = number of buffers
  * ************************************************/
-static uint32_t createSourceData(uint8_t *pSrcData[MAXBUFS],
+static uint32_t createData(uint8_t *pSrcData[MAXBUFS],
                                  uint32_t numOfBuffs)
 {
         uint32_t i = 0, j = 0;
@@ -174,7 +174,7 @@ static uint32_t bswap4(const uint32_t val)
 int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 {
 
-        uint32_t numBuffs = 9, i, a;
+        uint32_t numBuffs, a;
         uint32_t status = PASS_STATUS;
         uint8_t *pKeys[MAXBUFS];
         uint8_t *pIV[MAXBUFS];
@@ -189,21 +189,21 @@ int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
         fflush(stdout);
 
         /*Create test data buffers + populate with random data*/
-        if (createSourceData(pSrcData, numBuffs)) {
-                printf("createSourceData() error\n");
+        if (createData(pSrcData, MAXBUFS)) {
+                printf("createData() error\n");
                 return FAIL_STATUS;
         }
-        if (createSourceData(pDstData, numBuffs)) {
-                printf("createSourceData() error\n");
+        if (createData(pDstData, MAXBUFS)) {
+                printf("createData() error\n");
                 return FAIL_STATUS;
         }
 
         /*Create random keys and vectors*/
         if (createKeyVecData(ZUC_KEY_LEN_IN_BYTES, pKeys, ZUC_IV_LEN_IN_BYTES,
-                             pIV, 9)) {
+                             pIV, MAXBUFS)) {
                 printf("createKeyVecData() error\n");
-                for (i = 0; i < numBuffs; i++)/*MAXBUFS*/
-                        free(pSrcData[i]);
+                freePtrArray(pSrcData, MAXBUFS);
+                freePtrArray(pDstData, MAXBUFS);
                 return FAIL_STATUS;
         }
 
@@ -249,9 +249,10 @@ int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
         else
                 printf("validate ZUC Integrity 1 block: PASS\n");
 
-        freePtrArray(pKeys, 9);    /*Free the key buffers*/
-        freePtrArray(pIV, 9);      /*Free the vector buffers*/
-        freePtrArray(pSrcData, 9); /*Free the source buffers*/
+        freePtrArray(pKeys, MAXBUFS);    /*Free the key buffers*/
+        freePtrArray(pIV, MAXBUFS);      /*Free the vector buffers*/
+        freePtrArray(pSrcData, MAXBUFS); /*Free the source buffers*/
+        freePtrArray(pDstData, MAXBUFS); /*Free the destination buffers*/
         if (status)
                 return status;
 
