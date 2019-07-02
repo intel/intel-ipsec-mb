@@ -181,7 +181,7 @@ alternative algorithms instead.
 Package Content
 ===============
 
-LibTestApp - Library test application
+LibTestApp - Library test applications
 LibPerfApp - Library performance application
 sse - Intel(R) SSE optimized routines
 avx - Intel(R) AVX optimized routines

@@ -25,7 +25,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-APP := ipsec_MB_testapp
+TEST_APP := ipsec_MB_testapp
+XVALID_APP := ipsec_xvalid_test
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 
 CFLAGS = -g -DLINUX -D_GNU_SOURCE \
@@ -64,9 +65,15 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	ecb_test.c zuc_test.c
 OBJECTS := $(SOURCES:%.c=%.o)
 
-all: $(APP)
+XVALID_SOURCES := ipsec_xvalid.c
+XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o)
 
-$(APP): $(OBJECTS)
+all: $(TEST_APP) $(XVALID_APP)
+
+$(TEST_APP): $(OBJECTS)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+$(XVALID_APP): $(XVALID_OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 main.o: main.c do_test.h
@@ -88,9 +95,11 @@ chained_test.o: chained_test.c utils.h
 api_test.o: api_test.c gcm_ctr_vectors_test.h
 zuc_test.o: zuc_test.c zuc_test_vectors.h
 
+ipsec_xvalid.o: ipsec_xvalid.c
+
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) $(APP)
+	-rm -f $(OBJECTS) $(TEST_APP) $(XVALID_OBJECTS) $(XVALID_APP)
 
 SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
 CHECKPATCH?=checkpatch.pl

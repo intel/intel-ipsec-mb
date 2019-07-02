@@ -36,6 +36,9 @@ LibTestApp
 - AES-CMAC-128 bit length message tests added
 - CPU capability detection used to disable tests if instruction not present
 - ZUC-EEA3 and ZUC-EIA3 tests added
+- New cross architecture test application (ipsec_xvalid) added,
+  which mixes different implementations (based on different architectures),
+  to double check their correctness 
 
 LibPerfApp
 - Job size and number of iterations options added

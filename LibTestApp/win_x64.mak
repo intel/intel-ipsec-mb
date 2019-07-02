@@ -25,7 +25,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-APP = ipsec_MB_testapp
+TEST_APP = ipsec_MB_testapp
+XVALID_APP = ipsec_xvalid_test
 INSTNAME = intel-ipsec-mb
 
 !if !defined(PREFIX)
@@ -59,14 +60,20 @@ CC = cl
 CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(GCM_CFLAGS) $(INCDIR)
 
 LNK = link
-LFLAGS = /out:$(APP).exe $(DLFLAGS)
+TEST_LFLAGS = /out:$(TEST_APP).exe $(DLFLAGS)
+XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
 
-OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj
+TEST_OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj
 
-all: $(APP).exe
+XVALID_OBJS = ipsec_xvalid.obj
 
-$(APP).exe: $(OBJS) $(IPSECLIB)
-        $(LNK) $(LFLAGS) $(OBJS) $(IPSECLIB)
+all: $(TEST_APP).exe $(XVALID_APP).exe
+
+$(TEST_APP).exe: $(TEST_OBJS) $(IPSECLIB)
+        $(LNK) $(TEST_LFLAGS) $(TEST_OBJS) $(IPSECLIB)
+
+$(XVALID_APP).exe: $(XVALID_OBJS) $(IPSECLIB)
+        $(LNK) $(XVALID_LFLAGS) $(XVALID_OBJS) $(IPSECLIB)
 
 main.obj: main.c do_test.h
 	$(CC) /c $(CFLAGS) main.c
@@ -122,5 +129,8 @@ api_test.obj: api_test.c gcm_ctr_vectors_test.h
 zuc_test.obj: zuc_test.c zuc_test_vectors.h
 	$(CC) /c $(CFLAGS) zuc_test.c
 
+ipsec_xvalid.obj: ipsec_xvalid.c
+	$(CC) /c $(CFLAGS) ipsec_xvalid.c
+
 clean:
-	del /q $(OBJS) $(APP).*
+	del /q $(TEST_OBJS) $(TEST_APP).* $(XVALID_OBJS) $(XVALID_APP).*
