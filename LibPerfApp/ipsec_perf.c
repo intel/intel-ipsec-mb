@@ -1557,9 +1557,10 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         const char *func_names[4] = {
                 "SSE", "AVX", "AVX2", "AVX512"
         };
-        const char *c_mode_names[13] = {
-                "CBC", "CNTR", "CNTR+8", "NULL_CIPHER", "DOCAES", "DOCAES+8",
-                "DOCDES", "DOCDES+4", "GCM", "CCM", "DES", "3DES", "PON"
+        const char *c_mode_names[14] = {
+                "CBC", "CNTR", "CNTR+8", "ECB", "NULL_CIPHER", "DOCAES",
+                "DOCAES+8", "DOCDES", "DOCDES+4", "GCM", "CCM", "DES",
+                "3DES", "PON"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
