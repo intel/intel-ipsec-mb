@@ -189,6 +189,14 @@ avx2 - Intel(R) AVX2 optimized routines
 avx512 - Intel(R) AVX512 optimized routines
 no-aesni - Non-AESNI accelerated routines
 
+Note:
+There is just one branch used in the project. All development is done on the
+master branch. Code taken from the tip of the master branch should not be
+considered fit for production.
+Refer to the releases tab for stable code versions:
+https://github.com/intel/intel-ipsec-mb/releases
+
+
 Compilation
 ===========
 
