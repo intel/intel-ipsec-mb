@@ -339,9 +339,10 @@ int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                         memcpy(pSrcData[j], testEEA3_vectors[i].plaintext,
                                packetLen[j]);
                 }
-                IMB_ZUC_EEA3_4_BUFFER(
-                    mb_mgr, (const void **)pKeys, (const void **)pIV,
-                    (const void **)pSrcData, (void **)pDstData, packetLen);
+                IMB_ZUC_EEA3_4_BUFFER(mb_mgr, (const void * const *)pKeys,
+                                      (const void * const *)pIV,
+                                      (const void * const *)pSrcData,
+                                      (void **)pDstData, packetLen);
                 uint8_t *pDst8 = (uint8_t *)pDstData[0];
 
                 retTmp = memcmp(pDst8, testEEA3_vectors[i].ciphertext,
@@ -391,9 +392,10 @@ int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                         memcpy(pSrcData[j], testEEA3_vectors[i].ciphertext,
                                (testEEA3_vectors[i].length_in_bits + 7) / 8);
                 }
-                IMB_ZUC_EEA3_4_BUFFER(
-                    mb_mgr, (const void **)pKeys, (const void **)pIV,
-                    (const void **)pSrcData, (void **)pDstData, packetLen);
+                IMB_ZUC_EEA3_4_BUFFER(mb_mgr, (const void * const *)pKeys,
+                                      (const void * const *)pIV,
+                                      (const void * const *)pSrcData,
+                                      (void **)pDstData, packetLen);
                 pDst8 = (uint8_t *)pDstData[0];
                 retTmp = memcmp(pDst8, testEEA3_vectors[i].plaintext,
                                 (testEEA3_vectors[i].length_in_bits) / 8);
@@ -465,9 +467,9 @@ int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                         packetLen[j] =
                             (testEEA3_vectors[i].length_in_bits + 7) / 8;
                 }
-                IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void **)pKeys,
-                                      (const void **)pIV,
-                                      (const void **)pSrcData,
+                IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void * const *)pKeys,
+                                      (const void * const *)pIV,
+                                      (const void * const *)pSrcData,
                                       (void **)pDstData, packetLen, numBuffs);
                 uint8_t *pDst8 = (uint8_t *)pDstData[0];
 
@@ -519,9 +521,9 @@ int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                         memcpy(pSrcData[j], testEEA3_vectors[i].ciphertext,
                                (testEEA3_vectors[i].length_in_bits + 7) / 8);
                 }
-                IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void **)pKeys,
-                                      (const void **)pIV,
-                                      (const void **)pSrcData,
+                IMB_ZUC_EEA3_N_BUFFER(mb_mgr, (const void * const *)pKeys,
+                                      (const void * const *)pIV,
+                                      (const void * const *)pSrcData,
                                       (void **)pDstData, packetLen, numBuffs);
                 retTmp = memcmp(pDstData[0], testEEA3_vectors[i].plaintext,
                                 (testEEA3_vectors[i].length_in_bits) / 8);
@@ -597,12 +599,10 @@ int validate_zuc_EIA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
                 if (retTmp) {
                         printf("Validate ZUC 1 block  test %d (Int): FAIL\n",
                                i + 1);
-                        byte_hexdump(
-                            "Expected", (uint8_t *)&testEIA3_vectors[i].mac,
-                            sizeof(((struct test128EIA3_vectors_t *)0)->mac));
-                        byte_hexdump(
-                            "Found", pDstData,
-                            sizeof(((struct test128EIA3_vectors_t *)0)->mac));
+                        byte_hexdump("Expected",
+                                     (const uint8_t *)&testEIA3_vectors[i].mac,
+                                     ZUC_DIGEST_LEN);
+                        byte_hexdump("Found", pDstData, ZUC_DIGEST_LEN);
                         ret = retTmp;
                 } else
                         printf("Validate ZUC 1 block  test %d (Int): PASS\n",

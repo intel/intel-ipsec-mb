@@ -114,8 +114,10 @@ void _zuc_eea3_1_buffer_sse(const void *pKey,
 }
 
 static inline
-void _zuc_eea3_4_buffer_sse(const void *pKey[4], const void *pIv[4],
-                            const void *pBufferIn[4], void *pBufferOut[4],
+void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
+                            const void * const pIv[4],
+                            const void * const pBufferIn[4],
+                            void *pBufferOut[4],
                             const uint32_t length[4])
 {
 
@@ -345,8 +347,10 @@ void zuc_eea3_1_buffer_sse(const void *pKey,
 #endif
 }
 
-void zuc_eea3_4_buffer_sse(const void *pKey[4], const void *pIv[4],
-                           const void *pBufferIn[4], void *pBufferOut[4],
+void zuc_eea3_4_buffer_sse(const void * const pKey[4],
+                           const void * const pIv[4],
+                           const void * const pBufferIn[4],
+                           void *pBufferOut[4],
                            const uint32_t length[4])
 {
 #ifndef LINUX
@@ -386,8 +390,8 @@ void zuc_eea3_4_buffer_sse(const void *pKey[4], const void *pIv[4],
 }
 
 
-void zuc_eea3_n_buffer_sse(const void *pKey[], const void *pIv[],
-                           const void *pBufferIn[], void *pBufferOut[],
+void zuc_eea3_n_buffer_sse(const void * const pKey[], const void * const pIv[],
+                           const void * const pBufferIn[], void *pBufferOut[],
                            const uint32_t length[],
                            const uint32_t numBuffers)
 {
