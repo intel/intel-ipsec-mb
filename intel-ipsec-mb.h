@@ -667,11 +667,13 @@ typedef void (*aes_gcm_pre_t)(const void *, struct gcm_key_data *);
 typedef void (*zuc_eea3_1_buffer_t)(const void *, const void *, const void *,
                                     void *, const uint32_t);
 
-typedef void (*zuc_eea3_4_buffer_t)(const void **, const void **, const void **,
-                                    void **, const uint32_t *);
+typedef void (*zuc_eea3_4_buffer_t)(const void * const *, const void * const *,
+                                    const void * const *, void **,
+                                    const uint32_t *);
 
-typedef void (*zuc_eea3_n_buffer_t)(const void **, const void **, const void **,
-                                    void **, const uint32_t *, const uint32_t);
+typedef void (*zuc_eea3_n_buffer_t)(const void * const *, const void * const *,
+                                    const void * const *, void **,
+                                    const uint32_t *, const uint32_t);
 
 typedef void (*zuc_eia3_1_buffer_t)(const void *, const void *, const void *,
                                     const uint32_t, uint32_t *);

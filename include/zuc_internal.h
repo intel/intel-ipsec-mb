@@ -403,12 +403,14 @@ void zuc_eea3_1_buffer_sse(const void *pKey, const void *pIv,
                            const void *pBufferIn, void *pBufferOut,
                            const uint32_t lengthInBytes);
 
-void zuc_eea3_4_buffer_sse(const void *pKey[4], const void *pIv[4],
-                           const void *pBufferIn[4], void *pBufferOut[4],
+void zuc_eea3_4_buffer_sse(const void * const pKey[4],
+                           const void * const pIv[4],
+                           const void * const pBufferIn[4],
+                           void *pBufferOut[4],
                            const uint32_t lengthInBytes[4]);
 
-void zuc_eea3_n_buffer_sse(const void *pKey[], const void *pIv[],
-                           const void *pBufferIn[], void *pBufferOut[],
+void zuc_eea3_n_buffer_sse(const void * const pKey[], const void * const pIv[],
+                           const void * const pBufferIn[], void *pBufferOut[],
                            const uint32_t lengthInBytes[],
                            const uint32_t numBuffers);
 
@@ -420,12 +422,14 @@ void zuc_eea3_1_buffer_avx(const void *pKey, const void *pIv,
                            const void *pBufferIn, void *pBufferOut,
                            const uint32_t lengthInBytes);
 
-void zuc_eea3_4_buffer_avx(const void *pKey[4], const void *pIv[4],
-                           const void *pBufferIn[4], void *pBufferOut[4],
+void zuc_eea3_4_buffer_avx(const void * const pKey[4],
+                           const void * const pIv[4],
+                           const void * const pBufferIn[4],
+                           void *pBufferOut[4],
                            const uint32_t lengthInBytes[4]);
 
-void zuc_eea3_n_buffer_avx(const void *pKey[], const void *pIv[],
-                           const void *pBufferIn[], void *pBufferOut[],
+void zuc_eea3_n_buffer_avx(const void * const pKey[], const void * const pIv[],
+                           const void * const pBufferIn[], void *pBufferOut[],
                            const uint32_t lengthInBytes[],
                            const uint32_t numBuffers);
 
