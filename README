@@ -263,6 +263,33 @@ Note: Building with debugging information is not advised for production use.
 For more build options and their explanation run:
 > nmake /f win_x64.mak help
 
+FreeBSD (64-bit only)
+-------------------
+
+Required tools:
+- GNU make
+- NASM version 2.13.03 (or newer)
+- gcc (GCC) 4.8.3 (or newer) / clang 5.0 (or newer)
+
+Shared library:
+> gmake
+
+Static library:
+> gmake SHARED=n
+
+Clean the build:
+> gmake clean
+or
+> gmake clean SHARED=n
+
+Build with debugging information:
+> gmake DEBUG=y
+
+Note: Building with debugging information is not advised for production use.
+
+For more build options and their explanation run:
+> gmake help
+
 Safety options
 ==============
 
@@ -327,6 +354,26 @@ If you want to change install location then define PREFIX (default C:\Program Fi
 If library was compiled as a static library (not a default option) then install it
 using SHARED=n option:
 > nmake /f win_x64.mak install SHARED=n
+
+FreeBSD (64-bit only)
+-------------------
+
+First compile the library and then install:
+> gmake
+> sudo gmake install
+
+To uninstall the library run:
+> sudo gmake uninstall
+
+If you want to change install location then define PREFIX
+> sudo gmake install PREFIX=<path>
+
+If there is no need to run ldconfig at install stage please use NOLDCONFIG=y option.
+> sudo gmake install NOLDCONFIG=y
+
+If library was compiled as an archive (not a default option) then install it
+using SHARED=n option:
+> sudo gmake install SHARED=n
 
 Legal Disclaimer
 ================

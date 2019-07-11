@@ -22,6 +22,7 @@ Library
   - stitched AES-CTR-128 with CRC32 and BIP (running 32-bit XOR)
 - AES-CMAC-128 implementation for bit length messages added
 - ZUC-EEA3 and ZUC-EIA3 implementation added
+- FreeBSD experimental support added
 
 LibTestApp
 - New API tests added

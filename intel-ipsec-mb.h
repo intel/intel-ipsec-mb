@@ -44,8 +44,8 @@ typedef struct {
 /*
  * Macros for aligning data structures and function inlines
  */
-#ifdef __linux__
-/* Linux */
+#if defined __linux__ || defined __FreeBSD__
+/* Linux/FreeBSD */
 #define DECLARE_ALIGNED(decl, alignval) \
         decl __attribute__((aligned(alignval)))
 #define __forceinline \
