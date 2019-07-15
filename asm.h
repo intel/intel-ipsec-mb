@@ -35,9 +35,9 @@
 /* Define interface to base asm code */
 
 /* AES-CBC */
-void aes_cbc_enc_128_x8(AES_ARGS_x8 *args, uint64_t len_in_bytes);
-void aes_cbc_enc_192_x8(AES_ARGS_x8 *args, uint64_t len_in_bytes);
-void aes_cbc_enc_256_x8(AES_ARGS_x8 *args, uint64_t len_in_bytes);
+void aes_cbc_enc_128_x8(AES_ARGS *args, uint64_t len_in_bytes);
+void aes_cbc_enc_192_x8(AES_ARGS *args, uint64_t len_in_bytes);
+void aes_cbc_enc_256_x8(AES_ARGS *args, uint64_t len_in_bytes);
 
 void aes_cbc_dec_128_avx(const void *in, const uint8_t *IV, const void *keys,
                          void *out, uint64_t len_bytes);
