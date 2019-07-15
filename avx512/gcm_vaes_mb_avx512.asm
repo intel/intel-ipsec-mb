@@ -1221,9 +1221,6 @@ default rel
         shr     r12, 4
 
         vmovdqa64       zmm27, [rel SHUF_MASK]
-        vpxorq          zmm14, zmm14
-        vpxorq          zmm15, zmm15
-        vpxorq          zmm1, zmm1
 
         GCM_ENC_DEC_SMALL %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
@@ -1231,7 +1228,7 @@ default rel
                 zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, zmm24, zmm25, zmm26, zmm28, \
                 zmm29, zmm30, zmm31, zmm0,  zmm2,  zmm3,  zmm4,  zmm7,  zmm8,  zmm12, \
                 zmm10, zmm11, zmm5, \
-                zmm14, zmm15, zmm1, \
+                no_zmm, no_zmm, no_zmm, \
                 %%GPR, r15, k1, zmm27
 
 %%_ghash_done_x4:
