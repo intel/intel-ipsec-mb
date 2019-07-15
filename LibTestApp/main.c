@@ -297,10 +297,12 @@ main(int argc, char **argv)
                 free_mb_mgr(p_mgr);
         }
 
-        if (errors)
+        if (errors) {
                 printf("Test completed: FAIL\n");
-        else
-                printf("Test completed: PASS\n");
+                return EXIT_FAILURE;
+        }
+
+        printf("Test completed: PASS\n");
 
         return EXIT_SUCCESS;
 }
