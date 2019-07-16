@@ -977,6 +977,18 @@ process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
 
                 params->buf_size = buf_size;
 
+                /*
+                 * CBC and ECB operation modes do not support lengths which are
+                 * non-multiple of block size
+                 */
+                if (params->cipher_mode == CBC || params->cipher_mode == ECB)
+                        if ((buf_size % AES_BLOCK_SIZE)  != 0)
+                                continue;
+
+                if (params->cipher_mode == DES || params->cipher_mode == DES3)
+                        if ((buf_size % DES_BLOCK_SIZE)  != 0)
+                                continue;
+
                 if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params) < 0)
                         exit(EXIT_FAILURE);
         }
