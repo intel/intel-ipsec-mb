@@ -858,6 +858,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         generate_random_buf(test_buf, buf_size);
         generate_random_buf(key, MAX_KEY_SIZE);
         generate_random_buf(iv, 16);
+        generate_random_buf(aad, AAD_SIZE);
 
         /* Expand/schedule keys */
         if (prepare_keys(enc_mb_mgr, &keys, key, params) < 0)
