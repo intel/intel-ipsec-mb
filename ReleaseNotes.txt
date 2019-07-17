@@ -19,7 +19,7 @@ Library
 - Generation of make dependency files for Linux added
 - AES-ECB implementation added
 - PON specific stitched algorithm implementation added
-  - stitched AES-CTR-128 with CRC32 and BIP (running 32-bit XOR)
+  - stitched AES-CTR-128 (optional) with CRC32 and BIP (running 32-bit XOR)
 - AES-CMAC-128 implementation for bit length messages added
 - ZUC-EEA3 and ZUC-EIA3 implementation added
 - FreeBSD experimental support added

@@ -136,8 +136,10 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 #define AES_ECB_DEC_192       aes_ecb_dec_192_avx
 #define AES_ECB_DEC_256       aes_ecb_dec_256_avx
 
-#define SUBMIT_JOB_PON_ENC submit_job_pon_enc_avx
-#define SUBMIT_JOB_PON_DEC submit_job_pon_dec_avx
+#define SUBMIT_JOB_PON_ENC        submit_job_pon_enc_avx
+#define SUBMIT_JOB_PON_DEC        submit_job_pon_dec_avx
+#define SUBMIT_JOB_PON_ENC_NO_CTR submit_job_pon_enc_no_ctr_avx
+#define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx
 
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx

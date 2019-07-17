@@ -170,6 +170,14 @@ JOB_AES_HMAC *submit_job_pon_dec_sse(JOB_AES_HMAC *job);
 JOB_AES_HMAC *submit_job_pon_enc_sse_no_aesni(JOB_AES_HMAC *job);
 JOB_AES_HMAC *submit_job_pon_dec_sse_no_aesni(JOB_AES_HMAC *job);
 
+JOB_AES_HMAC *submit_job_pon_enc_no_ctr_avx(JOB_AES_HMAC *job);
+JOB_AES_HMAC *submit_job_pon_dec_no_ctr_avx(JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *submit_job_pon_enc_no_ctr_sse(JOB_AES_HMAC *job);
+JOB_AES_HMAC *submit_job_pon_dec_no_ctr_sse(JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *submit_job_pon_enc_no_ctr_sse_no_aesni(JOB_AES_HMAC *job);
+JOB_AES_HMAC *submit_job_pon_dec_no_ctr_sse_no_aesni(JOB_AES_HMAC *job);
 #endif /* IMB_ASM_H */
 
 

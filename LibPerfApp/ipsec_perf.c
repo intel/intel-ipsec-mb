@@ -96,7 +96,7 @@
 #define CIPHER_MODES_GCM 1	/* GCM */
 #define CIPHER_MODES_CCM 1	/* CCM */
 #define CIPHER_MODES_3DES 1	/* 3DES */
-#define CIPHER_MODES_PON 1	/* PON */
+#define CIPHER_MODES_PON 2	/* PON, NO_CTR PON */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 10	/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
                                    MD5, NULL_HASH, CMAC, CMAC_BITLEN */
@@ -172,6 +172,7 @@ enum test_cipher_mode_e {
         TEST_DES,
         TEST_3DES,
         TEST_PON_CNTR,
+        TEST_PON_NO_CNTR,
 };
 
 /* This enum will be mostly translated to JOB_HASH_ALG */
@@ -468,6 +469,14 @@ struct str_value_mapping aead_algo_str_map[] = {
                         .cipher_mode = TEST_PON_CNTR,
                         .hash_alg = TEST_PON_CRC_BIP,
                         .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "pon-128-no-ctr",
+                .values.job_params = {
+                        .cipher_mode = TEST_PON_NO_CNTR,
+                        .hash_alg = TEST_PON_CRC_BIP,
+                        .aes_key_size = 0
                 }
         },
 };
@@ -946,6 +955,7 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
                 c_mode = DES3;
                 break;
         case TEST_PON_CNTR:
+        case TEST_PON_NO_CNTR:
                 c_mode = PON_AES_CNTR;
                 break;
         default:
@@ -1024,6 +1034,8 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.hash_alg = PON_CRC_BIP;
                 job_template.msg_len_to_hash_in_bytes = size_aes + 8;
                 job_template.cipher_start_src_offset_in_bytes = 8;
+                if (params->cipher_mode == TEST_PON_NO_CNTR)
+                        job_template.msg_len_to_cipher_in_bytes = 0;
                 break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
@@ -1463,7 +1475,7 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 h_start = TEST_PON_CRC_BIP;
                 h_end = TEST_PON_CRC_BIP;
                 c_start = TEST_PON_CNTR;
-                c_end = TEST_PON_CNTR;
+                c_end = TEST_PON_NO_CNTR;
                 break;
         case TTYPE_CUSTOM:
                 h_start = params->hash_alg;
