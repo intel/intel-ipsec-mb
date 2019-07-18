@@ -761,6 +761,75 @@ typedef void (*kasumi_f9_1_buffer_t)(const kasumi_key_sched_t *,
                                      const void *,
                                      const uint32_t, void *);
 
+/**
+ * Snow3G key scheduling structure
+ */
+typedef struct snow3g_key_schedule_s {
+        /* KEY */
+        uint32_t k[4];
+} snow3g_key_schedule_t;
+
+typedef void (*snow3g_f8_1_buffer_t)(const snow3g_key_schedule_t *,
+                                     const void *, const void *,
+                                     void *, const uint32_t);
+
+typedef void (*snow3g_f8_1_buffer_bit_t)(const snow3g_key_schedule_t *,
+                                         const void *, const void *, void *,
+                                         const uint32_t, const uint32_t);
+
+typedef void (*snow3g_f8_2_buffer_t)(const snow3g_key_schedule_t *,
+                                     const void *, const void *,
+                                     const void *, void *, const uint32_t,
+                                     const void *, void *,const uint32_t);
+
+typedef void (*snow3g_f8_4_buffer_t)(const snow3g_key_schedule_t *,
+                                     const void *, const void *,const void *,
+                                     const void *, const void *, void *,
+                                     const uint32_t, const void *, void *,
+                                     const uint32_t, const void *, void *,
+                                     const uint32_t, const void *, void *,
+                                     const uint32_t);
+
+typedef void (*snow3g_f8_8_buffer_t)(const snow3g_key_schedule_t *,
+                                     const void *, const void *,const void *,
+                                     const void *, const void *, const void *,
+                                     const void *, const void *, const void *,
+                                     void *, const uint32_t, const void *,
+                                     void *, const uint32_t, const void *,
+                                     void *, const uint32_t, const void *,
+                                     void *, const uint32_t, const void *,
+                                     void *, const uint32_t, const void *,
+                                     void *, const uint32_t, const void *,
+                                     void *, const uint32_t, const void *,
+                                     void *, const uint32_t);
+
+typedef void
+(*snow3g_f8_8_buffer_multikey_t)(const snow3g_key_schedule_t * const [],
+                                 const void * const [], const void * const [],
+                                 void *[], const uint32_t[]);
+
+typedef void (*snow3g_f8_n_buffer_t)(const snow3g_key_schedule_t *,
+                                     const void * const [],
+                                     const void * const [],
+                                     void *[], const uint32_t[],
+                                     const uint32_t);
+
+typedef void
+(*snow3g_f8_n_buffer_multikey_t)(const snow3g_key_schedule_t * const [],
+                                 const void * const [],
+                                 const void * const [],
+                                 void *[], const uint32_t[],
+                                 const uint32_t);
+
+typedef void (*snow3g_f9_1_buffer_t)(const snow3g_key_schedule_t *,
+                                     const void *, const void *,
+                                     const uint64_t, void *);
+
+typedef uint32_t (*snow3g_init_key_sched_t)(const void *,
+                                            snow3g_key_schedule_t *);
+
+typedef uint32_t (*snow3g_key_sched_size_t)(void);
+
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
@@ -880,6 +949,18 @@ typedef struct MB_MGR {
         kasumi_f8_n_buffer_t      f8_n_buffer;
         kasumi_f9_1_buffer_t      f9_1_buffer;
         kasumi_f9_1_buffer_user_t f9_1_buffer_user;
+
+        snow3g_f8_1_buffer_bit_t snow3g_f8_1_buffer_bit;
+        snow3g_f8_1_buffer_t snow3g_f8_1_buffer;
+        snow3g_f8_2_buffer_t snow3g_f8_2_buffer;
+        snow3g_f8_4_buffer_t snow3g_f8_4_buffer;
+        snow3g_f8_8_buffer_t snow3g_f8_8_buffer;
+        snow3g_f8_n_buffer_t snow3g_f8_n_buffer;
+        snow3g_f8_8_buffer_multikey_t snow3g_f8_8_buffer_multikey;
+        snow3g_f8_n_buffer_multikey_t snow3g_f8_n_buffer_multikey;
+        snow3g_f9_1_buffer_t snow3g_f9_1_buffer;
+        snow3g_init_key_sched_t snow3g_init_key_sched;
+        snow3g_key_sched_size_t snow3g_key_sched_size;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1162,6 +1243,7 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
 #define IMB_ZUC_EIA3_1_BUFFER(_mgr, _key, _iv, _in, _len, _tag) \
         ((_mgr)->eia3_1_buffer((_key), (_iv), (_in), (_len), (_tag)))
 
+
 /* KASUMI F8/F9 functions */
 
 /**
@@ -1205,7 +1287,7 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  *
  * This function performs kasumi f8 operation on a two buffers.
  * They will be processed with the same key, which has already been scheduled
- * with sso_kasumi_init_f8_key_sched().
+ * with kasumi_init_f8_key_sched().
  *
  * @param [in]  ctx     Context where the scheduled keys are stored
  * @param [in]  iv1     Initialization vector for buffer in1
@@ -1227,7 +1309,7 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  *
  * This function performs kasumi f8 operation on a three buffers.
  * They must all have the same length and they will be processed with the same
- * key, which has already been scheduled with sso_kasumi_init_f8_key_sched().
+ * key, which has already been scheduled with kasumi_init_f8_key_sched().
  *
  * @param [in]  ctx     Context where the scheduled keys are stored
  * @param [in]  iv1     Initialization vector for buffer in1
@@ -1251,7 +1333,7 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  *
  * This function performs kasumi f8 operation on four buffers.
  * They must all have the same length and they will be processed with the same
- * key, which has already been scheduled with sso_kasumi_init_f8_key_sched().
+ * key, which has already been scheduled with kasumi_init_f8_key_sched().
  *
  * @param [in]  ctx     Context where the scheduled keys are stored
  * @param [in]  iv1     Initialization vector for buffer in1
@@ -1325,6 +1407,261 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
 #define IMB_KASUMI_F9_1_BUFFER_USER(_mgr, _ctx, _iv, _in, _len, _tag, _dir) \
         ((_mgr)->f9_1_buffer_user((_ctx), (_iv), (_in), (_len), \
                                   (_tag), (_dir)))
+
+
+/* SNOW3G F8/F9 functions */
+
+/**
+ * This function performs snow3g f8 operation on a single buffer. The key has
+ * already been scheduled with snow3g_init_key_sched().
+ *
+ * @param[in]  mgr           Pointer to multi-buffer structure
+ * @param[in]  ctx           Context where the scheduled keys are stored
+ * @param[in]  iv            iv[3] = count
+ *                           iv[2] = (bearer << 27) | ((dir & 0x1) << 26)
+ *                           iv[1] = pIV[3]
+ *                           iv[0] = pIV[2]
+ * @param[in]  in            Input buffer
+ * @param[out] out           Output buffer
+ * @param[in]  len           Length in bits of input buffer
+ * @param[in]  offset        Offset in input/output buffer (in bits)
+ */
+#define IMB_SNOW3G_F8_1_BUFFER_BIT(_mgr, _ctx, _iv, _in, _out, _len, _offset) \
+        ((_mgr)->snow3g_f8_1_buffer_bit((_ctx), (_iv), (_in),           \
+                                        (_out), (_len), (_offset)))
+
+/**
+ * This function performs snow3g f8 operation on a single buffer. The key has
+ * already been scheduled with snow3g_init_key_sched().
+ *
+ * @param[in]  mgr           Pointer to multi-buffer structure
+ * @param[in]  ctx           Context where the scheduled keys are stored
+ * @param[in]  iv            iv[3] = count
+ *                           iv[2] = (bearer << 27) | ((dir & 0x1) << 26)
+ *                           iv[1] = pIV[3]
+ *                           iv[0] = pIV[2]
+ * @param[in]  in            Input buffer
+ * @param[out] out           Output buffer
+ * @param[in]  len           Length in bits of input buffer
+ */
+#define IMB_SNOW3G_F8_1_BUFFER(_mgr, _ctx, _iv, _in, _out, _len)        \
+        ((_mgr)->snow3g_f8_1_buffer((_ctx), (_iv), (_in), (_out), (_len)))
+
+/**
+ * This function performs snow3g f8 operation on two buffers. They will
+ * be processed with the same key, which has already been scheduled with
+ * snow3g_init_key_sched().
+ *
+ * @param[in]  mgr           Pointer to multi-buffer structure
+ * @param[in]  ctx           Context where the scheduled keys are stored
+ * @param[in]  iv1           IV to use for buffer pBufferIn1
+ * @param[in]  iv2           IV to use for buffer pBufferIn2
+ * @param[in]  in1           Input buffer 1
+ * @param[out] out1          Output buffer 1
+ * @param[in]  len1          Length in bytes of input buffer 1
+ * @param[in]  in2           Input buffer 2
+ * @param[out] out2          Output buffer 2
+ * @param[in]  len2          Length in bytes of input buffer 2
+ */
+#define IMB_SNOW3G_F8_2_BUFFER(_mgr, _ctx, _iv1, _iv2,        \
+                               _in1, _out1, _len1,            \
+                               _in2, _out2, _len2)            \
+        ((_mgr)->snow3g_f8_2_buffer((_ctx), (_iv1), (_iv2),   \
+                                    (_in1), (_out1), (_len1), \
+                                    (_in2), (_out2), (_len2)))
+
+/**
+ *******************************************************************************
+ * This function performs snow3g f8 operation on four buffers. They will
+ * be processed with the same key, which has already been scheduled with
+ * snow3g_init_key_sched().
+ *
+ * @param[in]  mgr           Pointer to multi-buffer structure
+ * @param[in]  ctx           Context where the scheduled keys are stored
+ * @param[in]  iv1           IV to use for buffer pBufferIn1
+ * @param[in]  iv2           IV to use for buffer pBufferIn2
+ * @param[in]  iv3           IV to use for buffer pBufferIn3
+ * @param[in]  iv4           IV to use for buffer pBufferIn4
+ * @param[in]  in1           Input buffer 1
+ * @param[out] out1          Output buffer 1
+ * @param[in]  len1          Length in bytes of input buffer 1
+ * @param[in]  in2           Input buffer 2
+ * @param[out] out2          Output buffer 2
+ * @param[in]  len2          Length in bytes of input buffer 2
+ * @param[in]  in3           Input buffer 3
+ * @param[out] out3          Output buffer 3
+ * @param[in]  len3          Length in bytes of input buffer 3
+ * @param[in]  in4           Input buffer 4
+ * @param[out] out4          Output buffer 4
+ * @param[in]  len4          Length in bytes of input buffer 4
+ */
+#define IMB_SNOW3G_F8_4_BUFFER(_mgr, _ctx, _iv1, _iv2, _iv3, _iv4,      \
+                               _in1, _out1, _len1,                      \
+                               _in2, _out2, _len2,                      \
+                               _in3, _out3, _len3,                      \
+                               _in4, _out4, _len4)                      \
+        ((_mgr)->snow3g_f8_4_buffer((_ctx), (_iv1), (_iv2), (_iv3), (_iv4), \
+                                    (_in1), (_out1), (_len1), \
+                                    (_in2), (_out2), (_len2), \
+                                    (_in3), (_out3), (_len3), \
+                                    (_in4), (_out4), (_len4)))
+
+/**
+ *******************************************************************************
+ * This function performs snow3g f8 operation on eight buffers. They will
+ * be processed with the same key, which has already been scheduled with
+ * snow3g_init_key_sched().
+ *
+ * @param[in]  mgr           Pointer to multi-buffer structure
+ * @param[in]  ctx           Context where the scheduled keys are stored
+ * @param[in]  iv1           IV to use for buffer pBufferIn1
+ * @param[in]  iv2           IV to use for buffer pBufferIn2
+ * @param[in]  iv3           IV to use for buffer pBufferIn3
+ * @param[in]  iv4           IV to use for buffer pBufferIn4
+ * @param[in]  iv5           IV to use for buffer pBufferIn5
+ * @param[in]  iv6           IV to use for buffer pBufferIn6
+ * @param[in]  iv7           IV to use for buffer pBufferIn7
+ * @param[in]  iv8           IV to use for buffer pBufferIn8
+ * @param[in]  in1           Input buffer 1
+ * @param[out] out1          Output buffer 1
+ * @param[in]  len1          Length in bytes of input buffer 1
+ * @param[in]  in2           Input buffer 2
+ * @param[out] out2          Output buffer 2
+ * @param[in]  len2          Length in bytes of input buffer 2
+ * @param[in]  in3           Input buffer 3
+ * @param[out] out3          Output buffer 3
+ * @param[in]  len3          Length in bytes of input buffer 3
+ * @param[in]  in4           Input buffer 4
+ * @param[out] out4          Output buffer 4
+ * @param[in]  len4          Length in bytes of input buffer 4
+ * @param[in]  in5           Input buffer 5
+ * @param[out] out5          Output buffer 5
+ * @param[in]  len5          Length in bytes of input buffer 5
+ * @param[in]  in6           Input buffer 6
+ * @param[out] out6          Output buffer 6
+ * @param[in]  len6          Length in bytes of input buffer 6
+ * @param[in]  in7           Input buffer 7
+ * @param[out] out7          Output buffer 7
+ * @param[in]  len7          Length in bytes of input buffer 7
+ * @param[in]  in8           Input buffer 8
+ * @param[out] out8          Output buffer 8
+ * @param[in]  len8          Length in bytes of input buffer 8
+ */
+#define IMB_SNOW3G_F8_8_BUFFER(_mgr, _ctx, _iv1, _iv2, _iv3, _iv4,      \
+                               _iv5, _iv6, _iv7, _iv8,                  \
+                               _in1, _out1, _len1,                      \
+                               _in2, _out2, _len2,                      \
+                               _in3, _out3, _len3,                      \
+                               _in4, _out4, _len4,                      \
+                               _in5, _out5, _len5,                      \
+                               _in6, _out6, _len6,                      \
+                               _in7, _out7, _len7,                      \
+                               _in8, _out8, _len8)                      \
+        ((_mgr)->snow3g_f8_8_buffer((_ctx), (_iv1), (_iv2), (_iv3), (_iv4), \
+                                    (_iv5), (_iv6), (_iv7), (_iv8),     \
+                                    (_in1), (_out1), (_len1),           \
+                                    (_in2), (_out2), (_len2),           \
+                                    (_in3), (_out3), (_len3),           \
+                                    (_in4), (_out4), (_len4),           \
+                                    (_in5), (_out5), (_len5),           \
+                                    (_in6), (_out6), (_len6),           \
+                                    (_in7), (_out7), (_len7),           \
+                                    (_in8), (_out8), (_len8)))
+/**
+ * This function performs snow3g f8 operation on eight buffers. They will
+ * be processed with individual keys, which have already been scheduled
+ * with snow3g_init_key_sched().
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @param[in]  ctx      Array of 8 Contexts, where the scheduled keys are stored
+ * @param[in]  iv       Array of 8 IV values
+ * @param[in]  in       Array of 8 input buffers
+ * @param[out] out      Array of 8 output buffers
+ * @param[in]  lens     Array of 8 corresponding input buffer lengths
+ */
+#define IMB_SNOW3G_F8_8_BUFFER_MULTIKEY(_mgr, _ctx, _iv, _in, _out, _len) \
+        ((_mgr)->snow3g_f8_8_buffer_multikey((_ctx), (_iv), (_in), (_out),\
+                                             (_len)))
+
+/**
+ * This function performs snow3g f8 operation in parallel on N buffers. All
+ * input buffers can have different lengths and they will be processed with the
+ * same key, which has already been scheduled with snow3g_init_key_sched().
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @param[in]  ctx      Context where the scheduled keys are stored
+ * @param[in]  iv       Array of IV values
+ * @param[in]  in       Array of input buffers
+ * @param[out] out      Array of output buffers - out[0] set to NULL on failure
+ * @param[in]  len      Array of corresponding input buffer lengths
+ * @param[in]  count    Number of input buffers
+ *
+ ******************************************************************************/
+#define IMB_SNOW3G_F8_N_BUFFER(_mgr, _ctx, _iv, _in, _out, _len, _count) \
+        ((_mgr)->snow3g_f8_n_buffer((_ctx), (_iv), (_in), \
+                                    (_out), (_len), (_count)))
+
+/**
+ * This function performs snow3g f8 operation in parallel on N buffers. All
+ * input buffers can have different lengths. Confidentiallity keys can vary,
+ * schedules with snow3g_init_key_sched_multi().
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @param[in]  ctx      Array of Contexts, where the scheduled keys are stored
+ * @param[in]  iv       Array of IV values
+ * @param[in]  in       Array of input buffers
+ * @param[out] out      Array of output buffers
+ *                      - out[0] set to NULL on failure
+ * @param[in]  len      Array of corresponding input buffer lengths
+ * @param[in]  count    Number of input buffers
+ */
+#define IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(_mgr, _ctx, _iv, _in,           \
+                                        _out, _len, _count)             \
+        ((_mgr)->snow3g_f8_n_buffer_multikey((_ctx), (_iv), (_in),      \
+                                             (_out), (_len), (_count)))
+
+/**
+ * This function performs a snow3g f9 operation on a single block of data. The
+ * key has already been scheduled with snow3g_init_f8_key_sched().
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @param[in]  ctx      Context where the scheduled keys are stored
+ * @param[in]  iv       iv[3] = _BSWAP32(fresh^(dir<<15))
+ *                      iv[2] = _BSWAP32(count^(dir<<31))
+ *                      iv[1] = _BSWAP32(fresh)
+ *                      iv[0] = _BSWAP32(count)
+ *
+ * @param[in]  in       Input buffer
+ * @param[in]  len      Length in bits of the data to be hashed
+ * @param[out] digest   Computed digest
+ */
+#define IMB_SNOW3G_F9_1_BUFFER(_mgr, _ctx, _iv, _in, _len, _digest)     \
+        ((_mgr)->snow3g_f9_1_buffer((_ctx), (_iv), (_in), (_len), (_digest)))
+
+/**
+ * Snow3g key schedule init function.
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @param[in]  key      Confidentiality/Integrity key (expected in LE format)
+ * @param[out] ctx      Key schedule context to be initialised
+ * @return 0 on success
+ *
+ ******************************************************************************/
+#define IMB_SNOW3G_INIT_KEY_SCHED(_mgr, _key, _ctx)     \
+        ((_mgr)->snow3g_init_key_sched((_key), (_ctx)))
+
+/**
+ *******************************************************************************
+ * This function returns the size of the snow3g_key_schedule_t, used
+ * to store the key schedule.
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @return size of snow3g_key_schedule_t type success
+ * @return -1 on failed CPU capability check
+ *
+ ******************************************************************************/
+#define IMB_SNOW3G_KEY_SCHED_SIZE(_mgr)((_mgr)->snow3g_key_sched_size())
+
 
 /* Auxiliary functions */
 

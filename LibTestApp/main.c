@@ -50,6 +50,7 @@ extern int api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int pon_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int kasumi_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+extern int snow3g_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -288,6 +289,7 @@ main(int argc, char **argv)
                 errors += cmac_test(atype, p_mgr);
                 errors += zuc_test(atype, p_mgr);
                 errors += kasumi_test(atype, p_mgr);
+                errors += snow3g_test(atype, p_mgr);
                 errors += hmac_sha1_test(atype, p_mgr);
                 errors += hmac_sha256_sha512_test(atype, p_mgr);
                 errors += hmac_md5_test(atype, p_mgr);

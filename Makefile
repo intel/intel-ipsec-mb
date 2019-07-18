@@ -90,10 +90,11 @@ ifeq ($(CC),$(filter $(CC),gcc cc))
 GCC_VERSION = $(shell $(CC) -dumpversion | cut -d. -f1)
 GCC_GE_V5 = $(shell [ $(GCC_VERSION) -ge 5 ] && echo true)
 ifeq ($(GCC_GE_V5),true)
-OPT_SSE = -march=nehalem
-OPT_AVX = -march=sandybridge
-OPT_AVX2 = -march=haswell
+OPT_SSE = -march=nehalem -maes
+OPT_AVX = -march=sandybridge -maes
+OPT_AVX2 = -march=haswell -maes
 OPT_AVX512 = -march=broadwell
+OPT_NOAESNI = -march=nehalem
 endif
 endif
 
@@ -156,7 +157,12 @@ c_lib_objs := \
 	kasumi_sse.o \
 	zuc_sse_top.o \
 	zuc_avx_top.o \
-	zuc_iv.o
+	zuc_iv.o \
+	snow3g_sse.o \
+	snow3g_sse_no_aesni.o \
+	snow3g_avx.o \
+	snow3g_avx2.o \
+	snow3g_tables.o
 
 #
 # List of ASM modules (root directory/common)
@@ -563,7 +569,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:no-aesni/%.c
-	$(CC) -c $(CFLAGS_NO_SIMD) $< -o $@
+	$(CC) $(OPT_NOAESNI) -c $(CFLAGS_NO_SIMD) $< -o $@
 
 $(OBJ_DIR)/%.o:no-aesni/%.asm
 ifeq ($(USE_YASM),y)

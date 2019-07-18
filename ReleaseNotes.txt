@@ -24,6 +24,7 @@ Library
 - ZUC-EEA3 and ZUC-EIA3 implementation added
 - FreeBSD experimental support added
 - KASUMI-F8 and KASUMI-F9 implementation added
+- SNOW3G-UEA2 and SNOW3G-UIA2 implementation added
 
 LibTestApp
 - New API tests added
@@ -40,6 +41,7 @@ LibTestApp
 - New cross architecture test application (ipsec_xvalid) added,
   which mixes different implementations (based on different architectures),
   to double check their correctness 
+- SNOW3G-UEA2 and SNOW3G-UIA2 tests added
 
 LibPerfApp
 - Job size and number of iterations options added

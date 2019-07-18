@@ -33,6 +33,7 @@
 #include "intel-ipsec-mb.h"
 #include "include/kasumi_internal.h"
 #include "include/zuc_internal.h"
+#include "include/snow3g.h"
 
 #include "save_xmms.h"
 #include "asm.h"
@@ -618,6 +619,19 @@ init_mb_mgr_avx2(MB_MGR *state)
         state->f8_n_buffer         = kasumi_f8_n_buffer_avx;
         state->f9_1_buffer         = kasumi_f9_1_buffer_avx;
         state->f9_1_buffer_user    = kasumi_f9_1_buffer_user_avx;
+
+        state->snow3g_f8_1_buffer_bit = snow3g_f8_1_buffer_bit_avx2;
+        state->snow3g_f8_1_buffer  = snow3g_f8_1_buffer_avx2;
+        state->snow3g_f8_2_buffer  = snow3g_f8_2_buffer_avx2;
+        state->snow3g_f8_4_buffer  = snow3g_f8_4_buffer_avx2;
+        state->snow3g_f8_8_buffer  = snow3g_f8_8_buffer_avx2;
+        state->snow3g_f8_n_buffer  = snow3g_f8_n_buffer_avx2;
+        state->snow3g_f8_8_buffer_multikey = snow3g_f8_8_buffer_multikey_avx2;
+        state->snow3g_f8_n_buffer_multikey = snow3g_f8_n_buffer_multikey_avx2;
+        state->snow3g_f9_1_buffer = snow3g_f9_1_buffer_avx2;
+        state->snow3g_init_key_sched = snow3g_init_key_sched_avx2;
+        state->snow3g_key_sched_size = snow3g_key_sched_size_avx2;
+
 #ifndef NO_GCM
         state->gcm128_enc          = aes_gcm_enc_128_avx_gen4;
         state->gcm192_enc          = aes_gcm_enc_192_avx_gen4;

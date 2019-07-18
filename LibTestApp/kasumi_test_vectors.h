@@ -78,9 +78,9 @@ typedef struct hash_iv_test_vector_s {
         uint8_t key[MAX_DATA_LEN];
         uint32_t keyLenInBytes;
         uint8_t exp_out[KASUMI_BLOCK_SIZE];
-        uint8_t iv[MAX_DATA_LEN]; /*new to libsso*/
-        uint32_t ivLenInBytes;    /*new to libsso*/
-        uint32_t direction;       /*new to libsso*/
+        uint8_t iv[MAX_DATA_LEN];
+        uint32_t ivLenInBytes;
+        uint32_t direction;
 } hash_iv_test_vector_t;
 
 static const cipherbit_test_linear_vector_t kasumi_f8_linear_bitvectors = {

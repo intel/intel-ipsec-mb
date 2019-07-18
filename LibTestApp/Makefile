@@ -62,7 +62,8 @@ endif
 SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
 	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \
-	ecb_test.c zuc_test.c kasumi_test.c
+	ecb_test.c zuc_test.c kasumi_test.c snow3g_test.c
+
 OBJECTS := $(SOURCES:%.c=%.o)
 
 XVALID_SOURCES := ipsec_xvalid.c
@@ -95,7 +96,7 @@ chained_test.o: chained_test.c utils.h
 api_test.o: api_test.c gcm_ctr_vectors_test.h
 zuc_test.o: zuc_test.c zuc_test_vectors.h
 kasumi_test.o: kasumi_test.c kasumi_test_vectors.h
-
+snow3g_test.o: snow3g_test.c snow3g_test_vectors.h
 ipsec_xvalid.o: ipsec_xvalid.c
 
 .PHONY: clean
