@@ -11,7 +11,7 @@ Library
   - CCM chain order expected to be HASH_CIPHER for encryption and
     CIPHER_HASH for decryption
 - AES-CTR implementation for VAES added
-- AES-CBC decrypt implementation for VAES added
+- AES-CBC implementation for VAES added
 - Single buffer AES-GCM performance improvements added for VPCLMULQDQ + VAES
 - Multi-buffer AES-GCM implementation added for VPCLMULQDQ + VAES
 - Data transposition optimizations and unification across the library

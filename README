@@ -41,9 +41,9 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
 | AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
 | AES128-CCM    | N      | Y  by4 | Y  by8 | N      | N      | N      |
-| AES128-CBC    | N      | Y(1)   | Y(3)   | N      | N      | N      |
-| AES192-CBC    | N      | Y(1)   | Y(3)   | N      | N      | N      |
-| AES256-CBC    | N      | Y(1)   | Y(3)   | N      | N      | N      |
+| AES128-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
+| AES192-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
+| AES256-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES128-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by16 |
 | AES192-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by16 |
 | AES256-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by16 |
@@ -62,6 +62,7 @@ Notes:
 (1,2) - decryption is by4 and encryption is x4
 (3,4) - decryption is by8 and encryption is x8
 (5)   - AVX512 plus VAES and VPCLMULQDQ extensions
+(6)   - decryption is by16 and encryption is x16
 
 Legend:
   byY - single buffer Y blocks at a time
