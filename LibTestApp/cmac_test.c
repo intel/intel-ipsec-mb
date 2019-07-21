@@ -1181,13 +1181,13 @@ test_cmac(struct MB_MGR *mb_mgr,
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
-                        printf("Recieved job, expected NULL\n");
+                        printf("Received job, expected NULL\n");
                         goto end;
                 }
 
                 while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                         if (job != first_job) {
-                                printf("Invalid return job recieved\n");
+                                printf("Invalid return job received\n");
                                 goto end;
                         }
                         if (!cmac_job_ok(vec, job, job->user_data, padding,
