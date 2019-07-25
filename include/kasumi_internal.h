@@ -40,7 +40,12 @@
 
 #include "intel-ipsec-mb.h"
 #include "wireless_common.h"
+#include "include/clear_regs_mem.h"
 #include "kasumi_S97.h"
+
+/* Range of input data for KASUMI is from 1 to 20000 bits */
+#define KASUMI_MIN_LEN     1
+#define KASUMI_MAX_LEN     20000
 
 /* KASUMI cipher definitions */
 #define NUM_KASUMI_ROUNDS           (8)     /* 8 rounds in the kasumi spec */
@@ -553,6 +558,12 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                         lengthInBytes = 0;
                 }
         }
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(&a, sizeof(a));
+        clear_mem(&b, sizeof(b));
+        clear_mem(&safeInBuf, sizeof(safeInBuf));
+#endif
 }
 
 static inline void
@@ -644,6 +655,14 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                         cipherLengthInBits = 0;
                 }
         }
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(&a, sizeof(a));
+        clear_mem(&b, sizeof(b));
+        clear_mem(&c, sizeof(c));
+        clear_mem(&safeInBuf, sizeof(safeInBuf));
+        clear_mem(&safeOutBuf, sizeof(safeOutBuf));
+#endif
 }
 
 static inline void
@@ -814,6 +833,15 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                         lengthInBytes1 = 0;
                 }
         }
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(&a1, sizeof(a1));
+        clear_mem(&b1, sizeof(b1));
+        clear_mem(&a2, sizeof(a2));
+        clear_mem(&b2, sizeof(b2));
+        clear_mem(&temp, sizeof(temp));
+        clear_mem(&safeInBuf, sizeof(safeInBuf));
+#endif
 }
 
 static inline void
@@ -903,6 +931,18 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
                         lengthInBytes = 0;
                 }
         }
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(&a1, sizeof(a1));
+        clear_mem(&b1, sizeof(b1));
+        clear_mem(&a2, sizeof(a2));
+        clear_mem(&b2, sizeof(b2));
+        clear_mem(&a3, sizeof(a3));
+        clear_mem(&b3, sizeof(b3));
+        clear_mem(&safeInBuf1, sizeof(safeInBuf1));
+        clear_mem(&safeInBuf2, sizeof(safeInBuf2));
+        clear_mem(&safeInBuf3, sizeof(safeInBuf3));
+#endif
 }
 
 /*---------------------------------------------------------
@@ -1018,6 +1058,21 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                         lengthInBytes = 0;
                 }
         }
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(&a1, sizeof(a1));
+        clear_mem(&b1, sizeof(b1));
+        clear_mem(&a2, sizeof(a2));
+        clear_mem(&b2, sizeof(b2));
+        clear_mem(&a3, sizeof(a3));
+        clear_mem(&b3, sizeof(b3));
+        clear_mem(&a4, sizeof(a4));
+        clear_mem(&b4, sizeof(b4));
+        clear_mem(&safeInBuf1, sizeof(safeInBuf1));
+        clear_mem(&safeInBuf2, sizeof(safeInBuf2));
+        clear_mem(&safeInBuf3, sizeof(safeInBuf3));
+        clear_mem(&safeInBuf4, sizeof(safeInBuf4));
+#endif
 }
 
 /*---------------------------------------------------------
@@ -1221,6 +1276,17 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                 block, which might be complete or not */
 
         } /* while (dataCount) */
+#ifdef SAFE_DATA
+        uint32_t i;
+
+        /* Clear sensitive data in stack */
+        for (i = 0; i < dataCount; i++) {
+                clear_mem(&A[i], sizeof(A[i]));
+                clear_mem(&temp[i], sizeof(temp[i]));
+        }
+        clear_mem(&tempSort, sizeof(tempSort));
+        clear_mem(&safeInBuf, sizeof(safeInBuf));
+#endif
 }
 
 static inline void
@@ -1271,6 +1337,13 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn,
 
         /* swap result */
         *(uint32_t *)pDigest = bswap4(b.b32[1]);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(&a, sizeof(a));
+        clear_mem(&b, sizeof(b));
+        clear_mem(&mask, sizeof(mask));
+        clear_mem(&safeBuf, sizeof(safeBuf));
+#endif
 }
 
 /*---------------------------------------------------------
@@ -1361,6 +1434,15 @@ kasumi_f9_1_buffer_user(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 
         /* swap result */
         *(uint32_t *)pDigest = bswap4(b.b32[1]);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in stack */
+        clear_mem(&a, sizeof(a));
+        clear_mem(&b, sizeof(b));
+        clear_mem(&mask, sizeof(mask));
+        clear_mem(&message, sizeof(message));
+        clear_mem(&temp, sizeof(temp));
+        clear_mem(&safebuff, sizeof(safebuff));
+#endif
 }
 
 void kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,

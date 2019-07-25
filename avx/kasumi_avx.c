@@ -25,8 +25,12 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
+#include <limits.h>
+
 #include "include/save_xmms.h"
 #include "include/kasumi_internal.h"
+#include "include/save_xmms.h"
+#include "include/clear_regs_mem.h"
 
 #define SAVE_XMMS       save_xmms_avx
 #define RESTORE_XMMS    restore_xmms_avx
@@ -41,8 +45,23 @@ kasumi_f8_1_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 
         SAVE_XMMS(xmm_save);
 #endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pCtx == NULL || pBufferIn == NULL || pBufferOut == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (cipherLengthInBytes == 0 ||
+            cipherLengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT))
+                return;
+#endif
         kasumi_f8_1_buffer(pCtx, IV, pBufferIn, pBufferOut,
                            cipherLengthInBytes);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_avx();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -60,8 +79,23 @@ kasumi_f8_1_buffer_bit_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 
         SAVE_XMMS(xmm_save);
 #endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pCtx == NULL || pBufferIn == NULL || pBufferOut == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (cipherLengthInBits == 0 ||
+            cipherLengthInBits > KASUMI_MAX_LEN)
+                return;
+#endif
         kasumi_f8_1_buffer_bit(pCtx, IV, pBufferIn, pBufferOut,
                                cipherLengthInBits, offsetInBits);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_avx();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -79,9 +113,32 @@ kasumi_f8_2_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
 
         SAVE_XMMS(xmm_save);
 #endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pCtx == NULL)
+                return;
+
+        if (pBufferIn1 == NULL || pBufferOut1 == NULL)
+                return;
+
+        if (pBufferIn2 == NULL || pBufferOut2 == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (lengthInBytes1 == 0 || lengthInBytes1 > (KASUMI_MAX_LEN / CHAR_BIT))
+                return;
+
+        if (lengthInBytes2 == 0 || lengthInBytes2 > (KASUMI_MAX_LEN / CHAR_BIT))
+                return;
+#endif
         kasumi_f8_2_buffer(pCtx, IV1, IV2,
                            pBufferIn1, pBufferOut1, lengthInBytes1,
                            pBufferIn2, pBufferOut2, lengthInBytes2);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_avx();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -100,10 +157,33 @@ kasumi_f8_3_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
 
         SAVE_XMMS(xmm_save);
 #endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pCtx == NULL)
+                return;
+
+        if (pBufferIn1 == NULL || pBufferOut1 == NULL)
+                return;
+
+        if (pBufferIn2 == NULL || pBufferOut2 == NULL)
+                return;
+
+        if (pBufferIn3 == NULL || pBufferOut3 == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT))
+                return;
+#endif
         kasumi_f8_3_buffer(pCtx, IV1, IV2, IV3,
                            pBufferIn1, pBufferOut1,
                            pBufferIn2, pBufferOut2,
                            pBufferIn3, pBufferOut3, lengthInBytes);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_avx();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -124,12 +204,38 @@ kasumi_f8_4_buffer_avx(const kasumi_key_sched_t *pCtx,
 
         SAVE_XMMS(xmm_save);
 #endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pCtx == NULL)
+                return;
+
+        if (pBufferIn1 == NULL || pBufferOut1 == NULL)
+                return;
+
+        if (pBufferIn2 == NULL || pBufferOut2 == NULL)
+                return;
+
+        if (pBufferIn3 == NULL || pBufferOut3 == NULL)
+                return;
+
+        if (pBufferIn4 == NULL || pBufferOut4 == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT))
+                return;
+#endif
         kasumi_f8_4_buffer(pCtx, IV1, IV2, IV3, IV4,
                            pBufferIn1, pBufferOut1,
                            pBufferIn2, pBufferOut2,
                            pBufferIn3, pBufferOut3,
                            pBufferIn4, pBufferOut4,
                            lengthInBytes);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_avx();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -154,6 +260,25 @@ kasumi_f8_n_buffer_avx(const kasumi_key_sched_t *pKeySchedule,
         uint32_t i = 0;
         uint32_t numBuffs;
 
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pKeySchedule == NULL || pDataIn == NULL || pDataOut == NULL ||
+            dataLen == NULL || IV == NULL)
+                return;
+
+        for (i = 0; i < dataCount; i++) {
+                /* Check for NULL pointers */
+                if (pDataIn[i] == NULL || pDataOut[i] == NULL)
+                        return;
+
+                /* Check input data is in range of supported length */
+                if (dataLen[i] == 0 || dataLen[i] > (KASUMI_MAX_LEN / CHAR_BIT))
+                        return;
+        }
+#endif
+
+        i = 0;
+
         /* KASUMI F8 n buffer function can handle up to 16 buffers */
         while (numLeft > 0) {
                 IVPtr = &IV[i];
@@ -167,6 +292,11 @@ kasumi_f8_n_buffer_avx(const kasumi_key_sched_t *pKeySchedule,
                 i += numBuffs;
                 numLeft -= numBuffs;
         }
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_avx();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -182,7 +312,21 @@ kasumi_f9_1_buffer_avx(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
 
         SAVE_XMMS(xmm_save);
 #endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pCtx == NULL || pBufferIn == NULL || pDigest == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT))
+                return;
+#endif
         kasumi_f9_1_buffer(pCtx, pBufferIn, lengthInBytes, pDigest);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_avx();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -198,8 +342,22 @@ kasumi_f9_1_buffer_user_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 
         SAVE_XMMS(xmm_save);
 #endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pCtx == NULL || pBufferIn == NULL || pDigest == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (lengthInBits == 0 || lengthInBits > KASUMI_MAX_LEN)
+                return;
+#endif
         kasumi_f9_1_buffer_user(pCtx, IV, pBufferIn, lengthInBits,
                                 pDigest, direction);
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
+        clear_gps();
+        clear_xmms_avx();
+#endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
