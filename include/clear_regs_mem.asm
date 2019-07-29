@@ -38,7 +38,7 @@ clear_gps:
         xor     rcx, rcx
         xor     rdx, rdx
 ; On Linux, rdi and rsi are scratch registers
-%ifndef LINUX
+%ifdef LINUX
         xor     rdi, rdi
         xor     rsi, rsi
 %endif
