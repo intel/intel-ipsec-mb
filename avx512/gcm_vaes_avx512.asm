@@ -2048,7 +2048,7 @@ default rel
 %define %%ZT22                  %32 ; [clobbered] temporary ZMM
 %define %%ZT23                  %33 ; [clobbered] temporary ZMM
 %define %%ADDBE_4x4             %34 ; [in] ZMM with 4x128bits 4 in big-endian
-%define %%ADD_4x4               %35 ; [in] ZMM with 4x128bits 4 in little-endian
+%define %%ADDBE_1234            %35 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
 %define %%TO_REDUCE_L           %36 ; [in/out] ZMM for low 4x128-bit GHASH sum
 %define %%TO_REDUCE_H           %37 ; [in/out] ZMM for hi 4x128-bit GHASH sum
 %define %%TO_REDUCE_M           %38 ; [in/out] ZMM for medium 4x128-bit GHASH sum
@@ -2099,18 +2099,19 @@ default rel
         ;; prepare counter blocks
 
         cmp             BYTE(%%CTR_CHECK), (256 - 16)
-        jge             %%_16_blocks_overflow
-        vpaddd          %%B00_03, %%CTR_BE, %%ADDBE_4x4
+        jae             %%_16_blocks_overflow
+        vpaddd          %%B00_03, %%CTR_BE, %%ADDBE_1234
         vpaddd          %%B04_07, %%B00_03, %%ADDBE_4x4
         vpaddd          %%B08_11, %%B04_07, %%ADDBE_4x4
         vpaddd          %%B12_15, %%B08_11, %%ADDBE_4x4
         jmp             %%_16_blocks_ok
 %%_16_blocks_overflow:
         vpshufb         %%CTR_BE, %%CTR_BE, %%SHFMSK
-        vpaddd          %%B00_03, %%CTR_BE, %%ADD_4x4
-        vpaddd          %%B04_07, %%B00_03, %%ADD_4x4
-        vpaddd          %%B08_11, %%B04_07, %%ADD_4x4
-        vpaddd          %%B12_15, %%B08_11, %%ADD_4x4
+        vmovdqa64       %%B12_15, [rel ddq_add_4444]
+        vpaddd          %%B00_03, %%CTR_BE, [rel ddq_add_1234]
+        vpaddd          %%B04_07, %%B00_03, %%B12_15
+        vpaddd          %%B08_11, %%B04_07, %%B12_15
+        vpaddd          %%B12_15, %%B08_11, %%B12_15
         vpshufb         %%B00_03, %%SHFMSK
         vpshufb         %%B04_07, %%SHFMSK
         vpshufb         %%B08_11, %%SHFMSK
@@ -2130,7 +2131,7 @@ default rel
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; save counter for the next round
         ;; increment counter overflow check register
-        vmovdqa64       %%CTR_BE, %%B12_15
+        vshufi64x2      %%CTR_BE, %%B12_15, %%B12_15, 1111_1111b
         add             BYTE(%%CTR_CHECK), 16
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2834,7 +2835,7 @@ default rel
 
 ;;; - used by by128/48 code only
 %define %%ADDBE_4x4             zmm27
-%define %%ADD_4x4               zmm28       ; conflicts with CTR_BLOCK_SAVE
+%define %%ADDBE_1234            zmm28       ; conflicts with CTR_BLOCK_SAVE
 
 ;; used by8 code only
 %define %%GH4KEY                %%ZTMP17
@@ -2917,9 +2918,10 @@ default rel
 
         vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
         vmovdqa64       %%ADDBE_4x4, [rel ddq_addbe_4444]
-        vmovdqa64       %%ADD_4x4, [rel ddq_add_4444]
 
 %ifdef GCM_BIG_DATA
+        vmovdqa64       %%ADDBE_1234, [rel ddq_addbe_1234]
+
         cmp             %%LENGTH, (very_big_loop_nblocks * 16)
         jl              %%_message_below_very_big_nblocks
 
@@ -2932,7 +2934,7 @@ default rel
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%GH, %%GL, %%GM, \
-                %%ADDBE_4x4, %%ADD_4x4, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
                 %%SHUF_MASK, %%ENC_DEC, very_big_loop_nblocks, very_big_loop_depth
 
         sub             %%LENGTH, (very_big_loop_nblocks * 16)
@@ -2950,7 +2952,7 @@ default rel
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%GH, %%GL, %%GM, \
-                %%ADDBE_4x4, %%ADD_4x4, %%AAD_HASHz, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%AAD_HASHz, \
                 %%ENC_DEC, very_big_loop_nblocks, very_big_loop_depth, %%CTR_CHECK
 
         sub             %%LENGTH, (very_big_loop_nblocks * 16)
@@ -2958,7 +2960,6 @@ default rel
         jge             %%_encrypt_very_big_nblocks
 
 %%_no_more_very_big_nblocks:
-        vextracti32x4   %%CTR_BLOCKx, %%CTR_BLOCKz, 3
         vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
 
@@ -2979,7 +2980,7 @@ default rel
         jl              %%_message_below_big_nblocks
 
         ;; overwritten above by CTR_BLOCK_SAVE
-        vmovdqa64        %%ADD_4x4, [rel ddq_add_4444]
+        vmovdqa64        %%ADDBE_1234, [rel ddq_addbe_1234]
 
         INITIAL_BLOCKS_Nx16 %%PLAIN_CYPH_IN, %%CYPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
                 %%AAD_HASHz, %%CTR_BLOCKz, %%CTR_CHECK, \
@@ -2990,7 +2991,7 @@ default rel
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%GH, %%GL, %%GM, \
-                %%ADDBE_4x4, %%ADD_4x4, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
                 %%SHUF_MASK, %%ENC_DEC, big_loop_nblocks, big_loop_depth
 
         sub             %%LENGTH, (big_loop_nblocks * 16)
@@ -3008,7 +3009,7 @@ default rel
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%GH, %%GL, %%GM, \
-                %%ADDBE_4x4, %%ADD_4x4, %%AAD_HASHz, \
+                %%ADDBE_4x4, %%ADDBE_1234, %%AAD_HASHz, \
                 %%ENC_DEC, big_loop_nblocks, big_loop_depth, %%CTR_CHECK
 
         sub             %%LENGTH, (big_loop_nblocks * 16)
@@ -3016,7 +3017,6 @@ default rel
         jge             %%_encrypt_big_nblocks
 
 %%_no_more_big_nblocks:
-        vextracti32x4   %%CTR_BLOCKx, %%CTR_BLOCKz, 3
         vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
 
@@ -3280,7 +3280,7 @@ default rel
 %define %%CTR           %6      ; [in] ZMM with CTR BE blocks 4x128 bits
 %define %%CTR_CHECK     %7      ; [in/out] GPR with counter overflow check
 %define %%ADDBE_4x4     %8      ; [in] ZMM 4x128bits with value 4 (big endian)
-%define %%ADD_4x4       %9      ; [in] ZMM 4x128bits with value 4 (little endian)
+%define %%ADDBE_1234    %9      ; [in] ZMM 4x128bits with values 1, 2, 3 & 4 (big endian)
 %define %%T0            %10     ; [clobered] temporary ZMM register
 %define %%T1            %11     ; [clobered] temporary ZMM register
 %define %%T2            %12     ; [clobered] temporary ZMM register
@@ -3306,24 +3306,25 @@ default rel
         ;; prepare counter blocks
 
         cmp             BYTE(%%CTR_CHECK), (256 - 16)
-        jge             %%_next_16_overflow
-        vpaddd          %%B00_03, %%CTR,    %%ADDBE_4x4
+        jae             %%_next_16_overflow
+        vpaddd          %%B00_03, %%CTR, %%ADDBE_1234
         vpaddd          %%B04_07, %%B00_03, %%ADDBE_4x4
         vpaddd          %%B08_11, %%B04_07, %%ADDBE_4x4
         vpaddd          %%B12_15, %%B08_11, %%ADDBE_4x4
         jmp             %%_next_16_ok
 %%_next_16_overflow:
         vpshufb         %%CTR, %%CTR, %%SHUF_MASK
-        vpaddd          %%B00_03, %%CTR, %%ADD_4x4
-        vpaddd          %%B04_07, %%B00_03, %%ADD_4x4
-        vpaddd          %%B08_11, %%B04_07, %%ADD_4x4
-        vpaddd          %%B12_15, %%B08_11, %%ADD_4x4
+        vmovdqa64       %%B12_15, [rel ddq_add_4444]
+        vpaddd          %%B00_03, %%CTR, [rel ddq_add_1234]
+        vpaddd          %%B04_07, %%B00_03, %%B12_15
+        vpaddd          %%B08_11, %%B04_07, %%B12_15
+        vpaddd          %%B12_15, %%B08_11, %%B12_15
         vpshufb         %%B00_03, %%SHUF_MASK
         vpshufb         %%B04_07, %%SHUF_MASK
         vpshufb         %%B08_11, %%SHUF_MASK
         vpshufb         %%B12_15, %%SHUF_MASK
 %%_next_16_ok:
-        vmovdqa64       %%CTR, %%B12_15
+        vshufi64x2      %%CTR, %%B12_15, %%B12_15, 1111_1111b
         add             BYTE(%%CTR_CHECK), 16
 
         ;; === load 16 blocks of data
@@ -3434,7 +3435,7 @@ default rel
 %define %%GL            %32     ; [out] ZMM ghash sum (low)
 %define %%GM            %33     ; [out] ZMM ghash sum (middle)
 %define %%ADDBE_4x4     %34     ; [in] ZMM 4x128bits with value 4 (big endian)
-%define %%ADD_4x4       %35     ; [in] ZMM 4x128bits with value 4 (little endian)
+%define %%ADDBE_1234    %35     ; [in] ZMM 4x128bits with values 1, 2, 3 & 4 (big endian)
 %define %%SHUF_MASK     %36     ; [in] ZMM with BE/LE shuffle mask
 %define %%ENC_DEC       %37     ; [in] ENC (encrypt) or DEC (decrypt) selector
 %define %%NBLOCKS       %38     ; [in] number of blocks: multiple of 16
@@ -3451,14 +3452,13 @@ default rel
 
         ;; in LE format after init, convert to BE
         vshufi64x2      %%CTR, %%CTR, %%CTR, 0
-        vpsubd          %%CTR, %%CTR, [rel ddq_sub_3210]
         vpshufb         %%CTR, %%CTR, %%SHUF_MASK
 
         ;; ==== AES lead in
 
         ;; first 16 blocks - just cipher
         INITIAL_BLOCKS_16       %%IN, %%OUT, %%KP, %%DATA_OFFSET, \
-                                %%GHASH, %%CTR, %%CTR_CHECK, %%ADDBE_4x4, %%ADD_4x4, \
+                                %%GHASH, %%CTR, %%CTR_CHECK, %%ADDBE_4x4, %%ADDBE_1234, \
                                 %%T0, %%T1, %%T2, %%T3, %%T4, \
                                 %%T5, %%T6, %%T7, %%T8, \
                                 %%SHUF_MASK, %%ENC_DEC, aesout_offset, data_in_out_offset
@@ -3469,7 +3469,7 @@ default rel
 %if (%%DEPTH_BLK > 16)
 %rep ((%%DEPTH_BLK - 16) / 16)
         INITIAL_BLOCKS_16       %%IN, %%OUT, %%KP, %%DATA_OFFSET, \
-                                no_ghash, %%CTR, %%CTR_CHECK, %%ADDBE_4x4, %%ADD_4x4, \
+                                no_ghash, %%CTR, %%CTR_CHECK, %%ADDBE_4x4, %%ADDBE_1234, \
                                 %%T0, %%T1, %%T2, %%T3, %%T4, \
                                 %%T5, %%T6, %%T7, %%T8, \
                                 %%SHUF_MASK, %%ENC_DEC, aesout_offset, data_in_out_offset
@@ -3490,7 +3490,7 @@ default rel
                 %%T12, %%T13, %%T14, %%T15,\
                 %%T16, %%T17, %%T18, %%T19, \
                 %%T20, %%T21, %%T22, \
-                %%ADDBE_4x4, %%ADD_4x4, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
                 %%GL, %%GH, %%GM, \
                 first_time, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
@@ -3511,7 +3511,7 @@ default rel
                 %%T12, %%T13, %%T14, %%T15,\
                 %%T16, %%T17, %%T18, %%T19, \
                 %%T20, %%T21, %%T22, \
-                %%ADDBE_4x4, %%ADD_4x4, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
                 %%GL, %%GH, %%GM, \
                 no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 %endrep
@@ -3673,7 +3673,7 @@ default rel
 %define %%GTL                   %31     ; [in/out] ZMM GHASH sum (low)
 %define %%GTM                   %32     ; [in/out] ZMM GHASH sum (medium)
 %define %%ADDBE_4x4             %33     ; [in] ZMM 4x128bits with value 4 (big endian)
-%define %%ADD_4x4               %34     ; [in] ZMM 4x128bits with value 4 (little endian)
+%define %%ADDBE_1234            %34     ; [in] ZMM 4x128bits with values 1, 2, 3 & 4 (big endian)
 %define %%GHASH                 %35     ; [clobbered] ZMM with intermidiate GHASH value
 %define %%ENC_DEC               %36     ; [in] ENC (encrypt) or DEC (decrypt) selector
 %define %%NUM_BLOCKS            %37     ; [in] number of blocks to process in the loop
@@ -3697,7 +3697,7 @@ default rel
                 %%ZT12, %%ZT13, %%ZT14, %%ZT15,\
                 %%ZT16, %%ZT17, %%ZT18, %%ZT19, \
                 %%ZT20, %%ZT21, %%ZT22, \
-                %%ADDBE_4x4, %%ADD_4x4, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
                 %%GTL, %%GTH, %%GTM, \
                 no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
@@ -3718,7 +3718,7 @@ default rel
                 %%ZT12, %%ZT13, %%ZT14, %%ZT15,\
                 %%ZT16, %%ZT17, %%ZT18, %%ZT19, \
                 %%ZT20, %%ZT21, %%ZT22, \
-                %%ADDBE_4x4, %%ADD_4x4, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
                 %%GTL, %%GTH, %%GTM, \
                 final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
@@ -3740,7 +3740,7 @@ default rel
                 %%ZT12, %%ZT13, %%ZT14, %%ZT15,\
                 %%ZT16, %%ZT17, %%ZT18, %%ZT19, \
                 %%ZT20, %%ZT21, %%ZT22, \
-                %%ADDBE_4x4, %%ADD_4x4, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
                 %%GTL, %%GTH, %%GTM, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%GHASH
 
@@ -3761,7 +3761,7 @@ default rel
                 %%ZT12, %%ZT13, %%ZT14, %%ZT15,\
                 %%ZT16, %%ZT17, %%ZT18, %%ZT19, \
                 %%ZT20, %%ZT21, %%ZT22, \
-                %%ADDBE_4x4, %%ADD_4x4, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
                 %%GTL, %%GTH, %%GTM, \
                 no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 %endrep
