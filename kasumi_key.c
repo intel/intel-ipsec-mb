@@ -39,7 +39,7 @@
 * it will be used.
 *---------------------------------------------------------------------*/
 static void
-kasumi_key_schedule_sk(uint16_t *context, const uint8_t *pKey)
+kasumi_key_schedule_sk(uint16_t *context, const void *pKey)
 {
 
         /* Kasumi constants*/
@@ -48,7 +48,7 @@ kasumi_key_schedule_sk(uint16_t *context, const uint8_t *pKey)
 
         uint16_t k[8], kprime[8], k16, n;
         uint16_t *flat = context;
-        const uint8_t *pk = pKey;
+        const uint8_t *pk = (const uint8_t *) pKey;
 
         /* Build K[] and K'[] keys */
         for (n = 0; n < 8; n++, pk += 2) {
@@ -96,15 +96,16 @@ kasumi_key_sched_size(void)
 *---------------------------------------------------------------------*/
 static uint32_t
 kasumi_compute_sched(const uint8_t modifier,
-                     const uint8_t *const pKey, void *pCtx)
+                     const void *const pKey, void *pCtx)
 {
         uint32_t i = 0;
+        const uint8_t *const key = (const uint8_t * const)pKey;
         uint8_t ModKey[KASUMI_KEY_SIZE] = {0}; /* Modified key */
         kasumi_key_sched_t *pLocalCtx = (kasumi_key_sched_t *)pCtx;
 
         /* Construct the modified key*/
         for (i = 0; i < KASUMI_KEY_SIZE; i++)
-                ModKey[i] = (uint8_t)pKey[i] ^ modifier;
+                ModKey[i] = (uint8_t)key[i] ^ modifier;
 
         kasumi_key_schedule_sk(pLocalCtx->sk16, pKey);
         kasumi_key_schedule_sk(pLocalCtx->msk16, ModKey);
@@ -119,7 +120,7 @@ kasumi_compute_sched(const uint8_t modifier,
 *---------------------------------------------------------------------*/
 
 uint32_t
-kasumi_init_f8_key_sched(const uint8_t *const pKey,
+kasumi_init_f8_key_sched(const void *const pKey,
                          kasumi_key_sched_t *pCtx)
 {
         return kasumi_compute_sched(0x55, pKey, pCtx);
@@ -132,7 +133,7 @@ kasumi_init_f8_key_sched(const uint8_t *const pKey,
 *---------------------------------------------------------------------*/
 
 uint32_t
-kasumi_init_f9_key_sched(const uint8_t *const pKey,
+kasumi_init_f9_key_sched(const void *const pKey,
                          kasumi_key_sched_t *pCtx)
 {
         return kasumi_compute_sched(0xAA, pKey, pCtx);

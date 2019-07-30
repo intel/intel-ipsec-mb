@@ -961,16 +961,20 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
                 buffLenInBytes[i] = 128;
 
                 /* Test the encrypt */
-                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i], srcBuff[i],
-                                       srcBuff[i], buffLenInBytes, i + 1);
+                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
+                                       (const void **)srcBuff[i],
+                                       (void **)srcBuff[i],
+                                       buffLenInBytes, i + 1);
                 if (srcBuff[i][0] == NULL) {
                         printf("N buffer failure\n");
                         goto exit;
                 }
 
                 /* Test the Decrypt */
-                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i], srcBuff[i],
-                                       srcBuff[i], buffLenInBytes, i + 1);
+                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
+                                       (const void **)srcBuff[i],
+                                       (void **)srcBuff[i],
+                                       buffLenInBytes, i + 1);
                 if (srcBuff[i][0] == NULL) {
                         printf("N buffer failure\n");
                         goto exit;
@@ -1010,16 +1014,20 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
                 buffLenInBytes[i] = i + 131 * 8;
 
                 /* Test the encrypt */
-                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i], srcBuff[i],
-                                       srcBuff[i], buffLenInBytes, i + 1);
+                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
+                                       (const void **)srcBuff[i],
+                                       (void **)srcBuff[i],
+                                       buffLenInBytes, i + 1);
                 if (srcBuff[i][0] == NULL) {
                         printf("N buffer failure\n");
                         goto exit;
                 }
 
                 /* Test the Decrypt */
-                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i], srcBuff[i],
-                                       srcBuff[i], buffLenInBytes, i + 1);
+                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
+                                       (const void **)srcBuff[i],
+                                       (void **)srcBuff[i],
+                                       buffLenInBytes, i + 1);
                 if (srcBuff[i][0] == NULL) {
                         printf("N buffer failure\n");
                         goto exit;
@@ -1060,12 +1068,16 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
                 buffLenInBytes[i] = MAX_DATA_LEN / (1 + i);
 
                 /* Test the encrypt */
-                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i], srcBuff[i],
-                                       srcBuff[i], buffLenInBytes, i + 1);
+                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
+                                       (const void **)srcBuff[i],
+                                       (void **)srcBuff[i],
+                                       buffLenInBytes, i + 1);
 
                 /* Test the Decrypt */
-                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i], srcBuff[i],
-                                       srcBuff[i], buffLenInBytes, i + 1);
+                IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
+                                       (const void **)srcBuff[i],
+                                       (void **)srcBuff[i],
+                                       buffLenInBytes, i + 1);
 
                 for (j = 0; j <= i; j++) {
                         if (memcmp(srcBuff[i][j], dstBuff[i][j],

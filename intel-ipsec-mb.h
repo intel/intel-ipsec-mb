@@ -699,37 +699,45 @@ typedef void (*zuc_eea3_n_buffer_t)(const void * const *, const void * const *,
 typedef void (*zuc_eia3_1_buffer_t)(const void *, const void *, const void *,
                                     const uint32_t, uint32_t *);
 
-typedef void (*kasumi_f8_1_buffer_t)(kasumi_key_sched_t *,
-                                     uint64_t, uint8_t *, uint8_t *,
-                                     uint32_t);
-typedef void (*kasumi_f8_1_buffer_bit_t)(kasumi_key_sched_t *,
-                                         uint64_t, uint8_t *, uint8_t *,
-                                         uint32_t, uint32_t);
-typedef void (*kasumi_f8_2_buffer_t)(kasumi_key_sched_t *,
-                                     uint64_t,  uint64_t,
-                                     uint8_t *, uint8_t *, uint32_t,
-                                     uint8_t *, uint8_t *, uint32_t);
-typedef void (*kasumi_f8_3_buffer_t)(kasumi_key_sched_t *,
-                                     uint64_t,  uint64_t, uint64_t,
-                                     uint8_t *, uint8_t *,
-                                     uint8_t *, uint8_t *,
-                                     uint8_t *, uint8_t *, uint32_t);
-typedef void (*kasumi_f8_4_buffer_t)(kasumi_key_sched_t *,
-                                     uint64_t,  uint64_t, uint64_t,  uint64_t,
-                                     uint8_t *, uint8_t *,
-                                     uint8_t *, uint8_t *,
-                                     uint8_t *, uint8_t *,
-                                     uint8_t *, uint8_t *, uint32_t);
-typedef void (*kasumi_f8_n_buffer_t)(kasumi_key_sched_t *,
-                                     uint64_t *, uint8_t **,
-                                     uint8_t **, uint32_t *,
-                                     uint32_t);
-typedef void (*kasumi_f9_1_buffer_user_t)(kasumi_key_sched_t *,
-                                          uint64_t, uint8_t *,
-                                          uint32_t, uint8_t *,
-                                          uint32_t);
-typedef void (*kasumi_f9_1_buffer_t)(kasumi_key_sched_t *, uint8_t *,
-                                     uint32_t, uint8_t *);
+typedef void (*kasumi_f8_1_buffer_t)(const kasumi_key_sched_t *,
+                                     const uint64_t, const void *, void *,
+                                     const uint32_t);
+typedef void (*kasumi_f8_1_buffer_bit_t)(const kasumi_key_sched_t *,
+                                         const uint64_t, const void *,
+                                         void *,
+                                         const uint32_t, const uint32_t);
+typedef void (*kasumi_f8_2_buffer_t)(const kasumi_key_sched_t *,
+                                     const uint64_t,  const uint64_t,
+                                     const void *, void *,
+                                     const uint32_t,
+                                     const void *, void *,
+                                     const uint32_t);
+typedef void (*kasumi_f8_3_buffer_t)(const kasumi_key_sched_t *,
+                                     const uint64_t,  const uint64_t,
+                                     const uint64_t,
+                                     const void *, void *,
+                                     const void *, void *,
+                                     const void *, void *,
+                                     const uint32_t);
+typedef void (*kasumi_f8_4_buffer_t)(const kasumi_key_sched_t *,
+                                     const uint64_t,  const uint64_t,
+                                     const uint64_t,  const uint64_t,
+                                     const void *, void *,
+                                     const void *, void *,
+                                     const void *, void *,
+                                     const void *, void *,
+                                     const uint32_t);
+typedef void (*kasumi_f8_n_buffer_t)(const kasumi_key_sched_t *,
+                                     const uint64_t *, const void **,
+                                     void **, const uint32_t *,
+                                     const uint32_t);
+typedef void (*kasumi_f9_1_buffer_user_t)(const kasumi_key_sched_t *,
+                                          const uint64_t, const void *,
+                                          const uint32_t, void *,
+                                          const uint32_t);
+typedef void (*kasumi_f9_1_buffer_t)(const kasumi_key_sched_t *,
+                                     const void *,
+                                     const uint32_t, void *);
 
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
@@ -1317,10 +1325,10 @@ IMB_DLL_EXPORT uint32_t
 kasumi_key_sched_size(void);
 
 IMB_DLL_EXPORT uint32_t
-kasumi_init_f8_key_sched(const uint8_t * const pKey, kasumi_key_sched_t *pCtx);
+kasumi_init_f8_key_sched(const void * const pKey, kasumi_key_sched_t *pCtx);
 
 IMB_DLL_EXPORT uint32_t
-kasumi_init_f9_key_sched(const uint8_t * const pKey, kasumi_key_sched_t *pCtx);
+kasumi_init_f9_key_sched(const void * const pKey, kasumi_key_sched_t *pCtx);
 
 /* SSE */
 IMB_DLL_EXPORT void sha1_sse(const void *data, const uint64_t length,
