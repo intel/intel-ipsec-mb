@@ -1066,7 +1066,7 @@ default rel
 ;;;       when handling partial block case text is read and XOR'ed against it.
 ;;;       This needs to be in un-shuffled format.
 
-%macro INITIAL_BLOCKS 26
+%macro INITIAL_BLOCKS 26-27
 %define %%GDATA_KEY             %1      ; [in] pointer to GCM keys
 %define %%GDATA_CTX             %2      ; [in] pointer to GCM context
 %define %%CYPH_PLAIN_OUT        %3      ; [in] output buffer
@@ -1093,6 +1093,7 @@ default rel
 %define %%ENC_DEC               %24     ; [in] ENC/DEC selector
 %define %%MASKREG               %25     ; [clobbered] mask register
 %define %%SHUFMASK              %26     ; [in] ZMM with BE/LE shuffle mask
+%define %%PARTIAL_PRESENT       %27     ; [in] "no_partial_block" option can be passed here (if length is guaranteed to be > 15*16 bytes)
 
 %define %%T1 XWORD(%%ZT1)
 %define %%T2 XWORD(%%ZT2)
@@ -1107,6 +1108,14 @@ default rel
 %define %%TH %%ZT10
 %define %%TM %%ZT11
 %define %%TL %%ZT12
+
+;; determine if partial block code needs to be added
+%assign partial_block_possible 1
+%if %0 > 26
+%ifidn %%PARTIAL_PRESENT, no_partial_block
+%assign partial_block_possible 0
+%endif
+%endif
 
 %if %%num_initial_blocks > 0
         ;; prepare AES counter blocks
@@ -1195,6 +1204,7 @@ default rel
         vpshufb         %%ZT3, %%SHUFMASK
         vpshufb         %%ZT4, %%SHUFMASK
 
+%if partial_block_possible != 0
         ;; get text load/store mask (assume full mask by default)
         mov             %%IA0, 0xffff_ffff_ffff_ffff
 %if %%num_initial_blocks > 0
@@ -1213,9 +1223,14 @@ default rel
 %%_initial_partial_block_continue:
 %endif
         kmovq           %%MASKREG, %%IA0
-        ;; load plain or cipher text
+        ;; load plain or cipher text (masked)
         ZMM_LOAD_MASKED_BLOCKS_0_16 8, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
                         %%ZT1, %%ZT2, no_zmm, no_zmm, %%MASKREG
+%else
+        ;; load plain or cipher text
+        ZMM_LOAD_BLOCKS_0_16 8, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+                        %%ZT1, %%ZT2, no_zmm, no_zmm
+%endif  ;;  partial_block_possible
 
         ;; === AES ROUND 0
 %assign aes_round 0
@@ -1288,11 +1303,11 @@ default rel
 %endif
 %endrep                         ; %rep ((NROUNDS + 1) / 2)
 
+%if partial_block_possible != 0
         ;; write cipher/plain text back to output and
         ;; zero bytes outside the mask before hashing
         ZMM_STORE_MASKED_BLOCKS_0_16 8, %%CYPH_PLAIN_OUT, %%DATA_OFFSET, \
                         %%ZT3, %%ZT4, no_zmm, no_zmm, %%MASKREG
-
         ;; check if there is partial block
         cmp             %%LENGTH, 128
         jl              %%_initial_save_partial
@@ -1315,6 +1330,12 @@ default rel
         xor             %%LENGTH, %%LENGTH
         vmovdqu8        %%ZT4{%%MASKREG}{z}, %%ZT4
 %%_initial_blocks_done:
+%else
+        ZMM_STORE_BLOCKS_0_16 8, %%CYPH_PLAIN_OUT, %%DATA_OFFSET, \
+                        %%ZT3, %%ZT4, no_zmm, no_zmm
+        add             %%DATA_OFFSET, 128
+        sub             %%LENGTH, 128
+%endif  ;; partial_block_possible
 
         ;; Shuffle AES result for GHASH.
 %ifidn  %%ENC_DEC, DEC
@@ -3071,7 +3092,7 @@ default rel
                 %%LENGTH, %%DATA_OFFSET, number_of_blocks, %%CTR_BLOCKx, %%AAD_HASHz, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, \
-                %%IA0, %%IA1, %%ENC_DEC, %%MASKREG, %%SHUF_MASK
+                %%IA0, %%IA1, %%ENC_DEC, %%MASKREG, %%SHUF_MASK, no_partial_block
 %if number_of_blocks != 0
         jmp             %%_initial_blocks_encrypted
 %endif
