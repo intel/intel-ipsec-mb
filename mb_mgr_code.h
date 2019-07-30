@@ -475,7 +475,10 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else
                         return DOCSIS_FIRST_BLOCK(job);
         } else if (PON_AES_CNTR == job->cipher_mode) {
-                return SUBMIT_JOB_PON_ENC(job);
+                if (job->msg_len_to_cipher_in_bytes == 0)
+                        return SUBMIT_JOB_PON_ENC_NO_CTR(job);
+                else
+                        return SUBMIT_JOB_PON_ENC(job);
 #ifndef NO_GCM
         } else if (GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_ENC(state, job);
@@ -579,7 +582,10 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                         return DOCSIS_FIRST_BLOCK(job);
                 }
         } else if (PON_AES_CNTR == job->cipher_mode) {
-                return SUBMIT_JOB_PON_DEC(job);
+                if (job->msg_len_to_cipher_in_bytes == 0)
+                        return SUBMIT_JOB_PON_DEC_NO_CTR(job);
+                else
+                        return SUBMIT_JOB_PON_DEC(job);
 #ifndef NO_GCM
         } else if (GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_DEC(state, job);
@@ -1225,6 +1231,8 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  *   (encryption only)
                  * - CRC length is msg_len_to_cipher_in_bytes - 4 bytes
                  * - msg_len_to_cipher_in_bytes is aligned to 4 bytes
+                 * - If msg_len_to_cipher_in_bytes is 0, IV and key pointers
+                 *   are not required, as encryption is not done
                  */
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
@@ -1234,35 +1242,32 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->iv == NULL) {
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
-                        return 1;
-                }
-                if (job->aes_key_len_in_bytes != UINT64_C(16)) {
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
-                        return 1;
-                }
-                if (job->iv_len_in_bytes != UINT64_C(16)) {
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
-                        return 1;
-                }
-                /* message size needs to be aligned to 4 bytes and not zero */
-                if ((job->msg_len_to_cipher_in_bytes == 0) ||
-                    ((job->msg_len_to_cipher_in_bytes & 3) != 0)) {
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
-                        return 1;
-                }
-                if (job->cipher_start_src_offset_in_bytes != 8) {
-                        /*
-                         * XGEM header is 8 bytes and
-                         * it is not part of CRC/cipher
-                         */
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
-                        return 1;
-                }
                 if (job->hash_alg != PON_CRC_BIP) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
+                }
+                /*
+                 * If message length to cipher != 0, AES-CTR is performed and
+                 * key and IV require to be set properly
+                 */
+                if (job->msg_len_to_cipher_in_bytes != UINT64_C(0)) {
+                        /* message size needs to be aligned to 4 bytes */
+                        if ((job->msg_len_to_cipher_in_bytes & 3) != 0) {
+                                INVALID_PRN("cipher_mode:%d\n",
+                                            job->cipher_mode);
+                                return 1;
+                        }
+
+                        if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                                INVALID_PRN("cipher_mode:%d\n",
+                                            job->cipher_mode);
+                                return 1;
+                        }
+                        if (job->iv_len_in_bytes != UINT64_C(16)) {
+                                INVALID_PRN("cipher_mode:%d\n",
+                                            job->cipher_mode);
+                                return 1;
+                        }
                 }
                 break;
         default:
@@ -1456,24 +1461,11 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  * updated value put into the destination buffer.
                  * - msg_len_to_hash_in_bytes is aligned to 4 bytes
                  */
-                if (job->hash_start_src_offset_in_bytes != UINT64_C(0)) {
-                        /* Expecting zero here */
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
-                }
-                if ((job->msg_len_to_cipher_in_bytes +
-                     job->cipher_start_src_offset_in_bytes) !=
-                    job->msg_len_to_hash_in_bytes) {
+                if (((job->msg_len_to_hash_in_bytes & UINT64_C(3)) != 0) ||
+                    (job->msg_len_to_hash_in_bytes < UINT64_C(12)))  {
                         /*
-                         * XGEM header (8 bytes) is not part of CRC/cipher
-                         * operation but it is included in BIP (auth).
-                         */
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
-                }
-                if ((job->msg_len_to_hash_in_bytes & UINT64_C(3)) != 0)  {
-                        /*
-                         * Length aligned to bytes
+                         * Length aligned to 4-bytes (and at least 12 bytes,
+                         * including 8-byte XGEM header and 4-byte CRC)
                          */
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;

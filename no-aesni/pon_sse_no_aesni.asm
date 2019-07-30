@@ -28,4 +28,6 @@
 %include "include/aesni_emu.inc"
 %define DEC_FN_NAME submit_job_pon_dec_sse_no_aesni
 %define ENC_FN_NAME submit_job_pon_enc_sse_no_aesni
+%define DEC_NO_CTR_FN_NAME submit_job_pon_dec_no_ctr_sse_no_aesni
+%define ENC_NO_CTR_FN_NAME submit_job_pon_enc_no_ctr_sse_no_aesni
 %include "sse/pon_sse.asm"

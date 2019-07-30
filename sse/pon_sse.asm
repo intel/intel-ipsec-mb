@@ -41,6 +41,12 @@
 %ifndef ENC_FN_NAME
 %define ENC_FN_NAME submit_job_pon_enc_sse
 %endif
+%ifndef ENC_NO_CTR_FN_NAME
+%define ENC_NO_CTR_FN_NAME submit_job_pon_enc_no_ctr_sse
+%endif
+%ifndef DEC_NO_CTR_FN_NAME
+%define DEC_NO_CTR_FN_NAME submit_job_pon_dec_no_ctr_sse
+%endif
 
 extern byteswap_const
 extern ddq_add_1
@@ -177,7 +183,7 @@ section .text
 
 ;;; ============================================================================
 ;;; PON stitched algorithm round on a single AES block (16 bytes):
-;;;   AES-CTR
+;;;   AES-CTR (optional, depending on %%CIPH)
 ;;;   - prepares counter blocks
 ;;;   - encrypts counter blocks
 ;;;   - loads text
@@ -189,7 +195,7 @@ section .text
 ;;;   - CRC32 calculation
 ;;; Note: via selection of no_crc, no_bip, no_load, no_store different macro
 ;;;       behavior can be achieved to match needs of the overall algorithm.
-%macro DO_PON 14
+%macro DO_PON 15
 %define %%KP            %1      ; [in] GP, pointer to expanded keys
 %define %%N_ROUNDS      %2      ; [in] number of AES rounds (10, 12 or 14)
 %define %%CTR           %3      ; [in/out] XMM with counter block
@@ -203,8 +209,10 @@ section .text
 %define %%TXMM2         %11     ; [clobbered] XMM temporary
 %define %%CRC_TYPE      %12     ; [in] "first_crc" or "next_crc" or "no_crc"
 %define %%DIR           %13     ; [in] "ENC" or "DEC"
-%define %%CTR_CHECK     %14     ; [in/out] GP with 64bit counter (to identify overflow)
+%define %%CIPH          %14     ; [in] "CTR" or "NO_CTR"
+%define %%CTR_CHECK     %15     ; [in/out] GP with 64bit counter (to identify overflow)
 
+%ifidn %%CIPH, CTR
         ;; prepare counter blocks for encryption
         movdqa          %%TXMM0, %%CTR
         pshufb          %%TXMM0, [rel byteswap_const]
@@ -217,7 +225,7 @@ section .text
         pslldq          %%TXMM2, 8
         paddq           %%CTR, %%TXMM2
 %%_no_ctr_overflow:
-
+%endif
         ;; CRC calculation
 %ifidn %%CRC_TYPE, next_crc
         movdqa          %%TXMM2, %%XCRC_IN_OUT
@@ -225,15 +233,22 @@ section .text
         pclmulqdq       %%XCRC_IN_OUT, %%XCRC_MUL, 0x10
 %endif
 
-        ;; AES rounds
-        AES_ENC_ROUNDS  %%KP, %%N_ROUNDS, %%TXMM0
-
-        ;; load text and xor against encrypted counter blocks
 %ifnidn %%INP, no_load
         movdqu          %%TXMM1, [%%INP]
 %endif
-        pxor            %%TXMM0, %%TXMM1
 
+%ifidn %%CIPH, CTR
+        ;; AES rounds
+        AES_ENC_ROUNDS  %%KP, %%N_ROUNDS, %%TXMM0
+
+        ;; xor plaintext/ciphertext against encrypted counter blocks
+        pxor            %%TXMM0, %%TXMM1
+%else ;; CIPH = NO_CTR
+        ;; if no encryption needs to be done, move from input to output reg
+        movdqa          %%TXMM0, %%TXMM1
+%endif ;; CIPH = CTR
+
+%ifidn %%CIPH, CTR
 %ifidn %%DIR, ENC
         ;; CRC calculation for ENCRYPTION
 %ifidn %%CRC_TYPE, first_crc
@@ -259,6 +274,20 @@ section .text
         pxor            %%XCRC_IN_OUT, %%TXMM0
 %endif
 %endif                        ; DECRYPT
+%else ;; CIPH = NO_CTR
+        ;; CRC calculation for DECRYPTION
+%ifidn %%CRC_TYPE, first_crc
+        ;; in the first run just XOR initial CRC with the first block
+        pxor            %%XCRC_IN_OUT, %%TXMM1
+%endif
+%ifidn %%CRC_TYPE, next_crc
+        ;; - XOR results of CLMUL's together
+        ;; - then XOR against text block
+        pxor            %%XCRC_IN_OUT, %%TXMM2
+        pxor            %%XCRC_IN_OUT, %%TXMM1
+%endif
+
+%endif ;; CIPH = CTR
 
         ;; store the result in the output buffer
 %ifnidn %%OUTP, no_store
@@ -287,25 +316,26 @@ section .text
 
 ;;; ============================================================================
 ;;; CIPHER and BIP specified number of bytes
-%macro CIPHER_BIP_REST 11
+%macro CIPHER_BIP_REST 12
 %define %%NUM_BYTES   %1        ; [in/clobbered] number of bytes to cipher
 %define %%DIR         %2        ; [in] "ENC" or "DEC"
-%define %%PTR_IN      %3        ; [in/clobbered] GPR pointer to input buffer
-%define %%PTR_OUT     %4        ; [in/clobbered] GPR pointer to output buffer
-%define %%PTR_KEYS    %5        ; [in] GPR pointer to expanded keys
-%define %%XBIP_IN_OUT %6        ; [in/out] XMM 128-bit BIP state
-%define %%XCTR_IN_OUT %7        ; [in/out] XMM 128-bit AES counter block
-%define %%XMMT1       %8        ; [clobbered] temporary XMM
-%define %%XMMT2       %9        ; [clobbered] temporary XMM
-%define %%XMMT3       %10       ; [clobbered] temporary XMM
-%define %%CTR_CHECK   %11       ; [in/out] GP with 64bit counter (to identify overflow)
+%define %%CIPH        %3        ; [in] "CTR" or "NO_CTR"
+%define %%PTR_IN      %4        ; [in/clobbered] GPR pointer to input buffer
+%define %%PTR_OUT     %5        ; [in/clobbered] GPR pointer to output buffer
+%define %%PTR_KEYS    %6        ; [in] GPR pointer to expanded keys
+%define %%XBIP_IN_OUT %7        ; [in/out] XMM 128-bit BIP state
+%define %%XCTR_IN_OUT %8        ; [in/out] XMM 128-bit AES counter block
+%define %%XMMT1       %9        ; [clobbered] temporary XMM
+%define %%XMMT2       %10       ; [clobbered] temporary XMM
+%define %%XMMT3       %11       ; [clobbered] temporary XMM
+%define %%CTR_CHECK   %12       ; [in/out] GP with 64bit counter (to identify overflow)
 
 %%_cipher_last_blocks:
         cmp     %%NUM_BYTES, 16
         jb      %%_partial_block_left
 
         DO_PON  %%PTR_KEYS, NUM_AES_ROUNDS, %%XCTR_IN_OUT, %%PTR_IN, %%PTR_OUT, %%XBIP_IN_OUT, \
-                no_crc, no_crc, %%XMMT1, %%XMMT2, %%XMMT3, no_crc, %%DIR, %%CTR_CHECK
+                no_crc, no_crc, %%XMMT1, %%XMMT2, %%XMMT3, no_crc, %%DIR, %%CIPH, %%CTR_CHECK
         sub     %%NUM_BYTES, 16
         jz      %%_bip_done
         jmp     %%_cipher_last_blocks
@@ -318,7 +348,7 @@ section .text
         ;; XMMT2 = data in
         ;; XMMT1 = data out
         DO_PON  %%PTR_KEYS, NUM_AES_ROUNDS, %%XCTR_IN_OUT, no_load, no_store, no_bip, \
-                no_crc, no_crc, %%XMMT1, %%XMMT2, %%XMMT3, no_crc, %%DIR, %%CTR_CHECK
+                no_crc, no_crc, %%XMMT1, %%XMMT2, %%XMMT3, no_crc, %%DIR, %%CIPH, %%CTR_CHECK
 
         ;; store partial bytes and update BIP
         cmp     %%NUM_BYTES, 4
@@ -353,9 +383,11 @@ section .text
 ;;; - this is master macro that implements encrypt/decrypt API
 ;;; - calls other macros and directly uses registers
 ;;;   defined at the top of the file
-%macro AES128_CTR_PON 1
+%macro AES128_CTR_PON 2
 %define %%DIR   %1              ; [in] direction "ENC" or "DEC"
+%define %%CIPH  %2              ; [in] cipher "CTR" or "NO_CTR"
 
+%ifidn %%CIPH, CTR
         ;; - read 16 bytes of IV
         ;; - convert to little endian format
         ;; - save least significant 8 bytes in GP register for overflow check
@@ -363,6 +395,7 @@ section .text
         movdqu  xcounter, [tmp]
         pshufb  xcounter, [rel byteswap_const]
         movq    ctr_check, xcounter
+%endif
 
         ;; load 8 bytes of payload for BIP (not part of encrypted message)
         ;; @todo these 8 bytes are hardcoded for now (per standard spec)
@@ -370,15 +403,17 @@ section .text
         add     tmp, [job + _hash_start_src_offset_in_bytes]
         movq    xbip, [tmp]
 
-        ;; get input buffer
+        ;; get input buffer (after XGEM header)
         mov     p_in, [job + _src]
         add     p_in, [job + _cipher_start_src_offset_in_bytes]
 
         ;; get output buffer
         mov     p_out, [job + _dst]
 
+%ifidn %%CIPH, CTR
         ;; get key pointers
         mov     p_keys, [job + _aes_enc_key_expanded]
+%endif
 
         ;; initial CRC value
         movdqa  xcrc, [rel init_crc_value]
@@ -388,8 +423,16 @@ section .text
 
         ;; get number of bytes to cipher and crc
         ;; - computed CRC needs to be encrypted at the end too
+%ifidn %%CIPH, CTR
         mov     num_bytes, [job + _msg_len_to_cipher_in_bytes]
         sub     num_bytes, 4    ; subtract size of CRC at the end of the message
+%else
+        ;; Message length to cipher is 0, so length is obtained from hash params
+        mov     num_bytes, [job + _msg_len_to_hash_in_bytes]
+        ;; subtract size of header and CRC at the end of the message
+        sub     num_bytes, 12
+%endif
+
         jz      %%_crc_done
 
         cmp     num_bytes, 32
@@ -399,7 +442,7 @@ section .text
         ;; decrypt the buffer first (with appended CRC)
         lea     tmp, [num_bytes + 4] ; add size of appended CRC
 
-        CIPHER_BIP_REST tmp, %%DIR, p_in, p_out, p_keys, xbip, \
+        CIPHER_BIP_REST tmp, %%DIR, %%CIPH, p_in, p_out, p_keys, xbip, \
                         xcounter, xtmp1, xtmp2, xtmp3, ctr_check
 
         ;; correct in/out pointers
@@ -450,14 +493,14 @@ section .text
 
 %%_at_least_32_bytes:
         DO_PON  p_keys, NUM_AES_ROUNDS, xcounter, p_in, p_out, xbip, \
-                xcrc, xcrckey, xtmp1, xtmp2, xtmp3, first_crc, %%DIR, ctr_check
+                xcrc, xcrckey, xtmp1, xtmp2, xtmp3, first_crc, %%DIR, %%CIPH, ctr_check
         sub     num_bytes, 16
 
 %%_main_loop:
         cmp     num_bytes, 16
         jb      %%_exit_loop
         DO_PON  p_keys, NUM_AES_ROUNDS, xcounter, p_in, p_out, xbip, \
-                xcrc, xcrckey, xtmp1, xtmp2, xtmp3, next_crc, %%DIR, ctr_check
+                xcrc, xcrckey, xtmp1, xtmp2, xtmp3, next_crc, %%DIR, %%CIPH, ctr_check
         sub     num_bytes, 16
 %ifidn %%DIR, ENC
         jz      %%_128_done
@@ -470,7 +513,7 @@ section .text
         ;; decrypt the buffer including trailing CRC
         lea     tmp, [num_bytes + 4] ; add CRC size
 
-        CIPHER_BIP_REST tmp, %%DIR, p_in, p_out, p_keys, xbip, \
+        CIPHER_BIP_REST tmp, %%DIR, %%CIPH, p_in, p_out, p_keys, xbip, \
                         xcounter, xtmp1, xtmp2, xtmp3, ctr_check
 
         lea     tmp, [num_bytes + 4] ; correct in/out pointers
@@ -553,7 +596,7 @@ section .text
 %ifidn %%DIR, ENC
         add     num_bytes, 4 ; add size of appended CRC
 
-        CIPHER_BIP_REST num_bytes, %%DIR, p_in, p_out, p_keys, xbip, \
+        CIPHER_BIP_REST num_bytes, %%DIR, %%CIPH, p_in, p_out, p_keys, xbip, \
                         xcounter, xtmp1, xtmp2, xtmp3, ctr_check
 %endif                          ; ENCRYPTION
 
@@ -585,14 +628,28 @@ section .text
 align 32
 MKGLOBAL(ENC_FN_NAME,function,internal)
 ENC_FN_NAME:
-        AES128_CTR_PON ENC
+        AES128_CTR_PON ENC, CTR
         ret
 
 ;;; aes_cntr_128_pon_dec_sse(JOB_AES_HMAC *job)
 align 32
 MKGLOBAL(DEC_FN_NAME,function,internal)
 DEC_FN_NAME:
-        AES128_CTR_PON DEC
+        AES128_CTR_PON DEC, CTR
+        ret
+
+;;; aes_cntr_128_pon_enc_no_ctr_sse(JOB_AES_HMAC *job)
+align 32
+MKGLOBAL(ENC_NO_CTR_FN_NAME,function,internal)
+ENC_NO_CTR_FN_NAME:
+        AES128_CTR_PON ENC, NO_CTR
+        ret
+
+;;; aes_cntr_128_pon_dec_no_ctr_sse(JOB_AES_HMAC *job)
+align 32
+MKGLOBAL(DEC_NO_CTR_FN_NAME,function,internal)
+DEC_NO_CTR_FN_NAME:
+        AES128_CTR_PON DEC, NO_CTR
         ret
 
 %ifdef LINUX
