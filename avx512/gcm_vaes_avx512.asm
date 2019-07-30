@@ -3108,14 +3108,15 @@ default rel
         vmovdqa64       %%BLK0, %%ZTMP0
         vmovdqa64       %%BLK1, %%ZTMP1
 
-        ;; The entire message was encrypted processed in initial and now need to be hashed
-        or              %%LENGTH, %%LENGTH
-        je              %%_encrypt_done
+        ;; The entire message cannot get processed in INITIAL_BLOCKS
+        ;; - GCM_ENC_DEC_SMALL handles up to 16 blocks
+        ;; - INITIAL_BLOCKS processes up to 15 blocks
+        ;; - no need to check for zero length at this stage
 
         ;; In order to have only one reduction at the end
         ;; start HASH KEY pointer needs to be determined based on length and
         ;; call type.
-        ;; - note that 8 blocks already ciphered in INITIAL_BLOCKS and
+        ;; - note that 8 blocks are already ciphered in INITIAL_BLOCKS and
         ;;   subtracted from LENGTH
         lea             %%IA1, [%%LENGTH + (8 * 16)]
         add             %%IA1, 15
