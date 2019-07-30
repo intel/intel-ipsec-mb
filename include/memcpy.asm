@@ -387,13 +387,22 @@
         __simd_store %1,%2,%3,%4,%5,AVX
 %endm
 
-%macro __simd_store 6
+%macro simd_store_sse_15 5
+        __simd_store %1,%2,%3,%4,%5,SSE,15
+%endm
+
+%macro simd_store_avx_15 5
+        __simd_store %1,%2,%3,%4,%5,AVX,15
+%endm
+
+%macro __simd_store 6-7
 %define %%DST      %1    ; register: pointer to dst (not modified)
 %define %%SRC      %2    ; register: src data (clobbered)
 %define %%SIZE     %3    ; register: length in bytes (not modified)
 %define %%TMP      %4    ; 64-bit temp GPR (clobbered)
 %define %%IDX      %5    ; 64-bit temp GPR to store dst idx (clobbered)
 %define %%SIMDTYPE %6    ; "SSE" or "AVX"
+%define %%MAX_LEN  %7    ; [optional] maximum length to be stored, default 16
 
 %define %%PSRLDQ _PSRLDQ %%SIMDTYPE,
 
@@ -405,27 +414,47 @@
  %define %%MOVQ vmovq
 %endif
 
+;; determine max byte size for store operation
+%if %0 > 6
+%assign max_length_to_store %%MAX_LEN
+%else
+%assign max_length_to_store 16
+%endif
+
+%if max_length_to_store > 16
+%error "__simd_store macro invoked with MAX_LEN bigger than 16!"
+%endif
+
         xor %%IDX, %%IDX        ; zero idx
 
+%if max_length_to_store == 16
         test    %%SIZE, 16
         jz      %%lt16
         %%MOVDQU [%%DST], %%SRC
         jmp     %%end
 %%lt16:
+%endif
+
+%if max_length_to_store >= 8
         test    %%SIZE, 8
         jz      %%lt8
         %%MOVQ  [%%DST + %%IDX], %%SRC
         %%PSRLDQ %%SRC, 8
         add     %%IDX, 8
 %%lt8:
+%endif
+
         %%MOVQ %%TMP, %%SRC     ; use GPR from now on
 
+%if max_length_to_store >= 4
         test    %%SIZE, 4
         jz      %%lt4
         mov     [%%DST + %%IDX], DWORD(%%TMP)
         shr     %%TMP, 32
         add     %%IDX, 4
 %%lt4:
+%endif
+
         test    %%SIZE, 2
         jz      %%lt2
         mov     [%%DST + %%IDX], WORD(%%TMP)

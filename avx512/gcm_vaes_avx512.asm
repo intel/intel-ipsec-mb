@@ -3843,7 +3843,7 @@ default rel
         cmp     r11, 8
         je      %%_T_8
 
-        simd_store_avx r10, xmm9, r11, r12, rax
+        simd_store_avx_15 r10, xmm9, r11, r12, rax
         jmp     %%_return_T_done
 %%_T_8:
         vmovq    rax, xmm9
