@@ -982,14 +982,14 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
 
                 for (j = 0; j <= i; j++) {
                         if (memcmp(srcBuff[i][j], dstBuff[i][j],
-                                   buffLenInBytes[i]) != 0) {
+                                   buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer equal sizes, "
                                        "numBuffs:%d\n",
                                        i);
                                 hexdump("Actual:", srcBuff[i][j],
-                                        buffLenInBytes[i]);
+                                        buffLenInBytes[j]);
                                 hexdump("Expected:", dstBuff[i][j],
-                                        buffLenInBytes[i]);
+                                        buffLenInBytes[j]);
                                 goto exit;
                         }
                 }
@@ -1035,14 +1035,14 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
 
                 for (j = 0; j <= i; j++) {
                         if (memcmp(srcBuff[i][j], dstBuff[i][j],
-                                   buffLenInBytes[i]) != 0) {
+                                   buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer increasing sizes, "
                                        "srcBuff[%d][%d]\n",
                                        i, j);
                                 hexdump("Actual:", srcBuff[i][j],
-                                        buffLenInBytes[i]);
+                                        buffLenInBytes[j]);
                                 hexdump("Expected:", dstBuff[i][j],
-                                        buffLenInBytes[i]);
+                                        buffLenInBytes[j]);
                                 goto exit;
                         }
                 }
@@ -1081,14 +1081,14 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
 
                 for (j = 0; j <= i; j++) {
                         if (memcmp(srcBuff[i][j], dstBuff[i][j],
-                                   buffLenInBytes[i]) != 0) {
+                                   buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer decreasing sizes, "
                                        "numBuffs:%d\n",
                                        i);
                                 hexdump("Actual:", srcBuff[i][j],
-                                        buffLenInBytes[i]);
+                                        buffLenInBytes[j]);
                                 hexdump("Expected:", dstBuff[i][j],
-                                        buffLenInBytes[i]);
+                                        buffLenInBytes[j]);
                                 goto exit;
                         }
                 }
