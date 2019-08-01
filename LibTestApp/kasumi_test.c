@@ -803,8 +803,8 @@ static int validate_kasumi_f8_4_blocks(MB_MGR *mgr)
         uint8_t *key = NULL;
         int keyLen = MAX_KEY_LEN;
         uint64_t iv[4];
-        uint8_t *srcBuff[4];
-        uint8_t *dstBuff[4];
+        uint8_t *srcBuff[4] = {NULL};
+        uint8_t *dstBuff[4] = {NULL};
         uint32_t packetLen;
         int ret = 1;
 
