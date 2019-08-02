@@ -426,12 +426,12 @@ uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
 /** Generate random buffer */
 static void
-generate_random_buf(uint8_t *buf, unsigned int length)
+generate_random_buf(uint8_t *buf, const uint32_t length)
 {
-        unsigned int i;
+        uint32_t i;
 
         for (i = 0; i < length; i++)
-                buf[i] = rand() % UINT8_MAX;
+                buf[i] = (uint8_t) rand();
 }
 
 static void
