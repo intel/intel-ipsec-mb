@@ -193,9 +193,9 @@ typedef union SafeBuffer {
  * @param[in/out]   pData        Block to be enc/dec
  *
  ******************************************************************************/
-static void kasumi_1_block(uint16_t *context, uint16_t *data)
+static void kasumi_1_block(const uint16_t *context, uint16_t *data)
 {
-    uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
+    const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
     uint16_t temp_l, temp_h;
 
     /* 4 iterations odd/even */
@@ -229,9 +229,10 @@ static void kasumi_1_block(uint16_t *context, uint16_t *data)
  * @param[in/out]   pData2       Second block to be enc/dec
  *
  ******************************************************************************/
-static void kasumi_2_blocks(uint16_t *context, uint16_t *data1, uint16_t *data2)
+static void
+kasumi_2_blocks(const uint16_t *context, uint16_t *data1, uint16_t *data2)
 {
-    uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
+    const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
     uint16_t temp1_l, temp1_h;
     uint16_t temp2_l, temp2_h;
 
@@ -278,11 +279,12 @@ static void kasumi_2_blocks(uint16_t *context, uint16_t *data1, uint16_t *data2)
  * @param[in/out]   pData3       Third block to be enc/dec
  *
  ******************************************************************************/
-static void kasumi_3_blocks(uint16_t *context, uint16_t *data1,
-                            uint16_t *data2, uint16_t *data3)
+static void
+kasumi_3_blocks(const uint16_t *context, uint16_t *data1,
+                uint16_t *data2, uint16_t *data3)
 {
         /* Case when the conmpiler is able to interleave efficiently */
-        uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
+        const uint16_t *end = context + KASUMI_KEY_SCHEDULE_SIZE;
         uint16_t temp1_l, temp1_h;
         uint16_t temp2_l, temp2_h;
         uint16_t temp3_l, temp3_h;
@@ -337,7 +339,8 @@ static void kasumi_3_blocks(uint16_t *context, uint16_t *data1,
  * @param[in]       ppData      Pointer to an array of addresses of blocks
  *
  ******************************************************************************/
-static void kasumi_4_blocks(uint16_t *context, uint16_t **ppData)
+static void
+kasumi_4_blocks(const uint16_t *context, uint16_t **ppData)
 {
     /* Case when the conmpiler is unable to interleave efficiently */
     kasumi_2_blocks (context, ppData[0], ppData[1]);
@@ -354,7 +357,8 @@ static void kasumi_4_blocks(uint16_t *context, uint16_t **ppData)
  * @param[in]       ppData      Pointer to an array of addresses of blocks
  *
  ******************************************************************************/
-static void kasumi_8_blocks(uint16_t *context, uint16_t **ppData)
+static void
+kasumi_8_blocks(const uint16_t *context, uint16_t **ppData)
 {
     kasumi_4_blocks (context, &ppData[0]);
     kasumi_4_blocks (context, &ppData[4]);
@@ -376,66 +380,77 @@ static void kasumi_8_blocks(uint16_t *context, uint16_t **ppData)
 *   the right function and reference it in wrapperArray.
 *
 *******************************************************************************/
-static void kasumi_f8_1_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_1_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_1_block(context, data[0]);
 }
 
-static void kasumi_f8_2_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_2_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_2_blocks(context, data[0], data[1]);
 }
 
-static void kasumi_f8_3_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_3_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_3_blocks(context, data[0], data[1], data[2]);
 }
 
-static void kasumi_f8_5_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_5_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_4_blocks(context, &data[0]);
         kasumi_1_block(context, data[4]);
 }
 
-static void kasumi_f8_6_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_6_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         /* It is also assumed 6 = 4+2 packets is faster than 8 */
         kasumi_4_blocks(context, &data[0]);
         kasumi_2_blocks(context, data[4], data[5]);
 }
 
-static void kasumi_f8_7_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_7_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_4_blocks(context, &data[0]);
         kasumi_3_blocks(context, data[4], data[5], data[6]);
 }
 
-static void kasumi_f8_9_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_9_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
 
         kasumi_8_blocks(context, &data[0]);
         kasumi_1_block(context, data[8]);
 }
 
-static void kasumi_f8_10_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_10_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_8_blocks(context, &data[0]);
         kasumi_2_blocks(context, data[8], data[9]);
 }
 
-static void kasumi_f8_11_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_11_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_8_blocks(context, &data[0]);
         kasumi_3_blocks(context, data[8], data[9], data[10]);
 }
 
-static void kasumi_f8_12_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_12_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_8_blocks(context, &data[0]);
         kasumi_4_blocks(context, &data[8]);
 }
 
-static void kasumi_f8_13_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_13_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
 
         kasumi_8_blocks(context, &data[0]);
@@ -443,27 +458,30 @@ static void kasumi_f8_13_buffer_wrapper(uint16_t *context, uint16_t **data)
         kasumi_1_block(context, data[12]);
 }
 
-static void kasumi_f8_14_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_14_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_8_blocks(context, &data[0]);
         kasumi_4_blocks(context, &data[8]);
         kasumi_2_blocks(context, data[12], data[13]);
 }
 
-static void kasumi_f8_15_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_15_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_8_blocks(context, &data[0]);
         kasumi_4_blocks(context, &data[8]);
         kasumi_3_blocks(context, data[12], data[13], data[14]);
 }
 
-static void kasumi_f8_16_buffer_wrapper(uint16_t *context, uint16_t **data)
+static void
+kasumi_f8_16_buffer_wrapper(const uint16_t *context, uint16_t **data)
 {
         kasumi_8_blocks(context, &data[0]);
         kasumi_8_blocks(context, &data[8]);
 }
 
-typedef void (*kasumi_wrapper_t)(uint16_t *, uint16_t **);
+typedef void (*kasumi_wrapper_t)(const uint16_t *, uint16_t **);
 
 static kasumi_wrapper_t kasumiWrapperArray[] = {
         NULL,
@@ -485,13 +503,16 @@ static kasumi_wrapper_t kasumiWrapperArray[] = {
         kasumi_f8_16_buffer_wrapper};
 
 static inline void
-kasumi_f8_1_buffer(kasumi_key_sched_t *pCtx, uint64_t IV,
-                   uint8_t *pBufferIn, uint8_t *pBufferOut,
-                   uint32_t lengthInBytes)
+kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                   const void *pIn, void *pOut,
+                   const uint32_t length)
 {
         uint32_t blkcnt;
         kasumi_union_t a, b; /* the modifier */
         SafeBuf safeInBuf;
+        const uint8_t *pBufferIn = (const uint8_t *) pIn;
+        uint8_t *pBufferOut = (uint8_t *) pOut;
+        uint32_t lengthInBytes = length;
 
         /* IV Endianity  */
 	a.b64[0] = BSWAP64(IV);
@@ -535,15 +556,18 @@ kasumi_f8_1_buffer(kasumi_key_sched_t *pCtx, uint64_t IV,
 }
 
 static inline void
-kasumi_f8_1_buffer_bit(kasumi_key_sched_t *pCtx, uint64_t IV,
-                       uint8_t *pBufferIn, uint8_t *pBufferOut,
-                       uint32_t cipherLengthInBits,
-                       uint32_t offsetInBits)
+kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                       const void *pIn, void *pOut,
+                       const uint32_t lengthInBits,
+                       const uint32_t offsetInBits)
 {
+        const uint8_t *pBufferIn = (const uint8_t *) pIn;
+        uint8_t *pBufferOut = (uint8_t *) pOut;
+        uint32_t cipherLengthInBits = lengthInBits;
         uint32_t blkcnt;
         uint64_t shiftrem = 0;
         kasumi_union_t a, b, c; /* the modifier */
-        uint8_t *pcBufferIn = pBufferIn + (offsetInBits / 8);
+        const uint8_t *pcBufferIn = pBufferIn + (offsetInBits / 8);
         uint8_t *pcBufferOut = pBufferOut + (offsetInBits / 8);
         /* Offset into the first byte (0 - 7 bits) */
         uint32_t remainOffset = offsetInBits % 8;
@@ -623,12 +647,19 @@ kasumi_f8_1_buffer_bit(kasumi_key_sched_t *pCtx, uint64_t IV,
 }
 
 static inline void
-kasumi_f8_2_buffer(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                   uint64_t IV2, uint8_t *pBufferIn1,
-                   uint8_t *pBufferOut1, uint32_t lengthInBytes1,
-                   uint8_t *pBufferIn2, uint8_t *pBufferOut2,
-                   uint32_t lengthInBytes2)
+kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
+                   const uint64_t IV1, const uint64_t IV2,
+                   const void *pIn1, void *pOut1,
+                   const uint32_t length1,
+                   const void *pIn2, void *pOut2,
+                   const uint32_t length2)
 {
+        const uint8_t *pBufferIn1 = (const uint8_t *) pIn1;
+        uint8_t *pBufferOut1 = (uint8_t *) pOut1;
+        uint32_t lengthInBytes1 = length1;
+        const uint8_t *pBufferIn2 = (const uint8_t *) pIn2;
+        uint8_t *pBufferOut2 = (uint8_t *) pOut2;
+        uint32_t lengthInBytes2 = length2;
         uint32_t blkcnt, length;
         kasumi_union_t a1, b1; /* the modifier */
         kasumi_union_t a2, b2; /* the modifier */
@@ -786,12 +817,20 @@ kasumi_f8_2_buffer(kasumi_key_sched_t *pCtx, uint64_t IV1,
 }
 
 static inline void
-kasumi_f8_3_buffer(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                   uint64_t IV2, uint64_t IV3, uint8_t *pBufferIn1,
-                   uint8_t *pBufferOut1, uint8_t *pBufferIn2,
-                   uint8_t *pBufferOut2, uint8_t *pBufferIn3,
-                   uint8_t *pBufferOut3, uint32_t lengthInBytes)
+kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
+                   const uint64_t IV1, const uint64_t IV2, const uint64_t IV3,
+                   const void *pIn1, void *pOut1,
+                   const void *pIn2, void *pOut2,
+                   const void *pIn3, void *pOut3,
+                   const uint32_t length)
 {
+        const uint8_t *pBufferIn1 = (const uint8_t *) pIn1;
+        uint8_t *pBufferOut1 = (uint8_t *) pOut1;
+        const uint8_t *pBufferIn2 = (const uint8_t *) pIn2;
+        uint8_t *pBufferOut2 = (uint8_t *) pOut2;
+        const uint8_t *pBufferIn3 = (const uint8_t *) pIn3;
+        uint8_t *pBufferOut3 = (uint8_t *) pOut3;
+        uint32_t lengthInBytes = length;
         uint32_t blkcnt;
         kasumi_union_t a1, b1; /* the modifier */
         kasumi_union_t a2, b2; /* the modifier */
@@ -875,14 +914,23 @@ kasumi_f8_3_buffer(kasumi_key_sched_t *pCtx, uint64_t IV1,
 *---------------------------------------------------------*/
 
 static inline void
-kasumi_f8_4_buffer(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                   uint64_t IV2, uint64_t IV3, uint64_t IV4,
-                   uint8_t *pBufferIn1, uint8_t *pBufferOut1,
-                   uint8_t *pBufferIn2, uint8_t *pBufferOut2,
-                   uint8_t *pBufferIn3, uint8_t *pBufferOut3,
-                   uint8_t *pBufferIn4, uint8_t *pBufferOut4,
-                   uint32_t lengthInBytes)
+kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
+                   const uint64_t IV2, const uint64_t IV3, const uint64_t IV4,
+                   const void *pIn1, void *pOut1,
+                   const void *pIn2, void *pOut2,
+                   const void *pIn3, void *pOut3,
+                   const void *pIn4, void *pOut4,
+                   const uint32_t length)
 {
+        const uint8_t *pBufferIn1 = (const uint8_t *) pIn1;
+        uint8_t *pBufferOut1 = (uint8_t *) pOut1;
+        const uint8_t *pBufferIn2 = (const uint8_t *) pIn2;
+        uint8_t *pBufferOut2 = (uint8_t *) pOut2;
+        const uint8_t *pBufferIn3 = (const uint8_t *) pIn3;
+        uint8_t *pBufferOut3 = (uint8_t *) pOut3;
+        const uint8_t *pBufferIn4 = (const uint8_t *) pIn4;
+        uint8_t *pBufferOut4 = (uint8_t *) pOut4;
+        uint32_t lengthInBytes = length;
         uint32_t blkcnt;
         kasumi_union_t a1, b1; /* the modifier */
         kasumi_union_t a2, b2; /* the modifier */
@@ -988,25 +1036,33 @@ kasumi_f8_4_buffer(kasumi_key_sched_t *pCtx, uint64_t IV1,
 *******************************************************************************/
 
 static inline void
-kasumi_f8_n_buffer(kasumi_key_sched_t *pKeySchedule, uint64_t IV[],
-                   uint8_t *pDataIn[], uint8_t *pDataOut[],
-                   uint32_t dataLen[], uint32_t dataCount)
+kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
+                   const void *pIn[], void *pOut[],
+                   const uint32_t lengths[], const uint32_t bufCount)
 {
-        if (dataCount > 16) {
-                pDataOut[0] = NULL;
-                printf("dataCount too high (%d)\n", dataCount);
+        if (bufCount > 16) {
+                pOut[0] = NULL;
+                printf("dataCount too high (%d)\n", bufCount);
                 return;
         }
 
+        uint32_t dataCount = bufCount;
         kasumi_union_t A[NUM_PACKETS_16], temp[NUM_PACKETS_16], tempSort;
         uint16_t *data[NUM_PACKETS_16];
-        uint8_t *srctempbuff;
+        uint32_t dataLen[NUM_PACKETS_16];
+        uint8_t *pDataOut[NUM_PACKETS_16] = {NULL};
+        const uint8_t *pDataIn[NUM_PACKETS_16] = {NULL};
+        const uint8_t *srctempbuff;
         uint8_t *dsttempbuff;
         uint32_t blkcnt = 0;
         uint32_t len = 0;
         uint32_t packet_idx, inner_idx, same_size_blocks;
         int sortNeeded = 0, tempLen = 0;
         SafeBuf safeInBuf;
+
+        memcpy((void *)dataLen, lengths, dataCount * sizeof(uint32_t));
+        memcpy((void *)pDataIn, pIn, dataCount * sizeof(void *));
+        memcpy((void *)pDataOut, pOut, dataCount * sizeof(void *));
 
         /* save the IV to A for each packet */
         packet_idx = dataCount;
@@ -1168,11 +1224,12 @@ kasumi_f8_n_buffer(kasumi_key_sched_t *pKeySchedule, uint64_t IV[],
 }
 
 static inline void
-kasumi_f9_1_buffer(kasumi_key_sched_t *pCtx, uint8_t *dataIn,
-                   uint32_t length, uint8_t *pDigest)
+kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn,
+                   const uint32_t length, void *pDigest)
 {
         kasumi_union_t a, b, mask;
-        uint64_t *pIn = (uint64_t *)dataIn;
+        const uint64_t *pIn = (const uint64_t *)dataIn;
+        uint32_t lengthInBytes = length;
         SafeBuf safeBuf;
 
         /* Init */
@@ -1181,7 +1238,7 @@ kasumi_f9_1_buffer(kasumi_key_sched_t *pCtx, uint8_t *dataIn,
         mask.b64[0] = -1;
 
         /* Now run kasumi for all 8 byte blocks */
-        while (length >= 8) {
+        while (lengthInBytes >= 8) {
 
                 a.b64[0] ^= BSWAP64(*(pIn++));
 
@@ -1189,16 +1246,16 @@ kasumi_f9_1_buffer(kasumi_key_sched_t *pCtx, uint8_t *dataIn,
                 kasumi_1_block(pCtx->sk16, a.b16);
 
                 /* loop variant */
-                length -= 8; /* done another 64 bits */
+                lengthInBytes -= 8; /* done another 64 bits */
 
                 /* update */
                 b.b64[0] ^= a.b64[0];
         }
 
-        if (length) {
+        if (lengthInBytes) {
                 /* Not a whole 8 byte block remaining */
-                mask.b64[0] = ~(mask.b64[0] >> (BYTESIZE * length));
-                memcpy(&safeBuf.b64, pIn, length);
+                mask.b64[0] = ~(mask.b64[0] >> (BYTESIZE * lengthInBytes));
+                memcpy(&safeBuf.b64, pIn, lengthInBytes);
                 mask.b64[0] &= BSWAP64(safeBuf.b64);
                 a.b64[0] ^= mask.b64[0];
 
@@ -1226,12 +1283,13 @@ kasumi_f9_1_buffer(kasumi_key_sched_t *pCtx, uint8_t *dataIn,
 *---------------------------------------------------------*/
 
 static inline void
-kasumi_f9_1_buffer_user(kasumi_key_sched_t *pCtx, uint64_t IV,
-                        uint8_t *pDataIn, uint32_t lengthInBits,
-                        uint8_t *pDigest, uint32_t direction)
+kasumi_f9_1_buffer_user(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                        const void *pDataIn, const uint32_t length,
+                        void *pDigest, const uint32_t direction)
 {
         kasumi_union_t a, b, mask, message, temp;
-        uint64_t *pIn = (uint64_t *)pDataIn;
+        uint32_t lengthInBits = length;
+        const uint64_t *pIn = (const uint64_t *)pDataIn;
         kasumi_union_t safebuff;
 
         a.b64[0] = 0;
@@ -1305,78 +1363,94 @@ kasumi_f9_1_buffer_user(kasumi_key_sched_t *pCtx, uint64_t IV,
         *(uint32_t *)pDigest = bswap4(b.b32[1]);
 }
 
-void kasumi_f8_1_buffer_sse(kasumi_key_sched_t *pCtx, uint64_t IV,
-                            uint8_t *pBufferIn, uint8_t *pBufferOut,
-                            uint32_t cipherLengthInBytes);
-void kasumi_f8_1_buffer_bit_sse(kasumi_key_sched_t *pCtx, uint64_t IV,
-                                uint8_t *pBufferIn, uint8_t *pBufferOut,
-                                uint32_t cipherLengthInBits,
-                                uint32_t offsetInBits);
-void kasumi_f8_2_buffer_sse(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint8_t *pBufferIn1,
-                            uint8_t *pBufferOut1, uint32_t lengthInBytes1,
-                            uint8_t *pBufferIn2, uint8_t *pBufferOut2,
-                            uint32_t lengthInBytes2);
-void kasumi_f8_3_buffer_sse(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint64_t IV3, uint8_t *pBufferIn1,
-                            uint8_t *pBufferOut1, uint8_t *pBufferIn2,
-                            uint8_t *pBufferOut2, uint8_t *pBufferIn3,
-                            uint8_t *pBufferOut3, uint32_t lengthInBytes);
-void kasumi_f8_4_buffer_sse(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint64_t IV3, uint64_t IV4,
-                            uint8_t *pBufferIn1, uint8_t *pBufferOut1,
-                            uint8_t *pBufferIn2, uint8_t *pBufferOut2,
-                            uint8_t *pBufferIn3, uint8_t *pBufferOut3,
-                            uint8_t *pBufferIn4, uint8_t *pBufferOut4,
-                            uint32_t lengthInBytes);
-void kasumi_f8_n_buffer_sse(kasumi_key_sched_t *pKeySchedule, uint64_t IV[],
-                            uint8_t *pDataIn[], uint8_t *pDataOut[],
-                            uint32_t dataLen[], uint32_t dataCount);
+void kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                            const void *pBufferIn, void *pBufferOut,
+                            const uint32_t cipherLengthInBytes);
+
+void kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx,
+                                const uint64_t IV,
+                                const void *pBufferIn, void *pBufferOut,
+                                const uint32_t cipherLengthInBits,
+                                const uint32_t offsetInBits);
+
+void kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx,
+                            const uint64_t IV1, const uint64_t IV2,
+                            const void *pBufferIn1, void *pBufferOut1,
+                            const uint32_t lengthInBytes1,
+                            const void *pBufferIn2, void *pBufferOut2,
+                            const uint32_t lengthInBytes2);
+
+void kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
+                            const uint64_t IV2, const uint64_t IV3,
+                            const void *pBufferIn1, void *pBufferOut1,
+                            const void *pBufferIn2, void *pBufferOut2,
+                            const void *pBufferIn3, void *pBufferOut3,
+                            const uint32_t lengthInBytes);
+
+void kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
+                            const uint64_t IV1, const uint64_t IV2,
+                            const uint64_t IV3, const uint64_t IV4,
+                            const void *pBufferIn1, void *pBufferOut1,
+                            const void *pBufferIn2, void *pBufferOut2,
+                            const void *pBufferIn3, void *pBufferOut3,
+                            const void *pBufferIn4, void *pBufferOut4,
+                            const uint32_t lengthInBytes);
+
+void kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
+                            const uint64_t IV[],
+                            const void *pDataIn[], void *pDataOut[],
+                            const uint32_t dataLen[], const uint32_t dataCount);
+
+void kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx,
+                            const void *pBufferIn,
+                            const uint32_t lengthInBytes, void *pDigest);
+
+void kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx,
+                                 const uint64_t IV, const void *pBufferIn,
+                                 const uint32_t lengthInBits,
+                                 void *pDigest, const uint32_t direction);
 
 
+void kasumi_f8_1_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                            const void *pBufferIn, void *pBufferOut,
+                            const uint32_t cipherLengthInBytes);
+void kasumi_f8_1_buffer_bit_avx(const kasumi_key_sched_t *pCtx,
+                                const uint64_t IV,
+                                const void *pBufferIn, void *pBufferOut,
+                                const uint32_t cipherLengthInBits,
+                                const uint32_t offsetInBits);
+void kasumi_f8_2_buffer_avx(const kasumi_key_sched_t *pCtx,
+                            const uint64_t IV1, const uint64_t IV2,
+                            const void *pBufferIn1, void *pBufferOut1,
+                            const uint32_t lengthInBytes1,
+                            const void *pBufferIn2, void *pBufferOut2,
+                            const uint32_t lengthInBytes2);
+void kasumi_f8_3_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
+                            const uint64_t IV2, const uint64_t IV3,
+                            const void *pBufferIn1, void *pBufferOut1,
+                            const void *pBufferIn2, void *pBufferOut2,
+                            const void *pBufferIn3, void *pBufferOut3,
+                            const uint32_t lengthInBytes);
+void kasumi_f8_4_buffer_avx(const kasumi_key_sched_t *pCtx,
+                            const uint64_t IV1, const uint64_t IV2,
+                            const uint64_t IV3, const uint64_t IV4,
+                            const void *pBufferIn1, void *pBufferOut1,
+                            const void *pBufferIn2, void *pBufferOut2,
+                            const void *pBufferIn3, void *pBufferOut3,
+                            const void *pBufferIn4, void *pBufferOut4,
+                            const uint32_t lengthInBytes);
+void kasumi_f8_n_buffer_avx(const kasumi_key_sched_t *pKeySchedule,
+                            const uint64_t IV[],
+                            const void *pDataIn[], void *pDataOut[],
+                            const uint32_t dataLen[], const uint32_t dataCount);
 
-void kasumi_f9_1_buffer_sse(kasumi_key_sched_t *pCtx, uint8_t *pBufferIn,
-                            uint32_t lengthInBytes, uint8_t *pDigest);
+void kasumi_f9_1_buffer_avx(const kasumi_key_sched_t *pCtx,
+                            const void *pBufferIn,
+                            const uint32_t lengthInBytes, void *pDigest);
 
-void kasumi_f9_1_buffer_user_sse(kasumi_key_sched_t *pCtx, uint64_t IV,
-                                 uint8_t *pBufferIn, uint32_t lengthInBits,
-                                 uint8_t *pDigest, uint32_t direction);
-
-void kasumi_f8_1_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV,
-                            uint8_t *pBufferIn, uint8_t *pBufferOut,
-                            uint32_t cipherLengthInBytes);
-void kasumi_f8_1_buffer_bit_avx(kasumi_key_sched_t *pCtx, uint64_t IV,
-                                uint8_t *pBufferIn, uint8_t *pBufferOut,
-                                uint32_t cipherLengthInBits,
-                                uint32_t offsetInBits);
-void kasumi_f8_2_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint8_t *pBufferIn1,
-                            uint8_t *pBufferOut1, uint32_t lengthInBytes1,
-                            uint8_t *pBufferIn2, uint8_t *pBufferOut2,
-                            uint32_t lengthInBytes2);
-void kasumi_f8_3_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint64_t IV3, uint8_t *pBufferIn1,
-                            uint8_t *pBufferOut1, uint8_t *pBufferIn2,
-                            uint8_t *pBufferOut2, uint8_t *pBufferIn3,
-                            uint8_t *pBufferOut3, uint32_t lengthInBytes);
-void kasumi_f8_4_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint64_t IV3, uint64_t IV4,
-                            uint8_t *pBufferIn1, uint8_t *pBufferOut1,
-                            uint8_t *pBufferIn2, uint8_t *pBufferOut2,
-                            uint8_t *pBufferIn3, uint8_t *pBufferOut3,
-                            uint8_t *pBufferIn4, uint8_t *pBufferOut4,
-                            uint32_t lengthInBytes);
-void kasumi_f8_n_buffer_avx(kasumi_key_sched_t *pKeySchedule, uint64_t IV[],
-                            uint8_t *pDataIn[], uint8_t *pDataOut[],
-                            uint32_t dataLen[], uint32_t dataCount);
-
-
-
-void kasumi_f9_1_buffer_avx(kasumi_key_sched_t *pCtx, uint8_t *pBufferIn,
-                            uint32_t lengthInBytes, uint8_t *pDigest);
-
-void kasumi_f9_1_buffer_user_avx(kasumi_key_sched_t *pCtx, uint64_t IV,
-                                 uint8_t *pBufferIn, uint32_t lengthInBits,
-                                 uint8_t *pDigest, uint32_t direction);
+void kasumi_f9_1_buffer_user_avx(const kasumi_key_sched_t *pCtx,
+                                 const uint64_t IV, const void *pBufferIn,
+                                 const uint32_t lengthInBits,
+                                 void *pDigest, const uint32_t direction);
 #endif /*_KASUMI_INTERNAL_H_*/
 

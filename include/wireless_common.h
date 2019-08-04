@@ -123,14 +123,14 @@ static inline void xor_keystream_reverse_32(uint8_t *pDst, uint8_t *pSrc,
  * @param pDst [IN] - pointer to the output buffer (at least 8 bytes available)
  * @param keyStream [IN] -  the Keystream value (8 bytes)
  ******************************************************************************/
-static inline uint8_t *xor_keystrm_rev(uint8_t *pDst, uint8_t *pSrc,
-                                       uint64_t keyStream)
+static inline const uint8_t *
+xor_keystrm_rev(uint8_t *pDst, const uint8_t *pSrc, uint64_t keyStream)
 {
         /* default: XOR ONLY, read the input buffer, update the output buffer */
-        uint64_t *pSrc64 = (uint64_t *)pSrc;
+        const uint64_t *pSrc64 = (const uint64_t *)pSrc;
         uint64_t *pDst64 = (uint64_t *)pDst;
-        *pDst64 = *pSrc64++ ^ BSWAP64(keyStream);
-        return (uint8_t *)pSrc64;
+        *pDst64 = *pSrc64 ^ BSWAP64(keyStream);
+        return (const uint8_t *)(pSrc64 + 1);
 }
 
 /******************************************************************************
@@ -142,11 +142,12 @@ static inline uint8_t *xor_keystrm_rev(uint8_t *pDst, uint8_t *pSrc,
  *                    available)
  * @param len  [IN] - length in bytes to copy
  ******************************************************************************/
-static inline void memcpy_keystrm(uint8_t *pDst, uint8_t *pSrc, uint32_t len)
+static inline void
+memcpy_keystrm(uint8_t *pDst, const uint8_t *pSrc, uint32_t len)
 {
         switch (len) {
         case 8:
-                *(uint64_t *)pDst = *(uint64_t *)pSrc;
+                *(uint64_t *)pDst = *(const uint64_t *)pSrc;
                 break;
         case 7:
                 pDst[6] = pSrc[6];
@@ -158,7 +159,7 @@ static inline void memcpy_keystrm(uint8_t *pDst, uint8_t *pSrc, uint32_t len)
                 pDst[4] = pSrc[4];
                 /* fall-through */
         case 4:
-                *(uint32_t *)pDst = *(uint32_t *)pSrc;
+                *(uint32_t *)pDst = *(const uint32_t *)pSrc;
                 break;
         case 3:
                 pDst[2] = pSrc[2];

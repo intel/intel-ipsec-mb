@@ -31,9 +31,10 @@
 #define SAVE_XMMS       save_xmms_avx
 #define RESTORE_XMMS    restore_xmms_avx
 
-void kasumi_f8_1_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV,
-                            uint8_t *pBufferIn, uint8_t *pBufferOut,
-                            uint32_t cipherLengthInBytes)
+void
+kasumi_f8_1_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                       const void *pBufferIn, void *pBufferOut,
+                       const uint32_t cipherLengthInBytes)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -47,10 +48,12 @@ void kasumi_f8_1_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV,
 #endif
 }
 
-void kasumi_f8_1_buffer_bit_avx(kasumi_key_sched_t *pCtx, uint64_t IV,
-                                uint8_t *pBufferIn, uint8_t *pBufferOut,
-                                uint32_t cipherLengthInBits,
-                                uint32_t offsetInBits)
+void
+kasumi_f8_1_buffer_bit_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                           const void *pBufferIn,
+                           void *pBufferOut,
+                           const uint32_t cipherLengthInBits,
+                           const uint32_t offsetInBits)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -64,11 +67,12 @@ void kasumi_f8_1_buffer_bit_avx(kasumi_key_sched_t *pCtx, uint64_t IV,
 #endif
 }
 
-void kasumi_f8_2_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint8_t *pBufferIn1,
-                            uint8_t *pBufferOut1, uint32_t lengthInBytes1,
-                            uint8_t *pBufferIn2, uint8_t *pBufferOut2,
-                            uint32_t lengthInBytes2)
+void
+kasumi_f8_2_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
+                       const uint64_t IV2, const void *pBufferIn1,
+                       void *pBufferOut1, const uint32_t lengthInBytes1,
+                       const void *pBufferIn2, void *pBufferOut2,
+                       const uint32_t lengthInBytes2)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -83,11 +87,13 @@ void kasumi_f8_2_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
 #endif
 }
 
-void kasumi_f8_3_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint64_t IV3, uint8_t *pBufferIn1,
-                            uint8_t *pBufferOut1, uint8_t *pBufferIn2,
-                            uint8_t *pBufferOut2, uint8_t *pBufferIn3,
-                            uint8_t *pBufferOut3, uint32_t lengthInBytes)
+void
+kasumi_f8_3_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
+                       const uint64_t IV2, const uint64_t IV3,
+                       const void *pBufferIn1, void *pBufferOut1,
+                       const void *pBufferIn2, void *pBufferOut2,
+                       const void *pBufferIn3, void *pBufferOut3,
+                       const uint32_t lengthInBytes)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -103,13 +109,15 @@ void kasumi_f8_3_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
 #endif
 }
 
-void kasumi_f8_4_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
-                            uint64_t IV2, uint64_t IV3, uint64_t IV4,
-                            uint8_t *pBufferIn1, uint8_t *pBufferOut1,
-                            uint8_t *pBufferIn2, uint8_t *pBufferOut2,
-                            uint8_t *pBufferIn3, uint8_t *pBufferOut3,
-                            uint8_t *pBufferIn4, uint8_t *pBufferOut4,
-                            uint32_t lengthInBytes)
+void
+kasumi_f8_4_buffer_avx(const kasumi_key_sched_t *pCtx,
+                       const uint64_t IV1, const uint64_t IV2,
+                       const uint64_t IV3, const uint64_t IV4,
+                       const void *pBufferIn1, void *pBufferOut1,
+                       const void *pBufferIn2, void *pBufferOut2,
+                       const void *pBufferIn3, void *pBufferOut3,
+                       const void *pBufferIn4, void *pBufferOut4,
+                       const uint32_t lengthInBytes)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -127,9 +135,11 @@ void kasumi_f8_4_buffer_avx(kasumi_key_sched_t *pCtx, uint64_t IV1,
 #endif
 }
 
-void kasumi_f8_n_buffer_avx(kasumi_key_sched_t *pKeySchedule, uint64_t IV[],
-                            uint8_t *pDataIn[], uint8_t *pDataOut[],
-                            uint32_t dataLen[], uint32_t dataCount)
+void
+kasumi_f8_n_buffer_avx(const kasumi_key_sched_t *pKeySchedule,
+                       const uint64_t IV[],
+                       const void *pDataIn[], void *pDataOut[],
+                       const uint32_t dataLen[], const uint32_t dataCount)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -137,10 +147,10 @@ void kasumi_f8_n_buffer_avx(kasumi_key_sched_t *pKeySchedule, uint64_t IV[],
         SAVE_XMMS(xmm_save);
 #endif
         uint32_t numLeft = dataCount;
-        uint64_t *IVPtr;
-        uint8_t **pDataInPtr;
-        uint8_t **pDataOutPtr;
-        uint32_t *dataLenPtr;
+        const uint64_t *IVPtr;
+        const void **pDataInPtr;
+        void **pDataOutPtr;
+        const uint32_t *dataLenPtr;
         uint32_t i = 0;
         uint32_t numBuffs;
 
@@ -163,8 +173,9 @@ void kasumi_f8_n_buffer_avx(kasumi_key_sched_t *pKeySchedule, uint64_t IV[],
 }
 
 
-void kasumi_f9_1_buffer_avx(kasumi_key_sched_t *pCtx, uint8_t *pBufferIn,
-                            uint32_t lengthInBytes, uint8_t *pDigest)
+void
+kasumi_f9_1_buffer_avx(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
+                       const uint32_t lengthInBytes, void *pDigest)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -177,9 +188,10 @@ void kasumi_f9_1_buffer_avx(kasumi_key_sched_t *pCtx, uint8_t *pBufferIn,
 #endif
 }
 
-void kasumi_f9_1_buffer_user_avx(kasumi_key_sched_t *pCtx, uint64_t IV,
-                                 uint8_t *pBufferIn, uint32_t lengthInBits,
-                                 uint8_t *pDigest, uint32_t direction)
+void
+kasumi_f9_1_buffer_user_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
+                            const void *pBufferIn, const uint32_t lengthInBits,
+                            void *pDigest, const uint32_t direction)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
