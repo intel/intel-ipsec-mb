@@ -875,6 +875,9 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                              buf_size, tag_size, ENCRYPT, &keys, iv) < 0)
                         goto exit;
 
+                /* Randomize memory for input digest */
+                generate_random_buf(in_digest, tag_size);
+
                 job = IMB_SUBMIT_JOB(enc_mb_mgr);
 
                 if (!job)
@@ -892,6 +895,10 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 }
 
                 job = IMB_GET_NEXT_JOB(dec_mb_mgr);
+
+                /* Randomize memory for input digest */
+                generate_random_buf(out_digest, tag_size);
+
                 /*
                  * Generate digest from encrypted message and decrypt
                  * using reference architecture
