@@ -1101,10 +1101,10 @@ test_cmac(struct MB_MGR *mb_mgr,
                         /* check for std or 3gpp vectors
                            scale len if necessary */
                         if (vec->type == CMAC)
-                                job->u.CMAC_BITLEN.msg_len_to_hash_in_bits =
+                                job->msg_len_to_hash_in_bits =
                                         vec->len * 8;
                         else
-                                job->u.CMAC_BITLEN.msg_len_to_hash_in_bits =
+                                job->msg_len_to_hash_in_bits =
                                         vec->len;
                 }
                 job->u.CMAC._key_expanded = expkey;
@@ -1163,11 +1163,9 @@ test_cmac(struct MB_MGR *mb_mgr,
                 } else {
                         job->hash_alg = AES_CMAC_BITLEN;
                         if (vec->type == CMAC)
-                                job->u.CMAC_BITLEN.msg_len_to_hash_in_bits =
-                                        vec->len * 8;
+                                job->msg_len_to_hash_in_bits = vec->len * 8;
                         else
-                                job->u.CMAC_BITLEN.msg_len_to_hash_in_bits =
-                                        vec->len;
+                                job->msg_len_to_hash_in_bits = vec->len;
                 }
                 job->u.CMAC._key_expanded = expkey;
                 job->u.CMAC._skey1 = skey1;

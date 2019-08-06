@@ -536,10 +536,15 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->u.CMAC._skey2 = k3;
                 break;
         case AES_CMAC_BITLEN:
-                job->u.CMAC_BITLEN._key_expanded = k1_expanded;
-                job->u.CMAC_BITLEN._skey1 = k2;
-                job->u.CMAC_BITLEN._skey2 = k3;
-                job->u.CMAC_BITLEN.msg_len_to_hash_in_bits =
+                job->u.CMAC._key_expanded = k1_expanded;
+                job->u.CMAC._skey1 = k2;
+                job->u.CMAC._skey2 = k3;
+                /*
+                 * CMAC bit level version is done in bits (length is
+                 * converted to bits and it is decreased by 4 bits,
+                 * to force the CMAC bitlen path)
+                 */
+                job->msg_len_to_hash_in_bits =
                         (job->msg_len_to_hash_in_bytes * 8) - 4;
                 break;
         case SHA1:

@@ -174,8 +174,8 @@ endstruc
         lea     m_last, [state + _aes_cmac_scratch + tmp]
 
         ;; calculate len
-        ;; convert bits to bytes
-        mov     len, [job + _cmac_msg_len_to_hash_in_bits]
+        ;; convert bits to bytes (message length in bits for CMAC)
+        mov     len, [job + _msg_len_to_hash_in_bits]
         mov     rbits, len
         add     len, 7      ; inc len if there are remainder bits
         shr     len, 3

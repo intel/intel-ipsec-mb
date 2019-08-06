@@ -316,12 +316,6 @@ typedef struct JOB_AES_HMAC {
                         const void *_skey1;
                         const void *_skey2;
                 } CMAC;
-                struct _AES_CMAC_BITLEN_specific_fields {
-                        const void *_key_expanded; /* 16-byte aligned */
-                        const void *_skey1;
-                        const void *_skey2;
-                        uint64_t msg_len_to_hash_in_bits;
-                } CMAC_BITLEN;
 #ifndef NO_GCM
                 struct _AES_GCM_specific_fields {
                         /* Additional Authentication Data (AAD) */

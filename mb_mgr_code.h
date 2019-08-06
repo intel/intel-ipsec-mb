@@ -690,8 +690,11 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         case AES_CCM:
                 return SUBMIT_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo, job);
         case AES_CMAC:
-                /* CMAC OOO MGR assumes job len in bits */
-                job->u.CMAC_BITLEN.msg_len_to_hash_in_bits =
+                /*
+                 * CMAC OOO MGR assumes job len in bits
+                 * (for CMAC length is provided in bytes)
+                 */
+                job->msg_len_to_hash_in_bits =
                         job->msg_len_to_hash_in_bytes * 8;
                 return SUBMIT_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo, job);
         case AES_CMAC_BITLEN:
@@ -1381,6 +1384,13 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case AES_CMAC:
+        case AES_CMAC_BITLEN:
+                /*
+                 * WARNING: When using AES_CMAC_BITLEN, length of message
+                 * is passed in bits, using job->msg_len_to_hash_in_bits
+                 * (unlike "normal" AES_CMAC, where is passed in bytes,
+                 * using job->msg_len_to_hash_in_bytes).
+                 */
                 if (job->src == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
@@ -1392,37 +1402,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 /* T is 128 bits but 96 bits is also allowed due to
-                 * IPsec use case (RFC 4494)
-                 */
-                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
-                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
-                }
-                if (job->auth_tag_output == NULL) {
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
-                }
-                break;
-        case AES_CMAC_BITLEN:
-                /*
-                 * WARNING: job->msg_len_to_hash_in_bytes is ignored
-                 * for the AES_CMAC_BITLEN hash algorithm type.
-                 * job->u.CMAC_BITLEN.msg_len_to_hash_in_bits should
-                 * be used to set message length instead.
-                 */
-                if (job->src == NULL) {
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
-                }
-                if ((job->u.CMAC_BITLEN._key_expanded == NULL) ||
-                    (job->u.CMAC_BITLEN._skey1 == NULL) ||
-                    (job->u.CMAC_BITLEN._skey2 == NULL)) {
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
-                }
-                /*
-                 * T is 4 bytes but up to 16 bytes is allowed
+                 * IPsec use case (RFC 4494) and 32 bits for CMAC 3GPP.
                  */
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {

@@ -74,7 +74,6 @@ START_FIELDS	; AES CMAC Specific Fields
 FIELD	__key_expanded,			8,	8	; ptr to exp keys
 FIELD	__skey1,			8,	8	; ptr to subkey 1
 FIELD	__skey2,			8,	8	; ptr to subkey 2
-FIELD   __msg_len_to_hash_in_bits,      8,      8       ; msg len
 END_FIELDS
 
 %assign _AES_CMAC_spec_fields_size	_FIELD_OFFSET
@@ -140,7 +139,6 @@ END_FIELDS
 %assign _key_expanded		        _u + __key_expanded
 %assign _skey1			        _u + __skey1
 %assign _skey2			        _u + __skey2
-%assign _cmac_msg_len_to_hash_in_bits   _u + __msg_len_to_hash_in_bits
 %assign _gcm_aad	                _u + __gcm_aad
 %assign _gcm_aad_len	                _u + __gcm_aad_len
 

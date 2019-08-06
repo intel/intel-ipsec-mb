@@ -1023,10 +1023,15 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.hash_alg = AES_CMAC;
                 break;
         case TEST_HASH_CMAC_BITLEN:
-                job_template.u.CMAC_BITLEN._key_expanded = k1_expanded;
-                job_template.u.CMAC_BITLEN._skey1 = k2;
-                job_template.u.CMAC_BITLEN._skey2 = k3;
-                job_template.u.CMAC_BITLEN.msg_len_to_hash_in_bits =
+                job_template.u.CMAC._key_expanded = k1_expanded;
+                job_template.u.CMAC._skey1 = k2;
+                job_template.u.CMAC._skey2 = k3;
+                /*
+                 * CMAC bit level version is done in bits (length is
+                 * converted to bits and it is decreased by 4 bits,
+                 * to force the CMAC bitlen path)
+                 */
+                job_template.msg_len_to_hash_in_bits =
                         (job_template.msg_len_to_hash_in_bytes * 8) - 4;
                 job_template.hash_alg = AES_CMAC_BITLEN;
                 break;
