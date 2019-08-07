@@ -264,17 +264,25 @@ typedef struct JOB_AES_HMAC {
         uint8_t *dst; /*Output. May be cipher text or plaintext.
                        * In-place ciphering allowed, i.e. dst = src. */
         uint64_t cipher_start_src_offset_in_bytes;
-        uint64_t msg_len_to_cipher_in_bytes; /* Max len = 65472 bytes.
-                                              * IPSec case, the maximum cipher
-                                              * length would be:
-                                              * 65535 -
-                                              * 20 (outer IP header) -
-                                              * 24 (ESP header + IV) -
-                                              * 12 (supported ICV length) */
+        /* Max len = 65472 bytes.
+         * IPSec case, the maximum cipher
+         * length would be:
+         * 65535 -
+         * 20 (outer IP header) -
+         * 24 (ESP header + IV) -
+         * 12 (supported ICV length) */
+        union {
+                uint64_t msg_len_to_cipher_in_bytes;
+                uint64_t msg_len_to_cipher_in_bits;
+        };
         uint64_t hash_start_src_offset_in_bytes;
-        uint64_t msg_len_to_hash_in_bytes; /* Max len = 65496 bytes.
-                                            * (Max cipher len +
-                                            * 24 bytes ESP header) */
+        /* Max len = 65496 bytes.
+         * (Max cipher len +
+         * 24 bytes ESP header) */
+        union {
+                uint64_t msg_len_to_hash_in_bytes;
+                uint64_t msg_len_to_hash_in_bits;
+        };
         const uint8_t *iv; /* AES IV. */
         uint64_t iv_len_in_bytes; /* AES IV length in bytes. */
         uint8_t *auth_tag_output; /* HMAC Tag output. This may point to
