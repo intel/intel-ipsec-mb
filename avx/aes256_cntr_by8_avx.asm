@@ -27,6 +27,7 @@
 
 %include "include/os.asm"
 %include "include/memcpy.asm"
+%include "include/const.inc"
 
 ; routine to do AES256 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
@@ -42,6 +43,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define xdata1	xmm1
 %define xpart	xmm1
 %define xdata2	xmm2
+%define xtmp    xmm2
 %define xdata3	xmm3
 %define xdata4	xmm4
 %define xdata5	xmm5
@@ -62,6 +64,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define p_keys	  rdx
 %define p_out	  rcx
 %define num_bytes r8
+%define num_bits  r8
 %define p_ivlen   r9
 %else
 %define p_in	  rcx
@@ -69,24 +72,30 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define p_keys	  r8
 %define p_out	  r9
 %define num_bytes r10
+%define num_bits  r10
 %define p_ivlen   qword [rsp + 8*6]
 %endif
 
 %define tmp	r11
 
-%macro do_aes_load 1
-	do_aes %1, 1
+%define r_bits   r12
+%define tmp2    r13
+%define mask    r14
+
+%macro do_aes_load 2
+	do_aes %1, %2, 1
 %endmacro
 
-%macro do_aes_noload 1
-	do_aes %1, 0
+%macro do_aes_noload 2
+	do_aes %1, %2, 0
 %endmacro
 
 ; do_aes num_in_par load_keys
 ; This increments p_in, but not p_out
-%macro do_aes 2
+%macro do_aes 3
 %define %%by %1
-%define %%load_keys %2
+%define %%cntr_type %2
+%define %%load_keys %3
 
 %if (%%load_keys)
 	vmovdqa	xkey0, [p_keys + 0*16]
@@ -103,7 +112,12 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 	vmovdqa	xkeyA, [p_keys + 1*16]
 
 	vpxor	xdata0, xkey0
+%ifidn %%cntr_type, CNTR_BIT
 	vpaddd	xcounter, xcounter, [rel CONCAT(ddq_add_,%%by)]
+%else
+	vpaddq	xcounter, xcounter, [rel CONCAT(ddq_add_,%%by)]
+%endif
+
 %assign i 1
 %rep (%%by - 1)
 	vpxor	CONCAT(xdata,i), xkey0
@@ -241,111 +255,156 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 section .text
-
-;; aes_cntr_256_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
-align 32
-MKGLOBAL(aes_cntr_256_avx,function,internal)
-aes_cntr_256_avx:
+;; Macro performing AES-CTR.
+;;
+%macro DO_CNTR 1
+%define %%CNTR_TYPE %1 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CCM)
 
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
 %endif
 
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        push r12
+        push r13
+        push r14
+%endif
+
 	vmovdqa	xbyteswap, [rel byteswap_const]
+%ifidn %%CNTR_TYPE, CNTR
         test    p_ivlen, 16
-        jnz     iv_is_16_bytes
+        jnz     %%iv_is_16_bytes
         ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
         mov     DWORD(tmp), 0x01000000
         vpinsrq xcounter, [p_IV], 0
         vpinsrd xcounter, [p_IV + 8], 2
         vpinsrd xcounter, DWORD(tmp), 3
-bswap_iv:
+
+%else ;; CNTR_BIT
+        ; Read 16 byte IV: Nonce + 8-byte block counter (BE)
+        vmovdqu xcounter, [p_IV]
+%endif
+%%bswap_iv:
 	vpshufb	xcounter, xbyteswap
+
+        ;; calculate len
+        ;; convert bits to bytes (message length in bits for CNTR_BIT)
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        mov     r_bits, num_bits
+        shr     num_bits, 3 ; "num_bits" and "num_bytes" registers are the same
+        and     r_bits, 7   ; Check if there are remainder bits (0-7)
+%endif
 
 	mov	tmp, num_bytes
 	and	tmp, 7*16
-	jz	chk             ; x8 > or < 15 (not 7 lines)
+	jz	%%chk             ; x8 > or < 15 (not 7 lines)
 
 	; 1 <= tmp <= 7
 	cmp	tmp, 4*16
-	jg	gt4
-	je	eq4
+	jg	%%gt4
+	je	%%eq4
 
-lt4:
+%%lt4:
 	cmp	tmp, 2*16
-	jg	eq3
-	je	eq2
-eq1:
-	do_aes_load	1
+	jg	%%eq3
+	je	%%eq2
+%%eq1:
+	do_aes_load	1, %%CNTR_TYPE
 	add	p_out, 1*16
-	jmp	chk
+	jmp	%%chk
 
-eq2:
-	do_aes_load	2
+%%eq2:
+	do_aes_load	2, %%CNTR_TYPE
 	add	p_out, 2*16
-	jmp	chk
+	jmp	%%chk
 
-eq3:
-	do_aes_load	3
+%%eq3:
+	do_aes_load	3, %%CNTR_TYPE
 	add	p_out, 3*16
-	jmp	chk
+	jmp	%%chk
 
-eq4:
-	do_aes_load	4
+%%eq4:
+	do_aes_load	4, %%CNTR_TYPE
 	add	p_out, 4*16
-	jmp	chk
+	jmp	%%chk
 
-gt4:
+%%gt4:
 	cmp	tmp, 6*16
-	jg	eq7
-	je	eq6
+	jg	%%eq7
+	je	%%eq6
 
-eq5:
-	do_aes_load	5
+%%eq5:
+	do_aes_load	5, %%CNTR_TYPE
 	add	p_out, 5*16
-	jmp	chk
+	jmp	%%chk
 
-eq6:
-	do_aes_load	6
+%%eq6:
+	do_aes_load	6, %%CNTR_TYPE
 	add	p_out, 6*16
-	jmp	chk
+	jmp	%%chk
 
-eq7:
-	do_aes_load	7
+%%eq7:
+	do_aes_load	7, %%CNTR_TYPE
 	add	p_out, 7*16
 	; fall through to chk
-chk:
+%%chk:
 	and	num_bytes, ~(7*16)
-	jz	do_return2
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        jz      %%check_rbits
+%else
+	jz	%%do_return2
+%endif
 
         cmp	num_bytes, 16
-        jb	last
+        jb	%%last
 
 	; process multiples of 8 blocks
 	vmovdqa	xkey0, [p_keys + 0*16]
 	vmovdqa	xkey4, [p_keys + 4*16]
 	vmovdqa	xkey8, [p_keys + 8*16]
 	vmovdqa	xkey12, [p_keys + 12*16]
-	jmp	main_loop2
+	jmp	%%main_loop2
 
 align 32
-main_loop2:
-	; num_bytes is a multiple of 8 and >0
-	do_aes_noload	8
+%%main_loop2:
+	; num_bytes is a multiple of 8 blocks + partial bytes
+	do_aes_noload	8, %%CNTR_TYPE
 	add	p_out,	8*16
 	sub	num_bytes, 8*16
         cmp	num_bytes, 8*16
-	jae	main_loop2
+	jae	%%main_loop2
 
-	test	num_bytes, 15	; partial bytes to be processed?
-	jnz	last
+        ; Check if there is a partial block
+        or      num_bytes, num_bytes
+        jnz	%%last
 
-do_return2:
+%%check_rbits:
+;; Check here for number of remaining bits, in case there are no "full" bytes
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        or      r_bits, r_bits
+        jnz     %%last
+%endif
+
+%%do_return2:
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        pop r14
+        pop r13
+        pop r12
+%endif
+
 	ret
 
-last:
+%%last:
+
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        ;; Do not load another block if there is only a partial byte left
+        or      num_bytes, num_bytes
+        jz     %%final_ctr_enc
+%endif
 	; load partial block into XMM register
 	simd_load_avx_15_1 xpart, p_in, num_bytes
+
+%%final_ctr_enc:
 	; Encryption of a single partial block
         vpshufb	xcounter, xbyteswap
         vmovdqa	xdata0, xcounter
@@ -357,16 +416,85 @@ last:
 %endrep
 	; created keystream
         vaesenclast xdata0, [p_keys + 16*i]
-	; xor keystream with the message (scratch)
-        vpxor   xdata0, xpart
-	; copy result into the output buffer
-        simd_store_avx p_out, xdata0, num_bytes, tmp, rax
-        jmp	do_return2
 
-iv_is_16_bytes:
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        ;; Do not store another block if there is only a partial byte left
+        or      num_bytes, num_bytes
+        jz      %%encrypt_last_bits
+%endif
+	; xor keystream with the message (scratch)
+        vpxor   xpart, xdata0
+	; copy result into the output buffer
+	simd_store_avx p_out, xpart, num_bytes, tmp, rax
+
+%%encrypt_last_bits:
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        or      r_bits, r_bits
+        jz      %%do_return2
+
+        ;; Shift the byte from the encrypted counter block to use to the LSB
+        XVPSRLB xdata0, num_bytes, xtmp, tmp2
+
+        ;; There are bits remaining, need to read another byte from input
+        ;; and output and XOR input with encrypted CTR block, preserving
+        ;; the ouput bits that are not to be ciphered
+
+        ;; Save RCX in temporary XMM register
+        vmovq   xtmp, rcx
+        mov     DWORD(mask), 0xff
+%ifidn r_bits, rcx
+%error "r_bits cannot be mapped to rcx!"
+%endif
+        mov     cl, BYTE(r_bits)
+        shr     DWORD(mask), cl   ;; e.g. 3 remaining bits -> mask = 00011111
+        vmovq   rcx, xtmp
+
+        mov     BYTE(tmp), [p_out + num_bytes]
+        and     BYTE(tmp), BYTE(mask) ;; Keep only bits not to be ciphered
+        vpextrb tmp2, xdata0, 0
+        not     mask    ;; e.g. 3 remaining bits -> mask = 11100000
+
+        ;; Keep first bits that will XOR with input "valid" bits
+        and     BYTE(tmp2), BYTE(mask)
+        or      BYTE(tmp), BYTE(tmp2)
+
+        ;; Zero out "non-valid" bits
+        mov     BYTE(tmp2), [p_in + num_bytes]
+        and     BYTE(tmp2), BYTE(mask)
+
+        ;; OUT = (IN | 0s)  XOR (ENC CTR block | OUT)
+        xor     BYTE(tmp), BYTE(tmp2)
+        mov     [p_out + num_bytes], BYTE(tmp)
+%endif
+
+        jmp	%%do_return2
+
+%%iv_is_16_bytes:
         ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
         vmovdqu xcounter, [p_IV]
-        jmp     bswap_iv
+        jmp     %%bswap_iv
+%endmacro
+
+align 32
+%ifdef CNTR_CCM_AVX
+; JOB_AES_HMAC * aes_cntr_ccm_256_avx(JOB_AES_HMAC *job)
+; arg 1 : job
+MKGLOBAL(aes_cntr_ccm_256_avx,function,internal)
+aes_cntr_ccm_256_avx:
+	DO_CNTR CCM
+%else
+;; aes_cntr_256_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes,
+;;                  UINT64 iv_len)
+MKGLOBAL(aes_cntr_256_avx,function,internal)
+aes_cntr_256_avx:
+	DO_CNTR CNTR
+
+;; aes_cntr_bit_256_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bits,
+;;                  UINT64 iv_len)
+MKGLOBAL(aes_cntr_bit_256_avx,function,internal)
+aes_cntr_bit_256_avx:
+	DO_CNTR CNTR_BIT
+%endif ;; CNTR_CCM_AVX
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

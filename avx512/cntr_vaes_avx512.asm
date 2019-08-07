@@ -34,6 +34,7 @@
 %include "include/memcpy.asm"
 
 %include "include/aes_common.asm"
+%include "include/const.inc"
 
 section .data
 default rel
@@ -184,9 +185,9 @@ default rel
 ;;; Stack frame definition
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %ifidn __OUTPUT_FORMAT__, win64
-        %define GP_STORAGE      (6*8)  ; space for 6 GP registers
+        %define GP_STORAGE      (7*8)  ; space for 7 GP registers
 %else
-        %define GP_STORAGE      (4*8)  ; space for 4 GP registers
+        %define GP_STORAGE      (5*8)  ; space for 5 GP registers
 %endif
 
 %define STACK_FRAME_SIZE        GP_STORAGE
@@ -196,6 +197,81 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; This macro is used to maintain the bits from the output text
+;;; when writing out the output blocks, in case there are some bits
+;;; that do not require encryption
+%macro PRESERVE_BITS            12-13
+%define %%RBITS                 %1      ; [in] Remaining bits in last byte
+%define %%LENGTH                %2      ; [in] Length of the last set of blocks
+%define %%CYPH_PLAIN_OUT        %3      ; [in] Pointer to output buffer
+%define %%ZIN_OUT               %4      ; [in/out] ZMM with last set of output blocks
+%define %%ZTMP0                 %5      ; [clobbered] ZMM temporary
+%define %%ZTMP1                 %6      ; [clobbered] ZMM temporary
+%define %%ZTMP2                 %7      ; [clobbered] ZMM temporary
+%define %%IA0                   %8      ; [clobbered] GP temporary
+%define %%IA1                   %9      ; [clobbered] GP temporary
+%define %%blocks_to_skip        %10     ; [in] Number of blocks to skip from output
+%define %%FULL_PARTIAL          %11     ; [in] Last block type selection "full" or "partial"
+%define %%MASKREG               %12     ; [clobbered] Mask register
+%define %%DATA_OFFSET           %13     ; [in/out] Data offset
+%define %%NUM_ARGS              %0
+
+;; offset = number of sets of 4 blocks to skip
+%assign offset (((%%blocks_to_skip) / 4) * 64)
+;; num_left_blocks = number of blocks in the last set
+%assign num_left_blocks (((%%blocks_to_skip) & 3) + 1) ;; Range 1-4 blocks
+
+%if %%NUM_ARGS == 13
+        ;; Load output to get last partial byte
+%ifidn %%FULL_PARTIAL, partial
+        vmovdqu8        %%ZTMP0{%%MASKREG}, [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + offset]
+%else
+        vmovdqu8        %%ZTMP0, [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + offset]
+%endif ; %%FULL_PARTIAL == partial
+%else
+        ;; Load output to get last partial byte (loading up to the last 4 blocks)
+        ZMM_LOAD_MASKED_BLOCKS_0_16 num_left_blocks, %%CYPH_PLAIN_OUT, offset, \
+                        %%ZTMP0, no_zmm, no_zmm, no_zmm, %%MASKREG
+%endif ;; %%NUM_ARGS == 13
+
+        ;; Save RCX in temporary GP register
+        mov             %%IA0, rcx
+        mov             DWORD(%%IA1), 0xff
+        mov             cl, BYTE(%%RBITS)
+        shr             DWORD(%%IA1), cl ;; e.g. 3 remaining bits -> mask = 00011111
+        mov             rcx, %%IA0
+
+        vmovq           XWORD(%%ZTMP1), %%IA1
+
+        ;; Get number of full bytes in last block.
+        ;; Subtracting the bytes in the blocks to skip to the length of whole
+        ;; set of blocks gives us the number of bytes in the last block,
+        ;; but the last block has a partial byte at the end, so an extra byte
+        ;; needs to be subtracted
+        mov             %%IA1, %%LENGTH
+        sub             %%IA1, (%%blocks_to_skip * 16 + 1)
+        XVPSLLB         XWORD(%%ZTMP1), %%IA1, XWORD(%%ZTMP2), %%IA0
+%if num_left_blocks == 4
+        vshufi64x2      %%ZTMP1, %%ZTMP1, %%ZTMP1, 0x15
+%elif num_left_blocks == 3
+        vshufi64x2      %%ZTMP1, %%ZTMP1, %%ZTMP1, 0x45
+%elif num_left_blocks == 2
+        vshufi64x2      %%ZTMP1, %%ZTMP1, %%ZTMP1, 0x51
+%endif ;; No need to shift if there is only one block
+
+        ;; At this point, ZTMP1 contains a mask with all 0s, but with some ones
+        ;; in the partial byte
+
+        ;; First, clear the last bits (not to be ciphered) of the last output block
+        ;; %%ZIN_OUT = %%ZIN_OUT AND NOT %%ZTMP1  (0x50 = andA!C)
+        vpternlogq      %%ZIN_OUT, %%ZTMP1, %%ZTMP1, 0x50
+
+        ;; Then, set these last bits to the last bits coming from the output
+        ;; %%ZIN_OUT = %%ZIN_OUT OR (%%ZTMP0 AND %%ZTMP1)  (0xF8 = orAandBC)
+        vpternlogq      %%ZIN_OUT, %%ZTMP0, %%ZTMP1, 0xF8
+
+%endmacro
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; This macro is used to "warm-up" pipeline for ENCRYPT_16_PARALLEL
 ;;; macro code. It is called only for data lengths 256 and above.
 ;;; The flow is as follows:
@@ -204,7 +280,7 @@ default rel
 ;;;   - the last 16th block can be partial (lengths between 257 and 367)
 ;;;   - partial block ciphering is handled within this macro
 
-%macro INITIAL_BLOCKS 24
+%macro INITIAL_BLOCKS 26
 %define %%KEY                   %1      ; [in] pointer to key
 %define %%CYPH_PLAIN_OUT        %2      ; [in] output buffer
 %define %%PLAIN_CYPH_IN         %3      ; [in] input buffer
@@ -229,6 +305,8 @@ default rel
 %define %%MASKREG               %22     ; [clobbered] mask register
 %define %%SHUFREG               %23     ; [in] ZMM register with shuffle mask
 %define %%NROUNDS               %24     ; [in] number of rounds; numerical value
+%define %%CNTR_TYPE             %25     ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%RBITS                 %26     ; [in] Number of remaining bits in last byte
 
 %define %%T1 XWORD(%%ZT1)
 %define %%T2 XWORD(%%ZT2)
@@ -239,7 +317,11 @@ default rel
 %define %%T7 XWORD(%%ZT7)
 %define %%T8 XWORD(%%ZT8)
 
-
+%ifidn %%CNTR_TYPE, CNTR
+%define %%VPADD vpaddd
+%else
+%define %%VPADD vpaddq
+%endif
 
 %if %%num_initial_blocks > 0
         ;; load plain/cipher text
@@ -250,25 +332,25 @@ default rel
 %if %%num_initial_blocks > 1
 %if %%num_initial_blocks == 2
         vshufi64x2      YWORD(%%ZT1), YWORD(%%CTR), YWORD(%%CTR), 0
-        vpaddd          YWORD(%%ZT1), YWORD(%%ZT1), [rel ddq_add_0_3]
+        %%VPADD         YWORD(%%ZT1), YWORD(%%ZT1), [rel ddq_add_0_3]
 %elif %%num_initial_blocks <= 4
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD         %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
 %elif %%num_initial_blocks <= 8
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
+        %%VPADD         %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD         %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
 %elif %%num_initial_blocks <= 12
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
-        vpaddd          %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
+        %%VPADD         %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD         %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
+        %%VPADD         %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
 %else
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
-        vpaddd          %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
-        vpaddd          %%ZT4, ZWORD(%%CTR), [rel ddq_add_12_15]
+        %%VPADD         %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD         %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
+        %%VPADD         %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
+        %%VPADD         %%ZT4, ZWORD(%%CTR), [rel ddq_add_12_15]
 %endif
 %endif
 
@@ -415,6 +497,22 @@ default rel
 %assign j (j + 1)
 %endrep
 
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        ;; check if this is the end of the message
+        cmp             %%LENGTH, 256
+        jg              %%store_output
+        ;; Check if there is a partial byte
+        or              %%RBITS, %%RBITS
+        jz              %%store_output
+
+        ;; Copy the bits that are not ciphered from the output text,
+        ;; into the last bits of the output block, before writing it out
+        PRESERVE_BITS   %%RBITS, %%LENGTH, %%CYPH_PLAIN_OUT, %%ZT4, %%ZT5, %%ZT6, %%ZT7, \
+                        %%IA0, %%IA1, 15, partial, %%MASKREG, %%DATA_OFFSET
+
+%endif
+
+%%store_output:
         ;; write cipher/plain text back to output
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64], %%ZT2
@@ -445,11 +543,11 @@ default rel
 ;;;
 ;;; num_initial_blocks is expected to include the partial final block
 ;;; in the count.
-%macro INITIAL_BLOCKS_PARTIAL 19
+%macro INITIAL_BLOCKS_PARTIAL 21
 %define %%KEY                   %1  ; [in] key pointer
 %define %%CYPH_PLAIN_OUT        %2  ; [in] text out pointer
 %define %%PLAIN_CYPH_IN         %3  ; [in] text out pointer
-%define %%LENGTH                %4  ; [in] length in bytes
+%define %%LENGTH                %4  ; [in/clobbered] length in bytes
 %define %%num_initial_blocks    %5  ; [in] can be from 1 to 16 (not 0)
 %define %%CTR                   %6  ; [in/out] current counter value
 %define %%ZT1                   %7  ; [clobbered] ZMM temporary
@@ -465,6 +563,8 @@ default rel
 %define %%MASKREG               %17 ; [clobbered] mask register
 %define %%SHUFREG               %18 ; [in] ZMM register with shuffle mask
 %define %%NROUNDS               %19 ; [in] number of rounds; numerical value
+%define %%CNTR_TYPE             %20 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%RBITS                 %21 ; [in] Number of remaining bits in last byte
 
 %define %%T1 XWORD(%%ZT1)
 %define %%T2 XWORD(%%ZT2)
@@ -533,6 +633,34 @@ default rel
 %assign j (j + 1)
 %endrep
 
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        ;; Check if there is a partial byte
+        or              %%RBITS, %%RBITS
+        jz              %%store_output
+
+        ;; Copy the bits that are not ciphered from the output text,
+        ;; into the last bits of the output block, before writing it out
+%if %%num_initial_blocks <= 4
+        PRESERVE_BITS   %%RBITS, %%LENGTH, %%CYPH_PLAIN_OUT, %%ZT1, %%ZT5, %%ZT6, %%ZT7, \
+                        %%IA0, %%IA1, (%%num_initial_blocks - 1), \
+                        partial, %%MASKREG
+%elif %%num_initial_blocks <= 8
+        PRESERVE_BITS   %%RBITS, %%LENGTH, %%CYPH_PLAIN_OUT, %%ZT2, %%ZT5, %%ZT6, %%ZT7, \
+                        %%IA0, %%IA1, (%%num_initial_blocks - 1), \
+                        partial, %%MASKREG
+%elif %%num_initial_blocks <= 12
+        PRESERVE_BITS   %%RBITS, %%LENGTH, %%CYPH_PLAIN_OUT, %%ZT3, %%ZT5, %%ZT6, %%ZT7, \
+                        %%IA0, %%IA1, (%%num_initial_blocks - 1), \
+                        partial, %%MASKREG
+%else
+        PRESERVE_BITS   %%RBITS, %%LENGTH, %%CYPH_PLAIN_OUT, %%ZT4, %%ZT5, %%ZT6, %%ZT7, \
+                        %%IA0, %%IA1, (%%num_initial_blocks - 1), \
+                        partial, %%MASKREG
+%endif
+
+%endif
+
+%%store_output:
         ;; write cipher/plain text back to output
         ZMM_STORE_MASKED_BLOCKS_0_16 %%num_initial_blocks, %%CYPH_PLAIN_OUT, 0, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%MASKREG
@@ -545,7 +673,7 @@ default rel
 ;;; Main CNTR macro
 ;;; - operates on single stream
 ;;; - encrypts 16 blocks at a time
-%macro  ENCRYPT_16_PARALLEL 24
+%macro  ENCRYPT_16_PARALLEL 26
 %define %%KEY                   %1  ; [in] key pointer
 %define %%CYPH_PLAIN_OUT        %2  ; [in] pointer to output buffer
 %define %%PLAIN_CYPH_IN         %3  ; [in] pointer to input buffer
@@ -570,6 +698,8 @@ default rel
 %define %%SHUFREG               %22 ; [in] ZMM register with shuffle mask
 %define %%ADD8REG               %23 ; [in] ZMM register with increment by 8 mask
 %define %%NROUNDS               %24 ; [in] number of rounds; numerical value
+%define %%CNTR_TYPE             %25 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%RBITS                 %26 ; [in] Number of remaining bits in last byte
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; load/store mask (partial case) and load the text data
@@ -610,6 +740,23 @@ default rel
 %assign j (j + 1)
 %endrep
 
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        ;; Check if this is the last round
+        cmp             %%LENGTH, 256
+        jg              %%store_output
+        ;; Check if there is a partial byte
+        or              %%RBITS, %%RBITS
+        jz              %%store_output
+
+        ;; Copy the bits that are not ciphered from the output text,
+        ;; into the last bits of the output block, before writing it out
+        PRESERVE_BITS   %%RBITS, %%LENGTH, %%CYPH_PLAIN_OUT, %%ZT4, %%ZT5, %%ZT6, %%ZT7, \
+                        %%IA0, %%IA1, 15, %%FULL_PARTIAL, %%MASKREG, %%DATA_OFFSET
+
+%endif
+
+%%store_output:
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store the text data
 %ifidn %%FULL_PARTIAL, full
@@ -628,7 +775,8 @@ default rel
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Save register content for the caller
-%macro FUNC_SAVE 0
+%macro FUNC_SAVE 1
+%define %%CNTR_TYPE         %1  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
         mov     rax, rsp
 
         sub     rsp, STACK_FRAME_SIZE
@@ -636,10 +784,13 @@ default rel
 
         mov     [rsp + 0*8], r12
         mov     [rsp + 1*8], r13
-        mov     [rsp + 2*8], rax ; stack
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        mov     [rsp + 2*8], r14
+%endif
+        mov     [rsp + 3*8], rax ; stack
 %ifidn __OUTPUT_FORMAT__, win64
-        mov     [rsp + 3*8], rdi
-        mov     [rsp + 4*8], rsi
+        mov     [rsp + 4*8], rdi
+        mov     [rsp + 5*8], rsi
 %endif
 
 %endmacro
@@ -647,16 +798,20 @@ default rel
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Restore register content for the caller
-%macro FUNC_RESTORE 0
+%macro FUNC_RESTORE 1
+%define %%CNTR_TYPE         %1  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
 
         vzeroupper
 %ifidn __OUTPUT_FORMAT__, win64
-        mov     rdi, [rsp + 3*8]
-        mov     rsi, [rsp + 4*8]
+        mov     rdi, [rsp + 4*8]
+        mov     rsi, [rsp + 5*8]
 %endif
         mov     r12, [rsp + 0*8]
         mov     r13, [rsp + 1*8]
-        mov     rsp, [rsp + 2*8] ; stack
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        mov     [rsp + 2*8], r14
+%endif
+        mov     rsp, [rsp + 3*8] ; stack
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -664,7 +819,7 @@ default rel
 ;;; - number of blocks in the message comes as argument
 ;;; - depending on the number of blocks an optimized variant of
 ;;;   INITIAL_BLOCKS_PARTIAL is invoked
-%macro  CNTR_ENC_DEC_SMALL   19
+%macro  CNTR_ENC_DEC_SMALL   21
 %define %%KEY               %1  ; [in] key pointer
 %define %%CYPH_PLAIN_OUT    %2  ; [in] output buffer
 %define %%PLAIN_CYPH_IN     %3  ; [in] input buffer
@@ -684,6 +839,8 @@ default rel
 %define %%MASKREG           %17 ; [clobbered] mask register
 %define %%SHUFREG           %18 ; [in] ZMM register with shuffle mask
 %define %%NROUNDS           %19 ; [in] number of rounds; numerical value
+%define %%CNTR_TYPE         %20 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%RBITS             %21 ; [in] Number of remaining bits in last byte
 
         cmp     %%NUM_BLOCKS, 8
         je      %%_small_initial_num_blocks_is_8
@@ -740,7 +897,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_15:
@@ -749,7 +907,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_14:
@@ -758,7 +917,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_13:
@@ -767,7 +927,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_12:
@@ -776,7 +937,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_11:
@@ -785,7 +947,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_10:
@@ -794,7 +957,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_9:
@@ -803,7 +967,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 %%_small_initial_num_blocks_is_8:
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
@@ -811,7 +976,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_7:
@@ -820,7 +986,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_6:
@@ -829,7 +996,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_5:
@@ -838,7 +1006,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_4:
@@ -847,7 +1016,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_3:
@@ -856,7 +1026,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_2:
@@ -865,7 +1036,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_1:
@@ -874,7 +1046,8 @@ default rel
                 %%CTR, \
                 %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                 %%ZTMP6, %%ZTMP7, %%ZTMP8, \
-                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
 %%_small_initial_blocks_encrypted:
 
 %endmacro                       ; CNTR_ENC_DEC_SMALL
@@ -885,15 +1058,17 @@ default rel
 ; Input: job structure and number of AES rounds
 ; Output: job structure
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CNTR_ENC_DEC         2
+%macro  CNTR_ENC_DEC         3
 %define %%JOB               %1  ; [in/out] job
 %define %%NROUNDS           %2  ; [in] number of rounds; numerical value
+%define %%CNTR_TYPE         %3  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
 
 %define %%KEY               rax
 %define %%CYPH_PLAIN_OUT    rdx
 %define %%PLAIN_CYPH_IN     r8
 %define %%LENGTH            r9
 %define %%DATA_OFFSET       r13
+%define %%RBITS             r14
 
 %define %%IA0               r10
 %define %%IA1               r11
@@ -923,7 +1098,16 @@ default rel
 ;;; - process (number of 16byte blocks) mod 16 '%%_initial_num_blocks_is_# .. %%_initial_blocks_encrypted'
 ;;; - process 16x16 byte blocks at a time until all are done in %%_encrypt_by_16_new
 
-        mov             %%LENGTH, [%%JOB + _msg_len_to_cipher_in_bytes]
+        mov             %%LENGTH, [%%JOB + _msg_len_to_cipher]
+        ;; calculate len
+        ;; convert bits to bytes (message length in bits for CNTR_BIT)
+%ifidn %%CNTR_TYPE, CNTR_BIT
+        mov     %%RBITS, %%LENGTH
+        add     %%LENGTH, 7
+        shr     %%LENGTH, 3  ; LENGTH will hold number of bytes (including partial byte)
+        and     %%RBITS, 7   ; Get remainder bits in last byte (0-7)
+%endif
+
 %ifidn __OUTPUT_FORMAT__, win64
         cmp             %%LENGTH, 0
 %else
@@ -945,6 +1129,8 @@ default rel
 %assign i (i + 1)
 %endrep
 
+        mov             %%IA1, [%%JOB + _iv]
+%ifidn %%CNTR_TYPE, CNTR
         ;; Prepare initial mask to read 12 IV bytes
         mov             %%IA0, 0x0000_0000_0000_0fff
         vmovdqa         %%CTR_BLOCKx, [rel initial_12_IV_counter]
@@ -952,10 +1138,13 @@ default rel
         test            %%IA2, 16
         ;; Set mask to read 16 IV bytes if iv_len = 16
         cmovnz          %%IA0, [rel mask_16_bytes]
-        mov             %%IA1, [%%JOB + _iv]
 
         kmovq           %%MASKREG, %%IA0
         vmovdqu8        %%CTR_BLOCKx{%%MASKREG}, [%%IA1]
+%else ;; CNTR_BIT
+        ;; Read the full 16 bytes of IV
+        vmovdqu8        %%CTR_BLOCKx, [%%IA1]
+%endif ;; CNTR/CNTR_BIT
 
         vmovdqa64       %%SHUFREG, [rel SHUF_MASK]
         ;; store IV as counter in LE format
@@ -985,7 +1174,8 @@ default rel
                 %%IA1, %%CTR_BLOCKx, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, \
-                %%IA0, %%IA2, %%MASKREG, %%SHUFREG, %%NROUNDS
+                %%IA0, %%IA2, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
 
         jmp     %%_enc_dec_done
 
@@ -1079,7 +1269,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_14:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1087,7 +1277,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_13:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1095,7 +1285,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_12:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1103,7 +1293,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_11:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1111,7 +1301,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_10:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1119,7 +1309,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_9:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1127,7 +1317,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_8:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1135,7 +1325,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_7:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1143,7 +1333,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_6:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1151,7 +1341,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_5:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1159,7 +1349,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_4:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1167,7 +1357,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_3:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1175,7 +1365,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_2:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1183,7 +1373,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_1:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1191,7 +1381,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
         jmp             %%_initial_blocks_encrypted
 %%_initial_num_blocks_is_0:
         INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
@@ -1199,7 +1389,7 @@ default rel
                 %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
                 %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
                 %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
-                %%SHUFREG, %%NROUNDS
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
 
 %%_initial_blocks_encrypted:
         or              %%LENGTH, %%LENGTH
@@ -1217,7 +1407,8 @@ default rel
                 full, %%IA0, %%IA1, %%LENGTH, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, \
-                %%MASKREG, %%SHUFREG, %%ADD8REG, %%NROUNDS
+                %%MASKREG, %%SHUFREG, %%ADD8REG, %%NROUNDS, %%CNTR_TYPE, \
+                %%RBITS
         add             %%DATA_OFFSET, 256
         sub             %%LENGTH, 256
         cmp             %%LENGTH, 256
@@ -1237,7 +1428,8 @@ default rel
                 partial, %%IA0, %%IA1, %%LENGTH, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, \
-                %%MASKREG, %%SHUFREG, %%ADD8REG, %%NROUNDS
+                %%MASKREG, %%SHUFREG, %%ADD8REG, %%NROUNDS, %%CNTR_TYPE, \
+                %%RBITS
 
 %%_enc_dec_done:
 
@@ -1248,11 +1440,12 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_128_submit_vaes_avx512,function,internal)
 aes_cntr_128_submit_vaes_avx512:
-        FUNC_SAVE
+        FUNC_SAVE CNTR
         ;; arg1 - [in] job
         ;; arg2 - [in] NROUNDS
-        CNTR_ENC_DEC arg1, 9
-        FUNC_RESTORE
+        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+        CNTR_ENC_DEC arg1, 9, CNTR
+        FUNC_RESTORE CNTR
 
         ret
 
@@ -1261,11 +1454,12 @@ aes_cntr_128_submit_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_192_submit_vaes_avx512,function,internal)
 aes_cntr_192_submit_vaes_avx512:
-        FUNC_SAVE
+        FUNC_SAVE CNTR
         ;; arg1 - [in] job
         ;; arg2 - [in] NROUNDS
-        CNTR_ENC_DEC arg1, 11
-        FUNC_RESTORE
+        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+        CNTR_ENC_DEC arg1, 11, CNTR
+        FUNC_RESTORE CNTR
 
         ret
 
@@ -1274,11 +1468,54 @@ aes_cntr_192_submit_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_256_submit_vaes_avx512,function,internal)
 aes_cntr_256_submit_vaes_avx512:
-        FUNC_SAVE
+        FUNC_SAVE CNTR
         ;; arg1 - [in] job
         ;; arg2 - [in] NROUNDS
-        CNTR_ENC_DEC arg1, 13
-        FUNC_RESTORE
+        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+        CNTR_ENC_DEC arg1, 13, CNTR
+        FUNC_RESTORE CNTR
+
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void aes_cntr_bit_128_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes_cntr_bit_128_submit_vaes_avx512,function,internal)
+aes_cntr_bit_128_submit_vaes_avx512:
+        FUNC_SAVE CNTR_BIT
+        ;; arg1 - [in] job
+        ;; arg2 - [in] NROUNDS
+        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+        CNTR_ENC_DEC arg1, 9, CNTR_BIT
+        FUNC_RESTORE CNTR_BIT
+
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void aes_cntr_bit_192_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes_cntr_bit_192_submit_vaes_avx512,function,internal)
+aes_cntr_bit_192_submit_vaes_avx512:
+        FUNC_SAVE CNTR_BIT
+        ;; arg1 - [in] job
+        ;; arg2 - [in] NROUNDS
+        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+        CNTR_ENC_DEC arg1, 11, CNTR_BIT
+        FUNC_RESTORE CNTR_BIT
+
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void aes_cntr_bit_256_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes_cntr_bit_256_submit_vaes_avx512,function,internal)
+aes_cntr_bit_256_submit_vaes_avx512:
+        FUNC_SAVE CNTR_BIT
+        ;; arg1 - [in] job
+        ;; arg2 - [in] NROUNDS
+        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+        CNTR_ENC_DEC arg1, 13, CNTR_BIT
+        FUNC_RESTORE CNTR_BIT
 
         ret
 

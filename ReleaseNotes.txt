@@ -25,6 +25,7 @@ Library
 - FreeBSD experimental support added
 - KASUMI-F8 and KASUMI-F9 implementation added
 - SNOW3G-UEA2 and SNOW3G-UIA2 implementation added
+- AES-CTR implementation for bit length (128-NEA2/192-NEA2/256-NEA2) messages added
 
 LibTestApp
 - New API tests added
@@ -40,8 +41,9 @@ LibTestApp
 - ZUC-EEA3 and ZUC-EIA3 tests added
 - New cross architecture test application (ipsec_xvalid) added,
   which mixes different implementations (based on different architectures),
-  to double check their correctness 
+  to double check their correctness
 - SNOW3G-UEA2 and SNOW3G-UIA2 tests added
+- AES-CTR-128 bit length message tests added
 
 LibPerfApp
 - Job size and number of iterations options added

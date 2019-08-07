@@ -100,6 +100,35 @@ void aes_cntr_128_submit_vaes_avx512(JOB_AES_HMAC *job);
 void aes_cntr_192_submit_vaes_avx512(JOB_AES_HMAC *job);
 void aes_cntr_256_submit_vaes_avx512(JOB_AES_HMAC *job);
 
+/* AES-CTR-BITLEN */
+void aes_cntr_bit_256_sse(const void *in, const void *IV, const void *keys,
+                          void *out, uint64_t len_bits, uint64_t IV_len);
+void aes_cntr_bit_192_sse(const void *in, const void *IV, const void *keys,
+                          void *out, uint64_t len_bits, uint64_t IV_len);
+void aes_cntr_bit_128_sse(const void *in, const void *IV, const void *keys,
+                          void *out, uint64_t len_bits, uint64_t IV_len);
+
+void aes_cntr_bit_256_sse_no_aesni(const void *in, const void *IV,
+                                   const void *keys, void *out,
+                                   uint64_t len_bits, uint64_t IV_len);
+void aes_cntr_bit_192_sse_no_aesni(const void *in, const void *IV,
+                                   const void *keys, void *out,
+                                   uint64_t len_bits, uint64_t IV_len);
+void aes_cntr_bit_128_sse_no_aesni(const void *in, const void *IV,
+                                   const void *keys, void *out,
+                                   uint64_t len_bits, uint64_t IV_len);
+
+void aes_cntr_bit_256_avx(const void *in, const void *IV, const void *keys,
+                          void *out, uint64_t len_bits, uint64_t IV_len);
+void aes_cntr_bit_192_avx(const void *in, const void *IV, const void *keys,
+                          void *out, uint64_t len_bits, uint64_t IV_len);
+void aes_cntr_bit_128_avx(const void *in, const void *IV, const void *keys,
+                          void *out, uint64_t len_bits, uint64_t IV_len);
+
+void aes_cntr_bit_128_submit_vaes_avx512(JOB_AES_HMAC *job);
+void aes_cntr_bit_192_submit_vaes_avx512(JOB_AES_HMAC *job);
+void aes_cntr_bit_256_submit_vaes_avx512(JOB_AES_HMAC *job);
+
 /* AES-CCM */
 JOB_AES_HMAC *aes_cntr_ccm_128_sse(JOB_AES_HMAC *job);
 

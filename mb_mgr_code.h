@@ -457,6 +457,8 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 }
         } else if (CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);
+        } else if (CNTR_BITLEN == job->cipher_mode) {
+                return SUBMIT_JOB_AES_CNTR_BIT(job);
         } else if (ECB == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_128_ENC(job);
@@ -547,7 +549,7 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif /* FLUSH_JOB_DOCSIS_DES_ENC */
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
-        } else { /* assume CNTR, ECB, CCM or NULL_CIPHER */
+        } else { /* assume CNTR/CNTR_BITLEN, ECB, CCM or NULL_CIPHER */
                 return NULL;
         }
 }
@@ -566,6 +568,8 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 }
         } else if (CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);
+        } else if (CNTR_BITLEN == job->cipher_mode) {
+                return SUBMIT_JOB_AES_CNTR_BIT(job);
         } else if (ECB == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_128_DEC(job);
@@ -922,6 +926,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
         case CNTR:
+        case CNTR_BITLEN:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -949,6 +954,11 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
+                /*
+                 * msg_len_to_cipher_in_bits is used with CNTR_BITLEN, but it is
+                 * effectively the same field as msg_len_to_cipher_in_bytes,
+                 * since it is part of the same union
+                 */
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;

@@ -59,6 +59,8 @@ JOB_AES_HMAC *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 
 JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
+JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
+
 #define SAVE_XMMS save_xmms_avx
 #define RESTORE_XMMS restore_xmms_avx
 #define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_avx
@@ -81,6 +83,7 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 #define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_avx
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx
+#define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_avx
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx
@@ -89,6 +92,7 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 #define AES_CNTR_128       aes_cntr_128_avx
 #define AES_CNTR_192       aes_cntr_192_avx
 #define AES_CNTR_256       aes_cntr_256_avx
+
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
 
 #define AES_ECB_ENC_128       aes_ecb_enc_128_avx
