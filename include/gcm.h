@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2018, Intel Corporation
+  Copyright (c) 2018-2019, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -162,34 +162,6 @@ IMB_DLL_EXPORT void
 aes_gcm_pre_192_vaes_avx512(const void *key, struct gcm_key_data *key_data);
 IMB_DLL_EXPORT void
 aes_gcm_pre_256_vaes_avx512(const void *key, struct gcm_key_data *key_data);
-
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_enc_128_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_enc_192_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_enc_256_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
-
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_dec_128_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_dec_192_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_dec_256_submit_vaes_avx512(MB_MGR_GCM_OOO *state, JOB_AES_HMAC *job);
-
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_enc_128_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_enc_192_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_enc_256_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
-
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_dec_128_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_dec_192_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
-IMB_DLL_LOCAL JOB_AES_HMAC *
-aes_gcm_dec_256_flush_vaes_avx512(MB_MGR_GCM_OOO *state);
 
 /*
  * AVX512 GCM API
