@@ -114,7 +114,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/gcm_defines.asm"
-%include "include/gcm_keys.asm"
+%include "include/gcm_keys_vaes_avx512.asm"
 %include "include/memcpy.asm"
 %include "include/aes_common.asm"
 
@@ -614,33 +614,19 @@ default rel
 %define %%T5    %7
 %define %%T6    %8
 
-        ;; Haskey_i_k holds XORed values of the low and high parts of the Haskey_i
-
-        ;; GHASH keys 1 to 8 (with Karatsuba)
         vmovdqa  %%T5, %%HK
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_k], %%T1
-%assign i 2
-%rep 7
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2 ;  %%T5 = HashKey^i<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_ %+ i], %%T5           ;  [HashKey_i] = %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_ %+ i %+ _k], %%T1
-%assign i (i + 1)
-%endrep
 
-        ;; GHASH keys 9 to 128 (no Karatsuba)
+        ;; GHASH keys 2 to 48 or 128
 %ifdef GCM_BIG_DATA
 %assign max_hkey_idx 128
 %else
 %assign max_hkey_idx 48
 %endif
 
-%rep (max_hkey_idx - 8)
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^i<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_ %+ i], %%T5
+%assign i 2
+%rep (max_hkey_idx - 1)
+        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2 ;  %%T5 = HashKey^i<<1 mod poly
+        vmovdqu  [%%GDATA + HashKey_ %+ i], %%T5           ;  [HashKey_i] = %%T5
 %assign i (i + 1)
 %endrep
 

@@ -622,29 +622,49 @@ __declspec(align(64))
 #endif /* WIN32 */
 struct gcm_key_data {
         uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
-        uint8_t padding[GCM_ENC_KEY_LEN];        /* To align HashKey to 64 */
-        /* Storage for precomputed hash keys */
+        union {
+                /* Storage for precomputed hash keys */
+                struct {
+                        /*
+                         * This is needed for schoolbook multiply purposes.
+                         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+                         * (Hashkey^48<<1 mod poly)
+                         */
+                        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 8];
+                        /*
+                         * This is needed for Karatsuba multiply purposes.
+                         * Storage for XOR of High 64 bits and low 64 bits
+                         * of HashKey mod poly.
+                         *
+                         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+                         * (Hashkey^128<<1 mod poly)
+                         */
+                        uint8_t shifted_hkey_k[GCM_ENC_KEY_LEN * 8];
+                } sse_avx;
+                struct {
+                        /*
+                         * This is needed for schoolbook multiply purposes.
+                         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+                         * (Hashkey^48<<1 mod poly)
+                         */
+                        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 8];
+                } avx2_avx512;
+                struct {
 #ifdef GCM_BIG_DATA
-        /*
-         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
-         * (Hashkey^128<<1 mod poly)
-         */
-        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 128];
+                        /*
+                         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+                         * (Hashkey^128<<1 mod poly)
+                         */
+                        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 128];
 #else
-        /*
-         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
-         * (Hashkey^48<<1 mod poly)
-         */
-        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 48];
+                        /*
+                         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
+                         * (Hashkey^48<<1 mod poly)
+                         */
+                        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 48];
 #endif
-        /*
-         * Storage for XOR of High 64 bits and low 64 bits of HashKey mod poly.
-         * This is needed for Karatsuba purposes.
-         *
-         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
-         * (Hashkey^128<<1 mod poly)
-         */
-        uint8_t shifted_hkey_k[GCM_ENC_KEY_LEN * 8]; /* HashKey<<1 mod poly */
+                } vaes_avx512;
+        } ghash_keys;
 }
 #ifdef LINUX
 __attribute__((aligned(64)));

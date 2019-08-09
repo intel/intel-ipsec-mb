@@ -114,7 +114,8 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/gcm_defines.asm"
-%include "include/gcm_keys.asm"
+%include "include/gcm_keys_avx2_avx512.asm"
+
 %include "mb_mgr_datastruct.asm"
 %include "job_aes_hmac.asm"
 %include "include/memcpy.asm"
@@ -237,51 +238,26 @@ default rel
         ; Haskey_i_k holds XORed values of the low and high parts of the Haskey_i
         vmovdqa  %%T5, %%HK
 
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_k], %%T1
-
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^2<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_2], %%T5                    ;  [HashKey_2] = HashKey^2<<1 mod poly
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_2_k], %%T1
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^3<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_3], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_3_k], %%T1
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^4<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_4], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_4_k], %%T1
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^5<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_5], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_5_k], %%T1
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^6<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_6], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_6_k], %%T1
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^7<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_7], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_7_k], %%T1
 
         GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2      ;  %%T5 = HashKey^8<<1 mod poly
         vmovdqu  [%%GDATA + HashKey_8], %%T5
-        vpshufd  %%T1, %%T5, 01001110b
-        vpxor    %%T1, %%T5
-        vmovdqu  [%%GDATA + HashKey_8_k], %%T1
 %endmacro
 
 
