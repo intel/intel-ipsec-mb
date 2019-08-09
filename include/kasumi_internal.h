@@ -604,8 +604,21 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         /* Only one block to encrypt */
         if (cipherLengthInBits < (64 - remainOffset)) {
                 byteLength = (cipherLengthInBits + 7) / 8;
-                memcpy_keystrm(safeInBuf.b8, pcBufferIn,
-                                   byteLength);
+                memcpy_keystrm(safeInBuf.b8, pcBufferIn, byteLength);
+                /*
+                 * If operation is Out-of-place and there is offset
+                 * to be applied, "remainOffset" bits from the output buffer
+                 * need to be preserved (only applicable to first byte,
+                 * since remainOffset is up to 7 bits)
+                 */
+                if ((pIn != pOut) && remainOffset) {
+                        const uint8_t mask8 =
+                                (const uint8_t)(1 << (8 - remainOffset)) - 1;
+
+                        safeInBuf.b8[0] = (safeInBuf.b8[0] & mask8) |
+                                        (pcBufferOut[0] & ~mask8);
+                }
+
                 /* Last bits (not to cipher) need to be preserved from Input */
                 mask = (uint64_t)-1 << (KASUMI_BLOCK_SIZE * 8 -
                                 remainOffset - cipherLengthInBits);
@@ -614,8 +627,27 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                 memcpy_keystrm(pcBufferOut, safeOutBuf.b8, byteLength);
                 return;
         }
-        /* At least 64 bits to produce (including offset) */
-        pcBufferIn = xor_keystrm_rev(pcBufferOut, pcBufferIn, c.b64[0]);
+
+        /*
+         * If operation is Out-of-place and there is offset
+         * to be applied, "remainOffset" bits from the output buffer
+         * need to be preserved (only applicable to first byte,
+         * since remainOffset is up to 7 bits)
+         */
+         if ((pIn != pOut) && remainOffset) {
+                const uint8_t mask8 =
+                        (const uint8_t)(1 << (8 - remainOffset)) - 1;
+
+                memcpy_keystrm(safeInBuf.b8, pcBufferIn, 8);
+                safeInBuf.b8[0] = (safeInBuf.b8[0] & mask8) |
+                                (pcBufferOut[0] & ~mask8);
+                xor_keystrm_rev(pcBufferOut, safeInBuf.b8, c.b64[0]);
+                pcBufferIn += KASUMI_BLOCK_SIZE;
+        } else {
+                /* At least 64 bits to produce (including offset) */
+                pcBufferIn = xor_keystrm_rev(pcBufferOut, pcBufferIn, c.b64[0]);
+        }
+
         if (remainOffset != 0)
                 shiftrem = b.b64[0] << (64 - remainOffset);
         cipherLengthInBits -= KASUMI_BLOCK_SIZE * 8 - remainOffset;
