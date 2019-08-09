@@ -37,9 +37,9 @@ Table 1. List of supported cipher algorithms and their implementations.
 | Encryption    +-----------------------------------------------------|
 |               | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(5)|
 |---------------+--------+--------+--------+--------+--------+--------|
-| AES128-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
-| AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
-| AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
+| AES128-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | AES128-CCM    | N      | Y  by4 | Y  by8 | N      | N      | N      |
 | AES128-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES192-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
@@ -88,9 +88,9 @@ Table 2. List of supported integrity algorithms and their implementations.
 | HMAC-SHA2-256_128 | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
 | HMAC-SHA2-384_192 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
 | HMAC-SHA2-512_256 | N      | Y   x2 | Y   x2 | Y   x4 | Y   x8 | N      |
-| AES128-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
-| AES192-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
-| AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y x4by8|
+| AES128-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| AES192-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | NULL              | N      | N      | N      | N      | N      | N      |
 | AES128-CCM        | N      | Y   x4 | Y   x8 | N      | N      | N      |
 | AES128-CMAC-96    | Y      | Y   x4 | Y   x8 | N      | N      | N      |
