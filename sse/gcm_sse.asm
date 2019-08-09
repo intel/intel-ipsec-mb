@@ -114,7 +114,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/gcm_defines.asm"
-%include "include/gcm_keys.asm"
+%include "include/gcm_keys_sse_avx.asm"
 %include "include/memcpy.asm"
 
 %ifndef GCM128_MODE
