@@ -778,14 +778,14 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                         b1.b64[0] ^= a1.b64[0];
                         b1.b16[0] ^= (uint16_t)++blkcnt;
                         lengthInBytes1 -= KASUMI_BLOCK_SIZE;
-                } else if (length < KASUMI_BLOCK_SIZE) {
+                } else if (lengthInBytes1 < KASUMI_BLOCK_SIZE) {
                         memcpy_keystrm(safeInBuf.b8, pBufferIn1,
                                        lengthInBytes1);
                         xor_keystrm_rev(temp.b8, safeInBuf.b8, b1.b64[0]);
                         memcpy_keystrm(pBufferOut1, temp.b8,
                                        lengthInBytes1);
                         lengthInBytes1 = 0;
-                /* length == KASUMI_BLOCK_SIZE */
+                /* lengthInBytes1 == KASUMI_BLOCK_SIZE */
                 } else {
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         lengthInBytes1 = 0;
@@ -804,6 +804,7 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                         memcpy_keystrm(pBufferOut2, temp.b8,
                                        lengthInBytes2);
                         lengthInBytes2 = 0;
+                /* lengthInBytes2 == KASUMI_BLOCK_SIZE */
                 } else {
                         xor_keystrm_rev(pBufferOut2, pBufferIn2, b2.b64[0]);
                         lengthInBytes2 = 0;
