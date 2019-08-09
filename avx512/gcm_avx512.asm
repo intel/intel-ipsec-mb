@@ -114,6 +114,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/gcm_defines.asm"
+%include "include/gcm_keys.asm"
 %include "mb_mgr_datastruct.asm"
 %include "job_aes_hmac.asm"
 %include "include/memcpy.asm"
