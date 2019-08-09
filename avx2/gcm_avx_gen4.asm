@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2011-2018, Intel Corporation All rights reserved.
+;  Copyright(c) 2011-2019, Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -112,7 +112,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
-%include "gcm_defines.asm"
+%include "include/gcm_defines.asm"
 %include "include/memcpy.asm"
 
 %ifndef GCM128_MODE

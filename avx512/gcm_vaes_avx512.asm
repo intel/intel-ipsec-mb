@@ -113,7 +113,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
-%include "gcm_defines.asm"
+%include "include/gcm_defines.asm"
 %include "include/memcpy.asm"
 %include "include/aes_common.asm"
 
