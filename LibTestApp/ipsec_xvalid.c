@@ -841,7 +841,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         uint32_t i;
         int ret = -1;
         static DECLARE_ALIGNED(uint8_t iv[16], 16);
-        static struct cipher_auth_keys keys;
+        static struct cipher_auth_keys enc_keys, dec_keys;
         uint8_t aad[AAD_SIZE];
         uint8_t in_digest[MAX_DIGEST_SIZE];
         uint8_t out_digest[MAX_DIGEST_SIZE];
@@ -866,7 +866,10 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         generate_random_buf(aad, AAD_SIZE);
 
         /* Expand/schedule keys */
-        if (prepare_keys(enc_mb_mgr, &keys, key, params) < 0)
+        if (prepare_keys(enc_mb_mgr, &enc_keys, key, params) < 0)
+                goto exit;
+
+        if (prepare_keys(dec_mb_mgr, &dec_keys, key, params) < 0)
                 goto exit;
 
         for (i = 0; i < job_iter; i++) {
@@ -877,7 +880,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  */
                 memcpy(src_dst_buf, test_buf, buf_size);
                 if (fill_job(job, params, src_dst_buf, in_digest, aad,
-                             buf_size, tag_size, ENCRYPT, &keys, iv) < 0)
+                             buf_size, tag_size, ENCRYPT, &enc_keys, iv) < 0)
                         goto exit;
 
                 /* Randomize memory for input digest */
@@ -909,7 +912,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  * using reference architecture
                  */
                 if (fill_job(job, params, src_dst_buf, out_digest, aad,
-                             buf_size, tag_size, DECRYPT, &keys, iv) < 0)
+                             buf_size, tag_size, DECRYPT, &dec_keys, iv) < 0)
                         goto exit;
 
                 job = IMB_SUBMIT_JOB(dec_mb_mgr);
