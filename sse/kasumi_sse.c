@@ -243,7 +243,7 @@ kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
 void
 kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
                        const uint64_t IV[],
-                       const void *pDataIn[], void *pDataOut[],
+                       const void * const pDataIn[], void *pDataOut[],
                        const uint32_t dataLen[], const uint32_t dataCount)
 {
 #ifndef LINUX
@@ -253,7 +253,7 @@ kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
 #endif
         uint32_t numLeft = dataCount;
         const uint64_t *IVPtr;
-        const void **pDataInPtr;
+        const void * const *pDataInPtr;
         void **pDataOutPtr;
         const uint32_t *dataLenPtr;
         uint32_t i = 0;

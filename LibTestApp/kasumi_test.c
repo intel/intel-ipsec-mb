@@ -962,7 +962,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
 
                 /* Test the encrypt */
                 IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
-                                       (const void **)srcBuff[i],
+                                       (const void * const *)srcBuff[i],
                                        (void **)srcBuff[i],
                                        buffLenInBytes, i + 1);
                 if (srcBuff[i][0] == NULL) {
@@ -972,7 +972,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
 
                 /* Test the Decrypt */
                 IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
-                                       (const void **)srcBuff[i],
+                                       (const void * const *)srcBuff[i],
                                        (void **)srcBuff[i],
                                        buffLenInBytes, i + 1);
                 if (srcBuff[i][0] == NULL) {
@@ -1015,7 +1015,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
 
                 /* Test the encrypt */
                 IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
-                                       (const void **)srcBuff[i],
+                                       (const void * const *)srcBuff[i],
                                        (void **)srcBuff[i],
                                        buffLenInBytes, i + 1);
                 if (srcBuff[i][0] == NULL) {
@@ -1025,7 +1025,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
 
                 /* Test the Decrypt */
                 IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
-                                       (const void **)srcBuff[i],
+                                       (const void * const *)srcBuff[i],
                                        (void **)srcBuff[i],
                                        buffLenInBytes, i + 1);
                 if (srcBuff[i][0] == NULL) {
@@ -1069,13 +1069,13 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
 
                 /* Test the encrypt */
                 IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
-                                       (const void **)srcBuff[i],
+                                       (const void * const *)srcBuff[i],
                                        (void **)srcBuff[i],
                                        buffLenInBytes, i + 1);
 
                 /* Test the Decrypt */
                 IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched, IV[i],
-                                       (const void **)srcBuff[i],
+                                       (const void * const *)srcBuff[i],
                                        (void **)srcBuff[i],
                                        buffLenInBytes, i + 1);
 

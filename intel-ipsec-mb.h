@@ -750,7 +750,7 @@ typedef void (*kasumi_f8_4_buffer_t)(const kasumi_key_sched_t *,
                                      const void *, void *,
                                      const uint32_t);
 typedef void (*kasumi_f8_n_buffer_t)(const kasumi_key_sched_t *,
-                                     const uint64_t *, const void **,
+                                     const uint64_t *, const void * const *,
                                      void **, const uint32_t *,
                                      const uint32_t);
 typedef void (*kasumi_f9_1_buffer_user_t)(const kasumi_key_sched_t *,

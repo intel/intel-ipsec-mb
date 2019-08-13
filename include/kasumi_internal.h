@@ -1125,7 +1125,7 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
 
 static inline void
 kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
-                   const void *pIn[], void *pOut[],
+                   const void * const pIn[], void *pOut[],
                    const uint32_t lengths[], const uint32_t bufCount)
 {
         if (bufCount > 16) {
@@ -1513,7 +1513,7 @@ void kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
 
 void kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
                             const uint64_t IV[],
-                            const void *pDataIn[], void *pDataOut[],
+                            const void * const pDataIn[], void *pDataOut[],
                             const uint32_t dataLen[], const uint32_t dataCount);
 
 void kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx,
@@ -1556,7 +1556,7 @@ void kasumi_f8_4_buffer_avx(const kasumi_key_sched_t *pCtx,
                             const uint32_t lengthInBytes);
 void kasumi_f8_n_buffer_avx(const kasumi_key_sched_t *pKeySchedule,
                             const uint64_t IV[],
-                            const void *pDataIn[], void *pDataOut[],
+                            const void * const pDataIn[], void *pDataOut[],
                             const uint32_t dataLen[], const uint32_t dataCount);
 
 void kasumi_f9_1_buffer_avx(const kasumi_key_sched_t *pCtx,
