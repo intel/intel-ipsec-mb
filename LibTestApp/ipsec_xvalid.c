@@ -163,6 +163,27 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
+                .name = "aes-ctr-bit-128",
+                .values.job_params = {
+                        .cipher_mode = CNTR_BITLEN,
+                        .key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-bit-192",
+                .values.job_params = {
+                        .cipher_mode = CNTR_BITLEN,
+                        .key_size = AES_192_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-bit-256",
+                .values.job_params = {
+                        .cipher_mode = CNTR_BITLEN,
+                        .key_size = AES_256_BYTES
+                }
+        },
+        {
                 .name = "aes-ecb-128",
                 .values.job_params = {
                         .cipher_mode = ECB,
@@ -380,13 +401,13 @@ const uint8_t auth_tag_length_bytes[19] = {
 };
 
 /* Minimum, maximum and step values of key sizes */
-const uint8_t key_sizes[12][3] = {
-                {16, 32, 16}, /* CBC */
-                {16, 32, 16}, /* CNTR */
+const uint8_t key_sizes[13][3] = {
+                {16, 32, 8}, /* CBC */
+                {16, 32, 8}, /* CNTR */
                 {0, 0, 1},    /* NULL */
                 {16, 16, 1}, /* DOCSIS_SEC_BPI */
 #ifndef NO_GCM
-                {16, 32, 16}, /* GCM */
+                {16, 32, 8}, /* GCM */
 #endif
                 {0, 0, 1},    /* CUSTOM_CIPHER */
                 {8, 8, 1},    /* DES */
@@ -394,7 +415,8 @@ const uint8_t key_sizes[12][3] = {
                 {16, 16, 1},  /* CCM */
                 {24, 24, 1},  /* DES3 */
                 {16, 16, 1},  /* PON_AES_CNTR */
-                {16, 32, 16}, /* ECB */
+                {16, 32, 8}, /* ECB */
+                {16, 32, 8}, /* CNTR_BITLEN */
 };
 
 uint8_t custom_test = 0;
@@ -512,7 +534,12 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         uint8_t *opad = keys->opad;
         struct gcm_key_data *gdata_key = &keys->gdata_key;
 
-        job->msg_len_to_cipher_in_bytes = buf_size;
+        /* Force partial byte, by substracting 3 bits from the full length */
+        if (params->cipher_mode == CNTR_BITLEN)
+                job->msg_len_to_cipher_in_bits = buf_size * 8 - 3;
+        else
+                job->msg_len_to_cipher_in_bytes = buf_size;
+
         job->msg_len_to_hash_in_bytes = buf_size;
         job->hash_start_src_offset_in_bytes = 0;
         job->cipher_start_src_offset_in_bytes = 0;
@@ -604,6 +631,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->iv_len_in_bytes = 16;
                 break;
         case CNTR:
+        case CNTR_BITLEN:
                 job->aes_enc_key_expanded = enc_keys;
                 job->aes_dec_key_expanded = enc_keys;
                 job->iv_len_in_bytes = 16;
@@ -798,6 +826,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case CBC:
         case CCM:
         case CNTR:
+        case CNTR_BITLEN:
         case DOCSIS_SEC_BPI:
         case ECB:
                 switch (params->key_size) {
@@ -1086,7 +1115,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         JOB_HASH_ALG    hash_alg;
         JOB_CIPHER_MODE c_mode;
 
-        for (c_mode = CBC; c_mode <= ECB; c_mode++) {
+        for (c_mode = CBC; c_mode <= CNTR_BITLEN; c_mode++) {
                 /* Skip CUSTOM_CIPHER and PON */
                 if (c_mode == CUSTOM_CIPHER || c_mode == PON_AES_CNTR)
                         continue;
