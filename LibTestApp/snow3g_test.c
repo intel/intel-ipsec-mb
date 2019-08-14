@@ -1202,6 +1202,9 @@ static int validate_snow3g_f8_8_blocks_multi_key(struct MB_MGR *mb_mgr)
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
         memset(IV, 0, sizeof(IV));
+        memset(pKey, 0, sizeof(pKey));
+        memset(packetLen, 0, sizeof(packetLen));
+        memset(pKeySched, 0, sizeof(pKeySched));
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
