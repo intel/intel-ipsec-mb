@@ -149,8 +149,8 @@ default rel
 ;;; Stack frame definition
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %ifidn __OUTPUT_FORMAT__, win64
-        %define XMM_STORAGE     (10*16) ; space for 10 XMM registers
-        %define GP_STORAGE      (10*8)  ; space for 9 GP registers + 1 for alignment
+        %define XMM_STORAGE     (10*16)      ; space for 10 XMM registers
+        %define GP_STORAGE      ((9*8) + 24) ; space for 9 GP registers + 24 bytes for 64 byte alignment
 %else
         %define XMM_STORAGE     0
         %define GP_STORAGE      (8*8)   ; space for 7 GP registers + 1 for alignment
