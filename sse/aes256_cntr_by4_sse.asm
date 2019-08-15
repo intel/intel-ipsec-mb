@@ -46,15 +46,17 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 %define xdata1	xmm1
 %define xpart	xmm1
 %define xdata2	xmm2
-%define xtmp    xmm2
 %define xdata3	xmm3
 %define xdata4	xmm4
 %define xdata5	xmm5
 %define xdata6	xmm6
 %define xdata7	xmm7
 %define xcounter xmm8
+%define xtmp    xmm8
 %define xbyteswap xmm9
+%define xtmp2   xmm9
 %define xkey0 	xmm10
+%define xtmp3   xmm10
 %define xkey4 	xmm11
 %define xkey8 	xmm12
 %define xkey12	xmm13
@@ -249,6 +251,42 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 	pxor	CONCAT(xdata,i), xkeyA
 %endif
 
+%ifidn %%cntr_type, CNTR_BIT
+        ;; check if this is the end of the message
+        mov     tmp, num_bytes
+        and     tmp, ~(%%by*16)
+        jnz     %%skip_preserve
+        ;; Check if there is a partial byte
+        or      r_bits, r_bits
+        jz      %%skip_preserve
+
+%assign idx (%%by - 1)
+        ;; Load output to get last partial byte
+        movdqu         xtmp, [p_out + idx * 16]
+
+        ;; Save RCX in temporary GP register
+        mov             tmp, rcx
+        mov             mask, 0xff
+        mov             cl, BYTE(r_bits)
+        shr             mask, cl ;; e.g. 3 remaining bits -> mask = 00011111
+        mov             rcx, tmp
+
+        movq            xtmp2, mask
+        pslldq          xtmp2, 15
+        ;; At this point, xtmp2 contains a mask with all 0s, but with some ones
+        ;; in the partial byte
+
+        ;; Clear all the bits that do not need to be preserved from the output
+        pand            xtmp, xtmp2
+
+        ;; Clear all bits from the input that are not to be ciphered
+        pandn	        xtmp2, CONCAT(xdata, idx)
+        por             xtmp2, xtmp
+        movdqa		CONCAT(xdata, idx), xtmp2
+
+%%skip_preserve:
+%endif
+
 %assign i 0
 %rep %%by
 	MOVDQ	[p_out  + i*16], CONCAT(xdata,i)
@@ -261,7 +299,7 @@ extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .text
 
-;; Macro perforning AES-CTR.
+;; Macro performing AES-CTR.
 ;;
 %macro DO_CNTR 1
 %define %%CNTR_TYPE %1 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
@@ -298,6 +336,7 @@ section .text
         ;; convert bits to bytes (message length in bits for CNTR_BIT)
 %ifidn %%CNTR_TYPE, CNTR_BIT
         mov     r_bits, num_bits
+        add     num_bits, 7
         shr     num_bits, 3 ; "num_bits" and "num_bytes" registers are the same
         and     r_bits, 7   ; Check if there are remainder bits (0-7)
 %endif
@@ -325,11 +364,8 @@ section .text
 	; fall through to chk
 %%chk:
         and	num_bytes, ~(3*16)
-%ifidn %%CNTR_TYPE, CNTR_BIT
-        jz      %%check_rbits
-%else
 	jz	%%do_return2
-%endif
+
         cmp	num_bytes, 16
         jb	%%last
 
@@ -352,13 +388,6 @@ align 32
 	or      num_bytes, num_bytes
         jnz    %%last
 
-%%check_rbits:
-;; Check here for number of remaining bits, in case there are no "full" bytes
-%ifidn %%CNTR_TYPE, CNTR_BIT
-        or      r_bits, r_bits
-        jnz     %%last
-%endif
-
 %%do_return2:
 
 %ifidn %%CNTR_TYPE, CNTR_BIT
@@ -371,11 +400,6 @@ align 32
 
 %%last:
 
-%ifidn %%CNTR_TYPE, CNTR_BIT
-        ;; Do not load another block if there is only a partial byte left
-        or      num_bytes, num_bytes
-        jz     %%final_ctr_enc
-%endif
 	; load partial block into XMM register
 	simd_load_sse_15_1 xpart, p_in, num_bytes
 
@@ -392,57 +416,50 @@ align 32
 	; created keystream
         aesenclast xdata0, [p_keys + 16*i]
 
-%ifidn %%CNTR_TYPE, CNTR_BIT
-        ;; Do not store another block if there is only a partial byte left
-        or      num_bytes, num_bytes
-        jz     %%encrypt_last_bits
-%endif
 	; xor keystream with the message (scratch)
-        pxor	xpart, xdata0
-	; copy result into the output buffer
-	simd_store_sse p_out, xpart, num_bytes, tmp, rax
+        pxor    xdata0, xpart
 
-%%encrypt_last_bits:
 %ifidn %%CNTR_TYPE, CNTR_BIT
+        ;; Check if there is a partial byte
         or      r_bits, r_bits
-        jz      %%do_return2
+        jz      %%store_output
 
-        ;; Shift the byte from the encrypted counter block to use to the LSB
-        XPSRLB xdata0, num_bytes, xtmp, tmp2
+        ;; Load output to get last partial byte
+        simd_load_sse_15_1 xtmp, p_out, num_bytes
 
-        ;; There are bits remaining, need to read another byte from input
-        ;; and output and XOR input with encrypted CTR block, preserving
-        ;; the ouput bits that are not to be ciphered
-
-        ;; Save RCX in temporary XMM register
-        movq    xtmp, rcx
-        mov     DWORD(mask), 0xff
+        ;; Save RCX in temporary GP register
+        mov     tmp, rcx
+        mov     mask, 0xff
 %ifidn r_bits, rcx
 %error "r_bits cannot be mapped to rcx!"
 %endif
         mov     cl, BYTE(r_bits)
-        shr     DWORD(mask), cl   ;; e.g. 3 remaining bits -> mask = 00011111
-        movq    rcx, xtmp
+        shr     mask, cl ;; e.g. 3 remaining bits -> mask = 00011111
+        mov     rcx, tmp
 
-        mov     BYTE(tmp), [p_out + num_bytes]
-        and     BYTE(tmp), BYTE(mask) ;; Keep only bits not to be ciphered
-        pextrb  tmp2, xdata0, 0
-        not     mask    ;; e.g. 3 remaining bits -> mask = 11100000
+        movq    xtmp2, mask
 
-        ;; Keep first bits that will XOR with input "valid" bits
-        and     BYTE(tmp2), BYTE(mask)
-        or      BYTE(tmp), BYTE(tmp2)
+        ;; Get number of full bytes in last block of 16 bytes
+        mov     tmp, num_bytes
+        dec     tmp
+        XPSLLB  xtmp2, tmp, xtmp3, tmp2
+        ;; At this point, xtmp2 contains a mask with all 0s, but with some ones
+        ;; in the partial byte
 
-        ;; Zero out "non-valid" bits
-        mov     BYTE(tmp2), [p_in + num_bytes]
-        and     BYTE(tmp2), BYTE(mask)
+        ;; Clear all the bits that do not need to be preserved from the output
+        pand    xtmp, xtmp2
 
-        ;; OUT = (IN | 0s)  XOR (ENC CTR block | OUT)
-        xor     BYTE(tmp), BYTE(tmp2)
-        mov     [p_out + num_bytes], BYTE(tmp)
+        ;; Clear the bits from the input that are not to be ciphered
+        pandn   xtmp2, xdata0
+        por     xtmp2, xtmp
+        movdqa  xdata0, xtmp2
 %endif
 
-	jmp	%%do_return2
+%%store_output:
+        ; copy result into the output buffer
+        simd_store_sse_15 p_out, xdata0, num_bytes, tmp, rax
+
+        jmp	%%do_return2
 
 %%iv_is_16_bytes:
         ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
