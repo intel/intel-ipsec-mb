@@ -89,7 +89,8 @@
 
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
-#define CIPHER_MODES_AES 5	/* CBC, CNTR, CNTR+8, ECB, NULL_CIPHER */
+#define CIPHER_MODES_AES 7	/* CBC, CNTR, CNTR+8, CNTR_BITLEN,
+                                   CNTR_BITLEN-4, ECB, NULL_CIPHER */
 #define CIPHER_MODES_DOCSIS 4	/* AES DOCSIS, AES DOCSIS+8, DES DOCSIS,
                                    DES DOCSIS+8 */
 #define CIPHER_MODES_DES 1	/* DES */
@@ -161,6 +162,8 @@ enum test_cipher_mode_e {
         TEST_CBC = 1,
         TEST_CNTR,
         TEST_CNTR8, /* CNTR with increased buffer by 8 */
+        TEST_CNTR_BITLEN, /* CNTR-BITLEN */
+        TEST_CNTR_BITLEN4, /* CNTR-BITLEN with 4 less bits in the last byte */
         TEST_ECB,
         TEST_NULL_CIPHER,
         TEST_AESDOCSIS,
@@ -292,6 +295,48 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 .name = "aes-ctr8-256",
                 .values.job_params = {
                         .cipher_mode = TEST_CNTR8,
+                        .aes_key_size = AES_256_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-bit-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR_BITLEN,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-bit-192",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR_BITLEN,
+                        .aes_key_size = AES_192_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-bit-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR_BITLEN,
+                        .aes_key_size = AES_256_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-bit4-128",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR_BITLEN4,
+                        .aes_key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-bit4-192",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR_BITLEN4,
+                        .aes_key_size = AES_192_BYTES
+                }
+        },
+        {
+                .name = "aes-ctr-bit4-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_CNTR_BITLEN4,
                         .aes_key_size = AES_256_BYTES
                 }
         },
@@ -928,6 +973,10 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_CNTR8:
                 c_mode = CNTR;
                 break;
+        case TEST_CNTR_BITLEN:
+        case TEST_CNTR_BITLEN4:
+                c_mode = CNTR_BITLEN;
+                break;
         case TEST_ECB:
                 c_mode = ECB;
                 break;
@@ -991,7 +1040,13 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
         else
                 size_aes = params->size_aes;
 
-        job_template.msg_len_to_cipher_in_bytes = size_aes;
+        if (params->cipher_mode == TEST_CNTR_BITLEN)
+                job_template.msg_len_to_cipher_in_bits = size_aes * 8;
+        else if (params->cipher_mode == TEST_CNTR_BITLEN4)
+                job_template.msg_len_to_cipher_in_bits = size_aes * 8 - 4;
+        else
+                job_template.msg_len_to_cipher_in_bytes = size_aes;
+
         job_template.msg_len_to_hash_in_bytes = size_aes + sha_size_incr;
         job_template.hash_start_src_offset_in_bytes = 0;
         job_template.cipher_start_src_offset_in_bytes = sha_size_incr;
