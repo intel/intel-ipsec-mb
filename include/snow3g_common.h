@@ -1385,10 +1385,10 @@ uint32_t SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
 {
         const uint32_t *pKey32 = pKey;
 
-        pCtx->k[3] = _BSWAP32(pKey32[0]);
-        pCtx->k[2] = _BSWAP32(pKey32[1]);
-        pCtx->k[1] = _BSWAP32(pKey32[2]);
-        pCtx->k[0] = _BSWAP32(pKey32[3]);
+        pCtx->k[3] = BSWAP32(pKey32[0]);
+        pCtx->k[2] = BSWAP32(pKey32[1]);
+        pCtx->k[1] = BSWAP32(pKey32[2]);
+        pCtx->k[0] = BSWAP32(pKey32[3]);
 
         return 0;
 }
@@ -2668,7 +2668,7 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         E = 0;
         /* all blocks except the last one */
         for (i = 0; i < lengthInQwords; i++) {
-                V = _BSWAP64(inputBuffer[i]);
+                V = BSWAP64(inputBuffer[i]);
                 E = multiply_and_reduce64(E ^ V, P);
         }
 
@@ -2677,7 +2677,7 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         if (rem_bits) {
                 /* last bytes, do not go past end of buffer */
                 memcpy(&V, &inputBuffer[i], (rem_bits + 7) / 8);
-                V = _BSWAP64(V);
+                V = BSWAP64(V);
                 V &= (((uint64_t)-1) << (64 - rem_bits)); /* mask extra bits */
                 E = multiply_and_reduce64(E ^ V, P);
         }
@@ -2688,7 +2688,7 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 
         /* Final MAC */
         *(uint32_t *)pDigest =
-                (uint32_t)_BSWAP64(E ^ ((uint64_t)z[4] << 32));
+                (uint32_t)BSWAP64(E ^ ((uint64_t)z[4] << 32));
 }
 
 #endif /* SNOW3G_COMMON_H */

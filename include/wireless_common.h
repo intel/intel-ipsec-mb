@@ -43,8 +43,10 @@
 #define NUM_PACKETS_16 16
 
 #ifdef LINUX
+#define BSWAP32 __builtin_bswap32
 #define BSWAP64 __builtin_bswap64
 #else
+#define BSWAP32 _byteswap_ulong
 #define BSWAP64 _byteswap_uint64
 #endif
 
@@ -81,19 +83,23 @@ static inline uint32_t bswap4(const uint32_t val)
 * @param len  [IN] - length in bytes to copy (0 to 4)
 *
 *************************************************************************/
-static inline void memcpy_keystream_32(uint8_t *pDst, uint8_t *pSrc,
-                                       uint32_t len)
+static inline void memcpy_keystream_32(uint8_t *pDst,
+                                       const uint8_t *pSrc,
+                                       const uint32_t len)
 {
         switch (len) {
         case 4:
-                *(uint32_t *)pDst = *(uint32_t *)pSrc;
+                *(uint32_t *)pDst = *(const uint32_t *)pSrc;
                 break;
         case 3:
                 pDst[2] = pSrc[2];
+                /* fall-through */
         case 2:
                 pDst[1] = pSrc[1];
+                /* fall-through */
         case 1:
                 pDst[0] = pSrc[0];
+                /* fall-through */
         }
 }
 
@@ -107,13 +113,11 @@ static inline void memcpy_keystream_32(uint8_t *pDst, uint8_t *pSrc,
 *                    into network byte order before XOR
 *
 *************************************************************************/
-static inline void xor_keystream_reverse_32(uint8_t *pDst, uint8_t *pSrc,
-                                            uint32_t KS)
+static inline void xor_keystream_reverse_32(uint8_t *pDst,
+                                            const uint8_t *pSrc,
+                                            const uint32_t KS)
 {
-        pDst[0] = pSrc[0] ^ ((KS >> 24) & 0xff);
-        pDst[1] = pSrc[1] ^ ((KS >> 16) & 0xff);
-        pDst[2] = pSrc[2] ^ ((KS >> 8) & 0xff);
-        pDst[3] = pSrc[3] ^ (KS & 0xff);
+        *(uint32_t *)pDst = (*(const uint32_t *)pSrc) ^ BSWAP32(KS);
 }
 
 /******************************************************************************
@@ -143,7 +147,7 @@ xor_keystrm_rev(uint8_t *pDst, const uint8_t *pSrc, uint64_t keyStream)
  * @param len  [IN] - length in bytes to copy
  ******************************************************************************/
 static inline void
-memcpy_keystrm(uint8_t *pDst, const uint8_t *pSrc, uint32_t len)
+memcpy_keystrm(uint8_t *pDst, const uint8_t *pSrc, const uint32_t len)
 {
         switch (len) {
         case 8:

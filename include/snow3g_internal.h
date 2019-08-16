@@ -29,10 +29,7 @@
 #define _SNOW3G_INTERNAL_H_
 
 #include "intel-ipsec-mb.h"
-#include <immintrin.h>
-#include <smmintrin.h>
-#include <wmmintrin.h>
-#include <xmmintrin.h>
+#include "wireless_common.h"
 
 #define MAX_KEY_LEN (16)
 #define SNOW3G_4_BYTES (4)
@@ -48,38 +45,9 @@
 
 #define SNOW3GCONSTANT (0x1b)
 
-#define NUM_PACKETS_1 1
-#define NUM_PACKETS_2 2
-#define NUM_PACKETS_3 3
-#define NUM_PACKETS_4 4
-#define NUM_PACKETS_8 8
-#define NUM_PACKETS_16 16
-
 #define ComplementaryMask64(x) ((~(x) % 64) + 1)
 #define ComplementaryMask32(x) ((~(x) % 32) + 1)
 
-#ifdef _WIN32
-#define _BSWAP32(x) _byteswap_ulong(x)
-#define _BSWAP64(x) _byteswap_uint64(x)
-#else
-#define _BSWAP32(x) __builtin_bswap32(x)
-#define _BSWAP64(x) __builtin_bswap64(x)
-#endif
-
-typedef union _m128_u {
-        uint8_t byte[16];
-        uint16_t word[8];
-        uint32_t dword[4];
-        uint64_t qword[2];
-        __m128i m;
-} m128_t;
-
-typedef union _m64_u {
-        uint8_t byte[8];
-        uint16_t word[4];
-        uint32_t dword[2];
-        __m64 m;
-} m64_t;
 
 typedef struct snow3gKeyState1_s {
         /* 16 LFSR stages */
@@ -476,111 +444,6 @@ static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
         pCtx->LFSR_S[15] = V;
 }
 
-/*************************************************************************
- * @description - this function is used to copy the right number of bytes
- *                from the source to destination buffer
- *
- * @param pSrc [IN] - pointer to an input Byte array (at least len bytes
- *available)
- * @param pDst [IN] - pointer to the output buffer (at least len bytes
- *available)
- * @param len  [IN] - length in bytes to copy (0 to 4)
- *
- *************************************************************************/
-static inline void memcpy_keystream_32(uint8_t *pDst, const uint8_t *pSrc,
-                                       const uint32_t len)
-{
-        switch (len) {
-        case 4:
-                *(uint32_t *)pDst = *(const uint32_t *)pSrc;
-                break;
-        case 3:
-                pDst[2] = pSrc[2];
-                /* fall-through */
-        case 2:
-                pDst[1] = pSrc[1];
-                /* fall-through */
-        case 1:
-                pDst[0] = pSrc[0];
-        }
-}
-
-/*************************************************************************
- * @description - this function is used to XOR the right number of bytes
- *                from a keystrea and a source into a destination buffer
- *
- * @param pSrc [IN] - pointer to an input Byte array (at least 4 bytes
- *available)
- * @param pDst [IN] - pointer to the output buffer (at least 4 bytes available)
- * @param KS  [IN]  - 4 bytes of keystream number, must be reversed
- *                    into network byte order before XOR
- *
- *************************************************************************/
-static inline void xor_keystream_reverse_32(uint8_t *pDst, const uint8_t *pSrc,
-                                            const uint32_t KS)
-{
-        const uint32_t *pSrc32 = (const uint32_t *)pSrc;
-        uint32_t *pDst32 = (uint32_t *)pDst;
-        *pDst32 = *pSrc32 ^ _BSWAP32(KS);
-}
-
-/******************************************************************************
- * @description - this function is used to do a keystream operation
- * @param pSrc [IN] - pointer to an input Byte array (at least 8 bytes
- *available)
- * @param pDst [IN] - pointer to the output buffer (at least 8 bytes available)
- * @param keyStream [IN] -  the Keystream value (8 bytes)
- ******************************************************************************/
-static inline const uint8_t *
-xor_keystrm_rev(uint8_t *pDst, const uint8_t *pSrc, uint64_t keyStream)
-{
-        /* default: XOR ONLY, read the input buffer, update the output buffer */
-        const uint64_t *pSrc64 = (const uint64_t *)pSrc;
-        uint64_t *pDst64 = (uint64_t *)pDst;
-        *pDst64 = *pSrc64 ^ _BSWAP64(keyStream);
-        return (const uint8_t *)(pSrc64 + 1);
-}
-
-/******************************************************************************
- * @description - this function is used to copy the right number of bytes
- *                from the source to destination buffer
- * @param pSrc [IN] - pointer to an input Byte array (at least len bytes
- *available)
- * @param pDst [IN] - pointer to the output buffer (at least len bytes
- *available)
- * @param len  [IN] - length in bytes to copy
- ******************************************************************************/
-static inline void memcpy_keystrm(uint8_t *pDst,
-                                  const uint8_t *pSrc,
-                                  const uint32_t len)
-{
-        switch (len) {
-        case 8:
-                *(uint64_t *)pDst = *(const uint64_t *)pSrc;
-                break;
-        case 7:
-                pDst[6] = pSrc[6];
-                /* fall-through */
-        case 6:
-                pDst[5] = pSrc[5];
-                /* fall-through */
-        case 5:
-                pDst[4] = pSrc[4];
-                /* fall-through */
-        case 4:
-                *(uint32_t *)pDst = *(const uint32_t *)pSrc;
-                break;
-        case 3:
-                pDst[2] = pSrc[2];
-                /* fall-through */
-        case 2:
-                pDst[1] = pSrc[1];
-                /* fall-through */
-        case 1:
-                pDst[0] = pSrc[0];
-        }
-}
-
 /**
  *******************************************************************************
  * @description
@@ -615,10 +478,10 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                 pCtx->LFSR_S[i + 8] = L;
         }
 
-        pCtx->LFSR_S[15] ^= _BSWAP32(pIV32[3]);
-        pCtx->LFSR_S[12] ^= _BSWAP32(pIV32[2]);
-        pCtx->LFSR_S[10] ^= _BSWAP32(pIV32[1]);
-        pCtx->LFSR_S[9] ^= _BSWAP32(pIV32[0]);
+        pCtx->LFSR_S[15] ^= BSWAP32(pIV32[3]);
+        pCtx->LFSR_S[12] ^= BSWAP32(pIV32[2]);
+        pCtx->LFSR_S[10] ^= BSWAP32(pIV32[1]);
+        pCtx->LFSR_S[9] ^= BSWAP32(pIV32[0]);
 
         /* FSM initialialization */
         FSM2 = 0x0;
