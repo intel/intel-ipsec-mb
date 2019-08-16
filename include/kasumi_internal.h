@@ -567,6 +567,32 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 }
 
 static inline void
+preserve_bits(kasumi_union_t *c,
+              const uint8_t *pcBufferOut, const uint8_t *pcBufferIn,
+              SafeBuf *safeOutBuf, SafeBuf *safeInBuf,
+              const uint8_t bit_len, const uint8_t byte_len)
+{
+        const uint64_t mask = UINT64_MAX << (KASUMI_BLOCK_SIZE * 8 - bit_len);
+
+        /* Clear the last bits of the keystream and the input
+         * (input only in out-of-place case) */
+        c->b64[0] &= mask;
+        if (pcBufferIn != pcBufferOut) {
+                const uint64_t swapMask = BSWAP64(mask);
+
+                safeInBuf->b64 &= swapMask;
+
+                /*
+                 * Merge the last bits from the output, to be preserved,
+                 * in the keystream, to be XOR'd with the input
+                 * (which last bits are 0, maintaining the output bits)
+                 */
+                memcpy_keystrm(safeOutBuf->b8, pcBufferOut, byte_len);
+                c->b64[0] |= BSWAP64(safeOutBuf->b64 & ~swapMask);
+        }
+}
+
+static inline void
 kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                        const void *pIn, void *pOut,
                        const uint32_t lengthInBits,
@@ -585,7 +611,6 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         uint32_t byteLength = (cipherLengthInBits + 7) / 8;
         SafeBuf safeOutBuf;
         SafeBuf safeInBuf;
-        uint64_t mask;
 
         /* IV Endianity  */
         a.b64[0] = BSWAP64(IV);
@@ -619,10 +644,15 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                                         (pcBufferOut[0] & ~mask8);
                 }
 
-                /* Last bits (not to cipher) need to be preserved from Input */
-                mask = (uint64_t)-1 << (KASUMI_BLOCK_SIZE * 8 -
-                                remainOffset - cipherLengthInBits);
-                c.b64[0] &= mask;
+                /* If last byte is a partial byte, the last bits of the output
+                 * need to be preserved */
+                const uint8_t bitlen_with_off = remainOffset +
+                                        cipherLengthInBits;
+
+                if ((bitlen_with_off & 0x7) != 0) {
+                        preserve_bits(&c, pcBufferOut, pcBufferIn, &safeOutBuf,
+                                      &safeInBuf, bitlen_with_off, byteLength);
+                }
                 xor_keystrm_rev(safeOutBuf.b8, safeInBuf.b8, c.b64[0]);
                 memcpy_keystrm(pcBufferOut, safeOutBuf.b8, byteLength);
                 return;
@@ -678,10 +708,12 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                         memcpy_keystrm(safeInBuf.b8, pcBufferIn,
                                        byteLength);
 
-                        /* Last bits need to be preserved from Input */
-                        mask = ((uint64_t)-1) << (KASUMI_BLOCK_SIZE * 8 -
-                                cipherLengthInBits);
-                        c.b64[0] &= mask;
+                        /* If last byte is a partial byte, the last bits
+                         * of the output need to be preserved */
+                        if ((cipherLengthInBits & 0x7) != 0)
+                                preserve_bits(&c, pcBufferOut, pcBufferIn,
+                                              &safeOutBuf, &safeInBuf,
+                                              cipherLengthInBits, byteLength);
                         xor_keystrm_rev(safeOutBuf.b8, safeInBuf.b8, c.b64[0]);
                         memcpy_keystrm(pcBufferOut, safeOutBuf.b8, byteLength);
                         cipherLengthInBits = 0;
