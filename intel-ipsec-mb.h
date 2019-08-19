@@ -2354,6 +2354,46 @@ IMB_DLL_EXPORT int kasumi_f8_iv_gen(const uint32_t count,
 IMB_DLL_EXPORT int kasumi_f9_iv_gen(const uint32_t count,
                                     const uint32_t fresh,
                                     void *iv_ptr);
+
+/**
+ * @brief Generation of SNOW3G F8 Initialization Vector
+ *
+ * Parameters are passed in Little Endian format and
+ * used to generate the IV in Big Endian format
+ *
+ * @param [in]  count  COUNT (4 bytes in Little Endian)
+ * @param [in]  bearer BEARER (5 bits)
+ * @param [in]  dir    DIRECTION (1 bit)
+ * @param [out] iv_ptr Pointer to generated IV (16 bytes) in Big Endian format
+ *
+ * @return
+ *      - 0 if success
+ *      - 1 if one or more parameters are wrong
+ */
+IMB_DLL_EXPORT int snow3g_f8_iv_gen(const uint32_t count,
+                                    const uint8_t bearer,
+                                    const uint8_t dir,
+                                    void *iv_ptr);
+/**
+ * @brief Generation of SNOW3G F9 Initialization Vector
+ *
+ * Parameters are passed in Little Endian format and
+ * used to generate the IV in Big Endian format
+ *
+ * @param [in]  count  COUNT (4 bytes in Little Endian)
+ * @param [in]  fresh  FRESH (4 bytes in Little Endian)
+ * @param [in]  dir    DIRECTION (1 bit)
+ * @param [out] iv_ptr Pointer to generated IV (16 bytes) in Big Endian format
+ *
+ * @return
+ *      - 0 if success
+ *      - 1 if one or more parameters are wrong
+ */
+IMB_DLL_EXPORT int snow3g_f9_iv_gen(const uint32_t count,
+                                    const uint32_t fresh,
+                                    const uint8_t dir,
+                                    void *iv_ptr);
+
 #ifdef __cplusplus
 }
 #endif

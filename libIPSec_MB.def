@@ -305,3 +305,5 @@ EXPORTS
     kasumi_key_sched_size                       @279
     kasumi_init_f8_key_sched                    @280
     kasumi_init_f9_key_sched                    @281
+    snow3g_f8_iv_gen                            @282
+    snow3g_f9_iv_gen                            @283

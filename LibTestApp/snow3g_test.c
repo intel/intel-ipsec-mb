@@ -1704,10 +1704,85 @@ snow3g_f9_1_buffer_exit:
         return ret;
 }
 
+static int validate_f8_iv_gen(void)
+{
+        uint32_t i;
+        uint8_t IV[16];
+        const uint32_t numVectors = MAX_BIT_BUFFERS;
+
+        /* skip first vector as it's not part of test data */
+        for (i = 1; i < numVectors; i++) {
+                cipher_iv_gen_params_t *iv_params =
+                        &snow3g_f8_linear_bitvectors.iv_params[i];
+
+                memset(IV, 0, sizeof(IV));
+
+                /* generate IV */
+                if (snow3g_f8_iv_gen(iv_params->count, iv_params->bearer,
+                                     iv_params->dir, &IV) < 0)
+                        return 1;
+
+                /* validate result */
+                if (memcmp(IV, snow3g_f8_linear_bitvectors.iv[i], 16) != 0) {
+                        printf("snow3g_f8_iv_gen vector num: %d\n", i);
+                        snow3g_hexdump("Actual", IV, 16);
+                        snow3g_hexdump("Expected",
+                                       snow3g_f8_linear_bitvectors.iv[i], 16);
+                        return 1;
+                } else
+                        printf("snow3g_f8_iv_gen() vector num %d: PASS\n", i);
+        }
+
+        return 0;
+}
+
+static int validate_f9_iv_gen(void)
+{
+        uint32_t i;
+        uint8_t IV[16];
+        /* snow3g f9 test vectors are located at index 2 */
+        const uint32_t numVectors = numSnow3gHashTestVectors[2];
+
+
+        /* 6 test sets */
+        for (i = 0; i < numVectors; i++) {
+                hash_iv_gen_params_t *iv_params =
+                        &snow_f9_vectors[i].iv_params;
+
+                memset(IV, 0, sizeof(IV));
+
+                /* generate IV */
+                if (snow3g_f9_iv_gen(iv_params->count, iv_params->fresh,
+                                     iv_params->dir, &IV) < 0)
+                        return 1;
+
+                /* validate result */
+                if (memcmp(IV, snow_f9_vectors[i].iv, 16) != 0) {
+                        printf("snow3g_f9_iv_gen vector num: %d\n", i);
+                        snow3g_hexdump("Actual", IV, 16);
+                        snow3g_hexdump("Expected", snow_f9_vectors[i].iv, 16);
+                        return 1;
+                } else
+                        printf("snow3g_f9_iv_gen() vector num %d: PASS\n", i);
+        }
+
+        return 0;
+}
+
 int snow3g_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 {
         int status = 0;
         (void)(arch);
+
+
+        if (validate_f8_iv_gen()) {
+                printf("validate_snow3g_f8_iv_gen:: FAIL\n");
+                status = 1;
+        }
+        if (validate_f9_iv_gen()) {
+                printf("validate_snow3g_f9_iv_gen:: FAIL\n");
+                status = 1;
+        }
 
         if (validate_snow3g_f8_1_block(mb_mgr)) {
                 printf("validate_snow3g_f8_1_block: FAIL\n");

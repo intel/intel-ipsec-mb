@@ -42,6 +42,11 @@
 #define SNOW3G_KEY_LEN_IN_BYTES (16) /* 128b */
 #define SNOW3G_IV_LEN_IN_BYTES (16)  /* 128b */
 
+typedef struct cipher_iv_gen_params_s {
+        uint32_t count;
+        uint8_t bearer;
+        uint8_t dir;
+} cipher_iv_gen_params_t;
 typedef struct cipher_test_vector_s {
         uint32_t dataLenInBytes;
         uint32_t keyLenInBytes;
@@ -68,8 +73,15 @@ typedef struct cipherbit_test_linear_vector_s {
         uint8_t ciphertext[MAX_DATA_LEN];
         uint8_t key[MAX_BIT_BUFFERS][MAX_KEY_LEN];
         uint8_t iv[MAX_BIT_BUFFERS][MAX_IV_LEN];
+        cipher_iv_gen_params_t iv_params[MAX_BIT_BUFFERS];
 } cipherbit_test_linear_vector_t;
 
+
+typedef struct hash_iv_gen_params_s {
+        uint32_t count;
+        uint32_t fresh;
+        uint8_t dir;
+} hash_iv_gen_params_t;
 typedef struct hash_test_vector_s {
         uint8_t input[MAX_DATA_LEN];
         uint32_t lengthInBits;
@@ -79,6 +91,7 @@ typedef struct hash_test_vector_s {
         uint8_t iv[MAX_DATA_LEN];
         uint32_t ivLenInBytes;
         uint32_t direction;
+        hash_iv_gen_params_t iv_params;
 } hash_test_vector_t;
 
 static cipherbit_test_linear_vector_t snow3g_f8_linear_bitvectors = {
@@ -164,16 +177,23 @@ static cipherbit_test_linear_vector_t snow3g_f8_linear_bitvectors = {
          {0x39, 0x8a, 0x59, 0xb4, 0xac, 0x00, 0x00, 0x00, 0x39, 0x8a, 0x59,
           0xb4, 0xac, 0x00, 0x00, 0x00},
          {0x72, 0xA4, 0xF2, 0x0F, 0x64, 0x00, 0x00, 0x00, 0x72, 0xA4, 0xF2,
-          0x0F, 0x64, 0x00, 0x00, 0x00},
+          0x0F, 0x64, 0x00, 0x00, 0x00}, /* test 1 */
          {0xFA, 0x55, 0x6B, 0x26, 0x1C, 0x00, 0x00, 0x00, 0xFA, 0x55, 0x6B,
-          0x26, 0x1C, 0x00, 0x00, 0x00},
+          0x26, 0x1C, 0x00, 0x00, 0x00}, /* test 3 */
          {0xE2, 0x8B, 0xCF, 0x7B, 0xC0, 0x00, 0x00, 0x00, 0xE2, 0x8B, 0xCF,
-          0x7B, 0xC0, 0x00, 0x00, 0x00},
+          0x7B, 0xC0, 0x00, 0x00, 0x00}, /* test 2 */
          {0x39, 0x8A, 0x59, 0xB4, 0x2C, 0x00, 0x00, 0x00, 0x39, 0x8A, 0x59,
-          0xB4, 0x2C, 0x00, 0x00, 0x0},
+          0xB4, 0x2C, 0x00, 0x00, 0x00}, /* test 4 */
          {0x72, 0xA4, 0xF2, 0x0F, 0x48, 0x00, 0x00, 0x00, 0x72, 0xA4, 0xF2,
-          0x0F, 0x48, 0x00, 0x00, 0x00}}
-
+          0x0F, 0x48, 0x00, 0x00, 0x00}}, /* test 5 */
+        { /* IV gen params*/
+         {0x0, 0x0, 0x0}, /* N/A - not part of test data */
+         {0x72A4F20F, 0x0C, 0x1},
+         {0xFA556B26, 0x03, 0x1},
+         {0xE28BCF7B, 0x18, 0x0},
+         {0x398A59B4, 0x05, 0x1},
+         {0x72A4F20F, 0x09, 0x0},
+        }
 };
 
 static cipher_test_vector_t snow3g_f8_vectors[] = {
@@ -203,7 +223,8 @@ static cipher_test_vector_t snow3g_f8_vectors[] = {
           0x68, 0x0a, 0xf8, 0xc6, 0xd1},
          /*iv*/
          {0x39, 0x8a, 0x59, 0xb4, 0xac, 0x00, 0x00, 0x00, 0x39, 0x8a, 0x59,
-          0xb4, 0xac, 0x00, 0x00, 0x00}},
+          0xb4, 0xac, 0x00, 0x00, 0x00},
+        },
         {// 3GPP specs Test Set 1
          /*dataLenInBytes*/
          99,
@@ -378,6 +399,8 @@ static hash_test_vector_t snow_f9_vectors[] = {
                 16,
                 /*direction*/
                 0,
+                /* IV params */
+                {0x38A6F056, 0x05D2EC49, 0x0},
         },
         {
                 // 3GPP specs Test Set 2
@@ -402,6 +425,8 @@ static hash_test_vector_t snow_f9_vectors[] = {
                 16,
                 /*direction*/
                 1,
+                /* IV params */
+                {0x3EDC87E2, 0xA4F2D8E2, 0x1},
         },
         {
                 // 3GPP specs Test Set 3
@@ -426,6 +451,8 @@ static hash_test_vector_t snow_f9_vectors[] = {
                 16,
                 /*direction*/
                 1,
+                /* IV params */
+                {0x36AF6144, 0x9838F03A, 0x1},
         },
         {
                 // 3GPP specs Test Set 4
@@ -451,6 +478,8 @@ static hash_test_vector_t snow_f9_vectors[] = {
                 16,
                 /*direction*/
                 1,
+                /* IV params */
+                {0x14793E41, 0x0397E8FD, 0x1},
         },
         {
                 // 3GPP specs Test Set 5
@@ -484,6 +513,8 @@ static hash_test_vector_t snow_f9_vectors[] = {
                 16,
                 /*direction*/
                 1,
+                /* IV params */
+                {0x296F393C, 0x6B227737, 0x1},
         },
         {// 3GPP specs Test Set 6
          /*input*/
@@ -689,7 +720,10 @@ static hash_test_vector_t snow_f9_vectors[] = {
          /*ivLeninbytes*/
          16,
          /*direction*/
-         1}}; // snow3g f9 3GPP test vectors
+         1,
+         /* IV params */
+         {0x296F393C, 0x6B227737, 0x1},
+        }}; // snow3g f9 3GPP test vectors
 
 cipher_test_vector_t *snow3g_cipher_test_vectors[] = {
         snow3g_f8_vectors, snow3g_f8_vectors};

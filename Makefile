@@ -162,7 +162,8 @@ c_lib_objs := \
 	snow3g_sse_no_aesni.o \
 	snow3g_avx.o \
 	snow3g_avx2.o \
-	snow3g_tables.o
+	snow3g_tables.o \
+	snow3g_iv.o
 
 #
 # List of ASM modules (root directory/common)
