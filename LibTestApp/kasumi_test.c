@@ -40,6 +40,8 @@
 #include "kasumi_test_vectors.h"
 
 #define KASUMIIVLEN 8
+#define PAD_LEN 16
+
 cipher_test_vector_t *vecList[MAX_DATA_LEN];
 
 int kasumi_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
@@ -210,18 +212,31 @@ static int validate_kasumi_f8_1_block(MB_MGR *mgr)
 static void buffer_shift_right(uint8_t *buffer, uint32_t length, uint8_t offset)
 {
         uint8_t curr_byte, prev_byte;
-        uint32_t length_in_bytes = (length + offset + 7) / CHAR_BIT;
-        uint8_t lower_byte_mask = (1 << offset) - 1;
-        unsigned i;
+        const uint32_t length_in_bytes = (length + offset + 7) / CHAR_BIT;
+        const uint8_t lower_byte_mask = (1 << offset) - 1;
+        uint32_t i;
 
-        prev_byte = buffer[0];
-        buffer[0] >>= offset;
-        for (i = 1; i < length_in_bytes; i++) {
+        /* Padding */
+        prev_byte = 0xff;
+
+        for (i = 0; i < length_in_bytes; i++) {
                 curr_byte = buffer[i];
                 buffer[i] = ((prev_byte & lower_byte_mask) << (8 - offset)) |
                             (curr_byte >> offset);
                 prev_byte = curr_byte;
         }
+}
+
+static void copy_test_bufs(uint8_t *plainBuff, uint8_t *wrkBuff,
+                           uint8_t *ciphBuff, const uint8_t *src_test,
+                           const uint8_t *dst_test, const uint32_t byte_len)
+{
+        /* Reset all buffers to -1 (for padding check) and copy test vectors */
+        memset(wrkBuff, -1, (byte_len + PAD_LEN * 2));
+        memset(plainBuff, -1, (byte_len + PAD_LEN * 2));
+        memset(ciphBuff, -1, (byte_len + PAD_LEN * 2));
+        memcpy(plainBuff + PAD_LEN, src_test, byte_len);
+        memcpy(ciphBuff + PAD_LEN, dst_test, byte_len);
 }
 
 static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr)
@@ -235,10 +250,15 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr)
 
         uint8_t *pKey = NULL;
         int keyLen = MAX_KEY_LEN;
-        uint8_t srcBuff[MAX_DATA_LEN];
-        uint8_t dstBuff[MAX_DATA_LEN];
+        uint8_t plainBuff[MAX_DATA_LEN];
+        uint8_t ciphBuff[MAX_DATA_LEN];
         uint8_t wrkBuff[MAX_DATA_LEN];
+        /* Adding extra byte for offset tests (shifting 4 bits) */
+        uint8_t padding[PAD_LEN + 1];
         uint64_t IV;
+        int ret = 1;
+
+        memset(padding, -1, PAD_LEN + 1);
 
         if (!numKasumiTestVectors) {
                 printf("No Kasumi vectors found !\n");
@@ -258,121 +278,113 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr)
 
         /* Copy the data for for Kasumi_f8 1 Packet version*/
         for (i = 0; i < numKasumiTestVectors; i++) {
+                uint8_t *wrkBufBefPad = wrkBuff;
+                uint8_t *wrkBufAftPad = wrkBuff + PAD_LEN;
+                uint8_t *plainBufBefPad = plainBuff;
+                uint8_t *plainBufAftPad = plainBuff + PAD_LEN;
+                uint8_t *ciphBufBefPad = ciphBuff;
+                uint8_t *ciphBufAftPad = ciphBuff + PAD_LEN;
+
+                const uint32_t byte_len =
+                        (kasumi_bit_vectors[i].LenInBits + 7) / CHAR_BIT;
+                const uint32_t bit_len = kasumi_bit_vectors[i].LenInBits;
+
                 memcpy(pKey, kasumi_bit_vectors[i].key,
                        kasumi_bit_vectors[i].keyLenInBytes);
-                memcpy(srcBuff, kasumi_bit_vectors[i].plaintext,
-                       (kasumi_bit_vectors[i].LenInBits + 7) / CHAR_BIT);
-                memcpy(dstBuff, kasumi_bit_vectors[i].ciphertext,
-                       (kasumi_bit_vectors[i].LenInBits + 7) / CHAR_BIT);
                 memcpy((uint8_t *)&IV, kasumi_bit_vectors[i].iv,
                        kasumi_bit_vectors[i].ivLenInBytes);
+                copy_test_bufs(plainBufBefPad, wrkBufBefPad, ciphBufBefPad,
+                               kasumi_bit_vectors[i].plaintext,
+                               kasumi_bit_vectors[i].ciphertext,
+                               byte_len);
 
                 /* Setup the keysched to be used */
                 if (kasumi_init_f8_key_sched(pKey, pKeySched)) {
                         printf("kasumi_init_f8_key_sched()error\n");
-                        free(pKey);
-                        free(pKeySched);
-                        return 1;
+                        goto end;
                 }
 
                 /* Validate Encrypt */
-                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, srcBuff, wrkBuff,
-                                           kasumi_bit_vectors[i].LenInBits, 0);
+                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, plainBufAftPad,
+                                           wrkBufAftPad, bit_len, 0);
 
-                /* Check against the cipher test in the vector against the
+                /* Check the ciphertext in the vector against the
                  * encrypted plaintext */
-                if (membitcmp(wrkBuff, dstBuff, 0,
-                              kasumi_bit_vectors[i].LenInBits) != 0) {
+                if (membitcmp(wrkBufAftPad, ciphBufAftPad, 0, bit_len) != 0) {
                         printf("kasumi_f8_1_block(Enc) offset=0 vector:%d\n",
                                i);
-                        hexdump("Actual:", wrkBuff,
-                                (kasumi_bit_vectors[i].LenInBits + 7) /
-                                    CHAR_BIT);
-                        hexdump("Expected:", dstBuff,
-                                (kasumi_bit_vectors[i].LenInBits + 7) /
-                                    CHAR_BIT);
-                        free(pKey);
-                        free(pKeySched);
-                        return 1;
+                        hexdump("Actual:", wrkBufAftPad, byte_len);
+                        hexdump("Expected:", ciphBufAftPad, byte_len);
+                        goto end;
                 }
-                /*Validate Decrpyt*/
-                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, wrkBuff, srcBuff,
-                                           kasumi_bit_vectors[i].LenInBits, 0);
+                /* Check that data not to be ciphered was not overwritten */
+                if (memcmp(wrkBufBefPad, ciphBufBefPad, PAD_LEN)) {
+                        printf("overwrite head\n");
+                        hexdump("Head", wrkBufBefPad, PAD_LEN);
+                        goto end;
+                }
+                if (memcmp(wrkBufAftPad + byte_len - 1,
+                           ciphBufAftPad + byte_len - 1,
+                           PAD_LEN + 1)) {
+                        printf("overwrite tail\n");
+                        hexdump("Tail", wrkBufAftPad + byte_len - 1,
+                                PAD_LEN + 1);
+                        goto end;
+                }
+                /* Validate Decrypt */
+                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, ciphBufAftPad,
+                                           wrkBufAftPad, bit_len, 0);
 
-                memcpy(dstBuff, kasumi_bit_vectors[i].plaintext,
-                       (kasumi_bit_vectors[i].LenInBits + 7) / CHAR_BIT);
-                if (membitcmp(srcBuff, dstBuff, 0,
+                if (membitcmp(wrkBufAftPad, plainBufAftPad, 0,
                               kasumi_bit_vectors[i].LenInBits) != 0) {
                         printf("kasumi_f8_1_block(Dec) offset=0 vector:%d\n",
                                i);
-                        hexdump("Actual:", srcBuff,
-                                (kasumi_bit_vectors[i].LenInBits + 7) /
-                                    CHAR_BIT);
-                        hexdump("Expected:", dstBuff,
-                                (kasumi_bit_vectors[i].LenInBits + 7) /
-                                    CHAR_BIT);
-                        free(pKey);
-                        free(pKeySched);
-                        return 1;
+                        hexdump("Actual:", wrkBufAftPad, byte_len);
+                        hexdump("Expected:", plainBufAftPad, byte_len);
+                        goto end;
                 }
-                memcpy(srcBuff, kasumi_bit_vectors[i].plaintext,
-                       (kasumi_bit_vectors[i].LenInBits + 7) / CHAR_BIT);
-                buffer_shift_right(srcBuff,
-                                   kasumi_bit_vectors[i].LenInBits, 4);
-                memcpy(dstBuff, kasumi_bit_vectors[i].ciphertext,
-                       (kasumi_bit_vectors[i].LenInBits + 7) / CHAR_BIT);
-                buffer_shift_right(dstBuff,
-                                   kasumi_bit_vectors[i].LenInBits, 4);
+                copy_test_bufs(plainBufBefPad, wrkBufBefPad, ciphBufBefPad,
+                               kasumi_bit_vectors[i].plaintext,
+                               kasumi_bit_vectors[i].ciphertext,
+                               byte_len);
+                buffer_shift_right(plainBufBefPad, (byte_len + PAD_LEN * 2) * 8,
+                                   4);
+                buffer_shift_right(ciphBufBefPad, (byte_len + PAD_LEN * 2) * 8,
+                                   4);
 
                 /* Validate Encrypt */
-                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, srcBuff, wrkBuff,
-                                           kasumi_bit_vectors[i].LenInBits, 4);
+                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, plainBufAftPad,
+                                           wrkBufAftPad, bit_len, 4);
 
-                /* Check against the ciphertext in the vector against the
+                /* Check the ciphertext in the vector against the
                  * encrypted plaintext */
-                if (membitcmp(wrkBuff, dstBuff, 4,
-                              kasumi_bit_vectors[i].LenInBits) != 0) {
+                if (membitcmp(wrkBufAftPad, ciphBufAftPad, 4, bit_len) != 0) {
                         printf("kasumi_f8_1_block(Enc) offset=4  vector:%d\n",
                                i);
-                        hexdump("Actual:", wrkBuff,
-                                (kasumi_bit_vectors[i].LenInBits + 7) /
-                                    CHAR_BIT);
-                        hexdump("Expected:", dstBuff,
-                                (kasumi_bit_vectors[i].LenInBits + 7) /
-                                    CHAR_BIT);
-                        free(pKey);
-                        free(pKeySched);
-                        return 1;
+                        hexdump("Actual:", wrkBufAftPad, byte_len);
+                        hexdump("Expected:", ciphBufAftPad, byte_len);
+                        goto end;
                 }
-                /*Validate Decrpyt*/
-                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, wrkBuff, srcBuff,
-                                           kasumi_bit_vectors[i].LenInBits, 4);
+                /*Validate Decrypt*/
+                IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, ciphBufAftPad,
+                                           wrkBufAftPad, bit_len, 4);
 
-                memcpy(dstBuff, kasumi_bit_vectors[i].plaintext,
-                       (kasumi_bit_vectors[i].LenInBits + 7) / CHAR_BIT);
-                buffer_shift_right(dstBuff,
-                                   kasumi_bit_vectors[i].LenInBits, 4);
-
-                if (membitcmp(srcBuff, dstBuff, 4,
-                              kasumi_bit_vectors[i].LenInBits) != 0) {
+                if (membitcmp(plainBufAftPad, plainBufAftPad, 4,
+                              bit_len) != 0) {
                         printf("kasumi_f8_1_block(Dec) offset=4 vector:%d\n",
                                i);
-                        hexdump("Actual:", srcBuff,
-                                (kasumi_bit_vectors[i].LenInBits + 7) /
-                                    CHAR_BIT);
-                        hexdump("Expected:", dstBuff,
-                                (kasumi_bit_vectors[i].LenInBits + 7) /
-                                    CHAR_BIT);
-                        free(pKey);
-                        free(pKeySched);
-                        return 1;
+                        hexdump("Actual:", wrkBufAftPad, byte_len);
+                        hexdump("Expected:", plainBufAftPad, byte_len);
+                        goto end;
                 }
         }
 
+        ret = 0;
+        printf("[%s]:  PASS, for %d single buffers.\n", __FUNCTION__, i);
+end:
         free(pKey);
         free(pKeySched);
-        printf("[%s]:  PASS, for %d single buffers.\n", __FUNCTION__, i);
-        return 0;
+        return ret;
 }
 
 static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr)
