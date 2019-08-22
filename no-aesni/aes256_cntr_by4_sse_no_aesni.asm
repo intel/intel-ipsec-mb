@@ -27,4 +27,5 @@
 
 %include "include/aesni_emu.inc"
 %define AES_CNTR_256 aes_cntr_256_sse_no_aesni
+%define AES_CNTR_BIT_256 aes_cntr_bit_256_sse_no_aesni
 %include "sse/aes256_cntr_by4_sse.asm"

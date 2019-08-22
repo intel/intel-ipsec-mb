@@ -99,6 +99,8 @@ JOB_AES_HMAC *flush_job_docsis_des_dec_avx512(MB_MGR_DES_OOO *state);
 
 JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
+JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
+
 #define SAVE_XMMS save_xmms_avx
 #define RESTORE_XMMS restore_xmms_avx
 #define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_avx512
@@ -121,6 +123,7 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 #define SUBMIT_JOB_AES_ECB_256_DEC submit_job_aes_ecb_256_dec_avx
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx512
+#define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_avx512
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx512
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx512
@@ -129,6 +132,7 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 #define AES_CNTR_128       aes_cntr_128_avx
 #define AES_CNTR_192       aes_cntr_192_avx
 #define AES_CNTR_256       aes_cntr_256_avx
+
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
 
 #define AES_ECB_ENC_128       aes_ecb_enc_128_avx
@@ -440,6 +444,8 @@ static JOB_AES_HMAC *(*submit_job_aes_gcm_dec_avx512)
 
 static JOB_AES_HMAC *(*submit_job_aes_cntr_avx512)
         (JOB_AES_HMAC *job) = submit_job_aes_cntr_avx;
+static JOB_AES_HMAC *(*submit_job_aes_cntr_bit_avx512)
+        (JOB_AES_HMAC *job) = submit_job_aes_cntr_bit_avx;
 
 static JOB_AES_HMAC *
 vaes_submit_cntr_avx512(JOB_AES_HMAC *job)
@@ -450,6 +456,20 @@ vaes_submit_cntr_avx512(JOB_AES_HMAC *job)
                 aes_cntr_192_submit_vaes_avx512(job);
         else /* assume 32 bytes */
                 aes_cntr_256_submit_vaes_avx512(job);
+
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+static JOB_AES_HMAC *
+vaes_submit_cntr_bit_avx512(JOB_AES_HMAC *job)
+{
+        if (16 == job->aes_key_len_in_bytes)
+                aes_cntr_bit_128_submit_vaes_avx512(job);
+        else if (24 == job->aes_key_len_in_bytes)
+                aes_cntr_bit_192_submit_vaes_avx512(job);
+        else /* assume 32 bytes */
+                aes_cntr_bit_256_submit_vaes_avx512(job);
 
         job->status |= STS_COMPLETED_AES;
         return job;
@@ -1004,8 +1024,10 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->snow3g_init_key_sched = snow3g_init_key_sched_avx2;
         state->snow3g_key_sched_size = snow3g_key_sched_size_avx2;
 
-        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES)
+        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
                 submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;
+                submit_job_aes_cntr_bit_avx512 = vaes_submit_cntr_bit_avx512;
+        }
 #ifndef NO_GCM
         if ((state->features & (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) ==
             (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) {

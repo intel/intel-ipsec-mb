@@ -195,7 +195,8 @@ typedef enum {
         CCM,
         DES3,
         PON_AES_CNTR,
-        ECB
+        ECB,
+        CNTR_BITLEN, /* 128-EEA2/NIA2 (3GPP) */
 } JOB_CIPHER_MODE;
 
 typedef enum {
