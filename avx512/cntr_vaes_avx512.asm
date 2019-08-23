@@ -809,7 +809,7 @@ default rel
         mov     r12, [rsp + 0*8]
         mov     r13, [rsp + 1*8]
 %ifidn %%CNTR_TYPE, CNTR_BIT
-        mov     [rsp + 2*8], r14
+        mov     r14, [rsp + 2*8]
 %endif
         mov     rsp, [rsp + 3*8] ; stack
 %endmacro
