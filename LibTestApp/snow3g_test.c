@@ -84,6 +84,8 @@ int validate_snow3g_f8_1_block(struct MB_MGR *mb_mgr)
         uint8_t *pIV;
         int ret = 1;
 
+        printf("Testing IMB_SNOW3G_F8_1_BUFFER:\n");
+
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
 
@@ -150,6 +152,7 @@ int validate_snow3g_f8_1_block(struct MB_MGR *mb_mgr)
                         snow3g_hexdump("Expected:", dstBuff, length);
                         goto snow3g_f8_1_buffer_exit;
                 }
+                printf(".");
 
                 memcpy(dstBuff, testVectors[i].plaintext, length);
 
@@ -163,6 +166,7 @@ int validate_snow3g_f8_1_block(struct MB_MGR *mb_mgr)
                         snow3g_hexdump("Expected:", dstBuff, length);
                         goto snow3g_f8_1_buffer_exit;
                 }
+                printf(".");
         } /* for numVectors */
 
         /* no errors detected */
@@ -173,8 +177,7 @@ snow3g_f8_1_buffer_exit:
         free(pKey);
         free(pKeySched);
 
-        printf("[%s]: %s, for vector %d.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", i);
+        printf("\n");
 
         return ret;
 }
@@ -219,6 +222,8 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
         uint32_t offset = 0;
         uint32_t byteoffset = 0;
         int ret = 1;
+
+        printf("Testing IMB_SNOW3G_F8_1_BUFFER_BIT:\n");
 
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(midBuff, 0, sizeof(midBuff));
@@ -294,6 +299,7 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                                        (testVectors->dataLenInBits[i] + 7) / 8);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
+                printf(".");
 
                 /*Validate Decrypt*/
                 IMB_SNOW3G_F8_1_BUFFER_BIT(mb_mgr, pKeySched, pIV, dstBuff,
@@ -315,6 +321,8 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                                         offset % 8 + 7) / 8);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
+                printf(".");
+
                 /* Another test with Standard 3GPP table */
                 length = testStandardVectors[i].dataLenInBytes;
                 memcpy(srcBuff, testStandardVectors[i].plaintext, length);
@@ -340,6 +348,7 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                                        testStandardVectors[i].dataLenInBytes);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
+                printf(".");
 
                 /*Validate Decrypt*/
                 IMB_SNOW3G_F8_1_BUFFER_BIT(
@@ -358,6 +367,8 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                                        testStandardVectors[i].dataLenInBytes);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
+                printf(".");
+
                 memcpy(srcBuff, testStandardVectors[i].plaintext, length);
 
                 memcpy(dstBuff, testStandardVectors[i].ciphertext, length);
@@ -388,6 +399,7 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                                         8 + 4 + 7) / 8);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
+                printf(".");
 
                 /*Validate Decrypt*/
                 IMB_SNOW3G_F8_1_BUFFER_BIT(
@@ -409,6 +421,7 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                                  8 + 4 + 7) / 8);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
+                printf(".");
 
                 memcpy(srcBuff, testVectors->plaintext, bufferbytesize);
                 memcpy(dstBuff, testVectors->ciphertext, bufferbytesize);
@@ -426,8 +439,7 @@ snow3g_f8_1_buffer_bit_exit:
         free(pKey);
         free(pKeySched);
 
-        printf("[%s]: %s, for vector %d.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", i);
+        printf("\n");
 
         return ret;
 }
@@ -447,6 +459,8 @@ static int validate_snow3g_f8_2_blocks(struct MB_MGR *mb_mgr)
         uint8_t *IV[SNOW3G_IV_LEN_IN_BYTES];
         uint32_t packetLen[MAX_DATA_LEN];
         int ret = 1;
+
+        printf("Testing IMB_SNOW3G_F8_2_BUFFER:\n");
 
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
@@ -539,6 +553,7 @@ static int validate_snow3g_f8_2_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[0]);
                                 goto snow3g_f8_2_buffer_exit;
                         }
+                        printf(".");
                 }
 
                 /* Set the source buffer with ciphertext, and clear destination
@@ -564,6 +579,7 @@ static int validate_snow3g_f8_2_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[i]);
                                 goto snow3g_f8_2_buffer_exit;
                         }
+                        printf(".");
                 }
 
                 /* TEST OUT-OF-PLACE ENCRYPTION/DECRYPTION */
@@ -586,6 +602,7 @@ static int validate_snow3g_f8_2_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[0]);
                                 goto snow3g_f8_2_buffer_exit;
                         }
+                        printf(".");
                 }
                 /* Set the source buffer with ciphertext, and clear destination
                  * buffer */
@@ -612,6 +629,7 @@ static int validate_snow3g_f8_2_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[i]);
                                 goto snow3g_f8_2_buffer_exit;
                         }
+                        printf(".");
                 }
                 /* free buffers before next iteration */
                 for (k = 0; k < numPackets; k++) {
@@ -647,8 +665,7 @@ snow3g_f8_2_buffer_exit:
                 if (IV[i] != NULL)
                         free(IV[i]);
         }
-        printf("[%s]: %s, for %d single buffers.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", numPackets);
+        printf("\n");
 
         return ret;
 }
@@ -668,6 +685,8 @@ int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr)
         uint8_t *IV[SNOW3G_IV_LEN_IN_BYTES];
         uint32_t packetLen[MAX_DATA_LEN];
         int ret = 1;
+
+        printf("Testing IMB_SNOW3G_F8_4_BUFFER:\n");
 
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
@@ -761,6 +780,7 @@ int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[i]);
                                 goto snow3g_f8_4_buffer_exit;
                         }
+                        printf(".");
                 }
 
                 /* Set the source buffer with ciphertext, and clear destination
@@ -788,6 +808,7 @@ int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[i]);
                                 goto snow3g_f8_4_buffer_exit;
                         }
+                        printf(".");
                 }
                 /* TEST OUT-OF-PLACE ENCRYPTION/DECRYPTION */
                 /*Test the encrypt*/
@@ -802,7 +823,7 @@ int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr)
                         if (memcmp(dstBuff[i], testVectors[j].ciphertext,
                                    packetLen[i]) != 0) {
                                 printf("IMB_SNOW3G_F8_4_BUFFER(Enc) vector:%d "
-                                       "\n", j);
+                                       "buffer:%d\n", j, i);
                                 snow3g_hexdump("Actual:", dstBuff[i],
                                                packetLen[i]);
                                 snow3g_hexdump("Expected:",
@@ -810,6 +831,7 @@ int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[i]);
                                 goto snow3g_f8_4_buffer_exit;
                         }
+                        printf(".");
                 }
 
                 /* Set the source buffer with ciphertext, and clear destination
@@ -838,6 +860,7 @@ int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[i]);
                                 goto snow3g_f8_4_buffer_exit;
                         }
+                        printf(".");
                 }
                 /* free buffers before next iteration */
                 for (i = 0; i < numPackets; i++) {
@@ -911,6 +934,7 @@ int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr)
                                        packetLen[i]);
                         goto snow3g_f8_4_buffer_exit;
                 }
+                printf(".");
         }
 
         /* no errors detected */
@@ -930,8 +954,7 @@ snow3g_f8_4_buffer_exit:
                 if (IV[i] != NULL)
                         free(IV[i]);
         }
-        printf("[%s]: %s, for %d single buffers.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", numPackets);
+        printf("\n");
 
         return ret;
 }
@@ -951,6 +974,8 @@ static int validate_snow3g_f8_8_blocks(struct MB_MGR *mb_mgr)
         uint8_t *IV[SNOW3G_IV_LEN_IN_BYTES];
         uint32_t packetLen[MAX_DATA_LEN];
         int ret = 1;
+
+        printf("Testing IMB_SNOW3G_F8_8_BUFFER:\n");
 
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
@@ -1050,6 +1075,7 @@ static int validate_snow3g_f8_8_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[i]);
                                 goto snow3g_f8_8_buffer_exit;
                         }
+                        printf(".");
                 }
 
                 /*Test the decrypt*/
@@ -1076,6 +1102,7 @@ static int validate_snow3g_f8_8_blocks(struct MB_MGR *mb_mgr)
                                                packetLen[i]);
                                 goto snow3g_f8_8_buffer_exit;
                         }
+                        printf(".");
                 }
                                 /* free buffers before next iteration */
                 for (k = 0; k < numPackets; k++) {
@@ -1152,6 +1179,7 @@ static int validate_snow3g_f8_8_blocks(struct MB_MGR *mb_mgr)
                                        packetLen[i]);
                         goto snow3g_f8_8_buffer_exit;
                 }
+                printf(".");
         }
         /* no errors detected */
         ret = 0;
@@ -1170,8 +1198,7 @@ snow3g_f8_8_buffer_exit:
                 if (IV[i] != NULL)
                         free(IV[i]);
         }
-        printf("[%s]: %s, for %d single buffers.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", numPackets);
+        printf("\n");
 
         return ret;
 }
@@ -1198,6 +1225,8 @@ static int validate_snow3g_f8_8_blocks_multi_key(struct MB_MGR *mb_mgr)
         uint8_t *IV[MAX_DATA_LEN];
         uint32_t packetLen[MAX_DATA_LEN];
         int ret = 1;
+
+        printf("Testing IMB_SNOW3G_F8_8_BUFFER_MULTIKEY:\n");
 
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
@@ -1283,6 +1312,7 @@ static int validate_snow3g_f8_8_blocks_multi_key(struct MB_MGR *mb_mgr)
                                        packetLen[i]);
                         goto snow3g_f8_8_buffer_multikey_exit;
                 }
+                printf(".");
         }
 
         /*Test the decrypt*/
@@ -1303,6 +1333,7 @@ static int validate_snow3g_f8_8_blocks_multi_key(struct MB_MGR *mb_mgr)
                                        packetLen[i]);
                         goto snow3g_f8_8_buffer_multikey_exit;
                 }
+                printf(".");
         }
         /* no errors detected */
         ret = 0;
@@ -1321,8 +1352,7 @@ snow3g_f8_8_buffer_multikey_exit:
                         free(pKeySched[i]);
 
         }
-        printf("[%s]: %s, for %d multi buffers.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", numPackets);
+        printf("\n");
 
         return ret;
 }
@@ -1342,6 +1372,8 @@ int validate_snow3g_f8_n_blocks(struct MB_MGR *mb_mgr)
         uint8_t *IV[NUM_SUPPORTED_BUFFERS];
         uint32_t packetLen[MAX_DATA_LEN];
         int ret = 1;
+
+        printf("Testing IMB_SNOW3G_F8_N_BUFFER:\n");
 
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
@@ -1425,6 +1457,8 @@ int validate_snow3g_f8_n_blocks(struct MB_MGR *mb_mgr)
                                        packetLen[0]);
                         goto snow3g_f8_n_buffer_exit;
                 }
+                printf(".");
+
                 /*Test the Decrypt*/
                 IMB_SNOW3G_F8_N_BUFFER(mb_mgr, pKeySched,
                                        (const void * const *)IV,
@@ -1446,6 +1480,7 @@ int validate_snow3g_f8_n_blocks(struct MB_MGR *mb_mgr)
                                        packetLen[0]);
                         goto snow3g_f8_n_buffer_exit;
                 }
+                printf(".");
         }
         /* no errors detected */
         ret = 0;
@@ -1464,8 +1499,7 @@ snow3g_f8_n_buffer_exit:
                 if (IV[i] != NULL)
                         free(IV[i]);
         }
-        printf("[%s]: %s, for %d single buffers.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", numPackets);
+        printf("\n");
 
         return ret;
 }
@@ -1484,6 +1518,8 @@ static int validate_snow3g_f8_n_blocks_multi(struct MB_MGR *mb_mgr)
         uint8_t *IV[MAX_DATA_LEN];
         uint32_t packetLen[MAX_DATA_LEN];
         int ret = 1;
+
+        printf("Testing IMB_SNOW3G_F8_N_BUFFER_MULTIKEY:\n");
 
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
@@ -1568,6 +1604,8 @@ static int validate_snow3g_f8_n_blocks_multi(struct MB_MGR *mb_mgr)
                                        packetLen[i]);
                         goto snow3g_f8_n_buffer_multikey_exit;
                 }
+                printf(".");
+
                 /*Test the Decrypt*/
                 IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(
                         mb_mgr,
@@ -1591,6 +1629,7 @@ static int validate_snow3g_f8_n_blocks_multi(struct MB_MGR *mb_mgr)
                                        packetLen[i]);
                         goto snow3g_f8_n_buffer_multikey_exit;
                 }
+                printf(".");
         }
         /* no errors detected */
         ret = 0;
@@ -1609,8 +1648,7 @@ snow3g_f8_n_buffer_multikey_exit:
                         free(pKeySched[i]);
 
         }
-        printf("[%s]: %s, for %d multi buffers.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", numPackets);
+        printf("\n");
 
         return ret;
 }
@@ -1629,6 +1667,8 @@ int validate_snow3g_f9(struct MB_MGR *mb_mgr)
         uint8_t digest[DIGEST_LEN];
         uint8_t *pIV;
         int ret = 1;
+
+        printf("Testing IMB_SNOW3G_F9_1_BUFFER:\n");
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
@@ -1689,6 +1729,7 @@ int validate_snow3g_f9(struct MB_MGR *mb_mgr)
                                        DIGEST_LEN);
                         goto snow3g_f9_1_buffer_exit;
                 }
+                printf(".");
 
         } /* for numVectors */
         /* no errors detected */
@@ -1698,8 +1739,7 @@ snow3g_f9_1_buffer_exit:
         free(pIV);
         free(pKey);
         free(pKeySched);
-        printf("[%s]: %s, for vector %d.\n",
-               __FUNCTION__, ret == 0 ? "PASS" : "FAIL", i);
+        printf("\n");
 
         return ret;
 }
@@ -1709,6 +1749,8 @@ static int validate_f8_iv_gen(void)
         uint32_t i;
         uint8_t IV[16];
         const uint32_t numVectors = MAX_BIT_BUFFERS;
+
+        printf("Testing snow3g_f8_iv_gen:\n");
 
         /* skip first vector as it's not part of test data */
         for (i = 1; i < numVectors; i++) {
@@ -1730,9 +1772,10 @@ static int validate_f8_iv_gen(void)
                                        snow3g_f8_linear_bitvectors.iv[i], 16);
                         return 1;
                 } else
-                        printf("snow3g_f8_iv_gen() vector num %d: PASS\n", i);
+                        printf(".");
         }
 
+        printf("\n");
         return 0;
 }
 
@@ -1743,6 +1786,7 @@ static int validate_f9_iv_gen(void)
         /* snow3g f9 test vectors are located at index 2 */
         const uint32_t numVectors = numSnow3gHashTestVectors[2];
 
+        printf("Testing snow3g_f9_iv_gen:\n");
 
         /* 6 test sets */
         for (i = 0; i < numVectors; i++) {
@@ -1763,9 +1807,10 @@ static int validate_f9_iv_gen(void)
                         snow3g_hexdump("Expected", snow_f9_vectors[i].iv, 16);
                         return 1;
                 } else
-                        printf("snow3g_f9_iv_gen() vector num %d: PASS\n", i);
+                        printf(".");
         }
 
+        printf("\n");
         return 0;
 }
 
