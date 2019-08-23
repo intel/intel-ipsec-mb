@@ -133,7 +133,6 @@ extern const int S2_T3[256];
  *
  * ------------------------------------------------------------------ */
 #ifdef AVX2
-#ifndef __INTEL_COMPILER
 #define _mm256_set_m128i(/* __m128i */ hi, /* __m128i */ lo)                   \
         _mm256_insertf128_si256(_mm256_castsi128_si256(lo), (hi), 0x1)
 
@@ -143,7 +142,7 @@ extern const int S2_T3[256];
             _mm256_castsi128_si256(_mm_loadu_si128((const __m128i *)lo)),      \
             _mm_loadu_si128((const __m128i *)hi), 1)
 #endif /* _mm256_loadu2_m128i */
-#endif
+
 typedef struct snow3gKeyState8_s {
         /* 16 LFSR stages */
         __m256i LFSR_X[16];

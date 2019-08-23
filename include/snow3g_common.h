@@ -204,157 +204,68 @@ static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
  * ------------------------------------------------------------------ */
 static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
 {
-        __m256i F = _mm256_add_epi32(pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16],
-                                     pCtx->FSM_X[0]);
-        __m256i R = _mm256_xor_si256(pCtx->LFSR_X[(pCtx->iLFSR_X + 5) % 16],
-                                     pCtx->FSM_X[2]);
+        __m256i F, R, S2T0, S2T1, S2T2, S2T3, S1T0, S1T1, S1T2, S1T3;
+        __m256i w3, w2, w1, w0, offset, mask;
+
+        F = _mm256_add_epi32(pCtx->LFSR_X[(pCtx->iLFSR_X + 15)%16],
+                             pCtx->FSM_X[0]);
+        R = _mm256_xor_si256(pCtx->LFSR_X[(pCtx->iLFSR_X + 5)%16],
+                             pCtx->FSM_X[2]);
         *data = _mm256_xor_si256(F, pCtx->FSM_X[1]);
         R = _mm256_add_epi32(R, pCtx->FSM_X[1]);
+        offset = _mm256_set1_epi32(0x1);
 
-        __m256i w = pCtx->FSM_X[1];
-        __m256i x = pCtx->FSM_X[0];
+        F = pCtx->FSM_X[1];
+        w3   = _mm256_setr_epi32(0xF0F0F000, 0xF0F0F004, 0xF0F0F008,
+                                 0xF0F0F00C, 0xF0F0F000, 0xF0F0F004,
+                                 0xF0F0F008, 0xF0F0F00C);
+        mask = _mm256_shuffle_epi8(F,w3);
+        S2T0 = _mm256_i32gather_epi32(S2_T0,mask,4);
 
-        int index = 0;
+        w2   = _mm256_add_epi32(w3,offset);
+        mask = _mm256_shuffle_epi8(F,w2);
+        S2T1 = _mm256_i32gather_epi32(S2_T1,mask,4);
 
-        DECLARE_ALIGNED(uint32_t l[8], 64);
+        w1   = _mm256_add_epi32(w2,offset);
+        mask = _mm256_shuffle_epi8(pCtx->FSM_X[1],w1);
+        S2T2 = _mm256_i32gather_epi32(S2_T2,mask,4);
 
-        uint8_t w3 = _mm256_extract_epi8(w, 0);
-        uint8_t w2 = _mm256_extract_epi8(w, 0 + 1);
-        uint8_t w1 = _mm256_extract_epi8(w, 0 + 2);
-        uint8_t w0 = _mm256_extract_epi8(w, 0 + 3);
+        w0   = _mm256_add_epi32(w1,offset);
+        mask = _mm256_shuffle_epi8(F,w0);
+        S2T3 = _mm256_i32gather_epi32(S2_T3,mask,4);
 
-        l[index] = S2_T0[w3] ^ S2_T1[w2] ^ S2_T2[w1] ^ S2_T3[w0];
-        index++;
 
-        w3 = _mm256_extract_epi8(w, 4);
-        w2 = _mm256_extract_epi8(w, 4 + 1);
-        w1 = _mm256_extract_epi8(w, 4 + 2);
-        w0 = _mm256_extract_epi8(w, 4 + 3);
+        F = pCtx->FSM_X[0];
+        w3   = _mm256_setr_epi32(0xF0F0F000, 0xF0F0F004, 0xF0F0F008,
+                                 0xF0F0F00C, 0xF0F0F010, 0xF0F0F014,
+                                 0xF0F0F018, 0xF0F0F01C);
+        mask = _mm256_shuffle_epi8(F,w3);
+        S1T0 = _mm256_i32gather_epi32(S1_T0,mask,4);
 
-        l[index] = S2_T0[w3] ^ S2_T1[w2] ^ S2_T2[w1] ^ S2_T3[w0];
-        index++;
+        w2   = _mm256_add_epi32(w3,offset);
+        mask = _mm256_shuffle_epi8(F,w2);
+        S1T1 = _mm256_i32gather_epi32(S1_T1,mask,4);
 
-        w3 = _mm256_extract_epi8(w, 8);
-        w2 = _mm256_extract_epi8(w, 8 + 1);
-        w1 = _mm256_extract_epi8(w, 8 + 2);
-        w0 = _mm256_extract_epi8(w, 8 + 3);
+        w1   = _mm256_add_epi32(w2,offset);
+        mask = _mm256_shuffle_epi8(F,w1);
+        S1T2 = _mm256_i32gather_epi32(S1_T2,mask,4);
 
-        l[index] = S2_T0[w3] ^ S2_T1[w2] ^ S2_T2[w1] ^ S2_T3[w0];
-        index++;
+        w0   = _mm256_add_epi32(w1,offset);
+        mask = _mm256_shuffle_epi8(F,w0);
+        S1T3 = _mm256_i32gather_epi32(S1_T3,mask,4);
 
-        w3 = _mm256_extract_epi8(w, 12);
-        w2 = _mm256_extract_epi8(w, 12 + 1);
-        w1 = _mm256_extract_epi8(w, 12 + 2);
-        w0 = _mm256_extract_epi8(w, 12 + 3);
+        S2T0 = _mm256_xor_si256(S2T0, S2T1);
+        S2T2 = _mm256_xor_si256(S2T2, S2T3);
+        S2T0  = _mm256_xor_si256(S2T0, S2T2);
 
-        l[index] = S2_T0[w3] ^ S2_T1[w2] ^ S2_T2[w1] ^ S2_T3[w0];
-        index++;
+        S1T0 = _mm256_xor_si256(S1T0, S1T1);
+        S1T2 = _mm256_xor_si256(S1T2, S1T3);
+        S1T0 = _mm256_xor_si256(S1T0, S1T2);
 
-        w3 = _mm256_extract_epi8(w, 16);
-        w2 = _mm256_extract_epi8(w, 16 + 1);
-        w1 = _mm256_extract_epi8(w, 16 + 2);
-        w0 = _mm256_extract_epi8(w, 16 + 3);
 
-        l[index] = S2_T0[w3] ^ S2_T1[w2] ^ S2_T2[w1] ^ S2_T3[w0];
-        index++;
-
-        w3 = _mm256_extract_epi8(w, 20);
-        w2 = _mm256_extract_epi8(w, 20 + 1);
-        w1 = _mm256_extract_epi8(w, 20 + 2);
-        w0 = _mm256_extract_epi8(w, 20 + 3);
-
-        l[index] = S2_T0[w3] ^ S2_T1[w2] ^ S2_T2[w1] ^ S2_T3[w0];
-        index++;
-
-        w3 = _mm256_extract_epi8(w, 24);
-        w2 = _mm256_extract_epi8(w, 24 + 1);
-        w1 = _mm256_extract_epi8(w, 24 + 2);
-        w0 = _mm256_extract_epi8(w, 24 + 3);
-
-        l[index] = S2_T0[w3] ^ S2_T1[w2] ^ S2_T2[w1] ^ S2_T3[w0];
-        index++;
-
-        w3 = _mm256_extract_epi8(w, 28);
-        w2 = _mm256_extract_epi8(w, 28 + 1);
-        w1 = _mm256_extract_epi8(w, 28 + 2);
-        w0 = _mm256_extract_epi8(w, 28 + 3);
-
-        l[index] = S2_T0[w3] ^ S2_T1[w2] ^ S2_T2[w1] ^ S2_T3[w0];
-        index++;
-
-        pCtx->FSM_X[2] = _mm256_load_si256((const __m256i *)l);
-
-        int idx = 0;
-
-        DECLARE_ALIGNED(uint32_t k[8], 64);
-
-        uint8_t x3 = _mm256_extract_epi8(x, 0);
-        uint8_t x2 = _mm256_extract_epi8(x, 0 + 1);
-        uint8_t x1 = _mm256_extract_epi8(x, 0 + 2);
-        uint8_t x0 = _mm256_extract_epi8(x, 0 + 3);
-
-        k[idx] = S1_T0[x3] ^ S1_T1[x2] ^ S1_T2[x1] ^ S1_T3[x0];
-        idx++;
-
-        x3 = _mm256_extract_epi8(x, 4);
-        x2 = _mm256_extract_epi8(x, 4 + 1);
-        x1 = _mm256_extract_epi8(x, 4 + 2);
-        x0 = _mm256_extract_epi8(x, 4 + 3);
-
-        k[idx] = S1_T0[x3] ^ S1_T1[x2] ^ S1_T2[x1] ^ S1_T3[x0];
-        idx++;
-
-        x3 = _mm256_extract_epi8(x, 8);
-        x2 = _mm256_extract_epi8(x, 8 + 1);
-        x1 = _mm256_extract_epi8(x, 8 + 2);
-        x0 = _mm256_extract_epi8(x, 8 + 3);
-
-        k[idx] = S1_T0[x3] ^ S1_T1[x2] ^ S1_T2[x1] ^ S1_T3[x0];
-        idx++;
-
-        x3 = _mm256_extract_epi8(x, 12);
-        x2 = _mm256_extract_epi8(x, 12 + 1);
-        x1 = _mm256_extract_epi8(x, 12 + 2);
-        x0 = _mm256_extract_epi8(x, 12 + 3);
-
-        k[idx] = S1_T0[x3] ^ S1_T1[x2] ^ S1_T2[x1] ^ S1_T3[x0];
-        idx++;
-
-        x3 = _mm256_extract_epi8(x, 16);
-        x2 = _mm256_extract_epi8(x, 16 + 1);
-        x1 = _mm256_extract_epi8(x, 16 + 2);
-        x0 = _mm256_extract_epi8(x, 16 + 3);
-
-        k[idx] = S1_T0[x3] ^ S1_T1[x2] ^ S1_T2[x1] ^ S1_T3[x0];
-        idx++;
-
-        x3 = _mm256_extract_epi8(x, 20);
-        x2 = _mm256_extract_epi8(x, 20 + 1);
-        x1 = _mm256_extract_epi8(x, 20 + 2);
-        x0 = _mm256_extract_epi8(x, 20 + 3);
-
-        k[idx] = S1_T0[x3] ^ S1_T1[x2] ^ S1_T2[x1] ^ S1_T3[x0];
-        idx++;
-
-        x3 = _mm256_extract_epi8(x, 24);
-        x2 = _mm256_extract_epi8(x, 24 + 1);
-        x1 = _mm256_extract_epi8(x, 24 + 2);
-        x0 = _mm256_extract_epi8(x, 24 + 3);
-
-        k[idx] = S1_T0[x3] ^ S1_T1[x2] ^ S1_T2[x1] ^ S1_T3[x0];
-        idx++;
-
-        x3 = _mm256_extract_epi8(x, 28);
-        x2 = _mm256_extract_epi8(x, 28 + 1);
-        x1 = _mm256_extract_epi8(x, 28 + 2);
-        x0 = _mm256_extract_epi8(x, 28 + 3);
-
-        k[idx] = S1_T0[x3] ^ S1_T1[x2] ^ S1_T2[x1] ^ S1_T3[x0];
-        idx++;
-
-        pCtx->FSM_X[1] = _mm256_load_si256((const __m256i *)k);
-
-        /** output R to FSM1 */
+        pCtx->FSM_X[2]  = S2T0;
+        pCtx->FSM_X[1]  = S1T0;
+        pCtx->FSM_X[2]  = S2T0;
         pCtx->FSM_X[0] = R;
 }
 
