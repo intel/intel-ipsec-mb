@@ -157,7 +157,8 @@ enum test_type_e {
         NUM_TTYPES
 };
 
-/* This enum will be mostly translated to JOB_CIPHER_MODE */
+/* This enum will be mostly translated to JOB_CIPHER_MODE
+ * (make sure to update c_mode_names list in print_times function)  */
 enum test_cipher_mode_e {
         TEST_CBC = 1,
         TEST_CNTR,
@@ -176,9 +177,11 @@ enum test_cipher_mode_e {
         TEST_3DES,
         TEST_PON_CNTR,
         TEST_PON_NO_CNTR,
+        TEST_NUM_CIPHER_TESTS
 };
 
-/* This enum will be mostly translated to JOB_HASH_ALG */
+/* This enum will be mostly translated to JOB_HASH_ALG
+ * (make sure to update h_alg_names list in print_times function)  */
 enum test_hash_alg_e {
         TEST_SHA1 = 1,
         TEST_SHA_224,
@@ -194,6 +197,7 @@ enum test_hash_alg_e {
         TEST_CUSTOM_HASH, /* unused */
         TEST_HASH_CCM,
         TEST_PON_CRC_BIP,
+        TEST_NUM_HASH_TESTS
 };
 
 /* Struct storing cipher parameters */
@@ -1629,15 +1633,15 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         const char *func_names[4] = {
                 "SSE", "AVX", "AVX2", "AVX512"
         };
-        const char *c_mode_names[15] = {
-                "CBC", "CNTR", "CNTR+8", "ECB", "NULL_CIPHER", "DOCAES",
-                "DOCAES+8", "DOCDES", "DOCDES+4", "GCM", "CCM", "DES",
-                "3DES", "PON", "PON_NO_CTR"
+        const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = {
+                "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4", "ECB",
+                "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES", "DOCDES+4",
+                "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
         };
-        const char *h_alg_names[14] = {
+        const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
                 "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "GCM", "CUSTOM",
                 "CCM", "BIP-CRC32"
