@@ -40,9 +40,9 @@ section .text
 ; KeyStream, placing the result in the output buffer.
 ; KeyStream bytes must be swapped on 32 bit boundary before this operation
 %macro xor_keystream 1
-%define %%USEAVX %1 ; "SSE" or "AVX"
+%define %%SIMDTYPE %1 ; "SSE" or "AVX"
 
-%ifidn %%SIMDTYPE, "AVX"
+%ifidn %%SIMDTYPE, AVX
         %define %%MOVDQU  vmovdqu
         %define %%MOVDQA  vmovdqa
         %define %%PXOR    vpxor
@@ -115,12 +115,12 @@ section .text
 
 MKGLOBAL(asm_XorKeyStream64B_avx,function,internal)
 asm_XorKeyStream64B_avx:
-        xor_keystream 1
+        xor_keystream AVX
         ret
 
 MKGLOBAL(asm_XorKeyStream64B_sse,function,internal)
 asm_XorKeyStream64B_sse:
-        xor_keystream 0
+        xor_keystream SSE
         ret
 
 %ifdef LINUX
