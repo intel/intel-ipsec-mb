@@ -487,6 +487,7 @@ section .text
     make_u31    r15d, r12d, r13d, r14d
     mov         [rax +  (((%1 + 1)*16)+(%2*4))], r15d
 %endmacro
+
 MKGLOBAL(asm_ZucInitialization_4_sse,function,internal)
 asm_ZucInitialization_4_sse:
 

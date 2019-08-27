@@ -177,7 +177,8 @@ asm_generic_lib_objs := \
 	clear_regs_mem.o \
 	const.o \
 	aes128_ecbenc_x3.o \
-	zuc_common.o
+	zuc_common.o \
+	wireless_common.o
 
 #
 # List of ASM modules (no-aesni directory)

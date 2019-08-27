@@ -36,6 +36,7 @@
 #include <string.h>
 
 #include "include/zuc_internal.h"
+#include "include/wireless_common.h"
 #include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
 #include "intel-ipsec-mb.h"
@@ -82,10 +83,12 @@ void _zuc_eea3_1_buffer_sse(const void *pKey,
 
                 /* XOR The Keystream generated with the input buffer here */
                 pKeyStream64 = (uint64_t *) keyStream;
-                ZUC_XOR_KEYSTREAM(pIn64, pOut64, pKeyStream64);
+                asm_XorKeyStream64B_sse(pIn64, pOut64, pKeyStream64);
+                pIn64 += 8;
+                pOut64 += 8;
         }
 
-        /* Check for remaining 0 to 7 bytes */
+        /* Check for remaining 0 to 63 bytes */
         pIn8 = (const uint8_t *) pBufferIn;
         pOut8 = (uint8_t *) pBufferOut;
         if(numBytesLeftOver) {
@@ -101,7 +104,7 @@ void _zuc_eea3_1_buffer_sse(const void *pKey,
                 pTemp64 = (uint64_t *) &tempSrc[0];
                 pdstTemp64 = (uint64_t *) &tempDst[0];
 
-                ZUC_XOR_KEYSTREAM(pTemp64, pdstTemp64 ,pKeyStream64);
+                asm_XorKeyStream64B_sse(pTemp64, pdstTemp64, pKeyStream64);
                 memcpy(&pOut8[length - numBytesLeftOver], &tempDst[0],
                        numBytesLeftOver);
 
@@ -142,7 +145,7 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
         DECLARE_ALIGNED(uint8_t tempDst[64], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
-        /* strucutre to store the 4 IV's */
+        /* structure to store the 4 IV's */
         DECLARE_ALIGNED(ZucIv4_t ivs, 64);
         uint32_t numBytesLeftOver = 0;
         const uint8_t *pTempBufInPtr = NULL;
@@ -206,16 +209,24 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
                 /* XOR the KeyStream with the input buffers and store in output
                  * buffer*/
                 pKeyStream64 = (uint64_t *) keyStr1;
-                ZUC_XOR_KEYSTREAM(pIn64_0, pOut64_0, pKeyStream64);
+                asm_XorKeyStream64B_sse(pIn64_0, pOut64_0, pKeyStream64);
+                pIn64_0 += 8;
+                pOut64_0 += 8;
 
                 pKeyStream64 = (uint64_t *) keyStr2;
-                ZUC_XOR_KEYSTREAM(pIn64_1, pOut64_1, pKeyStream64);
+                asm_XorKeyStream64B_sse(pIn64_1, pOut64_1, pKeyStream64);
+                pIn64_1 += 8;
+                pOut64_1 += 8;
 
                 pKeyStream64 = (uint64_t *) keyStr3;
-                ZUC_XOR_KEYSTREAM(pIn64_2, pOut64_2, pKeyStream64);
+                asm_XorKeyStream64B_sse(pIn64_2, pOut64_2, pKeyStream64);
+                pIn64_2 += 8;
+                pOut64_2 += 8;
 
                 pKeyStream64 = (uint64_t *) keyStr4;
-                ZUC_XOR_KEYSTREAM(pIn64_3, pOut64_3, pKeyStream64);
+                asm_XorKeyStream64B_sse(pIn64_3, pOut64_3, pKeyStream64);
+                pIn64_3 += 8;
+                pOut64_3 += 8;
 
                 /* Update keystream count */
                 numKeyStreamsPerPkt--;
@@ -269,12 +280,14 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
                                 asm_ZucGenKeystream64B((uint32_t *) keyStr1,
                                                        &singlePktState);
                                 pKeyStream64 = (uint64_t *) keyStr1;
-                                ZUC_XOR_KEYSTREAM(pIn64_0, pOut64_0,
-                                                      pKeyStream64);
+                                asm_XorKeyStream64B_sse(pIn64_0, pOut64_0,
+                                                        pKeyStream64);
+                                pIn64_0 += 8;
+                                pOut64_0 += 8;
                         }
 
 
-                        /* Check for remaining 0 to 7 bytes */
+                        /* Check for remaining 0 to 63 bytes */
                         if (numBytesLeftOver) {
                                 asm_ZucGenKeystream64B((uint32_t *) &keyStr1,
                                                        &singlePktState);
@@ -292,8 +305,8 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
                                 pKeyStream64 = (uint64_t *) &keyStr1[0];
                                 pTempSrc64 = (uint64_t *) &tempSrc[0];
                                 pTempDst64 = (uint64_t *) &tempDst[0];
-                                ZUC_XOR_KEYSTREAM(pTempSrc64, pTempDst64,
-                                                      pKeyStream64);
+                                asm_XorKeyStream64B_sse(pTempSrc64, pTempDst64,
+                                                        pKeyStream64);
 
                                 memcpy(&pTempBufOutPtr[offset],
                                        &tempDst[0], numBytesLeftOver);
