@@ -38,6 +38,8 @@
 
 #include <string.h> /* memcpy(), memset() */
 
+#include "include/clear_regs_mem.h"
+
 /*
  * JOBS() and ADV_JOBS() moved into mb_mgr_code.h
  * get_next_job() and get_completed_job() API's are no longer inlines.
@@ -1588,10 +1590,7 @@ submit_job_and_check(MB_MGR *state, const int run_check)
                 if (job == NULL)
                         state->earliest_job = state->next_job;
                 ADV_JOBS(&state->next_job);
-#ifndef LINUX
-                RESTORE_XMMS(xmm_save);
-#endif
-                return job;
+                goto exit;
         }
 
         ADV_JOBS(&state->next_job);
@@ -1601,21 +1600,26 @@ submit_job_and_check(MB_MGR *state, const int run_check)
                 job = JOBS(state, state->earliest_job);
                 complete_job(state, job);
                 ADV_JOBS(&state->earliest_job);
-#ifndef LINUX
-                RESTORE_XMMS(xmm_save);
-#endif
-                return job;
+                goto exit;
         }
 
         /* not full */
+        job = JOBS(state, state->earliest_job);
+        if (job->status < STS_COMPLETED) {
+                job = NULL;
+                goto exit;
+        }
+
+        ADV_JOBS(&state->earliest_job);
+exit:
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
-        job = JOBS(state, state->earliest_job);
-        if (job->status < STS_COMPLETED)
-                return NULL;
-
-        ADV_JOBS(&state->earliest_job);
         return job;
 }
 
@@ -1652,6 +1656,11 @@ FLUSH_JOB(MB_MGR *state)
 
         if (state->earliest_job == state->next_job)
                 state->earliest_job = -1; /* becomes empty */
+
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
 
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
