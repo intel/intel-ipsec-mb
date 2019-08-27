@@ -1564,6 +1564,13 @@ __forceinline
 JOB_AES_HMAC *
 submit_job_and_check(MB_MGR *state, const int run_check)
 {
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                INVALID_PRN("submit job and check\n");
+                return NULL;
+        }
+#endif
+
         JOB_AES_HMAC *job = NULL;
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -1638,6 +1645,12 @@ SUBMIT_JOB_NOCHECK(MB_MGR *state)
 JOB_AES_HMAC *
 FLUSH_JOB(MB_MGR *state)
 {
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                INVALID_PRN("flush job\n");
+                return NULL;
+        }
+#endif
         JOB_AES_HMAC *job;
 #ifndef LINUX
         DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
@@ -1674,6 +1687,12 @@ FLUSH_JOB(MB_MGR *state)
 uint32_t
 QUEUE_SIZE(MB_MGR *state)
 {
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                INVALID_PRN("queue size\n");
+                return 0;
+        }
+#endif
         int a, b;
 
         if (state->earliest_job < 0)
@@ -1686,6 +1705,12 @@ QUEUE_SIZE(MB_MGR *state)
 JOB_AES_HMAC *
 GET_COMPLETED_JOB(MB_MGR *state)
 {
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                INVALID_PRN("get completed job\n");
+                return NULL;
+        }
+#endif
         JOB_AES_HMAC *job;
 
         if (state->earliest_job < 0)
@@ -1706,5 +1731,11 @@ GET_COMPLETED_JOB(MB_MGR *state)
 JOB_AES_HMAC *
 GET_NEXT_JOB(MB_MGR *state)
 {
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                INVALID_PRN("get next job\n");
+                return NULL;
+        }
+#endif
         return JOBS(state, state->next_job);
 }
