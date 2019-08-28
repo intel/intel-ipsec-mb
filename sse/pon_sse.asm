@@ -27,6 +27,7 @@
 
 %include "job_aes_hmac.asm"
 %include "include/os.asm"
+%include "include/memcpy.asm"
 
 ;;; This is implementation of stitched algorithms: AES128-CTR + CRC32 + BIP
 ;;; This combination is required by PON/xPON/gPON standard.
@@ -54,7 +55,7 @@ extern ddq_add_1
 section .data
 default rel
 
-;;; Precomputed constants for CRC32
+;;; Precomputed constants for CRC32 (Ethernet FCS)
 ;;;   Details of the CRC algorithm and 4 byte buffer of
 ;;;   {0x01, 0x02, 0x03, 0x04}:
 ;;;     Result     Poly       Init        RefIn  RefOut  XorOut
@@ -97,6 +98,26 @@ mask_out_top_bytes:
         dq 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF
         dq 0x0000000000000000, 0x0000000000000000
 
+;; Precomputed constants for HEC calculation (XGEM header)
+;; POLY 0x53900000:
+;;         k1    = 0xf9800000
+;;         k2    = 0xa0900000
+;;         k3    = 0x7cc00000
+;;         q     = 0x46b927ec
+;;         p_res = 0x53900000
+
+align 16
+k3_q:
+        dq 0x7cc00000, 0x46b927ec
+
+align 16
+p_res:
+        dq 0x53900000, 0
+
+align 16
+mask_out_top_64bits:
+        dq 0xffffffff_ffffffff, 0
+
 section .text
 
 %define NUM_AES_ROUNDS 10
@@ -109,6 +130,7 @@ section .text
 %define xtmp1   xmm4
 %define xtmp2   xmm5
 %define xtmp3   xmm6
+%define xtmp4   xmm8
 
 %ifdef LINUX
 %define arg1    rdi
@@ -119,6 +141,9 @@ section .text
 %define tmp_2   r9
 %define tmp_3   r10
 %define tmp_4   r11
+%define tmp_5   r12
+%define tmp_6   r13
+%define tmp_7   r14
 %else
 %define arg1    rcx
 %define arg2    rdx
@@ -127,6 +152,10 @@ section .text
 %define tmp_1   r10
 %define tmp_2   r11
 %define tmp_3   rax
+%define tmp_4   r12
+%define tmp_5   r13
+%define tmp_6   r14
+%define tmp_7   r15
 %endif
 
 %define job     arg1
@@ -135,31 +164,17 @@ section .text
 %define p_keys  arg3
 %define p_out   arg4
 
-%define num_bytes tmp_1
-%define tmp       tmp_2
-%define ctr_check tmp_3
+%define num_bytes       tmp_1   ; bytes to cipher
+%define tmp             tmp_2
+%define ctr_check       tmp_3   ; counter block overflow check
+%define bytes_to_crc    tmp_4   ; number of bytes to CRC ( < num_bytes)
 
-;;; ============================================================================
-;;; Loads 4, 8 or 12 bytes from memory location into XMM register
-%macro simd_load_sse_4_8_12 3
-%define %%XMM           %1      ; [out] XMM to read data into
-%define %%INP           %2      ; [in] GP input data pointer
-%define %%NUM           %3      ; [in] GP with number of bytes to read (4, 8 or 12)
+%define ethernet_fcs    tmp_6   ; not used together with tmp3
+%define tmp2            tmp_5
+%define tmp3            tmp_6
 
-        cmp     %%NUM, 4
-        jne     %%_simd_load_not_4
-        movd    %%XMM, [%%INP]
-        jmp     %%_simd_load_end
-%%_simd_load_not_4:
-        cmp     %%NUM, 8
-        jne     %%_simd_load_not_8
-        movq    %%XMM, [%%INP]
-        jmp     %%_simd_load_end
-%%_simd_load_not_8:
-        movq    %%XMM, [%%INP]
-        pinsrd  %%XMM, [%%INP + 8], 2
-%%_simd_load_end:
-%endmacro
+%define write_back_crc   tmp_7
+%define decrypt_not_done tmp_7
 
 ;;; ============================================================================
 ;;; Does all AES encryption rounds
@@ -194,7 +209,7 @@ section .text
 ;;;   CRC32
 ;;;   - CRC32 calculation
 ;;; Note: via selection of no_crc, no_bip, no_load, no_store different macro
-;;;       behavior can be achieved to match needs of the overall algorithm.
+;;;       behaviour can be achieved to match needs of the overall algorithm.
 %macro DO_PON 15
 %define %%KP            %1      ; [in] GP, pointer to expanded keys
 %define %%N_ROUNDS      %2      ; [in] number of AES rounds (10, 12 or 14)
@@ -316,7 +331,7 @@ section .text
 
 ;;; ============================================================================
 ;;; CIPHER and BIP specified number of bytes
-%macro CIPHER_BIP_REST 12
+%macro CIPHER_BIP_REST 14
 %define %%NUM_BYTES   %1        ; [in/clobbered] number of bytes to cipher
 %define %%DIR         %2        ; [in] "ENC" or "DEC"
 %define %%CIPH        %3        ; [in] "CTR" or "NO_CTR"
@@ -329,6 +344,8 @@ section .text
 %define %%XMMT2       %10       ; [clobbered] temporary XMM
 %define %%XMMT3       %11       ; [clobbered] temporary XMM
 %define %%CTR_CHECK   %12       ; [in/out] GP with 64bit counter (to identify overflow)
+%define %%GPT1        %13       ; [clobbered] temporary GP
+%define %%GPT2        %14       ; [clobbered] temporary GP
 
 %%_cipher_last_blocks:
         cmp     %%NUM_BYTES, 16
@@ -341,8 +358,7 @@ section .text
         jmp     %%_cipher_last_blocks
 
 %%_partial_block_left:
-        ;; 4, 8 or 12 bytes of partial block possible here
-        simd_load_sse_4_8_12 %%XMMT2, %%PTR_IN, %%NUM_BYTES
+        simd_load_sse_15_1 %%XMMT2, %%PTR_IN, %%NUM_BYTES
 
         ;; DO_PON() is not loading nor storing the data in this case:
         ;; XMMT2 = data in
@@ -350,33 +366,204 @@ section .text
         DO_PON  %%PTR_KEYS, NUM_AES_ROUNDS, %%XCTR_IN_OUT, no_load, no_store, no_bip, \
                 no_crc, no_crc, %%XMMT1, %%XMMT2, %%XMMT3, no_crc, %%DIR, %%CIPH, %%CTR_CHECK
 
-        ;; store partial bytes and update BIP
-        cmp     %%NUM_BYTES, 4
-        jne     %%_partial_block_not_4_bytes
-        movd    [%%PTR_OUT], %%XMMT1
-        movdqu  %%XMMT3, [rel mask_out_top_bytes + 16 - 4]
-        jmp     %%_partial_block_end
-%%_partial_block_not_4_bytes:
-        cmp     %%NUM_BYTES, 8
-        jne     %%_partial_block_not_8_bytes
-        movq    [%%PTR_OUT], %%XMMT1
-        movdqu  %%XMMT3, [rel mask_out_top_bytes + 16 - 8]
-        jmp     %%_partial_block_end
-%%_partial_block_not_8_bytes:
-        movq    [%%PTR_OUT], %%XMMT1
-        pextrd  [p_out + 8], %%XMMT1, 2
-        movdqu  %%XMMT3, [rel mask_out_top_bytes + 16 - 12]
-%%_partial_block_end:
-        ;; bip update for partial block (mask out bytes outside the message)
+        ;; BIP update for partial block (mask out bytes outside the message)
+        lea     %%GPT1, [rel mask_out_top_bytes + 16]
+        sub     %%GPT1, %%NUM_BYTES
+        movdqu  %%XMMT3, [%%GPT1]
+        ;; put masked cipher text into XMMT2 for BIP update
 %ifidn %%DIR, ENC
-        pand    %%XMMT1, %%XMMT3
-        pxor    %%XBIP_IN_OUT, %%XMMT1
+        movdqa  %%XMMT2, %%XMMT1
+        pand    %%XMMT2, %%XMMT3
 %else
         pand    %%XMMT2, %%XMMT3
-        pxor    %%XBIP_IN_OUT, %%XMMT2
 %endif
+        pxor    %%XBIP_IN_OUT, %%XMMT2
+
+        ;; store partial bytes in the output buffer
+        simd_store_sse_15 %%PTR_OUT, %%XMMT1, %%NUM_BYTES, %%GPT1, %%GPT2
+
 %%_bip_done:
 %endmacro                       ; CIPHER_BIP_REST
+;; =============================================================================
+;; Barrett reduction from 128-bits to 32-bits modulo Ethernet FCS polynomial
+
+%macro CRC32_REDUCE_128_TO_32 5
+%define %%CRC   %1         ; [out] GP to store 32-bit Ethernet FCS value
+%define %%XCRC  %2         ; [in/clobbered] XMM with CRC
+%define %%XT1   %3         ; [clobbered] temporary xmm register
+%define %%XT2   %4         ; [clobbered] temporary xmm register
+%define %%XT3   %5         ; [clobbered] temporary xmm register
+
+%define %%XCRCKEY %%XT3
+
+        ;;  compute CRC of a 128-bit value
+        movdqa          %%XCRCKEY, [rel rk5]
+
+        ;; 64b fold
+        movdqa          %%XT1, %%XCRC
+        pclmulqdq       %%XT1, %%XCRCKEY, 0x00
+        psrldq          %%XCRC, 8
+        pxor            %%XCRC, %%XT1
+
+        ;; 32b fold
+        movdqa          %%XT1, %%XCRC
+        pslldq          %%XT1, 4
+        pclmulqdq       %%XT1, %%XCRCKEY, 0x10
+        pxor            %%XCRC, %%XT1
+
+%%_crc_barrett:
+        ;; Barrett reduction
+        pand            %%XCRC, [rel mask2]
+        movdqa          %%XT1, %%XCRC
+        movdqa          %%XT2, %%XCRC
+        movdqa          %%XCRCKEY, [rel rk7]
+
+        pclmulqdq       %%XCRC, %%XCRCKEY, 0x00
+        pxor            %%XCRC, %%XT2
+        pand            %%XCRC, [rel mask]
+        movdqa          %%XT2, %%XCRC
+        pclmulqdq       %%XCRC, %%XCRCKEY, 0x10
+        pxor            %%XCRC, %%XT2
+        pxor            %%XCRC, %%XT1
+        pextrd          DWORD(%%CRC), %%XCRC, 2 ; 32-bit CRC value
+        not             DWORD(%%CRC)
+%endmacro
+
+;; =============================================================================
+;; Barrett reduction from 128-bits to 32-bits modulo 0x53900000 polynomial
+
+%macro HEC_REDUCE_128_TO_32 4
+%define %%XMM_IN_OUT %1         ; [in/out] xmm register with data in and out
+%define %%XT1        %2         ; [clobbered] temporary xmm register
+%define %%XT2        %3         ; [clobbered] temporary xmm register
+%define %%XT3        %4         ; [clobbered] temporary xmm register
+
+%define %%K3_Q  %%XT1
+%define %%P_RES %%XT2
+%define %%XTMP  %%XT3
+
+        ;; 128 to 64 bit reduction
+        movdqa          %%K3_Q,  [k3_q]
+        movdqa          %%P_RES, [p_res]
+
+        movdqa          %%XTMP, %%XMM_IN_OUT
+        pclmulqdq       %%XTMP, %%K3_Q, 0x01 ; K3
+        pxor            %%XTMP, %%XMM_IN_OUT
+
+        pclmulqdq       %%XTMP, %%K3_Q, 0x01 ; K3
+        pxor            %%XMM_IN_OUT, %%XTMP
+
+        pand            %%XMM_IN_OUT, [rel mask_out_top_64bits]
+
+        ;; 64 to 32 bit reduction
+        movdqa          %%XTMP, %%XMM_IN_OUT
+        psrldq          %%XTMP, 4
+        pclmulqdq       %%XTMP, %%K3_Q, 0x10 ; Q
+        pxor            %%XTMP, %%XMM_IN_OUT
+        psrldq          %%XTMP, 4
+
+        pclmulqdq       %%XTMP, %%P_RES, 0x00 ; P
+        pxor            %%XMM_IN_OUT, %%XTMP
+%endmacro
+
+;; =============================================================================
+;; Barrett reduction from 64-bits to 32-bits modulo 0x53900000 polynomial
+
+%macro HEC_REDUCE_64_TO_32 4
+%define %%XMM_IN_OUT %1         ; [in/out] xmm register with data in and out
+%define %%XT1        %2         ; [clobbered] temporary xmm register
+%define %%XT2        %3         ; [clobbered] temporary xmm register
+%define %%XT3        %4         ; [clobbered] temporary xmm register
+
+%define %%K3_Q  %%XT1
+%define %%P_RES %%XT2
+%define %%XTMP  %%XT3
+
+        movdqa          %%K3_Q,  [k3_q]
+        movdqa          %%P_RES, [p_res]
+
+        ;; 64 to 32 bit reduction
+        movdqa          %%XTMP, %%XMM_IN_OUT
+        psrldq          %%XTMP, 4
+        pclmulqdq       %%XTMP, %%K3_Q, 0x10 ; Q
+        pxor            %%XTMP, %%XMM_IN_OUT
+        psrldq          %%XTMP, 4
+
+        pclmulqdq       %%XTMP, %%P_RES, 0x00 ; P
+        pxor            %%XMM_IN_OUT, %%XTMP
+%endmacro
+
+;; =============================================================================
+;; HEC compute and header update for 32-bit XGEM headers
+%macro HEC_COMPUTE_32 6
+%define %%HEC_IN_OUT %1         ; [in/out] GP register with HEC in LE format
+%define %%GT1        %2         ; [clobbered] temporary GP register
+%define %%XT1        %4         ; [clobbered] temporary xmm register
+%define %%XT2        %5         ; [clobbered] temporary xmm register
+%define %%XT3        %6         ; [clobbered] temporary xmm register
+%define %%XT4        %7         ; [clobbered] temporary xmm register
+
+        mov             DWORD(%%GT1), DWORD(%%HEC_IN_OUT)
+        ;; shift out 13 bits of HEC value for CRC computation
+        shr             DWORD(%%GT1), 13
+
+        ;; mask out current HEC value to merge with an updated HEC at the end
+        and             DWORD(%%HEC_IN_OUT), 0xffff_e000
+
+        ;; prepare the message for CRC computation
+        movd            %%XT1, DWORD(%%GT1)
+        pslldq          %%XT1, 4         ; shift left by 32-bits
+
+        HEC_REDUCE_64_TO_32 %%XT1, %%XT2, %%XT3, %%XT4
+
+        ;; extract 32-bit value
+        ;; - normally perform 20 bit shift right but bit 0 is a parity bit
+        movd            DWORD(%%GT1), %%XT1
+        shr             DWORD(%%GT1), (20 - 1)
+
+        ;; merge header bytes with updated 12-bit CRC value and
+        ;; compute parity
+        or              DWORD(%%GT1), DWORD(%%HEC_IN_OUT)
+        popcnt          DWORD(%%HEC_IN_OUT), DWORD(%%GT1)
+        and             DWORD(%%HEC_IN_OUT), 1
+        or              DWORD(%%HEC_IN_OUT), DWORD(%%GT1)
+%endmacro
+
+;; =============================================================================
+;; HEC compute and header update for 64-bit XGEM headers
+%macro HEC_COMPUTE_64 6
+%define %%HEC_IN_OUT %1         ; [in/out] GP register with HEC in LE format
+%define %%GT1        %2         ; [clobbered] temporary GP register
+%define %%XT1        %3         ; [clobbered] temporary xmm register
+%define %%XT2        %4         ; [clobbered] temporary xmm register
+%define %%XT3        %5         ; [clobbered] temporary xmm register
+%define %%XT4        %6         ; [clobbered] temporary xmm register
+
+        mov             %%GT1, %%HEC_IN_OUT
+        ;; shift out 13 bits of HEC value for CRC computation
+        shr             %%GT1, 13
+
+        ;; mask out current HEC value to merge with an updated HEC at the end
+        and             %%HEC_IN_OUT, 0xffff_ffff_ffff_e000
+
+        ;; prepare the message for CRC computation
+        movq            %%XT1, %%GT1
+        pslldq          %%XT1, 4         ; shift left by 32-bits
+
+        HEC_REDUCE_128_TO_32 %%XT1, %%XT2, %%XT3, %%XT4
+
+        ;; extract 32-bit value
+        ;; - normally perform 20 bit shift right but bit 0 is a parity bit
+        movd            DWORD(%%GT1), %%XT1
+        shr             DWORD(%%GT1), (20 - 1)
+
+        ;; merge header bytes with updated 12-bit CRC value and
+        ;; compute parity
+        or              %%GT1, %%HEC_IN_OUT
+        popcnt          %%HEC_IN_OUT, %%GT1
+        and             %%HEC_IN_OUT, 1
+        or              %%HEC_IN_OUT, %%GT1
+%endmacro
 
 ;;; ============================================================================
 ;;; PON stitched algorithm of AES128-CTR, CRC and BIP
@@ -387,6 +574,61 @@ section .text
 %define %%DIR   %1              ; [in] direction "ENC" or "DEC"
 %define %%CIPH  %2              ; [in] cipher "CTR" or "NO_CTR"
 
+        push    r12
+        push    r13
+        push    r14
+%ifndef LINUX
+        push    r15
+%endif
+
+%ifidn %%DIR, ENC
+        ;; by default write back CRC for encryption
+        mov     DWORD(write_back_crc), 1
+%else
+        ;; mark decryption as finished
+        mov     DWORD(decrypt_not_done), 1
+%endif
+        ;; START BIP (and update HEC if encrypt direction)
+        ;; - load XGEM header (8 bytes) for BIP (not part of encrypted payload)
+        ;; - convert it into LE
+        ;; - update HEC field in the header
+        ;; - convert it into BE
+        ;; - store back the header (with updated HEC)
+        ;; - start BIP
+        ;; (free to use tmp_1, tmp_2 and tmp_3 at this stage)
+        mov     tmp_2, [job + _src]
+        add     tmp_2, [job + _hash_start_src_offset_in_bytes]
+        mov     tmp_3, [tmp_2]
+%ifidn %%DIR, ENC
+        bswap   tmp_3                   ; go to LE
+        HEC_COMPUTE_64 tmp_3, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
+        mov     bytes_to_crc, tmp_3
+        shr     bytes_to_crc, (48 + 2)  ; PLI = MSB 14 bits
+        bswap   tmp_3                   ; go back to BE
+        mov     [tmp_2], tmp_3
+        movq    xbip, tmp_3
+%else
+        movq    xbip, tmp_3
+        mov     bytes_to_crc, tmp_3
+        bswap   bytes_to_crc            ; go to LE
+        shr     bytes_to_crc, (48 + 2)  ; PLI = MSB 14 bits
+%endif
+        cmp     bytes_to_crc, 4
+        ja      %%_crc_not_zero
+        ;; XGEM payload shorter or equal to 4 bytes
+%ifidn %%DIR, ENC
+        ;; Don't write Ethernet FCS on encryption
+       xor     DWORD(write_back_crc), DWORD(write_back_crc)
+%else
+        ;; Mark decryption as not finished
+        ;; - Ethernet FCS is not computed
+        ;; - decrypt + BIP to be done at the end
+        xor     DWORD(decrypt_not_done), DWORD(decrypt_not_done)
+%endif
+        mov     DWORD(bytes_to_crc), 4  ; it will be zero after the sub (avoid jmp)
+%%_crc_not_zero:
+        sub     bytes_to_crc, 4         ; subtract size of the CRC itself
+
 %ifidn %%CIPH, CTR
         ;; - read 16 bytes of IV
         ;; - convert to little endian format
@@ -396,12 +638,6 @@ section .text
         pshufb  xcounter, [rel byteswap_const]
         movq    ctr_check, xcounter
 %endif
-
-        ;; load 8 bytes of payload for BIP (not part of encrypted message)
-        ;; @todo these 8 bytes are hardcoded for now (per standard spec)
-        mov     tmp, [job + _src]
-        add     tmp, [job + _hash_start_src_offset_in_bytes]
-        movq    xbip, [tmp]
 
         ;; get input buffer (after XGEM header)
         mov     p_in, [job + _src]
@@ -421,39 +657,36 @@ section .text
         ;; load CRC constants
         movdqa  xcrckey, [rel rk1] ; rk1 and rk2 in xcrckey
 
-        ;; get number of bytes to cipher and crc
-        ;; - computed CRC needs to be encrypted at the end too
+        ;; get number of bytes to cipher
 %ifidn %%CIPH, CTR
         mov     num_bytes, [job + _msg_len_to_cipher_in_bytes]
-        sub     num_bytes, 4    ; subtract size of CRC at the end of the message
 %else
-        ;; Message length to cipher is 0, so length is obtained from hash params
+        ;; Message length to cipher is 0
+        ;; - length is obtained from message length to hash (BIP) minus XGEM header size
         mov     num_bytes, [job + _msg_len_to_hash_in_bytes]
-        ;; subtract size of header and CRC at the end of the message
-        sub     num_bytes, 12
+        sub     num_bytes, 8
 %endif
-
+        or      bytes_to_crc, bytes_to_crc
         jz      %%_crc_done
 
-        cmp     num_bytes, 32
+        cmp     bytes_to_crc, 32
         jae     %%_at_least_32_bytes
 
 %ifidn %%DIR, DEC
-        ;; decrypt the buffer first (with appended CRC)
-        lea     tmp, [num_bytes + 4] ; add size of appended CRC
-
+        ;; decrypt the buffer first
+        mov     tmp, num_bytes
         CIPHER_BIP_REST tmp, %%DIR, %%CIPH, p_in, p_out, p_keys, xbip, \
-                        xcounter, xtmp1, xtmp2, xtmp3, ctr_check
+                        xcounter, xtmp1, xtmp2, xtmp3, ctr_check, tmp2, tmp3
 
-        ;; correct in/out pointers
-        lea     tmp, [num_bytes + 4] ; add size of appended CRC
-        and     tmp, -16
+        ;; correct in/out pointers - go back to start of the buffers
+        mov     tmp, num_bytes
+        and     tmp, -16        ; partial block handler doesn't increment pointers
         sub     p_in, tmp
         sub     p_out, tmp
 %endif                          ; DECRYPTION
 
         ;; less than 32 bytes
-        cmp     num_bytes, 16
+        cmp     bytes_to_crc, 16
         je      %%_exact_16_left
         jl      %%_less_than_16_left
         ;; load the plaintext
@@ -471,23 +704,19 @@ section .text
 %else
         movdqu  xtmp1, [p_out]
 %endif
-        pxor    xcrc, xtmp1 ; xor the initial crc value
+        pxor    xcrc, xtmp1 ; xor the initial CRC value
         jmp     %%_128_done
 
 %%_less_than_16_left:
-        ;; @note: due to message size restrictions (multiple of 4 bytes)
-        ;;        there will never be a case in which there is less than
-        ;;        4 bytes to process here
-
 %ifidn %%DIR, ENC
-        simd_load_sse_4_8_12 xtmp1, p_in, num_bytes
+        simd_load_sse_15_1 xtmp1, p_in, bytes_to_crc
 %else
-        simd_load_sse_4_8_12 xtmp1, p_out, num_bytes
+        simd_load_sse_15_1 xtmp1, p_out, bytes_to_crc
 %endif
-        pxor    xcrc, xtmp1 ; xor the initial crc value
+        pxor    xcrc, xtmp1 ; xor the initial CRC value
 
         lea     tmp, [rel pshufb_shf_table]
-        movdqu  xtmp1, [tmp + num_bytes]
+        movdqu  xtmp1, [tmp + bytes_to_crc]
         pshufb  xcrc, xtmp1
         jmp     %%_128_done
 
@@ -495,13 +724,15 @@ section .text
         DO_PON  p_keys, NUM_AES_ROUNDS, xcounter, p_in, p_out, xbip, \
                 xcrc, xcrckey, xtmp1, xtmp2, xtmp3, first_crc, %%DIR, %%CIPH, ctr_check
         sub     num_bytes, 16
+        sub     bytes_to_crc, 16
 
 %%_main_loop:
-        cmp     num_bytes, 16
+        cmp     bytes_to_crc, 16
         jb      %%_exit_loop
         DO_PON  p_keys, NUM_AES_ROUNDS, xcounter, p_in, p_out, xbip, \
                 xcrc, xcrckey, xtmp1, xtmp2, xtmp3, next_crc, %%DIR, %%CIPH, ctr_check
         sub     num_bytes, 16
+        sub     bytes_to_crc, 16
 %ifidn %%DIR, ENC
         jz      %%_128_done
 %endif
@@ -510,29 +741,29 @@ section .text
 %%_exit_loop:
 
 %ifidn %%DIR, DEC
-        ;; decrypt the buffer including trailing CRC
-        lea     tmp, [num_bytes + 4] ; add CRC size
+        ;; decrypt rest of the message including CRC and optional padding
+        mov     tmp, num_bytes
 
         CIPHER_BIP_REST tmp, %%DIR, %%CIPH, p_in, p_out, p_keys, xbip, \
-                        xcounter, xtmp1, xtmp2, xtmp3, ctr_check
+                        xcounter, xtmp1, xtmp2, xtmp3, ctr_check, tmp2, tmp3
 
-        lea     tmp, [num_bytes + 4] ; correct in/out pointers
-        and     tmp, -16
+        mov     tmp, num_bytes  ; correct in/out pointers - to point before cipher & BIP
+        and     tmp, -16        ; partial block handler doesn't increment pointers
         sub     p_in, tmp
         sub     p_out, tmp
 
-        or      num_bytes, num_bytes
+        or      bytes_to_crc, bytes_to_crc
         jz      %%_128_done
 %endif                          ; DECRYPTION
 
         ;; Partial bytes left - complete CRC calculation
 %%_crc_two_xmms:
         lea             tmp, [rel pshufb_shf_table]
-        movdqu          xtmp2, [tmp + num_bytes]
+        movdqu          xtmp2, [tmp + bytes_to_crc]
 %ifidn %%DIR, ENC
-        movdqu          xtmp1, [p_in - 16 + num_bytes]  ; xtmp1 = data for CRC
+        movdqu          xtmp1, [p_in - 16 + bytes_to_crc]  ; xtmp1 = data for CRC
 %else
-        movdqu          xtmp1, [p_out - 16 + num_bytes]  ; xtmp1 = data for CRC
+        movdqu          xtmp1, [p_out - 16 + bytes_to_crc]  ; xtmp1 = data for CRC
 %endif
         movdqa          xtmp3, xcrc
         pshufb          xcrc, xtmp2  ; top num_bytes with LSB xcrc
@@ -551,57 +782,37 @@ section .text
         pxor            xcrc, xtmp1
 
 %%_128_done:
-        ;;  compute crc of a 128-bit value
-        movdqa          xcrckey, [rel rk5]
-
-        ;; 64b fold
-        movdqa          xtmp1, xcrc
-        pclmulqdq       xtmp1, xcrckey, 0x00
-        psrldq          xcrc, 8
-        pxor            xcrc, xtmp1
-
-        ;; 32b fold
-        movdqa          xtmp1, xcrc
-        pslldq          xtmp1, 4
-        pclmulqdq       xtmp1, xcrckey, 0x10
-        pxor            xcrc, xtmp1
-
-%%_crc_barrett:
-        ;; barrett reduction
-        pand            xcrc, [rel mask2]
-        movdqa          xtmp1, xcrc
-        movdqa          xtmp2, xcrc
-        movdqa          xcrckey, [rel rk7]
-
-        pclmulqdq       xcrc, xcrckey, 0x00
-        pxor            xcrc, xtmp2
-        pand            xcrc, [rel mask]
-        movdqa          xtmp2, xcrc
-        pclmulqdq       xcrc, xcrckey, 0x10
-        pxor            xcrc, xtmp2
-        pxor            xcrc, xtmp1
-        pextrd          eax, xcrc, 2 ; EAX = CRC
-        not             eax
+        CRC32_REDUCE_128_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
 
 %%_crc_done:
         ;; @todo - store-to-load problem in ENC case (to be fixed later)
         ;; - store CRC in input buffer and authentication tag output
         ;; - encrypt remaining bytes
-        mov     tmp, [job + _auth_tag_output]
 %ifidn %%DIR, ENC
-        mov     [p_in + num_bytes], eax
+        or      DWORD(write_back_crc), DWORD(write_back_crc)
+        jz      %%_skip_crc_write_back
+        mov     [p_in + bytes_to_crc], DWORD(ethernet_fcs)
+%%_skip_crc_write_back:
 %endif
-        mov     [tmp + 4], eax
+        mov     tmp, [job + _auth_tag_output]
+        mov     [tmp + 4], DWORD(ethernet_fcs)
 
-%ifidn %%DIR, ENC
-        add     num_bytes, 4 ; add size of appended CRC
+        or      num_bytes, num_bytes
+        jz      %%_do_not_cipher_the_rest
 
+        ;; encrypt rest of the message
+        ;; - partial bytes including CRC and optional padding
+        ;; decrypt rest of the message
+        ;; - this may only happen when XGEM payload is short and padding is added
+%ifidn %%DIR, DEC
+        or      DWORD(decrypt_not_done), DWORD(decrypt_not_done)
+        jnz     %%_do_not_cipher_the_rest
+%endif
         CIPHER_BIP_REST num_bytes, %%DIR, %%CIPH, p_in, p_out, p_keys, xbip, \
-                        xcounter, xtmp1, xtmp2, xtmp3, ctr_check
-%endif                          ; ENCRYPTION
+                        xcounter, xtmp1, xtmp2, xtmp3, ctr_check, tmp2, tmp3
+%%_do_not_cipher_the_rest:
 
         ;; finalize BIP
-        mov     tmp, [job + _auth_tag_output]
         movdqa  xtmp1, xbip
         movdqa  xtmp2, xbip
         movdqa  xtmp3, xbip
@@ -618,6 +829,13 @@ section .text
 
         ;;  return job
         mov     rax, job
+
+%ifndef LINUX
+        pop     r15
+%endif
+        pop     r14
+        pop     r13
+        pop     r12
 %endmacro                       ; AES128_CTR_PON
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
