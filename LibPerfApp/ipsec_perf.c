@@ -618,6 +618,57 @@ uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
 uint32_t iter_scale = ITER_SCALE_LONG;
 
+#define PB_INIT_SIZE 50
+#define PB_INIT_IDX  2 /* after \r and [ */
+static uint32_t PB_SIZE = PB_INIT_SIZE;
+static uint32_t PB_FINAL_IDX = (PB_INIT_SIZE + (PB_INIT_IDX - 1));
+static char prog_bar[PB_INIT_SIZE + 4]; /* 50 + 4 for \r, [, ], \0 */
+static uint32_t pb_idx = PB_INIT_IDX;
+static uint32_t pb_mod = 0;
+
+static void prog_bar_init(const uint32_t total_num)
+{
+        if (total_num < PB_SIZE) {
+                PB_SIZE = total_num;
+                PB_FINAL_IDX = (PB_SIZE + (PB_INIT_IDX - 1));
+        }
+        pb_idx = PB_INIT_IDX;
+        pb_mod = total_num / PB_SIZE;
+
+        /* 32 dec == ascii ' ' char */
+        memset(prog_bar, 32, sizeof(prog_bar));
+        prog_bar[0] = '\r';
+        prog_bar[1] = '[';
+        prog_bar[PB_FINAL_IDX + 1] = ']';
+        prog_bar[PB_FINAL_IDX + 2] = '\0';
+
+        fputs(prog_bar, stderr);
+}
+
+static void prog_bar_fini(void)
+{
+        prog_bar[PB_FINAL_IDX] = 'X'; /* set final X */
+        fputs(prog_bar, stderr);
+}
+
+static void prog_bar_update(const uint32_t num)
+{
+        if ((pb_mod == 0) || num % pb_mod == 0) {
+                /* print X at every ~50th variant */
+                prog_bar[pb_idx] = 'X';
+                fputs(prog_bar, stderr);
+
+                /* don't overrun final idx */
+                if (pb_idx < (PB_SIZE + 1))
+                        pb_idx++;
+        } else {
+                const char pb_inter_chars[] = {'|', '/', '-', '\\'};
+                /* print intermediate chars */
+                prog_bar[pb_idx] = pb_inter_chars[num % DIM(pb_inter_chars)];
+                fputs(prog_bar, stderr);
+        }
+}
+
 /* Read unhalted cycles */
 __forceinline uint64_t read_cycles(const uint32_t core)
 {
@@ -1514,7 +1565,8 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 static void
 do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
             const uint32_t run, struct variant_s **variant_ptr,
-            uint32_t *variant, uint8_t *p_buffer, uint128_t *p_keys)
+            uint32_t *variant, uint8_t *p_buffer, uint128_t *p_keys,
+            const int print_info)
 {
         uint32_t hash_alg;
         uint32_t h_start = TEST_SHA1;
@@ -1575,6 +1627,9 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                         params->hash_alg = (enum test_hash_alg_e) hash_alg;
                         process_variant(mgr, arch, params, *variant_ptr, run,
                                         p_buffer, p_keys);
+                        /* update and print progress bar */
+                        if (print_info)
+                                prog_bar_update(*variant);
                         (*variant)++;
                         (*variant_ptr)++;
                 }
@@ -1585,7 +1640,8 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 static void
 run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
              const uint32_t run, struct variant_s **variant_ptr,
-             uint32_t *variant, uint8_t *p_buffer, uint128_t *p_keys)
+             uint32_t *variant, uint8_t *p_buffer, uint128_t *p_keys,
+             const int print_info)
 {
         uint32_t dir;
         uint32_t k; /* Key size */
@@ -1620,7 +1676,7 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 params->cipher_mode = custom_job_params.cipher_mode;
                 params->hash_alg = custom_job_params.hash_alg;
                 do_variants(mgr, arch, params, run, variant_ptr,
-                            variant, p_buffer, p_keys);
+                            variant, p_buffer, p_keys, print_info);
                 return;
         }
 
@@ -1629,7 +1685,7 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 for (k = AES_128_BYTES; k <= limit; k += 8) {
                         params->aes_key_size = k;
                         do_variants(mgr, arch, params, run, variant_ptr,
-                                    variant, p_buffer, p_keys);
+                                    variant, p_buffer, p_keys, print_info);
                 }
         }
 }
@@ -1830,6 +1886,11 @@ run_tests(void *arg)
                 goto exit;
         }
 
+        if (info->print_info)
+                fprintf(stderr, "Total number of combinations (algos, "
+                        "key sizes, cipher directions) to test = %u\n",
+                        total_variants);
+
         variant_list = (struct variant_s *)
                 malloc(total_variants * sizeof(struct variant_s));
         if (variant_list == NULL) {
@@ -1847,14 +1908,20 @@ run_tests(void *arg)
                         goto exit_failure;
                 }
         }
+
         for (run = 0; run < NUM_RUNS; run++) {
-                fprintf(stderr, "Starting run %d of %d\n", run+1, NUM_RUNS);
+                if (info->print_info)
+                        fprintf(stderr, "\nStarting run "
+                                "%d of %d\n", run+1, NUM_RUNS);
 
                 variant = 0;
                 variant_ptr = variant_list;
 
                 if (iter_scale == ITER_SCALE_SMOKE && run != 0)
                         continue;
+
+                if (info->print_info)
+                        prog_bar_init(total_variants);
 
                 for (type = TTYPE_AES_HMAC; type < NUM_TTYPES; type++) {
                         if (test_types[type] == 0)
@@ -1869,12 +1936,18 @@ run_tests(void *arg)
                                 if (archs[arch] == 0)
                                         continue;
                                 run_dir_test(p_mgr, arch, &params, run,
-                                             &variant_ptr, &variant, buf, keys);
+                                             &variant_ptr, &variant, buf,
+                                             keys, info->print_info);
                         }
                 } /* end for type */
+                if (info->print_info)
+                        prog_bar_fini();
+
         } /* end for run */
-        if (info->print_info == 1 && iter_scale != ITER_SCALE_SMOKE)
+        if (info->print_info == 1 && iter_scale != ITER_SCALE_SMOKE) {
+                fprintf(stderr, "\n");
                 print_times(variant_list, &params, total_variants, buf, keys);
+        }
 
 exit:
         if (variant_list != NULL) {
