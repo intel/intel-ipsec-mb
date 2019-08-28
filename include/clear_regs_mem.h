@@ -40,5 +40,7 @@ clear_mem(void *mem, const size_t size)
 void clear_scratch_gps(void);
 void clear_scratch_xmms_sse(void);
 void clear_scratch_xmms_avx(void);
+void clear_scratch_ymms(void);
+void clear_scratch_zmms(void);
 
 #endif /* CLEAR_REGS_H */

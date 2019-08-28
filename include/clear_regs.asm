@@ -64,6 +64,28 @@
 %endmacro
 
 ;
+; This macro clears any YMM registers passed
+;
+%macro clear_ymms 1-16
+%define %%NUM_REGS %0
+%rep %%NUM_REGS
+        vpxor   %1, %1
+%rotate 1
+%endrep
+%endmacro
+
+;
+; This macro clears any ZMM registers passed
+;
+%macro clear_zmms 1-32
+%define %%NUM_REGS %0
+%rep %%NUM_REGS
+        vpxorq  %1, %1
+%rotate 1
+%endrep
+%endmacro
+
+;
 ; This macro clears all scratch GP registers
 ; for Windows or Linux
 ;
@@ -109,6 +131,69 @@
 %assign i 0
 %rep 6
         vpxor   xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+%endif ; LINUX
+%endmacro
+
+;
+; This macro clears all scratch YMM registers
+;
+; It should be called before restoring the XMM registers
+; for Windows (XMM6-XMM15)
+;
+%macro clear_scratch_ymms_asm 0
+; On Linux, all YMM registers are scratch registers
+%ifdef LINUX
+%assign i 0
+%rep 16
+        vpxor   ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+; On Windows, YMM0-YMM5 registers are scratch registers.
+; YMM6-YMM15 upper 128 bits are scratch registers too, but
+; the lower 128 bits are to be restored after calling these function
+; which clears the upper bits too.
+%else
+%assign i 0
+%rep 6
+        vpxor   ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+%endif ; LINUX
+%endmacro
+
+;
+; This macro clears all scratch ZMM registers
+;
+; It should be called before restoring the XMM registers
+; for Windows (XMM6-XMM15). YMM registers are used
+; on purpose, since XOR'ing YMM registers is faster
+; than XOR'ing ZMM registers, and the operation clears
+; also the upper 256 bits
+;
+%macro clear_scratch_zmms_asm 0
+; On Linux, all ZMM registers are scratch registers
+%ifdef LINUX
+%assign i 0
+%rep 32
+        vpxorq  ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+; On Windows, ZMM0-ZMM5 and ZMM16-ZMM31 registers are scratch registers.
+; ZMM6-ZMM15 upper 384 bits are scratch registers too, but
+; the lower 128 bits are to be restored after calling these function
+; which clears the upper bits too.
+%else
+%assign i 0
+%rep 6
+        vpxorq  ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+
+%assign i 16
+%rep 16
+        vpxorq  ymm %+ i, ymm %+ i
 %assign i (i+1)
 %endrep
 %endif ; LINUX
