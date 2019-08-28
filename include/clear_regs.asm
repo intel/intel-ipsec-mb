@@ -25,47 +25,93 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+%ifndef _CLEAR_REGS_ASM_
+%define _CLEAR_REGS_ASM_
+
 %include "include/os.asm"
-%include "include/clear_regs.asm"
-
-section .text
-;
-; This function clears all scratch GP registers
-;
-; void clear_scratch_gps(void)
-MKGLOBAL(clear_scratch_gps,function,internal)
-clear_scratch_gps:
-
-        clear_scratch_gps_asm
-
-        ret
 
 ;
-; This function clears all scratch XMM registers
+; This macro clears any GP registers passed
 ;
-; void clear_scratch_xmms_sse(void)
-MKGLOBAL(clear_scratch_xmms_sse,function,internal)
-clear_scratch_xmms_sse:
-
-        clear_scratch_xmms_sse_asm
-
-        ret
+%macro clear_gps 1-16
+%define %%NUM_REGS %0
+%rep %%NUM_REGS
+        xor %1, %1
+%rotate 1
+%endrep
+%endmacro
 
 ;
-; This function clears all scratch XMM registers
+; This macro clears any XMM registers passed on SSE
 ;
-; It should be called before restoring the XMM registers
-; for Windows (XMM6-XMM15)
+%macro clear_xmms_sse 1-16
+%define %%NUM_REGS %0
+%rep %%NUM_REGS
+        pxor    %1, %1
+%rotate 1
+%endrep
+%endmacro
+
 ;
-; void clear_scratch_xmms_avx(void)
-MKGLOBAL(clear_scratch_xmms_avx,function,internal)
-clear_scratch_xmms_avx:
+; This macro clears any XMM registers passed on AVX
+;
+%macro clear_xmms_avx 1-16
+%define %%NUM_REGS %0
+%rep %%NUM_REGS
+        vpxor   %1, %1
+%rotate 1
+%endrep
+%endmacro
 
-        clear_scratch_xmms_avx_asm
-
-        ret
-
-
+;
+; This macro clears all scratch GP registers
+; for Windows or Linux
+;
+%macro clear_scratch_gps_asm 0
+        clear_gps rax, rcx, rdx, r8, r9, r10, r11
 %ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
+        clear_gps rdi, rsi
 %endif
+%endmacro
+
+;
+; This macro clears all scratch XMM registers on SSE
+;
+%macro clear_scratch_xmms_sse_asm 0
+%ifdef LINUX
+%assign i 0
+%rep 16
+        pxor    xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+; On Windows, XMM0-XMM5 registers are scratch registers
+%else
+%assign i 0
+%rep 6
+        pxor    xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+%endif ; LINUX
+%endmacro
+
+;
+; This macro clears all scratch XMM registers on AVX
+;
+%macro clear_scratch_xmms_avx_asm 0
+%ifdef LINUX
+%assign i 0
+%rep 16
+        vpxor   xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+; On Windows, XMM0-XMM5 registers are scratch registers
+%else
+%assign i 0
+%rep 6
+        vpxor   xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+%endif ; LINUX
+%endmacro
+
+%endif ;; _CLEAR_REGS_ASM
