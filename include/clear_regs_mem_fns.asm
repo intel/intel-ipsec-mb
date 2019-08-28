@@ -31,9 +31,9 @@ section .text
 ;
 ; This function clears all scratch GP registers
 ;
-; void clear_gps(void)
-MKGLOBAL(clear_gps,function,internal)
-clear_gps:
+; void clear_scratch_gps(void)
+MKGLOBAL(clear_scratch_gps,function,internal)
+clear_scratch_gps:
         xor     rax, rax
         xor     rcx, rcx
         xor     rdx, rdx
@@ -52,9 +52,9 @@ clear_gps:
 ;
 ; This function clears all scratch XMM registers
 ;
-; void clear_xmms_sse(void)
-MKGLOBAL(clear_xmms_sse,function,internal)
-clear_xmms_sse:
+; void clear_scratch_xmms_sse(void)
+MKGLOBAL(clear_scratch_xmms_sse,function,internal)
+clear_scratch_xmms_sse:
 ; On Linux, all XMM registers are scratch registers
 %ifdef LINUX
 %assign i 0
@@ -78,9 +78,9 @@ clear_xmms_sse:
 ; It should be called before restoring the XMM registers
 ; for Windows (XMM6-XMM15)
 ;
-; void clear_xmms_avx(void)
-MKGLOBAL(clear_xmms_avx,function,internal)
-clear_xmms_avx:
+; void clear_scratch_xmms_avx(void)
+MKGLOBAL(clear_scratch_xmms_avx,function,internal)
+clear_scratch_xmms_avx:
 ; On Linux, all XMM registers are scratch registers
 %ifdef LINUX
 %assign i 0

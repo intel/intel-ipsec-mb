@@ -59,8 +59,8 @@ kasumi_f8_1_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                            cipherLengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_avx();
+        clear_scratch_gps();
+        clear_scratch_xmms_avx();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -93,8 +93,8 @@ kasumi_f8_1_buffer_bit_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                                cipherLengthInBits, offsetInBits);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_avx();
+        clear_scratch_gps();
+        clear_scratch_xmms_avx();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -136,8 +136,8 @@ kasumi_f8_2_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                            pBufferIn2, pBufferOut2, lengthInBytes2);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_avx();
+        clear_scratch_gps();
+        clear_scratch_xmms_avx();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -181,8 +181,8 @@ kasumi_f8_3_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                            pBufferIn3, pBufferOut3, lengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_avx();
+        clear_scratch_gps();
+        clear_scratch_xmms_avx();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -233,8 +233,8 @@ kasumi_f8_4_buffer_avx(const kasumi_key_sched_t *pCtx,
                            lengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_avx();
+        clear_scratch_gps();
+        clear_scratch_xmms_avx();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -294,8 +294,8 @@ kasumi_f8_n_buffer_avx(const kasumi_key_sched_t *pKeySchedule,
         }
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_avx();
+        clear_scratch_gps();
+        clear_scratch_xmms_avx();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -324,8 +324,8 @@ kasumi_f9_1_buffer_avx(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
         kasumi_f9_1_buffer(pCtx, pBufferIn, lengthInBytes, pDigest);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_avx();
+        clear_scratch_gps();
+        clear_scratch_xmms_avx();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -355,8 +355,8 @@ kasumi_f9_1_buffer_user_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                                 pDigest, direction);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_avx();
+        clear_scratch_gps();
+        clear_scratch_xmms_avx();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);

@@ -37,8 +37,8 @@ clear_mem(void *mem, const size_t size)
         memset(mem, 0, size);
 }
 
-void clear_gps(void);
-void clear_xmms_sse(void);
-void clear_xmms_avx(void);
+void clear_scratch_gps(void);
+void clear_scratch_xmms_sse(void);
+void clear_scratch_xmms_avx(void);
 
 #endif /* CLEAR_REGS_H */

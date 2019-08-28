@@ -352,8 +352,8 @@ void zuc_eea3_1_buffer_sse(const void *pKey,
 
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        clear_scratch_gps();
+        clear_scratch_xmms_sse();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -394,8 +394,8 @@ void zuc_eea3_4_buffer_sse(const void * const pKey[4],
 
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        clear_scratch_gps();
+        clear_scratch_xmms_sse();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -456,8 +456,8 @@ void zuc_eea3_n_buffer_sse(const void * const pKey[], const void * const pIv[],
 
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        clear_scratch_gps();
+        clear_scratch_xmms_sse();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -544,8 +544,8 @@ void zuc_eia3_1_buffer_sse(const void *pKey,
         /* Clear sensitive data (in registers and stack) */
         clear_mem(keyStream, sizeof(keyStream));
         clear_mem(&zucState, sizeof(zucState));
-        clear_gps();
-        clear_xmms_sse();
+        clear_scratch_gps();
+        clear_scratch_xmms_sse();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);

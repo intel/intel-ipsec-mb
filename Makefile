@@ -174,7 +174,7 @@ asm_generic_lib_objs := \
 	aes_keyexp_256.o \
 	aes_cmac_subkey_gen.o \
 	save_xmms.o \
-	clear_regs_mem.o \
+	clear_regs_mem_fns.o \
 	const.o \
 	aes128_ecbenc_x3.o \
 	zuc_common.o \
