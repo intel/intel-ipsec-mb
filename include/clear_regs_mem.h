@@ -28,6 +28,7 @@
 #ifndef CLEAR_REGS_H
 #define CLEAR_REGS_H
 
+#define CLEAR_SCRATCH_GPS clear_scratch_gps
 static inline void
 clear_mem(void *mem, const size_t size)
 {

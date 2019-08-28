@@ -41,8 +41,9 @@
 #include "include/clear_regs_mem.h"
 #include "intel-ipsec-mb.h"
 
-#define SAVE_XMMS       save_xmms_avx
-#define RESTORE_XMMS    restore_xmms_avx
+#define SAVE_XMMS               save_xmms_avx
+#define RESTORE_XMMS            restore_xmms_avx
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
 
 static inline
 void _zuc_eea3_1_buffer_avx(const void *pKey,
@@ -349,8 +350,8 @@ void zuc_eea3_1_buffer_avx(const void *pKey,
 
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_scratch_gps();
-        clear_scratch_xmms_avx();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -391,8 +392,8 @@ void zuc_eea3_4_buffer_avx(const void * const pKey[4],
 
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_scratch_gps();
-        clear_scratch_xmms_avx();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -451,8 +452,8 @@ void zuc_eea3_n_buffer_avx(const void * const pKey[], const void * const pIv[],
         }
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_scratch_gps();
-        clear_scratch_xmms_avx();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -538,8 +539,8 @@ void zuc_eia3_1_buffer_avx(const void *pKey,
         /* Clear sensitive data (in registers and stack) */
         clear_mem(keyStream, sizeof(keyStream));
         clear_mem(&zucState, sizeof(zucState));
-        clear_scratch_gps();
-        clear_scratch_xmms_avx();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
