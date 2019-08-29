@@ -37,10 +37,15 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "intel-ipsec-mb.h"
 #include "include/snow3g.h"
 #include "include/snow3g_internal.h"
+#include "clear_regs_mem.h"
+
+#define CLEAR_MEM clear_mem
+#define CLEAR_VAR clear_var
 
 /* -------------------------------------------------------------------
  * LFSR array shift by 1 position, 4 packets at a time
@@ -992,6 +997,12 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
                         cipherLengthInBits = 0;
                 }
         }
+#ifdef SAFE_DATA
+        CLEAR_VAR(&KS8, sizeof(KS8));
+        CLEAR_VAR(&KS8bit, sizeof(KS8bit));
+        CLEAR_MEM(&safeInBuf, sizeof(safeInBuf));
+        CLEAR_MEM(&safeOutBuf, sizeof(safeOutBuf));
+#endif
 }
 
 /**
@@ -1041,6 +1052,10 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
                         memcpy_keystrm(safeBuff, pBufferIn, 4 + bytes);
                         xor_keystrm_rev(buftemp, safeBuff, KS8);
                         memcpy_keystrm(pBufferOut, buftemp, 4 + bytes);
+#ifdef SAFE_DATA
+                        CLEAR_MEM(&safeBuff, sizeof(safeBuff));
+                        CLEAR_MEM(&buftemp, sizeof(buftemp));
+#endif
                 } else {
                         /* exactly 4 last bytes */
                         snow3g_keystream_1_4(pCtx, &KS4);
@@ -1056,7 +1071,16 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
                 memcpy_keystream_32(safeBuff, pBufferIn, bytes);
                 xor_keystream_reverse_32(buftemp, safeBuff, KS4);
                 memcpy_keystream_32(pBufferOut, buftemp, bytes);
+#ifdef SAFE_DATA
+                CLEAR_MEM(&safeBuff, sizeof(safeBuff));
+                CLEAR_MEM(&buftemp, sizeof(buftemp));
+#endif
         }
+
+#ifdef SAFE_DATA
+        CLEAR_VAR(&KS4, sizeof(KS4));
+        CLEAR_VAR(&KS8, sizeof(KS8));
+#endif
 }
 
 #ifdef AVX2
@@ -1290,10 +1314,15 @@ static inline void snow3gStateConvert_4(snow3gKeyState4_t *pSrcState,
  * f8()
  * Initializations and Context size definitions
  *---------------------------------------------------------*/
-uint32_t SNOW3G_KEY_SCHED_SIZE(void) { return sizeof(snow3g_key_schedule_t); }
+size_t SNOW3G_KEY_SCHED_SIZE(void) { return sizeof(snow3g_key_schedule_t); }
 
-uint32_t SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
+int SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
 {
+#ifdef SAFE_PARAM
+        if ((pKey == NULL) || (pCtx == NULL))
+                return -1;
+#endif
+
         const uint32_t *pKey32 = pKey;
 
         pCtx->k[3] = BSWAP32(pKey32[0]);
@@ -1315,6 +1344,12 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
                         void  *pBufferOut,
                         const uint32_t lengthInBytes)
 {
+#ifdef SAFE_PARAM
+        if ((pHandle == NULL) || (pIV == NULL) ||
+            (pBufferIn == NULL) || (pBufferOut == NULL) ||
+            (lengthInBytes == 0) || (lengthInBytes > (UINT32_MAX / 8)))
+                return;
+#endif
         snow3gKeyState1_t ctx;
         uint32_t KS4; /* 4 bytes of keystream */
 
@@ -1325,6 +1360,13 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         snow3g_keystream_1_4(&ctx, &KS4);
 
         f8_snow3g(&ctx, pBufferIn, pBufferOut, lengthInBytes);
+
+#ifdef SAFE_DATA
+        CLEAR_VAR(&KS4, sizeof(KS4));
+        CLEAR_MEM(&ctx, sizeof(ctx));
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
 }
 
 /*---------------------------------------------------------
@@ -1339,6 +1381,13 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
                             const uint32_t lengthInBits,
                             const uint32_t offsetInBits)
 {
+#ifdef SAFE_PARAM
+        if ((pHandle == NULL) || (pIV == NULL) ||
+            (pBufferIn == NULL) || (pBufferOut == NULL) ||
+            (lengthInBits == 0))
+                return;
+#endif
+
         snow3gKeyState1_t ctx;
         uint32_t KS4; /* 4 bytes of keystream */
 
@@ -1349,6 +1398,13 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
         snow3g_keystream_1_4(&ctx, &KS4);
 
         f8_snow3g_bit(&ctx, pBufferIn, pBufferOut, lengthInBits, offsetInBits);
+
+#ifdef SAFE_DATA
+        CLEAR_VAR(&KS4, sizeof(KS4));
+        CLEAR_MEM(&ctx, sizeof(ctx));
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
 }
 
 /*---------------------------------------------------------
@@ -1368,6 +1424,13 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
                         void *pBufOut2,
                         const uint32_t lenInBytes2)
 {
+#ifdef SAFE_PARAM
+        if ((pHandle == NULL) || (pIV1 == NULL) || (pIV2 == NULL) ||
+            (pBufIn1 == NULL) || (pBufOut1 == NULL) ||
+            (pBufIn2 == NULL) || (pBufOut2 == NULL))
+                return;
+#endif
+
         snow3gKeyState1_t ctx1, ctx2;
         uint32_t KS4; /* 4 bytes of keystream */
 
@@ -1388,6 +1451,15 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
 
         /* data processing for packet 2 */
         f8_snow3g(&ctx2, pBufIn2, pBufOut2, lenInBytes2);
+
+#ifdef SAFE_DATA
+        CLEAR_VAR(&KS4, sizeof(KS4));
+        CLEAR_MEM(&ctx1, sizeof(ctx1));
+        CLEAR_MEM(&ctx2, sizeof(ctx2));
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
 }
 
 /*---------------------------------------------------------
@@ -1415,6 +1487,17 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
                         void *pBufferOut4,
                         const uint32_t lengthInBytes4)
 {
+#ifdef SAFE_PARAM
+        if ((pHandle == NULL) ||
+            (pIV1 == NULL) || (pIV2 == NULL) ||
+            (pIV3 == NULL) || (pIV4 == NULL) ||
+            (pBufferIn1 == NULL) || (pBufferOut1 == NULL) ||
+            (pBufferIn2 == NULL) || (pBufferOut2 == NULL) ||
+            (pBufferIn3 == NULL) || (pBufferOut3 == NULL) ||
+            (pBufferIn4 == NULL) || (pBufferOut4 == NULL))
+                return;
+#endif
+
         snow3gKeyState4_t ctx;
         __m128i H, L; /* 4 bytes of keystream */
         uint32_t lenInBytes1 = lengthInBytes1;
@@ -1501,6 +1584,15 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
                 snow3gStateConvert_4(&ctx, &ctx4, 3);
                 f8_snow3g(&ctx4, pBufIn4, pBufOut4, lenInBytes4);
         }
+
+#ifdef SAFE_DATA
+        H = _mm_setzero_si128();
+        L = _mm_setzero_si128();
+        CLEAR_MEM(&ctx, sizeof(ctx));
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
 }
 
 #ifdef AVX2
@@ -1621,6 +1713,12 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
                 snow3gStateConvert_8(&ctx, &ctx8, 7);
                 f8_snow3g(&ctx8, tBufferIn[7], tBufferOut[7], tLenInBytes[7]);
         }
+
+#ifdef SAFE_DATA
+        H = _mm256_setzero_si256();
+        L = _mm256_setzero_si256();
+        CLEAR_MEM(&ctx, sizeof(ctx));
+#endif /* SAFE_DATA */
 }
 
 /*---------------------------------------------------------
@@ -1757,6 +1855,12 @@ snow3g_8_buffer_ks_32_multi(uint32_t bytes,
                 snow3gStateConvert_8(&ctx, &ctx8, 7);
                 f8_snow3g(&ctx8, tBufferIn[7], tBufferOut[7], tLenInBytes[7]);
         }
+
+#ifdef SAFE_DATA
+        CLEAR_MEM(&ctx, sizeof(ctx));
+        CLEAR_MEM(&ks, sizeof(ks));
+        CLEAR_MEM(&in, sizeof(in));
+#endif /* SAFE_DATA */
 }
 
 /*---------------------------------------------------------
@@ -1931,6 +2035,12 @@ snow3g_8_buffer_ks_8(uint32_t bytes,
                 snow3gStateConvert_8(&ctx, &ctx8, 7);
                 f8_snow3g(&ctx8, pBufIn8, pBufOut8, lenInBytes8);
         }
+
+#ifdef SAFE_DATA
+        H = _mm256_setzero_si256();
+        L = _mm256_setzero_si256();
+        CLEAR_MEM(&ctx, sizeof(ctx));
+#endif /* SAFE_DATA */
 }
 
 /*---------------------------------------------------------
@@ -2123,6 +2233,12 @@ snow3g_8_buffer_ks_32(uint32_t bytes,
                 snow3gStateConvert_8(&ctx, &ctx8, 7);
                 f8_snow3g(&ctx8, pBufIn8, pBufOut8, lenInBytes8);
         }
+
+#ifdef SAFE_DATA
+        CLEAR_MEM(&ctx, sizeof(ctx));
+        CLEAR_MEM(&ks, sizeof(ks));
+        CLEAR_MEM(&in, sizeof(in));
+#endif /* SAFE_DATA */
 }
 #endif /* AVX2 */
 
@@ -2139,16 +2255,26 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
                                  void *BufferOut[],
                                  const uint32_t lengthInBytes[])
 {
-#ifndef AVX2
-        /* basic C workaround for lack of non AVX2 implementation */
         int i;
 
+#ifdef SAFE_PARAM
+        if ((pKey == NULL) || (IV == NULL) ||
+            (BufferIn == NULL) || (BufferOut == NULL))
+                return;
+
+        for (i = 0; i < 8; i++)
+                if ((pKey[i] == NULL) || (IV[i] == NULL) ||
+                    (BufferIn[i] == NULL) || (BufferOut[i] == NULL))
+                        return;
+#endif
+
+#ifndef AVX2
+        /* basic C workaround for lack of non AVX2 implementation */
         for (i = 0; i < 8; i++)
                 SNOW3G_F8_1_BUFFER(pKey[i], IV[i], BufferIn[i], BufferOut[i],
                                    lengthInBytes[i]);
 #else
         uint32_t bytes = lengthInBytes[0];
-        int i;
 
         /* find min byte lenght */
         for (i = 1; i < 8; i++)
@@ -2162,6 +2288,10 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
                 snow3g_8_buffer_ks_32_multi(bytes, pKey, IV, BufferIn,
                                             BufferOut, lengthInBytes);
         }
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif
 #endif /* AVX2 */
 }
 
@@ -2207,6 +2337,23 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
                         void *pBufOut8,
                         const uint32_t lenInBytes8)
 {
+#ifdef SAFE_PARAM
+        if ((pHandle == NULL) ||
+            (pIV1 == NULL) || (pIV2 == NULL) ||
+            (pIV3 == NULL) || (pIV4 == NULL) ||
+            (pIV5 == NULL) || (pIV6 == NULL) ||
+            (pIV7 == NULL) || (pIV8 == NULL) ||
+            (pBufIn1 == NULL) || (pBufOut1 == NULL) ||
+            (pBufIn2 == NULL) || (pBufOut2 == NULL) ||
+            (pBufIn3 == NULL) || (pBufOut3 == NULL) ||
+            (pBufIn4 == NULL) || (pBufOut4 == NULL) ||
+            (pBufIn5 == NULL) || (pBufOut5 == NULL) ||
+            (pBufIn6 == NULL) || (pBufOut6 == NULL) ||
+            (pBufIn7 == NULL) || (pBufOut7 == NULL) ||
+            (pBufIn8 == NULL) || (pBufOut8 == NULL))
+                return;
+#endif
+
 #ifdef AVX2
         uint32_t bytes1 =
                 (lenInBytes1 < lenInBytes2 ? lenInBytes1
@@ -2242,6 +2389,10 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
                         lenInBytes5, pBufIn6, pBufOut6, lenInBytes6, pBufIn7,
                         pBufOut7, lenInBytes7, pBufIn8, pBufOut8, lenInBytes8);
         }
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif
 #else  /* ~AVX2 */
         SNOW3G_F8_2_BUFFER(pHandle, pIV1, pIV2, pBufIn1, pBufOut1, lenInBytes1,
                            pBufIn2, pBufOut2, lenInBytes2);
@@ -2271,6 +2422,18 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
                         const uint32_t bufLenInBytes[],
                         const uint32_t packetCount)
 {
+#ifdef SAFE_PARAM
+        uint32_t i;
+
+        if ((pCtx == NULL) || (IV == NULL) ||
+            (pBufferIn == NULL) || (pBufferOut == NULL))
+                return;
+
+        for (i = 0; i < packetCount; i++)
+                if ((IV[i] == NULL) || (pBufferIn[i] == NULL) ||
+                    (pBufferOut[i] == NULL))
+                        return;
+#endif
         if (packetCount > 16) {
                 pBufferOut[0] = NULL;
                 printf("packetCount too high (%d)\n", packetCount);
@@ -2440,6 +2603,18 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
                                  const uint32_t bufLenInBytes[],
                                  const uint32_t packetCount)
 {
+#ifdef SAFE_PARAM
+        uint32_t i;
+
+        if ((pCtx == NULL) || (IV == NULL) ||
+            (pBufferIn == NULL) || (pBufferOut == NULL))
+                return;
+
+        for (i = 0; i < packetCount; i++)
+                if ((pCtx[i] == NULL) || (IV[i] == NULL) ||
+                    (pBufferIn[i] == NULL) || (pBufferOut[i] == NULL))
+                        return;
+#endif
         if (packetCount > 16) {
                 pBufferOut[0] = NULL;
                 printf("packetCount too high (%d)\n", packetCount);
@@ -2558,6 +2733,12 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
                         const uint64_t lengthInBits,
                         void *pDigest)
 {
+#ifdef SAFE_PARAM
+        if ((pHandle == NULL) || (pIV == NULL) ||
+            (pBufferIn == NULL) || (pDigest == NULL) ||
+            (lengthInBits == 0))
+                return;
+#endif
         snow3gKeyState1_t ctx;
         uint32_t z[5];
         uint64_t lengthInQwords, E, V, P;
@@ -2600,6 +2781,15 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         /* Final MAC */
         *(uint32_t *)pDigest =
                 (uint32_t)BSWAP64(E ^ ((uint64_t)z[4] << 32));
+#ifdef SAFE_DATA
+        CLEAR_VAR(&E, sizeof(E));
+        CLEAR_VAR(&V, sizeof(V));
+        CLEAR_VAR(&P, sizeof(P));
+        CLEAR_MEM(&z, sizeof(z));
+        CLEAR_MEM(&ctx, sizeof(ctx));
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
 }
 
 #endif /* SNOW3G_COMMON_H */

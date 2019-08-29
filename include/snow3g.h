@@ -141,10 +141,10 @@ snow3g_f9_1_buffer_sse(const snow3g_key_schedule_t *pCtx,
                        const uint64_t lengthInBits,
                        void *pDigest);
 
-uint32_t
+size_t
 snow3g_key_sched_size_sse(void);
 
-uint32_t
+int
 snow3g_init_key_sched_sse(const void *pKey, snow3g_key_schedule_t *pCtx);
 
 /*******************************************************************************
@@ -262,10 +262,10 @@ snow3g_f9_1_buffer_sse_no_aesni(const snow3g_key_schedule_t *pCtx,
                                 const uint64_t lengthInBits,
                                 void *pDigest);
 
-uint32_t
+size_t
 snow3g_key_sched_size_sse_no_aesni(void);
 
-uint32_t
+int
 snow3g_init_key_sched_sse_no_aesni(const void *pKey,
                                    snow3g_key_schedule_t *pCtx);
 
@@ -382,10 +382,10 @@ snow3g_f9_1_buffer_avx(const snow3g_key_schedule_t *pCtx,
                        const uint64_t lengthInBits,
                        void *pDigest);
 
-uint32_t
+size_t
 snow3g_key_sched_size_avx(void);
 
-uint32_t
+int
 snow3g_init_key_sched_avx(const void *pKey, snow3g_key_schedule_t *pCtx);
 
 /*******************************************************************************
@@ -502,10 +502,10 @@ snow3g_f9_1_buffer_avx2(const snow3g_key_schedule_t *pCtx,
                         const uint64_t lengthInBits,
                         void *pDigest);
 
-uint32_t
+size_t
 snow3g_key_sched_size_avx2(void);
 
-uint32_t
+int
 snow3g_init_key_sched_avx2(const void *pKey, snow3g_key_schedule_t *pCtx);
 
 #endif /* _SNOW3G_H_ */

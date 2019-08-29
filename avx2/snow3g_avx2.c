@@ -27,9 +27,11 @@
 
 #ifndef _WIN32
 #define AVX2
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_ymms
 #else
 /* use AVX implementation on Windows for now */
 #define AVX
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
 #endif
 #define SNOW3G_F8_1_BUFFER_BIT snow3g_f8_1_buffer_bit_avx2
 #define SNOW3G_F8_1_BUFFER snow3g_f8_1_buffer_avx2

@@ -38,6 +38,15 @@ clear_mem(void *mem, const size_t size)
         memset(mem, 0, size);
 }
 
+static inline void
+clear_var(void *var, const size_t size)
+{
+#ifdef LINUX
+        asm volatile (" " : : : "memory");
+#endif
+        memset(var, 0, size);
+}
+
 void clear_scratch_gps(void);
 void clear_scratch_xmms_sse(void);
 void clear_scratch_xmms_avx(void);

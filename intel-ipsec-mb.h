@@ -832,10 +832,10 @@ typedef void (*snow3g_f9_1_buffer_t)(const snow3g_key_schedule_t *,
                                      const void *, const void *,
                                      const uint64_t, void *);
 
-typedef uint32_t (*snow3g_init_key_sched_t)(const void *,
-                                            snow3g_key_schedule_t *);
+typedef int (*snow3g_init_key_sched_t)(const void *,
+                                       snow3g_key_schedule_t *);
 
-typedef uint32_t (*snow3g_key_sched_size_t)(void);
+typedef size_t (*snow3g_key_sched_size_t)(void);
 
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
@@ -1690,6 +1690,7 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  * @param[in]  key      Confidentiality/Integrity key (expected in LE format)
  * @param[out] ctx      Key schedule context to be initialised
  * @return 0 on success
+ * @return -1 on error
  *
  ******************************************************************************/
 #define IMB_SNOW3G_INIT_KEY_SCHED(_mgr, _key, _ctx)     \
@@ -1701,8 +1702,7 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  * to store the key schedule.
  *
  * @param[in]  mgr      Pointer to multi-buffer structure
- * @return size of snow3g_key_schedule_t type success
- * @return -1 on failed CPU capability check
+ * @return size of snow3g_key_schedule_t type
  *
  ******************************************************************************/
 #define IMB_SNOW3G_KEY_SCHED_SIZE(_mgr)((_mgr)->snow3g_key_sched_size())

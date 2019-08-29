@@ -71,7 +71,8 @@ static inline void snow3g_hexdump(const char *message, uint8_t *ptr, int len)
 
 int validate_snow3g_f8_1_block(struct MB_MGR *mb_mgr)
 {
-        int numVectors, i, length, size = 0;
+        int numVectors, i, length;
+        size_t size = 0;
         cipher_test_vector_t *testVectors = snow3g_cipher_test_vectors[1];
         /* snow3g f8 test vectors are located at index 1 */
         numVectors = numSnow3gCipherTestVectors[1];
@@ -134,8 +135,7 @@ int validate_snow3g_f8_1_block(struct MB_MGR *mb_mgr)
                 memcpy(pIV, testVectors[i].iv, testVectors[i].ivLenInBytes);
 
                 /*setup the keysched to be used*/
-                if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, pKey, pKeySched) ==
-                    (uint32_t)-1) {
+                if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, pKey, pKeySched) == -1) {
                         printf("CPU check failed\n");
                         goto snow3g_f8_1_buffer_exit;
                 }
@@ -203,7 +203,8 @@ static void buffer_shift_right(uint8_t *buffer, uint32_t length, uint8_t offset)
 
 static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
 {
-        int numVectors, i, length, size = 0;
+        int numVectors, i, length;
+        size_t size = 0;
         cipherbit_test_linear_vector_t *testVectors =
                 &snow3g_f8_linear_bitvectors /*snow3g_cipher_test_vectors[1]*/;
         cipher_test_vector_t *testStandardVectors =
@@ -275,8 +276,7 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                 memcpy(pIV, testVectors->iv[i], testVectors->ivLenInBytes);
 
                 /*setup the keysched to be used*/
-                if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, pKey, pKeySched) ==
-                    (uint32_t)-1) {
+                if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, pKey, pKeySched) == -1) {
                         printf("CPU check failed\n");
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
@@ -446,7 +446,8 @@ snow3g_f8_1_buffer_bit_exit:
 
 static int validate_snow3g_f8_2_blocks(struct MB_MGR *mb_mgr)
 {
-        int length, numVectors, i = 0, j = 0, size = 0, numPackets = 2;
+        int length, numVectors, i = 0, j = 0, numPackets = 2;
+        size_t size = 0;
         cipher_test_vector_t *testVectors = snow3g_cipher_test_vectors[1];
         /* snow3g f8 test vectors are located at index 1 */
         numVectors = numSnow3gCipherTestVectors[1];
@@ -672,7 +673,8 @@ snow3g_f8_2_buffer_exit:
 
 int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr)
 {
-        int length, numVectors, i = 0, j = 0, size = 0, numPackets = 4;
+        int length, numVectors, i = 0, j = 0, numPackets = 4;
+        size_t size = 0;
         cipher_test_vector_t *testVectors = snow3g_cipher_test_vectors[1];
         /* snow3g f8 test vectors are located at index 1 */
         numVectors = numSnow3gCipherTestVectors[1];
@@ -961,7 +963,8 @@ snow3g_f8_4_buffer_exit:
 
 static int validate_snow3g_f8_8_blocks(struct MB_MGR *mb_mgr)
 {
-        int length, numVectors, i, j, size = 0, numPackets = 8;
+        int length, numVectors, i, j, numPackets = 8;
+        size_t size = 0;
         cipher_test_vector_t *testVectors = snow3g_cipher_test_vectors[1];
         /* snow3g f8 test vectors are located at index 1 */
         numVectors = numSnow3gCipherTestVectors[1];
@@ -1205,7 +1208,8 @@ snow3g_f8_8_buffer_exit:
 
 static int validate_snow3g_f8_8_blocks_multi_key(struct MB_MGR *mb_mgr)
 {
-        int length, numVectors, i, j, size = 0, numPackets = 8;
+        int length, numVectors, i, j, numPackets = 8;
+        size_t size = 0;
 
         if (numPackets > NUM_SUPPORTED_BUFFERS) {
                 printf("numPackets %d too large !\n", numPackets);
@@ -1359,7 +1363,8 @@ snow3g_f8_8_buffer_multikey_exit:
 
 int validate_snow3g_f8_n_blocks(struct MB_MGR *mb_mgr)
 {
-        int length, numVectors, i, size = 0, numPackets = 16;
+        int length, numVectors, i, numPackets = 16;
+        size_t size = 0;
         cipher_test_vector_t *testVectors = snow3g_cipher_test_vectors[1];
         /* snow3g f8 test vectors are located at index 1 */
         numVectors = numSnow3gCipherTestVectors[1];
@@ -1506,7 +1511,8 @@ snow3g_f8_n_buffer_exit:
 
 static int validate_snow3g_f8_n_blocks_multi(struct MB_MGR *mb_mgr)
 {
-        int length, numVectors, i, size = 0, numPackets = NUM_SUPPORTED_BUFFERS;
+        int length, numVectors, i, numPackets = NUM_SUPPORTED_BUFFERS;
+        size_t size = 0;
         cipher_test_vector_t *testVectors = snow3g_cipher_test_vectors[1];
         /* snow3g f8 test vectors are located at index 1 */
         numVectors = numSnow3gCipherTestVectors[1];
@@ -1655,7 +1661,8 @@ snow3g_f8_n_buffer_multikey_exit:
 
 int validate_snow3g_f9(struct MB_MGR *mb_mgr)
 {
-        int numVectors, i, inputLen, size = 0;
+        int numVectors, i, inputLen;
+        size_t size = 0;
         hash_test_vector_t *testVectors = snow3g_hash_test_vectors[2];
         /* snow3g f9 test vectors are located at index 2 */
         numVectors = numSnow3gHashTestVectors[2];
