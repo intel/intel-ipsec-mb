@@ -31,8 +31,9 @@
 #include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
 
-#define SAVE_XMMS       save_xmms
-#define RESTORE_XMMS    restore_xmms
+#define SAVE_XMMS               save_xmms
+#define RESTORE_XMMS            restore_xmms
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 void
 kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
@@ -58,8 +59,8 @@ kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                            cipherLengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -92,8 +93,8 @@ kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx,
                                cipherLengthInBits, offsetInBits);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -135,8 +136,8 @@ kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                            pBufferIn2, pBufferOut2, lengthInBytes2);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -180,8 +181,8 @@ kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                            pBufferIn3, pBufferOut3, lengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -232,8 +233,8 @@ kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
                            lengthInBytes);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -293,8 +294,8 @@ kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
         }
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -323,8 +324,8 @@ kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
         kasumi_f9_1_buffer(pCtx, pBufferIn, lengthInBytes, pDigest);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
@@ -354,8 +355,8 @@ kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                                 pDigest, direction);
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */
-        clear_gps();
-        clear_xmms_sse();
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);

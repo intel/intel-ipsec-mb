@@ -101,8 +101,10 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
 JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
 
-#define SAVE_XMMS save_xmms_avx
-#define RESTORE_XMMS restore_xmms_avx
+#define SAVE_XMMS               save_xmms_avx
+#define RESTORE_XMMS            restore_xmms_avx
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_zmms
+
 #define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_avx512
 #define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_avx512
 #define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_avx512

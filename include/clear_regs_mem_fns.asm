@@ -26,50 +26,29 @@
 ;;
 
 %include "include/os.asm"
+%include "include/clear_regs.asm"
 
 section .text
 ;
 ; This function clears all scratch GP registers
 ;
-; void clear_gps(void)
-MKGLOBAL(clear_gps,function,internal)
-clear_gps:
-        xor     rax, rax
-        xor     rcx, rcx
-        xor     rdx, rdx
-; On Linux, rdi and rsi are scratch registers
-%ifdef LINUX
-        xor     rdi, rdi
-        xor     rsi, rsi
-%endif
-        xor     r8,  r8
-        xor     r9,  r9
-        xor     r10, r10
-        xor     r11, r11
+; void clear_scratch_gps(void)
+MKGLOBAL(clear_scratch_gps,function,internal)
+clear_scratch_gps:
+
+        clear_scratch_gps_asm
 
         ret
 
 ;
 ; This function clears all scratch XMM registers
 ;
-; void clear_xmms_sse(void)
-MKGLOBAL(clear_xmms_sse,function,internal)
-clear_xmms_sse:
-; On Linux, all XMM registers are scratch registers
-%ifdef LINUX
-%assign i 0
-%rep 16
-        pxor    xmm %+ i, xmm %+ i
-%assign i (i+1)
-%endrep
-; On Windows, XMM0-XMM5 registers are scratch registers
-%else
-%assign i 0
-%rep 6
-        pxor    xmm %+ i, xmm %+ i
-%assign i (i+1)
-%endrep
-%endif
+; void clear_scratch_xmms_sse(void)
+MKGLOBAL(clear_scratch_xmms_sse,function,internal)
+clear_scratch_xmms_sse:
+
+        clear_scratch_xmms_sse_asm
+
         ret
 
 ;
@@ -78,24 +57,43 @@ clear_xmms_sse:
 ; It should be called before restoring the XMM registers
 ; for Windows (XMM6-XMM15)
 ;
-; void clear_xmms_avx(void)
-MKGLOBAL(clear_xmms_avx,function,internal)
-clear_xmms_avx:
-; On Linux, all XMM registers are scratch registers
-%ifdef LINUX
-%assign i 0
-%rep 16
-        vpxor   xmm %+ i, xmm %+ i
-%assign i (i+1)
-%endrep
-; On Windows, XMM0-XMM5 registers are scratch registers
-%else
-%assign i 0
-%rep 6
-        vpxor   xmm %+ i, xmm %+ i
-%assign i (i+1)
-%endrep
-%endif
+; void clear_scratch_xmms_avx(void)
+MKGLOBAL(clear_scratch_xmms_avx,function,internal)
+clear_scratch_xmms_avx:
+
+        clear_scratch_xmms_avx_asm
+
+        ret
+
+;
+; This function clears all scratch YMM registers
+;
+; It should be called before restoring the XMM registers
+; for Windows (XMM6-XMM15)
+;
+; void clear_scratch_ymms(void)
+MKGLOBAL(clear_scratch_ymms,function,internal)
+clear_scratch_ymms:
+
+        clear_scratch_ymms_asm
+
+        ret
+
+;
+; This function clears all scratch ZMM registers
+;
+; It should be called before restoring the XMM registers
+; for Windows (XMM6-XMM15). YMM registers are used
+; on purpose, since XOR'ing YMM registers is faster
+; than XOR'ing ZMM registers, and the operation clears
+; also the upper 256 bits
+;
+; void clear_scratch_zmms(void)
+MKGLOBAL(clear_scratch_zmms,function,internal)
+clear_scratch_zmms:
+
+        clear_scratch_zmms_asm
+
         ret
 
 
