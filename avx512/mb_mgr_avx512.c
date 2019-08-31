@@ -1013,6 +1013,9 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->f8_n_buffer         = kasumi_f8_n_buffer_avx;
         state->f9_1_buffer         = kasumi_f9_1_buffer_avx;
         state->f9_1_buffer_user    = kasumi_f9_1_buffer_user_avx;
+        state->kasumi_init_f8_key_sched = kasumi_init_f8_key_sched_avx;
+        state->kasumi_init_f9_key_sched = kasumi_init_f9_key_sched_avx;
+        state->kasumi_key_sched_size = kasumi_key_sched_size_avx;
 
         state->snow3g_f8_1_buffer_bit = snow3g_f8_1_buffer_bit_avx2;
         state->snow3g_f8_1_buffer  = snow3g_f8_1_buffer_avx2;

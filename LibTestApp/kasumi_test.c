@@ -137,9 +137,9 @@ static int validate_kasumi_f8_1_block(MB_MGR *mgr)
                 printf("malloc(pKey):failed !\n");
                 return 1;
         }
-        pKeySched = malloc(kasumi_key_sched_size());
+        pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!pKeySched) {
-                printf("malloc(kasumi_key_sched_size()): failed !\n");
+                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 free(pKey);
                 return 1;
         }
@@ -156,8 +156,8 @@ static int validate_kasumi_f8_1_block(MB_MGR *mgr)
                        kasumi_test_vectors[i].ivLenInBytes);
 
                 /*setup the keysched to be used*/
-                if (kasumi_init_f8_key_sched(pKey, pKeySched)) {
-                        printf("kasumi_init_f8_key_sched()error\n");
+                if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, pKey, pKeySched)) {
+                        printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                         free(pKey);
                         free(pKeySched);
                         return 1;
@@ -269,9 +269,9 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr)
                 printf("malloc(pKey):failed !\n");
                 return 1;
         }
-        pKeySched = malloc(kasumi_key_sched_size());
+        pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!pKeySched) {
-                printf("malloc(kasumi_key_sched_size()): failed !\n");
+                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 free(pKey);
                 return 1;
         }
@@ -299,8 +299,8 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr)
                                byte_len);
 
                 /* Setup the keysched to be used */
-                if (kasumi_init_f8_key_sched(pKey, pKeySched)) {
-                        printf("kasumi_init_f8_key_sched()error\n");
+                if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, pKey, pKeySched)) {
+                        printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                         goto end;
                 }
 
@@ -414,9 +414,9 @@ static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr)
                 printf("malloc(pKey):failed !\n");
                 return 1;
         }
-        pKeySched = malloc(kasumi_key_sched_size());
+        pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!pKeySched) {
-                printf("malloc(kasumi_key_sched_size()): failed !\n");
+                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 free(pKey);
                 return 1;
         }
@@ -436,8 +436,8 @@ static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr)
                        kasumi_bit_vectors->ivLenInBytes);
 
                 /* Setup the keysched to be used */
-                if (kasumi_init_f8_key_sched(pKey, pKeySched)) {
-                        printf("kasumi_init_f8_key_sched()error\n");
+                if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, pKey, pKeySched)) {
+                        printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                         free(pKey);
                         free(pKeySched);
                         return 1;
@@ -476,8 +476,8 @@ static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr)
                        kasumi_bit_vectors->ivLenInBytes);
 
                 /* Setup the keysched to be used */
-                if (kasumi_init_f8_key_sched(pKey, pKeySched)) {
-                        printf("kasumi_init_f8_key_sched()error\n");
+                if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, pKey, pKeySched)) {
+                        printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                         free(pKey);
                         free(pKeySched);
                         return 1;
@@ -543,9 +543,9 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr)
                 goto exit;
         }
 
-        keySched = malloc(kasumi_key_sched_size());
+        keySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!keySched) {
-                printf("malloc(kasumi_key_sched_size()): failed !\n");
+                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 goto exit;
         }
 
@@ -576,8 +576,8 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr)
                        kasumi_test_vectors[i].ivLenInBytes);
         }
         /* Only 1 key is needed for kasumi 2 blocks */
-        if (kasumi_init_f8_key_sched(key, keySched)) {
-                printf("kasumi_init_f8_key_sched()error\n");
+        if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key, keySched)) {
+                printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                 goto exit;
         }
         /* Test the encrypt */
@@ -717,9 +717,9 @@ static int validate_kasumi_f8_3_blocks(MB_MGR *mgr)
                 goto exit;
         }
 
-        keySched = malloc(kasumi_key_sched_size());
+        keySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!keySched) {
-                printf("malloc(kasumi_key_sched_size()): failed !\n");
+                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 goto exit;
         }
 
@@ -752,8 +752,8 @@ static int validate_kasumi_f8_3_blocks(MB_MGR *mgr)
         }
 
         /* Only 1 key is needed for kasumi 3 blocks */
-        if (kasumi_init_f8_key_sched(key, keySched)) {
-                printf("kasumi_init_f8_key_sched()error\n");
+        if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key, keySched)) {
+                printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                 goto exit;
         }
 
@@ -831,9 +831,9 @@ static int validate_kasumi_f8_4_blocks(MB_MGR *mgr)
                 goto exit;
         }
 
-        keySched = malloc(kasumi_key_sched_size());
+        keySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!keySched) {
-                printf("malloc(kasumi_key_sched_size()): failed !\n");
+                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 goto exit;
         }
 
@@ -866,8 +866,8 @@ static int validate_kasumi_f8_4_blocks(MB_MGR *mgr)
         }
 
         /* Only 1 key is needed for kasumi 4 blocks */
-        if (kasumi_init_f8_key_sched(key, keySched)) {
-                printf("kasumi_init_f8_key_sched()error\n");
+        if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key, keySched)) {
+                printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                 goto exit;
         }
 
@@ -933,14 +933,14 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr)
         /* Only one key is used */
         memset(key, 0xAA, KASUMI_KEY_SIZE);
 
-        pKeySched = malloc(kasumi_key_sched_size());
+        pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!pKeySched) {
-                printf("malloc(kasumi_key_sched_size()): failed !\n");
+                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 goto exit;
         }
 
-        if (kasumi_init_f8_key_sched(key, pKeySched)) {
-                printf("kasumi_init_f8_key_sched()error\n");
+        if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key, pKeySched)) {
+                printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                 goto exit;
         }
 
@@ -1146,9 +1146,9 @@ static int validate_kasumi_f9(MB_MGR *mgr)
                 goto exit;
         }
 
-        pKeySched = malloc(kasumi_key_sched_size());
+        pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!pKeySched) {
-                printf("malloc (kasumi_key_sched_size()): failed !\n");
+                printf("malloc (IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 goto exit;
         }
 
@@ -1163,8 +1163,8 @@ static int validate_kasumi_f9(MB_MGR *mgr)
                 memcpy(digest, kasumiF9_test_vectors[i].exp_out,
                        KASUMI_DIGEST_SIZE);
 
-                if (kasumi_init_f9_key_sched(pKey, pKeySched)) {
-                        printf("kasumi_init_f9_key_sched()error\n");
+                if (IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, pKey, pKeySched)) {
+                        printf("IMB_KASUMI_INIT_F9_KEY_SCHED()error\n");
                         goto exit;
                 }
 
@@ -1222,9 +1222,9 @@ static int validate_kasumi_f9_user(MB_MGR *mgr)
                 goto exit;
         }
 
-        pKeySched = malloc(kasumi_key_sched_size());
+        pKeySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
         if (!pKeySched) {
-                printf("malloc (kasumi_key_sched_size()): failed !\n");
+                printf("malloc (IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
                 goto exit;
         }
 
@@ -1242,8 +1242,8 @@ static int validate_kasumi_f9_user(MB_MGR *mgr)
                 direction = kasumiF9_vectors[i].direction;
 
                 /* Only 1 key sched is used */
-                if (kasumi_init_f9_key_sched(pKey, pKeySched)) {
-                        printf("kasumi_init_f9_key_sched()error\n");
+                if (IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, pKey, pKeySched)) {
+                        printf("IMB_KASUMI_INIT_F9_KEY_SCHED() error\n");
                         goto exit;
                 }
                 /* Test the integrity for f9_user with IV */

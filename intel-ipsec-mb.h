@@ -761,6 +761,12 @@ typedef void (*kasumi_f9_1_buffer_user_t)(const kasumi_key_sched_t *,
 typedef void (*kasumi_f9_1_buffer_t)(const kasumi_key_sched_t *,
                                      const void *,
                                      const uint32_t, void *);
+typedef uint32_t (*kasumi_init_f8_key_sched_t)(const void *,
+                                            kasumi_key_sched_t *);
+typedef uint32_t (*kasumi_init_f9_key_sched_t)(const void *,
+                                            kasumi_key_sched_t *);
+typedef uint32_t (*kasumi_key_sched_size_t)(void);
+
 
 /**
  * Snow3G key scheduling structure
@@ -950,6 +956,9 @@ typedef struct MB_MGR {
         kasumi_f8_n_buffer_t      f8_n_buffer;
         kasumi_f9_1_buffer_t      f9_1_buffer;
         kasumi_f9_1_buffer_user_t f9_1_buffer_user;
+        kasumi_init_f8_key_sched_t kasumi_init_f8_key_sched;
+        kasumi_init_f9_key_sched_t kasumi_init_f9_key_sched;
+        kasumi_key_sched_size_t    kasumi_key_sched_size;
 
         snow3g_f8_1_buffer_bit_t snow3g_f8_1_buffer_bit;
         snow3g_f8_1_buffer_t snow3g_f8_1_buffer;
@@ -1409,6 +1418,42 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
         ((_mgr)->f9_1_buffer_user((_ctx), (_iv), (_in), (_len), \
                                   (_tag), (_dir)))
 
+/**
+ * KASUMI F8 key schedule init function.
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @param[in]  key      Confidentiality/Integrity key (expected in LE format)
+ * @param[out] ctx      Key schedule context to be initialised
+ * @return 0 on success
+ *
+ ******************************************************************************/
+#define IMB_KASUMI_INIT_F8_KEY_SCHED(_mgr, _key, _ctx)     \
+        ((_mgr)->kasumi_init_f8_key_sched((_key), (_ctx)))
+
+/**
+ * KASUMI F9 key schedule init function.
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @param[in]  key      Confidentiality/Integrity key (expected in LE format)
+ * @param[out] ctx      Key schedule context to be initialised
+ * @return 0 on success, -1 on failure
+ *
+ ******************************************************************************/
+#define IMB_KASUMI_INIT_F9_KEY_SCHED(_mgr, _key, _ctx)     \
+        ((_mgr)->kasumi_init_f9_key_sched((_key), (_ctx)))
+
+/**
+ *******************************************************************************
+ * This function returns the size of the kasumi_key_sched_t, used
+ * to store the key schedule.
+ *
+ * @param[in]  mgr      Pointer to multi-buffer structure
+ * @return size of kasumi_key_sched_t type success
+ * @return -1 on failed CPU capability check
+ *
+ ******************************************************************************/
+#define IMB_KASUMI_KEY_SCHED_SIZE(_mgr)((_mgr)->kasumi_key_sched_size())
+
 
 /* SNOW3G F8/F9 functions */
 
@@ -1680,15 +1725,6 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  */
 IMB_DLL_EXPORT int
 des_key_schedule(uint64_t *ks, const void *key);
-
-IMB_DLL_EXPORT uint32_t
-kasumi_key_sched_size(void);
-
-IMB_DLL_EXPORT uint32_t
-kasumi_init_f8_key_sched(const void * const pKey, kasumi_key_sched_t *pCtx);
-
-IMB_DLL_EXPORT uint32_t
-kasumi_init_f9_key_sched(const void * const pKey, kasumi_key_sched_t *pCtx);
 
 /* SSE */
 IMB_DLL_EXPORT void sha1_sse(const void *data, const uint64_t length,

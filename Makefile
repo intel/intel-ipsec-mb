@@ -153,7 +153,6 @@ c_lib_objs := \
 	aesni_emu.o \
 	kasumi_avx.o \
 	kasumi_iv.o \
-	kasumi_key.o \
 	kasumi_sse.o \
 	zuc_sse_top.o \
 	zuc_avx_top.o \
