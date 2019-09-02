@@ -304,3 +304,5 @@ EXPORTS
     zuc_eia3_iv_gen                             @278
     snow3g_f8_iv_gen                            @279
     snow3g_f9_iv_gen                            @280
+    kasumi_f8_iv_gen                            @281
+    kasumi_f9_iv_gen                            @282
