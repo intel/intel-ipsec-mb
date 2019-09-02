@@ -519,18 +519,16 @@ kasumi_key_schedule_sk(uint16_t *context, const void *pKey)
 {
 
         /* Kasumi constants*/
-        static uint16_t C[] = {0x0123, 0x4567, 0x89AB, 0xCDEF,
-                               0xFEDC, 0xBA98, 0x7654, 0x3210};
+        static const uint16_t C[] = {0x0123, 0x4567, 0x89AB, 0xCDEF,
+                                     0xFEDC, 0xBA98, 0x7654, 0x3210};
 
-        uint16_t k[8], kprime[8], k16, n;
-        uint16_t *flat = context;
+        uint16_t k[8], kprime[8], n;
         const uint8_t *pk = (const uint8_t *) pKey;
 
         /* Build K[] and K'[] keys */
         for (n = 0; n < 8; n++, pk += 2) {
-                k16 = (pk[0] << 8) + pk[1];
-                k[n] = k16;
-                kprime[n] = k16 ^ C[n];
+                k[n] = (pk[0] << 8) + pk[1];
+                kprime[n] = k[n] ^ C[n];
         }
 
         /*
@@ -538,16 +536,20 @@ kasumi_key_schedule_sk(uint16_t *context, const void *pKey)
          * order for easy usage at run-time
          */
         for (n = 0; n < 8; n++) {
-                flat[0] = ROL16(k[n], 1);
-                flat[1] = kprime[(n + 2) & 0x7];
-                flat[2] = ROL16(k[(n + 1) & 0x7], 5);
-                flat[3] = kprime[(n + 4) & 0x7];
-                flat[4] = ROL16(k[(n + 5) & 0x7], 8);
-                flat[5] = kprime[(n + 3) & 0x7];
-                flat[6] = ROL16(k[(n + 6) & 0x7], 13);
-                flat[7] = kprime[(n + 7) & 0x7];
-                flat += 8;
+                context[0] = ROL16(k[n], 1);
+                context[1] = kprime[(n + 2) & 0x7];
+                context[2] = ROL16(k[(n + 1) & 0x7], 5);
+                context[3] = kprime[(n + 4) & 0x7];
+                context[4] = ROL16(k[(n + 5) & 0x7], 8);
+                context[5] = kprime[(n + 3) & 0x7];
+                context[6] = ROL16(k[(n + 6) & 0x7], 13);
+                context[7] = kprime[(n + 7) & 0x7];
+                context += 8;
         }
+#ifdef SAFE_DATA
+        clear_mem(k, sizeof(k));
+        clear_mem(kprime, sizeof(kprime));
+#endif
 }
 
 /*---------------------------------------------------------------------
@@ -576,6 +578,9 @@ kasumi_compute_sched(const uint8_t modifier,
         kasumi_key_schedule_sk(pLocalCtx->sk16, pKey);
         kasumi_key_schedule_sk(pLocalCtx->msk16, ModKey);
 
+#ifdef SAFE_DATA
+        clear_mem(ModKey, sizeof(ModKey));
+#endif
         return 0;
 }
 
