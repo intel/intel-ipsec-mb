@@ -559,6 +559,11 @@ static inline int
 kasumi_compute_sched(const uint8_t modifier,
                      const void *const pKey, void *pCtx)
 {
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pKey == NULL || pCtx == NULL)
+                return -1;
+#endif
         uint32_t i = 0;
         const uint8_t *const key = (const uint8_t * const)pKey;
         uint8_t ModKey[KASUMI_KEY_SIZE] = {0}; /* Modified key */
