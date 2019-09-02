@@ -364,21 +364,21 @@ kasumi_f9_1_buffer_user_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 #endif
 }
 
-uint32_t
+int
 kasumi_init_f8_key_sched_avx(const void *const pKey,
                              kasumi_key_sched_t *pCtx)
 {
         return kasumi_init_f8_key_sched(pKey, pCtx);
 }
 
-uint32_t
+int
 kasumi_init_f9_key_sched_avx(const void *const pKey,
                              kasumi_key_sched_t *pCtx)
 {
         return kasumi_init_f9_key_sched(pKey, pCtx);
 }
 
-uint32_t
+size_t
 kasumi_key_sched_size_avx(void)
 {
         return kasumi_key_sched_size();

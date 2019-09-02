@@ -761,11 +761,11 @@ typedef void (*kasumi_f9_1_buffer_user_t)(const kasumi_key_sched_t *,
 typedef void (*kasumi_f9_1_buffer_t)(const kasumi_key_sched_t *,
                                      const void *,
                                      const uint32_t, void *);
-typedef uint32_t (*kasumi_init_f8_key_sched_t)(const void *,
-                                            kasumi_key_sched_t *);
-typedef uint32_t (*kasumi_init_f9_key_sched_t)(const void *,
-                                            kasumi_key_sched_t *);
-typedef uint32_t (*kasumi_key_sched_size_t)(void);
+typedef int (*kasumi_init_f8_key_sched_t)(const void *,
+                                          kasumi_key_sched_t *);
+typedef int (*kasumi_init_f9_key_sched_t)(const void *,
+                                          kasumi_key_sched_t *);
+typedef size_t (*kasumi_key_sched_size_t)(void);
 
 
 /**
@@ -1422,9 +1422,9 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  * KASUMI F8 key schedule init function.
  *
  * @param[in]  mgr      Pointer to multi-buffer structure
- * @param[in]  key      Confidentiality/Integrity key (expected in LE format)
+ * @param[in]  key      Confidentiality key (expected in LE format)
  * @param[out] ctx      Key schedule context to be initialised
- * @return 0 on success
+ * @return 0 on success, -1 on failure
  *
  ******************************************************************************/
 #define IMB_KASUMI_INIT_F8_KEY_SCHED(_mgr, _key, _ctx)     \
@@ -1434,7 +1434,7 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  * KASUMI F9 key schedule init function.
  *
  * @param[in]  mgr      Pointer to multi-buffer structure
- * @param[in]  key      Confidentiality/Integrity key (expected in LE format)
+ * @param[in]  key      Integrity key (expected in LE format)
  * @param[out] ctx      Key schedule context to be initialised
  * @return 0 on success, -1 on failure
  *
@@ -1449,7 +1449,6 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  *
  * @param[in]  mgr      Pointer to multi-buffer structure
  * @return size of kasumi_key_sched_t type success
- * @return -1 on failed CPU capability check
  *
  ******************************************************************************/
 #define IMB_KASUMI_KEY_SCHED_SIZE(_mgr)((_mgr)->kasumi_key_sched_size())

@@ -363,21 +363,21 @@ kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 #endif
 }
 
-uint32_t
+int
 kasumi_init_f8_key_sched_sse(const void *const pKey,
                              kasumi_key_sched_t *pCtx)
 {
         return kasumi_init_f8_key_sched(pKey, pCtx);
 }
 
-uint32_t
+int
 kasumi_init_f9_key_sched_sse(const void *const pKey,
                              kasumi_key_sched_t *pCtx)
 {
         return kasumi_init_f9_key_sched(pKey, pCtx);
 }
 
-uint32_t
+size_t
 kasumi_key_sched_size_sse(void)
 {
         return kasumi_key_sched_size();

@@ -555,7 +555,7 @@ kasumi_key_schedule_sk(uint16_t *context, const void *pKey)
 * Generic ksaumi key sched init function.
 *
 *---------------------------------------------------------------------*/
-static inline uint32_t
+static inline int
 kasumi_compute_sched(const uint8_t modifier,
                      const void *const pKey, void *pCtx)
 {
@@ -579,7 +579,7 @@ kasumi_compute_sched(const uint8_t modifier,
 * Get the size of a kasumi key sched context.
 *
 *---------------------------------------------------------------------*/
-static inline uint32_t
+static inline size_t
 kasumi_key_sched_size(void)
 {
         /*
@@ -595,7 +595,7 @@ kasumi_key_sched_size(void)
 *
 *---------------------------------------------------------------------*/
 
-static inline uint32_t
+static inline int
 kasumi_init_f8_key_sched(const void *const pKey,
                          kasumi_key_sched_t *pCtx)
 {
@@ -608,29 +608,29 @@ kasumi_init_f8_key_sched(const void *const pKey,
 *
 *---------------------------------------------------------------------*/
 
-static inline uint32_t
+static inline int
 kasumi_init_f9_key_sched(const void *const pKey,
                          kasumi_key_sched_t *pCtx)
 {
         return kasumi_compute_sched(0xAA, pKey, pCtx);
 }
 
-uint32_t
+size_t
 kasumi_key_sched_size_sse(void);
 
-uint32_t
+int
 kasumi_init_f8_key_sched_sse(const void *pKey, kasumi_key_sched_t *pCtx);
 
-uint32_t
+int
 kasumi_init_f9_key_sched_sse(const void *pKey, kasumi_key_sched_t *pCtx);
 
-uint32_t
+size_t
 kasumi_key_sched_size_avx(void);
 
-uint32_t
+int
 kasumi_init_f8_key_sched_avx(const void *pKey, kasumi_key_sched_t *pCtx);
 
-uint32_t
+int
 kasumi_init_f9_key_sched_avx(const void *pKey, kasumi_key_sched_t *pCtx);
 
 
