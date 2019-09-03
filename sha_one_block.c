@@ -31,6 +31,7 @@
 
 #include "intel-ipsec-mb.h"
 #include "constants.h"
+#include "include/clear_regs_mem.h"
 
 extern void sha1_block_sse(const void *, void *);
 extern void sha1_block_avx(const void *, void *);
@@ -272,6 +273,15 @@ sha_generic(const void *data, const uint64_t length, void *digest,
         sha_generic_one_block(cb, ld, is_avx, sha_type);
 
         sha_generic_write_digest(digest, ld, sha_type);
+#ifdef SAFE_DATA
+        clear_mem(cb, sizeof(cb));
+        clear_mem(&local_digest, sizeof(local_digest));
+        clear_scratch_gps();
+        if (is_avx)
+                clear_scratch_xmms_avx();
+        else
+                clear_scratch_xmms_sse();
+#endif
 }
 
 __forceinline
@@ -283,6 +293,13 @@ void sha_generic_1block(const void *data, void *digest,
 
         sha_generic_init(digest, sha_type);
         sha_generic_one_block(data, digest, is_avx, sha_type);
+#ifdef SAFE_DATA
+        clear_scratch_gps();
+        if (is_avx)
+                clear_scratch_xmms_avx();
+        else
+                clear_scratch_xmms_sse();
+#endif
 }
 
 
