@@ -80,6 +80,10 @@ void
 md5_one_block_common(const uint8_t *data, uint32_t digest[4],
                      const enum arch_type arch)
 {
+#ifdef SAFE_PARAM
+        if (data == NULL || digest == NULL)
+                return;
+#endif
         uint32_t a, b, c, d;
         uint32_t w[16];
         const uint32_t *data32 = (const uint32_t *)data;
