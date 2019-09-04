@@ -852,6 +852,11 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 4,  /* AES_CMAC 3GPP */
         };
 
+        /* Maximum length of buffer in PON is 2^14 + 8, since maximum
+         * PLI value is 2^14 - 1 + 1 extra byte of padding + 8 bytes
+         * of XGEM header */
+        const uint64_t max_pon_len = (1 << 14) + 8;
+
         switch (job->cipher_mode) {
         case CBC:
                 if (job->src == NULL) {
@@ -1257,6 +1262,13 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
+
+                /* source and destination buffer pointers cannot be the same,
+                 * as there are always 8 bytes that are not ciphered */
+                if (job->src == job->dst) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->hash_alg != PON_CRC_BIP) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1266,8 +1278,18 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  * key and IV require to be set properly
                  */
                 if (job->msg_len_to_cipher_in_bytes != UINT64_C(0)) {
+
                         /* message size needs to be aligned to 4 bytes */
                         if ((job->msg_len_to_cipher_in_bytes & 3) != 0) {
+                                INVALID_PRN("cipher_mode:%d\n",
+                                            job->cipher_mode);
+                                return 1;
+                        }
+
+                        /* Substract 8 bytes to maximum length since
+                         * XGEM header is not ciphered */
+                        if ((job->msg_len_to_cipher_in_bytes >
+                             (max_pon_len - 8))) {
                                 INVALID_PRN("cipher_mode:%d\n",
                                             job->cipher_mode);
                                 return 1;
@@ -1454,10 +1476,12 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  * - msg_len_to_hash_in_bytes is aligned to 4 bytes
                  */
                 if (((job->msg_len_to_hash_in_bytes & UINT64_C(3)) != 0) ||
-                    (job->msg_len_to_hash_in_bytes < UINT64_C(12)))  {
+                    (job->msg_len_to_hash_in_bytes < UINT64_C(8)) ||
+                    (job->msg_len_to_hash_in_bytes > max_pon_len)) {
                         /*
-                         * Length aligned to 4-bytes (and at least 12 bytes,
-                         * including 8-byte XGEM header and 4-byte CRC)
+                         * Length aligned to 4 bytes (and at least 8 bytes,
+                         * including 8-byte XGEM header and no more
+                         * than max length)
                          */
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
