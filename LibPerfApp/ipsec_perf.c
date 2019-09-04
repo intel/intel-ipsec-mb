@@ -1032,6 +1032,7 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
         static DECLARE_ALIGNED(uint8_t	k2[16], 16);
         static DECLARE_ALIGNED(uint8_t	k3[16], 16);
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
+        uint64_t xgem_hdr = 0;
         uint32_t size_aes;
         uint64_t time = 0;
         uint32_t aux;
@@ -1167,6 +1168,15 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.iv_len_in_bytes = 8;
         }
 
+
+        if (job_template.hash_alg == PON_CRC_BIP) {
+                /* create XGEM header template */
+                const uint64_t pli =
+                        (job_template.msg_len_to_cipher_in_bytes << 2) & 0xffff;
+
+                xgem_hdr = ((pli >> 8) & 0xff) | ((pli & 0xff) << 8);
+        }
+
 #ifndef _WIN32
         if (use_unhalted_cycles)
                 time = read_cycles(params->core);
@@ -1178,7 +1188,15 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 *job = job_template;
 
-                job->src = get_src_buffer(index, p_buffer);
+                if (job->hash_alg == PON_CRC_BIP) {
+                        uint64_t *p_src =
+                                (uint64_t *) get_src_buffer(index, p_buffer);
+
+                        job->src = (const uint8_t *)p_src;
+                        p_src[0] = xgem_hdr;
+                } else {
+                        job->src = get_src_buffer(index, p_buffer);
+                }
                 job->dst = get_dst_buffer(index, p_buffer);
                 if (job->cipher_mode == GCM) {
                         job->u.GCM.aad = job->src;

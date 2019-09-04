@@ -155,16 +155,6 @@ static const uint8_t OUT4_PON[] = {
 #define LENBIP4_PON  sizeof(IN4_PON)
 #define LENCIPH4_PON (LENBIP4_PON - OFFSET4_PON)
 
-#define ponvector(tname) \
-        { KEY ## tname, IV ## tname, IN ## tname, OUT ## tname, \
-                        BIPOUT ## tname, LENBIP ## tname,    \
-                        LENCIPH ## tname, OFFSET ## tname }
-
-#define pon_no_ctr_vector(tname) \
-        { NULL, NULL, IN ## tname, OUT ## tname, \
-                        BIPOUT ## tname, LENBIP ## tname,    \
-                        LENCIPH ## tname, OFFSET ## tname }
-
 /* Vectors with no encryption */
 static const uint8_t IN5_PON[] = {
         0x00, 0x20, 0x27, 0x11, 0x00, 0x00, 0x21, 0x23, /* XGEM header */
@@ -261,6 +251,145 @@ static const uint8_t OUT8_PON[] = {
 #define LENBIP8_PON  sizeof(IN8_PON)
 #define LENCIPH8_PON (LENBIP8_PON - OFFSET8_PON)
 
+/* Vectors with encryption and with padding */
+/* === vector 9 */
+static const uint8_t IN9_PON[] = {
+        0x00, 0x39, 0x03, 0xfd, 0x00, 0x00, 0xb3, 0x6a,  /* XGEM header */
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,  /* Ethernet frame */
+        0x10, 0x11,
+        0x8c, 0xd0, 0x9a, 0x8b,                          /* CRC value */
+        0x55, 0x55                                       /* XGEM padding */
+};
+
+static const uint8_t OUT9_PON[] = {
+        0x00, 0x39, 0x03, 0xfd, 0x00, 0x00, 0xb3, 0x6a,  /* XGEM header */
+        0x73, 0xe0, 0x5d, 0x5d, 0x32, 0x9c, 0x3b, 0xfa,  /* Ethernet frame */
+        0x6b, 0x66,
+        0xf6, 0x8e, 0x5b, 0xd5,                          /* CRC value */
+        0xab, 0xcd                                       /* XGEM padding */
+};
+
+#define KEY9_PON KEY1_PON
+
+static const uint8_t IV9_PON[] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+#define BIPOUT9_PON  0x738bf671
+#define OFFSET9_PON  8
+#define LENBIP9_PON  sizeof(IN9_PON)
+#define LENCIPH9_PON (LENBIP9_PON - OFFSET9_PON)
+
+/* === vector 10 */
+
+/* This is fragmented frame (1 bytes payload + padding)
+ * - computed CRC will not match value in the message
+ * - on encrypt CRC should not be written into the message
+ */
+static const uint8_t IN10_PON[] = {
+        0x00, 0x05, 0x03, 0xfd, 0x00, 0x00, 0xb9, 0xb4,  /* XGEM header */
+        0x08,                                            /* Ethernet frame */
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55         /* XGEM padding */
+};
+
+static const uint8_t OUT10_PON[] = {
+        0x00, 0x05, 0x03, 0xfd, 0x00, 0x00, 0xb9, 0xb4,  /* XGEM header */
+        0x73,                                            /* Ethernet frame */
+        0xbc, 0x02, 0x03, 0x6b, 0xc4, 0x60, 0xa0         /* XGEM padding */
+};
+
+#define KEY10_PON KEY1_PON
+#define IV10_PON IV9_PON
+#define BIPOUT10_PON  0xead87d18
+#define OFFSET10_PON  8
+#define LENBIP10_PON  sizeof(IN10_PON)
+#define LENCIPH10_PON (LENBIP10_PON - OFFSET10_PON)
+
+/* Vectors with no encryption and with padding */
+/* === vector 11 */
+static const uint8_t IN11_PON[] = {
+        0x00, 0x39, 0x03, 0xfd, 0x00, 0x00, 0xb3, 0x6a,  /* XGEM header */
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,  /* Ethernet frame */
+        0x10, 0x11,
+        0x8c, 0xd0, 0x9a, 0x8b,                          /* CRC value */
+        0x55, 0x55                                       /* XGEM padding */
+};
+
+static const uint8_t OUT11_PON[] = {
+        0x00, 0x39, 0x03, 0xfd, 0x00, 0x00, 0xb3, 0x6a,  /* XGEM header */
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,  /* Ethernet frame */
+        0x10, 0x11,
+        0x8c, 0xd0, 0x9a, 0x8b,                          /* CRC value */
+        0x55, 0x55                                       /* XGEM padding */
+};
+
+#define KEY11_PON KEY1_PON
+#define BIPOUT11_PON  0x166da78e
+#define OFFSET11_PON  8
+#define LENBIP11_PON  sizeof(IN11_PON)
+#define LENCIPH11_PON (LENBIP11_PON - OFFSET11_PON)
+
+/* === vector 12 */
+
+/* This is fragmented frame (1 bytes payload + padding)
+ * - computed CRC will not match value in the message
+ * - on encrypt CRC should not be written into the message
+ */
+static const uint8_t IN12_PON[] = {
+        0x00, 0x05, 0x03, 0xfd, 0x00, 0x00, 0xb9, 0xb4,  /* XGEM header */
+        0x08,                                            /* Ethernet frame */
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55         /* XGEM padding */
+};
+
+static const uint8_t OUT12_PON[] = {
+        0x00, 0x05, 0x03, 0xfd, 0x00, 0x00, 0xb9, 0xb4,  /* XGEM header */
+        0x08,                                            /* Ethernet frame */
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55         /* XGEM padding */
+};
+
+#define KEY12_PON KEY1_PON
+#define BIPOUT12_PON  0x49ba055d
+#define OFFSET12_PON  8
+#define LENBIP12_PON  sizeof(IN12_PON)
+#define LENCIPH12_PON (LENBIP12_PON - OFFSET12_PON)
+
+/* === vector 13 */
+
+/* This is fragmented frame (4 bytes payload + padding)
+ * - computed CRC will not match value in the message
+ * - on encrypt CRC should not be written into the message
+ */
+static const uint8_t IN13_PON[] = {
+        0x00, 0x11, 0x03, 0xfd, 0x00, 0x00, 0xbf, 0xff,  /* XGEM header */
+        0x08, 0x09, 0x0a, 0x0b,                          /* Ethernet frame */
+        0x55, 0x55, 0x55, 0x55                           /* XGEM padding */
+};
+
+static const uint8_t OUT13_PON[] = {
+        0x00, 0x11, 0x03, 0xfd, 0x00, 0x00, 0xbf, 0xff,  /* XGEM header */
+        0x73, 0xe0, 0x5d, 0x5d,                          /* Ethernet frame */
+        0x6b, 0xc4, 0x60, 0xa0                           /* XGEM padding */
+};
+
+#define KEY13_PON KEY1_PON
+#define IV13_PON IV9_PON
+#define BIPOUT13_PON  0xff813518
+#define OFFSET13_PON  8
+#define LENBIP13_PON  sizeof(IN13_PON)
+#define LENCIPH13_PON (LENBIP13_PON - OFFSET13_PON)
+
+
+#define ponvector(tname) \
+        { KEY ## tname, IV ## tname, IN ## tname, OUT ## tname, \
+                        BIPOUT ## tname, LENBIP ## tname,    \
+                        LENCIPH ## tname, OFFSET ## tname }
+
+#define pon_no_ctr_vector(tname) \
+        { NULL, NULL, IN ## tname, OUT ## tname, \
+                        BIPOUT ## tname, LENBIP ## tname,    \
+                        LENCIPH ## tname, OFFSET ## tname }
+
+
 static const struct pon_test_vector {
         const uint8_t *key;
         const uint8_t *iv;
@@ -278,7 +407,12 @@ static const struct pon_test_vector {
         pon_no_ctr_vector(5_PON),
         pon_no_ctr_vector(6_PON),
         pon_no_ctr_vector(7_PON),
-        pon_no_ctr_vector(8_PON)
+        pon_no_ctr_vector(8_PON),
+	ponvector(9_PON),
+	ponvector(10_PON),
+        pon_no_ctr_vector(11_PON),
+        pon_no_ctr_vector(12_PON),
+	ponvector(13_PON),
 };
 
 static int
@@ -312,10 +446,15 @@ test_pon(struct MB_MGR *mb_mgr,
         memset(target, -1, len_to_bip + (sizeof(padding) * 2));
         memset(padding, -1, sizeof(padding));
 
-        if (dir == ENCRYPT)
+        if (dir == ENCRYPT) {
                 memcpy(target + sizeof(padding), in_text, len_to_bip);
-        else
+                /* Corrupt HEC on encrypt direction
+                 * This is to make sure HEC gets updated by the library
+                 */
+                target[sizeof(padding) + 7] ^= 0xff;
+        } else {
                 memcpy(target + sizeof(padding), out_text, len_to_bip);
+        }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
@@ -370,10 +509,18 @@ test_pon(struct MB_MGR *mb_mgr,
         printf("BIP received 0x%08x\n", bip_output);
 #endif
 
+#ifdef DEBUG
+        int is_error = 0;
+#endif
+
         if (bip_output != bip_out) {
                 printf("BIP mismatch! expected 0x%08x, received 0x%08x\n",
                        bip_out, bip_output);
+#ifdef DEBUG
+                is_error = 1;
+#else
                 goto end;
+#endif
         }
 
         if (dir == ENCRYPT) {
@@ -381,14 +528,22 @@ test_pon(struct MB_MGR *mb_mgr,
                         printf("output mismatch\n");
                         hexdump(stderr, "Target",
                                 target, len_to_bip + (2 * sizeof(padding)));
+#ifdef DEBUG
+                        is_error = 1;
+#else
                         goto end;
+#endif
                 }
         } else {
                 if (memcmp(in_text, target + sizeof(padding), len_to_bip - 4)) {
                         printf("output mismatch\n");
                         hexdump(stderr, "Target", target,
                                 len_to_bip + (2 * sizeof(padding)));
+#ifdef DEBUG
+                        is_error = 1;
+#else
                         goto end;
+#endif
                 }
         }
 
@@ -396,7 +551,11 @@ test_pon(struct MB_MGR *mb_mgr,
                 printf("overwrite head\n");
                 hexdump(stderr, "Target", target,
                         len_to_bip + (2 * sizeof(padding)));
+#ifdef DEBUG
+                is_error = 1;
+#else
                 goto end;
+#endif
         }
 
         if (memcmp(padding, target + sizeof(padding) + len_to_bip,
@@ -404,8 +563,17 @@ test_pon(struct MB_MGR *mb_mgr,
                 printf("overwrite tail\n");
                 hexdump(stderr, "Target", target,
                         len_to_bip + (2 * sizeof(padding)));
+#ifdef DEBUG
+                is_error = 1;
+#else
                 goto end;
+#endif
         }
+
+#ifdef DEBUG
+        if (is_error)
+                goto end;
+#endif
 
         /* all checks passed */
         ret = 0;
