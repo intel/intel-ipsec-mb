@@ -38,9 +38,11 @@
 #include <intrin.h>
 #define strdup _strdup
 #define __forceinline static __forceinline
+#define BSWAP64 _byteswap_uint64
 #else
 #include <x86intrin.h>
 #define __forceinline static inline __attribute__((always_inline))
+#define BSWAP64 __builtin_bswap64
 #endif
 
 #include <intel-ipsec-mb.h>
@@ -366,7 +368,23 @@ struct str_value_mapping aead_algo_str_map[] = {
                         .hash_alg = AES_CCM,
                         .key_size = AES_128_BYTES
                 }
-        }
+        },
+        {
+                .name = "pon-128",
+                .values.job_params = {
+                        .cipher_mode = PON_AES_CNTR,
+                        .hash_alg = PON_CRC_BIP,
+                        .key_size = AES_128_BYTES
+                }
+        },
+        {
+                .name = "pon-128-no-ctr",
+                .values.job_params = {
+                        .cipher_mode = PON_AES_CNTR,
+                        .hash_alg = PON_CRC_BIP,
+                        .key_size = 0
+                }
+        },
 };
 
 /* This struct stores all information about performed test case */
@@ -545,9 +563,18 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         job->cipher_start_src_offset_in_bytes = 0;
         job->iv = iv;
 
+        if (params->cipher_mode == PON_AES_CNTR) {
+                /* Substract XGEM header */
+                job->msg_len_to_cipher_in_bytes -= 8;
+                job->cipher_start_src_offset_in_bytes = 8;
+                /* If no crypto needed, set msg_len_to_cipher to 0 */
+                if (params->key_size == 0)
+                        job->msg_len_to_cipher_in_bytes = 0;
+        }
+
         /* In-place operation */
         job->src = buf;
-        job->dst = buf;
+        job->dst = buf + job->cipher_start_src_offset_in_bytes;
         job->auth_tag_output = digest;
 
         job->hash_alg = params->hash_alg;
@@ -586,6 +613,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->u.HMAC._hashed_auth_key_xor_opad =
                         (uint8_t *) opad;
                 break;
+        case PON_CRC_BIP:
         case NULL_HASH:
         case AES_GMAC:
         case AES_CCM:
@@ -630,6 +658,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->aes_dec_key_expanded = dec_keys;
                 job->iv_len_in_bytes = 16;
                 break;
+        case PON_AES_CNTR:
         case CNTR:
         case CNTR_BITLEN:
                 job->aes_enc_key_expanded = enc_keys;
@@ -799,6 +828,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case PLAIN_SHA_256:
         case PLAIN_SHA_384:
         case PLAIN_SHA_512:
+        case PON_CRC_BIP:
                 /* No operation needed */
                 break;
         default:
@@ -817,6 +847,24 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         break;
                 case AES_256_BYTES:
                         IMB_AES256_GCM_PRE(mb_mgr, key, gdata_key);
+                        break;
+                default:
+                        fprintf(stderr, "Wrong key size\n");
+                        return -1;
+                }
+                break;
+        case PON_AES_CNTR:
+                switch (params->key_size) {
+                case AES_128_BYTES:
+                        IMB_AES_KEYEXP_128(mb_mgr, key, enc_keys, dec_keys);
+                        break;
+                case AES_192_BYTES:
+                        IMB_AES_KEYEXP_192(mb_mgr, key, enc_keys, dec_keys);
+                        break;
+                case AES_256_BYTES:
+                        IMB_AES_KEYEXP_256(mb_mgr, key, enc_keys, dec_keys);
+                        break;
+                case 0:
                         break;
                 default:
                         fprintf(stderr, "Wrong key size\n");
@@ -860,6 +908,38 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         return 0;
 }
 
+/* Modify the test buffer to set the HEC value and CRC, so the final
+ * decrypted message can be compared against the test buffer */
+static int
+modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
+                    const JOB_AES_HMAC *job, const uint64_t xgem_hdr)
+{
+        /* Set plaintext CRC in test buffer for PON */
+        uint32_t *buf32 = (uint32_t *) &test_buf[8 + params->buf_size - 4];
+        uint64_t *buf64 = (uint64_t *) test_buf;
+        const uint32_t *tag32 = (uint32_t *) job->auth_tag_output;
+        const uint64_t hec_mask = BSWAP64(0xfffffffffffe000);
+        const uint64_t xgem_hdr_out = ((const uint64_t *)job->src)[0];
+
+        if (params->buf_size >= 5)
+                buf32[0] = tag32[1];
+
+        /* Check if any bits apart from HEC are modified */
+        if ((xgem_hdr_out & hec_mask) != (xgem_hdr & hec_mask)) {
+                fprintf(stderr, "XGEM header overwritten outside HEC\n");
+                fprintf(stderr, "Original XGEM header: %"PRIx64"\n",
+                        xgem_hdr & hec_mask );
+                fprintf(stderr, "Output XGEM header: %"PRIx64"\n",
+                        xgem_hdr_out & hec_mask);
+                return -1;
+        }
+
+        /* Modify original XGEM header to include calculated HEC */
+        buf64[0] = xgem_hdr_out;
+
+        return 0;
+}
+
 /* Performs test using AES_HMAC or DOCSIS */
 static int
 do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
@@ -879,6 +959,18 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         uint8_t *src_dst_buf = NULL;
         uint8_t tag_size = auth_tag_length_bytes[params->hash_alg - 1];
         uint8_t key[MAX_KEY_SIZE];
+        uint64_t xgem_hdr = 0;
+        uint8_t tag_size_to_check = 0;
+
+        if (params->hash_alg == PON_CRC_BIP) {
+                /* Buf size is XGEM payload, including CRC,
+                 * allocate space for XGEM header and padding */
+                buf_size = buf_size + 8;
+                if (buf_size % 8)
+                        buf_size = (buf_size + 8) & 0xfffffff8;
+                /* Only first 4 bytes are checked, corresponding to BIP */
+                tag_size_to_check = 4;
+        }
 
         test_buf = malloc(buf_size);
         if (test_buf == NULL)
@@ -893,6 +985,16 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         generate_random_buf(key, MAX_KEY_SIZE);
         generate_random_buf(iv, 16);
         generate_random_buf(aad, AAD_SIZE);
+
+        /* For PON, construct the XGEM header, setting valid PLI */
+        if (params->hash_alg == PON_CRC_BIP) {
+                /* create XGEM header template */
+                const uint64_t pli = ((params->buf_size) << 2) & 0xffff;
+                uint64_t *p_src = (uint64_t *)test_buf;
+
+                xgem_hdr = ((pli >> 8) & 0xff) | ((pli & 0xff) << 8);
+                p_src[0] = xgem_hdr;
+        }
 
         /* Expand/schedule keys */
         if (prepare_keys(enc_mb_mgr, &enc_keys, key, params) < 0)
@@ -931,6 +1033,12 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
+                if (params->hash_alg == PON_CRC_BIP) {
+                        if (modify_pon_test_buf(test_buf, params, job,
+                                                xgem_hdr) < 0)
+                                goto exit;
+                }
+
                 job = IMB_GET_NEXT_JOB(dec_mb_mgr);
 
                 /* Randomize memory for input digest */
@@ -961,11 +1069,13 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 }
 
                 if (params->hash_alg != NULL_HASH &&
-                    memcmp(in_digest, out_digest, tag_size) != 0) {
+                    memcmp(in_digest, out_digest, tag_size_to_check) != 0) {
                         fprintf(stderr,
                                 "\nInput and output tags don't match\n");
-                        byte_hexdump("Input digest", in_digest, tag_size);
-                        byte_hexdump("Output digest", out_digest, tag_size);
+                        byte_hexdump("Input digest", in_digest,
+                                     tag_size_to_check);
+                        byte_hexdump("Output digest", out_digest,
+                                     tag_size_to_check);
                         goto exit;
                 }
 
@@ -992,7 +1102,7 @@ exit:
                 print_arch_info(enc_arch);
                 printf("Decrypting ");
                 print_arch_info(dec_arch);
-                printf("Buffer size = %u\n", buf_size);
+                printf("Buffer size = %u\n", params->buf_size);
                 printf("Key size = %u\n", params->key_size);
                 printf("Tag size = %u\n", tag_size);
         }
@@ -1116,8 +1226,8 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         JOB_CIPHER_MODE c_mode;
 
         for (c_mode = CBC; c_mode <= CNTR_BITLEN; c_mode++) {
-                /* Skip CUSTOM_CIPHER and PON */
-                if (c_mode == CUSTOM_CIPHER || c_mode == PON_AES_CNTR)
+                /* Skip CUSTOM_CIPHER */
+                if (c_mode == CUSTOM_CIPHER)
                         continue;
                 params->cipher_mode = c_mode;
                 uint8_t min_sz = key_sizes[c_mode - 1][0];
@@ -1129,16 +1239,21 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                         params->key_size = key_sz;
                         for (hash_alg = SHA1; hash_alg <= AES_CMAC_BITLEN;
                              hash_alg++) {
-                                /* Skip CUSTOM_HASH and PON */
-                                if (hash_alg == CUSTOM_HASH ||
-                                    hash_alg == PON_CRC_BIP)
+                                /* Skip CUSTOM_HASH */
+                                if (hash_alg == CUSTOM_HASH)
                                         continue;
+
                                 /* Skip not supported combinations */
                                 if ((c_mode == GCM && hash_alg != AES_GMAC) ||
                                     (c_mode != GCM && hash_alg == AES_GMAC))
                                         continue;
                                 if ((c_mode == CCM && hash_alg != AES_CCM) ||
                                     (c_mode != CCM && hash_alg == AES_CCM))
+                                        continue;
+                                if ((c_mode == PON_AES_CNTR &&
+                                                hash_alg != PON_CRC_BIP) ||
+                                    (c_mode != PON_AES_CNTR &&
+                                                hash_alg == PON_CRC_BIP))
                                         continue;
 
                                 params->hash_alg = hash_alg;
