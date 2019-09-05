@@ -113,6 +113,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
+%include "include/clear_regs.asm"
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_vaes_avx512.asm"
 %include "include/memcpy.asm"
@@ -2541,7 +2542,12 @@ default rel
 ;;; Restore register content for the caller
 %macro FUNC_RESTORE 0
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_zmms_asm
+%else
         vzeroupper
+%endif
 
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm15, [rsp + STACK_XMM_OFFSET + 9*16]
@@ -3933,6 +3939,7 @@ skip_aad_check_init:
 %endif
         GCM_INIT arg1, arg2, arg3, arg4, arg5, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10
+
 exit_init:
 
         FUNC_RESTORE
@@ -4058,6 +4065,7 @@ FN_NAME(enc,_finalize_):
 
         FUNC_SAVE
         GCM_COMPLETE    arg1, arg2, arg3, arg4, ENC, multi_call
+
         FUNC_RESTORE
 
 exit_enc_fin:
@@ -4098,6 +4106,7 @@ FN_NAME(dec,_finalize_):
 
         FUNC_SAVE
         GCM_COMPLETE    arg1, arg2, arg3, arg4, DEC, multi_call
+
         FUNC_RESTORE
 
 exit_dec_fin:

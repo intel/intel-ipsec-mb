@@ -112,6 +112,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
+%include "include/clear_regs.asm"
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_avx2_avx512.asm"
 %include "include/memcpy.asm"
@@ -2580,6 +2581,10 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %macro FUNC_RESTORE 0
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_ymms_asm
+%endif
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm15, [rsp + LOCAL_STORAGE + 9*16]
         vmovdqu xmm14, [rsp + LOCAL_STORAGE + 8*16]
@@ -3180,6 +3185,10 @@ FN_NAME(precomp,_):
         pop     r13
         pop     r12
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_ymms_asm
+%endif
 exit_precomp:
 
         ret
@@ -3231,6 +3240,10 @@ skip_aad_check_init:
 %endif
         GCM_INIT arg1, arg2, arg3, arg4, arg5
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_ymms_asm
+%endif
 exit_init:
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -3379,6 +3392,10 @@ FN_NAME(enc,_finalize_):
 %endif
         GCM_COMPLETE    arg1, arg2, arg3, arg4, ENC, multi_call
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_ymms_asm
+%endif
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm15, [rsp + 4*16]
         vmovdqu xmm14, [rsp + 3*16]
@@ -3438,6 +3455,10 @@ FN_NAME(dec,_finalize_):
 %endif
         GCM_COMPLETE    arg1, arg2, arg3, arg4, DEC, multi_call
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_ymms_asm
+%endif
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm15, [rsp + 4*16]
         vmovdqu xmm14, [rsp + 3*16]

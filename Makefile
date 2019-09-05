@@ -83,6 +83,8 @@ endif
 
 ifeq ($(SAFE_DATA),y)
 CFLAGS += -DSAFE_DATA
+NASM_FLAGS += -DSAFE_DATA
+YASM_FLAGS += -DSAFE_DATA
 endif
 
 ifeq ($(SAFE_PARAM),y)
