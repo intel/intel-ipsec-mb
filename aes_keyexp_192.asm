@@ -117,6 +117,15 @@ section .text
 MKGLOBAL(aes_keyexp_192_sse,function,)
 aes_keyexp_192_sse:
 
+%ifdef SAFE_PARAM
+        cmp     KEY, 0
+        jz      aes_keyexp_192_sse_return
+        cmp     EXP_ENC_KEYS, 0
+        jz      aes_keyexp_192_sse_return
+        cmp     EXP_DEC_KEYS, 0
+        jz      aes_keyexp_192_sse_return
+%endif
+
 %ifndef LINUX
 	sub	rsp, 16*2 + 8
 	movdqa	[rsp + 0*16], xmm6
@@ -188,10 +197,20 @@ aes_keyexp_192_sse:
 	add	rsp, 16*2 + 8
 %endif
 
+aes_keyexp_192_sse_return:
 	ret
 
 MKGLOBAL(aes_keyexp_192_sse_no_aesni,function,)
 aes_keyexp_192_sse_no_aesni:
+
+%ifdef SAFE_PARAM
+        cmp     KEY, 0
+        jz      aes_keyexp_192_sse_no_aesni_return
+        cmp     EXP_ENC_KEYS, 0
+        jz      aes_keyexp_192_sse_no_aesni_return
+        cmp     EXP_DEC_KEYS, 0
+        jz      aes_keyexp_192_sse_no_aesni_return
+%endif
 
 %ifndef LINUX
 	sub	rsp, 16*2 + 8
@@ -264,6 +283,7 @@ aes_keyexp_192_sse_no_aesni:
 	add	rsp, 16*2 + 8
 %endif
 
+aes_keyexp_192_sse_no_aesni_return:
 	ret
 
 MKGLOBAL(aes_keyexp_192_avx,function,)
@@ -272,6 +292,15 @@ MKGLOBAL(aes_keyexp_192_avx512,function,)
 aes_keyexp_192_avx:
 aes_keyexp_192_avx2:
 aes_keyexp_192_avx512:
+
+%ifdef SAFE_PARAM
+        cmp     KEY, 0
+        jz      aes_keyexp_192_avx_return
+        cmp     EXP_ENC_KEYS, 0
+        jz      aes_keyexp_192_avx_return
+        cmp     EXP_DEC_KEYS, 0
+        jz      aes_keyexp_192_avx_return
+%endif
 
 %ifndef LINUX
 	sub	rsp, 16*2 + 8
@@ -344,6 +373,7 @@ aes_keyexp_192_avx512:
 	add	rsp, 16*2 + 8
 %endif
 
+aes_keyexp_192_avx_return:
 	ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -359,6 +389,13 @@ aes_keyexp_192_avx512:
 ;
 MKGLOBAL(aes_keyexp_192_enc_sse,function,)
 aes_keyexp_192_enc_sse:
+
+%ifdef SAFE_PARAM
+        cmp     KEY, 0
+        jz      aes_keyexp_192_enc_sse_return
+        cmp     EXP_ENC_KEYS, 0
+        jz      aes_keyexp_192_enc_sse_return
+%endif
 
 %ifndef LINUX
 	sub	rsp, 16*2 + 8
@@ -412,10 +449,18 @@ aes_keyexp_192_enc_sse:
 	add	rsp, 16*2 + 8
 %endif
 
+aes_keyexp_192_enc_sse_return:
 	ret
 
 MKGLOBAL(aes_keyexp_192_enc_sse_no_aesni,function,)
 aes_keyexp_192_enc_sse_no_aesni:
+
+%ifdef SAFE_PARAM
+        cmp     KEY, 0
+        jz      aes_keyexp_192_enc_sse_no_aesni_return
+        cmp     EXP_ENC_KEYS, 0
+        jz      aes_keyexp_192_enc_sse_no_aesni_return
+%endif
 
 %ifndef LINUX
 	sub	rsp, 16*2 + 8
@@ -469,6 +514,7 @@ aes_keyexp_192_enc_sse_no_aesni:
 	add	rsp, 16*2 + 8
 %endif
 
+aes_keyexp_192_enc_sse_no_aesni_return:
 	ret
 
 MKGLOBAL(aes_keyexp_192_enc_avx,function,)
@@ -477,6 +523,13 @@ MKGLOBAL(aes_keyexp_192_enc_avx512,function,)
 aes_keyexp_192_enc_avx:
 aes_keyexp_192_enc_avx2:
 aes_keyexp_192_enc_avx512:
+
+%ifdef SAFE_PARAM
+        cmp     KEY, 0
+        jz      aes_keyexp_192_enc_avx_return
+        cmp     EXP_ENC_KEYS, 0
+        jz      aes_keyexp_192_enc_avx_return
+%endif
 
 %ifndef LINUX
 	sub	rsp, 16*2 + 8
@@ -530,6 +583,7 @@ aes_keyexp_192_enc_avx512:
 	add	rsp, 16*2 + 8
 %endif
 
+aes_keyexp_192_enc_avx_return:
 	ret
 
 %ifdef LINUX

@@ -139,6 +139,16 @@ section .text
 MKGLOBAL(aes_cmac_subkey_gen_sse,function,)
 align 32
 aes_cmac_subkey_gen_sse:
+
+%ifdef SAFE_PARAM
+        cmp     KEY_EXP, 0
+        jz      aes_cmac_subkey_gen_sse_return
+        cmp     KEY1, 0
+        jz      aes_cmac_subkey_gen_sse_return
+        cmp     KEY2, 0
+        jz      aes_cmac_subkey_gen_sse_return
+%endif
+
         ;; Step 1.  L := AES-128(K, const_Zero) ;
         movdqa          XL, [KEY_EXP + 16*0]    ; 0. ARK xor const_Zero
 	aesenc		XL, [KEY_EXP + 16*1]	; 1. ENC
@@ -190,11 +200,23 @@ K2_msb_is_zero_sse:
         pshufb          XKEY2, [rel byteswap_const]
         movdqu          [KEY1], XKEY1
         movdqu          [KEY2], XKEY2
+
+aes_cmac_subkey_gen_sse_return:
 	ret
 
 MKGLOBAL(aes_cmac_subkey_gen_sse_no_aesni,function,)
 align 32
 aes_cmac_subkey_gen_sse_no_aesni:
+
+%ifdef SAFE_PARAM
+        cmp     KEY_EXP, 0
+        jz      aes_cmac_subkey_gen_sse_no_aesni_return
+        cmp     KEY1, 0
+        jz      aes_cmac_subkey_gen_sse_no_aesni_return
+        cmp     KEY2, 0
+        jz      aes_cmac_subkey_gen_sse_no_aesni_return
+%endif
+
         ;; Step 1.  L := AES-128(K, const_Zero) ;
         movdqa          XL, [KEY_EXP + 16*0]    ; 0. ARK xor const_Zero
 	EMULATE_AESENC	XL, [KEY_EXP + 16*1]	; 1. ENC
@@ -246,6 +268,8 @@ K2_msb_is_zero_sse2:
         pshufb          XKEY2, [rel byteswap_const]
         movdqu          [KEY1], XKEY1
         movdqu          [KEY2], XKEY2
+
+aes_cmac_subkey_gen_sse_no_aesni_return:
 	ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -265,6 +289,16 @@ align 32
 aes_cmac_subkey_gen_avx:
 aes_cmac_subkey_gen_avx2:
 aes_cmac_subkey_gen_avx512:
+
+%ifdef SAFE_PARAM
+        cmp     KEY_EXP, 0
+        jz      aes_cmac_subkey_gen_avx_return
+        cmp     KEY1, 0
+        jz      aes_cmac_subkey_gen_avx_return
+        cmp     KEY2, 0
+        jz      aes_cmac_subkey_gen_avx_return
+%endif
+
         ;; Step 1.  L := AES-128(K, const_Zero) ;
         vmovdqa         XL, [KEY_EXP + 16*0]        ; 0. ARK xor const_Zero
         vaesenc         XL, [KEY_EXP + 16*1]        ; 1. ENC
@@ -316,6 +350,8 @@ K2_msb_is_zero_avx:
         vpshufb         XKEY2, [rel byteswap_const]
         vmovdqu         [KEY1], XKEY1
         vmovdqu         [KEY2], XKEY2
+
+aes_cmac_subkey_gen_avx_return:
         ret
 
 %ifdef LINUX

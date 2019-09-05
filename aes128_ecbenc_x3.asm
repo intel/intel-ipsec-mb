@@ -67,6 +67,19 @@ aes128_ecbenc_x3_sse:
 	mov		OUT2, [rsp + 5*8]
 %endif
 
+%ifdef SAFE_PARAM
+        cmp             IN, 0
+        jz              aes128_ecbenc_x3_sse_return
+        cmp             KEYS, 0
+        jz              aes128_ecbenc_x3_sse_return
+        cmp             OUT0, 0
+        jz              aes128_ecbenc_x3_sse_return
+        cmp             OUT1, 0
+        jz              aes128_ecbenc_x3_sse_return
+        cmp             OUT2, 0
+        jz              aes128_ecbenc_x3_sse_return
+%endif
+
 	movdqu		XDATA0, [IN + 0*16]	; load first block of plain text
 	movdqu		XDATA1, [IN + 1*16]	; load second block of plain text
 	movdqu		XDATA2, [IN + 2*16]	; load third block of plain text
@@ -131,6 +144,7 @@ aes128_ecbenc_x3_sse:
 	movdqu		[OUT1], XDATA1	; write back ciphertext
 	movdqu		[OUT2], XDATA2	; write back ciphertext
 
+aes128_ecbenc_x3_sse_return:
 	ret
 
 MKGLOBAL(aes128_ecbenc_x3_sse_no_aesni,function,internal)
@@ -138,6 +152,19 @@ aes128_ecbenc_x3_sse_no_aesni:
 
 %ifndef LINUX
 	mov		OUT2, [rsp + 5*8]
+%endif
+
+%ifdef SAFE_PARAM
+        cmp             IN, 0
+        jz              aes128_ecbenc_x3_sse_no_aesni_return
+        cmp             KEYS, 0
+        jz              aes128_ecbenc_x3_sse_no_aesni_return
+        cmp             OUT0, 0
+        jz              aes128_ecbenc_x3_sse_no_aesni_return
+        cmp             OUT1, 0
+        jz              aes128_ecbenc_x3_sse_no_aesni_return
+        cmp             OUT2, 0
+        jz              aes128_ecbenc_x3_sse_no_aesni_return
 %endif
 
 	movdqu		XDATA0, [IN + 0*16]	; load first block of plain text
@@ -204,6 +231,7 @@ aes128_ecbenc_x3_sse_no_aesni:
 	movdqu		[OUT1], XDATA1	; write back ciphertext
 	movdqu		[OUT2], XDATA2	; write back ciphertext
 
+aes128_ecbenc_x3_sse_no_aesni_return:
 	ret
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -214,6 +242,19 @@ aes128_ecbenc_x3_avx:
 
 %ifndef LINUX
 	mov		OUT2, [rsp + 5*8]
+%endif
+
+%ifdef SAFE_PARAM
+        cmp             IN, 0
+        jz              aes128_ecbenc_x3_avx_return
+        cmp             KEYS, 0
+        jz              aes128_ecbenc_x3_avx_return
+        cmp             OUT0, 0
+        jz              aes128_ecbenc_x3_avx_return
+        cmp             OUT1, 0
+        jz              aes128_ecbenc_x3_avx_return
+        cmp             OUT2, 0
+        jz              aes128_ecbenc_x3_avx_return
 %endif
 
 	vmovdqu		XDATA0, [IN + 0*16]	; load first block of plain text
@@ -280,6 +321,7 @@ aes128_ecbenc_x3_avx:
 	vmovdqu		[OUT1], XDATA1	; write back ciphertext
 	vmovdqu		[OUT2], XDATA2	; write back ciphertext
 
+aes128_ecbenc_x3_avx_return:
 	ret
 
 %ifdef LINUX
