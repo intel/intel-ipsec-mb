@@ -786,6 +786,85 @@ static uint8_t  T17[] = {
         0xcd, 0xdf, 0x88, 0x53, 0xbb, 0x2d, 0x55
 };
 
+/*
+ * Test Case 18 -- No plaintext
+ */
+static uint8_t K18[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
+};
+static uint8_t IV18[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0A, 0x0B
+};
+static uint8_t A18[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+};
+
+#define P18 NULL
+#define C18 NULL
+#define P18_len 0
+#define A18_len sizeof(A18)
+
+static uint8_t T18[] = {
+        0x8D, 0xF7, 0xD8, 0xED, 0xB9, 0x91, 0x65, 0xFA,
+        0xAD, 0x1B, 0x03, 0x8C, 0x53, 0xB3, 0x20, 0xE8
+};
+
+/*
+ * Test Case 19 -- No AAD
+ */
+static uint8_t P19[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
+};
+static uint8_t C19[] = {
+        0x93, 0x6D, 0xA5, 0xCD, 0x62, 0x1E, 0xF1, 0x53,
+        0x43, 0xDB, 0x6B, 0x81, 0x3A, 0xAE, 0x7E, 0x07
+};
+
+#define K19 K18
+#define IV19 IV18
+#define P19_len sizeof(P19)
+#define A19 NULL
+#define A19_len 0
+
+static uint8_t T19[] = {
+        0xFE, 0x8E, 0xC5, 0x55, 0x5F, 0x36, 0x08, 0xF7,
+        0x0E, 0xBC, 0x7F, 0xCE, 0xE9, 0x59, 0x2E, 0x9B
+};
+
+/*
+ * Test Case 20 -- No plaintext, no AAD
+ */
+#define K20 K18
+#define IV20 IV18
+#define P20 NULL
+#define C20 NULL
+#define P20_len 0
+#define A20 NULL
+#define A20_len 0
+
+static uint8_t T20[] = {
+        0x43, 0x5B, 0x9B, 0xA1, 0x2D, 0x75, 0xA4, 0xBE,
+        0x8A, 0x97, 0x7E, 0xA3, 0xCD, 0x01, 0x18, 0x90
+};
+
+/*
+ * Test Case 21 -- Variable tag size (1 byte)
+ */
+
+#define K21 K1
+#define IV21 IV1
+#define P21 P1
+#define C21 C1
+#define A21 A1
+#define A21_len A1_len
+
+static uint8_t T21[] = {
+        0x4F
+};
+
 static const struct gcm_ctr_vector gcm_vectors[] = {
 	/*
          * field order {K, Klen, IV, IVlen, A, Alen, P, Plen, C, T, Tlen};
@@ -808,6 +887,10 @@ static const struct gcm_ctr_vector gcm_vectors[] = {
         vector(15),
         vector(16),
         vector(17),
+        extra_vector(18),
+        extra_vector(19),
+        extra_vector(20),
+        vector(21),
 };
 
 typedef void (*gcm_enc_dec_fn_t)(const struct gcm_key_data *,
@@ -1147,19 +1230,21 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 #ifdef DEBUG
         printf("Testing GCM128 std vectors\n");
 #endif
-	/* Allocate space for the calculated ciphertext */
-	ct_test = malloc(vector->Plen);
-	if (ct_test == NULL) {
-		fprintf(stderr, "Can't allocate ciphertext memory\n");
-		is_error = 1;
-                goto test_gcm_vectors_exit;
-	}
-	/* Allocate space for the calculated ciphertext */
-	pt_test = malloc(vector->Plen);
-	if (pt_test == NULL) {
-		fprintf(stderr, "Can't allocate plaintext memory\n");
-		is_error = 1;
-                goto test_gcm_vectors_exit;
+        if (vector->Plen != 0) {
+	        /* Allocate space for the calculated ciphertext */
+		ct_test = malloc(vector->Plen);
+		if (ct_test == NULL) {
+			fprintf(stderr, "Can't allocate ciphertext memory\n");
+			is_error = 1;
+		        goto test_gcm_vectors_exit;
+		}
+	        /* Allocate space for the calculated plaintext */
+		pt_test = malloc(vector->Plen);
+		if (pt_test == NULL) {
+			fprintf(stderr, "Can't allocate plaintext memory\n");
+			is_error = 1;
+		        goto test_gcm_vectors_exit;
+		}
 	}
 
 	T_test = malloc(vector->Tlen);
