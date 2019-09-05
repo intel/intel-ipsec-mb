@@ -580,6 +580,8 @@ kasumi_compute_sched(const uint8_t modifier,
 
 #ifdef SAFE_DATA
         clear_mem(ModKey, sizeof(ModKey));
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
 #endif
         return 0;
 }
