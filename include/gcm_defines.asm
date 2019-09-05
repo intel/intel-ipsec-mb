@@ -236,10 +236,10 @@ section .text
 	%xdefine arg4 rcx
 	%xdefine arg5 r8
 	%xdefine arg6 r9
-	%xdefine arg7 [r14 + STACK_OFFSET + 8*1]
-	%xdefine arg8 [r14 + STACK_OFFSET + 8*2]
-	%xdefine arg9 [r14 + STACK_OFFSET + 8*3]
-	%xdefine arg10 [r14 + STACK_OFFSET + 8*4]
+	%xdefine arg7  qword [r14 + STACK_OFFSET + 8*1]
+	%xdefine arg8  qword [r14 + STACK_OFFSET + 8*2]
+	%xdefine arg9  qword [r14 + STACK_OFFSET + 8*3]
+	%xdefine arg10 qword [r14 + STACK_OFFSET + 8*4]
 %endif
 
 %ifdef NT_LDST

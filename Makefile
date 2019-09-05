@@ -64,6 +64,14 @@ CFLAGS := -DLINUX $(EXTRA_CFLAGS) $(INCLUDES) \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
 
+ASM_INCLUDE_DIRS := .
+
+YASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I $i)
+YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUDES)
+
+NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
+NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
+
 ifeq ($(DEBUG),y)
 CFLAGS += -g -DDEBUG
 OPT = -O0
@@ -79,6 +87,8 @@ endif
 
 ifeq ($(SAFE_PARAM),y)
 CFLAGS += -DSAFE_PARAM
+NASM_FLAGS += -DSAFE_PARAM
+YASM_FLAGS += -DSAFE_PARAM
 endif
 
 # prevent SIMD optimizations for non-aesni modules
@@ -110,14 +120,6 @@ LIBNAME = $(LIB).a
 LIBPERM = 0644
 LDFLAGS += -g
 endif
-
-ASM_INCLUDE_DIRS := .
-
-YASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I $i)
-YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUDES)
-
-NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
-NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
 
 # warning messages
 SAFE_PARAM_MSG1="SAFE_PARAM option not set."

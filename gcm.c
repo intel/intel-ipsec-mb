@@ -43,6 +43,10 @@
 
 void aes_gcm_pre_128_sse(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_128_enc_sse(key, key_data->expanded_keys);
         aes_gcm_precomp_128_sse(key_data);
 }
@@ -50,36 +54,60 @@ void aes_gcm_pre_128_sse(const void *key, struct gcm_key_data *key_data)
 void aes_gcm_pre_128_sse_no_aesni(const void *key,
                                   struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_128_enc_sse_no_aesni(key, key_data->expanded_keys);
         aes_gcm_precomp_128_sse_no_aesni(key_data);
 }
 
 void aes_gcm_pre_128_avx_gen2(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_128_enc_avx(key, key_data->expanded_keys);
         aes_gcm_precomp_128_avx_gen2(key_data);
 }
 
 void aes_gcm_pre_128_avx_gen4(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_128_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_128_avx_gen4(key_data);
 }
 
 void aes_gcm_pre_128_avx512(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_128_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_128_avx512(key_data);
 }
 
 void aes_gcm_pre_128_vaes_avx512(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_128_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_128_vaes_avx512(key_data);
 }
 
 void aes_gcm_pre_192_sse(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_192_enc_sse(key, key_data->expanded_keys);
         aes_gcm_precomp_192_sse(key_data);
 }
@@ -87,36 +115,60 @@ void aes_gcm_pre_192_sse(const void *key, struct gcm_key_data *key_data)
 void aes_gcm_pre_192_sse_no_aesni(const void *key,
                                   struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_192_enc_sse_no_aesni(key, key_data->expanded_keys);
         aes_gcm_precomp_192_sse_no_aesni(key_data);
 }
 
 void aes_gcm_pre_192_avx_gen2(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_192_enc_avx(key, key_data->expanded_keys);
         aes_gcm_precomp_192_avx_gen2(key_data);
 }
 
 void aes_gcm_pre_192_avx_gen4(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_192_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_192_avx_gen4(key_data);
 }
 
 void aes_gcm_pre_192_avx512(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_192_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_192_avx512(key_data);
 }
 
 void aes_gcm_pre_192_vaes_avx512(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_192_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_192_vaes_avx512(key_data);
 }
 
 void aes_gcm_pre_256_sse(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_256_enc_sse(key, key_data->expanded_keys);
         aes_gcm_precomp_256_sse(key_data);
 }
@@ -124,30 +176,50 @@ void aes_gcm_pre_256_sse(const void *key, struct gcm_key_data *key_data)
 void aes_gcm_pre_256_sse_no_aesni(const void *key,
                                   struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_256_enc_sse_no_aesni(key, key_data->expanded_keys);
         aes_gcm_precomp_256_sse_no_aesni(key_data);
 }
 
 void aes_gcm_pre_256_avx_gen2(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_256_enc_avx(key, key_data->expanded_keys);
         aes_gcm_precomp_256_avx_gen2(key_data);
 }
 
 void aes_gcm_pre_256_avx_gen4(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_256_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_256_avx_gen4(key_data);
 }
 
 void aes_gcm_pre_256_avx512(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_256_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_256_avx512(key_data);
 }
 
 void aes_gcm_pre_256_vaes_avx512(const void *key, struct gcm_key_data *key_data)
 {
+#ifdef SAFE_PARAM
+        if (key == NULL || key_data == NULL)
+                return;
+#endif
         aes_keyexp_256_enc_avx2(key, key_data->expanded_keys);
         aes_gcm_precomp_256_vaes_avx512(key_data);
 }
