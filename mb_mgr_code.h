@@ -797,15 +797,19 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 /* ========================================================================= */
 
 #ifdef DEBUG
+#define DEBUG_PUTS(s) \
+        fputs(s, stderr)
 #ifdef _WIN32
 #define INVALID_PRN(_fmt, ...)                                          \
         fprintf(stderr, "%s():%d: " _fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
+
 #else
 #define INVALID_PRN(_fmt, ...)                                          \
         fprintf(stderr, "%s():%d: " _fmt, __func__, __LINE__, __VA_ARGS__)
 #endif
 #else
 #define INVALID_PRN(_fmt, ...)
+#define DEBUG_PUTS(s)
 #endif
 
 __forceinline int
@@ -1590,7 +1594,7 @@ submit_job_and_check(MB_MGR *state, const int run_check)
 {
 #ifdef SAFE_PARAM
         if (state == NULL) {
-                INVALID_PRN("submit job and check\n");
+                DEBUG_PUTS("submit job and check\n");
                 return NULL;
         }
 #endif
@@ -1671,7 +1675,7 @@ FLUSH_JOB(MB_MGR *state)
 {
 #ifdef SAFE_PARAM
         if (state == NULL) {
-                INVALID_PRN("flush job\n");
+                DEBUG_PUTS("flush job\n");
                 return NULL;
         }
 #endif
@@ -1713,7 +1717,7 @@ QUEUE_SIZE(MB_MGR *state)
 {
 #ifdef SAFE_PARAM
         if (state == NULL) {
-                INVALID_PRN("queue size\n");
+                DEBUG_PUTS("queue size\n");
                 return 0;
         }
 #endif
@@ -1731,7 +1735,7 @@ GET_COMPLETED_JOB(MB_MGR *state)
 {
 #ifdef SAFE_PARAM
         if (state == NULL) {
-                INVALID_PRN("get completed job\n");
+                DEBUG_PUTS("get completed job\n");
                 return NULL;
         }
 #endif
@@ -1757,7 +1761,7 @@ GET_NEXT_JOB(MB_MGR *state)
 {
 #ifdef SAFE_PARAM
         if (state == NULL) {
-                INVALID_PRN("get next job\n");
+                DEBUG_PUTS("get next job\n");
                 return NULL;
         }
 #endif
