@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
+
 #include "intel-ipsec-mb.h"
 #include "include/kasumi_internal.h"
 #include "include/zuc_internal.h"
@@ -98,7 +100,6 @@ JOB_AES_HMAC *submit_job_aes_cntr_bit_sse_no_aesni(JOB_AES_HMAC *job);
 
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse_no_aesni
 #define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse_no_aesni

@@ -27,13 +27,14 @@
 
 #include <limits.h>
 
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
+
 #include "include/kasumi_internal.h"
 #include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
 
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 void
 kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
