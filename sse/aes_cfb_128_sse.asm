@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2017-2018, Intel Corporation
+;; Copyright (c) 2017-2019, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -27,6 +27,7 @@
 
 %include "include/os.asm"
 %include "include/memcpy.asm"
+%include "include/clear_regs.asm"
 
 ;;; Routine to do 128 bit CFB AES encrypt/decrypt operations on one block only.
 ;;; It processes only one buffer at a time.
@@ -153,6 +154,11 @@ skip_in_out_check:
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+%ifdef SAFE_DATA
+        ;; XDATA and XIN are the only scratch SIMD registers used
+        clear_xmms_sse  XDATA, XIN
+        clear_scratch_gps
+%endif
 exit_cfb:
 	ret
 
