@@ -200,6 +200,23 @@ end_loop:
 	movq	[icv], xmm0
 	pextrd	[icv + 8], xmm0, 2
 
+
+%ifdef SAFE_DATA
+        pxor    xmm0, xmm0
+
+        ;; Clear ICV's and final blocks in returned job and NULL lanes
+%assign I 0
+%rep 4
+        cmp	qword [state + _aes_xcbc_ldata + I * _XCBC_LANE_DATA_size + _xcbc_job_in_lane], 0
+        jne	APPEND(skip_clear_,I)
+        movdqa	[state + _aes_xcbc_args_ICV + I*16], xmm0
+        lea     lane_data, [state + _aes_xcbc_ldata + (I * _XCBC_LANE_DATA_size)]
+        movdqa  [lane_data + _xcbc_final_block], xmm0
+        movdqa  [lane_data + _xcbc_final_block + 16], xmm0
+APPEND(skip_clear_,I):
+%assign I (I+1)
+%endrep
+%endif
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]

@@ -204,6 +204,16 @@ end_loop:
 	movq	[icv], xmm0
 	pextrd	[icv + 8], xmm0, 2
 
+%ifdef SAFE_DATA
+        ;; Clear ICV
+        pxor    xmm0, xmm0
+        movdqa  [state + _aes_xcbc_args_ICV + idx], xmm0
+
+        ;; Clear final block (32 bytes)
+        movdqa  [lane_data + _xcbc_final_block], xmm0
+        movdqa  [lane_data + _xcbc_final_block + 16], xmm0
+%endif
+
 return:
 
 	mov	rbx, [rsp + _gpr_save + 8*0]
