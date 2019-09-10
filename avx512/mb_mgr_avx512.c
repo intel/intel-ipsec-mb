@@ -929,48 +929,6 @@ init_mb_mgr_avx512(MB_MGR *state)
         }
         state->aes_cmac_ooo.unused_lanes = 0xF76543210;
 
-#ifndef NO_GCM
-        /* init GCM MB manager in case VAES & VPCLMULQDQ are detected */
-        for (j = 0; j < 4; j++) {
-                state->gcm128_enc_ooo.lens[j] = 0;
-                state->gcm128_enc_ooo.job_in_lane[j] = NULL;
-                state->gcm128_enc_ooo.args.ctx[j] =
-                        &state->gcm128_enc_ooo.ctxs[j];
-
-                state->gcm192_enc_ooo.lens[j] = 0;
-                state->gcm192_enc_ooo.job_in_lane[j] = NULL;
-                state->gcm192_enc_ooo.args.ctx[j] =
-                        &state->gcm192_enc_ooo.ctxs[j];
-
-                state->gcm256_enc_ooo.lens[j] = 0;
-                state->gcm256_enc_ooo.job_in_lane[j] = NULL;
-                state->gcm256_enc_ooo.args.ctx[j] =
-                        &state->gcm256_enc_ooo.ctxs[j];
-
-                state->gcm128_dec_ooo.lens[j] = 0;
-                state->gcm128_dec_ooo.job_in_lane[j] = NULL;
-                state->gcm128_dec_ooo.args.ctx[j] =
-                        &state->gcm128_dec_ooo.ctxs[j];
-
-                state->gcm192_dec_ooo.lens[j] = 0;
-                state->gcm192_dec_ooo.job_in_lane[j] = NULL;
-                state->gcm192_dec_ooo.args.ctx[j] =
-                        &state->gcm192_dec_ooo.ctxs[j];
-
-                state->gcm256_dec_ooo.lens[j] = 0;
-                state->gcm256_dec_ooo.job_in_lane[j] = NULL;
-                state->gcm256_dec_ooo.args.ctx[j] =
-                        &state->gcm256_dec_ooo.ctxs[j];
-        }
-        state->gcm128_enc_ooo.unused_lanes = 0xF3210;
-        state->gcm192_enc_ooo.unused_lanes = 0xF3210;
-        state->gcm256_enc_ooo.unused_lanes = 0xF3210;
-        state->gcm128_dec_ooo.unused_lanes = 0xF3210;
-        state->gcm192_dec_ooo.unused_lanes = 0xF3210;
-        state->gcm256_dec_ooo.unused_lanes = 0xF3210;
-
-#endif /* NO_GCM */
-
         /* Init "in order" components */
         state->next_job = 0;
         state->earliest_job = -1;
