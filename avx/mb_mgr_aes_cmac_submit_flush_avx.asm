@@ -357,6 +357,30 @@ APPEND(skip_,I):
  	mov	qword [state + _aes_cmac_job_in_lane + idx*8], 0
  	or	dword [job_rax + _status], STS_COMPLETED_HMAC
 
+%ifdef SAFE_DATA
+        vpxor   xmm0, xmm0
+%ifidn %%SUBMIT_FLUSH, SUBMIT
+        ;; Clear digest (in memory for IV) and scratch memory of returned job
+        vmovdqa [tmp3], xmm0
+
+        shl     idx, 4
+        vmovdqa [state + _aes_cmac_scratch + idx], xmm0
+
+%else
+        ;; Clear digest and scratch memory of returned job and "NULL lanes"
+%assign I 0
+%rep 8
+        cmp     qword [state + _aes_cmac_job_in_lane + I*8], 0
+        jne     APPEND(skip_clear_,I)
+        vmovdqa [state + _aes_cmac_args_IV + I*16], xmm0
+        vmovdqa [state + _aes_cmac_scratch + I*16], xmm0
+APPEND(skip_clear_,I):
+%assign I (I+1)
+%endrep
+%endif ;; SUBMIT
+
+%endif ;; SAFE_DATA
+
 %%_return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
