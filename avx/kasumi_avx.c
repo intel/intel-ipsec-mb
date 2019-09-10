@@ -27,6 +27,8 @@
 
 #include <limits.h>
 
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
+
 #include "include/save_xmms.h"
 #include "include/kasumi_internal.h"
 #include "include/save_xmms.h"
@@ -34,7 +36,6 @@
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
 
 void
 kasumi_f8_1_buffer_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
