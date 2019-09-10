@@ -76,16 +76,11 @@
 
 %define TMP0	rax
 %define TMP1	r10
-%define PTR0	rsp + _buffer
 
 %define XDATA	xmm0
+%define XIN	xmm1
 
 section .text
-
-struc STACK
-_buffer:	resq	2
-_rsp_save:	resq	1
-endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void aes_cfb_128_one(void *out, void *in, void *iv, void *keys)
@@ -115,19 +110,7 @@ aes_cfb_128_one_avx512:
 %ifndef LINUX
 	mov		LEN, LEN2
 %endif
-        mov		rax, rsp
-        sub		rsp, STACK_size
-        and		rsp, -16
-	mov		[rsp + _rsp_save], rax
-
-	test		LEN, 16
-	jz		copy_in_lt16
-	vmovdqu		XDATA, [IN]
-	vmovdqa		[PTR0], XDATA
-	jmp		copy_in_end
-copy_in_lt16:
-	memcpy_avx_16	PTR0, IN, LEN, TMP0, TMP1
-copy_in_end:
+	simd_load_avx_16 XIN, IN, LEN
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -144,20 +127,12 @@ copy_in_end:
 	vaesenc		XDATA, XDATA, [KEYS + 16*9]	; 9. ENC
 	vaesenclast	XDATA, XDATA, [KEYS + 16*10]	; 10. ENC
 
-	vpxor		XDATA, XDATA, [PTR0] 		; plaintext/ciphertext XOR block cipher encryption
+	vpxor		XDATA, XIN       		; plaintext/ciphertext XOR block cipher encryption
 
-	test		LEN, 16
-	jz		copy_out_lt16
-	vmovdqu		[OUT], XDATA
-	jmp		copy_out_end
-copy_out_lt16:
-	vmovdqa		[PTR0], XDATA
-	memcpy_avx_16	OUT, PTR0, LEN, TMP0, TMP1
-copy_out_end:
+	simd_store_avx	OUT, XDATA, LEN, TMP0, TMP1
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	mov		rsp, [rsp + _rsp_save]	; original SP
 	ret
 
 %ifdef LINUX
