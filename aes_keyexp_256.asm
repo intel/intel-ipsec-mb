@@ -29,6 +29,7 @@
 %include "include/os.asm"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
+%include "include/clear_regs.asm"
 
 ; Uses the f() function of the aeskeygenassist result
 %macro key_expansion_256_sse 0
@@ -194,8 +195,13 @@ aes_keyexp_256_sse:
 	movdqa	[EXP_ENC_KEYS + 16*14], xmm1
 	movdqa	[EXP_DEC_KEYS + 16*0], xmm1
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
+
 aes_keyexp_256_sse_return:
-	ret
+        ret
 
 MKGLOBAL(aes_keyexp_256_sse_no_aesni,function,)
 aes_keyexp_256_sse_no_aesni:
@@ -296,6 +302,11 @@ aes_keyexp_256_sse_no_aesni:
         key_expansion_256_sse
 	movdqa	[EXP_ENC_KEYS + 16*14], xmm1
 	movdqa	[EXP_DEC_KEYS + 16*0], xmm1
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
 
 aes_keyexp_256_sse_no_aesni_return:
 	ret
@@ -404,6 +415,11 @@ aes_keyexp_256_avx512:
 	vmovdqa	[EXP_ENC_KEYS + 16*14], xmm1
 	vmovdqa	[EXP_DEC_KEYS + 16*0], xmm1
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_avx_asm
+%endif
+
 aes_keyexp_256_avx_return:
 	ret
 
@@ -488,6 +504,11 @@ aes_keyexp_256_enc_sse:
         key_expansion_256_sse
 	movdqa	[EXP_ENC_KEYS + 16*14], xmm1
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
+
 aes_keyexp_256_enc_sse_return:
 	ret
 
@@ -560,6 +581,11 @@ aes_keyexp_256_enc_sse_no_aesni:
         EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x40	; Generating round key 14
         key_expansion_256_sse
 	movdqa	[EXP_ENC_KEYS + 16*14], xmm1
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
 
 aes_keyexp_256_enc_sse_no_aesni_return:
 	ret
@@ -637,6 +663,11 @@ aes_keyexp_256_enc_avx512:
         vaeskeygenassist xmm2, xmm4, 0x40	; Generating round key 14
         key_expansion_256_avx
 	vmovdqa	[EXP_ENC_KEYS + 16*14], xmm1
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_avx_asm
+%endif
 
 aes_keyexp_256_enc_avx_return:
         ret

@@ -35,6 +35,7 @@
 %include "include/os.asm"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
+%include "include/clear_regs.asm"
 
 %ifdef LINUX
 %define IN	rdi	; arg 1
@@ -145,6 +146,11 @@ aes128_ecbenc_x3_sse:
 	movdqu		[OUT2], XDATA2	; write back ciphertext
 
 aes128_ecbenc_x3_sse_return:
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
 	ret
 
 MKGLOBAL(aes128_ecbenc_x3_sse_no_aesni,function,internal)
@@ -232,6 +238,11 @@ aes128_ecbenc_x3_sse_no_aesni:
 	movdqu		[OUT2], XDATA2	; write back ciphertext
 
 aes128_ecbenc_x3_sse_no_aesni_return:
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
 	ret
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -322,6 +333,11 @@ aes128_ecbenc_x3_avx:
 	vmovdqu		[OUT2], XDATA2	; write back ciphertext
 
 aes128_ecbenc_x3_avx_return:
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_avx_asm
+%endif
 	ret
 
 %ifdef LINUX

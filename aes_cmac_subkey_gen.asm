@@ -28,6 +28,7 @@
 %include "include/os.asm"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
+%include "include/clear_regs.asm"
 
 ;;; Routines to generate subkeys for AES-CMAC.
 ;;; See RFC 4493 for more details.
@@ -202,7 +203,12 @@ K2_msb_is_zero_sse:
         movdqu          [KEY2], XKEY2
 
 aes_cmac_subkey_gen_sse_return:
-	ret
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
+        ret
 
 MKGLOBAL(aes_cmac_subkey_gen_sse_no_aesni,function,)
 align 32
@@ -270,7 +276,12 @@ K2_msb_is_zero_sse2:
         movdqu          [KEY2], XKEY2
 
 aes_cmac_subkey_gen_sse_no_aesni_return:
-	ret
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -352,6 +363,11 @@ K2_msb_is_zero_avx:
         vmovdqu         [KEY2], XKEY2
 
 aes_cmac_subkey_gen_avx_return:
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_avx_asm
+%endif
         ret
 
 %ifdef LINUX

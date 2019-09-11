@@ -29,6 +29,7 @@
 %include "include/os.asm"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
+%include "include/clear_regs.asm"
 
 %macro key_expansion_128_sse 0
 	;; Assumes the xmm3 includes all zeros at this point.
@@ -147,6 +148,11 @@ aes_keyexp_128_sse:
         movdqa	[EXP_DEC_KEYS + 16*0], xmm1
 
 aes_keyexp_128_sse_return:
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
 	ret
 
 MKGLOBAL(aes_keyexp_128_sse_no_aesni,function,)
@@ -226,7 +232,12 @@ aes_keyexp_128_sse_no_aesni:
         movdqa	[EXP_DEC_KEYS + 16*0], xmm1
 
 aes_keyexp_128_sse_no_aesni_return:
-	ret
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -314,7 +325,12 @@ aes_keyexp_128_avx512:
         vmovdqa	[EXP_DEC_KEYS + 16*0], xmm1
 
 aes_keyexp_128_avx_return:
-	ret
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_avx_asm
+%endif
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

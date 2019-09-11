@@ -28,6 +28,7 @@
 %include "include/os.asm"
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
+%include "include/clear_regs.asm"
 
 %ifdef LINUX
 %define KEY		rdi
@@ -191,6 +192,11 @@ aes_keyexp_192_sse:
 	key_dec_192_sse 10
 	key_dec_192_sse 11
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
+
 %ifndef LINUX
 	movdqa	xmm6, [rsp + 0*16]
 	movdqa	xmm7, [rsp + 1*16]
@@ -276,6 +282,11 @@ aes_keyexp_192_sse_no_aesni:
 	key_dec_192_sse_no_aesni 9
 	key_dec_192_sse_no_aesni 10
 	key_dec_192_sse_no_aesni 11
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
 
 %ifndef LINUX
 	movdqa	xmm6, [rsp + 0*16]
@@ -367,6 +378,11 @@ aes_keyexp_192_avx512:
 	key_dec_192_avx 10
 	key_dec_192_avx 11
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_avx_asm
+%endif
+
 %ifndef LINUX
 	vmovdqa	xmm6, [rsp + 0*16]
 	vmovdqa	xmm7, [rsp + 1*16]
@@ -443,6 +459,11 @@ aes_keyexp_192_enc_sse:
         aeskeygenassist xmm2, xmm4, 0x80     ; Generate round key 12
         key_expansion_1_192_sse 192
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
+
 %ifndef LINUX
 	movdqa	xmm6, [rsp + 0*16]
 	movdqa	xmm7, [rsp + 1*16]
@@ -507,6 +528,11 @@ aes_keyexp_192_enc_sse_no_aesni:
 
         EMULATE_AESKEYGENASSIST xmm2, xmm4, 0x80     ; Generate round key 12
         key_expansion_1_192_sse 192
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_sse_asm
+%endif
 
 %ifndef LINUX
 	movdqa	xmm6, [rsp + 0*16]
@@ -576,6 +602,11 @@ aes_keyexp_192_enc_avx512:
 
         vaeskeygenassist xmm2, xmm4, 0x80   ; Generate round key 12
         key_expansion_1_192_avx 192
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_xmms_avx_asm
+%endif
 
 %ifndef LINUX
 	vmovdqa	xmm6, [rsp + 0*16]
