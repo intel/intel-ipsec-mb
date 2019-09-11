@@ -1020,11 +1020,11 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 break;
 #ifndef NO_GCM
         case GCM:
-                if (job->src == NULL) {
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->dst == NULL) {
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1348,14 +1348,15 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 break;
 #ifndef NO_GCM
         case AES_GMAC:
-                if (job->src == NULL) {
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
-                }
-                if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
+                }
+                if ((job->u.GCM.aad_len_in_bytes > 0) &&
+                    (job->u.GCM.aad == NULL)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
                 }
                 if (job->cipher_mode != GCM) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);

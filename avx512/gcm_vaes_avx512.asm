@@ -113,6 +113,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
+%include "include/clear_regs.asm"
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_vaes_avx512.asm"
 %include "include/memcpy.asm"
@@ -2541,7 +2542,12 @@ default rel
 ;;; Restore register content for the caller
 %macro FUNC_RESTORE 0
 
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_zmms_asm
+%else
         vzeroupper
+%endif
 
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm15, [rsp + STACK_XMM_OFFSET + 9*16]
@@ -3858,6 +3864,13 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
+;; Parameter is passed through register
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_precomp
+%endif
+
         FUNC_SAVE
 
         vpxor   xmm6, xmm6
@@ -3884,6 +3897,8 @@ FN_NAME(precomp,_):
         PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
         FUNC_RESTORE
+exit_precomp:
+
         ret
 
 
@@ -3898,8 +3913,35 @@ FN_NAME(precomp,_):
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
         FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_init
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_init
+
+        ;; Check IV != NULL
+        cmp     arg3, 0
+        jz      exit_init
+
+        ;; Check if aad_len == 0
+        cmp     arg5, 0
+        jz      skip_aad_check_init
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg4, 0
+        jz      exit_init
+
+skip_aad_check_init:
+%endif
         GCM_INIT arg1, arg2, arg3, arg4, arg5, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10
+
+exit_init:
+
         FUNC_RESTORE
         ret
 
@@ -3915,7 +3957,33 @@ FN_NAME(init,_):
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
         FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_update_enc
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_update_enc
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_update_enc
+
+        ;; Check out != NULL (plaintext_len != 0)
+        cmp     arg3, 0
+        jz      exit_update_enc
+
+        ;; Check in != NULL (plaintext_len != 0)
+        cmp     arg4, 0
+        jz      exit_update_enc
+
+skip_in_out_check_update_enc:
+%endif
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC, multi_call
+
+exit_update_enc:
         FUNC_RESTORE
         ret
 
@@ -3931,7 +3999,34 @@ FN_NAME(enc,_update_):
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
         FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_update_dec
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_update_dec
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_update_dec
+
+        ;; Check out != NULL (plaintext_len != 0)
+        cmp     arg3, 0
+        jz      exit_update_dec
+
+        ;; Check in != NULL (plaintext_len != 0)
+        cmp     arg4, 0
+        jz      exit_update_dec
+
+skip_in_out_check_update_dec:
+%endif
+
         GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC, multi_call
+
+exit_update_dec:
         FUNC_RESTORE
         ret
 
@@ -3945,9 +4040,35 @@ FN_NAME(dec,_update_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
+
+;; All parameters are passed through registers
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_enc_fin
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_enc_fin
+
+        ;; Check auth_tag != NULL
+        cmp     arg3, 0
+        jz      exit_enc_fin
+
+        ;; Check auth_tag_len == 0 or > 16
+        cmp     arg4, 0
+        jz      exit_enc_fin
+
+        cmp     arg4, 16
+        ja      exit_enc_fin
+%endif
+
         FUNC_SAVE
         GCM_COMPLETE    arg1, arg2, arg3, arg4, ENC, multi_call
+
         FUNC_RESTORE
+
+exit_enc_fin:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3960,9 +4081,35 @@ FN_NAME(enc,_finalize_):
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
+
+;; All parameters are passed through registers
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_dec_fin
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_dec_fin
+
+        ;; Check auth_tag != NULL
+        cmp     arg3, 0
+        jz      exit_dec_fin
+
+        ;; Check auth_tag_len == 0 or > 16
+        cmp     arg4, 0
+        jz      exit_dec_fin
+
+        cmp     arg4, 16
+        ja      exit_dec_fin
+%endif
+
         FUNC_SAVE
         GCM_COMPLETE    arg1, arg2, arg3, arg4, DEC, multi_call
+
         FUNC_RESTORE
+
+exit_dec_fin:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3982,10 +4129,60 @@ MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
 
         FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_enc
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_enc
+
+        ;; Check IV != NULL
+        cmp     arg6, 0
+        jz      exit_enc
+
+        ;; Check auth_tag != NULL
+        cmp     arg9, 0
+        jz      exit_enc
+
+        ;; Check auth_tag_len == 0 or > 16
+        cmp     arg10, 0
+        jz      exit_enc
+
+        cmp     arg10, 16
+        ja      exit_enc
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_enc
+
+        ;; Check out != NULL (plaintext_len != 0)
+        cmp     arg3, 0
+        jz      exit_enc
+
+        ;; Check in != NULL (plaintext_len != 0)
+        cmp     arg4, 0
+        jz      exit_enc
+
+skip_in_out_check_enc:
+        ;; Check if aad_len == 0
+        cmp     arg8, 0
+        jz      skip_aad_check_enc
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg7, 0
+        jz      exit_enc
+
+skip_aad_check_enc:
+%endif
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
         GCM_COMPLETE arg1, arg2, arg9, arg10, ENC, single_call
+
+exit_enc:
         FUNC_RESTORE
         ret
 
@@ -4006,10 +4203,60 @@ MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
 
         FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_dec
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_dec
+
+        ;; Check IV != NULL
+        cmp     arg6, 0
+        jz      exit_dec
+
+        ;; Check auth_tag != NULL
+        cmp     arg9, 0
+        jz      exit_dec
+
+        ;; Check auth_tag_len == 0 or > 16
+        cmp     arg10, 0
+        jz      exit_dec
+
+        cmp     arg10, 16
+        ja      exit_dec
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_dec
+
+        ;; Check out != NULL (plaintext_len != 0)
+        cmp     arg3, 0
+        jz      exit_dec
+
+        ;; Check in != NULL (plaintext_len != 0)
+        cmp     arg4, 0
+        jz      exit_dec
+
+skip_in_out_check_dec:
+        ;; Check if aad_len == 0
+        cmp     arg8, 0
+        jz      skip_aad_check_dec
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg7, 0
+        jz      exit_dec
+
+skip_aad_check_dec:
+%endif
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
         GCM_COMPLETE arg1, arg2, arg9, arg10, DEC, single_call
+
+exit_dec:
         FUNC_RESTORE
         ret
 
