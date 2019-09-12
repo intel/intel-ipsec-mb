@@ -520,6 +520,9 @@ section .text
                 vpxor           %%XCRC_IN_OUT, %%XCRC_IN_OUT, %%CTR1
 
                 CRC_CLMUL       %%XCRC_IN_OUT, %%XCRC_MUL, %%T2
+                vpxor           %%XCRC_IN_OUT, %%XCRC_IN_OUT, %%CTR2
+
+                CRC_CLMUL       %%XCRC_IN_OUT, %%XCRC_MUL, %%T2
 %endif                        ; DECRYPT
 %else ;; CIPH = NO_CTR
                 ;; CRC calculation for NO CIPHER option (blocks 1 & 2)
