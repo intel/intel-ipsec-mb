@@ -33,6 +33,7 @@
 #include "intel-ipsec-mb.h"
 #include "des.h"
 #include "des_utils.h"
+#include "include/clear_regs_mem.h"
 
 __forceinline
 void permute_operation(uint32_t *pa, uint32_t *pb,
@@ -474,8 +475,11 @@ des_enc_cbc_basic(const void *input, void *output, const int size,
         for (n = 0; n < nblocks; n++)
                 out[n] = iv = enc_dec_1(in[n] ^ iv, ks, 1 /* encrypt */);
 
+
+#ifdef SAFE_DATA
         /* *ivec = iv; */
-        iv = 0;
+        clear_var(&iv, sizeof(iv));
+#endif
 }
 
 IMB_DLL_LOCAL
@@ -507,8 +511,10 @@ des_dec_cbc_basic(const void *input, void *output, const int size,
                 iv = in_block;
         }
 
+#ifdef SAFE_DATA
         /* *ivec = iv; */
-        iv = 0;
+        clear_var(&iv, sizeof(iv));
+#endif
 }
 
 IMB_DLL_LOCAL
@@ -546,8 +552,10 @@ des3_enc_cbc_basic(const void *input, void *output, const int size,
                 out[n] = iv = t;
         }
 
+#ifdef SAFE_DATA
         /* *ivec = iv; */
-        iv = 0;
+        clear_var(&iv, sizeof(iv));
+#endif
 }
 
 IMB_DLL_LOCAL
@@ -577,12 +585,10 @@ des3_dec_cbc_basic(const void *input, void *output, const int size,
         IMB_ASSERT(ivec != NULL);
 
         for (n = 0; n < nblocks; n++) {
-                uint64_t t, next_iv;
+                uint64_t t;
+                const uint64_t next_iv = in[n];
 
-                next_iv = in[n];
-                t = in[n];
-
-                t = enc_dec_1(t, ks3, 0 /* decrypt */);
+                t = enc_dec_1(next_iv, ks3, 0 /* decrypt */);
                 t = enc_dec_1(t, ks2, 1 /* encrypt */);
                 t = enc_dec_1(t, ks1, 0 /* decrypt */);
                 out[n] = t ^ iv;
@@ -590,8 +596,10 @@ des3_dec_cbc_basic(const void *input, void *output, const int size,
                 iv = next_iv;
         }
 
+#ifdef SAFE_DATA
         /* *ivec = iv; */
-        iv = 0;
+        clear_var(&iv, sizeof(iv));
+#endif
 }
 
 __forceinline
@@ -638,6 +646,10 @@ cfb_one_basic(const void *input, void *output, const int size,
 
                 *out4 = *in4 ^ ((uint32_t) t);
         }
+
+#ifdef SAFE_DATA
+        clear_var(&t, sizeof(t));
+#endif
 }
 
 IMB_DLL_LOCAL
@@ -674,8 +686,10 @@ docsis_des_enc_basic(const void *input, void *output, const int size,
                         cfb_one_basic(input, output, partial, ks, ivec);
         }
 
+#ifdef SAFE_DATA
         /* *ivec = iv; */
-        iv = 0;
+        clear_var(&iv, sizeof(iv));
+#endif
 }
 
 IMB_DLL_LOCAL
@@ -720,6 +734,8 @@ docsis_des_dec_basic(const void *input, void *output, const int size,
                 iv = in_block;
         }
 
+#ifdef SAFE_DATA
         /* *ivec = iv; */
-        iv = 0;
+        clear_var(&iv, sizeof(iv));
+#endif
 }
