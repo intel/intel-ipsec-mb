@@ -51,13 +51,13 @@ static const uint8_t IV1_PON[] = {
 static const uint8_t IN1_PON[] = {
         0x00, 0x20, 0x27, 0x11, 0x00, 0x00, 0x21, 0x23, /* XGEM header */
         0x01, 0x02, 0x03, 0x04,                         /* Ethernet frame */
-        0x05, 0x06, 0x01, 0x01                          /* Initial CRC value */
+        0xcd, 0xfb, 0x3c, 0xb6                          /* CRC value */
 };
 
 static const uint8_t OUT1_PON[] = {
         0x00, 0x20, 0x27, 0x11, 0x00, 0x00, 0x21, 0x23, /* XGEM header */
         0xC7, 0x62, 0x82, 0xCA,                         /* Ethernet frame */
-        0x3E, 0x92, 0xC8, 0x5A                          /* Final CRC value */
+        0x3E, 0x92, 0xC8, 0x5A                          /* CRC value */
 };
 #define BIPOUT1_PON  0xA24CD0F9
 #define OFFSET1_PON  8
@@ -70,7 +70,7 @@ static const uint8_t IN2_PON[] = {
         0x00, 0x40, 0x27, 0x11, 0x00, 0x00, 0x29, 0x3C, /* XGEM header */
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x01, 0x01, /* Ethernet frame */
         0x01, 0x01, 0x01, 0x01,
-        0x81, 0x00, 0x00, 0x01                          /* CRC value */
+        0x00, 0x14, 0xa9, 0x04                          /* CRC value */
 };
 
 static const uint8_t OUT2_PON[] = {
@@ -99,7 +99,7 @@ static const uint8_t IN3_PON[] = {
         0x16, 0x2E, 0x12, 0x34, 0x56, 0x78, 0x12, 0x34,
         0x56, 0x90, 0x50, 0x10, 0x20, 0x00, 0xA6, 0x33,
         0x00, 0x00, 0x30, 0x31,
-        0x32, 0x33, 0x34, 0x35                          /* CRC value */
+        0x53, 0xc1, 0xe6, 0x0c                          /* CRC value */
 };
 
 static const uint8_t OUT3_PON[] = {
@@ -133,7 +133,7 @@ static const uint8_t IN4_PON[] = {
         0x16, 0x2E, 0x12, 0x34, 0x56, 0x78, 0x12, 0x34,
         0x56, 0x90, 0x50, 0x10, 0x20, 0x00, 0xA6, 0x33,
         0x00, 0x00, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35,
-        0x61, 0x62, 0x63, 0x64                          /* CRC value */
+        0x49, 0x0d, 0x52, 0xab                          /* CRC value */
 };
 
 static const uint8_t OUT4_PON[] = {
@@ -159,13 +159,13 @@ static const uint8_t OUT4_PON[] = {
 static const uint8_t IN5_PON[] = {
         0x00, 0x20, 0x27, 0x11, 0x00, 0x00, 0x21, 0x23, /* XGEM header */
         0x01, 0x02, 0x03, 0x04,                         /* Ethernet frame */
-        0x05, 0x06, 0x01, 0x01                          /* Initial CRC value */
+        0xCD, 0xFB, 0x3C, 0xB6                          /* CRC value */
 };
 
 static const uint8_t OUT5_PON[] = {
         0x00, 0x20, 0x27, 0x11, 0x00, 0x00, 0x21, 0x23, /* XGEM header */
         0x01, 0x02, 0x03, 0x04,                         /* Ethernet frame */
-        0xCD, 0xFB, 0x3C, 0xB6                          /* Final CRC value */
+        0xCD, 0xFB, 0x3C, 0xB6                          /* CRC value */
 };
 #define BIPOUT5_PON  0x8039D9CC
 #define OFFSET5_PON  8
@@ -176,7 +176,7 @@ static const uint8_t IN6_PON[] = {
         0x00, 0x40, 0x27, 0x11, 0x00, 0x00, 0x29, 0x3C, /* XGEM header */
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x01, 0x01, /* Ethernet frame */
         0x01, 0x01, 0x01, 0x01,
-        0x81, 0x00, 0x00, 0x01                          /* CRC value */
+        0x00, 0x14, 0xa9, 0x04                          /* CRC value */
 };
 
 static const uint8_t OUT6_PON[] = {
@@ -201,7 +201,7 @@ static const uint8_t IN7_PON[] = {
         0x16, 0x2e, 0x12, 0x34, 0x56, 0x78, 0x12, 0x34,
         0x56, 0x90, 0x50, 0x10, 0x20, 0x00, 0xa6, 0x33,
         0x00, 0x00, 0x30, 0x31,
-        0x32, 0x33, 0x34, 0x35                          /* CRC value */
+        0x53, 0xC1, 0xE6, 0x0C                          /* CRC value */
 };
 
 static const uint8_t OUT7_PON[] = {
@@ -231,7 +231,7 @@ static const uint8_t IN8_PON[] = {
         0x16, 0x2E, 0x12, 0x34, 0x56, 0x78, 0x12, 0x34,
         0x56, 0x90, 0x50, 0x10, 0x20, 0x00, 0xA6, 0x33,
         0x00, 0x00, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35,
-        0x61, 0x62, 0x63, 0x64                          /* CRC value */
+        0x49, 0x0D, 0x52, 0xAB                          /* CRC value */
 };
 
 static const uint8_t OUT8_PON[] = {
@@ -434,9 +434,7 @@ test_pon(struct MB_MGR *mb_mgr,
         int ret = -1;
         uint64_t tag_output = 0;
         uint32_t bip_output = 0;
-#ifdef DEBUG
         uint32_t crc_output = 0;
-#endif
 
         if (target == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
@@ -447,11 +445,27 @@ test_pon(struct MB_MGR *mb_mgr,
         memset(padding, -1, sizeof(padding));
 
         if (dir == ENCRYPT) {
+                const uint16_t pli = ((((uint16_t) in_text[0]) << 8) |
+                                      ((uint16_t) in_text[1])) >> 2;
+
                 memcpy(target + sizeof(padding), in_text, len_to_bip);
+
                 /* Corrupt HEC on encrypt direction
                  * This is to make sure HEC gets updated by the library
                  */
                 target[sizeof(padding) + 7] ^= 0xff;
+
+                /* Corrupt Ethernet FCS/CRC on encrypt direction
+                 * This is to make sure CRC gets updated by the library
+                 */
+                if (pli > 4) {
+                        uint8_t *p_crc = &target[sizeof(padding) + 8 + pli - 4];
+
+                        p_crc[0] ^= 0xff;
+                        p_crc[1] ^= 0xff;
+                        p_crc[2] ^= 0xff;
+                        p_crc[3] ^= 0xff;
+                }
         } else {
                 memcpy(target + sizeof(padding), out_text, len_to_bip);
         }
@@ -502,9 +516,9 @@ test_pon(struct MB_MGR *mb_mgr,
         }
 
         bip_output = (uint32_t) tag_output;
-#ifdef DEBUG
         crc_output = (uint32_t) (tag_output >> 32);
 
+#ifdef DEBUG
         printf("CRC received 0x%08x\n", crc_output);
         printf("BIP received 0x%08x\n", bip_output);
 #endif
@@ -512,6 +526,26 @@ test_pon(struct MB_MGR *mb_mgr,
 #ifdef DEBUG
         int is_error = 0;
 #endif
+
+        if (dir == DECRYPT) {
+                const uint16_t pli = ((((uint16_t) in_text[0]) << 8) |
+                                      ((uint16_t) in_text[1])) >> 2;
+
+                if (pli > 4) {
+                        const uint32_t crc_in_msg =
+                                *((const uint32_t *)&in_text[8 + pli - 4]);
+                        if (crc_in_msg != crc_output) {
+                                printf("CRC mismatch on decrypt! "
+                                       "expected 0x%08x, received 0x%08x\n",
+                                       crc_in_msg, crc_output);
+#ifdef DEBUG
+                                is_error = 1;
+#else
+                                goto end;
+#endif
+                        }
+                }
+        }
 
         if (bip_output != bip_out) {
                 printf("BIP mismatch! expected 0x%08x, received 0x%08x\n",
