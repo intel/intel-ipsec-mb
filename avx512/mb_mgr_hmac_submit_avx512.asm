@@ -350,7 +350,7 @@ end_loop:
         mov	[p + 2*SHA1_DIGEST_WORD_SIZE], DWORD(tmp3)
 
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
-        je      return
+        je      clear_ret
 
         ;; copy remaining 8 bytes to return 20 byte digest
         mov	DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE]
@@ -359,6 +359,29 @@ end_loop:
         bswap	DWORD(tmp2)
         mov	[p + 3*SHA1_DIGEST_WORD_SIZE], DWORD(tmp)
         mov	[p + 4*SHA1_DIGEST_WORD_SIZE], DWORD(tmp2)
+
+clear_ret:
+
+%ifdef SAFE_DATA
+        ;; Clear digest (20B), outer_block (20B) and extra_block (64B) of returned job
+        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE], 0
+        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE], 0
+        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 2*SHA1_DIGEST_ROW_SIZE], 0
+        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 3*SHA1_DIGEST_ROW_SIZE], 0
+        mov     dword [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 4*SHA1_DIGEST_ROW_SIZE], 0
+
+        vpxorq  zmm0, zmm0
+        imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata + lane_data]
+
+        ;; Clear first 64 bytes of extra_block
+        vmovdqu64 [lane_data + _extra_block], zmm0
+
+        ;; Clear first 20 bytes of outer_block
+        vmovdqu64 [lane_data + _outer_block], xmm0
+        mov     dword [lane_data + _outer_block + 16], 0
+%endif
+
 return:
         DBGPRINTL "---------- exit sha1 submit -----------"
         mov	rbp, [rsp + _gpr_save + 8*0]

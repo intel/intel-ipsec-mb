@@ -320,7 +320,7 @@ end_loop:
         mov	[p + 2*SHA1_DIGEST_WORD_SIZE], DWORD(tmp3)
 
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
-        je      return
+        je      clear_ret
 
         ;; copy remaining 8 bytes to return 20 byte digest
         mov	DWORD(tmp),  [state + _args_digest + idx*4 + 3*SHA1_DIGEST_WORD_SIZE]
@@ -329,6 +329,30 @@ end_loop:
         bswap	DWORD(tmp2)
         mov	[p + 3*4], DWORD(tmp)
         mov	[p + 4*4], DWORD(tmp2)
+
+clear_ret:
+
+%ifdef SAFE_DATA
+        pxor    xmm0, xmm0
+        ;; Clear digest (20B), outer_block (20B) and extra_block (64B)
+        ;; idx = 0 or 5 (depending on lane)
+        movdqu  [state + _args_digest + idx*4], xmm0
+        mov     dword [state + _args_digest + idx*4 + 16], 0
+
+        shr     idx, 2 ;; idx == 5 ? 1 : 0
+        imul    lane_data, idx, _HMAC_SHA1_LANE_DATA_size
+        lea     lane_data, [state + _ldata + lane_data]
+        ;; Clear first 64 bytes of extra_block
+%assign offset 0
+%rep 4
+        movdqa  [lane_data + _extra_block + offset], xmm0
+%assign offset (offset + 16)
+%endrep
+
+        ;; Clear 20 bytes of outer_block
+        movdqa  [lane_data + _outer_block], xmm0
+        mov     dword [lane_data + _outer_block + 16], 0
+%endif
 
 return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
