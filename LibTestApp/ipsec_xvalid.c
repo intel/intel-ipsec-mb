@@ -1087,6 +1087,21 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         byte_hexdump("Decrypted msg", src_dst_buf, buf_size);
                         goto exit;
                 }
+
+                if (params->hash_alg == PON_CRC_BIP && params->buf_size > 4) {
+                        const uint64_t plen = params->buf_size - 4;
+
+                        if (memcmp(src_dst_buf + 8 + plen,
+                                   out_digest + 4, 4) != 0) {
+                                fprintf(stderr, "\nDecrypted CRC and calculated"
+                                        " CRC don't match\n");
+                                byte_hexdump("Decrypted CRC",
+                                             src_dst_buf + 8 + plen, 4);
+                                byte_hexdump("Calculated CRC",
+                                             out_digest + 4, 4);
+                                goto exit;
+                        }
+                }
         }
 
         ret = 0;
@@ -1267,7 +1282,9 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         free_mb_mgr(dec_mgr);
 }
 
-/* Prepares data structure for test variants storage, sets test configuration */
+/* Prepares data structure for test variants storage,
+ * sets test configuration
+ */
 static void
 run_tests(void)
 {
@@ -1311,9 +1328,12 @@ static void usage(void)
                 "where args are zero or more\n"
                 "-h: print this message\n"
                 "-v: verbose, prints extra information\n"
-                "--enc-arch: encrypting with architecture (AESNI_EMU/SSE/AVX/AVX2/AVX512)\n"
-                "--dec-arch: decrypting with architecture (AESNI_EMU/SSE/AVX/AVX2/AVX512)\n"
-                "--cipher-algo: Select cipher algorithm to run on the custom test\n"
+                "--enc-arch: encrypting with architecture "
+                "(AESNI_EMU/SSE/AVX/AVX2/AVX512)\n"
+                "--dec-arch: decrypting with architecture "
+                "(AESNI_EMU/SSE/AVX/AVX2/AVX512)\n"
+                "--cipher-algo: Select cipher algorithm to run on the custom "
+                "test\n"
                 "--hash-algo: Select hash algorithm to run on the custom test\n"
                 "--aead-algo: Select AEAD algorithm to run on the custom test\n"
                 "--no-avx512: Don't do AVX512\n"
@@ -1323,7 +1343,8 @@ static void usage(void)
                 "--aesni-emu: Do AESNI_EMU (disabled by default)\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
-                "--job-size: size of the cipher & MAC job in bytes. It can be:\n"
+                "--job-size: size of the cipher & MAC job in bytes. "
+                "It can be:\n"
                 "            - single value: test single size\n"
                 "            - range: test multiple sizes with following format"
                 " min:step:max (e.g. 16:16:256)\n"
