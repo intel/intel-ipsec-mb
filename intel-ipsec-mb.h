@@ -564,29 +564,6 @@ struct gcm_context_data {
         uint64_t partial_block_length;
 };
 
-/**
- * @brief GCM argument data per lane
- */
-struct GCM_ARGS {
-        struct gcm_context_data *ctx[4];
-        const void *keys[4];
-        uint8_t *out[4];
-        const uint8_t *in[4];
-        void *tag[4];
-        uint64_t tag_len[4];
-};
-
-/**
- * @brief GCM multi-buffer manager structure
- */
-typedef struct {
-        struct GCM_ARGS args;
-        struct gcm_context_data ctxs[4];
-        uint64_t lens[4];
-        JOB_AES_HMAC *job_in_lane[4];
-        uint64_t unused_lanes;
-} MB_MGR_GCM_OOO;
-
 /* Authenticated Tag Length in bytes.
  * Valid values are 16 (most likely), 12 or 8. */
 #define MAX_TAG_LEN (16)
@@ -998,13 +975,6 @@ typedef struct MB_MGR {
         DECLARE_ALIGNED(MB_MGR_AES_XCBC_OOO aes_xcbc_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_CCM_OOO aes_ccm_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_CMAC_OOO aes_cmac_ooo, 64);
-
-        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm128_enc_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm192_enc_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm256_enc_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm128_dec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm192_dec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_GCM_OOO gcm256_dec_ooo, 64);
 } MB_MGR;
 
 /* ========================================================================== */

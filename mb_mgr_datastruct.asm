@@ -188,55 +188,6 @@ _des_args_LIn	equ	_des_args + _desarg_lin
 _des_args_LOut	equ	_des_args + _desarg_lout
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Define AES-GCM Out of Order Data Structures
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-START_FIELDS	; GCM_ARGS_X4
-;;	name		size	align
-FIELD	_gcmarg_ctx,    4*8,	8	; array of 4 pointers to context structures
-FIELD	_gcmarg_keys,	4*8,	8	; array of 4 pointers to keys
-FIELD	_gcmarg_out,	4*8,	8	; array of 4 pointers to out text
-FIELD	_gcmarg_in,	4*8,	8	; array of 4 pointers to in text
-FIELD	_gcmarg_tag,	4*8,	8	; array of 4 pointers to tags
-FIELD	_gcmarg_taglen,	4*8,	8	; array of 4 tag lenghts
-END_FIELDS
-%assign _GCM_ARGS_X4_size	_FIELD_OFFSET
-%assign _GCM_ARGS_X4_align	_STRUCT_ALIGN
-
-START_FIELDS	; GCM_CTX
-;;	name		        size	align
-FIELD	_gcmctx_aad_hash,	16*1,	1	; current hash input
-FIELD	_gcmctx_aad_len,	1*8,	8	; size of aad
-FIELD	_gcmctx_in_len,	        1*8,	8	; length of enc/dec data
-FIELD	_gcmctx_pblock_enckey,	16*1,	1	; enc key for partial block
-FIELD	_gcmctx_orig_iv,	16*1,	1	; input IV
-FIELD	_gcmctx_cur_count,	16*1,	1	; current counter block
-FIELD	_gcmctx_pblock_len,	1*8,	8	; length of partial block
-END_FIELDS
-%assign _GCM_CTX_size	_FIELD_OFFSET
-%assign _GCM_CTX_align	_STRUCT_ALIGN
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-START_FIELDS	; MB_MGR_GCM_OOO
-;;	name		        size	align
-FIELD	_gcm_args,	        _GCM_ARGS_X4_size, _GCM_ARGS_X4_align
-FIELD	_gcm_ctxs,	        4 * _GCM_CTX_size, _GCM_CTX_align
-FIELD	_gcm_lens,	        4*8,	8
-FIELD	_gcm_job_in_lane,       4*8,	8
-FIELD	_gcm_unused_lanes,      8,	8
-END_FIELDS
-%assign _MB_MGR_GCM_OOO_size	_FIELD_OFFSET
-%assign _MB_MGR_GCM_OOO_align	_STRUCT_ALIGN
-
-_gcm_args_in            equ	_gcm_args + _gcmarg_in
-_gcm_args_out           equ	_gcm_args + _gcmarg_out
-_gcm_args_keys          equ	_gcm_args + _gcmarg_keys
-_gcm_args_ctx           equ	_gcm_args + _gcmarg_ctx
-_gcm_args_tag           equ	_gcm_args + _gcmarg_tag
-_gcm_args_taglen        equ	_gcm_args + _gcmarg_taglen
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define HMAC Out Of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
