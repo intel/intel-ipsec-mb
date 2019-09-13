@@ -87,7 +87,7 @@
 section .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void aes_cfb_128_one(void *out, void *in, void *iv, void *keys)
+;; void aes_cfb_128_one(void *out, void *in, void *iv, void *keys, uint64_t len)
 ;; arg 1: OUT : addr to put clear/cipher text out
 ;; arg 2: IN  : addr to take cipher/clear text from
 ;; arg 3: IV  : initialization vector
@@ -111,6 +111,25 @@ AES_CFB_128_ONE:
 %ifndef LINUX
 	mov		LEN, LEN2
 %endif
+%ifdef SAFE_PARAM
+        cmp             IV, 0
+        jz              exit_cfb
+
+        cmp             KEYS, 0
+        jz              exit_cfb
+
+        cmp             LEN, 0
+        jz              skip_in_out_check
+
+        cmp             OUT, 0
+        jz              exit_cfb
+
+        cmp             IN, 0
+        jz              exit_cfb
+
+skip_in_out_check:
+%endif
+
 	simd_load_sse_16 XIN, IN, LEN
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -134,6 +153,7 @@ AES_CFB_128_ONE:
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+exit_cfb:
 	ret
 
 %ifdef LINUX
