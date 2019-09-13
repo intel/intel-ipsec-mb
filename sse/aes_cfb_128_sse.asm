@@ -157,7 +157,7 @@ skip_in_out_check:
 %ifdef SAFE_DATA
         ;; XDATA and XIN are the only scratch SIMD registers used
         clear_xmms_sse  XDATA, XIN
-        clear_scratch_gps
+        clear_scratch_gps_asm
 %endif
 exit_cfb:
 	ret
