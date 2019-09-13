@@ -454,6 +454,11 @@ void
 des_enc_cbc_basic(const void *input, void *output, const int size,
                   const uint64_t *ks, const uint64_t *ivec)
 {
+#ifdef SAFE_PARAM
+        if ((input == NULL) || (output == NULL) ||
+            (ks == NULL) || (ivec == NULL) || (size < 0))
+                return;
+#endif
         const uint64_t *in = input;
         uint64_t *out = output;
         const int nblocks = size / 8;
@@ -478,6 +483,11 @@ void
 des_dec_cbc_basic(const void *input, void *output, const int size,
                   const uint64_t *ks, const uint64_t *ivec)
 {
+#ifdef SAFE_PARAM
+        if ((input == NULL) || (output == NULL) ||
+            (ks == NULL) || (ivec == NULL) || (size < 0))
+                return;
+#endif
         const uint64_t *in = input;
         uint64_t *out = output;
         const int nblocks = size / 8;
@@ -507,6 +517,12 @@ des3_enc_cbc_basic(const void *input, void *output, const int size,
                    const uint64_t *ks1, const uint64_t *ks2,
                    const uint64_t *ks3, const uint64_t *ivec)
 {
+#ifdef SAFE_PARAM
+        if ((input == NULL) || (output == NULL) ||
+            (ks1 == NULL) || (ks2 == NULL) || (ks3 == NULL) ||
+            (ivec == NULL) || (size < 0))
+                return;
+#endif
         const uint64_t *in = input;
         uint64_t *out = output;
         const int nblocks = size / 8;
@@ -540,6 +556,12 @@ des3_dec_cbc_basic(const void *input, void *output, const int size,
                    const uint64_t *ks1, const uint64_t *ks2,
                    const uint64_t *ks3, const uint64_t *ivec)
 {
+#ifdef SAFE_PARAM
+        if ((input == NULL) || (output == NULL) ||
+            (ks1 == NULL) || (ks2 == NULL) || (ks3 == NULL) ||
+            (ivec == NULL) || (size < 0))
+                return;
+#endif
         const uint64_t *in = input;
         uint64_t *out = output;
         const int nblocks = size / 8;
@@ -577,6 +599,11 @@ void
 cfb_one_basic(const void *input, void *output, const int size,
               const uint64_t *ks, const uint64_t *ivec)
 {
+#ifdef SAFE_PARAM
+        if ((input == NULL) || (output == NULL) ||
+            (ks == NULL) || (ivec == NULL) || (size < 0))
+                return;
+#endif
         uint8_t *out = (uint8_t *) output;
         const uint8_t *in = (const uint8_t *) input;
         uint64_t t;
@@ -618,6 +645,11 @@ void
 docsis_des_enc_basic(const void *input, void *output, const int size,
                      const uint64_t *ks, const uint64_t *ivec)
 {
+#ifdef SAFE_PARAM
+        if ((input == NULL) || (output == NULL) ||
+            (ks == NULL) || (ivec == NULL) || (size < 0))
+                return;
+#endif
         const uint64_t *in = input;
         uint64_t *out = output;
         const int nblocks = size / DES_BLOCK_SIZE;
@@ -651,6 +683,11 @@ void
 docsis_des_dec_basic(const void *input, void *output, const int size,
                      const uint64_t *ks, const uint64_t *ivec)
 {
+#ifdef SAFE_PARAM
+        if ((input == NULL) || (output == NULL) ||
+            (ks == NULL) || (ivec == NULL) || (size < 0))
+                return;
+#endif
         const uint64_t *in = input;
         uint64_t *out = output;
         const int nblocks = size / DES_BLOCK_SIZE;
