@@ -141,5 +141,10 @@ int des_key_schedule(uint64_t *ks, const void *key)
                 ks[n] = expand_8x6_to_8x8(t);
         }
 
+#ifdef SAFE_DATA
+        clear_var(&c, sizeof(c));
+        clear_var(&d, sizeof(d));
+        clear_var(&t, sizeof(t));
+#endif
         return 0;
 }
