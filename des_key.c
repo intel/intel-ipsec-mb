@@ -31,6 +31,7 @@
 #include "intel-ipsec-mb.h"
 #include "des.h"
 #include "des_utils.h"
+#include "include/clear_regs_mem.h"
 
 /**
  * @brief Rotates 28-bit word
