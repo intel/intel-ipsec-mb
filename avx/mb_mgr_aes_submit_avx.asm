@@ -155,17 +155,18 @@ SUBMIT_JOB_AES_ENC:
 len_is_0:
 	; process completed job "idx"
 	mov	job_rax, [state + _aes_job_in_lane + idx*8]
-; Don't write back IV
-;	mov	iv, [job_rax + _iv]
 	mov	unused_lanes, [state + _aes_unused_lanes]
 	mov	qword [state + _aes_job_in_lane + idx*8], 0
 	or	dword [job_rax + _status], STS_COMPLETED_AES
 	shl	unused_lanes, 4
 	or	unused_lanes, idx
-;	shl	idx, 4 ; multiply by 16
 	mov	[state + _aes_unused_lanes], unused_lanes
-;	vmovdqa	xmm0, [state + _aes_args_IV + idx]
-;	vmovdqu	[iv], xmm0
+%ifdef SAFE_DATA
+        ;; Clear IV
+        vpxor   xmm0, xmm0
+        shl	idx, 4 ; multiply by 16
+        vmovdqa [state + _aes_args_IV + idx], xmm0
+%endif
 
 return:
 

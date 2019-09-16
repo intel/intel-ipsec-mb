@@ -240,6 +240,21 @@ len_is_0:
         mov     [state + _aes_unused_lanes], unused_lanes
         sub     qword [state + _aes_lanes_in_use], 1
 
+%ifdef SAFE_DATA
+        ;; Clear IV
+        vpxorq  xmm0, xmm0
+        shl     idx, 4 ; multiply by 16
+        vmovdqa [state + _aes_args_IV + idx], xmm0
+
+        ;; Clear expanded keys
+%assign round 0
+%rep NUM_KEYS
+        vmovdqa [state + _aesarg_key_tab + round * (16*16) + idx], xmm0
+%assign round (round + 1)
+%endrep
+
+%endif
+
 return:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
