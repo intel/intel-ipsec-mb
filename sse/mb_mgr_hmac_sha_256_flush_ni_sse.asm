@@ -87,6 +87,8 @@ _gpr_save:	resq	4 ;rbx, rbp, rsi (win), rdi (win)
 _rsp_save:	resq	1
 endstruc
 
+%define APPEND(a,b) a %+ b
+
 section .data
 default rel
 
@@ -257,7 +259,7 @@ end_loop:
 %endif
 	DBGPRINTL	"auth_tag_output:"
         DBGPRINT_XMM	xmm0
-        jmp     return
+        jmp     clear_ret
 
 copy_full_digest:
 	movdqu	xmm0,  [state + _args_digest_sha256 + idx]
@@ -274,6 +276,45 @@ copy_full_digest:
 	movdqu	[p], xmm0
 	movdqu	[p + 16], xmm1
 %endif
+
+clear_ret:
+
+%ifdef SAFE_DATA
+        pxor    xmm0, xmm0
+
+        ;; Clear digest, outer_block (28B/32B) and extra_block (64B)
+        ;; of returned job and NULL jobs
+%assign I 0
+%rep 2
+	cmp	qword [state + _ldata_sha256 + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
+	jne	APPEND(skip_clear_,I)
+
+        ;; Clear digest
+        movdqa  [state + _args_digest_sha256 + I*32], xmm0
+        movdqa  [state + _args_digest_sha256 + I*32 + 16], xmm0
+
+        lea     lane_data, [state + _ldata_sha256 + (I*_HMAC_SHA1_LANE_DATA_size)]
+        ;; Clear first 64 bytes of extra_block
+%assign offset 0
+%rep 4
+        movdqa  [lane_data + _extra_block + offset], xmm0
+%assign offset (offset + 16)
+%endrep
+
+        ;; Clear first 28 bytes (SHA-224) or 32 bytes (SHA-256) of outer_block
+        movdqa  [lane_data + _outer_block], xmm0
+%ifdef SHA224
+        mov     qword [lane_data + _outer_block + 16], 0
+        mov     dword [lane_data + _outer_block + 24], 0
+%else
+        movdqa  [lane_data + _outer_block + 16], xmm0
+%endif
+
+APPEND(skip_clear_,I):
+%assign I (I+1)
+%endrep
+
+%endif ;; SAFE_DATA
 
 return:
         DBGPRINTL "exit sha256-ni-sse flush"
