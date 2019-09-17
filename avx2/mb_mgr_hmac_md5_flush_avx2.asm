@@ -300,11 +300,44 @@ end_loop:
         mov	[p + 2*4], DWORD(tmp5)
 
 	cmp	DWORD [job_rax + _auth_tag_output_len_in_bytes], 12
-	je 	return
+	je 	clear_ret
 
 	; copy 16 bytes
 	mov	DWORD(tmp5), [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*idx + 3*MD5_DIGEST_ROW_SIZE]
 	mov	[p + 3*4], DWORD(tmp5)
+
+clear_ret:
+
+%ifdef SAFE_DATA
+        vpxor   ymm0, ymm0
+
+        ;; Clear digest (16B), outer_block (16B) and extra_block (64B)
+        ;; of returned job and NULL jobs
+%assign I 0
+%rep 16
+	cmp	qword [state + _ldata_md5 + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
+	jne	APPEND(skip_clear_,I)
+
+        ;; Clear digest (16 bytes)
+%assign J 0
+%rep 4
+        mov     dword [state + _args_digest_md5 + MD5_DIGEST_WORD_SIZE*I + J*MD5_DIGEST_ROW_SIZE], 0
+%assign J (J+1)
+%endrep
+
+        lea     lane_data, [state + _ldata_md5 + (I*_HMAC_SHA1_LANE_DATA_size)]
+        ;; Clear first 64 bytes of extra_block
+        vmovdqa [lane_data + _extra_block], ymm0
+        vmovdqa [lane_data + _extra_block + 32], ymm0
+
+        ;; Clear first 16 bytes of outer_block
+        vmovdqa [lane_data + _outer_block], xmm0
+
+APPEND(skip_clear_,I):
+%assign I (I+1)
+%endrep
+
+%endif ;; SAFE_DATA
 
 return:
         DBGPRINTL "---------- exit md5 flush -----------"
