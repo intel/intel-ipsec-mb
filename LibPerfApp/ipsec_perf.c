@@ -1727,7 +1727,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         printf("CIPHER");
         for (col = 0; col < total_variants; col++) {
                 par = variant_list[col].params;
-                c_mode = par.cipher_mode - CBC;
+                c_mode = par.cipher_mode - TEST_CBC;
                 printf("\t%s", c_mode_names[c_mode]);
         }
         printf("\n");
@@ -1741,7 +1741,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         printf("HASH_ALG");
         for (col = 0; col < total_variants; col++) {
                 par = variant_list[col].params;
-                h_alg = par.hash_alg - SHA1;
+                h_alg = par.hash_alg - TEST_SHA1;
                 printf("\t%s", h_alg_names[h_alg]);
         }
         printf("\n");
