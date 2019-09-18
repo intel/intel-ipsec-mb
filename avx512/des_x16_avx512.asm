@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2017-2018, Intel Corporation
+;; Copyright (c) 2017-2019, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -136,6 +136,30 @@ endstruc
 ;;; MACROS
 ;;; ===========================================================================
 ;;; ===========================================================================
+
+;;; ===========================================================================
+;;; CLEAR TRANSPOSED KEY SCHEDULE (if SAFE_DATA is selected)
+;;; ===========================================================================
+%macro CLEAR_KEY_SCHEDULE 2
+%define %%ALG   %1      ; [in] DES or 3DES
+%define %%ZT    %2      ; [clobbered] temporary ZMM register
+
+%ifdef SAFE_DATA
+        vpxorq  %%ZT, %%ZT
+%assign rep_num (2048 / 64)
+%ifidn %%ALG, 3DES
+%assign rep_num (rep_num * 3)
+%endif
+
+%assign offset 0
+%rep rep_num
+        vmovdqa64       [rsp + _key_sched + offset], %%ZT
+%assign offset (offset + 64)
+%endrep
+
+%endif ; SAFE_DATA
+
+%endmacro
 
 ;;; ===========================================================================
 ;;; PERMUTE
@@ -1282,6 +1306,13 @@ endstruc
 %endif
 %endrep
 
+%ifdef SAFE_DATA
+        ;; Clear copied IV's
+        vpxorq          %%T5, %%T5
+        vmovdqu64       [%%T_IV + (0*64)], %%T5
+        vmovdqu64       [%%T_IV + (1*64)], %%T5
+%endif
+
 %%_des_cfb_one_end:
 
 %endmacro
@@ -1755,6 +1786,9 @@ endstruc
 %ifidn %%DES_DOCSIS, DOCSIS
         DES_CFB_ONE     ENC, rsp + _key_sched, ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, rsp + _tmp_in, rsp + _tmp_out, rsp + _tmp_iv, rsp + _tmp_mask
 %endif
+
+        CLEAR_KEY_SCHEDULE %%DES_DOCSIS, ZW0
+
         ;; restore stack pointer and registers
         mov             r12, [rsp + _gpr_save + 0*8]
         mov             r13, [rsp + _gpr_save + 1*8]
@@ -2056,6 +2090,8 @@ endstruc
 
         ;; store IV and update pointers
         DES_FINISH      ZIV0, ZIV1, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4
+
+        CLEAR_KEY_SCHEDULE %%DES_DOCSIS, ZW0
 
         ;; restore stack pointer and registers
         mov             r12, [rsp + _gpr_save + 0*8]
