@@ -88,8 +88,27 @@ section .text
 %rep 16
         bt              %%NULL_MASK, i
         jnc             %%_skip_copy %+ i
-        vmovdqu64       [state + _aes_args_IV + (i*16)], %%XTMP
+        vmovdqa64       [state + _aes_args_IV + (i*16)], %%XTMP
 %%_skip_copy %+ i:
+%assign i (i + 1)
+%endrep
+
+%endmacro
+
+; clear IV into NULL lanes
+%macro CLEAR_IV_IN_NULL_LANES 3
+%define %%NULL_MASK     %1 ; [clobbered] GP to store NULL lane mask
+%define %%XTMP          %2 ; [clobbered] temp XMM reg
+%define %%MASK_REG      %3 ; [in] mask register
+
+        vpxorq          %%XTMP, %%XTMP
+        kmovw           DWORD(%%NULL_MASK), %%MASK_REG
+%assign i 0
+%rep 16
+        bt              %%NULL_MASK, i
+        jnc             %%_skip_clear %+ i
+        vmovdqa64       [state + _aes_args_IV + (i*16)], %%XTMP
+%%_skip_clear %+ i:
 %assign i (i + 1)
 %endrep
 
@@ -112,12 +131,35 @@ section .text
 %rep 16
         bt              %%NULL_MASK, k
         jnc             %%_skip_copy %+ j %+ _ %+ k
-        vmovdqu64       [%%KEY_TAB + j + (k*16)], %%XTMP
+        vmovdqa64       [%%KEY_TAB + j + (k*16)], %%XTMP
 %%_skip_copy %+ j %+ _ %+ k:
 %assign k (k + 1)
 %endrep
 
 %assign j (j + 256)
+%endrep
+
+%endmacro
+
+; clear round key's in NULL lanes
+%macro CLEAR_KEYS_IN_NULL_LANES 3
+%define %%NULL_MASK     %1 ; [clobbered] GP to store NULL lane mask
+%define %%XTMP          %2 ; [clobbered] temp XMM reg
+%define %%MASK_REG      %3 ; [in] mask register
+
+        vpxorq          %%XTMP, %%XTMP
+        kmovw           DWORD(%%NULL_MASK), %%MASK_REG
+%assign k 0 ; outer loop to iterate through lanes
+%rep 16
+        bt              %%NULL_MASK, k
+        jnc             %%_skip_clear %+ k
+%assign j 0 ; inner loop to iterate through round keys
+%rep NUM_KEYS
+        vmovdqa64       [state + _aesarg_key_tab + j + (k*16)], %%XTMP
+%assign j (j + 256)
+%endrep
+%%_skip_clear %+ k:
+%assign k (k + 1)
 %endrep
 
 %endmacro
@@ -239,6 +281,19 @@ len_is_0:
         or      unused_lanes, idx
         mov     [state + _aes_unused_lanes], unused_lanes
         sub     qword [state + _aes_lanes_in_use], 1
+
+%ifdef SAFE_DATA
+        ; Set bit of lane of returned job
+        xor     DWORD(tmp3), DWORD(tmp3)
+        bts     DWORD(tmp3), DWORD(idx)
+        kmovd   k1, DWORD(tmp3)
+        korb    k6, k1, k6
+
+        ;; Clear IV and expanded keys of returned job and "NULL lanes"
+        ;; (k6 contains the mask of the jobs)
+        CLEAR_IV_IN_NULL_LANES tmp1, xmm0, k6
+        CLEAR_KEYS_IN_NULL_LANES tmp1, xmm0, k6
+%endif
 
 return:
 

@@ -244,7 +244,7 @@ end_loop:
 	mov	[p + 2*4], DWORD(tmp2)
 
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 12
-        je      return
+        je      clear_ret
 
         ;; copy remaining 8 bytes to return 20 byte digest
         mov	DWORD(tmp2), [state + _args_digest + idx*4 + 3*SHA1_DIGEST_WORD_SIZE]
@@ -253,6 +253,40 @@ end_loop:
         bswap	DWORD(tmp4)
         mov	[p + 3*4], DWORD(tmp2)
         mov	[p + 4*4], DWORD(tmp4)
+
+clear_ret:
+
+%ifdef SAFE_DATA
+        pxor    xmm0, xmm0
+
+        ;; Clear digest (20B), outer_block (20B) and extra_block (64B)
+        ;; of returned job and NULL jobs
+%assign I 0
+%rep 2
+	cmp	qword [state + _ldata + (I*_HMAC_SHA1_LANE_DATA_size) + _job_in_lane], 0
+	jne	APPEND(skip_clear_,I)
+
+        ;; Clear digest
+        movdqu  [state + _args_digest + I*20], xmm0
+        mov     dword [state + _args_digest + I*20 + 16], 0
+
+        lea     lane_data, [state + _ldata + (I*_HMAC_SHA1_LANE_DATA_size)]
+        ;; Clear first 64 bytes of extra_block
+%assign offset 0
+%rep 4
+        movdqa  [lane_data + _extra_block + offset], xmm0
+%assign offset (offset + 16)
+%endrep
+
+        ;; Clear first 20 bytes of outer_block
+        movdqa  [lane_data + _outer_block], xmm0
+        mov     dword [lane_data + _outer_block + 16], 0
+
+APPEND(skip_clear_,I):
+%assign I (I+1)
+%endrep
+
+%endif ;; SAFE_DATA
 
 return:
 

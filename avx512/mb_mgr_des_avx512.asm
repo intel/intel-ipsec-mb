@@ -243,6 +243,12 @@ extern des3_x16_cbc_dec_avx512
         mov     rax, [STATE + _des_job_in_lane + MIN_IDX*8]
         mov     qword [STATE + _des_job_in_lane + MIN_IDX*8], 0
         or	dword [rax + _status], STS_COMPLETED_AES
+
+%ifdef SAFE_DATA
+        ;; Clear IV
+        mov     dword [STATE + _des_args_IV + MIN_IDX*4], 0
+        mov     dword [STATE + _des_args_IV + MIN_IDX*4 + (AVX512_NUM_DES_LANES*4)], 0
+%endif
         vzeroupper
 %%_des_submit_return:
 %endmacro
@@ -386,6 +392,18 @@ extern des3_x16_cbc_dec_avx512
         or	dword [rax + _status], STS_COMPLETED_AES
         ;; - clear job pointer
         mov     qword [STATE + _des_job_in_lane + MIN_IDX*8], 0
+%ifdef SAFE_DATA
+        ; Set bit of lane of returned job
+        xor     DWORD(IA0), DWORD(IA0)
+        bts     DWORD(IA0), DWORD(MIN_IDX)
+        kmovd   k1, DWORD(IA0)
+        korb    k6, k1, k6
+
+        ;; Clear IV of returned job and "NULL lanes" (k6 contains the mask of the jobs)
+        vpxorq  ZTMP1, ZTMP1
+        vmovdqa32       [STATE + _des_args_IV]{k6}, ZTMP1
+        vmovdqa32       [STATE + _des_args_IV + (16*4)]{k6}, ZTMP1
+%endif
 %%_des_flush_return:
         vzeroupper
 %endmacro

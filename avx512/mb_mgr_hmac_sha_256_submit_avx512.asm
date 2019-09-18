@@ -361,7 +361,7 @@ end_loop:
 %else
 	mov	[p + 3*4], DWORD(tmp4)
 %endif
-        jmp     return
+        jmp     clear_ret
 copy_full_digest:
 	;; copy 28 bytes for SHA224 // 32 bytes for SHA256
 	mov	DWORD(tmp),  [state + _args_digest_sha256 + 4*idx + 0*SHA256_DIGEST_ROW_SIZE]
@@ -395,6 +395,35 @@ copy_full_digest:
 %ifndef SHA224
 	mov	[p + 7*4], DWORD(tmp4)
 %endif
+
+clear_ret:
+
+%ifdef SAFE_DATA
+        ;; Clear digest (28B/32B), outer_block (28B/32B) and extra_block (64B) of returned job
+%assign J 0
+%rep 7
+        mov     dword [state + _args_digest_sha256 + SHA256_DIGEST_WORD_SIZE*idx + J*SHA256_DIGEST_ROW_SIZE], 0
+%assign J (J+1)
+%endrep
+%ifndef SHA224
+        mov     dword [state + _args_digest_sha256 + SHA256_DIGEST_WORD_SIZE*idx + 7*SHA256_DIGEST_ROW_SIZE], 0
+%endif
+
+        vpxorq  zmm0, zmm0
+        imul	lane_data, idx, _HMAC_SHA1_LANE_DATA_size
+        lea	lane_data, [state + _ldata_sha256 + lane_data]
+        ;; Clear first 64 bytes of extra_block
+        vmovdqu64  [lane_data + _extra_block], zmm0
+
+        ;; Clear first 28 bytes (SHA-224) or 32 bytes (SHA-256) of outer_block
+%ifdef SHA224
+        vmovdqa64 [lane_data + _outer_block], xmm0
+        mov     qword [lane_data + _outer_block + 16], 0
+        mov     dword [lane_data + _outer_block + 24], 0
+%else
+        vmovdqu64 [lane_data + _outer_block], ymm0
+%endif
+%endif ;; SAFE_DATA
 
 return:
 	mov	rbx, [rsp + _gpr_save + 8*0]
