@@ -855,14 +855,8 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case PON_AES_CNTR:
                 switch (params->key_size) {
-                case AES_128_BYTES:
+                case 16:
                         IMB_AES_KEYEXP_128(mb_mgr, key, enc_keys, dec_keys);
-                        break;
-                case AES_192_BYTES:
-                        IMB_AES_KEYEXP_192(mb_mgr, key, enc_keys, dec_keys);
-                        break;
-                case AES_256_BYTES:
-                        IMB_AES_KEYEXP_256(mb_mgr, key, enc_keys, dec_keys);
                         break;
                 case 0:
                         break;
