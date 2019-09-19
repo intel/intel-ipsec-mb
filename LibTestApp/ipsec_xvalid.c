@@ -68,6 +68,11 @@
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 
 #define SEED 0xdeadcafe
+#define IV_PATTERN 0x33333333
+#define PT_PATTERN 0x44444444
+#define AAD_PATTERN 0x55555555
+#define KEY_PATTERN 0x66666666
+#define TAG_PATTERN 0x77777777
 
 enum arch_type_e {
         ARCH_SSE = 0,
@@ -490,6 +495,51 @@ generate_random_buf(uint8_t *buf, const uint32_t length)
                 buf[i] = (uint8_t) rand();
 }
 
+/*
+ * Searches across a block of memory if a pattern is present
+ * (indicating there is some left over sensitive data)
+ *
+ * Returns 0 if pattern is present or -1 if not present
+ */
+static int
+search_patterns(const void *ptr, const size_t mem_size)
+{
+        const uint8_t *ptr8 = (const uint8_t *) ptr;
+        size_t i;
+        int ret = -1;
+
+        if (mem_size < 4)
+                return -1;
+
+        for (i = 0; i <= (mem_size - 4); i++) {
+                const uint32_t string = ((const uint32_t *) ptr8)[0];
+                if (string == IV_PATTERN) {
+                        fprintf(stderr, "Part of IV is present\n");
+                        ret = 0;
+                }
+                if (string == KEY_PATTERN) {
+                        fprintf(stderr, "Part of KEY is present\n");
+                        ret = 0;
+                }
+                if (string == TAG_PATTERN) {
+                        fprintf(stderr, "Part of TAG is present\n");
+                        ret = 0;
+                }
+                if (string == PT_PATTERN) {
+                        fprintf(stderr,
+                                "Part of plain/ciphertext is present\n");
+                        ret = 0;
+                }
+                if (ret == 0) {
+                        fprintf(stderr, "Offset = %zu\n", i);
+                        return 0;
+                }
+                ptr8++;
+        }
+
+        return -1;
+}
+
 static void
 byte_hexdump(const char *message, const uint8_t *ptr, const uint32_t len)
 {
@@ -729,7 +779,8 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
 
 static int
 prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
-             const uint8_t *key, const struct params_s *params)
+             const uint8_t *key, const struct params_s *params,
+             unsigned int force_pattern)
 {
         static uint8_t buf[SHA_512_BLOCK_SIZE];
         static DECLARE_ALIGNED(uint32_t dust[15 * 4], 16);
@@ -742,6 +793,75 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         uint8_t *opad = keys->opad;
         struct gcm_key_data *gdata_key = &keys->gdata_key;
         uint8_t i;
+
+        /* Set all expanded keys to KEY_PATTERN if flag is set */
+        if (force_pattern) {
+                switch (params->hash_alg) {
+                case AES_XCBC:
+                        memset(k1_expanded, KEY_PATTERN,
+                               sizeof(keys->k1_expanded));
+                        break;
+                case AES_CMAC:
+                case AES_CMAC_BITLEN:
+                        memset(k1_expanded, KEY_PATTERN,
+                               sizeof(keys->k1_expanded));
+                        memset(k2, KEY_PATTERN, sizeof(keys->k2));
+                        memset(k3, KEY_PATTERN, sizeof(keys->k3));
+                        break;
+                case SHA1:
+                case SHA_224:
+                case SHA_256:
+                case SHA_384:
+                case SHA_512:
+                case MD5:
+                        memset(ipad, KEY_PATTERN, sizeof(keys->ipad));
+                        memset(opad, KEY_PATTERN, sizeof(keys->opad));
+                        break;
+                case AES_CCM:
+                case AES_GMAC:
+                case NULL_HASH:
+                case PLAIN_SHA1:
+                case PLAIN_SHA_224:
+                case PLAIN_SHA_256:
+                case PLAIN_SHA_384:
+                case PLAIN_SHA_512:
+                case PON_CRC_BIP:
+                        /* No operation needed */
+                        break;
+                default:
+                        fprintf(stderr, "Unsupported hash algo\n");
+                        return -1;
+                }
+
+                switch (params->cipher_mode) {
+                case GCM:
+                        memset(gdata_key, KEY_PATTERN, sizeof(keys->gdata_key));
+                        break;
+                case PON_AES_CNTR:
+                case CBC:
+                case CCM:
+                case CNTR:
+                case CNTR_BITLEN:
+                case DOCSIS_SEC_BPI:
+                case ECB:
+                        memset(enc_keys, KEY_PATTERN, sizeof(keys->enc_keys));
+                        memset(dec_keys, KEY_PATTERN, sizeof(keys->dec_keys));
+                        break;
+                case DES:
+                case DES3:
+                case DOCSIS_DES:
+                        memset(enc_keys, KEY_PATTERN, sizeof(keys->enc_keys));
+                        break;
+                case NULL_CIPHER:
+                        /* No operation needed */
+                        break;
+                default:
+                        fprintf(stderr, "Unsupported cipher mode\n");
+                        return -1;
+                }
+
+                return 0;
+        }
 
         switch (params->hash_alg) {
         case AES_XCBC:
@@ -950,11 +1070,24 @@ modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
         return 0;
 }
 
+static int
+perform_safe_checks(MB_MGR *mgr, const char *dir)
+{
+        if (search_patterns(mgr, sizeof(MB_MGR)) == 0) {
+                fprintf(stderr, "Pattern found in MB_MGR after "
+                                "%s data\n", dir);
+                return -1;
+        }
+
+        return 0;
+}
+
 /* Performs test using AES_HMAC or DOCSIS */
 static int
 do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         MB_MGR *dec_mb_mgr, const enum arch_type_e dec_arch,
-        const struct params_s *params, struct data *data)
+        const struct params_s *params, struct data *data,
+        const unsigned safe_check)
 {
         JOB_AES_HMAC *job;
         uint32_t i;
@@ -983,11 +1116,22 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 tag_size_to_check = 4;
         }
 
-        /* Randomize input buffer, key and IV */
-        generate_random_buf(test_buf, buf_size);
-        generate_random_buf(key, MAX_KEY_SIZE);
-        generate_random_buf(iv, MAX_IV_SIZE);
-        generate_random_buf(aad, AAD_SIZE);
+        /* If performing a test searching for sensitive information,
+         * set keys, plaintext, IV and AAD to known values,
+         * so they can be searched later on in the MB_MGR structure and stack.
+         * Otherwise, just randomize the data */
+        if (safe_check) {
+                memset(test_buf, PT_PATTERN, buf_size);
+                memset(key, KEY_PATTERN, MAX_KEY_SIZE);
+                memset(iv, IV_PATTERN, MAX_IV_SIZE);
+                memset(aad, AAD_PATTERN, AAD_SIZE);
+
+        } else {
+                generate_random_buf(test_buf, buf_size);
+                generate_random_buf(key, MAX_KEY_SIZE);
+                generate_random_buf(iv, MAX_IV_SIZE);
+                generate_random_buf(aad, AAD_SIZE);
+        }
 
         /* For PON, construct the XGEM header, setting valid PLI */
         if (params->hash_alg == PON_CRC_BIP) {
@@ -1000,10 +1144,10 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         }
 
         /* Expand/schedule keys */
-        if (prepare_keys(enc_mb_mgr, enc_keys, key, params) < 0)
+        if (prepare_keys(enc_mb_mgr, enc_keys, key, params, safe_check) < 0)
                 goto exit;
 
-        if (prepare_keys(dec_mb_mgr, dec_keys, key, params) < 0)
+        if (prepare_keys(dec_mb_mgr, dec_keys, key, params, safe_check) < 0)
                 goto exit;
 
         for (i = 0; i < job_iter; i++) {
@@ -1029,6 +1173,12 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         fprintf(stderr, "job not returned\n");
                         goto exit;
                 }
+
+                /* Check that MB_MGR does not contain any
+                 * sensitive information after job is returned */
+                if (safe_check)
+                        if (perform_safe_checks(enc_mb_mgr, "encrypting") < 0)
+                                goto exit;
 
                 if (job->status != STS_COMPLETED) {
                         fprintf(stderr, "failed job, status:%d\n",
@@ -1059,6 +1209,12 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
 
                 if (!job)
                         job = IMB_FLUSH_JOB(dec_mb_mgr);
+
+                /* Check that MB_MGR does not contain any
+                 * sensitive information after job is returned */
+                if (safe_check)
+                        if (perform_safe_checks(dec_mb_mgr, "decrypting") < 0)
+                                goto exit;
 
                 if (!job) {
                         fprintf(stderr, "job not returned\n");
@@ -1129,7 +1285,8 @@ exit:
 static void
 process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                 MB_MGR *dec_mgr, const enum arch_type_e dec_arch,
-                struct params_s *params, struct data *variant_data)
+                struct params_s *params, struct data *variant_data,
+                const unsigned int safe_check)
 {
         const uint32_t sizes = params->num_sizes;
         uint32_t sz;
@@ -1161,16 +1318,24 @@ process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                         if ((buf_size % DES_BLOCK_SIZE)  != 0)
                                 continue;
 
-                if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
-                            variant_data) < 0)
+                /* Check for sensitive data first, then normal cross
+                 * architecture validation */
+                if (safe_check && do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
+                                          params, variant_data, 1) < 0)
                         exit(EXIT_FAILURE);
+
+                if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
+                            params, variant_data, 0) < 0)
+                        exit(EXIT_FAILURE);
+
         }
 }
 
 /* Sets cipher direction and key size  */
 static void
 run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
-         struct params_s *params, struct data *variant_data)
+         struct params_s *params, struct data *variant_data,
+         const unsigned int safe_check)
 {
         MB_MGR *enc_mgr = NULL;
         MB_MGR *dec_mgr = NULL;
@@ -1184,6 +1349,11 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 fprintf(stderr, "MB MGR could not be allocated\n");
                 exit(EXIT_FAILURE);
         }
+
+        /* Reset the MB MGR structure in case it is allocated with
+         * memory containing the patterns that will be searched later on */
+        if (safe_check)
+                memset(enc_mgr, 0, sizeof(MB_MGR));
 
         switch (enc_arch) {
         case ARCH_SSE:
@@ -1214,6 +1384,11 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 exit(EXIT_FAILURE);
         }
 
+        /* Reset the MB MGR structure in case it is allocated with
+         * memory containing the patterns that will be searched later on */
+        if (safe_check)
+                memset(dec_mgr, 0, sizeof(MB_MGR));
+
         switch (dec_arch) {
         case ARCH_SSE:
         case ARCH_AESNI_EMU:
@@ -1238,7 +1413,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 params->cipher_mode = custom_job_params.cipher_mode;
                 params->hash_alg = custom_job_params.hash_alg;
                 process_variant(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
-                                variant_data);
+                                variant_data, safe_check);
                 goto exit;
         }
 
@@ -1278,7 +1453,8 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
 
                                 params->hash_alg = hash_alg;
                                 process_variant(enc_mgr, enc_arch, dec_mgr,
-                                                dec_arch, params, variant_data);
+                                                dec_arch, params, variant_data,
+                                                safe_check);
                         }
                 }
         }
@@ -1292,7 +1468,7 @@ exit:
  * sets test configuration
  */
 static void
-run_tests(void)
+run_tests(const unsigned int safe_check)
 {
         struct params_s params;
         struct data *variant_data = NULL;
@@ -1330,7 +1506,8 @@ run_tests(void)
                                 continue;
                         printf("\tDecrypting with ");
                         print_arch_info(dec_arch);
-                        run_test(enc_arch, dec_arch, &params, variant_data);
+                        run_test(enc_arch, dec_arch, &params, variant_data,
+                                 safe_check);
                 }
 
         } /* end for run */
@@ -1365,7 +1542,10 @@ static void usage(void)
                 "            - range: test multiple sizes with following format"
                 " min:step:max (e.g. 16:16:256)\n"
                 "            (-o still applies for MAC)\n"
-                "--job-iter: number of tests iterations for each job size\n");
+                "--job-iter: number of tests iterations for each job size\n"
+                "--safe-check: check if keys, IVs, plaintext or tags "
+                "get cleared from MB_MGR upon job completion (off by default; "
+                "requires library compiled with SAFE_DATA)\n");
 }
 
 static int
@@ -1575,6 +1755,7 @@ int main(int argc, char *argv[])
         unsigned int cipher_algo_set = 0;
         unsigned int hash_algo_set = 0;
         unsigned int aead_algo_set = 0;
+        unsigned int safe_check = 0;
 
         for (i = 1; i < argc; i++)
                 if (strcmp(argv[i], "-h") == 0) {
@@ -1685,6 +1866,8 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--job-iter") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &job_iter, sizeof(job_iter));
+                } else if (strcmp(argv[i], "--safe-check") == 0) {
+                        safe_check = 1;
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -1720,23 +1903,29 @@ int main(int argc, char *argv[])
                 }
         }
 
-        if (enc_archs[ARCH_SSE] || dec_archs[ARCH_SSE]) {
-                MB_MGR *p_mgr = alloc_mb_mgr(flags);
+        MB_MGR *p_mgr = alloc_mb_mgr(flags);
+        if (p_mgr == NULL) {
+                fprintf(stderr, "Error allocating MB_MGR structure!\n");
+                return EXIT_FAILURE;
+        }
 
-                if (p_mgr == NULL) {
-                        fprintf(stderr, "Error allocating MB_MGR structure!\n");
-                        return EXIT_FAILURE;
-                }
+        if (safe_check && ((p_mgr->features & IMB_FEATURE_SAFE_DATA) == 0)) {
+                fprintf(stderr, "Library needs to be compiled with SAFE_DATA "
+                                "if --safe-check is enabled\n");
+                free_mb_mgr(p_mgr);
+                return EXIT_FAILURE;
+        }
+        if (enc_archs[ARCH_SSE] || dec_archs[ARCH_SSE]) {
                 init_mb_mgr_sse(p_mgr);
                 fprintf(stderr, "%s SHA extensions (shani) for SSE arch\n",
                         (p_mgr->features & IMB_FEATURE_SHANI) ?
                         "Using" : "Not using");
-                free_mb_mgr(p_mgr);
         }
+        free_mb_mgr(p_mgr);
 
         srand(SEED);
 
-        run_tests();
+        run_tests(safe_check);
 
         return EXIT_SUCCESS;
 }
