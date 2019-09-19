@@ -626,8 +626,13 @@ static char prog_bar[PB_INIT_SIZE + 4]; /* 50 + 4 for \r, [, ], \0 */
 static uint32_t pb_idx = PB_INIT_IDX;
 static uint32_t pb_mod = 0;
 
+static int silent_progress_bar = 0;
+
 static void prog_bar_init(const uint32_t total_num)
 {
+        if (silent_progress_bar)
+                return;
+
         if (total_num < PB_SIZE) {
                 PB_SIZE = total_num;
                 PB_FINAL_IDX = (PB_SIZE + (PB_INIT_IDX - 1));
@@ -647,12 +652,18 @@ static void prog_bar_init(const uint32_t total_num)
 
 static void prog_bar_fini(void)
 {
+        if (silent_progress_bar)
+                return;
+
         prog_bar[PB_FINAL_IDX] = 'X'; /* set final X */
         fputs(prog_bar, stderr);
 }
 
 static void prog_bar_update(const uint32_t num)
 {
+        if (silent_progress_bar)
+                return;
+
         if ((pb_mod == 0) || num % pb_mod == 0) {
                 /* print X at every ~50th variant */
                 prog_bar[pb_idx] = 'X';
@@ -1886,7 +1897,7 @@ run_tests(void *arg)
                 goto exit;
         }
 
-        if (info->print_info)
+        if (info->print_info && !silent_progress_bar)
                 fprintf(stderr, "Total number of combinations (algos, "
                         "key sizes, cipher directions) to test = %u\n",
                         total_variants);
@@ -1911,8 +1922,9 @@ run_tests(void *arg)
 
         for (run = 0; run < NUM_RUNS; run++) {
                 if (info->print_info)
-                        fprintf(stderr, "\nStarting run "
-                                "%d of %d\n", run+1, NUM_RUNS);
+                        fprintf(stderr, "\nStarting run %d of %d%c",
+                                run+1, NUM_RUNS,
+                                silent_progress_bar ? '\r' : '\n' );
 
                 variant = 0;
                 variant_ptr = variant_list;
@@ -2016,7 +2028,8 @@ static void usage(void)
                 " min:step:max (e.g. 16:16:256)\n"
                 "            (-o still applies for MAC)\n"
                 "--aad-size: size of AAD for AEAD algorithms\n"
-                "--job-iter: number of tests iterations for each job size\n",
+                "--job-iter: number of tests iterations for each job size\n"
+                "--no-progress-bar: Don't display progress bar\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -2387,6 +2400,8 @@ int main(int argc, char *argv[])
                                              sizeof(core_mask));
                 } else if (strcmp(argv[i], "--unhalted-cycles") == 0) {
                         use_unhalted_cycles = 1;
+                } else if (strcmp(argv[i], "--no-progress-bar") == 0) {
+                        silent_progress_bar = 1;
                 } else {
                         usage();
                         return EXIT_FAILURE;
