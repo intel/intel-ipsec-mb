@@ -370,33 +370,6 @@ APPEND(skip_,I):
         ENCRYPT_SINGLE_BLOCK tmp2, init_block0
         pxor    init_block0, [state + _aes_ccm_args_IV + tmp * 2]
 
-%ifdef SAFE_DATA
-        pxor    xtmp0, xtmp0
-%ifidn %%SUBMIT_FLUSH, SUBMIT
-        ;; Clear digest (in memory for CBC IV), counter block 0 and AAD of returned job
-        movdqa  [state + _aes_ccm_args_IV + tmp * 2],          xtmp0
-        movdqa  [state + _aes_ccm_init_blocks + tmp * 8],      xtmp0
-        movdqa  [state + _aes_ccm_init_blocks + tmp * 8 + 16], xtmp0
-        movdqa  [state + _aes_ccm_init_blocks + tmp * 8 + 32], xtmp0
-        movdqa  [state + _aes_ccm_init_blocks + tmp * 8 + 48], xtmp0
-%else
-        ;; Clear digest (in memory for CBC IV), counter block 0 and AAD
-        ;; of returned job and "NULL lanes"
-%assign I 0
-%rep 4
-        cmp     qword [state + _aes_ccm_job_in_lane + I*8], 0
-        jne     APPEND(skip_clear_,I)
-        movdqa  [state + _aes_ccm_args_IV + I*16],          xtmp0
-        movdqa  [state + _aes_ccm_init_blocks + I*64],      xtmp0
-        movdqa  [state + _aes_ccm_init_blocks + I*64 + 16], xtmp0
-        movdqa  [state + _aes_ccm_init_blocks + I*64 + 32], xtmp0
-        movdqa  [state + _aes_ccm_init_blocks + I*64 + 48], xtmp0
-APPEND(skip_clear_,I):
-%assign I (I+1)
-%endrep
-
-%endif ;; SUBMIT
-%endif ;; SAFE_DATA
         ;; Copy Mlen bytes into auth_tag_output (Mlen = 4,6,8,10,12,14,16)
         mov     min_job, [state + _aes_ccm_job_in_lane + tmp]
         mov     tmp3, [min_job + _auth_tag_output_len_in_bytes]
@@ -416,6 +389,35 @@ APPEND(skip_clear_,I):
 
         mov     qword [state + _aes_ccm_job_in_lane + min_idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_HMAC
+
+%ifdef SAFE_DATA
+        pxor    xtmp0, xtmp0
+%ifidn %%SUBMIT_FLUSH, SUBMIT
+        shl     min_idx, 3
+        ;; Clear digest (in memory for CBC IV), counter block 0 and AAD of returned job
+        movdqa  [state + _aes_ccm_args_IV + min_idx * 2],          xtmp0
+        movdqa  [state + _aes_ccm_init_blocks + min_idx * 8],      xtmp0
+        movdqa  [state + _aes_ccm_init_blocks + min_idx * 8 + 16], xtmp0
+        movdqa  [state + _aes_ccm_init_blocks + min_idx * 8 + 32], xtmp0
+        movdqa  [state + _aes_ccm_init_blocks + min_idx * 8 + 48], xtmp0
+%else
+        ;; Clear digest (in memory for CBC IV), counter block 0 and AAD
+        ;; of returned job and "NULL lanes"
+%assign I 0
+%rep 4
+        cmp     qword [state + _aes_ccm_job_in_lane + I*8], 0
+        jne     APPEND(skip_clear_,I)
+        movdqa  [state + _aes_ccm_args_IV + I*16],          xtmp0
+        movdqa  [state + _aes_ccm_init_blocks + I*64],      xtmp0
+        movdqa  [state + _aes_ccm_init_blocks + I*64 + 16], xtmp0
+        movdqa  [state + _aes_ccm_init_blocks + I*64 + 32], xtmp0
+        movdqa  [state + _aes_ccm_init_blocks + I*64 + 48], xtmp0
+APPEND(skip_clear_,I):
+%assign I (I+1)
+%endrep
+
+%endif ;; SUBMIT
+%endif ;; SAFE_DATA
 
 %%_return:
         mov     rbx, [rsp + _gpr_save + 8*0]
