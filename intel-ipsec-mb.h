@@ -844,6 +844,8 @@ typedef size_t (*snow3g_key_sched_size_t)(void);
                                 IMB_FEATURE_AVX512VL)
 #define IMB_FEATURE_VAES       (1ULL << 12)
 #define IMB_FEATURE_VPCLMULQDQ (1ULL << 13)
+#define IMB_FEATURE_SAFE_DATA  (1ULL << 14)
+#define IMB_FEATURE_SAFE_PARAM (1ULL << 15)
 
 /* ========================================================================== */
 /* TOP LEVEL (MB_MGR) Data structure fields */

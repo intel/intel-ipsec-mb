@@ -208,6 +208,13 @@ uint64_t cpu_feature_detect(void)
                         features |= feat_tab[i].feat;
         }
 
+#ifdef SAFE_DATA
+        features |= IMB_FEATURE_SAFE_DATA;
+#endif
+#ifdef SAFE_PARAM
+        features |= IMB_FEATURE_SAFE_PARAM;
+#endif
+
         return features;
 }
 
