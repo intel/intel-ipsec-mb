@@ -348,6 +348,12 @@ extern des3_x16_cbc_dec_avx512
         vmovdqa         [STATE + _des_lens + 2*8], XWORD(ZTMP1)
 
         push            MIN_IDX
+%ifdef SAFE_DATA
+        ;; Save k6, which may be clobbered by following functions
+        kmovq           IA0, k6
+        push            IA0
+%endif
+
         mov             arg2, MIN_LEN
 %ifidn %%ENC_DEC, ENC
         ;; encrypt
@@ -372,6 +378,11 @@ extern des3_x16_cbc_dec_avx512
         call            des3_x16_cbc_dec_avx512
 %endif
 %endif                          ; DEC
+%ifdef SAFE_DATA
+        ;; Restore k6, which may have been clobbered by previous functions
+        pop             IA0
+        kmovq           k6, IA0
+%endif
         pop             MIN_IDX
         jmp             %%_des_flush_end
 
@@ -397,7 +408,7 @@ extern des3_x16_cbc_dec_avx512
         xor     DWORD(IA0), DWORD(IA0)
         bts     DWORD(IA0), DWORD(MIN_IDX)
         kmovd   k1, DWORD(IA0)
-        korb    k6, k1, k6
+        kord    k6, k1, k6
 
         ;; Clear IV of returned job and "NULL lanes" (k6 contains the mask of the jobs)
         vpxorq  ZTMP1, ZTMP1
