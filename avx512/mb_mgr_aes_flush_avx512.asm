@@ -286,8 +286,8 @@ len_is_0:
         ; Set bit of lane of returned job
         xor     DWORD(tmp3), DWORD(tmp3)
         bts     DWORD(tmp3), DWORD(idx)
-        kmovd   k1, DWORD(tmp3)
-        korb    k6, k1, k6
+        kmovw   k1, DWORD(tmp3)
+        korw    k6, k1, k6
 
         ;; Clear IV and expanded keys of returned job and "NULL lanes"
         ;; (k6 contains the mask of the jobs)
