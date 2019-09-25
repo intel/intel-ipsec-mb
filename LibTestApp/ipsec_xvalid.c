@@ -59,7 +59,9 @@
 #define DEFAULT_JOB_ITER 10
 
 #define AAD_SIZE 12
-/* Maximum key size for SHA-512 */
+#define MAX_IV_SIZE 16
+
+/* Maximum key and digest size for SHA-512 */
 #define MAX_KEY_SIZE    SHA_512_BLOCK_SIZE
 #define MAX_DIGEST_SIZE SHA512_DIGEST_SIZE_IN_BYTES
 
@@ -86,6 +88,7 @@ struct params_s {
         uint32_t		num_sizes;
 };
 
+/* Struct storing all expanded keys */
 struct cipher_auth_keys {
         uint8_t ipad[SHA512_DIGEST_SIZE_IN_BYTES];
         uint8_t opad[SHA512_DIGEST_SIZE_IN_BYTES];
@@ -95,6 +98,19 @@ struct cipher_auth_keys {
         DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
         DECLARE_ALIGNED(struct gcm_key_data gdata_key, 64);
+};
+
+/* Struct storing all necessary data for crypto operations */
+struct data {
+        uint8_t test_buf[JOB_SIZE_TOP];
+        uint8_t src_dst_buf[JOB_SIZE_TOP];
+        uint8_t aad[AAD_SIZE];
+        uint8_t in_digest[MAX_DIGEST_SIZE];
+        uint8_t out_digest[MAX_DIGEST_SIZE];
+        uint8_t iv[MAX_IV_SIZE];
+        uint8_t key[MAX_KEY_SIZE];
+        struct cipher_auth_keys enc_keys;
+        struct cipher_auth_keys dec_keys;
 };
 
 struct custom_job_params {
@@ -938,23 +954,24 @@ modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
 static int
 do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         MB_MGR *dec_mb_mgr, const enum arch_type_e dec_arch,
-        const struct params_s *params)
+        const struct params_s *params, struct data *data)
 {
         JOB_AES_HMAC *job;
         uint32_t i;
         int ret = -1;
-        static DECLARE_ALIGNED(uint8_t iv[16], 16);
-        static struct cipher_auth_keys enc_keys, dec_keys;
-        uint8_t aad[AAD_SIZE];
-        uint8_t in_digest[MAX_DIGEST_SIZE];
-        uint8_t out_digest[MAX_DIGEST_SIZE];
         uint32_t buf_size = params->buf_size;
-        uint8_t *test_buf = NULL;
-        uint8_t *src_dst_buf = NULL;
         uint8_t tag_size = auth_tag_length_bytes[params->hash_alg - 1];
-        uint8_t key[MAX_KEY_SIZE];
         uint64_t xgem_hdr = 0;
         uint8_t tag_size_to_check = 0;
+        struct cipher_auth_keys *enc_keys = &data->enc_keys;
+        struct cipher_auth_keys *dec_keys = &data->dec_keys;
+        uint8_t *aad = data->aad;
+        uint8_t *iv = data->iv;
+        uint8_t *in_digest = data->in_digest;
+        uint8_t *out_digest = data->out_digest;
+        uint8_t *test_buf = data->test_buf;
+        uint8_t *src_dst_buf = data->src_dst_buf;
+        uint8_t *key = data->key;
 
         if (params->hash_alg == PON_CRC_BIP) {
                 /* Buf size is XGEM payload, including CRC,
@@ -966,18 +983,10 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 tag_size_to_check = 4;
         }
 
-        test_buf = malloc(buf_size);
-        if (test_buf == NULL)
-                goto exit;
-
-        src_dst_buf = malloc(buf_size);
-        if (src_dst_buf == NULL)
-                goto exit;
-
         /* Randomize input buffer, key and IV */
         generate_random_buf(test_buf, buf_size);
         generate_random_buf(key, MAX_KEY_SIZE);
-        generate_random_buf(iv, 16);
+        generate_random_buf(iv, MAX_IV_SIZE);
         generate_random_buf(aad, AAD_SIZE);
 
         /* For PON, construct the XGEM header, setting valid PLI */
@@ -991,10 +1000,10 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         }
 
         /* Expand/schedule keys */
-        if (prepare_keys(enc_mb_mgr, &enc_keys, key, params) < 0)
+        if (prepare_keys(enc_mb_mgr, enc_keys, key, params) < 0)
                 goto exit;
 
-        if (prepare_keys(dec_mb_mgr, &dec_keys, key, params) < 0)
+        if (prepare_keys(dec_mb_mgr, dec_keys, key, params) < 0)
                 goto exit;
 
         for (i = 0; i < job_iter; i++) {
@@ -1005,7 +1014,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  */
                 memcpy(src_dst_buf, test_buf, buf_size);
                 if (fill_job(job, params, src_dst_buf, in_digest, aad,
-                             buf_size, tag_size, ENCRYPT, &enc_keys, iv) < 0)
+                             buf_size, tag_size, ENCRYPT, enc_keys, iv) < 0)
                         goto exit;
 
                 /* Randomize memory for input digest */
@@ -1043,7 +1052,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  * using reference architecture
                  */
                 if (fill_job(job, params, src_dst_buf, out_digest, aad,
-                             buf_size, tag_size, DECRYPT, &dec_keys, iv) < 0)
+                             buf_size, tag_size, DECRYPT, dec_keys, iv) < 0)
                         goto exit;
 
                 job = IMB_SUBMIT_JOB(dec_mb_mgr);
@@ -1101,9 +1110,6 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         ret = 0;
 
 exit:
-        free(src_dst_buf);
-        free(test_buf);
-
         if (ret < 0) {
                 printf("Failures in\n");
                 print_algo_info(params);
@@ -1123,7 +1129,7 @@ exit:
 static void
 process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                 MB_MGR *dec_mgr, const enum arch_type_e dec_arch,
-                struct params_s *params)
+                struct params_s *params, struct data *variant_data)
 {
         const uint32_t sizes = params->num_sizes;
         uint32_t sz;
@@ -1132,6 +1138,9 @@ process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                 printf("Testing ");
                 print_algo_info(params);
         }
+
+        /* Reset the variant data */
+        memset(variant_data, 0, sizeof(struct data));
 
         for (sz = 0; sz < sizes; sz++) {
                 const uint32_t buf_size = job_sizes[RANGE_MIN] +
@@ -1152,7 +1161,8 @@ process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                         if ((buf_size % DES_BLOCK_SIZE)  != 0)
                                 continue;
 
-                if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params) < 0)
+                if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
+                            variant_data) < 0)
                         exit(EXIT_FAILURE);
         }
 }
@@ -1160,7 +1170,7 @@ process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
 /* Sets cipher direction and key size  */
 static void
 run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
-         struct params_s *params)
+         struct params_s *params, struct data *variant_data)
 {
         MB_MGR *enc_mgr = NULL;
         MB_MGR *dec_mgr = NULL;
@@ -1227,8 +1237,9 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 params->key_size = custom_job_params.key_size;
                 params->cipher_mode = custom_job_params.cipher_mode;
                 params->hash_alg = custom_job_params.hash_alg;
-                process_variant(enc_mgr, enc_arch, dec_mgr, dec_arch, params);
-                return;
+                process_variant(enc_mgr, enc_arch, dec_mgr, dec_arch, params,
+                                variant_data);
+                goto exit;
         }
 
         JOB_HASH_ALG    hash_alg;
@@ -1267,11 +1278,12 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
 
                                 params->hash_alg = hash_alg;
                                 process_variant(enc_mgr, enc_arch, dec_mgr,
-                                                dec_arch, params);
+                                                dec_arch, params, variant_data);
                         }
                 }
         }
 
+exit:
         free_mb_mgr(enc_mgr);
         free_mb_mgr(dec_mgr);
 }
@@ -1283,12 +1295,20 @@ static void
 run_tests(void)
 {
         struct params_s params;
+        struct data *variant_data = NULL;
         enum arch_type_e enc_arch, dec_arch;
         const uint32_t min_size = job_sizes[RANGE_MIN];
         const uint32_t max_size = job_sizes[RANGE_MAX];
         const uint32_t step_size = job_sizes[RANGE_STEP];
 
         params.num_sizes = ((max_size - min_size) / step_size) + 1;
+
+        variant_data = malloc(sizeof(struct data));
+
+        if (variant_data == NULL) {
+                fprintf(stderr, "Test data could not be allocated\n");
+                exit(EXIT_FAILURE);
+        }
 
         if (verbose) {
                 if (min_size == max_size)
@@ -1310,10 +1330,12 @@ run_tests(void)
                                 continue;
                         printf("\tDecrypting with ");
                         print_arch_info(dec_arch);
-                        run_test(enc_arch, dec_arch, &params);
+                        run_test(enc_arch, dec_arch, &params, variant_data);
                 }
 
         } /* end for run */
+
+        free(variant_data);
 }
 
 static void usage(void)
