@@ -875,6 +875,32 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
 }
 #endif /* AVX2 */
 
+static inline void
+preserve_bits(uint64_t *KS,
+              const uint8_t *pcBufferOut, const uint8_t *pcBufferIn,
+              SafeBuf *safeOutBuf, SafeBuf *safeInBuf,
+              const uint8_t bit_len, const uint8_t byte_len)
+{
+        const uint64_t mask = UINT64_MAX << (SNOW3G_BLOCK_SIZE * 8 - bit_len);
+
+        /* Clear the last bits of the keystream and the input
+         * (input only in out-of-place case) */
+        *KS &= mask;
+        if (pcBufferIn != pcBufferOut) {
+                const uint64_t swapMask = BSWAP64(mask);
+
+                safeInBuf->b64 &= swapMask;
+
+                /*
+                 * Merge the last bits from the output, to be preserved,
+                 * in the keystream, to be XOR'd with the input
+                 * (which last bits are 0, maintaining the output bits)
+                 */
+                memcpy_keystrm(safeOutBuf->b8, pcBufferOut, byte_len);
+                *KS |= BSWAP64(safeOutBuf->b64 & ~swapMask);
+        }
+}
+
 /**
 *******************************************************************************
 * @description
@@ -904,14 +930,6 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
         /* Offset into the first byte (0 - 7 bits) */
         uint32_t remainOffset = offsetInBits % 8;
         uint32_t byteLength = (cipherLengthInBits + 7) / 8;
-        uint64_t mask;
-
-        typedef union SafeBuffer {
-                uint64_t b64;
-                uint32_t b32[2];
-                uint8_t b8[SNOW3G_8_BYTES];
-        } SafeBuf;
-
         SafeBuf safeInBuf = {0};
         SafeBuf safeOutBuf = {0};
 
@@ -937,10 +955,16 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
                         safeInBuf.b8[0] = (safeInBuf.b8[0] & mask8) |
                                 (pcBufferOut[0] & ~mask8);
                 }
-                /* Last bits (not to cipher) need to be preserved from Input */
-                mask = (uint64_t)-1 << (SNOW3G_BLOCK_SIZE * 8 -
-                                        remainOffset - cipherLengthInBits);
-                KS8bit &= mask;
+                /* If last byte is a partial byte, the last bits of the output
+                 * need to be preserved */
+                const uint8_t bitlen_with_off = remainOffset +
+                        cipherLengthInBits;
+
+                if ((bitlen_with_off & 0x7) != 0)
+                        preserve_bits(&KS8bit, pcBufferOut, pcBufferIn,
+                                      &safeOutBuf, &safeInBuf,
+                                      bitlen_with_off, byteLength);
+
                 xor_keystrm_rev(safeOutBuf.b8, safeInBuf.b8, KS8bit);
                 memcpy_keystrm(pcBufferOut, safeOutBuf.b8, byteLength);
                 return;
@@ -981,17 +1005,19 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
                         cipherLengthInBits -= SNOW3G_BLOCK_SIZE * 8;
                         pcBufferOut += SNOW3G_BLOCK_SIZE;
                         /* loop variant */
-
                 } else {
                         /* end of the loop, handle the last bytes */
                         byteLength = (cipherLengthInBits + 7) / 8;
                         memcpy_keystrm(safeInBuf.b8, pcBufferIn,
                                        byteLength);
 
-                        /* Last bits need to be preserved from Input */
-                        mask = ((uint64_t)-1) << (SNOW3G_BLOCK_SIZE * 8 -
-                                cipherLengthInBits);
-                        KS8bit &= mask;
+                        /* If last byte is a partial byte, the last bits
+                         * of the output need to be preserved */
+                        if ((cipherLengthInBits & 0x7) != 0)
+                                preserve_bits(&KS8bit, pcBufferOut, pcBufferIn,
+                                              &safeOutBuf, &safeInBuf,
+                                              cipherLengthInBits, byteLength);
+
                         xor_keystrm_rev(safeOutBuf.b8, safeInBuf.b8, KS8bit);
                         memcpy_keystrm(pcBufferOut, safeOutBuf.b8, byteLength);
                         cipherLengthInBits = 0;

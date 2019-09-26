@@ -48,6 +48,11 @@
 #define ComplementaryMask64(x) ((~(x) % 64) + 1)
 #define ComplementaryMask32(x) ((~(x) % 32) + 1)
 
+typedef union SafeBuffer {
+        uint64_t b64;
+        uint32_t b32[2];
+        uint8_t b8[SNOW3G_8_BYTES];
+} SafeBuf;
 
 typedef struct snow3gKeyState1_s {
         /* 16 LFSR stages */
