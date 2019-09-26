@@ -704,8 +704,8 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
                                  const snow3g_key_schedule_t * const KeySched[],
                                  const void * const pIV[])
 {
-        uint32_t k[8];
-        uint32_t l[8];
+        DECLARE_ALIGNED(uint32_t k[8], 32);
+        DECLARE_ALIGNED(uint32_t l[8], 32);
         __m256i *K = (__m256i *)k;
         __m256i *L = (__m256i *)l;
 
