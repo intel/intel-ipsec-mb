@@ -37,6 +37,7 @@
 #include "snow3g_test_vectors.h"
 
 #define SNOW3GIVLEN 8
+#define PAD_LEN 16
 cipher_test_vector_t *vecList[MAX_DATA_LEN];
 
 int snow3g_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
@@ -183,22 +184,42 @@ snow3g_f8_1_buffer_exit:
 }
 
 /* Shift right a buffer by "offset" bits, "offset" < 8 */
-static void buffer_shift_right(uint8_t *buffer, uint32_t length, uint8_t offset)
+static void buffer_shift_right(uint8_t *buffer,
+                               const uint32_t length,
+                               const uint8_t offset)
 {
-        uint8_t curr_byte, prev_byte;
-        uint32_t length_in_bytes = (length * 8 + offset + 7) / 8;
-        uint8_t lower_byte_mask = (1 << offset) - 1;
-        unsigned i;
+        uint8_t prev_byte;
+        const uint32_t length_in_bytes = (length * 8 + offset + 7) / 8;
+        const uint8_t lower_byte_mask = (1 << offset) - 1;
+        uint32_t i;
 
         prev_byte = buffer[0];
         buffer[0] >>= offset;
 
         for (i = 1; i < length_in_bytes; i++) {
-                curr_byte = buffer[i];
+                const uint8_t curr_byte = buffer[i];
+
                 buffer[i] = ((prev_byte & lower_byte_mask) << (8 - offset)) |
                             (curr_byte >> offset);
                 prev_byte = curr_byte;
         }
+}
+
+static void copy_test_bufs(uint8_t *plainBuff, uint8_t *wrkBuff,
+                           uint8_t *ciphBuff, const uint8_t *src_test,
+                           const uint8_t *dst_test, const uint32_t byte_len)
+{
+        /*
+         * Reset all buffers
+         * - plain and cipher buffers to 0
+         * - working buffer to -1 (for padding check)
+         * and copy test vectors
+         */
+        memset(wrkBuff, -1, (byte_len + PAD_LEN * 2));
+        memset(plainBuff, 0, (byte_len + PAD_LEN * 2));
+        memset(ciphBuff, 0, (byte_len + PAD_LEN * 2));
+        memcpy(plainBuff + PAD_LEN, src_test, byte_len);
+        memcpy(ciphBuff + PAD_LEN, dst_test, byte_len);
 }
 
 static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
@@ -218,26 +239,20 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
         uint8_t srcBuff[MAX_DATA_LEN];
         uint8_t midBuff[MAX_DATA_LEN];
         uint8_t dstBuff[MAX_DATA_LEN];
+        /* Adding extra byte for offset tests (shifting up to 7 bits) */
+        uint8_t padding[PAD_LEN + 1];
         uint8_t *pIV;
-        uint32_t bufferbytesize = 0;
-        uint32_t offset = 0;
-        uint32_t byteoffset = 0;
         int ret = 1;
 
         printf("Testing IMB_SNOW3G_F8_1_BUFFER_BIT:\n");
 
-        memset(srcBuff, 0, sizeof(srcBuff));
-        memset(midBuff, 0, sizeof(midBuff));
-        memset(dstBuff, 0, sizeof(dstBuff));
+        memset(padding, -1, sizeof(padding));
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
                 return ret;
         }
-        for (i = 0; i < numVectors; i++)
-                bufferbytesize += testVectors->dataLenInBits[i];
 
-        bufferbytesize = (bufferbytesize + 7) / 8;
         pIV = malloc(SNOW3G_IV_LEN_IN_BYTES);
         if (!pIV) {
                 printf("malloc(pIV):failed !\n");
@@ -266,14 +281,36 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                 return ret;
         }
 
-        memcpy(srcBuff, testVectors->plaintext, bufferbytesize);
-        memcpy(dstBuff, testVectors->ciphertext, bufferbytesize);
-
         /*Copy the data for for Snow3g 1 Packet version*/
-        for (i = 0, offset = 0, byteoffset = 0; i < numVectors; i++) {
+        for (i = 0; i < numVectors; i++) {
+                uint8_t *midBufBefPad = midBuff;
+                uint8_t *midBufAftPad = midBuff + PAD_LEN;
+                uint8_t *srcBufBefPad = srcBuff;
+                uint8_t *srcBufAftPad = srcBuff + PAD_LEN;
+                uint8_t *dstBufBefPad = dstBuff;
+                uint8_t *dstBufAftPad = dstBuff + PAD_LEN;
+
+                const uint32_t byte_len =
+                        (testVectors->dataLenInBits[i] + 7) / 8;
+                const uint32_t bit_len = testVectors->dataLenInBits[i];
+                const uint32_t head_offset = i % 8;
+                const uint32_t tail_offset = (head_offset + bit_len) % 8;
+                const uint32_t final_byte_offset = (bit_len + head_offset) / 8;
+                const uint32_t byte_len_with_offset =
+                        (bit_len + head_offset + 7) / 8;
 
                 memcpy(pKey, testVectors->key[i], testVectors->keyLenInBytes);
                 memcpy(pIV, testVectors->iv[i], testVectors->ivLenInBytes);
+                copy_test_bufs(srcBufBefPad, midBufBefPad, dstBufBefPad,
+                               testVectors->plaintext[i],
+                               testVectors->ciphertext[i],
+                               byte_len);
+
+                /* shift buffers by offset for this round */
+                buffer_shift_right(srcBufBefPad, (byte_len + PAD_LEN * 2) * 8,
+                                   head_offset);
+                buffer_shift_right(dstBufBefPad, (byte_len + PAD_LEN * 2) * 8,
+                                   head_offset);
 
                 /*setup the keysched to be used*/
                 if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, pKey, pKeySched) == -1) {
@@ -282,43 +319,69 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                 }
 
                 /*Validate Encrypt*/
-                IMB_SNOW3G_F8_1_BUFFER_BIT(
-                        mb_mgr, pKeySched, pIV, srcBuff, midBuff,
-                        testVectors->dataLenInBits[i], offset);
+                IMB_SNOW3G_F8_1_BUFFER_BIT(mb_mgr, pKeySched, pIV, srcBufAftPad,
+                                           midBufAftPad, bit_len, head_offset);
 
                 /*check against the ciphertext in the vector against the
                  * encrypted plaintext*/
-                if (membitcmp(midBuff, dstBuff, testVectors->dataLenInBits[i],
-                              offset) != 0) {
+                if (membitcmp(midBufAftPad, dstBufAftPad,
+                              bit_len, head_offset) != 0) {
                         printf("Test1: snow3g_f8_1_bitbuffer(Enc) buffer:%d "
-                               "size:%d offset:%d\n",
-                               i, testVectors->dataLenInBits[i], offset);
-                        snow3g_hexdump("Actual:", &midBuff[byteoffset],
-                                       (testVectors->dataLenInBits[i] + 7) / 8);
-                        snow3g_hexdump("Expected:", &dstBuff[byteoffset],
-                                       (testVectors->dataLenInBits[i] + 7) / 8);
+                               "size:%d offset:%d\n", i, bit_len, head_offset);
+                        snow3g_hexdump("Actual:", midBufAftPad,
+                                       byte_len_with_offset);
+                        snow3g_hexdump("Expected:", dstBufAftPad,
+                                       byte_len_with_offset);
+                        goto snow3g_f8_1_buffer_bit_exit;
+                }
+
+                /* Check that data not to be ciphered was not overwritten */
+                if (membitcmp(midBufBefPad, padding,
+                              (PAD_LEN * 8) + head_offset, 0)) {
+                        printf("overwrite head\n");
+                        snow3g_hexdump("Head", midBufBefPad, PAD_LEN + 1);
+                        goto snow3g_f8_1_buffer_bit_exit;
+                }
+
+                if (membitcmp(midBufAftPad + final_byte_offset, padding,
+                              (PAD_LEN * 8) - tail_offset, tail_offset)) {
+                        printf("overwrite tail\n");
+                        snow3g_hexdump("Tail", midBufAftPad + final_byte_offset,
+                                       PAD_LEN + 1);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
                 printf(".");
 
-                /*Validate Decrypt*/
-                IMB_SNOW3G_F8_1_BUFFER_BIT(mb_mgr, pKeySched, pIV, dstBuff,
-                                           midBuff,
-                                           testVectors->dataLenInBits[i],
-                                           offset);
+                /* reset working buffer */
+                memset(midBufBefPad, -1, (byte_len + PAD_LEN * 2));
 
-                if (membitcmp(midBuff /*dstBuff*/, srcBuff,
-                              testVectors->dataLenInBits[i], offset) != 0) {
+                /*Validate Decrypt*/
+                IMB_SNOW3G_F8_1_BUFFER_BIT(mb_mgr, pKeySched, pIV, dstBufAftPad,
+                                           midBufAftPad, bit_len, head_offset);
+
+                if (membitcmp(midBufAftPad, srcBufAftPad, bit_len,
+                              head_offset) != 0) {
                         printf("Test2: snow3g_f8_1_bitbuffer(Dec) buffer:%d "
-                               "size:%d offset:%d\n",
-                               i, testVectors->dataLenInBits[i], offset);
-                        snow3g_hexdump(
-                                "Actual:", &/*dstBuff*/ midBuff[byteoffset],
-                                (testVectors->dataLenInBits[i] + offset % 8 +
-                                 7) / 8);
-                        snow3g_hexdump("Expected:", &srcBuff[byteoffset],
-                                       (testVectors->dataLenInBits[i] +
-                                        offset % 8 + 7) / 8);
+                               "size:%d offset:%d\n", i, bit_len, head_offset);
+                        snow3g_hexdump("Actual:", midBufAftPad,
+                                       byte_len_with_offset);
+                        snow3g_hexdump("Expected:", srcBufAftPad,
+                                       byte_len_with_offset);
+                        goto snow3g_f8_1_buffer_bit_exit;
+                }
+
+                /* Check that data not to be ciphered was not overwritten */
+                if (membitcmp(midBufBefPad, padding,
+                              (PAD_LEN * 8) + head_offset, 0)) {
+                        printf("overwrite head\n");
+                        snow3g_hexdump("Head", midBufBefPad, PAD_LEN + 1);
+                        goto snow3g_f8_1_buffer_bit_exit;
+                }
+                if (membitcmp(midBufAftPad + final_byte_offset, padding,
+                              (PAD_LEN * 8) - tail_offset, tail_offset)) {
+                        printf("overwrite tail\n");
+                        snow3g_hexdump("Tail", midBufAftPad + final_byte_offset,
+                                       PAD_LEN + 1);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
                 printf(".");
@@ -422,13 +485,6 @@ static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr)
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
                 printf(".");
-
-                memcpy(srcBuff, testVectors->plaintext, bufferbytesize);
-                memcpy(dstBuff, testVectors->ciphertext, bufferbytesize);
-                memcpy(midBuff, testVectors->ciphertext, bufferbytesize);
-
-                offset += testVectors->dataLenInBits[i];
-                byteoffset = offset / 8;
         }  /* for numVectors */
 
         /* no errors detected */
