@@ -32,7 +32,7 @@ CFLAGS = -DLINUX -D_GNU_SOURCE $(INCLUDES) \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
-	-pthread
+	-pthread -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
 
 LDFLAGS = -fPIE -z noexecstack -z relro -z now -pthread
 LDLIBS = -lIPSec_MB

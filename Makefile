@@ -62,7 +62,8 @@ CFLAGS := -DLINUX $(EXTRA_CFLAGS) $(INCLUDES) \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
-	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
+	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
+	-fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
 
 ASM_INCLUDE_DIRS := .
 
