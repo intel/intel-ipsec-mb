@@ -1072,11 +1072,54 @@ modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
         return 0;
 }
 
+/*
+ * Checks for sensitive information in registers, stack and MB_MGR
+ * (in this order, to try to minimize pollution of the data left out
+ *  after the job completion, due to these actual checks).
+ *
+ *  Returns -1 if sensitive information was found or 0 if not.
+ */
 static int
-perform_safe_checks(MB_MGR *mgr, const char *dir)
+perform_safe_checks(MB_MGR *mgr, const enum arch_type_e arch,
+                    const char *dir)
 {
         uint8_t *rsp_ptr;
+        uint32_t simd_size = 0;
 
+        dump_gps();
+        switch (arch) {
+        case ARCH_SSE:
+        case ARCH_AESNI_EMU:
+                dump_xmms_sse();
+                simd_size = XMM_MEM_SIZE;
+                break;
+        case ARCH_AVX:
+                dump_xmms_avx();
+                simd_size = XMM_MEM_SIZE;
+                break;
+        case ARCH_AVX2:
+                dump_ymms();
+                simd_size = YMM_MEM_SIZE;
+                break;
+        case ARCH_AVX512:
+                dump_zmms();
+                simd_size = ZMM_MEM_SIZE;
+                break;
+        default:
+                fprintf(stderr,
+                        "Error getting the architecture\n");
+                return -1;
+        }
+        if (search_patterns(gps, GP_MEM_SIZE) == 0) {
+                fprintf(stderr, "Pattern found in GP registers "
+                        "after %s data\n", dir);
+                return -1;
+        }
+        if (search_patterns(simd_regs, simd_size) == 0) {
+                fprintf(stderr, "Pattern found in SIMD "
+                        "registers after %s data\n", dir);
+                return -1;
+        }
         rsp_ptr = rdrsp();
         if (search_patterns((rsp_ptr - STACK_DEPTH),
                             STACK_DEPTH) == 0) {
@@ -1185,10 +1228,11 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
-                /* Check that MB_MGR and stack do not contain any
+                /* Check that the registers, stack and MB_MGR do not contain any
                  * sensitive information after job is returned */
                 if (safe_check)
-                        if (perform_safe_checks(enc_mb_mgr, "encrypting") < 0)
+                        if (perform_safe_checks(enc_mb_mgr, enc_arch,
+                            "encrypting") < 0)
                                 goto exit;
 
                 if (job->status != STS_COMPLETED) {
@@ -1221,12 +1265,12 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 if (!job)
                         job = IMB_FLUSH_JOB(dec_mb_mgr);
 
-                /* Check that MB_MGR and stack do not contain any
+                /* Check that the registers, stack and MB_MGR do not contain any
                  * sensitive information after job is returned */
                 if (safe_check)
-                        if (perform_safe_checks(dec_mb_mgr, "decrypting") < 0)
+                        if (perform_safe_checks(dec_mb_mgr, dec_arch,
+                            "decrypting") < 0)
                                 goto exit;
-
 
                 if (!job) {
                         fprintf(stderr, "job not returned\n");
