@@ -29,6 +29,10 @@ TEST_APP := ipsec_MB_testapp
 XVALID_APP := ipsec_xvalid_test
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 
+USE_YASM ?= n
+YASM ?= yasm
+NASM ?= nasm
+
 CFLAGS = -g -DLINUX -D_GNU_SOURCE \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
@@ -36,6 +40,9 @@ CFLAGS = -g -DLINUX -D_GNU_SOURCE \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
+
+YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__
+NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
 
 LDFLAGS = -fPIE -z noexecstack -z relro -z now
 LDLIBS = -lIPSec_MB
@@ -65,10 +72,19 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \
 	ecb_test.c zuc_test.c kasumi_test.c snow3g_test.c
 
+%.o:%.asm
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+
+ASM_OBJECTS := misc.o
+
 OBJECTS := $(SOURCES:%.c=%.o)
 
 XVALID_SOURCES := ipsec_xvalid.c
-XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o)
+XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o) $(ASM_OBJECTS)
 
 all: $(TEST_APP) $(XVALID_APP)
 
@@ -98,11 +114,11 @@ api_test.o: api_test.c gcm_ctr_vectors_test.h
 zuc_test.o: zuc_test.c zuc_test_vectors.h
 kasumi_test.o: kasumi_test.c kasumi_test_vectors.h
 snow3g_test.o: snow3g_test.c snow3g_test_vectors.h
-ipsec_xvalid.o: ipsec_xvalid.c
+ipsec_xvalid.o: ipsec_xvalid.c misc.h
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) $(TEST_APP) $(XVALID_OBJECTS) $(XVALID_APP)
+	-rm -f $(OBJECTS) $(TEST_APP) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS)
 
 SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
 CHECKPATCH?=checkpatch.pl
