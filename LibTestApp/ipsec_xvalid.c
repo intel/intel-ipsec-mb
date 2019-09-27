@@ -33,6 +33,7 @@
 #include <string.h>
 #include <errno.h>
 #include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
+#include "misc.h"
 
 #ifdef _WIN32
 #include <intrin.h>
@@ -73,6 +74,7 @@
 #define AAD_PATTERN 0x55555555
 #define KEY_PATTERN 0x66666666
 #define TAG_PATTERN 0x77777777
+#define STACK_DEPTH 8192
 
 enum arch_type_e {
         ARCH_SSE = 0,
@@ -1073,6 +1075,15 @@ modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
 static int
 perform_safe_checks(MB_MGR *mgr, const char *dir)
 {
+        uint8_t *rsp_ptr;
+
+        rsp_ptr = rdrsp();
+        if (search_patterns((rsp_ptr - STACK_DEPTH),
+                            STACK_DEPTH) == 0) {
+                fprintf(stderr, "Pattern found in stack after "
+                        "%s data\n", dir);
+                return -1;
+        }
         if (search_patterns(mgr, sizeof(MB_MGR)) == 0) {
                 fprintf(stderr, "Pattern found in MB_MGR after "
                                 "%s data\n", dir);
@@ -1174,7 +1185,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
-                /* Check that MB_MGR does not contain any
+                /* Check that MB_MGR and stack do not contain any
                  * sensitive information after job is returned */
                 if (safe_check)
                         if (perform_safe_checks(enc_mb_mgr, "encrypting") < 0)
@@ -1210,11 +1221,12 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 if (!job)
                         job = IMB_FLUSH_JOB(dec_mb_mgr);
 
-                /* Check that MB_MGR does not contain any
+                /* Check that MB_MGR and stack do not contain any
                  * sensitive information after job is returned */
                 if (safe_check)
                         if (perform_safe_checks(dec_mb_mgr, "decrypting") < 0)
                                 goto exit;
+
 
                 if (!job) {
                         fprintf(stderr, "job not returned\n");
