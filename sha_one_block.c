@@ -77,6 +77,17 @@ void store8_be(void *outp, const uint64_t val)
 }
 
 __forceinline
+void var_memcpy(void *dst, const void *src, const uint64_t len)
+{
+        uint64_t i;
+        const uint8_t *src8 = (const uint8_t *)src;
+        uint8_t *dst8 = (uint8_t *)dst;
+
+        for (i = 0; i < len; i++)
+                dst8[i] = src8[i];
+}
+
+__forceinline
 void copy_bswap4_array(void *dst, const void *src, const size_t num)
 {
         uint32_t *outp = (uint32_t *) dst;
@@ -262,7 +273,7 @@ sha_generic(const void *data, const uint64_t length, void *digest,
         r = length % blk_size;
 
         memset(cb, 0, sizeof(cb));
-        memcpy(cb, &inp[idx], r);
+        var_memcpy(cb, &inp[idx], r);
         cb[r] = 0x80;
 
         if (r >= (blk_size - pad_size)) {
