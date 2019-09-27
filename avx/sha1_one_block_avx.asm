@@ -260,16 +260,18 @@ sha1_block_avx:
 
 	vmovdqa	XTMP0, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
+%ifndef LINUX
 	mov	rax,rsp			; copy rsp
-	VMOVDQ	X0, [INP + 0*16]
 	sub	rsp,FRAMESZ
-	VMOVDQ	X1, [INP + 1*16]
-	and	rsp,-64			; align stack frame
+	and	rsp,-16			; align stack frame
 	mov	[_RSP],rax		; save copy of rsp
-
 	vmovdqa	[rsp + 0 * 16], xmm6
 	vmovdqa	[rsp + 1 * 16], xmm7
 	vmovdqa	[rsp + 2 * 16], xmm8
+%endif
+
+	VMOVDQ	X0, [INP + 0*16]
+	VMOVDQ	X1, [INP + 1*16]
 
 	;; load next message block
 	VMOVDQ	X2, [INP + 2*16]
@@ -470,11 +472,13 @@ loop3_5:
 	add	[SZ*3 + CTX], d
 	add	[SZ*4 + CTX], e
 
+%ifndef LINUX
 	vmovdqa	xmm8, [rsp + 2 * 16]
 	vmovdqa	xmm7, [rsp + 1 * 16]
 	vmovdqa	xmm6, [rsp + 0 * 16]
 
 	mov	rsp,[_RSP]
+%endif
 
 	pop	r13
 	pop	r12
