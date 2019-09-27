@@ -44,6 +44,16 @@
 %define MKGLOBAL(name,type,scope) global name
 %endif
 
+section .bss
+default rel
+
+MKGLOBAL(gps,data,)
+gps:	        resq	14
+
+MKGLOBAL(simd_regs,data,)
+alignb 64
+simd_regs:	resb	32*64
+
 section .text
 
 ;; Returns RSP pointer with the value BEFORE the call, so 8 bytes need
@@ -51,4 +61,76 @@ section .text
 MKGLOBAL(rdrsp,function,)
 rdrsp:
         lea rax, [rsp + 8]
+        ret
+
+MKGLOBAL(dump_gps,function,)
+dump_gps:
+
+        mov     [rel gps],      rax
+        mov     [rel gps + 8],  rbx
+        mov     [rel gps + 16], rcx
+        mov     [rel gps + 24], rdx
+        mov     [rel gps + 32], rdi
+        mov     [rel gps + 40], rsi
+
+%assign i 8
+%assign j 0
+%rep 8
+        mov     [rel gps + 48 + j], r %+i
+%assign i (i+1)
+%assign j (j+8)
+%endrep
+
+        ret
+
+MKGLOBAL(dump_xmms_sse,function,)
+dump_xmms_sse:
+
+%assign i 0
+%assign j 0
+%rep 16
+        movdqa  [rel simd_regs + j], xmm %+i
+%assign i (i+1)
+%assign j (j+16)
+%endrep
+
+        ret
+
+MKGLOBAL(dump_xmms_avx,function,)
+dump_xmms_avx:
+
+%assign i 0
+%assign j 0
+%rep 16
+        vmovdqa [rel simd_regs + j], xmm %+i
+%assign i (i+1)
+%assign j (j+16)
+%endrep
+
+        ret
+
+MKGLOBAL(dump_ymms,function,)
+dump_ymms:
+
+%assign i 0
+%assign j 0
+%rep 16
+        vmovdqa [rel simd_regs + j], ymm %+i
+%assign i (i+1)
+%assign j (j+32)
+%endrep
+
+        ret
+
+MKGLOBAL(dump_zmms,function,)
+dump_zmms:
+
+%assign i 0
+%assign j 0
+%rep 32
+        vmovdqa64 [rel simd_regs + j], zmm %+i
+%assign i (i+1)
+%assign j (j+64)
+%endrep
+
         ret

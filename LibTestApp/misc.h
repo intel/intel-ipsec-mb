@@ -28,7 +28,25 @@
 #ifndef XVALIDAPP_MISC_H
 #define XVALIDAPP_MISC_H
 
+/* RAX, RBX, RCX, RDX, RDI, RSI, R8-R15 */
+#define GP_MEM_SIZE 14*8
+
+#define XMM_MEM_SIZE 16*16
+#define YMM_MEM_SIZE 16*32
+#define ZMM_MEM_SIZE 32*64
+
+/* Memory allocated in BSS section in misc.asm */
+extern uint8_t gps[GP_MEM_SIZE];
+extern uint8_t simd_regs[ZMM_MEM_SIZE];
+
 /* Read RSP pointer */
 void *rdrsp(void);
+
+/* Functions to dump all registers into predefined memory */
+void dump_gps(void);
+void dump_xmms_sse(void);
+void dump_xmms_avx(void);
+void dump_ymms(void);
+void dump_zmms(void);
 
 #endif /* XVALIDAPP_MISC_H */
