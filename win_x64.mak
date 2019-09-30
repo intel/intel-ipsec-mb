@@ -408,32 +408,34 @@ $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
 help:
-!message * Available build options:
-!message * DEBUG=n (default)
-!message *           - this option will produce library not fit for debugging
-!message * SHARED=y (default)
-!message *           - this option will produce shared library
-!message * DEBUG=y   - this option will produce library fit for debugging
-!message * SHARED=n  - this option will produce static library
-!message * SAFE_DATA=n (default)
-!message *           - Sensitive data not cleared from registers and memory
-!message *             at operation end
-!message * SAFE_DATA=y
-!message *           - Sensitive data cleared from registers and memory
-!message *             at operation end
-!message * SAFE_PARAM=n (default)
-!message *           - API input parameters not checked
-!message * SAFE_PARAM=y
-!message *           - API input parameters checked
-!message * GCM_BIG_DATA=n (default)"
-!message *   Smaller GCM key structure with good performance level (VAES)
-!message *   for packet processing applications (buffers size < 2K).
-!message *   8 ghash keys used on SSE, AVX, AVX2 and AVX512.
-!message *   48 ghash keys used on AVX512 with VAES and VPCLMULQDQ.
-!message * GCM_BIG_DATA=y
-!message *   Better performing VAES GCM on big buffers using more ghash keys.
-!message *   This option results in a much bigger gcm_key structure (>2K).
-!message *   It only takes effect on platforms with VAES and VPCLMULQDQ.
+	@echo "Available build options:"
+	@echo "DEBUG=n (default)"
+	@echo "          - this option will produce library not fit for debugging"
+	@echo "SHARED=y (default)"
+	@echo "          - this option will produce shared library"
+	@echo "DEBUG=y   - this option will produce library fit for debugging"
+	@echo "SHARED=n  - this option will produce static library"
+	@echo "SAFE_DATA=n (default)"
+	@echo "          - Sensitive data not cleared from registers and memory"
+	@echo "            at operation end"
+	@echo "SAFE_DATA=y"
+	@echo "          - Sensitive data cleared from registers and memory"
+	@echo "            at operation end"
+	@echo "SAFE_PARAM=n (default)"
+	@echo "          - API input parameters not checked"
+	@echo "SAFE_PARAM=y"
+	@echo "          - API input parameters checked"
+	@echo "GCM_BIG_DATA=n (default)"
+	@echo "  - Smaller AVX512VAES GCM key structure with"
+        @echo "    good performance level for buffers sizes below 2K."
+	@echo "  - 8 ghash keys used on SSE, AVX, AVX2 and AVX512."
+	@echo "  - 48 ghash keys used on AVX512VAES and AVX512VPCLMULQDQ."
+	@echo "GCM_BIG_DATA=y"
+	@echo "  - Better performing AVX512VAES GCM on big buffers that"
+        @echo "    uses more ghash keys, 128 instead of 48."
+	@echo "  - This option results in a much bigger gcm_key structure, more than 2K."
+	@echo "  - Performance improvement takes effect only on platforms with"
+        @echo "    AVX512VAES and AVX512VPCLMULQDQ."
 
 clean:
 	-del /q $(lib_objs1)
