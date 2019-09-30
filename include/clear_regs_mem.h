@@ -28,6 +28,15 @@
 #ifndef CLEAR_REGS_H
 #define CLEAR_REGS_H
 
+/*
+ * memset_s() is only guaranteed to be available if
+ * __STDC_LIB_EXT1__ is defined by the implementation
+ * and if the user defines __STDC_WANT_LIB_EXT1__ to
+ * the integer constant 1 before including string.h
+ */
+#ifdef __WIN32
+#define __STDC_WANT_LIB_EXT1__ 1
+#endif
 #include <string.h>
 
 #define CLEAR_SCRATCH_GPS clear_scratch_gps
@@ -37,7 +46,11 @@ clear_mem(void *mem, const size_t size)
 #ifdef LINUX
         asm volatile (" " : : : "memory");
 #endif
+#ifdef __STDC_LIB_EXT1__
+        memset_s(mem, size, 0, size);
+#else
         memset(mem, 0, size);
+#endif
 }
 
 static inline void
@@ -46,7 +59,11 @@ clear_var(void *var, const size_t size)
 #ifdef LINUX
         asm volatile (" " : : : "memory");
 #endif
+#ifdef __STDC_LIB_EXT1__
+        memset_s(var, size, 0, size);
+#else
         memset(var, 0, size);
+#endif
 }
 
 void clear_scratch_gps(void);
