@@ -34,7 +34,8 @@ CFLAGS = -g -DLINUX -D_GNU_SOURCE \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
-	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
+	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
+	-fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
 
 LDFLAGS = -fPIE -z noexecstack -z relro -z now
 LDLIBS = -lIPSec_MB
