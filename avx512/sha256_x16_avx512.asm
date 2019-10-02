@@ -740,6 +740,16 @@ lastLoop:
 %assign I (I+1)
 %endrep
 
+%ifdef SAFE_DATA
+        ;; Clear stack frame (8*64 bytes)
+        vpxorq  zmm0, zmm0
+%assign i 0
+%rep 8
+	vmovdqa64 [rsp + i*64], zmm0
+%assign i (i+1)
+%endrep
+%endif
+
         mov     rsp, [rsp + _rsp]
         ret
 

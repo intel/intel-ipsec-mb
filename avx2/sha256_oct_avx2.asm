@@ -568,6 +568,17 @@ Lrounds_16_xx:
 
 	;;;;;;;;;;;;;;;;
 	;; Postamble
+
+%ifdef SAFE_DATA
+        ;; Clear stack frame ((16+8+4)*32 bytes)
+        vpxor   ymm0, ymm0
+%assign i 0
+%rep (16+8+4)
+	vmovdqa [rsp + i*SZ8], ymm0
+%assign i (i+1)
+%endrep
+%endif
+
 	add rsp, FRAMESZ
 	ret
 
