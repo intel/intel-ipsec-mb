@@ -695,6 +695,16 @@ lastblock:
         mov     [state +_data_ptr_md5  + 6*PTR_SZ], inp6
         mov     [state +_data_ptr_md5  + 7*PTR_SZ], inp7
 
+        ;; Clear stack frame (72*16 bytes)
+%ifdef SAFE_DATA
+        vpxor   xmm0, xmm0
+%assign i 0
+%rep (2*2*16+8)
+        vmovdqa [rsp + i*16], xmm0
+%assign i (i+1)
+%endrep
+%endif
+
         ;;;;;;;;;;;;;;;;
         ;; Postamble
         add     rsp, STACK_SIZE

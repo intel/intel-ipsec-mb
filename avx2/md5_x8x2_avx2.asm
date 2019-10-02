@@ -801,6 +801,16 @@ lastblock:
 	;;;;;;;;;;;;;;;;
 	;; Postamble
 
+        ;; Clear stack frame ((64+8+2)*32 bytes)
+%ifdef SAFE_DATA
+        vpxor   ymm0, ymm0
+%assign i 0
+%rep (2*2*16+8+2)
+        vmovdqa [rsp + i*32], ymm0
+%assign i (i+1)
+%endrep
+%endif
+
 	add	rsp, STACK_size
 
         ret
