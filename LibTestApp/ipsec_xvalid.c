@@ -1522,7 +1522,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
 
                 for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                         params->key_size = key_sz;
-                        for (hash_alg = SHA1; hash_alg <= AES_CMAC_BITLEN;
+                        for (hash_alg = SHA1; hash_alg <= PON_CRC_BIP;
                              hash_alg++) {
                                 /* Skip CUSTOM_HASH */
                                 if (hash_alg == CUSTOM_HASH)
