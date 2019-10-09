@@ -188,12 +188,16 @@ typedef union SafeBuffer {
 
 #define FIp1(data, key1, key2, key3)                                           \
         do {                                                                   \
+                uint16_t datal, datah;                                         \
+                                                                               \
                 (data) ^= (key1);                                              \
-                (data) = sso_kasumi_S7e[(uint8_t)(data)] ^ \
-                         sso_kasumi_S9e[(data) >> 7];      \
+                datal = LOOKUP16_SSE(sso_kasumi_S7e, (uint8_t)(data), 256);    \
+                datah = LOOKUP16_SSE(sso_kasumi_S9e, (data) >> 7, 512);        \
+                (data) = datal ^ datah;                                        \
                 (data) ^= (key2);                                              \
-                (data) = sso_kasumi_S7e[(data) >> 9] ^ \
-                         sso_kasumi_S9e[(data) & 0x1FF];       \
+                datal = LOOKUP16_SSE(sso_kasumi_S7e, (data) >> 9, 256);        \
+                datah = LOOKUP16_SSE(sso_kasumi_S9e, (data) & 0x1FF, 512);     \
+                (data) = datal ^ datah;                                        \
                 (data) ^= (key3);                                              \
         } while (0)
 
