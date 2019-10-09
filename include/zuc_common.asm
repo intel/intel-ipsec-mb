@@ -26,6 +26,10 @@
 ;;
 
 %include "include/os.asm"
+%include "include/reg_sizes.asm"
+
+extern lookup_8bit_sse
+
 
 section .data
 default rel
@@ -124,6 +128,78 @@ section .text
     shld        r15d, edx, 16   ; BRC_X3
 %endmacro
 
+%macro lookup_single_sbox 3
+%define %%table %1 ; [in] Pointer to table to look up
+%define %%idx   %2 ; [in] Index to look up
+%define %%value %3 ; [out] Returned value from lookup function (rcx, rdx, r8, r9)
+
+%ifdef SAFE_LOOKUP
+    ;; Save all registers used in lookup_8bit (xmm0-5, r9,r10)
+    ;; and registers for param passing and return (4 regs, OS dependent)
+    ;; (6*16 + 6*8 = 144 bytes)
+    sub     rsp, 144
+
+    movdqu  [rsp], xmm0
+    movdqu  [rsp + 16], xmm1
+    movdqu  [rsp + 32], xmm2
+    movdqu  [rsp + 48], xmm3
+    movdqu  [rsp + 64], xmm4
+    movdqu  [rsp + 80], xmm5
+    mov     [rsp + 96], r9
+    mov     [rsp + 104], r10
+
+%ifdef LINUX
+    mov     [rsp + 112], rdi
+    mov     [rsp + 120], rsi
+    mov     [rsp + 128], rdx
+
+    mov     rdi, %%table
+    mov     rsi, %%idx
+    mov     rdx, 256
+%else
+    mov     [rsp + 112], rcx
+    mov     [rsp + 120], rdx
+    mov     [rsp + 128], r8
+    mov     rcx, %%table
+    mov     rdx, %%idx
+    mov     r8,  256
+%endif
+    mov     [rsp + 136], rax
+
+    call    lookup_8bit_sse
+
+    ;; Restore all registers
+    movdqu  xmm0, [rsp]
+    movdqu  xmm1, [rsp + 16]
+    movdqu  xmm2, [rsp + 32]
+    movdqu  xmm3, [rsp + 48]
+    movdqu  xmm4, [rsp + 64]
+    movdqu  xmm5, [rsp + 80]
+    mov     r9,   [rsp + 96]
+    mov     r10,  [rsp + 104]
+
+%ifdef LINUX
+    mov     rdi, [rsp + 112]
+    mov     rsi, [rsp + 120]
+    mov     rdx, [rsp + 128]
+%else
+    mov     rcx, [rsp + 112]
+    mov     rdx, [rsp + 120]
+    mov     r8,  [rsp + 128]
+%endif
+
+    ;; Move returned value from lookup function, before restoring rax
+    mov     DWORD(%%value), eax
+    mov     rax, [rsp + 136]
+
+    add     rsp, 144
+
+%else ;; SAFE_LOOKUP
+
+    movzx DWORD(%%value), BYTE [%%table + %%idx]
+
+%endif ;; SAFE_LOOKUP
+%endmacro
 
 ;
 ;   NONLIN_FUN()
@@ -174,13 +250,13 @@ section .text
     shld        r8d, edx, 16
     shld        r9d, edx, 8
     and         rdx, 0xFF
-    movzx       edx, byte [rsi + rdx]
+    lookup_single_sbox rsi, rdx, rdx
     and         rbx, 0xFF
-    movzx       ebx, byte [rdi + rbx]
+    lookup_single_sbox rdi, rbx, rbx
     and         r8, 0xFF
-    movzx       r8d, byte [rsi + r8]
+    lookup_single_sbox rsi, r8, r8
     and         r9, 0xFF
-    movzx       r9d, byte [rdi + r9]
+    lookup_single_sbox rdi, r9, r9
     shrd        r10d, edx, 8
     shrd        r10d, ebx, 8
     shrd        r10d, r8d, 8
@@ -204,13 +280,13 @@ section .text
     shld        r9d, r11d, 8
     and         r11, 0xFF
 
-    movzx       r11d, byte [rsi + r11]
+    lookup_single_sbox rsi, r11, r11
     and         rbx, 0xFF
-    movzx       ebx, byte [rdi + rbx]
+    lookup_single_sbox rdi, rbx, rbx
     and         r8, 0xFF
-    movzx       r8d, byte [rsi + r8]
+    lookup_single_sbox rsi, r8, r8
     and         r9, 0xFF
-    movzx       r9d, byte [rdi + r9]
+    lookup_single_sbox rdi, r9, r9
 
     shrd        r11d, r11d, 8
 

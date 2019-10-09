@@ -26,6 +26,9 @@
 ;;
 
 %include "include/os.asm"
+%include "include/reg_sizes.asm"
+
+extern lookup_8bit_avx
 
 section .data
 default rel
@@ -242,6 +245,89 @@ align 64
     vmovdqa     [rax + OFS_X3], xmm2    ; BRC_X3
 %endmacro
 
+%macro lookup_single_sbox 2
+%define %%table   %1 ; [in] Pointer to table to look up
+%define %%idx_val %2 ; [in/out] Index to look up and returned value (rcx, rdx, r8, r9)
+
+%ifdef SAFE_LOOKUP
+    ;; Save all registers used in lookup_8bit (xmm0-5, r9,r10)
+    ;; and registers for param passing and return (4 regs, OS dependent)
+    ;; (6*16 + 6*8 = 144 bytes)
+    sub     rsp, 144
+
+    vmovdqu [rsp], xmm0
+    vmovdqu [rsp + 16], xmm1
+    vmovdqu [rsp + 32], xmm2
+    vmovdqu [rsp + 48], xmm3
+    vmovdqu [rsp + 64], xmm4
+    vmovdqu [rsp + 80], xmm5
+    mov     [rsp + 96], r9
+    mov     [rsp + 104], r10
+
+%ifdef LINUX
+    mov     [rsp + 112], rdi
+    mov     [rsp + 120], rsi
+    mov     [rsp + 128], rdx
+    mov     rdi, %%table
+    mov     rsi, %%idx_val
+    mov     rdx, 256
+%else
+%ifnidni %%idx_val, rcx
+    mov     [rsp + 112], rcx
+%endif
+%ifnidni %%idx_val, rdx
+    mov     [rsp + 120], rdx
+%endif
+%ifnidni %%idx_val, r8
+    mov     [rsp + 128], r8
+%endif
+
+    mov     rdx, %%idx_val
+    mov     rcx, %%table
+    mov     r8,  256
+%endif
+    mov     [rsp + 136], rax
+
+    call        lookup_8bit_avx
+
+    ;; Restore all registers
+    vmovdqu xmm0, [rsp]
+    vmovdqu xmm1, [rsp + 16]
+    vmovdqu xmm2, [rsp + 32]
+    vmovdqu xmm3, [rsp + 48]
+    vmovdqu xmm4, [rsp + 64]
+    vmovdqu xmm5, [rsp + 80]
+    mov     r9,   [rsp + 96]
+    mov     r10,  [rsp + 104]
+
+%ifdef LINUX
+    mov     rdi, [rsp + 112]
+    mov     rsi, [rsp + 120]
+    mov     rdx, [rsp + 128]
+%else
+%ifnidni %%idx_val, rcx
+    mov     rcx, [rsp + 112]
+%endif
+%ifnidni %%idx_val, rdx
+    mov     rdx, [rsp + 120]
+%endif
+%ifnidni %%idx_val, rcx
+    mov     r8,  [rsp + 128]
+%endif
+%endif
+
+    ;; Move returned value from lookup function, before restoring rax
+    mov     DWORD(%%idx_val), eax
+    mov     rax, [rsp + 136]
+
+    add     rsp, 144
+
+%else ;; SAFE_LOOKUP
+
+    movzx DWORD(%%idx_val), BYTE [%%table + %%idx_val]
+
+%endif ;; SAFE_LOOKUP
+%endmacro
 
 ;
 ;   sbox_lkup()
@@ -256,16 +342,15 @@ align 64
 ;
 %macro  sbox_lkup   3
     vpextrb     rcx, %3, (0 + (%2 * 4))
-    movzx       ecx, BYTE [rsi + rcx]
+    lookup_single_sbox rsi, rcx
     vpextrb     rdx, %3, (1 + (%2 * 4))
-
-    movzx       edx, BYTE [rdi + rdx]
+    lookup_single_sbox rdi, rdx
 
     xor         r10, r10
     vpextrb     r8,  %3, (2 + (%2 * 4))
-    movzx       r8d, BYTE [rsi + r8]
+    lookup_single_sbox rsi, r8
     vpextrb     r9,  %3, (3 + (%2 * 4))
-    movzx       r9d, BYTE [rdi + r9]
+    lookup_single_sbox rdi, r9
 
     shrd        r10d, ecx, 8
     shrd        r10d, edx, 8
