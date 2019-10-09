@@ -406,7 +406,7 @@ rotate_Xs
 ;; arg 1 : pointer to input data
 ;; arg 2 : pointer to digest
 section .text
-MKGLOBAL(FUNC,function,)
+MKGLOBAL(FUNC,function,internal)
 align 32
 FUNC:
 	push	rbx

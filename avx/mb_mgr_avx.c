@@ -308,7 +308,7 @@ flush_job_aes_gcm_enc_avx(MB_MGR *state, JOB_AES_HMAC *job)
 
 /* ====================================================================== */
 
-JOB_AES_HMAC *
+IMB_DLL_LOCAL JOB_AES_HMAC *
 submit_job_aes_cntr_avx(JOB_AES_HMAC *job)
 {
         if (16 == job->aes_key_len_in_bytes)
@@ -337,7 +337,7 @@ submit_job_aes_cntr_avx(JOB_AES_HMAC *job)
         return job;
 }
 
-JOB_AES_HMAC *
+IMB_DLL_LOCAL JOB_AES_HMAC *
 submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job)
 {
         if (16 == job->aes_key_len_in_bytes)
