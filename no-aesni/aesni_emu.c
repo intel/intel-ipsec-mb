@@ -31,6 +31,7 @@
 
 #include "intel-ipsec-mb.h"
 #include "aesni_emu.h"
+#include "include/constant_lookup.h"
 
 typedef union {
         uint32_t i;
@@ -113,18 +114,26 @@ static const uint8_t aes_isbox[16][16] = {
 
 static uint8_t aes_get_sbox(const uint32_t x)
 {
+#ifdef SAFE_LOOKUP
+        return lookup_8bit_sse(aes_sbox, (x & 0xFF), 256);
+#else
         uint32_t i = (x>>4) & 0xF;
         uint32_t j = x&0xF;
 
         return aes_sbox[i][j];
+#endif
 }
 
 static uint8_t aes_get_isbox(const uint32_t x)
 {
+#ifdef SAFE_LOOKUP
+        return lookup_8bit_sse(aes_isbox, (x & 0xFF), 256);
+#else
         uint32_t i = (x>>4) & 0xF;
         uint32_t j = x&0xF;
 
         return aes_isbox[i][j];
+#endif
 }
 
 static void xor_xmm(union xmm_reg *d,
