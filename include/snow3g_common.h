@@ -287,7 +287,7 @@ static inline void ClockFSM_4(snow3gKeyState4_t *pCtx, __m128i *data)
 #pragma warning(push)
 #pragma warning(disable:4556)
 #endif
-#ifdef NO_AESNI
+#if defined (NO_AESNI) || defined (SAFE_LOOKUP)
         uint32_t L = 0;
 #endif
         uint32_t K = 0;
@@ -298,7 +298,7 @@ static inline void ClockFSM_4(snow3gKeyState4_t *pCtx, __m128i *data)
                           pCtx->FSM_X[2]);
         *data = _mm_xor_si128(F, pCtx->FSM_X[1]);
         R = _mm_add_epi32(R, pCtx->FSM_X[1]);
-#ifdef NO_AESNI
+#if defined (NO_AESNI) || defined (SAFE_LOOKUP)
         S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, L, 0);
         S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, L, 1);
         S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, L, 2);
