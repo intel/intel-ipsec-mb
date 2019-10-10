@@ -39,6 +39,10 @@
         lookup_16bit_sse(_table, _idx, _size)
 #define LOOKUP16_AVX(_table, _idx, _size) \
         lookup_16bit_avx(_table, _idx, _size)
+#define LOOKUP32_SSE(_table, _idx, _size) \
+        lookup_32bit_sse(_table, _idx, _size)
+#define LOOKUP32_AVX(_table, _idx, _size) \
+        lookup_32bit_avx(_table, _idx, _size)
 #else
 #define LOOKUP8_SSE(_table, _idx, _size) \
         _table[_idx]
@@ -48,15 +52,19 @@
         _table[_idx]
 #define LOOKUP16_AVX(_table, _idx, _size) \
         _table[_idx]
+#define LOOKUP32_SSE(_table, _idx, _size) \
+        _table[_idx]
+#define LOOKUP32_AVX(_table, _idx, _size) \
+        _table[_idx]
 #endif
 
 /*
  * @brief Constant time SSE lookup function on variable size table
  *        with 8-bit values
  *
- * @param[in] table     Pointer to table to look up (16-byte aligned)
+ * @param[in] table     Pointer to the table to look up (16-byte aligned)
  * @param[in] idx       Index to look up
- * @param[in] size      Size of table to look up (multiple of 16 bytes)
+ * @param[in] size      Number of 8 bit elements in the table (multiple of 16)
  *
  * @return value to lookup
  */
@@ -67,9 +75,9 @@ lookup_8bit_sse(const void *table, const uint32_t idx, const uint32_t size);
  * @brief Constant time AVX lookup function on variable size table
  *        with 8-bit values
  *
- * @param[in] table     Pointer to table to look up (16-byte aligned)
+ * @param[in] table     Pointer to the table to look up (16-byte aligned)
  * @param[in] idx       Index to look up
- * @param[in] size      Size of table to look up (multiple of 16 bytes)
+ * @param[in] size      Number of 8 bit elements in the table (multiple of 16)
  *
  * @return value to lookup
  */
@@ -80,9 +88,9 @@ lookup_8bit_avx(const void *table, const uint32_t idx, const uint32_t size);
  * @brief Constant time SSE lookup function on variable size table
  *        with 16-bit values
  *
- * @param[in] table     Pointer to table to look up (16-byte aligned)
+ * @param[in] table     Pointer to the table to look up (16-byte aligned)
  * @param[in] idx       Index to look up
- * @param[in] size      Size of table to look up (multiple of 16 bytes)
+ * @param[in] size      Number of 16 bit elements in the table (multiple of 8)
  *
  * @return value to lookup
  */
@@ -93,13 +101,39 @@ lookup_16bit_sse(const void *table, const uint32_t idx, const uint32_t size);
  * @brief Constant time AVX lookup function on variable size table
  *        with 16-bit values
  *
- * @param[in] table     Pointer to table to look up (16-byte aligned)
+ * @param[in] table     Pointer to the table to look up (16-byte aligned)
  * @param[in] idx       Index to look up
- * @param[in] size      Size of table to look up (multiple of 16 bytes)
+ * @param[in] size      Number of 16 bit elements in the table (multiple of 8)
  *
  * @return value to lookup
  */
 uint16_t
 lookup_16bit_avx(const void *table, const uint32_t idx, const uint32_t size);
+
+/*
+ * @brief Constant time SSE lookup function on
+ *        variable size table with 32-bit values
+ *
+ * @param[in] table     Pointer to the table to look up (16-byte aligned)
+ * @param[in] idx       Index to look up
+ * @param[in] size      Number of 32 bit elements in the table (multiple of 4)
+ *
+ * @return value to lookup
+ */
+uint32_t
+lookup_32bit_sse(const void *table, const uint32_t idx, const uint32_t size);
+
+/*
+ * @brief Constant time AVX lookup function on
+ *        variable size table with 32-bit values
+ *
+ * @param[in] table     Pointer to the table to look up (16-byte aligned)
+ * @param[in] idx       Index to look up
+ * @param[in] size      Number of 32 bit elements in the table (multiple of 4)
+ *
+ * @return value to lookup
+ */
+uint32_t
+lookup_32bit_avx(const void *table, const uint32_t idx, const uint32_t size);
 
 #endif /* CONSTANT_LOOKUP_H */
