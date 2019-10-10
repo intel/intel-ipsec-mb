@@ -207,6 +207,127 @@ exit8_avx:
 
         ret
 
+; uint8_t lookup_16bit_sse(const void *table, const uint32_t idx, const uint32_t size);
+; arg 1 : pointer to table to look up
+; arg 2 : index to look up
+; arg 3 : size of table to look up
+MKGLOBAL(lookup_16bit_sse,function,internal)
+lookup_16bit_sse:
+
+        ;; Number of loop iters = matrix size / 8 (number of values in XMM)
+        shr     size, 3
+        je      exit16_sse
+
+        xor     offset, offset
+
+        ;; Broadcast idx to look up
+        movd    bcast_idx, DWORD(idx)
+        movdqa  xtmp, [rel bcast_mask]
+        pxor    accum_val, accum_val
+        pshufb  bcast_idx, xtmp
+
+        movdqa  xadd,     [rel add_8]
+        movdqa  xindices, [rel idx_tab16]
+
+loop16_sse:
+
+        movdqa  xtmp, xindices
+
+        ;; Compare indices with idx
+        ;; This generates a mask with all 0s except for the position where idx matches (all 1s here)
+        pcmpeqw xtmp, bcast_idx
+
+        ;; Load next 8 values
+        movdqa  xtmp2, [table + offset]
+
+        ;; This generates data with all 0s except the value we are looking for in the index to look up
+        pand    xtmp2, xtmp
+
+        por     accum_val, xtmp2
+
+        ;; Get next 8 indices
+        paddw   xindices, xadd
+        add     offset, 16
+        dec     size
+
+        jne     loop16_sse
+
+        ;; Extract value from XMM register
+        movdqa  xtmp, accum_val
+        pslldq  xtmp, 8      ; shift left by 64 bits
+        por     accum_val, xtmp
+
+        movdqa  xtmp, accum_val
+        pslldq  xtmp, 4      ; shift left by 32 bits
+        por     accum_val, xtmp
+
+        movdqa  xtmp, accum_val
+        pslldq  xtmp, 2      ; shift left by 16 bits
+        por     accum_val, xtmp
+
+        pextrw  rax, accum_val, 7
+
+exit16_sse:
+        ret
+
+; uint8_t lookup_16bit_avx(const void *table, const uint32_t idx, const uint32_t size);
+; arg 1 : pointer to table to look up
+; arg 2 : index to look up
+; arg 3 : size of table to look up
+MKGLOBAL(lookup_16bit_avx,function,internal)
+lookup_16bit_avx:
+
+        ;; Number of loop iters = matrix size / 8 (number of values in XMM)
+        shr     size, 3
+        je      exit16_avx
+
+        xor     offset, offset
+
+        ;; Broadcast idx to look up
+        vmovd   bcast_idx, DWORD(idx)
+        vmovdqa xtmp, [rel bcast_mask]
+        vpxor   accum_val, accum_val
+        vpshufb bcast_idx, xtmp
+
+        vmovdqa xadd,     [rel add_8]
+        vmovdqa xindices, [rel idx_tab16]
+
+loop16_avx:
+
+        ;; Compare indices with idx
+        ;; This generates a mask with all 0s except for the position where idx matches (all 1s here)
+        vpcmpeqw xtmp, xindices, bcast_idx
+
+        ;; Load next 16 values
+        vmovdqa xtmp2, [table + offset]
+
+        ;; This generates data with all 0s except the value we are looking for in the index to look up
+        vpand   xtmp2, xtmp
+
+        vpor    accum_val, xtmp2
+
+        ;; Get next 8 indices
+        vpaddw  xindices, xadd
+        add     offset, 16
+        dec     size
+
+        jne     loop16_avx
+
+        ;; Extract value from XMM register
+        vpslldq xtmp, accum_val, 8 ; shift left by 64 bits
+        vpor    accum_val, xtmp
+
+        vpslldq xtmp, accum_val, 4 ; shift left by 32 bits
+        vpor    accum_val, xtmp
+
+        vpslldq xtmp, accum_val, 2 ; shift left by 16 bits
+        vpor    accum_val, xtmp
+
+        vpextrw rax, accum_val, 7
+
+exit16_avx:
+        ret
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif
