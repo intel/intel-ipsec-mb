@@ -576,6 +576,16 @@ lastLoop:
 %assign I (I+1)
 %endrep
 
+
+%ifdef SAFE_DATA
+        ;; Clear stack frame ((NUM_LANES*8)*64 bytes)
+        vpxorq  zmm0, zmm0
+%assign i 0
+%rep (NUM_LANES*8)
+	vmovdqa64 [rsp + i*64], zmm0
+%assign i (i+1)
+%endrep
+%endif
         mov     rsp, [rsp + _RSP]
 ;hash_done:
         ret

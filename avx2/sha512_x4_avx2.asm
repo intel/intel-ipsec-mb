@@ -432,6 +432,16 @@ Lrounds_16_xx:
 	;;;;;;;;;;;;;;;;
 	;; Postamble
 
+        ;; Clear stack frame ((16 + 8)*32 bytes)
+%ifdef SAFE_DATA
+        vpxor   ymm0, ymm0
+%assign i 0
+%rep (16+NUM_SHA512_DIGEST_WORDS)
+	vmovdqa [rsp + i*SZ4], ymm0
+%assign i (i+1)
+%endrep
+%endif
+
 	add rsp, stack_frame_size
 
 	; outer calling routine restores XMM and other GP registers
