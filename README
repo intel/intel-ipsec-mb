@@ -262,6 +262,7 @@ or
 Build with additional safety features:
  - SAFE_DATA clears sensitive information stored in stack/registers
  - SAFE_PARAM adds extra checks on input parameters
+ - SAFE_LOOKUP uses constant-time lookups (enabled by default)
 > nmake /f win_x64.mak SAFE_DATA=y SAFE_PARAM=y
 
 Build with debugging information:
@@ -302,10 +303,13 @@ For more build options and their explanation run:
 Safety options
 ==============
 
-There are two build options that can be enabled to increase safety in the code and
+There are three build options that can be enabled to increase safety in the code and
 protecting external functions from incorrect input data.
-These options are disabled by default, due to
+SAFE_DATA and SAFE_PARAM options are disabled by default, due to
 the performance impact associated to the extra code added.
+SAFE_LOOKUP option is enabled by default, and can be disabled
+by setting the parameter equal to "n" (e.g. make SAFE_LOOKUP=n).
+
 These options (explained below) can be enabled when building the library,
 by setting the parameter equal to "y" (e.g. make SAFE_DATA=y).
 No specific code has been added, and no specific validation or security tests have been performed
@@ -322,6 +326,19 @@ SAFE_PARAM
 
 Input parameters are checked, looking generally for NULL pointers
 or an incorrect input length.
+
+SAFE_LOOKUP
+-----------
+
+Lookups which depend on sensitive information are implemented with
+constant time functions.
+Algorithms where these constant time functions are used are the following:
+
+- AESNI emulation
+- DES: SSE, AVX and AVX2 implementations
+- KASUMI: all architectures
+- SNOW3G: all architectures
+- ZUC: all architectures
 
 Installation
 ============

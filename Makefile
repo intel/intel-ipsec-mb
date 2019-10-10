@@ -94,6 +94,12 @@ NASM_FLAGS += -DSAFE_PARAM
 YASM_FLAGS += -DSAFE_PARAM
 endif
 
+ifneq ($(SAFE_LOOKUP),n)
+CFLAGS += -DSAFE_LOOKUP
+NASM_FLAGS += -DSAFE_LOOKUP
+YASM_FLAGS += -DSAFE_LOOKUP
+endif
+
 # prevent SIMD optimizations for non-aesni modules
 CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
@@ -131,6 +137,9 @@ SAFE_DATA_MSG1="SAFE_DATA option not set."
 SAFE_DATA_MSG2="Stack and registers containing sensitive information, \
 		such keys or IV will not be cleared \
 		at the end of function calls."
+SAFE_LOOKUP_MSG1="SAFE_LOOKUP option not set."
+SAFE_LOOKUP_MSG2="Lookups which depend on sensitive information \
+		are not guaranteed to be done in constant time."
 
 ifeq ($(GCM_BIG_DATA),y)
 CFLAGS += -DGCM_BIG_DATA
@@ -182,7 +191,8 @@ asm_generic_lib_objs := \
 	const.o \
 	aes128_ecbenc_x3.o \
 	zuc_common.o \
-	wireless_common.o
+	wireless_common.o \
+	constant_lookup.o
 
 #
 # List of ASM modules (no-aesni directory)
@@ -455,6 +465,9 @@ endif
 ifneq ($(SAFE_DATA), y)
 	@echo "NOTE:" $(SAFE_DATA_MSG1) $(SAFE_DATA_MSG2)
 endif
+ifeq ($(SAFE_LOOKUP), n)
+	@echo "NOTE:" $(SAFE_LOOKUP_MSG1) $(SAFE_LOOKUP_MSG2)
+endif
 
 .PHONY: install
 install: $(LIBNAME)
@@ -618,6 +631,10 @@ help:
 	@echo "          - API input parameters not checked"
 	@echo "SAFE_PARAM=y"
 	@echo "          - API input parameters checked"
+	@echo "SAFE_LOOKUP=n"
+	@echo "          - Lookups depending on sensitive data might not be constant time"
+	@echo "SAFE_LOOKUP=y (default)"
+	@echo "          - Lookups depending on sensitive data are constant time"
 	@echo "GCM_BIG_DATA=n (default)"
 	@echo "          - Smaller GCM key structure with good performance level (VAES)"
 	@echo "            for packet processing applications (buffers size < 2K)"

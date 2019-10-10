@@ -33,6 +33,8 @@
 # SAFE_DATA=y   - this option will clear memory and registers containing
 # 		  sensitive information (e.g. keys, IVs)
 # SAFE_PARAM=y  - this option will add extra input parameter checks
+# SAFE_LOOKUP=y - this option will perform constant-time lookups depending on
+# 		  sensitive data (default)
 # GCM_BIG_DATA=y
 #           - Better performing VAES GCM on big buffers using more ghash keys (~5% up).
 #             This option results in a much bigger gcm_key structure (>2K)
@@ -79,6 +81,11 @@ DCFLAGS = $(DCFLAGS) /DSAFE_PARAM
 DAFLAGS = $(DAFLAGS) -DSAFE_PARAM
 !endif
 
+!if "$(SAFE_LOOKUP)" != "n"
+DCFLAGS = $(DCFLAGS) /DSAFE_LOOKUP
+DAFLAGS = $(DAFLAGS) -DSAFE_LOOKUP
+!endif
+
 !if "$(GCM_BIG_DATA)" == "y"
 GCM_AFLAGS = -DGCM_BIG_DATA
 GCM_CFLAGS = /DGCM_BIG_DATA
@@ -112,6 +119,9 @@ SAFE_DATA_MSG1=SAFE_DATA option not set.
 SAFE_DATA_MSG2=Stack and registers containing sensitive information, \
 		such keys or IV will not be cleared \
 		at the end of function calls.
+SAFE_LOOKUP_MSG1=SAFE_LOOKUP option not set.
+SAFE_LOOKUP_MSG2=Lookups which depend on sensitive information \
+		are not guaranteed to be done in constant time.
 
 lib_objs1 = \
 	$(OBJ_DIR)\aes128_cbc_dec_by4_sse.obj \
@@ -224,7 +234,8 @@ lib_objs1 = \
         $(OBJ_DIR)\mb_mgr_aes256_submit_avx512.obj \
         $(OBJ_DIR)\mb_mgr_aes256_flush_avx512.obj \
         $(OBJ_DIR)\const.obj \
-	$(OBJ_DIR)\wireless_common.obj
+	$(OBJ_DIR)\wireless_common.obj \
+	$(OBJ_DIR)\constant_lookup.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_avx.obj \
@@ -363,6 +374,10 @@ $(LIBNAME): $(all_objs)
 	@echo NOTE:  $(SAFE_DATA_MSG1) $(SAFE_DATA_MSG2)
 !endif
 
+!if "$(SAFE_LOOKUP)" == "n"
+	@echo NOTE:  $(SAFE_LOOKUP_MSG1) $(SAFE_LOOKUP_MSG2)
+!endif
+
 $(all_objs): $(OBJ_DIR)
 
 {.\}.c{$(OBJ_DIR)}.obj:
@@ -425,6 +440,10 @@ help:
 	@echo "          - API input parameters not checked"
 	@echo "SAFE_PARAM=y"
 	@echo "          - API input parameters checked"
+	@echo "SAFE_LOOKUP=n"
+	@echo "          - Lookups depending on sensitive data might not be constant time"
+	@echo "SAFE_LOOKUP=y (default)"
+	@echo "          - Lookups depending on sensitive data are constant time"
 	@echo "GCM_BIG_DATA=n (default)"
 	@echo "  - Smaller AVX512VAES GCM key structure with"
         @echo "    good performance level for buffers sizes below 2K."
