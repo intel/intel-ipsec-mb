@@ -34,6 +34,7 @@
 #include "des.h"
 #include "des_utils.h"
 #include "include/clear_regs_mem.h"
+#include "include/constant_lookup.h"
 
 __forceinline
 void permute_operation(uint32_t *pa, uint32_t *pb,
@@ -391,14 +392,22 @@ uint32_t fRK(const uint32_t R, const uint64_t K)
          *   s-box: 48 bits -> 32 bits
          *   p-phase: 32 bits -> 32 bites permutation
          */
-        return sbox0p[x & 0x3f] |
-                sbox1p[(x >> (8 * 1)) & 0x3f] |
-                sbox2p[(x >> (8 * 2)) & 0x3f] |
-                sbox3p[(x >> (8 * 3)) & 0x3f] |
-                sbox4p[(x >> (8 * 4)) & 0x3f] |
-                sbox5p[(x >> (8 * 5)) & 0x3f] |
-                sbox6p[(x >> (8 * 6)) & 0x3f] |
-                sbox7p[(x >> (8 * 7)) & 0x3f];
+        return ((LOOKUP32_SSE(sbox0p, ((x >> (8 * 0)) & 0x3f),
+                              sizeof(sbox0p))) |
+                (LOOKUP32_SSE(sbox1p, ((x >> (8 * 1)) & 0x3f),
+                              sizeof(sbox1p))) |
+                (LOOKUP32_SSE(sbox2p, ((x >> (8 * 2)) & 0x3f),
+                              sizeof(sbox2p))) |
+                (LOOKUP32_SSE(sbox3p, ((x >> (8 * 3)) & 0x3f),
+                              sizeof(sbox3p))) |
+                (LOOKUP32_SSE(sbox4p, ((x >> (8 * 4)) & 0x3f),
+                              sizeof(sbox4p))) |
+                (LOOKUP32_SSE(sbox5p, ((x >> (8 * 5)) & 0x3f),
+                              sizeof(sbox5p))) |
+                (LOOKUP32_SSE(sbox6p, ((x >> (8 * 6)) & 0x3f),
+                              sizeof(sbox6p))) |
+                (LOOKUP32_SSE(sbox7p, ((x >> (8 * 7)) & 0x3f),
+                              sizeof(sbox7p))));
 }
 
 __forceinline
