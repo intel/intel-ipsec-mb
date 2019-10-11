@@ -2065,6 +2065,14 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         movdqu  [r10], xmm9
 
 %%_return_T_done:
+
+%ifdef SAFE_DATA
+        ;; Clear sensitive data from context structure
+        pxor    xmm0, xmm0
+        movdqu	[%%GDATA_CTX + AadHash], xmm0
+        movdqu  [%%GDATA_CTX + PBlockEncKey], xmm0
+%endif
+
 %endmacro ;GCM_COMPLETE
 
 
