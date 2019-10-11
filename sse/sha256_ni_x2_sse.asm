@@ -596,6 +596,16 @@ sha256_ni:
 done_hash:
         DBGPRINTL	"exit sha256-ni-x2"
 
+        ;; Clear stack frame (4*16 bytes)
+%ifdef SAFE_DATA
+        pxor    xmm0, xmm0
+%assign i 0
+%rep 4
+        movdqa	[rsp + i*16], xmm0
+%assign i (i+1)
+%endrep
+%endif
+
 	add		rsp, frame_size
 	ret
 
