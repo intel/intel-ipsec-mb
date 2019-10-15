@@ -70,7 +70,7 @@ endif
 SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
 	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \
-	ecb_test.c zuc_test.c kasumi_test.c snow3g_test.c
+	ecb_test.c zuc_test.c kasumi_test.c snow3g_test.c direct_api_test.c
 
 %.o:%.asm
 ifeq ($(USE_YASM),y)
@@ -115,6 +115,7 @@ zuc_test.o: zuc_test.c zuc_test_vectors.h
 kasumi_test.o: kasumi_test.c kasumi_test_vectors.h
 snow3g_test.o: snow3g_test.c snow3g_test_vectors.h
 ipsec_xvalid.o: ipsec_xvalid.c misc.h
+direct_api_test.o: direct_api_test.c
 
 .PHONY: clean
 clean:

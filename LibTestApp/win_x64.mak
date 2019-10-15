@@ -66,7 +66,7 @@ XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
 AS = nasm
 AFLAGS = -fwin64 -Xvc -DWIN_ABI
 
-TEST_OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj kasumi_test.obj snow3g_test.obj
+TEST_OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj kasumi_test.obj snow3g_test.obj direct_api_test.obj
 
 XVALID_OBJS = ipsec_xvalid.obj misc.obj
 
@@ -140,6 +140,9 @@ kasumi_test.obj: kasumi_test.c kasumi_test_vectors.h
 
 snow3g_test.obj: snow3g_test.c snow3g_test_vectors.h
 	$(CC) /c $(CFLAGS) snow3g_test.c
+
+direct_api_test.obj: direct_api_test.c
+	$(CC) /c $(CFLAGS) direct_api_test.c
 
 ipsec_xvalid.obj: ipsec_xvalid.c misc.h
 	$(CC) /c $(CFLAGS) ipsec_xvalid.c

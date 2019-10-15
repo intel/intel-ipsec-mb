@@ -51,6 +51,7 @@ extern int pon_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int kasumi_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 extern int snow3g_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+extern int direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -298,6 +299,7 @@ main(int argc, char **argv)
                 errors += sha_test(atype, p_mgr);
                 errors += chained_test(atype, p_mgr);
                 errors += api_test(atype, p_mgr);
+                errors += direct_api_test(atype, p_mgr);
                 free_mb_mgr(p_mgr);
         }
 
