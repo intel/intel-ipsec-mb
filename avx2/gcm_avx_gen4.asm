@@ -3411,9 +3411,9 @@ FN_NAME(enc,_finalize_):
         vmovdqu xmm6, [rsp + 0*16]
         add     rsp, 5*16
 %endif
-
-exit_enc_fin:
         pop r12
+exit_enc_fin:
+
 ret
 
 
