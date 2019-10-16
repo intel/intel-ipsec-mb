@@ -335,6 +335,92 @@ test_gcm_api(struct MB_MGR *mgr)
         return 0;
 }
 
+/*
+ * @brief Performs direct Key expansion and
+ *        generation API invalid param tests
+ */
+static int
+test_key_exp_gen_api(struct MB_MGR *mgr)
+{
+        const uint32_t text_len = BUF_SIZE;
+        uint8_t out_buf[BUF_SIZE];
+        uint8_t zero_buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+
+        seg_err = setjmp(env);
+        if (seg_err) {
+                printf("%s: segfault occured!\n", __func__);
+                return 1;
+        }
+
+        memset(out_buf, 0, text_len);
+        memset(zero_buf, 0, text_len);
+
+        /**
+         * API are generally tested twice:
+         * 1. test with all invalid params
+         * 2. test with some valid params (in, out, len)
+         *    and verify output buffer is not modified
+         */
+
+        IMB_AES_KEYEXP_128(mgr, NULL, NULL, NULL);
+        IMB_AES_KEYEXP_128(mgr, NULL, out_buf, zero_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_AES_KEYEXP_128, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_AES_KEYEXP_192(mgr, NULL, NULL, NULL);
+        IMB_AES_KEYEXP_192(mgr, NULL, out_buf, zero_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_AES_KEYEXP_192, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_AES_KEYEXP_256(mgr, NULL, NULL, NULL);
+        IMB_AES_KEYEXP_256(mgr, NULL, out_buf, zero_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_AES_KEYEXP_256, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_AES_CMAC_SUBKEY_GEN_128(mgr, NULL, NULL, NULL);
+        IMB_AES_CMAC_SUBKEY_GEN_128(mgr, NULL, out_buf, zero_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_AES_CMAC_SUBKEY_GEN_128, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_AES_XCBC_KEYEXP(mgr, NULL, NULL, NULL, NULL);
+        IMB_AES_XCBC_KEYEXP(mgr, NULL, out_buf, out_buf, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_AES_XCBC_KEYEXP, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_DES_KEYSCHED(mgr, NULL, NULL);
+        IMB_DES_KEYSCHED(mgr, (uint64_t *)out_buf, NULL);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_DES_KEYSCHED, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        printf("\n");
+        return 0;
+}
+
 int
 direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 {
@@ -358,6 +444,7 @@ direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 #endif
 
         errors += test_gcm_api(mb_mgr);
+        errors += test_key_exp_gen_api(mb_mgr);
 
 	if (0 == errors)
 		printf("...Pass\n");
