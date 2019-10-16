@@ -421,6 +421,136 @@ test_key_exp_gen_api(struct MB_MGR *mgr)
         return 0;
 }
 
+/*
+ * @brief Performs direct hash API invalid param tests
+ */
+static int
+test_hash_api(struct MB_MGR *mgr)
+{
+        const uint32_t text_len = BUF_SIZE;
+        uint8_t out_buf[BUF_SIZE];
+        uint8_t zero_buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+
+        seg_err = setjmp(env);
+        if (seg_err) {
+                printf("%s: segfault occured!\n", __func__);
+                return 1;
+        }
+
+        memset(out_buf, 0, text_len);
+        memset(zero_buf, 0, text_len);
+
+        /**
+         * API are generally tested twice:
+         * 1. test with all invalid params
+         * 2. test with some valid params (in, out, len)
+         *    and verify output buffer is not modified
+         */
+
+        IMB_SHA1_ONE_BLOCK(mgr, NULL, NULL);
+        IMB_SHA1_ONE_BLOCK(mgr, NULL, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA1_ONE_BLOCK, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA1(mgr, NULL, -1, NULL);
+        IMB_SHA1(mgr, NULL, BUF_SIZE, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA1, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA224_ONE_BLOCK(mgr, NULL, NULL);
+        IMB_SHA224_ONE_BLOCK(mgr, NULL, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA224_ONE_BLOCK, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA224(mgr, NULL, -1, NULL);
+        IMB_SHA224(mgr, NULL, BUF_SIZE, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA224, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA256_ONE_BLOCK(mgr, NULL, NULL);
+        IMB_SHA256_ONE_BLOCK(mgr, NULL, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA256_ONE_BLOCK, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA256(mgr, NULL, -1, NULL);
+        IMB_SHA256(mgr, NULL, BUF_SIZE, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA256, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA384_ONE_BLOCK(mgr, NULL, NULL);
+        IMB_SHA384_ONE_BLOCK(mgr, NULL, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA384_ONE_BLOCK, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA384(mgr, NULL, -1, NULL);
+        IMB_SHA384(mgr, NULL, BUF_SIZE, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA384, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA512_ONE_BLOCK(mgr, NULL, NULL);
+        IMB_SHA512_ONE_BLOCK(mgr, NULL, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA512_ONE_BLOCK, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_SHA512(mgr, NULL, -1, NULL);
+        IMB_SHA512(mgr, NULL, BUF_SIZE, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_SHA512, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_MD5_ONE_BLOCK(mgr, NULL, NULL);
+        IMB_MD5_ONE_BLOCK(mgr, NULL, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_MD5_ONE_BLOCK, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        printf("\n");
+        return 0;
+}
+
 int
 direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 {
@@ -445,6 +575,7 @@ direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 
         errors += test_gcm_api(mb_mgr);
         errors += test_key_exp_gen_api(mb_mgr);
+        errors += test_hash_api(mb_mgr);
 
 	if (0 == errors)
 		printf("...Pass\n");
