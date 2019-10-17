@@ -69,9 +69,7 @@
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 
 #define SEED 0xdeadcafe
-#define IV_PATTERN 0x33333333
 #define PT_PATTERN 0x44444444
-#define AAD_PATTERN 0x55555555
 #define KEY_PATTERN 0x66666666
 #define TAG_PATTERN 0x77777777
 #define STACK_DEPTH 8192
@@ -518,10 +516,6 @@ search_patterns(const void *ptr, const size_t mem_size)
                 const uint32_t string = ((const uint32_t *) ptr8)[0];
                 int ret = -1;
 
-                if (string == IV_PATTERN) {
-                        fprintf(stderr, "Part of IV is present\n");
-                        ret = 0;
-                }
                 if (string == KEY_PATTERN) {
                         fprintf(stderr, "Part of KEY is present\n");
                         ret = 0;
@@ -1174,15 +1168,12 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         }
 
         /* If performing a test searching for sensitive information,
-         * set keys, plaintext, IV and AAD to known values,
+         * set keys and plaintext to known values,
          * so they can be searched later on in the MB_MGR structure and stack.
          * Otherwise, just randomize the data */
         if (safe_check) {
                 memset(test_buf, PT_PATTERN, buf_size);
                 memset(key, KEY_PATTERN, MAX_KEY_SIZE);
-                memset(iv, IV_PATTERN, MAX_IV_SIZE);
-                memset(aad, AAD_PATTERN, AAD_SIZE);
-
         } else {
                 generate_random_buf(test_buf, buf_size);
                 generate_random_buf(key, MAX_KEY_SIZE);
