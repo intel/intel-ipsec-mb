@@ -3013,6 +3013,13 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu  [r10], xmm9
 
 %%_return_T_done:
+
+%ifdef SAFE_DATA
+        ;; Clear sensitive data from context structure
+        vpxor   xmm0, xmm0
+        vmovdqu [%%GDATA_CTX + AadHash], xmm0
+        vmovdqu [%%GDATA_CTX + PBlockEncKey], xmm0
+%endif
 %endmacro ; GCM_COMPLETE
 
 

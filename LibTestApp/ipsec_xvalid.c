@@ -69,9 +69,7 @@
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 
 #define SEED 0xdeadcafe
-#define IV_PATTERN 0x33333333
 #define PT_PATTERN 0x44444444
-#define AAD_PATTERN 0x55555555
 #define KEY_PATTERN 0x66666666
 #define TAG_PATTERN 0x77777777
 #define STACK_DEPTH 8192
@@ -97,6 +95,8 @@ struct params_s {
 
 /* Struct storing all expanded keys */
 struct cipher_auth_keys {
+        uint8_t temp_buf[SHA_512_BLOCK_SIZE];
+        DECLARE_ALIGNED(uint32_t dust[15 * 4], 16);
         uint8_t ipad[SHA512_DIGEST_SIZE_IN_BYTES];
         uint8_t opad[SHA512_DIGEST_SIZE_IN_BYTES];
         DECLARE_ALIGNED(uint32_t k1_expanded[15 * 4], 16);
@@ -508,17 +508,14 @@ search_patterns(const void *ptr, const size_t mem_size)
 {
         const uint8_t *ptr8 = (const uint8_t *) ptr;
         size_t i;
-        int ret = -1;
 
         if (mem_size < 4)
                 return -1;
 
         for (i = 0; i <= (mem_size - 4); i++) {
                 const uint32_t string = ((const uint32_t *) ptr8)[0];
-                if (string == IV_PATTERN) {
-                        fprintf(stderr, "Part of IV is present\n");
-                        ret = 0;
-                }
+                int ret = -1;
+
                 if (string == KEY_PATTERN) {
                         fprintf(stderr, "Part of KEY is present\n");
                         ret = 0;
@@ -782,10 +779,10 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
 static int
 prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
              const uint8_t *key, const struct params_s *params,
-             unsigned int force_pattern)
+             const unsigned int force_pattern)
 {
-        static uint8_t buf[SHA_512_BLOCK_SIZE];
-        static DECLARE_ALIGNED(uint32_t dust[15 * 4], 16);
+        uint8_t *buf = keys->temp_buf;
+        uint32_t *dust = keys->dust;
         uint32_t *k1_expanded = keys->k1_expanded;
         uint8_t *k2 = keys->k2;
         uint8_t *k3 = keys->k3;
@@ -876,13 +873,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case SHA1:
                 /* compute ipad hash */
-                memset(buf, 0x36, sizeof(buf));
+                memset(buf, 0x36, SHA1_BLOCK_SIZE);
                 for (i = 0; i < SHA1_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, sizeof(buf));
+                memset(buf, 0x5c, SHA1_BLOCK_SIZE);
                 for (i = 0; i < SHA1_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad);
@@ -890,13 +887,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case SHA_224:
                 /* compute ipad hash */
-                memset(buf, 0x36, sizeof(buf));
+                memset(buf, 0x36, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, sizeof(buf));
+                memset(buf, 0x5c, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad);
@@ -904,13 +901,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case SHA_256:
                 /* compute ipad hash */
-                memset(buf, 0x36, sizeof(buf));
+                memset(buf, 0x36, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, sizeof(buf));
+                memset(buf, 0x5c, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad);
@@ -918,13 +915,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case SHA_384:
                 /* compute ipad hash */
-                memset(buf, 0x36, sizeof(buf));
+                memset(buf, 0x36, SHA_384_BLOCK_SIZE);
                 for (i = 0; i < SHA_384_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, sizeof(buf));
+                memset(buf, 0x5c, SHA_384_BLOCK_SIZE);
                 for (i = 0; i < SHA_384_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad);
@@ -932,13 +929,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case SHA_512:
                 /* compute ipad hash */
-                memset(buf, 0x36, sizeof(buf));
+                memset(buf, 0x36, SHA_512_BLOCK_SIZE);
                 for (i = 0; i < SHA_512_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, sizeof(buf));
+                memset(buf, 0x5c, SHA_512_BLOCK_SIZE);
                 for (i = 0; i < SHA_512_BLOCK_SIZE; i++)
                         buf[i] ^= key[i];
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad);
@@ -946,13 +943,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case MD5:
                 /* compute ipad hash */
-                memset(buf, 0x36, sizeof(buf));
+                memset(buf, 0x36, 64);
                 for (i = 0; i < 64; i++)
                         buf[i] ^= key[i];
                 IMB_MD5_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, sizeof(buf));
+                memset(buf, 0x5c, 64);
                 for (i = 0; i < 64; i++)
                         buf[i] ^= key[i];
                 IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad);
@@ -1171,15 +1168,12 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         }
 
         /* If performing a test searching for sensitive information,
-         * set keys, plaintext, IV and AAD to known values,
+         * set keys and plaintext to known values,
          * so they can be searched later on in the MB_MGR structure and stack.
          * Otherwise, just randomize the data */
         if (safe_check) {
                 memset(test_buf, PT_PATTERN, buf_size);
                 memset(key, KEY_PATTERN, MAX_KEY_SIZE);
-                memset(iv, IV_PATTERN, MAX_IV_SIZE);
-                memset(aad, AAD_PATTERN, AAD_SIZE);
-
         } else {
                 generate_random_buf(test_buf, buf_size);
                 generate_random_buf(key, MAX_KEY_SIZE);
@@ -1197,12 +1191,52 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 p_src[0] = xgem_hdr;
         }
 
-        /* Expand/schedule keys */
-        if (prepare_keys(enc_mb_mgr, enc_keys, key, params, safe_check) < 0)
-                goto exit;
+        /*
+         * Expand/schedule keys.
+         * If checking for sensitive information, first use actual
+         * key expansion functions and check the stack for left over
+         * information and then set a pattern in the expanded key memory
+         * to search for later on.
+         * If not checking for sensitive information, just use the key
+         * expansion functions.
+         */
+        if (safe_check) {
+                uint8_t *rsp_ptr;
 
-        if (prepare_keys(dec_mb_mgr, dec_keys, key, params, safe_check) < 0)
-                goto exit;
+                if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 0) < 0)
+                        goto exit;
+
+                rsp_ptr = rdrsp();
+                if (search_patterns((rsp_ptr - STACK_DEPTH),
+                                     STACK_DEPTH) == 0) {
+                        fprintf(stderr, "Pattern found in stack after "
+                                "expanding encryption keys\n");
+                        goto exit;
+                }
+
+                if (prepare_keys(dec_mb_mgr, dec_keys, key, params, 0) < 0)
+                        goto exit;
+
+                rsp_ptr = rdrsp();
+                if (search_patterns((rsp_ptr - STACK_DEPTH),
+                                     STACK_DEPTH) == 0) {
+                        fprintf(stderr, "Pattern found in stack after "
+                                "expanding decryption keys\n");
+                        goto exit;
+                }
+
+                if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 1) < 0)
+                        goto exit;
+
+                if (prepare_keys(enc_mb_mgr, dec_keys, key, params, 1) < 0)
+                        goto exit;
+        } else {
+                if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 0) < 0)
+                        goto exit;
+
+                if (prepare_keys(enc_mb_mgr, dec_keys, key, params, 0) < 0)
+                        goto exit;
+        }
 
         for (i = 0; i < job_iter; i++) {
                 job = IMB_GET_NEXT_JOB(enc_mb_mgr);
@@ -1488,7 +1522,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
 
                 for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                         params->key_size = key_sz;
-                        for (hash_alg = SHA1; hash_alg <= AES_CMAC_BITLEN;
+                        for (hash_alg = SHA1; hash_alg <= PON_CRC_BIP;
                              hash_alg++) {
                                 /* Skip CUSTOM_HASH */
                                 if (hash_alg == CUSTOM_HASH)

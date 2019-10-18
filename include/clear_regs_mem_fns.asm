@@ -96,6 +96,28 @@ clear_scratch_zmms:
 
         ret
 
+;
+; This function clears all memory passed
+;
+; void force_memset_zero(void *mem, const size_t size)
+MKGLOBAL(force_memset_zero,function,internal)
+force_memset_zero:
+
+%ifdef LINUX
+        mov rcx, rsi
+%else
+        push rdi
+        mov rdi, rcx
+        mov rcx, rdx
+%endif
+        xor eax, eax
+        cld
+        rep stosb
+
+%ifndef LINUX
+        pop rdi
+%endif
+        ret
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
