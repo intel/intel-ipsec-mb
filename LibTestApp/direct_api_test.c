@@ -670,6 +670,163 @@ test_zuc_api(struct MB_MGR *mgr)
         return 0;
 }
 
+/*
+ * @brief Performs direct KASUMI API invalid param tests
+ */
+static int
+test_kasumi_api(struct MB_MGR *mgr)
+{
+        const uint32_t text_len = BUF_SIZE;
+        const uint32_t inv_len = -1;
+        const uint64_t inv_iv = -1;
+        uint8_t out_buf[BUF_SIZE];
+        uint8_t zero_buf[BUF_SIZE];
+        int i, seg_err; /* segfault flag */
+        void *out_bufs[NUM_BUFS];
+        uint32_t lens[NUM_BUFS];
+        int ret1 = 0;
+        int ret2 = 0;
+
+        seg_err = setjmp(env);
+        if (seg_err) {
+                printf("%s: segfault occured!\n", __func__);
+                return 1;
+        }
+
+        for (i = 0; i < NUM_BUFS; i++) {
+                out_bufs[i] = (void *)&out_buf;
+                lens[i] = text_len;
+        }
+
+        memset(out_buf, 0, text_len);
+        memset(zero_buf, 0, text_len);
+
+        /**
+         * API are generally tested twice:
+         * 1. test with all invalid params
+         * 2. test with some valid params (in, out, len)
+         *    and verify output buffer is not modified
+         */
+
+        IMB_KASUMI_F8_1_BUFFER(mgr, NULL, inv_iv, NULL, NULL, inv_len);
+        IMB_KASUMI_F8_1_BUFFER(mgr, NULL, inv_iv, NULL, out_buf, text_len);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_KASUMI_F8_1_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_KASUMI_F8_1_BUFFER_BIT(mgr, NULL, inv_iv, NULL,
+                                   NULL, inv_len, inv_len);
+        IMB_KASUMI_F8_1_BUFFER_BIT(mgr, NULL, inv_iv, NULL,
+                                   out_buf, text_len, 0);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_KASUMI_F8_1_BUFFER_BIT, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_KASUMI_F8_2_BUFFER(mgr, NULL, inv_iv, inv_iv, NULL,
+                               NULL, inv_len, NULL, NULL, inv_len);
+        IMB_KASUMI_F8_2_BUFFER(mgr, NULL, inv_iv, inv_iv, NULL,
+                               out_buf, text_len, NULL, out_buf, text_len);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_KASUMI_F8_2_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_KASUMI_F8_3_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, NULL,
+                               NULL, NULL, NULL, NULL, NULL, inv_len);
+        IMB_KASUMI_F8_3_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, NULL,
+                               out_buf, NULL, out_buf, NULL, out_buf, text_len);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_KASUMI_F8_3_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_KASUMI_F8_4_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, inv_iv,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               inv_len);
+        IMB_KASUMI_F8_4_BUFFER(mgr, NULL, inv_iv, inv_iv, inv_iv, inv_iv,
+                               NULL, out_buf, NULL, out_buf, NULL, out_buf,
+                               NULL, out_buf, inv_len);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_KASUMI_F8_4_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL,
+                               NULL, &inv_len, inv_len);
+        IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL,
+                               out_bufs, lens, NUM_BUFS);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_KASUMI_F8_N_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_KASUMI_F9_1_BUFFER(mgr, NULL, NULL, inv_len, NULL);
+        IMB_KASUMI_F9_1_BUFFER(mgr, NULL, NULL, text_len, out_buf);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_KASUMI_F9_1_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_KASUMI_F9_1_BUFFER_USER(mgr, NULL, inv_iv, NULL,
+                                    inv_len, NULL, inv_len);
+        IMB_KASUMI_F9_1_BUFFER_USER(mgr, NULL, inv_iv, NULL,
+                                    text_len, out_buf, 0);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_KASUMI_F9_1_BUFFER_USER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        ret1 = IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, NULL, NULL);
+        ret2 = IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, NULL,
+                                            (kasumi_key_sched_t *)out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
+            ret1 == 0 || ret2 == 0) {
+                printf("%s: IMB_KASUMI_INIT_F8_KEY_SCHED, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        ret1 = IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, NULL, NULL);
+        ret2 = IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, NULL,
+                                            (kasumi_key_sched_t *)out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
+            ret1 == 0 || ret2 == 0) {
+                printf("%s: IMB_KASUMI_INIT_F9_KEY_SCHED, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        if (IMB_KASUMI_KEY_SCHED_SIZE(mgr) <= 0) {
+                printf("%s: IMB_KASUMI_KEY_SCHED_SIZE, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        printf("\n");
+        return 0;
+}
+
 int
 direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 {
@@ -697,6 +854,7 @@ direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
         errors += test_hash_api(mb_mgr);
         errors += test_aes_api(mb_mgr);
         errors += test_zuc_api(mb_mgr);
+        errors += test_kasumi_api(mb_mgr);
 
 	if (0 == errors)
 		printf("...Pass\n");
