@@ -602,10 +602,9 @@ test_zuc_api(struct MB_MGR *mgr)
         const uint32_t inv_len = -1;
         uint8_t out_buf[BUF_SIZE];
         uint8_t zero_buf[BUF_SIZE];
-        int seg_err; /* segfault flag */
+        int i, ret1, ret2, seg_err; /* segfault flag */
         void *out_bufs[NUM_BUFS];
         uint32_t lens[NUM_BUFS];
-        int i;
 
         seg_err = setjmp(env);
         if (seg_err) {
@@ -627,6 +626,30 @@ test_zuc_api(struct MB_MGR *mgr)
          * 2. test with some valid params (in, out, len)
          *    and verify output buffer is not modified
          */
+
+        ret1 = zuc_eea3_iv_gen(inv_len, (const uint8_t)inv_len,
+                               (const uint8_t)inv_len, NULL);
+        ret2 = zuc_eea3_iv_gen(inv_len, (const uint8_t)inv_len,
+                               (const uint8_t)inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
+            ret1 == 0 || ret2 == 0) {
+                printf("%s: zuc_eea3_iv_gen, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        ret1 = zuc_eia3_iv_gen(inv_len, (const uint8_t)inv_len,
+                               (const uint8_t)inv_len, NULL);
+        ret2 = zuc_eia3_iv_gen(inv_len, (const uint8_t)inv_len,
+                               (const uint8_t)inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
+            ret1 == 0 || ret2 == 0) {
+                printf("%s: zuc_eia3_iv_gen, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
 
         IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, NULL, inv_len);
         IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, out_buf, text_len);
@@ -681,11 +704,9 @@ test_kasumi_api(struct MB_MGR *mgr)
         const uint64_t inv_iv = -1;
         uint8_t out_buf[BUF_SIZE];
         uint8_t zero_buf[BUF_SIZE];
-        int i, seg_err; /* segfault flag */
+        int i, ret1, ret2, seg_err; /* segfault flag */
         void *out_bufs[NUM_BUFS];
         uint32_t lens[NUM_BUFS];
-        int ret1 = 0;
-        int ret2 = 0;
 
         seg_err = setjmp(env);
         if (seg_err) {
@@ -707,6 +728,26 @@ test_kasumi_api(struct MB_MGR *mgr)
          * 2. test with some valid params (in, out, len)
          *    and verify output buffer is not modified
          */
+
+        ret1 = kasumi_f8_iv_gen(inv_len, (const uint8_t)inv_len,
+                                (const uint8_t)inv_len, NULL);
+        ret2 = kasumi_f8_iv_gen(inv_len, (const uint8_t)inv_len,
+                                (const uint8_t)inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
+            ret1 == 0 || ret2 == 0) {
+                printf("%s: kasumi_f8_iv_gen, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        ret1 = kasumi_f9_iv_gen(inv_len, inv_len, NULL);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) || ret1 == 0) {
+                printf("%s: kasumi_f9_iv_gen, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
 
         IMB_KASUMI_F8_1_BUFFER(mgr, NULL, inv_iv, NULL, NULL, inv_len);
         IMB_KASUMI_F8_1_BUFFER(mgr, NULL, inv_iv, NULL, out_buf, text_len);
@@ -837,11 +878,9 @@ test_snow3g_api(struct MB_MGR *mgr)
         const uint32_t inv_len = -1;
         uint8_t out_buf[BUF_SIZE];
         uint8_t zero_buf[BUF_SIZE];
-        int i, seg_err; /* segfault flag */
+        int i, ret1, ret2, seg_err; /* segfault flag */
         void *out_bufs[NUM_BUFS];
         uint32_t lens[NUM_BUFS];
-        int ret1 = 0;
-        int ret2 = 0;
 
         seg_err = setjmp(env);
         if (seg_err) {
@@ -863,6 +902,30 @@ test_snow3g_api(struct MB_MGR *mgr)
          * 2. test with some valid params (in, out, len)
          *    and verify output buffer is not modified
          */
+
+        ret1 = snow3g_f8_iv_gen(inv_len, (const uint8_t)inv_len,
+                                (const uint8_t)inv_len, NULL);
+        ret2 = snow3g_f8_iv_gen(inv_len, (const uint8_t)inv_len,
+                                (const uint8_t)inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
+            ret1 == 0 || ret2 == 0) {
+                printf("%s: snow3g_f8_iv_gen, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        ret1 = snow3g_f9_iv_gen(inv_len, (const uint8_t)inv_len,
+                                (const uint8_t)inv_len, NULL);
+        ret2 = snow3g_f9_iv_gen(inv_len, (const uint8_t)inv_len,
+                                (const uint8_t)inv_len, out_buf);
+        if ((memcmp(out_buf, zero_buf, text_len) != 0) ||
+            ret1 == 0 || ret2 == 0) {
+                printf("%s: snow3g_f9_iv_gen, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
 
         IMB_SNOW3G_F8_1_BUFFER(mgr, NULL, NULL, NULL, NULL, inv_len);
         IMB_SNOW3G_F8_1_BUFFER(mgr, NULL, NULL, NULL, out_buf, text_len);
