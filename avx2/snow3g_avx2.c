@@ -25,13 +25,14 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef _WIN32
-#define AVX2
-#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_ymms
-#else
-/* use AVX implementation on Windows for now */
+
+#if defined (_WIN32) || defined (SAFE_LOOKUP)
+/* use AVX implementation on Windows for now or when SAFE_LOOKUP flag is set */
 #define AVX
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
+#else
+#define AVX2
+#define CLEAR_SCRATCH_SIMD_REGS clear_scratch_ymms
 #endif
 #define SNOW3G_F8_1_BUFFER_BIT snow3g_f8_1_buffer_bit_avx2
 #define SNOW3G_F8_1_BUFFER snow3g_f8_1_buffer_avx2

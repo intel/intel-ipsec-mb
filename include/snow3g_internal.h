@@ -30,6 +30,7 @@
 
 #include "intel-ipsec-mb.h"
 #include "wireless_common.h"
+#include "constant_lookup.h"
 
 #define MAX_KEY_LEN (16)
 #define SNOW3G_4_BYTES (4)
@@ -47,6 +48,39 @@
 
 #define ComplementaryMask64(x) ((~(x) % 64) + 1)
 #define ComplementaryMask32(x) ((~(x) % 32) + 1)
+
+#ifndef SAFE_LOOKUP
+/*standard lookup */
+#define SNOW3G_LOOKUP_W0(table, idx, size) \
+        table[idx].w0.v
+#define SNOW3G_LOOKUP_W1(table, idx, size) \
+        table[idx].w1.v
+#define SNOW3G_LOOKUP_W2(table, idx, size) \
+        table[idx].w2.v
+#define SNOW3G_LOOKUP_W3(table, idx, size) \
+        table[idx].w3.v
+#else
+/* contant time lookup */
+#if defined (AVX) || defined (AVX2)
+#define SNOW3G_LOOKUP_W0(table, idx, size) \
+        ((uint32_t)(LOOKUP64_AVX(table, idx, size) >> 0))
+#define SNOW3G_LOOKUP_W1(table, idx, size) \
+        ((uint32_t)(LOOKUP64_AVX(table, idx, size) >> 8))
+#define SNOW3G_LOOKUP_W2(table, idx, size) \
+        ((uint32_t)(LOOKUP64_AVX(table, idx, size) >> 16))
+#define SNOW3G_LOOKUP_W3(table, idx, size) \
+        ((uint32_t)(LOOKUP64_AVX(table, idx, size) >> 24))
+#else
+#define SNOW3G_LOOKUP_W0(table, idx, size) \
+        ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 0))
+#define SNOW3G_LOOKUP_W1(table, idx, size) \
+        ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 8))
+#define SNOW3G_LOOKUP_W2(table, idx, size) \
+        ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 16))
+#define SNOW3G_LOOKUP_W3(table, idx, size) \
+        ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 24))
+#endif /* AVX || AVX2 */
+#endif /* SAFE_LOOKUP */
 
 typedef union SafeBuffer {
         uint64_t b64;
@@ -191,8 +225,8 @@ typedef struct snow3gKeyState8_s {
         } while (0)
 #endif /* AVX2 */
 
-#ifdef NO_AESNI
 
+#if defined (NO_AESNI) || defined (SAFE_LOOKUP)
 /* help compilers to interleave the
  * operations and table access latencies
  */
@@ -207,21 +241,29 @@ typedef struct snow3gKeyState8_s {
                 uint32_t tw, tx;                                               \
                 w3 = w & 0xff;                                                 \
                 x3 = x & 0xff;                                                 \
-                tw = snow3g_table_S2[w3].w3.v;                                 \
-                tx = snow3g_table_S1[x3].w3.v;                                 \
+                tw = SNOW3G_LOOKUP_W3(snow3g_table_S2, w3,                     \
+                                      sizeof(snow3g_table_S2));                \
+                tx = SNOW3G_LOOKUP_W3(snow3g_table_S1, x3,                     \
+                                      sizeof(snow3g_table_S1));                \
                 w0 = w >> 24;                                                  \
                 x0 = x >> 24;                                                  \
-                tw ^= snow3g_table_S2[w0].w0.v;                                \
-                tx ^= snow3g_table_S1[x0].w0.v;                                \
+                tw ^= SNOW3G_LOOKUP_W0(snow3g_table_S2, w0,                    \
+                                       sizeof(snow3g_table_S2));               \
+                tx ^= SNOW3G_LOOKUP_W0(snow3g_table_S1, x0,                    \
+                                       sizeof(snow3g_table_S1));               \
                 w1 = (w >> 16) & 0xff;                                         \
                 x1 = (x >> 16) & 0xff;                                         \
-                tw ^= snow3g_table_S2[w1].w1.v;                                \
-                tx ^= snow3g_table_S1[x1].w1.v;                                \
+                tw ^= SNOW3G_LOOKUP_W1(snow3g_table_S2, w1,                    \
+                                       sizeof(snow3g_table_S2));               \
+                tx ^= SNOW3G_LOOKUP_W1(snow3g_table_S1, x1,                    \
+                                       sizeof(snow3g_table_S1));               \
                 w2 = (w >> 8) & 0xff;                                          \
                 x2 = (x >> 8) & 0xff;                                          \
-                y = tw ^ snow3g_table_S2[w2].w2.v;                             \
-                w = tx ^ snow3g_table_S1[x2].w2.v;                             \
-        } while (0)
+                y = tw ^ SNOW3G_LOOKUP_W2(snow3g_table_S2, w2,                 \
+                                          sizeof(snow3g_table_S2));            \
+                w = tx ^ SNOW3G_LOOKUP_W2(snow3g_table_S1, x2,                 \
+                                          sizeof(snow3g_table_S1));            \
+               } while (0)
 
 /* Sbox Snow3g_S1 and Snow3g_S2, simple C code
  *  y = Snow3g_S2(w); w = Snow3g_S1(x); u = Snow3g_S1(z);
@@ -235,27 +277,39 @@ typedef struct snow3gKeyState8_s {
                 w3 = w & 0xff;                                                 \
                 x3 = x & 0xff;                                                 \
                 z3 = z & 0xff;                                                 \
-                tw = snow3g_table_S2[w3].w3.v;                                 \
-                tx = snow3g_table_S1[x3].w3.v;                                 \
-                tz = snow3g_table_S1[z3].w3.v;                                 \
+                tw = SNOW3G_LOOKUP_W3(snow3g_table_S2, w3,                     \
+                                      sizeof(snow3g_table_S2));                \
+                tx = SNOW3G_LOOKUP_W3(snow3g_table_S1, x3,                     \
+                                      sizeof(snow3g_table_S1));                \
+                tz = SNOW3G_LOOKUP_W3(snow3g_table_S1, z3,                     \
+                                      sizeof(snow3g_table_S1));                \
                 w0 = w >> 24;                                                  \
                 x0 = x >> 24;                                                  \
                 z0 = z >> 24;                                                  \
-                tw ^= snow3g_table_S2[w0].w0.v;                                \
-                tx ^= snow3g_table_S1[x0].w0.v;                                \
-                tz ^= snow3g_table_S1[z0].w0.v;                                \
+                tw ^= SNOW3G_LOOKUP_W0(snow3g_table_S2, w0,                    \
+                                       sizeof(snow3g_table_S2));               \
+                tx ^= SNOW3G_LOOKUP_W0(snow3g_table_S1, x0,                    \
+                                       sizeof(snow3g_table_S1));               \
+                tz ^= SNOW3G_LOOKUP_W0(snow3g_table_S1, z0,                    \
+                                       sizeof(snow3g_table_S1));               \
                 w1 = (w >> 16) & 0xff;                                         \
                 x1 = (x >> 16) & 0xff;                                         \
                 z1 = (z >> 16) & 0xff;                                         \
-                tw ^= snow3g_table_S2[w1].w1.v;                                \
-                tx ^= snow3g_table_S1[x1].w1.v;                                \
-                tz ^= snow3g_table_S1[z1].w1.v;                                \
+                tw ^= SNOW3G_LOOKUP_W1(snow3g_table_S2, w1,                    \
+                                       sizeof(snow3g_table_S2));               \
+                tx ^= SNOW3G_LOOKUP_W1(snow3g_table_S1, x1,                    \
+                                       sizeof(snow3g_table_S1));               \
+                tz ^= SNOW3G_LOOKUP_W1(snow3g_table_S1, z1,                    \
+                                       sizeof(snow3g_table_S1));               \
                 w2 = (w >> 8) & 0xff;                                          \
                 x2 = (x >> 8) & 0xff;                                          \
                 z2 = (z >> 8) & 0xff;                                          \
-                y = tw ^ snow3g_table_S2[w2].w2.v;                             \
-                w = tx ^ snow3g_table_S1[x2].w2.v;                             \
-                u = tz ^ snow3g_table_S1[z2].w2.v;                             \
+                y = tw ^ SNOW3G_LOOKUP_W2(snow3g_table_S2, w2,                 \
+                                          sizeof(snow3g_table_S2));            \
+                w = tx ^ SNOW3G_LOOKUP_W2(snow3g_table_S1, x2,                 \
+                                          sizeof(snow3g_table_S1));            \
+                u = tz ^ SNOW3G_LOOKUP_W2(snow3g_table_S1, z2,                 \
+                                          sizeof(snow3g_table_S1));            \
         } while (0)
 
 /* Sbox Snow3g_S1 and Snow3g_S2 with dependency unrolling
@@ -273,8 +327,14 @@ typedef struct snow3gKeyState8_s {
                 w2 = _mm_extract_epi8(w, (4 * n + 1));                         \
                 w1 = _mm_extract_epi8(w, (4 * n + 2));                         \
                 w0 = _mm_extract_epi8(w, (4 * n + 3));                         \
-                l = snow3g_table_S2[w3].w3.v ^ snow3g_table_S2[w2].w2.v ^      \
-                    snow3g_table_S2[w1].w1.v ^ snow3g_table_S2[w0].w0.v;       \
+                l = SNOW3G_LOOKUP_W3(snow3g_table_S2, w3,                      \
+                                     sizeof(snow3g_table_S2)) ^                \
+                        SNOW3G_LOOKUP_W2(snow3g_table_S2, w2,                  \
+                                         sizeof(snow3g_table_S2)) ^            \
+                        SNOW3G_LOOKUP_W1(snow3g_table_S2, w1,                  \
+                                         sizeof(snow3g_table_S2)) ^            \
+                        SNOW3G_LOOKUP_W0(snow3g_table_S2, w0,                  \
+                                         sizeof(snow3g_table_S2));             \
                 if (n != 0)                                                    \
                         w = _mm_insert_epi32(w, k, (n - 1));                   \
                 if (n != 0)                                                    \
@@ -283,8 +343,14 @@ typedef struct snow3gKeyState8_s {
                 x2 = _mm_extract_epi8(x, (4 * n + 1));                         \
                 x1 = _mm_extract_epi8(x, (4 * n + 2));                         \
                 x0 = _mm_extract_epi8(x, (4 * n + 3));                         \
-                k = snow3g_table_S1[x3].w3.v ^ snow3g_table_S1[x2].w2.v ^      \
-                    snow3g_table_S1[x1].w1.v ^ snow3g_table_S1[x0].w0.v;       \
+                k = SNOW3G_LOOKUP_W3(snow3g_table_S1, x3,                      \
+                                     sizeof(snow3g_table_S1)) ^                \
+                        SNOW3G_LOOKUP_W2(snow3g_table_S1, x2,                  \
+                                         sizeof(snow3g_table_S1)) ^            \
+                        SNOW3G_LOOKUP_W1(snow3g_table_S1, x1,                  \
+                                         sizeof(snow3g_table_S1)) ^            \
+                        SNOW3G_LOOKUP_W0(snow3g_table_S1, x0,                  \
+                                         sizeof(snow3g_table_S1));             \
                 if (n == 3)                                                    \
                         w = _mm_insert_epi32(w, k, n);                         \
                 if (n == 3)                                                    \
@@ -357,7 +423,7 @@ typedef struct snow3gKeyState8_s {
                 y = _mm_insert_epi32(y, ty, n);                                \
         } while (0)
 
-#endif /* NO_AESNI */
+#endif /* NO_AESNI || SAFE_LOOKUP */
 
 /* -------------------------------------------------------------------
  * Sbox Snow3g_S1 maps a 32bit input to a 32bit output

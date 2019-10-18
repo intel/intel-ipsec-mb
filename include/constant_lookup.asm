@@ -58,6 +58,13 @@ add_4:
         dd 0x4, 0x4, 0x4, 0x4
 
 align 16
+idx_tab64:
+        dq 0x0,  0x1
+
+add_2:
+        dq 0x2, 0x2
+
+align 16
 bcast_mask:
         db 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01,
         db 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
@@ -444,6 +451,108 @@ loop32_avx:
         vmovd   eax, accum_val
 
 exit32_avx:
+        ret
+
+
+; uint64_t lookup_64bit_sse(const void *table, const uint32_t idx, const uint32_t size);
+; arg 1 : pointer to table to look up
+; arg 2 : index to look up
+; arg 3 : size of table to look up
+MKGLOBAL(lookup_64bit_sse,function,internal)
+lookup_64bit_sse:
+        ;; Number of loop iters = matrix size / 2 (number of values in XMM)
+        shr     size, 1
+        je      exit64_sse
+
+        xor     offset, offset
+
+        ;; Broadcast idx to look up
+        movq    bcast_idx, idx
+        pxor    accum_val, accum_val
+        pinsrq  bcast_idx, idx, 1
+
+        movdqa  xadd,     [rel add_2]
+        movdqa  xindices, [rel idx_tab64]
+
+loop64_sse:
+        movdqa  xtmp, xindices
+
+        ;; Compare indices with idx
+        ;; This generates a mask with all 0s except for the position where idx matches (all 1s here)
+        pcmpeqq xtmp, bcast_idx
+
+        ;; Load next 2 values
+        movdqa  xtmp2, [table + offset]
+
+        ;; This generates data with all 0s except the value we are looking for in the index to look up
+        pand    xtmp2, xtmp
+
+        por     accum_val, xtmp2
+
+        ;; Get next 2 indices
+        paddq   xindices, xadd
+        add     offset, 16
+        dec     size
+
+        jne     loop64_sse
+
+        ;; Extract value from XMM register
+        movdqa  xtmp, accum_val
+        psrldq  xtmp, 8      ; shift right by 64 bits
+        por     accum_val, xtmp
+
+        movq     rax, accum_val
+
+exit64_sse:
+        ret
+
+
+; uint64_t lookup_64bit_avx(const void *table, const uint32_t idx, const uint32_t size);
+; arg 1 : pointer to table to look up
+; arg 2 : index to look up
+; arg 3 : size of table to look up
+MKGLOBAL(lookup_64bit_avx,function,internal)
+lookup_64bit_avx:
+        ;; Number of loop iters = matrix size / 2 (number of values in XMM)
+        shr     size, 1
+        je      exit64_avx
+
+        xor     offset, offset
+
+        vmovq    bcast_idx, idx
+        vpxor    accum_val, accum_val
+        vpinsrq  bcast_idx, idx, 1
+
+        vmovdqa xadd,     [rel add_2]
+        vmovdqa xindices, [rel idx_tab64]
+
+loop64_avx:
+        ;; Compare indices with idx
+        ;; This generates a mask with all 0s except for the position where idx matches (all 1s here)
+        vpcmpeqq xtmp, xindices, bcast_idx
+
+        ;; Load next 2 values
+        vmovdqa xtmp2, [table + offset]
+
+        ;; This generates data with all 0s except the value we are looking for in the index to look up
+        vpand   xtmp2, xtmp
+
+        vpor    accum_val, xtmp2
+
+        ;; Get next 2 indices
+        vpaddq  xindices, xadd
+        add     offset, 16
+        dec     size
+
+        jne     loop64_avx
+
+        ;; Extract value from XMM register
+        vpsrldq xtmp, accum_val, 8 ; shift right by 64 bits
+        vpor    accum_val, xtmp
+
+        vmovq   rax, accum_val
+
+exit64_avx:
         ret
 
 
