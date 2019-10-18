@@ -36,6 +36,7 @@
 #include "gcm_ctr_vectors_test.h"
 
 #define BUF_SIZE ((uint32_t)sizeof(struct gcm_key_data))
+#define NUM_BUFS 8
 
 int
 direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
@@ -591,6 +592,84 @@ test_aes_api(struct MB_MGR *mgr)
         return 0;
 }
 
+/*
+ * @brief Performs direct ZUC API invalid param tests
+ */
+static int
+test_zuc_api(struct MB_MGR *mgr)
+{
+        const uint32_t text_len = BUF_SIZE;
+        const uint32_t inv_len = -1;
+        uint8_t out_buf[BUF_SIZE];
+        uint8_t zero_buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+        void *out_bufs[NUM_BUFS];
+        uint32_t lens[NUM_BUFS];
+        int i;
+
+        seg_err = setjmp(env);
+        if (seg_err) {
+                printf("%s: segfault occured!\n", __func__);
+                return 1;
+        }
+
+        for (i = 0; i < NUM_BUFS; i++) {
+                out_bufs[i] = (void *)&out_buf;
+                lens[i] = text_len;
+        }
+
+        memset(out_buf, 0, text_len);
+        memset(zero_buf, 0, text_len);
+
+        /**
+         * API are generally tested twice:
+         * 1. test with all invalid params
+         * 2. test with some valid params (in, out, len)
+         *    and verify output buffer is not modified
+         */
+
+        IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, NULL, inv_len);
+        IMB_ZUC_EEA3_1_BUFFER(mgr, NULL, NULL, NULL, out_buf, text_len);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_ZUC_EEA3_1_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_ZUC_EEA3_4_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL);
+        IMB_ZUC_EEA3_4_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_ZUC_EEA3_4_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL,
+                              NULL, &inv_len, inv_len);
+        IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL,
+                              out_bufs, lens, NUM_BUFS);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_ZUC_EEA3_N_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        IMB_ZUC_EIA3_1_BUFFER(mgr, NULL, NULL, NULL, inv_len, NULL);
+        IMB_ZUC_EIA3_1_BUFFER(mgr, NULL, NULL, NULL, text_len, out_bufs[0]);
+        if (memcmp(out_buf, zero_buf, text_len) != 0) {
+                printf("%s: IMB_ZUC_EIA3_1_BUFFER, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        printf("\n");
+        return 0;
+}
+
 int
 direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 {
@@ -617,6 +696,7 @@ direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
         errors += test_key_exp_gen_api(mb_mgr);
         errors += test_hash_api(mb_mgr);
         errors += test_aes_api(mb_mgr);
+        errors += test_zuc_api(mb_mgr);
 
 	if (0 == errors)
 		printf("...Pass\n");
