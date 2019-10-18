@@ -49,4 +49,10 @@ void dump_xmms_avx(void);
 void dump_ymms(void);
 void dump_zmms(void);
 
+/* Functions to clear all scratch SIMD registers */
+void clear_scratch_xmms_sse(void);
+void clear_scratch_xmms_avx(void);
+void clear_scratch_ymms(void);
+void clear_scratch_zmms(void);
+
 #endif /* XVALIDAPP_MISC_H */

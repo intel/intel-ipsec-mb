@@ -134,3 +134,118 @@ dump_zmms:
 %endrep
 
         ret
+
+;
+; This function clears all scratch XMM registers
+;
+; void clear_scratch_xmms_sse(void)
+MKGLOBAL(clear_scratch_xmms_sse,function,internal)
+clear_scratch_xmms_sse:
+
+%ifdef LINUX
+%assign i 0
+%rep 16
+        pxor    xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+; On Windows, XMM0-XMM5 registers are scratch registers
+%else
+%assign i 0
+%rep 6
+        pxor    xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+%endif ; LINUX
+
+        ret
+
+;
+; This function clears all scratch XMM registers
+;
+; It should be called before restoring the XMM registers
+; for Windows (XMM6-XMM15)
+;
+; void clear_scratch_xmms_avx(void)
+MKGLOBAL(clear_scratch_xmms_avx,function,internal)
+clear_scratch_xmms_avx:
+
+%ifdef LINUX
+        vzeroall
+; On Windows, XMM0-XMM5 registers are scratch registers
+%else
+%assign i 0
+%rep 6
+        vpxor   xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+%endif ; LINUX
+
+        ret
+
+;
+; This function clears all scratch YMM registers
+;
+; It should be called before restoring the XMM registers
+; for Windows (XMM6-XMM15)
+;
+; void clear_scratch_ymms(void)
+MKGLOBAL(clear_scratch_ymms,function,internal)
+clear_scratch_ymms:
+; On Linux, all YMM registers are scratch registers
+%ifdef LINUX
+        vzeroall
+; On Windows, YMM0-YMM5 registers are scratch registers.
+; YMM6-YMM15 upper 128 bits are scratch registers too, but
+; the lower 128 bits are to be restored after calling these function
+; which clears the upper bits too.
+%else
+%assign i 0
+%rep 6
+        vpxor   ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+%endif ; LINUX
+
+        ret
+
+;
+; This function clears all scratch ZMM registers
+;
+; It should be called before restoring the XMM registers
+; for Windows (XMM6-XMM15). YMM registers are used
+; on purpose, since XOR'ing YMM registers is faster
+; than XOR'ing ZMM registers, and the operation clears
+; also the upper 256 bits
+;
+; void clear_scratch_zmms(void)
+MKGLOBAL(clear_scratch_zmms,function,internal)
+clear_scratch_zmms:
+
+; On Linux, all ZMM registers are scratch registers
+%ifdef LINUX
+        vzeroall
+        ;; vzeroall only clears the first 16 ZMM registers
+%assign i 16
+%rep 16
+        vpxorq  ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+; On Windows, ZMM0-ZMM5 and ZMM16-ZMM31 registers are scratch registers.
+; ZMM6-ZMM15 upper 384 bits are scratch registers too, but
+; the lower 128 bits are to be restored after calling these function
+; which clears the upper bits too.
+%else
+%assign i 0
+%rep 6
+        vpxorq  ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+
+%assign i 16
+%rep 16
+        vpxorq  ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+%endif ; LINUX
+
+        ret

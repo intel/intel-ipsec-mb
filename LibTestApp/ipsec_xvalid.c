@@ -1133,6 +1133,29 @@ perform_safe_checks(MB_MGR *mgr, const enum arch_type_e arch,
         return 0;
 }
 
+static void
+clear_scratch_simd(const enum arch_type_e arch)
+{
+        switch (arch) {
+        case ARCH_SSE:
+        case ARCH_AESNI_EMU:
+                clear_scratch_xmms_sse();
+                break;
+        case ARCH_AVX:
+                clear_scratch_xmms_avx();
+                break;
+        case ARCH_AVX2:
+                clear_scratch_ymms();
+                break;
+        case ARCH_AVX512:
+                clear_scratch_zmms();
+                break;
+        default:
+                fprintf(stderr, "Invalid architecture\n");
+                exit(EXIT_FAILURE);
+        }
+}
+
 /* Performs test using AES_HMAC or DOCSIS */
 static int
 do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
@@ -1203,6 +1226,9 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         if (safe_check) {
                 uint8_t *rsp_ptr;
 
+                /* Clear scratch registers before expanding keys to prevent
+                 * other functions from storing sensitive data in stack */
+                clear_scratch_simd(enc_arch);
                 if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 0) < 0)
                         goto exit;
 
@@ -1252,6 +1278,10 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 /* Randomize memory for input digest */
                 generate_random_buf(in_digest, tag_size);
 
+                /* Clear scratch registers before submitting job to prevent
+                 * other functions from storing sensitive data in stack */
+                if (safe_check)
+                        clear_scratch_simd(enc_arch);
                 job = IMB_SUBMIT_JOB(enc_mb_mgr);
 
                 if (!job)
@@ -1294,6 +1324,10 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                              buf_size, tag_size, DECRYPT, dec_keys, iv) < 0)
                         goto exit;
 
+                /* Clear scratch registers before submitting job to prevent
+                 * other functions from storing sensitive data in stack */
+                if (safe_check)
+                        clear_scratch_simd(dec_arch);
                 job = IMB_SUBMIT_JOB(dec_mb_mgr);
 
                 if (!job)
