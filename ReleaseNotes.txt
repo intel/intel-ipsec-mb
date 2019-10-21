@@ -1,7 +1,7 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Not Released
+v0.53 October 2019
 ========================================================================
 
 Library
@@ -26,6 +26,9 @@ Library
 - KASUMI-F8 and KASUMI-F9 implementation added
 - SNOW3G-UEA2 and SNOW3G-UIA2 implementation added
 - AES-CTR implementation for bit length (128-NEA2/192-NEA2/256-NEA2) messages added
+- SAFE_PARAM, SAFE_DATA and SAFE_LOOKUP compile time options added.
+  Find more about these options in the README file or on-line at
+  https://github.com/intel/intel-ipsec-mb/blob/master/README.
 
 LibTestApp
 - New API tests added
@@ -44,6 +47,7 @@ LibTestApp
   to double check their correctness
 - SNOW3G-UEA2 and SNOW3G-UIA2 tests added
 - AES-CTR-128 bit length message tests added
+- Negative tests extended to cover all API's
 
 LibPerfApp
 - Job size and number of iterations options added
