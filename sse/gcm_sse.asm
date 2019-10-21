@@ -830,10 +830,13 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         movdqa  %%T3, %%XMM8
 
         cmp     %%LENGTH, 128
-        jl      %%_initial_blocks_done                  ; no need for precomputed constants
+        jl      %%_initial_blocks_done
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Haskey_i_k holds XORed values of the low and high parts of the Haskey_i
+; Prepare 8 counter blocks and perform rounds of AES cipher on them, load plain/cipher text and store cipher/plain text.
+; Keep 8 cipher text blocks for further GHASH computations (XMM1 - XMM8)
+; - combine current GHASH value into block 0 (XMM1)
+
                 paddd   %%CTR, [ONE]                   ; INCR Y0
                 movdqa  %%XMM1, %%CTR
                 pshufb  %%XMM1, [SHUF_MASK]             ; perform a 16Byte swap
