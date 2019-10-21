@@ -46,6 +46,11 @@
 
 #define SNOW3GCONSTANT (0x1b)
 
+/* Range of input data for SNOW3G is from 1 to 2^32 bits */
+#define SNOW3G_MIN_LEN 1
+#define SNOW3G_MAX_BITLEN (UINT32_MAX)
+#define SNOW3G_MAX_BYTELEN (UINT32_MAX / 8)
+
 #define ComplementaryMask64(x) ((~(x) % 64) + 1)
 #define ComplementaryMask32(x) ((~(x) % 32) + 1)
 

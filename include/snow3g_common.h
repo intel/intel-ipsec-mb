@@ -1373,7 +1373,7 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 #ifdef SAFE_PARAM
         if ((pHandle == NULL) || (pIV == NULL) ||
             (pBufferIn == NULL) || (pBufferOut == NULL) ||
-            (lengthInBytes == 0) || (lengthInBytes > (UINT32_MAX / 8)))
+            (lengthInBytes == 0) || (lengthInBytes > SNOW3G_MAX_BYTELEN))
                 return;
 #endif
         snow3gKeyState1_t ctx;
@@ -1453,7 +1453,9 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
 #ifdef SAFE_PARAM
         if ((pHandle == NULL) || (pIV1 == NULL) || (pIV2 == NULL) ||
             (pBufIn1 == NULL) || (pBufOut1 == NULL) ||
-            (pBufIn2 == NULL) || (pBufOut2 == NULL))
+            (pBufIn2 == NULL) || (pBufOut2 == NULL) ||
+            (lenInBytes1 == 0) || (lenInBytes1 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes2 == 0) || (lenInBytes2 > SNOW3G_MAX_BYTELEN))
                 return;
 #endif
 
@@ -1520,7 +1522,11 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
             (pBufferIn1 == NULL) || (pBufferOut1 == NULL) ||
             (pBufferIn2 == NULL) || (pBufferOut2 == NULL) ||
             (pBufferIn3 == NULL) || (pBufferOut3 == NULL) ||
-            (pBufferIn4 == NULL) || (pBufferOut4 == NULL))
+            (pBufferIn4 == NULL) || (pBufferOut4 == NULL) ||
+            (lengthInBytes1 == 0) || (lengthInBytes1 > SNOW3G_MAX_BYTELEN) ||
+            (lengthInBytes2 == 0) || (lengthInBytes2 > SNOW3G_MAX_BYTELEN) ||
+            (lengthInBytes3 == 0) || (lengthInBytes3 > SNOW3G_MAX_BYTELEN) ||
+            (lengthInBytes4 == 0) || (lengthInBytes4 > SNOW3G_MAX_BYTELEN))
                 return;
 #endif
 
@@ -2284,13 +2290,15 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
         int i;
 
 #ifdef SAFE_PARAM
-        if ((pKey == NULL) || (IV == NULL) ||
-            (BufferIn == NULL) || (BufferOut == NULL))
+        if ((pKey == NULL) || (IV == NULL) || (BufferIn == NULL) ||
+            (BufferOut == NULL) || (lengthInBytes == NULL))
                 return;
 
         for (i = 0; i < 8; i++)
                 if ((pKey[i] == NULL) || (IV[i] == NULL) ||
-                    (BufferIn[i] == NULL) || (BufferOut[i] == NULL))
+                    (BufferIn[i] == NULL) || (BufferOut[i] == NULL) ||
+                    (lengthInBytes[i] == 0) ||
+                    (lengthInBytes[i] > SNOW3G_MAX_BYTELEN))
                         return;
 #endif
 
@@ -2376,7 +2384,15 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
             (pBufIn5 == NULL) || (pBufOut5 == NULL) ||
             (pBufIn6 == NULL) || (pBufOut6 == NULL) ||
             (pBufIn7 == NULL) || (pBufOut7 == NULL) ||
-            (pBufIn8 == NULL) || (pBufOut8 == NULL))
+            (pBufIn8 == NULL) || (pBufOut8 == NULL) ||
+            (lenInBytes1 == 0) || (lenInBytes1 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes2 == 0) || (lenInBytes2 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes3 == 0) || (lenInBytes3 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes4 == 0) || (lenInBytes4 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes5 == 0) || (lenInBytes5 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes6 == 0) || (lenInBytes6 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes7 == 0) || (lenInBytes7 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes8 == 0) || (lenInBytes8 > SNOW3G_MAX_BYTELEN))
                 return;
 #endif
 
@@ -2451,13 +2467,14 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
 #ifdef SAFE_PARAM
         uint32_t i;
 
-        if ((pCtx == NULL) || (IV == NULL) ||
-            (pBufferIn == NULL) || (pBufferOut == NULL))
+        if ((pCtx == NULL) || (IV == NULL) || (pBufferIn == NULL) ||
+            (pBufferOut == NULL) || (bufLenInBytes == NULL))
                 return;
 
         for (i = 0; i < packetCount; i++)
                 if ((IV[i] == NULL) || (pBufferIn[i] == NULL) ||
-                    (pBufferOut[i] == NULL))
+                    (pBufferOut[i] == NULL) || (bufLenInBytes[i] == 0) ||
+                    (bufLenInBytes[i] > SNOW3G_MAX_BYTELEN))
                         return;
 #endif
         if (packetCount > 16) {
@@ -2632,13 +2649,15 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
 #ifdef SAFE_PARAM
         uint32_t i;
 
-        if ((pCtx == NULL) || (IV == NULL) ||
-            (pBufferIn == NULL) || (pBufferOut == NULL))
+        if ((pCtx == NULL) || (IV == NULL) || (pBufferIn == NULL) ||
+            (pBufferOut == NULL) || (bufLenInBytes == NULL))
                 return;
 
         for (i = 0; i < packetCount; i++)
                 if ((pCtx[i] == NULL) || (IV[i] == NULL) ||
-                    (pBufferIn[i] == NULL) || (pBufferOut[i] == NULL))
+                    (pBufferIn[i] == NULL) || (pBufferOut[i] == NULL) ||
+                    (bufLenInBytes[i] == 0) ||
+                    (bufLenInBytes[i] > SNOW3G_MAX_BYTELEN))
                         return;
 #endif
         if (packetCount > 16) {
@@ -2762,7 +2781,7 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 #ifdef SAFE_PARAM
         if ((pHandle == NULL) || (pIV == NULL) ||
             (pBufferIn == NULL) || (pDigest == NULL) ||
-            (lengthInBits == 0))
+            (lengthInBits == 0) || (lengthInBits > SNOW3G_MAX_BITLEN))
                 return;
 #endif
         snow3gKeyState1_t ctx;
