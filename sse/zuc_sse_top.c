@@ -377,7 +377,7 @@ void zuc_eea3_4_buffer_sse(const void * const pKey[4],
 
         /* Check for NULL pointers */
         if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
-            pBufferOut == NULL)
+            pBufferOut == NULL || length == NULL)
                 return;
 
         for (i = 0; i < 4; i++) {
@@ -421,7 +421,7 @@ void zuc_eea3_n_buffer_sse(const void * const pKey[], const void * const pIv[],
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
-            pBufferOut == NULL)
+            pBufferOut == NULL || length == NULL)
                 return;
 
         for (i = 0; i < numBuffers; i++) {
