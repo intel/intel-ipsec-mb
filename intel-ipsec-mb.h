@@ -72,8 +72,8 @@ typedef struct {
 #endif
 
 /* Library version */
-#define IMB_VERSION_STR "0.52.3-dev"
-#define IMB_VERSION_NUM 0x3403
+#define IMB_VERSION_STR "0.53.0"
+#define IMB_VERSION_NUM 0x3500
 
 /* Macro to translate version number */
 #define IMB_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
