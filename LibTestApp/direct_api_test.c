@@ -670,7 +670,7 @@ test_zuc_api(struct MB_MGR *mgr)
         printf(".");
 
         IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL,
-                              NULL, &inv_len, inv_len);
+                              NULL, NULL, inv_len);
         IMB_ZUC_EEA3_N_BUFFER(mgr, NULL, NULL, NULL,
                               out_bufs, lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
@@ -805,7 +805,7 @@ test_kasumi_api(struct MB_MGR *mgr)
         printf(".");
 
         IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL,
-                               NULL, &inv_len, inv_len);
+                               NULL, NULL, inv_len);
         IMB_KASUMI_F8_N_BUFFER(mgr, NULL, NULL, NULL,
                                out_bufs, lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
@@ -999,7 +999,7 @@ test_snow3g_api(struct MB_MGR *mgr)
         }
         printf(".");
 
-        IMB_SNOW3G_F8_N_BUFFER(mgr, NULL, NULL, NULL, NULL, &inv_len, inv_len);
+        IMB_SNOW3G_F8_N_BUFFER(mgr, NULL, NULL, NULL, NULL, NULL, inv_len);
         IMB_SNOW3G_F8_N_BUFFER(mgr, NULL, NULL, NULL, out_bufs, lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
                 printf("%s: IMB_SNOW3G_F8_N_BUFFER, invalid "
@@ -1009,7 +1009,7 @@ test_snow3g_api(struct MB_MGR *mgr)
         printf(".");
 
         IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, NULL,
-                                        &inv_len, inv_len);
+                                        NULL, inv_len);
         IMB_SNOW3G_F8_N_BUFFER_MULTIKEY(mgr, NULL, NULL, NULL, out_bufs,
                                         lens, NUM_BUFS);
         if (memcmp(out_buf, zero_buf, text_len) != 0) {
