@@ -1,24 +1,25 @@
 ========================================================================
 README for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-March 2018
+October 2019
 ========================================================================
 
 
 Contents
 ========
 
-- Overview
-- Processor Extensions
-- Recommendations
-- Package Content
-- Compilation
-- Installation
-- Legal Disclaimer
+1. Overview
+2. Processor Extensions
+3. Recommendations
+4. Package Content
+5. Compilation
+6. Installation
+7. Disclaimer (ZUC, KASUMI, SNOW3G)
+8. Legal Disclaimer
 
 
-Overview
-========
+1. Overview
+===========
 Intel Multi-Buffer Crypto for IPsec Library is highly-optimized
 software implementations of the core cryptographic processing for IPsec,
 which provides industry-leading performance on a range of Intel(R) Processors.
@@ -144,8 +145,8 @@ Table 3. Encryption and integrity algorithm combinations
 +---------------+-----------------------------------------------------+
 
 
-Processor Extensions
-====================
+2. Processor Extensions
+=======================
 
 Table 4. Processor extensions used in the library
 +-------------------------------------------------------------------------+
@@ -168,8 +169,8 @@ Table 4. Processor extensions used in the library
 |-------------------+-----------+-----------------------------------------|
 
 
-Recommendations
-===============
+3. Recommendations
+==================
 
 Legacy or to be avoided algorithms listed in the table below are implemented
 in the library in order to support legacy applications. Please use corresponding
@@ -195,8 +196,8 @@ Operating System to provide process isolation.
 As the result, it is recommended to use latest Operating System patches and
 security updates.
 
-Package Content
-===============
+4. Package Content
+==================
 
 LibTestApp - Library test applications
 LibPerfApp - Library performance application
@@ -214,8 +215,8 @@ Refer to the releases tab for stable code versions:
 https://github.com/intel/intel-ipsec-mb/releases
 
 
-Compilation
-===========
+5. Compilation
+==============
 
 Linux (64-bit only)
 -------------------
@@ -282,7 +283,7 @@ For more build options and their explanation run:
 > nmake /f win_x64.mak help
 
 FreeBSD (64-bit only)
--------------------
+---------------------
 
 Required tools:
 - GNU make
@@ -308,8 +309,8 @@ Note: Building with debugging information is not advised for production use.
 For more build options and their explanation run:
 > gmake help
 
-Safety options
-==============
+6. Safety options
+=================
 
 There are three build options that can be enabled to increase safety in the code and
 protecting external functions from incorrect input data.
@@ -348,8 +349,8 @@ Algorithms where these constant time functions are used are the following:
 - SNOW3G: all architectures
 - ZUC: all architectures
 
-Installation
-============
+7. Installation
+===============
 
 Linux (64-bit only)
 -------------------
@@ -409,8 +410,21 @@ If library was compiled as an archive (not a default option) then install it
 using SHARED=n option:
 > sudo gmake install SHARED=n
 
-Legal Disclaimer
-================
+8. Disclaimer (ZUC, KASUMI, SNOW3G)
+===================================
+
+Please note that cryptographic material, such as ciphering algorithms, may be
+subject to national regulations. What is more, use of some algorithms in
+real networks and production equipment can be subject to agreement or
+licensing by the GSMA and/or the ETSI.
+
+For more details please see:
+- GSMA https://www.gsma.com/security/security-algorithms/
+- ETSI https://www.etsi.org/security-algorithms-and-codes/cellular-algorithm-licences
+
+
+9. Legal Disclaimer
+===================
 
 THIS SOFTWARE IS PROVIDED BY INTEL"AS IS". NO LICENSE, EXPRESS OR
 IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL PROPERTY RIGHTS
