@@ -164,8 +164,9 @@ len_is_0:
 %ifdef SAFE_DATA
         ;; Clear IV
         vpxor   xmm0, xmm0
-        shl	idx, 4 ; multiply by 16
-        vmovdqa [state + _aes_args_IV + idx], xmm0
+        shl	idx, 3 ; multiply by 8
+        vmovdqa [state + _aes_args_IV + idx*2], xmm0
+        mov     qword [state + _aes_args_keys + idx], 0
 %endif
 
 return:

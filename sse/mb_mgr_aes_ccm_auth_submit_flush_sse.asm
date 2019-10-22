@@ -400,6 +400,7 @@ APPEND(skip_,I):
         movdqa  [state + _aes_ccm_init_blocks + min_idx * 8 + 16], xtmp0
         movdqa  [state + _aes_ccm_init_blocks + min_idx * 8 + 32], xtmp0
         movdqa  [state + _aes_ccm_init_blocks + min_idx * 8 + 48], xtmp0
+        mov     qword [state + _aes_ccm_args_keys + min_idx], 0
 %else
         ;; Clear digest (in memory for CBC IV), counter block 0 and AAD
         ;; of returned job and "NULL lanes"
@@ -412,6 +413,7 @@ APPEND(skip_,I):
         movdqa  [state + _aes_ccm_init_blocks + I*64 + 16], xtmp0
         movdqa  [state + _aes_ccm_init_blocks + I*64 + 32], xtmp0
         movdqa  [state + _aes_ccm_init_blocks + I*64 + 48], xtmp0
+        mov     qword [state + _aes_ccm_args_keys + I*8], 0
 APPEND(skip_clear_,I):
 %assign I (I+1)
 %endrep
