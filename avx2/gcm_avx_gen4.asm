@@ -796,8 +796,9 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %endrep
 %endif
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                ;; Haskey_i_k holds XORed values of the low and high parts of
-                ;; the Haskey_i
+                ;; Prepare 8 counter blocks and perform rounds of AES cipher on
+                ;; them, load plain/cipher text and store cipher/plain text.
+                ;; Stitch GHASH computation in between AES rounds.
                 vpaddd   %%XMM1, %%CTR, [rel ONE]   ; INCR Y0
                 vpaddd   %%XMM2, %%CTR, [rel TWO]   ; INCR Y0
                 vpaddd   %%XMM3, %%XMM1, [rel TWO]  ; INCR Y0
