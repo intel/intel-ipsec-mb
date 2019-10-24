@@ -510,6 +510,8 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif
         } else if (CCM == job->cipher_mode) {
                 return AES_CNTR_CCM_128(job);
+        } else if (ZUC_EEA3 == job->cipher_mode) {
+                return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
         } else { /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -551,6 +553,8 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif /* FLUSH_JOB_DOCSIS_DES_ENC */
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
+        } else if (ZUC_EEA3 == job->cipher_mode) {
+                return FLUSH_JOB_ZUC_EEA3(&state->zuc_ooo);
         } else { /* assume CNTR/CNTR_BITLEN, ECB, CCM or NULL_CIPHER */
                 return NULL;
         }
@@ -620,6 +624,8 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (CCM == job->cipher_mode) {
                 return AES_CNTR_CCM_128(job);
+        } else if (ZUC_EEA3 == job->cipher_mode) {
+                return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
         } else {
                 /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
@@ -647,6 +653,8 @@ FLUSH_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
         if (DOCSIS_DES == job->cipher_mode)
                 return FLUSH_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_DEC */
+        if (ZUC_EEA3 == job->cipher_mode)
+                return FLUSH_JOB_ZUC_EEA3(&state->zuc_ooo);
         (void) state;
         return NULL;
 }
@@ -733,6 +741,14 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 IMB_SHA512(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
+        case ZUC_EIA3_BITLEN:
+                IMB_ZUC_EIA3_1_BUFFER(state, job->u.ZUC_EIA3._key,
+                                 job->u.ZUC_EIA3._iv,
+                                 job->src + job->hash_start_src_offset_in_bytes,
+                                 (const uint32_t) job->msg_len_to_hash_in_bits,
+                                 (uint32_t *) job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
         default: /* assume GCM, PON_CRC_BIP or NULL_HASH */
@@ -831,6 +847,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 0,  /* CUSTOM HASH */
                 0,  /* AES_CCM */
                 16, /* AES_CMAC */
+                4, /* ZUC_EIA3_BITLEN */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -854,6 +871,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 48, /* PLAIN_SHA_384 */
                 64, /* PLAIN_SHA_512 */
                 4,  /* AES_CMAC 3GPP */
+                4, /* ZUC_EIA3_BITLEN */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1311,6 +1329,37 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         }
                 }
                 break;
+        case ZUC_EEA3:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes == 0 ||
+                    job->msg_len_to_cipher_in_bytes > ZUC_MAX_BYTELEN) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(16)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                break;
         default:
                 INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                 return 1;
@@ -1504,6 +1553,29 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                break;
+        case ZUC_EIA3_BITLEN:
+                if (job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if ((job->msg_len_to_hash_in_bits < ZUC_MIN_BITLEN) &&
+                    (job->msg_len_to_hash_in_bits > ZUC_MAX_BITLEN)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->u.ZUC_EIA3._key == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->u.ZUC_EIA3._iv == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }

@@ -706,9 +706,9 @@ asm_ZucInitialization_4_sse:
 
 
     ; Load read-only registers
-	lea     rdi, [S0]       ; used by sbox_lkup() macro
-    lea     rsi, [S1]
-    movdqa  xmm12, [mask31]
+    lea     rdi, [rel S0]       ; used by sbox_lkup() macro
+    lea     rsi, [rel S1]
+    movdqa  xmm12, [rel mask31]
 
     ; Shift LFSR 32-times, update state variables
 %assign N 0
@@ -819,9 +819,9 @@ asm_ZucGenKeystream64B_4_sse:
 
 
     ; Load read-only registers
-    lea         rdi, [S0]       ; used by sbox_lkup() macro
-    lea         rsi, [S1]
-    movdqa      xmm12, [mask31]
+    lea         rdi, [rel S0]       ; used by sbox_lkup() macro
+    lea         rsi, [rel S1]
+    movdqa      xmm12, [rel mask31]
 
     ; Generate 64B of keystream in 16 rounds
 %assign N 1
@@ -937,9 +937,9 @@ asm_ZucCipher64B_4_sse:
         mov     rax, pState
 
         ; Load read-only registers
-        lea     rdi, [S0]       ; used by sbox_lkup() macro
-        lea     rsi, [S1]
-        movdqa  xmm12, [mask31]
+        lea     rdi, [rel S0]       ; used by sbox_lkup() macro
+        lea     rsi, [rel S1]
+        movdqa  xmm12, [rel mask31]
 
         ; Generate 64B of keystream in 16 rounds
 %assign N 1
@@ -952,11 +952,8 @@ asm_ZucCipher64B_4_sse:
 %assign N N+1
 %endrep
 
-        ; Take keystream pointers off (#push = #pops)
-        pop     rax
-        pop     rax
-        pop     rax
-        pop     rax
+        ; Restore rsp pointer to value before pushing keystreams
+        add     rsp, 4*8
 
         movdqa  xmm15, [rel swap_mask]
 

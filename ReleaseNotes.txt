@@ -1,6 +1,13 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+v0.54
+========================================================================
+
+Library
+- ZUC-EEA3 and ZUC-EIA3 algorithms added in job API (using cipher mode ZUC_EEA3
+  and hash_alg ZUC_EIA3_BITLEN)
+
 v0.53 October 2019
 ========================================================================
 

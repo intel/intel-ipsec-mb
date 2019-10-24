@@ -282,7 +282,8 @@ asm_sse_lib_objs := \
 	mb_mgr_hmac_sha_224_flush_ni_sse.o \
 	mb_mgr_hmac_sha_224_submit_ni_sse.o \
 	mb_mgr_hmac_sha_256_flush_ni_sse.o \
-	mb_mgr_hmac_sha_256_submit_ni_sse.o
+	mb_mgr_hmac_sha_256_submit_ni_sse.o \
+	mb_mgr_zuc_submit_flush_sse.o
 
 #
 # List of ASM modules (avx directory)
@@ -334,7 +335,8 @@ asm_avx_lib_objs := \
 	mb_mgr_hmac_sha_384_flush_avx.o \
 	mb_mgr_hmac_sha_384_submit_avx.o \
 	mb_mgr_hmac_sha_512_flush_avx.o \
-	mb_mgr_hmac_sha_512_submit_avx.o
+	mb_mgr_hmac_sha_512_submit_avx.o \
+	mb_mgr_zuc_submit_flush_avx.o
 
 #
 # List of ASM modules (avx2 directory)

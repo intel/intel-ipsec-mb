@@ -62,6 +62,10 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
 JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
 
+JOB_AES_HMAC *submit_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state,
+                                        JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state);
+
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
@@ -83,6 +87,9 @@ JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
 
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_avx
+
+#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx
+#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx
@@ -423,6 +430,16 @@ init_mb_mgr_avx(MB_MGR *state)
                sizeof(state->docsis_sec_ooo.job_in_lane));
         state->docsis_sec_ooo.unused_lanes = 0xF76543210;
         state->docsis_sec_ooo.num_lanes_inuse = 0;
+
+        /* Init ZUC out-of-order fields */
+        memset(state->zuc_ooo.lens, 0xFF,
+               sizeof(state->zuc_ooo.lens));
+        memset(&state->zuc_ooo.lens[0], 0,
+               sizeof(state->zuc_ooo.lens[0]) * 4);
+        memset(state->zuc_ooo.job_in_lane, 0,
+               sizeof(state->zuc_ooo.job_in_lane));
+        state->zuc_ooo.unused_lanes = 0xFF03020100;
+        state->zuc_ooo.num_lanes_inuse = 0;
 
 
         /* Init HMAC/SHA1 out-of-order fields */

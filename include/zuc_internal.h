@@ -447,6 +447,22 @@ IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX(const void *ks, const void *data,
                                             const uint64_t n_words);
 
 
+IMB_DLL_LOCAL
+void zuc_eea3_4_buffer_job_sse(const void * const pKey[4],
+                               const void * const pIv[4],
+                               const void * const pBufferIn[4],
+                               void *pBufferOut[4],
+                               const uint16_t lengthInBytes[4],
+                               const void * const job_in_lane[4]);
+
+IMB_DLL_LOCAL
+void zuc_eea3_4_buffer_job_avx(const void * const pKey[4],
+                               const void * const pIv[4],
+                               const void * const pBufferIn[4],
+                               void *pBufferOut[4],
+                               const uint16_t lengthInBytes[4],
+                               const void * const job_in_lane[4]);
+
 /* the s-boxes */
 extern const uint8_t S0[256];
 extern const uint8_t S1[256];

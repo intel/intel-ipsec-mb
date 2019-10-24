@@ -196,7 +196,8 @@ typedef enum {
         DES3,
         PON_AES_CNTR,
         ECB,
-        CNTR_BITLEN, /* 128-EEA2/NIA2 (3GPP) */
+        CNTR_BITLEN,    /* 128-EEA2/NIA2 (3GPP) */
+        ZUC_EEA3        /* 128-EEA3/NEA3 (3GPP) */
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -224,8 +225,9 @@ typedef enum {
         PLAIN_SHA_256,   /* SHA256 */
         PLAIN_SHA_384,   /* SHA384 */
         PLAIN_SHA_512,   /* SHA512 */
-        AES_CMAC_BITLEN, /* 128-EIA2 (3GPP) */
-        PON_CRC_BIP
+        AES_CMAC_BITLEN, /* 128-EIA2/NIA2 (3GPP) */
+        PON_CRC_BIP,
+        ZUC_EIA3_BITLEN  /* 128-EIA3/NIA3 (3GPP) */
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -324,6 +326,11 @@ typedef struct JOB_AES_HMAC {
                         uint64_t aad_len_in_bytes;    /* Length of AAD */
                 } GCM;
 #endif /* !NO_GCM */
+                struct _ZUC_EIA3_specific_fields {
+                        /* 16-byte aligned pointers */
+                        const uint8_t *_key;
+                        const uint8_t *_iv;
+                } ZUC_EIA3;
         } u;
 
         JOB_STS status;
@@ -397,6 +404,13 @@ typedef struct {
         uint8_t *last_out[AVX512_NUM_DES_LANES];
 } DES_ARGS_x16;
 
+typedef struct {
+        const uint8_t *in[4];
+        uint8_t *out[4];
+        const uint8_t *keys[4];
+        const uint8_t *iv[4];
+} ZUC_ARGS_x4;
+
 /* AES out-of-order scheduler fields */
 typedef struct {
         AES_ARGS args;
@@ -466,6 +480,17 @@ typedef struct {
         uint64_t num_lanes_inuse;
 } MB_MGR_DES_OOO;
 
+/* ZUC out-of-order scheduler fields */
+typedef struct {
+        ZUC_ARGS_x4 args;
+        DECLARE_ALIGNED(uint16_t lens[8], 16);
+        /* each byte is index (0...3) of unused lanes
+         * byte 4 is set to FF as a flag
+         */
+        uint64_t unused_lanes;
+        JOB_AES_HMAC *job_in_lane[4];
+        uint64_t num_lanes_inuse;
+} MB_MGR_ZUC_OOO;
 
 /* HMAC-SHA1 and HMAC-SHA256/224 */
 typedef struct {
@@ -967,6 +992,7 @@ typedef struct MB_MGR {
         DECLARE_ALIGNED(MB_MGR_DES_OOO des3_dec_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO docsis_des_enc_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO docsis_des_dec_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_ZUC_OOO zuc_ooo, 64);
 
         DECLARE_ALIGNED(MB_MGR_HMAC_SHA_1_OOO hmac_sha_1_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_HMAC_SHA_256_OOO hmac_sha_224_ooo, 64);

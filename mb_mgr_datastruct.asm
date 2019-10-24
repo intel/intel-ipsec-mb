@@ -188,6 +188,38 @@ _des_args_LIn	equ	_des_args + _desarg_lin
 _des_args_LOut	equ	_des_args + _desarg_lout
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Define ZUC Out of Order Data Structures
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS	; ZUC_ARGS_X4
+;;	name		size	align
+FIELD	_zucarg_in,	4*8,	8	; array of 4 pointers to in text
+FIELD	_zucarg_out,	4*8,	8	; array of 4 pointers to out text
+FIELD	_zucarg_keys,	4*8,	8	; array of 4 pointers to keys
+FIELD	_zucarg_IV,	4*8,	8	; array of 4 pointers to IVs
+END_FIELDS
+%assign _ZUC_ARGS_X4_size	_FIELD_OFFSET
+%assign _ZUC_ARGS_X4_align	_STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS	; MB_MGR_ZUC_OOO
+;;	name		size	align
+FIELD	_zuc_args,	_ZUC_ARGS_X4_size, _ZUC_ARGS_X4_align
+FIELD	_zuc_lens,	8*2,	16
+FIELD	_zuc_unused_lanes, 8,	8
+FIELD	_zuc_job_in_lane, 4*8,	8
+FIELD	_zuc_lanes_in_use, 8,	8
+END_FIELDS
+%assign _MB_MGR_ZUC_OOO_size	_FIELD_OFFSET
+%assign _MB_MGR_ZUC_OOO_align	_STRUCT_ALIGN
+
+_zuc_args_in	equ	_zuc_args + _zucarg_in
+_zuc_args_out	equ	_zuc_args + _zucarg_out
+_zuc_args_keys	equ	_zuc_args + _zucarg_keys
+_zuc_args_IV	equ	_zuc_args + _zucarg_IV
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define HMAC Out Of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

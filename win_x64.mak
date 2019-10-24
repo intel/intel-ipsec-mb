@@ -320,6 +320,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_sse.obj \
+	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_avx.obj \
 	$(OBJ_DIR)\mb_mgr_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_avx512.obj \
