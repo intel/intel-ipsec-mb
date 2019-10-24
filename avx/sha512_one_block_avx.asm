@@ -439,7 +439,19 @@ done_hash:
 	vmovdqa	xmm11,[rsp + _XMM_SAVE + 5*16]
 	vmovdqa	xmm12,[rsp + _XMM_SAVE + 6*16]
 	vmovdqa	xmm13,[rsp + _XMM_SAVE + 7*16]
+%ifdef SAFE_DATA
+        ;; Clear potential sensitive data stored in stack
+        vpxor   xmm0, xmm0
+        vmovdqa [rsp + _XMM_SAVE + 0 * 16], xmm0
+        vmovdqa [rsp + _XMM_SAVE + 1 * 16], xmm0
+        vmovdqa [rsp + _XMM_SAVE + 2 * 16], xmm0
+        vmovdqa [rsp + _XMM_SAVE + 3 * 16], xmm0
+        vmovdqa [rsp + _XMM_SAVE + 4 * 16], xmm0
+        vmovdqa [rsp + _XMM_SAVE + 5 * 16], xmm0
+        vmovdqa [rsp + _XMM_SAVE + 6 * 16], xmm0
+        vmovdqa [rsp + _XMM_SAVE + 7 * 16], xmm0
 %endif
+%endif ;; LINUX
 
 	add	rsp, STACK_size
 

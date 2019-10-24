@@ -63,6 +63,21 @@ restore_xmms:
 	movdqa	xmm13, [ARG1 + 7*16]
 	movdqa	xmm14, [ARG1 + 8*16]
 	movdqa	xmm15, [ARG1 + 9*16]
+%ifdef SAFE_DATA
+        ;; Clear potential sensitive data stored in stack
+        pxor    xmm0, xmm0
+        movdqa  [ARG1 + 0 * 16], xmm0
+        movdqa  [ARG1 + 1 * 16], xmm0
+        movdqa  [ARG1 + 2 * 16], xmm0
+        movdqa  [ARG1 + 3 * 16], xmm0
+        movdqa  [ARG1 + 4 * 16], xmm0
+        movdqa  [ARG1 + 5 * 16], xmm0
+        movdqa  [ARG1 + 6 * 16], xmm0
+        movdqa  [ARG1 + 7 * 16], xmm0
+        movdqa  [ARG1 + 8 * 16], xmm0
+        movdqa  [ARG1 + 9 * 16], xmm0
+%endif
+
 	ret
 
 
@@ -95,6 +110,21 @@ restore_xmms_avx:
 	vmovdqa	xmm13, [ARG1 + 7*16]
 	vmovdqa	xmm14, [ARG1 + 8*16]
 	vmovdqa	xmm15, [ARG1 + 9*16]
+
+%ifdef SAFE_DATA
+        ;; Clear potential sensitive data stored in stack
+        vpxor   xmm0, xmm0
+        vmovdqa [ARG1 + 0 * 16], xmm0
+        vmovdqa [ARG1 + 1 * 16], xmm0
+        vmovdqa [ARG1 + 2 * 16], xmm0
+        vmovdqa [ARG1 + 3 * 16], xmm0
+        vmovdqa [ARG1 + 4 * 16], xmm0
+        vmovdqa [ARG1 + 5 * 16], xmm0
+        vmovdqa [ARG1 + 6 * 16], xmm0
+        vmovdqa [ARG1 + 7 * 16], xmm0
+        vmovdqa [ARG1 + 8 * 16], xmm0
+        vmovdqa [ARG1 + 9 * 16], xmm0
+%endif
 	ret
 
 %ifdef LINUX

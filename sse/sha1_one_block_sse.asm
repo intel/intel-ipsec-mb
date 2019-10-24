@@ -488,8 +488,16 @@ loop3_5:
 	movdqa	xmm7, [rsp + 1 * 16]
 	movdqa	xmm6, [rsp + 0 * 16]
 
-	mov	rsp, [_RSP]
+%ifdef SAFE_DATA
+        ;; Clear potential sensitive data stored in stack
+        pxor    xmm0, xmm0
+        movdqa  [rsp + 0 * 16], xmm0
+        movdqa  [rsp + 1 * 16], xmm0
+        movdqa  [rsp + 2 * 16], xmm0
 %endif
+
+	mov	rsp, [_RSP]
+%endif ;; LINUX
 
 	pop	r13
 	pop	r12
