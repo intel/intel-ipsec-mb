@@ -114,7 +114,8 @@ struct data {
         uint8_t aad[AAD_SIZE];
         uint8_t in_digest[MAX_DIGEST_SIZE];
         uint8_t out_digest[MAX_DIGEST_SIZE];
-        uint8_t iv[MAX_IV_SIZE];
+        uint8_t cipher_iv[MAX_IV_SIZE];
+        uint8_t auth_iv[MAX_IV_SIZE];
         uint8_t key[MAX_KEY_SIZE];
         struct cipher_auth_keys enc_keys;
         struct cipher_auth_keys dec_keys;
@@ -258,6 +259,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
+                .name = "zuc-eea3",
+                .values.job_params = {
+                        .cipher_mode = ZUC_EEA3,
+                        .key_size = 16
+                }
+        },
+        {
                 .name = "null",
                 .values.job_params = {
                         .cipher_mode = NULL_CIPHER,
@@ -357,6 +365,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = PLAIN_SHA_512
                 }
         },
+        {
+                .name = "zuc-eia3",
+                .values.job_params = {
+                        .hash_alg = ZUC_EIA3_BITLEN,
+                }
+        }
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -417,7 +431,7 @@ struct variant_s {
         uint64_t *avg_times;
 };
 
-const uint8_t auth_tag_length_bytes[19] = {
+const uint8_t auth_tag_length_bytes[] = {
                 12, /* SHA1 */
                 14, /* SHA_224 */
                 16, /* SHA_256 */
@@ -439,10 +453,11 @@ const uint8_t auth_tag_length_bytes[19] = {
                 64, /* PLAIN_SHA_512 */
                 4,  /* AES_CMAC_BITLEN (3GPP) */
                 8,  /* PON */
+                4,  /* ZUC_EIA3_BITLEN */
 };
 
 /* Minimum, maximum and step values of key sizes */
-const uint8_t key_sizes[13][3] = {
+const uint8_t key_sizes[][3] = {
                 {16, 32, 8}, /* CBC */
                 {16, 32, 8}, /* CNTR */
                 {0, 0, 1},    /* NULL */
@@ -458,6 +473,7 @@ const uint8_t key_sizes[13][3] = {
                 {16, 16, 1},  /* PON_AES_CNTR */
                 {16, 32, 8}, /* ECB */
                 {16, 32, 8}, /* CNTR_BITLEN */
+                {16, 16, 1}, /* ZUC_EEA3 */
 };
 
 uint8_t custom_test = 0;
@@ -605,7 +621,8 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
          uint8_t *buf, uint8_t *digest, const uint8_t *aad,
          const uint32_t buf_size, const uint8_t tag_size,
          JOB_CIPHER_DIRECTION cipher_dir,
-         struct cipher_auth_keys *keys, uint8_t *iv)
+         struct cipher_auth_keys *keys, uint8_t *cipher_iv,
+         uint8_t *auth_iv)
 {
         static const void *ks_ptr[3];
         uint32_t *k1_expanded = keys->k1_expanded;
@@ -626,7 +643,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         job->msg_len_to_hash_in_bytes = buf_size;
         job->hash_start_src_offset_in_bytes = 0;
         job->cipher_start_src_offset_in_bytes = 0;
-        job->iv = iv;
+        job->iv = cipher_iv;
 
         if (params->cipher_mode == PON_AES_CNTR) {
                 /* Substract XGEM header */
@@ -677,6 +694,10 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                         (uint8_t *) ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad =
                         (uint8_t *) opad;
+                break;
+        case ZUC_EIA3_BITLEN:
+                job->u.ZUC_EIA3._key  = k2;
+                job->u.ZUC_EIA3._iv  = auth_iv;
                 break;
         case PON_CRC_BIP:
         case NULL_HASH:
@@ -765,6 +786,11 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->aes_dec_key_expanded = dec_keys;
                 job->iv_len_in_bytes = 0;
                 break;
+        case ZUC_EEA3:
+                job->aes_enc_key_expanded = k2;
+                job->aes_dec_key_expanded = k2;
+                job->iv_len_in_bytes = 16;
+                break;
         case NULL_CIPHER:
                 /* No operation needed */
                 break;
@@ -816,6 +842,9 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         memset(ipad, KEY_PATTERN, sizeof(keys->ipad));
                         memset(opad, KEY_PATTERN, sizeof(keys->opad));
                         break;
+                case ZUC_EIA3_BITLEN:
+                        memset(k3, KEY_PATTERN, sizeof(keys->k3));
+                        break;
                 case AES_CCM:
                 case AES_GMAC:
                 case NULL_HASH:
@@ -850,6 +879,9 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case DES3:
                 case DOCSIS_DES:
                         memset(enc_keys, KEY_PATTERN, sizeof(keys->enc_keys));
+                        break;
+                case ZUC_EEA3:
+                        memset(k2, KEY_PATTERN, sizeof(keys->k2));
                         break;
                 case NULL_CIPHER:
                         /* No operation needed */
@@ -955,6 +987,9 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
+        case ZUC_EIA3_BITLEN:
+                memcpy(k3, key, sizeof(keys->k3));
+                break;
         case AES_CCM:
         case AES_GMAC:
         case NULL_HASH:
@@ -1025,6 +1060,9 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case DES3:
         case DOCSIS_DES:
                 des_key_schedule((uint64_t *) enc_keys, key);
+                break;
+        case ZUC_EEA3:
+                memcpy(k2, key, sizeof(keys->k2));
                 break;
         case NULL_CIPHER:
                 /* No operation needed */
@@ -1173,7 +1211,8 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         struct cipher_auth_keys *enc_keys = &data->enc_keys;
         struct cipher_auth_keys *dec_keys = &data->dec_keys;
         uint8_t *aad = data->aad;
-        uint8_t *iv = data->iv;
+        uint8_t *cipher_iv = data->cipher_iv;
+        uint8_t *auth_iv = data->auth_iv;
         uint8_t *in_digest = data->in_digest;
         uint8_t *out_digest = data->out_digest;
         uint8_t *test_buf = data->test_buf;
@@ -1200,7 +1239,8 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         } else {
                 generate_random_buf(test_buf, buf_size);
                 generate_random_buf(key, MAX_KEY_SIZE);
-                generate_random_buf(iv, MAX_IV_SIZE);
+                generate_random_buf(cipher_iv, MAX_IV_SIZE);
+                generate_random_buf(auth_iv, MAX_IV_SIZE);
                 generate_random_buf(aad, AAD_SIZE);
         }
 
@@ -1272,7 +1312,8 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  */
                 memcpy(src_dst_buf, test_buf, buf_size);
                 if (fill_job(job, params, src_dst_buf, in_digest, aad,
-                             buf_size, tag_size, ENCRYPT, enc_keys, iv) < 0)
+                             buf_size, tag_size, ENCRYPT, enc_keys,
+                             cipher_iv, auth_iv) < 0)
                         goto exit;
 
                 /* Randomize memory for input digest */
@@ -1321,7 +1362,8 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  * using reference architecture
                  */
                 if (fill_job(job, params, src_dst_buf, out_digest, aad,
-                             buf_size, tag_size, DECRYPT, dec_keys, iv) < 0)
+                             buf_size, tag_size, DECRYPT, dec_keys,
+                             cipher_iv, auth_iv) < 0)
                         goto exit;
 
                 /* Clear scratch registers before submitting job to prevent
@@ -1544,7 +1586,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         JOB_HASH_ALG    hash_alg;
         JOB_CIPHER_MODE c_mode;
 
-        for (c_mode = CBC; c_mode <= CNTR_BITLEN; c_mode++) {
+        for (c_mode = CBC; c_mode <= ZUC_EEA3; c_mode++) {
                 /* Skip CUSTOM_CIPHER */
                 if (c_mode == CUSTOM_CIPHER)
                         continue;
@@ -1556,7 +1598,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
 
                 for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                         params->key_size = key_sz;
-                        for (hash_alg = SHA1; hash_alg <= PON_CRC_BIP;
+                        for (hash_alg = SHA1; hash_alg <= ZUC_EIA3_BITLEN;
                              hash_alg++) {
                                 /* Skip CUSTOM_HASH */
                                 if (hash_alg == CUSTOM_HASH)
