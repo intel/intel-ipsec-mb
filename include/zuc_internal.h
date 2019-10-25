@@ -51,8 +51,10 @@
 #define ZUC_WORD                            (32)
 
 /* Range of input data for ZUC is from 1 to 65504 bits */
-#define ZUC_MIN_LEN     1
-#define ZUC_MAX_LEN     65504
+#define ZUC_MIN_BITLEN     1
+#define ZUC_MAX_BITLEN     65504
+#define ZUC_MIN_BYTELEN    1
+#define ZUC_MAX_BYTELEN    (ZUC_MAX_BITLEN / 8)
 
 #ifdef DEBUG
 #ifdef _WIN32

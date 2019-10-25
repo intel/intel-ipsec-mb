@@ -345,7 +345,7 @@ void zuc_eea3_1_buffer_sse(const void *pKey,
                 return;
 
         /* Check input data is in range of supported length */
-        if (length < ZUC_MIN_LEN || length > ZUC_MAX_LEN)
+        if (length < ZUC_MIN_BYTELEN || length > ZUC_MAX_BYTELEN)
                 return;
 #endif
 
@@ -386,7 +386,7 @@ void zuc_eea3_4_buffer_sse(const void * const pKey[4],
                         return;
 
                 /* Check input data is in range of supported length */
-                if (length[i] < ZUC_MIN_LEN || length[i] > ZUC_MAX_LEN)
+                if (length[i] < ZUC_MIN_BYTELEN || length[i] > ZUC_MAX_BYTELEN)
                         return;
         }
 #endif
@@ -430,7 +430,7 @@ void zuc_eea3_n_buffer_sse(const void * const pKey[], const void * const pIv[],
                         return;
 
                 /* Check input data is in range of supported length */
-                if (length[i] < ZUC_MIN_LEN || length[i] > ZUC_MAX_LEN)
+                if (length[i] < ZUC_MIN_BYTELEN || length[i] > ZUC_MAX_BYTELEN)
                         return;
         }
 #endif
@@ -503,7 +503,7 @@ void zuc_eia3_1_buffer_sse(const void *pKey,
                 return;
 
         /* Check input data is in range of supported length */
-        if (lengthInBits < ZUC_MIN_LEN || lengthInBits > ZUC_MAX_LEN)
+        if (lengthInBits < ZUC_MIN_BITLEN || lengthInBits > ZUC_MAX_BITLEN)
                 return;
 #endif
 
