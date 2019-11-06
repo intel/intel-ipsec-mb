@@ -95,6 +95,11 @@ dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
 bit_mask_table:
 db	0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe
 
+align 16
+swap_mask:
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+
 
 section .text
 align 64
@@ -847,6 +852,191 @@ asm_ZucGenKeystream64B_4_avx:
     pop         rbx
     ret
 
+;;
+;; void asm_ZucCipher64B_4_avx(state4_t *pSta, u32 *pKeyStr[4], u64 *pIn[4],
+;;                             u64 *pOut[4], u64 bufOff);
+;;
+;; WIN64
+;;  RCX    - pSta
+;;  RDX    - pKeyStr
+;;  R8     - pIn
+;;  R9     - pOut
+;;  rsp+40 - bufOff
+;;
+;; LIN64
+;;  RDI - pSta
+;;  RSI - pKeyStr
+;;  RDX - pIn
+;;  RCX - pOut
+;;  R8  - bufOff
+;;
+MKGLOBAL(asm_ZucCipher64B_4_avx,function,internal)
+asm_ZucCipher64B_4_avx:
+
+%ifdef LINUX
+        %define         pState  rdi
+        %define         pKS     rsi
+        %define         pIn     rdx
+        %define         pOut    rcx
+        %define         bufOff  r8
+%else
+        %define         pState  rcx
+        %define         pKS     rdx
+        %define         pIn     r8
+        %define         pOut    r9
+        %define         bufOff  r10
+%endif
+
+        ; save non-volatile registers
+%ifdef LINUX
+        ;; 5 gps to save + 4 gps from input parameters
+        sub     rsp, 72
+        mov     [rsp], rbx
+        mov     [rsp + 8], r12
+        mov     [rsp + 16], r13
+        mov     [rsp + 24], r14
+        mov     [rsp + 32], r15
+        mov     [rsp + 40], pKS
+        mov     [rsp + 48], pIn
+        mov     [rsp + 56], pOut
+        mov     [rsp + 64], bufOff
+%else
+        mov     bufOff, [rsp + 40]
+        mov     rax, rsp
+        ;; 8 gps to save + 4 gps from parameters +  2 xmm registers
+        sub     rsp, 128
+        and     rsp, -16
+        vmovdqa [rsp], xmm6
+        vmovdqa [rsp + 16], xmm7
+        mov     [rsp + 32], rdi
+        mov     [rsp + 40], rsi
+        mov     [rsp + 48], rbx
+        mov     [rsp + 56], r12
+        mov     [rsp + 64], r13
+        mov     [rsp + 72], r14
+        mov     [rsp + 80], r15
+        mov     [rsp + 88], rax
+        mov     [rsp + 96], pKS
+        mov     [rsp + 104], pIn
+        mov     [rsp + 112], pOut
+        mov     [rsp + 120], bufOff
+%endif
+
+        mov     r12, [pKS]
+        mov     r13, [pKS + 8]
+        mov     r14, [pKS + 16]
+        mov     r15, [pKS + 24]
+        ; Store 4 keystream pointers on the stack
+        push    r12
+        push    r13
+        push    r14
+        push    r15
+
+        ; Load state pointer in RAX
+        mov     rax, pState
+
+        ; Load read-only registers
+        lea     rdi, [S0]       ; used by sbox_lkup() macro
+        lea     rsi, [S1]
+        vmovdqa xmm12, [mask31]
+
+        ; Generate 64B of keystream in 16 rounds
+%assign N 1
+%rep 16
+        bits_reorg4 N
+        nonlin_fun4 1
+        store_kstr4
+        vpxor   xmm0, xmm0
+        lfsr_updt4  N
+%assign N N+1
+%endrep
+
+        ; Take keystream pointers off (#push = #pops)
+        pop     rax
+        pop     rax
+        pop     rax
+        pop     rax
+
+        vmovdqa  xmm15, [rel swap_mask]
+
+        ;; Restore input parameters
+%ifdef LINUX
+        mov     pKS, [rsp + 40]
+        mov     pIn, [rsp + 48]
+        mov     pOut, [rsp + 56]
+        mov     bufOff, [rsp + 64]
+%else
+        mov     pKS,    [rsp + 96]
+        mov     pIn,    [rsp + 104]
+        mov     pOut,   [rsp + 112]
+        mov     bufOff, [rsp + 120]
+%endif
+
+%assign off 0
+%rep 4
+        ;; XOR Input buffer with keystream in rounds of 16B
+        mov     r12, [pIn]
+        mov     r13, [pIn + 8]
+        mov     r14, [pIn + 16]
+        mov     r15, [pIn + 24]
+        vmovdqu xmm0, [r12 + bufOff + off]
+        vmovdqu xmm1, [r13 + bufOff + off]
+        vmovdqu xmm2, [r14 + bufOff + off]
+        vmovdqu xmm3, [r15 + bufOff + off]
+
+        mov     r12, [pKS]
+        mov     r13, [pKS + 8]
+        mov     r14, [pKS + 16]
+        mov     r15, [pKS + 24]
+        vmovdqa xmm4, [r12 + off]
+        vmovdqa xmm5, [r13 + off]
+        vmovdqa xmm6, [r14 + off]
+        vmovdqa xmm7, [r15 + off]
+
+        vpshufb xmm4, xmm15
+        vpshufb xmm5, xmm15
+        vpshufb xmm6, xmm15
+        vpshufb xmm7, xmm15
+
+        vpxor   xmm4, xmm0
+        vpxor   xmm5, xmm1
+        vpxor   xmm6, xmm2
+        vpxor   xmm7, xmm3
+
+        mov     r12, [pOut]
+        mov     r13, [pOut + 8]
+        mov     r14, [pOut + 16]
+        mov     r15, [pOut + 24]
+
+        vmovdqu [r12 + bufOff + off], xmm4
+        vmovdqu [r13 + bufOff + off], xmm5
+        vmovdqu [r14 + bufOff + off], xmm6
+        vmovdqu [r15 + bufOff + off], xmm7
+%assign off (off + 16)
+%endrep
+
+        ; Restore non-volatile registers
+%ifdef LINUX
+        mov     rbx, [rsp]
+        mov     r12, [rsp + 8]
+        mov     r13, [rsp + 16]
+        mov     r14, [rsp + 24]
+        mov     r15, [rsp + 32]
+        add     rsp, 72
+%else
+        vmovdqa xmm6, [rsp]
+        vmovdqa xmm7, [rsp + 16]
+        mov     rdi,  [rsp + 32]
+        mov     rsi,  [rsp + 40]
+        mov     rbx,  [rsp + 48]
+        mov     r12,  [rsp + 56]
+        mov     r13,  [rsp + 64]
+        mov     r14,  [rsp + 72]
+        mov     r15,  [rsp + 80]
+        mov     rsp,  [rsp + 88]
+%endif
+
+        ret
 
 ;;
 ;; extern uint32_t asm_Eia3RemainderAVX(const void *ks, const void *data, uint64_t n_bits)
