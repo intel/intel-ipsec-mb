@@ -54,13 +54,8 @@ void _zuc_eea3_1_buffer_avx(const void *pKey,
 {
         DECLARE_ALIGNED(ZucState_t zucState, 64);
         DECLARE_ALIGNED(uint8_t keyStream[64], 64);
-        /* buffer to store 64 bytes of keystream */
-        DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
-        DECLARE_ALIGNED(uint8_t tempDst[64], 64);
 
         const uint64_t *pIn64 = NULL;
-        const uint8_t *pIn8 = NULL;
-        uint8_t *pOut8 = NULL;
         uint64_t *pOut64 = NULL, *pKeyStream64 = NULL;
         uint64_t *pTemp64 = NULL, *pdstTemp64 = NULL;
 
@@ -90,9 +85,13 @@ void _zuc_eea3_1_buffer_avx(const void *pKey,
         }
 
         /* Check for remaining 0 to 63 bytes */
-        pIn8 = (const uint8_t *) pBufferIn;
-        pOut8 = (uint8_t *) pBufferOut;
         if(numBytesLeftOver) {
+                /* buffer to store 64 bytes of keystream */
+                DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
+                DECLARE_ALIGNED(uint8_t tempDst[64], 64);
+                const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
+                uint8_t *pOut8 = (uint8_t *) pBufferOut;
+
                 asm_ZucGenKeystream64B((uint32_t *) &keyStream[0], &zucState);
 
                 /* copy the remaining bytes into temporary buffer and XOR with
@@ -109,6 +108,10 @@ void _zuc_eea3_1_buffer_avx(const void *pKey,
                 memcpy(&pOut8[length - numBytesLeftOver], &tempDst[0],
                        numBytesLeftOver);
 
+#ifdef SAFE_DATA
+                clear_mem(tempSrc, sizeof(tempSrc));
+                clear_mem(tempDst, sizeof(tempDst));
+#endif
         }
 #ifdef SAFE_DATA
         /* Clear sensitive data in stack */
@@ -140,8 +143,6 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
         DECLARE_ALIGNED(uint8_t keyStr2[64], 64);
         DECLARE_ALIGNED(uint8_t keyStr3[64], 64);
         DECLARE_ALIGNED(uint8_t keyStr4[64], 64);
-        DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
-        DECLARE_ALIGNED(uint8_t tempDst[64], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
@@ -158,8 +159,6 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
         uint64_t *pOut64_1 = NULL;
         uint64_t *pOut64_2 = NULL;
         uint64_t *pOut64_3 = NULL;
-        uint64_t *pTempSrc64 = NULL;
-        uint64_t *pTempDst64 = NULL;
         uint64_t *pKeyStream64 = NULL;
 
         /* rounded down minimum length */
@@ -288,10 +287,14 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
 
                         /* Check for remaining 0 to 63 bytes */
                         if (numBytesLeftOver) {
-                                asm_ZucGenKeystream64B((uint32_t *) &keyStr1,
-                                                       &singlePktState);
+                                DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
+                                DECLARE_ALIGNED(uint8_t tempDst[64], 64);
+                                uint64_t *pTempSrc64;
+                                uint64_t *pTempDst64;
                                 uint32_t offset = length[i] - numBytesLeftOver;
 
+                                asm_ZucGenKeystream64B((uint32_t *) &keyStr1,
+                                                       &singlePktState);
                                 /* copy the remaining bytes into temporary
                                  * buffer and XOR with the 64-bytes of
                                  * keystream. Then copy on the valid bytes back
@@ -309,6 +312,10 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
 
                                 memcpy(&pTempBufOutPtr[offset],
                                        &tempDst[0], numBytesLeftOver);
+#ifdef SAFE_DATA
+                                clear_mem(tempSrc, sizeof(tempSrc));
+                                clear_mem(tempDst, sizeof(tempDst));
+#endif
                         }
                 }
         }
