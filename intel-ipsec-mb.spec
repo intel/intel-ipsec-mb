@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2018, Intel Corporation
+# Copyright (c) 2017-2019, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -24,8 +24,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %global githubname   intel-ipsec-mb
-%global githubver    0.51
+%global githubver    0.53
 %global githubfull   %{githubname}-%{githubver}
+%global patchversion 0
 
 # disable producing debuginfo for this package
 %global debug_package %{nil}
@@ -33,7 +34,7 @@
 Summary:            IPSEC cryptography library optimized for Intel Architecture
 Name:               %{githubname}
 Release:            1%{?dist}
-Version:            %{githubver}
+Version:            %{githubver}.%{patchversion}
 License:            BSD
 Group:              Development/Tools
 ExclusiveArch:      x86_64
@@ -99,6 +100,9 @@ ln -s libIPSec_MB.so.%{version} libIPSec_MB.so
 %{_mandir}/man7/libipsec-mb-dev.7.gz
 
 %changelog
+* Mon Nov 11 2019 Marcel Cornu <marcel.d.cornu@intel.com> 0.53.0-1
+- Update for release package v0.53.0
+
 * Thu Sep 13 2018 Marcel Cornu <marcel.d.cornu@intel.com> 0.51-1
 - Update for release package v0.51
 
