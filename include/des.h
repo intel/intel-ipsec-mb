@@ -108,4 +108,97 @@ void docsis_des_enc_basic(const void *input, void *output, const int size,
 void docsis_des_dec_basic(const void *input, void *output, const int size,
                           const uint64_t *ks, const uint64_t *ivec);
 
+/* ========================================================================= */
+/* DES and 3DES inline function for use in mb_mgr_code.h                     */
+/* ========================================================================= */
+
+/**
+ * @brief DES cipher encryption
+ *
+ * @param job description of performed crypto operation
+ * @return It always returns value passed in \a job
+ */
+__forceinline
+JOB_AES_HMAC *
+DES_CBC_ENC(JOB_AES_HMAC *job)
+{
+        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        des_enc_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
+                          job->dst,
+                          job->msg_len_to_cipher_in_bytes &
+                          (~(DES_BLOCK_SIZE - 1)),
+                          job->aes_enc_key_expanded, (const uint64_t *)job->iv);
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+/**
+ * @brief DES cipher decryption
+ *
+ * @param job description of performed crypto operation
+ * @return It always returns value passed in \a job
+ */
+__forceinline
+JOB_AES_HMAC *
+DES_CBC_DEC(JOB_AES_HMAC *job)
+{
+        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        des_dec_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
+                          job->dst,
+                          job->msg_len_to_cipher_in_bytes &
+                          (~(DES_BLOCK_SIZE - 1)),
+                          job->aes_dec_key_expanded, (const uint64_t *)job->iv);
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+/**
+ * @brief 3DES cipher encryption
+ *
+ * @param job description of performed crypto operation
+ * @return It always returns value passed in \a job
+ */
+__forceinline
+JOB_AES_HMAC *
+DES3_CBC_ENC(JOB_AES_HMAC *job)
+{
+        const void * const *ks_ptr =
+                (const void * const *)job->aes_enc_key_expanded;
+
+        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        des3_enc_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
+                           job->dst,
+                           job->msg_len_to_cipher_in_bytes &
+                           (~(DES_BLOCK_SIZE - 1)),
+                           ks_ptr[0], ks_ptr[1], ks_ptr[2],
+                           (const uint64_t *)job->iv);
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+/**
+ * @brief 3DES cipher decryption
+ *
+ * @param job description of performed crypto operation
+ * @return It always returns value passed in \a job
+ */
+__forceinline
+JOB_AES_HMAC *
+DES3_CBC_DEC(JOB_AES_HMAC *job)
+{
+        const void * const *ks_ptr =
+                (const void * const *)job->aes_dec_key_expanded;
+
+        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        des3_dec_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
+                           job->dst,
+                           job->msg_len_to_cipher_in_bytes &
+                           (~(DES_BLOCK_SIZE - 1)),
+                           ks_ptr[0], ks_ptr[1], ks_ptr[2],
+                           (const uint64_t *)job->iv);
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
+
 #endif /* IMB_DES_H */

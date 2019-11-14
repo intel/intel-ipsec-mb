@@ -39,7 +39,7 @@
 
 #include "save_xmms.h"
 #include "asm.h"
-#include "des.h"
+#include "include/des.h"
 #include "gcm.h"
 #include "noaesni.h"
 

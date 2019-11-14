@@ -31,8 +31,8 @@
 #include <string.h>
 
 #include "intel-ipsec-mb.h"
-#include "des.h"
-#include "des_utils.h"
+#include "include/des.h"
+#include "include/des_utils.h"
 #include "include/clear_regs_mem.h"
 #include "include/constant_lookup.h"
 
