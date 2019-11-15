@@ -992,7 +992,6 @@ typedef struct MB_MGR {
         DECLARE_ALIGNED(MB_MGR_DES_OOO des3_dec_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO docsis_des_enc_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO docsis_des_dec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_ZUC_OOO zuc_ooo, 64);
 
         DECLARE_ALIGNED(MB_MGR_HMAC_SHA_1_OOO hmac_sha_1_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_HMAC_SHA_256_OOO hmac_sha_224_ooo, 64);
@@ -1003,6 +1002,7 @@ typedef struct MB_MGR {
         DECLARE_ALIGNED(MB_MGR_AES_XCBC_OOO aes_xcbc_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_CCM_OOO aes_ccm_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_CMAC_OOO aes_cmac_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_ZUC_OOO zuc_ooo, 64);
 } MB_MGR;
 
 /* ========================================================================== */
