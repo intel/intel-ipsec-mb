@@ -488,7 +488,7 @@ endif
 endif
 
 .PHONY: uninstall
-uninstall: $(LIBNAME)
+uninstall:
 	-rm -f $(HDR_DIR)/$(IMB_HDR)
 	-rm -f $(LIB_INSTALL_DIR)/$(LIBNAME)
 	-rm -f $(MAN_DIR)/$(MAN1)
