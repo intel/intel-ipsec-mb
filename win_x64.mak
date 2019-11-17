@@ -460,7 +460,7 @@ clean:
 	-del /q $(lib_objs1)
 	-del /q $(lib_objs2)
 	-del /q $(gcm_objs)
-	-del /q $(LIBNAME).*
+	-del /q $(LIBBASE).dll $(LIBBASE).lib
 
 install:
         -md "$(INSTDIR)"
