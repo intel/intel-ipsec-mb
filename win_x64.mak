@@ -430,6 +430,8 @@ help:
 	@echo "          - this option will produce shared library"
 	@echo "DEBUG=y   - this option will produce library fit for debugging"
 	@echo "SHARED=n  - this option will produce static library"
+	@echo "OBJ_DIR=obj (default)"
+	@echo "          - this option can be used to change build directory"
 	@echo "SAFE_DATA=n (default)"
 	@echo "          - Sensitive data not cleared from registers and memory"
 	@echo "            at operation end"
