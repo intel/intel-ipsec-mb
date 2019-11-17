@@ -28,6 +28,7 @@
 TEST_APP := ipsec_MB_testapp
 XVALID_APP := ipsec_xvalid_test
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
+LIB_DIR ?= ..
 
 USE_YASM ?= n
 YASM ?= yasm
@@ -53,7 +54,7 @@ CFLAGS +=
 else
 # library not installed
 CFLAGS +=  -I../include -I../
-LDFLAGS += -L../
+LDFLAGS += -L$(LIB_DIR)
 endif
 
 ifeq ($(DEBUG),y)

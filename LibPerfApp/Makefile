@@ -25,6 +25,7 @@
 
 EXE=ipsec_perf
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
+LIB_DIR ?= ..
 
 CFLAGS = -DLINUX -D_GNU_SOURCE $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
@@ -39,11 +40,11 @@ LDLIBS = -lIPSec_MB
 
 ifeq ("$(shell test -e $(INSTPATH) && echo -n yes)","yes")
 # library installed
-CFLAGS += 
+CFLAGS +=
 else
 # library not installed
 CFLAGS +=  -I../include -I../
-LDFLAGS += -L../
+LDFLAGS += -L$(LIB_DIR)
 endif
 
 ifeq ($(DEBUG),y)
