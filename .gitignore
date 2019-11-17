@@ -1,6 +1,8 @@
 *.o
 *.so
 *.a
+*.d
 *~
 ipsec_MB_testapp
 ipsec_perf
+ipsec_xvalid_test
