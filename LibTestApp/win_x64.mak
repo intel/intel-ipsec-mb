@@ -37,7 +37,10 @@ PREFIX = C:\Program Files
 IPSECLIB = "$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib"
 INCDIR = -I"$(PREFIX)\$(INSTNAME)"
 !else
-IPSECLIB = ..\libIPSec_MB.lib
+!if !defined(LIB_DIR)
+LIB_DIR = ..
+!endif
+IPSECLIB = "$(LIB_DIR)\libIPSec_MB.lib"
 INCDIR = -I..\ -I..\include
 !endif
 

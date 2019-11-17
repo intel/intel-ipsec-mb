@@ -51,6 +51,7 @@ YASM ?= yasm
 NASM ?= nasm
 
 OBJ_DIR = obj
+LIB_DIR = .
 
 INCLUDE_DIRS := include . no-aesni
 INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
@@ -449,13 +450,13 @@ c_dep_target_files := $(c_dep_files:%=$(OBJ_DIR)/%)
 dep_files := $(asm_dep_files) $(c_dep_files)
 dep_target_files := $(dep_files:%=$(OBJ_DIR)/%)
 
-all: $(LIBNAME)
+all: $(LIB_DIR)/$(LIBNAME)
 
-$(LIBNAME): $(target_obj_files)
+$(LIB_DIR)/$(LIBNAME): $(target_obj_files)
 ifeq ($(SHARED),y)
-	$(CC) -shared -Wl,-soname,$(LIB).so.$(SO_VERSION) -o $(LIBNAME) $^ -lc
-	ln -f -s $(LIBNAME) $(LIB).so.$(SO_VERSION)
-	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB).so
+	$(CC) -shared -Wl,-soname,$(LIB).so.$(SO_VERSION) -o $@ $^ -lc
+	ln -f -s $(LIBNAME) $(LIB_DIR)/$(LIB).so.$(SO_VERSION)
+	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB_DIR)/$(LIB).so
 else
 	$(AR) -qcs $@ $^
 endif
@@ -470,11 +471,11 @@ ifeq ($(SAFE_LOOKUP), n)
 endif
 
 .PHONY: install
-install: $(LIBNAME)
+install: $(LIB_DIR)/$(LIBNAME)
 	install -d $(HDR_DIR)
 	install -m 0644 $(IMB_HDR) $(HDR_DIR)
 	install -d $(LIB_INSTALL_DIR)
-	install -s -m $(LIBPERM) $(LIBNAME) $(LIB_INSTALL_DIR)
+	install -s -m $(LIBPERM) $(LIB_DIR)/$(LIBNAME) $(LIB_INSTALL_DIR)
 	install -d $(MAN_DIR)
 	install -m 0444 $(MAN1) $(MAN_DIR)
 	install -m 0444 $(MAN2) $(MAN_DIR)
@@ -501,7 +502,7 @@ endif
 .PHONY: build_c_dep_target_files
 build_c_dep_target_files: $(c_dep_target_files)
 
-$(target_obj_files): | $(OBJ_DIR) build_c_dep_target_files
+$(target_obj_files): | $(OBJ_DIR) $(LIB_DIR) build_c_dep_target_files
 $(dep_target_files): | $(OBJ_DIR)
 
 #
@@ -600,6 +601,9 @@ endif
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
+$(LIB_DIR):
+	mkdir $(LIB_DIR)
+
 .PHONY: TAGS
 TAGS:
 	find ./ -name '*.[ch]' | etags -
@@ -610,7 +614,7 @@ TAGS:
 clean:
 	rm -Rf $(target_obj_files)
 	rm -Rf $(dep_target_files)
-	rm -f $(LIB).a $(LIB).so*
+	rm -f $(LIB_DIR)/$(LIB).a $(LIB_DIR)/$(LIB).so*
 
 .PHONY: help
 help:
@@ -623,6 +627,8 @@ help:
 	@echo "SHARED=n  - this option will produce static library"
 	@echo "OBJ_DIR=obj (default)"
 	@echo "          - this option can be used to change build directory"
+	@echo "LIB_DIR=. (default)"
+	@echo "          - this option can be used to change the library directory"
 	@echo "SAFE_DATA=n (default)"
 	@echo "          - Sensitive data not cleared from registers and memory"
 	@echo "            at operation end"

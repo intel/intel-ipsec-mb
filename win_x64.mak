@@ -58,6 +58,7 @@ LIBNAME = $(LIBBASE).dll
 LIBNAME = $(LIBBASE).lib
 !endif
 OBJ_DIR = obj
+LIB_DIR = .\
 
 !ifdef DEBUG
 OPT = /Od
@@ -359,9 +360,9 @@ CFLAGS = $(CFLAGS) -DNO_GCM
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
 !endif
 
-all: $(LIBNAME)
+all: $(LIB_DIR)\$(LIBNAME)
 
-$(LIBNAME): $(all_objs)
+$(LIB_DIR)\$(LIBNAME): $(all_objs)
 !if "$(SHARED)" == "y"
 	$(LINK_TOOL) $(LINKFLAGS) /DLL /DEF:libIPSec_MB.def /OUT:$@  $(all_objs)
 !else
@@ -378,7 +379,7 @@ $(LIBNAME): $(all_objs)
 	@echo NOTE:  $(SAFE_LOOKUP_MSG1) $(SAFE_LOOKUP_MSG2)
 !endif
 
-$(all_objs): $(OBJ_DIR)
+$(all_objs): $(OBJ_DIR) $(LIB_DIR)
 
 {.\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS) $<
@@ -422,6 +423,9 @@ $(all_objs): $(OBJ_DIR)
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
+$(LIB_DIR):
+	mkdir $(LIB_DIR)
+
 help:
 	@echo "Available build options:"
 	@echo "DEBUG=n (default)"
@@ -432,6 +436,8 @@ help:
 	@echo "SHARED=n  - this option will produce static library"
 	@echo "OBJ_DIR=obj (default)"
 	@echo "          - this option can be used to change build directory"
+	@echo "LIB_DIR=. (default)"
+	@echo "          - this option can be used to change the library directory"
 	@echo "SAFE_DATA=n (default)"
 	@echo "          - Sensitive data not cleared from registers and memory"
 	@echo "            at operation end"
@@ -462,7 +468,7 @@ clean:
 	-del /q $(lib_objs1)
 	-del /q $(lib_objs2)
 	-del /q $(gcm_objs)
-	-del /q $(LIBBASE).dll $(LIBBASE).lib
+	-del /q $(LIB_DIR)\$(LIBBASE).dll $(LIB_DIR)\$(LIBBASE).lib
 
 install:
         -md "$(INSTDIR)"
@@ -471,8 +477,8 @@ install:
         -copy /Y /V /B $(LIBBASE).lib "$(INSTDIR)"
         -copy /Y /V /A intel-ipsec-mb.h "$(INSTDIR)"
 !if "$(SHARED)" == "y"
-        -copy /Y /V /B $(LIBBASE).dll "$(INSTDIR)"
-        -copy /Y /V /B $(LIBBASE).dll "%windir%\system32"
+        -copy /Y /V /B $(LIB_DIR)\$(LIBBASE).dll "$(INSTDIR)"
+        -copy /Y /V /B $(LIB_DIR)\$(LIBBASE).dll "%windir%\system32"
 !endif
 
 uninstall:
