@@ -26,11 +26,20 @@
 *******************************************************************************/
 
 /**
- * @brief DOCSIS AES (AES128 CBC + AES128 CFB) and DOCSIS DES (DES CBC + DES CFB)
- *        job submit and flush helper functions for mb_mgr_code.h
+ * DOCSIS AES (AES128 CBC + AES128 CFB) and DOCSIS DES (DES CBC + DES CFB).
+ * JOB submit and flush helper functions to be used from mb_mgr_code.h
  *
- * @note AES_CFB_ONE, SUBMIT_JOB_AES128_DEC and SUBMIT_JOB_AES128_ENC have to be
- *       defined when including this file.
+ * @note These need to be defined prior to including this file:
+ *           ETHERNET_FCS, AES_CFB_ONE, SUBMIT_JOB_AES128_DEC and
+ *           SUBMIT_JOB_AES128_ENC.
+ *
+ * @note The file defines the following:
+ *           DOCSIS_LAST_BLOCK, DOCSIS_FIRST_BLOCK,
+ *           SUBMIT_JOB_DOCSIS_SEC_ENC, FLUSH_JOB_DOCSIS_SEC_ENC,
+ *           SUBMIT_JOB_DOCSIS_SEC_DEC,
+ *           SUBMIT_JOB_DOCSIS_SEC_CRC_ENC, FLUSH_JOB_DOCSIS_SEC_CRC_ENC,
+ *           SUBMIT_JOB_DOCSIS_SEC_CRC_DEC,
+ *           DOCSIS_DES_ENC and DOCSIS_DES_DEC.
  */
 
 #ifndef DOCSIS_COMMON_H
@@ -172,6 +181,67 @@ SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_AES128_DEC(job);
         } else
                 return DOCSIS_FIRST_BLOCK(job);
+}
+
+/**
+ * Minimum Ethernet frame size to calculate CRC for:
+ * Source Address (6 bytes) + Destination Address (6 bytes) + Type/Len (2 bytes)
+ */
+#define MIN_ETHERNET_PDU_SIZE 14
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+{
+        if (job->msg_len_to_hash_in_bytes >= MIN_ETHERNET_PDU_SIZE) {
+                uint32_t *p_crc = (uint32_t *) job->auth_tag_output;
+
+                (*p_crc) =
+                        ETHERNET_FCS(job->src +
+                                     job->hash_start_src_offset_in_bytes,
+                                     job->msg_len_to_hash_in_bytes,
+                                     job->src +
+                                     job->hash_start_src_offset_in_bytes +
+                                     job->msg_len_to_hash_in_bytes);
+        }
+        return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job);
+}
+
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state)
+{
+        /**
+         * CRC has been already calculated.
+         * Normal cipher flush only required.
+         */
+        return FLUSH_JOB_DOCSIS_SEC_ENC(state);
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+{
+        (void) state;
+
+        if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                DOCSIS_LAST_BLOCK(job);
+                job = SUBMIT_JOB_AES128_DEC(job);
+        } else {
+                job = DOCSIS_FIRST_BLOCK(job);
+        }
+
+        if (job->msg_len_to_hash_in_bytes >= MIN_ETHERNET_PDU_SIZE) {
+                uint32_t *p_crc = (uint32_t *) job->auth_tag_output;
+
+                (*p_crc) =
+                        ETHERNET_FCS(job->src +
+                                     job->hash_start_src_offset_in_bytes,
+                                     job->msg_len_to_hash_in_bytes,
+                                     NULL);
+        }
+
+        return job;
 }
 
 /* ========================================================================= */
