@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2012-2018, Intel Corporation
+  Copyright (c) 2012-2019, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -272,7 +272,12 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES_ECB_256_ENC(job);
                 }
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
-                return SUBMIT_JOB_DOCSIS_SEC_ENC(&state->docsis_sec_ooo, job);
+                MB_MGR_AES_OOO *p_ooo = &state->docsis_sec_ooo;
+
+                if (job->hash_alg == DOCSIS_CRC32)
+                        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(p_ooo, job);
+                else
+                        return SUBMIT_JOB_DOCSIS_SEC_ENC(p_ooo, job);
         } else if (PON_AES_CNTR == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes == 0)
                         return SUBMIT_JOB_PON_ENC_NO_CTR(job);
@@ -330,7 +335,12 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_AES_GCM_ENC(state, job);
 #endif /* NO_GCM */
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
-                return FLUSH_JOB_DOCSIS_SEC_ENC(&state->docsis_sec_ooo);
+                MB_MGR_AES_OOO *p_ooo = &state->docsis_sec_ooo;
+
+                if (job->hash_alg == DOCSIS_CRC32)
+                        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(p_ooo);
+                else
+                        return FLUSH_JOB_DOCSIS_SEC_ENC(p_ooo);
 #ifdef FLUSH_JOB_DES_CBC_ENC
         } else if (DES == job->cipher_mode) {
                 return FLUSH_JOB_DES_CBC_ENC(&state->des_enc_ooo);
@@ -377,7 +387,12 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES_ECB_256_DEC(job);
                 }
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
-                return SUBMIT_JOB_DOCSIS_SEC_DEC(&state->docsis_sec_ooo, job);
+                MB_MGR_AES_OOO *p_ooo = &state->docsis_sec_ooo;
+
+                if (job->hash_alg == DOCSIS_CRC32)
+                        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(p_ooo, job);
+                else
+                        return SUBMIT_JOB_DOCSIS_SEC_DEC(p_ooo, job);
         } else if (PON_AES_CNTR == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes == 0)
                         return SUBMIT_JOB_PON_DEC_NO_CTR(job);
@@ -818,10 +833,6 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->msg_len_to_cipher_in_bytes == 0) {
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
-                        return 1;
-                }
                 break;
 #ifndef NO_GCM
         case GCM:
@@ -1095,7 +1106,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                                 return 1;
                         }
 
-                        /* Substract 8 bytes to maximum length since
+                        /* Subtract 8 bytes to maximum length since
                          * XGEM header is not ciphered */
                         if ((job->msg_len_to_cipher_in_bytes >
                              (max_pon_len - 8))) {
@@ -1243,7 +1254,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 /*
                  * AES-CCM allows for only one message for
-                 * cipher and uthentication.
+                 * cipher and authentication.
                  * AAD can be used to extend authentication over
                  * clear text fields.
                  */
@@ -1363,6 +1374,52 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                break;
+        case DOCSIS_CRC32:
+                /**
+                 * Use only in combination with DOCSIS_SEC_BPI.
+                 * Assumptions about Ethernet PDU carried over DOCSIS:
+                 * - cipher_start_src_offset_in_bytes <=
+                 *       (hash_start_src_offset_in_bytes + 12)
+                 * - msg_len_to_cipher_in_bytes <=
+                 *       (msg_len_to_hash_in_bytes - 12 + 4)
+                 * - @note: in-place operation allowed only
+                 * - authentication tag size is 4 bytes
+                 * - @note: in encrypt direction, computed CRC value is put into
+                 *   the source buffer
+                 * - encrypt sequence: hash, cipher
+                 * - decrypt sequence: cipher, hash
+                 */
+                if (job->cipher_mode != DOCSIS_SEC_BPI) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes >
+                    (job->msg_len_to_hash_in_bytes - 8)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->cipher_start_src_offset_in_bytes <
+                    (job->hash_start_src_offset_in_bytes + 12)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                        /* Ethernet FCS CRC is 32-bits */
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if ((job->cipher_direction == ENCRYPT &&
+                     job->chain_order != HASH_CIPHER) ||
+                    (job->cipher_direction == DECRYPT &&
+                     job->chain_order != CIPHER_HASH)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }

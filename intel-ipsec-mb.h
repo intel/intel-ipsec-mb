@@ -227,7 +227,8 @@ typedef enum {
         PLAIN_SHA_512,   /* SHA512 */
         AES_CMAC_BITLEN, /* 128-EIA2/NIA2 (3GPP) */
         PON_CRC_BIP,
-        ZUC_EIA3_BITLEN  /* 128-EIA3/NIA3 (3GPP) */
+        ZUC_EIA3_BITLEN, /* 128-EIA3/NIA3 (3GPP) */
+        DOCSIS_CRC32,    /* with DOCSIS_SEC_BPI only */
 } JOB_HASH_ALG;
 
 typedef enum {
