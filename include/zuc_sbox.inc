@@ -58,6 +58,33 @@ align 16
 Bottom5_bits_of_the_byte:
 dd 0x1f1f1f1f, 0x1f1f1f1f, 0x1f1f1f1f, 0x1f1f1f1f
 
+align 16
+Aes_to_Zuc_mul_low_nibble:
+        db 0x00, 0x01, 0x82, 0x83, 0x9e, 0x9f, 0x1c, 0x1d, 0x24, 0x25, 0xa6, 0xa7, 0xba, 0xbb, 0x38, 0x39
+
+align 16
+Aes_to_Zuc_mul_high_nibble:
+        db 0x00, 0xd5, 0x08, 0xdd, 0x7c, 0xa9, 0x74, 0xa1, 0x9c, 0x49, 0x94, 0x41, 0xe0, 0x35, 0xe8, 0x3d
+
+align 16
+Comb_matrix_mul_low_nibble:
+        db 0x55, 0x41, 0xff, 0xeb, 0x24, 0x30, 0x8e, 0x9a, 0xe2, 0xf6, 0x48, 0x5c, 0x93, 0x87, 0x39, 0x2d
+
+align 16
+Comb_matrix_mul_high_nibble:
+        db 0x55, 0xba, 0xcc, 0x23, 0x15, 0xfa, 0x8c, 0x63, 0x09, 0xe6, 0x90, 0x7f, 0x49, 0xa6, 0xd0, 0x3f
+
+align 16
+Shuf_mask:
+        db 0x00, 0x0D, 0x0A, 0x07, 0x04, 0x01, 0x0e, 0x0b, 0x08, 0x05, 0x02, 0x0f, 0x0C, 0x09, 0x06, 0x03
+
+align 16
+Cancel_aes:
+        db 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63
+
+align 16
+Const_comb_matrix:
+        db 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55
 
 ;
 ; Rotate left 5 bits in each byte, within an XMM register
@@ -156,4 +183,107 @@ dd 0x1f1f1f1f, 0x1f1f1f1f, 0x1f1f1f1f, 0x1f1f1f1f
         Rotl_5_AVX   %%IN_OUT, %%XTMP1
 %endmacro
 
+;
+; Perform 8x8 matrix multiplication using lookup tables with partial results
+; for high and low nible of each input byte
+;
+%macro MUL_PSHUFB_SSE 4
+%define %%XIN     %1      ; [in] XMM reg containing input vector
+%define %%XLO     %2      ; [in/clobbered] XMM reg containing low nibble table
+%define %%XHI_OUT %3      ; [in/out] XMM reg with high nibble table as input and which outputs the resulted vector
+%define %%XTMP    %4      ; [clobbered] Temp XMM register
+
+        ; Get low nibble of input data
+        movdqa  %%XTMP, [rel Low_nibble_mask]
+        pand    %%XTMP, %%XIN
+
+        ; Get low nibble of output
+        pshufb  %%XLO, %%XTMP
+
+        ; Get high nibble of input data
+        movdqa  %%XTMP, [rel High_nibble_mask]
+        pand    %%XTMP, %%XIN
+        psrlq   %%XTMP, 4
+
+        ; Get high nibble of output
+        pshufb  %%XHI_OUT, %%XTMP
+
+        ; XOR high and low nibbles to get full bytes
+        pxor    %%XHI_OUT, %%XLO
+
+%endmacro
+
+;
+; Compute 16 S1 box values from 16 bytes, stored in XMM register
+;
+%macro S1_comput_SSE 4
+%define %%XIN_OUT       %1 ; [in/out] XMM reg with input values which will contain the output values
+%define %%XTMP1         %2 ; [clobbered] Temporary XMM register
+%define %%XTMP2         %3 ; [clobbered] Temporary XMM register
+%define %%XTMP3         %4 ; [clobbered] Temporary XMM register
+
+        movdqa          %%XTMP1, [rel Aes_to_Zuc_mul_low_nibble]
+        movdqa          %%XTMP2, [rel Aes_to_Zuc_mul_high_nibble]
+        MUL_PSHUFB_SSE  %%XIN_OUT, %%XTMP1, %%XTMP2, %%XTMP3
+
+        pshufb          %%XTMP2, [rel Shuf_mask]
+        aesenclast      %%XTMP2, [rel Cancel_aes]
+
+        movdqa          %%XTMP1, [rel Comb_matrix_mul_low_nibble]
+        movdqa          %%XIN_OUT, [rel Comb_matrix_mul_high_nibble]
+        MUL_PSHUFB_SSE  %%XTMP2, %%XTMP1, %%XIN_OUT, %%XTMP3
+        pxor            %%XIN_OUT, [rel Const_comb_matrix]
+
+%endmacro
+
+;
+; Perform 8x8 matrix multiplication using lookup tables with partial results
+; for high and low nible of each input byte
+;
+%macro MUL_PSHUFB_AVX 4
+%define %%XIN     %1      ; [in] XMM reg containing input vector
+%define %%XLO     %2      ; [in/clobbered] XMM reg containing low nibble table
+%define %%XHI_OUT %3      ; [in/out] XMM reg with high nibble table as input and which outputs the resulted vector
+%define %%XTMP    %4      ; [clobbered] Temp XMM register
+
+        ; Get low nibble of input data
+        vpand   %%XTMP, %%XIN, [rel Low_nibble_mask]
+
+        ; Get low nibble of output
+        vpshufb %%XLO, %%XTMP
+
+        ; Get high nibble of input data
+        vpand   %%XTMP, %%XIN, [rel High_nibble_mask]
+        vpsrlq  %%XTMP, 4
+
+        ; Get high nibble of output
+        vpshufb %%XHI_OUT, %%XTMP
+
+        ; XOR high and low nibbles to get full bytes
+        vpxor   %%XHI_OUT, %%XLO
+
+%endmacro
+
+;
+; Compute 16 S1 box values from 16 bytes, stored in XMM register
+;
+%macro S1_comput_AVX 4
+%define %%XIN_OUT       %1 ; [in/out] XMM reg with input values which will contain the output values
+%define %%XTMP1         %2 ; [clobbered] Temporary XMM register
+%define %%XTMP2         %3 ; [clobbered] Temporary XMM register
+%define %%XTMP3         %4 ; [clobbered] Temporary XMM register
+
+        vmovdqa         %%XTMP1, [rel Aes_to_Zuc_mul_low_nibble]
+        vmovdqa         %%XTMP2, [rel Aes_to_Zuc_mul_high_nibble]
+        MUL_PSHUFB_AVX  %%XIN_OUT, %%XTMP1, %%XTMP2, %%XTMP3
+
+        vpshufb         %%XTMP2, [rel Shuf_mask]
+        vaesenclast     %%XTMP2, [rel Cancel_aes]
+
+        vmovdqa         %%XTMP1, [rel Comb_matrix_mul_low_nibble]
+        vmovdqa         %%XIN_OUT, [rel Comb_matrix_mul_high_nibble]
+        MUL_PSHUFB_AVX  %%XTMP2, %%XTMP1, %%XIN_OUT, %%XTMP3
+        vpxor           %%XIN_OUT, [rel Const_comb_matrix]
+
+%endmacro
 %endif ; end ifndef _ZUC_SBOX_INC_
