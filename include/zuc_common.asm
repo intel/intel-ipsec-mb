@@ -27,6 +27,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
+%include "include/zuc_sbox.inc"
 
 extern lookup_8bit_sse
 
@@ -295,7 +296,6 @@ section .text
     shrd        r11d, r9d, 8
 %endmacro
 
-
 ;
 ;   LFSR_UPDT()
 ;
@@ -382,24 +382,11 @@ section .text
 	mov 		[rax +  ((%1 + 1)*4)], r15d
 %endmacro
 
-
-
-;----------------------------------------------------------------------------------------
-;;
-;;extern void Zuc_Initialization(uint8_t* pKey, uint8_t* pIV, uint32_t * pState)
-;;
-;; WIN64
-;;	RCX - pKey
-;;	RDX - pIV
-;;      R8  - pState
-;; LIN64
-;;	RDI - pKey
-;;	RSI - pIV
-;;      RDX - pState
-;;
-align 16
-MKGLOBAL(asm_ZucInitialization,function,internal)
-asm_ZucInitialization:
+;
+; Initialize internal LFSR
+;
+%macro ZUC_INIT 1
+%define %%ARCH  %1 ; [in] SSE/AVX
 
 %ifdef LINUX
 	%define		pKe	rdi
@@ -416,22 +403,22 @@ asm_ZucInitialization:
 
     ;load stack pointer to rbp and reserve memory in the red zone
     mov rbp, rsp
-    sub rsp, 196
+    sub rsp, 64
 
     ; Save non-volatile registers
     mov [rbp - 8],  rbx
-    mov [rbp - 32], r12
-    mov [rbp - 40], r13
-    mov [rbp - 48], r14
-    mov [rbp - 56], r15
+    mov [rbp - 16], r12
+    mov [rbp - 24], r13
+    mov [rbp - 32], r14
+    mov [rbp - 40], r15
 %ifndef LINUX
-    mov [rbp - 64], rdi
-    mov [rbp - 72], rsi
+    mov [rbp - 48], rdi
+    mov [rbp - 56], rsi
 %endif
 
     lea rbx, [rel EK_d]     ; load pointer to D
     lea rax, [pState]      ; load pointer to pState
-    mov [rbp - 88], pState   ; save pointer to pState
+    mov [rbp - 64], pState   ; save pointer to pState
 
     ; Expand key
     key_expand  0
@@ -450,7 +437,7 @@ asm_ZucInitialization:
     ; Shift LFSR 32-times, update state variables
 %assign N 0
 %rep 32
-    mov rdx, [rbp - 88]   ; load pointer to pState
+    mov rdx, [rbp - 64]   ; load pointer to pState
     lea rsi, [rdx]
 
     BITS_REORG  N
@@ -458,7 +445,7 @@ asm_ZucInitialization:
     NONLIN_FUN  1
     shr         eax, 1
 
-    mov rdx, [rbp - 88]   ; re-load pointer to pState
+    mov rdx, [rbp - 64]   ; re-load pointer to pState
     lea rsi, [rdx]
 
     LFSR_UPDT   N
@@ -467,7 +454,7 @@ asm_ZucInitialization:
 %endrep
 
     ; And once more, initial round from keygen phase = 33 times
-    mov rdx, [rbp - 88]   ; load pointer to pState
+    mov         rdx, [rbp - 64]   ; load pointer to pState
     lea         rsi, [rdx]
 
 
@@ -475,12 +462,12 @@ asm_ZucInitialization:
     NONLIN_FUN  0
     xor         rax, rax
 
-    mov         rdx, [rbp - 88]   ; load pointer to pState
+    mov         rdx, [rbp - 64]   ; load pointer to pState
     lea         rsi, [rdx]
 
     LFSR_UPDT   0
 
-    mov         rdx, [rbp - 88]   ; load pointer to pState
+    mov         rdx, [rbp - 64]   ; load pointer to pState
     lea         rsi, [rdx]
 
     ; Save ZUC's state variables
@@ -494,35 +481,28 @@ asm_ZucInitialization:
 
     ; Restore non-volatile registers
     mov rbx, [rbp - 8]
-    mov r12, [rbp - 32]
-    mov r13, [rbp - 40]
-    mov r14, [rbp - 48]
-    mov r15, [rbp - 56]
+    mov r12, [rbp - 16]
+    mov r13, [rbp - 24]
+    mov r14, [rbp - 32]
+    mov r15, [rbp - 40]
 %ifndef LINUX
-    mov rdi, [rbp - 64]
-    mov rsi, [rbp - 72]
+    mov rdi, [rbp - 48]
+    mov rsi, [rbp - 56]
 %endif
 
     ; restore base pointer
     mov rsp, rbp
     pop rbp
 
-    ret
+%endmacro
 
-
-;;
-;; void asm_ZucGenKeystream8B(void *pKeystream, ZucState_t *pState);
-;;
-;; WIN64
-;;	RCX - KS (key stream pointer)
-;; 	RDX - STATE (state pointer)
-;; LIN64
-;;	RDI - KS (key stream pointer)
-;;	RSI - STATE (state pointer)
-;;
-align 16
-MKGLOBAL(asm_ZucGenKeystream8B,function,internal)
-asm_ZucGenKeystream8B:
+;
+; Generate N*4 bytes of keystream
+; for a single buffer (where N is number of rounds)
+;
+%macro ZUC_KEYGEN 2
+%define %%ARCH          %1 ; [in] SSE/AVX
+%define %%NUM_ROUNDS    %2 ; [in] Number of 4-byte rounds
 
 %ifdef LINUX
 	%define		pKS	rdi
@@ -536,26 +516,23 @@ asm_ZucGenKeystream8B:
 
     ;load stack pointer to rbp and reserve memory in the red zone
     mov rbp, rsp
-    sub rsp, 196
+    sub rsp, 72
 
     ; Save non-volatile registers
     mov [rbp - 8], rbx
-    mov [rbp - 32], r12
-    mov [rbp - 40], r13
-    mov [rbp - 48], r14
-    mov [rbp - 56], r15
+    mov [rbp - 16], r12
+    mov [rbp - 24], r13
+    mov [rbp - 32], r14
+    mov [rbp - 40], r15
 %ifndef LINUX
-    mov [rbp - 64], rdi
-    mov [rbp - 72], rsi
+    mov [rbp - 48], rdi
+    mov [rbp - 56], rsi
 %endif
-
 
     ; Load input keystream pointer parameter in RAX
     mov         rax, pKS
 
     ; Restore ZUC's state variables
-    xor         r10, r10
-    xor         r11, r11
     mov         r10d, [pState + OFFSET_FR1]
     mov         r11d, [pState + OFFSET_FR2]
     mov         r12d, [pState + OFFSET_BRC_X0]
@@ -564,31 +541,31 @@ asm_ZucGenKeystream8B:
     mov         r15d, [pState + OFFSET_BRC_X3]
 
     ; Store keystream pointer
-    mov [rbp - 80], rax
+    mov [rbp - 64], rax
 
     ; Store ZUC State Pointer
-    mov [rbp - 88], pState
+    mov [rbp - 72], pState
 
-    ; Generate 8B of keystream in 2 rounds
+    ; Generate N*4B of keystream in N rounds
 %assign N 1
-%rep 2
+%rep %%NUM_ROUNDS
 
-    mov rdx, [rbp - 88]       ; load *pState
+    mov rdx, [rbp - 72]       ; load *pState
     lea rsi, [rdx]
 
     BITS_REORG  N
     NONLIN_FUN  1
 
     ;Store the keystream
-    mov rbx, [rbp - 80]  ; load *pkeystream
+    mov rbx, [rbp - 64]  ; load *pkeystream
     xor eax, r15d
     mov [rbx], eax
     add rbx, 4          ; increment the pointer
-    mov [rbp - 80], rbx   ; save pkeystream
+    mov [rbp - 64], rbx   ; save pkeystream
 
     xor         rax, rax
 
-    mov rdx, [rbp - 88]     ; load *pState
+    mov rdx, [rbp - 72]     ; load *pState
     lea rsi, [rdx]
 
     LFSR_UPDT   N
@@ -596,7 +573,7 @@ asm_ZucGenKeystream8B:
 %assign N N+1
 %endrep
 
-    mov rsi, [rbp - 88]   ; load pState
+    mov rsi, [rbp - 72]   ; load pState
 
 
     ; Save ZUC's state variables
@@ -609,23 +586,63 @@ asm_ZucGenKeystream8B:
 
     ; Restore non-volatile registers
     mov rbx, [rbp - 8]
-    mov r12, [rbp - 32]
-    mov r13, [rbp - 40]
-    mov r14, [rbp - 48]
-    mov r15, [rbp - 56]
+    mov r12, [rbp - 16]
+    mov r13, [rbp - 24]
+    mov r14, [rbp - 32]
+    mov r15, [rbp - 40]
 %ifndef LINUX
-    mov rdi, [rbp - 64]
-    mov rsi, [rbp - 72]
+    mov rdi, [rbp - 48]
+    mov rsi, [rbp - 56]
 %endif
 
     mov rsp, rbp
     pop rbp
 
+%endmacro
+
+;;
+;;extern void Zuc_Initialization_sse(uint8_t* pKey, uint8_t* pIV, uint32_t * pState)
+;;
+;; WIN64
+;;	RCX - pKey
+;;	RDX - pIV
+;;      R8  - pState
+;; LIN64
+;;	RDI - pKey
+;;	RSI - pIV
+;;      RDX - pState
+;;
+align 16
+MKGLOBAL(asm_ZucInitialization_sse,function,internal)
+asm_ZucInitialization_sse:
+
+    ZUC_INIT SSE
+
+    ret
+
+;;
+;;extern void Zuc_Initialization_avx(uint8_t* pKey, uint8_t* pIV, uint32_t * pState)
+;;
+;; WIN64
+;;	RCX - pKey
+;;	RDX - pIV
+;;      R8  - pState
+;; LIN64
+;;	RDI - pKey
+;;	RSI - pIV
+;;      RDX - pState
+;;
+align 16
+MKGLOBAL(asm_ZucInitialization_avx,function,internal)
+asm_ZucInitialization_avx:
+
+    ZUC_INIT AVX
+
     ret
 
 
 ;;
-;; void asm_ZucGenKeystream64B(uint32_t * pKeystream, uint32_t * pState);
+;; void asm_ZucGenKeystream8B_sse(void *pKeystream, ZucState_t *pState);
 ;;
 ;; WIN64
 ;;	RCX - KS (key stream pointer)
@@ -635,106 +652,65 @@ asm_ZucGenKeystream8B:
 ;;	RSI - STATE (state pointer)
 ;;
 align 16
-MKGLOBAL(asm_ZucGenKeystream64B,function,internal)
-asm_ZucGenKeystream64B:
+MKGLOBAL(asm_ZucGenKeystream8B_sse,function,internal)
+asm_ZucGenKeystream8B_sse:
 
-%ifdef LINUX
-	%define		pKS	rdi
-	%define		pState	rsi
-%else
-	%define		pKS	rcx
-	%define		pState	rdx
-%endif
-    ; save the base pointer
-    push rbp
+    ZUC_KEYGEN SSE, 2
 
-    ;load stack pointer to rbp and reserve memory in the red zone
-    mov rbp, rsp
-    sub rsp, 196
+    ret
 
-    ; Save non-volatile registers
-    mov [rbp - 8], rbx
-    mov [rbp - 32], r12
-    mov [rbp - 40], r13
-    mov [rbp - 48], r14
-    mov [rbp - 56], r15
-%ifndef LINUX
-    mov [rbp - 64], rdi
-    mov [rbp - 72], rsi
-%endif
+;;
+;; void asm_ZucGenKeystream8B_avx(void *pKeystream, ZucState_t *pState);
+;;
+;; WIN64
+;;	RCX - KS (key stream pointer)
+;; 	RDX - STATE (state pointer)
+;; LIN64
+;;	RDI - KS (key stream pointer)
+;;	RSI - STATE (state pointer)
+;;
+align 16
+MKGLOBAL(asm_ZucGenKeystream8B_avx,function,internal)
+asm_ZucGenKeystream8B_avx:
 
-
-    ; Load input keystream pointer parameter in RAX
-    mov         rax, pKS
-
-    ; Restore ZUC's state variables
-    xor         r10, r10
-    xor         r11, r11
-    mov         r10d, [pState + OFFSET_FR1]
-    mov         r11d, [pState + OFFSET_FR2]
-    mov         r12d, [pState + OFFSET_BRC_X0]
-    mov         r13d, [pState + OFFSET_BRC_X1]
-    mov         r14d, [pState + OFFSET_BRC_X2]
-    mov         r15d, [pState + OFFSET_BRC_X3]
-
-    ; Store keystream pointer
-    mov [rbp - 80], rax
-
-    ; Store ZUC State Pointer
-    mov [rbp - 88], pState
-
-    ; Generate 64B of keystream in 16 rounds
-%assign N 1
-%rep 16
-
-    mov rdx, [rbp - 88]       ; load *pState
-    lea rsi, [rdx]
-
-    BITS_REORG  N
-    NONLIN_FUN  1
-
-    ;Store the keystream
-    mov rbx, [rbp - 80]  ; load *pkeystream
-    xor eax, r15d
-    mov [rbx], eax
-    add rbx, 4          ; increment the pointer
-    mov [rbp - 80], rbx   ; save pkeystream
-
-    xor         rax, rax
-
-    mov rdx, [rbp - 88]     ; load *pState
-    lea rsi, [rdx]
-
-    LFSR_UPDT   N
-
-%assign N N+1
-%endrep
-
-    mov rsi, [rbp - 88]   ; load pState
-
-
-    ; Save ZUC's state variables
-    mov         [rsi + OFFSET_FR1], r10d
-    mov         [rsi + OFFSET_FR2], r11d
-    mov         [rsi + OFFSET_BRC_X0], r12d
-    mov         [rsi + OFFSET_BRC_X1], r13d
-    mov         [rsi + OFFSET_BRC_X2], r14d
-    mov         [rsi + OFFSET_BRC_X3], r15d
-
-    ; Restore non-volatile registers
-    mov rbx, [rbp - 8]
-    mov r12, [rbp - 32]
-    mov r13, [rbp - 40]
-    mov r14, [rbp - 48]
-    mov r15, [rbp - 56]
-%ifndef LINUX
-    mov rdi, [rbp - 64]
-    mov rsi, [rbp - 72]
-%endif
-
-    mov rsp, rbp
-    pop rbp
+    ZUC_KEYGEN AVX, 2
 
     ret
 
 
+;;
+;; void asm_ZucGenKeystream64B_sse(uint32_t * pKeystream, uint32_t * pState);
+;;
+;; WIN64
+;;	RCX - KS (key stream pointer)
+;; 	RDX - STATE (state pointer)
+;; LIN64
+;;	RDI - KS (key stream pointer)
+;;	RSI - STATE (state pointer)
+;;
+align 16
+MKGLOBAL(asm_ZucGenKeystream64B_sse,function,internal)
+asm_ZucGenKeystream64B_sse:
+
+    ZUC_KEYGEN SSE, 16
+
+    ret
+
+
+;;
+;; void asm_ZucGenKeystream64B_avx(uint32_t * pKeystream, uint32_t * pState);
+;;
+;; WIN64
+;;	RCX - KS (key stream pointer)
+;; 	RDX - STATE (state pointer)
+;; LIN64
+;;	RDI - KS (key stream pointer)
+;;	RSI - STATE (state pointer)
+;;
+align 16
+MKGLOBAL(asm_ZucGenKeystream64B_avx,function,internal)
+asm_ZucGenKeystream64B_avx:
+
+    ZUC_KEYGEN AVX, 16
+
+    ret

@@ -192,9 +192,13 @@ typedef struct zuc_iv_4_s {
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucInitialization(const void *pKey,
-                                         const void *pIv,
-                                         ZucState_t *pState);
+IMB_DLL_LOCAL void asm_ZucInitialization_sse(const void *pKey,
+                                             const void *pIv,
+                                             ZucState_t *pState);
+
+IMB_DLL_LOCAL void asm_ZucInitialization_avx(const void *pKey,
+                                             const void *pIv,
+                                             ZucState_t *pState);
 
 /**
  ******************************************************************************
@@ -244,8 +248,11 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B(uint32_t *pKeystream,
-                                          ZucState_t *pState);
+IMB_DLL_LOCAL void asm_ZucGenKeystream64B_sse(uint32_t *pKeystream,
+                                              ZucState_t *pState);
+
+IMB_DLL_LOCAL void asm_ZucGenKeystream64B_avx(uint32_t *pKeystream,
+                                              ZucState_t *pState);
 
 /**
  ******************************************************************************
@@ -266,8 +273,11 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B(uint32_t *pKeystream,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B(void *pKeystream,
-                                         ZucState_t *pState);
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_sse(void *pKeystream,
+                                             ZucState_t *pState);
+
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_avx(void *pKeystream,
+                                             ZucState_t *pState);
 
 /**
  ******************************************************************************

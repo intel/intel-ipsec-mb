@@ -66,7 +66,7 @@ void _zuc_eea3_1_buffer_avx(const void *pKey,
         memset(&zucState, 0, sizeof(ZucState_t));
 
         /* initialize the zuc state */
-        asm_ZucInitialization(pKey, pIv, &(zucState));
+        asm_ZucInitialization_avx(pKey, pIv, &(zucState));
 
         /* Loop Over all the Quad-Words in input buffer and XOR with the 64bits
          * of generated keystream */
@@ -75,7 +75,8 @@ void _zuc_eea3_1_buffer_avx(const void *pKey,
 
         while (numKeyStreamsPerPkt--) {
                 /* Generate the key stream 64 bytes at a time */
-                asm_ZucGenKeystream64B((uint32_t *) &keyStream[0], &zucState);
+                asm_ZucGenKeystream64B_avx((uint32_t *) &keyStream[0],
+                                           &zucState);
 
                 /* XOR The Keystream generated with the input buffer here */
                 pKeyStream64 = (uint64_t *) keyStream;
@@ -92,7 +93,8 @@ void _zuc_eea3_1_buffer_avx(const void *pKey,
                 const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
                 uint8_t *pOut8 = (uint8_t *) pBufferOut;
 
-                asm_ZucGenKeystream64B((uint32_t *) &keyStream[0], &zucState);
+                asm_ZucGenKeystream64B_avx((uint32_t *) &keyStream[0],
+                                           &zucState);
 
                 /* copy the remaining bytes into temporary buffer and XOR with
                  * the 64-bytes of keystream. Then copy on the valid bytes back
@@ -275,7 +277,7 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
 
                         while (numKeyStreamsPerPkt--) {
                                 /* Generate the key stream 64 bytes at a time */
-                                asm_ZucGenKeystream64B((uint32_t *) keyStr1,
+                                asm_ZucGenKeystream64B_avx((uint32_t *) keyStr1,
                                                        &singlePktState);
                                 pKeyStream64 = (uint64_t *) keyStr1;
                                 asm_XorKeyStream64B_avx(pIn64_0, pOut64_0,
@@ -293,7 +295,7 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
                                 uint64_t *pTempDst64;
                                 uint32_t offset = length[i] - numBytesLeftOver;
 
-                                asm_ZucGenKeystream64B((uint32_t *) &keyStr1,
+                                asm_ZucGenKeystream64B_avx((uint32_t *)&keyStr1,
                                                        &singlePktState);
                                 /* copy the remaining bytes into temporary
                                  * buffer and XOR with the 64-bytes of
@@ -467,7 +469,8 @@ void zuc_eea3_4_buffer_job_avx(const void * const pKey[4],
 
                         while (numKeyStreamsPerPkt--) {
                                 /* Generate the key stream 64 bytes at a time */
-                                asm_ZucGenKeystream64B((uint32_t *) keyStr[0],
+                                asm_ZucGenKeystream64B_avx(
+                                                       (uint32_t *) keyStr[0],
                                                        &singlePktState);
                                 pKeyStream64 = (uint64_t *) keyStr[0];
                                 asm_XorKeyStream64B_avx(pIn64[0], pOut64[0],
@@ -485,7 +488,8 @@ void zuc_eea3_4_buffer_job_avx(const void * const pKey[4],
                                 uint64_t *pTempDst64;
                                 uint32_t offset = length[i] - numBytesLeftOver;
 
-                                asm_ZucGenKeystream64B((uint32_t *) &keyStr[0],
+                                asm_ZucGenKeystream64B_avx(
+                                                       (uint32_t *) &keyStr[0],
                                                        &singlePktState);
                                 /* copy the remaining bytes into temporary
                                  * buffer and XOR with the 64-bytes of
@@ -702,8 +706,8 @@ void zuc_eia3_1_buffer_avx(const void *pKey,
 
         memset(&zucState, 0, sizeof(ZucState_t));
 
-        asm_ZucInitialization(pKey, pIv, &(zucState));
-        asm_ZucGenKeystream64B(pZuc, &zucState);
+        asm_ZucInitialization_avx(pKey, pIv, &(zucState));
+        asm_ZucGenKeystream64B_avx(pZuc, &zucState);
 
         /* loop over the message bits */
         while (remainingBits >= keyStreamLengthInBits) {
@@ -711,9 +715,9 @@ void zuc_eia3_1_buffer_avx(const void *pKey,
                 L -= (keyStreamLengthInBits / 32);
                 /* Generate the next key stream 8 bytes or 64 bytes */
                 if (!remainingBits)
-                        asm_ZucGenKeystream8B(&keyStream[16], &zucState);
+                        asm_ZucGenKeystream8B_avx(&keyStream[16], &zucState);
                 else
-                        asm_ZucGenKeystream64B(&keyStream[16], &zucState);
+                        asm_ZucGenKeystream64B_avx(&keyStream[16], &zucState);
                 T = asm_Eia3Round64BAVX(T, &keyStream[0], pIn8);
                 memcpy(&keyStream[0], &keyStream[16], 16 * sizeof(uint32_t));
                 pIn8 = &pIn8[ZUC_KEYSTR_LEN];
@@ -724,7 +728,7 @@ void zuc_eia3_1_buffer_avx(const void *pKey,
          * keystream needs to have up to another 2 ZUC WORDS (8B)
          */
         if (remainingBits > (14 * 32))
-                asm_ZucGenKeystream8B(&keyStream[16], &zucState);
+                asm_ZucGenKeystream8B_avx(&keyStream[16], &zucState);
         T ^= asm_Eia3RemainderAVX(&keyStream[0], pIn8, remainingBits);
         T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
                          remainingBits % 32);
