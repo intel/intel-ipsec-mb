@@ -38,11 +38,9 @@
 #ifdef _WIN32
 #include <intrin.h>
 #define strdup _strdup
-#define __forceinline static __forceinline
 #define BSWAP64 _byteswap_uint64
 #else
 #include <x86intrin.h>
-#define __forceinline static inline __attribute__((always_inline))
 #define BSWAP64 __builtin_bswap64
 #endif
 
@@ -1095,7 +1093,7 @@ modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
         if ((xgem_hdr_out & hec_mask) != (xgem_hdr & hec_mask)) {
                 fprintf(stderr, "XGEM header overwritten outside HEC\n");
                 fprintf(stderr, "Original XGEM header: %"PRIx64"\n",
-                        xgem_hdr & hec_mask );
+                        xgem_hdr & hec_mask);
                 fprintf(stderr, "Output XGEM header: %"PRIx64"\n",
                         xgem_hdr_out & hec_mask);
                 return -1;
@@ -1337,7 +1335,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  * sensitive information after job is returned */
                 if (safe_check)
                         if (perform_safe_checks(enc_mb_mgr, enc_arch,
-                            "encrypting") < 0)
+                                                "encrypting") < 0)
                                 goto exit;
 
                 if (job->status != STS_COMPLETED) {
@@ -2070,6 +2068,7 @@ int main(int argc, char *argv[])
         }
 
         MB_MGR *p_mgr = alloc_mb_mgr(flags);
+
         if (p_mgr == NULL) {
                 fprintf(stderr, "Error allocating MB_MGR structure!\n");
                 return EXIT_FAILURE;
