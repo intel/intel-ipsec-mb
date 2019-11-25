@@ -158,7 +158,7 @@ typedef struct {
 #define SSE_NUM_MD5_LANES    AVX_NUM_MD5_LANES
 
 /*
- *  Each row is sized to hold enough lanes for AVX2, AVX1 and SSE use a subset
+ * Each row is sized to hold enough lanes for AVX2, AVX1 and SSE use a subset
  * of each row. Thus one row is not adjacent in memory to its neighboring rows
  * in the case of SSE and AVX1.
  */
@@ -166,6 +166,13 @@ typedef struct {
 #define SHA1_DIGEST_SZ   (NUM_SHA_DIGEST_WORDS * AVX512_NUM_SHA1_LANES)
 #define SHA256_DIGEST_SZ (NUM_SHA_256_DIGEST_WORDS * AVX512_NUM_SHA256_LANES)
 #define SHA512_DIGEST_SZ (NUM_SHA_512_DIGEST_WORDS * AVX512_NUM_SHA512_LANES)
+
+/**
+ * Minimum Ethernet frame size to calculate CRC32
+ * Source Address (6 bytes) + Destination Address (6 bytes) + Type/Len (2 bytes)
+ */
+#define DOCSIS_CRC32_MIN_ETH_PDU_SIZE 14
+#define DOCSIS_CRC32_TAG_SIZE         4
 
 /*
  * Job structure definitions

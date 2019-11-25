@@ -183,17 +183,11 @@ SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
                 return DOCSIS_FIRST_BLOCK(job);
 }
 
-/**
- * Minimum Ethernet frame size to calculate CRC for:
- * Source Address (6 bytes) + Destination Address (6 bytes) + Type/Len (2 bytes)
- */
-#define MIN_ETHERNET_PDU_SIZE 14
-
 __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
 {
-        if (job->msg_len_to_hash_in_bytes >= MIN_ETHERNET_PDU_SIZE) {
+        if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
                 uint32_t *p_crc = (uint32_t *) job->auth_tag_output;
 
                 (*p_crc) =
@@ -231,7 +225,7 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
                 job = DOCSIS_FIRST_BLOCK(job);
         }
 
-        if (job->msg_len_to_hash_in_bytes >= MIN_ETHERNET_PDU_SIZE) {
+        if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
                 uint32_t *p_crc = (uint32_t *) job->auth_tag_output;
 
                 (*p_crc) =

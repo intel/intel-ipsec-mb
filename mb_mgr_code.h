@@ -1390,22 +1390,30 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  * - authentication tag size is 4 bytes
                  * - @note: in encrypt direction, computed CRC value is put into
                  *   the source buffer
-                 * - encrypt sequence: hash, cipher
-                 * - decrypt sequence: cipher, hash
+                 * - encrypt chain order: hash, cipher
+                 * - decrypt chain order: cipher, hash
                  */
                 if (job->cipher_mode != DOCSIS_SEC_BPI) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                if (job->msg_len_to_cipher_in_bytes >
-                    (job->msg_len_to_hash_in_bytes - 8)) {
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
-                }
-                if (job->cipher_start_src_offset_in_bytes <
-                    (job->hash_start_src_offset_in_bytes + 12)) {
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                        return 1;
+                if (job->msg_len_to_cipher_in_bytes &&
+                    job->msg_len_to_hash_in_bytes) {
+                        const uint64_t ciph_adjust =
+                                DOCSIS_CRC32_MIN_ETH_PDU_SIZE -
+                                2 - /* ETH TYPE */
+                                DOCSIS_CRC32_TAG_SIZE;
+
+                        if ((job->msg_len_to_cipher_in_bytes + ciph_adjust) >
+                            job->msg_len_to_hash_in_bytes) {
+                                INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                                return 1;
+                        }
+                        if (job->cipher_start_src_offset_in_bytes <
+                            (job->hash_start_src_offset_in_bytes + 12)) {
+                                INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                                return 1;
+                        }
                 }
                 if (job->auth_tag_output == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
