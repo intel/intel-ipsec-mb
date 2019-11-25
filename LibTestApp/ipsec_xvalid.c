@@ -368,6 +368,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = ZUC_EIA3_BITLEN,
                 }
+        },
+        {
+                .name = "docsis-crc32",
+                .values.job_params = {
+                        .hash_alg = DOCSIS_CRC32,
+                }
         }
 };
 
@@ -452,6 +458,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 4,  /* AES_CMAC_BITLEN (3GPP) */
                 8,  /* PON */
                 4,  /* ZUC_EIA3_BITLEN */
+                DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -652,6 +659,21 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                         job->msg_len_to_cipher_in_bytes = 0;
         }
 
+        if (params->hash_alg == DOCSIS_CRC32 &&
+            params->cipher_mode == DOCSIS_SEC_BPI) {
+                if (buf_size >= 16) {
+                        const uint64_t cipher_adjust = /* SA + DA only */
+                                DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2;
+
+                        job->cipher_start_src_offset_in_bytes += cipher_adjust;
+                        job->msg_len_to_cipher_in_bytes -= cipher_adjust;
+                        job->msg_len_to_hash_in_bytes -= DOCSIS_CRC32_TAG_SIZE;
+                } else {
+                        job->msg_len_to_cipher_in_bytes = 0;
+                        job->msg_len_to_hash_in_bytes = 0;
+                }
+        }
+
         /* In-place operation */
         job->src = buf;
         job->dst = buf + job->cipher_start_src_offset_in_bytes;
@@ -708,6 +730,8 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         case PLAIN_SHA_512:
                 /* No operation needed */
                 break;
+        case DOCSIS_CRC32:
+                break;
         default:
                 printf("Unsupported hash algorithm\n");
                 return -1;
@@ -719,7 +743,9 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
 
         if (params->cipher_mode == NULL_CIPHER) {
                 job->chain_order = HASH_CIPHER;
-        } else if (params->cipher_mode == CCM) {
+        } else if (params->cipher_mode == CCM ||
+                   (params->cipher_mode == DOCSIS_SEC_BPI &&
+                    params->hash_alg == DOCSIS_CRC32)) {
                 if (job->cipher_direction == ENCRYPT)
                         job->chain_order = HASH_CIPHER;
                 else
@@ -852,6 +878,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case PLAIN_SHA_384:
                 case PLAIN_SHA_512:
                 case PON_CRC_BIP:
+                case DOCSIS_CRC32:
                         /* No operation needed */
                         break;
                 default:
@@ -997,6 +1024,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case PLAIN_SHA_384:
         case PLAIN_SHA_512:
         case PON_CRC_BIP:
+        case DOCSIS_CRC32:
                 /* No operation needed */
                 break;
         default:
@@ -1102,6 +1130,21 @@ modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
         /* Modify original XGEM header to include calculated HEC */
         buf64[0] = xgem_hdr_out;
 
+        return 0;
+}
+
+/* Modify the test buffer to set the CRC value, so the final
+ * decrypted message can be compared against the test buffer */
+static int
+modify_docsis_crc32_test_buf(uint8_t *test_buf, const struct params_s *params,
+                             const JOB_AES_HMAC *job)
+{
+        if (params->buf_size >=
+            (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE)) {
+                /* Set plaintext CRC32 in the test buffer */
+                memcpy(&test_buf[params->buf_size - DOCSIS_CRC32_TAG_SIZE],
+                       job->auth_tag_output, DOCSIS_CRC32_TAG_SIZE);
+        }
         return 0;
 }
 
@@ -1347,6 +1390,11 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 if (params->hash_alg == PON_CRC_BIP) {
                         if (modify_pon_test_buf(test_buf, params, job,
                                                 xgem_hdr) < 0)
+                                goto exit;
+                }
+                if (params->hash_alg == DOCSIS_CRC32) {
+                        if (modify_docsis_crc32_test_buf(test_buf,
+                                                         params, job) < 0)
                                 goto exit;
                 }
 
@@ -1596,7 +1644,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
 
                 for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                         params->key_size = key_sz;
-                        for (hash_alg = SHA1; hash_alg <= ZUC_EIA3_BITLEN;
+                        for (hash_alg = SHA1; hash_alg <= DOCSIS_CRC32;
                              hash_alg++) {
                                 /* Skip CUSTOM_HASH */
                                 if (hash_alg == CUSTOM_HASH)
@@ -1613,6 +1661,13 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                                                 hash_alg != PON_CRC_BIP) ||
                                     (c_mode != PON_AES_CNTR &&
                                                 hash_alg == PON_CRC_BIP))
+                                        continue;
+                                if (c_mode == DOCSIS_SEC_BPI &&
+                                    (hash_alg != NULL_HASH &&
+                                     hash_alg != DOCSIS_CRC32))
+                                        continue;
+                                if (c_mode != DOCSIS_SEC_BPI &&
+                                    hash_alg == DOCSIS_CRC32)
                                         continue;
 
                                 params->hash_alg = hash_alg;
