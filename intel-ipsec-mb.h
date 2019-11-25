@@ -203,8 +203,9 @@ typedef enum {
         DES3,
         PON_AES_CNTR,
         ECB,
-        CNTR_BITLEN,    /* 128-EEA2/NIA2 (3GPP) */
-        ZUC_EEA3        /* 128-EEA3/NEA3 (3GPP) */
+        CNTR_BITLEN,       /* 128-EEA2/NEA2 (3GPP) */
+        ZUC_EEA3,          /* 128-EEA3/NEA3 (3GPP) */
+        SNOW3G_UEA2_BITLEN /* 128-UEA2 (3GPP) */
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -339,6 +340,10 @@ typedef struct JOB_AES_HMAC {
                         const uint8_t *_key;
                         const uint8_t *_iv;
                 } ZUC_EIA3;
+                struct _SNOW3G_UEA2_specific_fields {
+                        /* Source buffer bit offset */
+                        uint64_t src_bit_offset;
+                } SNOW3G_UEA2;
         } u;
 
         JOB_STS status;

@@ -312,6 +312,32 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 return AES_CNTR_CCM_128(job);
         } else if (ZUC_EEA3 == job->cipher_mode) {
                 return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
+        } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
+                /* Use bit length API if
+                 * - msg length is not a multiple of bytes
+                 * - bit offset passed
+                 */
+                if (job->msg_len_to_cipher_in_bits % 8  ||
+                    job->u.SNOW3G_UEA2.src_bit_offset) {
+                        IMB_SNOW3G_F8_1_BUFFER_BIT(state,
+                                   (const snow3g_key_schedule_t *)
+                                   job->aes_enc_key_expanded,
+                                   job->iv, job->src, job->dst,
+                                   (uint32_t)job->msg_len_to_cipher_in_bits,
+                                   (uint32_t)job->u.SNOW3G_UEA2.src_bit_offset);
+
+                        job->status |= STS_COMPLETED_AES;
+                        return job;
+                } else {
+                        IMB_SNOW3G_F8_1_BUFFER(state,
+                                (const snow3g_key_schedule_t *)
+                                job->aes_enc_key_expanded,
+                                job->iv, job->src, job->dst,
+                                (uint32_t)(job->msg_len_to_cipher_in_bits / 8));
+
+                        job->status |= STS_COMPLETED_AES;
+                        return job;
+                }
         } else { /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -428,6 +454,31 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 return AES_CNTR_CCM_128(job);
         } else if (ZUC_EEA3 == job->cipher_mode) {
                 return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
+        } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
+                /* Use bit length API if
+                 * - msg length is not a multiple of bytes
+                 * - bit offset passed
+                 */
+                if (job->msg_len_to_cipher_in_bits % 8 ||
+                    job->u.SNOW3G_UEA2.src_bit_offset) {
+                        IMB_SNOW3G_F8_1_BUFFER_BIT(state,
+                                   (const snow3g_key_schedule_t *)
+                                   job->aes_enc_key_expanded,
+                                   job->iv, job->src, job->dst,
+                                   (uint32_t)job->msg_len_to_cipher_in_bits,
+                                   (uint32_t)job->u.SNOW3G_UEA2.src_bit_offset);
+                        job->status |= STS_COMPLETED_AES;
+                        return job;
+                } else {
+                        IMB_SNOW3G_F8_1_BUFFER(state,
+                               (const snow3g_key_schedule_t *)
+                               job->aes_enc_key_expanded,
+                               job->iv, job->src, job->dst,
+                               (uint32_t)job->msg_len_to_cipher_in_bits / 8);
+
+                        job->status |= STS_COMPLETED_AES;
+                        return job;
+                }
         } else {
                 /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
@@ -629,6 +680,8 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 #define INVALID_PRN(_fmt, ...)
 #define DEBUG_PUTS(s)
 #endif
+
+#define SNOW3G_MAX_BITLEN (UINT32_MAX)
 
 __forceinline int
 is_job_invalid(const JOB_AES_HMAC *job)
@@ -1150,6 +1203,37 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 if (job->msg_len_to_cipher_in_bytes == 0 ||
                     job->msg_len_to_cipher_in_bytes > ZUC_MAX_BYTELEN) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(16)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                break;
+        case SNOW3G_UEA2_BITLEN:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bits == 0 ||
+                    job->msg_len_to_cipher_in_bits > SNOW3G_MAX_BITLEN) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
