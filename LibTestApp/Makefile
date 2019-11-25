@@ -121,7 +121,7 @@ direct_api_test.o: direct_api_test.c
 clean:
 	-rm -f $(OBJECTS) $(TEST_APP) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS)
 
-SOURCES_STYLE := $(foreach infile,$(SOURCES),-f $(infile))
+SOURCES_STYLE := $(foreach infile,$(SOURCES) $(XVALID_SOURCES),-f $(infile))
 CHECKPATCH?=checkpatch.pl
 .PHONY: style
 style:
