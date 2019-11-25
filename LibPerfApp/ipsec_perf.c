@@ -91,8 +91,8 @@
 
 #define CIPHER_MODES_AES 7	/* CBC, CNTR, CNTR+8, CNTR_BITLEN,
                                    CNTR_BITLEN-4, ECB, NULL_CIPHER */
-#define CIPHER_MODES_DOCSIS 4	/* AES DOCSIS, AES DOCSIS+8, DES DOCSIS,
-                                   DES DOCSIS+8 */
+#define CIPHER_MODES_DOCSIS_AES 2 /* AES DOCSIS, AES DOCSIS+8 */
+#define CIPHER_MODES_DOCSIS_DES 2 /* DES DOCSIS, DES DOCSIS+4 */
 #define CIPHER_MODES_DES 1	/* DES */
 #define CIPHER_MODES_GCM 1	/* GCM */
 #define CIPHER_MODES_CCM 1	/* CCM */
@@ -102,7 +102,8 @@
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 10	/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
                                    MD5, NULL_HASH, CMAC, CMAC_BITLEN */
-#define HASH_ALGS_DOCSIS 1	/* NULL_HASH */
+#define HASH_ALGS_DOCSIS_DES 1	/* NULL_HASH */
+#define HASH_ALGS_DOCSIS_AES 2	/* NULL_HASH, DOCSIS_CRC32 */
 #define HASH_ALGS_GCM 1		/* GCM */
 #define HASH_ALGS_CCM 1		/* CCM */
 #define HASH_ALGS_DES 1		/* NULL_HASH for DES */
@@ -110,7 +111,8 @@
 #define HASH_ALGS_PON 1	        /* CRC32/BIP for PON */
 #define HASH_ALGS_ZUC 1	        /* ZUC-EIA3 */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
-#define KEY_SIZES_DOCSIS 1	/* 16 or 8 */
+#define KEY_SIZES_DOCSIS_AES 1	/* 16 */
+#define KEY_SIZES_DOCSIS_DES 1	/* 8 */
 #define KEY_SIZES_GCM 3		/* 16, 24, 32 */
 #define KEY_SIZES_CCM 1		/* 16 */
 #define KEY_SIZES_DES 1		/* 8 */
@@ -127,8 +129,10 @@
  */
 #define VARIANTS_PER_ARCH_AES (CIPHER_MODES_AES * DIRECTIONS *  \
                                HASH_ALGS_AES * KEY_SIZES_AES)
-#define VARIANTS_PER_ARCH_DOCSIS (CIPHER_MODES_DOCSIS * DIRECTIONS *  \
-                                  HASH_ALGS_DOCSIS * KEY_SIZES_DOCSIS)
+#define VARIANTS_PER_ARCH_DOCSIS_DES (CIPHER_MODES_DOCSIS_DES * DIRECTIONS *  \
+                                  HASH_ALGS_DOCSIS_DES * KEY_SIZES_DOCSIS_DES)
+#define VARIANTS_PER_ARCH_DOCSIS_AES (CIPHER_MODES_DOCSIS_AES * DIRECTIONS *  \
+                                  HASH_ALGS_DOCSIS_AES * KEY_SIZES_DOCSIS_AES)
 #define VARIANTS_PER_ARCH_GCM (CIPHER_MODES_GCM * DIRECTIONS *  \
                                HASH_ALGS_GCM * KEY_SIZES_GCM)
 #define VARIANTS_PER_ARCH_CCM (CIPHER_MODES_CCM * DIRECTIONS *  \
@@ -152,7 +156,8 @@ enum arch_type_e {
 
 enum test_type_e {
         TTYPE_AES_HMAC,
-        TTYPE_AES_DOCSIS,
+        TTYPE_AES_DOCSIS_DES,
+        TTYPE_AES_DOCSIS_AES,
         TTYPE_AES_GCM,
         TTYPE_AES_CCM,
         TTYPE_AES_DES,
@@ -200,6 +205,7 @@ enum test_hash_alg_e {
         TEST_HASH_CMAC, /* added here to be included in AES tests */
         TEST_HASH_CMAC_BITLEN,
         TEST_NULL_HASH,
+        TEST_DOCSIS_CRC32,
         TEST_HASH_GCM, /* Additional field used by GCM, not translated */
         TEST_CUSTOM_HASH, /* unused */
         TEST_HASH_CCM,
@@ -498,6 +504,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_ZUC_EIA3,
                 }
         },
+        {
+                .name = "docsis-crc32",
+                .values.job_params = {
+                        .hash_alg = TEST_DOCSIS_CRC32,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -577,7 +589,7 @@ enum cache_type_e {
 
 enum cache_type_e cache_type = WARM;
 
-const uint32_t auth_tag_length_bytes[20] = {
+const uint32_t auth_tag_length_bytes[21] = {
                 12, /* SHA1 */
                 14, /* SHA_224 */
                 16, /* SHA_256 */
@@ -586,6 +598,7 @@ const uint32_t auth_tag_length_bytes[20] = {
                 12, /* AES_XCBC */
                 12, /* MD5 */
                 0,  /* NULL_HASH */
+                DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
 #ifndef NO_GCM
                 16, /* AES_GMAC */
 #endif
@@ -628,8 +641,8 @@ struct custom_job_params custom_job_params = {
 };
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-/* AES, DOCSIS, GCM, CCM, DES, 3DES, PON, CUSTOM */
-uint8_t test_types[NUM_TTYPES] = {1, 1, 1, 1, 1, 1, 1, 0};
+/* AES, DOCSIS DES, DOCSIS AES, GCM, CCM, DES, 3DES, PON, ZUC, CUSTOM */
+uint8_t test_types[NUM_TTYPES] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 };
 
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
@@ -1161,6 +1174,9 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
         case TEST_HASH_GCM:
                 job_template.hash_alg = AES_GMAC;
                 break;
+        case TEST_DOCSIS_CRC32:
+                job_template.hash_alg = DOCSIS_CRC32;
+                break;
         case TEST_NULL_HASH:
                 job_template.hash_alg = NULL_HASH;
                 break;
@@ -1213,7 +1229,10 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
 
         if (params->cipher_mode == TEST_NULL_CIPHER) {
                 job_template.chain_order = HASH_CIPHER;
-        } else if (params->cipher_mode == TEST_CCM) {
+        } else if (params->cipher_mode == TEST_CCM ||
+                   ((params->cipher_mode == TEST_AESDOCSIS ||
+                     params->cipher_mode == TEST_AESDOCSIS8) &&
+                    params->hash_alg == TEST_DOCSIS_CRC32)) {
                 if (job_template.cipher_direction == ENCRYPT)
                         job_template.chain_order = HASH_CIPHER;
                 else
@@ -1264,6 +1283,17 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
         } else if (job_template.cipher_mode == ZUC_EEA3) {
                 job_template.aes_key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 16;
+        } else if (job_template.cipher_mode == DOCSIS_SEC_BPI &&
+                   job_template.hash_alg == DOCSIS_CRC32) {
+                const uint64_t ciph_adjust = /* SA + DA */
+                        DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2 /* ETH TYPE */;
+
+                job_template.cipher_start_src_offset_in_bytes = ciph_adjust;
+                job_template.msg_len_to_cipher_in_bytes =
+                        size_aes - ciph_adjust;
+                job_template.hash_start_src_offset_in_bytes = 0;
+                job_template.msg_len_to_hash_in_bytes =
+                        size_aes - DOCSIS_CRC32_TAG_SIZE;
         }
 
         if (job_template.hash_alg == PON_CRC_BIP) {
@@ -1323,9 +1353,11 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
 #endif
                 while (job) {
 #ifdef DEBUG
-                        if (job->status != STS_COMPLETED)
+                        if (job->status != STS_COMPLETED) {
                                 fprintf(stderr, "failed job, status:%d\n",
                                         job->status);
+                                return 1;
+                        }
 #endif
                         job = IMB_GET_COMPLETED_JOB(mb_mgr);
                 }
@@ -1333,8 +1365,10 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
 
         while ((job = IMB_FLUSH_JOB(mb_mgr))) {
 #ifdef DEBUG
-                if (job->status != STS_COMPLETED)
+                if (job->status != STS_COMPLETED) {
                         fprintf(stderr, "failed job, status:%d\n", job->status);
+                        return 1;
+                }
 #endif
         }
 
@@ -1622,10 +1656,16 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         uint32_t c_end = TEST_NULL_CIPHER;
 
         switch (params->test_type) {
-        case TTYPE_AES_DOCSIS:
+        case TTYPE_AES_DOCSIS_DES:
                 h_start = TEST_NULL_HASH;
-                c_start = TEST_AESDOCSIS;
+                c_start = TEST_DESDOCSIS;
                 c_end = TEST_DESDOCSIS4;
+                break;
+        case TTYPE_AES_DOCSIS_AES:
+                h_start = TEST_NULL_HASH;
+                h_end = TEST_DOCSIS_CRC32;
+                c_start = TEST_AESDOCSIS;
+                c_end = TEST_AESDOCSIS8;
                 break;
         case TTYPE_AES_GCM:
                 h_start = TEST_HASH_GCM;
@@ -1674,9 +1714,25 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         }
 
         for (c_mode = c_start; c_mode <= c_end; c_mode++) {
-                params->cipher_mode = (enum test_cipher_mode_e) c_mode;
                 for (hash_alg = h_start; hash_alg <= h_end; hash_alg++) {
+                        int skip_variant = 0;
+
+                        if (c_mode != TEST_AESDOCSIS &&
+                            c_mode != TEST_AESDOCSIS8) {
+                                skip_variant =
+                                        (hash_alg == TEST_DOCSIS_CRC32);
+                        } else {
+                                skip_variant =
+                                        (hash_alg != TEST_DOCSIS_CRC32 &&
+                                         hash_alg != TEST_NULL_HASH);
+                        }
+
+                        if (skip_variant)
+                                continue;
+
+                        params->cipher_mode = (enum test_cipher_mode_e) c_mode;
                         params->hash_alg = (enum test_hash_alg_e) hash_alg;
+
                         process_variant(mgr, arch, params, *variant_ptr, run,
                                         p_buffer, p_keys);
                         /* update and print progress bar */
@@ -1699,7 +1755,8 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         uint32_t k; /* Key size */
         uint32_t limit = AES_256_BYTES; /* Key size value limit */
 
-        if (params->test_type == TTYPE_AES_DOCSIS ||
+        if (params->test_type == TTYPE_AES_DOCSIS_DES ||
+            params->test_type == TTYPE_AES_DOCSIS_AES ||
             params->test_type == TTYPE_AES_DES ||
             params->test_type == TTYPE_AES_3DES ||
             params->test_type == TTYPE_PON ||
@@ -1770,8 +1827,8 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         };
         const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
-                "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "GCM", "CUSTOM",
-                "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN"
+                "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "CRC32",
+                "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
@@ -1895,8 +1952,12 @@ run_tests(void *arg)
                         variants_per_arch = VARIANTS_PER_ARCH_AES;
                         max_arch = NUM_ARCHS;
                         break;
-                case TTYPE_AES_DOCSIS:
-                        variants_per_arch = VARIANTS_PER_ARCH_DOCSIS;
+                case TTYPE_AES_DOCSIS_AES:
+                        variants_per_arch = VARIANTS_PER_ARCH_DOCSIS_AES;
+                        max_arch = NUM_ARCHS;
+                        break;
+                case TTYPE_AES_DOCSIS_DES:
+                        variants_per_arch = VARIANTS_PER_ARCH_DOCSIS_DES;
                         max_arch = NUM_ARCHS;
                         break;
                 case TTYPE_AES_GCM:
@@ -2321,7 +2382,12 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--no-aes") == 0) {
                         test_types[TTYPE_AES_HMAC] = 0;
                 } else if (strcmp(argv[i], "--no-docsis") == 0) {
-                        test_types[TTYPE_AES_DOCSIS] = 0;
+                        test_types[TTYPE_AES_DOCSIS_DES] = 0;
+                        test_types[TTYPE_AES_DOCSIS_AES] = 0;
+                } else if (strcmp(argv[i], "--no-docsis-des") == 0) {
+                        test_types[TTYPE_AES_DOCSIS_DES] = 0;
+                } else if (strcmp(argv[i], "--no-docsis-aes") == 0) {
+                        test_types[TTYPE_AES_DOCSIS_AES] = 0;
                 } else if (strcmp(argv[i], "--no-ccm") == 0) {
                         test_types[TTYPE_AES_CCM] = 0;
                 } else if (strcmp(argv[i], "--no-des") == 0) {
@@ -2485,11 +2551,10 @@ int main(int argc, char *argv[])
 
         if (job_sizes[RANGE_MIN] == 0) {
                 if (test_types[TTYPE_AES_HMAC] ||
-                                test_types[TTYPE_AES_DOCSIS] ||
-                                test_types[TTYPE_AES_DES] ||
-                                test_types[TTYPE_AES_3DES] ||
-                                (test_types[TTYPE_CUSTOM] &&
-                                 aead_algo_set == 0)) {
+                    test_types[TTYPE_AES_DOCSIS_DES] ||
+                    test_types[TTYPE_AES_DOCSIS_AES] ||
+                    test_types[TTYPE_AES_DES] || test_types[TTYPE_AES_3DES] ||
+                    (test_types[TTYPE_CUSTOM] && aead_algo_set == 0)) {
                         fprintf(stderr, "Buffer size cannot be 0 unless only "
                                         "an AEAD algorithm is tested\n");
                         return EXIT_FAILURE;
