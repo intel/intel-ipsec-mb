@@ -212,6 +212,7 @@ FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state)
         return FLUSH_JOB_DOCSIS_SEC_ENC(state);
 }
 
+#ifndef SUBMIT_JOB_DOCSIS_SEC_CRC_DEC
 __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
@@ -237,6 +238,7 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
 
         return job;
 }
+#endif
 
 /* ========================================================================= */
 /* DES, 3DES and DOCSIS DES (DES CBC + DES CFB) */

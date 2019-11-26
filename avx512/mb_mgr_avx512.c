@@ -530,6 +530,39 @@ static void
                            const void *keys, void *out,
                            uint64_t len_bytes) = aes_cbc_dec_256_avx;
 
+/* ====================================================================== */
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
+
+extern uint32_t aes_docsis_dec_128_crc32_avx512(JOB_AES_HMAC *job);
+
+static JOB_AES_HMAC *
+submit_aes_docsis_dec_crc32_avx512(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+{
+        (void) state;
+
+        if (job->msg_len_to_hash_in_bytes == 0) {
+                if (job->msg_len_to_cipher_in_bytes == 0) {
+                        /* NO cipher, NO CRC32 */
+                        job->status |= STS_COMPLETED_AES;
+                        return job;
+                }
+
+                /* Cipher, NO CRC32 */
+                return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job);
+        }
+
+        /* Cipher + CRC32 // CRC32 */
+        (void) aes_docsis_dec_128_crc32_avx512(job);
+        return job;
+}
+
+#define SUBMIT_JOB_DOCSIS_SEC_CRC_DEC submit_aes_docsis_dec_crc32_avx512
+
+/* ====================================================================== */
+
 void
 init_mb_mgr_avx512(MB_MGR *state)
 {

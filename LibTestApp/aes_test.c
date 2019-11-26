@@ -1497,7 +1497,14 @@ docrc_job_ok(const struct JOB_AES_HMAC *job,
         if (job->msg_len_to_hash_in_bytes >= 14) {
                 if (memcmp(job->auth_tag_output, &p_vec->crc_hash,
                            sizeof(p_vec->crc_hash))) {
-                        printf("%d authentication tag mismatch\n", num);
+                        const uint32_t *p_got =
+                                (const uint32_t *)job->auth_tag_output;
+                        const uint32_t *p_exp =
+                                (const uint32_t *)&p_vec->crc_hash;
+
+                        printf("%d authentication tag mismatch "
+                               "(got = 0x%X, exp = 0x%X)\n",
+                               num, *p_got, *p_exp);
                         return 0;
                 }
         }
