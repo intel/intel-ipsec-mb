@@ -678,17 +678,13 @@ static inline uint64_t load_uint64(const void *ptr)
         return *((const uint64_t *)ptr);
 }
 
-void zuc_eia3_1_buffer_avx(const void *pKey,
-                           const void *pIv,
-                           const void *pBufferIn,
-                           const uint32_t lengthInBits,
-                           uint32_t *pMacI)
+static inline
+void _zuc_eia3_1_buffer_avx(const void *pKey,
+                            const void *pIv,
+                            const void *pBufferIn,
+                            const uint32_t lengthInBits,
+                            uint32_t *pMacI)
 {
-#ifndef LINUX
-        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
-
-        SAVE_XMMS(xmm_save);
-#endif
         DECLARE_ALIGNED(ZucState_t zucState, 64);
         DECLARE_ALIGNED(uint32_t keyStream[16 * 2], 64);
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
@@ -700,16 +696,6 @@ void zuc_eia3_1_buffer_avx(const void *pKey,
         uint32_t T = 0;
         const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
 
-#ifdef SAFE_PARAM
-        /* Check for NULL pointers */
-        if (pKey == NULL || pIv == NULL || pBufferIn == NULL || pMacI == NULL)
-                return;
-
-        /* Check input data is in range of supported length */
-        if (lengthInBits < ZUC_MIN_BITLEN || lengthInBits > ZUC_MAX_BITLEN)
-                return;
-#endif
-
         memset(&zucState, 0, sizeof(ZucState_t));
 
         asm_ZucInitialization_avx(pKey, pIv, &(zucState));
@@ -719,6 +705,7 @@ void zuc_eia3_1_buffer_avx(const void *pKey,
         while (remainingBits >= keyStreamLengthInBits) {
                 remainingBits -=  keyStreamLengthInBits;
                 L -= (keyStreamLengthInBits / 32);
+
                 /* Generate the next key stream 8 bytes or 64 bytes */
                 if (!remainingBits)
                         asm_ZucGenKeystream8B_avx(&keyStream[16], &zucState);
@@ -747,6 +734,261 @@ void zuc_eia3_1_buffer_avx(const void *pKey,
         /* Clear sensitive data (in registers and stack) */
         clear_mem(keyStream, sizeof(keyStream));
         clear_mem(&zucState, sizeof(zucState));
+#endif
+}
+
+static inline
+void _zuc_eia3_4_buffer_avx(const void * const pKey[4],
+                            const void * const pIv[4],
+                            const void * const pBufferIn[4],
+                            const uint32_t lengthInBits[4],
+                            uint32_t *pMacI[4])
+{
+        unsigned int i = 0;
+        DECLARE_ALIGNED(ZucState4_t state, 64);
+        DECLARE_ALIGNED(ZucState_t singlePktState, 64);
+        /* Calculate the minimum input packet size */
+        uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
+                           lengthInBits[0] : lengthInBits[1]);
+        uint32_t bits2 = (lengthInBits[2] < lengthInBits[3] ?
+                           lengthInBits[2] : lengthInBits[3]);
+        /* min number of bytes */
+        uint32_t commonBits = (bits1 < bits2) ? bits1 : bits2;
+        DECLARE_ALIGNED(uint8_t keyStr[4][2*64], 64);
+        /* structure to store the 4 keys */
+        DECLARE_ALIGNED(ZucKey4_t keys, 64);
+        /* structure to store the 4 IV's */
+        DECLARE_ALIGNED(ZucIv4_t ivs, 64);
+        const uint8_t *pIn8[4] = {NULL};
+        uint32_t remainCommonBits = commonBits;
+        uint32_t numKeyStr = 0;
+        uint32_t T[4] = {0};
+        const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
+
+        for (i = 0; i < 4; i++)
+                pIn8[i] = (const uint8_t *) pBufferIn[i];
+
+        /* Need to set the LFSR state to zero */
+        memset(&state, 0, sizeof(ZucState4_t));
+
+        /* Setup the Keys */
+        keys.pKey1 = pKey[0];
+        keys.pKey2 = pKey[1];
+        keys.pKey3 = pKey[2];
+        keys.pKey4 = pKey[3];
+
+        /* setup the IV's */
+        ivs.pIv1 = pIv[0];
+        ivs.pIv2 = pIv[1];
+        ivs.pIv3 = pIv[2];
+        ivs.pIv4 = pIv[3];
+
+        asm_ZucInitialization_4_avx( &keys,  &ivs, &state);
+
+        /* Generate 64 bytes at a time */
+        asm_ZucGenKeystream64B_4_avx(&state,
+                                     (uint32_t *) keyStr[0],
+                                     (uint32_t *) keyStr[1],
+                                     (uint32_t *) keyStr[2],
+                                     (uint32_t *) keyStr[3]);
+
+        /* loop over the message bits */
+        while (remainCommonBits >= keyStreamLengthInBits) {
+                remainCommonBits -= keyStreamLengthInBits;
+                numKeyStr++;
+                /* Generate the next key stream 8 bytes or 64 bytes */
+                if (!remainCommonBits)
+                        asm_ZucGenKeystream8B_4_avx(&state,
+                                     (uint32_t *) &keyStr[0][64],
+                                     (uint32_t *) &keyStr[1][64],
+                                     (uint32_t *) &keyStr[2][64],
+                                     (uint32_t *) &keyStr[3][64]);
+                else
+                        asm_ZucGenKeystream64B_4_avx(&state,
+                                     (uint32_t *) &keyStr[0][64],
+                                     (uint32_t *) &keyStr[1][64],
+                                     (uint32_t *) &keyStr[2][64],
+                                     (uint32_t *) &keyStr[3][64]);
+                for (i = 0; i < 4; i++) {
+                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
+                                                   pIn8[i]);
+                        memcpy(&keyStr[i][0], &keyStr[i][64],
+                               16 * sizeof(uint32_t));
+                        pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
+                }
+        }
+
+        /* Process each packet separately for the remaining bits */
+        for (i = 0; i < 4; i++) {
+                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD);
+                uint32_t L = ((N + 31) / ZUC_WORD) -
+                             numKeyStr*(keyStreamLengthInBits / 32);
+                uint32_t remainBits = lengthInBits[i] -
+                                      numKeyStr*keyStreamLengthInBits;
+                uint32_t *keyStr32 = (uint32_t *) keyStr[i];
+
+                /* If remaining bits are more than 56 bytes, we need to generate
+                 * at least 8B more of keystream, so we need to copy
+                 * the zuc state to single packet state first */
+                if (remainBits > (14*32)) {
+                        singlePktState.lfsrState[0] = state.lfsrState[0][i];
+                        singlePktState.lfsrState[1] = state.lfsrState[1][i];
+                        singlePktState.lfsrState[2] = state.lfsrState[2][i];
+                        singlePktState.lfsrState[3] = state.lfsrState[3][i];
+                        singlePktState.lfsrState[4] = state.lfsrState[4][i];
+                        singlePktState.lfsrState[5] = state.lfsrState[5][i];
+                        singlePktState.lfsrState[6] = state.lfsrState[6][i];
+                        singlePktState.lfsrState[7] = state.lfsrState[7][i];
+                        singlePktState.lfsrState[8] = state.lfsrState[8][i];
+                        singlePktState.lfsrState[9] = state.lfsrState[9][i];
+                        singlePktState.lfsrState[10] = state.lfsrState[10][i];
+                        singlePktState.lfsrState[11] = state.lfsrState[11][i];
+                        singlePktState.lfsrState[12] = state.lfsrState[12][i];
+                        singlePktState.lfsrState[13] = state.lfsrState[13][i];
+                        singlePktState.lfsrState[14] = state.lfsrState[14][i];
+                        singlePktState.lfsrState[15] = state.lfsrState[15][i];
+
+                        singlePktState.fR1 = state.fR1[i];
+                        singlePktState.fR2 = state.fR2[i];
+
+                        singlePktState.bX0 = state.bX0[i];
+                        singlePktState.bX1 = state.bX1[i];
+                        singlePktState.bX2 = state.bX2[i];
+                        singlePktState.bX3 = state.bX3[i];
+                }
+
+                while (remainBits >= keyStreamLengthInBits) {
+                        remainBits -= keyStreamLengthInBits;
+                        L -= (keyStreamLengthInBits / 32);
+
+                        /* Generate the next key stream 8 bytes or 64 bytes */
+                        if (!remainBits)
+                                asm_ZucGenKeystream8B_avx(&keyStr32[16],
+                                                          &singlePktState);
+                        else
+                                asm_ZucGenKeystream64B_avx(&keyStr32[16],
+                                                           &singlePktState);
+                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr32[0], pIn8[i]);
+                        memcpy(keyStr32, &keyStr32[16], 16 * sizeof(uint32_t));
+                        pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
+                }
+
+                /*
+                 * If remaining bits has more than 14 ZUC WORDS (double words),
+                 * keystream needs to have up to another 2 ZUC WORDS (8B)
+                 */
+
+                if (remainBits > (14 * 32))
+                        asm_ZucGenKeystream8B_avx(&keyStr32[16],
+                                                  &singlePktState);
+
+                uint32_t keyBlock = keyStr32[L - 1];
+
+                T[i] ^= asm_Eia3RemainderAVX(keyStr32, pIn8[i], remainBits);
+                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
+                                 remainBits % 32);
+
+                /* save the final MAC-I result */
+                *(pMacI[i]) = bswap4(T[i] ^ keyBlock);
+        }
+
+#ifdef SAFE_DATA
+        /* Clear sensitive data (in registers and stack) */
+        clear_mem(keyStr, sizeof(keyStr));
+        clear_mem(&singlePktState, sizeof(singlePktState));
+        clear_mem(&state, sizeof(state));
+        clear_mem(&keys, sizeof(keys));
+#endif
+}
+
+void zuc_eia3_1_buffer_avx(const void *pKey,
+                           const void *pIv,
+                           const void *pBufferIn,
+                           const uint32_t lengthInBits,
+                           uint32_t *pMacI)
+{
+#ifndef LINUX
+        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
+
+        SAVE_XMMS(xmm_save);
+#endif
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pKey == NULL || pIv == NULL || pBufferIn == NULL || pMacI == NULL)
+                return;
+
+        /* Check input data is in range of supported length */
+        if (lengthInBits < ZUC_MIN_BITLEN || lengthInBits > ZUC_MAX_BITLEN)
+                return;
+#endif
+
+        _zuc_eia3_1_buffer_avx(pKey, pIv, pBufferIn, lengthInBits, pMacI);
+
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif
+#ifndef LINUX
+        RESTORE_XMMS(xmm_save);
+#endif
+}
+
+void zuc_eia3_n_buffer_avx(const void * const pKey[],
+                           const void * const pIv[],
+                           const void * const pBufferIn[],
+                           const uint32_t lengthInBits[],
+                           uint32_t *pMacI[],
+                           const uint32_t numBuffers)
+{
+#ifndef LINUX
+        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
+
+        SAVE_XMMS(xmm_save);
+#endif
+
+        unsigned int i;
+        unsigned int packetCount = numBuffers;
+
+#ifdef SAFE_PARAM
+        /* Check for NULL pointers */
+        if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
+            lengthInBits == NULL || pMacI == NULL)
+                return;
+
+        for (i = 0; i < numBuffers; i++) {
+                if (pKey[i] == NULL || pIv[i] == NULL ||
+                    pBufferIn[i] == NULL || pMacI[i] == NULL)
+                        return;
+
+                /* Check input data is in range of supported length */
+                if (lengthInBits[i] < ZUC_MIN_BITLEN ||
+                    lengthInBits[i] > ZUC_MAX_BITLEN)
+                        return;
+        }
+#endif
+        i = 0;
+
+        while(packetCount >= 4) {
+                packetCount -=4;
+                _zuc_eia3_4_buffer_avx(&pKey[i],
+                                       &pIv[i],
+                                       &pBufferIn[i],
+                                       &lengthInBits[i],
+                                       &pMacI[i]);
+                i+=4;
+        }
+
+        while(packetCount--) {
+                _zuc_eia3_1_buffer_avx(pKey[i],
+                                       pIv[i],
+                                       pBufferIn[i],
+                                       lengthInBits[i],
+                                       pMacI[i]);
+                i++;
+        }
+
+#ifdef SAFE_DATA
+        /* Clear sensitive data in registers */
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
 #endif

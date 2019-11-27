@@ -13,6 +13,7 @@ Library
 - KASUMI-UEA1 and KASUMI-UIA1 algorithms added in job API (using cipher type
   KASUMI_UEA1_BITLEN and hash type KASUMI_UIA2)
 - New GHASH API added
+- ZUC-EIA3 Multi-buffer API added and implemented for SSE and AVX.
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through

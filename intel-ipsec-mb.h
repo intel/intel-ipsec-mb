@@ -766,6 +766,12 @@ typedef void (*zuc_eea3_n_buffer_t)(const void * const *, const void * const *,
 typedef void (*zuc_eia3_1_buffer_t)(const void *, const void *, const void *,
                                     const uint32_t, uint32_t *);
 
+typedef void (*zuc_eia3_n_buffer_t)(const void * const *, const void * const *,
+                                    const void * const *,
+                                    const uint32_t *, uint32_t **,
+                                    const uint32_t);
+
+
 typedef void (*kasumi_f8_1_buffer_t)(const kasumi_key_sched_t *,
                                      const uint64_t, const void *, void *,
                                      const uint32_t);
@@ -994,6 +1000,7 @@ typedef struct MB_MGR {
         zuc_eea3_4_buffer_t eea3_4_buffer;
         zuc_eea3_n_buffer_t eea3_n_buffer;
         zuc_eia3_1_buffer_t eia3_1_buffer;
+        zuc_eia3_n_buffer_t eia3_n_buffer;
 
         kasumi_f8_1_buffer_t      f8_1_buffer;
         kasumi_f8_1_buffer_bit_t  f8_1_buffer_bit;
@@ -1297,6 +1304,8 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
  */
 #define IMB_ZUC_EIA3_1_BUFFER(_mgr, _key, _iv, _in, _len, _tag) \
         ((_mgr)->eia3_1_buffer((_key), (_iv), (_in), (_len), (_tag)))
+#define IMB_ZUC_EIA3_N_BUFFER(_mgr, _key, _iv, _in, _len, _tag, _num) \
+        ((_mgr)->eia3_n_buffer((_key), (_iv), (_in), (_len), (_tag), (_num)))
 
 
 /* KASUMI F8/F9 functions */

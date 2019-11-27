@@ -568,6 +568,13 @@ void zuc_eia3_1_buffer_sse(const void *pKey, const void *pIv,
                            const void *pBufferIn, const uint32_t lengthInBits,
                            uint32_t *pMacI);
 
+void zuc_eia3_n_buffer_sse(const void * const pKey[],
+                           const void * const pIv[],
+                           const void * const pBufferIn[],
+                           const uint32_t lengthInBits[],
+                           uint32_t *pMacI[],
+                           const uint32_t numBuffers);
+
 void zuc_eea3_1_buffer_avx(const void *pKey, const void *pIv,
                            const void *pBufferIn, void *pBufferOut,
                            const uint32_t lengthInBytes);
@@ -586,6 +593,13 @@ void zuc_eea3_n_buffer_avx(const void * const pKey[], const void * const pIv[],
 void zuc_eia3_1_buffer_avx(const void *pKey, const void *pIv,
                            const void *pBufferIn, const uint32_t lengthInBits,
                            uint32_t *pMacI);
+
+void zuc_eia3_n_buffer_avx(const void * const pKey[],
+                           const void * const pIv[],
+                           const void * const pBufferIn[],
+                           const uint32_t lengthInBits[],
+                           uint32_t *pMacI[],
+                           const uint32_t numBuffers);
 
 
 #endif /* ZUC_INTERNAL_H_ */
