@@ -237,6 +237,7 @@ typedef enum {
         PON_CRC_BIP,
         ZUC_EIA3_BITLEN, /* 128-EIA3/NIA3 (3GPP) */
         DOCSIS_CRC32,    /* with DOCSIS_SEC_BPI only */
+        SNOW3G_UIA2_BITLEN, /* 128-UIA2 (3GPP) */
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -344,6 +345,11 @@ typedef struct JOB_AES_HMAC {
                         /* Source buffer bit offset */
                         uint64_t src_bit_offset;
                 } SNOW3G_UEA2;
+                struct _SNOW3G_UIA2_specific_fields {
+                        /* 16-byte aligned pointers */
+                        const uint8_t *_key;
+                        const uint8_t *_iv;
+                } SNOW3G_UIA2;
         } u;
 
         JOB_STS status;

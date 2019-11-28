@@ -604,6 +604,15 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                                  (uint32_t *) job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
+        case SNOW3G_UIA2_BITLEN:
+                IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
+                               job->u.SNOW3G_UIA2._key,
+                               job->u.SNOW3G_UIA2._iv,
+                               job->src + job->hash_start_src_offset_in_bytes,
+                               job->msg_len_to_hash_in_bits,
+                               job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
         default: /* assume GCM, PON_CRC_BIP or NULL_HASH */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -703,6 +712,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 0,  /* AES_CCM */
                 16, /* AES_CMAC */
                 4, /* ZUC_EIA3_BITLEN */
+                4, /* SNOW3G_UIA2_BITLEN */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -727,6 +737,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 64, /* PLAIN_SHA_512 */
                 4,  /* AES_CMAC 3GPP */
                 4, /* ZUC_EIA3_BITLEN */
+                4, /* SNOW3G_UIA2_BITLEN */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1512,6 +1523,29 @@ is_job_invalid(const JOB_AES_HMAC *job)
                      job->chain_order != HASH_CIPHER) ||
                     (job->cipher_direction == DECRYPT &&
                      job->chain_order != CIPHER_HASH)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                break;
+        case SNOW3G_UIA2_BITLEN:
+                if (job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if ((job->msg_len_to_hash_in_bits == 0) ||
+                    (job->msg_len_to_hash_in_bits > SNOW3G_MAX_BITLEN)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->u.SNOW3G_UIA2._key == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->u.SNOW3G_UIA2._iv == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
