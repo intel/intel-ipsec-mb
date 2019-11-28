@@ -127,7 +127,7 @@ DECLARE_ALIGNED(const int snow3g_table_A_div[256],32) = {
         0x9ee2651c, 0x86ed25d1, 0xaefce52f, 0xb6f3a5e2};
 
 IMB_DLL_LOCAL
-snow3gTableEntry_t snow3g_table_S1[256] = {
+DECLARE_ALIGNED(const snow3gTableEntry_t snow3g_table_S1[256],32) = {
         {.v = 0xc6a56363c6a56363ULL}, {.v = 0xf8847c7cf8847c7cULL},
         {.v = 0xee997777ee997777ULL}, {.v = 0xf68d7b7bf68d7b7bULL},
         {.v = 0xff0df2f2ff0df2f2ULL}, {.v = 0xd6bd6b6bd6bd6b6bULL},
@@ -258,7 +258,7 @@ snow3gTableEntry_t snow3g_table_S1[256] = {
         {.v = 0x6dd6bbbb6dd6bbbbULL}, {.v = 0x2c3a16162c3a1616ULL}};
 
 IMB_DLL_LOCAL
-snow3gTableEntry_t snow3g_table_S2[256] = {
+DECLARE_ALIGNED(const snow3gTableEntry_t snow3g_table_S2[256],32) = {
         {.v = 0x4a6f25254a6f2525ULL}, {.v = 0x486c2424486c2424ULL},
         {.v = 0xe6957373e6957373ULL}, {.v = 0xcea96767cea96767ULL},
         {.v = 0xc710d7d7c710d7d7ULL}, {.v = 0x359baeae359baeaeULL},
