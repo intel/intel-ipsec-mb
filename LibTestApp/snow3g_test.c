@@ -60,7 +60,7 @@ static
 int validate_snow3g_f8_n_blocks_multi(struct MB_MGR *mb_mgr,
                                              uint32_t job_api);
 static
-int validate_snow3g_f9(struct MB_MGR *mb_mgr);
+int validate_snow3g_f9(struct MB_MGR *mb_mgr, uint32_t job_api);
 static
 int membitcmp(const uint8_t *input, const uint8_t *output,
               const uint32_t bitlength, const uint32_t offset);
@@ -85,7 +85,9 @@ struct {
         {validate_snow3g_f8_n_blocks,
          "validate_snow3g_f8_n_blocks"},
         {validate_snow3g_f8_n_blocks_multi,
-         "validate_snow3g_f8_n_blocks_multi"}
+         "validate_snow3g_f8_n_blocks_multi"},
+        {validate_snow3g_f9,
+         "validate_snow3g_f9"}
 };
 
 /******************************************************************************
@@ -152,6 +154,40 @@ submit_uea2_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 
         if (jobs_rx != num_jobs) {
                 printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                return -1;
+        }
+
+        return 0;
+}
+
+static inline int
+submit_uia2_job(struct MB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
+                uint8_t *src, uint8_t *tag, const uint32_t bitlen)
+{
+        JOB_AES_HMAC *job;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->chain_order = CIPHER_HASH;
+        job->cipher_mode = NULL_CIPHER;
+        job->src = src;
+        job->u.SNOW3G_UIA2._iv = iv;
+        job->u.SNOW3G_UIA2._key = key;
+
+        job->hash_start_src_offset_in_bytes = 0;
+        job->msg_len_to_hash_in_bits = bitlen;
+        job->hash_alg = SNOW3G_UIA2_BITLEN;
+        job->auth_tag_output = tag;
+        job->auth_tag_output_len_in_bytes = 4;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job != NULL) {
+                if (job->status != STS_COMPLETED) {
+                        printf("%d error status:%d",
+                               __LINE__, job->status);
+                        return -1;
+                }
+        } else {
+                printf("Expected returned job, but got nothing\n");
                 return -1;
         }
 
@@ -2039,7 +2075,7 @@ snow3g_f8_n_buffer_multikey_exit:
         return ret;
 }
 
-static int validate_snow3g_f9(struct MB_MGR *mb_mgr)
+static int validate_snow3g_f9(struct MB_MGR *mb_mgr, uint32_t job_api)
 {
         int numVectors, i, inputLen;
         size_t size = 0;
@@ -2055,7 +2091,8 @@ static int validate_snow3g_f9(struct MB_MGR *mb_mgr)
         uint8_t *pIV;
         int ret = 1;
 
-        printf("Testing IMB_SNOW3G_F9_1_BUFFER:\n");
+        printf("Testing IMB_SNOW3G_F9_1_BUFFER: (%s):\n",
+               job_api ? "Job API" : "Direct API");
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
@@ -2105,8 +2142,14 @@ static int validate_snow3g_f9(struct MB_MGR *mb_mgr)
                 }
 
                 /*test the integrity for f9_user with IV*/
-                IMB_SNOW3G_F9_1_BUFFER(mb_mgr, pKeySched, pIV, srcBuff,
-                                       testVectors[i].lengthInBits, digest);
+                if (job_api)
+                        submit_uia2_job(mb_mgr, (uint8_t *)pKeySched,
+                                        pIV, srcBuff, digest,
+                                        testVectors[i].lengthInBits);
+                else
+                        IMB_SNOW3G_F9_1_BUFFER(mb_mgr, pKeySched, pIV, srcBuff,
+                                               testVectors[i].lengthInBits,
+                                               digest);
 
                 /*Compare the digest with the expected in the vectors*/
                 if (memcmp(digest, testVectors[i].exp_out, DIGEST_LEN) != 0) {
@@ -2232,9 +2275,6 @@ int snow3g_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
                         status = 1;
                 }
         }
-
-        if (validate_snow3g_f9(mb_mgr))
-                printf("validate_snow3g_f9: FAIL\n");
 
         if (!status)
                 printf("ALL TESTS PASSED.\n");
