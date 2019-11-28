@@ -86,15 +86,16 @@ void _zuc_eea3_1_buffer_avx(const void *pKey,
         }
 
         /* Check for remaining 0 to 63 bytes */
-        if(numBytesLeftOver) {
+        if (numBytesLeftOver) {
                 /* buffer to store 64 bytes of keystream */
                 DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
                 DECLARE_ALIGNED(uint8_t tempDst[64], 64);
                 const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
                 uint8_t *pOut8 = (uint8_t *) pBufferOut;
+                const uint64_t num4BRounds = ((numBytesLeftOver - 1) / 4) + 1;
 
-                asm_ZucGenKeystream64B_avx((uint32_t *) &keyStream[0],
-                                           &zucState);
+                asm_ZucGenKeystream_avx((uint32_t *) &keyStream[0],
+                                        &zucState, num4BRounds);
 
                 /* copy the remaining bytes into temporary buffer and XOR with
                  * the 64-bytes of keystream. Then copy on the valid bytes back
@@ -294,9 +295,12 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
                                 uint64_t *pTempSrc64;
                                 uint64_t *pTempDst64;
                                 uint32_t offset = length[i] - numBytesLeftOver;
+                                const uint64_t num4BRounds =
+                                        ((numBytesLeftOver - 1) / 4) + 1;
 
-                                asm_ZucGenKeystream64B_avx((uint32_t *)&keyStr1,
-                                                       &singlePktState);
+                                asm_ZucGenKeystream_avx((uint32_t *)&keyStr1,
+                                                        &singlePktState,
+                                                        num4BRounds);
                                 /* copy the remaining bytes into temporary
                                  * buffer and XOR with the 64-bytes of
                                  * keystream. Then copy on the valid bytes back
@@ -487,10 +491,12 @@ void zuc_eea3_4_buffer_job_avx(const void * const pKey[4],
                                 uint64_t *pTempSrc64;
                                 uint64_t *pTempDst64;
                                 uint32_t offset = length[i] - numBytesLeftOver;
+                                const uint64_t num4BRounds =
+                                        ((numBytesLeftOver - 1) / 4) + 1;
 
-                                asm_ZucGenKeystream64B_avx(
-                                                       (uint32_t *) &keyStr[0],
-                                                       &singlePktState);
+                                asm_ZucGenKeystream_avx((uint32_t *) &keyStr[0],
+                                                       &singlePktState,
+                                                       num4BRounds);
                                 /* copy the remaining bytes into temporary
                                  * buffer and XOR with the 64-bytes of
                                  * keystream. Then copy on the valid bytes back
