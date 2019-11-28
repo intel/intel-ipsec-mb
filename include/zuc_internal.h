@@ -284,6 +284,37 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_avx(void *pKeystream,
  *
  * @description
  *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate N*4 bytes of
+ *      keystream, being N the number of rounds specified
+ *      in the numRounds parameter (from 1 to 16 rounds,
+ *      equal to from 4 to 64 bytes)
+ *
+ * @param[in,out] pKeystream        Pointer to an input buffer that will
+ *                                  contain the generated keystream.
+
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState_t
+ *
+ * @param[in] numRounds             Number of 4-byte rounds (1 to 16 rounds)
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_ZucGenKeystream_sse(void *pKeystream,
+                                           ZucState_t *pState,
+                                           uint64_t numRounds);
+
+IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
+                                           ZucState_t *pState,
+                                           uint64_t numRounds);
+
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
  *      stage of the ZUC algorithm. The function will generate 64 bytes of
  *      keystream for four packets in parallel.
  *

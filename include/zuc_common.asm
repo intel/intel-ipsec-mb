@@ -488,6 +488,118 @@ section .text
 
 %endmacro
 
+;
+; Generate N*4 bytes of keystream for a single buffer
+; (where N is number of rounds, being 16 rounds the maximum)
+;
+%macro ZUC_KEYGEN_VAR 1
+%define %%ARCH          %1 ; [in] SSE/AVX
+
+%ifdef LINUX
+	%define		pKS	rdi
+	%define		pState	rsi
+        %define         nRounds rdx
+%else
+	%define		pKS	rcx
+	%define		pState	rdx
+        %define         nRounds r8
+%endif
+
+%define MAX_ROUNDS 16
+    ; save the base pointer
+    push rbp
+
+    ;load stack pointer to rbp and reserve memory in the red zone
+    mov rbp, rsp
+    sub rsp, 80
+
+    ; Save non-volatile registers
+    mov [rbp - 8], rbx
+    mov [rbp - 16], r12
+    mov [rbp - 24], r13
+    mov [rbp - 32], r14
+    mov [rbp - 40], r15
+%ifndef LINUX
+    mov [rbp - 48], rdi
+    mov [rbp - 56], rsi
+%endif
+
+    mov [rbp - 80], nRounds
+
+    ; Load input keystream pointer parameter in RAX
+    mov         rax, pKS
+
+    ; Restore ZUC's state variables
+    mov         r10d, [pState + OFFSET_FR1]
+    mov         r11d, [pState + OFFSET_FR2]
+    mov         r12d, [pState + OFFSET_BRC_X0]
+    mov         r13d, [pState + OFFSET_BRC_X1]
+    mov         r14d, [pState + OFFSET_BRC_X2]
+    mov         r15d, [pState + OFFSET_BRC_X3]
+
+    ; Store keystream pointer
+    mov [rbp - 64], rax
+
+    ; Store ZUC State Pointer
+    mov [rbp - 72], pState
+
+    ; Generate N*4B of keystream in N rounds
+%assign N 1
+%rep MAX_ROUNDS
+
+    mov rdx, [rbp - 72]       ; load *pState
+    lea rsi, [rdx]
+
+    BITS_REORG  N
+    NONLIN_FUN  1, %%ARCH
+
+    ;Store the keystream
+    mov rbx, [rbp - 64]  ; load *pkeystream
+    xor eax, r15d
+    mov [rbx], eax
+    add rbx, 4          ; increment the pointer
+    mov [rbp - 64], rbx   ; save pkeystream
+
+    xor rax, rax
+
+    mov rdx, [rbp - 72]     ; load *pState
+    lea rsi, [rdx]
+
+    LFSR_UPDT   N
+
+    dec qword [rbp - 80] ; numRounds - 1
+    jz %%exit_loop
+%assign N N+1
+%endrep
+
+%%exit_loop:
+    mov rsi, [rbp - 72]   ; load pState
+
+
+    ; Save ZUC's state variables
+    mov         [rsi + OFFSET_FR1], r10d
+    mov         [rsi + OFFSET_FR2], r11d
+    mov         [rsi + OFFSET_BRC_X0], r12d
+    mov         [rsi + OFFSET_BRC_X1], r13d
+    mov         [rsi + OFFSET_BRC_X2], r14d
+    mov         [rsi + OFFSET_BRC_X3], r15d
+
+    ; Restore non-volatile registers
+    mov rbx, [rbp - 8]
+    mov r12, [rbp - 16]
+    mov r13, [rbp - 24]
+    mov r14, [rbp - 32]
+    mov r15, [rbp - 40]
+%ifndef LINUX
+    mov rdi, [rbp - 48]
+    mov rsi, [rbp - 56]
+%endif
+
+    mov rsp, rbp
+    pop rbp
+
+%endmacro
+
 ;;
 ;;extern void Zuc_Initialization_sse(uint8_t* pKey, uint8_t* pIV, uint32_t * pState)
 ;;
@@ -564,7 +676,6 @@ asm_ZucGenKeystream8B_avx:
 
     ret
 
-
 ;;
 ;; void asm_ZucGenKeystream64B_sse(uint32_t * pKeystream, uint32_t * pState);
 ;;
@@ -583,7 +694,6 @@ asm_ZucGenKeystream64B_sse:
 
     ret
 
-
 ;;
 ;; void asm_ZucGenKeystream64B_avx(uint32_t * pKeystream, uint32_t * pState);
 ;;
@@ -599,5 +709,47 @@ MKGLOBAL(asm_ZucGenKeystream64B_avx,function,internal)
 asm_ZucGenKeystream64B_avx:
 
     ZUC_KEYGEN AVX, 16
+
+    ret
+
+;;
+;; void asm_ZucGenKeystream_sse(uint32_t * pKeystream, uint32_t * pState,
+;;                              uint64_t numRounds);
+;;
+;; WIN64
+;;	RCX - KS (key stream pointer)
+;; 	RDX - STATE (state pointer)
+;; 	R8  - NROUNDS (number of 4B rounds)
+;; LIN64
+;;	RDI - KS (key stream pointer)
+;;	RSI - STATE (state pointer)
+;; 	RDX - NROUNDS (number of 4B rounds)
+;;
+align 16
+MKGLOBAL(asm_ZucGenKeystream_sse,function,internal)
+asm_ZucGenKeystream_sse:
+
+    ZUC_KEYGEN_VAR SSE
+
+    ret
+
+;;
+;; void asm_ZucGenKeystream_avx(uint32_t * pKeystream, uint32_t * pState);
+;;                              uint64_t numRounds);
+;;
+;; WIN64
+;;	RCX - KS (key stream pointer)
+;; 	RDX - STATE (state pointer)
+;; 	R8  - NROUNDS (number of 4B rounds)
+;; LIN64
+;;	RDI - KS (key stream pointer)
+;;	RSI - STATE (state pointer)
+;; 	RDX - NROUNDS (number of 4B rounds)
+;;
+align 16
+MKGLOBAL(asm_ZucGenKeystream_avx,function,internal)
+asm_ZucGenKeystream_avx:
+
+    ZUC_KEYGEN_VAR AVX
 
     ret
