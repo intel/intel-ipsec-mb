@@ -1455,7 +1455,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                if ((job->msg_len_to_hash_in_bits < ZUC_MIN_BITLEN) &&
+                if ((job->msg_len_to_hash_in_bits < ZUC_MIN_BITLEN) ||
                     (job->msg_len_to_hash_in_bits > ZUC_MAX_BITLEN)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
