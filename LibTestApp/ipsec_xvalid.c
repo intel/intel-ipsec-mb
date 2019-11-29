@@ -1166,7 +1166,7 @@ modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
 
 /* Modify the test buffer to set the CRC value, so the final
  * decrypted message can be compared against the test buffer */
-static int
+static void
 modify_docsis_crc32_test_buf(uint8_t *test_buf, const struct params_s *params,
                              const JOB_AES_HMAC *job)
 {
@@ -1176,7 +1176,6 @@ modify_docsis_crc32_test_buf(uint8_t *test_buf, const struct params_s *params,
                 memcpy(&test_buf[params->buf_size - DOCSIS_CRC32_TAG_SIZE],
                        job->auth_tag_output, DOCSIS_CRC32_TAG_SIZE);
         }
-        return 0;
 }
 
 /*
@@ -1423,11 +1422,9 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                                                 xgem_hdr) < 0)
                                 goto exit;
                 }
-                if (params->hash_alg == DOCSIS_CRC32) {
-                        if (modify_docsis_crc32_test_buf(test_buf,
-                                                         params, job) < 0)
-                                goto exit;
-                }
+
+                if (params->hash_alg == DOCSIS_CRC32)
+                        modify_docsis_crc32_test_buf(test_buf, params, job);
 
                 job = IMB_GET_NEXT_JOB(dec_mb_mgr);
 
