@@ -264,6 +264,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
+                .name = "snow3g-uea2",
+                .values.job_params = {
+                        .cipher_mode = SNOW3G_UEA2_BITLEN,
+                        .key_size = 16
+                }
+        },
+        {
                 .name = "null",
                 .values.job_params = {
                         .cipher_mode = NULL_CIPHER,
@@ -370,6 +377,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                 }
         },
         {
+                .name = "snow3g-uia2",
+                .values.job_params = {
+                        .hash_alg = SNOW3G_UIA2_BITLEN,
+                }
+        },
+        {
                 .name = "docsis-crc32",
                 .values.job_params = {
                         .hash_alg = DOCSIS_CRC32,
@@ -459,6 +472,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 8,  /* PON */
                 4,  /* ZUC_EIA3_BITLEN */
                 DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
+                4,  /* SNOW3G_UIA2_BITLEN (3GPP) */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -479,6 +493,7 @@ const uint8_t key_sizes[][3] = {
                 {16, 32, 8}, /* ECB */
                 {16, 32, 8}, /* CNTR_BITLEN */
                 {16, 16, 1}, /* ZUC_EEA3 */
+                {16, 16, 1}, /* SNOW3G_UEA2 */
 };
 
 uint8_t custom_test = 0;
@@ -719,6 +734,12 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->u.ZUC_EIA3._key  = k2;
                 job->u.ZUC_EIA3._iv  = auth_iv;
                 break;
+        case SNOW3G_UIA2_BITLEN:
+                job->u.SNOW3G_UIA2._key = k2;
+                job->u.SNOW3G_UIA2._iv = auth_iv;
+                job->msg_len_to_hash_in_bits =
+                        (job->msg_len_to_hash_in_bytes * 8);
+                break;
         case PON_CRC_BIP:
         case NULL_HASH:
         case AES_GMAC:
@@ -815,6 +836,12 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->aes_dec_key_expanded = k2;
                 job->iv_len_in_bytes = 16;
                 break;
+        case SNOW3G_UEA2_BITLEN:
+                job->aes_enc_key_expanded = k2;
+                job->aes_dec_key_expanded = k2;
+                job->iv_len_in_bytes = 16;
+                job->cipher_start_src_offset_in_bits = 0;
+                break;
         case NULL_CIPHER:
                 /* No operation needed */
                 break;
@@ -867,6 +894,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         memset(opad, KEY_PATTERN, sizeof(keys->opad));
                         break;
                 case ZUC_EIA3_BITLEN:
+                case SNOW3G_UIA2_BITLEN:
                         memset(k3, KEY_PATTERN, sizeof(keys->k3));
                         break;
                 case AES_CCM:
@@ -906,6 +934,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         memset(enc_keys, KEY_PATTERN, sizeof(keys->enc_keys));
                         break;
                 case ZUC_EEA3:
+                case SNOW3G_UEA2_BITLEN:
                         memset(k2, KEY_PATTERN, sizeof(keys->k2));
                         break;
                 case NULL_CIPHER:
@@ -1013,6 +1042,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
 
                 break;
         case ZUC_EIA3_BITLEN:
+        case SNOW3G_UIA2_BITLEN:
                 memcpy(k3, key, sizeof(keys->k3));
                 break;
         case AES_CCM:
@@ -1088,6 +1118,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 des_key_schedule((uint64_t *) enc_keys, key);
                 break;
         case ZUC_EEA3:
+        case SNOW3G_UEA2_BITLEN:
                 memcpy(k2, key, sizeof(keys->k2));
                 break;
         case NULL_CIPHER:
@@ -1632,7 +1663,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         JOB_HASH_ALG    hash_alg;
         JOB_CIPHER_MODE c_mode;
 
-        for (c_mode = CBC; c_mode <= ZUC_EEA3; c_mode++) {
+        for (c_mode = CBC; c_mode <= SNOW3G_UEA2_BITLEN; c_mode++) {
                 /* Skip CUSTOM_CIPHER */
                 if (c_mode == CUSTOM_CIPHER)
                         continue;
@@ -1644,7 +1675,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
 
                 for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                         params->key_size = key_sz;
-                        for (hash_alg = SHA1; hash_alg <= DOCSIS_CRC32;
+                        for (hash_alg = SHA1; hash_alg <= SNOW3G_UIA2_BITLEN;
                              hash_alg++) {
                                 /* Skip CUSTOM_HASH */
                                 if (hash_alg == CUSTOM_HASH)
