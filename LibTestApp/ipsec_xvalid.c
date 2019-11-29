@@ -676,12 +676,16 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
 
         if (params->hash_alg == DOCSIS_CRC32 &&
             params->cipher_mode == DOCSIS_SEC_BPI) {
-                if (buf_size >= 16) {
+                if (buf_size >=
+                    (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE)) {
                         const uint64_t cipher_adjust = /* SA + DA only */
                                 DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2;
 
                         job->cipher_start_src_offset_in_bytes += cipher_adjust;
                         job->msg_len_to_cipher_in_bytes -= cipher_adjust;
+                        job->msg_len_to_hash_in_bytes -= DOCSIS_CRC32_TAG_SIZE;
+                } else if (buf_size > DOCSIS_CRC32_TAG_SIZE) {
+                        job->msg_len_to_cipher_in_bytes = 0;
                         job->msg_len_to_hash_in_bytes -= DOCSIS_CRC32_TAG_SIZE;
                 } else {
                         job->msg_len_to_cipher_in_bytes = 0;
@@ -1298,6 +1302,14 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         buf_size = (buf_size + 8) & 0xfffffff8;
                 /* Only first 4 bytes are checked, corresponding to BIP */
                 tag_size_to_check = 4;
+        }
+
+        if (params->hash_alg == DOCSIS_CRC32) {
+                if (params->buf_size >=
+                    (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE))
+                        tag_size_to_check = DOCSIS_CRC32_TAG_SIZE;
+                else
+                        tag_size_to_check = 0;
         }
 
         /* If performing a test searching for sensitive information,
