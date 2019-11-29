@@ -133,9 +133,8 @@ submit_uea2_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 job->aes_enc_key_expanded = keys[i];
                 job->aes_key_len_in_bytes = 16;
 
-                job->cipher_start_src_offset_in_bytes = 0;
+                job->cipher_start_src_offset_in_bits = bit_offsets[i];
                 job->msg_len_to_cipher_in_bits = bitlens[i];
-                job->u.SNOW3G_UEA2.src_bit_offset = bit_offsets[i];
                 job->hash_alg = NULL_HASH;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);

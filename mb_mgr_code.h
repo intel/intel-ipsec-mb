@@ -318,13 +318,13 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                  * - bit offset passed
                  */
                 if (job->msg_len_to_cipher_in_bits % 8  ||
-                    job->u.SNOW3G_UEA2.src_bit_offset) {
+                    job->cipher_start_src_offset_in_bits) {
                         IMB_SNOW3G_F8_1_BUFFER_BIT(state,
-                                   (const snow3g_key_schedule_t *)
-                                   job->aes_enc_key_expanded,
-                                   job->iv, job->src, job->dst,
-                                   (uint32_t)job->msg_len_to_cipher_in_bits,
-                                   (uint32_t)job->u.SNOW3G_UEA2.src_bit_offset);
+                                (const snow3g_key_schedule_t *)
+                                job->aes_enc_key_expanded,
+                                job->iv, job->src, job->dst,
+                                (uint32_t)job->msg_len_to_cipher_in_bits,
+                                (uint32_t)job->cipher_start_src_offset_in_bits);
 
                         job->status |= STS_COMPLETED_AES;
                         return job;
@@ -460,13 +460,13 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                  * - bit offset passed
                  */
                 if (job->msg_len_to_cipher_in_bits % 8 ||
-                    job->u.SNOW3G_UEA2.src_bit_offset) {
+                    job->cipher_start_src_offset_in_bits) {
                         IMB_SNOW3G_F8_1_BUFFER_BIT(state,
-                                   (const snow3g_key_schedule_t *)
-                                   job->aes_enc_key_expanded,
-                                   job->iv, job->src, job->dst,
-                                   (uint32_t)job->msg_len_to_cipher_in_bits,
-                                   (uint32_t)job->u.SNOW3G_UEA2.src_bit_offset);
+                                (const snow3g_key_schedule_t *)
+                                job->aes_enc_key_expanded,
+                                job->iv, job->src, job->dst,
+                                (uint32_t)job->msg_len_to_cipher_in_bits,
+                                (uint32_t)job->cipher_start_src_offset_in_bits);
                         job->status |= STS_COMPLETED_AES;
                         return job;
                 } else {

@@ -276,7 +276,10 @@ typedef struct JOB_AES_HMAC {
                              * In-place ciphering allowed. */
         uint8_t *dst; /*Output. May be cipher text or plaintext.
                        * In-place ciphering allowed, i.e. dst = src. */
-        uint64_t cipher_start_src_offset_in_bytes;
+        union {
+                uint64_t cipher_start_src_offset_in_bytes;
+                uint64_t cipher_start_src_offset_in_bits;
+        };
         /* Max len = 65472 bytes.
          * IPSec case, the maximum cipher
          * length would be:
@@ -341,14 +344,10 @@ typedef struct JOB_AES_HMAC {
                         const uint8_t *_key;
                         const uint8_t *_iv;
                 } ZUC_EIA3;
-                struct _SNOW3G_UEA2_specific_fields {
-                        /* Source buffer bit offset */
-                        uint64_t src_bit_offset;
-                } SNOW3G_UEA2;
                 struct _SNOW3G_UIA2_specific_fields {
                         /* 16-byte aligned pointers */
-                        const uint8_t *_key;
-                        const uint8_t *_iv;
+                        const void *_key;
+                        const void *_iv;
                 } SNOW3G_UIA2;
         } u;
 
