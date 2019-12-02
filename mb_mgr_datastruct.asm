@@ -69,6 +69,32 @@ _aes_args_IV	equ	_aes_args + _aesarg_IV
 _aes_args_key_tab       equ     _aes_args + _aesarg_key_tab
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Build on top of AES args and AES OOO - it needs to be compatible
+
+START_FIELDS	; MB_MGR_DOCSIS_AES_OOO
+;;	name                      size            align
+FIELD	_docsis_aes_args,         _AES_ARGS_size, _AES_ARGS_align
+FIELD	_docsis_aes_lens,         16*2,           16
+FIELD	_docsis_aes_unused_lanes, 8,              8
+FIELD	_docsis_aes_job_in_lane,  16*8,	          8
+FIELD	_docsis_aes_lanes_in_use, 8,              8
+FIELD	_docsis_crc_init,         16*16,	  64
+FIELD	_docsis_crc_len,          16*2,           16
+FIELD	_docsis_crc_done,         16*1,           16
+END_FIELDS
+%assign _MB_MGR_DOCSIS_AES_OOO_size	_FIELD_OFFSET
+%assign _MB_MGR_DOCSIS_AES_OOO_align	_STRUCT_ALIGN
+
+_docsis_aes_args_in      equ   _docsis_aes_args + _aesarg_in
+_docsis_aes_args_out     equ   _docsis_aes_args + _aesarg_out
+_docsis_aes_args_keys    equ   _docsis_aes_args + _aesarg_keys
+_docsis_aes_args_IV      equ   _docsis_aes_args + _aesarg_IV
+_docsis_aes_args_key_tab equ   _docsis_aes_args + _aesarg_key_tab
+_docsis_crc_args_init    equ   _docsis_aes_args + _docsis_crc_init
+_docsis_crc_args_len     equ   _docsis_aes_args + _docsis_crc_len
+_docsis_crc_args_done    equ   _docsis_aes_args + _docsis_crc_done
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define XCBC Out of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

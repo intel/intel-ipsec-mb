@@ -441,6 +441,21 @@ typedef struct {
         uint64_t num_lanes_inuse;
 } MB_MGR_AES_OOO;
 
+/* DOCSIS AES out-of-order scheduler fields */
+typedef struct {
+        AES_ARGS args;
+        DECLARE_ALIGNED(uint16_t lens[16], 16);
+        /* each nibble is index (0...15) of an unused lane,
+         * the last nibble is set to F as a flag
+         */
+        uint64_t unused_lanes;
+        JOB_AES_HMAC *job_in_lane[16];
+        uint64_t num_lanes_inuse;
+        DECLARE_ALIGNED(uint128_t crc_init[16], 16);
+        DECLARE_ALIGNED(uint16_t crc_len[16], 16);
+        DECLARE_ALIGNED(uint8_t crc_done[16], 16);
+} MB_MGR_DOCSIS_AES_OOO;
+
 /* AES XCBC out-of-order scheduler fields */
 typedef struct {
         DECLARE_ALIGNED(uint8_t final_block[2 * 16], 32);
@@ -1003,7 +1018,7 @@ typedef struct MB_MGR {
         DECLARE_ALIGNED(MB_MGR_AES_OOO aes128_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_AES_OOO aes192_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_AES_OOO aes256_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_AES_OOO docsis_sec_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_DOCSIS_AES_OOO docsis_sec_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO des_enc_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO des_dec_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO des3_enc_ooo, 64);
