@@ -73,7 +73,7 @@ kasumi_f9_iv_gen(const uint32_t count, const uint32_t fresh,
         iv32[0] = bswap4(count);
 
         /* IV[4-7] = FRESH */
-        iv32[0] = bswap4(fresh);
+        iv32[1] = bswap4(fresh);
 
         return 0;
 }
