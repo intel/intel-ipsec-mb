@@ -205,7 +205,8 @@ typedef enum {
         ECB,
         CNTR_BITLEN,       /* 128-EEA2/NEA2 (3GPP) */
         ZUC_EEA3,          /* 128-EEA3/NEA3 (3GPP) */
-        SNOW3G_UEA2_BITLEN /* 128-UEA2 (3GPP) */
+        SNOW3G_UEA2_BITLEN,/* 128-UEA2 (3GPP) */
+        KASUMI_UEA1_BITLEN,/* 128-UEA1 (3GPP) */
 } JOB_CIPHER_MODE;
 
 typedef enum {

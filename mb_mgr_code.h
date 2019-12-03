@@ -272,6 +272,36 @@ submit_snow3g_uea2_job(MB_MGR *state, JOB_AES_HMAC *job)
         return job;
 }
 
+__forceinline
+JOB_AES_HMAC *
+submit_kasumi_uea1_job(MB_MGR *state, JOB_AES_HMAC *job)
+{
+        const kasumi_key_sched_t *key = job->aes_enc_key_expanded;
+        const uint64_t iv = *(const uint64_t *)job->iv;
+        const uint32_t msg_bitlen =
+                        (const uint32_t)job->msg_len_to_cipher_in_bits;
+        const uint32_t msg_bitoff =
+                        (const uint32_t)job->cipher_start_src_offset_in_bits;
+
+        /* Use bit length API if
+         * - msg length is not a multiple of bytes
+         * - bit offset passed
+         */
+        if ((msg_bitlen & 0x07) || msg_bitoff) {
+                IMB_KASUMI_F8_1_BUFFER_BIT(state, key, iv, job->src, job->dst,
+                                           msg_bitlen, msg_bitoff);
+
+        } else {
+                const uint32_t msg_bytelen = msg_bitlen >> 3;
+
+                IMB_KASUMI_F8_1_BUFFER(state, key, iv, job->src, job->dst,
+                                       msg_bytelen);
+        }
+
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
 /* ========================================================================= */
 /* Cipher submit & flush functions */
 /* ========================================================================= */
@@ -347,6 +377,8 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
         } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
+        } else if (KASUMI_UEA1_BITLEN == job->cipher_mode) {
+                return submit_kasumi_uea1_job(state, job);
         } else { /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -470,6 +502,8 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
         } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
+        } else if (KASUMI_UEA1_BITLEN == job->cipher_mode) {
+                return submit_kasumi_uea1_job(state, job);
         } else {
                 /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
@@ -1240,6 +1274,37 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                break;
+        case KASUMI_UEA1_BITLEN:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->aes_enc_key_expanded == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bits == 0 ||
+                    job->msg_len_to_cipher_in_bits > KASUMI_MAX_LEN) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(8)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
