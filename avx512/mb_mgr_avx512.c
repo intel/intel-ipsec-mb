@@ -534,12 +534,13 @@ static void
 
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job);
+SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job);
 
 extern uint32_t aes_docsis_dec_128_crc32_avx512(JOB_AES_HMAC *job);
 
 static JOB_AES_HMAC *
-submit_aes_docsis_dec_crc32_avx512(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+submit_aes_docsis_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                   JOB_AES_HMAC *job)
 {
         (void) state;
 
@@ -560,6 +561,15 @@ submit_aes_docsis_dec_crc32_avx512(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
 }
 
 #define SUBMIT_JOB_DOCSIS_SEC_CRC_DEC submit_aes_docsis_dec_crc32_avx512
+
+extern JOB_AES_HMAC *
+submit_job_aes_docsis_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                       JOB_AES_HMAC *job);
+#define SUBMIT_JOB_DOCSIS_SEC_CRC_ENC submit_job_aes_docsis_enc_crc32_avx512
+
+extern JOB_AES_HMAC *
+flush_job_aes_docsis_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state);
+#define FLUSH_JOB_DOCSIS_SEC_CRC_ENC  flush_job_aes_docsis_enc_crc32_avx512
 
 /* ====================================================================== */
 

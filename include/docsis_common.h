@@ -136,10 +136,11 @@ DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
  */
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
 {
         if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
-                JOB_AES_HMAC *tmp = SUBMIT_JOB_AES128_ENC(state, job);
+                JOB_AES_HMAC *tmp =
+                        SUBMIT_JOB_AES128_ENC((MB_MGR_AES_OOO *)state, job);
 
                 return DOCSIS_LAST_BLOCK(tmp);
         } else
@@ -155,9 +156,9 @@ SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
  */
 __forceinline
 JOB_AES_HMAC *
-FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_AES_OOO *state)
+FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
 {
-        JOB_AES_HMAC *tmp = FLUSH_JOB_AES128_ENC(state);
+        JOB_AES_HMAC *tmp = FLUSH_JOB_AES128_ENC((MB_MGR_AES_OOO *)state);
 
         return DOCSIS_LAST_BLOCK(tmp);
 }
@@ -172,7 +173,7 @@ FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_AES_OOO *state)
  */
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
 {
         (void) state;
 
@@ -183,9 +184,10 @@ SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
                 return DOCSIS_FIRST_BLOCK(job);
 }
 
+#ifndef SUBMIT_JOB_DOCSIS_SEC_CRC_ENC
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
 {
         if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
                 uint32_t *p_crc = (uint32_t *) job->auth_tag_output;
@@ -200,10 +202,12 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
         }
         return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job);
 }
+#endif
 
+#ifndef FLUSH_JOB_DOCSIS_SEC_CRC_ENC
 __forceinline
 JOB_AES_HMAC *
-FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state)
+FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
 {
         /**
          * CRC has been already calculated.
@@ -211,11 +215,12 @@ FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state)
          */
         return FLUSH_JOB_DOCSIS_SEC_ENC(state);
 }
+#endif
 
 #ifndef SUBMIT_JOB_DOCSIS_SEC_CRC_DEC
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
 {
         (void) state;
 
