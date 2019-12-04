@@ -28,6 +28,7 @@
 ;;; DOCSIS SEC BPI (AES128-CBC + AES128-CFB) encryption
 ;;; stitched together with CRC32
 
+%use smartalign
 
 %include "include/os.asm"
 %include "job_aes_hmac.asm"
@@ -504,6 +505,7 @@ section .text
 %define %%OUT6  %%GT6
 %define %%OUT7  %%GT7
 
+%define %%CRC32 %%GT11
 %define %%IDX   %%GT12
 
 %define %%XCIPH0 XWORD(%%ZT0)
@@ -514,6 +516,12 @@ section .text
 %define %%XCIPH5 XWORD(%%ZT5)
 %define %%XCIPH6 XWORD(%%ZT6)
 %define %%XCIPH7 XWORD(%%ZT7)
+
+%define %%XCRC_MUL XWORD(%%ZT8)
+%define %%XCRC_TMP XWORD(%%ZT9)
+%define %%XCRC_DAT XWORD(%%ZT10)
+%define %%XCRC_VAL XWORD(%%ZT11)
+%define %%XCRC_TMP2 XWORD(%%ZT12)
 
 %define %%XDATA0 XWORD(%%ZT16)
 %define %%XDATA1 XWORD(%%ZT17)
@@ -531,6 +539,8 @@ section .text
 %define %%XTMP  XWORD(%%ZTMP)
 
 	xor	        %%IDX, %%IDX
+
+        vmovdqa64       %%XCRC_MUL, [rel rk1]
 
         vmovdqu64       %%ZIN,   [%%ARG + _aesarg_in]
         vmovdqu64       %%ZOUT,  [%%ARG + _aesarg_out]
@@ -569,7 +579,75 @@ section .text
         vmovdqu64	%%XDATA6, [%%IN6 + %%IDX]
         vmovdqu64	%%XDATA7, [%%IN7 + %%IDX]
 
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%assign crc_lane 0
+%rep 8
+        cmp             byte [%%ARG + _docsis_crc_args_done + crc_lane], 1
+        je              APPEND(%%_crc_lane_done_, crc_lane)
+
+        cmp             byte [%%ARG + _docsis_crc_args_done + crc_lane], 2
+        je              APPEND(%%_crc_lane_first_, crc_lane)
+
+
+        cmp             word [%%ARG + _docsis_crc_args_len + 2*crc_lane], 16
+        jb              APPEND(%%_crc_lane_last_, crc_lane)
+
+        ;; most common case - next blocks for CRC
+        vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*crc_lane]
+        vmovdqa64       %%XCRC_DAT, APPEND(%%XDATA, crc_lane)
+        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
+        vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*crc_lane], %%XCRC_VAL
+        sub             word [%%ARG + _docsis_crc_args_len + 2*crc_lane], 16
+        jmp             APPEND(%%_crc_lane_done_, crc_lane)
+
+APPEND(%%_crc_lane_last_, crc_lane):
+        ;; partial block case (the last one)
+        vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*crc_lane]
+        movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + crc_lane*2] ; GT9 = bytes_to_crc
+        lea             %%GT8, [rel pshufb_shf_table]
+        vmovdqu64       %%XCRC_TMP, [%%GT8 + %%GT9]
+        lea             %%GT8, [APPEND(%%IN, crc_lane) + %%IDX]
+        vmovdqu64       %%XCRC_DAT, [%%GT8 - 16 + %%GT9]  ; XCRC_DAT = data for CRC
+        vmovdqa64       %%XCRC_TMP2, %%XCRC_VAL
+        vpshufb         %%XCRC_VAL, %%XCRC_TMP  ; top bytes_to_crc with LSB XCRC_VAL
+        vpxorq          %%XCRC_TMP, [rel mask3]
+        vpshufb         %%XCRC_TMP2, %%XCRC_TMP ; bottom (16 - bytes_to_crc) with MSB XCRC_VAL
+
+        vpblendvb       %%XCRC_DAT, %%XCRC_TMP2, %%XCRC_DAT, %%XCRC_TMP
+
+        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
+        CRC32_REDUCE_128_TO_32 %%CRC32, %%XCRC_VAL, %%XCRC_TMP, %%XCRC_DAT, %%XCRC_TMP2
+
+        ;; save final CRC value in init
+        mov             [%%ARG + _docsis_crc_args_init + 16*crc_lane], DWORD(%%CRC32)
+
+        ;; write back CRC value into source buffer
+        movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + crc_lane*2]
+        lea             %%GT8, [APPEND(%%IN, crc_lane) + %%IDX]
+        mov             [%%GT8 + %%GT9], DWORD(%%CRC32)
+
+        ;; reload the data for cipher (includes just computed CRC)
+        vmovdqu64       APPEND(%%XDATA, crc_lane), [APPEND(%%IN, crc_lane) + %%IDX]
+
+        mov             word [%%ARG + _docsis_crc_args_len + 2*crc_lane], 0
+        ;; mark as done
+        mov             byte [%%ARG + _docsis_crc_args_done + crc_lane], 1
+        jmp             APPEND(%%_crc_lane_done_, crc_lane)
+
+APPEND(%%_crc_lane_first_, crc_lane):
+        ;; Case of less than 16 bytes will not happen here since
+        ;; submit code takes care of it.
+        ;; in the first run just XOR initial CRC with the first block
+        vpxorq          %%XCRC_DAT, APPEND(%%XDATA, crc_lane), [%%ARG + _docsis_crc_args_init + 16*crc_lane]
+        vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*crc_lane], %%XCRC_DAT
+        ;; mark first block as done
+        mov             byte [%%ARG + _docsis_crc_args_done + crc_lane], 0
+        sub             word [%%ARG + _docsis_crc_args_len + 2*crc_lane], 16
+
+APPEND(%%_crc_lane_done_, crc_lane):
+%assign crc_lane (crc_lane + 1)
+%endrep
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; - load key pointers to performs AES rounds
         ;; - use ternary logic for: plain-text XOR IV and AES ARK(0)
         ;;      - IV = XCIPHx
@@ -771,34 +849,61 @@ section .text
 	shl             %%lane, 4	; multiply by 16
 	vmovdqa64       [%%STATE + _aes_args_IV + %%lane], xmm0
 
-        mov             byte [%%STATE + _docsis_crc_args_done + %%lane], 1 ; @todo
+        mov             byte [%%STATE + _docsis_crc_args_done + %%lane], 1
 
         cmp             qword [%%JOB + _msg_len_to_hash_in_bytes], 0
         jz              %%_crc_complete
 
+        ;; there is CRC to calculate - now in one go or in chunks
+        ;; - load init value into the lane
         vmovdqa64       XWORD(%%ZT0), [rel init_crc_value]
         vmovdqa64       [%%STATE + _docsis_crc_args_init + %%lane], XWORD(%%ZT0)
         shr             %%lane, 4
-        mov             %%GT5, [%%JOB + _msg_len_to_hash_in_bytes]
-        mov             [%%STATE + _docsis_crc_args_len + %%lane*2], WORD(%%GT5)
 
         mov             %%GT6, [%%JOB + _src]
         add             %%GT6, [%%JOB + _hash_start_src_offset_in_bytes]
         vmovdqa64       XWORD(%%ZT1), [rel rk1]
 
+        cmp             qword [%%JOB + _msg_len_to_cipher_in_bytes], (3 * 16)
+        jae             %%_crc_in_chunks
+
+        ;; this is short message - compute whole CRC in one go
+        mov             %%GT5, [%%JOB + _msg_len_to_hash_in_bytes]
+        mov             [%%STATE + _docsis_crc_args_len + %%lane*2], WORD(%%GT5)
+
         ;; GT6 - ptr, GT5 - length, ZT1 - CRC_MUL, ZT0 - CRC_IN_OUT
-        ETHERNET_FCS_CRC %%GT6, %%GT5, rax, XWORD(%%ZT0), %%GT2, \
+        ETHERNET_FCS_CRC %%GT6, %%GT5, %%GT7, XWORD(%%ZT0), %%GT2, \
                          XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
 
         mov             %%GT6, [%%JOB + _src]
         add             %%GT6, [%%JOB + _hash_start_src_offset_in_bytes]
         add             %%GT6, [%%JOB + _msg_len_to_hash_in_bytes]
-        mov             [%%GT6], eax
+        mov             [%%GT6], DWORD(%%GT7)
+        shl             %%lane, 4
+        mov             [%%STATE + _docsis_crc_args_init + %%lane], DWORD(%%GT7)
+        shr             %%lane, 4
+        jmp             %%_crc_complete
 
-        mov             %%GT6, [%%JOB + _auth_tag_output]
-        mov             [%%GT6], eax
+%%_crc_in_chunks:
+        ;; CRC in chunks will follow
+        mov             %%GT5, [%%JOB + _msg_len_to_cipher_in_bytes]
+        sub             %%GT5, 4
+        mov             [%%STATE + _docsis_crc_args_len + %%lane*2], WORD(%%GT5)
+        mov             byte [%%STATE + _docsis_crc_args_done + %%lane], 2
 
-        mov             byte [%%STATE + _docsis_crc_args_done + %%lane], 1
+        ;; now calculate only CRC on bytes before cipher start
+        mov             %%GT5, [%%JOB + _cipher_start_src_offset_in_bytes]
+        sub             %%GT5, [%%JOB + _hash_start_src_offset_in_bytes]
+
+        ;; GT6 - ptr, GT5 - length, ZT1 - CRC_MUL, ZT0 - CRC_IN_OUT
+        ETHERNET_FCS_CRC %%GT6, %%GT5, %%GT7, XWORD(%%ZT0), %%GT2, \
+                         XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4)
+
+        not             DWORD(%%GT7)
+        vmovd           xmm8, DWORD(%%GT7)
+        shl             %%lane, 4
+        vmovdqa64       [%%STATE + _docsis_crc_args_init + %%lane], xmm8
+        shr             %%lane, 4
 
 %%_crc_complete:
 	cmp             %%unused_lanes, 0xf
@@ -850,8 +955,11 @@ section .text
 	mov             %%tmp1, [%%STATE + _aes_args_in + %%good_lane*8]
 	mov             %%tmp2, [%%STATE + _aes_args_out + %%good_lane*8]
 	mov             %%tmp3, [%%STATE + _aes_args_keys + %%good_lane*8]
+	mov             WORD(%%GT6), [%%STATE + _docsis_crc_args_len + %%good_lane*2]
+	mov             BYTE(%%GT7), [%%STATE + _docsis_crc_args_done + %%good_lane]
 	shl             %%good_lane, 4 ; multiply by 16
 	vmovdqa64       xmm2, [%%STATE + _aes_args_IV + %%good_lane]
+        vmovdqa64       xmm3, [%%STATE + _docsis_crc_args_init + %%good_lane]
 	vmovdqa64       xmm0, [%%STATE + _aes_lens]
 
 %assign I 0
@@ -861,7 +969,10 @@ section .text
 	mov	        [%%STATE + _aes_args_in + I*8], %%tmp1
 	mov	        [%%STATE + _aes_args_out + I*8], %%tmp2
 	mov	        [%%STATE + _aes_args_keys + I*8], %%tmp3
+        mov             [%%STATE + _docsis_crc_args_len + I*2], WORD(%%GT6)
+        mov             [%%STATE + _docsis_crc_args_done + I], BYTE(%%GT7)
 	vmovdqa64       [%%STATE + _aes_args_IV + I*16], xmm2
+	vmovdqa64       [%%STATE + _docsis_crc_args_init + I*16], xmm3
 	vporq           xmm0, xmm0, [rel len_masks + 16*I]
 APPEND(%%_skip_,I):
 %assign I (I+1)
@@ -871,7 +982,7 @@ APPEND(%%_skip_,I):
 
 %%_find_min_job:
 	;; Find min length (xmm0 includes vector of 8 lengths)
-        ;; vmovdqa64       xmm0, [%%STATE + _aes_lens] => not needed xmm0 already loaded with lenghts
+        ;; vmovdqa64       xmm0, [%%STATE + _aes_lens] => not needed xmm0 already loaded with lengths
 	vphminposuw     xmm1, xmm0
 	vpextrw         DWORD(%%len2), xmm1, 0	; min value
 	vpextrw         DWORD(%%idx), xmm1, 1	; min index (0...7)
@@ -896,9 +1007,62 @@ APPEND(%%_skip_,I):
 
 %%_len_is_0:
 	mov	        %%job_rax, [%%STATE + _aes_job_in_lane + %%idx*8]
+
+        ;; CRC the remaining bytes
+        cmp             byte [%%STATE + _docsis_crc_args_done + %%idx], 1
+        je              %%_crc_is_complete
+
+        ;; some bytes left to complete CRC
+        movzx           %%GT3, word [%%STATE + _docsis_crc_args_len + %%idx*2]
+        mov             %%GT4, [%%STATE + _aes_args_in + %%idx*8]
+
+        or              %%GT3, %%GT3
+        jz              %%_crc_read_reduce
+
+        shl             %%idx, 1
+        vmovdqa64       xmm8, [%%STATE + _docsis_crc_args_init + %%idx*8]
+        shr             %%idx, 1
+
+        lea             %%GT5, [rel pshufb_shf_table]
+        vmovdqu64       xmm10, [%%GT5 + %%GT3]
+        vmovdqu64       xmm9, [%%GT4 - 16 + %%GT3]
+        vmovdqa64       xmm11, xmm8
+        vpshufb         xmm8, xmm10  ; top num_bytes with LSB xcrc
+        vpxorq          xmm10, [rel mask3]
+        vpshufb         xmm11, xmm10 ; bottom (16 - num_bytes) with MSB xcrc
+
+        ;; data num_bytes (top) blended with MSB bytes of CRC (bottom)
+        vpblendvb       xmm11, xmm9, xmm10
+
+        ;; final CRC calculation
+        vmovdqa64       xmm9, [rel rk1]
+        CRC_CLMUL       xmm8, xmm9, xmm11, xmm12
+        jmp             %%_crc_reduce
+
+;; complete the last block
+
+%%_crc_read_reduce:
+        shl             %%idx, 1
+        vmovdqa64       xmm8, [%%STATE + _docsis_crc_args_init + %%idx*8]
+        shr             %%idx, 1
+
+%%_crc_reduce:
+        ;; GT3 - offset in bytes to put the CRC32 value into
+        ;; GT4 - src buffer pointer
+        ;; xmm8 - current CRC value for reduction
+        ;; - write CRC value into SRC buffer for further cipher
+        ;; - keep CRC value in init field
+        CRC32_REDUCE_128_TO_32 %%GT7, xmm8, xmm9, xmm10, xmm11
+        mov             [%%GT4 + %%GT3], DWORD(%%GT7)
+        shl             %%idx, 1
+        mov             [%%STATE + _docsis_crc_args_init + %%idx*8], DWORD(%%GT7)
+        shr             %%idx, 1
+
+%%_crc_is_complete:
         mov             %%GT3, [%%job_rax + _msg_len_to_cipher_in_bytes]
         and             %%GT3, 0xf
-        jz              %%_no_partial_block
+        jz              %%_no_partial_block_cipher
+
 
         ;; AES128-CFB on the partial block
         mov             %%GT4, [%%STATE + _aes_args_in + %%idx*8]
@@ -924,9 +1088,16 @@ APPEND(%%_skip_,I):
         vpxorq          xmm1, xmm1, xmm3
         vmovdqu8        [%%GT5]{k1}, xmm1
 
-%%_no_partial_block:
-	; process completed job "idx"
-	mov	        %%unused_lanes, [%%STATE + _aes_unused_lanes]
+%%_no_partial_block_cipher:
+	;;  - copy CRC value into auth tag
+        ;; - process completed job "idx"
+        shl             %%idx, 1
+        mov             DWORD(%%GT7), [%%STATE + _docsis_crc_args_init + %%idx*8]
+        shr             %%idx, 1
+        mov             %%GT6, [%%job_rax + _auth_tag_output]
+        mov             [%%GT6], DWORD(%%GT7)
+
+        mov	        %%unused_lanes, [%%STATE + _aes_unused_lanes]
 	mov	        qword [%%STATE + _aes_job_in_lane + %%idx*8], 0
 	or	        dword [%%job_rax + _status], STS_COMPLETED_AES
 	shl	        %%unused_lanes, 4
