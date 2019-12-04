@@ -626,25 +626,12 @@ asm_ZucInitialization_4_sse:
 
     ret
 
-;;
-;; void asm_ZucGenKeystream64B_4_sse(state4_t *pSta, u32* pKeyStr1, u32* pKeyStr2, u32* pKeyStr3, u32* pKeyStr4);
-;;
-;; WIN64
-;;  RCX    - pSta
-;;  RDX    - pKeyStr1
-;;  R8     - pKeyStr2
-;;  R9     - pKeyStr3
-;;  Stack  - pKeyStr4
-;;
-;; LIN64
-;;  RDI - pSta
-;;  RSI - pKeyStr1
-;;  RDX - pKeyStr2
-;;  RCX - pKeyStr3
-;;  R8  - pKeyStr4
-;;
-MKGLOBAL(asm_ZucGenKeystream64B_4_sse,function,internal)
-asm_ZucGenKeystream64B_4_sse:
+;
+; Generate N*4 bytes of keystream
+; for 4 buffers (where N is number of rounds)
+;
+%macro KEYGEN_4_SSE 1
+%define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
 
 %ifdef LINUX
 	%define		pState	rdi
@@ -689,9 +676,9 @@ asm_ZucGenKeystream64B_4_sse:
     ; Load read-only registers
     movdqa      xmm12, [rel mask31]
 
-    ; Generate 64B of keystream in 16 rounds
+    ; Generate N*4B of keystream in N rounds
 %assign N 1
-%rep 16
+%rep %%NUM_ROUNDS
     bits_reorg4 N
     nonlin_fun4 1
     store_kstr4
@@ -717,7 +704,56 @@ asm_ZucGenKeystream64B_4_sse:
     pop         r13
     pop         r12
     pop         rbx
-    ret
+
+%endmacro
+
+;;
+;; void asm_ZucGenKeystream64B_4_sse(state4_t *pSta, u32* pKeyStr1, u32* pKeyStr2, u32* pKeyStr3, u32* pKeyStr4);
+;;
+;; WIN64
+;;  RCX    - pSta
+;;  RDX    - pKeyStr1
+;;  R8     - pKeyStr2
+;;  R9     - pKeyStr3
+;;  Stack  - pKeyStr4
+;;
+;; LIN64
+;;  RDI - pSta
+;;  RSI - pKeyStr1
+;;  RDX - pKeyStr2
+;;  RCX - pKeyStr3
+;;  R8  - pKeyStr4
+;;
+MKGLOBAL(asm_ZucGenKeystream64B_4_sse,function,internal)
+asm_ZucGenKeystream64B_4_sse:
+
+        KEYGEN_4_SSE 16
+
+        ret
+
+;;
+;; void asm_ZucGenKeystream8B_4_sse(state4_t *pSta, u32* pKeyStr1, u32* pKeyStr2, u32* pKeyStr3, u32* pKeyStr4);
+;;
+;; WIN64
+;;  RCX    - pSta
+;;  RDX    - pKeyStr1
+;;  R8     - pKeyStr2
+;;  R9     - pKeyStr3
+;;  Stack  - pKeyStr4
+;;
+;; LIN64
+;;  RDI - pSta
+;;  RSI - pKeyStr1
+;;  RDX - pKeyStr2
+;;  RCX - pKeyStr3
+;;  R8  - pKeyStr4
+;;
+MKGLOBAL(asm_ZucGenKeystream8B_4_sse,function,internal)
+asm_ZucGenKeystream8B_4_sse:
+
+        KEYGEN_4_SSE 2
+
+        ret
 
 ;;
 ;; void asm_ZucCipher64B_4_sse(state4_t *pSta, u32 *pKeyStr[4], u64 *pIn[4],

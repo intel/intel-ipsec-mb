@@ -615,28 +615,13 @@ asm_ZucInitialization_4_avx:
     pop         rbx
 
     ret
+
 ;
+; Generate N*4 bytes of keystream
+; for 4 buffers (where N is number of rounds)
 ;
-;
-;;
-;; void asm_ZucGenKeystream64B_4_avx(state4_t *pSta, u32* pKeyStr1, u32* pKeyStr2, u32* pKeyStr3, u32* pKeyStr4);
-;;
-;; WIN64
-;;  RCX    - pSta
-;;  RDX    - pKeyStr1
-;;  R8     - pKeyStr2
-;;  R9     - pKeyStr3
-;;  Stack  - pKeyStr4
-;;
-;; LIN64
-;;  RDI - pSta
-;;  RSI - pKeyStr1
-;;  RDX - pKeyStr2
-;;  RCX - pKeyStr3
-;;  R8  - pKeyStr4
-;;
-MKGLOBAL(asm_ZucGenKeystream64B_4_avx,function,internal)
-asm_ZucGenKeystream64B_4_avx:
+%macro KEYGEN_4_AVX 1
+%define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
 
 %ifdef LINUX
 	%define		pState	rdi
@@ -681,9 +666,9 @@ asm_ZucGenKeystream64B_4_avx:
     ; Load read-only registers
     vmovdqa     xmm12, [rel mask31]
 
-    ; Generate 64B of keystream in 16 rounds
+    ; Generate N*4B of keystream in N rounds
 %assign N 1
-%rep 16
+%rep %%NUM_ROUNDS
     bits_reorg4 N
     nonlin_fun4 1
     store_kstr4
@@ -709,6 +694,55 @@ asm_ZucGenKeystream64B_4_avx:
     pop         r13
     pop         r12
     pop         rbx
+
+%endmacro
+
+;
+;; void asm_ZucGenKeystream64B_4_avx(state4_t *pSta, u32* pKeyStr1, u32* pKeyStr2, u32* pKeyStr3, u32* pKeyStr4);
+;;
+;; WIN64
+;;  RCX    - pSta
+;;  RDX    - pKeyStr1
+;;  R8     - pKeyStr2
+;;  R9     - pKeyStr3
+;;  Stack  - pKeyStr4
+;;
+;; LIN64
+;;  RDI - pSta
+;;  RSI - pKeyStr1
+;;  RDX - pKeyStr2
+;;  RCX - pKeyStr3
+;;  R8  - pKeyStr4
+;;
+MKGLOBAL(asm_ZucGenKeystream64B_4_avx,function,internal)
+asm_ZucGenKeystream64B_4_avx:
+
+    KEYGEN_4_AVX 16
+
+    ret
+
+;
+;; void asm_ZucGenKeystream8B_4_avx(state4_t *pSta, u32* pKeyStr1, u32* pKeyStr2, u32* pKeyStr3, u32* pKeyStr4);
+;;
+;; WIN64
+;;  RCX    - pSta
+;;  RDX    - pKeyStr1
+;;  R8     - pKeyStr2
+;;  R9     - pKeyStr3
+;;  Stack  - pKeyStr4
+;;
+;; LIN64
+;;  RDI - pSta
+;;  RSI - pKeyStr1
+;;  RDX - pKeyStr2
+;;  RCX - pKeyStr3
+;;  R8  - pKeyStr4
+;;
+MKGLOBAL(asm_ZucGenKeystream8B_4_avx,function,internal)
+asm_ZucGenKeystream8B_4_avx:
+
+    KEYGEN_4_AVX 2
+
     ret
 
 ;;

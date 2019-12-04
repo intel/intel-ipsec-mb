@@ -356,6 +356,47 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_avx(ZucState4_t *pState,
  *
  * @description
  *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 8 bytes of
+ *      keystream for four packets in parallel.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState4_t
+ *
+ * @param[in,out] pKeyStr1          Pointer to an input buffer that will
+ *                                  contain the generated keystream for packet
+ *                                  one.
+ * @param[in,out] pKeyStr2          Pointer to an input buffer that will
+ *                                  contain the generated keystream for packet
+ *                                  two.
+ * @param[in,out] pKeyStr3          Pointer to an input buffer that will
+ *                                  contain the generated keystream for packet
+ *                                  three.
+ * @param[in,out] pKeyStr4          Pointer to an input buffer that will
+ *                                  contain the generated keystream for packet
+ *                                  four.
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_4 to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse(ZucState4_t *pState,
+                                               uint32_t *pKeyStr1,
+                                               uint32_t *pKeyStr2,
+                                               uint32_t *pKeyStr3,
+                                               uint32_t *pKeyStr4);
+
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
+                                               uint32_t *pKeyStr1,
+                                               uint32_t *pKeyStr2,
+                                               uint32_t *pKeyStr3,
+                                               uint32_t *pKeyStr4);
+
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
  *      stage of the ZUC algorithm. The function will generate 64 bytes of
  *      keystream for four packets in parallel and will XOR this keystream
  *      with the input text, producing 64 bytes of output for all four packets.
