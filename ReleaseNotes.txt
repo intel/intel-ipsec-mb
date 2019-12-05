@@ -23,6 +23,8 @@ LibTestApp
 - Extended DOCSIS tests with combined CRC32 calculation cases
 - Extended KASUMI tests to validate KASUMI-UEA1 and KASUMI-UIA1 algorithms
   through job API
+- Extended ZUC tests to validate ZUC-EIA3 multi-buffer implementation
+  through direct and job API
 
 LibPerfApp
 - Added support for ZUC-EEA3 and ZUC-EIA3 algorithms
