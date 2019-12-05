@@ -152,10 +152,10 @@ static inline void hexdump(const char *message, const uint8_t *ptr, int len)
 }
 
 static inline int
-submit_kasumi_f8_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, void **ivs,
-                      uint8_t **src, uint8_t **dst, const uint32_t *bitlens,
-                      const uint32_t *bit_offsets, int dir,
-                      const unsigned int num_jobs)
+submit_kasumi_f8_jobs(struct MB_MGR *mb_mgr, kasumi_key_sched_t **keys,
+                      uint64_t **ivs, uint8_t **src, uint8_t **dst,
+                      const uint32_t *bitlens, const uint32_t *bit_offsets,
+                      int dir, const unsigned int num_jobs)
 {
         JOB_AES_HMAC *job;
         unsigned int i;
@@ -168,9 +168,9 @@ submit_kasumi_f8_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, void **ivs,
                 job->cipher_mode = KASUMI_UEA1_BITLEN;
                 job->src = src[i];
                 job->dst = dst[i];
-                job->iv = ivs[i];
+                job->iv = (void *)ivs[i];
                 job->iv_len_in_bytes = 8;
-                job->aes_enc_key_expanded = keys[i];
+                job->aes_enc_key_expanded = (uint8_t *)keys[i];
                 job->aes_key_len_in_bytes = 16;
 
                 job->cipher_start_src_offset_in_bits = bit_offsets[i];
@@ -257,10 +257,10 @@ static int validate_kasumi_f8_1_block(MB_MGR *mgr, const unsigned job_api)
                         return 1;
                 }
 
-                /*Validate Encrpyt*/
+                /* Validate Encrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, (uint8_t **)&pKeySched,
-                                              (void **)&pIV, &pSrcBuff,
+                        submit_kasumi_f8_jobs(mgr, &pKeySched,
+                                              &pIV, &pSrcBuff,
                                               &pSrcBuff, &bitLen, &bitOffset,
                                               ENCRYPT, 1);
                 else
@@ -287,8 +287,8 @@ static int validate_kasumi_f8_1_block(MB_MGR *mgr, const unsigned job_api)
 
                 /*Validate Decrypt*/
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, (uint8_t **)&pKeySched,
-                                              (void **)&pIV, &pSrcBuff,
+                        submit_kasumi_f8_jobs(mgr, &pKeySched,
+                                              &pIV, &pSrcBuff,
                                               &pSrcBuff, &bitLen,
                                               &bitOffset, DECRYPT, 1);
                 else
@@ -417,8 +417,8 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
 
                 /* Validate Encrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, (uint8_t **)&pKeySched,
-                                              (void **)&pIV, &plainBufAftPad,
+                        submit_kasumi_f8_jobs(mgr, &pKeySched,
+                                              &pIV, &plainBufAftPad,
                                               &wrkBufAftPad, &bit_len,
                                               &bit_offset, ENCRYPT, 1);
                 else
@@ -451,8 +451,8 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
                 }
                 /* Validate Decrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, (uint8_t **)&pKeySched,
-                                              (void **)&pIV, &ciphBufAftPad,
+                        submit_kasumi_f8_jobs(mgr, &pKeySched,
+                                              &pIV, &ciphBufAftPad,
                                               &wrkBufAftPad, &bit_len,
                                               &bit_offset, DECRYPT, 1);
                 else
@@ -480,8 +480,8 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
 
                 /* Validate Encrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, (uint8_t **)&pKeySched,
-                                              (void **)&pIV, &plainBufAftPad,
+                        submit_kasumi_f8_jobs(mgr, &pKeySched,
+                                              &pIV, &plainBufAftPad,
                                               &wrkBufAftPad, &bit_len,
                                               &bit_offset, ENCRYPT, 1);
                 else
@@ -500,8 +500,8 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
                 }
                 /*Validate Decrypt*/
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, (uint8_t **)&pKeySched,
-                                              (void **)&pIV, &ciphBufAftPad,
+                        submit_kasumi_f8_jobs(mgr, &pKeySched,
+                                              &pIV, &ciphBufAftPad,
                                               &wrkBufAftPad, &bit_len,
                                               &bit_offset, DECRYPT, 1);
                 else
@@ -594,8 +594,8 @@ static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr,
 
                 /* Validate Encrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, (uint8_t **)&pKeySched,
-                                              (void **)&pIV, &pSrcBuff,
+                        submit_kasumi_f8_jobs(mgr, &pKeySched,
+                                              &pIV, &pSrcBuff,
                                               &pWrkBuff, &bit_len,
                                               &offset, ENCRYPT, 1);
                 else
@@ -641,8 +641,8 @@ static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr,
 
                 /* Validate Decrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, (uint8_t **)&pKeySched,
-                                              (void **)&pIV, &pDstBuff,
+                        submit_kasumi_f8_jobs(mgr, &pKeySched,
+                                              &pIV, &pDstBuff,
                                               &pWrkBuff, &bit_len,
                                               &offset, DECRYPT, 1);
                 else
@@ -680,19 +680,23 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
 
         int numKasumiTestVectors, i = 0, numPackets = 2;
         const cipher_test_vector_t *kasumi_test_vectors = NULL;
-        kasumi_key_sched_t *keySched = NULL;
+        kasumi_key_sched_t *keySched[3] = {NULL};
 
-        (void)(job_api); /* temporarily unused */
+        printf("Testing IMB_KASUMI_F8_2_BUFFER (%s):\n",
+               job_api ? "Job API" : "Direct API");
 
         kasumi_test_vectors = cipher_test_vectors[0];
         numKasumiTestVectors = numCipherTestVectors[0];
 
-        uint8_t *key = NULL;
+        uint8_t *key[3] = {NULL};
         int keyLen = MAX_KEY_LEN;
         uint64_t iv[3];
         uint8_t *srcBuff[3] = {NULL};
         uint8_t *dstBuff[3] = {NULL};
         uint32_t packetLen[3];
+        uint32_t bitLens[3];
+        uint32_t bitOffsets[3];
+        uint64_t *pIV[3] = {NULL};
         int ret = 1;
 
         if (!numKasumiTestVectors) {
@@ -700,21 +704,24 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
                 goto exit;
         }
 
-        key = malloc(keyLen);
-        if (!key) {
-                printf("malloc(key):failed !\n");
-                goto exit;
-        }
-
-        keySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
-        if (!keySched) {
-                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
-                goto exit;
-        }
-
         /* Create test Data for num Packets + 1 */
         for (i = 0; i < numPackets + 1; i++) {
                 packetLen[i] = kasumi_test_vectors[i].dataLenInBytes;
+                bitLens[i] = packetLen[i] * 8;
+                bitOffsets[i] = 0;
+                pIV[i] = &iv[i];
+
+                key[i] = malloc(keyLen);
+                if (!key[i]) {
+                        printf("malloc(key):failed !\n");
+                        goto exit;
+                }
+                keySched[i] = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
+                if (!keySched[i]) {
+                        printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): "
+                               "failed !\n");
+                        goto exit;
+                }
                 srcBuff[i] = malloc(packetLen[i]);
                 if (!srcBuff[i]) {
                         printf("malloc(srcBuff[%u]:failed !\n", i);
@@ -726,7 +733,7 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
                         goto exit;
                 }
 
-                memcpy(key, kasumi_test_vectors[i].key,
+                memcpy(key[i], kasumi_test_vectors[i].key,
                        kasumi_test_vectors[i].keyLenInBytes);
 
                 memcpy(srcBuff[i], kasumi_test_vectors[i].plaintext,
@@ -737,16 +744,26 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
 
                 memcpy(&iv[i], kasumi_test_vectors[i].iv,
                        kasumi_test_vectors[i].ivLenInBytes);
+
+                /* init key schedule */
+                if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key[i], keySched[i])) {
+                        printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
+                        goto exit;
+                }
+
         }
-        /* Only 1 key is needed for kasumi 2 blocks */
-        if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key, keySched)) {
-                printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
-                goto exit;
-        }
+
         /* Test the encrypt */
-        IMB_KASUMI_F8_2_BUFFER(mgr, keySched, iv[0], iv[1], srcBuff[0],
-                               srcBuff[0], packetLen[0], srcBuff[1], srcBuff[1],
-                               packetLen[1]);
+        if (job_api)
+                submit_kasumi_f8_jobs(mgr, keySched, (uint64_t **)&pIV,
+                                      (uint8_t **)&srcBuff,
+                                      (uint8_t **)&srcBuff,
+                                      (uint32_t *)&bitLens,
+                                      (uint32_t *)&bitOffsets, ENCRYPT, 2);
+        else
+                IMB_KASUMI_F8_2_BUFFER(mgr, keySched[0], iv[0], iv[1],
+                                       srcBuff[0], srcBuff[0], packetLen[0],
+                                       srcBuff[1], srcBuff[1], packetLen[1]);
 
         /* Compare the ciphertext with the encrypted plaintext */
         for (i = 0; i < numPackets; i++) {
@@ -763,69 +780,63 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
                 memcpy(srcBuff[i], kasumi_test_vectors[i].plaintext,
                        kasumi_test_vectors[i].dataLenInBytes);
 
-        /* Test the encrypt reverse order */
-        IMB_KASUMI_F8_2_BUFFER(mgr, keySched, iv[0], iv[1], srcBuff[1],
-                               srcBuff[1], packetLen[1], srcBuff[0], srcBuff[0],
-                               packetLen[0]);
+        /* Test the encrypt reverse order (direct API only) */
+        if (!job_api) {
+                IMB_KASUMI_F8_2_BUFFER(mgr, keySched[0], iv[0], iv[1],
+                                       srcBuff[1], srcBuff[1], packetLen[1],
+                                       srcBuff[0], srcBuff[0], packetLen[0]);
 
-        /* Compare the ciphertext with the encrypted plaintext */
-        for (i = 0; i < numPackets; i++) {
-                if (memcmp(srcBuff[i], kasumi_test_vectors[i].ciphertext,
-                           packetLen[i]) != 0) {
-                        printf("kasumi_f8_2_buffer(Enc)  vector:%d\n", i);
-                        hexdump("Actual:", srcBuff[i], packetLen[i]);
-                        hexdump("Expected:", kasumi_test_vectors[i].ciphertext,
-                                packetLen[i]);
-                        goto exit;
+                /* Compare the ciphertext with the encrypted plaintext */
+                for (i = 0; i < numPackets; i++) {
+                        if (memcmp(srcBuff[i],
+                                   kasumi_test_vectors[i].ciphertext,
+                                   packetLen[i]) != 0) {
+                                printf("kasumi_f8_2_buffer(Enc)  "
+                                       "vector:%d\n", i);
+                                hexdump("Actual:", srcBuff[i], packetLen[i]);
+                                hexdump("Expected:",
+                                        kasumi_test_vectors[i].ciphertext,
+                                        packetLen[i]);
+                                goto exit;
+                        }
+                }
+                for (i = 0; i < numPackets + 1; i++)
+                        memcpy(srcBuff[i], kasumi_test_vectors[i].plaintext,
+                               kasumi_test_vectors[i].dataLenInBytes);
+
+                /* Test the encrypt reverse order (direct API only) */
+                IMB_KASUMI_F8_2_BUFFER(mgr, keySched[0], iv[0], iv[1],
+                                       srcBuff[0], srcBuff[0], packetLen[0],
+                                       srcBuff[2], srcBuff[2], packetLen[2]);
+
+                /* Compare the ciphertext with the encrypted plaintext*/
+                for (i = 0; i < numPackets + 1; i++) {
+                        if (i == 1)
+                                continue;
+                        if (memcmp(srcBuff[i],
+                                   kasumi_test_vectors[i].ciphertext,
+                                   packetLen[i]) != 0) {
+                                printf("kasumi_f8_2_buffer(Enc) "
+                                       "vector:%d\n", i);
+                                hexdump("Actual:", srcBuff[i], packetLen[i]);
+                                hexdump("Expected:",
+                                        kasumi_test_vectors[i].ciphertext,
+                                        packetLen[i]);
+                                goto exit;
+                        }
                 }
         }
-        for (i = 0; i < numPackets + 1; i++)
-                memcpy(srcBuff[i], kasumi_test_vectors[i].plaintext,
-                       kasumi_test_vectors[i].dataLenInBytes);
-
-        /* Test the encrypt reverse order */
-        IMB_KASUMI_F8_2_BUFFER(mgr, keySched, iv[0], iv[1], srcBuff[0],
-                               srcBuff[0], packetLen[0], srcBuff[2], srcBuff[2],
-                               packetLen[2]);
-
-        /* Compare the ciphertext with the encrypted plaintext*/
-        for (i = 0; i < numPackets + 1; i++) {
-                if (i == 1)
-                        continue;
-                if (memcmp(srcBuff[i], kasumi_test_vectors[i].ciphertext,
-                           packetLen[i]) != 0) {
-                        printf("kasumi_f8_2_buffer(Enc)  vector:%d\n", i);
-                        hexdump("Actual:", srcBuff[i], packetLen[i]);
-                        hexdump("Expected:", kasumi_test_vectors[i].ciphertext,
-                                packetLen[i]);
-                        goto exit;
-                }
-        }
-
         /* Test the decrypt */
-        IMB_KASUMI_F8_2_BUFFER(mgr, keySched, iv[0], iv[1], dstBuff[0],
-                               dstBuff[0], packetLen[0], dstBuff[1], dstBuff[1],
-                               packetLen[1]);
-
-        /* Compare the plaintext with the decrypted ciphertext */
-        for (i = 0; i < numPackets; i++) {
-                if (memcmp(dstBuff[i], kasumi_test_vectors[i].plaintext,
-                           packetLen[i]) != 0) {
-                        printf("kasumi_f8_2_buffer(Dec)  vector:%d\n", i);
-                        hexdump("Actual:", dstBuff[i], packetLen[i]);
-                        hexdump("Expected:", kasumi_test_vectors[i].plaintext,
-                                packetLen[i]);
-                        goto exit;
-                }
-        }
-        /* Test the decrypt reverse order */
-        for (i = 0; i < numPackets; i++)
-                memcpy(dstBuff[i], kasumi_test_vectors[i].ciphertext,
-                       kasumi_test_vectors[i].dataLenInBytes);
-
-        IMB_KASUMI_F8_2_BUFFER(mgr, keySched, iv[0], iv[1], dstBuff[1],
-                               dstBuff[1], packetLen[1], dstBuff[0], dstBuff[0],
-                               packetLen[0]);
+        if (job_api)
+                submit_kasumi_f8_jobs(mgr, keySched, (uint64_t **)&pIV,
+                                      (uint8_t **)&dstBuff,
+                                      (uint8_t **)&dstBuff,
+                                      (uint32_t *)&bitLens,
+                                      (uint32_t *)&bitOffsets, DECRYPT, 2);
+        else
+                IMB_KASUMI_F8_2_BUFFER(mgr, keySched[0], iv[0], iv[1],
+                                       dstBuff[0], dstBuff[0], packetLen[0],
+                                       dstBuff[1], dstBuff[1], packetLen[1]);
 
         /* Compare the plaintext with the decrypted ciphertext */
         for (i = 0; i < numPackets; i++) {
@@ -839,13 +850,37 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
                 }
         }
 
+        /* Test the decrypt reverse order (direct API only) */
+        if (!job_api) {
+                for (i = 0; i < numPackets; i++)
+                        memcpy(dstBuff[i], kasumi_test_vectors[i].ciphertext,
+                               kasumi_test_vectors[i].dataLenInBytes);
+
+                IMB_KASUMI_F8_2_BUFFER(mgr, keySched[0], iv[0], iv[1],
+                                       dstBuff[1], dstBuff[1], packetLen[1],
+                                       dstBuff[0], dstBuff[0], packetLen[0]);
+
+                /* Compare the plaintext with the decrypted ciphertext */
+                for (i = 0; i < numPackets; i++) {
+                        if (memcmp(dstBuff[i], kasumi_test_vectors[i].plaintext,
+                                   packetLen[i]) != 0) {
+                                printf("kasumi_f8_2_buffer(Dec) "
+                                       "vector:%d\n", i);
+                                hexdump("Actual:", dstBuff[i], packetLen[i]);
+                                hexdump("Expected:",
+                                        kasumi_test_vectors[i].plaintext,
+                                        packetLen[i]);
+                                goto exit;
+                        }
+                }
+        }
         ret = 0;
 
         printf("[%s]: PASS.\n", __FUNCTION__);
 exit:
-        free(key);
-        free(keySched);
         for (i = 0; i < numPackets + 1; i++) {
+                free(key[i]);
+                free(keySched[i]);
                 free(srcBuff[i]);
                 free(dstBuff[i]);
         }
@@ -856,19 +891,23 @@ static int validate_kasumi_f8_3_blocks(MB_MGR *mgr, const unsigned job_api)
 {
         int numKasumiTestVectors, i = 0, numPackets = 3;
         const cipher_test_vector_t *kasumi_test_vectors = NULL;
-        kasumi_key_sched_t *keySched = NULL;
+        kasumi_key_sched_t *keySched[3] = {NULL};
 
-        (void)(job_api); /* temporarily unused */
+        printf("Testing IMB_KASUMI_F8_3_BUFFER (%s):\n",
+               job_api ? "Job API" : "Direct API");
 
         kasumi_test_vectors = cipher_test_vectors[0];
         numKasumiTestVectors = numCipherTestVectors[0];
 
-        uint8_t *key = NULL;
+        uint8_t *key[3] = {NULL};
         int keyLen = MAX_KEY_LEN;
         uint64_t iv[3];
         uint8_t *srcBuff[3] = {NULL};
         uint8_t *dstBuff[3] = {NULL};
-        uint32_t packetLen;
+        uint32_t packetLen[3];
+        uint32_t bitLens[3];
+        uint32_t bitOffsets[3];
+        uint64_t *pIV[3] = {NULL};
         int ret = 1;
 
         if (!numKasumiTestVectors) {
@@ -876,34 +915,36 @@ static int validate_kasumi_f8_3_blocks(MB_MGR *mgr, const unsigned job_api)
                 goto exit;
         }
 
-        key = malloc(keyLen);
-        if (!key) {
-                printf("malloc(key):failed !\n");
-                goto exit;
-        }
-
-        keySched = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
-        if (!keySched) {
-                printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): failed !\n");
-                goto exit;
-        }
-
-        packetLen = kasumi_test_vectors[0].dataLenInBytes;
-
         /* Create test Data for num Packets */
         for (i = 0; i < numPackets; i++) {
-                srcBuff[i] = malloc(packetLen);
+                packetLen[i] = kasumi_test_vectors[0].dataLenInBytes;
+                bitLens[i] = packetLen[i] * 8;
+                bitOffsets[i] = 0;
+                pIV[i] = &iv[i];
+
+                key[i] = malloc(keyLen);
+                if (!key[i]) {
+                        printf("malloc(key):failed !\n");
+                        goto exit;
+                }
+                keySched[i] = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
+                if (!keySched[i]) {
+                        printf("malloc(IMB_KASUMI_KEY_SCHED_SIZE()): "
+                               "failed !\n");
+                        goto exit;
+                }
+                srcBuff[i] = malloc(packetLen[0]);
                 if (!srcBuff[i]) {
                         printf("malloc(srcBuff[%u]:failed !\n", i);
                         goto exit;
                 }
-                dstBuff[i] = malloc(packetLen);
+                dstBuff[i] = malloc(packetLen[0]);
                 if (!dstBuff[i]) {
                         printf("malloc(dstBuff[%u]:failed !\n", i);
                         goto exit;
                 }
 
-                memcpy(key, kasumi_test_vectors[0].key,
+                memcpy(key[i], kasumi_test_vectors[0].key,
                        kasumi_test_vectors[0].keyLenInBytes);
 
                 memcpy(srcBuff[i], kasumi_test_vectors[0].plaintext,
@@ -914,44 +955,60 @@ static int validate_kasumi_f8_3_blocks(MB_MGR *mgr, const unsigned job_api)
 
                 memcpy(&iv[i], kasumi_test_vectors[0].iv,
                        kasumi_test_vectors[0].ivLenInBytes);
-        }
 
-        /* Only 1 key is needed for kasumi 3 blocks */
-        if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key, keySched)) {
-                printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
-                goto exit;
+                /* init key schedule */
+                if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key[0], keySched[i])) {
+                        printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
+                        goto exit;
+                }
         }
 
         /* Test the encrypt */
-        IMB_KASUMI_F8_3_BUFFER(mgr, keySched, iv[0], iv[1], iv[2], srcBuff[0],
-                               srcBuff[0], srcBuff[1], srcBuff[1], srcBuff[2],
-                               srcBuff[2], packetLen);
+        if (job_api)
+                submit_kasumi_f8_jobs(mgr, keySched, (uint64_t **)&pIV,
+                                      (uint8_t **)&srcBuff,
+                                      (uint8_t **)&srcBuff,
+                                      (uint32_t *)&bitLens,
+                                      (uint32_t *)&bitOffsets, ENCRYPT, 3);
+        else
+                IMB_KASUMI_F8_3_BUFFER(mgr, keySched[0], iv[0], iv[1], iv[2],
+                                       srcBuff[0], srcBuff[0], srcBuff[1],
+                                       srcBuff[1], srcBuff[2], srcBuff[2],
+                                       packetLen[0]);
 
         /* Compare the ciphertext with the encrypted plaintext */
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(srcBuff[i], kasumi_test_vectors[0].ciphertext,
-                           packetLen) != 0) {
+                           packetLen[0]) != 0) {
                         printf("kasumi_f8_3_buffer(Enc)  vector:%d\n", i);
-                        hexdump("Actual:", srcBuff[i], packetLen);
+                        hexdump("Actual:", srcBuff[i], packetLen[0]);
                         hexdump("Expected:", kasumi_test_vectors[0].ciphertext,
-                                packetLen);
+                                packetLen[0]);
                         goto exit;
                 }
         }
 
         /* Test the decrypt */
-        IMB_KASUMI_F8_3_BUFFER(mgr, keySched, iv[0], iv[1], iv[2], dstBuff[0],
-                           dstBuff[0], dstBuff[1], dstBuff[1], dstBuff[2],
-                           dstBuff[2], packetLen);
+        if (job_api)
+                submit_kasumi_f8_jobs(mgr, keySched, (uint64_t **)&pIV,
+                                      (uint8_t **)&dstBuff,
+                                      (uint8_t **)&dstBuff,
+                                      (uint32_t *)&bitLens,
+                                      (uint32_t *)&bitOffsets, DECRYPT, 3);
+        else
+                IMB_KASUMI_F8_3_BUFFER(mgr, keySched[0], iv[0], iv[1], iv[2],
+                                       dstBuff[0], dstBuff[0], dstBuff[1],
+                                       dstBuff[1], dstBuff[2], dstBuff[2],
+                                       packetLen[0]);
 
         /* Compare the plaintext with the decrypted ciphertext */
         for (i = 0; i < numPackets; i++) {
                 if (memcmp(dstBuff[i], kasumi_test_vectors[0].plaintext,
-                           packetLen) != 0) {
+                           packetLen[0]) != 0) {
                         printf("kasumi_f8_3_buffer(Dec)  vector:%d\n", i);
-                        hexdump("Actual:", dstBuff[i], packetLen);
+                        hexdump("Actual:", dstBuff[i], packetLen[0]);
                         hexdump("Expected:", kasumi_test_vectors[0].plaintext,
-                                packetLen);
+                                packetLen[0]);
                         goto exit;
                 }
         }
@@ -959,9 +1016,9 @@ static int validate_kasumi_f8_3_blocks(MB_MGR *mgr, const unsigned job_api)
         ret = 0;
         printf("[%s]: PASS.\n", __FUNCTION__);
 exit:
-        free(key);
-        free(keySched);
         for (i = 0; i < numPackets; i++) {
+                free(key[i]);
+                free(keySched[i]);
                 free(srcBuff[i]);
                 free(dstBuff[i]);
         }
