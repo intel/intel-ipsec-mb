@@ -66,7 +66,7 @@ typedef struct cipherbit_test_linear_vector_s {
 
 typedef struct hash_test_vector_s {
         uint8_t input[MAX_DATA_LEN];
-        uint32_t lengthInBits;
+        uint32_t lengthInBytes;
         uint8_t key[MAX_DATA_LEN];
         uint32_t keyLenInBytes;
         uint8_t exp_out[KASUMI_BLOCK_SIZE];

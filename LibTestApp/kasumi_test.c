@@ -61,6 +61,10 @@ static int
 validate_kasumi_f8_4_blocks(struct MB_MGR *mb_mgr, const unsigned job_api);
 static int
 validate_kasumi_f8_n_blocks(struct MB_MGR *mb_mgr, const unsigned job_api);
+static int
+validate_kasumi_f9(MB_MGR *mgr, const unsigned job_api);
+static int
+validate_kasumi_f9_user(MB_MGR *mgr, const unsigned job_api);
 
 /* kasumi validation function pointer table */
 struct {
@@ -80,7 +84,11 @@ struct {
         {validate_kasumi_f8_4_blocks,
          "validate_kasumi_f8_4_blocks"},
         {validate_kasumi_f8_n_blocks,
-         "validate_kasumi_f8_n_blocks"}
+         "validate_kasumi_f8_n_blocks"},
+        {validate_kasumi_f9,
+         "validate_kasumi_f9"},
+        {validate_kasumi_f9_user,
+         "validate_kasumi_f9_user"}
 };
 
 static int membitcmp(const uint8_t *input, const uint8_t *output,
@@ -193,6 +201,39 @@ submit_kasumi_f8_jobs(struct MB_MGR *mb_mgr, kasumi_key_sched_t **keys,
 
         if (jobs_rx != num_jobs) {
                 printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                return -1;
+        }
+
+        return 0;
+}
+
+static inline int
+submit_kasumi_f9_job(struct MB_MGR *mb_mgr, kasumi_key_sched_t *key,
+                     uint8_t *src, uint8_t *tag, const uint32_t len)
+{
+        JOB_AES_HMAC *job;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->chain_order = CIPHER_HASH;
+        job->cipher_mode = NULL_CIPHER;
+        job->src = src;
+        job->u.KASUMI_UIA1._key = key;
+
+        job->hash_start_src_offset_in_bytes = 0;
+        job->msg_len_to_hash_in_bytes = len;
+        job->hash_alg = KASUMI_UIA1;
+        job->auth_tag_output = tag;
+        job->auth_tag_output_len_in_bytes = 4;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        if (job != NULL) {
+                if (job->status != STS_COMPLETED) {
+                        printf("%d error status:%d",
+                               __LINE__, job->status);
+                        return -1;
+                }
+        } else {
+                printf("Expected returned job, but got nothing\n");
                 return -1;
         }
 
@@ -1452,7 +1493,7 @@ exit:
         return ret;
 }
 
-static int validate_kasumi_f9(MB_MGR *mgr)
+static int validate_kasumi_f9(MB_MGR *mgr, const unsigned job_api)
 {
         kasumi_key_sched_t *pKeySched = NULL;
         uint8_t *pKey = NULL;
@@ -1462,6 +1503,9 @@ static int validate_kasumi_f9(MB_MGR *mgr)
         int numKasumiF9TestVectors, i;
         hash_test_vector_t *kasumiF9_test_vectors = NULL;
         int ret = 1;
+
+        printf("Testing IMB_KASUMI_F9_1_BUFFER (%s):\n",
+               job_api ? "Job API" : "Direct API");
 
         kasumiF9_test_vectors = kasumi_f9_vectors;
         numKasumiF9TestVectors = numHashTestVectors[0];
@@ -1484,11 +1528,12 @@ static int validate_kasumi_f9(MB_MGR *mgr)
 
         /* Create the test Data */
         for (i = 0; i < numKasumiF9TestVectors; i++) {
+                uint32_t byteLen = kasumiF9_test_vectors[i].lengthInBytes;
+
                 memcpy(pKey, kasumiF9_test_vectors[i].key,
                        kasumiF9_test_vectors[i].keyLenInBytes);
 
-                memcpy(srcBuff, kasumiF9_test_vectors[i].input,
-                       kasumiF9_test_vectors[i].lengthInBits);
+                memcpy(srcBuff, kasumiF9_test_vectors[i].input, byteLen);
 
                 memcpy(digest, kasumiF9_test_vectors[i].exp_out,
                        KASUMI_DIGEST_SIZE);
@@ -1499,9 +1544,12 @@ static int validate_kasumi_f9(MB_MGR *mgr)
                 }
 
                 /* Test F9 integrity */
-                IMB_KASUMI_F9_1_BUFFER(mgr, pKeySched, srcBuff,
-                                       kasumiF9_test_vectors[i].lengthInBits,
-                                       digest);
+                if (job_api)
+                        submit_kasumi_f9_job(mgr, pKeySched, srcBuff,
+                                             digest, byteLen);
+                else
+                        IMB_KASUMI_F9_1_BUFFER(mgr, pKeySched, srcBuff,
+                                               byteLen, digest);
 
                 /* Compare the digest with the expected in the vectors */
                 if (memcmp(digest, kasumiF9_test_vectors[i].exp_out,
@@ -1523,7 +1571,7 @@ exit:
         return ret;
 }
 
-static int validate_kasumi_f9_user(MB_MGR *mgr)
+static int validate_kasumi_f9_user(MB_MGR *mgr, const unsigned job_api)
 {
         int numKasumiF9IV_TestVectors = 0, i = 0;
         hash_iv_test_vector_t *kasumiF9_vectors = NULL;
@@ -1540,6 +1588,8 @@ static int validate_kasumi_f9_user(MB_MGR *mgr)
         uint8_t digest[KASUMI_DIGEST_SIZE];
         uint32_t direction;
         int ret = 1;
+
+        (void)job_api; /* unused parameter */
 
         if (!numKasumiF9IV_TestVectors) {
                 printf("No Kasumi vectors found !\n");
@@ -1626,14 +1676,6 @@ int kasumi_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
                 }
         }
 
-        if (validate_kasumi_f9(mb_mgr)) {
-                printf("validate_kasumi_f9: FAIL\n");
-                status = 1;
-        }
-        if (validate_kasumi_f9_user(mb_mgr)) {
-                printf("validate_kasumi_f9_user: FAIL\n");
-                status = 1;
-        }
         if (!status)
                 printf("ALL TESTS PASSED.\n");
         else
