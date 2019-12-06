@@ -100,6 +100,7 @@
 #define CIPHER_MODES_PON 2	/* PON, NO_CTR PON */
 #define CIPHER_MODES_ZUC 1	/* ZUC-EEA3 */
 #define CIPHER_MODES_SNOW3G 1   /* SNOW3G-UEA2 */
+#define CIPHER_MODES_KASUMI 1   /* KASUMI-UEA1 */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 10	/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
                                    MD5, NULL_HASH, CMAC, CMAC_BITLEN */
@@ -112,6 +113,7 @@
 #define HASH_ALGS_PON 1	        /* CRC32/BIP for PON */
 #define HASH_ALGS_ZUC 1	        /* ZUC-EIA3 */
 #define HASH_ALGS_SNOW3G 1      /* SNOW3G-UIA2 */
+#define HASH_ALGS_KASUMI 1      /* KASUMI-UIA1 */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
 #define KEY_SIZES_DOCSIS_AES 1	/* 16 */
 #define KEY_SIZES_DOCSIS_DES 1	/* 8 */
@@ -122,6 +124,7 @@
 #define KEY_SIZES_PON 1		/* 16 */
 #define KEY_SIZES_ZUC 1         /* 16 */
 #define KEY_SIZES_SNOW3G 1      /* 16 */
+#define KEY_SIZES_KASUMI 1      /* 16 */
 
 #define IA32_MSR_FIXED_CTR_CTRL      0x38D
 #define IA32_MSR_PERF_GLOBAL_CTR     0x38F
@@ -151,6 +154,8 @@
                                 HASH_ALGS_ZUC * KEY_SIZES_ZUC)
 #define VARIANTS_PER_ARCH_SNOW3G (CIPHER_MODES_SNOW3G * DIRECTIONS *    \
                                   HASH_ALGS_SNOW3G * KEY_SIZES_SNOW3G)
+#define VARIANTS_PER_ARCH_KASUMI (CIPHER_MODES_KASUMI * DIRECTIONS *    \
+                                  HASH_ALGS_KASUMI * KEY_SIZES_KASUMI)
 enum arch_type_e {
         ARCH_SSE = 0,
         ARCH_AVX,
@@ -170,6 +175,7 @@ enum test_type_e {
         TTYPE_PON,
         TTYPE_ZUC,
         TTYPE_SNOW3G,
+        TTYPE_KASUMI,
         TTYPE_CUSTOM,
         NUM_TTYPES
 };
@@ -196,6 +202,7 @@ enum test_cipher_mode_e {
         TEST_PON_NO_CNTR,
         TEST_ZUC_EEA3,
         TEST_SNOW3G_UEA2,
+        TEST_KASUMI_UEA1,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -219,6 +226,7 @@ enum test_hash_alg_e {
         TEST_PON_CRC_BIP,
         TEST_ZUC_EIA3,
         TEST_SNOW3G_UIA2,
+        TEST_KASUMI_UIA1,
         TEST_NUM_HASH_TESTS
 };
 
@@ -444,6 +452,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
+                .name = "kasumi-uea1",
+                .values.job_params = {
+                        .cipher_mode = TEST_KASUMI_UEA1,
+                        .aes_key_size = 16
+                }
+        },
+        {
                 .name = "null",
                 .values.job_params = {
                         .cipher_mode = TEST_NULL_CIPHER,
@@ -531,6 +546,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_SNOW3G_UIA2,
                 }
         },
+        {
+                .name = "kasumi-uia1",
+                .values.job_params = {
+                        .hash_alg = TEST_KASUMI_UIA1,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -610,7 +631,7 @@ enum cache_type_e {
 
 enum cache_type_e cache_type = WARM;
 
-const uint32_t auth_tag_length_bytes[22] = {
+const uint32_t auth_tag_length_bytes[] = {
                 12, /* SHA1 */
                 14, /* SHA_224 */
                 16, /* SHA_256 */
@@ -635,6 +656,7 @@ const uint32_t auth_tag_length_bytes[22] = {
                 8,  /* PON */
                 4,  /* ZUC-EIA3 */
                 4,  /* SNOW3G-UIA2 */
+                4,  /* KASUMI-UIA1 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1136,6 +1158,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_SNOW3G_UEA2:
                 c_mode = SNOW3G_UEA2_BITLEN;
                 break;
+        case TEST_KASUMI_UEA1:
+                c_mode = KASUMI_UEA1_BITLEN;
+                break;
         default:
                 break;
         }
@@ -1245,6 +1270,12 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.SNOW3G_UIA2._key = k3;
                 job_template.u.SNOW3G_UIA2._iv = (uint8_t *)&auth_iv;
                 break;
+        case TEST_KASUMI_UIA1:
+                job_template.hash_alg = KASUMI_UIA1;
+                job_template.msg_len_to_hash_in_bytes =
+                        job_template.msg_len_to_hash_in_bytes;
+                job_template.u.KASUMI_UIA1._key = k3;
+                break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
                 job_template.u.HMAC._hashed_auth_key_xor_ipad =
@@ -1332,6 +1363,12 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.cipher_start_src_offset_in_bits = 0;
                 job_template.aes_key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 16;
+        } else if (job_template.cipher_mode == KASUMI_UEA1_BITLEN) {
+                job_template.msg_len_to_cipher_in_bits =
+                        (job_template.msg_len_to_cipher_in_bytes * 8);
+                job_template.cipher_start_src_offset_in_bits = 0;
+                job_template.aes_key_len_in_bytes = 16;
+                job_template.iv_len_in_bytes = 8;
         }
 
         if (job_template.hash_alg == PON_CRC_BIP) {
@@ -1747,6 +1784,12 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 c_start = TEST_SNOW3G_UEA2;
                 c_end = TEST_SNOW3G_UEA2;
                 break;
+        case TTYPE_KASUMI:
+                h_start = TEST_KASUMI_UIA1;
+                h_end = TEST_KASUMI_UIA1;
+                c_start = TEST_KASUMI_UEA1;
+                c_end = TEST_KASUMI_UEA1;
+                break;
         case TTYPE_CUSTOM:
                 h_start = params->hash_alg;
                 h_end = params->hash_alg;
@@ -1806,7 +1849,8 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
             params->test_type == TTYPE_PON ||
             params->test_type == TTYPE_AES_CCM ||
             params->test_type == TTYPE_ZUC ||
-            params->test_type == TTYPE_SNOW3G)
+            params->test_type == TTYPE_SNOW3G ||
+            params->test_type == TTYPE_KASUMI)
                 limit = AES_128_BYTES;
 
         switch (arch) {
@@ -1866,7 +1910,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4", "ECB",
                 "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES", "DOCDES+4",
                 "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR", "ZUC_EEA3",
-                "SNOW3G_UEA2_BITLEN"
+                "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
@@ -1875,7 +1919,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
                 "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "CRC32",
                 "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN",
-                "SNOW3G_UIA2_BITLEN"
+                "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
@@ -2035,6 +2079,10 @@ run_tests(void *arg)
                         variants_per_arch = VARIANTS_PER_ARCH_SNOW3G;
                         max_arch = NUM_ARCHS;
                         break;
+                case TTYPE_KASUMI:
+                        variants_per_arch = VARIANTS_PER_ARCH_KASUMI;
+                        max_arch = NUM_ARCHS;
+                        break;
                 case TTYPE_CUSTOM:
                         variants_per_arch = 1;
                         max_arch = NUM_ARCHS;
@@ -2171,6 +2219,7 @@ static void usage(void)
                 "--no-pon: do not run PON cipher perf tests\n"
                 "--no-zuc: do not run ZUC perf tests\n"
                 "--no-snow3g: do not run SNOW3G perf tests\n"
+                "--no-kasumi: do not run KASUMI perf tests\n"
                 "--gcm-job-api: use JOB API for GCM perf tests"
                 " (raw GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run"
@@ -2452,6 +2501,8 @@ int main(int argc, char *argv[])
                         test_types[TTYPE_ZUC] = 0;
                 } else if (strcmp(argv[i], "--no-snow3g") == 0) {
                         test_types[TTYPE_SNOW3G] = 0;
+                } else if (strcmp(argv[i], "--no-kasumi") == 0) {
+                        test_types[TTYPE_KASUMI] = 0;
                 } else if (strcmp(argv[i], "--gcm-job-api") == 0) {
                         use_gcm_job_api = 1;
                 } else if (strcmp(argv[i], "--quick") == 0) {
