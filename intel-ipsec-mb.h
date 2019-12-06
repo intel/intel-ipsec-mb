@@ -239,6 +239,7 @@ typedef enum {
         ZUC_EIA3_BITLEN, /* 128-EIA3/NIA3 (3GPP) */
         DOCSIS_CRC32,    /* with DOCSIS_SEC_BPI only */
         SNOW3G_UIA2_BITLEN, /* 128-UIA2 (3GPP) */
+        KASUMI_UIA1,     /* 128-UIA1 (3GPP) */
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -350,6 +351,10 @@ typedef struct JOB_AES_HMAC {
                         const void *_key;
                         const void *_iv;
                 } SNOW3G_UIA2;
+                struct _KASUMI_UIA1_specific_fields {
+                        /* 16-byte aligned pointers */
+                        const void *_key;
+                } KASUMI_UIA1;
         } u;
 
         JOB_STS status;

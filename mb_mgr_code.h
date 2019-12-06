@@ -638,6 +638,14 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                                job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
+        case KASUMI_UIA1:
+                IMB_KASUMI_F9_1_BUFFER(state, (const kasumi_key_sched_t *)
+                               job->u.KASUMI_UIA1._key,
+                               job->src + job->hash_start_src_offset_in_bytes,
+                               (const uint32_t) job->msg_len_to_hash_in_bytes,
+                               job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
         default: /* assume GCM, PON_CRC_BIP or NULL_HASH */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -738,6 +746,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 16, /* AES_CMAC */
                 4, /* ZUC_EIA3_BITLEN */
                 4, /* SNOW3G_UIA2_BITLEN */
+                4, /* KASUMI_UIA1 */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -763,6 +772,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 4,  /* AES_CMAC 3GPP */
                 4, /* ZUC_EIA3_BITLEN */
                 4, /* SNOW3G_UIA2_BITLEN */
+                4, /* KASUMI_UIA1 */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1598,6 +1608,26 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 if (job->u.SNOW3G_UIA2._iv == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                break;
+        case KASUMI_UIA1:
+                if (job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if ((job->msg_len_to_hash_in_bytes == 0) ||
+                    (job->msg_len_to_hash_in_bytes >
+                     (KASUMI_MAX_LEN / BYTESIZE))) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->u.KASUMI_UIA1._key == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
