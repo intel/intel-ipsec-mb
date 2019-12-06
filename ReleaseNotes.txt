@@ -10,6 +10,8 @@ Library
 - SNOW3G-UEA2 and SNOW3G-UIA2 algorithms added in job API (using cipher type
   SNOW3G_UEA2_BITLEN and hash type SNOW3G_UIA2_BITLEN)
 - AVX512 implementation of stitched DOCSIS cipher with CRC32 calculations
+- KASUMI-UEA1 and KASUMI-UIA1 algorithms added in job API (using cipher type
+  KASUMI_UEA1_BITLEN and hash type KASUMI_UIA2)
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through
@@ -17,11 +19,14 @@ LibTestApp
 - Extended SNOW3G tests to validate SNOW3G-UEA2 and SNOW3G-UIA2 algorithms
   through job API
 - Extended DOCSIS tests with combined CRC32 calculation cases
+- Extended KASUMI tests to validate KASUMI-UEA1 and KASUMI-UIA1 algorithms
+  through job API
 
 LibPerfApp
 - Added support for ZUC-EEA3 and ZUC-EIA3 algorithms
 - Added support for SNOW3G-UEA2 and SNOW3G-UIA2 algorithms
 - Added support for DOCSIS combined with CRC32
+- Added support for KASUMI-UEA1 and KASUMI-UIA1 algorithms
 
 v0.53 October 2019
 ========================================================================
