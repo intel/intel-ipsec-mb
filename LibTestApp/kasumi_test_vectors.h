@@ -29,7 +29,7 @@
 #ifndef __KASUMI_TEST_VECTORS_H__
 #define __KASUMI_TEST_VECTORS_H__
 
-#define MAX_DATA_LEN (3048)
+#define MAX_DATA_LEN (2500)
 #define MAX_KEY_LEN (32)
 #define MAX_IV_LEN (16)
 #define NUM_SUPPORTED_BUFFERS (16)
