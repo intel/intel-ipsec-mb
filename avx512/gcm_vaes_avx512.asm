@@ -4267,6 +4267,55 @@ exit_dec:
         FUNC_RESTORE
         ret
 
+%ifdef GCM128_MODE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   ghash_vaes_avx512
+;        const struct gcm_key_data *key_data,
+;        const void   *in,
+;        const u64    in_len,
+;        void         *tag,
+;        const u64    tag_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(ghash_vaes_avx512,function,)
+ghash_vaes_avx512:
+
+        FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_ghash
+
+        ;; Check in != NULL
+        cmp     arg2, 0
+        jz      exit_ghash
+
+        ;; Check in_len != 0
+        cmp     arg3, 0
+        jz      exit_ghash
+
+        ;; Check tag != NULL
+        cmp     arg4, 0
+        jz      exit_ghash
+
+        ;; Check tag_len != 0
+        cmp     arg5, 0
+        jz      exit_ghash
+%endif
+
+        CALC_AAD_HASH arg2, arg3, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
+                      zmm6, zmm7, zmm8, zmm9, zmm10, r10, r11, r12, k1
+
+        vpshufb xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
+
+        simd_store_avx arg4, xmm0, arg5, r12, rax
+
+exit_ghash:
+        FUNC_RESTORE
+
+        ret
+%endif
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif

@@ -36,6 +36,7 @@
 #include "include/kasumi_internal.h"
 #include "include/zuc_internal.h"
 #include "include/snow3g.h"
+#include "include/gcm.h"
 
 #include "save_xmms.h"
 #include "asm.h"
@@ -835,6 +836,7 @@ init_mb_mgr_sse(MB_MGR *state)
         state->gcm128_pre          = aes_gcm_pre_128_sse;
         state->gcm192_pre          = aes_gcm_pre_192_sse;
         state->gcm256_pre          = aes_gcm_pre_256_sse;
+        state->ghash               = ghash_sse;
 #endif
 }
 

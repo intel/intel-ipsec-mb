@@ -36,6 +36,7 @@
 #include "include/kasumi_internal.h"
 #include "include/zuc_internal.h"
 #include "include/snow3g.h"
+#include "include/gcm.h"
 
 #include "save_xmms.h"
 #include "asm.h"
@@ -1105,6 +1106,7 @@ init_mb_mgr_avx512(MB_MGR *state)
                 state->gcm128_pre          = aes_gcm_pre_128_vaes_avx512;
                 state->gcm192_pre          = aes_gcm_pre_192_vaes_avx512;
                 state->gcm256_pre          = aes_gcm_pre_256_vaes_avx512;
+                state->ghash               = ghash_vaes_avx512;
 
                 submit_job_aes_gcm_enc_avx512 = vaes_submit_gcm_enc_avx512;
                 submit_job_aes_gcm_dec_avx512 = vaes_submit_gcm_dec_avx512;
@@ -1136,6 +1138,7 @@ init_mb_mgr_avx512(MB_MGR *state)
                 state->gcm128_pre          = aes_gcm_pre_128_avx512;
                 state->gcm192_pre          = aes_gcm_pre_192_avx512;
                 state->gcm256_pre          = aes_gcm_pre_256_avx512;
+                state->ghash               = ghash_avx512;
         }
 #endif
 }

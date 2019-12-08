@@ -749,6 +749,9 @@ typedef void (*aes_gcm_enc_dec_finalize_t)(const struct gcm_key_data *,
 typedef void (*aes_gcm_precomp_t)(struct gcm_key_data *);
 typedef void (*aes_gcm_pre_t)(const void *, struct gcm_key_data *);
 
+typedef void (*ghash_t)(struct gcm_key_data *, const void *,
+                        const uint64_t, void *, const uint64_t);
+
 typedef void (*zuc_eea3_1_buffer_t)(const void *, const void *, const void *,
                                     void *, const uint32_t);
 
@@ -985,6 +988,7 @@ typedef struct MB_MGR {
         aes_gcm_pre_t           gcm128_pre;
         aes_gcm_pre_t           gcm192_pre;
         aes_gcm_pre_t           gcm256_pre;
+        ghash_t                 ghash;
 
         zuc_eea3_1_buffer_t eea3_1_buffer;
         zuc_eea3_4_buffer_t eea3_4_buffer;
@@ -1257,6 +1261,9 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
         ((_mgr)->gcm192_pre((_key_in), (_key_exp)))
 #define IMB_AES256_GCM_PRE(_mgr, _key_in, _key_exp)     \
         ((_mgr)->gcm256_pre((_key_in), (_key_exp)))
+
+#define IMB_GHASH(_mgr, _key, _in, _in_len, _out, _out_len) \
+        ((_mgr)->ghash((_key), (_in), (_in_len), (_out), (_out_len)))
 
 /* ZUC EEA3/EIA3 functions */
 

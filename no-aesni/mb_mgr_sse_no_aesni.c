@@ -759,6 +759,7 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         state->gcm128_pre          = aes_gcm_pre_128_sse_no_aesni;
         state->gcm192_pre          = aes_gcm_pre_192_sse_no_aesni;
         state->gcm256_pre          = aes_gcm_pre_256_sse_no_aesni;
+        state->ghash               = ghash_sse;
 #endif
 }
 

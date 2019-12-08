@@ -396,3 +396,8 @@ EXPORTS
     kasumi_init_f9_key_sched_sse                @370
     kasumi_key_sched_size_avx                   @371
     kasumi_key_sched_size_sse                   @372
+    ghash_sse                                   @373
+    ghash_avx_gen2                              @374
+    ghash_avx_gen4                              @375
+    ghash_avx512                                @376
+    ghash_vaes_avx512                           @377

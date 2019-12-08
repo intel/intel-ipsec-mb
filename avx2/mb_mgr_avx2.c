@@ -36,6 +36,7 @@
 #include "include/kasumi_internal.h"
 #include "include/zuc_internal.h"
 #include "include/snow3g.h"
+#include "include/gcm.h"
 
 #include "save_xmms.h"
 #include "asm.h"
@@ -701,6 +702,7 @@ init_mb_mgr_avx2(MB_MGR *state)
         state->gcm128_pre          = aes_gcm_pre_128_avx_gen4;
         state->gcm192_pre          = aes_gcm_pre_192_avx_gen4;
         state->gcm256_pre          = aes_gcm_pre_256_avx_gen4;
+        state->ghash               = ghash_avx_gen4;
 #endif
 }
 

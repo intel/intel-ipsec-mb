@@ -2581,6 +2581,57 @@ exit_dec:
 
 	ret
 
+%ifdef GCM128_MODE
+%ifndef NO_AESNI
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   ghash_sse
+;        const struct gcm_key_data *key_data,
+;        const void   *in,
+;        const u64    in_len,
+;        void         *tag,
+;        const u64    tag_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(ghash_sse,function,)
+ghash_sse:
+
+        FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_ghash
+
+        ;; Check in != NULL
+        cmp     arg2, 0
+        jz      exit_ghash
+
+        ;; Check in_len != 0
+        cmp     arg3, 0
+        jz      exit_ghash
+
+        ;; Check tag != NULL
+        cmp     arg4, 0
+        jz      exit_ghash
+
+        ;; Check tag_len != 0
+        cmp     arg5, 0
+        jz      exit_ghash
+%endif
+
+        CALC_AAD_HASH arg2, arg3, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
+                      r10, r11, r12, r13, rax
+
+        pshufb  xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
+
+        simd_store_sse arg4, xmm0, arg5, r12, rax
+
+exit_ghash:
+        FUNC_RESTORE
+
+        ret
+%endif ;; !NO_AESNI
+%endif ;; GCM128_MODE
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif
