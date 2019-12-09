@@ -413,8 +413,11 @@ test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen,
                         printf("Found: 0x%02X (last byte)\n",
                                0xFF & out[bitlen / 8]);
                         ret = -1;
-                } else
+                }
+#ifdef DEBUG
+                else
                         printf("%s : PASS\n", err_msg);
+#endif
         }
         fflush(stdout);
 
@@ -654,9 +657,12 @@ int validate_zuc_EIA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
                                      ZUC_DIGEST_LEN);
                         byte_hexdump("Found", pDstData, ZUC_DIGEST_LEN);
                         ret = retTmp;
-                } else
+                }
+#ifdef DEBUG
+                else
                         printf("Validate ZUC 1 block  test %d (Int): PASS\n",
                                i + 1);
+#endif
                 fflush(stdout);
         }
         return ret;
@@ -683,8 +689,10 @@ int validate_zuc_algorithm(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
                 ret = memcmp(pDstData, swapBytes.sbb, 8);
                 if (ret)
                         printf("ZUC 1 algorithm test %d: FAIL\n", i);
+#ifdef DEBUG
                 else
                         printf("ZUC 1 algorithm test %d: PASS\n", i);
+#endif
         }
         return ret;
 };
