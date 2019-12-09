@@ -1366,13 +1366,13 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 1) < 0)
                         goto exit;
 
-                if (prepare_keys(enc_mb_mgr, dec_keys, key, params, 1) < 0)
+                if (prepare_keys(dec_mb_mgr, dec_keys, key, params, 1) < 0)
                         goto exit;
         } else {
                 if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 0) < 0)
                         goto exit;
 
-                if (prepare_keys(enc_mb_mgr, dec_keys, key, params, 0) < 0)
+                if (prepare_keys(dec_mb_mgr, dec_keys, key, params, 0) < 0)
                         goto exit;
         }
 
