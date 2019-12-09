@@ -420,7 +420,7 @@ section .text
 ;; =====================================================================
 ;; CRC32 computation round
 ;; =====================================================================
-%macro CRC32_ROUND 15
+%macro CRC32_ROUND 16
 %define %%FIRST         %1      ; [in] "first_possible" or "no_first"
 %define %%LAST          %2      ; [in] "last_possible" or "no_last"
 %define %%ARG           %3      ; [in] GP with pointer to OOO manager / arguments
@@ -431,11 +431,12 @@ section .text
 %define %%XCRC_MUL      %8      ; [clobbered] temporary XMM (xmm0-15)
 %define %%XCRC_TMP      %9      ; [clobbered] temporary XMM (xmm0-15)
 %define %%XCRC_TMP2     %10     ; [clobbered] temporary XMM (xmm0-15)
-%define %%IN            %11     ; [in] GP with input data pointer (last partial only)
+%define %%IN            %11     ; [clobbered] temporary GPR (last partial only)
 %define %%IDX           %12     ; [in] GP with data offset (last partial only)
-%define %%GT8           %13     ; [clobbered] temporary GPR
-%define %%GT9           %14     ; [clobbered] temporary GPR
-%define %%CRC32         %15     ; [clobbered] temporary GPR
+%define %%OFFS          %13     ; [in] numerical offset (last partial only)
+%define %%GT8           %14     ; [clobbered] temporary GPR (last partial only)
+%define %%GT9           %15     ; [clobbered] temporary GPR (last partial only)
+%define %%CRC32         %16     ; [clobbered] temporary GPR (last partial only)
 
         cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 1
         je              %%_crc_lane_done
@@ -475,7 +476,8 @@ section .text
         movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + %%LANEID*2] ; GT9 = bytes_to_crc
         lea             %%GT8, [rel pshufb_shf_table]
         vmovdqu64       %%XCRC_TMP, [%%GT8 + %%GT9]
-        lea             %%GT8, [%%IN + %%IDX]
+        mov             %%IN, [%%ARG + _aesarg_in + 8*%%LANEID]
+        lea             %%GT8, [%%IN + %%IDX + %%OFFS]
         vmovdqu64       %%XCRC_DAT, [%%GT8 - 16 + %%GT9]  ; XCRC_DAT = data for CRC
         vmovdqa64       %%XCRC_TMP2, %%XCRC_VAL
         vpshufb         %%XCRC_VAL, %%XCRC_TMP  ; top bytes_to_crc with LSB XCRC_VAL
@@ -492,11 +494,11 @@ section .text
 
         ;; write back CRC value into source buffer
         movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + %%LANEID*2]
-        lea             %%GT8, [%%IN + %%IDX]
+        lea             %%GT8, [%%IN + %%IDX + %%OFFS]
         mov             [%%GT8 + %%GT9], DWORD(%%CRC32)
 
-        ;; reload the data for cipher (includes just computed CRC)
-        vmovdqu64       %%XDATA, [%%IN + %%IDX]
+        ;; reload the data for cipher (includes just computed CRC) - @todo store to load
+        vmovdqu64       %%XDATA, [%%IN + %%IDX + %%OFFS]
 
         mov             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 0
         ;; mark as done
@@ -527,7 +529,7 @@ section .text
 ;; =====================================================================
 %macro AES128_CBC_ENC_CRC32_PARELLEL 47
 %define %%ARG   %1      ; [in/out] GPR with pointer to arguments structure (updated on output)
-%define %%LEN   %2      ; [in] number of bytes to be encrypted on all lanes
+%define %%LEN   %2      ; [in/clobbered] number of bytes to be encrypted on all lanes
 %define %%GT0   %3      ; [clobbered] GP register
 %define %%GT1   %4      ; [clobbered] GP register
 %define %%GT2   %5      ; [clobbered] GP register
@@ -601,6 +603,7 @@ section .text
 %define %%OUT6  %%GT6
 %define %%OUT7  %%GT7
 
+%define %%GP1   %%GT10
 %define %%CRC32 %%GT11
 %define %%IDX   %%GT12
 
@@ -618,6 +621,7 @@ section .text
 %define %%XCRC_DAT XWORD(%%ZT10)
 %define %%XCRC_VAL XWORD(%%ZT11)
 %define %%XCRC_TMP2 XWORD(%%ZT12)
+%define %%XTMP  %%XCRC_TMP2
 
 %define %%XDATA0 XWORD(%%ZT16)
 %define %%XDATA1 XWORD(%%ZT17)
@@ -631,8 +635,16 @@ section .text
 %define %%ZIN   %%ZT24  ; 8 x ptr
 %define %%ZOUT  %%ZT25  ; 8 x ptr
 %define %%ZKEYS %%ZT26  ; 8 x ptr
-%define %%ZTMP  %%ZT27
-%define %%XTMP  XWORD(%%ZTMP)
+
+%define %%XDATB0 XWORD(%%ZT27)
+%define %%XDATB1 XWORD(%%ZT28)
+%define %%XDATB2 XWORD(%%ZT29)
+%define %%XDATB3 XWORD(%%ZT30)
+%define %%XDATB4 XWORD(%%ZT31)
+%define %%XDATB5 XWORD(%%ZT13)
+%define %%XDATB6 XWORD(%%ZT14)
+%define %%XDATB7 XWORD(%%ZT15)
+
 
 	xor	        %%IDX, %%IDX
 
@@ -651,9 +663,11 @@ section .text
 	vmovdqa64       %%XCIPH6, [%%ARG + _aesarg_IV + 16*6]
 	vmovdqa64       %%XCIPH7, [%%ARG + _aesarg_IV + 16*7]
 
-%%_main_enc_loop:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; load plain text
+        ;; Pipeline start
+        ;; - load plain text (one block from each lane)
+        ;; - compute CRC32 on loaded text
+
         vmovq           %%IN0, XWORD(%%ZIN)
         vpextrq         %%IN1, XWORD(%%ZIN), 1
         vextracti32x4   %%XTMP, %%ZIN, 1
@@ -675,14 +689,281 @@ section .text
         vmovdqu64	%%XDATA6, [%%IN6 + %%IDX]
         vmovdqu64	%%XDATA7, [%%IN7 + %%IDX]
 
+        ;; CRC32 rounds on all lanes - first and last cases are possible
 %assign crc_lane 0
 %rep 8
         CRC32_ROUND first_possible, last_possible, %%ARG, crc_lane, \
                     APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
                     %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                    APPEND(%%IN, crc_lane), %%IDX, %%GT8, %%GT9, %%CRC32
+                    %%GP1, %%IDX, 0, %%GT8, %%GT9, %%CRC32
 %assign crc_lane (crc_lane + 1)
 %endrep
+
+        ;; check if only 16 bytes in this execution
+        sub             %%LEN, 16
+        je              %%_encrypt_the_last_block
+
+%%_main_enc_loop:
+        ;; if 16 bytes lest left (for CRC) then go to the code variant where CRC last block case is checked
+        cmp             %%LEN, 16
+        je              %%_encrypt_and_crc_the_last_block
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; Load plain text for CRC
+        ;; - one block from each lane
+        ;; - one block ahead of cipher
+
+        vmovq           %%IN0, XWORD(%%ZIN)
+        vpextrq         %%IN1, XWORD(%%ZIN), 1
+        vextracti32x4   %%XTMP, %%ZIN, 1
+        vmovq           %%IN2, %%XTMP
+        vpextrq         %%IN3, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZIN, 2
+        vmovq           %%IN4, %%XTMP
+        vpextrq         %%IN5, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZIN, 3
+        vmovq           %%IN6, %%XTMP
+        vpextrq         %%IN7, %%XTMP, 1
+
+        vmovdqu64	%%XDATB0, [%%IN0 + %%IDX + 16]
+        vmovdqu64	%%XDATB1, [%%IN1 + %%IDX + 16]
+        vmovdqu64	%%XDATB2, [%%IN2 + %%IDX + 16]
+        vmovdqu64	%%XDATB3, [%%IN3 + %%IDX + 16]
+        vmovdqu64	%%XDATB4, [%%IN4 + %%IDX + 16]
+        vmovdqu64	%%XDATB5, [%%IN5 + %%IDX + 16]
+        vmovdqu64	%%XDATB6, [%%IN6 + %%IDX + 16]
+        vmovdqu64	%%XDATB7, [%%IN7 + %%IDX + 16]
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; - load key pointers to performs AES rounds
+        ;; - use ternary logic for: plain-text XOR IV and AES ARK(0)
+        ;;      - IV = XCIPHx
+        ;;      - plain-text = XDATAx
+        ;;      - ARK = [%%KEYSx + 16*0]
+        vmovq           %%KEYS0, XWORD(%%ZKEYS)
+        vpextrq         %%KEYS1, XWORD(%%ZKEYS), 1
+        vextracti32x4   %%XTMP, %%ZKEYS, 1
+        vmovq           %%KEYS2, %%XTMP
+        vpextrq         %%KEYS3, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZKEYS, 2
+        vmovq           %%KEYS4, %%XTMP
+        vpextrq         %%KEYS5, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZKEYS, 3
+        vmovq           %%KEYS6, %%XTMP
+        vpextrq         %%KEYS7, %%XTMP, 1
+
+        vpternlogq      %%XCIPH0, %%XDATA0, [%%KEYS0 + 16*0], 0x96
+        vpternlogq      %%XCIPH1, %%XDATA1, [%%KEYS1 + 16*0], 0x96
+        vpternlogq      %%XCIPH2, %%XDATA2, [%%KEYS2 + 16*0], 0x96
+        vpternlogq      %%XCIPH3, %%XDATA3, [%%KEYS3 + 16*0], 0x96
+        vpternlogq      %%XCIPH4, %%XDATA4, [%%KEYS4 + 16*0], 0x96
+        vpternlogq      %%XCIPH5, %%XDATA5, [%%KEYS5 + 16*0], 0x96
+        vpternlogq      %%XCIPH6, %%XDATA6, [%%KEYS6 + 16*0], 0x96
+        vpternlogq      %%XCIPH7, %%XDATA7, [%%KEYS7 + 16*0], 0x96
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; AES ROUNDS 1 to 9
+%assign crc_lane 0
+%assign i 1
+%rep 9
+	vaesenc		%%XCIPH0, [%%KEYS0 + 16*i]
+	vaesenc		%%XCIPH1, [%%KEYS1 + 16*i]
+	vaesenc		%%XCIPH2, [%%KEYS2 + 16*i]
+	vaesenc		%%XCIPH3, [%%KEYS3 + 16*i]
+	vaesenc		%%XCIPH4, [%%KEYS4 + 16*i]
+	vaesenc		%%XCIPH5, [%%KEYS5 + 16*i]
+	vaesenc		%%XCIPH6, [%%KEYS6 + 16*i]
+	vaesenc		%%XCIPH7, [%%KEYS7 + 16*i]
+
+%if crc_lane < 8
+        CRC32_ROUND no_first, no_last, %%ARG, crc_lane, \
+                    APPEND(%%XDATB, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
+                    %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+                    no_in, no_idx, 0, no_gpr, no_gpr, no_gpr
+%endif
+
+%assign i (i + 1)
+%assign crc_lane (crc_lane + 1)
+%endrep
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; AES ROUNDS 10
+	vaesenclast	%%XCIPH0, [%%KEYS0 + 16*10]
+	vaesenclast	%%XCIPH1, [%%KEYS1 + 16*10]
+	vaesenclast	%%XCIPH2, [%%KEYS2 + 16*10]
+	vaesenclast	%%XCIPH3, [%%KEYS3 + 16*10]
+	vaesenclast	%%XCIPH4, [%%KEYS4 + 16*10]
+	vaesenclast	%%XCIPH5, [%%KEYS5 + 16*10]
+	vaesenclast	%%XCIPH6, [%%KEYS6 + 16*10]
+	vaesenclast	%%XCIPH7, [%%KEYS7 + 16*10]
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; store cipher text
+        ;; - XCIPHx is an IV for the next block
+
+        vmovq           %%OUT0, XWORD(%%ZOUT)
+        vpextrq         %%OUT1, XWORD(%%ZOUT), 1
+        vextracti32x4   %%XTMP, %%ZOUT, 1
+        vmovq           %%OUT2, %%XTMP
+        vpextrq         %%OUT3, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZOUT, 2
+        vmovq           %%OUT4, %%XTMP
+        vpextrq         %%OUT5, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZOUT, 3
+        vmovq           %%OUT6, %%XTMP
+        vpextrq         %%OUT7, %%XTMP, 1
+
+        vmovdqu64	[%%OUT0 + %%IDX], %%XCIPH0
+        vmovdqu64	[%%OUT1 + %%IDX], %%XCIPH1
+        vmovdqu64	[%%OUT2 + %%IDX], %%XCIPH2
+        vmovdqu64	[%%OUT3 + %%IDX], %%XCIPH3
+        vmovdqu64	[%%OUT4 + %%IDX], %%XCIPH4
+        vmovdqu64	[%%OUT5 + %%IDX], %%XCIPH5
+        vmovdqu64	[%%OUT6 + %%IDX], %%XCIPH6
+        vmovdqu64	[%%OUT7 + %%IDX], %%XCIPH7
+
+        vmovdqa64       %%XDATA0, %%XDATB0
+        vmovdqa64       %%XDATA1, %%XDATB1
+        vmovdqa64       %%XDATA2, %%XDATB2
+        vmovdqa64       %%XDATA3, %%XDATB3
+        vmovdqa64       %%XDATA4, %%XDATB4
+        vmovdqa64       %%XDATA5, %%XDATB5
+        vmovdqa64       %%XDATA6, %%XDATB6
+        vmovdqa64       %%XDATA7, %%XDATB7
+
+        add             %%IDX, 16
+        sub             %%LEN, 16
+        jmp             %%_main_enc_loop
+
+%%_encrypt_and_crc_the_last_block:
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; Load plain text for CRC
+        ;; - one block from each lane
+        ;; - one block ahead of cipher
+
+        vmovq           %%IN0, XWORD(%%ZIN)
+        vpextrq         %%IN1, XWORD(%%ZIN), 1
+        vextracti32x4   %%XTMP, %%ZIN, 1
+        vmovq           %%IN2, %%XTMP
+        vpextrq         %%IN3, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZIN, 2
+        vmovq           %%IN4, %%XTMP
+        vpextrq         %%IN5, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZIN, 3
+        vmovq           %%IN6, %%XTMP
+        vpextrq         %%IN7, %%XTMP, 1
+
+        vmovdqu64	%%XDATB0, [%%IN0 + %%IDX + 16]
+        vmovdqu64	%%XDATB1, [%%IN1 + %%IDX + 16]
+        vmovdqu64	%%XDATB2, [%%IN2 + %%IDX + 16]
+        vmovdqu64	%%XDATB3, [%%IN3 + %%IDX + 16]
+        vmovdqu64	%%XDATB4, [%%IN4 + %%IDX + 16]
+        vmovdqu64	%%XDATB5, [%%IN5 + %%IDX + 16]
+        vmovdqu64	%%XDATB6, [%%IN6 + %%IDX + 16]
+        vmovdqu64	%%XDATB7, [%%IN7 + %%IDX + 16]
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; - load key pointers to performs AES rounds
+        ;; - use ternary logic for: plain-text XOR IV and AES ARK(0)
+        ;;      - IV = XCIPHx
+        ;;      - plain-text = XDATAx
+        ;;      - ARK = [%%KEYSx + 16*0]
+        vmovq           %%KEYS0, XWORD(%%ZKEYS)
+        vpextrq         %%KEYS1, XWORD(%%ZKEYS), 1
+        vextracti32x4   %%XTMP, %%ZKEYS, 1
+        vmovq           %%KEYS2, %%XTMP
+        vpextrq         %%KEYS3, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZKEYS, 2
+        vmovq           %%KEYS4, %%XTMP
+        vpextrq         %%KEYS5, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZKEYS, 3
+        vmovq           %%KEYS6, %%XTMP
+        vpextrq         %%KEYS7, %%XTMP, 1
+
+        vpternlogq      %%XCIPH0, %%XDATA0, [%%KEYS0 + 16*0], 0x96
+        vpternlogq      %%XCIPH1, %%XDATA1, [%%KEYS1 + 16*0], 0x96
+        vpternlogq      %%XCIPH2, %%XDATA2, [%%KEYS2 + 16*0], 0x96
+        vpternlogq      %%XCIPH3, %%XDATA3, [%%KEYS3 + 16*0], 0x96
+        vpternlogq      %%XCIPH4, %%XDATA4, [%%KEYS4 + 16*0], 0x96
+        vpternlogq      %%XCIPH5, %%XDATA5, [%%KEYS5 + 16*0], 0x96
+        vpternlogq      %%XCIPH6, %%XDATA6, [%%KEYS6 + 16*0], 0x96
+        vpternlogq      %%XCIPH7, %%XDATA7, [%%KEYS7 + 16*0], 0x96
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; AES ROUNDS 1 to 9
+%assign crc_lane 0
+%assign i 1
+%rep 9
+	vaesenc		%%XCIPH0, [%%KEYS0 + 16*i]
+	vaesenc		%%XCIPH1, [%%KEYS1 + 16*i]
+	vaesenc		%%XCIPH2, [%%KEYS2 + 16*i]
+	vaesenc		%%XCIPH3, [%%KEYS3 + 16*i]
+	vaesenc		%%XCIPH4, [%%KEYS4 + 16*i]
+	vaesenc		%%XCIPH5, [%%KEYS5 + 16*i]
+	vaesenc		%%XCIPH6, [%%KEYS6 + 16*i]
+	vaesenc		%%XCIPH7, [%%KEYS7 + 16*i]
+
+%if crc_lane < 8
+        CRC32_ROUND no_first, last_possible, %%ARG, crc_lane, \
+                    APPEND(%%XDATB, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
+                    %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+                    %%GP1, %%IDX, 16, %%GT8, %%GT9, %%CRC32
+%endif
+
+%assign i (i + 1)
+%assign crc_lane (crc_lane + 1)
+%endrep
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; AES ROUNDS 10
+	vaesenclast	%%XCIPH0, [%%KEYS0 + 16*10]
+	vaesenclast	%%XCIPH1, [%%KEYS1 + 16*10]
+	vaesenclast	%%XCIPH2, [%%KEYS2 + 16*10]
+	vaesenclast	%%XCIPH3, [%%KEYS3 + 16*10]
+	vaesenclast	%%XCIPH4, [%%KEYS4 + 16*10]
+	vaesenclast	%%XCIPH5, [%%KEYS5 + 16*10]
+	vaesenclast	%%XCIPH6, [%%KEYS6 + 16*10]
+	vaesenclast	%%XCIPH7, [%%KEYS7 + 16*10]
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; store cipher text
+        ;; - XCIPHx is an IV for the next block
+
+        vmovq           %%OUT0, XWORD(%%ZOUT)
+        vpextrq         %%OUT1, XWORD(%%ZOUT), 1
+        vextracti32x4   %%XTMP, %%ZOUT, 1
+        vmovq           %%OUT2, %%XTMP
+        vpextrq         %%OUT3, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZOUT, 2
+        vmovq           %%OUT4, %%XTMP
+        vpextrq         %%OUT5, %%XTMP, 1
+        vextracti32x4   %%XTMP, %%ZOUT, 3
+        vmovq           %%OUT6, %%XTMP
+        vpextrq         %%OUT7, %%XTMP, 1
+
+        vmovdqu64	[%%OUT0 + %%IDX], %%XCIPH0
+        vmovdqu64	[%%OUT1 + %%IDX], %%XCIPH1
+        vmovdqu64	[%%OUT2 + %%IDX], %%XCIPH2
+        vmovdqu64	[%%OUT3 + %%IDX], %%XCIPH3
+        vmovdqu64	[%%OUT4 + %%IDX], %%XCIPH4
+        vmovdqu64	[%%OUT5 + %%IDX], %%XCIPH5
+        vmovdqu64	[%%OUT6 + %%IDX], %%XCIPH6
+        vmovdqu64	[%%OUT7 + %%IDX], %%XCIPH7
+
+        add             %%IDX, 16
+        sub             %%LEN, 16
+
+        vmovdqa64       %%XDATA0, %%XDATB0
+        vmovdqa64       %%XDATA1, %%XDATB1
+        vmovdqa64       %%XDATA2, %%XDATB2
+        vmovdqa64       %%XDATA3, %%XDATB3
+        vmovdqa64       %%XDATA4, %%XDATB4
+        vmovdqa64       %%XDATA5, %%XDATB5
+        vmovdqa64       %%XDATA6, %%XDATB6
+        vmovdqa64       %%XDATA7, %%XDATB7
+
+%%_encrypt_the_last_block:
+        ;; NOTE: XDATA[0-7] preloaded with data blocks from corresponding lanes
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; - load key pointers to performs AES rounds
@@ -763,8 +1044,6 @@ section .text
         vmovdqu64	[%%OUT7 + %%IDX], %%XCIPH7
 
         add             %%IDX, 16
-        cmp             %%LEN, %%IDX
-        jnz             %%_main_enc_loop
 
 %%_enc_done:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -780,7 +1059,7 @@ section .text
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; update IN and OUT pointers
-	vmovq           XWORD(%%ZT0), %%LEN
+	vmovq           XWORD(%%ZT0), %%IDX
 	vpshufd         XWORD(%%ZT0), XWORD(%%ZT0), 0x44
         vshufi64x2      %%ZT0, %%ZT0, 0x00
         vpaddq          %%ZIN, %%ZIN, %%ZT0
