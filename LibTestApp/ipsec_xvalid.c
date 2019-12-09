@@ -1279,7 +1279,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         uint32_t buf_size = params->buf_size;
         uint8_t tag_size = auth_tag_length_bytes[params->hash_alg - 1];
         uint64_t xgem_hdr = 0;
-        uint8_t tag_size_to_check = 0;
+        uint8_t tag_size_to_check = tag_size;
         struct cipher_auth_keys *enc_keys = &data->enc_keys;
         struct cipher_auth_keys *dec_keys = &data->dec_keys;
         uint8_t *aad = data->aad;
