@@ -76,26 +76,17 @@ default rel
 
 align 16
 dupw:
-	;ddq 0x01000100010001000100010001000100
 	dq 0x0100010001000100, 0x0100010001000100
 
 align 16
 len_masks:
-	;ddq 0x0000000000000000000000000000FFFF
 	dq 0x000000000000FFFF, 0x0000000000000000
-	;ddq 0x000000000000000000000000FFFF0000
 	dq 0x00000000FFFF0000, 0x0000000000000000
-	;ddq 0x00000000000000000000FFFF00000000
 	dq 0x0000FFFF00000000, 0x0000000000000000
-	;ddq 0x0000000000000000FFFF000000000000
 	dq 0xFFFF000000000000, 0x0000000000000000
-	;ddq 0x000000000000FFFF0000000000000000
 	dq 0x0000000000000000, 0x000000000000FFFF
-	;ddq 0x00000000FFFF00000000000000000000
 	dq 0x0000000000000000, 0x00000000FFFF0000
-	;ddq 0x0000FFFF000000000000000000000000
 	dq 0x0000000000000000, 0x0000FFFF00000000
-	;ddq 0xFFFF0000000000000000000000000000
 	dq 0x0000000000000000, 0xFFFF000000000000
 
 one:	dq  1
@@ -427,6 +418,91 @@ section .text
 
 ;; =====================================================================
 ;; =====================================================================
+;; CRC32 computation round
+;; =====================================================================
+%macro CRC32_ROUND 13
+%define %%ARG           %1      ; [in] GP with pointer to OOO manager / arguments
+%define %%LANEID        %2      ; [in] numerical value with lane id
+%define %%XDATA         %3      ; [in] an XMM (any) with input data block for CRC calculation
+%define %%XCRC_VAL      %4      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_DAT      %5      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_MUL      %6      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_TMP      %7      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_TMP2     %8      ; [clobbered] temporary XMM (xmm0-15)
+%define %%IN            %9      ; [in] GP with input data pointer (last partial only)
+%define %%IDX           %10     ; [in] GP with data offset (last partial only)
+%define %%GT8           %11     ; [clobbered] temporary GPR
+%define %%GT9           %12     ; [clobbered] temporary GPR
+%define %%CRC32         %13     ; [clobbered] temporary GPR
+
+        cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 1
+        je              %%_crc_lane_done
+
+        cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 2
+        je              %%_crc_lane_first_round
+
+        cmp             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
+        jb              %%_crc_lane_last_partial
+
+        ;; The most common case: next block for CRC
+        vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*%%LANEID]
+        vmovdqa64       %%XCRC_DAT, %%XDATA
+        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
+        vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*%%LANEID], %%XCRC_VAL
+        sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
+        jmp             %%_crc_lane_done
+
+%%_crc_lane_last_partial:
+        ;; Partial block case (the last block)
+        ;; - last CRC round is specific
+        ;; - followed by CRC reduction and write back of the CRC
+        vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*%%LANEID]
+        movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + %%LANEID*2] ; GT9 = bytes_to_crc
+        lea             %%GT8, [rel pshufb_shf_table]
+        vmovdqu64       %%XCRC_TMP, [%%GT8 + %%GT9]
+        lea             %%GT8, [%%IN + %%IDX]
+        vmovdqu64       %%XCRC_DAT, [%%GT8 - 16 + %%GT9]  ; XCRC_DAT = data for CRC
+        vmovdqa64       %%XCRC_TMP2, %%XCRC_VAL
+        vpshufb         %%XCRC_VAL, %%XCRC_TMP  ; top bytes_to_crc with LSB XCRC_VAL
+        vpxorq          %%XCRC_TMP, [rel mask3]
+        vpshufb         %%XCRC_TMP2, %%XCRC_TMP ; bottom (16 - bytes_to_crc) with MSB XCRC_VAL
+
+        vpblendvb       %%XCRC_DAT, %%XCRC_TMP2, %%XCRC_DAT, %%XCRC_TMP
+
+        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
+        CRC32_REDUCE_128_TO_32 %%CRC32, %%XCRC_VAL, %%XCRC_TMP, %%XCRC_DAT, %%XCRC_TMP2
+
+        ;; save final CRC value in init
+        mov             [%%ARG + _docsis_crc_args_init + 16*%%LANEID], DWORD(%%CRC32)
+
+        ;; write back CRC value into source buffer
+        movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + %%LANEID*2]
+        lea             %%GT8, [%%IN + %%IDX]
+        mov             [%%GT8 + %%GT9], DWORD(%%CRC32)
+
+        ;; reload the data for cipher (includes just computed CRC)
+        vmovdqu64       %%XDATA, [%%IN + %%IDX]
+
+        mov             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 0
+        ;; mark as done
+        mov             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 1
+        jmp             %%_crc_lane_done
+
+%%_crc_lane_first_round:
+        ;; Case of less than 16 bytes will not happen here since
+        ;; submit code takes care of it.
+        ;; in the first round just XOR initial CRC with the first block
+        vpxorq          %%XCRC_DAT, %%XDATA, [%%ARG + _docsis_crc_args_init + 16*%%LANEID]
+        vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*%%LANEID], %%XCRC_DAT
+        ;; mark first block as done
+        mov             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 0
+        sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
+
+%%_crc_lane_done:
+%endmacro       ; CRC32_ROUND
+
+;; =====================================================================
+;; =====================================================================
 ;; AES128-CBC encryption combined with CRC32 operations
 ;; =====================================================================
 %macro AES128_CBC_ENC_CRC32_PARELLEL 47
@@ -581,69 +657,9 @@ section .text
 
 %assign crc_lane 0
 %rep 8
-        cmp             byte [%%ARG + _docsis_crc_args_done + crc_lane], 1
-        je              APPEND(%%_crc_lane_done_, crc_lane)
-
-        cmp             byte [%%ARG + _docsis_crc_args_done + crc_lane], 2
-        je              APPEND(%%_crc_lane_first_, crc_lane)
-
-
-        cmp             word [%%ARG + _docsis_crc_args_len + 2*crc_lane], 16
-        jb              APPEND(%%_crc_lane_last_, crc_lane)
-
-        ;; most common case - next blocks for CRC
-        vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*crc_lane]
-        vmovdqa64       %%XCRC_DAT, APPEND(%%XDATA, crc_lane)
-        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
-        vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*crc_lane], %%XCRC_VAL
-        sub             word [%%ARG + _docsis_crc_args_len + 2*crc_lane], 16
-        jmp             APPEND(%%_crc_lane_done_, crc_lane)
-
-APPEND(%%_crc_lane_last_, crc_lane):
-        ;; partial block case (the last one)
-        vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*crc_lane]
-        movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + crc_lane*2] ; GT9 = bytes_to_crc
-        lea             %%GT8, [rel pshufb_shf_table]
-        vmovdqu64       %%XCRC_TMP, [%%GT8 + %%GT9]
-        lea             %%GT8, [APPEND(%%IN, crc_lane) + %%IDX]
-        vmovdqu64       %%XCRC_DAT, [%%GT8 - 16 + %%GT9]  ; XCRC_DAT = data for CRC
-        vmovdqa64       %%XCRC_TMP2, %%XCRC_VAL
-        vpshufb         %%XCRC_VAL, %%XCRC_TMP  ; top bytes_to_crc with LSB XCRC_VAL
-        vpxorq          %%XCRC_TMP, [rel mask3]
-        vpshufb         %%XCRC_TMP2, %%XCRC_TMP ; bottom (16 - bytes_to_crc) with MSB XCRC_VAL
-
-        vpblendvb       %%XCRC_DAT, %%XCRC_TMP2, %%XCRC_DAT, %%XCRC_TMP
-
-        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
-        CRC32_REDUCE_128_TO_32 %%CRC32, %%XCRC_VAL, %%XCRC_TMP, %%XCRC_DAT, %%XCRC_TMP2
-
-        ;; save final CRC value in init
-        mov             [%%ARG + _docsis_crc_args_init + 16*crc_lane], DWORD(%%CRC32)
-
-        ;; write back CRC value into source buffer
-        movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + crc_lane*2]
-        lea             %%GT8, [APPEND(%%IN, crc_lane) + %%IDX]
-        mov             [%%GT8 + %%GT9], DWORD(%%CRC32)
-
-        ;; reload the data for cipher (includes just computed CRC)
-        vmovdqu64       APPEND(%%XDATA, crc_lane), [APPEND(%%IN, crc_lane) + %%IDX]
-
-        mov             word [%%ARG + _docsis_crc_args_len + 2*crc_lane], 0
-        ;; mark as done
-        mov             byte [%%ARG + _docsis_crc_args_done + crc_lane], 1
-        jmp             APPEND(%%_crc_lane_done_, crc_lane)
-
-APPEND(%%_crc_lane_first_, crc_lane):
-        ;; Case of less than 16 bytes will not happen here since
-        ;; submit code takes care of it.
-        ;; in the first run just XOR initial CRC with the first block
-        vpxorq          %%XCRC_DAT, APPEND(%%XDATA, crc_lane), [%%ARG + _docsis_crc_args_init + 16*crc_lane]
-        vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*crc_lane], %%XCRC_DAT
-        ;; mark first block as done
-        mov             byte [%%ARG + _docsis_crc_args_done + crc_lane], 0
-        sub             word [%%ARG + _docsis_crc_args_len + 2*crc_lane], 16
-
-APPEND(%%_crc_lane_done_, crc_lane):
+        CRC32_ROUND %%ARG, crc_lane, APPEND(%%XDATA, crc_lane), %%XCRC_VAL, \
+                    %%XCRC_DAT, %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+                    APPEND(%%IN, crc_lane), %%IDX, %%GT8, %%GT9, %%CRC32
 %assign crc_lane (crc_lane + 1)
 %endrep
 
