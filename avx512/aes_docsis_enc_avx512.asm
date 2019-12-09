@@ -420,29 +420,35 @@ section .text
 ;; =====================================================================
 ;; CRC32 computation round
 ;; =====================================================================
-%macro CRC32_ROUND 13
-%define %%ARG           %1      ; [in] GP with pointer to OOO manager / arguments
-%define %%LANEID        %2      ; [in] numerical value with lane id
-%define %%XDATA         %3      ; [in] an XMM (any) with input data block for CRC calculation
-%define %%XCRC_VAL      %4      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_DAT      %5      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_MUL      %6      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_TMP      %7      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_TMP2     %8      ; [clobbered] temporary XMM (xmm0-15)
-%define %%IN            %9      ; [in] GP with input data pointer (last partial only)
-%define %%IDX           %10     ; [in] GP with data offset (last partial only)
-%define %%GT8           %11     ; [clobbered] temporary GPR
-%define %%GT9           %12     ; [clobbered] temporary GPR
-%define %%CRC32         %13     ; [clobbered] temporary GPR
+%macro CRC32_ROUND 15
+%define %%FIRST         %1      ; [in] "first_possible" or "no_first"
+%define %%LAST          %2      ; [in] "last_possible" or "no_last"
+%define %%ARG           %3      ; [in] GP with pointer to OOO manager / arguments
+%define %%LANEID        %4      ; [in] numerical value with lane id
+%define %%XDATA         %5      ; [in] an XMM (any) with input data block for CRC calculation
+%define %%XCRC_VAL      %6      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_DAT      %7      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_MUL      %8      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_TMP      %9      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_TMP2     %10     ; [clobbered] temporary XMM (xmm0-15)
+%define %%IN            %11     ; [in] GP with input data pointer (last partial only)
+%define %%IDX           %12     ; [in] GP with data offset (last partial only)
+%define %%GT8           %13     ; [clobbered] temporary GPR
+%define %%GT9           %14     ; [clobbered] temporary GPR
+%define %%CRC32         %15     ; [clobbered] temporary GPR
 
         cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 1
         je              %%_crc_lane_done
 
+%ifnidn %%FIRST, no_first
         cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 2
         je              %%_crc_lane_first_round
+%endif  ; no_first
 
+%ifnidn %%LAST, no_last
         cmp             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
         jb              %%_crc_lane_last_partial
+%endif  ; no_last
 
         ;; The most common case: next block for CRC
         vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*%%LANEID]
@@ -450,8 +456,17 @@ section .text
         CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
         vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*%%LANEID], %%XCRC_VAL
         sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
+%ifidn %%LAST, no_last
+%ifidn %%FIRST, no_first
+        ;; no jump needed - just fall through
+%else
         jmp             %%_crc_lane_done
+%endif  ; no_first
+%else
+        jmp             %%_crc_lane_done
+%endif  ; np_last
 
+%ifnidn %%LAST, no_last
 %%_crc_lane_last_partial:
         ;; Partial block case (the last block)
         ;; - last CRC round is specific
@@ -486,8 +501,12 @@ section .text
         mov             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 0
         ;; mark as done
         mov             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 1
+%ifnidn %%FIRST, no_first
         jmp             %%_crc_lane_done
+%endif  ; no_first
+%endif  ; no_last
 
+%ifnidn %%FIRST, no_first
 %%_crc_lane_first_round:
         ;; Case of less than 16 bytes will not happen here since
         ;; submit code takes care of it.
@@ -497,6 +516,7 @@ section .text
         ;; mark first block as done
         mov             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 0
         sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
+%endif  ; no_first
 
 %%_crc_lane_done:
 %endmacro       ; CRC32_ROUND
@@ -657,8 +677,9 @@ section .text
 
 %assign crc_lane 0
 %rep 8
-        CRC32_ROUND %%ARG, crc_lane, APPEND(%%XDATA, crc_lane), %%XCRC_VAL, \
-                    %%XCRC_DAT, %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+        CRC32_ROUND first_possible, last_possible, %%ARG, crc_lane, \
+                    APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
+                    %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
                     APPEND(%%IN, crc_lane), %%IDX, %%GT8, %%GT9, %%CRC32
 %assign crc_lane (crc_lane + 1)
 %endrep
