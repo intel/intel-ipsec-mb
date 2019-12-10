@@ -420,7 +420,7 @@ section .text
 ;; =====================================================================
 ;; CRC32 computation round
 ;; =====================================================================
-%macro CRC32_ROUND 16
+%macro CRC32_ROUND 16-17
 %define %%FIRST         %1      ; [in] "first_possible" or "no_first"
 %define %%LAST          %2      ; [in] "last_possible" or "no_last"
 %define %%ARG           %3      ; [in] GP with pointer to OOO manager / arguments
@@ -437,6 +437,7 @@ section .text
 %define %%GT8           %14     ; [clobbered] temporary GPR (last partial only)
 %define %%GT9           %15     ; [clobbered] temporary GPR (last partial only)
 %define %%CRC32         %16     ; [clobbered] temporary GPR (last partial only)
+%define %%SUBLEN        %17     ; [in/optional] if "dont_subtract_len" length not subtracted
 
         cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], 1
         je              %%_crc_lane_done
@@ -455,7 +456,9 @@ section .text
         vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*%%LANEID]
         CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
         vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*%%LANEID], %%XCRC_VAL
+%ifnidn %%SUBLEN, dont_subtract_len
         sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
+%endif
 %ifidn %%LAST, no_last
 %ifidn %%FIRST, no_first
         ;; no jump needed - just fall through
@@ -602,6 +605,8 @@ section .text
 %define %%OUT6  %%GT6
 %define %%OUT7  %%GT7
 
+%define %%CRC_BYTES %%GT9
+
 %define %%GP1   %%GT10
 %define %%CRC32 %%GT11
 %define %%IDX   %%GT12
@@ -646,6 +651,7 @@ section .text
 
 
 	xor	        %%IDX, %%IDX
+	xor	        %%CRC_BYTES, %%CRC_BYTES
 
         vmovdqa64       %%XCRC_MUL, [rel rk1]
 
@@ -703,7 +709,8 @@ section .text
         je              %%_encrypt_the_last_block
 
 %%_main_enc_loop:
-        ;; if 16 bytes lest left (for CRC) then go to the code variant where CRC last block case is checked
+        ;; if 16 bytes left (for CRC) then
+        ;; go to the code variant where CRC last block case is checked
         cmp             %%LEN, 16
         je              %%_encrypt_and_crc_the_last_block
 
@@ -734,7 +741,7 @@ section .text
         vmovdqu64	%%XDATB7, [%%IN7 + %%IDX + 16]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; - load key pointers to performs AES rounds
+        ;; - load key pointers to perform AES rounds
         ;; - use ternary logic for: plain-text XOR IV and AES ARK(0)
         ;;      - IV = XCIPHx
         ;;      - plain-text = XDATAx
@@ -778,7 +785,7 @@ section .text
         CRC32_ROUND no_first, no_last, %%ARG, crc_lane, \
                     APPEND(%%XDATB, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
                     %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                    no_in, no_idx, 0, no_gpr, no_gpr, no_gpr
+                    no_in, no_idx, 0, no_gpr, no_gpr, no_gpr, dont_subtract_len
 %endif
 
 %assign i (i + 1)
@@ -831,11 +838,24 @@ section .text
         vmovdqa64       %%XDATA7, %%XDATB7
 
         add             %%IDX, 16
+        add             %%CRC_BYTES, 16
         sub             %%LEN, 16
         jmp             %%_main_enc_loop
 
 %%_encrypt_and_crc_the_last_block:
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; Main loop doesn't subtract lenghts to save cycles
+        ;; - all subtracts get accumulated and are done below
+        sub             [%%ARG + _docsis_crc_args_len + 2*0], WORD(%%CRC_BYTES)
+        sub             [%%ARG + _docsis_crc_args_len + 2*1], WORD(%%CRC_BYTES)
+        sub             [%%ARG + _docsis_crc_args_len + 2*2], WORD(%%CRC_BYTES)
+        sub             [%%ARG + _docsis_crc_args_len + 2*3], WORD(%%CRC_BYTES)
+        sub             [%%ARG + _docsis_crc_args_len + 2*4], WORD(%%CRC_BYTES)
+        sub             [%%ARG + _docsis_crc_args_len + 2*5], WORD(%%CRC_BYTES)
+        sub             [%%ARG + _docsis_crc_args_len + 2*6], WORD(%%CRC_BYTES)
+        sub             [%%ARG + _docsis_crc_args_len + 2*7], WORD(%%CRC_BYTES)
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Load plain text for CRC
         ;; - one block from each lane
         ;; - one block ahead of cipher
@@ -862,7 +882,7 @@ section .text
         vmovdqu64	%%XDATB7, [%%IN7 + %%IDX + 16]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; - load key pointers to performs AES rounds
+        ;; - load key pointers to perform AES rounds
         ;; - use ternary logic for: plain-text XOR IV and AES ARK(0)
         ;;      - IV = XCIPHx
         ;;      - plain-text = XDATAx
@@ -965,7 +985,7 @@ section .text
         ;; NOTE: XDATA[0-7] preloaded with data blocks from corresponding lanes
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; - load key pointers to performs AES rounds
+        ;; - load key pointers to perform AES rounds
         ;; - use ternary logic for: plain-text XOR IV and AES ARK(0)
         ;;      - IV = XCIPHx
         ;;      - plain-text = XDATAx
