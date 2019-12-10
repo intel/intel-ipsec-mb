@@ -536,7 +536,7 @@ __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job);
 
-extern uint32_t aes_docsis_dec_128_crc32_avx512(JOB_AES_HMAC *job);
+extern void aes_docsis_dec_128_crc32_avx512(JOB_AES_HMAC *job);
 
 static JOB_AES_HMAC *
 submit_aes_docsis_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
@@ -556,7 +556,7 @@ submit_aes_docsis_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
         }
 
         /* Cipher + CRC32 // CRC32 */
-        (void) aes_docsis_dec_128_crc32_avx512(job);
+        aes_docsis_dec_128_crc32_avx512(job);
         return job;
 }
 
