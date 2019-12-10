@@ -1167,8 +1167,8 @@ section .text
 
         mov             byte [%%STATE + _docsis_crc_args_done + %%lane], 1
 
-        cmp             qword [%%JOB + _msg_len_to_hash_in_bytes], 0
-        jz              %%_crc_complete
+        cmp             qword [%%JOB + _msg_len_to_hash_in_bytes], 14
+        jb              %%_crc_complete
 
         ;; there is CRC to calculate - now in one go or in chunks
         ;; - load init value into the lane
