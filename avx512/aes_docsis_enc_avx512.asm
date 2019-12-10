@@ -636,10 +636,6 @@ section .text
 %define %%XDATA6 XWORD(%%ZT22)
 %define %%XDATA7 XWORD(%%ZT23)
 
-%define %%ZIN   %%ZT24  ; 8 x ptr
-%define %%ZOUT  %%ZT25  ; 8 x ptr
-%define %%ZKEYS %%ZT26  ; 8 x ptr
-
 %define %%XDATB0 XWORD(%%ZT27)
 %define %%XDATB1 XWORD(%%ZT28)
 %define %%XDATB2 XWORD(%%ZT29)
@@ -655,10 +651,6 @@ section .text
 
         vmovdqa64       %%XCRC_MUL, [rel rk1]
 
-        vmovdqu64       %%ZIN,   [%%ARG + _aesarg_in]
-        vmovdqu64       %%ZOUT,  [%%ARG + _aesarg_out]
-        vmovdqu64       %%ZKEYS, [%%ARG + _aesarg_keys]
-
 	vmovdqa64       %%XCIPH0, [%%ARG + _aesarg_IV + 16*0]
 	vmovdqa64       %%XCIPH1, [%%ARG + _aesarg_IV + 16*1]
 	vmovdqa64       %%XCIPH2, [%%ARG + _aesarg_IV + 16*2]
@@ -673,17 +665,14 @@ section .text
         ;; - load plain text (one block from each lane)
         ;; - compute CRC32 on loaded text
 
-        vmovq           %%IN0, XWORD(%%ZIN)
-        vpextrq         %%IN1, XWORD(%%ZIN), 1
-        vextracti32x4   %%XTMP, %%ZIN, 1
-        vmovq           %%IN2, %%XTMP
-        vpextrq         %%IN3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZIN, 2
-        vmovq           %%IN4, %%XTMP
-        vpextrq         %%IN5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZIN, 3
-        vmovq           %%IN6, %%XTMP
-        vpextrq         %%IN7, %%XTMP, 1
+        mov             %%IN0, [%%ARG + _aesarg_in + 8*0]
+        mov             %%IN1, [%%ARG + _aesarg_in + 8*1]
+        mov             %%IN2, [%%ARG + _aesarg_in + 8*2]
+        mov             %%IN3, [%%ARG + _aesarg_in + 8*3]
+        mov             %%IN4, [%%ARG + _aesarg_in + 8*4]
+        mov             %%IN5, [%%ARG + _aesarg_in + 8*5]
+        mov             %%IN6, [%%ARG + _aesarg_in + 8*6]
+        mov             %%IN7, [%%ARG + _aesarg_in + 8*7]
 
         vmovdqu64	%%XDATA0, [%%IN0 + %%IDX]
         vmovdqu64	%%XDATA1, [%%IN1 + %%IDX]
@@ -719,18 +708,6 @@ section .text
         ;; - one block from each lane
         ;; - one block ahead of cipher
 
-        vmovq           %%IN0, XWORD(%%ZIN)
-        vpextrq         %%IN1, XWORD(%%ZIN), 1
-        vextracti32x4   %%XTMP, %%ZIN, 1
-        vmovq           %%IN2, %%XTMP
-        vpextrq         %%IN3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZIN, 2
-        vmovq           %%IN4, %%XTMP
-        vpextrq         %%IN5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZIN, 3
-        vmovq           %%IN6, %%XTMP
-        vpextrq         %%IN7, %%XTMP, 1
-
         vmovdqu64	%%XDATB0, [%%IN0 + %%IDX + 16]
         vmovdqu64	%%XDATB1, [%%IN1 + %%IDX + 16]
         vmovdqu64	%%XDATB2, [%%IN2 + %%IDX + 16]
@@ -746,17 +723,14 @@ section .text
         ;;      - IV = XCIPHx
         ;;      - plain-text = XDATAx
         ;;      - ARK = [%%KEYSx + 16*0]
-        vmovq           %%KEYS0, XWORD(%%ZKEYS)
-        vpextrq         %%KEYS1, XWORD(%%ZKEYS), 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 1
-        vmovq           %%KEYS2, %%XTMP
-        vpextrq         %%KEYS3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 2
-        vmovq           %%KEYS4, %%XTMP
-        vpextrq         %%KEYS5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 3
-        vmovq           %%KEYS6, %%XTMP
-        vpextrq         %%KEYS7, %%XTMP, 1
+        mov             %%KEYS0, [%%ARG + _aesarg_keys + 8*0]
+        mov             %%KEYS1, [%%ARG + _aesarg_keys + 8*1]
+        mov             %%KEYS2, [%%ARG + _aesarg_keys + 8*2]
+        mov             %%KEYS3, [%%ARG + _aesarg_keys + 8*3]
+        mov             %%KEYS4, [%%ARG + _aesarg_keys + 8*4]
+        mov             %%KEYS5, [%%ARG + _aesarg_keys + 8*5]
+        mov             %%KEYS6, [%%ARG + _aesarg_keys + 8*6]
+        mov             %%KEYS7, [%%ARG + _aesarg_keys + 8*7]
 
         vpternlogq      %%XCIPH0, %%XDATA0, [%%KEYS0 + 16*0], 0x96
         vpternlogq      %%XCIPH1, %%XDATA1, [%%KEYS1 + 16*0], 0x96
@@ -807,17 +781,14 @@ section .text
         ;; store cipher text
         ;; - XCIPHx is an IV for the next block
 
-        vmovq           %%OUT0, XWORD(%%ZOUT)
-        vpextrq         %%OUT1, XWORD(%%ZOUT), 1
-        vextracti32x4   %%XTMP, %%ZOUT, 1
-        vmovq           %%OUT2, %%XTMP
-        vpextrq         %%OUT3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZOUT, 2
-        vmovq           %%OUT4, %%XTMP
-        vpextrq         %%OUT5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZOUT, 3
-        vmovq           %%OUT6, %%XTMP
-        vpextrq         %%OUT7, %%XTMP, 1
+        mov             %%OUT0, [%%ARG + _aesarg_out + 8*0]
+        mov             %%OUT1, [%%ARG + _aesarg_out + 8*1]
+        mov             %%OUT2, [%%ARG + _aesarg_out + 8*2]
+        mov             %%OUT3, [%%ARG + _aesarg_out + 8*3]
+        mov             %%OUT4, [%%ARG + _aesarg_out + 8*4]
+        mov             %%OUT5, [%%ARG + _aesarg_out + 8*5]
+        mov             %%OUT6, [%%ARG + _aesarg_out + 8*6]
+        mov             %%OUT7, [%%ARG + _aesarg_out + 8*7]
 
         vmovdqu64	[%%OUT0 + %%IDX], %%XCIPH0
         vmovdqu64	[%%OUT1 + %%IDX], %%XCIPH1
@@ -840,11 +811,21 @@ section .text
         add             %%IDX, 16
         add             %%CRC_BYTES, 16
         sub             %%LEN, 16
+
+        mov             %%IN0, [%%ARG + _aesarg_in + 8*0]
+        mov             %%IN1, [%%ARG + _aesarg_in + 8*1]
+        mov             %%IN2, [%%ARG + _aesarg_in + 8*2]
+        mov             %%IN3, [%%ARG + _aesarg_in + 8*3]
+        mov             %%IN4, [%%ARG + _aesarg_in + 8*4]
+        mov             %%IN5, [%%ARG + _aesarg_in + 8*5]
+        mov             %%IN6, [%%ARG + _aesarg_in + 8*6]
+        mov             %%IN7, [%%ARG + _aesarg_in + 8*7]
+
         jmp             %%_main_enc_loop
 
 %%_encrypt_and_crc_the_last_block:
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; Main loop doesn't subtract lenghts to save cycles
+        ;; Main loop doesn't subtract lengths to save cycles
         ;; - all subtracts get accumulated and are done below
         sub             [%%ARG + _docsis_crc_args_len + 2*0], WORD(%%CRC_BYTES)
         sub             [%%ARG + _docsis_crc_args_len + 2*1], WORD(%%CRC_BYTES)
@@ -859,18 +840,6 @@ section .text
         ;; Load plain text for CRC
         ;; - one block from each lane
         ;; - one block ahead of cipher
-
-        vmovq           %%IN0, XWORD(%%ZIN)
-        vpextrq         %%IN1, XWORD(%%ZIN), 1
-        vextracti32x4   %%XTMP, %%ZIN, 1
-        vmovq           %%IN2, %%XTMP
-        vpextrq         %%IN3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZIN, 2
-        vmovq           %%IN4, %%XTMP
-        vpextrq         %%IN5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZIN, 3
-        vmovq           %%IN6, %%XTMP
-        vpextrq         %%IN7, %%XTMP, 1
 
         vmovdqu64	%%XDATB0, [%%IN0 + %%IDX + 16]
         vmovdqu64	%%XDATB1, [%%IN1 + %%IDX + 16]
@@ -887,17 +856,14 @@ section .text
         ;;      - IV = XCIPHx
         ;;      - plain-text = XDATAx
         ;;      - ARK = [%%KEYSx + 16*0]
-        vmovq           %%KEYS0, XWORD(%%ZKEYS)
-        vpextrq         %%KEYS1, XWORD(%%ZKEYS), 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 1
-        vmovq           %%KEYS2, %%XTMP
-        vpextrq         %%KEYS3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 2
-        vmovq           %%KEYS4, %%XTMP
-        vpextrq         %%KEYS5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 3
-        vmovq           %%KEYS6, %%XTMP
-        vpextrq         %%KEYS7, %%XTMP, 1
+        mov             %%KEYS0, [%%ARG + _aesarg_keys + 8*0]
+        mov             %%KEYS1, [%%ARG + _aesarg_keys + 8*1]
+        mov             %%KEYS2, [%%ARG + _aesarg_keys + 8*2]
+        mov             %%KEYS3, [%%ARG + _aesarg_keys + 8*3]
+        mov             %%KEYS4, [%%ARG + _aesarg_keys + 8*4]
+        mov             %%KEYS5, [%%ARG + _aesarg_keys + 8*5]
+        mov             %%KEYS6, [%%ARG + _aesarg_keys + 8*6]
+        mov             %%KEYS7, [%%ARG + _aesarg_keys + 8*7]
 
         vpternlogq      %%XCIPH0, %%XDATA0, [%%KEYS0 + 16*0], 0x96
         vpternlogq      %%XCIPH1, %%XDATA1, [%%KEYS1 + 16*0], 0x96
@@ -948,17 +914,14 @@ section .text
         ;; store cipher text
         ;; - XCIPHx is an IV for the next block
 
-        vmovq           %%OUT0, XWORD(%%ZOUT)
-        vpextrq         %%OUT1, XWORD(%%ZOUT), 1
-        vextracti32x4   %%XTMP, %%ZOUT, 1
-        vmovq           %%OUT2, %%XTMP
-        vpextrq         %%OUT3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZOUT, 2
-        vmovq           %%OUT4, %%XTMP
-        vpextrq         %%OUT5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZOUT, 3
-        vmovq           %%OUT6, %%XTMP
-        vpextrq         %%OUT7, %%XTMP, 1
+        mov             %%OUT0, [%%ARG + _aesarg_out + 8*0]
+        mov             %%OUT1, [%%ARG + _aesarg_out + 8*1]
+        mov             %%OUT2, [%%ARG + _aesarg_out + 8*2]
+        mov             %%OUT3, [%%ARG + _aesarg_out + 8*3]
+        mov             %%OUT4, [%%ARG + _aesarg_out + 8*4]
+        mov             %%OUT5, [%%ARG + _aesarg_out + 8*5]
+        mov             %%OUT6, [%%ARG + _aesarg_out + 8*6]
+        mov             %%OUT7, [%%ARG + _aesarg_out + 8*7]
 
         vmovdqu64	[%%OUT0 + %%IDX], %%XCIPH0
         vmovdqu64	[%%OUT1 + %%IDX], %%XCIPH1
@@ -990,17 +953,14 @@ section .text
         ;;      - IV = XCIPHx
         ;;      - plain-text = XDATAx
         ;;      - ARK = [%%KEYSx + 16*0]
-        vmovq           %%KEYS0, XWORD(%%ZKEYS)
-        vpextrq         %%KEYS1, XWORD(%%ZKEYS), 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 1
-        vmovq           %%KEYS2, %%XTMP
-        vpextrq         %%KEYS3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 2
-        vmovq           %%KEYS4, %%XTMP
-        vpextrq         %%KEYS5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZKEYS, 3
-        vmovq           %%KEYS6, %%XTMP
-        vpextrq         %%KEYS7, %%XTMP, 1
+        mov             %%KEYS0, [%%ARG + _aesarg_keys + 8*0]
+        mov             %%KEYS1, [%%ARG + _aesarg_keys + 8*1]
+        mov             %%KEYS2, [%%ARG + _aesarg_keys + 8*2]
+        mov             %%KEYS3, [%%ARG + _aesarg_keys + 8*3]
+        mov             %%KEYS4, [%%ARG + _aesarg_keys + 8*4]
+        mov             %%KEYS5, [%%ARG + _aesarg_keys + 8*5]
+        mov             %%KEYS6, [%%ARG + _aesarg_keys + 8*6]
+        mov             %%KEYS7, [%%ARG + _aesarg_keys + 8*7]
 
         vpternlogq      %%XCIPH0, %%XDATA0, [%%KEYS0 + 16*0], 0x96
         vpternlogq      %%XCIPH1, %%XDATA1, [%%KEYS1 + 16*0], 0x96
@@ -1041,17 +1001,14 @@ section .text
         ;; store cipher text
         ;; - XCIPHx is an IV for the next block
 
-        vmovq           %%OUT0, XWORD(%%ZOUT)
-        vpextrq         %%OUT1, XWORD(%%ZOUT), 1
-        vextracti32x4   %%XTMP, %%ZOUT, 1
-        vmovq           %%OUT2, %%XTMP
-        vpextrq         %%OUT3, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZOUT, 2
-        vmovq           %%OUT4, %%XTMP
-        vpextrq         %%OUT5, %%XTMP, 1
-        vextracti32x4   %%XTMP, %%ZOUT, 3
-        vmovq           %%OUT6, %%XTMP
-        vpextrq         %%OUT7, %%XTMP, 1
+        mov             %%OUT0, [%%ARG + _aesarg_out + 8*0]
+        mov             %%OUT1, [%%ARG + _aesarg_out + 8*1]
+        mov             %%OUT2, [%%ARG + _aesarg_out + 8*2]
+        mov             %%OUT3, [%%ARG + _aesarg_out + 8*3]
+        mov             %%OUT4, [%%ARG + _aesarg_out + 8*4]
+        mov             %%OUT5, [%%ARG + _aesarg_out + 8*5]
+        mov             %%OUT6, [%%ARG + _aesarg_out + 8*6]
+        mov             %%OUT7, [%%ARG + _aesarg_out + 8*7]
 
         vmovdqu64	[%%OUT0 + %%IDX], %%XCIPH0
         vmovdqu64	[%%OUT1 + %%IDX], %%XCIPH1
@@ -1078,13 +1035,11 @@ section .text
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; update IN and OUT pointers
-	vmovq           XWORD(%%ZT0), %%IDX
-	vpshufd         XWORD(%%ZT0), XWORD(%%ZT0), 0x44
-        vshufi64x2      %%ZT0, %%ZT0, 0x00
-        vpaddq          %%ZIN, %%ZIN, %%ZT0
-        vpaddq          %%ZOUT, %%ZOUT, %%ZT0
-        vmovdqu64       [%%ARG + _aesarg_in], %%ZIN
-        vmovdqu64       [%%ARG + _aesarg_out], %%ZOUT
+        vpbroadcastq    %%ZT0, %%IDX
+        vpaddq          %%ZT1, %%ZT0, [%%ARG + _aesarg_in]
+        vpaddq          %%ZT2, %%ZT0, [%%ARG + _aesarg_out]
+        vmovdqu64       [%%ARG + _aesarg_in], %%ZT1
+        vmovdqu64       [%%ARG + _aesarg_out], %%ZT2
 
 %endmacro       ; AES128_CBC_ENC_CRC32_PARALLEL
 
