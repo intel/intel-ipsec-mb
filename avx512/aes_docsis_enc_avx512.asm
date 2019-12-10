@@ -453,8 +453,7 @@ section .text
 
         ;; The most common case: next block for CRC
         vmovdqa64       %%XCRC_VAL, [%%ARG + _docsis_crc_args_init + 16*%%LANEID]
-        vmovdqa64       %%XCRC_DAT, %%XDATA
-        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
+        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
         vmovdqa64       [%%ARG + _docsis_crc_args_init + 16*%%LANEID], %%XCRC_VAL
         sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
 %ifidn %%LAST, no_last
