@@ -9,16 +9,19 @@ Library
   ZUC_EEA3 and hash_alg ZUC_EIA3_BITLEN)
 - SNOW3G-UEA2 and SNOW3G-UIA2 algorithms added in job API (using cipher type
   SNOW3G_UEA2_BITLEN and hash type SNOW3G_UIA2_BITLEN)
+- AVX512 implementation of stitched DOCSIS cipher with CRC32 calculations
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through
   job API
 - Extended SNOW3G tests to validate SNOW3G-UEA2 and SNOW3G-UIA2 algorithms
   through job API
+- Extended DOCSIS tests with combined CRC32 calculation cases
 
 LibPerfApp
 - Added support for ZUC-EEA3 and ZUC-EIA3 algorithms
 - Added support for SNOW3G-UEA2 and SNOW3G-UIA2 algorithms
+- Added support for DOCSIS combined with CRC32
 
 v0.53 October 2019
 ========================================================================

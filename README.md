@@ -47,7 +47,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES192-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
 | AES256-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
 | NULL          | Y      | N      | N      | N      | N      | N      |
-| AES128-DOCSIS | N      | Y(2)   | Y(4)   | N      | N      | N      |
+| AES128-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | N      |
 | DES-DOCSIS    | Y      | N      | N      | N      | Y  x16 | N      |
 | 3DES          | Y      | N      | N      | N      | Y  x16 | N      |
 | DES           | Y      | N      | N      | N      | Y  x16 | N      |
@@ -61,6 +61,7 @@ Notes:
 (3,4) - decryption is by8 and encryption is x8  
 (5)   - AVX512 plus VAES and VPCLMULQDQ extensions  
 (6)   - decryption is by16 and encryption is x16  
+(7)   - same as AES128-CBC for AVX, combines cipher and CRC32  
 
 Legend:  
 ` byY` - single buffer Y blocks at a time  
@@ -95,12 +96,14 @@ Table 2. List of supported integrity algorithms and their implementations.
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
 | ZUC-EIA3          | N      | Y      | Y      | N      | N      | N      |
 | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
+| DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  
 (1) - MD5 over one block implemented in C  
 (2) - Implementation using SHANI extentions is x2  
 (3) - AVX512 plus VAES and VPCLMULQDQ extensions  
+(4) - used only with AES128-DOCSIS cipher
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  
@@ -133,6 +136,8 @@ Table 3. Encryption and integrity algorithm combinations
 | DES-DOCSIS,   |                                                     |
 | 3DES,         |                                                     |
 | DES,          |                                                     |
+|---------------+-----------------------------------------------------|
+| AES128-DOCSIS | DOCSIS-CRC32                                        |
 |---------------+-----------------------------------------------------|
 | KASUMI-F8     | KASUMI-F9                                           |
 |---------------+-----------------------------------------------------|
