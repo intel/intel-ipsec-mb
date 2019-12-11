@@ -730,6 +730,9 @@ section .text
 
 %xdefine %%XKEY0  XWORD(%%ZT32)
 
+        prefetchw       [%%SRC + 0*64]
+        prefetchw       [%%SRC + 1*64]
+
         vmovdqa64       %%XCRC_MUL, [rel rk1]
 
         xor     %%OFFSET, %%OFFSET
@@ -812,6 +815,9 @@ section .text
 %%_main_loop:
         cmp     %%NUM_BYTES, (8 * 16)
         jb      %%_exit_loop
+
+        prefetchw       [%%SRC + %%OFFSET + 2*64]
+        prefetchw       [%%SRC + %%OFFSET + 3*64]
         ;; Stitched cipher and CRC
         ;; - ciphered blocks: n + 0, n + 1, n + 2, n + 3, n + 4, n + 5, n + 6, n + 7
         ;; - crc'ed blocks: n - 8, n - 7, n - 6, n - 5, n - 4, n - 3, n - 2, n - 1
@@ -989,6 +995,9 @@ aes_docsis_dec_128_crc32_avx512:
 
         mov             tmp1, [job + _src]
         add             tmp1, [job + _hash_start_src_offset_in_bytes]   ; CRC only start
+
+        prefetchw       [tmp1 + 0*64]
+        prefetchw       [tmp1 + 1*64]
 
         cmp             qword [job + _msg_len_to_cipher_in_bytes], 0
         jz              aes_docsis_dec_128_crc32_avx512__no_cipher

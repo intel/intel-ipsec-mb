@@ -674,6 +674,15 @@ section .text
         mov             %%IN6, [%%ARG + _aesarg_in + 8*6]
         mov             %%IN7, [%%ARG + _aesarg_in + 8*7]
 
+        prefetchw       [%%IN0 + 1*64]
+        prefetchw       [%%IN1 + 1*64]
+        prefetchw       [%%IN2 + 1*64]
+        prefetchw       [%%IN3 + 1*64]
+        prefetchw       [%%IN4 + 1*64]
+        prefetchw       [%%IN5 + 1*64]
+        prefetchw       [%%IN6 + 1*64]
+        prefetchw       [%%IN7 + 1*64]
+
         vmovdqu64	%%XDATA0, [%%IN0 + %%IDX]
         vmovdqu64	%%XDATA1, [%%IN1 + %%IDX]
         vmovdqu64	%%XDATA2, [%%IN2 + %%IDX]
@@ -716,6 +725,15 @@ section .text
         vmovdqu64	%%XDATB5, [%%IN5 + %%IDX + 16]
         vmovdqu64	%%XDATB6, [%%IN6 + %%IDX + 16]
         vmovdqu64	%%XDATB7, [%%IN7 + %%IDX + 16]
+
+        prefetchw       [%%IN0 + %%IDX + 1*64]
+        prefetchw       [%%IN1 + %%IDX + 1*64]
+        prefetchw       [%%IN2 + %%IDX + 1*64]
+        prefetchw       [%%IN3 + %%IDX + 1*64]
+        prefetchw       [%%IN4 + %%IDX + 1*64]
+        prefetchw       [%%IN5 + %%IDX + 1*64]
+        prefetchw       [%%IN6 + %%IDX + 1*64]
+        prefetchw       [%%IN7 + %%IDX + 1*64]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; - load key pointers to perform AES rounds
@@ -1124,7 +1142,7 @@ section .text
 
 	mov	        [%%STATE + _aes_job_in_lane + %%lane*8], %%JOB
 
-        vmovdqa64       xmm0, [%%STATE + _aes_lens]
+        vmovdqa         xmm0, [%%STATE + _aes_lens]
         XVPINSRW        xmm0, xmm1, %%tmp, %%lane, %%len, scale_x16
         vmovdqa         [%%STATE + _aes_lens], xmm0
 
@@ -1152,6 +1170,10 @@ section .text
 
         mov             %%GT6, [%%JOB + _src]
         add             %%GT6, [%%JOB + _hash_start_src_offset_in_bytes]
+
+        prefetchw       [%%GT6 + 0*64]
+        prefetchw       [%%GT6 + 1*64]
+
         vmovdqa64       XWORD(%%ZT1), [rel rk1]
 
         cmp             qword [%%JOB + _msg_len_to_cipher_in_bytes], (3 * 16)
