@@ -1019,6 +1019,7 @@ typedef struct MB_MGR {
         DECLARE_ALIGNED(MB_MGR_AES_OOO aes192_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_AES_OOO aes256_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DOCSIS_AES_OOO docsis_sec_ooo, 64);
+        DECLARE_ALIGNED(MB_MGR_DOCSIS_AES_OOO docsis_crc32_sec_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO des_enc_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO des_dec_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_DES_OOO des3_enc_ooo, 64);

@@ -683,6 +683,16 @@ init_mb_mgr_avx512(MB_MGR *state)
                 state->docsis_sec_ooo.num_lanes_inuse = 0;
         }
 
+        /* init 8 lanes */
+        memset(state->docsis_crc32_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis_crc32_sec_ooo.lens));
+        memset(&state->docsis_crc32_sec_ooo.lens[0], 0,
+               sizeof(state->docsis_crc32_sec_ooo.lens[0]) * 8);
+        memset(state->docsis_crc32_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis_crc32_sec_ooo.job_in_lane));
+        state->docsis_crc32_sec_ooo.unused_lanes = 0xF76543210;
+        state->docsis_crc32_sec_ooo.num_lanes_inuse = 0;
+
 
         /* DES, 3DES and DOCSIS DES (DES CBC + DES CFB for partial block) */
         /* - separate DES OOO for encryption */

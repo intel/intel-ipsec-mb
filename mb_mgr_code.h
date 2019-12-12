@@ -272,12 +272,17 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_AES_ECB_256_ENC(job);
                 }
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
-                MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
 
-                if (job->hash_alg == DOCSIS_CRC32)
+                if (job->hash_alg == DOCSIS_CRC32) {
+                        MB_MGR_DOCSIS_AES_OOO *p_ooo =
+                                &state->docsis_crc32_sec_ooo;
+
                         return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(p_ooo, job);
-                else
+                } else {
+                        MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
+
                         return SUBMIT_JOB_DOCSIS_SEC_ENC(p_ooo, job);
+                }
         } else if (PON_AES_CNTR == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes == 0)
                         return SUBMIT_JOB_PON_ENC_NO_CTR(job);
@@ -361,12 +366,17 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_AES_GCM_ENC(state, job);
 #endif /* NO_GCM */
         } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
-                MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
 
-                if (job->hash_alg == DOCSIS_CRC32)
+                if (job->hash_alg == DOCSIS_CRC32) {
+                        MB_MGR_DOCSIS_AES_OOO *p_ooo =
+                                &state->docsis_crc32_sec_ooo;
+
                         return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(p_ooo);
-                else
+                } else {
+                        MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
+
                         return FLUSH_JOB_DOCSIS_SEC_ENC(p_ooo);
+                }
 #ifdef FLUSH_JOB_DES_CBC_ENC
         } else if (DES == job->cipher_mode) {
                 return FLUSH_JOB_DES_CBC_ENC(&state->des_enc_ooo);
