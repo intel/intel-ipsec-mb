@@ -60,7 +60,7 @@ GCM_CFLAGS =
 
 CC = cl
 # _CRT_SECURE_NO_WARNINGS disables warning C4996 about unsecure snprintf() being used
-CFLAGS = /nologo /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(GCM_CFLAGS) $(INCDIR)
+CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(GCM_CFLAGS) $(INCDIR)
 
 LNK = link
 TEST_LFLAGS = /out:$(TEST_APP).exe $(DLFLAGS)

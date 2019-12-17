@@ -9,8 +9,9 @@ Contents
 5. Compilation
 6. Security Considerations & Options for Increased Security
 7. Installation
-8. Disclaimer (ZUC, KASUMI, SNOW3G)
-9. Legal Disclaimer
+8. Backwards compatibility
+9. Disclaimer (ZUC, KASUMI, SNOW3G)
+10. Legal Disclaimer
 
 1\. Overview
 ============
@@ -443,7 +444,23 @@ If there is no need to run ldconfig at install stage please use NOLDCONFIG=y opt
 If library was compiled as an archive (not a default option) then install it using SHARED=n option:   
 `> sudo gmake install SHARED=n`
 
-8\. Disclaimer (ZUC, KASUMI, SNOW3G)
+8\. Backwards compatibility
+===========================
+
+In version 0.54, some symbols have been renamed to avoid too generic names (such as cipher modes or
+hash algorithms).
+
+When building an application and linking it against the IPSec Multi Buffer library,
+by default the old symbols (up to v0.53) are exported, to maintain backwards compatibility.
+
+Applications should move to the new API as soon as possible, as the old symbols
+are marked as deprecated and will be removed in a future release.
+
+For applications which face symbol conflicts due to these old generic names,
+they should be compiled with the flag -DNO_COMPAT_IMB_API_053, which will
+not export the old symbols.
+
+9\. Disclaimer (ZUC, KASUMI, SNOW3G)
 ====================================
 
 Please note that cryptographic material, such as ciphering algorithms, may be
@@ -455,7 +472,7 @@ For more details please see:
 - GSMA https://www.gsma.com/security/security-algorithms/  
 - ETSI https://www.etsi.org/security-algorithms-and-codes/cellular-algorithm-licences
 
-9\. Legal Disclaimer
+10\. Legal Disclaimer
 ====================
 
 THIS SOFTWARE IS PROVIDED BY INTEL"AS IS". NO LICENSE, EXPRESS OR   

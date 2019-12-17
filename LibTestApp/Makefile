@@ -34,7 +34,7 @@ USE_YASM ?= n
 YASM ?= yasm
 NASM ?= nasm
 
-CFLAGS = -g -DLINUX -D_GNU_SOURCE \
+CFLAGS = -g -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \

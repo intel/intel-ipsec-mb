@@ -27,7 +27,7 @@ EXE=ipsec_perf
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ..
 
-CFLAGS = -DLINUX -D_GNU_SOURCE $(INCLUDES) \
+CFLAGS = -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
