@@ -39,7 +39,7 @@ extern "C" {
 typedef struct {
         uint64_t low;
         uint64_t high;
-} uint128_t;
+} imb_uint128_t;
 
 /*
  * Macros for aligning data structures and function inlines
@@ -387,8 +387,8 @@ typedef struct {
         const uint8_t *in[16];
         uint8_t *out[16];
         const uint32_t *keys[16];
-        DECLARE_ALIGNED(uint128_t IV[16], 64);
-        DECLARE_ALIGNED(uint128_t key_tab[15][16], 64);
+        DECLARE_ALIGNED(imb_uint128_t IV[16], 64);
+        DECLARE_ALIGNED(imb_uint128_t key_tab[15][16], 64);
 } AES_ARGS;
 
 typedef struct {
@@ -414,7 +414,7 @@ typedef struct {
 typedef struct {
         const uint8_t *in[8];
         const uint32_t *keys[8];
-        DECLARE_ALIGNED(uint128_t ICV[8], 32);
+        DECLARE_ALIGNED(imb_uint128_t ICV[8], 32);
 } AES_XCBC_ARGS_x8;
 
 typedef struct {
@@ -457,7 +457,7 @@ typedef struct {
         uint64_t unused_lanes;
         JOB_AES_HMAC *job_in_lane[16];
         uint64_t num_lanes_inuse;
-        DECLARE_ALIGNED(uint128_t crc_init[16], 16);
+        DECLARE_ALIGNED(imb_uint128_t crc_init[16], 16);
         DECLARE_ALIGNED(uint16_t crc_len[16], 16);
         DECLARE_ALIGNED(uint8_t crc_done[16], 16);
 } MB_MGR_DOCSIS_AES_OOO;

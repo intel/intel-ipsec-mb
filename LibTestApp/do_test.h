@@ -196,7 +196,7 @@ static void
 test_aux_func(MB_MGR *mgr)
 {
         /* test aux functions */
-        uint128_t keys[15] = {{0, 0}};
+        imb_uint128_t keys[15] = {{0, 0}};
         static uint8_t buf[4096+20];
 
         uint32_t digest1[8];
@@ -224,9 +224,9 @@ do_test(MB_MGR *mb_mgr)
 {
         uint32_t size;
         JOB_AES_HMAC *job;
-        static uint128_t IV = {0,0};
+        static imb_uint128_t IV = {0,0};
         static uint32_t ipad[5], opad[5], digest[3];
-        uint128_t keys[15] = {{0, 0}};
+        imb_uint128_t keys[15] = {{0, 0}};
         static uint8_t buf[4096+20];
 
         for (size = 32; size < 4096; size += 16) {

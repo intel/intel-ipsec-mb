@@ -539,7 +539,7 @@ void zuc_eea3_1_buffer_sse(const void *pKey,
                            const uint32_t length)
 {
 #ifndef LINUX
-        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
+        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 
         SAVE_XMMS(xmm_save);
 #endif
@@ -573,7 +573,7 @@ void zuc_eea3_4_buffer_sse(const void * const pKey[4],
                            const uint32_t length[4])
 {
 #ifndef LINUX
-        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
+        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 
         SAVE_XMMS(xmm_save);
 #endif
@@ -615,7 +615,7 @@ void zuc_eea3_n_buffer_sse(const void * const pKey[], const void * const pIv[],
                            const uint32_t numBuffers)
 {
 #ifndef LINUX
-        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
+        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 
         SAVE_XMMS(xmm_save);
 #endif
@@ -687,7 +687,7 @@ void zuc_eia3_1_buffer_sse(const void *pKey,
                            uint32_t *pMacI)
 {
 #ifndef LINUX
-        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
+        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 
         SAVE_XMMS(xmm_save);
 #endif

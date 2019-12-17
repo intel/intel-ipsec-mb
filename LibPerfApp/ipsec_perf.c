@@ -941,9 +941,9 @@ static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
 }
 
 /* Freeing allocated memory */
-static void free_mem(uint8_t **p_buffer, uint128_t **p_keys)
+static void free_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 {
-        uint128_t *keys = NULL;
+        imb_uint128_t *keys = NULL;
         uint8_t *buf = NULL;
 
         if (p_keys != NULL) {
@@ -972,7 +972,7 @@ static void free_mem(uint8_t **p_buffer, uint128_t **p_keys)
 }
 
 static const void *
-get_key_pointer(const uint32_t index, const uint128_t *p_keys)
+get_key_pointer(const uint32_t index, const imb_uint128_t *p_keys)
 {
         return (const void *) &p_keys[key_idxs[index]];
 }
@@ -1011,13 +1011,14 @@ static void init_buf(void *pb, const size_t length)
  * init_offsets() needs to be called prior to that so that
  * index_limit is set up accordingly to hot/cold selection.
  */
-static void init_mem(uint8_t **p_buffer, uint128_t **p_keys)
+static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 {
         const size_t bufs_size = index_limit * REGION_SIZE;
-        const size_t keys_size = index_limit * KEYS_PER_JOB * sizeof(uint128_t);
+        const size_t keys_size =
+                index_limit * KEYS_PER_JOB * sizeof(imb_uint128_t);
         const size_t alignment = 64;
         uint8_t *buf = NULL;
-        uint128_t *keys = NULL;
+        imb_uint128_t *keys = NULL;
 
         if (p_keys == NULL || p_buffer == NULL) {
                 fprintf(stderr, "Internal buffer allocation error!\n");
@@ -1035,9 +1036,9 @@ static void init_mem(uint8_t **p_buffer, uint128_t **p_keys)
         }
 
 #ifdef LINUX
-        keys = (uint128_t *) memalign(alignment, keys_size);
+        keys = (imb_uint128_t *) memalign(alignment, keys_size);
 #else
-        keys = (uint128_t *) _aligned_malloc(keys_size, alignment);
+        keys = (imb_uint128_t *) _aligned_malloc(keys_size, alignment);
 #endif
         if (!keys) {
                 fprintf(stderr, "Could not allocate memory for keys!\n");
@@ -1170,14 +1171,14 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
 /* Performs test using AES_HMAC or DOCSIS */
 static uint64_t
 do_test(MB_MGR *mb_mgr, struct params_s *params,
-        const uint32_t num_iter, uint8_t *p_buffer, uint128_t *p_keys)
+        const uint32_t num_iter, uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         JOB_AES_HMAC *job;
         JOB_AES_HMAC job_template;
         uint32_t i;
         static uint32_t index = 0;
-        static DECLARE_ALIGNED(uint128_t iv, 16);
-        static DECLARE_ALIGNED(uint128_t auth_iv, 16);
+        static DECLARE_ALIGNED(imb_uint128_t iv, 16);
+        static DECLARE_ALIGNED(imb_uint128_t auth_iv, 16);
         static uint32_t ipad[5], opad[5], digest[3];
         static DECLARE_ALIGNED(uint32_t k1_expanded[11 * 4], 16);
         static DECLARE_ALIGNED(uint8_t	k2[16], 16);
@@ -1461,7 +1462,7 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
 static uint64_t
 do_test_gcm(struct params_s *params,
             const uint32_t num_iter, MB_MGR *mb_mgr,
-            uint8_t *p_buffer, uint128_t *p_keys)
+            uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
         static DECLARE_ALIGNED(struct gcm_context_data gdata_ctx, 64);
@@ -1623,7 +1624,7 @@ do_test_gcm(struct params_s *params,
 /* Computes mean of set of times after dropping bottom and top quarters */
 static uint64_t
 mean_median(uint64_t *array, uint32_t size,
-            uint8_t *p_buffer, uint128_t *p_keys)
+            uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         const uint32_t quarter = size / 4;
         uint32_t i;
@@ -1661,7 +1662,7 @@ mean_median(uint64_t *array, uint32_t size,
 static void
 process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 struct variant_s *variant_ptr, const uint32_t run,
-                uint8_t *p_buffer, uint128_t *p_keys)
+                uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         const uint32_t sizes = params->num_sizes;
         uint64_t *times = &variant_ptr->avg_times[run];
@@ -1720,7 +1721,7 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 static void
 do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
             const uint32_t run, struct variant_s **variant_ptr,
-            uint32_t *variant, uint8_t *p_buffer, uint128_t *p_keys,
+            uint32_t *variant, uint8_t *p_buffer, imb_uint128_t *p_keys,
             const int print_info)
 {
         uint32_t hash_alg;
@@ -1835,7 +1836,7 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 static void
 run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
              const uint32_t run, struct variant_s **variant_ptr,
-             uint32_t *variant, uint8_t *p_buffer, uint128_t *p_keys,
+             uint32_t *variant, uint8_t *p_buffer, imb_uint128_t *p_keys,
              const int print_info)
 {
         uint32_t dir;
@@ -1892,7 +1893,8 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 /* Generates output containing averaged times for each test variant */
 static void
 print_times(struct variant_s *variant_list, struct params_s *params,
-            const uint32_t total_variants, uint8_t *p_buffer, uint128_t *p_keys)
+            const uint32_t total_variants, uint8_t *p_buffer,
+            imb_uint128_t *p_keys)
 {
         const uint32_t sizes = params->num_sizes;
         uint32_t col;
@@ -1991,7 +1993,7 @@ run_tests(void *arg)
         const uint32_t max_size = job_sizes[RANGE_MAX];
         const uint32_t step_size = job_sizes[RANGE_STEP];
         uint8_t *buf = NULL;
-        uint128_t *keys = NULL;
+        imb_uint128_t *keys = NULL;
 
         p_mgr = info->p_mgr;
 

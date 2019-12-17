@@ -1730,7 +1730,7 @@ submit_job_and_check(MB_MGR *state, const int run_check)
 
         JOB_AES_HMAC *job = NULL;
 #ifndef LINUX
-        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
+        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 
         SAVE_XMMS(xmm_save);
 #endif
@@ -1810,7 +1810,7 @@ FLUSH_JOB(MB_MGR *state)
 #endif
         JOB_AES_HMAC *job;
 #ifndef LINUX
-        DECLARE_ALIGNED(uint128_t xmm_save[10], 16);
+        DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 #endif
 
         if (state->earliest_job < 0)
