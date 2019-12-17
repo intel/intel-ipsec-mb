@@ -229,6 +229,7 @@ section .text
 	%xdefine arg8  qword [r14 + STACK_OFFSET + 8*8]
 	%xdefine arg9  qword [r14 + STACK_OFFSET + 8*9]
 	%xdefine arg10 qword [r14 + STACK_OFFSET + 8*10]
+	%xdefine arg11 qword [r14 + STACK_OFFSET + 8*11]
 %else
 	%xdefine arg1 rdi
 	%xdefine arg2 rsi
@@ -240,6 +241,7 @@ section .text
 	%xdefine arg8  qword [r14 + STACK_OFFSET + 8*2]
 	%xdefine arg9  qword [r14 + STACK_OFFSET + 8*3]
 	%xdefine arg10 qword [r14 + STACK_OFFSET + 8*4]
+	%xdefine arg11 qword [r14 + STACK_OFFSET + 8*5]
 %endif
 
 %ifdef NT_LDST

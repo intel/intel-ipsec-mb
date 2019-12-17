@@ -401,3 +401,21 @@ EXPORTS
     ghash_avx_gen4                              @375
     ghash_avx512                                @376
     ghash_vaes_avx512                           @377
+    aes_gcm_init_var_iv_128_avx_gen2            @378
+    aes_gcm_init_var_iv_128_avx_gen4            @379
+    aes_gcm_init_var_iv_128_avx512              @380
+    aes_gcm_init_var_iv_128_vaes_avx512         @381
+    aes_gcm_init_var_iv_128_sse                 @382
+    aes_gcm_init_var_iv_128_sse_no_aesni        @383
+    aes_gcm_init_var_iv_192_avx_gen2            @384
+    aes_gcm_init_var_iv_192_avx_gen4            @385
+    aes_gcm_init_var_iv_192_avx512              @386
+    aes_gcm_init_var_iv_192_vaes_avx512         @387
+    aes_gcm_init_var_iv_192_sse                 @388
+    aes_gcm_init_var_iv_192_sse_no_aesni        @389
+    aes_gcm_init_var_iv_256_avx_gen2            @390
+    aes_gcm_init_var_iv_256_avx_gen4            @391
+    aes_gcm_init_var_iv_256_avx512              @392
+    aes_gcm_init_var_iv_256_vaes_avx512         @393
+    aes_gcm_init_var_iv_256_sse                 @394
+    aes_gcm_init_var_iv_256_sse_no_aesni        @395

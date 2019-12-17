@@ -14,6 +14,8 @@ Library
   KASUMI_UEA1_BITLEN and hash type KASUMI_UIA2)
 - New GHASH API added
 - ZUC-EIA3 Multi-buffer API added and implemented for SSE and AVX.
+- Added support for any IV size in AES-GCM, through the job API and new
+  direct API
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through

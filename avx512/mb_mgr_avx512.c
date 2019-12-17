@@ -251,6 +251,20 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 #define AES_GCM_DEC_256_VAES aes_gcm_dec_256_vaes_avx512
 #define AES_GCM_ENC_256_VAES aes_gcm_enc_256_vaes_avx512
 
+#define AES_GCM_DEC_IV_128   aes_gcm_dec_var_iv_128_avx512
+#define AES_GCM_ENC_IV_128   aes_gcm_enc_var_iv_128_avx512
+#define AES_GCM_DEC_IV_192   aes_gcm_dec_var_iv_192_avx512
+#define AES_GCM_ENC_IV_192   aes_gcm_enc_var_iv_192_avx512
+#define AES_GCM_DEC_IV_256   aes_gcm_dec_var_iv_256_avx512
+#define AES_GCM_ENC_IV_256   aes_gcm_enc_var_iv_256_avx512
+
+#define AES_GCM_DEC_IV_128_VAES aes_gcm_dec_var_iv_128_vaes_avx512
+#define AES_GCM_ENC_IV_128_VAES aes_gcm_enc_var_iv_128_vaes_avx512
+#define AES_GCM_DEC_IV_192_VAES aes_gcm_dec_var_iv_192_vaes_avx512
+#define AES_GCM_ENC_IV_192_VAES aes_gcm_enc_var_iv_192_vaes_avx512
+#define AES_GCM_DEC_IV_256_VAES aes_gcm_dec_var_iv_256_vaes_avx512
+#define AES_GCM_ENC_IV_256_VAES aes_gcm_enc_var_iv_256_vaes_avx512
+
 #define SUBMIT_JOB_AES_GCM_DEC submit_job_aes_gcm_dec_avx512
 #define FLUSH_JOB_AES_GCM_DEC  flush_job_aes_gcm_avx512
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_avx512
@@ -303,33 +317,40 @@ plain_submit_gcm_dec_avx512(MB_MGR *state, JOB_AES_HMAC *job)
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
 
-        if (16 == job->aes_key_len_in_bytes)
-                AES_GCM_DEC_128(job->aes_dec_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes,
-                                job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-        else if (24 == job->aes_key_len_in_bytes)
-                AES_GCM_DEC_192(job->aes_dec_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes,
-                                job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-        else /* assume 32 bytes */
-                AES_GCM_DEC_256(job->aes_dec_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes,
-                                job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
+        if (16 == job->aes_key_len_in_bytes) {
+                AES_GCM_DEC_IV_128(job->aes_dec_key_expanded,
+                                   &ctx, job->dst,
+                                   job->src +
+                                   job->cipher_start_src_offset_in_bytes,
+                                   job->msg_len_to_cipher_in_bytes,
+                                   job->iv, job->iv_len_in_bytes,
+                                   job->u.GCM.aad,
+                                   job->u.GCM.aad_len_in_bytes,
+                                   job->auth_tag_output,
+                                   job->auth_tag_output_len_in_bytes);
+        } else if (24 == job->aes_key_len_in_bytes) {
+                AES_GCM_DEC_IV_192(job->aes_dec_key_expanded,
+                                   &ctx, job->dst,
+                                   job->src +
+                                   job->cipher_start_src_offset_in_bytes,
+                                   job->msg_len_to_cipher_in_bytes,
+                                   job->iv, job->iv_len_in_bytes,
+                                   job->u.GCM.aad,
+                                   job->u.GCM.aad_len_in_bytes,
+                                   job->auth_tag_output,
+                                   job->auth_tag_output_len_in_bytes);
+        } else { /* assume 32 bytes */
+                AES_GCM_DEC_IV_256(job->aes_dec_key_expanded,
+                                   &ctx, job->dst,
+                                   job->src +
+                                   job->cipher_start_src_offset_in_bytes,
+                                   job->msg_len_to_cipher_in_bytes,
+                                   job->iv, job->iv_len_in_bytes,
+                                   job->u.GCM.aad,
+                                   job->u.GCM.aad_len_in_bytes,
+                                   job->auth_tag_output,
+                                   job->auth_tag_output_len_in_bytes);
+        }
 
         job->status = STS_COMPLETED;
         return job;
@@ -341,30 +362,40 @@ plain_submit_gcm_enc_avx512(MB_MGR *state, JOB_AES_HMAC *job)
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
 
-        if (16 == job->aes_key_len_in_bytes)
-                AES_GCM_ENC_128(job->aes_enc_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes, job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-        else if (24 == job->aes_key_len_in_bytes)
-                AES_GCM_ENC_192(job->aes_enc_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes, job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
-        else /* assume 32 bytes */
-                AES_GCM_ENC_256(job->aes_enc_key_expanded, &ctx, job->dst,
-                                job->src +
-                                job->cipher_start_src_offset_in_bytes,
-                                job->msg_len_to_cipher_in_bytes, job->iv,
-                                job->u.GCM.aad, job->u.GCM.aad_len_in_bytes,
-                                job->auth_tag_output,
-                                job->auth_tag_output_len_in_bytes);
+        if (16 == job->aes_key_len_in_bytes) {
+                AES_GCM_ENC_IV_128(job->aes_enc_key_expanded,
+                                   &ctx, job->dst,
+                                   job->src +
+                                   job->cipher_start_src_offset_in_bytes,
+                                   job->msg_len_to_cipher_in_bytes,
+                                   job->iv, job->iv_len_in_bytes,
+                                   job->u.GCM.aad,
+                                   job->u.GCM.aad_len_in_bytes,
+                                   job->auth_tag_output,
+                                   job->auth_tag_output_len_in_bytes);
+        } else if (24 == job->aes_key_len_in_bytes) {
+                AES_GCM_ENC_IV_192(job->aes_enc_key_expanded,
+                                   &ctx, job->dst,
+                                   job->src +
+                                   job->cipher_start_src_offset_in_bytes,
+                                   job->msg_len_to_cipher_in_bytes,
+                                   job->iv, job->iv_len_in_bytes,
+                                   job->u.GCM.aad,
+                                   job->u.GCM.aad_len_in_bytes,
+                                   job->auth_tag_output,
+                                   job->auth_tag_output_len_in_bytes);
+        } else { /* assume 32 bytes */
+                AES_GCM_ENC_IV_256(job->aes_enc_key_expanded,
+                                   &ctx, job->dst,
+                                   job->src +
+                                   job->cipher_start_src_offset_in_bytes,
+                                   job->msg_len_to_cipher_in_bytes,
+                                   job->iv, job->iv_len_in_bytes,
+                                   job->u.GCM.aad,
+                                   job->u.GCM.aad_len_in_bytes,
+                                   job->auth_tag_output,
+                                   job->auth_tag_output_len_in_bytes);
+        }
 
         job->status = STS_COMPLETED;
         return job;
@@ -377,35 +408,38 @@ vaes_submit_gcm_dec_avx512(MB_MGR *state, JOB_AES_HMAC *job)
         (void) state;
 
         if (16 == job->aes_key_len_in_bytes)
-                AES_GCM_DEC_128_VAES(job->aes_dec_key_expanded, &ctx, job->dst,
-                                     job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->msg_len_to_cipher_in_bytes,
-                                     job->iv,
-                                     job->u.GCM.aad,
-                                     job->u.GCM.aad_len_in_bytes,
-                                     job->auth_tag_output,
-                                     job->auth_tag_output_len_in_bytes);
+                AES_GCM_DEC_IV_128_VAES(job->aes_dec_key_expanded, &ctx,
+                                        job->dst,
+                                        job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->msg_len_to_cipher_in_bytes,
+                                        job->iv, job->iv_len_in_bytes,
+                                        job->u.GCM.aad,
+                                        job->u.GCM.aad_len_in_bytes,
+                                        job->auth_tag_output,
+                                        job->auth_tag_output_len_in_bytes);
         else if (24 == job->aes_key_len_in_bytes)
-                AES_GCM_DEC_192_VAES(job->aes_dec_key_expanded, &ctx, job->dst,
-                                     job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->msg_len_to_cipher_in_bytes,
-                                     job->iv,
-                                     job->u.GCM.aad,
-                                     job->u.GCM.aad_len_in_bytes,
-                                     job->auth_tag_output,
-                                     job->auth_tag_output_len_in_bytes);
+                AES_GCM_DEC_IV_192_VAES(job->aes_dec_key_expanded, &ctx,
+                                        job->dst,
+                                        job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->msg_len_to_cipher_in_bytes,
+                                        job->iv, job->iv_len_in_bytes,
+                                        job->u.GCM.aad,
+                                        job->u.GCM.aad_len_in_bytes,
+                                        job->auth_tag_output,
+                                        job->auth_tag_output_len_in_bytes);
         else /* assume 32 bytes */
-                AES_GCM_DEC_256_VAES(job->aes_dec_key_expanded, &ctx, job->dst,
-                                     job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->msg_len_to_cipher_in_bytes,
-                                     job->iv,
-                                     job->u.GCM.aad,
-                                     job->u.GCM.aad_len_in_bytes,
-                                     job->auth_tag_output,
-                                     job->auth_tag_output_len_in_bytes);
+                AES_GCM_DEC_IV_256_VAES(job->aes_dec_key_expanded, &ctx,
+                                        job->dst,
+                                        job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->msg_len_to_cipher_in_bytes,
+                                        job->iv, job->iv_len_in_bytes,
+                                        job->u.GCM.aad,
+                                        job->u.GCM.aad_len_in_bytes,
+                                        job->auth_tag_output,
+                                        job->auth_tag_output_len_in_bytes);
 
         job->status = STS_COMPLETED;
         return job;
@@ -418,32 +452,38 @@ vaes_submit_gcm_enc_avx512(MB_MGR *state, JOB_AES_HMAC *job)
         (void) state;
 
         if (16 == job->aes_key_len_in_bytes)
-                AES_GCM_ENC_128_VAES(job->aes_enc_key_expanded, &ctx, job->dst,
-                                     job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->msg_len_to_cipher_in_bytes, job->iv,
-                                     job->u.GCM.aad,
-                                     job->u.GCM.aad_len_in_bytes,
-                                     job->auth_tag_output,
-                                     job->auth_tag_output_len_in_bytes);
+                AES_GCM_ENC_IV_128_VAES(job->aes_enc_key_expanded, &ctx,
+                                        job->dst,
+                                        job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->msg_len_to_cipher_in_bytes,
+                                        job->iv, job->iv_len_in_bytes,
+                                        job->u.GCM.aad,
+                                        job->u.GCM.aad_len_in_bytes,
+                                        job->auth_tag_output,
+                                        job->auth_tag_output_len_in_bytes);
         else if (24 == job->aes_key_len_in_bytes)
-                AES_GCM_ENC_192_VAES(job->aes_enc_key_expanded, &ctx, job->dst,
-                                     job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->msg_len_to_cipher_in_bytes, job->iv,
-                                     job->u.GCM.aad,
-                                     job->u.GCM.aad_len_in_bytes,
-                                     job->auth_tag_output,
-                                     job->auth_tag_output_len_in_bytes);
+                AES_GCM_ENC_IV_192_VAES(job->aes_enc_key_expanded, &ctx,
+                                        job->dst,
+                                        job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->msg_len_to_cipher_in_bytes,
+                                        job->iv, job->iv_len_in_bytes,
+                                        job->u.GCM.aad,
+                                        job->u.GCM.aad_len_in_bytes,
+                                        job->auth_tag_output,
+                                        job->auth_tag_output_len_in_bytes);
         else /* assume 32 bytes */
-                AES_GCM_ENC_256_VAES(job->aes_enc_key_expanded, &ctx, job->dst,
-                                     job->src +
-                                     job->cipher_start_src_offset_in_bytes,
-                                     job->msg_len_to_cipher_in_bytes, job->iv,
-                                     job->u.GCM.aad,
-                                     job->u.GCM.aad_len_in_bytes,
-                                     job->auth_tag_output,
-                                     job->auth_tag_output_len_in_bytes);
+                AES_GCM_ENC_IV_256_VAES(job->aes_enc_key_expanded, &ctx,
+                                        job->dst,
+                                        job->src +
+                                        job->cipher_start_src_offset_in_bytes,
+                                        job->msg_len_to_cipher_in_bytes,
+                                        job->iv, job->iv_len_in_bytes,
+                                        job->u.GCM.aad,
+                                        job->u.GCM.aad_len_in_bytes,
+                                        job->auth_tag_output,
+                                        job->auth_tag_output_len_in_bytes);
 
         job->status = STS_COMPLETED;
         return job;
@@ -1098,6 +1138,9 @@ init_mb_mgr_avx512(MB_MGR *state)
                 state->gcm128_init         = aes_gcm_init_128_vaes_avx512;
                 state->gcm192_init         = aes_gcm_init_192_vaes_avx512;
                 state->gcm256_init         = aes_gcm_init_256_vaes_avx512;
+                state->gcm128_init_var_iv = aes_gcm_init_var_iv_128_vaes_avx512;
+                state->gcm192_init_var_iv = aes_gcm_init_var_iv_192_vaes_avx512;
+                state->gcm256_init_var_iv = aes_gcm_init_var_iv_256_vaes_avx512;
                 state->gcm128_enc_update   = aes_gcm_enc_128_update_vaes_avx512;
                 state->gcm192_enc_update   = aes_gcm_enc_192_update_vaes_avx512;
                 state->gcm256_enc_update   = aes_gcm_enc_256_update_vaes_avx512;
@@ -1136,6 +1179,9 @@ init_mb_mgr_avx512(MB_MGR *state)
                 state->gcm128_init         = aes_gcm_init_128_avx512;
                 state->gcm192_init         = aes_gcm_init_192_avx512;
                 state->gcm256_init         = aes_gcm_init_256_avx512;
+                state->gcm128_init_var_iv  = aes_gcm_init_var_iv_128_avx512;
+                state->gcm192_init_var_iv  = aes_gcm_init_var_iv_192_avx512;
+                state->gcm256_init_var_iv  = aes_gcm_init_var_iv_256_avx512;
                 state->gcm128_enc_update   = aes_gcm_enc_128_update_avx512;
                 state->gcm192_enc_update   = aes_gcm_enc_192_update_avx512;
                 state->gcm256_enc_update   = aes_gcm_enc_256_update_avx512;

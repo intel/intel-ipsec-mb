@@ -960,7 +960,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->iv_len_in_bytes != UINT64_C(12)) {
+                if (job->iv_len_in_bytes == 0) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }

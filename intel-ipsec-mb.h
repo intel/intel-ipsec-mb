@@ -737,9 +737,19 @@ typedef void (*aes_gcm_enc_dec_t)(const struct gcm_key_data *,
                                   uint8_t *, uint8_t const *, uint64_t,
                                   const uint8_t *, uint8_t const *, uint64_t,
                                   uint8_t *, uint64_t);
+typedef void (*aes_gcm_enc_dec_iv_t)(const struct gcm_key_data *,
+                                     struct gcm_context_data *, uint8_t *,
+                                     uint8_t const *, const uint64_t,
+                                     const uint8_t *, uint8_t const *,
+                                     const uint64_t, uint8_t *,
+                                     const uint64_t, const uint64_t);
 typedef void (*aes_gcm_init_t)(const struct gcm_key_data *,
                                struct gcm_context_data *,
                                const uint8_t *, uint8_t const *, uint64_t);
+typedef void (*aes_gcm_init_var_iv_t)(const struct gcm_key_data *,
+                                      struct gcm_context_data *,
+                                      const uint8_t *, const uint64_t,
+                                      const uint8_t *, const uint64_t);
 typedef void (*aes_gcm_enc_dec_update_t)(const struct gcm_key_data *,
                                          struct gcm_context_data *,
                                          uint8_t *, const uint8_t *, uint64_t);
@@ -1028,6 +1038,9 @@ typedef struct MB_MGR {
 
         ghash_t                 ghash;
         zuc_eia3_n_buffer_t     eia3_n_buffer;
+        aes_gcm_init_var_iv_t   gcm128_init_var_iv;
+        aes_gcm_init_var_iv_t   gcm192_init_var_iv;
+        aes_gcm_init_var_iv_t   gcm256_init_var_iv;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1230,6 +1243,16 @@ IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
         ((_mgr)->gcm192_init((_key), (_ctx), (_iv), (_aad), (_aadl)))
 #define IMB_AES256_GCM_INIT(_mgr, _key, _ctx, _iv, _aad, _aadl)        \
         ((_mgr)->gcm256_init((_key), (_ctx), (_iv), (_aad), (_aadl)))
+
+#define IMB_AES128_GCM_INIT_VAR_IV(_mgr, _key, _ctx, _iv, _ivl, _aad, _aadl) \
+        ((_mgr)->gcm128_init_var_iv((_key), (_ctx), (_iv), (_ivl), \
+                                    (_aad), (_aadl)))
+#define IMB_AES192_GCM_INIT_VAR_IV(_mgr, _key, _ctx, _iv, _ivl, _aad, _aadl) \
+        ((_mgr)->gcm192_init_var_iv((_key), (_ctx), (_iv), (_ivl), \
+                                    (_aad), (_aadl)))
+#define IMB_AES256_GCM_INIT_VAR_IV(_mgr, _key, _ctx, _iv, _ivl, _aad, _aadl) \
+        ((_mgr)->gcm256_init_var_iv((_key), (_ctx), (_iv), (_ivl), \
+                                    (_aad), (_aadl)))
 
 #define IMB_AES128_GCM_ENC_UPDATE(_mgr, _key, _ctx, _out, _in, _len)    \
         ((_mgr)->gcm128_enc_update((_key), (_ctx), (_out), (_in), (_len)))

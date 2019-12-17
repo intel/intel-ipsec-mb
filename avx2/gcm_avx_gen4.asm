@@ -2607,20 +2607,57 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         pop     r12
 %endmacro
 
+%macro CALC_J0 15
+%define %%KEY           %1 ;; [in] Pointer to GCM KEY structure
+%define %%IV            %2 ;; [in] Pointer to IV
+%define %%IV_LEN        %3 ;; [in] IV length
+%define %%J0            %4 ;; [out] XMM reg to contain J0
+%define %%TMP0          %5 ;; [clobbered] Temporary GP reg
+%define %%TMP1          %6 ;; [clobbered] Temporary GP reg
+%define %%TMP2          %7 ;; [clobbered] Temporary GP reg
+%define %%TMP3          %8 ;; [clobbered] Temporary GP reg
+%define %%TMP4          %9 ;; [clobbered] Temporary GP reg
+%define %%XTMP0         %10 ;; [clobbered] Temporary XMM reg
+%define %%XTMP1         %11 ;; [clobbered] Temporary XMM reg
+%define %%XTMP2         %12 ;; [clobbered] Temporary XMM reg
+%define %%XTMP3         %13 ;; [clobbered] Temporary XMM reg
+%define %%XTMP4         %14 ;; [clobbered] Temporary XMM reg
+%define %%XTMP5         %15 ;; [clobbered] Temporary XMM reg
+
+        ;; J0 = GHASH(IV || 0s+64 || len(IV)64)
+        ;; s = 16 * RoundUp(len(IV)/16) -  len(IV) */
+
+        ;; Calculate GHASH of (IV || 0s)
+        CALC_AAD_HASH %%IV, %%IV_LEN, %%J0, %%KEY, %%XTMP0, %%XTMP1, %%XTMP2, \
+                      %%XTMP3, %%XTMP4, %%XTMP5, %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%TMP4
+
+        ;; Calculate GHASH of last 16-byte block (0 || len(IV)64)
+        vmovdqu %%XTMP0, [%%KEY + HashKey]
+        mov     %%TMP2, %%IV_LEN
+        shl     %%TMP2, 3 ;; IV length in bits
+        vmovq   %%XTMP1, %%TMP2
+        vpxor   %%J0, %%XTMP1
+        GHASH_MUL %%J0, %%XTMP0, %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5
+
+        vpshufb %%J0, [rel SHUF_MASK] ; perform a 16Byte swap
+%endmacro
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GCM_INIT initializes a gcm_context_data struct to prepare for encoding/decoding.
-; Input: gcm_key_data * (GDATA_KEY), gcm_context_data *(GDATA_CTX), IV,
+; Input: gcm_key_data * (GDATA_KEY), gcm_context_data *(GDATA_CTX), IV, IV_LEN,
 ; Additional Authentication data (A_IN), Additional Data length (A_LEN).
-; Output: Updated GDATA_CTX with the hash of A_IN (AadHash) and initialized other parts of GDATA_CTX.
-; Clobbers rax, r10-r13, and xmm0-xmm6
+; Output: Updated GDATA_CTX with the hash of A_IN (AadHash) and initialized other parts of GDATA.
+; Clobbers rax, r10-r13 and xmm0-xmm6
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_INIT        5
-%define %%GDATA_KEY     %1
-%define %%GDATA_CTX     %2
-%define %%IV            %3
-%define %%A_IN          %4
-%define %%A_LEN         %5
+%macro  GCM_INIT        5-6
+%define %%GDATA_KEY     %1 ; [in] Pointer to GCM Key data structure
+%define %%GDATA_CTX     %2 ; [in/out] Pointer to GCM Context data structure
+%define %%IV            %3 ; [in] Pointer to IV
+%define %%A_IN	        %4 ; [in] Pointer to AAD
+%define %%A_LEN	        %5 ; [in] AAD length
+%define %%IV_LEN        %6 ; [in] IV length
+
 %define %%AAD_HASH      xmm14
 
 
@@ -2645,9 +2682,14 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         mov     [%%GDATA_CTX + PBlockLen], r10              ; ctx_data.partial_block_length = 0
         vmovdqu [%%GDATA_CTX + PBlockEncKey], xmm2          ; ctx_data.partial_block_enc_key = 0
         mov     r10, %%IV
-        vmovdqa xmm2, [rel ONEf]                            ; read 12 IV bytes and pad with 0x00000001
+%if %0 == 6 ;; IV is different than 12 bytes
+        CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, xmm2, r10, r11, r12, r13, rax, xmm1, xmm0, \
+                xmm3, xmm4, xmm5, xmm6
+%else ;; IV is 12 bytes
+        vmovdqa xmm2, [rel ONEf]                        ; read 12 IV bytes and pad with 0x00000001
         vpinsrq xmm2, [r10], 0
         vpinsrd xmm2, [r10+8], 2
+%endif
         vmovdqu [%%GDATA_CTX + OrigIV], xmm2                ; ctx_data.orig_IV = iv
 
         vpshufb xmm2, [rel SHUF_MASK]
@@ -3218,9 +3260,9 @@ FN_NAME(init,_):
         push    r14
         push    r15
         mov     r14, rsp
-	; xmm6:xmm15 need to be maintained for Windows
+	; xmm6 needs to be maintained for Windows
 	sub	rsp, 1*16
-	movdqu	[rsp + 0*16], xmm6
+	vmovdqu	[rsp + 0*16], xmm6
 %endif
 
 %ifdef SAFE_PARAM
@@ -3255,7 +3297,7 @@ skip_aad_check_init:
 exit_init:
 
 %ifidn __OUTPUT_FORMAT__, win64
-	movdqu	xmm6 , [rsp + 0*16]
+	vmovdqu	xmm6 , [rsp + 0*16]
         mov     rsp, r14
         pop     r15
         pop     r14
@@ -3264,6 +3306,81 @@ exit_init:
         pop     r12
         ret
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_init_var_iv_128_avx_gen4 / aes_gcm_init_var_iv_192_avx_gen4 /
+;       aes_gcm_init_var_iv_256_avx_gen4
+;        const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8        *iv,
+;        const u64 iv_len,
+;        const u8  *aad,
+;        const u64 aad_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(FN_NAME(init_var_iv,_),function,)
+FN_NAME(init_var_iv,_):
+	push	r12
+	push	r13
+%ifidn __OUTPUT_FORMAT__, win64
+        push    r14
+        push    r15
+        mov     r14, rsp
+	; xmm6 needs to be maintained for Windows
+	sub	rsp, 1*16
+	vmovdqu	[rsp + 0*16], xmm6
+%endif
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_init_IV
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_init_IV
+
+        ;; Check IV != NULL
+        cmp     arg3, 0
+        jz      exit_init_IV
+
+        ;; Check iv_len != 0
+        cmp     arg4, 0
+        jz      exit_init_IV
+
+        ;; Check if aad_len == 0
+        cmp     arg6, 0
+        jz      skip_aad_check_init_IV
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg5, 0
+        jz      exit_init_IV
+
+skip_aad_check_init_IV:
+%endif
+        cmp     arg4, 12
+        je      iv_len_12_init_IV
+
+	GCM_INIT arg1, arg2, arg3, arg5, arg6, arg4
+        jmp     skip_iv_len_12_init_IV
+
+iv_len_12_init_IV:
+	GCM_INIT arg1, arg2, arg3, arg5, arg6
+
+skip_iv_len_12_init_IV:
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_ymms_asm
+%endif
+exit_init_IV:
+
+%ifidn __OUTPUT_FORMAT__, win64
+	vmovdqu	xmm6 , [rsp + 0*16]
+        mov     rsp, r14
+        pop     r15
+        pop     r14
+%endif
+	pop	r13
+	pop	r12
+        ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_update_avx_gen4 / aes_gcm_enc_192_update_avx_gen4 /
@@ -3623,8 +3740,6 @@ skip_in_out_check_dec:
 
 skip_aad_check_dec:
 %endif
-
-
         GCM_INIT arg1, arg2, arg6, arg7, arg8
 
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
@@ -3635,6 +3750,188 @@ exit_dec:
         FUNC_RESTORE
 
         ret
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_enc_var_iv_128_avx_gen4 / aes_gcm_enc_var_iv_192_avx_gen4 /
+;       aes_gcm_enc_var_iv_256_avx_gen4
+;        const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8        *out,
+;        const u8  *in,
+;        u64       plaintext_len,
+;        u8        *iv,
+;        const u64 iv_len,
+;        const u8  *aad,
+;        const u64 aad_len,
+;        u8        *auth_tag,
+;        const u64 auth_tag_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(FN_NAME(enc_var_iv,_),function,)
+FN_NAME(enc_var_iv,_):
+
+	FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_enc_IV
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_enc_IV
+
+        ;; Check IV != NULL
+        cmp     arg6, 0
+        jz      exit_enc_IV
+
+        ;; Check IV len != 0
+        cmp     arg7, 0
+        jz      exit_enc_IV
+
+        ;; Check auth_tag != NULL
+        cmp     arg10, 0
+        jz      exit_enc_IV
+
+        ;; Check auth_tag_len == 0 or > 16
+        cmp     arg11, 0
+        jz      exit_enc_IV
+
+        cmp     arg11, 16
+        ja      exit_enc_IV
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_enc_IV
+
+        ;; Check out != NULL (plaintext_len != 0)
+        cmp     arg3, 0
+        jz      exit_enc_IV
+
+        ;; Check in != NULL (plaintext_len != 0)
+        cmp     arg4, 0
+        jz      exit_enc_IV
+
+skip_in_out_check_enc_IV:
+        ;; Check if aad_len == 0
+        cmp     arg9, 0
+        jz      skip_aad_check_enc_IV
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg8, 0
+        jz      exit_enc_IV
+
+skip_aad_check_enc_IV:
+%endif
+        cmp     arg7, 12
+        je      iv_len_12_enc_IV
+
+	GCM_INIT arg1, arg2, arg6, arg8, arg9, arg7
+        jmp     skip_iv_len_12_enc_IV
+
+iv_len_12_enc_IV:
+	GCM_INIT arg1, arg2, arg6, arg8, arg9
+
+skip_iv_len_12_enc_IV:
+        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
+
+        GCM_COMPLETE arg1, arg2, arg10, arg11, ENC, single_call
+
+exit_enc_IV:
+	FUNC_RESTORE
+
+	ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   aes_gcm_dec_var_iv_128_avx_gen4 / aes_gcm_dec_var_iv_192_avx_gen4 /
+;       aes_gcm_dec_var_iv_256_avx_gen4
+;        const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        u8        *out,
+;        const u8  *in,
+;        u64       plaintext_len,
+;        u8        *iv,
+;        const u64 iv_len,
+;        const u8  *aad,
+;        const u64 aad_len,
+;        u8        *auth_tag,
+;        const u64 auth_tag_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(FN_NAME(dec_var_iv,_),function,)
+FN_NAME(dec_var_iv,_):
+
+	FUNC_SAVE
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_dec_IV
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_dec_IV
+
+        ;; Check IV != NULL
+        cmp     arg6, 0
+        jz      exit_dec_IV
+
+        ;; Check IV len != 0
+        cmp     arg7, 0
+        jz      exit_dec_IV
+
+        ;; Check auth_tag != NULL
+        cmp     arg10, 0
+        jz      exit_dec_IV
+
+        ;; Check auth_tag_len == 0 or > 16
+        cmp     arg11, 0
+        jz      exit_dec_IV
+
+        cmp     arg11, 16
+        ja      exit_dec_IV
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_dec_IV
+
+        ;; Check out != NULL (plaintext_len != 0)
+        cmp     arg3, 0
+        jz      exit_dec_IV
+
+        ;; Check in != NULL (plaintext_len != 0)
+        cmp     arg4, 0
+        jz      exit_dec_IV
+
+skip_in_out_check_dec_IV:
+        ;; Check if aad_len == 0
+        cmp     arg9, 0
+        jz      skip_aad_check_dec_IV
+
+        ;; Check aad != NULL (aad_len != 0)
+        cmp     arg8, 0
+        jz      exit_dec_IV
+
+skip_aad_check_dec_IV:
+%endif
+        cmp     arg7, 12
+        je      iv_len_12_dec_IV
+
+	GCM_INIT arg1, arg2, arg6, arg8, arg9, arg7
+        jmp     skip_iv_len_12_dec_IV
+
+iv_len_12_dec_IV:
+	GCM_INIT arg1, arg2, arg6, arg8, arg9
+
+skip_iv_len_12_dec_IV:
+        GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
+
+        GCM_COMPLETE arg1, arg2, arg10, arg11, DEC, single_call
+
+
+exit_dec_IV:
+	FUNC_RESTORE
+
+	ret
 
 %ifdef GCM128_MODE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
