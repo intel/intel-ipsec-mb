@@ -793,7 +793,8 @@ ecb_test(const enum arch_type arch,
         for (i = 0; i < DIM(num_jobs_tab); i++)
                 errors += test_ecb_vectors(mb_mgr, DIM(ecb_vectors),
                                            ecb_vectors,
-                                           "AES-ECB standard test vectors", ECB,
+                                           "AES-ECB standard test vectors",
+                                           IMB_CIPHER_ECB,
                                            num_jobs_tab[i]);
 	if (0 == errors)
 		printf("...Pass\n");

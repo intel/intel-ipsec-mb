@@ -478,7 +478,7 @@ test_pon(struct MB_MGR *mb_mgr,
         job->chain_order = order;
         job->dst = target + sizeof(padding) + offset_to_cipher_crc;
         job->src = target + sizeof(padding) /* in_text */;
-        job->cipher_mode = PON_AES_CNTR;
+        job->cipher_mode = IMB_CIPHER_PON_AES_CNTR;
         job->cipher_start_src_offset_in_bytes = (uint64_t) offset_to_cipher_crc;
 
         /* If IV == NULL, NO CTR is done */

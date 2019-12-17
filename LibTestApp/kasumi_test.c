@@ -173,7 +173,7 @@ submit_kasumi_f8_jobs(struct MB_MGR *mb_mgr, kasumi_key_sched_t **keys,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->cipher_direction = dir;
                 job->chain_order = CIPHER_HASH;
-                job->cipher_mode = KASUMI_UEA1_BITLEN;
+                job->cipher_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN;
                 job->src = src[i];
                 job->dst = dst[i];
                 job->iv = (void *)ivs[i];
@@ -215,7 +215,7 @@ submit_kasumi_f9_job(struct MB_MGR *mb_mgr, kasumi_key_sched_t *key,
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->chain_order = CIPHER_HASH;
-        job->cipher_mode = NULL_CIPHER;
+        job->cipher_mode = IMB_CIPHER_NULL;
         job->src = src;
         job->u.KASUMI_UIA1._key = key;
 

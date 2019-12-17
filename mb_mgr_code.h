@@ -309,7 +309,7 @@ __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 {
-        if (CBC == job->cipher_mode) {
+        if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES128_ENC(&state->aes128_ooo, job);
                 } else if (24 == job->aes_key_len_in_bytes) {
@@ -317,11 +317,11 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_ENC(&state->aes256_ooo, job);
                 }
-        } else if (CNTR == job->cipher_mode) {
+        } else if (IMB_CIPHER_CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);
-        } else if (CNTR_BITLEN == job->cipher_mode) {
+        } else if (IMB_CIPHER_CNTR_BITLEN == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR_BIT(job);
-        } else if (ECB == job->cipher_mode) {
+        } else if (IMB_CIPHER_ECB == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_128_ENC(job);
                 } else if (24 == job->aes_key_len_in_bytes) {
@@ -329,7 +329,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES_ECB_256_ENC(job);
                 }
-        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
+        } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
 
                 if (job->hash_alg == DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
@@ -341,45 +341,45 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 
                         return SUBMIT_JOB_DOCSIS_SEC_ENC(p_ooo, job);
                 }
-        } else if (PON_AES_CNTR == job->cipher_mode) {
+        } else if (IMB_CIPHER_PON_AES_CNTR == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes == 0)
                         return SUBMIT_JOB_PON_ENC_NO_CTR(job);
                 else
                         return SUBMIT_JOB_PON_ENC(job);
 #ifndef NO_GCM
-        } else if (GCM == job->cipher_mode) {
+        } else if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_ENC(state, job);
 #endif /* NO_GCM */
-        } else if (CUSTOM_CIPHER == job->cipher_mode) {
+        } else if (IMB_CIPHER_CUSTOM == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
-        } else if (DES == job->cipher_mode) {
+        } else if (IMB_CIPHER_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DES_CBC_ENC
                 return SUBMIT_JOB_DES_CBC_ENC(&state->des_enc_ooo, job);
 #else
                 return DES_CBC_ENC(job);
 #endif /* SUBMIT_JOB_DES_CBC_ENC */
-        } else if (DOCSIS_DES == job->cipher_mode) {
+        } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
                 return SUBMIT_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo,
                                                  job);
 #else
                 return DOCSIS_DES_ENC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_ENC */
-        } else if (DES3 == job->cipher_mode) {
+        } else if (IMB_CIPHER_DES3 == job->cipher_mode) {
 #ifdef SUBMIT_JOB_3DES_CBC_ENC
                 return SUBMIT_JOB_3DES_CBC_ENC(&state->des3_enc_ooo, job);
 #else
                 return DES3_CBC_ENC(job);
 #endif
-        } else if (CCM == job->cipher_mode) {
+        } else if (IMB_CIPHER_CCM == job->cipher_mode) {
                 return AES_CNTR_CCM_128(job);
-        } else if (ZUC_EEA3 == job->cipher_mode) {
+        } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
                 return SUBMIT_JOB_ZUC_EEA3(&state->zuc_eea3_ooo, job);
-        } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
+        } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
-        } else if (KASUMI_UEA1_BITLEN == job->cipher_mode) {
+        } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == job->cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
-        } else { /* assume NULL_CIPHER */
+        } else { /* assume IMB_CIPHER_NULL */
                 job->status |= STS_COMPLETED_AES;
                 return job;
         }
@@ -389,7 +389,7 @@ __forceinline
 JOB_AES_HMAC *
 FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 {
-        if (CBC == job->cipher_mode) {
+        if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
                         return FLUSH_JOB_AES128_ENC(&state->aes128_ooo);
                 } else if (24 == job->aes_key_len_in_bytes) {
@@ -398,10 +398,10 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return FLUSH_JOB_AES256_ENC(&state->aes256_ooo);
                 }
 #ifndef NO_GCM
-        } else if (GCM == job->cipher_mode) {
+        } else if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return FLUSH_JOB_AES_GCM_ENC(state, job);
 #endif /* NO_GCM */
-        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
+        } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
 
                 if (job->hash_alg == DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
@@ -414,22 +414,24 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return FLUSH_JOB_DOCSIS_SEC_ENC(p_ooo);
                 }
 #ifdef FLUSH_JOB_DES_CBC_ENC
-        } else if (DES == job->cipher_mode) {
+        } else if (IMB_CIPHER_DES == job->cipher_mode) {
                 return FLUSH_JOB_DES_CBC_ENC(&state->des_enc_ooo);
 #endif /* FLUSH_JOB_DES_CBC_ENC */
 #ifdef FLUSH_JOB_3DES_CBC_ENC
-        } else if (DES3 == job->cipher_mode) {
+        } else if (IMB_CIPHER_DES3 == job->cipher_mode) {
                 return FLUSH_JOB_3DES_CBC_ENC(&state->des3_enc_ooo);
 #endif /* FLUSH_JOB_3DES_CBC_ENC */
 #ifdef FLUSH_JOB_DOCSIS_DES_ENC
-        } else if (DOCSIS_DES == job->cipher_mode) {
+        } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
                 return FLUSH_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_ENC */
-        } else if (CUSTOM_CIPHER == job->cipher_mode) {
+        } else if (IMB_CIPHER_CUSTOM == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
-        } else if (ZUC_EEA3 == job->cipher_mode) {
+        } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
                 return FLUSH_JOB_ZUC_EEA3(&state->zuc_eea3_ooo);
-        } else { /* assume CNTR/CNTR_BITLEN, ECB, CCM or NULL_CIPHER */
+        /* assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
+         * IMB_CIPHER_CCM or IMB_CIPHER_NULL */
+        } else {
                 return NULL;
         }
 }
@@ -438,7 +440,7 @@ __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 {
-        if (CBC == job->cipher_mode) {
+        if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES128_DEC(job);
                 } else if (24 == job->aes_key_len_in_bytes) {
@@ -446,11 +448,11 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_DEC(job);
                 }
-        } else if (CNTR == job->cipher_mode) {
+        } else if (IMB_CIPHER_CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);
-        } else if (CNTR_BITLEN == job->cipher_mode) {
+        } else if (IMB_CIPHER_CNTR_BITLEN == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR_BIT(job);
-        } else if (ECB == job->cipher_mode) {
+        } else if (IMB_CIPHER_ECB == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_128_DEC(job);
                 } else if (24 == job->aes_key_len_in_bytes) {
@@ -458,54 +460,54 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES_ECB_256_DEC(job);
                 }
-        } else if (DOCSIS_SEC_BPI == job->cipher_mode) {
+        } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
                 MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
 
                 if (job->hash_alg == DOCSIS_CRC32)
                         return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(p_ooo, job);
                 else
                         return SUBMIT_JOB_DOCSIS_SEC_DEC(p_ooo, job);
-        } else if (PON_AES_CNTR == job->cipher_mode) {
+        } else if (IMB_CIPHER_PON_AES_CNTR == job->cipher_mode) {
                 if (job->msg_len_to_cipher_in_bytes == 0)
                         return SUBMIT_JOB_PON_DEC_NO_CTR(job);
                 else
                         return SUBMIT_JOB_PON_DEC(job);
 #ifndef NO_GCM
-        } else if (GCM == job->cipher_mode) {
+        } else if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_DEC(state, job);
 #endif /* NO_GCM */
-        } else if (DES == job->cipher_mode) {
+        } else if (IMB_CIPHER_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DES_CBC_DEC
                 return SUBMIT_JOB_DES_CBC_DEC(&state->des_dec_ooo, job);
 #else
                 (void) state;
                 return DES_CBC_DEC(job);
 #endif /* SUBMIT_JOB_DES_CBC_DEC */
-        } else if (DOCSIS_DES == job->cipher_mode) {
+        } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
                 return SUBMIT_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo,
                                                  job);
 #else
                 return DOCSIS_DES_DEC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_DEC */
-        } else if (DES3 == job->cipher_mode) {
+        } else if (IMB_CIPHER_DES3 == job->cipher_mode) {
 #ifdef SUBMIT_JOB_3DES_CBC_DEC
                 return SUBMIT_JOB_3DES_CBC_DEC(&state->des3_dec_ooo, job);
 #else
                 return DES3_CBC_DEC(job);
 #endif
-        } else if (CUSTOM_CIPHER == job->cipher_mode) {
+        } else if (IMB_CIPHER_CUSTOM == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
-        } else if (CCM == job->cipher_mode) {
+        } else if (IMB_CIPHER_CCM == job->cipher_mode) {
                 return AES_CNTR_CCM_128(job);
-        } else if (ZUC_EEA3 == job->cipher_mode) {
+        } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
                 return SUBMIT_JOB_ZUC_EEA3(&state->zuc_eea3_ooo, job);
-        } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
+        } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
-        } else if (KASUMI_UEA1_BITLEN == job->cipher_mode) {
+        } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == job->cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
         } else {
-                /* assume NULL_CIPHER */
+                /* assume IMB_CIPHER_NULL */
                 job->status |= STS_COMPLETED_AES;
                 return job;
         }
@@ -516,22 +518,22 @@ JOB_AES_HMAC *
 FLUSH_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 {
 #ifndef NO_GCM
-        if (GCM == job->cipher_mode)
+        if (IMB_CIPHER_GCM == job->cipher_mode)
                 return FLUSH_JOB_AES_GCM_DEC(state, job);
 #endif /* NO_GCM */
 #ifdef FLUSH_JOB_DES_CBC_DEC
-        if (DES == job->cipher_mode)
+        if (IMB_CIPHER_DES == job->cipher_mode)
                 return FLUSH_JOB_DES_CBC_DEC(&state->des_dec_ooo);
 #endif /* FLUSH_JOB_DES_CBC_DEC */
 #ifdef FLUSH_JOB_3DES_CBC_DEC
-        if (DES3 == job->cipher_mode)
+        if (IMB_CIPHER_DES3 == job->cipher_mode)
                 return FLUSH_JOB_3DES_CBC_DEC(&state->des3_dec_ooo);
 #endif /* FLUSH_JOB_3DES_CBC_DEC */
 #ifdef FLUSH_JOB_DOCSIS_DES_DEC
-        if (DOCSIS_DES == job->cipher_mode)
+        if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode)
                 return FLUSH_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_DEC */
-        if (ZUC_EEA3 == job->cipher_mode)
+        if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode)
                 return FLUSH_JOB_ZUC_EEA3(&state->zuc_eea3_ooo);
         (void) state;
         return NULL;
@@ -777,7 +779,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
         const uint64_t max_pon_len = (1 << 14) + 8;
 
         switch (job->cipher_mode) {
-        case CBC:
+        case IMB_CIPHER_CBC:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -819,7 +821,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case ECB:
+        case IMB_CIPHER_ECB:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -851,8 +853,8 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case CNTR:
-        case CNTR_BITLEN:
+        case IMB_CIPHER_CNTR:
+        case IMB_CIPHER_CNTR_BITLEN:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -890,14 +892,14 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case NULL_CIPHER:
+        case IMB_CIPHER_NULL:
                 /*
                  * No checks required for this mode
                  * @note NULL cipher doesn't perform memory copy operation
                  *       from source to destination
                  */
                 break;
-        case DOCSIS_SEC_BPI:
+        case IMB_CIPHER_DOCSIS_SEC_BPI:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -930,7 +932,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
 #ifndef NO_GCM
-        case GCM:
+        case IMB_CIPHER_GCM:
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -970,14 +972,14 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 }
                 break;
 #endif /* !NO_GCM */
-        case CUSTOM_CIPHER:
+        case IMB_CIPHER_CUSTOM:
                 /* no checks here */
                 if (job->cipher_func == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
-        case DES:
+        case IMB_CIPHER_DES:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1017,7 +1019,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case DOCSIS_DES:
+        case IMB_CIPHER_DOCSIS_DES:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1053,7 +1055,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case CCM:
+        case IMB_CIPHER_CCM:
                 if (job->msg_len_to_cipher_in_bytes != 0) {
                         if (job->src == NULL) {
                                 INVALID_PRN("cipher_mode:%d\n",
@@ -1096,7 +1098,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case DES3:
+        case IMB_CIPHER_DES3:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1157,7 +1159,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         }
                 }
                 break;
-        case PON_AES_CNTR:
+        case IMB_CIPHER_PON_AES_CNTR:
                 /*
                  * CRC and cipher are done together. A few assumptions:
                  * - CRC and cipher start offsets are the same
@@ -1222,7 +1224,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         }
                 }
                 break;
-        case ZUC_EEA3:
+        case IMB_CIPHER_ZUC_EEA3:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1253,7 +1255,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case SNOW3G_UEA2_BITLEN:
+        case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1284,7 +1286,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case KASUMI_UEA1_BITLEN:
+        case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                 if (job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1362,7 +1364,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                if (job->cipher_mode != GCM) {
+                if (job->cipher_mode != IMB_CIPHER_GCM) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
                 }
@@ -1405,7 +1407,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
                 }
-                if (job->cipher_mode != CCM) {
+                if (job->cipher_mode != IMB_CIPHER_CCM) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
@@ -1503,7 +1505,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                if (job->cipher_mode != PON_AES_CNTR) {
+                if (job->cipher_mode != IMB_CIPHER_PON_AES_CNTR) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
@@ -1550,7 +1552,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  * - encrypt chain order: hash, cipher
                  * - decrypt chain order: cipher, hash
                  */
-                if (job->cipher_mode != DOCSIS_SEC_BPI) {
+                if (job->cipher_mode != IMB_CIPHER_DOCSIS_SEC_BPI) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }

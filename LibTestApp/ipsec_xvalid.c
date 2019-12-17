@@ -148,140 +148,140 @@ struct str_value_mapping cipher_algo_str_map[] = {
         {
                 .name = "aes-cbc-128",
                 .values.job_params = {
-                        .cipher_mode = CBC,
+                        .cipher_mode = IMB_CIPHER_CBC,
                         .key_size = AES_128_BYTES
                 }
         },
         {
                 .name = "aes-cbc-192",
                 .values.job_params = {
-                        .cipher_mode = CBC,
+                        .cipher_mode = IMB_CIPHER_CBC,
                         .key_size = AES_192_BYTES
                 }
         },
         {
                 .name = "aes-cbc-256",
                 .values.job_params = {
-                        .cipher_mode = CBC,
+                        .cipher_mode = IMB_CIPHER_CBC,
                         .key_size = AES_256_BYTES
                 }
         },
         {
                 .name = "aes-ctr-128",
                 .values.job_params = {
-                        .cipher_mode = CNTR,
+                        .cipher_mode = IMB_CIPHER_CNTR,
                         .key_size = AES_128_BYTES
                 }
         },
         {
                 .name = "aes-ctr-192",
                 .values.job_params = {
-                        .cipher_mode = CNTR,
+                        .cipher_mode = IMB_CIPHER_CNTR,
                         .key_size = AES_192_BYTES
                 }
         },
         {
                 .name = "aes-ctr-256",
                 .values.job_params = {
-                        .cipher_mode = CNTR,
+                        .cipher_mode = IMB_CIPHER_CNTR,
                         .key_size = AES_256_BYTES
                 }
         },
         {
                 .name = "aes-ctr-bit-128",
                 .values.job_params = {
-                        .cipher_mode = CNTR_BITLEN,
+                        .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
                         .key_size = AES_128_BYTES
                 }
         },
         {
                 .name = "aes-ctr-bit-192",
                 .values.job_params = {
-                        .cipher_mode = CNTR_BITLEN,
+                        .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
                         .key_size = AES_192_BYTES
                 }
         },
         {
                 .name = "aes-ctr-bit-256",
                 .values.job_params = {
-                        .cipher_mode = CNTR_BITLEN,
+                        .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
                         .key_size = AES_256_BYTES
                 }
         },
         {
                 .name = "aes-ecb-128",
                 .values.job_params = {
-                        .cipher_mode = ECB,
+                        .cipher_mode = IMB_CIPHER_ECB,
                         .key_size = AES_128_BYTES
                 }
         },
         {
                 .name = "aes-ecb-192",
                 .values.job_params = {
-                        .cipher_mode = ECB,
+                        .cipher_mode = IMB_CIPHER_ECB,
                         .key_size = AES_192_BYTES
                 }
         },
         {
                 .name = "aes-ecb-256",
                 .values.job_params = {
-                        .cipher_mode = ECB,
+                        .cipher_mode = IMB_CIPHER_ECB,
                         .key_size = AES_256_BYTES
                 }
         },
         {
                 .name = "aes-docsis",
                 .values.job_params = {
-                        .cipher_mode = DOCSIS_SEC_BPI,
+                        .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
                         .key_size = AES_128_BYTES
                 }
         },
         {
                 .name = "des-docsis",
                 .values.job_params = {
-                        .cipher_mode = DOCSIS_DES,
+                        .cipher_mode = IMB_CIPHER_DOCSIS_DES,
                         .key_size = 8
                 }
         },
         {
                 .name = "des-cbc",
                 .values.job_params = {
-                        .cipher_mode = DES,
+                        .cipher_mode = IMB_CIPHER_DES,
                         .key_size = 8
                 }
         },
         {
                 .name = "3des-cbc",
                 .values.job_params = {
-                        .cipher_mode = DES3,
+                        .cipher_mode = IMB_CIPHER_DES3,
                         .key_size = 24
                 }
         },
         {
                 .name = "zuc-eea3",
                 .values.job_params = {
-                        .cipher_mode = ZUC_EEA3,
+                        .cipher_mode = IMB_CIPHER_ZUC_EEA3,
                         .key_size = 16
                 }
         },
         {
                 .name = "snow3g-uea2",
                 .values.job_params = {
-                        .cipher_mode = SNOW3G_UEA2_BITLEN,
+                        .cipher_mode = IMB_CIPHER_SNOW3G_UEA2_BITLEN,
                         .key_size = 16
                 }
         },
         {
                 .name = "kasumi-uea1",
                 .values.job_params = {
-                        .cipher_mode = KASUMI_UEA1_BITLEN,
+                        .cipher_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN,
                         .key_size = 16
                 }
         },
         {
                 .name = "null",
                 .values.job_params = {
-                        .cipher_mode = NULL_CIPHER,
+                        .cipher_mode = IMB_CIPHER_NULL,
                         .key_size = 0
                 }
         }
@@ -408,7 +408,7 @@ struct str_value_mapping aead_algo_str_map[] = {
         {
                 .name = "aes-gcm-128",
                 .values.job_params = {
-                        .cipher_mode = GCM,
+                        .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = AES_GMAC,
                         .key_size = AES_128_BYTES
                 }
@@ -416,7 +416,7 @@ struct str_value_mapping aead_algo_str_map[] = {
         {
                 .name = "aes-gcm-192",
                 .values.job_params = {
-                        .cipher_mode = GCM,
+                        .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = AES_GMAC,
                         .key_size = AES_192_BYTES
                 }
@@ -424,7 +424,7 @@ struct str_value_mapping aead_algo_str_map[] = {
         {
                 .name = "aes-gcm-256",
                 .values.job_params = {
-                        .cipher_mode = GCM,
+                        .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = AES_GMAC,
                         .key_size = AES_256_BYTES
                 }
@@ -432,7 +432,7 @@ struct str_value_mapping aead_algo_str_map[] = {
         {
                 .name = "aes-ccm-128",
                 .values.job_params = {
-                        .cipher_mode = CCM,
+                        .cipher_mode = IMB_CIPHER_CCM,
                         .hash_alg = AES_CCM,
                         .key_size = AES_128_BYTES
                 }
@@ -440,7 +440,7 @@ struct str_value_mapping aead_algo_str_map[] = {
         {
                 .name = "pon-128",
                 .values.job_params = {
-                        .cipher_mode = PON_AES_CNTR,
+                        .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
                         .hash_alg = PON_CRC_BIP,
                         .key_size = AES_128_BYTES
                 }
@@ -448,7 +448,7 @@ struct str_value_mapping aead_algo_str_map[] = {
         {
                 .name = "pon-128-no-ctr",
                 .values.job_params = {
-                        .cipher_mode = PON_AES_CNTR,
+                        .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
                         .hash_alg = PON_CRC_BIP,
                         .key_size = 0
                 }
@@ -492,24 +492,24 @@ const uint8_t auth_tag_length_bytes[] = {
 
 /* Minimum, maximum and step values of key sizes */
 const uint8_t key_sizes[][3] = {
-                {16, 32, 8}, /* CBC */
-                {16, 32, 8}, /* CNTR */
-                {0, 0, 1},    /* NULL */
-                {16, 16, 1}, /* DOCSIS_SEC_BPI */
+                {16, 32, 8}, /* IMB_CIPHER_CBC */
+                {16, 32, 8}, /* IMB_CIPHER_CNTR */
+                {0, 0, 1},   /* IMB_CIPHER_NULL */
+                {16, 16, 1}, /* IMB_CIPHER_DOCSIS_SEC_BPI */
 #ifndef NO_GCM
-                {16, 32, 8}, /* GCM */
+                {16, 32, 8}, /* IMB_CIPHER_GCM */
 #endif
-                {0, 0, 1},    /* CUSTOM_CIPHER */
-                {8, 8, 1},    /* DES */
-                {8, 8, 1},    /* DOCSIS_DES */
-                {16, 16, 1},  /* CCM */
-                {24, 24, 1},  /* DES3 */
-                {16, 16, 1},  /* PON_AES_CNTR */
-                {16, 32, 8}, /* ECB */
-                {16, 32, 8}, /* CNTR_BITLEN */
-                {16, 16, 1}, /* ZUC_EEA3 */
-                {16, 16, 1}, /* SNOW3G_UEA2 */
-                {16, 16, 1}, /* KASUMI_UEA1 */
+                {0, 0, 1},   /* IMB_CIPHER_CUSTOM */
+                {8, 8, 1},   /* IMB_CIPHER_DES */
+                {8, 8, 1},   /* IMB_CIPHER_DOCSIS_DES */
+                {16, 16, 1}, /* IMB_CIPHER_CCM */
+                {24, 24, 1}, /* IMB_CIPHER_DES3 */
+                {16, 16, 1}, /* IMB_CIPHER_PON_AES_CNTR */
+                {16, 32, 8}, /* IMB_CIPHER_ECB */
+                {16, 32, 8}, /* IMB_CIPHER_CNTR_BITLEN */
+                {16, 16, 1}, /* IMB_CIPHER_ZUC_EEA3 */
+                {16, 16, 1}, /* IMB_CIPHER_SNOW3G_UEA2 */
+                {16, 16, 1}, /* IMB_CIPHER_KASUMI_UEA1_BITLEN */
 };
 
 uint8_t custom_test = 0;
@@ -528,7 +528,7 @@ uint32_t job_sizes[NUM_RANGE] = {DEFAULT_JOB_SIZE_MIN,
 uint32_t job_iter = DEFAULT_JOB_ITER;
 
 struct custom_job_params custom_job_params = {
-        .cipher_mode  = NULL_CIPHER,
+        .cipher_mode  = IMB_CIPHER_NULL,
         .hash_alg     = NULL_HASH,
         .key_size = 0
 };
@@ -672,7 +672,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         struct gcm_key_data *gdata_key = &keys->gdata_key;
 
         /* Force partial byte, by substracting 3 bits from the full length */
-        if (params->cipher_mode == CNTR_BITLEN)
+        if (params->cipher_mode == IMB_CIPHER_CNTR_BITLEN)
                 job->msg_len_to_cipher_in_bits = buf_size * 8 - 3;
         else
                 job->msg_len_to_cipher_in_bytes = buf_size;
@@ -682,7 +682,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         job->cipher_start_src_offset_in_bytes = 0;
         job->iv = cipher_iv;
 
-        if (params->cipher_mode == PON_AES_CNTR) {
+        if (params->cipher_mode == IMB_CIPHER_PON_AES_CNTR) {
                 /* Substract XGEM header */
                 job->msg_len_to_cipher_in_bytes -= 8;
                 job->cipher_start_src_offset_in_bytes = 8;
@@ -692,7 +692,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         }
 
         if (params->hash_alg == DOCSIS_CRC32 &&
-            params->cipher_mode == DOCSIS_SEC_BPI) {
+            params->cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI) {
                 if (buf_size >=
                     (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE)) {
                         const uint64_t cipher_adjust = /* SA + DA only */
@@ -786,10 +786,10 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
 
         job->cipher_direction = cipher_dir;
 
-        if (params->cipher_mode == NULL_CIPHER) {
+        if (params->cipher_mode == IMB_CIPHER_NULL) {
                 job->chain_order = HASH_CIPHER;
-        } else if (params->cipher_mode == CCM ||
-                   (params->cipher_mode == DOCSIS_SEC_BPI &&
+        } else if (params->cipher_mode == IMB_CIPHER_CCM ||
+                   (params->cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
                     params->hash_alg == DOCSIS_CRC32)) {
                 if (job->cipher_direction == ENCRYPT)
                         job->chain_order = HASH_CIPHER;
@@ -807,27 +807,27 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         job->aes_key_len_in_bytes = params->key_size;
 
         switch (job->cipher_mode) {
-        case CBC:
-        case DOCSIS_SEC_BPI:
+        case IMB_CIPHER_CBC:
+        case IMB_CIPHER_DOCSIS_SEC_BPI:
                 job->aes_enc_key_expanded = enc_keys;
                 job->aes_dec_key_expanded = dec_keys;
                 job->iv_len_in_bytes = 16;
                 break;
-        case PON_AES_CNTR:
-        case CNTR:
-        case CNTR_BITLEN:
+        case IMB_CIPHER_PON_AES_CNTR:
+        case IMB_CIPHER_CNTR:
+        case IMB_CIPHER_CNTR_BITLEN:
                 job->aes_enc_key_expanded = enc_keys;
                 job->aes_dec_key_expanded = enc_keys;
                 job->iv_len_in_bytes = 16;
                 break;
-        case GCM:
+        case IMB_CIPHER_GCM:
                 job->aes_enc_key_expanded = gdata_key;
                 job->aes_dec_key_expanded = gdata_key;
                 job->u.GCM.aad_len_in_bytes = params->aad_size;
                 job->u.GCM.aad = aad;
                 job->iv_len_in_bytes = 12;
                 break;
-        case CCM:
+        case IMB_CIPHER_CCM:
                 job->msg_len_to_cipher_in_bytes = buf_size;
                 job->msg_len_to_hash_in_bytes = buf_size;
                 job->hash_start_src_offset_in_bytes = 0;
@@ -838,29 +838,29 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->aes_dec_key_expanded = enc_keys;
                 job->iv_len_in_bytes = 13;
                 break;
-        case DES:
-        case DOCSIS_DES:
+        case IMB_CIPHER_DES:
+        case IMB_CIPHER_DOCSIS_DES:
                 job->aes_enc_key_expanded = enc_keys;
                 job->aes_dec_key_expanded = enc_keys;
                 job->iv_len_in_bytes = 8;
                 break;
-        case DES3:
+        case IMB_CIPHER_DES3:
                 ks_ptr[0] = ks_ptr[1] = ks_ptr[2] = enc_keys;
                 job->aes_enc_key_expanded = ks_ptr;
                 job->aes_dec_key_expanded = ks_ptr;
                 job->iv_len_in_bytes = 8;
                 break;
-        case ECB:
+        case IMB_CIPHER_ECB:
                 job->aes_enc_key_expanded = enc_keys;
                 job->aes_dec_key_expanded = dec_keys;
                 job->iv_len_in_bytes = 0;
                 break;
-        case ZUC_EEA3:
+        case IMB_CIPHER_ZUC_EEA3:
                 job->aes_enc_key_expanded = k2;
                 job->aes_dec_key_expanded = k2;
                 job->iv_len_in_bytes = 16;
                 break;
-        case SNOW3G_UEA2_BITLEN:
+        case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                 job->aes_enc_key_expanded = k2;
                 job->aes_dec_key_expanded = k2;
                 job->iv_len_in_bytes = 16;
@@ -868,7 +868,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->msg_len_to_cipher_in_bits =
                         (job->msg_len_to_cipher_in_bytes * 8);
                 break;
-        case KASUMI_UEA1_BITLEN:
+        case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                 job->aes_enc_key_expanded = k2;
                 job->aes_dec_key_expanded = k2;
                 job->iv_len_in_bytes = 8;
@@ -876,7 +876,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->msg_len_to_cipher_in_bits =
                         (job->msg_len_to_cipher_in_bytes * 8);
                 break;
-        case NULL_CIPHER:
+        case IMB_CIPHER_NULL:
                 /* No operation needed */
                 break;
         default:
@@ -952,34 +952,34 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 }
 
                 switch (params->cipher_mode) {
-                case GCM:
+                case IMB_CIPHER_GCM:
                         memset(gdata_key, CIPH_KEY_PATTERN,
-                               sizeof(keys->gdata_key));
+                                sizeof(keys->gdata_key));
                         break;
-                case PON_AES_CNTR:
-                case CBC:
-                case CCM:
-                case CNTR:
-                case CNTR_BITLEN:
-                case DOCSIS_SEC_BPI:
-                case ECB:
+                case IMB_CIPHER_PON_AES_CNTR:
+                case IMB_CIPHER_CBC:
+                case IMB_CIPHER_CCM:
+                case IMB_CIPHER_CNTR:
+                case IMB_CIPHER_CNTR_BITLEN:
+                case IMB_CIPHER_DOCSIS_SEC_BPI:
+                case IMB_CIPHER_ECB:
                         memset(enc_keys, CIPH_KEY_PATTERN,
                                sizeof(keys->enc_keys));
                         memset(dec_keys, CIPH_KEY_PATTERN,
                                sizeof(keys->dec_keys));
                         break;
-                case DES:
-                case DES3:
-                case DOCSIS_DES:
+                case IMB_CIPHER_DES:
+                case IMB_CIPHER_DES3:
+                case IMB_CIPHER_DOCSIS_DES:
                         memset(enc_keys, CIPH_KEY_PATTERN,
                                sizeof(keys->enc_keys));
                         break;
-                case ZUC_EEA3:
-                case SNOW3G_UEA2_BITLEN:
-                case KASUMI_UEA1_BITLEN:
+                case IMB_CIPHER_ZUC_EEA3:
+                case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
+                case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                         memset(k2, CIPH_KEY_PATTERN, sizeof(keys->k2));
                         break;
-                case NULL_CIPHER:
+                case IMB_CIPHER_NULL:
                         /* No operation needed */
                         break;
                 default:
@@ -1106,7 +1106,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         }
 
         switch (params->cipher_mode) {
-        case GCM:
+        case IMB_CIPHER_GCM:
                 switch (params->key_size) {
                 case AES_128_BYTES:
                         IMB_AES128_GCM_PRE(mb_mgr, ciph_key, gdata_key);
@@ -1122,7 +1122,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         return -1;
                 }
                 break;
-        case PON_AES_CNTR:
+        case IMB_CIPHER_PON_AES_CNTR:
                 switch (params->key_size) {
                 case 16:
                         IMB_AES_KEYEXP_128(mb_mgr, ciph_key, enc_keys,
@@ -1135,12 +1135,12 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         return -1;
                 }
                 break;
-        case CBC:
-        case CCM:
-        case CNTR:
-        case CNTR_BITLEN:
-        case DOCSIS_SEC_BPI:
-        case ECB:
+        case IMB_CIPHER_CBC:
+        case IMB_CIPHER_CCM:
+        case IMB_CIPHER_CNTR:
+        case IMB_CIPHER_CNTR_BITLEN:
+        case IMB_CIPHER_DOCSIS_SEC_BPI:
+        case IMB_CIPHER_ECB:
                 switch (params->key_size) {
                 case AES_128_BYTES:
                         IMB_AES_KEYEXP_128(mb_mgr, ciph_key, enc_keys,
@@ -1159,17 +1159,17 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         return -1;
                 }
                 break;
-        case DES:
-        case DES3:
-        case DOCSIS_DES:
+        case IMB_CIPHER_DES:
+        case IMB_CIPHER_DES3:
+        case IMB_CIPHER_DOCSIS_DES:
                 des_key_schedule((uint64_t *) enc_keys, ciph_key);
                 break;
-        case ZUC_EEA3:
-        case SNOW3G_UEA2_BITLEN:
-        case KASUMI_UEA1_BITLEN:
+        case IMB_CIPHER_ZUC_EEA3:
+        case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
+        case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                 memcpy(k2, ciph_key, sizeof(keys->k2));
                 break;
-        case NULL_CIPHER:
+        case IMB_CIPHER_NULL:
                 /* No operation needed */
                 break;
         default:
@@ -1546,7 +1546,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
-                if (params->cipher_mode != NULL_CIPHER &&
+                if (params->cipher_mode != IMB_CIPHER_NULL &&
                     memcmp(src_dst_buf, test_buf, buf_size) != 0) {
                         fprintf(stderr,
                                 "\nDecrypted text and plaintext don't match\n");
@@ -1618,11 +1618,13 @@ process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                  * CBC and ECB operation modes do not support lengths which are
                  * non-multiple of block size
                  */
-                if (params->cipher_mode == CBC || params->cipher_mode == ECB)
+                if (params->cipher_mode == IMB_CIPHER_CBC ||
+                    params->cipher_mode == IMB_CIPHER_ECB)
                         if ((buf_size % AES_BLOCK_SIZE)  != 0)
                                 continue;
 
-                if (params->cipher_mode == DES || params->cipher_mode == DES3)
+                if (params->cipher_mode == IMB_CIPHER_DES ||
+                    params->cipher_mode == IMB_CIPHER_DES3)
                         if ((buf_size % DES_BLOCK_SIZE)  != 0)
                                 continue;
 
@@ -1728,9 +1730,10 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         JOB_HASH_ALG    hash_alg;
         JOB_CIPHER_MODE c_mode;
 
-        for (c_mode = CBC; c_mode <= KASUMI_UEA1_BITLEN; c_mode++) {
-                /* Skip CUSTOM_CIPHER */
-                if (c_mode == CUSTOM_CIPHER)
+        for (c_mode = IMB_CIPHER_CBC; c_mode <= IMB_CIPHER_KASUMI_UEA1_BITLEN;
+             c_mode++) {
+                /* Skip IMB_CIPHER_CUSTOM */
+                if (c_mode == IMB_CIPHER_CUSTOM)
                         continue;
                 params->cipher_mode = c_mode;
                 uint8_t min_sz = key_sizes[c_mode - 1][0];
@@ -1747,22 +1750,26 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                                         continue;
 
                                 /* Skip not supported combinations */
-                                if ((c_mode == GCM && hash_alg != AES_GMAC) ||
-                                    (c_mode != GCM && hash_alg == AES_GMAC))
+                                if ((c_mode == IMB_CIPHER_GCM &&
+                                    hash_alg != AES_GMAC) ||
+                                    (c_mode != IMB_CIPHER_GCM &&
+                                    hash_alg == AES_GMAC))
                                         continue;
-                                if ((c_mode == CCM && hash_alg != AES_CCM) ||
-                                    (c_mode != CCM && hash_alg == AES_CCM))
+                                if ((c_mode == IMB_CIPHER_CCM &&
+                                    hash_alg != AES_CCM) ||
+                                    (c_mode != IMB_CIPHER_CCM &&
+                                    hash_alg == AES_CCM))
                                         continue;
-                                if ((c_mode == PON_AES_CNTR &&
+                                if ((c_mode == IMB_CIPHER_PON_AES_CNTR &&
                                                 hash_alg != PON_CRC_BIP) ||
-                                    (c_mode != PON_AES_CNTR &&
+                                    (c_mode != IMB_CIPHER_PON_AES_CNTR &&
                                                 hash_alg == PON_CRC_BIP))
                                         continue;
-                                if (c_mode == DOCSIS_SEC_BPI &&
+                                if (c_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
                                     (hash_alg != NULL_HASH &&
                                      hash_alg != DOCSIS_CRC32))
                                         continue;
-                                if (c_mode != DOCSIS_SEC_BPI &&
+                                if (c_mode != IMB_CIPHER_DOCSIS_SEC_BPI &&
                                     hash_alg == DOCSIS_CRC32)
                                         continue;
 

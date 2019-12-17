@@ -366,7 +366,7 @@ submit_eea3_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->cipher_direction = dir;
                 job->chain_order = CIPHER_HASH;
-                job->cipher_mode = ZUC_EEA3;
+                job->cipher_mode = IMB_CIPHER_ZUC_EEA3;
                 job->src = src[i];
                 job->dst = dst[i];
                 job->iv = ivs[i];
@@ -418,7 +418,7 @@ submit_eia3_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->chain_order = CIPHER_HASH;
-                job->cipher_mode = NULL_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
                 job->src = src[i];
                 job->u.ZUC_EIA3._iv = iv[i];
                 job->u.ZUC_EIA3._key = keys[i];

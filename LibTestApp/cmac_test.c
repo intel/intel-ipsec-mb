@@ -1091,7 +1091,7 @@ test_cmac(struct MB_MGR *mb_mgr,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->cipher_direction = dir;
                 job->chain_order = HASH_CIPHER;
-                job->cipher_mode = NULL_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
 
                 if (type == CMAC) {
                         job->hash_alg = AES_CMAC;
@@ -1155,7 +1155,7 @@ test_cmac(struct MB_MGR *mb_mgr,
 
                 job->cipher_direction = dir;
                 job->chain_order = HASH_CIPHER;
-                job->cipher_mode = NULL_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
 
                 if (type == CMAC) {
                         job->hash_alg = AES_CMAC;

@@ -1947,7 +1947,7 @@ test_ccm(struct MB_MGR *mb_mgr,
                                 job->src = vec->packet_out;
                         }
                 }
-                job->cipher_mode = CCM;
+                job->cipher_mode = IMB_CIPHER_CCM;
                 job->aes_enc_key_expanded = expkey;
                 job->aes_dec_key_expanded = expkey;
                 job->aes_key_len_in_bytes = 16; /* AES-CCM-128 for now */

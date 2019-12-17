@@ -188,25 +188,49 @@ typedef enum {
         STS_ERROR
 } JOB_STS;
 
-typedef enum {
-        CBC = 1,
-        CNTR,
-        NULL_CIPHER,
-        DOCSIS_SEC_BPI,
+/*
+ * Define enums from API v0.53, so applications that were using this version
+ * will still be compiled successfully.
+ * This list does not need to be extended for new enums.
+ */
+#ifndef NO_COMPAT_IMB_API_053
+/***** Previous cipher mode enums *****/
+#define CBC                     IMB_CIPHER_CBC
+#define CNTR                    IMB_CIPHER_CNTR
+#define NULL_CIPHER             IMB_CIPHER_NULL
+#define DOCSIS_SEC_BPI          IMB_CIPHER_DOCSIS_SEC_BPI
 #ifndef NO_GCM
-        GCM,
+#define GCM                     IMB_CIPHER_GCM
 #endif /* !NO_GCM */
-        CUSTOM_CIPHER,
-        DES,
-        DOCSIS_DES,
-        CCM,
-        DES3,
-        PON_AES_CNTR,
-        ECB,
-        CNTR_BITLEN,       /* 128-EEA2/NEA2 (3GPP) */
-        ZUC_EEA3,          /* 128-EEA3/NEA3 (3GPP) */
-        SNOW3G_UEA2_BITLEN,/* 128-UEA2 (3GPP) */
-        KASUMI_UEA1_BITLEN,/* 128-UEA1 (3GPP) */
+#define CUSTOM_CIPHER           IMB_CIPHER_CUSTOM
+#define DES                     IMB_CIPHER_DES
+#define DOCSIS_DES              IMB_CIPHER_DOCSIS_DES
+#define CCM                     IMB_CIPHER_CCM
+#define DES3                    IMB_CIPHER_DES3
+#define PON_AES_CNTR            IMB_CIPHER_PON_AES_CNTR
+#define ECB                     IMB_CIPHER_ECB
+#define CNTR_BITLEN             IMB_CIPHER_CNTR_BITLEN
+#endif /* !NO_COMPAT_IMB_API_053 */
+
+typedef enum {
+        IMB_CIPHER_CBC = 1,
+        IMB_CIPHER_CNTR,
+        IMB_CIPHER_NULL,
+        IMB_CIPHER_DOCSIS_SEC_BPI,
+#ifndef NO_GCM
+        IMB_CIPHER_GCM,
+#endif /* !NO_GCM */
+        IMB_CIPHER_CUSTOM,
+        IMB_CIPHER_DES,
+        IMB_CIPHER_DOCSIS_DES,
+        IMB_CIPHER_CCM,
+        IMB_CIPHER_DES3,
+        IMB_CIPHER_PON_AES_CNTR,
+        IMB_CIPHER_ECB,
+        IMB_CIPHER_CNTR_BITLEN,       /* 128-EEA2/NEA2 (3GPP) */
+        IMB_CIPHER_ZUC_EEA3,          /* 128-EEA3/NEA3 (3GPP) */
+        IMB_CIPHER_SNOW3G_UEA2_BITLEN,/* 128-UEA2 (3GPP) */
+        IMB_CIPHER_KASUMI_UEA1_BITLEN /* 128-UEA1 (3GPP) */
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -358,7 +382,8 @@ typedef struct JOB_AES_HMAC {
         } u;
 
         JOB_STS status;
-        JOB_CIPHER_MODE cipher_mode; /* CBC, CNTR, DES, GCM etc. */
+        /* IMB_CIPHER_CBC, IMB_CIPHER_CNTR, IMB_CIPHER_GCM, etc. */
+        JOB_CIPHER_MODE cipher_mode;
         JOB_CIPHER_DIRECTION cipher_direction; /* Encrypt/decrypt */
         JOB_HASH_ALG hash_alg; /* SHA-1 or others... */
         JOB_CHAIN_ORDER chain_order; /* CIPHER_HASH or HASH_CIPHER.

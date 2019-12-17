@@ -1283,7 +1283,7 @@ test_ctr(struct MB_MGR *mb_mgr,
         int ret = -1;
 
         /* Get number of bytes (in case algo is CNTR_BITLEN) */
-        if (alg == CNTR)
+        if (alg == IMB_CIPHER_CNTR)
                 text_byte_len = text_len;
         else
                 text_byte_len = BYTE_ROUND_UP(text_len);
@@ -1312,7 +1312,7 @@ test_ctr(struct MB_MGR *mb_mgr,
         job->iv = iv;
         job->iv_len_in_bytes = iv_len;
         job->cipher_start_src_offset_in_bytes = 0;
-        if (alg == CNTR)
+        if (alg == IMB_CIPHER_CNTR)
                 job->msg_len_to_cipher_in_bytes = text_byte_len;
         else
                 job->msg_len_to_cipher_in_bits = text_len;
@@ -1372,22 +1372,23 @@ test_ctr_vectors(struct MB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
 	printf("AES-CTR standard test vectors:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
 #ifdef DEBUG
-        if (alg == CNTR)
-		printf("Standard vector %d/%d  Keylen:%d IVlen:%d PTLen:%d ",
-                       vect, vectors_cnt - 1,
-                       (int) vectors[vect].Klen,
-                       (int) vectors[vect].IVlen,
-                       (int) vectors[vect].Plen);
-        else
-		printf("Bit vector %d/%d  Keylen:%d IVlen:%d PTLen:%d ",
-                       vect, vectors_cnt - 1,
-                       (int) vectors[vect].Klen,
-                       (int) vectors[vect].IVlen,
-                       (int) vectors[vect].Plen);
+                if (alg == IMB_CIPHER_CNTR)
+		        printf("Standard vector %d/%d  Keylen:%d "
+                               "IVlen:%d PTLen:%d ",
+                               vect, vectors_cnt - 1,
+                               (int) vectors[vect].Klen,
+                               (int) vectors[vect].IVlen,
+                               (int) vectors[vect].Plen);
+                else
+		        printf("Bit vector %d/%d  Keylen:%d "
+                               "IVlen:%d PTLen:%d ",
+                               vect, vectors_cnt - 1,
+                               (int) vectors[vect].Klen,
+                               (int) vectors[vect].IVlen,
+                               (int) vectors[vect].Plen);
 #else
 		printf(".");
 #endif
-
 
                 switch (vectors[vect].Klen) {
                 case BITS_128:
@@ -1482,11 +1483,12 @@ ctr_test(const enum arch_type arch,
 	const uint32_t ctr_bit_vec_cnt = DIM(ctr_bit_vectors);
 
         /* Standard CTR vectors */
-        errors = test_ctr_vectors(mb_mgr, ctr_vectors, ctr_vec_cnt, CNTR);
+        errors = test_ctr_vectors(mb_mgr, ctr_vectors, ctr_vec_cnt,
+                                  IMB_CIPHER_CNTR);
 
         /* CTR_BITLEN vectors */
         errors += test_ctr_vectors(mb_mgr, ctr_bit_vectors, ctr_bit_vec_cnt,
-                                   CNTR_BITLEN);
+                                   IMB_CIPHER_CNTR_BITLEN);
 
 	if (0 == errors)
 		printf("...Pass\n");

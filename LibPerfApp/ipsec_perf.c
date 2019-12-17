@@ -1109,58 +1109,58 @@ static void init_offsets(const enum cache_type_e ctype)
 static JOB_CIPHER_MODE
 translate_cipher_mode(const enum test_cipher_mode_e test_mode)
 {
-        JOB_CIPHER_MODE c_mode = NULL_CIPHER;
+        JOB_CIPHER_MODE c_mode = IMB_CIPHER_NULL;
 
         switch (test_mode) {
         case TEST_CBC:
-                c_mode = CBC;
+                c_mode = IMB_CIPHER_CBC;
                 break;
         case TEST_CNTR:
         case TEST_CNTR8:
-                c_mode = CNTR;
+                c_mode = IMB_CIPHER_CNTR;
                 break;
         case TEST_CNTR_BITLEN:
         case TEST_CNTR_BITLEN4:
-                c_mode = CNTR_BITLEN;
+                c_mode = IMB_CIPHER_CNTR_BITLEN;
                 break;
         case TEST_ECB:
-                c_mode = ECB;
+                c_mode = IMB_CIPHER_ECB;
                 break;
         case TEST_NULL_CIPHER:
-                c_mode = NULL_CIPHER;
+                c_mode = IMB_CIPHER_NULL;
                 break;
         case TEST_AESDOCSIS:
         case TEST_AESDOCSIS8:
-                c_mode = DOCSIS_SEC_BPI;
+                c_mode = IMB_CIPHER_DOCSIS_SEC_BPI;
                 break;
         case TEST_DESDOCSIS:
         case TEST_DESDOCSIS4:
-                c_mode = DOCSIS_DES;
+                c_mode = IMB_CIPHER_DOCSIS_DES;
                 break;
         case TEST_GCM:
-                c_mode = GCM;
+                c_mode = IMB_CIPHER_GCM;
                 break;
         case TEST_CCM:
-                c_mode = CCM;
+                c_mode = IMB_CIPHER_CCM;
                 break;
         case TEST_DES:
-                c_mode = DES;
+                c_mode = IMB_CIPHER_DES;
                 break;
         case TEST_3DES:
-                c_mode = DES3;
+                c_mode = IMB_CIPHER_DES3;
                 break;
         case TEST_PON_CNTR:
         case TEST_PON_NO_CNTR:
-                c_mode = PON_AES_CNTR;
+                c_mode = IMB_CIPHER_PON_AES_CNTR;
                 break;
         case TEST_ZUC_EEA3:
-                c_mode = ZUC_EEA3;
+                c_mode = IMB_CIPHER_ZUC_EEA3;
                 break;
         case TEST_SNOW3G_UEA2:
-                c_mode = SNOW3G_UEA2_BITLEN;
+                c_mode = IMB_CIPHER_SNOW3G_UEA2_BITLEN;
                 break;
         case TEST_KASUMI_UEA1:
-                c_mode = KASUMI_UEA1_BITLEN;
+                c_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN;
                 break;
         default:
                 break;
@@ -1311,7 +1311,7 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
         /* Translating enum to the API's one */
         job_template.cipher_mode = translate_cipher_mode(params->cipher_mode);
         job_template.aes_key_len_in_bytes = params->aes_key_size;
-        if (job_template.cipher_mode == GCM) {
+        if (job_template.cipher_mode == IMB_CIPHER_GCM) {
                 uint8_t key[32];
 
                 switch (params->aes_key_size) {
@@ -1330,24 +1330,24 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.aes_dec_key_expanded = &gdata_key;
                 job_template.u.GCM.aad_len_in_bytes = params->aad_size;
                 job_template.iv_len_in_bytes = 12;
-        } else if (job_template.cipher_mode == CCM) {
+        } else if (job_template.cipher_mode == IMB_CIPHER_CCM) {
                 job_template.msg_len_to_cipher_in_bytes = size_aes;
                 job_template.msg_len_to_hash_in_bytes = size_aes;
                 job_template.hash_start_src_offset_in_bytes = 0;
                 job_template.cipher_start_src_offset_in_bytes = 0;
                 job_template.u.CCM.aad_len_in_bytes = params->aad_size;
                 job_template.iv_len_in_bytes = 13;
-        } else if (job_template.cipher_mode == DES ||
-                   job_template.cipher_mode == DOCSIS_DES) {
+        } else if (job_template.cipher_mode == IMB_CIPHER_DES ||
+                   job_template.cipher_mode == IMB_CIPHER_DOCSIS_DES) {
                 job_template.aes_key_len_in_bytes = 8;
                 job_template.iv_len_in_bytes = 8;
-        } else if (job_template.cipher_mode == DES3) {
+        } else if (job_template.cipher_mode == IMB_CIPHER_DES3) {
                 job_template.aes_key_len_in_bytes = 24;
                 job_template.iv_len_in_bytes = 8;
-        } else if (job_template.cipher_mode == ZUC_EEA3) {
+        } else if (job_template.cipher_mode == IMB_CIPHER_ZUC_EEA3) {
                 job_template.aes_key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 16;
-        } else if (job_template.cipher_mode == DOCSIS_SEC_BPI &&
+        } else if (job_template.cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
                    job_template.hash_alg == DOCSIS_CRC32) {
                 const uint64_t ciph_adjust = /* SA + DA */
                         DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2 /* ETH TYPE */;
@@ -1358,13 +1358,13 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.hash_start_src_offset_in_bytes = 0;
                 job_template.msg_len_to_hash_in_bytes =
                         size_aes - DOCSIS_CRC32_TAG_SIZE;
-        } else if (job_template.cipher_mode == SNOW3G_UEA2_BITLEN) {
+        } else if (job_template.cipher_mode == IMB_CIPHER_SNOW3G_UEA2_BITLEN) {
                 job_template.msg_len_to_cipher_in_bits =
                         (job_template.msg_len_to_cipher_in_bytes * 8);
                 job_template.cipher_start_src_offset_in_bits = 0;
                 job_template.aes_key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 16;
-        } else if (job_template.cipher_mode == KASUMI_UEA1_BITLEN) {
+        } else if (job_template.cipher_mode == IMB_CIPHER_KASUMI_UEA1_BITLEN) {
                 job_template.msg_len_to_cipher_in_bits =
                         (job_template.msg_len_to_cipher_in_bytes * 8);
                 job_template.cipher_start_src_offset_in_bits = 0;
@@ -1401,14 +1401,14 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                         job->src = get_src_buffer(index, p_buffer);
                 }
                 job->dst = get_dst_buffer(index, p_buffer);
-                if (job->cipher_mode == GCM) {
+                if (job->cipher_mode == IMB_CIPHER_GCM) {
                         job->u.GCM.aad = job->src;
-                } else if (job->cipher_mode == CCM) {
+                } else if (job->cipher_mode == IMB_CIPHER_CCM) {
                         job->u.CCM.aad = job->src;
                         job->aes_enc_key_expanded = job->aes_dec_key_expanded =
                                 (const uint32_t *) get_key_pointer(index,
                                                                    p_keys);
-                } else if (job->cipher_mode == DES3) {
+                } else if (job->cipher_mode == IMB_CIPHER_DES3) {
                         static const void *ks_ptr[3];
 
                         ks_ptr[0] = ks_ptr[1] = ks_ptr[2] =

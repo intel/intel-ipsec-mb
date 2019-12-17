@@ -476,7 +476,7 @@ test_sha(struct MB_MGR *mb_mgr,
                 job->auth_tag_output_len_in_bytes = vec->digest_len;
                 job->src = vec->data;
                 job->msg_len_to_hash_in_bytes = vec->data_len;
-                job->cipher_mode = NULL_CIPHER;
+                job->cipher_mode = IMB_CIPHER_NULL;
                 switch (vec->sha_type) {
                 case 1:
                         job->hash_alg = PLAIN_SHA1;

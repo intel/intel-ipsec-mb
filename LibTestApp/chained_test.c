@@ -500,7 +500,7 @@ chained_test(const enum arch_type arch,
                 errors += test_chained_vectors(mb_mgr, DIM(chained_vectors),
                                    chained_vectors,
                                    "AES-CBC + SHA1-HMAC standard test vectors",
-                                   CBC, SHA1, SHA1_BLOCK_SIZE,
+                                   IMB_CIPHER_CBC, SHA1, SHA1_BLOCK_SIZE,
                                    num_jobs_tab[i]);
         if (0 == errors)
                 printf("...Pass\n");

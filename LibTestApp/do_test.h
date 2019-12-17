@@ -162,7 +162,7 @@ known_answer_test(MB_MGR *mb_mgr)
         job->msg_len_to_hash_in_bytes = TEXTSIZE;
         job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
         job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
-        job->cipher_mode = CBC;
+        job->cipher_mode = IMB_CIPHER_CBC;
         job->hash_alg = SHA1;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
@@ -249,7 +249,7 @@ do_test(MB_MGR *mb_mgr)
                 job->iv = (uint8_t *) &IV;
                 job->iv_len_in_bytes = 16;
 
-                job->cipher_mode = CBC;
+                job->cipher_mode = IMB_CIPHER_CBC;
                 job->hash_alg = SHA1;
 
                 switch (rand() % 3) {

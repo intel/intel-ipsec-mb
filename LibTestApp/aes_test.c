@@ -1580,7 +1580,7 @@ test_docrc_many(struct MB_MGR *mb_mgr,
                                 p_vec->cipher_offset;
                         job->src = targets[i] + sizeof(padding);
                 }
-                job->cipher_mode = DOCSIS_SEC_BPI;
+                job->cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI;
                 job->aes_enc_key_expanded = enc_keys;
                 job->aes_dec_key_expanded = dec_keys;
                 job->aes_key_len_in_bytes = key_len;
@@ -1772,13 +1772,15 @@ aes_test(const enum arch_type arch,
         for (i = 0; i < DIM(num_jobs_tab); i++)
                 errors += test_aes_vectors(mb_mgr, DIM(aes_vectors),
                                            aes_vectors,
-                                           "AES-CBC standard test vectors", CBC,
+                                           "AES-CBC standard test vectors",
+                                           IMB_CIPHER_CBC,
                                            num_jobs_tab[i]);
         for (i = 0; i < DIM(num_jobs_tab); i++)
                 errors += test_aes_vectors(mb_mgr, DIM(docsis_vectors),
                                            docsis_vectors,
                                            "AES-DOCSIS standard test vectors",
-                                           DOCSIS_SEC_BPI, num_jobs_tab[i]);
+                                           IMB_CIPHER_DOCSIS_SEC_BPI,
+                                           num_jobs_tab[i]);
         if (!cfb128_validate(mb_mgr))
                 errors++;
 

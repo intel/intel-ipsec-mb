@@ -334,7 +334,7 @@ test_des_many(struct MB_MGR *mb_mgr,
                         job->src = targets[i] + sizeof(padding);
                 }
                 job->cipher_mode = cipher;
-                if (cipher == DES3) {
+                if (cipher == IMB_CIPHER_DES3) {
                         job->aes_enc_key_expanded = (const void *) ks_ptr;
                         job->aes_dec_key_expanded = (const void *) ks_ptr;
                         job->aes_key_len_in_bytes = 24; /* 3x keys only */
@@ -470,7 +470,7 @@ test_des_one(struct MB_MGR *mb_mgr,
                 job->src = target + sizeof(padding);
         }
         job->cipher_mode = cipher;
-        if (cipher == DES3) {
+        if (cipher == IMB_CIPHER_DES3) {
                 job->aes_enc_key_expanded = (const void *) ks_ptr;
                 job->aes_dec_key_expanded = (const void *) ks_ptr;
                 job->aes_key_len_in_bytes = 24;
@@ -550,7 +550,7 @@ test_des(struct MB_MGR *mb_mgr,
 {
         int ret = 0;
 
-        if (cipher == DES3) {
+        if (cipher == IMB_CIPHER_DES3) {
                 if (ks2 == NULL && ks3 == NULL) {
                         ret |= test_des_one(mb_mgr, arch, ks, ks, ks, iv,
                                             in_text, out_text, text_len, dir,
@@ -664,7 +664,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, DES3, 0)) {
+                             ENCRYPT, CIPHER_HASH, IMB_CIPHER_DES3, 0)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
                 }
@@ -673,7 +673,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, DES3, 0)) {
+                             DECRYPT, HASH_CIPHER, IMB_CIPHER_DES3, 0)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
                 }
@@ -682,7 +682,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, DES3, 1)) {
+                             ENCRYPT, CIPHER_HASH, IMB_CIPHER_DES3, 1)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
                         errors++;
                 }
@@ -691,7 +691,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, DES3, 1)) {
+                             DECRYPT, HASH_CIPHER, IMB_CIPHER_DES3, 1)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
                         errors++;
                 }
@@ -707,16 +707,16 @@ des_test(const enum arch_type arch,
         int errors;
 
         errors = test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
-                                  "DES standard test vectors", DES);
+                                  "DES standard test vectors", IMB_CIPHER_DES);
 
         errors += test_des_vectors(mb_mgr, arch, DIM(docsis_vectors),
                                    docsis_vectors,
                                    "DOCSIS DES standard test vectors",
-                                   DOCSIS_DES);
+                                   IMB_CIPHER_DOCSIS_DES);
 
         errors += test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
                                   "3DES (single key) standard test vectors",
-                                   DES3);
+                                   IMB_CIPHER_DES3);
 
         errors += test_des3_vectors(mb_mgr, arch, DIM(des3_vectors),
                                     des3_vectors,

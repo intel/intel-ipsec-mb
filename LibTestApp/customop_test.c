@@ -131,13 +131,13 @@ static const struct auth_attr_s auth_attr_tab[] = {
  * test hash functions
  */
 static const struct cipher_attr_s cipher_attr_tab[] = {
-        { "CBC128", CBC, 16, 16 },
-        { "CBC192", CBC, 24, 16 },
-        { "CBC256", CBC, 32, 16 },
-        { "CUSTOM_CIPHER", CUSTOM_CIPHER, 32, 12 },
-        { "CTR128", CNTR, 16, 12 },
-        { "CTR192", CNTR, 24, 12 },
-        { "CTR256", CNTR, 32, 12 }
+        { "CBC128",        IMB_CIPHER_CBC,    16, 16 },
+        { "CBC192",        IMB_CIPHER_CBC,    24, 16 },
+        { "CBC256",        IMB_CIPHER_CBC,    32, 16 },
+        { "CUSTOM_CIPHER", IMB_CIPHER_CUSTOM, 32, 12 },
+        { "CTR128",        IMB_CIPHER_CNTR,   16, 12 },
+        { "CTR192",        IMB_CIPHER_CNTR,   24, 12 },
+        { "CTR256",        IMB_CIPHER_CNTR,   32, 12 }
 };
 
 static int
@@ -154,7 +154,7 @@ job_check(const struct JOB_AES_HMAC *job)
                 TRACE("failed job status:%d\n", job->status);
                 return -1;
         }
-        if (job->cipher_mode == CUSTOM_CIPHER) {
+        if (job->cipher_mode == IMB_CIPHER_CUSTOM) {
                 if (job->cipher_direction == ENCRYPT) {
                         unsigned i;
 

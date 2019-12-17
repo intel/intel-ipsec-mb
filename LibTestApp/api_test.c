@@ -150,7 +150,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
         job->cipher_direction = cipher_direction;
 
         switch (job->cipher_mode) {
-        case CBC:
+        case IMB_CIPHER_CBC:
                 if (job->cipher_direction == ENCRYPT)
                         job->aes_enc_key_expanded = dust_bin;
                 else
@@ -160,16 +160,16 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
-        case CNTR:
+        case IMB_CIPHER_CNTR:
                 job->aes_enc_key_expanded = dust_bin;
                 job->aes_key_len_in_bytes = UINT64_C(16);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
-        case NULL_CIPHER:
+        case IMB_CIPHER_NULL:
                 break;
-        case DOCSIS_SEC_BPI:
+        case IMB_CIPHER_DOCSIS_SEC_BPI:
                 /* it has to be set regardless of direction (AES-CFB) */
                 job->aes_enc_key_expanded = dust_bin;
                 if (job->cipher_direction == DECRYPT)
@@ -179,7 +179,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
-        case GCM:
+        case IMB_CIPHER_GCM:
                 if (job->cipher_direction == ENCRYPT)
                         job->aes_enc_key_expanded = dust_bin;
                 else
@@ -189,10 +189,10 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(12);
                 break;
-        case CUSTOM_CIPHER:
+        case IMB_CIPHER_CUSTOM:
                 job->cipher_func = dummy_cipher_hash_func;
                 break;
-        case DES:
+        case IMB_CIPHER_DES:
                 if (job->cipher_direction == ENCRYPT)
                         job->aes_enc_key_expanded = dust_bin;
                 else
@@ -202,7 +202,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(8);
                 break;
-        case DOCSIS_DES:
+        case IMB_CIPHER_DOCSIS_DES:
                 if (job->cipher_direction == ENCRYPT)
                         job->aes_enc_key_expanded = dust_bin;
                 else
@@ -212,7 +212,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(8);
                 break;
-        case CCM:
+        case IMB_CIPHER_CCM:
                 /* AES-CTR and CBC-MAC use only encryption keys */
                 job->aes_enc_key_expanded = dust_bin;
                 job->aes_key_len_in_bytes = UINT64_C(16);
@@ -220,7 +220,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->iv_len_in_bytes = UINT64_C(13);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 break;
-        case DES3:
+        case IMB_CIPHER_DES3:
                 if (job->cipher_direction == ENCRYPT)
                         job->aes_enc_key_expanded = dust_keys;
                 else
@@ -356,7 +356,7 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
 {
         JOB_HASH_ALG hash;
         JOB_CIPHER_DIRECTION dir;
-        const JOB_CIPHER_MODE cipher = NULL_CIPHER;
+        const JOB_CIPHER_MODE cipher = IMB_CIPHER_NULL;
         JOB_CHAIN_ORDER order;
         struct JOB_AES_HMAC template_job;
         struct JOB_AES_HMAC *job;
@@ -456,9 +456,10 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
                 for (dir = ENCRYPT; dir <= DECRYPT; dir++)
-                        for (cipher = CBC; cipher <= DES3; cipher++) {
-                                if (cipher == NULL_CIPHER ||
-                                    cipher == CUSTOM_CIPHER)
+                        for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
+                             cipher++) {
+                                if (cipher == IMB_CIPHER_NULL ||
+                                    cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -475,9 +476,10 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
                 for (dir = ENCRYPT; dir <= DECRYPT; dir++)
-                        for (cipher = CBC; cipher <= DES3; cipher++) {
-                                if (cipher == NULL_CIPHER ||
-                                    cipher == CUSTOM_CIPHER)
+                        for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
+                             cipher++) {
+                                if (cipher == IMB_CIPHER_NULL ||
+                                    cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -494,9 +496,10 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
                 for (dir = ENCRYPT; dir <= DECRYPT; dir++)
-                        for (cipher = CBC; cipher <= DES3; cipher++) {
-                                if (cipher == NULL_CIPHER ||
-                                    cipher == CUSTOM_CIPHER)
+                        for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
+                             cipher++) {
+                                if (cipher == IMB_CIPHER_NULL ||
+                                    cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -513,25 +516,26 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          * AES_DEC_KEY_EXPANDED = NULL
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
-                for (cipher = CBC; cipher <= DES3; cipher++) {
+                for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
+                     cipher++) {
                         fill_in_job(&template_job, cipher, ENCRYPT,
                                     hash, order);
                         switch (cipher) {
-                        case CBC:
-                        case CNTR:
-                        case DOCSIS_SEC_BPI:
-                        case GCM:
-                        case DES:
-                        case DOCSIS_DES:
-                        case CCM:
-                        case DES3:
+                        case IMB_CIPHER_CBC:
+                        case IMB_CIPHER_CNTR:
+                        case IMB_CIPHER_DOCSIS_SEC_BPI:
+                        case IMB_CIPHER_GCM:
+                        case IMB_CIPHER_DES:
+                        case IMB_CIPHER_DOCSIS_DES:
+                        case IMB_CIPHER_CCM:
+                        case IMB_CIPHER_DES3:
                                 template_job.aes_enc_key_expanded = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        203))
                                         return 1;
                                 break;
-                        case NULL_CIPHER:
-                        case CUSTOM_CIPHER:
+                        case IMB_CIPHER_NULL:
+                        case IMB_CIPHER_CUSTOM:
                         default:
                                 break;
                         }
@@ -543,28 +547,29 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          * AES_DEC_KEY_EXPANDED = NULL
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
-                for (cipher = CBC; cipher <= DES3; cipher++) {
+                for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
+                     cipher++) {
                         fill_in_job(&template_job, cipher, DECRYPT,
                                     hash, order);
                         switch (cipher) {
-                        case GCM:
-                        case CBC:
-                        case DES:
-                        case DES3:
-                        case DOCSIS_DES:
+                        case IMB_CIPHER_GCM:
+                        case IMB_CIPHER_CBC:
+                        case IMB_CIPHER_DES:
+                        case IMB_CIPHER_DES3:
+                        case IMB_CIPHER_DOCSIS_DES:
                                 template_job.aes_dec_key_expanded = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        204))
                                         return 1;
                                 break;
-                        case CNTR:
-                        case CCM:
+                        case IMB_CIPHER_CNTR:
+                        case IMB_CIPHER_CCM:
                                 template_job.aes_enc_key_expanded = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        204))
                                         return 1;
                                 break;
-                        case DOCSIS_SEC_BPI:
+                        case IMB_CIPHER_DOCSIS_SEC_BPI:
                                 template_job.aes_enc_key_expanded = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        204))
@@ -576,8 +581,8 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
                                                        204))
                                         return 1;
                                 break;
-                        case NULL_CIPHER:
-                        case CUSTOM_CIPHER:
+                        case IMB_CIPHER_NULL:
+                        case IMB_CIPHER_CUSTOM:
                         default:
                                 break;
                         }
