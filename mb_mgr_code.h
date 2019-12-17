@@ -244,6 +244,34 @@ FLUSH_JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
         return JOB_CUSTOM_HASH(job);
 }
 
+__forceinline
+JOB_AES_HMAC *
+submit_snow3g_uea2_job(MB_MGR *state, JOB_AES_HMAC *job)
+{
+        const snow3g_key_schedule_t *key = job->aes_enc_key_expanded;
+        const uint32_t msg_bitlen =
+                        (const uint32_t)job->msg_len_to_cipher_in_bits;
+        const uint32_t msg_bitoff =
+                        (const uint32_t)job->cipher_start_src_offset_in_bits;
+
+        /* Use bit length API if
+         * - msg length is not a multiple of bytes
+         * - bit offset passed
+         */
+        if ((msg_bitlen & 0x07) || msg_bitoff) {
+                IMB_SNOW3G_F8_1_BUFFER_BIT(state, key, job->iv, job->src,
+                                           job->dst, msg_bitlen, msg_bitoff);
+        } else {
+                const uint32_t msg_bytelen = msg_bitlen >> 3;
+
+                IMB_SNOW3G_F8_1_BUFFER(state, key, job->iv, job->src,
+                                       job->dst, msg_bytelen);
+        }
+
+        job->status |= STS_COMPLETED_AES;
+        return job;
+}
+
 /* ========================================================================= */
 /* Cipher submit & flush functions */
 /* ========================================================================= */
@@ -318,31 +346,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (ZUC_EEA3 == job->cipher_mode) {
                 return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
         } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
-                /* Use bit length API if
-                 * - msg length is not a multiple of bytes
-                 * - bit offset passed
-                 */
-                if (job->msg_len_to_cipher_in_bits % 8  ||
-                    job->cipher_start_src_offset_in_bits) {
-                        IMB_SNOW3G_F8_1_BUFFER_BIT(state,
-                                (const snow3g_key_schedule_t *)
-                                job->aes_enc_key_expanded,
-                                job->iv, job->src, job->dst,
-                                (uint32_t)job->msg_len_to_cipher_in_bits,
-                                (uint32_t)job->cipher_start_src_offset_in_bits);
-
-                        job->status |= STS_COMPLETED_AES;
-                        return job;
-                } else {
-                        IMB_SNOW3G_F8_1_BUFFER(state,
-                                (const snow3g_key_schedule_t *)
-                                job->aes_enc_key_expanded,
-                                job->iv, job->src, job->dst,
-                                (uint32_t)(job->msg_len_to_cipher_in_bits / 8));
-
-                        job->status |= STS_COMPLETED_AES;
-                        return job;
-                }
+                return submit_snow3g_uea2_job(state, job);
         } else { /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -465,30 +469,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (ZUC_EEA3 == job->cipher_mode) {
                 return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
         } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
-                /* Use bit length API if
-                 * - msg length is not a multiple of bytes
-                 * - bit offset passed
-                 */
-                if (job->msg_len_to_cipher_in_bits % 8 ||
-                    job->cipher_start_src_offset_in_bits) {
-                        IMB_SNOW3G_F8_1_BUFFER_BIT(state,
-                                (const snow3g_key_schedule_t *)
-                                job->aes_enc_key_expanded,
-                                job->iv, job->src, job->dst,
-                                (uint32_t)job->msg_len_to_cipher_in_bits,
-                                (uint32_t)job->cipher_start_src_offset_in_bits);
-                        job->status |= STS_COMPLETED_AES;
-                        return job;
-                } else {
-                        IMB_SNOW3G_F8_1_BUFFER(state,
-                               (const snow3g_key_schedule_t *)
-                               job->aes_enc_key_expanded,
-                               job->iv, job->src, job->dst,
-                               (uint32_t)job->msg_len_to_cipher_in_bits / 8);
-
-                        job->status |= STS_COMPLETED_AES;
-                        return job;
-                }
+                return submit_snow3g_uea2_job(state, job);
         } else {
                 /* assume NULL_CIPHER */
                 job->status |= STS_COMPLETED_AES;
