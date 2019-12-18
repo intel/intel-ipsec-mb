@@ -376,7 +376,7 @@ submit_eea3_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = lens[i];
-                job->hash_alg = NULL_HASH;
+                job->hash_alg = IMB_AUTH_NULL;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
@@ -425,7 +425,7 @@ submit_eia3_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
 
                 job->hash_start_src_offset_in_bytes = 0;
                 job->msg_len_to_hash_in_bits = lens[i];
-                job->hash_alg = ZUC_EIA3_BITLEN;
+                job->hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN;
                 job->auth_tag_output = tags[i];
                 job->auth_tag_output_len_in_bytes = 4;
 

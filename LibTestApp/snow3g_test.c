@@ -135,7 +135,7 @@ submit_uea2_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 
                 job->cipher_start_src_offset_in_bits = bit_offsets[i];
                 job->msg_len_to_cipher_in_bits = bitlens[i];
-                job->hash_alg = NULL_HASH;
+                job->hash_alg = IMB_AUTH_NULL;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
@@ -174,7 +174,7 @@ submit_uia2_job(struct MB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
 
         job->hash_start_src_offset_in_bytes = 0;
         job->msg_len_to_hash_in_bits = bitlen;
-        job->hash_alg = SNOW3G_UIA2_BITLEN;
+        job->hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN;
         job->auth_tag_output = tag;
         job->auth_tag_output_len_in_bytes = 4;
 

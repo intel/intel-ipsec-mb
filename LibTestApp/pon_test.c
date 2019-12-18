@@ -498,7 +498,7 @@ test_pon(struct MB_MGR *mb_mgr,
                 job->msg_len_to_cipher_in_bytes = 0;
         }
 
-        job->hash_alg = PON_CRC_BIP;
+        job->hash_alg = IMB_AUTH_PON_CRC_BIP;
         job->hash_start_src_offset_in_bytes = 0;
         job->msg_len_to_hash_in_bytes = (uint64_t) len_to_bip;
         job->auth_tag_output = (void *) &tag_output;

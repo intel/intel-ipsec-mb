@@ -291,115 +291,115 @@ struct str_value_mapping hash_algo_str_map[] = {
         {
                 .name = "sha1-hmac",
                 .values.job_params = {
-                        .hash_alg = SHA1
+                        .hash_alg = IMB_AUTH_HMAC_SHA_1
                 }
         },
         {
                 .name = "sha224-hmac",
                 .values.job_params = {
-                        .hash_alg = SHA_224
+                        .hash_alg = IMB_AUTH_HMAC_SHA_224
                 }
         },
         {
                 .name = "sha256-hmac",
                 .values.job_params = {
-                        .hash_alg = SHA_256
+                        .hash_alg = IMB_AUTH_HMAC_SHA_256
                 }
         },
         {
                 .name = "sha384-hmac",
                 .values.job_params = {
-                        .hash_alg = SHA_384
+                        .hash_alg = IMB_AUTH_HMAC_SHA_384
                 }
         },
         {
                 .name = "sha512-hmac",
                 .values.job_params = {
-                        .hash_alg = SHA_512
+                        .hash_alg = IMB_AUTH_HMAC_SHA_512
                 }
         },
         {
                 .name = "aes-xcbc",
                 .values.job_params = {
-                        .hash_alg = AES_XCBC
+                        .hash_alg = IMB_AUTH_AES_XCBC
                 }
         },
         {
                 .name = "md5-hmac",
                 .values.job_params = {
-                        .hash_alg = MD5
+                        .hash_alg = IMB_AUTH_MD5
                 }
         },
         {
                 .name = "aes-cmac",
                 .values.job_params = {
-                        .hash_alg = AES_CMAC
+                        .hash_alg = IMB_AUTH_AES_CMAC
                 }
         },
         {
                 .name = "null",
                 .values.job_params = {
-                        .hash_alg = NULL_HASH
+                        .hash_alg = IMB_AUTH_NULL
                 }
         },
         {
                 .name = "aes-cmac-bitlen",
                 .values.job_params = {
-                        .hash_alg = AES_CMAC_BITLEN
+                        .hash_alg = IMB_AUTH_AES_CMAC_BITLEN
                 }
         },
         {
                 .name = "sha1",
                 .values.job_params = {
-                        .hash_alg = PLAIN_SHA1
+                        .hash_alg = IMB_AUTH_SHA_1
                 }
         },
         {
                 .name = "sha224",
                 .values.job_params = {
-                        .hash_alg = PLAIN_SHA_224
+                        .hash_alg = IMB_AUTH_SHA_224
                 }
         },
         {
                 .name = "sha256",
                 .values.job_params = {
-                        .hash_alg = PLAIN_SHA_256
+                        .hash_alg = IMB_AUTH_SHA_256
                 }
         },
         {
                 .name = "sha384",
                 .values.job_params = {
-                        .hash_alg = PLAIN_SHA_384
+                        .hash_alg = IMB_AUTH_SHA_384
                 }
         },
         {
                 .name = "sha512",
                 .values.job_params = {
-                        .hash_alg = PLAIN_SHA_512
+                        .hash_alg = IMB_AUTH_SHA_512
                 }
         },
         {
                 .name = "zuc-eia3",
                 .values.job_params = {
-                        .hash_alg = ZUC_EIA3_BITLEN,
+                        .hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN,
                 }
         },
         {
                 .name = "snow3g-uia2",
                 .values.job_params = {
-                        .hash_alg = SNOW3G_UIA2_BITLEN,
+                        .hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN,
                 }
         },
         {
                 .name = "kasumi-uia1",
                 .values.job_params = {
-                        .hash_alg = KASUMI_UIA1,
+                        .hash_alg = IMB_AUTH_KASUMI_UIA1,
                 }
         },
         {
                 .name = "docsis-crc32",
                 .values.job_params = {
-                        .hash_alg = DOCSIS_CRC32,
+                        .hash_alg = IMB_AUTH_DOCSIS_CRC32,
                 }
         }
 };
@@ -409,7 +409,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .name = "aes-gcm-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
-                        .hash_alg = AES_GMAC,
+                        .hash_alg = IMB_AUTH_AES_GMAC,
                         .key_size = AES_128_BYTES
                 }
         },
@@ -417,7 +417,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .name = "aes-gcm-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
-                        .hash_alg = AES_GMAC,
+                        .hash_alg = IMB_AUTH_AES_GMAC,
                         .key_size = AES_192_BYTES
                 }
         },
@@ -425,7 +425,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .name = "aes-gcm-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
-                        .hash_alg = AES_GMAC,
+                        .hash_alg = IMB_AUTH_AES_GMAC,
                         .key_size = AES_256_BYTES
                 }
         },
@@ -433,7 +433,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .name = "aes-ccm-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CCM,
-                        .hash_alg = AES_CCM,
+                        .hash_alg = IMB_AUTH_AES_CCM,
                         .key_size = AES_128_BYTES
                 }
         },
@@ -441,7 +441,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .name = "pon-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
-                        .hash_alg = PON_CRC_BIP,
+                        .hash_alg = IMB_AUTH_PON_CRC_BIP,
                         .key_size = AES_128_BYTES
                 }
         },
@@ -449,7 +449,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .name = "pon-128-no-ctr",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
-                        .hash_alg = PON_CRC_BIP,
+                        .hash_alg = IMB_AUTH_PON_CRC_BIP,
                         .key_size = 0
                 }
         },
@@ -463,31 +463,31 @@ struct variant_s {
 };
 
 const uint8_t auth_tag_length_bytes[] = {
-                12, /* SHA1 */
-                14, /* SHA_224 */
-                16, /* SHA_256 */
-                24, /* SHA_384 */
-                32, /* SHA_512 */
-                12, /* AES_XCBC */
-                12, /* MD5 */
-                0,  /* NULL_HASH */
+                12, /* IMB_AUTH_HMAC_SHA_1 */
+                14, /* IMB_AUTH_HMAC_SHA_224 */
+                16, /* IMB_AUTH_HMAC_SHA_256 */
+                24, /* IMB_AUTH_HMAC_SHA_384 */
+                32, /* IMB_AUTH_HMAC_SHA_512 */
+                12, /* IMB_AUTH_AES_XCBC */
+                12, /* IMB_AUTH_MD5 */
+                0,  /* IMB_AUTH_NULL */
 #ifndef NO_GCM
-                16, /* AES_GMAC */
+                16, /* IMB_AUTH_AES_GMAC */
 #endif
-                0,  /* CUSTOM HASH */
-                16,  /* AES_CCM */
-                16, /* AES_CMAC */
-                20, /* PLAIN_SHA1 */
-                28, /* PLAIN_SHA_224 */
-                32, /* PLAIN_SHA_256 */
-                48, /* PLAIN_SHA_384 */
-                64, /* PLAIN_SHA_512 */
-                4,  /* AES_CMAC_BITLEN (3GPP) */
-                8,  /* PON */
-                4,  /* ZUC_EIA3_BITLEN */
-                DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
-                4,  /* SNOW3G_UIA2_BITLEN (3GPP) */
-                4,  /* KASUMI_UIA1 (3GPP) */
+                0,  /* IMB_AUTH_CUSTOM HASH */
+                16, /* IMB_AES_CCM */
+                16, /* IMB_AES_CMAC */
+                20, /* IMB_PLAIN_SHA1 */
+                28, /* IMB_PLAIN_SHA_224 */
+                32, /* IMB_PLAIN_SHA_256 */
+                48, /* IMB_PLAIN_SHA_384 */
+                64, /* IMB_PLAIN_SHA_512 */
+                4,  /* IMB_AES_CMAC_BITLEN (3GPP) */
+                8,  /* IMB_PON */
+                4,  /* IMB_ZUC_EIA3_BITLEN */
+                DOCSIS_CRC32_TAG_SIZE, /* IMB_AUTH_DOCSIS_CRC32 */
+                4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN (3GPP) */
+                4,  /* IMB_AUTH_KASUMI_UIA1 (3GPP) */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -529,7 +529,7 @@ uint32_t job_iter = DEFAULT_JOB_ITER;
 
 struct custom_job_params custom_job_params = {
         .cipher_mode  = IMB_CIPHER_NULL,
-        .hash_alg     = NULL_HASH,
+        .hash_alg     = IMB_AUTH_NULL,
         .key_size = 0
 };
 
@@ -691,7 +691,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                         job->msg_len_to_cipher_in_bytes = 0;
         }
 
-        if (params->hash_alg == DOCSIS_CRC32 &&
+        if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32 &&
             params->cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI) {
                 if (buf_size >=
                     (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE)) {
@@ -717,17 +717,17 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
 
         job->hash_alg = params->hash_alg;
         switch (params->hash_alg) {
-        case AES_XCBC:
+        case IMB_AUTH_AES_XCBC:
                 job->u.XCBC._k1_expanded = k1_expanded;
                 job->u.XCBC._k2 = k2;
                 job->u.XCBC._k3 = k3;
                 break;
-        case AES_CMAC:
+        case IMB_AUTH_AES_CMAC:
                 job->u.CMAC._key_expanded = k1_expanded;
                 job->u.CMAC._skey1 = k2;
                 job->u.CMAC._skey2 = k3;
                 break;
-        case AES_CMAC_BITLEN:
+        case IMB_AUTH_AES_CMAC_BITLEN:
                 job->u.CMAC._key_expanded = k1_expanded;
                 job->u.CMAC._skey1 = k2;
                 job->u.CMAC._skey2 = k3;
@@ -739,43 +739,43 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->msg_len_to_hash_in_bits =
                         (job->msg_len_to_hash_in_bytes * 8) - 4;
                 break;
-        case SHA1:
-        case SHA_224:
-        case SHA_256:
-        case SHA_384:
-        case SHA_512:
-        case MD5:
+        case IMB_AUTH_HMAC_SHA_1:
+        case IMB_AUTH_HMAC_SHA_224:
+        case IMB_AUTH_HMAC_SHA_256:
+        case IMB_AUTH_HMAC_SHA_384:
+        case IMB_AUTH_HMAC_SHA_512:
+        case IMB_AUTH_MD5:
                 /* HMAC hash alg is SHA1 or MD5 */
                 job->u.HMAC._hashed_auth_key_xor_ipad =
                         (uint8_t *) ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad =
                         (uint8_t *) opad;
                 break;
-        case ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
                 job->u.ZUC_EIA3._key  = k2;
                 job->u.ZUC_EIA3._iv  = auth_iv;
                 break;
-        case SNOW3G_UIA2_BITLEN:
+        case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 job->u.SNOW3G_UIA2._key = k2;
                 job->u.SNOW3G_UIA2._iv = auth_iv;
                 job->msg_len_to_hash_in_bits =
                         (job->msg_len_to_hash_in_bytes * 8);
                 break;
-        case KASUMI_UIA1:
+        case IMB_AUTH_KASUMI_UIA1:
                 job->u.KASUMI_UIA1._key = k2;
                 break;
-        case PON_CRC_BIP:
-        case NULL_HASH:
-        case AES_GMAC:
-        case AES_CCM:
-        case PLAIN_SHA1:
-        case PLAIN_SHA_224:
-        case PLAIN_SHA_256:
-        case PLAIN_SHA_384:
-        case PLAIN_SHA_512:
+        case IMB_AUTH_PON_CRC_BIP:
+        case IMB_AUTH_NULL:
+        case IMB_AUTH_AES_GMAC:
+        case IMB_AUTH_AES_CCM:
+        case IMB_AUTH_SHA_1:
+        case IMB_AUTH_SHA_224:
+        case IMB_AUTH_SHA_256:
+        case IMB_AUTH_SHA_384:
+        case IMB_AUTH_SHA_512:
                 /* No operation needed */
                 break;
-        case DOCSIS_CRC32:
+        case IMB_AUTH_DOCSIS_CRC32:
                 break;
         default:
                 printf("Unsupported hash algorithm\n");
@@ -790,7 +790,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
                 job->chain_order = HASH_CIPHER;
         } else if (params->cipher_mode == IMB_CIPHER_CCM ||
                    (params->cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
-                    params->hash_alg == DOCSIS_CRC32)) {
+                    params->hash_alg == IMB_AUTH_DOCSIS_CRC32)) {
                 if (job->cipher_direction == ENCRYPT)
                         job->chain_order = HASH_CIPHER;
                 else
@@ -909,41 +909,41 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
          * if flag is set */
         if (force_pattern) {
                 switch (params->hash_alg) {
-                case AES_XCBC:
+                case IMB_AUTH_AES_XCBC:
                         memset(k1_expanded, AUTH_KEY_PATTERN,
                                sizeof(keys->k1_expanded));
                         break;
-                case AES_CMAC:
-                case AES_CMAC_BITLEN:
+                case IMB_AUTH_AES_CMAC:
+                case IMB_AUTH_AES_CMAC_BITLEN:
                         memset(k1_expanded, AUTH_KEY_PATTERN,
                                sizeof(keys->k1_expanded));
                         memset(k2, AUTH_KEY_PATTERN, sizeof(keys->k2));
                         memset(k3, AUTH_KEY_PATTERN, sizeof(keys->k3));
                         break;
-                case SHA1:
-                case SHA_224:
-                case SHA_256:
-                case SHA_384:
-                case SHA_512:
-                case MD5:
+                case IMB_AUTH_HMAC_SHA_1:
+                case IMB_AUTH_HMAC_SHA_224:
+                case IMB_AUTH_HMAC_SHA_256:
+                case IMB_AUTH_HMAC_SHA_384:
+                case IMB_AUTH_HMAC_SHA_512:
+                case IMB_AUTH_MD5:
                         memset(ipad, AUTH_KEY_PATTERN, sizeof(keys->ipad));
                         memset(opad, AUTH_KEY_PATTERN, sizeof(keys->opad));
                         break;
-                case ZUC_EIA3_BITLEN:
-                case SNOW3G_UIA2_BITLEN:
-                case KASUMI_UIA1:
+                case IMB_AUTH_ZUC_EIA3_BITLEN:
+                case IMB_AUTH_SNOW3G_UIA2_BITLEN:
+                case IMB_AUTH_KASUMI_UIA1:
                         memset(k3, AUTH_KEY_PATTERN, sizeof(keys->k3));
                         break;
-                case AES_CCM:
-                case AES_GMAC:
-                case NULL_HASH:
-                case PLAIN_SHA1:
-                case PLAIN_SHA_224:
-                case PLAIN_SHA_256:
-                case PLAIN_SHA_384:
-                case PLAIN_SHA_512:
-                case PON_CRC_BIP:
-                case DOCSIS_CRC32:
+                case IMB_AUTH_AES_CCM:
+                case IMB_AUTH_AES_GMAC:
+                case IMB_AUTH_NULL:
+                case IMB_AUTH_SHA_1:
+                case IMB_AUTH_SHA_224:
+                case IMB_AUTH_SHA_256:
+                case IMB_AUTH_SHA_384:
+                case IMB_AUTH_SHA_512:
+                case IMB_AUTH_PON_CRC_BIP:
+                case IMB_AUTH_DOCSIS_CRC32:
                         /* No operation needed */
                         break;
                 default:
@@ -991,15 +991,15 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         }
 
         switch (params->hash_alg) {
-        case AES_XCBC:
+        case IMB_AUTH_AES_XCBC:
                 IMB_AES_XCBC_KEYEXP(mb_mgr, auth_key, k1_expanded, k2, k3);
                 break;
-        case AES_CMAC:
-        case AES_CMAC_BITLEN:
+        case IMB_AUTH_AES_CMAC:
+        case IMB_AUTH_AES_CMAC_BITLEN:
                 IMB_AES_KEYEXP_128(mb_mgr, auth_key, k1_expanded, dust);
                 IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, k1_expanded, k2, k3);
                 break;
-        case SHA1:
+        case IMB_AUTH_HMAC_SHA_1:
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA1_BLOCK_SIZE);
                 for (i = 0; i < SHA1_BLOCK_SIZE; i++)
@@ -1013,7 +1013,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
-        case SHA_224:
+        case IMB_AUTH_HMAC_SHA_224:
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
@@ -1027,7 +1027,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
-        case SHA_256:
+        case IMB_AUTH_HMAC_SHA_256:
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
@@ -1041,7 +1041,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
-        case SHA_384:
+        case IMB_AUTH_HMAC_SHA_384:
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA_384_BLOCK_SIZE);
                 for (i = 0; i < SHA_384_BLOCK_SIZE; i++)
@@ -1055,7 +1055,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
-        case SHA_512:
+        case IMB_AUTH_HMAC_SHA_512:
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA_512_BLOCK_SIZE);
                 for (i = 0; i < SHA_512_BLOCK_SIZE; i++)
@@ -1069,7 +1069,7 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
-        case MD5:
+        case IMB_AUTH_MD5:
                 /* compute ipad hash */
                 memset(buf, 0x36, 64);
                 for (i = 0; i < 64; i++)
@@ -1083,21 +1083,21 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
-        case ZUC_EIA3_BITLEN:
-        case SNOW3G_UIA2_BITLEN:
-        case KASUMI_UIA1:
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
+        case IMB_AUTH_SNOW3G_UIA2_BITLEN:
+        case IMB_AUTH_KASUMI_UIA1:
                 memcpy(k3, auth_key, sizeof(keys->k3));
                 break;
-        case AES_CCM:
-        case AES_GMAC:
-        case NULL_HASH:
-        case PLAIN_SHA1:
-        case PLAIN_SHA_224:
-        case PLAIN_SHA_256:
-        case PLAIN_SHA_384:
-        case PLAIN_SHA_512:
-        case PON_CRC_BIP:
-        case DOCSIS_CRC32:
+        case IMB_AUTH_AES_CCM:
+        case IMB_AUTH_AES_GMAC:
+        case IMB_AUTH_NULL:
+        case IMB_AUTH_SHA_1:
+        case IMB_AUTH_SHA_224:
+        case IMB_AUTH_SHA_256:
+        case IMB_AUTH_SHA_384:
+        case IMB_AUTH_SHA_512:
+        case IMB_AUTH_PON_CRC_BIP:
+        case IMB_AUTH_DOCSIS_CRC32:
                 /* No operation needed */
                 break;
         default:
@@ -1339,7 +1339,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         uint8_t *ciph_key = data->ciph_key;
         uint8_t *auth_key = data->auth_key;
 
-        if (params->hash_alg == PON_CRC_BIP) {
+        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
                 /* Buf size is XGEM payload, including CRC,
                  * allocate space for XGEM header and padding */
                 buf_size = buf_size + 8;
@@ -1349,7 +1349,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 tag_size_to_check = 4;
         }
 
-        if (params->hash_alg == DOCSIS_CRC32) {
+        if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                 if (params->buf_size >=
                     (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE))
                         tag_size_to_check = DOCSIS_CRC32_TAG_SIZE;
@@ -1375,7 +1375,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         }
 
         /* For PON, construct the XGEM header, setting valid PLI */
-        if (params->hash_alg == PON_CRC_BIP) {
+        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
                 /* create XGEM header template */
                 const uint64_t pli = ((params->buf_size) << 2) & 0xffff;
                 uint64_t *p_src = (uint64_t *)test_buf;
@@ -1482,13 +1482,13 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
-                if (params->hash_alg == PON_CRC_BIP) {
+                if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
                         if (modify_pon_test_buf(test_buf, params, job,
                                                 xgem_hdr) < 0)
                                 goto exit;
                 }
 
-                if (params->hash_alg == DOCSIS_CRC32)
+                if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32)
                         modify_docsis_crc32_test_buf(test_buf, params, job);
 
                 job = IMB_GET_NEXT_JOB(dec_mb_mgr);
@@ -1535,7 +1535,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 if (safe_check)
                         continue;
 
-                if (params->hash_alg != NULL_HASH &&
+                if (params->hash_alg != IMB_AUTH_NULL &&
                     memcmp(in_digest, out_digest, tag_size_to_check) != 0) {
                         fprintf(stderr,
                                 "\nInput and output tags don't match\n");
@@ -1555,7 +1555,8 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
-                if (params->hash_alg == PON_CRC_BIP && params->buf_size > 4) {
+                if ((params->hash_alg == IMB_AUTH_PON_CRC_BIP) &&
+                    (params->buf_size > 4)) {
                         const uint64_t plen = params->buf_size - 4;
 
                         if (memcmp(src_dst_buf + 8 + plen,
@@ -1743,34 +1744,35 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
 
                 for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                         params->key_size = key_sz;
-                        for (hash_alg = SHA1; hash_alg <= KASUMI_UIA1;
+                        for (hash_alg = IMB_AUTH_HMAC_SHA_1;
+                             hash_alg <= IMB_AUTH_KASUMI_UIA1;
                              hash_alg++) {
-                                /* Skip CUSTOM_HASH */
-                                if (hash_alg == CUSTOM_HASH)
+                                /* Skip IMB_AUTH_CUSTOM */
+                                if (hash_alg == IMB_AUTH_CUSTOM)
                                         continue;
 
                                 /* Skip not supported combinations */
                                 if ((c_mode == IMB_CIPHER_GCM &&
-                                    hash_alg != AES_GMAC) ||
+                                    hash_alg != IMB_AUTH_AES_GMAC) ||
                                     (c_mode != IMB_CIPHER_GCM &&
-                                    hash_alg == AES_GMAC))
+                                    hash_alg == IMB_AUTH_AES_GMAC))
                                         continue;
                                 if ((c_mode == IMB_CIPHER_CCM &&
-                                    hash_alg != AES_CCM) ||
+                                    hash_alg != IMB_AUTH_AES_CCM) ||
                                     (c_mode != IMB_CIPHER_CCM &&
-                                    hash_alg == AES_CCM))
+                                    hash_alg == IMB_AUTH_AES_CCM))
                                         continue;
                                 if ((c_mode == IMB_CIPHER_PON_AES_CNTR &&
-                                                hash_alg != PON_CRC_BIP) ||
+                                    hash_alg != IMB_AUTH_PON_CRC_BIP) ||
                                     (c_mode != IMB_CIPHER_PON_AES_CNTR &&
-                                                hash_alg == PON_CRC_BIP))
+                                    hash_alg == IMB_AUTH_PON_CRC_BIP))
                                         continue;
                                 if (c_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
-                                    (hash_alg != NULL_HASH &&
-                                     hash_alg != DOCSIS_CRC32))
+                                    (hash_alg != IMB_AUTH_NULL &&
+                                     hash_alg != IMB_AUTH_DOCSIS_CRC32))
                                         continue;
                                 if (c_mode != IMB_CIPHER_DOCSIS_SEC_BPI &&
-                                    hash_alg == DOCSIS_CRC32)
+                                    hash_alg == IMB_AUTH_DOCSIS_CRC32)
                                         continue;
 
                                 params->hash_alg = hash_alg;

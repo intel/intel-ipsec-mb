@@ -183,7 +183,7 @@ submit_kasumi_f8_jobs(struct MB_MGR *mb_mgr, kasumi_key_sched_t **keys,
 
                 job->cipher_start_src_offset_in_bits = bit_offsets[i];
                 job->msg_len_to_cipher_in_bits = bitlens[i];
-                job->hash_alg = NULL_HASH;
+                job->hash_alg = IMB_AUTH_NULL;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
@@ -221,7 +221,7 @@ submit_kasumi_f9_job(struct MB_MGR *mb_mgr, kasumi_key_sched_t *key,
 
         job->hash_start_src_offset_in_bytes = 0;
         job->msg_len_to_hash_in_bytes = len;
-        job->hash_alg = KASUMI_UIA1;
+        job->hash_alg = IMB_AUTH_KASUMI_UIA1;
         job->auth_tag_output = tag;
         job->auth_tag_output_len_in_bytes = 4;
 

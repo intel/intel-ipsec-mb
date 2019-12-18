@@ -1317,7 +1317,7 @@ test_ctr(struct MB_MGR *mb_mgr,
         else
                 job->msg_len_to_cipher_in_bits = text_len;
 
-        job->hash_alg = NULL_HASH;
+        job->hash_alg = IMB_AUTH_NULL;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (!job) {

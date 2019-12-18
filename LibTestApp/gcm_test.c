@@ -1358,7 +1358,7 @@ aes_gcm_job(MB_MGR *mb_mgr,
         }
 
         job->cipher_mode                      = IMB_CIPHER_GCM;
-        job->hash_alg                         = AES_GMAC;
+        job->hash_alg                         = IMB_AUTH_AES_GMAC;
         job->chain_order                      = order;
         job->aes_enc_key_expanded             = key;
         job->aes_dec_key_expanded             = key;

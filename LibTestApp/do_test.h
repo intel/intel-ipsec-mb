@@ -163,7 +163,7 @@ known_answer_test(MB_MGR *mb_mgr)
         job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
         job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
         job->cipher_mode = IMB_CIPHER_CBC;
-        job->hash_alg = SHA1;
+        job->hash_alg = IMB_AUTH_HMAC_SHA_1;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job) {
@@ -250,7 +250,7 @@ do_test(MB_MGR *mb_mgr)
                 job->iv_len_in_bytes = 16;
 
                 job->cipher_mode = IMB_CIPHER_CBC;
-                job->hash_alg = SHA1;
+                job->hash_alg = IMB_AUTH_HMAC_SHA_1;
 
                 switch (rand() % 3) {
                 case 0:

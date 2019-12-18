@@ -670,7 +670,7 @@ test_ecb_many(struct MB_MGR *mb_mgr,
                 job->user_data = targets[i];
                 job->user_data2 = (void *)((uint64_t)i);
 
-                job->hash_alg = NULL_HASH;
+                job->hash_alg = IMB_AUTH_NULL;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {

@@ -1217,25 +1217,25 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.XCBC._k1_expanded = k1_expanded;
                 job_template.u.XCBC._k2 = k2;
                 job_template.u.XCBC._k3 = k3;
-                job_template.hash_alg = AES_XCBC;
+                job_template.hash_alg = IMB_AUTH_AES_XCBC;
                 break;
         case TEST_HASH_CCM:
-                job_template.hash_alg = AES_CCM;
+                job_template.hash_alg = IMB_AUTH_AES_CCM;
                 break;
         case TEST_HASH_GCM:
-                job_template.hash_alg = AES_GMAC;
+                job_template.hash_alg = IMB_AUTH_AES_GMAC;
                 break;
         case TEST_DOCSIS_CRC32:
-                job_template.hash_alg = DOCSIS_CRC32;
+                job_template.hash_alg = IMB_AUTH_DOCSIS_CRC32;
                 break;
         case TEST_NULL_HASH:
-                job_template.hash_alg = NULL_HASH;
+                job_template.hash_alg = IMB_AUTH_NULL;
                 break;
         case TEST_HASH_CMAC:
                 job_template.u.CMAC._key_expanded = k1_expanded;
                 job_template.u.CMAC._skey1 = k2;
                 job_template.u.CMAC._skey2 = k3;
-                job_template.hash_alg = AES_CMAC;
+                job_template.hash_alg = IMB_AUTH_AES_CMAC;
                 break;
         case TEST_HASH_CMAC_BITLEN:
                 job_template.u.CMAC._key_expanded = k1_expanded;
@@ -1248,31 +1248,31 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                  */
                 job_template.msg_len_to_hash_in_bits =
                         (job_template.msg_len_to_hash_in_bytes * 8) - 4;
-                job_template.hash_alg = AES_CMAC_BITLEN;
+                job_template.hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
                 break;
         case TEST_PON_CRC_BIP:
-                job_template.hash_alg = PON_CRC_BIP;
+                job_template.hash_alg = IMB_AUTH_PON_CRC_BIP;
                 job_template.msg_len_to_hash_in_bytes = size_aes + 8;
                 job_template.cipher_start_src_offset_in_bytes = 8;
                 if (params->cipher_mode == TEST_PON_NO_CNTR)
                         job_template.msg_len_to_cipher_in_bytes = 0;
                 break;
         case TEST_ZUC_EIA3:
-                job_template.hash_alg = ZUC_EIA3_BITLEN;
+                job_template.hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN;
                 job_template.msg_len_to_hash_in_bits =
                         (job_template.msg_len_to_hash_in_bytes * 8);
                 job_template.u.ZUC_EIA3._key = k3;
                 job_template.u.ZUC_EIA3._iv = (uint8_t *) &auth_iv;
                 break;
         case TEST_SNOW3G_UIA2:
-                job_template.hash_alg = SNOW3G_UIA2_BITLEN;
+                job_template.hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN;
                 job_template.msg_len_to_hash_in_bits =
                         (job_template.msg_len_to_hash_in_bytes * 8);
                 job_template.u.SNOW3G_UIA2._key = k3;
                 job_template.u.SNOW3G_UIA2._iv = (uint8_t *)&auth_iv;
                 break;
         case TEST_KASUMI_UIA1:
-                job_template.hash_alg = KASUMI_UIA1;
+                job_template.hash_alg = IMB_AUTH_KASUMI_UIA1;
                 job_template.msg_len_to_hash_in_bytes =
                         job_template.msg_len_to_hash_in_bytes;
                 job_template.u.KASUMI_UIA1._key = k3;
@@ -1348,7 +1348,7 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.aes_key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 16;
         } else if (job_template.cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
-                   job_template.hash_alg == DOCSIS_CRC32) {
+                   job_template.hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                 const uint64_t ciph_adjust = /* SA + DA */
                         DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2 /* ETH TYPE */;
 
@@ -1372,7 +1372,7 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.iv_len_in_bytes = 8;
         }
 
-        if (job_template.hash_alg == PON_CRC_BIP) {
+        if (job_template.hash_alg == IMB_AUTH_PON_CRC_BIP) {
                 /* create XGEM header template */
                 const uint64_t pli =
                         (job_template.msg_len_to_cipher_in_bytes << 2) & 0xffff;
@@ -1391,7 +1391,7 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 *job = job_template;
 
-                if (job->hash_alg == PON_CRC_BIP) {
+                if (job->hash_alg == IMB_AUTH_PON_CRC_BIP) {
                         uint64_t *p_src =
                                 (uint64_t *) get_src_buffer(index, p_buffer);
 

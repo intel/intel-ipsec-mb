@@ -349,7 +349,7 @@ test_des_many(struct MB_MGR *mb_mgr,
                 job->msg_len_to_cipher_in_bytes = text_len;
                 job->user_data = (void *)((uint64_t)i);
 
-                job->hash_alg = NULL_HASH;
+                job->hash_alg = IMB_AUTH_NULL;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
@@ -484,7 +484,7 @@ test_des_one(struct MB_MGR *mb_mgr,
         job->cipher_start_src_offset_in_bytes = 0;
         job->msg_len_to_cipher_in_bytes = text_len;
 
-        job->hash_alg = NULL_HASH;
+        job->hash_alg = IMB_AUTH_NULL;
 
         if (arch == ARCH_AVX512) {
                 job = IMB_SUBMIT_JOB(mb_mgr);

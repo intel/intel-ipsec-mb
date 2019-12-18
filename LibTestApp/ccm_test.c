@@ -1957,7 +1957,7 @@ test_ccm(struct MB_MGR *mb_mgr,
                 job->msg_len_to_cipher_in_bytes =
                         vec->packet_len - vec->clear_len;
 
-                job->hash_alg = AES_CCM;
+                job->hash_alg = IMB_AUTH_AES_CCM;
                 job->hash_start_src_offset_in_bytes = vec->clear_len;
                 job->msg_len_to_hash_in_bytes =
                         vec->packet_len - vec->clear_len;

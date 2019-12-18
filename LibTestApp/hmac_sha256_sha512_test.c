@@ -975,17 +975,17 @@ test_hmac_shax(struct MB_MGR *mb_mgr,
 
                 switch (sha_type) {
                 case 224:
-                        job->hash_alg = SHA_224;
+                        job->hash_alg = IMB_AUTH_HMAC_SHA_224;
                         break;
                 case 256:
-                        job->hash_alg = SHA_256;
+                        job->hash_alg = IMB_AUTH_HMAC_SHA_256;
                         break;
                 case 384:
-                        job->hash_alg = SHA_384;
+                        job->hash_alg = IMB_AUTH_HMAC_SHA_384;
                         break;
                 case 512:
                 default:
-                        job->hash_alg = SHA_512;
+                        job->hash_alg = IMB_AUTH_HMAC_SHA_512;
                         break;
                 }
 

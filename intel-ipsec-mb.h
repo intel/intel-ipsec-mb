@@ -210,6 +210,29 @@ typedef enum {
 #define PON_AES_CNTR            IMB_CIPHER_PON_AES_CNTR
 #define ECB                     IMB_CIPHER_ECB
 #define CNTR_BITLEN             IMB_CIPHER_CNTR_BITLEN
+
+/***** Previous hash algo enums *****/
+#define SHA1                    IMB_AUTH_HMAC_SHA_1
+#define SHA_224                 IMB_AUTH_HMAC_SHA_224
+#define SHA_256                 IMB_AUTH_HMAC_SHA_256
+#define SHA_384                 IMB_AUTH_HMAC_SHA_384
+#define SHA_512                 IMB_AUTH_HMAC_SHA_512
+#define AES_XCBC                IMB_AUTH_AES_XCBC
+#define MD5                     IMB_AUTH_MD5
+#define NULL_HASH               IMB_AUTH_NULL
+#ifndef NO_GCM
+#define AES_GMAC                IMB_AUTH_AES_GMAC
+#endif /* !NO_GCM */
+#define CUSTOM_HASH             IMB_AUTH_CUSTOM
+#define AES_CCM                 IMB_AUTH_AES_CCM
+#define AES_CMAC                IMB_AUTH_AES_CMAC
+#define PLAIN_SHA1              IMB_AUTH_SHA_1
+#define PLAIN_SHA_224           IMB_AUTH_SHA_224
+#define PLAIN_SHA_256           IMB_AUTH_SHA_256
+#define PLAIN_SHA_384           IMB_AUTH_SHA_384
+#define PLAIN_SHA_512           IMB_AUTH_SHA_512
+#define AES_CMAC_BITLEN         IMB_AUTH_AES_CMAC_BITLEN
+#define PON_CRC_BIP             IMB_AUTH_PON_CRC_BIP
 #endif /* !NO_COMPAT_IMB_API_053 */
 
 typedef enum {
@@ -239,31 +262,31 @@ typedef enum {
 } JOB_CIPHER_DIRECTION;
 
 typedef enum {
-        SHA1 = 1,  /* HMAC-SHA1 */
-        SHA_224,   /* HMAC-SHA224 */
-        SHA_256,   /* HMAC-SHA256 */
-        SHA_384,   /* HMAC-SHA384 */
-        SHA_512,   /* HMAC-SHA512 */
-        AES_XCBC,
-        MD5,       /* HMAC-MD5 */
-        NULL_HASH,
+        IMB_AUTH_HMAC_SHA_1 = 1,    /* HMAC-SHA1 */
+        IMB_AUTH_HMAC_SHA_224,      /* HMAC-SHA224 */
+        IMB_AUTH_HMAC_SHA_256,      /* HMAC-SHA256 */
+        IMB_AUTH_HMAC_SHA_384,      /* HMAC-SHA384 */
+        IMB_AUTH_HMAC_SHA_512,      /* HMAC-SHA512 */
+        IMB_AUTH_AES_XCBC,
+        IMB_AUTH_MD5,               /* HMAC-MD5 */
+        IMB_AUTH_NULL,
 #ifndef NO_GCM
-        AES_GMAC,
+        IMB_AUTH_AES_GMAC,
 #endif /* !NO_GCM */
-        CUSTOM_HASH,
-        AES_CCM,         /* AES128-CCM */
-        AES_CMAC,        /* AES128-CMAC */
-        PLAIN_SHA1,      /* SHA1 */
-        PLAIN_SHA_224,   /* SHA224 */
-        PLAIN_SHA_256,   /* SHA256 */
-        PLAIN_SHA_384,   /* SHA384 */
-        PLAIN_SHA_512,   /* SHA512 */
-        AES_CMAC_BITLEN, /* 128-EIA2/NIA2 (3GPP) */
-        PON_CRC_BIP,
-        ZUC_EIA3_BITLEN, /* 128-EIA3/NIA3 (3GPP) */
-        DOCSIS_CRC32,    /* with DOCSIS_SEC_BPI only */
-        SNOW3G_UIA2_BITLEN, /* 128-UIA2 (3GPP) */
-        KASUMI_UIA1,     /* 128-UIA1 (3GPP) */
+        IMB_AUTH_CUSTOM,
+        IMB_AUTH_AES_CCM,            /* AES128-CCM */
+        IMB_AUTH_AES_CMAC,           /* AES128-CMAC */
+        IMB_AUTH_SHA_1,              /* SHA1 */
+        IMB_AUTH_SHA_224,            /* SHA224 */
+        IMB_AUTH_SHA_256,            /* SHA256 */
+        IMB_AUTH_SHA_384,            /* SHA384 */
+        IMB_AUTH_SHA_512,            /* SHA512 */
+        IMB_AUTH_AES_CMAC_BITLEN,    /* 128-EIA2/NIA2 (3GPP) */
+        IMB_AUTH_PON_CRC_BIP,
+        IMB_AUTH_ZUC_EIA3_BITLEN,    /* 128-EIA3/NIA3 (3GPP) */
+        IMB_AUTH_DOCSIS_CRC32,       /* with DOCSIS_SEC_BPI only */
+        IMB_AUTH_SNOW3G_UIA2_BITLEN, /* 128-UIA2 (3GPP) */
+        IMB_AUTH_KASUMI_UIA1,        /* 128-UIA1 (3GPP) */
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -385,7 +408,7 @@ typedef struct JOB_AES_HMAC {
         /* IMB_CIPHER_CBC, IMB_CIPHER_CNTR, IMB_CIPHER_GCM, etc. */
         JOB_CIPHER_MODE cipher_mode;
         JOB_CIPHER_DIRECTION cipher_direction; /* Encrypt/decrypt */
-        JOB_HASH_ALG hash_alg; /* SHA-1 or others... */
+        JOB_HASH_ALG hash_alg; /* IMB_AUTH_SHA_1 or others... */
         JOB_CHAIN_ORDER chain_order; /* CIPHER_HASH or HASH_CIPHER.
                                       * For AES-CCM, when encrypting,
                                       * HASH_CIPHER must be selected,

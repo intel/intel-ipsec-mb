@@ -425,7 +425,7 @@ test_hmac_sha1(struct MB_MGR *mb_mgr,
                 job->u.HMAC._hashed_auth_key_xor_ipad = ipad_hash;
                 job->u.HMAC._hashed_auth_key_xor_opad = opad_hash;
                 job->cipher_mode = IMB_CIPHER_NULL;
-                job->hash_alg = SHA1;
+                job->hash_alg = IMB_AUTH_HMAC_SHA_1;
 
                 job->user_data = auths[i];
 

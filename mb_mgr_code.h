@@ -331,7 +331,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 }
         } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
 
-                if (job->hash_alg == DOCSIS_CRC32) {
+                if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 &state->docsis_crc32_sec_ooo;
 
@@ -403,7 +403,7 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
 #endif /* NO_GCM */
         } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
 
-                if (job->hash_alg == DOCSIS_CRC32) {
+                if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 &state->docsis_crc32_sec_ooo;
 
@@ -463,7 +463,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
                 MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
 
-                if (job->hash_alg == DOCSIS_CRC32)
+                if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32)
                         return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(p_ooo, job);
                 else
                         return SUBMIT_JOB_DOCSIS_SEC_DEC(p_ooo, job);
@@ -551,39 +551,39 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         printf("--------Enter SUBMIT_JOB_HASH --------------\n");
 #endif
         switch (job->hash_alg) {
-        case SHA1:
+        case IMB_AUTH_HMAC_SHA_1:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return SUBMIT_JOB_HMAC_NI(&state->hmac_sha_1_ooo, job);
 #endif
                 return SUBMIT_JOB_HMAC(&state->hmac_sha_1_ooo, job);
-        case SHA_224:
+        case IMB_AUTH_HMAC_SHA_224:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return SUBMIT_JOB_HMAC_SHA_224_NI
                                 (&state->hmac_sha_224_ooo, job);
 #endif
                 return SUBMIT_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo, job);
-        case SHA_256:
+        case IMB_AUTH_HMAC_SHA_256:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return SUBMIT_JOB_HMAC_SHA_256_NI
                                 (&state->hmac_sha_256_ooo, job);
 #endif
                 return SUBMIT_JOB_HMAC_SHA_256(&state->hmac_sha_256_ooo, job);
-        case SHA_384:
+        case IMB_AUTH_HMAC_SHA_384:
                 return SUBMIT_JOB_HMAC_SHA_384(&state->hmac_sha_384_ooo, job);
-        case SHA_512:
+        case IMB_AUTH_HMAC_SHA_512:
                 return SUBMIT_JOB_HMAC_SHA_512(&state->hmac_sha_512_ooo, job);
-        case AES_XCBC:
+        case IMB_AUTH_AES_XCBC:
                 return SUBMIT_JOB_AES_XCBC(&state->aes_xcbc_ooo, job);
-        case MD5:
+        case IMB_AUTH_MD5:
                 return SUBMIT_JOB_HMAC_MD5(&state->hmac_md5_ooo, job);
-        case CUSTOM_HASH:
+        case IMB_AUTH_CUSTOM:
                 return SUBMIT_JOB_CUSTOM_HASH(job);
-        case AES_CCM:
+        case IMB_AUTH_AES_CCM:
                 return SUBMIT_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo, job);
-        case AES_CMAC:
+        case IMB_AUTH_AES_CMAC:
                 /*
                  * CMAC OOO MGR assumes job len in bits
                  * (for CMAC length is provided in bytes)
@@ -591,41 +591,41 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 job->msg_len_to_hash_in_bits =
                         job->msg_len_to_hash_in_bytes * 8;
                 return SUBMIT_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo, job);
-        case AES_CMAC_BITLEN:
+        case IMB_AUTH_AES_CMAC_BITLEN:
                 return SUBMIT_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo, job);
-        case PLAIN_SHA1:
+        case IMB_AUTH_SHA_1:
                 IMB_SHA1(state,
                          job->src + job->hash_start_src_offset_in_bytes,
                          job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
-        case PLAIN_SHA_224:
+        case IMB_AUTH_SHA_224:
                 IMB_SHA224(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
-        case PLAIN_SHA_256:
+        case IMB_AUTH_SHA_256:
                 IMB_SHA256(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
-        case PLAIN_SHA_384:
+        case IMB_AUTH_SHA_384:
                 IMB_SHA384(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
-        case PLAIN_SHA_512:
+        case IMB_AUTH_SHA_512:
                 IMB_SHA512(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
-        case ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC_EIA3(&state->zuc_eia3_ooo, job);
-        case SNOW3G_UIA2_BITLEN:
+        case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
                                job->u.SNOW3G_UIA2._key,
                                job->u.SNOW3G_UIA2._iv,
@@ -634,7 +634,7 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                                job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
-        case KASUMI_UIA1:
+        case IMB_AUTH_KASUMI_UIA1:
                 IMB_KASUMI_F9_1_BUFFER(state, (const kasumi_key_sched_t *)
                                job->u.KASUMI_UIA1._key,
                                job->src + job->hash_start_src_offset_in_bytes,
@@ -642,7 +642,7 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                                job->auth_tag_output);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
-        default: /* assume GCM, PON_CRC_BIP or NULL_HASH */
+        default: /* assume IMB_AUTH_GCM,IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
         }
@@ -653,44 +653,44 @@ JOB_AES_HMAC *
 FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
 {
         switch (job->hash_alg) {
-        case SHA1:
+        case IMB_AUTH_HMAC_SHA_1:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return FLUSH_JOB_HMAC_NI(&state->hmac_sha_1_ooo);
 #endif
                 return FLUSH_JOB_HMAC(&state->hmac_sha_1_ooo);
-        case SHA_224:
+        case IMB_AUTH_HMAC_SHA_224:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return FLUSH_JOB_HMAC_SHA_224_NI
                                 (&state->hmac_sha_224_ooo);
 #endif
                 return FLUSH_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo);
-        case SHA_256:
+        case IMB_AUTH_HMAC_SHA_256:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return FLUSH_JOB_HMAC_SHA_256_NI
                                 (&state->hmac_sha_256_ooo);
 #endif
                 return FLUSH_JOB_HMAC_SHA_256(&state->hmac_sha_256_ooo);
-        case SHA_384:
+        case IMB_AUTH_HMAC_SHA_384:
                 return FLUSH_JOB_HMAC_SHA_384(&state->hmac_sha_384_ooo);
-        case SHA_512:
+        case IMB_AUTH_HMAC_SHA_512:
                 return FLUSH_JOB_HMAC_SHA_512(&state->hmac_sha_512_ooo);
-        case AES_XCBC:
+        case IMB_AUTH_AES_XCBC:
                 return FLUSH_JOB_AES_XCBC(&state->aes_xcbc_ooo);
-        case MD5:
+        case IMB_AUTH_MD5:
                 return FLUSH_JOB_HMAC_MD5(&state->hmac_md5_ooo);
-        case CUSTOM_HASH:
+        case IMB_AUTH_CUSTOM:
                 return FLUSH_JOB_CUSTOM_HASH(job);
-        case AES_CCM:
+        case IMB_AUTH_AES_CCM:
                 return FLUSH_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo);
-        case AES_CMAC:
-        case AES_CMAC_BITLEN:
+        case IMB_AUTH_AES_CMAC:
+        case IMB_AUTH_AES_CMAC_BITLEN:
                 return FLUSH_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo);
-        case ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(&state->zuc_eia3_ooo);
-        default: /* assume GCM or NULL_HASH */
+        default: /* assume GCM or IMB_AUTH_NULL */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
                         job->status |= STS_COMPLETED_HMAC;
                         return job;
@@ -728,49 +728,49 @@ is_job_invalid(const JOB_AES_HMAC *job)
 {
         const uint64_t auth_tag_len_fips[] = {
                 0,  /* INVALID selection */
-                20, /* SHA1 */
-                28, /* SHA_224 */
-                32, /* SHA_256 */
-                48, /* SHA_384 */
-                64, /* SHA_512 */
-                12, /* AES_XCBC */
-                16, /* MD5 */
-                0,  /* NULL_HASH */
+                20, /* IMB_AUTH_HMAC_SHA_1 */
+                28, /* IMB_AUTH_HMAC_SHA_224 */
+                32, /* IMB_AUTH_HMAC_SHA_256 */
+                48, /* IMB_AUTH_HMAC_SHA_384 */
+                64, /* IMB_AUTH_HMAC_SHA_512 */
+                12, /* IMB_AUTH_AES_XCBC */
+                16, /* IMB_AUTH_MD5 */
+                0,  /* IMB_AUTH_NULL */
 #ifndef NO_GCM
-                16, /* AES_GMAC */
+                16, /* IMB_AUTH_AES_GMAC */
 #endif
-                0,  /* CUSTOM HASH */
-                0,  /* AES_CCM */
-                16, /* AES_CMAC */
-                4, /* ZUC_EIA3_BITLEN */
-                4, /* SNOW3G_UIA2_BITLEN */
-                4, /* KASUMI_UIA1 */
+                0,  /* IMB_AUTH_CUSTOM */
+                0,  /* IMB_AUTH_AES_CCM */
+                16, /* IMB_AUTH_AES_CMAC */
+                4,  /* IMB_AUTH_ZUC_EIA3_BITLEN */
+                4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN */
+                4,  /* IMB_AUTH_KASUMI_UIA1 */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
-                12, /* SHA1 */
-                14, /* SHA_224 */
-                16, /* SHA_256 */
-                24, /* SHA_384 */
-                32, /* SHA_512 */
-                12, /* AES_XCBC */
-                12, /* MD5 */
-                0,  /* NULL_HASH */
+                12, /* IMB_AUTH_HMAC_SHA_1 */
+                14, /* IMB_AUTH_HMAC_SHA_224 */
+                16, /* IMB_AUTH_HMAC_SHA_256 */
+                24, /* IMB_AUTH_HMAC_SHA_384 */
+                32, /* IMB_AUTH_HMAC_SHA_512 */
+                12, /* IMB_AUTH_AES_XCBC */
+                12, /* IMB_AUTH_MD5 */
+                0,  /* IMB_AUTH_NULL */
 #ifndef NO_GCM
-                16, /* AES_GMAC */
+                16, /* IMB_AUTH_AES_GMAC */
 #endif
-                0,  /* CUSTOM HASH */
-                0,  /* AES_CCM */
-                16, /* AES_CMAC */
-                20, /* PLAIN_SHA1 */
-                28, /* PLAIN_SHA_224 */
-                32, /* PLAIN_SHA_256 */
-                48, /* PLAIN_SHA_384 */
-                64, /* PLAIN_SHA_512 */
-                4,  /* AES_CMAC 3GPP */
-                4, /* ZUC_EIA3_BITLEN */
-                4, /* SNOW3G_UIA2_BITLEN */
-                4, /* KASUMI_UIA1 */
+                0,  /* IMB_AUTH_CUSTOM */
+                0,  /* IMB_AUTH_AES_CCM */
+                16, /* IMB_AUTH_AES_CMAC */
+                20, /* IMB_AUTH_SHA_1 */
+                28, /* IMB_AUTH_SHA_224 */
+                32, /* IMB_AUTH_SHA_256 */
+                48, /* IMB_AUTH_SHA_384 */
+                64, /* IMB_AUTH_SHA_512 */
+                4,  /* IMB_AUTH_AES_CMAC 3GPP */
+                4,  /* IMB_AUTH_ZUC_EIA3_BITLEN */
+                4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN */
+                4,  /* IMB_AUTH_KASUMI_UIA1 */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -966,7 +966,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->hash_alg != AES_GMAC) {
+                if (job->hash_alg != IMB_AUTH_AES_GMAC) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1093,7 +1093,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->hash_alg != AES_CCM) {
+                if (job->hash_alg != IMB_AUTH_AES_CCM) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1186,7 +1186,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->hash_alg != PON_CRC_BIP) {
+                if (job->hash_alg != IMB_AUTH_PON_CRC_BIP) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1323,13 +1323,13 @@ is_job_invalid(const JOB_AES_HMAC *job)
         }
 
         switch (job->hash_alg) {
-        case SHA1:
-        case AES_XCBC:
-        case MD5:
-        case SHA_224:
-        case SHA_256:
-        case SHA_384:
-        case SHA_512:
+        case IMB_AUTH_HMAC_SHA_1:
+        case IMB_AUTH_AES_XCBC:
+        case IMB_AUTH_MD5:
+        case IMB_AUTH_HMAC_SHA_224:
+        case IMB_AUTH_HMAC_SHA_256:
+        case IMB_AUTH_HMAC_SHA_384:
+        case IMB_AUTH_HMAC_SHA_512:
                 if (job->src == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
@@ -1350,10 +1350,10 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case NULL_HASH:
+        case IMB_AUTH_NULL:
                 break;
 #ifndef NO_GCM
-        case AES_GMAC:
+        case IMB_AUTH_AES_GMAC:
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
@@ -1379,13 +1379,13 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  */
                 break;
 #endif /* !NO_GCM */
-        case CUSTOM_HASH:
+        case IMB_AUTH_CUSTOM:
                 if (job->hash_func == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
-        case AES_CCM:
+        case IMB_AUTH_AES_CCM:
                 if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
@@ -1428,8 +1428,8 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case AES_CMAC:
-        case AES_CMAC_BITLEN:
+        case IMB_AUTH_AES_CMAC:
+        case IMB_AUTH_AES_CMAC_BITLEN:
                 /*
                  * WARNING: When using AES_CMAC_BITLEN, length of message
                  * is passed in bits, using job->msg_len_to_hash_in_bits
@@ -1459,11 +1459,11 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case PLAIN_SHA1:
-        case PLAIN_SHA_224:
-        case PLAIN_SHA_256:
-        case PLAIN_SHA_384:
-        case PLAIN_SHA_512:
+        case IMB_AUTH_SHA_1:
+        case IMB_AUTH_SHA_224:
+        case IMB_AUTH_SHA_256:
+        case IMB_AUTH_SHA_384:
+        case IMB_AUTH_SHA_512:
                 if (job->auth_tag_output_len_in_bytes !=
                     auth_tag_len_ipsec[job->hash_alg]) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
@@ -1478,7 +1478,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case PON_CRC_BIP:
+        case IMB_AUTH_PON_CRC_BIP:
                 /*
                  * Authentication tag in PON is BIP 32-bit value only
                  * CRC is done together with cipher,
@@ -1514,7 +1514,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
                 if (job->src == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
@@ -1537,7 +1537,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case DOCSIS_CRC32:
+        case IMB_AUTH_DOCSIS_CRC32:
                 /**
                  * Use only in combination with DOCSIS_SEC_BPI.
                  * Assumptions about Ethernet PDU carried over DOCSIS:
@@ -1591,7 +1591,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case SNOW3G_UIA2_BITLEN:
+        case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 if (job->src == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
@@ -1614,7 +1614,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-        case KASUMI_UIA1:
+        case IMB_AUTH_KASUMI_UIA1:
                 if (job->src == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;

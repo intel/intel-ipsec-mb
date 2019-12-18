@@ -118,13 +118,13 @@ hash_addon(struct JOB_AES_HMAC *job)
  * test cipher functions
  */
 static const struct auth_attr_s auth_attr_tab[] = {
-        { "SHA1", SHA1, 12 },
-        { "SHA224", SHA_224, 14 },
-        { "SHA256", SHA_256, 16 },
-        { "SHA384", SHA_384, 24 },
-        { "SHA512", SHA_512, 32 },
-        { "MD5", MD5, 12 },
-        { "CUSTOM_HASH", CUSTOM_HASH, 16 }
+        { "SHA1",        IMB_AUTH_HMAC_SHA_1,   12 },
+        { "SHA224",      IMB_AUTH_HMAC_SHA_224, 14 },
+        { "SHA256",      IMB_AUTH_HMAC_SHA_256, 16 },
+        { "SHA384",      IMB_AUTH_HMAC_SHA_384, 24 },
+        { "SHA512",      IMB_AUTH_HMAC_SHA_512, 32 },
+        { "MD5",         IMB_AUTH_MD5,     12 },
+        { "CUSTOM_HASH", IMB_AUTH_CUSTOM,  16 }
 };
 
 /*
@@ -178,7 +178,7 @@ job_check(const struct JOB_AES_HMAC *job)
                 }
         }
 
-        if (job->hash_alg == CUSTOM_HASH) {
+        if (job->hash_alg == IMB_AUTH_CUSTOM) {
                 unsigned i;
 
                 for (i = 0; i < job->auth_tag_output_len_in_bytes; i++) {

@@ -6,12 +6,12 @@ v0.54
 
 Library
 - ZUC-EEA3 and ZUC-EIA3 algorithms added in job API (using cipher mode
-  IMB_CIPHER_ZUC_EEA3 and hash_alg ZUC_EIA3_BITLEN)
+  IMB_CIPHER_ZUC_EEA3 and hash_alg IMB_AUTH_ZUC_EIA3_BITLEN)
 - SNOW3G-UEA2 and SNOW3G-UIA2 algorithms added in job API (using cipher type
-  IMB_CIPHER_SNOW3G_UEA2_BITLEN and hash type SNOW3G_UIA2_BITLEN)
+  IMB_CIPHER_SNOW3G_UEA2_BITLEN and hash type IMB_AUTH_SNOW3G_UIA2_BITLEN)
 - AVX512 implementation of stitched DOCSIS cipher with CRC32 calculations
 - KASUMI-UEA1 and KASUMI-UIA1 algorithms added in job API (using cipher type
-  IMB_CIPHER_KASUMI_UEA1_BITLEN and hash type KASUMI_UIA2)
+  IMB_CIPHER_KASUMI_UEA1_BITLEN and hash type IMB_AUTH_KASUMI_UIA1)
 - New GHASH API added
 - ZUC-EIA3 Multi-buffer API added and implemented for SSE and AVX.
 - Added support for any IV size in AES-GCM, through the job API and new

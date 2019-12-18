@@ -479,20 +479,20 @@ test_sha(struct MB_MGR *mb_mgr,
                 job->cipher_mode = IMB_CIPHER_NULL;
                 switch (vec->sha_type) {
                 case 1:
-                        job->hash_alg = PLAIN_SHA1;
+                        job->hash_alg = IMB_AUTH_SHA_1;
                         break;
                 case 224:
-                        job->hash_alg = PLAIN_SHA_224;
+                        job->hash_alg = IMB_AUTH_SHA_224;
                         break;
                 case 256:
-                        job->hash_alg = PLAIN_SHA_256;
+                        job->hash_alg = IMB_AUTH_SHA_256;
                         break;
                 case 384:
-                        job->hash_alg = PLAIN_SHA_384;
+                        job->hash_alg = IMB_AUTH_SHA_384;
                         break;
                 case 512:
                 default:
-                        job->hash_alg = PLAIN_SHA_512;
+                        job->hash_alg = IMB_AUTH_SHA_512;
                         break;
                 }
 

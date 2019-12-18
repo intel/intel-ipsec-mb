@@ -1094,10 +1094,10 @@ test_cmac(struct MB_MGR *mb_mgr,
                 job->cipher_mode = IMB_CIPHER_NULL;
 
                 if (type == CMAC) {
-                        job->hash_alg = AES_CMAC;
+                        job->hash_alg = IMB_AUTH_AES_CMAC;
                         job->msg_len_to_hash_in_bytes = vec->len;
                 } else {
-                        job->hash_alg = AES_CMAC_BITLEN;
+                        job->hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
                         /* check for std or 3gpp vectors
                            scale len if necessary */
                         if (vec->type == CMAC)
@@ -1158,10 +1158,10 @@ test_cmac(struct MB_MGR *mb_mgr,
                 job->cipher_mode = IMB_CIPHER_NULL;
 
                 if (type == CMAC) {
-                        job->hash_alg = AES_CMAC;
+                        job->hash_alg = IMB_AUTH_AES_CMAC;
                         job->msg_len_to_hash_in_bytes = vec->len;
                 } else {
-                        job->hash_alg = AES_CMAC_BITLEN;
+                        job->hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
                         if (vec->type == CMAC)
                                 job->msg_len_to_hash_in_bits = vec->len * 8;
                         else

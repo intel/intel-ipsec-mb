@@ -124,7 +124,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 32, /* SHA_512 */
                 12, /* AES_XCBC */
                 12, /* MD5 */
-                0,  /* NULL_HASH */
+                0,  /* IMB_AUTH_NULL */
                 16, /* AES_GMAC */
                 0,  /* CUSTOM HASH */
                 16, /* AES_CCM */
@@ -235,35 +235,35 @@ fill_in_job(struct JOB_AES_HMAC *job,
         }
 
         switch (job->hash_alg) {
-        case SHA1:
-        case AES_XCBC:
-        case MD5:
-        case SHA_224:
-        case SHA_256:
-        case SHA_384:
-        case SHA_512:
-        case PLAIN_SHA1:
-        case PLAIN_SHA_224:
-        case PLAIN_SHA_256:
-        case PLAIN_SHA_384:
-        case PLAIN_SHA_512:
+        case IMB_AUTH_HMAC_SHA_1:
+        case IMB_AUTH_AES_XCBC:
+        case IMB_AUTH_MD5:
+        case IMB_AUTH_HMAC_SHA_224:
+        case IMB_AUTH_HMAC_SHA_256:
+        case IMB_AUTH_HMAC_SHA_384:
+        case IMB_AUTH_HMAC_SHA_512:
+        case IMB_AUTH_SHA_1:
+        case IMB_AUTH_SHA_224:
+        case IMB_AUTH_SHA_256:
+        case IMB_AUTH_SHA_384:
+        case IMB_AUTH_SHA_512:
                 job->msg_len_to_hash_in_bytes = msg_len_to_hash;
                 job->auth_tag_output = dust_bin;
                 job->auth_tag_output_len_in_bytes = tag_len_tab[job->hash_alg];
                 break;
-        case NULL_HASH:
+        case IMB_AUTH_NULL:
                 break;
-        case CUSTOM_HASH:
+        case IMB_AUTH_CUSTOM:
                 job->hash_func = dummy_cipher_hash_func;
                 break;
-        case AES_GMAC:
+        case IMB_AUTH_AES_GMAC:
                 job->msg_len_to_hash_in_bytes = msg_len_to_hash;
                 job->auth_tag_output = dust_bin;
                 job->auth_tag_output_len_in_bytes = tag_len_tab[job->hash_alg];
                 job->u.GCM.aad = dust_bin;
                 job->u.GCM.aad_len_in_bytes = 16;
                 break;
-        case AES_CCM:
+        case IMB_AUTH_AES_CCM:
                 job->u.CCM.aad = dust_bin;
                 job->u.CCM.aad_len_in_bytes = 16;
                 job->msg_len_to_hash_in_bytes = job->msg_len_to_cipher_in_bytes;
@@ -272,7 +272,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->auth_tag_output = dust_bin;
                 job->auth_tag_output_len_in_bytes = tag_len_tab[job->hash_alg];
                 break;
-        case AES_CMAC:
+        case IMB_AUTH_AES_CMAC:
                 job->u.CMAC._key_expanded = dust_bin;
                 job->u.CMAC._skey1 = dust_bin;
                 job->u.CMAC._skey2 = dust_bin;
@@ -372,9 +372,10 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
                 for (dir = ENCRYPT; dir <= DECRYPT; dir++)
-                        for (hash = SHA1; hash <= PLAIN_SHA_512; hash++) {
-                                if (hash == NULL_HASH ||
-                                    hash == CUSTOM_HASH)
+                        for (hash = IMB_AUTH_HMAC_SHA_1;
+                             hash <= IMB_AUTH_SHA_512; hash++) {
+                                if (hash == IMB_AUTH_NULL ||
+                                    hash == IMB_AUTH_CUSTOM)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -391,9 +392,10 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
                 for (dir = ENCRYPT; dir <= DECRYPT; dir++)
-                        for (hash = SHA1; hash <= PLAIN_SHA_512; hash++) {
-                                if (hash == NULL_HASH ||
-                                    hash == CUSTOM_HASH)
+                        for (hash = IMB_AUTH_HMAC_SHA_1;
+                             hash <= IMB_AUTH_SHA_512; hash++) {
+                                if (hash == IMB_AUTH_NULL ||
+                                    hash == IMB_AUTH_CUSTOM)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -410,9 +412,10 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
                 for (dir = ENCRYPT; dir <= DECRYPT; dir++)
-                        for (hash = SHA1; hash <= PLAIN_SHA_512; hash++) {
-                                if (hash == NULL_HASH ||
-                                    hash == CUSTOM_HASH)
+                        for (hash = IMB_AUTH_HMAC_SHA_1;
+                             hash <= IMB_AUTH_SHA_512; hash++) {
+                                if (hash == IMB_AUTH_NULL ||
+                                    hash == IMB_AUTH_CUSTOM)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -438,7 +441,7 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
 static int
 test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
 {
-        const JOB_HASH_ALG hash = NULL_HASH;
+        const JOB_HASH_ALG hash = IMB_AUTH_NULL;
         JOB_CIPHER_DIRECTION dir;
         JOB_CIPHER_MODE cipher;
         JOB_CHAIN_ORDER order;
