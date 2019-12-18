@@ -589,7 +589,7 @@ submit_and_verify(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                 uint8_t *pDst8 = (uint8_t *)pDstData[i];
                 int retTmp;
                 char msg_start[50];
-                char msg[50];
+                char msg[100];
 
                 vector = testEEA3_vectors[buf_idx[i]];
                 if (var_bufs)
