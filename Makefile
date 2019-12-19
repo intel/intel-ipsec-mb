@@ -105,16 +105,22 @@ endif
 CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
 
+# Set generic architectural optimizations
+OPT_SSE := -msse4.2 -maes
+OPT_AVX := -msse4.2 -maes
+OPT_AVX2 := -msse4.2 -maes
+OPT_AVX512 := -msse4.2 -maes
+OPT_NOAESNI := -march=nehalem
+
 # Set architectural optimizations for GCC/CC
 ifeq ($(CC),$(filter $(CC),gcc cc))
 GCC_VERSION = $(shell $(CC) -dumpversion | cut -d. -f1)
 GCC_GE_V5 = $(shell [ $(GCC_VERSION) -ge 5 ] && echo true)
 ifeq ($(GCC_GE_V5),true)
-OPT_SSE = -march=nehalem -maes
-OPT_AVX = -march=sandybridge -maes
-OPT_AVX2 = -march=haswell -maes
-OPT_AVX512 = -march=broadwell
-OPT_NOAESNI = -march=nehalem
+OPT_SSE := -march=nehalem -maes
+OPT_AVX := -march=sandybridge -maes
+OPT_AVX2 := -march=haswell -maes
+OPT_AVX512 := -march=broadwell
 endif
 endif
 
