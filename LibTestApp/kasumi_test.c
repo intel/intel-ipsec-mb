@@ -1208,14 +1208,13 @@ exit:
 
 static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
 {
-        kasumi_key_sched_t
-                *pKeySched[NUM_SUPPORTED_BUFFERS][NUM_SUPPORTED_BUFFERS];
-        uint64_t IV[NUM_SUPPORTED_BUFFERS][NUM_SUPPORTED_BUFFERS];
-        uint64_t *pIV[NUM_SUPPORTED_BUFFERS][NUM_SUPPORTED_BUFFERS];
+        kasumi_key_sched_t *pKeySched[NUM_SUPPORTED_BUFFERS];
+        uint64_t IV[NUM_SUPPORTED_BUFFERS];
+        uint64_t *pIV[NUM_SUPPORTED_BUFFERS];
         uint32_t buffLenInBytes[NUM_SUPPORTED_BUFFERS];
-        uint8_t *srcBuff[NUM_SUPPORTED_BUFFERS][NUM_SUPPORTED_BUFFERS];
-        uint8_t *dstBuff[NUM_SUPPORTED_BUFFERS][NUM_SUPPORTED_BUFFERS];
-        uint8_t *key[NUM_SUPPORTED_BUFFERS][NUM_SUPPORTED_BUFFERS];
+        uint8_t *srcBuff[NUM_SUPPORTED_BUFFERS];
+        uint8_t *refBuff[NUM_SUPPORTED_BUFFERS];
+        uint8_t *key[NUM_SUPPORTED_BUFFERS];
         uint32_t bitLens[NUM_SUPPORTED_BUFFERS];
         uint32_t bitOffsets[NUM_SUPPORTED_BUFFERS];
 
@@ -1229,48 +1228,37 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
         for (i = 0; i < NUM_SUPPORTED_BUFFERS; i++) {
                 bitOffsets[i] = 0;
 
-                for (j = 0; j < NUM_SUPPORTED_BUFFERS; j++) {
-
-                        key[i][j] = malloc(KASUMI_KEY_SIZE);
-                        if (!key[i][j]) {
-                                printf("malloc(key[%u][%u]:failed !\n",
-                                       i, j);
-                                goto exit;
-                        }
-                        pKeySched[i][j] =
-                                malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
-                        if (!pKeySched[i][j]) {
-                                printf("malloc(pKeySched[%u][%u]:failed !\n",
-                                       i, j);
-                                goto exit;
-                        }
-                        srcBuff[i][j] = malloc(MAX_DATA_LEN);
-                        if (!srcBuff[i][j]) {
-                                printf("malloc(srcBuff[%u][%u]:failed !\n",
-                                       i, j);
-                                goto exit;
-                        }
-                        dstBuff[i][j] = malloc(MAX_DATA_LEN);
-                        if (!dstBuff[i][j]) {
-                                printf("malloc(dstBuff[%u][%u]:failed !\n",
-                                       i, j);
-                                goto exit;
-                        }
-
-                        memset(key[i][j], 0xAA, KASUMI_KEY_SIZE);
-                        memset(srcBuff[i][j], i, MAX_DATA_LEN);
-                        memset(dstBuff[i][j], i, MAX_DATA_LEN);
-
-                        if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key[i][j],
-                                                         pKeySched[i][j])) {
-                                printf("IMB_KASUMI_INIT_F8_KEY_SCHED() "
-                                       "error\n");
-                                goto exit;
-                        }
-
-                        IV[i][j] = (uint64_t)i;
-                        pIV[i][j] = &IV[i][j];
+                key[i] = malloc(KASUMI_KEY_SIZE);
+                if (!key[i]) {
+                        printf("malloc(key[%u]:failed !\n", i);
+                        goto exit;
                 }
+
+                pKeySched[i] = malloc(IMB_KASUMI_KEY_SCHED_SIZE(mgr));
+                if (!pKeySched[i]) {
+                        printf("malloc(pKeySched[%u]:failed !\n", i);
+                        goto exit;
+                }
+
+                srcBuff[i] = malloc(MAX_DATA_LEN);
+                if (!srcBuff[i]) {
+                        printf("malloc(srcBuff[%u]:failed !\n", i);
+                        goto exit;
+                }
+                refBuff[i] = malloc(MAX_DATA_LEN);
+                if (!refBuff[i]) {
+                        printf("malloc(refBuff[%u]:failed !\n", i);
+                        goto exit;
+                }
+
+                memset(key[i], 0xAA, KASUMI_KEY_SIZE);
+                if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key[i], pKeySched[i])) {
+                        printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
+                        goto exit;
+                }
+
+                IV[i] = (uint64_t)i;
+                pIV[i] = &IV[i];
         }
 
         /* Testing multiple buffers of equal size */
@@ -1278,56 +1266,62 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
                 /* Testing Buffer sizes for 128 */
                 buffLenInBytes[i] = 128;
 
-                for (j = 0; j <= i; j++)
+                for (j = 0; j <= i; j++) {
                         bitLens[j] = buffLenInBytes[i] * 8;
+
+                        /* Reset input buffers with test data */
+                        memset(srcBuff[j], i, buffLenInBytes[i]);
+                        memset(refBuff[j], i, buffLenInBytes[i]);
+                }
 
                 /* Test the encrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, pKeySched[i],
-                                              (uint64_t **)&pIV,
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint32_t *)&bitLens,
-                                              (uint32_t *)&bitOffsets,
+                        submit_kasumi_f8_jobs(mgr, pKeySched,
+                                              (uint64_t **)pIV,
+                                              (uint8_t **)srcBuff,
+                                              (uint8_t **)srcBuff,
+                                              (uint32_t *)bitLens,
+                                              (uint32_t *)bitOffsets,
                                               ENCRYPT, i + 1);
                 else
-                        IMB_KASUMI_F8_N_BUFFER(mgr, *pKeySched[i], IV[i],
-                                               (const void * const *)srcBuff[i],
-                                               (void **)srcBuff[i],
-                                               &buffLenInBytes[i], i + 1);
-                if (srcBuff[i][0] == NULL) {
+                        /* All buffers share the same key */
+                        IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
+                                               (const void * const *)srcBuff,
+                                               (void **)srcBuff,
+                                               buffLenInBytes, i + 1);
+                if (srcBuff[i] == NULL) {
                         printf("N buffer failure\n");
                         goto exit;
                 }
 
                 /* Test the Decrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, pKeySched[i],
-                                              (uint64_t **)&pIV,
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint32_t *)&bitLens,
-                                              (uint32_t *)&bitOffsets,
+                        submit_kasumi_f8_jobs(mgr, pKeySched,
+                                              (uint64_t **)pIV,
+                                              (uint8_t **)srcBuff,
+                                              (uint8_t **)srcBuff,
+                                              (uint32_t *)bitLens,
+                                              (uint32_t *)bitOffsets,
                                               DECRYPT, i + 1);
                 else
-                        IMB_KASUMI_F8_N_BUFFER(mgr, *pKeySched[i], IV[i],
-                                               (const void * const *)srcBuff[i],
-                                               (void **)srcBuff[i],
-                                               &buffLenInBytes[i], i + 1);
-                if (srcBuff[i][0] == NULL) {
+                        /* All buffers share the same key */
+                        IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
+                                               (const void * const *)srcBuff,
+                                               (void **)srcBuff,
+                                               buffLenInBytes, i + 1);
+                if (srcBuff[i] == NULL) {
                         printf("N buffer failure\n");
                         goto exit;
                 }
 
                 for (j = 0; j <= i; j++) {
-                        if (memcmp(srcBuff[i][j], dstBuff[i][j],
+                        if (memcmp(srcBuff[j], refBuff[j],
                                    buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer equal sizes, "
-                                       "numBuffs:%d\n",
-                                       i);
-                                hexdump("Actual:", srcBuff[i][j],
+                                       "numBuffs:%d\n", i + 1);
+                                hexdump("Actual:", srcBuff[j],
                                         buffLenInBytes[j]);
-                                hexdump("Expected:", dstBuff[i][j],
+                                hexdump("Expected:", refBuff[j],
                                         buffLenInBytes[j]);
                                 goto exit;
                         }
@@ -1335,73 +1329,68 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
         }
         printf("[%s]: PASS, 1 to %d buffers of equal size.\n", __FUNCTION__, i);
 
-        /* Reset input buffers with test data */
-        for (i = 0; i < NUM_SUPPORTED_BUFFERS; i++) {
-                for (j = 0; j < NUM_SUPPORTED_BUFFERS; j++) {
-                        memset(srcBuff[i][j], i, MAX_DATA_LEN);
-                        memset(dstBuff[i][j], i, MAX_DATA_LEN);
-
-                        IV[i][j] = (uint64_t)i;
-                }
-        }
-
         /* Testing multiple buffers of increasing size */
         for (i = 0; i < NUM_SUPPORTED_BUFFERS; i++) {
 
                 /* Testing different Buffer sizes*/
                 buffLenInBytes[i] = i + 131 * 8;
 
-                for (j = 0; j <= i; j++)
+                for (j = 0; j <= i; j++) {
                         bitLens[j] = buffLenInBytes[i] * 8;
 
+                        /* Reset input buffers with test data */
+                        memset(srcBuff[j], i, buffLenInBytes[i]);
+                        memset(refBuff[j], i, buffLenInBytes[i]);
+                }
 
                 /* Test the encrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, pKeySched[i],
-                                              (uint64_t **)&pIV,
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint32_t *)&bitLens,
-                                              (uint32_t *)&bitOffsets,
-                                              ENCRYPT, i + 1);
+                        submit_kasumi_f8_jobs(mgr, pKeySched,
+                                              (uint64_t **)pIV,
+                                              (uint8_t **)srcBuff,
+                                              (uint8_t **)srcBuff,
+                                              (uint32_t *)bitLens,
+                                              (uint32_t *)bitOffsets,
+                                              DECRYPT, i + 1);
                 else
-                        IMB_KASUMI_F8_N_BUFFER(mgr, *pKeySched[i], IV[i],
-                                               (const void * const *)srcBuff[i],
-                                               (void **)srcBuff[i],
-                                               &buffLenInBytes[i], i + 1);
-                if (srcBuff[i][0] == NULL) {
+                        /* All buffers share the same key */
+                        IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
+                                               (const void * const *)srcBuff,
+                                               (void **)srcBuff,
+                                               buffLenInBytes, i + 1);
+                if (srcBuff[i] == NULL) {
                         printf("N buffer failure\n");
                         goto exit;
                 }
 
                 /* Test the Decrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, pKeySched[i],
-                                              (uint64_t **)&pIV,
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint32_t *)&bitLens,
-                                              (uint32_t *)&bitOffsets,
+                        submit_kasumi_f8_jobs(mgr, pKeySched,
+                                              (uint64_t **)pIV,
+                                              (uint8_t **)srcBuff,
+                                              (uint8_t **)srcBuff,
+                                              (uint32_t *)bitLens,
+                                              (uint32_t *)bitOffsets,
                                               DECRYPT, i + 1);
                 else
-                        IMB_KASUMI_F8_N_BUFFER(mgr, *pKeySched[i], IV[i],
-                                               (const void * const *)srcBuff[i],
-                                               (void **)srcBuff[i],
-                                               &buffLenInBytes[i], i + 1);
-                if (srcBuff[i][0] == NULL) {
+                        /* All buffers share the same key */
+                        IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
+                                               (const void * const *)srcBuff,
+                                               (void **)srcBuff,
+                                               buffLenInBytes, i + 1);
+                if (srcBuff[i] == NULL) {
                         printf("N buffer failure\n");
                         goto exit;
                 }
 
                 for (j = 0; j <= i; j++) {
-                        if (memcmp(srcBuff[i][j], dstBuff[i][j],
+                        if (memcmp(srcBuff[j], refBuff[j],
                                    buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer increasing sizes, "
-                                       "srcBuff[%d][%d]\n",
-                                       i, j);
-                                hexdump("Actual:", srcBuff[i][j],
+                                       "numBuffs:%d\n", i + 1);
+                                hexdump("Actual:", srcBuff[j],
                                         buffLenInBytes[j]);
-                                hexdump("Expected:", dstBuff[i][j],
+                                hexdump("Expected:", refBuff[j],
                                         buffLenInBytes[j]);
                                 goto exit;
                         }
@@ -1411,65 +1400,66 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
         printf("[%s]: PASS, 1 to %d buffers of increasing size.\n",
                __FUNCTION__, i);
 
-        /* Reset input buffers with test data */
-        for (i = 0; i < NUM_SUPPORTED_BUFFERS; i++) {
-                for (j = 0; j < NUM_SUPPORTED_BUFFERS; j++) {
-                        memset(srcBuff[i][j], i, MAX_DATA_LEN);
-                        memset(dstBuff[i][j], i, MAX_DATA_LEN);
-
-                        IV[i][j] = (uint64_t)i;
-                }
-        }
-
         /* Testing multiple buffers of decreasing size */
         for (i = 0; i < NUM_SUPPORTED_BUFFERS; i++) {
 
                 /* Testing Buffer sizes from 3048 to 190 */
                 buffLenInBytes[i] = MAX_DATA_LEN / (1 + i);
 
-                for (j = 0; j <= i; j++)
+                for (j = 0; j <= i; j++) {
                         bitLens[j] = buffLenInBytes[i] * 8;
 
+                        /* Reset input buffers with test data */
+                        memset(srcBuff[j], i, buffLenInBytes[i]);
+                        memset(refBuff[j], i, buffLenInBytes[i]);
+                }
 
                 /* Test the encrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, pKeySched[i],
-                                              (uint64_t **)&pIV,
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint32_t *)&bitLens,
-                                              (uint32_t *)&bitOffsets,
-                                              ENCRYPT, i + 1);
+                        submit_kasumi_f8_jobs(mgr, pKeySched,
+                                              (uint64_t **)pIV,
+                                              (uint8_t **)srcBuff,
+                                              (uint8_t **)srcBuff,
+                                              (uint32_t *)bitLens,
+                                              (uint32_t *)bitOffsets,
+                                              DECRYPT, i + 1);
                 else
-                        IMB_KASUMI_F8_N_BUFFER(mgr, *pKeySched[i], IV[i],
-                                               (const void * const *)srcBuff[i],
-                                               (void **)srcBuff[i],
-                                               &buffLenInBytes[i], i + 1);
+                        IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
+                                               (const void * const *)srcBuff,
+                                               (void **)srcBuff,
+                                               buffLenInBytes, i + 1);
+                if (srcBuff[i] == NULL) {
+                        printf("N buffer failure\n");
+                        goto exit;
+                }
 
                 /* Test the Decrypt */
                 if (job_api)
-                        submit_kasumi_f8_jobs(mgr, pKeySched[i],
-                                              (uint64_t **)&pIV,
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint8_t **)&srcBuff[i],
-                                              (uint32_t *)&bitLens,
-                                              (uint32_t *)&bitOffsets,
+                        submit_kasumi_f8_jobs(mgr, pKeySched,
+                                              (uint64_t **)pIV,
+                                              (uint8_t **)srcBuff,
+                                              (uint8_t **)srcBuff,
+                                              (uint32_t *)bitLens,
+                                              (uint32_t *)bitOffsets,
                                               DECRYPT, i + 1);
                 else
-                        IMB_KASUMI_F8_N_BUFFER(mgr, *pKeySched[i], IV[i],
-                                               (const void * const *)srcBuff[i],
-                                               (void **)srcBuff[i],
-                                               &buffLenInBytes[i], i + 1);
+                        IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
+                                               (const void * const *)srcBuff,
+                                               (void **)srcBuff,
+                                               buffLenInBytes, i + 1);
+                if (srcBuff[i] == NULL) {
+                        printf("N buffer failure\n");
+                        goto exit;
+                }
 
                 for (j = 0; j <= i; j++) {
-                        if (memcmp(srcBuff[i][j], dstBuff[i][j],
+                        if (memcmp(srcBuff[j], refBuff[j],
                                    buffLenInBytes[j]) != 0) {
                                 printf("kasumi_f8_n_buffer decreasing sizes, "
-                                       "numBuffs:%d\n",
-                                       i);
-                                hexdump("Actual:", srcBuff[i][j],
+                                       "numBuffs:%d\n", i + 1);
+                                hexdump("Actual:", srcBuff[j],
                                         buffLenInBytes[j]);
-                                hexdump("Expected:", dstBuff[i][j],
+                                hexdump("Expected:", refBuff[j],
                                         buffLenInBytes[j]);
                                 goto exit;
                         }
@@ -1482,12 +1472,10 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
 exit:
         /* free up test buffers */
         for (i = 0; i < NUM_SUPPORTED_BUFFERS; i++) {
-                for (j = 0; j < NUM_SUPPORTED_BUFFERS; j++) {
-                        free(key[i][j]);
-                        free(pKeySched[i][j]);
-                        free(srcBuff[i][j]);
-                        free(dstBuff[i][j]);
-                }
+                free(key[i]);
+                free(pKeySched[i]);
+                free(srcBuff[i]);
+                free(refBuff[i]);
         }
 
         return ret;
