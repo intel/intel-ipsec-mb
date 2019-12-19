@@ -124,6 +124,21 @@ OPT_AVX512 := -march=broadwell
 endif
 endif
 
+# Set architectural optimizations for clang
+ifeq ($(CC),$(filter $(CC),clang))
+CLANG_VERSION = $(shell $(CC) --version | head -n 1 | cut -d ' ' -f 3)
+CLANG_GE_V381 = $(shell test "$(CLANG_VERSION)" \> "3.8.0" && echo true)
+ifeq ($(CLANG_GE_V381),true)
+OPT_SSE := -march=nehalem -maes
+OPT_AVX := -march=sandybridge -maes
+OPT_AVX2 := -march=haswell -maes
+OPT_AVX512 := -march=broadwell
+endif
+# remove CFLAGS that clang warns about
+CFLAGS := $(subst -fno-delete-null-pointer-checks,,$(CFLAGS))
+CFLAGS := $(subst -fno-strict-overflow,,$(CFLAGS))
+endif
+
 # so or static build
 ifeq ($(SHARED),y)
 CFLAGS += -fPIC
