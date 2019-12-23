@@ -2017,53 +2017,14 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
          *  - extract the LFSR and FSM structures
          *  - Continue process 1 buffer
          */
-        if (tLenInBytes[0]) {
-                snow3gKeyState1_t ctx1;
+        for (i = 0; i < 8; i++) {
+                snow3gKeyState1_t t_ctx;
 
-                snow3gStateConvert_8(&ctx, &ctx1, 0);
-                f8_snow3g(&ctx1, tBufferIn[0], tBufferOut[0], tLenInBytes[0]);
-        }
-        if (tLenInBytes[1]) {
-                snow3gKeyState1_t ctx2;
+                if (tLenInBytes[i] == 0)
+                        continue;
 
-                snow3gStateConvert_8(&ctx, &ctx2, 1);
-                f8_snow3g(&ctx2, tBufferIn[1], tBufferOut[1], tLenInBytes[1]);
-        }
-        if (tLenInBytes[2]) {
-                snow3gKeyState1_t ctx3;
-
-                snow3gStateConvert_8(&ctx, &ctx3, 2);
-                f8_snow3g(&ctx3, tBufferIn[2], tBufferOut[2], tLenInBytes[2]);
-        }
-        if (tLenInBytes[3]) {
-                snow3gKeyState1_t ctx4;
-
-                snow3gStateConvert_8(&ctx, &ctx4, 3);
-                f8_snow3g(&ctx4, tBufferIn[3], tBufferOut[3], tLenInBytes[3]);
-        }
-        if (tLenInBytes[4]) {
-                snow3gKeyState1_t ctx5;
-
-                snow3gStateConvert_8(&ctx, &ctx5, 4);
-                f8_snow3g(&ctx5, tBufferIn[4], tBufferOut[4], tLenInBytes[4]);
-        }
-        if (tLenInBytes[5]) {
-                snow3gKeyState1_t ctx6;
-
-                snow3gStateConvert_8(&ctx, &ctx6, 5);
-                f8_snow3g(&ctx6, tBufferIn[5], tBufferOut[5], tLenInBytes[5]);
-        }
-        if (tLenInBytes[6]) {
-                snow3gKeyState1_t ctx7;
-
-                snow3gStateConvert_8(&ctx, &ctx7, 6);
-                f8_snow3g(&ctx7, tBufferIn[6], tBufferOut[6], tLenInBytes[6]);
-        }
-        if (tLenInBytes[7]) {
-                snow3gKeyState1_t ctx8;
-
-                snow3gStateConvert_8(&ctx, &ctx8, 7);
-                f8_snow3g(&ctx8, tBufferIn[7], tBufferOut[7], tLenInBytes[7]);
+                snow3gStateConvert_8(&ctx, &t_ctx, i);
+                f8_snow3g(&t_ctx, tBufferIn[i], tBufferOut[i], tLenInBytes[i]);
         }
 
 #ifdef SAFE_DATA
@@ -2159,53 +2120,14 @@ snow3g_8_buffer_ks_32_multi(uint32_t bytes,
          *  - extract the LFSR and FSM structures
          *  - Continue process 1 buffer
          */
-        if (tLenInBytes[0]) {
-                snow3gKeyState1_t ctx1;
+        for (i = 0; i < 8; i++) {
+                snow3gKeyState1_t t_ctx;
 
-                snow3gStateConvert_8(&ctx, &ctx1, 0);
-                f8_snow3g(&ctx1, tBufferIn[0], tBufferOut[0], tLenInBytes[0]);
-        }
-        if (tLenInBytes[1]) {
-                snow3gKeyState1_t ctx2;
+                if (tLenInBytes[i] == 0)
+                        continue;
 
-                snow3gStateConvert_8(&ctx, &ctx2, 1);
-                f8_snow3g(&ctx2, tBufferIn[1], tBufferOut[1], tLenInBytes[1]);
-        }
-        if (tLenInBytes[2]) {
-                snow3gKeyState1_t ctx3;
-
-                snow3gStateConvert_8(&ctx, &ctx3, 2);
-                f8_snow3g(&ctx3, tBufferIn[2], tBufferOut[2], tLenInBytes[2]);
-        }
-        if (tLenInBytes[3]) {
-                snow3gKeyState1_t ctx4;
-
-                snow3gStateConvert_8(&ctx, &ctx4, 3);
-                f8_snow3g(&ctx4, tBufferIn[3], tBufferOut[3], tLenInBytes[3]);
-        }
-        if (tLenInBytes[4]) {
-                snow3gKeyState1_t ctx5;
-
-                snow3gStateConvert_8(&ctx, &ctx5, 4);
-                f8_snow3g(&ctx5, tBufferIn[4], tBufferOut[4], tLenInBytes[4]);
-        }
-        if (tLenInBytes[5]) {
-                snow3gKeyState1_t ctx6;
-
-                snow3gStateConvert_8(&ctx, &ctx6, 5);
-                f8_snow3g(&ctx6, tBufferIn[5], tBufferOut[5], tLenInBytes[5]);
-        }
-        if (tLenInBytes[6]) {
-                snow3gKeyState1_t ctx7;
-
-                snow3gStateConvert_8(&ctx, &ctx7, 6);
-                f8_snow3g(&ctx7, tBufferIn[6], tBufferOut[6], tLenInBytes[6]);
-        }
-        if (tLenInBytes[7]) {
-                snow3gKeyState1_t ctx8;
-
-                snow3gStateConvert_8(&ctx, &ctx8, 7);
-                f8_snow3g(&ctx8, tBufferIn[7], tBufferOut[7], tLenInBytes[7]);
+                snow3gStateConvert_8(&ctx, &t_ctx, i);
+                f8_snow3g(&t_ctx, tBufferIn[i], tBufferOut[i], tLenInBytes[i]);
         }
 
 #ifdef SAFE_DATA
