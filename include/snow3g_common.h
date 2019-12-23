@@ -172,10 +172,14 @@ static inline uint32_t S1_box(const uint32_t x)
 static inline uint32_t S2_box(const uint32_t x)
 {
 #if defined (NO_AESNI) || defined (SAFE_LOOKUP)
-        return SNOW3G_LOOKUP_W3(snow3g_table_S2, x & 0xff, sizeof(snow3g_table_S2)) ^
-                SNOW3G_LOOKUP_W0(snow3g_table_S2, x >> 24, sizeof(snow3g_table_S2)) ^
-                SNOW3G_LOOKUP_W1(snow3g_table_S2, (x >> 16) & 0xff, sizeof(snow3g_table_S2)) ^
-                SNOW3G_LOOKUP_W2(snow3g_table_S2, (x >> 8) & 0xff, sizeof(snow3g_table_S2));
+        return SNOW3G_LOOKUP_W3(snow3g_table_S2, x & 0xff,
+                                sizeof(snow3g_table_S2)) ^
+                SNOW3G_LOOKUP_W0(snow3g_table_S2, x >> 24,
+                                 sizeof(snow3g_table_S2)) ^
+                SNOW3G_LOOKUP_W1(snow3g_table_S2, (x >> 16) & 0xff,
+                                 sizeof(snow3g_table_S2)) ^
+                SNOW3G_LOOKUP_W2(snow3g_table_S2, (x >> 8) & 0xff,
+                                 sizeof(snow3g_table_S2));
 #else
         return snow3g_table_S2[x & 0xff].w3.v ^
                 snow3g_table_S2[(x >> 16) & 0xff].w1.v ^
