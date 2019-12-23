@@ -108,8 +108,6 @@ typedef struct snow3gKeyState8_s {
 /* -------------------------------------------------------------------
  * combined S-Box processing for reduced instruction dependencies
  *
- * S1_S2_S3_1 : 3 S-Box at the same time
- *
  * S1_S2_4    : 2 S-Box , 4 packets at a time
  *
  * ------------------------------------------------------------------ */
@@ -127,53 +125,6 @@ typedef struct snow3gKeyState8_s {
 /* help compilers to interleave the
  * operations and table access latencies
  */
-
-/* Sbox Snow3g_S1 and Snow3g_S2, simple C code
- *  y = Snow3g_S2(w); w = Snow3g_S1(x); u = Snow3g_S1(z);
- */
-#define S1_S2_S3_1(y, w, x, u, z)                                              \
-        do {                                                                   \
-                unsigned w0, w1, w2, w3;                                       \
-                unsigned x0, x1, x2, x3;                                       \
-                unsigned z0, z1, z2, z3;                                       \
-                uint32_t tw, tx, tz;                                           \
-                w3 = w & 0xff;                                                 \
-                x3 = x & 0xff;                                                 \
-                z3 = z & 0xff;                                                 \
-                tw = SNOW3G_LOOKUP_W3(snow3g_table_S2, w3,                     \
-                                      sizeof(snow3g_table_S2));                \
-                tx = SNOW3G_LOOKUP_W3(snow3g_table_S1, x3,                     \
-                                      sizeof(snow3g_table_S1));                \
-                tz = SNOW3G_LOOKUP_W3(snow3g_table_S1, z3,                     \
-                                      sizeof(snow3g_table_S1));                \
-                w0 = w >> 24;                                                  \
-                x0 = x >> 24;                                                  \
-                z0 = z >> 24;                                                  \
-                tw ^= SNOW3G_LOOKUP_W0(snow3g_table_S2, w0,                    \
-                                       sizeof(snow3g_table_S2));               \
-                tx ^= SNOW3G_LOOKUP_W0(snow3g_table_S1, x0,                    \
-                                       sizeof(snow3g_table_S1));               \
-                tz ^= SNOW3G_LOOKUP_W0(snow3g_table_S1, z0,                    \
-                                       sizeof(snow3g_table_S1));               \
-                w1 = (w >> 16) & 0xff;                                         \
-                x1 = (x >> 16) & 0xff;                                         \
-                z1 = (z >> 16) & 0xff;                                         \
-                tw ^= SNOW3G_LOOKUP_W1(snow3g_table_S2, w1,                    \
-                                       sizeof(snow3g_table_S2));               \
-                tx ^= SNOW3G_LOOKUP_W1(snow3g_table_S1, x1,                    \
-                                       sizeof(snow3g_table_S1));               \
-                tz ^= SNOW3G_LOOKUP_W1(snow3g_table_S1, z1,                    \
-                                       sizeof(snow3g_table_S1));               \
-                w2 = (w >> 8) & 0xff;                                          \
-                x2 = (x >> 8) & 0xff;                                          \
-                z2 = (z >> 8) & 0xff;                                          \
-                y = tw ^ SNOW3G_LOOKUP_W2(snow3g_table_S2, w2,                 \
-                                          sizeof(snow3g_table_S2));            \
-                w = tx ^ SNOW3G_LOOKUP_W2(snow3g_table_S1, x2,                 \
-                                          sizeof(snow3g_table_S1));            \
-                u = tz ^ SNOW3G_LOOKUP_W2(snow3g_table_S1, z2,                 \
-                                          sizeof(snow3g_table_S1));            \
-        } while (0)
 
 /* Sbox Snow3g_S1 and Snow3g_S2 with dependency unrolling
  * for n in [0..3]
@@ -227,23 +178,6 @@ typedef struct snow3gKeyState8_s {
  */
 
 /* Sbox Snow3g_S1 and Snow3g_S2
- *  y = Snow3g_S2(w); w = rijndael Snow3g_S1(x); u = rijndael Snow3g_S1(z);
- */
-#define S1_S2_S3_1(y, w, x, v, z)                                              \
-        do {                                                                   \
-                __m128i m10, m11, m12;                                         \
-                m11 = _mm_cvtsi32_si128(x);                                    \
-                m10 = _mm_setzero_si128();                                     \
-                m11 = _mm_shuffle_epi32(m11, 0x0);                             \
-                m11 = _mm_aesenc_si128(m11, m10);                              \
-                m12 = _mm_cvtsi32_si128(z);                                    \
-                m12 = _mm_shuffle_epi32(m12, 0x0);                             \
-                m12 = _mm_aesenc_si128(m12, m10);                              \
-                y = Snow3g_S2(w);                                              \
-                w = _mm_cvtsi128_si32(m11);                                    \
-                v = _mm_cvtsi128_si32(m12);                                    \
-        } while (0)
-/* Sbox Snow3g_S1 and Snow3g_S2
  * for n in [0..3]
  *     extract packet data
  *     y = Snow3g_S2(w); w = rijndael Snow3g_S1(x)
@@ -273,37 +207,6 @@ typedef struct snow3gKeyState8_s {
         } while (0)
 
 #endif /* NO_AESNI || SAFE_LOOKUP */
-
-/* -------------------------------------------------------------------
- * Sbox Snow3g_S1 maps a 32bit input to a 32bit output
- * ------------------------------------------------------------------ */
-/* static inline uint32_t Snow3g_S1(uint32_t w) */
-/* { */
-/*         uint32_t w0, w1, w2, w3; */
-
-/*         w3 = w & 0xff; */
-/*         w1 = (w >> 16) & 0xff; */
-/*         w2 = (w >> 8) & 0xff; */
-/*         w0 = w >> 24; */
-/*         return snow3g_table_S1[w3].w3.v ^ snow3g_table_S1[w1].w1.v ^ */
-/*                snow3g_table_S1[w2].w2.v ^ snow3g_table_S1[w0].w0.v; */
-/* } */
-
-/* -------------------------------------------------------------------
- * Sbox Snow3g_S2 maps a 32bit input to a 32bit output
- * ------------------------------------------------------------------ */
-static inline uint32_t Snow3g_S2(uint32_t w)
-{
-        uint32_t w0, w1, w2, w3;
-
-        w3 = w & 0xff;
-        w1 = (w >> 16) & 0xff;
-        w2 = (w >> 8) & 0xff;
-        w0 = w >> 24;
-
-        return snow3g_table_S2[w3].w3.v ^ snow3g_table_S2[w1].w1.v ^
-               snow3g_table_S2[w2].w2.v ^ snow3g_table_S2[w0].w0.v;
-}
 
 /* -------------------------------------------------------------------
  * LFSR array shift by 1 position
@@ -471,13 +374,15 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                 V1 ^= L1 << 8;
                 V0 ^= L11 >> 8; /* (0x00 || s11,0 || s11,1 || s11,2 ) */
                 V1 ^= L12 >> 8;
-                S1_S2_S3_1(FSM3, FSM2, R1, FSM4, R0);
+                FSM3 = S2_box(FSM2);
+                FSM2 = S1_box(R1);
+                FSM4 = S1_box(R0);
                 V0 ^= F0; /* ^F */
                 R1 = FSM3 ^ pCtx->LFSR_S[6];
                 F1 = V0 + R0;
                 F1 ^= FSM2;
                 R1 += FSM2;
-                FSM3 = Snow3g_S2(FSM2);
+                FSM3 = S2_box(FSM2);
                 FSM2 = FSM4;
                 V1 ^= F1;
 
@@ -852,13 +757,16 @@ static inline void snow3g_keystream_1_8(snow3gKeyState1_t *pCtx,
         F0 ^= pCtx->FSM_R2;
         R0 = pCtx->FSM_R3 ^ pCtx->LFSR_S[5];
         R0 += pCtx->FSM_R2;
-        S1_S2_S3_1(pCtx->FSM_R3, pCtx->FSM_R2, R1, FSM4, R0);
+
+        pCtx->FSM_R3 = S2_box(pCtx->FSM_R2);
+        pCtx->FSM_R2 = S1_box(R1);
+        FSM4 = S1_box(R0);
         R1 = pCtx->FSM_R3 ^ pCtx->LFSR_S[6];
         F1 = V0 + R0;
         F1 ^= L1;
         F1 ^= pCtx->FSM_R2;
         R1 += pCtx->FSM_R2;
-        pCtx->FSM_R3 = Snow3g_S2(pCtx->FSM_R2);
+        pCtx->FSM_R3 = S2_box(pCtx->FSM_R2);
         pCtx->FSM_R2 = FSM4;
         pCtx->FSM_R1 = R1;
 
