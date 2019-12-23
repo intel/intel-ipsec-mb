@@ -121,93 +121,6 @@ typedef struct snow3gKeyState8_s {
 #endif /* _mm256_loadu2_m128i */
 #endif /* AVX2 */
 
-#if defined (NO_AESNI) || defined (SAFE_LOOKUP)
-/* help compilers to interleave the
- * operations and table access latencies
- */
-
-/* Sbox Snow3g_S1 and Snow3g_S2 with dependency unrolling
- * for n in [0..3]
- *     w[n-1] = k; y[n] = Snow3g_S2(w[n]); k = Snow3g_S1(x[n])
- *
- *
- */
-#define S1_S2_4(y, w, x, k, l, n)                                              \
-        do {                                                                   \
-                unsigned w0, w1, w2, w3;                                       \
-                unsigned x0, x1, x2, x3;                                       \
-                uint32_t ty = l;                                               \
-                w3 = _mm_extract_epi8(w, (4 * n + 0));                         \
-                w2 = _mm_extract_epi8(w, (4 * n + 1));                         \
-                w1 = _mm_extract_epi8(w, (4 * n + 2));                         \
-                w0 = _mm_extract_epi8(w, (4 * n + 3));                         \
-                l = SNOW3G_LOOKUP_W3(snow3g_table_S2, w3,                      \
-                                     sizeof(snow3g_table_S2)) ^                \
-                        SNOW3G_LOOKUP_W2(snow3g_table_S2, w2,                  \
-                                         sizeof(snow3g_table_S2)) ^            \
-                        SNOW3G_LOOKUP_W1(snow3g_table_S2, w1,                  \
-                                         sizeof(snow3g_table_S2)) ^            \
-                        SNOW3G_LOOKUP_W0(snow3g_table_S2, w0,                  \
-                                         sizeof(snow3g_table_S2));             \
-                if (n != 0)                                                    \
-                        w = _mm_insert_epi32(w, k, (n - 1));                   \
-                if (n != 0)                                                    \
-                        y = _mm_insert_epi32(y, ty, (n - 1));                  \
-                x3 = _mm_extract_epi8(x, (4 * n + 0));                         \
-                x2 = _mm_extract_epi8(x, (4 * n + 1));                         \
-                x1 = _mm_extract_epi8(x, (4 * n + 2));                         \
-                x0 = _mm_extract_epi8(x, (4 * n + 3));                         \
-                k = SNOW3G_LOOKUP_W3(snow3g_table_S1, x3,                      \
-                                     sizeof(snow3g_table_S1)) ^                \
-                        SNOW3G_LOOKUP_W2(snow3g_table_S1, x2,                  \
-                                         sizeof(snow3g_table_S1)) ^            \
-                        SNOW3G_LOOKUP_W1(snow3g_table_S1, x1,                  \
-                                         sizeof(snow3g_table_S1)) ^            \
-                        SNOW3G_LOOKUP_W0(snow3g_table_S1, x0,                  \
-                                         sizeof(snow3g_table_S1));             \
-                if (n == 3)                                                    \
-                        w = _mm_insert_epi32(w, k, n);                         \
-                if (n == 3)                                                    \
-                        y = _mm_insert_epi32(y, l, n);                         \
-        } while (0)
-
-#else /* SSE/AVX */
-
-/* use AES-NI Rijndael for Snow3G Sbox, overlap the latency
- * of AESENC with Snow3g_S2 sbox calculations
- */
-
-/* Sbox Snow3g_S1 and Snow3g_S2
- * for n in [0..3]
- *     extract packet data
- *     y = Snow3g_S2(w); w = rijndael Snow3g_S1(x)
- *     insert the result data
- */
-#define S1_S2_4(y, w, x, k, n)                                                 \
-        do {                                                                   \
-                uint32_t ty;                                                   \
-                unsigned w0, w1, w2, w3;                                       \
-                __m128i m10, m11;                                              \
-                m10 = _mm_setzero_si128();                                     \
-                m11 = _mm_shuffle_epi32(                                       \
-                    x, ((n << 6) | (n << 4) | (n << 2) | (n << 0)));           \
-                m11 = _mm_aesenc_si128(m11, m10);                              \
-                w3 = _mm_extract_epi8(w, (4 * n + 0));                         \
-                w2 = _mm_extract_epi8(w, (4 * n + 1));                         \
-                w1 = _mm_extract_epi8(w, (4 * n + 2));                         \
-                w0 = _mm_extract_epi8(w, (4 * n + 3));                         \
-                ty = snow3g_table_S2[w3].w3.v ^ snow3g_table_S2[w1].w1.v ^     \
-                     snow3g_table_S2[w2].w2.v ^ snow3g_table_S2[w0].w0.v;      \
-                if (n != 0)                                                    \
-                        w = _mm_insert_epi32(w, k, (n - 1));                   \
-                k = _mm_cvtsi128_si32(m11);                                    \
-                if (n == 3)                                                    \
-                        w = _mm_insert_epi32(w, k, n);                         \
-                y = _mm_insert_epi32(y, ty, n);                                \
-        } while (0)
-
-#endif /* NO_AESNI || SAFE_LOOKUP */
-
 /* -------------------------------------------------------------------
  * LFSR array shift by 1 position
  * ------------------------------------------------------------------ */
@@ -285,7 +198,6 @@ static inline void ClockFSM_1(snow3gKeyState1_t *pCtx, uint32_t *data)
 
         pCtx->FSM_R3 = S2_box(pCtx->FSM_R2);
         pCtx->FSM_R2 = S1_box(pCtx->FSM_R1);
-
         pCtx->FSM_R1 = R;
 }
 
@@ -294,14 +206,13 @@ static inline void ClockFSM_1(snow3gKeyState1_t *pCtx, uint32_t *data)
  * ------------------------------------------------------------------ */
 static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
 {
-        uint32_t V = pCtx->LFSR_S[2];
-        uint32_t S0 = pCtx->LFSR_S[0];
-        uint32_t S11 = pCtx->LFSR_S[11];
-
-        V ^= snow3g_table_A_mul[S0 >> 24];
-        V ^= snow3g_table_A_div[S11 & 0xff];
-        V ^= S0 << 8;
-        V ^= S11 >> 8;
+        const uint32_t S0 = pCtx->LFSR_S[0];
+        const uint32_t S11 = pCtx->LFSR_S[11];
+        const uint32_t V = pCtx->LFSR_S[2] ^
+                snow3g_table_A_mul[S0 >> 24] ^
+                snow3g_table_A_div[S11 & 0xff] ^
+                (S0 << 8) ^
+                (S11 >> 8);
 
         ShiftLFSR_1(pCtx);
 
@@ -647,9 +558,9 @@ static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
         S1T0 = _mm256_xor_si256(S1T0, S1T2);
 
 
-        pCtx->FSM_X[2]  = S2T0;
-        pCtx->FSM_X[1]  = S1T0;
-        pCtx->FSM_X[2]  = S2T0;
+        pCtx->FSM_X[2] = S2T0;
+        pCtx->FSM_X[1] = S1T0;
+        pCtx->FSM_X[2] = S2T0;
         pCtx->FSM_X[0] = R;
 }
 
@@ -661,33 +572,32 @@ static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
  * ------------------------------------------------------------------ */
 static inline void ClockFSM_4(snow3gKeyState4_t *pCtx, __m128i *data)
 {
-        __m128i F, R;
 #ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable:4556)
 #endif
-#if defined (NO_AESNI) || defined (SAFE_LOOKUP)
-        uint32_t L = 0;
-#endif
-        uint32_t K = 0;
+        const uint32_t iLFSR_X = pCtx->iLFSR_X;
+        const __m128i F =
+                _mm_add_epi32(pCtx->LFSR_X[(iLFSR_X + 15) % 16],
+                              pCtx->FSM_X[0]);
+        const __m128i R =
+                _mm_add_epi32(_mm_xor_si128(pCtx->LFSR_X[(iLFSR_X + 5) % 16],
+                                            pCtx->FSM_X[2]),
+                              pCtx->FSM_X[1]);
 
-        F = _mm_add_epi32(pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16],
-                          pCtx->FSM_X[0]);
-        R = _mm_xor_si128(pCtx->LFSR_X[(pCtx->iLFSR_X + 5) % 16],
-                          pCtx->FSM_X[2]);
         *data = _mm_xor_si128(F, pCtx->FSM_X[1]);
-        R = _mm_add_epi32(R, pCtx->FSM_X[1]);
-#if defined (NO_AESNI) || defined (SAFE_LOOKUP)
-        S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, L, 0);
-        S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, L, 1);
-        S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, L, 2);
-        S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, L, 3);
-#else
-        S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, 0);
-        S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, 1);
-        S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, 2);
-        S1_S2_4(pCtx->FSM_X[2], pCtx->FSM_X[1], pCtx->FSM_X[0], K, 3);
-#endif /* NO_AESNI */
+
+        const uint32_t FSM1_L3 = S1_box(_mm_cvtsi128_si32(pCtx->FSM_X[0]));
+        const uint32_t FSM2_L3 = S2_box(_mm_cvtsi128_si32(pCtx->FSM_X[1]));
+        const uint32_t FSM1_L2 = S1_box(_mm_extract_epi32(pCtx->FSM_X[0], 1));
+        const uint32_t FSM2_L2 = S2_box(_mm_extract_epi32(pCtx->FSM_X[1], 1));
+        const uint32_t FSM1_L1 = S1_box(_mm_extract_epi32(pCtx->FSM_X[0], 2));
+        const uint32_t FSM2_L1 = S2_box(_mm_extract_epi32(pCtx->FSM_X[1], 2));
+        const uint32_t FSM1_L0 = S1_box(_mm_extract_epi32(pCtx->FSM_X[0], 3));
+        const uint32_t FSM2_L0 = S2_box(_mm_extract_epi32(pCtx->FSM_X[1], 3));
+
+        pCtx->FSM_X[2] = _mm_set_epi32(FSM2_L3, FSM2_L2, FSM2_L1, FSM2_L0);
+        pCtx->FSM_X[1] = _mm_set_epi32(FSM1_L3, FSM1_L2, FSM1_L1, FSM1_L0);
         pCtx->FSM_X[0] = R;
 
 #ifdef _WIN32
