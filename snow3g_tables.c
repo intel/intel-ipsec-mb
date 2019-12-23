@@ -25,7 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#include "snow3g_internal.h"
+#include "snow3g_tables.h"
 
 /*--------------------------------------------------------------------
  *
