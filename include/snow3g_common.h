@@ -763,17 +763,25 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
         int i;
 
         /** Byte reversal on each KS */
-        __m256i mask1 = {0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL,
-                         0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL};
+        static const __m256i mask1 = {
+                0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL,
+                0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL
+        };
         /** Reversal, shifted 4 bytes right */
-        __m256i mask2 = {0x0405060708090a0bULL, 0x0c0d0e0f00010203ULL,
-                         0x0405060708090a0bULL, 0x0c0d0e0f00010203ULL};
+        static const __m256i mask2 = {
+                0x0405060708090a0bULL, 0x0c0d0e0f00010203ULL,
+                0x0405060708090a0bULL, 0x0c0d0e0f00010203ULL
+        };
         /** Reversal, shifted 8 bytes right */
-        __m256i mask3 = {0x08090a0b0c0d0e0fULL, 0x0001020304050607ULL,
-                         0x08090a0b0c0d0e0fULL, 0x0001020304050607ULL};
+        static const __m256i mask3 = {
+                0x08090a0b0c0d0e0fULL, 0x0001020304050607ULL,
+                0x08090a0b0c0d0e0fULL, 0x0001020304050607ULL
+        };
         /** Reversal, shifted 12 bytes right */
-        __m256i mask4 = {0x0c0d0e0f00010203ULL, 0x0405060708090a0bULL,
-                         0x0c0d0e0f00010203ULL, 0x0405060708090a0bULL};
+        static const __m256i mask4 = {
+                0x0c0d0e0f00010203ULL, 0x0405060708090a0bULL,
+                0x0c0d0e0f00010203ULL, 0x0405060708090a0bULL
+        };
 
         snow3g_keystream_8_4(pCtx, &temp[0]);
         snow3g_keystream_8_4(pCtx, &temp[1]);
@@ -911,8 +919,10 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
         /* Initialize the LFSR table from constants, Keys, and IV */
 
         /* Load complete 128b IV into register (SSE2)*/
-        uint64_t sm[2] = {0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL};
-        __m128i *swapMask = (__m128i *) sm;
+        static const uint64_t sm[2] = {
+                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
+        };
+        const __m128i *swapMask = (const __m128i *) sm;
 
         R = _mm_loadu_si128((const __m128i *)pIV1);
         S = _mm_loadu_si128((const __m128i *)pIV2);
@@ -1007,8 +1017,10 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
         /* Initialize the LFSR table from constants, Keys, and IV */
 
         /* Load complete 256b IV into register (SSE2)*/
-        __m256i swapMask = {0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
-                            0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL};
+        static const __m256i swapMask = {
+                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
+                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
+        };
         mR = _mm256_loadu2_m128i((const __m128i *)pIV[4],
                                  (const __m128i *)pIV[0]);
         mS = _mm256_loadu2_m128i((const __m128i *)pIV[5],
@@ -1105,8 +1117,11 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
         /* Initialize the LFSR table from constants, Keys, and IV */
 
         /* Load complete 256b IV into register (SSE2)*/
-        __m256i swapMask = {0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
-                            0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL};
+        static const __m256i swapMask = {
+                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
+                0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
+        };
+
         mR = _mm256_loadu2_m128i((const __m128i *)pIV5, (const __m128i *)pIV1);
         mS = _mm256_loadu2_m128i((const __m128i *)pIV6, (const __m128i *)pIV2);
         mT = _mm256_loadu2_m128i((const __m128i *)pIV7, (const __m128i *)pIV3);
