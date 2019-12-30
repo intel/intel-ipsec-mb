@@ -116,12 +116,14 @@ typedef struct snow3gKeyState8_s {
  * ------------------------------------------------------------------ */
 
 #ifdef AVX2
-#ifndef _mm256_loadu2_m128i
-#define _mm256_loadu2_m128i(hi, lo)                                            \
-        _mm256_inserti128_si256(                                               \
-            _mm256_castsi128_si256(_mm_loadu_si128((const __m128i *)lo)),      \
-            _mm_loadu_si128((const __m128i *)hi), 1)
-#endif /* _mm256_loadu2_m128i */
+static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
+{
+        const __m128i lo128 = _mm_loadu_si128((const __m128i *) lo);
+        const __m128i hi128 = _mm_loadu_si128((const __m128i *) hi);
+
+        return _mm256_inserti128_si256(_mm256_castsi128_si256(lo128), hi128, 1);
+}
+
 #endif /* AVX2 */
 
 /* -------------------------------------------------------------------
@@ -1025,14 +1027,10 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
         };
-        mR = _mm256_loadu2_m128i((const __m128i *)pIV[4],
-                                 (const __m128i *)pIV[0]);
-        mS = _mm256_loadu2_m128i((const __m128i *)pIV[5],
-                                 (const __m128i *)pIV[1]);
-        mT = _mm256_loadu2_m128i((const __m128i *)pIV[6],
-                                 (const __m128i *)pIV[2]);
-        mU = _mm256_loadu2_m128i((const __m128i *)pIV[7],
-                                 (const __m128i *)pIV[3]);
+        mR = _mm256_loadu_2xm128i(pIV[4], pIV[0]);
+        mS = _mm256_loadu_2xm128i(pIV[5], pIV[1]);
+        mT = _mm256_loadu_2xm128i(pIV[6], pIV[2]);
+        mU = _mm256_loadu_2xm128i(pIV[7], pIV[3]);
 
         /* initialize the array block (SSE4) */
         for (i = 0; i < 4; i++) {
@@ -1126,10 +1124,10 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
         };
 
-        mR = _mm256_loadu2_m128i((const __m128i *)pIV5, (const __m128i *)pIV1);
-        mS = _mm256_loadu2_m128i((const __m128i *)pIV6, (const __m128i *)pIV2);
-        mT = _mm256_loadu2_m128i((const __m128i *)pIV7, (const __m128i *)pIV3);
-        mU = _mm256_loadu2_m128i((const __m128i *)pIV8, (const __m128i *)pIV4);
+        mR = _mm256_loadu_2xm128i(pIV5, pIV1);
+        mS = _mm256_loadu_2xm128i(pIV6, pIV2);
+        mT = _mm256_loadu_2xm128i(pIV7, pIV3);
+        mU = _mm256_loadu_2xm128i(pIV8, pIV4);
 
         /* initialize the array block (SSE4) */
         for (i = 0; i < 4; i++) {
