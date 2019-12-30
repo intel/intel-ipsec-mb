@@ -537,33 +537,12 @@ $(target_obj_files): | $(OBJ_DIR) $(LIB_DIR) build_c_dep_target_files
 $(dep_target_files): | $(OBJ_DIR)
 
 #
-# dependency file build recipies
-#
-
-$(OBJ_DIR)/%.d:%.c
-	$(CC) -MM -MP -MF $@ $(CFLAGS) $<
-
-$(OBJ_DIR)/%.d:sse/%.c
-	$(CC) -MM -MP -MF $@ $(CFLAGS) $<
-
-$(OBJ_DIR)/%.d:avx/%.c
-	$(CC) -MM -MP -MF $@ $(CFLAGS) $<
-
-$(OBJ_DIR)/%.d:avx2/%.c
-	$(CC) -MM -MP -MF $@ $(CFLAGS) $<
-
-$(OBJ_DIR)/%.d:avx512/%.c
-	$(CC) -MM -MP -MF $@ $(CFLAGS) $<
-
-$(OBJ_DIR)/%.d:no-aesni/%.c
-	$(CC) -MM -MP -MF $@ $(CFLAGS) $<
-
-#
-# object file build recipies
+# object file build recipes
+# - dependency file construction is part of the compilation
 #
 
 $(OBJ_DIR)/%.o:%.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -MMD -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:%.asm
 ifeq ($(USE_YASM),y)
@@ -573,7 +552,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:sse/%.c
-	$(CC) $(OPT_SSE) -c $(CFLAGS) $< -o $@
+	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:sse/%.asm
 ifeq ($(USE_YASM),y)
@@ -583,7 +562,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx/%.c
-	$(CC) $(OPT_AVX) -c $(CFLAGS) $< -o $@
+	$(CC) -MMD $(OPT_AVX) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx/%.asm
 ifeq ($(USE_YASM),y)
@@ -593,7 +572,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx2/%.c
-	$(CC) $(OPT_AVX2) -c $(CFLAGS) $< -o $@
+	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx2/%.asm
 ifeq ($(USE_YASM),y)
@@ -603,7 +582,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:avx512/%.c
-	$(CC) $(OPT_AVX512) -c $(CFLAGS) $< -o $@
+	$(CC) -MMD $(OPT_AVX512) -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:avx512/%.asm
 ifeq ($(USE_YASM),y)
@@ -620,7 +599,7 @@ else
 endif
 
 $(OBJ_DIR)/%.o:no-aesni/%.c
-	$(CC) $(OPT_NOAESNI) -c $(CFLAGS_NO_SIMD) $< -o $@
+	$(CC) -MMD $(OPT_NOAESNI) -c $(CFLAGS_NO_SIMD) $< -o $@
 
 $(OBJ_DIR)/%.o:no-aesni/%.asm
 ifeq ($(USE_YASM),y)
