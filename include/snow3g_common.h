@@ -178,19 +178,24 @@ static inline uint32_t S1_box(const uint32_t x)
 static inline uint32_t S2_box(const uint32_t x)
 {
 #if defined (NO_AESNI) || defined (SAFE_LOOKUP)
-        return SNOW3G_LOOKUP_W3(snow3g_table_S2, x & 0xff,
-                                sizeof(snow3g_table_S2)) ^
-                SNOW3G_LOOKUP_W0(snow3g_table_S2, x >> 24,
-                                 sizeof(snow3g_table_S2)) ^
-                SNOW3G_LOOKUP_W1(snow3g_table_S2, (x >> 16) & 0xff,
-                                 sizeof(snow3g_table_S2)) ^
-                SNOW3G_LOOKUP_W2(snow3g_table_S2, (x >> 8) & 0xff,
-                                 sizeof(snow3g_table_S2));
+        return SNOW3G_SAFE_LOOKUP_W3(snow3g_table_S2, x & 0xff,
+                                     sizeof(snow3g_table_S2)) ^
+                SNOW3G_SAFE_LOOKUP_W0(snow3g_table_S2, (x >> 24) & 0xff,
+                                      sizeof(snow3g_table_S2)) ^
+                SNOW3G_SAFE_LOOKUP_W1(snow3g_table_S2, (x >> 16) & 0xff,
+                                      sizeof(snow3g_table_S2)) ^
+                SNOW3G_SAFE_LOOKUP_W2(snow3g_table_S2, (x >> 8) & 0xff,
+                                      sizeof(snow3g_table_S2));
 #else
-        return snow3g_table_S2[x & 0xff].w3.v ^
-                snow3g_table_S2[(x >> 16) & 0xff].w1.v ^
-                snow3g_table_S2[(x >> 8) & 0xff].w2.v ^
-                snow3g_table_S2[x >> 24].w0.v;
+        const uint8_t *w3 = (const uint8_t *)&snow3g_table_S2[x & 0xff];
+        const uint8_t *w1 = (const uint8_t *)&snow3g_table_S2[(x >> 16) & 0xff];
+        const uint8_t *w2 = (const uint8_t *)&snow3g_table_S2[(x >> 8) & 0xff];
+        const uint8_t *w0 = (const uint8_t *)&snow3g_table_S2[(x >> 24) & 0xff];
+
+        return *((const uint32_t *)&w3[3]) ^
+                *((const uint32_t *)&w1[1]) ^
+                *((const uint32_t *)&w2[2]) ^
+                *((const uint32_t *)&w0[0]);
 #endif
 }
 

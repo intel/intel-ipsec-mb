@@ -51,61 +51,9 @@
         ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 24))
 #endif /* AVX || AVX2 */
 
-#ifndef SAFE_LOOKUP
-/*standard lookup */
-#define SNOW3G_LOOKUP_W0(table, idx, size) \
-        table[idx].w0.v
-#define SNOW3G_LOOKUP_W1(table, idx, size) \
-        table[idx].w1.v
-#define SNOW3G_LOOKUP_W2(table, idx, size) \
-        table[idx].w2.v
-#define SNOW3G_LOOKUP_W3(table, idx, size) \
-        table[idx].w3.v
-#else
-/* contant time lookup */
-#define SNOW3G_LOOKUP_W0(table, idx, size) \
-        SNOW3G_SAFE_LOOKUP_W0(table, idx, size)
-#define SNOW3G_LOOKUP_W1(table, idx, size) \
-        SNOW3G_SAFE_LOOKUP_W1(table, idx, size)
-#define SNOW3G_LOOKUP_W2(table, idx, size) \
-        SNOW3G_SAFE_LOOKUP_W2(table, idx, size)
-#define SNOW3G_LOOKUP_W3(table, idx, size) \
-        SNOW3G_SAFE_LOOKUP_W3(table, idx, size)
-#endif /* SAFE_LOOKUP */
-
-#ifdef _WIN32
-#pragma pack(push,1)
-#define DECLARE_PACKED_UINT32(x) uint32_t x
-#else
-#define DECLARE_PACKED_UINT32(x) uint32_t x __attribute__((__packed__))
-#endif
-
-typedef union snow3gTableEntry_u {
-        uint64_t v;
-        struct {
-                uint8_t shift[3];
-                DECLARE_PACKED_UINT32(v);
-        } w3;
-        struct {
-                uint8_t shift[2];
-                DECLARE_PACKED_UINT32(v);
-        } w2;
-        struct {
-                uint8_t shift[1];
-                DECLARE_PACKED_UINT32(v);
-        } w1;
-        struct {
-                uint8_t shift[4];
-                DECLARE_PACKED_UINT32(v);
-        } w0;
-} snow3gTableEntry_t;
-#ifdef _WIN32
-#pragma pack(pop)
-#endif
-
 extern const int snow3g_table_A_mul[256];
 extern const int snow3g_table_A_div[256];
-extern const snow3gTableEntry_t snow3g_table_S2[256];
+extern const uint64_t snow3g_table_S2[256];
 #ifdef AVX2
 extern const int S2_T0[256];
 extern const int S2_T1[256];
