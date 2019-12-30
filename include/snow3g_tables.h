@@ -105,7 +105,6 @@ typedef union snow3gTableEntry_u {
 
 extern const int snow3g_table_A_mul[256];
 extern const int snow3g_table_A_div[256];
-extern const snow3gTableEntry_t snow3g_table_S1[256];
 extern const snow3gTableEntry_t snow3g_table_S2[256];
 #ifdef AVX2
 extern const int S2_T0[256];

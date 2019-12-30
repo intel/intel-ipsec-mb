@@ -43,6 +43,9 @@
 #include "wireless_common.h"
 #include "include/snow3g.h"
 #include "include/snow3g_tables.h"
+#ifdef NO_AESNI
+#include "include/aesni_emu.h"
+#endif
 
 #include "clear_regs_mem.h"
 
@@ -149,14 +152,15 @@ static inline void ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
 static inline uint32_t S1_box(const uint32_t x)
 {
 #ifdef NO_AESNI
-        return SNOW3G_SAFE_LOOKUP_W3(snow3g_table_S1, x & 0xff,
-                                     sizeof(snow3g_table_S1)) ^
-                SNOW3G_SAFE_LOOKUP_W0(snow3g_table_S1, x >> 24,
-                                      sizeof(snow3g_table_S1)) ^
-                SNOW3G_SAFE_LOOKUP_W1(snow3g_table_S1, (x >> 16) & 0xff,
-                                      sizeof(snow3g_table_S1)) ^
-                SNOW3G_SAFE_LOOKUP_W2(snow3g_table_S1, (x >> 8) & 0xff,
-                                      sizeof(snow3g_table_S1));
+        union xmm_reg key, v;
+
+        key.qword[0] = key.qword[1] = 0;
+
+        v.dword[0] = v.dword[1] =
+                v.dword[2] = v.dword[3] = x;
+
+        emulate_AESENC(&v, &key);
+        return v.dword[0];
 #else
         __m128i m;
 
