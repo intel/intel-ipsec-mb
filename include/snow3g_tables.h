@@ -108,10 +108,6 @@ extern const int snow3g_table_A_div[256];
 extern const snow3gTableEntry_t snow3g_table_S1[256];
 extern const snow3gTableEntry_t snow3g_table_S2[256];
 #ifdef AVX2
-extern const int S1_T0[256];
-extern const int S1_T1[256];
-extern const int S1_T2[256];
-extern const int S1_T3[256];
 extern const int S2_T0[256];
 extern const int S2_T1[256];
 extern const int S2_T2[256];

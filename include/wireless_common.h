@@ -67,10 +67,7 @@ typedef union _m64_u {
 
 static inline uint32_t bswap4(const uint32_t val)
 {
-        return ((val >> 24) |             /**< A*/
-                ((val & 0xff0000) >> 8) | /**< B*/
-                ((val & 0xff00) << 8) |   /**< C*/
-                (val << 24));             /**< D*/
+        return BSWAP32(val);
 }
 
 /*************************************************************************
