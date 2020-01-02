@@ -29,8 +29,10 @@
 
 section .data
 default rel
-align 16
+align 32
 swap_mask:
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
@@ -122,6 +124,42 @@ MKGLOBAL(asm_XorKeyStream64B_sse,function,internal)
 asm_XorKeyStream64B_sse:
         xor_keystream SSE
         ret
+
+MKGLOBAL(asm_XorKeyStream64B_avx2,function,internal)
+asm_XorKeyStream64B_avx2:
+%ifdef LINUX
+        %define	        pIn	rdi
+        %define	        pOut	rsi
+        %define	        pKS	rdx
+%else
+        %define	        pIn	rcx
+        %define	        pOut	rdx
+        %define	        pKS	r8
+%endif
+        %define         YKEY0   ymm0
+        %define         YKEY1   ymm1
+        %define         YIN0    ymm2
+        %define         YIN1    ymm3
+        %define         YSHUF   ymm4
+
+        vmovdqa         YSHUF, [rel swap_mask]
+        vmovdqa         YKEY0, [pKS]
+        vmovdqa         YKEY1, [pKS + 32]
+
+        vpshufb         YKEY0, YSHUF
+        vpshufb         YKEY1, YSHUF
+
+        vmovdqu         YIN0, [pIn]
+        vmovdqu         YIN1, [pIn + 32]
+
+        vpxor           YKEY0, YIN0
+        vpxor           YKEY1, YIN1
+
+        vmovdqu         [pOut],      YKEY0
+        vmovdqu         [pOut + 32], YKEY1
+
+        ret
+
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

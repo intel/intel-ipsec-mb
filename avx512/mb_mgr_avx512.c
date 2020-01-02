@@ -104,13 +104,13 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
 JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
 
-JOB_AES_HMAC *submit_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state,
+JOB_AES_HMAC *submit_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state,
                                         JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state);
+JOB_AES_HMAC *flush_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state);
 
-JOB_AES_HMAC *submit_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state,
+JOB_AES_HMAC *submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state,
                                         JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
+JOB_AES_HMAC *flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
@@ -137,10 +137,10 @@ JOB_AES_HMAC *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx512
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_avx512
 
-#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx
-#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx
-#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx
-#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx
+#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx2
+#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx2
+#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx2
+#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx2
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx512
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx512
@@ -802,19 +802,19 @@ init_mb_mgr_avx512(MB_MGR *state)
         memset(state->zuc_eea3_ooo.lens, 0xFF,
                sizeof(state->zuc_eea3_ooo.lens));
         memset(&state->zuc_eea3_ooo.lens[0], 0,
-               sizeof(state->zuc_eea3_ooo.lens[0]) * 4);
+               sizeof(state->zuc_eea3_ooo.lens[0]) * 8);
         memset(state->zuc_eea3_ooo.job_in_lane, 0,
                sizeof(state->zuc_eea3_ooo.job_in_lane));
-        state->zuc_eea3_ooo.unused_lanes = 0xFF03020100;
+        state->zuc_eea3_ooo.unused_lanes = 0xF76543210;
         state->zuc_eea3_ooo.num_lanes_inuse = 0;
 
         memset(state->zuc_eia3_ooo.lens, 0xFF,
                sizeof(state->zuc_eia3_ooo.lens));
         memset(&state->zuc_eia3_ooo.lens[0], 0,
-               sizeof(state->zuc_eia3_ooo.lens[0]) * 4);
+               sizeof(state->zuc_eia3_ooo.lens[0]) * 8);
         memset(state->zuc_eia3_ooo.job_in_lane, 0,
                sizeof(state->zuc_eia3_ooo.job_in_lane));
-        state->zuc_eia3_ooo.unused_lanes = 0xFF03020100;
+        state->zuc_eia3_ooo.unused_lanes = 0xF76543210;
         state->zuc_eia3_ooo.num_lanes_inuse = 0;
 
 
@@ -1092,11 +1092,11 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->md5_one_block       = md5_one_block_avx512;
         state->aes128_cfb_one      = aes_cfb_128_one_avx512;
 
-        state->eea3_1_buffer       = zuc_eea3_1_buffer_avx;
+        state->eea3_1_buffer       = zuc_eea3_1_buffer_avx2;
         state->eea3_4_buffer       = zuc_eea3_4_buffer_avx;
-        state->eea3_n_buffer       = zuc_eea3_n_buffer_avx;
-        state->eia3_1_buffer       = zuc_eia3_1_buffer_avx;
-        state->eia3_n_buffer       = zuc_eia3_n_buffer_avx;
+        state->eea3_n_buffer       = zuc_eea3_n_buffer_avx2;
+        state->eia3_1_buffer       = zuc_eia3_1_buffer_avx2;
+        state->eia3_n_buffer       = zuc_eia3_n_buffer_avx2;
 
         state->f8_1_buffer         = kasumi_f8_1_buffer_avx;
         state->f8_1_buffer_bit     = kasumi_f8_1_buffer_bit_avx;

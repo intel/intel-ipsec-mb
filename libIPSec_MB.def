@@ -419,3 +419,7 @@ EXPORTS
     aes_gcm_init_var_iv_256_vaes_avx512         @393
     aes_gcm_init_var_iv_256_sse                 @394
     aes_gcm_init_var_iv_256_sse_no_aesni        @395
+    zuc_eea3_1_buffer_avx2                      @396
+    zuc_eea3_n_buffer_avx2                      @397
+    zuc_eia3_1_buffer_avx2                      @398
+    zuc_eia3_n_buffer_avx2                      @399

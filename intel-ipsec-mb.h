@@ -429,11 +429,11 @@ typedef struct {
 } DES_ARGS_x16;
 
 typedef struct {
-        const uint8_t *in[4];
-        uint8_t *out[4];
-        const uint8_t *keys[4];
-        const uint8_t *iv[4];
-} ZUC_ARGS_x4;
+        const uint8_t *in[8];
+        uint8_t *out[8];
+        const uint8_t *keys[8];
+        const uint8_t *iv[8];
+} ZUC_ARGS_x8;
 
 /* AES out-of-order scheduler fields */
 typedef struct {
@@ -521,13 +521,10 @@ typedef struct {
 
 /* ZUC out-of-order scheduler fields */
 typedef struct {
-        ZUC_ARGS_x4 args;
+        ZUC_ARGS_x8 args;
         DECLARE_ALIGNED(uint16_t lens[8], 16);
-        /* each byte is index (0...3) of unused lanes
-         * byte 4 is set to FF as a flag
-         */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[4];
+        JOB_AES_HMAC *job_in_lane[8];
         uint64_t num_lanes_inuse;
 } MB_MGR_ZUC_OOO;
 

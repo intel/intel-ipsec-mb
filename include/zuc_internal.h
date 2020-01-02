@@ -117,7 +117,7 @@ typedef struct zuc_state_s {
 /**
  *****************************************************************************
  * @description
- *      Packed structure to store the ZUC state for a single packet. *
+ *      Packed structure to store the ZUC state for 4 packets. *
  *****************************************************************************/
 typedef struct zuc_state_4_s {
     uint32_t lfsrState[16][4];
@@ -169,6 +169,50 @@ typedef struct zuc_iv_4_s {
     const uint8_t *pIv4;
     /**< Pointer to 128-bit initialization vector for packet 4 */
 } ZucIv4_t;
+
+/**
+ *****************************************************************************
+ * @description
+ *      Packed structure to store the ZUC state for 8 packets. *
+ *****************************************************************************/
+typedef struct zuc_state_8_s {
+    uint32_t lfsrState[16][8];
+    /**< State registers of the LFSR */
+    uint32_t fR1[8];
+    /**< register of F */
+    uint32_t fR2[8];
+    /**< register of F */
+    uint32_t bX0[8];
+    /**< Output X0 of the bit reorganization for 8 packets */
+    uint32_t bX1[8];
+    /**< Output X1 of the bit reorganization for 8 packets */
+    uint32_t bX2[8];
+    /**< Output X2 of the bit reorganization for 8 packets */
+    uint32_t bX3[8];
+    /**< Output X3 of the bit reorganization for 8 packets */
+} ZucState8_t;
+
+/**
+ *****************************************************************************
+ * @description
+ *      Structure to store pointers to the 8 keys to be used as input to
+ *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream68B_8
+ *****************************************************************************/
+typedef struct zuc_key_8_s {
+    const uint8_t *pKeys[8];
+    /**< Array of pointers to 128-bit keys for the 8 packets */
+} ZucKey8_t;
+
+/**
+ *****************************************************************************
+ * @description
+ *      Structure to store pointers to the 8 IV's to be used as input to
+ *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream68B_8
+ *****************************************************************************/
+typedef struct zuc_iv_8_s {
+    const uint8_t *pIvs[8];
+    /**< Array of pointers to 128-bit IV's for the 8 packets */
+} ZucIv8_t;
 
 /**
  ******************************************************************************
@@ -228,6 +272,10 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_sse(ZucKey4_t *pKeys,
 IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
                                                ZucIv4_t *pIvs,
                                                ZucState4_t *pState);
+
+IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
+                                               ZucIv8_t *pIvs,
+                                               ZucState8_t *pState);
 
 /**
  ******************************************************************************
@@ -351,6 +399,8 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_avx(ZucState4_t *pState,
                                                 uint32_t *pKeyStr3,
                                                 uint32_t *pKeyStr4);
 
+IMB_DLL_LOCAL void asm_ZucGenKeystream64B_8_avx2(ZucState8_t *pState,
+                                                uint32_t *pKeyStr[8]);
 /**
  ******************************************************************************
  *
@@ -392,6 +442,8 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
                                                uint32_t *pKeyStr3,
                                                uint32_t *pKeyStr4);
 
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState,
+                                                uint32_t *pKeyStr[8]);
 /**
  ******************************************************************************
  *
@@ -450,6 +502,36 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_4_avx(ZucState4_t *pState,
                                           uint32_t *pKeyStr[4],
                                           const uint64_t *pIn[4],
                                           uint64_t *pOut[4],
+                                          uint64_t bufOffset);
+
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 64 bytes of
+ *      keystream for eight packets in parallel and will XOR this keystream
+ *      with the input text, producing 64 bytes of output for all eight packets.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState8_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to buffers that will
+ *                                  contain the generated keystreams for all
+ *                                  8 packets.
+ * @param[in] pIn                   Array of pointers to 8 input buffers.
+ * @param[out] pOut                 Array of pointers to 8 output buffers.
+ * @param[in] bufOffset             Offset into pIn and pOut
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_8 to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_ZucCipher64B_8_avx2(ZucState8_t *pState,
+                                          uint32_t *pKeyStr[8],
+                                          const uint64_t *pIn[8],
+                                          uint64_t *pOut[8],
                                           uint64_t bufOffset);
 
 /**
@@ -546,6 +628,14 @@ void zuc_eea3_4_buffer_job_avx(const void * const pKey[4],
                                const void * const job_in_lane[4]);
 
 IMB_DLL_LOCAL
+void zuc_eea3_8_buffer_job_avx2(const void * const pKey[8],
+                               const void * const pIv[8],
+                               const void * const pBufferIn[8],
+                               void *pBufferOut[8],
+                               const uint16_t lengthInBytes[8],
+                               const void * const job_in_lane[8]);
+
+IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
                                const void * const pIv[4],
                                const void * const pBufferIn[4],
@@ -560,6 +650,14 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[4],
                                uint32_t *pMacI[4],
                                const uint16_t lengthInBits[4],
                                const void * const job_in_lane[4]);
+
+IMB_DLL_LOCAL
+void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
+                                const void * const pIv[8],
+                                const void * const pBufferIn[8],
+                                uint32_t *pMacI[8],
+                                const uint16_t lengthInBits[8],
+                                const void * const job_in_lane[8]);
 
 /* the s-boxes */
 extern const uint8_t S0[256];
@@ -617,6 +715,26 @@ void zuc_eia3_n_buffer_avx(const void * const pKey[],
                            uint32_t *pMacI[],
                            const uint32_t numBuffers);
 
+
+void zuc_eea3_1_buffer_avx2(const void *pKey, const void *pIv,
+                            const void *pBufferIn, void *pBufferOut,
+                            const uint32_t lengthInBytes);
+
+void zuc_eea3_n_buffer_avx2(const void * const pKey[], const void * const pIv[],
+                            const void * const pBufferIn[], void *pBufferOut[],
+                            const uint32_t lengthInBytes[],
+                            const uint32_t numBuffers);
+
+void zuc_eia3_1_buffer_avx2(const void *pKey, const void *pIv,
+                           const void *pBufferIn, const uint32_t lengthInBits,
+                           uint32_t *pMacI);
+
+void zuc_eia3_n_buffer_avx2(const void * const pKey[],
+                            const void * const pIv[],
+                            const void * const pBufferIn[],
+                            const uint32_t lengthInBits[],
+                            uint32_t *pMacI[],
+                            const uint32_t numBuffers);
 
 #endif /* ZUC_INTERNAL_H_ */
 

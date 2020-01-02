@@ -192,6 +192,7 @@ c_lib_objs := \
 	kasumi_sse.o \
 	zuc_sse_top.o \
 	zuc_avx_top.o \
+	zuc_avx2_top.o \
 	zuc_iv.o \
 	snow3g_sse.o \
 	snow3g_sse_no_aesni.o \
@@ -370,6 +371,7 @@ asm_avx2_lib_objs := \
 	sha1_x8_avx2.o \
 	sha256_oct_avx2.o \
 	sha512_x4_avx2.o \
+	zuc_avx2.o \
 	mb_mgr_hmac_md5_flush_avx2.o \
 	mb_mgr_hmac_md5_submit_avx2.o \
 	mb_mgr_hmac_flush_avx2.o \
@@ -381,7 +383,8 @@ asm_avx2_lib_objs := \
 	mb_mgr_hmac_sha_384_flush_avx2.o \
 	mb_mgr_hmac_sha_384_submit_avx2.o \
 	mb_mgr_hmac_sha_512_flush_avx2.o \
-	mb_mgr_hmac_sha_512_submit_avx2.o
+	mb_mgr_hmac_sha_512_submit_avx2.o \
+	mb_mgr_zuc_submit_flush_avx2.o
 
 #
 # List of ASM modules (avx512 directory)
