@@ -497,11 +497,10 @@ static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
         U = _mm_xor_si128(T, pCtx->LFSR_X[(pCtx->iLFSR_X + 2) % 16]);
         ShiftLFSR_4(pCtx);
 
-        /* (SSE4) */
-        T = _mm_insert_epi32(T, X2[0], 0);
-        T = _mm_insert_epi32(T, X2[1], 1);
-        T = _mm_insert_epi32(T, X2[2], 2);
-        T = _mm_insert_epi32(T, X2[3], 3);
+        /*
+         * One load is equivalent to previous 4 x 32-bit insert operations
+         */
+        T = _mm_loadu_si128((const __m128i *) &X2[0]);
         S = _mm_xor_si128(S, U);
         S = _mm_xor_si128(S, T);
         pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16] = S;
@@ -574,7 +573,6 @@ static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
 
         pCtx->FSM_X[0] = R;
 }
-
 #endif /* AVX2 */
 
 /* -------------------------------------------------------------------
