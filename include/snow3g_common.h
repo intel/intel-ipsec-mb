@@ -127,17 +127,6 @@ static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 #endif /* AVX2 */
 
 /* -------------------------------------------------------------------
- * LFSR array shift by 1 position
- * ------------------------------------------------------------------ */
-static inline void ShiftLFSR_1(snow3gKeyState1_t *pCtx)
-{
-        uint32_t i;
-
-        for (i = 0; i < 15; i++)
-                pCtx->LFSR_S[i] = pCtx->LFSR_S[i + 1];
-}
-
-/* -------------------------------------------------------------------
  * LFSR array shift by 2 positions
  * ------------------------------------------------------------------ */
 static inline void ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
@@ -166,6 +155,10 @@ static inline uint32_t S1_box(const uint32_t x)
 #else
         __m128i m;
 
+        /*
+         * Because of mix column operation the 32-bit word has to be
+         * broadcasted across the 128-bit vector register for S1/AESENC
+         */
         m = _mm_shuffle_epi32(_mm_cvtsi32_si128(x), 0);
         m = _mm_aesenc_si128(m, _mm_setzero_si128());
         return _mm_cvtsi128_si32(m);
@@ -204,16 +197,16 @@ static inline uint32_t S2_box(const uint32_t x)
  * The FSM has 2 input words S5 and S15 from the LFSR
  * produces a 32 bit output word F
  * ------------------------------------------------------------------ */
-static inline void ClockFSM_1(snow3gKeyState1_t *pCtx, uint32_t *data)
+static inline uint32_t ClockFSM_1(snow3gKeyState1_t *pCtx)
 {
         const uint32_t F = (pCtx->LFSR_S[15] + pCtx->FSM_R1) ^ pCtx->FSM_R2;
         const uint32_t R = (pCtx->FSM_R3 ^ pCtx->LFSR_S[5]) + pCtx->FSM_R2;
 
-        *data = F;
-
         pCtx->FSM_R3 = S2_box(pCtx->FSM_R2);
         pCtx->FSM_R2 = S1_box(pCtx->FSM_R1);
         pCtx->FSM_R1 = R;
+
+        return F;
 }
 
 /* -------------------------------------------------------------------
@@ -228,8 +221,11 @@ static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
                 snow3g_table_A_div[S11 & 0xff] ^
                 (S0 << 8) ^
                 (S11 >> 8);
+        unsigned i;
 
-        ShiftLFSR_1(pCtx);
+        /* LFSR array shift by 1 position */
+        for (i = 0; i < 15; i++)
+                pCtx->LFSR_S[i] = pCtx->LFSR_S[i + 1];
 
         pCtx->LFSR_S[15] = V;
 }
@@ -339,14 +335,14 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
 static inline void snow3g_f9_keystream_words(snow3gKeyState1_t *pCtx,
                                              uint32_t *pKeyStream)
 {
-        uint32_t F, XX;
         int i;
 
-        ClockFSM_1(pCtx, &XX);
+        (void) ClockFSM_1(pCtx);
         ClockLFSR_1(pCtx);
 
         for (i = 0; i < 5; i++) {
-                ClockFSM_1(pCtx, &F);
+                const uint32_t F = ClockFSM_1(pCtx);
+
                 pKeyStream[i] = F ^ pCtx->LFSR_S[0];
                 ClockLFSR_1(pCtx);
         }
@@ -620,17 +616,16 @@ static inline void ClockFSM_4(snow3gKeyState4_t *pCtx, __m128i *data)
 * This function generates 4 bytes of keystream 1 buffer at a time
 *
 * @param[in]     pCtx       Context where the scheduled keys are stored
-* @param[in/out] pKeyStream Pointer to generated keystream
+* @return 4 bytes of keystream
 *
 *******************************************************************************/
-static inline void snow3g_keystream_1_4(snow3gKeyState1_t *pCtx,
-                                        uint32_t *pKeyStream)
+static inline uint32_t snow3g_keystream_1_4(snow3gKeyState1_t *pCtx)
 {
-        uint32_t F;
+        const uint32_t F = ClockFSM_1(pCtx);
+        const uint32_t ks = F ^ pCtx->LFSR_S[0];
 
-        ClockFSM_1(pCtx, &F);
-        *pKeyStream = F ^ pCtx->LFSR_S[0];
         ClockLFSR_1(pCtx);
+        return ks;
 }
 
 /**
@@ -1396,7 +1391,7 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
 #endif
                 } else {
                         /* exactly 4 last bytes */
-                        snow3g_keystream_1_4(pCtx, &KS4);
+                        KS4 = snow3g_keystream_1_4(pCtx);
                         xor_keystream_reverse_32(pBufferOut, pBufferIn, KS4);
                 }
         } else if (0 != bytes) {
@@ -1405,7 +1400,7 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
                 uint8_t safeBuff[4];
 
                 memset(safeBuff, 0, SNOW3G_4_BYTES);
-                snow3g_keystream_1_4(pCtx, &KS4);
+                KS4 = snow3g_keystream_1_4(pCtx);
                 memcpy_keystream_32(safeBuff, pBufferIn, bytes);
                 xor_keystream_reverse_32(buftemp, safeBuff, KS4);
                 memcpy_keystream_32(pBufferOut, buftemp, bytes);
@@ -1693,18 +1688,16 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 #endif /* SAFE_DATA */
 
         snow3gKeyState1_t ctx;
-        uint32_t KS4; /* 4 bytes of keystream */
 
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_1(&ctx, pHandle, pIV);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        snow3g_keystream_1_4(&ctx, &KS4);
+        (void) snow3g_keystream_1_4(&ctx);
 
         f8_snow3g(&ctx, pBufferIn, pBufferOut, lengthInBytes);
 
 #ifdef SAFE_DATA
-        CLEAR_VAR(&KS4, sizeof(KS4));
         CLEAR_MEM(&ctx, sizeof(ctx));
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
@@ -1734,18 +1727,16 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
 #endif /* SAFE_DATA */
 
         snow3gKeyState1_t ctx;
-        uint32_t KS4; /* 4 bytes of keystream */
 
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_1(&ctx, pHandle, pIV);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        snow3g_keystream_1_4(&ctx, &KS4);
+        (void) snow3g_keystream_1_4(&ctx);
 
         f8_snow3g_bit(&ctx, pBufferIn, pBufferOut, lengthInBits, offsetInBits);
 
 #ifdef SAFE_DATA
-        CLEAR_VAR(&KS4, sizeof(KS4));
         CLEAR_MEM(&ctx, sizeof(ctx));
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
@@ -1782,13 +1773,12 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
 #endif /* SAFE_DATA */
 
         snow3gKeyState1_t ctx1, ctx2;
-        uint32_t KS4; /* 4 bytes of keystream */
 
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_1(&ctx1, pHandle, pIV1);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        snow3g_keystream_1_4(&ctx1, &KS4);
+        (void) snow3g_keystream_1_4(&ctx1);
 
         /* data processing for packet 1 */
         f8_snow3g(&ctx1, pBufIn1, pBufOut1, lenInBytes1);
@@ -1797,13 +1787,12 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
         snow3gStateInitialize_1(&ctx2, pHandle, pIV2);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        snow3g_keystream_1_4(&ctx2, &KS4);
+        (void) snow3g_keystream_1_4(&ctx2);
 
         /* data processing for packet 2 */
         f8_snow3g(&ctx2, pBufIn2, pBufOut2, lenInBytes2);
 
 #ifdef SAFE_DATA
-        CLEAR_VAR(&KS4, sizeof(KS4));
         CLEAR_MEM(&ctx1, sizeof(ctx1));
         CLEAR_MEM(&ctx2, sizeof(ctx2));
         CLEAR_SCRATCH_GPS();
