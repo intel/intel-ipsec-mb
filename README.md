@@ -52,7 +52,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | 3DES          | Y      | N      | N      | N      | Y  x16 | N      |
 | DES           | Y      | N      | N      | N      | Y  x16 | N      |
 | KASUMI-F8     | Y      | N      | N      | N      | N      | N      |
-| ZUC-EEA3      | N      | Y      | Y      | N      | N      | N      |
+| ZUC-EEA3      | N      | Y  x4  | Y  x4  | N      | N      | N      |
 | SNOW3G-UEA2   | N      | Y      | Y      | Y      | N      | N      |
 +---------------------------------------------------------------------+
 ```
@@ -94,7 +94,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | AES128-CCM        | N      | Y   x4 | Y   x8 | N      | N      | N      |
 | AES128-CMAC-96    | Y      | Y   x4 | Y   x8 | N      | N      | N      |
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
-| ZUC-EIA3          | N      | Y      | Y      | N      | N      | N      |
+| ZUC-EIA3          | N      | Y  x4  | Y  x4  | N      | N      | N      |
 | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
 +-------------------------------------------------------------------------+

@@ -545,6 +545,22 @@ void zuc_eea3_4_buffer_job_avx(const void * const pKey[4],
                                const uint16_t lengthInBytes[4],
                                const void * const job_in_lane[4]);
 
+IMB_DLL_LOCAL
+void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
+                               const void * const pIv[4],
+                               const void * const pBufferIn[4],
+                               uint32_t *pMacI[4],
+                               const uint16_t lengthInBits[4],
+                               const void * const job_in_lane[4]);
+
+IMB_DLL_LOCAL
+void zuc_eia3_4_buffer_job_avx(const void * const pKey[4],
+                               const void * const pIv[4],
+                               const void * const pBufferIn[4],
+                               uint32_t *pMacI[4],
+                               const uint16_t lengthInBits[4],
+                               const void * const job_in_lane[4]);
+
 /* the s-boxes */
 extern const uint8_t S0[256];
 extern const uint8_t S1[256];

@@ -374,7 +374,7 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (CCM == job->cipher_mode) {
                 return AES_CNTR_CCM_128(job);
         } else if (ZUC_EEA3 == job->cipher_mode) {
-                return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
+                return SUBMIT_JOB_ZUC_EEA3(&state->zuc_eea3_ooo, job);
         } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
         } else if (KASUMI_UEA1_BITLEN == job->cipher_mode) {
@@ -428,7 +428,7 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (CUSTOM_CIPHER == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
         } else if (ZUC_EEA3 == job->cipher_mode) {
-                return FLUSH_JOB_ZUC_EEA3(&state->zuc_ooo);
+                return FLUSH_JOB_ZUC_EEA3(&state->zuc_eea3_ooo);
         } else { /* assume CNTR/CNTR_BITLEN, ECB, CCM or NULL_CIPHER */
                 return NULL;
         }
@@ -499,7 +499,7 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
         } else if (CCM == job->cipher_mode) {
                 return AES_CNTR_CCM_128(job);
         } else if (ZUC_EEA3 == job->cipher_mode) {
-                return SUBMIT_JOB_ZUC_EEA3(&state->zuc_ooo, job);
+                return SUBMIT_JOB_ZUC_EEA3(&state->zuc_eea3_ooo, job);
         } else if (SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
         } else if (KASUMI_UEA1_BITLEN == job->cipher_mode) {
@@ -532,7 +532,7 @@ FLUSH_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 return FLUSH_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_DEC */
         if (ZUC_EEA3 == job->cipher_mode)
-                return FLUSH_JOB_ZUC_EEA3(&state->zuc_ooo);
+                return FLUSH_JOB_ZUC_EEA3(&state->zuc_eea3_ooo);
         (void) state;
         return NULL;
 }
@@ -622,13 +622,7 @@ SUBMIT_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
         case ZUC_EIA3_BITLEN:
-                IMB_ZUC_EIA3_1_BUFFER(state, job->u.ZUC_EIA3._key,
-                                 job->u.ZUC_EIA3._iv,
-                                 job->src + job->hash_start_src_offset_in_bytes,
-                                 (const uint32_t) job->msg_len_to_hash_in_bits,
-                                 (uint32_t *) job->auth_tag_output);
-                job->status |= STS_COMPLETED_HMAC;
-                return job;
+                return SUBMIT_JOB_ZUC_EIA3(&state->zuc_eia3_ooo, job);
         case SNOW3G_UIA2_BITLEN:
                 IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
                                job->u.SNOW3G_UIA2._key,
@@ -692,6 +686,8 @@ FLUSH_JOB_HASH(MB_MGR *state, JOB_AES_HMAC *job)
         case AES_CMAC:
         case AES_CMAC_BITLEN:
                 return FLUSH_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo);
+        case ZUC_EIA3_BITLEN:
+                return FLUSH_JOB_ZUC_EIA3(&state->zuc_eia3_ooo);
         default: /* assume GCM or NULL_HASH */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
                         job->status |= STS_COMPLETED_HMAC;

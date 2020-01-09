@@ -80,13 +80,22 @@ END_FIELDS
 %assign _AES_CMAC_spec_fields_align	_STRUCT_ALIGN
 
 START_FIELDS	; GCM Specific Fields
-;;;	name				size	align
+;;;	name	ggn			size	align
 FIELD	__gcm_aad,			8,	8	; pointer to AAD
 FIELD	__gcm_aad_len,			8,	8	; 64-bit AAD length
 END_FIELDS
 
 %assign _GCM_spec_fields_size	_FIELD_OFFSET
 %assign _GCM_spec_fields_align	_STRUCT_ALIGN
+
+START_FIELDS	; ZUC-EIA3 Specific Fields
+;;;	name				size	align
+FIELD	__zuc_eia3_key,			8,	8	; pointer to key
+FIELD	__zuc_eia3_iv,			8,	8	; pointer to IV
+END_FIELDS
+
+%assign _ZUC_EIA3_spec_fields_size	_FIELD_OFFSET
+%assign _ZUC_EIA3_spec_fields_align	_STRUCT_ALIGN
 
 
 START_FIELDS	; JOB_AES_HMAC
@@ -110,7 +119,8 @@ UNION	_u,	_HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
 		_AES_XCBC_spec_fields_size, _AES_XCBC_spec_fields_align, \
 		_CBCMAC_spec_fields_size, _CBCMAC_spec_fields_align, \
                 _AES_CMAC_spec_fields_size, _AES_CMAC_spec_fields_align, \
-                _GCM_spec_fields_size, _GCM_spec_fields_align
+                _GCM_spec_fields_size, _GCM_spec_fields_align, \
+                _ZUC_EIA3_spec_fields_size, _ZUC_EIA3_spec_fields_align
 
 FIELD	_status,			4,	4	; JOB_STS
 FIELD	_cipher_mode,			4,	4	; JOB_CIPHER_MODE
@@ -141,4 +151,6 @@ END_FIELDS
 %assign _skey2			        _u + __skey2
 %assign _gcm_aad	                _u + __gcm_aad
 %assign _gcm_aad_len	                _u + __gcm_aad_len
+%assign _zuc_eia3_key                   _u + __zuc_eia3_key
+%assign _zuc_eia3_iv                    _u + __zuc_eia3_iv
 

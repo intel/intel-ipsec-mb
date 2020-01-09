@@ -362,9 +362,10 @@ submit_eea3_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 
 static inline int
 submit_eia3_job(struct MB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
-                 uint8_t *src, uint8_t *tag, const uint32_t len)
+                uint8_t *src, uint8_t *tag, const uint32_t len)
 {
         JOB_AES_HMAC *job;
+        unsigned int jobs_rx = 0;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->chain_order = CIPHER_HASH;
@@ -381,13 +382,25 @@ submit_eia3_job(struct MB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job != NULL) {
+                jobs_rx++;
                 if (job->status != STS_COMPLETED) {
                         printf("%d error status:%d",
                                __LINE__, job->status);
                         return -1;
                 }
-        } else {
-                printf("Expected returned job, but got nothing\n");
+        }
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                jobs_rx++;
+                if (job->status != STS_COMPLETED) {
+                        printf("%d error status:%d",
+                               __LINE__, job->status);
+                        return -1;
+                }
+        }
+
+        if (jobs_rx != 1) {
+                printf("Expected a single job, received %d\n", jobs_rx);
                 return -1;
         }
 
