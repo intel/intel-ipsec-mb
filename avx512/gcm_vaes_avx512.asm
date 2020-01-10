@@ -1926,14 +1926,14 @@ default rel
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; load/store mask (partial case) and load the text data
 %ifidn %%FULL_PARTIAL, full
-        VX512LDR        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
-        VX512LDR        %%ZT5, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
+        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%ZT5, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
 %else
         lea             %%IA0, [rel byte64_len_to_mask_table]
         mov             %%IA1, %%LENGTH
         sub             %%IA1, 64
         kmovq           %%MASKREG, [%%IA0 + 8*%%IA1]
-        VX512LDR        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
+        vmovdqu8        %%ZT4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET]
         vmovdqu8        %%ZT5{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 64]
 %endif
 
@@ -1948,10 +1948,10 @@ default rel
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store the cipher/plain text data
 %ifidn %%FULL_PARTIAL, full
-        VX512STR        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
-        VX512STR        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64], %%ZT2
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64], %%ZT2
 %else
-        VX512STR        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
+        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET], %%ZT1
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + 64]{%%MASKREG}, %%ZT2
 %endif
 
