@@ -639,10 +639,6 @@ static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
  * ------------------------------------------------------------------ */
 static inline void ClockFSM_4(snow3gKeyState4_t *pCtx, __m128i *data)
 {
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable:4556)
-#endif
         const uint32_t iLFSR_X = pCtx->iLFSR_X;
         const __m128i F =
                 _mm_add_epi32(pCtx->LFSR_X[(iLFSR_X + 15) % 16],
@@ -666,10 +662,6 @@ static inline void ClockFSM_4(snow3gKeyState4_t *pCtx, __m128i *data)
         pCtx->FSM_X[2] = _mm_set_epi32(FSM2_L3, FSM2_L2, FSM2_L1, FSM2_L0);
         pCtx->FSM_X[1] = _mm_set_epi32(FSM1_L3, FSM1_L2, FSM1_L1, FSM1_L0);
         pCtx->FSM_X[0] = R;
-
-#ifdef _WIN32
-#pragma warning(pop)
-#endif
 }
 
 /**
