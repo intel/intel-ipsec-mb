@@ -170,26 +170,88 @@ static inline uint32_t S1_box(const uint32_t x)
  * ------------------------------------------------------------------ */
 static inline uint32_t S2_box(const uint32_t x)
 {
-#if defined (NO_AESNI) || defined (SAFE_LOOKUP)
-        return SNOW3G_SAFE_LOOKUP_W3(snow3g_table_S2, x & 0xff,
-                                     sizeof(snow3g_table_S2)) ^
-                SNOW3G_SAFE_LOOKUP_W0(snow3g_table_S2, (x >> 24) & 0xff,
-                                      sizeof(snow3g_table_S2)) ^
-                SNOW3G_SAFE_LOOKUP_W1(snow3g_table_S2, (x >> 16) & 0xff,
-                                      sizeof(snow3g_table_S2)) ^
-                SNOW3G_SAFE_LOOKUP_W2(snow3g_table_S2, (x >> 8) & 0xff,
-                                      sizeof(snow3g_table_S2));
-#else
-        const uint8_t *w3 = (const uint8_t *)&snow3g_table_S2[x & 0xff];
-        const uint8_t *w1 = (const uint8_t *)&snow3g_table_S2[(x >> 16) & 0xff];
-        const uint8_t *w2 = (const uint8_t *)&snow3g_table_S2[(x >> 8) & 0xff];
-        const uint8_t *w0 = (const uint8_t *)&snow3g_table_S2[(x >> 24) & 0xff];
+        /*
+         * Mix column AES GF() reduction poly is 0x1B and
+         * SNOW3G reduction poly is 0x69.
+         * The fixup value is 0x1B ^ 0x69 = 0x72
+         */
+        static const uint32_t mixc_fixup_tab[16] = {
+                0x00000000, 0x72000072, 0x00007272, 0x72007200,
+                0x00727200, 0x72727272, 0x00720072, 0x72720000,
+                /* the table is symmetric */
+                0x72720000, 0x00720072, 0x72727272, 0x00727200,
+                0x72007200, 0x00007272, 0x72000072, 0x00000000
+        };
 
-        return *((const uint32_t *)&w3[3]) ^
-                *((const uint32_t *)&w1[1]) ^
-                *((const uint32_t *)&w2[2]) ^
-                *((const uint32_t *)&w0[0]);
+        const uint8_t w3 = (const uint8_t)(x);
+        const uint8_t w2 = (const uint8_t)(x >> 8);
+        const uint8_t w1 = (const uint8_t)(x >> 16);
+        const uint8_t w0 = (const uint8_t)(x >> 24);
+
+        /* Perform invSR(SQ(x)) transform through lookup table */
+#ifdef SAFE_LOOKUP
+        const uint8_t xfrm_w3 = SNOW3G_SAFE_LUT8(snow3g_invSR_SQ, w3, 256);
+        const uint8_t xfrm_w2 = SNOW3G_SAFE_LUT8(snow3g_invSR_SQ, w2, 256);
+        const uint8_t xfrm_w1 = SNOW3G_SAFE_LUT8(snow3g_invSR_SQ, w1, 256);
+        const uint8_t xfrm_w0 = SNOW3G_SAFE_LUT8(snow3g_invSR_SQ, w0, 256);
+#else
+        const uint8_t xfrm_w3 = snow3g_invSR_SQ[w3];
+        const uint8_t xfrm_w2 = snow3g_invSR_SQ[w2];
+        const uint8_t xfrm_w1 = snow3g_invSR_SQ[w1];
+        const uint8_t xfrm_w0 = snow3g_invSR_SQ[w0];
 #endif
+
+        /* construct new 32-bit word after the transformation */
+        const uint32_t new_x = ((uint32_t) xfrm_w3) |
+                (((uint32_t) xfrm_w2) << 8) |
+                (((uint32_t) xfrm_w1) << 16) |
+                (((uint32_t) xfrm_w0) << 24);
+
+        /* use AESNI operations for the rest of the S2 box
+         * in: new_x
+         * out: ret, ret_nomixc
+         */
+#ifdef NO_AESNI
+        union xmm_reg key, v, v_fixup;
+
+        key.qword[0] = key.qword[1] = 0;
+
+        v.dword[0] = v.dword[1] =
+                v.dword[2] = v.dword[3] = new_x;
+
+        v_fixup = v;
+
+        emulate_AESENC(&v, &key);
+        emulate_AESENCLAST(&v_fixup, &key);
+
+        const uint32_t ret = v.dword[0];
+        const uint32_t ret_nomixc = v_fixup.dword[0];
+#else
+        __m128i m;
+
+        /*
+         * Because of mix column operation the 32-bit word has to be
+         * broadcasted across the 128-bit vector register for S1/AESENC
+         */
+        m = _mm_shuffle_epi32(_mm_cvtsi32_si128(new_x), 0);
+        /*
+         * aesenclast does not perform mix column operation and
+         * allows to determine the fixup value to be applied
+         * on result of aesenc to produce correct result for SNOW3G.
+         */
+        const uint32_t ret_nomixc =
+                _mm_cvtsi128_si32(_mm_aesenclast_si128(m, _mm_setzero_si128()));
+        const uint32_t ret =
+                _mm_cvtsi128_si32(_mm_aesenc_si128(m, _mm_setzero_si128()));
+#endif
+
+        const uint32_t fixup_idx =
+                ((ret_nomixc & 0x80000000) >> (31 - 3)) |
+                ((ret_nomixc & 0x00800000) >> (23 - 2)) |
+                ((ret_nomixc & 0x00008000) >> (15 - 1)) |
+                ((ret_nomixc & 0x00000080) >> 7);
+
+        return ret ^ mixc_fixup_tab[fixup_idx];
 }
 
 /* -------------------------------------------------------------------

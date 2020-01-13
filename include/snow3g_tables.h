@@ -32,28 +32,15 @@
 #include "constant_lookup.h"
 
 #if defined (AVX) || defined (AVX2)
-#define SNOW3G_SAFE_LOOKUP_W0(table, idx, size) \
-        ((uint32_t)(LOOKUP64_AVX(table, idx, size) >> 0))
-#define SNOW3G_SAFE_LOOKUP_W1(table, idx, size) \
-        ((uint32_t)(LOOKUP64_AVX(table, idx, size) >> 8))
-#define SNOW3G_SAFE_LOOKUP_W2(table, idx, size) \
-        ((uint32_t)(LOOKUP64_AVX(table, idx, size) >> 16))
-#define SNOW3G_SAFE_LOOKUP_W3(table, idx, size) \
-        ((uint32_t)(LOOKUP64_AVX(table, idx, size) >> 24))
+#define SNOW3G_SAFE_LUT8(table, idx, size) LOOKUP8_AVX(table, idx, size)
 #else /* SSE */
-#define SNOW3G_SAFE_LOOKUP_W0(table, idx, size)                 \
-        ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 0))
-#define SNOW3G_SAFE_LOOKUP_W1(table, idx, size) \
-        ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 8))
-#define SNOW3G_SAFE_LOOKUP_W2(table, idx, size) \
-        ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 16))
-#define SNOW3G_SAFE_LOOKUP_W3(table, idx, size) \
-        ((uint32_t)(LOOKUP64_SSE(table, idx, size) >> 24))
+#define SNOW3G_SAFE_LUT8(table, idx, size) LOOKUP8_SSE(table, idx, size)
 #endif /* AVX || AVX2 */
 
 extern const int snow3g_table_A_mul[256];
 extern const int snow3g_table_A_div[256];
-extern const uint64_t snow3g_table_S2[256];
+extern const uint8_t snow3g_invSR_SQ[256];
+
 #ifdef AVX2
 extern const int S2_T0[256];
 extern const int S2_T1[256];
