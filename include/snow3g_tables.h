@@ -41,12 +41,4 @@ extern const int snow3g_table_A_mul[256];
 extern const int snow3g_table_A_div[256];
 extern const uint8_t snow3g_invSR_SQ[256];
 
-#ifdef AVX2
-extern const int S2_T0[256];
-extern const int S2_T1[256];
-extern const int S2_T2[256];
-extern const int S2_T3[256];
-#endif /* AVX2 */
-
-
 #endif /* _SNOW3G_TABLES_H_  */

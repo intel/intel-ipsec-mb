@@ -108,13 +108,6 @@ typedef struct snow3gKeyState8_s {
 } snow3gKeyState8_t;
 #endif /* AVX2 */
 
-/* -------------------------------------------------------------------
- * combined S-Box processing for reduced instruction dependencies
- *
- * S1_S2_4    : 2 S-Box , 4 packets at a time
- *
- * ------------------------------------------------------------------ */
-
 #ifdef AVX2
 static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 {
@@ -571,18 +564,8 @@ static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
  * ------------------------------------------------------------------ */
 static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
 {
-        static const uint32_t start_shuf_mask[8] = {
-                0xF0F0F000, 0xF0F0F004, 0xF0F0F008, 0xF0F0F00C,
-                0xF0F0F000, 0xF0F0F004, 0xF0F0F008, 0xF0F0F00C
-        };
-        static const uint32_t add_epi32_one[8] = {
-                0x00000001, 0x00000001, 0x00000001, 0x00000001,
-                0x00000001, 0x00000001, 0x00000001, 0x00000001
-        };
         const uint32_t iLFSR_X_5 = (pCtx->iLFSR_X + 5) & 15;
         const uint32_t iLFSR_X_15 = (pCtx->iLFSR_X + 15) & 15;
-        __m256i S2T0, S2T1, S2T2, S2T3;
-        __m256i shuffle_mask, gather_mask;
 
         const __m256i F =
                 _mm256_add_epi32(pCtx->LFSR_X[iLFSR_X_15], pCtx->FSM_X[0]);
@@ -594,28 +577,18 @@ static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
                                                   pCtx->FSM_X[2]),
                                  pCtx->FSM_X[1]);
 
-        const __m256i offset =
-                _mm256_loadu_si256((const __m256i *) add_epi32_one);
+        const __m256i FSM_X1 = pCtx->FSM_X[1];
+        const uint32_t FSM2_L0 = S2_box(_mm256_extract_epi32(FSM_X1, 0));
+        const uint32_t FSM2_L1 = S2_box(_mm256_extract_epi32(FSM_X1, 1));
+        const uint32_t FSM2_L2 = S2_box(_mm256_extract_epi32(FSM_X1, 2));
+        const uint32_t FSM2_L3 = S2_box(_mm256_extract_epi32(FSM_X1, 3));
+        const uint32_t FSM2_L4 = S2_box(_mm256_extract_epi32(FSM_X1, 4));
+        const uint32_t FSM2_L5 = S2_box(_mm256_extract_epi32(FSM_X1, 5));
+        const uint32_t FSM2_L6 = S2_box(_mm256_extract_epi32(FSM_X1, 6));
+        const uint32_t FSM2_L7 = S2_box(_mm256_extract_epi32(FSM_X1, 7));
 
-        shuffle_mask = _mm256_loadu_si256((const __m256i *) start_shuf_mask);
-        gather_mask = _mm256_shuffle_epi8(pCtx->FSM_X[1], shuffle_mask);
-        S2T0 = _mm256_i32gather_epi32(S2_T0, gather_mask, 4);
-
-        shuffle_mask = _mm256_add_epi32(shuffle_mask, offset);
-        gather_mask = _mm256_shuffle_epi8(pCtx->FSM_X[1], shuffle_mask);
-        S2T1 = _mm256_i32gather_epi32(S2_T1, gather_mask, 4);
-
-        shuffle_mask = _mm256_add_epi32(shuffle_mask, offset);
-        gather_mask = _mm256_shuffle_epi8(pCtx->FSM_X[1], shuffle_mask);
-        S2T2 = _mm256_i32gather_epi32(S2_T2, gather_mask, 4);
-
-        shuffle_mask = _mm256_add_epi32(shuffle_mask, offset);
-        gather_mask = _mm256_shuffle_epi8(pCtx->FSM_X[1], shuffle_mask);
-        S2T3 = _mm256_i32gather_epi32(S2_T3, gather_mask, 4);
-
-        S2T0 = _mm256_xor_si256(S2T0, S2T1);
-        S2T2 = _mm256_xor_si256(S2T2, S2T3);
-        pCtx->FSM_X[2] = _mm256_xor_si256(S2T0, S2T2);
+        pCtx->FSM_X[2] = _mm256_set_epi32(FSM2_L7, FSM2_L6, FSM2_L5, FSM2_L4,
+                                          FSM2_L3, FSM2_L2, FSM2_L1, FSM2_L0);
 
         const __m256i T = pCtx->FSM_X[0];
 
@@ -1035,8 +1008,9 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
         for (i = 0; i < 32; i++) {
                 ClockFSM_4(pCtx, &S);
                 ClockLFSR_4(pCtx);
-                pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16] = _mm_xor_si128(
-                        pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16], S);
+                pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16] =
+                        _mm_xor_si128(pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16],
+                                      S);
         }
 }
 
