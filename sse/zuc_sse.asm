@@ -93,65 +93,65 @@ section .text
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*10
+        %define GP_STORAGE      8*8
 %else
         %define XMM_STORAGE     0
+        %define GP_STORAGE      6*8
 %endif
 
-%define VARIABLE_OFFSET XMM_STORAGE
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define GP_OFFSET XMM_STORAGE
 
 %macro FUNC_SAVE 0
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-%ifidn __OUTPUT_FORMAT__, win64
-        push    rdi
-        push    rsi
-%endif
-        mov     r14, rsp
-
+        mov     r11, rsp
         sub     rsp, VARIABLE_OFFSET
-        and     rsp, ~63
+        and     rsp, ~15
 
 %ifidn __OUTPUT_FORMAT__, win64
         ; xmm6:xmm15 need to be maintained for Windows
-        movdqu [rsp + 0*16],xmm6
-        movdqu [rsp + 1*16],xmm7
-        movdqu [rsp + 2*16],xmm8
-        movdqu [rsp + 3*16],xmm9
-        movdqu [rsp + 4*16],xmm10
-        movdqu [rsp + 5*16],xmm11
-        movdqu [rsp + 6*16],xmm12
-        movdqu [rsp + 7*16],xmm13
-        movdqu [rsp + 8*16],xmm14
-        movdqu [rsp + 9*16],xmm15
+        movdqa  [rsp + 0*16], xmm6
+        movdqa  [rsp + 1*16], xmm7
+        movdqa  [rsp + 2*16], xmm8
+        movdqa  [rsp + 3*16], xmm9
+        movdqa  [rsp + 4*16], xmm10
+        movdqa  [rsp + 5*16], xmm11
+        movdqa  [rsp + 6*16], xmm12
+        movdqa  [rsp + 7*16], xmm13
+        movdqa  [rsp + 8*16], xmm14
+        movdqa  [rsp + 9*16], xmm15
+        mov     [rsp + GP_OFFSET + 48], rdi
+        mov     [rsp + GP_OFFSET + 56], rsi
 %endif
+        mov     [rsp + GP_OFFSET],      r12
+        mov     [rsp + GP_OFFSET + 8],  r13
+        mov     [rsp + GP_OFFSET + 16], r14
+        mov     [rsp + GP_OFFSET + 24], r15
+        mov     [rsp + GP_OFFSET + 32], rbx
+        mov     [rsp + GP_OFFSET + 40], r11 ;; rsp pointer
 %endmacro
-
 
 %macro FUNC_RESTORE 0
 
 %ifidn __OUTPUT_FORMAT__, win64
-        movdqu xmm15, [rsp + 9*16]
-        movdqu xmm14, [rsp + 8*16]
-        movdqu xmm13, [rsp + 7*16]
-        movdqu xmm12, [rsp + 6*16]
-        movdqu xmm11, [rsp + 5*16]
-        movdqu xmm10, [rsp + 4*16]
-        movdqu xmm9, [rsp + 3*16]
-        movdqu xmm8, [rsp + 2*16]
-        movdqu xmm7, [rsp + 1*16]
-        movdqu xmm6, [rsp + 0*16]
+        movdqa  xmm6,  [rsp + 0*16]
+        movdqa  xmm7,  [rsp + 1*16]
+        movdqa  xmm8,  [rsp + 2*16]
+        movdqa  xmm9,  [rsp + 3*16]
+        movdqa  xmm10, [rsp + 4*16]
+        movdqa  xmm11, [rsp + 5*16]
+        movdqa  xmm12, [rsp + 6*16]
+        movdqa  xmm13, [rsp + 7*16]
+        movdqa  xmm14, [rsp + 8*16]
+        movdqa  xmm15, [rsp + 9*16]
+        mov     rdi, [rsp + GP_OFFSET + 48]
+        mov     rsi, [rsp + GP_OFFSET + 56]
 %endif
-        mov     rsp, r14
-%ifidn __OUTPUT_FORMAT__, win64
-        pop     rsi
-        pop     rdi
-%endif
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
+        mov     r12, [rsp + GP_OFFSET]
+        mov     r13, [rsp + GP_OFFSET + 8]
+        mov     r14, [rsp + GP_OFFSET + 16]
+        mov     r15, [rsp + GP_OFFSET + 24]
+        mov     rbx, [rsp + GP_OFFSET + 32]
+        mov     rsp, [rsp + GP_OFFSET + 40]
 %endmacro
 
 
@@ -331,14 +331,15 @@ section .text
 ;
 %macro  store_kstr4 0
     pxor        xmm0, [rax + OFS_X3]
+
+    mov         rcx, [rsp]
+    mov         rdx, [rsp + 8]
+    mov         r8,  [rsp + 16]
+    mov         r9,  [rsp + 24]
     pextrd      r15d, xmm0, 3
-    pop         r9              ; *pKeyStr4
     pextrd      r14d, xmm0, 2
-    pop         r8              ; *pKeyStr3
     pextrd      r13d, xmm0, 1
-    pop         rdx             ; *pKeyStr2
     pextrd      r12d, xmm0, 0
-    pop         rcx             ; *pKeyStr1
     mov         [r9], r15d
     mov         [r8], r14d
     mov         [rdx], r13d
@@ -347,10 +348,10 @@ section .text
     add         rdx, 4
     add         r8, 4
     add         r9, 4
-    push        rcx
-    push        rdx
-    push        r8
-    push        r9
+    mov         [rsp],      rcx
+    mov         [rsp + 8],  rdx
+    mov         [rsp + 16], r8
+    mov         [rsp + 24], r9
 %endmacro
 
 
@@ -469,15 +470,7 @@ asm_ZucInitialization_4_sse:
 	%define		pState	r8
 %endif
 
-    ; Save non-volatile registers
-    push    rbx
-    push    rdi
-    push    rsi
-    push    r12
-    push    r13
-    push    r14
-    push    r15
-    push    rdx
+    FUNC_SAVE
 
     lea     rax, [pState]      ; load pointer to LFSR
     push    pState             ; Save LFSR Pointer to stack
@@ -531,8 +524,6 @@ asm_ZucInitialization_4_sse:
     key_expand_4  12, 1
     key_expand_4  14, 1
 
-
-
     ;Third packet key expand here - reset pointers
     pop     rdx             ; get IV array pointer from Stack
     mov     rcx, [rdx+16]      ; load offset to IV 3 in array
@@ -545,6 +536,7 @@ asm_ZucInitialization_4_sse:
     push    rbx             ; save Key pointer
     push    rdx             ; save IV pointer
     lea     rbx, [EK_d]
+
     ; Expand key packet 3
     key_expand_4  0, 2
     key_expand_4  2, 2
@@ -555,8 +547,6 @@ asm_ZucInitialization_4_sse:
     key_expand_4  12, 2
     key_expand_4  14, 2
 
-
-
     ;fourth packet key expand here - reset pointers
     pop     rdx             ; get IV array pointer from Stack
     mov     rcx, [rdx+24]      ; load offset to IV 4 in array
@@ -566,6 +556,7 @@ asm_ZucInitialization_4_sse:
     mov     rcx, [rbx+24]      ; load offset to key 2 in array
     lea     rdi, [rcx]   ; load pointer to Key 2
     lea     rbx, [EK_d]
+
     ; Expand key packet 4
     key_expand_4  0, 3
     key_expand_4  2, 3
@@ -612,17 +603,7 @@ asm_ZucInitialization_4_sse:
     pxor    xmm0, xmm0
     lfsr_updt4  0
 
-
-
-    ; Restore non-volatile registers
-    pop        rdx
-    pop         r15
-    pop         r14
-    pop         r13
-    pop         r12
-    pop         rsi
-    pop         rdi
-    pop         rbx
+    FUNC_RESTORE
 
     ret
 
@@ -651,24 +632,14 @@ asm_ZucInitialization_4_sse:
     mov         rax, [rsp + 8*5] ; 5th parameter from stack
 %endif
 
-    ; Save non-volatile registers
-    push        rbx
-    push        r12
-    push        r13
-    push        r14
-    push        r15
+    FUNC_SAVE
 
-%ifndef LINUX
-    push        rdi
-    push        rsi
-%endif
     ; Store 4 keystream pointers on the stack
-
-    push        pKS1
-    push        pKS2
-    push        pKS3
-    push        pKS4
-
+    sub     rsp, 4*8
+    mov     [rsp],      pKS1
+    mov     [rsp + 8],  pKS2
+    mov     [rsp + 16], pKS3
+    mov     [rsp + 24], pKS4
 
     ; Load state pointer in RAX
     mov         rax, pState
@@ -687,23 +658,10 @@ asm_ZucInitialization_4_sse:
 %assign N N+1
 %endrep
 
-    ; Take keystream pointers off (#push = #pops)
-    pop         rax
-    pop         rax
-    pop         rax
-    pop         rax
+    ;; Restore rsp pointer to value before pushing keystreams
+    add         rsp, 4*8
 
-%ifndef LINUX
-    pop        rsi
-    pop        rdi
-%endif
-
-    ; Restore non-volatile registers
-    pop         r15
-    pop         r14
-    pop         r13
-    pop         r12
-    pop         rbx
+    FUNC_RESTORE
 
 %endmacro
 
@@ -790,50 +748,26 @@ asm_ZucCipher64B_4_sse:
         %define         bufOff  r10
 %endif
 
-        ; save non-volatile registers
-%ifdef LINUX
-        ;; 5 gps to save + 4 gps from input parameters
-        sub     rsp, 72
-        mov     [rsp], rbx
-        mov     [rsp + 8], r12
-        mov     [rsp + 16], r13
-        mov     [rsp + 24], r14
-        mov     [rsp + 32], r15
-        mov     [rsp + 40], pKS
-        mov     [rsp + 48], pIn
-        mov     [rsp + 56], pOut
-        mov     [rsp + 64], bufOff
-%else
+%ifndef LINUX
         mov     bufOff, [rsp + 40]
-        mov     rax, rsp
-        ;; 8 gps to save + 4 gps from parameters +  2 xmm registers
-        sub     rsp, 128
-        and     rsp, -16
-        movdqa  [rsp], xmm6
-        movdqa  [rsp + 16], xmm7
-        mov     [rsp + 32], rdi
-        mov     [rsp + 40], rsi
-        mov     [rsp + 48], rbx
-        mov     [rsp + 56], r12
-        mov     [rsp + 64], r13
-        mov     [rsp + 72], r14
-        mov     [rsp + 80], r15
-        mov     [rsp + 88], rax
-        mov     [rsp + 96], pKS
-        mov     [rsp + 104], pIn
-        mov     [rsp + 112], pOut
-        mov     [rsp + 120], bufOff
 %endif
+        FUNC_SAVE
 
+        ; Store 4 keystream pointers and input registers in the stack
+        sub     rsp, 8*8
         mov     r12, [pKS]
         mov     r13, [pKS + 8]
         mov     r14, [pKS + 16]
         mov     r15, [pKS + 24]
-        ; Store 4 keystream pointers on the stack
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        mov     [rsp],      r12
+        mov     [rsp + 8],  r13
+        mov     [rsp + 16], r14
+        mov     [rsp + 24], r15
+
+        mov     [rsp + 32], pKS
+        mov     [rsp + 40], pIn
+        mov     [rsp + 48], pOut
+        mov     [rsp + 56], bufOff
 
         ; Load state pointer in RAX
         mov     rax, pState
@@ -852,23 +786,18 @@ asm_ZucCipher64B_4_sse:
 %assign N N+1
 %endrep
 
-        ; Restore rsp pointer to value before pushing keystreams
-        add     rsp, 4*8
+        ;; Restore input parameters
+        mov     pKS,    [rsp + 32]
+        mov     pIn,    [rsp + 40]
+        mov     pOut,   [rsp + 48]
+        mov     bufOff, [rsp + 56]
+
+        ;; Restore rsp pointer to value before pushing keystreams
+        ;; and input parameters
+        add     rsp, 8*8
 
         movdqa  xmm15, [rel swap_mask]
 
-        ;; Restore input parameters
-%ifdef LINUX
-        mov     pKS, [rsp + 40]
-        mov     pIn, [rsp + 48]
-        mov     pOut, [rsp + 56]
-        mov     bufOff, [rsp + 64]
-%else
-        mov     pKS, [rsp + 96]
-        mov     pIn, [rsp + 104]
-        mov     pOut,[rsp + 112]
-        mov     bufOff, [rsp + 120]
-%endif
 %assign off 0
 %rep 4
         ;; XOR Input buffer with keystream in rounds of 16B
@@ -912,26 +841,7 @@ asm_ZucCipher64B_4_sse:
 %assign off (off + 16)
 %endrep
 
-        ; Restore non-volatile registers
-%ifdef LINUX
-        mov     rbx, [rsp]
-        mov     r12, [rsp + 8]
-        mov     r13, [rsp + 16]
-        mov     r14, [rsp + 24]
-        mov     r15, [rsp + 32]
-        add     rsp, 72
-%else
-        movdqa  xmm6, [rsp]
-        movdqa  xmm7, [rsp + 16]
-        mov     rdi,  [rsp + 32]
-        mov     rsi,  [rsp + 40]
-        mov     rbx,  [rsp + 48]
-        mov     r12,  [rsp + 56]
-        mov     r13,  [rsp + 64]
-        mov     r14,  [rsp + 72]
-        mov     r15,  [rsp + 80]
-        mov     rsp,  [rsp + 88]
-%endif
+        FUNC_RESTORE
 
         ret
 
