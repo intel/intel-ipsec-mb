@@ -69,10 +69,9 @@ extern zuc_eia3_4_buffer_job_avx
 
 %define job_rax          rax
 
-; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
 struc STACK
-_gpr_save:      resq    8
+_gpr_save:      resq    10
 _rsp_save:      resq    1
 endstruc
 
@@ -109,6 +108,8 @@ SUBMIT_JOB_ZUC_EEA3:
         mov     [rsp + _gpr_save + 8*6], rsi
         mov     [rsp + _gpr_save + 8*7], rdi
 %endif
+        mov     [rsp + _gpr_save + 8*8], state
+        mov     [rsp + _gpr_save + 8*9], job
         mov     [rsp + _rsp_save], rax  ; original SP
 
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -145,10 +146,11 @@ SUBMIT_JOB_ZUC_EEA3:
         cmp     len2, 0
         je      len_is_0_submit_eea3
 
-        push    state
-        push    job
+        ; Move state into r11, as register for state will be used
+        ; to pass parameter to next function
         mov     r11, state
 
+        ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
         ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
         sub     rsp, 48
@@ -172,8 +174,8 @@ SUBMIT_JOB_ZUC_EEA3:
 %ifndef LINUX
         add     rsp, 48
 %endif
-        pop     job
-        pop     state
+        mov     state, [rsp + _gpr_save + 8*8]
+        mov     job,   [rsp + _gpr_save + 8*9]
 
         ;; Clear all lengths (function will encrypt whole buffers)
         mov     qword [state + _zuc_lens], 0
@@ -242,6 +244,7 @@ FLUSH_JOB_ZUC_EEA3:
         mov     [rsp + _gpr_save + 8*6], rsi
         mov     [rsp + _gpr_save + 8*7], rdi
 %endif
+        mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _rsp_save], rax  ; original SP
 
         ; check for empty
@@ -282,12 +285,14 @@ APPEND(skip_eea3_,I):
         cmp     WORD(tmp5), 0
         je      len_is_0_flush_eea3
 
-        push    state
+        ; Move state into r11, as register for state will be used
+        ; to pass parameter to next function
         mov     r11, state
 
+        ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 48 bytes for 6 parameters + 8 bytes to align to 16 bytes
-        sub     rsp, (48+8)
+        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
+        sub     rsp, 48
 %endif
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -306,9 +311,9 @@ APPEND(skip_eea3_,I):
         call    zuc_eea3_4_buffer_job_avx
 
 %ifndef LINUX
-        add     rsp, (48+8)
+        add     rsp, 48
 %endif
-        pop     state
+        mov     state, [rsp + _gpr_save + 8*8]
 
         ;; Clear all lengths (function will encrypt whole buffers)
         mov     qword [state + _zuc_lens], 0
@@ -372,6 +377,8 @@ SUBMIT_JOB_ZUC_EIA3:
         mov     [rsp + _gpr_save + 8*6], rsi
         mov     [rsp + _gpr_save + 8*7], rdi
 %endif
+        mov     [rsp + _gpr_save + 8*8], state
+        mov     [rsp + _gpr_save + 8*9], job
         mov     [rsp + _rsp_save], rax  ; original SP
 
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -408,10 +415,11 @@ SUBMIT_JOB_ZUC_EIA3:
         cmp     len2, 0
         je      len_is_0_submit_eia3
 
-        push    state
-        push    job
+        ; Move state into r11, as register for state will be used
+        ; to pass parameter to next function
         mov     r11, state
 
+        ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
         ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
         sub     rsp, 48
@@ -435,8 +443,8 @@ SUBMIT_JOB_ZUC_EIA3:
 %ifndef LINUX
         add     rsp, 48
 %endif
-        pop     job
-        pop     state
+        mov     state, [rsp + _gpr_save + 8*8]
+        mov     job,   [rsp + _gpr_save + 8*9]
 
         ;; Clear all lengths (function will authenticate all buffers)
         mov     qword [state + _zuc_lens], 0
@@ -505,6 +513,7 @@ FLUSH_JOB_ZUC_EIA3:
         mov     [rsp + _gpr_save + 8*6], rsi
         mov     [rsp + _gpr_save + 8*7], rdi
 %endif
+        mov     [rsp + _gpr_save + 8*8], state
         mov     [rsp + _rsp_save], rax  ; original SP
 
         ; check for empty
@@ -545,12 +554,13 @@ APPEND(skip_eia3_,I):
         cmp     WORD(tmp5), 0
         je      len_is_0_flush_eia3
 
-        push    state
+        ; Move state into r11, as register for state will be used
+        ; to pass parameter to next function
         mov     r11, state
 
 %ifndef LINUX
-        ;; 48 bytes for 6 parameters + 8 bytes to align to 16 bytes
-        sub     rsp, (48+8)
+        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
+        sub     rsp, 48
 %endif
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
@@ -569,9 +579,9 @@ APPEND(skip_eia3_,I):
         call    zuc_eia3_4_buffer_job_avx
 
 %ifndef LINUX
-        add     rsp, (48+8)
+        add     rsp, 48
 %endif
-        pop     state
+        mov     state, [rsp + _gpr_save + 8*8]
 
         ;; Clear all lengths (function will authenticate all buffers)
         mov     qword [state + _zuc_lens], 0
