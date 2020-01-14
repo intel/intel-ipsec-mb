@@ -396,9 +396,7 @@ static inline void snow3g_f9_keystream_words(snow3gKeyState1_t *pCtx,
         ClockLFSR_1(pCtx);
 
         for (i = 0; i < 5; i++) {
-                const uint32_t F = ClockFSM_1(pCtx);
-
-                pKeyStream[i] = F ^ pCtx->LFSR_S[0];
+                pKeyStream[i] = ClockFSM_1(pCtx) ^ pCtx->LFSR_S[0];
                 ClockLFSR_1(pCtx);
         }
 }
@@ -418,7 +416,7 @@ static inline void ShiftLFSR_8(snow3gKeyState8_t *pCtx)
 /* LFSR array shift */
 static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
 {
-        pCtx->iLFSR_X = (pCtx->iLFSR_X + 1) % 16;
+        pCtx->iLFSR_X = (pCtx->iLFSR_X + 1) & 15;
 }
 
 /*---------------------------------------------------------
@@ -474,29 +472,29 @@ static void C0_C11_8(__m256i *S, const __m256i *L0, const __m256i *L11)
  *       ^ table_Alpha_div[LFSR[11] & 0xff]
  *       ^ table_Alpha_mul[LFSR[0] & 0xff]
  * ------------------------------------------------------------------ */
-static inline void C0_C11_4(uint32_t *S, const __m128i *L0, const __m128i *L11)
+static inline __m128i C0_C11_4(const __m128i L0, const __m128i L11)
 {
-        unsigned B11[4], B0[4];
+        const uint8_t L11IDX0 = _mm_extract_epi8(L11, 0);
+        const uint8_t L11IDX1 = _mm_extract_epi8(L11, 4);
+        const uint8_t L11IDX2 = _mm_extract_epi8(L11, 8);
+        const uint8_t L11IDX3 = _mm_extract_epi8(L11, 12);
 
-        B11[0] = _mm_extract_epi8(*L11, 0);
-        B11[1] = _mm_extract_epi8(*L11, 4);
-        B11[2] = _mm_extract_epi8(*L11, 8);
-        B11[3] = _mm_extract_epi8(*L11, 12);
+        const __m128i SL11 = _mm_setr_epi32(snow3g_table_A_div[L11IDX0],
+                                            snow3g_table_A_div[L11IDX1],
+                                            snow3g_table_A_div[L11IDX2],
+                                            snow3g_table_A_div[L11IDX3]);
 
-        S[0] = snow3g_table_A_div[B11[0]];
-        S[1] = snow3g_table_A_div[B11[1]];
-        S[2] = snow3g_table_A_div[B11[2]];
-        S[3] = snow3g_table_A_div[B11[3]];
+        const uint8_t L0IDX0 = _mm_extract_epi8(L0, 3);
+        const uint8_t L0IDX1 = _mm_extract_epi8(L0, 7);
+        const uint8_t L0IDX2 = _mm_extract_epi8(L0, 11);
+        const uint8_t L0IDX3 = _mm_extract_epi8(L0, 15);
 
-        B0[0] = _mm_extract_epi8(*L0, 3);
-        B0[1] = _mm_extract_epi8(*L0, 7);
-        B0[2] = _mm_extract_epi8(*L0, 11);
-        B0[3] = _mm_extract_epi8(*L0, 15);
+        const __m128i SL0 = _mm_setr_epi32(snow3g_table_A_mul[L0IDX0],
+                                           snow3g_table_A_mul[L0IDX1],
+                                           snow3g_table_A_mul[L0IDX2],
+                                           snow3g_table_A_mul[L0IDX3]);
 
-        S[0] ^= snow3g_table_A_mul[B0[0]];
-        S[1] ^= snow3g_table_A_mul[B0[1]];
-        S[2] ^= snow3g_table_A_mul[B0[2]];
-        S[3] ^= snow3g_table_A_mul[B0[3]];
+        return _mm_xor_si128(SL11, SL0);
 }
 
 #ifdef AVX2
@@ -512,19 +510,19 @@ static inline void ClockLFSR_8(snow3gKeyState8_t *pCtx)
         __m256i S, T, U;
 
         U = pCtx->LFSR_X[pCtx->iLFSR_X];
-        S = pCtx->LFSR_X[(pCtx->iLFSR_X + 11) % 16];
+        S = pCtx->LFSR_X[(pCtx->iLFSR_X + 11) & 15];
 
         C0_C11_8(&X2, &U, &S);
 
         T = _mm256_slli_epi32(U, 8);
         S = _mm256_srli_epi32(S, 8);
-        U = _mm256_xor_si256(T, pCtx->LFSR_X[(pCtx->iLFSR_X + 2) % 16]);
+        U = _mm256_xor_si256(T, pCtx->LFSR_X[(pCtx->iLFSR_X + 2) & 15]);
 
         ShiftLFSR_8(pCtx);
 
         S = _mm256_xor_si256(S, U);
         S = _mm256_xor_si256(S, X2);
-        pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16] = S;
+        pCtx->LFSR_X[(pCtx->iLFSR_X + 15) & 15] = S;
 }
 #endif /* AVX2 */
 
@@ -536,25 +534,20 @@ static inline void ClockLFSR_8(snow3gKeyState8_t *pCtx)
  * ------------------------------------------------------------------ */
 static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
 {
-        uint32_t X2[4];
         __m128i S, T, U;
 
         U = pCtx->LFSR_X[pCtx->iLFSR_X];
-        S = pCtx->LFSR_X[(pCtx->iLFSR_X + 11) % 16];
-        C0_C11_4(X2, &U, &S);
+        S = pCtx->LFSR_X[(pCtx->iLFSR_X + 11) & 15];
+        const __m128i X2 = C0_C11_4(U, S);
 
         T = _mm_slli_epi32(U, 8);
         S = _mm_srli_epi32(S, 8);
-        U = _mm_xor_si128(T, pCtx->LFSR_X[(pCtx->iLFSR_X + 2) % 16]);
+        U = _mm_xor_si128(T, pCtx->LFSR_X[(pCtx->iLFSR_X + 2) & 15]);
         ShiftLFSR_4(pCtx);
 
-        /*
-         * One load is equivalent to previous 4 x 32-bit insert operations
-         */
-        T = _mm_loadu_si128((const __m128i *) &X2[0]);
         S = _mm_xor_si128(S, U);
-        S = _mm_xor_si128(S, T);
-        pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16] = S;
+        S = _mm_xor_si128(S, X2);
+        pCtx->LFSR_X[(pCtx->iLFSR_X + 15) & 15] = S;
 }
 
 #ifdef AVX2
@@ -562,7 +555,7 @@ static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
  * ClockFSM function as defined in snow3g standard
  * 8 packets at a time
  * ------------------------------------------------------------------ */
-static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
+static inline __m256i ClockFSM_8(snow3gKeyState8_t *pCtx)
 {
         const uint32_t iLFSR_X_5 = (pCtx->iLFSR_X + 5) & 15;
         const uint32_t iLFSR_X_15 = (pCtx->iLFSR_X + 15) & 15;
@@ -570,7 +563,7 @@ static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
         const __m256i F =
                 _mm256_add_epi32(pCtx->LFSR_X[iLFSR_X_15], pCtx->FSM_X[0]);
 
-        *data = _mm256_xor_si256(F, pCtx->FSM_X[1]);
+        const __m256i ret = _mm256_xor_si256(F, pCtx->FSM_X[1]);
 
         const __m256i R =
                 _mm256_add_epi32(_mm256_xor_si256(pCtx->LFSR_X[iLFSR_X_5],
@@ -603,6 +596,8 @@ static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
                                  S1_box(_mm256_extract_epi32(T, 0)));
 
         pCtx->FSM_X[0] = R;
+
+        return ret;
 }
 #endif /* AVX2 */
 
@@ -610,18 +605,18 @@ static inline void ClockFSM_8(snow3gKeyState8_t *pCtx, __m256i *data)
  * ClockFSM function as defined in snow3g standard
  * 4 packets at a time
  * ------------------------------------------------------------------ */
-static inline void ClockFSM_4(snow3gKeyState4_t *pCtx, __m128i *data)
+static inline __m128i ClockFSM_4(snow3gKeyState4_t *pCtx)
 {
         const uint32_t iLFSR_X = pCtx->iLFSR_X;
         const __m128i F =
-                _mm_add_epi32(pCtx->LFSR_X[(iLFSR_X + 15) % 16],
+                _mm_add_epi32(pCtx->LFSR_X[(iLFSR_X + 15) & 15],
                               pCtx->FSM_X[0]);
         const __m128i R =
-                _mm_add_epi32(_mm_xor_si128(pCtx->LFSR_X[(iLFSR_X + 5) % 16],
+                _mm_add_epi32(_mm_xor_si128(pCtx->LFSR_X[(iLFSR_X + 5) & 15],
                                             pCtx->FSM_X[2]),
                               pCtx->FSM_X[1]);
 
-        *data = _mm_xor_si128(F, pCtx->FSM_X[1]);
+        const __m128i ret = _mm_xor_si128(F, pCtx->FSM_X[1]);
 
         const uint32_t FSM1_L3 = S1_box(_mm_cvtsi128_si32(pCtx->FSM_X[0]));
         const uint32_t FSM2_L3 = S2_box(_mm_cvtsi128_si32(pCtx->FSM_X[1]));
@@ -635,6 +630,8 @@ static inline void ClockFSM_4(snow3gKeyState4_t *pCtx, __m128i *data)
         pCtx->FSM_X[2] = _mm_set_epi32(FSM2_L3, FSM2_L2, FSM2_L1, FSM2_L0);
         pCtx->FSM_X[1] = _mm_set_epi32(FSM1_L3, FSM1_L2, FSM1_L1, FSM1_L0);
         pCtx->FSM_X[0] = R;
+
+        return ret;
 }
 
 /**
@@ -664,52 +661,45 @@ static inline uint32_t snow3g_keystream_1_4(snow3gKeyState1_t *pCtx)
 * @param[in/out]        pKeyStream   Pointer to generated keystream
 *
 *******************************************************************************/
-static inline void snow3g_keystream_1_8(snow3gKeyState1_t *pCtx,
-                                        uint64_t *pKeyStream)
+static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
 {
-        uint64_t F;
-        uint32_t FSM4;
-        uint32_t V0, V1;
-        uint32_t F0, F1;
-        uint32_t R0, R1;
-        uint32_t L0, L1, L11, L12;
-
         /* Merged clock FSM + clock LFSR + clock FSM + clockLFSR
          * in order to avoid redundancies in function processing
          * and less instruction immediate dependencies
          */
-        L0 = pCtx->LFSR_S[0];
-        V0 = pCtx->LFSR_S[2];
-        L1 = pCtx->LFSR_S[1];
-        V1 = pCtx->LFSR_S[3];
-        R1 = pCtx->FSM_R1;
-        L11 = pCtx->LFSR_S[11];
-        L12 = pCtx->LFSR_S[12];
-        V0 ^= snow3g_table_A_mul[L0 >> 24];
-        V1 ^= snow3g_table_A_mul[L1 >> 24];
-        V0 ^= snow3g_table_A_div[L11 & 0xff];
-        V1 ^= snow3g_table_A_div[L12 & 0xff];
-        V0 ^= L0 << 8;
-        V1 ^= L1 << 8;
-        V0 ^= L11 >> 8;
-        V1 ^= L12 >> 8;
-        F0 = pCtx->LFSR_S[15] + R1;
-        F0 ^= L0;
-        F0 ^= pCtx->FSM_R2;
-        R0 = pCtx->FSM_R3 ^ pCtx->LFSR_S[5];
-        R0 += pCtx->FSM_R2;
+        const uint32_t L0 = pCtx->LFSR_S[0];
+        const uint32_t L1 = pCtx->LFSR_S[1];
+        const uint32_t R1 = pCtx->FSM_R1;
+        const uint32_t L11 = pCtx->LFSR_S[11];
+        const uint32_t L12 = pCtx->LFSR_S[12];
+
+        const uint32_t V0 =
+                pCtx->LFSR_S[2] ^
+                snow3g_table_A_mul[L0 >> 24] ^
+                snow3g_table_A_div[L11 & 0xff] ^
+                (L0 << 8) ^
+                (L11 >> 8);
+
+        const uint32_t V1 =
+                pCtx->LFSR_S[3] ^
+                snow3g_table_A_mul[L1 >> 24] ^
+                snow3g_table_A_div[L12 & 0xff] ^
+                (L1 << 8) ^
+                (L12 >> 8);
+
+        const uint32_t F0 = (pCtx->LFSR_S[15] + R1) ^ L0 ^ pCtx->FSM_R2;
+        const uint32_t R0 = (pCtx->FSM_R3 ^ pCtx->LFSR_S[5]) + pCtx->FSM_R2;
 
         pCtx->FSM_R3 = S2_box(pCtx->FSM_R2);
         pCtx->FSM_R2 = S1_box(R1);
-        FSM4 = S1_box(R0);
-        R1 = pCtx->FSM_R3 ^ pCtx->LFSR_S[6];
-        F1 = V0 + R0;
-        F1 ^= L1;
-        F1 ^= pCtx->FSM_R2;
-        R1 += pCtx->FSM_R2;
+
+        const uint32_t FSM4 = S1_box(R0);
+        const uint32_t new_R1 = (pCtx->FSM_R3 ^ pCtx->LFSR_S[6]) + pCtx->FSM_R2;
+        const uint32_t F1 = (V0 + R0) ^ L1 ^ pCtx->FSM_R2;
+
         pCtx->FSM_R3 = S2_box(pCtx->FSM_R2);
         pCtx->FSM_R2 = FSM4;
-        pCtx->FSM_R1 = R1;
+        pCtx->FSM_R1 = new_R1;
 
         /* Shift LFSR twice */
         ShiftTwiceLFSR_1(pCtx);
@@ -718,11 +708,7 @@ static inline void snow3g_keystream_1_8(snow3gKeyState1_t *pCtx,
         pCtx->LFSR_S[14] = V0;
         pCtx->LFSR_S[15] = V1;
 
-        F = F0;
-        F <<= 32;
-        F |= (uint64_t)F1;
-
-        *pKeyStream = F;
+        return (((uint64_t) F0) << 32) | ((uint64_t) F1);
 }
 
 #ifdef AVX2
@@ -739,16 +725,14 @@ static inline void snow3g_keystream_8_8(snow3gKeyState8_t *pCtx,
                                         __m256i *pKeyStreamLo,
                                         __m256i *pKeyStreamHi)
 {
-        __m256i H, L;
-
         /* first set of 4 bytes */
-        ClockFSM_8(pCtx, &L);
-        L = _mm256_xor_si256(L, pCtx->LFSR_X[pCtx->iLFSR_X]);
+        const __m256i L = _mm256_xor_si256(ClockFSM_8(pCtx),
+                                           pCtx->LFSR_X[pCtx->iLFSR_X]);
         ClockLFSR_8(pCtx);
 
         /* second set of 4 bytes */
-        ClockFSM_8(pCtx, &H);
-        H = _mm256_xor_si256(H, pCtx->LFSR_X[pCtx->iLFSR_X]);
+        const __m256i H = _mm256_xor_si256(ClockFSM_8(pCtx),
+                                           pCtx->LFSR_X[pCtx->iLFSR_X]);
         ClockLFSR_8(pCtx);
 
         /* merge the 2 sets */
@@ -765,14 +749,13 @@ static inline void snow3g_keystream_8_8(snow3gKeyState8_t *pCtx,
 * @param[in/out]        pKeyStream   Pointer to generated keystream
 *
 *******************************************************************************/
-static inline void snow3g_keystream_8_4(snow3gKeyState8_t *pCtx,
-                                        __m256i *pKeyStream)
+static inline __m256i snow3g_keystream_8_4(snow3gKeyState8_t *pCtx)
 {
-        __m256i F;
+        const __m256i keyStream = _mm256_xor_si256(ClockFSM_8(pCtx),
+                                                   pCtx->LFSR_X[pCtx->iLFSR_X]);
 
-        ClockFSM_8(pCtx, &F);
-        *pKeyStream = _mm256_xor_si256(F, pCtx->LFSR_X[pCtx->iLFSR_X]);
         ClockLFSR_8(pCtx);
+        return keyStream;
 }
 
 /**
@@ -814,23 +797,14 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
                 0x0c0d0e0f00010203ULL, 0x0405060708090a0bULL
         };
 
-        snow3g_keystream_8_4(pCtx, &temp[0]);
-        snow3g_keystream_8_4(pCtx, &temp[1]);
-        snow3g_keystream_8_4(pCtx, &temp[2]);
-        snow3g_keystream_8_4(pCtx, &temp[3]);
-        snow3g_keystream_8_4(pCtx, &temp[4]);
-        snow3g_keystream_8_4(pCtx, &temp[5]);
-        snow3g_keystream_8_4(pCtx, &temp[6]);
-        snow3g_keystream_8_4(pCtx, &temp[7]);
-
-        temp[0] = _mm256_shuffle_epi8(temp[0], mask1);
-        temp[1] = _mm256_shuffle_epi8(temp[1], mask2);
-        temp[2] = _mm256_shuffle_epi8(temp[2], mask3);
-        temp[3] = _mm256_shuffle_epi8(temp[3], mask4);
-        temp[4] = _mm256_shuffle_epi8(temp[4], mask1);
-        temp[5] = _mm256_shuffle_epi8(temp[5], mask2);
-        temp[6] = _mm256_shuffle_epi8(temp[6], mask3);
-        temp[7] = _mm256_shuffle_epi8(temp[7], mask4);
+        temp[0] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask1);
+        temp[1] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask2);
+        temp[2] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask3);
+        temp[3] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask4);
+        temp[4] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask1);
+        temp[5] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask2);
+        temp[6] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask3);
+        temp[7] = _mm256_shuffle_epi8(snow3g_keystream_8_4(pCtx), mask4);
 
         __m256i blended[8];
         /* blends KS together: 128bit slice consists
@@ -864,10 +838,12 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
         blended[7] = _mm256_shuffle_epi32(temp[7], 0x93);
 
         for (i = 0; i < 4; i++) {
-                pKeyStream[i] = _mm256_permute2x128_si256(blended[i],
-                                                          blended[i + 4], 0x20);
-                pKeyStream[i + 4] = _mm256_permute2x128_si256(
-                        blended[i], blended[i + 4], 0x31);
+                pKeyStream[i] =
+                        _mm256_permute2x128_si256(blended[i],
+                                                  blended[i + 4], 0x20);
+                pKeyStream[i + 4] =
+                        _mm256_permute2x128_si256( blended[i],
+                                                   blended[i + 4], 0x31);
         }
 }
 
@@ -882,14 +858,13 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
 * @param[in/out]        pKeyStream   Pointer to generated keystream
 *
 *******************************************************************************/
-static inline void snow3g_keystream_4_4(snow3gKeyState4_t *pCtx,
-                                        __m128i *pKeyStream)
+static inline __m128i snow3g_keystream_4_4(snow3gKeyState4_t *pCtx)
 {
-        __m128i F;
+        const __m128i keyStream = _mm_xor_si128(ClockFSM_4(pCtx),
+                                                pCtx->LFSR_X[pCtx->iLFSR_X]);
 
-        ClockFSM_4(pCtx, &F);
-        *pKeyStream = _mm_xor_si128(F, pCtx->LFSR_X[pCtx->iLFSR_X]);
         ClockLFSR_4(pCtx);
+        return keyStream;
 }
 
 /**
@@ -906,16 +881,16 @@ static inline void snow3g_keystream_4_8(snow3gKeyState4_t *pCtx,
                                         __m128i *pKeyStreamLo,
                                         __m128i *pKeyStreamHi)
 {
-        __m128i H, L;
-
         /* first set of 4 bytes */
-        ClockFSM_4(pCtx, &L);
-        L = _mm_xor_si128(L, pCtx->LFSR_X[pCtx->iLFSR_X]);
+        const __m128i L = _mm_xor_si128(ClockFSM_4(pCtx),
+                                        pCtx->LFSR_X[pCtx->iLFSR_X]);
+
         ClockLFSR_4(pCtx);
 
         /* second set of 4 bytes */
-        ClockFSM_4(pCtx, &H);
-        H = _mm_xor_si128(H, pCtx->LFSR_X[pCtx->iLFSR_X]);
+        const __m128i H = _mm_xor_si128(ClockFSM_4(pCtx),
+                                        pCtx->LFSR_X[pCtx->iLFSR_X]);
+
         ClockLFSR_4(pCtx);
 
         /* merge the 2 sets */
@@ -942,10 +917,9 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
                         const void *pIV1, const void *pIV2,
                         const void *pIV3, const void *pIV4)
 {
-        uint32_t K, L;
-        int i;
         __m128i R, S, T, U;
-        __m128i V0, V1, T0, T1;
+        __m128i T0, T1;
+        int i;
 
         /* Initialize the LFSR table from constants, Keys, and IV */
 
@@ -953,7 +927,6 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
         static const uint64_t sm[2] = {
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
         };
-        const __m128i *swapMask = (const __m128i *) sm;
 
         R = _mm_loadu_si128((const __m128i *)pIV1);
         S = _mm_loadu_si128((const __m128i *)pIV2);
@@ -962,24 +935,27 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
 
         /* initialize the array block (SSE4) */
         for (i = 0; i < 4; i++) {
-                K = pKeySched->k[i];
-                L = ~K;
-                V0 = _mm_set1_epi32(K);
-                V1 = _mm_set1_epi32(L);
-                pCtx->LFSR_X[i + 4] = V0;
-                pCtx->LFSR_X[i + 12] = V0;
-                pCtx->LFSR_X[i + 0] = V1;
-                pCtx->LFSR_X[i + 8] = V1;
+                const uint32_t K = pKeySched->k[i];
+                const uint32_t L = ~K;
+                const __m128i VK = _mm_set1_epi32(K);
+                const __m128i VL = _mm_set1_epi32(L);
+
+                pCtx->LFSR_X[i + 4] =
+                        pCtx->LFSR_X[i + 12] = VK;
+                pCtx->LFSR_X[i + 0] =
+                        pCtx->LFSR_X[i + 8] = VL;
         }
         /* Update the schedule structure with IVs */
         /* Store the 4 IVs in LFSR by a column/row matrix swap
          * after endianness correction */
 
         /* endianness swap (SSSE3) */
-        R = _mm_shuffle_epi8(R, *swapMask);
-        S = _mm_shuffle_epi8(S, *swapMask);
-        T = _mm_shuffle_epi8(T, *swapMask);
-        U = _mm_shuffle_epi8(U, *swapMask);
+        const __m128i swapMask = _mm_loadu_si128((const __m128i *) sm);
+
+        R = _mm_shuffle_epi8(R, swapMask);
+        S = _mm_shuffle_epi8(S, swapMask);
+        T = _mm_shuffle_epi8(T, swapMask);
+        U = _mm_shuffle_epi8(U, swapMask);
 
         /* row/column dword inversion (SSE2) */
         T0 = _mm_unpacklo_epi32(R, S);
@@ -993,24 +969,24 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
         S = _mm_unpackhi_epi64(T0, T1);
         R = _mm_unpacklo_epi64(T0, T1);
 
-        /*IV ^ LFSR (SSE2) */
+        /* IV ^ LFSR (SSE2) */
         pCtx->LFSR_X[15] = _mm_xor_si128(pCtx->LFSR_X[15], U);
         pCtx->LFSR_X[12] = _mm_xor_si128(pCtx->LFSR_X[12], T);
         pCtx->LFSR_X[10] = _mm_xor_si128(pCtx->LFSR_X[10], S);
         pCtx->LFSR_X[9] = _mm_xor_si128(pCtx->LFSR_X[9], R);
         pCtx->iLFSR_X = 0;
+
         /* FSM initialization (SSE2) */
-        S = _mm_setzero_si128();
-        for (i = 0; i < 3; i++)
-                pCtx->FSM_X[i] = S;
+        pCtx->FSM_X[0] = pCtx->FSM_X[1] =
+                pCtx->FSM_X[2] = _mm_setzero_si128();
 
         /* Initialisation rounds */
         for (i = 0; i < 32; i++) {
-                ClockFSM_4(pCtx, &S);
+                T1 = ClockFSM_4(pCtx);
                 ClockLFSR_4(pCtx);
-                pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16] =
-                        _mm_xor_si128(pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16],
-                                      S);
+                pCtx->LFSR_X[(pCtx->iLFSR_X + 15) & 15] =
+                        _mm_xor_si128(pCtx->LFSR_X[(pCtx->iLFSR_X + 15) & 15],
+                                      T1);
         }
 }
 
@@ -1075,41 +1051,44 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
         /* Store the 4 IVs in LFSR by a column/row matrix swap
          * after endianness correction */
 
-        /* endianness swap (SSSE3) */
+        /* endianness swap */
         mR = _mm256_shuffle_epi8(mR, swapMask);
         mS = _mm256_shuffle_epi8(mS, swapMask);
         mT = _mm256_shuffle_epi8(mT, swapMask);
         mU = _mm256_shuffle_epi8(mU, swapMask);
 
-        /* row/column dword inversion (SSE2) */
+        /* row/column dword inversion */
         T0 = _mm256_unpacklo_epi32(mR, mS);
         mR = _mm256_unpackhi_epi32(mR, mS);
         T1 = _mm256_unpacklo_epi32(mT, mU);
         mT = _mm256_unpackhi_epi32(mT, mU);
 
-        /* row/column qword inversion (SSE2) */
+        /* row/column qword inversion  */
         mU = _mm256_unpackhi_epi64(mR, mT);
         mT = _mm256_unpacklo_epi64(mR, mT);
         mS = _mm256_unpackhi_epi64(T0, T1);
         mR = _mm256_unpacklo_epi64(T0, T1);
 
-        /*IV ^ LFSR (SSE2) */
+        /*IV ^ LFSR  */
         pCtx->LFSR_X[15] = _mm256_xor_si256(pCtx->LFSR_X[15], mU);
         pCtx->LFSR_X[12] = _mm256_xor_si256(pCtx->LFSR_X[12], mT);
         pCtx->LFSR_X[10] = _mm256_xor_si256(pCtx->LFSR_X[10], mS);
         pCtx->LFSR_X[9] = _mm256_xor_si256(pCtx->LFSR_X[9], mR);
         pCtx->iLFSR_X = 0;
-        /* FSM initialization (SSE2) */
-        mS = _mm256_setzero_si256();
-        for (i = 0; i < 3; i++)
-                pCtx->FSM_X[i] = mS;
+
+        /* FSM initialization  */
+        pCtx->FSM_X[0] =
+                pCtx->FSM_X[1] =
+                pCtx->FSM_X[2] = _mm256_setzero_si256();
 
         /* Initialisation rounds */
         for (i = 0; i < 32; i++) {
-                ClockFSM_8(pCtx, &mS);
+                mS = ClockFSM_8(pCtx);
                 ClockLFSR_8(pCtx);
-                pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16] = _mm256_xor_si256(
-                        pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16], mS);
+
+                const uint32_t idx = (pCtx->iLFSR_X + 15) & 15;
+
+                pCtx->LFSR_X[idx] = _mm256_xor_si256(pCtx->LFSR_X[idx], mS);
         }
 }
 
@@ -1138,9 +1117,9 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
                         const void *pIV5, const void *pIV6,
                         const void *pIV7, const void *pIV8)
 {
-        uint32_t K, L;
+        /* uint32_t K, L; */
+        __m256i mR, mS, mT, mU, /* V0, V1, */ T0, T1;
         int i;
-        __m256i mR, mS, mT, mU, V0, V1, T0, T1;
 
         /* Initialize the LFSR table from constants, Keys, and IV */
 
@@ -1157,14 +1136,15 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
 
         /* initialize the array block (SSE4) */
         for (i = 0; i < 4; i++) {
-                K = pKeySched->k[i];
-                L = ~K;
-                V0 = _mm256_set1_epi32(K);
-                V1 = _mm256_set1_epi32(L);
-                pCtx->LFSR_X[i + 4] = V0;
-                pCtx->LFSR_X[i + 12] = V0;
-                pCtx->LFSR_X[i + 0] = V1;
-                pCtx->LFSR_X[i + 8] = V1;
+                const uint32_t K = pKeySched->k[i];
+                const uint32_t L = ~K;
+                const __m256i V0 = _mm256_set1_epi32(K);
+                const __m256i V1 = _mm256_set1_epi32(L);
+
+                pCtx->LFSR_X[i + 4] =
+                        pCtx->LFSR_X[i + 12] = V0;
+                pCtx->LFSR_X[i + 0] =
+                        pCtx->LFSR_X[i + 8] = V1;
         }
 
         /* Update the schedule structure with IVs */
@@ -1195,17 +1175,20 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
         pCtx->LFSR_X[10] = _mm256_xor_si256(pCtx->LFSR_X[10], mS);
         pCtx->LFSR_X[9] = _mm256_xor_si256(pCtx->LFSR_X[9], mR);
         pCtx->iLFSR_X = 0;
+
         /* FSM initialization (SSE2) */
-        mS = _mm256_setzero_si256();
-        for (i = 0; i < 3; i++)
-                pCtx->FSM_X[i] = mS;
+        pCtx->FSM_X[0] =
+                pCtx->FSM_X[1] =
+                pCtx->FSM_X[2] = _mm256_setzero_si256();
 
         /* Initialisation rounds */
         for (i = 0; i < 32; i++) {
-                ClockFSM_8(pCtx, &mS);
+                mS = ClockFSM_8(pCtx);
                 ClockLFSR_8(pCtx);
-                pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16] = _mm256_xor_si256(
-                        pCtx->LFSR_X[(pCtx->iLFSR_X + 15) % 16], mS);
+
+                const uint32_t idx = (pCtx->iLFSR_X + 15) & 15;
+
+                pCtx->LFSR_X[idx] = _mm256_xor_si256(pCtx->LFSR_X[idx], mS);
         }
 }
 #endif /* AVX2 */
@@ -1271,7 +1254,7 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
         /* Now run the block cipher */
 
         /* Start with potential partial block (due to offset and length) */
-        snow3g_keystream_1_8(pCtx, &KS8);
+        KS8 = snow3g_keystream_1_8(pCtx);
         KS8bit = KS8 >> remainOffset;
         /* Only one block to encrypt */
         if (cipherLengthInBits < (64 - remainOffset)) {
@@ -1330,7 +1313,7 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
 
         while (cipherLengthInBits) {
                 /* produce the next block of keystream */
-                snow3g_keystream_1_8(pCtx, &KS8);
+                KS8 = snow3g_keystream_1_8(pCtx);
                 KS8bit = (KS8 >> remainOffset) | shiftrem;
                 if (remainOffset != 0)
                         shiftrem = KS8 << (64 - remainOffset);
@@ -1384,8 +1367,8 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
                              const uint32_t lengthInBytes)
 {
         uint32_t qwords = lengthInBytes / SNOW3G_8_BYTES; /* number of qwords */
-        uint32_t words = lengthInBytes & 4; /* remaining word if not 0 */
-        uint32_t bytes = lengthInBytes & 3; /* remaining bytes */
+        const uint32_t words = lengthInBytes & 4; /* remaining word if not 0 */
+        const uint32_t bytes = lengthInBytes & 3; /* remaining bytes */
         uint32_t KS4;                       /* 4 bytes of keystream */
         uint64_t KS8;                       /* 8 bytes of keystream */
         const uint8_t *pBufferIn = pIn;
@@ -1394,7 +1377,7 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
         /* process 64 bits at a time */
         while (qwords--) {
                 /* generate keystream 8 bytes at a time */
-                snow3g_keystream_1_8(pCtx, &KS8);
+                KS8 = snow3g_keystream_1_8(pCtx);
 
                 /* xor keystream 8 bytes at a time */
                 pBufferIn = xor_keystrm_rev(pBufferOut, pBufferIn, KS8);
@@ -1409,7 +1392,7 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
                         uint8_t safeBuff[8];
 
                         memset(safeBuff, 0, SNOW3G_8_BYTES);
-                        snow3g_keystream_1_8(pCtx, &KS8);
+                        KS8 = snow3g_keystream_1_8(pCtx);
                         memcpy_keystrm(safeBuff, pBufferIn, 4 + bytes);
                         xor_keystrm_rev(buftemp, safeBuff, KS8);
                         memcpy_keystrm(pBufferOut, buftemp, 4 + bytes);
@@ -1448,137 +1431,36 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
 /**
 *******************************************************************************
 * @description
-* This function converts the state from a 4 buffer state structure to 1
+* This function converts the state from a 8 buffer state structure to 1
 * buffer state structure.
 *
 * @param[in]    pSrcState               Pointer to the source state
 * @param[in]    pDstState               Pointer to the destination state
-* @param[in]    NumBuffers              Number of buffers
+* @param[in]    NumBuffer               Buffer number
 *
 *******************************************************************************/
-static inline void snow3gStateConvert_8(snow3gKeyState8_t *pSrcState,
+static inline void snow3gStateConvert_8(const snow3gKeyState8_t *pSrcState,
                                         snow3gKeyState1_t *pDstState,
-                                        uint32_t NumBuffers)
+                                        const uint32_t NumBuffer)
 {
-        uint32_t T = 0, iLFSR_X = pSrcState->iLFSR_X;
-        __m256i *LFSR_X = pSrcState->LFSR_X;
-        int i;
+        const uint32_t iLFSR_X = pSrcState->iLFSR_X;
+        const __m256i *LFSR_X = pSrcState->LFSR_X;
+        uint32_t i;
 
         for (i = 0; i < 16; i++) {
-                switch (NumBuffers) {
-                case 0:
-                        T = _mm256_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 0);
-                        break;
-                case 1:
-                        T = _mm256_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 1);
-                        break;
-                case 2:
-                        T = _mm256_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 2);
-                        break;
-                case 3:
-                        T = _mm256_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 3);
-                        break;
-                case 4:
-                        T = _mm256_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 4);
-                        break;
-                case 5:
-                        T = _mm256_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 5);
-                        break;
-                case 6:
-                        T = _mm256_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 6);
-                        break;
-                case 7:
-                        T = _mm256_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 7);
-                        break;
-                }
-                pDstState->LFSR_S[i] = T;
-        }
-        i = 0;
-        switch (NumBuffers) {
-        case 0:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 0);
-                break;
-        case 1:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 1);
-                break;
-        case 2:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 2);
-                break;
-        case 3:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 3);
-                break;
-        case 4:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 4);
-                break;
-        case 5:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 5);
-                break;
-        case 6:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 6);
-                break;
-        case 7:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 7);
-                break;
-        }
-        pDstState->FSM_R1 = T;
+                const uint32_t *pLFSR_X =
+                        (const uint32_t *) &LFSR_X[(i + iLFSR_X) & 15];
 
-        i = 1;
-        switch (NumBuffers) {
-        case 0:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 0);
-                break;
-        case 1:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 1);
-                break;
-        case 2:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 2);
-                break;
-        case 3:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 3);
-                break;
-        case 4:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 4);
-                break;
-        case 5:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 5);
-                break;
-        case 6:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 6);
-                break;
-        case 7:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 7);
-                break;
+                pDstState->LFSR_S[i] = pLFSR_X[NumBuffer];
         }
-        pDstState->FSM_R2 = T;
 
-        i = 2;
-        switch (NumBuffers) {
-        case 0:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 0);
-                break;
-        case 1:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 1);
-                break;
-        case 2:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 2);
-                break;
-        case 3:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 3);
-                break;
-        case 4:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 4);
-                break;
-        case 5:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 5);
-                break;
-        case 6:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 6);
-                break;
-        case 7:
-                T = _mm256_extract_epi32(pSrcState->FSM_X[i], 7);
-                break;
-        }
-        pDstState->FSM_R3 = T;
+        const uint32_t *pFSM_X0 = (const uint32_t *)&pSrcState->FSM_X[0];
+        const uint32_t *pFSM_X1 = (const uint32_t *)&pSrcState->FSM_X[1];
+        const uint32_t *pFSM_X2 = (const uint32_t *)&pSrcState->FSM_X[2];
+
+        pDstState->FSM_R1 = pFSM_X0[NumBuffer];
+        pDstState->FSM_R2 = pFSM_X1[NumBuffer];
+        pDstState->FSM_R3 = pFSM_X2[NumBuffer];
 }
 #endif /* AVX2 */
 
@@ -1590,85 +1472,31 @@ static inline void snow3gStateConvert_8(snow3gKeyState8_t *pSrcState,
 *
 * @param[in]    pSrcState               Pointer to the source state
 * @param[in]    pDstState               Pointer to the destination state
-* @param[in]    NumBuffers              Number of buffers
+* @param[in]    NumBuffer               Buffer number
 *
 *******************************************************************************/
-static inline void snow3gStateConvert_4(snow3gKeyState4_t *pSrcState,
+static inline void snow3gStateConvert_4(const snow3gKeyState4_t *pSrcState,
                                         snow3gKeyState1_t *pDstState,
-                                        uint32_t NumBuffers)
+                                        const uint32_t NumBuffer)
 {
+        const uint32_t iLFSR_X = pSrcState->iLFSR_X;
+        const __m128i *LFSR_X = pSrcState->LFSR_X;
         uint32_t i;
-        uint32_t T = 0, iLFSR_X = pSrcState->iLFSR_X;
-        __m128i *LFSR_X = pSrcState->LFSR_X;
 
         for (i = 0; i < 16; i++) {
-                switch (NumBuffers) {
-                case 0:
-                        T = _mm_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 0);
-                        break;
-                case 1:
-                        T = _mm_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 1);
-                        break;
-                case 2:
-                        T = _mm_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 2);
-                        break;
-                case 3:
-                        T = _mm_extract_epi32(LFSR_X[(i + iLFSR_X) % 16], 3);
-                        break;
-                }
-                pDstState->LFSR_S[i] = T;
+                const uint32_t *pLFSR_X =
+                        (const uint32_t *) &LFSR_X[(i + iLFSR_X) & 15];
+
+                pDstState->LFSR_S[i] = pLFSR_X[NumBuffer];
         }
 
-        i = 0;
-        switch (NumBuffers) {
-        case 0:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 0);
-                break;
-        case 1:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 1);
-                break;
-        case 2:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 2);
-                break;
-        case 3:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 3);
-                break;
-        }
-        pDstState->FSM_R1 = T;
+        const uint32_t *pFSM_X0 = (const uint32_t *)&pSrcState->FSM_X[0];
+        const uint32_t *pFSM_X1 = (const uint32_t *)&pSrcState->FSM_X[1];
+        const uint32_t *pFSM_X2 = (const uint32_t *)&pSrcState->FSM_X[2];
 
-        i = 1;
-        switch (NumBuffers) {
-        case 0:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 0);
-                break;
-        case 1:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 1);
-                break;
-        case 2:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 2);
-                break;
-        case 3:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 3);
-                break;
-        }
-        pDstState->FSM_R2 = T;
-
-        i = 2;
-        switch (NumBuffers) {
-        case 0:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 0);
-                break;
-        case 1:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 1);
-                break;
-        case 2:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 2);
-                break;
-        case 3:
-                T = _mm_extract_epi32(pSrcState->FSM_X[i], 3);
-                break;
-        }
-        pDstState->FSM_R3 = T;
+        pDstState->FSM_R1 = pFSM_X0[NumBuffer];
+        pDstState->FSM_R2 = pFSM_X1[NumBuffer];
+        pDstState->FSM_R3 = pFSM_X2[NumBuffer];
 }
 
 /*---------------------------------------------------------
@@ -1902,14 +1730,14 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
         snow3gStateInitialize_4(&ctx, pHandle, pIV1, pIV2, pIV3, pIV4);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        snow3g_keystream_4_4(&ctx, &L);
+        L = snow3g_keystream_4_4(&ctx);
 
         lenInBytes1 -= bytes;
         lenInBytes2 -= bytes;
         lenInBytes3 -= bytes;
         lenInBytes4 -= bytes;
 
-        /* generates 4 bytes at a time on all streams */
+        /* generates 8 bytes at a time on all streams */
         while (qwords--) {
                 snow3g_keystream_4_8(&ctx, &L, &H);
                 pBufIn1 = xor_keystrm_rev(pBufOut1, pBufIn1,
@@ -2003,7 +1831,7 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
         snow3gStateInitialize_8_multiKey(&ctx, pKey, IV);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        snow3g_keystream_8_4(&ctx, &L);
+        L = snow3g_keystream_8_4(&ctx);
 
         for (i = 0; i < 8; i++)
                 tLenInBytes[i] -= bytes;
@@ -2093,7 +1921,7 @@ snow3g_8_buffer_ks_32_multi(uint32_t bytes,
         /* Clock FSM and LFSR once, ignore the keystream */
         __m256i ks[8];
 
-        snow3g_keystream_8_4(&ctx, ks);
+        (void) snow3g_keystream_8_4(&ctx);
 
         for (i = 0; i < 8; i++)
                 tLenInBytes[i] -= bytes;
@@ -2229,7 +2057,7 @@ snow3g_8_buffer_ks_8(uint32_t bytes,
                                 pIV4, pIV5, pIV6, pIV7, pIV8);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        snow3g_keystream_8_4(&ctx, &L);
+        (void) snow3g_keystream_8_4(&ctx);
 
         lenInBytes1 -= bytes;
         lenInBytes2 -= bytes;
@@ -2406,7 +2234,7 @@ snow3g_8_buffer_ks_32(uint32_t bytes,
         /* Clock FSM and LFSR once, ignore the keystream */
         __m256i ks[8];
 
-        snow3g_keystream_8_4(&ctx, ks);
+        (void) snow3g_keystream_8_4(&ctx);
 
         lenInBytes1 -= bytes;
         lenInBytes2 -= bytes;
