@@ -941,6 +941,8 @@ typedef struct MB_MGR {
         /*
          * ARCH handlers / API
          * Careful as changes here can break ABI compatibility
+         * (always include function pointers at the end of the list,
+         * before "earliest_job")
          */
         get_next_job_t          get_next_job;
         submit_job_t            submit_job;
@@ -994,13 +996,11 @@ typedef struct MB_MGR {
         aes_gcm_pre_t           gcm128_pre;
         aes_gcm_pre_t           gcm192_pre;
         aes_gcm_pre_t           gcm256_pre;
-        ghash_t                 ghash;
 
         zuc_eea3_1_buffer_t eea3_1_buffer;
         zuc_eea3_4_buffer_t eea3_4_buffer;
         zuc_eea3_n_buffer_t eea3_n_buffer;
         zuc_eia3_1_buffer_t eia3_1_buffer;
-        zuc_eia3_n_buffer_t eia3_n_buffer;
 
         kasumi_f8_1_buffer_t      f8_1_buffer;
         kasumi_f8_1_buffer_bit_t  f8_1_buffer_bit;
@@ -1025,6 +1025,9 @@ typedef struct MB_MGR {
         snow3g_f9_1_buffer_t snow3g_f9_1_buffer;
         snow3g_init_key_sched_t snow3g_init_key_sched;
         snow3g_key_sched_size_t snow3g_key_sched_size;
+
+        ghash_t                 ghash;
+        zuc_eia3_n_buffer_t     eia3_n_buffer;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
