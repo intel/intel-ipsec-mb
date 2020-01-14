@@ -218,7 +218,8 @@ static inline uint32_t S2_box(const uint32_t x)
         emulate_AESENCLAST(&v_fixup, &key);
 
         const uint32_t ret = v.dword[0];
-        const uint32_t ret_nomixc = v_fixup.dword[0];
+        const __m128i ret_nomixc =
+                _mm_loadu_si128((const __m128i *) &v_fixup.qword[0]);
 #else
         __m128i m;
 
@@ -232,17 +233,12 @@ static inline uint32_t S2_box(const uint32_t x)
          * allows to determine the fixup value to be applied
          * on result of aesenc to produce correct result for SNOW3G.
          */
-        const uint32_t ret_nomixc =
-                _mm_cvtsi128_si32(_mm_aesenclast_si128(m, _mm_setzero_si128()));
+        const __m128i ret_nomixc =
+                _mm_aesenclast_si128(m, _mm_setzero_si128());
         const uint32_t ret =
                 _mm_cvtsi128_si32(_mm_aesenc_si128(m, _mm_setzero_si128()));
 #endif
-
-        const uint32_t fixup_idx =
-                ((ret_nomixc & 0x80000000) >> (31 - 3)) |
-                ((ret_nomixc & 0x00800000) >> (23 - 2)) |
-                ((ret_nomixc & 0x00008000) >> (15 - 1)) |
-                ((ret_nomixc & 0x00000080) >> 7);
+        const uint32_t fixup_idx = _mm_movemask_epi8(ret_nomixc) & 15;
 
         return ret ^ mixc_fixup_tab[fixup_idx];
 }
