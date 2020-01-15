@@ -120,6 +120,150 @@ static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 #endif /* AVX2 */
 
 /* -------------------------------------------------------------------
+ * Parallel safe lookup of 16 indexes in the 256 x 8-bit element table
+ * ------------------------------------------------------------------ */
+static inline __m128i lut8_256(const __m128i indexes, const void *lut)
+{
+        const __m128i *lut128 = (const __m128i *) lut;
+        const __m128i m_top_idx =
+                _mm_and_si128(indexes, _mm_set1_epi32(0xf0f0f0f0));
+        const __m128i m_low_idx =
+                _mm_and_si128(indexes, _mm_set1_epi32(0x0f0f0f0f));
+
+        __m128i cidx1, cidx2, cidx3, cidx4;
+        __m128i data1, data2, data3, data4;
+        __m128i res1, res2, res3, res4;
+
+        /* bytes 0 - 64 */
+        data1 = _mm_loadu_si128(&lut128[0]);
+        data2 = _mm_loadu_si128(&lut128[1]);
+        data3 = _mm_loadu_si128(&lut128[2]);
+        data4 = _mm_loadu_si128(&lut128[3]);
+
+        cidx1 = _mm_set1_epi32(0x00000000);
+        cidx2 = _mm_set1_epi32(0x10101010);
+        cidx3 = _mm_set1_epi32(0x20202020);
+        cidx4 = _mm_set1_epi32(0x30303030);
+
+        cidx1 = _mm_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
+        cidx2 = _mm_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
+        cidx3 = _mm_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
+        cidx4 = _mm_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
+
+        data1 = _mm_shuffle_epi8(data1, m_low_idx);
+        data2 = _mm_shuffle_epi8(data2, m_low_idx);
+        data3 = _mm_shuffle_epi8(data3, m_low_idx);
+        data4 = _mm_shuffle_epi8(data4, m_low_idx);
+
+        res1 = _mm_and_si128(data1, cidx1);
+        res2 = _mm_and_si128(data2, cidx2);
+        res3 = _mm_and_si128(data3, cidx3);
+        res4 = _mm_and_si128(data4, cidx4);
+
+        /* bytes 64 - 127 */
+        data1 = _mm_loadu_si128(&lut128[4]);
+        data2 = _mm_loadu_si128(&lut128[5]);
+        data3 = _mm_loadu_si128(&lut128[6]);
+        data4 = _mm_loadu_si128(&lut128[7]);
+
+        cidx1 = _mm_set1_epi32(0x40404040);
+        cidx2 = _mm_set1_epi32(0x50505050);
+        cidx3 = _mm_set1_epi32(0x60606060);
+        cidx4 = _mm_set1_epi32(0x70707070);
+
+        cidx1 = _mm_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
+        cidx2 = _mm_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
+        cidx3 = _mm_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
+        cidx4 = _mm_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
+
+        data1 = _mm_shuffle_epi8(data1, m_low_idx);
+        data2 = _mm_shuffle_epi8(data2, m_low_idx);
+        data3 = _mm_shuffle_epi8(data3, m_low_idx);
+        data4 = _mm_shuffle_epi8(data4, m_low_idx);
+
+        data1 = _mm_and_si128(data1, cidx1);
+        data2 = _mm_and_si128(data2, cidx2);
+        data3 = _mm_and_si128(data3, cidx3);
+        data4 = _mm_and_si128(data4, cidx4);
+
+        res1 = _mm_or_si128(res1, data1);
+        res2 = _mm_or_si128(res2, data2);
+        res3 = _mm_or_si128(res3, data3);
+        res4 = _mm_or_si128(res4, data4);
+
+        /* bytes 128 - 191 */
+        data1 = _mm_loadu_si128(&lut128[8]);
+        data2 = _mm_loadu_si128(&lut128[9]);
+        data3 = _mm_loadu_si128(&lut128[10]);
+        data4 = _mm_loadu_si128(&lut128[11]);
+
+        cidx1 = _mm_set1_epi32(0x80808080);
+        cidx2 = _mm_set1_epi32(0x90909090);
+        cidx3 = _mm_set1_epi32(0xa0a0a0a0);
+        cidx4 = _mm_set1_epi32(0xb0b0b0b0);
+
+        cidx1 = _mm_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
+        cidx2 = _mm_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
+        cidx3 = _mm_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
+        cidx4 = _mm_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
+
+        data1 = _mm_shuffle_epi8(data1, m_low_idx);
+        data2 = _mm_shuffle_epi8(data2, m_low_idx);
+        data3 = _mm_shuffle_epi8(data3, m_low_idx);
+        data4 = _mm_shuffle_epi8(data4, m_low_idx);
+
+        data1 = _mm_and_si128(data1, cidx1);
+        data2 = _mm_and_si128(data2, cidx2);
+        data3 = _mm_and_si128(data3, cidx3);
+        data4 = _mm_and_si128(data4, cidx4);
+
+        res1 = _mm_or_si128(res1, data1);
+        res2 = _mm_or_si128(res2, data2);
+        res3 = _mm_or_si128(res3, data3);
+        res4 = _mm_or_si128(res4, data4);
+
+        /* bytes 192 - 255 */
+        data1 = _mm_loadu_si128(&lut128[12]);
+        data2 = _mm_loadu_si128(&lut128[13]);
+        data3 = _mm_loadu_si128(&lut128[14]);
+        data4 = _mm_loadu_si128(&lut128[15]);
+
+        cidx1 = _mm_set1_epi32(0xc0c0c0c0);
+        cidx2 = _mm_set1_epi32(0xd0d0d0d0);
+        cidx3 = _mm_set1_epi32(0xe0e0e0e0);
+        cidx4 = _mm_set1_epi32(0xf0f0f0f0);
+
+        cidx1 = _mm_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
+        cidx2 = _mm_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
+        cidx3 = _mm_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
+        cidx4 = _mm_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
+
+        data1 = _mm_shuffle_epi8(data1, m_low_idx);
+        data2 = _mm_shuffle_epi8(data2, m_low_idx);
+        data3 = _mm_shuffle_epi8(data3, m_low_idx);
+        data4 = _mm_shuffle_epi8(data4, m_low_idx);
+
+        data1 = _mm_and_si128(data1, cidx1);
+        data2 = _mm_and_si128(data2, cidx2);
+        data3 = _mm_and_si128(data3, cidx3);
+        data4 = _mm_and_si128(data4, cidx4);
+
+        res1 = _mm_or_si128(res1, res2);
+        res3 = _mm_or_si128(res3, res4);
+
+        res2 = _mm_or_si128(data1, data2);
+        res4 = _mm_or_si128(data3, data4);
+
+        res1 = _mm_or_si128(res1, res2);
+        res1 = _mm_or_si128(res1, res3);
+        res1 = _mm_or_si128(res1, res4);
+
+        /* finish */
+
+        return res1;
+}
+
+/* -------------------------------------------------------------------
  * LFSR array shift by 2 positions
  * ------------------------------------------------------------------ */
 static inline void ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
@@ -176,29 +320,28 @@ static inline uint32_t S2_box(const uint32_t x)
                 0x72007200, 0x00007272, 0x72000072, 0x00000000
         };
 
+        /* Perform invSR(SQ(x)) transform through lookup table */
+#ifdef SAFE_LOOKUP
+        const __m128i par_lut =
+                lut8_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
+        const uint32_t new_x = _mm_cvtsi128_si32(par_lut);
+#else
         const uint8_t w3 = (const uint8_t)(x);
         const uint8_t w2 = (const uint8_t)(x >> 8);
         const uint8_t w1 = (const uint8_t)(x >> 16);
         const uint8_t w0 = (const uint8_t)(x >> 24);
 
-        /* Perform invSR(SQ(x)) transform through lookup table */
-#ifdef SAFE_LOOKUP
-        const uint8_t xfrm_w3 = SNOW3G_SAFE_LUT8(snow3g_invSR_SQ, w3, 256);
-        const uint8_t xfrm_w2 = SNOW3G_SAFE_LUT8(snow3g_invSR_SQ, w2, 256);
-        const uint8_t xfrm_w1 = SNOW3G_SAFE_LUT8(snow3g_invSR_SQ, w1, 256);
-        const uint8_t xfrm_w0 = SNOW3G_SAFE_LUT8(snow3g_invSR_SQ, w0, 256);
-#else
         const uint8_t xfrm_w3 = snow3g_invSR_SQ[w3];
         const uint8_t xfrm_w2 = snow3g_invSR_SQ[w2];
         const uint8_t xfrm_w1 = snow3g_invSR_SQ[w1];
         const uint8_t xfrm_w0 = snow3g_invSR_SQ[w0];
-#endif
 
         /* construct new 32-bit word after the transformation */
         const uint32_t new_x = ((uint32_t) xfrm_w3) |
                 (((uint32_t) xfrm_w2) << 8) |
                 (((uint32_t) xfrm_w1) << 16) |
                 (((uint32_t) xfrm_w0) << 24);
+#endif
 
         /* use AESNI operations for the rest of the S2 box
          * in: new_x
@@ -220,27 +363,27 @@ static inline uint32_t S2_box(const uint32_t x)
         const uint32_t ret = v.dword[0];
         const __m128i ret_nomixc =
                 _mm_loadu_si128((const __m128i *) &v_fixup.qword[0]);
+        const uint32_t fixup_idx = _mm_movemask_epi8(ret_nomixc);
 #else
-        __m128i m;
 
         /*
          * Because of mix column operation the 32-bit word has to be
          * broadcasted across the 128-bit vector register for S1/AESENC
          */
-        m = _mm_shuffle_epi32(_mm_cvtsi32_si128(new_x), 0);
+        const __m128i m = _mm_shuffle_epi32(_mm_cvtsi32_si128(new_x), 0);
+
         /*
          * aesenclast does not perform mix column operation and
          * allows to determine the fixup value to be applied
          * on result of aesenc to produce correct result for SNOW3G.
          */
-        const __m128i ret_nomixc =
-                _mm_aesenclast_si128(m, _mm_setzero_si128());
+        const __m128i ret_nomixc = _mm_aesenclast_si128(m, _mm_setzero_si128());
+        const uint32_t fixup_idx = _mm_movemask_epi8(ret_nomixc);
         const uint32_t ret =
                 _mm_cvtsi128_si32(_mm_aesenc_si128(m, _mm_setzero_si128()));
 #endif
-        const uint32_t fixup_idx = _mm_movemask_epi8(ret_nomixc) & 15;
 
-        return ret ^ mixc_fixup_tab[fixup_idx];
+        return ret ^ mixc_fixup_tab[fixup_idx & 15];
 }
 
 /* -------------------------------------------------------------------
