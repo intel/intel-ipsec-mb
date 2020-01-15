@@ -134,7 +134,7 @@ static inline __m128i lut8_256(const __m128i indexes, const void *lut)
         __m128i data1, data2, data3, data4;
         __m128i res1, res2, res3, res4;
 
-        /* bytes 0 - 64 */
+        /* bytes 0 - 63 */
         data1 = _mm_loadu_si128(&lut128[0]);
         data2 = _mm_loadu_si128(&lut128[1]);
         data3 = _mm_loadu_si128(&lut128[2]);
@@ -302,24 +302,100 @@ static inline uint32_t S1_box(const uint32_t x)
 #endif
 }
 
+/**
+ * @brief SNOW3G S2 mix column correction function vs AESENC operation
+ *
+ * Mix column AES GF() reduction poly is 0x1B and SNOW3G reduction poly is 0x69.
+ * The fix-up value is 0x1B ^ 0x69 = 0x72 and needs to be applied on selected
+ * bytes of the 32-bit word.
+ *
+ * 'aesenclast' operation does not perform mix column operation and
+ * allows to determine the fix-up value to be applied on result of 'aesenc'
+ * in order to produce correct result for SNOW3G.
+ *
+ * This function implements basic look-up table method with a fix-up values.
+ * An index to the fix-up table is identified by bits 31, 23, 15 and 7 of
+ * \a no_mixc word.
+ *
+ * @param no_mixc result of 'aesenclast' operation, 32-bit word index 0 only
+ * @param mixc    result of 'aesenc' operation, 32-bit word index 0 only
+ *
+ * @return corrected \a mixc 32-bit word for SNOW3G S2
+ */
+static inline uint32_t
+s2_mixc_fixup_scalar(const __m128i no_mixc, const __m128i mixc)
+{
+        static const uint32_t fixup_table[16] = {
+                0x00000000, 0x72000072, 0x00007272, 0x72007200,
+                0x00727200, 0x72727272, 0x00720072, 0x72720000,
+                /* NOTE: the table is symmetric */
+                0x72720000, 0x00720072, 0x72727272, 0x00727200,
+                0x72007200, 0x00007272, 0x72000072, 0x00000000
+        };
+        const uint32_t index = _mm_movemask_epi8(no_mixc) & 15;
+
+        return _mm_cvtsi128_si32(mixc) ^ fixup_table[index];
+}
+
+/**
+ * @brief SNOW3G S2 mix column correction function vs AESENC operation
+ *
+ * Mix column AES GF() reduction poly is 0x1B and SNOW3G reduction poly is 0x69.
+ * The fix-up value is 0x1B ^ 0x69 = 0x72 and needs to be applied on selected
+ * bytes of the 32-bit word.
+ *
+ * 'aesenclast' operation does not perform mix column operation and
+ * allows to determine the fix-up value to be applied on result of 'aesenc'
+ * in order to produce correct result for SNOW3G.
+ *
+ * This function implements more scalable SIMD method to apply the fix-up value
+ * for multiple stream at the same time.
+ *
+ * a = \a no_mixc bit-31
+ * b = \a no_mixc bit-23
+ * c = \a no_mixc bit-15
+ * d = \a no_mixc bit-7
+ *
+ * mask0_f(), mask1_f(), mask2_f() and mask3_f() functions
+ * specify if corresponding byte of \a mixc word, i.e. 0, 1, 2 or 3
+ * respectively, should be corrected.
+ * Definition of the functions:
+ *     mask0_f(a, b, c, d) = c'd + cd' => c xor d
+ *     mask1_f(a, b, c, d) = b'c + bc' => b xor c
+ *     mask2_f(a, b, c, d) = a'b + ab' => a xor b
+ *     mask3_f(a, b, c, d) = a'd + ad' => d xor a
+ * The above are resolved through SIMD instructions: and, cmpeq, shuffle and
+ * xor. As the result mask is obtained with 0xff byte value at positions
+ * that require 0x72 fix up value to be applied.
+ *
+ * @param no_mixc result of 'aesenclast' operation, 4 x 32-bit words
+ * @param mixc    result of 'aesenc' operation, 4 x 32-bit words
+ *
+ * @return corrected \a mixc for SNOW3G S2, 4 x 32-bit words
+ */
+static inline __m128i s2_mixc_fixup(const __m128i no_mixc, const __m128i mixc)
+{
+        const __m128i m_shuf = _mm_set_epi32(0x0c0f0e0d, 0x080b0a09,
+                                             0x04070605, 0x00030201);
+        const __m128i m_bit7 = _mm_set1_epi32(0x80808080);
+        const __m128i m_mask = _mm_set1_epi32(0x72727272);
+        __m128i pattern, pattern_shuf, fixup;
+
+        pattern = _mm_and_si128(no_mixc, m_bit7);
+        pattern = _mm_cmpeq_epi8(pattern, m_bit7);
+        pattern_shuf = _mm_shuffle_epi8(pattern, m_shuf);
+        pattern = _mm_xor_si128(pattern, pattern_shuf);
+
+        fixup = _mm_and_si128(m_mask, pattern);
+
+        return _mm_xor_si128(fixup, mixc);
+}
+
 /* -------------------------------------------------------------------
  * Sbox S2 maps a 32bit input to a 32bit output
  * ------------------------------------------------------------------ */
 static inline uint32_t S2_box(const uint32_t x)
 {
-        /*
-         * Mix column AES GF() reduction poly is 0x1B and
-         * SNOW3G reduction poly is 0x69.
-         * The fixup value is 0x1B ^ 0x69 = 0x72
-         */
-        static const uint32_t mixc_fixup_tab[16] = {
-                0x00000000, 0x72000072, 0x00007272, 0x72007200,
-                0x00727200, 0x72727272, 0x00720072, 0x72720000,
-                /* the table is symmetric */
-                0x72720000, 0x00720072, 0x72727272, 0x00727200,
-                0x72007200, 0x00007272, 0x72000072, 0x00000000
-        };
-
         /* Perform invSR(SQ(x)) transform through lookup table */
 #ifdef SAFE_LOOKUP
         const __m128i par_lut =
@@ -360,12 +436,11 @@ static inline uint32_t S2_box(const uint32_t x)
         emulate_AESENC(&v, &key);
         emulate_AESENCLAST(&v_fixup, &key);
 
-        const uint32_t ret = v.dword[0];
+        const __m128i ret_mixc =
+                _mm_loadu_si128((const __m128i *) &v.qword[0]);
         const __m128i ret_nomixc =
                 _mm_loadu_si128((const __m128i *) &v_fixup.qword[0]);
-        const uint32_t fixup_idx = _mm_movemask_epi8(ret_nomixc);
 #else
-
         /*
          * Because of mix column operation the 32-bit word has to be
          * broadcasted across the 128-bit vector register for S1/AESENC
@@ -377,13 +452,13 @@ static inline uint32_t S2_box(const uint32_t x)
          * allows to determine the fixup value to be applied
          * on result of aesenc to produce correct result for SNOW3G.
          */
-        const __m128i ret_nomixc = _mm_aesenclast_si128(m, _mm_setzero_si128());
-        const uint32_t fixup_idx = _mm_movemask_epi8(ret_nomixc);
-        const uint32_t ret =
-                _mm_cvtsi128_si32(_mm_aesenc_si128(m, _mm_setzero_si128()));
+        const __m128i ret_nomixc =
+                _mm_aesenclast_si128(m, _mm_setzero_si128());
+        const __m128i ret_mixc =
+                _mm_aesenc_si128(m, _mm_setzero_si128());
 #endif
 
-        return ret ^ mixc_fixup_tab[fixup_idx & 15];
+        return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
 }
 
 /* -------------------------------------------------------------------
