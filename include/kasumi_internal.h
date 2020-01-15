@@ -762,6 +762,10 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                    const void *pIn, void *pOut,
                    const uint32_t length)
 {
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         uint32_t blkcnt;
         kasumi_union_t a, b; /* the modifier */
         SafeBuf safeInBuf;
@@ -848,6 +852,10 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                        const uint32_t lengthInBits,
                        const uint32_t offsetInBits)
 {
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         const uint8_t *pBufferIn = (const uint8_t *) pIn;
         uint8_t *pBufferOut = (uint8_t *) pOut;
         uint32_t cipherLengthInBits = lengthInBits;
@@ -987,6 +995,10 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                    const void *pIn2, void *pOut2,
                    const uint32_t length2)
 {
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         const uint8_t *pBufferIn1 = (const uint8_t *) pIn1;
         uint8_t *pBufferOut1 = (uint8_t *) pOut1;
         uint32_t lengthInBytes1 = length1;
@@ -1167,6 +1179,10 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
                    const void *pIn3, void *pOut3,
                    const uint32_t length)
 {
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         const uint8_t *pBufferIn1 = (const uint8_t *) pIn1;
         uint8_t *pBufferOut1 = (uint8_t *) pOut1;
         const uint8_t *pBufferIn2 = (const uint8_t *) pIn2;
@@ -1277,6 +1293,10 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                    const void *pIn4, void *pOut4,
                    const uint32_t length)
 {
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         const uint8_t *pBufferIn1 = (const uint8_t *) pIn1;
         uint8_t *pBufferOut1 = (uint8_t *) pOut1;
         const uint8_t *pBufferIn2 = (const uint8_t *) pIn2;
@@ -1410,6 +1430,10 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                    const void * const pIn[], void *pOut[],
                    const uint32_t lengths[], const uint32_t bufCount)
 {
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         if (bufCount > 16) {
                 pOut[0] = NULL;
                 printf("dataCount too high (%d)\n", bufCount);
@@ -1608,6 +1632,10 @@ static inline void
 kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn,
                    const uint32_t length, void *pDigest)
 {
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         kasumi_union_t a, b, mask;
         const uint64_t *pIn = (const uint64_t *)dataIn;
         uint32_t lengthInBytes = length;
@@ -1675,6 +1703,10 @@ kasumi_f9_1_buffer_user(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                         const void *pDataIn, const uint32_t length,
                         void *pDigest, const uint32_t direction)
 {
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         kasumi_union_t a, b, mask, message, temp;
         uint32_t lengthInBits = length;
         const uint64_t *pIn = (const uint64_t *)pDataIn;

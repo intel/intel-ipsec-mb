@@ -1376,6 +1376,10 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
             (lengthInBytes == 0) || (lengthInBytes > SNOW3G_MAX_BYTELEN))
                 return;
 #endif
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         snow3gKeyState1_t ctx;
         uint32_t KS4; /* 4 bytes of keystream */
 
@@ -1413,6 +1417,9 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
             (lengthInBits == 0))
                 return;
 #endif
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
 
         snow3gKeyState1_t ctx;
         uint32_t KS4; /* 4 bytes of keystream */
@@ -1458,6 +1465,9 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
             (lenInBytes2 == 0) || (lenInBytes2 > SNOW3G_MAX_BYTELEN))
                 return;
 #endif
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
 
         snow3gKeyState1_t ctx1, ctx2;
         uint32_t KS4; /* 4 bytes of keystream */
@@ -1529,6 +1539,9 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
             (lengthInBytes4 == 0) || (lengthInBytes4 > SNOW3G_MAX_BYTELEN))
                 return;
 #endif
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
 
         snow3gKeyState4_t ctx;
         __m128i H, L; /* 4 bytes of keystream */
@@ -2308,6 +2321,10 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
                 SNOW3G_F8_1_BUFFER(pKey[i], IV[i], BufferIn[i], BufferOut[i],
                                    lengthInBytes[i]);
 #else
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         uint32_t bytes = lengthInBytes[0];
 
         /* find min byte lenght */
@@ -2397,6 +2414,10 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
 #endif
 
 #ifdef AVX2
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         uint32_t bytes1 =
                 (lenInBytes1 < lenInBytes2 ? lenInBytes1
                                            : lenInBytes2); /* number of bytes */
@@ -2477,6 +2498,10 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
                     (bufLenInBytes[i] > SNOW3G_MAX_BYTELEN))
                         return;
 #endif
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         if (packetCount > 16) {
                 pBufferOut[0] = NULL;
                 printf("packetCount too high (%d)\n", packetCount);
@@ -2660,6 +2685,10 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
                     (bufLenInBytes[i] > SNOW3G_MAX_BYTELEN))
                         return;
 #endif
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         if (packetCount > 16) {
                 pBufferOut[0] = NULL;
                 printf("packetCount too high (%d)\n", packetCount);
@@ -2784,6 +2813,10 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
             (lengthInBits == 0) || (lengthInBits > SNOW3G_MAX_BITLEN))
                 return;
 #endif
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
         snow3gKeyState1_t ctx;
         uint32_t z[5];
         uint64_t lengthInQwords, E, V, P;
