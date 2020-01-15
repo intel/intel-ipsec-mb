@@ -1511,6 +1511,9 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
+                if (safe_check)
+                        continue;
+
                 if (params->hash_alg != NULL_HASH &&
                     memcmp(in_digest, out_digest, tag_size_to_check) != 0) {
                         fprintf(stderr,
