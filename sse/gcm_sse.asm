@@ -2030,11 +2030,11 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; GCM_COMPLETE Finishes Encyrption/Decryption of last partial block after GCM_UPDATE finishes.
+; GCM_COMPLETE Finishes Encryption/Decryption of last partial block after GCM_UPDATE finishes.
 ; Input: A gcm_key_data * (GDATA_KEY), gcm_context_data * (GDATA_CTX) and
 ; whether encoding or decoding (ENC_DEC).
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
-; Clobbers rax, r10-r12, and xmm0, xmm1, xmm5, xmm6, xmm9, xmm11, xmm14, xmm15
+; Clobbers rax, r10-r12, and xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro	GCM_COMPLETE		5
 %define	%%GDATA_KEY		%1
@@ -2453,12 +2453,14 @@ FN_NAME(enc,_finalize_):
 
 %ifidn __OUTPUT_FORMAT__, win64
 	; xmm6:xmm15 need to be maintained for Windows
-	sub	rsp, 5*16
-	movdqu	[rsp + 0*16],xmm6
-	movdqu	[rsp + 1*16],xmm9
-	movdqu	[rsp + 2*16],xmm11
-	movdqu	[rsp + 3*16],xmm14
-	movdqu	[rsp + 4*16],xmm15
+        sub	rsp, 7*16
+        movdqu	[rsp + 0*16], xmm6
+        movdqu	[rsp + 1*16], xmm9
+        movdqu	[rsp + 2*16], xmm10
+        movdqu	[rsp + 3*16], xmm11
+        movdqu	[rsp + 4*16], xmm13
+        movdqu	[rsp + 5*16], xmm14
+        movdqu	[rsp + 6*16], xmm15
 %endif
 
 	GCM_COMPLETE	arg1, arg2, arg3, arg4, ENC
@@ -2468,12 +2470,14 @@ FN_NAME(enc,_finalize_):
         clear_scratch_xmms_sse_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-	movdqu	xmm15  , [rsp + 4*16]
-	movdqu	xmm14  , [rsp+ 3*16]
-	movdqu	xmm11  , [rsp + 2*16]
-	movdqu	xmm9 , [rsp + 1*16]
-	movdqu	xmm6 , [rsp + 0*16]
-	add	rsp, 5*16
+        movdqu	xmm15, [rsp + 6*16]
+        movdqu	xmm14, [rsp + 5*16]
+        movdqu	xmm13, [rsp + 4*16]
+        movdqu	xmm11, [rsp + 3*16]
+        movdqu	xmm10, [rsp + 2*16]
+        movdqu	xmm9,  [rsp + 1*16]
+        movdqu	xmm6,  [rsp + 0*16]
+        add     rsp, 7*16
 %endif
 
 	pop r12
@@ -2517,12 +2521,14 @@ FN_NAME(dec,_finalize_):
 
 %ifidn __OUTPUT_FORMAT__, win64
 	; xmm6:xmm15 need to be maintained for Windows
-	sub	rsp, 5*16
-	movdqu	[rsp + 0*16],xmm6
-	movdqu	[rsp + 1*16],xmm9
-	movdqu	[rsp + 2*16],xmm11
-	movdqu	[rsp + 3*16],xmm14
-	movdqu	[rsp + 4*16],xmm15
+        sub	rsp, 7*16
+        movdqu	[rsp + 0*16], xmm6
+        movdqu	[rsp + 1*16], xmm9
+        movdqu	[rsp + 2*16], xmm10
+        movdqu	[rsp + 3*16], xmm11
+        movdqu	[rsp + 4*16], xmm13
+        movdqu	[rsp + 5*16], xmm14
+        movdqu	[rsp + 6*16], xmm15
 %endif
 	GCM_COMPLETE	arg1, arg2, arg3, arg4, DEC
 
@@ -2531,12 +2537,14 @@ FN_NAME(dec,_finalize_):
         clear_scratch_xmms_sse_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
-	movdqu	xmm15  , [rsp + 4*16]
-	movdqu	xmm14  , [rsp+ 3*16]
-	movdqu	xmm11  , [rsp + 2*16]
-	movdqu	xmm9 , [rsp + 1*16]
-	movdqu	xmm6 , [rsp + 0*16]
-	add	rsp, 5*16
+        movdqu	xmm15, [rsp + 6*16]
+        movdqu	xmm14, [rsp + 5*16]
+        movdqu	xmm13, [rsp + 4*16]
+        movdqu	xmm11, [rsp + 3*16]
+        movdqu	xmm10, [rsp + 2*16]
+        movdqu	xmm9,  [rsp + 1*16]
+        movdqu	xmm6,  [rsp + 0*16]
+        add     rsp, 7*16
 %endif
 
 	pop r12
