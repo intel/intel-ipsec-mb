@@ -833,21 +833,24 @@ static inline uint64_t multiply_and_reduce64(uint64_t a, uint64_t b)
  *       ^ table_Alpha_div[LFSR[11] & 0xff]
  *       ^ table_Alpha_mul[LFSR[0] & 0xff]
  * ------------------------------------------------------------------ */
-static void C0_C11_8(__m256i *S, const __m256i *L0, const __m256i *L11)
+static inline __m256i C0_C11_8(const __m256i L0, const __m256i L11)
 {
-        __m256i mask, Sx, B11, B0, offset;
+        static const __m256i mask1 = {
+                0x8080800480808000ULL, 0x8080800C80808008ULL,
+                0x8080800480808000ULL, 0x8080800C80808008ULL
+        };
+        static const __m256i mask2 = {
+                0x8080800780808003ULL, 0x8080800F8080800BULL,
+                0x8080800780808003ULL, 0x8080800F8080800BULL
+        };
+        const __m256i S1 =
+                _mm256_i32gather_epi32(snow3g_table_A_div,
+                                       _mm256_shuffle_epi8(L11, mask1), 4);
+        const __m256i S2 =
+                _mm256_i32gather_epi32(snow3g_table_A_mul,
+                                       _mm256_shuffle_epi8(L0, mask2), 4);
 
-        offset = _mm256_set1_epi32(3);
-        mask = _mm256_setr_epi32(0xF0F0F000, 0xF0F0F004, 0xF0F0F008, 0xF0F0F00C,
-                                 0xF0F0F000, 0xF0F0F004, 0xF0F0F008,
-                                 0xF0F0F00C);
-        B11 = _mm256_shuffle_epi8(*L11, mask);
-        *S = _mm256_i32gather_epi32(snow3g_table_A_div, B11, 4);
-
-        mask = _mm256_add_epi32(mask, offset);
-        B0 = _mm256_shuffle_epi8(*L0, mask);
-        Sx = _mm256_i32gather_epi32(snow3g_table_A_mul, B0, 4);
-        *S = _mm256_xor_si256(*S, Sx);
+        return _mm256_xor_si256(S1, S2);
 }
 #endif /* AVX2 */
 
@@ -897,7 +900,7 @@ static inline void ClockLFSR_8(snow3gKeyState8_t *pCtx)
         U = pCtx->LFSR_X[pCtx->iLFSR_X];
         S = pCtx->LFSR_X[(pCtx->iLFSR_X + 11) & 15];
 
-        C0_C11_8(&X2, &U, &S);
+        X2 = C0_C11_8(U, S);
 
         T = _mm256_slli_epi32(U, 8);
         S = _mm256_srli_epi32(S, 8);
