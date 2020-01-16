@@ -274,69 +274,6 @@ static inline void ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
                 pCtx->LFSR_S[i] = pCtx->LFSR_S[i + 2];
 }
 
-/* -------------------------------------------------------------------
- * Sbox S1 maps a 32bit input to a 32bit output
- * ------------------------------------------------------------------ */
-static inline uint32_t S1_box(const uint32_t x)
-{
-#ifdef NO_AESNI
-        union xmm_reg key, v;
-
-        key.qword[0] = key.qword[1] = 0;
-
-        v.dword[0] = v.dword[1] =
-                v.dword[2] = v.dword[3] = x;
-
-        emulate_AESENC(&v, &key);
-        return v.dword[0];
-#else
-        __m128i m;
-
-        /*
-         * Because of mix column operation the 32-bit word has to be
-         * broadcasted across the 128-bit vector register for S1/AESENC
-         */
-        m = _mm_shuffle_epi32(_mm_cvtsi32_si128(x), 0);
-        m = _mm_aesenc_si128(m, _mm_setzero_si128());
-        return _mm_cvtsi128_si32(m);
-#endif
-}
-
-/**
- * @brief SNOW3G S2 mix column correction function vs AESENC operation
- *
- * Mix column AES GF() reduction poly is 0x1B and SNOW3G reduction poly is 0x69.
- * The fix-up value is 0x1B ^ 0x69 = 0x72 and needs to be applied on selected
- * bytes of the 32-bit word.
- *
- * 'aesenclast' operation does not perform mix column operation and
- * allows to determine the fix-up value to be applied on result of 'aesenc'
- * in order to produce correct result for SNOW3G.
- *
- * This function implements basic look-up table method with a fix-up values.
- * An index to the fix-up table is identified by bits 31, 23, 15 and 7 of
- * \a no_mixc word.
- *
- * @param no_mixc result of 'aesenclast' operation, 32-bit word index 0 only
- * @param mixc    result of 'aesenc' operation, 32-bit word index 0 only
- *
- * @return corrected \a mixc 32-bit word for SNOW3G S2
- */
-static inline uint32_t
-s2_mixc_fixup_scalar(const __m128i no_mixc, const __m128i mixc)
-{
-        static const uint32_t fixup_table[16] = {
-                0x00000000, 0x72000072, 0x00007272, 0x72007200,
-                0x00727200, 0x72727272, 0x00720072, 0x72720000,
-                /* NOTE: the table is symmetric */
-                0x72720000, 0x00720072, 0x72727272, 0x00727200,
-                0x72007200, 0x00007272, 0x72000072, 0x00000000
-        };
-        const uint32_t index = _mm_movemask_epi8(no_mixc) & 15;
-
-        return _mm_cvtsi128_si32(mixc) ^ fixup_table[index];
-}
-
 /**
  * @brief SNOW3G S2 mix column correction function vs AESENC operation
  *
@@ -389,6 +326,141 @@ static inline __m128i s2_mixc_fixup(const __m128i no_mixc, const __m128i mixc)
         fixup = _mm_and_si128(m_mask, pattern);
 
         return _mm_xor_si128(fixup, mixc);
+}
+
+/**
+ * @brief SNOW3G S2 mix column correction function vs AESENC operation
+ *
+ * Mix column AES GF() reduction poly is 0x1B and SNOW3G reduction poly is 0x69.
+ * The fix-up value is 0x1B ^ 0x69 = 0x72 and needs to be applied on selected
+ * bytes of the 32-bit word.
+ *
+ * 'aesenclast' operation does not perform mix column operation and
+ * allows to determine the fix-up value to be applied on result of 'aesenc'
+ * in order to produce correct result for SNOW3G.
+ *
+ * This function implements basic look-up table method with a fix-up values.
+ * An index to the fix-up table is identified by bits 31, 23, 15 and 7 of
+ * \a no_mixc word.
+ *
+ * @param no_mixc result of 'aesenclast' operation, 32-bit word index 0 only
+ * @param mixc    result of 'aesenc' operation, 32-bit word index 0 only
+ *
+ * @return corrected \a mixc 32-bit word for SNOW3G S2
+ */
+static inline uint32_t
+s2_mixc_fixup_scalar(const __m128i no_mixc, const __m128i mixc)
+{
+        static const uint32_t fixup_table[16] = {
+                0x00000000, 0x72000072, 0x00007272, 0x72007200,
+                0x00727200, 0x72727272, 0x00720072, 0x72720000,
+                /* NOTE: the table is symmetric */
+                0x72720000, 0x00720072, 0x72727272, 0x00727200,
+                0x72007200, 0x00007272, 0x72000072, 0x00000000
+        };
+        const uint32_t index = _mm_movemask_epi8(no_mixc) & 15;
+
+        return _mm_cvtsi128_si32(mixc) ^ fixup_table[index];
+}
+
+/* -------------------------------------------------------------------
+ * Sbox S1 maps a 32bit input to a 32bit output
+ * ------------------------------------------------------------------ */
+static inline uint32_t S1_box(const uint32_t x)
+{
+#ifdef NO_AESNI
+        union xmm_reg key, v;
+
+        key.qword[0] = key.qword[1] = 0;
+
+        v.dword[0] = v.dword[1] =
+                v.dword[2] = v.dword[3] = x;
+
+        emulate_AESENC(&v, &key);
+        return v.dword[0];
+#else
+        __m128i m;
+
+        /*
+         * Because of mix column operation the 32-bit word has to be
+         * broadcasted across the 128-bit vector register for S1/AESENC
+         */
+        m = _mm_shuffle_epi32(_mm_cvtsi32_si128(x), 0);
+        m = _mm_aesenc_si128(m, _mm_setzero_si128());
+        return _mm_cvtsi128_si32(m);
+#endif
+}
+
+/* -------------------------------------------------------------------
+ * Sbox S1 maps a 4x32bit input to a 4x32bit output
+ * ------------------------------------------------------------------ */
+static inline __m128i S1_box_4(const __m128i x)
+{
+#ifdef NO_AESNI
+        union xmm_reg key, v, vt;
+
+        key.qword[0] = key.qword[1] = 0;
+
+        /*
+         * - Broadcast 32-bit word across XMM
+         * - Perfrom AES oeprations
+         * - Save result 32-bit words in v and f vectors.
+         *   'f' is used for fixup of mixed columns only
+         */
+        _mm_storeu_si128((__m128i *) &vt.qword[0],
+                         _mm_shuffle_epi32(x, 0b00000000));
+        emulate_AESENC(&vt, &key);
+        v.dword[0] = vt.dword[0];
+
+        _mm_storeu_si128((__m128i *) &vt.qword[0],
+                         _mm_shuffle_epi32(x, 0b01010101));
+        emulate_AESENC(&vt, &key);
+        v.dword[1] = vt.dword[0];
+
+        _mm_storeu_si128((__m128i *) &vt.qword[0],
+                         _mm_shuffle_epi32(x, 0b10101010));
+        emulate_AESENC(&vt, &key);
+        v.dword[2] = vt.dword[0];
+
+        _mm_storeu_si128((__m128i *) &vt.qword[0],
+                         _mm_shuffle_epi32(x, 0b11111111));
+        emulate_AESENC(&vt, &key);
+        v.dword[3] = vt.dword[0];
+
+        return _mm_loadu_si128((const __m128i *) &v.qword[0]);
+#else
+        const __m128i m_zero = _mm_setzero_si128();
+        __m128i m1, m2, m3, m4;
+
+        m1 = _mm_shuffle_epi32(x, 0b00000000);
+        m2 = _mm_shuffle_epi32(x, 0b01010101);
+        m3 = _mm_shuffle_epi32(x, 0b10101010);
+        m4 = _mm_shuffle_epi32(x, 0b11111111);
+
+        m1 = _mm_aesenc_si128(m1, m_zero);
+        m2 = _mm_aesenc_si128(m2, m_zero);
+        m3 = _mm_aesenc_si128(m3, m_zero);
+        m4 = _mm_aesenc_si128(m4, m_zero);
+
+        /*
+         * Put results of AES operations back into
+         * two vectors of 32-bit words
+         *
+         * First step:
+         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
+         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
+         */
+        m1 = _mm_unpacklo_epi32(m1, m2);
+        m3 = _mm_unpacklo_epi32(m3, m4);
+
+        /*
+         * The last step:
+         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
+         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
+         */
+        m1 = _mm_unpacklo_epi64(m1, m3);
+        return m1;
+#endif
 }
 
 /* -------------------------------------------------------------------
@@ -459,6 +531,105 @@ static inline uint32_t S2_box(const uint32_t x)
 #endif
 
         return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
+}
+
+/* -------------------------------------------------------------------
+ * Sbox S2 maps a 32bit input to a 32bit output
+ * ------------------------------------------------------------------ */
+static inline __m128i S2_box_4(const __m128i x)
+{
+        /* Perform invSR(SQ(x)) transform through a lookup table */
+        const __m128i new_x = lut8_256(x, snow3g_invSR_SQ);
+
+        /* use AESNI operations for the rest of the S2 box */
+#ifdef NO_AESNI
+        union xmm_reg key, v, f;
+        union xmm_reg vt, ft;
+
+        key.qword[0] = key.qword[1] = 0;
+
+        /*
+         * - Broadcast 32-bit word across XMM and
+         *   perfrom AES oeprations
+         * - Save result 32-bit words in v and f vectors.
+         *   'f' is used for fixup of mixed columns only
+         */
+        _mm_storeu_si128((__m128i *) &vt.qword[0],
+                         _mm_shuffle_epi32(new_x, 0b00000000));
+        ft = vt;
+        emulate_AESENC(&vt, &key);
+        emulate_AESENCLAST(&ft, &key);
+        v.dword[0] = vt.dword[0];
+        f.dword[0] = ft.dword[0];
+
+        _mm_storeu_si128((__m128i *) &vt.qword[0],
+                         _mm_shuffle_epi32(new_x, 0b01010101));
+        ft = vt;
+        emulate_AESENC(&vt, &key);
+        emulate_AESENCLAST(&ft, &key);
+        v.dword[1] = vt.dword[0];
+        f.dword[1] = ft.dword[0];
+
+        _mm_storeu_si128((__m128i *) &vt.qword[0],
+                         _mm_shuffle_epi32(new_x, 0b10101010));
+        ft = vt;
+        emulate_AESENC(&vt, &key);
+        emulate_AESENCLAST(&ft, &key);
+        v.dword[2] = vt.dword[0];
+        f.dword[2] = ft.dword[0];
+
+        _mm_storeu_si128((__m128i *) &vt.qword[0],
+                         _mm_shuffle_epi32(new_x, 0b11111111));
+        ft = vt;
+        emulate_AESENC(&vt, &key);
+        emulate_AESENCLAST(&ft, &key);
+        v.dword[3] = vt.dword[0];
+        f.dword[3] = ft.dword[0];
+
+        return s2_mixc_fixup(_mm_loadu_si128((const __m128i *) &f.qword[0]),
+                             _mm_loadu_si128((const __m128i *) &v.qword[0]));
+#else
+        const __m128i m_zero = _mm_setzero_si128();
+        __m128i m1, m2, m3, m4, f1, f2, f3, f4;
+
+        m1 = _mm_shuffle_epi32(new_x, 0b00000000);
+        m2 = _mm_shuffle_epi32(new_x, 0b01010101);
+        m3 = _mm_shuffle_epi32(new_x, 0b10101010);
+        m4 = _mm_shuffle_epi32(new_x, 0b11111111);
+
+        f1 = _mm_aesenclast_si128(m1, m_zero);
+        m1 = _mm_aesenc_si128(m1, m_zero);
+        f2 = _mm_aesenclast_si128(m2, m_zero);
+        m2 = _mm_aesenc_si128(m2, m_zero);
+        f3 = _mm_aesenclast_si128(m3, m_zero);
+        m3 = _mm_aesenc_si128(m3, m_zero);
+        f4 = _mm_aesenclast_si128(m4, m_zero);
+        m4 = _mm_aesenc_si128(m4, m_zero);
+
+        /*
+         * Put results of AES operations back into
+         * two vectors of 32-bit words
+         *
+         * First step:
+         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
+         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
+         */
+        m1 = _mm_unpacklo_epi32(m1, m2);
+        f1 = _mm_unpacklo_epi32(f1, f2);
+        m3 = _mm_unpacklo_epi32(m3, m4);
+        f3 = _mm_unpacklo_epi32(f3, f4);
+
+        /*
+         * The last step:
+         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
+         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
+         * f1 = [ 0-63 f1 | 0-63 f3 ] =>
+         *      [ 0-31 f1 | 0-31 f2 | 0-31 f3 | 0-31 f4 ]
+         */
+        m1 = _mm_unpacklo_epi64(m1, m3);
+        f1 = _mm_unpacklo_epi64(f1, f3);
+        return s2_mixc_fixup(f1, m1);
+#endif
 }
 
 /* -------------------------------------------------------------------
@@ -832,17 +1003,8 @@ static inline __m128i ClockFSM_4(snow3gKeyState4_t *pCtx)
 
         const __m128i ret = _mm_xor_si128(F, pCtx->FSM_X[1]);
 
-        const uint32_t FSM1_L3 = S1_box(_mm_cvtsi128_si32(pCtx->FSM_X[0]));
-        const uint32_t FSM2_L3 = S2_box(_mm_cvtsi128_si32(pCtx->FSM_X[1]));
-        const uint32_t FSM1_L2 = S1_box(_mm_extract_epi32(pCtx->FSM_X[0], 1));
-        const uint32_t FSM2_L2 = S2_box(_mm_extract_epi32(pCtx->FSM_X[1], 1));
-        const uint32_t FSM1_L1 = S1_box(_mm_extract_epi32(pCtx->FSM_X[0], 2));
-        const uint32_t FSM2_L1 = S2_box(_mm_extract_epi32(pCtx->FSM_X[1], 2));
-        const uint32_t FSM1_L0 = S1_box(_mm_extract_epi32(pCtx->FSM_X[0], 3));
-        const uint32_t FSM2_L0 = S2_box(_mm_extract_epi32(pCtx->FSM_X[1], 3));
-
-        pCtx->FSM_X[2] = _mm_set_epi32(FSM2_L3, FSM2_L2, FSM2_L1, FSM2_L0);
-        pCtx->FSM_X[1] = _mm_set_epi32(FSM1_L3, FSM1_L2, FSM1_L1, FSM1_L0);
+        pCtx->FSM_X[2] = S2_box_4(pCtx->FSM_X[1]);
+        pCtx->FSM_X[1] = S1_box_4(pCtx->FSM_X[0]);
         pCtx->FSM_X[0] = R;
 
         return ret;
