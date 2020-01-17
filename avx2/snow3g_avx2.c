@@ -26,8 +26,8 @@
 *******************************************************************************/
 
 
-#if defined (_WIN32) || defined (SAFE_LOOKUP)
-/* use AVX implementation on Windows for now or when SAFE_LOOKUP flag is set */
+#ifdef _WIN32
+/* use AVX implementation on Windows for now */
 #define AVX
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
 #else
