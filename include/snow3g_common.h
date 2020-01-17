@@ -263,6 +263,158 @@ static inline __m128i lut8_256(const __m128i indexes, const void *lut)
         return res1;
 }
 
+#ifdef AVX2
+/* -------------------------------------------------------------------
+ * Parallel safe lookup of 32 indexes in the 256 x 8-bit element table
+ * ------------------------------------------------------------------ */
+static inline __m256i lut8_256_avx2(const __m256i indexes, const void *lut)
+{
+        static const __m256i top_nibble_mask = {
+                0xf0f0f0f0f0f0f0f0ULL, 0xf0f0f0f0f0f0f0f0ULL,
+                0xf0f0f0f0f0f0f0f0ULL, 0xf0f0f0f0f0f0f0f0ULL
+        };
+        static const __m256i low_nibble_mask = {
+                0x0f0f0f0f0f0f0f0fULL, 0x0f0f0f0f0f0f0f0fULL,
+                0x0f0f0f0f0f0f0f0fULL, 0x0f0f0f0f0f0f0f0fULL
+        };
+        const __m128 *lut128 = (const __m128 *) lut;
+        const __m256i m_low_idx = _mm256_and_si256(indexes, low_nibble_mask);
+        const __m256i m_top_idx = _mm256_and_si256(indexes, top_nibble_mask);
+
+        __m256i cidx1, cidx2, cidx3, cidx4;
+        __m256i data1, data2, data3, data4;
+        __m256i res1, res2, res3, res4;
+
+        /* bytes 0 - 63 */
+        data1 = (__m256i) _mm256_broadcast_ps(&lut128[0]);
+        data2 = (__m256i) _mm256_broadcast_ps(&lut128[1]);
+        data3 = (__m256i) _mm256_broadcast_ps(&lut128[2]);
+        data4 = (__m256i) _mm256_broadcast_ps(&lut128[3]);
+
+        cidx1 = _mm256_set1_epi32(0x00000000);
+        cidx2 = _mm256_set1_epi32(0x10101010);
+        cidx3 = _mm256_set1_epi32(0x20202020);
+        cidx4 = _mm256_set1_epi32(0x30303030);
+
+        cidx1 = _mm256_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
+        cidx2 = _mm256_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
+        cidx3 = _mm256_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
+        cidx4 = _mm256_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
+
+        data1 = _mm256_shuffle_epi8(data1, m_low_idx);
+        data2 = _mm256_shuffle_epi8(data2, m_low_idx);
+        data3 = _mm256_shuffle_epi8(data3, m_low_idx);
+        data4 = _mm256_shuffle_epi8(data4, m_low_idx);
+
+        res1 = _mm256_and_si256(data1, cidx1);
+        res2 = _mm256_and_si256(data2, cidx2);
+        res3 = _mm256_and_si256(data3, cidx3);
+        res4 = _mm256_and_si256(data4, cidx4);
+
+        /* bytes 64 - 127 */
+        data1 = (__m256i) _mm256_broadcast_ps(&lut128[4]);
+        data2 = (__m256i) _mm256_broadcast_ps(&lut128[5]);
+        data3 = (__m256i) _mm256_broadcast_ps(&lut128[6]);
+        data4 = (__m256i) _mm256_broadcast_ps(&lut128[7]);
+
+        cidx1 = _mm256_set1_epi32(0x40404040);
+        cidx2 = _mm256_set1_epi32(0x50505050);
+        cidx3 = _mm256_set1_epi32(0x60606060);
+        cidx4 = _mm256_set1_epi32(0x70707070);
+
+        cidx1 = _mm256_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
+        cidx2 = _mm256_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
+        cidx3 = _mm256_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
+        cidx4 = _mm256_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
+
+        data1 = _mm256_shuffle_epi8(data1, m_low_idx);
+        data2 = _mm256_shuffle_epi8(data2, m_low_idx);
+        data3 = _mm256_shuffle_epi8(data3, m_low_idx);
+        data4 = _mm256_shuffle_epi8(data4, m_low_idx);
+
+        data1 = _mm256_and_si256(data1, cidx1);
+        data2 = _mm256_and_si256(data2, cidx2);
+        data3 = _mm256_and_si256(data3, cidx3);
+        data4 = _mm256_and_si256(data4, cidx4);
+
+        res1 = _mm256_or_si256(res1, data1);
+        res2 = _mm256_or_si256(res2, data2);
+        res3 = _mm256_or_si256(res3, data3);
+        res4 = _mm256_or_si256(res4, data4);
+
+        /* bytes 128 - 191 */
+        data1 = (__m256i) _mm256_broadcast_ps(&lut128[8]);
+        data2 = (__m256i) _mm256_broadcast_ps(&lut128[9]);
+        data3 = (__m256i) _mm256_broadcast_ps(&lut128[10]);
+        data4 = (__m256i) _mm256_broadcast_ps(&lut128[11]);
+
+        cidx1 = _mm256_set1_epi32(0x80808080);
+        cidx2 = _mm256_set1_epi32(0x90909090);
+        cidx3 = _mm256_set1_epi32(0xa0a0a0a0);
+        cidx4 = _mm256_set1_epi32(0xb0b0b0b0);
+
+        cidx1 = _mm256_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
+        cidx2 = _mm256_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
+        cidx3 = _mm256_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
+        cidx4 = _mm256_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
+
+        data1 = _mm256_shuffle_epi8(data1, m_low_idx);
+        data2 = _mm256_shuffle_epi8(data2, m_low_idx);
+        data3 = _mm256_shuffle_epi8(data3, m_low_idx);
+        data4 = _mm256_shuffle_epi8(data4, m_low_idx);
+
+        data1 = _mm256_and_si256(data1, cidx1);
+        data2 = _mm256_and_si256(data2, cidx2);
+        data3 = _mm256_and_si256(data3, cidx3);
+        data4 = _mm256_and_si256(data4, cidx4);
+
+        res1 = _mm256_or_si256(res1, data1);
+        res2 = _mm256_or_si256(res2, data2);
+        res3 = _mm256_or_si256(res3, data3);
+        res4 = _mm256_or_si256(res4, data4);
+
+        /* bytes 192 - 255 */
+        data1 = (__m256i) _mm256_broadcast_ps(&lut128[12]);
+        data2 = (__m256i) _mm256_broadcast_ps(&lut128[13]);
+        data3 = (__m256i) _mm256_broadcast_ps(&lut128[14]);
+        data4 = (__m256i) _mm256_broadcast_ps(&lut128[15]);
+
+        cidx1 = _mm256_set1_epi32(0xc0c0c0c0);
+        cidx2 = _mm256_set1_epi32(0xd0d0d0d0);
+        cidx3 = _mm256_set1_epi32(0xe0e0e0e0);
+        cidx4 = _mm256_set1_epi32(0xf0f0f0f0);
+
+        cidx1 = _mm256_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
+        cidx2 = _mm256_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
+        cidx3 = _mm256_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
+        cidx4 = _mm256_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
+
+        data1 = _mm256_shuffle_epi8(data1, m_low_idx);
+        data2 = _mm256_shuffle_epi8(data2, m_low_idx);
+        data3 = _mm256_shuffle_epi8(data3, m_low_idx);
+        data4 = _mm256_shuffle_epi8(data4, m_low_idx);
+
+        data1 = _mm256_and_si256(data1, cidx1);
+        data2 = _mm256_and_si256(data2, cidx2);
+        data3 = _mm256_and_si256(data3, cidx3);
+        data4 = _mm256_and_si256(data4, cidx4);
+
+        res1 = _mm256_or_si256(res1, res2);
+        res3 = _mm256_or_si256(res3, res4);
+
+        res2 = _mm256_or_si256(data1, data2);
+        res4 = _mm256_or_si256(data3, data4);
+
+        res1 = _mm256_or_si256(res1, res2);
+        res1 = _mm256_or_si256(res1, res3);
+        res1 = _mm256_or_si256(res1, res4);
+
+        /* finish */
+
+        return res1;
+}
+#endif /* AVX2 */
+
 /* -------------------------------------------------------------------
  * LFSR array shift by 2 positions
  * ------------------------------------------------------------------ */
@@ -327,6 +479,30 @@ static inline __m128i s2_mixc_fixup(const __m128i no_mixc, const __m128i mixc)
 
         return _mm_xor_si128(fixup, mixc);
 }
+
+#ifdef AVX2
+static inline __m256i
+s2_mixc_fixup_avx2(const __m256i no_mixc, const __m256i mixc)
+{
+        const __m256i m_shuf =
+                _mm256_set_epi32(0x0c0f0e0d, 0x080b0a09,
+                                 0x04070605, 0x00030201,
+                                 0x0c0f0e0d, 0x080b0a09,
+                                 0x04070605, 0x00030201);
+        const __m256i m_bit7 = _mm256_set1_epi32(0x80808080);
+        const __m256i m_mask = _mm256_set1_epi32(0x72727272);
+        __m256i pattern, pattern_shuf, fixup;
+
+        pattern = _mm256_and_si256(no_mixc, m_bit7);
+        pattern = _mm256_cmpeq_epi8(pattern, m_bit7);
+        pattern_shuf = _mm256_shuffle_epi8(pattern, m_shuf);
+        pattern = _mm256_xor_si256(pattern, pattern_shuf);
+
+        fixup = _mm256_and_si256(m_mask, pattern);
+
+        return _mm256_xor_si256(fixup, mixc);
+}
+#endif
 
 /**
  * @brief SNOW3G S2 mix column correction function vs AESENC operation
@@ -463,6 +639,60 @@ static inline __m128i S1_box_4(const __m128i x)
 #endif
 }
 
+#ifdef AVX2
+/* -------------------------------------------------------------------
+ * Sbox S1 maps a 8x32bit input to a 8x32bit output
+ * ------------------------------------------------------------------ */
+static inline __m256i S1_box_8(const __m256i x)
+{
+        const __m128i x1 = _mm256_extractf128_si256(x, 0);
+        const __m128i x2 = _mm256_extractf128_si256(x, 1);
+        const __m128i m_zero = _mm_setzero_si128();
+        __m128i m1, m2, m3, m4, m5, m6, m7, m8;
+
+        m1 = _mm_shuffle_epi32(x1, 0b00000000);
+        m2 = _mm_shuffle_epi32(x1, 0b01010101);
+        m3 = _mm_shuffle_epi32(x1, 0b10101010);
+        m4 = _mm_shuffle_epi32(x1, 0b11111111);
+        m5 = _mm_shuffle_epi32(x2, 0b00000000);
+        m6 = _mm_shuffle_epi32(x2, 0b01010101);
+        m7 = _mm_shuffle_epi32(x2, 0b10101010);
+        m8 = _mm_shuffle_epi32(x2, 0b11111111);
+
+        m1 = _mm_aesenc_si128(m1, m_zero);
+        m2 = _mm_aesenc_si128(m2, m_zero);
+        m3 = _mm_aesenc_si128(m3, m_zero);
+        m4 = _mm_aesenc_si128(m4, m_zero);
+        m5 = _mm_aesenc_si128(m5, m_zero);
+        m6 = _mm_aesenc_si128(m6, m_zero);
+        m7 = _mm_aesenc_si128(m7, m_zero);
+        m8 = _mm_aesenc_si128(m8, m_zero);
+
+        /*
+         * Put results of AES operations back into
+         * two vectors of 32-bit words
+         *
+         * First step:
+         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
+         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
+         */
+        m1 = _mm_unpacklo_epi32(m1, m2);
+        m3 = _mm_unpacklo_epi32(m3, m4);
+        m5 = _mm_unpacklo_epi32(m5, m6);
+        m7 = _mm_unpacklo_epi32(m7, m8);
+
+        /*
+         * The last step:
+         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
+         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
+         */
+        m1 = _mm_unpacklo_epi64(m1, m3);
+        m5 = _mm_unpacklo_epi64(m5, m7);
+
+        return _mm256_inserti128_si256(_mm256_castsi128_si256(m1), m5, 1);
+}
+#endif /* AVX2 */
+
 /* -------------------------------------------------------------------
  * Sbox S2 maps a 32bit input to a 32bit output
  * ------------------------------------------------------------------ */
@@ -534,7 +764,7 @@ static inline uint32_t S2_box(const uint32_t x)
 }
 
 /* -------------------------------------------------------------------
- * Sbox S2 maps a 32bit input to a 32bit output
+ * Sbox S2 maps a 4x32bit input to a 4x32bit output
  * ------------------------------------------------------------------ */
 static inline __m128i S2_box_4(const __m128i x)
 {
@@ -631,6 +861,108 @@ static inline __m128i S2_box_4(const __m128i x)
         return s2_mixc_fixup(f1, m1);
 #endif
 }
+
+#ifdef AVX2
+/* -------------------------------------------------------------------
+ * Sbox S2 maps a 8x32bit input to a 8x32bit output
+ * ------------------------------------------------------------------ */
+static inline __m256i S2_box_8(const __m256i x)
+{
+        /* Perform invSR(SQ(x)) transform through a lookup table */
+        const __m256i new_x = lut8_256_avx2(x, snow3g_invSR_SQ);
+
+        /* use AESNI operations for the rest of the S2 box */
+        const __m128i m_zero = _mm_setzero_si128();
+        const __m128i x1 = (__m128i) _mm256_extractf128_si256(new_x, 0);
+        const __m128i x2 = (__m128i) _mm256_extractf128_si256(new_x, 1);
+        __m128i m1, m2, m3, m4, f1, f2, f3, f4;
+        __m256i m, f;
+
+        m1 = _mm_shuffle_epi32(x1, 0b00000000);
+        m2 = _mm_shuffle_epi32(x1, 0b01010101);
+        m3 = _mm_shuffle_epi32(x1, 0b10101010);
+        m4 = _mm_shuffle_epi32(x1, 0b11111111);
+
+        f1 = _mm_aesenclast_si128(m1, m_zero);
+        m1 = _mm_aesenc_si128(m1, m_zero);
+        f2 = _mm_aesenclast_si128(m2, m_zero);
+        m2 = _mm_aesenc_si128(m2, m_zero);
+        f3 = _mm_aesenclast_si128(m3, m_zero);
+        m3 = _mm_aesenc_si128(m3, m_zero);
+        f4 = _mm_aesenclast_si128(m4, m_zero);
+        m4 = _mm_aesenc_si128(m4, m_zero);
+
+        /*
+         * Put results of AES operations back into
+         * two vectors of 32-bit words
+         *
+         * First step:
+         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
+         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
+         */
+        m1 = _mm_unpacklo_epi32(m1, m2);
+        f1 = _mm_unpacklo_epi32(f1, f2);
+        m3 = _mm_unpacklo_epi32(m3, m4);
+        f3 = _mm_unpacklo_epi32(f3, f4);
+
+        /*
+         * The last step:
+         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
+         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
+         * f1 = [ 0-63 f1 | 0-63 f3 ] =>
+         *      [ 0-31 f1 | 0-31 f2 | 0-31 f3 | 0-31 f4 ]
+         */
+        m1 = _mm_unpacklo_epi64(m1, m3);
+        f1 = _mm_unpacklo_epi64(f1, f3);
+
+        m = _mm256_castsi128_si256(m1);
+        f = _mm256_castsi128_si256(f1);
+
+        /* next 128 bits */
+
+        m1 = _mm_shuffle_epi32(x2, 0b00000000);
+        m2 = _mm_shuffle_epi32(x2, 0b01010101);
+        m3 = _mm_shuffle_epi32(x2, 0b10101010);
+        m4 = _mm_shuffle_epi32(x2, 0b11111111);
+
+        f1 = _mm_aesenclast_si128(m1, m_zero);
+        m1 = _mm_aesenc_si128(m1, m_zero);
+        f2 = _mm_aesenclast_si128(m2, m_zero);
+        m2 = _mm_aesenc_si128(m2, m_zero);
+        f3 = _mm_aesenclast_si128(m3, m_zero);
+        m3 = _mm_aesenc_si128(m3, m_zero);
+        f4 = _mm_aesenclast_si128(m4, m_zero);
+        m4 = _mm_aesenc_si128(m4, m_zero);
+
+        /*
+         * Put results of AES operations back into
+         * two vectors of 32-bit words
+         *
+         * First step:
+         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
+         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
+         */
+        m1 = _mm_unpacklo_epi32(m1, m2);
+        f1 = _mm_unpacklo_epi32(f1, f2);
+        m3 = _mm_unpacklo_epi32(m3, m4);
+        f3 = _mm_unpacklo_epi32(f3, f4);
+
+        /*
+         * The last step:
+         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
+         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
+         * f1 = [ 0-63 f1 | 0-63 f3 ] =>
+         *      [ 0-31 f1 | 0-31 f2 | 0-31 f3 | 0-31 f4 ]
+         */
+        m1 = _mm_unpacklo_epi64(m1, m3);
+        f1 = _mm_unpacklo_epi64(f1, f3);
+
+        m = _mm256_inserti128_si256(m, m1, 1);
+        f = _mm256_inserti128_si256(f, f1, 1);
+
+        return s2_mixc_fixup_avx2(f, m);
+}
+#endif /* AVX2 */
 
 /* -------------------------------------------------------------------
  * ClockFSM function as defined in snow3g standard
@@ -958,31 +1290,8 @@ static inline __m256i ClockFSM_8(snow3gKeyState8_t *pCtx)
                                                   pCtx->FSM_X[2]),
                                  pCtx->FSM_X[1]);
 
-        const __m256i FSM_X1 = pCtx->FSM_X[1];
-        const uint32_t FSM2_L0 = S2_box(_mm256_extract_epi32(FSM_X1, 0));
-        const uint32_t FSM2_L1 = S2_box(_mm256_extract_epi32(FSM_X1, 1));
-        const uint32_t FSM2_L2 = S2_box(_mm256_extract_epi32(FSM_X1, 2));
-        const uint32_t FSM2_L3 = S2_box(_mm256_extract_epi32(FSM_X1, 3));
-        const uint32_t FSM2_L4 = S2_box(_mm256_extract_epi32(FSM_X1, 4));
-        const uint32_t FSM2_L5 = S2_box(_mm256_extract_epi32(FSM_X1, 5));
-        const uint32_t FSM2_L6 = S2_box(_mm256_extract_epi32(FSM_X1, 6));
-        const uint32_t FSM2_L7 = S2_box(_mm256_extract_epi32(FSM_X1, 7));
-
-        pCtx->FSM_X[2] = _mm256_set_epi32(FSM2_L7, FSM2_L6, FSM2_L5, FSM2_L4,
-                                          FSM2_L3, FSM2_L2, FSM2_L1, FSM2_L0);
-
-        const __m256i T = pCtx->FSM_X[0];
-
-        pCtx->FSM_X[1] =
-                _mm256_set_epi32(S1_box(_mm256_extract_epi32(T, 7)),
-                                 S1_box(_mm256_extract_epi32(T, 6)),
-                                 S1_box(_mm256_extract_epi32(T, 5)),
-                                 S1_box(_mm256_extract_epi32(T, 4)),
-                                 S1_box(_mm256_extract_epi32(T, 3)),
-                                 S1_box(_mm256_extract_epi32(T, 2)),
-                                 S1_box(_mm256_extract_epi32(T, 1)),
-                                 S1_box(_mm256_extract_epi32(T, 0)));
-
+        pCtx->FSM_X[2] = S2_box_8(pCtx->FSM_X[1]);
+        pCtx->FSM_X[1] = S1_box_8(pCtx->FSM_X[0]);
         pCtx->FSM_X[0] = R;
 
         return ret;
