@@ -68,7 +68,8 @@
 
 #define SEED 0xdeadcafe
 #define PT_PATTERN 0x44444444
-#define KEY_PATTERN 0x66666666
+#define CIPH_KEY_PATTERN 0x33333333
+#define AUTH_KEY_PATTERN 0x66666666
 #define TAG_PATTERN 0x77777777
 #define STACK_DEPTH 8192
 
@@ -114,7 +115,8 @@ struct data {
         uint8_t out_digest[MAX_DIGEST_SIZE];
         uint8_t cipher_iv[MAX_IV_SIZE];
         uint8_t auth_iv[MAX_IV_SIZE];
-        uint8_t key[MAX_KEY_SIZE];
+        uint8_t ciph_key[MAX_KEY_SIZE];
+        uint8_t auth_key[MAX_KEY_SIZE];
         struct cipher_auth_keys enc_keys;
         struct cipher_auth_keys dec_keys;
 };
@@ -567,8 +569,12 @@ search_patterns(const void *ptr, const size_t mem_size)
                 const uint32_t string = ((const uint32_t *) ptr8)[0];
                 int ret = -1;
 
-                if (string == KEY_PATTERN) {
-                        fprintf(stderr, "Part of KEY is present\n");
+                if (string == CIPH_KEY_PATTERN) {
+                        fprintf(stderr, "Part of CIPHER_KEY is present\n");
+                        ret = 0;
+                }
+                if (string == AUTH_KEY_PATTERN) {
+                        fprintf(stderr, "Part of AUTH_KEY is present\n");
                         ret = 0;
                 }
                 if (string == TAG_PATTERN) {
@@ -887,7 +893,8 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
 
 static int
 prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
-             const uint8_t *key, const struct params_s *params,
+             const uint8_t *ciph_key, const uint8_t *auth_key,
+             const struct params_s *params,
              const unsigned int force_pattern)
 {
         uint8_t *buf = keys->temp_buf;
@@ -902,19 +909,20 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         struct gcm_key_data *gdata_key = &keys->gdata_key;
         uint8_t i;
 
-        /* Set all expanded keys to KEY_PATTERN if flag is set */
+        /* Set all expanded keys to CIPH_KEY_PATTERN/AUTH_KEY_PATTERN
+         * if flag is set */
         if (force_pattern) {
                 switch (params->hash_alg) {
                 case AES_XCBC:
-                        memset(k1_expanded, KEY_PATTERN,
+                        memset(k1_expanded, AUTH_KEY_PATTERN,
                                sizeof(keys->k1_expanded));
                         break;
                 case AES_CMAC:
                 case AES_CMAC_BITLEN:
-                        memset(k1_expanded, KEY_PATTERN,
+                        memset(k1_expanded, AUTH_KEY_PATTERN,
                                sizeof(keys->k1_expanded));
-                        memset(k2, KEY_PATTERN, sizeof(keys->k2));
-                        memset(k3, KEY_PATTERN, sizeof(keys->k3));
+                        memset(k2, AUTH_KEY_PATTERN, sizeof(keys->k2));
+                        memset(k3, AUTH_KEY_PATTERN, sizeof(keys->k3));
                         break;
                 case SHA1:
                 case SHA_224:
@@ -922,13 +930,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case SHA_384:
                 case SHA_512:
                 case MD5:
-                        memset(ipad, KEY_PATTERN, sizeof(keys->ipad));
-                        memset(opad, KEY_PATTERN, sizeof(keys->opad));
+                        memset(ipad, AUTH_KEY_PATTERN, sizeof(keys->ipad));
+                        memset(opad, AUTH_KEY_PATTERN, sizeof(keys->opad));
                         break;
                 case ZUC_EIA3_BITLEN:
                 case SNOW3G_UIA2_BITLEN:
                 case KASUMI_UIA1:
-                        memset(k3, KEY_PATTERN, sizeof(keys->k3));
+                        memset(k3, AUTH_KEY_PATTERN, sizeof(keys->k3));
                         break;
                 case AES_CCM:
                 case AES_GMAC:
@@ -949,7 +957,8 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
 
                 switch (params->cipher_mode) {
                 case GCM:
-                        memset(gdata_key, KEY_PATTERN, sizeof(keys->gdata_key));
+                        memset(gdata_key, CIPH_KEY_PATTERN,
+                               sizeof(keys->gdata_key));
                         break;
                 case PON_AES_CNTR:
                 case CBC:
@@ -958,18 +967,21 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case CNTR_BITLEN:
                 case DOCSIS_SEC_BPI:
                 case ECB:
-                        memset(enc_keys, KEY_PATTERN, sizeof(keys->enc_keys));
-                        memset(dec_keys, KEY_PATTERN, sizeof(keys->dec_keys));
+                        memset(enc_keys, CIPH_KEY_PATTERN,
+                               sizeof(keys->enc_keys));
+                        memset(dec_keys, CIPH_KEY_PATTERN,
+                               sizeof(keys->dec_keys));
                         break;
                 case DES:
                 case DES3:
                 case DOCSIS_DES:
-                        memset(enc_keys, KEY_PATTERN, sizeof(keys->enc_keys));
+                        memset(enc_keys, CIPH_KEY_PATTERN,
+                               sizeof(keys->enc_keys));
                         break;
                 case ZUC_EEA3:
                 case SNOW3G_UEA2_BITLEN:
                 case KASUMI_UEA1_BITLEN:
-                        memset(k2, KEY_PATTERN, sizeof(keys->k2));
+                        memset(k2, CIPH_KEY_PATTERN, sizeof(keys->k2));
                         break;
                 case NULL_CIPHER:
                         /* No operation needed */
@@ -984,24 +996,24 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
 
         switch (params->hash_alg) {
         case AES_XCBC:
-                IMB_AES_XCBC_KEYEXP(mb_mgr, key, k1_expanded, k2, k3);
+                IMB_AES_XCBC_KEYEXP(mb_mgr, auth_key, k1_expanded, k2, k3);
                 break;
         case AES_CMAC:
         case AES_CMAC_BITLEN:
-                IMB_AES_KEYEXP_128(mb_mgr, key, k1_expanded, dust);
+                IMB_AES_KEYEXP_128(mb_mgr, auth_key, k1_expanded, dust);
                 IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, k1_expanded, k2, k3);
                 break;
         case SHA1:
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA1_BLOCK_SIZE);
                 for (i = 0; i < SHA1_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
                 memset(buf, 0x5c, SHA1_BLOCK_SIZE);
                 for (i = 0; i < SHA1_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
@@ -1009,13 +1021,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
                 memset(buf, 0x5c, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
@@ -1023,13 +1035,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
                 memset(buf, 0x5c, SHA_256_BLOCK_SIZE);
                 for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
@@ -1037,13 +1049,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA_384_BLOCK_SIZE);
                 for (i = 0; i < SHA_384_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
                 memset(buf, 0x5c, SHA_384_BLOCK_SIZE);
                 for (i = 0; i < SHA_384_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
@@ -1051,13 +1063,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 /* compute ipad hash */
                 memset(buf, 0x36, SHA_512_BLOCK_SIZE);
                 for (i = 0; i < SHA_512_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
                 memset(buf, 0x5c, SHA_512_BLOCK_SIZE);
                 for (i = 0; i < SHA_512_BLOCK_SIZE; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
@@ -1065,20 +1077,20 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 /* compute ipad hash */
                 memset(buf, 0x36, 64);
                 for (i = 0; i < 64; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_MD5_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
                 memset(buf, 0x5c, 64);
                 for (i = 0; i < 64; i++)
-                        buf[i] ^= key[i];
+                        buf[i] ^= auth_key[i];
                 IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
         case ZUC_EIA3_BITLEN:
         case SNOW3G_UIA2_BITLEN:
         case KASUMI_UIA1:
-                memcpy(k3, key, sizeof(keys->k3));
+                memcpy(k3, auth_key, sizeof(keys->k3));
                 break;
         case AES_CCM:
         case AES_GMAC:
@@ -1101,13 +1113,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case GCM:
                 switch (params->key_size) {
                 case AES_128_BYTES:
-                        IMB_AES128_GCM_PRE(mb_mgr, key, gdata_key);
+                        IMB_AES128_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
                 case AES_192_BYTES:
-                        IMB_AES192_GCM_PRE(mb_mgr, key, gdata_key);
+                        IMB_AES192_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
                 case AES_256_BYTES:
-                        IMB_AES256_GCM_PRE(mb_mgr, key, gdata_key);
+                        IMB_AES256_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
                 default:
                         fprintf(stderr, "Wrong key size\n");
@@ -1117,7 +1129,8 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case PON_AES_CNTR:
                 switch (params->key_size) {
                 case 16:
-                        IMB_AES_KEYEXP_128(mb_mgr, key, enc_keys, dec_keys);
+                        IMB_AES_KEYEXP_128(mb_mgr, ciph_key, enc_keys,
+                                           dec_keys);
                         break;
                 case 0:
                         break;
@@ -1134,13 +1147,16 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case ECB:
                 switch (params->key_size) {
                 case AES_128_BYTES:
-                        IMB_AES_KEYEXP_128(mb_mgr, key, enc_keys, dec_keys);
+                        IMB_AES_KEYEXP_128(mb_mgr, ciph_key, enc_keys,
+                                           dec_keys);
                         break;
                 case AES_192_BYTES:
-                        IMB_AES_KEYEXP_192(mb_mgr, key, enc_keys, dec_keys);
+                        IMB_AES_KEYEXP_192(mb_mgr, ciph_key, enc_keys,
+                                          dec_keys);
                         break;
                 case AES_256_BYTES:
-                        IMB_AES_KEYEXP_256(mb_mgr, key, enc_keys, dec_keys);
+                        IMB_AES_KEYEXP_256(mb_mgr, ciph_key, enc_keys,
+                                           dec_keys);
                         break;
                 default:
                         fprintf(stderr, "Wrong key size\n");
@@ -1150,12 +1166,12 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case DES:
         case DES3:
         case DOCSIS_DES:
-                des_key_schedule((uint64_t *) enc_keys, key);
+                des_key_schedule((uint64_t *) enc_keys, ciph_key);
                 break;
         case ZUC_EEA3:
         case SNOW3G_UEA2_BITLEN:
         case KASUMI_UEA1_BITLEN:
-                memcpy(k2, key, sizeof(keys->k2));
+                memcpy(k2, ciph_key, sizeof(keys->k2));
                 break;
         case NULL_CIPHER:
                 /* No operation needed */
@@ -1324,7 +1340,8 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         uint8_t *out_digest = data->out_digest;
         uint8_t *test_buf = data->test_buf;
         uint8_t *src_dst_buf = data->src_dst_buf;
-        uint8_t *key = data->key;
+        uint8_t *ciph_key = data->ciph_key;
+        uint8_t *auth_key = data->auth_key;
 
         if (params->hash_alg == PON_CRC_BIP) {
                 /* Buf size is XGEM payload, including CRC,
@@ -1350,10 +1367,12 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
          * Otherwise, just randomize the data */
         if (safe_check) {
                 memset(test_buf, PT_PATTERN, buf_size);
-                memset(key, KEY_PATTERN, MAX_KEY_SIZE);
+                memset(ciph_key, CIPH_KEY_PATTERN, MAX_KEY_SIZE);
+                memset(auth_key, AUTH_KEY_PATTERN, MAX_KEY_SIZE);
         } else {
                 generate_random_buf(test_buf, buf_size);
-                generate_random_buf(key, MAX_KEY_SIZE);
+                generate_random_buf(ciph_key, MAX_KEY_SIZE);
+                generate_random_buf(auth_key, MAX_KEY_SIZE);
                 generate_random_buf(cipher_iv, MAX_IV_SIZE);
                 generate_random_buf(auth_iv, MAX_IV_SIZE);
                 generate_random_buf(aad, AAD_SIZE);
@@ -1384,7 +1403,8 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 /* Clear scratch registers before expanding keys to prevent
                  * other functions from storing sensitive data in stack */
                 clear_scratch_simd(enc_arch);
-                if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 0) < 0)
+                if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key,
+                                 params, 0) < 0)
                         goto exit;
 
                 rsp_ptr = rdrsp();
@@ -1395,7 +1415,8 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
-                if (prepare_keys(dec_mb_mgr, dec_keys, key, params, 0) < 0)
+                if (prepare_keys(dec_mb_mgr, dec_keys, ciph_key, auth_key,
+                                 params, 0) < 0)
                         goto exit;
 
                 rsp_ptr = rdrsp();
@@ -1406,16 +1427,20 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
-                if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 1) < 0)
+                if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key,
+                                 params, 1) < 0)
                         goto exit;
 
-                if (prepare_keys(dec_mb_mgr, dec_keys, key, params, 1) < 0)
+                if (prepare_keys(dec_mb_mgr, dec_keys, ciph_key, auth_key,
+                                 params, 1) < 0)
                         goto exit;
         } else {
-                if (prepare_keys(enc_mb_mgr, enc_keys, key, params, 0) < 0)
+                if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key,
+                                 params, 0) < 0)
                         goto exit;
 
-                if (prepare_keys(dec_mb_mgr, dec_keys, key, params, 0) < 0)
+                if (prepare_keys(dec_mb_mgr, dec_keys, ciph_key, auth_key,
+                                 params, 0) < 0)
                         goto exit;
         }
 
