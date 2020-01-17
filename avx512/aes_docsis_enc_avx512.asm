@@ -1423,6 +1423,7 @@ APPEND(%%_skip_,I):
         shl	        %%idx, 3 ; multiply by 8
         vmovdqa         [%%STATE + _aes_args_IV + %%idx*2], xmm0
         mov             qword [%%STATE + _aes_args_keys + %%idx], 0
+        vmovdqa         [%%STATE + _docsis_crc_args_init + %%idx*2], xmm0
 %else
         ;; Clear IVs of returned job and "NULL lanes"
         vpxor   xmm0, xmm0
@@ -1431,6 +1432,7 @@ APPEND(%%_skip_,I):
 	cmp	        qword [%%STATE + _aes_job_in_lane + I*8], 0
 	jne	        APPEND(%%_skip_clear_,I)
 	vmovdqa         [%%STATE + _aes_args_IV + I*16], xmm0
+        vmovdqa         [%%STATE + _docsis_crc_args_init + I*16], xmm0
 APPEND(%%_skip_clear_,I):
 %assign I (I+1)
 %endrep
