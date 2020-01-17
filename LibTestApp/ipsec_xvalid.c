@@ -582,7 +582,8 @@ search_patterns(const void *ptr, const size_t mem_size)
                         ret = 0;
                 }
                 if (ret == 0) {
-                        fprintf(stderr, "Offset = %zu\n", i);
+                        fprintf(stderr, "Offset = %zu bytes, Addr = %p\n",
+                                i, ptr8);
                         return 0;
                 }
                 ptr8++;
