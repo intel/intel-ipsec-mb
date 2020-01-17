@@ -70,7 +70,6 @@
 #define PT_PATTERN 0x44444444
 #define CIPH_KEY_PATTERN 0x33333333
 #define AUTH_KEY_PATTERN 0x66666666
-#define TAG_PATTERN 0x77777777
 #define STACK_DEPTH 8192
 
 enum arch_type_e {
@@ -575,10 +574,6 @@ search_patterns(const void *ptr, const size_t mem_size)
                 }
                 if (string == AUTH_KEY_PATTERN) {
                         fprintf(stderr, "Part of AUTH_KEY is present\n");
-                        ret = 0;
-                }
-                if (string == TAG_PATTERN) {
-                        fprintf(stderr, "Part of TAG is present\n");
                         ret = 0;
                 }
                 if (string == PT_PATTERN) {
