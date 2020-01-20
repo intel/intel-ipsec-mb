@@ -1016,7 +1016,7 @@ void zuc_eia3_n_buffer_avx2(const void * const pKey[],
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
         if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
-            lengthInBits == NULL || pMacI == NULL || lengthInBits)
+            lengthInBits == NULL || pMacI == NULL)
                 return;
 
         for (i = 0; i < numBuffers; i++) {
