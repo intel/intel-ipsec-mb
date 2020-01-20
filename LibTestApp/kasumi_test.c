@@ -1208,13 +1208,13 @@ exit:
 
 static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
 {
-        kasumi_key_sched_t *pKeySched[NUM_SUPPORTED_BUFFERS];
+        kasumi_key_sched_t *pKeySched[NUM_SUPPORTED_BUFFERS] = {NULL};
         uint64_t IV[NUM_SUPPORTED_BUFFERS];
         uint64_t *pIV[NUM_SUPPORTED_BUFFERS];
         uint32_t buffLenInBytes[NUM_SUPPORTED_BUFFERS];
-        uint8_t *srcBuff[NUM_SUPPORTED_BUFFERS];
-        uint8_t *refBuff[NUM_SUPPORTED_BUFFERS];
-        uint8_t *key[NUM_SUPPORTED_BUFFERS];
+        uint8_t *srcBuff[NUM_SUPPORTED_BUFFERS] = {NULL};
+        uint8_t *refBuff[NUM_SUPPORTED_BUFFERS] = {NULL};
+        uint8_t *key[NUM_SUPPORTED_BUFFERS] = {NULL};
         uint32_t bitLens[NUM_SUPPORTED_BUFFERS];
         uint32_t bitOffsets[NUM_SUPPORTED_BUFFERS];
 
