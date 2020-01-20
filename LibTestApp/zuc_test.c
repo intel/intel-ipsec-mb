@@ -44,7 +44,8 @@
 #include "zuc_test_vectors.h"
 #include "gcm_ctr_vectors_test.h"
 
-#define MAXBUFS 9
+#define MAXBUFS ((NUM_ZUC_EIA3_TESTS > NUM_ZUC_EEA3_TESTS) ? \
+                  NUM_ZUC_EIA3_TESTS : NUM_ZUC_EEA3_TESTS)
 #define PASS_STATUS 0
 #define FAIL_STATUS -1
 
@@ -675,6 +676,9 @@ int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         int ret = 0;
         int retTmp;
         uint32_t buf_idx[MAXBUFS];
+
+        if (numBuffs > NUM_ZUC_EEA3_TESTS)
+                numBuffs = NUM_ZUC_EEA3_TESTS;
 
         assert(numBuffs > 0);
         for (i = 0; i < NUM_ZUC_EEA3_TESTS; i++) {
