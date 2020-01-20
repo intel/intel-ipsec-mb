@@ -1534,12 +1534,10 @@ test_docrc_many(struct MB_MGR *mb_mgr,
         const uint8_t *out_text = NULL;
 
         if (targets == NULL)
-                return ret;
+                goto end_alloc;
 
-        if (auths == NULL) {
-                free(targets);
-                return ret;
-        }
+        if (auths == NULL)
+                goto end_alloc;
 
         if (dir == ENCRYPT) {
                 in_text = p_vec->pt;
@@ -1626,11 +1624,14 @@ test_docrc_many(struct MB_MGR *mb_mgr,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
  end_alloc:
-        for (i = 0; i < num_jobs; i++)
-                free(targets[i]);
 
-        free(targets);
+        if (targets != NULL) {
+                for (i = 0; i < num_jobs; i++)
+                        free(targets[i]);
+                free(targets);
+        }
         free(auths);
+
         return ret;
 }
 
