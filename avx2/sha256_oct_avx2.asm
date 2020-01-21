@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -45,6 +45,7 @@
 
 %include "mb_mgr_datastruct.asm"
 %include "include/transpose_avx2.asm"
+%include "include/clear_regs.asm"
 
 section .data
 default rel
@@ -571,7 +572,7 @@ Lrounds_16_xx:
 
 %ifdef SAFE_DATA
         ;; Clear stack frame ((16+8+4)*32 bytes)
-        vpxor   ymm0, ymm0
+        clear_all_ymms_asm
 %assign i 0
 %rep (16+8+4)
 	vmovdqa [rsp + i*SZ8], ymm0
