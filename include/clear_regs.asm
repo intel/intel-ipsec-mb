@@ -193,4 +193,47 @@
 %endif ; LINUX
 %endmacro
 
+;
+; This macro clears all XMM registers on SSE
+;
+%macro clear_all_xmms_sse_asm 0
+%assign i 0
+%rep 16
+        pxor    xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
+%endmacro
+
+;
+; This macro clears all XMM registers on AVX
+;
+%macro clear_all_xmms_avx_asm 0
+        vzeroall
+%endmacro
+
+;
+; This macro clears all YMM registers
+
+;
+%macro clear_all_ymms_asm 0
+        vzeroall
+%endmacro
+
+;
+; This macro clears all ZMM registers
+;
+; YMM registers are used on purpose, since XOR'ing YMM registers
+; is faster than XOR'ing ZMM registers, and the operation clears
+; also the upper 256 bits
+;
+%macro clear_all_zmms_asm 0
+        vzeroall
+        ;; vzeroall only clears the first 16 ZMM registers
+%assign i 16
+%rep 16
+        vpxorq  ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
+%endmacro
+
 %endif ;; _CLEAR_REGS_ASM
