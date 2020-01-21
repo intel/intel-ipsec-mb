@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 %include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
+%include "include/clear_regs.asm"
 
 struc STACK
 _gpr_save:      resq    3
@@ -701,6 +702,11 @@ aes_cbc_enc_128_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 9
         FUNC_RESTORE
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -711,6 +717,11 @@ aes_cbc_enc_192_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 11
         FUNC_RESTORE
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
         ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  void aes_cbc_enc_256_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
@@ -720,6 +731,11 @@ aes_cbc_enc_256_vaes_avx512:
         FUNC_SAVE
         CBC_ENC 13
         FUNC_RESTORE
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
         ret
 
 %ifdef LINUX

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 %include "job_aes_hmac.asm"
 %include "include/reg_sizes.asm"
 %include "include/os.asm"
+%include "include/clear_regs.asm"
 %include "mb_mgr_datastruct.asm"
 
 ;; In System V AMD64 ABI
@@ -1053,6 +1054,11 @@ aes_docsis_dec_128_crc32_avx512__exit:
         mov             rbx, [rsp + _gpr_save + 2*8]
         mov             rbp, [rsp + _gpr_save + 3*8]
 	mov	        rsp, [rsp + _rsp_save]	; original SP
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
         ret
 
 

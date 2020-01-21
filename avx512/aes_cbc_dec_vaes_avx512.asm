@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/aes_common.asm"
+%include "include/clear_regs.asm"
 
 %define zIV        zmm0
 %define zBLK_0_3   zmm1
@@ -445,6 +446,10 @@ aes_cbc_dec_128_vaes_avx512:
 %endif
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 9, tmp
 
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -457,6 +462,10 @@ aes_cbc_dec_192_vaes_avx512:
 %endif
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 11, tmp
 
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -468,6 +477,10 @@ aes_cbc_dec_256_vaes_avx512:
         mov     num_bytes, [rsp + 8*5]
 %endif
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, num_bytes, 13, tmp
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
 
         ret
 

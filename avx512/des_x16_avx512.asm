@@ -1,5 +1,5 @@
-;;
-;; Copyright (c) 2017-2019, Intel Corporation
+;
+;; Copyright (c) 2017-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -52,6 +52,7 @@
 %include "constants.asm"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
+%include "include/clear_regs.asm"
 
 %ifdef LINUX
 %define arg1	rdi
@@ -1795,6 +1796,11 @@ endstruc
         mov             r14, [rsp + _gpr_save + 2*8]
         mov             r15, [rsp + _gpr_save + 3*8]
 	mov	        rsp, [rsp + _rsp_save]	; original SP
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
 %endmacro
 
 ;;; ===========================================================================
@@ -2099,6 +2105,11 @@ endstruc
         mov             r14, [rsp + _gpr_save + 2*8]
         mov             r15, [rsp + _gpr_save + 3*8]
 	mov	        rsp, [rsp + _rsp_save]	; original SP
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
 %endmacro
 
 

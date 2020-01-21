@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
+%include "include/clear_regs.asm"
 
 %define APPEND(a,b) a %+ b
 
@@ -414,6 +415,11 @@ section .text
 	mov	rdi, [rsp + _gpr_save + 8*7]
 %endif
 	mov	rsp, [rsp + _rsp_save]	; original SP
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
 %endmacro
 
 ;; =====================================================================

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2017-2018, Intel Corporation
+;; Copyright (c) 2017-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -44,6 +44,7 @@
 %include "include/dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/transpose_avx512.asm"
+%include "include/clear_regs.asm"
 
 %define APPEND(a,b) a %+ b
 
@@ -579,7 +580,7 @@ lastLoop:
 
 %ifdef SAFE_DATA
         ;; Clear stack frame ((NUM_LANES*8)*64 bytes)
-        vpxorq  zmm0, zmm0
+	clear_all_zmms_asm
 %assign i 0
 %rep (NUM_LANES*8)
 	vmovdqa64 [rsp + i*64], zmm0

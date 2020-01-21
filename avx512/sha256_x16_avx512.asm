@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2017-2018, Intel Corporation
+;; Copyright (c) 2017-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -43,6 +43,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "include/transpose_avx512.asm"
 %include "include/reg_sizes.asm"
+%include "include/clear_regs.asm"
 
 ; re-use K256 from sha256_oct_avx2.asm
 extern K256
@@ -742,7 +743,8 @@ lastLoop:
 
 %ifdef SAFE_DATA
         ;; Clear stack frame (8*64 bytes)
-        vpxorq  zmm0, zmm0
+	clear_all_zmms_asm
+
 %assign i 0
 %rep 8
 	vmovdqa64 [rsp + i*64], zmm0

@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Copyright(c) 2019, Intel Corporation All rights reserved.
+;  Copyright(c) 2019-2020, Intel Corporation All rights reserved.
 ;
 ;  Redistribution and use in source and binary forms, with or without
 ;  modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 
 %include "include/aes_common.asm"
 %include "include/const.inc"
+%include "include/clear_regs.asm"
 
 section .data
 default rel
@@ -801,7 +802,12 @@ default rel
 %macro FUNC_RESTORE 1
 %define %%CNTR_TYPE         %1  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
 
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%else
         vzeroupper
+%endif ;; SAFE_DATA
+
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rdi, [rsp + 4*8]
         mov     rsi, [rsp + 5*8]

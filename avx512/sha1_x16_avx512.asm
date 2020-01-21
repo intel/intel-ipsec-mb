@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -43,6 +43,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "include/transpose_avx512.asm"
 %include "include/reg_sizes.asm"
+%include "include/clear_regs.asm"
 
 section .data
 default rel
@@ -431,6 +432,10 @@ lastLoop:
 	mov	[state + _data_ptr_sha1 + 13*PTR_SZ], inp5
 	mov	[state + _data_ptr_sha1 + 14*PTR_SZ], inp6
 	mov	[state + _data_ptr_sha1 + 15*PTR_SZ], inp7
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
 
 	ret
 
