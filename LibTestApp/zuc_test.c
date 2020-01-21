@@ -524,7 +524,8 @@ validate_zuc_EEA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
                 memcpy(pSrcData, testEEA3_vectors[i].plaintext, byteLength);
                 if (job_api)
                         submit_eea3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData,
-                                         &pDstData, &byteLength, ENCRYPT, 1);
+                                         &pDstData, &byteLength,
+                                         IMB_DIR_ENCRYPT, 1);
                 else
                         IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData,
                                               pDstData, byteLength);
@@ -559,7 +560,7 @@ submit_and_verify(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                 memcpy(pKeys[i], vector.CK, ZUC_KEY_LEN_IN_BYTES);
                 zuc_eea3_iv_gen(vector.count, vector.Bearer,
                         vector.Direction, pIV[i]);
-                if (dir == ENCRYPT)
+                if (dir == IMB_DIR_ENCRYPT)
                         memcpy(pSrcData[i], vector.plaintext, packetLen[i]);
                 else
                         memcpy(pSrcData[i], vector.ciphertext, packetLen[i]);
@@ -600,7 +601,7 @@ submit_and_verify(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                                  "Validate ZUC %c block",
                                  type == TEST_4_BUFFER ? '4' : 'N');
 
-                if (dir == ENCRYPT) {
+                if (dir == IMB_DIR_ENCRYPT) {
                         snprintf(msg, sizeof(msg),
                                  "%s test %u, index %u (Enc):",
                                  msg_start, buf_idx[i] + 1, i);
@@ -636,13 +637,13 @@ int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                         buf_idx[j] = i;
 
                 retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, job_api, ENCRYPT, TEST_4_BUFFER,
-                                           0, 4, buf_idx);
+                                           pIV, job_api, IMB_DIR_ENCRYPT,
+                                           TEST_4_BUFFER, 0, 4, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
                 retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, job_api, DECRYPT, TEST_4_BUFFER,
-                                           0, 4, buf_idx);
+                                           pIV, job_api, IMB_DIR_DECRYPT,
+                                           TEST_4_BUFFER, 0, 4, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
         }
@@ -654,13 +655,13 @@ int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                         buf_idx[j] = i+j;
 
                 retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, job_api, ENCRYPT, TEST_4_BUFFER,
-                                           1, 4, buf_idx);
+                                           pIV, job_api, IMB_DIR_ENCRYPT,
+                                           TEST_4_BUFFER, 1, 4, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
                 retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, job_api, DECRYPT, TEST_4_BUFFER,
-                                           1, 4, buf_idx);
+                                           pIV, job_api, IMB_DIR_DECRYPT,
+                                           TEST_4_BUFFER, 1, 4, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
         }
@@ -686,14 +687,15 @@ int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                         buf_idx[j] = i;
 
                 retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, job_api, ENCRYPT, TEST_N_BUFFER,
+                                           pIV, job_api,
+                                           IMB_DIR_ENCRYPT, TEST_N_BUFFER,
                                            0, numBuffs, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
 
                 retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                           pIV, job_api, DECRYPT, TEST_N_BUFFER,
-                                           0, numBuffs, buf_idx);
+                                           pIV, job_api, IMB_DIR_DECRYPT,
+                                           TEST_N_BUFFER, 0, numBuffs, buf_idx);
                 if (retTmp < 0)
                         ret = retTmp;
         }
@@ -703,13 +705,13 @@ int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                 buf_idx[i] = i % NUM_ZUC_EEA3_TESTS;
 
         retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                   pIV, job_api, ENCRYPT, TEST_N_BUFFER,
+                                   pIV, job_api, IMB_DIR_ENCRYPT, TEST_N_BUFFER,
                                    1, numBuffs, buf_idx);
         if (retTmp < 0)
                 ret = retTmp;
 
         retTmp = submit_and_verify(mb_mgr, pSrcData, pDstData, pKeys,
-                                   pIV, job_api, DECRYPT, TEST_N_BUFFER,
+                                   pIV, job_api, IMB_DIR_DECRYPT, TEST_N_BUFFER,
                                    1, numBuffs, buf_idx);
         if (retTmp < 0)
                 ret = retTmp;

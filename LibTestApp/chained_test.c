@@ -61,22 +61,22 @@ const struct test_set {
         const char *set_name;
 } test_sets[] = {
         {
-                .dir = ENCRYPT,
+                .dir = IMB_DIR_ENCRYPT,
                 .order = CIPHER_HASH,
                 .set_name = "encrypt-hash"
         },
         {
-                .dir = DECRYPT,
+                .dir = IMB_DIR_DECRYPT,
                 .order = CIPHER_HASH,
                 .set_name = "decrypt-hash"
         },
         {
-                .dir = ENCRYPT,
+                .dir = IMB_DIR_ENCRYPT,
                 .order = HASH_CIPHER,
                 .set_name = "hash-encrypt"
         },
         {
-                .dir = DECRYPT,
+                .dir = IMB_DIR_DECRYPT,
                 .order = HASH_CIPHER,
                 .set_name = "hash-decrypt"
         },
@@ -232,15 +232,15 @@ test_chained_many(struct MB_MGR *mb_mgr,
         const void *iv = vec->IV;
         const unsigned text_len = (unsigned) vec->PTlen;
         const unsigned digest_size = vec->Digest_len;
-        const uint8_t *in_text = (dir == ENCRYPT) ? vec->PT : vec->CT;
-        const uint8_t *out_text = (dir == ENCRYPT) ? vec->CT : vec->PT;
+        const uint8_t *in_text = (dir == IMB_DIR_ENCRYPT) ? vec->PT : vec->CT;
+        const uint8_t *out_text = (dir == IMB_DIR_ENCRYPT) ? vec->CT : vec->PT;
         const uint8_t *digest;
 
         if (num_jobs == 0)
                 return 0;
 
-        if ((dir == ENCRYPT && order == CIPHER_HASH) ||
-            (dir == DECRYPT && order == HASH_CIPHER))
+        if ((dir == IMB_DIR_ENCRYPT && order == CIPHER_HASH) ||
+            (dir == IMB_DIR_DECRYPT && order == HASH_CIPHER))
                 digest = vec->Digest_CT;
         else
                 digest = vec->Digest_PT;

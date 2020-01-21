@@ -78,7 +78,7 @@ DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
         if (job == NULL)
                 return job;
 
-        IMB_ASSERT((job->cipher_direction == DECRYPT) ||
+        IMB_ASSERT((job->cipher_direction == IMB_DIR_DECRYPT) ||
                    (job->status & STS_COMPLETED_AES));
 
         partial_bytes = job->msg_len_to_cipher_in_bytes & (AES_BLOCK_SIZE - 1);
@@ -88,7 +88,7 @@ DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
                 return job;
 
         /* in either case IV has to be the last cipher-text block */
-        if (job->cipher_direction == ENCRYPT)
+        if (job->cipher_direction == IMB_DIR_ENCRYPT)
                 iv = job->dst + offset - AES_BLOCK_SIZE;
         else
                 iv = job->src + job->cipher_start_src_offset_in_bytes +

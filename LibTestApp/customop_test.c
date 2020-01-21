@@ -89,7 +89,7 @@ cipher_addon(struct JOB_AES_HMAC *job)
         TRACE("Seq:%u Cipher Addon cipher:%s auth:%s\n",
               node->seq, node->cipher->name, node->auth->name);
 
-        if (job->cipher_direction == ENCRYPT)
+        if (job->cipher_direction == IMB_DIR_ENCRYPT)
                 memset(job->dst, 1, job->msg_len_to_cipher_in_bytes);
         else
                 memset(job->dst, 2, job->msg_len_to_cipher_in_bytes);
@@ -155,7 +155,7 @@ job_check(const struct JOB_AES_HMAC *job)
                 return -1;
         }
         if (job->cipher_mode == IMB_CIPHER_CUSTOM) {
-                if (job->cipher_direction == ENCRYPT) {
+                if (job->cipher_direction == IMB_DIR_ENCRYPT) {
                         unsigned i;
 
                         for (i = 0; i < job->msg_len_to_cipher_in_bytes; i++) {
@@ -242,7 +242,7 @@ customop_test(struct MB_MGR *mgr)
                 job->u.HMAC._hashed_auth_key_xor_ipad = node->ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = node->opad;
                 job->cipher_mode = node->cipher->mode;
-                job->cipher_direction = ENCRYPT;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
                 job->chain_order = CIPHER_HASH;
                 job->hash_alg = node->auth->hash;
                 job->user_data = node;
@@ -287,7 +287,7 @@ customop_test(struct MB_MGR *mgr)
                 job->u.HMAC._hashed_auth_key_xor_ipad = node->ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = node->opad;
                 job->cipher_mode = node->cipher->mode;
-                job->cipher_direction = DECRYPT;
+                job->cipher_direction = IMB_DIR_DECRYPT;
                 job->chain_order = HASH_CIPHER;
                 job->hash_alg = node->auth->hash;
                 job->user_data = node;

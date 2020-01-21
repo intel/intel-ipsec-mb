@@ -741,7 +741,7 @@ test_ecb_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                 if (test_ecb_many(mb_mgr, enc_keys, dec_keys,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, cipher, 0,
+                             IMB_DIR_ENCRYPT, CIPHER_HASH, cipher, 0,
                              vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
@@ -750,7 +750,7 @@ test_ecb_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                 if (test_ecb_many(mb_mgr, enc_keys, dec_keys,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, cipher, 0,
+                             IMB_DIR_DECRYPT, HASH_CIPHER, cipher, 0,
                              vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
@@ -759,7 +759,7 @@ test_ecb_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                 if (test_ecb_many(mb_mgr, enc_keys, dec_keys,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, cipher, 1,
+                             IMB_DIR_ENCRYPT, CIPHER_HASH, cipher, 1,
                              vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
                         errors++;
@@ -768,7 +768,7 @@ test_ecb_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                 if (test_ecb_many(mb_mgr, enc_keys, dec_keys,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, cipher, 1,
+                             IMB_DIR_DECRYPT, HASH_CIPHER, cipher, 1,
                              vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
                         errors++;

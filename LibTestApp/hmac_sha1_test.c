@@ -409,7 +409,7 @@ test_hmac_sha1(struct MB_MGR *mb_mgr,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->aes_enc_key_expanded = NULL;
                 job->aes_dec_key_expanded = NULL;
-                job->cipher_direction = ENCRYPT;
+                job->cipher_direction = IMB_DIR_ENCRYPT;
                 job->chain_order = HASH_CIPHER;
                 job->dst = NULL;
                 job->aes_key_len_in_bytes = 0;

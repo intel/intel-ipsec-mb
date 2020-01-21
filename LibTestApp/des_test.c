@@ -601,7 +601,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, cipher, 0)) {
+                             IMB_DIR_ENCRYPT, CIPHER_HASH, cipher, 0)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
                 }
@@ -610,7 +610,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, cipher, 0)) {
+                             IMB_DIR_DECRYPT, HASH_CIPHER, cipher, 0)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
                 }
@@ -619,7 +619,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, cipher, 1)) {
+                             IMB_DIR_ENCRYPT, CIPHER_HASH, cipher, 1)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
                         errors++;
                 }
@@ -628,7 +628,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, cipher, 1)) {
+                             IMB_DIR_DECRYPT, HASH_CIPHER, cipher, 1)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
                         errors++;
                 }
@@ -664,7 +664,8 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, IMB_CIPHER_DES3, 0)) {
+                             IMB_DIR_ENCRYPT, CIPHER_HASH,
+                             IMB_CIPHER_DES3, 0)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
                 }
@@ -673,7 +674,8 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, IMB_CIPHER_DES3, 0)) {
+                             IMB_DIR_DECRYPT, HASH_CIPHER,
+                             IMB_CIPHER_DES3, 0)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
                 }
@@ -682,7 +684,8 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
-                             ENCRYPT, CIPHER_HASH, IMB_CIPHER_DES3, 1)) {
+                             IMB_DIR_ENCRYPT, CIPHER_HASH,
+                             IMB_CIPHER_DES3, 1)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
                         errors++;
                 }
@@ -691,7 +694,8 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
-                             DECRYPT, HASH_CIPHER, IMB_CIPHER_DES3, 1)) {
+                             IMB_DIR_DECRYPT, HASH_CIPHER,
+                             IMB_CIPHER_DES3, 1)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
                         errors++;
                 }

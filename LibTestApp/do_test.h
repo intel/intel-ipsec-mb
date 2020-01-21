@@ -146,7 +146,7 @@ known_answer_test(MB_MGR *mb_mgr)
 
         job->aes_enc_key_expanded = enc_keys;
         job->aes_dec_key_expanded = dec_keys;
-        job->cipher_direction = DECRYPT;
+        job->cipher_direction = IMB_DIR_DECRYPT;
         job->chain_order = HASH_CIPHER;
         job->dst = test_buf;
         job->aes_key_len_in_bytes = 16;
@@ -266,19 +266,19 @@ do_test(MB_MGR *mb_mgr)
 
                 switch (rand() % 4) {
 		case 0:
-                        job->cipher_direction = ENCRYPT;
+                        job->cipher_direction = IMB_DIR_ENCRYPT;
                         job->chain_order = HASH_CIPHER;
 			break;
 		case 1:
-                        job->cipher_direction = ENCRYPT;
+                        job->cipher_direction = IMB_DIR_ENCRYPT;
                         job->chain_order = CIPHER_HASH;
 			break;
                 case 2:
-			job->cipher_direction = DECRYPT;
+			job->cipher_direction = IMB_DIR_DECRYPT;
 			job->chain_order = CIPHER_HASH;
 			break;
 		case 3:
-			job->cipher_direction = DECRYPT;
+			job->cipher_direction = IMB_DIR_DECRYPT;
 			job->chain_order = HASH_CIPHER;
 			break;
                 }

@@ -606,8 +606,8 @@ struct str_value_mapping aead_algo_str_map[] = {
 };
 
 struct str_value_mapping cipher_dir_str_map[] = {
-        {.name = "encrypt", .values.job_params.cipher_dir = ENCRYPT},
-        {.name = "decrypt", .values.job_params.cipher_dir = DECRYPT}
+        {.name = "encrypt", .values.job_params.cipher_dir = IMB_DIR_ENCRYPT},
+        {.name = "decrypt", .values.job_params.cipher_dir = IMB_DIR_DECRYPT}
 };
 
 /* This struct stores all information about performed test case */
@@ -681,7 +681,7 @@ struct custom_job_params custom_job_params = {
         .cipher_mode  = TEST_NULL_CIPHER,
         .hash_alg     = TEST_NULL_HASH,
         .aes_key_size = 0,
-        .cipher_dir   = ENCRYPT
+        .cipher_dir   = IMB_DIR_ENCRYPT
 };
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
@@ -1297,12 +1297,12 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                    ((params->cipher_mode == TEST_AESDOCSIS ||
                      params->cipher_mode == TEST_AESDOCSIS8) &&
                     params->hash_alg == TEST_DOCSIS_CRC32)) {
-                if (job_template.cipher_direction == ENCRYPT)
+                if (job_template.cipher_direction == IMB_DIR_ENCRYPT)
                         job_template.chain_order = HASH_CIPHER;
                 else
                         job_template.chain_order = CIPHER_HASH;
         } else {
-                if (job_template.cipher_direction == ENCRYPT)
+                if (job_template.cipher_direction == IMB_DIR_ENCRYPT)
                         job_template.chain_order = CIPHER_HASH;
                 else
                         job_template.chain_order = HASH_CIPHER;
@@ -1504,7 +1504,7 @@ do_test_gcm(struct params_s *params,
                 break;
         }
 
-        if (params->cipher_dir == ENCRYPT) {
+        if (params->cipher_dir == IMB_DIR_ENCRYPT) {
 #ifndef _WIN32
                 if (use_unhalted_cycles)
                         time = read_cycles(params->core);
@@ -1880,7 +1880,7 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 return;
         }
 
-        for (dir = ENCRYPT; dir <= DECRYPT; dir++) {
+        for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                 params->cipher_dir = (JOB_CIPHER_DIRECTION) dir;
                 for (k = AES_128_BYTES; k <= limit; k += 8) {
                         params->aes_key_size = k;
@@ -1937,7 +1937,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         printf("DIR");
         for (col = 0; col < total_variants; col++) {
                 par = variant_list[col].params;
-                c_dir = par.cipher_dir - ENCRYPT;
+                c_dir = par.cipher_dir - IMB_DIR_ENCRYPT;
                 printf("\t%s", c_dir_names[c_dir]);
         }
         printf("\n");

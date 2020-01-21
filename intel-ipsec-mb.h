@@ -233,6 +233,10 @@ typedef enum {
 #define PLAIN_SHA_512           IMB_AUTH_SHA_512
 #define AES_CMAC_BITLEN         IMB_AUTH_AES_CMAC_BITLEN
 #define PON_CRC_BIP             IMB_AUTH_PON_CRC_BIP
+
+/***** Previous cipher direction enums *****/
+#define ENCRYPT                 IMB_DIR_ENCRYPT
+#define DECRYPT                 IMB_DIR_DECRYPT
 #endif /* !NO_COMPAT_IMB_API_053 */
 
 typedef enum {
@@ -257,8 +261,8 @@ typedef enum {
 } JOB_CIPHER_MODE;
 
 typedef enum {
-        ENCRYPT = 1,
-        DECRYPT
+        IMB_DIR_ENCRYPT = 1,
+        IMB_DIR_DECRYPT
 } JOB_CIPHER_DIRECTION;
 
 typedef enum {
@@ -407,7 +411,8 @@ typedef struct JOB_AES_HMAC {
         JOB_STS status;
         /* IMB_CIPHER_CBC, IMB_CIPHER_CNTR, IMB_CIPHER_GCM, etc. */
         JOB_CIPHER_MODE cipher_mode;
-        JOB_CIPHER_DIRECTION cipher_direction; /* Encrypt/decrypt */
+        /* IMB_DIR_ENCRYPT/IMB_DIR_DECRYPT */
+        JOB_CIPHER_DIRECTION cipher_direction;
         JOB_HASH_ALG hash_alg; /* IMB_AUTH_SHA_1 or others... */
         JOB_CHAIN_ORDER chain_order; /* CIPHER_HASH or HASH_CIPHER.
                                       * For AES-CCM, when encrypting,

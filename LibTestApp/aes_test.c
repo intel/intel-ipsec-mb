@@ -1417,7 +1417,7 @@ test_aes_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                                   vec_tab[vect].IV,
                                   vec_tab[vect].P, vec_tab[vect].C,
                                   (unsigned) vec_tab[vect].Plen,
-                                  ENCRYPT, CIPHER_HASH, cipher, 0,
+                                  IMB_DIR_ENCRYPT, CIPHER_HASH, cipher, 0,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
@@ -1427,7 +1427,7 @@ test_aes_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                                   vec_tab[vect].IV,
                                   vec_tab[vect].C, vec_tab[vect].P,
                                   (unsigned) vec_tab[vect].Plen,
-                                  DECRYPT, HASH_CIPHER, cipher, 0,
+                                  IMB_DIR_DECRYPT, HASH_CIPHER, cipher, 0,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
@@ -1437,7 +1437,7 @@ test_aes_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                                   vec_tab[vect].IV,
                                   vec_tab[vect].P, vec_tab[vect].C,
                                   (unsigned) vec_tab[vect].Plen,
-                                  ENCRYPT, CIPHER_HASH, cipher, 1,
+                                  IMB_DIR_ENCRYPT, CIPHER_HASH, cipher, 1,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
                         errors++;
@@ -1447,7 +1447,7 @@ test_aes_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
                                   vec_tab[vect].IV,
                                   vec_tab[vect].C, vec_tab[vect].P,
                                   (unsigned) vec_tab[vect].Plen,
-                                  DECRYPT, HASH_CIPHER, cipher, 1,
+                                  IMB_DIR_DECRYPT, HASH_CIPHER, cipher, 1,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
                         errors++;
@@ -1539,7 +1539,7 @@ test_docrc_many(struct MB_MGR *mb_mgr,
         if (auths == NULL)
                 goto end_alloc;
 
-        if (dir == ENCRYPT) {
+        if (dir == IMB_DIR_ENCRYPT) {
                 in_text = p_vec->pt;
                 out_text = p_vec->ct;
         } else {
@@ -1558,7 +1558,7 @@ test_docrc_many(struct MB_MGR *mb_mgr,
                         /* copy input text to the allocated buffer */
                         memcpy(targets[i] + sizeof(padding), in_text,
                                frame_len);
-                        if (dir == ENCRYPT && p_vec->hash_length >= 14)
+                        if (dir == IMB_DIR_ENCRYPT && p_vec->hash_length >= 14)
                                 memset(targets[i] + sizeof(padding) +
                                        frame_len - tag_len, 0xff, tag_len);
                 }
@@ -1657,7 +1657,7 @@ test_docrc_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
 
                 if (test_docrc_many(mb_mgr, enc_keys, dec_keys,
                                     &vec_tab[vect],
-                                    ENCRYPT, HASH_CIPHER, 1,
+                                    IMB_DIR_ENCRYPT, HASH_CIPHER, 1,
                                     num_jobs)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
@@ -1665,7 +1665,7 @@ test_docrc_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
 
                 if (test_docrc_many(mb_mgr, enc_keys, dec_keys,
                                     &vec_tab[vect],
-                                    DECRYPT, CIPHER_HASH, 1,
+                                    IMB_DIR_DECRYPT, CIPHER_HASH, 1,
                                     num_jobs)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;

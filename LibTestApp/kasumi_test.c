@@ -303,7 +303,7 @@ static int validate_kasumi_f8_1_block(MB_MGR *mgr, const unsigned job_api)
                         submit_kasumi_f8_jobs(mgr, &pKeySched,
                                               &pIV, &pSrcBuff,
                                               &pSrcBuff, &bitLen, &bitOffset,
-                                              ENCRYPT, 1);
+                                              IMB_DIR_ENCRYPT, 1);
                 else
                         IMB_KASUMI_F8_1_BUFFER(mgr, pKeySched, IV, srcBuff,
                                                srcBuff, byteLen);
@@ -331,7 +331,7 @@ static int validate_kasumi_f8_1_block(MB_MGR *mgr, const unsigned job_api)
                         submit_kasumi_f8_jobs(mgr, &pKeySched,
                                               &pIV, &pSrcBuff,
                                               &pSrcBuff, &bitLen,
-                                              &bitOffset, DECRYPT, 1);
+                                              &bitOffset, IMB_DIR_DECRYPT, 1);
                 else
                         IMB_KASUMI_F8_1_BUFFER(mgr, pKeySched, IV, srcBuff,
                                                srcBuff, byteLen);
@@ -461,7 +461,7 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
                         submit_kasumi_f8_jobs(mgr, &pKeySched,
                                               &pIV, &plainBufAftPad,
                                               &wrkBufAftPad, &bit_len,
-                                              &bit_offset, ENCRYPT, 1);
+                                              &bit_offset, IMB_DIR_ENCRYPT, 1);
                 else
                         IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV,
                                                    plainBufAftPad, wrkBufAftPad,
@@ -495,7 +495,7 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
                         submit_kasumi_f8_jobs(mgr, &pKeySched,
                                               &pIV, &ciphBufAftPad,
                                               &wrkBufAftPad, &bit_len,
-                                              &bit_offset, DECRYPT, 1);
+                                              &bit_offset, IMB_DIR_DECRYPT, 1);
                 else
                         IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV,
                                                    ciphBufAftPad, wrkBufAftPad,
@@ -524,7 +524,7 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
                         submit_kasumi_f8_jobs(mgr, &pKeySched,
                                               &pIV, &plainBufAftPad,
                                               &wrkBufAftPad, &bit_len,
-                                              &bit_offset, ENCRYPT, 1);
+                                              &bit_offset, IMB_DIR_ENCRYPT, 1);
                 else
                         IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV,
                                                    plainBufAftPad, wrkBufAftPad,
@@ -544,7 +544,7 @@ static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
                         submit_kasumi_f8_jobs(mgr, &pKeySched,
                                               &pIV, &ciphBufAftPad,
                                               &wrkBufAftPad, &bit_len,
-                                              &bit_offset, DECRYPT, 1);
+                                              &bit_offset, IMB_DIR_DECRYPT, 1);
                 else
                         IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV,
                                                    ciphBufAftPad, wrkBufAftPad,
@@ -638,7 +638,7 @@ static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr,
                         submit_kasumi_f8_jobs(mgr, &pKeySched,
                                               &pIV, &pSrcBuff,
                                               &pWrkBuff, &bit_len,
-                                              &offset, ENCRYPT, 1);
+                                              &offset, IMB_DIR_ENCRYPT, 1);
                 else
                         IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, srcBuff,
                                                    wrkbuf, bit_len, offset);
@@ -685,7 +685,7 @@ static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr,
                         submit_kasumi_f8_jobs(mgr, &pKeySched,
                                               &pIV, &pDstBuff,
                                               &pWrkBuff, &bit_len,
-                                              &offset, DECRYPT, 1);
+                                              &offset, IMB_DIR_DECRYPT, 1);
                 else
                         IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, dstBuff,
                                                    wrkbuf, bit_len, offset);
@@ -800,7 +800,8 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
                                       (uint8_t **)&srcBuff,
                                       (uint8_t **)&srcBuff,
                                       (uint32_t *)&bitLens,
-                                      (uint32_t *)&bitOffsets, ENCRYPT, 2);
+                                      (uint32_t *)&bitOffsets,
+                                      IMB_DIR_ENCRYPT, 2);
         else
                 IMB_KASUMI_F8_2_BUFFER(mgr, keySched[0], iv[0], iv[1],
                                        srcBuff[0], srcBuff[0], packetLen[0],
@@ -873,7 +874,8 @@ static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
                                       (uint8_t **)&dstBuff,
                                       (uint8_t **)&dstBuff,
                                       (uint32_t *)&bitLens,
-                                      (uint32_t *)&bitOffsets, DECRYPT, 2);
+                                      (uint32_t *)&bitOffsets,
+                                      IMB_DIR_DECRYPT, 2);
         else
                 IMB_KASUMI_F8_2_BUFFER(mgr, keySched[0], iv[0], iv[1],
                                        dstBuff[0], dstBuff[0], packetLen[0],
@@ -1010,7 +1012,8 @@ static int validate_kasumi_f8_3_blocks(MB_MGR *mgr, const unsigned job_api)
                                       (uint8_t **)&srcBuff,
                                       (uint8_t **)&srcBuff,
                                       (uint32_t *)&bitLens,
-                                      (uint32_t *)&bitOffsets, ENCRYPT, 3);
+                                      (uint32_t *)&bitOffsets,
+                                      IMB_DIR_ENCRYPT, 3);
         else
                 IMB_KASUMI_F8_3_BUFFER(mgr, keySched[0], iv[0], iv[1], iv[2],
                                        srcBuff[0], srcBuff[0], srcBuff[1],
@@ -1035,7 +1038,8 @@ static int validate_kasumi_f8_3_blocks(MB_MGR *mgr, const unsigned job_api)
                                       (uint8_t **)&dstBuff,
                                       (uint8_t **)&dstBuff,
                                       (uint32_t *)&bitLens,
-                                      (uint32_t *)&bitOffsets, DECRYPT, 3);
+                                      (uint32_t *)&bitOffsets,
+                                      IMB_DIR_DECRYPT, 3);
         else
                 IMB_KASUMI_F8_3_BUFFER(mgr, keySched[0], iv[0], iv[1], iv[2],
                                        dstBuff[0], dstBuff[0], dstBuff[1],
@@ -1148,7 +1152,8 @@ static int validate_kasumi_f8_4_blocks(MB_MGR *mgr, const unsigned job_api)
                                       (uint8_t **)&srcBuff,
                                       (uint8_t **)&srcBuff,
                                       (uint32_t *)&bitLens,
-                                      (uint32_t *)&bitOffsets, ENCRYPT, 4);
+                                      (uint32_t *)&bitOffsets,
+                                      IMB_DIR_ENCRYPT, 4);
         else
                 IMB_KASUMI_F8_4_BUFFER(mgr, keySched[0], iv[0], iv[1], iv[2],
                                        iv[3], srcBuff[0], srcBuff[0],
@@ -1174,7 +1179,8 @@ static int validate_kasumi_f8_4_blocks(MB_MGR *mgr, const unsigned job_api)
                                       (uint8_t **)&dstBuff,
                                       (uint8_t **)&dstBuff,
                                       (uint32_t *)&bitLens,
-                                      (uint32_t *)&bitOffsets, DECRYPT, 4);
+                                      (uint32_t *)&bitOffsets,
+                                      IMB_DIR_DECRYPT, 4);
         else
                 IMB_KASUMI_F8_4_BUFFER(mgr, keySched[0], iv[0], iv[1], iv[2],
                                        iv[3], dstBuff[0], dstBuff[0],
@@ -1282,7 +1288,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
                                               (uint8_t **)srcBuff,
                                               (uint32_t *)bitLens,
                                               (uint32_t *)bitOffsets,
-                                              ENCRYPT, i + 1);
+                                              IMB_DIR_ENCRYPT, i + 1);
                 else
                         /* All buffers share the same key */
                         IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
@@ -1302,7 +1308,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
                                               (uint8_t **)srcBuff,
                                               (uint32_t *)bitLens,
                                               (uint32_t *)bitOffsets,
-                                              DECRYPT, i + 1);
+                                              IMB_DIR_DECRYPT, i + 1);
                 else
                         /* All buffers share the same key */
                         IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
@@ -1351,7 +1357,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
                                               (uint8_t **)srcBuff,
                                               (uint32_t *)bitLens,
                                               (uint32_t *)bitOffsets,
-                                              DECRYPT, i + 1);
+                                              IMB_DIR_DECRYPT, i + 1);
                 else
                         /* All buffers share the same key */
                         IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
@@ -1371,7 +1377,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
                                               (uint8_t **)srcBuff,
                                               (uint32_t *)bitLens,
                                               (uint32_t *)bitOffsets,
-                                              DECRYPT, i + 1);
+                                              IMB_DIR_DECRYPT, i + 1);
                 else
                         /* All buffers share the same key */
                         IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
@@ -1422,7 +1428,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
                                               (uint8_t **)srcBuff,
                                               (uint32_t *)bitLens,
                                               (uint32_t *)bitOffsets,
-                                              DECRYPT, i + 1);
+                                              IMB_DIR_DECRYPT, i + 1);
                 else
                         IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
                                                (const void * const *)srcBuff,
@@ -1441,7 +1447,7 @@ static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
                                               (uint8_t **)srcBuff,
                                               (uint32_t *)bitLens,
                                               (uint32_t *)bitOffsets,
-                                              DECRYPT, i + 1);
+                                              IMB_DIR_DECRYPT, i + 1);
                 else
                         IMB_KASUMI_F8_N_BUFFER(mgr, pKeySched[i], IV,
                                                (const void * const *)srcBuff,

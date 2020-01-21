@@ -444,7 +444,7 @@ test_pon(struct MB_MGR *mb_mgr,
         memset(target, -1, len_to_bip + (sizeof(padding) * 2));
         memset(padding, -1, sizeof(padding));
 
-        if (dir == ENCRYPT) {
+        if (dir == IMB_DIR_ENCRYPT) {
                 const uint16_t pli = ((((uint16_t) in_text[0]) << 8) |
                                       ((uint16_t) in_text[1])) >> 2;
 
@@ -527,7 +527,7 @@ test_pon(struct MB_MGR *mb_mgr,
         int is_error = 0;
 #endif
 
-        if (dir == DECRYPT) {
+        if (dir == IMB_DIR_DECRYPT) {
                 const uint16_t pli = ((((uint16_t) in_text[0]) << 8) |
                                       ((uint16_t) in_text[1])) >> 2;
 
@@ -557,7 +557,7 @@ test_pon(struct MB_MGR *mb_mgr,
 #endif
         }
 
-        if (dir == ENCRYPT) {
+        if (dir == IMB_DIR_ENCRYPT) {
                 if (memcmp(out_text, target + sizeof(padding), len_to_bip)) {
                         printf("output mismatch\n");
                         hexdump(stderr, "Target",
@@ -655,7 +655,7 @@ test_pon_std_vectors(struct MB_MGR *mb_mgr)
                              pon_vectors[vect].length_to_bip,
                              pon_vectors[vect].offset_to_crc_cipher,
                              pon_vectors[vect].bip_out,
-                             ENCRYPT, HASH_CIPHER)) {
+                             IMB_DIR_ENCRYPT, HASH_CIPHER)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
                 }
@@ -669,7 +669,7 @@ test_pon_std_vectors(struct MB_MGR *mb_mgr)
                              pon_vectors[vect].length_to_bip,
                              pon_vectors[vect].offset_to_crc_cipher,
                              pon_vectors[vect].bip_out,
-                             DECRYPT, CIPHER_HASH)) {
+                             IMB_DIR_DECRYPT, CIPHER_HASH)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
                 }

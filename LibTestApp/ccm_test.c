@@ -1775,7 +1775,7 @@ ccm_job_ok(const struct ccm_rfc3610_vector *vec,
 
         /* cipher checks */
         if (in_place) {
-                if (dir == ENCRYPT) {
+                if (dir == IMB_DIR_ENCRYPT) {
                         if (memcmp(vec->packet_out, target + sizeof_padding,
                                    vec->packet_len)) {
                                 printf("cipher mismatched\n");
@@ -1799,7 +1799,7 @@ ccm_job_ok(const struct ccm_rfc3610_vector *vec,
                         }
                 }
         } else { /* out-of-place */
-                if (dir == ENCRYPT) {
+                if (dir == IMB_DIR_ENCRYPT) {
                         if (memcmp(vec->packet_out + vec->clear_len,
                                    target + sizeof_padding,
                                    vec->packet_len - vec->clear_len)) {
@@ -1893,7 +1893,8 @@ test_ccm(struct MB_MGR *mb_mgr,
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         int i = 0, jobs_rx = 0, ret = -1;
-        const int order = (dir == ENCRYPT) ? HASH_CIPHER : CIPHER_HASH;
+        const int order = (dir == IMB_DIR_ENCRYPT) ?
+                           HASH_CIPHER : CIPHER_HASH;
 
         if (targets == NULL || auths == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
@@ -1916,7 +1917,7 @@ test_ccm(struct MB_MGR *mb_mgr,
                 memset(auths[i], -1, 16 + (sizeof(padding) * 2));
 
                 if (in_place) {
-                        if (dir == ENCRYPT)
+                        if (dir == IMB_DIR_ENCRYPT)
                                 memcpy(targets[i] + sizeof(padding),
                                        vec->packet_in, vec->packet_len);
                         else
@@ -1939,7 +1940,7 @@ test_ccm(struct MB_MGR *mb_mgr,
                                 targets[i] + sizeof(padding) + vec->clear_len;
                         job->src = targets[i] + sizeof(padding);
                 } else {
-                        if (dir == ENCRYPT) {
+                        if (dir == IMB_DIR_ENCRYPT) {
                                 job->dst = targets[i] + sizeof(padding);
                                 job->src = vec->packet_in;
                         } else {
@@ -2043,22 +2044,26 @@ test_ccm_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 		printf(".");
 #endif
 
-                if (test_ccm(mb_mgr, &ccm_vectors[idx], ENCRYPT, 1, num_jobs)) {
+                if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_ENCRYPT, 1,
+                             num_jobs)) {
                         printf("error #%d encrypt in-place\n", vect);
                         errors++;
                 }
 
-                if (test_ccm(mb_mgr, &ccm_vectors[idx], DECRYPT, 1, num_jobs)) {
+                if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_DECRYPT, 1,
+                             num_jobs)) {
                         printf("error #%d decrypt in-place\n", vect);
                         errors++;
                 }
 
-                if (test_ccm(mb_mgr, &ccm_vectors[idx], ENCRYPT, 0, num_jobs)) {
+                if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_ENCRYPT, 0,
+                             num_jobs)) {
                         printf("error #%d encrypt out-of-place\n", vect);
                         errors++;
                 }
 
-                if (test_ccm(mb_mgr, &ccm_vectors[idx], DECRYPT, 0, num_jobs)) {
+                if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_DECRYPT, 0,
+                             num_jobs)) {
                         printf("error #%d decrypt out-of-place\n", vect);
                         errors++;
                 }

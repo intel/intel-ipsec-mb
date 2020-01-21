@@ -1232,13 +1232,13 @@ test_cmac_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 #endif
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
-                              ENCRYPT, num_jobs, CMAC)) {
+                              IMB_DIR_ENCRYPT, num_jobs, CMAC)) {
                         printf("error #%d encrypt\n", vect);
                         errors++;
                 }
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
-                              DECRYPT, num_jobs, CMAC)) {
+                              IMB_DIR_DECRYPT, num_jobs, CMAC)) {
                         printf("error #%d decrypt\n", vect);
                         errors++;
                 }
@@ -1271,13 +1271,13 @@ test_cmac_bitlen_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 #endif
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
-                              ENCRYPT, num_jobs, CMAC_BITLEN)) {
+                              IMB_DIR_ENCRYPT, num_jobs, CMAC_BITLEN)) {
                         printf("error #%d encrypt\n", vect);
                         errors++;
                 }
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
-                              DECRYPT, num_jobs, CMAC_BITLEN)) {
+                              IMB_DIR_DECRYPT, num_jobs, CMAC_BITLEN)) {
                         printf("error #%d decrypt\n", vect);
                         errors++;
                 }
@@ -1309,13 +1309,13 @@ test_cmac_bitlen_3gpp_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 #endif
 
                 if (test_cmac(mb_mgr, &cmac_3gpp_vectors[idx],
-                              ENCRYPT, num_jobs, CMAC_BITLEN)) {
+                              IMB_DIR_ENCRYPT, num_jobs, CMAC_BITLEN)) {
                         printf("error #%d encrypt\n", vect);
                         errors++;
                 }
 
                 if (test_cmac(mb_mgr, &cmac_3gpp_vectors[idx],
-                              DECRYPT, num_jobs, CMAC_BITLEN)) {
+                              IMB_DIR_DECRYPT, num_jobs, CMAC_BITLEN)) {
                         printf("error #%d decrypt\n", vect);
                         errors++;
                 }

@@ -792,12 +792,12 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == ENCRYPT &&
+                if (job->cipher_direction == IMB_DIR_ENCRYPT &&
                     job->aes_enc_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == DECRYPT &&
+                if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->aes_dec_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -917,7 +917,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == DECRYPT &&
+                if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->aes_dec_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -946,12 +946,12 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 /* Same key structure used for encrypt and decrypt */
-                if (job->cipher_direction == ENCRYPT &&
+                if (job->cipher_direction == IMB_DIR_ENCRYPT &&
                     job->aes_enc_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == DECRYPT &&
+                if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->aes_dec_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -992,12 +992,12 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == ENCRYPT &&
+                if (job->cipher_direction == IMB_DIR_ENCRYPT &&
                     job->aes_enc_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == DECRYPT &&
+                if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->aes_dec_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1032,12 +1032,12 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == ENCRYPT &&
+                if (job->cipher_direction == IMB_DIR_ENCRYPT &&
                     job->aes_enc_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == DECRYPT &&
+                if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->aes_dec_key_expanded == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
@@ -1127,7 +1127,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->cipher_direction == ENCRYPT) {
+                if (job->cipher_direction == IMB_DIR_ENCRYPT) {
                         const void * const *ks_ptr =
                                 (const void * const *)job->aes_enc_key_expanded;
 
@@ -1583,9 +1583,9 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                if ((job->cipher_direction == ENCRYPT &&
+                if ((job->cipher_direction == IMB_DIR_ENCRYPT &&
                      job->chain_order != HASH_CIPHER) ||
-                    (job->cipher_direction == DECRYPT &&
+                    (job->cipher_direction == IMB_DIR_DECRYPT &&
                      job->chain_order != CIPHER_HASH)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
@@ -1644,7 +1644,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
 __forceinline
 JOB_AES_HMAC *SUBMIT_JOB_AES(MB_MGR *state, JOB_AES_HMAC *job)
 {
-	if (job->cipher_direction == ENCRYPT)
+	if (job->cipher_direction == IMB_DIR_ENCRYPT)
 		job = SUBMIT_JOB_AES_ENC(state, job);
 	else
 		job = SUBMIT_JOB_AES_DEC(state, job);
@@ -1655,7 +1655,7 @@ JOB_AES_HMAC *SUBMIT_JOB_AES(MB_MGR *state, JOB_AES_HMAC *job)
 __forceinline
 JOB_AES_HMAC *FLUSH_JOB_AES(MB_MGR *state, JOB_AES_HMAC *job)
 {
-	if (job->cipher_direction == ENCRYPT)
+	if (job->cipher_direction == IMB_DIR_ENCRYPT)
 		job = FLUSH_JOB_AES_ENC(state, job);
 	else
 		job = FLUSH_JOB_AES_DEC(state, job);

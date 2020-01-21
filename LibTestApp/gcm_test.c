@@ -1374,7 +1374,7 @@ aes_gcm_job(MB_MGR *mb_mgr,
         job->auth_tag_output                  = auth_tag;
         job->auth_tag_output_len_in_bytes     = auth_tag_len;
         job->cipher_direction                 =
-                (order == CIPHER_HASH) ? ENCRYPT : DECRYPT;
+                (order == CIPHER_HASH) ? IMB_DIR_ENCRYPT : IMB_DIR_DECRYPT;
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         while (job) {

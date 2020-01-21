@@ -151,7 +151,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
 
         switch (job->cipher_mode) {
         case IMB_CIPHER_CBC:
-                if (job->cipher_direction == ENCRYPT)
+                if (job->cipher_direction == IMB_DIR_ENCRYPT)
                         job->aes_enc_key_expanded = dust_bin;
                 else
                         job->aes_dec_key_expanded = dust_bin;
@@ -172,7 +172,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
         case IMB_CIPHER_DOCSIS_SEC_BPI:
                 /* it has to be set regardless of direction (AES-CFB) */
                 job->aes_enc_key_expanded = dust_bin;
-                if (job->cipher_direction == DECRYPT)
+                if (job->cipher_direction == IMB_DIR_DECRYPT)
                         job->aes_dec_key_expanded = dust_bin;
                 job->aes_key_len_in_bytes = UINT64_C(16);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
@@ -180,7 +180,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
         case IMB_CIPHER_GCM:
-                if (job->cipher_direction == ENCRYPT)
+                if (job->cipher_direction == IMB_DIR_ENCRYPT)
                         job->aes_enc_key_expanded = dust_bin;
                 else
                         job->aes_dec_key_expanded = dust_bin;
@@ -193,7 +193,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->cipher_func = dummy_cipher_hash_func;
                 break;
         case IMB_CIPHER_DES:
-                if (job->cipher_direction == ENCRYPT)
+                if (job->cipher_direction == IMB_DIR_ENCRYPT)
                         job->aes_enc_key_expanded = dust_bin;
                 else
                         job->aes_dec_key_expanded = dust_bin;
@@ -203,7 +203,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->iv_len_in_bytes = UINT64_C(8);
                 break;
         case IMB_CIPHER_DOCSIS_DES:
-                if (job->cipher_direction == ENCRYPT)
+                if (job->cipher_direction == IMB_DIR_ENCRYPT)
                         job->aes_enc_key_expanded = dust_bin;
                 else
                         job->aes_dec_key_expanded = dust_bin;
@@ -221,7 +221,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 break;
         case IMB_CIPHER_DES3:
-                if (job->cipher_direction == ENCRYPT)
+                if (job->cipher_direction == IMB_DIR_ENCRYPT)
                         job->aes_enc_key_expanded = dust_keys;
                 else
                         job->aes_dec_key_expanded = dust_keys;
@@ -371,7 +371,7 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
          * SRC = NULL
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
-                for (dir = ENCRYPT; dir <= DECRYPT; dir++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
                              hash <= IMB_AUTH_SHA_512; hash++) {
                                 if (hash == IMB_AUTH_NULL ||
@@ -391,7 +391,7 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
          * AUTH_TAG_OUTPUT = NULL
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
-                for (dir = ENCRYPT; dir <= DECRYPT; dir++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
                              hash <= IMB_AUTH_SHA_512; hash++) {
                                 if (hash == IMB_AUTH_NULL ||
@@ -411,7 +411,7 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
          * AUTH_TAG_OUTPUT_LEN = 0
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
-                for (dir = ENCRYPT; dir <= DECRYPT; dir++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
                              hash <= IMB_AUTH_SHA_512; hash++) {
                                 if (hash == IMB_AUTH_NULL ||
@@ -458,7 +458,7 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          * SRC = NULL
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
-                for (dir = ENCRYPT; dir <= DECRYPT; dir++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                              cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
@@ -478,7 +478,7 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          * DST = NULL
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
-                for (dir = ENCRYPT; dir <= DECRYPT; dir++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                              cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
@@ -498,7 +498,7 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          * IV = NULL
          */
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
-                for (dir = ENCRYPT; dir <= DECRYPT; dir++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                              cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
@@ -521,7 +521,7 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
                 for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                      cipher++) {
-                        fill_in_job(&template_job, cipher, ENCRYPT,
+                        fill_in_job(&template_job, cipher, IMB_DIR_ENCRYPT,
                                     hash, order);
                         switch (cipher) {
                         case IMB_CIPHER_CBC:
@@ -552,7 +552,7 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
         for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
                 for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                      cipher++) {
-                        fill_in_job(&template_job, cipher, DECRYPT,
+                        fill_in_job(&template_job, cipher, IMB_DIR_DECRYPT,
                                     hash, order);
                         switch (cipher) {
                         case IMB_CIPHER_GCM:

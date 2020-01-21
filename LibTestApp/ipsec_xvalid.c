@@ -791,12 +791,12 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         } else if (params->cipher_mode == IMB_CIPHER_CCM ||
                    (params->cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
                     params->hash_alg == IMB_AUTH_DOCSIS_CRC32)) {
-                if (job->cipher_direction == ENCRYPT)
+                if (job->cipher_direction == IMB_DIR_ENCRYPT)
                         job->chain_order = HASH_CIPHER;
                 else
                         job->chain_order = CIPHER_HASH;
         } else {
-                if (job->cipher_direction == ENCRYPT)
+                if (job->cipher_direction == IMB_DIR_ENCRYPT)
                         job->chain_order = CIPHER_HASH;
                 else
                         job->chain_order = HASH_CIPHER;
@@ -1448,7 +1448,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  */
                 memcpy(src_dst_buf, test_buf, buf_size);
                 if (fill_job(job, params, src_dst_buf, in_digest, aad,
-                             buf_size, tag_size, ENCRYPT, enc_keys,
+                             buf_size, tag_size, IMB_DIR_ENCRYPT, enc_keys,
                              cipher_iv, auth_iv) < 0)
                         goto exit;
 
@@ -1501,7 +1501,7 @@ do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  * using reference architecture
                  */
                 if (fill_job(job, params, src_dst_buf, out_digest, aad,
-                             buf_size, tag_size, DECRYPT, dec_keys,
+                             buf_size, tag_size, IMB_DIR_DECRYPT, dec_keys,
                              cipher_iv, auth_iv) < 0)
                         goto exit;
 
