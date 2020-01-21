@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 ; This code schedules 1 blocks at a time, with 4 lanes per block
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %include "include/os.asm"
+%include "include/clear_regs.asm"
 
 %define	MOVDQ movdqu ;; assume buffers not aligned
 
@@ -448,7 +449,7 @@ done_hash:
 
 %ifdef SAFE_DATA
         ;; Clear potential sensitive data stored in stack
-        pxor    xmm0, xmm0
+        clear_xmms_sse xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
         movdqa  [rsp + _XMM_SAVE + 0 * 16], xmm0
         movdqa  [rsp + _XMM_SAVE + 1 * 16], xmm0
         movdqa  [rsp + _XMM_SAVE + 2 * 16], xmm0
@@ -457,6 +458,10 @@ done_hash:
         movdqa  [rsp + _XMM_SAVE + 5 * 16], xmm0
         movdqa  [rsp + _XMM_SAVE + 6 * 16], xmm0
         movdqa  [rsp + _XMM_SAVE + 7 * 16], xmm0
+%endif
+%else ;; LINUX
+%ifdef SAFE_DATA
+	clear_all_xmms_sse_asm
 %endif
 %endif ;; LINUX
 

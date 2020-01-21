@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -43,6 +43,7 @@
 %include "include/dbgprint.asm"
 
 %include "mb_mgr_datastruct.asm"
+%include "include/clear_regs.asm"
 
 ; resdq = res0 => 16 bytes
 struc frame
@@ -598,7 +599,7 @@ done_hash:
 
         ;; Clear stack frame (4*16 bytes)
 %ifdef SAFE_DATA
-        pxor    xmm0, xmm0
+        clear_all_xmms_sse_asm
 %assign i 0
 %rep 4
         movdqa	[rsp + i*16], xmm0

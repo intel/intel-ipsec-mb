@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
 
 %include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
+%include "include/clear_regs.asm"
 
 %define	MOVDQ movdqu ;; assume buffers not aligned
 %macro pxor2 2
@@ -373,6 +374,11 @@ done:
 %endif
 	mov	rbp, [rsp + _gpr_save + 8*0]
 	add	rsp, STACK_size
+
+%ifdef SAFE_DATA
+	clear_all_xmms_sse_asm
+%endif ;; SAFE_DATA
+
 	ret
 
 %ifdef LINUX

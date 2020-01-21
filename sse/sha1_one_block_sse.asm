@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 ; SHA1 code, hybrid, rolled, interleaved
 ; Uses SSE instructions
 %include "include/os.asm"
+%include "include/clear_regs.asm"
 
 section .data
 default rel
@@ -490,13 +491,18 @@ loop3_5:
 
 %ifdef SAFE_DATA
         ;; Clear potential sensitive data stored in stack
-        pxor    xmm0, xmm0
+        clear_xmms_sse xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
         movdqa  [rsp + 0 * 16], xmm0
         movdqa  [rsp + 1 * 16], xmm0
         movdqa  [rsp + 2 * 16], xmm0
+
 %endif
 
 	mov	rsp, [_RSP]
+%else ;; LINUX
+%ifdef SAFE_DATA
+	clear_all_xmms_sse_asm
+%endif
 %endif ;; LINUX
 
 	pop	r13

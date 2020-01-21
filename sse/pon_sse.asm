@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 %include "job_aes_hmac.asm"
 %include "include/os.asm"
 %include "include/memcpy.asm"
+%include "include/clear_regs.asm"
 
 ;;; This is implementation of stitched algorithms: AES128-CTR + CRC32 + BIP
 ;;; This combination is required by PON/xPON/gPON standard.
@@ -836,6 +837,11 @@ section .text
         pop     r14
         pop     r13
         pop     r12
+
+%ifdef SAFE_DATA
+	clear_all_xmms_sse_asm
+%endif ;; SAFE_DATA
+
 %endmacro                       ; AES128_CTR_PON
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

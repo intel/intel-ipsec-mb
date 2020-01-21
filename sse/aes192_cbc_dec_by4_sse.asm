@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -42,6 +42,7 @@
 ; arg 5: LEN:  length in bytes (multiple of 16)
 ;
 %include "include/os.asm"
+%include "include/clear_regs.asm"
 
 
 %ifndef AES_CBC_DEC_192
@@ -580,8 +581,10 @@ main_loop:
 	jne	main_loop
 
 done:
-; Don't write back IV
-;	movdqu	[IV], XIV
+
+%ifdef SAFE_DATA
+	clear_all_xmms_sse_asm
+%endif ;; SAFE_DATA
 
 	ret
 
