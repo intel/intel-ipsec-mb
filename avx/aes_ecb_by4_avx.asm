@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -43,6 +43,7 @@
 ;
 
 %include "include/os.asm"
+%include "include/clear_regs.asm"
 
 %ifndef AES_ECB_ENC_128
 %define AES_ECB_ENC_128 aes_ecb_enc_128_avx
@@ -608,6 +609,10 @@ section .text
 	jne	%%main_loop
 
 %%done:
+
+%ifdef SAFE_DATA
+	clear_all_xmms_avx_asm
+%endif ;; SAFE_DATA
 
 	ret
 

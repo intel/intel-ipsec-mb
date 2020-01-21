@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -41,6 +41,7 @@
 
 %include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
+%include "include/clear_regs.asm"
 extern K512_2
 
 section .data
@@ -363,7 +364,7 @@ Lrounds_16_xx:
 
         ;; Clear stack frame ((16 + 8)*16 bytes)
 %ifdef SAFE_DATA
-        vpxor   xmm0, xmm0
+        clear_all_xmms_avx_asm
 %assign i 0
 %rep (16+NUM_SHA512_DIGEST_WORDS)
         vmovdqa [rsp + i*SZ2], xmm0

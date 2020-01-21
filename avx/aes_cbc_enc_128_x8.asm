@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
 
 %include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
+%include "include/clear_regs.asm"
 
 %define	VMOVDQ vmovdqu ;; assume buffers not aligned
 
@@ -487,6 +488,11 @@ done:
 %endif
 
 	add	rsp, STACK_size
+
+%ifdef SAFE_DATA
+	clear_all_xmms_avx_asm
+%endif ;; SAFE_DATA
+
 	ret
 
 %ifdef LINUX

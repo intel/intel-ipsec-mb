@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 ;; clobbers xmm0-15
 
 %include "include/os.asm"
+%include "include/clear_regs.asm"
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
@@ -296,8 +297,10 @@ main_loop2:
 	jne	main_loop2
 
 do_return2:
-; Don't write back IV
-;	vmovdqu	[p_IV], xIV
+
+%ifdef SAFE_DATA
+	clear_all_xmms_avx_asm
+%endif ;; SAFE_DATA
 
 	ret
 
