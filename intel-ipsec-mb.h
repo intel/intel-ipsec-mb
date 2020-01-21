@@ -241,6 +241,11 @@ typedef enum {
 /***** Previous chain order enums *****/
 #define HASH_CIPHER             IMB_ORDER_HASH_CIPHER
 #define CIPHER_HASH             IMB_ORDER_CIPHER_HASH
+
+/***** Previous key size enums *****/
+#define AES_128_BYTES           IMB_KEY_AES_128_BYTES
+#define AES_192_BYTES           IMB_KEY_AES_192_BYTES
+#define AES_256_BYTES           IMB_KEY_AES_256_BYTES
 #endif /* !NO_COMPAT_IMB_API_053 */
 
 typedef enum {
@@ -303,9 +308,9 @@ typedef enum {
 } JOB_CHAIN_ORDER;
 
 typedef enum {
-        AES_128_BYTES = 16,
-        AES_192_BYTES = 24,
-        AES_256_BYTES = 32
+        IMB_KEY_AES_128_BYTES = 16,
+        IMB_KEY_AES_192_BYTES = 24,
+        IMB_KEY_AES_256_BYTES = 32
 } AES_KEY_SIZE_BYTES;
 
 typedef struct JOB_AES_HMAC {

@@ -1398,7 +1398,8 @@ job_aes_gcm_enc_128(const struct gcm_key_data *key,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         (void) ctx; /* unused */
-        aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key, AES_128_BYTES,
+        aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key,
+                    IMB_KEY_AES_128_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1413,7 +1414,8 @@ job_aes_gcm_dec_128(const struct gcm_key_data *key,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         (void) ctx; /* unused */
-        aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key, AES_128_BYTES,
+        aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key,
+                    IMB_KEY_AES_128_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1428,7 +1430,8 @@ job_aes_gcm_enc_192(const struct gcm_key_data *key,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         (void) ctx; /* unused */
-        aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key, AES_192_BYTES,
+        aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key,
+                    IMB_KEY_AES_192_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1443,7 +1446,8 @@ job_aes_gcm_dec_192(const struct gcm_key_data *key,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         (void) ctx; /* unused */
-        aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key, AES_192_BYTES,
+        aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key,
+                    IMB_KEY_AES_192_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1458,7 +1462,8 @@ job_aes_gcm_enc_256(const struct gcm_key_data *key,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         (void) ctx; /* unused */
-        aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key, AES_256_BYTES,
+        aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key,
+                    IMB_KEY_AES_256_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1473,7 +1478,8 @@ job_aes_gcm_dec_256(const struct gcm_key_data *key,
                     uint8_t *auth_tag, uint64_t auth_tag_len)
 {
         (void) ctx; /* unused */
-        aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key, AES_256_BYTES,
+        aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key,
+                    IMB_KEY_AES_256_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);

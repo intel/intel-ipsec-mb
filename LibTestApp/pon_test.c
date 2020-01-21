@@ -485,7 +485,7 @@ test_pon(struct MB_MGR *mb_mgr,
         if (iv != NULL) {
                 job->aes_enc_key_expanded = expkey;
                 job->aes_dec_key_expanded = expkey;
-                job->aes_key_len_in_bytes = AES_128_BYTES;
+                job->aes_key_len_in_bytes = IMB_KEY_AES_128_BYTES;
                 job->iv = iv;
                 job->iv_len_in_bytes = 16;
                 job->msg_len_to_cipher_in_bytes = (uint64_t) len_to_cipher;

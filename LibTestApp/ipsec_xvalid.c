@@ -149,91 +149,91 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 .name = "aes-cbc-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
-                        .key_size = AES_128_BYTES
+                        .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
                 .name = "aes-cbc-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
-                        .key_size = AES_192_BYTES
+                        .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
                 .name = "aes-cbc-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
-                        .key_size = AES_256_BYTES
+                        .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
                 .name = "aes-ctr-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
-                        .key_size = AES_128_BYTES
+                        .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
                 .name = "aes-ctr-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
-                        .key_size = AES_192_BYTES
+                        .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
                 .name = "aes-ctr-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
-                        .key_size = AES_256_BYTES
+                        .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
                 .name = "aes-ctr-bit-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                        .key_size = AES_128_BYTES
+                        .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
                 .name = "aes-ctr-bit-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                        .key_size = AES_192_BYTES
+                        .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
                 .name = "aes-ctr-bit-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                        .key_size = AES_256_BYTES
+                        .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
                 .name = "aes-ecb-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
-                        .key_size = AES_128_BYTES
+                        .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
                 .name = "aes-ecb-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
-                        .key_size = AES_192_BYTES
+                        .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
                 .name = "aes-ecb-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
-                        .key_size = AES_256_BYTES
+                        .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
                 .name = "aes-docsis",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
-                        .key_size = AES_128_BYTES
+                        .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
@@ -410,7 +410,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
-                        .key_size = AES_128_BYTES
+                        .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
@@ -418,7 +418,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
-                        .key_size = AES_192_BYTES
+                        .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
@@ -426,7 +426,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
-                        .key_size = AES_256_BYTES
+                        .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
@@ -434,7 +434,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CCM,
                         .hash_alg = IMB_AUTH_AES_CCM,
-                        .key_size = AES_128_BYTES
+                        .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
@@ -442,7 +442,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
                         .hash_alg = IMB_AUTH_PON_CRC_BIP,
-                        .key_size = AES_128_BYTES
+                        .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
@@ -1108,13 +1108,13 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         switch (params->cipher_mode) {
         case IMB_CIPHER_GCM:
                 switch (params->key_size) {
-                case AES_128_BYTES:
+                case IMB_KEY_AES_128_BYTES:
                         IMB_AES128_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
-                case AES_192_BYTES:
+                case IMB_KEY_AES_192_BYTES:
                         IMB_AES192_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
-                case AES_256_BYTES:
+                case IMB_KEY_AES_256_BYTES:
                         IMB_AES256_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
                 default:
@@ -1142,15 +1142,15 @@ prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_CIPHER_DOCSIS_SEC_BPI:
         case IMB_CIPHER_ECB:
                 switch (params->key_size) {
-                case AES_128_BYTES:
+                case IMB_KEY_AES_128_BYTES:
                         IMB_AES_KEYEXP_128(mb_mgr, ciph_key, enc_keys,
                                            dec_keys);
                         break;
-                case AES_192_BYTES:
+                case IMB_KEY_AES_192_BYTES:
                         IMB_AES_KEYEXP_192(mb_mgr, ciph_key, enc_keys,
                                           dec_keys);
                         break;
-                case AES_256_BYTES:
+                case IMB_KEY_AES_256_BYTES:
                         IMB_AES_KEYEXP_256(mb_mgr, ciph_key, enc_keys,
                                            dec_keys);
                         break;
