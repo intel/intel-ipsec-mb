@@ -787,19 +787,19 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
         job->cipher_direction = cipher_dir;
 
         if (params->cipher_mode == IMB_CIPHER_NULL) {
-                job->chain_order = HASH_CIPHER;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
         } else if (params->cipher_mode == IMB_CIPHER_CCM ||
                    (params->cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
                     params->hash_alg == IMB_AUTH_DOCSIS_CRC32)) {
                 if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                        job->chain_order = HASH_CIPHER;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
                 else
-                        job->chain_order = CIPHER_HASH;
+                        job->chain_order = IMB_ORDER_CIPHER_HASH;
         } else {
                 if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                        job->chain_order = CIPHER_HASH;
+                        job->chain_order = IMB_ORDER_CIPHER_HASH;
                 else
-                        job->chain_order = HASH_CIPHER;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
         }
 
         /* Translating enum to the API's one */

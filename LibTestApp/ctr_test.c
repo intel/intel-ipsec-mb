@@ -1413,7 +1413,7 @@ test_ctr_vectors(struct MB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                              (unsigned) vectors[vect].IVlen,
                              vectors[vect].P, vectors[vect].C,
                              (unsigned) vectors[vect].Plen,
-                             IMB_DIR_ENCRYPT, CIPHER_HASH, alg)) {
+                             IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg)) {
                         printf("error #%d encrypt\n", vect + 1);
                         errors++;
                 }
@@ -1424,7 +1424,7 @@ test_ctr_vectors(struct MB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                              (unsigned) vectors[vect].IVlen,
                              vectors[vect].C, vectors[vect].P,
                              (unsigned) vectors[vect].Plen,
-                             IMB_DIR_DECRYPT, HASH_CIPHER, alg)) {
+                             IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg)) {
                         printf("error #%d decrypt\n", vect + 1);
                         errors++;
                 }
@@ -1451,7 +1451,8 @@ test_ctr_vectors(struct MB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                                      local_iv, new_iv_len,
                                      vectors[vect].P, vectors[vect].C,
                                      (unsigned) vectors[vect].Plen,
-                                     IMB_DIR_ENCRYPT, CIPHER_HASH, alg)) {
+                                     IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
+                                     alg)) {
                                 printf("error #%d encrypt\n", vect + 1);
                                 errors++;
                         }
@@ -1461,7 +1462,8 @@ test_ctr_vectors(struct MB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                                      local_iv, new_iv_len,
                                      vectors[vect].C, vectors[vect].P,
                                      (unsigned) vectors[vect].Plen,
-                                     IMB_DIR_DECRYPT, HASH_CIPHER, alg)) {
+                                     IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
+                                     alg)) {
                                 printf("error #%d decrypt\n", vect + 1);
                                 errors++;
                         }

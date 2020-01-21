@@ -237,6 +237,10 @@ typedef enum {
 /***** Previous cipher direction enums *****/
 #define ENCRYPT                 IMB_DIR_ENCRYPT
 #define DECRYPT                 IMB_DIR_DECRYPT
+
+/***** Previous chain order enums *****/
+#define HASH_CIPHER             IMB_ORDER_HASH_CIPHER
+#define CIPHER_HASH             IMB_ORDER_CIPHER_HASH
 #endif /* !NO_COMPAT_IMB_API_053 */
 
 typedef enum {
@@ -294,8 +298,8 @@ typedef enum {
 } JOB_HASH_ALG;
 
 typedef enum {
-        CIPHER_HASH = 1,
-        HASH_CIPHER
+        IMB_ORDER_CIPHER_HASH = 1,
+        IMB_ORDER_HASH_CIPHER
 } JOB_CHAIN_ORDER;
 
 typedef enum {
@@ -414,11 +418,11 @@ typedef struct JOB_AES_HMAC {
         /* IMB_DIR_ENCRYPT/IMB_DIR_DECRYPT */
         JOB_CIPHER_DIRECTION cipher_direction;
         JOB_HASH_ALG hash_alg; /* IMB_AUTH_SHA_1 or others... */
-        JOB_CHAIN_ORDER chain_order; /* CIPHER_HASH or HASH_CIPHER.
-                                      * For AES-CCM, when encrypting,
-                                      * HASH_CIPHER must be selected,
-                                      * and when decrypting,
-                                      * CIPHER_HASH must be selected. */
+        /* IMB_ORDER_CIPHER_HASH or IMB_ORDER_HASH_CIPHER.
+        * For AES-CCM, when encrypting, IMB_ORDER_HASH_CIPHER
+        * must be selected, and when decrypting,
+        * IMB_ORDER_CIPHER_HASH must be selected. */
+        JOB_CHAIN_ORDER chain_order;
 
         void *user_data;
         void *user_data2;

@@ -957,7 +957,7 @@ test_hmac_shax(struct MB_MGR *mb_mgr,
                 job->aes_enc_key_expanded = NULL;
                 job->aes_dec_key_expanded = NULL;
                 job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = HASH_CIPHER;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->dst = NULL;
                 job->aes_key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);

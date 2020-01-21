@@ -124,7 +124,7 @@ submit_uea2_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->cipher_direction = dir;
-                job->chain_order = CIPHER_HASH;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
                 job->cipher_mode = IMB_CIPHER_SNOW3G_UEA2_BITLEN;
                 job->src = src[i];
                 job->dst = dst[i];
@@ -166,7 +166,7 @@ submit_uia2_job(struct MB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
         JOB_AES_HMAC *job;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->chain_order = CIPHER_HASH;
+        job->chain_order = IMB_ORDER_CIPHER_HASH;
         job->cipher_mode = IMB_CIPHER_NULL;
         job->src = src;
         job->u.SNOW3G_UIA2._iv = iv;

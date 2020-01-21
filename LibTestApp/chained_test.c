@@ -62,22 +62,22 @@ const struct test_set {
 } test_sets[] = {
         {
                 .dir = IMB_DIR_ENCRYPT,
-                .order = CIPHER_HASH,
+                .order = IMB_ORDER_CIPHER_HASH,
                 .set_name = "encrypt-hash"
         },
         {
                 .dir = IMB_DIR_DECRYPT,
-                .order = CIPHER_HASH,
+                .order = IMB_ORDER_CIPHER_HASH,
                 .set_name = "decrypt-hash"
         },
         {
                 .dir = IMB_DIR_ENCRYPT,
-                .order = HASH_CIPHER,
+                .order = IMB_ORDER_HASH_CIPHER,
                 .set_name = "hash-encrypt"
         },
         {
                 .dir = IMB_DIR_DECRYPT,
-                .order = HASH_CIPHER,
+                .order = IMB_ORDER_HASH_CIPHER,
                 .set_name = "hash-decrypt"
         },
 
@@ -239,8 +239,8 @@ test_chained_many(struct MB_MGR *mb_mgr,
         if (num_jobs == 0)
                 return 0;
 
-        if ((dir == IMB_DIR_ENCRYPT && order == CIPHER_HASH) ||
-            (dir == IMB_DIR_DECRYPT && order == HASH_CIPHER))
+        if ((dir == IMB_DIR_ENCRYPT && order == IMB_ORDER_CIPHER_HASH) ||
+            (dir == IMB_DIR_DECRYPT && order == IMB_ORDER_HASH_CIPHER))
                 digest = vec->Digest_CT;
         else
                 digest = vec->Digest_PT;
@@ -317,7 +317,7 @@ test_chained_many(struct MB_MGR *mb_mgr,
                  * in the source buffer, this offset is set to point at
                  * the destination buffer.
                  */
-                if (!in_place && (job->chain_order == CIPHER_HASH)) {
+                if (!in_place && (job->chain_order == IMB_ORDER_CIPHER_HASH)) {
                         const uintptr_t u_src = (const uintptr_t) job->src;
                         const uintptr_t u_dst = (const uintptr_t) job->dst;
                         const uintptr_t offset = (u_dst > u_src) ?

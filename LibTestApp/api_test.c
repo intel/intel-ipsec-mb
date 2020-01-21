@@ -370,7 +370,8 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
         /* ======== test 100
          * SRC = NULL
          */
-        for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
                              hash <= IMB_AUTH_SHA_512; hash++) {
@@ -390,7 +391,8 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
         /* ======== test 101
          * AUTH_TAG_OUTPUT = NULL
          */
-        for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
                              hash <= IMB_AUTH_SHA_512; hash++) {
@@ -410,7 +412,8 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
         /* ======== test 102
          * AUTH_TAG_OUTPUT_LEN = 0
          */
-        for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
                              hash <= IMB_AUTH_SHA_512; hash++) {
@@ -457,7 +460,8 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
         /* ======== test 200
          * SRC = NULL
          */
-        for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                              cipher++) {
@@ -477,7 +481,8 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
         /* ======== test 201
          * DST = NULL
          */
-        for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                              cipher++) {
@@ -497,7 +502,8 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
         /* ======== test 202
          * IV = NULL
          */
-        for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                              cipher++) {
@@ -518,7 +524,8 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          * AES_ENC_KEY_EXPANDED = NULL
          * AES_DEC_KEY_EXPANDED = NULL
          */
-        for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
                 for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                      cipher++) {
                         fill_in_job(&template_job, cipher, IMB_DIR_ENCRYPT,
@@ -549,7 +556,8 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
          * AES_ENC_KEY_EXPANDED = NULL
          * AES_DEC_KEY_EXPANDED = NULL
          */
-        for (order = CIPHER_HASH; order <= HASH_CIPHER; order++)
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
                 for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_DES3;
                      cipher++) {
                         fill_in_job(&template_job, cipher, IMB_DIR_DECRYPT,

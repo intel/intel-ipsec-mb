@@ -1090,7 +1090,7 @@ test_cmac(struct MB_MGR *mb_mgr,
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->cipher_direction = dir;
-                job->chain_order = HASH_CIPHER;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_NULL;
 
                 if (type == CMAC) {
@@ -1154,7 +1154,7 @@ test_cmac(struct MB_MGR *mb_mgr,
                 first_job = job;
 
                 job->cipher_direction = dir;
-                job->chain_order = HASH_CIPHER;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_NULL;
 
                 if (type == CMAC) {

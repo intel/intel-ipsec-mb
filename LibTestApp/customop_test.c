@@ -243,7 +243,7 @@ customop_test(struct MB_MGR *mgr)
                 job->u.HMAC._hashed_auth_key_xor_opad = node->opad;
                 job->cipher_mode = node->cipher->mode;
                 job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = CIPHER_HASH;
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
                 job->hash_alg = node->auth->hash;
                 job->user_data = node;
 
@@ -288,7 +288,7 @@ customop_test(struct MB_MGR *mgr)
                 job->u.HMAC._hashed_auth_key_xor_opad = node->opad;
                 job->cipher_mode = node->cipher->mode;
                 job->cipher_direction = IMB_DIR_DECRYPT;
-                job->chain_order = HASH_CIPHER;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->hash_alg = node->auth->hash;
                 job->user_data = node;
 

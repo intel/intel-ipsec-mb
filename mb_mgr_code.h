@@ -1584,9 +1584,9 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 if ((job->cipher_direction == IMB_DIR_ENCRYPT &&
-                     job->chain_order != HASH_CIPHER) ||
+                     job->chain_order != IMB_ORDER_HASH_CIPHER) ||
                     (job->cipher_direction == IMB_DIR_DECRYPT &&
-                     job->chain_order != CIPHER_HASH)) {
+                     job->chain_order != IMB_ORDER_CIPHER_HASH)) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
@@ -1680,7 +1680,7 @@ JOB_AES_HMAC *RESUBMIT_JOB(MB_MGR *state, JOB_AES_HMAC *job)
 __forceinline
 JOB_AES_HMAC *submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
 {
-	if (job->chain_order == CIPHER_HASH)
+	if (job->chain_order == IMB_ORDER_CIPHER_HASH)
 		job = SUBMIT_JOB_AES(state, job);
 	else
 		job = SUBMIT_JOB_HASH(state, job);
@@ -1692,7 +1692,7 @@ JOB_AES_HMAC *submit_new_job(MB_MGR *state, JOB_AES_HMAC *job)
 __forceinline
 void complete_job(MB_MGR *state, JOB_AES_HMAC *job)
 {
-        if (job->chain_order == CIPHER_HASH) {
+        if (job->chain_order == IMB_ORDER_CIPHER_HASH) {
                 /* while() loop optimized for cipher_hash order */
                 while (job->status < STS_COMPLETED) {
                         JOB_AES_HMAC *tmp = FLUSH_JOB_AES(state, job);

@@ -1292,20 +1292,20 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
         job_template.cipher_direction = params->cipher_dir;
 
         if (params->cipher_mode == TEST_NULL_CIPHER) {
-                job_template.chain_order = HASH_CIPHER;
+                job_template.chain_order = IMB_ORDER_HASH_CIPHER;
         } else if (params->cipher_mode == TEST_CCM ||
                    ((params->cipher_mode == TEST_AESDOCSIS ||
                      params->cipher_mode == TEST_AESDOCSIS8) &&
                     params->hash_alg == TEST_DOCSIS_CRC32)) {
                 if (job_template.cipher_direction == IMB_DIR_ENCRYPT)
-                        job_template.chain_order = HASH_CIPHER;
+                        job_template.chain_order = IMB_ORDER_HASH_CIPHER;
                 else
-                        job_template.chain_order = CIPHER_HASH;
+                        job_template.chain_order = IMB_ORDER_CIPHER_HASH;
         } else {
                 if (job_template.cipher_direction == IMB_DIR_ENCRYPT)
-                        job_template.chain_order = CIPHER_HASH;
+                        job_template.chain_order = IMB_ORDER_CIPHER_HASH;
                 else
-                        job_template.chain_order = HASH_CIPHER;
+                        job_template.chain_order = IMB_ORDER_HASH_CIPHER;
         }
 
         /* Translating enum to the API's one */

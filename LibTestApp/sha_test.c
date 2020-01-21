@@ -471,7 +471,7 @@ test_sha(struct MB_MGR *mb_mgr,
 
                 memset(job, 0, sizeof(*job));
                 job->cipher_direction = IMB_DIR_ENCRYPT;
-                job->chain_order = HASH_CIPHER;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->auth_tag_output = auths[i] + sizeof(padding);
                 job->auth_tag_output_len_in_bytes = vec->digest_len;
                 job->src = vec->data;
