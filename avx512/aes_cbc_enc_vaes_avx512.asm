@@ -266,7 +266,7 @@ endstruc
 ;   - each loop encrypts 4 blocks across 16 lanes
 ;   - stop when %%LENGTH is less than 64 bytes (4 blocks)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro ENCRYPT_16_PARALLEL 31
+%macro ENCRYPT_16_PARALLEL 32
 %define %%ZIV00_03      %1  ;; [in] lane 0-3 IVs
 %define %%ZIV04_07      %2  ;; [in] lane 4-7 IVs
 %define %%ZIV08_11      %3  ;; [in] lane 8-11 IVs
@@ -298,6 +298,7 @@ endstruc
 %define %%TMP1          %29 ;; [clobbered] tmp GP register
 %define %%TMP2          %30 ;; [clobbered] tmp GP register
 %define %%TMP3          %31 ;; [clobbered] tmp GP register
+%define %%CBC_MAC       %32 ;; CBC-MAC flag
 
 %define %%IN    ARG + _aesarg_in
 %define %%OUT   ARG + _aesarg_out
@@ -385,6 +386,8 @@ endstruc
         vmovdqa64       %%ZIV08_11, %%B3L08_11
         vmovdqa64       %%ZIV12_15, %%B3L12_15
 
+        ;; Don't write back ciphertext for CBC-MAC
+%if %%CBC_MAC == 0
         ;; write back cipher text for lanes 0-3
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
@@ -412,7 +415,7 @@ endstruc
 
         LOAD_STORE_x4 12, 13, 14, 15, %%OUT, %%IDX, %%B0L12_15, %%B1L12_15, \
                      %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, %%TMP2, %%TMP3, STORE
-
+%endif ;; !CBC_MAC
         sub             %%LENGTH, 64
         add             %%IDX, 64
         jmp             %%encrypt_16_start
@@ -424,11 +427,12 @@ endstruc
         vpaddq          %%ZTMP1, %%ZTMP2, [%%IN + 64]
         vmovdqa64       [%%IN], %%ZTMP0
         vmovdqa64       [%%IN + 64], %%ZTMP1
-
+%if %%CBC_MAC == 0 ;; skip out pointer update for CBC_MAC
         vpaddq          %%ZTMP0, %%ZTMP2, [%%OUT]
         vpaddq          %%ZTMP1, %%ZTMP2, [%%OUT + 64]
         vmovdqa64       [%%OUT], %%ZTMP0
         vmovdqa64       [%%OUT + 64], %%ZTMP1
+%endif ;; !CBC_MAC
 
 %%encrypt_16_done:
 %endmacro
@@ -436,7 +440,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; ENCRYPT_16_FINAL Encodes final blocks (less than 4) across 16 lanes
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro ENCRYPT_16_FINAL 31
+%macro ENCRYPT_16_FINAL 32
 %define %%ZIV00_03      %1  ;; [in] lane 0-3 IVs
 %define %%ZIV04_07      %2  ;; [in] lane 4-7 IVs
 %define %%ZIV08_11      %3  ;; [in] lane 8-11 IVs
@@ -468,6 +472,7 @@ endstruc
 %define %%TMP2          %29 ;; [clobbered] tmp GP register
 %define %%TMP3          %30 ;; [clobbered] tmp GP register
 %define %%NUM_BLKS      %31 ;; [in] number of blocks (numerical value)
+%define %%CBC_MAC       %32 ;; CBC_MAC flag
 
 %define %%IN    ARG + _aesarg_in
 %define %%OUT   ARG + _aesarg_out
@@ -568,6 +573,8 @@ endstruc
         vmovdqa64       %%ZIV08_11, %%B2L08_11
         vmovdqa64       %%ZIV12_15, %%B2L12_15
 %endif
+        ;; Don't write back ciphertext for CBC-MAC
+%if %%CBC_MAC == 0
         ;; write back cipher text for lanes 0-3
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
@@ -599,6 +606,7 @@ endstruc
         LOAD_STORE_x4 12, 13, 14, 15, %%OUT, %%IDX, %%B0L12_15, %%B1L12_15, \
                       %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, %%TMP2, \
                       %%TMP3, STORE, k1
+%endif ;; !CBC_MAC
 
         ;; update in/out pointers
         mov             %%IDX, %%NUM_BLKS
@@ -608,12 +616,12 @@ endstruc
         vpaddq          %%ZTMP1, %%ZTMP2, [%%IN + 64]
         vmovdqa64       [%%IN], %%ZTMP0
         vmovdqa64       [%%IN + 64], %%ZTMP1
-
+%if %%CBC_MAC == 0 ;; skip out pointer update for CBC-MAC
         vpaddq          %%ZTMP0, %%ZTMP2, [%%OUT]
         vpaddq          %%ZTMP1, %%ZTMP2, [%%OUT + 64]
         vmovdqa64       [%%OUT], %%ZTMP0
         vmovdqa64       [%%OUT + 64], %%ZTMP1
-
+%endif ;; !CBC_MAC
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -624,8 +632,9 @@ endstruc
 ; First encrypts block up to multiple of 4
 ; Then encrypts final blocks (less than 4)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro CBC_ENC 1
+%macro CBC_ENC 2
 %define %%ROUNDS        %1
+%define %%CBC_MAC       %2
 
         ;; load transpose tables
         vmovdqa64       TAB_A0B0A1B1, [rel A0B0A1B1]
@@ -640,7 +649,8 @@ endstruc
         ENCRYPT_16_PARALLEL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                             LEN, %%ROUNDS, IA12, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, \
                             ZT6, ZT7, ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, \
-                            ZT15, ZT16, ZT17, ZT18, ZT19, IA2, IA3, IA4, IA5
+                            ZT15, ZT16, ZT17, ZT18, ZT19, IA2, IA3, IA4, IA5, \
+                            %%CBC_MAC
 
         ;; get num remaining blocks
         shr             LEN, 4
@@ -655,19 +665,19 @@ endstruc
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA12, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA2, IA3, IA4, IA5, 3
+                         ZT18, ZT19, IA2, IA3, IA4, IA5, 3, %%CBC_MAC
         jmp             %%_cbc_enc_done
 %%_final_blocks_1:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA12, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA2, IA3, IA4, IA5, 1
+                         ZT18, ZT19, IA2, IA3, IA4, IA5, 1, %%CBC_MAC
         jmp             %%_cbc_enc_done
 %%_final_blocks_2:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA12, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA2, IA3, IA4, IA5, 2
+                         ZT18, ZT19, IA2, IA3, IA4, IA5, 2, %%CBC_MAC
 %%_cbc_enc_done:
         ;; store IV's per lane
         vmovdqa64       [ARG + _aesarg_IV + 16*0],  ZIV00_03
@@ -700,7 +710,7 @@ section .text
 MKGLOBAL(aes_cbc_enc_128_vaes_avx512,function,internal)
 aes_cbc_enc_128_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 9
+        CBC_ENC 9, 0
         FUNC_RESTORE
 
 %ifdef SAFE_DATA
@@ -715,7 +725,7 @@ aes_cbc_enc_128_vaes_avx512:
 MKGLOBAL(aes_cbc_enc_192_vaes_avx512,function,internal)
 aes_cbc_enc_192_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 11
+        CBC_ENC 11, 0
         FUNC_RESTORE
 
 %ifdef SAFE_DATA
@@ -729,7 +739,17 @@ aes_cbc_enc_192_vaes_avx512:
 MKGLOBAL(aes_cbc_enc_256_vaes_avx512,function,internal)
 aes_cbc_enc_256_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 13
+        CBC_ENC 13, 0
+        FUNC_RESTORE
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  void aes128_cbc_mac_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes128_cbc_mac_vaes_avx512,function,internal)
+aes128_cbc_mac_vaes_avx512:
+        FUNC_SAVE
+        CBC_ENC 9, 1
         FUNC_RESTORE
 
 %ifdef SAFE_DATA
