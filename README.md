@@ -93,7 +93,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | NULL              | N      | N      | N      | N      | N      | N      |
 | AES128-CCM        | N      | Y   x4 | Y   x8 | N      | N      | N      |
-| AES128-CMAC-96    | Y      | Y   x4 | Y   x8 | N      | N      | N      |
+| AES128-CMAC-96    | Y      | Y   x4 | Y   x8 | N      | N      | Y x16  |
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
 | ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | N      | N      |
 | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |

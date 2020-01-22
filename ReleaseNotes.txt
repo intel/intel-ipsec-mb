@@ -18,6 +18,7 @@ Library
   direct API
 - Check for new flag NO_COMPAT_IMB_API_053, which exposes only new API,
   removing backwards compatibility with version v0.53.
+- AES-CMAC implementation for VAES added
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through
