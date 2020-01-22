@@ -218,6 +218,11 @@ JOB_AES_HMAC *submit_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
 
 JOB_AES_HMAC *flush_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
 
+JOB_AES_HMAC *submit_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
+                                                   JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *flush_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state);
+
 JOB_AES_HMAC *submit_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state,
                                            JOB_AES_HMAC *job);
 
@@ -289,15 +294,11 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_avx512
 
-void aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
-
-#define AES128_CBC_MAC     aes128_cbc_mac_x8
-
 #define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_avx
 #define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_avx
 
-#define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_avx
-#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_avx
+#define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_avx512
+#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_avx512
 
 /* ====================================================================== */
 
@@ -577,6 +578,16 @@ static void
                            const void *keys, void *out,
                            uint64_t len_bytes) = aes_cbc_dec_256_avx;
 
+static JOB_AES_HMAC *
+(*submit_job_aes_cmac_auth_avx512)
+        (MB_MGR_CMAC_OOO *state,
+         JOB_AES_HMAC *job) = submit_job_aes_cmac_auth_avx;
+
+static JOB_AES_HMAC *
+(*flush_job_aes_cmac_auth_avx512)
+        (MB_MGR_CMAC_OOO *state) = flush_job_aes_cmac_auth_avx;
+
+
 /* ====================================================================== */
 
 __forceinline
@@ -651,6 +662,10 @@ init_mb_mgr_avx512(MB_MGR *state)
                         submit_job_aes256_enc_vaes_avx512;
                 flush_job_aes256_enc_avx512 =
                         flush_job_aes256_enc_vaes_avx512;
+                submit_job_aes_cmac_auth_avx512 =
+                        submit_job_aes_cmac_auth_vaes_avx512;
+                flush_job_aes_cmac_auth_avx512 =
+                        flush_job_aes_cmac_auth_vaes_avx512;
         }
 
         /* Init AES out-of-order fields */
@@ -1055,13 +1070,30 @@ init_mb_mgr_avx512(MB_MGR *state)
         state->aes_ccm_ooo.unused_lanes = 0xF76543210;
 
         /* Init AES-CMAC auth out-of-order fields */
-        for (j = 0; j < 8; j++) {
-                state->aes_cmac_ooo.init_done[j] = 0;
-                state->aes_cmac_ooo.lens[j] = 0;
-                state->aes_cmac_ooo.job_in_lane[j] = NULL;
+        if (vaes_support) {
+                /* init 16 lanes */
+                memset(state->aes_cmac_ooo.init_done, 0,
+                       sizeof(state->aes_cmac_ooo.init_done));
+                memset(state->aes_cmac_ooo.lens, 0,
+                       sizeof(state->aes_cmac_ooo.lens));
+                memset(state->aes_cmac_ooo.job_in_lane, 0,
+                       sizeof(state->aes_cmac_ooo.job_in_lane));
+                state->aes_cmac_ooo.unused_lanes = 0xFEDCBA9876543210;
+                state->aes_cmac_ooo.num_lanes_inuse = 0;
+
+        } else {
+                /* init 8 lanes */
+                memset(state->aes_cmac_ooo.init_done, 0,
+                       sizeof(state->aes_cmac_ooo.init_done));
+                memset(state->aes_cmac_ooo.lens, 0xFF,
+                       sizeof(state->aes_cmac_ooo.lens));
+                memset(&state->aes_cmac_ooo.lens[0], 0,
+                       sizeof(state->aes_cmac_ooo.lens[0]) * 8);
+                memset(state->aes_cmac_ooo.job_in_lane, 0,
+                       sizeof(state->aes_cmac_ooo.job_in_lane));
+                state->aes_cmac_ooo.unused_lanes = 0xF76543210;
+                state->aes_cmac_ooo.num_lanes_inuse = 0;
         }
-        state->aes_cmac_ooo.unused_lanes = 0xF76543210;
-        state->aes_cmac_ooo.num_lanes_inuse = 0;
 
         /* Init "in order" components */
         state->next_job = 0;
