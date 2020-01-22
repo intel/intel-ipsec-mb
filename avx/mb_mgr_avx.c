@@ -710,6 +710,7 @@ init_mb_mgr_avx(MB_MGR *state)
                 state->aes_cmac_ooo.job_in_lane[j] = NULL;
         }
         state->aes_cmac_ooo.unused_lanes = 0xF76543210;
+        state->aes_cmac_ooo.num_lanes_inuse = 0;
 
         /* Init "in order" components */
         state->next_job = 0;

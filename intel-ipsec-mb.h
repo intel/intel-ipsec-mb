@@ -558,14 +558,15 @@ typedef struct {
 /* AES-CMAC out-of-order scheduler structure */
 typedef struct {
         AES_ARGS args; /* need to re-use AES arguments */
-        DECLARE_ALIGNED(uint16_t lens[8], 16);
-        DECLARE_ALIGNED(uint16_t init_done[8], 16);
+        DECLARE_ALIGNED(uint16_t lens[16], 32);
+        DECLARE_ALIGNED(uint16_t init_done[16], 32);
         /* each byte is index (0...3) of unused lanes
          * byte 4 is set to FF as a flag
          */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[8];
-        DECLARE_ALIGNED(uint8_t scratch[8 * 16], 32);
+        JOB_AES_HMAC *job_in_lane[16];
+        uint64_t num_lanes_inuse;
+        DECLARE_ALIGNED(uint8_t scratch[16 * 16], 32);
 } MB_MGR_CMAC_OOO;
 
 
