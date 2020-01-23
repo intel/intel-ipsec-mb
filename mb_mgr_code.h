@@ -1619,7 +1619,11 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                if ((job->msg_len_to_hash_in_bytes == 0) ||
+                /*
+                 * KASUMI-UIA1 needs to be at least 8 bytes
+                 * (IV + direction bit + '1' + 0s to align to byte boundary)
+                 */
+                if ((job->msg_len_to_hash_in_bytes < (KASUMI_BLOCK_SIZE + 1)) ||
                     (job->msg_len_to_hash_in_bytes >
                      (KASUMI_MAX_LEN / BYTESIZE))) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);

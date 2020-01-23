@@ -1629,6 +1629,14 @@ process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                         if ((buf_size % DES_BLOCK_SIZE)  != 0)
                                 continue;
 
+                /*
+                 * KASUMI-UIA1 needs to be at least 8 bytes
+                 * (IV + direction bit + '1' + 0s to align to byte boundary)
+                 */
+                if (params->hash_alg == IMB_AUTH_KASUMI_UIA1)
+                        if (buf_size < (KASUMI_BLOCK_SIZE + 1))
+                                continue;
+
                 /* Check for sensitive data first, then normal cross
                  * architecture validation */
                 if (safe_check && do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
