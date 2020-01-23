@@ -579,9 +579,7 @@ static inline __m128i S1_box_4(const __m128i x)
 
         /*
          * - Broadcast 32-bit word across XMM
-         * - Perfrom AES oeprations
-         * - Save result 32-bit words in v and f vectors.
-         *   'f' is used for fixup of mixed columns only
+         * - Perform AES operations
          */
         _mm_storeu_si128((__m128i *) &vt.qword[0],
                          _mm_shuffle_epi32(x, 0b00000000));
@@ -721,9 +719,10 @@ static inline uint32_t S2_box(const uint32_t x)
                 (((uint32_t) xfrm_w0) << 24);
 #endif
 
-        /* use AESNI operations for the rest of the S2 box
+        /*
+         * Use AESNI operations for the rest of the S2 box
          * in: new_x
-         * out: ret, ret_nomixc
+         * out: ret_mixc, ret_nomixc
          */
 #ifdef NO_AESNI
         union xmm_reg key, v, v_fixup;
@@ -751,7 +750,7 @@ static inline uint32_t S2_box(const uint32_t x)
 
         /*
          * aesenclast does not perform mix column operation and
-         * allows to determine the fixup value to be applied
+         * allows to determine the fix-up value to be applied
          * on result of aesenc to produce correct result for SNOW3G.
          */
         const __m128i ret_nomixc =
@@ -780,9 +779,9 @@ static inline __m128i S2_box_4(const __m128i x)
 
         /*
          * - Broadcast 32-bit word across XMM and
-         *   perfrom AES oeprations
+         *   perform AES operations
          * - Save result 32-bit words in v and f vectors.
-         *   'f' is used for fixup of mixed columns only
+         *   'f' is used for fix-up of mixed columns only
          */
         _mm_storeu_si128((__m128i *) &vt.qword[0],
                          _mm_shuffle_epi32(new_x, 0b00000000));
@@ -1041,7 +1040,7 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
         pCtx->LFSR_S[10] ^= BSWAP32(pIV32[1]);
         pCtx->LFSR_S[9] ^= BSWAP32(pIV32[0]);
 
-        /* FSM initialialization */
+        /* FSM initialization */
         FSM2 = 0x0;
         FSM3 = 0x0;
         FSM4 = 0x0;
@@ -1138,7 +1137,7 @@ static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
 
 /*---------------------------------------------------------
  * @description
- * Gf2 modular multiplication/reduction
+ * GF2 modular multiplication/reduction
  *
  *---------------------------------------------------------*/
 static inline uint64_t multiply_and_reduce64(uint64_t a, uint64_t b)
@@ -1682,7 +1681,7 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
 /**
 *******************************************************************************
 * @description
-* This function intializes the key schedule for 8 buffers with
+* This function initializes the key schedule for 8 buffers with
 * individual keys, for snow3g f8/f9.
 *
 *       @param [in]      pCtx            Context where scheduled keys are stored
@@ -1805,8 +1804,7 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
                         const void *pIV5, const void *pIV6,
                         const void *pIV7, const void *pIV8)
 {
-        /* uint32_t K, L; */
-        __m256i mR, mS, mT, mU, /* V0, V1, */ T0, T1;
+        __m256i mR, mS, mT, mU, T0, T1;
         int i;
 
         /* Initialize the LFSR table from constants, Keys, and IV */
