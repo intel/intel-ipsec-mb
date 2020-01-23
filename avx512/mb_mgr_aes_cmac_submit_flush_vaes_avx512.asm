@@ -130,44 +130,33 @@ endstruc
         vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
 %endmacro
 
-; copy IV into NULL lanes
-%macro COPY_IV_TO_NULL_LANES 4
-%define %%IDX           %1 ; [in] GP with good lane idx (scaled x16)
-%define %%NULL_MASK     %2 ; [clobbered] GP to store NULL lane mask
-%define %%XTMP          %3 ; [clobbered] temp XMM reg
-%define %%MASK_REG      %4 ; [in] mask register
-
-        vmovdqa64       %%XTMP, [state + _aes_cmac_args_IV + %%IDX]
-        kmovw           DWORD(%%NULL_MASK), %%MASK_REG
-%assign i 0
-%rep 16
-        bt              %%NULL_MASK, i
-        jnc             %%_skip_copy %+ i
-        vmovdqa64       [state + _aes_cmac_args_IV + (i*16)], %%XTMP
-%%_skip_copy %+ i:
-%assign i (i + 1)
-%endrep
-
-%endmacro
-
-; copy round key's into NULL lanes
-%macro COPY_KEYS_TO_NULL_LANES 5
+; copy IV's and round keys into NULL lanes
+%macro COPY_IV_KEYS_TO_NULL_LANES 6
 %define %%IDX           %1 ; [in] GP with good lane idx (scaled x16)
 %define %%NULL_MASK     %2 ; [clobbered] GP to store NULL lane mask
 %define %%KEY_TAB       %3 ; [clobbered] GP to store key table pointer
-%define %%XTMP          %4 ; [clobbered] temp XMM reg
-%define %%MASK_REG      %5 ; [in] mask register
+%define %%XTMP1         %4 ; [clobbered] temp XMM reg
+%define %%XTMP2         %5 ; [clobbered] temp XMM reg
+%define %%MASK_REG      %6 ; [in] mask register
 
+        vmovdqa64       %%XTMP1, [state + _aes_cmac_args_IV + %%IDX]
         lea             %%KEY_TAB, [state + _aes_cmac_args_key_tab]
         kmovw           DWORD(%%NULL_MASK), %%MASK_REG
+
 %assign j 0 ; outer loop to iterate through round keys
 %rep 15
-        vmovdqa64       %%XTMP, [%%KEY_TAB + j + %%IDX]
+        vmovdqa64       %%XTMP2, [%%KEY_TAB + j + %%IDX]
+
 %assign k 0 ; inner loop to iterate through lanes
 %rep 16
         bt              %%NULL_MASK, k
         jnc             %%_skip_copy %+ j %+ _ %+ k
-        vmovdqa64       [%%KEY_TAB + j + (k*16)], %%XTMP
+
+%if j == 0 ;; copy IVs for each lane just once
+        vmovdqa64       [state + _aes_cmac_args_IV + (k*16)], %%XTMP1
+%endif
+        ;; copy key for each lane
+        vmovdqa64       [%%KEY_TAB + j + (k*16)], %%XTMP2
 %%_skip_copy %+ j %+ _ %+ k:
 %assign k (k + 1)
 %endrep
@@ -177,8 +166,8 @@ endstruc
 
 %endmacro
 
-; clear round key's in NULL lanes
-%macro CLEAR_KEYS_IN_NULL_LANES 3
+; clear IVs, scratch buffers and round key's in NULL lanes
+%macro CLEAR_IV_KEYS_SCRATCH_IN_NULL_LANES 3
 %define %%NULL_MASK     %1 ; [clobbered] GP to store NULL lane mask
 %define %%XTMP          %2 ; [clobbered] temp XMM reg
 %define %%MASK_REG      %3 ; [in] mask register
@@ -189,32 +178,19 @@ endstruc
 %rep 16
         bt              %%NULL_MASK, k
         jnc             %%_skip_clear %+ k
+
+        ;; clean lane scratch and IV buffers
+        vmovdqa64       [state + _aes_cmac_scratch + (k*16)], %%XTMP
+        vmovdqa64       [state + _aes_cmac_args_IV + (k*16)], %%XTMP
+
 %assign j 0 ; inner loop to iterate through round keys
 %rep NUM_KEYS
         vmovdqa64       [state + _aes_cmac_args_key_tab + j + (k*16)], %%XTMP
 %assign j (j + 256)
+
 %endrep
 %%_skip_clear %+ k:
 %assign k (k + 1)
-%endrep
-
-%endmacro
-
-; clear scratch buffers in NULL lanes
-%macro CLEAR_SCRATCH_IN_NULL_LANES 3
-%define %%NULL_MASK     %1 ; [clobbered] GP to store NULL lane mask
-%define %%XTMP          %2 ; [clobbered] temp XMM reg
-%define %%MASK_REG      %3 ; [in] mask register
-
-        vpxorq          %%XTMP, %%XTMP
-        kmovw           DWORD(%%NULL_MASK), %%MASK_REG
-%assign i 0
-%rep 16
-        bt              %%NULL_MASK, i
-        jnc             %%_skip_clear %+ i
-        vmovdqa64       [state + _aes_cmac_scratch + (i*16)], %%XTMP
-%%_skip_clear %+ i:
-%assign i (i + 1)
 %endrep
 
 %endmacro
@@ -403,11 +379,9 @@ endstruc
 
         ;; scale up good lane idx before copying IV and keys
         shl             tmp2, 4
-        ;; - copy IV to null lanes
-        COPY_IV_TO_NULL_LANES tmp2, tmp4, xmm4, k6
 
-        ;; - copy round keys to null lanes
-        COPY_KEYS_TO_NULL_LANES tmp2, tmp4, tmp3, xmm4, k6
+        ;; - copy IV and round keys to null lanes
+        COPY_IV_KEYS_TO_NULL_LANES tmp2, tmp4, tmp3, xmm4, xmm5, k6
 
         ;; Find min length for lanes 0-7
         vphminposuw xmm2, xmm0
@@ -527,9 +501,10 @@ endstruc
 %ifdef SAFE_DATA
         vpxor   xmm0, xmm0
 %ifidn %%SUBMIT_FLUSH, SUBMIT
-        ;; Clear scratch memory of returned job
+        ;; Clear IV and scratch memory of returned job
         shl     idx, 4
         vmovdqa [state + _aes_cmac_scratch + idx], xmm0
+        vmovdqa [state + _aes_cmac_args_IV + idx], xmm0
 
         ;; Clear expanded keys
 %assign round 0
@@ -545,10 +520,9 @@ endstruc
         kmovw   k1, DWORD(tmp2)
         korw    k6, k1, k6
 
-        ;; Clear expanded keys of returned job and "NULL lanes"
+        ;; Clear IVs, keys and scratch buffers of returned job and "NULL lanes"
         ;; (k6 contains the mask of the jobs)
-        CLEAR_KEYS_IN_NULL_LANES tmp4, xmm0, k6
-        CLEAR_SCRATCH_IN_NULL_LANES tmp4, xmm0, k6
+        CLEAR_IV_KEYS_SCRATCH_IN_NULL_LANES tmp4, xmm0, k6
 %endif ;; SUBMIT
 
 %endif ;; SAFE_DATA
