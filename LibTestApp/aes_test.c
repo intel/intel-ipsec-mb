@@ -1305,12 +1305,16 @@ test_aes_many(struct MB_MGR *mb_mgr,
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int i, jobs_rx = 0, ret = -1;
 
-        assert(targets != NULL);
+        if (targets == NULL)
+                goto end_alloc;
 
+        memset(targets, 0, num_jobs * sizeof(void *));
         memset(padding, -1, sizeof(padding));
 
         for (i = 0; i < num_jobs; i++) {
                 targets[i] = malloc(text_len + (sizeof(padding) * 2));
+                if (targets[i] == NULL)
+                        goto end_alloc;
                 memset(targets[i], -1, text_len + (sizeof(padding) * 2));
                 if (in_place) {
                         /* copy input text to the allocated buffer */
@@ -1373,9 +1377,13 @@ test_aes_many(struct MB_MGR *mb_mgr,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
 
-        for (i = 0; i < num_jobs; i++)
-                free(targets[i]);
-        free(targets);
+end_alloc:
+        if (targets != NULL) {
+                for (i = 0; i < num_jobs; i++)
+                        free(targets[i]);
+                free(targets);
+        }
+
         return ret;
 }
 
@@ -1539,6 +1547,8 @@ test_docrc_many(struct MB_MGR *mb_mgr,
 
         if (targets == NULL)
                 goto end_alloc;
+
+        memset(targets, 0, num_jobs * sizeof(void *));
 
         if (auths == NULL)
                 goto end_alloc;
