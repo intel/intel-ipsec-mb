@@ -44,10 +44,10 @@
 #include "zuc_test_vectors.h"
 #include "gcm_ctr_vectors_test.h"
 
-#define MAXBUFS ((NUM_ZUC_EIA3_TESTS > NUM_ZUC_EEA3_TESTS) ? \
-                  NUM_ZUC_EIA3_TESTS : NUM_ZUC_EEA3_TESTS)
+#define MAXBUFS 17
 #define PASS_STATUS 0
 #define FAIL_STATUS -1
+#define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
 
 enum test_type {
         TEST_4_BUFFER,
@@ -187,7 +187,8 @@ static uint32_t bswap4(const uint32_t val)
 int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 {
 
-        uint32_t numBuffs, a;
+        const uint32_t numBuffs[] = {4, 8, 9, 16, 17};
+        uint32_t i;
         uint32_t status = PASS_STATUS;
         uint8_t *pKeys[MAXBUFS];
         uint8_t *pIV[MAXBUFS];
@@ -231,57 +232,35 @@ int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
                                      pIV[0], 0))
                 status = 1;
         else
-                printf("validate ZUC 1 block (direct API): PASS\n");
+                printf("validate ZUC EEA 1 buffer (direct API): PASS\n");
 
         if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV, 0))
                 status = 1;
         else
-                printf("validate ZUC 4 block (direct API): PASS\n");
+                printf("validate ZUC EEA 4 buffers (direct API): PASS\n");
 
-        for (a = 0; a < 3; a++) {
-                switch (a) {
-                case 0:
-                        numBuffs = 4;
-                        break;
-                case 1:
-                        numBuffs = 8;
-                        break;
-                default:
-                        numBuffs = 9;
-                        break;
-                }
+        for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs, 0))
+                                             pIV, numBuffs[i], 0))
                         status = 1;
                 else
-                        printf("validate ZUC n block buffers %d (direct API): "
-                               "PASS\n", a);
+                        printf("validate ZUC EEA N buffers (%u) (direct API): "
+                               "PASS\n", numBuffs[i]);
         }
 
         if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0],
                                      pIV[0], 0))
                 status = 1;
         else
-                printf("validate ZUC Integrity 1 block (direct API): PASS\n");
+                printf("validate ZUC EIA 1 buffer (direct API): PASS\n");
 
-        for (a = 0; a < 3; a++) {
-                switch (a) {
-                case 0:
-                        numBuffs = 4;
-                        break;
-                case 1:
-                        numBuffs = 8;
-                        break;
-                default:
-                        numBuffs = 9;
-                        break;
-                }
+        for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs, 0))
+                                             pIV, numBuffs[i], 0))
                         status = 1;
                 else
-                        printf("validate ZUC Integrity n block buffers %d "
-                               "(direct API): PASS\n", a);
+                        printf("validate ZUC EIA N buffers (%u) "
+                               "(direct API): PASS\n", numBuffs[i]);
         }
 
         /* Job API tests */
@@ -289,57 +268,35 @@ int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
                                      pIV[0], 1))
                 status = 1;
         else
-                printf("validate ZUC 1 block (job API): PASS\n");
+                printf("validate ZUC EEA 1 buffer (job API): PASS\n");
 
         if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV, 1))
                 status = 1;
         else
-                printf("validate ZUC 4 block (job API): PASS\n");
+                printf("validate ZUC EEA 4 buffers (job API): PASS\n");
 
-        for (a = 0; a < 3; a++) {
-                switch (a) {
-                case 0:
-                        numBuffs = 4;
-                        break;
-                case 1:
-                        numBuffs = 8;
-                        break;
-                default:
-                        numBuffs = 9;
-                        break;
-                }
+        for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs, 1))
+                                             pIV, numBuffs[i], 1))
                         status = 1;
                 else
-                        printf("validate ZUC n block buffers %d (job API): "
-                               "PASS\n", a);
+                        printf("validate ZUC EEA N buffers (%u) (job API): "
+                               "PASS\n", numBuffs[i]);
         }
 
         if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0],
                                      pIV[0], 1))
                 status = 1;
         else
-                printf("validate ZUC Integrity 1 block (job API): PASS\n");
+                printf("validate ZUC EIA 1 buffer (job API): PASS\n");
 
-        for (a = 0; a < 3; a++) {
-                switch (a) {
-                case 0:
-                        numBuffs = 4;
-                        break;
-                case 1:
-                        numBuffs = 8;
-                        break;
-                default:
-                        numBuffs = 9;
-                        break;
-                }
+        for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
-                                             pIV, numBuffs, 1))
+                                             pIV, numBuffs[i], 1))
                         status = 1;
                 else
-                        printf("validate ZUC Integrity n block buffers %d "
-                               "(direct API): PASS\n", a);
+                        printf("validate ZUC EIA N buffers (%u) "
+                               "(job API): PASS\n", numBuffs[i]);
         }
 
         freePtrArray(pKeys, MAXBUFS);    /*Free the key buffers*/
@@ -678,9 +635,6 @@ int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         int retTmp;
         uint32_t buf_idx[MAXBUFS];
 
-        if (numBuffs > NUM_ZUC_EEA3_TESTS)
-                numBuffs = NUM_ZUC_EEA3_TESTS;
-
         assert(numBuffs > 0);
         for (i = 0; i < NUM_ZUC_EEA3_TESTS; i++) {
                 for (j = 0; j < numBuffs; j++)
@@ -777,9 +731,6 @@ int validate_zuc_EIA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         uint32_t bitLength[MAXBUFS];
         struct test128EIA3_vectors_t vector;
 
-        if (numBuffs > NUM_ZUC_EIA3_TESTS)
-                numBuffs = NUM_ZUC_EIA3_TESTS;
-
         for (i = 0; i < NUM_ZUC_EIA3_TESTS; i++) {
                 vector = testEIA3_vectors[i];
                 for (j = 0; j < numBuffs; j++) {
@@ -828,7 +779,7 @@ int validate_zuc_EIA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         /* Generate digests for n different test vectors,
          * grouping all available tests vectors in groups of N buffers */
         for (i = 0; i < numBuffs; i++) {
-                vector = testEIA3_vectors[i];
+                vector = testEIA3_vectors[i % NUM_ZUC_EIA3_TESTS];
                 memcpy(pKeys[i], vector.CK,
                        ZUC_KEY_LEN_IN_BYTES);
 
@@ -847,7 +798,7 @@ int validate_zuc_EIA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
                               numBuffs);
 
         for (i = 0; i < numBuffs; i++) {
-                vector = testEIA3_vectors[i];
+                vector = testEIA3_vectors[i % NUM_ZUC_EIA3_TESTS];
                 retTmp =
                     memcmp(pDstData[i], &vector.mac,
                            sizeof(((struct test128EIA3_vectors_t *)0)->mac));
