@@ -45,6 +45,42 @@
 #define RESTORE_XMMS            restore_xmms
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_ymms
 
+static inline int
+find_min_length16(const uint16_t length[8])
+{
+        __m128i xmm_lengths = _mm_loadu_si128((const __m128i *)length);
+
+        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
+        return _mm_extract_epi16(xmm_lengths, 0);
+}
+
+static inline int
+find_min_length32(const uint32_t length[8])
+{
+        static const uint64_t lo_mask[2] = {
+                0x0d0c090805040100UL, 0xFFFFFFFFFFFFFFFFUL
+        };
+        static const uint64_t hi_mask[2] = {
+                0xFFFFFFFFFFFFFFFFUL, 0x0d0c090805040100UL
+        };
+
+        /* Calculate the minimum input packet size */
+        __m128i length1 = _mm_loadu_si128((const __m128i *) length);
+        __m128i length2 = _mm_loadu_si128((const __m128i *) &length[4]);
+        __m128i shuf_hi_mask = _mm_loadu_si128((const __m128i *) hi_mask);
+        __m128i shuf_lo_mask = _mm_loadu_si128((const __m128i *) lo_mask);
+
+        length1 = _mm_shuffle_epi8(length1, shuf_lo_mask);
+        length2 = _mm_shuffle_epi8(length2, shuf_hi_mask);
+
+        /* Contains array of 16-bit lengths */
+        length1 = _mm_or_si128(length1, length2);
+
+        length1 = _mm_minpos_epu16(length1);
+
+        return _mm_extract_epi16(length1, 0);
+}
+
 static inline
 void _zuc_eea3_1_buffer_avx2(const void *pKey,
                             const void *pIv,
@@ -133,19 +169,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[8],
         DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
-        /* Calculate the minimum input packet size */
-        uint32_t bytes1 = (length[0] < length[1] ?
-                           length[0] : length[1]);
-        uint32_t bytes2 = (length[2] < length[3] ?
-                           length[2] : length[3]);
-        uint32_t bytes3 = (length[4] < length[5] ?
-                           length[4] : length[5]);
-        uint32_t bytes4 = (length[6] < length[7] ?
-                           length[6] : length[7]);
-        /* min number of bytes */
-        uint32_t bytes12 = (bytes1 < bytes2) ? bytes1 : bytes2;
-        uint32_t bytes34 = (bytes3 < bytes4) ? bytes3 : bytes4;
-        uint32_t bytes = (bytes12 < bytes34) ? bytes12 : bytes34;
+        uint32_t bytes = find_min_length32(length);
         uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
         uint32_t remainBytes[8] = {0};
         DECLARE_ALIGNED(uint8_t keyStr[8][64], 64);
@@ -318,19 +342,7 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[8],
         DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
-        /* Calculate the minimum input packet size */
-        uint32_t bytes1 = (length[0] < length[1] ?
-                           length[0] : length[1]);
-        uint32_t bytes2 = (length[2] < length[3] ?
-                           length[2] : length[3]);
-        uint32_t bytes3 = (length[4] < length[5] ?
-                           length[4] : length[5]);
-        uint32_t bytes4 = (length[6] < length[7] ?
-                           length[6] : length[7]);
-        /* min number of bytes */
-        uint32_t bytes12 = (bytes1 < bytes2) ? bytes1 : bytes2;
-        uint32_t bytes34 = (bytes3 < bytes4) ? bytes3 : bytes4;
-        uint32_t bytes = (bytes12 < bytes34) ? bytes12 : bytes34;
+        uint32_t bytes = find_min_length16(length);
         uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
         uint32_t remainBytes[8] = {0};
         DECLARE_ALIGNED(uint8_t keyStr[8][64], 64);
@@ -657,19 +669,7 @@ void _zuc_eia3_8_buffer_avx2(const void * const pKey[8],
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        /* Calculate the minimum input packet size */
-        uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
-                           lengthInBits[0] : lengthInBits[1]);
-        uint32_t bits2 = (lengthInBits[2] < lengthInBits[3] ?
-                           lengthInBits[2] : lengthInBits[3]);
-        uint32_t bits3 = (lengthInBits[4] < lengthInBits[5] ?
-                           lengthInBits[4] : lengthInBits[5]);
-        uint32_t bits4 = (lengthInBits[6] < lengthInBits[7] ?
-                           lengthInBits[6] : lengthInBits[7]);
-        /* min number of bits */
-        uint32_t bits12 = (bits1 < bits2) ? bits1 : bits2;
-        uint32_t bits34 = (bits3 < bits4) ? bits3 : bits4;
-        uint32_t commonBits = (bits12 < bits34) ? bits12 : bits34;
+        uint32_t commonBits = find_min_length32(lengthInBits);
         DECLARE_ALIGNED(uint8_t keyStr[8][2*64], 64);
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
@@ -845,19 +845,7 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        /* Calculate the minimum input packet size */
-        uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
-                           lengthInBits[0] : lengthInBits[1]);
-        uint32_t bits2 = (lengthInBits[2] < lengthInBits[3] ?
-                           lengthInBits[2] : lengthInBits[3]);
-        uint32_t bits3 = (lengthInBits[4] < lengthInBits[5] ?
-                           lengthInBits[4] : lengthInBits[5]);
-        uint32_t bits4 = (lengthInBits[6] < lengthInBits[7] ?
-                           lengthInBits[6] : lengthInBits[7]);
-        /* min number of bits */
-        uint32_t bits12 = (bits1 < bits2) ? bits1 : bits2;
-        uint32_t bits34 = (bits3 < bits4) ? bits3 : bits4;
-        uint32_t commonBits = (bits12 < bits34) ? bits12 : bits34;
+        uint32_t commonBits = find_min_length16(lengthInBits);
         DECLARE_ALIGNED(uint8_t keyStr[8][2*64], 64);
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
