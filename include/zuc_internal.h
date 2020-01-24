@@ -196,7 +196,7 @@ typedef struct zuc_state_8_s {
  *****************************************************************************
  * @description
  *      Structure to store pointers to the 8 keys to be used as input to
- *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream68B_8
+ *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream64B_8
  *****************************************************************************/
 typedef struct zuc_key_8_s {
     const uint8_t *pKeys[8];
@@ -207,7 +207,7 @@ typedef struct zuc_key_8_s {
  *****************************************************************************
  * @description
  *      Structure to store pointers to the 8 IV's to be used as input to
- *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream68B_8
+ *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream64B_8
  *****************************************************************************/
 typedef struct zuc_iv_8_s {
     const uint8_t *pIvs[8];
@@ -273,9 +273,31 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
                                                ZucIv4_t *pIvs,
                                                ZucState4_t *pState);
 
+/**
+ ******************************************************************************
+ * @description
+ *      Definition of the external function that implements the initialization
+ *      stage of the ZUC algorithm for 8 packets. The function will initialize
+ *      the state for 8 individual packets.
+ *
+ * @param[in] pKey                  Pointer to an array of 128-bit initial keys
+ *                                  that will be used when initializing the ZUC
+ *                                  state.
+ * @param[in] pIv                   Pointer to an array of 128-bit initial
+ *                                  vectors that will be used when initializing
+ *                                  the ZUC state.
+ * @param[in,out] pState            Pointer to a ZUC state structure of type
+ *                                  @ref ZucState8_t that will be populated
+ *                                  with the initialized ZUC state.
+ *
+ * @pre
+ *      None
+ *
+ *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
-                                               ZucIv8_t *pIvs,
-                                               ZucState8_t *pState);
+                                                ZucIv8_t *pIvs,
+                                                ZucState8_t *pState);
+
 
 /**
  ******************************************************************************
@@ -399,8 +421,29 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_avx(ZucState4_t *pState,
                                                 uint32_t *pKeyStr3,
                                                 uint32_t *pKeyStr4);
 
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 64 bytes of
+ *      keystream for eight packets in parallel.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState8_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to 8 input buffers that
+ *                                  will contain the generated keystream for
+ *                                  these 8 packets.
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_8 to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream64B_8_avx2(ZucState8_t *pState,
-                                                uint32_t *pKeyStr[8]);
+                                                 uint32_t *pKeyStr[8]);
+
 /**
  ******************************************************************************
  *
@@ -442,6 +485,26 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
                                                uint32_t *pKeyStr3,
                                                uint32_t *pKeyStr4);
 
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 8 bytes of
+ *      keystream for eight packets in parallel.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState8_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to 8 input buffers that
+ *                                  will contain the generated keystream for
+ *                                  these 8 packets.
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_8 to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState,
                                                 uint32_t *pKeyStr[8]);
 /**
@@ -529,10 +592,10 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_4_avx(ZucState4_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucCipher64B_8_avx2(ZucState8_t *pState,
-                                          uint32_t *pKeyStr[8],
-                                          const uint64_t *pIn[8],
-                                          uint64_t *pOut[8],
-                                          uint64_t bufOffset);
+                                           uint32_t *pKeyStr[8],
+                                           const uint64_t *pIn[8],
+                                           uint64_t *pOut[8],
+                                           uint64_t bufOffset);
 
 /**
  ******************************************************************************
@@ -629,11 +692,11 @@ void zuc_eea3_4_buffer_job_avx(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc_eea3_8_buffer_job_avx2(const void * const pKey[8],
-                               const void * const pIv[8],
-                               const void * const pBufferIn[8],
-                               void *pBufferOut[8],
-                               const uint16_t lengthInBytes[8],
-                               const void * const job_in_lane[8]);
+                                const void * const pIv[8],
+                                const void * const pBufferIn[8],
+                                void *pBufferOut[8],
+                                const uint16_t lengthInBytes[8],
+                                const void * const job_in_lane[8]);
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
@@ -726,8 +789,8 @@ void zuc_eea3_n_buffer_avx2(const void * const pKey[], const void * const pIv[],
                             const uint32_t numBuffers);
 
 void zuc_eia3_1_buffer_avx2(const void *pKey, const void *pIv,
-                           const void *pBufferIn, const uint32_t lengthInBits,
-                           uint32_t *pMacI);
+                            const void *pBufferIn, const uint32_t lengthInBits,
+                            uint32_t *pMacI);
 
 void zuc_eia3_n_buffer_avx2(const void * const pKey[],
                             const void * const pIv[],

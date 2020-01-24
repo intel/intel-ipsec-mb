@@ -503,7 +503,6 @@ asm_ZucInitialization_8_avx2:
     ;; Expand keys for packets 2-7
 %assign idx 1
 %rep 6
-    ;second packet key expand here - reset pointers
     pop     rdx             ; get IV array pointer from Stack
     mov     rcx, [rdx+8*idx]      ; load offset to next IV in array
     lea     rsi, [rcx]    ; load pointer to next IV
@@ -529,10 +528,10 @@ asm_ZucInitialization_8_avx2:
 %assign idx (idx + 1)
 %endrep
 
-    ;eight fourth packet key expand here - reset pointers
+    ; Expand eighth packet key
     pop     rdx             ; get IV array pointer from Stack
     mov     rcx, [rdx+56]      ; load offset to IV 8 in array
-    lea     rsi, [rcx]   ; load pointer to IV8
+    lea     rsi, [rcx]   ; load pointer to IV 8
 
     pop     rbx             ; get Key array pointer from Stack
     mov     rcx, [rbx+56]      ; load offset to key 8 in array
