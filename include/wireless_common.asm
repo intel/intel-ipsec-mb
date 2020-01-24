@@ -29,8 +29,12 @@
 
 section .data
 default rel
-align 32
+align 64
 swap_mask:
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
@@ -160,6 +164,27 @@ asm_XorKeyStream64B_avx2:
 
         ret
 
+MKGLOBAL(asm_XorKeyStream64B_avx512,function,internal)
+asm_XorKeyStream64B_avx512:
+%ifdef LINUX
+        %define	        pIn     rdi
+        %define	        pOut    rsi
+        %define	        pKS     rdx
+%else
+        %define	        pIn     rcx
+        %define	        pOut    rdx
+        %define	        pKS     r8
+%endif
+        %define         ZKEY    zmm0
+        %define         ZIN     zmm1
+
+        vmovdqa64       ZKEY,   [pKS]
+        vpshufb         ZKEY,   [rel swap_mask]
+        vmovdqu64       ZIN,    [pIn]
+        vpxorq          ZKEY,   ZIN
+        vmovdqu64       [pOut], ZKEY
+
+        ret
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
