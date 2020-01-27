@@ -1630,7 +1630,7 @@ process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                                 continue;
 
                 /*
-                 * KASUMI-UIA1 needs to be at least 8 bytes
+                 * KASUMI-UIA1 needs to be at least 9 bytes
                  * (IV + direction bit + '1' + 0s to align to byte boundary)
                  */
                 if (params->hash_alg == IMB_AUTH_KASUMI_UIA1)
