@@ -340,7 +340,7 @@ endstruc
 
         ;; Check at least one job
         cmp     qword [state + _aes_cmac_num_lanes_inuse], 0
-        jc      %%_return_null
+        je      %%_return_null
 
         ; find a lane with a non-null job
         vpxord          zmm0, zmm0, zmm0
