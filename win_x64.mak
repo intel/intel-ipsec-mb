@@ -224,9 +224,11 @@ lib_objs1 = \
 	$(OBJ_DIR)\zuc_sse_top.obj \
 	$(OBJ_DIR)\zuc_avx_top.obj \
 	$(OBJ_DIR)\zuc_avx2_top.obj \
+	$(OBJ_DIR)\zuc_avx512_top.obj \
 	$(OBJ_DIR)\zuc_sse.obj \
 	$(OBJ_DIR)\zuc_avx.obj \
 	$(OBJ_DIR)\zuc_avx2.obj \
+	$(OBJ_DIR)\zuc_avx512.obj \
 	$(OBJ_DIR)\zuc_iv.obj \
 	$(OBJ_DIR)\snow3g_sse.obj \
 	$(OBJ_DIR)\snow3g_sse_no_aesni.obj \

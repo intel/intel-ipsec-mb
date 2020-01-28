@@ -24,6 +24,7 @@ Library
 - Added by8/x8 implementations of SSE AES128-CBC, AES192-CBC, AES256-CBC,
   DOCSIS SEC BPI, AES-CCM and AES-CMAC.
 - AES256-DOCSIS algorithm added.
+- ZUC-EEA3 and ZUC-EIA3 Multi-buffer implemented for AVX2 and AVX512.
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through

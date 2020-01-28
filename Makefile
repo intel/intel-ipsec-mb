@@ -194,6 +194,7 @@ c_lib_objs := \
 	zuc_sse_top.o \
 	zuc_avx_top.o \
 	zuc_avx2_top.o \
+	zuc_avx512_top.o \
 	zuc_iv.o \
 	snow3g_sse.o \
 	snow3g_sse_no_aesni.o \
@@ -416,6 +417,7 @@ asm_avx512_lib_objs := \
 	aes_cbc_enc_vaes_avx512.o \
 	aes_docsis_dec_avx512.o \
 	aes_docsis_enc_avx512.o \
+	zuc_avx512.o \
 	mb_mgr_aes_submit_avx512.o \
 	mb_mgr_aes_flush_avx512.o \
 	mb_mgr_aes192_submit_avx512.o \
