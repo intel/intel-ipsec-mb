@@ -66,7 +66,7 @@
         _table[_idx]
 #endif
 
-/*
+/**
  * @brief Constant time SSE lookup function on variable size table
  *        with 8-bit values
  *
@@ -76,10 +76,10 @@
  *
  * @return value to lookup
  */
-uint8_t
+IMB_DLL_LOCAL uint8_t
 lookup_8bit_sse(const void *table, const uint32_t idx, const uint32_t size);
 
-/*
+/**
  * @brief Constant time AVX lookup function on variable size table
  *        with 8-bit values
  *
@@ -89,10 +89,10 @@ lookup_8bit_sse(const void *table, const uint32_t idx, const uint32_t size);
  *
  * @return value to lookup
  */
-uint8_t
+IMB_DLL_LOCAL uint8_t
 lookup_8bit_avx(const void *table, const uint32_t idx, const uint32_t size);
 
-/*
+/**
  * @brief Constant time SSE lookup function on variable size table
  *        with 16-bit values
  *
@@ -102,10 +102,10 @@ lookup_8bit_avx(const void *table, const uint32_t idx, const uint32_t size);
  *
  * @return value to lookup
  */
-uint16_t
+IMB_DLL_LOCAL uint16_t
 lookup_16bit_sse(const void *table, const uint32_t idx, const uint32_t size);
 
-/*
+/**
  * @brief Constant time AVX lookup function on variable size table
  *        with 16-bit values
  *
@@ -115,10 +115,10 @@ lookup_16bit_sse(const void *table, const uint32_t idx, const uint32_t size);
  *
  * @return value to lookup
  */
-uint16_t
+IMB_DLL_LOCAL uint16_t
 lookup_16bit_avx(const void *table, const uint32_t idx, const uint32_t size);
 
-/*
+/**
  * @brief Constant time SSE lookup function on
  *        variable size table with 32-bit values
  *
@@ -128,10 +128,10 @@ lookup_16bit_avx(const void *table, const uint32_t idx, const uint32_t size);
  *
  * @return value to lookup
  */
-uint32_t
+IMB_DLL_LOCAL uint32_t
 lookup_32bit_sse(const void *table, const uint32_t idx, const uint32_t size);
 
-/*
+/**
  * @brief Constant time AVX lookup function on
  *        variable size table with 32-bit values
  *
@@ -141,10 +141,10 @@ lookup_32bit_sse(const void *table, const uint32_t idx, const uint32_t size);
  *
  * @return value to lookup
  */
-uint32_t
+IMB_DLL_LOCAL uint32_t
 lookup_32bit_avx(const void *table, const uint32_t idx, const uint32_t size);
 
-/*
+/**
  * @brief Constant time SSE lookup function on
  *        variable size table with 64-bit values
  *
@@ -154,10 +154,10 @@ lookup_32bit_avx(const void *table, const uint32_t idx, const uint32_t size);
  *
  * @return value to lookup
  */
-uint64_t
+IMB_DLL_LOCAL uint64_t
 lookup_64bit_sse(const void *table, const uint32_t idx, const uint32_t size);
 
-/*
+/**
  * @brief Constant time AVX lookup function on
  *        variable size table with 64-bit values
  *
