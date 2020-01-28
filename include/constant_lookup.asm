@@ -98,6 +98,7 @@ section .text
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
 ; arg 3 : size of table to look up (multiple of 16 bytes)
+align 32
 MKGLOBAL(lookup_8bit_sse,function,internal)
 lookup_8bit_sse:
 
@@ -165,6 +166,7 @@ exit8_sse:
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
 ; arg 3 : size of table to look up (multiple of 16 bytes)
+align 32
 MKGLOBAL(lookup_8bit_avx,function,internal)
 lookup_8bit_avx:
         ;; Number of loop iters = matrix size / 4 (number of values in XMM)
@@ -226,6 +228,7 @@ exit8_avx:
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
 ; arg 3 : size of table to look up
+align 32
 MKGLOBAL(lookup_16bit_sse,function,internal)
 lookup_16bit_sse:
 
@@ -289,6 +292,7 @@ exit16_sse:
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
 ; arg 3 : size of table to look up
+align 32
 MKGLOBAL(lookup_16bit_avx,function,internal)
 lookup_16bit_avx:
 
@@ -347,6 +351,7 @@ exit16_avx:
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
 ; arg 3 : size of table to look up
+align 32
 MKGLOBAL(lookup_32bit_sse,function,internal)
 lookup_32bit_sse:
 
@@ -405,6 +410,7 @@ exit32_sse:
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
 ; arg 3 : size of table to look up
+align 32
 MKGLOBAL(lookup_32bit_avx,function,internal)
 lookup_32bit_avx:
         ;; Number of loop iters = matrix size / 4 (number of values in XMM)
@@ -458,6 +464,7 @@ exit32_avx:
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
 ; arg 3 : size of table to look up
+align 32
 MKGLOBAL(lookup_64bit_sse,function,internal)
 lookup_64bit_sse:
         ;; Number of loop iters = matrix size / 2 (number of values in XMM)

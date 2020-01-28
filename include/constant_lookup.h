@@ -167,7 +167,7 @@ lookup_64bit_sse(const void *table, const uint32_t idx, const uint32_t size);
  *
  * @return value to lookup
  */
-uint64_t
+IMB_DLL_LOCAL uint64_t
 lookup_64bit_avx(const void *table, const uint32_t idx, const uint32_t size);
 
 #endif /* CONSTANT_LOOKUP_H */
