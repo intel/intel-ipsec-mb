@@ -221,24 +221,24 @@ _des_args_LOut	equ	_des_args + _desarg_lout
 ;;;; Define ZUC Out of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-START_FIELDS	; ZUC_ARGS_X8
+START_FIELDS	; ZUC_ARGS_X16
 ;;	name		size	align
-FIELD	_zucarg_in,	8*8,	8	; array of 8 pointers to in text
-FIELD	_zucarg_out,	8*8,	8	; array of 8 pointers to out text
-FIELD	_zucarg_keys,	8*8,	8	; array of 8 pointers to keys
-FIELD	_zucarg_IV,	8*8,	8	; array of 8 pointers to IVs
+FIELD	_zucarg_in,	16*8,	8	; array of 16 pointers to in text
+FIELD	_zucarg_out,	16*8,	8	; array of 16 pointers to out text
+FIELD	_zucarg_keys,	16*8,	8	; array of 16 pointers to keys
+FIELD	_zucarg_IV,	16*8,	8	; array of 16 pointers to IVs
 END_FIELDS
-%assign _ZUC_ARGS_X8_size	_FIELD_OFFSET
-%assign _ZUC_ARGS_X8_align	_STRUCT_ALIGN
+%assign _ZUC_ARGS_X16_size	_FIELD_OFFSET
+%assign _ZUC_ARGS_X16_align	_STRUCT_ALIGN
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 START_FIELDS	; MB_MGR_ZUC_OOO
 ;;	name		size	align
-FIELD	_zuc_args,	_ZUC_ARGS_X8_size, _ZUC_ARGS_X8_align
-FIELD	_zuc_lens,	8*2,	16
+FIELD	_zuc_args,	_ZUC_ARGS_X16_size, _ZUC_ARGS_X16_align
+FIELD	_zuc_lens,	16*2,	32
 FIELD	_zuc_unused_lanes, 8,	8
-FIELD	_zuc_job_in_lane, 8*8,	8
+FIELD	_zuc_job_in_lane, 16*8,	8
 FIELD	_zuc_lanes_in_use, 8,	8
 END_FIELDS
 %assign _MB_MGR_ZUC_OOO_size	_FIELD_OFFSET

@@ -1,5 +1,5 @@
 /*******************************************************************************
- Copyright (c) 2012-2019, Intel Corporation
+ Copyright (c) 2012-2020, Intel Corporation
 
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
@@ -104,13 +104,13 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
 JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
 
-JOB_AES_HMAC *submit_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state);
+JOB_AES_HMAC *submit_job_zuc_eea3_avx512(MB_MGR_ZUC_OOO *state,
+                                         JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_zuc_eea3_avx512(MB_MGR_ZUC_OOO *state);
 
-JOB_AES_HMAC *submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
+JOB_AES_HMAC *submit_job_zuc_eia3_avx512(MB_MGR_ZUC_OOO *state,
+                                         JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_zuc_eia3_avx512(MB_MGR_ZUC_OOO *state);
 
 JOB_AES_HMAC *aes_cntr_ccm_128_vaes_avx512(JOB_AES_HMAC *job);
 
@@ -139,10 +139,10 @@ JOB_AES_HMAC *aes_cntr_ccm_128_vaes_avx512(JOB_AES_HMAC *job);
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_avx512
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_avx512
 
-#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx2
-#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx2
-#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx2
-#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx2
+#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_avx512
+#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx512
+#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx512
+#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx512
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx512
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx512
@@ -907,20 +907,16 @@ init_mb_mgr_avx512(MB_MGR *state)
         /* Init ZUC out-of-order fields */
         memset(state->zuc_eea3_ooo.lens, 0xFF,
                sizeof(state->zuc_eea3_ooo.lens));
-        memset(&state->zuc_eea3_ooo.lens[0], 0,
-               sizeof(state->zuc_eea3_ooo.lens[0]) * 8);
         memset(state->zuc_eea3_ooo.job_in_lane, 0,
                sizeof(state->zuc_eea3_ooo.job_in_lane));
-        state->zuc_eea3_ooo.unused_lanes = 0xF76543210;
+        state->zuc_eea3_ooo.unused_lanes = 0xFEDCBA9876543210;
         state->zuc_eea3_ooo.num_lanes_inuse = 0;
 
         memset(state->zuc_eia3_ooo.lens, 0xFF,
                sizeof(state->zuc_eia3_ooo.lens));
-        memset(&state->zuc_eia3_ooo.lens[0], 0,
-               sizeof(state->zuc_eia3_ooo.lens[0]) * 8);
         memset(state->zuc_eia3_ooo.job_in_lane, 0,
                sizeof(state->zuc_eia3_ooo.job_in_lane));
-        state->zuc_eia3_ooo.unused_lanes = 0xF76543210;
+        state->zuc_eia3_ooo.unused_lanes = 0xFEDCBA9876543210;
         state->zuc_eia3_ooo.num_lanes_inuse = 0;
 
 

@@ -52,6 +52,10 @@ db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
 
 align 64
@@ -736,6 +740,149 @@ asm_ZucGenKeystream8B_16_avx512:
     KEYGEN_16_AVX512 2
 
     ret
+
+;;
+;; void asm_ZucCipher64B_16_avx512(state4_t *pSta, u32 *pKeyStr[16], u64 *pIn[16],
+;;                             u64 *pOut[16], u64 bufOff);
+;;
+;; WIN64
+;;  RCX    - pSta
+;;  RDX    - pKeyStr
+;;  R8     - pIn
+;;  R9     - pOut
+;;  rsp+40 - bufOff
+;;
+;; LIN64
+;;  RDI - pSta
+;;  RSI - pKeyStr
+;;  RDX - pIn
+;;  RCX - pOut
+;;  R8  - bufOff
+;;
+MKGLOBAL(asm_ZucCipher64B_16_avx512,function,internal)
+asm_ZucCipher64B_16_avx512:
+
+%ifdef LINUX
+        %define         pState  rdi
+        %define         pKS     rsi
+        %define         pIn     rdx
+        %define         pOut    rcx
+        %define         bufOff  r8
+%else
+        %define         pState  rcx
+        %define         pKS     rdx
+        %define         pIn     r8
+        %define         pOut    r9
+        %define         bufOff  r10
+%endif
+
+        ;; Store parameter from stack in register
+%ifndef LINUX
+        mov     bufOff, [rsp + 40]
+%endif
+        FUNC_SAVE
+
+        ; Store 16 keystream pointers and input registers in the stack
+        sub     rsp, 16*8 + 4*8
+
+%assign i 0
+%rep 2
+        vmovdqu64 zmm0, [pKS + 64*i]
+        vmovdqu64 [rsp + 64*i], zmm0
+%assign i (i+1)
+%endrep
+
+        mov     [rsp + 128], pKS
+        mov     [rsp + 128 + 8], pIn
+        mov     [rsp + 128 + 16], pOut
+        mov     [rsp + 128 + 24], bufOff
+
+        ; Load state pointer in RAX
+        mov     rax, pState
+
+        ; Load read-only registers
+        vmovdqa64 zmm12, [rel mask31]
+        mov     edx, 0xAAAAAAAA
+        kmovd   k1, edx
+
+        ; Generate 64B of keystream in 16 rounds
+%assign N 1
+%rep 16
+        bits_reorg16 N
+        nonlin_fun16 1
+        store_kstr16
+        vpxorq   zmm0, zmm0
+        lfsr_updt16  N
+%assign N N+1
+%endrep
+
+        ;; Restore input parameters
+        mov     pKS,    [rsp + 128]
+        mov     pIn,    [rsp + 128 + 8]
+        mov     pOut,   [rsp + 128 + 16]
+        mov     bufOff, [rsp + 128 + 24]
+
+        ;; Restore rsp pointer to value before pushing keystreams
+        ;; and input parameters
+        add     rsp, 16*8 + 4*8
+
+        ;; XOR Input buffer with keystream
+
+        ;; Read all 16 streams using registers r12-15 into registers zmm0-15
+%assign i 0
+%assign j 0
+%assign k 12
+%rep 16
+        mov     APPEND(r, k), [pIn + i]
+        vmovdqu64 APPEND(zmm, j), [APPEND(r, k) + bufOff]
+%assign k 12 + ((j + 1) % 4)
+%assign j (j + 1)
+%assign i (i + 8)
+%endrep
+
+        ;; Read all 16 keystreams using registers r12-15 into registers zmm16-31
+%assign i 0
+%assign j 16
+%assign k 12
+%rep 16
+        mov     APPEND(r, k), [pKS + i]
+        vmovdqu64 APPEND(zmm, j), [APPEND(r, k)]
+%assign k 12 + ((j + 1) % 4)
+%assign j (j + 1)
+%assign i (i + 8)
+%endrep
+
+        ;; Shuffle all 16 keystreams in registers zmm16-31
+%assign i 16
+%rep 16
+        vpshufb zmm %+i, [rel swap_mask]
+%assign i (i+1)
+%endrep
+
+        ;; XOR Input (zmm0-15) with Keystreams (zmm16-31)
+%assign i 0
+%assign j 16
+%rep 16
+        vpxorq zmm %+j, zmm %+i
+%assign i (i + 1)
+%assign j (j + 1)
+%endrep
+
+        ;; Write output for all 16 buffers (zmm16-31) using registers r12-15
+%assign i 0
+%assign j 16
+%assign k 12
+%rep 16
+        mov     APPEND(r, k), [pOut + i]
+        vmovdqu64 [APPEND(r, k) + bufOff], APPEND(zmm, j)
+%assign k 12 + ((j + 1) % 4)
+%assign j (j + 1)
+%assign i (i + 8)
+%endrep
+
+        FUNC_RESTORE
+
+        ret
 
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------

@@ -436,7 +436,8 @@ asm_avx512_lib_objs := \
 	mb_mgr_hmac_sha_512_submit_avx512.o \
 	mb_mgr_des_avx512.o \
 	mb_mgr_aes_cmac_submit_flush_vaes_avx512.o \
-	mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.o
+	mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.o \
+	mb_mgr_zuc_submit_flush_avx512.o
 
 #
 # GCM object file lists

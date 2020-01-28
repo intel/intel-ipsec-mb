@@ -714,6 +714,36 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_8_avx2(ZucState8_t *pState,
 
 /**
  ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 64 bytes of
+ *      keystream for sixteen packets in parallel and will XOR this keystream
+ *      with the input text, producing 64 bytes of output for all 16 packets.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState16_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to buffers that will
+ *                                  contain the generated keystreams for all
+ *                                  16 packets.
+ * @param[in] pIn                   Array of pointers to 16 input buffers.
+ * @param[out] pOut                 Array of pointers to 16 output buffers.
+ * @param[in] bufOffset             Offset into pIn and pOut
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_16 to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_ZucCipher64B_16_avx512(ZucState16_t *pState,
+                                              uint32_t *pKeyStr[16],
+                                              const uint64_t *pIn[16],
+                                              uint64_t *pOut[16],
+                                              uint64_t bufOffset);
+
+/**
+ ******************************************************************************
  * @description
  *      Definition of the external function to update the authentication tag
  *      based on keystream and data (SSE varient)
@@ -814,6 +844,14 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[8],
                                 const void * const job_in_lane[8]);
 
 IMB_DLL_LOCAL
+void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
+                                   const void * const pIv[16],
+                                   const void * const pBufferIn[16],
+                                   void *pBufferOut[16],
+                                   const uint16_t lengthInBytes[16],
+                                   const void * const job_in_lane[16]);
+
+IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
                                const void * const pIv[4],
                                const void * const pBufferIn[4],
@@ -836,6 +874,14 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
                                 uint32_t *pMacI[8],
                                 const uint16_t lengthInBits[8],
                                 const void * const job_in_lane[8]);
+
+IMB_DLL_LOCAL
+void zuc_eia3_16_buffer_job_avx512(const void * const pKey[16],
+                                   const void * const pIv[16],
+                                   const void * const pBufferIn[16],
+                                   uint32_t *pMacI[16],
+                                   const uint16_t lengthInBits[16],
+                                   const void * const job_in_lane[16]);
 
 /* the s-boxes */
 extern const uint8_t S0[256];
