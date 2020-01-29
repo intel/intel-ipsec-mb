@@ -260,7 +260,7 @@ asm_sse_lib_objs := \
 	pon_sse.o \
 	aes128_cntr_by8_sse.o \
 	aes192_cntr_by8_sse.o \
-	aes256_cntr_by4_sse.o \
+	aes256_cntr_by8_sse.o \
 	aes_ecb_by4_sse.o \
 	aes128_cntr_ccm_by4_sse.o \
 	aes_cfb_128_sse.o \
