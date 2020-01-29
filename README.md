@@ -37,13 +37,13 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES128-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
-| AES128-CCM    | N      | Y  by4 | Y  by8 | N      | N      | N      |
+| AES128-CCM    | N      | Y  by8 | Y  by8 | N      | N      | N      |
 | AES128-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES192-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES256-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
-| AES128-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by16 |
-| AES192-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by16 |
-| AES256-CTR    | N      | Y  by4 | Y  by8 | N      | N      | Y by16 |
+| AES128-CTR    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES192-CTR    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES256-CTR    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES128-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
 | AES192-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
 | AES256-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
