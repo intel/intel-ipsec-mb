@@ -69,6 +69,63 @@ bcast_mask:
         db 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01,
         db 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 
+align 64
+idx_rows_avx:
+        dd 0x00000000, 0x00000000, 0x00000000, 0x00000000
+        dd 0x10101010, 0x10101010, 0x10101010, 0x10101010
+        dd 0x20202020, 0x20202020, 0x20202020, 0x20202020
+        dd 0x30303030, 0x30303030, 0x30303030, 0x30303030
+        dd 0x40404040, 0x40404040, 0x40404040, 0x40404040
+        dd 0x50505050, 0x50505050, 0x50505050, 0x50505050
+        dd 0x60606060, 0x60606060, 0x60606060, 0x60606060
+        dd 0x70707070, 0x70707070, 0x70707070, 0x70707070
+        dd 0x80808080, 0x80808080, 0x80808080, 0x80808080
+        dd 0x90909090, 0x90909090, 0x90909090, 0x90909090
+        dd 0xa0a0a0a0, 0xa0a0a0a0, 0xa0a0a0a0, 0xa0a0a0a0
+        dd 0xb0b0b0b0, 0xb0b0b0b0, 0xb0b0b0b0, 0xb0b0b0b0
+        dd 0xc0c0c0c0, 0xc0c0c0c0, 0xc0c0c0c0, 0xc0c0c0c0
+        dd 0xd0d0d0d0, 0xd0d0d0d0, 0xd0d0d0d0, 0xd0d0d0d0
+        dd 0xe0e0e0e0, 0xe0e0e0e0, 0xe0e0e0e0, 0xe0e0e0e0
+        dd 0xf0f0f0f0, 0xf0f0f0f0, 0xf0f0f0f0, 0xf0f0f0f0
+
+align 64
+idx_rows_avx2:
+        dd 0x00000000, 0x00000000, 0x00000000, 0x00000000
+        dd 0x00000000, 0x00000000, 0x00000000, 0x00000000
+        dd 0x10101010, 0x10101010, 0x10101010, 0x10101010
+        dd 0x10101010, 0x10101010, 0x10101010, 0x10101010
+        dd 0x20202020, 0x20202020, 0x20202020, 0x20202020
+        dd 0x20202020, 0x20202020, 0x20202020, 0x20202020
+        dd 0x30303030, 0x30303030, 0x30303030, 0x30303030
+        dd 0x30303030, 0x30303030, 0x30303030, 0x30303030
+        dd 0x40404040, 0x40404040, 0x40404040, 0x40404040
+        dd 0x40404040, 0x40404040, 0x40404040, 0x40404040
+        dd 0x50505050, 0x50505050, 0x50505050, 0x50505050
+        dd 0x50505050, 0x50505050, 0x50505050, 0x50505050
+        dd 0x60606060, 0x60606060, 0x60606060, 0x60606060
+        dd 0x60606060, 0x60606060, 0x60606060, 0x60606060
+        dd 0x70707070, 0x70707070, 0x70707070, 0x70707070
+        dd 0x70707070, 0x70707070, 0x70707070, 0x70707070
+        dd 0x80808080, 0x80808080, 0x80808080, 0x80808080
+        dd 0x80808080, 0x80808080, 0x80808080, 0x80808080
+        dd 0x90909090, 0x90909090, 0x90909090, 0x90909090
+        dd 0x90909090, 0x90909090, 0x90909090, 0x90909090
+        dd 0xa0a0a0a0, 0xa0a0a0a0, 0xa0a0a0a0, 0xa0a0a0a0
+        dd 0xa0a0a0a0, 0xa0a0a0a0, 0xa0a0a0a0, 0xa0a0a0a0
+        dd 0xb0b0b0b0, 0xb0b0b0b0, 0xb0b0b0b0, 0xb0b0b0b0
+        dd 0xb0b0b0b0, 0xb0b0b0b0, 0xb0b0b0b0, 0xb0b0b0b0
+        dd 0xc0c0c0c0, 0xc0c0c0c0, 0xc0c0c0c0, 0xc0c0c0c0
+        dd 0xc0c0c0c0, 0xc0c0c0c0, 0xc0c0c0c0, 0xc0c0c0c0
+        dd 0xd0d0d0d0, 0xd0d0d0d0, 0xd0d0d0d0, 0xd0d0d0d0
+        dd 0xd0d0d0d0, 0xd0d0d0d0, 0xd0d0d0d0, 0xd0d0d0d0
+        dd 0xe0e0e0e0, 0xe0e0e0e0, 0xe0e0e0e0, 0xe0e0e0e0
+        dd 0xe0e0e0e0, 0xe0e0e0e0, 0xe0e0e0e0, 0xe0e0e0e0
+        dd 0xf0f0f0f0, 0xf0f0f0f0, 0xf0f0f0f0, 0xf0f0f0f0
+        dd 0xf0f0f0f0, 0xf0f0f0f0, 0xf0f0f0f0, 0xf0f0f0f0
+        ;; extra
+        dd 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f
+        dd 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f, 0x0f0f0f0f
+
 section .text
 
 %ifdef LINUX
@@ -560,6 +617,369 @@ loop64_avx:
         vmovq   rax, accum_val
 
 exit64_avx:
+        ret
+
+; __m128i lookup_16x8bit_sse(const __m128i indexes, const void *table)
+; arg 1 : vector with 16 8-bit indexes to be looked up
+; arg 2 : pointer to a 256 element table
+align 32
+MKGLOBAL(lookup_16x8bit_sse,function,internal)
+lookup_16x8bit_sse:
+%define arg_table   arg1
+%define arg_indexes xmm0
+%define arg_return  xmm0
+
+        movdqa          xmm15, [rel idx_rows_avx + (15 * 16)]
+        movdqa          xmm14, xmm15
+        psrlq           xmm14, 4
+        movdqa          xmm1, arg_indexes
+        movdqa          xmm2, arg_indexes
+        pand            xmm1, xmm15        ;; top nibble part of the index
+        pand            xmm2, xmm14        ;; low nibble part of the index
+
+        movdqa          xmm9,  xmm1
+        movdqa          xmm10, xmm1
+        movdqa          xmm11, xmm1
+        movdqa          xmm12, xmm1
+        movdqa          xmm13, xmm1
+        movdqa          xmm14, xmm1
+        pcmpeqb         xmm9, [rel idx_rows_avx + (0 * 16)]
+        movdqa          xmm3, [arg_table + (0 * 16)]
+        pcmpeqb         xmm10, [rel idx_rows_avx + (1 * 16)]
+        movdqa          xmm4, [arg_table + (1 * 16)]
+        pcmpeqb         xmm11, [rel idx_rows_avx + (2 * 16)]
+        movdqa          xmm5, [arg_table + (2 * 16)]
+        pcmpeqb         xmm12, [rel idx_rows_avx + (3 * 16)]
+        movdqa          xmm6, [arg_table + (3 * 16)]
+        pcmpeqb         xmm13, [rel idx_rows_avx + (4 * 16)]
+        movdqa          xmm7, [arg_table + (4 * 16)]
+        pcmpeqb         xmm14, [rel idx_rows_avx + (5 * 16)]
+        movdqa          xmm8, [arg_table + (5 * 16)]
+
+        pshufb          xmm3, xmm2
+        pshufb          xmm4, xmm2
+        pshufb          xmm5, xmm2
+        pshufb          xmm6, xmm2
+        pshufb          xmm7, xmm2
+        pshufb          xmm8, xmm2
+
+        pand            xmm9,  xmm3
+        pand            xmm10, xmm4
+        pand            xmm11, xmm5
+        pand            xmm12, xmm6
+        pand            xmm13, xmm7
+        pand            xmm14, xmm8
+
+        por             xmm9,  xmm10
+        por             xmm11, xmm12
+        por             xmm14, xmm13
+        movdqa          arg_return, xmm9
+        por             arg_return, xmm11
+
+        ;; xmm8 and xmm14 are used for final OR result from now on.
+        ;; arg_return & xmm14 carry current OR result.
+
+        movdqa          xmm9,  xmm1
+        movdqa          xmm10, xmm1
+        movdqa          xmm11, xmm1
+        movdqa          xmm12, xmm1
+        movdqa          xmm13, xmm1
+
+        pcmpeqb         xmm9,  [rel idx_rows_avx + (6 * 16)]
+        movdqa          xmm3, [arg_table + (6 * 16)]
+        pcmpeqb         xmm10, [rel idx_rows_avx + (7 * 16)]
+        movdqa          xmm4, [arg_table + (7 * 16)]
+        pcmpeqb         xmm11, [rel idx_rows_avx + (8 * 16)]
+        movdqa          xmm5, [arg_table + (8 * 16)]
+        pcmpeqb         xmm12, [rel idx_rows_avx + (9 * 16)]
+        movdqa          xmm6, [arg_table + (9 * 16)]
+        pcmpeqb         xmm13, [rel idx_rows_avx + (10 * 16)]
+        movdqa          xmm7, [arg_table + (10 * 16)]
+
+        pshufb          xmm3, xmm2
+        pshufb          xmm4, xmm2
+        pshufb          xmm5, xmm2
+        pshufb          xmm6, xmm2
+        pshufb          xmm7, xmm2
+
+        pand            xmm9,  xmm3
+        pand            xmm10, xmm4
+        pand            xmm11, xmm5
+        pand            xmm12, xmm6
+        pand            xmm13, xmm7
+
+        por             xmm9,  xmm10
+        por             xmm11, xmm12
+        por             xmm14, xmm13
+        por             arg_return, xmm9
+        por             xmm14, xmm11
+
+        ;; arg_return & xmm15 carry current OR result
+
+        movdqa          xmm9,  xmm1
+        movdqa          xmm10, xmm1
+        movdqa          xmm11, xmm1
+        movdqa          xmm12, xmm1
+        movdqa          xmm13, xmm1
+
+        pcmpeqb         xmm9,  [rel idx_rows_avx + (11 * 16)]
+        movdqa          xmm3, [arg_table + (11 * 16)]
+        pcmpeqb         xmm10, [rel idx_rows_avx + (12 * 16)]
+        movdqa          xmm4, [arg_table + (12 * 16)]
+        pcmpeqb         xmm11, [rel idx_rows_avx + (13 * 16)]
+        movdqa          xmm5, [arg_table + (13 * 16)]
+        pcmpeqb         xmm12, [rel idx_rows_avx + (14 * 16)]
+        movdqa          xmm6, [arg_table + (14 * 16)]
+        pcmpeqb         xmm13, [rel idx_rows_avx + (15 * 16)]
+        movdqa          xmm7, [arg_table + (15 * 16)]
+
+        pshufb          xmm3, xmm2
+        pshufb          xmm4, xmm2
+        pshufb          xmm5, xmm2
+        pshufb          xmm6, xmm2
+        pshufb          xmm7, xmm2
+
+        pand            xmm9,  xmm3
+        pand            xmm10, xmm4
+        pand            xmm11, xmm5
+        pand            xmm12, xmm6
+        pand            xmm13, xmm7
+
+        por             xmm9,  xmm10
+        por             xmm11, xmm12
+        por             xmm14, xmm13
+        por             arg_return, xmm9
+        por             xmm14, xmm11
+        por             arg_return, xmm14
+
+        ret
+
+; __m128i lookup_16x8bit_avx(const __m128i indexes, const void *table)
+; arg 1 : vector with 16 8-bit indexes to be looked up
+; arg 2 : pointer to a 256 element table
+align 32
+MKGLOBAL(lookup_16x8bit_avx,function,internal)
+lookup_16x8bit_avx:
+%define arg_table   arg1
+%define arg_indexes xmm0
+%define arg_return  xmm0
+
+        vmovdqa         xmm15, [rel idx_rows_avx + (15 * 16)]
+        vpsrlq          xmm2, xmm15, 4
+
+        vpand           xmm1, xmm15, arg_indexes        ;; top nibble part of the index
+        vpand           xmm2, xmm2, arg_indexes         ;; low nibble part of the index
+
+        vpcmpeqb        xmm9,  xmm1, [rel idx_rows_avx + (0 * 16)]
+        vmovdqa         xmm3, [arg_table + (0 * 16)]
+        vpcmpeqb        xmm10, xmm1, [rel idx_rows_avx + (1 * 16)]
+        vmovdqa         xmm4, [arg_table + (1 * 16)]
+        vpcmpeqb        xmm11, xmm1, [rel idx_rows_avx + (2 * 16)]
+        vmovdqa         xmm5, [arg_table + (2 * 16)]
+        vpcmpeqb        xmm12, xmm1, [rel idx_rows_avx + (3 * 16)]
+        vmovdqa         xmm6, [arg_table + (3 * 16)]
+        vpcmpeqb        xmm13, xmm1, [rel idx_rows_avx + (4 * 16)]
+        vmovdqa         xmm7, [arg_table + (4 * 16)]
+        vpcmpeqb        xmm14, xmm1, [rel idx_rows_avx + (5 * 16)]
+        vmovdqa         xmm8, [arg_table + (5 * 16)]
+
+        vpshufb         xmm3, xmm3, xmm2
+        vpshufb         xmm4, xmm4, xmm2
+        vpshufb         xmm5, xmm5, xmm2
+        vpshufb         xmm6, xmm6, xmm2
+        vpshufb         xmm7, xmm7, xmm2
+        vpshufb         xmm8, xmm8, xmm2
+
+        vpand           xmm9,  xmm9,  xmm3
+        vpand           xmm10, xmm10, xmm4
+        vpand           xmm11, xmm11, xmm5
+        vpand           xmm12, xmm12, xmm6
+        vpand           xmm13, xmm13, xmm7
+        vpand           xmm14, xmm14, xmm8
+
+        vpor            xmm9,  xmm9,  xmm10
+        vpor            xmm11, xmm11, xmm12
+        vpor            xmm14, xmm13, xmm14
+        vpor            arg_return, xmm9, xmm11
+
+        ;; xmm8 and xmm14 are used for final OR result from now on.
+        ;; arg_return & xmm14 carry current OR result.
+
+        vpcmpeqb        xmm9,  xmm1, [rel idx_rows_avx + (6 * 16)]
+        vmovdqa         xmm3, [arg_table + (6 * 16)]
+        vpcmpeqb        xmm10, xmm1, [rel idx_rows_avx + (7 * 16)]
+        vmovdqa         xmm4, [arg_table + (7 * 16)]
+        vpcmpeqb        xmm11, xmm1, [rel idx_rows_avx + (8 * 16)]
+        vmovdqa         xmm5, [arg_table + (8 * 16)]
+        vpcmpeqb        xmm12, xmm1, [rel idx_rows_avx + (9 * 16)]
+        vmovdqa         xmm6, [arg_table + (9 * 16)]
+        vpcmpeqb        xmm13, xmm1, [rel idx_rows_avx + (10 * 16)]
+        vmovdqa         xmm7, [arg_table + (10 * 16)]
+
+        vpshufb         xmm3, xmm3, xmm2
+        vpshufb         xmm4, xmm4, xmm2
+        vpshufb         xmm5, xmm5, xmm2
+        vpshufb         xmm6, xmm6, xmm2
+        vpshufb         xmm7, xmm7, xmm2
+
+        vpand           xmm9,  xmm9,  xmm3
+        vpand           xmm10, xmm10, xmm4
+        vpand           xmm11, xmm11, xmm5
+        vpand           xmm12, xmm12, xmm6
+        vpand           xmm13, xmm13, xmm7
+
+        vpor            xmm9,  xmm9,  xmm10
+        vpor            xmm11, xmm11, xmm12
+        vpor            xmm15, xmm9,  xmm11
+        vpor            xmm8,  xmm14, xmm13
+
+        ;; arg_return, xmm15 & xmm8 carry current OR result
+
+        vpcmpeqb        xmm9,  xmm1, [rel idx_rows_avx + (11 * 16)]
+        vmovdqa         xmm3, [arg_table + (11 * 16)]
+        vpcmpeqb        xmm10, xmm1, [rel idx_rows_avx + (12 * 16)]
+        vmovdqa         xmm4, [arg_table + (12 * 16)]
+        vpcmpeqb        xmm11, xmm1, [rel idx_rows_avx + (13 * 16)]
+        vmovdqa         xmm5, [arg_table + (13 * 16)]
+        vpcmpeqb        xmm12, xmm1, [rel idx_rows_avx + (14 * 16)]
+        vmovdqa         xmm6, [arg_table + (14 * 16)]
+        vpcmpeqb        xmm13, xmm1, [rel idx_rows_avx + (15 * 16)]
+        vmovdqa         xmm7, [arg_table + (15 * 16)]
+
+        vpshufb         xmm3, xmm3, xmm2
+        vpshufb         xmm4, xmm4, xmm2
+        vpshufb         xmm5, xmm5, xmm2
+        vpshufb         xmm6, xmm6, xmm2
+        vpshufb         xmm7, xmm7, xmm2
+
+        vpand           xmm9,  xmm9,  xmm3
+        vpand           xmm10, xmm10, xmm4
+        vpand           xmm11, xmm11, xmm5
+        vpand           xmm12, xmm12, xmm6
+        vpand           xmm13, xmm13, xmm7
+
+        vpor            xmm14, xmm15, xmm8
+        vpor            xmm9,  xmm9,  xmm10
+        vpor            xmm11, xmm11, xmm12
+        vpor            xmm13, xmm13, xmm14
+        vpor            xmm15, xmm9,  xmm11
+        vpor            arg_return, arg_return, xmm13
+        vpor            arg_return, arg_return, xmm15
+
+        ret
+
+; __m256i lookup_32x8bit_avx2(const __m256i indexes, const void *table)
+; arg 1 : vector with 32 8-bit indexes to be looked up
+; arg 2 : pointer to a 256 element table
+align 32
+MKGLOBAL(lookup_32x8bit_avx2,function,internal)
+lookup_32x8bit_avx2:
+%define arg_table   arg1
+%define arg_indexes ymm0
+%define arg_return  ymm0
+
+        vmovdqa         ymm15, [rel idx_rows_avx2 + (15 * 32)]
+        vpsrlq          ymm2, ymm15, 4
+
+        vpand           ymm1, ymm15, arg_indexes        ;; top nibble part of the index
+        vpand           ymm2, ymm2, arg_indexes         ;; low nibble part of the index
+
+        vpcmpeqb        ymm9,  ymm1, [rel idx_rows_avx2 + (0 * 32)]
+        vbroadcastf128  ymm3, [arg_table + (0 * 16)]
+        vpcmpeqb        ymm10, ymm1, [rel idx_rows_avx2 + (1 * 32)]
+        vbroadcastf128  ymm4, [arg_table + (1 * 16)]
+        vpcmpeqb        ymm11, ymm1, [rel idx_rows_avx2 + (2 * 32)]
+        vbroadcastf128  ymm5, [arg_table + (2 * 16)]
+        vpcmpeqb        ymm12, ymm1, [rel idx_rows_avx2 + (3 * 32)]
+        vbroadcastf128  ymm6, [arg_table + (3 * 16)]
+        vpcmpeqb        ymm13, ymm1, [rel idx_rows_avx2 + (4 * 32)]
+        vbroadcastf128  ymm7, [arg_table + (4 * 16)]
+        vpcmpeqb        ymm14, ymm1, [rel idx_rows_avx2 + (5 * 32)]
+        vbroadcastf128  ymm8, [arg_table + (5 * 16)]
+
+        vpshufb         ymm3, ymm3, ymm2
+        vpshufb         ymm4, ymm4, ymm2
+        vpshufb         ymm5, ymm5, ymm2
+        vpshufb         ymm6, ymm6, ymm2
+        vpshufb         ymm7, ymm7, ymm2
+        vpshufb         ymm8, ymm8, ymm2
+
+        vpand           ymm9,  ymm9,  ymm3
+        vpand           ymm10, ymm10, ymm4
+        vpand           ymm11, ymm11, ymm5
+        vpand           ymm12, ymm12, ymm6
+        vpand           ymm13, ymm13, ymm7
+        vpand           ymm14, ymm14, ymm8
+
+        vpor            ymm9,  ymm9,  ymm10
+        vpor            ymm11, ymm11, ymm12
+        vpor            ymm14, ymm13, ymm14
+        vpor            arg_return, ymm9, ymm11
+
+        ;; ymm8 and ymm14 are used for final OR result from now on.
+        ;; arg_return & ymm14 carry current OR result.
+
+        vpcmpeqb        ymm9,  ymm1, [rel idx_rows_avx2 + (6 * 32)]
+        vbroadcastf128  ymm3, [arg_table + (6 * 16)]
+        vpcmpeqb        ymm10, ymm1, [rel idx_rows_avx2 + (7 * 32)]
+        vbroadcastf128  ymm4, [arg_table + (7 * 16)]
+        vpcmpeqb        ymm11, ymm1, [rel idx_rows_avx2 + (8 * 32)]
+        vbroadcastf128  ymm5, [arg_table + (8 * 16)]
+        vpcmpeqb        ymm12, ymm1, [rel idx_rows_avx2 + (9 * 32)]
+        vbroadcastf128  ymm6, [arg_table + (9 * 16)]
+        vpcmpeqb        ymm13, ymm1, [rel idx_rows_avx2 + (10 * 32)]
+        vbroadcastf128  ymm7, [arg_table + (10 * 16)]
+
+        vpshufb         ymm3, ymm3, ymm2
+        vpshufb         ymm4, ymm4, ymm2
+        vpshufb         ymm5, ymm5, ymm2
+        vpshufb         ymm6, ymm6, ymm2
+        vpshufb         ymm7, ymm7, ymm2
+
+        vpand           ymm9,  ymm9,  ymm3
+        vpand           ymm10, ymm10, ymm4
+        vpand           ymm11, ymm11, ymm5
+        vpand           ymm12, ymm12, ymm6
+        vpand           ymm13, ymm13, ymm7
+
+        vpor            ymm9,  ymm9,  ymm10
+        vpor            ymm11, ymm11, ymm12
+        vpor            ymm15, ymm9, ymm11
+        vpor            ymm8,  ymm14, ymm13
+
+        ;; arg_return, ymm15 & ymm8 carry current OR result
+
+        vpcmpeqb        ymm9,  ymm1, [rel idx_rows_avx2 + (11 * 32)]
+        vbroadcastf128  ymm3, [arg_table + (11 * 16)]
+        vpcmpeqb        ymm10, ymm1, [rel idx_rows_avx2 + (12 * 32)]
+        vbroadcastf128  ymm4, [arg_table + (12 * 16)]
+        vpcmpeqb        ymm11, ymm1, [rel idx_rows_avx2 + (13 * 32)]
+        vbroadcastf128  ymm5, [arg_table + (13 * 16)]
+        vpcmpeqb        ymm12, ymm1, [rel idx_rows_avx2 + (14 * 32)]
+        vbroadcastf128  ymm6, [arg_table + (14 * 16)]
+        vpcmpeqb        ymm13, ymm1, [rel idx_rows_avx2 + (15 * 32)]
+        vbroadcastf128  ymm7, [arg_table + (15 * 16)]
+
+        vpshufb         ymm3, ymm3, ymm2
+        vpshufb         ymm4, ymm4, ymm2
+        vpshufb         ymm5, ymm5, ymm2
+        vpshufb         ymm6, ymm6, ymm2
+        vpshufb         ymm7, ymm7, ymm2
+
+        vpand           ymm9,  ymm9,  ymm3
+        vpand           ymm10, ymm10, ymm4
+        vpand           ymm11, ymm11, ymm5
+        vpand           ymm12, ymm12, ymm6
+        vpand           ymm13, ymm13, ymm7
+
+        vpor            ymm14, ymm15, ymm8
+        vpor            ymm9,  ymm9,  ymm10
+        vpor            ymm11, ymm11, ymm12
+        vpor            ymm13, ymm13, ymm14
+        vpor            ymm15, ymm9, ymm11
+        vpor            arg_return, arg_return, ymm13
+        vpor            arg_return, arg_return, ymm15
+
         ret
 
 
