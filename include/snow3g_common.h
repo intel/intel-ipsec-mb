@@ -39,6 +39,7 @@
 #include <string.h> /* memset(), memcpy() */
 #include <stdint.h>
 
+#include "include/constant_lookup.h"
 #include "intel-ipsec-mb.h"
 #include "wireless_common.h"
 #include "include/snow3g.h"
@@ -120,300 +121,17 @@ static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 #endif /* AVX2 */
 
 /* -------------------------------------------------------------------
- * Parallel safe lookup of 16 indexes in the 256 x 8-bit element table
+ * Wrapper for safe lookup of 16 indexes in 256x8-bit table (sse/avx)
  * ------------------------------------------------------------------ */
 static inline __m128i lut8_256(const __m128i indexes, const void *lut)
 {
-        const __m128i *lut128 = (const __m128i *) lut;
-        const __m128i m_top_idx =
-                _mm_and_si128(indexes, _mm_set1_epi32(0xf0f0f0f0));
-        const __m128i m_low_idx =
-                _mm_and_si128(indexes, _mm_set1_epi32(0x0f0f0f0f));
-
-        __m128i cidx1, cidx2, cidx3, cidx4;
-        __m128i data1, data2, data3, data4;
-        __m128i res1, res2, res3, res4;
-
-        /* bytes 0 - 63 */
-        data1 = _mm_loadu_si128(&lut128[0]);
-        data2 = _mm_loadu_si128(&lut128[1]);
-        data3 = _mm_loadu_si128(&lut128[2]);
-        data4 = _mm_loadu_si128(&lut128[3]);
-
-        cidx1 = _mm_set1_epi32(0x00000000);
-        cidx2 = _mm_set1_epi32(0x10101010);
-        cidx3 = _mm_set1_epi32(0x20202020);
-        cidx4 = _mm_set1_epi32(0x30303030);
-
-        cidx1 = _mm_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
-        cidx2 = _mm_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
-        cidx3 = _mm_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
-        cidx4 = _mm_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
-
-        data1 = _mm_shuffle_epi8(data1, m_low_idx);
-        data2 = _mm_shuffle_epi8(data2, m_low_idx);
-        data3 = _mm_shuffle_epi8(data3, m_low_idx);
-        data4 = _mm_shuffle_epi8(data4, m_low_idx);
-
-        res1 = _mm_and_si128(data1, cidx1);
-        res2 = _mm_and_si128(data2, cidx2);
-        res3 = _mm_and_si128(data3, cidx3);
-        res4 = _mm_and_si128(data4, cidx4);
-
-        /* bytes 64 - 127 */
-        data1 = _mm_loadu_si128(&lut128[4]);
-        data2 = _mm_loadu_si128(&lut128[5]);
-        data3 = _mm_loadu_si128(&lut128[6]);
-        data4 = _mm_loadu_si128(&lut128[7]);
-
-        cidx1 = _mm_set1_epi32(0x40404040);
-        cidx2 = _mm_set1_epi32(0x50505050);
-        cidx3 = _mm_set1_epi32(0x60606060);
-        cidx4 = _mm_set1_epi32(0x70707070);
-
-        cidx1 = _mm_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
-        cidx2 = _mm_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
-        cidx3 = _mm_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
-        cidx4 = _mm_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
-
-        data1 = _mm_shuffle_epi8(data1, m_low_idx);
-        data2 = _mm_shuffle_epi8(data2, m_low_idx);
-        data3 = _mm_shuffle_epi8(data3, m_low_idx);
-        data4 = _mm_shuffle_epi8(data4, m_low_idx);
-
-        data1 = _mm_and_si128(data1, cidx1);
-        data2 = _mm_and_si128(data2, cidx2);
-        data3 = _mm_and_si128(data3, cidx3);
-        data4 = _mm_and_si128(data4, cidx4);
-
-        res1 = _mm_or_si128(res1, data1);
-        res2 = _mm_or_si128(res2, data2);
-        res3 = _mm_or_si128(res3, data3);
-        res4 = _mm_or_si128(res4, data4);
-
-        /* bytes 128 - 191 */
-        data1 = _mm_loadu_si128(&lut128[8]);
-        data2 = _mm_loadu_si128(&lut128[9]);
-        data3 = _mm_loadu_si128(&lut128[10]);
-        data4 = _mm_loadu_si128(&lut128[11]);
-
-        cidx1 = _mm_set1_epi32(0x80808080);
-        cidx2 = _mm_set1_epi32(0x90909090);
-        cidx3 = _mm_set1_epi32(0xa0a0a0a0);
-        cidx4 = _mm_set1_epi32(0xb0b0b0b0);
-
-        cidx1 = _mm_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
-        cidx2 = _mm_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
-        cidx3 = _mm_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
-        cidx4 = _mm_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
-
-        data1 = _mm_shuffle_epi8(data1, m_low_idx);
-        data2 = _mm_shuffle_epi8(data2, m_low_idx);
-        data3 = _mm_shuffle_epi8(data3, m_low_idx);
-        data4 = _mm_shuffle_epi8(data4, m_low_idx);
-
-        data1 = _mm_and_si128(data1, cidx1);
-        data2 = _mm_and_si128(data2, cidx2);
-        data3 = _mm_and_si128(data3, cidx3);
-        data4 = _mm_and_si128(data4, cidx4);
-
-        res1 = _mm_or_si128(res1, data1);
-        res2 = _mm_or_si128(res2, data2);
-        res3 = _mm_or_si128(res3, data3);
-        res4 = _mm_or_si128(res4, data4);
-
-        /* bytes 192 - 255 */
-        data1 = _mm_loadu_si128(&lut128[12]);
-        data2 = _mm_loadu_si128(&lut128[13]);
-        data3 = _mm_loadu_si128(&lut128[14]);
-        data4 = _mm_loadu_si128(&lut128[15]);
-
-        cidx1 = _mm_set1_epi32(0xc0c0c0c0);
-        cidx2 = _mm_set1_epi32(0xd0d0d0d0);
-        cidx3 = _mm_set1_epi32(0xe0e0e0e0);
-        cidx4 = _mm_set1_epi32(0xf0f0f0f0);
-
-        cidx1 = _mm_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
-        cidx2 = _mm_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
-        cidx3 = _mm_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
-        cidx4 = _mm_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
-
-        data1 = _mm_shuffle_epi8(data1, m_low_idx);
-        data2 = _mm_shuffle_epi8(data2, m_low_idx);
-        data3 = _mm_shuffle_epi8(data3, m_low_idx);
-        data4 = _mm_shuffle_epi8(data4, m_low_idx);
-
-        data1 = _mm_and_si128(data1, cidx1);
-        data2 = _mm_and_si128(data2, cidx2);
-        data3 = _mm_and_si128(data3, cidx3);
-        data4 = _mm_and_si128(data4, cidx4);
-
-        res1 = _mm_or_si128(res1, res2);
-        res3 = _mm_or_si128(res3, res4);
-
-        res2 = _mm_or_si128(data1, data2);
-        res4 = _mm_or_si128(data3, data4);
-
-        res1 = _mm_or_si128(res1, res2);
-        res1 = _mm_or_si128(res1, res3);
-        res1 = _mm_or_si128(res1, res4);
-
-        /* finish */
-
-        return res1;
+#ifdef AVX
+        return lookup_16x8bit_avx(indexes, lut);
+#else
+        return lookup_16x8bit_sse(indexes, lut);
+#endif
 }
 
-#ifdef AVX2
-/* -------------------------------------------------------------------
- * Parallel safe lookup of 32 indexes in the 256 x 8-bit element table
- * ------------------------------------------------------------------ */
-static inline __m256i lut8_256_avx2(const __m256i indexes, const void *lut)
-{
-        static const __m256i top_nibble_mask = {
-                0xf0f0f0f0f0f0f0f0ULL, 0xf0f0f0f0f0f0f0f0ULL,
-                0xf0f0f0f0f0f0f0f0ULL, 0xf0f0f0f0f0f0f0f0ULL
-        };
-        static const __m256i low_nibble_mask = {
-                0x0f0f0f0f0f0f0f0fULL, 0x0f0f0f0f0f0f0f0fULL,
-                0x0f0f0f0f0f0f0f0fULL, 0x0f0f0f0f0f0f0f0fULL
-        };
-        const __m128 *lut128 = (const __m128 *) lut;
-        const __m256i m_low_idx = _mm256_and_si256(indexes, low_nibble_mask);
-        const __m256i m_top_idx = _mm256_and_si256(indexes, top_nibble_mask);
-
-        __m256i cidx1, cidx2, cidx3, cidx4;
-        __m256i data1, data2, data3, data4;
-        __m256i res1, res2, res3, res4;
-
-        /* bytes 0 - 63 */
-        data1 = (__m256i) _mm256_broadcast_ps(&lut128[0]);
-        data2 = (__m256i) _mm256_broadcast_ps(&lut128[1]);
-        data3 = (__m256i) _mm256_broadcast_ps(&lut128[2]);
-        data4 = (__m256i) _mm256_broadcast_ps(&lut128[3]);
-
-        cidx1 = _mm256_set1_epi32(0x00000000);
-        cidx2 = _mm256_set1_epi32(0x10101010);
-        cidx3 = _mm256_set1_epi32(0x20202020);
-        cidx4 = _mm256_set1_epi32(0x30303030);
-
-        cidx1 = _mm256_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
-        cidx2 = _mm256_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
-        cidx3 = _mm256_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
-        cidx4 = _mm256_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
-
-        data1 = _mm256_shuffle_epi8(data1, m_low_idx);
-        data2 = _mm256_shuffle_epi8(data2, m_low_idx);
-        data3 = _mm256_shuffle_epi8(data3, m_low_idx);
-        data4 = _mm256_shuffle_epi8(data4, m_low_idx);
-
-        res1 = _mm256_and_si256(data1, cidx1);
-        res2 = _mm256_and_si256(data2, cidx2);
-        res3 = _mm256_and_si256(data3, cidx3);
-        res4 = _mm256_and_si256(data4, cidx4);
-
-        /* bytes 64 - 127 */
-        data1 = (__m256i) _mm256_broadcast_ps(&lut128[4]);
-        data2 = (__m256i) _mm256_broadcast_ps(&lut128[5]);
-        data3 = (__m256i) _mm256_broadcast_ps(&lut128[6]);
-        data4 = (__m256i) _mm256_broadcast_ps(&lut128[7]);
-
-        cidx1 = _mm256_set1_epi32(0x40404040);
-        cidx2 = _mm256_set1_epi32(0x50505050);
-        cidx3 = _mm256_set1_epi32(0x60606060);
-        cidx4 = _mm256_set1_epi32(0x70707070);
-
-        cidx1 = _mm256_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
-        cidx2 = _mm256_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
-        cidx3 = _mm256_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
-        cidx4 = _mm256_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
-
-        data1 = _mm256_shuffle_epi8(data1, m_low_idx);
-        data2 = _mm256_shuffle_epi8(data2, m_low_idx);
-        data3 = _mm256_shuffle_epi8(data3, m_low_idx);
-        data4 = _mm256_shuffle_epi8(data4, m_low_idx);
-
-        data1 = _mm256_and_si256(data1, cidx1);
-        data2 = _mm256_and_si256(data2, cidx2);
-        data3 = _mm256_and_si256(data3, cidx3);
-        data4 = _mm256_and_si256(data4, cidx4);
-
-        res1 = _mm256_or_si256(res1, data1);
-        res2 = _mm256_or_si256(res2, data2);
-        res3 = _mm256_or_si256(res3, data3);
-        res4 = _mm256_or_si256(res4, data4);
-
-        /* bytes 128 - 191 */
-        data1 = (__m256i) _mm256_broadcast_ps(&lut128[8]);
-        data2 = (__m256i) _mm256_broadcast_ps(&lut128[9]);
-        data3 = (__m256i) _mm256_broadcast_ps(&lut128[10]);
-        data4 = (__m256i) _mm256_broadcast_ps(&lut128[11]);
-
-        cidx1 = _mm256_set1_epi32(0x80808080);
-        cidx2 = _mm256_set1_epi32(0x90909090);
-        cidx3 = _mm256_set1_epi32(0xa0a0a0a0);
-        cidx4 = _mm256_set1_epi32(0xb0b0b0b0);
-
-        cidx1 = _mm256_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
-        cidx2 = _mm256_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
-        cidx3 = _mm256_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
-        cidx4 = _mm256_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
-
-        data1 = _mm256_shuffle_epi8(data1, m_low_idx);
-        data2 = _mm256_shuffle_epi8(data2, m_low_idx);
-        data3 = _mm256_shuffle_epi8(data3, m_low_idx);
-        data4 = _mm256_shuffle_epi8(data4, m_low_idx);
-
-        data1 = _mm256_and_si256(data1, cidx1);
-        data2 = _mm256_and_si256(data2, cidx2);
-        data3 = _mm256_and_si256(data3, cidx3);
-        data4 = _mm256_and_si256(data4, cidx4);
-
-        res1 = _mm256_or_si256(res1, data1);
-        res2 = _mm256_or_si256(res2, data2);
-        res3 = _mm256_or_si256(res3, data3);
-        res4 = _mm256_or_si256(res4, data4);
-
-        /* bytes 192 - 255 */
-        data1 = (__m256i) _mm256_broadcast_ps(&lut128[12]);
-        data2 = (__m256i) _mm256_broadcast_ps(&lut128[13]);
-        data3 = (__m256i) _mm256_broadcast_ps(&lut128[14]);
-        data4 = (__m256i) _mm256_broadcast_ps(&lut128[15]);
-
-        cidx1 = _mm256_set1_epi32(0xc0c0c0c0);
-        cidx2 = _mm256_set1_epi32(0xd0d0d0d0);
-        cidx3 = _mm256_set1_epi32(0xe0e0e0e0);
-        cidx4 = _mm256_set1_epi32(0xf0f0f0f0);
-
-        cidx1 = _mm256_cmpeq_epi8(cidx1, m_top_idx); /* 0xff on match */
-        cidx2 = _mm256_cmpeq_epi8(cidx2, m_top_idx); /* 0xff on match */
-        cidx3 = _mm256_cmpeq_epi8(cidx3, m_top_idx); /* 0xff on match */
-        cidx4 = _mm256_cmpeq_epi8(cidx4, m_top_idx); /* 0xff on match */
-
-        data1 = _mm256_shuffle_epi8(data1, m_low_idx);
-        data2 = _mm256_shuffle_epi8(data2, m_low_idx);
-        data3 = _mm256_shuffle_epi8(data3, m_low_idx);
-        data4 = _mm256_shuffle_epi8(data4, m_low_idx);
-
-        data1 = _mm256_and_si256(data1, cidx1);
-        data2 = _mm256_and_si256(data2, cidx2);
-        data3 = _mm256_and_si256(data3, cidx3);
-        data4 = _mm256_and_si256(data4, cidx4);
-
-        res1 = _mm256_or_si256(res1, res2);
-        res3 = _mm256_or_si256(res3, res4);
-
-        res2 = _mm256_or_si256(data1, data2);
-        res4 = _mm256_or_si256(data3, data4);
-
-        res1 = _mm256_or_si256(res1, res2);
-        res1 = _mm256_or_si256(res1, res3);
-        res1 = _mm256_or_si256(res1, res4);
-
-        /* finish */
-
-        return res1;
-}
-#endif /* AVX2 */
 
 /* -------------------------------------------------------------------
  * LFSR array shift by 2 positions
@@ -868,7 +586,7 @@ static inline __m128i S2_box_4(const __m128i x)
 static inline __m256i S2_box_8(const __m256i x)
 {
         /* Perform invSR(SQ(x)) transform through a lookup table */
-        const __m256i new_x = lut8_256_avx2(x, snow3g_invSR_SQ);
+        const __m256i new_x = lookup_32x8bit_avx2(x, snow3g_invSR_SQ);
 
         /* use AESNI operations for the rest of the S2 box */
         const __m128i m_zero = _mm_setzero_si128();
