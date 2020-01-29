@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2018, Intel Corporation
+;; Copyright (c) 2018-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -28,4 +28,4 @@
 %include "include/aesni_emu.inc"
 %define AES_CNTR_128 aes_cntr_128_sse_no_aesni
 %define AES_CNTR_BIT_128 aes_cntr_bit_128_sse_no_aesni
-%include "sse/aes128_cntr_by4_sse.asm"
+%include "sse/aes128_cntr_by8_sse.asm"

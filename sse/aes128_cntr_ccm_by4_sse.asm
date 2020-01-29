@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -29,4 +29,4 @@
 %ifndef AES_CNTR_CCM_128
 %define AES_CNTR_CCM_128 aes_cntr_ccm_128_sse
 %endif
-%include "sse/aes128_cntr_by4_sse.asm"
+%include "sse/aes128_cntr_by8_sse.asm"
