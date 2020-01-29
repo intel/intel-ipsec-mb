@@ -31,7 +31,7 @@
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
 
-; routine to do AES192 CNTR enc/decrypt "by4"
+; routine to do AES192 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
 %ifndef AES_CNTR_192
@@ -40,6 +40,7 @@
 %endif
 
 extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
+extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 
 %define CONCAT(a,b) a %+ b
 %define MOVDQ movdqu
@@ -329,29 +330,60 @@ section .text
         and     r_bits, 7   ; Check if there are remainder bits (0-7)
 %endif
 	mov	tmp, num_bytes
-	and	tmp, 3*16
-	jz	%%chk             ; x4 > or < 15 (not 3 lines)
+	and	tmp, 7*16
+	jz	%%chk       ; multiple of 8 blocks and/or below 16 bytes
 
-	; 1 <= tmp <= 3
+	; 1 <= tmp <= 7
+	cmp	tmp, 4*16
+	jg	%%gt4
+	je	%%eq4
+
+        ; 1 <= tmp <= 3
 	cmp	tmp, 2*16
 	jg	%%eq3
 	je	%%eq2
 %%eq1:
-	do_aes_load	1, %%CNTR_TYPE
+	do_aes_load	1, %%CNTR_TYPE	; 1 block
 	add	p_out, 1*16
         jmp     %%chk
 
 %%eq2:
-	do_aes_load	2, %%CNTR_TYPE
+	do_aes_load	2, %%CNTR_TYPE	; 2 blocks
 	add	p_out, 2*16
         jmp      %%chk
 
 %%eq3:
-	do_aes_load	3, %%CNTR_TYPE
+	do_aes_load	3, %%CNTR_TYPE	; 3 blocks
 	add	p_out, 3*16
+	jmp	%%chk
+
+%%eq4:
+	do_aes_load	4, %%CNTR_TYPE
+	add	p_out, 4*16
+	jmp	%%chk
+
+%%gt4:
+        ; 5 <= tmp <= 7
+	cmp	tmp, 6*16
+	jg	%%eq7
+	je	%%eq6
+
+%%eq5:
+	do_aes_load	5, %%CNTR_TYPE
+	add	p_out, 5*16
+	jmp	%%chk
+
+%%eq6:
+	do_aes_load	6, %%CNTR_TYPE
+	add	p_out, 6*16
+	jmp	%%chk
+
+%%eq7:
+	do_aes_load	7, %%CNTR_TYPE
+	add	p_out, 7*16
 	; fall through to chk
 %%chk:
-        and	num_bytes, ~(3*16)
+	and	num_bytes, ~(7*16)
 	jz	%%do_return2
 
         cmp	num_bytes, 16
@@ -365,11 +397,11 @@ section .text
 
 align 32
 %%main_loop2:
-	; num_bytes is a multiple of 4 blocks + partial bytes
-	do_aes_noload	4, %%CNTR_TYPE
-	add	p_out,	4*16
-	sub	num_bytes, 4*16
-        cmp	num_bytes, 4*16
+	; num_bytes is a multiple of 8 blocks + partial bytes
+	do_aes_noload	8, %%CNTR_TYPE
+	add	p_out,	8*16
+	sub	num_bytes, 8*16
+        cmp	num_bytes, 8*16
 	jae	%%main_loop2
 
         ; Check if there is a partial block
