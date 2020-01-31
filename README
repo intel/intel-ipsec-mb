@@ -65,7 +65,8 @@ Table 1. List of supported cipher algorithms and their implementations.
     +---------------------------------------------------------------------+
 
 Notes:
-(1,2) - decryption is by4 and encryption is x4
+(1,2) - decryption is by4 and encryption is x4, on CPU's supporting GFNI
+        decryption is by8 and encryption is x4
 (3,4) - decryption is by8 and encryption is x8
 (5) - AVX512 plus VAES and VPCLMULQDQ extensions
 (6) - decryption is by16 and encryption is x16
