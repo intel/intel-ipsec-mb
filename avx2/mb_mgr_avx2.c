@@ -441,8 +441,6 @@ init_mb_mgr_avx2(MB_MGR *state)
         /* Init ZUC out-of-order fields */
         memset(state->zuc_eea3_ooo.lens, 0xFF,
                sizeof(state->zuc_eea3_ooo.lens));
-        memset(&state->zuc_eea3_ooo.lens[0], 0,
-               sizeof(state->zuc_eea3_ooo.lens[0]) * 8);
         memset(state->zuc_eea3_ooo.job_in_lane, 0,
                sizeof(state->zuc_eea3_ooo.job_in_lane));
         state->zuc_eea3_ooo.unused_lanes = 0xF76543210;
@@ -450,8 +448,6 @@ init_mb_mgr_avx2(MB_MGR *state)
 
         memset(state->zuc_eia3_ooo.lens, 0xFF,
                sizeof(state->zuc_eia3_ooo.lens));
-        memset(&state->zuc_eia3_ooo.lens[0], 0,
-               sizeof(state->zuc_eia3_ooo.lens[0]) * 8);
         memset(state->zuc_eia3_ooo.job_in_lane, 0,
                sizeof(state->zuc_eia3_ooo.job_in_lane));
         state->zuc_eia3_ooo.unused_lanes = 0xF76543210;

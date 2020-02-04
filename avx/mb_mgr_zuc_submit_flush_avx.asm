@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -41,9 +41,9 @@ section .data
 default rel
 
 align 16
-one:    dq  1
-two:    dq  2
-three:  dq  3
+broadcast_word:
+db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
+db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 
 extern zuc_eea3_4_buffer_job_avx
 extern zuc_eia3_4_buffer_job_avx
@@ -72,6 +72,7 @@ extern zuc_eia3_4_buffer_job_avx
 ; This routine and its callee clobbers all GPRs
 struc STACK
 _gpr_save:      resq    10
+_null_len_save: resq    1
 _rsp_save:      resq    1
 endstruc
 
@@ -186,6 +187,8 @@ len_is_0_submit_eea3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_AES
+        ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
+        mov     word [state + _zuc_lens + idx*2], 0xFFFF
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -217,8 +220,6 @@ FLUSH_JOB_ZUC_EEA3:
 
 %define unused_lanes     rbx
 %define tmp1             rbx
-
-%define good_lane        rdx
 
 %define tmp2             rax
 
@@ -252,21 +253,38 @@ FLUSH_JOB_ZUC_EEA3:
         bt      unused_lanes, 32+7
         jc      return_null_flush_eea3
 
-        ; find a lane with a non-null job
-        xor     good_lane, good_lane
-        cmp     qword [state + _zuc_job_in_lane + 1*8], 0
-        cmovne  good_lane, [rel one]
-        cmp     qword [state + _zuc_job_in_lane + 2*8], 0
-        cmovne  good_lane, [rel two]
-        cmp     qword [state + _zuc_job_in_lane + 3*8], 0
-        cmovne  good_lane, [rel three]
+        ; Find minimum length (searching for zero length,
+        ; to retrieve already encrypted buffers)
+        vmovdqa xmm0, [state + _zuc_lens]
+        vphminposuw     xmm1, xmm0
+        vpextrw len2, xmm1, 0   ; min value
+        vpextrw idx, xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      len_is_0_flush_eea3
 
         ; copy good_lane to empty lanes
-        mov     tmp1, [state + _zuc_args_in + good_lane*8]
-        mov     tmp2, [state + _zuc_args_out + good_lane*8]
-        mov     tmp3, [state + _zuc_args_keys + good_lane*8]
-        mov     tmp4, [state + _zuc_args_IV + good_lane*8]
-        mov     WORD(tmp5), [state + _zuc_lens + good_lane*2]
+        mov     tmp1, [state + _zuc_args_in + idx*8]
+        mov     tmp2, [state + _zuc_args_out + idx*8]
+        mov     tmp3, [state + _zuc_args_keys + idx*8]
+        mov     tmp4, [state + _zuc_args_IV + idx*8]
+        mov     WORD(tmp5), [state + _zuc_lens + idx*2]
+
+        ; Set valid length in NULL jobs
+        vmovd   xmm0, DWORD(tmp5)
+        vpshufb xmm0, xmm0, [rel broadcast_word]
+        vmovdqa xmm1, [state + _zuc_lens]
+
+        vpcmpeqw xmm2, xmm2 ;; Get all ff's in XMM register
+        vpcmpeqw xmm3, xmm1, xmm2 ;; Mask with FFFF in NULL jobs
+        vmovq   [rsp + _null_len_save], xmm3 ;; Save lengths with FFFF in NULL jobs
+
+        vpand   xmm4, xmm3, xmm0 ;; Length of valid job in all NULL jobs
+
+        vpxor   xmm2, xmm3 ;; Mask with 0000 in NULL jobs
+        vpand   xmm1, xmm2 ;; Zero out lengths of NULL jobs
+
+        vpor    xmm1, xmm4
+        vmovq   [state + _zuc_lens], xmm1
 
 %assign I 0
 %rep 4
@@ -276,14 +294,9 @@ FLUSH_JOB_ZUC_EEA3:
         mov     [state + _zuc_args_out + I*8], tmp2
         mov     [state + _zuc_args_keys + I*8], tmp3
         mov     [state + _zuc_args_IV + I*8], tmp4
-        mov     [state + _zuc_lens + I*2], WORD(tmp5)
 APPEND(skip_eea3_,I):
 %assign I (I+1)
 %endrep
-
-        mov     idx, good_lane
-        cmp     WORD(tmp5), 0
-        je      len_is_0_flush_eea3
 
         ; Move state into r11, as register for state will be used
         ; to pass parameter to next function
@@ -313,10 +326,12 @@ APPEND(skip_eea3_,I):
 %ifndef LINUX
         add     rsp, 48
 %endif
+        mov     tmp5, [rsp + _null_len_save]
+
         mov     state, [rsp + _gpr_save + 8*8]
 
-        ;; Clear all lengths (function will encrypt whole buffers)
-        mov     qword [state + _zuc_lens], 0
+        ;; Clear all lengths of valid jobs and set to FFFF to NULL jobs
+        mov     qword [state + _zuc_lens], tmp5
 
 len_is_0_flush_eea3:
         ; process completed job "idx"
@@ -324,6 +339,8 @@ len_is_0_flush_eea3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_AES
+        ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
+        mov     word [state + _zuc_lens + idx*2], 0xFFFF
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -455,6 +472,8 @@ len_is_0_submit_eia3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_HMAC
+        ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
+        mov     word [state + _zuc_lens + idx*2], 0xFFFF
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -486,8 +505,6 @@ FLUSH_JOB_ZUC_EIA3:
 
 %define unused_lanes     rbx
 %define tmp1             rbx
-
-%define good_lane        rdx
 
 %define tmp2             rax
 
@@ -521,21 +538,40 @@ FLUSH_JOB_ZUC_EIA3:
         bt      unused_lanes, 32+7
         jc      return_null_flush_eia3
 
-        ; find a lane with a non-null job
-        xor     good_lane, good_lane
-        cmp     qword [state + _zuc_job_in_lane + 1*8], 0
-        cmovne  good_lane, [rel one]
-        cmp     qword [state + _zuc_job_in_lane + 2*8], 0
-        cmovne  good_lane, [rel two]
-        cmp     qword [state + _zuc_job_in_lane + 3*8], 0
-        cmovne  good_lane, [rel three]
+        ; Find minimum length (searching for zero length,
+        ; to retrieve already authenticated buffers)
+        vmovdqa xmm0, [state + _zuc_lens]
+        vphminposuw     xmm1, xmm0
+        vpextrw len2, xmm1, 0   ; min value
+        vpextrw idx, xmm1, 1    ; min index (0...3)
+        cmp     len2, 0
+        je      len_is_0_flush_eia3
 
         ; copy good_lane to empty lanes
-        mov     tmp1, [state + _zuc_args_in + good_lane*8]
-        mov     tmp2, [state + _zuc_args_out + good_lane*8]
-        mov     tmp3, [state + _zuc_args_keys + good_lane*8]
-        mov     tmp4, [state + _zuc_args_IV + good_lane*8]
-        mov     WORD(tmp5), [state + _zuc_lens + good_lane*2]
+        mov     tmp1, [state + _zuc_args_in + idx*8]
+        mov     tmp2, [state + _zuc_args_out + idx*8]
+        mov     tmp3, [state + _zuc_args_keys + idx*8]
+        mov     tmp4, [state + _zuc_args_IV + idx*8]
+        mov     WORD(tmp5), [state + _zuc_lens + idx*2]
+
+        ; Set valid length in NULL jobs
+        vmovd   xmm0, DWORD(tmp5)
+        vpshufb xmm0, xmm0, [rel broadcast_word]
+        vmovdqa xmm1, [state + _zuc_lens]
+
+        vpcmpeqw xmm2, xmm2 ;; Get all ff's in XMM register
+        vpcmpeqw xmm3, xmm1, xmm2 ;; Mask with FFFF in NULL jobs
+        vmovq	tmp5, xmm3
+        mov     [rsp + _null_len_save], tmp5 ;; Save lengths with FFFF in NULL jobs
+
+        vpand   xmm4, xmm3, xmm0 ;; Length of valid job in all NULL jobs
+
+        vpxor   xmm2, xmm3 ;; Mask with 0000 in NULL jobs
+        vpand   xmm1, xmm2 ;; Zero out lengths of NULL jobs
+
+        vpor    xmm1, xmm4
+        vmovq   tmp5, xmm1
+        mov     [state + _zuc_lens], tmp5
 
 %assign I 0
 %rep 4
@@ -545,14 +581,9 @@ FLUSH_JOB_ZUC_EIA3:
         mov     [state + _zuc_args_out + I*8], tmp2
         mov     [state + _zuc_args_keys + I*8], tmp3
         mov     [state + _zuc_args_IV + I*8], tmp4
-        mov     [state + _zuc_lens + I*2], WORD(tmp5)
 APPEND(skip_eia3_,I):
 %assign I (I+1)
 %endrep
-
-        mov     idx, good_lane
-        cmp     WORD(tmp5), 0
-        je      len_is_0_flush_eia3
 
         ; Move state into r11, as register for state will be used
         ; to pass parameter to next function
@@ -581,10 +612,12 @@ APPEND(skip_eia3_,I):
 %ifndef LINUX
         add     rsp, 48
 %endif
+
+        mov	tmp5, [rsp + _null_len_save]
         mov     state, [rsp + _gpr_save + 8*8]
 
-        ;; Clear all lengths (function will authenticate all buffers)
-        mov     qword [state + _zuc_lens], 0
+        ;; Clear all lengths of valid jobs and set to FFFF to NULL jobs
+        mov     qword [state + _zuc_lens], tmp5
 
 len_is_0_flush_eia3:
         ; process completed job "idx"
@@ -592,6 +625,8 @@ len_is_0_flush_eia3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_HMAC
+        ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
+        mov     word [state + _zuc_lens + idx*2], 0xFFFF
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
