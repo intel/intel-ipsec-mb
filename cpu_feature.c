@@ -162,6 +162,12 @@ static uint32_t detect_vpclmulqdq(void)
         return (cpuid_7_0.ecx & (1 << 10));
 }
 
+static uint32_t detect_gfni(void)
+{
+        /* Check presence of GFNI - bit 8 of ECX */
+        return (cpuid_7_0.ecx & (1 << 8));
+}
+
 uint64_t cpu_feature_detect(void)
 {
         static const struct {
@@ -183,6 +189,7 @@ uint64_t cpu_feature_detect(void)
                 { 7, IMB_FEATURE_AVX512VL, detect_avx512vl },
                 { 7, IMB_FEATURE_VAES, detect_vaes },
                 { 7, IMB_FEATURE_VPCLMULQDQ, detect_vpclmulqdq },
+                { 7, IMB_FEATURE_GFNI, detect_gfni },
         };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
