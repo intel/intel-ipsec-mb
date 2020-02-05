@@ -131,6 +131,7 @@ SAFE_LOOKUP_MSG2=Lookups which depend on sensitive information \
 lib_objs1 = \
 	$(OBJ_DIR)\aes128_cbc_dec_by4_sse.obj \
         $(OBJ_DIR)\aes128_cbc_dec_by4_sse_no_aesni.obj \
+	$(OBJ_DIR)\aes128_cbc_dec_by8_sse.obj \
 	$(OBJ_DIR)\aes128_cbc_dec_by8_avx.obj \
 	$(OBJ_DIR)\aes_ecb_by4_sse.obj \
 	$(OBJ_DIR)\aes_ecb_by4_sse_no_aesni.obj \
