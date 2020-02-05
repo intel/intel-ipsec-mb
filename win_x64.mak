@@ -148,6 +148,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes128_ecbenc_x3.obj \
 	$(OBJ_DIR)\aes192_cbc_dec_by4_sse.obj \
         $(OBJ_DIR)\aes192_cbc_dec_by4_sse_no_aesni.obj \
+	$(OBJ_DIR)\aes192_cbc_dec_by8_sse.obj \
 	$(OBJ_DIR)\aes192_cbc_dec_by8_avx.obj \
 	$(OBJ_DIR)\aes192_cntr_by8_sse.obj \
         $(OBJ_DIR)\aes192_cntr_by8_sse_no_aesni.obj \
