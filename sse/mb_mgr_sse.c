@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2012-2018, Intel Corporation
+  Copyright (c) 2012-2020, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -166,9 +166,9 @@ JOB_AES_HMAC *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 #define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_sse
 #define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_sse
 
-#define AES_CBC_DEC_128       aes_cbc_dec_128_sse
-#define AES_CBC_DEC_192       aes_cbc_dec_192_sse
-#define AES_CBC_DEC_256       aes_cbc_dec_256_sse
+#define AES_CBC_DEC_128       aes128_cbc_dec_ptr
+#define AES_CBC_DEC_192       aes192_cbc_dec_ptr
+#define AES_CBC_DEC_256       aes256_cbc_dec_ptr
 
 #define AES_CNTR_128       aes_cntr_128_sse
 #define AES_CNTR_192       aes_cntr_192_sse
@@ -258,6 +258,19 @@ void aes128_cbc_mac_x4(AES_ARGS *args, uint64_t len);
 uint32_t ethernet_fcs_sse(const void *msg, uint64_t len, const void *tag_ouput);
 
 #define ETHERNET_FCS ethernet_fcs_sse
+
+/* ====================================================================== */
+
+/*
+ * CBC decrypt function pointers
+ */
+
+typedef void (* cbc_dec_fn_t)(const void *, const uint8_t *, const void *,
+                              void *, uint64_t);
+
+static cbc_dec_fn_t aes128_cbc_dec_ptr = aes_cbc_dec_128_sse;
+static cbc_dec_fn_t aes192_cbc_dec_ptr = aes_cbc_dec_192_sse;
+static cbc_dec_fn_t aes256_cbc_dec_ptr = aes_cbc_dec_256_sse;
 
 /* ====================================================================== */
 
@@ -480,6 +493,12 @@ init_mb_mgr_sse(MB_MGR *state)
         state->aes256_ooo.unused_lanes = 0xFF03020100;
         state->aes256_ooo.num_lanes_inuse = 0;
 
+        if (state->features & IMB_FEATURE_GFNI) {
+                /* change AES-CBC decrypt implementation */
+                aes128_cbc_dec_ptr = aes_cbc_dec_128_by8_sse;
+                aes192_cbc_dec_ptr = aes_cbc_dec_192_by8_sse;
+                aes256_cbc_dec_ptr = aes_cbc_dec_256_by8_sse;
+        }
 
         /* DOCSIS SEC BPI uses same settings as AES128 CBC */
         memset(state->docsis_sec_ooo.lens, 0xFF,
