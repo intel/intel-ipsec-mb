@@ -56,6 +56,18 @@ JOB_AES_HMAC *submit_job_aes256_enc_sse(MB_MGR_AES_OOO *state,
                                         JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_aes256_enc_sse(MB_MGR_AES_OOO *state);
 
+JOB_AES_HMAC *submit_job_aes128_enc_x8_sse(MB_MGR_AES_OOO *state,
+                                           JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes128_enc_x8_sse(MB_MGR_AES_OOO *state);
+
+JOB_AES_HMAC *submit_job_aes192_enc_x8_sse(MB_MGR_AES_OOO *state,
+                                           JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes192_enc_x8_sse(MB_MGR_AES_OOO *state);
+
+JOB_AES_HMAC *submit_job_aes256_enc_x8_sse(MB_MGR_AES_OOO *state,
+                                           JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_aes256_enc_x8_sse(MB_MGR_AES_OOO *state);
+
 JOB_AES_HMAC *submit_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state,
                                   JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_hmac_sse(MB_MGR_HMAC_SHA_1_OOO *state);
@@ -122,15 +134,15 @@ JOB_AES_HMAC *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
 
-#define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_sse
+#define SUBMIT_JOB_AES128_ENC submit_job_aes128_enc_ptr
 #define SUBMIT_JOB_AES128_DEC submit_job_aes128_dec_sse
-#define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_sse
-#define SUBMIT_JOB_AES192_ENC submit_job_aes192_enc_sse
+#define FLUSH_JOB_AES128_ENC  flush_job_aes128_enc_ptr
+#define SUBMIT_JOB_AES192_ENC submit_job_aes192_enc_ptr
 #define SUBMIT_JOB_AES192_DEC submit_job_aes192_dec_sse
-#define FLUSH_JOB_AES192_ENC  flush_job_aes192_enc_sse
-#define SUBMIT_JOB_AES256_ENC submit_job_aes256_enc_sse
+#define FLUSH_JOB_AES192_ENC  flush_job_aes192_enc_ptr
+#define SUBMIT_JOB_AES256_ENC submit_job_aes256_enc_ptr
 #define SUBMIT_JOB_AES256_DEC submit_job_aes256_dec_sse
-#define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_sse
+#define FLUSH_JOB_AES256_ENC  flush_job_aes256_enc_ptr
 #define SUBMIT_JOB_AES_ECB_128_ENC submit_job_aes_ecb_128_enc_sse
 #define SUBMIT_JOB_AES_ECB_128_DEC submit_job_aes_ecb_128_dec_sse
 #define SUBMIT_JOB_AES_ECB_192_ENC submit_job_aes_ecb_192_enc_sse
@@ -271,6 +283,25 @@ typedef void (* cbc_dec_fn_t)(const void *, const uint8_t *, const void *,
 static cbc_dec_fn_t aes128_cbc_dec_ptr = aes_cbc_dec_128_sse;
 static cbc_dec_fn_t aes192_cbc_dec_ptr = aes_cbc_dec_192_sse;
 static cbc_dec_fn_t aes256_cbc_dec_ptr = aes_cbc_dec_256_sse;
+
+/*
+ * CBC encrypt function pointers
+ */
+
+typedef JOB_AES_HMAC *(*aes_submit_job_t)(MB_MGR_AES_OOO *, JOB_AES_HMAC *);
+
+static aes_submit_job_t submit_job_aes128_enc_ptr =
+        submit_job_aes128_enc_sse;
+static aes_submit_job_t submit_job_aes192_enc_ptr =
+        submit_job_aes192_enc_sse;
+static aes_submit_job_t submit_job_aes256_enc_ptr =
+        submit_job_aes256_enc_sse;
+
+typedef JOB_AES_HMAC *(*aes_flush_job_t)(MB_MGR_AES_OOO *);
+
+static aes_flush_job_t flush_job_aes128_enc_ptr = flush_job_aes128_enc_sse;
+static aes_flush_job_t flush_job_aes192_enc_ptr = flush_job_aes192_enc_sse;
+static aes_flush_job_t flush_job_aes256_enc_ptr = flush_job_aes256_enc_sse;
 
 /* ====================================================================== */
 
@@ -464,34 +495,41 @@ init_mb_mgr_sse(MB_MGR *state)
         }
 
         /* Init AES out-of-order fields */
-        memset(state->aes128_ooo.lens, 0xFF,
-               sizeof(state->aes128_ooo.lens));
-        memset(&state->aes128_ooo.lens[0], 0,
-               sizeof(state->aes128_ooo.lens[0]) * 4);
+        memset(state->aes128_ooo.lens, 0xFF, sizeof(state->aes128_ooo.lens));
         memset(state->aes128_ooo.job_in_lane, 0,
                sizeof(state->aes128_ooo.job_in_lane));
-        state->aes128_ooo.unused_lanes = 0xF3210;
         state->aes128_ooo.num_lanes_inuse = 0;
+        if (state->features & IMB_FEATURE_GFNI) {
+                state->aes128_ooo.unused_lanes = 0xF76543210;
+                submit_job_aes128_enc_ptr = submit_job_aes128_enc_x8_sse;
+                flush_job_aes128_enc_ptr = flush_job_aes128_enc_x8_sse;
+        } else {
+                state->aes128_ooo.unused_lanes = 0xF3210;
+        }
 
-
-        memset(state->aes192_ooo.lens, 0xFF,
-               sizeof(state->aes192_ooo.lens));
-        memset(&state->aes192_ooo.lens[0], 0,
-               sizeof(state->aes192_ooo.lens[0]) * 4);
+        memset(state->aes192_ooo.lens, 0xFF, sizeof(state->aes192_ooo.lens));
         memset(state->aes192_ooo.job_in_lane, 0,
                sizeof(state->aes192_ooo.job_in_lane));
-        state->aes192_ooo.unused_lanes = 0xF3210;
         state->aes192_ooo.num_lanes_inuse = 0;
+        if (state->features & IMB_FEATURE_GFNI) {
+                state->aes192_ooo.unused_lanes = 0xF76543210;
+                submit_job_aes192_enc_ptr = submit_job_aes192_enc_x8_sse;
+                flush_job_aes192_enc_ptr = flush_job_aes192_enc_x8_sse;
+        } else {
+                state->aes192_ooo.unused_lanes = 0xF3210;
+        }
 
-
-        memset(state->aes256_ooo.lens, 0xFF,
-               sizeof(state->aes256_ooo.lens));
-        memset(&state->aes256_ooo.lens[0], 0,
-               sizeof(state->aes256_ooo.lens[0]) * 4);
+        memset(state->aes256_ooo.lens, 0xFF, sizeof(state->aes256_ooo.lens));
         memset(state->aes256_ooo.job_in_lane, 0,
                sizeof(state->aes256_ooo.job_in_lane));
-        state->aes256_ooo.unused_lanes = 0xF3210;
         state->aes256_ooo.num_lanes_inuse = 0;
+        if (state->features & IMB_FEATURE_GFNI) {
+                state->aes256_ooo.unused_lanes = 0xF76543210;
+                submit_job_aes256_enc_ptr = submit_job_aes256_enc_x8_sse;
+                flush_job_aes256_enc_ptr = flush_job_aes256_enc_x8_sse;
+        } else {
+                state->aes256_ooo.unused_lanes = 0xF3210;
+        }
 
         if (state->features & IMB_FEATURE_GFNI) {
                 /* change AES-CBC decrypt implementation */
@@ -503,21 +541,25 @@ init_mb_mgr_sse(MB_MGR *state)
         /* DOCSIS SEC BPI uses same settings as AES128 CBC */
         memset(state->docsis_sec_ooo.lens, 0xFF,
                sizeof(state->docsis_sec_ooo.lens));
-        memset(&state->docsis_sec_ooo.lens[0], 0,
-               sizeof(state->docsis_sec_ooo.lens[0]) * 4);
         memset(state->docsis_sec_ooo.job_in_lane, 0,
                sizeof(state->docsis_sec_ooo.job_in_lane));
-        state->docsis_sec_ooo.unused_lanes = 0xF3210;
         state->docsis_sec_ooo.num_lanes_inuse = 0;
+        if (state->features & IMB_FEATURE_GFNI) {
+                state->docsis_sec_ooo.unused_lanes = 0xF76543210;
+        } else {
+                state->docsis_sec_ooo.unused_lanes = 0xF3210;
+        }
 
         memset(state->docsis_crc32_sec_ooo.lens, 0xFF,
                sizeof(state->docsis_crc32_sec_ooo.lens));
-        memset(&state->docsis_crc32_sec_ooo.lens[0], 0,
-               sizeof(state->docsis_crc32_sec_ooo.lens[0]) * 4);
         memset(state->docsis_crc32_sec_ooo.job_in_lane, 0,
                sizeof(state->docsis_crc32_sec_ooo.job_in_lane));
-        state->docsis_crc32_sec_ooo.unused_lanes = 0xF3210;
         state->docsis_crc32_sec_ooo.num_lanes_inuse = 0;
+        if (state->features & IMB_FEATURE_GFNI) {
+                state->docsis_crc32_sec_ooo.unused_lanes = 0xF76543210;
+        } else {
+                state->docsis_crc32_sec_ooo.unused_lanes = 0xF3210;
+        }
 
         /* Init ZUC out-of-order fields */
         memset(state->zuc_eea3_ooo.lens, 0xFF,
