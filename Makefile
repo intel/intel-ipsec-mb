@@ -292,6 +292,12 @@ asm_sse_lib_objs := \
 	mb_mgr_aes192_submit_sse.o \
 	mb_mgr_aes256_flush_sse.o \
 	mb_mgr_aes256_submit_sse.o \
+	mb_mgr_aes_flush_sse_x8.o \
+	mb_mgr_aes_submit_sse_x8.o \
+	mb_mgr_aes192_flush_sse_x8.o \
+	mb_mgr_aes192_submit_sse_x8.o \
+	mb_mgr_aes256_flush_sse_x8.o \
+	mb_mgr_aes256_submit_sse_x8.o \
 	mb_mgr_aes_cmac_submit_flush_sse.o \
 	mb_mgr_aes_ccm_auth_submit_flush_sse.o \
 	mb_mgr_aes_xcbc_flush_sse.o \

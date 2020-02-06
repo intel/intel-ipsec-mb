@@ -109,8 +109,8 @@ section .text
 
 align 32
 
-MKGLOBAL(aes_cbc_enc_192_x8_see,function,internal)
-aes_cbc_enc_192_x8_see:
+MKGLOBAL(aes_cbc_enc_192_x8_sse,function,internal)
+aes_cbc_enc_192_x8_sse:
 
 	sub	rsp, STACK_size
 	mov	[GPR_SAVE_AREA + 8*0], rbp

@@ -113,10 +113,10 @@ section .text
 align 32
 %ifdef CBC_MAC
 MKGLOBAL(aes128_cbc_mac_x8_sse,function,internal)
-aes128_cbc_mac_x4:
+aes128_cbc_mac_x8_sse:
 %else
 MKGLOBAL(aes_cbc_enc_128_x8_sse,function,internal)
-aes_cbc_enc_128_x4:
+aes_cbc_enc_128_x8_sse:
 %endif
 
         sub	rsp, STACK_size
