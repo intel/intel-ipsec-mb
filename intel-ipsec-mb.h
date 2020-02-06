@@ -544,14 +544,15 @@ typedef struct {
 /* AES-CCM out-of-order scheduler structure */
 typedef struct {
         AES_ARGS args; /* need to re-use AES arguments */
-        DECLARE_ALIGNED(uint16_t lens[8], 16);
-        DECLARE_ALIGNED(uint16_t init_done[8], 16);
+        DECLARE_ALIGNED(uint16_t lens[16], 32);
+        DECLARE_ALIGNED(uint16_t init_done[16], 32);
         /* each byte is index (0...3) of unused lanes
          * byte 4 is set to FF as a flag
          */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[8];
-        DECLARE_ALIGNED(uint8_t init_blocks[8 * (4 * 16)], 32);
+        JOB_AES_HMAC *job_in_lane[16];
+        uint64_t num_lanes_inuse;
+        DECLARE_ALIGNED(uint8_t init_blocks[16 * (4 * 16)], 64);
 } MB_MGR_CCM_OOO;
 
 

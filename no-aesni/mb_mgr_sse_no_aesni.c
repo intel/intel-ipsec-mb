@@ -689,9 +689,10 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
 
         /* Init AES-CCM auth out-of-order fields */
         memset(&state->aes_ccm_ooo, 0, sizeof(MB_MGR_CCM_OOO));
-        for (j = 4; j < 8; j++)
+        for (j = 4; j < 16; j++)
                 state->aes_ccm_ooo.lens[j] = 0xFFFF;
         state->aes_ccm_ooo.unused_lanes = 0xF3210;
+        state->aes_ccm_ooo.num_lanes_inuse = 0;
 
         /* Init AES-CMAC auth out-of-order fields */
         state->aes_cmac_ooo.lens[0] = 0;

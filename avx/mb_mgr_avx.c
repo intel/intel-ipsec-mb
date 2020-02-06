@@ -701,7 +701,11 @@ init_mb_mgr_avx(MB_MGR *state)
                 state->aes_ccm_ooo.lens[j] = 0;
                 state->aes_ccm_ooo.job_in_lane[j] = NULL;
         }
+        for (; j < 16; j++)
+                state->aes_ccm_ooo.lens[j] = 0xFFFF;
+
         state->aes_ccm_ooo.unused_lanes = 0xF76543210;
+        state->aes_ccm_ooo.num_lanes_inuse = 0;
 
         /* Init AES-CMAC auth out-of-order fields */
         for (j = 0; j < 8; j++) {
