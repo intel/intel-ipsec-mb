@@ -220,6 +220,7 @@ JOB_AES_HMAC *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 /* ====================================================================== */
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_sse_no_aesni
+#define AES_CFB_256_ONE    aes_cfb_256_one_sse_no_aesni
 
 void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 

@@ -791,8 +791,8 @@ typedef void (*hash_one_block_t)(const void *, void *);
 typedef void (*hash_fn_t)(const void *, const uint64_t, void *);
 typedef void (*xcbc_keyexp_t)(const void *, void *, void *, void *);
 typedef int (*des_keysched_t)(uint64_t *, const void *);
-typedef void (*aes128_cfb_t)(void *, const void *, const void *, const void *,
-                             uint64_t);
+typedef void (*aes_cfb_t)(void *, const void *, const void *, const void *,
+                          uint64_t);
 typedef void (*aes_gcm_enc_dec_t)(const struct gcm_key_data *,
                                   struct gcm_context_data *,
                                   uint8_t *, uint8_t const *, uint64_t,
@@ -1039,7 +1039,7 @@ typedef struct MB_MGR {
         hash_fn_t               sha256;
         hash_fn_t               sha384;
         hash_fn_t               sha512;
-        aes128_cfb_t            aes128_cfb_one;
+        aes_cfb_t               aes128_cfb_one;
 
         aes_gcm_enc_dec_t       gcm128_enc;
         aes_gcm_enc_dec_t       gcm192_enc;

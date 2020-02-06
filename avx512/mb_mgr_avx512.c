@@ -300,6 +300,7 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 /* ====================================================================== */
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_avx512
+#define AES_CFB_256_ONE    aes_cfb_256_one_avx512
 
 #define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_avx512
 #define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_avx512
@@ -610,7 +611,8 @@ static JOB_AES_HMAC *
 
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job);
+SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+                          const uint64_t key_size);
 
 extern void aes_docsis_dec_128_crc32_avx512(JOB_AES_HMAC *job);
 
@@ -628,7 +630,7 @@ submit_aes_docsis_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
                 }
 
                 /* Cipher, NO CRC32 */
-                return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job);
+                return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job, 16);
         }
 
         /* Cipher + CRC32 // CRC32 */

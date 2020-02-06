@@ -115,7 +115,7 @@
 #define HASH_ALGS_SNOW3G 1      /* SNOW3G-UIA2 */
 #define HASH_ALGS_KASUMI 1      /* KASUMI-UIA1 */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
-#define KEY_SIZES_DOCSIS_AES 1	/* 16 */
+#define KEY_SIZES_DOCSIS_AES 2	/* 16, 32 */
 #define KEY_SIZES_DOCSIS_DES 1	/* 8 */
 #define KEY_SIZES_GCM 3		/* 16, 24, 32 */
 #define KEY_SIZES_CCM 1		/* 16 */
@@ -396,17 +396,31 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
-                .name = "aes-docsis",
+                .name = "aes-docsis-128",
                 .values.job_params = {
                         .cipher_mode = TEST_AESDOCSIS,
                         .aes_key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
-                .name = "aes-docsis8",
+                .name = "aes-docsis8-128",
                 .values.job_params = {
                         .cipher_mode = TEST_AESDOCSIS8,
                         .aes_key_size = IMB_KEY_AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-docsis-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_AESDOCSIS,
+                        .aes_key_size = IMB_KEY_AES_256_BYTES
+                }
+        },
+        {
+                .name = "aes-docsis8-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_AESDOCSIS8,
+                        .aes_key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {

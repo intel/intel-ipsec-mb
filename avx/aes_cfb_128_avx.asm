@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2018-2019, Intel Corporation
+;; Copyright (c) 2018-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -83,6 +83,59 @@
 
 section .text
 
+
+%macro do_cfb 1
+%define %%NROUNDS %1
+
+%ifndef LINUX
+	mov		LEN, LEN2
+%endif
+%ifdef SAFE_PARAM
+        cmp             IV, 0
+        jz              %%exit_cfb
+
+        cmp             KEYS, 0
+        jz              %%exit_cfb
+
+        cmp             LEN, 0
+        jz              %%skip_in_out_check
+
+        cmp             OUT, 0
+        jz              %%exit_cfb
+
+        cmp             IN, 0
+        jz              %%exit_cfb
+
+%%skip_in_out_check:
+%endif
+
+	simd_load_avx_16 XIN, IN, LEN
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	vmovdqu		XDATA, [IV] 		; IV (or next to last block)
+	vpxor		XDATA, [KEYS + 16*0]	; 0. ARK
+%assign i 16
+%rep %%NROUNDS
+	vaesenc		XDATA, [KEYS + i]	; ENC
+%assign i (i+16)
+%endrep
+	vaesenclast	XDATA, [KEYS + i]
+
+	vpxor		XDATA, XIN 		; plaintext/ciphertext XOR block cipher encryption
+
+	simd_store_avx	OUT, XDATA, LEN, TMP0, TMP1
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+%ifdef SAFE_DATA
+        ;; XDATA and XIN are the only scratch SIMD registers used
+        clear_xmms_avx  XDATA, XIN
+        clear_scratch_gps_asm
+%endif
+%%exit_cfb:
+%endmacro
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void aes_cfb_128_one(void *out, void *in, void *iv, void *keys, uint64_t len)
 ;; arg 1: OUT : addr to put clear/cipher text out
@@ -108,57 +161,40 @@ align 32
 aes_cfb_128_one_avx:
 aes_cfb_128_one_avx2:
 aes_cfb_128_one_avx512:
-%ifndef LINUX
-	mov		LEN, LEN2
-%endif
-%ifdef SAFE_PARAM
-        cmp             IV, 0
-        jz              exit_cfb
 
-        cmp             KEYS, 0
-        jz              exit_cfb
+        do_cfb 9
 
-        cmp             LEN, 0
-        jz              skip_in_out_check
+        ret
 
-        cmp             OUT, 0
-        jz              exit_cfb
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void aes_cfb_256_one(void *out, void *in, void *iv, void *keys, uint64_t len)
+;; arg 1: OUT : addr to put clear/cipher text out
+;; arg 2: IN  : addr to take cipher/clear text from
+;; arg 3: IV  : initialization vector
+;; arg 4: KEYS: pointer to expanded keys structure (16 byte aligned)
+;; arg 5: LEN:  length of the text to encrypt/decrypt (valid range is 0 to 16)
+;;
+;; AES CFB256 one block encrypt/decrypt implementation.
+;; The function doesn't update IV. The result of operation can be found in OUT.
+;;
+;; It is primarly designed to process partial block of
+;; DOCSIS 3.1 AES Packet PDU Encryption (I.10)
+;;
+;; It process up to one block only (up to 16 bytes).
+;;
+;; It makes sure not to read more than LEN bytes from IN and
+;; not to store more than LEN bytes to OUT.
+MKGLOBAL(aes_cfb_256_one_avx,function,)
+MKGLOBAL(aes_cfb_256_one_avx2,function,)
+MKGLOBAL(aes_cfb_256_one_avx512,function,)
+align 32
+aes_cfb_256_one_avx:
+aes_cfb_256_one_avx2:
+aes_cfb_256_one_avx512:
 
-        cmp             IN, 0
-        jz              exit_cfb
+        do_cfb 13
 
-skip_in_out_check:
-%endif
-	simd_load_avx_16 XIN, IN, LEN
-
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-	vmovdqu		XDATA, [IV] 		; IV (or next to last block)
-	vpxor		XDATA, XDATA, [KEYS + 16*0]	; 0. ARK
-	vaesenc		XDATA, XDATA, [KEYS + 16*1]	; 1. ENC
-	vaesenc		XDATA, XDATA, [KEYS + 16*2]	; 2. ENC
-	vaesenc		XDATA, XDATA, [KEYS + 16*3]	; 3. ENC
-	vaesenc		XDATA, XDATA, [KEYS + 16*4]	; 4. ENC
-	vaesenc		XDATA, XDATA, [KEYS + 16*5]	; 5. ENC
-	vaesenc		XDATA, XDATA, [KEYS + 16*6]	; 6. ENC
-	vaesenc		XDATA, XDATA, [KEYS + 16*7]	; 7. ENC
-	vaesenc		XDATA, XDATA, [KEYS + 16*8]	; 8. ENC
-	vaesenc		XDATA, XDATA, [KEYS + 16*9]	; 9. ENC
-	vaesenclast	XDATA, XDATA, [KEYS + 16*10]	; 10. ENC
-
-	vpxor		XDATA, XIN       		; plaintext/ciphertext XOR block cipher encryption
-
-	simd_store_avx	OUT, XDATA, LEN, TMP0, TMP1
-
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-%ifdef SAFE_DATA
-        ;; XDATA and XIN are the only scratch SIMD registers used
-        clear_xmms_avx  XDATA, XIN
-        clear_scratch_gps_asm
-%endif
-exit_cfb:
-	ret
+        ret
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

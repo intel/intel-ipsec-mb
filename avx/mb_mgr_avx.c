@@ -220,6 +220,7 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 /* ====================================================================== */
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_avx
+#define AES_CFB_256_ONE    aes_cfb_256_one_avx
 
 void aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
 

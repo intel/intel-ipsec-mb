@@ -230,10 +230,17 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
-                .name = "aes-docsis",
+                .name = "aes-docsis-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
                         .key_size = IMB_KEY_AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-docsis-256",
+                .values.job_params = {
+                        .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
+                        .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
@@ -495,7 +502,7 @@ const uint8_t key_sizes[][3] = {
                 {16, 32, 8}, /* IMB_CIPHER_CBC */
                 {16, 32, 8}, /* IMB_CIPHER_CNTR */
                 {0, 0, 1},   /* IMB_CIPHER_NULL */
-                {16, 16, 1}, /* IMB_CIPHER_DOCSIS_SEC_BPI */
+                {16, 32, 16}, /* IMB_CIPHER_DOCSIS_SEC_BPI */
 #ifndef NO_GCM
                 {16, 32, 8}, /* IMB_CIPHER_GCM */
 #endif

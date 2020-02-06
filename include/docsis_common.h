@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2019, Intel Corporation
+  Copyright (c) 2019-2020, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -26,12 +26,14 @@
 *******************************************************************************/
 
 /**
- * DOCSIS AES (AES128 CBC + AES128 CFB) and DOCSIS DES (DES CBC + DES CFB).
+ * DOCSIS AES (AES CBC + AES CFB, for 128 and 256-bit keys)
+ * and DOCSIS DES (DES CBC + DES CFB).
  * JOB submit and flush helper functions to be used from mb_mgr_code.h
  *
  * @note These need to be defined prior to including this file:
  *           ETHERNET_FCS, AES_CFB_ONE, SUBMIT_JOB_AES128_DEC and
- *           SUBMIT_JOB_AES128_ENC.
+ *           SUBMIT_JOB_AES128_ENC, SUBMIT_JOB_AES256_DEC and
+ *           SUBMIT_JOB_AES256_DEC.
  *
  * @note The file defines the following:
  *           DOCSIS_LAST_BLOCK, DOCSIS_FIRST_BLOCK,
@@ -56,6 +58,27 @@
 #define AES_BLOCK_SIZE 16
 #endif
 
+IMB_DLL_LOCAL void aes_cfb_256_one_sse_no_aesni(void *out, const void *in,
+                                                const void *iv,
+                                                const void *keys,
+                                                const uint64_t len);
+
+IMB_DLL_LOCAL void aes_cfb_256_one_sse(void *out, const void *in,
+                                       const void *iv, const void *keys,
+                                       const uint64_t len);
+
+IMB_DLL_LOCAL void aes_cfb_256_one_avx(void *out, const void *in,
+                                       const void *iv, const void *keys,
+                                       const uint64_t len);
+
+IMB_DLL_LOCAL void aes_cfb_256_one_avx2(void *out, const void *in,
+                                       const void *iv, const void *keys,
+                                       const uint64_t len);
+
+IMB_DLL_LOCAL void aes_cfb_256_one_avx512(void *out, const void *in,
+                                          const void *iv, const void *keys,
+                                          const uint64_t len);
+
 /**
  * @brief Encrypts/decrypts the last partial block for DOCSIS SEC v3.1 BPI
  *
@@ -69,7 +92,7 @@
  */
 __forceinline
 JOB_AES_HMAC *
-DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
+DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job, const uint64_t key_size)
 {
         const void *iv = NULL;
         uint64_t offset = 0;
@@ -95,10 +118,16 @@ DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
                         offset - AES_BLOCK_SIZE;
 
         IMB_ASSERT(partial_bytes <= AES_BLOCK_SIZE);
-        AES_CFB_128_ONE(job->dst + offset,
-                        job->src + job->cipher_start_src_offset_in_bytes +
-                        offset,
-                        iv, job->aes_enc_key_expanded, partial_bytes);
+        if (key_size == 16)
+                AES_CFB_128_ONE(job->dst + offset,
+                            job->src + job->cipher_start_src_offset_in_bytes +
+                            offset,
+                            iv, job->aes_enc_key_expanded, partial_bytes);
+        else /* 32 */
+                AES_CFB_256_ONE(job->dst + offset,
+                            job->src + job->cipher_start_src_offset_in_bytes +
+                            offset,
+                            iv, job->aes_enc_key_expanded, partial_bytes);
 
         return job;
 }
@@ -114,14 +143,21 @@ DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job)
  */
 __forceinline
 JOB_AES_HMAC *
-DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
+DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job, const uint64_t key_size)
 {
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         IMB_ASSERT(job->msg_len_to_cipher_in_bytes <= AES_BLOCK_SIZE);
-        AES_CFB_128_ONE(job->dst,
-                        job->src + job->cipher_start_src_offset_in_bytes,
-                        job->iv, job->aes_enc_key_expanded,
-                        job->msg_len_to_cipher_in_bytes);
+        if (key_size == 16)
+                AES_CFB_128_ONE(job->dst,
+                            job->src + job->cipher_start_src_offset_in_bytes,
+                            job->iv, job->aes_enc_key_expanded,
+                            job->msg_len_to_cipher_in_bytes);
+        else /* 32 */
+                AES_CFB_256_ONE(job->dst,
+                            job->src + job->cipher_start_src_offset_in_bytes,
+                            job->iv, job->aes_enc_key_expanded,
+                            job->msg_len_to_cipher_in_bytes);
+
         job->status |= STS_COMPLETED_AES;
         return job;
 }
@@ -136,15 +172,28 @@ DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job)
  */
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+                          const uint64_t key_size)
 {
-        if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
-                JOB_AES_HMAC *tmp =
-                        SUBMIT_JOB_AES128_ENC((MB_MGR_AES_OOO *)state, job);
+        JOB_AES_HMAC *tmp;
 
-                return DOCSIS_LAST_BLOCK(tmp);
-        } else
-                return DOCSIS_FIRST_BLOCK(job);
+        if (key_size == 16) {
+                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                        tmp = SUBMIT_JOB_AES128_ENC((MB_MGR_AES_OOO *)state,
+                                                    job);
+
+                        return DOCSIS_LAST_BLOCK(tmp, 16);
+                } else
+                        return DOCSIS_FIRST_BLOCK(job, 16);
+        } else { /* Key length = 32 */
+                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                        tmp = SUBMIT_JOB_AES256_ENC((MB_MGR_AES_OOO *)state,
+                                                    job);
+
+                        return DOCSIS_LAST_BLOCK(tmp, 32);
+                } else
+                        return DOCSIS_FIRST_BLOCK(job, 32);
+        }
 }
 
 /**
@@ -156,11 +205,19 @@ SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
  */
 __forceinline
 JOB_AES_HMAC *
-FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
+FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, const uint64_t key_size)
 {
-        JOB_AES_HMAC *tmp = FLUSH_JOB_AES128_ENC((MB_MGR_AES_OOO *)state);
+        JOB_AES_HMAC *tmp;
 
-        return DOCSIS_LAST_BLOCK(tmp);
+        if (key_size == 16) {
+                tmp = FLUSH_JOB_AES128_ENC((MB_MGR_AES_OOO *)state);
+
+                return DOCSIS_LAST_BLOCK(tmp, 16);
+        } else { /* 32 */
+                tmp = FLUSH_JOB_AES256_ENC((MB_MGR_AES_OOO *)state);
+
+                return DOCSIS_LAST_BLOCK(tmp, 32);
+        }
 }
 
 /**
@@ -173,15 +230,24 @@ FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
  */
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+                          const uint64_t key_size)
 {
         (void) state;
 
-        if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
-                DOCSIS_LAST_BLOCK(job);
-                return SUBMIT_JOB_AES128_DEC(job);
-        } else
-                return DOCSIS_FIRST_BLOCK(job);
+        if (key_size == 16) {
+                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                        DOCSIS_LAST_BLOCK(job, 16);
+                        return SUBMIT_JOB_AES128_DEC(job);
+                } else
+                        return DOCSIS_FIRST_BLOCK(job, 16);
+        } else { /* 32 */
+                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                        DOCSIS_LAST_BLOCK(job, 32);
+                        return SUBMIT_JOB_AES256_DEC(job);
+                } else
+                        return DOCSIS_FIRST_BLOCK(job, 32);
+        }
 }
 
 #ifndef SUBMIT_JOB_DOCSIS_SEC_CRC_ENC
@@ -200,7 +266,7 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
                                      job->hash_start_src_offset_in_bytes +
                                      job->msg_len_to_hash_in_bytes);
         }
-        return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job);
+        return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job, 16);
 }
 #endif
 
@@ -213,7 +279,7 @@ FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
          * CRC has been already calculated.
          * Normal cipher flush only required.
          */
-        return FLUSH_JOB_DOCSIS_SEC_ENC(state);
+        return FLUSH_JOB_DOCSIS_SEC_ENC(state, 16);
 }
 #endif
 
@@ -225,10 +291,10 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
         (void) state;
 
         if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
-                DOCSIS_LAST_BLOCK(job);
+                DOCSIS_LAST_BLOCK(job, 16);
                 job = SUBMIT_JOB_AES128_DEC(job);
         } else {
-                job = DOCSIS_FIRST_BLOCK(job);
+                job = DOCSIS_FIRST_BLOCK(job, 16);
         }
 
         if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {

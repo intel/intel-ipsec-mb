@@ -255,6 +255,7 @@ JOB_AES_HMAC *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 /* ====================================================================== */
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_sse
+#define AES_CFB_256_ONE    aes_cfb_256_one_sse
 
 #define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_ptr
 #define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_ptr
