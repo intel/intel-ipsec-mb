@@ -149,6 +149,16 @@ FLUSH_JOB_AES_ENC:
 	cmovne	good_lane, [rel two]
 	cmp	qword [state + _aes_job_in_lane + 3*8], 0
 	cmovne	good_lane, [rel three]
+%if NUM_LANES > 4
+	cmp	qword [state + _aes_job_in_lane + 4*8], 0
+	cmovne	good_lane, [rel four]
+	cmp	qword [state + _aes_job_in_lane + 5*8], 0
+	cmovne	good_lane, [rel five]
+	cmp	qword [state + _aes_job_in_lane + 6*8], 0
+	cmovne	good_lane, [rel six]
+	cmp	qword [state + _aes_job_in_lane + 7*8], 0
+	cmovne	good_lane, [rel seven]
+%endif
 
 	; copy good_lane to empty lanes
 	mov	tmp1, [state + _aes_args_in + good_lane*8]

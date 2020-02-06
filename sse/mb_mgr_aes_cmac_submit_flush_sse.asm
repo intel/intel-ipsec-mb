@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2018, Intel Corporation
+;; Copyright (c) 2018-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -36,12 +36,14 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
-%ifndef AES128_CBC_MAC
+%ifndef NUM_LANES
+%define NUM_LANES 4
+%endif
 
+%ifndef AES128_CBC_MAC
 %define AES128_CBC_MAC aes128_cbc_mac_x4
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_sse
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_sse
-
 %endif
 
 extern AES128_CBC_MAC
@@ -51,17 +53,32 @@ default rel
 
 align 16
 len_masks:
-	;ddq 0x0000000000000000000000000000FFFF
 	dq 0x000000000000FFFF, 0x0000000000000000
-	;ddq 0x000000000000000000000000FFFF0000
 	dq 0x00000000FFFF0000, 0x0000000000000000
-	;ddq 0x00000000000000000000FFFF00000000
 	dq 0x0000FFFF00000000, 0x0000000000000000
-	;ddq 0x0000000000000000FFFF000000000000
 	dq 0xFFFF000000000000, 0x0000000000000000
+%if NUM_LANES > 4
+        dq 0x0000000000000000, 0x000000000000FFFF
+	dq 0x0000000000000000, 0x00000000FFFF0000
+	dq 0x0000000000000000, 0x0000FFFF00000000
+	dq 0x0000000000000000, 0xFFFF000000000000
+%endif
+
+%if NUM_LANES > 4
+align 16
+dupw:
+	dq 0x0100010001000100, 0x0100010001000100
+%endif
+
 one:	dq  1
 two:	dq  2
 three:	dq  3
+%if NUM_LANES > 4
+four:	dq  4
+five:	dq  5
+six:	dq  6
+seven:	dq  7
+%endif
 
 section .text
 
@@ -237,7 +254,7 @@ endstruc
 %else ; end SUBMIT
 
         ;; Check at least one job
-        bt      unused_lanes, 19
+        bt      unused_lanes, ((NUM_LANES * 4) + 3)
 	jc      %%_return_null
 
       	;; Find a lane with a non-null job
@@ -248,6 +265,16 @@ endstruc
 	cmovne	good_lane, [rel two]
 	cmp	qword [state + _aes_cmac_job_in_lane + 3*8], 0
 	cmovne	good_lane, [rel three]
+%if NUM_LANES > 4
+	cmp	qword [state + _aes_cmac_job_in_lane + 4*8], 0
+	cmovne	good_lane, [rel four]
+	cmp	qword [state + _aes_cmac_job_in_lane + 5*8], 0
+	cmovne	good_lane, [rel five]
+	cmp	qword [state + _aes_cmac_job_in_lane + 6*8], 0
+	cmovne	good_lane, [rel six]
+	cmp	qword [state + _aes_cmac_job_in_lane + 7*8], 0
+	cmovne	good_lane, [rel seven]
+%endif
 
 	; Copy good_lane to empty lanes
 	mov	tmp2, [state + _aes_cmac_args_in + good_lane*8]
@@ -257,7 +284,7 @@ endstruc
 	movdqa	xmm0, [state + _aes_cmac_lens]
 
 %assign I 0
-%rep 4
+%rep NUM_LANES
 	cmp	qword [state + _aes_cmac_job_in_lane + I*8], 0
 	jne	APPEND(skip_,I)
 	mov	[state + _aes_cmac_args_in + I*8], tmp2
@@ -275,10 +302,15 @@ APPEND(skip_,I):
 %%_cmac_round:
 	pextrw	len2, xmm1, 0	; min value
 	pextrw	idx, xmm1, 1	; min index (0...3)
-        cmp	len2, 0
+        or	len2, len2
 	je	%%_len_is_0
+
+%if NUM_LANES > 4
+	pshufb	xmm1, [rel dupw]        ; duplicate words across all lanes
+%else
         pshuflw	xmm1, xmm1, 0
-	psubw	xmm0, xmm1
+%endif
+        psubw	xmm0, xmm1
 	movdqa	[state + _aes_cmac_lens], xmm0
 
         ; "state" and "args" are the same address, arg1
@@ -353,7 +385,7 @@ APPEND(skip_,I):
 %else
         ;; Clear digest and scratch memory of returned job and "NULL lanes"
 %assign I 0
-%rep 4
+%rep NUM_LANES
         cmp     qword [state + _aes_cmac_job_in_lane + I*8], 0
         jne     APPEND(skip_clear_,I)
         movdqa  [state + _aes_cmac_args_IV + I*16], xmm0

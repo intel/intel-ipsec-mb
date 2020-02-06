@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019, Intel Corporation
+;; Copyright (c) 2019-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -34,12 +34,14 @@
 %include "include/const.inc"
 %include "include/memcpy.asm"
 
-%ifndef AES128_CBC_MAC
+%ifndef NUM_LANES
+%define NUM_LANES 4
+%endif
 
+%ifndef AES128_CBC_MAC
 %define AES128_CBC_MAC aes128_cbc_mac_x4
 %define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes_ccm_auth_sse
 %define FLUSH_JOB_AES_CCM_AUTH flush_job_aes_ccm_auth_sse
-
 %endif
 
 extern AES128_CBC_MAC
@@ -53,17 +55,39 @@ len_masks:
         dq 0x00000000FFFF0000, 0x0000000000000000
         dq 0x0000FFFF00000000, 0x0000000000000000
         dq 0xFFFF000000000000, 0x0000000000000000
+%if NUM_LANES > 4
+        dq 0x0000000000000000, 0x000000000000FFFF
+	dq 0x0000000000000000, 0x00000000FFFF0000
+	dq 0x0000000000000000, 0x0000FFFF00000000
+	dq 0x0000000000000000, 0xFFFF000000000000
+%endif
+
+%if NUM_LANES > 4
+align 16
+dupw:
+	dq 0x0100010001000100, 0x0100010001000100
+%endif
+
+align 16
 counter_mask:
 	dq 0xFFFFFFFFFFFFFF07, 0x0000FFFFFFFFFFFF
+
 one:    dq  1
 two:    dq  2
 three:  dq  3
+%if NUM_LANES > 4
+four:	dq  4
+five:	dq  5
+six:	dq  6
+seven:	dq  7
+%endif
 
 section .text
 
 %define APPEND(a,b) a %+ b
 
 %define NROUNDS 9 ; AES-CCM-128
+
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -293,7 +317,7 @@ endstruc
 %else ; end SUBMIT
 
         ;; Check at least one job
-        bt      unused_lanes, 19
+	bt	unused_lanes, ((NUM_LANES * 4) + 3)
         jc      %%_return_null
 
         ;; Find a lane with a non-null job
@@ -304,6 +328,16 @@ endstruc
         cmovne  good_lane, [rel two]
         cmp     qword [state + _aes_ccm_job_in_lane + 3*8], 0
         cmovne  good_lane, [rel three]
+%if NUM_LANES > 4
+        cmp     qword [state + _aes_ccm_job_in_lane + 4*8], 0
+        cmovne  good_lane, [rel four]
+        cmp     qword [state + _aes_ccm_job_in_lane + 5*8], 0
+        cmovne  good_lane, [rel five]
+        cmp     qword [state + _aes_ccm_job_in_lane + 6*8], 0
+        cmovne  good_lane, [rel six]
+        cmp     qword [state + _aes_ccm_job_in_lane + 7*8], 0
+        cmovne  good_lane, [rel seven]
+%endif
 
         ; Copy good_lane to empty lanes
         movzx   tmp,  word [state + _aes_ccm_init_done + good_lane*2]
@@ -314,7 +348,7 @@ endstruc
         movdqa  ccm_lens, [state + _aes_ccm_lens]
 
 %assign I 0
-%rep 4
+%rep NUM_LANES
         cmp     qword [state + _aes_ccm_job_in_lane + I*8], 0
         jne     APPEND(skip_,I)
         por     ccm_lens, [rel len_masks + 16*I]
@@ -340,7 +374,11 @@ APPEND(skip_,I):
         or      len2, len2
         je      %%_len_is_0
         ;; subtract min length from all lengths
+%if NUM_LANES > 4
+	pshufb	min_len_idx, [rel dupw]     ; duplicate words across all lanes
+%else
         pshuflw min_len_idx, min_len_idx, 0 ; broadcast min length
+%endif
         psubw   ccm_lens, min_len_idx
         movdqa  [state + _aes_ccm_lens], ccm_lens
 
@@ -405,7 +443,7 @@ APPEND(skip_,I):
         ;; Clear digest (in memory for CBC IV), counter block 0 and AAD
         ;; of returned job and "NULL lanes"
 %assign I 0
-%rep 4
+%rep NUM_LANES
         cmp     qword [state + _aes_ccm_job_in_lane + I*8], 0
         jne     APPEND(skip_clear_,I)
         movdqa  [state + _aes_ccm_args_IV + I*16],          xtmp0
