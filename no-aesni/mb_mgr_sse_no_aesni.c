@@ -426,7 +426,7 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
                sizeof(state->aes128_ooo.lens[0]) * 4);
         memset(state->aes128_ooo.job_in_lane, 0,
                sizeof(state->aes128_ooo.job_in_lane));
-        state->aes128_ooo.unused_lanes = 0xFF03020100;
+        state->aes128_ooo.unused_lanes = 0xF3210;
         state->aes128_ooo.num_lanes_inuse = 0;
 
 
@@ -436,7 +436,7 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
                sizeof(state->aes192_ooo.lens[0]) * 4);
         memset(state->aes192_ooo.job_in_lane, 0,
                sizeof(state->aes192_ooo.job_in_lane));
-        state->aes192_ooo.unused_lanes = 0xFF03020100;
+        state->aes192_ooo.unused_lanes = 0xF3210;
         state->aes192_ooo.num_lanes_inuse = 0;
 
 
@@ -446,7 +446,7 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
                sizeof(state->aes256_ooo.lens[0]) * 4);
         memset(state->aes256_ooo.job_in_lane, 0,
                sizeof(state->aes256_ooo.job_in_lane));
-        state->aes256_ooo.unused_lanes = 0xFF03020100;
+        state->aes256_ooo.unused_lanes = 0xF3210;
         state->aes256_ooo.num_lanes_inuse = 0;
 
 
@@ -457,7 +457,7 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
                sizeof(state->docsis_sec_ooo.lens[0]) * 4);
         memset(state->docsis_sec_ooo.job_in_lane, 0,
                sizeof(state->docsis_sec_ooo.job_in_lane));
-        state->docsis_sec_ooo.unused_lanes = 0xFF03020100;
+        state->docsis_sec_ooo.unused_lanes = 0xF3210;
         state->docsis_sec_ooo.num_lanes_inuse = 0;
 
         memset(state->docsis_crc32_sec_ooo.lens, 0xFF,
@@ -466,7 +466,7 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
                sizeof(state->docsis_crc32_sec_ooo.lens[0]) * 4);
         memset(state->docsis_crc32_sec_ooo.job_in_lane, 0,
                sizeof(state->docsis_crc32_sec_ooo.job_in_lane));
-        state->docsis_crc32_sec_ooo.unused_lanes = 0xFF03020100;
+        state->docsis_crc32_sec_ooo.unused_lanes = 0xF3210;
         state->docsis_crc32_sec_ooo.num_lanes_inuse = 0;
 
         /* Init ZUC out-of-order fields */

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,10 @@
 
 %include "include/reg_sizes.asm"
 
+%ifndef NUM_LANES
+%define NUM_LANES 4
+%endif
+
 %ifndef AES_CBC_ENC_X4
 %define AES_CBC_ENC_X4 aes_cbc_enc_128_x4
 %define FLUSH_JOB_AES_ENC flush_job_aes128_enc_sse
@@ -44,17 +48,32 @@ default rel
 
 align 16
 len_masks:
-	;ddq 0x0000000000000000000000000000FFFF
 	dq 0x000000000000FFFF, 0x0000000000000000
-	;ddq 0x000000000000000000000000FFFF0000
 	dq 0x00000000FFFF0000, 0x0000000000000000
-	;ddq 0x00000000000000000000FFFF00000000
 	dq 0x0000FFFF00000000, 0x0000000000000000
-	;ddq 0x0000000000000000FFFF000000000000
 	dq 0xFFFF000000000000, 0x0000000000000000
+%if NUM_LANES > 4
+        dq 0x0000000000000000, 0x000000000000FFFF
+	dq 0x0000000000000000, 0x00000000FFFF0000
+	dq 0x0000000000000000, 0x0000FFFF00000000
+	dq 0x0000000000000000, 0xFFFF000000000000
+%endif
+
+%if NUM_LANES > 4
+align 16
+dupw:
+	dq 0x0100010001000100, 0x0100010001000100
+%endif
+
 one:	dq  1
 two:	dq  2
 three:	dq  3
+%if NUM_LANES > 4
+four:	dq  4
+five:	dq  5
+six:	dq  6
+seven:	dq  7
+%endif
 
 section .text
 
@@ -74,7 +93,6 @@ section .text
 
 %define job_rax          rax
 
-%if 1
 %define unused_lanes     rbx
 %define tmp1             rbx
 
@@ -88,7 +106,6 @@ section .text
 %define idx              rbp
 
 %define tmp3             r8
-%endif
 
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
@@ -121,7 +138,7 @@ FLUSH_JOB_AES_ENC:
 
 	; check for empty
 	mov	unused_lanes, [state + _aes_unused_lanes]
-	bt	unused_lanes, 32+7
+	bt	unused_lanes, ((NUM_LANES * 4) + 3)
 	jc	return_null
 
 	; find a lane with a non-null job
@@ -142,7 +159,7 @@ FLUSH_JOB_AES_ENC:
 	movdqa	xmm0, [state + _aes_lens]
 
 %assign I 0
-%rep 4
+%rep NUM_LANES
 	cmp	qword [state + _aes_job_in_lane + I*8], 0
 	jne	APPEND(skip_,I)
 	mov	[state + _aes_args_in + I*8], tmp1
@@ -158,10 +175,14 @@ APPEND(skip_,I):
 	phminposuw	xmm1, xmm0
 	pextrw	len2, xmm1, 0	; min value
 	pextrw	idx, xmm1, 1	; min index (0...3)
-	cmp	len2, 0
-	je	len_is_0
+	or	len2, len2
+	jz	len_is_0
 
-	pshuflw	xmm1, xmm1, 0
+%if NUM_LANES > 4
+	pshufb	xmm1, [rel dupw]   ; duplicate words across all lanes
+%else
+        pshuflw	xmm1, xmm1, 0
+%endif
 	psubw	xmm0, xmm1
 	movdqa	[state + _aes_lens], xmm0
 
@@ -176,14 +197,14 @@ len_is_0:
 	mov	unused_lanes, [state + _aes_unused_lanes]
 	mov	qword [state + _aes_job_in_lane + idx*8], 0
 	or	dword [job_rax + _status], STS_COMPLETED_AES
-	shl	unused_lanes, 8
+	shl	unused_lanes, 4
 	or	unused_lanes, idx
 	mov	[state + _aes_unused_lanes], unused_lanes
 %ifdef SAFE_DATA
         ;; Clear IVs of returned job and "NULL lanes"
         pxor    xmm0, xmm0
 %assign I 0
-%rep 4
+%rep NUM_LANES
 	cmp	qword [state + _aes_job_in_lane + I*8], 0
 	jne	APPEND(skip_clear_,I)
 	movdqa	[state + _aes_args_IV + I*16], xmm0
@@ -193,7 +214,6 @@ APPEND(skip_clear_,I):
 %endif
 
 return:
-
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

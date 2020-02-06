@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2012-2018, Intel Corporation
+;; Copyright (c) 2012-2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -32,11 +32,13 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
-%ifndef AES_CBC_ENC_X4
+%ifndef NUM_LANES
+%define NUM_LANES 4
+%endif
 
+%ifndef AES_CBC_ENC_X4
 %define AES_CBC_ENC_X4 aes_cbc_enc_128_x4
 %define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_sse
-
 %endif
 
 ; void AES_CBC_ENC_X4(AES_ARGS *args, UINT64 len_in_bytes);
@@ -56,7 +58,6 @@ extern AES_CBC_ENC_X4
 
 %define job_rax          rax
 
-%if 1
 ; idx needs to be in rbp
 %define len              rbp
 %define idx              rbp
@@ -67,7 +68,6 @@ extern AES_CBC_ENC_X4
 %define iv               r9
 
 %define unused_lanes     rbx
-%endif
 
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
@@ -75,6 +75,15 @@ struc STACK
 _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
+
+%if NUM_LANES > 4
+section .data
+default rel
+
+align 16
+dupw:
+	dq 0x0100010001000100, 0x0100010001000100
+%endif
 
 section .text
 
@@ -101,8 +110,9 @@ SUBMIT_JOB_AES_ENC:
 	mov	[rsp + _rsp_save], rax	; original SP
 
 	mov	unused_lanes, [state + _aes_unused_lanes]
-	movzx	lane, BYTE(unused_lanes)
-	shr	unused_lanes, 8
+	mov	lane, unused_lanes
+        and     lane, 0xf
+	shr	unused_lanes, 4
 	mov	iv, [job + _iv]
 	mov	[state + _aes_unused_lanes], unused_lanes
 
@@ -126,7 +136,7 @@ SUBMIT_JOB_AES_ENC:
         XPINSRW xmm0, xmm1, tmp, lane, len, no_scale
         movdqa  [state + _aes_lens], xmm0
 
-	cmp	unused_lanes, 0xff
+	cmp	unused_lanes, 0xf
 	jne	return_null
 
 	; Find min length
@@ -136,7 +146,11 @@ SUBMIT_JOB_AES_ENC:
 	cmp	len2, 0
 	je	len_is_0
 
-	pshuflw	xmm1, xmm1, 0
+%if NUM_LANES > 4
+	pshufb	xmm1, [rel dupw]   ; duplicate words across all lanes
+%else
+        pshuflw	xmm1, xmm1, 0
+%endif
 	psubw	xmm0, xmm1
 	movdqa	[state + _aes_lens], xmm0
 
@@ -151,7 +165,7 @@ len_is_0:
 	mov	unused_lanes, [state + _aes_unused_lanes]
 	mov	qword [state + _aes_job_in_lane + idx*8], 0
 	or	dword [job_rax + _status], STS_COMPLETED_AES
-	shl	unused_lanes, 8
+	shl	unused_lanes, 4
 	or	unused_lanes, idx
 	mov	[state + _aes_unused_lanes], unused_lanes
 %ifdef SAFE_DATA
@@ -163,7 +177,6 @@ len_is_0:
 %endif
 
 return:
-
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]
