@@ -65,8 +65,8 @@ Table 1. List of supported cipher algorithms and their implementations.
     +---------------------------------------------------------------------+
 
 Notes:
-(1,2) - decryption is by4 and encryption is x4, on CPU's supporting GFNI
-        decryption is by8 and encryption is x4
+(1,2) - By default, decryption is by4 and encryption is x4.
+      	On CPU's supporting GFNI, decryption is by8 and encryption is x8.
 (3,4) - decryption is by8 and encryption is x8
 (5) - AVX512 plus VAES and VPCLMULQDQ extensions
 (6) - decryption is by16 and encryption is x16
@@ -100,8 +100,8 @@ implementations.
     | AES192-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
     | AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
     | NULL              | N      | N      | N      | N      | N      | N      |
-    | AES128-CCM        | N      | Y   x4 | Y   x8 | N      | N      | N      |
-    | AES128-CMAC-96    | Y      | Y   x4 | Y   x8 | N      | N      | Y x16  |
+    | AES128-CCM        | N      | Y(5)x4 | Y   x8 | N      | N      | N      |
+    | AES128-CMAC-96    | Y      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
     | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
     | ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | N      | N      |
     | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
@@ -113,6 +113,7 @@ Notes:
 (2) - Implementation using SHANI extentions is x2
 (3) - AVX512 plus VAES and VPCLMULQDQ extensions
 (4) - used only with AES128-DOCSIS cipher
+(5) - x8 on selected CPU's supporting GFNI
 
 Legend:
 byY- single buffer Y blocks at a time

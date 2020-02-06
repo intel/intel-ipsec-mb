@@ -21,6 +21,8 @@ Library
 - AES-CMAC implementation for VAES added
 - SSE AES128-CTR, AES192-CTR, AES256-CTR and AES128-CCM cipher implementations
   changed from by4 to by8
+- Added by8/x8 implementations of SSE AES128-CBC, AES192-CBC, AES256-CBC,
+  DOCSIS SEC BPI, AES-CCM and AES-CMAC.
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through
