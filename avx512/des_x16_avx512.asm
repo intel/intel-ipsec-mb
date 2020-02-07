@@ -379,36 +379,52 @@ endstruc
 	mov             DWORD(IA0), 0xaaaaaaaa
 	kmovd           k2, DWORD(IA0)
 
-	vpermw          %%T0{k1}{z}, %%IN0A, [rel S_box_flipped + 0*64]
-	vpermw          %%T1{k1}{z}, %%IN0A, [rel S_box_flipped + 1*64]
-	vpermw          %%T2{k2}{z}, %%IN0A, [rel S_box_flipped + 4*64]
-	vpermw          %%T3{k2}{z}, %%IN0A, [rel S_box_flipped + 5*64]
+        vmovdqa64       %%T0, [rel S_box_flipped + 0*64]
+        vmovdqa64       %%T1, [rel S_box_flipped + 1*64]
+        vmovdqa64       %%T2, [rel S_box_flipped + 4*64]
+        vmovdqa64       %%T3, [rel S_box_flipped + 5*64]
+	vpermw          %%T0{k1}{z}, %%IN0A, %%T0
+	vpermw          %%T1{k1}{z}, %%IN0A, %%T1
+	vpermw          %%T2{k2}{z}, %%IN0A, %%T2
+	vpermw          %%T3{k2}{z}, %%IN0A, %%T3
 	vpxord          %%T0, %%T0, %%T2
 	vpxord          %%OUT, %%T1, %%T3
         vmovdqu16       %%OUT{k3}, %%T0
 
-	vpermw          %%T0{k1}{z}, %%IN0B, [rel S_box_flipped + 2*64]
-	vpermw          %%T1{k1}{z}, %%IN0B, [rel S_box_flipped + 3*64]
-	vpermw          %%T2{k2}{z}, %%IN0B, [rel S_box_flipped + 6*64]
-	vpermw          %%T3{k2}{z}, %%IN0B, [rel S_box_flipped + 7*64]
+        vmovdqa64       %%T0, [rel S_box_flipped + 2*64]
+        vmovdqa64       %%T1, [rel S_box_flipped + 3*64]
+        vmovdqa64       %%T2, [rel S_box_flipped + 6*64]
+        vmovdqa64       %%T3, [rel S_box_flipped + 7*64]
+	vpermw          %%T0{k1}{z}, %%IN0B, %%T0
+	vpermw          %%T1{k1}{z}, %%IN0B, %%T1
+	vpermw          %%T2{k2}{z}, %%IN0B, %%T2
+	vpermw          %%T3{k2}{z}, %%IN0B, %%T3
 	vpxord          %%T0, %%T0, %%T2
 	vpxord          %%T3, %%T1, %%T3
         vmovdqu16       %%T3{k4}, %%T0
 	vpsllw          %%T3, %%T3, 4
 	vpxord          %%OUT, %%OUT, %%T3
 
-	vpermw          %%T0{k1}{z}, %%IN1A, [rel S_box_flipped + 8*64]
-	vpermw          %%T1{k1}{z}, %%IN1A, [rel S_box_flipped + 9*64]
-	vpermw          %%T2{k2}{z}, %%IN1A, [rel S_box_flipped + 12*64]
-	vpermw          %%T3{k2}{z}, %%IN1A, [rel S_box_flipped + 13*64]
+        vmovdqa64       %%T0, [rel S_box_flipped + 8*64]
+        vmovdqa64       %%T1, [rel S_box_flipped + 9*64]
+        vmovdqa64       %%T2, [rel S_box_flipped + 12*64]
+        vmovdqa64       %%T3, [rel S_box_flipped + 13*64]
+	vpermw          %%T0{k1}{z}, %%IN1A, %%T0
+	vpermw          %%T1{k1}{z}, %%IN1A, %%T1
+	vpermw          %%T2{k2}{z}, %%IN1A, %%T2
+	vpermw          %%T3{k2}{z}, %%IN1A, %%T3
 	vpxord          %%T0, %%T0, %%T2
 	vpxord          %%T4, %%T1, %%T3
         vmovdqu16       %%T4{k5}, %%T0
 
-	vpermw          %%T0{k1}{z}, %%IN1B, [rel S_box_flipped + 10*64]
-	vpermw          %%T1{k1}{z}, %%IN1B, [rel S_box_flipped + 11*64]
-	vpermw          %%T2{k2}{z}, %%IN1B, [rel S_box_flipped + 14*64]
-	vpermw          %%T3{k2}{z}, %%IN1B, [rel S_box_flipped + 15*64]
+        vmovdqa64       %%T0, [rel S_box_flipped + 10*64]
+        vmovdqa64       %%T1, [rel S_box_flipped + 11*64]
+        vmovdqa64       %%T2, [rel S_box_flipped + 14*64]
+        vmovdqa64       %%T3, [rel S_box_flipped + 15*64]
+	vpermw          %%T0{k1}{z}, %%IN1B, %%T0
+	vpermw          %%T1{k1}{z}, %%IN1B, %%T1
+	vpermw          %%T2{k2}{z}, %%IN1B, %%T2
+	vpermw          %%T3{k2}{z}, %%IN1B, %%T3
 	vpxord          %%T0, %%T0, %%T2
 	vpxord          %%T5, %%T1, %%T3
         vmovdqu16       %%T5{k6}, %%T0
