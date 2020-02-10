@@ -107,10 +107,10 @@ CFLAGS += $(OPT)
 
 # Set generic architectural optimizations
 OPT_SSE := -msse4.2 -maes
-OPT_AVX := -msse4.2 -maes
-OPT_AVX2 := -msse4.2 -maes
-OPT_AVX512 := -msse4.2 -maes
-OPT_NOAESNI := -march=nehalem
+OPT_AVX := -mavx -maes
+OPT_AVX2 := -mavx2 -maes
+OPT_AVX512 := -mavx2 -maes # -mavx512f is not available until gcc 4.9
+OPT_NOAESNI := -msse4.2 -mno-aes
 
 # Set architectural optimizations for GCC/CC
 ifeq ($(CC),$(filter $(CC),gcc cc))
@@ -121,6 +121,7 @@ OPT_SSE := -march=nehalem -maes
 OPT_AVX := -march=sandybridge -maes
 OPT_AVX2 := -march=haswell -maes
 OPT_AVX512 := -march=broadwell
+OPT_NOAESNI := -march=nehalem
 endif
 endif
 
