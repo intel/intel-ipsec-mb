@@ -51,17 +51,19 @@ endstruc
 %define arg2	rsi
 %define arg3	rcx
 %define arg4	rdx
+%define TMP2	rcx
+%define TMP3	rdx
 %else
 %define arg1	rcx
 %define arg2	rdx
-%define arg3	rdi
-%define arg4	rsi
+%define arg3	r8
+%define arg4	r9
+%define TMP2	rdi
+%define TMP3	rsi
 %endif
 
 %define TMP0	r11
 %define TMP1    rbx
-%define TMP2	arg3
-%define TMP3	arg4
 %define TMP4	rbp
 %define TMP5	r8
 %define TMP6	r9
@@ -533,9 +535,9 @@ section .text
 
 ;; =====================================================================
 ;; =====================================================================
-;; AES128-CBC encryption combined with CRC32 operations
+;; AES128/256-CBC encryption combined with CRC32 operations
 ;; =====================================================================
-%macro AES128_CBC_ENC_CRC32_PARELLEL 47
+%macro AES_CBC_ENC_CRC32_PARALLEL 48
 %define %%ARG   %1      ; [in/out] GPR with pointer to arguments structure (updated on output)
 %define %%LEN   %2      ; [in/clobbered] number of bytes to be encrypted on all lanes
 %define %%GT0   %3      ; [clobbered] GP register
@@ -583,6 +585,7 @@ section .text
 %define %%ZT29  %45     ; [clobbered] ZMM register (zmm16 - zmm31)
 %define %%ZT30  %46     ; [clobbered] ZMM register (zmm16 - zmm31)
 %define %%ZT31  %47     ; [clobbered] ZMM register (zmm16 - zmm31)
+%define %%NROUNDS %48   ; [in] Number of rounds (9 or 13, based on key size)
 
 %define %%KEYS0 %%GT0
 %define %%KEYS1 %%GT1
@@ -766,10 +769,10 @@ section .text
         vpternlogq      %%XCIPH7, %%XDATA7, [%%KEYS7 + 16*0], 0x96
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; AES ROUNDS 1 to 9
+        ;; AES ROUNDS 1 to NROUNDS (9 or 13)
 %assign crc_lane 0
 %assign i 1
-%rep 9
+%rep %%NROUNDS
 	vaesenc		%%XCIPH0, [%%KEYS0 + 16*i]
 	vaesenc		%%XCIPH1, [%%KEYS1 + 16*i]
 	vaesenc		%%XCIPH2, [%%KEYS2 + 16*i]
@@ -791,15 +794,15 @@ section .text
 %endrep
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; AES ROUNDS 10
-	vaesenclast	%%XCIPH0, [%%KEYS0 + 16*10]
-	vaesenclast	%%XCIPH1, [%%KEYS1 + 16*10]
-	vaesenclast	%%XCIPH2, [%%KEYS2 + 16*10]
-	vaesenclast	%%XCIPH3, [%%KEYS3 + 16*10]
-	vaesenclast	%%XCIPH4, [%%KEYS4 + 16*10]
-	vaesenclast	%%XCIPH5, [%%KEYS5 + 16*10]
-	vaesenclast	%%XCIPH6, [%%KEYS6 + 16*10]
-	vaesenclast	%%XCIPH7, [%%KEYS7 + 16*10]
+        ;; AES ROUNDS 10 or 14
+	vaesenclast	%%XCIPH0, [%%KEYS0 + 16*i]
+	vaesenclast	%%XCIPH1, [%%KEYS1 + 16*i]
+	vaesenclast	%%XCIPH2, [%%KEYS2 + 16*i]
+	vaesenclast	%%XCIPH3, [%%KEYS3 + 16*i]
+	vaesenclast	%%XCIPH4, [%%KEYS4 + 16*i]
+	vaesenclast	%%XCIPH5, [%%KEYS5 + 16*i]
+	vaesenclast	%%XCIPH6, [%%KEYS6 + 16*i]
+	vaesenclast	%%XCIPH7, [%%KEYS7 + 16*i]
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store cipher text
@@ -899,10 +902,10 @@ section .text
         vpternlogq      %%XCIPH7, %%XDATA7, [%%KEYS7 + 16*0], 0x96
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; AES ROUNDS 1 to 9
+        ;; AES ROUNDS 1 to NROUNDS (9 or 13)
 %assign crc_lane 0
 %assign i 1
-%rep 9
+%rep %%NROUNDS
 	vaesenc		%%XCIPH0, [%%KEYS0 + 16*i]
 	vaesenc		%%XCIPH1, [%%KEYS1 + 16*i]
 	vaesenc		%%XCIPH2, [%%KEYS2 + 16*i]
@@ -924,15 +927,15 @@ section .text
 %endrep
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; AES ROUNDS 10
-	vaesenclast	%%XCIPH0, [%%KEYS0 + 16*10]
-	vaesenclast	%%XCIPH1, [%%KEYS1 + 16*10]
-	vaesenclast	%%XCIPH2, [%%KEYS2 + 16*10]
-	vaesenclast	%%XCIPH3, [%%KEYS3 + 16*10]
-	vaesenclast	%%XCIPH4, [%%KEYS4 + 16*10]
-	vaesenclast	%%XCIPH5, [%%KEYS5 + 16*10]
-	vaesenclast	%%XCIPH6, [%%KEYS6 + 16*10]
-	vaesenclast	%%XCIPH7, [%%KEYS7 + 16*10]
+        ;; AES ROUNDS 10 or 14
+	vaesenclast	%%XCIPH0, [%%KEYS0 + 16*i]
+	vaesenclast	%%XCIPH1, [%%KEYS1 + 16*i]
+	vaesenclast	%%XCIPH2, [%%KEYS2 + 16*i]
+	vaesenclast	%%XCIPH3, [%%KEYS3 + 16*i]
+	vaesenclast	%%XCIPH4, [%%KEYS4 + 16*i]
+	vaesenclast	%%XCIPH5, [%%KEYS5 + 16*i]
+	vaesenclast	%%XCIPH6, [%%KEYS6 + 16*i]
+	vaesenclast	%%XCIPH7, [%%KEYS7 + 16*i]
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store cipher text
@@ -996,9 +999,9 @@ section .text
         vpternlogq      %%XCIPH7, %%XDATA7, [%%KEYS7 + 16*0], 0x96
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; AES ROUNDS 1 to 9
+        ;; AES ROUNDS 1 to NROUNDS (9 or 13)
 %assign i 1
-%rep 9
+%rep %%NROUNDS
 	vaesenc		%%XCIPH0, [%%KEYS0 + 16*i]
 	vaesenc		%%XCIPH1, [%%KEYS1 + 16*i]
 	vaesenc		%%XCIPH2, [%%KEYS2 + 16*i]
@@ -1011,15 +1014,15 @@ section .text
 %endrep
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; AES ROUNDS 10
-	vaesenclast	%%XCIPH0, [%%KEYS0 + 16*10]
-	vaesenclast	%%XCIPH1, [%%KEYS1 + 16*10]
-	vaesenclast	%%XCIPH2, [%%KEYS2 + 16*10]
-	vaesenclast	%%XCIPH3, [%%KEYS3 + 16*10]
-	vaesenclast	%%XCIPH4, [%%KEYS4 + 16*10]
-	vaesenclast	%%XCIPH5, [%%KEYS5 + 16*10]
-	vaesenclast	%%XCIPH6, [%%KEYS6 + 16*10]
-	vaesenclast	%%XCIPH7, [%%KEYS7 + 16*10]
+        ;; AES ROUNDS 10 or 14
+	vaesenclast	%%XCIPH0, [%%KEYS0 + 16*i]
+	vaesenclast	%%XCIPH1, [%%KEYS1 + 16*i]
+	vaesenclast	%%XCIPH2, [%%KEYS2 + 16*i]
+	vaesenclast	%%XCIPH3, [%%KEYS3 + 16*i]
+	vaesenclast	%%XCIPH4, [%%KEYS4 + 16*i]
+	vaesenclast	%%XCIPH5, [%%KEYS5 + 16*i]
+	vaesenclast	%%XCIPH6, [%%KEYS6 + 16*i]
+	vaesenclast	%%XCIPH7, [%%KEYS7 + 16*i]
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store cipher text
@@ -1065,13 +1068,13 @@ section .text
         vmovdqu64       [%%ARG + _aesarg_in], %%ZT1
         vmovdqu64       [%%ARG + _aesarg_out], %%ZT2
 
-%endmacro       ; AES128_CBC_ENC_CRC32_PARALLEL
+%endmacro       ; AES_CBC_ENC_CRC32_PARALLEL
 
 ;; =====================================================================
 ;; =====================================================================
 ;; DOCSIS SEC BPI + CRC32 SUBMIT / FLUSH macro
 ;; =====================================================================
-%macro SUBMIT_FLUSH_DOCSIS_CRC32 48
+%macro SUBMIT_FLUSH_DOCSIS_CRC32 49
 %define %%STATE %1      ; [in/out] GPR with pointer to arguments structure (updated on output)
 %define %%JOB   %2      ; [in] number of bytes to be encrypted on all lanes
 %define %%GT0   %3      ; [clobbered] GP register
@@ -1120,6 +1123,7 @@ section .text
 %define %%ZT30  %46     ; [clobbered] ZMM register (zmm16 - zmm31)
 %define %%ZT31  %47     ; [clobbered] ZMM register (zmm16 - zmm31)
 %define %%SUBMIT_FLUSH %48 ; [in] "submit" or "flush"; %%JOB ignored for "flush"
+%define %%NROUNDS %49   ; [in] Number of rounds (9 or 13, based on key size)
 
 %define %%idx           %%GT0
 %define %%unused_lanes  %%GT3
@@ -1313,13 +1317,14 @@ APPEND(%%_skip_,I):
 
         mov             [rsp + _idx], %%idx
 
-        AES128_CBC_ENC_CRC32_PARELLEL %%STATE, %%len2, \
+        AES_CBC_ENC_CRC32_PARALLEL %%STATE, %%len2, \
                         %%GT0, %%GT1, %%GT2, %%GT3, %%GT4, %%GT5, %%GT6, \
                         %%GT7, %%GT8, %%GT9, %%GT10, %%GT11, %%GT12, \
                         %%ZT0,  %%ZT1,  %%ZT2,  %%ZT3,  %%ZT4,  %%ZT5,  %%ZT6,  %%ZT7, \
                         %%ZT8,  %%ZT9,  %%ZT10, %%ZT11, %%ZT12, %%ZT13, %%ZT14, %%ZT15, \
                         %%ZT16, %%ZT17, %%ZT18, %%ZT19, %%ZT20, %%ZT21, %%ZT22, %%ZT23, \
-                        %%ZT24, %%ZT25, %%ZT26, %%ZT27, %%ZT28, %%ZT29, %%ZT30, %%ZT31
+                        %%ZT24, %%ZT25, %%ZT26, %%ZT27, %%ZT28, %%ZT29, %%ZT30, %%ZT31, \
+                        %%NROUNDS
 
         mov             %%idx, [rsp + _idx]
 
@@ -1382,7 +1387,7 @@ APPEND(%%_skip_,I):
         jz              %%_no_partial_block_cipher
 
 
-        ;; AES128-CFB on the partial block
+        ;; AES128/256-CFB on the partial block
         mov             %%GT4, [%%STATE + _aes_args_in + %%idx*8]
         mov             %%GT5, [%%STATE + _aes_args_out + %%idx*8]
         mov             %%GT6, [%%job_rax + _aes_enc_key_expanded]
@@ -1393,16 +1398,12 @@ APPEND(%%_skip_,I):
         kmovw           k1, [%%GT2 + %%GT3*2]
         vmovdqu8        xmm3{k1}{z}, [%%GT4]
         vpxorq          xmm1, xmm2, [%%GT6 + 0*16]
-        vaesenc         xmm1, [%%GT6 + 1*16]
-        vaesenc         xmm1, [%%GT6 + 2*16]
-        vaesenc         xmm1, [%%GT6 + 3*16]
-        vaesenc         xmm1, [%%GT6 + 4*16]
-        vaesenc         xmm1, [%%GT6 + 5*16]
-        vaesenc         xmm1, [%%GT6 + 6*16]
-        vaesenc         xmm1, [%%GT6 + 7*16]
-        vaesenc         xmm1, [%%GT6 + 8*16]
-        vaesenc         xmm1, [%%GT6 + 9*16]
-        vaesenclast     xmm1, [%%GT6 + 10*16]
+%assign i 1
+%rep %%NROUNDS
+        vaesenc         xmm1, [%%GT6 + i*16]
+%assign i (i + 1)
+%endrep
+        vaesenclast     xmm1, [%%GT6 + i*16]
         vpxorq          xmm1, xmm1, xmm3
         vmovdqu8        [%%GT5]{k1}, xmm1
 
@@ -1450,15 +1451,21 @@ APPEND(%%_skip_clear_,I):
 %endmacro
 
 
-;; =====================================================================
-;; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+;; ===========================================================================
+;; JOB* SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job,
+;;                                    const uint64_t key_size)
 ;; arg 1 : state
 ;; arg 2 : job
+;; arg 3 : key size
 
 align 64
 MKGLOBAL(submit_job_aes_docsis_enc_crc32_avx512,function,internal)
 submit_job_aes_docsis_enc_crc32_avx512:
         FUNC_ENTRY
+
+        test    arg3, 32
+        jnz     submit_256
+
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
                         TMP0,  TMP1,  TMP2,  TMP3,  TMP4,  TMP5,  TMP6, \
                         TMP7,  TMP8,  TMP9,  TMP10, TMP11, TMP12, \
@@ -1466,17 +1473,35 @@ submit_job_aes_docsis_enc_crc32_avx512:
                         zmm8,  zmm9,  zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
                         zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                        submit
+                        submit, 9
+        jmp     submit_exit
+
+submit_256:
+        SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
+                        TMP0,  TMP1,  TMP2,  TMP3,  TMP4,  TMP5,  TMP6, \
+                        TMP7,  TMP8,  TMP9,  TMP10, TMP11, TMP12, \
+                        zmm0,  zmm1,  zmm2,  zmm3,  zmm4,  zmm5,  zmm6,  zmm7, \
+                        zmm8,  zmm9,  zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
+                        zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        submit, 13
+
+submit_exit:
         FUNC_EXIT
 	ret
 
 ;; =====================================================================
-;; JOB* FLUSH(MB_MGR_AES_OOO *state)
+;; JOB* FLUSH(MB_MGR_AES_OOO *state, const uint64_t key_size)
 ;; arg 1 : state
+;; arg 2 : key size
 align 64
 MKGLOBAL(flush_job_aes_docsis_enc_crc32_avx512,function,internal)
 flush_job_aes_docsis_enc_crc32_avx512:
         FUNC_ENTRY
+
+        test    arg2, 32
+        jnz     flush_256
+
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
                         TMP0,  TMP1,  TMP2,  TMP3,  TMP4,  TMP5,  TMP6, \
                         TMP7,  TMP8,  TMP9,  TMP10, TMP11, TMP12, \
@@ -1484,7 +1509,20 @@ flush_job_aes_docsis_enc_crc32_avx512:
                         zmm8,  zmm9,  zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
                         zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                        flush
+                        flush, 9
+        jmp     flush_exit
+
+flush_256:
+        SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
+                        TMP0,  TMP1,  TMP2,  TMP3,  TMP4,  TMP5,  TMP6, \
+                        TMP7,  TMP8,  TMP9,  TMP10, TMP11, TMP12, \
+                        zmm0,  zmm1,  zmm2,  zmm3,  zmm4,  zmm5,  zmm6,  zmm7, \
+                        zmm8,  zmm9,  zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
+                        zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        flush, 13
+
+flush_exit:
         FUNC_EXIT
 	ret
 

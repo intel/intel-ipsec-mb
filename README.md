@@ -49,6 +49,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES256-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
 | NULL          | Y      | N      | N      | N      | N      | N      |
 | AES128-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | N      |
+| AES256-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | N      |
 | DES-DOCSIS    | Y      | N      | N      | N      | Y  x16 | N      |
 | 3DES          | Y      | N      | N      | N      | Y  x16 | N      |
 | DES           | Y      | N      | N      | N      | Y  x16 | N      |

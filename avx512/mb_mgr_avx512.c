@@ -614,11 +614,13 @@ JOB_AES_HMAC *
 SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
                           const uint64_t key_size);
 
-extern void aes_docsis_dec_128_crc32_avx512(JOB_AES_HMAC *job);
+extern void aes_docsis_dec_crc32_avx512(JOB_AES_HMAC *job,
+                                        const uint64_t key_size);
 
 static JOB_AES_HMAC *
 submit_aes_docsis_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
-                                   JOB_AES_HMAC *job)
+                                   JOB_AES_HMAC *job,
+                                   const uint64_t key_size)
 {
         (void) state;
 
@@ -630,11 +632,12 @@ submit_aes_docsis_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
                 }
 
                 /* Cipher, NO CRC32 */
-                return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job, 16);
+                return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job, key_size);
         }
 
         /* Cipher + CRC32 // CRC32 */
-        aes_docsis_dec_128_crc32_avx512(job);
+        aes_docsis_dec_crc32_avx512(job, key_size);
+
         return job;
 }
 
@@ -642,11 +645,13 @@ submit_aes_docsis_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
 
 extern JOB_AES_HMAC *
 submit_job_aes_docsis_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
-                                       JOB_AES_HMAC *job);
+                                       JOB_AES_HMAC *job,
+                                       const uint64_t key_size);
 #define SUBMIT_JOB_DOCSIS_SEC_CRC_ENC submit_job_aes_docsis_enc_crc32_avx512
 
 extern JOB_AES_HMAC *
-flush_job_aes_docsis_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state);
+flush_job_aes_docsis_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                      const uint64_t key_size);
 #define FLUSH_JOB_DOCSIS_SEC_CRC_ENC  flush_job_aes_docsis_enc_crc32_avx512
 
 /* ====================================================================== */

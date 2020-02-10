@@ -253,7 +253,8 @@ SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
 #ifndef SUBMIT_JOB_DOCSIS_SEC_CRC_ENC
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+                              const uint64_t key_size)
 {
         if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
                 uint32_t *p_crc = (uint32_t *) job->auth_tag_output;
@@ -266,35 +267,40 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
                                      job->hash_start_src_offset_in_bytes +
                                      job->msg_len_to_hash_in_bytes);
         }
-        return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job, 16);
+        return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job, key_size);
 }
 #endif
 
 #ifndef FLUSH_JOB_DOCSIS_SEC_CRC_ENC
 __forceinline
 JOB_AES_HMAC *
-FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
+FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
+                             const uint64_t key_size)
 {
         /**
          * CRC has been already calculated.
          * Normal cipher flush only required.
          */
-        return FLUSH_JOB_DOCSIS_SEC_ENC(state, 16);
+        return FLUSH_JOB_DOCSIS_SEC_ENC(state, key_size);
 }
 #endif
 
 #ifndef SUBMIT_JOB_DOCSIS_SEC_CRC_DEC
 __forceinline
 JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+                              const uint64_t key_size)
 {
         (void) state;
 
         if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
-                DOCSIS_LAST_BLOCK(job, 16);
-                job = SUBMIT_JOB_AES128_DEC(job);
+                DOCSIS_LAST_BLOCK(job, key_size);
+                if (key_size == 16)
+                        job = SUBMIT_JOB_AES128_DEC(job);
+                else /* 32 */
+                        job = SUBMIT_JOB_AES256_DEC(job);
         } else {
-                job = DOCSIS_FIRST_BLOCK(job, 16);
+                job = DOCSIS_FIRST_BLOCK(job, key_size);
         }
 
         if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {

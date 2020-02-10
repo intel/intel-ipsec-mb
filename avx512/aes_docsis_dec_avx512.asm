@@ -52,7 +52,8 @@ endstruc
 %define arg2	rdx
 %endif
 
-%define job arg1
+%define job     arg1
+%define keysz   arg2
 
 %define tmp1	rbx
 %define tmp2	rbp
@@ -347,9 +348,9 @@ section .text
 
 ;; ===================================================================
 ;; ===================================================================
-;; AES128 CBC decryption on 1 to 8 blocks
+;; AES128/256 CBC decryption on 1 to 8 blocks
 ;; ===================================================================
-%macro AES128_CBC_DEC_1_TO_8 26-33
+%macro AES_CBC_DEC_1_TO_8 27-34
 %define %%SRC        %1  ; [in] GP with pointer to source buffer
 %define %%DST        %2  ; [in] GP with pointer to destination buffer
 %define %%NUMBL      %3  ; [in] numerical constant with number of blocks to process
@@ -375,14 +376,15 @@ section .text
 %define %%XC6        %23 ; [out] block of clear text (xmm0 - xmm15)
 %define %%XC7        %24 ; [out] block of clear text (xmm0 - xmm15)
 %define %%XTKEY      %25 ; [clobbered] temporary XMM (xmm0 - xmm15)
-%define %%XCRCB0     %26 ; [out] XMM (any) to receive copy of clear text, or "no_reg_copy"
-%define %%XCRCB1     %27 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB2     %28 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB3     %29 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB4     %30 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB5     %31 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB6     %32 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB7     %33 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
+%define %%NROUNDS    %26 ; [in] Number of rounds (9 or 13)
+%define %%XCRCB0     %27 ; [out] XMM (any) to receive copy of clear text, or "no_reg_copy"
+%define %%XCRCB1     %28 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
+%define %%XCRCB2     %29 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
+%define %%XCRCB3     %30 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
+%define %%XCRCB4     %31 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
+%define %%XCRCB5     %32 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
+%define %%XCRCB6     %33 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
+%define %%XCRCB7     %34 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
 
         ;; /////////////////////////////////////////////////
         ;; load cipher text blocks XD0-XD7
@@ -400,10 +402,10 @@ section .text
 %assign i (i+1)
 %endrep
 
-        ;; AES rounds 1 to 9 & CRC blocks 0 to 8
+        ;; AES rounds 1 to 9/13 & CRC blocks 0 to 8
 %assign crc_block 0
 %assign round 1
-%rep 9
+%rep %%NROUNDS
 
         ;; /////////////////////////////////////////////////
         ;; AES decrypt round
@@ -415,11 +417,11 @@ section .text
 %endrep ;; number of blocks
 %assign round (round + 1)
 
-%endrep ;; 9 x AES round (8 is max number of CRC blocks)
+%endrep ;; 9/13 x AES round (8 is max number of CRC blocks)
 
         ;; /////////////////////////////////////////////////
-        ;; AES round 10 (the last one)
-        vmovdqa64       %%XTKEY, [%%KEY_PTR + (10*16)]
+        ;; AES round 10/14 (the last one)
+        vmovdqa64       %%XTKEY, [%%KEY_PTR + (round*16)]
 %assign i 0
 %rep %%NUMBL
 	vaesdeclast     %%XC %+ i, %%XC %+ i, %%XTKEY
@@ -463,7 +465,7 @@ section .text
         ;; update lengths and offset
         add             %%OFFS, (%%NUMBL * 16)
         sub             %%NBYTES, (%%NUMBL * 16)
-%endmacro       ;; AES128_CBC_DEC_1_TO_8
+%endmacro       ;; AES_CBC_DEC_1_TO_8
 
 ;; ===================================================================
 ;; ===================================================================
@@ -501,12 +503,12 @@ section .text
 
 ;; ===================================================================
 ;; ===================================================================
-;; Stitched AES128 CBC decryption & CRC32 on 1 to 8 blocks
+;; Stitched AES128/256 CBC decryption & CRC32 on 1 to 8 blocks
 ;; XCRCINx - on input they include clear text input for CRC.
 ;;           They get updated towards the end of the macro with
 ;;           just decrypted set of blocks.
 ;; ===================================================================
-%macro AES128_CBC_DEC_CRC32_1_TO_8 38
+%macro AES_CBC_DEC_CRC32_1_TO_8 39
 %define %%SRC        %1  ; [in] GP with pointer to source buffer
 %define %%DST        %2  ; [in] GP with pointer to destination buffer
 %define %%NUMBL      %3  ; [in] numerical constant with number of blocks to cipher
@@ -533,18 +535,19 @@ section .text
 %define %%XC6        %24 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
 %define %%XC7        %25 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
 %define %%XTKEY      %26 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%CRC_TYPE   %27 ; [in] CRC operation: "first_crc" or "next_crc"
-%define %%CRC_MUL    %28 ; [in] XMM with CRC multiplier (xmm0 - xmm15)
-%define %%CRC_IN_OUT %29 ; [in/out] current CRC value
-%define %%XTMP       %30 ; [clobbered] temporary XMM (xmm0 - xmm15) - for CRC
-%define %%XCRCIN0    %31 ; [in/out] clear text block
-%define %%XCRCIN1    %32 ; [in/out] clear text block
-%define %%XCRCIN2    %33 ; [in/out] clear text block
-%define %%XCRCIN3    %34 ; [in/out] clear text block
-%define %%XCRCIN4    %35 ; [in/out] clear text block
-%define %%XCRCIN5    %36 ; [in/out] clear text block
-%define %%XCRCIN6    %37 ; [in/out] clear text block
-%define %%XCRCIN7    %38 ; [in/out] clear text block
+%define %%NROUNDS    %27 ; [in] Number of rounds (9 or 13)
+%define %%CRC_TYPE   %28 ; [in] CRC operation: "first_crc" or "next_crc"
+%define %%CRC_MUL    %29 ; [in] XMM with CRC multiplier (xmm0 - xmm15)
+%define %%CRC_IN_OUT %30 ; [in/out] current CRC value
+%define %%XTMP       %31 ; [clobbered] temporary XMM (xmm0 - xmm15) - for CRC
+%define %%XCRCIN0    %32 ; [in/out] clear text block
+%define %%XCRCIN1    %33 ; [in/out] clear text block
+%define %%XCRCIN2    %34 ; [in/out] clear text block
+%define %%XCRCIN3    %35 ; [in/out] clear text block
+%define %%XCRCIN4    %36 ; [in/out] clear text block
+%define %%XCRCIN5    %37 ; [in/out] clear text block
+%define %%XCRCIN6    %38 ; [in/out] clear text block
+%define %%XCRCIN7    %39 ; [in/out] clear text block
 
         ;; /////////////////////////////////////////////////
         ;; load cipher text blocks XD0-XD7
@@ -562,10 +565,10 @@ section .text
 %assign i (i+1)
 %endrep
 
-        ;; AES rounds 1 to 9 & CRC blocks 0 to 8
+        ;; AES rounds 1 to 9/13 & CRC blocks 0 to 8
 %assign crc_block 0
 %assign round 1
-%rep 9
+%rep %%NROUNDS
 
         ;; /////////////////////////////////////////////////
         ;; AES decrypt round
@@ -593,11 +596,11 @@ section .text
 %endif          ;; crc_block < %%NUMBL_CRC
 %assign crc_block (crc_block + 1)
 
-%endrep ;; 9 x AES round (8 is max number of CRC blocks)
+%endrep ;; 9/13 x AES round (8 is max number of CRC blocks)
 
         ;; /////////////////////////////////////////////////
-        ;; AES round 10 (the last one)
-        vmovdqa64       %%XTKEY, [%%KEY_PTR + (10*16)]
+        ;; AES round 10/14 (the last one)
+        vmovdqa64       %%XTKEY, [%%KEY_PTR + (round*16)]
 %assign i 0
 %rep %%NUMBL
 	vaesdeclast     %%XC %+ i, %%XC %+ i, %%XTKEY
@@ -641,13 +644,13 @@ section .text
         add             %%OFFS, (%%NUMBL * 16)
         sub             %%NBYTES, (%%NUMBL * 16)
 
-%endmacro       ;; AES128_CBC_DEC_CRC32_1_TO_8
+%endmacro       ;; AES_CBC_DEC_CRC32_1_TO_8
 
 ;; ===================================================================
 ;; ===================================================================
 ;; DOCSIS SEC BPI (AES based) decryption + CRC32
 ;; ===================================================================
-%macro DOCSIS_DEC_CRC32 39
+%macro DOCSIS_DEC_CRC32 40
 %define %%KEYS       %1   ;; [in] GP with pointer to expanded keys (decrypt)
 %define %%SRC        %2   ;; [in] GP with pointer to source buffer
 %define %%DST        %3   ;; [in] GP with pointer to destination buffer
@@ -689,6 +692,7 @@ section .text
 %define %%ZT30       %37  ;; [clobbered] temporary ZMM
 %define %%ZT31       %38  ;; [clobbered] temporary ZMM
 %define %%ZT32       %39  ;; [clobbered] temporary ZMM
+%define %%NROUNDS    %40  ;; [in] Number of rounds (9 or 13)
 
 %define %%NUM_BLOCKS %%GT1
 %define %%OFFSET     %%GT2
@@ -772,15 +776,15 @@ section .text
 %%_eq %+ align_blocks :
         ;; Start building the pipeline by decrypting number of blocks
         ;; - later cipher & CRC operations get stitched
-        AES128_CBC_DEC_1_TO_8 %%SRC, %%DST, align_blocks, %%OFFSET, %%NUM_BYTES, \
-                              %%XKEY0, %%KEYS, %%XIV, \
-                              %%XT0, %%XT1, %%XT2, %%XT3, \
-                              %%XT4, %%XT5, %%XT6, %%XT7, \
-                              %%XCIPH0, %%XCIPH1, %%XCIPH2, %%XCIPH3, \
-                              %%XCIPH4, %%XCIPH5, %%XCIPH6, %%XCIPH7, \
-                              %%XTMP0, \
-                              %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,     \
-                              %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
+        AES_CBC_DEC_1_TO_8 %%SRC, %%DST, align_blocks, %%OFFSET, %%NUM_BYTES, \
+                           %%XKEY0, %%KEYS, %%XIV, \
+                           %%XT0, %%XT1, %%XT2, %%XT3, \
+                           %%XT4, %%XT5, %%XT6, %%XT7, \
+                           %%XCIPH0, %%XCIPH1, %%XCIPH2, %%XCIPH3, \
+                           %%XCIPH4, %%XCIPH5, %%XCIPH6, %%XCIPH7, \
+                           %%XTMP0, %%NROUNDS, \
+                           %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,     \
+                           %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
         cmp     %%NUM_BYTES, (8*16)
         jae     %%_eq %+ align_blocks %+ _next_8
 
@@ -798,16 +802,16 @@ section .text
         ;;  8 or more blocks remaining in the message
         ;; - compute CRC on decrypted blocks while decrypting next 8 blocks
         ;; - next jump to the main loop to do parallel decrypt and crc32
-        AES128_CBC_DEC_CRC32_1_TO_8 %%SRC, %%DST, 8, align_blocks, %%OFFSET, %%NUM_BYTES, \
-                              %%XKEY0, %%KEYS, %%XIV, \
-                              %%XT0, %%XT1, %%XT2, %%XT3, \
-                              %%XT4, %%XT5, %%XT6, %%XT7, \
-                              %%XCIPH0, %%XCIPH1, %%XCIPH2, %%XCIPH3, \
-                              %%XCIPH4, %%XCIPH5, %%XCIPH6, %%XCIPH7, \
-                              %%XTMP0, \
-                              first_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP1, \
-                              %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,       \
-                              %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
+        AES_CBC_DEC_CRC32_1_TO_8 %%SRC, %%DST, 8, align_blocks, %%OFFSET, %%NUM_BYTES, \
+                                 %%XKEY0, %%KEYS, %%XIV, \
+                                 %%XT0, %%XT1, %%XT2, %%XT3, \
+                                 %%XT4, %%XT5, %%XT6, %%XT7, \
+                                 %%XCIPH0, %%XCIPH1, %%XCIPH2, %%XCIPH3, \
+                                 %%XCIPH4, %%XCIPH5, %%XCIPH6, %%XCIPH7, \
+                                 %%XTMP0, %%NROUNDS, \
+                                 first_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP1, \
+                                 %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,       \
+                                 %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
         jmp	%%_main_loop
 
 %assign align_blocks (align_blocks + 1)
@@ -822,13 +826,13 @@ section .text
         ;; Stitched cipher and CRC
         ;; - ciphered blocks: n + 0, n + 1, n + 2, n + 3, n + 4, n + 5, n + 6, n + 7
         ;; - crc'ed blocks: n - 8, n - 7, n - 6, n - 5, n - 4, n - 3, n - 2, n - 1
-        AES128_CBC_DEC_CRC32_1_TO_8 %%SRC, %%DST, 8, 8, %%OFFSET, %%NUM_BYTES, \
+        AES_CBC_DEC_CRC32_1_TO_8 %%SRC, %%DST, 8, 8, %%OFFSET, %%NUM_BYTES, \
                               %%XKEY0, %%KEYS, %%XIV, \
                               %%XT0, %%XT1, %%XT2, %%XT3, \
                               %%XT4, %%XT5, %%XT6, %%XT7, \
                               %%XCIPH0, %%XCIPH1, %%XCIPH2, %%XCIPH3, \
                               %%XCIPH4, %%XCIPH5, %%XCIPH6, %%XCIPH7, \
-                              %%XTMP0, \
+                              %%XTMP0, %%NROUNDS, \
                               next_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP1, \
                               %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,       \
                               %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
@@ -847,21 +851,17 @@ section .text
         or      %%NUM_BYTES, %%NUM_BYTES
         jz      %%_no_partial_bytes
 
-        ;; AES128-CFB on the partial block
+        ;; AES128/256-CFB on the partial block
         lea             %%GT1, [rel byte_len_to_mask_table]
         kmovw           k1, [%%GT1 + %%NUM_BYTES*2]
         vmovdqu8        %%XTMP1{k1}{z}, [%%SRC + %%OFFSET + 0]
         vpxorq          %%XTMP0, %%XIV, [%%KEYS_ENC + 0*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 1*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 2*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 3*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 4*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 5*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 6*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 7*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 8*16]
-        vaesenc         %%XTMP0, [%%KEYS_ENC + 9*16]
-        vaesenclast     %%XTMP0, [%%KEYS_ENC + 10*16]
+%assign i 1
+%rep %%NROUNDS
+        vaesenc         %%XTMP0, [%%KEYS_ENC + i*16]
+%assign i (i + 1)
+%endrep
+        vaesenclast     %%XTMP0, [%%KEYS_ENC + i*16]
         vpxorq          %%XTMP0, %%XTMP0, %%XTMP1
         vmovdqu8        [%%DST + %%OFFSET + 0]{k1}, %%XTMP0
 
@@ -979,10 +979,11 @@ section .text
 ;; ===================================================================
 ;; ===================================================================
 ;; input: arg1 = job
+;;        arg2 = key size
 ;; ===================================================================
 align 64
-MKGLOBAL(aes_docsis_dec_128_crc32_avx512,function,internal)
-aes_docsis_dec_128_crc32_avx512:
+MKGLOBAL(aes_docsis_dec_crc32_avx512,function,internal)
+aes_docsis_dec_crc32_avx512:
 	mov	        rax, rsp
 	sub	        rsp, STACKFRAME_size
 	and	        rsp, -64
@@ -1001,11 +1002,11 @@ aes_docsis_dec_128_crc32_avx512:
         prefetchw       [tmp1 + 1*64]
 
         cmp             qword [job + _msg_len_to_cipher_in_bytes], 0
-        jz              aes_docsis_dec_128_crc32_avx512__no_cipher
+        jz              aes_docsis_dec_crc32_avx512__no_cipher
 
         mov             tmp2, [job + _cipher_start_src_offset_in_bytes]
         cmp             tmp2, [job + _hash_start_src_offset_in_bytes]
-        jbe             aes_docsis_dec_128_crc32_avx512__skip_aad       ; avoid zero lengths or negative cases
+        jbe             aes_docsis_dec_crc32_avx512__skip_aad       ; avoid zero lengths or negative cases
 
         sub             tmp2, [job + _hash_start_src_offset_in_bytes]   ; CRC only size / AAD
 
@@ -1014,7 +1015,7 @@ aes_docsis_dec_128_crc32_avx512:
         not             eax             ; carry CRC value into the combined part
         vmovd           xmm15, eax      ; initial CRC value
 
-aes_docsis_dec_128_crc32_avx512__skip_aad:
+aes_docsis_dec_crc32_avx512__skip_aad:
         mov             tmp1, [job + _iv]
 	vmovdqu64       xmm14, [tmp1]   ; load IV
 
@@ -1027,22 +1028,37 @@ aes_docsis_dec_128_crc32_avx512__skip_aad:
         mov             tmp5, [job + _aes_dec_key_expanded]
         mov             tmp6, [job + _aes_enc_key_expanded]
 
+        test            keysz, 32
+        jnz             docsis_dec_crc32_key_256
+
         DOCSIS_DEC_CRC32 tmp5, tmp2, tmp3, tmp4, tmp6, \
                          tmp7, tmp8, \
                          xmm15, xmm14, \
                          zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
                          zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
                          zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31
+                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, 9
 
-        jmp             aes_docsis_dec_128_crc32_avx512__exit
+        jmp             docsis_dec_crc32_end
+docsis_dec_crc32_key_256:
 
-aes_docsis_dec_128_crc32_avx512__no_cipher:
+        DOCSIS_DEC_CRC32 tmp5, tmp2, tmp3, tmp4, tmp6, \
+                         tmp7, tmp8, \
+                         xmm15, xmm14, \
+                         zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                         zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
+                         zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, 13
+
+docsis_dec_crc32_end:
+        jmp             aes_docsis_dec_crc32_avx512__exit
+
+aes_docsis_dec_crc32_avx512__no_cipher:
         ;; tmp1 - already points to hash start
         mov             tmp2, [job + _msg_len_to_hash_in_bytes]
         ETHERNET_FCS_CRC tmp1, tmp2, rax, xmm15, tmp3, xmm0, xmm1, xmm2, xmm3
 
-aes_docsis_dec_128_crc32_avx512__exit:
+aes_docsis_dec_crc32_avx512__exit:
         mov             tmp1, [job + _auth_tag_output]
 	mov             [tmp1], eax        ; store CRC32 value
 

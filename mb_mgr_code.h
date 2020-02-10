@@ -335,7 +335,8 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 &state->docsis_crc32_sec_ooo;
 
-                        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(p_ooo, job);
+                        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(p_ooo, job,
+                                                job->aes_key_len_in_bytes);
                 } else {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
 
@@ -408,7 +409,8 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 &state->docsis_crc32_sec_ooo;
 
-                        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(p_ooo);
+                        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(p_ooo,
+                                                job->aes_key_len_in_bytes);
                 } else {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
 
@@ -466,7 +468,8 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                 MB_MGR_DOCSIS_AES_OOO *p_ooo = &state->docsis_sec_ooo;
 
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32)
-                        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(p_ooo, job);
+                        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(p_ooo, job,
+                                                job->aes_key_len_in_bytes);
                 else
                         return SUBMIT_JOB_DOCSIS_SEC_DEC(p_ooo, job,
                                                 job->aes_key_len_in_bytes);

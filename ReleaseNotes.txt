@@ -23,6 +23,7 @@ Library
   changed from by4 to by8
 - Added by8/x8 implementations of SSE AES128-CBC, AES192-CBC, AES256-CBC,
   DOCSIS SEC BPI, AES-CCM and AES-CMAC.
+- AES256-DOCSIS algorithm added.
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through
@@ -34,6 +35,7 @@ LibTestApp
   through job API
 - Extended ZUC tests to validate ZUC-EIA3 multi-buffer implementation
   through direct and job API
+- Extended AES-DOCSIS tests with 256-bit keys
 
 LibPerfApp
 - Added support for ZUC-EEA3 and ZUC-EIA3 algorithms
