@@ -69,7 +69,7 @@
 #define SEED 0xdeadcafe
 #define PT_PATTERN 0x44444444
 #define CIPH_KEY_PATTERN 0x33333333
-#define AUTH_KEY_PATTERN 0x66666666
+#define AUTH_KEY_PATTERN 0xCCCCCCCC
 #define STACK_DEPTH 8192
 
 enum arch_type_e {
