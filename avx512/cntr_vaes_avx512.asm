@@ -51,6 +51,9 @@ SHUF_MASK:
         dq     0x08090A0B0C0D0E0F, 0x0001020304050607
         dq     0x08090A0B0C0D0E0F, 0x0001020304050607
 
+align 16
+set_byte15:     DQ 0x0000000000000000, 0x0100000000000000
+
 align 64
 ddq_add_13_16:
         dq	0x000000000000000d, 0x0000000000000000
@@ -1067,7 +1070,7 @@ default rel
 %macro  CNTR_ENC_DEC         3
 %define %%JOB               %1  ; [in/out] job
 %define %%NROUNDS           %2  ; [in] number of rounds; numerical value
-%define %%CNTR_TYPE         %3  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%CNTR_TYPE         %3  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CCM)
 
 %define %%KEY               rax
 %define %%CYPH_PLAIN_OUT    rdx
@@ -1099,12 +1102,76 @@ default rel
 
 %define %%MASKREG               k1
 
+%define %%FLAGS                 %%IA0
+%define %%P_IV                  %%IA1
+%define %%IV_LEN                %%IA2
+
 ;;; Macro flow:
 ;;; - calculate the number of 16byte blocks in the message
 ;;; - process (number of 16byte blocks) mod 16 '%%_initial_num_blocks_is_# .. %%_initial_blocks_encrypted'
 ;;; - process 16x16 byte blocks at a time until all are done in %%_encrypt_by_16_new
 
-        mov             %%LENGTH, [%%JOB + _msg_len_to_cipher]
+%ifidn %%CNTR_TYPE, CCM
+        mov     %%PLAIN_CYPH_IN, [%%JOB + _src]
+        add     %%PLAIN_CYPH_IN, [%%JOB + _cipher_start_src_offset_in_bytes]
+        mov     %%IV_LEN, [%%JOB + _iv_len_in_bytes]
+        mov	%%LENGTH, [%%JOB + _msg_len_to_cipher_in_bytes]
+        mov     %%KEY, [%%JOB + _aes_enc_key_expanded]
+        mov     %%CYPH_PLAIN_OUT, [%%JOB + _dst]
+
+        xor     %%DATA_OFFSET, %%DATA_OFFSET
+
+        ;; Prepare IV ;;
+
+        ;; Byte 0: flags with L'
+        ;; Calculate L' = 15 - Nonce length - 1 = 14 - IV length
+        mov     %%FLAGS, 14
+        sub     %%FLAGS, %%IV_LEN
+        vmovd   %%CTR_BLOCKx, DWORD(%%FLAGS)
+        ;; Bytes 1 - 13: Nonce (7 - 13 bytes long)
+
+        ;; Bytes 1 - 7 are always copied (first 7 bytes)
+        mov     %%P_IV, [%%JOB + _iv]
+        vpinsrb %%CTR_BLOCKx, [%%P_IV], 1
+        vpinsrw %%CTR_BLOCKx, [%%P_IV + 1], 1
+        vpinsrd %%CTR_BLOCKx, [%%P_IV + 3], 1
+
+        cmp     %%IV_LEN, 7
+        je      %%_finish_nonce_move
+
+        cmp     %%IV_LEN, 8
+        je      %%_iv_length_8
+        cmp     %%IV_LEN, 9
+        je      %%_iv_length_9
+        cmp     %%IV_LEN, 10
+        je      %%_iv_length_10
+        cmp     %%IV_LEN, 11
+        je      %%_iv_length_11
+        cmp     %%IV_LEN, 12
+        je      %%_iv_length_12
+
+        ;; Bytes 8 - 13
+%%_iv_length_13:
+        vpinsrb %%CTR_BLOCKx, [%%P_IV + 12], 13
+%%_iv_length_12:
+        vpinsrb %%CTR_BLOCKx, [%%P_IV + 11], 12
+%%_iv_length_11:
+        vpinsrd %%CTR_BLOCKx, [%%P_IV + 7], 2
+        jmp     %%_finish_nonce_move
+%%_iv_length_10:
+        vpinsrb %%CTR_BLOCKx, [%%P_IV + 9], 10
+%%_iv_length_9:
+        vpinsrb %%CTR_BLOCKx, [%%P_IV + 8], 9
+%%_iv_length_8:
+        vpinsrb %%CTR_BLOCKx, [%%P_IV + 7], 8
+
+%%_finish_nonce_move:
+        ; last byte = 1
+        vpor    %%CTR_BLOCKx, [rel set_byte15]
+
+%else ;; CNTR/CNTR_BIT
+
+        mov     %%LENGTH, [%%JOB + _msg_len_to_cipher]
         ;; calculate len
         ;; convert bits to bytes (message length in bits for CNTR_BIT)
 %ifidn %%CNTR_TYPE, CNTR_BIT
@@ -1128,6 +1195,8 @@ default rel
         mov             %%CYPH_PLAIN_OUT, [%%JOB + _dst]
         mov             %%KEY, [%%JOB + _aes_enc_key_expanded]
 
+%endif ;; CNTR_TYPE
+
         ;; Prepare round keys (only first 10, due to lack of registers)
 %assign i 0
 %rep (%%NROUNDS + 2)
@@ -1147,10 +1216,12 @@ default rel
 
         kmovq           %%MASKREG, %%IA0
         vmovdqu8        %%CTR_BLOCKx{%%MASKREG}, [%%IA1]
-%else ;; CNTR_BIT
+%endif ;; CNTR
+
+%ifidn %%CNTR_TYPE, CNTR_BIT
         ;; Read the full 16 bytes of IV
         vmovdqu8        %%CTR_BLOCKx, [%%IA1]
-%endif ;; CNTR/CNTR_BIT
+%endif ;; CNTR_BIT
 
         vmovdqa64       %%SHUFREG, [rel SHUF_MASK]
         ;; store IV as counter in LE format
@@ -1438,9 +1509,29 @@ default rel
                 %%RBITS
 
 %%_enc_dec_done:
+%ifidn %%CNTR_TYPE, CCM
+	mov	rax, %%JOB
+	or	dword [rax + _status], STS_COMPLETED_AES
+%endif
 
 %endmacro                       ; CNTR_ENC_DEC
 
+%ifdef CNTR_CCM_AVX512
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;JOB_AES_HMAC * aes_cntr_ccm_128_vaes_avx512(JOB_AES_HMAC *job)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes_cntr_ccm_128_vaes_avx512,function,internal)
+aes_cntr_ccm_128_vaes_avx512:
+        FUNC_SAVE CNTR
+        ;; arg1 - [in] job
+        ;; arg2 - [in] NROUNDS
+        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CCM)
+        CNTR_ENC_DEC arg1, 9, CCM
+        FUNC_RESTORE CNTR
+
+        ret
+
+%else
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void aes_cntr_128_submit_vaes_avx512 (JOB_AES_HMAC *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1524,6 +1615,8 @@ aes_cntr_bit_256_submit_vaes_avx512:
         FUNC_RESTORE CNTR_BIT
 
         ret
+
+%endif ;; CNTR_CCM_AVX512
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
