@@ -112,6 +112,8 @@ JOB_AES_HMAC *submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state,
                                         JOB_AES_HMAC *job);
 JOB_AES_HMAC *flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
 
+JOB_AES_HMAC *aes_cntr_ccm_128_vaes_avx512(JOB_AES_HMAC *job);
+
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
@@ -150,7 +152,7 @@ JOB_AES_HMAC *flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
 #define AES_CNTR_192       aes_cntr_192_avx
 #define AES_CNTR_256       aes_cntr_256_avx
 
-#define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx
+#define AES_CNTR_CCM_128   aes_cntr_ccm_128_avx512
 
 #define AES_ECB_ENC_128       aes_ecb_enc_128_avx
 #define AES_ECB_ENC_192       aes_ecb_enc_192_avx
@@ -228,6 +230,11 @@ JOB_AES_HMAC *submit_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state,
 
 JOB_AES_HMAC *flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 
+JOB_AES_HMAC *submit_job_aes_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state,
+                                                  JOB_AES_HMAC *job);
+
+JOB_AES_HMAC *flush_job_aes_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
+
 #define SUBMIT_JOB_HMAC               submit_job_hmac_avx512
 #define FLUSH_JOB_HMAC                flush_job_hmac_avx512
 #define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx512
@@ -294,8 +301,8 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 
 #define AES_CFB_128_ONE    aes_cfb_128_one_avx512
 
-#define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_avx
-#define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_avx
+#define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_avx512
+#define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_avx512
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_avx512
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_avx512
@@ -587,6 +594,17 @@ static JOB_AES_HMAC *
 (*flush_job_aes_cmac_auth_avx512)
         (MB_MGR_CMAC_OOO *state) = flush_job_aes_cmac_auth_avx;
 
+static JOB_AES_HMAC *
+(*submit_job_aes_ccm_auth_avx512)
+        (MB_MGR_CCM_OOO *state,
+         JOB_AES_HMAC *job) = submit_job_aes_ccm_auth_avx;
+
+static JOB_AES_HMAC *
+(*flush_job_aes_ccm_auth_avx512)
+        (MB_MGR_CCM_OOO *state) = flush_job_aes_ccm_auth_avx;
+
+static JOB_AES_HMAC *
+(*aes_cntr_ccm_128_avx512) (JOB_AES_HMAC *job) = aes_cntr_ccm_128_avx;
 
 /* ====================================================================== */
 
@@ -666,6 +684,11 @@ init_mb_mgr_avx512(MB_MGR *state)
                         submit_job_aes_cmac_auth_vaes_avx512;
                 flush_job_aes_cmac_auth_avx512 =
                         flush_job_aes_cmac_auth_vaes_avx512;
+                submit_job_aes_ccm_auth_avx512 =
+                        submit_job_aes_ccm_auth_vaes_avx512;
+                flush_job_aes_ccm_auth_avx512 =
+                        flush_job_aes_ccm_auth_vaes_avx512;
+                aes_cntr_ccm_128_avx512 = aes_cntr_ccm_128_vaes_avx512;
         }
 
         /* Init AES out-of-order fields */
@@ -1062,16 +1085,29 @@ init_mb_mgr_avx512(MB_MGR *state)
         }
 
         /* Init AES-CCM auth out-of-order fields */
-        for (j = 0; j < 8; j++) {
-                state->aes_ccm_ooo.init_done[j] = 0;
-                state->aes_ccm_ooo.lens[j] = 0;
-                state->aes_ccm_ooo.job_in_lane[j] = NULL;
-        }
-        for (; j < 16; j++)
-                state->aes_ccm_ooo.lens[j] = 0xFFFF;
+        if (vaes_support) {
+                /* init 16 lanes */
+                memset(state->aes_ccm_ooo.init_done, 0,
+                       sizeof(state->aes_ccm_ooo.init_done));
+                memset(state->aes_ccm_ooo.lens, 0,
+                       sizeof(state->aes_ccm_ooo.lens));
+                memset(state->aes_ccm_ooo.job_in_lane, 0,
+                       sizeof(state->aes_ccm_ooo.job_in_lane));
+                state->aes_ccm_ooo.unused_lanes = 0xFEDCBA9876543210;
+                state->aes_ccm_ooo.num_lanes_inuse = 0;
+        } else {
+                /* init 8 lanes */
+                for (j = 0; j < 8; j++) {
+                        state->aes_ccm_ooo.init_done[j] = 0;
+                        state->aes_ccm_ooo.lens[j] = 0;
+                        state->aes_ccm_ooo.job_in_lane[j] = NULL;
+                }
+                for (; j < 16; j++)
+                        state->aes_ccm_ooo.lens[j] = 0xFFFF;
 
-        state->aes_ccm_ooo.unused_lanes = 0xF76543210;
-        state->aes_ccm_ooo.num_lanes_inuse = 0;
+                state->aes_ccm_ooo.unused_lanes = 0xF76543210;
+                state->aes_ccm_ooo.num_lanes_inuse = 0;
+        }
 
         /* Init AES-CMAC auth out-of-order fields */
         if (vaes_support) {

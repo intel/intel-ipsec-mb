@@ -234,6 +234,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\des_basic.obj \
 	$(OBJ_DIR)\des_x16_avx512.obj \
 	$(OBJ_DIR)\cntr_vaes_avx512.obj \
+        $(OBJ_DIR)\cntr_ccm_vaes_avx512.obj \
         $(OBJ_DIR)\aes_cbc_dec_vaes_avx512.obj \
         $(OBJ_DIR)\aes_cbc_enc_vaes_avx512.obj \
         $(OBJ_DIR)\mb_mgr_aes_submit_avx512.obj \
@@ -247,7 +248,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\constant_lookup.obj \
 	$(OBJ_DIR)\ethernet_fcs_sse.obj \
 	$(OBJ_DIR)\ethernet_fcs_avx.obj \
-	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_vaes_avx512.obj
+	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_vaes_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_avx.obj \
