@@ -45,6 +45,50 @@ extern AES128_CBC_MAC
 section .data
 default rel
 
+align 64
+byte_len_to_mask_table:
+        dw      0x0000, 0x0001, 0x0003, 0x0007,
+        dw      0x000f, 0x001f, 0x003f, 0x007f,
+        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
+        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
+        dw      0xffff
+
+align 64
+byte64_len_to_mask_table:
+        dq      0x0000000000000000, 0x0000000000000001
+        dq      0x0000000000000003, 0x0000000000000007
+        dq      0x000000000000000f, 0x000000000000001f
+        dq      0x000000000000003f, 0x000000000000007f
+        dq      0x00000000000000ff, 0x00000000000001ff
+        dq      0x00000000000003ff, 0x00000000000007ff
+        dq      0x0000000000000fff, 0x0000000000001fff
+        dq      0x0000000000003fff, 0x0000000000007fff
+        dq      0x000000000000ffff, 0x000000000001ffff
+        dq      0x000000000003ffff, 0x000000000007ffff
+        dq      0x00000000000fffff, 0x00000000001fffff
+        dq      0x00000000003fffff, 0x00000000007fffff
+        dq      0x0000000000ffffff, 0x0000000001ffffff
+        dq      0x0000000003ffffff, 0x0000000007ffffff
+        dq      0x000000000fffffff, 0x000000001fffffff
+        dq      0x000000003fffffff, 0x000000007fffffff
+        dq      0x00000000ffffffff, 0x00000001ffffffff
+        dq      0x00000003ffffffff, 0x00000007ffffffff
+        dq      0x0000000fffffffff, 0x0000001fffffffff
+        dq      0x0000003fffffffff, 0x0000007fffffffff
+        dq      0x000000ffffffffff, 0x000001ffffffffff
+        dq      0x000003ffffffffff, 0x000007ffffffffff
+        dq      0x00000fffffffffff, 0x00001fffffffffff
+        dq      0x00003fffffffffff, 0x00007fffffffffff
+        dq      0x0000ffffffffffff, 0x0001ffffffffffff
+        dq      0x0003ffffffffffff, 0x0007ffffffffffff
+        dq      0x000fffffffffffff, 0x001fffffffffffff
+        dq      0x003fffffffffffff, 0x007fffffffffffff
+        dq      0x00ffffffffffffff, 0x01ffffffffffffff
+        dq      0x03ffffffffffffff, 0x07ffffffffffffff
+        dq      0x0fffffffffffffff, 0x1fffffffffffffff
+        dq      0x3fffffffffffffff, 0x7fffffffffffffff
+        dq      0xffffffffffffffff
+
 align 16
 len_mask:
         dq 0xFFFFFFFFFFFFFFF0
@@ -315,43 +359,14 @@ endstruc
         or      flags, tmp
 
         ;; Bytes 1 - 13: Nonce (7 - 13 bytes long)
-
         ;; Bytes 1 - 7 are always copied (first 7 bytes)
         mov     tmp, [job + _iv]
-        vpinsrb init_block0, [tmp], 1
-        vpinsrw init_block0, [tmp + 1], 1
-        vpinsrd init_block0, [tmp + 3], 1
 
-        cmp     iv_len, 7
-        je      %%_finish_nonce_move
+        lea     tmp2, [rel byte_len_to_mask_table]
+        kmovw   k1, [tmp2 + iv_len*2]
 
-        cmp     iv_len, 8
-        je      %%_iv_length_8
-        cmp     iv_len, 9
-        je      %%_iv_length_9
-        cmp     iv_len, 10
-        je      %%_iv_length_10
-        cmp     iv_len, 11
-        je      %%_iv_length_11
-        cmp     iv_len, 12
-        je      %%_iv_length_12
-
-        ;; Bytes 8 - 13
-%%_iv_length_13:
-        vpinsrb init_block0, [tmp + 12], 13
-%%_iv_length_12:
-        vpinsrb init_block0, [tmp + 11], 12
-%%_iv_length_11:
-        vpinsrd init_block0, [tmp + 7], 2
-        jmp     %%_finish_nonce_move
-%%_iv_length_10:
-        vpinsrb init_block0, [tmp + 9], 10
-%%_iv_length_9:
-        vpinsrb init_block0, [tmp + 8], 9
-%%_iv_length_8:
-        vpinsrb init_block0, [tmp + 7], 8
-
-%%_finish_nonce_move:
+        vmovdqu8 init_block0{k1}, [tmp]
+        vpslldq init_block0, init_block0, 1
 
         ;; Bytes 14 & 15 (message length), in Big Endian
         mov     ax, [job + _msg_len_to_hash_in_bytes]
@@ -409,8 +424,13 @@ endstruc
         xchg    al, ah
         mov     [tmp], ax
         add     tmp, 2
+
+        lea     tmp2, [rel byte64_len_to_mask_table]
+        kmovq   k1, [tmp2 + aad_len*8]
+
         mov     tmp2, [job + _cbcmac_aad]
-        memcpy_avx_64_1 tmp, tmp2, aad_len, tmp3, tmp4, xtmp0, xtmp1, xtmp2, XWORD(ytmp3)
+        vmovdqu8 ZWORD(xtmp0){k1}, [tmp2]
+        vmovdqu8 [tmp]{k1}, ZWORD(xtmp0)
 
 %%_aad_complete:
 
