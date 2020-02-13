@@ -51,9 +51,6 @@ SHUF_MASK:
         dq     0x08090A0B0C0D0E0F, 0x0001020304050607
         dq     0x08090A0B0C0D0E0F, 0x0001020304050607
 
-align 16
-set_byte15:     DQ 0x0000000000000000, 0x0100000000000000
-
 align 64
 ddq_add_13_16:
         dq	0x000000000000000d, 0x0000000000000000
@@ -116,6 +113,14 @@ ddq_add_16:
         dq	0x0000000000000010, 0x0000000000000000
         dq	0x0000000000000010, 0x0000000000000000
         dq	0x0000000000000010, 0x0000000000000000
+
+align 64
+byte_len_to_mask_table:
+        dw      0x0000, 0x0001, 0x0003, 0x0007,
+        dw      0x000f, 0x001f, 0x003f, 0x007f,
+        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
+        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
+        dw      0xffff
 
 align 64
 byte64_len_to_mask_table:
@@ -1082,6 +1087,7 @@ default rel
 %define %%IA0               r10
 %define %%IA1               r11
 %define %%IA2               r12
+%define %%IA3               r15
 
 %define %%CTR_BLOCKx            xmm0
 %define %%CTR_BLOCK_1_4          zmm1
@@ -1102,9 +1108,11 @@ default rel
 
 %define %%MASKREG               k1
 
+;; vars only used for CCM initial block preparation
 %define %%FLAGS                 %%IA0
 %define %%P_IV                  %%IA1
 %define %%IV_LEN                %%IA2
+%define %%IV_MASK               r8
 
 ;;; Macro flow:
 ;;; - calculate the number of 16byte blocks in the message
@@ -1112,62 +1120,30 @@ default rel
 ;;; - process 16x16 byte blocks at a time until all are done in %%_encrypt_by_16_new
 
 %ifidn %%CNTR_TYPE, CCM
-        mov     %%PLAIN_CYPH_IN, [%%JOB + _src]
-        add     %%PLAIN_CYPH_IN, [%%JOB + _cipher_start_src_offset_in_bytes]
+       ;; prepare initial block
         mov     %%IV_LEN, [%%JOB + _iv_len_in_bytes]
-        mov	%%LENGTH, [%%JOB + _msg_len_to_cipher_in_bytes]
-        mov     %%KEY, [%%JOB + _aes_enc_key_expanded]
-        mov     %%CYPH_PLAIN_OUT, [%%JOB + _dst]
-
-        xor     %%DATA_OFFSET, %%DATA_OFFSET
 
         ;; Prepare IV ;;
+        mov     %%P_IV, [%%JOB + _iv]
 
         ;; Byte 0: flags with L'
         ;; Calculate L' = 15 - Nonce length - 1 = 14 - IV length
         mov     %%FLAGS, 14
         sub     %%FLAGS, %%IV_LEN
-        vmovd   %%CTR_BLOCKx, DWORD(%%FLAGS)
+
         ;; Bytes 1 - 13: Nonce (7 - 13 bytes long)
+        lea     %%IV_MASK, [rel byte_len_to_mask_table]
+        kmovw   %%MASKREG, [%%IV_MASK + %%IV_LEN*2]
+        vmovdqu8 %%CTR_BLOCKx{%%MASKREG}{z}, [%%P_IV]
 
-        ;; Bytes 1 - 7 are always copied (first 7 bytes)
-        mov     %%P_IV, [%%JOB + _iv]
-        vpinsrb %%CTR_BLOCKx, [%%P_IV], 1
-        vpinsrw %%CTR_BLOCKx, [%%P_IV + 1], 1
-        vpinsrd %%CTR_BLOCKx, [%%P_IV + 3], 1
+        vpslldq %%CTR_BLOCKx, %%CTR_BLOCKx, 1
+        vpinsrb %%CTR_BLOCKx, BYTE(%%FLAGS), 0
 
-        cmp     %%IV_LEN, 7
-        je      %%_finish_nonce_move
-
-        cmp     %%IV_LEN, 8
-        je      %%_iv_length_8
-        cmp     %%IV_LEN, 9
-        je      %%_iv_length_9
-        cmp     %%IV_LEN, 10
-        je      %%_iv_length_10
-        cmp     %%IV_LEN, 11
-        je      %%_iv_length_11
-        cmp     %%IV_LEN, 12
-        je      %%_iv_length_12
-
-        ;; Bytes 8 - 13
-%%_iv_length_13:
-        vpinsrb %%CTR_BLOCKx, [%%P_IV + 12], 13
-%%_iv_length_12:
-        vpinsrb %%CTR_BLOCKx, [%%P_IV + 11], 12
-%%_iv_length_11:
-        vpinsrd %%CTR_BLOCKx, [%%P_IV + 7], 2
-        jmp     %%_finish_nonce_move
-%%_iv_length_10:
-        vpinsrb %%CTR_BLOCKx, [%%P_IV + 9], 10
-%%_iv_length_9:
-        vpinsrb %%CTR_BLOCKx, [%%P_IV + 8], 9
-%%_iv_length_8:
-        vpinsrb %%CTR_BLOCKx, [%%P_IV + 7], 8
-
-%%_finish_nonce_move:
         ; last byte = 1
-        vpor    %%CTR_BLOCKx, [rel set_byte15]
+        mov     %%IA3, 1
+        vpinsrb %%CTR_BLOCKx, BYTE(%%IA3), 15
+
+        mov	%%LENGTH, [%%JOB + _msg_len_to_cipher_in_bytes]
 
 %else ;; CNTR/CNTR_BIT
 
@@ -1188,14 +1164,14 @@ default rel
 %endif
         je              %%_enc_dec_done
 
+%endif ;; CNTR_TYPE
+
         xor             %%DATA_OFFSET, %%DATA_OFFSET
 
         mov             %%PLAIN_CYPH_IN, [%%JOB + _src]
         add             %%PLAIN_CYPH_IN, [%%JOB + _cipher_start_src_offset_in_bytes]
         mov             %%CYPH_PLAIN_OUT, [%%JOB + _dst]
         mov             %%KEY, [%%JOB + _aes_enc_key_expanded]
-
-%endif ;; CNTR_TYPE
 
         ;; Prepare round keys (only first 10, due to lack of registers)
 %assign i 0
