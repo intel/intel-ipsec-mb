@@ -109,6 +109,151 @@ typedef struct snow3gKeyState8_s {
 } snow3gKeyState8_t;
 #endif /* AVX2 */
 
+
+static inline uint32_t
+length_find_min(const uint32_t *out_array, const size_t dim_array)
+{
+        size_t i;
+        uint32_t min = 0;
+
+        if (dim_array > 0)
+                min  = out_array[0];
+
+        for (i = 1; i < dim_array; i++)
+                if (out_array[i] < min)
+                        min = out_array[i];
+
+        return min;
+}
+
+static inline void
+length_sub(uint32_t *out_array, const size_t dim_array, const uint32_t subv)
+{
+        size_t i;
+
+        for (i = 0; i < dim_array; i++)
+                out_array[i] -= subv;
+}
+
+static inline uint32_t
+length_check(const uint32_t *out_array, const size_t dim_array)
+{
+        size_t i;
+
+        for (i = 0; i < dim_array; i++) {
+                if ((out_array[i] == 0) ||
+                    (out_array[i] > SNOW3G_MAX_BYTELEN))
+                        return 0;
+        }
+
+        return 1;
+}
+
+static inline void
+length_copy_4(uint32_t *out_array,
+              const uint32_t length1, const uint32_t length2,
+              const uint32_t length3, const uint32_t length4)
+{
+        out_array[0] = length1;
+        out_array[1] = length2;
+        out_array[2] = length3;
+        out_array[3] = length4;
+}
+
+static inline void
+length_copy_8(uint32_t *out_array,
+              const uint32_t length1, const uint32_t length2,
+              const uint32_t length3, const uint32_t length4,
+              const uint32_t length5, const uint32_t length6,
+              const uint32_t length7, const uint32_t length8)
+{
+        out_array[0] = length1;
+        out_array[1] = length2;
+        out_array[2] = length3;
+        out_array[3] = length4;
+        out_array[4] = length5;
+        out_array[5] = length6;
+        out_array[6] = length7;
+        out_array[7] = length8;
+}
+
+static inline int
+ptr_check(void *out_array[], const size_t dim_array)
+{
+        size_t i;
+
+        for (i = 0; i < dim_array; i++)
+                if (out_array[i] == NULL)
+                        return 0;
+
+        return 1;
+}
+
+static inline int
+cptr_check(const void * const out_array[], const size_t dim_array)
+{
+        size_t i;
+
+        for (i = 0; i < dim_array; i++)
+                if (out_array[i] == NULL)
+                        return 0;
+
+        return 1;
+}
+
+static inline void
+ptr_copy_4(void *out_array[],
+           void *ptr1, void *ptr2, void *ptr3, void *ptr4)
+{
+        out_array[0] = ptr1;
+        out_array[1] = ptr2;
+        out_array[2] = ptr3;
+        out_array[3] = ptr4;
+}
+
+static inline void
+cptr_copy_4(const void *out_array[],
+            const void *ptr1, const void *ptr2,
+            const void *ptr3, const void *ptr4)
+{
+        out_array[0] = ptr1;
+        out_array[1] = ptr2;
+        out_array[2] = ptr3;
+        out_array[3] = ptr4;
+}
+
+static inline void
+ptr_copy_8(void *out_array[],
+           void *ptr1, void *ptr2, void *ptr3, void *ptr4,
+           void *ptr5, void *ptr6, void *ptr7, void *ptr8)
+{
+        out_array[0] = ptr1;
+        out_array[1] = ptr2;
+        out_array[2] = ptr3;
+        out_array[3] = ptr4;
+        out_array[4] = ptr5;
+        out_array[5] = ptr6;
+        out_array[6] = ptr7;
+        out_array[7] = ptr8;
+}
+
+static inline void
+cptr_copy_8(const void *out_array[],
+            const void *ptr1, const void *ptr2,
+            const void *ptr3, const void *ptr4,
+            const void *ptr5, const void *ptr6,
+            const void *ptr7, const void *ptr8)
+{
+        out_array[0] = ptr1;
+        out_array[1] = ptr2;
+        out_array[2] = ptr3;
+        out_array[3] = ptr4;
+        out_array[4] = ptr5;
+        out_array[5] = ptr6;
+        out_array[6] = ptr7;
+        out_array[7] = ptr8;
+}
+
 #ifdef AVX2
 static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 {
@@ -405,6 +550,7 @@ static inline __m256i S1_box_8(const __m256i x)
         m1 = _mm_unpacklo_epi64(m1, m3);
         m5 = _mm_unpacklo_epi64(m5, m7);
 
+        /* return [ 255 - 128 : m5 | 127 - 0 : m1 ] */
         return _mm256_inserti128_si256(_mm256_castsi128_si256(m1), m5, 1);
 }
 #endif /* AVX2 */
@@ -699,7 +845,7 @@ static inline uint32_t ClockFSM_1(snow3gKeyState1_t *pCtx)
 }
 
 /* -------------------------------------------------------------------
- * ClockLFSR functin as defined in snow3g standard
+ * ClockLFSR function as defined in snow3g standard
  * ------------------------------------------------------------------ */
 static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
 {
@@ -720,15 +866,15 @@ static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
 }
 
 /**
- *******************************************************************************
- * @description
- * This function initializes the key schedule for 1 buffer for snow3g f8/f9.
- *
- * @param[in]       pCtx        Context where the scheduled keys are stored
- * @param [in]      pKeySched    Key schedule
- * @param [in]      pIV          IV
- *
- ******************************************************************************/
+*******************************************************************************
+* @description
+* This function initializes the key schedule for 1 buffer for snow3g f8/f9.
+*
+* @param[in]       pCtx        Context where the scheduled keys are stored
+* @param [in]      pKeySched    Key schedule
+* @param [in]      pIV          IV
+*
+******************************************************************************/
 static inline void
 snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                         const snow3g_key_schedule_t *pKeySched,
@@ -811,16 +957,16 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
 }
 
 /**
- *******************************************************************************
- * @description
- * This function generates 5 words of keystream used in the initial stages
- * of snow3g F9.
- *
- * @param[in]       pCtx                         Context where the scheduled
- *keys are stored
- * @param[in/out]   pKeyStream          Pointer to the generated keystream
- *
- ******************************************************************************/
+*******************************************************************************
+* @description
+* This function generates 5 words of keystream used in the initial stages
+* of snow3g F9.
+*
+* @param[in]       pCtx                         Context where the scheduled
+*keys are stored
+* @param[in/out]   pKeyStream          Pointer to the generated keystream
+*
+******************************************************************************/
 static inline void snow3g_f9_keystream_words(snow3gKeyState1_t *pCtx,
                                              uint32_t *pKeyStream)
 {
@@ -1251,7 +1397,6 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
                                                    blended[i + 4], 0x31);
         }
 }
-
 #endif /* AVX2 */
 
 /**
@@ -2086,119 +2231,90 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
                         void *pBufferOut4,
                         const uint32_t lengthInBytes4)
 {
+        const size_t num_lanes = 4;
+        snow3gKeyState4_t ctx;
+        uint32_t lenInBytes[num_lanes];
+        uint8_t *pBufferOut[num_lanes];
+        const uint8_t *pBufferIn[num_lanes];
+        uint32_t bytes, qwords, i;
+
+        length_copy_4(lenInBytes, lengthInBytes1, lengthInBytes2,
+                      lengthInBytes3, lengthInBytes4);
+
+        cptr_copy_4((const void **)pBufferIn,
+                    pBufferIn1, pBufferIn2, pBufferIn3, pBufferIn4);
+
+        ptr_copy_4((void **)pBufferOut, pBufferOut1, pBufferOut2,
+                   pBufferOut3, pBufferOut4);
+
 #ifdef SAFE_PARAM
         if ((pHandle == NULL) ||
             (pIV1 == NULL) || (pIV2 == NULL) ||
-            (pIV3 == NULL) || (pIV4 == NULL) ||
-            (pBufferIn1 == NULL) || (pBufferOut1 == NULL) ||
-            (pBufferIn2 == NULL) || (pBufferOut2 == NULL) ||
-            (pBufferIn3 == NULL) || (pBufferOut3 == NULL) ||
-            (pBufferIn4 == NULL) || (pBufferOut4 == NULL) ||
-            (lengthInBytes1 == 0) || (lengthInBytes1 > SNOW3G_MAX_BYTELEN) ||
-            (lengthInBytes2 == 0) || (lengthInBytes2 > SNOW3G_MAX_BYTELEN) ||
-            (lengthInBytes3 == 0) || (lengthInBytes3 > SNOW3G_MAX_BYTELEN) ||
-            (lengthInBytes4 == 0) || (lengthInBytes4 > SNOW3G_MAX_BYTELEN))
+            (pIV3 == NULL) || (pIV4 == NULL))
+                return;
+
+        if (!cptr_check((const void * const *)pBufferIn, num_lanes) ||
+            !ptr_check((void **)pBufferOut, num_lanes) ||
+            !length_check(lenInBytes, num_lanes))
                 return;
 #endif
+
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-        snow3gKeyState4_t ctx;
-        __m128i H, L; /* 4 bytes of keystream */
-        uint32_t lenInBytes1 = lengthInBytes1;
-        uint32_t lenInBytes2 = lengthInBytes2;
-        uint32_t lenInBytes3 = lengthInBytes3;
-        uint32_t lenInBytes4 = lengthInBytes4;
-        uint32_t bytes1 =
-                (lenInBytes1 < lenInBytes2 ? lenInBytes1
-                 : lenInBytes2); /* number of bytes */
-        uint32_t bytes2 =
-                (lenInBytes3 < lenInBytes4 ? lenInBytes3
-                 : lenInBytes4);    /* number of bytes */
-        /* min num of bytes */
-        uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
-        uint32_t qwords = bytes / SNOW3G_8_BYTES;
-        uint8_t *pBufOut1 = pBufferOut1;
-        uint8_t *pBufOut2 = pBufferOut2;
-        uint8_t *pBufOut3 = pBufferOut3;
-        uint8_t *pBufOut4 = pBufferOut4;
-        const uint8_t *pBufIn1 = pBufferIn1;
-        const uint8_t *pBufIn2 = pBufferIn2;
-        const uint8_t *pBufIn3 = pBufferIn3;
-        const uint8_t *pBufIn4 = pBufferIn4;
+        /* find min common length */
+        bytes = length_find_min(lenInBytes, num_lanes);
 
+        qwords = bytes / SNOW3G_8_BYTES;
         bytes = qwords * SNOW3G_8_BYTES; /* rounded down minimum length */
+
+        /* subtract min common length from all buffers */
+        length_sub(lenInBytes, num_lanes, bytes);
 
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_4(&ctx, pHandle, pIV1, pIV2, pIV3, pIV4);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        L = snow3g_keystream_4_4(&ctx);
-
-        lenInBytes1 -= bytes;
-        lenInBytes2 -= bytes;
-        lenInBytes3 -= bytes;
-        lenInBytes4 -= bytes;
+        (void) snow3g_keystream_4_4(&ctx);
 
         /* generates 8 bytes at a time on all streams */
         while (qwords--) {
-                snow3g_keystream_4_8(&ctx, &L, &H);
-                pBufIn1 = xor_keystrm_rev(pBufOut1, pBufIn1,
-                                          _mm_extract_epi64(L, 0));
-                pBufIn2 = xor_keystrm_rev(pBufOut2, pBufIn2,
-                                          _mm_extract_epi64(L, 1));
-                pBufIn3 = xor_keystrm_rev(pBufOut3, pBufIn3,
-                                          _mm_extract_epi64(H, 0));
-                pBufIn4 = xor_keystrm_rev(pBufOut4, pBufIn4,
-                                          _mm_extract_epi64(H, 1));
+                __m128i H, L; /* 4 bytes of keystream */
 
-                pBufOut1 += SNOW3G_8_BYTES;
-                pBufOut2 += SNOW3G_8_BYTES;
-                pBufOut3 += SNOW3G_8_BYTES;
-                pBufOut4 += SNOW3G_8_BYTES;
+                snow3g_keystream_4_8(&ctx, &L, &H);
+
+                pBufferIn[0] = xor_keystrm_rev(pBufferOut[0], pBufferIn[0],
+                                               _mm_extract_epi64(L, 0));
+                pBufferIn[1] = xor_keystrm_rev(pBufferOut[1], pBufferIn[1],
+                                               _mm_extract_epi64(L, 1));
+                pBufferIn[2] = xor_keystrm_rev(pBufferOut[2], pBufferIn[2],
+                                               _mm_extract_epi64(H, 0));
+                pBufferIn[3] = xor_keystrm_rev(pBufferOut[3], pBufferIn[3],
+                                               _mm_extract_epi64(H, 1));
+
+                for (i = 0; i < num_lanes; i++)
+                        pBufferOut[i] += SNOW3G_8_BYTES;
         }
 
         /* process the remaining of each buffer
          *  - extract the LFSR and FSM structures
          *  - Continue process 1 buffer
          */
-        if (lenInBytes1) {
-                snow3gKeyState1_t ctx1;
+        for (i = 0; i < num_lanes; i++) {
+                snow3gKeyState1_t ctx_t;
 
-                snow3gStateConvert_4(&ctx, &ctx1, 0);
-                f8_snow3g(&ctx1, pBufIn1, pBufOut1, lenInBytes1);
-        }
-
-        if (lenInBytes2) {
-                snow3gKeyState1_t ctx2;
-
-                snow3gStateConvert_4(&ctx, &ctx2, 1);
-                f8_snow3g(&ctx2, pBufIn2, pBufOut2, lenInBytes2);
-        }
-
-        if (lenInBytes3) {
-                snow3gKeyState1_t ctx3;
-
-                snow3gStateConvert_4(&ctx, &ctx3, 2);
-                f8_snow3g(&ctx3, pBufIn3, pBufOut3, lenInBytes3);
-        }
-
-        if (lenInBytes4) {
-                snow3gKeyState1_t ctx4;
-
-                snow3gStateConvert_4(&ctx, &ctx4, 3);
-                f8_snow3g(&ctx4, pBufIn4, pBufOut4, lenInBytes4);
+                if (lenInBytes[i] == 0)
+                        continue;
+                snow3gStateConvert_4(&ctx, &ctx_t, i);
+                f8_snow3g(&ctx_t, pBufferIn[i], pBufferOut[i], lenInBytes[i]);
         }
 
 #ifdef SAFE_DATA
-        H = _mm_setzero_si128();
-        L = _mm_setzero_si128();
         CLEAR_MEM(&ctx, sizeof(ctx));
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
-
 }
 
 #ifdef AVX2
@@ -2215,34 +2331,35 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
                            const void * const pBufferIn[],
                            void *pBufferOut[], const uint32_t *lengthInBytes)
 {
+        const size_t num_lanes = 8;
+        const uint8_t *tBufferIn[num_lanes];
+        uint8_t *tBufferOut[num_lanes];
+        uint32_t tLenInBytes[num_lanes];
         const uint32_t qwords = bytes / SNOW3G_8_BYTES;
-        __m256i H, L; /* 8 bytes of keystream */
         snow3gKeyState8_t ctx;
-        int i;
-        const uint8_t *tBufferIn[8];
-        uint8_t *tBufferOut[8];
-        uint32_t tLenInBytes[8];
+        size_t i;
 
         bytes = qwords * SNOW3G_8_BYTES; /* rounded down minimum length */
 
-        for (i = 0; i < 8; i++) {
-                tBufferIn[i] = pBufferIn[i];
-                tBufferOut[i] = pBufferOut[i];
-                tLenInBytes[i] = lengthInBytes[i];
-        }
+        memcpy((void *)tBufferIn, (const void *)pBufferIn,
+               sizeof(tBufferIn));
+        memcpy((void *)tBufferOut, (const void *)pBufferOut,
+               sizeof(tBufferOut));
+        memcpy((void *)tLenInBytes, (const void *)lengthInBytes,
+               sizeof(tLenInBytes));
 
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_8_multiKey(&ctx, pKey, IV);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        L = snow3g_keystream_8_4(&ctx);
+        (void) snow3g_keystream_8_4(&ctx);
 
-        for (i = 0; i < 8; i++)
-                tLenInBytes[i] -= bytes;
+        length_sub(tLenInBytes, num_lanes, bytes);
 
         /* generates 8 sets at a time on all streams */
         for (i = qwords; i != 0; i--) {
-                int j;
+                __m256i H, L; /* 8 bytes of keystream */
+                size_t j;
 
                 snow3g_keystream_8_8(&ctx, &L, &H);
 
@@ -2263,7 +2380,7 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
                 tBufferIn[7] = xor_keystrm_rev(tBufferOut[7], tBufferIn[7],
                                                _mm256_extract_epi64(H, 3));
 
-                for (j = 0; j < 8; j++)
+                for (j = 0; j < num_lanes; j++)
                         tBufferOut[j] += SNOW3G_8_BYTES;
         }
 
@@ -2271,7 +2388,7 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
          *  - extract the LFSR and FSM structures
          *  - Continue process 1 buffer
          */
-        for (i = 0; i < 8; i++) {
+        for (i = 0; i < num_lanes; i++) {
                 snow3gKeyState1_t t_ctx;
 
                 if (tLenInBytes[i] == 0)
@@ -2282,8 +2399,6 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
         }
 
 #ifdef SAFE_DATA
-        H = _mm256_setzero_si256();
-        L = _mm256_setzero_si256();
         CLEAR_MEM(&ctx, sizeof(ctx));
 #endif /* SAFE_DATA */
 }
@@ -2295,78 +2410,54 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
  *      Uses individual key schedule for each buffer.
  *---------------------------------------------------------*/
 static inline void
-snow3g_8_buffer_ks_32_multi(uint32_t bytes,
+snow3g_8_buffer_ks_32_multi(const uint32_t bytes,
                             const snow3g_key_schedule_t * const pKey[],
                             const void * const IV[],
                             const void * const pBufferIn[],
                             void *pBufferOut[], const uint32_t *lengthInBytes)
 {
-
+        const size_t block_size = 32;
+        const size_t num_lanes = 8;
+        const uint8_t *tBufferIn[num_lanes];
+        uint8_t *tBufferOut[num_lanes];
+        uint32_t tLenInBytes[num_lanes];
+        const uint32_t blocks = bytes / block_size;
+        __m256i ks[num_lanes];
         snow3gKeyState8_t ctx;
-        uint32_t i;
+        size_t i;
 
-        const uint8_t *tBufferIn[8];
-        uint8_t *tBufferOut[8];
-        uint32_t tLenInBytes[8];
-
-        for (i = 0; i < 8; i++) {
-                tBufferIn[i] = pBufferIn[i];
-                tBufferOut[i] = pBufferOut[i];
-                tLenInBytes[i] = lengthInBytes[i];
-        }
-
-        uint32_t blocks = bytes / 32;
-
-        bytes = blocks * 32; /* rounded down minimum length */
+        memcpy((void *)tBufferIn, (const void *)pBufferIn,
+               sizeof(tBufferIn));
+        memcpy((void *)tBufferOut, (const void *)pBufferOut,
+               sizeof(tBufferOut));
+        memcpy((void *)tLenInBytes, (const void *)lengthInBytes,
+               sizeof(tLenInBytes));
 
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_8_multiKey(&ctx, pKey, IV);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        __m256i ks[8];
-
         (void) snow3g_keystream_8_4(&ctx);
 
-        for (i = 0; i < 8; i++)
-                tLenInBytes[i] -= bytes;
-
-        __m256i in[8];
+        /* subtract common, multiple of block size, length from all lanes */
+        length_sub(tLenInBytes, num_lanes, blocks * block_size);
 
         /* generates 8 sets at a time on all streams */
         for (i = 0; i < blocks; i++) {
-                int j;
-
-                in[0] = _mm256_loadu_si256((const __m256i *)tBufferIn[0]);
-                in[1] = _mm256_loadu_si256((const __m256i *)tBufferIn[1]);
-                in[2] = _mm256_loadu_si256((const __m256i *)tBufferIn[2]);
-                in[3] = _mm256_loadu_si256((const __m256i *)tBufferIn[3]);
-                in[4] = _mm256_loadu_si256((const __m256i *)tBufferIn[4]);
-                in[5] = _mm256_loadu_si256((const __m256i *)tBufferIn[5]);
-                in[6] = _mm256_loadu_si256((const __m256i *)tBufferIn[6]);
-                in[7] = _mm256_loadu_si256((const __m256i *)tBufferIn[7]);
+                size_t j;
 
                 snow3g_keystream_8_32(&ctx, ks);
 
-                _mm256_storeu_si256((__m256i *)tBufferOut[0],
-                                    _mm256_xor_si256(in[0], ks[0]));
-                _mm256_storeu_si256((__m256i *)tBufferOut[1],
-                                    _mm256_xor_si256(in[1], ks[1]));
-                _mm256_storeu_si256((__m256i *)tBufferOut[2],
-                                    _mm256_xor_si256(in[2], ks[2]));
-                _mm256_storeu_si256((__m256i *)tBufferOut[3],
-                                    _mm256_xor_si256(in[3], ks[3]));
-                _mm256_storeu_si256((__m256i *)tBufferOut[4],
-                                    _mm256_xor_si256(in[4], ks[4]));
-                _mm256_storeu_si256((__m256i *)tBufferOut[5],
-                                    _mm256_xor_si256(in[5], ks[5]));
-                _mm256_storeu_si256((__m256i *)tBufferOut[6],
-                                    _mm256_xor_si256(in[6], ks[6]));
-                _mm256_storeu_si256((__m256i *)tBufferOut[7],
-                                    _mm256_xor_si256(in[7], ks[7]));
+                for (j = 0; j < num_lanes; j++) {
+                        const __m256i *in_ptr = (const __m256i *)tBufferIn[j];
+                        __m256i *out_ptr = (__m256i *)tBufferOut[j];
+                        const __m256i in = _mm256_loadu_si256(in_ptr);
 
-                for (j = 0; j < 8; j++) {
-                        tBufferIn[i] += 32;
-                        tBufferOut[i] += 32;
+                        _mm256_storeu_si256(out_ptr,
+                                            _mm256_xor_si256(in, ks[j]));
+
+                        tBufferIn[j] += block_size;
+                        tBufferOut[j] += block_size;
                 }
         }
 
@@ -2374,7 +2465,7 @@ snow3g_8_buffer_ks_32_multi(uint32_t bytes,
          *  - extract the LFSR and FSM structures
          *  - Continue process 1 buffer
          */
-        for (i = 0; i < 8; i++) {
+        for (i = 0; i < num_lanes; i++) {
                 snow3gKeyState1_t t_ctx;
 
                 if (tLenInBytes[i] == 0)
@@ -2387,7 +2478,6 @@ snow3g_8_buffer_ks_32_multi(uint32_t bytes,
 #ifdef SAFE_DATA
         CLEAR_MEM(&ctx, sizeof(ctx));
         CLEAR_MEM(&ks, sizeof(ks));
-        CLEAR_MEM(&in, sizeof(in));
 #endif /* SAFE_DATA */
 }
 
@@ -2398,174 +2488,72 @@ snow3g_8_buffer_ks_32_multi(uint32_t bytes,
  *      Uses same key schedule for each buffer.
  *---------------------------------------------------------*/
 static inline void
-snow3g_8_buffer_ks_8(uint32_t bytes,
-                     const snow3g_key_schedule_t *pHandle,
-                     const void *pIV1,
-                     const void *pIV2,
-                     const void *pIV3,
-                     const void *pIV4,
-                     const void *pIV5,
-                     const void *pIV6,
-                     const void *pIV7,
-                     const void *pIV8,
-                     const void *pBufferIn1, void *pBufferOut1,
-                     const uint32_t lengthInBytes1,
-                     const void *pBufferIn2, void *pBufferOut2,
-                     const uint32_t lengthInBytes2,
-                     const void *pBufferIn3, void *pBufferOut3,
-                     const uint32_t lengthInBytes3,
-                     const void *pBufferIn4, void *pBufferOut4,
-                     const uint32_t lengthInBytes4,
-                     const void *pBufferIn5, void *pBufferOut5,
-                     const uint32_t lengthInBytes5,
-                     const void *pBufferIn6, void *pBufferOut6,
-                     const uint32_t lengthInBytes6,
-                     const void *pBufferIn7, void *pBufferOut7,
-                     const uint32_t lengthInBytes7,
-                     const void *pBufferIn8, void *pBufferOut8,
-                     const uint32_t lengthInBytes8)
+snow3g_8_buffer_ks_8(const uint32_t bytes,
+                     const snow3g_key_schedule_t *pKey,
+                     const void * const IV[],
+                     const uint8_t *pBufferIn[],
+                     uint8_t *pBufferOut[],
+                     uint32_t *lengthInBytes)
 {
+        const size_t num_lanes = 8;
         const uint32_t qwords = bytes / SNOW3G_8_BYTES;
-        __m256i H, L; /* 8 bytes of keystream */
         snow3gKeyState8_t ctx;
-        int i;
-        uint32_t lenInBytes1 = lengthInBytes1;
-        uint32_t lenInBytes2 = lengthInBytes2;
-        uint32_t lenInBytes3 = lengthInBytes3;
-        uint32_t lenInBytes4 = lengthInBytes4;
-        uint32_t lenInBytes5 = lengthInBytes5;
-        uint32_t lenInBytes6 = lengthInBytes6;
-        uint32_t lenInBytes7 = lengthInBytes7;
-        uint32_t lenInBytes8 = lengthInBytes8;
-        uint8_t *pBufOut1 = pBufferOut1;
-        uint8_t *pBufOut2 = pBufferOut2;
-        uint8_t *pBufOut3 = pBufferOut3;
-        uint8_t *pBufOut4 = pBufferOut4;
-        uint8_t *pBufOut5 = pBufferOut5;
-        uint8_t *pBufOut6 = pBufferOut6;
-        uint8_t *pBufOut7 = pBufferOut7;
-        uint8_t *pBufOut8 = pBufferOut8;
-        const uint8_t *pBufIn1 = pBufferIn1;
-        const uint8_t *pBufIn2 = pBufferIn2;
-        const uint8_t *pBufIn3 = pBufferIn3;
-        const uint8_t *pBufIn4 = pBufferIn4;
-        const uint8_t *pBufIn5 = pBufferIn5;
-        const uint8_t *pBufIn6 = pBufferIn6;
-        const uint8_t *pBufIn7 = pBufferIn7;
-        const uint8_t *pBufIn8 = pBufferIn8;
-
-        bytes = qwords * SNOW3G_8_BYTES; /* rounded down minimum length */
+        uint32_t i;
 
         /* Initialize the schedule from the IV */
-        snow3gStateInitialize_8(&ctx, pHandle, pIV1, pIV2, pIV3,
-                                pIV4, pIV5, pIV6, pIV7, pIV8);
+        snow3gStateInitialize_8(&ctx, pKey, IV[0], IV[1], IV[2],
+                                IV[3], IV[4], IV[5], IV[6], IV[7]);
 
         /* Clock FSM and LFSR once, ignore the keystream */
         (void) snow3g_keystream_8_4(&ctx);
 
-        lenInBytes1 -= bytes;
-        lenInBytes2 -= bytes;
-        lenInBytes3 -= bytes;
-        lenInBytes4 -= bytes;
-        lenInBytes5 -= bytes;
-        lenInBytes6 -= bytes;
-        lenInBytes7 -= bytes;
-        lenInBytes8 -= bytes;
+        /* subtract rounded down minimum length */
+        length_sub(lengthInBytes, num_lanes, qwords * SNOW3G_8_BYTES);
 
         /* generates 8 sets at a time on all streams */
         for (i = qwords; i != 0; i--) {
+                __m256i H, L; /* 8 bytes of keystream */
+                uint32_t j;
+
                 snow3g_keystream_8_8(&ctx, &L, &H);
 
-                pBufIn1 = xor_keystrm_rev(pBufOut1, pBufIn1,
-                                          _mm256_extract_epi64(L, 0));
-                pBufIn2 = xor_keystrm_rev(pBufOut2, pBufIn2,
-                                          _mm256_extract_epi64(L, 1));
-                pBufIn3 = xor_keystrm_rev(pBufOut3, pBufIn3,
-                                          _mm256_extract_epi64(H, 0));
-                pBufIn4 = xor_keystrm_rev(pBufOut4, pBufIn4,
-                                          _mm256_extract_epi64(H, 1));
-                pBufIn5 = xor_keystrm_rev(pBufOut5, pBufIn5,
-                                          _mm256_extract_epi64(L, 2));
-                pBufIn6 = xor_keystrm_rev(pBufOut6, pBufIn6,
-                                          _mm256_extract_epi64(L, 3));
-                pBufIn7 = xor_keystrm_rev(pBufOut7, pBufIn7,
-                                          _mm256_extract_epi64(H, 2));
-                pBufIn8 = xor_keystrm_rev(pBufOut8, pBufIn8,
-                                          _mm256_extract_epi64(H, 3));
+                pBufferIn[0] = xor_keystrm_rev(pBufferOut[0], pBufferIn[0],
+                                               _mm256_extract_epi64(L, 0));
+                pBufferIn[1] = xor_keystrm_rev(pBufferOut[1], pBufferIn[1],
+                                               _mm256_extract_epi64(L, 1));
+                pBufferIn[2] = xor_keystrm_rev(pBufferOut[2], pBufferIn[2],
+                                               _mm256_extract_epi64(H, 0));
+                pBufferIn[3] = xor_keystrm_rev(pBufferOut[3], pBufferIn[3],
+                                               _mm256_extract_epi64(H, 1));
+                pBufferIn[4] = xor_keystrm_rev(pBufferOut[4], pBufferIn[4],
+                                               _mm256_extract_epi64(L, 2));
+                pBufferIn[5] = xor_keystrm_rev(pBufferOut[5], pBufferIn[5],
+                                               _mm256_extract_epi64(L, 3));
+                pBufferIn[6] = xor_keystrm_rev(pBufferOut[6], pBufferIn[6],
+                                               _mm256_extract_epi64(H, 2));
+                pBufferIn[7] = xor_keystrm_rev(pBufferOut[7], pBufferIn[7],
+                                               _mm256_extract_epi64(H, 3));
 
-                pBufOut1 += SNOW3G_8_BYTES;
-                pBufOut2 += SNOW3G_8_BYTES;
-                pBufOut3 += SNOW3G_8_BYTES;
-                pBufOut4 += SNOW3G_8_BYTES;
-                pBufOut5 += SNOW3G_8_BYTES;
-                pBufOut6 += SNOW3G_8_BYTES;
-                pBufOut7 += SNOW3G_8_BYTES;
-                pBufOut8 += SNOW3G_8_BYTES;
+                for (j = 0; j < num_lanes; j++)
+                        pBufferOut[j] += SNOW3G_8_BYTES;
         }
 
         /* process the remaining of each buffer
          *  - extract the LFSR and FSM structures
          *  - Continue process 1 buffer
          */
-        if (lenInBytes1) {
-                snow3gKeyState1_t ctx1;
+        for (i = 0; i < num_lanes; i++) {
+                snow3gKeyState1_t ctx_t;
 
-                snow3gStateConvert_8(&ctx, &ctx1, 0);
-                f8_snow3g(&ctx1, pBufIn1, pBufOut1, lenInBytes1);
-        }
+                if (lengthInBytes[i] == 0)
+                        continue;
 
-        if (lenInBytes2) {
-                snow3gKeyState1_t ctx2;
-
-                snow3gStateConvert_8(&ctx, &ctx2, 1);
-                f8_snow3g(&ctx2, pBufIn2, pBufOut2, lenInBytes2);
-        }
-
-        if (lenInBytes3) {
-                snow3gKeyState1_t ctx3;
-
-                snow3gStateConvert_8(&ctx, &ctx3, 2);
-                f8_snow3g(&ctx3, pBufIn3, pBufOut3, lenInBytes3);
-        }
-
-        if (lenInBytes4) {
-                snow3gKeyState1_t ctx4;
-
-                snow3gStateConvert_8(&ctx, &ctx4, 3);
-                f8_snow3g(&ctx4, pBufIn4, pBufOut4, lenInBytes4);
-        }
-
-        if (lenInBytes5) {
-                snow3gKeyState1_t ctx5;
-
-                snow3gStateConvert_8(&ctx, &ctx5, 4);
-                f8_snow3g(&ctx5, pBufIn5, pBufOut5, lenInBytes5);
-        }
-
-        if (lenInBytes6) {
-                snow3gKeyState1_t ctx6;
-
-                snow3gStateConvert_8(&ctx, &ctx6, 5);
-                f8_snow3g(&ctx6, pBufIn6, pBufOut6, lenInBytes6);
-        }
-
-        if (lenInBytes7) {
-                snow3gKeyState1_t ctx7;
-
-                snow3gStateConvert_8(&ctx, &ctx7, 6);
-                f8_snow3g(&ctx7, pBufIn7, pBufOut7, lenInBytes7);
-        }
-
-        if (lenInBytes8) {
-                snow3gKeyState1_t ctx8;
-
-                snow3gStateConvert_8(&ctx, &ctx8, 7);
-                f8_snow3g(&ctx8, pBufIn8, pBufOut8, lenInBytes8);
+                snow3gStateConvert_8(&ctx, &ctx_t, i);
+                f8_snow3g(&ctx_t, pBufferIn[i], pBufferOut[i],
+                          lengthInBytes[i]);
         }
 
 #ifdef SAFE_DATA
-        H = _mm256_setzero_si256();
-        L = _mm256_setzero_si256();
         CLEAR_MEM(&ctx, sizeof(ctx));
 #endif /* SAFE_DATA */
 }
@@ -2577,188 +2565,62 @@ snow3g_8_buffer_ks_8(uint32_t bytes,
  *      Uses same key schedule for each buffer.
  *---------------------------------------------------------*/
 static inline void
-snow3g_8_buffer_ks_32(uint32_t bytes,
+snow3g_8_buffer_ks_32(const uint32_t bytes,
                       const snow3g_key_schedule_t *pKey,
-                      const void *pIV1, const void *pIV2,
-                      const void *pIV3, const void *pIV4,
-                      const void *pIV5, const void *pIV6,
-                      const void *pIV7, const void *pIV8,
-                      const void *pBufferIn1, void *pBufferOut1,
-                      const uint32_t lengthInBytes1,
-                      const void *pBufferIn2, void *pBufferOut2,
-                      const uint32_t lengthInBytes2,
-                      const void *pBufferIn3, void *pBufferOut3,
-                      const uint32_t lengthInBytes3,
-                      const void *pBufferIn4, void *pBufferOut4,
-                      const uint32_t lengthInBytes4,
-                      const void *pBufferIn5, void *pBufferOut5,
-                      const uint32_t lengthInBytes5,
-                      const void *pBufferIn6, void *pBufferOut6,
-                      const uint32_t lengthInBytes6,
-                      const void *pBufferIn7, void *pBufferOut7,
-                      const uint32_t lengthInBytes7,
-                      const void *pBufferIn8, void *pBufferOut8,
-                      const uint32_t lengthInBytes8)
+                      const void * const IV[],
+                      const uint8_t *pBufferIn[],
+                      uint8_t *pBufferOut[],
+                      uint32_t *lengthInBytes)
 {
+        const size_t num_lanes = 8;
+        const size_t block_size = 32;
+        const uint32_t blocks = bytes / block_size;
+        __m256i ks[num_lanes], in[num_lanes];
         snow3gKeyState8_t ctx;
         uint32_t i;
-        uint32_t lenInBytes1 = lengthInBytes1;
-        uint32_t lenInBytes2 = lengthInBytes2;
-        uint32_t lenInBytes3 = lengthInBytes3;
-        uint32_t lenInBytes4 = lengthInBytes4;
-        uint32_t lenInBytes5 = lengthInBytes5;
-        uint32_t lenInBytes6 = lengthInBytes6;
-        uint32_t lenInBytes7 = lengthInBytes7;
-        uint32_t lenInBytes8 = lengthInBytes8;
-        uint8_t *pBufOut1 = pBufferOut1;
-        uint8_t *pBufOut2 = pBufferOut2;
-        uint8_t *pBufOut3 = pBufferOut3;
-        uint8_t *pBufOut4 = pBufferOut4;
-        uint8_t *pBufOut5 = pBufferOut5;
-        uint8_t *pBufOut6 = pBufferOut6;
-        uint8_t *pBufOut7 = pBufferOut7;
-        uint8_t *pBufOut8 = pBufferOut8;
-        const uint8_t *pBufIn1 = pBufferIn1;
-        const uint8_t *pBufIn2 = pBufferIn2;
-        const uint8_t *pBufIn3 = pBufferIn3;
-        const uint8_t *pBufIn4 = pBufferIn4;
-        const uint8_t *pBufIn5 = pBufferIn5;
-        const uint8_t *pBufIn6 = pBufferIn6;
-        const uint8_t *pBufIn7 = pBufferIn7;
-        const uint8_t *pBufIn8 = pBufferIn8;
-
-        uint32_t blocks = bytes / 32;
-
-        bytes = blocks * 32; /* rounded down minimum length */
 
         /* Initialize the schedule from the IV */
-        snow3gStateInitialize_8(&ctx, pKey, pIV1, pIV2, pIV3, pIV4, pIV5, pIV6,
-                                pIV7, pIV8);
+        snow3gStateInitialize_8(&ctx, pKey, IV[0], IV[1], IV[2],
+                                IV[3], IV[4], IV[5], IV[6], IV[7]);
 
         /* Clock FSM and LFSR once, ignore the keystream */
-        __m256i ks[8];
-
         (void) snow3g_keystream_8_4(&ctx);
 
-        lenInBytes1 -= bytes;
-        lenInBytes2 -= bytes;
-        lenInBytes3 -= bytes;
-        lenInBytes4 -= bytes;
-        lenInBytes5 -= bytes;
-        lenInBytes6 -= bytes;
-        lenInBytes7 -= bytes;
-        lenInBytes8 -= bytes;
-
-        __m256i in[8];
+        length_sub(lengthInBytes, num_lanes, blocks * block_size);
 
         /* generates 8 sets at a time on all streams */
         for (i = 0; i < blocks; i++) {
+                uint32_t j;
 
-                in[0] = _mm256_loadu_si256((const __m256i *)pBufIn1);
-                in[1] = _mm256_loadu_si256((const __m256i *)pBufIn2);
-                in[2] = _mm256_loadu_si256((const __m256i *)pBufIn3);
-                in[3] = _mm256_loadu_si256((const __m256i *)pBufIn4);
-                in[4] = _mm256_loadu_si256((const __m256i *)pBufIn5);
-                in[5] = _mm256_loadu_si256((const __m256i *)pBufIn6);
-                in[6] = _mm256_loadu_si256((const __m256i *)pBufIn7);
-                in[7] = _mm256_loadu_si256((const __m256i *)pBufIn8);
+                for (j = 0; j < num_lanes; j++) {
+                        const __m256i *in_ptr = (const __m256i *)pBufferIn[j];
+
+                        in[j] = _mm256_loadu_si256(in_ptr);
+                        pBufferIn[j] += block_size;
+                }
 
                 snow3g_keystream_8_32(&ctx, ks);
 
-                _mm256_storeu_si256((__m256i *)pBufOut1,
-                                    _mm256_xor_si256(in[0], ks[0]));
-                _mm256_storeu_si256((__m256i *)pBufOut2,
-                                    _mm256_xor_si256(in[1], ks[1]));
-                _mm256_storeu_si256((__m256i *)pBufOut3,
-                                    _mm256_xor_si256(in[2], ks[2]));
-                _mm256_storeu_si256((__m256i *)pBufOut4,
-                                    _mm256_xor_si256(in[3], ks[3]));
-                _mm256_storeu_si256((__m256i *)pBufOut5,
-                                    _mm256_xor_si256(in[4], ks[4]));
-                _mm256_storeu_si256((__m256i *)pBufOut6,
-                                    _mm256_xor_si256(in[5], ks[5]));
-                _mm256_storeu_si256((__m256i *)pBufOut7,
-                                    _mm256_xor_si256(in[6], ks[6]));
-                _mm256_storeu_si256((__m256i *)pBufOut8,
-                                    _mm256_xor_si256(in[7], ks[7]));
-
-                pBufIn1 += 32;
-                pBufIn2 += 32;
-                pBufIn3 += 32;
-                pBufIn4 += 32;
-                pBufIn5 += 32;
-                pBufIn6 += 32;
-                pBufIn7 += 32;
-                pBufIn8 += 32;
-
-                pBufOut1 += 32;
-                pBufOut2 += 32;
-                pBufOut3 += 32;
-                pBufOut4 += 32;
-                pBufOut5 += 32;
-                pBufOut6 += 32;
-                pBufOut7 += 32;
-                pBufOut8 += 32;
+                for (j = 0; j < num_lanes; j++) {
+                        _mm256_storeu_si256((__m256i *)pBufferOut[j],
+                                            _mm256_xor_si256(in[j], ks[j]));
+                        pBufferOut[j] += block_size;
+                }
         }
 
         /* process the remaining of each buffer
          *  - extract the LFSR and FSM structures
          *  - Continue process 1 buffer
          */
-        if (lenInBytes1) {
-                snow3gKeyState1_t ctx1;
+        for (i = 0; i < num_lanes; i++) {
+                snow3gKeyState1_t ctx_t;
 
-                snow3gStateConvert_8(&ctx, &ctx1, 0);
-                f8_snow3g(&ctx1, pBufIn1, pBufOut1, lenInBytes1);
-        }
+                if (lengthInBytes[i] == 0)
+                        continue;
 
-        if (lenInBytes2) {
-                snow3gKeyState1_t ctx2;
-
-                snow3gStateConvert_8(&ctx, &ctx2, 1);
-                f8_snow3g(&ctx2, pBufIn2, pBufOut2, lenInBytes2);
-        }
-
-        if (lenInBytes3) {
-                snow3gKeyState1_t ctx3;
-
-                snow3gStateConvert_8(&ctx, &ctx3, 2);
-                f8_snow3g(&ctx3, pBufIn3, pBufOut3, lenInBytes3);
-        }
-
-        if (lenInBytes4) {
-                snow3gKeyState1_t ctx4;
-
-                snow3gStateConvert_8(&ctx, &ctx4, 3);
-                f8_snow3g(&ctx4, pBufIn4, pBufOut4, lenInBytes4);
-        }
-
-        if (lenInBytes5) {
-                snow3gKeyState1_t ctx5;
-
-                snow3gStateConvert_8(&ctx, &ctx5, 4);
-                f8_snow3g(&ctx5, pBufIn5, pBufOut5, lenInBytes5);
-        }
-
-        if (lenInBytes6) {
-                snow3gKeyState1_t ctx6;
-
-                snow3gStateConvert_8(&ctx, &ctx6, 5);
-                f8_snow3g(&ctx6, pBufIn6, pBufOut6, lenInBytes6);
-        }
-
-        if (lenInBytes7) {
-                snow3gKeyState1_t ctx7;
-
-                snow3gStateConvert_8(&ctx, &ctx7, 6);
-                f8_snow3g(&ctx7, pBufIn7, pBufOut7, lenInBytes7);
-        }
-
-        if (lenInBytes8) {
-                snow3gKeyState1_t ctx8;
-
-                snow3gStateConvert_8(&ctx, &ctx8, 7);
-                f8_snow3g(&ctx8, pBufIn8, pBufOut8, lenInBytes8);
+                snow3gStateConvert_8(&ctx, &ctx_t, i);
+                f8_snow3g(&ctx_t, pBufferIn[i], pBufferOut[i],
+                          lengthInBytes[i]);
         }
 
 #ifdef SAFE_DATA
@@ -2782,37 +2644,34 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
                                  void *BufferOut[],
                                  const uint32_t lengthInBytes[])
 {
-        int i;
+        const size_t num_lanes = 8;
 
 #ifdef SAFE_PARAM
         if ((pKey == NULL) || (IV == NULL) || (BufferIn == NULL) ||
             (BufferOut == NULL) || (lengthInBytes == NULL))
                 return;
 
-        for (i = 0; i < 8; i++)
-                if ((pKey[i] == NULL) || (IV[i] == NULL) ||
-                    (BufferIn[i] == NULL) || (BufferOut[i] == NULL) ||
-                    (lengthInBytes[i] == 0) ||
-                    (lengthInBytes[i] > SNOW3G_MAX_BYTELEN))
-                        return;
+        if (!ptr_check(BufferOut, num_lanes) || !cptr_check(IV, num_lanes) ||
+            !cptr_check((const void * const *)pKey, num_lanes) ||
+            !cptr_check(BufferIn, num_lanes) ||
+            !length_check(lengthInBytes, num_lanes))
+                return;
 #endif
 
 #ifndef AVX2
-        /* basic C workaround for lack of non AVX2 implementation */
-        for (i = 0; i < 8; i++)
+        /* Basic C workaround for lack of non AVX2 implementation */
+        size_t i;
+
+        for (i = 0; i < num_lanes; i++)
                 SNOW3G_F8_1_BUFFER(pKey[i], IV[i], BufferIn[i], BufferOut[i],
                                    lengthInBytes[i]);
 #else
+
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-        uint32_t bytes = lengthInBytes[0];
-
-        /* find min byte lenght */
-        for (i = 1; i < 8; i++)
-                if (lengthInBytes[i] < bytes)
-                        bytes = lengthInBytes[i];
+        const uint32_t bytes = length_find_min(lengthInBytes, num_lanes);
 
         if (bytes % 32) {
                 snow3g_8_buffer_ks_8_multi(bytes, pKey, IV, BufferIn, BufferOut,
@@ -2821,6 +2680,7 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
                 snow3g_8_buffer_ks_32_multi(bytes, pKey, IV, BufferIn,
                                             BufferOut, lengthInBytes);
         }
+
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
@@ -2870,86 +2730,67 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
                         void *pBufOut8,
                         const uint32_t lenInBytes8)
 {
+        const size_t num_lanes = 8;
+        uint32_t lengthInBytes[num_lanes];
+        const uint8_t *pBufferIn[num_lanes];
+        const void *pIV[num_lanes];
+        uint8_t *pBufferOut[num_lanes];
+
+        length_copy_8(lengthInBytes,
+                      lenInBytes1, lenInBytes2, lenInBytes3, lenInBytes4,
+                      lenInBytes5, lenInBytes6, lenInBytes7, lenInBytes8);
+
+        cptr_copy_8((const void **)pBufferIn,
+                    pBufIn1, pBufIn2, pBufIn3, pBufIn4,
+                    pBufIn5, pBufIn6, pBufIn7, pBufIn8);
+
+        cptr_copy_8(pIV, pIV1, pIV2, pIV3, pIV4, pIV5, pIV6, pIV7, pIV8);
+
+        ptr_copy_8((void **)pBufferOut,
+                   pBufOut1, pBufOut2, pBufOut3, pBufOut4,
+                   pBufOut5, pBufOut6, pBufOut7, pBufOut8);
+
 #ifdef SAFE_PARAM
-        if ((pHandle == NULL) ||
-            (pIV1 == NULL) || (pIV2 == NULL) ||
-            (pIV3 == NULL) || (pIV4 == NULL) ||
-            (pIV5 == NULL) || (pIV6 == NULL) ||
-            (pIV7 == NULL) || (pIV8 == NULL) ||
-            (pBufIn1 == NULL) || (pBufOut1 == NULL) ||
-            (pBufIn2 == NULL) || (pBufOut2 == NULL) ||
-            (pBufIn3 == NULL) || (pBufOut3 == NULL) ||
-            (pBufIn4 == NULL) || (pBufOut4 == NULL) ||
-            (pBufIn5 == NULL) || (pBufOut5 == NULL) ||
-            (pBufIn6 == NULL) || (pBufOut6 == NULL) ||
-            (pBufIn7 == NULL) || (pBufOut7 == NULL) ||
-            (pBufIn8 == NULL) || (pBufOut8 == NULL) ||
-            (lenInBytes1 == 0) || (lenInBytes1 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes2 == 0) || (lenInBytes2 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes3 == 0) || (lenInBytes3 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes4 == 0) || (lenInBytes4 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes5 == 0) || (lenInBytes5 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes6 == 0) || (lenInBytes6 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes7 == 0) || (lenInBytes7 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes8 == 0) || (lenInBytes8 > SNOW3G_MAX_BYTELEN))
+        if (pHandle == NULL)
+                return;
+
+        if (!length_check(lengthInBytes, num_lanes) ||
+            !cptr_check((const void * const *)pBufferIn, num_lanes) ||
+            !cptr_check(pIV, num_lanes) ||
+            !ptr_check((void **)pBufferOut, num_lanes))
                 return;
 #endif
 
 #ifdef AVX2
+
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-        uint32_t bytes1 =
-                (lenInBytes1 < lenInBytes2 ? lenInBytes1
-                                           : lenInBytes2); /* number of bytes */
-        uint32_t bytes2 =
-                (lenInBytes3 < lenInBytes4 ? lenInBytes3
-                                           : lenInBytes4); /* number of bytes */
-        uint32_t bytes3 =
-                (lenInBytes5 < lenInBytes6 ? lenInBytes5
-                                           : lenInBytes6); /* number of bytes */
-        uint32_t bytes4 =
-                (lenInBytes7 < lenInBytes8 ? lenInBytes7
-                                           : lenInBytes8); /* number of bytes */
-        uint32_t bytesq1 =
-                (bytes1 < bytes2) ? bytes1 : bytes2; /* min number of bytes */
-        uint32_t bytesq2 = (bytes3 < bytes4) ? bytes3 : bytes4;
-        uint32_t bytes = (bytesq1 < bytesq2) ? bytesq1 : bytesq2;
+        const uint32_t bytes = length_find_min(lengthInBytes, num_lanes);
 
         if (bytes % 32) {
-                snow3g_8_buffer_ks_8(
-                        bytes, pHandle, pIV1, pIV2, pIV3, pIV4, pIV5, pIV6,
-                        pIV7, pIV8, pBufIn1, pBufOut1, lenInBytes1, pBufIn2,
-                        pBufOut2, lenInBytes2, pBufIn3, pBufOut3, lenInBytes3,
-                        pBufIn4, pBufOut4, lenInBytes4, pBufIn5, pBufOut5,
-                        lenInBytes5, pBufIn6, pBufOut6, lenInBytes6, pBufIn7,
-                        pBufOut7, lenInBytes7, pBufIn8, pBufOut8, lenInBytes8);
+                snow3g_8_buffer_ks_8(bytes, pHandle, pIV,
+                                     pBufferIn, pBufferOut, lengthInBytes);
         } else {
-                snow3g_8_buffer_ks_32(
-                        bytes, pHandle, pIV1, pIV2, pIV3, pIV4, pIV5, pIV6,
-                        pIV7, pIV8, pBufIn1, pBufOut1, lenInBytes1, pBufIn2,
-                        pBufOut2, lenInBytes2, pBufIn3, pBufOut3, lenInBytes3,
-                        pBufIn4, pBufOut4, lenInBytes4, pBufIn5, pBufOut5,
-                        lenInBytes5, pBufIn6, pBufOut6, lenInBytes6, pBufIn7,
-                        pBufOut7, lenInBytes7, pBufIn8, pBufOut8, lenInBytes8);
+                snow3g_8_buffer_ks_32(bytes, pHandle, pIV,
+                                      pBufferIn, pBufferOut, lengthInBytes);
         }
+
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
 #endif
 #else  /* ~AVX2 */
-        SNOW3G_F8_2_BUFFER(pHandle, pIV1, pIV2, pBufIn1, pBufOut1, lenInBytes1,
-                           pBufIn2, pBufOut2, lenInBytes2);
+        size_t i;
 
-        SNOW3G_F8_2_BUFFER(pHandle, pIV3, pIV4, pBufIn3, pBufOut3, lenInBytes3,
-                           pBufIn4, pBufOut4, lenInBytes4);
-
-        SNOW3G_F8_2_BUFFER(pHandle, pIV5, pIV6, pBufIn5, pBufOut5, lenInBytes5,
-                           pBufIn6, pBufOut6, lenInBytes6);
-
-        SNOW3G_F8_2_BUFFER(pHandle, pIV7, pIV8, pBufIn7, pBufOut7, lenInBytes7,
-                           pBufIn8, pBufOut8, lenInBytes8);
+        for (i = 0; i < num_lanes; i += 2) {
+                SNOW3G_F8_2_BUFFER(pHandle, pIV[i], pIV[i + 1],
+                                   pBufferIn[i], pBufferOut[i],
+                                   lengthInBytes[i],
+                                   pBufferIn[i + 1], pBufferOut[i + 1],
+                                   lengthInBytes[i + 1]);
+        }
 #endif /* AVX */
 }
 
@@ -2968,23 +2809,22 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
                         const uint32_t packetCount)
 {
 #ifdef SAFE_PARAM
-        uint32_t i;
-
         if ((pCtx == NULL) || (IV == NULL) || (pBufferIn == NULL) ||
             (pBufferOut == NULL) || (bufLenInBytes == NULL))
                 return;
 
-        for (i = 0; i < packetCount; i++)
-                if ((IV[i] == NULL) || (pBufferIn[i] == NULL) ||
-                    (pBufferOut[i] == NULL) || (bufLenInBytes[i] == 0) ||
-                    (bufLenInBytes[i] > SNOW3G_MAX_BYTELEN))
-                        return;
+        if (!cptr_check(IV, packetCount) ||
+            !cptr_check(pBufferIn, packetCount) ||
+            !ptr_check(pBufferOut, packetCount) ||
+            !length_check(bufLenInBytes, packetCount))
+                return;
 #endif
+
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-        if (packetCount > 16) {
+        if (packetCount > NUM_PACKETS_16) {
                 pBufferOut[0] = NULL;
                 printf("packetCount too high (%d)\n", packetCount);
                 return;
@@ -3011,7 +2851,7 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
 
                 /* check if all packets are sorted by decreasing length */
                 if (packet_index > 0 && lensBuf[packet_index - 1] <
-                                                lensBuf[packet_index]) {
+                    lensBuf[packet_index]) {
                         /* this packet array is not correctly sorted */
                         sortNeeded = 1;
                 }
@@ -3201,7 +3041,7 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
 
                 /* check if all packets are sorted by decreasing length */
                 if (packet_index > 0 && lensBuf[packet_index - 1] <
-                                                lensBuf[packet_index]) {
+                    lensBuf[packet_index]) {
                         /* this packet array is not correctly sorted */
                         sortNeeded = 1;
                 }
