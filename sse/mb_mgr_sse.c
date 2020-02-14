@@ -573,26 +573,46 @@ init_mb_mgr_sse(MB_MGR *state)
                 aes256_cbc_dec_ptr = aes_cbc_dec_256_by8_sse;
         }
 
-        /* DOCSIS SEC BPI uses same settings as AES128 CBC */
-        memset(state->docsis_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis_sec_ooo.lens));
-        memset(state->docsis_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis_sec_ooo.job_in_lane));
-        state->docsis_sec_ooo.num_lanes_inuse = 0;
+        /* DOCSIS SEC BPI uses same settings as AES CBC */
+        memset(state->docsis128_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis128_sec_ooo.lens));
+        memset(state->docsis128_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis128_sec_ooo.job_in_lane));
+        state->docsis128_sec_ooo.num_lanes_inuse = 0;
         if (state->features & IMB_FEATURE_GFNI)
-                state->docsis_sec_ooo.unused_lanes = 0xF76543210;
+                state->docsis128_sec_ooo.unused_lanes = 0xF76543210;
         else
-                state->docsis_sec_ooo.unused_lanes = 0xF3210;
+                state->docsis128_sec_ooo.unused_lanes = 0xF3210;
 
-        memset(state->docsis_crc32_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis_crc32_sec_ooo.lens));
-        memset(state->docsis_crc32_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis_crc32_sec_ooo.job_in_lane));
-        state->docsis_crc32_sec_ooo.num_lanes_inuse = 0;
+        memset(state->docsis128_crc32_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis128_crc32_sec_ooo.lens));
+        memset(state->docsis128_crc32_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis128_crc32_sec_ooo.job_in_lane));
+        state->docsis128_crc32_sec_ooo.num_lanes_inuse = 0;
         if (state->features & IMB_FEATURE_GFNI)
-                state->docsis_crc32_sec_ooo.unused_lanes = 0xF76543210;
+                state->docsis128_crc32_sec_ooo.unused_lanes = 0xF76543210;
         else
-                state->docsis_crc32_sec_ooo.unused_lanes = 0xF3210;
+                state->docsis128_crc32_sec_ooo.unused_lanes = 0xF3210;
+
+        memset(state->docsis256_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis256_sec_ooo.lens));
+        memset(state->docsis256_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis256_sec_ooo.job_in_lane));
+        state->docsis256_sec_ooo.num_lanes_inuse = 0;
+        if (state->features & IMB_FEATURE_GFNI)
+                state->docsis256_sec_ooo.unused_lanes = 0xF76543210;
+        else
+                state->docsis256_sec_ooo.unused_lanes = 0xF3210;
+
+        memset(state->docsis256_crc32_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis256_crc32_sec_ooo.lens));
+        memset(state->docsis256_crc32_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis256_crc32_sec_ooo.job_in_lane));
+        state->docsis256_crc32_sec_ooo.num_lanes_inuse = 0;
+        if (state->features & IMB_FEATURE_GFNI)
+                state->docsis256_crc32_sec_ooo.unused_lanes = 0xF76543210;
+        else
+                state->docsis256_crc32_sec_ooo.unused_lanes = 0xF3210;
 
         /* Init ZUC out-of-order fields */
         memset(state->zuc_eea3_ooo.lens, 0xFF,

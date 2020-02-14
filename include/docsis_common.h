@@ -196,6 +196,20 @@ SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
         }
 }
 
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS128_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job, 16);
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS256_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job, 32);
+}
+
 /**
  * @brief JOB flush helper function for DOCSIS SEC encryption
  *
@@ -218,6 +232,19 @@ FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, const uint64_t key_size)
 
                 return DOCSIS_LAST_BLOCK(tmp, 32);
         }
+}
+
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_DOCSIS128_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
+{
+        return FLUSH_JOB_DOCSIS_SEC_ENC(state, 16);
+}
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_DOCSIS256_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
+{
+        return FLUSH_JOB_DOCSIS_SEC_ENC(state, 32);
 }
 
 /**
@@ -250,7 +277,21 @@ SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
         }
 }
 
-#ifndef SUBMIT_JOB_DOCSIS_SEC_CRC_ENC
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS128_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job, 16);
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS256_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job, 32);
+}
+
+#ifndef SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC
 __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
@@ -269,9 +310,25 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
         }
         return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job, key_size);
 }
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
+                                 JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(state, job, 16);
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
+                                 JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(state, job, 32);
+}
 #endif
 
-#ifndef FLUSH_JOB_DOCSIS_SEC_CRC_ENC
+#ifndef FLUSH_JOB_DOCSIS128_SEC_CRC_ENC
 __forceinline
 JOB_AES_HMAC *
 FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
@@ -283,9 +340,22 @@ FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
          */
         return FLUSH_JOB_DOCSIS_SEC_ENC(state, key_size);
 }
+
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_DOCSIS128_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
+{
+        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(state, 16);
+}
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_DOCSIS256_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
+{
+        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(state, 32);
+}
 #endif
 
-#ifndef SUBMIT_JOB_DOCSIS_SEC_CRC_DEC
+#ifndef SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC
 __forceinline
 JOB_AES_HMAC *
 SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
@@ -314,6 +384,22 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
         }
 
         return job;
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state,
+                                 JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(state, job, 16);
+}
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state,
+                                 JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(state, job, 32);
 }
 #endif
 

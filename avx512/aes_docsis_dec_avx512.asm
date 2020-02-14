@@ -53,7 +53,6 @@ endstruc
 %endif
 
 %define job     arg1
-%define keysz   arg2
 
 %define tmp1	rbx
 %define tmp2	rbp
@@ -976,14 +975,8 @@ section .text
 
 %endmacro       ;; DOCSIS_DEC_CRC32
 
-;; ===================================================================
-;; ===================================================================
-;; input: arg1 = job
-;;        arg2 = key size
-;; ===================================================================
-align 64
-MKGLOBAL(aes_docsis_dec_crc32_avx512,function,internal)
-aes_docsis_dec_crc32_avx512:
+%macro AES_DOCSIS_DEC_CRC32 1
+%define %%NROUNDS %1 ; [in] Number of rounds (9 or 13)
 	mov	        rax, rsp
 	sub	        rsp, STACKFRAME_size
 	and	        rsp, -64
@@ -1002,11 +995,11 @@ aes_docsis_dec_crc32_avx512:
         prefetchw       [tmp1 + 1*64]
 
         cmp             qword [job + _msg_len_to_cipher_in_bytes], 0
-        jz              aes_docsis_dec_crc32_avx512__no_cipher
+        jz              %%aes_docsis_dec_crc32_avx512__no_cipher
 
         mov             tmp2, [job + _cipher_start_src_offset_in_bytes]
         cmp             tmp2, [job + _hash_start_src_offset_in_bytes]
-        jbe             aes_docsis_dec_crc32_avx512__skip_aad       ; avoid zero lengths or negative cases
+        jbe             %%aes_docsis_dec_crc32_avx512__skip_aad       ; avoid zero lengths or negative cases
 
         sub             tmp2, [job + _hash_start_src_offset_in_bytes]   ; CRC only size / AAD
 
@@ -1015,7 +1008,7 @@ aes_docsis_dec_crc32_avx512:
         not             eax             ; carry CRC value into the combined part
         vmovd           xmm15, eax      ; initial CRC value
 
-aes_docsis_dec_crc32_avx512__skip_aad:
+%%aes_docsis_dec_crc32_avx512__skip_aad:
         mov             tmp1, [job + _iv]
 	vmovdqu64       xmm14, [tmp1]   ; load IV
 
@@ -1028,37 +1021,23 @@ aes_docsis_dec_crc32_avx512__skip_aad:
         mov             tmp5, [job + _aes_dec_key_expanded]
         mov             tmp6, [job + _aes_enc_key_expanded]
 
-        test            keysz, 32
-        jnz             docsis_dec_crc32_key_256
-
         DOCSIS_DEC_CRC32 tmp5, tmp2, tmp3, tmp4, tmp6, \
                          tmp7, tmp8, \
                          xmm15, xmm14, \
                          zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
                          zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
                          zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, 9
+                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                         %%NROUNDS
 
-        jmp             docsis_dec_crc32_end
-docsis_dec_crc32_key_256:
+        jmp             %%aes_docsis_dec_crc32_avx512__exit
 
-        DOCSIS_DEC_CRC32 tmp5, tmp2, tmp3, tmp4, tmp6, \
-                         tmp7, tmp8, \
-                         xmm15, xmm14, \
-                         zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
-                         zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
-                         zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, 13
-
-docsis_dec_crc32_end:
-        jmp             aes_docsis_dec_crc32_avx512__exit
-
-aes_docsis_dec_crc32_avx512__no_cipher:
+%%aes_docsis_dec_crc32_avx512__no_cipher:
         ;; tmp1 - already points to hash start
         mov             tmp2, [job + _msg_len_to_hash_in_bytes]
         ETHERNET_FCS_CRC tmp1, tmp2, rax, xmm15, tmp3, xmm0, xmm1, xmm2, xmm3
 
-aes_docsis_dec_crc32_avx512__exit:
+%%aes_docsis_dec_crc32_avx512__exit:
         mov             tmp1, [job + _auth_tag_output]
 	mov             [tmp1], eax        ; store CRC32 value
 
@@ -1074,6 +1053,25 @@ aes_docsis_dec_crc32_avx512__exit:
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
 %endif ;; SAFE_DATA
+%endmacro
+
+;; ===================================================================
+;; ===================================================================
+;; input: arg1 = job
+;; ===================================================================
+align 64
+MKGLOBAL(aes_docsis128_dec_crc32_avx512,function,internal)
+aes_docsis128_dec_crc32_avx512:
+
+        AES_DOCSIS_DEC_CRC32 9
+
+        ret
+
+align 64
+MKGLOBAL(aes_docsis256_dec_crc32_avx512,function,internal)
+aes_docsis256_dec_crc32_avx512:
+
+        AES_DOCSIS_DEC_CRC32 13
 
         ret
 

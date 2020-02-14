@@ -49,15 +49,11 @@ endstruc
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
-%define arg3	rcx
-%define arg4	rdx
 %define TMP2	rcx
 %define TMP3	rdx
 %else
 %define arg1	rcx
 %define arg2	rdx
-%define arg3	r8
-%define arg4	r9
 %define TMP2	rdi
 %define TMP3	rsi
 %endif
@@ -1450,21 +1446,15 @@ APPEND(%%_skip_clear_,I):
 
 %endmacro
 
-
 ;; ===========================================================================
-;; JOB* SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job,
-;;                                    const uint64_t key_size)
+;; JOB* SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
 ;; arg 1 : state
 ;; arg 2 : job
-;; arg 3 : key size
 
 align 64
-MKGLOBAL(submit_job_aes_docsis_enc_crc32_avx512,function,internal)
-submit_job_aes_docsis_enc_crc32_avx512:
+MKGLOBAL(submit_job_aes_docsis128_enc_crc32_avx512,function,internal)
+submit_job_aes_docsis128_enc_crc32_avx512:
         FUNC_ENTRY
-
-        test    arg3, 32
-        jnz     submit_256
 
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
                         TMP0,  TMP1,  TMP2,  TMP3,  TMP4,  TMP5,  TMP6, \
@@ -1474,9 +1464,19 @@ submit_job_aes_docsis_enc_crc32_avx512:
                         zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
                         submit, 9
-        jmp     submit_exit
+        FUNC_EXIT
+	ret
 
-submit_256:
+;; ===========================================================================
+;; JOB* SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+;; arg 1 : state
+;; arg 2 : job
+
+align 64
+MKGLOBAL(submit_job_aes_docsis256_enc_crc32_avx512,function,internal)
+submit_job_aes_docsis256_enc_crc32_avx512:
+        FUNC_ENTRY
+
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
                         TMP0,  TMP1,  TMP2,  TMP3,  TMP4,  TMP5,  TMP6, \
                         TMP7,  TMP8,  TMP9,  TMP10, TMP11, TMP12, \
@@ -1485,22 +1485,16 @@ submit_256:
                         zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
                         submit, 13
-
-submit_exit:
         FUNC_EXIT
 	ret
 
 ;; =====================================================================
-;; JOB* FLUSH(MB_MGR_AES_OOO *state, const uint64_t key_size)
+;; JOB* FLUSH128(MB_MGR_AES_OOO *state)
 ;; arg 1 : state
-;; arg 2 : key size
 align 64
-MKGLOBAL(flush_job_aes_docsis_enc_crc32_avx512,function,internal)
-flush_job_aes_docsis_enc_crc32_avx512:
+MKGLOBAL(flush_job_aes_docsis128_enc_crc32_avx512,function,internal)
+flush_job_aes_docsis128_enc_crc32_avx512:
         FUNC_ENTRY
-
-        test    arg2, 32
-        jnz     flush_256
 
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
                         TMP0,  TMP1,  TMP2,  TMP3,  TMP4,  TMP5,  TMP6, \
@@ -1510,9 +1504,17 @@ flush_job_aes_docsis_enc_crc32_avx512:
                         zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
                         flush, 9
-        jmp     flush_exit
+        FUNC_EXIT
+	ret
 
-flush_256:
+;; =====================================================================
+;; JOB* FLUSH256(MB_MGR_AES_OOO *state)
+;; arg 1 : state
+align 64
+MKGLOBAL(flush_job_aes_docsis256_enc_crc32_avx512,function,internal)
+flush_job_aes_docsis256_enc_crc32_avx512:
+        FUNC_ENTRY
+
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
                         TMP0,  TMP1,  TMP2,  TMP3,  TMP4,  TMP5,  TMP6, \
                         TMP7,  TMP8,  TMP9,  TMP10, TMP11, TMP12, \
@@ -1522,7 +1524,6 @@ flush_256:
                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
                         flush, 13
 
-flush_exit:
         FUNC_EXIT
 	ret
 

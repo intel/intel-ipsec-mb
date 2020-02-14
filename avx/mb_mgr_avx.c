@@ -458,25 +458,43 @@ init_mb_mgr_avx(MB_MGR *state)
         state->aes256_ooo.num_lanes_inuse = 0;
 
         /* DOCSIS SEC BPI (AES CBC + AES CFB for partial block)
-         * uses same settings as AES128 CBC.
+         * uses same settings as AES CBC.
          */
-        memset(state->docsis_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis_sec_ooo.lens));
-        memset(&state->docsis_sec_ooo.lens[0], 0,
-               sizeof(state->docsis_sec_ooo.lens[0]) * 8);
-        memset(state->docsis_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis_sec_ooo.job_in_lane));
-        state->docsis_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis_sec_ooo.num_lanes_inuse = 0;
+        memset(state->docsis128_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis128_sec_ooo.lens));
+        memset(&state->docsis128_sec_ooo.lens[0], 0,
+               sizeof(state->docsis128_sec_ooo.lens[0]) * 8);
+        memset(state->docsis128_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis128_sec_ooo.job_in_lane));
+        state->docsis128_sec_ooo.unused_lanes = 0xF76543210;
+        state->docsis128_sec_ooo.num_lanes_inuse = 0;
 
-        memset(state->docsis_crc32_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis_crc32_sec_ooo.lens));
-        memset(&state->docsis_crc32_sec_ooo.lens[0], 0,
-               sizeof(state->docsis_crc32_sec_ooo.lens[0]) * 8);
-        memset(state->docsis_crc32_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis_crc32_sec_ooo.job_in_lane));
-        state->docsis_crc32_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis_crc32_sec_ooo.num_lanes_inuse = 0;
+        memset(state->docsis128_crc32_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis128_crc32_sec_ooo.lens));
+        memset(&state->docsis128_crc32_sec_ooo.lens[0], 0,
+               sizeof(state->docsis128_crc32_sec_ooo.lens[0]) * 8);
+        memset(state->docsis128_crc32_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis128_crc32_sec_ooo.job_in_lane));
+        state->docsis128_crc32_sec_ooo.unused_lanes = 0xF76543210;
+        state->docsis128_crc32_sec_ooo.num_lanes_inuse = 0;
+
+        memset(state->docsis256_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis256_sec_ooo.lens));
+        memset(&state->docsis256_sec_ooo.lens[0], 0,
+               sizeof(state->docsis256_sec_ooo.lens[0]) * 8);
+        memset(state->docsis256_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis256_sec_ooo.job_in_lane));
+        state->docsis256_sec_ooo.unused_lanes = 0xF76543210;
+        state->docsis256_sec_ooo.num_lanes_inuse = 0;
+
+        memset(state->docsis256_crc32_sec_ooo.lens, 0xFF,
+               sizeof(state->docsis256_crc32_sec_ooo.lens));
+        memset(&state->docsis256_crc32_sec_ooo.lens[0], 0,
+               sizeof(state->docsis256_crc32_sec_ooo.lens[0]) * 8);
+        memset(state->docsis256_crc32_sec_ooo.job_in_lane, 0,
+               sizeof(state->docsis256_crc32_sec_ooo.job_in_lane));
+        state->docsis256_crc32_sec_ooo.unused_lanes = 0xF76543210;
+        state->docsis256_crc32_sec_ooo.num_lanes_inuse = 0;
 
         /* Init ZUC out-of-order fields */
         memset(state->zuc_eea3_ooo.lens, 0xFF,
