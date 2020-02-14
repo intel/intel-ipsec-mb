@@ -2152,7 +2152,7 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
  * @description
  *      Snow3G F8 2 buffer:
  *      Two buffers enc/dec with the same key schedule.
- *      The 3 IVs are independent and are passed as an array of pointers.
+ *      The 2 IVs are independent and are passed as an array of pointers.
  *      Each buffer and data length are separate.
  *---------------------------------------------------------*/
 void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
@@ -2321,25 +2321,26 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
 /*---------------------------------------------------------
  * @description
  *      Snow3G 8 buffer ks 8 multi:
- *      Processes 8 packets 8 bytes at a time.
- *      Uses individual key schedule for each buffer.
+ *      Processes 8 packets 32 or 8 bytes at a time.
+ *      Use different key schedule for each buffer.
  *---------------------------------------------------------*/
 static inline void
-snow3g_8_buffer_ks_8_multi(uint32_t bytes,
-                           const snow3g_key_schedule_t * const pKey[],
-                           const void * const IV[],
-                           const void * const pBufferIn[],
-                           void *pBufferOut[], const uint32_t *lengthInBytes)
+snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
+                              const void * const IV[],
+                              const void * const pBufferIn[],
+                              void *pBufferOut[],
+                              const uint32_t *lengthInBytes)
 {
         const size_t num_lanes = 8;
+        const size_t big_block_size = 32;
+        const size_t small_block_size = SNOW3G_BLOCK_SIZE;
         const uint8_t *tBufferIn[num_lanes];
         uint8_t *tBufferOut[num_lanes];
         uint32_t tLenInBytes[num_lanes];
-        const uint32_t qwords = bytes / SNOW3G_8_BYTES;
         snow3gKeyState8_t ctx;
+        const uint32_t bytes = length_find_min(lengthInBytes, num_lanes);
+        uint32_t bytes_left = bytes & (~(small_block_size - 1));
         size_t i;
-
-        bytes = qwords * SNOW3G_8_BYTES; /* rounded down minimum length */
 
         memcpy((void *)tBufferIn, (const void *)pBufferIn,
                sizeof(tBufferIn));
@@ -2354,110 +2355,88 @@ snow3g_8_buffer_ks_8_multi(uint32_t bytes,
         /* Clock FSM and LFSR once, ignore the keystream */
         (void) snow3g_keystream_8_4(&ctx);
 
-        length_sub(tLenInBytes, num_lanes, bytes);
+        if (bytes_left >= big_block_size) {
+                const uint32_t blocks = bytes / big_block_size;
+                __m256i ks[num_lanes], in[num_lanes];
 
-        /* generates 8 sets at a time on all streams */
-        for (i = qwords; i != 0; i--) {
-                __m256i H, L; /* 8 bytes of keystream */
-                size_t j;
+                /*
+                 * subtract common, multiple of block size,
+                 * length from all lanes
+                 */
+                length_sub(tLenInBytes, num_lanes, blocks * big_block_size);
+                bytes_left -= blocks * big_block_size;
 
-                snow3g_keystream_8_8(&ctx, &L, &H);
+                /* generates 8 sets at a time on all streams */
+                for (i = 0; i < blocks; i++) {
+                        size_t j;
 
-                tBufferIn[0] = xor_keystrm_rev(tBufferOut[0], tBufferIn[0],
-                                               _mm256_extract_epi64(L, 0));
-                tBufferIn[1] = xor_keystrm_rev(tBufferOut[1], tBufferIn[1],
-                                               _mm256_extract_epi64(L, 1));
-                tBufferIn[2] = xor_keystrm_rev(tBufferOut[2], tBufferIn[2],
-                                               _mm256_extract_epi64(H, 0));
-                tBufferIn[3] = xor_keystrm_rev(tBufferOut[3], tBufferIn[3],
-                                               _mm256_extract_epi64(H, 1));
-                tBufferIn[4] = xor_keystrm_rev(tBufferOut[4], tBufferIn[4],
-                                               _mm256_extract_epi64(L, 2));
-                tBufferIn[5] = xor_keystrm_rev(tBufferOut[5], tBufferIn[5],
-                                               _mm256_extract_epi64(L, 3));
-                tBufferIn[6] = xor_keystrm_rev(tBufferOut[6], tBufferIn[6],
-                                               _mm256_extract_epi64(H, 2));
-                tBufferIn[7] = xor_keystrm_rev(tBufferOut[7], tBufferIn[7],
-                                               _mm256_extract_epi64(H, 3));
+                        for (j = 0; j < num_lanes; j++) {
+                                const __m256i *in_ptr =
+                                        (const __m256i *)tBufferIn[j];
 
-                for (j = 0; j < num_lanes; j++)
-                        tBufferOut[j] += SNOW3G_8_BYTES;
-        }
+                                in[j] = _mm256_loadu_si256(in_ptr);
+                                tBufferIn[j] += big_block_size;
+                        }
 
-        /* process the remaining of each buffer
-         *  - extract the LFSR and FSM structures
-         *  - Continue process 1 buffer
-         */
-        for (i = 0; i < num_lanes; i++) {
-                snow3gKeyState1_t t_ctx;
+                        snow3g_keystream_8_32(&ctx, ks);
 
-                if (tLenInBytes[i] == 0)
-                        continue;
+                        for (j = 0; j < num_lanes; j++) {
+                                const __m256i xor_val =
+                                        _mm256_xor_si256(in[j], ks[j]);
 
-                snow3gStateConvert_8(&ctx, &t_ctx, i);
-                f8_snow3g(&t_ctx, tBufferIn[i], tBufferOut[i], tLenInBytes[i]);
-        }
+                                _mm256_storeu_si256((__m256i *)tBufferOut[j],
+                                                    xor_val);
+
+                                tBufferOut[j] += big_block_size;
+                        }
+                }
 
 #ifdef SAFE_DATA
-        CLEAR_MEM(&ctx, sizeof(ctx));
+                CLEAR_MEM(ks, sizeof(ks));
+                CLEAR_MEM(in, sizeof(in));
 #endif /* SAFE_DATA */
-}
+        }
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G 8 buffer ks 32 multi:
- *      Processes 8 packets 32 bytes at a time.
- *      Uses individual key schedule for each buffer.
- *---------------------------------------------------------*/
-static inline void
-snow3g_8_buffer_ks_32_multi(const uint32_t bytes,
-                            const snow3g_key_schedule_t * const pKey[],
-                            const void * const IV[],
-                            const void * const pBufferIn[],
-                            void *pBufferOut[], const uint32_t *lengthInBytes)
-{
-        const size_t block_size = 32;
-        const size_t num_lanes = 8;
-        const uint8_t *tBufferIn[num_lanes];
-        uint8_t *tBufferOut[num_lanes];
-        uint32_t tLenInBytes[num_lanes];
-        const uint32_t blocks = bytes / block_size;
-        __m256i ks[num_lanes];
-        snow3gKeyState8_t ctx;
-        size_t i;
+        if (bytes_left >= small_block_size) {
+                const uint32_t blocks = bytes_left / small_block_size;
 
-        memcpy((void *)tBufferIn, (const void *)pBufferIn,
-               sizeof(tBufferIn));
-        memcpy((void *)tBufferOut, (const void *)pBufferOut,
-               sizeof(tBufferOut));
-        memcpy((void *)tLenInBytes, (const void *)lengthInBytes,
-               sizeof(tLenInBytes));
+                length_sub(tLenInBytes, num_lanes, blocks * small_block_size);
+                bytes_left -= blocks * small_block_size;
 
-        /* Initialize the schedule from the IV */
-        snow3gStateInitialize_8_multiKey(&ctx, pKey, IV);
+                /* generates 8 sets at a time on all streams */
+                for (i = 0; i < blocks; i++) {
+                        __m256i H, L; /* 8 bytes of keystream */
+                        size_t j;
 
-        /* Clock FSM and LFSR once, ignore the keystream */
-        (void) snow3g_keystream_8_4(&ctx);
+                        snow3g_keystream_8_8(&ctx, &L, &H);
 
-        /* subtract common, multiple of block size, length from all lanes */
-        length_sub(tLenInBytes, num_lanes, blocks * block_size);
+                        tBufferIn[0] =
+                                xor_keystrm_rev(tBufferOut[0], tBufferIn[0],
+                                                _mm256_extract_epi64(L, 0));
+                        tBufferIn[1] =
+                                xor_keystrm_rev(tBufferOut[1], tBufferIn[1],
+                                                _mm256_extract_epi64(L, 1));
+                        tBufferIn[2] =
+                                xor_keystrm_rev(tBufferOut[2], tBufferIn[2],
+                                                _mm256_extract_epi64(H, 0));
+                        tBufferIn[3] =
+                                xor_keystrm_rev(tBufferOut[3], tBufferIn[3],
+                                                _mm256_extract_epi64(H, 1));
+                        tBufferIn[4] =
+                                xor_keystrm_rev(tBufferOut[4], tBufferIn[4],
+                                                _mm256_extract_epi64(L, 2));
+                        tBufferIn[5] =
+                                xor_keystrm_rev(tBufferOut[5], tBufferIn[5],
+                                                _mm256_extract_epi64(L, 3));
+                        tBufferIn[6] =
+                                xor_keystrm_rev(tBufferOut[6], tBufferIn[6],
+                                                _mm256_extract_epi64(H, 2));
+                        tBufferIn[7] =
+                                xor_keystrm_rev(tBufferOut[7], tBufferIn[7],
+                                                _mm256_extract_epi64(H, 3));
 
-        /* generates 8 sets at a time on all streams */
-        for (i = 0; i < blocks; i++) {
-                size_t j;
-
-                snow3g_keystream_8_32(&ctx, ks);
-
-                for (j = 0; j < num_lanes; j++) {
-                        const __m256i *in_ptr = (const __m256i *)tBufferIn[j];
-                        __m256i *out_ptr = (__m256i *)tBufferOut[j];
-                        const __m256i in = _mm256_loadu_si256(in_ptr);
-
-                        _mm256_storeu_si256(out_ptr,
-                                            _mm256_xor_si256(in, ks[j]));
-
-                        tBufferIn[j] += block_size;
-                        tBufferOut[j] += block_size;
+                        for (j = 0; j < num_lanes; j++)
+                                tBufferOut[j] += small_block_size;
                 }
         }
 
@@ -2477,7 +2456,6 @@ snow3g_8_buffer_ks_32_multi(const uint32_t bytes,
 
 #ifdef SAFE_DATA
         CLEAR_MEM(&ctx, sizeof(ctx));
-        CLEAR_MEM(&ks, sizeof(ks));
 #endif /* SAFE_DATA */
 }
 
@@ -2498,9 +2476,8 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
         const size_t big_block_size = 32;
         const size_t small_block_size = SNOW3G_8_BYTES;
         const uint32_t bytes = length_find_min(lengthInBytes, num_lanes);
-        __m256i ks[num_lanes], in[num_lanes];
         snow3gKeyState8_t ctx;
-        uint32_t i, bytes_left = bytes & (~small_block_size);
+        uint32_t i, bytes_left = bytes & (~(small_block_size - 1));
 
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_8(&ctx, pKey, IV[0], IV[1], IV[2],
@@ -2511,6 +2488,7 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
 
         if (bytes_left >= big_block_size) {
                 const uint32_t blocks = bytes_left / big_block_size;
+                __m256i ks[num_lanes], in[num_lanes];
 
                 length_sub(lengthInBytes, num_lanes, blocks * big_block_size);
                 bytes_left -= blocks * big_block_size;
@@ -2538,6 +2516,11 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
                                 pBufferOut[j] += big_block_size;
                         }
                 }
+
+#ifdef SAFE_DATA
+                CLEAR_MEM(ks, sizeof(ks));
+                CLEAR_MEM(in, sizeof(in));
+#endif /* SAFE_DATA */
         }
 
         if (bytes_left >= small_block_size) {
@@ -2600,8 +2583,6 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
 
 #ifdef SAFE_DATA
         CLEAR_MEM(&ctx, sizeof(ctx));
-        CLEAR_MEM(&ks, sizeof(ks));
-        CLEAR_MEM(&in, sizeof(in));
 #endif /* SAFE_DATA */
 }
 
@@ -2647,15 +2628,8 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-        const uint32_t bytes = length_find_min(lengthInBytes, num_lanes);
-
-        if (bytes % 32) {
-                snow3g_8_buffer_ks_8_multi(bytes, pKey, IV, BufferIn, BufferOut,
-                                           lengthInBytes);
-        } else {
-                snow3g_8_buffer_ks_32_multi(bytes, pKey, IV, BufferIn,
-                                            BufferOut, lengthInBytes);
-        }
+        snow3g_8_buffer_ks_32_8_multi(pKey, IV, BufferIn,
+                                      BufferOut, lengthInBytes);
 
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_GPS();
@@ -2984,7 +2958,7 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
         CLEAR_SCRATCH_SIMD_REGS();
 #endif /* SAFE_DATA */
 
-        if (packetCount > 16) {
+        if (packetCount > NUM_PACKETS_16) {
                 pBufferOut[0] = NULL;
                 printf("packetCount too high (%d)\n", packetCount);
                 return;
