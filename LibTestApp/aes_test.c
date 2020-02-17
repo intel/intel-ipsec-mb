@@ -1000,6 +1000,7 @@ static struct aes_vector aes_cfb_128_tab[] = {
 /* =================================================================== */
 /* DOCSIS with CRC: AES CBC + CFB + CRC32 */
 
+/* 128-bit keys */
 static const uint8_t DOCRC1_KEY[] = {
         0x00, 0x00, 0x00, 0x00, 0xaa, 0xbb, 0xcc, 0xdd,
         0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55
@@ -1029,6 +1030,7 @@ static const uint8_t DOCRC1_CT[] = {
         /* CRC (encrypted) */
         0x61, 0xF8, 0x63, 0x42
 };
+#define DOCRC1_KEY_LEN       16
 #define DOCRC1_HASH_OFFSET   6
 #define DOCRC1_HASH_LENGTH   14
 #define DOCRC1_CIPHER_OFFSET 18
@@ -1062,8 +1064,9 @@ static const uint8_t DOCRC2_CT[] = {
         /* CRC (encrypted) */
         0xFE, 0x12, 0x99, 0xE5
 };
-#define DOCRC2_KEY DOCRC1_KEY
-#define DOCRC2_IV  DOCRC1_IV
+#define DOCRC2_KEY           DOCRC1_KEY
+#define DOCRC2_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC2_IV            DOCRC1_IV
 #define DOCRC2_HASH_OFFSET   6
 #define DOCRC2_HASH_LENGTH   15
 #define DOCRC2_CIPHER_OFFSET 18
@@ -1099,8 +1102,9 @@ static const uint8_t DOCRC3_CT[] = {
         /* CRC (encrypted) */
         0x54, 0x85, 0xF8, 0x32
 };
-#define DOCRC3_KEY DOCRC1_KEY
-#define DOCRC3_IV  DOCRC1_IV
+#define DOCRC3_KEY           DOCRC1_KEY
+#define DOCRC3_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC3_IV            DOCRC1_IV
 #define DOCRC3_HASH_OFFSET   6
 #define DOCRC3_HASH_LENGTH   24
 #define DOCRC3_CIPHER_OFFSET 18
@@ -1136,8 +1140,9 @@ static const uint8_t DOCRC4_CT[] = {
         /* CRC (encrypted) */
         0xFE, 0x47, 0x3E, 0x22
 };
-#define DOCRC4_KEY DOCRC1_KEY
-#define DOCRC4_IV  DOCRC1_IV
+#define DOCRC4_KEY           DOCRC1_KEY
+#define DOCRC4_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC4_IV            DOCRC1_IV
 #define DOCRC4_HASH_OFFSET   6
 #define DOCRC4_HASH_LENGTH   25
 #define DOCRC4_CIPHER_OFFSET 18
@@ -1185,8 +1190,9 @@ static const uint8_t DOCRC5_CT[] = {
         /* CRC (encrypted) */
         0xAB, 0xED, 0x2C, 0x26
 };
-#define DOCRC5_KEY DOCRC1_KEY
-#define DOCRC5_IV  DOCRC1_IV
+#define DOCRC5_KEY           DOCRC1_KEY
+#define DOCRC5_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC5_IV            DOCRC1_IV
 #define DOCRC5_HASH_OFFSET   6
 #define DOCRC5_HASH_LENGTH   72
 #define DOCRC5_CIPHER_OFFSET 18
@@ -1234,8 +1240,9 @@ static const uint8_t DOCRC6_CT[] = {
         /* CRC (encrypted) */
         0x2F, 0xD4, 0x48, 0x18
 };
-#define DOCRC6_KEY DOCRC1_KEY
-#define DOCRC6_IV  DOCRC1_IV
+#define DOCRC6_KEY           DOCRC1_KEY
+#define DOCRC6_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC6_IV            DOCRC1_IV
 #define DOCRC6_HASH_OFFSET   6
 #define DOCRC6_HASH_LENGTH   73
 #define DOCRC6_CIPHER_OFFSET 18
@@ -1283,8 +1290,9 @@ static const uint8_t DOCRC7_CT[] = {
         /* CRC (encrypted) */
         0x11, 0xB4, 0x06, 0x33
 };
-#define DOCRC7_KEY DOCRC1_KEY
-#define DOCRC7_IV  DOCRC1_IV
+#define DOCRC7_KEY           DOCRC1_KEY
+#define DOCRC7_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC7_IV            DOCRC1_IV
 #define DOCRC7_HASH_OFFSET   6
 #define DOCRC7_HASH_LENGTH   73
 #define DOCRC7_CIPHER_OFFSET 40
@@ -1321,8 +1329,9 @@ static const uint8_t DOCRC8_CT[] = {
         /* CRC (4 bytes) */
         0xCB, 0x7C, 0xAB, 0x56
 };
-#define DOCRC8_KEY DOCRC1_KEY
-#define DOCRC8_IV  DOCRC1_IV
+#define DOCRC8_KEY           DOCRC1_KEY
+#define DOCRC8_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC8_IV            DOCRC1_IV
 #define DOCRC8_HASH_OFFSET   6
 #define DOCRC8_HASH_LENGTH   24
 #define DOCRC8_CIPHER_OFFSET 18
@@ -1359,8 +1368,9 @@ static const uint8_t DOCRC9_CT[] = {
         /* instead of CRC (4 bytes) */
         0x7D, 0xB0, 0xE7, 0x18
 };
-#define DOCRC9_KEY DOCRC1_KEY
-#define DOCRC9_IV  DOCRC1_IV
+#define DOCRC9_KEY           DOCRC1_KEY
+#define DOCRC9_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC9_IV            DOCRC1_IV
 #define DOCRC9_HASH_OFFSET   6
 #define DOCRC9_HASH_LENGTH   0
 #define DOCRC9_CIPHER_OFFSET 18
@@ -1397,8 +1407,9 @@ static const uint8_t DOCRC10_CT[] = {
         /* CRC (4 bytes) */
         0xFF, 0xFF, 0xFF, 0x55
 };
-#define DOCRC10_KEY DOCRC1_KEY
-#define DOCRC10_IV  DOCRC1_IV
+#define DOCRC10_KEY           DOCRC1_KEY
+#define DOCRC10_KEY_LEN       DOCRC1_KEY_LEN
+#define DOCRC10_IV            DOCRC1_IV
 #define DOCRC10_HASH_OFFSET   6
 #define DOCRC10_HASH_LENGTH   0
 #define DOCRC10_CIPHER_OFFSET 18
@@ -1406,8 +1417,309 @@ static const uint8_t DOCRC10_CT[] = {
 #define DOCRC10_CRC           0x0
 #define DOCRC10_FRAME_LEN     DIM(DOCRC10_PT)
 
+/* 256-bit keys */
+static const uint8_t DOCRC11_KEY[] = {
+        0x00, 0x00, 0x00, 0x00, 0xAA, 0xBB, 0xCC, 0xDD,
+        0xEE, 0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
+        0x00, 0x00, 0x00, 0x00, 0xAA, 0xBB, 0xCC, 0xDD,
+        0xEE, 0xFF, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55
+};
+static const uint8_t DOCRC11_IV[] = {
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11
+};
+static const uint8_t DOCRC11_PT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU without CRC (14 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        0x08, 0x00,
+        /* CRC (4 bytes) */
+        0x14, 0x08, 0xe8, 0x55
+};
+static const uint8_t DOCRC11_CT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU DA / SA (12 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        /* PDU Type/Len (encrypted) */
+        0x08, 0x46,
+        /* CRC (encrypted) */
+        0x98, 0x98, 0x47, 0x76
+};
+
+#define DOCRC11_KEY_LEN       32
+#define DOCRC11_HASH_OFFSET   6
+#define DOCRC11_HASH_LENGTH   14
+#define DOCRC11_CIPHER_OFFSET 18
+#define DOCRC11_CIPHER_LENGTH 6
+#define DOCRC11_CRC           0x55e80814 /* LE */
+#define DOCRC11_FRAME_LEN     DIM(DOCRC11_PT)
+
+static const uint8_t DOCRC12_PT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU without CRC (15 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        0x08, 0x00, 0xAA,
+        /* CRC (4 bytes) */
+        0x0E, 0x99, 0x8E, 0xFE
+};
+static const uint8_t DOCRC12_CT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU DA / SA (12 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        /* PDU Type/Len (encrypted) */
+        0x08, 0x46, 0x26,
+        /* CRC (encrypted) */
+        0x9E, 0x36, 0xAD, 0xC7
+};
+
+#define DOCRC12_KEY           DOCRC11_KEY
+#define DOCRC12_KEY_LEN       DOCRC11_KEY_LEN
+#define DOCRC12_IV            DOCRC11_IV
+#define DOCRC12_HASH_OFFSET   6
+#define DOCRC12_HASH_LENGTH   15
+#define DOCRC12_CIPHER_OFFSET 18
+#define DOCRC12_CIPHER_LENGTH 7
+#define DOCRC12_CRC           0xFE8E990E /* LE */
+#define DOCRC12_FRAME_LEN     DIM(DOCRC12_PT)
+
+static const uint8_t DOCRC13_PT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU without CRC (24 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        0x08, 0x00, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        /* CRC (4 bytes) */
+        0xCB, 0x7C, 0xAB, 0x56
+};
+static const uint8_t DOCRC13_CT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU DA / SA (12 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        /* PDU Type/Len (encrypted) */
+        0xA1, 0xFF, 0x45, 0x21, 0x43, 0xC7,
+        0x5B, 0x3C, 0xAB, 0x7A, 0x80, 0xC9,
+        /* CRC (encrypted) */
+        0x70, 0x51, 0x54, 0xD0
+};
+
+#define DOCRC13_KEY           DOCRC11_KEY
+#define DOCRC13_KEY_LEN       DOCRC11_KEY_LEN
+#define DOCRC13_IV            DOCRC11_IV
+#define DOCRC13_HASH_OFFSET   6
+#define DOCRC13_HASH_LENGTH   24
+#define DOCRC13_CIPHER_OFFSET 18
+#define DOCRC13_CIPHER_LENGTH 16
+#define DOCRC13_CRC           0x56AB7CCB /* LE */
+#define DOCRC13_FRAME_LEN     DIM(DOCRC13_PT)
+
+static const uint8_t DOCRC14_PT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU without CRC (24 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        0x08, 0x00, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA,
+        /* CRC (4 bytes) */
+        0x3F, 0x15, 0xE1, 0xE8
+};
+static const uint8_t DOCRC14_CT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU DA / SA (12 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        /* PDU Type/Len (encrypted) */
+        0xA0, 0x88, 0x19, 0x50, 0x3B, 0x70,
+        0x91, 0x3C, 0x2A, 0x46, 0x74, 0x45,
+        0x03,
+        /* CRC (encrypted) */
+        0x30, 0xC8, 0xA9, 0xCC
+};
+
+#define DOCRC14_KEY           DOCRC11_KEY
+#define DOCRC14_KEY_LEN       DOCRC11_KEY_LEN
+#define DOCRC14_IV            DOCRC11_IV
+#define DOCRC14_HASH_OFFSET   6
+#define DOCRC14_HASH_LENGTH   25
+#define DOCRC14_CIPHER_OFFSET 18
+#define DOCRC14_CIPHER_LENGTH 17
+#define DOCRC14_CRC           0xE8E1153F /* LE */
+#define DOCRC14_FRAME_LEN     DIM(DOCRC14_PT)
+
+static const uint8_t DOCRC15_PT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU without CRC (72 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        0x08, 0x00, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        /* CRC (4 bytes) */
+        0x2E, 0x07, 0xC8, 0x3C
+};
+
+static const uint8_t DOCRC15_CT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU DA / SA (12 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        /* PDU Type/Len (encrypted) */
+        0x5D, 0xB3, 0xD1, 0xF4, 0x6C, 0x65,
+        0xCA, 0x3B, 0x5C, 0x16, 0xB3, 0xA4,
+        0x23, 0x74, 0x81, 0x5E, 0x12, 0x03,
+        0x7B, 0x3F, 0xBB, 0x62, 0x1D, 0x29,
+        0x66, 0x60, 0x1B, 0x6E, 0x01, 0xFE,
+        0x6F, 0x40, 0x12, 0xE6, 0x20, 0xE6,
+        0x10, 0xBE, 0x5B, 0xF2, 0x7E, 0x7F,
+        0x43, 0x53, 0x66, 0x38, 0xA6, 0x4D,
+        0xF3, 0x66, 0x84, 0x9F, 0xE2, 0xEC,
+        0x9F, 0xBC, 0xD4, 0x38, 0xDB, 0x33,
+        /* CRC (encrypted) */
+        0x4E, 0x12, 0xB3, 0xB4
+};
+
+#define DOCRC15_KEY           DOCRC11_KEY
+#define DOCRC15_KEY_LEN       DOCRC11_KEY_LEN
+#define DOCRC15_IV            DOCRC11_IV
+#define DOCRC15_HASH_OFFSET   6
+#define DOCRC15_HASH_LENGTH   72
+#define DOCRC15_CIPHER_OFFSET 18
+#define DOCRC15_CIPHER_LENGTH 64
+#define DOCRC15_CRC           0x3CC8072E /* LE */
+#define DOCRC15_FRAME_LEN     DIM(DOCRC15_PT)
+
+static const uint8_t DOCRC16_PT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU without CRC (72 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        0x08, 0x00, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA,
+        /* CRC (4 bytes) */
+        0xB3, 0x60, 0xEB, 0x38
+};
+
+static const uint8_t DOCRC16_CT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU DA / SA (12 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        /* PDU Type/Len (encrypted) */
+        0x5D, 0xB3, 0xD1, 0xF4, 0x6C, 0x65,
+        0xCA, 0x3B, 0x5C, 0x16, 0xB3, 0xA4,
+        0x23, 0x74, 0x81, 0x5E, 0x12, 0x03,
+        0x7B, 0x3F, 0xBB, 0x62, 0x1D, 0x29,
+        0x66, 0x60, 0x1B, 0x6E, 0x01, 0xFE,
+        0x6F, 0x40, 0x12, 0xE6, 0x20, 0xE6,
+        0x10, 0xBE, 0x5B, 0xF2, 0x7E, 0x7F,
+        0x43, 0x53, 0x66, 0x38, 0xA6, 0x4D,
+        0xD9, 0xA6, 0x6A, 0x07, 0x6B, 0xAA,
+        0x5C, 0xF6, 0xB4, 0x1D, 0xC5, 0x9A,
+        0x7C,
+        /* CRC (encrypted) */
+        0x48, 0xDB, 0xB1, 0x74
+};
+
+#define DOCRC16_KEY           DOCRC11_KEY
+#define DOCRC16_KEY_LEN       DOCRC11_KEY_LEN
+#define DOCRC16_IV            DOCRC11_IV
+#define DOCRC16_HASH_OFFSET   6
+#define DOCRC16_HASH_LENGTH   73
+#define DOCRC16_CIPHER_OFFSET 18
+#define DOCRC16_CIPHER_LENGTH 65
+#define DOCRC16_CRC           0x38EB60B3 /* LE */
+#define DOCRC16_FRAME_LEN     DIM(DOCRC16_PT)
+
+static const uint8_t DOCRC17_PT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU without CRC (73 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        0x08, 0x00, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA,
+        /* CRC (4 bytes) */
+        0xB3, 0x60, 0xEB, 0x38
+};
+
+static const uint8_t DOCRC17_CT[] = {
+        /* DOCSIS Header (6 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* PDU DA / SA + Extra data (34 bytes) */
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+        0x08, 0x00, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        0xAA, 0xAA, 0xAA, 0xAA,
+        /* PDU Type/Len (encrypted) */
+        0x96, 0x03, 0x94, 0x9B, 0xDA, 0x96,
+        0x00, 0x42, 0x7B, 0x52, 0xD3, 0xB9,
+        0xA4, 0x10, 0x7B, 0x87, 0x0B, 0xBA,
+        0x41, 0x0E, 0x2B, 0x8F, 0xA6, 0xA3,
+        0xF5, 0x55, 0x9C, 0x0C, 0x69, 0x7C,
+        0x36, 0xD2, 0xBF, 0xA1, 0xF2, 0x2B,
+        0xAB, 0x1A, 0x92,
+        /* CRC (encrypted) */
+        0xAF, 0x19, 0x88, 0xDD
+};
+
+#define DOCRC17_KEY           DOCRC11_KEY
+#define DOCRC17_KEY_LEN       DOCRC11_KEY_LEN
+#define DOCRC17_IV            DOCRC11_IV
+#define DOCRC17_HASH_OFFSET   6
+#define DOCRC17_HASH_LENGTH   73
+#define DOCRC17_CIPHER_OFFSET 40
+#define DOCRC17_CIPHER_LENGTH 43
+#define DOCRC17_CRC           0x38EB60B3 /* LE */
+#define DOCRC17_FRAME_LEN     DIM(DOCRC17_PT)
+
+
 #define MK_DOCRC_VEC(_n)                                                \
-        { _n ## _FRAME_LEN, _n ## _KEY, _n ## _IV,                      \
+        { _n ## _FRAME_LEN, _n ## _KEY, _n ## _KEY_LEN, _n ## _IV,      \
                         _n ## _PT, _n ## _CT,                           \
                         _n ## _HASH_OFFSET, _n ## _HASH_LENGTH,         \
                         _n ## _CIPHER_OFFSET, _n ## _CIPHER_LENGTH,     \
@@ -1416,6 +1728,7 @@ static const uint8_t DOCRC10_CT[] = {
 struct docsis_crc_vector {
         uint64_t frame_len;
         const uint8_t *key;
+        uint64_t key_len;
         const uint8_t *iv;
         const uint8_t *pt;
         const uint8_t *ct;
@@ -1427,6 +1740,7 @@ struct docsis_crc_vector {
 };
 
 struct docsis_crc_vector docsis_crc_tab[] = {
+        /* 128-bit key */
         MK_DOCRC_VEC(DOCRC1),
         MK_DOCRC_VEC(DOCRC2),
         MK_DOCRC_VEC(DOCRC3),
@@ -1437,6 +1751,14 @@ struct docsis_crc_vector docsis_crc_tab[] = {
         MK_DOCRC_VEC(DOCRC8),
         MK_DOCRC_VEC(DOCRC9),
         MK_DOCRC_VEC(DOCRC10),
+        /* 256-bit key */
+        MK_DOCRC_VEC(DOCRC11),
+        MK_DOCRC_VEC(DOCRC12),
+        MK_DOCRC_VEC(DOCRC13),
+        MK_DOCRC_VEC(DOCRC14),
+        MK_DOCRC_VEC(DOCRC15),
+        MK_DOCRC_VEC(DOCRC16),
+        MK_DOCRC_VEC(DOCRC17),
 };
 
 static int
@@ -1721,7 +2043,7 @@ test_docrc_many(struct MB_MGR *mb_mgr,
                 const int in_place,
                 const int num_jobs)
 {
-        const unsigned key_len = 16;
+        const uint64_t key_len = p_vec->key_len;
         const unsigned tag_len = 4;
         const unsigned frame_len = (unsigned) p_vec->frame_len;
         struct JOB_AES_HMAC *job;
@@ -1853,8 +2175,18 @@ test_docrc_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
 #else
 		printf(".");
 #endif
-                IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].key, enc_keys,
-                                   dec_keys);
+                switch (vec_tab[vect].key_len) {
+                case 16:
+                        IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].key, enc_keys,
+                                           dec_keys);
+                        break;
+                case 32:
+                default:
+                        IMB_AES_KEYEXP_256(mb_mgr, vec_tab[vect].key, enc_keys,
+                                           dec_keys);
+                        break;
+                }
+
 
                 if (test_docrc_many(mb_mgr, enc_keys, dec_keys,
                                     &vec_tab[vect],
