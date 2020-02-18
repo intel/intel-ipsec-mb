@@ -212,7 +212,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; AESENC_ROUNDS_x16 macro
 ; - 16 lanes, 1 block per lane
-; - it handles special cases: the last and zero rounds
+; - performs AES encrypt rounds 1-NROUNDS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro AESENC_ROUNDS_x16 5
 %define %%L00_03  %1              ; [in/out] ZMM with lane 0-3 blocks
@@ -227,16 +227,9 @@ endstruc
 %define K08_11_OFFSET 128
 %define K12_15_OFFSET 192
 
-%assign ROUND 0
-%rep (%%NROUNDS + 2)
+%assign ROUND 1
+%rep (%%NROUNDS + 1)
 
-%if ROUND < 1
-        ;; XOR with key 0 before doing aesenc
-        vpxorq          %%L00_03, [%%KP + K00_03_OFFSET + ROUND * (16*16)]
-        vpxorq          %%L04_07, [%%KP + K04_07_OFFSET + ROUND * (16*16)]
-        vpxorq          %%L08_11, [%%KP + K08_11_OFFSET + ROUND * (16*16)]
-        vpxorq          %%L12_15, [%%KP + K12_15_OFFSET + ROUND * (16*16)]
-%else
 %if ROUND <= %%NROUNDS
 
         ;; rounds 1 to 9/11/13
@@ -250,7 +243,6 @@ endstruc
         vaesenclast     %%L04_07, %%L04_07, [%%KP + K04_07_OFFSET + ROUND * (16*16)]
         vaesenclast     %%L08_11, %%L08_11, [%%KP + K08_11_OFFSET + ROUND * (16*16)]
         vaesenclast     %%L12_15, %%L12_15, [%%KP + K12_15_OFFSET + ROUND * (16*16)]
-%endif
 %endif
 
 %assign ROUND (ROUND + 1)
@@ -302,6 +294,11 @@ endstruc
 
 %define %%IN    ARG + _aesarg_in
 %define %%OUT   ARG + _aesarg_out
+%define %%KP    ARG + _aesarg_key_tab
+%define K00_03_OFFSET 0
+%define K04_07_OFFSET 64
+%define K08_11_OFFSET 128
+%define K12_15_OFFSET 192
 
         ;; check for at least 4 blocks
         cmp             %%LENGTH, 64
@@ -344,38 +341,38 @@ endstruc
         TRANSPOSE_4x4 %%B0L12_15, %%B1L12_15, %%B2L12_15, %%B3L12_15, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
 
-        ;; xor first plaintext block with IV
-        vpxorq          %%B0L00_03, %%ZIV00_03
-        vpxorq          %%B0L04_07, %%ZIV04_07
-        vpxorq          %%B0L08_11, %%ZIV08_11
-        vpxorq          %%B0L12_15, %%ZIV12_15
+        ;; xor first plaintext block with IV and round zero key
+        vpternlogq      %%B0L00_03, %%ZIV00_03, [%%KP + K00_03_OFFSET], 0x96
+        vpternlogq      %%B0L04_07, %%ZIV04_07, [%%KP + K04_07_OFFSET], 0x96
+        vpternlogq      %%B0L08_11, %%ZIV08_11, [%%KP + K08_11_OFFSET], 0x96
+        vpternlogq      %%B0L12_15, %%ZIV12_15, [%%KP + K12_15_OFFSET], 0x96
 
         ;; encrypt block 0 lanes
         AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%NROUNDS
 
-        ;; xor plaintext block with last cipher block
-        vpxorq          %%B1L00_03, %%B0L00_03
-        vpxorq          %%B1L04_07, %%B0L04_07
-        vpxorq          %%B1L08_11, %%B0L08_11
-        vpxorq          %%B1L12_15, %%B0L12_15
+        ;; xor plaintext block with last cipher block and round zero key
+        vpternlogq      %%B1L00_03, %%B0L00_03, [%%KP + K00_03_OFFSET], 0x96
+        vpternlogq      %%B1L04_07, %%B0L04_07, [%%KP + K04_07_OFFSET], 0x96
+        vpternlogq      %%B1L08_11, %%B0L08_11, [%%KP + K08_11_OFFSET], 0x96
+        vpternlogq      %%B1L12_15, %%B0L12_15, [%%KP + K12_15_OFFSET], 0x96
 
         ;; encrypt block 1 lanes
         AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%NROUNDS
 
-        ;; xor plaintext block with last cipher block
-        vpxorq          %%B2L00_03, %%B1L00_03
-        vpxorq          %%B2L04_07, %%B1L04_07
-        vpxorq          %%B2L08_11, %%B1L08_11
-        vpxorq          %%B2L12_15, %%B1L12_15
+        ;; xor plaintext block with last cipher block and round zero key
+        vpternlogq      %%B2L00_03, %%B1L00_03, [%%KP + K00_03_OFFSET], 0x96
+        vpternlogq      %%B2L04_07, %%B1L04_07, [%%KP + K04_07_OFFSET], 0x96
+        vpternlogq      %%B2L08_11, %%B1L08_11, [%%KP + K08_11_OFFSET], 0x96
+        vpternlogq      %%B2L12_15, %%B1L12_15, [%%KP + K12_15_OFFSET], 0x96
 
         ;; encrypt block 2 lanes
         AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%NROUNDS
 
-        ;; xor plaintext block with last cipher block
-        vpxorq          %%B3L00_03, %%B2L00_03
-        vpxorq          %%B3L04_07, %%B2L04_07
-        vpxorq          %%B3L08_11, %%B2L08_11
-        vpxorq          %%B3L12_15, %%B2L12_15
+        ;; xor plaintext block with last cipher block and round zero key
+        vpternlogq      %%B3L00_03, %%B2L00_03, [%%KP + K00_03_OFFSET], 0x96
+        vpternlogq      %%B3L04_07, %%B2L04_07, [%%KP + K04_07_OFFSET], 0x96
+        vpternlogq      %%B3L08_11, %%B2L08_11, [%%KP + K08_11_OFFSET], 0x96
+        vpternlogq      %%B3L12_15, %%B2L12_15, [%%KP + K12_15_OFFSET], 0x96
 
         ;; encrypt block 3 lanes
         AESENC_ROUNDS_x16 %%B3L00_03, %%B3L04_07, %%B3L08_11, %%B3L12_15, %%NROUNDS
@@ -476,6 +473,11 @@ endstruc
 
 %define %%IN    ARG + _aesarg_in
 %define %%OUT   ARG + _aesarg_out
+%define %%KP    ARG + _aesarg_key_tab
+%define K00_03_OFFSET 0
+%define K04_07_OFFSET 64
+%define K08_11_OFFSET 128
+%define K12_15_OFFSET 192
 
 %if %%NUM_BLKS == 1
         mov             %%TMP0, 0x0000_0000_0000_ffff
@@ -521,11 +523,11 @@ endstruc
         TRANSPOSE_4x4 %%B0L12_15, %%B1L12_15, %%B2L12_15, %%B3L12_15, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
 
-        ;; xor plaintext block with IV
-        vpxorq          %%B0L00_03, %%ZIV00_03
-        vpxorq          %%B0L04_07, %%ZIV04_07
-        vpxorq          %%B0L08_11, %%ZIV08_11
-        vpxorq          %%B0L12_15, %%ZIV12_15
+        ;; xor plaintext block with IV and round zero key
+        vpternlogq      %%B0L00_03, %%ZIV00_03, [%%KP + K00_03_OFFSET], 0x96
+        vpternlogq      %%B0L04_07, %%ZIV04_07, [%%KP + K04_07_OFFSET], 0x96
+        vpternlogq      %%B0L08_11, %%ZIV08_11, [%%KP + K08_11_OFFSET], 0x96
+        vpternlogq      %%B0L12_15, %%ZIV12_15, [%%KP + K12_15_OFFSET], 0x96
 
         ;; encrypt block 0 lanes
         AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%NROUNDS
@@ -539,11 +541,11 @@ endstruc
 %endif
 
 %if %%NUM_BLKS >= 2
-        ;; xor plaintext block with last cipher block
-        vpxorq          %%B1L00_03, %%B0L00_03
-        vpxorq          %%B1L04_07, %%B0L04_07
-        vpxorq          %%B1L08_11, %%B0L08_11
-        vpxorq          %%B1L12_15, %%B0L12_15
+        ;; xor plaintext block with last cipher block and round zero key
+        vpternlogq      %%B1L00_03, %%B0L00_03, [%%KP + K00_03_OFFSET], 0x96
+        vpternlogq      %%B1L04_07, %%B0L04_07, [%%KP + K04_07_OFFSET], 0x96
+        vpternlogq      %%B1L08_11, %%B0L08_11, [%%KP + K08_11_OFFSET], 0x96
+        vpternlogq      %%B1L12_15, %%B0L12_15, [%%KP + K12_15_OFFSET], 0x96
 
         ;; encrypt block 1 lanes
         AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%NROUNDS
@@ -557,11 +559,11 @@ endstruc
 %endif
 
 %if %%NUM_BLKS >= 3
-        ;; xor plaintext block with last cipher block
-        vpxorq          %%B2L00_03, %%B1L00_03
-        vpxorq          %%B2L04_07, %%B1L04_07
-        vpxorq          %%B2L08_11, %%B1L08_11
-        vpxorq          %%B2L12_15, %%B1L12_15
+        ;; xor plaintext block with last cipher block and round zero key
+        vpternlogq      %%B2L00_03, %%B1L00_03, [%%KP + K00_03_OFFSET], 0x96
+        vpternlogq      %%B2L04_07, %%B1L04_07, [%%KP + K04_07_OFFSET], 0x96
+        vpternlogq      %%B2L08_11, %%B1L08_11, [%%KP + K08_11_OFFSET], 0x96
+        vpternlogq      %%B2L12_15, %%B1L12_15, [%%KP + K12_15_OFFSET], 0x96
 
         ;; encrypt block 2 lanes
         AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%NROUNDS
