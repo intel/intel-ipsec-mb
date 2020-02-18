@@ -1087,7 +1087,6 @@ default rel
 %define %%IA0               r10
 %define %%IA1               r11
 %define %%IA2               r12
-%define %%IA3               r15
 
 %define %%CTR_BLOCKx            xmm0
 %define %%CTR_BLOCK_1_4          zmm1
@@ -1140,8 +1139,8 @@ default rel
         vpinsrb %%CTR_BLOCKx, BYTE(%%FLAGS), 0
 
         ; last byte = 1
-        mov     %%IA3, 1
-        vpinsrb %%CTR_BLOCKx, BYTE(%%IA3), 15
+        mov     %%IA2, 1
+        vpinsrb %%CTR_BLOCKx, BYTE(%%IA2), 15
 
         mov	%%LENGTH, [%%JOB + _msg_len_to_cipher_in_bytes]
 
