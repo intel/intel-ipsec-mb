@@ -25,6 +25,7 @@ Library
   DOCSIS SEC BPI, AES-CCM and AES-CMAC.
 - AES256-DOCSIS algorithm added.
 - ZUC-EEA3 and ZUC-EIA3 Multi-buffer implemented for AVX2 and AVX512.
+- Minimum required version for NASM is now 2.14.
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through

@@ -243,14 +243,17 @@ align 64
 ;
 ;   params
 ;       %1 == 1, then calculate W
+;       %2 == 1, then GFNI instructions may be used
 ;   uses
 ;
 ;   return
 ;       zmm0 = W value, updates F_R1[] / F_R2[]
 ;
-%macro nonlin_fun16  1
+%macro nonlin_fun16  2
+%define %%CALC_W     %1
+%define %%USE_GFNI   %2
 
-%if (%1 == 1)
+%if (%%CALC_W == 1)
     vmovdqa64   zmm0, [rax + OFS_X0]
     vpxorq      zmm0, [rax + OFS_R1]
     vpaddd      zmm0, [rax + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
@@ -296,8 +299,8 @@ align 64
     vshufpd     zmm4, zmm2, zmm1, 0xAA ; All S1 input values
 
     ; Compute S0 and S1 values
-    S0_comput_AVX512  zmm3, zmm1, zmm2
-    S1_comput_AVX512  zmm4, zmm1, zmm2, zmm5, zmm6
+    S0_comput_AVX512  zmm3, zmm1, zmm2, %%USE_GFNI
+    S1_comput_AVX512  zmm4, zmm1, zmm2, zmm5, zmm6, %%USE_GFNI
 
     ; Need to shuffle back zmm1 & zmm2 before storing output
     ; (revert what was done before S0 and S1 computations)
@@ -473,8 +476,8 @@ align 64
 
 %endmacro
 
-MKGLOBAL(asm_ZucInitialization_16_avx512,function,internal)
-asm_ZucInitialization_16_avx512:
+%macro INIT_16_AVX512 1
+%define %%USE_GFNI   %1 ; [in] If 1, then GFNI instructions may be used
 
 %ifdef LINUX
 	%define		pKe	rdi
@@ -542,7 +545,7 @@ asm_ZucInitialization_16_avx512:
     push    rdx
 
     bits_reorg16 N, 0
-    nonlin_fun16 1
+    nonlin_fun16 1, %%USE_GFNI
     vpsrld  zmm0,1         ; Shift out LSB of W
 
     pop     rdx
@@ -559,7 +562,7 @@ asm_ZucInitialization_16_avx512:
     push    rdx
 
     bits_reorg16 0, 0
-    nonlin_fun16 0
+    nonlin_fun16 0, %%USE_GFNI
 
     pop     rdx
     lea     rax, [rdx]
@@ -569,14 +572,37 @@ asm_ZucInitialization_16_avx512:
 
     FUNC_RESTORE
 
+%endmacro
+
+;;
+;; void asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
+;;                                      ZucState16_t *pState)
+;;
+MKGLOBAL(asm_ZucInitialization_16_avx512,function,internal)
+asm_ZucInitialization_16_avx512:
+
+    INIT_16_AVX512 0
+
+    ret
+
+;;
+;; void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
+;;                                           ZucState16_t *pState)
+;;
+MKGLOBAL(asm_ZucInitialization_16_gfni_avx512,function,internal)
+asm_ZucInitialization_16_gfni_avx512:
+
+    INIT_16_AVX512 1
+
     ret
 
 ;
 ; Generate N*4 bytes of keystream
 ; for 16 buffers (where N is number of rounds)
 ;
-%macro KEYGEN_16_AVX512 1
+%macro KEYGEN_16_AVX512 2
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
+%define %%USE_GFNI      %2 ; [in] If 1, then GFNI instructions may be used
 
 %ifdef LINUX
 	%define		pState	rdi
@@ -601,7 +627,7 @@ asm_ZucInitialization_16_avx512:
 %assign idx 16
 %rep %%NUM_ROUNDS
     bits_reorg16 N, 1, APPEND(zmm, idx)
-    nonlin_fun16 1
+    nonlin_fun16 1, %%USE_GFNI
     ; OFS_X3 XOR W (zmm0)
     vpxorq      APPEND(zmm, idx), zmm0
     vpxorq      zmm0, zmm0
@@ -630,57 +656,45 @@ asm_ZucInitialization_16_avx512:
 ;;
 ;; void asm_ZucGenKeystream64B_16_avx512(state16_t *pSta, u32* pKeyStr[16])
 ;;
-;; WIN64
-;;  RCX    - pSta
-;;  RDX    - pKeyStr
-;;
-;; LIN64
-;;  RDI    - pSta
-;;  RSI    - pKeyStr
-;;
 MKGLOBAL(asm_ZucGenKeystream64B_16_avx512,function,internal)
 asm_ZucGenKeystream64B_16_avx512:
 
-    KEYGEN_16_AVX512 16
+    KEYGEN_16_AVX512 16, 0
 
     ret
 
 ;;
 ;; void asm_ZucGenKeystream8B_16_avx512(state16_t *pSta, u32* pKeyStr[16])
 ;;
-;; WIN64
-;;  RCX    - pSta
-;;  RDX    - pKeyStr
-;;
-;; LIN64
-;;  RDI    - pSta
-;;  RSI    - pKeyStr
-;;
 MKGLOBAL(asm_ZucGenKeystream8B_16_avx512,function,internal)
 asm_ZucGenKeystream8B_16_avx512:
 
-    KEYGEN_16_AVX512 2
+    KEYGEN_16_AVX512 2, 0
 
     ret
 
 ;;
-;; void asm_ZucCipher64B_16_avx512(state16_t *pSta, u64 *pIn[16],
-;;                             u64 *pOut[16], u64 bufOff);
+;; void asm_ZucGenKeystream64B_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16])
 ;;
-;; WIN64
-;;  RCX - pSta
-;;  RDX - pIn
-;;  R8  - pOut
-;;  R9  - bufOff
+MKGLOBAL(asm_ZucGenKeystream64B_16_gfni_avx512,function,internal)
+asm_ZucGenKeystream64B_16_gfni_avx512:
+
+    KEYGEN_16_AVX512 16, 1
+
+    ret
+
 ;;
-;; LIN64
-;;  RDI - pSta
-;;  RSI - pIn
-;;  R8  - pOut
-;;  R9  - bufOff
+;; void asm_ZucGenKeystream8B_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16])
 ;;
-MKGLOBAL(asm_ZucCipher64B_16_avx512,function,internal)
-asm_ZucCipher64B_16_avx512:
+MKGLOBAL(asm_ZucGenKeystream8B_16_gfni_avx512,function,internal)
+asm_ZucGenKeystream8B_16_gfni_avx512:
+
+    KEYGEN_16_AVX512 2, 1
+
+    ret
+
+%macro CIPHER64B_16_AVX512 1
+%define %%USE_GFNI      %1 ; [in] If 1, then GFNI instructions may be used
 
 %ifdef LINUX
         %define         pState  rdi
@@ -709,7 +723,7 @@ asm_ZucCipher64B_16_avx512:
 %assign idx 16
 %rep 16
         bits_reorg16 N, 1, APPEND(zmm, idx)
-        nonlin_fun16 1
+        nonlin_fun16 1, %%USE_GFNI
         ; OFS_X3 XOR W (zmm0)
         vpxorq  APPEND(zmm, idx), zmm0
         vpxorq   zmm0, zmm0
@@ -770,8 +784,27 @@ asm_ZucCipher64B_16_avx512:
 
         FUNC_RESTORE
 
+%endmacro
+
+;;
+;; void asm_ZucCipher64B_16_avx512(state16_t *pSta, u64 *pIn[16],
+;;                                 u64 *pOut[16], u64 bufOff);
+MKGLOBAL(asm_ZucCipher64B_16_avx512,function,internal)
+asm_ZucCipher64B_16_avx512:
+
+        CIPHER64B_16_AVX512 0
+
         ret
 
+;;
+;; void asm_ZucCipher64B_16_gfni_avx512(state16_t *pSta, u64 *pIn[16],
+;;                                      u64 *pOut[16], u64 bufOff);
+MKGLOBAL(asm_ZucCipher64B_16_gfni_avx512,function,internal)
+asm_ZucCipher64B_16_gfni_avx512:
+
+        CIPHER64B_16_AVX512 1
+
+        ret
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
 

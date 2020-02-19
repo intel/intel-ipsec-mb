@@ -230,7 +230,7 @@ Linux (64-bit only)
 
 Required tools:  
 - GNU make  
-- NASM version 2.13.03 (or newer)  
+- NASM version 2.14 (or newer)
 - gcc (GCC) 4.8.3 (or newer)  
 
 Shared library:  
