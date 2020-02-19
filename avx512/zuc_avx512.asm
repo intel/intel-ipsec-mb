@@ -28,6 +28,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
+%include "include/transpose_avx512.asm"
 
 %define APPEND(a,b) a %+ b
 
@@ -56,7 +57,6 @@ db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
-
 
 align 64
 S1_S0_shuf:
@@ -96,7 +96,6 @@ align 64
 %define OFS_X0  (OFS_R2 + (4*16))
 %define OFS_X1  (OFS_X0 + (4*16))
 %define OFS_X2  (OFS_X1 + (4*16))
-%define OFS_X3  (OFS_X2 + (4*16))
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*10
@@ -162,7 +161,6 @@ align 64
         mov     rsp, [rsp + GP_OFFSET + 40]
 %endmacro
 
-
 ;;
 ;;   make_u31()
 ;;
@@ -184,12 +182,14 @@ align 64
 ;
 ;   params
 ;       %1 - round number
+;       %2 - Calculate X3 (1 = yes)
+;       %3 - ZMM register storing X3
 ;       rax - LFSR pointer
 ;   uses
 ;
 ;   return
 ;
-%macro  bits_reorg16 1
+%macro  bits_reorg16 2-3
     ;
     ; zmm15 = LFSR_S15
     ; zmm14 = LFSR_S14
@@ -223,10 +223,11 @@ align 64
     vpsrld      zmm5, 15
     vporq       zmm7, zmm5
     vmovdqa64   [rax + OFS_X2], zmm7    ; BRC_X2
+%if (%2 == 1)
     vpslld      zmm2, 16
     vpsrld      zmm0, 15
-    vporq       zmm2, zmm0
-    vmovdqa64   [rax + OFS_X3], zmm2    ; BRC_X3
+    vporq       %3, zmm2, zmm0 ; Store BRC_X3 in ZMM register
+%endif
 %endmacro
 
 ;
@@ -317,108 +318,65 @@ align 64
     vmovdqa64   [rax + OFS_R2], zmm2
 %endmacro
 
-
 ;
 ;   store_kstr16()
 ;
-;   params
-;
-;   uses
-;       zmm0 as input
-;   return
-;
-%macro  store_kstr16 0
-    vpxorq      zmm0, [rax + OFS_X3]
+%macro  store_kstr16 17
+%define %%DATA64B_L0  %1  ; [in] 64 bytes of keystream for lane 0
+%define %%DATA64B_L1  %2  ; [in] 64 bytes of keystream for lane 1
+%define %%DATA64B_L2  %3  ; [in] 64 bytes of keystream for lane 2
+%define %%DATA64B_L3  %4  ; [in] 64 bytes of keystream for lane 3
+%define %%DATA64B_L4  %5  ; [in] 64 bytes of keystream for lane 4
+%define %%DATA64B_L5  %6  ; [in] 64 bytes of keystream for lane 5
+%define %%DATA64B_L6  %7  ; [in] 64 bytes of keystream for lane 6
+%define %%DATA64B_L7  %8  ; [in] 64 bytes of keystream for lane 7
+%define %%DATA64B_L8  %9  ; [in] 64 bytes of keystream for lane 8
+%define %%DATA64B_L9  %10 ; [in] 64 bytes of keystream for lane 9
+%define %%DATA64B_L10 %11 ; [in] 64 bytes of keystream for lane 10
+%define %%DATA64B_L11 %12 ; [in] 64 bytes of keystream for lane 11
+%define %%DATA64B_L12 %13 ; [in] 64 bytes of keystream for lane 12
+%define %%DATA64B_L13 %14 ; [in] 64 bytes of keystream for lane 13
+%define %%DATA64B_L14 %15 ; [in] 64 bytes of keystream for lane 14
+%define %%DATA64B_L15 %16 ; [in] 64 bytes of keystream for lane 15
+%define %%KMASK       %17 ; [in] K mask containing which dwords will be stored
 
-    mov         rcx, [rsp]
-    mov         rdx, [rsp + 8]
-    mov         r8,  [rsp + 16]
-    mov         r9,  [rsp + 24]
-    vpextrd     r15d, xmm0, 3
-    vpextrd     r14d, xmm0, 2
-    vpextrd     r13d, xmm0, 1
-    vpextrd     r12d, xmm0, 0
-    mov         [r9], r15d
-    mov         [r8], r14d
-    mov         [rdx], r13d
-    mov         [rcx], r12d
-    add         rcx, 4
-    add         rdx, 4
-    add         r8, 4
-    add         r9, 4
-    mov         [rsp],      rcx
-    mov         [rsp + 8],  rdx
-    mov         [rsp + 16], r8
-    mov         [rsp + 24], r9
+    mov         r8,    [pKS]
+    mov         r9,    [pKS + 8]
+    mov         r10,   [pKS + 16]
+    mov         r11,   [pKS + 24]
+    vmovdqu32   [r8]{%%KMASK},  %%DATA64B_L0
+    vmovdqu32   [r9]{%%KMASK},  %%DATA64B_L1
+    vmovdqu32   [r10]{%%KMASK}, %%DATA64B_L2
+    vmovdqu32   [r11]{%%KMASK}, %%DATA64B_L3
 
-    vextracti32x4   xmm1, zmm0, 1
-    mov         rcx, [rsp + 32]
-    mov         rdx, [rsp + 40]
-    mov         r8,  [rsp + 48]
-    mov         r9,  [rsp + 56]
-    vpextrd     r15d, xmm1, 3
-    vpextrd     r14d, xmm1, 2
-    vpextrd     r13d, xmm1, 1
-    vpextrd     r12d, xmm1, 0
-    mov         [r9], r15d
-    mov         [r8], r14d
-    mov         [rdx], r13d
-    mov         [rcx], r12d
-    add         rcx, 4
-    add         rdx, 4
-    add         r8, 4
-    add         r9, 4
-    mov         [rsp + 32], rcx
-    mov         [rsp + 40], rdx
-    mov         [rsp + 48], r8
-    mov         [rsp + 56], r9
+    mov         r8,    [pKS + 32]
+    mov         r9,    [pKS + 40]
+    mov         r10,   [pKS + 48]
+    mov         r11,   [pKS + 56]
+    vmovdqu32   [r8]{%%KMASK},  %%DATA64B_L4
+    vmovdqu32   [r9]{%%KMASK},  %%DATA64B_L5
+    vmovdqu32   [r10]{%%KMASK}, %%DATA64B_L6
+    vmovdqu32   [r11]{%%KMASK}, %%DATA64B_L7
 
-    vextracti32x4   xmm1, zmm0, 2
-    mov         rcx, [rsp + 64]
-    mov         rdx, [rsp + 72]
-    mov         r8,  [rsp + 80]
-    mov         r9,  [rsp + 88]
-    vpextrd     r15d, xmm1, 3
-    vpextrd     r14d, xmm1, 2
-    vpextrd     r13d, xmm1, 1
-    vpextrd     r12d, xmm1, 0
-    mov         [r9], r15d
-    mov         [r8], r14d
-    mov         [rdx], r13d
-    mov         [rcx], r12d
-    add         rcx, 4
-    add         rdx, 4
-    add         r8, 4
-    add         r9, 4
-    mov         [rsp + 64], rcx
-    mov         [rsp + 72], rdx
-    mov         [rsp + 80], r8
-    mov         [rsp + 88], r9
+    mov         r8,    [pKS + 64]
+    mov         r9,    [pKS + 72]
+    mov         r10,   [pKS + 80]
+    mov         r11,   [pKS + 88]
+    vmovdqu32   [r8]{%%KMASK},  %%DATA64B_L8
+    vmovdqu32   [r9]{%%KMASK},  %%DATA64B_L9
+    vmovdqu32   [r10]{%%KMASK}, %%DATA64B_L10
+    vmovdqu32   [r11]{%%KMASK}, %%DATA64B_L11
 
-    vextracti32x4   xmm1, zmm0, 3
-    mov         rcx, [rsp + 96]
-    mov         rdx, [rsp + 104]
-    mov         r8,  [rsp + 112]
-    mov         r9,  [rsp + 120]
-    vpextrd     r15d, xmm1, 3
-    vpextrd     r14d, xmm1, 2
-    vpextrd     r13d, xmm1, 1
-    vpextrd     r12d, xmm1, 0
-    mov         [r9], r15d
-    mov         [r8], r14d
-    mov         [rdx], r13d
-    mov         [rcx], r12d
-    add         rcx, 4
-    add         rdx, 4
-    add         r8, 4
-    add         r9, 4
-    mov         [rsp + 96], rcx
-    mov         [rsp + 104], rdx
-    mov         [rsp + 112], r8
-    mov         [rsp + 120], r9
+    mov         r8,    [pKS + 96]
+    mov         r9,    [pKS + 104]
+    mov         r10,   [pKS + 112]
+    mov         r11,   [pKS + 120]
+    vmovdqu32   [r8]{%%KMASK},  %%DATA64B_L12
+    vmovdqu32   [r9]{%%KMASK},  %%DATA64B_L13
+    vmovdqu32   [r10]{%%KMASK}, %%DATA64B_L14
+    vmovdqu32   [r11]{%%KMASK}, %%DATA64B_L15
 
 %endmacro
-
 
 ;
 ;   add_mod31()
@@ -622,7 +580,7 @@ asm_ZucInitialization_16_avx512:
     lea     rax, [rdx]
     push    rdx
 
-    bits_reorg16 N
+    bits_reorg16 N, 0
     nonlin_fun16 1
     vpsrld  zmm0,1         ; Shift out LSB of W
 
@@ -639,7 +597,7 @@ asm_ZucInitialization_16_avx512:
     lea     rax, [rdx]
     push    rdx
 
-    bits_reorg16 0
+    bits_reorg16 0, 0
     nonlin_fun16 0
 
     pop     rdx
@@ -669,37 +627,40 @@ asm_ZucInitialization_16_avx512:
 
     FUNC_SAVE
 
-    ; Store 16 keystream pointers on the stack
-    sub     rsp, 16*8
-
-%assign i 0
-%rep 2
-    vmovdqu64 zmm0, [pKS + 64*i]
-    vmovdqu64 [rsp + 64*i], zmm0
-%assign i (i+1)
-%endrep
-
     ; Load state pointer in RAX
     mov         rax, pState
 
     ; Load read-only registers
     vmovdqa64   zmm12, [rel mask31]
-    mov         edx, 0xAAAAAAAA
-    kmovd       k1, edx
+    mov         r8d, 0xAAAAAAAA
+    kmovd       k1, r8d
 
     ; Generate N*4B of keystream in N rounds
 %assign N 1
+%assign idx 16
 %rep %%NUM_ROUNDS
-    bits_reorg16 N
+    bits_reorg16 N, 1, APPEND(zmm, idx)
     nonlin_fun16 1
-    store_kstr16
+    ; OFS_X3 XOR W (zmm0)
+    vpxorq      APPEND(zmm, idx), zmm0
     vpxorq      zmm0, zmm0
     lfsr_updt16  N
 %assign N N+1
+%assign idx (idx + 1)
 %endrep
 
-    ;; Restore rsp pointer to value before pushing keystreams
-    add         rsp, 16*8
+    mov         r8d, ((1 << %%NUM_ROUNDS) - 1)
+    kmovd       k1, r8d
+    ; ZMM16-31 contain the keystreams for each round
+    ; Perform a 32-bit 16x16 transpose to have up to 64 bytes
+    ; (NUM_ROUNDS * 4B) of each lane in a different register
+    TRANSPOSE16_U32 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                    zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                    zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                    zmm8, zmm9, zmm10, zmm11, zmm12, zmm13
+
+    store_kstr16 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                 zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, k1
 
     FUNC_RESTORE
 
@@ -807,14 +768,25 @@ asm_ZucCipher64B_16_avx512:
 
         ; Generate 64B of keystream in 16 rounds
 %assign N 1
+%assign idx 16
 %rep 16
-        bits_reorg16 N
+        bits_reorg16 N, 1, APPEND(zmm, idx)
         nonlin_fun16 1
-        store_kstr16
+        ; OFS_X3 XOR W (zmm0)
+        vpxorq  APPEND(zmm, idx), zmm0
         vpxorq   zmm0, zmm0
         lfsr_updt16  N
 %assign N N+1
+%assign idx (idx + 1)
 %endrep
+
+        ; ZMM16-31 contain the keystreams for each round
+        ; Perform a 32-bit 16x16 transpose to have the 64 bytes
+        ; of each lane in a different register
+        TRANSPOSE16_U32 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                        zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                        zmm8, zmm9, zmm10, zmm11, zmm12, zmm13
 
         ;; Restore input parameters
         mov     pKS,    [rsp + 128]
@@ -835,18 +807,6 @@ asm_ZucCipher64B_16_avx512:
 %rep 16
         mov     APPEND(r, k), [pIn + i]
         vmovdqu64 APPEND(zmm, j), [APPEND(r, k) + bufOff]
-%assign k 12 + ((j + 1) % 4)
-%assign j (j + 1)
-%assign i (i + 8)
-%endrep
-
-        ;; Read all 16 keystreams using registers r12-15 into registers zmm16-31
-%assign i 0
-%assign j 16
-%assign k 12
-%rep 16
-        mov     APPEND(r, k), [pKS + i]
-        vmovdqu64 APPEND(zmm, j), [APPEND(r, k)]
 %assign k 12 + ((j + 1) % 4)
 %assign j (j + 1)
 %assign i (i + 8)
