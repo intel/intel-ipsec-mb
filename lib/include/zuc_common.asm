@@ -472,6 +472,32 @@ section .text
 %assign N N+1
 %endrep
 
+;; Reorder LFSR registers, as not all 16 rounds have been completed
+%if (%%NUM_ROUNDS == 8)
+%ifidn %%ARCH, AVX
+    vmovdqa xmm0, [rsi]
+    vmovdqa xmm1, [rsi+16]
+    vmovdqa xmm2, [rsi+32]
+    vmovdqa xmm3, [rsi+48]
+
+    vmovdqa [rsi],    xmm2
+    vmovdqa [rsi+16], xmm3
+    vmovdqa [rsi+32], xmm0
+    vmovdqa [rsi+48], xmm1
+%else
+    movdqa xmm0, [rsi]
+    movdqa xmm1, [rsi+16]
+    movdqa xmm2, [rsi+32]
+    movdqa xmm3, [rsi+48]
+
+    movdqa [rsi],    xmm2
+    movdqa [rsi+16], xmm3
+    movdqa [rsi+32], xmm0
+    movdqa [rsi+48], xmm1
+%endif
+
+%endif
+
     mov rsi, [rbp - 72]   ; load pState
 
 
@@ -777,6 +803,24 @@ MKGLOBAL(asm_ZucGenKeystream64B_avx,function,internal)
 asm_ZucGenKeystream64B_avx:
 
     ZUC_KEYGEN AVX, 16
+
+    ret
+
+;;
+;; void asm_ZucGenKeystream32B_avx(uint32_t * pKeystream, uint32_t * pState);
+;;
+;; WIN64
+;;	RCX - KS (key stream pointer)
+;; 	RDX - STATE (state pointer)
+;; LIN64
+;;	RDI - KS (key stream pointer)
+;;	RSI - STATE (state pointer)
+;;
+align 16
+MKGLOBAL(asm_ZucGenKeystream32B_avx,function,internal)
+asm_ZucGenKeystream32B_avx:
+
+    ZUC_KEYGEN AVX, 8
 
     ret
 
