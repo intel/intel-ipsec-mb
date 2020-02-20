@@ -1021,28 +1021,8 @@ Eia3RoundsAVX_byte_loop_end:
 
         ret
 
-;;
-;;extern uint32_t asm_Eia3Round64BAVX(uint32_t T, const void *KS, const void *DATA)
-;;
-;; Updates authentication tag T based on keystream KS and DATA.
-;; - it processes 64 bytes of DATA
-;; - reads data in 16 byte chunks and bit reverses them
-;; - reads and re-arranges KS
-;; - employs clmul for the XOR & ROL part
-;; - copies top 64 butes of KS to bottom (for the next round)
-;;
-;; WIN64
-;;	RCX - T
-;;	RDX - KS pointer to key stream (2 x 64 bytes)
-;;;     R8  - DATA pointer to data
-;; LIN64
-;;	RDI - T
-;;	RSI - KS pointer to key stream (2 x 64 bytes)
-;;      RDX - DATA pointer to data
-;;
-align 64
-MKGLOBAL(asm_Eia3Round64BAVX,function,internal)
-asm_Eia3Round64BAVX:
+%macro EIA3_ROUND 1
+%define %%NUM_16B_ROUNDS %1
 
 %ifdef LINUX
 	%define		T	edi
@@ -1054,8 +1034,6 @@ asm_Eia3Round64BAVX:
 	%define		DATA	r8
 %endif
 
-        FUNC_SAVE
-
         vmovdqa  xmm5, [bit_reverse_table_l]
         vmovdqa  xmm6, [bit_reverse_table_h]
         vmovdqa  xmm7, [bit_reverse_and_table]
@@ -1063,7 +1041,7 @@ asm_Eia3Round64BAVX:
 
         vpxor    xmm9, xmm9
 %assign I 0
-%rep 4
+%rep %%NUM_16B_ROUNDS
         ;; read 16 bytes and reverse bits
         vmovdqu  xmm0, [DATA + 16*I]
         vpand    xmm1, xmm0, xmm7
@@ -1130,10 +1108,69 @@ asm_Eia3Round64BAVX:
         shr     rax, 32
         xor     eax, T
 
+%endmacro
+
+;;
+;;extern uint32_t asm_Eia3Round64BAVX(uint32_t T, const void *KS, const void *DATA)
+;;
+;; Updates authentication tag T based on keystream KS and DATA.
+;; - it processes 64 bytes of DATA
+;; - reads data in 16 byte chunks and bit reverses them
+;; - reads and re-arranges KS
+;; - employs clmul for the XOR & ROL part
+;; - copies top 64 bytes of KS to bottom (for the next round)
+;;
+;; WIN64
+;;	RCX - T
+;;	RDX - KS pointer to key stream (2 x 64 bytes)
+;;;     R8  - DATA pointer to data
+;; LIN64
+;;	RDI - T
+;;	RSI - KS pointer to key stream (2 x 64 bytes)
+;;      RDX - DATA pointer to data
+;;
+align 64
+MKGLOBAL(asm_Eia3Round64BAVX,function,internal)
+asm_Eia3Round64BAVX:
+
+        FUNC_SAVE
+
+        EIA3_ROUND 4
+
         FUNC_RESTORE
 
         ret
 
+;;
+;;extern uint32_t asm_Eia3Round32BAVX(uint32_t T, const void *KS, const void *DATA)
+;;
+;; Updates authentication tag T based on keystream KS and DATA.
+;; - it processes 32 bytes of DATA
+;; - reads data in 16 byte chunks and bit reverses them
+;; - reads and re-arranges KS
+;; - employs clmul for the XOR & ROL part
+;; - copies top 32 bytes of KS to bottom (for the next round)
+;;
+;; WIN64
+;;	RCX - T
+;;	RDX - KS pointer to key stream (2 x 32 bytes)
+;;;     R8  - DATA pointer to data
+;; LIN64
+;;	RDI - T
+;;	RSI - KS pointer to key stream (2 x 32 bytes)
+;;      RDX - DATA pointer to data
+;;
+align 64
+MKGLOBAL(asm_Eia3Round32BAVX,function,internal)
+asm_Eia3Round32BAVX:
+
+        FUNC_SAVE
+
+        EIA3_ROUND 2
+
+        FUNC_RESTORE
+
+        ret
 
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
