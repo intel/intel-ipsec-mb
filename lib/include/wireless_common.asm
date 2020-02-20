@@ -129,8 +129,8 @@ asm_XorKeyStream64B_sse:
         xor_keystream SSE
         ret
 
-MKGLOBAL(asm_XorKeyStream64B_avx2,function,internal)
-asm_XorKeyStream64B_avx2:
+MKGLOBAL(asm_XorKeyStream32B_avx2,function,internal)
+asm_XorKeyStream32B_avx2:
 %ifdef LINUX
         %define	        pIn	rdi
         %define	        pOut	rsi
@@ -140,27 +140,16 @@ asm_XorKeyStream64B_avx2:
         %define	        pOut	rdx
         %define	        pKS	r8
 %endif
-        %define         YKEY0   ymm0
-        %define         YKEY1   ymm1
-        %define         YIN0    ymm2
-        %define         YIN1    ymm3
-        %define         YSHUF   ymm4
+        %define         YKEY   ymm0
+        %define         YIN    ymm1
 
-        vmovdqa         YSHUF, [rel swap_mask]
-        vmovdqa         YKEY0, [pKS]
-        vmovdqa         YKEY1, [pKS + 32]
+        vmovdqa         YKEY, [pKS]
+        vpshufb         YKEY, [rel swap_mask]
 
-        vpshufb         YKEY0, YSHUF
-        vpshufb         YKEY1, YSHUF
+        vmovdqu         YIN, [pIn]
+        vpxor           YKEY, YIN
 
-        vmovdqu         YIN0, [pIn]
-        vmovdqu         YIN1, [pIn + 32]
-
-        vpxor           YKEY0, YIN0
-        vpxor           YKEY1, YIN1
-
-        vmovdqu         [pOut],      YKEY0
-        vmovdqu         [pOut + 32], YKEY1
+        vmovdqu         [pOut], YKEY
 
         ret
 

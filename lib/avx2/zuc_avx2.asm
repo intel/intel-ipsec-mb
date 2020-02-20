@@ -28,6 +28,9 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
+%include "include/transpose_avx2.asm"
+
+%define APPEND(a,b) a %+ b
 
 section .data
 default rel
@@ -101,7 +104,6 @@ align 64
 %define OFS_X0  (OFS_R2 + (4*8))
 %define OFS_X1  (OFS_X0 + (4*8))
 %define OFS_X2  (OFS_X1 + (4*8))
-%define OFS_X3  (OFS_X2 + (4*8))
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*10
@@ -167,6 +169,25 @@ align 64
         mov     rsp, [rsp + GP_OFFSET + 40]
 %endmacro
 
+%macro REORDER_LFSR 1
+%define %%STATE      %1
+
+%assign i 0
+%rep 16
+    vmovdqa APPEND(ymm,i), [%%STATE + 32*i]
+%assign i (i+1)
+%endrep
+
+%assign i 0
+%assign j 8
+%rep 16
+    vmovdqa [%%STATE + 32*i], APPEND(ymm,j)
+%assign i (i+1)
+%assign j ((j+1) % 16)
+%endrep
+
+
+%endmacro
 
 ;;
 ;;   make_u31()
@@ -189,12 +210,14 @@ align 64
 ;
 ;   params
 ;       %1 - round number
+;       %2 - Calculate X3 (1 = yes)
+;       %3 - YMM register storing X3
 ;       rax - LFSR pointer
 ;   uses
 ;
 ;   return
 ;
-%macro  bits_reorg8 1
+%macro  bits_reorg8 2-3
     ;
     ; ymm15 = LFSR_S15
     ; ymm14 = LFSR_S14
@@ -228,10 +251,11 @@ align 64
     vpsrld      ymm5, 15
     vpor        ymm7, ymm5
     vmovdqa     [rax + OFS_X2], ymm7    ; BRC_X2
+%if (%2 == 1)
     vpslld      ymm2, 16
     vpsrld      ymm0, 15
-    vpor        ymm2, ymm0
-    vmovdqa     [rax + OFS_X3], ymm2    ; BRC_X3
+    vpor        %3, ymm2, ymm0 ; Store BRC_X3 in YMM register
+%endif
 %endmacro
 
 ;
@@ -328,27 +352,56 @@ align 64
     vmovdqa     [rax + OFS_R2], ymm2
 %endmacro
 
-
 ;
-;   store_kstr8()
+;   store32B_kstr8()
 ;
-;   params
-;
-;   uses
-;       ymm0 as input
-;   return
-;
-%macro  store_kstr8 0
-    vpxor       ymm0, [rax + OFS_X3]
+%macro  store32B_kstr8 8
+%define %%DATA32B_L0  %1  ; [in] 32 bytes of keystream for lane 0
+%define %%DATA32B_L1  %2  ; [in] 32 bytes of keystream for lane 1
+%define %%DATA32B_L2  %3  ; [in] 32 bytes of keystream for lane 2
+%define %%DATA32B_L3  %4  ; [in] 32 bytes of keystream for lane 3
+%define %%DATA32B_L4  %5  ; [in] 32 bytes of keystream for lane 4
+%define %%DATA32B_L5  %6  ; [in] 32 bytes of keystream for lane 5
+%define %%DATA32B_L6  %7  ; [in] 32 bytes of keystream for lane 6
+%define %%DATA32B_L7  %8  ; [in] 32 bytes of keystream for lane 7
 
     mov         rcx, [rsp]
     mov         rdx, [rsp + 8]
     mov         r8,  [rsp + 16]
     mov         r9,  [rsp + 24]
-    vpextrd     r15d, xmm0, 3
-    vpextrd     r14d, xmm0, 2
-    vpextrd     r13d, xmm0, 1
-    vmovd       r12d, xmm0
+    vmovdqu     [rcx], %%DATA32B_L0
+    vmovdqu     [rdx], %%DATA32B_L1
+    vmovdqu     [r8],  %%DATA32B_L2
+    vmovdqu     [r9],  %%DATA32B_L3
+
+    mov         rcx, [rsp + 32]
+    mov         rdx, [rsp + 40]
+    mov         r8,  [rsp + 48]
+    mov         r9,  [rsp + 56]
+    vmovdqu     [rcx], %%DATA32B_L4
+    vmovdqu     [rdx], %%DATA32B_L5
+    vmovdqu     [r8],  %%DATA32B_L6
+    vmovdqu     [r9],  %%DATA32B_L7
+
+%endmacro
+
+;
+;   store4B_kstr8()
+;
+;   params
+;
+;   %1 - YMM register with OFS_X3
+;   return
+;
+%macro  store4B_kstr8 1
+    mov         rcx, [rsp]
+    mov         rdx, [rsp + 8]
+    mov         r8,  [rsp + 16]
+    mov         r9,  [rsp + 24]
+    vpextrd     r15d, XWORD(%1), 3
+    vpextrd     r14d, XWORD(%1), 2
+    vpextrd     r13d, XWORD(%1), 1
+    vmovd       r12d, XWORD(%1)
     mov         [r9], r15d
     mov         [r8], r14d
     mov         [rdx], r13d
@@ -362,15 +415,15 @@ align 64
     mov         [rsp + 16], r8
     mov         [rsp + 24], r9
 
-    vextracti128   xmm0, ymm0, 1
+    vextracti128 XWORD(%1), %1, 1
     mov         rcx, [rsp + 32]
     mov         rdx, [rsp + 40]
     mov         r8,  [rsp + 48]
     mov         r9,  [rsp + 56]
-    vpextrd     r15d, xmm0, 3
-    vpextrd     r14d, xmm0, 2
-    vpextrd     r13d, xmm0, 1
-    vmovd       r12d, xmm0
+    vpextrd     r15d, XWORD(%1), 3
+    vpextrd     r14d, XWORD(%1), 2
+    vpextrd     r13d, XWORD(%1), 1
+    vmovd       r12d, XWORD(%1)
     mov         [r9], r15d
     mov         [r8], r14d
     mov         [rdx], r13d
@@ -586,7 +639,7 @@ asm_ZucInitialization_8_avx2:
     lea     rax, [rdx]
     push    rdx
 
-    bits_reorg8 N
+    bits_reorg8 N, 0
     nonlin_fun8 1
     vpsrld  ymm0,1         ; Shift out LSB of W
 
@@ -603,7 +656,7 @@ asm_ZucInitialization_8_avx2:
     lea     rax, [rdx]
     push    rdx
 
-    bits_reorg8 0
+    bits_reorg8 0, 0
     nonlin_fun8 0
 
     pop     rdx
@@ -634,24 +687,17 @@ asm_ZucInitialization_8_avx2:
     FUNC_SAVE
 
     ; Store 8 keystream pointers on the stack
-    sub     rsp, 8*8
-    mov     r12, [pKS]
-    mov     r13, [pKS + 8]
-    mov     r14, [pKS + 16]
-    mov     r15, [pKS + 24]
-    mov     [rsp],      r12
-    mov     [rsp + 8],  r13
-    mov     [rsp + 16], r14
-    mov     [rsp + 24], r15
-    mov     r12, [pKS + 32]
-    mov     r13, [pKS + 40]
-    mov     r14, [pKS + 48]
-    mov     r15, [pKS + 56]
-    mov     [rsp + 32], r12
-    mov     [rsp + 40], r13
-    mov     [rsp + 48], r14
-    mov     [rsp + 56], r15
+    ; and reserve memory for storing keystreams for all 8 buffers
+    mov     r10, rsp
+    sub     rsp, (8*8 + %%NUM_ROUNDS * 32)
+    and     rsp, -31
 
+%assign i 0
+%rep 2
+    vmovdqa     ymm0, [pKS + 32*i]
+    vmovdqa     [rsp + 32*i], ymm0
+%assign i (i+1)
+%endrep
 
     ; Load state pointer in RAX
     mov         rax, pState
@@ -659,26 +705,76 @@ asm_ZucInitialization_8_avx2:
     ; Load read-only registers
     vmovdqa     ymm12, [rel mask31]
 
-    ; Generate 64B of keystream in 16 rounds
+    ; Generate N*4B of keystream in N rounds
 %assign N 1
 %rep %%NUM_ROUNDS
-    bits_reorg8 N
+    bits_reorg8 N, 1, ymm10
     nonlin_fun8 1
-    store_kstr8
+    ; OFS_X3 XOR W (ymm0) and store in stack
+    vpxor   ymm10, ymm0
+    vmovdqa [rsp + 64 + (N-1)*32], ymm10
     vpxor        ymm0, ymm0
     lfsr_updt8  N
 %assign N N+1
 %endrep
 
-    ;; Restore rsp pointer to value before pushing keystreams
-    add         rsp, 8*8
+%if (%%NUM_ROUNDS == 8)
+    ;; Load all OFS_X3
+    vmovdqa xmm0,[rsp + 64]
+    vmovdqa xmm1,[rsp + 64 + 32*1]
+    vmovdqa xmm2,[rsp + 64 + 32*2]
+    vmovdqa xmm3,[rsp + 64 + 32*3]
+    vmovdqa xmm4,[rsp + 64 + 16]
+    vmovdqa xmm5,[rsp + 64 + 32*1 + 16]
+    vmovdqa xmm6,[rsp + 64 + 32*2 + 16]
+    vmovdqa xmm7,[rsp + 64 + 32*3 + 16]
+
+    vinserti128 ymm0, ymm0, [rsp + 64 + 32*4], 0x01
+    vinserti128 ymm1, ymm1, [rsp + 64 + 32*5], 0x01
+    vinserti128 ymm2, ymm2, [rsp + 64 + 32*6], 0x01
+    vinserti128 ymm3, ymm3, [rsp + 64 + 32*7], 0x01
+    vinserti128 ymm4, ymm4, [rsp + 64 + 32*4 + 16], 0x01
+    vinserti128 ymm5, ymm5, [rsp + 64 + 32*5 + 16], 0x01
+    vinserti128 ymm6, ymm6, [rsp + 64 + 32*6 + 16], 0x01
+    vinserti128 ymm7, ymm7, [rsp + 64 + 32*7 + 16], 0x01
+
+    TRANSPOSE8_U32 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9
+
+    store32B_kstr8 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
+
+    ;; Reorder LFSR registers, as not all 16 rounds have been completed
+    ;; (No need to do if NUM_ROUNDS != 8, as it would indicate that
+    ;; these would be the final rounds)
+    REORDER_LFSR rax
+
+%else ;; NUM_ROUNDS == 8
+%assign idx 0
+%rep %%NUM_ROUNDS
+    vmovdqa APPEND(ymm, idx), [rsp + 64 + idx*32]
+    store4B_kstr8 APPEND(ymm, idx)
+%assign idx (idx + 1)
+%endrep
+%endif ;; NUM_ROUNDS == 8
+
+        ;; Clear stack frame containing keystream information
+%ifdef SAFE_DATA
+        vpxor   ymm0, ymm0
+%assign i 0
+%rep (2+%%NUM_ROUNDS)
+	vmovdqa [rsp + i*32], ymm0
+%assign i (i+1)
+%endrep
+%endif
+
+    ;; Restore rsp pointer
+    mov         rsp, r10
 
     FUNC_RESTORE
 
 %endmacro
 
 ;;
-;; void asm_ZucGenKeystream64B_8_avx2(state8_t *pSta, u32* pKeyStr[8])
+;; void asm_ZucGenKeystream32B_8_avx2(state8_t *pSta, u32* pKeyStr[8])
 ;;
 ;; WIN64
 ;;  RCX    - pSta
@@ -688,10 +784,10 @@ asm_ZucInitialization_8_avx2:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-MKGLOBAL(asm_ZucGenKeystream64B_8_avx2,function,internal)
-asm_ZucGenKeystream64B_8_avx2:
+MKGLOBAL(asm_ZucGenKeystream32B_8_avx2,function,internal)
+asm_ZucGenKeystream32B_8_avx2:
 
-    KEYGEN_8_AVX2 16
+    KEYGEN_8_AVX2 8
 
     ret
 
@@ -714,7 +810,7 @@ asm_ZucGenKeystream8B_8_avx2:
     ret
 
 ;;
-;; void asm_ZucCipher64B_8_avx2(state4_t *pSta, u32 *pKeyStr[8], u64 *pIn[8],
+;; void asm_ZucCipher32B_8_avx2(state4_t *pSta, u32 *pKeyStr[8], u64 *pIn[8],
 ;;                             u64 *pOut[8], u64 bufOff);
 ;;
 ;; WIN64
@@ -731,8 +827,8 @@ asm_ZucGenKeystream8B_8_avx2:
 ;;  RCX - pOut
 ;;  R8  - bufOff
 ;;
-MKGLOBAL(asm_ZucCipher64B_8_avx2,function,internal)
-asm_ZucCipher64B_8_avx2:
+MKGLOBAL(asm_ZucCipher32B_8_avx2,function,internal)
+asm_ZucCipher32B_8_avx2:
 
 %ifdef LINUX
         %define         pState  rdi
@@ -756,22 +852,13 @@ asm_ZucCipher64B_8_avx2:
 
         ; Store 8 keystream pointers and input registers in the stack
         sub     rsp, 12*8
-        mov     r12, [pKS]
-        mov     r13, [pKS + 8]
-        mov     r14, [pKS + 16]
-        mov     r15, [pKS + 24]
-        mov     [rsp],      r12
-        mov     [rsp + 8],  r13
-        mov     [rsp + 16], r14
-        mov     [rsp + 24], r15
-        mov     r12, [pKS + 32]
-        mov     r13, [pKS + 40]
-        mov     r14, [pKS + 48]
-        mov     r15, [pKS + 56]
-        mov     [rsp + 32], r12
-        mov     [rsp + 40], r13
-        mov     [rsp + 48], r14
-        mov     [rsp + 56], r15
+
+%assign i 0
+%rep 2
+    vmovdqu     ymm0, [pKS + 32*i]
+    vmovdqu     [rsp + 32*i], ymm0
+%assign i (i+1)
+%endrep
 
         mov     [rsp + 64], pKS
         mov     [rsp + 72], pIn
@@ -784,16 +871,21 @@ asm_ZucCipher64B_8_avx2:
         ; Load read-only registers
         vmovdqa ymm12, [rel mask31]
 
-        ; Generate 64B of keystream in 16 rounds
+        ; Generate 32B of keystream in 8 rounds
 %assign N 1
-%rep 16
-        bits_reorg8 N
+%rep 8
+        bits_reorg8 N, 1, ymm10
         nonlin_fun8 1
-        store_kstr8
+        ; OFS_XR XOR W (ymm0)
+        vpxor   ymm10, ymm0
+        store4B_kstr8 ymm10
         vpxor   ymm0, ymm0
         lfsr_updt8  N
 %assign N N+1
 %endrep
+
+        ;; Reorder LFSR registers, as not all 16 rounds have been completed
+        REORDER_LFSR rax
 
         ;; Restore input parameters
         mov     pKS,    [rsp + 64]
@@ -805,8 +897,6 @@ asm_ZucCipher64B_8_avx2:
         ;; and input parameters
         add     rsp, 12*8
 
-%assign off 0
-%rep 2
         ;; XOR Input buffer with keystream in rounds of 32B
 
         ;; Read all 8 streams
@@ -814,37 +904,37 @@ asm_ZucCipher64B_8_avx2:
         mov     r13, [pIn + 8]
         mov     r14, [pIn + 16]
         mov     r15, [pIn + 24]
-        vmovdqu ymm0, [r12 + bufOff + off]
-        vmovdqu ymm1, [r13 + bufOff + off]
-        vmovdqu ymm2, [r14 + bufOff + off]
-        vmovdqu ymm3, [r15 + bufOff + off]
+        vmovdqu ymm0, [r12 + bufOff]
+        vmovdqu ymm1, [r13 + bufOff]
+        vmovdqu ymm2, [r14 + bufOff]
+        vmovdqu ymm3, [r15 + bufOff]
         mov     r12, [pIn + 32]
         mov     r13, [pIn + 40]
         mov     r14, [pIn + 48]
         mov     r15, [pIn + 56]
-        vmovdqu ymm4, [r12 + bufOff + off]
-        vmovdqu ymm5, [r13 + bufOff + off]
-        vmovdqu ymm6, [r14 + bufOff + off]
-        vmovdqu ymm7, [r15 + bufOff + off]
+        vmovdqu ymm4, [r12 + bufOff]
+        vmovdqu ymm5, [r13 + bufOff]
+        vmovdqu ymm6, [r14 + bufOff]
+        vmovdqu ymm7, [r15 + bufOff]
 
         ;; Read all 8 keystreams
         mov     r12, [pKS]
         mov     r13, [pKS + 8]
         mov     r14, [pKS + 16]
         mov     r15, [pKS + 24]
-        vmovdqa ymm8, [r12 + off]
-        vmovdqa ymm9, [r13 + off]
-        vmovdqa ymm10, [r14 + off]
-        vmovdqa ymm11, [r15 + off]
+        vmovdqa ymm8, [r12]
+        vmovdqa ymm9, [r13]
+        vmovdqa ymm10, [r14]
+        vmovdqa ymm11, [r15]
 
         mov     r12, [pKS + 32]
         mov     r13, [pKS + 40]
         mov     r14, [pKS + 48]
         mov     r15, [pKS + 56]
-        vmovdqa ymm12, [r12 + off]
-        vmovdqa ymm13, [r13 + off]
-        vmovdqa ymm14, [r14 + off]
-        vmovdqa ymm15, [r15 + off]
+        vmovdqa ymm12, [r12]
+        vmovdqa ymm13, [r13]
+        vmovdqa ymm14, [r14]
+        vmovdqa ymm15, [r15]
 
         vpshufb ymm8,  [rel swap_mask]
         vpshufb ymm9,  [rel swap_mask]
@@ -872,22 +962,20 @@ asm_ZucCipher64B_8_avx2:
         mov     r14, [pOut + 16]
         mov     r15, [pOut + 24]
 
-        vmovdqu [r12 + bufOff + off], ymm8
-        vmovdqu [r13 + bufOff + off], ymm9
-        vmovdqu [r14 + bufOff + off], ymm10
-        vmovdqu [r15 + bufOff + off], ymm11
+        vmovdqu [r12 + bufOff], ymm8
+        vmovdqu [r13 + bufOff], ymm9
+        vmovdqu [r14 + bufOff], ymm10
+        vmovdqu [r15 + bufOff], ymm11
 
         mov     r12, [pOut + 32]
         mov     r13, [pOut + 40]
         mov     r14, [pOut + 48]
         mov     r15, [pOut + 56]
 
-        vmovdqu [r12 + bufOff + off], ymm12
-        vmovdqu [r13 + bufOff + off], ymm13
-        vmovdqu [r14 + bufOff + off], ymm14
-        vmovdqu [r15 + bufOff + off], ymm15
-%assign off (off + 32)
-%endrep
+        vmovdqu [r12 + bufOff], ymm12
+        vmovdqu [r13 + bufOff], ymm13
+        vmovdqu [r14 + bufOff], ymm14
+        vmovdqu [r15 + bufOff], ymm15
 
         FUNC_RESTORE
 

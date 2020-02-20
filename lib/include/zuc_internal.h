@@ -554,7 +554,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_avx(ZucState4_t *pState,
  *
  * @description
  *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate 64 bytes of
+ *      stage of the ZUC algorithm. The function will generate 32 bytes of
  *      keystream for eight packets in parallel.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
@@ -569,7 +569,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_avx(ZucState4_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_8_avx2(ZucState8_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_avx2(ZucState8_t *pState,
                                                  uint32_t *pKeyStr[8]);
 
 /**
@@ -775,9 +775,9 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_4_avx(ZucState4_t *pState,
  *
  * @description
  *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate 64 bytes of
+ *      stage of the ZUC algorithm. The function will generate 32 bytes of
  *      keystream for eight packets in parallel and will XOR this keystream
- *      with the input text, producing 64 bytes of output for all eight packets.
+ *      with the input text, producing 32 bytes of output for all eight packets.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState8_t
@@ -794,7 +794,7 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_4_avx(ZucState4_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipher64B_8_avx2(ZucState8_t *pState,
+IMB_DLL_LOCAL void asm_ZucCipher32B_8_avx2(ZucState8_t *pState,
                                            uint32_t *pKeyStr[8],
                                            const uint64_t *pIn[8],
                                            uint64_t *pOut[8],

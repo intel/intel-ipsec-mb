@@ -214,18 +214,18 @@ IMB_DLL_LOCAL void asm_XorKeyStream64B_avx(const void *pIn, void *pOut,
  ******************************************************************************
  *
  * @description
- *      Definition of the external AVX2 function that XOR's 64 bytes of input
- *      with 64 bytes of keystream, swapping keystream bytes every 4 bytes.
+ *      Definition of the external AVX2 function that XOR's 32 bytes of input
+ *      with 32 bytes of keystream, swapping keystream bytes every 4 bytes.
  *
  * @param[in]  pIn              Pointer to the input buffer
  * @param[out] pOut             Pointer to the output buffer
- * @param[in]  pKey             Pointer to the new 64 byte keystream
+ * @param[in]  pKey             Pointer to the new 32 byte keystream
  *
  * @pre
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_XorKeyStream64B_avx2(const void *pIn, void *pOut,
+IMB_DLL_LOCAL void asm_XorKeyStream32B_avx2(const void *pIn, void *pOut,
                                             const void *pKey);
 
 /**
