@@ -35,10 +35,20 @@
 section .data
 default rel
 
-align 32
-EK_d:
-dw	0x44D7, 0x26BC, 0x626B, 0x135E, 0x5789, 0x35E2, 0x7135, 0x09AF,
-dw	0x4D78, 0x2F13, 0x6BC4, 0x1AF1, 0x5E26, 0x3C4D, 0x789A, 0x47AC
+align 64
+EK_d64:
+dd	0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
+dd	0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
+
+align 64
+shuf_mask_key:
+dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF, 0x04FFFFFF, 0x05FFFFFF, 0x06FFFFFF, 0x07FFFFFF,
+dd      0x08FFFFFF, 0x09FFFFFF, 0x0AFFFFFF, 0x0BFFFFFF, 0x0CFFFFFF, 0x0DFFFFFF, 0x0EFFFFFF, 0x0FFFFFFF,
+
+align 64
+shuf_mask_iv:
+dd      0xFFFFFF00, 0xFFFFFF01, 0xFFFFFF02, 0xFFFFFF03, 0xFFFFFF04, 0xFFFFFF05, 0xFFFFFF06, 0xFFFFFF07,
+dd      0xFFFFFF08, 0xFFFFFF09, 0xFFFFFF0A, 0xFFFFFF0B, 0xFFFFFF0C, 0xFFFFFF0D, 0xFFFFFF0E, 0xFFFFFF0F,
 
 align 64
 mask31:
@@ -159,21 +169,6 @@ align 64
         mov     r15, [rsp + GP_OFFSET + 24]
         mov     rbx, [rsp + GP_OFFSET + 32]
         mov     rsp, [rsp + GP_OFFSET + 40]
-%endmacro
-
-;;
-;;   make_u31()
-;;
-%macro  make_u31    4
-
-%define %%Rt        %1
-%define %%Ke        %2
-%define %%Ek        %3
-%define %%Iv        %4
-    xor         %%Rt, %%Rt
-    shrd        %%Rt, %%Iv, 8
-    shrd        %%Rt, %%Ek, 15
-    shrd        %%Rt, %%Ke, 9
 %endmacro
 
 
@@ -458,24 +453,29 @@ align 64
     ; LFSR_S16 = (LFSR_S15++) = eax
 %endmacro
 
-
 ;
-;   key_expand_16()
+; Initialize LFSR registers for a single lane
 ;
-%macro  key_expand_16  2
-    movzx       r8d, byte [rdi +  (%1 + 0)]
-    movzx       r9d, word [rbx + ((%1 + 0)*2)]
-    movzx       r10d, byte [rsi + (%1 + 0)]
-    make_u31    r11d, r8d, r9d, r10d
-    mov         [rax +  (((%1 + 0)*64)+(%2*4))], r11d
+; From spec, s_i (LFSR) registers need to be loaded as follows:
+;
+; For 0 <= i <= 15, let s_i= k_i || d_i || iv_i.
+; Where k_i is each byte of the key, d_i is a 15-bit constant
+; and iv_i is each byte of the IV.
+;
+%macro INIT_LFSR 4
+%define %%KEY  %1 ;; [in] Key pointer
+%define %%IV   %2 ;; [in] IV pointer
+%define %%LFSR %3 ;; [out] ZMM register to contain initialized LFSR regs
+%define %%ZTMP %4 ;; [clobbered] ZMM temporary register
 
-    movzx       r12d, byte [rdi +  (%1 + 1)]
-    movzx       r13d, word [rbx + ((%1 + 1)*2)]
-    movzx       r14d, byte [rsi +  (%1 + 1)]
-    make_u31    r15d, r12d, r13d, r14d
-    mov         [rax +  (((%1 + 1)*64)+(%2*4))], r15d
+    vbroadcasti64x2 %%LFSR, [%%KEY]
+    vbroadcasti64x2 %%ZTMP, [%%IV]
+    vpshufb         %%LFSR, [rel shuf_mask_key]
+    vpsrld          %%LFSR, 1
+    vpshufb         %%ZTMP, [rel shuf_mask_iv]
+    vpternlogq      %%LFSR, %%ZTMP, [rel EK_d64], 0xFE ; A OR B OR C
+
 %endmacro
-
 
 MKGLOBAL(asm_ZucInitialization_16_avx512,function,internal)
 asm_ZucInitialization_16_avx512:
@@ -492,81 +492,46 @@ asm_ZucInitialization_16_avx512:
 
     FUNC_SAVE
 
-    lea     rax, [pState]      ; load pointer to LFSR
-    push    pState             ; Save LFSR Pointer to stack
+    push    pState      ; Save LFSR Pointer to stack
 
-    ; setup the key pointer for first buffer key expand
-    mov     rbx, [pKe]      ; load the pointer to the array of keys into rbx
+    ; Set LFSR registers for Packet 1
+    mov     r9, [pKe]   ; Load Key 1 pointer
+    mov     r10, [pIv]  ; Load IV 1 pointer
+    INIT_LFSR r9, r10, zmm0, zmm1
 
-    push    pKe             ; save rdi (key pointer) to the stack
-    lea     rdi, [rbx]      ; load the pointer to the first key into rdi
-
-
-    ; setup the IV pointer for first buffer key expand
-    mov     rcx, [pIv]      ; load the pointer to the array of IV's
-    push    pIv             ; save the IV pointer to the stack
-    lea     rsi, [rcx]      ; load the first IV pointer
-
-    lea     rbx, [EK_d]     ; load D variables
-
-    ; Expand key packet 1
-    key_expand_16  0, 0
-    key_expand_16  2, 0
-    key_expand_16  4, 0
-    key_expand_16  6, 0
-    key_expand_16  8, 0
-    key_expand_16  10, 0
-    key_expand_16  12, 0
-    key_expand_16  14, 0
-
-
-    ;; Expand keys for packets 2-15
+    ; Set LFSR registers for Packets 2-15
 %assign idx 1
+%assign reg_lfsr 2
+%assign reg_tmp 3
 %rep 14
-    pop     rdx             ; get IV array pointer from Stack
-    mov     rcx, [rdx+8*idx]      ; load offset to next IV in array
-    lea     rsi, [rcx]    ; load pointer to next IV
+    mov     r9, [pKe+8*idx]  ; Load Key N pointer
+    mov     r10, [pIv+8*idx] ; Load IV N pointer
+    INIT_LFSR r9, r10, APPEND(zmm, reg_lfsr), APPEND(zmm, reg_tmp)
 
-    pop     rbx             ; get Key array pointer from Stack
-    mov     rcx, [rbx+8*idx]      ; load offset to next key in array
-    lea     rdi, [rcx]    ; load pointer to next Key
-
-    push    rbx             ; save Key pointer
-    push    rdx             ; save IV pointer
-
-    lea     rbx, [EK_d]
-
-    ; Expand key packet N
-    key_expand_16  0, idx
-    key_expand_16  2, idx
-    key_expand_16  4, idx
-    key_expand_16  6, idx
-    key_expand_16  8, idx
-    key_expand_16  10, idx
-    key_expand_16  12, idx
-    key_expand_16  14, idx
 %assign idx (idx + 1)
+%assign reg_lfsr (reg_lfsr + 2)
+%assign reg_tmp (reg_tmp + 2)
 %endrep
 
-    ;; Expand key for sixteenth packet
-    pop     rdx             ; get IV array pointer from Stack
-    mov     rcx, [rdx+8*15]      ; load offset to IV 16 in array
-    lea     rsi, [rcx]   ; load pointer to IV 16
+    ; Set LFSR registers for Packet 16
+    mov     r9, [pKe+8*15]      ; Load Key 16 pointer
+    mov     r10, [pIv+8*15]     ; Load IV 16 pointer
+    INIT_LFSR r9, r10, zmm30, zmm31
 
-    pop     rbx             ; get Key array pointer from Stack
-    mov     rcx, [rbx+8*15]      ; load offset to key 16 in array
-    lea     rdi, [rcx]   ; load pointer to Key 16
-    lea     rbx, [EK_d]
+    ; Store LFSR registers in memory (reordering first, so all S0 regs
+    ; are together, then all S1 regs... until S15)
+    TRANSPOSE16_U32 zmm0, zmm2, zmm4, zmm6, zmm8, zmm10, zmm12, zmm14, \
+                    zmm16, zmm18, zmm20, zmm22, zmm24, zmm26, zmm28, zmm30, \
+                    zmm1, zmm3, zmm5, zmm7, zmm9, zmm11, zmm13, zmm15, \
+                    zmm17, zmm19, zmm21, zmm23, zmm25, zmm27
 
-    ; Expand key packet 16
-    key_expand_16  0, 15
-    key_expand_16  2, 15
-    key_expand_16  4, 15
-    key_expand_16  6, 15
-    key_expand_16  8, 15
-    key_expand_16  10, 15
-    key_expand_16  12, 15
-    key_expand_16  14, 15
+%assign i 0
+%assign j 0
+%rep 16
+    vmovdqa64 [pState + 64*i], APPEND(zmm, j)
+%assign i (i+1)
+%assign j (j+2)
+%endrep
 
     ; Load read-only registers
     vmovdqa64  zmm12, [rel mask31]
