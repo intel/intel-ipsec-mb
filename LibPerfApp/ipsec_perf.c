@@ -1828,6 +1828,9 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
                                 skip_variant =
                                         (hash_alg != TEST_DOCSIS_CRC32 &&
                                          hash_alg != TEST_NULL_HASH);
+
+                                /* AES-DOCSIS supports only 16 & 32-byte keys */
+                                skip_variant |= (params->aes_key_size == 24);
                         }
 
                         if (skip_variant)
@@ -1859,7 +1862,6 @@ run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
         uint32_t limit = IMB_KEY_AES_256_BYTES; /* Key size value limit */
 
         if (params->test_type == TTYPE_AES_DOCSIS_DES ||
-            params->test_type == TTYPE_AES_DOCSIS_AES ||
             params->test_type == TTYPE_AES_DES ||
             params->test_type == TTYPE_AES_3DES ||
             params->test_type == TTYPE_PON ||
