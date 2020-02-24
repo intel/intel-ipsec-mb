@@ -373,7 +373,6 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
 
         uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
         uint32_t remainBytes[16] = {0};
-        DECLARE_ALIGNED(uint8_t keyStr[16][64], 64);
         /* structure to store the 16 keys */
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
         /* structure to store the 16 IV's */
@@ -384,8 +383,6 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
 
         const uint64_t *pIn64[16]= {NULL};
         uint64_t *pOut64[16] = {NULL};
-        uint64_t *pKeyStream64 = NULL;
-        uint32_t *pKeyStrArr[16] = {NULL};
         uint64_t bufOffset = 0;
 
         /* rounded down minimum length */
@@ -409,15 +406,13 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
         for (i = 0; i < 16; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
-                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
         }
 
         /* Loop for 64 bytes at a time generating 16 key-streams per loop */
         while (numKeyStreamsPerPkt) {
                 /* Generate 64 bytes of KeyStream for 16 buffers
                  * and XOR with input */
-                asm_ZucCipher64B_16_avx512(&state, (uint32_t **)pKeyStrArr,
-                                           pIn64, pOut64, bufOffset);
+                asm_ZucCipher64B_16_avx512(&state, pIn64, pOut64, bufOffset);
                 bufOffset += 64;
 
                 /* Update keystream count */
@@ -472,11 +467,12 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
                                                                 remainBytes[i]];
 
                         while (numKeyStreamsPerPkt--) {
+                                DECLARE_ALIGNED(uint32_t keyStream[16], 64);
+                                uint64_t *pKeyStream64 = (uint64_t *) keyStream;
+
                                 /* Generate the key stream 64 bytes at a time */
-                                asm_ZucGenKeystream64B_avx(
-                                                       (uint32_t *) keyStr[0],
-                                                       &singlePktState);
-                                pKeyStream64 = (uint64_t *) keyStr[0];
+                                asm_ZucGenKeystream64B_avx(keyStream,
+                                                           &singlePktState);
                                 asm_XorKeyStream64B_avx512(pIn64[0], pOut64[0],
                                                            pKeyStream64);
                                 pIn64[0] += 8;
@@ -493,8 +489,10 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
                                 uint32_t offset = length[i] - numBytesLeftOver;
                                 const uint64_t num4BRounds =
                                         ((numBytesLeftOver - 1) / 4) + 1;
+                                DECLARE_ALIGNED(uint32_t keyStream[16], 64);
+                                uint64_t *pKeyStream64 = (uint64_t *) keyStream;
 
-                                asm_ZucGenKeystream_avx((uint32_t *)&keyStr[0],
+                                asm_ZucGenKeystream_avx(keyStream,
                                                         &singlePktState,
                                                         num4BRounds);
                                 /* copy the remaining bytes into temporary
@@ -506,7 +504,6 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
                                 memset(&tempSrc[numBytesLeftOver], 0,
                                        64 - numBytesLeftOver);
 
-                                pKeyStream64 = (uint64_t *) &keyStr[0][0];
                                 pTempSrc64 = (uint64_t *) &tempSrc[0];
                                 pTempDst64 = (uint64_t *) &tempDst[0];
                                 asm_XorKeyStream64B_avx512(pTempSrc64,
@@ -524,7 +521,6 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
         }
 #ifdef SAFE_DATA
         /* Clear sensitive data in stack */
-        clear_mem(keyStr, sizeof(keyStr));
         clear_mem(&singlePktState, sizeof(singlePktState));
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));

@@ -668,68 +668,45 @@ asm_ZucGenKeystream8B_16_avx512:
     ret
 
 ;;
-;; void asm_ZucCipher64B_16_avx512(state4_t *pSta, u32 *pKeyStr[16], u64 *pIn[16],
+;; void asm_ZucCipher64B_16_avx512(state16_t *pSta, u64 *pIn[16],
 ;;                             u64 *pOut[16], u64 bufOff);
 ;;
 ;; WIN64
-;;  RCX    - pSta
-;;  RDX    - pKeyStr
-;;  R8     - pIn
-;;  R9     - pOut
-;;  rsp+40 - bufOff
+;;  RCX - pSta
+;;  RDX - pIn
+;;  R8  - pOut
+;;  R9  - bufOff
 ;;
 ;; LIN64
 ;;  RDI - pSta
-;;  RSI - pKeyStr
-;;  RDX - pIn
-;;  RCX - pOut
-;;  R8  - bufOff
+;;  RSI - pIn
+;;  R8  - pOut
+;;  R9  - bufOff
 ;;
 MKGLOBAL(asm_ZucCipher64B_16_avx512,function,internal)
 asm_ZucCipher64B_16_avx512:
 
 %ifdef LINUX
         %define         pState  rdi
-        %define         pKS     rsi
-        %define         pIn     rdx
-        %define         pOut    rcx
-        %define         bufOff  r8
+        %define         pIn     rsi
+        %define         pOut    rdx
+        %define         bufOff  rcx
 %else
         %define         pState  rcx
-        %define         pKS     rdx
-        %define         pIn     r8
-        %define         pOut    r9
-        %define         bufOff  r10
+        %define         pIn     rdx
+        %define         pOut    r8
+        %define         bufOff  r9
 %endif
 
-        ;; Store parameter from stack in register
-%ifndef LINUX
-        mov     bufOff, [rsp + 40]
-%endif
         FUNC_SAVE
-
-        ; Store 16 keystream pointers and input registers in the stack
-        sub     rsp, 16*8 + 4*8
-
-%assign i 0
-%rep 2
-        vmovdqu64 zmm0, [pKS + 64*i]
-        vmovdqu64 [rsp + 64*i], zmm0
-%assign i (i+1)
-%endrep
-
-        mov     [rsp + 128], pKS
-        mov     [rsp + 128 + 8], pIn
-        mov     [rsp + 128 + 16], pOut
-        mov     [rsp + 128 + 24], bufOff
 
         ; Load state pointer in RAX
         mov     rax, pState
 
         ; Load read-only registers
         vmovdqa64 zmm12, [rel mask31]
-        mov     edx, 0xAAAAAAAA
-        kmovd   k1, edx
+        mov     r10d, 0xAAAAAAAA
+        kmovd   k1, r10d
 
         ; Generate 64B of keystream in 16 rounds
 %assign N 1
@@ -752,16 +729,6 @@ asm_ZucCipher64B_16_avx512:
                         zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
                         zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
                         zmm8, zmm9, zmm10, zmm11, zmm12, zmm13
-
-        ;; Restore input parameters
-        mov     pKS,    [rsp + 128]
-        mov     pIn,    [rsp + 128 + 8]
-        mov     pOut,   [rsp + 128 + 16]
-        mov     bufOff, [rsp + 128 + 24]
-
-        ;; Restore rsp pointer to value before pushing keystreams
-        ;; and input parameters
-        add     rsp, 16*8 + 4*8
 
         ;; XOR Input buffer with keystream
 
