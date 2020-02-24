@@ -272,19 +272,17 @@ align 64
     rot_mod32   zmm4, zmm1, 10
     rot_mod32   zmm5, zmm1, 18
     rot_mod32   zmm6, zmm1, 24
-    vpxorq      zmm1, zmm3
-    vpxorq      zmm1, zmm4
-    vpxorq      zmm1, zmm5
-    vpxorq      zmm1, zmm6      ; XMM1 = U = L1(P)
+    ; ZMM1 = U = L1(P)
+    vpternlogq  zmm1, zmm3, zmm4, 0x96 ; (A ^ B) ^ C
+    vpternlogq  zmm1, zmm5, zmm6, 0x96 ; (A ^ B) ^ C
 
     rot_mod32   zmm3, zmm2, 8
     rot_mod32   zmm4, zmm2, 14
     rot_mod32   zmm5, zmm2, 22
     rot_mod32   zmm6, zmm2, 30
-    vpxorq      zmm2, zmm3
-    vpxorq      zmm2, zmm4
-    vpxorq      zmm2, zmm5
-    vpxorq      zmm2, zmm6      ; XMM2 = V = L2(Q)
+    ; ZMM2 = V = L2(Q)
+    vpternlogq  zmm2, zmm3, zmm4, 0x96 ; (A ^ B) ^ C
+    vpternlogq  zmm2, zmm5, zmm6, 0x96 ; (A ^ B) ^ C
 
     ; Shuffle U and V to have all S0 lookups in XMM1 and all S1 lookups in XMM2
 
@@ -405,9 +403,7 @@ align 64
 
     vpslld      zmm2, %1, %2
     vpsrld      %1, %1, (31 - %2)
-
-    vporq       %1, zmm2
-    vpandq      %1, MASK31
+    vpternlogq  %1, zmm2, MASK31, 0xA8 ; (A | B) & C
 %endmacro
 
 
