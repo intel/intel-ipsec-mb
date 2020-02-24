@@ -654,12 +654,11 @@ const uint32_t auth_tag_length_bytes[] = {
                 12, /* AES_XCBC */
                 12, /* MD5 */
                 0,  /* NULL_HASH */
-                DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
 #ifndef NO_GCM
                 16, /* AES_GMAC */
 #endif
                 0,  /* CUSTOM HASH */
-                0,  /* AES_CCM */
+                16, /* AES_CCM */
                 16, /* AES_CMAC */
                 20, /* PLAIN_SHA1 */
                 28, /* PLAIN_SHA_224 */
@@ -669,6 +668,7 @@ const uint32_t auth_tag_length_bytes[] = {
                 4,  /* AES_CMAC_BITLEN (3GPP) */
                 8,  /* PON */
                 4,  /* ZUC-EIA3 */
+                DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
                 4,  /* SNOW3G-UIA2 */
                 4,  /* KASUMI-UIA1 */
 };
@@ -1384,7 +1384,8 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
                 job_template.cipher_start_src_offset_in_bits = 0;
                 job_template.aes_key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 8;
-        }
+        } else if (job_template.cipher_mode == IMB_CIPHER_ECB)
+                job_template.iv_len_in_bytes = 0;
 
         if (job_template.hash_alg == IMB_AUTH_PON_CRC_BIP) {
                 /* create XGEM header template */
