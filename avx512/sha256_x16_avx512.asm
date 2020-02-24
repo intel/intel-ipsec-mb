@@ -648,7 +648,8 @@ lloop:
 
 	add	IDX, 64
 
-	TRANSPOSE16_U32 W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11, W12, W13, W14, W15, TMP0, TMP1, TMP4, TMP5
+	TRANSPOSE16_U32_PRELOADED W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, \
+                                  W11, W12, W13, W14, W15, TMP0, TMP1, TMP4, TMP5
 
 %assign I 0
 %rep 16

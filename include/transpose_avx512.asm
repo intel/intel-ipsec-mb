@@ -192,7 +192,7 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 
 %endmacro
 
-; 16x16 32-BIT TRANSPOSE
+; 16x16 32-BIT TRANSPOSE AFTER INTERLEAVED LOADS
 ;
 ; Before calling this macro, TRANSPOSE16_U32_LOAD_FIRST8 and TRANSPOSE16_U32_LOAD_LAST8
 ; must be called.
@@ -201,7 +201,7 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 ; r8-r15 [in/out] zmm registers containing bytes 32-63 of each 64B block (e.g. zmm8 = [i15-i8 a15-a8])
 ; t0-t1 [clobbered] zmm temporary registers
 ; m0-m1 [clobbered] zmm registers for shuffle mask storing
-%macro TRANSPOSE16_U32 20
+%macro TRANSPOSE16_U32_PRELOADED 20
 %define %%r0 %1
 %define %%r1 %2
 %define %%r2 %3
@@ -356,6 +356,121 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 
 	vmovdqu32 %%r2, %%t1			; r2 = {p2 o2 n2 m2  l2 k2 j2 i2  h2 g2 f2 e2  d2 c2 b2 a2}
 
+%endmacro
+
+;;; 16x16 32-BIT TRANSPOSE
+;;;
+;;; IN00-IN15 aka L0/R0 - L7/R7 [in/out]:
+;;;          in:  L0 - 16 x word0, R0 - 16 x word1, ... R7 - 16 x word15
+;;;          out: L0 - lane 0 data, R0 - lane 1 data, ... R7 - lane 15 data
+;;; T0-T3 [clobbered] - temporary zmm registers
+;;; K0-K5 [clobbered] - temporary zmm registers
+;;; H0-H3 [clobbered] - temporary zmm registers
+%macro TRANSPOSE16_U32 30
+%define %%IN00 %1               ; L0
+%define %%IN01 %2               ; R0
+%define %%IN02 %3               ; L1
+%define %%IN03 %4               ; R1
+%define %%IN04 %5               ; L2
+%define %%IN05 %6               ; R2
+%define %%IN06 %7               ; L3
+%define %%IN07 %8               ; R3
+%define %%IN08 %9               ; L4
+%define %%IN09 %10              ; R4
+%define %%IN10 %11              ; L5
+%define %%IN11 %12              ; R5
+%define %%IN12 %13              ; L6
+%define %%IN13 %14              ; R6
+%define %%IN14 %15              ; L7
+%define %%IN15 %16              ; R7
+%define %%T0 %17
+%define %%T1 %18
+%define %%T2 %19
+%define %%T3 %20
+%define %%K0 %21
+%define %%K1 %22
+%define %%K2 %23
+%define %%K3 %24
+%define %%K4 %25
+%define %%K5 %26
+%define %%H0 %27
+%define %%H1 %28
+%define %%H2 %29
+%define %%H3 %30
+
+        vpunpckldq      %%K0, %%IN00, %%IN01
+        vpunpckhdq      %%K1, %%IN00, %%IN01
+        vpunpckldq      %%T0, %%IN02, %%IN03
+        vpunpckhdq      %%T1, %%IN02, %%IN03
+
+        vpunpckldq      %%IN00, %%IN04, %%IN05
+        vpunpckhdq      %%IN01, %%IN04, %%IN05
+        vpunpckldq      %%IN02, %%IN06, %%IN07
+        vpunpckhdq      %%IN03, %%IN06, %%IN07
+
+        vpunpcklqdq     %%K2, %%K0, %%T0
+        vpunpckhqdq     %%T2, %%K0, %%T0
+        vpunpcklqdq     %%K3, %%K1, %%T1
+        vpunpckhqdq     %%T3, %%K1, %%T1
+
+        vpunpcklqdq     %%K0, %%IN00, %%IN02
+        vpunpckhqdq     %%K1, %%IN00, %%IN02
+        vpunpcklqdq     %%T0, %%IN01, %%IN03
+        vpunpckhqdq     %%T1, %%IN01, %%IN03
+
+        vpunpckldq      %%K4, %%IN08, %%IN09
+        vpunpckhdq      %%K5, %%IN08, %%IN09
+        vpunpckldq      %%IN04, %%IN10, %%IN11
+        vpunpckhdq      %%IN05, %%IN10, %%IN11
+        vpunpckldq      %%IN06, %%IN12, %%IN13
+        vpunpckhdq      %%IN07, %%IN12, %%IN13
+        vpunpckldq      %%IN10, %%IN14, %%IN15
+        vpunpckhdq      %%IN11, %%IN14, %%IN15
+
+        vpunpcklqdq     %%IN12, %%K4, %%IN04
+        vpunpckhqdq     %%IN13, %%K4, %%IN04
+        vpunpcklqdq     %%IN14, %%K5, %%IN05
+        vpunpckhqdq     %%IN15, %%K5, %%IN05
+        vpunpcklqdq     %%IN00, %%IN06, %%IN10
+        vpunpckhqdq     %%IN01, %%IN06, %%IN10
+        vpunpcklqdq     %%IN02, %%IN07, %%IN11
+        vpunpckhqdq     %%IN03, %%IN07, %%IN11
+
+        vshufi64x2      %%H0, %%K2, %%K0, 0x44
+        vshufi64x2      %%H1, %%K2, %%K0, 0xee
+        vshufi64x2      %%H2, %%IN12, %%IN00, 0x44
+        vshufi64x2      %%H3, %%IN12, %%IN00, 0xee
+        vshufi64x2      %%IN00, %%H0, %%H2, 0x88    ; L0
+        vshufi64x2      %%IN04, %%H0, %%H2, 0xdd    ; L2
+        vshufi64x2      %%IN08, %%H1, %%H3, 0x88    ; L4
+        vshufi64x2      %%IN12, %%H1, %%H3, 0xdd    ; L6
+
+        vshufi64x2      %%H0, %%T2, %%K1, 0x44
+        vshufi64x2      %%H1, %%T2, %%K1, 0xee
+        vshufi64x2      %%H2, %%IN13, %%IN01, 0x44
+        vshufi64x2      %%H3, %%IN13, %%IN01, 0xee
+        vshufi64x2      %%IN01, %%H0, %%H2, 0x88    ; R0
+        vshufi64x2      %%IN05, %%H0, %%H2, 0xdd    ; R2
+        vshufi64x2      %%IN09, %%H1, %%H3, 0x88    ; R4
+        vshufi64x2      %%IN13, %%H1, %%H3, 0xdd    ; R6
+
+        vshufi64x2      %%H0, %%K3, %%T0, 0x44
+        vshufi64x2      %%H1, %%K3, %%T0, 0xee
+        vshufi64x2      %%H2, %%IN14, %%IN02, 0x44
+        vshufi64x2      %%H3, %%IN14, %%IN02, 0xee
+        vshufi64x2      %%IN02, %%H0, %%H2, 0x88    ; L1
+        vshufi64x2      %%IN06, %%H0, %%H2, 0xdd    ; L3
+        vshufi64x2      %%IN10, %%H1, %%H3, 0x88    ; L5
+        vshufi64x2      %%IN14, %%H1, %%H3, 0xdd    ; L7
+
+        vshufi64x2      %%H0, %%T3, %%T1, 0x44
+        vshufi64x2      %%H1, %%T3, %%T1, 0xee
+        vshufi64x2      %%H2, %%IN15, %%IN03, 0x44
+        vshufi64x2      %%H3, %%IN15, %%IN03, 0xee
+        vshufi64x2      %%IN03, %%H0, %%H2, 0x88    ; R1
+        vshufi64x2      %%IN07, %%H0, %%H2, 0xdd    ; R3
+        vshufi64x2      %%IN11, %%H1, %%H3, 0x88    ; R5
+        vshufi64x2      %%IN15, %%H1, %%H3, 0xdd    ; R7
 %endmacro
 
 ; LOAD ALL 8 LANES FOR 8x8 64-BIT TRANSPOSE
