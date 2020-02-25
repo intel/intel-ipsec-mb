@@ -2087,6 +2087,13 @@ ccm_test(const enum arch_type arch,
         errors += test_ccm_std_vectors(mb_mgr, 7);
         errors += test_ccm_std_vectors(mb_mgr, 8);
         errors += test_ccm_std_vectors(mb_mgr, 9);
+        errors += test_ccm_std_vectors(mb_mgr, 10);
+        errors += test_ccm_std_vectors(mb_mgr, 13);
+        errors += test_ccm_std_vectors(mb_mgr, 14);
+        errors += test_ccm_std_vectors(mb_mgr, 15);
+        errors += test_ccm_std_vectors(mb_mgr, 17);
+        errors += test_ccm_std_vectors(mb_mgr, 18);
+        errors += test_ccm_std_vectors(mb_mgr, 19);
 
 	if (0 == errors)
 		printf("...Pass\n");
