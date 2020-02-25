@@ -1334,15 +1334,15 @@ cmac_test(const enum arch_type arch,
         (void) arch; /* unused */
 
         /* CMAC with standard vectors */
-        for (i = 1; i < 10; i++)
+        for (i = 1; i < 20; i++)
                 errors += test_cmac_std_vectors(mb_mgr, i);
 
         /* CMAC BITLEN with standard vectors */
-        for (i = 1; i < 10; i++)
+        for (i = 1; i < 20; i++)
                 errors += test_cmac_bitlen_std_vectors(mb_mgr, i);
 
         /* CMAC BITLEN with 3GPP vectors */
-        for (i = 1; i < 10; i++)
+        for (i = 1; i < 20; i++)
                 errors += test_cmac_bitlen_3gpp_vectors(mb_mgr, i);
 
 	if (0 == errors)

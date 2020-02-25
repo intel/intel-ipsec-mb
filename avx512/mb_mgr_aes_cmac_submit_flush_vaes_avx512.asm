@@ -557,10 +557,10 @@ endstruc
 
         ;; M_last = M_n XOR K1
         mov     tmp3, [job + _skey1]
-        vmovdqu xmm0, [tmp3]
-        vmovdqu xmm1, [tmp2]
-        vpxor   xmm0, xmm1
-        vmovdqa [m_last], xmm0
+        vmovdqu xmm4, [tmp3]
+        vmovdqu xmm5, [tmp2]
+        vpxor   xmm4, xmm5
+        vmovdqa [m_last], xmm4
 
         jmp     %%_step_5
 
@@ -618,7 +618,7 @@ endstruc
         mov     rcx, tmp3       ; restore rcx
 %endif
         kmovq   k1, tmp5
-        vmovdqu8 xmm0{k1}{z}, [tmp]
+        vmovdqu8 xmm4{k1}{z}, [tmp]
 
         dec     r
 
@@ -637,7 +637,7 @@ endstruc
         XVPSLLB xmm2, r, xmm1, tmp2
 
         ;; pad final byte
-        vpandn  xmm2, xmm0
+        vpandn  xmm2, xmm4
 %ifndef LINUX
 	mov	rcx, tmp
 %endif
@@ -664,7 +664,7 @@ endstruc
         jmp     %%_step_5
 
 %%_load_full_block_3gpp:
-        vmovdqu xmm0, [tmp]
+        vmovdqu xmm4, [tmp]
         mov     r, 0xf
         jmp     %%_update_mlast_3gpp
 %endif
