@@ -983,5 +983,34 @@ void zuc_eia3_n_buffer_avx512(const void * const pKey[],
                               uint32_t *pMacI[],
                               const uint32_t numBuffers);
 
+/* Internal API */
+IMB_DLL_LOCAL
+void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
+                            const void * const pIv[4],
+                            const void * const pBufferIn[4],
+                            void *pBufferOut[4],
+                            const uint32_t length[4]);
+
+IMB_DLL_LOCAL
+void _zuc_eia3_4_buffer_avx(const void * const pKey[4],
+                            const void * const pIv[4],
+                            const void * const pBufferIn[4],
+                            const uint32_t lengthInBits[4],
+                            uint32_t *pMacI[4]);
+
+IMB_DLL_LOCAL
+void _zuc_eea3_8_buffer_avx2(const void * const pKey[8],
+                             const void * const pIv[8],
+                             const void * const pBufferIn[8],
+                             void *pBufferOut[8],
+                             const uint32_t length[8]);
+
+IMB_DLL_LOCAL
+void _zuc_eia3_8_buffer_avx2(const void * const pKey[8],
+                             const void * const pIv[8],
+                             const void * const pBufferIn[8],
+                             const uint32_t lengthInBits[8],
+                             uint32_t *pMacI[8]);
+
 #endif /* ZUC_INTERNAL_H_ */
 

@@ -159,7 +159,7 @@ void _zuc_eea3_1_buffer_avx2(const void *pKey,
 #endif
 }
 
-static inline
+IMB_DLL_LOCAL
 void _zuc_eea3_8_buffer_avx2(const void * const pKey[8],
                             const void * const pIv[8],
                             const void * const pBufferIn[8],
@@ -578,6 +578,16 @@ void zuc_eea3_n_buffer_avx2(const void * const pKey[], const void * const pIv[],
                 i+=8;
         }
 
+        if (packetCount >= 4) {
+                packetCount -= 4;
+                _zuc_eea3_4_buffer_avx(&pKey[i],
+                                       &pIv[i],
+                                       &pBufferIn[i],
+                                       &pBufferOut[i],
+                                       &length[i]);
+                i += 4;
+        }
+
         while(packetCount--) {
                 _zuc_eea3_1_buffer_avx2(pKey[i],
                                        pIv[i],
@@ -659,7 +669,7 @@ void _zuc_eia3_1_buffer_avx2(const void *pKey,
 
 }
 
-static inline
+IMB_DLL_LOCAL
 void _zuc_eia3_8_buffer_avx2(const void * const pKey[8],
                              const void * const pIv[8],
                              const void * const pBufferIn[8],
@@ -1028,6 +1038,16 @@ void zuc_eia3_n_buffer_avx2(const void * const pKey[],
                                         &lengthInBits[i],
                                         &pMacI[i]);
                 i += 8;
+        }
+
+        if (packetCount >= 4) {
+                packetCount -= 4;
+                _zuc_eia3_4_buffer_avx(&pKey[i],
+                                       &pIv[i],
+                                       &pBufferIn[i],
+                                       &lengthInBits[i],
+                                       &pMacI[i]);
+                i += 4;
         }
 
         while(packetCount--) {

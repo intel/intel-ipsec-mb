@@ -609,6 +609,26 @@ void zuc_eea3_n_buffer_avx512(const void * const pKey[],
                 i += 16;
         }
 
+        while(packetCount >= 8) {
+                packetCount -= 8;
+                _zuc_eea3_8_buffer_avx2(&pKey[i],
+                                        &pIv[i],
+                                        &pBufferIn[i],
+                                        &pBufferOut[i],
+                                        &length[i]);
+                i += 8;
+        }
+
+        while(packetCount >= 4) {
+                packetCount -= 4;
+                _zuc_eea3_4_buffer_avx(&pKey[i],
+                                       &pIv[i],
+                                       &pBufferIn[i],
+                                       &pBufferOut[i],
+                                       &length[i]);
+                i += 4;
+        }
+
         while(packetCount--) {
                 _zuc_eea3_1_buffer_avx512(pKey[i],
                                           pIv[i],
@@ -1117,13 +1137,32 @@ void zuc_eia3_n_buffer_avx512(const void * const pKey[],
         while(packetCount >= 16) {
                 packetCount -= 16;
                 _zuc_eia3_16_buffer_avx512(&pKey[i],
-                                          &pIv[i],
-                                          &pBufferIn[i],
-                                          &lengthInBits[i],
-                                          &pMacI[i]);
+                                           &pIv[i],
+                                           &pBufferIn[i],
+                                           &lengthInBits[i],
+                                           &pMacI[i]);
                 i += 16;
         }
 
+        if (packetCount >= 8) {
+                packetCount -= 8;
+                _zuc_eia3_8_buffer_avx2(&pKey[i],
+                                        &pIv[i],
+                                        &pBufferIn[i],
+                                        &lengthInBits[i],
+                                        &pMacI[i]);
+                i += 8;
+        }
+
+        if (packetCount >= 4) {
+                packetCount -= 4;
+                _zuc_eia3_4_buffer_avx(&pKey[i],
+                                       &pIv[i],
+                                       &pBufferIn[i],
+                                       &lengthInBits[i],
+                                       &pMacI[i]);
+                i += 4;
+        }
         while(packetCount--) {
                 _zuc_eia3_1_buffer_avx512(pKey[i],
                                           pIv[i],

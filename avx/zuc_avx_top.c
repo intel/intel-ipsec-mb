@@ -123,7 +123,7 @@ void _zuc_eea3_1_buffer_avx(const void *pKey,
 #endif
 }
 
-static inline
+IMB_DLL_LOCAL
 void _zuc_eea3_4_buffer_avx(const void * const pKey[4],
                             const void * const pIv[4],
                             const void * const pBufferIn[4],
@@ -737,7 +737,7 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
 #endif
 }
 
-static inline
+IMB_DLL_LOCAL
 void _zuc_eia3_4_buffer_avx(const void * const pKey[4],
                             const void * const pIv[4],
                             const void * const pBufferIn[4],
