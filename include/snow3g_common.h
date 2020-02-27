@@ -500,6 +500,28 @@ static inline __m128i S1_box_4(const __m128i x)
 #endif
 }
 
+/* -------------------------------------------------------------------
+ * Sbox S1 maps a 2x32bit input to a 2x32bit output
+ * ------------------------------------------------------------------ */
+static inline void S1_box_2(uint32_t *x1, uint32_t *x2)
+{
+#ifdef NO_AESNI
+        /* reuse S1_box() for NO_AESNI path */
+        *x1 = S1_box(*x1);
+        *x2 = S1_box(*x2);
+#else
+        const __m128i m_zero = _mm_setzero_si128();
+        __m128i m1, m2;
+
+        m1 = _mm_set1_epi32(*x1);
+        m2 = _mm_set1_epi32(*x2);
+        m1 = _mm_aesenc_si128(m1, m_zero);
+        m2 = _mm_aesenc_si128(m2, m_zero);
+        *x1 = _mm_extract_epi32(m1, 0);
+        *x2 = _mm_extract_epi32(m2, 0);
+#endif
+}
+
 #ifdef AVX2
 /* -------------------------------------------------------------------
  * Sbox S1 maps a 8x32bit input to a 8x32bit output
@@ -560,7 +582,7 @@ static inline __m256i S1_box_8(const __m256i x)
  * ------------------------------------------------------------------ */
 static inline uint32_t S2_box(const uint32_t x)
 {
-        /* Perform invSR(SQ(x)) transform through lookup table */
+        /* Perform invSR(SQ(x)) transform */
 #ifdef SAFE_LOOKUP
         const __m128i par_lut =
                 lut8_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
@@ -722,6 +744,44 @@ static inline __m128i S2_box_4(const __m128i x)
         m1 = _mm_unpacklo_epi64(m1, m3);
         f1 = _mm_unpacklo_epi64(f1, f3);
         return s2_mixc_fixup(f1, m1);
+#endif
+}
+
+/* -------------------------------------------------------------------
+ * Sbox S2 maps a 2x32bit input to a 2x32bit output
+ * ------------------------------------------------------------------ */
+static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
+{
+#ifdef NO_AESNI
+        *x1 = S2_box(*x1);
+        *x2 = S2_box(*x2);
+#else
+        /* Perform invSR(SQ(x)) transform through a lookup table */
+        const __m128i new_x = lut8_256(_mm_set_epi32(0, 0, *x2, *x1),
+                                       snow3g_invSR_SQ);
+        const __m128i m_zero = _mm_setzero_si128();
+        __m128i m1, m2, f1, f2;
+
+        m1 = _mm_shuffle_epi32(new_x, 0b00000000);
+        m2 = _mm_shuffle_epi32(new_x, 0b01010101);
+
+        f1 = _mm_aesenclast_si128(m1, m_zero);
+        m1 = _mm_aesenc_si128(m1, m_zero);
+        f2 = _mm_aesenclast_si128(m2, m_zero);
+        m2 = _mm_aesenc_si128(m2, m_zero);
+
+        /*
+         * Put results of AES operations back into one vector
+         * for further fix up
+         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
+         */
+        m1 = _mm_unpacklo_epi32(m1, m2);
+        f1 = _mm_unpacklo_epi32(f1, f2);
+
+        m1 = s2_mixc_fixup(f1, m1);
+
+        *x1 = _mm_extract_epi32(m1, 0);
+        *x2 = _mm_extract_epi32(m1, 1);
 #endif
 }
 
@@ -1220,7 +1280,6 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
          */
         const uint32_t L0 = pCtx->LFSR_S[0];
         const uint32_t L1 = pCtx->LFSR_S[1];
-        const uint32_t R1 = pCtx->FSM_R1;
         const uint32_t L11 = pCtx->LFSR_S[11];
         const uint32_t L12 = pCtx->LFSR_S[12];
 
@@ -1238,19 +1297,31 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
                 (L1 << 8) ^
                 (L12 >> 8);
 
-        const uint32_t F0 = (pCtx->LFSR_S[15] + R1) ^ L0 ^ pCtx->FSM_R2;
-        const uint32_t R0 = (pCtx->FSM_R3 ^ pCtx->LFSR_S[5]) + pCtx->FSM_R2;
+        const uint32_t F0 =
+                (pCtx->LFSR_S[15] + pCtx->FSM_R1) ^ L0 ^ pCtx->FSM_R2;
+        const uint32_t R0 =
+                (pCtx->FSM_R3 ^ pCtx->LFSR_S[5]) + pCtx->FSM_R2;
 
-        pCtx->FSM_R3 = S2_box(pCtx->FSM_R2);
-        pCtx->FSM_R2 = S1_box(R1);
+        uint32_t s1_box_step1 = pCtx->FSM_R1;
+        uint32_t s1_box_step2 = R0;
 
-        const uint32_t FSM4 = S1_box(R0);
-        const uint32_t new_R1 = (pCtx->FSM_R3 ^ pCtx->LFSR_S[6]) + pCtx->FSM_R2;
-        const uint32_t F1 = (V0 + R0) ^ L1 ^ pCtx->FSM_R2;
+        S1_box_2(&s1_box_step1, &s1_box_step2);
 
-        pCtx->FSM_R3 = S2_box(pCtx->FSM_R2);
-        pCtx->FSM_R2 = FSM4;
-        pCtx->FSM_R1 = new_R1;
+        uint32_t s2_box_step1 = pCtx->FSM_R2;
+        uint32_t s2_box_step2 = s1_box_step1;
+
+        S2_box_2(&s2_box_step1, &s2_box_step2);
+
+        /*
+         * At this stage FCM_Rx mapping is as follows:
+         *    pCtx->FSM_R2 = s1_box_step1;
+         *    pCtx->FSM_R3 = s2_box_step1;
+         */
+        const uint32_t F1 = (V0 + R0) ^ L1 ^ s1_box_step1;
+
+        pCtx->FSM_R3 = s2_box_step2;
+        pCtx->FSM_R2 = s1_box_step2;
+        pCtx->FSM_R1 = (s2_box_step1 ^ pCtx->LFSR_S[6]) + s1_box_step1;
 
         /* Shift LFSR twice */
         ShiftTwiceLFSR_1(pCtx);
