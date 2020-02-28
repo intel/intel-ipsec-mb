@@ -996,6 +996,13 @@ void zuc_eea3_n_buffer_avx512(const void * const pKey[],
                               const uint32_t lengthInBytes[],
                               const uint32_t numBuffers);
 
+void zuc_eea3_n_buffer_gfni_avx512(const void * const pKey[],
+                                   const void * const pIv[],
+                                   const void * const pBufferIn[],
+                                   void *pBufferOut[],
+                                   const uint32_t lengthInBytes[],
+                                   const uint32_t numBuffers);
+
 void zuc_eia3_1_buffer_avx512(const void *pKey, const void *pIv,
                               const void *pBufferIn,
                               const uint32_t lengthInBits,
@@ -1007,6 +1014,13 @@ void zuc_eia3_n_buffer_avx512(const void * const pKey[],
                               const uint32_t lengthInBits[],
                               uint32_t *pMacI[],
                               const uint32_t numBuffers);
+
+void zuc_eia3_n_buffer_gfni_avx512(const void * const pKey[],
+                                   const void * const pIv[],
+                                   const void * const pBufferIn[],
+                                   const uint32_t lengthInBits[],
+                                   uint32_t *pMacI[],
+                                   const uint32_t numBuffers);
 
 /* Internal API */
 IMB_DLL_LOCAL

@@ -54,7 +54,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | 3DES          | Y      | N      | N      | N      | Y  x16 | N      |
 | DES           | Y      | N      | N      | N      | Y  x16 | N      |
 | KASUMI-F8     | Y      | N      | N      | N      | N      | N      |
-| ZUC-EEA3      | N      | Y  x4  | Y  x4  | Y  x8  | N      | N      |
+| ZUC-EEA3      | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
 | SNOW3G-UEA2   | N      | Y      | Y      | Y      | N      | N      |
 +---------------------------------------------------------------------+
 ```
@@ -62,7 +62,7 @@ Notes:
 (1,2) - By default, decryption is by4 and encryption is x4.
       	On CPU's supporting GFNI, decryption is by8 and encryption is x8.
 (3,4) - decryption is by8 and encryption is x8  
-(5)   - AVX512 plus VAES and VPCLMULQDQ extensions  
+(5)   - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
 (6)   - decryption is by16 and encryption is x16  
 (7)   - same as AES128-CBC for AVX, combines cipher and CRC32  
 
@@ -97,7 +97,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | AES128-CCM        | N      | Y(5)x4 | Y   x8 | N      | N      | N      |
 | AES128-CMAC-96    | Y      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
-| ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | N      | N      |
+| ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
 | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
 +-------------------------------------------------------------------------+
@@ -105,7 +105,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 Notes:  
 (1) - MD5 over one block implemented in C  
 (2) - Implementation using SHANI extentions is x2  
-(3) - AVX512 plus VAES and VPCLMULQDQ extensions  
+(3) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
 (4) - used only with AES128-DOCSIS cipher
 (5) - x8 on selected CPU's supporting GFNI
 

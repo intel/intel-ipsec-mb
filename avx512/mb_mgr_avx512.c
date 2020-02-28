@@ -1265,9 +1265,16 @@ init_mb_mgr_avx512(MB_MGR *state)
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_avx512;
         state->eea3_4_buffer       = zuc_eea3_4_buffer_avx;
-        state->eea3_n_buffer       = zuc_eea3_n_buffer_avx512;
         state->eia3_1_buffer       = zuc_eia3_1_buffer_avx512;
-        state->eia3_n_buffer       = zuc_eia3_n_buffer_avx512;
+
+        if ((state->features & IMB_FEATURE_GFNI) &&
+            (state->features & IMB_FEATURE_VAES)) {
+                state->eea3_n_buffer       = zuc_eea3_n_buffer_gfni_avx512;
+                state->eia3_n_buffer       = zuc_eia3_n_buffer_gfni_avx512;
+        } else {
+                state->eea3_n_buffer       = zuc_eea3_n_buffer_avx512;
+                state->eia3_n_buffer       = zuc_eia3_n_buffer_avx512;
+        }
 
         state->f8_1_buffer         = kasumi_f8_1_buffer_avx;
         state->f8_1_buffer_bit     = kasumi_f8_1_buffer_bit_avx;
@@ -1297,6 +1304,7 @@ init_mb_mgr_avx512(MB_MGR *state)
                 submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;
                 submit_job_aes_cntr_bit_avx512 = vaes_submit_cntr_bit_avx512;
         }
+
 #ifndef NO_GCM
         if ((state->features & (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) ==
             (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) {

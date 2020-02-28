@@ -423,3 +423,9 @@ EXPORTS
     zuc_eea3_n_buffer_avx2                      @397
     zuc_eia3_1_buffer_avx2                      @398
     zuc_eia3_n_buffer_avx2                      @399
+    zuc_eea3_1_buffer_avx512                    @400
+    zuc_eea3_n_buffer_avx512                    @401
+    zuc_eia3_1_buffer_avx512                    @402
+    zuc_eia3_n_buffer_avx512                    @403
+    zuc_eea3_n_buffer_gfni_avx512               @404
+    zuc_eia3_n_buffer_gfni_avx512               @405
