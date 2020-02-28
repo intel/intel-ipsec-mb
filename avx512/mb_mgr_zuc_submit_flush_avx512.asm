@@ -33,16 +33,22 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
-%define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_avx512
-%define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_avx512
-%define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_avx512
-%define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_avx512
+%ifndef SUBMIT_JOB_ZUC_EEA3
+%define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_no_gfni_avx512
+%define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_no_gfni_avx512
+%define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_no_gfni_avx512
+%define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_no_gfni_avx512
+%define ZUC_EEA3_16_BUFFER zuc_eea3_16_buffer_job_no_gfni_avx512
+%define ZUC_EIA3_16_BUFFER zuc_eia3_16_buffer_job_no_gfni_avx512
+%endif
 
 section .data
 default rel
 
-extern zuc_eea3_16_buffer_job_avx512
-extern zuc_eia3_16_buffer_job_avx512
+extern zuc_eea3_16_buffer_job_no_gfni_avx512
+extern zuc_eia3_16_buffer_job_no_gfni_avx512
+extern zuc_eea3_16_buffer_job_gfni_avx512
+extern zuc_eia3_16_buffer_job_gfni_avx512
 
 %ifdef LINUX
 %define arg1    rdi
@@ -169,7 +175,7 @@ SUBMIT_JOB_ZUC_EEA3:
         mov     arg6, r12
 %endif
 
-        call    zuc_eea3_16_buffer_job_avx512
+        call    ZUC_EEA3_16_BUFFER
 
 %ifndef LINUX
         add     rsp, 48
@@ -342,7 +348,7 @@ FLUSH_JOB_ZUC_EEA3:
         mov     arg6, r12
 %endif
 
-        call    zuc_eea3_16_buffer_job_avx512
+        call    ZUC_EEA3_16_BUFFER
 
 %ifndef LINUX
         add     rsp, 48
@@ -491,7 +497,7 @@ SUBMIT_JOB_ZUC_EIA3:
         mov     arg6, r12
 %endif
 
-        call    zuc_eia3_16_buffer_job_avx512
+        call    ZUC_EIA3_16_BUFFER
 
 %ifndef LINUX
         add     rsp, 48
@@ -663,7 +669,7 @@ FLUSH_JOB_ZUC_EIA3:
         mov     arg6, r12
 %endif
 
-        call    zuc_eia3_16_buffer_job_avx512
+        call    ZUC_EIA3_16_BUFFER
 
 %ifndef LINUX
         add     rsp, 48

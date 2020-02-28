@@ -104,13 +104,21 @@ JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
 
 JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
 
-JOB_AES_HMAC *submit_job_zuc_eea3_avx512(MB_MGR_ZUC_OOO *state,
-                                         JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_zuc_eea3_avx512(MB_MGR_ZUC_OOO *state);
+JOB_AES_HMAC *submit_job_zuc_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
+                                                 JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_zuc_eea3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
 
-JOB_AES_HMAC *submit_job_zuc_eia3_avx512(MB_MGR_ZUC_OOO *state,
-                                         JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_zuc_eia3_avx512(MB_MGR_ZUC_OOO *state);
+JOB_AES_HMAC *submit_job_zuc_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
+                                                 JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_zuc_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
+
+JOB_AES_HMAC *submit_job_zuc_eea3_gfni_avx512(MB_MGR_ZUC_OOO *state,
+                                              JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_zuc_eea3_gfni_avx512(MB_MGR_ZUC_OOO *state);
+
+JOB_AES_HMAC *submit_job_zuc_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
+                                              JOB_AES_HMAC *job);
+JOB_AES_HMAC *flush_job_zuc_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state);
 
 JOB_AES_HMAC *aes_cntr_ccm_128_vaes_avx512(JOB_AES_HMAC *job);
 
@@ -607,6 +615,24 @@ static JOB_AES_HMAC *
 static JOB_AES_HMAC *
 (*aes_cntr_ccm_128_avx512) (JOB_AES_HMAC *job) = aes_cntr_ccm_128_avx;
 
+static JOB_AES_HMAC *
+(*submit_job_zuc_eea3_avx512)
+        (MB_MGR_ZUC_OOO *state, JOB_AES_HMAC *job) =
+                        submit_job_zuc_eea3_no_gfni_avx512;
+
+static JOB_AES_HMAC *
+(*flush_job_zuc_eea3_avx512)
+        (MB_MGR_ZUC_OOO *state) = flush_job_zuc_eea3_no_gfni_avx512;
+
+static JOB_AES_HMAC *
+(*submit_job_zuc_eia3_avx512)
+        (MB_MGR_ZUC_OOO *state, JOB_AES_HMAC *job) =
+                        submit_job_zuc_eia3_no_gfni_avx512;
+
+static JOB_AES_HMAC *
+(*flush_job_zuc_eia3_avx512)
+        (MB_MGR_ZUC_OOO *state) = flush_job_zuc_eia3_no_gfni_avx512;
+
 /* ====================================================================== */
 
 __forceinline
@@ -733,6 +759,14 @@ init_mb_mgr_avx512(MB_MGR *state)
                 flush_job_aes_ccm_auth_avx512 =
                         flush_job_aes_ccm_auth_vaes_avx512;
                 aes_cntr_ccm_128_avx512 = aes_cntr_ccm_128_vaes_avx512;
+        }
+
+        if ((state->features & IMB_FEATURE_GFNI) &&
+            (state->features & IMB_FEATURE_VAES)) {
+                submit_job_zuc_eea3_avx512 = submit_job_zuc_eea3_gfni_avx512;
+                flush_job_zuc_eea3_avx512 = flush_job_zuc_eea3_gfni_avx512;
+                submit_job_zuc_eia3_avx512 = submit_job_zuc_eia3_gfni_avx512;
+                flush_job_zuc_eia3_avx512 = flush_job_zuc_eia3_gfni_avx512;
         }
 
         /* Init AES out-of-order fields */

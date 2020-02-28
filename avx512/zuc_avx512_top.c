@@ -341,12 +341,14 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[16],
 #endif
 }
 
-void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
-                                   const void * const pIv[16],
-                                   const void * const pBufferIn[16],
-                                   void *pBufferOut[16],
-                                   const uint16_t length[16],
-                                   const void * const job_in_lane[16])
+static inline
+void _zuc_eea3_16_buffer_job(const void * const pKey[16],
+                             const void * const pIv[16],
+                             const void * const pBufferIn[16],
+                             void *pBufferOut[16],
+                             const uint16_t length[16],
+                             const void * const job_in_lane[16],
+                             const unsigned use_gfni)
 {
         DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
@@ -401,7 +403,10 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
                 ivs.pIvs[i] = pIv[i];
         }
 
-        asm_ZucInitialization_16_avx512(&keys,  &ivs, &state);
+        if (use_gfni)
+                asm_ZucInitialization_16_gfni_avx512(&keys,  &ivs, &state);
+        else
+                asm_ZucInitialization_16_avx512(&keys,  &ivs, &state);
 
         for (i = 0; i < 16; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
@@ -412,7 +417,12 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
         while (numKeyStreamsPerPkt) {
                 /* Generate 64 bytes of KeyStream for 16 buffers
                  * and XOR with input */
-                asm_ZucCipher64B_16_avx512(&state, pIn64, pOut64, bufOffset);
+                if (use_gfni)
+                        asm_ZucCipher64B_16_gfni_avx512(&state, pIn64, pOut64,
+                                                        bufOffset);
+                else
+                        asm_ZucCipher64B_16_avx512(&state, pIn64, pOut64,
+                                                   bufOffset);
                 bufOffset += 64;
 
                 /* Update keystream count */
@@ -526,6 +536,28 @@ void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
         clear_mem(&keys, sizeof(keys));
         clear_mem(&ivs, sizeof(ivs));
 #endif
+}
+
+void zuc_eea3_16_buffer_job_no_gfni_avx512(const void * const pKey[16],
+                                           const void * const pIv[16],
+                                           const void * const pBufferIn[16],
+                                           void *pBufferOut[16],
+                                           const uint16_t length[16],
+                                           const void * const job_in_lane[16])
+{
+        _zuc_eea3_16_buffer_job(pKey, pIv, pBufferIn, pBufferOut,
+                                length, job_in_lane, 0);
+}
+
+void zuc_eea3_16_buffer_job_gfni_avx512(const void * const pKey[16],
+                                        const void * const pIv[16],
+                                        const void * const pBufferIn[16],
+                                        void *pBufferOut[16],
+                                        const uint16_t length[16],
+                                        const void * const job_in_lane[16])
+{
+        _zuc_eea3_16_buffer_job(pKey, pIv, pBufferIn, pBufferOut,
+                                length, job_in_lane, 1);
 }
 
 void zuc_eea3_1_buffer_avx512(const void *pKey,
@@ -798,10 +830,10 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[16],
                 /* Generate the next key stream 8 bytes or 64 bytes */
                 if (!remainCommonBits)
                         asm_ZucGenKeystream8B_16_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr);
                 else
                         asm_ZucGenKeystream64B_16_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                      (uint32_t **)pKeyStrArr);
                 for (i = 0; i < 16; i++) {
                         T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
                                                    pIn8[i]);
@@ -926,12 +958,14 @@ void zuc_eia3_1_buffer_avx512(const void *pKey,
 #endif
 }
 
-void zuc_eia3_16_buffer_job_avx512(const void * const pKey[16],
-                                  const void * const pIv[16],
-                                  const void * const pBufferIn[16],
-                                  uint32_t *pMacI[16],
-                                  const uint16_t lengthInBits[16],
-                                  const void * const job_in_lane[16])
+static inline
+void _zuc_eia3_16_buffer_job(const void * const pKey[16],
+                             const void * const pIv[16],
+                             const void * const pBufferIn[16],
+                             uint32_t *pMacI[16],
+                             const uint16_t lengthInBits[16],
+                             const void * const job_in_lane[16],
+                             const unsigned use_gfni)
 {
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState16_t state, 64);
@@ -978,10 +1012,19 @@ void zuc_eia3_16_buffer_job_avx512(const void * const pKey[16],
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState16_t));
 
-        asm_ZucInitialization_16_avx512(&keys,  &ivs, &state);
+        if (use_gfni) {
+                asm_ZucInitialization_16_gfni_avx512(&keys,  &ivs, &state);
 
-        /* Generate 64 bytes at a time */
-        asm_ZucGenKeystream64B_16_avx512(&state, (uint32_t **)pKeyStrArr);
+                /* Generate 64 bytes at a time */
+                asm_ZucGenKeystream64B_16_gfni_avx512(&state,
+                                                      (uint32_t **)pKeyStrArr);
+        } else {
+                asm_ZucInitialization_16_avx512(&keys,  &ivs, &state);
+
+                /* Generate 64 bytes at a time */
+                asm_ZucGenKeystream64B_16_avx512(&state,
+                                                 (uint32_t **)pKeyStrArr);
+        }
 
         /* Point at the next 64 bytes of the key */
         for (i = 0; i < 16; i++)
@@ -991,12 +1034,21 @@ void zuc_eia3_16_buffer_job_avx512(const void * const pKey[16],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 64 bytes */
-                if (!remainCommonBits)
-                        asm_ZucGenKeystream8B_16_avx512(&state,
-                                                     (uint32_t **)pKeyStrArr);
-                else
-                        asm_ZucGenKeystream64B_16_avx512(&state,
-                                                      (uint32_t **)pKeyStrArr);
+                if (use_gfni) {
+                        if (!remainCommonBits)
+                                asm_ZucGenKeystream8B_16_gfni_avx512(&state,
+                                                       (uint32_t **)pKeyStrArr);
+                        else
+                                asm_ZucGenKeystream64B_16_gfni_avx512(&state,
+                                                       (uint32_t **)pKeyStrArr);
+                } else {
+                        if (!remainCommonBits)
+                                asm_ZucGenKeystream8B_16_avx512(&state,
+                                                       (uint32_t **)pKeyStrArr);
+                        else
+                                asm_ZucGenKeystream64B_16_avx512(&state,
+                                                       (uint32_t **)pKeyStrArr);
+                }
                 for (i = 0; i < 16; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
@@ -1093,6 +1145,28 @@ void zuc_eia3_16_buffer_job_avx512(const void * const pKey[16],
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
 #endif
+}
+
+void zuc_eia3_16_buffer_job_no_gfni_avx512(const void * const pKey[16],
+                                           const void * const pIv[16],
+                                           const void * const pBufferIn[16],
+                                           uint32_t *pMacI[16],
+                                           const uint16_t lengthInBits[16],
+                                           const void * const job_in_lane[16])
+{
+        _zuc_eia3_16_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
+                                job_in_lane, 0);
+}
+
+void zuc_eia3_16_buffer_job_gfni_avx512(const void * const pKey[16],
+                                        const void * const pIv[16],
+                                        const void * const pBufferIn[16],
+                                        uint32_t *pMacI[16],
+                                        const uint16_t lengthInBits[16],
+                                        const void * const job_in_lane[16])
+{
+        _zuc_eia3_16_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
+                                job_in_lane, 1);
 }
 
 void zuc_eia3_n_buffer_avx512(const void * const pKey[],

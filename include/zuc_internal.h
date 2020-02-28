@@ -746,6 +746,11 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_16_avx512(ZucState16_t *pState,
                                               uint64_t *pOut[16],
                                               uint64_t bufOffset);
 
+IMB_DLL_LOCAL void asm_ZucCipher64B_16_gfni_avx512(ZucState16_t *pState,
+                                                   const uint64_t *pIn[16],
+                                                   uint64_t *pOut[16],
+                                                   uint64_t bufOffset);
+
 /**
  ******************************************************************************
  * @description
@@ -848,12 +853,20 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[8],
                                 const void * const job_in_lane[8]);
 
 IMB_DLL_LOCAL
-void zuc_eea3_16_buffer_job_avx512(const void * const pKey[16],
-                                   const void * const pIv[16],
-                                   const void * const pBufferIn[16],
-                                   void *pBufferOut[16],
-                                   const uint16_t lengthInBytes[16],
-                                   const void * const job_in_lane[16]);
+void zuc_eea3_16_buffer_job_no_gfni_avx512(const void * const pKey[16],
+                                           const void * const pIv[16],
+                                           const void * const pBufferIn[16],
+                                           void *pBufferOut[16],
+                                           const uint16_t lengthInBytes[16],
+                                           const void * const job_in_lane[16]);
+
+IMB_DLL_LOCAL
+void zuc_eea3_16_buffer_job_gfni_avx512(const void * const pKey[16],
+                                        const void * const pIv[16],
+                                        const void * const pBufferIn[16],
+                                        void *pBufferOut[16],
+                                        const uint16_t lengthInBytes[16],
+                                        const void * const job_in_lane[16]);
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
@@ -880,12 +893,20 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
                                 const void * const job_in_lane[8]);
 
 IMB_DLL_LOCAL
-void zuc_eia3_16_buffer_job_avx512(const void * const pKey[16],
-                                   const void * const pIv[16],
-                                   const void * const pBufferIn[16],
-                                   uint32_t *pMacI[16],
-                                   const uint16_t lengthInBits[16],
-                                   const void * const job_in_lane[16]);
+void zuc_eia3_16_buffer_job_no_gfni_avx512(const void * const pKey[16],
+                                           const void * const pIv[16],
+                                           const void * const pBufferIn[16],
+                                           uint32_t *pMacI[16],
+                                           const uint16_t lengthInBits[16],
+                                           const void * const job_in_lane[16]);
+
+IMB_DLL_LOCAL
+void zuc_eia3_16_buffer_job_gfni_avx512(const void * const pKey[16],
+                                        const void * const pIv[16],
+                                        const void * const pBufferIn[16],
+                                        uint32_t *pMacI[16],
+                                        const uint16_t lengthInBits[16],
+                                        const void * const job_in_lane[16]);
 
 /* the s-boxes */
 extern const uint8_t S0[256];
