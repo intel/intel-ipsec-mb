@@ -243,6 +243,20 @@ JOB_AES_HMAC *submit_job_aes_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state,
 
 JOB_AES_HMAC *flush_job_aes_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+                              const uint64_t key_size);
+__forceinline
+JOB_AES_HMAC *
+FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
+                             const uint64_t key_size);
+
+__forceinline
+JOB_AES_HMAC *
+SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+                              const uint64_t key_size);
+
 #define SUBMIT_JOB_HMAC               submit_job_hmac_avx512
 #define FLUSH_JOB_HMAC                flush_job_hmac_avx512
 #define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx512
@@ -318,9 +332,10 @@ JOB_AES_HMAC *flush_job_aes_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 
 /* ====================================================================== */
 
-uint32_t ethernet_fcs_avx(const void *msg, uint64_t len, const void *tag_ouput);
+extern uint32_t
+ethernet_fcs_avx512(const void *msg, uint64_t len, const void *tag_ouput);
 
-#define ETHERNET_FCS ethernet_fcs_avx
+#define ETHERNET_FCS ethernet_fcs_avx512
 
 /* ====================================================================== */
 
@@ -693,29 +708,101 @@ submit_aes_docsis256_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
         return job;
 }
 
-#define SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC submit_aes_docsis128_dec_crc32_avx512
-
-#define SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC submit_aes_docsis256_dec_crc32_avx512
-
 extern JOB_AES_HMAC *
 submit_job_aes_docsis128_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
                                           JOB_AES_HMAC *job);
-#define SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC \
-        submit_job_aes_docsis128_enc_crc32_avx512
-
 extern JOB_AES_HMAC *
 flush_job_aes_docsis128_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state);
-#define FLUSH_JOB_DOCSIS128_SEC_CRC_ENC flush_job_aes_docsis128_enc_crc32_avx512
 
 extern JOB_AES_HMAC *
 submit_job_aes_docsis256_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
                                           JOB_AES_HMAC *job);
-#define SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC \
-        submit_job_aes_docsis256_enc_crc32_avx512
-
 extern JOB_AES_HMAC *
 flush_job_aes_docsis256_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state);
-#define FLUSH_JOB_DOCSIS256_SEC_CRC_ENC flush_job_aes_docsis256_enc_crc32_avx512
+
+__forceinline
+JOB_AES_HMAC *
+submit_job_docsis128_sec_crc_enc_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                             JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(state, job, 16);
+}
+
+__forceinline
+JOB_AES_HMAC *
+submit_job_docsis256_sec_crc_enc_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                             JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(state, job, 32);
+}
+
+__forceinline
+JOB_AES_HMAC *
+flush_job_docsis128_sec_crc_enc_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state)
+{
+        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(state, 16);
+}
+
+__forceinline
+JOB_AES_HMAC *
+flush_job_docsis256_sec_crc_enc_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state)
+{
+        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(state, 32);
+}
+
+__forceinline
+JOB_AES_HMAC *
+submit_job_docsis128_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                             JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(state, job, 16);
+}
+
+__forceinline
+JOB_AES_HMAC *
+submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                             JOB_AES_HMAC *job)
+{
+        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(state, job, 32);
+}
+
+static JOB_AES_HMAC *
+(*submit_job_docsis128_sec_crc_enc_fn)
+        (MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job) =
+        submit_job_aes_docsis128_enc_crc32_avx512;
+
+static JOB_AES_HMAC *
+(*submit_job_docsis256_sec_crc_enc_fn)
+        (MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job) =
+        submit_job_aes_docsis256_enc_crc32_avx512;
+
+static JOB_AES_HMAC *
+(*flush_job_docsis128_sec_crc_enc_fn)
+        (MB_MGR_DOCSIS_AES_OOO *state) =
+        flush_job_aes_docsis128_enc_crc32_avx512;
+
+static JOB_AES_HMAC *
+(*flush_job_docsis256_sec_crc_enc_fn)
+        (MB_MGR_DOCSIS_AES_OOO *state) =
+        flush_job_aes_docsis256_enc_crc32_avx512;
+
+static JOB_AES_HMAC *
+(*submit_job_docsis128_sec_crc_dec_fn)
+        (MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job) =
+        submit_aes_docsis128_dec_crc32_avx512;
+
+static JOB_AES_HMAC *
+(*submit_job_docsis256_sec_crc_dec_fn)
+        (MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job) =
+        submit_aes_docsis256_dec_crc32_avx512;
+
+#define SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC submit_job_docsis128_sec_crc_enc_fn
+#define SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC submit_job_docsis256_sec_crc_enc_fn
+#define FLUSH_JOB_DOCSIS128_SEC_CRC_ENC flush_job_docsis128_sec_crc_enc_fn
+#define FLUSH_JOB_DOCSIS256_SEC_CRC_ENC flush_job_docsis256_sec_crc_enc_fn
+#define SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC submit_job_docsis128_sec_crc_dec_fn
+#define SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC submit_job_docsis256_sec_crc_dec_fn
+
 
 /* ====================================================================== */
 
@@ -759,6 +846,19 @@ init_mb_mgr_avx512(MB_MGR *state)
                 flush_job_aes_ccm_auth_avx512 =
                         flush_job_aes_ccm_auth_vaes_avx512;
                 aes_cntr_ccm_128_avx512 = aes_cntr_ccm_128_vaes_avx512;
+
+                submit_job_docsis128_sec_crc_enc_fn =
+                        submit_job_docsis128_sec_crc_enc_vaes_avx512;
+                submit_job_docsis256_sec_crc_enc_fn =
+                        submit_job_docsis256_sec_crc_enc_vaes_avx512;
+                flush_job_docsis128_sec_crc_enc_fn =
+                        flush_job_docsis128_sec_crc_enc_vaes_avx512;
+                flush_job_docsis256_sec_crc_enc_fn =
+                        flush_job_docsis256_sec_crc_enc_vaes_avx512;
+                submit_job_docsis128_sec_crc_dec_fn =
+                        submit_job_docsis128_sec_crc_dec_vaes_avx512;
+                submit_job_docsis256_sec_crc_dec_fn =
+                        submit_job_docsis256_sec_crc_dec_vaes_avx512;
         }
 
         if ((state->features & IMB_FEATURE_GFNI) &&
@@ -862,24 +962,43 @@ init_mb_mgr_avx512(MB_MGR *state)
                 state->docsis256_sec_ooo.num_lanes_inuse = 0;
         }
 
-        /* init 8 lanes */
-        memset(state->docsis128_crc32_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis128_crc32_sec_ooo.lens));
-        memset(&state->docsis128_crc32_sec_ooo.lens[0], 0,
-               sizeof(state->docsis128_crc32_sec_ooo.lens[0]) * 8);
-        memset(state->docsis128_crc32_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis128_crc32_sec_ooo.job_in_lane));
-        state->docsis128_crc32_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis128_crc32_sec_ooo.num_lanes_inuse = 0;
+        if (vaes_support) {
+                /* init 16 lanes */
+                memset(state->docsis128_crc32_sec_ooo.lens, 0,
+                       sizeof(state->docsis128_crc32_sec_ooo.lens));
+                memset(state->docsis128_crc32_sec_ooo.job_in_lane, 0,
+                       sizeof(state->docsis128_crc32_sec_ooo.job_in_lane));
+                state->docsis128_crc32_sec_ooo.unused_lanes =
+                        0xFEDCBA9876543210;
+                state->docsis128_crc32_sec_ooo.num_lanes_inuse = 0;
 
-        memset(state->docsis256_crc32_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis256_crc32_sec_ooo.lens));
-        memset(&state->docsis256_crc32_sec_ooo.lens[0], 0,
-               sizeof(state->docsis256_crc32_sec_ooo.lens[0]) * 8);
-        memset(state->docsis256_crc32_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis256_crc32_sec_ooo.job_in_lane));
-        state->docsis256_crc32_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis256_crc32_sec_ooo.num_lanes_inuse = 0;
+                memset(state->docsis256_crc32_sec_ooo.lens, 0,
+                       sizeof(state->docsis256_crc32_sec_ooo.lens));
+                memset(state->docsis256_crc32_sec_ooo.job_in_lane, 0,
+                       sizeof(state->docsis256_crc32_sec_ooo.job_in_lane));
+                state->docsis256_crc32_sec_ooo.unused_lanes =
+                        0xFEDCBA9876543210;
+                state->docsis256_crc32_sec_ooo.num_lanes_inuse = 0;
+        } else {
+                /* init 8 lanes */
+                memset(state->docsis128_crc32_sec_ooo.lens, 0xFF,
+                       sizeof(state->docsis128_crc32_sec_ooo.lens));
+                memset(&state->docsis128_crc32_sec_ooo.lens[0], 0,
+                       sizeof(state->docsis128_crc32_sec_ooo.lens[0]) * 8);
+                memset(state->docsis128_crc32_sec_ooo.job_in_lane, 0,
+                       sizeof(state->docsis128_crc32_sec_ooo.job_in_lane));
+                state->docsis128_crc32_sec_ooo.unused_lanes = 0xF76543210;
+                state->docsis128_crc32_sec_ooo.num_lanes_inuse = 0;
+
+                memset(state->docsis256_crc32_sec_ooo.lens, 0xFF,
+                       sizeof(state->docsis256_crc32_sec_ooo.lens));
+                memset(&state->docsis256_crc32_sec_ooo.lens[0], 0,
+                       sizeof(state->docsis256_crc32_sec_ooo.lens[0]) * 8);
+                memset(state->docsis256_crc32_sec_ooo.job_in_lane, 0,
+                       sizeof(state->docsis256_crc32_sec_ooo.job_in_lane));
+                state->docsis256_crc32_sec_ooo.unused_lanes = 0xF76543210;
+                state->docsis256_crc32_sec_ooo.num_lanes_inuse = 0;
+        }
 
         /* DES, 3DES and DOCSIS DES (DES CBC + DES CFB for partial block) */
         /* - separate DES OOO for encryption */
