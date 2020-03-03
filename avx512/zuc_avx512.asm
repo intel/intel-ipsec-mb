@@ -226,19 +226,6 @@ align 64
 %endmacro
 
 ;
-;   rot_mod32()
-;
-;   uses zmm7
-;
-%macro  rot_mod32   3
-    vpslld      %1, %2, %3
-    vpsrld      zmm7, %2, (32 - %3)
-
-    vporq       %1, zmm7
-%endmacro
-
-
-;
 ;   nonlin_fun16()
 ;
 ;   params
@@ -271,18 +258,18 @@ align 64
     vporq       zmm1, zmm3, zmm6
     vporq       zmm2, zmm4, zmm5
 
-    rot_mod32   zmm3, zmm1, 2
-    rot_mod32   zmm4, zmm1, 10
-    rot_mod32   zmm5, zmm1, 18
-    rot_mod32   zmm6, zmm1, 24
+    vprold   zmm3, zmm1, 2
+    vprold   zmm4, zmm1, 10
+    vprold   zmm5, zmm1, 18
+    vprold   zmm6, zmm1, 24
     ; ZMM1 = U = L1(P)
     vpternlogq  zmm1, zmm3, zmm4, 0x96 ; (A ^ B) ^ C
     vpternlogq  zmm1, zmm5, zmm6, 0x96 ; (A ^ B) ^ C
 
-    rot_mod32   zmm3, zmm2, 8
-    rot_mod32   zmm4, zmm2, 14
-    rot_mod32   zmm5, zmm2, 22
-    rot_mod32   zmm6, zmm2, 30
+    vprold   zmm3, zmm2, 8
+    vprold   zmm4, zmm2, 14
+    vprold   zmm5, zmm2, 22
+    vprold   zmm6, zmm2, 30
     ; ZMM2 = V = L2(Q)
     vpternlogq  zmm2, zmm3, zmm4, 0x96 ; (A ^ B) ^ C
     vpternlogq  zmm2, zmm5, zmm6, 0x96 ; (A ^ B) ^ C
