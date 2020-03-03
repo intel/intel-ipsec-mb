@@ -56,6 +56,7 @@ extern int hec_test(struct IMB_MGR *mb_mgr);
 extern int xcbc_test(struct IMB_MGR *mb_mgr);
 extern int aes_cbcs_test(struct IMB_MGR *mb_mgr);
 extern int crc_test(struct IMB_MGR *mb_mgr);
+extern int chacha_test(struct IMB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -306,6 +307,7 @@ main(int argc, char **argv)
                 errors += chained_test(p_mgr);
                 errors += hec_test(p_mgr);
                 errors += aes_cbcs_test(p_mgr);
+                errors += chacha_test(p_mgr);
                 errors += api_test(p_mgr);
                 errors += direct_api_test(p_mgr);
                 errors += clear_mem_test(p_mgr);

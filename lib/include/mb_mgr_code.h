@@ -43,6 +43,7 @@
 
 #include "include/clear_regs_mem.h"
 #include "include/des.h"
+#include "include/chacha20.h"
 #include "intel-ipsec-mb.h"
 
 /*
@@ -461,6 +462,8 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
 #else
                 return DES_CBC_ENC(job);
 #endif /* SUBMIT_JOB_DES_CBC_ENC */
+        } else if (IMB_CIPHER_CHACHA20 == job->cipher_mode) {
+                return CHACHA20_ENC_DEC(job);
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
                 MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
@@ -595,6 +598,8 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                 (void) state;
                 return DES_CBC_DEC(job);
 #endif /* SUBMIT_JOB_DES_CBC_DEC */
+        } else if (IMB_CIPHER_CHACHA20 == job->cipher_mode) {
+                return CHACHA20_ENC_DEC(job);
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
                 MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
@@ -1530,6 +1535,36 @@ is_job_invalid(const IMB_JOB *job)
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(8)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_CHACHA20:
+                if (job->src == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->dst == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->enc_keys == NULL) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->key_len_in_bytes != UINT64_C(32)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes == 0) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(12)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }

@@ -58,6 +58,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | ZUC-EEA3      | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
 | SNOW3G-UEA2   | N      | Y      | Y      | Y      | N      | N      |
 | AES128-CBCS(9)| N      | Y(1)   | Y(3)   | N      | N      | N      |
+| Chacha20      | Y      | N      | N      | N      | N      | N      |
 +---------------------------------------------------------------------+
 ```
 Notes:  
@@ -147,6 +148,7 @@ Table 3. Encryption and integrity algorithm combinations
 | DES-DOCSIS,   |                                                     |
 | 3DES,         |                                                     |
 | DES,          |                                                     |
+| Chacha20,     |                                                     |
 |---------------+-----------------------------------------------------|
 | AES128-DOCSIS | DOCSIS-CRC32                                        |
 |---------------+-----------------------------------------------------|

@@ -202,6 +202,7 @@ c_lib_objs := \
 	sha_one_block.o \
 	des_key.o \
 	des_basic.o \
+	chacha20.o \
 	version.o \
 	cpu_feature.o \
 	aesni_emu.o \

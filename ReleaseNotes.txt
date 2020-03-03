@@ -20,6 +20,7 @@ Library
   GFNI instructions.
 - AES-XCBC-128 implementation for AVX512 (VAES)
 - AES-CBCS-128 implementation for SSE and AVX (1:9 crypt:skip pattern)
+- Chacha20 scalar implementation
 
 Test Applications
 - CCM tests extended to test AES-CCM-256
@@ -29,11 +30,13 @@ Test Applications
 - AES-XCBC-128 tests added to test app
 - AES-CBCS-128 tests added to test app
 - AES-CBCS-128 support added to xvalidation app
+- Chacha20 tests added to test and xvalidation app
 
 Performance Application
 - AES-CCM-256 support added
 - AES-CMAC-256 support added
 - AES-CBCS-128 support added
+- Chacha20 support added
 
 
 v0.54 April 2020

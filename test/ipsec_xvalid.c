@@ -106,7 +106,7 @@ struct cipher_auth_keys {
         uint8_t ipad[SHA512_DIGEST_SIZE_IN_BYTES];
         uint8_t opad[SHA512_DIGEST_SIZE_IN_BYTES];
         DECLARE_ALIGNED(uint32_t k1_expanded[15 * 4], 16);
-        DECLARE_ALIGNED(uint8_t	k2[16], 16);
+        DECLARE_ALIGNED(uint8_t	k2[32], 16);
         DECLARE_ALIGNED(uint8_t	k3[16], 16);
         DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
@@ -298,6 +298,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBCS_1_9,
                         .key_size = 16
+                }
+        },
+        {
+                .name = "chacha20",
+                .values.job_params = {
+                        .cipher_mode = IMB_CIPHER_CHACHA20,
+                        .key_size = 32
                 }
         },
         {
@@ -565,6 +572,7 @@ const uint8_t key_sizes[][3] = {
                 {16, 16, 1}, /* IMB_CIPHER_SNOW3G_UEA2 */
                 {16, 16, 1}, /* IMB_CIPHER_KASUMI_UEA1_BITLEN */
                 {16, 16, 1}, /* IMB_CIPHER_CBCS_1_9 */
+                {32, 32, 1}, /* IMB_CIPHER_CHACHA20 */
 };
 
 uint8_t custom_test = 0;
@@ -950,6 +958,11 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->msg_len_to_cipher_in_bits =
                         (job->msg_len_to_cipher_in_bytes * 8);
                 break;
+        case IMB_CIPHER_CHACHA20:
+                job->enc_keys = k2;
+                job->dec_keys = k2;
+                job->iv_len_in_bytes = 12;
+                break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
                 break;
@@ -1059,7 +1072,10 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_CIPHER_ZUC_EEA3:
                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                 case IMB_CIPHER_KASUMI_UEA1_BITLEN:
-                        memset(k2, (int)CIPH_KEY_PATTERN, sizeof(keys->k2));
+                        memset(k2, (int)CIPH_KEY_PATTERN, 16);
+                        break;
+                case IMB_CIPHER_CHACHA20:
+                        memset(k2, (int)CIPH_KEY_PATTERN, 32);
                         break;
                 case IMB_CIPHER_NULL:
                         /* No operation needed */
@@ -1263,7 +1279,10 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_CIPHER_ZUC_EEA3:
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
-                memcpy(k2, ciph_key, sizeof(keys->k2));
+                memcpy(k2, ciph_key, 16);
+                break;
+        case IMB_CIPHER_CHACHA20:
+                memset(k2, (int)CIPH_KEY_PATTERN, 32);
                 break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
