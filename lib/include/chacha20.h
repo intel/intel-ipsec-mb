@@ -35,7 +35,7 @@ chacha20_enc_dec_basic(const void *input, void *output, const uint64_t size,
 
 __forceinline
 JOB_AES_HMAC *
-CHACHA20_ENC_DEC(JOB_AES_HMAC *job)
+SUBMIT_JOB_CHACHA20_ENC_DEC_SCALAR(JOB_AES_HMAC *job)
 {
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         chacha20_enc_dec_basic(job->src + job->cipher_start_src_offset_in_bytes,

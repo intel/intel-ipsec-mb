@@ -21,6 +21,7 @@ Library
 - AES-XCBC-128 implementation for AVX512 (VAES)
 - AES-CBCS-128 implementation for SSE and AVX (1:9 crypt:skip pattern)
 - Chacha20 scalar implementation
+- Chacha20 AVX512 implementation
 
 Test Applications
 - CCM tests extended to test AES-CCM-256

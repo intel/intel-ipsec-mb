@@ -463,7 +463,11 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return DES_CBC_ENC(job);
 #endif /* SUBMIT_JOB_DES_CBC_ENC */
         } else if (IMB_CIPHER_CHACHA20 == job->cipher_mode) {
-                return CHACHA20_ENC_DEC(job);
+#ifdef SUBMIT_JOB_CHACHA20_ENC_DEC_VEC
+                return SUBMIT_JOB_CHACHA20_ENC_DEC_VEC(job);
+#else
+                return SUBMIT_JOB_CHACHA20_ENC_DEC_SCALAR(job);
+#endif /* SUDBMIT_JOB_CHACHA20_ENC_DEC_VEC */
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
                 MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
@@ -599,7 +603,11 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                 return DES_CBC_DEC(job);
 #endif /* SUBMIT_JOB_DES_CBC_DEC */
         } else if (IMB_CIPHER_CHACHA20 == job->cipher_mode) {
-                return CHACHA20_ENC_DEC(job);
+#ifdef SUBMIT_JOB_CHACHA20_ENC_DEC_VEC
+                return SUBMIT_JOB_CHACHA20_ENC_DEC_VEC(job);
+#else
+                return SUBMIT_JOB_CHACHA20_ENC_DEC_SCALAR(job);
+#endif
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
                 MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
