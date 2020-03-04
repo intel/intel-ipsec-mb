@@ -53,10 +53,6 @@
 #define CLEAR_MEM clear_mem
 #define CLEAR_VAR clear_var
 
-/* -------------------------------------------------------------------
- * PREVIOUSLY SNOW3G INTERNAL
- * ------------------------------------------------------------------ */
-
 #define MAX_KEY_LEN (16)
 #define SNOW3G_4_BYTES (4)
 #define SNOW3G_8_BYTES (8)
@@ -108,7 +104,6 @@ typedef struct snow3gKeyState8_s {
         uint32_t iLFSR_X;
 } snow3gKeyState8_t;
 #endif /* AVX2 */
-
 
 /**
  * @brief Finds minimum 32-bit value in an array
@@ -295,6 +290,12 @@ cptr_copy_8(const void *out_array[],
 }
 
 #ifdef AVX2
+/**
+ * @brief Loads 2x128-bit vectors into one 256-bit vector
+ * @param[in] hi  pointer to 128-bit vector (high)
+ * @param[in] lo  pointer to 128-bit vector (low)
+ * @return 256-bit vector
+ */
 static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 {
         const __m128i lo128 = _mm_loadu_si128((const __m128i *) lo);
@@ -304,9 +305,12 @@ static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 }
 #endif /* AVX2 */
 
-/* -------------------------------------------------------------------
- * Wrapper for safe lookup of 16 indexes in 256x8-bit table (sse/avx)
- * ------------------------------------------------------------------ */
+/**
+ * @brief Wrapper for safe lookup of 16 indexes in 256x8-bit table (sse/avx)
+ * @param[in] indexes  vector of 16x8-bit indexes to be looked up
+ * @param[in] lut      pointer to a 256x8-bit table
+ * @return 16x8-bit values looked in \a lut using 16x8-bit \a indexes
+ */
 static inline __m128i lut16x8b_256(const __m128i indexes, const void *lut)
 {
 #if defined(AVX2) || defined(AVX)
@@ -316,10 +320,10 @@ static inline __m128i lut16x8b_256(const __m128i indexes, const void *lut)
 #endif
 }
 
-
-/* -------------------------------------------------------------------
- * LFSR array shift by 2 positions
- * ------------------------------------------------------------------ */
+/**
+ * @brief LFSR array shift by 2 positions
+ * @param[in/out] pCtx  key state context structure
+ */
 static inline void ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
 {
         int i;
@@ -440,9 +444,13 @@ s2_mixc_fixup_scalar(const __m128i no_mixc, const __m128i mixc)
         return _mm_cvtsi128_si32(mixc) ^ fixup_table[index];
 }
 
-/* -------------------------------------------------------------------
- * Sbox S1 maps a 32bit input to a 32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S1 maps a 32bit input to a 32bit output
+ *
+ * @param[in] x  32-bit word to be passed through S1 box
+ *
+ * @return \a x transformed through S1 box
+ */
 static inline uint32_t S1_box(const uint32_t x)
 {
 #ifdef NO_AESNI
@@ -468,9 +476,12 @@ static inline uint32_t S1_box(const uint32_t x)
 #endif
 }
 
-/* -------------------------------------------------------------------
- * Sbox S1 maps a 2x32bit input to a 2x32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S1 maps a 2x32bit input to a 2x32bit output
+ *
+ * @param[in] x1  32-bit word to be passed through S1 box
+ * @param[in] x2  32-bit word to be passed through S1 box
+ */
 static inline void S1_box_2(uint32_t *x1, uint32_t *x2)
 {
 #ifdef NO_AESNI
@@ -490,9 +501,13 @@ static inline void S1_box_2(uint32_t *x1, uint32_t *x2)
 #endif
 }
 
-/* -------------------------------------------------------------------
- * Sbox S1 maps a 4x32bit input to a 4x32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S1 maps a 4x32bit input to a 4x32bit output
+ *
+ * @param[in] x  vector of 4 32-bit words to be passed through S1 box
+ *
+ * @return 4x32-bits from \a x transformed through S1 box
+ */
 static inline __m128i S1_box_4(const __m128i x)
 {
 #ifdef NO_AESNI
@@ -561,9 +576,13 @@ static inline __m128i S1_box_4(const __m128i x)
 }
 
 #ifdef AVX2
-/* -------------------------------------------------------------------
- * Sbox S1 maps a 8x32bit input to a 8x32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S1 maps a 8x32bit input to a 8x32bit output
+ *
+ * @param[in] x  vector of 8 32-bit words to be passed through S1 box
+ *
+ * @return 8x32-bits from \a x transformed through S1 box
+ */
 static inline __m256i S1_box_8(const __m256i x)
 {
         const __m128i x1 = _mm256_castsi256_si128(x);
@@ -615,9 +634,13 @@ static inline __m256i S1_box_8(const __m256i x)
 }
 #endif /* AVX2 */
 
-/* -------------------------------------------------------------------
- * Sbox S2 maps a 32bit input to a 32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S2 maps a 32-bit input to a 32-bit output
+ *
+ * @param[in] x  32-bit word to be passed through S2 box
+ *
+ * @return \a x transformed through S2 box
+ */
 static inline uint32_t S2_box(const uint32_t x)
 {
         /* Perform invSR(SQ(x)) transform */
@@ -686,9 +709,12 @@ static inline uint32_t S2_box(const uint32_t x)
         return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
 }
 
-/* -------------------------------------------------------------------
- * Sbox S2 maps a 2x32bit input to a 2x32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S2 maps a 2x32bit input to a 2x32bit output
+ *
+ * @param[in/out] x1  32-bit word to be passed through S2 box
+ * @param[in/out] x2  32-bit word to be passed through S2 box
+ */
 static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
 {
 #ifdef NO_AESNI
@@ -724,9 +750,13 @@ static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
 #endif
 }
 
-/* -------------------------------------------------------------------
- * Sbox S2 maps a 4x32bit input to a 4x32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S2 maps a 4x32bit input to a 4x32bit output
+ *
+ * @param[in] x  vector of 4 32-bit words to be passed through S2 box
+ *
+ * @return 4x32-bits from \a x transformed through S2 box
+ */
 static inline __m128i S2_box_4(const __m128i x)
 {
         /* Perform invSR(SQ(x)) transform through a lookup table */
@@ -823,9 +853,12 @@ static inline __m128i S2_box_4(const __m128i x)
 #endif
 }
 
-/* -------------------------------------------------------------------
- * Sbox S2 maps a 4x32bit input to a 4x32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S2 maps a 2x4x32bit input to a 2x4x32bit output
+ *
+ * @param[in/out] in_out1  vector of 4 32-bit words to be passed through S2 box
+ * @param[in/out] in_out2  vector of 4 32-bit words to be passed through S2 box
+ */
 static inline void S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
 {
 #ifdef NO_AESNI
@@ -916,9 +949,13 @@ static inline void S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
 }
 
 #ifdef AVX2
-/* -------------------------------------------------------------------
- * Sbox S2 maps a 8x32bit input to a 8x32bit output
- * ------------------------------------------------------------------ */
+/**
+ * @brief Sbox S2 maps a 8x32bit input to a 8x32bit output
+ *
+ * @param[in] x  vector of 8 32-bit words to be passed through S2 box
+ *
+ * @return 8x32-bits from \a x transformed through S2 box
+ */
 static inline __m256i S2_box_8(const __m256i x)
 {
         /* Perform invSR(SQ(x)) transform through a lookup table */
@@ -1017,11 +1054,14 @@ static inline __m256i S2_box_8(const __m256i x)
 }
 #endif /* AVX2 */
 
-/* -------------------------------------------------------------------
- * ClockFSM function as defined in snow3g standard
+/**
+ * @brief ClockFSM function as defined in SNOW3G standard
+ *
  * The FSM has 2 input words S5 and S15 from the LFSR
- * produces a 32 bit output word F
- * ------------------------------------------------------------------ */
+ * produces a 32 bit output word F.
+ *
+ * @param[in/out] pCtx  context structure
+ */
 static inline uint32_t ClockFSM_1(snow3gKeyState1_t *pCtx)
 {
         const uint32_t F = (pCtx->LFSR_S[15] + pCtx->FSM_R1) ^ pCtx->FSM_R2;
@@ -1034,9 +1074,10 @@ static inline uint32_t ClockFSM_1(snow3gKeyState1_t *pCtx)
         return F;
 }
 
-/* -------------------------------------------------------------------
- * ClockLFSR function as defined in snow3g standard
- * ------------------------------------------------------------------ */
+/**
+ * @brief ClockLFSR function as defined in SNOW3G standard
+ * @param[in/out] pCtx  context structure
+ */
 static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
 {
         const uint32_t S0 = pCtx->LFSR_S[0];
@@ -1056,15 +1097,12 @@ static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
 }
 
 /**
-*******************************************************************************
-* @description
-* This function initializes the key schedule for 1 buffer for snow3g f8/f9.
-*
-* @param[in]       pCtx        Context where the scheduled keys are stored
-* @param [in]      pKeySched    Key schedule
-* @param [in]      pIV          IV
-*
-******************************************************************************/
+ * @brief Initializes the key schedule for 1 buffer for SNOW3G f8/f9.
+ *
+ * @param[in/out]  pCtx        Context where the scheduled keys are stored
+ * @param[in]      pKeySched   Key schedule
+ * @param[in]      pIV         IV
+ */
 static inline void
 snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                         const snow3g_key_schedule_t *pKeySched,
@@ -1147,16 +1185,11 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
 }
 
 /**
-*******************************************************************************
-* @description
-* This function generates 5 words of keystream used in the initial stages
-* of snow3g F9.
-*
-* @param[in]       pCtx                         Context where the scheduled
-*keys are stored
-* @param[in/out]   pKeyStream          Pointer to the generated keystream
-*
-******************************************************************************/
+ * @brief Generates 5 words of key stream used in the initial stages of F9.
+ *
+ * @param[in]     pCtx        Context where the scheduled keys are stored
+ * @param[in/out] pKeyStream  Pointer to the generated keystream
+ */
 static inline void snow3g_f9_keystream_words(snow3gKeyState1_t *pCtx,
                                              uint32_t *pKeyStream)
 {
@@ -1171,29 +1204,36 @@ static inline void snow3g_f9_keystream_words(snow3gKeyState1_t *pCtx,
         }
 }
 
-/* -------------------------------------------------------------------
- * LFSR array shift by 1 position, 4 packets at a time
- * ------------------------------------------------------------------ */
-
 #ifdef AVX2
-/* LFSR array shift */
+/**
+ * @brief LFSR array shift by one (8 lanes)
+ * @param[in]     pCtx       Context where the scheduled keys are stored
+ */
 static inline void ShiftLFSR_8(snow3gKeyState8_t *pCtx)
 {
         pCtx->iLFSR_X = (pCtx->iLFSR_X + 1) & 15;
 }
 #endif /* AVX2 */
 
-/* LFSR array shift */
+/**
+ * @brief LFSR array shift by one (4 lanes)
+ * @param[in]     pCtx       Context where the scheduled keys are stored
+ */
 static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
 {
         pCtx->iLFSR_X = (pCtx->iLFSR_X + 1) & 15;
 }
 
-/*---------------------------------------------------------
- * @description
- * GF2 modular multiplication/reduction
+/**
+ * @brief GF2 modular multiplication/reduction
  *
- *---------------------------------------------------------*/
+ * Implements MUL64 function from the standard.
+ * SNOW3GCONSTANT/0x1b reduction polynomial applied.
+ *
+ * @param[in] a   64-bit input
+ * @param[in] b   64-bit input
+ * @return 64-bit output
+ */
 static inline uint64_t multiply_and_reduce64(uint64_t a, uint64_t b)
 {
         uint64_t msk;
@@ -1212,12 +1252,13 @@ static inline uint64_t multiply_and_reduce64(uint64_t a, uint64_t b)
 }
 
 #ifdef AVX2
-/* -------------------------------------------------------------------
- * ClockLFSR sub-function as defined in snow3g standard
- * S = LFSR[2]
- *       ^ table_Alpha_div[LFSR[11] & 0xff]
- *       ^ table_Alpha_mul[LFSR[0] & 0xff]
- * ------------------------------------------------------------------ */
+/**
+ * @brief ClockLFSR sub-function as defined in SNOW3G standard (8 lanes)
+ *
+ * @param[in] L0        LFSR[0]
+ * @param[in] L11       LFSR[11]
+ * @return table_Alpha_div[LFSR[11] & 0xff] ^ table_Alpha_mul[LFSR[0] & 0xff]
+ */
 static inline __m256i C0_C11_8(const __m256i L0, const __m256i L11)
 {
         static const __m256i mask1 = {
@@ -1239,12 +1280,13 @@ static inline __m256i C0_C11_8(const __m256i L0, const __m256i L11)
 }
 #endif /* AVX2 */
 
-/* -------------------------------------------------------------------
- * ClockLFSR sub-function as defined in snow3g standard
- * S = LFSR[2]
- *       ^ table_Alpha_div[LFSR[11] & 0xff]
- *       ^ table_Alpha_mul[LFSR[0] & 0xff]
- * ------------------------------------------------------------------ */
+/**
+ * @brief ClockLFSR sub-function as defined in SNOW3G standard (4 lanes)
+ *
+ * @param[in] L0        LFSR[0]
+ * @param[in] L11       LFSR[11]
+ * @return table_Alpha_div[LFSR[11] & 0xff] ^ table_Alpha_mul[LFSR[0] & 0xff]
+ */
 static inline __m128i C0_C11_4(const __m128i L0, const __m128i L11)
 {
         const uint8_t L11IDX0 = _mm_extract_epi8(L11, 0);
@@ -1271,12 +1313,15 @@ static inline __m128i C0_C11_4(const __m128i L0, const __m128i L11)
 }
 
 #ifdef AVX2
-/* -------------------------------------------------------------------
- * ClockLFSR function as defined in snow3g standard
+/**
+ * @brief ClockLFSR function as defined in SNOW3G standard (8 lanes)
+ *
  * S =  table_Alpha_div[LFSR[11] & 0xff]
  *       ^ table_Alpha_mul[LFSR[0] >> 24]
  *       ^ LFSR[2] ^ LFSR[0] << 8 ^ LFSR[11] >> 8
- * ------------------------------------------------------------------ */
+ *
+ * @param[in]     pCtx       Context where the scheduled keys are stored
+ */
 static inline void ClockLFSR_8(snow3gKeyState8_t *pCtx)
 {
         __m256i X2;
@@ -1299,12 +1344,15 @@ static inline void ClockLFSR_8(snow3gKeyState8_t *pCtx)
 }
 #endif /* AVX2 */
 
-/* -------------------------------------------------------------------
- * ClockLFSR function as defined in snow3g standard
+/**
+ * @brief ClockLFSR function as defined in SNOW3G standard (4 lanes)
+ *
  * S =  table_Alpha_div[LFSR[11] & 0xff]
  *       ^ table_Alpha_mul[LFSR[0] >> 24]
  *       ^ LFSR[2] ^ LFSR[0] << 8 ^ LFSR[11] >> 8
- * ------------------------------------------------------------------ */
+ *
+ * @param[in]     pCtx       Context where the scheduled keys are stored
+ */
 static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
 {
         __m128i S, T, U;
@@ -1324,10 +1372,14 @@ static inline void ClockLFSR_4(snow3gKeyState4_t *pCtx)
 }
 
 #ifdef AVX2
-/* -------------------------------------------------------------------
- * ClockFSM function as defined in snow3g standard
- * 8 packets at a time
- * ------------------------------------------------------------------ */
+/**
+ * @brief ClockFSM function as defined in SNOW3G standard
+ *
+ * It operates on 8 packets/lanes at a time
+ *
+ * @param[in]     pCtx       Context where the scheduled keys are stored
+ * @return 8 x 4bytes of key stream
+ */
 static inline __m256i ClockFSM_8(snow3gKeyState8_t *pCtx)
 {
         const uint32_t iLFSR_X_5 = (pCtx->iLFSR_X + 5) & 15;
@@ -1351,10 +1403,14 @@ static inline __m256i ClockFSM_8(snow3gKeyState8_t *pCtx)
 }
 #endif /* AVX2 */
 
-/* -------------------------------------------------------------------
- * ClockFSM function as defined in snow3g standard
- * 4 packets at a time
- * ------------------------------------------------------------------ */
+/**
+ * @brief ClockFSM function as defined in SNOW3G standard
+ *
+ * It operates on 4 packets/lanes at a time
+ *
+ * @param[in]     pCtx       Context where the scheduled keys are stored
+ * @return 4 x 4bytes of key stream
+ */
 static inline __m128i ClockFSM_4(snow3gKeyState4_t *pCtx)
 {
         const uint32_t iLFSR_X = pCtx->iLFSR_X;
@@ -1376,14 +1432,11 @@ static inline __m128i ClockFSM_4(snow3gKeyState4_t *pCtx)
 }
 
 /**
-*******************************************************************************
-* @description
-* This function generates 4 bytes of keystream 1 buffer at a time
-*
-* @param[in]     pCtx       Context where the scheduled keys are stored
-* @return 4 bytes of keystream
-*
-*******************************************************************************/
+ * @brief Generates 4 bytes of key stream 1 buffer at a time
+ *
+ * @param[in]     pCtx       Context where the scheduled keys are stored
+ * @return 4 bytes of key stream
+ */
 static inline uint32_t snow3g_keystream_1_4(snow3gKeyState1_t *pCtx)
 {
         const uint32_t F = ClockFSM_1(pCtx);
@@ -1394,17 +1447,15 @@ static inline uint32_t snow3g_keystream_1_4(snow3gKeyState1_t *pCtx)
 }
 
 /**
-*******************************************************************************
-* @description
-* This function generates 8 bytes of keystream 1 buffer at a time
-*
-* @param[in]            pCtx         Context where the scheduled keys are stored
-* @param[in/out]        pKeyStream   Pointer to generated keystream
-*
-*******************************************************************************/
+ * @brief Generates 8 bytes of key stream for 1 buffer at a time
+ *
+ * @param[in] pCtx Context where the scheduled keys are stored
+ * @return 8 bytes of a key stream
+ */
 static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
 {
-        /* Merged clock FSM + clock LFSR + clock FSM + clockLFSR
+        /*
+         * Merged clock FSM + clock LFSR + clock FSM + clockLFSR
          * in order to avoid redundancies in function processing
          * and less instruction immediate dependencies
          */
@@ -1443,9 +1494,9 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
         S2_box_2(&s2_box_step1, &s2_box_step2);
 
         /*
-         * At this stage FCM_Rx mapping is as follows:
-         *    pCtx->FSM_R2 = s1_box_step1;
-         *    pCtx->FSM_R3 = s2_box_step1;
+         * At this stage FSM_R mapping is as follows:
+         *    FSM_R2 = s1_box_step1
+         *    FSM_R3 = s2_box_step1
          */
         const uint32_t F1 = (V0 + R0) ^ L1 ^ s1_box_step1;
 
@@ -1456,7 +1507,7 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
         /* Shift LFSR twice */
         ShiftTwiceLFSR_1(pCtx);
 
-        /* keystream mode LFSR update */
+        /* key stream mode LFSR update */
         pCtx->LFSR_S[14] = V0;
         pCtx->LFSR_S[15] = V1;
 
@@ -1465,14 +1516,12 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
 
 #ifdef AVX2
 /**
-*******************************************************************************
-* @description
-* This function generates 8 bytes of keystream 8 buffers at a time
-*
-* @param[in]            pCtx         Context where the scheduled keys are stored
-* @param[in/out]        pKeyStream   Pointer to generated keystream
-*
-*******************************************************************************/
+ * @brief Generates 8 bytes of key stream 8 buffers at a time
+ *
+ * @param[in]      pCtx         Context where the scheduled keys are stored
+ * @param[in/out]  pKeyStreamLo Pointer to generated key stream
+ * @param[in/out]  pKeyStreamHi Pointer to generated key stream
+ */
 static inline void snow3g_keystream_8_8(snow3gKeyState8_t *pCtx,
                                         __m256i *pKeyStreamLo,
                                         __m256i *pKeyStreamHi)
@@ -1493,14 +1542,11 @@ static inline void snow3g_keystream_8_8(snow3gKeyState8_t *pCtx,
 }
 
 /**
-*******************************************************************************
-* @description
-* This function generates 4 bytes of keystream 8 buffers at a time
-*
-* @param[in]            pCtx         Context where the scheduled keys are stored
-* @param[in/out]        pKeyStream   Pointer to generated keystream
-*
-*******************************************************************************/
+ * @brief Generates 4 bytes of key stream 8 buffers at a time
+ *
+ * @param[in]      pCtx         Context where the scheduled keys are stored
+ * @return 8 x 4 bytes vaector with key stream data
+ */
 static inline __m256i snow3g_keystream_8_4(snow3gKeyState8_t *pCtx)
 {
         const __m256i keyStream = _mm256_xor_si256(ClockFSM_8(pCtx),
@@ -1511,14 +1557,11 @@ static inline __m256i snow3g_keystream_8_4(snow3gKeyState8_t *pCtx)
 }
 
 /**
-*****************************************************************************
-* @description
-* This function generates 32 bytes of keystream 8 buffers at a time
-*
-* @param[in]            pCtx         Context where the scheduled keys are stored
-* @param[in/out]        pKeyStream   Array of generated keystreams
-*
-******************************************************************************/
+ * @brief Generates 32 bytes of key stream 8 buffers at a time
+ *
+ * @param[in]     pCtx         Context where the scheduled keys are stored
+ * @param[in/out] pKeyStream   Array of generated key streams
+ */
 static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
                                          __m256i *pKeyStream)
 {
@@ -1601,14 +1644,11 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
 #endif /* AVX2 */
 
 /**
-*******************************************************************************
-* @description
-* This function generates 4 bytes of keystream 4 buffers at a time
-*
-* @param[in]            pCtx         Context where the scheduled keys are stored
-* @param[in/out]        pKeyStream   Pointer to generated keystream
-*
-*******************************************************************************/
+ * @brief Generates 4 bytes of key stream 4 buffers at a time
+ *
+ * @param[in]      pCtx         Context where the scheduled keys are stored
+ * @param[in/out]  pKeyStream   Pointer to generated key stream
+ */
 static inline __m128i snow3g_keystream_4_4(snow3gKeyState4_t *pCtx)
 {
         const __m128i keyStream = _mm_xor_si128(ClockFSM_4(pCtx),
@@ -1619,15 +1659,12 @@ static inline __m128i snow3g_keystream_4_4(snow3gKeyState4_t *pCtx)
 }
 
 /**
-*******************************************************************************
-* @description
-* This function generates 8 bytes of keystream 4 buffers at a time
-*
-* @param[in]            pCtx         Context where the scheduled keys are stored
-* @param[in/out]        pKeyStreamLo Pointer to lower end of generated keystream
-* @param[in/out]        pKeyStreamHi Pointer to higer end of generated keystream
-*
-*******************************************************************************/
+ * @brief Generates 8 bytes of key stream 4 buffers at a time
+ *
+ * @param[in]      pCtx         Context where the scheduled keys are stored
+ * @param[in/out]  pKeyStreamLo Pointer to lower end of generated key stream
+ * @param[in/out]  pKeyStreamHi Pointer to higher end of generated key stream
+ */
 static inline void snow3g_keystream_4_8(snow3gKeyState4_t *pCtx,
                                         __m128i *pKeyStreamLo,
                                         __m128i *pKeyStreamHi)
@@ -1705,20 +1742,16 @@ static inline void snow3g_keystream_4_8(snow3gKeyState4_t *pCtx,
 }
 
 /**
-*******************************************************************************
-* @description
-* This function generates 16 bytes of keystream 4 buffers at a time
-*
-* @param[in]            pCtx         Context where the scheduled keys are stored
-* @param[in/out]        pKeyStream   Pointer to lower end of generated keystream
-* @param[in/out]        pKeyStreamHi Pointer to higer end of generated keystream
-*
-*******************************************************************************/
+ * @brief Generates 16 bytes of key stream 4 buffers at a time
+ *
+ * @param[in]     pCtx         Context where the scheduled keys are stored
+ * @param[in/out] pKeyStream   Pointer to store generated key stream
+ */
 static inline void snow3g_keystream_4_16(snow3gKeyState4_t *pCtx,
                                          __m128i pKeyStream[4])
 {
         static const uint64_t sm[2] = {
-                /* 0x0706050403020100ULL, 0x0f0e0d0c0b0a0908ULL */
+                /* mask for byte swapping 64-bit words */
                 0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL
         };
 
@@ -1757,18 +1790,15 @@ static inline void snow3g_keystream_4_16(snow3gKeyState4_t *pCtx,
 }
 
 /**
-*******************************************************************************
-* @description
-* This function initializes the key schedule for 4 buffers for snow3g f8/f9.
-*
-*       @param [in]      pCtx        Context where the scheduled keys are stored
-*       @param [in]      pKeySched   Key schedule
-*       @param [in]      pIV1        IV for buffer 1
-*       @param [in]      pIV2        IV for buffer 2
-*       @param [in]      pIV3        IV for buffer 3
-*       @param [in]      pIV4        IV for buffer 4
-*
-*******************************************************************************/
+ * @brief Initializes the key schedule for 4 buffers for SNOW3G f8/f9.
+ *
+ * @param [in]      pCtx        Context where the scheduled keys are stored
+ * @param [in]      pKeySched   Key schedule
+ * @param [in]      pIV1        IV for buffer 1
+ * @param [in]      pIV2        IV for buffer 2
+ * @param [in]      pIV3        IV for buffer 3
+ * @param [in]      pIV4        IV for buffer 4
+ */
 static inline void
 snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
                         const snow3g_key_schedule_t *pKeySched,
@@ -1850,23 +1880,14 @@ snow3gStateInitialize_4(snow3gKeyState4_t *pCtx,
 
 #ifdef AVX2
 /**
-*******************************************************************************
-* @description
-* This function initializes the key schedule for 8 buffers with
-* individual keys, for snow3g f8/f9.
-*
-*       @param [in]      pCtx            Context where scheduled keys are stored
-*       @param [in]      pKeySched       Key schedule
-*       @param [in]      pIV1            IV for buffer 1
-*       @param [in]      pIV2            IV for buffer 2
-*       @param [in]      pIV3            IV for buffer 3
-*       @param [in]      pIV4            IV for buffer 4
-*       @param [in]      pIV5            IV for buffer 5
-*       @param [in]      pIV6            IV for buffer 6
-*       @param [in]      pIV7            IV for buffer 7
-*       @param [in]      pIV8            IV for buffer 8
-*
-*******************************************************************************/
+ * @brief Initializes the key schedule for 8 buffers with individual keys
+ *
+ * It can be used for SNOW3G F8/F9
+ *
+ * @param[in/out] pCtx      pointer to an array with 8 key stream states
+ * @param[in]     pKeySched pointer to an array with 8 key schedules
+ * @param[in]     pIV       pointer to an array with 8 IV's
+ */
 static inline void
 snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
                                  const snow3g_key_schedule_t * const KeySched[],
@@ -1951,22 +1972,19 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
 }
 
 /**
-*******************************************************************************
-* @description
-* This function initializes the key schedule for 8 buffers for snow3g f8/f9.
-*
-*       @param [in]     pCtx         Context where the scheduled keys are stored
-*       @param [in]     pKeySched    Key schedule
-*       @param [in]     pIV1         IV for buffer 1
-*       @param [in]     pIV2         IV for buffer 2
-*       @param [in]     pIV3         IV for buffer 3
-*       @param [in]     pIV4         IV for buffer 4
-*       @param [in]     pIV5         IV for buffer 5
-*       @param [in]     pIV6         IV for buffer 6
-*       @param [in]     pIV7         IV for buffer 7
-*       @param [in]     pIV8         IV for buffer 8
-*
-*******************************************************************************/
+ * @brief Initializes the key schedule for 8 buffers for SNOW3G f8/f9.
+ *
+ * @param [in]     pCtx         Context where the scheduled keys are stored
+ * @param [in]     pKeySched    Key schedule
+ * @param [in]     pIV1         IV for buffer 1
+ * @param [in]     pIV2         IV for buffer 2
+ * @param [in]     pIV3         IV for buffer 3
+ * @param [in]     pIV4         IV for buffer 4
+ * @param [in]     pIV5         IV for buffer 5
+ * @param [in]     pIV6         IV for buffer 6
+ * @param [in]     pIV7         IV for buffer 7
+ * @param [in]     pIV8         IV for buffer 8
+ */
 static inline void
 snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
                         const snow3g_key_schedule_t *pKeySched,
@@ -2058,7 +2076,7 @@ preserve_bits(uint64_t *KS,
 {
         const uint64_t mask = UINT64_MAX << (SNOW3G_BLOCK_SIZE * 8 - bit_len);
 
-        /* Clear the last bits of the keystream and the input
+        /* Clear the last bits of the key stream and the input
          * (input only in out-of-place case) */
         *KS &= mask;
         if (pcBufferIn != pcBufferOut) {
@@ -2068,7 +2086,7 @@ preserve_bits(uint64_t *KS,
 
                 /*
                  * Merge the last bits from the output, to be preserved,
-                 * in the keystream, to be XOR'd with the input
+                 * in the key stream, to be XOR'd with the input
                  * (which last bits are 0, maintaining the output bits)
                  */
                 memcpy_keystrm(safeOutBuf->b8, pcBufferOut, byte_len);
@@ -2077,18 +2095,14 @@ preserve_bits(uint64_t *KS,
 }
 
 /**
-*******************************************************************************
-* @description
-* This function is the core snow3g bit algorithm
-* for the 3GPP confidentiality algorithm
-*
-* @param[in]    pCtx                Context where the scheduled keys are stored
-* @param[in]    pBufferIn           Input buffer
-* @param[out]   pBufferOut          Output buffer
-* @param[in]    cipherLengthInBits  length in bits of the data to be encrypted
-* @param[in]    bitOffset           offset in input buffer, where data are valid
-*
-*******************************************************************************/
+ * @brief Core SNOW3G F8 bit algorithm for the 3GPP confidentiality algorithm
+ *
+ * @param[in]    pCtx          Context where the scheduled keys are stored
+ * @param[in]    pIn           Input buffer
+ * @param[out]   pOut          Output buffer
+ * @param[in]    lengthInBits  length in bits of the data to be encrypted
+ * @param[in]    offsetinBits  offset in input buffer, where data are valid
+ */
 static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
                                  const void *pIn,
                                  void *pOut,
@@ -2099,7 +2113,7 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
         uint8_t *pBufferOut = pOut;
         uint32_t cipherLengthInBits = lengthInBits;
         uint64_t shiftrem = 0;
-        uint64_t KS8, KS8bit; /* 8 bytes of keystream */
+        uint64_t KS8, KS8bit; /* 8 bytes of key stream */
         const uint8_t *pcBufferIn = pBufferIn + (offsetInBits / 8);
         uint8_t *pcBufferOut = pBufferOut + (offsetInBits / 8);
         /* Offset into the first byte (0 - 7 bits) */
@@ -2169,7 +2183,7 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
         pcBufferOut += SNOW3G_BLOCK_SIZE;
 
         while (cipherLengthInBits) {
-                /* produce the next block of keystream */
+                /* produce the next block of key stream */
                 KS8 = snow3g_keystream_1_8(pCtx);
                 KS8bit = (KS8 >> remainOffset) | shiftrem;
                 if (remainOffset != 0)
@@ -2207,17 +2221,13 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
 }
 
 /**
-*******************************************************************************
-* @description
-* This function is the core snow3g algorithm for
-* the 3GPP confidentiality and integrity algorithm.
-*
-* @param[in]       pCtx            Context where the scheduled keys are stored
-* @param[in]       pBufferIn       Input buffer
-* @param[out]      pBufferOut      Output buffer
-* @param[in]       lengthInBytes   length in bytes of the data to be encrypted
-*
-*******************************************************************************/
+ * @brief Core SNOW3G F8 algorithm for the 3GPP confidentiality algorithm
+ *
+ * @param[in]  pCtx           Context where the scheduled keys are stored
+ * @param[in]  pIn            Input buffer
+ * @param[out] pOut           Output buffer
+ * @param[in]  lengthInBytes  length in bytes of the data to be encrypted
+ */
 static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
                              const void *pIn,
                              void *pOut,
@@ -2226,14 +2236,14 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
         uint32_t qwords = lengthInBytes / SNOW3G_8_BYTES; /* number of qwords */
         const uint32_t words = lengthInBytes & 4; /* remaining word if not 0 */
         const uint32_t bytes = lengthInBytes & 3; /* remaining bytes */
-        uint32_t KS4;                       /* 4 bytes of keystream */
-        uint64_t KS8;                       /* 8 bytes of keystream */
+        uint32_t KS4;                       /* 4 bytes of key stream */
+        uint64_t KS8;                       /* 8 bytes of key stream */
         const uint8_t *pBufferIn = pIn;
         uint8_t *pBufferOut = pOut;
 
         /* process 128 bits at a time */
         while (qwords >= 2) {
-                /* generate keystream 8 bytes at a time */
+                /* generate key stream 8 bytes at a time */
                 __m128i ks;
 
                 ks = _mm_cvtsi64_si128(BSWAP64(snow3g_keystream_1_8(pCtx)));
@@ -2253,10 +2263,10 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
 
         /* process 64 bits at a time */
         while (qwords--) {
-                /* generate keystream 8 bytes at a time */
+                /* generate key stream 8 bytes at a time */
                 KS8 = snow3g_keystream_1_8(pCtx);
 
-                /* xor keystream 8 bytes at a time */
+                /* xor key stream 8 bytes at a time */
                 pBufferIn = xor_keystrm_rev(pBufferOut, pBufferIn, KS8);
                 pBufferOut += SNOW3G_8_BYTES;
         }
@@ -2306,16 +2316,12 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
 
 #ifdef AVX2
 /**
-*******************************************************************************
-* @description
-* This function converts the state from a 8 buffer state structure to 1
-* buffer state structure.
-*
-* @param[in]    pSrcState               Pointer to the source state
-* @param[in]    pDstState               Pointer to the destination state
-* @param[in]    NumBuffer               Buffer number
-*
-*******************************************************************************/
+ * @brief Extracts one state from a 8 buffer state structure.
+ *
+ * @param[in]  pSrcState   Pointer to the source state
+ * @param[in]  pDstState   Pointer to the destination state
+ * @param[in]  NumBuffer   Buffer number
+ */
 static inline void snow3gStateConvert_8(const snow3gKeyState8_t *pSrcState,
                                         snow3gKeyState1_t *pDstState,
                                         const uint32_t NumBuffer)
@@ -2342,16 +2348,12 @@ static inline void snow3gStateConvert_8(const snow3gKeyState8_t *pSrcState,
 #endif /* AVX2 */
 
 /**
-*******************************************************************************
-* @description
-* This function converts the state from a 4 buffer state structure to 1
-* buffer state structure.
-*
-* @param[in]    pSrcState               Pointer to the source state
-* @param[in]    pDstState               Pointer to the destination state
-* @param[in]    NumBuffer               Buffer number
-*
-*******************************************************************************/
+ * @brief Extracts one state from a 4 buffer state structure.
+ *
+ * @param[in]  pSrcState   Pointer to the source state
+ * @param[in]  pDstState   Pointer to the destination state
+ * @param[in]  NumBuffer   Buffer number
+ */
 static inline void snow3gStateConvert_4(const snow3gKeyState4_t *pSrcState,
                                         snow3gKeyState1_t *pDstState,
                                         const uint32_t NumBuffer)
@@ -2376,12 +2378,23 @@ static inline void snow3gStateConvert_4(const snow3gKeyState4_t *pSrcState,
         pDstState->FSM_R3 = pFSM_X2[NumBuffer];
 }
 
-/*---------------------------------------------------------
- * f8()
- * Initializations and Context size definitions
- *---------------------------------------------------------*/
-size_t SNOW3G_KEY_SCHED_SIZE(void) { return sizeof(snow3g_key_schedule_t); }
+/**
+ * @brief Provides size of key schedule structure
+ * @return Key schedule structure in bytes
+ */
+size_t SNOW3G_KEY_SCHED_SIZE(void)
+{
+        return sizeof(snow3g_key_schedule_t);
+}
 
+/**
+ * @brief Key schedule initialisation
+ * @param[in]  pKey  pointer to a 16-byte key
+ * @param[out] pCtx  pointer to key schedule structure
+ * @return Operation status
+ * @retval 0 all OK
+ * @retval -1 parameter error
+ */
 int SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
 {
 #ifdef SAFE_PARAM
@@ -2399,11 +2412,17 @@ int SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
         return 0;
 }
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G F8 1 buffer:
- *      Single buffer enc/dec with IV and precomputed key schedule
- *---------------------------------------------------------*/
+/**
+ * @brief Single buffer F8 encrypt/decrypt
+ *
+ * Single buffer enc/dec with IV and precomputed key schedule
+ *
+ * @param[in]  pHandle       pointer to precomputed key schedule
+ * @param[in]  pIV           pointer to IV
+ * @param[in]  pBufferIn     pointer to an input buffer
+ * @param[out] pBufferOut    pointer to an output buffer
+ * @param[in]  lengthInBytes message length in bits
+ */
 void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
                         const void *pIV,
                         const void *pBufferIn,
@@ -2425,7 +2444,7 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_1(&ctx, pHandle, pIV);
 
-        /* Clock FSM and LFSR once, ignore the keystream */
+        /* Clock FSM and LFSR once, ignore the key stream */
         (void) snow3g_keystream_1_4(&ctx);
 
         f8_snow3g(&ctx, pBufferIn, pBufferOut, lengthInBytes);
@@ -2437,11 +2456,15 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 #endif /* SAFE_DATA */
 }
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G F8 bit 1 buffer:
- *      Single buffer enc/dec with IV and precomputed key schedule
- *---------------------------------------------------------*/
+/**
+ * @brief Single bit-length buffer F8 encrypt/decrypt
+ * @param[in] pHandle      pointer to precomputed key schedule
+ * @param[in] pIV          pointer to IV
+ * @param[in] pBufferIn    pointer to an input buffer
+ * @param[out] pBufferOut  pointer to an output buffer
+ * @param[in] lengthInBits message length in bits
+ * @param[in] offsetInBits message offset in bits
+ */
 void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
                             const void *pIV,
                             const void *pBufferIn,
@@ -2464,7 +2487,7 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_1(&ctx, pHandle, pIV);
 
-        /* Clock FSM and LFSR once, ignore the keystream */
+        /* Clock FSM and LFSR once, ignore the key stream */
         (void) snow3g_keystream_1_4(&ctx);
 
         f8_snow3g_bit(&ctx, pBufferIn, pBufferOut, lengthInBits, offsetInBits);
@@ -2476,13 +2499,23 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
 #endif /* SAFE_DATA */
 }
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G F8 2 buffer:
- *      Two buffers enc/dec with the same key schedule.
- *      The 2 IVs are independent and are passed as an array of pointers.
- *      Each buffer and data length are separate.
- *---------------------------------------------------------*/
+/**
+ * @brief Two buffer F8 encrypt/decrypt with the same key schedule
+ *
+ * Two buffers enc/dec with the same key schedule.
+ * The 2 IVs are independent and are passed as an array of pointers.
+ * Each buffer and data length are separate.
+ *
+ * @param[in] pHandle      pointer to precomputed key schedule
+ * @param[in] pIV1         pointer to IV
+ * @param[in] pIV2         pointer to IV
+ * @param[in] pBufIn1      pointer to an input buffer
+ * @param[in] pBufOut1     pointer to an output buffer
+ * @param[in] lenInBytes1  message size in bytes
+ * @param[in] pBufIn2      pointer to an input buffer
+ * @param[in] pBufOut2     pointer to an output buffer
+ * @param[in] lenInBytes2  message size in bytes
+ */
 void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
                         const void *pIV1,
                         const void *pIV2,
@@ -2510,7 +2543,7 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_1(&ctx1, pHandle, pIV1);
 
-        /* Clock FSM and LFSR once, ignore the keystream */
+        /* Clock FSM and LFSR once, ignore the key stream */
         (void) snow3g_keystream_1_4(&ctx1);
 
         /* data processing for packet 1 */
@@ -2519,7 +2552,7 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_1(&ctx2, pHandle, pIV2);
 
-        /* Clock FSM and LFSR once, ignore the keystream */
+        /* Clock FSM and LFSR once, ignore the key stream */
         (void) snow3g_keystream_1_4(&ctx2);
 
         /* data processing for packet 2 */
@@ -2534,13 +2567,31 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
 
 }
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G F8 4 buffer:
- *      Four packets enc/dec with the same key schedule.
- *      The 4 IVs are independent and are passed as an array of pointers.
- *      Each buffer and data length are separate.
- *---------------------------------------------------------*/
+/**
+ * @brief Four buffer F8 encrypt/decrypt with the same key schedule
+ *
+ * Four packets enc/dec with the same key schedule.
+ * The 4 IVs are independent and are passed as an array of pointers.
+ * Each buffer and data length are separate.
+ *
+ * @param[in] pHandle         pointer to precomputed key schedule
+ * @param[in] pIV1            pointer to IV
+ * @param[in] pIV2            pointer to IV
+ * @param[in] pIV3            pointer to IV
+ * @param[in] pIV4            pointer to IV
+ * @param[in] pBufferIn1      pointer to an input buffer
+ * @param[in] pBufferOut1     pointer to an output buffer
+ * @param[in] lengthInBytes1  message size in bytes
+ * @param[in] pBufferIn2      pointer to an input buffer
+ * @param[in] pBufferOut2     pointer to an output buffer
+ * @param[in] lengthInBytes2  message size in bytes
+ * @param[in] pBufferIn3      pointer to an input buffer
+ * @param[in] pBufferOut3     pointer to an output buffer
+ * @param[in] lengthInBytes3  message size in bytes
+ * @param[in] pBufferIn4      pointer to an input buffer
+ * @param[in] pBufferOut4     pointer to an output buffer
+ * @param[in] lengthInBytes4  message size in bytes
+ */
 void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
                         const void *pIV1,
                         const void *pIV2,
@@ -2601,7 +2652,7 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_4(&ctx, pHandle, pIV1, pIV2, pIV3, pIV4);
 
-        /* Clock FSM and LFSR once, ignore the keystream */
+        /* Clock FSM and LFSR once, ignore the key stream */
         (void) snow3g_keystream_4_4(&ctx);
 
         /* generates 8 bytes at a time on all streams */
@@ -2625,7 +2676,7 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
         }
 
         while (qwords--) {
-                __m128i H, L; /* 4 bytes of keystream */
+                __m128i H, L; /* 4 bytes of key stream */
 
                 snow3g_keystream_4_8(&ctx, &L, &H);
 
@@ -2663,12 +2714,18 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
 }
 
 #ifdef AVX2
-/*---------------------------------------------------------
- * @description
- *      Snow3G 8 buffer ks 8 multi:
- *      Processes 8 packets 32 or 8 bytes at a time.
- *      Use different key schedule for each buffer.
- *---------------------------------------------------------*/
+/**
+ * @brief Multiple-key 8 buffer F8/F9 key stream generation
+ *
+ * Processes 8 packets 32 or 8 bytes at a time.
+ * Use different key schedule for each buffer.
+ *
+ * @param[in] pKey          pointer to an array of key schedules
+ * @param[in] IV            pointer to an array of IV's
+ * @param[in] pBufferIn     pointer to an array of input buffers
+ * @param[out] pBufferOut   pointer to an array of output buffers
+ * @param[in] lengthInBytes pointer to an array of message lengths in bytes
+ */
 static inline void
 snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
                               const void * const IV[],
@@ -2697,7 +2754,7 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
         /* Initialize the schedule from the IV */
         snow3gStateInitialize_8_multiKey(&ctx, pKey, IV);
 
-        /* Clock FSM and LFSR once, ignore the keystream */
+        /* Clock FSM and LFSR once, ignore the key stream */
         (void) snow3g_keystream_8_4(&ctx);
 
         if (bytes_left >= big_block_size) {
@@ -2746,7 +2803,7 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
 
                 /* generates 8 sets at a time on all streams */
                 for (i = 0; i < blocks; i++) {
-                        __m256i H, L; /* 8 bytes of keystream */
+                        __m256i H, L; /* 8 bytes of key stream */
                         size_t j;
 
                         snow3g_keystream_8_8(&ctx, &L, &H);
@@ -2800,12 +2857,18 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
 #endif /* SAFE_DATA */
 }
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G 8 buffer ks 8 multi:
- *      Processes 8 packets 32 or 8 bytes at a time.
- *      Uses same key schedule for each buffer.
- *---------------------------------------------------------*/
+/**
+ * @brief Single-key 8 buffer F8/F9 key stream generation
+ *
+ * Processes 8 packets 32 or 8 bytes at a time.
+ * Use same key schedule for each buffer.
+ *
+ * @param[in] pKey          pointer to a key schedule
+ * @param[in] IV            pointer to an array of IV's
+ * @param[in] pBufferIn     pointer to an array of input buffers
+ * @param[out] pBufferOut   pointer to an array of output buffers
+ * @param[in] lengthInBytes pointer to an array of message lengths in bytes
+ */
 static inline void
 snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
                         const void * const IV[],
@@ -2824,7 +2887,7 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
         snow3gStateInitialize_8(&ctx, pKey, IV[0], IV[1], IV[2],
                                 IV[3], IV[4], IV[5], IV[6], IV[7]);
 
-        /* Clock FSM and LFSR once, ignore the keystream */
+        /* Clock FSM and LFSR once, ignore the key stream */
         (void) snow3g_keystream_8_4(&ctx);
 
         if (bytes_left >= big_block_size) {
@@ -2869,7 +2932,7 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
 
                 /* generates 8 sets at a time on all streams */
                 for (i = 0; i < blocks; i++) {
-                        __m256i H, L; /* 8 bytes of keystream */
+                        __m256i H, L; /* 8 bytes of key stream */
                         uint32_t j;
 
                         snow3g_keystream_8_8(&ctx, &L, &H);
@@ -2926,13 +2989,19 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
 
 #endif /* AVX2 */
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G F8 8 buffer, multi-key:
- *      Eight packets enc/dec with eight respective key schedules.
- *      The 8 IVs are independent and are passed as an array of pointers.
- *      Each buffer and data length are separate.
- *---------------------------------------------------------*/
+/**
+ * @brief Multiple-key 8 buffer F8 encrypt/decrypt
+ *
+ * Eight packets enc/dec with eight respective key schedules.
+ * The 8 IVs are independent and are passed as an array of pointers.
+ * Each buffer and data length are separate.
+ *
+ * @param[in] pKey          pointer to an array of key schedules
+ * @param[in] IV            pointer to an array of IV's
+ * @param[in] pBufferIn     pointer to an array of input buffers
+ * @param[out] pBufferOut   pointer to an array of output buffers
+ * @param[in] lengthInBytes pointer to an array of message lengths in bytes
+ */
 void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
                                  const void * const IV[],
                                  const void * const BufferIn[],
@@ -2977,14 +3046,47 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
 #endif /* AVX2 */
 }
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G F8 8 buffer:
- *      Eight packets enc/dec with the same key schedule.
- *      The 8 IVs are independent and are passed as an array of pointers.
- *      Each buffer and data length are separate.
- *      Uses AVX instructions.
- *---------------------------------------------------------*/
+/**
+ * @brief 8 buffer F8 encrypt/decrypt with the same key schedule
+ *
+ * Eight packets enc/dec with the same key schedule.
+ * The 8 IVs are independent and are passed as an array of pointers.
+ * Each buffer and data length are separate.
+ *
+ * @param[in] pHandle         pointer to precomputed key schedule
+ * @param[in] pIV1            pointer to IV
+ * @param[in] pIV2            pointer to IV
+ * @param[in] pIV3            pointer to IV
+ * @param[in] pIV4            pointer to IV
+ * @param[in] pIV5            pointer to IV
+ * @param[in] pIV6            pointer to IV
+ * @param[in] pIV7            pointer to IV
+ * @param[in] pIV8            pointer to IV
+ * @param[in] pBufIn1         pointer to an input buffer
+ * @param[in] pBufOut1        pointer to an output buffer
+ * @param[in] lenInBytes1     message size in bytes
+ * @param[in] pBufIn2         pointer to an input buffer
+ * @param[in] pBufOut2        pointer to an output buffer
+ * @param[in] lenInBytes2     message size in bytes
+ * @param[in] pBufIn3         pointer to an input buffer
+ * @param[in] pBufOut3        pointer to an output buffer
+ * @param[in] lenInBytes3     message size in bytes
+ * @param[in] pBufIn4         pointer to an input buffer
+ * @param[in] pBufOut4        pointer to an output buffer
+ * @param[in] lenInBytes4     message size in bytes
+ * @param[in] pBufIn5         pointer to an input buffer
+ * @param[in] pBufOut5        pointer to an output buffer
+ * @param[in] lenInBytes5     message size in bytes
+ * @param[in] pBufIn6         pointer to an input buffer
+ * @param[in] pBufOut6        pointer to an output buffer
+ * @param[in] lenInBytes6     message size in bytes
+ * @param[in] pBufIn7         pointer to an input buffer
+ * @param[in] pBufOut7        pointer to an output buffer
+ * @param[in] lenInBytes7     message size in bytes
+ * @param[in] pBufIn8         pointer to an input buffer
+ * @param[in] pBufOut8        pointer to an output buffer
+ * @param[in] lenInBytes8     message size in bytes
+ */
 void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
                         const void *pIV1,
                         const void *pIV2,
@@ -3080,13 +3182,20 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
 #endif /* AVX */
 }
 
-/******************************************************************************
- * @description
- *      Snow3G F8 multi packet:
- *      Performs F8 enc/dec on [n] packets. The operation is performed in-place.
- *      The input IV's are passed in Little Endian format.
- *      The KeySchedule is in Little Endian format.
- ******************************************************************************/
+/**
+ * @brief Single-key N buffer F8 encrypt/decrypt
+ *
+ * Performs F8 enc/dec on N packets.
+ * The input IV's are passed in Little Endian format.
+ * The KeySchedule is in Little Endian format.
+ *
+ * @param[in] pCtx          pointer to a key schedule
+ * @param[in] IV            pointer to an array of IV's
+ * @param[in] pBufferIn     pointer to an array of input buffers
+ * @param[out] pBufferOut   pointer to an array of output buffers
+ * @param[in] bufLenInBytes pointer to an array of message lengths in bytes
+ * @param[in] packetCount   number of packets to process (N)
+ */
 void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
                         const void * const IV[],
                         const void * const pBufferIn[],
@@ -3272,6 +3381,20 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
         }
 }
 
+/**
+ * @brief Multi-key N buffer F8 encrypt/decrypt
+ *
+ * Performs F8 enc/dec on N packets.
+ * The input IV's are passed in Little Endian format.
+ * The KeySchedule is in Little Endian format.
+ *
+ * @param[in]  pCtx          pointer to an array of key schedules
+ * @param[in]  IV            pointer to an array of IV's
+ * @param[in]  pBufferIn     pointer to an array of input buffers
+ * @param[out] pBufferOut    pointer to an array of output buffers
+ * @param[in]  bufLenInBytes pointer to an array of message lengths in bytes
+ * @param[in]  packetCount   number of packets to process (N)
+ */
 void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
                                  const void * const IV[],
                                  const void * const pBufferIn[],
@@ -3391,8 +3514,8 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
                 packet_index += 8;
         }
 #endif
-        /* TODO process 4 buffers at-a-time */
-        /* TODO process 2 packets at-a-time */
+        /* @todo process 4 buffers at-a-time */
+        /* @todo process 2 packets at-a-time */
         /* remaining packets are processed 1 at a time */
         while (pktCnt--) {
                 SNOW3G_F8_1_BUFFER(pCtxBuf[packet_index + 0],
@@ -3404,11 +3527,17 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
         }
 }
 
-/*---------------------------------------------------------
- * @description
- *      Snow3G F9 1 buffer
- *      Single buffer digest with IV and precomputed key schedule
- *---------------------------------------------------------*/
+/**
+ * @brief Single buffer bit-length F9 function
+ *
+ * Single buffer digest with IV and precomputed key schedule.
+ *
+ * @param[in] pHandle      pointer to precomputed key schedule
+ * @param[in] pIV          pointer to IV
+ * @param[in] pBufferIn    pointer to an input buffer
+ * @param[in] lengthInBits message length in bits
+ * @param[out] pDigest     pointer to store the F9 digest
+ */
 void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
                         const void *pIV,
                         const void *pBufferIn,
@@ -3433,10 +3562,10 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 
         inputBuffer = (const uint64_t *)pBufferIn;
 
-        /* Initialize the snow3g key schedule */
+        /* Initialize the SNOW3G key schedule */
         snow3gStateInitialize_1(&ctx, pHandle, pIV);
 
-        /*Generate 5 keystream words*/
+        /*Generate 5 key stream words*/
         snow3g_f9_keystream_words(&ctx, &z[0]);
 
         P = ((uint64_t)z[0] << 32) | ((uint64_t)z[1]);
