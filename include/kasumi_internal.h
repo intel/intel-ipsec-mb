@@ -867,7 +867,7 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         /* Offset into the first byte (0 - 7 bits) */
         uint32_t remainOffset = offsetInBits % 8;
         uint32_t byteLength = (cipherLengthInBits + 7) / 8;
-        SafeBuf safeOutBuf;
+        SafeBuf safeOutBuf = {0};
         SafeBuf safeInBuf;
 
         /* IV Endianity  */
