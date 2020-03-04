@@ -1113,19 +1113,15 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                         const snow3g_key_schedule_t *pKeySched,
                         const void *pIV)
 {
-        uint32_t K, L;
-        int i;
-        uint32_t V0, V1;
-        uint32_t F0, F1;
-        uint32_t L0, L1, L11, L12;
-        uint32_t R0, R1;
-        uint32_t FSM2, FSM3, FSM4;
+        uint32_t FSM1, FSM2, FSM3;
         const uint32_t *pIV32 = pIV;
+        int i;
 
         /* LFSR initialisation */
         for (i = 0; i < 4; i++) {
-                K = pKeySched->k[i];
-                L = ~K;
+                const uint32_t K = pKeySched->k[i];
+                const uint32_t L = ~K;
+
                 pCtx->LFSR_S[i + 4] = K;
                 pCtx->LFSR_S[i + 12] = K;
                 pCtx->LFSR_S[i + 0] = L;
@@ -1138,43 +1134,52 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
         pCtx->LFSR_S[9] ^= BSWAP32(pIV32[0]);
 
         /* FSM initialization */
-        FSM2 = 0x0;
-        FSM3 = 0x0;
-        FSM4 = 0x0;
-        R1 = 0x0;
-        V1 = pCtx->LFSR_S[15];
+        FSM2 = 0;
+        FSM3 = 0;
+        FSM1 = 0;
 
         for (i = 0; i < 16; i++) {
+                const uint32_t L0 = pCtx->LFSR_S[0];
+                const uint32_t L1 = pCtx->LFSR_S[1];
+                const uint32_t L11 = pCtx->LFSR_S[11];
+                const uint32_t L12 = pCtx->LFSR_S[12];
+
                 /* clock FSM + clock LFSR + clockFSM + clock LFSR */
-                L0 = pCtx->LFSR_S[0];
-                L1 = pCtx->LFSR_S[1];
-                V0 = pCtx->LFSR_S[2];
-                F0 = V1 + R1; /**  (s15 +  R1) **/
-                V1 = pCtx->LFSR_S[3];
-                V0 ^= snow3g_table_A_mul[L0 >> 24]; /* MUL(s0,0 ) */
-                F0 ^= FSM2;                         /** (s15 + R1) ^ R2 **/
-                V1 ^= snow3g_table_A_mul[L1 >> 24];
-                L11 = pCtx->LFSR_S[11];
-                L12 = pCtx->LFSR_S[12];
-                R0 = FSM3 ^ pCtx->LFSR_S[5];          /*** (R3 ^ s5 ) ***/
-                V0 ^= snow3g_table_A_div[L11 & 0xff]; /* DIV(s11,3 )*/
-                R0 += FSM2;                           /*** R2 + (R3 ^ s5 ) ***/
-                V1 ^= snow3g_table_A_div[L12 & 0xff];
-                V0 ^= L0 << 8; /*  (s0,1 || s0,2 || s0,3 || 0x00) */
-                V1 ^= L1 << 8;
-                V0 ^= L11 >> 8; /* (0x00 || s11,0 || s11,1 || s11,2 ) */
-                V1 ^= L12 >> 8;
-                FSM3 = S2_box(FSM2);
-                FSM2 = S1_box(R1);
-                FSM4 = S1_box(R0);
-                V0 ^= F0; /* ^F */
-                R1 = FSM3 ^ pCtx->LFSR_S[6];
-                F1 = V0 + R0;
-                F1 ^= FSM2;
-                R1 += FSM2;
-                FSM3 = S2_box(FSM2);
-                FSM2 = FSM4;
-                V1 ^= F1;
+                const uint32_t F0 =
+                        (pCtx->LFSR_S[15] + FSM1) ^ FSM2; /* (s15 + R1) ^ R2 */
+
+                const uint32_t V0 =
+                        pCtx->LFSR_S[2] ^
+                        snow3g_table_A_mul[L0 >> 24] ^ /* MUL(s0,0 ) */
+                        snow3g_table_A_div[L11 & 0xff] ^ /* DIV(s11,3 )*/
+                        (L0 << 8) ^ /*  (s0,1 || s0,2 || s0,3 || 0x00) */
+                        (L11 >> 8) ^ /* (0x00 || s11,0 || s11,1 || s11,2 ) */
+                        F0;
+
+                const uint32_t R0 =
+                        (FSM3 ^ pCtx->LFSR_S[5]) + FSM2; /* R2 + (R3 ^ s5 ) */
+
+                uint32_t s1_box_step1 = FSM1;
+                uint32_t s1_box_step2 = R0;
+
+                S1_box_2(&s1_box_step1, &s1_box_step2);
+
+                uint32_t s2_box_step1 = FSM2;
+                uint32_t s2_box_step2 = s1_box_step1; /* S1_box(R0) */
+
+                S2_box_2(&s2_box_step1, &s2_box_step2);
+
+                FSM1 = (s2_box_step1 ^ pCtx->LFSR_S[6]) + s1_box_step1;
+
+                const uint32_t F1 = (V0 + R0) ^ s1_box_step1;
+
+                const uint32_t V1 = pCtx->LFSR_S[3] ^
+                        snow3g_table_A_mul[L1 >> 24] ^
+                        snow3g_table_A_div[L12 & 0xff] ^
+                        (L1 << 8) ^ (L12 >> 8) ^ F1;
+
+                FSM2 = s1_box_step2;
+                FSM3 = s2_box_step2;
 
                 /* shift LFSR twice */
                 ShiftTwiceLFSR_1(pCtx);
@@ -1186,7 +1191,7 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
         /* set FSM into scheduling structure */
         pCtx->FSM_R3 = FSM3;
         pCtx->FSM_R2 = FSM2;
-        pCtx->FSM_R1 = R1;
+        pCtx->FSM_R1 = FSM1;
 }
 
 /**
