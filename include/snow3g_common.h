@@ -871,15 +871,12 @@ static inline void S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
         *in_out1 = S2_box_4(*in_out1);
         *in_out2 = S2_box_4(*in_out2);
 #else
-        /* Perform invSR(SQ(x)) transform through a lookup table */
-        /* @todo add parallel 32 lookup API for AVX/SSE */
-        *in_out1 = lut16x8b_256(*in_out1, snow3g_invSR_SQ);
-        *in_out2 = lut16x8b_256(*in_out2, snow3g_invSR_SQ);
-
-        /* use AESNI operations for the rest of the S2 box */
+        /*
+         * Perform invSR(SQ(x)) transform through a lookup table and
+         * use AESNI operations for the rest of the S2 box
+         */
         const __m128i m_zero = _mm_setzero_si128();
-        const __m128i x1 = *in_out1;
-        const __m128i x2 = *in_out2;
+        const __m128i x1 = lut16x8b_256(*in_out1, snow3g_invSR_SQ);
         __m128i m1, m2, m3, m4, f1, f2, f3, f4;
         __m128i m5, m6, m7, m8, f5, f6, f7, f8;
 
@@ -889,6 +886,8 @@ static inline void S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
         m4 = _mm_shuffle_epi32(x1, 0b11111111);
 
         /* start shuffling next 128 bits of data */
+        const __m128i x2 = lut16x8b_256(*in_out2, snow3g_invSR_SQ);
+
         m5 = _mm_shuffle_epi32(x2, 0b00000000);
         m6 = _mm_shuffle_epi32(x2, 0b01010101);
         m7 = _mm_shuffle_epi32(x2, 0b10101010);
@@ -1760,28 +1759,10 @@ static inline void snow3g_keystream_4_16(snow3gKeyState4_t *pCtx,
                 /* mask for byte swapping 64-bit words */
                 0x0001020304050607ULL, 0x08090a0b0c0d0e0fULL
         };
+        __m128i ksL1, ksL2, ksH1, ksH2;
 
-        const __m128i L1 = _mm_xor_si128(ClockFSM_4(pCtx),
-                                         pCtx->LFSR_X[pCtx->iLFSR_X]);
-        ClockLFSR_4(pCtx);
-
-        const __m128i H1 = _mm_xor_si128(ClockFSM_4(pCtx),
-                                         pCtx->LFSR_X[pCtx->iLFSR_X]);
-        ClockLFSR_4(pCtx);
-
-        const __m128i ksL1 = _mm_unpacklo_epi32(H1, L1);
-        const __m128i ksH1 = _mm_unpackhi_epi32(H1, L1);
-
-        const __m128i L2 = _mm_xor_si128(ClockFSM_4(pCtx),
-                                         pCtx->LFSR_X[pCtx->iLFSR_X]);
-        ClockLFSR_4(pCtx);
-
-        const __m128i H2 = _mm_xor_si128(ClockFSM_4(pCtx),
-                                        pCtx->LFSR_X[pCtx->iLFSR_X]);
-        ClockLFSR_4(pCtx);
-
-        const __m128i ksL2 = _mm_unpacklo_epi32(H2, L2);
-        const __m128i ksH2 = _mm_unpackhi_epi32(H2, L2);
+        snow3g_keystream_4_8(pCtx, &ksL1, &ksH1);
+        snow3g_keystream_4_8(pCtx, &ksL2, &ksH2);
 
         const __m128i swapMask = _mm_loadu_si128((const __m128i *)sm);
 
