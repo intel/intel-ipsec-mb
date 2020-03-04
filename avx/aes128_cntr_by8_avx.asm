@@ -157,6 +157,12 @@ section .text
 %define %%cntr_type %2
 %define %%load_keys %3
 
+%ifidn %%cntr_type, CNTR_BIT
+%define %%VPADD vpaddq
+%else
+%define %%VPADD vpaddd
+%endif
+
 %if (%%load_keys)
 	vmovdqa	xkey0, [p_keys + 0*16]
 %endif
@@ -164,7 +170,7 @@ section .text
 	vpshufb	xdata0, xcounter, xbyteswap
 %assign i 1
 %rep (%%by - 1)
-	vpaddd	CONCAT(xdata,i), xcounter, [rel CONCAT(ddq_add_,i)]
+	%%VPADD	CONCAT(xdata,i), xcounter, [rel CONCAT(ddq_add_,i)]
 	vpshufb	CONCAT(xdata,i), CONCAT(xdata,i), xbyteswap
 %assign i (i + 1)
 %endrep
@@ -172,11 +178,7 @@ section .text
 	vmovdqa	xkeyA, [p_keys + 1*16]
 
 	vpxor	xdata0, xkey0
-%ifidn %%cntr_type, CNTR_BIT
-	vpaddd	xcounter, xcounter, [rel CONCAT(ddq_add_,%%by)]
-%else
-	vpaddq	xcounter, xcounter, [rel CONCAT(ddq_add_,%%by)]
-%endif
+	%%VPADD	xcounter, xcounter, [rel CONCAT(ddq_add_,%%by)]
 
 %assign i 1
 %rep (%%by - 1)

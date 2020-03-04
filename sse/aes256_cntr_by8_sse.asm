@@ -105,6 +105,12 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define %%cntr_type %2
 %define %%load_keys %3
 
+%ifidn %%cntr_type, CNTR_BIT
+%define %%PADD paddq
+%else
+%define %%PADD paddd
+%endif
+
 %if (%%load_keys)
 	movdqa	xkey0, [p_keys + 0*16]
 %endif
@@ -114,7 +120,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %assign i 1
 %rep (%%by - 1)
 	movdqa	CONCAT(xdata,i), xcounter
-	paddd	CONCAT(xdata,i), [rel CONCAT(ddq_add_,i)]
+	%%PADD	CONCAT(xdata,i), [rel CONCAT(ddq_add_,i)]
 	pshufb	CONCAT(xdata,i), xbyteswap
 %assign i (i + 1)
 %endrep
@@ -122,11 +128,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 	movdqa	xkeyA, [p_keys + 1*16]
 
 	pxor	xdata0, xkey0
-%ifidn %%cntr_type, CNTR_BIT
-	paddq	xcounter, [rel CONCAT(ddq_add_,%%by)]
-%else
-	paddd	xcounter, [rel CONCAT(ddq_add_,%%by)]
-%endif
+	%%PADD	xcounter, [rel CONCAT(ddq_add_,%%by)]
 
 %assign i 1
 %rep (%%by - 1)

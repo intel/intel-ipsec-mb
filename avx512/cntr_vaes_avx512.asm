@@ -481,15 +481,15 @@ default rel
         ;; prepare next counter blocks
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
 %if %%num_initial_blocks > 0
-        vpaddd          %%CTR_1_4, ZWORD(%%CTR), [rel ddq_add_1_4]
-        vpaddd          %%CTR_5_8, ZWORD(%%CTR), [rel ddq_add_5_8]
-        vpaddd          %%CTR_9_12, ZWORD(%%CTR), [rel ddq_add_9_12]
-        vpaddd          %%CTR_13_16, ZWORD(%%CTR), [rel ddq_add_13_16]
+        %%VPADD         %%CTR_1_4, ZWORD(%%CTR), [rel ddq_add_1_4]
+        %%VPADD         %%CTR_5_8, ZWORD(%%CTR), [rel ddq_add_5_8]
+        %%VPADD         %%CTR_9_12, ZWORD(%%CTR), [rel ddq_add_9_12]
+        %%VPADD         %%CTR_13_16, ZWORD(%%CTR), [rel ddq_add_13_16]
 %else
-        vpaddd          %%CTR_1_4, ZWORD(%%CTR), [rel ddq_add_0_3]
-        vpaddd          %%CTR_5_8, ZWORD(%%CTR), [rel ddq_add_4_7]
-        vpaddd          %%CTR_9_12, ZWORD(%%CTR), [rel ddq_add_8_11]
-        vpaddd          %%CTR_13_16, ZWORD(%%CTR), [rel ddq_add_12_15]
+        %%VPADD         %%CTR_1_4, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD         %%CTR_5_8, ZWORD(%%CTR), [rel ddq_add_4_7]
+        %%VPADD         %%CTR_9_12, ZWORD(%%CTR), [rel ddq_add_8_11]
+        %%VPADD         %%CTR_13_16, ZWORD(%%CTR), [rel ddq_add_12_15]
 %endif
 
         vpshufb         %%ZT1, %%CTR_1_4, %%SHUFREG
@@ -575,6 +575,12 @@ default rel
 %define %%CNTR_TYPE             %20 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
 %define %%RBITS                 %21 ; [in] Number of remaining bits in last byte
 
+%ifidn %%CNTR_TYPE, CNTR
+%define %%VPADD vpaddd
+%else
+%define %%VPADD vpaddq
+%endif
+
 %define %%T1 XWORD(%%ZT1)
 %define %%T2 XWORD(%%ZT2)
 %define %%T3 XWORD(%%ZT3)
@@ -605,25 +611,25 @@ default rel
         vmovdqa64       XWORD(%%ZT1), XWORD(%%CTR)
 %elif %%num_initial_blocks == 2
         vshufi64x2      YWORD(%%ZT1), YWORD(%%CTR), YWORD(%%CTR), 0
-        vpaddd          YWORD(%%ZT1), YWORD(%%ZT1), [rel ddq_add_0_3]
+        %%VPADD          YWORD(%%ZT1), YWORD(%%ZT1), [rel ddq_add_0_3]
 %elif %%num_initial_blocks <= 4
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
 %elif %%num_initial_blocks <= 8
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
+        %%VPADD          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
 %elif %%num_initial_blocks <= 12
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
-        vpaddd          %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
+        %%VPADD          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
+        %%VPADD          %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
 %else
         vshufi64x2      ZWORD(%%CTR), ZWORD(%%CTR), ZWORD(%%CTR), 0
-        vpaddd          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
-        vpaddd          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
-        vpaddd          %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
-        vpaddd          %%ZT4, ZWORD(%%CTR), [rel ddq_add_12_15]
+        %%VPADD          %%ZT1, ZWORD(%%CTR), [rel ddq_add_0_3]
+        %%VPADD          %%ZT2, ZWORD(%%CTR), [rel ddq_add_4_7]
+        %%VPADD          %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
+        %%VPADD          %%ZT4, ZWORD(%%CTR), [rel ddq_add_12_15]
 %endif
 
         ;; shuffle the counters for AES rounds
@@ -710,6 +716,12 @@ default rel
 %define %%CNTR_TYPE             %25 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
 %define %%RBITS                 %26 ; [in] Number of remaining bits in last byte
 
+%ifidn %%CNTR_TYPE, CNTR
+%define %%VPADD vpaddd
+%else
+%define %%VPADD vpaddq
+%endif
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; load/store mask (partial case) and load the text data
 %ifidn %%FULL_PARTIAL, full
@@ -732,10 +744,11 @@ default rel
         ;; populate counter blocks
         ;; %%CTR is shuffled outside the scope of this macro
         ;; it has to be kept in unshuffled form
-        vpaddd          %%CTR_1_4, %%CTR_1_4, %%ADD8REG
-        vpaddd          %%CTR_5_8, %%CTR_5_8, %%ADD8REG
-        vpaddd          %%CTR_9_12, %%CTR_9_12, %%ADD8REG
-        vpaddd          %%CTR_13_16, %%CTR_13_16, %%ADD8REG
+        %%VPADD          %%CTR_1_4, %%CTR_1_4, %%ADD8REG
+        %%VPADD          %%CTR_5_8, %%CTR_5_8, %%ADD8REG
+        %%VPADD          %%CTR_9_12, %%CTR_9_12, %%ADD8REG
+        %%VPADD          %%CTR_13_16, %%CTR_13_16, %%ADD8REG
+
         vpshufb         %%ZT1, %%CTR_1_4, %%SHUFREG
         vpshufb         %%ZT2, %%CTR_5_8, %%SHUFREG
         vpshufb         %%ZT3, %%CTR_9_12, %%SHUFREG
