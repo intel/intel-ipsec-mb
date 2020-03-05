@@ -492,12 +492,12 @@ static inline void S1_box_2(uint32_t *x1, uint32_t *x2)
         const __m128i m_zero = _mm_setzero_si128();
         __m128i m1, m2;
 
-        m1 = _mm_set1_epi32(*x1);
-        m2 = _mm_set1_epi32(*x2);
+        m1 = _mm_shuffle_epi32(_mm_cvtsi32_si128(*x1), 0);
         m1 = _mm_aesenc_si128(m1, m_zero);
+        m2 = _mm_shuffle_epi32(_mm_cvtsi32_si128(*x2), 0);
         m2 = _mm_aesenc_si128(m2, m_zero);
-        *x1 = _mm_extract_epi32(m1, 0);
-        *x2 = _mm_extract_epi32(m2, 0);
+        *x1 = _mm_cvtsi128_si32(m1);
+        *x2 = _mm_cvtsi128_si32(m2);
 #endif
 }
 
@@ -643,35 +643,11 @@ static inline __m256i S1_box_8(const __m256i x)
  */
 static inline uint32_t S2_box(const uint32_t x)
 {
+#ifdef NO_AESNI
         /* Perform invSR(SQ(x)) transform */
-#ifdef SAFE_LOOKUP
         const __m128i par_lut =
                 lut16x8b_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
         const uint32_t new_x = _mm_cvtsi128_si32(par_lut);
-#else
-        const uint8_t w3 = (const uint8_t)(x);
-        const uint8_t w2 = (const uint8_t)(x >> 8);
-        const uint8_t w1 = (const uint8_t)(x >> 16);
-        const uint8_t w0 = (const uint8_t)(x >> 24);
-
-        const uint8_t xfrm_w3 = snow3g_invSR_SQ[w3];
-        const uint8_t xfrm_w2 = snow3g_invSR_SQ[w2];
-        const uint8_t xfrm_w1 = snow3g_invSR_SQ[w1];
-        const uint8_t xfrm_w0 = snow3g_invSR_SQ[w0];
-
-        /* construct new 32-bit word after the transformation */
-        const uint32_t new_x = ((uint32_t) xfrm_w3) |
-                (((uint32_t) xfrm_w2) << 8) |
-                (((uint32_t) xfrm_w1) << 16) |
-                (((uint32_t) xfrm_w0) << 24);
-#endif
-
-        /*
-         * Use AESNI operations for the rest of the S2 box
-         * in: new_x
-         * out: ret_mixc, ret_nomixc
-         */
-#ifdef NO_AESNI
         union xmm_reg key, v, v_fixup;
 
         key.qword[0] = key.qword[1] = 0;
@@ -688,12 +664,30 @@ static inline uint32_t S2_box(const uint32_t x)
                 _mm_loadu_si128((const __m128i *) &v.qword[0]);
         const __m128i ret_nomixc =
                 _mm_loadu_si128((const __m128i *) &v_fixup.qword[0]);
+
+        return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
+#else
+
+#ifndef SAFE_LOOKUP
+        const uint8_t *w3 = (const uint8_t *)&snow3g_table_S2[x & 0xff];
+        const uint8_t *w1 = (const uint8_t *)&snow3g_table_S2[(x >> 16) & 0xff];
+        const uint8_t *w2 = (const uint8_t *)&snow3g_table_S2[(x >> 8) & 0xff];
+        const uint8_t *w0 = (const uint8_t *)&snow3g_table_S2[(x >> 24) & 0xff];
+
+        return *((const uint32_t *)&w3[3]) ^
+                *((const uint32_t *)&w1[1]) ^
+                *((const uint32_t *)&w2[2]) ^
+                *((const uint32_t *)&w0[0]);
+
 #else
         /*
          * Because of mix column operation the 32-bit word has to be
          * broadcasted across the 128-bit vector register for S1/AESENC
          */
-        const __m128i m = _mm_shuffle_epi32(_mm_cvtsi32_si128(new_x), 0);
+        /* Perform invSR(SQ(x)) transform */
+        const __m128i par_lut =
+                lut16x8b_256(_mm_cvtsi32_si128(x), snow3g_invSR_SQ);
+        const __m128i m = _mm_shuffle_epi32(par_lut, 0);
 
         /*
          * aesenclast does not perform mix column operation and
@@ -704,9 +698,11 @@ static inline uint32_t S2_box(const uint32_t x)
                 _mm_aesenclast_si128(m, _mm_setzero_si128());
         const __m128i ret_mixc =
                 _mm_aesenc_si128(m, _mm_setzero_si128());
-#endif
 
         return s2_mixc_fixup_scalar(ret_nomixc, ret_mixc);
+#endif
+
+#endif
 }
 
 /**
@@ -721,20 +717,16 @@ static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
         *x1 = S2_box(*x1);
         *x2 = S2_box(*x2);
 #else
-        /* Perform invSR(SQ(x)) transform through a lookup table */
-        const __m128i m_zero = _mm_setzero_si128();
-        __m128i m1, m2, f1, f2;
 
 #ifdef SAFE_LOOKUP
+        /* Perform invSR(SQ(x)) transform through a lookup table */
+        const __m128i m_zero = _mm_setzero_si128();
         const __m128i new_x = lut16x8b_256(_mm_set_epi32(0, 0, *x2, *x1),
                                            snow3g_invSR_SQ);
+        __m128i m1, m2, f1, f2;
 
         m1 = _mm_shuffle_epi32(new_x, 0b00000000);
         m2 = _mm_shuffle_epi32(new_x, 0b01010101);
-#else
-        m1 = _mm_set1_epi32(S2_box(*x1));
-        m2 = _mm_set1_epi32(S2_box(*x2));
-#endif
 
         f1 = _mm_aesenclast_si128(m1, m_zero);
         m1 = _mm_aesenc_si128(m1, m_zero);
@@ -753,7 +745,12 @@ static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
 
         *x1 = _mm_extract_epi32(m1, 0);
         *x2 = _mm_extract_epi32(m1, 1);
+#else
+        *x1 = S2_box(*x1);
+        *x2 = S2_box(*x2);
 #endif
+
+#endif /* !NO_AESNI */
 }
 
 /**
@@ -2233,26 +2230,6 @@ static inline void f8_snow3g(snow3gKeyState1_t *pCtx,
         const uint8_t *pBufferIn = pIn;
         uint8_t *pBufferOut = pOut;
 
-        /* process 128 bits at a time */
-        while (qwords >= 2) {
-                /* generate key stream 8 bytes at a time */
-                __m128i ks;
-
-                ks = _mm_cvtsi64_si128(BSWAP64(snow3g_keystream_1_8(pCtx)));
-
-                const __m128i in = _mm_loadu_si128((const __m128i *)pBufferIn);
-
-                ks = _mm_insert_epi64(ks,
-                                      BSWAP64(snow3g_keystream_1_8(pCtx)), 1);
-
-                _mm_storeu_si128((__m128i *)pBufferOut, _mm_xor_si128(in, ks));
-
-                pBufferIn += (2 * SNOW3G_8_BYTES);
-                pBufferOut += (2 * SNOW3G_8_BYTES);
-
-                qwords = qwords - 2;
-        }
-
         /* process 64 bits at a time */
         while (qwords--) {
                 /* generate key stream 8 bytes at a time */
@@ -2604,9 +2581,9 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
 {
         const size_t num_lanes = 4;
         snow3gKeyState4_t ctx;
-        uint32_t lenInBytes[num_lanes];
-        uint8_t *pBufferOut[num_lanes];
-        const uint8_t *pBufferIn[num_lanes];
+        uint32_t lenInBytes[4];
+        uint8_t *pBufferOut[4];
+        const uint8_t *pBufferIn[4];
         uint32_t bytes, qwords, i;
 
         length_copy_4(lenInBytes, lengthInBytes1, lengthInBytes2,
@@ -2649,7 +2626,7 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
 
         /* generates 8 bytes at a time on all streams */
         while (qwords >= 2) {
-                __m128i ks[num_lanes];
+                __m128i ks[4];
 
                 snow3g_keystream_4_16(&ctx, ks);
 
@@ -2728,9 +2705,9 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
         const size_t num_lanes = 8;
         const size_t big_block_size = 32;
         const size_t small_block_size = SNOW3G_BLOCK_SIZE;
-        const uint8_t *tBufferIn[num_lanes];
-        uint8_t *tBufferOut[num_lanes];
-        uint32_t tLenInBytes[num_lanes];
+        const uint8_t *tBufferIn[8];
+        uint8_t *tBufferOut[8];
+        uint32_t tLenInBytes[8];
         snow3gKeyState8_t ctx;
         const uint32_t bytes = length_find_min(lengthInBytes, num_lanes);
         uint32_t bytes_left = bytes & (~(small_block_size - 1));
@@ -2751,7 +2728,7 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
 
         if (bytes_left >= big_block_size) {
                 const uint32_t blocks = bytes / big_block_size;
-                __m256i ks[num_lanes];
+                __m256i ks[8];
 
                 /*
                  * subtract common, multiple of block size,
@@ -2884,7 +2861,7 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
 
         if (bytes_left >= big_block_size) {
                 const uint32_t blocks = bytes_left / big_block_size;
-                __m256i ks[num_lanes];
+                __m256i ks[8];
 
                 length_sub(lengthInBytes, num_lanes, blocks * big_block_size);
                 bytes_left -= blocks * big_block_size;
@@ -3113,11 +3090,10 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
                         void *pBufOut8,
                         const uint32_t lenInBytes8)
 {
-        const size_t num_lanes = 8;
-        uint32_t lengthInBytes[num_lanes];
-        const uint8_t *pBufferIn[num_lanes];
-        const void *pIV[num_lanes];
-        uint8_t *pBufferOut[num_lanes];
+        uint32_t lengthInBytes[8];
+        const uint8_t *pBufferIn[8];
+        const void *pIV[8];
+        uint8_t *pBufferOut[8];
 
         length_copy_8(lengthInBytes,
                       lenInBytes1, lenInBytes2, lenInBytes3, lenInBytes4,

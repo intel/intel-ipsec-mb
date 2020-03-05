@@ -40,5 +40,6 @@
 extern const int snow3g_table_A_mul[256];
 extern const int snow3g_table_A_div[256];
 extern const uint8_t snow3g_invSR_SQ[256];
+extern const uint64_t snow3g_table_S2[256];
 
 #endif /* _SNOW3G_TABLES_H_  */
