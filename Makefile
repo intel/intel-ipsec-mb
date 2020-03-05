@@ -481,15 +481,8 @@ asm_avx512_gcm_objs := \
 	gcm128_avx512.o gcm192_avx512.o gcm256_avx512.o
 
 #
-# build object files lists for GCM and NO-GCM variants
+# build object files lists
 #
-ifeq ($(NO_GCM), y)
-CFLAGS += -DNO_GCM
-asm_obj_files := $(asm_generic_lib_objs) $(asm_noaesni_lib_objs) \
-	$(asm_sse_lib_objs) $(asm_avx_lib_objs) \
-	$(asm_avx2_lib_objs) $(asm_avx512_lib_objs)
-c_obj_files := $(c_lib_objs)
-else
 asm_obj_files := $(asm_generic_lib_objs) \
 	$(asm_noaesni_lib_objs) $(asm_noaesni_gcm_objs) \
 	$(asm_sse_lib_objs) $(asm_sse_gcm_objs) \
@@ -497,7 +490,6 @@ asm_obj_files := $(asm_generic_lib_objs) \
 	$(asm_avx2_lib_objs) $(asm_avx2_gcm_objs) \
 	$(asm_avx512_lib_objs) $(asm_avx512_gcm_objs)
 c_obj_files := $(c_lib_objs) $(c_gcm_objs)
-endif
 
 #
 # aggregate all objects files together and prefix with OBJDIR

@@ -429,10 +429,8 @@ SUBMIT_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_PON_ENC_NO_CTR(job);
                 else
                         return SUBMIT_JOB_PON_ENC(job);
-#ifndef NO_GCM
         } else if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_ENC(state, job);
-#endif /* NO_GCM */
         } else if (IMB_CIPHER_CUSTOM == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_DES == job->cipher_mode) {
@@ -480,10 +478,8 @@ FLUSH_JOB_AES_ENC(MB_MGR *state, JOB_AES_HMAC *job)
                 } else  { /* assume 32 */
                         return FLUSH_JOB_AES256_ENC(&state->aes256_ooo);
                 }
-#ifndef NO_GCM
         } else if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return FLUSH_JOB_AES_GCM_ENC(state, job);
-#endif /* NO_GCM */
         } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
                 return flush_docsis_enc_job(state, job);
 #ifdef FLUSH_JOB_DES_CBC_ENC
@@ -540,10 +536,8 @@ SUBMIT_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
                         return SUBMIT_JOB_PON_DEC_NO_CTR(job);
                 else
                         return SUBMIT_JOB_PON_DEC(job);
-#ifndef NO_GCM
         } else if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return SUBMIT_JOB_AES_GCM_DEC(state, job);
-#endif /* NO_GCM */
         } else if (IMB_CIPHER_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DES_CBC_DEC
                 return SUBMIT_JOB_DES_CBC_DEC(&state->des_dec_ooo, job);
@@ -585,10 +579,8 @@ __forceinline
 JOB_AES_HMAC *
 FLUSH_JOB_AES_DEC(MB_MGR *state, JOB_AES_HMAC *job)
 {
-#ifndef NO_GCM
         if (IMB_CIPHER_GCM == job->cipher_mode)
                 return FLUSH_JOB_AES_GCM_DEC(state, job);
-#endif /* NO_GCM */
 #ifdef FLUSH_JOB_DES_CBC_DEC
         if (IMB_CIPHER_DES == job->cipher_mode)
                 return FLUSH_JOB_DES_CBC_DEC(&state->des_dec_ooo);
@@ -804,9 +796,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 12, /* IMB_AUTH_AES_XCBC */
                 16, /* IMB_AUTH_MD5 */
                 0,  /* IMB_AUTH_NULL */
-#ifndef NO_GCM
                 16, /* IMB_AUTH_AES_GMAC */
-#endif
                 0,  /* IMB_AUTH_CUSTOM */
                 0,  /* IMB_AUTH_AES_CCM */
                 16, /* IMB_AUTH_AES_CMAC */
@@ -824,9 +814,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 12, /* IMB_AUTH_AES_XCBC */
                 12, /* IMB_AUTH_MD5 */
                 0,  /* IMB_AUTH_NULL */
-#ifndef NO_GCM
                 16, /* IMB_AUTH_AES_GMAC */
-#endif
                 0,  /* IMB_AUTH_CUSTOM */
                 0,  /* IMB_AUTH_AES_CCM */
                 16, /* IMB_AUTH_AES_CMAC */
@@ -1000,7 +988,6 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-#ifndef NO_GCM
         case IMB_CIPHER_GCM:
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
@@ -1040,7 +1027,6 @@ is_job_invalid(const JOB_AES_HMAC *job)
                         return 1;
                 }
                 break;
-#endif /* !NO_GCM */
         case IMB_CIPHER_CUSTOM:
                 /* no checks here */
                 if (job->cipher_func == NULL) {
@@ -1421,7 +1407,6 @@ is_job_invalid(const JOB_AES_HMAC *job)
                 break;
         case IMB_AUTH_NULL:
                 break;
-#ifndef NO_GCM
         case IMB_AUTH_AES_GMAC:
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
@@ -1447,7 +1432,6 @@ is_job_invalid(const JOB_AES_HMAC *job)
                  * SUBMIT_JOB_AES_GCM_ENC and SUBMIT_JOB_AES_GCM_DEC functions.
                  */
                 break;
-#endif /* !NO_GCM */
         case IMB_AUTH_CUSTOM:
                 if (job->hash_func == NULL) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);

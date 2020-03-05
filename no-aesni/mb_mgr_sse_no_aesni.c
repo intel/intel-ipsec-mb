@@ -175,7 +175,6 @@ JOB_AES_HMAC *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 #define SUBMIT_JOB_PON_ENC_NO_CTR submit_job_pon_enc_no_ctr_sse_no_aesni
 #define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_sse_no_aesni
 
-#ifndef NO_GCM
 #define AES_GCM_DEC_128   aes_gcm_dec_128_sse_no_aesni
 #define AES_GCM_ENC_128   aes_gcm_enc_128_sse_no_aesni
 #define AES_GCM_DEC_192   aes_gcm_dec_192_sse_no_aesni
@@ -194,7 +193,6 @@ JOB_AES_HMAC *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 #define FLUSH_JOB_AES_GCM_DEC  flush_job_aes_gcm_dec_sse_no_aesni
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_sse_no_aesni
 #define FLUSH_JOB_AES_GCM_ENC  flush_job_aes_gcm_enc_sse_no_aesni
-#endif /* NO_GCM */
 
 /* ====================================================================== */
 
@@ -243,7 +241,6 @@ uint32_t ethernet_fcs_sse(const void *msg, uint64_t len, const void *tag_ouput);
 /*
  * GCM submit / flush API for SSE arch without AESNI
  */
-#ifndef NO_GCM
 static JOB_AES_HMAC *
 submit_job_aes_gcm_dec_sse_no_aesni(MB_MGR *state, JOB_AES_HMAC *job)
 {
@@ -349,7 +346,6 @@ flush_job_aes_gcm_enc_sse_no_aesni(MB_MGR *state, JOB_AES_HMAC *job)
         (void) job;
         return NULL;
 }
-#endif /* NO_GCM */
 
 IMB_DLL_LOCAL JOB_AES_HMAC *
 submit_job_aes_cntr_sse_no_aesni(JOB_AES_HMAC *job)
@@ -791,7 +787,6 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         state->snow3g_init_key_sched = snow3g_init_key_sched_sse_no_aesni;
         state->snow3g_key_sched_size = snow3g_key_sched_size_sse_no_aesni;
 
-#ifndef NO_GCM
         state->gcm128_enc          = aes_gcm_enc_128_sse_no_aesni;
         state->gcm192_enc          = aes_gcm_enc_192_sse_no_aesni;
         state->gcm256_enc          = aes_gcm_enc_256_sse_no_aesni;
@@ -823,7 +818,6 @@ init_mb_mgr_sse_no_aesni(MB_MGR *state)
         state->gcm192_pre          = aes_gcm_pre_192_sse_no_aesni;
         state->gcm256_pre          = aes_gcm_pre_256_sse_no_aesni;
         state->ghash               = ghash_sse;
-#endif
 }
 
 #include "mb_mgr_code.h"

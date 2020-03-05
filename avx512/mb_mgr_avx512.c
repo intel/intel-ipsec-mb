@@ -270,7 +270,6 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
 #define SUBMIT_JOB_HMAC_MD5           submit_job_hmac_md5_avx2
 #define FLUSH_JOB_HMAC_MD5            flush_job_hmac_md5_avx2
 
-#ifndef NO_GCM
 #define AES_GCM_DEC_128   aes_gcm_dec_128_avx512
 #define AES_GCM_ENC_128   aes_gcm_enc_128_avx512
 #define AES_GCM_DEC_192   aes_gcm_dec_192_avx512
@@ -303,7 +302,6 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
 #define FLUSH_JOB_AES_GCM_DEC  flush_job_aes_gcm_avx512
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_avx512
 #define FLUSH_JOB_AES_GCM_ENC  flush_job_aes_gcm_avx512
-#endif /* NO_GCM */
 
 /* ====================================================================== */
 
@@ -342,7 +340,6 @@ ethernet_fcs_avx512(const void *msg, uint64_t len, const void *tag_ouput);
 /*
  * GCM submit / flush API for AVX512 arch
  */
-#ifndef NO_GCM
 static JOB_AES_HMAC *
 plain_submit_gcm_dec_avx512(MB_MGR *state, JOB_AES_HMAC *job)
 {
@@ -534,8 +531,6 @@ static JOB_AES_HMAC *(*submit_job_aes_gcm_enc_avx512)
 
 static JOB_AES_HMAC *(*submit_job_aes_gcm_dec_avx512)
         (MB_MGR *state, JOB_AES_HMAC *job) = plain_submit_gcm_dec_avx512;
-
-#endif /* NO_GCM */
 
 static JOB_AES_HMAC *(*submit_job_aes_cntr_avx512)
         (JOB_AES_HMAC *job) = submit_job_aes_cntr_avx;
@@ -1424,7 +1419,6 @@ init_mb_mgr_avx512(MB_MGR *state)
                 submit_job_aes_cntr_bit_avx512 = vaes_submit_cntr_bit_avx512;
         }
 
-#ifndef NO_GCM
         if ((state->features & (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) ==
             (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) {
                 state->gcm128_enc          = aes_gcm_enc_128_vaes_avx512;
@@ -1500,7 +1494,6 @@ init_mb_mgr_avx512(MB_MGR *state)
                 state->gcm256_pre          = aes_gcm_pre_256_avx512;
                 state->ghash               = ghash_avx512;
         }
-#endif
 }
 
 #include "mb_mgr_code.h"

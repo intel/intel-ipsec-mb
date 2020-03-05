@@ -378,12 +378,7 @@ gcm_objs = \
 	$(OBJ_DIR)\gcm192_sse_no_aesni.obj \
 	$(OBJ_DIR)\gcm256_sse_no_aesni.obj
 
-!ifdef NO_GCM
-all_objs = $(lib_objs1) $(lib_objs2)
-CFLAGS = $(CFLAGS) -DNO_GCM
-!else
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
-!endif
 
 all: $(LIB_DIR)\$(LIBNAME)
 

@@ -27,8 +27,6 @@
 
 #include "intel-ipsec-mb.h"
 
-#ifndef NO_GCM
-
 #ifndef _GCM_H_
 #define _GCM_H_
 
@@ -864,4 +862,3 @@ ghash_vaes_avx512(struct gcm_key_data *key_data, const void *in,
                   const uint64_t tag_len);
 
 #endif /* _GCM_H_ */
-#endif /* NO_GCM */

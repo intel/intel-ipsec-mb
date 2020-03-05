@@ -120,7 +120,6 @@ JOB_AES_HMAC *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
 #define SUBMIT_JOB_PON_ENC_NO_CTR submit_job_pon_enc_no_ctr_avx
 #define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx
 
-#ifndef NO_GCM
 #define AES_GCM_DEC_128   aes_gcm_dec_128_avx_gen2
 #define AES_GCM_ENC_128   aes_gcm_enc_128_avx_gen2
 #define AES_GCM_DEC_192   aes_gcm_dec_192_avx_gen2
@@ -139,7 +138,6 @@ JOB_AES_HMAC *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
 #define FLUSH_JOB_AES_GCM_DEC  flush_job_aes_gcm_dec_avx
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_avx
 #define FLUSH_JOB_AES_GCM_ENC  flush_job_aes_gcm_enc_avx
-#endif
 
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx
@@ -243,7 +241,6 @@ uint32_t ethernet_fcs_avx(const void *msg, uint64_t len, const void *tag_ouput);
 /*
  * GCM submit / flush API for AVX arch
  */
-#ifndef NO_GCM
 static JOB_AES_HMAC *
 submit_job_aes_gcm_dec_avx(MB_MGR *state, JOB_AES_HMAC *job)
 {
@@ -349,7 +346,6 @@ flush_job_aes_gcm_enc_avx(MB_MGR *state, JOB_AES_HMAC *job)
         (void) job;
         return NULL;
 }
-#endif /* NO_GCM */
 
 /* ====================================================================== */
 
@@ -791,7 +787,6 @@ init_mb_mgr_avx(MB_MGR *state)
         state->snow3g_init_key_sched = snow3g_init_key_sched_avx;
         state->snow3g_key_sched_size = snow3g_key_sched_size_avx;
 
-#ifndef NO_GCM
         state->gcm128_enc          = aes_gcm_enc_128_avx_gen2;
         state->gcm192_enc          = aes_gcm_enc_192_avx_gen2;
         state->gcm256_enc          = aes_gcm_enc_256_avx_gen2;
@@ -823,7 +818,6 @@ init_mb_mgr_avx(MB_MGR *state)
         state->gcm192_pre          = aes_gcm_pre_192_avx_gen2;
         state->gcm256_pre          = aes_gcm_pre_256_avx_gen2;
         state->ghash               = ghash_avx_gen2;
-#endif
 }
 
 #include "mb_mgr_code.h"

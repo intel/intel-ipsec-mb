@@ -654,9 +654,7 @@ const uint32_t auth_tag_length_bytes[] = {
                 12, /* AES_XCBC */
                 12, /* MD5 */
                 0,  /* NULL_HASH */
-#ifndef NO_GCM
                 16, /* AES_GMAC */
-#endif
                 0,  /* CUSTOM HASH */
                 16, /* AES_CCM */
                 16, /* AES_CMAC */

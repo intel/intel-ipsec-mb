@@ -478,9 +478,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 12, /* IMB_AUTH_AES_XCBC */
                 12, /* IMB_AUTH_MD5 */
                 0,  /* IMB_AUTH_NULL */
-#ifndef NO_GCM
                 16, /* IMB_AUTH_AES_GMAC */
-#endif
                 0,  /* IMB_AUTH_CUSTOM HASH */
                 16, /* IMB_AES_CCM */
                 16, /* IMB_AES_CMAC */
@@ -503,9 +501,7 @@ const uint8_t key_sizes[][3] = {
                 {16, 32, 8}, /* IMB_CIPHER_CNTR */
                 {0, 0, 1},   /* IMB_CIPHER_NULL */
                 {16, 32, 16}, /* IMB_CIPHER_DOCSIS_SEC_BPI */
-#ifndef NO_GCM
                 {16, 32, 8}, /* IMB_CIPHER_GCM */
-#endif
                 {0, 0, 1},   /* IMB_CIPHER_CUSTOM */
                 {8, 8, 1},   /* IMB_CIPHER_DES */
                 {8, 8, 1},   /* IMB_CIPHER_DOCSIS_DES */

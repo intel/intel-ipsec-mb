@@ -199,9 +199,7 @@ typedef enum {
 #define CNTR                    IMB_CIPHER_CNTR
 #define NULL_CIPHER             IMB_CIPHER_NULL
 #define DOCSIS_SEC_BPI          IMB_CIPHER_DOCSIS_SEC_BPI
-#ifndef NO_GCM
 #define GCM                     IMB_CIPHER_GCM
-#endif /* !NO_GCM */
 #define CUSTOM_CIPHER           IMB_CIPHER_CUSTOM
 #define DES                     IMB_CIPHER_DES
 #define DOCSIS_DES              IMB_CIPHER_DOCSIS_DES
@@ -220,9 +218,7 @@ typedef enum {
 #define AES_XCBC                IMB_AUTH_AES_XCBC
 #define MD5                     IMB_AUTH_MD5
 #define NULL_HASH               IMB_AUTH_NULL
-#ifndef NO_GCM
 #define AES_GMAC                IMB_AUTH_AES_GMAC
-#endif /* !NO_GCM */
 #define CUSTOM_HASH             IMB_AUTH_CUSTOM
 #define AES_CCM                 IMB_AUTH_AES_CCM
 #define AES_CMAC                IMB_AUTH_AES_CMAC
@@ -253,9 +249,7 @@ typedef enum {
         IMB_CIPHER_CNTR,
         IMB_CIPHER_NULL,
         IMB_CIPHER_DOCSIS_SEC_BPI,
-#ifndef NO_GCM
         IMB_CIPHER_GCM,
-#endif /* !NO_GCM */
         IMB_CIPHER_CUSTOM,
         IMB_CIPHER_DES,
         IMB_CIPHER_DOCSIS_DES,
@@ -283,9 +277,7 @@ typedef enum {
         IMB_AUTH_AES_XCBC,
         IMB_AUTH_MD5,               /* HMAC-MD5 */
         IMB_AUTH_NULL,
-#ifndef NO_GCM
         IMB_AUTH_AES_GMAC,
-#endif /* !NO_GCM */
         IMB_AUTH_CUSTOM,
         IMB_AUTH_AES_CCM,            /* AES128-CCM */
         IMB_AUTH_AES_CMAC,           /* AES128-CMAC */
@@ -394,13 +386,11 @@ typedef struct JOB_AES_HMAC {
                         const void *_skey1;
                         const void *_skey2;
                 } CMAC;
-#ifndef NO_GCM
                 struct _AES_GCM_specific_fields {
                         /* Additional Authentication Data (AAD) */
                         const void *aad;
                         uint64_t aad_len_in_bytes;    /* Length of AAD */
                 } GCM;
-#endif /* !NO_GCM */
                 struct _ZUC_EIA3_specific_fields {
                         /* 16-byte aligned pointers */
                         const uint8_t *_key;
@@ -2014,7 +2004,6 @@ IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
  * Direct GCM API.
  * Note that GCM is also availabe through job API.
  */
-#ifndef NO_GCM
 /**
  * @brief GCM-AES Encryption
  *
@@ -2474,7 +2463,6 @@ IMB_DLL_EXPORT void aes_gcm_pre_256_avx_gen2(const void *key,
                                              struct gcm_key_data *key_data);
 IMB_DLL_EXPORT void aes_gcm_pre_256_avx_gen4(const void *key,
                                              struct gcm_key_data *key_data);
-#endif /* !NO_GCM */
 
 /**
  * @brief Generation of ZUC Initialization Vectors (for EEA3 and EIA3)
