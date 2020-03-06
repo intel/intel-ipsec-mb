@@ -194,7 +194,7 @@ job_check(const struct JOB_AES_HMAC *job)
 
 
 int
-customop_test(struct MB_MGR *mgr)
+customop_test(struct IMB_MGR *mgr)
 {
         struct test_vec_s test_tab[DIM(cipher_attr_tab) * DIM(auth_attr_tab)];
         struct JOB_AES_HMAC *job;

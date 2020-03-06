@@ -35,23 +35,23 @@
 #include "customop_test.h"
 #include "utils.h"
 
-extern int des_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int ccm_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int cmac_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int hmac_sha1_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+extern int des_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int ccm_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int cmac_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int hmac_sha1_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 extern int hmac_sha256_sha512_test(const enum arch_type arch,
-                                   struct MB_MGR *mb_mgr);
-extern int hmac_md5_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int aes_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int ecb_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int sha_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int chained_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int pon_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int kasumi_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int snow3g_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
-extern int direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+                                   struct IMB_MGR *mb_mgr);
+extern int hmac_md5_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int aes_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int ecb_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int sha_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int chained_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int pon_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int zuc_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int kasumi_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int snow3g_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -91,7 +91,7 @@ print_hw_features(void)
                 { IMB_FEATURE_VPCLMULQDQ, "VPCLMULQDQ" },
                 { IMB_FEATURE_GFNI, "GFNI" },
         };
-        MB_MGR *p_mgr = NULL;
+        IMB_MGR *p_mgr = NULL;
         unsigned i;
 
         printf("Detected hardware features:\n");
@@ -123,7 +123,7 @@ detect_arch(int *p_do_aesni_emu, int *p_do_sse, int *p_do_avx,
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
         const uint64_t detect_pclmulqdq = IMB_FEATURE_PCLMULQDQ;
-        MB_MGR *p_mgr = NULL;
+        IMB_MGR *p_mgr = NULL;
 
         if (p_do_aesni_emu == NULL || p_do_sse == NULL ||
             p_do_avx == NULL || p_do_avx2 == NULL ||
@@ -173,7 +173,7 @@ main(int argc, char **argv)
         int i, do_sse = 1, do_avx = 1, do_avx2 = 1, do_avx512 = 1;
         int do_aesni_emu = 1, do_gcm = 1;
         int auto_detect = 0;
-        MB_MGR *p_mgr = NULL;
+        IMB_MGR *p_mgr = NULL;
         uint64_t flags = 0;
         int errors = 0;
 

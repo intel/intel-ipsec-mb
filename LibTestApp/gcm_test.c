@@ -1094,7 +1094,7 @@ typedef void (*gcm_enc_dec_fn_t)(const struct gcm_key_data *,
                                  const uint8_t *, uint64_t,
                                  uint8_t *, uint64_t);
 
-static MB_MGR *p_gcm_mgr = NULL;
+static IMB_MGR *p_gcm_mgr = NULL;
 
 static int check_data(const uint8_t *test, const uint8_t *expected,
                       uint64_t len, const char *data_name)
@@ -1341,7 +1341,7 @@ sgl_aes_gcm_dec_256(const struct gcm_key_data *key,
  * job API
  *****************************************************************************/
 static void
-aes_gcm_job(MB_MGR *mb_mgr,
+aes_gcm_job(IMB_MGR *mb_mgr,
             JOB_CHAIN_ORDER order,
             const struct gcm_key_data *key,
             uint64_t key_len,
@@ -1723,7 +1723,7 @@ static int test_ghash(void)
 	return is_error;
 }
 
-int gcm_test(MB_MGR *p_mgr)
+int gcm_test(IMB_MGR *p_mgr)
 {
 	int errors = 0;
 

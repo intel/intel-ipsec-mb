@@ -109,7 +109,7 @@ static unsigned char cipherCBC128[] = {
 
 
 static int
-known_answer_test(MB_MGR *mb_mgr)
+known_answer_test(IMB_MGR *mb_mgr)
 {
         uint8_t test_buf[NUMBYTES];
         uint8_t buf[64];
@@ -193,7 +193,7 @@ known_answer_test(MB_MGR *mb_mgr)
 }
 
 static void
-test_aux_func(MB_MGR *mgr)
+test_aux_func(IMB_MGR *mgr)
 {
         /* test aux functions */
         imb_uint128_t keys[15] = {{0, 0}};
@@ -220,7 +220,7 @@ test_aux_func(MB_MGR *mgr)
 }
 
 static int
-do_test(MB_MGR *mb_mgr)
+do_test(IMB_MGR *mb_mgr)
 {
         uint32_t size;
         JOB_AES_HMAC *job;

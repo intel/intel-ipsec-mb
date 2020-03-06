@@ -635,7 +635,7 @@ struct variant_s {
 struct thread_info {
         int print_info;
         int core;
-        MB_MGR *p_mgr;
+        IMB_MGR *p_mgr;
 } t_info[MAX_NUM_THREADS];
 
 enum cache_type_e {
@@ -1182,7 +1182,7 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
 
 /* Performs test using AES_HMAC or DOCSIS */
 static uint64_t
-do_test(MB_MGR *mb_mgr, struct params_s *params,
+do_test(IMB_MGR *mb_mgr, struct params_s *params,
         const uint32_t num_iter, uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         JOB_AES_HMAC *job;
@@ -1474,7 +1474,7 @@ do_test(MB_MGR *mb_mgr, struct params_s *params,
 /* Performs test using GCM */
 static uint64_t
 do_test_gcm(struct params_s *params,
-            const uint32_t num_iter, MB_MGR *mb_mgr,
+            const uint32_t num_iter, IMB_MGR *mb_mgr,
             uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
@@ -1673,7 +1673,7 @@ mean_median(uint64_t *array, uint32_t size,
 
 /* Runs test for each buffer size and stores averaged execution time */
 static void
-process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
+process_variant(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 struct variant_s *variant_ptr, const uint32_t run,
                 uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
@@ -1732,7 +1732,7 @@ process_variant(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
 /* Sets cipher mode, hash algorithm */
 static void
-do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
+do_variants(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
             const uint32_t run, struct variant_s **variant_ptr,
             uint32_t *variant, uint8_t *p_buffer, imb_uint128_t *p_keys,
             const int print_info)
@@ -1850,7 +1850,7 @@ do_variants(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
 /* Sets cipher direction and key size  */
 static void
-run_dir_test(MB_MGR *mgr, const uint32_t arch, struct params_s *params,
+run_dir_test(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
              const uint32_t run, struct variant_s **variant_ptr,
              uint32_t *variant, uint8_t *p_buffer, imb_uint128_t *p_keys,
              const int print_info)
@@ -1995,7 +1995,7 @@ run_tests(void *arg)
 {
         uint32_t i;
         struct thread_info *info = (struct thread_info *)arg;
-        MB_MGR *p_mgr = NULL;
+        IMB_MGR *p_mgr = NULL;
         struct params_s params;
         uint32_t num_variants[NUM_TTYPES] = {0};
         uint32_t type, at_size, run, arch;
@@ -2319,7 +2319,7 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
                 IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
-        MB_MGR *p_mgr = NULL;
+        IMB_MGR *p_mgr = NULL;
         enum arch_type_e arch_id;
 
         if (arch_support == NULL) {
@@ -2730,7 +2730,7 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "CCM AAD = %"PRIu64"\n", ccm_aad_size);
 
         if (archs[ARCH_SSE]) {
-                MB_MGR *p_mgr = alloc_mb_mgr(flags);
+                IMB_MGR *p_mgr = alloc_mb_mgr(flags);
 
                 if (p_mgr == NULL) {
                         fprintf(stderr, "Error allocating MB_MGR structure!\n");

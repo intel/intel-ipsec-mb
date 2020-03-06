@@ -36,7 +36,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int aes_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int aes_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 struct aes_vector {
 	const uint8_t *K;          /* key */
@@ -1795,7 +1795,7 @@ aes_job_ok(const struct JOB_AES_HMAC *job,
 }
 
 static int
-test_aes_many(struct MB_MGR *mb_mgr,
+test_aes_many(struct IMB_MGR *mb_mgr,
               void *enc_keys,
               void *dec_keys,
               const void *iv,
@@ -1897,7 +1897,7 @@ end_alloc:
 }
 
 static int
-test_aes_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
+test_aes_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                  const struct aes_vector *vec_tab, const char *banner,
                  const JOB_CIPHER_MODE cipher, const int num_jobs)
 {
@@ -2034,7 +2034,7 @@ docrc_job_ok(const struct JOB_AES_HMAC *job,
 }
 
 static int
-test_docrc_many(struct MB_MGR *mb_mgr,
+test_docrc_many(struct IMB_MGR *mb_mgr,
                 void *enc_keys,
                 void *dec_keys,
                 const struct docsis_crc_vector *p_vec,
@@ -2159,7 +2159,7 @@ test_docrc_many(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_docrc_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
+test_docrc_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                    const struct docsis_crc_vector *vec_tab,
                    const char *banner, const int num_jobs)
 {
@@ -2233,7 +2233,7 @@ cfb128_validate_ok(const uint8_t *output, const uint8_t *in_text,
 
 
 static int
-cfb128_validate(struct MB_MGR *mb_mgr)
+cfb128_validate(struct IMB_MGR *mb_mgr)
 {
         unsigned i;
 
@@ -2292,7 +2292,7 @@ cfb128_validate(struct MB_MGR *mb_mgr)
 
 int
 aes_test(const enum arch_type arch,
-         struct MB_MGR *mb_mgr)
+         struct IMB_MGR *mb_mgr)
 {
         const int num_jobs_tab[] = {
                 1, 3, 4, 5, 7, 8, 9, 15, 16, 17

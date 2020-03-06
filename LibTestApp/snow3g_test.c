@@ -40,34 +40,34 @@
 #define PAD_LEN 16
 cipher_test_vector_t *vecList[MAX_DATA_LEN];
 
-int snow3g_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int snow3g_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 static
-int validate_snow3g_f8_1_block(struct MB_MGR *mb_mgr, unsigned int job_api);
+int validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, unsigned int job_api);
 static
-int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr, unsigned int job_api);
+int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr, unsigned int job_api);
 static
-int validate_snow3g_f8_2_blocks(struct MB_MGR *mb_mgr, uint32_t job_api);
+int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api);
 static
-int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr, uint32_t job_api);
+int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api);
 static
-int validate_snow3g_f8_8_blocks(struct MB_MGR *mb_mgr, uint32_t job_api);
+int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api);
 static
-int validate_snow3g_f8_8_blocks_multi_key(struct MB_MGR *mb_mgr,
+int validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
                                           uint32_t job_api);
 static
-int validate_snow3g_f8_n_blocks(struct MB_MGR *mb_mgr, uint32_t job_api);
+int validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api);
 static
-int validate_snow3g_f8_n_blocks_multi(struct MB_MGR *mb_mgr,
+int validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
                                              uint32_t job_api);
 static
-int validate_snow3g_f9(struct MB_MGR *mb_mgr, uint32_t job_api);
+int validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api);
 static
 int membitcmp(const uint8_t *input, const uint8_t *output,
               const uint32_t bitlength, const uint32_t offset);
 
 /* snow3g validation function pointer table */
 struct {
-        int (*func)(struct MB_MGR *, uint32_t job_api);
+        int (*func)(struct IMB_MGR *, uint32_t job_api);
         const char *func_name;
 } snow3g_func_tab[] = {
         {validate_snow3g_f8_1_bitblock,
@@ -112,7 +112,7 @@ static inline void snow3g_hexdump(const char *message, uint8_t *ptr, int len)
 }
 
 static inline int
-submit_uea2_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
+submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                  uint8_t **src, uint8_t **dst, const uint32_t *bitlens,
                  const uint32_t *bit_offsets, int dir,
                  const unsigned int num_jobs)
@@ -160,7 +160,7 @@ submit_uea2_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 }
 
 static inline int
-submit_uia2_job(struct MB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
+submit_uia2_job(struct IMB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
                 uint8_t *src, uint8_t *tag, const uint32_t bitlen)
 {
         JOB_AES_HMAC *job;
@@ -193,7 +193,7 @@ submit_uia2_job(struct MB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
         return 0;
 }
 
-static int validate_snow3g_f8_1_block(struct MB_MGR *mb_mgr, uint32_t job_api)
+static int validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api)
 {
         int numVectors, i, length;
         size_t size = 0;
@@ -365,7 +365,7 @@ static void copy_test_bufs(uint8_t *plainBuff, uint8_t *wrkBuff,
         memcpy(ciphBuff + PAD_LEN, dst_test, byte_len);
 }
 
-static int validate_snow3g_f8_1_bitblock(struct MB_MGR *mb_mgr,
+static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                                          uint32_t job_api)
 {
         int numVectors, i, length;
@@ -664,7 +664,7 @@ snow3g_f8_1_buffer_bit_exit:
         return ret;
 }
 
-static int validate_snow3g_f8_2_blocks(struct MB_MGR *mb_mgr, uint32_t job_api)
+static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
 {
         int length, numVectors, i = 0, j = 0, numPackets = 2;
         size_t size = 0;
@@ -928,7 +928,7 @@ snow3g_f8_2_buffer_exit:
         return ret;
 }
 
-static int validate_snow3g_f8_4_blocks(struct MB_MGR *mb_mgr, uint32_t job_api)
+static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
 {
         int length, numVectors, i = 0, j = 0, numPackets = 4;
         size_t size = 0;
@@ -1283,7 +1283,7 @@ snow3g_f8_4_buffer_exit:
         return ret;
 }
 
-static int validate_snow3g_f8_8_blocks(struct MB_MGR *mb_mgr, uint32_t job_api)
+static int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
 {
         int length, numVectors, i, j, numPackets = 8;
         size_t size = 0;
@@ -1581,7 +1581,7 @@ snow3g_f8_8_buffer_exit:
         return ret;
 }
 
-static int validate_snow3g_f8_8_blocks_multi_key(struct MB_MGR *mb_mgr,
+static int validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
                                                  uint32_t job_api)
 {
         int length, numVectors, i, j, numPackets = 8;
@@ -1755,7 +1755,7 @@ snow3g_f8_8_buffer_multikey_exit:
         return ret;
 }
 
-static int validate_snow3g_f8_n_blocks(struct MB_MGR *mb_mgr, uint32_t job_api)
+static int validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
 {
         int length, numVectors, i, numPackets = 16;
         size_t size = 0;
@@ -1927,7 +1927,7 @@ snow3g_f8_n_buffer_exit:
         return ret;
 }
 
-static int validate_snow3g_f8_n_blocks_multi(struct MB_MGR *mb_mgr,
+static int validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
                                              uint32_t job_api)
 {
         int length, numVectors, i, numPackets = NUM_SUPPORTED_BUFFERS;
@@ -2098,7 +2098,7 @@ snow3g_f8_n_buffer_multikey_exit:
         return ret;
 }
 
-static int validate_snow3g_f9(struct MB_MGR *mb_mgr, uint32_t job_api)
+static int validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api)
 {
         int numVectors, i, inputLen;
         size_t size = 0;
@@ -2267,7 +2267,7 @@ static int validate_f9_iv_gen(void)
         return 0;
 }
 
-int snow3g_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
+int snow3g_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
 {
         int status = 0;
         uint32_t i;

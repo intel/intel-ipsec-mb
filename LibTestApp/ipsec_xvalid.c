@@ -891,7 +891,7 @@ fill_job(JOB_AES_HMAC *job, const struct params_s *params,
 }
 
 static int
-prepare_keys(MB_MGR *mb_mgr, struct cipher_auth_keys *keys,
+prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
              const uint8_t *ciph_key, const uint8_t *auth_key,
              const struct params_s *params,
              const unsigned int force_pattern)
@@ -1237,7 +1237,7 @@ modify_docsis_crc32_test_buf(uint8_t *test_buf, const struct params_s *params,
  *  Returns -1 if sensitive information was found or 0 if not.
  */
 static int
-perform_safe_checks(MB_MGR *mgr, const enum arch_type_e arch,
+perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch,
                     const char *dir)
 {
         uint8_t *rsp_ptr;
@@ -1284,7 +1284,7 @@ perform_safe_checks(MB_MGR *mgr, const enum arch_type_e arch,
                         "%s data\n", dir);
                 return -1;
         }
-        if (search_patterns(mgr, sizeof(MB_MGR)) == 0) {
+        if (search_patterns(mgr, sizeof(IMB_MGR)) == 0) {
                 fprintf(stderr, "Pattern found in MB_MGR after "
                                 "%s data\n", dir);
                 return -1;
@@ -1318,8 +1318,8 @@ clear_scratch_simd(const enum arch_type_e arch)
 
 /* Performs test using AES_HMAC or DOCSIS */
 static int
-do_test(MB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
-        MB_MGR *dec_mb_mgr, const enum arch_type_e dec_arch,
+do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
+        IMB_MGR *dec_mb_mgr, const enum arch_type_e dec_arch,
         const struct params_s *params, struct data *data,
         const unsigned safe_check)
 {
@@ -1595,8 +1595,8 @@ exit:
 
 /* Runs test for each buffer size */
 static void
-process_variant(MB_MGR *enc_mgr, const enum arch_type_e enc_arch,
-                MB_MGR *dec_mgr, const enum arch_type_e dec_arch,
+process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
+                IMB_MGR *dec_mgr, const enum arch_type_e dec_arch,
                 struct params_s *params, struct data *variant_data,
                 const unsigned int safe_check)
 {
@@ -1659,8 +1659,8 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
          struct params_s *params, struct data *variant_data,
          const unsigned int safe_check)
 {
-        MB_MGR *enc_mgr = NULL;
-        MB_MGR *dec_mgr = NULL;
+        IMB_MGR *enc_mgr = NULL;
+        IMB_MGR *dec_mgr = NULL;
 
         if (enc_arch == ARCH_AESNI_EMU)
                 enc_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
@@ -1675,7 +1675,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         /* Reset the MB MGR structure in case it is allocated with
          * memory containing the patterns that will be searched later on */
         if (safe_check)
-                memset(enc_mgr, 0, sizeof(MB_MGR));
+                memset(enc_mgr, 0, sizeof(IMB_MGR));
 
         switch (enc_arch) {
         case ARCH_SSE:
@@ -1709,7 +1709,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         /* Reset the MB MGR structure in case it is allocated with
          * memory containing the patterns that will be searched later on */
         if (safe_check)
-                memset(dec_mgr, 0, sizeof(MB_MGR));
+                memset(dec_mgr, 0, sizeof(IMB_MGR));
 
         switch (dec_arch) {
         case ARCH_SSE:
@@ -1879,7 +1879,7 @@ static void usage(void)
                 "            (-o still applies for MAC)\n"
                 "--job-iter: number of tests iterations for each job size\n"
                 "--safe-check: check if keys, IVs, plaintext or tags "
-                "get cleared from MB_MGR upon job completion (off by default; "
+                "get cleared from IMB_MGR upon job completion (off by default; "
                 "requires library compiled with SAFE_DATA)\n");
 }
 
@@ -1943,7 +1943,7 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
                 IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
-        MB_MGR *p_mgr = NULL;
+        IMB_MGR *p_mgr = NULL;
         enum arch_type_e arch_id;
 
         if (arch_support == NULL) {
@@ -2238,7 +2238,7 @@ int main(int argc, char *argv[])
                 }
         }
 
-        MB_MGR *p_mgr = alloc_mb_mgr(flags);
+        IMB_MGR *p_mgr = alloc_mb_mgr(flags);
 
         if (p_mgr == NULL) {
                 fprintf(stderr, "Error allocating MB_MGR structure!\n");

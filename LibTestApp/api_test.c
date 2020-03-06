@@ -33,13 +33,13 @@
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
 
-int api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 /*
  * @brief Performs JOB API behavior tests
  */
 static int
-test_job_api(struct MB_MGR *mb_mgr)
+test_job_api(struct IMB_MGR *mb_mgr)
 {
         struct JOB_AES_HMAC *job, *job_next;
 
@@ -290,7 +290,7 @@ fill_in_job(struct JOB_AES_HMAC *job,
  *        invalid arguments status.
  */
 static int
-is_submit_invalid(struct MB_MGR *mb_mgr, const struct JOB_AES_HMAC *job,
+is_submit_invalid(struct IMB_MGR *mb_mgr, const struct JOB_AES_HMAC *job,
                   const int test_num)
 {
         struct JOB_AES_HMAC *mb_job = NULL, *job_ret = NULL;
@@ -352,7 +352,7 @@ is_submit_invalid(struct MB_MGR *mb_mgr, const struct JOB_AES_HMAC *job,
  * @brief Tests invalid settings for MAC modes
  */
 static int
-test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
+test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
 {
         JOB_HASH_ALG hash;
         JOB_CIPHER_DIRECTION dir;
@@ -442,7 +442,7 @@ test_job_invalid_mac_args(struct MB_MGR *mb_mgr)
  * @brief Tests invalid settings for CIPHER modes
  */
 static int
-test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
+test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 {
         const JOB_HASH_ALG hash = IMB_AUTH_NULL;
         JOB_CIPHER_DIRECTION dir;
@@ -609,7 +609,7 @@ test_job_invalid_cipher_args(struct MB_MGR *mb_mgr)
 }
 
 int
-api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
+api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
 

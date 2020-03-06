@@ -34,7 +34,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int ccm_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int ccm_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 /*
  * Test vectors from https://tools.ietf.org/html/rfc3610
@@ -1882,7 +1882,7 @@ ccm_job_ok(const struct ccm_rfc3610_vector *vec,
 }
 
 static int
-test_ccm(struct MB_MGR *mb_mgr,
+test_ccm(struct IMB_MGR *mb_mgr,
          const struct ccm_rfc3610_vector *vec,
          const int dir, const int in_place, const int num_jobs)
 {
@@ -2023,7 +2023,7 @@ test_ccm(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_ccm_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
+test_ccm_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 {
 	const int vectors_cnt = sizeof(ccm_vectors) / sizeof(ccm_vectors[0]);
 	int vect;
@@ -2074,7 +2074,7 @@ test_ccm_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 
 int
 ccm_test(const enum arch_type arch,
-         struct MB_MGR *mb_mgr)
+         struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
 

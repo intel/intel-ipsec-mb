@@ -39,7 +39,7 @@
 #define NUM_BUFS 8
 
 int
-direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 /* Used to restore environment after potential segfaults */
 jmp_buf env;
@@ -60,7 +60,7 @@ seg_handler(int signum)
  * @brief Performs direct GCM API invalid param tests
  */
 static int
-test_gcm_api(struct MB_MGR *mgr)
+test_gcm_api(struct IMB_MGR *mgr)
 {
         const uint32_t text_len = BUF_SIZE;
         uint8_t out_buf[BUF_SIZE];
@@ -341,7 +341,7 @@ test_gcm_api(struct MB_MGR *mgr)
  *        generation API invalid param tests
  */
 static int
-test_key_exp_gen_api(struct MB_MGR *mgr)
+test_key_exp_gen_api(struct IMB_MGR *mgr)
 {
         const uint32_t text_len = BUF_SIZE;
         uint8_t out_buf[BUF_SIZE];
@@ -426,7 +426,7 @@ test_key_exp_gen_api(struct MB_MGR *mgr)
  * @brief Performs direct hash API invalid param tests
  */
 static int
-test_hash_api(struct MB_MGR *mgr)
+test_hash_api(struct IMB_MGR *mgr)
 {
         const uint32_t text_len = BUF_SIZE;
         uint8_t out_buf[BUF_SIZE];
@@ -556,7 +556,7 @@ test_hash_api(struct MB_MGR *mgr)
  * @brief Performs direct AES API invalid param tests
  */
 static int
-test_aes_api(struct MB_MGR *mgr)
+test_aes_api(struct IMB_MGR *mgr)
 {
         const uint32_t text_len = BUF_SIZE;
         uint8_t out_buf[BUF_SIZE];
@@ -596,7 +596,7 @@ test_aes_api(struct MB_MGR *mgr)
  * @brief Performs direct ZUC API invalid param tests
  */
 static int
-test_zuc_api(struct MB_MGR *mgr)
+test_zuc_api(struct IMB_MGR *mgr)
 {
         const uint32_t text_len = BUF_SIZE;
         const uint32_t inv_len = -1;
@@ -697,7 +697,7 @@ test_zuc_api(struct MB_MGR *mgr)
  * @brief Performs direct KASUMI API invalid param tests
  */
 static int
-test_kasumi_api(struct MB_MGR *mgr)
+test_kasumi_api(struct IMB_MGR *mgr)
 {
         const uint32_t text_len = BUF_SIZE;
         const uint32_t inv_len = -1;
@@ -872,7 +872,7 @@ test_kasumi_api(struct MB_MGR *mgr)
  * @brief Performs direct SNOW3G API invalid param tests
  */
 static int
-test_snow3g_api(struct MB_MGR *mgr)
+test_snow3g_api(struct IMB_MGR *mgr)
 {
         const uint32_t text_len = BUF_SIZE;
         const uint32_t inv_len = -1;
@@ -1051,7 +1051,7 @@ test_snow3g_api(struct MB_MGR *mgr)
 }
 
 int
-direct_api_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
+direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
         (void) arch; /* unused */

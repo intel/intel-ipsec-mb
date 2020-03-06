@@ -36,7 +36,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int ecb_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int ecb_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 struct ecb_vector {
 	const uint8_t *K;          /* key */
@@ -613,7 +613,7 @@ ecb_job_ok(const struct JOB_AES_HMAC *job,
 }
 
 static int
-test_ecb_many(struct MB_MGR *mb_mgr,
+test_ecb_many(struct IMB_MGR *mb_mgr,
               void *enc_keys,
               void *dec_keys,
               const uint8_t *in_text,
@@ -705,7 +705,7 @@ test_ecb_many(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_ecb_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
+test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                  const struct ecb_vector *vec_tab, const char *banner,
                  const JOB_CIPHER_MODE cipher, const int num_jobs)
 {
@@ -780,7 +780,7 @@ test_ecb_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
 
 int
 ecb_test(const enum arch_type arch,
-         struct MB_MGR *mb_mgr)
+         struct IMB_MGR *mb_mgr)
 {
         const int num_jobs_tab[] = {
                 1, 3, 4, 5, 7, 8, 9, 15, 16, 17

@@ -341,7 +341,7 @@ ethernet_fcs_avx512(const void *msg, uint64_t len, const void *tag_ouput);
  * GCM submit / flush API for AVX512 arch
  */
 static JOB_AES_HMAC *
-plain_submit_gcm_dec_avx512(MB_MGR *state, JOB_AES_HMAC *job)
+plain_submit_gcm_dec_avx512(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
@@ -386,7 +386,7 @@ plain_submit_gcm_dec_avx512(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 static JOB_AES_HMAC *
-plain_submit_gcm_enc_avx512(MB_MGR *state, JOB_AES_HMAC *job)
+plain_submit_gcm_enc_avx512(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
@@ -431,7 +431,7 @@ plain_submit_gcm_enc_avx512(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 static JOB_AES_HMAC *
-vaes_submit_gcm_dec_avx512(MB_MGR *state, JOB_AES_HMAC *job)
+vaes_submit_gcm_dec_avx512(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
@@ -475,7 +475,7 @@ vaes_submit_gcm_dec_avx512(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 static JOB_AES_HMAC *
-vaes_submit_gcm_enc_avx512(MB_MGR *state, JOB_AES_HMAC *job)
+vaes_submit_gcm_enc_avx512(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
@@ -519,7 +519,7 @@ vaes_submit_gcm_enc_avx512(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 static JOB_AES_HMAC *
-flush_job_aes_gcm_avx512(MB_MGR *state, JOB_AES_HMAC *job)
+flush_job_aes_gcm_avx512(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         (void) state;
         (void) job;
@@ -527,10 +527,10 @@ flush_job_aes_gcm_avx512(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 static JOB_AES_HMAC *(*submit_job_aes_gcm_enc_avx512)
-        (MB_MGR *state, JOB_AES_HMAC *job) = plain_submit_gcm_enc_avx512;
+        (IMB_MGR *state, JOB_AES_HMAC *job) = plain_submit_gcm_enc_avx512;
 
 static JOB_AES_HMAC *(*submit_job_aes_gcm_dec_avx512)
-        (MB_MGR *state, JOB_AES_HMAC *job) = plain_submit_gcm_dec_avx512;
+        (IMB_MGR *state, JOB_AES_HMAC *job) = plain_submit_gcm_dec_avx512;
 
 static JOB_AES_HMAC *(*submit_job_aes_cntr_avx512)
         (JOB_AES_HMAC *job) = submit_job_aes_cntr_avx;
@@ -802,7 +802,7 @@ static JOB_AES_HMAC *
 /* ====================================================================== */
 
 void
-init_mb_mgr_avx512(MB_MGR *state)
+init_mb_mgr_avx512(IMB_MGR *state)
 {
         unsigned int j, vaes_support = 0;
         uint8_t *p;

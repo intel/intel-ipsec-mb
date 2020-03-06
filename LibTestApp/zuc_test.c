@@ -54,23 +54,23 @@ enum test_type {
         TEST_N_BUFFER
 };
 
-int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int zuc_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
-int validate_zuc_algorithm(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
+int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                            uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV);
-int validate_zuc_EEA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
+int validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                              uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
                              const unsigned int job_api);
-int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
+int validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                              uint8_t **pDstData, uint8_t **pKeys,
                              uint8_t **pIV, const unsigned int job_api);
-int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
+int validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                              uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
                              uint32_t numBuffs, const unsigned int job_api);
-int validate_zuc_EIA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
+int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                              uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
                              const unsigned int job_api);
-int validate_zuc_EIA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
+int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                              uint8_t **pDstData, uint8_t **pKeys,
                              uint8_t **pIV, uint32_t numBuffs,
                              const unsigned int job_api);
@@ -184,7 +184,7 @@ static uint32_t bswap4(const uint32_t val)
                 (val << 24));             /**< D*/
 }
 
-int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
+int zuc_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
 {
 
         const uint32_t numBuffs[] = {4, 8, 9, 16, 17};
@@ -311,7 +311,7 @@ int zuc_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
 }
 
 static inline int
-submit_eea3_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
+submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                  uint8_t **src, uint8_t **dst, const uint32_t *lens,
                  int dir, const unsigned int num_jobs)
 {
@@ -364,7 +364,7 @@ submit_eea3_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 }
 
 static inline int
-submit_eia3_jobs(struct MB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
+submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
                  uint8_t **src, uint8_t **tags, const uint32_t *lens,
                  const unsigned int num_jobs)
 {
@@ -460,7 +460,7 @@ test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen,
 }
 
 int
-validate_zuc_EEA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
+validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                          uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
                          const unsigned int job_api)
 {
@@ -500,7 +500,7 @@ validate_zuc_EEA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
 };
 
 static int
-submit_and_verify(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
+submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                   uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
                   const unsigned int job_api, JOB_CIPHER_DIRECTION dir,
                   enum test_type type, const unsigned int var_bufs,
@@ -580,7 +580,7 @@ submit_and_verify(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         return ret;
 }
 
-int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
+int validate_zuc_EEA_4_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                              uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
                              const unsigned int job_api)
 {
@@ -626,7 +626,7 @@ int validate_zuc_EEA_4_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         return ret;
 };
 
-int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
+int validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                              uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
                              uint32_t numBuffs, const unsigned int job_api)
 {
@@ -673,7 +673,7 @@ int validate_zuc_EEA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         return ret;
 };
 
-int validate_zuc_EIA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
+int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                              uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
                              const unsigned int job_api)
 {
@@ -721,7 +721,7 @@ int validate_zuc_EIA_1_block(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
         return ret;
 };
 
-int validate_zuc_EIA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
+int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                              uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
                              uint32_t numBuffs, const unsigned int job_api)
 {
@@ -821,7 +821,7 @@ int validate_zuc_EIA_n_block(struct MB_MGR *mb_mgr, uint8_t **pSrcData,
         return ret;
 };
 
-int validate_zuc_algorithm(struct MB_MGR *mb_mgr, uint8_t *pSrcData,
+int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                            uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV)
 {
         uint32_t i;

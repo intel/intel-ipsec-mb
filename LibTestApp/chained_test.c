@@ -39,7 +39,7 @@
 #define SHA1_BLOCK_SIZE     64
 #define SHA1_DIGEST_SIZE    20
 
-int chained_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int chained_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 struct chained_vector {
         const uint8_t *cipher_key;     /* cipher key */
@@ -209,7 +209,7 @@ chained_job_ok(const JOB_AES_HMAC *job,
 }
 
 static int
-test_chained_many(struct MB_MGR *mb_mgr,
+test_chained_many(struct IMB_MGR *mb_mgr,
                   const void *enc_keys,
                   const void *dec_keys,
                   const struct chained_vector *vec,
@@ -378,7 +378,7 @@ test_chained_many(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_chained_vectors(struct MB_MGR *mb_mgr, const int vec_cnt,
+test_chained_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                  const struct chained_vector *vec_tab, const char *banner,
                  const JOB_CIPHER_MODE cipher,
                  const JOB_HASH_ALG hash,
@@ -486,7 +486,7 @@ exit:
 
 int
 chained_test(const enum arch_type arch,
-         struct MB_MGR *mb_mgr)
+         struct IMB_MGR *mb_mgr)
 {
         const int num_jobs_tab[] = {
                 1, 3, 4, 5, 7, 8, 9, 15, 16, 17

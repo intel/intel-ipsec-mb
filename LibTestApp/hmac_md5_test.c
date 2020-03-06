@@ -34,7 +34,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int hmac_md5_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int hmac_md5_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 #define block_size    64
 #define digest_size   16
@@ -365,7 +365,7 @@ hmac_md5_job_ok(const struct hmac_md5_rfc2202_vector *vec,
 }
 
 static int
-test_hmac_md5(struct MB_MGR *mb_mgr,
+test_hmac_md5(struct IMB_MGR *mb_mgr,
                const struct hmac_md5_rfc2202_vector *vec,
                const int num_jobs)
 {
@@ -499,7 +499,7 @@ test_hmac_md5(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_hmac_md5_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
+test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 {
 	const int vectors_cnt =
                 sizeof(hmac_md5_vectors) / sizeof(hmac_md5_vectors[0]);
@@ -532,7 +532,7 @@ test_hmac_md5_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 
 int
 hmac_md5_test(const enum arch_type arch,
-               struct MB_MGR *mb_mgr)
+               struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
 

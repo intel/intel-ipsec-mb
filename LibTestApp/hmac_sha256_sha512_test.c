@@ -34,7 +34,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int hmac_sha256_sha512_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int hmac_sha256_sha512_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 /*
  * Test vectors from https://tools.ietf.org/html/rfc4231
@@ -816,7 +816,7 @@ hmac_shax_job_ok(const struct hmac_rfc4231_vector *vec,
 }
 
 static int
-test_hmac_shax(struct MB_MGR *mb_mgr,
+test_hmac_shax(struct IMB_MGR *mb_mgr,
                const struct hmac_rfc4231_vector *vec,
                const int num_jobs,
                const int sha_type)
@@ -1038,7 +1038,7 @@ test_hmac_shax(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_hmac_shax_std_vectors(struct MB_MGR *mb_mgr, const int sha_type,
+test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr, const int sha_type,
                            const int num_jobs)
 {
 	const int vectors_cnt =
@@ -1089,7 +1089,7 @@ test_hmac_shax_std_vectors(struct MB_MGR *mb_mgr, const int sha_type,
 
 int
 hmac_sha256_sha512_test(const enum arch_type arch,
-                        struct MB_MGR *mb_mgr)
+                        struct IMB_MGR *mb_mgr)
 {
         const int sha_types_tab[] = {
                 224, 256, 384, 512

@@ -342,7 +342,7 @@ static ccm_flush_job_t flush_job_aes_ccm_auth_ptr =
  * GCM submit / flush API for SSE arch
  */
 static JOB_AES_HMAC *
-submit_job_aes_gcm_dec_sse(MB_MGR *state, JOB_AES_HMAC *job)
+submit_job_aes_gcm_dec_sse(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
@@ -387,7 +387,7 @@ submit_job_aes_gcm_dec_sse(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 static JOB_AES_HMAC *
-flush_job_aes_gcm_dec_sse(MB_MGR *state, JOB_AES_HMAC *job)
+flush_job_aes_gcm_dec_sse(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         (void) state;
         (void) job;
@@ -395,7 +395,7 @@ flush_job_aes_gcm_dec_sse(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 static JOB_AES_HMAC *
-submit_job_aes_gcm_enc_sse(MB_MGR *state, JOB_AES_HMAC *job)
+submit_job_aes_gcm_enc_sse(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
@@ -440,7 +440,7 @@ submit_job_aes_gcm_enc_sse(MB_MGR *state, JOB_AES_HMAC *job)
 }
 
 static JOB_AES_HMAC *
-flush_job_aes_gcm_enc_sse(MB_MGR *state, JOB_AES_HMAC *job)
+flush_job_aes_gcm_enc_sse(IMB_MGR *state, JOB_AES_HMAC *job)
 {
         (void) state;
         (void) job;
@@ -511,7 +511,7 @@ submit_job_aes_cntr_bit_sse(JOB_AES_HMAC *job)
 /* ====================================================================== */
 
 void
-init_mb_mgr_sse(MB_MGR *state)
+init_mb_mgr_sse(IMB_MGR *state)
 {
         unsigned int j;
         uint8_t *p;

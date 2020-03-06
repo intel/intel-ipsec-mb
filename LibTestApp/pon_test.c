@@ -34,7 +34,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int pon_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int pon_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 /* === vector 1 */
 
@@ -416,7 +416,7 @@ static const struct pon_test_vector {
 };
 
 static int
-test_pon(struct MB_MGR *mb_mgr,
+test_pon(struct IMB_MGR *mb_mgr,
          const void *expkey,
          const void *iv,
          const uint8_t *in_text,
@@ -622,7 +622,7 @@ test_pon(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_pon_std_vectors(struct MB_MGR *mb_mgr)
+test_pon_std_vectors(struct IMB_MGR *mb_mgr)
 {
 	const int vectors_cnt = sizeof(pon_vectors) / sizeof(pon_vectors[0]);
 	int vect;
@@ -678,7 +678,7 @@ test_pon_std_vectors(struct MB_MGR *mb_mgr)
 	return errors;
 }
 
-int pon_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
+int pon_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
 

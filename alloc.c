@@ -47,11 +47,11 @@
  * @return Pointer to allocated memory for MB_MGR structure
  * @retval NULL on allocation error
  */
-MB_MGR *alloc_mb_mgr(uint64_t flags)
+IMB_MGR *alloc_mb_mgr(uint64_t flags)
 {
         const size_t alignment = 64;
-        const size_t size = sizeof(MB_MGR);
-        MB_MGR *ptr = NULL;
+        const size_t size = sizeof(IMB_MGR);
+        IMB_MGR *ptr = NULL;
 
 #ifdef LINUX
         if (posix_memalign((void **)&ptr, alignment, size))
@@ -73,7 +73,7 @@ MB_MGR *alloc_mb_mgr(uint64_t flags)
  * @param ptr a pointer to allocated MB_MGR structure
  *
  */
-void free_mb_mgr(MB_MGR *ptr)
+void free_mb_mgr(IMB_MGR *ptr)
 {
         IMB_ASSERT(ptr != NULL);
 #ifdef LINUX

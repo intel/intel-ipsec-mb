@@ -30,13 +30,13 @@
 #ifndef NOAESNI_H
 #define NOAESNI_H
 
-IMB_DLL_EXPORT void init_mb_mgr_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse_no_aesni(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse_no_aesni(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_sse_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT uint32_t queue_size_sse_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse_no_aesni(IMB_MGR *state);
 
 IMB_DLL_EXPORT void
 aes_keyexp_128_sse_no_aesni(const void *key, void *enc_exp_keys,

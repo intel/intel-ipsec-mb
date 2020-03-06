@@ -29,6 +29,6 @@
 #define _CUSTOMOP_TEST_H_
 
 struct MB_MGR;
-extern int customop_test(struct MB_MGR *state);
+extern int customop_test(struct IMB_MGR *state);
 
 #endif /* !_CUSTOMOP_TEST_H_ */

@@ -1264,7 +1264,7 @@ static const struct gcm_ctr_vector ctr_bit_vectors[] = {
 };
 
 static int
-test_ctr(struct MB_MGR *mb_mgr,
+test_ctr(struct IMB_MGR *mb_mgr,
          const void *expkey,
          unsigned key_len,
          const void *iv,
@@ -1361,7 +1361,7 @@ test_ctr(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_ctr_vectors(struct MB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
+test_ctr_vectors(struct IMB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                  const uint32_t vectors_cnt, const JOB_CIPHER_MODE alg)
 {
 	uint32_t vect;
@@ -1475,7 +1475,7 @@ test_ctr_vectors(struct MB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
 
 int
 ctr_test(const enum arch_type arch,
-         struct MB_MGR *mb_mgr)
+         struct IMB_MGR *mb_mgr)
 {
         int errors;
 

@@ -39,7 +39,7 @@
 #define DIM(x) (sizeof(x) / sizeof(x[0]))
 #endif
 
-int des_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int des_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 struct des_vector {
 	const uint8_t *K;          /* key */
@@ -280,7 +280,7 @@ static struct des3_vector des3_vectors[] = {
 };
 
 static int
-test_des_many(struct MB_MGR *mb_mgr,
+test_des_many(struct IMB_MGR *mb_mgr,
               const uint64_t *ks,
               const uint64_t *ks2,
               const uint64_t *ks3,
@@ -421,7 +421,7 @@ test_des_many(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_des_one(struct MB_MGR *mb_mgr,
+test_des_one(struct IMB_MGR *mb_mgr,
              const enum arch_type arch,
              const uint64_t *ks,
              const uint64_t *ks2,
@@ -534,7 +534,7 @@ test_des_one(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_des(struct MB_MGR *mb_mgr,
+test_des(struct IMB_MGR *mb_mgr,
          const enum arch_type arch,
          const uint64_t *ks,
          const uint64_t *ks2,
@@ -578,7 +578,7 @@ test_des(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_des_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
+test_des_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                  const int vec_cnt,
                  const struct des_vector *vec_tab, const char *banner,
                  const JOB_CIPHER_MODE cipher)
@@ -642,7 +642,7 @@ test_des_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
 }
 
 static int
-test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
+test_des3_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                   const int vec_cnt,
                   const struct des3_vector *vec_tab, const char *banner)
 {
@@ -710,7 +710,7 @@ test_des3_vectors(struct MB_MGR *mb_mgr, const enum arch_type arch,
 
 int
 des_test(const enum arch_type arch,
-         struct MB_MGR *mb_mgr)
+         struct IMB_MGR *mb_mgr)
 {
         int errors;
 

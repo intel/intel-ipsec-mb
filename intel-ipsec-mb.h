@@ -242,6 +242,9 @@ typedef enum {
 #define AES_128_BYTES           IMB_KEY_AES_128_BYTES
 #define AES_192_BYTES           IMB_KEY_AES_192_BYTES
 #define AES_256_BYTES           IMB_KEY_AES_256_BYTES
+
+#define MB_MGR                  IMB_MGR
+
 #endif /* !NO_COMPAT_IMB_API_053 */
 
 typedef enum {
@@ -759,14 +762,14 @@ __attribute__((aligned(64)));
 
 /* ========================================================================== */
 /* API data type definitions */
-struct MB_MGR;
+struct IMB_MGR;
 
-typedef void (*init_mb_mgr_t)(struct MB_MGR *);
-typedef JOB_AES_HMAC *(*get_next_job_t)(struct MB_MGR *);
-typedef JOB_AES_HMAC *(*submit_job_t)(struct MB_MGR *);
-typedef JOB_AES_HMAC *(*get_completed_job_t)(struct MB_MGR *);
-typedef JOB_AES_HMAC *(*flush_job_t)(struct MB_MGR *);
-typedef uint32_t (*queue_size_t)(struct MB_MGR *);
+typedef void (*init_mb_mgr_t)(struct IMB_MGR *);
+typedef JOB_AES_HMAC *(*get_next_job_t)(struct IMB_MGR *);
+typedef JOB_AES_HMAC *(*submit_job_t)(struct IMB_MGR *);
+typedef JOB_AES_HMAC *(*get_completed_job_t)(struct IMB_MGR *);
+typedef JOB_AES_HMAC *(*flush_job_t)(struct IMB_MGR *);
+typedef uint32_t (*queue_size_t)(struct IMB_MGR *);
 typedef void (*keyexp_t)(const void *, void *, void *);
 typedef void (*cmac_subkey_gen_t)(const void *, void *, void *);
 typedef void (*hash_one_block_t)(const void *, void *);
@@ -975,11 +978,11 @@ typedef size_t (*snow3g_key_sched_size_t)(void);
 #define IMB_FEATURE_GFNI       (1ULL << 16)
 
 /* ========================================================================== */
-/* TOP LEVEL (MB_MGR) Data structure fields */
+/* TOP LEVEL (IMB_MGR) Data structure fields */
 
 #define MAX_JOBS 128
 
-typedef struct MB_MGR {
+typedef struct IMB_MGR {
         /*
          * flags - passed to alloc_mb_mgr()
          * features - reflects features of multi-buffer instance
@@ -1117,7 +1120,7 @@ typedef struct MB_MGR {
         DECLARE_ALIGNED(MB_MGR_CMAC_OOO aes_cmac_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_ZUC_OOO zuc_eea3_ooo, 64);
         DECLARE_ALIGNED(MB_MGR_ZUC_OOO zuc_eia3_ooo, 64);
-} MB_MGR;
+} IMB_MGR;
 
 /* ========================================================================== */
 /* API definitions */
@@ -1147,40 +1150,40 @@ IMB_DLL_EXPORT unsigned imb_get_version(void);
  * get_completed_job and flush_job returns a job object. This job object ceases
  * to be usable at the next call to get_next_job
  */
-IMB_DLL_EXPORT MB_MGR *alloc_mb_mgr(uint64_t flags);
-IMB_DLL_EXPORT void free_mb_mgr(MB_MGR *state);
+IMB_DLL_EXPORT IMB_MGR *alloc_mb_mgr(uint64_t flags);
+IMB_DLL_EXPORT void free_mb_mgr(IMB_MGR *state);
 
-IMB_DLL_EXPORT void init_mb_mgr_avx(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx(MB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_avx(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_avx(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx(IMB_MGR *state);
+IMB_DLL_EXPORT uint32_t queue_size_avx(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx(IMB_MGR *state);
 
-IMB_DLL_EXPORT void init_mb_mgr_avx2(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx2(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx2(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx2(MB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_avx2(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx2(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx2(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT uint32_t queue_size_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx2(IMB_MGR *state);
 
-IMB_DLL_EXPORT void init_mb_mgr_avx512(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx512(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx512(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx512(MB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_avx512(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx512(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx512(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT uint32_t queue_size_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx512(IMB_MGR *state);
 
-IMB_DLL_EXPORT void init_mb_mgr_sse(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse(MB_MGR *state);
-IMB_DLL_EXPORT uint32_t queue_size_sse(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse(MB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(MB_MGR *state);
+IMB_DLL_EXPORT void init_mb_mgr_sse(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse(IMB_MGR *state);
+IMB_DLL_EXPORT uint32_t queue_size_sse(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse(IMB_MGR *state);
+IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(IMB_MGR *state);
 
 /*
  * Wrapper macros to call arch API's set up

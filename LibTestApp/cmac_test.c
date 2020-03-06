@@ -39,7 +39,7 @@ enum cmac_type {
         CMAC_BITLEN,
 };
 
-int cmac_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int cmac_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
 /*
  * Test vectors from https://tools.ietf.org/html/rfc4493
@@ -1032,7 +1032,7 @@ cmac_job_ok(const struct cmac_rfc4493_vector *vec,
 }
 
 static int
-test_cmac(struct MB_MGR *mb_mgr,
+test_cmac(struct IMB_MGR *mb_mgr,
           const struct cmac_rfc4493_vector *vec,
           const int dir,
           const int num_jobs,
@@ -1213,7 +1213,7 @@ test_cmac(struct MB_MGR *mb_mgr,
 }
 
 static int
-test_cmac_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
+test_cmac_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 {
 	const int vectors_cnt = sizeof(cmac_vectors) / sizeof(cmac_vectors[0]);
 	int vect;
@@ -1249,7 +1249,7 @@ test_cmac_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 }
 
 static int
-test_cmac_bitlen_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
+test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 {
 	const int vectors_cnt = sizeof(cmac_vectors) / sizeof(cmac_vectors[0]);
 	int vect;
@@ -1288,7 +1288,7 @@ test_cmac_bitlen_std_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 }
 
 static int
-test_cmac_bitlen_3gpp_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
+test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 {
 	const int vectors_cnt =
                 sizeof(cmac_3gpp_vectors) / sizeof(cmac_3gpp_vectors[0]);
@@ -1327,7 +1327,7 @@ test_cmac_bitlen_3gpp_vectors(struct MB_MGR *mb_mgr, const int num_jobs)
 
 int
 cmac_test(const enum arch_type arch,
-          struct MB_MGR *mb_mgr)
+          struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
 

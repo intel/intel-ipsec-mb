@@ -45,30 +45,30 @@
 
 cipher_test_vector_t *vecList[MAX_DATA_LEN];
 
-int kasumi_test(const enum arch_type arch, struct MB_MGR *mb_mgr);
+int kasumi_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 static int
-validate_kasumi_f8_1_block(struct MB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_1_block(struct IMB_MGR *mb_mgr, const unsigned job_api);
 static int
-validate_kasumi_f8_1_bitblock(struct MB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_1_bitblock(struct IMB_MGR *mb_mgr, const unsigned job_api);
 static int
-validate_kasumi_f8_1_bitblock_offset(struct MB_MGR *mb_mgr,
+validate_kasumi_f8_1_bitblock_offset(struct IMB_MGR *mb_mgr,
                                      const unsigned job_api);
 static int
-validate_kasumi_f8_2_blocks(struct MB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_2_blocks(struct IMB_MGR *mb_mgr, const unsigned job_api);
 static int
-validate_kasumi_f8_3_blocks(struct MB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_3_blocks(struct IMB_MGR *mb_mgr, const unsigned job_api);
 static int
-validate_kasumi_f8_4_blocks(struct MB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_4_blocks(struct IMB_MGR *mb_mgr, const unsigned job_api);
 static int
-validate_kasumi_f8_n_blocks(struct MB_MGR *mb_mgr, const unsigned job_api);
+validate_kasumi_f8_n_blocks(struct IMB_MGR *mb_mgr, const unsigned job_api);
 static int
-validate_kasumi_f9(MB_MGR *mgr, const unsigned job_api);
+validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api);
 static int
-validate_kasumi_f9_user(MB_MGR *mgr, const unsigned job_api);
+validate_kasumi_f9_user(IMB_MGR *mgr, const unsigned job_api);
 
 /* kasumi validation function pointer table */
 struct {
-        int (*func)(struct MB_MGR *, const unsigned job_api);
+        int (*func)(struct IMB_MGR *, const unsigned job_api);
         const char *func_name;
 } kasumi_func_tab[] = {
         {validate_kasumi_f8_1_block,
@@ -160,7 +160,7 @@ static inline void hexdump(const char *message, const uint8_t *ptr, int len)
 }
 
 static inline int
-submit_kasumi_f8_jobs(struct MB_MGR *mb_mgr, kasumi_key_sched_t **keys,
+submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
                       uint64_t **ivs, uint8_t **src, uint8_t **dst,
                       const uint32_t *bitlens, const uint32_t *bit_offsets,
                       int dir, const unsigned int num_jobs)
@@ -208,7 +208,7 @@ submit_kasumi_f8_jobs(struct MB_MGR *mb_mgr, kasumi_key_sched_t **keys,
 }
 
 static inline int
-submit_kasumi_f9_job(struct MB_MGR *mb_mgr, kasumi_key_sched_t *key,
+submit_kasumi_f9_job(struct IMB_MGR *mb_mgr, kasumi_key_sched_t *key,
                      uint8_t *src, uint8_t *tag, const uint32_t len)
 {
         JOB_AES_HMAC *job;
@@ -240,7 +240,7 @@ submit_kasumi_f9_job(struct MB_MGR *mb_mgr, kasumi_key_sched_t *key,
         return 0;
 }
 
-static int validate_kasumi_f8_1_block(MB_MGR *mgr, const unsigned job_api)
+static int validate_kasumi_f8_1_block(IMB_MGR *mgr, const unsigned job_api)
 {
         int numKasumiTestVectors, i = 0;
         uint8_t *pKey = NULL;
@@ -386,7 +386,7 @@ static void copy_test_bufs(uint8_t *plainBuff, uint8_t *wrkBuff,
         memcpy(ciphBuff + PAD_LEN, dst_test, byte_len);
 }
 
-static int validate_kasumi_f8_1_bitblock(MB_MGR *mgr, const unsigned job_api)
+static int validate_kasumi_f8_1_bitblock(IMB_MGR *mgr, const unsigned job_api)
 {
         int numKasumiTestVectors, i = 0;
         kasumi_key_sched_t *pKeySched = NULL;
@@ -568,7 +568,7 @@ end:
         return ret;
 }
 
-static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr,
+static int validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr,
                                                 const unsigned job_api)
 {
         int numKasumiTestVectors, i = 0;
@@ -716,7 +716,7 @@ static int validate_kasumi_f8_1_bitblock_offset(MB_MGR *mgr,
         return 0;
 }
 
-static int validate_kasumi_f8_2_blocks(MB_MGR *mgr, const unsigned job_api)
+static int validate_kasumi_f8_2_blocks(IMB_MGR *mgr, const unsigned job_api)
 {
 
         int numKasumiTestVectors, i = 0, numPackets = 2;
@@ -930,7 +930,7 @@ exit:
         return ret;
 }
 
-static int validate_kasumi_f8_3_blocks(MB_MGR *mgr, const unsigned job_api)
+static int validate_kasumi_f8_3_blocks(IMB_MGR *mgr, const unsigned job_api)
 {
         int numKasumiTestVectors, i = 0, numPackets = 3;
         const cipher_test_vector_t *kasumi_test_vectors = NULL;
@@ -1070,7 +1070,7 @@ exit:
         return ret;
 }
 
-static int validate_kasumi_f8_4_blocks(MB_MGR *mgr, const unsigned job_api)
+static int validate_kasumi_f8_4_blocks(IMB_MGR *mgr, const unsigned job_api)
 {
         int numKasumiTestVectors, i = 0, numPackets = 4;
         const cipher_test_vector_t *kasumi_test_vectors = NULL;
@@ -1212,7 +1212,7 @@ exit:
         return ret;
 }
 
-static int validate_kasumi_f8_n_blocks(MB_MGR *mgr, const unsigned job_api)
+static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
 {
         kasumi_key_sched_t *pKeySched[NUM_SUPPORTED_BUFFERS] = {NULL};
         uint64_t IV[NUM_SUPPORTED_BUFFERS];
@@ -1487,7 +1487,7 @@ exit:
         return ret;
 }
 
-static int validate_kasumi_f9(MB_MGR *mgr, const unsigned job_api)
+static int validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api)
 {
         kasumi_key_sched_t *pKeySched = NULL;
         uint8_t *pKey = NULL;
@@ -1565,7 +1565,7 @@ exit:
         return ret;
 }
 
-static int validate_kasumi_f9_user(MB_MGR *mgr, const unsigned job_api)
+static int validate_kasumi_f9_user(IMB_MGR *mgr, const unsigned job_api)
 {
         int numKasumiF9IV_TestVectors = 0, i = 0;
         hash_iv_test_vector_t *kasumiF9_vectors = NULL;
@@ -1645,7 +1645,7 @@ exit:
         return ret;
 }
 
-int kasumi_test(const enum arch_type arch, struct MB_MGR *mb_mgr)
+int kasumi_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
 {
         int status = 0;
         unsigned i;
