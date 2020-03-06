@@ -54,10 +54,6 @@ else
 CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
-ifeq ($(GCM_BIG_DATA),y)
-CFLAGS += -DGCM_BIG_DATA
-endif
-
 SOURCES := ipsec_perf.c msr.c
 OBJECTS := $(SOURCES:%.c=%.o)
 

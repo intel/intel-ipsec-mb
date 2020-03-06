@@ -753,19 +753,11 @@ struct gcm_key_data {
                         uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 8];
                 } avx2_avx512;
                 struct {
-#ifdef GCM_BIG_DATA
-                        /*
-                         * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
-                         * (Hashkey^128<<1 mod poly)
-                         */
-                        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 128];
-#else
                         /*
                          * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
                          * (Hashkey^48<<1 mod poly)
                          */
                         uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 48];
-#endif
                 } vaes_avx512;
         } ghash_keys;
 }

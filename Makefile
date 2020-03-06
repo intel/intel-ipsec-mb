@@ -187,12 +187,6 @@ SAFE_LOOKUP_MSG1="SAFE_LOOKUP option not set."
 SAFE_LOOKUP_MSG2="Lookups which depend on sensitive information \
 		are not guaranteed to be done in constant time."
 
-ifeq ($(GCM_BIG_DATA),y)
-CFLAGS += -DGCM_BIG_DATA
-NASM_FLAGS += -DGCM_BIG_DATA
-YASM_FLAGS += -DGCM_BIG_DATA
-endif
-
 #
 # List of C modules (any origin)
 #
@@ -702,15 +696,6 @@ help:
 	@echo "          - Lookups depending on sensitive data might not be constant time"
 	@echo "SAFE_LOOKUP=y (default)"
 	@echo "          - Lookups depending on sensitive data are constant time"
-	@echo "GCM_BIG_DATA=n (default)"
-	@echo "          - Smaller GCM key structure with good performance level (VAES)"
-	@echo "            for packet processing applications (buffers size < 2K)"
-	@echo "          - 8 ghash keys used on SSE, AVX, AVX2 and AVX512"
-	@echo "          - 48 ghash keys used on AVX512 with VAES and VPCLMULQDQ"
-	@echo "GCM_BIG_DATA=y"
-	@echo "          - Better performing VAES GCM on big buffers using more ghash keys."
-	@echo "            This option results in a much bigger gcm_key structure (>2K)."
-	@echo "            It only takes effect on platforms with VAES and VPCLMULQDQ."
 
 
 CHECKPATCH ?= checkpatch.pl

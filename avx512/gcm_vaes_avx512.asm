@@ -156,11 +156,7 @@ default rel
         %define XMM_STORAGE     0
         %define GP_STORAGE      (8*8)   ; space for 7 GP registers + 1 for alignment
 %endif
-%ifdef GCM_BIG_DATA
-%define LOCAL_STORAGE           (128*16)   ; space for up to 128 AES blocks
-%else
-%define LOCAL_STORAGE           (48*16)   ; space for up to 48 AES blocks
-%endif
+%define LOCAL_STORAGE           (48*16) ; space for up to 48 AES blocks
 
 ;;; sequence is (bottom-up): GP, XMM, local
 %define STACK_GP_OFFSET         0
@@ -617,12 +613,8 @@ default rel
 
         vmovdqa  %%T5, %%HK
 
-        ;; GHASH keys 2 to 48 or 128
-%ifdef GCM_BIG_DATA
-%assign max_hkey_idx 128
-%else
+        ;; GHASH keys 2 to 48
 %assign max_hkey_idx 48
-%endif
 
 %assign i 2
 %rep (max_hkey_idx - 1)
@@ -2899,17 +2891,8 @@ default rel
 
 %define %%MASKREG               k1
 
-%ifdef GCM_BIG_DATA
-;; reduction every 128 blocks, depth 32 blocks
-;; @note 128 blocks is the maximum capacity of the stack frame when
-;;       GCM_BIG_DATA is defined
-%assign very_big_loop_nblocks   128
-%assign very_big_loop_depth     32
-%endif
-
 ;; reduction every 48 blocks, depth 32 blocks
-;; @note 48 blocks is the maximum capacity of the stack frame when
-;;       GCM_BIG_DATA is not defined
+;; @note 48 blocks is the maximum capacity of the stack frame
 %assign big_loop_nblocks        48
 %assign big_loop_depth          32
 
@@ -2971,63 +2954,6 @@ default rel
 
         vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
         vmovdqa64       %%ADDBE_4x4, [rel ddq_addbe_4444]
-
-%ifdef GCM_BIG_DATA
-        vmovdqa64       %%ADDBE_1234, [rel ddq_addbe_1234]
-
-        cmp             %%LENGTH, (very_big_loop_nblocks * 16)
-        jl              %%_message_below_very_big_nblocks
-
-        INITIAL_BLOCKS_Nx16 %%PLAIN_CYPH_IN, %%CYPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
-                %%AAD_HASHz, %%CTR_BLOCKz, %%CTR_CHECK, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11, \
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
-                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%GH, %%GL, %%GM, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%SHUF_MASK, %%ENC_DEC, very_big_loop_nblocks, very_big_loop_depth
-
-        sub             %%LENGTH, (very_big_loop_nblocks * 16)
-        cmp             %%LENGTH, (very_big_loop_nblocks * 16)
-        jl              %%_no_more_very_big_nblocks
-
-%%_encrypt_very_big_nblocks:
-        GHASH_ENCRYPT_Nx16_PARALLEL \
-                %%PLAIN_CYPH_IN, %%CYPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
-                %%CTR_BLOCKz, %%SHUF_MASK, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11, \
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
-                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%GH, %%GL, %%GM, \
-                %%ADDBE_4x4, %%ADDBE_1234, %%AAD_HASHz, \
-                %%ENC_DEC, very_big_loop_nblocks, very_big_loop_depth, %%CTR_CHECK
-
-        sub             %%LENGTH, (very_big_loop_nblocks * 16)
-        cmp             %%LENGTH, (very_big_loop_nblocks * 16)
-        jge             %%_encrypt_very_big_nblocks
-
-%%_no_more_very_big_nblocks:
-        vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
-        vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
-
-        GHASH_LAST_Nx16 %%GDATA_KEY, %%AAD_HASHz, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11, \
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
-                %%GH, %%GL, %%GM, very_big_loop_nblocks, very_big_loop_depth
-
-        or              %%LENGTH, %%LENGTH
-        jz              %%_ghash_done
-
-%%_message_below_very_big_nblocks:
-%endif          ; GCM_BIG_DATA
 
         cmp             %%LENGTH, (big_loop_nblocks * 16)
         jl              %%_message_below_big_nblocks

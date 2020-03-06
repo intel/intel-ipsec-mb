@@ -56,15 +56,9 @@ DCFLAGS = /O2 /Oi
 DLFLAGS =
 !endif
 
-!if "$(GCM_BIG_DATA)" == "y"
-GCM_CFLAGS = /DGCM_BIG_DATA
-!else
-GCM_CFLAGS =
-!endif
-
 CC = cl
 # _CRT_SECURE_NO_WARNINGS disables warning C4996 about unsecure strtok() being used
-CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(GCM_CFLAGS) $(INCDIR)
+CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(INCDIR)
 
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)

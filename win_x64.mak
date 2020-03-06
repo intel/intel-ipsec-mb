@@ -35,9 +35,6 @@
 # SAFE_PARAM=y  - this option will add extra input parameter checks
 # SAFE_LOOKUP=y - this option will perform constant-time lookups depending on
 # 		  sensitive data (default)
-# GCM_BIG_DATA=y
-#           - Better performing VAES GCM on big buffers using more ghash keys (~5% up).
-#             This option results in a much bigger gcm_key structure (>2K)
 
 !if !defined(SHARED)
 SHARED = y
@@ -91,16 +88,8 @@ DCFLAGS = $(DCFLAGS) /DSAFE_LOOKUP
 DAFLAGS = $(DAFLAGS) -DSAFE_LOOKUP
 !endif
 
-!if "$(GCM_BIG_DATA)" == "y"
-GCM_AFLAGS = -DGCM_BIG_DATA
-GCM_CFLAGS = /DGCM_BIG_DATA
-!else
-GCM_AFLAGS =
-GCM_CFLAGS =
-!endif
-
 CC = cl
-CFLAGS_ALL = $(EXTRA_CFLAGS) $(GCM_CFLAGS) /I. /Iinclude /Ino-aesni \
+CFLAGS_ALL = $(EXTRA_CFLAGS) /I. /Iinclude /Ino-aesni \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
 
 CFLAGS = $(CFLAGS_ALL) $(OPT) $(DCFLAGS)
@@ -113,7 +102,7 @@ LINK_TOOL = link
 LINKFLAGS = $(DLFLAGS) /nologo /machine:X64
 
 AS = nasm
-AFLAGS = $(DAFLAGS) $(GCM_AFLAGS) -fwin64 -Xvc -DWIN_ABI -Iinclude/ \
+AFLAGS = $(DAFLAGS) -fwin64 -Xvc -DWIN_ABI -Iinclude/ \
        -I./ -Iavx/ -Iavx2/ -Iavx512/ -Isse/
 
 # warning messages
@@ -488,17 +477,6 @@ help:
 	@echo "          - Lookups depending on sensitive data might not be constant time"
 	@echo "SAFE_LOOKUP=y (default)"
 	@echo "          - Lookups depending on sensitive data are constant time"
-	@echo "GCM_BIG_DATA=n (default)"
-	@echo "  - Smaller AVX512VAES GCM key structure with"
-        @echo "    good performance level for buffers sizes below 2K."
-	@echo "  - 8 ghash keys used on SSE, AVX, AVX2 and AVX512."
-	@echo "  - 48 ghash keys used on AVX512VAES and AVX512VPCLMULQDQ."
-	@echo "GCM_BIG_DATA=y"
-	@echo "  - Better performing AVX512VAES GCM on big buffers that"
-        @echo "    uses more ghash keys, 128 instead of 48."
-	@echo "  - This option results in a much bigger gcm_key structure, more than 2K."
-	@echo "  - Performance improvement takes effect only on platforms with"
-        @echo "    AVX512VAES and AVX512VPCLMULQDQ."
 
 clean:
 	-del /q $(lib_objs1)
