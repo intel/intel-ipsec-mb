@@ -119,15 +119,17 @@ section .text
 ;; =============================================================================
 ;; Barrett reduction from 128-bits to 32-bits modulo Ethernet FCS polynomial
 
-%macro CRC32_REDUCE_128_TO_32 5
+%macro CRC32_REDUCE_128_TO_32 6
 %define %%CRC   %1         ; [out] GP to store 32-bit Ethernet FCS value
 %define %%XCRC  %2         ; [in/clobbered] XMM with CRC
 %define %%XT1   %3         ; [clobbered] temporary xmm register
 %define %%XT2   %4         ; [clobbered] temporary xmm register
 %define %%XT3   %5         ; [clobbered] temporary xmm register
+%define %%FOLD  %6         ; skip fold for less than 4 bytes - values "fold" or "no_fold"
 
 %define %%XCRCKEY %%XT3
 
+%ifidn %%FOLD, fold
         ;;  compute crc of a 128-bit value
         vmovdqa         %%XCRCKEY, [rel rk5]
 
@@ -140,6 +142,7 @@ section .text
         vpslldq         %%XT1, %%XCRC, 4
         vpclmulqdq      %%XT1, %%XT1, %%XCRCKEY, 0x10
         vpxor           %%XCRC, %%XCRC, %%XT1
+%endif
 
 %%_crc_barrett:
         ;; Barrett reduction
@@ -183,6 +186,10 @@ section .text
         jae     %%_at_least_32_bytes
 
         ;; less than 32 bytes
+        cmp	%%bytes_to_crc, 4
+	jl	%%_only_less_than_4
+
+        ;; more than 3 bytes
         cmp     %%bytes_to_crc, 16
         je      %%_exact_16_left
         jl      %%_less_than_16_left
@@ -243,8 +250,33 @@ section .text
         vpxor           %%xcrc, %%xtmp1
 
 %%_128_done:
-        CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
+        CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey, fold
+        jmp     %%_crc_done
 
+%%_only_less_than_4:
+        simd_load_avx_15_1 %%xtmp1, %%p_in, %%bytes_to_crc
+        vpxor   %%xcrc, %%xtmp1 ; xor the initial CRC value
+
+        cmp	%%bytes_to_crc, 3
+	jl	%%_only_less_than_3
+
+	vpslldq	%%xcrc, 5
+        CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey, no_fold
+	jmp	%%_crc_done
+
+%%_only_less_than_3:
+	cmp	%%bytes_to_crc, 2
+	jl	%%_only_less_than_2
+
+	vpslldq	%%xcrc, 6
+        CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey, no_fold
+	jmp	%%_crc_done
+
+%%_only_less_than_2:
+	vpslldq	%%xcrc, 7
+        CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey, no_fold
+
+%%_crc_done:
         or              %%p_fcs_out, %%p_fcs_out
         jz              %%_skip_writing_crc
         mov             [%%p_fcs_out], DWORD(%%ethernet_fcs)
