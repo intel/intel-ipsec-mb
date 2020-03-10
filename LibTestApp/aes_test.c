@@ -1847,9 +1847,9 @@ test_aes_many(struct IMB_MGR *mb_mgr,
                         job->src = targets[i] + sizeof(padding);
                 }
                 job->cipher_mode = cipher;
-                job->aes_enc_key_expanded = enc_keys;
-                job->aes_dec_key_expanded = dec_keys;
-                job->aes_key_len_in_bytes = key_len;
+                job->enc_keys = enc_keys;
+                job->dec_keys = dec_keys;
+                job->key_len_in_bytes = key_len;
 
                 job->iv = iv;
                 job->iv_len_in_bytes = 16;
@@ -2104,9 +2104,9 @@ test_docrc_many(struct IMB_MGR *mb_mgr,
                         job->src = targets[i] + sizeof(padding);
                 }
                 job->cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI;
-                job->aes_enc_key_expanded = enc_keys;
-                job->aes_dec_key_expanded = dec_keys;
-                job->aes_key_len_in_bytes = key_len;
+                job->enc_keys = enc_keys;
+                job->dec_keys = dec_keys;
+                job->key_len_in_bytes = key_len;
 
                 job->iv = p_vec->iv;
                 job->iv_len_in_bytes = 16;

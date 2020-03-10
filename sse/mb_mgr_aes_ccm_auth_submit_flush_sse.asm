@@ -195,7 +195,7 @@ endstruc
         ;; Copy job info into lane
         mov     [state + _aes_ccm_job_in_lane + lane*8], job
         ;; Copy keys into lane args
-        mov     tmp, [job + _aes_enc_key_expanded]
+        mov     tmp, [job + _enc_keys]
         mov     [state + _aes_ccm_args_keys + lane*8], tmp
         ;; init_done = 0
         mov     word [state + _aes_ccm_init_done + lane*2], 0

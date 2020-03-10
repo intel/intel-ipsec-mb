@@ -483,16 +483,16 @@ test_pon(struct IMB_MGR *mb_mgr,
 
         /* If IV == NULL, NO CTR is done */
         if (iv != NULL) {
-                job->aes_enc_key_expanded = expkey;
-                job->aes_dec_key_expanded = expkey;
-                job->aes_key_len_in_bytes = IMB_KEY_AES_128_BYTES;
+                job->enc_keys = expkey;
+                job->dec_keys = expkey;
+                job->key_len_in_bytes = IMB_KEY_AES_128_BYTES;
                 job->iv = iv;
                 job->iv_len_in_bytes = 16;
                 job->msg_len_to_cipher_in_bytes = (uint64_t) len_to_cipher;
         } else {
-                job->aes_enc_key_expanded = NULL;
-                job->aes_dec_key_expanded = NULL;
-                job->aes_key_len_in_bytes = 0;
+                job->enc_keys = NULL;
+                job->dec_keys = NULL;
+                job->key_len_in_bytes = 0;
                 job->iv = NULL;
                 job->iv_len_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = 0;

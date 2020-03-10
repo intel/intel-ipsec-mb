@@ -335,13 +335,13 @@ test_des_many(struct IMB_MGR *mb_mgr,
                 }
                 job->cipher_mode = cipher;
                 if (cipher == IMB_CIPHER_DES3) {
-                        job->aes_enc_key_expanded = (const void *) ks_ptr;
-                        job->aes_dec_key_expanded = (const void *) ks_ptr;
-                        job->aes_key_len_in_bytes = 24; /* 3x keys only */
+                        job->enc_keys = (const void *) ks_ptr;
+                        job->dec_keys = (const void *) ks_ptr;
+                        job->key_len_in_bytes = 24; /* 3x keys only */
                 } else {
-                        job->aes_enc_key_expanded = ks;
-                        job->aes_dec_key_expanded = ks;
-                        job->aes_key_len_in_bytes = 8;
+                        job->enc_keys = ks;
+                        job->dec_keys = ks;
+                        job->key_len_in_bytes = 8;
                 }
                 job->iv = iv;
                 job->iv_len_in_bytes = 8;
@@ -471,13 +471,13 @@ test_des_one(struct IMB_MGR *mb_mgr,
         }
         job->cipher_mode = cipher;
         if (cipher == IMB_CIPHER_DES3) {
-                job->aes_enc_key_expanded = (const void *) ks_ptr;
-                job->aes_dec_key_expanded = (const void *) ks_ptr;
-                job->aes_key_len_in_bytes = 24;
+                job->enc_keys = (const void *) ks_ptr;
+                job->dec_keys = (const void *) ks_ptr;
+                job->key_len_in_bytes = 24;
         } else {
-                job->aes_enc_key_expanded = ks;
-                job->aes_dec_key_expanded = ks;
-                job->aes_key_len_in_bytes = 8;
+                job->enc_keys = ks;
+                job->dec_keys = ks;
+                job->key_len_in_bytes = 8;
         }
         job->iv = iv;
         job->iv_len_in_bytes = 8;

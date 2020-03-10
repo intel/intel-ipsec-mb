@@ -127,7 +127,7 @@ DES_CBC_ENC(IMB_JOB *job)
                           job->dst,
                           job->msg_len_to_cipher_in_bytes &
                           (~(DES_BLOCK_SIZE - 1)),
-                          job->aes_enc_key_expanded, (const uint64_t *)job->iv);
+                          job->enc_keys, (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;
 }
@@ -147,7 +147,7 @@ DES_CBC_DEC(IMB_JOB *job)
                           job->dst,
                           job->msg_len_to_cipher_in_bytes &
                           (~(DES_BLOCK_SIZE - 1)),
-                          job->aes_dec_key_expanded, (const uint64_t *)job->iv);
+                          job->dec_keys, (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;
 }
@@ -163,7 +163,7 @@ IMB_JOB *
 DES3_CBC_ENC(IMB_JOB *job)
 {
         const void * const *ks_ptr =
-                (const void * const *)job->aes_enc_key_expanded;
+                (const void * const *)job->enc_keys;
 
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         des3_enc_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
@@ -187,7 +187,7 @@ IMB_JOB *
 DES3_CBC_DEC(IMB_JOB *job)
 {
         const void * const *ks_ptr =
-                (const void * const *)job->aes_dec_key_expanded;
+                (const void * const *)job->dec_keys;
 
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         des3_dec_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,

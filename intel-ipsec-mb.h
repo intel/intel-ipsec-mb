@@ -245,6 +245,11 @@ typedef enum {
 
 #define MB_MGR                  IMB_MGR
 #define JOB_AES_HMAC            IMB_JOB
+
+/***** Previous fields in IMB_JOB/JOB_AES_HMAC *****/
+#define aes_enc_key_expanded enc_keys
+#define aes_dec_key_expanded dec_keys
+#define aes_key_len_in_bytes key_len_in_bytes
 #endif /* !NO_COMPAT_IMB_API_053 */
 
 typedef enum {
@@ -310,25 +315,24 @@ typedef enum {
 
 typedef struct IMB_JOB {
         /*
-         * For AES, aes_enc_key_expanded and aes_dec_key_expanded are
+         * For AES, enc_keys and dec_keys are
          * expected to point to expanded keys structure.
-         * - AES-CTR, AES-ECB and AES-CCM, only aes_enc_key_expanded is used
+         * - AES-CTR, AES-ECB and AES-CCM, only enc_keys is used
          * - DOCSIS (AES-CBC + AES-CFB), both pointers are used
-         *   aes_enc_key_expanded has to be set always for the partial block
+         *   enc_keys has to be set always for the partial block
          *
-         * For DES, aes_enc_key_expanded and aes_dec_key_expanded are
+         * For DES, enc_keys and dec_keys are
          * expected to point to DES key schedule.
          * - same key schedule used for enc and dec operations
          *
-         * For 3DES, aes_enc_key_expanded and aes_dec_key_expanded are
+         * For 3DES, enc_keys and dec_keys are
          * expected to point to an array of 3 pointers for
          * the corresponding 3 key schedules.
          * - same key schedule used for enc and dec operations
          */
-        const void *aes_enc_key_expanded;  /* 16-byte aligned pointer. */
-        const void *aes_dec_key_expanded;
-        uint64_t aes_key_len_in_bytes; /* 16, 24 and 32 byte (128, 192 and
-                                        * 256-bit) keys supported */
+        const void *enc_keys;  /* 16-byte aligned pointer. */
+        const void *dec_keys;
+        uint64_t key_len_in_bytes;
         const uint8_t *src; /* Input. May be cipher text or plaintext.
                              * In-place ciphering allowed. */
         uint8_t *dst; /*Output. May be cipher text or plaintext.
@@ -356,9 +360,9 @@ typedef struct IMB_JOB {
                 uint64_t msg_len_to_hash_in_bytes;
                 uint64_t msg_len_to_hash_in_bits;
         };
-        const uint8_t *iv; /* AES IV. */
-        uint64_t iv_len_in_bytes; /* AES IV length in bytes. */
-        uint8_t *auth_tag_output; /* HMAC Tag output. This may point to
+        const uint8_t *iv; /* Initialization Vector (IV) */
+        uint64_t iv_len_in_bytes; /* IV length in bytes. */
+        uint8_t *auth_tag_output; /* Tag output. This may point to
                                    * a location in the src buffer
                                    * (for in place)*/
         uint64_t auth_tag_output_len_in_bytes; /* Authentication (i.e. HMAC) tag

@@ -100,9 +100,9 @@ END_FIELDS
 
 START_FIELDS	; IMB_JOB
 ;;;	name				size	align
-FIELD	_aes_enc_key_expanded,		8,	8	; pointer to exp enc keys
-FIELD	_aes_dec_key_expanded,		8,	8	; pointer to exp dec keys
-FIELD	_aes_key_len_in_bytes,		8,	8
+FIELD	_enc_keys,			8,	8	; pointer to enc keys
+FIELD	_dec_keys,			8,	8	; pointer to dec keys
+FIELD	_key_len_in_bytes,		8,	8
 FIELD	_src,				8,	8	; pointer to src buffer
 FIELD	_dst,				8,	8	; pointer to dst buffer
 FIELD	_cipher_start_src_offset_in_bytes, \

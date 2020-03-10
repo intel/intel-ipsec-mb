@@ -144,12 +144,12 @@ known_answer_test(IMB_MGR *mb_mgr)
         /* test AES128 Dec */
         job = IMB_GET_NEXT_JOB(mb_mgr);
 
-        job->aes_enc_key_expanded = enc_keys;
-        job->aes_dec_key_expanded = dec_keys;
+        job->enc_keys = enc_keys;
+        job->dec_keys = dec_keys;
         job->cipher_direction = IMB_DIR_DECRYPT;
         job->chain_order = IMB_ORDER_HASH_CIPHER;
         job->dst = test_buf;
-        job->aes_key_len_in_bytes = 16;
+        job->key_len_in_bytes = 16;
         job->auth_tag_output = digest;
         job->auth_tag_output_len_in_bytes = 12;
         memcpy(iv, ic, sizeof(iv));
@@ -242,8 +242,8 @@ do_test(IMB_MGR *mb_mgr)
                 job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t*)ipad;
                 job->u.HMAC._hashed_auth_key_xor_opad = (uint8_t*)opad;
 
-                job->aes_enc_key_expanded =
-                        job->aes_dec_key_expanded = (uint32_t*) keys;
+                job->enc_keys =
+                        job->dec_keys = (uint32_t*) keys;
                 job->src = buf;
                 job->dst = buf + 20;
                 job->iv = (uint8_t *) &IV;
@@ -254,13 +254,13 @@ do_test(IMB_MGR *mb_mgr)
 
                 switch (rand() % 3) {
                 case 0:
-                        job->aes_key_len_in_bytes = 16;
+                        job->key_len_in_bytes = 16;
                         break;
                 case 1:
-                        job->aes_key_len_in_bytes = 24;
+                        job->key_len_in_bytes = 24;
                         break;
                 default:
-                        job->aes_key_len_in_bytes = 32;
+                        job->key_len_in_bytes = 32;
                         break;
                 }
 

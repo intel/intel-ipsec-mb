@@ -1322,7 +1322,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
         /* Translating enum to the API's one */
         job_template.cipher_mode = translate_cipher_mode(params->cipher_mode);
-        job_template.aes_key_len_in_bytes = params->aes_key_size;
+        job_template.key_len_in_bytes = params->aes_key_size;
         if (job_template.cipher_mode == IMB_CIPHER_GCM) {
                 uint8_t key[32];
 
@@ -1338,8 +1338,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         IMB_AES256_GCM_PRE(mb_mgr, key, &gdata_key);
                         break;
                 }
-                job_template.aes_enc_key_expanded = &gdata_key;
-                job_template.aes_dec_key_expanded = &gdata_key;
+                job_template.enc_keys = &gdata_key;
+                job_template.dec_keys = &gdata_key;
                 job_template.u.GCM.aad_len_in_bytes = params->aad_size;
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == IMB_CIPHER_CCM) {
@@ -1351,13 +1351,13 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.iv_len_in_bytes = 13;
         } else if (job_template.cipher_mode == IMB_CIPHER_DES ||
                    job_template.cipher_mode == IMB_CIPHER_DOCSIS_DES) {
-                job_template.aes_key_len_in_bytes = 8;
+                job_template.key_len_in_bytes = 8;
                 job_template.iv_len_in_bytes = 8;
         } else if (job_template.cipher_mode == IMB_CIPHER_DES3) {
-                job_template.aes_key_len_in_bytes = 24;
+                job_template.key_len_in_bytes = 24;
                 job_template.iv_len_in_bytes = 8;
         } else if (job_template.cipher_mode == IMB_CIPHER_ZUC_EEA3) {
-                job_template.aes_key_len_in_bytes = 16;
+                job_template.key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 16;
         } else if (job_template.cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
                    job_template.hash_alg == IMB_AUTH_DOCSIS_CRC32) {
@@ -1374,13 +1374,13 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.msg_len_to_cipher_in_bits =
                         (job_template.msg_len_to_cipher_in_bytes * 8);
                 job_template.cipher_start_src_offset_in_bits = 0;
-                job_template.aes_key_len_in_bytes = 16;
+                job_template.key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 16;
         } else if (job_template.cipher_mode == IMB_CIPHER_KASUMI_UEA1_BITLEN) {
                 job_template.msg_len_to_cipher_in_bits =
                         (job_template.msg_len_to_cipher_in_bytes * 8);
                 job_template.cipher_start_src_offset_in_bits = 0;
-                job_template.aes_key_len_in_bytes = 16;
+                job_template.key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 8;
         } else if (job_template.cipher_mode == IMB_CIPHER_ECB)
                 job_template.iv_len_in_bytes = 0;
@@ -1418,7 +1418,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         job->u.GCM.aad = job->src;
                 } else if (job->cipher_mode == IMB_CIPHER_CCM) {
                         job->u.CCM.aad = job->src;
-                        job->aes_enc_key_expanded = job->aes_dec_key_expanded =
+                        job->enc_keys = job->dec_keys =
                                 (const uint32_t *) get_key_pointer(index,
                                                                    p_keys);
                 } else if (job->cipher_mode == IMB_CIPHER_DES3) {
@@ -1426,10 +1426,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
 
                         ks_ptr[0] = ks_ptr[1] = ks_ptr[2] =
                                 get_key_pointer(index, p_keys);
-                        job->aes_enc_key_expanded =
-                                job->aes_dec_key_expanded = ks_ptr;
+                        job->enc_keys =
+                                job->dec_keys = ks_ptr;
                 } else {
-                        job->aes_enc_key_expanded = job->aes_dec_key_expanded =
+                        job->enc_keys = job->dec_keys =
                                 (const uint32_t *) get_key_pointer(index,
                                                                    p_keys);
                 }

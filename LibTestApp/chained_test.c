@@ -296,9 +296,9 @@ test_chained_many(struct IMB_MGR *mb_mgr,
                         job->src = in_text;
                 }
                 job->cipher_mode = cipher;
-                job->aes_enc_key_expanded = enc_keys;
-                job->aes_dec_key_expanded = dec_keys;
-                job->aes_key_len_in_bytes = cipher_key_size;
+                job->enc_keys = enc_keys;
+                job->dec_keys = dec_keys;
+                job->key_len_in_bytes = cipher_key_size;
 
                 job->iv = iv;
                 job->iv_len_in_bytes = 16;

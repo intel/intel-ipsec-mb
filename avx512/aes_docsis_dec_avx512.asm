@@ -1018,8 +1018,8 @@ section .text
         mov             tmp3, [job + _dst]                              ; AES destination
 
         mov             tmp4, [job + _msg_len_to_cipher_in_bytes]       ; CRC + AES size
-        mov             tmp5, [job + _aes_dec_key_expanded]
-        mov             tmp6, [job + _aes_enc_key_expanded]
+        mov             tmp5, [job + _dec_keys]
+        mov             tmp6, [job + _enc_keys]
 
         DOCSIS_DEC_CRC32 tmp5, tmp2, tmp3, tmp4, tmp6, \
                          tmp7, tmp8, \

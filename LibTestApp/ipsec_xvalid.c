@@ -807,25 +807,25 @@ fill_job(IMB_JOB *job, const struct params_s *params,
 
         /* Translating enum to the API's one */
         job->cipher_mode = params->cipher_mode;
-        job->aes_key_len_in_bytes = params->key_size;
+        job->key_len_in_bytes = params->key_size;
 
         switch (job->cipher_mode) {
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_DOCSIS_SEC_BPI:
-                job->aes_enc_key_expanded = enc_keys;
-                job->aes_dec_key_expanded = dec_keys;
+                job->enc_keys = enc_keys;
+                job->dec_keys = dec_keys;
                 job->iv_len_in_bytes = 16;
                 break;
         case IMB_CIPHER_PON_AES_CNTR:
         case IMB_CIPHER_CNTR:
         case IMB_CIPHER_CNTR_BITLEN:
-                job->aes_enc_key_expanded = enc_keys;
-                job->aes_dec_key_expanded = enc_keys;
+                job->enc_keys = enc_keys;
+                job->dec_keys = enc_keys;
                 job->iv_len_in_bytes = 16;
                 break;
         case IMB_CIPHER_GCM:
-                job->aes_enc_key_expanded = gdata_key;
-                job->aes_dec_key_expanded = gdata_key;
+                job->enc_keys = gdata_key;
+                job->dec_keys = gdata_key;
                 job->u.GCM.aad_len_in_bytes = params->aad_size;
                 job->u.GCM.aad = aad;
                 job->iv_len_in_bytes = 12;
@@ -837,43 +837,43 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->u.CCM.aad_len_in_bytes = params->aad_size;
                 job->u.CCM.aad = aad;
-                job->aes_enc_key_expanded = enc_keys;
-                job->aes_dec_key_expanded = enc_keys;
+                job->enc_keys = enc_keys;
+                job->dec_keys = enc_keys;
                 job->iv_len_in_bytes = 13;
                 break;
         case IMB_CIPHER_DES:
         case IMB_CIPHER_DOCSIS_DES:
-                job->aes_enc_key_expanded = enc_keys;
-                job->aes_dec_key_expanded = enc_keys;
+                job->enc_keys = enc_keys;
+                job->dec_keys = enc_keys;
                 job->iv_len_in_bytes = 8;
                 break;
         case IMB_CIPHER_DES3:
                 ks_ptr[0] = ks_ptr[1] = ks_ptr[2] = enc_keys;
-                job->aes_enc_key_expanded = ks_ptr;
-                job->aes_dec_key_expanded = ks_ptr;
+                job->enc_keys = ks_ptr;
+                job->dec_keys = ks_ptr;
                 job->iv_len_in_bytes = 8;
                 break;
         case IMB_CIPHER_ECB:
-                job->aes_enc_key_expanded = enc_keys;
-                job->aes_dec_key_expanded = dec_keys;
+                job->enc_keys = enc_keys;
+                job->dec_keys = dec_keys;
                 job->iv_len_in_bytes = 0;
                 break;
         case IMB_CIPHER_ZUC_EEA3:
-                job->aes_enc_key_expanded = k2;
-                job->aes_dec_key_expanded = k2;
+                job->enc_keys = k2;
+                job->dec_keys = k2;
                 job->iv_len_in_bytes = 16;
                 break;
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
-                job->aes_enc_key_expanded = k2;
-                job->aes_dec_key_expanded = k2;
+                job->enc_keys = k2;
+                job->dec_keys = k2;
                 job->iv_len_in_bytes = 16;
                 job->cipher_start_src_offset_in_bits = 0;
                 job->msg_len_to_cipher_in_bits =
                         (job->msg_len_to_cipher_in_bytes * 8);
                 break;
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
-                job->aes_enc_key_expanded = k2;
-                job->aes_dec_key_expanded = k2;
+                job->enc_keys = k2;
+                job->dec_keys = k2;
                 job->iv_len_in_bytes = 8;
                 job->cipher_start_src_offset_in_bits = 0;
                 job->msg_len_to_cipher_in_bits =

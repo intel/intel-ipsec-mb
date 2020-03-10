@@ -191,7 +191,7 @@ SUBMIT_JOB_AES_ENC:
         mov     [state + _aes_args_in + lane*8], tmp
 
         ;; Insert expanded keys
-        mov     tmp, [job + _aes_enc_key_expanded]
+        mov     tmp, [job + _enc_keys]
         INSERT_KEYS tmp, lane, NUM_KEYS, tmp2, zmm4, tmp3
 
         ;; Update output pointer

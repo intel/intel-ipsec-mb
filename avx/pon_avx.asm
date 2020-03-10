@@ -912,7 +912,7 @@ section .text
 
 %ifidn %%CIPH, CTR
         ;; get key pointers
-        mov     p_keys, [job + _aes_enc_key_expanded]
+        mov     p_keys, [job + _enc_keys]
 %endif
 
         ;; initial CRC value

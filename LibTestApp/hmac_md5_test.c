@@ -429,12 +429,12 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
 
         for (i = 0; i < num_jobs; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
-                job->aes_enc_key_expanded = NULL;
-                job->aes_dec_key_expanded = NULL;
+                job->enc_keys = NULL;
+                job->dec_keys = NULL;
                 job->cipher_direction = IMB_DIR_ENCRYPT;
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->dst = NULL;
-                job->aes_key_len_in_bytes = 0;
+                job->key_len_in_bytes = 0;
                 job->auth_tag_output = auths[i] + sizeof(padding);
                 job->auth_tag_output_len_in_bytes = vec->digest_len;
                 job->iv = NULL;

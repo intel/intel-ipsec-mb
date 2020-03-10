@@ -306,7 +306,7 @@ section .text
         add     p_in, [job + _cipher_start_src_offset_in_bytes]
         mov     p_ivlen, [job + _iv_len_in_bytes]
         mov	num_bytes, [job + _msg_len_to_cipher_in_bytes]
-        mov     p_keys, [job + _aes_enc_key_expanded]
+        mov     p_keys, [job + _enc_keys]
         mov     p_out, [job + _dst]
 
 	movdqa	xbyteswap, [rel byteswap_const]

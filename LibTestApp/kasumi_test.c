@@ -178,8 +178,8 @@ submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
                 job->dst = dst[i];
                 job->iv = (void *)ivs[i];
                 job->iv_len_in_bytes = 8;
-                job->aes_enc_key_expanded = (uint8_t *)keys[i];
-                job->aes_key_len_in_bytes = 16;
+                job->enc_keys = (uint8_t *)keys[i];
+                job->key_len_in_bytes = 16;
 
                 job->cipher_start_src_offset_in_bits = bit_offsets[i];
                 job->msg_len_to_cipher_in_bits = bitlens[i];

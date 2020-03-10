@@ -328,8 +328,8 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 job->dst = dst[i];
                 job->iv = ivs[i];
                 job->iv_len_in_bytes = 16;
-                job->aes_enc_key_expanded = keys[i];
-                job->aes_key_len_in_bytes = 16;
+                job->enc_keys = keys[i];
+                job->key_len_in_bytes = 16;
 
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = lens[i];

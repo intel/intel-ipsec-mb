@@ -125,7 +125,7 @@ SUBMIT_JOB_ZUC_EEA3:
         mov     tmp, [job + _src]
         add     tmp, [job + _cipher_start_src_offset_in_bytes]
         mov     [state + _zuc_args_in + lane*8], tmp
-        mov     tmp, [job + _aes_enc_key_expanded]
+        mov     tmp, [job + _enc_keys]
         mov     [state + _zuc_args_keys + lane*8], tmp
         mov     tmp, [job + _dst]
         mov     [state + _zuc_args_out + lane*8], tmp

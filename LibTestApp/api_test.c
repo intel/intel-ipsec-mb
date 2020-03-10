@@ -152,17 +152,17 @@ fill_in_job(struct IMB_JOB *job,
         switch (job->cipher_mode) {
         case IMB_CIPHER_CBC:
                 if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                        job->aes_enc_key_expanded = dust_bin;
+                        job->enc_keys = dust_bin;
                 else
-                        job->aes_dec_key_expanded = dust_bin;
-                job->aes_key_len_in_bytes = UINT64_C(16);
+                        job->dec_keys = dust_bin;
+                job->key_len_in_bytes = UINT64_C(16);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
         case IMB_CIPHER_CNTR:
-                job->aes_enc_key_expanded = dust_bin;
-                job->aes_key_len_in_bytes = UINT64_C(16);
+                job->enc_keys = dust_bin;
+                job->key_len_in_bytes = UINT64_C(16);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(16);
@@ -171,20 +171,20 @@ fill_in_job(struct IMB_JOB *job,
                 break;
         case IMB_CIPHER_DOCSIS_SEC_BPI:
                 /* it has to be set regardless of direction (AES-CFB) */
-                job->aes_enc_key_expanded = dust_bin;
+                job->enc_keys = dust_bin;
                 if (job->cipher_direction == IMB_DIR_DECRYPT)
-                        job->aes_dec_key_expanded = dust_bin;
-                job->aes_key_len_in_bytes = UINT64_C(16);
+                        job->dec_keys = dust_bin;
+                job->key_len_in_bytes = UINT64_C(16);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
         case IMB_CIPHER_GCM:
                 if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                        job->aes_enc_key_expanded = dust_bin;
+                        job->enc_keys = dust_bin;
                 else
-                        job->aes_dec_key_expanded = dust_bin;
-                job->aes_key_len_in_bytes = UINT64_C(16);
+                        job->dec_keys = dust_bin;
+                job->key_len_in_bytes = UINT64_C(16);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(12);
@@ -194,38 +194,38 @@ fill_in_job(struct IMB_JOB *job,
                 break;
         case IMB_CIPHER_DES:
                 if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                        job->aes_enc_key_expanded = dust_bin;
+                        job->enc_keys = dust_bin;
                 else
-                        job->aes_dec_key_expanded = dust_bin;
-                job->aes_key_len_in_bytes = UINT64_C(8);
+                        job->dec_keys = dust_bin;
+                job->key_len_in_bytes = UINT64_C(8);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(8);
                 break;
         case IMB_CIPHER_DOCSIS_DES:
                 if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                        job->aes_enc_key_expanded = dust_bin;
+                        job->enc_keys = dust_bin;
                 else
-                        job->aes_dec_key_expanded = dust_bin;
-                job->aes_key_len_in_bytes = UINT64_C(8);
+                        job->dec_keys = dust_bin;
+                job->key_len_in_bytes = UINT64_C(8);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(8);
                 break;
         case IMB_CIPHER_CCM:
                 /* AES-CTR and CBC-MAC use only encryption keys */
-                job->aes_enc_key_expanded = dust_bin;
-                job->aes_key_len_in_bytes = UINT64_C(16);
+                job->enc_keys = dust_bin;
+                job->key_len_in_bytes = UINT64_C(16);
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(13);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 break;
         case IMB_CIPHER_DES3:
                 if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                        job->aes_enc_key_expanded = dust_keys;
+                        job->enc_keys = dust_keys;
                 else
-                        job->aes_dec_key_expanded = dust_keys;
-                job->aes_key_len_in_bytes = UINT64_C(24);
+                        job->dec_keys = dust_keys;
+                job->key_len_in_bytes = UINT64_C(24);
                 job->msg_len_to_cipher_in_bytes = msg_len_to_cipher;
                 job->iv = dust_bin;
                 job->iv_len_in_bytes = UINT64_C(8);
@@ -539,7 +539,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_DOCSIS_DES:
                         case IMB_CIPHER_CCM:
                         case IMB_CIPHER_DES3:
-                                template_job.aes_enc_key_expanded = NULL;
+                                template_job.enc_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        203))
                                         return 1;
@@ -568,26 +568,26 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_DES:
                         case IMB_CIPHER_DES3:
                         case IMB_CIPHER_DOCSIS_DES:
-                                template_job.aes_dec_key_expanded = NULL;
+                                template_job.dec_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        204))
                                         return 1;
                                 break;
                         case IMB_CIPHER_CNTR:
                         case IMB_CIPHER_CCM:
-                                template_job.aes_enc_key_expanded = NULL;
+                                template_job.enc_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        204))
                                         return 1;
                                 break;
                         case IMB_CIPHER_DOCSIS_SEC_BPI:
-                                template_job.aes_enc_key_expanded = NULL;
+                                template_job.enc_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        204))
                                         return 1;
-                                template_job.aes_enc_key_expanded =
-                                        template_job.aes_dec_key_expanded;
-                                template_job.aes_dec_key_expanded = NULL;
+                                template_job.enc_keys =
+                                        template_job.dec_keys;
+                                template_job.dec_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        204))
                                         return 1;

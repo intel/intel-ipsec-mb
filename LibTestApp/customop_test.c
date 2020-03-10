@@ -224,9 +224,9 @@ customop_test(struct IMB_MGR *mgr)
                 job->cipher_func = cipher_addon;
                 job->hash_func = hash_addon;
 
-                job->aes_enc_key_expanded = node->enc_key;
-                job->aes_dec_key_expanded = node->dec_key;
-                job->aes_key_len_in_bytes = node->cipher->key_len;
+                job->enc_keys = node->enc_key;
+                job->dec_keys = node->dec_key;
+                job->key_len_in_bytes = node->cipher->key_len;
                 job->src = node->txt;
                 job->dst = node->txt;
                 job->cipher_start_src_offset_in_bytes = 16;
@@ -269,9 +269,9 @@ customop_test(struct IMB_MGR *mgr)
                 job->cipher_func = cipher_addon;
                 job->hash_func = hash_addon;
 
-                job->aes_enc_key_expanded = node->enc_key;
-                job->aes_dec_key_expanded = node->dec_key;
-                job->aes_key_len_in_bytes = node->cipher->key_len;
+                job->enc_keys = node->enc_key;
+                job->dec_keys = node->dec_key;
+                job->key_len_in_bytes = node->cipher->key_len;
                 job->src = node->txt;
                 job->dst = node->txt;
                 job->cipher_start_src_offset_in_bytes = 16;

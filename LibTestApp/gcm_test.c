@@ -1360,9 +1360,9 @@ aes_gcm_job(IMB_MGR *mb_mgr,
         job->cipher_mode                      = IMB_CIPHER_GCM;
         job->hash_alg                         = IMB_AUTH_AES_GMAC;
         job->chain_order                      = order;
-        job->aes_enc_key_expanded             = key;
-        job->aes_dec_key_expanded             = key;
-        job->aes_key_len_in_bytes             = key_len;
+        job->enc_keys             = key;
+        job->dec_keys             = key;
+        job->key_len_in_bytes             = key_len;
         job->src                              = in;
         job->dst                              = out;
         job->msg_len_to_cipher_in_bytes       = len;

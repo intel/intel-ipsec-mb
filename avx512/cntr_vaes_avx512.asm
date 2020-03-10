@@ -1183,7 +1183,7 @@ default rel
         mov             %%PLAIN_CYPH_IN, [%%JOB + _src]
         add             %%PLAIN_CYPH_IN, [%%JOB + _cipher_start_src_offset_in_bytes]
         mov             %%CYPH_PLAIN_OUT, [%%JOB + _dst]
-        mov             %%KEY, [%%JOB + _aes_enc_key_expanded]
+        mov             %%KEY, [%%JOB + _enc_keys]
 
         ;; Prepare round keys (only first 10, due to lack of registers)
 %assign i 0

@@ -247,8 +247,8 @@ submit_job_aes_gcm_dec_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
 
-        if (16 == job->aes_key_len_in_bytes) {
-                AES_GCM_DEC_IV_128(job->aes_dec_key_expanded,
+        if (16 == job->key_len_in_bytes) {
+                AES_GCM_DEC_IV_128(job->dec_keys,
                                    &ctx, job->dst,
                                    job->src +
                                    job->cipher_start_src_offset_in_bytes,
@@ -258,8 +258,8 @@ submit_job_aes_gcm_dec_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
                                    job->u.GCM.aad_len_in_bytes,
                                    job->auth_tag_output,
                                    job->auth_tag_output_len_in_bytes);
-        } else if (24 == job->aes_key_len_in_bytes) {
-                AES_GCM_DEC_IV_192(job->aes_dec_key_expanded,
+        } else if (24 == job->key_len_in_bytes) {
+                AES_GCM_DEC_IV_192(job->dec_keys,
                                    &ctx, job->dst,
                                    job->src +
                                    job->cipher_start_src_offset_in_bytes,
@@ -270,7 +270,7 @@ submit_job_aes_gcm_dec_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
                                    job->auth_tag_output,
                                    job->auth_tag_output_len_in_bytes);
         } else { /* assume 32 bytes */
-                AES_GCM_DEC_IV_256(job->aes_dec_key_expanded,
+                AES_GCM_DEC_IV_256(job->dec_keys,
                                    &ctx, job->dst,
                                    job->src +
                                    job->cipher_start_src_offset_in_bytes,
@@ -300,8 +300,8 @@ submit_job_aes_gcm_enc_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
 
-        if (16 == job->aes_key_len_in_bytes) {
-                AES_GCM_ENC_IV_128(job->aes_enc_key_expanded,
+        if (16 == job->key_len_in_bytes) {
+                AES_GCM_ENC_IV_128(job->enc_keys,
                                    &ctx, job->dst,
                                    job->src +
                                    job->cipher_start_src_offset_in_bytes,
@@ -311,8 +311,8 @@ submit_job_aes_gcm_enc_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
                                    job->u.GCM.aad_len_in_bytes,
                                    job->auth_tag_output,
                                    job->auth_tag_output_len_in_bytes);
-        } else if (24 == job->aes_key_len_in_bytes) {
-                AES_GCM_ENC_IV_192(job->aes_enc_key_expanded,
+        } else if (24 == job->key_len_in_bytes) {
+                AES_GCM_ENC_IV_192(job->enc_keys,
                                    &ctx, job->dst,
                                    job->src +
                                    job->cipher_start_src_offset_in_bytes,
@@ -323,7 +323,7 @@ submit_job_aes_gcm_enc_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
                                    job->auth_tag_output,
                                    job->auth_tag_output_len_in_bytes);
         } else { /* assume 32 bytes */
-                AES_GCM_ENC_IV_256(job->aes_enc_key_expanded,
+                AES_GCM_ENC_IV_256(job->enc_keys,
                                    &ctx, job->dst,
                                    job->src +
                                    job->cipher_start_src_offset_in_bytes,
@@ -350,24 +350,24 @@ flush_job_aes_gcm_enc_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
 IMB_DLL_LOCAL IMB_JOB *
 submit_job_aes_cntr_sse_no_aesni(IMB_JOB *job)
 {
-        if (16 == job->aes_key_len_in_bytes)
+        if (16 == job->key_len_in_bytes)
                 AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
                              job->iv,
-                             job->aes_enc_key_expanded,
+                             job->enc_keys,
                              job->dst,
                              job->msg_len_to_cipher_in_bytes,
                              job->iv_len_in_bytes);
-        else if (24 == job->aes_key_len_in_bytes)
+        else if (24 == job->key_len_in_bytes)
                 AES_CNTR_192(job->src + job->cipher_start_src_offset_in_bytes,
                              job->iv,
-                             job->aes_enc_key_expanded,
+                             job->enc_keys,
                              job->dst,
                              job->msg_len_to_cipher_in_bytes,
                              job->iv_len_in_bytes);
         else /* assume 32 bytes */
                 AES_CNTR_256(job->src + job->cipher_start_src_offset_in_bytes,
                              job->iv,
-                             job->aes_enc_key_expanded,
+                             job->enc_keys,
                              job->dst,
                              job->msg_len_to_cipher_in_bytes,
                              job->iv_len_in_bytes);
@@ -381,24 +381,24 @@ submit_job_aes_cntr_bit_sse_no_aesni(IMB_JOB *job)
 {
         const uint64_t offset = job->cipher_start_src_offset_in_bytes;
 
-        if (16 == job->aes_key_len_in_bytes)
+        if (16 == job->key_len_in_bytes)
                 aes_cntr_bit_128_sse_no_aesni(job->src + offset,
                                               job->iv,
-                                              job->aes_enc_key_expanded,
+                                              job->enc_keys,
                                               job->dst,
                                               job->msg_len_to_cipher_in_bits,
                                               job->iv_len_in_bytes);
-        else if (24 == job->aes_key_len_in_bytes)
+        else if (24 == job->key_len_in_bytes)
                 aes_cntr_bit_192_sse_no_aesni(job->src + offset,
                                               job->iv,
-                                              job->aes_enc_key_expanded,
+                                              job->enc_keys,
                                               job->dst,
                                               job->msg_len_to_cipher_in_bits,
                                               job->iv_len_in_bytes);
         else /* assume 32 bytes */
                 aes_cntr_bit_256_sse_no_aesni(job->src + offset,
                                               job->iv,
-                                              job->aes_enc_key_expanded,
+                                              job->enc_keys,
                                               job->dst,
                                               job->msg_len_to_cipher_in_bits,
                                               job->iv_len_in_bytes);

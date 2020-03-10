@@ -1156,7 +1156,7 @@ section .text
 	add             %%tmp, [%%JOB + _cipher_start_src_offset_in_bytes]
 	vmovdqu         xmm0, [%%iv]
 	mov             [%%STATE + _aes_args_in + %%lane*8], %%tmp
-	mov             %%tmp, [%%JOB + _aes_enc_key_expanded]
+	mov             %%tmp, [%%JOB + _enc_keys]
 	mov             [%%STATE + _aes_args_keys + %%lane*8], %%tmp
 	mov             %%tmp, [%%JOB + _dst]
 	mov             [%%STATE + _aes_args_out + %%lane*8], %%tmp
@@ -1386,7 +1386,7 @@ APPEND(%%_skip_,I):
         ;; AES128/256-CFB on the partial block
         mov             %%GT4, [%%STATE + _aes_args_in + %%idx*8]
         mov             %%GT5, [%%STATE + _aes_args_out + %%idx*8]
-        mov             %%GT6, [%%job_rax + _aes_enc_key_expanded]
+        mov             %%GT6, [%%job_rax + _enc_keys]
         shl             %%idx, 1
         vmovdqa64       xmm2, [%%STATE + _aes_args_IV + %%idx*8]
         shr             %%idx, 1

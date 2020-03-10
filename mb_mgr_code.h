@@ -75,7 +75,7 @@ SUBMIT_JOB_AES128_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
-                        job->aes_dec_key_expanded,
+                        job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
@@ -88,7 +88,7 @@ SUBMIT_JOB_AES192_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
-                        job->aes_dec_key_expanded,
+                        job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes);
         job->status |= STS_COMPLETED_AES;
@@ -101,7 +101,7 @@ SUBMIT_JOB_AES256_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
-                        job->aes_dec_key_expanded,
+                        job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
@@ -113,7 +113,7 @@ IMB_JOB *
 SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_128(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->aes_enc_key_expanded,
+                        job->enc_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
@@ -125,7 +125,7 @@ IMB_JOB *
 SUBMIT_JOB_AES_ECB_192_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_192(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->aes_enc_key_expanded,
+                        job->enc_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
@@ -137,7 +137,7 @@ IMB_JOB *
 SUBMIT_JOB_AES_ECB_256_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_256(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->aes_enc_key_expanded,
+                        job->enc_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
@@ -149,7 +149,7 @@ IMB_JOB *
 SUBMIT_JOB_AES_ECB_128_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->aes_dec_key_expanded,
+                        job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
@@ -161,7 +161,7 @@ IMB_JOB *
 SUBMIT_JOB_AES_ECB_192_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->aes_dec_key_expanded,
+                        job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
@@ -173,7 +173,7 @@ IMB_JOB *
 SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
-                        job->aes_dec_key_expanded,
+                        job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
         job->status |= STS_COMPLETED_AES;
@@ -248,7 +248,7 @@ __forceinline
 IMB_JOB *
 submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
 {
-        const snow3g_key_schedule_t *key = job->aes_enc_key_expanded;
+        const snow3g_key_schedule_t *key = job->enc_keys;
         const uint32_t msg_bitlen =
                         (const uint32_t)job->msg_len_to_cipher_in_bits;
         const uint32_t msg_bitoff =
@@ -276,7 +276,7 @@ __forceinline
 IMB_JOB *
 submit_kasumi_uea1_job(IMB_MGR *state, IMB_JOB *job)
 {
-        const kasumi_key_sched_t *key = job->aes_enc_key_expanded;
+        const kasumi_key_sched_t *key = job->enc_keys;
         const uint64_t iv = *(const uint64_t *)job->iv;
         const uint32_t msg_bitlen =
                         (const uint32_t)job->msg_len_to_cipher_in_bits;
@@ -306,7 +306,7 @@ __forceinline
 IMB_JOB *
 submit_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
 {
-        if (16 == job->aes_key_len_in_bytes) {
+        if (16 == job->key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 &state->docsis128_crc32_sec_ooo;
@@ -337,7 +337,7 @@ __forceinline
 IMB_JOB *
 flush_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
 {
-        if (16 == job->aes_key_len_in_bytes) {
+        if (16 == job->key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 &state->docsis128_crc32_sec_ooo;
@@ -368,7 +368,7 @@ __forceinline
 IMB_JOB *
 submit_docsis_dec_job(IMB_MGR *state, IMB_JOB *job)
 {
-        if (16 == job->aes_key_len_in_bytes) {
+        if (16 == job->key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
                                 &state->docsis128_crc32_sec_ooo;
@@ -403,9 +403,9 @@ IMB_JOB *
 SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_CBC == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
+                if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES128_ENC(&state->aes128_ooo, job);
-                } else if (24 == job->aes_key_len_in_bytes) {
+                } else if (24 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES192_ENC(&state->aes192_ooo, job);
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_ENC(&state->aes256_ooo, job);
@@ -415,9 +415,9 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         } else if (IMB_CIPHER_CNTR_BITLEN == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR_BIT(job);
         } else if (IMB_CIPHER_ECB == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
+                if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_128_ENC(job);
-                } else if (24 == job->aes_key_len_in_bytes) {
+                } else if (24 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_192_ENC(job);
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES_ECB_256_ENC(job);
@@ -471,9 +471,9 @@ IMB_JOB *
 FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_CBC == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
+                if (16 == job->key_len_in_bytes) {
                         return FLUSH_JOB_AES128_ENC(&state->aes128_ooo);
-                } else if (24 == job->aes_key_len_in_bytes) {
+                } else if (24 == job->key_len_in_bytes) {
                         return FLUSH_JOB_AES192_ENC(&state->aes192_ooo);
                 } else  { /* assume 32 */
                         return FLUSH_JOB_AES256_ENC(&state->aes256_ooo);
@@ -510,9 +510,9 @@ IMB_JOB *
 SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_CBC == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
+                if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES128_DEC(job);
-                } else if (24 == job->aes_key_len_in_bytes) {
+                } else if (24 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES192_DEC(job);
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_DEC(job);
@@ -522,9 +522,9 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
         } else if (IMB_CIPHER_CNTR_BITLEN == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR_BIT(job);
         } else if (IMB_CIPHER_ECB == job->cipher_mode) {
-                if (16 == job->aes_key_len_in_bytes) {
+                if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_128_DEC(job);
-                } else if (24 == job->aes_key_len_in_bytes) {
+                } else if (24 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES_ECB_192_DEC(job);
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES_ECB_256_DEC(job);
@@ -849,18 +849,18 @@ is_job_invalid(const IMB_JOB *job)
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_ENCRYPT &&
-                    job->aes_enc_key_expanded == NULL) {
+                    job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
-                    job->aes_dec_key_expanded == NULL) {
+                    job->dec_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(16) &&
-                    job->aes_key_len_in_bytes != UINT64_C(24) &&
-                    job->aes_key_len_in_bytes != UINT64_C(32)) {
+                if (job->key_len_in_bytes != UINT64_C(16) &&
+                    job->key_len_in_bytes != UINT64_C(24) &&
+                    job->key_len_in_bytes != UINT64_C(32)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -886,13 +886,13 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_enc_key_expanded == NULL) {
+                if (job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(16) &&
-                    job->aes_key_len_in_bytes != UINT64_C(24) &&
-                    job->aes_key_len_in_bytes != UINT64_C(32)) {
+                if (job->key_len_in_bytes != UINT64_C(16) &&
+                    job->key_len_in_bytes != UINT64_C(24) &&
+                    job->key_len_in_bytes != UINT64_C(32)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -923,13 +923,13 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_enc_key_expanded == NULL) {
+                if (job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(16) &&
-                    job->aes_key_len_in_bytes != UINT64_C(24) &&
-                    job->aes_key_len_in_bytes != UINT64_C(32)) {
+                if (job->key_len_in_bytes != UINT64_C(16) &&
+                    job->key_len_in_bytes != UINT64_C(24) &&
+                    job->key_len_in_bytes != UINT64_C(32)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -968,18 +968,18 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_enc_key_expanded == NULL) {
+                if (job->enc_keys == NULL) {
                         /* it has to be set regardless of direction (AES-CFB) */
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
-                    job->aes_dec_key_expanded == NULL) {
+                    job->dec_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if ((job->aes_key_len_in_bytes != UINT64_C(16)) &&
-                    (job->aes_key_len_in_bytes != UINT64_C(32))) {
+                if ((job->key_len_in_bytes != UINT64_C(16)) &&
+                    (job->key_len_in_bytes != UINT64_C(32))) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1003,18 +1003,18 @@ is_job_invalid(const IMB_JOB *job)
                 }
                 /* Same key structure used for encrypt and decrypt */
                 if (job->cipher_direction == IMB_DIR_ENCRYPT &&
-                    job->aes_enc_key_expanded == NULL) {
+                    job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
-                    job->aes_dec_key_expanded == NULL) {
+                    job->dec_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(16) &&
-                    job->aes_key_len_in_bytes != UINT64_C(24) &&
-                    job->aes_key_len_in_bytes != UINT64_C(32)) {
+                if (job->key_len_in_bytes != UINT64_C(16) &&
+                    job->key_len_in_bytes != UINT64_C(24) &&
+                    job->key_len_in_bytes != UINT64_C(32)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1048,16 +1048,16 @@ is_job_invalid(const IMB_JOB *job)
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_ENCRYPT &&
-                    job->aes_enc_key_expanded == NULL) {
+                    job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
-                    job->aes_dec_key_expanded == NULL) {
+                    job->dec_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(8)) {
+                if (job->key_len_in_bytes != UINT64_C(8)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1088,16 +1088,16 @@ is_job_invalid(const IMB_JOB *job)
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_ENCRYPT &&
-                    job->aes_enc_key_expanded == NULL) {
+                    job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
-                    job->aes_dec_key_expanded == NULL) {
+                    job->dec_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(8)) {
+                if (job->key_len_in_bytes != UINT64_C(8)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1127,13 +1127,13 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_enc_key_expanded == NULL) {
+                if (job->enc_keys == NULL) {
                         /* AES-CTR and CBC-MAC use only encryption keys */
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 /* currently only AES-CCM-128 is supported */
-                if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                if (job->key_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1166,7 +1166,7 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(24)) {
+                if (job->key_len_in_bytes != UINT64_C(24)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1184,7 +1184,7 @@ is_job_invalid(const IMB_JOB *job)
                 }
                 if (job->cipher_direction == IMB_DIR_ENCRYPT) {
                         const void * const *ks_ptr =
-                                (const void * const *)job->aes_enc_key_expanded;
+                                (const void * const *)job->enc_keys;
 
                         if (ks_ptr == NULL) {
                                 INVALID_PRN("cipher_mode:%d\n",
@@ -1199,7 +1199,7 @@ is_job_invalid(const IMB_JOB *job)
                         }
                 } else {
                         const void * const *ks_ptr =
-                                (const void * const *)job->aes_dec_key_expanded;
+                                (const void * const *)job->dec_keys;
 
                         if (ks_ptr == NULL) {
                                 INVALID_PRN("cipher_mode:%d\n",
@@ -1267,7 +1267,7 @@ is_job_invalid(const IMB_JOB *job)
                                 return 1;
                         }
 
-                        if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                        if (job->key_len_in_bytes != UINT64_C(16)) {
                                 INVALID_PRN("cipher_mode:%d\n",
                                             job->cipher_mode);
                                 return 1;
@@ -1292,11 +1292,11 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_enc_key_expanded == NULL) {
+                if (job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                if (job->key_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1323,11 +1323,11 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_enc_key_expanded == NULL) {
+                if (job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                if (job->key_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1354,11 +1354,11 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_enc_key_expanded == NULL) {
+                if (job->enc_keys == NULL) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
-                if (job->aes_key_len_in_bytes != UINT64_C(16)) {
+                if (job->key_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }

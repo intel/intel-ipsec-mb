@@ -1306,9 +1306,9 @@ test_ctr(struct IMB_MGR *mb_mgr,
         job->dst = target + 16;
         job->src = in_text;
         job->cipher_mode = alg;
-        job->aes_enc_key_expanded = expkey;
-        job->aes_dec_key_expanded = expkey;
-        job->aes_key_len_in_bytes = key_len;
+        job->enc_keys = expkey;
+        job->dec_keys = expkey;
+        job->key_len_in_bytes = key_len;
         job->iv = iv;
         job->iv_len_in_bytes = iv_len;
         job->cipher_start_src_offset_in_bytes = 0;

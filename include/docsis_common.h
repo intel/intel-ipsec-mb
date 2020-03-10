@@ -122,12 +122,12 @@ DOCSIS_LAST_BLOCK(IMB_JOB *job, const uint64_t key_size)
                 AES_CFB_128_ONE(job->dst + offset,
                             job->src + job->cipher_start_src_offset_in_bytes +
                             offset,
-                            iv, job->aes_enc_key_expanded, partial_bytes);
+                            iv, job->enc_keys, partial_bytes);
         else /* 32 */
                 AES_CFB_256_ONE(job->dst + offset,
                             job->src + job->cipher_start_src_offset_in_bytes +
                             offset,
-                            iv, job->aes_enc_key_expanded, partial_bytes);
+                            iv, job->enc_keys, partial_bytes);
 
         return job;
 }
@@ -150,12 +150,12 @@ DOCSIS_FIRST_BLOCK(IMB_JOB *job, const uint64_t key_size)
         if (key_size == 16)
                 AES_CFB_128_ONE(job->dst,
                             job->src + job->cipher_start_src_offset_in_bytes,
-                            job->iv, job->aes_enc_key_expanded,
+                            job->iv, job->enc_keys,
                             job->msg_len_to_cipher_in_bytes);
         else /* 32 */
                 AES_CFB_256_ONE(job->dst,
                             job->src + job->cipher_start_src_offset_in_bytes,
-                            job->iv, job->aes_enc_key_expanded,
+                            job->iv, job->enc_keys,
                             job->msg_len_to_cipher_in_bytes);
 
         job->status |= STS_COMPLETED_AES;
@@ -421,7 +421,7 @@ DOCSIS_DES_ENC(IMB_JOB *job)
         docsis_des_enc_basic(job->src + job->cipher_start_src_offset_in_bytes,
                              job->dst,
                              (int) job->msg_len_to_cipher_in_bytes,
-                             job->aes_enc_key_expanded,
+                             job->enc_keys,
                              (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;
@@ -441,7 +441,7 @@ DOCSIS_DES_DEC(IMB_JOB *job)
         docsis_des_dec_basic(job->src + job->cipher_start_src_offset_in_bytes,
                              job->dst,
                              (int) job->msg_len_to_cipher_in_bytes,
-                             job->aes_dec_key_expanded,
+                             job->dec_keys,
                              (const uint64_t *)job->iv);
         job->status |= STS_COMPLETED_AES;
         return job;

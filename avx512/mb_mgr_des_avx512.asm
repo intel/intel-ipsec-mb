@@ -120,9 +120,9 @@ extern des3_x16_cbc_dec_avx512
         mov     [STATE + _des_job_in_lane + LANE*8], JOB
         ;; - key schedule
 %ifidn %%ENC_DEC, ENC
-        mov     IA2, [JOB + _aes_enc_key_expanded]
+        mov     IA2, [JOB + _enc_keys]
 %else
-        mov     IA2, [JOB + _aes_dec_key_expanded]
+        mov     IA2, [JOB + _dec_keys]
 %endif
         mov     [STATE + _des_args_keys + LANE*8], IA2
         ;; - IV
