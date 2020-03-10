@@ -1762,7 +1762,7 @@ struct docsis_crc_vector docsis_crc_tab[] = {
 };
 
 static int
-aes_job_ok(const struct JOB_AES_HMAC *job,
+aes_job_ok(const struct IMB_JOB *job,
            const uint8_t *out_text,
            const uint8_t *target,
            const uint8_t *padding,
@@ -1809,7 +1809,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
               const int key_len,
               const int num_jobs)
 {
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int i, jobs_rx = 0, ret = -1;
@@ -1979,7 +1979,7 @@ test_aes_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
 }
 
 static int
-docrc_job_ok(const struct JOB_AES_HMAC *job,
+docrc_job_ok(const struct IMB_JOB *job,
              const struct docsis_crc_vector *p_vec,
              const uint8_t *target,
              const uint8_t *padding,
@@ -2046,7 +2046,7 @@ test_docrc_many(struct IMB_MGR *mb_mgr,
         const uint64_t key_len = p_vec->key_len;
         const unsigned tag_len = 4;
         const unsigned frame_len = (unsigned) p_vec->frame_len;
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         uint32_t *auths = malloc(num_jobs * sizeof(uint32_t));

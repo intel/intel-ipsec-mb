@@ -1277,7 +1277,7 @@ test_ctr(struct IMB_MGR *mb_mgr,
          const JOB_CIPHER_MODE alg)
 {
         uint32_t text_byte_len;
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t *target;
         int ret = -1;

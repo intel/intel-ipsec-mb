@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 
 %include "include/reg_sizes.asm"
@@ -80,7 +80,7 @@ section .text
 
 %define APPEND(a,b) a %+ b
 
-; JOB* SUBMIT_JOB_ZUC_EEA3(MB_MGR_ZUC_OOO *state, JOB_AES_HMAC *job)
+; JOB* SUBMIT_JOB_ZUC_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC_EEA3,function,internal)
@@ -367,7 +367,7 @@ return_null_flush_eea3:
         xor     job_rax, job_rax
         jmp     return_flush_eea3
 
-; JOB* SUBMIT_JOB_ZUC_EIA3(MB_MGR_ZUC_OOO *state, JOB_AES_HMAC *job)
+; JOB* SUBMIT_JOB_ZUC_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC_EIA3,function,internal)

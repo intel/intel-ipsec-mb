@@ -91,8 +91,8 @@ IMB_DLL_LOCAL void aes_cfb_256_one_avx512(void *out, const void *in,
  * @return It always returns value passed in \a job
  */
 __forceinline
-JOB_AES_HMAC *
-DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job, const uint64_t key_size)
+IMB_JOB *
+DOCSIS_LAST_BLOCK(IMB_JOB *job, const uint64_t key_size)
 {
         const void *iv = NULL;
         uint64_t offset = 0;
@@ -142,8 +142,8 @@ DOCSIS_LAST_BLOCK(JOB_AES_HMAC *job, const uint64_t key_size)
  * @return It always returns value passed in \a job
  */
 __forceinline
-JOB_AES_HMAC *
-DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job, const uint64_t key_size)
+IMB_JOB *
+DOCSIS_FIRST_BLOCK(IMB_JOB *job, const uint64_t key_size)
 {
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         IMB_ASSERT(job->msg_len_to_cipher_in_bytes <= AES_BLOCK_SIZE);
@@ -171,11 +171,11 @@ DOCSIS_FIRST_BLOCK(JOB_AES_HMAC *job, const uint64_t key_size)
  * @return Pointer to completed JOB or NULL
  */
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+IMB_JOB *
+SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
                           const uint64_t key_size)
 {
-        JOB_AES_HMAC *tmp;
+        IMB_JOB *tmp;
 
         if (key_size == 16) {
                 if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
@@ -197,15 +197,15 @@ SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS128_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_DOCSIS128_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job, 16);
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS256_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_DOCSIS256_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_DOCSIS_SEC_ENC(state, job, 32);
 }
@@ -218,10 +218,10 @@ SUBMIT_JOB_DOCSIS256_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
  * @return Pointer to completed JOB or NULL
  */
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, const uint64_t key_size)
 {
-        JOB_AES_HMAC *tmp;
+        IMB_JOB *tmp;
 
         if (key_size == 16) {
                 tmp = FLUSH_JOB_AES128_ENC((MB_MGR_AES_OOO *)state);
@@ -235,13 +235,13 @@ FLUSH_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, const uint64_t key_size)
 }
 
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 FLUSH_JOB_DOCSIS128_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
 {
         return FLUSH_JOB_DOCSIS_SEC_ENC(state, 16);
 }
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 FLUSH_JOB_DOCSIS256_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
 {
         return FLUSH_JOB_DOCSIS_SEC_ENC(state, 32);
@@ -256,8 +256,8 @@ FLUSH_JOB_DOCSIS256_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
  * @return Pointer to completed JOB or NULL
  */
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+IMB_JOB *
+SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
                           const uint64_t key_size)
 {
         (void) state;
@@ -278,22 +278,22 @@ SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS128_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_DOCSIS128_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job, 16);
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS256_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_DOCSIS256_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job)
 {
         return SUBMIT_JOB_DOCSIS_SEC_DEC(state, job, 32);
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+IMB_JOB *
+SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
                               const uint64_t key_size)
 {
         if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
@@ -312,24 +312,24 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
 
 #ifndef AVX512
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
-                                 JOB_AES_HMAC *job)
+                                 IMB_JOB *job)
 {
         return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(state, job, 16);
 }
 
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
-                                 JOB_AES_HMAC *job)
+                                 IMB_JOB *job)
 {
         return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(state, job, 32);
 }
 #endif
 
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
                              const uint64_t key_size)
 {
@@ -342,13 +342,13 @@ FLUSH_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state,
 
 #ifndef AVX512
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 FLUSH_JOB_DOCSIS128_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
 {
         return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(state, 16);
 }
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 FLUSH_JOB_DOCSIS256_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
 {
         return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(state, 32);
@@ -356,8 +356,8 @@ FLUSH_JOB_DOCSIS256_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state)
 #endif
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
+IMB_JOB *
+SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
                               const uint64_t key_size)
 {
         (void) state;
@@ -387,17 +387,17 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, JOB_AES_HMAC *job,
 
 #ifndef AVX512
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state,
-                                 JOB_AES_HMAC *job)
+                                 IMB_JOB *job)
 {
         return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(state, job, 16);
 }
 
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state,
-                                 JOB_AES_HMAC *job)
+                                 IMB_JOB *job)
 {
         return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(state, job, 32);
 }
@@ -414,8 +414,8 @@ SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state,
  * @return It always returns value passed in \a job
  */
 __forceinline
-JOB_AES_HMAC *
-DOCSIS_DES_ENC(JOB_AES_HMAC *job)
+IMB_JOB *
+DOCSIS_DES_ENC(IMB_JOB *job)
 {
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         docsis_des_enc_basic(job->src + job->cipher_start_src_offset_in_bytes,
@@ -434,8 +434,8 @@ DOCSIS_DES_ENC(JOB_AES_HMAC *job)
  * @return It always returns value passed in \a job
  */
 __forceinline
-JOB_AES_HMAC *
-DOCSIS_DES_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+DOCSIS_DES_DEC(IMB_JOB *job)
 {
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         docsis_des_dec_basic(job->src + job->cipher_start_src_offset_in_bytes,

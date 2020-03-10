@@ -34,7 +34,7 @@
 ;;
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
@@ -104,7 +104,7 @@ byteswap:
 section .text
 
 %ifdef SHA224
-; JOB* submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job)
+; JOB* submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(submit_job_hmac_sha_224_ni_sse,function,internal)
@@ -112,7 +112,7 @@ submit_job_hmac_sha_224_ni_sse:
 
 %else
 
-; JOB* submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, JOB_AES_HMAC *job)
+; JOB* submit_job_hmac_sha_256_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(submit_job_hmac_sha_256_ni_sse,function,internal)

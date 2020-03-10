@@ -118,7 +118,7 @@
 %include "include/gcm_keys_avx2_avx512.asm"
 
 %include "mb_mgr_datastruct.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "include/memcpy.asm"
 
 %ifndef GCM128_MODE

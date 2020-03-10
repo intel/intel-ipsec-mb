@@ -1760,7 +1760,7 @@ static const struct ccm_rfc3610_vector {
 
 static int
 ccm_job_ok(const struct ccm_rfc3610_vector *vec,
-           const struct JOB_AES_HMAC *job,
+           const struct IMB_JOB *job,
            const uint8_t *target,
            const uint8_t *padding,
            const uint8_t *auth,
@@ -1888,7 +1888,7 @@ test_ccm(struct IMB_MGR *mb_mgr,
 {
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
         DECLARE_ALIGNED(uint32_t dust[4*15], 16);
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         uint8_t **auths = malloc(num_jobs * sizeof(void *));

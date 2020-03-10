@@ -41,7 +41,7 @@
 ;; Clobbers ZMM0-31
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
@@ -115,7 +115,7 @@ _gpr_save:	resq	7
 _rsp_save:	resq	1
 endstruc
 
-; JOB* submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state, JOB_AES_HMAC *job)
+; JOB* submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state, IMB_JOB *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
 MKGLOBAL(submit_job_hmac_avx512,function,internal)

@@ -33,7 +33,7 @@
 ;; Clobbers ZMM0-31
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
@@ -104,7 +104,7 @@ _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
 
-; JOB* FUNC(MB_MGR_HMAC_sha_512_OOO *state, JOB_AES_HMAC *job)
+; JOB* FUNC(MB_MGR_HMAC_sha_512_OOO *state, IMB_JOB *job)
 ; arg 1 : rcx : state
 ; arg 2 : rdx : job
 align 64

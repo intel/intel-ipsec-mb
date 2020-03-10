@@ -1185,8 +1185,8 @@ static uint64_t
 do_test(IMB_MGR *mb_mgr, struct params_s *params,
         const uint32_t num_iter, uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
-        JOB_AES_HMAC *job;
-        JOB_AES_HMAC job_template;
+        IMB_JOB *job;
+        IMB_JOB job_template;
         uint32_t i;
         static uint32_t index = 0;
         static DECLARE_ALIGNED(imb_uint128_t iv, 16);

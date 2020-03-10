@@ -295,7 +295,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
               const int num_jobs)
 {
         const void *ks_ptr[3]; /* 3DES */
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int i, jobs_rx = 0, ret = -1;
@@ -436,7 +436,7 @@ test_des_one(struct IMB_MGR *mb_mgr,
              const int in_place)
 {
         const void *ks_ptr[3]; /* 3DES */
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t *target = malloc(text_len + (sizeof(padding) * 2));
         int ret = -1;

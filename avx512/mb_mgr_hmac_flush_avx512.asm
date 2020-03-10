@@ -41,7 +41,7 @@
 ;; Clobbers ZMM0-31
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 

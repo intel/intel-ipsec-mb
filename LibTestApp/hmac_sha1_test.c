@@ -306,7 +306,7 @@ static const struct hmac_sha1_rfc2202_vector {
 
 static int
 hmac_sha1_job_ok(const struct hmac_sha1_rfc2202_vector *vec,
-                 const struct JOB_AES_HMAC *job,
+                 const struct IMB_JOB *job,
                  const uint8_t *auth,
                  const uint8_t *padding,
                  const size_t sizeof_padding)
@@ -349,7 +349,7 @@ test_hmac_sha1(struct IMB_MGR *mb_mgr,
                const struct hmac_sha1_rfc2202_vector *vec,
                const int num_jobs)
 {
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         int i = 0, jobs_rx = 0, ret = -1;

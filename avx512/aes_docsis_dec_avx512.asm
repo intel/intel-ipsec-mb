@@ -26,7 +26,7 @@
 ;;
 %use smartalign
 
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "include/reg_sizes.asm"
 %include "include/os.asm"
 %include "include/clear_regs.asm"

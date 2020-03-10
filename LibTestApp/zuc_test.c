@@ -315,7 +315,7 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                  uint8_t **src, uint8_t **dst, const uint32_t *lens,
                  int dir, const unsigned int num_jobs)
 {
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
         unsigned int i;
         unsigned int jobs_rx = 0;
 
@@ -368,7 +368,7 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
                  uint8_t **src, uint8_t **tags, const uint32_t *lens,
                  const unsigned int num_jobs)
 {
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
         unsigned int i;
         unsigned int jobs_rx = 0;
 

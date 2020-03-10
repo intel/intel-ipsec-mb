@@ -31,7 +31,7 @@
 %use smartalign
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
@@ -1447,7 +1447,7 @@ APPEND(%%_skip_clear_,I):
 %endmacro
 
 ;; ===========================================================================
-;; JOB* SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+;; JOB* SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ;; arg 1 : state
 ;; arg 2 : job
 
@@ -1468,7 +1468,7 @@ submit_job_aes_docsis128_enc_crc32_avx512:
 	ret
 
 ;; ===========================================================================
-;; JOB* SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+;; JOB* SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ;; arg 1 : state
 ;; arg 2 : job
 

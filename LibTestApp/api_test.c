@@ -41,7 +41,7 @@ int api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 static int
 test_job_api(struct IMB_MGR *mb_mgr)
 {
-        struct JOB_AES_HMAC *job, *job_next;
+        struct IMB_JOB *job, *job_next;
 
 	printf("JOB API behavior test:\n");
 
@@ -99,7 +99,7 @@ test_job_api(struct IMB_MGR *mb_mgr)
 /*
  * @brief Dummy function for custom hash and cipher modes
  */
-static int dummy_cipher_hash_func(struct JOB_AES_HMAC *job)
+static int dummy_cipher_hash_func(struct IMB_JOB *job)
 {
         (void) job;
         return 0;
@@ -109,7 +109,7 @@ static int dummy_cipher_hash_func(struct JOB_AES_HMAC *job)
  * @brief Fills in job structure with valid settings
  */
 static void
-fill_in_job(struct JOB_AES_HMAC *job,
+fill_in_job(struct IMB_JOB *job,
             const JOB_CIPHER_MODE cipher_mode,
             const JOB_CIPHER_DIRECTION cipher_direction,
             const JOB_HASH_ALG hash_alg,
@@ -290,10 +290,10 @@ fill_in_job(struct JOB_AES_HMAC *job,
  *        invalid arguments status.
  */
 static int
-is_submit_invalid(struct IMB_MGR *mb_mgr, const struct JOB_AES_HMAC *job,
+is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                   const int test_num)
 {
-        struct JOB_AES_HMAC *mb_job = NULL, *job_ret = NULL;
+        struct IMB_JOB *mb_job = NULL, *job_ret = NULL;
 
         /* get next available job slot */
         mb_job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -358,8 +358,8 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         JOB_CIPHER_DIRECTION dir;
         const JOB_CIPHER_MODE cipher = IMB_CIPHER_NULL;
         JOB_CHAIN_ORDER order;
-        struct JOB_AES_HMAC template_job;
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB template_job;
+        struct IMB_JOB *job;
 
 	printf("Invalid JOB MAC arguments test:\n");
 
@@ -448,8 +448,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         JOB_CIPHER_DIRECTION dir;
         JOB_CIPHER_MODE cipher;
         JOB_CHAIN_ORDER order;
-        struct JOB_AES_HMAC template_job;
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB template_job;
+        struct IMB_JOB *job;
 
 	printf("Invalid JOB CIPHER arguments test:\n");
 

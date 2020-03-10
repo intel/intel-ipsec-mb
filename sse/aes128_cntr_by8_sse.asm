@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
@@ -562,7 +562,7 @@ align 32
 
 align 32
 %ifdef CNTR_CCM_SSE
-; JOB_AES_HMAC * aes_cntr_ccm_128_sse(JOB_AES_HMAC *job)
+; IMB_JOB * aes_cntr_ccm_128_sse(IMB_JOB *job)
 ; arg 1 : job
 MKGLOBAL(AES_CNTR_CCM_128,function,internal)
 AES_CNTR_CCM_128:

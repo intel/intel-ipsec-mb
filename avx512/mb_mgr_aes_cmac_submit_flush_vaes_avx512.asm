@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 
 %include "include/reg_sizes.asm"
@@ -672,14 +672,14 @@ endstruc
 
 
 align 64
-; JOB_AES_HMAC * submit_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state, JOB_AES_HMAC *job)
+; IMB_JOB * submit_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CMAC_AUTH,function,internal)
 SUBMIT_JOB_AES_CMAC_AUTH:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_VAES_AVX512 SUBMIT
 
-; JOB_AES_HMAC * flush_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state)
+; IMB_JOB * flush_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CMAC_AUTH,function,internal)
 FLUSH_JOB_AES_CMAC_AUTH:

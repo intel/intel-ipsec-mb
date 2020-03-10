@@ -165,7 +165,7 @@ submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
                       const uint32_t *bitlens, const uint32_t *bit_offsets,
                       int dir, const unsigned int num_jobs)
 {
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
         unsigned int i;
         unsigned int jobs_rx = 0;
 
@@ -211,7 +211,7 @@ static inline int
 submit_kasumi_f9_job(struct IMB_MGR *mb_mgr, kasumi_key_sched_t *key,
                      uint8_t *src, uint8_t *tag, const uint32_t len)
 {
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->chain_order = IMB_ORDER_CIPHER_HASH;

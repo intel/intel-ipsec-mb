@@ -134,7 +134,7 @@ static const struct chained_vector chained_vectors[] = {
 };
 
 static int
-chained_job_ok(const JOB_AES_HMAC *job,
+chained_job_ok(const IMB_JOB *job,
                const unsigned num_vec,
                const uint8_t *expected_text,
                const unsigned text_len,
@@ -222,7 +222,7 @@ test_chained_many(struct IMB_MGR *mb_mgr,
                   const unsigned in_place,
                   const unsigned num_jobs)
 {
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = NULL;
         uint8_t **auths = NULL;

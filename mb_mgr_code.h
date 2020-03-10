@@ -50,18 +50,18 @@
  * For binary compatibility they have been made proper symbols.
  */
 __forceinline
-JOB_AES_HMAC *JOBS(IMB_MGR *state, const int offset)
+IMB_JOB *JOBS(IMB_MGR *state, const int offset)
 {
         char *cp = (char *)state->jobs;
 
-        return (JOB_AES_HMAC *)(cp + offset);
+        return (IMB_JOB *)(cp + offset);
 }
 
 __forceinline
 void ADV_JOBS(int *ptr)
 {
-        *ptr += sizeof(JOB_AES_HMAC);
-        if (*ptr >= (int) (MAX_JOBS * sizeof(JOB_AES_HMAC)))
+        *ptr += sizeof(IMB_JOB);
+        if (*ptr >= (int) (MAX_JOBS * sizeof(IMB_JOB)))
                 *ptr = 0;
 }
 
@@ -70,8 +70,8 @@ void ADV_JOBS(int *ptr)
 /* ========================================================================= */
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES128_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
@@ -83,8 +83,8 @@ SUBMIT_JOB_AES128_DEC(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES192_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
@@ -96,8 +96,8 @@ SUBMIT_JOB_AES192_DEC(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES256_DEC(IMB_JOB *job)
 {
         AES_CBC_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
                         job->iv,
@@ -109,8 +109,8 @@ SUBMIT_JOB_AES256_DEC(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_ECB_128_ENC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->aes_enc_key_expanded,
@@ -121,8 +121,8 @@ SUBMIT_JOB_AES_ECB_128_ENC(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_ECB_192_ENC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES_ECB_192_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_192(job->src + job->cipher_start_src_offset_in_bytes,
                         job->aes_enc_key_expanded,
@@ -133,8 +133,8 @@ SUBMIT_JOB_AES_ECB_192_ENC(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_ECB_256_ENC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES_ECB_256_ENC(IMB_JOB *job)
 {
         AES_ECB_ENC_256(job->src + job->cipher_start_src_offset_in_bytes,
                         job->aes_enc_key_expanded,
@@ -145,8 +145,8 @@ SUBMIT_JOB_AES_ECB_256_ENC(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_ECB_128_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES_ECB_128_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_128(job->src + job->cipher_start_src_offset_in_bytes,
                         job->aes_dec_key_expanded,
@@ -157,8 +157,8 @@ SUBMIT_JOB_AES_ECB_128_DEC(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_ECB_192_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES_ECB_192_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_192(job->src + job->cipher_start_src_offset_in_bytes,
                         job->aes_dec_key_expanded,
@@ -169,8 +169,8 @@ SUBMIT_JOB_AES_ECB_192_DEC(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_ECB_256_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
 {
         AES_ECB_DEC_256(job->src + job->cipher_start_src_offset_in_bytes,
                         job->aes_dec_key_expanded,
@@ -191,8 +191,8 @@ SUBMIT_JOB_AES_ECB_256_DEC(JOB_AES_HMAC *job)
 /* ========================================================================= */
 
 __forceinline
-JOB_AES_HMAC *
-JOB_CUSTOM_CIPHER(JOB_AES_HMAC *job)
+IMB_JOB *
+JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         if (!(job->status & STS_COMPLETED_AES)) {
                 if (job->cipher_func(job))
@@ -204,22 +204,22 @@ JOB_CUSTOM_CIPHER(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_CUSTOM_CIPHER(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         return JOB_CUSTOM_CIPHER(job);
 }
 
 __forceinline
-JOB_AES_HMAC *
-FLUSH_JOB_CUSTOM_CIPHER(JOB_AES_HMAC *job)
+IMB_JOB *
+FLUSH_JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
         return JOB_CUSTOM_CIPHER(job);
 }
 
 __forceinline
-JOB_AES_HMAC *
-JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
+IMB_JOB *
+JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         if (!(job->status & STS_COMPLETED_HMAC)) {
                 if (job->hash_func(job))
@@ -231,22 +231,22 @@ JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         return JOB_CUSTOM_HASH(job);
 }
 
 __forceinline
-JOB_AES_HMAC *
-FLUSH_JOB_CUSTOM_HASH(JOB_AES_HMAC *job)
+IMB_JOB *
+FLUSH_JOB_CUSTOM_HASH(IMB_JOB *job)
 {
         return JOB_CUSTOM_HASH(job);
 }
 
 __forceinline
-JOB_AES_HMAC *
-submit_snow3g_uea2_job(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
 {
         const snow3g_key_schedule_t *key = job->aes_enc_key_expanded;
         const uint32_t msg_bitlen =
@@ -273,8 +273,8 @@ submit_snow3g_uea2_job(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-submit_kasumi_uea1_job(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+submit_kasumi_uea1_job(IMB_MGR *state, IMB_JOB *job)
 {
         const kasumi_key_sched_t *key = job->aes_enc_key_expanded;
         const uint64_t iv = *(const uint64_t *)job->iv;
@@ -303,8 +303,8 @@ submit_kasumi_uea1_job(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-submit_docsis_enc_job(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+submit_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
 {
         if (16 == job->aes_key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
@@ -334,8 +334,8 @@ submit_docsis_enc_job(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-flush_docsis_enc_job(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+flush_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
 {
         if (16 == job->aes_key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
@@ -365,8 +365,8 @@ flush_docsis_enc_job(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-submit_docsis_dec_job(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+submit_docsis_dec_job(IMB_MGR *state, IMB_JOB *job)
 {
         if (16 == job->aes_key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
@@ -399,8 +399,8 @@ submit_docsis_dec_job(IMB_MGR *state, JOB_AES_HMAC *job)
 /* Cipher submit & flush functions */
 /* ========================================================================= */
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_ENC(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
@@ -467,8 +467,8 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-FLUSH_JOB_AES_ENC(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
@@ -506,8 +506,8 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_AES_DEC(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->aes_key_len_in_bytes) {
@@ -576,8 +576,8 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-FLUSH_JOB_AES_DEC(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+FLUSH_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
         if (IMB_CIPHER_GCM == job->cipher_mode)
                 return FLUSH_JOB_AES_GCM_DEC(state, job);
@@ -604,8 +604,8 @@ FLUSH_JOB_AES_DEC(IMB_MGR *state, JOB_AES_HMAC *job)
 /* ========================================================================= */
 
 __forceinline
-JOB_AES_HMAC *
-SUBMIT_JOB_HASH(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
 #ifdef VERBOSE
         printf("--------Enter SUBMIT_JOB_HASH --------------\n");
@@ -709,8 +709,8 @@ SUBMIT_JOB_HASH(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
-FLUSH_JOB_HASH(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *
+FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
@@ -784,7 +784,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, JOB_AES_HMAC *job)
 #define SNOW3G_MAX_BITLEN (UINT32_MAX)
 
 __forceinline int
-is_job_invalid(const JOB_AES_HMAC *job)
+is_job_invalid(const IMB_JOB *job)
 {
         const uint64_t auth_tag_len_fips[] = {
                 0,  /* INVALID selection */
@@ -1699,7 +1699,7 @@ is_job_invalid(const JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *SUBMIT_JOB_AES(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *SUBMIT_JOB_AES(IMB_MGR *state, IMB_JOB *job)
 {
 	if (job->cipher_direction == IMB_DIR_ENCRYPT)
 		job = SUBMIT_JOB_AES_ENC(state, job);
@@ -1710,7 +1710,7 @@ JOB_AES_HMAC *SUBMIT_JOB_AES(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *FLUSH_JOB_AES(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *FLUSH_JOB_AES(IMB_MGR *state, IMB_JOB *job)
 {
 	if (job->cipher_direction == IMB_DIR_ENCRYPT)
 		job = FLUSH_JOB_AES_ENC(state, job);
@@ -1722,7 +1722,7 @@ JOB_AES_HMAC *FLUSH_JOB_AES(IMB_MGR *state, JOB_AES_HMAC *job)
 
 /* submit a half-completed job, based on the status */
 __forceinline
-JOB_AES_HMAC *RESUBMIT_JOB(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *RESUBMIT_JOB(IMB_MGR *state, IMB_JOB *job)
 {
         while (job != NULL && job->status < STS_COMPLETED) {
                 if (job->status == STS_COMPLETED_HMAC)
@@ -1735,7 +1735,7 @@ JOB_AES_HMAC *RESUBMIT_JOB(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *submit_new_job(IMB_MGR *state, JOB_AES_HMAC *job)
+IMB_JOB *submit_new_job(IMB_MGR *state, IMB_JOB *job)
 {
 	if (job->chain_order == IMB_ORDER_CIPHER_HASH)
 		job = SUBMIT_JOB_AES(state, job);
@@ -1747,12 +1747,12 @@ JOB_AES_HMAC *submit_new_job(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-void complete_job(IMB_MGR *state, JOB_AES_HMAC *job)
+void complete_job(IMB_MGR *state, IMB_JOB *job)
 {
         if (job->chain_order == IMB_ORDER_CIPHER_HASH) {
                 /* while() loop optimized for cipher_hash order */
                 while (job->status < STS_COMPLETED) {
-                        JOB_AES_HMAC *tmp = FLUSH_JOB_AES(state, job);
+                        IMB_JOB *tmp = FLUSH_JOB_AES(state, job);
 
                         if (tmp == NULL)
                                 tmp = FLUSH_JOB_HASH(state, job);
@@ -1762,7 +1762,7 @@ void complete_job(IMB_MGR *state, JOB_AES_HMAC *job)
         } else {
                 /* while() loop optimized for hash_cipher order */
                 while (job->status < STS_COMPLETED) {
-                        JOB_AES_HMAC *tmp = FLUSH_JOB_HASH(state, job);
+                        IMB_JOB *tmp = FLUSH_JOB_HASH(state, job);
 
                         if (tmp == NULL)
                                 tmp = FLUSH_JOB_AES(state, job);
@@ -1773,7 +1773,7 @@ void complete_job(IMB_MGR *state, JOB_AES_HMAC *job)
 }
 
 __forceinline
-JOB_AES_HMAC *
+IMB_JOB *
 submit_job_and_check(IMB_MGR *state, const int run_check)
 {
 #ifdef SAFE_PARAM
@@ -1783,7 +1783,7 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
         }
 #endif
 
-        JOB_AES_HMAC *job = NULL;
+        IMB_JOB *job = NULL;
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 
@@ -1842,19 +1842,19 @@ exit:
         return job;
 }
 
-JOB_AES_HMAC *
+IMB_JOB *
 SUBMIT_JOB(IMB_MGR *state)
 {
         return submit_job_and_check(state, 1);
 }
 
-JOB_AES_HMAC *
+IMB_JOB *
 SUBMIT_JOB_NOCHECK(IMB_MGR *state)
 {
         return submit_job_and_check(state, 0);
 }
 
-JOB_AES_HMAC *
+IMB_JOB *
 FLUSH_JOB(IMB_MGR *state)
 {
 #ifdef SAFE_PARAM
@@ -1863,7 +1863,7 @@ FLUSH_JOB(IMB_MGR *state)
                 return NULL;
         }
 #endif
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
 #endif
@@ -1909,12 +1909,12 @@ QUEUE_SIZE(IMB_MGR *state)
 
         if (state->earliest_job < 0)
                 return 0;
-        a = state->next_job / sizeof(JOB_AES_HMAC);
-        b = state->earliest_job / sizeof(JOB_AES_HMAC);
+        a = state->next_job / sizeof(IMB_JOB);
+        b = state->earliest_job / sizeof(IMB_JOB);
         return ((a-b) & (MAX_JOBS-1));
 }
 
-JOB_AES_HMAC *
+IMB_JOB *
 GET_COMPLETED_JOB(IMB_MGR *state)
 {
 #ifdef SAFE_PARAM
@@ -1923,7 +1923,7 @@ GET_COMPLETED_JOB(IMB_MGR *state)
                 return NULL;
         }
 #endif
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
 
         if (state->earliest_job < 0)
                 return NULL;
@@ -1940,7 +1940,7 @@ GET_COMPLETED_JOB(IMB_MGR *state)
         return job;
 }
 
-JOB_AES_HMAC *
+IMB_JOB *
 GET_NEXT_JOB(IMB_MGR *state)
 {
 #ifdef SAFE_PARAM

@@ -993,7 +993,7 @@ static const struct cmac_rfc4493_vector cmac_3gpp_vectors[] = {
 
 static int
 cmac_job_ok(const struct cmac_rfc4493_vector *vec,
-            const struct JOB_AES_HMAC *job,
+            const struct IMB_JOB *job,
             const uint8_t *auth,
             const uint8_t *padding,
             const size_t sizeof_padding)
@@ -1041,7 +1041,7 @@ test_cmac(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
         DECLARE_ALIGNED(uint32_t dust[4*15], 16);
         uint32_t skey1[4], skey2[4];
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         int i = 0, jobs_rx = 0, ret = -1;
@@ -1148,7 +1148,7 @@ test_cmac(struct IMB_MGR *mb_mgr,
          * Submit each job and flush immediately
          */
         for (i = 0; i < num_jobs; i++) {
-                struct JOB_AES_HMAC *first_job = NULL;
+                struct IMB_JOB *first_job = NULL;
 
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 first_job = job;

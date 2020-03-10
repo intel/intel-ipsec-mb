@@ -43,33 +43,33 @@
 #include "cpu_feature.h"
 #include "noaesni.h"
 
-JOB_AES_HMAC *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
+IMB_JOB *submit_job_aes128_enc_avx(MB_MGR_AES_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_aes128_enc_avx(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes192_enc_avx(MB_MGR_AES_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes192_enc_avx(MB_MGR_AES_OOO *state);
+IMB_JOB *submit_job_aes192_enc_avx(MB_MGR_AES_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_aes192_enc_avx(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes256_enc_avx(MB_MGR_AES_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
+IMB_JOB *submit_job_aes256_enc_avx(MB_MGR_AES_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_aes256_enc_avx(MB_MGR_AES_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state,
-                                      JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
+IMB_JOB *submit_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state,
+                                      IMB_JOB *job);
+IMB_JOB *flush_job_aes_xcbc_avx(MB_MGR_AES_XCBC_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes_cntr_avx(JOB_AES_HMAC *job);
+IMB_JOB *submit_job_aes_cntr_avx(IMB_JOB *job);
 
-JOB_AES_HMAC *submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job);
+IMB_JOB *submit_job_aes_cntr_bit_avx(IMB_JOB *job);
 
-JOB_AES_HMAC *submit_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state);
+IMB_JOB *submit_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state);
 
-JOB_AES_HMAC *submit_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state,
-                                        JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
+IMB_JOB *submit_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
@@ -154,39 +154,39 @@ JOB_AES_HMAC *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
 
 
 
-JOB_AES_HMAC *submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state,
-                                  JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state);
+IMB_JOB *submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state,
+                                  IMB_JOB *job);
+IMB_JOB *flush_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state);
 
-JOB_AES_HMAC *submit_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state,
-                                          JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state);
+IMB_JOB *submit_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state,
+                                          IMB_JOB *job);
+IMB_JOB *flush_job_hmac_sha_224_avx(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC *submit_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state,
-                                          JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state);
+IMB_JOB *submit_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state,
+                                          IMB_JOB *job);
+IMB_JOB *flush_job_hmac_sha_256_avx(MB_MGR_HMAC_SHA_256_OOO *state);
 
-JOB_AES_HMAC *submit_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state,
-                                          JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state);
+IMB_JOB *submit_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state,
+                                          IMB_JOB *job);
+IMB_JOB *flush_job_hmac_sha_384_avx(MB_MGR_HMAC_SHA_512_OOO *state);
 
-JOB_AES_HMAC *submit_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state,
-                                          JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state);
+IMB_JOB *submit_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state,
+                                          IMB_JOB *job);
+IMB_JOB *flush_job_hmac_sha_512_avx(MB_MGR_HMAC_SHA_512_OOO *state);
 
-JOB_AES_HMAC *submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state,
-                                      JOB_AES_HMAC *job);
-JOB_AES_HMAC *flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
+IMB_JOB *submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state,
+                                      IMB_JOB *job);
+IMB_JOB *flush_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
-                                           JOB_AES_HMAC *job);
+IMB_JOB *submit_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
+                                           IMB_JOB *job);
 
-JOB_AES_HMAC *flush_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
+IMB_JOB *flush_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
 
-JOB_AES_HMAC *submit_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state,
-                                           JOB_AES_HMAC *job);
+IMB_JOB *submit_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state,
+                                           IMB_JOB *job);
 
-JOB_AES_HMAC *flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state);
+IMB_JOB *flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 
 #define SUBMIT_JOB_HMAC               submit_job_hmac_avx
 #define FLUSH_JOB_HMAC                flush_job_hmac_avx
@@ -241,8 +241,8 @@ uint32_t ethernet_fcs_avx(const void *msg, uint64_t len, const void *tag_ouput);
 /*
  * GCM submit / flush API for AVX arch
  */
-static JOB_AES_HMAC *
-submit_job_aes_gcm_dec_avx(IMB_MGR *state, JOB_AES_HMAC *job)
+static IMB_JOB *
+submit_job_aes_gcm_dec_avx(IMB_MGR *state, IMB_JOB *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
@@ -286,16 +286,16 @@ submit_job_aes_gcm_dec_avx(IMB_MGR *state, JOB_AES_HMAC *job)
         return job;
 }
 
-static JOB_AES_HMAC *
-flush_job_aes_gcm_dec_avx(IMB_MGR *state, JOB_AES_HMAC *job)
+static IMB_JOB *
+flush_job_aes_gcm_dec_avx(IMB_MGR *state, IMB_JOB *job)
 {
         (void) state;
         (void) job;
         return NULL;
 }
 
-static JOB_AES_HMAC *
-submit_job_aes_gcm_enc_avx(IMB_MGR *state, JOB_AES_HMAC *job)
+static IMB_JOB *
+submit_job_aes_gcm_enc_avx(IMB_MGR *state, IMB_JOB *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
         (void) state;
@@ -339,8 +339,8 @@ submit_job_aes_gcm_enc_avx(IMB_MGR *state, JOB_AES_HMAC *job)
         return job;
 }
 
-static JOB_AES_HMAC *
-flush_job_aes_gcm_enc_avx(IMB_MGR *state, JOB_AES_HMAC *job)
+static IMB_JOB *
+flush_job_aes_gcm_enc_avx(IMB_MGR *state, IMB_JOB *job)
 {
         (void) state;
         (void) job;
@@ -349,8 +349,8 @@ flush_job_aes_gcm_enc_avx(IMB_MGR *state, JOB_AES_HMAC *job)
 
 /* ====================================================================== */
 
-IMB_DLL_LOCAL JOB_AES_HMAC *
-submit_job_aes_cntr_avx(JOB_AES_HMAC *job)
+IMB_DLL_LOCAL IMB_JOB *
+submit_job_aes_cntr_avx(IMB_JOB *job)
 {
         if (16 == job->aes_key_len_in_bytes)
                 AES_CNTR_128(job->src + job->cipher_start_src_offset_in_bytes,
@@ -378,8 +378,8 @@ submit_job_aes_cntr_avx(JOB_AES_HMAC *job)
         return job;
 }
 
-IMB_DLL_LOCAL JOB_AES_HMAC *
-submit_job_aes_cntr_bit_avx(JOB_AES_HMAC *job)
+IMB_DLL_LOCAL IMB_JOB *
+submit_job_aes_cntr_bit_avx(IMB_JOB *job)
 {
         if (16 == job->aes_key_len_in_bytes)
                 aes_cntr_bit_128_avx(job->src +

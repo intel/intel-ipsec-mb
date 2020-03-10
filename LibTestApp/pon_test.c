@@ -428,7 +428,7 @@ test_pon(struct IMB_MGR *mb_mgr,
          const int dir,
          const int order)
 {
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t *target = malloc(len_to_bip + (sizeof(padding) * 2));
         int ret = -1;

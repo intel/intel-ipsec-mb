@@ -117,7 +117,7 @@ known_answer_test(IMB_MGR *mb_mgr)
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
         DECLARE_ALIGNED(uint8_t ipad_hash[5*4], 16);
         DECLARE_ALIGNED(uint8_t opad_hash[5*4], 16);
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
         uint8_t iv[16];
         uint8_t digest[12];
         uint32_t i;
@@ -223,7 +223,7 @@ static int
 do_test(IMB_MGR *mb_mgr)
 {
         uint32_t size;
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
         static imb_uint128_t IV = {0,0};
         static uint32_t ipad[5], opad[5], digest[3];
         imb_uint128_t keys[15] = {{0, 0}};

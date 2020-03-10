@@ -27,7 +27,7 @@
 
 %use smartalign
 
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
@@ -1143,28 +1143,28 @@ section .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; submit_job_pon_enc_avx(JOB_AES_HMAC *job)
+;;; submit_job_pon_enc_avx(IMB_JOB *job)
 align 64
 MKGLOBAL(submit_job_pon_enc_avx,function,internal)
 submit_job_pon_enc_avx:
         AES128_CTR_PON ENC, CTR
         ret
 
-;;; submit_job_pon_dec_avx(JOB_AES_HMAC *job)
+;;; submit_job_pon_dec_avx(IMB_JOB *job)
 align 64
 MKGLOBAL(submit_job_pon_dec_avx,function,internal)
 submit_job_pon_dec_avx:
         AES128_CTR_PON DEC, CTR
         ret
 
-;;; submit_job_pon_enc_no_ctr_avx(JOB_AES_HMAC *job)
+;;; submit_job_pon_enc_no_ctr_avx(IMB_JOB *job)
 align 64
 MKGLOBAL(submit_job_pon_enc_no_ctr_avx,function,internal)
 submit_job_pon_enc_no_ctr_avx:
         AES128_CTR_PON ENC, NO_CTR
         ret
 
-;;; submit_job_pon_dec_no_ctr_avx(JOB_AES_HMAC *job)
+;;; submit_job_pon_dec_no_ctr_avx(IMB_JOB *job)
 align 64
 MKGLOBAL(submit_job_pon_dec_no_ctr_avx,function,internal)
 submit_job_pon_dec_no_ctr_avx:

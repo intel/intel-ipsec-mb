@@ -80,7 +80,7 @@ struct test_vec_s {
  * addon cipher function
  */
 static int
-cipher_addon(struct JOB_AES_HMAC *job)
+cipher_addon(struct IMB_JOB *job)
 {
 #ifdef DEBUG
         struct test_vec_s *node = job->user_data;
@@ -101,7 +101,7 @@ cipher_addon(struct JOB_AES_HMAC *job)
  * addon hash function
  */
 static int
-hash_addon(struct JOB_AES_HMAC *job)
+hash_addon(struct IMB_JOB *job)
 {
 #ifdef DEBUG
         struct test_vec_s *node = job->user_data;
@@ -141,7 +141,7 @@ static const struct cipher_attr_s cipher_attr_tab[] = {
 };
 
 static int
-job_check(const struct JOB_AES_HMAC *job)
+job_check(const struct IMB_JOB *job)
 {
 #ifdef DEBUG
         struct test_vec_s *done = job->user_data;
@@ -197,7 +197,7 @@ int
 customop_test(struct IMB_MGR *mgr)
 {
         struct test_vec_s test_tab[DIM(cipher_attr_tab) * DIM(auth_attr_tab)];
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         unsigned i, j, seq;
         int result = 0;
 

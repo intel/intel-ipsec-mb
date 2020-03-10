@@ -499,7 +499,7 @@ align 32
 
 align 32
 %ifdef CNTR_CCM_AVX
-; JOB_AES_HMAC * aes_cntr_ccm_256_avx(JOB_AES_HMAC *job)
+; IMB_JOB * aes_cntr_ccm_256_avx(IMB_JOB *job)
 ; arg 1 : job
 MKGLOBAL(aes_cntr_ccm_256_avx,function,internal)
 aes_cntr_ccm_256_avx:

@@ -30,7 +30,7 @@
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
 %include "mb_mgr_datastruct.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "include/memcpy.asm"
 
 %include "include/aes_common.asm"
@@ -1506,7 +1506,7 @@ default rel
 
 %ifdef CNTR_CCM_AVX512
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;JOB_AES_HMAC * aes_cntr_ccm_128_vaes_avx512(JOB_AES_HMAC *job)
+;IMB_JOB * aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_ccm_128_vaes_avx512,function,internal)
 aes_cntr_ccm_128_vaes_avx512:
@@ -1521,7 +1521,7 @@ aes_cntr_ccm_128_vaes_avx512:
 
 %else
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_128_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;void aes_cntr_128_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_128_submit_vaes_avx512,function,internal)
 aes_cntr_128_submit_vaes_avx512:
@@ -1535,7 +1535,7 @@ aes_cntr_128_submit_vaes_avx512:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_192_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;void aes_cntr_192_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_192_submit_vaes_avx512,function,internal)
 aes_cntr_192_submit_vaes_avx512:
@@ -1549,7 +1549,7 @@ aes_cntr_192_submit_vaes_avx512:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_256_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;void aes_cntr_256_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_256_submit_vaes_avx512,function,internal)
 aes_cntr_256_submit_vaes_avx512:
@@ -1563,7 +1563,7 @@ aes_cntr_256_submit_vaes_avx512:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_bit_128_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;void aes_cntr_bit_128_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_128_submit_vaes_avx512,function,internal)
 aes_cntr_bit_128_submit_vaes_avx512:
@@ -1577,7 +1577,7 @@ aes_cntr_bit_128_submit_vaes_avx512:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_bit_192_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;void aes_cntr_bit_192_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_192_submit_vaes_avx512,function,internal)
 aes_cntr_bit_192_submit_vaes_avx512:
@@ -1591,7 +1591,7 @@ aes_cntr_bit_192_submit_vaes_avx512:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void aes_cntr_bit_256_submit_vaes_avx512 (JOB_AES_HMAC *job)
+;void aes_cntr_bit_256_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cntr_bit_256_submit_vaes_avx512,function,internal)
 aes_cntr_bit_256_submit_vaes_avx512:

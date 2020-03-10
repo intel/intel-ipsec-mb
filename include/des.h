@@ -119,8 +119,8 @@ void docsis_des_dec_basic(const void *input, void *output, const int size,
  * @return It always returns value passed in \a job
  */
 __forceinline
-JOB_AES_HMAC *
-DES_CBC_ENC(JOB_AES_HMAC *job)
+IMB_JOB *
+DES_CBC_ENC(IMB_JOB *job)
 {
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         des_enc_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
@@ -139,8 +139,8 @@ DES_CBC_ENC(JOB_AES_HMAC *job)
  * @return It always returns value passed in \a job
  */
 __forceinline
-JOB_AES_HMAC *
-DES_CBC_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+DES_CBC_DEC(IMB_JOB *job)
 {
         IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
         des_dec_cbc_basic(job->src + job->cipher_start_src_offset_in_bytes,
@@ -159,8 +159,8 @@ DES_CBC_DEC(JOB_AES_HMAC *job)
  * @return It always returns value passed in \a job
  */
 __forceinline
-JOB_AES_HMAC *
-DES3_CBC_ENC(JOB_AES_HMAC *job)
+IMB_JOB *
+DES3_CBC_ENC(IMB_JOB *job)
 {
         const void * const *ks_ptr =
                 (const void * const *)job->aes_enc_key_expanded;
@@ -183,8 +183,8 @@ DES3_CBC_ENC(JOB_AES_HMAC *job)
  * @return It always returns value passed in \a job
  */
 __forceinline
-JOB_AES_HMAC *
-DES3_CBC_DEC(JOB_AES_HMAC *job)
+IMB_JOB *
+DES3_CBC_DEC(IMB_JOB *job)
 {
         const void * const *ks_ptr =
                 (const void * const *)job->aes_dec_key_expanded;

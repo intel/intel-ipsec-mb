@@ -1349,7 +1349,7 @@ aes_gcm_job(IMB_MGR *mb_mgr,
             const uint8_t *iv, const uint64_t iv_len, const uint8_t *aad,
             uint64_t aad_len, uint8_t *auth_tag, uint64_t auth_tag_len)
 {
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         if (!job) {

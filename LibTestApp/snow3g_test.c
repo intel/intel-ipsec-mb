@@ -117,7 +117,7 @@ submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                  const uint32_t *bit_offsets, int dir,
                  const unsigned int num_jobs)
 {
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
         unsigned int i;
         unsigned int jobs_rx = 0;
 
@@ -163,7 +163,7 @@ static inline int
 submit_uia2_job(struct IMB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
                 uint8_t *src, uint8_t *tag, const uint32_t bitlen)
 {
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
         job->chain_order = IMB_ORDER_CIPHER_HASH;

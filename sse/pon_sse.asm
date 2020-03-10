@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
@@ -848,28 +848,28 @@ section .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; aes_cntr_128_pon_enc_sse(JOB_AES_HMAC *job)
+;;; aes_cntr_128_pon_enc_sse(IMB_JOB *job)
 align 32
 MKGLOBAL(ENC_FN_NAME,function,internal)
 ENC_FN_NAME:
         AES128_CTR_PON ENC, CTR
         ret
 
-;;; aes_cntr_128_pon_dec_sse(JOB_AES_HMAC *job)
+;;; aes_cntr_128_pon_dec_sse(IMB_JOB *job)
 align 32
 MKGLOBAL(DEC_FN_NAME,function,internal)
 DEC_FN_NAME:
         AES128_CTR_PON DEC, CTR
         ret
 
-;;; aes_cntr_128_pon_enc_no_ctr_sse(JOB_AES_HMAC *job)
+;;; aes_cntr_128_pon_enc_no_ctr_sse(IMB_JOB *job)
 align 32
 MKGLOBAL(ENC_NO_CTR_FN_NAME,function,internal)
 ENC_NO_CTR_FN_NAME:
         AES128_CTR_PON ENC, NO_CTR
         ret
 
-;;; aes_cntr_128_pon_dec_no_ctr_sse(JOB_AES_HMAC *job)
+;;; aes_cntr_128_pon_dec_no_ctr_sse(IMB_JOB *job)
 align 32
 MKGLOBAL(DEC_NO_CTR_FN_NAME,function,internal)
 DEC_NO_CTR_FN_NAME:

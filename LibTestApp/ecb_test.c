@@ -580,7 +580,7 @@ static const struct ecb_vector ecb_vectors[] = {
 };
 
 static int
-ecb_job_ok(const struct JOB_AES_HMAC *job,
+ecb_job_ok(const struct IMB_JOB *job,
            const uint8_t *out_text,
            const uint8_t *target,
            const uint8_t *padding,
@@ -626,7 +626,7 @@ test_ecb_many(struct IMB_MGR *mb_mgr,
               const int key_len,
               const int num_jobs)
 {
-        struct JOB_AES_HMAC *job;
+        struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int i, jobs_rx = 0, ret = -1;

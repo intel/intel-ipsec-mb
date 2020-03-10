@@ -38,7 +38,7 @@
 %define STS_INVALID_ARGS	4
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Define JOB_AES_HMAC structure
+;;;; Define IMB_JOB structure
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 START_FIELDS	; HMAC Specific Fields
@@ -98,7 +98,7 @@ END_FIELDS
 %assign _ZUC_EIA3_spec_fields_align	_STRUCT_ALIGN
 
 
-START_FIELDS	; JOB_AES_HMAC
+START_FIELDS	; IMB_JOB
 ;;;	name				size	align
 FIELD	_aes_enc_key_expanded,		8,	8	; pointer to exp enc keys
 FIELD	_aes_dec_key_expanded,		8,	8	; pointer to exp dec keys
@@ -136,8 +136,8 @@ END_FIELDS
 %assign _msg_len_to_hash_in_bytes   _msg_len_to_hash
 %assign _msg_len_to_hash_in_bits    _msg_len_to_hash
 
-%assign _JOB_AES_HMAC_size	_FIELD_OFFSET
-%assign _JOB_AES_HMAC_align	_STRUCT_ALIGN
+%assign _IMB_JOB_size	_FIELD_OFFSET
+%assign _IMB_JOB_align	_STRUCT_ALIGN
 
 %assign _auth_key_xor_ipad              _u + __auth_key_xor_ipad
 %assign _auth_key_xor_opad	        _u + __auth_key_xor_opad

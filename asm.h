@@ -103,9 +103,9 @@ void aes_cntr_192_avx(const void *in, const void *IV, const void *keys,
 void aes_cntr_128_avx(const void *in, const void *IV, const void *keys,
                       void *out, uint64_t len_bytes, uint64_t IV_len);
 
-void aes_cntr_128_submit_vaes_avx512(JOB_AES_HMAC *job);
-void aes_cntr_192_submit_vaes_avx512(JOB_AES_HMAC *job);
-void aes_cntr_256_submit_vaes_avx512(JOB_AES_HMAC *job);
+void aes_cntr_128_submit_vaes_avx512(IMB_JOB *job);
+void aes_cntr_192_submit_vaes_avx512(IMB_JOB *job);
+void aes_cntr_256_submit_vaes_avx512(IMB_JOB *job);
 
 /* AES-CTR-BITLEN */
 void aes_cntr_bit_256_sse(const void *in, const void *IV, const void *keys,
@@ -132,16 +132,16 @@ void aes_cntr_bit_192_avx(const void *in, const void *IV, const void *keys,
 void aes_cntr_bit_128_avx(const void *in, const void *IV, const void *keys,
                           void *out, uint64_t len_bits, uint64_t IV_len);
 
-void aes_cntr_bit_128_submit_vaes_avx512(JOB_AES_HMAC *job);
-void aes_cntr_bit_192_submit_vaes_avx512(JOB_AES_HMAC *job);
-void aes_cntr_bit_256_submit_vaes_avx512(JOB_AES_HMAC *job);
+void aes_cntr_bit_128_submit_vaes_avx512(IMB_JOB *job);
+void aes_cntr_bit_192_submit_vaes_avx512(IMB_JOB *job);
+void aes_cntr_bit_256_submit_vaes_avx512(IMB_JOB *job);
 
 /* AES-CCM */
-JOB_AES_HMAC *aes_cntr_ccm_128_sse(JOB_AES_HMAC *job);
+IMB_JOB *aes_cntr_ccm_128_sse(IMB_JOB *job);
 
-JOB_AES_HMAC *aes_cntr_ccm_128_sse_no_aesni(JOB_AES_HMAC *job);
+IMB_JOB *aes_cntr_ccm_128_sse_no_aesni(IMB_JOB *job);
 
-JOB_AES_HMAC *aes_cntr_ccm_128_avx(JOB_AES_HMAC *job);
+IMB_JOB *aes_cntr_ccm_128_avx(IMB_JOB *job);
 
 /* AES-ECB */
 void aes_ecb_enc_256_sse(const void *in, const void *keys,
@@ -197,23 +197,23 @@ void aes128_ecbenc_x3_avx(const void *in, void *keys,
                           void *out1, void *out2, void *out3);
 
 /* stitched AES128-CNTR, CRC32 and BIP */
-JOB_AES_HMAC *submit_job_pon_enc_avx(JOB_AES_HMAC *job);
-JOB_AES_HMAC *submit_job_pon_dec_avx(JOB_AES_HMAC *job);
+IMB_JOB *submit_job_pon_enc_avx(IMB_JOB *job);
+IMB_JOB *submit_job_pon_dec_avx(IMB_JOB *job);
 
-JOB_AES_HMAC *submit_job_pon_enc_sse(JOB_AES_HMAC *job);
-JOB_AES_HMAC *submit_job_pon_dec_sse(JOB_AES_HMAC *job);
+IMB_JOB *submit_job_pon_enc_sse(IMB_JOB *job);
+IMB_JOB *submit_job_pon_dec_sse(IMB_JOB *job);
 
-JOB_AES_HMAC *submit_job_pon_enc_sse_no_aesni(JOB_AES_HMAC *job);
-JOB_AES_HMAC *submit_job_pon_dec_sse_no_aesni(JOB_AES_HMAC *job);
+IMB_JOB *submit_job_pon_enc_sse_no_aesni(IMB_JOB *job);
+IMB_JOB *submit_job_pon_dec_sse_no_aesni(IMB_JOB *job);
 
-JOB_AES_HMAC *submit_job_pon_enc_no_ctr_avx(JOB_AES_HMAC *job);
-JOB_AES_HMAC *submit_job_pon_dec_no_ctr_avx(JOB_AES_HMAC *job);
+IMB_JOB *submit_job_pon_enc_no_ctr_avx(IMB_JOB *job);
+IMB_JOB *submit_job_pon_dec_no_ctr_avx(IMB_JOB *job);
 
-JOB_AES_HMAC *submit_job_pon_enc_no_ctr_sse(JOB_AES_HMAC *job);
-JOB_AES_HMAC *submit_job_pon_dec_no_ctr_sse(JOB_AES_HMAC *job);
+IMB_JOB *submit_job_pon_enc_no_ctr_sse(IMB_JOB *job);
+IMB_JOB *submit_job_pon_dec_no_ctr_sse(IMB_JOB *job);
 
-JOB_AES_HMAC *submit_job_pon_enc_no_ctr_sse_no_aesni(JOB_AES_HMAC *job);
-JOB_AES_HMAC *submit_job_pon_dec_no_ctr_sse_no_aesni(JOB_AES_HMAC *job);
+IMB_JOB *submit_job_pon_enc_no_ctr_sse_no_aesni(IMB_JOB *job);
+IMB_JOB *submit_job_pon_dec_no_ctr_sse_no_aesni(IMB_JOB *job);
 #endif /* IMB_ASM_H */
 
 

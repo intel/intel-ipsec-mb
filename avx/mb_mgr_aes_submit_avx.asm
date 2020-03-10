@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "job_aes_hmac.asm"
+%include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 
 %include "include/reg_sizes.asm"
@@ -84,7 +84,7 @@ _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
 
-; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, JOB_AES_HMAC *job)
+; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)

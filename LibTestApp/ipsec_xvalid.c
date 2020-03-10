@@ -657,7 +657,7 @@ print_arch_info(const enum arch_type_e arch)
 }
 
 static int
-fill_job(JOB_AES_HMAC *job, const struct params_s *params,
+fill_job(IMB_JOB *job, const struct params_s *params,
          uint8_t *buf, uint8_t *digest, const uint8_t *aad,
          const uint32_t buf_size, const uint8_t tag_size,
          JOB_CIPHER_DIRECTION cipher_dir,
@@ -1187,7 +1187,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
  * decrypted message can be compared against the test buffer */
 static int
 modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
-                    const JOB_AES_HMAC *job, const uint64_t xgem_hdr)
+                    const IMB_JOB *job, const uint64_t xgem_hdr)
 {
         /* Set plaintext CRC in test buffer for PON */
         uint32_t *buf32 = (uint32_t *) &test_buf[8 + params->buf_size - 4];
@@ -1219,7 +1219,7 @@ modify_pon_test_buf(uint8_t *test_buf, const struct params_s *params,
  * decrypted message can be compared against the test buffer */
 static void
 modify_docsis_crc32_test_buf(uint8_t *test_buf, const struct params_s *params,
-                             const JOB_AES_HMAC *job)
+                             const IMB_JOB *job)
 {
         if (params->buf_size >=
             (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE)) {
@@ -1323,7 +1323,7 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         const struct params_s *params, struct data *data,
         const unsigned safe_check)
 {
-        JOB_AES_HMAC *job;
+        IMB_JOB *job;
         uint32_t i;
         int ret = -1;
         uint32_t buf_size = params->buf_size;

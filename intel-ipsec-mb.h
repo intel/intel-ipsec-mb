@@ -244,7 +244,7 @@ typedef enum {
 #define AES_256_BYTES           IMB_KEY_AES_256_BYTES
 
 #define MB_MGR                  IMB_MGR
-
+#define JOB_AES_HMAC            IMB_JOB
 #endif /* !NO_COMPAT_IMB_API_053 */
 
 typedef enum {
@@ -308,7 +308,7 @@ typedef enum {
         IMB_KEY_AES_256_BYTES = 32
 } AES_KEY_SIZE_BYTES;
 
-typedef struct JOB_AES_HMAC {
+typedef struct IMB_JOB {
         /*
          * For AES, aes_enc_key_expanded and aes_dec_key_expanded are
          * expected to point to expanded keys structure.
@@ -431,9 +431,9 @@ typedef struct JOB_AES_HMAC {
          *     success: 0
          *     fail:    other
          */
-        int (*cipher_func)(struct JOB_AES_HMAC *);
-        int (*hash_func)(struct JOB_AES_HMAC *);
-} JOB_AES_HMAC;
+        int (*cipher_func)(struct IMB_JOB *);
+        int (*hash_func)(struct IMB_JOB *);
+} IMB_JOB;
 
 /*
  * Argument structures for various algorithms
@@ -498,7 +498,7 @@ typedef struct {
          * the last nibble is set to F as a flag
          */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[16];
+        IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
 } MB_MGR_AES_OOO;
 
@@ -510,7 +510,7 @@ typedef struct {
          * the last nibble is set to F as a flag
          */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[16];
+        IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(imb_uint128_t crc_init[16], 16);
         DECLARE_ALIGNED(uint16_t crc_len[16], 16);
@@ -520,7 +520,7 @@ typedef struct {
 /* AES XCBC out-of-order scheduler fields */
 typedef struct {
         DECLARE_ALIGNED(uint8_t final_block[2 * 16], 32);
-        JOB_AES_HMAC *job_in_lane;
+        IMB_JOB *job_in_lane;
         uint64_t final_done;
 } XCBC_LANE_DATA;
 
@@ -543,7 +543,7 @@ typedef struct {
          * byte 4 is set to FF as a flag
          */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[16];
+        IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(uint8_t init_blocks[16 * (4 * 16)], 64);
 } MB_MGR_CCM_OOO;
@@ -558,7 +558,7 @@ typedef struct {
          * byte 4 is set to FF as a flag
          */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[16];
+        IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(uint8_t scratch[16 * 16], 32);
 } MB_MGR_CMAC_OOO;
@@ -572,7 +572,7 @@ typedef struct {
          * nibble 8 is set to F as a flag
          */
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[16];
+        IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
 } MB_MGR_DES_OOO;
 
@@ -581,7 +581,7 @@ typedef struct {
         ZUC_ARGS_x16 args;
         DECLARE_ALIGNED(uint16_t lens[16], 16);
         uint64_t unused_lanes;
-        JOB_AES_HMAC *job_in_lane[16];
+        IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
 } MB_MGR_ZUC_OOO;
 
@@ -589,7 +589,7 @@ typedef struct {
 typedef struct {
         /* YMM aligned access to extra_block */
         DECLARE_ALIGNED(uint8_t extra_block[2 * SHA1_BLOCK_SIZE+8], 32);
-        JOB_AES_HMAC *job_in_lane;
+        IMB_JOB *job_in_lane;
         uint8_t outer_block[64];
         uint32_t outer_done;
         uint32_t extra_blocks; /* num extra blocks (1 or 2) */
@@ -602,7 +602,7 @@ typedef struct {
 typedef struct {
         DECLARE_ALIGNED(uint8_t extra_block[2 * SHA_512_BLOCK_SIZE + 16], 32);
         uint8_t outer_block[SHA_512_BLOCK_SIZE];
-        JOB_AES_HMAC *job_in_lane;
+        IMB_JOB *job_in_lane;
         uint32_t outer_done;
         uint32_t extra_blocks; /* num extra blocks (1 or 2) */
         uint32_t size_offset;  /* offset in extra_block to start of
@@ -765,10 +765,10 @@ __attribute__((aligned(64)));
 struct IMB_MGR;
 
 typedef void (*init_mb_mgr_t)(struct IMB_MGR *);
-typedef JOB_AES_HMAC *(*get_next_job_t)(struct IMB_MGR *);
-typedef JOB_AES_HMAC *(*submit_job_t)(struct IMB_MGR *);
-typedef JOB_AES_HMAC *(*get_completed_job_t)(struct IMB_MGR *);
-typedef JOB_AES_HMAC *(*flush_job_t)(struct IMB_MGR *);
+typedef IMB_JOB *(*get_next_job_t)(struct IMB_MGR *);
+typedef IMB_JOB *(*submit_job_t)(struct IMB_MGR *);
+typedef IMB_JOB *(*get_completed_job_t)(struct IMB_MGR *);
+typedef IMB_JOB *(*flush_job_t)(struct IMB_MGR *);
 typedef uint32_t (*queue_size_t)(struct IMB_MGR *);
 typedef void (*keyexp_t)(const void *, void *, void *);
 typedef void (*cmac_subkey_gen_t)(const void *, void *, void *);
@@ -1092,7 +1092,7 @@ typedef struct IMB_MGR {
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
         int              next_job;     /* byte offset */
-        JOB_AES_HMAC     jobs[MAX_JOBS];
+        IMB_JOB     jobs[MAX_JOBS];
 
         /* out of order managers */
         DECLARE_ALIGNED(MB_MGR_AES_OOO aes128_ooo, 64);
@@ -1154,36 +1154,36 @@ IMB_DLL_EXPORT IMB_MGR *alloc_mb_mgr(uint64_t flags);
 IMB_DLL_EXPORT void free_mb_mgr(IMB_MGR *state);
 
 IMB_DLL_EXPORT void init_mb_mgr_avx(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_avx(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *flush_job_avx(IMB_MGR *state);
 IMB_DLL_EXPORT uint32_t queue_size_avx(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_next_job_avx(IMB_MGR *state);
 
 IMB_DLL_EXPORT void init_mb_mgr_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *flush_job_avx2(IMB_MGR *state);
 IMB_DLL_EXPORT uint32_t queue_size_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx2(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx2(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_next_job_avx2(IMB_MGR *state);
 
 IMB_DLL_EXPORT void init_mb_mgr_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *flush_job_avx512(IMB_MGR *state);
 IMB_DLL_EXPORT uint32_t queue_size_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_avx512(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_completed_job_avx512(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_next_job_avx512(IMB_MGR *state);
 
 IMB_DLL_EXPORT void init_mb_mgr_sse(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_sse(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *submit_job_nocheck_sse(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *flush_job_sse(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_sse(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_sse(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *flush_job_sse(IMB_MGR *state);
 IMB_DLL_EXPORT uint32_t queue_size_sse(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_completed_job_sse(IMB_MGR *state);
-IMB_DLL_EXPORT JOB_AES_HMAC *get_next_job_sse(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_completed_job_sse(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
 
 /*
  * Wrapper macros to call arch API's set up
