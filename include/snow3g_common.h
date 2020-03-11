@@ -3110,6 +3110,8 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
                    pBufOut5, pBufOut6, pBufOut7, pBufOut8);
 
 #ifdef SAFE_PARAM
+        const size_t num_lanes = 8;
+
         if (pHandle == NULL)
                 return;
 
