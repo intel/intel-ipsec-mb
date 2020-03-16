@@ -32,6 +32,7 @@
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
 
 #include "intel-ipsec-mb.h"
+#include "ipsec_ooo_mgr.h"
 #include "include/kasumi_internal.h"
 #include "include/zuc_internal.h"
 #include "include/snow3g.h"
@@ -416,6 +417,27 @@ init_mb_mgr_avx(IMB_MGR *state)
         unsigned int j;
         uint8_t *p;
         size_t size;
+        MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
+        MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
+        MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
+        MB_MGR_DOCSIS_AES_OOO *docsis128_sec_ooo = state->docsis128_sec_ooo;
+        MB_MGR_DOCSIS_AES_OOO *docsis128_crc32_sec_ooo =
+                                                state->docsis128_crc32_sec_ooo;
+        MB_MGR_DOCSIS_AES_OOO *docsis256_sec_ooo = state->docsis256_sec_ooo;
+        MB_MGR_DOCSIS_AES_OOO *docsis256_crc32_sec_ooo =
+                                                state->docsis256_crc32_sec_ooo;
+        MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
+        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
+        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
+        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = state->hmac_sha_384_ooo;
+        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_512_ooo = state->hmac_sha_512_ooo;
+        MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
+        MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
+        MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
+        MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
+        MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+        MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+
 
         state->features = cpu_feature_adjust(state->flags,
                                              cpu_feature_detect());
@@ -426,104 +448,104 @@ init_mb_mgr_avx(IMB_MGR *state)
         }
 
             /* Init AES out-of-order fields */
-        memset(state->aes128_ooo.lens, 0xFF,
-               sizeof(state->aes128_ooo.lens));
-        memset(&state->aes128_ooo.lens[0], 0,
-               sizeof(state->aes128_ooo.lens[0]) * 8);
-        memset(state->aes128_ooo.job_in_lane, 0,
-               sizeof(state->aes128_ooo.job_in_lane));
-        state->aes128_ooo.unused_lanes = 0xF76543210;
-        state->aes128_ooo.num_lanes_inuse = 0;
+        memset(aes128_ooo->lens, 0xFF,
+               sizeof(aes128_ooo->lens));
+        memset(&aes128_ooo->lens[0], 0,
+               sizeof(aes128_ooo->lens[0]) * 8);
+        memset(aes128_ooo->job_in_lane, 0,
+               sizeof(aes128_ooo->job_in_lane));
+        aes128_ooo->unused_lanes = 0xF76543210;
+        aes128_ooo->num_lanes_inuse = 0;
 
-        memset(state->aes192_ooo.lens, 0xFF,
-               sizeof(state->aes192_ooo.lens));
-        memset(&state->aes192_ooo.lens[0], 0,
-               sizeof(state->aes192_ooo.lens[0]) * 8);
-        memset(state->aes192_ooo.job_in_lane, 0,
-               sizeof(state->aes192_ooo.job_in_lane));
-        state->aes192_ooo.unused_lanes = 0xF76543210;
-        state->aes192_ooo.num_lanes_inuse = 0;
+        memset(aes192_ooo->lens, 0xFF,
+               sizeof(aes192_ooo->lens));
+        memset(&aes192_ooo->lens[0], 0,
+               sizeof(aes192_ooo->lens[0]) * 8);
+        memset(aes192_ooo->job_in_lane, 0,
+               sizeof(aes192_ooo->job_in_lane));
+        aes192_ooo->unused_lanes = 0xF76543210;
+        aes192_ooo->num_lanes_inuse = 0;
 
-        memset(&state->aes256_ooo.lens, 0xFF,
-               sizeof(state->aes256_ooo.lens));
-        memset(&state->aes256_ooo.lens[0], 0,
-               sizeof(state->aes256_ooo.lens[0]) * 8);
-        memset(state->aes256_ooo.job_in_lane, 0,
-               sizeof(state->aes256_ooo.job_in_lane));
-        state->aes256_ooo.unused_lanes = 0xF76543210;
-        state->aes256_ooo.num_lanes_inuse = 0;
+        memset(&aes256_ooo->lens, 0xFF,
+               sizeof(aes256_ooo->lens));
+        memset(&aes256_ooo->lens[0], 0,
+               sizeof(aes256_ooo->lens[0]) * 8);
+        memset(aes256_ooo->job_in_lane, 0,
+               sizeof(aes256_ooo->job_in_lane));
+        aes256_ooo->unused_lanes = 0xF76543210;
+        aes256_ooo->num_lanes_inuse = 0;
 
         /* DOCSIS SEC BPI (AES CBC + AES CFB for partial block)
          * uses same settings as AES CBC.
          */
-        memset(state->docsis128_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis128_sec_ooo.lens));
-        memset(&state->docsis128_sec_ooo.lens[0], 0,
-               sizeof(state->docsis128_sec_ooo.lens[0]) * 8);
-        memset(state->docsis128_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis128_sec_ooo.job_in_lane));
-        state->docsis128_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis128_sec_ooo.num_lanes_inuse = 0;
+        memset(docsis128_sec_ooo->lens, 0xFF,
+               sizeof(docsis128_sec_ooo->lens));
+        memset(&docsis128_sec_ooo->lens[0], 0,
+               sizeof(docsis128_sec_ooo->lens[0]) * 8);
+        memset(docsis128_sec_ooo->job_in_lane, 0,
+               sizeof(docsis128_sec_ooo->job_in_lane));
+        docsis128_sec_ooo->unused_lanes = 0xF76543210;
+        docsis128_sec_ooo->num_lanes_inuse = 0;
 
-        memset(state->docsis128_crc32_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis128_crc32_sec_ooo.lens));
-        memset(&state->docsis128_crc32_sec_ooo.lens[0], 0,
-               sizeof(state->docsis128_crc32_sec_ooo.lens[0]) * 8);
-        memset(state->docsis128_crc32_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis128_crc32_sec_ooo.job_in_lane));
-        state->docsis128_crc32_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis128_crc32_sec_ooo.num_lanes_inuse = 0;
+        memset(docsis128_crc32_sec_ooo->lens, 0xFF,
+               sizeof(docsis128_crc32_sec_ooo->lens));
+        memset(&docsis128_crc32_sec_ooo->lens[0], 0,
+               sizeof(docsis128_crc32_sec_ooo->lens[0]) * 8);
+        memset(docsis128_crc32_sec_ooo->job_in_lane, 0,
+               sizeof(docsis128_crc32_sec_ooo->job_in_lane));
+        docsis128_crc32_sec_ooo->unused_lanes = 0xF76543210;
+        docsis128_crc32_sec_ooo->num_lanes_inuse = 0;
 
-        memset(state->docsis256_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis256_sec_ooo.lens));
-        memset(&state->docsis256_sec_ooo.lens[0], 0,
-               sizeof(state->docsis256_sec_ooo.lens[0]) * 8);
-        memset(state->docsis256_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis256_sec_ooo.job_in_lane));
-        state->docsis256_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis256_sec_ooo.num_lanes_inuse = 0;
+        memset(docsis256_sec_ooo->lens, 0xFF,
+               sizeof(docsis256_sec_ooo->lens));
+        memset(&docsis256_sec_ooo->lens[0], 0,
+               sizeof(docsis256_sec_ooo->lens[0]) * 8);
+        memset(docsis256_sec_ooo->job_in_lane, 0,
+               sizeof(docsis256_sec_ooo->job_in_lane));
+        docsis256_sec_ooo->unused_lanes = 0xF76543210;
+        docsis256_sec_ooo->num_lanes_inuse = 0;
 
-        memset(state->docsis256_crc32_sec_ooo.lens, 0xFF,
-               sizeof(state->docsis256_crc32_sec_ooo.lens));
-        memset(&state->docsis256_crc32_sec_ooo.lens[0], 0,
-               sizeof(state->docsis256_crc32_sec_ooo.lens[0]) * 8);
-        memset(state->docsis256_crc32_sec_ooo.job_in_lane, 0,
-               sizeof(state->docsis256_crc32_sec_ooo.job_in_lane));
-        state->docsis256_crc32_sec_ooo.unused_lanes = 0xF76543210;
-        state->docsis256_crc32_sec_ooo.num_lanes_inuse = 0;
+        memset(docsis256_crc32_sec_ooo->lens, 0xFF,
+               sizeof(docsis256_crc32_sec_ooo->lens));
+        memset(&docsis256_crc32_sec_ooo->lens[0], 0,
+               sizeof(docsis256_crc32_sec_ooo->lens[0]) * 8);
+        memset(docsis256_crc32_sec_ooo->job_in_lane, 0,
+               sizeof(docsis256_crc32_sec_ooo->job_in_lane));
+        docsis256_crc32_sec_ooo->unused_lanes = 0xF76543210;
+        docsis256_crc32_sec_ooo->num_lanes_inuse = 0;
 
         /* Init ZUC out-of-order fields */
-        memset(state->zuc_eea3_ooo.lens, 0xFF,
-               sizeof(state->zuc_eea3_ooo.lens));
-        memset(state->zuc_eea3_ooo.job_in_lane, 0,
-               sizeof(state->zuc_eea3_ooo.job_in_lane));
-        state->zuc_eea3_ooo.unused_lanes = 0xFF03020100;
-        state->zuc_eea3_ooo.num_lanes_inuse = 0;
+        memset(zuc_eea3_ooo->lens, 0xFF,
+               sizeof(zuc_eea3_ooo->lens));
+        memset(zuc_eea3_ooo->job_in_lane, 0,
+               sizeof(zuc_eea3_ooo->job_in_lane));
+        zuc_eea3_ooo->unused_lanes = 0xFF03020100;
+        zuc_eea3_ooo->num_lanes_inuse = 0;
 
-        memset(state->zuc_eia3_ooo.lens, 0xFF,
-               sizeof(state->zuc_eia3_ooo.lens));
-        memset(state->zuc_eia3_ooo.job_in_lane, 0,
-               sizeof(state->zuc_eia3_ooo.job_in_lane));
-        state->zuc_eia3_ooo.unused_lanes = 0xFF03020100;
-        state->zuc_eia3_ooo.num_lanes_inuse = 0;
+        memset(zuc_eia3_ooo->lens, 0xFF,
+               sizeof(zuc_eia3_ooo->lens));
+        memset(zuc_eia3_ooo->job_in_lane, 0,
+               sizeof(zuc_eia3_ooo->job_in_lane));
+        zuc_eia3_ooo->unused_lanes = 0xFF03020100;
+        zuc_eia3_ooo->num_lanes_inuse = 0;
 
         /* Init HMAC/SHA1 out-of-order fields */
-        state->hmac_sha_1_ooo.lens[0] = 0;
-        state->hmac_sha_1_ooo.lens[1] = 0;
-        state->hmac_sha_1_ooo.lens[2] = 0;
-        state->hmac_sha_1_ooo.lens[3] = 0;
-        state->hmac_sha_1_ooo.lens[4] = 0xFFFF;
-        state->hmac_sha_1_ooo.lens[5] = 0xFFFF;
-        state->hmac_sha_1_ooo.lens[6] = 0xFFFF;
-        state->hmac_sha_1_ooo.lens[7] = 0xFFFF;
-        state->hmac_sha_1_ooo.unused_lanes = 0xFF03020100;
+        hmac_sha_1_ooo->lens[0] = 0;
+        hmac_sha_1_ooo->lens[1] = 0;
+        hmac_sha_1_ooo->lens[2] = 0;
+        hmac_sha_1_ooo->lens[3] = 0;
+        hmac_sha_1_ooo->lens[4] = 0xFFFF;
+        hmac_sha_1_ooo->lens[5] = 0xFFFF;
+        hmac_sha_1_ooo->lens[6] = 0xFFFF;
+        hmac_sha_1_ooo->lens[7] = 0xFFFF;
+        hmac_sha_1_ooo->unused_lanes = 0xFF03020100;
         for (j = 0; j < AVX_NUM_SHA1_LANES; j++) {
-                state->hmac_sha_1_ooo.ldata[j].job_in_lane = NULL;
-                state->hmac_sha_1_ooo.ldata[j].extra_block[64] = 0x80;
-                memset(state->hmac_sha_1_ooo.ldata[j].extra_block + 65,
+                hmac_sha_1_ooo->ldata[j].job_in_lane = NULL;
+                hmac_sha_1_ooo->ldata[j].extra_block[64] = 0x80;
+                memset(hmac_sha_1_ooo->ldata[j].extra_block + 65,
                        0x00,
                        64+7);
-                p = state->hmac_sha_1_ooo.ldata[j].outer_block;
+                p = hmac_sha_1_ooo->ldata[j].outer_block;
                 memset(p + 5*4 + 1,
                        0x00,
                        64 - 5*4 - 1 - 2);
@@ -532,25 +554,25 @@ init_mb_mgr_avx(IMB_MGR *state)
                 p[64-1] = 0xA0;
         }
         /* Init HMAC/SHA224 out-of-order fields */
-        state->hmac_sha_224_ooo.lens[0] = 0;
-        state->hmac_sha_224_ooo.lens[1] = 0;
-        state->hmac_sha_224_ooo.lens[2] = 0;
-        state->hmac_sha_224_ooo.lens[3] = 0;
-        state->hmac_sha_224_ooo.lens[4] = 0xFFFF;
-        state->hmac_sha_224_ooo.lens[5] = 0xFFFF;
-        state->hmac_sha_224_ooo.lens[6] = 0xFFFF;
-        state->hmac_sha_224_ooo.lens[7] = 0xFFFF;
-        state->hmac_sha_224_ooo.unused_lanes = 0xFF03020100;
+        hmac_sha_224_ooo->lens[0] = 0;
+        hmac_sha_224_ooo->lens[1] = 0;
+        hmac_sha_224_ooo->lens[2] = 0;
+        hmac_sha_224_ooo->lens[3] = 0;
+        hmac_sha_224_ooo->lens[4] = 0xFFFF;
+        hmac_sha_224_ooo->lens[5] = 0xFFFF;
+        hmac_sha_224_ooo->lens[6] = 0xFFFF;
+        hmac_sha_224_ooo->lens[7] = 0xFFFF;
+        hmac_sha_224_ooo->unused_lanes = 0xFF03020100;
         for (j = 0; j < AVX_NUM_SHA256_LANES; j++) {
-                state->hmac_sha_224_ooo.ldata[j].job_in_lane = NULL;
+                hmac_sha_224_ooo->ldata[j].job_in_lane = NULL;
 
-                p = state->hmac_sha_224_ooo.ldata[j].extra_block;
-                size = sizeof(state->hmac_sha_224_ooo.ldata[j].extra_block);
+                p = hmac_sha_224_ooo->ldata[j].extra_block;
+                size = sizeof(hmac_sha_224_ooo->ldata[j].extra_block);
                 memset (p, 0x00, size);
                 p[64] = 0x80;
 
-                p = state->hmac_sha_224_ooo.ldata[j].outer_block;
-                size = sizeof(state->hmac_sha_224_ooo.ldata[j].outer_block);
+                p = hmac_sha_224_ooo->ldata[j].outer_block;
+                size = sizeof(hmac_sha_224_ooo->ldata[j].outer_block);
                 memset(p, 0x00, size);
                 p[7 * 4] = 0x80;  /* digest 7 words long */
                 p[64 - 2] = 0x02; /* length in little endian = 0x02E0 */
@@ -558,22 +580,22 @@ init_mb_mgr_avx(IMB_MGR *state)
         }
 
         /* Init HMAC/SHA256 out-of-order fields */
-        state->hmac_sha_256_ooo.lens[0] = 0;
-        state->hmac_sha_256_ooo.lens[1] = 0;
-        state->hmac_sha_256_ooo.lens[2] = 0;
-        state->hmac_sha_256_ooo.lens[3] = 0;
-        state->hmac_sha_256_ooo.lens[4] = 0xFFFF;
-        state->hmac_sha_256_ooo.lens[5] = 0xFFFF;
-        state->hmac_sha_256_ooo.lens[6] = 0xFFFF;
-        state->hmac_sha_256_ooo.lens[7] = 0xFFFF;
-        state->hmac_sha_256_ooo.unused_lanes = 0xFF03020100;
+        hmac_sha_256_ooo->lens[0] = 0;
+        hmac_sha_256_ooo->lens[1] = 0;
+        hmac_sha_256_ooo->lens[2] = 0;
+        hmac_sha_256_ooo->lens[3] = 0;
+        hmac_sha_256_ooo->lens[4] = 0xFFFF;
+        hmac_sha_256_ooo->lens[5] = 0xFFFF;
+        hmac_sha_256_ooo->lens[6] = 0xFFFF;
+        hmac_sha_256_ooo->lens[7] = 0xFFFF;
+        hmac_sha_256_ooo->unused_lanes = 0xFF03020100;
         for (j = 0; j < AVX_NUM_SHA256_LANES; j++) {
-                state->hmac_sha_256_ooo.ldata[j].job_in_lane = NULL;
-                state->hmac_sha_256_ooo.ldata[j].extra_block[64] = 0x80;
-                memset(state->hmac_sha_256_ooo.ldata[j].extra_block + 65,
+                hmac_sha_256_ooo->ldata[j].job_in_lane = NULL;
+                hmac_sha_256_ooo->ldata[j].extra_block[64] = 0x80;
+                memset(hmac_sha_256_ooo->ldata[j].extra_block + 65,
                        0x00,
                        64+7);
-                p = state->hmac_sha_256_ooo.ldata[j].outer_block;
+                p = hmac_sha_256_ooo->ldata[j].outer_block;
                 memset(p + 8*4 + 1,
                        0x00,
                        64 - 8*4 - 1 - 2);
@@ -584,17 +606,17 @@ init_mb_mgr_avx(IMB_MGR *state)
 
 
         /* Init HMAC/SHA384 out-of-order fields */
-        state->hmac_sha_384_ooo.lens[0] = 0;
-        state->hmac_sha_384_ooo.lens[1] = 0;
-        state->hmac_sha_384_ooo.lens[2] = 0xFFFF;
-        state->hmac_sha_384_ooo.lens[3] = 0xFFFF;
-        state->hmac_sha_384_ooo.lens[4] = 0xFFFF;
-        state->hmac_sha_384_ooo.lens[5] = 0xFFFF;
-        state->hmac_sha_384_ooo.lens[6] = 0xFFFF;
-        state->hmac_sha_384_ooo.lens[7] = 0xFFFF;
-        state->hmac_sha_384_ooo.unused_lanes = 0xFF0100;
+        hmac_sha_384_ooo->lens[0] = 0;
+        hmac_sha_384_ooo->lens[1] = 0;
+        hmac_sha_384_ooo->lens[2] = 0xFFFF;
+        hmac_sha_384_ooo->lens[3] = 0xFFFF;
+        hmac_sha_384_ooo->lens[4] = 0xFFFF;
+        hmac_sha_384_ooo->lens[5] = 0xFFFF;
+        hmac_sha_384_ooo->lens[6] = 0xFFFF;
+        hmac_sha_384_ooo->lens[7] = 0xFFFF;
+        hmac_sha_384_ooo->unused_lanes = 0xFF0100;
         for (j = 0; j < AVX_NUM_SHA512_LANES; j++) {
-                MB_MGR_HMAC_SHA_512_OOO *ctx = &state->hmac_sha_384_ooo;
+                MB_MGR_HMAC_SHA_512_OOO *ctx = hmac_sha_384_ooo;
 
                 ctx->ldata[j].job_in_lane = NULL;
                 ctx->ldata[j].extra_block[SHA_384_BLOCK_SIZE] = 0x80;
@@ -620,17 +642,17 @@ init_mb_mgr_avx(IMB_MGR *state)
         }
 
         /* Init HMAC/SHA512 out-of-order fields */
-        state->hmac_sha_512_ooo.lens[0] = 0;
-        state->hmac_sha_512_ooo.lens[1] = 0;
-        state->hmac_sha_512_ooo.lens[2] = 0xFFFF;
-        state->hmac_sha_512_ooo.lens[3] = 0xFFFF;
-        state->hmac_sha_512_ooo.lens[4] = 0xFFFF;
-        state->hmac_sha_512_ooo.lens[5] = 0xFFFF;
-        state->hmac_sha_512_ooo.lens[6] = 0xFFFF;
-        state->hmac_sha_512_ooo.lens[7] = 0xFFFF;
-        state->hmac_sha_512_ooo.unused_lanes = 0xFF0100;
+        hmac_sha_512_ooo->lens[0] = 0;
+        hmac_sha_512_ooo->lens[1] = 0;
+        hmac_sha_512_ooo->lens[2] = 0xFFFF;
+        hmac_sha_512_ooo->lens[3] = 0xFFFF;
+        hmac_sha_512_ooo->lens[4] = 0xFFFF;
+        hmac_sha_512_ooo->lens[5] = 0xFFFF;
+        hmac_sha_512_ooo->lens[6] = 0xFFFF;
+        hmac_sha_512_ooo->lens[7] = 0xFFFF;
+        hmac_sha_512_ooo->unused_lanes = 0xFF0100;
         for (j = 0; j < AVX_NUM_SHA512_LANES; j++) {
-                MB_MGR_HMAC_SHA_512_OOO *ctx = &state->hmac_sha_512_ooo;
+                MB_MGR_HMAC_SHA_512_OOO *ctx = hmac_sha_512_ooo;
 
                 ctx->ldata[j].job_in_lane = NULL;
                 ctx->ldata[j].extra_block[SHA_512_BLOCK_SIZE] = 0x80;
@@ -657,33 +679,33 @@ init_mb_mgr_avx(IMB_MGR *state)
 
 
         /* Init HMAC/MD5 out-of-order fields */
-        state->hmac_md5_ooo.lens[0] = 0;
-        state->hmac_md5_ooo.lens[1] = 0;
-        state->hmac_md5_ooo.lens[2] = 0;
-        state->hmac_md5_ooo.lens[3] = 0;
-        state->hmac_md5_ooo.lens[4] = 0;
-        state->hmac_md5_ooo.lens[5] = 0;
-        state->hmac_md5_ooo.lens[6] = 0;
-        state->hmac_md5_ooo.lens[7] = 0;
-        state->hmac_md5_ooo.lens[8] = 0xFFFF;
-        state->hmac_md5_ooo.lens[9] = 0xFFFF;
-        state->hmac_md5_ooo.lens[10] = 0xFFFF;
-        state->hmac_md5_ooo.lens[11] = 0xFFFF;
-        state->hmac_md5_ooo.lens[12] = 0xFFFF;
-        state->hmac_md5_ooo.lens[13] = 0xFFFF;
-        state->hmac_md5_ooo.lens[14] = 0xFFFF;
-        state->hmac_md5_ooo.lens[15] = 0xFFFF;
-        state->hmac_md5_ooo.unused_lanes = 0xF76543210;
+        hmac_md5_ooo->lens[0] = 0;
+        hmac_md5_ooo->lens[1] = 0;
+        hmac_md5_ooo->lens[2] = 0;
+        hmac_md5_ooo->lens[3] = 0;
+        hmac_md5_ooo->lens[4] = 0;
+        hmac_md5_ooo->lens[5] = 0;
+        hmac_md5_ooo->lens[6] = 0;
+        hmac_md5_ooo->lens[7] = 0;
+        hmac_md5_ooo->lens[8] = 0xFFFF;
+        hmac_md5_ooo->lens[9] = 0xFFFF;
+        hmac_md5_ooo->lens[10] = 0xFFFF;
+        hmac_md5_ooo->lens[11] = 0xFFFF;
+        hmac_md5_ooo->lens[12] = 0xFFFF;
+        hmac_md5_ooo->lens[13] = 0xFFFF;
+        hmac_md5_ooo->lens[14] = 0xFFFF;
+        hmac_md5_ooo->lens[15] = 0xFFFF;
+        hmac_md5_ooo->unused_lanes = 0xF76543210;
         for (j = 0; j < AVX_NUM_MD5_LANES; j++) {
-                state->hmac_md5_ooo.ldata[j].job_in_lane = NULL;
+                hmac_md5_ooo->ldata[j].job_in_lane = NULL;
 
-                p = state->hmac_md5_ooo.ldata[j].extra_block;
-                size = sizeof(state->hmac_md5_ooo.ldata[j].extra_block);
+                p = hmac_md5_ooo->ldata[j].extra_block;
+                size = sizeof(hmac_md5_ooo->ldata[j].extra_block);
                 memset (p, 0x00, size);
                 p[64] = 0x80;
 
-                p = state->hmac_md5_ooo.ldata[j].outer_block;
-                size = sizeof(state->hmac_md5_ooo.ldata[j].outer_block);
+                p = hmac_md5_ooo->ldata[j].outer_block;
+                size = sizeof(hmac_md5_ooo->ldata[j].outer_block);
                 memset(p, 0x00, size);
                 p[4 * 4] = 0x80;
                 p[64 - 7] = 0x02;
@@ -691,41 +713,41 @@ init_mb_mgr_avx(IMB_MGR *state)
         }
 
         /* Init AES/XCBC OOO fields */
-        state->aes_xcbc_ooo.lens[0] = 0;
-        state->aes_xcbc_ooo.lens[1] = 0;
-        state->aes_xcbc_ooo.lens[2] = 0;
-        state->aes_xcbc_ooo.lens[3] = 0;
-        state->aes_xcbc_ooo.lens[4] = 0;
-        state->aes_xcbc_ooo.lens[5] = 0;
-        state->aes_xcbc_ooo.lens[6] = 0;
-        state->aes_xcbc_ooo.lens[7] = 0;
-        state->aes_xcbc_ooo.unused_lanes = 0xF76543210;
+        aes_xcbc_ooo->lens[0] = 0;
+        aes_xcbc_ooo->lens[1] = 0;
+        aes_xcbc_ooo->lens[2] = 0;
+        aes_xcbc_ooo->lens[3] = 0;
+        aes_xcbc_ooo->lens[4] = 0;
+        aes_xcbc_ooo->lens[5] = 0;
+        aes_xcbc_ooo->lens[6] = 0;
+        aes_xcbc_ooo->lens[7] = 0;
+        aes_xcbc_ooo->unused_lanes = 0xF76543210;
         for (j = 0; j < 8; j++) {
-                state->aes_xcbc_ooo.ldata[j].job_in_lane = NULL;
-                state->aes_xcbc_ooo.ldata[j].final_block[16] = 0x80;
-                memset(state->aes_xcbc_ooo.ldata[j].final_block + 17, 0x00, 15);
+                aes_xcbc_ooo->ldata[j].job_in_lane = NULL;
+                aes_xcbc_ooo->ldata[j].final_block[16] = 0x80;
+                memset(aes_xcbc_ooo->ldata[j].final_block + 17, 0x00, 15);
         }
 
         /* Init AES-CCM auth out-of-order fields */
         for (j = 0; j < 8; j++) {
-                state->aes_ccm_ooo.init_done[j] = 0;
-                state->aes_ccm_ooo.lens[j] = 0;
-                state->aes_ccm_ooo.job_in_lane[j] = NULL;
+                aes_ccm_ooo->init_done[j] = 0;
+                aes_ccm_ooo->lens[j] = 0;
+                aes_ccm_ooo->job_in_lane[j] = NULL;
         }
         for (; j < 16; j++)
-                state->aes_ccm_ooo.lens[j] = 0xFFFF;
+                aes_ccm_ooo->lens[j] = 0xFFFF;
 
-        state->aes_ccm_ooo.unused_lanes = 0xF76543210;
-        state->aes_ccm_ooo.num_lanes_inuse = 0;
+        aes_ccm_ooo->unused_lanes = 0xF76543210;
+        aes_ccm_ooo->num_lanes_inuse = 0;
 
         /* Init AES-CMAC auth out-of-order fields */
         for (j = 0; j < 8; j++) {
-                state->aes_cmac_ooo.init_done[j] = 0;
-                state->aes_cmac_ooo.lens[j] = 0;
-                state->aes_cmac_ooo.job_in_lane[j] = NULL;
+                aes_cmac_ooo->init_done[j] = 0;
+                aes_cmac_ooo->lens[j] = 0;
+                aes_cmac_ooo->job_in_lane[j] = NULL;
         }
-        state->aes_cmac_ooo.unused_lanes = 0xF76543210;
-        state->aes_cmac_ooo.num_lanes_inuse = 0;
+        aes_cmac_ooo->unused_lanes = 0xF76543210;
+        aes_cmac_ooo->num_lanes_inuse = 0;
 
         /* Init "in order" components */
         state->next_job = 0;

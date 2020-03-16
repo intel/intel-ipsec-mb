@@ -1672,11 +1672,6 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 exit(EXIT_FAILURE);
         }
 
-        /* Reset the MB MGR structure in case it is allocated with
-         * memory containing the patterns that will be searched later on */
-        if (safe_check)
-                memset(enc_mgr, 0, sizeof(IMB_MGR));
-
         switch (enc_arch) {
         case ARCH_SSE:
         case ARCH_AESNI_EMU:
@@ -1705,11 +1700,6 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 fprintf(stderr, "MB MGR could not be allocated\n");
                 exit(EXIT_FAILURE);
         }
-
-        /* Reset the MB MGR structure in case it is allocated with
-         * memory containing the patterns that will be searched later on */
-        if (safe_check)
-                memset(dec_mgr, 0, sizeof(IMB_MGR));
 
         switch (dec_arch) {
         case ARCH_SSE:

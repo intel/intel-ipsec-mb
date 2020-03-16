@@ -31,8 +31,40 @@
 #else
 #include <malloc.h> /* _aligned_malloc() and aligned_free() */
 #endif
+#include <string.h>
 #include "intel-ipsec-mb.h"
+#include "ipsec_ooo_mgr.h"
 #include "cpu_feature.h"
+
+static void *
+alloc_aligned_mem(const size_t size)
+{
+        void *ptr;
+
+        const size_t alignment = 64;
+#ifdef LINUX
+        if (posix_memalign((void **)&ptr, alignment, size))
+                return NULL;
+#else
+        ptr = _aligned_malloc(size, alignment);
+#endif
+
+        IMB_ASSERT(ptr != NULL);
+
+        memset(ptr, 0, size);
+
+        return ptr;
+}
+
+static void
+free_mem(void *ptr)
+{
+#ifdef LINUX
+        free(ptr);
+#else
+        _aligned_free(ptr);
+#endif
+}
 
 /**
  * @brief Allocates memory for multi-buffer manager instance
@@ -49,22 +81,132 @@
  */
 IMB_MGR *alloc_mb_mgr(uint64_t flags)
 {
-        const size_t alignment = 64;
-        const size_t size = sizeof(IMB_MGR);
         IMB_MGR *ptr = NULL;
 
-#ifdef LINUX
-        if (posix_memalign((void **)&ptr, alignment, size))
-                return NULL;
-#else
-        ptr = _aligned_malloc(size, alignment);
-#endif
+        ptr = alloc_aligned_mem(sizeof(IMB_MGR));
+        IMB_ASSERT(ptr != NULL);
         if (ptr != NULL) {
                 ptr->flags = flags; /* save the flags for future use in init */
                 ptr->features = cpu_feature_adjust(flags, cpu_feature_detect());
-        }
-        IMB_ASSERT(ptr != NULL);
+        } else
+                return NULL;
+
+
+        /* Allocate memory for OOO */
+        ptr->aes128_ooo = alloc_aligned_mem(sizeof(MB_MGR_AES_OOO));
+        if (ptr->aes128_ooo == NULL)
+                goto exit_fail;
+        ptr->aes192_ooo = alloc_aligned_mem(sizeof(MB_MGR_AES_OOO));
+        if (ptr->aes192_ooo == NULL)
+                goto exit_fail;
+        ptr->aes256_ooo = alloc_aligned_mem(sizeof(MB_MGR_AES_OOO));
+        if (ptr->aes256_ooo == NULL)
+                goto exit_fail;
+        ptr->docsis128_sec_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_DOCSIS_AES_OOO));
+        if (ptr->docsis128_sec_ooo == NULL)
+                goto exit_fail;
+        ptr->docsis128_crc32_sec_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_DOCSIS_AES_OOO));
+        if (ptr->docsis128_crc32_sec_ooo == NULL)
+                goto exit_fail;
+        ptr->docsis256_sec_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_DOCSIS_AES_OOO));
+        if (ptr->docsis256_sec_ooo == NULL)
+                goto exit_fail;
+        ptr->docsis256_crc32_sec_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_DOCSIS_AES_OOO));
+        if (ptr->docsis256_crc32_sec_ooo == NULL)
+                goto exit_fail;
+        ptr->des_enc_ooo = alloc_aligned_mem(sizeof(MB_MGR_DES_OOO));
+        if (ptr->des_enc_ooo == NULL)
+                goto exit_fail;
+        ptr->des_dec_ooo = alloc_aligned_mem(sizeof(MB_MGR_DES_OOO));
+        if (ptr->des_dec_ooo == NULL)
+                goto exit_fail;
+        ptr->des3_enc_ooo = alloc_aligned_mem(sizeof(MB_MGR_DES_OOO));
+        if (ptr->des3_enc_ooo == NULL)
+                goto exit_fail;
+        ptr->des3_dec_ooo = alloc_aligned_mem(sizeof(MB_MGR_DES_OOO));
+        if (ptr->des3_dec_ooo == NULL)
+                goto exit_fail;
+        ptr->docsis_des_enc_ooo = alloc_aligned_mem(sizeof(MB_MGR_DES_OOO));
+        if (ptr->docsis_des_enc_ooo == NULL)
+                goto exit_fail;
+        ptr->docsis_des_dec_ooo = alloc_aligned_mem(sizeof(MB_MGR_DES_OOO));
+        if (ptr->docsis_des_dec_ooo == NULL)
+                goto exit_fail;
+        ptr->zuc_eea3_ooo = alloc_aligned_mem(sizeof(MB_MGR_ZUC_OOO));
+        if (ptr->zuc_eea3_ooo == NULL)
+                goto exit_fail;
+
+        ptr->hmac_sha_1_ooo = alloc_aligned_mem(sizeof(MB_MGR_HMAC_SHA_1_OOO));
+        if (ptr->hmac_sha_1_ooo == NULL)
+                goto exit_fail;
+        ptr->hmac_sha_224_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_HMAC_SHA_256_OOO));
+        if (ptr->hmac_sha_224_ooo == NULL)
+                goto exit_fail;
+        ptr->hmac_sha_256_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_HMAC_SHA_256_OOO));
+        if (ptr->hmac_sha_256_ooo == NULL)
+                goto exit_fail;
+        ptr->hmac_sha_384_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_HMAC_SHA_512_OOO));
+        if (ptr->hmac_sha_384_ooo == NULL)
+                goto exit_fail;
+        ptr->hmac_sha_512_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_HMAC_SHA_512_OOO));
+        if (ptr->hmac_sha_512_ooo == NULL)
+                goto exit_fail;
+        ptr->hmac_md5_ooo =
+                alloc_aligned_mem(sizeof(MB_MGR_HMAC_MD5_OOO));
+        if (ptr->hmac_md5_ooo == NULL)
+                goto exit_fail;
+        ptr->aes_xcbc_ooo = alloc_aligned_mem(sizeof(MB_MGR_AES_XCBC_OOO));
+        if (ptr->aes_xcbc_ooo == NULL)
+                goto exit_fail;
+        ptr->aes_ccm_ooo = alloc_aligned_mem(sizeof(MB_MGR_CCM_OOO));
+        if (ptr->aes_ccm_ooo == NULL)
+                goto exit_fail;
+        ptr->aes_cmac_ooo = alloc_aligned_mem(sizeof(MB_MGR_CMAC_OOO));
+        if (ptr->aes_cmac_ooo == NULL)
+                goto exit_fail;
+        ptr->zuc_eia3_ooo = alloc_aligned_mem(sizeof(MB_MGR_ZUC_OOO));
+        if (ptr->zuc_eia3_ooo == NULL)
+                goto exit_fail;
+
         return ptr;
+
+exit_fail:
+        free_mem(ptr->aes128_ooo);
+        free_mem(ptr->aes192_ooo);
+        free_mem(ptr->aes256_ooo);
+        free_mem(ptr->docsis128_sec_ooo);
+        free_mem(ptr->docsis128_crc32_sec_ooo);
+        free_mem(ptr->docsis256_sec_ooo);
+        free_mem(ptr->docsis256_crc32_sec_ooo);
+        free_mem(ptr->des_enc_ooo);
+        free_mem(ptr->des_dec_ooo);
+        free_mem(ptr->des3_enc_ooo);
+        free_mem(ptr->des3_dec_ooo);
+        free_mem(ptr->docsis_des_enc_ooo);
+        free_mem(ptr->docsis_des_dec_ooo);
+        free_mem(ptr->zuc_eea3_ooo);
+
+        free_mem(ptr->hmac_sha_1_ooo);
+        free_mem(ptr->hmac_sha_224_ooo);
+        free_mem(ptr->hmac_sha_256_ooo);
+        free_mem(ptr->hmac_sha_384_ooo);
+        free_mem(ptr->hmac_sha_512_ooo);
+        free_mem(ptr->hmac_md5_ooo);
+        free_mem(ptr->aes_xcbc_ooo);
+        free_mem(ptr->aes_ccm_ooo);
+        free_mem(ptr->aes_cmac_ooo);
+        free_mem(ptr->zuc_eia3_ooo);
+        free(ptr);
+
+        return NULL;
 }
 
 /**
@@ -76,9 +218,36 @@ IMB_MGR *alloc_mb_mgr(uint64_t flags)
 void free_mb_mgr(IMB_MGR *ptr)
 {
         IMB_ASSERT(ptr != NULL);
-#ifdef LINUX
-        free(ptr);
-#else
-        _aligned_free(ptr);
-#endif
+
+        /* Free memory for OOO */
+        if (ptr != NULL) {
+                free_mem(ptr->aes128_ooo);
+                free_mem(ptr->aes192_ooo);
+                free_mem(ptr->aes256_ooo);
+                free_mem(ptr->docsis128_sec_ooo);
+                free_mem(ptr->docsis128_crc32_sec_ooo);
+                free_mem(ptr->docsis256_sec_ooo);
+                free_mem(ptr->docsis256_crc32_sec_ooo);
+                free_mem(ptr->des_enc_ooo);
+                free_mem(ptr->des_dec_ooo);
+                free_mem(ptr->des3_enc_ooo);
+                free_mem(ptr->des3_dec_ooo);
+                free_mem(ptr->docsis_des_enc_ooo);
+                free_mem(ptr->docsis_des_dec_ooo);
+                free_mem(ptr->zuc_eea3_ooo);
+
+                free_mem(ptr->hmac_sha_1_ooo);
+                free_mem(ptr->hmac_sha_224_ooo);
+                free_mem(ptr->hmac_sha_256_ooo);
+                free_mem(ptr->hmac_sha_384_ooo);
+                free_mem(ptr->hmac_sha_512_ooo);
+                free_mem(ptr->hmac_md5_ooo);
+                free_mem(ptr->aes_xcbc_ooo);
+                free_mem(ptr->aes_ccm_ooo);
+                free_mem(ptr->aes_cmac_ooo);
+                free_mem(ptr->zuc_eia3_ooo);
+        }
+
+        /* Free IMB_MGR */
+        free_mem(ptr);
 }

@@ -101,29 +101,11 @@ typedef struct {
 
 #define AES_BLOCK_SIZE 16
 
-#define NUM_MD5_DIGEST_WORDS     4
-#define NUM_SHA_DIGEST_WORDS     5
-#define NUM_SHA_256_DIGEST_WORDS 8
-#define NUM_SHA_224_DIGEST_WORDS 7
-#define NUM_SHA_512_DIGEST_WORDS 8
-#define NUM_SHA_384_DIGEST_WORDS 6
-
-#define SHA_DIGEST_WORD_SIZE      4
-#define SHA224_DIGEST_WORD_SIZE   4
-#define SHA256_DIGEST_WORD_SIZE   4
-#define SHA384_DIGEST_WORD_SIZE   8
-#define SHA512_DIGEST_WORD_SIZE   8
-
-#define SHA1_DIGEST_SIZE_IN_BYTES \
-        (NUM_SHA_DIGEST_WORDS * SHA_DIGEST_WORD_SIZE)
-#define SHA224_DIGEST_SIZE_IN_BYTES \
-        (NUM_SHA_224_DIGEST_WORDS * SHA224_DIGEST_WORD_SIZE)
-#define SHA256_DIGEST_SIZE_IN_BYTES \
-        (NUM_SHA_256_DIGEST_WORDS * SHA256_DIGEST_WORD_SIZE)
-#define SHA384_DIGEST_SIZE_IN_BYTES \
-        (NUM_SHA_384_DIGEST_WORDS * SHA384_DIGEST_WORD_SIZE)
-#define SHA512_DIGEST_SIZE_IN_BYTES \
-        (NUM_SHA_512_DIGEST_WORDS * SHA512_DIGEST_WORD_SIZE)
+#define SHA1_DIGEST_SIZE_IN_BYTES   20
+#define SHA224_DIGEST_SIZE_IN_BYTES 28
+#define SHA256_DIGEST_SIZE_IN_BYTES 32
+#define SHA384_DIGEST_SIZE_IN_BYTES 48
+#define SHA512_DIGEST_SIZE_IN_BYTES 64
 
 #define SHA1_BLOCK_SIZE 64    /* 512 bits is 64 byte blocks */
 #define SHA_256_BLOCK_SIZE 64 /* 512 bits is 64 byte blocks */
@@ -134,38 +116,6 @@ typedef struct {
 #define KASUMI_IV_SIZE          8
 #define KASUMI_BLOCK_SIZE       8
 #define KASUMI_DIGEST_SIZE      4
-
-/* Number of lanes AVX512, AVX2, AVX and SSE */
-#define AVX512_NUM_SHA1_LANES   16
-#define AVX512_NUM_SHA256_LANES 16
-#define AVX512_NUM_SHA512_LANES 8
-#define AVX512_NUM_MD5_LANES    32
-#define AVX512_NUM_DES_LANES    16
-
-#define AVX2_NUM_SHA1_LANES     8
-#define AVX2_NUM_SHA256_LANES   8
-#define AVX2_NUM_SHA512_LANES   4
-#define AVX2_NUM_MD5_LANES      16
-
-#define AVX_NUM_SHA1_LANES      4
-#define AVX_NUM_SHA256_LANES    4
-#define AVX_NUM_SHA512_LANES    2
-#define AVX_NUM_MD5_LANES       8
-
-#define SSE_NUM_SHA1_LANES   AVX_NUM_SHA1_LANES
-#define SSE_NUM_SHA256_LANES AVX_NUM_SHA256_LANES
-#define SSE_NUM_SHA512_LANES AVX_NUM_SHA512_LANES
-#define SSE_NUM_MD5_LANES    AVX_NUM_MD5_LANES
-
-/*
- * Each row is sized to hold enough lanes for AVX2, AVX1 and SSE use a subset
- * of each row. Thus one row is not adjacent in memory to its neighboring rows
- * in the case of SSE and AVX1.
- */
-#define MD5_DIGEST_SZ    (NUM_MD5_DIGEST_WORDS * AVX512_NUM_MD5_LANES)
-#define SHA1_DIGEST_SZ   (NUM_SHA_DIGEST_WORDS * AVX512_NUM_SHA1_LANES)
-#define SHA256_DIGEST_SZ (NUM_SHA_256_DIGEST_WORDS * AVX512_NUM_SHA256_LANES)
-#define SHA512_DIGEST_SZ (NUM_SHA_512_DIGEST_WORDS * AVX512_NUM_SHA512_LANES)
 
 /**
  * Minimum Ethernet frame size to calculate CRC32
@@ -438,221 +388,6 @@ typedef struct IMB_JOB {
         int (*cipher_func)(struct IMB_JOB *);
         int (*hash_func)(struct IMB_JOB *);
 } IMB_JOB;
-
-/*
- * Argument structures for various algorithms
- */
-typedef struct {
-        const uint8_t *in[16];
-        uint8_t *out[16];
-        const uint32_t *keys[16];
-        DECLARE_ALIGNED(imb_uint128_t IV[16], 64);
-        DECLARE_ALIGNED(imb_uint128_t key_tab[15][16], 64);
-} AES_ARGS;
-
-typedef struct {
-        DECLARE_ALIGNED(uint32_t digest[SHA1_DIGEST_SZ], 32);
-        uint8_t *data_ptr[AVX512_NUM_SHA1_LANES];
-} SHA1_ARGS;
-
-typedef struct {
-        DECLARE_ALIGNED(uint32_t digest[SHA256_DIGEST_SZ], 32);
-        uint8_t *data_ptr[AVX512_NUM_SHA256_LANES];
-} SHA256_ARGS;
-
-typedef struct {
-        DECLARE_ALIGNED(uint64_t digest[SHA512_DIGEST_SZ], 32);
-        uint8_t *data_ptr[AVX512_NUM_SHA512_LANES];
-}  SHA512_ARGS;
-
-typedef struct {
-        DECLARE_ALIGNED(uint32_t digest[MD5_DIGEST_SZ], 32);
-        uint8_t *data_ptr[AVX512_NUM_MD5_LANES];
-} MD5_ARGS;
-
-typedef struct {
-        const uint8_t *in[8];
-        const uint32_t *keys[8];
-        DECLARE_ALIGNED(imb_uint128_t ICV[8], 32);
-} AES_XCBC_ARGS_x8;
-
-typedef struct {
-        const uint8_t *in[AVX512_NUM_DES_LANES];
-        uint8_t *out[AVX512_NUM_DES_LANES];
-        const uint8_t *keys[AVX512_NUM_DES_LANES];
-        uint32_t IV[AVX512_NUM_DES_LANES * 2]; /* uint32_t is more handy here */
-        uint32_t partial_len[AVX512_NUM_DES_LANES];
-        uint32_t block_len[AVX512_NUM_DES_LANES];
-        const uint8_t *last_in[AVX512_NUM_DES_LANES];
-        uint8_t *last_out[AVX512_NUM_DES_LANES];
-} DES_ARGS_x16;
-
-typedef struct {
-        const uint16_t *in[16];
-        uint16_t *out[16];
-        const uint16_t *keys[16];
-        const uint16_t *iv[16];
-} ZUC_ARGS_x16;
-
-/* AES out-of-order scheduler fields */
-typedef struct {
-        AES_ARGS args;
-        DECLARE_ALIGNED(uint16_t lens[16], 16);
-        /* each nibble is index (0...15) of an unused lane,
-         * the last nibble is set to F as a flag
-         */
-        uint64_t unused_lanes;
-        IMB_JOB *job_in_lane[16];
-        uint64_t num_lanes_inuse;
-} MB_MGR_AES_OOO;
-
-/* DOCSIS AES out-of-order scheduler fields */
-typedef struct {
-        AES_ARGS args;
-        DECLARE_ALIGNED(uint16_t lens[16], 16);
-        /* each nibble is index (0...15) of an unused lane,
-         * the last nibble is set to F as a flag
-         */
-        uint64_t unused_lanes;
-        IMB_JOB *job_in_lane[16];
-        uint64_t num_lanes_inuse;
-        DECLARE_ALIGNED(imb_uint128_t crc_init[16], 16);
-        DECLARE_ALIGNED(uint16_t crc_len[16], 16);
-        DECLARE_ALIGNED(uint8_t crc_done[16], 16);
-} MB_MGR_DOCSIS_AES_OOO;
-
-/* AES XCBC out-of-order scheduler fields */
-typedef struct {
-        DECLARE_ALIGNED(uint8_t final_block[2 * 16], 32);
-        IMB_JOB *job_in_lane;
-        uint64_t final_done;
-} XCBC_LANE_DATA;
-
-typedef struct {
-        AES_XCBC_ARGS_x8 args;
-        DECLARE_ALIGNED(uint16_t lens[8], 16);
-        /* each byte is index (0...3) of unused lanes
-         * byte 4 is set to FF as a flag
-         */
-        uint64_t unused_lanes;
-        XCBC_LANE_DATA ldata[8];
-} MB_MGR_AES_XCBC_OOO;
-
-/* AES-CCM out-of-order scheduler structure */
-typedef struct {
-        AES_ARGS args; /* need to re-use AES arguments */
-        DECLARE_ALIGNED(uint16_t lens[16], 32);
-        DECLARE_ALIGNED(uint16_t init_done[16], 32);
-        /* each byte is index (0...3) of unused lanes
-         * byte 4 is set to FF as a flag
-         */
-        uint64_t unused_lanes;
-        IMB_JOB *job_in_lane[16];
-        uint64_t num_lanes_inuse;
-        DECLARE_ALIGNED(uint8_t init_blocks[16 * (4 * 16)], 64);
-} MB_MGR_CCM_OOO;
-
-
-/* AES-CMAC out-of-order scheduler structure */
-typedef struct {
-        AES_ARGS args; /* need to re-use AES arguments */
-        DECLARE_ALIGNED(uint16_t lens[16], 32);
-        DECLARE_ALIGNED(uint16_t init_done[16], 32);
-        /* each byte is index (0...3) of unused lanes
-         * byte 4 is set to FF as a flag
-         */
-        uint64_t unused_lanes;
-        IMB_JOB *job_in_lane[16];
-        uint64_t num_lanes_inuse;
-        DECLARE_ALIGNED(uint8_t scratch[16 * 16], 32);
-} MB_MGR_CMAC_OOO;
-
-
-/* DES out-of-order scheduler fields */
-typedef struct {
-        DES_ARGS_x16 args;
-        DECLARE_ALIGNED(uint16_t lens[16], 16);
-        /* each nibble is index (0...7) of unused lanes
-         * nibble 8 is set to F as a flag
-         */
-        uint64_t unused_lanes;
-        IMB_JOB *job_in_lane[16];
-        uint64_t num_lanes_inuse;
-} MB_MGR_DES_OOO;
-
-/* ZUC out-of-order scheduler fields */
-typedef struct {
-        ZUC_ARGS_x16 args;
-        DECLARE_ALIGNED(uint16_t lens[16], 16);
-        uint64_t unused_lanes;
-        IMB_JOB *job_in_lane[16];
-        uint64_t num_lanes_inuse;
-} MB_MGR_ZUC_OOO;
-
-/* HMAC-SHA1 and HMAC-SHA256/224 */
-typedef struct {
-        /* YMM aligned access to extra_block */
-        DECLARE_ALIGNED(uint8_t extra_block[2 * SHA1_BLOCK_SIZE+8], 32);
-        IMB_JOB *job_in_lane;
-        uint8_t outer_block[64];
-        uint32_t outer_done;
-        uint32_t extra_blocks; /* num extra blocks (1 or 2) */
-        uint32_t size_offset;  /* offset in extra_block to start of
-                                * size field */
-        uint32_t start_offset; /* offset to start of data */
-} HMAC_SHA1_LANE_DATA;
-
-/* HMAC-SHA512/384 */
-typedef struct {
-        DECLARE_ALIGNED(uint8_t extra_block[2 * SHA_512_BLOCK_SIZE + 16], 32);
-        uint8_t outer_block[SHA_512_BLOCK_SIZE];
-        IMB_JOB *job_in_lane;
-        uint32_t outer_done;
-        uint32_t extra_blocks; /* num extra blocks (1 or 2) */
-        uint32_t size_offset;  /* offset in extra_block to start of
-                                * size field */
-        uint32_t start_offset; /* offset to start of data */
-} HMAC_SHA512_LANE_DATA;
-
-/*
- * unused_lanes contains a list of unused lanes stored as bytes or as
- * nibbles depending on the arch. The end of list is either FF or F.
- */
-typedef struct {
-        SHA1_ARGS args;
-        DECLARE_ALIGNED(uint16_t lens[16], 32);
-        uint64_t unused_lanes;
-        HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA1_LANES];
-        uint32_t num_lanes_inuse;
-} MB_MGR_HMAC_SHA_1_OOO;
-
-typedef struct {
-        SHA256_ARGS args;
-        DECLARE_ALIGNED(uint16_t lens[16], 16);
-        uint64_t unused_lanes;
-        HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA256_LANES];
-        uint32_t num_lanes_inuse;
-} MB_MGR_HMAC_SHA_256_OOO;
-
-typedef struct {
-        SHA512_ARGS args;
-        DECLARE_ALIGNED(uint16_t lens[8], 16);
-        uint64_t unused_lanes;
-        HMAC_SHA512_LANE_DATA ldata[AVX512_NUM_SHA512_LANES];
-} MB_MGR_HMAC_SHA_512_OOO;
-
-/* MD5-HMAC out-of-order scheduler fields */
-typedef struct {
-        MD5_ARGS args;
-        DECLARE_ALIGNED(uint16_t lens[AVX512_NUM_MD5_LANES], 16);
-        /*
-         * In the avx2 case, all 16 nibbles of unused lanes are used.
-         * In that case num_lanes_inuse is used to detect the end of the list
-         */
-        uint64_t unused_lanes;
-        HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_MD5_LANES];
-        uint32_t num_lanes_inuse;
-} MB_MGR_HMAC_MD5_OOO;
 
 
 /* KASUMI */
@@ -1099,31 +834,31 @@ typedef struct IMB_MGR {
         IMB_JOB     jobs[MAX_JOBS];
 
         /* out of order managers */
-        DECLARE_ALIGNED(MB_MGR_AES_OOO aes128_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_AES_OOO aes192_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_AES_OOO aes256_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DOCSIS_AES_OOO docsis128_sec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DOCSIS_AES_OOO docsis128_crc32_sec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DOCSIS_AES_OOO docsis256_sec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DOCSIS_AES_OOO docsis256_crc32_sec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DES_OOO des_enc_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DES_OOO des_dec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DES_OOO des3_enc_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DES_OOO des3_dec_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DES_OOO docsis_des_enc_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_DES_OOO docsis_des_dec_ooo, 64);
+        void *aes128_ooo;
+        void *aes192_ooo;
+        void *aes256_ooo;
+        void *docsis128_sec_ooo;
+        void *docsis128_crc32_sec_ooo;
+        void *docsis256_sec_ooo;
+        void *docsis256_crc32_sec_ooo;
+        void *des_enc_ooo;
+        void *des_dec_ooo;
+        void *des3_enc_ooo;
+        void *des3_dec_ooo;
+        void *docsis_des_enc_ooo;
+        void *docsis_des_dec_ooo;
 
-        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_1_OOO hmac_sha_1_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_256_OOO hmac_sha_224_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_256_OOO hmac_sha_256_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_512_OOO hmac_sha_384_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_HMAC_SHA_512_OOO hmac_sha_512_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_HMAC_MD5_OOO hmac_md5_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_AES_XCBC_OOO aes_xcbc_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_CCM_OOO aes_ccm_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_CMAC_OOO aes_cmac_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_ZUC_OOO zuc_eea3_ooo, 64);
-        DECLARE_ALIGNED(MB_MGR_ZUC_OOO zuc_eia3_ooo, 64);
+        void *hmac_sha_1_ooo;
+        void *hmac_sha_224_ooo;
+        void *hmac_sha_256_ooo;
+        void *hmac_sha_384_ooo;
+        void *hmac_sha_512_ooo;
+        void *hmac_md5_ooo;
+        void *aes_xcbc_ooo;
+        void *aes_ccm_ooo;
+        void *aes_cmac_ooo;
+        void *zuc_eea3_ooo;
+        void *zuc_eia3_ooo;
 } IMB_MGR;
 
 /* ========================================================================== */

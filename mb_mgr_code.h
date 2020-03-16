@@ -309,24 +309,24 @@ submit_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
         if (16 == job->key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis128_crc32_sec_ooo;
+                                state->docsis128_crc32_sec_ooo;
 
                         return SUBMIT_JOB_DOCSIS128_SEC_CRC_ENC(p_ooo, job);
                 } else {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis128_sec_ooo;
+                                state->docsis128_sec_ooo;
 
                         return SUBMIT_JOB_DOCSIS128_SEC_ENC(p_ooo, job);
                 }
         } else { /* 32 */
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis256_crc32_sec_ooo;
+                                state->docsis256_crc32_sec_ooo;
 
                         return SUBMIT_JOB_DOCSIS256_SEC_CRC_ENC(p_ooo, job);
                 } else {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis256_sec_ooo;
+                                state->docsis256_sec_ooo;
 
                         return SUBMIT_JOB_DOCSIS256_SEC_ENC(p_ooo, job);
                 }
@@ -340,24 +340,24 @@ flush_docsis_enc_job(IMB_MGR *state, IMB_JOB *job)
         if (16 == job->key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis128_crc32_sec_ooo;
+                                state->docsis128_crc32_sec_ooo;
 
                         return FLUSH_JOB_DOCSIS128_SEC_CRC_ENC(p_ooo);
                 } else {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis128_sec_ooo;
+                                state->docsis128_sec_ooo;
 
                         return FLUSH_JOB_DOCSIS128_SEC_ENC(p_ooo);
                 }
         } else { /* 32 */
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis256_crc32_sec_ooo;
+                                state->docsis256_crc32_sec_ooo;
 
                         return FLUSH_JOB_DOCSIS256_SEC_CRC_ENC(p_ooo);
                 } else {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis256_sec_ooo;
+                                state->docsis256_sec_ooo;
 
                         return FLUSH_JOB_DOCSIS256_SEC_ENC(p_ooo);
                 }
@@ -371,24 +371,24 @@ submit_docsis_dec_job(IMB_MGR *state, IMB_JOB *job)
         if (16 == job->key_len_in_bytes) {
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis128_crc32_sec_ooo;
+                                state->docsis128_crc32_sec_ooo;
 
                         return SUBMIT_JOB_DOCSIS128_SEC_CRC_DEC(p_ooo, job);
                 } else {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis128_sec_ooo;
+                                state->docsis128_sec_ooo;
 
                         return SUBMIT_JOB_DOCSIS128_SEC_DEC(p_ooo, job);
                 }
         } else { /* 32 */
                 if (job->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis256_crc32_sec_ooo;
+                                state->docsis256_crc32_sec_ooo;
 
                         return SUBMIT_JOB_DOCSIS256_SEC_CRC_DEC(p_ooo, job);
                 } else {
                         MB_MGR_DOCSIS_AES_OOO *p_ooo =
-                                &state->docsis256_sec_ooo;
+                                state->docsis256_sec_ooo;
 
                         return SUBMIT_JOB_DOCSIS256_SEC_DEC(p_ooo, job);
                 }
@@ -402,13 +402,18 @@ __forceinline
 IMB_JOB *
 SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
 {
+        MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
+        MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
+        MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
+        MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
-                        return SUBMIT_JOB_AES128_ENC(&state->aes128_ooo, job);
+                        return SUBMIT_JOB_AES128_ENC(aes128_ooo, job);
                 } else if (24 == job->key_len_in_bytes) {
-                        return SUBMIT_JOB_AES192_ENC(&state->aes192_ooo, job);
+                        return SUBMIT_JOB_AES192_ENC(aes192_ooo, job);
                 } else { /* assume 32 */
-                        return SUBMIT_JOB_AES256_ENC(&state->aes256_ooo, job);
+                        return SUBMIT_JOB_AES256_ENC(aes256_ooo, job);
                 }
         } else if (IMB_CIPHER_CNTR == job->cipher_mode) {
                 return SUBMIT_JOB_AES_CNTR(job);
@@ -435,27 +440,33 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DES_CBC_ENC
-                return SUBMIT_JOB_DES_CBC_ENC(&state->des_enc_ooo, job);
+                MB_MGR_DES_OOO *des_enc_ooo = state->des_enc_ooo;
+
+                return SUBMIT_JOB_DES_CBC_ENC(des_enc_ooo, job);
 #else
                 return DES_CBC_ENC(job);
 #endif /* SUBMIT_JOB_DES_CBC_ENC */
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
-                return SUBMIT_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo,
+                MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
+
+                return SUBMIT_JOB_DOCSIS_DES_ENC(docsis_des_enc_ooo,
                                                  job);
 #else
                 return DOCSIS_DES_ENC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_ENC */
         } else if (IMB_CIPHER_DES3 == job->cipher_mode) {
 #ifdef SUBMIT_JOB_3DES_CBC_ENC
-                return SUBMIT_JOB_3DES_CBC_ENC(&state->des3_enc_ooo, job);
+                MB_MGR_DES_OOO *des3_enc_ooo = state->des3_enc_ooo;
+
+                return SUBMIT_JOB_3DES_CBC_ENC(des3_enc_ooo, job);
 #else
                 return DES3_CBC_ENC(job);
 #endif
         } else if (IMB_CIPHER_CCM == job->cipher_mode) {
                 return AES_CNTR_CCM_128(job);
         } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
-                return SUBMIT_JOB_ZUC_EEA3(&state->zuc_eea3_ooo, job);
+                return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == job->cipher_mode) {
@@ -470,13 +481,18 @@ __forceinline
 IMB_JOB *
 FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
 {
+        MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
+        MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
+        MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
+        MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
-                        return FLUSH_JOB_AES128_ENC(&state->aes128_ooo);
+                        return FLUSH_JOB_AES128_ENC(aes128_ooo);
                 } else if (24 == job->key_len_in_bytes) {
-                        return FLUSH_JOB_AES192_ENC(&state->aes192_ooo);
+                        return FLUSH_JOB_AES192_ENC(aes192_ooo);
                 } else  { /* assume 32 */
-                        return FLUSH_JOB_AES256_ENC(&state->aes256_ooo);
+                        return FLUSH_JOB_AES256_ENC(aes256_ooo);
                 }
         } else if (IMB_CIPHER_GCM == job->cipher_mode) {
                 return FLUSH_JOB_AES_GCM_ENC(state, job);
@@ -484,20 +500,26 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return flush_docsis_enc_job(state, job);
 #ifdef FLUSH_JOB_DES_CBC_ENC
         } else if (IMB_CIPHER_DES == job->cipher_mode) {
-                return FLUSH_JOB_DES_CBC_ENC(&state->des_enc_ooo);
+                MB_MGR_DES_OOO *des_enc_ooo = state->des_enc_ooo;
+
+                return FLUSH_JOB_DES_CBC_ENC(des_enc_ooo);
 #endif /* FLUSH_JOB_DES_CBC_ENC */
 #ifdef FLUSH_JOB_3DES_CBC_ENC
         } else if (IMB_CIPHER_DES3 == job->cipher_mode) {
-                return FLUSH_JOB_3DES_CBC_ENC(&state->des3_enc_ooo);
+                MB_MGR_DES_OOO *des3_enc_ooo = state->des3_enc_ooo;
+
+                return FLUSH_JOB_3DES_CBC_ENC(des3_enc_ooo);
 #endif /* FLUSH_JOB_3DES_CBC_ENC */
 #ifdef FLUSH_JOB_DOCSIS_DES_ENC
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
-                return FLUSH_JOB_DOCSIS_DES_ENC(&state->docsis_des_enc_ooo);
+                MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
+
+                return FLUSH_JOB_DOCSIS_DES_ENC(docsis_des_enc_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_ENC */
         } else if (IMB_CIPHER_CUSTOM == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
-                return FLUSH_JOB_ZUC_EEA3(&state->zuc_eea3_ooo);
+                return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
         /* assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
          * IMB_CIPHER_CCM or IMB_CIPHER_NULL */
         } else {
@@ -509,6 +531,8 @@ __forceinline
 IMB_JOB *
 SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
+        MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES128_DEC(job);
@@ -540,21 +564,27 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_AES_GCM_DEC(state, job);
         } else if (IMB_CIPHER_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DES_CBC_DEC
-                return SUBMIT_JOB_DES_CBC_DEC(&state->des_dec_ooo, job);
+                MB_MGR_DES_OOO *des_dec_ooo = state->des_dec_ooo;
+
+                return SUBMIT_JOB_DES_CBC_DEC(des_dec_ooo, job);
 #else
                 (void) state;
                 return DES_CBC_DEC(job);
 #endif /* SUBMIT_JOB_DES_CBC_DEC */
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
-                return SUBMIT_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo,
+                MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
+
+                return SUBMIT_JOB_DOCSIS_DES_DEC(docsis_des_dec_ooo,
                                                  job);
 #else
                 return DOCSIS_DES_DEC(job);
 #endif /* SUBMIT_JOB_DOCSIS_DES_DEC */
         } else if (IMB_CIPHER_DES3 == job->cipher_mode) {
 #ifdef SUBMIT_JOB_3DES_CBC_DEC
-                return SUBMIT_JOB_3DES_CBC_DEC(&state->des3_dec_ooo, job);
+                MB_MGR_DES_OOO *des3_dec_ooo = state->des3_dec_ooo;
+
+                return SUBMIT_JOB_3DES_CBC_DEC(des3_dec_ooo, job);
 #else
                 return DES3_CBC_DEC(job);
 #endif
@@ -563,7 +593,7 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
         } else if (IMB_CIPHER_CCM == job->cipher_mode) {
                 return AES_CNTR_CCM_128(job);
         } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
-                return SUBMIT_JOB_ZUC_EEA3(&state->zuc_eea3_ooo, job);
+                return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == job->cipher_mode) {
@@ -579,22 +609,30 @@ __forceinline
 IMB_JOB *
 FLUSH_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
+        MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+
         if (IMB_CIPHER_GCM == job->cipher_mode)
                 return FLUSH_JOB_AES_GCM_DEC(state, job);
 #ifdef FLUSH_JOB_DES_CBC_DEC
+        MB_MGR_DES_OOO *des_dec_ooo = state->des_dec_ooo;
+
         if (IMB_CIPHER_DES == job->cipher_mode)
-                return FLUSH_JOB_DES_CBC_DEC(&state->des_dec_ooo);
+                return FLUSH_JOB_DES_CBC_DEC(des_dec_ooo);
 #endif /* FLUSH_JOB_DES_CBC_DEC */
 #ifdef FLUSH_JOB_3DES_CBC_DEC
+        MB_MGR_DES_OOO *des3_dec_ooo = state->des3_dec_ooo;
+
         if (IMB_CIPHER_DES3 == job->cipher_mode)
-                return FLUSH_JOB_3DES_CBC_DEC(&state->des3_dec_ooo);
+                return FLUSH_JOB_3DES_CBC_DEC(des3_dec_ooo);
 #endif /* FLUSH_JOB_3DES_CBC_DEC */
 #ifdef FLUSH_JOB_DOCSIS_DES_DEC
+        MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
+
         if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode)
-                return FLUSH_JOB_DOCSIS_DES_DEC(&state->docsis_des_dec_ooo);
+                return FLUSH_JOB_DOCSIS_DES_DEC(docsis_des_dec_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_DEC */
         if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode)
-                return FLUSH_JOB_ZUC_EEA3(&state->zuc_eea3_ooo);
+                return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
         (void) state;
         return NULL;
 }
@@ -607,6 +645,17 @@ __forceinline
 IMB_JOB *
 SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
+        MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
+        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
+        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
+        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = state->hmac_sha_384_ooo;
+        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_512_ooo = state->hmac_sha_512_ooo;
+        MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
+        MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
+        MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
+        MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
+        MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+
 #ifdef VERBOSE
         printf("--------Enter SUBMIT_JOB_HASH --------------\n");
 #endif
@@ -614,35 +663,35 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_HMAC_SHA_1:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
-                        return SUBMIT_JOB_HMAC_NI(&state->hmac_sha_1_ooo, job);
+                        return SUBMIT_JOB_HMAC_NI(hmac_sha_1_ooo, job);
 #endif
-                return SUBMIT_JOB_HMAC(&state->hmac_sha_1_ooo, job);
+                return SUBMIT_JOB_HMAC(hmac_sha_1_ooo, job);
         case IMB_AUTH_HMAC_SHA_224:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return SUBMIT_JOB_HMAC_SHA_224_NI
-                                (&state->hmac_sha_224_ooo, job);
+                                (hmac_sha_224_ooo, job);
 #endif
-                return SUBMIT_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo, job);
+                return SUBMIT_JOB_HMAC_SHA_224(hmac_sha_224_ooo, job);
         case IMB_AUTH_HMAC_SHA_256:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return SUBMIT_JOB_HMAC_SHA_256_NI
-                                (&state->hmac_sha_256_ooo, job);
+                                (hmac_sha_256_ooo, job);
 #endif
-                return SUBMIT_JOB_HMAC_SHA_256(&state->hmac_sha_256_ooo, job);
+                return SUBMIT_JOB_HMAC_SHA_256(hmac_sha_256_ooo, job);
         case IMB_AUTH_HMAC_SHA_384:
-                return SUBMIT_JOB_HMAC_SHA_384(&state->hmac_sha_384_ooo, job);
+                return SUBMIT_JOB_HMAC_SHA_384(hmac_sha_384_ooo, job);
         case IMB_AUTH_HMAC_SHA_512:
-                return SUBMIT_JOB_HMAC_SHA_512(&state->hmac_sha_512_ooo, job);
+                return SUBMIT_JOB_HMAC_SHA_512(hmac_sha_512_ooo, job);
         case IMB_AUTH_AES_XCBC:
-                return SUBMIT_JOB_AES_XCBC(&state->aes_xcbc_ooo, job);
+                return SUBMIT_JOB_AES_XCBC(aes_xcbc_ooo, job);
         case IMB_AUTH_MD5:
-                return SUBMIT_JOB_HMAC_MD5(&state->hmac_md5_ooo, job);
+                return SUBMIT_JOB_HMAC_MD5(hmac_md5_ooo, job);
         case IMB_AUTH_CUSTOM:
                 return SUBMIT_JOB_CUSTOM_HASH(job);
         case IMB_AUTH_AES_CCM:
-                return SUBMIT_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo, job);
+                return SUBMIT_JOB_AES_CCM_AUTH(aes_ccm_ooo, job);
         case IMB_AUTH_AES_CMAC:
                 /*
                  * CMAC OOO MGR assumes job len in bits
@@ -650,9 +699,9 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                  */
                 job->msg_len_to_hash_in_bits =
                         job->msg_len_to_hash_in_bytes * 8;
-                return SUBMIT_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo, job);
+                return SUBMIT_JOB_AES_CMAC_AUTH(aes_cmac_ooo, job);
         case IMB_AUTH_AES_CMAC_BITLEN:
-                return SUBMIT_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo, job);
+                return SUBMIT_JOB_AES_CMAC_AUTH(aes_cmac_ooo, job);
         case IMB_AUTH_SHA_1:
                 IMB_SHA1(state,
                          job->src + job->hash_start_src_offset_in_bytes,
@@ -684,7 +733,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
-                return SUBMIT_JOB_ZUC_EIA3(&state->zuc_eia3_ooo, job);
+                return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
                                job->u.SNOW3G_UIA2._key,
@@ -712,44 +761,55 @@ __forceinline
 IMB_JOB *
 FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
+        MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
+        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
+        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
+        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = state->hmac_sha_384_ooo;
+        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_512_ooo = state->hmac_sha_512_ooo;
+        MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
+        MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
+        MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
+        MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
+        MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
-                        return FLUSH_JOB_HMAC_NI(&state->hmac_sha_1_ooo);
+                        return FLUSH_JOB_HMAC_NI(hmac_sha_1_ooo);
 #endif
-                return FLUSH_JOB_HMAC(&state->hmac_sha_1_ooo);
+                return FLUSH_JOB_HMAC(hmac_sha_1_ooo);
         case IMB_AUTH_HMAC_SHA_224:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return FLUSH_JOB_HMAC_SHA_224_NI
-                                (&state->hmac_sha_224_ooo);
+                                (hmac_sha_224_ooo);
 #endif
-                return FLUSH_JOB_HMAC_SHA_224(&state->hmac_sha_224_ooo);
+                return FLUSH_JOB_HMAC_SHA_224(hmac_sha_224_ooo);
         case IMB_AUTH_HMAC_SHA_256:
 #ifdef HASH_USE_SHAEXT
                 if (state->features & IMB_FEATURE_SHANI)
                         return FLUSH_JOB_HMAC_SHA_256_NI
-                                (&state->hmac_sha_256_ooo);
+                                (hmac_sha_256_ooo);
 #endif
-                return FLUSH_JOB_HMAC_SHA_256(&state->hmac_sha_256_ooo);
+                return FLUSH_JOB_HMAC_SHA_256(hmac_sha_256_ooo);
         case IMB_AUTH_HMAC_SHA_384:
-                return FLUSH_JOB_HMAC_SHA_384(&state->hmac_sha_384_ooo);
+                return FLUSH_JOB_HMAC_SHA_384(hmac_sha_384_ooo);
         case IMB_AUTH_HMAC_SHA_512:
-                return FLUSH_JOB_HMAC_SHA_512(&state->hmac_sha_512_ooo);
+                return FLUSH_JOB_HMAC_SHA_512(hmac_sha_512_ooo);
         case IMB_AUTH_AES_XCBC:
-                return FLUSH_JOB_AES_XCBC(&state->aes_xcbc_ooo);
+                return FLUSH_JOB_AES_XCBC(aes_xcbc_ooo);
         case IMB_AUTH_MD5:
-                return FLUSH_JOB_HMAC_MD5(&state->hmac_md5_ooo);
+                return FLUSH_JOB_HMAC_MD5(hmac_md5_ooo);
         case IMB_AUTH_CUSTOM:
                 return FLUSH_JOB_CUSTOM_HASH(job);
         case IMB_AUTH_AES_CCM:
-                return FLUSH_JOB_AES_CCM_AUTH(&state->aes_ccm_ooo);
+                return FLUSH_JOB_AES_CCM_AUTH(aes_ccm_ooo);
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_BITLEN:
-                return FLUSH_JOB_AES_CMAC_AUTH(&state->aes_cmac_ooo);
+                return FLUSH_JOB_AES_CMAC_AUTH(aes_cmac_ooo);
         case IMB_AUTH_ZUC_EIA3_BITLEN:
-                return FLUSH_JOB_ZUC_EIA3(&state->zuc_eia3_ooo);
+                return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         default: /* assume GCM or IMB_AUTH_NULL */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
                         job->status |= STS_COMPLETED_HMAC;

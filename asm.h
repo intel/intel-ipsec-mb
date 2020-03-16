@@ -31,6 +31,7 @@
 #define IMB_ASM_H
 
 #include "intel-ipsec-mb.h"
+#include "ipsec_ooo_mgr.h"
 
 /* Define interface to base asm code */
 

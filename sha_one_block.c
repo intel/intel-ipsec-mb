@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "intel-ipsec-mb.h"
+#include "ipsec_ooo_mgr.h"
 #include "constants.h"
 #include "include/clear_regs_mem.h"
 
