@@ -98,13 +98,13 @@ IMB_JOB *submit_job_aes_cntr_sse_no_aesni(IMB_JOB *job);
 
 IMB_JOB *submit_job_aes_cntr_bit_sse_no_aesni(IMB_JOB *job);
 
-IMB_JOB *submit_job_zuc_eea3_sse(MB_MGR_ZUC_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eea3_sse(MB_MGR_ZUC_OOO *state);
+JOB_AES_HMAC *submit_job_zuc_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
+                                               IMB_JOB *job);
+JOB_AES_HMAC *flush_job_zuc_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 
-IMB_JOB *submit_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
+JOB_AES_HMAC *submit_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
+                                               IMB_JOB *job);
+JOB_AES_HMAC *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
@@ -148,10 +148,10 @@ IMB_JOB *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 #define SUBMIT_JOB_AES_CNTR   submit_job_aes_cntr_sse_no_aesni
 #define SUBMIT_JOB_AES_CNTR_BIT   submit_job_aes_cntr_bit_sse_no_aesni
 
-#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_sse
-#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_sse
-#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_sse
-#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_sse
+#define SUBMIT_JOB_ZUC_EEA3   submit_job_zuc_eea3_sse_no_aesni
+#define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_sse_no_aesni
+#define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_sse_no_aesni
+#define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_sse_no_aesni
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_sse_no_aesni
 #define AES_CBC_DEC_192       aes_cbc_dec_192_sse_no_aesni
@@ -487,8 +487,6 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         /* Init ZUC out-of-order fields */
         memset(state->zuc_eea3_ooo.lens, 0xFF,
                sizeof(state->zuc_eea3_ooo.lens));
-        memset(&state->zuc_eea3_ooo.lens[0], 0,
-               sizeof(state->zuc_eea3_ooo.lens[0]) * 4);
         memset(state->zuc_eea3_ooo.job_in_lane, 0,
                sizeof(state->zuc_eea3_ooo.job_in_lane));
         state->zuc_eea3_ooo.unused_lanes = 0xFF03020100;
@@ -496,8 +494,6 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
 
         memset(state->zuc_eia3_ooo.lens, 0xFF,
                sizeof(state->zuc_eia3_ooo.lens));
-        memset(&state->zuc_eia3_ooo.lens[0], 0,
-               sizeof(state->zuc_eia3_ooo.lens[0]) * 4);
         memset(state->zuc_eia3_ooo.job_in_lane, 0,
                sizeof(state->zuc_eia3_ooo.job_in_lane));
         state->zuc_eia3_ooo.unused_lanes = 0xFF03020100;
@@ -755,11 +751,11 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->md5_one_block       = md5_one_block_sse;
         state->aes128_cfb_one      = aes_cfb_128_one_sse_no_aesni;
 
-        state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
-        state->eea3_4_buffer       = zuc_eea3_4_buffer_sse;
-        state->eea3_n_buffer       = zuc_eea3_n_buffer_sse;
-        state->eia3_1_buffer       = zuc_eia3_1_buffer_sse;
-        state->eia3_n_buffer       = zuc_eia3_n_buffer_sse;
+        state->eea3_1_buffer       = zuc_eea3_1_buffer_sse_no_aesni;
+        state->eea3_4_buffer       = zuc_eea3_4_buffer_sse_no_aesni;
+        state->eea3_n_buffer       = zuc_eea3_n_buffer_sse_no_aesni;
+        state->eia3_1_buffer       = zuc_eia3_1_buffer_sse_no_aesni;
+        state->eia3_n_buffer       = zuc_eia3_n_buffer_sse_no_aesni;
 
         state->f8_1_buffer         = kasumi_f8_1_buffer_sse;
         state->f8_1_buffer_bit     = kasumi_f8_1_buffer_bit_sse;

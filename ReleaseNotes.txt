@@ -29,6 +29,7 @@ Library
   using this latter GFNI and VAES instructions where these are present
   in the CPU.
 - Minimum required version for NASM is now 2.14.
+- ZUC-EEA3 and ZUC-EIA3 Multi-buffer implemented with AESNI emulation instructions.
 
 LibTestApp
 - Extended ZUC tests to validate ZUC-EEA3 and ZUC-EIA3 algorithms through

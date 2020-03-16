@@ -28,6 +28,9 @@
 %ifndef _ZUC_SBOX_INC_
 %define _ZUC_SBOX_INC_
 
+%define NO_AESNI_RENAME
+%include "include/aesni_emu.inc"
+
 section .data
 
 default rel
@@ -390,6 +393,29 @@ Rotl5_matrix:
 
         pshufb          %%XTMP2, [rel Shuf_mask]
         aesenclast      %%XTMP2, [rel Cancel_aes]
+
+        movdqa          %%XTMP1, [rel Comb_matrix_mul_low_nibble]
+        movdqa          %%XIN_OUT, [rel Comb_matrix_mul_high_nibble]
+        MUL_PSHUFB_SSE  %%XTMP2, %%XTMP1, %%XIN_OUT, %%XTMP3
+        pxor            %%XIN_OUT, [rel Const_comb_matrix]
+
+%endmacro
+
+;
+; Compute 16 S1 box values from 16 bytes, stored in XMM register
+;
+%macro S1_comput_SSE_NO_AESNI 4
+%define %%XIN_OUT       %1 ; [in/out] XMM reg with input values which will contain the output values
+%define %%XTMP1         %2 ; [clobbered] Temporary XMM register
+%define %%XTMP2         %3 ; [clobbered] Temporary XMM register
+%define %%XTMP3         %4 ; [clobbered] Temporary XMM register
+
+        movdqa          %%XTMP1, [rel Aes_to_Zuc_mul_low_nibble]
+        movdqa          %%XTMP2, [rel Aes_to_Zuc_mul_high_nibble]
+        MUL_PSHUFB_SSE  %%XIN_OUT, %%XTMP1, %%XTMP2, %%XTMP3
+
+        pshufb          %%XTMP2, [rel Shuf_mask]
+        EMULATE_AESENCLAST      %%XTMP2, [rel Cancel_aes]
 
         movdqa          %%XTMP1, [rel Comb_matrix_mul_low_nibble]
         movdqa          %%XIN_OUT, [rel Comb_matrix_mul_high_nibble]

@@ -29,6 +29,15 @@
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
 
+%ifndef ZUC_CIPHER64B_4
+%define ZUC_CIPHER64B_4 asm_ZucCipher64B_4_sse
+%define ZUC_INIT_4 asm_ZucInitialization_4_sse
+%define ZUC_KEYGEN64B_4 asm_ZucGenKeystream64B_4_sse
+%define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
+%define ZUC_EIA3ROUND64B asm_Eia3Round64BSSE
+%define ZUC_EIA3REMAINDER64B asm_Eia3RemainderSSE
+%endif
+
 section .data
 default rel
 
@@ -457,8 +466,8 @@ section .text
     mov         [rax +  (((%1 + 1)*16)+(%2*4))], r15d
 %endmacro
 
-MKGLOBAL(asm_ZucInitialization_4_sse,function,internal)
-asm_ZucInitialization_4_sse:
+MKGLOBAL(ZUC_INIT_4,function,internal)
+ZUC_INIT_4:
 
 %ifdef LINUX
 	%define		pKe	rdi
@@ -682,8 +691,8 @@ asm_ZucInitialization_4_sse:
 ;;  RCX - pKeyStr3
 ;;  R8  - pKeyStr4
 ;;
-MKGLOBAL(asm_ZucGenKeystream64B_4_sse,function,internal)
-asm_ZucGenKeystream64B_4_sse:
+MKGLOBAL(ZUC_KEYGEN64B_4,function,internal)
+ZUC_KEYGEN64B_4:
 
         KEYGEN_4_SSE 16
 
@@ -706,8 +715,8 @@ asm_ZucGenKeystream64B_4_sse:
 ;;  RCX - pKeyStr3
 ;;  R8  - pKeyStr4
 ;;
-MKGLOBAL(asm_ZucGenKeystream8B_4_sse,function,internal)
-asm_ZucGenKeystream8B_4_sse:
+MKGLOBAL(ZUC_KEYGEN8B_4,function,internal)
+ZUC_KEYGEN8B_4:
 
         KEYGEN_4_SSE 2
 
@@ -731,8 +740,8 @@ asm_ZucGenKeystream8B_4_sse:
 ;;  RCX - pOut
 ;;  R8  - bufOff
 ;;
-MKGLOBAL(asm_ZucCipher64B_4_sse,function,internal)
-asm_ZucCipher64B_4_sse:
+MKGLOBAL(ZUC_CIPHER64B_4,function,internal)
+ZUC_CIPHER64B_4:
 
 %ifdef LINUX
         %define         pState  rdi
@@ -860,8 +869,8 @@ asm_ZucCipher64B_4_sse:
 ;;      RDX - N_BITS (number data bits to process)
 ;;
 align 16
-MKGLOBAL(asm_Eia3RemainderSSE,function,internal)
-asm_Eia3RemainderSSE:
+MKGLOBAL(ZUC_EIA3REMAINDER64B,function,internal)
+ZUC_EIA3REMAINDER64B:
 %ifdef LINUX
 	%define		KS	rdi
 	%define		DATA	rsi
@@ -1043,8 +1052,8 @@ Eia3RoundsSSE_byte_loop_end:
 ;;      RDX - DATA pointer to data
 ;;
 align 16
-MKGLOBAL(asm_Eia3Round64BSSE,function,internal)
-asm_Eia3Round64BSSE:
+MKGLOBAL(ZUC_EIA3ROUND64B,function,internal)
+ZUC_EIA3ROUND64B:
 
 %ifdef LINUX
 	%define		T	edi

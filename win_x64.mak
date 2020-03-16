@@ -211,10 +211,12 @@ lib_objs1 = \
 	$(OBJ_DIR)\kasumi_sse.obj \
 	$(OBJ_DIR)\zuc_common.obj \
 	$(OBJ_DIR)\zuc_sse_top.obj \
+	$(OBJ_DIR)\zuc_sse_no_aesni_top.obj \
 	$(OBJ_DIR)\zuc_avx_top.obj \
 	$(OBJ_DIR)\zuc_avx2_top.obj \
 	$(OBJ_DIR)\zuc_avx512_top.obj \
 	$(OBJ_DIR)\zuc_sse.obj \
+	$(OBJ_DIR)\zuc_sse_no_aesni.obj \
 	$(OBJ_DIR)\zuc_avx.obj \
 	$(OBJ_DIR)\zuc_avx2.obj \
 	$(OBJ_DIR)\zuc_avx512.obj \
@@ -342,6 +344,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_ni_sse.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_sse.obj \
+	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx2.obj \
 	$(OBJ_DIR)\mb_mgr_zuc_submit_flush_avx512.obj \

@@ -32,10 +32,14 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
+%ifndef SUBMIT_JOB_ZUC_EEA3
 %define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_sse
 %define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_sse
 %define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_sse
 %define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_sse
+%define ZUC_EEA3_4_BUFFER zuc_eea3_4_buffer_job_sse
+%define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_sse
+%endif
 
 section .data
 default rel
@@ -45,8 +49,8 @@ broadcast_word:
 db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 
-extern zuc_eea3_4_buffer_job_sse
-extern zuc_eia3_4_buffer_job_sse
+extern ZUC_EEA3_4_BUFFER
+extern ZUC_EIA3_4_BUFFER
 
 %ifdef LINUX
 %define arg1    rdi
@@ -170,7 +174,7 @@ SUBMIT_JOB_ZUC_EEA3:
         mov     arg6, r12
 %endif
 
-        call    zuc_eea3_4_buffer_job_sse
+        call    ZUC_EEA3_4_BUFFER
 
 %ifndef LINUX
         add     rsp, 48
@@ -322,7 +326,7 @@ APPEND(skip_eea3_,I):
         mov     arg6, r12
 %endif
 
-        call    zuc_eea3_4_buffer_job_sse
+        call    ZUC_EEA3_4_BUFFER
 
 %ifndef LINUX
         add     rsp, 48
@@ -456,7 +460,7 @@ SUBMIT_JOB_ZUC_EIA3:
         mov     arg6, r12
 %endif
 
-        call    zuc_eia3_4_buffer_job_sse
+        call    ZUC_EIA3_4_BUFFER
 
 %ifndef LINUX
         add     rsp, 48
@@ -609,7 +613,7 @@ APPEND(skip_eia3_,I):
         mov     arg6, r12
 %endif
 
-        call    zuc_eia3_4_buffer_job_sse
+        call    ZUC_EIA3_4_BUFFER
 
 %ifndef LINUX
         add     rsp, 48
