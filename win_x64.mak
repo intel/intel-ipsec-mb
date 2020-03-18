@@ -480,7 +480,7 @@ clean:
 	-del /q $(lib_objs1)
 	-del /q $(lib_objs2)
 	-del /q $(gcm_objs)
-	-del /q $(LIB_DIR)\$(LIBBASE).dll $(LIB_DIR)\$(LIBBASE).lib
+	-del /q $(LIB_DIR)\$(LIBBASE).dll $(LIB_DIR)\$(LIBBASE).lib $(LIB_DIR)\$(LIBBASE).exp
 
 install:
         -md "$(INSTDIR)"
