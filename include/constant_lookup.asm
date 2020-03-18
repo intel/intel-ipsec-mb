@@ -625,10 +625,28 @@ exit64_avx:
 align 32
 MKGLOBAL(lookup_16x8bit_sse,function,internal)
 lookup_16x8bit_sse:
-%define arg_table   arg1
 %define arg_indexes xmm0
 %define arg_return  xmm0
+%define arg_table   arg1
 
+%ifndef LINUX
+%undef arg_table
+%define arg_table   arg2
+        mov             rax, rsp
+        sub             rsp, (10 * 16)
+        and             rsp, ~15
+        ;; xmm6:xmm15 need to be maintained for Windows
+        movdqa          [rsp + 0*16], xmm6
+        movdqa          [rsp + 1*16], xmm7
+        movdqa          [rsp + 2*16], xmm8
+        movdqa          [rsp + 3*16], xmm9
+        movdqa          [rsp + 4*16], xmm10
+        movdqa          [rsp + 5*16], xmm11
+        movdqa          [rsp + 6*16], xmm12
+        movdqa          [rsp + 7*16], xmm13
+        movdqa          [rsp + 8*16], xmm14
+        movdqa          [rsp + 9*16], xmm15
+%endif
         movdqa          xmm15, [rel idx_rows_avx + (15 * 16)]
         movdqa          xmm14, xmm15
         psrlq           xmm14, 4
@@ -752,7 +770,36 @@ lookup_16x8bit_sse:
         por             xmm14, xmm11
         por             arg_return, xmm14
 
+%ifndef LINUX
+        movdqa          xmm15, [rsp + 9*16]
+        movdqa          xmm14, [rsp + 8*16]
+        movdqa          xmm13, [rsp + 7*16]
+        movdqa          xmm12, [rsp + 6*16]
+        movdqa          xmm11, [rsp + 5*16]
+        movdqa          xmm10, [rsp + 4*16]
+        movdqa          xmm9,  [rsp + 3*16]
+        movdqa          xmm8,  [rsp + 2*16]
+        movdqa          xmm7,  [rsp + 1*16]
+        movdqa          xmm6,  [rsp + 0*16]
+%ifdef SAFE_DATA
+        pxor            xmm5, xmm5
+        movdqa          [rsp + 0*16], xmm5
+        movdqa          [rsp + 1*16], xmm5
+        movdqa          [rsp + 2*16], xmm5
+        movdqa          [rsp + 3*16], xmm5
+        movdqa          [rsp + 4*16], xmm5
+        movdqa          [rsp + 5*16], xmm5
+        movdqa          [rsp + 6*16], xmm5
+        movdqa          [rsp + 7*16], xmm5
+        movdqa          [rsp + 8*16], xmm5
+        movdqa          [rsp + 9*16], xmm5
+%endif                          ; SAFE_DATA
+        mov             rsp, rax
+%endif                          ; !LINUX
         ret
+%undef arg_indexes
+%undef arg_return
+%undef arg_table
 
 ; __m128i lookup_16x8bit_avx(const __m128i indexes, const void *table)
 ; arg 1 : vector with 16 8-bit indexes to be looked up
@@ -760,9 +807,29 @@ lookup_16x8bit_sse:
 align 32
 MKGLOBAL(lookup_16x8bit_avx,function,internal)
 lookup_16x8bit_avx:
-%define arg_table   arg1
 %define arg_indexes xmm0
 %define arg_return  xmm0
+%define arg_table   arg1
+
+%ifndef LINUX
+%undef arg_table
+%define arg_table   arg2
+
+        mov             rax, rsp
+        sub             rsp, (10 * 16)
+        and             rsp, ~15
+        ;; xmm6:xmm15 need to be maintained for Windows
+        vmovdqa         [rsp + 0*16], xmm6
+        vmovdqa         [rsp + 1*16], xmm7
+        vmovdqa         [rsp + 2*16], xmm8
+        vmovdqa         [rsp + 3*16], xmm9
+        vmovdqa         [rsp + 4*16], xmm10
+        vmovdqa         [rsp + 5*16], xmm11
+        vmovdqa         [rsp + 6*16], xmm12
+        vmovdqa         [rsp + 7*16], xmm13
+        vmovdqa         [rsp + 8*16], xmm14
+        vmovdqa         [rsp + 9*16], xmm15
+%endif                          ; !LINUX
 
         vmovdqa         xmm15, [rel idx_rows_avx + (15 * 16)]
         vpsrlq          xmm2, xmm15, 4
@@ -866,7 +933,36 @@ lookup_16x8bit_avx:
         vpor            arg_return, arg_return, xmm13
         vpor            arg_return, arg_return, xmm15
 
+%ifndef LINUX
+        vmovdqa         xmm15, [rsp + 9*16]
+        vmovdqa         xmm14, [rsp + 8*16]
+        vmovdqa         xmm13, [rsp + 7*16]
+        vmovdqa         xmm12, [rsp + 6*16]
+        vmovdqa         xmm11, [rsp + 5*16]
+        vmovdqa         xmm10, [rsp + 4*16]
+        vmovdqa         xmm9,  [rsp + 3*16]
+        vmovdqa         xmm8,  [rsp + 2*16]
+        vmovdqa         xmm7,  [rsp + 1*16]
+        vmovdqa         xmm6,  [rsp + 0*16]
+%ifdef SAFE_DATA
+        vpxor           xmm5, xmm5, xmm5
+        vmovdqa         [rsp + 0*16], xmm5
+        vmovdqa         [rsp + 1*16], xmm5
+        vmovdqa         [rsp + 2*16], xmm5
+        vmovdqa         [rsp + 3*16], xmm5
+        vmovdqa         [rsp + 4*16], xmm5
+        vmovdqa         [rsp + 5*16], xmm5
+        vmovdqa         [rsp + 6*16], xmm5
+        vmovdqa         [rsp + 7*16], xmm5
+        vmovdqa         [rsp + 8*16], xmm5
+        vmovdqa         [rsp + 9*16], xmm5
+%endif
+        mov             rsp, rax
+%endif                          ; !LINUX
         ret
+%undef arg_indexes
+%undef arg_return
+%undef arg_table
 
 ; __m256i lookup_32x8bit_avx2(const __m256i indexes, const void *table)
 ; arg 1 : vector with 32 8-bit indexes to be looked up
@@ -874,9 +970,29 @@ lookup_16x8bit_avx:
 align 32
 MKGLOBAL(lookup_32x8bit_avx2,function,internal)
 lookup_32x8bit_avx2:
-%define arg_table   arg1
 %define arg_indexes ymm0
 %define arg_return  ymm0
+%define arg_table   arg1
+
+%ifndef LINUX
+%undef arg_table
+%define arg_table   arg2
+
+        mov             rax, rsp
+        sub             rsp, (10 * 16)
+        and             rsp, ~31
+        ;; xmm6:xmm15 need to be maintained for Windows
+        vmovdqa         [rsp + 0*16], xmm6
+        vmovdqa         [rsp + 1*16], xmm7
+        vmovdqa         [rsp + 2*16], xmm8
+        vmovdqa         [rsp + 3*16], xmm9
+        vmovdqa         [rsp + 4*16], xmm10
+        vmovdqa         [rsp + 5*16], xmm11
+        vmovdqa         [rsp + 6*16], xmm12
+        vmovdqa         [rsp + 7*16], xmm13
+        vmovdqa         [rsp + 8*16], xmm14
+        vmovdqa         [rsp + 9*16], xmm15
+%endif                          ; !LINUX
 
         vmovdqa         ymm15, [rel idx_rows_avx2 + (15 * 32)]
         vpsrlq          ymm2, ymm15, 4
@@ -980,8 +1096,31 @@ lookup_32x8bit_avx2:
         vpor            arg_return, arg_return, ymm13
         vpor            arg_return, arg_return, ymm15
 
+%ifndef LINUX
+        vmovdqa         xmm15, [rsp + 9*16]
+        vmovdqa         xmm14, [rsp + 8*16]
+        vmovdqa         xmm13, [rsp + 7*16]
+        vmovdqa         xmm12, [rsp + 6*16]
+        vmovdqa         xmm11, [rsp + 5*16]
+        vmovdqa         xmm10, [rsp + 4*16]
+        vmovdqa         xmm9,  [rsp + 3*16]
+        vmovdqa         xmm8,  [rsp + 2*16]
+        vmovdqa         xmm7,  [rsp + 1*16]
+        vmovdqa         xmm6,  [rsp + 0*16]
+%ifdef SAFE_DATA
+        vpxor           ymm5, ymm5, ymm5
+        vmovdqa         [rsp + 0*16], ymm5
+        vmovdqa         [rsp + 2*16], ymm5
+        vmovdqa         [rsp + 4*16], ymm5
+        vmovdqa         [rsp + 6*16], ymm5
+        vmovdqa         [rsp + 8*16], ymm5
+%endif
+        mov             rsp, rax
+%endif                          ; !LINUX
         ret
-
+%undef arg_indexes
+%undef arg_return
+%undef arg_table
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
