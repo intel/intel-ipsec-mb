@@ -1078,10 +1078,9 @@ section .text
         mov             [%%STATE + _aes_args_keys + %%lane*8], %%tmp
         mov             %%tmp, [%%JOB + _dst]
         mov             [%%STATE + _aes_args_out + %%lane*8], %%tmp
+        mov             byte [%%STATE + _docsis_crc_args_done + %%lane], CRC_LANE_STATE_DONE
         shl             %%lane, 4       ; multiply by 16
         vmovdqa64       [%%STATE + _aes_args_IV + %%lane], xmm0
-
-        mov             byte [%%STATE + _docsis_crc_args_done + %%lane], CRC_LANE_STATE_DONE
 
         cmp             qword [%%JOB + _msg_len_to_hash_in_bytes], 14
         jb              %%_crc_complete
