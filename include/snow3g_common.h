@@ -721,8 +721,12 @@ static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
 #ifdef SAFE_LOOKUP
         /* Perform invSR(SQ(x)) transform through a lookup table */
         const __m128i m_zero = _mm_setzero_si128();
-        const __m128i new_x = lut16x8b_256(_mm_set_epi32(0, 0, *x2, *x1),
-                                           snow3g_invSR_SQ);
+#ifdef SSE
+        const __m128i x_vec = _mm_insert_epi32(_mm_cvtsi32_si128(*x1), *x2, 1);
+#else
+        const __m128i x_vec = _mm_set_epi32(0, 0, *x2, *x1);
+#endif
+        const __m128i new_x = lut16x8b_256(x_vec, snow3g_invSR_SQ);
         __m128i m1, m2, f1, f2;
 
         m1 = _mm_shuffle_epi32(new_x, 0b00000000);
