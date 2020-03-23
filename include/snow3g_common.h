@@ -412,18 +412,6 @@ s2_mixc_fixup_avx2(const __m256i no_mixc, const __m256i mixc)
 /**
  * @brief SNOW3G S2 mix column correction function vs AESENC operation
  *
- * Mix column AES GF() reduction poly is 0x1B and SNOW3G reduction poly is 0x69.
- * The fix-up value is 0x1B ^ 0x69 = 0x72 and needs to be applied on selected
- * bytes of the 32-bit word.
- *
- * 'aesenclast' operation does not perform mix column operation and
- * allows to determine the fix-up value to be applied on result of 'aesenc'
- * in order to produce correct result for SNOW3G.
- *
- * This function implements basic look-up table method with a fix-up values.
- * An index to the fix-up table is identified by bits 31, 23, 15 and 7 of
- * \a no_mixc word.
- *
  * @param no_mixc result of 'aesenclast' operation, 32-bit word index 0 only
  * @param mixc    result of 'aesenc' operation, 32-bit word index 0 only
  *
@@ -432,16 +420,7 @@ s2_mixc_fixup_avx2(const __m256i no_mixc, const __m256i mixc)
 static inline uint32_t
 s2_mixc_fixup_scalar(const __m128i no_mixc, const __m128i mixc)
 {
-        static const uint32_t fixup_table[16] = {
-                0x00000000, 0x72000072, 0x00007272, 0x72007200,
-                0x00727200, 0x72727272, 0x00720072, 0x72720000,
-                /* NOTE: the table is symmetric */
-                0x72720000, 0x00720072, 0x72727272, 0x00727200,
-                0x72007200, 0x00007272, 0x72000072, 0x00000000
-        };
-        const uint32_t index = _mm_movemask_epi8(no_mixc) & 15;
-
-        return _mm_cvtsi128_si32(mixc) ^ fixup_table[index];
+        return _mm_cvtsi128_si32(s2_mixc_fixup_4(no_mixc, mixc));
 }
 
 /**
