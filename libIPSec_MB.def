@@ -434,3 +434,12 @@ EXPORTS
     zuc_eea3_n_buffer_sse_no_aesni              @408
     zuc_eia3_1_buffer_sse_no_aesni              @409
     imb_clear_mem                               @410
+    imb_aes_gmac_init_128_sse                   @411
+    imb_aes_gmac_init_192_sse                   @412
+    imb_aes_gmac_init_256_sse                   @413
+    imb_aes_gmac_update_128_sse                 @414
+    imb_aes_gmac_update_192_sse                 @415
+    imb_aes_gmac_update_256_sse                 @416
+    imb_aes_gmac_finalize_128_sse               @417
+    imb_aes_gmac_finalize_192_sse               @418
+    imb_aes_gmac_finalize_256_sse               @419
