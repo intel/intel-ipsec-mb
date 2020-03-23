@@ -359,7 +359,7 @@ static inline void ShiftTwiceLFSR_1(snow3gKeyState1_t *pCtx)
  *     mask1_f(a, b, c, d) = b'c + bc' => b xor c
  *     mask2_f(a, b, c, d) = a'b + ab' => a xor b
  *     mask3_f(a, b, c, d) = a'd + ad' => d xor a
- * The above are resolved through SIMD instructions: and, cmpeq, shuffle and
+ * The above are resolved through SIMD instructions: and, cmpgt, shuffle and
  * xor. As the result mask is obtained with 0xff byte value at positions
  * that require 0x72 fix up value to be applied.
  *
@@ -372,12 +372,14 @@ static inline __m128i s2_mixc_fixup_4(const __m128i no_mixc, const __m128i mixc)
 {
         const __m128i m_shuf = _mm_set_epi32(0x0c0f0e0d, 0x080b0a09,
                                              0x04070605, 0x00030201);
-        const __m128i m_bit7 = _mm_set1_epi32(0x80808080);
+        const __m128i m_zero = _mm_setzero_si128();
         const __m128i m_mask = _mm_set1_epi32(0x72727272);
         __m128i pattern, pattern_shuf, fixup;
 
-        pattern = _mm_and_si128(no_mixc, m_bit7);
-        pattern = _mm_cmpeq_epi8(pattern, m_bit7);
+        /* Using signed compare to return 0xFF when
+         * the most significant bit of no_mixc is set.
+         */
+        pattern = _mm_cmpgt_epi8(m_zero, no_mixc);
         pattern_shuf = _mm_shuffle_epi8(pattern, m_shuf);
         pattern = _mm_xor_si128(pattern, pattern_shuf);
 
@@ -394,12 +396,14 @@ s2_mixc_fixup_avx2(const __m256i no_mixc, const __m256i mixc)
                                  0x04070605, 0x00030201,
                                  0x0c0f0e0d, 0x080b0a09,
                                  0x04070605, 0x00030201);
-        const __m256i m_bit7 = _mm256_set1_epi32(0x80808080);
+        const __m256i m_zero = _mm256_setzero_si256();
         const __m256i m_mask = _mm256_set1_epi32(0x72727272);
         __m256i pattern, pattern_shuf, fixup;
 
-        pattern = _mm256_and_si256(no_mixc, m_bit7);
-        pattern = _mm256_cmpeq_epi8(pattern, m_bit7);
+        /* Using signed compare to return 0xFF when
+         * the most significant bit of no_mixc is set.
+         */
+        pattern = _mm256_cmpgt_epi8(m_zero, no_mixc);
         pattern_shuf = _mm256_shuffle_epi8(pattern, m_shuf);
         pattern = _mm256_xor_si256(pattern, pattern_shuf);
 
