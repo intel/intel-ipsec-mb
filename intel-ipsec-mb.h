@@ -544,6 +544,16 @@ typedef void (*aes_gcm_enc_dec_finalize_t)(const struct gcm_key_data *,
 typedef void (*aes_gcm_precomp_t)(struct gcm_key_data *);
 typedef void (*aes_gcm_pre_t)(const void *, struct gcm_key_data *);
 
+typedef void (*aes_gmac_init_t)(const struct gcm_key_data *,
+                                struct gcm_context_data *,
+                                const uint8_t *, const uint64_t);
+typedef void (*aes_gmac_update_t)(const struct gcm_key_data *,
+                                  struct gcm_context_data *,
+                                  const uint8_t *, const uint64_t);
+typedef void (*aes_gmac_finalize_t)(const struct gcm_key_data *,
+                                  struct gcm_context_data *,
+                                  uint8_t *, const uint64_t);
+
 typedef void (*ghash_t)(struct gcm_key_data *, const void *,
                         const uint64_t, void *, const uint64_t);
 
@@ -828,6 +838,16 @@ typedef struct IMB_MGR {
         aes_gcm_init_var_iv_t   gcm192_init_var_iv;
         aes_gcm_init_var_iv_t   gcm256_init_var_iv;
 
+        aes_gmac_init_t         gmac128_init;
+        aes_gmac_init_t         gmac192_init;
+        aes_gmac_init_t         gmac256_init;
+        aes_gmac_update_t       gmac128_update;
+        aes_gmac_update_t       gmac192_update;
+        aes_gmac_update_t       gmac256_update;
+        aes_gmac_finalize_t     gmac128_finalize;
+        aes_gmac_finalize_t     gmac192_finalize;
+        aes_gmac_finalize_t     gmac256_finalize;
+
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
         int              next_job;     /* byte offset */
@@ -1069,6 +1089,27 @@ IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
         ((_mgr)->gcm192_dec_finalize((_key), (_ctx), (_tag), (_tagl)))
 #define IMB_AES256_GCM_DEC_FINALIZE(_mgr, _key, _ctx, _tag, _tagl)      \
         ((_mgr)->gcm256_dec_finalize((_key), (_ctx), (_tag), (_tagl)))
+
+#define IMB_AES128_GMAC_INIT(_mgr, _key, _ctx, _iv, _ivl) \
+        ((_mgr)->gmac128_init((_key), (_ctx), (_iv), (_ivl)))
+#define IMB_AES192_GMAC_INIT(_mgr, _key, _ctx, _iv, _ivl) \
+        ((_mgr)->gmac192_init((_key), (_ctx), (_iv), (_ivl)))
+#define IMB_AES256_GMAC_INIT(_mgr, _key, _ctx, _iv, _ivl) \
+        ((_mgr)->gmac256_init((_key), (_ctx), (_iv), (_ivl)))
+
+#define IMB_AES128_GMAC_UPDATE(_mgr, _key, _ctx, _in, _len) \
+        ((_mgr)->gmac128_update((_key), (_ctx), (_in), (_len)))
+#define IMB_AES192_GMAC_UPDATE(_mgr, _key, _ctx, _in, _len) \
+        ((_mgr)->gmac192_update((_key), (_ctx), (_in), (_len)))
+#define IMB_AES256_GMAC_UPDATE(_mgr, _key, _ctx, _in, _len) \
+        ((_mgr)->gmac256_update((_key), (_ctx), (_in), (_len)))
+
+#define IMB_AES128_GMAC_FINALIZE(_mgr, _key, _ctx, _tag, _tagl)      \
+        ((_mgr)->gmac128_finalize((_key), (_ctx), (_tag), (_tagl)))
+#define IMB_AES192_GMAC_FINALIZE(_mgr, _key, _ctx, _tag, _tagl)      \
+        ((_mgr)->gmac192_finalize((_key), (_ctx), (_tag), (_tagl)))
+#define IMB_AES256_GMAC_FINALIZE(_mgr, _key, _ctx, _tag, _tagl)      \
+        ((_mgr)->gmac256_finalize((_key), (_ctx), (_tag), (_tagl)))
 
 #define IMB_AES128_GCM_PRECOMP(_mgr, _key) \
         ((_mgr)->gcm128_precomp((_key)))
