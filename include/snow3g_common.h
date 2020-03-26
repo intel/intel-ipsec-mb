@@ -296,7 +296,7 @@ cptr_copy_8(const void *out_array[],
  * @param[in] lo  pointer to 128-bit vector (low)
  * @return 256-bit vector
  */
-static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
+static inline __m256i load_2xm128i_into_m256i(const void *hi, const void *lo)
 {
         const __m128i lo128 = _mm_loadu_si128((const __m128i *) lo);
         const __m128i hi128 = _mm_loadu_si128((const __m128i *) hi);
@@ -305,11 +305,11 @@ static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 }
 
 /**
- * @brief Broadcasts 128-bit data onto 2x128-bit vectors
+ * @brief Broadcasts 128-bit data into 256-bit vector
  * @param[in] ptr  pointer to a 128-bit vector
  * @return 256-bit vector
  */
-static inline __m256i _mm256_broadcast_si128(const void *ptr)
+static inline __m256i broadcast_m128i_to_m256i(const void *ptr)
 {
         return _mm256_castps_si256(_mm256_broadcast_ps((const __m128 *)ptr));
 }
@@ -1069,6 +1069,7 @@ static inline __m256i S2_box_8(const __m256i x)
 static inline
 __m128i MULa_4(const __m128i L0)
 {
+#ifdef SAFE_LOOKUP
         const __m128i gather_clear_mask =
                 _mm_set_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
                              0x80, 0x80, 0x80, 0x80, 15, 11, 7, 3);
@@ -1109,6 +1110,17 @@ __m128i MULa_4(const __m128i L0)
         th = _mm_unpacklo_epi16(b0, b2);
 
         return _mm_xor_si128(th, tl);
+#else
+        const uint8_t L0IDX0 = _mm_extract_epi8(L0, 3);
+        const uint8_t L0IDX1 = _mm_extract_epi8(L0, 7);
+        const uint8_t L0IDX2 = _mm_extract_epi8(L0, 11);
+        const uint8_t L0IDX3 = _mm_extract_epi8(L0, 15);
+
+        return _mm_setr_epi32(snow3g_table_A_mul[L0IDX0],
+                              snow3g_table_A_mul[L0IDX1],
+                              snow3g_table_A_mul[L0IDX2],
+                              snow3g_table_A_mul[L0IDX3]);
+#endif
 }
 
 /**
@@ -1122,6 +1134,7 @@ __m128i MULa_4(const __m128i L0)
 static inline
 void MULa_2(uint32_t *L0_1, uint32_t *L0_2)
 {
+#ifdef SAFE_LOOKUP
         __m128i in, out;
 
         in = _mm_cvtsi32_si128(*L0_1);
@@ -1130,6 +1143,10 @@ void MULa_2(uint32_t *L0_1, uint32_t *L0_2)
 
         *L0_1 = _mm_cvtsi128_si32(out);
         *L0_2 = _mm_extract_epi32(out, 1);
+#else
+        *L0_1 = snow3g_table_A_mul[*L0_1 >> 24];
+        *L0_2 = snow3g_table_A_mul[*L0_2 >> 24];
+#endif
 }
 
 /**
@@ -1167,6 +1184,7 @@ uint32_t MULa(const uint32_t L0)
 static inline
 __m256i MULa_8(const __m256i L0)
 {
+#ifdef SAFE_LOOKUP
         const __m256i byte0_mask = _mm256_set1_epi64x(0x000000ff000000ffULL);
         const __m256i byte1_mask = _mm256_set1_epi64x(0x0000ff000000ff00ULL);
         const __m256i byte2_mask = _mm256_set1_epi64x(0x00ff000000ff0000ULL);
@@ -1183,10 +1201,10 @@ __m256i MULa_8(const __m256i L0)
 
         tl = _mm256_and_si256(th, low_nibble_mask);
 
-        b0 = _mm256_broadcast_si128(snow3g_MULa_byte0_low);
-        b1 = _mm256_broadcast_si128(snow3g_MULa_byte1_low);
-        b2 = _mm256_broadcast_si128(snow3g_MULa_byte2_low);
-        b3 = _mm256_broadcast_si128(snow3g_MULa_byte3_low);
+        b0 = broadcast_m128i_to_m256i(snow3g_MULa_byte0_low);
+        b1 = broadcast_m128i_to_m256i(snow3g_MULa_byte1_low);
+        b2 = broadcast_m128i_to_m256i(snow3g_MULa_byte2_low);
+        b3 = broadcast_m128i_to_m256i(snow3g_MULa_byte3_low);
 
         b0 = _mm256_shuffle_epi8(b0, tl);
         b1 = _mm256_shuffle_epi8(b1, tl);
@@ -1204,10 +1222,10 @@ __m256i MULa_8(const __m256i L0)
 
         th = _mm256_and_si256(_mm256_srli_epi32(th, 4), low_nibble_mask);
 
-        b0 = _mm256_broadcast_si128(snow3g_MULa_byte0_hi);
-        b1 = _mm256_broadcast_si128(snow3g_MULa_byte1_hi);
-        b2 = _mm256_broadcast_si128(snow3g_MULa_byte2_hi);
-        b3 = _mm256_broadcast_si128(snow3g_MULa_byte3_hi);
+        b0 = broadcast_m128i_to_m256i(snow3g_MULa_byte0_hi);
+        b1 = broadcast_m128i_to_m256i(snow3g_MULa_byte1_hi);
+        b2 = broadcast_m128i_to_m256i(snow3g_MULa_byte2_hi);
+        b3 = broadcast_m128i_to_m256i(snow3g_MULa_byte3_hi);
 
         b0 = _mm256_shuffle_epi8(b0, th);
         b1 = _mm256_shuffle_epi8(b1, th);
@@ -1224,6 +1242,15 @@ __m256i MULa_8(const __m256i L0)
         th = _mm256_or_si256(b0, b2);
 
         return _mm256_xor_si256(th, tl);
+#else
+        static const __m256i mask = {
+                0x8080800780808003ULL, 0x8080800F8080800BULL,
+                0x8080800780808003ULL, 0x8080800F8080800BULL
+        };
+
+        return _mm256_i32gather_epi32(snow3g_table_A_mul,
+                                      _mm256_shuffle_epi8(L0, mask), 4);
+#endif
 }
 #endif /* AVX2 */
 
@@ -1243,6 +1270,7 @@ __m256i MULa_8(const __m256i L0)
 static inline
 __m128i DIVa_4(const __m128i L11)
 {
+#ifdef SAFE_LOOKUP
         const __m128i gather_clear_mask =
                 _mm_set_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
                              0x80, 0x80, 0x80, 0x80, 0x0c, 0x08, 0x04, 0x00);
@@ -1283,6 +1311,17 @@ __m128i DIVa_4(const __m128i L11)
         th = _mm_unpacklo_epi16(b0, b2);
 
         return _mm_xor_si128(th, tl);
+#else
+        const uint8_t L11IDX0 = _mm_extract_epi8(L11, 0);
+        const uint8_t L11IDX1 = _mm_extract_epi8(L11, 4);
+        const uint8_t L11IDX2 = _mm_extract_epi8(L11, 8);
+        const uint8_t L11IDX3 = _mm_extract_epi8(L11, 12);
+
+        return _mm_setr_epi32(snow3g_table_A_div[L11IDX0],
+                              snow3g_table_A_div[L11IDX1],
+                              snow3g_table_A_div[L11IDX2],
+                              snow3g_table_A_div[L11IDX3]);
+#endif
 }
 
 /**
@@ -1296,6 +1335,7 @@ __m128i DIVa_4(const __m128i L11)
 static inline
 void DIVa_2(uint32_t *L11_1, uint32_t *L11_2)
 {
+#ifdef SAFE_LOOKUP
         __m128i in, out;
 
         in = _mm_cvtsi32_si128(*L11_1);
@@ -1304,6 +1344,10 @@ void DIVa_2(uint32_t *L11_1, uint32_t *L11_2)
 
         *L11_1 = _mm_cvtsi128_si32(out);
         *L11_2 = _mm_extract_epi32(out, 1);
+#else
+        *L11_1 = snow3g_table_A_div[*L11_1 & 0xff];
+        *L11_2 = snow3g_table_A_div[*L11_2 & 0xff];
+#endif
 }
 
 /**
@@ -1341,6 +1385,7 @@ uint32_t DIVa(const uint32_t L11)
 static inline
 __m256i DIVa_8(const __m256i L11)
 {
+#ifdef SAFE_LOOKUP
         const __m256i byte0_mask = _mm256_set1_epi64x(0x000000ff000000ffULL);
         const __m256i byte1_mask = _mm256_set1_epi64x(0x0000ff000000ff00ULL);
         const __m256i byte2_mask = _mm256_set1_epi64x(0x00ff000000ff0000ULL);
@@ -1357,10 +1402,10 @@ __m256i DIVa_8(const __m256i L11)
 
         tl = _mm256_and_si256(th, low_nibble_mask);
 
-        b0 = _mm256_broadcast_si128(snow3g_DIVa_byte0_low);
-        b1 = _mm256_broadcast_si128(snow3g_DIVa_byte1_low);
-        b2 = _mm256_broadcast_si128(snow3g_DIVa_byte2_low);
-        b3 = _mm256_broadcast_si128(snow3g_DIVa_byte3_low);
+        b0 = broadcast_m128i_to_m256i(snow3g_DIVa_byte0_low);
+        b1 = broadcast_m128i_to_m256i(snow3g_DIVa_byte1_low);
+        b2 = broadcast_m128i_to_m256i(snow3g_DIVa_byte2_low);
+        b3 = broadcast_m128i_to_m256i(snow3g_DIVa_byte3_low);
 
         b0 = _mm256_shuffle_epi8(b0, tl);
         b1 = _mm256_shuffle_epi8(b1, tl);
@@ -1378,10 +1423,10 @@ __m256i DIVa_8(const __m256i L11)
 
         th = _mm256_and_si256(_mm256_srli_epi32(th, 4), low_nibble_mask);
 
-        b0 = _mm256_broadcast_si128(snow3g_DIVa_byte0_hi);
-        b1 = _mm256_broadcast_si128(snow3g_DIVa_byte1_hi);
-        b2 = _mm256_broadcast_si128(snow3g_DIVa_byte2_hi);
-        b3 = _mm256_broadcast_si128(snow3g_DIVa_byte3_hi);
+        b0 = broadcast_m128i_to_m256i(snow3g_DIVa_byte0_hi);
+        b1 = broadcast_m128i_to_m256i(snow3g_DIVa_byte1_hi);
+        b2 = broadcast_m128i_to_m256i(snow3g_DIVa_byte2_hi);
+        b3 = broadcast_m128i_to_m256i(snow3g_DIVa_byte3_hi);
 
         b0 = _mm256_shuffle_epi8(b0, th);
         b1 = _mm256_shuffle_epi8(b1, th);
@@ -1398,6 +1443,15 @@ __m256i DIVa_8(const __m256i L11)
         th = _mm256_or_si256(b0, b2);
 
         return _mm256_xor_si256(th, tl);
+#else
+        static const __m256i mask = {
+                0x8080800480808000ULL, 0x8080800C80808008ULL,
+                0x8080800480808000ULL, 0x8080800C80808008ULL
+        };
+
+        return _mm256_i32gather_epi32(snow3g_table_A_div,
+                                      _mm256_shuffle_epi8(L11, mask), 4);
+#endif
 }
 #endif /* AVX2 */
 
@@ -2227,10 +2281,10 @@ snow3gStateInitialize_8_multiKey(snow3gKeyState8_t *pCtx,
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL,
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
         };
-        mR = _mm256_loadu_2xm128i(pIV[4], pIV[0]);
-        mS = _mm256_loadu_2xm128i(pIV[5], pIV[1]);
-        mT = _mm256_loadu_2xm128i(pIV[6], pIV[2]);
-        mU = _mm256_loadu_2xm128i(pIV[7], pIV[3]);
+        mR = load_2xm128i_into_m256i(pIV[4], pIV[0]);
+        mS = load_2xm128i_into_m256i(pIV[5], pIV[1]);
+        mT = load_2xm128i_into_m256i(pIV[6], pIV[2]);
+        mU = load_2xm128i_into_m256i(pIV[7], pIV[3]);
 
         /* initialize the array block (SSE4) */
         for (i = 0; i < 4; i++) {
@@ -2323,10 +2377,10 @@ snow3gStateInitialize_8(snow3gKeyState8_t *pCtx,
                 0x0405060700010203ULL, 0x0c0d0e0f08090a0bULL
         };
 
-        mR = _mm256_loadu_2xm128i(pIV5, pIV1);
-        mS = _mm256_loadu_2xm128i(pIV6, pIV2);
-        mT = _mm256_loadu_2xm128i(pIV7, pIV3);
-        mU = _mm256_loadu_2xm128i(pIV8, pIV4);
+        mR = load_2xm128i_into_m256i(pIV5, pIV1);
+        mS = load_2xm128i_into_m256i(pIV6, pIV2);
+        mT = load_2xm128i_into_m256i(pIV7, pIV3);
+        mU = load_2xm128i_into_m256i(pIV8, pIV4);
 
         /* initialize the array block (SSE4) */
         for (i = 0; i < 4; i++) {
