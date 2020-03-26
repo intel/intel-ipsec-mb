@@ -1228,6 +1228,180 @@ __m256i MULa_8(const __m256i L0)
 #endif /* AVX2 */
 
 /**
+ * @brief DIValpha SNOW3G operation on 4 8-bit values at the same time
+ *
+ * Function picks the right byte from the register to run DIValpha operation on.
+ * DIValpha is implemented through 8 16-byte tables and pshufb is used to
+ * look the tables up. This approach is possible because
+ * DIValpha operation has linear nature.
+ * Final operation result is calculated via byte re-arrangement on
+ * the lookup results and an XOR operation.
+ *
+ * @param [in] L11      4 x 32-bit LFSR[11]
+ * @return 4 x 32-bit DIValpha(L11 & 0xff)
+ */
+static inline
+__m128i DIVa_4(const __m128i L11)
+{
+        const __m128i gather_clear_mask =
+                _mm_set_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                             0x80, 0x80, 0x80, 0x80, 0x0c, 0x08, 0x04, 0x00);
+        const __m128i low_nibble_mask = _mm_set1_epi32(0x0f0f0f0f);
+        __m128i b0, b1, b2, b3, tl, th;
+
+        th = _mm_shuffle_epi8(L11, gather_clear_mask);
+
+        tl = _mm_and_si128(th, low_nibble_mask);
+        b0 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte0_low);
+        b1 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte1_low);
+        b2 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte2_low);
+        b3 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte3_low);
+
+        b0 = _mm_shuffle_epi8(b0, tl);
+        b1 = _mm_shuffle_epi8(b1, tl);
+        b2 = _mm_shuffle_epi8(b2, tl);
+        b3 = _mm_shuffle_epi8(b3, tl);
+
+        b0 = _mm_unpacklo_epi8(b0, b1);
+        b2 = _mm_unpacklo_epi8(b2, b3);
+        tl = _mm_unpacklo_epi16(b0, b2);
+
+        b0 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte0_hi);
+        b1 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte1_hi);
+        b2 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte2_hi);
+        b3 = _mm_loadu_si128((const __m128i *)snow3g_DIVa_byte3_hi);
+
+        th = _mm_and_si128(_mm_srli_epi32(th, 4), low_nibble_mask);
+
+        b0 = _mm_shuffle_epi8(b0, th);
+        b1 = _mm_shuffle_epi8(b1, th);
+        b2 = _mm_shuffle_epi8(b2, th);
+        b3 = _mm_shuffle_epi8(b3, th);
+
+        b0 = _mm_unpacklo_epi8(b0, b1);
+        b2 = _mm_unpacklo_epi8(b2, b3);
+        th = _mm_unpacklo_epi16(b0, b2);
+
+        return _mm_xor_si128(th, tl);
+}
+
+/**
+ * @brief DIValpha SNOW3G operation on 2 8-bit values at the same time
+ *
+ * @param [in/out] L11_1 On input, 32-bit LFSR[11].
+ *                       On output, 32-bit DIValpha(L11 & 0xff)
+ * @param [in/out] L11_2 On input, 32-bit LFSR[11].
+ *                       On output, 32-bit DIValpha(L11 & 0xff)
+ */
+static inline
+void DIVa_2(uint32_t *L11_1, uint32_t *L11_2)
+{
+        __m128i in, out;
+
+        in = _mm_cvtsi32_si128(*L11_1);
+        in = _mm_insert_epi32(in, *L11_2, 1);
+        out = DIVa_4(in);
+
+        *L11_1 = _mm_cvtsi128_si32(out);
+        *L11_2 = _mm_extract_epi32(out, 1);
+}
+
+/**
+ * @brief DIValpha SNOW3G operation on a 8-bit value.
+ *
+ * @param [in] L11       32-bit LFSR[11]
+ * @return 32-bit DIValpha(L11 & 0xff)
+ */
+static inline
+uint32_t DIVa(const uint32_t L11)
+{
+#ifdef SAFE_LOOKUP
+        const __m128i L11_vec = _mm_cvtsi32_si128(L11);
+
+        return _mm_cvtsi128_si32(DIVa_4(L11_vec));
+#else
+        return snow3g_table_A_div[L11 & 0xff];
+#endif
+}
+
+#ifdef AVX2
+/**
+ * @brief DIValpha SNOW3G operation on 8 8-bit values at the same time
+ *
+ * Function picks the right byte from the register to run DIValpha operation on.
+ * DIValpha is implemented through 8 16-byte tables and pshufb is used to
+ * look the tables up. This approach is possible because
+ * DIValpha operation has linear nature.
+ * Final operation result is calculated via byte re-arrangement on
+ * the lookup results and an XOR operation.
+ *
+ * @param [in] L11       8 x 32-bit LFSR[11]
+ * @return 8 x 32-bit DIValpha(L11 & 0xff)
+ */
+static inline
+__m256i DIVa_8(const __m256i L11)
+{
+        const __m256i byte0_mask = _mm256_set1_epi64x(0x000000ff000000ffULL);
+        const __m256i byte1_mask = _mm256_set1_epi64x(0x0000ff000000ff00ULL);
+        const __m256i byte2_mask = _mm256_set1_epi64x(0x00ff000000ff0000ULL);
+        const __m256i byte3_mask = _mm256_set1_epi64x(0xff000000ff000000ULL);
+        const __m256i gather_clear_mask =
+                _mm256_set_epi8(0x0c, 0x0c, 0x0c, 0x0c, 0x08, 0x08, 0x08, 0x08,
+                                0x04, 0x04, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00,
+                                0x0c, 0x0c, 0x0c, 0x0c, 0x08, 0x08, 0x08, 0x08,
+                                0x04, 0x04, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00);
+        const __m256i low_nibble_mask = _mm256_set1_epi32(0x0f0f0f0f);
+        __m256i b0, b1, b2, b3, tl, th;
+
+        th = _mm256_shuffle_epi8(L11, gather_clear_mask);
+
+        tl = _mm256_and_si256(th, low_nibble_mask);
+
+        b0 = _mm256_broadcast_si128(snow3g_DIVa_byte0_low);
+        b1 = _mm256_broadcast_si128(snow3g_DIVa_byte1_low);
+        b2 = _mm256_broadcast_si128(snow3g_DIVa_byte2_low);
+        b3 = _mm256_broadcast_si128(snow3g_DIVa_byte3_low);
+
+        b0 = _mm256_shuffle_epi8(b0, tl);
+        b1 = _mm256_shuffle_epi8(b1, tl);
+        b2 = _mm256_shuffle_epi8(b2, tl);
+        b3 = _mm256_shuffle_epi8(b3, tl);
+
+        b0 = _mm256_and_si256(b0, byte0_mask);
+        b1 = _mm256_and_si256(b1, byte1_mask);
+        b2 = _mm256_and_si256(b2, byte2_mask);
+        b3 = _mm256_and_si256(b3, byte3_mask);
+
+        b0 = _mm256_or_si256(b0, b1);
+        b2 = _mm256_or_si256(b2, b3);
+        tl = _mm256_or_si256(b0, b2);
+
+        th = _mm256_and_si256(_mm256_srli_epi32(th, 4), low_nibble_mask);
+
+        b0 = _mm256_broadcast_si128(snow3g_DIVa_byte0_hi);
+        b1 = _mm256_broadcast_si128(snow3g_DIVa_byte1_hi);
+        b2 = _mm256_broadcast_si128(snow3g_DIVa_byte2_hi);
+        b3 = _mm256_broadcast_si128(snow3g_DIVa_byte3_hi);
+
+        b0 = _mm256_shuffle_epi8(b0, th);
+        b1 = _mm256_shuffle_epi8(b1, th);
+        b2 = _mm256_shuffle_epi8(b2, th);
+        b3 = _mm256_shuffle_epi8(b3, th);
+
+        b0 = _mm256_and_si256(b0, byte0_mask);
+        b1 = _mm256_and_si256(b1, byte1_mask);
+        b2 = _mm256_and_si256(b2, byte2_mask);
+        b3 = _mm256_and_si256(b3, byte3_mask);
+
+        b0 = _mm256_or_si256(b0, b1);
+        b2 = _mm256_or_si256(b2, b3);
+        th = _mm256_or_si256(b0, b2);
+
+        return _mm256_xor_si256(th, tl);
+}
+#endif /* AVX2 */
+
+/**
  * @brief ClockFSM function as defined in SNOW3G standard
  *
  * The FSM has 2 input words S5 and S15 from the LFSR
@@ -1257,7 +1431,7 @@ static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
         const uint32_t S11 = pCtx->LFSR_S[11];
         const uint32_t V = pCtx->LFSR_S[2] ^
                 MULa(S0) ^
-                snow3g_table_A_div[S11 & 0xff] ^
+                DIVa(S11) ^
                 (S0 << 8) ^
                 (S11 >> 8);
         unsigned i;
@@ -1313,8 +1487,11 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                 const uint32_t L12 = pCtx->LFSR_S[12];
                 uint32_t MULa_L0 = L0;
                 uint32_t MULa_L1 = L1;
+                uint32_t DIVa_L11 = L11;
+                uint32_t DIVa_L12 = L12;
 
                 MULa_2(&MULa_L0, &MULa_L1);
+                DIVa_2(&DIVa_L11, &DIVa_L12);
 
                 /* clock FSM + clock LFSR + clockFSM + clock LFSR */
                 const uint32_t F0 =
@@ -1323,7 +1500,7 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                 const uint32_t V0 =
                         pCtx->LFSR_S[2] ^
                         MULa_L0 ^ /* MUL(s0,0 ) */
-                        snow3g_table_A_div[L11 & 0xff] ^ /* DIV(s11,3 )*/
+                        DIVa_L11 ^ /* DIV(s11,3 )*/
                         (L0 << 8) ^ /*  (s0,1 || s0,2 || s0,3 || 0x00) */
                         (L11 >> 8) ^ /* (0x00 || s11,0 || s11,1 || s11,2 ) */
                         F0;
@@ -1347,7 +1524,7 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
 
                 const uint32_t V1 = pCtx->LFSR_S[3] ^
                              MULa_L1 ^
-                             snow3g_table_A_div[L12 & 0xff] ^
+                             DIVa_L12 ^
                              (L1 << 8) ^ (L12 >> 8) ^ F1;
 
                 FSM2 = s1_box_step2;
@@ -1443,13 +1620,7 @@ static inline uint64_t multiply_and_reduce64(uint64_t a, uint64_t b)
  */
 static inline __m256i C0_C11_8(const __m256i L0, const __m256i L11)
 {
-        static const __m256i mask1 = {
-                0x8080800480808000ULL, 0x8080800C80808008ULL,
-                0x8080800480808000ULL, 0x8080800C80808008ULL
-        };
-        const __m256i S1 =
-                _mm256_i32gather_epi32(snow3g_table_A_div,
-                                       _mm256_shuffle_epi8(L11, mask1), 4);
+        const __m256i S1 = DIVa_8(L11);
         const __m256i S2 = MULa_8(L0);
 
         return _mm256_xor_si256(S1, S2);
@@ -1465,16 +1636,7 @@ static inline __m256i C0_C11_8(const __m256i L0, const __m256i L11)
  */
 static inline __m128i C0_C11_4(const __m128i L0, const __m128i L11)
 {
-        const uint8_t L11IDX0 = _mm_extract_epi8(L11, 0);
-        const uint8_t L11IDX1 = _mm_extract_epi8(L11, 4);
-        const uint8_t L11IDX2 = _mm_extract_epi8(L11, 8);
-        const uint8_t L11IDX3 = _mm_extract_epi8(L11, 12);
-
-        const __m128i SL11 = _mm_setr_epi32(snow3g_table_A_div[L11IDX0],
-                                            snow3g_table_A_div[L11IDX1],
-                                            snow3g_table_A_div[L11IDX2],
-                                            snow3g_table_A_div[L11IDX3]);
-
+        const __m128i SL11 = DIVa_4(L11);
         const __m128i SL0 = MULa_4(L0);
 
         return _mm_xor_si128(SL11, SL0);
@@ -1633,20 +1795,23 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
         const uint32_t L12 = pCtx->LFSR_S[12];
         uint32_t MULa_L0 = L0;
         uint32_t MULa_L1 = L1;
+        uint32_t DIVa_L11 = L11;
+        uint32_t DIVa_L12 = L12;
 
         MULa_2(&MULa_L0, &MULa_L1);
+        DIVa_2(&DIVa_L11, &DIVa_L12);
 
         const uint32_t V0 =
                 pCtx->LFSR_S[2] ^
                 MULa_L0 ^
-                snow3g_table_A_div[L11 & 0xff] ^
+                DIVa_L11 ^
                 (L0 << 8) ^
                 (L11 >> 8);
 
         const uint32_t V1 =
                 pCtx->LFSR_S[3] ^
                 MULa_L1 ^
-                snow3g_table_A_div[L12 & 0xff] ^
+                DIVa_L12 ^
                 (L1 << 8) ^
                 (L12 >> 8);
 
