@@ -303,6 +303,16 @@ static inline __m256i _mm256_loadu_2xm128i(const void *hi, const void *lo)
 
         return _mm256_inserti128_si256(_mm256_castsi128_si256(lo128), hi128, 1);
 }
+
+/**
+ * @brief Broadcasts 128-bit data onto 2x128-bit vectors
+ * @param[in] ptr  pointer to a 128-bit vector
+ * @return 256-bit vector
+ */
+static inline __m256i _mm256_broadcast_si128(const void *ptr)
+{
+        return _mm256_castps_si256(_mm256_broadcast_ps((const __m128 *)ptr));
+}
 #endif /* AVX2 */
 
 /**
@@ -1044,6 +1054,180 @@ static inline __m256i S2_box_8(const __m256i x)
 #endif /* AVX2 */
 
 /**
+ * @brief MULalpha SNOW3G operation on 4 8-bit values at the same time
+ *
+ * Function picks the right byte from the register to run MULalpha operation on.
+ * MULalpha is implemented through 8 16-byte tables and pshufb is used to
+ * look the tables up. This approach is possible because
+ * MULalpha operation has linear nature.
+ * Final operation result is calculated via byte re-arrangement on
+ * the lookup results and an XOR operation.
+ *
+ * @param [in] L0       4 x 32-bit LFSR[0]
+ * @return 4 x 32-bit MULalpha(L0 >> 24)
+ */
+static inline
+__m128i MULa_4(const __m128i L0)
+{
+        const __m128i gather_clear_mask =
+                _mm_set_epi8(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                             0x80, 0x80, 0x80, 0x80, 15, 11, 7, 3);
+        const __m128i low_nibble_mask = _mm_set1_epi32(0x0f0f0f0f);
+        __m128i b0, b1, b2, b3, tl, th;
+
+        th = _mm_shuffle_epi8(L0, gather_clear_mask);
+
+        tl = _mm_and_si128(th, low_nibble_mask);
+        b0 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte0_low);
+        b1 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte1_low);
+        b2 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte2_low);
+        b3 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte3_low);
+
+        b0 = _mm_shuffle_epi8(b0, tl);
+        b1 = _mm_shuffle_epi8(b1, tl);
+        b2 = _mm_shuffle_epi8(b2, tl);
+        b3 = _mm_shuffle_epi8(b3, tl);
+
+        b0 = _mm_unpacklo_epi8(b0, b1);
+        b2 = _mm_unpacklo_epi8(b2, b3);
+        tl = _mm_unpacklo_epi16(b0, b2);
+
+        b0 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte0_hi);
+        b1 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte1_hi);
+        b2 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte2_hi);
+        b3 = _mm_loadu_si128((const __m128i *)snow3g_MULa_byte3_hi);
+
+        th = _mm_and_si128(_mm_srli_epi32(th, 4), low_nibble_mask);
+
+        b0 = _mm_shuffle_epi8(b0, th);
+        b1 = _mm_shuffle_epi8(b1, th);
+        b2 = _mm_shuffle_epi8(b2, th);
+        b3 = _mm_shuffle_epi8(b3, th);
+
+        b0 = _mm_unpacklo_epi8(b0, b1);
+        b2 = _mm_unpacklo_epi8(b2, b3);
+        th = _mm_unpacklo_epi16(b0, b2);
+
+        return _mm_xor_si128(th, tl);
+}
+
+/**
+ * @brief MULalpha SNOW3G operation on 2 8-bit values at the same time
+ *
+ * @param [in/out] L0_1  On input, 32-bit LFSR[0].
+ *                       On output, 32-bit MULalpha(L0 >> 24)
+ * @param [in/out] L0_2  On input, 32-bit LFSR[0].
+ *                       On output, 32-bit MULalpha(L0 >> 24)
+ */
+static inline
+void MULa_2(uint32_t *L0_1, uint32_t *L0_2)
+{
+        __m128i in, out;
+
+        in = _mm_cvtsi32_si128(*L0_1);
+        in = _mm_insert_epi32(in, *L0_2, 1);
+        out = MULa_4(in);
+
+        *L0_1 = _mm_cvtsi128_si32(out);
+        *L0_2 = _mm_extract_epi32(out, 1);
+}
+
+/**
+ * @brief MULalpha SNOW3G operation on a 8-bit value.
+ *
+ * @param [in] L0       32-bit LFSR[0]
+ * @return 32-bit MULalpha(L0 >> 24)
+ */
+static inline
+uint32_t MULa(const uint32_t L0)
+{
+#ifdef SAFE_LOOKUP
+        const __m128i L0_vec = _mm_cvtsi32_si128(L0);
+
+        return _mm_cvtsi128_si32(MULa_4(L0_vec));
+#else
+        return snow3g_table_A_mul[L0 >> 24];
+#endif
+}
+
+#ifdef AVX2
+/**
+ * @brief MULalpha SNOW3G operation on 8 8-bit values at the same time
+ *
+ * Function picks the right byte from the register to run MULalpha operation on.
+ * MULalpha is implemented through 8 16-byte tables and pshufb is used to
+ * look the tables up. This approach is possible because
+ * MULalpha operation has linear nature.
+ * Final operation result is calculated via byte re-arrangement on
+ * the lookup results and an XOR operation.
+ *
+ * @param [in] L0       8 x 32-bit LFSR[0]
+ * @return 8 x 32-bit MULalpha(L0 >> 24)
+ */
+static inline
+__m256i MULa_8(const __m256i L0)
+{
+        const __m256i byte0_mask = _mm256_set1_epi64x(0x000000ff000000ffULL);
+        const __m256i byte1_mask = _mm256_set1_epi64x(0x0000ff000000ff00ULL);
+        const __m256i byte2_mask = _mm256_set1_epi64x(0x00ff000000ff0000ULL);
+        const __m256i byte3_mask = _mm256_set1_epi64x(0xff000000ff000000ULL);
+        const __m256i gather_clear_mask =
+                _mm256_set_epi8(0x0f, 0x0f, 0x0f, 0x0f, 0x0b, 0x0b, 0x0b, 0x0b,
+                                0x07, 0x07, 0x07, 0x07, 0x03, 0x03, 0x03, 0x03,
+                                0x0f, 0x0f, 0x0f, 0x0f, 0x0b, 0x0b, 0x0b, 0x0b,
+                                0x07, 0x07, 0x07, 0x07, 0x03, 0x03, 0x03, 0x03);
+        const __m256i low_nibble_mask = _mm256_set1_epi32(0x0f0f0f0f);
+        __m256i b0, b1, b2, b3, tl, th;
+
+        th = _mm256_shuffle_epi8(L0, gather_clear_mask);
+
+        tl = _mm256_and_si256(th, low_nibble_mask);
+
+        b0 = _mm256_broadcast_si128(snow3g_MULa_byte0_low);
+        b1 = _mm256_broadcast_si128(snow3g_MULa_byte1_low);
+        b2 = _mm256_broadcast_si128(snow3g_MULa_byte2_low);
+        b3 = _mm256_broadcast_si128(snow3g_MULa_byte3_low);
+
+        b0 = _mm256_shuffle_epi8(b0, tl);
+        b1 = _mm256_shuffle_epi8(b1, tl);
+        b2 = _mm256_shuffle_epi8(b2, tl);
+        b3 = _mm256_shuffle_epi8(b3, tl);
+
+        b0 = _mm256_and_si256(b0, byte0_mask);
+        b1 = _mm256_and_si256(b1, byte1_mask);
+        b2 = _mm256_and_si256(b2, byte2_mask);
+        b3 = _mm256_and_si256(b3, byte3_mask);
+
+        b0 = _mm256_or_si256(b0, b1);
+        b2 = _mm256_or_si256(b2, b3);
+        tl = _mm256_or_si256(b0, b2);
+
+        th = _mm256_and_si256(_mm256_srli_epi32(th, 4), low_nibble_mask);
+
+        b0 = _mm256_broadcast_si128(snow3g_MULa_byte0_hi);
+        b1 = _mm256_broadcast_si128(snow3g_MULa_byte1_hi);
+        b2 = _mm256_broadcast_si128(snow3g_MULa_byte2_hi);
+        b3 = _mm256_broadcast_si128(snow3g_MULa_byte3_hi);
+
+        b0 = _mm256_shuffle_epi8(b0, th);
+        b1 = _mm256_shuffle_epi8(b1, th);
+        b2 = _mm256_shuffle_epi8(b2, th);
+        b3 = _mm256_shuffle_epi8(b3, th);
+
+        b0 = _mm256_and_si256(b0, byte0_mask);
+        b1 = _mm256_and_si256(b1, byte1_mask);
+        b2 = _mm256_and_si256(b2, byte2_mask);
+        b3 = _mm256_and_si256(b3, byte3_mask);
+
+        b0 = _mm256_or_si256(b0, b1);
+        b2 = _mm256_or_si256(b2, b3);
+        th = _mm256_or_si256(b0, b2);
+
+        return _mm256_xor_si256(th, tl);
+}
+#endif /* AVX2 */
+
+/**
  * @brief ClockFSM function as defined in SNOW3G standard
  *
  * The FSM has 2 input words S5 and S15 from the LFSR
@@ -1072,7 +1256,7 @@ static inline void ClockLFSR_1(snow3gKeyState1_t *pCtx)
         const uint32_t S0 = pCtx->LFSR_S[0];
         const uint32_t S11 = pCtx->LFSR_S[11];
         const uint32_t V = pCtx->LFSR_S[2] ^
-                snow3g_table_A_mul[S0 >> 24] ^
+                MULa(S0) ^
                 snow3g_table_A_div[S11 & 0xff] ^
                 (S0 << 8) ^
                 (S11 >> 8);
@@ -1127,6 +1311,10 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                 const uint32_t L1 = pCtx->LFSR_S[1];
                 const uint32_t L11 = pCtx->LFSR_S[11];
                 const uint32_t L12 = pCtx->LFSR_S[12];
+                uint32_t MULa_L0 = L0;
+                uint32_t MULa_L1 = L1;
+
+                MULa_2(&MULa_L0, &MULa_L1);
 
                 /* clock FSM + clock LFSR + clockFSM + clock LFSR */
                 const uint32_t F0 =
@@ -1134,7 +1322,7 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
 
                 const uint32_t V0 =
                         pCtx->LFSR_S[2] ^
-                        snow3g_table_A_mul[L0 >> 24] ^ /* MUL(s0,0 ) */
+                        MULa_L0 ^ /* MUL(s0,0 ) */
                         snow3g_table_A_div[L11 & 0xff] ^ /* DIV(s11,3 )*/
                         (L0 << 8) ^ /*  (s0,1 || s0,2 || s0,3 || 0x00) */
                         (L11 >> 8) ^ /* (0x00 || s11,0 || s11,1 || s11,2 ) */
@@ -1158,9 +1346,9 @@ snow3gStateInitialize_1(snow3gKeyState1_t *pCtx,
                 const uint32_t F1 = (V0 + R0) ^ s1_box_step1;
 
                 const uint32_t V1 = pCtx->LFSR_S[3] ^
-                        snow3g_table_A_mul[L1 >> 24] ^
-                        snow3g_table_A_div[L12 & 0xff] ^
-                        (L1 << 8) ^ (L12 >> 8) ^ F1;
+                             MULa_L1 ^
+                             snow3g_table_A_div[L12 & 0xff] ^
+                             (L1 << 8) ^ (L12 >> 8) ^ F1;
 
                 FSM2 = s1_box_step2;
                 FSM3 = s2_box_step2;
@@ -1259,16 +1447,10 @@ static inline __m256i C0_C11_8(const __m256i L0, const __m256i L11)
                 0x8080800480808000ULL, 0x8080800C80808008ULL,
                 0x8080800480808000ULL, 0x8080800C80808008ULL
         };
-        static const __m256i mask2 = {
-                0x8080800780808003ULL, 0x8080800F8080800BULL,
-                0x8080800780808003ULL, 0x8080800F8080800BULL
-        };
         const __m256i S1 =
                 _mm256_i32gather_epi32(snow3g_table_A_div,
                                        _mm256_shuffle_epi8(L11, mask1), 4);
-        const __m256i S2 =
-                _mm256_i32gather_epi32(snow3g_table_A_mul,
-                                       _mm256_shuffle_epi8(L0, mask2), 4);
+        const __m256i S2 = MULa_8(L0);
 
         return _mm256_xor_si256(S1, S2);
 }
@@ -1293,15 +1475,7 @@ static inline __m128i C0_C11_4(const __m128i L0, const __m128i L11)
                                             snow3g_table_A_div[L11IDX2],
                                             snow3g_table_A_div[L11IDX3]);
 
-        const uint8_t L0IDX0 = _mm_extract_epi8(L0, 3);
-        const uint8_t L0IDX1 = _mm_extract_epi8(L0, 7);
-        const uint8_t L0IDX2 = _mm_extract_epi8(L0, 11);
-        const uint8_t L0IDX3 = _mm_extract_epi8(L0, 15);
-
-        const __m128i SL0 = _mm_setr_epi32(snow3g_table_A_mul[L0IDX0],
-                                           snow3g_table_A_mul[L0IDX1],
-                                           snow3g_table_A_mul[L0IDX2],
-                                           snow3g_table_A_mul[L0IDX3]);
+        const __m128i SL0 = MULa_4(L0);
 
         return _mm_xor_si128(SL11, SL0);
 }
@@ -1457,17 +1631,21 @@ static inline uint64_t snow3g_keystream_1_8(snow3gKeyState1_t *pCtx)
         const uint32_t L1 = pCtx->LFSR_S[1];
         const uint32_t L11 = pCtx->LFSR_S[11];
         const uint32_t L12 = pCtx->LFSR_S[12];
+        uint32_t MULa_L0 = L0;
+        uint32_t MULa_L1 = L1;
+
+        MULa_2(&MULa_L0, &MULa_L1);
 
         const uint32_t V0 =
                 pCtx->LFSR_S[2] ^
-                snow3g_table_A_mul[L0 >> 24] ^
+                MULa_L0 ^
                 snow3g_table_A_div[L11 & 0xff] ^
                 (L0 << 8) ^
                 (L11 >> 8);
 
         const uint32_t V1 =
                 pCtx->LFSR_S[3] ^
-                snow3g_table_A_mul[L1 >> 24] ^
+                MULa_L1 ^
                 snow3g_table_A_div[L12 & 0xff] ^
                 (L1 << 8) ^
                 (L12 >> 8);
