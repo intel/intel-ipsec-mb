@@ -2031,17 +2031,15 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GCM_COMPLETE Finishes Encryption/Decryption of last partial block after GCM_UPDATE finishes.
-; Input: A gcm_key_data * (GDATA_KEY), gcm_context_data * (GDATA_CTX) and
-; whether encoding or decoding (ENC_DEC).
+; Input: A gcm_key_data * (GDATA_KEY), gcm_context_data * (GDATA_CTX).
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
 ; Clobbers rax, r10-r12, and xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro	GCM_COMPLETE		5
+%macro	GCM_COMPLETE		4
 %define	%%GDATA_KEY		%1
 %define	%%GDATA_CTX		%2
 %define	%%AUTH_TAG		%3
 %define	%%AUTH_TAG_LEN		%4
-%define	%%ENC_DEC		%5
 %define	%%PLAIN_CYPH_LEN	rax
 
         mov     r12, [%%GDATA_CTX + PBlockLen]		; r12 = aadLen (number of bytes)
@@ -2463,7 +2461,7 @@ FN_NAME(enc,_finalize_):
         movdqu	[rsp + 6*16], xmm15
 %endif
 
-	GCM_COMPLETE	arg1, arg2, arg3, arg4, ENC
+	GCM_COMPLETE	arg1, arg2, arg3, arg4
 
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
@@ -2530,7 +2528,7 @@ FN_NAME(dec,_finalize_):
         movdqu	[rsp + 5*16], xmm14
         movdqu	[rsp + 6*16], xmm15
 %endif
-	GCM_COMPLETE	arg1, arg2, arg3, arg4, DEC
+	GCM_COMPLETE	arg1, arg2, arg3, arg4
 
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
@@ -2622,7 +2620,7 @@ skip_aad_check_enc:
 
 	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC
 
-	GCM_COMPLETE arg1, arg2, arg9, arg10, ENC
+	GCM_COMPLETE arg1, arg2, arg9, arg10
 
 exit_enc:
 	FUNC_RESTORE
@@ -2699,7 +2697,7 @@ skip_aad_check_dec:
 
 	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC
 
-	GCM_COMPLETE arg1, arg2, arg9, arg10, DEC
+	GCM_COMPLETE arg1, arg2, arg9, arg10
 
 exit_dec:
 	FUNC_RESTORE
@@ -2789,7 +2787,7 @@ iv_len_12_enc_IV:
 skip_iv_len_12_enc_IV:
 	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC
 
-	GCM_COMPLETE arg1, arg2, arg10, arg11, ENC
+	GCM_COMPLETE arg1, arg2, arg10, arg11
 
 exit_enc_IV:
 	FUNC_RESTORE
@@ -2879,7 +2877,7 @@ iv_len_12_dec_IV:
 skip_iv_len_12_dec_IV:
 	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC
 
-	GCM_COMPLETE arg1, arg2, arg10, arg11, DEC
+	GCM_COMPLETE arg1, arg2, arg10, arg11
 
 exit_dec_IV:
 	FUNC_RESTORE
