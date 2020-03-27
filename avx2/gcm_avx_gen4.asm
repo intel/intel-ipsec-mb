@@ -507,18 +507,18 @@ default rel
 ; Requires the input data be at least 1 byte long.
 ; Input: gcm_key_data * (GDATA_KEY), gcm_context_data *(GDATA_CTX), input text (PLAIN_CYPH_IN),
 ; input text length (PLAIN_CYPH_LEN), the current data offset (DATA_OFFSET),
-; and whether encoding or decoding (ENC_DEC)
+; the hash subkey (HASH_SUBKEY) and whether encoding or decoding (ENC_DEC)
 ; Output: A cypher of the first partial block (CYPH_PLAIN_OUT), and updated GDATA_CTX
-; Clobbers rax, r10, r12, r13, r15, xmm0, xmm1, xmm2, xmm3, xmm5, xmm6, xmm9, xmm10, xmm11, xmm13
+; Clobbers rax, r10, r12, r13, r15, xmm0, xmm1, xmm2, xmm3, xmm5, xmm6, xmm9, xmm10, xmm11
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro PARTIAL_BLOCK    8
-%define %%GDATA_KEY             %1
-%define %%GDATA_CTX             %2
-%define %%CYPH_PLAIN_OUT        %3
-%define %%PLAIN_CYPH_IN         %4
-%define %%PLAIN_CYPH_LEN        %5
-%define %%DATA_OFFSET           %6
-%define %%AAD_HASH              %7
+%define %%GDATA_CTX             %1
+%define %%CYPH_PLAIN_OUT        %2
+%define %%PLAIN_CYPH_IN         %3
+%define %%PLAIN_CYPH_LEN        %4
+%define %%DATA_OFFSET           %5
+%define %%AAD_HASH              %6
+%define %%HASH_SUBKEY           %7
 %define %%ENC_DEC               %8
 
         mov     r13, [%%GDATA_CTX + PBlockLen]
@@ -538,7 +538,6 @@ default rel
 
 
         vmovdqu xmm9, [%%GDATA_CTX + PBlockEncKey]  ;xmm9 = my_ctx_data.partial_block_enc_key
-        vmovdqu xmm13, [%%GDATA_KEY + HashKey]
 
         lea     r12, [rel SHIFT_MASK]
 
@@ -569,7 +568,7 @@ default rel
         cmp     r15,0
         jl      %%_partial_incomplete_1
 
-        GHASH_MUL       %%AAD_HASH, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6       ;GHASH computation for the last <16 Byte block
+        GHASH_MUL       %%AAD_HASH, %%HASH_SUBKEY, xmm0, xmm10, xmm11, xmm5, xmm6       ;GHASH computation for the last <16 Byte block
         xor     rax,rax
         mov     [%%GDATA_CTX + PBlockLen], rax
         jmp     %%_dec_done
@@ -603,7 +602,7 @@ default rel
         cmp     r15,0
         jl      %%_partial_incomplete_2
 
-        GHASH_MUL       %%AAD_HASH, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6       ;GHASH computation for the last <16 Byte block
+        GHASH_MUL       %%AAD_HASH, %%HASH_SUBKEY, xmm0, xmm10, xmm11, xmm5, xmm6       ;GHASH computation for the last <16 Byte block
         xor     rax,rax
         mov     [%%GDATA_CTX + PBlockLen], rax
         jmp     %%_encode_done
@@ -2829,7 +2828,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; NOTE: partial block processing makes only sense for multi_call here.
         ;; Used for the update flow - if there was a previous partial
         ;; block fill the remaining bytes here.
-        PARTIAL_BLOCK %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%DATA_OFFSET, xmm8, %%ENC_DEC
+        PARTIAL_BLOCK %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%DATA_OFFSET, xmm8, xmm13, %%ENC_DEC
 %endif
 
         ;;  lift CTR set from initial_blocks to here
