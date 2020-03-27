@@ -448,22 +448,8 @@ section .text
 %define %%LANEDAT       %17     ; [in/out] CRC cumulative sum
 %define %%SUBLEN        %18     ; [in/optional] if "dont_subtract_len" length not subtracted
 
-%assign kreg 0  ;; do not use kreg by default
-
-%ifidn %%FIRST, no_first
-        ;; mid or last usage
-%if %%LANEID < 7
-        ;; no check - use K registers
-%assign kreg (%%LANEID + 1)
-%else
         cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_DONE
         je              %%_crc_lane_done
-%endif  ;; !(%%LANEID < 7)
-%else
-        ;; it can be the first chunk (or mid, or last). k registers not loaded yet.
-        cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_DONE
-        je              %%_crc_lane_done
-%endif  ; no_first
 
 %ifnidn %%FIRST, no_first
         cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_TO_START
@@ -478,11 +464,7 @@ section .text
         ;; The most common case: next block for CRC
         vmovdqa64       %%XCRC_VAL, %%LANEDAT
         CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
-%if kreg > 0
-        vmovdqa64       %%LANEDAT{APPEND(k,kreg)}, %%XCRC_VAL
-%else
         vmovdqa64       %%LANEDAT, %%XCRC_VAL
-%endif  ;; kreg > 0
 %ifnidn %%SUBLEN, dont_subtract_len
         sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
 %endif
@@ -550,6 +532,45 @@ section .text
 
 %%_crc_lane_done:
 %endmacro       ; CRC32_ROUND
+
+;; =====================================================================
+;; =====================================================================
+;; CRC32 computation middle round only
+;; - uses K registers to allow/disallow update of lane's CRC value
+;; =====================================================================
+%macro CRC32_MID_ROUND 7
+%define %%ARG           %1      ; [in] GP with pointer to OOO manager / arguments
+%define %%LANEID        %2      ; [in] numerical value with lane id
+%define %%XDATA         %3      ; [in] an XMM (any) with input data block for CRC calculation
+%define %%XCRC_VAL      %4      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_MUL      %5      ; [clobbered] temporary XMM (xmm0-15)
+%define %%XCRC_TMP      %6      ; [clobbered] temporary XMM (xmm0-15)
+%define %%LANEDAT       %7      ; [in/out] CRC cumulative sum
+
+%if %%LANEID < 7
+
+        ;; use K registers
+%assign kreg (%%LANEID + 1)
+
+        ;; The most common case: next block for CRC
+        vmovdqa64       %%XCRC_VAL, %%LANEDAT
+        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
+        vmovdqa64       %%LANEDAT{APPEND(k,kreg)}, %%XCRC_VAL
+
+%else
+
+        cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_DONE
+        je              %%_crc_lane_done
+
+        ;; The most common case: next block for CRC
+        vmovdqa64       %%XCRC_VAL, %%LANEDAT
+        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
+        vmovdqa64       %%LANEDAT, %%XCRC_VAL
+%%_crc_lane_done:
+
+%endif  ;; !(%%LANEID < 7)
+
+%endmacro       ; CRC32_MID_ROUND
 
 ;; =====================================================================
 ;; =====================================================================
@@ -749,11 +770,9 @@ section .text
         mov             %%GP1, [%%ARG + _aesarg_in + (8 * crc_lane)]
         vmovdqu64       APPEND(%%XDATA,crc_lane), [%%GP1 + %%IDX + 16]
 
-        CRC32_ROUND no_first, no_last, %%ARG, crc_lane, \
-                    APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
-                    %%XCRC_MUL, %%XCRC_TMP, no_xmm, \
-                    no_gp, no_idx, no_offset, no_gp, no_gp, no_crc,\
-                    APPEND(%%XDATB, crc_lane), dont_subtract_len
+        CRC32_MID_ROUND %%ARG, crc_lane, APPEND(%%XDATA, crc_lane), \
+                        %%XCRC_VAL, %%XCRC_MUL, %%XCRC_TMP, \
+                        APPEND(%%XDATB, crc_lane)
 
 %assign crc_lane (crc_lane + 1)
 %endif  ;; i > 1 && crc_lane < 8
