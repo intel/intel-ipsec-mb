@@ -762,10 +762,10 @@ section .text
 %macro HEC_COMPUTE_32 6
 %define %%HEC_IN_OUT %1         ; [in/out] GP register with HEC in LE format
 %define %%GT1        %2         ; [clobbered] temporary GP register
-%define %%XT1        %4         ; [clobbered] temporary xmm register
-%define %%XT2        %5         ; [clobbered] temporary xmm register
-%define %%XT3        %6         ; [clobbered] temporary xmm register
-%define %%XT4        %7         ; [clobbered] temporary xmm register
+%define %%XT1        %3         ; [clobbered] temporary xmm register
+%define %%XT2        %4         ; [clobbered] temporary xmm register
+%define %%XT3        %5         ; [clobbered] temporary xmm register
+%define %%XT4        %6         ; [clobbered] temporary xmm register
 
         mov             DWORD(%%GT1), DWORD(%%HEC_IN_OUT)
         ;; shift out 13 bits of HEC value for CRC computation
@@ -1169,6 +1169,22 @@ align 64
 MKGLOBAL(submit_job_pon_dec_no_ctr_avx,function,internal)
 submit_job_pon_dec_no_ctr_avx:
         AES128_CTR_PON DEC, NO_CTR
+        ret
+
+align 64
+MKGLOBAL(hec_32_avx,function,)
+hec_32_avx:
+        movbe   eax, [arg1]
+        HEC_COMPUTE_32 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
+        bswap   eax
+        ret
+
+align 64
+MKGLOBAL(hec_64_avx,function,)
+hec_64_avx:
+        movbe   rax, [arg1]
+        HEC_COMPUTE_64 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
+        bswap   rax
         ret
 
 %ifdef LINUX

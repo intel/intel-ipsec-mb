@@ -1020,6 +1020,9 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->gmac128_finalize    = imb_aes_gmac_finalize_128_sse;
         state->gmac192_finalize    = imb_aes_gmac_finalize_192_sse;
         state->gmac256_finalize    = imb_aes_gmac_finalize_256_sse;
+
+        state->hec_32              = hec_32_sse;
+        state->hec_64              = hec_64_sse;
 }
 
 #include "mb_mgr_code.h"

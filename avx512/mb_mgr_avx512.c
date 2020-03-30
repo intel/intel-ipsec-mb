@@ -1441,6 +1441,9 @@ init_mb_mgr_avx512(IMB_MGR *state)
         state->snow3g_init_key_sched = snow3g_init_key_sched_avx2;
         state->snow3g_key_sched_size = snow3g_key_sched_size_avx2;
 
+        state->hec_32              = hec_32_avx;
+        state->hec_64              = hec_64_avx;
+
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
                 submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;
                 submit_job_aes_cntr_bit_avx512 = vaes_submit_cntr_bit_avx512;

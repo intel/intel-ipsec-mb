@@ -488,3 +488,7 @@ EXPORTS
     imb_aes_gmac_finalize_128_vaes_avx512       @462
     imb_aes_gmac_finalize_192_vaes_avx512       @463
     imb_aes_gmac_finalize_256_vaes_avx512       @464
+    hec_32_sse                                  @465
+    hec_64_sse                                  @466
+    hec_32_avx                                  @467
+    hec_64_avx                                  @468

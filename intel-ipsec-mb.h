@@ -692,6 +692,9 @@ typedef int (*snow3g_init_key_sched_t)(const void *,
 
 typedef size_t (*snow3g_key_sched_size_t)(void);
 
+typedef uint32_t (*hec_32_t)(const uint8_t *);
+typedef uint64_t (*hec_64_t)(const uint8_t *);
+
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
@@ -847,6 +850,9 @@ typedef struct IMB_MGR {
         aes_gmac_finalize_t     gmac128_finalize;
         aes_gmac_finalize_t     gmac192_finalize;
         aes_gmac_finalize_t     gmac256_finalize;
+
+        hec_32_t                hec_32;
+        hec_64_t                hec_64;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1617,6 +1623,9 @@ IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
  ******************************************************************************/
 #define IMB_SNOW3G_KEY_SCHED_SIZE(_mgr)((_mgr)->snow3g_key_sched_size())
 
+/* HEC compute functions */
+#define IMB_HEC_32(_mgr, _in)((_mgr)->hec_32(_in))
+#define IMB_HEC_64(_mgr, _in)((_mgr)->hec_64(_in))
 
 /* Auxiliary functions */
 
@@ -1671,6 +1680,8 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse(const void *key_exp, void *key1,
 IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
+IMB_DLL_EXPORT uint32_t hec_32_sse(const uint8_t *in);
+IMB_DLL_EXPORT uint64_t hec_64_sse(const uint8_t *in);
 
 /* AVX */
 IMB_DLL_EXPORT void sha1_avx(const void *data, const uint64_t length,
@@ -1708,6 +1719,8 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1,
 IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
+IMB_DLL_EXPORT uint32_t hec_32_avx(const uint8_t *in);
+IMB_DLL_EXPORT uint64_t hec_64_avx(const uint8_t *in);
 
 /* AVX2 */
 IMB_DLL_EXPORT void sha1_avx2(const void *data, const uint64_t length,
