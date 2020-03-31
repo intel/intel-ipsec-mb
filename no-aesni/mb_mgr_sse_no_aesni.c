@@ -835,6 +835,16 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->gcm192_pre          = aes_gcm_pre_192_sse_no_aesni;
         state->gcm256_pre          = aes_gcm_pre_256_sse_no_aesni;
         state->ghash               = ghash_sse;
+
+        state->gmac128_init        = imb_aes_gmac_init_128_sse_no_aesni;
+        state->gmac192_init        = imb_aes_gmac_init_192_sse_no_aesni;
+        state->gmac256_init        = imb_aes_gmac_init_256_sse_no_aesni;
+        state->gmac128_update      = imb_aes_gmac_update_128_sse_no_aesni;
+        state->gmac192_update      = imb_aes_gmac_update_192_sse_no_aesni;
+        state->gmac256_update      = imb_aes_gmac_update_256_sse_no_aesni;
+        state->gmac128_finalize    = imb_aes_gmac_finalize_128_sse_no_aesni;
+        state->gmac192_finalize    = imb_aes_gmac_finalize_192_sse_no_aesni;
+        state->gmac256_finalize    = imb_aes_gmac_finalize_256_sse_no_aesni;
 }
 
 #include "mb_mgr_code.h"
