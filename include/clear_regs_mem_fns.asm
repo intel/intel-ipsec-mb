@@ -119,6 +119,37 @@ force_memset_zero:
 %endif
         ret
 
+MKGLOBAL(imb_clear_mem,function,)
+imb_clear_mem:
+
+%ifdef LINUX
+        cmp rdi, 0
+%else
+        cmp rcx, 0
+%endif
+        jz  clr_mem_return
+
+        pushfq ;; save flags
+%ifdef LINUX
+        mov rcx, rsi
+%else
+        push rdi
+        mov rdi, rcx
+        mov rcx, rdx
+%endif
+        xor eax, eax
+        cld
+        rep stosb
+
+%ifndef LINUX
+        pop rdi
+%endif
+        sfence  ;; ensure stores complete
+        popfq   ;; restore flags
+
+clr_mem_return:
+        ret
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif

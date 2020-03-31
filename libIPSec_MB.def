@@ -433,3 +433,4 @@ EXPORTS
     zuc_eea3_4_buffer_sse_no_aesni              @407
     zuc_eea3_n_buffer_sse_no_aesni              @408
     zuc_eia3_1_buffer_sse_no_aesni              @409
+    imb_clear_mem                               @410

@@ -2296,6 +2296,13 @@ IMB_DLL_EXPORT int snow3g_f9_iv_gen(const uint32_t count,
                                     const uint32_t fresh,
                                     const uint8_t dir,
                                     void *iv_ptr);
+/**
+ * @brief Force clearing/zeroing of memory
+ *
+ * @param [in] mem   Pointer to memory address to clear
+ * @param [in] size  Size of memory to clear (in bytes)
+ */
+IMB_DLL_EXPORT void imb_clear_mem(void *mem, const size_t size);
 
 #ifdef __cplusplus
 }
