@@ -461,3 +461,12 @@ EXPORTS
     imb_aes_gmac_finalize_128_sse_no_aesni      @435
     imb_aes_gmac_finalize_192_sse_no_aesni      @436
     imb_aes_gmac_finalize_256_sse_no_aesni      @437
+    imb_aes_gmac_init_128_avx_gen4              @438
+    imb_aes_gmac_init_192_avx_gen4              @439
+    imb_aes_gmac_init_256_avx_gen4              @440
+    imb_aes_gmac_update_128_avx_gen4            @441
+    imb_aes_gmac_update_192_avx_gen4            @442
+    imb_aes_gmac_update_256_avx_gen4            @443
+    imb_aes_gmac_finalize_128_avx_gen4          @444
+    imb_aes_gmac_finalize_192_avx_gen4          @445
+    imb_aes_gmac_finalize_256_avx_gen4          @446

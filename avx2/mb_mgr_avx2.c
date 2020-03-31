@@ -784,6 +784,16 @@ init_mb_mgr_avx2(IMB_MGR *state)
         state->gcm192_pre          = aes_gcm_pre_192_avx_gen4;
         state->gcm256_pre          = aes_gcm_pre_256_avx_gen4;
         state->ghash               = ghash_avx_gen4;
+
+        state->gmac128_init        = imb_aes_gmac_init_128_avx_gen4;
+        state->gmac192_init        = imb_aes_gmac_init_192_avx_gen4;
+        state->gmac256_init        = imb_aes_gmac_init_256_avx_gen4;
+        state->gmac128_update      = imb_aes_gmac_update_128_avx_gen4;
+        state->gmac192_update      = imb_aes_gmac_update_192_avx_gen4;
+        state->gmac256_update      = imb_aes_gmac_update_256_avx_gen4;
+        state->gmac128_finalize    = imb_aes_gmac_finalize_128_avx_gen4;
+        state->gmac192_finalize    = imb_aes_gmac_finalize_192_avx_gen4;
+        state->gmac256_finalize    = imb_aes_gmac_finalize_256_avx_gen4;
 }
 
 #include "mb_mgr_code.h"

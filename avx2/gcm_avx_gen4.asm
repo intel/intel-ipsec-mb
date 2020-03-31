@@ -129,16 +129,19 @@
 %ifdef GCM128_MODE
 %define NROUNDS 9
 %define FN_NAME(x,y) aes_gcm_ %+ x %+ _128 %+ y %+ avx_gen4
+%define GMAC_FN_NAME(x) imb_aes_gmac_ %+ x %+ _128_ %+ avx_gen4
 %endif
 
 %ifdef GCM192_MODE
 %define NROUNDS 11
 %define FN_NAME(x,y) aes_gcm_ %+ x %+ _192 %+ y %+ avx_gen4
+%define GMAC_FN_NAME(x) imb_aes_gmac_ %+ x %+ _192_ %+ avx_gen4
 %endif
 
 %ifdef GCM256_MODE
 %define NROUNDS 13
 %define FN_NAME(x,y) aes_gcm_ %+ x %+ _256 %+ y %+ avx_gen4
+%define GMAC_FN_NAME(x) imb_aes_gmac_ %+ x %+ _256_ %+ avx_gen4
 %endif
 
 section .text
@@ -339,7 +342,6 @@ default rel
 
         mov     %%T1, %%A_IN            ; T1 = AAD
         mov     %%T2, %%A_LEN           ; T2 = aadLen
-        vpxor   %%AAD_HASH, %%AAD_HASH
 
 %%_get_AAD_loop128:
         cmp     %%T2, 128
@@ -2627,6 +2629,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; s = 16 * RoundUp(len(IV)/16) -  len(IV) */
 
         ;; Calculate GHASH of (IV || 0s)
+        vpxor   %%J0, %%J0
         CALC_AAD_HASH %%IV, %%IV_LEN, %%J0, %%KEY, %%XTMP0, %%XTMP1, %%XTMP2, \
                       %%XTMP3, %%XTMP4, %%XTMP5, %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%TMP4
 
@@ -2664,6 +2667,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         cmp     r10, 0
         je      %%_aad_is_zero
 
+        vpxor   %%AAD_HASH, %%AAD_HASH
         CALC_AAD_HASH %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, r10, r11, r12, r13, rax
         jmp     %%_after_aad
 
@@ -3975,6 +3979,7 @@ ghash_avx_gen4:
         jz      exit_ghash
 %endif
 
+        vpxor   xmm0, xmm0
         CALC_AAD_HASH arg2, arg3, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
                       r10, r11, r12, r13, rax
 
@@ -3987,6 +3992,175 @@ exit_ghash:
 
         ret
 %endif
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; PARTIAL_BLOCK_GMAC: Handles the tag partial blocks between update calls.
+; Requires the input data be at least 1 byte long.
+; Input: gcm_key_data (GDATA_KEY), gcm_context_data (GDATA_CTX), input text (PLAIN_IN),
+; input text length (PLAIN_LEN), hash subkey (HASH_SUBKEY).
+; Output: Updated GDATA_CTX
+; Clobbers rax, r10, r12, r13, r15, xmm0, xmm1, xmm2, xmm3, xmm5, xmm6, xmm9, xmm10, xmm11, xmm13
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro PARTIAL_BLOCK_GMAC	7
+%define	%%GDATA_KEY             %1
+%define	%%GDATA_CTX             %2
+%define	%%PLAIN_IN              %3
+%define	%%PLAIN_LEN             %4
+%define	%%DATA_OFFSET           %5
+%define	%%AAD_HASH              %6
+%define	%%HASH_SUBKEY           %7
+
+	mov	r13, [%%GDATA_CTX + PBlockLen]
+	cmp	r13, 0
+        ; Leave Macro if no partial blocks
+	je	%%_partial_block_done
+
+        ; Read in input data without over reading
+	cmp	%%PLAIN_LEN, 16
+	jl	%%_fewer_than_16_bytes
+        ; If more than 16 bytes of data, just fill the xmm register
+	VXLDR   xmm1, [%%PLAIN_IN]
+	jmp	%%_data_read
+
+%%_fewer_than_16_bytes:
+	lea	r10, [%%PLAIN_IN]
+	READ_SMALL_DATA_INPUT	xmm1, r10, %%PLAIN_LEN, rax, r12, r15
+
+        ; Finished reading in data
+%%_data_read:
+
+	lea	r12, [rel SHIFT_MASK]
+        ; Adjust the shuffle mask pointer to be able to shift r13 bytes
+        ; (16-r13 is the number of bytes in plaintext mod 16)
+	add	r12, r13
+        ; Get the appropriate shuffle mask
+	vmovdqu	xmm2, [r12]
+	vmovdqa	xmm3, xmm1
+
+	mov	r15, %%PLAIN_LEN
+	add	r15, r13
+        ; Set r15 to be the amount of data left in PLAIN_IN after filling the block
+	sub	r15, 16
+        ; Determine if partial block is not being filled and shift mask accordingly
+	jge	%%_no_extra_mask_1
+	sub	r12, r15
+%%_no_extra_mask_1:
+
+        ; Get the appropriate mask to mask out bottom r13 bytes of xmm3
+	vmovdqu	xmm1, [r12 + ALL_F-SHIFT_MASK]
+
+	vpand	xmm3, xmm1
+	vpshufb	xmm3, [rel SHUF_MASK]
+	vpshufb	xmm3, xmm2
+	vpxor	%%AAD_HASH, xmm3
+
+	cmp	r15,0
+	jl	%%_partial_incomplete_1
+
+        ; GHASH computation for the last <16 Byte block
+	GHASH_MUL	%%AAD_HASH, %%HASH_SUBKEY, xmm0, xmm10, xmm11, xmm5, xmm6
+	xor	rax, rax
+	mov	[%%GDATA_CTX + PBlockLen], rax
+	jmp	%%_ghash_done
+%%_partial_incomplete_1:
+%ifidn __OUTPUT_FORMAT__, win64
+        mov     rax, %%PLAIN_LEN
+        add     [%%GDATA_CTX + PBlockLen], rax
+%else
+        add     [%%GDATA_CTX + PBlockLen], %%PLAIN_LEN
+%endif
+%%_ghash_done:
+	vmovdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
+
+        cmp     r15, 0
+        jl      %%_partial_fill
+
+        mov     r12, 16
+        ; Set r12 to be the number of bytes to skip after this macro
+        sub     r12, r13
+
+        jmp     %%offset_set
+%%_partial_fill:
+        mov     r12, %%PLAIN_LEN
+%%offset_set:
+        mov     %%DATA_OFFSET, r12
+%%_partial_block_done:
+%endmacro ; PARTIAL_BLOCK_GMAC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   imb_aes_gmac_update_128_avx_gen4 / imb_aes_gmac_update_192_avx_gen4 /
+;       imb_aes_gmac_update_256_avx_gen4
+;        const struct gcm_key_data *key_data,
+;        struct gcm_context_data *context_data,
+;        const   u8 *in,
+;        const   u64 plaintext_len);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(GMAC_FN_NAME(update),function,)
+GMAC_FN_NAME(update):
+
+	FUNC_SAVE
+
+        ;; Check if plaintext_len == 0
+        cmp     arg4, 0
+        je	exit_gmac_update
+
+%ifdef SAFE_PARAM
+        ;; Check key_data != NULL
+        cmp     arg1, 0
+        jz      exit_gmac_update
+
+        ;; Check context_data != NULL
+        cmp     arg2, 0
+        jz      exit_gmac_update
+
+        ;; Check in != NULL (plaintext_len != 0)
+        cmp     arg3, 0
+        jz      exit_gmac_update
+%endif
+
+        ; Increment size of "AAD length" for GMAC
+        add     [arg2 + AadLen], arg4
+
+        ;; Deal with previous partial block
+	xor	r11, r11
+	vmovdqu	xmm13, [arg1 + HashKey]
+	vmovdqu	xmm8, [arg2 + AadHash]
+
+	PARTIAL_BLOCK_GMAC arg1, arg2, arg3, arg4, r11, xmm8, xmm13
+
+        ; CALC_AAD_HASH needs to deal with multiple of 16 bytes
+        sub     arg4, r11
+        add     arg3, r11
+
+        vmovq   xmm7, arg4 ; Save remaining length
+        and     arg4, -16 ; Get multiple of 16 bytes
+
+        or      arg4, arg4
+        jz      no_full_blocks
+
+        ;; Calculate GHASH of this segment
+        CALC_AAD_HASH arg3, arg4, xmm8, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
+                      r10, r11, r12, r13, rax
+	vmovdqu	[arg2 + AadHash], xmm8	; ctx_data.aad hash = aad_hash
+
+no_full_blocks:
+        add     arg3, arg4 ; Point at partial block
+
+        vmovq   arg4, xmm7 ; Restore original remaining length
+        and     arg4, 15
+        jz      exit_gmac_update
+
+        ; Save next partial block
+        mov	[arg2 + PBlockLen], arg4
+        READ_SMALL_DATA_INPUT xmm1, arg3, arg4, r11, r12, r13
+        vpshufb xmm1, [rel SHUF_MASK]
+        vpxor   xmm8, xmm1
+        vmovdqu [arg2 + AadHash], xmm8
+
+exit_gmac_update:
+	FUNC_RESTORE
+
+	ret
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
