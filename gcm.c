@@ -283,3 +283,63 @@ imb_aes_gmac_finalize_256_sse(const struct gcm_key_data *key_data,
         aes_gcm_enc_256_finalize_sse(key_data, context_data, auth_tag,
                                      auth_tag_len);
 }
+
+void
+imb_aes_gmac_init_128_avx_gen2(const struct gcm_key_data *key_data,
+                               struct gcm_context_data *context_data,
+                               const uint8_t *iv,
+                               const uint64_t iv_len)
+{
+        aes_gcm_init_var_iv_128_avx_gen2(key_data, context_data, iv,
+                                         iv_len, NULL, 0);
+}
+
+void
+imb_aes_gmac_init_192_avx_gen2(const struct gcm_key_data *key_data,
+                               struct gcm_context_data *context_data,
+                               const uint8_t *iv,
+                               const uint64_t iv_len)
+{
+        aes_gcm_init_var_iv_192_avx_gen2(key_data, context_data, iv,
+                                         iv_len, NULL, 0);
+}
+
+void
+imb_aes_gmac_init_256_avx_gen2(const struct gcm_key_data *key_data,
+                               struct gcm_context_data *context_data,
+                               const uint8_t *iv,
+                               const uint64_t iv_len)
+{
+        aes_gcm_init_var_iv_256_avx_gen2(key_data, context_data, iv,
+                                         iv_len, NULL, 0);
+}
+
+void
+imb_aes_gmac_finalize_128_avx_gen2(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *auth_tag,
+                                   const uint64_t  auth_tag_len)
+{
+        aes_gcm_enc_128_finalize_avx_gen2(key_data, context_data, auth_tag,
+                                          auth_tag_len);
+}
+
+void
+imb_aes_gmac_finalize_192_avx_gen2(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *auth_tag,
+                                   const uint64_t  auth_tag_len)
+{
+        aes_gcm_enc_192_finalize_avx_gen2(key_data, context_data, auth_tag,
+                                          auth_tag_len);
+}
+
+void
+imb_aes_gmac_finalize_256_avx_gen2(const struct gcm_key_data *key_data,
+                                   struct gcm_context_data *context_data,
+                                   uint8_t *auth_tag,
+                                   const uint64_t  auth_tag_len)
+{
+        aes_gcm_enc_256_finalize_avx_gen2(key_data, context_data, auth_tag,
+                                          auth_tag_len);
+}
