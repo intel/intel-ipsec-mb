@@ -33,12 +33,18 @@
 #include "aesni_emu.h"
 #include "include/constant_lookup.h"
 
+#ifdef LINUX
+#include <x86intrin.h>
+#else
+#include <intrin.h>
+#endif
+
 typedef union {
         uint32_t i;
         uint8_t byte[4];
 } byte_split_t;
 
-static const uint8_t aes_sbox[16][16] = {
+static const DECLARE_ALIGNED(uint8_t aes_sbox[16][16], 16) = {
         { 0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
           0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76 },
         { 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
@@ -73,7 +79,7 @@ static const uint8_t aes_sbox[16][16] = {
           0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 }
 };
 
-static const uint8_t aes_isbox[16][16] = {
+static const DECLARE_ALIGNED(uint8_t aes_isbox[16][16], 16) = {
         { 0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38,
           0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb },
         { 0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87,
@@ -112,30 +118,6 @@ static const uint8_t aes_isbox[16][16] = {
 /* Emulation API helper functions */
 /* ========================================================================== */
 
-static uint8_t aes_get_sbox(const uint32_t x)
-{
-#ifdef SAFE_LOOKUP
-        return lookup_8bit_sse(aes_sbox, (x & 0xFF), 256);
-#else
-        uint32_t i = (x>>4) & 0xF;
-        uint32_t j = x&0xF;
-
-        return aes_sbox[i][j];
-#endif
-}
-
-static uint8_t aes_get_isbox(const uint32_t x)
-{
-#ifdef SAFE_LOOKUP
-        return lookup_8bit_sse(aes_isbox, (x & 0xFF), 256);
-#else
-        uint32_t i = (x>>4) & 0xF;
-        uint32_t j = x&0xF;
-
-        return aes_isbox[i][j];
-#endif
-}
-
 static void xor_xmm(union xmm_reg *d,
                     const union xmm_reg *s1,
                     const union xmm_reg *s2)
@@ -153,34 +135,25 @@ static uint32_t rot(const uint32_t x)
         return y;
 }
 
-static uint32_t sbox4(const uint32_t x)
-{
-        uint32_t i;
-        byte_split_t b, o;
-
-        b.i = x;
-
-        for (i = 0; i < 4; i++)
-                o.byte[i] = aes_get_sbox(b.byte[i]);
-
-        return o.i;
-}
-
 static void substitute_bytes(union xmm_reg *dst, const union xmm_reg *src)
 {
-        uint32_t i;
+        __m128i vx = _mm_loadu_si128((const __m128i *) &src->byte[0]);
 
-        for (i = 0; i < MAX_BYTES_PER_XMM; i++)
-                dst->byte[i] = aes_get_sbox(src->byte[i]);
+        IMB_ASSERT(MAX_BYTES_PER_XMM == 16);
+
+        vx = lookup_16x8bit_sse(vx, aes_sbox);
+        _mm_storeu_si128((__m128i *) &dst->byte[0], vx);
 }
 
 static void inverse_substitute_bytes(union xmm_reg *dst,
                                      const union xmm_reg *src)
 {
-        uint32_t i;
+        __m128i vx = _mm_loadu_si128((const __m128i *) &src->byte[0]);
 
-        for (i = 0; i < MAX_BYTES_PER_XMM; i++)
-                dst->byte[i] = aes_get_isbox(src->byte[i]);
+        IMB_ASSERT(MAX_BYTES_PER_XMM == 16);
+
+        vx = lookup_16x8bit_sse(vx, aes_isbox);
+        _mm_storeu_si128((__m128i *) &dst->byte[0], vx);
 }
 
 static uint8_t gfmul(const uint8_t x, const uint8_t y)
@@ -317,13 +290,15 @@ IMB_DLL_LOCAL void emulate_AESKEYGENASSIST(union xmm_reg *dst,
                                            const union xmm_reg *src,
                                            const uint32_t imm8)
 {
-        union xmm_reg tmp = *src;
-        uint32_t rcon = (imm8 & 0xFF);
+        union xmm_reg tmp;
+        const uint32_t rcon = (imm8 & 0xFF);
 
-        dst->dword[3] = rot(sbox4(tmp.dword[3])) ^ rcon;
-        dst->dword[2] = sbox4(tmp.dword[3]);
-        dst->dword[1] = rot(sbox4(tmp.dword[1])) ^ rcon;
-        dst->dword[0] = sbox4(tmp.dword[1]);
+        substitute_bytes(&tmp, src);
+
+        dst->dword[3] = rot(tmp.dword[3]) ^ rcon;
+        dst->dword[2] = tmp.dword[3];
+        dst->dword[1] = rot(tmp.dword[1]) ^ rcon;
+        dst->dword[0] = tmp.dword[1];
 }
 
 IMB_DLL_LOCAL void emulate_AESENC(union xmm_reg *dst,
