@@ -1050,6 +1050,61 @@ test_snow3g_api(struct IMB_MGR *mgr)
         return 0;
 }
 
+/*
+ * @brief Performs direct clear memory API invalid param tests
+ */
+static int
+test_clear_mem_api(void)
+{
+        const uint32_t text_len = BUF_SIZE;
+        uint8_t out_buf[BUF_SIZE];
+        uint8_t cmp_buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+
+        seg_err = setjmp(env);
+        if (seg_err) {
+                printf("%s: segfault occured!\n", __func__);
+                return 1;
+        }
+
+        memset(out_buf, 0xff, text_len);
+        memset(cmp_buf, 0xff, text_len);
+
+        /**
+         * API are generally tested twice:
+         * 1. test with all invalid params
+         * 2. test with some valid params (in, out, len)
+         *    and verify output buffer is not modified
+         */
+
+        imb_clear_mem(NULL, text_len);
+        if (memcmp(out_buf, cmp_buf, text_len) != 0) {
+                printf("%s: imb_clear_mem, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        imb_clear_mem(out_buf, 0);
+        if (memcmp(out_buf, cmp_buf, text_len) != 0) {
+                printf("%s: imb_clear_mem, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        imb_clear_mem(out_buf, text_len);
+        if (memcmp(out_buf, cmp_buf, text_len) == 0) {
+                printf("%s: imb_clear_mem, invalid "
+                       "param test failed!\n", __func__);
+                return 1;
+        }
+        printf(".");
+
+        printf("\n");
+        return 0;
+}
+
 int
 direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
 {
@@ -1064,13 +1119,16 @@ direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
 #endif
         printf("Invalid Direct API arguments test:\n");
 
-        if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) == 0) {
-                printf("SAFE_PARAM feature disabled, skipping tests\n");
-                return 0;
-        }
 #ifndef DEBUG
         handler = signal(SIGSEGV, seg_handler);
 #endif
+        errors += test_clear_mem_api();
+
+        if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) == 0) {
+                printf("SAFE_PARAM feature disabled, "
+                       "skipping remaining tests\n");
+                goto dir_api_exit;
+        }
 
         errors += test_gcm_api(mb_mgr);
         errors += test_key_exp_gen_api(mb_mgr);
@@ -1080,6 +1138,7 @@ direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
         errors += test_kasumi_api(mb_mgr);
         errors += test_snow3g_api(mb_mgr);
 
+dir_api_exit:
 	if (0 == errors)
 		printf("...Pass\n");
 	else
