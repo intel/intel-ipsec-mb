@@ -1488,6 +1488,16 @@ init_mb_mgr_avx512(IMB_MGR *state)
 
                 submit_job_aes_gcm_enc_avx512 = vaes_submit_gcm_enc_avx512;
                 submit_job_aes_gcm_dec_avx512 = vaes_submit_gcm_dec_avx512;
+
+                state->gmac128_init     = imb_aes_gmac_init_128_vaes_avx512;
+                state->gmac192_init     = imb_aes_gmac_init_192_vaes_avx512;
+                state->gmac256_init     = imb_aes_gmac_init_256_vaes_avx512;
+                state->gmac128_update   = imb_aes_gmac_update_128_vaes_avx512;
+                state->gmac192_update   = imb_aes_gmac_update_192_vaes_avx512;
+                state->gmac256_update   = imb_aes_gmac_update_256_vaes_avx512;
+                state->gmac128_finalize = imb_aes_gmac_finalize_128_vaes_avx512;
+                state->gmac192_finalize = imb_aes_gmac_finalize_192_vaes_avx512;
+                state->gmac256_finalize = imb_aes_gmac_finalize_256_vaes_avx512;
         } else {
                 state->gcm128_enc          = aes_gcm_enc_128_avx512;
                 state->gcm192_enc          = aes_gcm_enc_192_avx512;
@@ -1520,6 +1530,16 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 state->gcm192_pre          = aes_gcm_pre_192_avx512;
                 state->gcm256_pre          = aes_gcm_pre_256_avx512;
                 state->ghash               = ghash_avx512;
+
+                state->gmac128_init        = imb_aes_gmac_init_128_avx512;
+                state->gmac192_init        = imb_aes_gmac_init_192_avx512;
+                state->gmac256_init        = imb_aes_gmac_init_256_avx512;
+                state->gmac128_update      = imb_aes_gmac_update_128_avx512;
+                state->gmac192_update      = imb_aes_gmac_update_192_avx512;
+                state->gmac256_update      = imb_aes_gmac_update_256_avx512;
+                state->gmac128_finalize    = imb_aes_gmac_finalize_128_avx512;
+                state->gmac192_finalize    = imb_aes_gmac_finalize_192_avx512;
+                state->gmac256_finalize    = imb_aes_gmac_finalize_256_avx512;
         }
 }
 
