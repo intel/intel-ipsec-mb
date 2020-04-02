@@ -395,8 +395,7 @@ default rel
 ;;; ===========================================================================
 ;;; GHASH 1 to 16 blocks of cipher text
 ;;; - performs reduction at the end
-;;; - can take intermediate GHASH sums as input
-%macro  GHASH_1_TO_16 20
+%macro  GHASH_1_TO_16 17
 %define %%KP            %1      ; [in] pointer to expanded keys
 %define %%GHASH         %2      ; [out] ghash output
 %define %%T1            %3      ; [clobbered] temporary ZMM
@@ -408,15 +407,12 @@ default rel
 %define %%T7            %9      ; [clobbered] temporary ZMM
 %define %%T8            %10     ; [clobbered] temporary ZMM
 %define %%T9            %11     ; [clobbered] temporary ZMM
-%define %%GH            %12     ; [in/cloberred] ghash sum (high) or "no_zmm"
-%define %%GL            %13     ; [in/cloberred] ghash sum (low) or "no_zmm"
-%define %%GM            %14     ; [in/cloberred] ghash sum (medium) or "no_zmm"
-%define %%AAD_HASH_IN   %15     ; [in] input hash value
-%define %%CIPHER_IN0    %16     ; [in] ZMM with cipher text blocks 0-3
-%define %%CIPHER_IN1    %17     ; [in] ZMM with cipher text blocks 4-7
-%define %%CIPHER_IN2    %18     ; [in] ZMM with cipher text blocks 8-11
-%define %%CIPHER_IN3    %19     ; [in] ZMM with cipher text blocks 12-15
-%define %%NUM_BLOCKS    %20     ; [in] numerical value, number of blocks
+%define %%AAD_HASH_IN   %12     ; [in] input hash value
+%define %%CIPHER_IN0    %13     ; [in] ZMM with cipher text blocks 0-3
+%define %%CIPHER_IN1    %14     ; [in] ZMM with cipher text blocks 4-7
+%define %%CIPHER_IN2    %15     ; [in] ZMM with cipher text blocks 8-11
+%define %%CIPHER_IN3    %16     ; [in] ZMM with cipher text blocks 12-15
+%define %%NUM_BLOCKS    %17     ; [in] numerical value, number of blocks
 
 %define %%T0H           %%T1
 %define %%T0L           %%T2
@@ -437,20 +433,6 @@ default rel
         vpxorq          %%CIPHER_IN0, %%CIPHER_IN0, %%AAD_HASH_IN
 
 %assign first_result 1
-
-%ifnidn %%GH, no_zmm
-%ifnidn %%GM, no_zmm
-%ifnidn %%GL, no_zmm
-        ;; GHASH sums passed in to be updated and
-        ;; reduced at the end
-        vmovdqa64       %%T0H, %%GH
-        vmovdqa64       %%T0L, %%GL
-        vmovdqa64       %%T0M1, %%GM
-        vpxorq          %%T0M2, %%T0M2
-%assign first_result 0
-%endif
-%endif
-%endif
 
 %rep (blocks_left / 4)
 %xdefine %%REG_IN %%CIPHER_IN %+ reg_idx
@@ -1351,7 +1333,7 @@ default rel
 ;;;
 ;;; num_initial_blocks is expected to include the partial final block
 ;;; in the count.
-%macro INITIAL_BLOCKS_PARTIAL 41
+%macro INITIAL_BLOCKS_PARTIAL 38
 %define %%GDATA_KEY             %1  ; [in] key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
 %define %%CYPH_PLAIN_OUT        %3  ; [in] text out pointer
@@ -1386,13 +1368,10 @@ default rel
 %define %%ZT20                  %32 ; [clobbered] ZMM temporary
 %define %%ZT21                  %33 ; [clobbered] ZMM temporary
 %define %%ZT22                  %34 ; [clobbered] ZMM temporary
-%define %%GH                    %35 ; [in] ZMM ghash sum (high)
-%define %%GL                    %36 ; [in] ZMM ghash sum (low)
-%define %%GM                    %37 ; [in] ZMM ghash sum (middle)
-%define %%IA0                   %38 ; [clobbered] GP temporary
-%define %%IA1                   %39 ; [clobbered] GP temporary
-%define %%MASKREG               %40 ; [clobbered] mask register
-%define %%SHUFMASK              %41 ; [in] ZMM with BE/LE shuffle mask
+%define %%IA0                   %35 ; [clobbered] GP temporary
+%define %%IA1                   %36 ; [clobbered] GP temporary
+%define %%MASKREG               %37 ; [clobbered] mask register
+%define %%SHUFMASK              %38 ; [in] ZMM with BE/LE shuffle mask
 
 %define %%T1 XWORD(%%ZT1)
 %define %%T2 XWORD(%%ZT2)
@@ -1408,15 +1387,6 @@ default rel
 %define %%DAT2 %%ZT10
 %define %%DAT3 %%ZT11
 
-%ifnidn %%GH, no_zmm
-%ifnidn %%GL, no_zmm
-%ifnidn %%GM, no_zmm
-        ;; when temporary sums are passed then zero HASH IN value
-        ;; - whatever it holds it is invalid in this case
-        vpxorq          %%HASH_IN_OUT, %%HASH_IN_OUT
-%endif
-%endif
-%endif
         ;; Copy ghash to temp reg
         vmovdqa64       %%T2, %%HASH_IN_OUT
 
@@ -1571,7 +1541,6 @@ default rel
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT12, %%ZT13, %%ZT14, %%ZT15, %%ZT16, \
                         %%ZT17, %%ZT18, %%ZT19, %%ZT20, \
-                        %%GH, %%GL, %%GM, \
                         %%ZT2, %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
                         %%num_initial_blocks
 
@@ -1607,7 +1576,6 @@ default rel
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT12, %%ZT13, %%ZT14, %%ZT15, %%ZT16, \
                         %%ZT17, %%ZT18, %%ZT19, %%ZT20, \
-                        %%GH, %%GL, %%GM, \
                         %%ZT2, %%DAT0, %%DAT1, %%DAT2, %%DAT3, k
 
         ;; just fall through no jmp needed
@@ -1620,42 +1588,10 @@ default rel
         ;; In this case we may just have a partial block, and that
         ;; gets hashed in finalize.
 
-%assign need_for_reduction 1
-%ifidn %%GH, no_zmm
-%ifidn %%GL, no_zmm
-%ifidn %%GM, no_zmm
-;; if %%GH, %%GL & %%GM not passed then reduction is not required
-%assign need_for_reduction 0
-%endif
-%endif
-%endif
-
-%if need_for_reduction == 0
         ;; The hash should end up in HASH_IN_OUT.
         ;; The only way we should get here is if there is
         ;; a partial block of data, so xor that into the hash.
         vpxorq          %%HASH_IN_OUT, %%T2, %%T7
-%else
-        ;; right - here we have nothing to ghash in the small data but
-        ;; we have GHASH sums passed through that we need to gather and reduce
-
-        ;; integrate TM into TH and TL
-        vpsrldq         %%ZT12, %%GM, 8
-        vpslldq         %%ZT13, %%GM, 8
-        vpxorq          %%GH, %%GH, %%ZT12
-        vpxorq          %%GL, %%GL, %%ZT13
-
-        ;; add TH and TL 128-bit words horizontally
-        VHPXORI4x128    %%GH, %%ZT12
-        VHPXORI4x128    %%GL, %%ZT13
-
-        ;; reduction
-        vmovdqa64       XWORD(%%ZT12), [rel POLY2]
-        VCLMUL_REDUCE   %%HASH_IN_OUT, XWORD(%%ZT12), \
-                        XWORD(%%GH), XWORD(%%GL), XWORD(%%ZT13), XWORD(%%ZT14)
-
-        vpxorq          %%HASH_IN_OUT, %%HASH_IN_OUT, %%T7
-%endif
         ;; The result is in %%HASH_IN_OUT
         jmp             %%_after_reduction
 %endif
@@ -2690,7 +2626,7 @@ default rel
 ;;; - number of blocks in the message comes as argument
 ;;; - depending on the number of blocks an optimized variant of
 ;;;   INITIAL_BLOCKS_PARTIAL is invoked
-%macro  GCM_ENC_DEC_SMALL   42
+%macro  GCM_ENC_DEC_SMALL   39
 %define %%GDATA_KEY         %1  ; [in] key pointer
 %define %%GDATA_CTX         %2  ; [in] context pointer
 %define %%CYPH_PLAIN_OUT    %3  ; [in] output buffer
@@ -2726,13 +2662,10 @@ default rel
 %define %%ZTMP20            %33 ; [clobbered] ZMM register
 %define %%ZTMP21            %34 ; [clobbered] ZMM register
 %define %%ZTMP22            %35 ; [clobbered] ZMM register
-%define %%GH                %36 ; [in] ZMM ghash sum (high)
-%define %%GL                %37 ; [in] ZMM ghash sum (low)
-%define %%GM                %38 ; [in] ZMM ghash sum (middle)
-%define %%IA0               %39 ; [clobbered] GP register
-%define %%IA1               %40 ; [clobbered] GP register
-%define %%MASKREG           %41 ; [clobbered] mask register
-%define %%SHUFMASK          %42 ; [in] ZMM with BE/LE shuffle mask
+%define %%IA0               %36 ; [clobbered] GP register
+%define %%IA1               %37 ; [clobbered] GP register
+%define %%MASKREG           %38 ; [clobbered] mask register
+%define %%SHUFMASK          %39 ; [in] ZMM with BE/LE shuffle mask
 
         cmp     %%NUM_BLOCKS, 8
         je      %%_small_initial_num_blocks_is_8
@@ -2793,7 +2726,6 @@ default rel
                 %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, %%ZTMP14, \
                 %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%GH, %%GL, %%GM, \
                 %%IA0, %%IA1, %%MASKREG, %%SHUFMASK
 %if num_blocks != 16
         jmp     %%_small_initial_blocks_encrypted
@@ -3037,7 +2969,6 @@ default rel
                 %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                no_zmm, no_zmm, no_zmm, \
                 %%IA0, %%IA3, %%MASKREG, %%SHUF_MASK
 
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
