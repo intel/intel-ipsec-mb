@@ -34,15 +34,15 @@
 %include "include/const.inc"
 %include "include/memcpy.asm"
 
-%ifndef AES128_CBC_MAC
+%ifndef AES_CBC_MAC
 
-%define AES128_CBC_MAC aes128_cbc_mac_x8
-%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes_ccm_auth_avx
-%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes_ccm_auth_avx
+%define AES_CBC_MAC aes128_cbc_mac_x8
+%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes128_ccm_auth_avx
+%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes128_ccm_auth_avx
 
 %endif
 
-extern AES128_CBC_MAC
+extern AES_CBC_MAC
 
 section .data
 default rel
@@ -366,7 +366,7 @@ APPEND(skip_,I):
 
         ; "state" and "args" are the same address, arg1
         ; len2 is arg2
-        call    AES128_CBC_MAC
+        call    AES_CBC_MAC
         ; state and min_idx are intact
 
 %%_len_is_0:
@@ -518,14 +518,14 @@ APPEND(skip_clear_,I):
 
 
 align 64
-; IMB_JOB * submit_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state, IMB_JOB *job)
+; IMB_JOB * submit_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CCM_AUTH,function,internal)
 SUBMIT_JOB_AES_CCM_AUTH:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX SUBMIT
 
-; IMB_JOB * flush_job_aes_ccm_auth_avx(MB_MGR_CCM_OOO *state)
+; IMB_JOB * flush_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)
 FLUSH_JOB_AES_CCM_AUTH:

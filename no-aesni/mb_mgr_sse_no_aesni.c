@@ -90,10 +90,10 @@ IMB_JOB *submit_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state,
                                                     IMB_JOB *job);
 IMB_JOB *flush_job_aes_cmac_auth_sse_no_aesni(MB_MGR_CMAC_OOO *state);
 
-IMB_JOB *submit_job_aes_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state,
-                                           IMB_JOB *job);
+IMB_JOB *submit_job_aes128_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state,
+                                                 IMB_JOB *job);
 
-IMB_JOB *flush_job_aes_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
+IMB_JOB *flush_job_aes128_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
 
 IMB_JOB *submit_job_aes_cntr_sse_no_aesni(IMB_JOB *job);
 
@@ -225,8 +225,8 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 
 #define AES128_CBC_MAC     aes128_cbc_mac_x4_no_aesni
 
-#define FLUSH_JOB_AES_CCM_AUTH     flush_job_aes_ccm_auth_sse_no_aesni
-#define SUBMIT_JOB_AES_CCM_AUTH    submit_job_aes_ccm_auth_sse_no_aesni
+#define FLUSH_JOB_AES128_CCM_AUTH     flush_job_aes128_ccm_auth_sse_no_aesni
+#define SUBMIT_JOB_AES128_CCM_AUTH    submit_job_aes128_ccm_auth_sse_no_aesni
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_sse_no_aesni
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse_no_aesni

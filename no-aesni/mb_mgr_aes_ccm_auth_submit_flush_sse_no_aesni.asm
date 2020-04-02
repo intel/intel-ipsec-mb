@@ -26,7 +26,7 @@
 ;;
 
 %include "include/aesni_emu.inc"
-%define AES128_CBC_MAC aes128_cbc_mac_x4_no_aesni
-%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes_ccm_auth_sse_no_aesni
-%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes_ccm_auth_sse_no_aesni
+%define AES_CBC_MAC aes128_cbc_mac_x4_no_aesni
+%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes128_ccm_auth_sse_no_aesni
+%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes128_ccm_auth_sse_no_aesni
 %include "sse/mb_mgr_aes_ccm_auth_submit_flush_sse.asm"

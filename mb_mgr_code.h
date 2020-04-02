@@ -691,7 +691,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_CUSTOM:
                 return SUBMIT_JOB_CUSTOM_HASH(job);
         case IMB_AUTH_AES_CCM:
-                return SUBMIT_JOB_AES_CCM_AUTH(aes_ccm_ooo, job);
+                return SUBMIT_JOB_AES128_CCM_AUTH(aes_ccm_ooo, job);
         case IMB_AUTH_AES_CMAC:
                 /*
                  * CMAC OOO MGR assumes job len in bits
@@ -804,7 +804,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_CUSTOM:
                 return FLUSH_JOB_CUSTOM_HASH(job);
         case IMB_AUTH_AES_CCM:
-                return FLUSH_JOB_AES_CCM_AUTH(aes_ccm_ooo);
+                return FLUSH_JOB_AES128_CCM_AUTH(aes_ccm_ooo);
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_BITLEN:
                 return FLUSH_JOB_AES_CMAC_AUTH(aes_cmac_ooo);
