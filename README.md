@@ -59,10 +59,10 @@ Table 1. List of supported cipher algorithms and their implementations.
 +---------------------------------------------------------------------+
 ```
 Notes:  
-(1,2) - By default, decryption is by4 and encryption is x4.
-      	On CPU's supporting GFNI, decryption is by8 and encryption is x8.
+(1,2) - By default, decryption is by4 and encryption is x4.  
+        On CPU's supporting GFNI, decryption is by8 and encryption is x8.  
 (3,4) - decryption is by8 and encryption is x8  
-(5)   - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
+(5)   - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions  
 (6)   - decryption is by16 and encryption is x16  
 (7)   - same as AES128-CBC for AVX, combines cipher and CRC32  
 
@@ -105,9 +105,9 @@ Table 2. List of supported integrity algorithms and their implementations.
 Notes:  
 (1) - MD5 over one block implemented in C  
 (2) - Implementation using SHANI extentions is x2  
-(3) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
-(4) - used only with AES128-DOCSIS cipher
-(5) - x8 on selected CPU's supporting GFNI
+(3) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions  
+(4) - used only with AES128-DOCSIS cipher  
+(5) - x8 on selected CPU's supporting GFNI  
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  
@@ -230,7 +230,7 @@ Linux (64-bit only)
 
 Required tools:  
 - GNU make  
-- NASM version 2.14 (or newer)
+- NASM version 2.14 (or newer)  
 - gcc (GCC) 4.8.3 (or newer)  
 
 Shared library:  
@@ -389,6 +389,16 @@ Algorithms where these constant time functions are used are the following:
 If SAFE_LOOKUP is not enabled in the build (e.g. make SAFE_LOOKUP=n) then the
 algorithms listed above may be susceptible to timing attacks which could expose
 the cryptographic key.
+
+### Security API
+**Force clearing/zeroing of memory**
+```c
+IMB_DLL_EXPORT void imb_clear_mem(void *mem, const size_t size);
+```
+To assist in clearing sensitive application data such as keys, plaintext etc.
+the library provides the `imb_clear_mem()` API. This API zeros _'size'_ bytes
+of memory pointed to by _'mem'_ followed by the _sfence_ instruction to
+ensure memory is cleared before the function returns.
 
 7\. Installation
 ================

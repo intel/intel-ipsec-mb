@@ -67,7 +67,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 
 Notes:
 (1,2) - By default, decryption is by4 and encryption is x4.
-      	On CPU's supporting GFNI, decryption is by8 and encryption is x8.
+        On CPU's supporting GFNI, decryption is by8 and encryption is x8.
 (3,4) - decryption is by8 and encryption is x8
 (5) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
 (6) - decryption is by16 and encryption is x16
@@ -417,6 +417,17 @@ following:
 If SAFE_LOOKUP is not enabled in the build (e.g. make SAFE_LOOKUP=n)
 then the algorithms listed above may be susceptible to timing attacks
 which could expose the cryptographic key.
+
+Security API
+
+FORCE CLEARING/ZEROING OF MEMORY
+
+    IMB_DLL_EXPORT void imb_clear_mem(void *mem, const size_t size);
+
+To assist in clearing sensitive application data such as keys, plaintext
+etc. the library provides the imb_clear_mem() API. This API zeros
+'size' bytes of memory pointed to by 'mem' followed by the sfence
+instruction to ensure memory is cleared before the function returns.
 
 
 
