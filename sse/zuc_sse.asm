@@ -371,7 +371,7 @@ section .text
     pextrd      r15d, xmm0, 3
     pextrd      r14d, xmm0, 2
     pextrd      r13d, xmm0, 1
-    pextrd      r12d, xmm0, 0
+    movd        r12d, xmm0
     mov         [r9], r15d
     mov         [r8], r14d
     mov         [rdx], r13d

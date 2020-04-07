@@ -348,7 +348,7 @@ align 64
     vpextrd     r15d, xmm0, 3
     vpextrd     r14d, xmm0, 2
     vpextrd     r13d, xmm0, 1
-    vpextrd     r12d, xmm0, 0
+    vmovd       r12d, xmm0
     mov         [r9], r15d
     mov         [r8], r14d
     mov         [rdx], r13d
@@ -370,7 +370,7 @@ align 64
     vpextrd     r15d, xmm0, 3
     vpextrd     r14d, xmm0, 2
     vpextrd     r13d, xmm0, 1
-    vpextrd     r12d, xmm0, 0
+    vmovd       r12d, xmm0
     mov         [r9], r15d
     mov         [r8], r14d
     mov         [rdx], r13d
