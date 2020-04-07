@@ -86,7 +86,9 @@ section .text
 
 %define APPEND(a,b) a %+ b
 
+%ifndef NROUNDS
 %define NROUNDS 9 ; AES-CCM-128
+%endif
 
 %ifdef LINUX
 %define arg1    rdi

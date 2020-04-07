@@ -25,6 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
+#define SSE /* @todo: remove once other mgrs support CCM-256 */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -128,6 +129,8 @@ IMB_JOB *submit_job_aes256_ccm_auth_sse(MB_MGR_CCM_OOO *state,
 
 IMB_JOB *flush_job_aes128_ccm_auth_sse(MB_MGR_CCM_OOO *state);
 
+IMB_JOB *flush_job_aes256_ccm_auth_sse(MB_MGR_CCM_OOO *state);
+
 IMB_JOB *submit_job_aes128_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state,
                                            IMB_JOB *job);
 
@@ -201,6 +204,7 @@ IMB_JOB *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 #define AES_CNTR_256       aes_cntr_256_sse
 
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_sse
+#define AES_CNTR_CCM_256   aes_cntr_ccm_256_sse
 
 #define AES_ECB_ENC_128       aes_ecb_enc_128_sse
 #define AES_ECB_ENC_192       aes_ecb_enc_192_sse
@@ -261,6 +265,9 @@ IMB_JOB *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 
 #define FLUSH_JOB_AES128_CCM_AUTH     flush_job_aes128_ccm_auth_ptr
 #define SUBMIT_JOB_AES128_CCM_AUTH    submit_job_aes128_ccm_auth_ptr
+
+#define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_sse
+#define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_sse
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_ptr
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_ptr
