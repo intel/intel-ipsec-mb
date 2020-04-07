@@ -47,6 +47,78 @@
 
 #define NUM_AVX512_BUFS 16
 
+static inline uint16_t
+find_min_length16(const uint16_t length[NUM_AVX512_BUFS])
+{
+        __m128i xmm_lengths;
+
+        /* Calculate the minimum input packet size from packets 0-7 */
+        xmm_lengths = _mm_loadu_si128((const __m128i *)length);
+        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
+
+        const uint16_t min_length1 =
+                        (const uint16_t) _mm_extract_epi16(xmm_lengths, 0);
+
+        /* Calculate the minimum input packet size from packets 8-15 */
+        xmm_lengths = _mm_loadu_si128((const __m128i *)&length[8]);
+        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
+
+        const uint16_t min_length2 =
+                        (const uint16_t) _mm_extract_epi16(xmm_lengths, 0);
+
+        return (min_length1 < min_length2) ? min_length1 : min_length2;
+}
+
+static inline uint32_t
+find_min_length32(const uint32_t length[NUM_AVX512_BUFS])
+{
+        /* Calculate the minimum input packet size */
+        static const uint64_t lo_mask[2] = {
+                0x0d0c090805040100UL, 0xFFFFFFFFFFFFFFFFUL
+        };
+        static const uint64_t hi_mask[2] = {
+                0xFFFFFFFFFFFFFFFFUL, 0x0d0c090805040100UL
+        };
+        const __m128i shuf_hi_mask =
+                        _mm_loadu_si128((const __m128i *) hi_mask);
+        const __m128i shuf_lo_mask =
+                        _mm_loadu_si128((const __m128i *) lo_mask);
+        __m128i xmm_lengths1, xmm_lengths2;
+
+        /* Calculate the minimum input packet size from packets 0-7 */
+        xmm_lengths1 = _mm_loadu_si128((const __m128i *) length);
+        xmm_lengths2 = _mm_loadu_si128((const __m128i *) &length[4]);
+
+        xmm_lengths1 = _mm_shuffle_epi8(xmm_lengths1, shuf_lo_mask);
+        xmm_lengths2 = _mm_shuffle_epi8(xmm_lengths2, shuf_hi_mask);
+
+        /* Contains array of 16-bit lengths */
+        xmm_lengths1 = _mm_or_si128(xmm_lengths1, xmm_lengths2);
+
+        xmm_lengths1 = _mm_minpos_epu16(xmm_lengths1);
+
+        const uint32_t min_length1 =
+                        (const uint32_t) _mm_extract_epi16(xmm_lengths1, 0);
+
+        /* Calculate the minimum input packet size from packets 8-15 */
+        xmm_lengths1 = _mm_loadu_si128((const __m128i *) &length[8]);
+        xmm_lengths2 = _mm_loadu_si128((const __m128i *) &length[12]);
+
+        xmm_lengths1 = _mm_shuffle_epi8(xmm_lengths1, shuf_lo_mask);
+        xmm_lengths2 = _mm_shuffle_epi8(xmm_lengths2, shuf_hi_mask);
+
+        /* Contains array of 16-bit lengths */
+        xmm_lengths1 = _mm_or_si128(xmm_lengths1, xmm_lengths2);
+
+        xmm_lengths1 = _mm_minpos_epu16(xmm_lengths1);
+
+        const uint32_t min_length2 =
+                        (const uint32_t) _mm_extract_epi16(xmm_lengths1, 0);
+
+        /* Calculate the minimum input packet size from all packets */
+        return (min_length1 < min_length2) ? min_length1 : min_length2;
+}
+
 static inline
 void _zuc_eea3_1_buffer_avx512(const void *pKey,
                                const void *pIv,
@@ -136,49 +208,8 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
-        static const uint64_t lo_mask[2] = {
-                0x0d0c090805040100UL, 0xFFFFFFFFFFFFFFFFUL
-        };
-        static const uint64_t hi_mask[2] = {
-                0xFFFFFFFFFFFFFFFFUL, 0x0d0c090805040100UL
-        };
-        __m128i shuf_hi_mask = _mm_loadu_si128((const __m128i *) hi_mask);
-        __m128i shuf_lo_mask = _mm_loadu_si128((const __m128i *) lo_mask);
-        __m128i length1, length2;
-        uint16_t min_value[8];
-
-        /* Calculate the minimum input packet size from packets 0-7 */
-        length1 = _mm_loadu_si128((const __m128i *) length);
-        length2 = _mm_loadu_si128((const __m128i *) &length[4]);
-
-        length1 = _mm_shuffle_epi8(length1, shuf_lo_mask);
-        length2 = _mm_shuffle_epi8(length2, shuf_hi_mask);
-
-        /* Contains array of 16-bit lengths */
-        length1 = _mm_or_si128(length1, length2);
-
-        length1 = _mm_minpos_epu16(length1);
-        _mm_storeu_si128((__m128i *) min_value, length1);
-
-        uint32_t bytes1 = (uint32_t) min_value[0];
-
-        /* Calculate the minimum input packet size from packets 8-15 */
-        length1 = _mm_loadu_si128((const __m128i *) &length[8]);
-        length2 = _mm_loadu_si128((const __m128i *) &length[12]);
-
-        length1 = _mm_shuffle_epi8(length1, shuf_lo_mask);
-        length2 = _mm_shuffle_epi8(length2, shuf_hi_mask);
-
-        /* Contains array of 16-bit lengths */
-        length1 = _mm_or_si128(length1, length2);
-
-        length1 = _mm_minpos_epu16(length1);
-        _mm_storeu_si128((__m128i *) min_value, length1);
-
-        uint32_t bytes2 = (uint32_t) min_value[0];
-
         /* Calculate the minimum input packet size from all packets */
-        uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
+        uint32_t bytes = find_min_length32(length);
 
         uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
         uint32_t remainBytes[NUM_AVX512_BUFS] = {0};
@@ -362,25 +393,8 @@ void _zuc_eea3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
         DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
-        uint16_t min_value[8];
-        __m128i xmm_lengths;
-
-        /* Calculate the minimum input packet size from packets 0-7 */
-        xmm_lengths = _mm_loadu_si128((const __m128i *)length);
-        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
-        _mm_storeu_si128((__m128i *) min_value, xmm_lengths);
-
-        uint32_t bytes1 = (uint32_t) min_value[0];
-
-        /* Calculate the minimum input packet size from packets 8-15 */
-        xmm_lengths = _mm_loadu_si128((const __m128i *)&length[8]);
-        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
-        _mm_storeu_si128((__m128i *) min_value, xmm_lengths);
-
-        uint32_t bytes2 = (uint32_t) min_value[0];
-
         /* Calculate the minimum input packet size from all packets */
-        uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
+        uint32_t bytes = find_min_length16(length);
 
         uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
         uint32_t remainBytes[NUM_AVX512_BUFS] = {0};
@@ -786,50 +800,8 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        /* Calculate the minimum input packet size */
-        static const uint64_t lo_mask[2] = {
-                0x0d0c090805040100UL, 0xFFFFFFFFFFFFFFFFUL
-        };
-        static const uint64_t hi_mask[2] = {
-                0xFFFFFFFFFFFFFFFFUL, 0x0d0c090805040100UL
-        };
-        __m128i shuf_hi_mask = _mm_loadu_si128((const __m128i *) hi_mask);
-        __m128i shuf_lo_mask = _mm_loadu_si128((const __m128i *) lo_mask);
-        __m128i length1, length2;
-        uint16_t min_value[8];
-
-        /* Calculate the minimum input packet size from packets 0-7 */
-        length1 = _mm_loadu_si128((const __m128i *) lengthInBits);
-        length2 = _mm_loadu_si128((const __m128i *) &lengthInBits[4]);
-
-        length1 = _mm_shuffle_epi8(length1, shuf_lo_mask);
-        length2 = _mm_shuffle_epi8(length2, shuf_hi_mask);
-
-        /* Contains array of 16-bit lengths */
-        length1 = _mm_or_si128(length1, length2);
-
-        length1 = _mm_minpos_epu16(length1);
-        _mm_storeu_si128((__m128i *) min_value, length1);
-
-        uint32_t bits1 = (uint32_t) min_value[0];
-
-        /* Calculate the minimum input packet size from packets 8-15 */
-        length1 = _mm_loadu_si128((const __m128i *) &lengthInBits[8]);
-        length2 = _mm_loadu_si128((const __m128i *) &lengthInBits[12]);
-
-        length1 = _mm_shuffle_epi8(length1, shuf_lo_mask);
-        length2 = _mm_shuffle_epi8(length2, shuf_hi_mask);
-
-        /* Contains array of 16-bit lengths */
-        length1 = _mm_or_si128(length1, length2);
-
-        length1 = _mm_minpos_epu16(length1);
-        _mm_storeu_si128((__m128i *) min_value, length1);
-
-        uint32_t bits2 = (uint32_t) min_value[0];
-
         /* Calculate the minimum input packet size from all packets */
-        uint32_t commonBits = (bits1 < bits2) ? bits1 : bits2;
+        uint32_t commonBits = find_min_length32(lengthInBits);
 
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX512_BUFS][2*64], 64);
         /* structure to store the 16 keys */
@@ -1029,25 +1001,8 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        uint16_t min_value[8];
-        __m128i xmm_lengths;
-
-        /* Calculate the minimum input packet size from packets 0-7 */
-        xmm_lengths = _mm_loadu_si128((const __m128i *)lengthInBits);
-        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
-        _mm_storeu_si128((__m128i *) min_value, xmm_lengths);
-
-        uint32_t bits1 = (uint32_t) min_value[0];
-
-        /* Calculate the minimum input packet size from packets 8-15 */
-        xmm_lengths = _mm_loadu_si128((const __m128i *)&lengthInBits[8]);
-        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
-        _mm_storeu_si128((__m128i *) min_value, xmm_lengths);
-
-        uint32_t bits2 = (uint32_t) min_value[0];
-
         /* Calculate the minimum input packet size from all packets */
-        uint32_t commonBits = (bits1 < bits2) ? bits1 : bits2;
+        uint32_t commonBits = find_min_length16(lengthInBits);
 
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX512_BUFS][2*64], 64);
         /* structure to store the 16 keys */
