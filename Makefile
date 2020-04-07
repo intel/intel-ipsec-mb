@@ -60,7 +60,7 @@ ifeq ($(NASM_VERSION),)
 $(error "NASM is not installed! Minimum required version: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
 else
 NASM_MAJOR_VER = $(shell echo $(NASM_VERSION) | cut -d "." -f 1)
-NASM_MINOR_VER = $(shell echo $(NASM_VERSION) | cut -d "." -f 2)
+NASM_MINOR_VER = $(shell echo $(NASM_VERSION) | cut -d "." -f 2 | cut -c 1-2)
 NASM_GE_MAJOR = $(shell [ $(NASM_MAJOR_VER) -ge $(NASM_MAJOR_REQ) ] && echo true)
 NASM_GE_MINOR = $(shell [ $(NASM_MINOR_VER) -ge $(NASM_MINOR_REQ) ] && echo true)
 ifneq ($(NASM_GE_MAJOR),true)
