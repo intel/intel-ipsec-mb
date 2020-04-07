@@ -45,6 +45,8 @@
 #define RESTORE_XMMS            restore_xmms
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
+#define NUM_SSE_BUFS 4
+
 static inline
 void _zuc_eea3_1_buffer_sse(const void *pKey,
                             const void *pIv,
@@ -123,11 +125,11 @@ void _zuc_eea3_1_buffer_sse(const void *pKey,
 }
 
 static inline
-void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
-                            const void * const pIv[4],
-                            const void * const pBufferIn[4],
-                            void *pBufferOut[4],
-                            const uint32_t length[4])
+void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
+                            const void * const pIv[NUM_SSE_BUFS],
+                            const void * const pBufferIn[NUM_SSE_BUFS],
+                            void *pBufferOut[NUM_SSE_BUFS],
+                            const uint32_t length[NUM_SSE_BUFS])
 {
 
         DECLARE_ALIGNED(ZucState4_t state, 64);
@@ -142,7 +144,7 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
         /* min number of bytes */
         uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
         uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
-        uint32_t remainBytes[4] = {0};
+        uint32_t remainBytes[NUM_SSE_BUFS] = {0};
         DECLARE_ALIGNED(uint8_t keyStr1[64], 64);
         DECLARE_ALIGNED(uint8_t keyStr2[64], 64);
         DECLARE_ALIGNED(uint8_t keyStr3[64], 64);
@@ -172,7 +174,7 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
         memset(&state, 0, sizeof(ZucState4_t));
 
         /* Calculate the number of bytes left over for each packet */
-        for (i=0; i< 4; i++)
+        for (i = 0; i < NUM_SSE_BUFS; i++)
                 remainBytes[i] = length[i] - bytes;
 
         /* Setup the Keys */
@@ -236,7 +238,7 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
         }
 
         /* process each packet separately for the remaining bytes */
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < NUM_SSE_BUFS; i++) {
                 if (remainBytes[i]) {
                         /* need to copy the zuc state to single packet state */
                         singlePktState.lfsrState[0] = state.lfsrState[0][i];
@@ -335,17 +337,16 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[4],
         clear_mem(&singlePktState, sizeof(singlePktState));
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
-        clear_mem(&ivs, sizeof(ivs));
 #endif
 }
 
 IMB_DLL_LOCAL
-void zuc_eea3_4_buffer_job_sse(const void * const pKey[4],
-                               const void * const pIv[4],
-                               const void * const pBufferIn[4],
-                               void *pBufferOut[4],
-                               const uint16_t length[4],
-                               const void * const job_in_lane[4])
+void zuc_eea3_4_buffer_job_sse(const void * const pKey[NUM_SSE_BUFS],
+                               const void * const pIv[NUM_SSE_BUFS],
+                               const void * const pBufferIn[NUM_SSE_BUFS],
+                               void *pBufferOut[NUM_SSE_BUFS],
+                               const uint16_t length[NUM_SSE_BUFS],
+                               const void * const job_in_lane[NUM_SSE_BUFS])
 {
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
@@ -359,8 +360,8 @@ void zuc_eea3_4_buffer_job_sse(const void * const pKey[4],
         /* min number of bytes */
         uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
         uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
-        uint32_t remainBytes[4] = {0};
-        DECLARE_ALIGNED(uint8_t keyStr[4][64], 64);
+        uint32_t remainBytes[NUM_SSE_BUFS] = {0};
+        DECLARE_ALIGNED(uint8_t keyStr[NUM_SSE_BUFS][64], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
@@ -369,10 +370,10 @@ void zuc_eea3_4_buffer_job_sse(const void * const pKey[4],
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
 
-        const uint64_t *pIn64[4] = {NULL};
-        uint64_t *pOut64[4] = {NULL};
+        const uint64_t *pIn64[NUM_SSE_BUFS] = {NULL};
+        uint64_t *pOut64[NUM_SSE_BUFS] = {NULL};
         uint64_t *pKeyStream64 = NULL;
-        uint32_t *pKeyStrArr[4] = {NULL};
+        uint32_t *pKeyStrArr[NUM_SSE_BUFS] = {NULL};
         uint64_t bufOffset = 0;
 
         /* rounded down minimum length */
@@ -382,7 +383,7 @@ void zuc_eea3_4_buffer_job_sse(const void * const pKey[4],
         memset(&state, 0, sizeof(ZucState4_t));
 
         /* Calculate the number of bytes left over for each packet */
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < NUM_SSE_BUFS; i++)
                 remainBytes[i] = length[i] - bytes;
 
         /* Setup the Keys */
@@ -425,13 +426,13 @@ void zuc_eea3_4_buffer_job_sse(const void * const pKey[4],
                 numKeyStreamsPerPkt--;
         }
 
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < NUM_SSE_BUFS; i++) {
                 pIn64[i] += (bufOffset >> 3);
                 pOut64[i] += (bufOffset >> 3);
         }
 
         /* process each packet separately for the remaining bytes */
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < NUM_SSE_BUFS; i++) {
                 if (remainBytes[i] && job_in_lane[i]) {
                         /* need to copy the zuc state to single packet state */
                         singlePktState.lfsrState[0] = state.lfsrState[0][i];
@@ -566,11 +567,11 @@ void zuc_eea3_1_buffer_sse(const void *pKey,
 #endif
 }
 
-void zuc_eea3_4_buffer_sse(const void * const pKey[4],
-                           const void * const pIv[4],
-                           const void * const pBufferIn[4],
-                           void *pBufferOut[4],
-                           const uint32_t length[4])
+void zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
+                           const void * const pIv[NUM_SSE_BUFS],
+                           const void * const pBufferIn[NUM_SSE_BUFS],
+                           void *pBufferOut[NUM_SSE_BUFS],
+                           const uint32_t length[NUM_SSE_BUFS])
 {
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
@@ -585,7 +586,7 @@ void zuc_eea3_4_buffer_sse(const void * const pKey[4],
             pBufferOut == NULL || length == NULL)
                 return;
 
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < NUM_SSE_BUFS; i++) {
                 if (pKey[i] == NULL || pIv[i] == NULL ||
                     pBufferIn[i] == NULL || pBufferOut[i] == NULL)
                         return;
@@ -742,11 +743,11 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
 }
 
 static inline
-void _zuc_eia3_4_buffer_sse(const void * const pKey[4],
-                            const void * const pIv[4],
-                            const void * const pBufferIn[4],
-                            const uint32_t lengthInBits[4],
-                            uint32_t *pMacI[4])
+void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
+                            const void * const pIv[NUM_SSE_BUFS],
+                            const void * const pBufferIn[NUM_SSE_BUFS],
+                            const uint32_t lengthInBits[NUM_SSE_BUFS],
+                            uint32_t *pMacI[NUM_SSE_BUFS])
 {
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState4_t state, 64);
@@ -758,18 +759,18 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[4],
                            lengthInBits[2] : lengthInBits[3]);
         /* min number of bytes */
         uint32_t commonBits = (bits1 < bits2) ? bits1 : bits2;
-        DECLARE_ALIGNED(uint8_t keyStr[4][2*64], 64);
+        DECLARE_ALIGNED(uint8_t keyStr[NUM_SSE_BUFS][2*64], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
         DECLARE_ALIGNED(ZucIv4_t ivs, 64);
-        const uint8_t *pIn8[4] = {NULL};
+        const uint8_t *pIn8[NUM_SSE_BUFS] = {NULL};
         uint32_t remainCommonBits = commonBits;
         uint32_t numKeyStr = 0;
-        uint32_t T[4] = {0};
+        uint32_t T[NUM_SSE_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
 
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < NUM_SSE_BUFS; i++)
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
 
         /* Need to set the LFSR state to zero */
@@ -813,7 +814,7 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[4],
                                      (uint32_t *) &keyStr[1][64],
                                      (uint32_t *) &keyStr[2][64],
                                      (uint32_t *) &keyStr[3][64]);
-                for (i = 0; i < 4; i++) {
+                for (i = 0; i < NUM_SSE_BUFS; i++) {
                         T[i] = asm_Eia3Round64BSSE(T[i], &keyStr[i][0],
                                                    pIn8[i]);
                         /* Copy the last keystream generated
@@ -824,7 +825,7 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[4],
         }
 
         /* Process each packet separately for the remaining bits */
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < NUM_SSE_BUFS; i++) {
                 const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD);
                 uint32_t L = ((N + 31) / ZUC_WORD) -
                              numKeyStr*(keyStreamLengthInBits / 32);
@@ -940,12 +941,12 @@ void zuc_eia3_1_buffer_sse(const void *pKey,
 #endif
 }
 
-void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
-                               const void * const pIv[4],
-                               const void * const pBufferIn[4],
-                               uint32_t *pMacI[4],
-                               const uint16_t lengthInBits[4],
-                               const void * const job_in_lane[4])
+void zuc_eia3_4_buffer_job_sse(const void * const pKey[NUM_SSE_BUFS],
+                               const void * const pIv[NUM_SSE_BUFS],
+                               const void * const pBufferIn[NUM_SSE_BUFS],
+                               uint32_t *pMacI[NUM_SSE_BUFS],
+                               const uint16_t lengthInBits[NUM_SSE_BUFS],
+                               const void * const job_in_lane[NUM_SSE_BUFS])
 {
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState4_t state, 64);
@@ -957,18 +958,18 @@ void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
                            lengthInBits[2] : lengthInBits[3]);
         /* min number of bytes */
         uint32_t commonBits = (bits1 < bits2) ? bits1 : bits2;
-        DECLARE_ALIGNED(uint8_t keyStr[4][2*64], 64);
+        DECLARE_ALIGNED(uint8_t keyStr[NUM_SSE_BUFS][2*64], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
         DECLARE_ALIGNED(ZucIv4_t ivs, 64);
-        const uint8_t *pIn8[4] = {NULL};
+        const uint8_t *pIn8[NUM_SSE_BUFS] = {NULL};
         uint32_t remainCommonBits = commonBits;
         uint32_t numKeyStr = 0;
-        uint32_t T[4] = {0};
+        uint32_t T[NUM_SSE_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
 
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < NUM_SSE_BUFS; i++)
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
 
         /* Need to set the LFSR state to zero */
@@ -1012,7 +1013,7 @@ void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
                                      (uint32_t *) &keyStr[1][64],
                                      (uint32_t *) &keyStr[2][64],
                                      (uint32_t *) &keyStr[3][64]);
-                for (i = 0; i < 4; i++) {
+                for (i = 0; i < NUM_SSE_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
                         T[i] = asm_Eia3Round64BSSE(T[i], &keyStr[i][0],
@@ -1025,7 +1026,7 @@ void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
         }
 
         /* Process each packet separately for the remaining bits */
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < NUM_SSE_BUFS; i++) {
                 if (job_in_lane[i] == NULL)
                         continue;
 
