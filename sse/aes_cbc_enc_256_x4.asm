@@ -67,20 +67,23 @@
 
 %define IN0	r8
 %define KEYS0	rbx
-%define OUT0	r9
 
 %define IN1	r10
 %define KEYS1	REG3
-%define OUT1	r11
 
 %define IN2	r12
 %define KEYS2	REG4
-%define OUT2	r13
 
 %define IN3	r14
 %define KEYS3	rbp
-%define OUT3	r15
 
+%ifndef CBC_MAC
+;; No cipher text write back for CBC-MAC
+%define OUT0	r9
+%define OUT1	r11
+%define OUT2	r13
+%define OUT3	r15
+%endif
 
 %define XDATA0		xmm0
 %define XDATA1		xmm1
@@ -104,14 +107,31 @@
 %define XKEY3_6		xmm14
 %define XKEY3_9		xmm15
 
-%ifndef AES_CBC_ENC_X4
-%define AES_CBC_ENC_X4 aes_cbc_enc_256_x4
-%endif
+;; %ifndef AES_CBC_ENC_X4
+;; %define AES_CBC_ENC_X4 aes_cbc_enc_256_x4
+;; %endif
 
 section .text
 
-MKGLOBAL(AES_CBC_ENC_X4,function,internal)
-AES_CBC_ENC_X4:
+%ifndef AES_CBC_ENC_X4
+%ifdef CBC_MAC
+MKGLOBAL(aes256_cbc_mac_x4,function,internal)
+aes256_cbc_mac_x4:
+%else
+MKGLOBAL(aes_cbc_enc_256_x4,function,internal)
+aes_cbc_enc_256_x4:
+%endif
+
+%else ;; NO-AESNI
+
+%ifdef CBC_MAC
+MKGLOBAL(aes256_cbc_mac_x4_no_aesni,function,internal)
+aes256_cbc_mac_x4_no_aesni:
+%else
+MKGLOBAL(aes_cbc_enc_256_x4_no_aesni,function,internal)
+aes_cbc_enc_256_x4_no_aesni:
+%endif
+%endif ;; AES_CBC_ENC_X4
 
 	push	rbp
 
@@ -139,11 +159,12 @@ AES_CBC_ENC_X4:
 	pxor		XDATA2, [ARG + _aesarg_IV + 16*2] ; plaintext XOR IV
 	pxor		XDATA3, [ARG + _aesarg_IV + 16*3] ; plaintext XOR IV
 
+%ifndef CBC_MAC
 	mov		OUT0,	[ARG + _aesarg_out + 8*0]
 	mov		OUT1,	[ARG + _aesarg_out + 8*1]
 	mov		OUT2,	[ARG + _aesarg_out + 8*2]
 	mov		OUT3,	[ARG + _aesarg_out + 8*3]
-
+%endif
 	pxor		XDATA0, [KEYS0 + 16*0]		; 0. ARK
 	pxor		XDATA1, [KEYS1 + 16*0]		; 0. ARK
 	pxor		XDATA2, [KEYS2 + 16*0]		; 0. ARK
@@ -233,11 +254,12 @@ AES_CBC_ENC_X4:
 	aesenclast	XDATA2, [KEYS2 + 16*14]	; 14. ENC
 	aesenclast	XDATA3, [KEYS3 + 16*14]	; 14. ENC
 
+%ifndef CBC_MAC
 	MOVDQ		[OUT0], XDATA0		; write back ciphertext
 	MOVDQ		[OUT1], XDATA1		; write back ciphertext
 	MOVDQ		[OUT2], XDATA2		; write back ciphertext
 	MOVDQ		[OUT3], XDATA3		; write back ciphertext
-
+%endif
 	cmp		LEN, IDX
 	je		done
 
@@ -323,12 +345,13 @@ main_loop:
 	aesenclast	XDATA2, [KEYS2 + 16*14]	; 14. ENC
 	aesenclast	XDATA3, [KEYS3 + 16*14]	; 14. ENC
 
-
+%ifndef CBC_MAC
+        ;; No cipher text write back for CBC-MAC
 	MOVDQ		[OUT0 + IDX], XDATA0	; write back ciphertext
 	MOVDQ		[OUT1 + IDX], XDATA1	; write back ciphertex
 	MOVDQ		[OUT2 + IDX], XDATA2	; write back ciphertex
 	MOVDQ		[OUT3 + IDX], XDATA3	; write back ciphertex
-
+%endif
 
 	add	IDX, 16
 	cmp	LEN, IDX
@@ -351,6 +374,8 @@ done:
 	add	IN3, LEN
 	mov	[ARG + _aesarg_in + 8*3], IN3
 
+%ifndef CBC_MAC
+        ;; No OUT pointer updates for CBC-MAC
 	add	OUT0, LEN
 	mov	[ARG + _aesarg_out + 8*0], OUT0
 	add	OUT1, LEN
@@ -359,7 +384,7 @@ done:
 	mov	[ARG + _aesarg_out + 8*2], OUT2
 	add	OUT3, LEN
 	mov	[ARG + _aesarg_out + 8*3], OUT3
-
+%endif
 	pop	rbp
 
 %ifdef SAFE_DATA
