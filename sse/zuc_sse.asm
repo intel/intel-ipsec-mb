@@ -293,17 +293,13 @@ section .text
     pxor        xmm2, [rax + OFS_X2]    ; W2 = F_R2 ^ BRC_X2
 
     movdqa      xmm3, xmm1
-    movdqa      xmm4, xmm1
-    movdqa      xmm5, xmm2
-    movdqa      xmm6, xmm2
-    pslld       xmm3, 16
+    movdqa      xmm4, xmm2
+    pslld       xmm1, 16
+    pslld       xmm2, 16
+    psrld       xmm3, 16
     psrld       xmm4, 16
-    pslld       xmm5, 16
-    psrld       xmm6, 16
-    movdqa      xmm1, xmm3
-    movdqa      xmm2, xmm4
-    por         xmm1, xmm6
-    por         xmm2, xmm5
+    por         xmm1, xmm4
+    por         xmm2, xmm3
 
     rot_mod32   xmm3, xmm1, 2
     rot_mod32   xmm4, xmm1, 10
