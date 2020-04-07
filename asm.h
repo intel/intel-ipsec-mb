@@ -140,6 +140,8 @@ void aes_cntr_bit_256_submit_vaes_avx512(IMB_JOB *job);
 /* AES-CCM */
 IMB_JOB *aes_cntr_ccm_128_sse(IMB_JOB *job);
 
+IMB_JOB *aes_cntr_ccm_256_sse(IMB_JOB *job);
+
 IMB_JOB *aes_cntr_ccm_128_sse_no_aesni(IMB_JOB *job);
 
 IMB_JOB *aes_cntr_ccm_128_avx(IMB_JOB *job);

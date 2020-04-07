@@ -26,8 +26,10 @@
 ;;
 
 %include "include/os.asm"
+%include "imb_job.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
+%include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
 
 ; routine to do AES256 CNTR enc/decrypt "by8"
@@ -38,7 +40,7 @@
 %define AES_CNTR_BIT_256 aes_cntr_bit_256_sse
 %endif
 
-extern byteswap_const, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
+extern byteswap_const, set_byte15, ddq_add_1, ddq_add_2, ddq_add_3, ddq_add_4
 extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 
 %define CONCAT(a,b) a %+ b
@@ -65,6 +67,24 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define xkeyA	xmm14
 %define xkeyB	xmm15
 
+%ifdef CNTR_CCM_SSE
+%ifdef LINUX
+%define job	  rdi
+%define p_in	  rsi
+%define p_keys	  rdx
+%define p_out	  rcx
+%define num_bytes r8
+%define p_ivlen   r9
+%else ;; LINUX
+%define job	  rcx
+%define p_in	  rdx
+%define p_keys	  r8
+%define p_out	  r9
+%define num_bytes r10
+%define p_ivlen   rax
+%endif ;; LINUX
+%define p_IV    r11
+%else ;; CNTR_CCM_SSE
 %ifdef LINUX
 %define p_in	  rdi
 %define p_IV	  rsi
@@ -82,8 +102,10 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %define num_bits  r10
 %define p_ivlen   qword [rsp + 8*6]
 %endif
+%endif ;; CNTR_CCM_SSE
 
 %define tmp	r11
+%define flags   r11
 
 %define r_bits   r12
 %define tmp2    r13
@@ -306,8 +328,65 @@ section .text
 ;; Macro performing AES-CTR.
 ;;
 %macro DO_CNTR 1
-%define %%CNTR_TYPE %1 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%CNTR_TYPE %1 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CCM)
 
+%ifidn %%CNTR_TYPE, CCM
+        mov     p_in, [job + _src]
+        add     p_in, [job + _cipher_start_src_offset_in_bytes]
+        mov     p_ivlen, [job + _iv_len_in_bytes]
+        mov	num_bytes, [job + _msg_len_to_cipher_in_bytes]
+        mov     p_keys, [job + _enc_keys]
+        mov     p_out, [job + _dst]
+
+	movdqa	xbyteswap, [rel byteswap_const]
+        ;; Prepare IV ;;
+
+        ;; Byte 0: flags with L'
+        ;; Calculate L' = 15 - Nonce length - 1 = 14 - IV length
+        mov     flags, 14
+        sub     flags, p_ivlen
+        movd    xcounter, DWORD(flags)
+        ;; Bytes 1 - 13: Nonce (7 - 13 bytes long)
+
+        ;; Bytes 1 - 7 are always copied (first 7 bytes)
+        mov     p_IV, [job + _iv]
+        pinsrb	xcounter, [p_IV], 1
+        pinsrw	xcounter, [p_IV + 1], 1
+        pinsrd  xcounter, [p_IV + 3], 1
+
+        cmp     p_ivlen, 7
+        je      _finish_nonce_move
+
+        cmp     p_ivlen, 8
+        je      _iv_length_8
+        cmp     p_ivlen, 9
+        je      _iv_length_9
+        cmp     p_ivlen, 10
+        je      _iv_length_10
+        cmp     p_ivlen, 11
+        je      _iv_length_11
+        cmp     p_ivlen, 12
+        je      _iv_length_12
+
+        ;; Bytes 8 - 13
+_iv_length_13:
+        pinsrb 	xcounter, [p_IV + 12], 13
+_iv_length_12:
+        pinsrb 	xcounter, [p_IV + 11], 12
+_iv_length_11:
+        pinsrd	xcounter, [p_IV + 7], 2
+        jmp     _finish_nonce_move
+_iv_length_10:
+        pinsrb	xcounter, [p_IV + 9], 10
+_iv_length_9:
+        pinsrb	xcounter, [p_IV + 8], 9
+_iv_length_8:
+        pinsrb	xcounter, [p_IV + 7], 8
+
+_finish_nonce_move:
+        ; last byte = 1
+        por     xcounter, [rel set_byte15]
+%else ;; CNTR/CNTR_BIT
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
 %endif
@@ -321,7 +400,7 @@ section .text
 	movdqa	xbyteswap, [rel byteswap_const]
 %ifidn %%CNTR_TYPE, CNTR
         test    p_ivlen, 16
-        jnz     %%iv_is_16_bytes
+        jnz     %%_iv_is_16_bytes
         ; Read 12 bytes: Nonce + ESP IV. Then pad with block counter 0x00000001
         mov     DWORD(tmp), 0x01000000
         pinsrq  xcounter, [p_IV], 0
@@ -332,8 +411,8 @@ section .text
         ; Read 16 byte IV: Nonce + 8-byte block counter (BE)
         movdqu  xcounter, [p_IV]
 %endif
-
-%%bswap_iv:
+%endif ;; CNTR/CNTR_BIT/CCM
+%%_bswap_iv:
 	pshufb	xcounter, xbyteswap
 
         ;; calculate len
@@ -346,63 +425,63 @@ section .text
 %endif
 	mov	tmp, num_bytes
 	and	tmp, 7*16
-	jz	%%chk       ; multiple of 8 blocks and/or below 16 bytes
+	jz	%%_chk       ; multiple of 8 blocks and/or below 16 bytes
 
 	; 1 <= tmp <= 7
 	cmp	tmp, 4*16
-	jg	%%gt4
-	je	%%eq4
+	jg	%%_gt4
+	je	%%_eq4
 
         ; 1 <= tmp <= 3
 	cmp	tmp, 2*16
-	jg	%%eq3
-	je	%%eq2
-%%eq1:
+	jg	%%_eq3
+	je	%%_eq2
+%%_eq1:
 	do_aes_load	1, %%CNTR_TYPE	; 1 block
 	add	p_out, 1*16
-        jmp     %%chk
+        jmp     %%_chk
 
-%%eq2:
+%%_eq2:
 	do_aes_load	2, %%CNTR_TYPE	; 2 blocks
 	add	p_out, 2*16
-        jmp      %%chk
+        jmp      %%_chk
 
-%%eq3:
+%%_eq3:
 	do_aes_load	3, %%CNTR_TYPE	; 3 blocks
 	add	p_out, 3*16
-	jmp	%%chk
+	jmp	%%_chk
 
-%%eq4:
+%%_eq4:
 	do_aes_load	4, %%CNTR_TYPE
 	add	p_out, 4*16
-	jmp	%%chk
+	jmp	%%_chk
 
-%%gt4:
+%%_gt4:
         ; 5 <= tmp <= 7
 	cmp	tmp, 6*16
-	jg	%%eq7
-	je	%%eq6
+	jg	%%_eq7
+	je	%%_eq6
 
-%%eq5:
+%%_eq5:
 	do_aes_load	5, %%CNTR_TYPE
 	add	p_out, 5*16
-	jmp	%%chk
+	jmp	%%_chk
 
-%%eq6:
+%%_eq6:
 	do_aes_load	6, %%CNTR_TYPE
 	add	p_out, 6*16
-	jmp	%%chk
+	jmp	%%_chk
 
-%%eq7:
+%%_eq7:
 	do_aes_load	7, %%CNTR_TYPE
 	add	p_out, 7*16
 	; fall through to chk
-%%chk:
+%%_chk:
 	and	num_bytes, ~(7*16)
-	jz	%%do_return2
+	jz	%%_do_return2
 
         cmp	num_bytes, 16
-        jb	%%last
+        jb	%%_last
 
 	; process multiples of 4 blocks
 	movdqa	xkey0, [p_keys + 0*16]
@@ -411,19 +490,23 @@ section .text
 	movdqa	xkey12, [p_keys + 12*16]
 
 align 32
-%%main_loop2:
+%%_main_loop2:
 	; num_bytes is a multiple of 8 blocks + partial bytes
 	do_aes_noload	8, %%CNTR_TYPE
 	add	p_out,	8*16
 	sub	num_bytes, 8*16
         cmp	num_bytes, 8*16
-	jae	%%main_loop2
+	jae	%%_main_loop2
 
         ; Check if there is a partial block
 	or      num_bytes, num_bytes
-        jnz    %%last
+        jnz    %%_last
 
-%%do_return2:
+%%_do_return2:
+%ifidn %%CNTR_TYPE, CCM
+	mov	rax, job
+	or	dword [rax + _status], STS_COMPLETED_AES
+%endif
 
 %ifidn %%CNTR_TYPE, CNTR_BIT
         pop r14
@@ -437,12 +520,12 @@ align 32
 
 	ret
 
-%%last:
+%%_last:
 
 	; load partial block into XMM register
 	simd_load_sse_15_1 xpart, p_in, num_bytes
 
-%%final_ctr_enc:
+%%_final_ctr_enc:
 	; Encryption of a single partial block
 	pshufb	xcounter, xbyteswap
 	movdqa	xdata0, xcounter
@@ -461,7 +544,7 @@ align 32
 %ifidn %%CNTR_TYPE, CNTR_BIT
         ;; Check if there is a partial byte
         or      r_bits, r_bits
-        jz      %%store_output
+        jz      %%_store_output
 
         ;; Load output to get last partial byte
         simd_load_sse_15_1 xtmp, p_out, num_bytes
@@ -494,19 +577,26 @@ align 32
         movdqa  xdata0, xtmp2
 %endif
 
-%%store_output:
+%%_store_output:
         ; copy result into the output buffer
         simd_store_sse_15 p_out, xdata0, num_bytes, tmp, rax
 
-        jmp	%%do_return2
+        jmp	%%_do_return2
 
-%%iv_is_16_bytes:
+%%_iv_is_16_bytes:
         ; Read 16 byte IV: Nonce + ESP IV + block counter (BE)
         movdqu  xcounter, [p_IV]
-        jmp     %%bswap_iv
+        jmp     %%_bswap_iv
 %endmacro
 
 align 32
+%ifdef CNTR_CCM_SSE
+; IMB_JOB * aes_cntr_ccm_256_sse(IMB_JOB *job)
+; arg 1 : job
+MKGLOBAL(AES_CNTR_CCM_256,function,internal)
+AES_CNTR_CCM_256:
+        DO_CNTR CCM
+%else
 ;; aes_cntr_256_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 MKGLOBAL(AES_CNTR_256,function,internal)
 AES_CNTR_256:
@@ -516,6 +606,7 @@ AES_CNTR_256:
 MKGLOBAL(AES_CNTR_BIT_256,function,internal)
 AES_CNTR_BIT_256:
         DO_CNTR CNTR_BIT
+%endif ;; CNTR_CCM_SSE
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
