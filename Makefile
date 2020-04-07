@@ -293,6 +293,7 @@ asm_sse_lib_objs := \
 	aes128_cntr_ccm_by8_sse.o \
 	aes_cfb_sse.o \
 	aes128_cbc_mac_x4.o \
+	aes256_cbc_mac_x4.o \
 	aes128_cbc_mac_x8_sse.o \
 	aes_xcbc_mac_128_x4.o \
 	md5_x4x2_sse.o \
