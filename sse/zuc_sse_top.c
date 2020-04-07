@@ -714,7 +714,9 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
                 else
                         asm_ZucGenKeystream64B_sse(&keyStream[16], &zucState);
                 T = asm_Eia3Round64BSSE(T, &keyStream[0], pIn8);
-                memcpy(&keyStream[0], &keyStream[16], 16 * sizeof(uint32_t));
+                /* Copy the last keystream generated
+                 * to the first 64 bytes */
+                memcpy(&keyStream[0], &keyStream[16], 64);
                 pIn8 = &pIn8[ZUC_KEYSTR_LEN];
         }
 
@@ -814,8 +816,9 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[4],
                 for (i = 0; i < 4; i++) {
                         T[i] = asm_Eia3Round64BSSE(T[i], &keyStr[i][0],
                                                    pIn8[i]);
-                        memcpy(&keyStr[i][0], &keyStr[i][64],
-                               16 * sizeof(uint32_t));
+                        /* Copy the last keystream generated
+                         * to the first 64 bytes */
+                        memcpy(&keyStr[i][0], &keyStr[i][64], 64);
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }
         }
@@ -871,7 +874,9 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[4],
                                 asm_ZucGenKeystream64B_sse(&keyStr32[16],
                                                            &singlePktState);
                         T[i] = asm_Eia3Round64BSSE(T[i], &keyStr32[0], pIn8[i]);
-                        memcpy(keyStr32, &keyStr32[16], 16 * sizeof(uint32_t));
+                        /* Copy the last keystream generated
+                         * to the first 64 bytes */
+                        memcpy(keyStr32, &keyStr32[16], 64);
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }
 
@@ -1012,8 +1017,9 @@ void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
                                 continue;
                         T[i] = asm_Eia3Round64BSSE(T[i], &keyStr[i][0],
                                                    pIn8[i]);
-                        memcpy(&keyStr[i][0], &keyStr[i][64],
-                               16 * sizeof(uint32_t));
+                        /* Copy the last keystream generated
+                         * to the first 64 bytes */
+                        memcpy(&keyStr[i][0], &keyStr[i][64], 64);
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }
         }
@@ -1072,7 +1078,9 @@ void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
                                 asm_ZucGenKeystream64B_sse(&keyStr32[16],
                                                            &singlePktState);
                         T[i] = asm_Eia3Round64BSSE(T[i], &keyStr32[0], pIn8[i]);
-                        memcpy(keyStr32, &keyStr32[16], 16 * sizeof(uint32_t));
+                        /* Copy the last keystream generated
+                         * to the first 64 bytes */
+                        memcpy(keyStr32, &keyStr32[16], 64);
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }
 
