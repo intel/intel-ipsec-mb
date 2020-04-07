@@ -444,7 +444,6 @@ section .text
     ; xmm13 = LFSR_S13
     ; xmm15 = LFSR_S15
     ;
-    pxor        xmm3, xmm3
     movdqa      xmm1,  [rax + (( 0 + %1) % 16)*16]
     movdqa      xmm4,  [rax + (( 4 + %1) % 16)*16]
     movdqa      xmm10, [rax + ((10 + %1) % 16)*16]

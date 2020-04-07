@@ -414,7 +414,6 @@ align 64
     ; zmm13 = LFSR_S13
     ; zmm15 = LFSR_S15
     ;
-    vpxorq      zmm3, zmm3
     vmovdqa64   zmm1,  [rax + (( 0 + %1) % 16)*64]
     vmovdqa64   zmm4,  [rax + (( 4 + %1) % 16)*64]
     vmovdqa64   zmm10, [rax + ((10 + %1) % 16)*64]

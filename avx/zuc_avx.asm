@@ -421,7 +421,6 @@ align 64
     ; xmm13 = LFSR_S13
     ; xmm15 = LFSR_S15
     ;
-    vpxor       xmm3, xmm3
     vmovdqa     xmm1,  [rax + (( 0 + %1) % 16)*16]
     vmovdqa     xmm4,  [rax + (( 4 + %1) % 16)*16]
     vmovdqa     xmm10, [rax + ((10 + %1) % 16)*16]
