@@ -2558,7 +2558,7 @@ ccm_test(const enum arch_type arch,
         errors += test_ccm_128_std_vectors(mb_mgr, 18);
         errors += test_ccm_128_std_vectors(mb_mgr, 19);
 
-        if (arch == ARCH_SSE) {
+        if (arch == ARCH_SSE || arch == ARCH_NO_AESNI) {
                 /* AES-CCM-256 tests */
                 errors += test_ccm_256_std_vectors(mb_mgr, 1);
                 errors += test_ccm_256_std_vectors(mb_mgr, 3);
