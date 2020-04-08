@@ -163,6 +163,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes128_cbc_mac_x8.obj \
         $(OBJ_DIR)\aes256_cbc_mac_x4.obj \
         $(OBJ_DIR)\aes256_cbc_mac_x4_no_aesni.obj \
+        $(OBJ_DIR)\aes256_cbc_mac_x8.obj \
 	$(OBJ_DIR)\aes_cbc_enc_128_x4.obj \
         $(OBJ_DIR)\aes_cbc_enc_128_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes_cbc_enc_128_x8_sse.obj \

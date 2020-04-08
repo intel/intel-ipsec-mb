@@ -370,6 +370,7 @@ asm_avx_lib_objs := \
 	aes_ecb_by4_avx.o \
 	aes_cfb_avx.o \
 	aes128_cbc_mac_x8.o \
+	aes256_cbc_mac_x8.o \
 	aes_xcbc_mac_128_x8.o \
 	md5_x4x2_avx.o \
 	sha1_mult_avx.o \
