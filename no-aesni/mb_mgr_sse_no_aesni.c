@@ -25,6 +25,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
+#define NO_AESNI /* @todo: remove once other mgrs support CCM-256 */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,6 +96,11 @@ IMB_JOB *submit_job_aes128_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state,
 
 IMB_JOB *flush_job_aes128_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
 
+IMB_JOB *submit_job_aes256_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state,
+                                                 IMB_JOB *job);
+
+IMB_JOB *flush_job_aes256_ccm_auth_sse_no_aesni(MB_MGR_CCM_OOO *state);
+
 IMB_JOB *submit_job_aes_cntr_sse_no_aesni(IMB_JOB *job);
 
 IMB_JOB *submit_job_aes_cntr_bit_sse_no_aesni(IMB_JOB *job);
@@ -163,6 +169,7 @@ JOB_AES_HMAC *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 #define AES_CNTR_256       aes_cntr_256_sse_no_aesni
 
 #define AES_CNTR_CCM_128   aes_cntr_ccm_128_sse_no_aesni
+#define AES_CNTR_CCM_256   aes_cntr_ccm_256_sse_no_aesni
 
 #define AES_ECB_ENC_128       aes_ecb_enc_128_sse_no_aesni
 #define AES_ECB_ENC_192       aes_ecb_enc_192_sse_no_aesni
@@ -227,6 +234,9 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 
 #define FLUSH_JOB_AES128_CCM_AUTH     flush_job_aes128_ccm_auth_sse_no_aesni
 #define SUBMIT_JOB_AES128_CCM_AUTH    submit_job_aes128_ccm_auth_sse_no_aesni
+
+#define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_sse_no_aesni
+#define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_sse_no_aesni
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_sse_no_aesni
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_sse_no_aesni

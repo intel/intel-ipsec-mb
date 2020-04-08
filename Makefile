@@ -252,10 +252,12 @@ asm_noaesni_lib_objs := \
 	aes256_cntr_by8_sse_no_aesni.o \
 	aes_ecb_by4_sse_no_aesni.o \
 	aes128_cntr_ccm_by8_sse_no_aesni.o \
+	aes256_cntr_ccm_by8_sse_no_aesni.o \
 	pon_sse_no_aesni.o \
 	zuc_sse_no_aesni.o \
 	aes_cfb_sse_no_aesni.o \
 	aes128_cbc_mac_x4_no_aesni.o \
+	aes256_cbc_mac_x4_no_aesni.o \
 	aes_xcbc_mac_128_x4_no_aesni.o \
 	mb_mgr_aes_flush_sse_no_aesni.o \
 	mb_mgr_aes_submit_sse_no_aesni.o \
@@ -265,6 +267,7 @@ asm_noaesni_lib_objs := \
 	mb_mgr_aes256_submit_sse_no_aesni.o \
 	mb_mgr_aes_cmac_submit_flush_sse_no_aesni.o \
 	mb_mgr_aes_ccm_auth_submit_flush_sse_no_aesni.o \
+	mb_mgr_aes256_ccm_auth_submit_flush_sse_no_aesni.o \
 	mb_mgr_aes_xcbc_flush_sse_no_aesni.o \
 	mb_mgr_aes_xcbc_submit_sse_no_aesni.o \
 	mb_mgr_zuc_submit_flush_sse_no_aesni.o

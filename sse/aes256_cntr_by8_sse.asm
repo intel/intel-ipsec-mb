@@ -591,7 +591,7 @@ align 32
 
 align 32
 %ifdef CNTR_CCM_SSE
-; IMB_JOB * aes_cntr_ccm_256_sse(IMB_JOB *job)
+; IMB_JOB * aes_cntr_ccm_256_<arch>(IMB_JOB *job)
 ; arg 1 : job
 MKGLOBAL(AES_CNTR_CCM_256,function,internal)
 AES_CNTR_CCM_256:

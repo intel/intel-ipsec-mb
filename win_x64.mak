@@ -129,6 +129,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\pon_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_sse.obj \
         $(OBJ_DIR)\aes128_cntr_by8_sse_no_aesni.obj \
+        $(OBJ_DIR)\aes256_cntr_by8_sse_no_aesni.obj \
 	$(OBJ_DIR)\pon_avx.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_avx.obj \
 	$(OBJ_DIR)\aes128_cntr_ccm_by8_sse.obj \
@@ -150,6 +151,7 @@ lib_objs1 = \
         $(OBJ_DIR)\aes256_cntr_by8_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes256_cntr_by8_avx.obj \
         $(OBJ_DIR)\aes256_cntr_ccm_by8_sse.obj \
+        $(OBJ_DIR)\aes256_cntr_ccm_by8_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes_cfb_sse.obj \
         $(OBJ_DIR)\aes_cfb_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes_cfb_avx.obj \
@@ -160,6 +162,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes128_cbc_mac_x8_sse.obj \
 	$(OBJ_DIR)\aes128_cbc_mac_x8.obj \
         $(OBJ_DIR)\aes256_cbc_mac_x4.obj \
+        $(OBJ_DIR)\aes256_cbc_mac_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes_cbc_enc_128_x4.obj \
         $(OBJ_DIR)\aes_cbc_enc_128_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes_cbc_enc_128_x8_sse.obj \
@@ -288,6 +291,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_avx.obj \
         $(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_sse.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_sse.obj \
         $(OBJ_DIR)\mb_mgr_aes_xcbc_flush_sse_no_aesni.obj \
