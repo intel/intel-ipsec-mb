@@ -395,7 +395,7 @@ default rel
 ;;; ===========================================================================
 ;;; GHASH 1 to 16 blocks of cipher text
 ;;; - performs reduction at the end
-%macro  GHASH_1_TO_16 17
+%macro  GHASH_1_TO_16 18-24
 %define %%KP            %1      ; [in] pointer to expanded keys
 %define %%GHASH         %2      ; [out] ghash output
 %define %%T1            %3      ; [clobbered] temporary ZMM
@@ -413,6 +413,13 @@ default rel
 %define %%CIPHER_IN2    %15     ; [in] ZMM with cipher text blocks 8-11
 %define %%CIPHER_IN3    %16     ; [in] ZMM with cipher text blocks 12-15
 %define %%NUM_BLOCKS    %17     ; [in] numerical value, number of blocks
+%define %%INSTANCE_TYPE %18     ; [in] multi_call or single_call
+%define %%ROUND         %19     ; [in] Round number (for multi_call): "first", "mid", "last"
+%define %%HKEY_START    %20     ; [in] Hash subkey to start from (for multi_call): 48, 32, 16
+%define %%PREV_H        %21     ; [in/out] In: High result from previous call, Out: High result of this call
+%define %%PREV_L        %22     ; [in/out] In: Low result from previous call, Out: Low result of this call
+%define %%PREV_M1       %23     ; [in/out] In: Medium 1 result from previous call, Out: Medium 1 result of this call
+%define %%PREV_M2       %24     ; [in/out] In: Medium 2 result from previous call, Out: Medium 2 result of this call
 
 %define %%T0H           %%T1
 %define %%T0L           %%T2
@@ -426,13 +433,39 @@ default rel
 
 %define %%HK            %%T9
 
-%assign hashk       HashKey_ %+ %%NUM_BLOCKS
 %assign reg_idx     0
 %assign blocks_left %%NUM_BLOCKS
 
-        vpxorq          %%CIPHER_IN0, %%CIPHER_IN0, %%AAD_HASH_IN
-
+%ifidn %%INSTANCE_TYPE, single_call
+%assign hashk           HashKey_ %+ %%NUM_BLOCKS
 %assign first_result 1
+%assign reduce       1
+        vpxorq          %%CIPHER_IN0, %%CIPHER_IN0, %%AAD_HASH_IN
+%else ; %%INSTANCE_TYPE == multi_call
+
+%assign hashk           HashKey_ %+ %%HKEY_START
+%ifidn %%ROUND, first
+%assign first_result 1
+%assign reduce       0
+        vpxorq          %%CIPHER_IN0, %%CIPHER_IN0, %%AAD_HASH_IN
+%elifidn %%ROUND, mid
+%assign first_result 0
+%assign reduce       0
+        vmovdqa64          %%T0H, %%PREV_H
+        vmovdqa64          %%T0L, %%PREV_L
+        vmovdqa64          %%T0M1, %%PREV_M1
+        vmovdqa64          %%T0M2, %%PREV_M2
+%else ; %%ROUND == last
+%assign first_result 0
+%assign reduce       1
+        vmovdqa64          %%T0H, %%PREV_H
+        vmovdqa64          %%T0L, %%PREV_L
+        vmovdqa64          %%T0M1, %%PREV_M1
+        vmovdqa64          %%T0M2, %%PREV_M2
+%endif ; %%ROUND
+
+%endif ; %%INSTANCE_TYPE
+
 
 %rep (blocks_left / 4)
 %xdefine %%REG_IN %%CIPHER_IN %+ reg_idx
@@ -514,6 +547,7 @@ default rel
 
 %endif ; blocks_left > 0
 
+%if reduce == 1
         ;; integrate TM into TH and TL
         vpxorq          %%T0M1, %%T0M1, %%T0M2
         vpsrldq         %%T1M1, %%T0M1, 8
@@ -529,6 +563,12 @@ default rel
         vmovdqa64       XWORD(%%HK), [rel POLY2]
         VCLMUL_REDUCE   XWORD(%%GHASH), XWORD(%%HK), \
                         XWORD(%%T0H), XWORD(%%T0L), XWORD(%%T0M1), XWORD(%%T0M2)
+%else ;; reduce == 0
+        vmovdqa64       %%PREV_H, %%T0H
+        vmovdqa64       %%PREV_L, %%T0L
+        vmovdqa64       %%PREV_M1, %%T0M1
+        vmovdqa64       %%PREV_M2, %%T0M2
+%endif
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -646,7 +686,7 @@ default rel
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
 ; Output: The hash of the data (AAD_HASH).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  CALC_AAD_HASH   22
+%macro  CALC_AAD_HASH   26
 %define %%A_IN          %1      ; [in] AAD text pointer
 %define %%A_LEN         %2      ; [in] AAD length
 %define %%AAD_HASH      %3      ; [in/out] xmm ghash value
@@ -665,21 +705,28 @@ default rel
 %define %%ZT11          %16     ; [clobbered] ZMM register
 %define %%ZT12          %17     ; [clobbered] ZMM register
 %define %%ZT13          %18     ; [clobbered] ZMM register
-%define %%T1            %19     ; [clobbered] GP register
-%define %%T2            %20     ; [clobbered] GP register
-%define %%T3            %21     ; [clobbered] GP register
-%define %%MASKREG       %22     ; [clobbered] mask register
+%define %%ZT14          %19     ; [clobbered] ZMM register
+%define %%ZT15          %20     ; [clobbered] ZMM register
+%define %%ZT16          %21     ; [clobbered] ZMM register
+%define %%ZT17          %22     ; [clobbered] ZMM register
+%define %%T1            %23     ; [clobbered] GP register
+%define %%T2            %24     ; [clobbered] GP register
+%define %%T3            %25     ; [clobbered] GP register
+%define %%MASKREG       %26     ; [clobbered] mask register
 
 %define %%SHFMSK %%ZT13
 
         mov             %%T1, %%A_IN            ; T1 = AAD
         mov             %%T2, %%A_LEN           ; T2 = aadLen
 
+        or              %%T2, %%T2
+        jz              %%_CALC_AAD_done
+
         vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
 
-%%_get_AAD_loop256:
-        cmp             %%T2, 256
-        jl              %%_exit_AAD_loop256
+%%_get_AAD_loop48x16:
+        cmp             %%T2, (48*16)
+        jl              %%_exit_AAD_loop48x16
 
         vmovdqu64       %%ZT1, [%%T1 + 64*0]  ; Blocks 0-3
         vmovdqu64       %%ZT2, [%%T1 + 64*1]  ; Blocks 4-7
@@ -694,18 +741,112 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        16
+                        16, multi_call, first, 48, %%ZT14, %%ZT15, %%ZT16, %%ZT17
 
-        sub             %%T2, 256
+        vmovdqu64       %%ZT1, [%%T1 + 16*16 + 64*0]  ; Blocks 16-19
+        vmovdqu64       %%ZT2, [%%T1 + 16*16 + 64*1]  ; Blocks 20-23
+        vmovdqu64       %%ZT3, [%%T1 + 16*16 + 64*2]  ; Blocks 24-27
+        vmovdqu64       %%ZT4, [%%T1 + 16*16 + 64*3]  ; Blocks 28-31
+        vpshufb         %%ZT1, %%SHFMSK
+        vpshufb         %%ZT2, %%SHFMSK
+        vpshufb         %%ZT3, %%SHFMSK
+        vpshufb         %%ZT4, %%SHFMSK
+
+        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        16, multi_call, mid, 32, %%ZT14, %%ZT15, %%ZT16, %%ZT17
+
+        vmovdqu64       %%ZT1, [%%T1 + 32*16 + 64*0]  ; Blocks 32-35
+        vmovdqu64       %%ZT2, [%%T1 + 32*16 + 64*1]  ; Blocks 36-39
+        vmovdqu64       %%ZT3, [%%T1 + 32*16 + 64*2]  ; Blocks 40-43
+        vmovdqu64       %%ZT4, [%%T1 + 32*16 + 64*3]  ; Blocks 44-47
+        vpshufb         %%ZT1, %%SHFMSK
+        vpshufb         %%ZT2, %%SHFMSK
+        vpshufb         %%ZT3, %%SHFMSK
+        vpshufb         %%ZT4, %%SHFMSK
+
+        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        16, multi_call, last, 16, %%ZT14, %%ZT15, %%ZT16, %%ZT17
+
+        sub             %%T2, (48*16)
         je              %%_CALC_AAD_done
 
-        add             %%T1, 256
-        jmp             %%_get_AAD_loop256
+        add             %%T1, (48*16)
+        jmp             %%_get_AAD_loop48x16
 
-%%_exit_AAD_loop256:
-        or              %%T2, %%T2
-        jz              %%_CALC_AAD_done
+%%_exit_AAD_loop48x16:
+        ; Less than 48x16 bytes remaining
+        cmp             %%T2, (32*16)
+        jl              %%_less_than_32x16
 
+        ; Get next 16 blocks
+        vmovdqu64       %%ZT1, [%%T1 + 64*0]
+        vmovdqu64       %%ZT2, [%%T1 + 64*1]
+        vmovdqu64       %%ZT3, [%%T1 + 64*2]
+        vmovdqu64       %%ZT4, [%%T1 + 64*3]
+        vpshufb         %%ZT1, %%SHFMSK
+        vpshufb         %%ZT2, %%SHFMSK
+        vpshufb         %%ZT3, %%SHFMSK
+        vpshufb         %%ZT4, %%SHFMSK
+
+        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        16, multi_call, first, 32, %%ZT14, %%ZT15, %%ZT16, %%ZT17
+
+        vmovdqu64       %%ZT1, [%%T1 + 16*16 + 64*0]
+        vmovdqu64       %%ZT2, [%%T1 + 16*16 + 64*1]
+        vmovdqu64       %%ZT3, [%%T1 + 16*16 + 64*2]
+        vmovdqu64       %%ZT4, [%%T1 + 16*16 + 64*3]
+        vpshufb         %%ZT1, %%SHFMSK
+        vpshufb         %%ZT2, %%SHFMSK
+        vpshufb         %%ZT3, %%SHFMSK
+        vpshufb         %%ZT4, %%SHFMSK
+
+        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        16, multi_call, last, 16, %%ZT14, %%ZT15, %%ZT16, %%ZT17
+
+        sub             %%T2, (32*16)
+        je              %%_CALC_AAD_done
+
+        add             %%T1, (32*16)
+        jmp             %%_less_than_16x16
+
+%%_less_than_32x16:
+        cmp             %%T2, (16*16)
+        jl              %%_less_than_16x16
+        ; Get next 16 blocks
+        vmovdqu64       %%ZT1, [%%T1 + 64*0]
+        vmovdqu64       %%ZT2, [%%T1 + 64*1]
+        vmovdqu64       %%ZT3, [%%T1 + 64*2]
+        vmovdqu64       %%ZT4, [%%T1 + 64*3]
+        vpshufb         %%ZT1, %%SHFMSK
+        vpshufb         %%ZT2, %%SHFMSK
+        vpshufb         %%ZT3, %%SHFMSK
+        vpshufb         %%ZT4, %%SHFMSK
+
+        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
+                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        16, single_call
+
+        sub             %%T2, (16*16)
+        je              %%_CALC_AAD_done
+
+        add             %%T1, (16*16)
+
+        ; Less than 16x16 bytes remaining
+%%_less_than_16x16:
         ;; prep mask source address
         lea             %%T3, [rel byte64_len_to_mask_table]
         lea             %%T3, [%%T3 + %%T2*8]
@@ -754,7 +895,8 @@ default rel
         ;; - jump to reduction code
 
 %%_AAD_blocks_16:
-        sub             %%T3, (64 * 24)
+        ; Adjust address to range of byte64_len_to_mask_table
+        sub             %%T3, (64 * 3 * 8)
         kmovq           %%MASKREG, [%%T3]
         vmovdqu8        %%ZT1, [%%T1 + 64*0]
         vmovdqu8        %%ZT2, [%%T1 + 64*1]
@@ -768,11 +910,11 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        16
+                        16, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_15:
-        sub             %%T3, (64 * 24)
+        sub             %%T3, (64 * 3 * 8)
         kmovq           %%MASKREG, [%%T3]
         vmovdqu8        %%ZT1, [%%T1 + 64*0]
         vmovdqu8        %%ZT2, [%%T1 + 64*1]
@@ -786,11 +928,11 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        15
+                        15, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_14:
-        sub             %%T3, (64 * 24)
+        sub             %%T3, (64 * 3 * 8)
         kmovq           %%MASKREG, [%%T3]
         vmovdqu8        %%ZT1, [%%T1 + 64*0]
         vmovdqu8        %%ZT2, [%%T1 + 64*1]
@@ -804,11 +946,11 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        14
+                        14, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_13:
-        sub             %%T3, (64 * 24)
+        sub             %%T3, (64 * 3 * 8)
         kmovq           %%MASKREG, [%%T3]
         vmovdqu8        %%ZT1, [%%T1 + 64*0]
         vmovdqu8        %%ZT2, [%%T1 + 64*1]
@@ -822,11 +964,11 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        13
+                        13, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_12:
-        sub             %%T3, (64 * 16)
+        sub             %%T3, (64 * 2 * 8)
         kmovq           %%MASKREG, [%%T3]
         vmovdqu8        %%ZT1, [%%T1 + 64*0]
         vmovdqu8        %%ZT2, [%%T1 + 64*1]
@@ -838,11 +980,11 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, no_zmm, \
-                        12
+                        12, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_11:
-        sub             %%T3, (64 * 16)
+        sub             %%T3, (64 * 2 * 8)
         kmovq           %%MASKREG, [%%T3]
         vmovdqu8        %%ZT1, [%%T1 + 64*0]
         vmovdqu8        %%ZT2, [%%T1 + 64*1]
@@ -854,11 +996,11 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, no_zmm, \
-                        11
+                        11, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_10:
-        sub             %%T3, (64 * 16)
+        sub             %%T3, (64 * 2 * 8)
         kmovq           %%MASKREG, [%%T3]
         vmovdqu8        %%ZT1, [%%T1 + 64*0]
         vmovdqu8        %%ZT2, [%%T1 + 64*1]
@@ -870,11 +1012,11 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, no_zmm, \
-                        10
+                        10, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_9:
-        sub             %%T3, (64 * 16)
+        sub             %%T3, (64 * 2 * 8)
         kmovq           %%MASKREG, [%%T3]
         vmovdqu8        %%ZT1, [%%T1 + 64*0]
         vmovdqu8        %%ZT2, [%%T1 + 64*1]
@@ -886,7 +1028,7 @@ default rel
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, no_zmm, \
-                        9
+                        9, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_8:
@@ -900,7 +1042,7 @@ default rel
                         %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
                         %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, no_zmm, no_zmm, \
-                        8
+                        8, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_7:
@@ -914,7 +1056,7 @@ default rel
                         %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
                         %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, no_zmm, no_zmm, \
-                        7
+                        7, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_6:
@@ -928,7 +1070,7 @@ default rel
                         %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
                         %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, no_zmm, no_zmm, \
-                        6
+                        6, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_5:
@@ -942,7 +1084,7 @@ default rel
                         %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
                         %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
                         ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, no_zmm, no_zmm, \
-                        5
+                        5, single_call
         jmp             %%_CALC_AAD_done
 
 
@@ -954,7 +1096,7 @@ default rel
                         %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
                         %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
                         ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
-                        4
+                        4, single_call
         jmp             %%_CALC_AAD_done
 
 %%_AAD_blocks_3:
@@ -965,7 +1107,7 @@ default rel
                         %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
                         %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
                         ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
-                        3
+                        3, single_call
         jmp             %%_CALC_AAD_done
 
 
@@ -977,7 +1119,7 @@ default rel
                         %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
                         %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
                         ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
-                        2
+                        2, single_call
         jmp             %%_CALC_AAD_done
 
 
@@ -989,7 +1131,7 @@ default rel
                         %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
                         %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
                         ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
-                        1
+                        1, single_call
 %%_CALC_AAD_done:
         ;; result in AAD_HASH
 
@@ -1692,7 +1834,7 @@ default rel
                         %%ZT12, %%ZT13, %%ZT14, %%ZT15, %%ZT16, \
                         %%ZT17, %%ZT18, %%ZT19, %%ZT20, \
                         %%ZT2, %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
-                        %%num_initial_blocks
+                        %%num_initial_blocks, single_call
 
         jmp             %%_small_initial_compute_done
 %endif                          ; %if %%num_initial_blocks < 16
@@ -1726,7 +1868,7 @@ default rel
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT12, %%ZT13, %%ZT14, %%ZT15, %%ZT16, \
                         %%ZT17, %%ZT18, %%ZT19, %%ZT20, \
-                        %%ZT2, %%DAT0, %%DAT1, %%DAT2, %%DAT3, k
+                        %%ZT2, %%DAT0, %%DAT1, %%DAT2, %%DAT3, k, single_call
 
         ;; just fall through no jmp needed
 %else
@@ -2657,7 +2799,7 @@ default rel
 %endmacro
 
 
-%macro CALC_J0 22
+%macro CALC_J0 26
 %define %%KEY           %1 ;; [in] Pointer to GCM KEY structure
 %define %%IV            %2 ;; [in] Pointer to IV
 %define %%IV_LEN        %3 ;; [in] IV length
@@ -2676,10 +2818,14 @@ default rel
 %define %%ZT11          %16 ;; [clobbered] ZMM register
 %define %%ZT12          %17 ;; [clobbered] ZMM register
 %define %%ZT13          %18 ;; [clobbered] ZMM register
-%define %%T1            %19 ;; [clobbered] GP register
-%define %%T2            %20 ;; [clobbered] GP register
-%define %%T3            %21 ;; [clobbered] GP register
-%define %%MASKREG       %22 ;; [clobbered] mask register
+%define %%ZT14          %19 ;; [clobbered] ZMM register
+%define %%ZT15          %20 ;; [clobbered] ZMM register
+%define %%ZT16          %21 ;; [clobbered] ZMM register
+%define %%ZT17          %22 ;; [clobbered] ZMM register
+%define %%T1            %23 ;; [clobbered] GP register
+%define %%T2            %24 ;; [clobbered] GP register
+%define %%T3            %25 ;; [clobbered] GP register
+%define %%MASKREG       %26 ;; [clobbered] mask register
 
 %define %%POLY   %%ZT8
 %define %%TH     %%ZT7
@@ -2693,7 +2839,8 @@ default rel
         vpxor   %%J0, %%J0
         CALC_AAD_HASH %%IV, %%IV_LEN, %%J0, %%KEY, %%ZT0, %%ZT1, %%ZT2, %%ZT3, \
                       %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, %%ZT10, %%ZT11, \
-                      %%ZT12, %%ZT13, %%T1, %%T2, %%T3, %%MASKREG
+                      %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
+                      %%T1, %%T2, %%T3, %%MASKREG
 
         ;; Calculate GHASH of last 16-byte block (0 || len(IV)64)
         mov     %%T1, %%IV_LEN
@@ -2719,7 +2866,7 @@ default rel
 ;;; Additional Authentication data (A_IN), Additional Data length (A_LEN).
 ;;; Output: Updated GDATA_CTX with the hash of A_IN (AadHash) and initialized other parts of GDATA_CTX.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_INIT        25-26
+%macro  GCM_INIT        29-30
 %define %%GDATA_KEY     %1      ; [in] GCM expanded keys pointer
 %define %%GDATA_CTX     %2      ; [in] GCM context pointer
 %define %%IV            %3      ; [in] IV pointer
@@ -2745,12 +2892,17 @@ default rel
 %define %%ZT11          %23     ; [clobbered] ZMM register
 %define %%ZT12          %24     ; [clobbered] ZMM register
 %define %%ZT13          %25     ; [clobbered] ZMM register
-%define %%IV_LEN        %26     ; [in] IV length
+%define %%ZT14          %26     ; [clobbered] ZMM register
+%define %%ZT15          %27     ; [clobbered] ZMM register
+%define %%ZT16          %28     ; [clobbered] ZMM register
+%define %%ZT17          %29     ; [clobbered] ZMM register
+%define %%IV_LEN        %30     ; [in] IV length
 
         vpxor           %%AAD_HASH, %%AAD_HASH
         CALC_AAD_HASH   %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, \
-                        %%ZT10, %%ZT11, %%ZT12, %%ZT13, %%GPR1, %%GPR2, %%GPR3, %%MASKREG
+                        %%ZT10, %%ZT11, %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
+                        %%GPR1, %%GPR2, %%GPR3, %%MASKREG
 
         mov             %%GPR1, %%A_LEN
         vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASH   ; ctx.aad hash = aad_hash
@@ -2760,11 +2912,11 @@ default rel
         mov             [%%GDATA_CTX + InLen], %%GPR1         ; ctx.in_length = 0
         mov             [%%GDATA_CTX + PBlockLen], %%GPR1     ; ctx.partial_block_length = 0
 
-%if %0 == 26 ;; IV is different than 12 bytes
+%if %0 == 30 ;; IV is different than 12 bytes
         CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, %%CUR_COUNT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, \
                         %%ZT8, %%ZT9, %%ZT10, %%ZT11, %%ZT12, %%ZT13, \
-                        %%GPR1, %%GPR2, %%GPR3, %%MASKREG
+                        %%ZT14, %%ZT15, %%ZT16, %%ZT17, %%GPR1, %%GPR2, %%GPR3, %%MASKREG
 %else ;; IV is 12 bytes
         ;; read 12 IV bytes and pad with 0x00000001
         vmovdqu8        %%CUR_COUNT, [rel ONEf]
@@ -4024,7 +4176,7 @@ skip_aad_check_init:
 %endif
         GCM_INIT arg1, arg2, arg3, arg4, arg5, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
-                zmm12, zmm13, zmm15, zmm16
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
 
 exit_init:
 
@@ -4077,13 +4229,13 @@ skip_aad_check_init_IV:
 
         GCM_INIT arg1, arg2, arg3, arg5, arg6, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16, arg4
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, arg4
         jmp     skip_iv_len_12_init_IV
 
 iv_len_12_init_IV:
         GCM_INIT arg1, arg2, arg3, arg5, arg6, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
 
 skip_iv_len_12_init_IV:
 %ifdef SAFE_DATA
@@ -4330,7 +4482,7 @@ skip_aad_check_enc:
 %endif
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
-                zmm12, zmm13, zmm15, zmm16
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call
 
@@ -4405,7 +4557,7 @@ skip_aad_check_dec:
 %endif
         GCM_INIT arg1, arg2, arg6, arg7, arg8, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
-                zmm12, zmm13, zmm15, zmm16
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
         GCM_COMPLETE arg1, arg2, arg9, arg10, single_call
 
@@ -4489,13 +4641,13 @@ skip_aad_check_enc_IV:
 
         GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16, arg7
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, arg7
         jmp     skip_iv_len_12_enc_IV
 
 iv_len_12_enc_IV:
         GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
 
 skip_iv_len_12_enc_IV:
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
@@ -4581,13 +4733,13 @@ skip_aad_check_dec_IV:
 
         GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm12, \
-                zmm13, zmm15, zmm16, arg7
+                zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, arg7
         jmp     skip_iv_len_12_dec_IV
 
 iv_len_12_dec_IV:
         GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12, k1, xmm14, xmm2, \
                 zmm1, zmm11, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                zmm12, zmm13, zmm15, zmm16
+                zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
 
 skip_iv_len_12_dec_IV:
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
@@ -4636,7 +4788,7 @@ ghash_vaes_avx512:
         vpxor   xmm0, xmm0
         CALC_AAD_HASH arg2, arg3, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
                       zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
-                      zmm15, r10, r11, r12, k1
+                      zmm15, zmm16, zmm17, zmm18, zmm19, r10, r11, r12, k1
 
         vpshufb xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
 
@@ -4807,7 +4959,7 @@ GMAC_FN_NAME(update):
         ;; Calculate GHASH of this segment
         CALC_AAD_HASH arg3, arg4, xmm8, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
                       zmm6, zmm7, zmm9, zmm10, zmm11, zmm12, zmm13, zmm15, \
-                      zmm16, r10, r11, r12, k1
+                      zmm16, zmm17, zmm18, zmm19, zmm20, r10, r11, r12, k1
 	vmovdqu64	[arg2 + AadHash], xmm8	; ctx_data.aad hash = aad_hash
 
 no_full_blocks:
