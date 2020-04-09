@@ -391,6 +391,7 @@ asm_avx_lib_objs := \
 	mb_mgr_aes256_submit_avx.o \
 	mb_mgr_aes_cmac_submit_flush_avx.o\
 	mb_mgr_aes_ccm_auth_submit_flush_avx.o \
+	mb_mgr_aes256_ccm_auth_submit_flush_avx.o \
 	mb_mgr_aes_xcbc_flush_avx.o \
 	mb_mgr_aes_xcbc_submit_avx.o \
 	mb_mgr_hmac_md5_flush_avx.o \

@@ -25,8 +25,6 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#define SSE /* @todo: remove once other mgrs support CCM-256 */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

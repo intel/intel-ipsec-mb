@@ -76,7 +76,9 @@ section .text
 
 %define APPEND(a,b) a %+ b
 
+%ifndef NROUNDS
 %define NROUNDS 9 ; AES-CCM-128
+%endif
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -518,14 +520,14 @@ APPEND(skip_clear_,I):
 
 
 align 64
-; IMB_JOB * submit_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state, IMB_JOB *job)
+; IMB_JOB * submit_job_aes128/256_ccm_auth_avx(MB_MGR_CCM_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CCM_AUTH,function,internal)
 SUBMIT_JOB_AES_CCM_AUTH:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX SUBMIT
 
-; IMB_JOB * flush_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state)
+; IMB_JOB * flush_job_aes128/256_ccm_auth_avx(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)
 FLUSH_JOB_AES_CCM_AUTH:

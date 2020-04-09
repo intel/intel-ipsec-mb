@@ -464,15 +464,11 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return DES3_CBC_ENC(job);
 #endif
         } else if (IMB_CIPHER_CCM == job->cipher_mode) {
-#if defined (SSE) || defined (NO_AESNI)
                 if (16 == job->key_len_in_bytes) {
                         return AES_CNTR_CCM_128(job);
                 } else { /* assume 32 */
                         return AES_CNTR_CCM_256(job);
                 }
-#else
-                return AES_CNTR_CCM_128(job);
-#endif
         } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
                 return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode) {
@@ -599,15 +595,11 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
         } else if (IMB_CIPHER_CUSTOM == job->cipher_mode) {
                 return SUBMIT_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_CCM == job->cipher_mode) {
-#if defined (SSE) || defined (NO_AESNI)
                 if (16 == job->key_len_in_bytes) {
                         return AES_CNTR_CCM_128(job);
                 } else { /* assume 32 */
                         return AES_CNTR_CCM_256(job);
                 }
-#else
-                return AES_CNTR_CCM_128(job);
-#endif
         } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
                 return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode) {
@@ -707,15 +699,11 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_CUSTOM:
                 return SUBMIT_JOB_CUSTOM_HASH(job);
         case IMB_AUTH_AES_CCM:
-#if defined (SSE) || defined (NO_AESNI)
                 if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES128_CCM_AUTH(aes_ccm_ooo, job);
                 } else { /* assume 32 */
                         return SUBMIT_JOB_AES256_CCM_AUTH(aes_ccm_ooo, job);
                 }
-#else
-                return SUBMIT_JOB_AES128_CCM_AUTH(aes_ccm_ooo, job);
-#endif
         case IMB_AUTH_AES_CMAC:
                 /*
                  * CMAC OOO MGR assumes job len in bits
@@ -828,15 +816,11 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_CUSTOM:
                 return FLUSH_JOB_CUSTOM_HASH(job);
         case IMB_AUTH_AES_CCM:
-#if defined (SSE) || defined (NO_AESNI)
                 if (16 == job->key_len_in_bytes) {
                         return FLUSH_JOB_AES128_CCM_AUTH(aes_ccm_ooo);
                 } else { /* assume 32 */
                         return FLUSH_JOB_AES256_CCM_AUTH(aes_ccm_ooo);
                 }
-#else
-                return FLUSH_JOB_AES128_CCM_AUTH(aes_ccm_ooo);
-#endif
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_BITLEN:
                 return FLUSH_JOB_AES_CMAC_AUTH(aes_cmac_ooo);
