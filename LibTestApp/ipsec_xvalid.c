@@ -57,7 +57,10 @@
 
 #define DEFAULT_JOB_ITER 10
 
-#define AAD_SIZE 12
+#define MAX_GCM_AAD_SIZE 1024
+#define MAX_CCM_AAD_SIZE 46
+#define MAX_AAD_SIZE 1024
+
 #define MAX_IV_SIZE 16
 
 /* Maximum key and digest size for SHA-512 */
@@ -109,7 +112,7 @@ struct cipher_auth_keys {
 struct data {
         uint8_t test_buf[JOB_SIZE_TOP];
         uint8_t src_dst_buf[JOB_SIZE_TOP];
-        uint8_t aad[AAD_SIZE];
+        uint8_t aad[MAX_AAD_SIZE];
         uint8_t in_digest[MAX_DIGEST_SIZE];
         uint8_t out_digest[MAX_DIGEST_SIZE];
         uint8_t cipher_iv[MAX_IV_SIZE];
@@ -1382,7 +1385,7 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 generate_random_buf(auth_key, MAX_KEY_SIZE);
                 generate_random_buf(cipher_iv, MAX_IV_SIZE);
                 generate_random_buf(auth_iv, MAX_IV_SIZE);
-                generate_random_buf(aad, AAD_SIZE);
+                generate_random_buf(aad, MAX_AAD_SIZE);
         }
 
         /* For PON, construct the XGEM header, setting valid PLI */
@@ -1596,6 +1599,7 @@ exit:
                 printf("Buffer size = %u\n", params->buf_size);
                 printf("Key size = %u\n", params->key_size);
                 printf("Tag size = %u\n", tag_size);
+                printf("AAD size = %u\n", (uint32_t) params->aad_size);
         }
 
         return ret;
@@ -1610,6 +1614,8 @@ process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
 {
         const uint32_t sizes = params->num_sizes;
         uint32_t sz;
+        uint64_t min_aad_sz = 0;
+        uint64_t max_aad_sz, aad_sz;
 
         if (verbose) {
                 printf("Testing ");
@@ -1619,44 +1625,54 @@ process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
         /* Reset the variant data */
         memset(variant_data, 0, sizeof(struct data));
 
+        if (params->cipher_mode == IMB_CIPHER_GCM)
+                max_aad_sz = MAX_GCM_AAD_SIZE;
+        else if (params->cipher_mode == IMB_CIPHER_CCM)
+                max_aad_sz = MAX_CCM_AAD_SIZE;
+        else
+                max_aad_sz = 0;
+
         for (sz = 0; sz < sizes; sz++) {
                 const uint32_t buf_size = job_sizes[RANGE_MIN] +
                                         (sz * job_sizes[RANGE_STEP]);
-                params->aad_size = AAD_SIZE;
+                for (aad_sz = min_aad_sz; aad_sz <= max_aad_sz; aad_sz++) {
+                        params->aad_size = aad_sz;
+                        params->buf_size = buf_size;
 
-                params->buf_size = buf_size;
+                        /*
+                         * CBC and ECB operation modes do not support lengths
+                         * which are non-multiple of block size
+                         */
+                        if (params->cipher_mode == IMB_CIPHER_CBC ||
+                            params->cipher_mode == IMB_CIPHER_ECB)
+                                if ((buf_size % AES_BLOCK_SIZE)  != 0)
+                                        continue;
 
-                /*
-                 * CBC and ECB operation modes do not support lengths which are
-                 * non-multiple of block size
-                 */
-                if (params->cipher_mode == IMB_CIPHER_CBC ||
-                    params->cipher_mode == IMB_CIPHER_ECB)
-                        if ((buf_size % AES_BLOCK_SIZE)  != 0)
-                                continue;
+                        if (params->cipher_mode == IMB_CIPHER_DES ||
+                            params->cipher_mode == IMB_CIPHER_DES3)
+                                if ((buf_size % DES_BLOCK_SIZE)  != 0)
+                                        continue;
 
-                if (params->cipher_mode == IMB_CIPHER_DES ||
-                    params->cipher_mode == IMB_CIPHER_DES3)
-                        if ((buf_size % DES_BLOCK_SIZE)  != 0)
-                                continue;
+                        /*
+                         * KASUMI-UIA1 needs to be at least 9 bytes
+                         * (IV + direction bit + '1' + 0s to align to
+                         * byte boundary)
+                         */
+                        if (params->hash_alg == IMB_AUTH_KASUMI_UIA1)
+                                if (buf_size < (KASUMI_BLOCK_SIZE + 1))
+                                        continue;
 
-                /*
-                 * KASUMI-UIA1 needs to be at least 9 bytes
-                 * (IV + direction bit + '1' + 0s to align to byte boundary)
-                 */
-                if (params->hash_alg == IMB_AUTH_KASUMI_UIA1)
-                        if (buf_size < (KASUMI_BLOCK_SIZE + 1))
-                                continue;
+                        /* Check for sensitive data first, then normal cross
+                         * architecture validation */
+                        if (safe_check && do_test(enc_mgr, enc_arch, dec_mgr,
+                                                  dec_arch, params,
+                                                  variant_data, 1) < 0)
+                                exit(EXIT_FAILURE);
 
-                /* Check for sensitive data first, then normal cross
-                 * architecture validation */
-                if (safe_check && do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
-                                          params, variant_data, 1) < 0)
-                        exit(EXIT_FAILURE);
-
-                if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
-                            params, variant_data, 0) < 0)
-                        exit(EXIT_FAILURE);
+                        if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
+                                    params, variant_data, 0) < 0)
+                                exit(EXIT_FAILURE);
+                }
 
         }
 }
