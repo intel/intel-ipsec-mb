@@ -148,6 +148,8 @@ IMB_JOB *aes_cntr_ccm_256_sse_no_aesni(IMB_JOB *job);
 
 IMB_JOB *aes_cntr_ccm_128_avx(IMB_JOB *job);
 
+IMB_JOB *aes_cntr_ccm_256_avx(IMB_JOB *job);
+
 /* AES-ECB */
 void aes_ecb_enc_256_sse(const void *in, const void *keys,
                          void *out, uint64_t len_bytes);

@@ -367,6 +367,7 @@ asm_avx_lib_objs := \
 	aes192_cntr_by8_avx.o \
 	aes256_cntr_by8_avx.o \
 	aes128_cntr_ccm_by8_avx.o \
+	aes256_cntr_ccm_by8_avx.o \
 	aes_ecb_by4_avx.o \
 	aes_cfb_avx.o \
 	aes128_cbc_mac_x8.o \
