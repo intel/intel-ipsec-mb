@@ -445,6 +445,14 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
+                .name = "aes-ccm-256",
+                .values.job_params = {
+                        .cipher_mode = IMB_CIPHER_CCM,
+                        .hash_alg = IMB_AUTH_AES_CCM,
+                        .key_size = IMB_KEY_AES_256_BYTES
+                }
+        },
+        {
                 .name = "pon-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
@@ -505,7 +513,7 @@ const uint8_t key_sizes[][3] = {
                 {0, 0, 1},   /* IMB_CIPHER_CUSTOM */
                 {8, 8, 1},   /* IMB_CIPHER_DES */
                 {8, 8, 1},   /* IMB_CIPHER_DOCSIS_DES */
-                {16, 16, 1}, /* IMB_CIPHER_CCM */
+                {16, 32, 16},/* IMB_CIPHER_CCM */
                 {24, 24, 1}, /* IMB_CIPHER_DES3 */
                 {16, 16, 1}, /* IMB_CIPHER_PON_AES_CNTR */
                 {16, 32, 8}, /* IMB_CIPHER_ECB */
