@@ -37,7 +37,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES128-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
-| AES128-CCM    | N      | Y  by8 | Y  by8 | N      | N      | N      |
+| AES128-CCM    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES128-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES192-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES256-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
@@ -48,8 +48,8 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES192-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
 | AES256-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
 | NULL          | Y      | N      | N      | N      | N      | N      |
-| AES128-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | N      |
-| AES256-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | N      |
+| AES128-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
+| AES256-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
 | DES-DOCSIS    | Y      | N      | N      | N      | Y  x16 | N      |
 | 3DES          | Y      | N      | N      | N      | Y  x16 | N      |
 | DES           | Y      | N      | N      | N      | Y  x16 | N      |
@@ -65,6 +65,7 @@ Notes:
 (5)   - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions  
 (6)   - decryption is by16 and encryption is x16  
 (7)   - same as AES128-CBC for AVX, combines cipher and CRC32  
+(8)   - decryption is by16 and encryption is x16  
 
 Legend:  
 ` byY` - single buffer Y blocks at a time  
@@ -94,7 +95,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | AES192-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | NULL              | N      | N      | N      | N      | N      | N      |
-| AES128-CCM        | N      | Y(5)x4 | Y   x8 | N      | N      | N      |
+| AES128-CCM        | N      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
 | AES128-CMAC-96    | Y      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
 | ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
@@ -262,7 +263,7 @@ Required tools:
   - LIB: Microsoft (R) Library Manager Version 14.00.24215.1  
   - LINK: Microsoft (R) Incremental Linker Version 14.00.24215.1  
   - Note: Building on later versions should work but is not verified  
-- NASM version 2.13.03 (or newer)  
+- NASM version 2.14 (or newer)  
 
 Shared library (DLL):  
 `> nmake /f win_x64.mak`
@@ -295,7 +296,7 @@ FreeBSD (64-bit only)
 
 Required tools:  
 - GNU make  
-- NASM version 2.13.03 (or newer)  
+- NASM version 2.14 (or newer)  
 - gcc (GCC) 4.8.3 (or newer) / clang 5.0 (or newer)  
 
 Shared library:   
