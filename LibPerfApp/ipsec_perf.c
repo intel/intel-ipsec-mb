@@ -118,7 +118,7 @@
 #define KEY_SIZES_DOCSIS_AES 2	/* 16, 32 */
 #define KEY_SIZES_DOCSIS_DES 1	/* 8 */
 #define KEY_SIZES_GCM 3		/* 16, 24, 32 */
-#define KEY_SIZES_CCM 1		/* 16 */
+#define KEY_SIZES_CCM 2		/* 16, 32 */
 #define KEY_SIZES_DES 1		/* 8 */
 #define KEY_SIZES_3DES 1	/* 8 x 3 */
 #define KEY_SIZES_PON 1		/* 16 */
@@ -599,6 +599,14 @@ struct str_value_mapping aead_algo_str_map[] = {
                         .cipher_mode = TEST_CCM,
                         .hash_alg = TEST_HASH_CCM,
                         .aes_key_size = IMB_KEY_AES_128_BYTES
+                }
+        },
+        {
+                .name = "aes-ccm-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_CCM,
+                        .hash_alg = TEST_HASH_CCM,
+                        .aes_key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
@@ -1863,7 +1871,6 @@ run_dir_test(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
             params->test_type == TTYPE_AES_DES ||
             params->test_type == TTYPE_AES_3DES ||
             params->test_type == TTYPE_PON ||
-            params->test_type == TTYPE_AES_CCM ||
             params->test_type == TTYPE_ZUC ||
             params->test_type == TTYPE_SNOW3G ||
             params->test_type == TTYPE_KASUMI)
@@ -1898,6 +1905,11 @@ run_dir_test(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
         for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                 params->cipher_dir = (JOB_CIPHER_DIRECTION) dir;
                 for (k = IMB_KEY_AES_128_BYTES; k <= limit; k += 8) {
+                        /* AES-CCM-192 not currently supported */
+                        if((params->test_type == TTYPE_AES_CCM) &&
+                           (k == IMB_KEY_AES_192_BYTES))
+                                continue;
+
                         params->aes_key_size = k;
                         do_variants(mgr, arch, params, run, variant_ptr,
                                     variant, p_buffer, p_keys, print_info);
