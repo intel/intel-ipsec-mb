@@ -277,7 +277,7 @@ x64
 - LIB: Microsoft (R) Library Manager Version 14.00.24215.1
 - LINK: Microsoft (R) Incremental Linker Version 14.00.24215.1
 - Note: Building on later versions should work but is not verified
-- NASM version 2.13.03 (or newer)
+- NASM version 2.14 (or newer)
 
 Shared library (DLL):
 > nmake /f win_x64.mak
@@ -311,7 +311,7 @@ FreeBSD (64-bit only)
 
 Required tools:
 - GNU make
-- NASM version 2.13.03 (or newer)
+- NASM version 2.14 (or newer)
 - gcc (GCC) 4.8.3 (or newer) / clang 5.0 (or newer)
 
 Shared library:
