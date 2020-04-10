@@ -117,4 +117,18 @@ IMB_DLL_LOCAL void emulate_AESDECLAST(union xmm_reg *dst,
 IMB_DLL_LOCAL void emulate_AESIMC(union xmm_reg *dst,
                                   const union xmm_reg *src);
 
+/**
+ * @brief PCLMULQDQ instruction emulation function
+ *
+ * Performs carry-less multiplication of two 64-bit numbers and
+ * returns 128-bit product.
+ *
+ * @param src1_dst pointer to 128 bit input/output buffer
+ * @param src2     pointer to 128 bit input number
+ * @param imm8     constant for selecting quadword
+ */
+IMB_DLL_LOCAL void emulate_PCLMULQDQ(union xmm_reg *src1_dst,
+                                     const union xmm_reg *src2,
+                                     const uint32_t imm8);
+
 #endif /* _AESNI_EMU_H_ */

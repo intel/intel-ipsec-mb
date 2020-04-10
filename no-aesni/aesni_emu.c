@@ -348,3 +348,82 @@ IMB_DLL_LOCAL void emulate_AESIMC(union xmm_reg *dst,
 {
         inverse_mix_columns(dst, src);
 }
+
+/* ========================================================================== */
+/* PCLMULQDQ emulation function */
+/* ========================================================================== */
+
+IMB_DLL_LOCAL void
+emulate_PCLMULQDQ(union xmm_reg *src1_dst, const union xmm_reg *src2,
+                  const uint32_t imm8)
+{
+        uint64_t x, y; /* input 64-bit words */
+        uint64_t r0 = 0, r1 = 0; /* result 128-bit word (2x64) */
+        int i, j;
+
+        if (imm8 & 0x01)
+                x = src1_dst->qword[1];
+        else
+                x = src1_dst->qword[0];
+
+        if (imm8 & 0x10)
+                y = src2->qword[1];
+        else
+                y = src2->qword[0];
+
+        /*
+         * Implementation based on PCLMULQDQ helper function from Intel(R) SDM.
+         *   X[] = one of 64-bit words from src1_dst
+         *   Y[] = one of 64-bit words from src2
+         *
+         *     define PCLMUL128(X, Y) :
+         *         FOR i <-- 0 to 63 :
+         *             TMP[i] <-- X[0] and Y[i]
+         *             FOR j <-- 1 to i :
+         *                 TMP[i] <-- TMP[i] xor (X[j] and Y[i - j])
+         *             DEST[i] <-- TMP[i]
+         *         FOR i <-- 64 to 126 :
+         *             TMP[i] <-- 0
+         *             FOR j <-- i - 63 to 63 :
+         *                 TMP[i] <-- TMP[i] xor (X[j] and Y[i - j])
+         *             DEST[i] <-- TMP[i]
+         *         DEST[127] <-- 0;
+         *         RETURN DEST
+         */
+
+        for (i = 0; i <= 63; i++) {
+                /* TMP[i] <--X[0] and Y[i] */
+                int tmp_i = (int)(x & (y >> i));
+
+                /* j = 1; j = 0 ... 63; j++ */
+                for (j = 1; j <= i; j++) {
+                        /* TMP[i] <--TMP[i] xor (X[j] and Y[i - j]) */
+                        const int x_j = (int)(x >> j);
+                        const int y_i_j = (int)(y >> (i - j));
+
+                        tmp_i ^= (x_j & y_i_j);
+                }
+                /* DEST[i] <--TMP[i] */
+                r0 |= ((uint64_t)(tmp_i & 1)) << i;
+        }
+
+        for (i = 64; i <= 126; i++) {
+                /* TMP[i] <--0 */
+                int tmp_i = 0;
+
+                /* j = 1 ... 63 ; j <= 63; j++ */
+                for (j = (i - 63); j <= 63; j++) {
+                        /* TMP[i] <--TMP[i] xor (X[j] and Y[i - j]) */
+                        const int x_j = (int)(x >> j);
+                        const int y_i_j = (int)(y >> (i - j));
+
+                        tmp_i ^= (x_j & y_i_j);
+                }
+                /* DEST[i] <--TMP[i] */
+                r1 |= ((uint64_t)(tmp_i & 1)) << (i - 64);
+        }
+
+        /* save the result */
+        src1_dst->qword[0] = r0;
+        src1_dst->qword[1] = r1;
+}
