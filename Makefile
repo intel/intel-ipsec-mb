@@ -466,6 +466,7 @@ asm_avx512_lib_objs := \
 	mb_mgr_des_avx512.o \
 	mb_mgr_aes_cmac_submit_flush_vaes_avx512.o \
 	mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.o \
+	mb_mgr_aes256_ccm_auth_submit_flush_vaes_avx512.o \
 	mb_mgr_zuc_submit_flush_avx512.o \
 	mb_mgr_zuc_submit_flush_gfni_avx512.o \
 	ethernet_fcs_avx512.o

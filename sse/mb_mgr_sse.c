@@ -902,7 +902,9 @@ init_mb_mgr_sse(IMB_MGR *state)
         memset(aes_ccm_ooo->lens, 0xff, sizeof(aes_ccm_ooo->lens));
         memset(aes_ccm_ooo->job_in_lane, 0,
                sizeof(aes_ccm_ooo->job_in_lane));
-        if (state->features & IMB_FEATURE_GFNI) {
+        if ((state->features & IMB_FEATURE_GFNI) &&
+            /* tmp workaround until CCM256 x8 implemented */
+            !(state->features & IMB_FEATURE_VAES)) {
                 submit_job_aes128_ccm_auth_ptr =
                         submit_job_aes128_ccm_auth_x8_sse;
                 flush_job_aes128_ccm_auth_ptr =

@@ -129,7 +129,6 @@ lib_objs1 = \
 	$(OBJ_DIR)\pon_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_sse.obj \
         $(OBJ_DIR)\aes128_cntr_by8_sse_no_aesni.obj \
-        $(OBJ_DIR)\aes256_cntr_by8_sse_no_aesni.obj \
 	$(OBJ_DIR)\pon_avx.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_avx.obj \
 	$(OBJ_DIR)\aes128_cntr_ccm_by8_sse.obj \
@@ -257,7 +256,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\ethernet_fcs_avx.obj \
         $(OBJ_DIR)\ethernet_fcs_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_vaes_avx512.obj \
-        $(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.obj
+        $(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_vaes_avx512.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_avx.obj \

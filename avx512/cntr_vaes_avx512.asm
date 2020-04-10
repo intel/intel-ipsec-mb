@@ -1519,6 +1519,20 @@ aes_cntr_ccm_128_vaes_avx512:
 
         ret
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;IMB_JOB * aes_cntr_ccm_256_vaes_avx512(IMB_JOB *job)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes_cntr_ccm_256_vaes_avx512,function,internal)
+aes_cntr_ccm_256_vaes_avx512:
+        FUNC_SAVE CNTR
+        ;; arg1 - [in] job
+        ;; arg2 - [in] NROUNDS
+        ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CCM)
+        CNTR_ENC_DEC arg1, 13, CCM
+        FUNC_RESTORE CNTR
+
+        ret
+
 %else
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void aes_cntr_128_submit_vaes_avx512 (IMB_JOB *job)

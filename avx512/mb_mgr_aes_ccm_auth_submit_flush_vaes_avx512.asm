@@ -118,7 +118,9 @@ section .text
 
 %define APPEND(a,b) a %+ b
 
+%ifndef NROUNDS
 %define NROUNDS 9 ; AES-CCM-128
+%endif
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -195,13 +197,12 @@ endstruc
 %endmacro
 
 ; transpose keys and insert into key table
-%macro INSERT_KEYS 6
+%macro INSERT_KEYS 5
 %define %%KP    %1 ; [in] GP reg with pointer to expanded keys
 %define %%LANE  %2 ; [in] GP reg with lane number
-%define %%NKEYS %3 ; [in] number of round keys (numerical value)
-%define %%COL   %4 ; [clobbered] GP reg
-%define %%ZTMP  %5 ; [clobbered] ZMM reg
-%define %%IA0   %6 ; [clobbered] GP reg
+%define %%COL   %3 ; [clobbered] GP reg
+%define %%ZTMP  %4 ; [clobbered] ZMM reg
+%define %%IA0   %5 ; [clobbered] GP reg
 
 %assign ROW (16*16)
 
@@ -222,6 +223,7 @@ endstruc
         vextracti64x2   [%%COL + ROW*6], %%ZTMP, 2
         vextracti64x2   [%%COL + ROW*7], %%ZTMP, 3
 
+%if NROUNDS == 9 ;; 11 round keys
         mov             %%IA0, 0x3f
         kmovq           k1, %%IA0
         vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 128]
@@ -229,6 +231,22 @@ endstruc
         vextracti64x2   [%%COL + ROW*8], %%ZTMP, 0
         vextracti64x2   [%%COL + ROW*9], %%ZTMP, 1
         vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
+
+%else ;; assume 15 keys for CCM 256
+        vmovdqu64       %%ZTMP, [%%KP + 128]
+        vextracti64x2   [%%COL + ROW*8], %%ZTMP, 0
+        vextracti64x2   [%%COL + ROW*9], %%ZTMP, 1
+        vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
+        vextracti64x2   [%%COL + ROW*11], %%ZTMP, 3
+
+        mov             %%IA0, 0x3f
+        kmovq           k1, %%IA0
+        vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 192]
+
+        vextracti64x2   [%%COL + ROW*12], %%ZTMP, 0
+        vextracti64x2   [%%COL + ROW*13], %%ZTMP, 1
+        vextracti64x2   [%%COL + ROW*14], %%ZTMP, 2
+%endif
 %endmacro
 
 ; copy IV's and round keys into NULL lanes
@@ -335,7 +353,7 @@ endstruc
 
         ;; Insert expanded keys
         mov     tmp, [job + _enc_keys]
-        INSERT_KEYS tmp, lane, NUM_KEYS, tmp2, zmm4, tmp3
+        INSERT_KEYS tmp, lane, tmp2, zmm4, tmp3
 
         ;; init_done = 0
         mov     word [state + _aes_ccm_init_done + lane*2], 0
@@ -704,14 +722,14 @@ endstruc
 
 
 align 64
-; IMB_JOB * submit_job_aes128_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state, IMB_JOB *job)
+; IMB_JOB * submit_job_aes128/256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CCM_AUTH,function,internal)
 SUBMIT_JOB_AES_CCM_AUTH:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX SUBMIT
 
-; IMB_JOB * flush_job_aes128_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state)
+; IMB_JOB * flush_job_aes128/256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)
 FLUSH_JOB_AES_CCM_AUTH:

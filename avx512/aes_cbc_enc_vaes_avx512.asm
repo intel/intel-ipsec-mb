@@ -760,6 +760,21 @@ aes128_cbc_mac_vaes_avx512:
 
         ret
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  void aes256_cbc_mac_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes256_cbc_mac_vaes_avx512,function,internal)
+aes256_cbc_mac_vaes_avx512:
+        FUNC_SAVE
+        CBC_ENC 13, 1
+        FUNC_RESTORE
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
+        ret
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif
