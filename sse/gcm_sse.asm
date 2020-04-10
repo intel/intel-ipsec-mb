@@ -2882,18 +2882,21 @@ exit_dec_IV:
 	ret
 
 %ifdef GCM128_MODE
-%ifndef NO_AESNI
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   ghash_sse
+;void   ghash_sse / ghash_sse_no_aesni
 ;        const struct gcm_key_data *key_data,
 ;        const void   *in,
 ;        const u64    in_len,
 ;        void         *tag,
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%ifndef NO_AESNI
 MKGLOBAL(ghash_sse,function,)
 ghash_sse:
-
+%else
+MKGLOBAL(ghash_sse_no_aesni,function,)
+ghash_sse_no_aesni:
+%endif
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -2930,7 +2933,6 @@ exit_ghash:
         FUNC_RESTORE
 
         ret
-%endif ;; !NO_AESNI
 %endif ;; GCM128_MODE
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
