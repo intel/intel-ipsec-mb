@@ -223,6 +223,13 @@
         EMULATE_AESNI emulate_AESKEYGENASSIST, %%src_dst, %%key, %%imm
 %endmacro
 
+;; PCLMULQDQ translation macro
+%macro EMULATE_PCLMULQDQ 3
+%define %%src1_dst %1
+%define %%src2     %2
+%define %%imm      %3
+        EMULATE_AESNI emulate_PCLMULQDQ, %%src1_dst, %%src2, %%imm
+%endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AESNI defines
@@ -235,6 +242,7 @@
 %define aesdeclast      EMULATE_AESDECLAST
 %define aesimc          EMULATE_AESIMC
 %define aeskeygenassist EMULATE_AESKEYGENASSIST
+%define pclmulqdq       EMULATE_PCLMULQDQ
 %endif
 
 extern emulate_AESENC
@@ -243,5 +251,6 @@ extern emulate_AESDEC
 extern emulate_AESDECLAST
 extern emulate_AESIMC
 extern emulate_AESKEYGENASSIST
+extern emulate_PCLMULQDQ
 
 %endif ; end ifndef _AESNI_EMU_INC_
