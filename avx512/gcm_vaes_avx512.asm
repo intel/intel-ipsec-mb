@@ -855,36 +855,36 @@ default rel
         add             %%T2, 15
         and             %%T2, -16       ; 1 to 16 blocks possible here
         shr             %%T2, 4
-        cmp             %%T2, 15
-        je              %%_AAD_blocks_15
-        cmp             %%T2, 14
-        je              %%_AAD_blocks_14
-        cmp             %%T2, 13
-        je              %%_AAD_blocks_13
-        cmp             %%T2, 12
-        je              %%_AAD_blocks_12
-        cmp             %%T2, 11
-        je              %%_AAD_blocks_11
-        cmp             %%T2, 10
-        je              %%_AAD_blocks_10
-        cmp             %%T2, 9
-        je              %%_AAD_blocks_9
-        cmp             %%T2, 8
-        je              %%_AAD_blocks_8
-        cmp             %%T2, 7
-        je              %%_AAD_blocks_7
-        cmp             %%T2, 6
-        je              %%_AAD_blocks_6
-        cmp             %%T2, 5
-        je              %%_AAD_blocks_5
-        cmp             %%T2, 4
-        je              %%_AAD_blocks_4
-        cmp             %%T2, 3
-        je              %%_AAD_blocks_3
-        cmp             %%T2, 2
-        je              %%_AAD_blocks_2
         cmp             %%T2, 1
         je              %%_AAD_blocks_1
+        cmp             %%T2, 2
+        je              %%_AAD_blocks_2
+        cmp             %%T2, 3
+        je              %%_AAD_blocks_3
+        cmp             %%T2, 4
+        je              %%_AAD_blocks_4
+        cmp             %%T2, 5
+        je              %%_AAD_blocks_5
+        cmp             %%T2, 6
+        je              %%_AAD_blocks_6
+        cmp             %%T2, 7
+        je              %%_AAD_blocks_7
+        cmp             %%T2, 8
+        je              %%_AAD_blocks_8
+        cmp             %%T2, 9
+        je              %%_AAD_blocks_9
+        cmp             %%T2, 10
+        je              %%_AAD_blocks_10
+        cmp             %%T2, 11
+        je              %%_AAD_blocks_11
+        cmp             %%T2, 12
+        je              %%_AAD_blocks_12
+        cmp             %%T2, 13
+        je              %%_AAD_blocks_13
+        cmp             %%T2, 14
+        je              %%_AAD_blocks_14
+        cmp             %%T2, 15
+        je              %%_AAD_blocks_15
         ;; fall through for 16 blocks
 
         ;; The flow of each of these cases is identical:
