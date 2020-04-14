@@ -357,9 +357,10 @@ IMB_DLL_LOCAL void
 emulate_PCLMULQDQ(union xmm_reg *src1_dst, const union xmm_reg *src2,
                   const uint32_t imm8)
 {
-        uint64_t x, y; /* input 64-bit words */
+        uint64_t x; /* input 64-bit word */
         uint64_t r0 = 0, r1 = 0; /* result 128-bit word (2x64) */
-        int i, j;
+        uint64_t y0 = 0, y1 = 0; /* y0/y1 - input word; 128 bits */
+        uint64_t mask;
 
         if (imm8 & 0x01)
                 x = src1_dst->qword[1];
@@ -367,9 +368,9 @@ emulate_PCLMULQDQ(union xmm_reg *src1_dst, const union xmm_reg *src2,
                 x = src1_dst->qword[0];
 
         if (imm8 & 0x10)
-                y = src2->qword[1];
+                y0 = src2->qword[1];
         else
-                y = src2->qword[0];
+                y0 = src2->qword[0];
 
         /*
          * Implementation based on PCLMULQDQ helper function from Intel(R) SDM.
@@ -391,36 +392,28 @@ emulate_PCLMULQDQ(union xmm_reg *src1_dst, const union xmm_reg *src2,
          *         RETURN DEST
          */
 
-        for (i = 0; i <= 63; i++) {
-                /* TMP[i] <--X[0] and Y[i] */
-                int tmp_i = (int)(x & (y >> i));
+        /*
+         * This implementation is focused on reducing number of operations per
+         * bit and it deverges from the above by doing series of 128-bit xor's
+         * and shifts.
+         *   Y := zero extended src2 (128 bits)
+         *   R := zero (128 bits)
+         *   for N := 0 to 63 step 1
+         *       if (bit N of src1 == 1) then R := R XOR Y
+         *       Y := Y << 1
+         *   return R
+         */
+        for (mask = 1ULL; mask != 0ULL; mask <<= 1) {
+                const uint64_t mask_bit63 = (1ULL << 63);
 
-                /* j = 1; j = 0 ... 63; j++ */
-                for (j = 1; j <= i; j++) {
-                        /* TMP[i] <--TMP[i] xor (X[j] and Y[i - j]) */
-                        const int x_j = (int)(x >> j);
-                        const int y_i_j = (int)(y >> (i - j));
-
-                        tmp_i ^= (x_j & y_i_j);
+                if (x & mask) {
+                        r0 ^= y0;
+                        r1 ^= y1;
                 }
-                /* DEST[i] <--TMP[i] */
-                r0 |= ((uint64_t)(tmp_i & 1)) << i;
-        }
-
-        for (i = 64; i <= 126; i++) {
-                /* TMP[i] <--0 */
-                int tmp_i = 0;
-
-                /* j = 1 ... 63 ; j <= 63; j++ */
-                for (j = (i - 63); j <= 63; j++) {
-                        /* TMP[i] <--TMP[i] xor (X[j] and Y[i - j]) */
-                        const int x_j = (int)(x >> j);
-                        const int y_i_j = (int)(y >> (i - j));
-
-                        tmp_i ^= (x_j & y_i_j);
-                }
-                /* DEST[i] <--TMP[i] */
-                r1 |= ((uint64_t)(tmp_i & 1)) << (i - 64);
+                y1 <<= 1;
+                if (y0 & mask_bit63)
+                        y1 |= 1ULL;
+                y0 <<= 1;
         }
 
         /* save the result */
