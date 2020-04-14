@@ -1360,7 +1360,6 @@ APPEND(%%_skip_,I):
         ;; Clear IV
         vpxor           xmm0, xmm0
         shl             %%idx, 3 ; multiply by 8
-        vmovdqa         [%%STATE + _aes_args_IV + %%idx*2], xmm0
         mov             qword [%%STATE + _aes_args_keys + %%idx], 0
         vmovdqa         [%%STATE + _docsis_crc_args_init + %%idx*2], xmm0
 %else
@@ -1370,7 +1369,7 @@ APPEND(%%_skip_,I):
 %rep 8
         cmp             qword [%%STATE + _aes_job_in_lane + I*8], 0
         jne             APPEND(%%_skip_clear_,I)
-        vmovdqa         [%%STATE + _aes_args_IV + I*16], xmm0
+        mov             qword [%%STATE + _aes_args_keys + I*8], 0
         vmovdqa         [%%STATE + _docsis_crc_args_init + I*16], xmm0
 APPEND(%%_skip_clear_,I):
 %assign I (I+1)
