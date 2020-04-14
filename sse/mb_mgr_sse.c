@@ -134,6 +134,11 @@ IMB_JOB *submit_job_aes128_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state,
 
 IMB_JOB *flush_job_aes128_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state);
 
+IMB_JOB *submit_job_aes256_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state,
+                                           IMB_JOB *job);
+
+IMB_JOB *flush_job_aes256_ccm_auth_x8_sse(MB_MGR_CCM_OOO *state);
+
 IMB_JOB *submit_job_aes_cntr_sse(IMB_JOB *job);
 
 IMB_JOB *submit_job_aes_cntr_bit_sse(IMB_JOB *job);
@@ -264,8 +269,8 @@ IMB_JOB *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 #define FLUSH_JOB_AES128_CCM_AUTH     flush_job_aes128_ccm_auth_ptr
 #define SUBMIT_JOB_AES128_CCM_AUTH    submit_job_aes128_ccm_auth_ptr
 
-#define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_sse
-#define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_sse
+#define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_ptr
+#define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_ptr
 
 #define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_ptr
 #define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_ptr
@@ -344,6 +349,11 @@ static ccm_submit_job_t submit_job_aes128_ccm_auth_ptr =
         submit_job_aes128_ccm_auth_sse;
 static ccm_flush_job_t flush_job_aes128_ccm_auth_ptr =
         flush_job_aes128_ccm_auth_sse;
+
+static ccm_submit_job_t submit_job_aes256_ccm_auth_ptr =
+        submit_job_aes256_ccm_auth_sse;
+static ccm_flush_job_t flush_job_aes256_ccm_auth_ptr =
+        flush_job_aes256_ccm_auth_sse;
 
 /* ====================================================================== */
 
@@ -902,13 +912,15 @@ init_mb_mgr_sse(IMB_MGR *state)
         memset(aes_ccm_ooo->lens, 0xff, sizeof(aes_ccm_ooo->lens));
         memset(aes_ccm_ooo->job_in_lane, 0,
                sizeof(aes_ccm_ooo->job_in_lane));
-        if ((state->features & IMB_FEATURE_GFNI) &&
-            /* tmp workaround until CCM256 x8 implemented */
-            !(state->features & IMB_FEATURE_VAES)) {
+        if (state->features & IMB_FEATURE_GFNI) {
                 submit_job_aes128_ccm_auth_ptr =
                         submit_job_aes128_ccm_auth_x8_sse;
                 flush_job_aes128_ccm_auth_ptr =
                         flush_job_aes128_ccm_auth_x8_sse;
+                submit_job_aes256_ccm_auth_ptr =
+                        submit_job_aes256_ccm_auth_x8_sse;
+                flush_job_aes256_ccm_auth_ptr =
+                        flush_job_aes256_ccm_auth_x8_sse;
                 aes_ccm_ooo->unused_lanes = 0xF76543210;
         } else {
                 aes_ccm_ooo->unused_lanes = 0xF3210;
