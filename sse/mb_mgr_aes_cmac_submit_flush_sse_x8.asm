@@ -26,7 +26,7 @@
 ;;
 
 %define NUM_LANES 8
-%define AES128_CBC_MAC aes128_cbc_mac_x8_sse
+%define AES_CBC_MAC aes128_cbc_mac_x8_sse
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_x8_sse
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_x8_sse
 

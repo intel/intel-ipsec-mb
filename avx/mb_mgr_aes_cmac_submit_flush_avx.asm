@@ -36,11 +36,11 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
-%define AES128_CBC_MAC aes128_cbc_mac_x8
+%define AES_CBC_MAC aes128_cbc_mac_x8
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_avx
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_avx
 
-extern AES128_CBC_MAC
+extern AES_CBC_MAC
 
 section .data
 default rel
@@ -299,7 +299,7 @@ APPEND(skip_,I):
 
         ; "state" and "args" are the same address, arg1
         ; len2 is arg2
-        call    AES128_CBC_MAC
+        call    AES_CBC_MAC
         ; state and idx are intact
 
         vmovdqa xmm0, [state + _aes_cmac_lens]  ; preload lens

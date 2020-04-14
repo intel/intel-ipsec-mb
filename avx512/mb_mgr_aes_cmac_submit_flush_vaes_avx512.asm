@@ -32,12 +32,12 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
-%define AES128_CBC_MAC aes128_cbc_mac_vaes_avx512
+%define AES_CBC_MAC aes128_cbc_mac_vaes_avx512
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_vaes_avx512
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_vaes_avx512
 %define NUM_KEYS 11
 
-extern AES128_CBC_MAC
+extern AES_CBC_MAC
 
 section .data
 default rel
@@ -410,7 +410,7 @@ endstruc
 
         ; "state" and "args" are the same address, arg1
         ; len2 is arg2
-        call    AES128_CBC_MAC
+        call    AES_CBC_MAC
         ; state and idx are intact
 
         vmovdqa ymm0, [state + _aes_cmac_lens]  ; preload lens
