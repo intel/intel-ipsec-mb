@@ -33,8 +33,8 @@
 %include "include/const.inc"
 
 %define AES_CBC_MAC aes128_cbc_mac_vaes_avx512
-%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes_cmac_auth_vaes_avx512
-%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes_cmac_auth_vaes_avx512
+%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes128_cmac_auth_vaes_avx512
+%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes128_cmac_auth_vaes_avx512
 %define NUM_KEYS 11
 
 extern AES_CBC_MAC

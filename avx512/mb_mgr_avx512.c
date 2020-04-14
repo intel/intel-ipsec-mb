@@ -230,15 +230,15 @@ IMB_JOB *submit_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state,
                                        IMB_JOB *job);
 IMB_JOB *flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
-IMB_JOB *submit_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
-                                           IMB_JOB *job);
+IMB_JOB *submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
+                                         IMB_JOB *job);
 
-IMB_JOB *flush_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
+IMB_JOB *flush_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
 
-IMB_JOB *submit_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
-                                                   IMB_JOB *job);
+IMB_JOB *submit_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
+                                                 IMB_JOB *job);
 
-IMB_JOB *flush_job_aes_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state);
+IMB_JOB *flush_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state);
 
 IMB_JOB *submit_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state,
                                         IMB_JOB *job);
@@ -346,8 +346,8 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
 #define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_avx512
 #define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_avx512
 
-#define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_avx512
-#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_avx512
+#define FLUSH_JOB_AES128_CMAC_AUTH    flush_job_aes128_cmac_auth_avx512
+#define SUBMIT_JOB_AES128_CMAC_AUTH   submit_job_aes128_cmac_auth_avx512
 
 /* ====================================================================== */
 
@@ -626,13 +626,13 @@ static void
                            uint64_t len_bytes) = aes_cbc_dec_256_avx;
 
 static IMB_JOB *
-(*submit_job_aes_cmac_auth_avx512)
+(*submit_job_aes128_cmac_auth_avx512)
         (MB_MGR_CMAC_OOO *state,
-         IMB_JOB *job) = submit_job_aes_cmac_auth_avx;
+         IMB_JOB *job) = submit_job_aes128_cmac_auth_avx;
 
 static IMB_JOB *
-(*flush_job_aes_cmac_auth_avx512)
-        (MB_MGR_CMAC_OOO *state) = flush_job_aes_cmac_auth_avx;
+(*flush_job_aes128_cmac_auth_avx512)
+        (MB_MGR_CMAC_OOO *state) = flush_job_aes128_cmac_auth_avx;
 
 static IMB_JOB *
 (*submit_job_aes128_ccm_auth_avx512)
@@ -891,10 +891,10 @@ init_mb_mgr_avx512(IMB_MGR *state)
                         submit_job_aes256_enc_vaes_avx512;
                 flush_job_aes256_enc_avx512 =
                         flush_job_aes256_enc_vaes_avx512;
-                submit_job_aes_cmac_auth_avx512 =
-                        submit_job_aes_cmac_auth_vaes_avx512;
-                flush_job_aes_cmac_auth_avx512 =
-                        flush_job_aes_cmac_auth_vaes_avx512;
+                submit_job_aes128_cmac_auth_avx512 =
+                        submit_job_aes128_cmac_auth_vaes_avx512;
+                flush_job_aes128_cmac_auth_avx512 =
+                        flush_job_aes128_cmac_auth_vaes_avx512;
                 submit_job_aes128_ccm_auth_avx512 =
                         submit_job_aes128_ccm_auth_vaes_avx512;
                 flush_job_aes128_ccm_auth_avx512 =

@@ -186,10 +186,10 @@ IMB_JOB *submit_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state,
                                        IMB_JOB *job);
 IMB_JOB *flush_job_hmac_md5_avx2(MB_MGR_HMAC_MD5_OOO *state);
 
-IMB_JOB *submit_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
+IMB_JOB *submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
                                            IMB_JOB *job);
 
-IMB_JOB *flush_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
+IMB_JOB *flush_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
 
 IMB_JOB *submit_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state,
                                         IMB_JOB *job);
@@ -243,8 +243,8 @@ void aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
 #define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_avx
 #define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_avx
 
-#define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_avx
-#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_avx
+#define FLUSH_JOB_AES128_CMAC_AUTH    flush_job_aes128_cmac_auth_avx
+#define SUBMIT_JOB_AES128_CMAC_AUTH   submit_job_aes128_cmac_auth_avx
 
 /* ====================================================================== */
 

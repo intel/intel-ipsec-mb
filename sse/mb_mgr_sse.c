@@ -109,15 +109,15 @@ IMB_JOB *submit_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state,
                                       IMB_JOB *job);
 IMB_JOB *flush_job_aes_xcbc_sse(MB_MGR_AES_XCBC_OOO *state);
 
-IMB_JOB *submit_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state,
-                                           IMB_JOB *job);
+IMB_JOB *submit_job_aes128_cmac_auth_sse(MB_MGR_CMAC_OOO *state,
+                                         IMB_JOB *job);
 
-IMB_JOB *flush_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
+IMB_JOB *flush_job_aes128_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
 
-IMB_JOB *submit_job_aes_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state,
-                                              IMB_JOB *job);
+IMB_JOB *submit_job_aes128_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state,
+                                            IMB_JOB *job);
 
-IMB_JOB *flush_job_aes_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state);
+IMB_JOB *flush_job_aes128_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state);
 
 IMB_JOB *submit_job_aes128_ccm_auth_sse(MB_MGR_CCM_OOO *state,
                                         IMB_JOB *job);
@@ -275,8 +275,8 @@ uint64_t hec_64_sse(const uint8_t *in);
 #define FLUSH_JOB_AES256_CCM_AUTH     flush_job_aes256_ccm_auth_ptr
 #define SUBMIT_JOB_AES256_CCM_AUTH    submit_job_aes256_ccm_auth_ptr
 
-#define FLUSH_JOB_AES_CMAC_AUTH    flush_job_aes_cmac_auth_ptr
-#define SUBMIT_JOB_AES_CMAC_AUTH   submit_job_aes_cmac_auth_ptr
+#define FLUSH_JOB_AES128_CMAC_AUTH    flush_job_aes128_cmac_auth_ptr
+#define SUBMIT_JOB_AES128_CMAC_AUTH   submit_job_aes128_cmac_auth_ptr
 
 /* ====================================================================== */
 
@@ -334,10 +334,10 @@ static aes_flush_job_t flush_job_aes256_enc_ptr = flush_job_aes256_enc_sse;
 typedef IMB_JOB *(*cmac_submit_job_t)(MB_MGR_CMAC_OOO *, IMB_JOB *);
 typedef IMB_JOB *(*cmac_flush_job_t)(MB_MGR_CMAC_OOO *);
 
-static cmac_submit_job_t submit_job_aes_cmac_auth_ptr =
-        submit_job_aes_cmac_auth_sse;
-static cmac_flush_job_t flush_job_aes_cmac_auth_ptr =
-        flush_job_aes_cmac_auth_sse;
+static cmac_submit_job_t submit_job_aes128_cmac_auth_ptr =
+        submit_job_aes128_cmac_auth_sse;
+static cmac_flush_job_t flush_job_aes128_cmac_auth_ptr =
+        flush_job_aes128_cmac_auth_sse;
 
 /* ====================================================================== */
 
@@ -939,8 +939,10 @@ init_mb_mgr_sse(IMB_MGR *state)
                sizeof(aes_cmac_ooo->job_in_lane));
         aes_cmac_ooo->num_lanes_inuse = 0;
         if (state->features & IMB_FEATURE_GFNI) {
-                submit_job_aes_cmac_auth_ptr = submit_job_aes_cmac_auth_x8_sse;
-                flush_job_aes_cmac_auth_ptr = flush_job_aes_cmac_auth_x8_sse;
+                submit_job_aes128_cmac_auth_ptr =
+                        submit_job_aes128_cmac_auth_x8_sse;
+                flush_job_aes128_cmac_auth_ptr =
+                        flush_job_aes128_cmac_auth_x8_sse;
                 aes_cmac_ooo->unused_lanes = 0xF76543210;
         } else {
                 aes_cmac_ooo->unused_lanes = 0xF3210;
