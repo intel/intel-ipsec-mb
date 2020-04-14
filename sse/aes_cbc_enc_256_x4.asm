@@ -107,10 +107,6 @@
 %define XKEY3_6		xmm14
 %define XKEY3_9		xmm15
 
-;; %ifndef AES_CBC_ENC_X4
-;; %define AES_CBC_ENC_X4 aes_cbc_enc_256_x4
-;; %endif
-
 section .text
 
 %ifndef AES_CBC_ENC_X4

@@ -51,7 +51,7 @@
 ;; arg 2: LEN : len (in units of bytes)
 
 struc STACK
-_gpr_save:	resq	1
+_gpr_save:	resq	8
 _len:		resq	1
 endstruc
 
@@ -109,11 +109,26 @@ section .text
 
 align 32
 
+%ifdef CBC_MAC
+MKGLOBAL(aes256_cbc_mac_x8_sse,function,internal)
+aes256_cbc_mac_x8_sse:
+%else
 MKGLOBAL(aes_cbc_enc_256_x8_sse,function,internal)
 aes_cbc_enc_256_x8_sse:
-
+%endif
 	sub	rsp, STACK_size
 	mov	[GPR_SAVE_AREA + 8*0], rbp
+%ifdef CBC_MAC
+	mov	[GPR_SAVE_AREA + 8*1], rbx
+	mov	[GPR_SAVE_AREA + 8*2], r12
+	mov	[GPR_SAVE_AREA + 8*3], r13
+	mov	[GPR_SAVE_AREA + 8*4], r14
+	mov	[GPR_SAVE_AREA + 8*5], r15
+%ifndef LINUX
+	mov	[GPR_SAVE_AREA + 8*6], rsi
+	mov	[GPR_SAVE_AREA + 8*7], rdi
+%endif
+%endif
 
 	mov	IDX, 16
 	mov	[LEN_AREA], LEN
@@ -253,7 +268,9 @@ aes_cbc_enc_256_x8_sse:
 	aesenc		XDATA3, [KEYS3 + 16*9]	; 9. ENC
 	aesenc		XDATA4, [KEYS4 + 16*9]	; 9. ENC
 	aesenc		XDATA5, [KEYS5 + 16*9]	; 9. ENC
+%ifndef CBC_MAC
 	mov		TMP, [ARG + _aesarg_out + 8*0]
+%endif
 	aesenc		XDATA6, XKEY6_9       	; 9. ENC
 	aesenc		XDATA7, [KEYS7 + 16*9]	; 9. ENC
 
@@ -304,6 +321,7 @@ aes_cbc_enc_256_x8_sse:
 	aesenclast	XDATA6, [KEYS6 + 16*14]	; 14. ENC
 	aesenclast	XDATA7, [KEYS7 + 16*14]	; 14. ENC
 
+%ifndef CBC_MAC
 	movdqu		[TMP], XDATA0		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*1]
 	movdqu		[TMP], XDATA1		; write back ciphertext
@@ -319,7 +337,7 @@ aes_cbc_enc_256_x8_sse:
 	movdqu		[TMP], XDATA6		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*7]
 	movdqu		[TMP], XDATA7		; write back ciphertext
-
+%endif
 	cmp		[LEN_AREA], IDX
 	je		done
 
@@ -424,7 +442,9 @@ main_loop:
 	aesenc		XDATA3, [KEYS3 + 16*9]	; 9. ENC
 	aesenc		XDATA4, [KEYS4 + 16*9]	; 9. ENC
 	aesenc		XDATA5, [KEYS5 + 16*9]	; 9. ENC
+%ifndef CBC_MAC
 	mov		TMP, [ARG + _aesarg_out + 8*0]
+%endif
 	aesenc		XDATA6, XKEY6_9       	; 9. ENC
 	aesenc		XDATA7, [KEYS7 + 16*9]	; 9. ENC
 
@@ -474,7 +494,7 @@ main_loop:
 	aesenclast	XDATA6, [KEYS6 + 16*14]	; 14. ENC
 	aesenclast	XDATA7, [KEYS7 + 16*14]	; 14. ENC
 
-
+%ifndef CBC_MAC
 	movdqu		[TMP + IDX], XDATA0		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*1]
 	movdqu		[TMP + IDX], XDATA1		; write back ciphertext
@@ -490,7 +510,7 @@ main_loop:
 	movdqu		[TMP + IDX], XDATA6		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*7]
 	movdqu		[TMP + IDX], XDATA7		; write back ciphertext
-
+%endif
 	add	IDX, 16
 	cmp	[LEN_AREA], IDX
 	jne	main_loop
@@ -521,6 +541,8 @@ done:
 	movdqa	[ARG + _aesarg_in + 16*1], xmm2
 	movdqa	[ARG + _aesarg_in + 16*2], xmm3
 	movdqa	[ARG + _aesarg_in + 16*3], xmm4
+
+%ifndef CBC_MAC
         movdqa  xmm5, xmm0
 	paddq	xmm5, [ARG + _aesarg_out + 16*0]
         movdqa  xmm6, xmm0
@@ -533,11 +555,23 @@ done:
 	movdqa	[ARG + _aesarg_out + 16*1], xmm6
 	movdqa	[ARG + _aesarg_out + 16*2], xmm7
 	movdqa	[ARG + _aesarg_out + 16*3], xmm8
+%endif
 
 ;; XMMs are saved at a higher level
 	mov	rbp, [GPR_SAVE_AREA + 8*0]
+%ifdef CBC_MAC
+	mov	rbx, [GPR_SAVE_AREA + 8*1]
+	mov	r12, [GPR_SAVE_AREA + 8*2]
+	mov	r13, [GPR_SAVE_AREA + 8*3]
+	mov	r14, [GPR_SAVE_AREA + 8*4]
+	mov	r15, [GPR_SAVE_AREA + 8*5]
+%ifndef LINUX
+	mov	rsi, [GPR_SAVE_AREA + 8*6]
+	mov	rdi, [GPR_SAVE_AREA + 8*7]
+%endif
+%endif
 
-	add	rsp, STACK_size
+        add	rsp, STACK_size
 
 %ifdef SAFE_DATA
 	clear_all_xmms_sse_asm
