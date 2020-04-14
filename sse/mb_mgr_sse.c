@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SSE /* @todo: remove when CMAC-256 supported for all archs */
+
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #include "intel-ipsec-mb.h"
@@ -118,6 +120,16 @@ IMB_JOB *submit_job_aes128_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state,
                                             IMB_JOB *job);
 
 IMB_JOB *flush_job_aes128_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state);
+
+IMB_JOB *submit_job_aes256_cmac_auth_sse(MB_MGR_CMAC_OOO *state,
+                                         IMB_JOB *job);
+
+IMB_JOB *flush_job_aes256_cmac_auth_sse(MB_MGR_CMAC_OOO *state);
+
+IMB_JOB *submit_job_aes256_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state,
+                                            IMB_JOB *job);
+
+IMB_JOB *flush_job_aes256_cmac_auth_x8_sse(MB_MGR_CMAC_OOO *state);
 
 IMB_JOB *submit_job_aes128_ccm_auth_sse(MB_MGR_CCM_OOO *state,
                                         IMB_JOB *job);
@@ -278,6 +290,9 @@ uint64_t hec_64_sse(const uint8_t *in);
 #define FLUSH_JOB_AES128_CMAC_AUTH    flush_job_aes128_cmac_auth_ptr
 #define SUBMIT_JOB_AES128_CMAC_AUTH   submit_job_aes128_cmac_auth_ptr
 
+#define FLUSH_JOB_AES256_CMAC_AUTH    flush_job_aes256_cmac_auth_ptr
+#define SUBMIT_JOB_AES256_CMAC_AUTH   submit_job_aes256_cmac_auth_ptr
+
 /* ====================================================================== */
 
 /*
@@ -338,6 +353,10 @@ static cmac_submit_job_t submit_job_aes128_cmac_auth_ptr =
         submit_job_aes128_cmac_auth_sse;
 static cmac_flush_job_t flush_job_aes128_cmac_auth_ptr =
         flush_job_aes128_cmac_auth_sse;
+static cmac_submit_job_t submit_job_aes256_cmac_auth_ptr =
+        submit_job_aes256_cmac_auth_sse;
+static cmac_flush_job_t flush_job_aes256_cmac_auth_ptr =
+        flush_job_aes256_cmac_auth_sse;
 
 /* ====================================================================== */
 
@@ -943,6 +962,11 @@ init_mb_mgr_sse(IMB_MGR *state)
                         submit_job_aes128_cmac_auth_x8_sse;
                 flush_job_aes128_cmac_auth_ptr =
                         flush_job_aes128_cmac_auth_x8_sse;
+                submit_job_aes256_cmac_auth_ptr =
+                        submit_job_aes256_cmac_auth_x8_sse;
+                flush_job_aes256_cmac_auth_ptr =
+                        flush_job_aes256_cmac_auth_x8_sse;
+
                 aes_cmac_ooo->unused_lanes = 0xF76543210;
         } else {
                 aes_cmac_ooo->unused_lanes = 0xF3210;

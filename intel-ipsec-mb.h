@@ -253,6 +253,7 @@ typedef enum {
         IMB_AUTH_AES_GMAC_128,       /* AES-GMAC (128-bit key) */
         IMB_AUTH_AES_GMAC_192,       /* AES-GMAC (192-bit key) */
         IMB_AUTH_AES_GMAC_256,       /* AES-GMAC (256-bit key) */
+        IMB_AUTH_AES_CMAC_256,       /* AES256-CMAC */
 } JOB_HASH_ALG;
 
 typedef enum {

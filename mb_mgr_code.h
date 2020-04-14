@@ -747,6 +747,12 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_AES128_CMAC_AUTH(aes_cmac_ooo, job);
         case IMB_AUTH_AES_CMAC_BITLEN:
                 return SUBMIT_JOB_AES128_CMAC_AUTH(aes_cmac_ooo, job);
+#ifdef SSE
+        case IMB_AUTH_AES_CMAC_256:
+                job->msg_len_to_hash_in_bits =
+                        job->msg_len_to_hash_in_bytes * 8;
+                return SUBMIT_JOB_AES256_CMAC_AUTH(aes_cmac_ooo, job);
+#endif
         case IMB_AUTH_SHA_1:
                 IMB_SHA1(state,
                          job->src + job->hash_start_src_offset_in_bytes,
@@ -869,6 +875,10 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_BITLEN:
                 return FLUSH_JOB_AES128_CMAC_AUTH(aes_cmac_ooo);
+#ifdef SSE
+        case IMB_AUTH_AES_CMAC_256:
+                return FLUSH_JOB_AES256_CMAC_AUTH(aes_cmac_ooo);
+#endif
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         default: /* assume GCM or IMB_AUTH_NULL */
@@ -954,6 +964,7 @@ is_job_invalid(const IMB_JOB *job)
                 16, /* IMB_AUTH_AES_GMAC_128 */
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
+                16, /* IMB_AUTH_AES_CMAC_256 */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1646,10 +1657,11 @@ is_job_invalid(const IMB_JOB *job)
                 break;
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_BITLEN:
+        case IMB_AUTH_AES_CMAC_256:
                 /*
-                 * WARNING: When using AES_CMAC_BITLEN, length of message
-                 * is passed in bits, using job->msg_len_to_hash_in_bits
-                 * (unlike "normal" AES_CMAC, where is passed in bytes,
+                 * WARNING: When using IMB_AUTH_AES_CMAC_BITLEN, length of
+                 * message is passed in bits, using job->msg_len_to_hash_in_bits
+                 * (unlike "normal" IMB_AUTH_AES_CMAC, where is passed in bytes,
                  * using job->msg_len_to_hash_in_bytes).
                  */
                 if (job->src == NULL) {
