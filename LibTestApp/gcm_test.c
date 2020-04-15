@@ -1863,10 +1863,61 @@ static int test_ghash(void)
 	return is_error;
 }
 
+static void
+aes_gmac_job(IMB_MGR *mb_mgr,
+             const uint8_t *k,
+             struct gcm_key_data *gmac_key,
+             const uint64_t key_len,
+             const uint8_t *in, const uint64_t len,
+             const uint8_t *iv, const uint64_t iv_len,
+             uint8_t *auth_tag, const uint64_t auth_tag_len)
+{
+        IMB_JOB *job;
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        if (!job) {
+                fprintf(stderr, "failed to get job\n");
+                return;
+        }
+
+        if (key_len == 16) {
+                IMB_AES128_GCM_PRE(mb_mgr, k, gmac_key);
+                job->hash_alg = IMB_AUTH_AES_GMAC_128;
+        } else if (key_len == 24) {
+                IMB_AES192_GCM_PRE(mb_mgr, k, gmac_key);
+                job->hash_alg = IMB_AUTH_AES_GMAC_192;
+        } else { /* key_len == 32 */
+                IMB_AES256_GCM_PRE(mb_mgr, k, gmac_key);
+                job->hash_alg = IMB_AUTH_AES_GMAC_256;
+        }
+
+        job->cipher_mode = IMB_CIPHER_NULL;
+        job->u.GMAC._key = gmac_key;
+        job->u.GMAC._iv = iv;
+        job->u.GMAC.iv_len_in_bytes = iv_len;
+        job->src = in;
+        job->msg_len_to_hash_in_bytes = len;
+        job->hash_start_src_offset_in_bytes = UINT64_C(0);
+        job->auth_tag_output                  = auth_tag;
+        job->auth_tag_output_len_in_bytes     = auth_tag_len;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+        while (job) {
+                if (job->status != STS_COMPLETED)
+                        fprintf(stderr, "failed job, status:%d\n", job->status);
+                job = IMB_GET_COMPLETED_JOB(mb_mgr);
+        }
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                if (job->status != STS_COMPLETED)
+                        fprintf(stderr, "failed job, status:%d\n", job->status);
+        }
+}
+
 #define MAX_SEG_SIZE 64
 static int
 test_gmac_vector(const struct gcm_ctr_vector *vector,
-                 const uint64_t seg_size)
+                 const uint64_t seg_size,
+                 const unsigned job_api)
 {
         struct gcm_key_data key = {0};
         struct gcm_context_data ctx;
@@ -1879,68 +1930,79 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
         uint32_t i;
         uint8_t T_test[16];
 
-        switch (vector->Klen) {
-        case BITS_128:
-                IMB_AES128_GCM_PRE(p_gcm_mgr, vector->K, &key);
-                IMB_AES128_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);
-                in_ptr = vector->P;
-                for (i = 0; i < nb_segs; i++) {
-                        memcpy(in_seg, in_ptr, seg_size);
-                        IMB_AES128_GMAC_UPDATE(p_gcm_mgr, &key, &ctx, in_seg,
-                                               seg_size);
-                        in_ptr += seg_size;
-                }
+        if (job_api)
+                aes_gmac_job(p_gcm_mgr, vector->K, &key, vector->Klen, in_ptr,
+                             seg_size, iv, iv_len, T_test, vector->Tlen);
+        else {
+                switch (vector->Klen) {
+                case BITS_128:
+                        IMB_AES128_GCM_PRE(p_gcm_mgr, vector->K, &key);
+                        IMB_AES128_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);
+                        in_ptr = vector->P;
+                        for (i = 0; i < nb_segs; i++) {
+                                memcpy(in_seg, in_ptr, seg_size);
+                                IMB_AES128_GMAC_UPDATE(p_gcm_mgr, &key, &ctx,
+                                                       in_seg,
+                                                       seg_size);
+                                in_ptr += seg_size;
+                        }
 
-                if (last_partial_seg != 0) {
-                        memcpy(in_seg, in_ptr, last_partial_seg);
-                        IMB_AES128_GMAC_UPDATE(p_gcm_mgr, &key, &ctx, in_seg,
-                                               last_partial_seg);
-                }
+                        if (last_partial_seg != 0) {
+                                memcpy(in_seg, in_ptr, last_partial_seg);
+                                IMB_AES128_GMAC_UPDATE(p_gcm_mgr, &key, &ctx,
+                                                       in_seg,
+                                                       last_partial_seg);
+                        }
 
-                IMB_AES128_GMAC_FINALIZE(p_gcm_mgr, &key, &ctx, T_test,
-                                         vector->Tlen);
-                break;
-        case BITS_192:
-                IMB_AES192_GCM_PRE(p_gcm_mgr, vector->K, &key);
-                IMB_AES192_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);
-                in_ptr = vector->P;
-                for (i = 0; i < nb_segs; i++) {
-                        memcpy(in_seg, in_ptr, seg_size);
-                        IMB_AES192_GMAC_UPDATE(p_gcm_mgr, &key, &ctx, in_seg,
-                                               seg_size);
-                        in_ptr += seg_size;
-                }
+                        IMB_AES128_GMAC_FINALIZE(p_gcm_mgr, &key, &ctx, T_test,
+                                                 vector->Tlen);
+                        break;
+                case BITS_192:
+                        IMB_AES192_GCM_PRE(p_gcm_mgr, vector->K, &key);
+                        IMB_AES192_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);
+                        in_ptr = vector->P;
+                        for (i = 0; i < nb_segs; i++) {
+                                memcpy(in_seg, in_ptr, seg_size);
+                                IMB_AES192_GMAC_UPDATE(p_gcm_mgr, &key, &ctx,
+                                                       in_seg,
+                                                       seg_size);
+                                in_ptr += seg_size;
+                        }
 
-                if (last_partial_seg != 0) {
-                        memcpy(in_seg, in_ptr, last_partial_seg);
-                        IMB_AES192_GMAC_UPDATE(p_gcm_mgr, &key, &ctx, in_seg,
-                                               last_partial_seg);
-                }
+                        if (last_partial_seg != 0) {
+                                memcpy(in_seg, in_ptr, last_partial_seg);
+                                IMB_AES192_GMAC_UPDATE(p_gcm_mgr, &key, &ctx,
+                                                       in_seg,
+                                                       last_partial_seg);
+                        }
 
-                IMB_AES192_GMAC_FINALIZE(p_gcm_mgr, &key, &ctx, T_test,
-                                         vector->Tlen);
-                break;
-        case BITS_256:
-        default:
-                IMB_AES256_GCM_PRE(p_gcm_mgr, vector->K, &key);
-                IMB_AES256_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);
-                in_ptr = vector->P;
-                for (i = 0; i < nb_segs; i++) {
-                        memcpy(in_seg, in_ptr, seg_size);
-                        IMB_AES256_GMAC_UPDATE(p_gcm_mgr, &key, &ctx, in_seg,
-                                               seg_size);
-                        in_ptr += seg_size;
-                }
+                        IMB_AES192_GMAC_FINALIZE(p_gcm_mgr, &key, &ctx, T_test,
+                                                 vector->Tlen);
+                        break;
+                case BITS_256:
+                default:
+                        IMB_AES256_GCM_PRE(p_gcm_mgr, vector->K, &key);
+                        IMB_AES256_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);
+                        in_ptr = vector->P;
+                        for (i = 0; i < nb_segs; i++) {
+                                memcpy(in_seg, in_ptr, seg_size);
+                                IMB_AES256_GMAC_UPDATE(p_gcm_mgr, &key, &ctx,
+                                                       in_seg,
+                                                       seg_size);
+                                in_ptr += seg_size;
+                        }
 
-                if (last_partial_seg != 0) {
-                        memcpy(in_seg, in_ptr, last_partial_seg);
-                        IMB_AES256_GMAC_UPDATE(p_gcm_mgr, &key, &ctx, in_seg,
-                                               last_partial_seg);
-                }
+                        if (last_partial_seg != 0) {
+                                memcpy(in_seg, in_ptr, last_partial_seg);
+                                IMB_AES256_GMAC_UPDATE(p_gcm_mgr, &key, &ctx,
+                                                       in_seg,
+                                                       last_partial_seg);
+                        }
 
-                IMB_AES256_GMAC_FINALIZE(p_gcm_mgr, &key, &ctx, T_test,
-                                         vector->Tlen);
-                break;
+                        IMB_AES256_GMAC_FINALIZE(p_gcm_mgr, &key, &ctx, T_test,
+                                                 vector->Tlen);
+                        break;
+                }
         }
 
         return check_data(T_test, vector->T, vector->Tlen,
@@ -1957,10 +2019,13 @@ static int test_gmac(void)
 
 	printf("GMAC test vectors:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
+                /* Using direct API, which allows SGL */
                 for (seg_size = 1; seg_size <= MAX_SEG_SIZE; seg_size++) {
                         vector = &gmac_vectors[vect];
-                        is_error |= test_gmac_vector(vector, seg_size);
+                        is_error |= test_gmac_vector(vector, seg_size, 0);
                 }
+                /* Using job API */
+                is_error |= test_gmac_vector(vector, vector->Plen, 1);
         }
 
 	return is_error;
