@@ -111,8 +111,8 @@ JOB_AES_HMAC *submit_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
                                                IMB_JOB *job);
 JOB_AES_HMAC *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 
-uint32_t hec_32_sse(const uint8_t *in);
-uint64_t hec_64_sse(const uint8_t *in);
+uint32_t hec_32_sse_no_aesni(const uint8_t *in);
+uint64_t hec_64_sse_no_aesni(const uint8_t *in);
 
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
@@ -858,8 +858,8 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->gmac192_finalize    = imb_aes_gmac_finalize_192_sse_no_aesni;
         state->gmac256_finalize    = imb_aes_gmac_finalize_256_sse_no_aesni;
 
-        state->hec_32              = hec_32_sse;
-        state->hec_64              = hec_64_sse;
+        state->hec_32              = hec_32_sse_no_aesni;
+        state->hec_64              = hec_64_sse_no_aesni;
 }
 
 #include "mb_mgr_code.h"

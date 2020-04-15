@@ -492,3 +492,5 @@ EXPORTS
     hec_64_sse                                  @466
     hec_32_avx                                  @467
     hec_64_avx                                  @468
+    hec_32_sse_no_aesni                         @469
+    hec_64_sse_no_aesni                         @470

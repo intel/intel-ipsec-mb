@@ -49,6 +49,12 @@
 %ifndef DEC_NO_CTR_FN_NAME
 %define DEC_NO_CTR_FN_NAME submit_job_pon_dec_no_ctr_sse
 %endif
+%ifndef HEC_32
+%define HEC_32 hec_32_sse
+%endif
+%ifndef HEC_64
+%define HEC_64 hec_64_sse
+%endif
 
 extern byteswap_const
 extern ddq_add_1
@@ -876,23 +882,31 @@ DEC_NO_CTR_FN_NAME:
         AES128_CTR_PON DEC, NO_CTR
         ret
 
-%ifndef NO_AESNI ;; SSE only
 align 64
-MKGLOBAL(hec_32_sse,function,)
-hec_32_sse:
+MKGLOBAL(HEC_32,function,)
+HEC_32:
+%ifndef NO_AESNI
         movbe   eax, [arg1]
+%else
+        mov     eax, [arg1]
+        bswap   eax
+%endif
         HEC_COMPUTE_32 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
         bswap   eax
         ret
 
 align 64
-MKGLOBAL(hec_64_sse,function,)
-hec_64_sse:
+MKGLOBAL(HEC_64,function,)
+HEC_64:
+%ifndef NO_AESNI
         movbe   rax, [arg1]
+%else
+        mov     rax, [arg1]
+        bswap   rax
+%endif
         HEC_COMPUTE_64 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
         bswap   rax
         ret
-%endif
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
