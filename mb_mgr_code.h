@@ -43,6 +43,7 @@
 
 #include "include/clear_regs_mem.h"
 #include "include/des.h"
+#include "intel-ipsec-mb.h"
 
 /*
  * JOBS() and ADV_JOBS() moved into mb_mgr_code.h
@@ -650,6 +651,38 @@ FLUSH_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 /* ========================================================================= */
 
 __forceinline
+void
+process_gmac(IMB_MGR *state, IMB_JOB *job, const AES_KEY_SIZE_BYTES key_size)
+{
+        struct gcm_context_data ctx;
+        const struct gcm_key_data *key = job->u.GMAC._key;
+        const uint8_t *iv = job->u.GMAC._iv;
+        const uint64_t iv_len = job->u.GMAC.iv_len_in_bytes;
+        const uint8_t *src = job->src + job->hash_start_src_offset_in_bytes;
+        const uint64_t src_len = job->msg_len_to_hash_in_bytes;
+
+        if (key_size == IMB_KEY_AES_128_BYTES) {
+                IMB_AES128_GMAC_INIT(state, key, &ctx, iv, iv_len);
+                IMB_AES128_GMAC_UPDATE(state, key, &ctx, src, src_len);
+                IMB_AES128_GMAC_FINALIZE(state, key, &ctx,
+                                         job->auth_tag_output,
+                                         job->auth_tag_output_len_in_bytes);
+        } else if (key_size == IMB_KEY_AES_192_BYTES) {
+                IMB_AES192_GMAC_INIT(state, key, &ctx, iv, iv_len);
+                IMB_AES192_GMAC_UPDATE(state, key, &ctx, src, src_len);
+                IMB_AES192_GMAC_FINALIZE(state, key, &ctx,
+                                         job->auth_tag_output,
+                                         job->auth_tag_output_len_in_bytes);
+        } else { /* key_size == 256 */
+                IMB_AES256_GMAC_INIT(state, key, &ctx, iv, iv_len);
+                IMB_AES256_GMAC_UPDATE(state, key, &ctx, src, src_len);
+                IMB_AES256_GMAC_FINALIZE(state, key, &ctx,
+                                         job->auth_tag_output,
+                                         job->auth_tag_output_len_in_bytes);
+        }
+}
+
+__forceinline
 IMB_JOB *
 SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
@@ -761,6 +794,18 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                                job->src + job->hash_start_src_offset_in_bytes,
                                (const uint32_t) job->msg_len_to_hash_in_bytes,
                                job->auth_tag_output);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
+        case IMB_AUTH_AES_GMAC_128:
+                process_gmac(state, job, IMB_KEY_AES_128_BYTES);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
+        case IMB_AUTH_AES_GMAC_192:
+                process_gmac(state, job, IMB_KEY_AES_192_BYTES);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
+        case IMB_AUTH_AES_GMAC_256:
+                process_gmac(state, job, IMB_KEY_AES_256_BYTES);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
         default: /* assume IMB_AUTH_GCM,IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL */
@@ -879,6 +924,9 @@ is_job_invalid(const IMB_JOB *job)
                 4,  /* IMB_AUTH_ZUC_EIA3_BITLEN */
                 4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN */
                 4,  /* IMB_AUTH_KASUMI_UIA1 */
+                16, /* IMB_AUTH_AES_GMAC_128 */
+                16, /* IMB_AUTH_AES_GMAC_192 */
+                16, /* IMB_AUTH_AES_GMAC_256 */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -903,6 +951,9 @@ is_job_invalid(const IMB_JOB *job)
                 4,  /* IMB_AUTH_ZUC_EIA3_BITLEN */
                 4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN */
                 4,  /* IMB_AUTH_KASUMI_UIA1 */
+                16, /* IMB_AUTH_AES_GMAC_128 */
+                16, /* IMB_AUTH_AES_GMAC_192 */
+                16, /* IMB_AUTH_AES_GMAC_256 */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1508,6 +1559,41 @@ is_job_invalid(const IMB_JOB *job)
                  * It is not used for AES-GCM & GMAC - see
                  * SUBMIT_JOB_AES_GCM_ENC and SUBMIT_JOB_AES_GCM_DEC functions.
                  */
+                break;
+        case IMB_AUTH_AES_GMAC_128:
+        case IMB_AUTH_AES_GMAC_192:
+        case IMB_AUTH_AES_GMAC_256:
+                if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
+                    job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                                return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                /* This GMAC mode is to be used as stand-alone,
+                 * not combined with GCM */
+                if (job->cipher_mode == IMB_CIPHER_GCM) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                                return 1;
+                }
+                if (job->u.GMAC._key == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->u.GMAC._iv == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->u.GMAC.iv_len_in_bytes == 0) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
                 break;
         case IMB_AUTH_CUSTOM:
                 if (job->hash_func == NULL) {

@@ -250,6 +250,9 @@ typedef enum {
         IMB_AUTH_DOCSIS_CRC32,       /* with DOCSIS_SEC_BPI only */
         IMB_AUTH_SNOW3G_UIA2_BITLEN, /* 128-UIA2 (3GPP) */
         IMB_AUTH_KASUMI_UIA1,        /* 128-UIA1 (3GPP) */
+        IMB_AUTH_AES_GMAC_128,       /* AES-GMAC (128-bit key) */
+        IMB_AUTH_AES_GMAC_192,       /* AES-GMAC (192-bit key) */
+        IMB_AUTH_AES_GMAC_256,       /* AES-GMAC (256-bit key) */
 } JOB_HASH_ALG;
 
 typedef enum {
@@ -362,6 +365,11 @@ typedef struct IMB_JOB {
                         /* 16-byte aligned pointers */
                         const void *_key;
                 } KASUMI_UIA1;
+                struct _AES_GMAC_specific_fields {
+                        const struct gcm_key_data *_key;
+                        const void *_iv;
+                        uint64_t iv_len_in_bytes;
+                } GMAC; /* Used with AES_GMAC_128/192/256 */
         } u;
 
         JOB_STS status;
