@@ -270,7 +270,8 @@ asm_noaesni_lib_objs := \
 	mb_mgr_aes256_ccm_auth_submit_flush_sse_no_aesni.o \
 	mb_mgr_aes_xcbc_flush_sse_no_aesni.o \
 	mb_mgr_aes_xcbc_submit_sse_no_aesni.o \
-	mb_mgr_zuc_submit_flush_sse_no_aesni.o
+	mb_mgr_zuc_submit_flush_sse_no_aesni.o \
+	ethernet_fcs_sse_no_aesni.o
 
 #
 # List of ASM modules (sse directory)

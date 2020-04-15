@@ -244,9 +244,10 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 
 /* ====================================================================== */
 
-uint32_t ethernet_fcs_sse(const void *msg, uint64_t len, const void *tag_ouput);
+uint32_t ethernet_fcs_sse_no_aesni(const void *msg, uint64_t len,
+                                   const void *tag_ouput);
 
-#define ETHERNET_FCS ethernet_fcs_sse
+#define ETHERNET_FCS ethernet_fcs_sse_no_aesni
 
 /* ====================================================================== */
 

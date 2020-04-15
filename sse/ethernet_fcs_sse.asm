@@ -28,6 +28,10 @@
 %include "include/os.asm"
 %include "include/memcpy.asm"
 
+%ifndef ETHERNET_FCS_FN
+%define ETHERNET_FCS_FN ethernet_fcs_sse
+%endif
+
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
@@ -295,8 +299,8 @@ section .text
 ;; arg3 - place to store computed CRC value (can be NULL)
 ;; Returns CRC value through RAX
 align 32
-MKGLOBAL(ethernet_fcs_sse,function,internal)
-ethernet_fcs_sse:
+MKGLOBAL(ETHERNET_FCS_FN, function,internal)
+ETHERNET_FCS_FN:
         ETHERNET_FCS_CRC arg1, arg2, arg3, rax, tmp, xmm1, xmm2, xmm3, xmm4, xmm5, xmm0
 	ret
 
