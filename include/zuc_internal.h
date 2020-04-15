@@ -806,6 +806,9 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_16_gfni_avx512(ZucState16_t *pState,
 IMB_DLL_LOCAL uint32_t asm_Eia3Round64BSSE(uint32_t T, const void *ks,
                                            const void *data);
 
+IMB_DLL_LOCAL uint32_t asm_Eia3Round64BSSE_no_aesni(uint32_t T, const void *ks,
+                                                    const void *data);
+
 /**
  ******************************************************************************
  * @description
@@ -824,6 +827,10 @@ IMB_DLL_LOCAL uint32_t asm_Eia3Round64BSSE(uint32_t T, const void *ks,
  *****************************************************************************/
 IMB_DLL_LOCAL uint32_t asm_Eia3RemainderSSE(const void *ks, const void *data,
                                             const uint64_t n_words);
+
+IMB_DLL_LOCAL uint32_t asm_Eia3RemainderSSE_no_aesni(const void *ks,
+                                                     const void *data,
+                                                     const uint64_t n_words);
 
 /**
  ******************************************************************************

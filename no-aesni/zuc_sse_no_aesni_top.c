@@ -722,7 +722,7 @@ void _zuc_eia3_1_buffer_sse_no_aesni(const void *pKey,
                 else
                         asm_ZucGenKeystream64B_sse_no_aesni(&keyStream[16],
                                                             &zucState);
-                T = asm_Eia3Round64BSSE(T, &keyStream[0], pIn8);
+                T = asm_Eia3Round64BSSE_no_aesni(T, &keyStream[0], pIn8);
                 memcpy(&keyStream[0], &keyStream[16], 16 * sizeof(uint32_t));
                 pIn8 = &pIn8[ZUC_KEYSTR_LEN];
         }
@@ -733,7 +733,8 @@ void _zuc_eia3_1_buffer_sse_no_aesni(const void *pKey,
          */
         if (remainingBits > (14 * 32))
                 asm_ZucGenKeystream8B_sse_no_aesni(&keyStream[16], &zucState);
-        T ^= asm_Eia3RemainderSSE(&keyStream[0], pIn8, remainingBits);
+        T ^= asm_Eia3RemainderSSE_no_aesni(&keyStream[0], pIn8,
+                                            remainingBits);
         T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
                          remainingBits % 32);
 
@@ -821,8 +822,8 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[4],
                                      (uint32_t *) &keyStr[2][64],
                                      (uint32_t *) &keyStr[3][64]);
                 for (i = 0; i < 4; i++) {
-                        T[i] = asm_Eia3Round64BSSE(T[i], &keyStr[i][0],
-                                                   pIn8[i]);
+                        T[i] = asm_Eia3Round64BSSE_no_aesni(T[i], &keyStr[i][0],
+                                                            pIn8[i]);
                         memcpy(&keyStr[i][0], &keyStr[i][64],
                                16 * sizeof(uint32_t));
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
@@ -881,7 +882,8 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[4],
                                 asm_ZucGenKeystream64B_sse_no_aesni(
                                                            &keyStr32[16],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round64BSSE(T[i], &keyStr32[0], pIn8[i]);
+                        T[i] = asm_Eia3Round64BSSE_no_aesni(T[i], &keyStr32[0],
+                                                            pIn8[i]);
                         memcpy(keyStr32, &keyStr32[16], 16 * sizeof(uint32_t));
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }
@@ -897,7 +899,8 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[4],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                T[i] ^= asm_Eia3RemainderSSE(keyStr32, pIn8[i], remainBits);
+                T[i] ^= asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i],
+                                                      remainBits);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
@@ -1022,8 +1025,8 @@ void zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
                 for (i = 0; i < 4; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        T[i] = asm_Eia3Round64BSSE(T[i], &keyStr[i][0],
-                                                   pIn8[i]);
+                        T[i] = asm_Eia3Round64BSSE_no_aesni(T[i], &keyStr[i][0],
+                                                            pIn8[i]);
                         memcpy(&keyStr[i][0], &keyStr[i][64],
                                16 * sizeof(uint32_t));
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
@@ -1085,7 +1088,8 @@ void zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
                                 asm_ZucGenKeystream64B_sse_no_aesni(
                                                            &keyStr32[16],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round64BSSE(T[i], &keyStr32[0], pIn8[i]);
+                        T[i] = asm_Eia3Round64BSSE_no_aesni(T[i], &keyStr32[0],
+                                                            pIn8[i]);
                         memcpy(keyStr32, &keyStr32[16], 16 * sizeof(uint32_t));
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }
@@ -1101,7 +1105,8 @@ void zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                T[i] ^= asm_Eia3RemainderSSE(keyStr32, pIn8[i], remainBits);
+                T[i] ^= asm_Eia3RemainderSSE_no_aesni(keyStr32, pIn8[i],
+                                                      remainBits);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
