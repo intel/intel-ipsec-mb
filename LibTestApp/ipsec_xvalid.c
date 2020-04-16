@@ -429,7 +429,13 @@ struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_GMAC_256,
                 }
-        }
+        },
+        {
+                .name = "aes-cmac-256",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_AES_CMAC_256,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -525,6 +531,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 16, /* IMB_AUTH_AES_GMAC_128 */
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
+                16, /* IMB_AES_CMAC_256 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -774,6 +781,11 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->msg_len_to_hash_in_bits =
                         (job->msg_len_to_hash_in_bytes * 8) - 4;
                 break;
+        case IMB_AUTH_AES_CMAC_256:
+                job->u.CMAC._key_expanded = k1_expanded;
+                job->u.CMAC._skey1 = k2;
+                job->u.CMAC._skey2 = k3;
+                break;
         case IMB_AUTH_HMAC_SHA_1:
         case IMB_AUTH_HMAC_SHA_224:
         case IMB_AUTH_HMAC_SHA_256:
@@ -957,6 +969,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         break;
                 case IMB_AUTH_AES_CMAC:
                 case IMB_AUTH_AES_CMAC_BITLEN:
+                case IMB_AUTH_AES_CMAC_256:
                         memset(k1_expanded, AUTH_KEY_PATTERN,
                                sizeof(keys->k1_expanded));
                         memset(k2, AUTH_KEY_PATTERN, sizeof(keys->k2));
@@ -1040,6 +1053,10 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_AUTH_AES_CMAC_BITLEN:
                 IMB_AES_KEYEXP_128(mb_mgr, auth_key, k1_expanded, dust);
                 IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, k1_expanded, k2, k3);
+                break;
+        case IMB_AUTH_AES_CMAC_256:
+                IMB_AES_KEYEXP_256(mb_mgr, auth_key, k1_expanded, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, k1_expanded, k2, k3);
                 break;
         case IMB_AUTH_HMAC_SHA_1:
                 /* compute ipad hash */
