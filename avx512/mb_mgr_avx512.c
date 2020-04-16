@@ -237,6 +237,12 @@ IMB_JOB *submit_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
 
 IMB_JOB *flush_job_aes128_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
 
+IMB_JOB *submit_job_aes256_cmac_auth_avx(MB_MGR_CMAC_OOO *state,
+                                         IMB_JOB *job);
+
+IMB_JOB *flush_job_aes256_cmac_auth_avx(MB_MGR_CMAC_OOO *state);
+
+
 IMB_JOB *submit_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
                                                  IMB_JOB *job);
 
@@ -350,6 +356,9 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
 
 #define FLUSH_JOB_AES128_CMAC_AUTH    flush_job_aes128_cmac_auth_avx512
 #define SUBMIT_JOB_AES128_CMAC_AUTH   submit_job_aes128_cmac_auth_avx512
+
+#define FLUSH_JOB_AES256_CMAC_AUTH    flush_job_aes256_cmac_auth_avx
+#define SUBMIT_JOB_AES256_CMAC_AUTH   submit_job_aes256_cmac_auth_avx
 
 /* ====================================================================== */
 

@@ -292,6 +292,7 @@ lib_objs2 = \
         $(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_sse_x8.obj \
         $(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_sse_no_aesni.obj \
         $(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_avx.obj \
+        $(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_sse_x8.obj \
 	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_sse_no_aesni.obj \

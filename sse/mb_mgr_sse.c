@@ -29,8 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SSE /* @todo: remove when CMAC-256 supported for all archs */
-
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #include "intel-ipsec-mb.h"
