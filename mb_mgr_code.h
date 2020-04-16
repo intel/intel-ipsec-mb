@@ -747,12 +747,10 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_AES128_CMAC_AUTH(aes_cmac_ooo, job);
         case IMB_AUTH_AES_CMAC_BITLEN:
                 return SUBMIT_JOB_AES128_CMAC_AUTH(aes_cmac_ooo, job);
-#ifndef NO_AESNI
         case IMB_AUTH_AES_CMAC_256:
                 job->msg_len_to_hash_in_bits =
                         job->msg_len_to_hash_in_bytes * 8;
                 return SUBMIT_JOB_AES256_CMAC_AUTH(aes_cmac_ooo, job);
-#endif
         case IMB_AUTH_SHA_1:
                 IMB_SHA1(state,
                          job->src + job->hash_start_src_offset_in_bytes,
@@ -875,10 +873,8 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_BITLEN:
                 return FLUSH_JOB_AES128_CMAC_AUTH(aes_cmac_ooo);
-#ifndef NO_AESNI
         case IMB_AUTH_AES_CMAC_256:
                 return FLUSH_JOB_AES256_CMAC_AUTH(aes_cmac_ooo);
-#endif
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         default: /* assume GCM or IMB_AUTH_NULL */
