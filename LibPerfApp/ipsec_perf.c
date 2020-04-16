@@ -103,8 +103,9 @@
 #define CIPHER_MODES_KASUMI 1   /* KASUMI-UEA1 */
 #define CIPHER_MODES_GMAC 1     /* NULL */
 #define DIRECTIONS 2		/* ENC, DEC */
-#define HASH_ALGS_AES 10	/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
-                                   MD5, NULL_HASH, CMAC, CMAC_BITLEN */
+#define HASH_ALGS_AES 11	/* SHA1, SHA256, SHA224, SHA384,
+                                   SHA512, XCBC, MD5, NULL_HASH,
+                                   CMAC, CMAC_BITLEN, CMAC_256 */
 #define HASH_ALGS_DOCSIS_DES 1	/* NULL_HASH */
 #define HASH_ALGS_DOCSIS_AES 2	/* NULL_HASH, DOCSIS_CRC32 */
 #define HASH_ALGS_GCM 1		/* GCM */
@@ -236,6 +237,7 @@ enum test_hash_alg_e {
         TEST_AES_GMAC_128,
         TEST_AES_GMAC_192,
         TEST_AES_GMAC_256,
+        TEST_HASH_CMAC_256,
         TEST_NUM_HASH_TESTS
 };
 
@@ -592,7 +594,13 @@ struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = TEST_AES_GMAC_256,
                 }
-        }
+        },
+        {
+                .name = "aes-cmac-256",
+                .values.job_params = {
+                        .hash_alg = TEST_HASH_CMAC_256,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -707,6 +715,7 @@ const uint32_t auth_tag_length_bytes[] = {
                 16, /* IMB_AUTH_AES_GMAC_128 */
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
+                16, /* AES_CMAC_256 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1301,6 +1310,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.msg_len_to_hash_in_bits =
                         (job_template.msg_len_to_hash_in_bytes * 8) - 4;
                 job_template.hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
+                break;
+        case TEST_HASH_CMAC_256:
+                job_template.u.CMAC._key_expanded = k1_expanded;
+                job_template.u.CMAC._skey1 = k2;
+                job_template.u.CMAC._skey2 = k3;
+                job_template.hash_alg = IMB_AUTH_AES_CMAC_256;
                 break;
         case TEST_PON_CRC_BIP:
                 job_template.hash_alg = IMB_AUTH_PON_CRC_BIP;
@@ -2011,7 +2026,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
                 "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "CRC32",
                 "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN",
-                "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1"
+                "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1", "CMAC_256"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
