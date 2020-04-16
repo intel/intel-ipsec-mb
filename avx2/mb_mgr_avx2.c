@@ -73,6 +73,8 @@ IMB_JOB *submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
 
+void aes_cmac_256_subkey_gen_avx2(const void *key_exp,
+                                  void *key1, void *key2);
 uint32_t hec_32_avx(const uint8_t *in);
 uint64_t hec_64_avx(const uint8_t *in);
 
@@ -720,6 +722,7 @@ init_mb_mgr_avx2(IMB_MGR *state)
         state->keyexp_192          = aes_keyexp_192_avx2;
         state->keyexp_256          = aes_keyexp_256_avx2;
         state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_avx2;
+        state->cmac_subkey_gen_256 = aes_cmac_256_subkey_gen_avx2;
         state->xcbc_keyexp         = aes_xcbc_expand_key_avx2;
         state->des_key_sched       = des_key_schedule;
         state->sha1_one_block      = sha1_one_block_avx2;

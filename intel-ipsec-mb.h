@@ -863,6 +863,8 @@ typedef struct IMB_MGR {
         hec_32_t                hec_32;
         hec_64_t                hec_64;
 
+        cmac_subkey_gen_t       cmac_subkey_gen_256;
+
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
         int              next_job;     /* byte offset */
@@ -998,6 +1000,9 @@ IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
 
 #define IMB_AES_CMAC_SUBKEY_GEN_128(_mgr, _key_exp, _k1, _k2)   \
         ((_mgr)->cmac_subkey_gen_128((_key_exp), (_k1), (_k2)))
+
+#define IMB_AES_CMAC_SUBKEY_GEN_256(_mgr, _key_exp, _k1, _k2)   \
+        ((_mgr)->cmac_subkey_gen_256((_key_exp), (_k1), (_k2)))
 
 #define IMB_AES_XCBC_KEYEXP(_mgr, _key, _k1_exp, _k2, _k3)      \
         ((_mgr)->xcbc_keyexp((_key), (_k1_exp), (_k2), (_k3)))

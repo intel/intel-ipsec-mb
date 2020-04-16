@@ -198,6 +198,9 @@ IMB_JOB *submit_job_aes256_ccm_auth_avx(MB_MGR_CCM_OOO *state,
 
 IMB_JOB *flush_job_aes256_ccm_auth_avx(MB_MGR_CCM_OOO *state);
 
+void aes_cmac_256_subkey_gen_avx(const void *key_exp,
+                                 void *key1, void *key2);
+
 #define SUBMIT_JOB_HMAC               submit_job_hmac_avx
 #define FLUSH_JOB_HMAC                flush_job_hmac_avx
 #define SUBMIT_JOB_HMAC_SHA_224       submit_job_hmac_sha_224_avx
@@ -776,6 +779,7 @@ init_mb_mgr_avx(IMB_MGR *state)
         state->keyexp_192          = aes_keyexp_192_avx;
         state->keyexp_256          = aes_keyexp_256_avx;
         state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_avx;
+        state->cmac_subkey_gen_256 = aes_cmac_256_subkey_gen_avx;
         state->xcbc_keyexp         = aes_xcbc_expand_key_avx;
         state->des_key_sched       = des_key_schedule;
         state->sha1_one_block      = sha1_one_block_avx;

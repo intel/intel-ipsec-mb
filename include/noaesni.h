@@ -59,6 +59,9 @@ aes_keyexp_256_enc_sse_no_aesni(const void *key, void *enc_exp_keys);
 IMB_DLL_EXPORT void
 aes_cmac_subkey_gen_sse_no_aesni(const void *key_exp, void *key1, void *key2);
 IMB_DLL_EXPORT void
+aes_cmac_256_subkey_gen_sse_no_aesni(const void *key_exp,
+                                     void *key1, void *key2);
+IMB_DLL_EXPORT void
 aes_cfb_128_one_sse_no_aesni(void *out, const void *in, const void *iv,
                              const void *keys, uint64_t len);
 

@@ -125,6 +125,8 @@ IMB_JOB *aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job);
 
 IMB_JOB *aes_cntr_ccm_256_vaes_avx512(IMB_JOB *job);
 
+void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
+                                    void *key1, void *key2);
 uint32_t hec_32_avx(const uint8_t *in);
 uint64_t hec_64_avx(const uint8_t *in);
 
@@ -1426,6 +1428,7 @@ init_mb_mgr_avx512(IMB_MGR *state)
         state->keyexp_192          = aes_keyexp_192_avx512;
         state->keyexp_256          = aes_keyexp_256_avx512;
         state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_avx512;
+        state->cmac_subkey_gen_256 = aes_cmac_256_subkey_gen_avx512;
         state->xcbc_keyexp         = aes_xcbc_expand_key_avx512;
         state->des_key_sched       = des_key_schedule;
         state->sha1_one_block      = sha1_one_block_avx512;

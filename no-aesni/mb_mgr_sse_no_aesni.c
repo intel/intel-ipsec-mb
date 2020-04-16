@@ -769,6 +769,7 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->keyexp_192          = aes_keyexp_192_sse_no_aesni;
         state->keyexp_256          = aes_keyexp_256_sse_no_aesni;
         state->cmac_subkey_gen_128 = aes_cmac_subkey_gen_sse_no_aesni;
+        state->cmac_subkey_gen_256 = aes_cmac_256_subkey_gen_sse_no_aesni;
         state->xcbc_keyexp         = aes_xcbc_expand_key_sse_no_aesni;
         state->des_key_sched       = des_key_schedule;
         state->sha1_one_block      = sha1_one_block_sse;

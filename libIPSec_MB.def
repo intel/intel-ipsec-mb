@@ -494,3 +494,8 @@ EXPORTS
     hec_64_avx                                  @468
     hec_32_sse_no_aesni                         @469
     hec_64_sse_no_aesni                         @470
+    aes_cmac_256_subkey_gen_sse                 @471
+    aes_cmac_256_subkey_gen_sse_no_aesni        @472
+    aes_cmac_256_subkey_gen_avx                 @473
+    aes_cmac_256_subkey_gen_avx2                @474
+    aes_cmac_256_subkey_gen_avx512              @475
