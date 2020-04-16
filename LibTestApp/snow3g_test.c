@@ -40,7 +40,7 @@
 #define PAD_LEN 16
 cipher_test_vector_t *vecList[MAX_DATA_LEN];
 
-int snow3g_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int snow3g_test(struct IMB_MGR *mb_mgr);
 static
 int validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, unsigned int job_api);
 static
@@ -2267,12 +2267,10 @@ static int validate_f9_iv_gen(void)
         return 0;
 }
 
-int snow3g_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
+int snow3g_test(struct IMB_MGR *mb_mgr)
 {
         int status = 0;
         uint32_t i;
-        (void)(arch);
-
 
         if (validate_f8_iv_gen()) {
                 printf("validate_snow3g_f8_iv_gen:: FAIL\n");

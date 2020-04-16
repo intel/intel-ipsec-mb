@@ -36,24 +36,23 @@
 #include "utils.h"
 
 extern int des_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int ccm_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int cmac_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int hmac_sha1_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int hmac_sha256_sha512_test(const enum arch_type arch,
-                                   struct IMB_MGR *mb_mgr);
-extern int hmac_md5_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int aes_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int ecb_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int sha_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int chained_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int pon_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int zuc_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int kasumi_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int snow3g_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int clear_mem_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
-extern int hec_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+extern int ccm_test(struct IMB_MGR *mb_mgr);
+extern int cmac_test(struct IMB_MGR *mb_mgr);
+extern int hmac_sha1_test(struct IMB_MGR *mb_mgr);
+extern int hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr);
+extern int hmac_md5_test(struct IMB_MGR *mb_mgr);
+extern int aes_test(struct IMB_MGR *mb_mgr);
+extern int ecb_test(struct IMB_MGR *mb_mgr);
+extern int sha_test(struct IMB_MGR *mb_mgr);
+extern int chained_test(struct IMB_MGR *mb_mgr);
+extern int api_test(struct IMB_MGR *mb_mgr);
+extern int pon_test(struct IMB_MGR *mb_mgr);
+extern int zuc_test(struct IMB_MGR *mb_mgr);
+extern int kasumi_test(struct IMB_MGR *mb_mgr);
+extern int snow3g_test(struct IMB_MGR *mb_mgr);
+extern int direct_api_test(struct IMB_MGR *mb_mgr);
+extern int clear_mem_test(struct IMB_MGR *mb_mgr);
+extern int hec_test(struct IMB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -283,28 +282,28 @@ main(int argc, char **argv)
 
                 errors += known_answer_test(p_mgr);
                 errors += do_test(p_mgr);
-                errors += ctr_test(atype, p_mgr);
-                errors += pon_test(atype, p_mgr);
+                errors += ctr_test(p_mgr);
+                errors += pon_test(p_mgr);
                 if (do_gcm)
                         errors += gcm_test(p_mgr);
                 errors += customop_test(p_mgr);
                 errors += des_test(atype, p_mgr);
-                errors += ccm_test(atype, p_mgr);
-                errors += cmac_test(atype, p_mgr);
-                errors += zuc_test(atype, p_mgr);
-                errors += kasumi_test(atype, p_mgr);
-                errors += snow3g_test(atype, p_mgr);
-                errors += hmac_sha1_test(atype, p_mgr);
-                errors += hmac_sha256_sha512_test(atype, p_mgr);
-                errors += hmac_md5_test(atype, p_mgr);
-                errors += aes_test(atype, p_mgr);
-                errors += ecb_test(atype, p_mgr);
-                errors += sha_test(atype, p_mgr);
-                errors += chained_test(atype, p_mgr);
-                errors += hec_test(atype, p_mgr);
-                errors += api_test(atype, p_mgr);
-                errors += direct_api_test(atype, p_mgr);
-                errors += clear_mem_test(atype, p_mgr);
+                errors += ccm_test(p_mgr);
+                errors += cmac_test(p_mgr);
+                errors += zuc_test(p_mgr);
+                errors += kasumi_test(p_mgr);
+                errors += snow3g_test(p_mgr);
+                errors += hmac_sha1_test(p_mgr);
+                errors += hmac_sha256_sha512_test(p_mgr);
+                errors += hmac_md5_test(p_mgr);
+                errors += aes_test(p_mgr);
+                errors += ecb_test(p_mgr);
+                errors += sha_test(p_mgr);
+                errors += chained_test(p_mgr);
+                errors += hec_test(p_mgr);
+                errors += api_test(p_mgr);
+                errors += direct_api_test(p_mgr);
+                errors += clear_mem_test(p_mgr);
                 free_mb_mgr(p_mgr);
         }
 

@@ -36,7 +36,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int ecb_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int ecb_test(struct IMB_MGR *mb_mgr);
 
 struct ecb_vector {
 	const uint8_t *K;          /* key */
@@ -779,16 +779,13 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
 }
 
 int
-ecb_test(const enum arch_type arch,
-         struct IMB_MGR *mb_mgr)
+ecb_test(struct IMB_MGR *mb_mgr)
 {
         const int num_jobs_tab[] = {
                 1, 3, 4, 5, 7, 8, 9, 15, 16, 17
         };
         unsigned i;
         int errors = 0;
-
-        (void) arch; /* unused */
 
         for (i = 0; i < DIM(num_jobs_tab); i++)
                 errors += test_ecb_vectors(mb_mgr, DIM(ecb_vectors),

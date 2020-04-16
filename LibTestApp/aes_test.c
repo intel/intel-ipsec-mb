@@ -36,7 +36,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int aes_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int aes_test(struct IMB_MGR *mb_mgr);
 
 struct aes_vector {
 	const uint8_t *K;          /* key */
@@ -2348,16 +2348,13 @@ cfb128_validate(struct IMB_MGR *mb_mgr)
 }
 
 int
-aes_test(const enum arch_type arch,
-         struct IMB_MGR *mb_mgr)
+aes_test(struct IMB_MGR *mb_mgr)
 {
         const int num_jobs_tab[] = {
                 1, 3, 4, 5, 7, 8, 9, 15, 16, 17
         };
         unsigned i;
         int errors = 0;
-
-        (void) arch; /* unused */
 
         for (i = 0; i < DIM(num_jobs_tab); i++)
                 errors += test_aes_vectors(mb_mgr, DIM(aes_vectors),
@@ -2374,19 +2371,13 @@ aes_test(const enum arch_type arch,
         if (!cfb128_validate(mb_mgr))
                 errors++;
 
-        if (arch != ARCH_NO_AESNI) {
-                /*
-                 * These tests utilize PCLMULQDQ which is not present
-                 * on platforms without AESNI => skip the test on such system.
-                 */
-                for (i = 0; i < DIM(num_jobs_tab); i++)
-                        errors +=
-                                test_docrc_vectors(mb_mgr,
-                                                   DIM(docsis_crc_tab),
-                                                   docsis_crc_tab,
-                                                   "AES-DOCSIS+CRC32 vectors",
-                                                   num_jobs_tab[i]);
-        }
+        for (i = 0; i < DIM(num_jobs_tab); i++)
+                errors +=
+                        test_docrc_vectors(mb_mgr,
+                                           DIM(docsis_crc_tab),
+                                           docsis_crc_tab,
+                                           "AES-DOCSIS+CRC32 vectors",
+                                           num_jobs_tab[i]);
 
 	if (0 == errors)
 		printf("...Pass\n");

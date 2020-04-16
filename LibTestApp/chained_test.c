@@ -39,7 +39,7 @@
 #define SHA1_BLOCK_SIZE     64
 #define SHA1_DIGEST_SIZE    20
 
-int chained_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int chained_test(struct IMB_MGR *mb_mgr);
 
 struct chained_vector {
         const uint8_t *cipher_key;     /* cipher key */
@@ -485,16 +485,13 @@ exit:
 }
 
 int
-chained_test(const enum arch_type arch,
-         struct IMB_MGR *mb_mgr)
+chained_test(struct IMB_MGR *mb_mgr)
 {
         const int num_jobs_tab[] = {
                 1, 3, 4, 5, 7, 8, 9, 15, 16, 17
         };
         unsigned i;
         int errors = 0;
-
-        (void) arch; /* unused */
 
         for (i = 0; i < DIM(num_jobs_tab); i++)
                 errors += test_chained_vectors(mb_mgr, DIM(chained_vectors),

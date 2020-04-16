@@ -33,7 +33,7 @@
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
 
-int api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int api_test(struct IMB_MGR *mb_mgr);
 
 /*
  * @brief Performs JOB API behavior tests
@@ -609,11 +609,9 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 }
 
 int
-api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
+api_test(struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
-
-        (void) arch; /* unused */
 
         errors += test_job_api(mb_mgr);
         errors += test_job_invalid_mac_args(mb_mgr);

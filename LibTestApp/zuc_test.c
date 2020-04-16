@@ -54,7 +54,7 @@ enum test_type {
         TEST_N_BUFFER
 };
 
-int zuc_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int zuc_test(struct IMB_MGR *mb_mgr);
 
 int validate_zuc_algorithm(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                            uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV);
@@ -184,7 +184,7 @@ static uint32_t bswap4(const uint32_t val)
                 (val << 24));             /**< D*/
 }
 
-int zuc_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
+int zuc_test(struct IMB_MGR *mb_mgr)
 {
 
         const uint32_t numBuffs[] = {4, 8, 9, 16, 17};
@@ -194,10 +194,6 @@ int zuc_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
         uint8_t *pIV[MAXBUFS];
         uint8_t *pSrcData[MAXBUFS];
         uint8_t *pDstData[MAXBUFS];
-
-        /* Do not run the tests for aesni emulation */
-        if (arch == ARCH_NO_AESNI)
-                return 0;
 
         printf("Running Functional Tests\n");
         fflush(stdout);

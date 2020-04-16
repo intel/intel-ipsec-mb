@@ -34,7 +34,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int hmac_sha1_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int hmac_sha1_test(struct IMB_MGR *mb_mgr);
 
 #define block_size    64
 #define digest_size   20
@@ -510,12 +510,9 @@ test_hmac_sha1_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 }
 
 int
-hmac_sha1_test(const enum arch_type arch,
-               struct IMB_MGR *mb_mgr)
+hmac_sha1_test(struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
-
-        (void) arch; /* unused */
 
         errors += test_hmac_sha1_std_vectors(mb_mgr, 1);
         errors += test_hmac_sha1_std_vectors(mb_mgr, 3);

@@ -1474,12 +1474,9 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
 }
 
 int
-ctr_test(const enum arch_type arch,
-         struct IMB_MGR *mb_mgr)
+ctr_test(struct IMB_MGR *mb_mgr)
 {
         int errors;
-
-        (void) arch; /* unused */
 
 	const uint32_t ctr_vec_cnt = DIM(ctr_vectors);
 	const uint32_t ctr_bit_vec_cnt = DIM(ctr_bit_vectors);

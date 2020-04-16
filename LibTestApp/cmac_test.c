@@ -39,7 +39,7 @@ enum cmac_type {
         CMAC_BITLEN,
 };
 
-int cmac_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int cmac_test(struct IMB_MGR *mb_mgr);
 
 /*
  * Test vectors from https://tools.ietf.org/html/rfc4493
@@ -1326,12 +1326,9 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 }
 
 int
-cmac_test(const enum arch_type arch,
-          struct IMB_MGR *mb_mgr)
+cmac_test(struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
-
-        (void) arch; /* unused */
 
         /* CMAC with standard vectors */
         for (i = 1; i < 20; i++)

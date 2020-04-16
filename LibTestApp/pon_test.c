@@ -34,7 +34,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int pon_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int pon_test(struct IMB_MGR *mb_mgr);
 
 /* === vector 1 */
 
@@ -678,12 +678,9 @@ test_pon_std_vectors(struct IMB_MGR *mb_mgr)
 	return errors;
 }
 
-int pon_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
+int pon_test(struct IMB_MGR *mb_mgr)
 {
-        int errors = 0;
-
-        if (arch != ARCH_NO_AESNI)
-                errors = test_pon_std_vectors(mb_mgr);
+        int errors = test_pon_std_vectors(mb_mgr);
 
 	if (0 == errors)
 		printf("...Pass\n");

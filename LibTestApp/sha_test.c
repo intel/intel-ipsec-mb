@@ -34,7 +34,7 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-int sha_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int sha_test(struct IMB_MGR *mb_mgr);
 
 /*
  * Test vectors come from this NIST document:
@@ -570,12 +570,9 @@ test_sha_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 }
 
 int
-sha_test(const enum arch_type arch,
-         struct IMB_MGR *mb_mgr)
+sha_test(struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
-
-        (void) arch; /* unused */
 
         errors += test_sha_vectors(mb_mgr, 1);
 

@@ -36,7 +36,7 @@
 
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 
-int hec_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int hec_test(struct IMB_MGR *mb_mgr);
 
 static int test_32_bit(IMB_MGR *mgr)
 {
@@ -140,12 +140,9 @@ static int test_64_bit(IMB_MGR *mgr)
 }
 
 int
-hec_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
+hec_test(struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
-
-        if (arch == ARCH_NO_AESNI)
-                return errors;
 
         /* functional validation */
         errors += test_32_bit(mb_mgr);

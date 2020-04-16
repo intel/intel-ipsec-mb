@@ -45,7 +45,7 @@
 
 cipher_test_vector_t *vecList[MAX_DATA_LEN];
 
-int kasumi_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int kasumi_test(struct IMB_MGR *mb_mgr);
 static int
 validate_kasumi_f8_1_block(struct IMB_MGR *mb_mgr, const unsigned job_api);
 static int
@@ -1645,14 +1645,10 @@ exit:
         return ret;
 }
 
-int kasumi_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
+int kasumi_test(struct IMB_MGR *mb_mgr)
 {
         int status = 0;
         unsigned i;
-
-        /* Do not run the tests for aesni emulation */
-        if (arch == ARCH_NO_AESNI)
-                return 0;
 
         /* validate direct api */
         for (i = 0; i < DIM(kasumi_func_tab); i++) {

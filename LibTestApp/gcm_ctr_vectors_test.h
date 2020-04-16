@@ -76,6 +76,6 @@ struct gcm_ctr_vector {
 struct MB_MGR;
 
 extern int gcm_test(IMB_MGR *p_mgr);
-int ctr_test(const enum arch_type arch, struct IMB_MGR *);
+int ctr_test(struct IMB_MGR *);
 
 #endif /* GCM_CTR_VECTORS_TEST_H_ */

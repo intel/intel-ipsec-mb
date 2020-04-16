@@ -36,7 +36,7 @@
 #define MAX_RAND 1024
 #define PATTERN 0x66
 
-int clear_mem_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+int clear_mem_test(struct IMB_MGR *mb_mgr);
 
 /* validate expected bytes */
 static int
@@ -69,9 +69,8 @@ static void print_bytes(uint8_t *ptr, int size)
         printf("\n");
 }
 
-int clear_mem_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
+int clear_mem_test(struct IMB_MGR *mb_mgr)
 {
-        (void)arch;
         (void)mb_mgr;
 
         int i, errors = 0;

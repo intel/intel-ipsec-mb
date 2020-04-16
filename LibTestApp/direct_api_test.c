@@ -39,7 +39,7 @@
 #define NUM_BUFS 8
 
 int
-direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
+direct_api_test(struct IMB_MGR *mb_mgr);
 
 /* Used to restore environment after potential segfaults */
 jmp_buf env;
@@ -1106,10 +1106,9 @@ test_clear_mem_api(void)
 }
 
 int
-direct_api_test(const enum arch_type arch, struct IMB_MGR *mb_mgr)
+direct_api_test(struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
-        (void) arch; /* unused */
 #ifndef DEBUG
 #ifdef _WIN32
         void *handler;
