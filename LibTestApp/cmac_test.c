@@ -35,8 +35,9 @@
 #include "utils.h"
 
 enum cmac_type {
-        CMAC = 0,
-        CMAC_BITLEN,
+        CMAC_128 = 0,
+        CMAC_128_BITLEN,
+        CMAC_256,
 };
 
 int cmac_test(struct IMB_MGR *mb_mgr);
@@ -943,6 +944,78 @@ static const uint8_t EIA2_128_M_8[2064] = {
         0x32, 0x98, 0x3d, 0xd6, 0xc3, 0xa8, 0xb7, 0xd0
 };
 
+/*
+ * AES-CMAC-256 vectors
+ */
+
+/*
+ *  Subkey Generation
+ *  K              603DEB10 15CA71BE 2B73AEF0 857D7781
+ *                 1F352C07 3B6108D7 2D9810A3 0914DFF4
+ *  AES-256(key,0) E568F681 94CF76D6 174D4CC0 4310A854
+ *  K1             CAD1ED03 299EEDAC 2E9A9980 8621502F
+ *  K2             95A3DA06 533DDB58 5D353301 0C42A0D9
+ */
+static const uint8_t cmac_256_key[32] = {
+        0x60, 0x3D, 0xEB, 0x10, 0x15, 0xCA, 0x71, 0xBE,
+        0x2B, 0x73, 0xAE, 0xF0, 0x85, 0x7D, 0x77, 0x81,
+        0x1F, 0x35, 0x2C, 0x07, 0x3B, 0x61, 0x08, 0xD7,
+        0x2D, 0x98, 0x10, 0xA3, 0x09, 0x14, 0xDF, 0xF4
+};
+static const uint8_t cmac_256_sub_key1[16] = {
+        0xCA, 0xD1, 0xED, 0x03, 0x29, 0x9E, 0xED, 0xAC,
+        0x2E, 0x9A, 0x99, 0x80, 0x86, 0x21, 0x50, 0x2F
+};
+static const uint8_t cmac_256_sub_key2[16] = {
+        0x95, 0xA3, 0xDA, 0x06, 0x53, 0x3D, 0xDB, 0x58,
+        0x5D, 0x35, 0x33, 0x01, 0x0C, 0x42, 0xA0, 0xD9
+};
+
+/*
+ *  Example 1: len = 0
+ *  M              <empty string>
+ *  AES-CMAC       028962F6 1B7BF89E FC6B551F 4667D983
+ */
+static const uint8_t CMAC_256_T_1[16] = {
+        0x02, 0x89, 0x62, 0xF6, 0x1B, 0x7B, 0xF8, 0x9E,
+        0xFC, 0x6B, 0x55, 0x1F, 0x46, 0x67, 0xD9, 0x83
+};
+
+/*
+ *  Example 2: len = 16
+ *  M              6BC1BEE2 2E409F96 E93D7E11 7393172A
+ *  AES-CMAC       28A7023F 452E8F82 BD4BF28D 8C37C35C
+ */
+static const uint8_t CMAC_256_T_2[16] = {
+        0x28, 0xA7, 0x02, 0x3F, 0x45, 0x2E, 0x8F, 0x82,
+        0xBD, 0x4B, 0xF2, 0x8D, 0x8C, 0x37, 0xC3, 0x5C
+};
+
+/*
+ *  Example 3: len = 20
+ *  M              6BC1BEE2 2E409F96 E93D7E11 7393172A
+ *                 AE2D8A57
+ *  AES-CMAC       156727DC 0878944A 023C1FE0 3BAD6D93
+ */
+static const uint8_t CMAC_256_T_3[16] = {
+        0x15, 0x67, 0x27, 0xDC, 0x08, 0x78, 0x94, 0x4A,
+        0x02, 0x3C, 0x1F, 0xE0, 0x3B, 0xAD, 0x6D, 0x93
+};
+
+/*
+ *  Example 4: len = 64
+ *  M              6BC1BEE2 2E409F96 E93D7E11 7393172A
+ *                 AE2D8A57 1E03AC9C 9EB76FAC 45AF8E51
+ *                 30C81C46 A35CE411 E5FBC119 1A0A52EF
+ *                 F69F2445 DF4F9B17 AD2B417B E66C3710
+ *  AES-CMAC       E1992190 549F6ED5 696A2C05 6C315410
+ */
+static const uint8_t CMAC_256_T_4[16] = {
+        0xE1, 0x99, 0x21, 0x90, 0x54, 0x9F, 0x6E, 0xD5,
+        0x69, 0x6A, 0x2C, 0x05, 0x6C, 0x31, 0x54, 0x10
+};
+
+
 static const struct cmac_rfc4493_vector {
         const uint8_t *key;
         const uint8_t *sub_key1;
@@ -953,42 +1026,53 @@ static const struct cmac_rfc4493_vector {
         size_t T_len;
         enum cmac_type type; /* vector type - std or 3gpp */
 } cmac_vectors[] = {
-        { key, sub_key1, sub_key2, M, 0,  T_1, 16, CMAC },
-        { key, sub_key1, sub_key2, M, 16, T_2, 16, CMAC },
-        { key, sub_key1, sub_key2, M, 40, T_3, 16, CMAC },
-        { key, sub_key1, sub_key2, M, 64, T_4, 16, CMAC },
-        { key, sub_key1, sub_key2, M, 0,  T_1, 15, CMAC },
-        { key, sub_key1, sub_key2, M, 16, T_2, 15, CMAC },
-        { key, sub_key1, sub_key2, M, 40, T_3, 15, CMAC },
-        { key, sub_key1, sub_key2, M, 64, T_4, 15, CMAC },
-        { key, sub_key1, sub_key2, M, 0,  T_1, 12, CMAC },
-        { key, sub_key1, sub_key2, M, 16, T_2, 12, CMAC },
-        { key, sub_key1, sub_key2, M, 40, T_3, 12, CMAC },
-        { key, sub_key1, sub_key2, M, 64, T_4, 12, CMAC },
-        { key, sub_key1, sub_key2, M, 0,  T_1, 4, CMAC },
-        { key, sub_key1, sub_key2, M, 16, T_2, 4, CMAC },
-        { key, sub_key1, sub_key2, M, 40, T_3, 4, CMAC },
-        { key, sub_key1, sub_key2, M, 64, T_4, 4, CMAC },
-        { key, sub_key1, sub_key2, M, 8,  T_5, 16, CMAC },
+        { key, sub_key1, sub_key2, M, 0,  T_1, 16, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 16, T_2, 16, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 40, T_3, 16, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 64, T_4, 16, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 0,  T_1, 15, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 16, T_2, 15, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 40, T_3, 15, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 64, T_4, 15, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 0,  T_1, 12, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 16, T_2, 12, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 40, T_3, 12, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 64, T_4, 12, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 0,  T_1, 4, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 16, T_2, 4, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 40, T_3, 4, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 64, T_4, 4, CMAC_128 },
+        { key, sub_key1, sub_key2, M, 8,  T_5, 16, CMAC_128 },
+};
+
+static const struct cmac_rfc4493_vector cmac_256_vectors[] = {
+        { cmac_256_key, cmac_256_sub_key1, cmac_256_sub_key2, M, 0,
+          CMAC_256_T_1, 16, CMAC_256 },
+        { cmac_256_key, cmac_256_sub_key1, cmac_256_sub_key2, M, 16,
+          CMAC_256_T_2, 16, CMAC_256 },
+        { cmac_256_key, cmac_256_sub_key1, cmac_256_sub_key2, M, 20,
+          CMAC_256_T_3, 16, CMAC_256 },
+        { cmac_256_key, cmac_256_sub_key1, cmac_256_sub_key2, M, 64,
+          CMAC_256_T_4, 16, CMAC_256 },
 };
 
 static const struct cmac_rfc4493_vector cmac_3gpp_vectors[] = {
         { EIA2_128_K_1, EIA2_128_SK1_1, EIA2_128_SK2_1,
-          EIA2_128_M_1, 122, EIA2_128_T_1, 4, CMAC_BITLEN },
+          EIA2_128_M_1, 122, EIA2_128_T_1, 4, CMAC_128_BITLEN },
         { EIA2_128_K_2, EIA2_128_SK1_2, EIA2_128_SK2_2,
-          EIA2_128_M_2, 128, EIA2_128_T_2, 4, CMAC_BITLEN },
+          EIA2_128_M_2, 128, EIA2_128_T_2, 4, CMAC_128_BITLEN },
         { EIA2_128_K_3, EIA2_128_SK1_3, EIA2_128_SK2_3,
-          EIA2_128_M_3, 318, EIA2_128_T_3, 4, CMAC_BITLEN },
+          EIA2_128_M_3, 318, EIA2_128_T_3, 4, CMAC_128_BITLEN },
         { EIA2_128_K_4, EIA2_128_SK1_4, EIA2_128_SK2_4,
-          EIA2_128_M_4, 575, EIA2_128_T_4, 4, CMAC_BITLEN },
+          EIA2_128_M_4, 575, EIA2_128_T_4, 4, CMAC_128_BITLEN },
         { EIA2_128_K_5, EIA2_128_SK1_5, EIA2_128_SK2_5,
-          EIA2_128_M_5, 832, EIA2_128_T_5, 4, CMAC_BITLEN },
+          EIA2_128_M_5, 832, EIA2_128_T_5, 4, CMAC_128_BITLEN },
         { EIA2_128_K_6, EIA2_128_SK1_6, EIA2_128_SK2_6,
-          EIA2_128_M_6, 447, EIA2_128_T_6, 4, CMAC_BITLEN },
+          EIA2_128_M_6, 447, EIA2_128_T_6, 4, CMAC_128_BITLEN },
         { EIA2_128_K_7, EIA2_128_SK1_7, EIA2_128_SK2_7,
-          EIA2_128_M_7, 2622, EIA2_128_T_7, 4, CMAC_BITLEN },
+          EIA2_128_M_7, 2622, EIA2_128_T_7, 4, CMAC_128_BITLEN },
         { EIA2_128_K_8, EIA2_128_SK1_8, EIA2_128_SK2_8,
-          EIA2_128_M_8, 16512, EIA2_128_T_8, 4, CMAC_BITLEN },
+          EIA2_128_M_8, 16512, EIA2_128_T_8, 4, CMAC_128_BITLEN },
 };
 
 static int
@@ -1064,8 +1148,13 @@ test_cmac(struct IMB_MGR *mb_mgr,
                 memset(auths[i], -1, 16 + (sizeof(padding) * 2));
         }
 
-        IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
-        IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
+        if ((type == CMAC_128) || (type == CMAC_128_BITLEN)) {
+                IMB_AES_KEYEXP_128(mb_mgr, vec->key, expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
+        } else { /* AES-CMAC-256 */
+                IMB_AES_KEYEXP_256(mb_mgr, vec->key, expkey, dust);
+                IMB_AES_CMAC_SUBKEY_GEN_256(mb_mgr, expkey, skey1, skey2);
+        }
 
         if (memcmp(vec->sub_key1, skey1, sizeof(skey1))) {
                 printf("sub-key1 mismatched\n");
@@ -1093,19 +1182,27 @@ test_cmac(struct IMB_MGR *mb_mgr,
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_NULL;
 
-                if (type == CMAC) {
+                switch (type) {
+                case CMAC_128:
                         job->hash_alg = IMB_AUTH_AES_CMAC;
                         job->msg_len_to_hash_in_bytes = vec->len;
-                } else {
+                        break;
+                case CMAC_128_BITLEN:
                         job->hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
                         /* check for std or 3gpp vectors
                            scale len if necessary */
-                        if (vec->type == CMAC)
-                                job->msg_len_to_hash_in_bits =
-                                        vec->len * 8;
+                        if (vec->type == CMAC_128)
+                                job->msg_len_to_hash_in_bits = vec->len * 8;
                         else
-                                job->msg_len_to_hash_in_bits =
-                                        vec->len;
+                                job->msg_len_to_hash_in_bits = vec->len;
+                        break;
+                case CMAC_256:
+                        job->hash_alg = IMB_AUTH_AES_CMAC_256;
+                        job->msg_len_to_hash_in_bytes = vec->len;
+                        break;
+                default:
+                        printf("Invalid CMAC type specifed\n");
+                        goto end;
                 }
                 job->u.CMAC._key_expanded = expkey;
                 job->u.CMAC._skey1 = skey1;
@@ -1157,15 +1254,27 @@ test_cmac(struct IMB_MGR *mb_mgr,
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_NULL;
 
-                if (type == CMAC) {
+                switch (type) {
+                case CMAC_128:
                         job->hash_alg = IMB_AUTH_AES_CMAC;
                         job->msg_len_to_hash_in_bytes = vec->len;
-                } else {
+                        break;
+                case CMAC_128_BITLEN:
                         job->hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
-                        if (vec->type == CMAC)
+                        /* check for std or 3gpp vectors
+                           scale len if necessary */
+                        if (vec->type == CMAC_128)
                                 job->msg_len_to_hash_in_bits = vec->len * 8;
                         else
                                 job->msg_len_to_hash_in_bits = vec->len;
+                        break;
+                case CMAC_256:
+                        job->hash_alg = IMB_AUTH_AES_CMAC_256;
+                        job->msg_len_to_hash_in_bytes = vec->len;
+                        break;
+                default:
+                        printf("Invalid CMAC type specifed\n");
+                        goto end;
                 }
                 job->u.CMAC._key_expanded = expkey;
                 job->u.CMAC._skey1 = skey1;
@@ -1215,15 +1324,15 @@ test_cmac(struct IMB_MGR *mb_mgr,
 static int
 test_cmac_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 {
-	const int vectors_cnt = sizeof(cmac_vectors) / sizeof(cmac_vectors[0]);
+	const int vectors_cnt = DIM(cmac_vectors);
 	int vect;
 	int errors = 0;
 
-	printf("AES-CMAC standard test vectors (N jobs = %d):\n", num_jobs);
+	printf("AES-CMAC-128 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 #ifdef DEBUG
-		printf("Standard vector [%d/%d] M len: %d, T len:%d\n",
+		printf("Standard CMAC-128 vector [%d/%d] M len: %d, T len:%d\n",
                        vect, vectors_cnt,
                        (int) cmac_vectors[idx].len,
                        (int) cmac_vectors[idx].T_len);
@@ -1232,13 +1341,49 @@ test_cmac_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 #endif
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
-                              IMB_DIR_ENCRYPT, num_jobs, CMAC)) {
+                              IMB_DIR_ENCRYPT, num_jobs, CMAC_128)) {
                         printf("error #%d encrypt\n", vect);
                         errors++;
                 }
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
-                              IMB_DIR_DECRYPT, num_jobs, CMAC)) {
+                              IMB_DIR_DECRYPT, num_jobs, CMAC_128)) {
+                        printf("error #%d decrypt\n", vect);
+                        errors++;
+                }
+
+	}
+	printf("\n");
+        return errors;
+}
+
+static int
+test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+{
+	const int vectors_cnt = DIM(cmac_256_vectors);
+	int vect;
+	int errors = 0;
+
+	printf("AES-CMAC-256 standard test vectors (N jobs = %d):\n", num_jobs);
+	for (vect = 1; vect <= vectors_cnt; vect++) {
+                const int idx = vect - 1;
+#ifdef DEBUG
+		printf("Standard CMAC-256 vector [%d/%d] M len: %d, T len:%d\n",
+                       vect, vectors_cnt,
+                       (int) cmac_256_vectors[idx].len,
+                       (int) cmac_256_vectors[idx].T_len);
+#else
+		printf(".");
+#endif
+
+                if (test_cmac(mb_mgr, &cmac_256_vectors[idx],
+                              IMB_DIR_ENCRYPT, num_jobs, CMAC_256)) {
+                        printf("error #%d encrypt\n", vect);
+                        errors++;
+                }
+
+                if (test_cmac(mb_mgr, &cmac_256_vectors[idx],
+                              IMB_DIR_DECRYPT, num_jobs, CMAC_256)) {
                         printf("error #%d decrypt\n", vect);
                         errors++;
                 }
@@ -1256,7 +1401,7 @@ test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 	int errors = 0;
 
 
-        printf("AES-CMAC BITLEN standard test vectors "
+        printf("AES-CMAC-128 BITLEN standard test vectors "
                "(N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
@@ -1271,13 +1416,13 @@ test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 #endif
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
-                              IMB_DIR_ENCRYPT, num_jobs, CMAC_BITLEN)) {
+                              IMB_DIR_ENCRYPT, num_jobs, CMAC_128_BITLEN)) {
                         printf("error #%d encrypt\n", vect);
                         errors++;
                 }
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
-                              IMB_DIR_DECRYPT, num_jobs, CMAC_BITLEN)) {
+                              IMB_DIR_DECRYPT, num_jobs, CMAC_128_BITLEN)) {
                         printf("error #%d decrypt\n", vect);
                         errors++;
                 }
@@ -1295,7 +1440,8 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 	int vect;
 	int errors = 0;
 
-	printf("AES-CMAC BITLEN 3GPP test vectors (N jobs = %d):\n", num_jobs);
+	printf("AES-CMAC-128 BITLEN 3GPP test vectors (N jobs = %d):\n",
+               num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
 #ifdef DEBUG
@@ -1309,13 +1455,13 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 #endif
 
                 if (test_cmac(mb_mgr, &cmac_3gpp_vectors[idx],
-                              IMB_DIR_ENCRYPT, num_jobs, CMAC_BITLEN)) {
+                              IMB_DIR_ENCRYPT, num_jobs, CMAC_128_BITLEN)) {
                         printf("error #%d encrypt\n", vect);
                         errors++;
                 }
 
                 if (test_cmac(mb_mgr, &cmac_3gpp_vectors[idx],
-                              IMB_DIR_DECRYPT, num_jobs, CMAC_BITLEN)) {
+                              IMB_DIR_DECRYPT, num_jobs, CMAC_128_BITLEN)) {
                         printf("error #%d decrypt\n", vect);
                         errors++;
                 }
@@ -1330,17 +1476,21 @@ cmac_test(struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
 
-        /* CMAC with standard vectors */
+        /* CMAC 128 with standard vectors */
         for (i = 1; i < 20; i++)
                 errors += test_cmac_std_vectors(mb_mgr, i);
 
-        /* CMAC BITLEN with standard vectors */
+        /* CMAC 128 BITLEN with standard vectors */
         for (i = 1; i < 20; i++)
                 errors += test_cmac_bitlen_std_vectors(mb_mgr, i);
 
-        /* CMAC BITLEN with 3GPP vectors */
+        /* CMAC 128 BITLEN with 3GPP vectors */
         for (i = 1; i < 20; i++)
                 errors += test_cmac_bitlen_3gpp_vectors(mb_mgr, i);
+
+        /* CMAC 256 with standard vectors */
+        for (i = 1; i < 20; i++)
+                errors += test_cmac_256_std_vectors(mb_mgr, i);
 
 	if (0 == errors)
 		printf("...Pass\n");
