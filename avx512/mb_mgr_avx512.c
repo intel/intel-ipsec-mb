@@ -248,6 +248,11 @@ IMB_JOB *submit_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
 
 IMB_JOB *flush_job_aes128_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state);
 
+IMB_JOB *submit_job_aes256_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state,
+                                                 IMB_JOB *job);
+
+IMB_JOB *flush_job_aes256_cmac_auth_vaes_avx512(MB_MGR_CMAC_OOO *state);
+
 IMB_JOB *submit_job_aes128_ccm_auth_avx(MB_MGR_CCM_OOO *state,
                                         IMB_JOB *job);
 
@@ -357,8 +362,8 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
 #define FLUSH_JOB_AES128_CMAC_AUTH    flush_job_aes128_cmac_auth_avx512
 #define SUBMIT_JOB_AES128_CMAC_AUTH   submit_job_aes128_cmac_auth_avx512
 
-#define FLUSH_JOB_AES256_CMAC_AUTH    flush_job_aes256_cmac_auth_avx
-#define SUBMIT_JOB_AES256_CMAC_AUTH   submit_job_aes256_cmac_auth_avx
+#define FLUSH_JOB_AES256_CMAC_AUTH    flush_job_aes256_cmac_auth_avx512
+#define SUBMIT_JOB_AES256_CMAC_AUTH   submit_job_aes256_cmac_auth_avx512
 
 /* ====================================================================== */
 
@@ -646,6 +651,15 @@ static IMB_JOB *
         (MB_MGR_CMAC_OOO *state) = flush_job_aes128_cmac_auth_avx;
 
 static IMB_JOB *
+(*submit_job_aes256_cmac_auth_avx512)
+        (MB_MGR_CMAC_OOO *state,
+         IMB_JOB *job) = submit_job_aes256_cmac_auth_avx;
+
+static IMB_JOB *
+(*flush_job_aes256_cmac_auth_avx512)
+        (MB_MGR_CMAC_OOO *state) = flush_job_aes256_cmac_auth_avx;
+
+static IMB_JOB *
 (*submit_job_aes128_ccm_auth_avx512)
         (MB_MGR_CCM_OOO *state,
          IMB_JOB *job) = submit_job_aes128_ccm_auth_avx;
@@ -906,6 +920,10 @@ init_mb_mgr_avx512(IMB_MGR *state)
                         submit_job_aes128_cmac_auth_vaes_avx512;
                 flush_job_aes128_cmac_auth_avx512 =
                         flush_job_aes128_cmac_auth_vaes_avx512;
+                submit_job_aes256_cmac_auth_avx512 =
+                        submit_job_aes256_cmac_auth_vaes_avx512;
+                flush_job_aes256_cmac_auth_avx512 =
+                        flush_job_aes256_cmac_auth_vaes_avx512;
                 submit_job_aes128_ccm_auth_avx512 =
                         submit_job_aes128_ccm_auth_vaes_avx512;
                 flush_job_aes128_ccm_auth_avx512 =

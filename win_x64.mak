@@ -258,6 +258,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\ethernet_fcs_sse_no_aesni.obj \
         $(OBJ_DIR)\ethernet_fcs_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_vaes_avx512.obj \
+        $(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_vaes_avx512.obj \
         $(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.obj \
         $(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_vaes_avx512.obj
 

@@ -32,10 +32,12 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
+%ifndef AES_CBC_MAC
 %define AES_CBC_MAC aes128_cbc_mac_vaes_avx512
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes128_cmac_auth_vaes_avx512
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes128_cmac_auth_vaes_avx512
 %define NUM_KEYS 11
+%endif
 
 extern AES_CBC_MAC
 
@@ -94,13 +96,12 @@ endstruc
 ;;; ===========================================================================
 
 ; transpose keys and insert into key table
-%macro INSERT_KEYS 6
+%macro INSERT_KEYS 5
 %define %%KP    %1 ; [in] GP reg with pointer to expanded keys
 %define %%LANE  %2 ; [in] GP reg with lane number
-%define %%NKEYS %3 ; [in] number of round keys (numerical value)
-%define %%COL   %4 ; [clobbered] GP reg
-%define %%ZTMP  %5 ; [clobbered] ZMM reg
-%define %%IA0   %6 ; [clobbered] GP reg
+%define %%COL   %3 ; [clobbered] GP reg
+%define %%ZTMP  %4 ; [clobbered] ZMM reg
+%define %%IA0   %5 ; [clobbered] GP reg
 
 %assign ROW (16*16)
 
@@ -121,6 +122,7 @@ endstruc
         vextracti64x2   [%%COL + ROW*6], %%ZTMP, 2
         vextracti64x2   [%%COL + ROW*7], %%ZTMP, 3
 
+%if NUM_KEYS == 11
         mov             %%IA0, 0x3f
         kmovq           k1, %%IA0
         vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 128]
@@ -128,6 +130,22 @@ endstruc
         vextracti64x2   [%%COL + ROW*8], %%ZTMP, 0
         vextracti64x2   [%%COL + ROW*9], %%ZTMP, 1
         vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
+
+%else ;; assume 15 keys for CMAC 256
+        vmovdqu64       %%ZTMP, [%%KP + 128]
+        vextracti64x2   [%%COL + ROW*8], %%ZTMP, 0
+        vextracti64x2   [%%COL + ROW*9], %%ZTMP, 1
+        vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
+        vextracti64x2   [%%COL + ROW*11], %%ZTMP, 3
+
+        mov             %%IA0, 0x3f
+        kmovq           k1, %%IA0
+        vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 192]
+
+        vextracti64x2   [%%COL + ROW*12], %%ZTMP, 0
+        vextracti64x2   [%%COL + ROW*13], %%ZTMP, 1
+        vextracti64x2   [%%COL + ROW*14], %%ZTMP, 2
+%endif
 %endmacro
 
 ; copy IV's and round keys into NULL lanes
@@ -243,7 +261,7 @@ endstruc
 
         ;; Insert expanded keys
         mov     tmp, [job + _key_expanded]
-        INSERT_KEYS tmp, lane, NUM_KEYS, tmp2, zmm4, tmp3
+        INSERT_KEYS tmp, lane, tmp2, zmm4, tmp3
 
         ;; Calculate len
         ;; Convert bits to bytes (message length in bits for CMAC)
