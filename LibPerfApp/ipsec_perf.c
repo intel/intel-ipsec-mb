@@ -101,6 +101,7 @@
 #define CIPHER_MODES_ZUC 1	/* ZUC-EEA3 */
 #define CIPHER_MODES_SNOW3G 1   /* SNOW3G-UEA2 */
 #define CIPHER_MODES_KASUMI 1   /* KASUMI-UEA1 */
+#define CIPHER_MODES_GMAC 1     /* NULL */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 10	/* SHA1, SHA256, SHA224, SHA384, SHA512, XCBC,
                                    MD5, NULL_HASH, CMAC, CMAC_BITLEN */
@@ -114,6 +115,7 @@
 #define HASH_ALGS_ZUC 1	        /* ZUC-EIA3 */
 #define HASH_ALGS_SNOW3G 1      /* SNOW3G-UIA2 */
 #define HASH_ALGS_KASUMI 1      /* KASUMI-UIA1 */
+#define HASH_ALGS_GMAC 3        /* AES-GMAC-128/192/256 */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
 #define KEY_SIZES_DOCSIS_AES 2	/* 16, 32 */
 #define KEY_SIZES_DOCSIS_DES 1	/* 8 */
@@ -125,6 +127,7 @@
 #define KEY_SIZES_ZUC 1         /* 16 */
 #define KEY_SIZES_SNOW3G 1      /* 16 */
 #define KEY_SIZES_KASUMI 1      /* 16 */
+#define KEY_SIZES_GMAC   1      /* 0 (no cipher key) */
 
 #define IA32_MSR_FIXED_CTR_CTRL      0x38D
 #define IA32_MSR_PERF_GLOBAL_CTR     0x38F
@@ -156,6 +159,8 @@
                                   HASH_ALGS_SNOW3G * KEY_SIZES_SNOW3G)
 #define VARIANTS_PER_ARCH_KASUMI (CIPHER_MODES_KASUMI * DIRECTIONS *    \
                                   HASH_ALGS_KASUMI * KEY_SIZES_KASUMI)
+#define VARIANTS_PER_ARCH_GMAC (CIPHER_MODES_GMAC * DIRECTIONS *   \
+                                  HASH_ALGS_GMAC * KEY_SIZES_GMAC)
 enum arch_type_e {
         ARCH_SSE = 0,
         ARCH_AVX,
@@ -176,6 +181,7 @@ enum test_type_e {
         TTYPE_ZUC,
         TTYPE_SNOW3G,
         TTYPE_KASUMI,
+        TTYPE_AES_GMAC,
         TTYPE_CUSTOM,
         NUM_TTYPES
 };
@@ -227,6 +233,9 @@ enum test_hash_alg_e {
         TEST_ZUC_EIA3,
         TEST_SNOW3G_UIA2,
         TEST_KASUMI_UIA1,
+        TEST_AES_GMAC_128,
+        TEST_AES_GMAC_192,
+        TEST_AES_GMAC_256,
         TEST_NUM_HASH_TESTS
 };
 
@@ -566,6 +575,24 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_KASUMI_UIA1,
                 }
         },
+        {
+                .name = "aes-gmac-128",
+                .values.job_params = {
+                        .hash_alg = TEST_AES_GMAC_128,
+                }
+        },
+        {
+                .name = "aes-gmac-192",
+                .values.job_params = {
+                        .hash_alg = TEST_AES_GMAC_192,
+                }
+        },
+        {
+                .name = "aes-gmac-256",
+                .values.job_params = {
+                        .hash_alg = TEST_AES_GMAC_256,
+                }
+        }
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -677,6 +704,9 @@ const uint32_t auth_tag_length_bytes[] = {
                 DOCSIS_CRC32_TAG_SIZE, /* DOCSIS_CRC32 */
                 4,  /* SNOW3G-UIA2 */
                 4,  /* KASUMI-UIA1 */
+                16, /* IMB_AUTH_AES_GMAC_128 */
+                16, /* IMB_AUTH_AES_GMAC_192 */
+                16, /* IMB_AUTH_AES_GMAC_256 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -705,8 +735,9 @@ struct custom_job_params custom_job_params = {
 };
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-/* AES, DOCSIS DES, DOCSIS AES, GCM, CCM, DES, 3DES, PON, ZUC, CUSTOM */
-uint8_t test_types[NUM_TTYPES] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 };
+/* AES, DOCSIS DES, DOCSIS AES, GCM, CCM, DES, 3DES, PON, ZUC,
+ * KASUMI, GMAC, CUSTOM */
+uint8_t test_types[NUM_TTYPES] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 };
 
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
@@ -1208,6 +1239,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         uint32_t size_aes;
         uint64_t time = 0;
         uint32_t aux;
+        uint8_t gcm_key[32];
 
         if ((params->cipher_mode == TEST_AESDOCSIS8) ||
             (params->cipher_mode == TEST_CNTR8))
@@ -1297,6 +1329,27 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         job_template.msg_len_to_hash_in_bytes;
                 job_template.u.KASUMI_UIA1._key = k3;
                 break;
+        case TEST_AES_GMAC_128:
+                job_template.hash_alg = IMB_AUTH_AES_GMAC_128;
+                IMB_AES128_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
+                job_template.u.GMAC._key = &gdata_key;
+                job_template.u.GMAC._iv = (uint8_t *) &auth_iv;
+                job_template.u.GMAC.iv_len_in_bytes = 12;
+                break;
+        case TEST_AES_GMAC_192:
+                job_template.hash_alg = IMB_AUTH_AES_GMAC_192;
+                IMB_AES192_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
+                job_template.u.GMAC._key = &gdata_key;
+                job_template.u.GMAC._iv = (uint8_t *) &auth_iv;
+                job_template.u.GMAC.iv_len_in_bytes = 12;
+                break;
+        case TEST_AES_GMAC_256:
+                job_template.hash_alg = IMB_AUTH_AES_GMAC_256;
+                IMB_AES256_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
+                job_template.u.GMAC._key = &gdata_key;
+                job_template.u.GMAC._iv = (uint8_t *) &auth_iv;
+                job_template.u.GMAC.iv_len_in_bytes = 12;
+                break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
                 job_template.u.HMAC._hashed_auth_key_xor_ipad =
@@ -1332,18 +1385,16 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         job_template.cipher_mode = translate_cipher_mode(params->cipher_mode);
         job_template.key_len_in_bytes = params->aes_key_size;
         if (job_template.cipher_mode == IMB_CIPHER_GCM) {
-                uint8_t key[32];
-
                 switch (params->aes_key_size) {
                 case IMB_KEY_AES_128_BYTES:
-                        IMB_AES128_GCM_PRE(mb_mgr, key, &gdata_key);
+                        IMB_AES128_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
                         break;
                 case IMB_KEY_AES_192_BYTES:
-                        IMB_AES192_GCM_PRE(mb_mgr, key, &gdata_key);
+                        IMB_AES192_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
                         break;
                 case IMB_KEY_AES_256_BYTES:
                 default:
-                        IMB_AES256_GCM_PRE(mb_mgr, key, &gdata_key);
+                        IMB_AES256_GCM_PRE(mb_mgr, gcm_key, &gdata_key);
                         break;
                 }
                 job_template.enc_keys = &gdata_key;
@@ -1812,6 +1863,12 @@ do_variants(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 c_start = TEST_KASUMI_UEA1;
                 c_end = TEST_KASUMI_UEA1;
                 break;
+        case TTYPE_AES_GMAC:
+                h_start = TEST_AES_GMAC_128;
+                h_end = TEST_AES_GMAC_256;
+                c_start = TEST_NULL_CIPHER;
+                c_end = TEST_NULL_CIPHER;
+                break;
         case TTYPE_CUSTOM:
                 h_start = params->hash_alg;
                 h_end = params->hash_alg;
@@ -1865,7 +1922,8 @@ run_dir_test(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
 {
         uint32_t dir;
         uint32_t k; /* Key size */
-        uint32_t limit = IMB_KEY_AES_256_BYTES; /* Key size value limit */
+        uint32_t start_k = IMB_KEY_AES_128_BYTES;
+        uint32_t end_k = IMB_KEY_AES_256_BYTES; /* Key size value limit */
 
         if (params->test_type == TTYPE_AES_DOCSIS_DES ||
             params->test_type == TTYPE_AES_DES ||
@@ -1874,7 +1932,12 @@ run_dir_test(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
             params->test_type == TTYPE_ZUC ||
             params->test_type == TTYPE_SNOW3G ||
             params->test_type == TTYPE_KASUMI)
-                limit = IMB_KEY_AES_128_BYTES;
+                end_k = IMB_KEY_AES_128_BYTES;
+
+        if (params->test_type == TTYPE_AES_GMAC) {
+                start_k = 0;
+                end_k = 0;
+        }
 
         switch (arch) {
         case 0:
@@ -1904,7 +1967,7 @@ run_dir_test(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
 
         for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                 params->cipher_dir = (JOB_CIPHER_DIRECTION) dir;
-                for (k = IMB_KEY_AES_128_BYTES; k <= limit; k += 8) {
+                for (k = start_k; k <= end_k; k += 8) {
                         /* AES-CCM-192 not currently supported */
                         if((params->test_type == TTYPE_AES_CCM) &&
                            (k == IMB_KEY_AES_192_BYTES))
@@ -2110,6 +2173,10 @@ run_tests(void *arg)
                         break;
                 case TTYPE_KASUMI:
                         variants_per_arch = VARIANTS_PER_ARCH_KASUMI;
+                        max_arch = NUM_ARCHS;
+                        break;
+                case TTYPE_AES_GMAC:
+                        variants_per_arch = VARIANTS_PER_ARCH_GMAC;
                         max_arch = NUM_ARCHS;
                         break;
                 case TTYPE_CUSTOM:
