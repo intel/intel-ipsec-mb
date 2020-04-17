@@ -151,6 +151,9 @@ IMB_JOB *submit_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
 
+uint32_t hec_32_sse(const uint8_t *in);
+uint64_t hec_64_sse(const uint8_t *in);
+
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
 

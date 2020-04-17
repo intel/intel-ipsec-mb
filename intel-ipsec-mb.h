@@ -1688,9 +1688,6 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_sse(const void *key_exp, void *key1,
 IMB_DLL_EXPORT void aes_cfb_128_one_sse(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
-IMB_DLL_EXPORT uint32_t hec_32_sse(const uint8_t *in);
-IMB_DLL_EXPORT uint64_t hec_64_sse(const uint8_t *in);
-
 /* AVX */
 IMB_DLL_EXPORT void sha1_avx(const void *data, const uint64_t length,
                              void *digest);
@@ -1727,9 +1724,6 @@ IMB_DLL_EXPORT void aes_cmac_subkey_gen_avx(const void *key_exp, void *key1,
 IMB_DLL_EXPORT void aes_cfb_128_one_avx(void *out, const void *in,
                                         const void *iv, const void *keys,
                                         uint64_t len);
-IMB_DLL_EXPORT uint32_t hec_32_avx(const uint8_t *in);
-IMB_DLL_EXPORT uint64_t hec_64_avx(const uint8_t *in);
-
 /* AVX2 */
 IMB_DLL_EXPORT void sha1_avx2(const void *data, const uint64_t length,
                               void *digest);

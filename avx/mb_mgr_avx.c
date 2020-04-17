@@ -72,6 +72,9 @@ IMB_JOB *submit_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
 
+uint32_t hec_32_avx(const uint8_t *in);
+uint64_t hec_64_avx(const uint8_t *in);
+
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 

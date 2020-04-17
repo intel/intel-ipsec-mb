@@ -125,6 +125,9 @@ IMB_JOB *aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job);
 
 IMB_JOB *aes_cntr_ccm_256_vaes_avx512(IMB_JOB *job);
 
+uint32_t hec_32_avx(const uint8_t *in);
+uint64_t hec_64_avx(const uint8_t *in);
+
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
