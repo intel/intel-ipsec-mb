@@ -411,6 +411,24 @@ struct str_value_mapping hash_algo_str_map[] = {
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_DOCSIS_CRC32,
                 }
+        },
+        {
+                .name = "aes-gmac-128",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_AES_GMAC_128,
+                }
+        },
+        {
+                .name = "aes-gmac-192",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_AES_GMAC_192,
+                }
+        },
+        {
+                .name = "aes-gmac-256",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_AES_GMAC_256,
+                }
         }
 };
 
@@ -504,6 +522,9 @@ const uint8_t auth_tag_length_bytes[] = {
                 DOCSIS_CRC32_TAG_SIZE, /* IMB_AUTH_DOCSIS_CRC32 */
                 4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN (3GPP) */
                 4,  /* IMB_AUTH_KASUMI_UIA1 (3GPP) */
+                16, /* IMB_AUTH_AES_GMAC_128 */
+                16, /* IMB_AUTH_AES_GMAC_192 */
+                16, /* IMB_AUTH_AES_GMAC_256 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -777,6 +798,13 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 break;
         case IMB_AUTH_KASUMI_UIA1:
                 job->u.KASUMI_UIA1._key = k2;
+                break;
+        case IMB_AUTH_AES_GMAC_128:
+        case IMB_AUTH_AES_GMAC_192:
+        case IMB_AUTH_AES_GMAC_256:
+                job->u.GMAC._key = gdata_key;
+                job->u.GMAC._iv = auth_iv;
+                job->u.GMAC.iv_len_in_bytes = 12;
                 break;
         case IMB_AUTH_PON_CRC_BIP:
         case IMB_AUTH_NULL:
@@ -1101,6 +1129,15 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
         case IMB_AUTH_KASUMI_UIA1:
                 memcpy(k3, auth_key, sizeof(keys->k3));
+                break;
+        case IMB_AUTH_AES_GMAC_128:
+                IMB_AES128_GCM_PRE(mb_mgr, auth_key, gdata_key);
+                break;
+        case IMB_AUTH_AES_GMAC_192:
+                IMB_AES192_GCM_PRE(mb_mgr, auth_key, gdata_key);
+                break;
+        case IMB_AUTH_AES_GMAC_256:
+                IMB_AES256_GCM_PRE(mb_mgr, auth_key, gdata_key);
                 break;
         case IMB_AUTH_AES_CCM:
         case IMB_AUTH_AES_GMAC:
@@ -1770,7 +1807,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                         params->key_size = key_sz;
                         for (hash_alg = IMB_AUTH_HMAC_SHA_1;
-                             hash_alg <= IMB_AUTH_KASUMI_UIA1;
+                             hash_alg <= IMB_AUTH_AES_GMAC_256;
                              hash_alg++) {
                                 /* Skip IMB_AUTH_CUSTOM */
                                 if (hash_alg == IMB_AUTH_CUSTOM)
@@ -1798,6 +1835,11 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                                         continue;
                                 if (c_mode != IMB_CIPHER_DOCSIS_SEC_BPI &&
                                     hash_alg == IMB_AUTH_DOCSIS_CRC32)
+                                        continue;
+                                if (c_mode == IMB_CIPHER_GCM &&
+                                    (hash_alg == IMB_AUTH_AES_GMAC_128 ||
+                                     hash_alg == IMB_AUTH_AES_GMAC_192 ||
+                                     hash_alg == IMB_AUTH_AES_GMAC_256))
                                         continue;
 
                                 params->hash_alg = hash_alg;
