@@ -38,6 +38,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | AES128-CCM    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES256-CCM    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
 | AES128-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES192-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | AES256-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
@@ -96,11 +97,14 @@ Table 2. List of supported integrity algorithms and their implementations.
 | AES256-GMAC       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | NULL              | N      | N      | N      | N      | N      | N      |
 | AES128-CCM        | N      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
+| AES256-CCM        | N      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
 | AES128-CMAC-96    | Y      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
+| AES256-CMAC-96    | Y      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
 | ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
 | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
+| HEC               | N      | Y      | Y      | N      | N      | N      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  

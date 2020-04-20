@@ -1,6 +1,28 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+Unreleased
+========================================================================
+
+Library
+- AES-CCM-256 implementation for SSE, AVX and AVX512 (VAES)
+- AES-CMAC-256 implementation for SSE, AVX and AVX512 (VAES)
+- 32bit and 64bit HEC compute API added
+- AES-GMAC direct API added to support Scatter-Gather list (SGL)
+- CALC_AAD_HASH macro improved for AVX512 (VAES), boosting performance
+  for AES-GMAC, GHASH and hash calculation for AAD in AES-GCM
+
+LibTestApp
+- CCM tests extended to test AES-CCM-256
+- CMAC tests extended to test AES-CMAC-256
+- HEC tests added to test app
+- AES-GMAC SGL tests added to test app
+
+LibPerfApp
+- AES-CCM-256 support added
+- AES-CMAC-256 support added
+
+
 v0.54 April 2020
 ========================================================================
 
