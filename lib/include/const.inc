@@ -93,24 +93,29 @@ extern padding_0x80_tab16
 
 
 ;;; VPINSRW_M256 insert word into 32 byte memory range
-%macro VPINSRW_M256 8
+%macro VPINSRW_M256 7
 
 %define %%mem_addr      %1 ; 16 byte aligned memory address to insert word
 %define %%tmp_simd1     %2 ; XMM reg to clobber
 %define %%tmp_simd2     %3 ; XMM reg to clobber
 %define %%tmp_gp        %4 ; GP reg to clobber
-%define %%offset        %5 ; GP reg used to store offset
-%define %%idx           %6 ; word index to insert value
-%define %%val           %7 ; word value to insert into idx
-%define %%scale_idx     %8 ; flag to set if index is to be scaled x16
+%define %%idx           %5 ; word index to insert value
+%define %%val           %6 ; word value to insert into idx
+%define %%scale_idx     %7 ; flag to set if index is to be scaled x16
 
-        mov     %%offset, %%idx
-        and     %%offset, 0x8   ; set offset 0 or 8
-        and     %%idx, 0x7      ; remove offset from idx
-        vmovdqa %%tmp_simd1, [%%mem_addr + %%offset*2]
+        cmp     %%idx, 8
+        jl      %%lower_128
+        sub     %%idx, 8
+        vmovdqa %%tmp_simd1, [%%mem_addr + 2*8]
         XVPINSRW %%tmp_simd1, %%tmp_simd2, %%tmp_gp, %%idx, %%val, %%scale_idx
-        vmovdqa [%%mem_addr + %%offset*2], %%tmp_simd1
-        or      %%idx, %%offset ; reset offset
+        vmovdqa [%%mem_addr + 2*8], %%tmp_simd1
+        add     %%idx, 8
+        jmp     %%exit
+%%lower_128:
+        vmovdqa %%tmp_simd1, [%%mem_addr]
+        XVPINSRW %%tmp_simd1, %%tmp_simd2, %%tmp_gp, %%idx, %%val, %%scale_idx
+        vmovdqa [%%mem_addr], %%tmp_simd1
+%%exit:
 %endmacro
 
 ;;; PSLB_COMMON shift bytes 128 bit SIMD register

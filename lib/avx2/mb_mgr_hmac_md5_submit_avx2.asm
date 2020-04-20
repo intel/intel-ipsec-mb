@@ -135,7 +135,7 @@ submit_job_hmac_md5_avx2:
         mov	[lane_data + _job_in_lane], job
         mov	dword [lane_data + _outer_done], 0
 
-        VPINSRW_M256 state + _lens_md5, xmm0, xmm1, last_len, p, lane, tmp, scale_x16
+        VPINSRW_M256 state + _lens_md5, xmm0, xmm1, p, lane, tmp, scale_x16
 
         mov	last_len, len
         and	last_len, 63
@@ -182,7 +182,7 @@ end_fast_copy:
         jnz	ge64_bytes
 
 lt64_bytes:
-        VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, len2, lane, extra_blocks, scale_x16
+        VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, lane, extra_blocks, scale_x16
 
         lea	tmp, [lane_data + _extra_block + start_offset]
         mov	[state + _args_data_ptr_md5 + PTR_SZ*lane], tmp
@@ -251,7 +251,7 @@ proc_outer:
         mov	DWORD(size_offset), [lane_data + _size_offset]
         mov	qword [lane_data + _extra_block + size_offset], 0
 
-        VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, job, idx, 1, scale_x16
+        VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, idx, 1, scale_x16
 
         lea	tmp, [lane_data + _outer_block]
         mov	job, [lane_data + _job_in_lane]
@@ -275,7 +275,7 @@ proc_outer:
 proc_extra_blocks:
         mov	DWORD(start_offset), [lane_data + _start_offset]
 
-        VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, len2, idx, extra_blocks, scale_x16
+        VPINSRW_M256 state + _lens_md5, xmm0, xmm1, tmp, idx, extra_blocks, scale_x16
 
         lea	tmp, [lane_data + _extra_block + start_offset]
         mov	[state + _args_data_ptr_md5 + PTR_SZ*idx], tmp
