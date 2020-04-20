@@ -45,6 +45,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
+%include "include/const.inc"
 
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
@@ -154,7 +155,7 @@ submit_job_hmac_avx512:
 
         mov	[lane_data + _job_in_lane], job
         mov	dword [lane_data + _outer_done], 0
-        mov	[state + _lens + 2*lane], WORD(tmp)
+        VPINSRW_M256 state + _lens, xmm0, xmm1, p, lane, tmp, scale_x16
 
         mov	last_len, len
 	DBGPRINTL64 "last_len", last_len
@@ -271,7 +272,7 @@ proc_outer:
         mov	dword [lane_data + _outer_done], 1
         mov	DWORD(size_offset), [lane_data + _size_offset]
         mov	qword [lane_data + _extra_block + size_offset], 0
-        mov	word [state + _lens + 2*idx], 1
+        VPINSRW_M256 state + _lens, xmm0, xmm1, p, idx, 1, scale_x16
         lea	tmp, [lane_data + _outer_block]
         mov	job, [lane_data + _job_in_lane]
         mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
@@ -300,7 +301,7 @@ proc_outer:
         align	16
 proc_extra_blocks:
         mov	DWORD(start_offset), [lane_data + _start_offset]
-        mov	[state + _lens + 2*idx], WORD(extra_blocks)
+        VPINSRW_M256 state + _lens, xmm0, xmm1, p2, idx, extra_blocks, scale_x16
         lea	tmp, [lane_data + _extra_block + start_offset]
         mov	[state + _args_data_ptr + PTR_SZ*idx], tmp
         mov	dword [lane_data + _extra_blocks], 0

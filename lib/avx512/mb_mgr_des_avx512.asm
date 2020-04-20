@@ -48,6 +48,7 @@
 %include "constants.asm"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
+%include "include/const.inc"
 
 extern docsis_des_x16_enc_avx512
 extern docsis_des_x16_dec_avx512
@@ -141,7 +142,8 @@ extern des3_x16_cbc_dec_avx512
         ;; - length in bytes (block aligned)
         mov     IA2, [JOB + _msg_len_to_cipher_in_bytes]
         and     IA2, -8
-        mov     [STATE + _des_lens + LANE*2], WORD(IA2)
+        VPINSRW_M256 STATE + _des_lens, XWORD(ZTMP0), XWORD(ZTMP1), MIN_LEN, LANE, IA2, scale_x16
+
 %ifidn %%DES_DOCSIS, DOCSIS
         ;; - block length
         mov     [STATE + _des_args_BLen + LANE*4], DWORD(IA2)
