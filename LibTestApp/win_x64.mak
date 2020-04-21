@@ -38,10 +38,10 @@ IPSECLIB = "$(PREFIX)\$(INSTNAME)\libIPSec_MB.lib"
 INCDIR = -I"$(PREFIX)\$(INSTNAME)"
 !else
 !if !defined(LIB_DIR)
-LIB_DIR = ..
+LIB_DIR = ..\lib
 !endif
 IPSECLIB = "$(LIB_DIR)\libIPSec_MB.lib"
-INCDIR = -I..\ -I..\include
+INCDIR = -I..\lib -I..\lib\include
 !endif
 
 !ifdef DEBUG
