@@ -679,9 +679,6 @@ clean:
 	rm -Rf $(dep_target_files)
 	rm -f $(LIB_DIR)/$(LIB).a $(LIB_DIR)/$(LIB).so*
 
-README:
-	pandoc -f markdown -t plain $@.md -o $@
-
 .PHONY: help
 help:
 	@echo "Available build options:"
