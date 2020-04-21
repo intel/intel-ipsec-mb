@@ -981,7 +981,7 @@ IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
  * Direct use of arch API's may result in better performance.
  * Using below indirect interface may produce slightly worse performance but
  * it can simplify application implementation.
- * LibTestApp provides example of using the indirect interface.
+ * The test app provides example of using the indirect interface.
  */
 #define IMB_GET_NEXT_JOB(_mgr)       ((_mgr)->get_next_job((_mgr)))
 #define IMB_SUBMIT_JOB(_mgr)         ((_mgr)->submit_job((_mgr)))

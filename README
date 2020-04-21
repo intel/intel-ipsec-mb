@@ -218,13 +218,14 @@ updates.
 4. PACKAGE CONTENT
 
 
--   LibTestApp - Library test applications
--   LibPerfApp - Library performance application
--   sse - Intel(R) SSE optimized routines
--   avx - Intel(R) AVX optimized routines
--   avx2 - Intel(R) AVX2 optimized routines
--   avx512 - Intel(R) AVX512 optimized routines
--   no-aesni - Non-AESNI accelerated routines
+-   test - Library test applications
+-   perf - Library performance application
+-   lib - Library source files
+-   lib/sse - Intel(R) SSE optimized routines
+-   lib/avx - Intel(R) AVX optimized routines
+-   lib/avx2 - Intel(R) AVX2 optimized routines
+-   lib/avx512 - Intel(R) AVX512 optimized routines
+-   lib/no-aesni - Non-AESNI accelerated routines
 
 NOTE:
 There is just one branch used in the project. All development is done on

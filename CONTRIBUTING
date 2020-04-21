@@ -276,7 +276,7 @@ Git Commit Messages
 Git commit messages should start with a short 50 character or less summary
 in a single paragraph. Ideally, it should start with a short prefix
 followed by a colon describing which part of the code it modifies
-e.g. "LibTestApp: extended AES-CBC tests".
+e.g. "test: extended AES-CBC tests".
 
 
 Development Workflow
