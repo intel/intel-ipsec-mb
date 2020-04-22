@@ -25,17 +25,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# Available build options:
-# DEBUG=y   	- this option will produce library fit for debugging
-# DEBUG=n   	- this option will produce library not fit for debugging (default)
-# SHARED=y  	- this option will produce shared library (DLL) (default)
-# SHARED=n  	- this option will produce static library (lib)
-# SAFE_DATA=y   - this option will clear memory and registers containing
-# 		  sensitive information (e.g. keys, IVs)
-# SAFE_PARAM=y  - this option will add extra input parameter checks
-# SAFE_LOOKUP=y - this option will perform constant-time lookups depending on
-# 		  sensitive data (default)
-
 all:
 	cd lib & $(MAKE) /f win_x64.mak
 	cd test & $(MAKE) /f win_x64.mak
