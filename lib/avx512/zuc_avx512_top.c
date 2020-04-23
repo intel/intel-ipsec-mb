@@ -813,11 +813,12 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX512_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
-        uint32_t *pKeyStrArr[NUM_AVX512_BUFS] = {NULL};
+        uint32_t *pKeyStrArr0[NUM_AVX512_BUFS] = {NULL};
+        uint32_t *pKeyStrArr64[NUM_AVX512_BUFS] = {NULL};
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
-                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
+                pKeyStrArr0[i] = (uint32_t *) &keyStr[i][0];
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
         }
@@ -830,18 +831,19 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
 
                 /* Generate 64 bytes at a time */
                 asm_ZucGenKeystream64B_16_gfni_avx512(&state,
-                                                      (uint32_t **)pKeyStrArr);
+                                                      (uint32_t **)pKeyStrArr0);
         } else {
                 asm_ZucInitialization_16_avx512(&keys,  &ivs, &state);
 
                 /* Generate 64 bytes at a time */
                 asm_ZucGenKeystream64B_16_avx512(&state,
-                                                 (uint32_t **)pKeyStrArr);
+                                                 (uint32_t **)pKeyStrArr0);
         }
 
         /* Point at the next 64 bytes of the key */
         for (i = 0; i < NUM_AVX512_BUFS; i++)
-                pKeyStrArr[i] = (uint32_t *) &keyStr[i][64];
+                pKeyStrArr64[i] = (uint32_t *) &keyStr[i][64];
+
         /* loop over the message bits */
         while (remainCommonBits >= keyStreamLengthInBits) {
                 remainCommonBits -= keyStreamLengthInBits;
@@ -850,21 +852,28 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 if (use_gfni) {
                         if (!remainCommonBits)
                                 asm_ZucGenKeystream8B_16_gfni_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr64);
                         else
                                 asm_ZucGenKeystream64B_16_gfni_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr64);
                 } else {
                         if (!remainCommonBits)
                                 asm_ZucGenKeystream8B_16_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr64);
                         else
                                 asm_ZucGenKeystream64B_16_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr64);
+                }
+                if (use_gfni) {
+                        for (i = 0; i < NUM_AVX512_BUFS; i+=4)
+                                asm_Eia3Round64B_4_VPCLMUL(&T[i],
+                                                 (const void **)&pKeyStrArr0[i],
+                                                 (const void **)&pIn8[i]);
                 }
                 for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
-                                                   pIn8[i]);
+                        if (!use_gfni)
+                                T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
+                                                           pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][64], 64);
@@ -1014,11 +1023,12 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX512_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
-        uint32_t *pKeyStrArr[NUM_AVX512_BUFS] = {NULL};
+        uint32_t *pKeyStrArr0[NUM_AVX512_BUFS] = {NULL};
+        uint32_t *pKeyStrArr64[NUM_AVX512_BUFS] = {NULL};
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
-                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
+                pKeyStrArr0[i] = (uint32_t *) &keyStr[i][0];
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
         }
@@ -1031,18 +1041,19 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
 
                 /* Generate 64 bytes at a time */
                 asm_ZucGenKeystream64B_16_gfni_avx512(&state,
-                                                      (uint32_t **)pKeyStrArr);
+                                                      (uint32_t **)pKeyStrArr0);
         } else {
                 asm_ZucInitialization_16_avx512(&keys,  &ivs, &state);
 
                 /* Generate 64 bytes at a time */
                 asm_ZucGenKeystream64B_16_avx512(&state,
-                                                 (uint32_t **)pKeyStrArr);
+                                                 (uint32_t **)pKeyStrArr0);
         }
 
         /* Point at the next 64 bytes of the key */
         for (i = 0; i < NUM_AVX512_BUFS; i++)
-                pKeyStrArr[i] = (uint32_t *) &keyStr[i][64];
+                pKeyStrArr64[i] = (uint32_t *) &keyStr[i][64];
+
         /* loop over the message bits */
         while (remainCommonBits >= keyStreamLengthInBits) {
                 remainCommonBits -= keyStreamLengthInBits;
@@ -1051,24 +1062,31 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
                 if (use_gfni) {
                         if (!remainCommonBits)
                                 asm_ZucGenKeystream8B_16_gfni_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr64);
                         else
                                 asm_ZucGenKeystream64B_16_gfni_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr64);
                 } else {
                         if (!remainCommonBits)
                                 asm_ZucGenKeystream8B_16_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr64);
                         else
                                 asm_ZucGenKeystream64B_16_avx512(&state,
-                                                       (uint32_t **)pKeyStrArr);
+                                                     (uint32_t **)pKeyStrArr64);
+                }
+                if (use_gfni) {
+                        for (i = 0; i < NUM_AVX512_BUFS; i+=4)
+                                asm_Eia3Round64B_4_VPCLMUL(&T[i],
+                                                 (const void **)&pKeyStrArr0[i],
+                                                 (const void **)&pIn8[i]);
                 }
                 for (i = 0; i < NUM_AVX512_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
 
-                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
-                                                   pIn8[i]);
+                        if (!use_gfni)
+                                T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
+                                                           pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][64], 64);

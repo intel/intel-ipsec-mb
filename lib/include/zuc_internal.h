@@ -851,6 +851,9 @@ IMB_DLL_LOCAL uint32_t asm_Eia3RemainderSSE_no_aesni(const void *ks,
 IMB_DLL_LOCAL uint32_t asm_Eia3Round64BAVX(uint32_t T, const void *ks,
                                            const void *data);
 
+IMB_DLL_LOCAL void asm_Eia3Round64B_4_VPCLMUL(uint32_t *T, const void **ks,
+                                              const void **data);
+
 /**
  ******************************************************************************
  * @description
