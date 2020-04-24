@@ -869,6 +869,11 @@ asm_Eia3Round64B_4_VPCLMUL:
 %define         KS_ADDR2        r15
 %define         KS_ADDR3        rax
 
+%define         DATA_TRANS0     zmm16
+%define         DATA_TRANS1     zmm17
+%define         DATA_TRANS2     zmm18
+%define         DATA_TRANS3     zmm19
+
         FUNC_SAVE
 
         vmovdqa64       zmm5,  [rel bit_reverse_table_l]
@@ -885,17 +890,16 @@ asm_Eia3Round64B_4_VPCLMUL:
         mov             KS_ADDR1,   [KS + 1*8]
         mov             KS_ADDR2,   [KS + 2*8]
         mov             KS_ADDR3,   [KS + 3*8]
+
+        TRANSPOSE4_U128 DATA_ADDR0, DATA_ADDR1, DATA_ADDR2, DATA_ADDR3, \
+                        DATA_TRANS0, DATA_TRANS1, DATA_TRANS2, DATA_TRANS3, \
+                        zmm20, zmm21, zmm22, zmm23
 %assign I 0
 %rep 4
-        ;; read 16 bytes from all 4 buffers and reverse bits
-        vmovdqu         xmm0, [DATA_ADDR0 + 16*I]
-        vinserti32x4    zmm0, [DATA_ADDR1 + 16*I], 1
-        vinserti32x4    zmm0, [DATA_ADDR2 + 16*I], 2
-        vinserti32x4    zmm0, [DATA_ADDR3 + 16*I], 3
+        ;; Reverse bits of next 16 bytes from all 4 buffers
+        vpandq          zmm1, APPEND(DATA_TRANS,I), zmm7
 
-        vpandq          zmm1, zmm0, zmm7
-
-        vpandnq         zmm2, zmm7, zmm0
+        vpandnq         zmm2, zmm7, APPEND(DATA_TRANS, I)
         vpsrld          zmm2, 4
 
         vpshufb         zmm8, zmm6, zmm1       ; bit reverse low nibbles (use high table)
@@ -926,7 +930,7 @@ asm_Eia3Round64B_4_VPCLMUL:
 
         ;;  - set up DATA
         vpandq          zmm13, zmm10, zmm8
-        vpshufd         zmm0, zmm13, 0xdc
+        vpshufd         APPEND(DATA_TRANS, I), zmm13, 0xdc
 
         vpsrldq         zmm8, 8
         vpshufd         zmm1, zmm8, 0xdc
@@ -934,16 +938,16 @@ asm_Eia3Round64B_4_VPCLMUL:
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
 %if I != 0
-        vpclmulqdq      zmm13, zmm0, zmm2, 0x00
-        vpclmulqdq      zmm14, zmm0, zmm2, 0x11
+        vpclmulqdq      zmm13, APPEND(DATA_TRANS, I), zmm2, 0x00
+        vpclmulqdq      zmm14, APPEND(DATA_TRANS, I), zmm2, 0x11
         vpclmulqdq      zmm15, zmm1, zmm3, 0x00
         vpclmulqdq      zmm8,  zmm1, zmm3, 0x11
 
         vpternlogq      zmm13, zmm14, zmm8, 0x96
         vpternlogq      zmm9, zmm13, zmm15, 0x96
 %else
-        vpclmulqdq      zmm9, zmm0, zmm2, 0x00
-        vpclmulqdq      zmm13, zmm0, zmm2, 0x11
+        vpclmulqdq      zmm9, APPEND(DATA_TRANS, I), zmm2, 0x00
+        vpclmulqdq      zmm13, APPEND(DATA_TRANS, I), zmm2, 0x11
         vpclmulqdq      zmm14, zmm1, zmm3, 0x00
         vpclmulqdq      zmm15, zmm1, zmm3, 0x11
 
