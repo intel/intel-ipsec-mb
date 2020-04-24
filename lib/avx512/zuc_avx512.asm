@@ -874,6 +874,11 @@ asm_Eia3Round64B_4_VPCLMUL:
 %define         DATA_TRANS2     zmm18
 %define         DATA_TRANS3     zmm19
 
+%define         KS_TRANS0       zmm20
+%define         KS_TRANS1       zmm21
+%define         KS_TRANS2       zmm22
+%define         KS_TRANS3       zmm23
+
         FUNC_SAVE
 
         vmovdqa64       zmm5,  [rel bit_reverse_table_l]
@@ -886,15 +891,21 @@ asm_Eia3Round64B_4_VPCLMUL:
         mov             DATA_ADDR1, [DATA + 1*8]
         mov             DATA_ADDR2, [DATA + 2*8]
         mov             DATA_ADDR3, [DATA + 3*8]
+
+        TRANSPOSE4_U128 DATA_ADDR0, DATA_ADDR1, DATA_ADDR2, DATA_ADDR3, \
+                        DATA_TRANS0, DATA_TRANS1, DATA_TRANS2, DATA_TRANS3, \
+                        zmm24, zmm25, zmm26, zmm27
+
         mov             KS_ADDR0,   [KS + 0*8]
         mov             KS_ADDR1,   [KS + 1*8]
         mov             KS_ADDR2,   [KS + 2*8]
         mov             KS_ADDR3,   [KS + 3*8]
 
-        TRANSPOSE4_U128 DATA_ADDR0, DATA_ADDR1, DATA_ADDR2, DATA_ADDR3, \
-                        DATA_TRANS0, DATA_TRANS1, DATA_TRANS2, DATA_TRANS3, \
-                        zmm20, zmm21, zmm22, zmm23
+        TRANSPOSE4_U128 KS_ADDR0, KS_ADDR1, KS_ADDR2, KS_ADDR3, \
+                        KS_TRANS0, KS_TRANS1, KS_TRANS2, KS_TRANS3, \
+                        zmm24, zmm25, zmm26, zmm27
 %assign I 0
+%assign J 1
 %rep 4
         ;; Reverse bits of next 16 bytes from all 4 buffers
         vpandq          zmm1, APPEND(DATA_TRANS,I), zmm7
@@ -911,19 +922,16 @@ asm_Eia3Round64B_4_VPCLMUL:
         ;; ZUC authentication part
         ;; - 4x32 data bits
         ;; - set up KS
-%if I != 0
-        vmovdqa64       zmm11, zmm12
+        vmovdqa64       zmm11, APPEND(KS_TRANS, I)
+%if I != 3
+        vmovdqa64       zmm12, APPEND(KS_TRANS, J)
 %else
-        vmovdqu         xmm11, [KS_ADDR0 + (I*16) + (0*4)]
-        vinserti32x4    zmm11, [KS_ADDR1 + (I*16) + (0*4)], 1
-        vinserti32x4    zmm11, [KS_ADDR2 + (I*16) + (0*4)], 2
-        vinserti32x4    zmm11, [KS_ADDR3 + (I*16) + (0*4)], 3
+        ; Bytes 64-79 from the keystreams that were not loaded yet
+        vmovdqu         xmm12, [KS_ADDR0 + 64]
+        vinserti32x4    zmm12, [KS_ADDR1 + 64], 1
+        vinserti32x4    zmm12, [KS_ADDR2 + 64], 2
+        vinserti32x4    zmm12, [KS_ADDR3 + 64], 3
 %endif
-        vmovdqu         xmm12, [KS_ADDR0 + (I*16) + (4*4)]
-        vinserti32x4    zmm12, [KS_ADDR1 + (I*16) + (4*4)], 1
-        vinserti32x4    zmm12, [KS_ADDR2 + (I*16) + (4*4)], 2
-        vinserti32x4    zmm12, [KS_ADDR3 + (I*16) + (4*4)], 3
-
         vpalignr        zmm13, zmm12, zmm11, 8
         vpshufd         zmm2, zmm11, 0x61
         vpshufd         zmm3, zmm13, 0x61
@@ -955,7 +963,7 @@ asm_Eia3Round64B_4_VPCLMUL:
         vpternlogq      zmm9, zmm13, zmm14, 0x96
 %endif
 
-
+%assign J (J + 1)
 %assign I (I + 1)
 %endrep
 
