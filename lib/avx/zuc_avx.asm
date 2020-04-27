@@ -897,18 +897,13 @@ asm_Eia3RemainderAVX:
 
         ;; read 16 bytes and reverse bits
         vmovdqu xmm0, [DATA]
-        vmovdqa xmm1, xmm0
-        vpand   xmm1, xmm7
+        vpand   xmm1, xmm0, xmm7
 
-        vmovdqa xmm2, xmm7
-        vpandn  xmm2, xmm0
+        vpandn  xmm2, xmm7, xmm0
         vpsrld  xmm2, 4
 
-        vmovdqa xmm8, xmm6      ; bit reverse low nibbles (use high table)
-        vpshufb xmm8, xmm1
-
-        vmovdqa xmm4, xmm5      ; bit reverse high nibbles (use low table)
-        vpshufb xmm4, xmm2
+        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
 
         vpor    xmm8, xmm4
         ; xmm8 - bit reversed data bytes
@@ -922,8 +917,7 @@ asm_Eia3RemainderAVX:
         vpshufd xmm1, xmm4, 0x61
 
         ;;  - set up DATA
-        vmovdqa xmm2, xmm8
-        vpand   xmm2, xmm10
+        vpand   xmm2, xmm8, xmm10
         vpshufd xmm3, xmm2, 0xdc
         vmovdqa xmm4, xmm3
 
@@ -957,19 +951,14 @@ Eia3RoundsAVX_dq_end:
         vpshufd xmm4, xmm1, 0xf1
 
         ;;  bit-reverse 4 bytes of data
-        vmovdqa xmm2, xmm7
         vmovd   xmm0, [DATA]
-        vmovdqa xmm1, xmm0
-        vpand   xmm1, xmm2
+        vpand   xmm1, xmm0, xmm7
 
-        vpandn  xmm2, xmm0
+        vpandn  xmm2, xmm7, xmm0
         vpsrld  xmm2, 4
 
-        vmovdqa xmm0, xmm6    ; bit reverse low nibbles (use high table)
-        vpshufb xmm0, xmm1
-
-        vmovdqa xmm3, xmm5    ; bit reverse high nibbles (use low table)
-        vpshufb xmm3, xmm2
+        vpshufb xmm0, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
 
         vpor    xmm0, xmm3
 
