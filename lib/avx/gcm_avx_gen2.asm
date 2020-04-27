@@ -1993,7 +1993,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 	mov	%%PLAIN_CYPH_LEN, [%%GDATA_CTX + InLen]
 
         shl     r12, 3                                  ; convert into number of bits
-        vmovd   xmm15, r12d                             ; len(A) in xmm15
+        vmovq   xmm15, r12                              ; len(A) in xmm15
 
         shl     %%PLAIN_CYPH_LEN, 3                     ; len(C) in bits  (*128)
         vmovq   xmm1, %%PLAIN_CYPH_LEN

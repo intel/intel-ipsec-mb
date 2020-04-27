@@ -2056,7 +2056,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 	mov	%%PLAIN_CYPH_LEN, [%%GDATA_CTX + InLen]
 
         shl     r12, 3                                  ; convert into number of bits
-        movd    xmm15, r12d                             ; len(A) in xmm15
+        movq    xmm15, r12                              ; len(A) in xmm15
 
         shl     %%PLAIN_CYPH_LEN, 3                     ; len(C) in bits  (*128)
         movq    xmm1, %%PLAIN_CYPH_LEN
