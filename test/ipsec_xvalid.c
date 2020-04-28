@@ -1364,16 +1364,16 @@ clear_scratch_simd(const enum arch_type_e arch)
         switch (arch) {
         case ARCH_SSE:
         case ARCH_AESNI_EMU:
-                clear_scratch_xmms_sse();
+                clr_scratch_xmms_sse();
                 break;
         case ARCH_AVX:
-                clear_scratch_xmms_avx();
+                clr_scratch_xmms_avx();
                 break;
         case ARCH_AVX2:
-                clear_scratch_ymms();
+                clr_scratch_ymms();
                 break;
         case ARCH_AVX512:
-                clear_scratch_zmms();
+                clr_scratch_zmms();
                 break;
         default:
                 fprintf(stderr, "Invalid architecture\n");

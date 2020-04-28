@@ -138,9 +138,9 @@ dump_zmms:
 ;
 ; This function clears all scratch XMM registers
 ;
-; void clear_scratch_xmms_sse(void)
-MKGLOBAL(clear_scratch_xmms_sse,function,internal)
-clear_scratch_xmms_sse:
+; void clr_scratch_xmms_sse(void)
+MKGLOBAL(clr_scratch_xmms_sse,function,internal)
+clr_scratch_xmms_sse:
 
 %ifdef LINUX
 %assign i 0
@@ -165,9 +165,9 @@ clear_scratch_xmms_sse:
 ; It should be called before restoring the XMM registers
 ; for Windows (XMM6-XMM15)
 ;
-; void clear_scratch_xmms_avx(void)
-MKGLOBAL(clear_scratch_xmms_avx,function,internal)
-clear_scratch_xmms_avx:
+; void clr_scratch_xmms_avx(void)
+MKGLOBAL(clr_scratch_xmms_avx,function,internal)
+clr_scratch_xmms_avx:
 
 %ifdef LINUX
         vzeroall
@@ -188,9 +188,9 @@ clear_scratch_xmms_avx:
 ; It should be called before restoring the XMM registers
 ; for Windows (XMM6-XMM15)
 ;
-; void clear_scratch_ymms(void)
-MKGLOBAL(clear_scratch_ymms,function,internal)
-clear_scratch_ymms:
+; void clr_scratch_ymms(void)
+MKGLOBAL(clr_scratch_ymms,function,internal)
+clr_scratch_ymms:
 ; On Linux, all YMM registers are scratch registers
 %ifdef LINUX
         vzeroall
@@ -217,9 +217,9 @@ clear_scratch_ymms:
 ; than XOR'ing ZMM registers, and the operation clears
 ; also the upper 256 bits
 ;
-; void clear_scratch_zmms(void)
-MKGLOBAL(clear_scratch_zmms,function,internal)
-clear_scratch_zmms:
+; void clr_scratch_zmms(void)
+MKGLOBAL(clr_scratch_zmms,function,internal)
+clr_scratch_zmms:
 
 ; On Linux, all ZMM registers are scratch registers
 %ifdef LINUX
