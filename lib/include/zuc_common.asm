@@ -157,8 +157,8 @@ section .text
 %ifidn %%ARCH, SSE
     movq        xmm0, rdx
     movdqa      xmm1, xmm0
-    S0_comput_SSE xmm1, xmm2, xmm3
-    S1_comput_SSE xmm0, xmm2, xmm3, xmm4
+    S0_comput_SSE xmm1, xmm2, xmm3, 0
+    S1_comput_SSE xmm0, xmm2, xmm3, xmm4, 0
 
     pand        xmm0, [rel mask_S1]
     pand        xmm1, [rel mask_S0]
@@ -169,7 +169,7 @@ section .text
 %elifidn %%ARCH, SSE_NO_AESNI
     movq        xmm0, rdx
     movdqa      xmm1, xmm0
-    S0_comput_SSE xmm1, xmm2, xmm3
+    S0_comput_SSE xmm1, xmm2, xmm3, 0
     S1_comput_SSE_NO_AESNI xmm0, xmm2, xmm3, xmm4
 
     pand        xmm0, [rel mask_S1]

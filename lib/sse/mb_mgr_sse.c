@@ -1004,8 +1004,14 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->aes128_cfb_one      = aes_cfb_128_one_sse;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
-        state->eea3_4_buffer       = zuc_eea3_4_buffer_sse;
-        state->eea3_n_buffer       = zuc_eea3_n_buffer_sse;
+        if (state->features & IMB_FEATURE_GFNI) {
+                state->eea3_4_buffer       = zuc_eea3_4_buffer_gfni_sse;
+                state->eea3_n_buffer       = zuc_eea3_n_buffer_gfni_sse;
+        } else {
+                state->eea3_4_buffer       = zuc_eea3_4_buffer_sse;
+                state->eea3_n_buffer       = zuc_eea3_n_buffer_sse;
+        }
+
         state->eia3_1_buffer       = zuc_eia3_1_buffer_sse;
         state->eia3_n_buffer       = zuc_eia3_n_buffer_sse;
 

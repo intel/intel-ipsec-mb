@@ -315,6 +315,7 @@ asm_sse_lib_objs := \
 	sha1_ni_x2_sse.o \
 	sha256_ni_x2_sse.o \
 	zuc_sse.o \
+	zuc_sse_gfni.o \
 	mb_mgr_aes_flush_sse.o \
 	mb_mgr_aes_submit_sse.o \
 	mb_mgr_aes192_flush_sse.o \

@@ -25,12 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "include/aesni_emu.inc"
-%define ZUC_CIPHER64B_4 asm_ZucCipher64B_4_sse_no_aesni
-%define ZUC_INIT_4 asm_ZucInitialization_4_sse_no_aesni
-%define ZUC_KEYGEN64B_4 asm_ZucGenKeystream64B_4_sse_no_aesni
-%define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse_no_aesni
-%define ZUC_EIA3ROUND64B asm_Eia3Round64BSSE_no_aesni
-%define ZUC_EIA3REMAINDER64B asm_Eia3RemainderSSE_no_aesni
-%define USE_GFNI 0
+%define USE_GFNI 1
+%define ZUC_CIPHER64B_4 asm_ZucCipher64B_4_gfni_sse
+%define ZUC_INIT_4 asm_ZucInitialization_4_gfni_sse
+%define ZUC_KEYGEN64B_4 asm_ZucGenKeystream64B_4_gfni_sse
+%define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_gfni_sse
 %include "sse/zuc_sse.asm"

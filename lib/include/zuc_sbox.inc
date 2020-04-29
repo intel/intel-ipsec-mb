@@ -171,10 +171,11 @@ Rotl5_matrix:
 ;
 ; Compute 16 S0 box values from 16 bytes, stored in XMM register
 ;
-%macro S0_comput_SSE 3
+%macro S0_comput_SSE 4
 %define %%IN_OUT        %1 ; [in/out] XMM reg with input values which will contain the output values
 %define %%XTMP1         %2 ; [clobbered] Temporary XMM register
 %define %%XTMP2         %3 ; [clobbered] Temporary XMM register
+%define %%USE_GFNI      %4 ; [in] If 1, GFNI can be used
 
         movdqa  %%XTMP1, %%IN_OUT
 
@@ -199,7 +200,11 @@ Rotl5_matrix:
         psllq   %%IN_OUT, 4
         por     %%IN_OUT, %%XTMP1 ; t = (s << 4) | r
 
-        Rotl_5_SSE  %%IN_OUT, %%XTMP1
+%if (%%USE_GFNI == 1)
+        gf2p8affineqb  %%IN_OUT, [rel Rotl5_matrix], 0x00
+%else
+        Rotl_5_SSE     %%IN_OUT, %%XTMP1
+%endif
 %endmacro
 
 ;
@@ -381,12 +386,19 @@ Rotl5_matrix:
 ;
 ; Compute 16 S1 box values from 16 bytes, stored in XMM register
 ;
-%macro S1_comput_SSE 4
+%macro S1_comput_SSE 5
 %define %%XIN_OUT       %1 ; [in/out] XMM reg with input values which will contain the output values
 %define %%XTMP1         %2 ; [clobbered] Temporary XMM register
 %define %%XTMP2         %3 ; [clobbered] Temporary XMM register
 %define %%XTMP3         %4 ; [clobbered] Temporary XMM register
+%define %%USE_GFNI      %5 ; [in] If 1, GFNI can be used
 
+%if (%%USE_GFNI == 1)
+        gf2p8affineqb  %%XIN_OUT, [rel Aes_to_Zuc], 0x00
+        pshufb         %%XIN_OUT, [rel Shuf_mask]
+        aesenclast     %%XIN_OUT, [rel Cancel_aes]
+        gf2p8affineqb  %%XIN_OUT, [rel CombMatrix], 0x55
+%else ; USE_GFNI == 0
         movdqa          %%XTMP1, [rel Aes_to_Zuc_mul_low_nibble]
         movdqa          %%XTMP2, [rel Aes_to_Zuc_mul_high_nibble]
         MUL_PSHUFB_SSE  %%XIN_OUT, %%XTMP1, %%XTMP2, %%XTMP3
@@ -398,6 +410,7 @@ Rotl5_matrix:
         movdqa          %%XIN_OUT, [rel Comb_matrix_mul_high_nibble]
         MUL_PSHUFB_SSE  %%XTMP2, %%XTMP1, %%XIN_OUT, %%XTMP3
         pxor            %%XIN_OUT, [rel Const_comb_matrix]
+%endif ; USE_GFNI == 1
 
 %endmacro
 

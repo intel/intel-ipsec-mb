@@ -36,6 +36,7 @@
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
 %define ZUC_EIA3ROUND64B asm_Eia3Round64BSSE
 %define ZUC_EIA3REMAINDER64B asm_Eia3RemainderSSE
+%define USE_GFNI 0
 %endif
 
 section .data
@@ -274,14 +275,17 @@ section .text
 ;
 ;   params
 ;       %1 == 1, then calculate W
+;       %2 == 1, then GFNI instructions may be used
 ;   uses
 ;
 ;   return
 ;       xmm0 = W value, updates F_R1[] / F_R2[]
 ;
-%macro nonlin_fun4  1
+%macro nonlin_fun4  2
+%define %%CALC_W     %1
+%define %%USE_GFNI   %2
 
-%if (%1 == 1)
+%if (%%CALC_W == 1)
     movdqa      xmm0, [rax + OFS_X0]
     pxor        xmm0, [rax + OFS_R1]
     paddd       xmm0, [rax + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
@@ -331,8 +335,8 @@ section .text
     shufpd      xmm2, xmm3, 0x2 ; All S1 input values
 
     ; Compute S0 and S1 values
-    S0_comput_SSE   xmm1, xmm3, xmm4
-    S1_comput_SSE   xmm2, xmm3, xmm4, xmm5
+    S0_comput_SSE   xmm1, xmm3, xmm4, %%USE_GFNI
+    S1_comput_SSE   xmm2, xmm3, xmm4, xmm5, %%USE_GFNI
 
     ; Need to shuffle back xmm1 & xmm2 before storing output
     ; (revert what was done before S0 and S1 computations)
@@ -605,7 +609,7 @@ ZUC_INIT_4:
     push    rdx
 
     bits_reorg4 N
-    nonlin_fun4 1
+    nonlin_fun4 1, USE_GFNI
     psrld  xmm0,1         ; Shift out LSB of W
 
     pop     rdx
@@ -622,7 +626,7 @@ ZUC_INIT_4:
     push    rdx
 
     bits_reorg4 0
-    nonlin_fun4 0
+    nonlin_fun4 0, USE_GFNI
 
     pop     rdx
     lea     rax, [rdx]
@@ -678,7 +682,7 @@ ZUC_INIT_4:
 %assign N 1
 %rep %%NUM_ROUNDS
     bits_reorg4 N
-    nonlin_fun4 1
+    nonlin_fun4 1, USE_GFNI
     store_kstr4
     pxor        xmm0, xmm0
     lfsr_updt4  N
@@ -806,7 +810,7 @@ ZUC_CIPHER64B_4:
 %assign N 1
 %rep 16
         bits_reorg4 N
-        nonlin_fun4 1
+        nonlin_fun4 1, USE_GFNI
         store_kstr4
         pxor    xmm0, xmm0
         lfsr_updt4  N
