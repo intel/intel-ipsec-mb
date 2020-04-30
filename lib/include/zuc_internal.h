@@ -616,6 +616,12 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse_no_aesni(ZucState4_t *pState,
                                                         uint32_t *pKeyStr3,
                                                         uint32_t *pKeyStr4);
 
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_gfni_sse(ZucState4_t *pState,
+                                                    uint32_t *pKeyStr1,
+                                                    uint32_t *pKeyStr2,
+                                                    uint32_t *pKeyStr3,
+                                                    uint32_t *pKeyStr4);
+
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
                                                uint32_t *pKeyStr1,
                                                uint32_t *pKeyStr2,
@@ -1022,6 +1028,13 @@ void zuc_eia3_n_buffer_sse(const void * const pKey[],
                            const uint32_t lengthInBits[],
                            uint32_t *pMacI[],
                            const uint32_t numBuffers);
+
+void zuc_eia3_n_buffer_gfni_sse(const void * const pKey[],
+                                const void * const pIv[],
+                                const void * const pBufferIn[],
+                                const uint32_t lengthInBits[],
+                                uint32_t *pMacI[],
+                                const uint32_t numBuffers);
 
 void zuc_eea3_1_buffer_sse_no_aesni(const void *pKey, const void *pIv,
                                     const void *pBufferIn, void *pBufferOut,

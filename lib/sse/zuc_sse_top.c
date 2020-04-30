@@ -834,7 +834,8 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                             const void * const pIv[NUM_SSE_BUFS],
                             const void * const pBufferIn[NUM_SSE_BUFS],
                             const uint32_t lengthInBits[NUM_SSE_BUFS],
-                            uint32_t *pMacI[NUM_SSE_BUFS])
+                            uint32_t *pMacI[NUM_SSE_BUFS],
+                            const unsigned use_gfni)
 {
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState4_t state, 64);
@@ -875,32 +876,58 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
         ivs.pIv3 = pIv[2];
         ivs.pIv4 = pIv[3];
 
-        asm_ZucInitialization_4_sse( &keys,  &ivs, &state);
+        if (use_gfni) {
+                asm_ZucInitialization_4_gfni_sse(&keys, &ivs, &state);
 
-        /* Generate 64 bytes at a time */
-        asm_ZucGenKeystream64B_4_sse(&state,
-                                     (uint32_t *) keyStr[0],
-                                     (uint32_t *) keyStr[1],
-                                     (uint32_t *) keyStr[2],
-                                     (uint32_t *) keyStr[3]);
+                /* Generate 64 bytes at a time */
+                asm_ZucGenKeystream64B_4_gfni_sse(&state,
+                                                  (uint32_t *) keyStr[0],
+                                                  (uint32_t *) keyStr[1],
+                                                  (uint32_t *) keyStr[2],
+                                                  (uint32_t *) keyStr[3]);
+        } else {
+                asm_ZucInitialization_4_sse(&keys, &ivs, &state);
+
+                /* Generate 64 bytes at a time */
+                asm_ZucGenKeystream64B_4_sse(&state,
+                                             (uint32_t *) keyStr[0],
+                                             (uint32_t *) keyStr[1],
+                                             (uint32_t *) keyStr[2],
+                                             (uint32_t *) keyStr[3]);
+        }
 
         /* loop over the message bits */
         while (remainCommonBits >= keyStreamLengthInBits) {
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 64 bytes */
-                if (!remainCommonBits)
-                        asm_ZucGenKeystream8B_4_sse(&state,
-                                     (uint32_t *) &keyStr[0][64],
-                                     (uint32_t *) &keyStr[1][64],
-                                     (uint32_t *) &keyStr[2][64],
-                                     (uint32_t *) &keyStr[3][64]);
-                else
-                        asm_ZucGenKeystream64B_4_sse(&state,
-                                     (uint32_t *) &keyStr[0][64],
-                                     (uint32_t *) &keyStr[1][64],
-                                     (uint32_t *) &keyStr[2][64],
-                                     (uint32_t *) &keyStr[3][64]);
+                if (use_gfni) {
+                        if (!remainCommonBits)
+                                asm_ZucGenKeystream8B_4_gfni_sse(&state,
+                                             (uint32_t *) &keyStr[0][64],
+                                             (uint32_t *) &keyStr[1][64],
+                                             (uint32_t *) &keyStr[2][64],
+                                             (uint32_t *) &keyStr[3][64]);
+                        else
+                                asm_ZucGenKeystream64B_4_gfni_sse(&state,
+                                             (uint32_t *) &keyStr[0][64],
+                                             (uint32_t *) &keyStr[1][64],
+                                             (uint32_t *) &keyStr[2][64],
+                                             (uint32_t *) &keyStr[3][64]);
+                } else {
+                        if (!remainCommonBits)
+                                asm_ZucGenKeystream8B_4_sse(&state,
+                                             (uint32_t *) &keyStr[0][64],
+                                             (uint32_t *) &keyStr[1][64],
+                                             (uint32_t *) &keyStr[2][64],
+                                             (uint32_t *) &keyStr[3][64]);
+                        else
+                                asm_ZucGenKeystream64B_4_sse(&state,
+                                             (uint32_t *) &keyStr[0][64],
+                                             (uint32_t *) &keyStr[1][64],
+                                             (uint32_t *) &keyStr[2][64],
+                                             (uint32_t *) &keyStr[3][64]);
+                }
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
                         T[i] = asm_Eia3Round64BSSE(T[i], &keyStr[i][0],
                                                    pIn8[i]);
@@ -1200,12 +1227,14 @@ void zuc_eia3_4_buffer_job_sse(const void * const pKey[NUM_SSE_BUFS],
 #endif
 }
 
-void zuc_eia3_n_buffer_sse(const void * const pKey[],
-                           const void * const pIv[],
-                           const void * const pBufferIn[],
-                           const uint32_t lengthInBits[],
-                           uint32_t *pMacI[],
-                           const uint32_t numBuffers)
+static inline
+void _zuc_eia3_n_buffer_sse(const void * const pKey[],
+                            const void * const pIv[],
+                            const void * const pBufferIn[],
+                            const uint32_t lengthInBits[],
+                            uint32_t *pMacI[],
+                            const uint32_t numBuffers,
+                            const unsigned use_gfni)
 {
 #ifndef LINUX
         DECLARE_ALIGNED(imb_uint128_t xmm_save[10], 16);
@@ -1241,7 +1270,8 @@ void zuc_eia3_n_buffer_sse(const void * const pKey[],
                                        &pIv[i],
                                        &pBufferIn[i],
                                        &lengthInBits[i],
-                                       &pMacI[i]);
+                                       &pMacI[i],
+                                       use_gfni);
                 i+=4;
         }
 
@@ -1262,4 +1292,26 @@ void zuc_eia3_n_buffer_sse(const void * const pKey[],
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
+}
+
+void zuc_eia3_n_buffer_sse(const void * const pKey[],
+                           const void * const pIv[],
+                           const void * const pBufferIn[],
+                           const uint32_t lengthInBits[],
+                           uint32_t *pMacI[],
+                           const uint32_t numBuffers)
+{
+       _zuc_eia3_n_buffer_sse(pKey, pIv, pBufferIn, lengthInBits,
+                              pMacI, numBuffers, 0);
+}
+
+void zuc_eia3_n_buffer_gfni_sse(const void * const pKey[],
+                                const void * const pIv[],
+                                const void * const pBufferIn[],
+                                const uint32_t lengthInBits[],
+                                uint32_t *pMacI[],
+                                const uint32_t numBuffers)
+{
+       _zuc_eia3_n_buffer_sse(pKey, pIv, pBufferIn, lengthInBits,
+                              pMacI, numBuffers, 1);
 }
