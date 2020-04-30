@@ -357,6 +357,7 @@ asm_sse_lib_objs := \
 	mb_mgr_hmac_sha_256_flush_ni_sse.o \
 	mb_mgr_hmac_sha_256_submit_ni_sse.o \
 	mb_mgr_zuc_submit_flush_sse.o \
+	mb_mgr_zuc_submit_flush_gfni_sse.o \
 	ethernet_fcs_sse.o
 
 #

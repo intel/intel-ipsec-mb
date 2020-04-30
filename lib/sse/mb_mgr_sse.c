@@ -153,13 +153,21 @@ IMB_JOB *submit_job_aes_cntr_sse(IMB_JOB *job);
 
 IMB_JOB *submit_job_aes_cntr_bit_sse(IMB_JOB *job);
 
-IMB_JOB *submit_job_zuc_eea3_sse(MB_MGR_ZUC_OOO *state,
-                                        IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eea3_sse(MB_MGR_ZUC_OOO *state);
+IMB_JOB *submit_job_zuc_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
+                                         IMB_JOB *job);
+IMB_JOB *flush_job_zuc_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state);
 
-IMB_JOB *submit_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state,
+IMB_JOB *submit_job_zuc_eea3_gfni_sse(MB_MGR_ZUC_OOO *state,
+                                      IMB_JOB *job);
+IMB_JOB *flush_job_zuc_eea3_gfni_sse(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *submit_job_zuc_eia3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
-IMB_JOB *flush_job_zuc_eia3_sse(MB_MGR_ZUC_OOO *state);
+IMB_JOB *flush_job_zuc_eia3_no_gfni_sse(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *submit_job_zuc_eia3_gfni_sse(MB_MGR_ZUC_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_zuc_eia3_gfni_sse(MB_MGR_ZUC_OOO *state);
 
 void aes_cmac_256_subkey_gen_sse(const void *key_exp,
                                  void *key1, void *key2);
@@ -551,6 +559,24 @@ submit_job_aes_cntr_bit_sse(IMB_JOB *job)
 
 /* ====================================================================== */
 
+static IMB_JOB *
+(*submit_job_zuc_eea3_sse)
+        (MB_MGR_ZUC_OOO *state, IMB_JOB *job) =
+                        submit_job_zuc_eea3_no_gfni_sse;
+
+static IMB_JOB *
+(*flush_job_zuc_eea3_sse)
+        (MB_MGR_ZUC_OOO *state) = flush_job_zuc_eea3_no_gfni_sse;
+
+static IMB_JOB *
+(*submit_job_zuc_eia3_sse)
+        (MB_MGR_ZUC_OOO *state, IMB_JOB *job) =
+                        submit_job_zuc_eia3_no_gfni_sse;
+
+static IMB_JOB *
+(*flush_job_zuc_eia3_sse)
+        (MB_MGR_ZUC_OOO *state) = flush_job_zuc_eia3_no_gfni_sse;
+
 void
 init_mb_mgr_sse(IMB_MGR *state)
 {
@@ -584,6 +610,13 @@ init_mb_mgr_sse(IMB_MGR *state)
         if (!(state->features & IMB_FEATURE_AESNI)) {
                 init_mb_mgr_sse_no_aesni(state);
                 return;
+        }
+
+        if (state->features & IMB_FEATURE_GFNI) {
+                submit_job_zuc_eea3_sse = submit_job_zuc_eea3_gfni_sse;
+                flush_job_zuc_eea3_sse = flush_job_zuc_eea3_gfni_sse;
+                submit_job_zuc_eia3_sse = submit_job_zuc_eia3_gfni_sse;
+                flush_job_zuc_eia3_sse = flush_job_zuc_eia3_gfni_sse;
         }
 
         /* Init AES out-of-order fields */

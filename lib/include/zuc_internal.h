@@ -896,12 +896,12 @@ IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX(const void *ks, const void *data,
 
 
 IMB_DLL_LOCAL
-void zuc_eea3_4_buffer_job_sse(const void * const pKey[4],
-                               const void * const pIv[4],
-                               const void * const pBufferIn[4],
-                               void *pBufferOut[4],
-                               const uint16_t lengthInBytes[4],
-                               const void * const job_in_lane[4]);
+void zuc_eea3_4_buffer_job_no_gfni_sse(const void * const pKey[4],
+                                       const void * const pIv[4],
+                                       const void * const pBufferIn[4],
+                                       void *pBufferOut[4],
+                                       const uint16_t lengthInBytes[4],
+                                       const void * const job_in_lane[4]);
 
 IMB_DLL_LOCAL
 void zuc_eea3_4_buffer_job_gfni_sse(const void * const pKey[4],
@@ -952,12 +952,20 @@ void zuc_eea3_16_buffer_job_gfni_avx512(const void * const pKey[16],
                                         const void * const job_in_lane[16]);
 
 IMB_DLL_LOCAL
-void zuc_eia3_4_buffer_job_sse(const void * const pKey[4],
-                               const void * const pIv[4],
-                               const void * const pBufferIn[4],
-                               uint32_t *pMacI[4],
-                               const uint16_t lengthInBits[4],
-                               const void * const job_in_lane[4]);
+void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
+                                    const void * const pIv[4],
+                                    const void * const pBufferIn[4],
+                                    uint32_t *pMacI[4],
+                                    const uint16_t lengthInBits[4],
+                                    const void * const job_in_lane[4]);
+
+IMB_DLL_LOCAL
+void zuc_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[4],
+                                       const void * const pIv[4],
+                                       const void * const pBufferIn[4],
+                                       uint32_t *pMacI[4],
+                                       const uint16_t lengthInBits[4],
+                                       const void * const job_in_lane[4]);
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],

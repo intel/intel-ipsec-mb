@@ -554,12 +554,12 @@ void _zuc_eea3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 }
 
 void
-zuc_eea3_4_buffer_job_sse(const void * const pKey[NUM_SSE_BUFS],
-                          const void * const pIv[NUM_SSE_BUFS],
-                          const void * const pBufferIn[NUM_SSE_BUFS],
-                          void *pBufferOut[NUM_SSE_BUFS],
-                          const uint16_t length[NUM_SSE_BUFS],
-                          const void * const job_in_lane[NUM_SSE_BUFS])
+zuc_eea3_4_buffer_job_no_gfni_sse(const void * const pKey[NUM_SSE_BUFS],
+                                  const void * const pIv[NUM_SSE_BUFS],
+                                  const void * const pBufferIn[NUM_SSE_BUFS],
+                                  void *pBufferOut[NUM_SSE_BUFS],
+                                  const uint16_t length[NUM_SSE_BUFS],
+                                  const void * const job_in_lane[NUM_SSE_BUFS])
 {
         _zuc_eea3_4_buffer_job(pKey, pIv, pBufferIn, pBufferOut,
                                length, job_in_lane, 0);
@@ -1055,12 +1055,14 @@ void zuc_eia3_1_buffer_sse(const void *pKey,
 #endif
 }
 
-void zuc_eia3_4_buffer_job_sse(const void * const pKey[NUM_SSE_BUFS],
-                               const void * const pIv[NUM_SSE_BUFS],
-                               const void * const pBufferIn[NUM_SSE_BUFS],
-                               uint32_t *pMacI[NUM_SSE_BUFS],
-                               const uint16_t lengthInBits[NUM_SSE_BUFS],
-                               const void * const job_in_lane[NUM_SSE_BUFS])
+static inline
+void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
+                            const void * const pIv[NUM_SSE_BUFS],
+                            const void * const pBufferIn[NUM_SSE_BUFS],
+                            uint32_t *pMacI[NUM_SSE_BUFS],
+                            const uint16_t lengthInBits[NUM_SSE_BUFS],
+                            const void * const job_in_lane[NUM_SSE_BUFS],
+                            const unsigned use_gfni)
 {
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState4_t state, 64);
@@ -1101,32 +1103,58 @@ void zuc_eia3_4_buffer_job_sse(const void * const pKey[NUM_SSE_BUFS],
         ivs.pIv3 = pIv[2];
         ivs.pIv4 = pIv[3];
 
-        asm_ZucInitialization_4_sse( &keys,  &ivs, &state);
+        if (use_gfni) {
+                asm_ZucInitialization_4_gfni_sse(&keys, &ivs, &state);
 
-        /* Generate 64 bytes at a time */
-        asm_ZucGenKeystream64B_4_sse(&state,
-                                     (uint32_t *) keyStr[0],
-                                     (uint32_t *) keyStr[1],
-                                     (uint32_t *) keyStr[2],
-                                     (uint32_t *) keyStr[3]);
+                /* Generate 64 bytes at a time */
+                asm_ZucGenKeystream64B_4_gfni_sse(&state,
+                                                  (uint32_t *) keyStr[0],
+                                                  (uint32_t *) keyStr[1],
+                                                  (uint32_t *) keyStr[2],
+                                                  (uint32_t *) keyStr[3]);
+        } else {
+                asm_ZucInitialization_4_sse(&keys,  &ivs, &state);
+
+                /* Generate 64 bytes at a time */
+                asm_ZucGenKeystream64B_4_sse(&state,
+                                             (uint32_t *) keyStr[0],
+                                             (uint32_t *) keyStr[1],
+                                             (uint32_t *) keyStr[2],
+                                             (uint32_t *) keyStr[3]);
+        }
 
         /* loop over the message bits */
         while (remainCommonBits >= keyStreamLengthInBits) {
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 64 bytes */
-                if (!remainCommonBits)
-                        asm_ZucGenKeystream8B_4_sse(&state,
-                                     (uint32_t *) &keyStr[0][64],
-                                     (uint32_t *) &keyStr[1][64],
-                                     (uint32_t *) &keyStr[2][64],
-                                     (uint32_t *) &keyStr[3][64]);
-                else
-                        asm_ZucGenKeystream64B_4_sse(&state,
-                                     (uint32_t *) &keyStr[0][64],
-                                     (uint32_t *) &keyStr[1][64],
-                                     (uint32_t *) &keyStr[2][64],
-                                     (uint32_t *) &keyStr[3][64]);
+                if (use_gfni) {
+                        if (!remainCommonBits)
+                                asm_ZucGenKeystream8B_4_gfni_sse(&state,
+                                             (uint32_t *) &keyStr[0][64],
+                                             (uint32_t *) &keyStr[1][64],
+                                             (uint32_t *) &keyStr[2][64],
+                                             (uint32_t *) &keyStr[3][64]);
+                        else
+                                asm_ZucGenKeystream64B_4_gfni_sse(&state,
+                                             (uint32_t *) &keyStr[0][64],
+                                             (uint32_t *) &keyStr[1][64],
+                                             (uint32_t *) &keyStr[2][64],
+                                             (uint32_t *) &keyStr[3][64]);
+                } else {
+                        if (!remainCommonBits)
+                                asm_ZucGenKeystream8B_4_sse(&state,
+                                             (uint32_t *) &keyStr[0][64],
+                                             (uint32_t *) &keyStr[1][64],
+                                             (uint32_t *) &keyStr[2][64],
+                                             (uint32_t *) &keyStr[3][64]);
+                        else
+                                asm_ZucGenKeystream64B_4_sse(&state,
+                                             (uint32_t *) &keyStr[0][64],
+                                             (uint32_t *) &keyStr[1][64],
+                                             (uint32_t *) &keyStr[2][64],
+                                             (uint32_t *) &keyStr[3][64]);
+                }
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
@@ -1225,6 +1253,28 @@ void zuc_eia3_4_buffer_job_sse(const void * const pKey[NUM_SSE_BUFS],
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
 #endif
+}
+
+void zuc_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[NUM_SSE_BUFS],
+                                  const void * const pIv[NUM_SSE_BUFS],
+                                  const void * const pBufferIn[NUM_SSE_BUFS],
+                                  uint32_t *pMacI[NUM_SSE_BUFS],
+                                  const uint16_t lengthInBits[NUM_SSE_BUFS],
+                                  const void * const job_in_lane[NUM_SSE_BUFS])
+{
+        _zuc_eia3_4_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
+                               job_in_lane, 0);
+}
+
+void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[NUM_SSE_BUFS],
+                                  const void * const pIv[NUM_SSE_BUFS],
+                                  const void * const pBufferIn[NUM_SSE_BUFS],
+                                  uint32_t *pMacI[NUM_SSE_BUFS],
+                                  const uint16_t lengthInBits[NUM_SSE_BUFS],
+                                  const void * const job_in_lane[NUM_SSE_BUFS])
+{
+        _zuc_eia3_4_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
+                               job_in_lane, 1);
 }
 
 static inline

@@ -11,6 +11,8 @@ Library
 - AES-GMAC direct API added to support Scatter-Gather list (SGL)
 - CALC_AAD_HASH macro improved for AVX512 (VAES), boosting performance
   for AES-GMAC, GHASH and hash calculation for AAD in AES-GCM
+- ZUC-EEA3 and ZUC-EIA3 Multi-buffer implemented for SSE using
+  GFNI instructions.
 
 LibTestApp
 - CCM tests extended to test AES-CCM-256

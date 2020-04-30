@@ -33,12 +33,12 @@
 %include "include/const.inc"
 
 %ifndef SUBMIT_JOB_ZUC_EEA3
-%define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_sse
-%define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_sse
-%define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_sse
-%define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_sse
-%define ZUC_EEA3_4_BUFFER zuc_eea3_4_buffer_job_sse
-%define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_sse
+%define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_no_gfni_sse
+%define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_no_gfni_sse
+%define ZUC_EEA3_4_BUFFER zuc_eea3_4_buffer_job_no_gfni_sse
+%define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_no_gfni_sse
+%define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_no_gfni_sse
+%define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_no_gfni_sse
 %endif
 
 section .data
