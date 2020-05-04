@@ -75,6 +75,28 @@
 #define SHA256_DIGEST_SZ (NUM_SHA_256_DIGEST_WORDS * AVX512_NUM_SHA256_LANES)
 #define SHA512_DIGEST_SZ (NUM_SHA_512_DIGEST_WORDS * AVX512_NUM_SHA512_LANES)
 
+/**
+ *****************************************************************************
+ * @description
+ *      Packed structure to store the ZUC state for 16 packets. *
+ *****************************************************************************/
+typedef struct zuc_state_16_s {
+    uint32_t lfsrState[16][16];
+    /**< State registers of the LFSR */
+    uint32_t fR1[16];
+    /**< register of F */
+    uint32_t fR2[16];
+    /**< register of F */
+    uint32_t bX0[16];
+    /**< Output X0 of the bit reorganization for 16 packets */
+    uint32_t bX1[16];
+    /**< Output X1 of the bit reorganization for 16 packets */
+    uint32_t bX2[16];
+    /**< Output X2 of the bit reorganization for 16 packets */
+    uint32_t bX3[16];
+    /**< Output X3 of the bit reorganization for 16 packets */
+} ZucState16_t;
+
 /*
  * Argument structures for various algorithms
  */
@@ -231,6 +253,8 @@ typedef struct {
         uint64_t unused_lanes;
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
+        DECLARE_ALIGNED(ZucState16_t state16, 64);
+        uint16_t init_not_done;
         uint64_t road_block;
 } MB_MGR_ZUC_OOO;
 

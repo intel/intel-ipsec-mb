@@ -29,6 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
 %include "include/transpose_avx512.asm"
+%include "mb_mgr_datastruct.asm"
 
 %define APPEND(a,b) a %+ b
 
@@ -236,16 +237,12 @@ align 64
 ;
 ;   bits_reorg16()
 ;
-;   params
-;       %1 - round number
-;       %2 - Calculate X3 (1 = yes)
-;       %3 - ZMM register storing X3
-;       rax - LFSR pointer
-;   uses
-;
-;   return
-;
-%macro  bits_reorg16 2-3
+%macro  bits_reorg16 3-4
+%define %%STATE     %1 ; [in] ZUC state
+%define %%ROUND_NUM %2 ; [in] Round number
+%define %%LANE_MASK %3 ; [in] Mask register with lanes to update
+%define %%X3_OUT    %4 ; [out] ZMM register containing X3 of all lanes
+
     ;
     ; zmm15 = LFSR_S15
     ; zmm14 = LFSR_S14
@@ -256,61 +253,58 @@ align 64
     ; zmm2  = LFSR_S2
     ; zmm0  = LFSR_S0
     ;
-    vmovdqa64   zmm15, [rax + ((15 + %1) % 16)*64]
-    vmovdqa64   zmm14, [rax + ((14 + %1) % 16)*64]
-    vmovdqa64   zmm11, [rax + ((11 + %1) % 16)*64]
-    vmovdqa64   zmm9,  [rax + (( 9 + %1) % 16)*64]
-    vmovdqa64   zmm7,  [rax + (( 7 + %1) % 16)*64]
-    vmovdqa64   zmm5,  [rax + (( 5 + %1) % 16)*64]
-    vmovdqa64   zmm2,  [rax + (( 2 + %1) % 16)*64]
-    vmovdqa64   zmm0,  [rax + (( 0 + %1) % 16)*64]
+    vmovdqa64   zmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm14, [%%STATE + ((14 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm11, [%%STATE + ((11 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm9,  [%%STATE + (( 9 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm7,  [%%STATE + (( 7 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm5,  [%%STATE + (( 5 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm2,  [%%STATE + (( 2 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
 
     vpxorq      zmm1, zmm1
     vpslld      zmm15, 1
     vpblendmw   zmm3{k1},  zmm14, zmm1
     vpblendmw   zmm15{k1}, zmm3, zmm15
 
-    vmovdqa64   [rax + OFS_X0], zmm15   ; BRC_X0
+    vmovdqa32   [%%STATE + OFS_X0]{%%LANE_MASK}, zmm15   ; BRC_X0
     vpslld      zmm11, 16
     vpsrld      zmm9, 15
     vporq       zmm11, zmm9
-    vmovdqa64   [rax + OFS_X1], zmm11   ; BRC_X1
+    vmovdqa32   [%%STATE + OFS_X1]{%%LANE_MASK}, zmm11   ; BRC_X1
     vpslld      zmm7, 16
     vpsrld      zmm5, 15
     vporq       zmm7, zmm5
-    vmovdqa64   [rax + OFS_X2], zmm7    ; BRC_X2
-%if (%2 == 1)
+    vmovdqa32   [%%STATE + OFS_X2]{%%LANE_MASK}, zmm7    ; BRC_X2
+%if (%0 == 4)
     vpslld      zmm2, 16
     vpsrld      zmm0, 15
-    vporq       %3, zmm2, zmm0 ; Store BRC_X3 in ZMM register
+    vporq       %%X3_OUT, zmm2, zmm0 ; Store BRC_X3 in ZMM register
 %endif
 %endmacro
 
 ;
 ;   nonlin_fun16()
 ;
-;   params
-;       %1 == 1, then calculate W
-;       %2 == 1, then GFNI instructions may be used
-;   uses
-;
 ;   return
-;       zmm0 = W value, updates F_R1[] / F_R2[]
+;       W value, updates F_R1[] / F_R2[]
 ;
-%macro nonlin_fun16  2
-%define %%CALC_W     %1
-%define %%USE_GFNI   %2
+%macro nonlin_fun16  3-4
+%define %%STATE     %1 ; [in] ZUC state
+%define %%LANE_MASK %2 ; [in] Mask register with lanes to update
+%define %%USE_GFNI  %3 ; [in] Use GFNI instructions
+%define %%W         %4 ; [out] ZMM register to contain W for all lanes
 
-%if (%%CALC_W == 1)
-    vmovdqa64   zmm0, [rax + OFS_X0]
-    vpxorq      zmm0, [rax + OFS_R1]
-    vpaddd      zmm0, [rax + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
+%if (%0 == 4)
+    vmovdqa64   %%W, [%%STATE + OFS_X0]
+    vpxorq      %%W, [%%STATE + OFS_R1]
+    vpaddd      %%W, [%%STATE + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
 %endif
 
-    vmovdqa64   zmm1, [rax + OFS_R1]
-    vmovdqa64   zmm2, [rax + OFS_R2]
-    vpaddd      zmm1, [rax + OFS_X1]    ; W1 = F_R1 + BRC_X1
-    vpxorq      zmm2, [rax + OFS_X2]    ; W2 = F_R2 ^ BRC_X2
+    vmovdqa64   zmm1, [%%STATE + OFS_R1]
+    vmovdqa64   zmm2, [%%STATE + OFS_R2]
+    vpaddd      zmm1, [%%STATE + OFS_X1]    ; W1 = F_R1 + BRC_X1
+    vpxorq      zmm2, [%%STATE + OFS_X2]    ; W2 = F_R2 ^ BRC_X2
 
     vpslld      zmm3, zmm1, 16
     vpsrld      zmm4, zmm1, 16
@@ -358,8 +352,8 @@ align 64
     vpshufb     zmm1, [rel rev_S0_S1_shuf]
     vpshufb     zmm2, [rel rev_S1_S0_shuf]
 
-    vmovdqa64   [rax + OFS_R1], zmm1
-    vmovdqa64   [rax + OFS_R2], zmm2
+    vmovdqa32   [%%STATE + OFS_R1]{%%LANE_MASK}, zmm1
+    vmovdqa32   [%%STATE + OFS_R2]{%%LANE_MASK}, zmm2
 %endmacro
 
 ;
@@ -461,13 +455,11 @@ align 64
 ;
 ;   lfsr_updt16()
 ;
-;   params
-;       %1 - round number
-;   uses
-;       zmm0 as input (ZERO or W)
-;   return
-;
-%macro  lfsr_updt16  1
+%macro  lfsr_updt16  4
+%define %%STATE     %1 ; [in] ZUC state
+%define %%ROUND_NUM %2 ; [in] Round number
+%define %%LANE_MASK %3 ; [in] Mask register with lanes to update
+%define %%W         %4 ; [out] ZMM register to contain W for all lanes
     ;
     ; zmm1  = LFSR_S0
     ; zmm4  = LFSR_S4
@@ -475,26 +467,26 @@ align 64
     ; zmm13 = LFSR_S13
     ; zmm15 = LFSR_S15
     ;
-    vmovdqa64   zmm1,  [rax + (( 0 + %1) % 16)*64]
-    vmovdqa64   zmm4,  [rax + (( 4 + %1) % 16)*64]
-    vmovdqa64   zmm10, [rax + ((10 + %1) % 16)*64]
-    vmovdqa64   zmm13, [rax + ((13 + %1) % 16)*64]
-    vmovdqa64   zmm15, [rax + ((15 + %1) % 16)*64]
+    vmovdqa64   zmm1,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   zmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
 
     ; Calculate LFSR feedback
-    add_mod31   zmm0, zmm1
+    add_mod31   %%W, zmm1
     rot_mod31   zmm1, 8
-    add_mod31   zmm0, zmm1
+    add_mod31   %%W, zmm1
     rot_mod31   zmm4, 20
-    add_mod31   zmm0, zmm4
+    add_mod31   %%W, zmm4
     rot_mod31   zmm10, 21
-    add_mod31   zmm0, zmm10
+    add_mod31   %%W, zmm10
     rot_mod31   zmm13, 17
-    add_mod31   zmm0, zmm13
+    add_mod31   %%W, zmm13
     rot_mod31   zmm15, 15
-    add_mod31   zmm0, zmm15
+    add_mod31   %%W, zmm15
 
-    vmovdqa64   [rax + (( 0 + %1) % 16)*64], zmm0
+    vmovdqa32   [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]{%%LANE_MASK}, %%W
 
     ; LFSR_S16 = (LFSR_S15++) = eax
 %endmacro
@@ -527,18 +519,37 @@ align 64
 %define %%USE_GFNI   %1 ; [in] If 1, then GFNI instructions may be used
 
 %ifdef LINUX
-	%define		pKe	rdi
-	%define		pIv	rsi
-	%define		pState	rdx
+	%define		pKe	  rdi
+	%define		pIv	  rsi
+	%define		pState	  rdx
+        %define         lane_mask ecx
 %else
-	%define		pKe	rcx
-	%define		pIv	rdx
-	%define		pState	r8
+	%define		pKe	  rcx
+	%define		pIv	  rdx
+	%define		pState	  r8
+        %define         lane_mask r9d
 %endif
 
     FUNC_SAVE
 
     push    pState      ; Save LFSR Pointer to stack
+
+    kmovw   k2, lane_mask
+
+    ; Zero out state (for not initialized LFSR's)
+    vpxorq  zmm0, zmm0
+%assign I 0
+%rep 16
+    vmovdqa32 [pState + I*64]{k2}, zmm0 ; Zero out LFSR's
+%assign I (I + 1)
+%endrep
+    ; Zero out FR1-2, BX0-3
+    vmovdqa32 [pState + _zucstate_fr1]{k2}, zmm0
+    vmovdqa32 [pState + _zucstate_fr2]{k2}, zmm0
+    vmovdqa32 [pState + _zucstate_bX0]{k2}, zmm0
+    vmovdqa32 [pState + _zucstate_bX1]{k2}, zmm0
+    vmovdqa32 [pState + _zucstate_bX2]{k2}, zmm0
+    vmovdqa32 [pState + _zucstate_bX3]{k2}, zmm0
 
     ; Set LFSR registers for Packet 1
     mov     r9, [pKe]   ; Load Key 1 pointer
@@ -574,7 +585,7 @@ align 64
 %assign i 0
 %assign j 0
 %rep 16
-    vmovdqa64 [pState + 64*i], APPEND(zmm, j)
+    vmovdqa32 [pState + 64*i]{k2}, APPEND(zmm, j)
 %assign i (i+1)
 %assign j (j+2)
 %endrep
@@ -591,15 +602,15 @@ align 64
     lea     rax, [rdx]
     push    rdx
 
-    bits_reorg16 N, 0
-    nonlin_fun16 1, %%USE_GFNI
+    bits_reorg16 rax, N, k2
+    nonlin_fun16 rax, k2, %%USE_GFNI, zmm0
     vpsrld  zmm0,1         ; Shift out LSB of W
 
     pop     rdx
     lea     rax, [rdx]
     push    rdx
 
-    lfsr_updt16  N           ; W (zmm0) used in LFSR update - not set to zero
+    lfsr_updt16  rax, N, k2, zmm0  ; W (zmm0) used in LFSR update - not set to zero
 %assign N N+1
 %endrep
 
@@ -608,14 +619,14 @@ align 64
     lea     rax, [rdx]
     push    rdx
 
-    bits_reorg16 0, 0
-    nonlin_fun16 0, %%USE_GFNI
+    bits_reorg16 rax, 0, k2
+    nonlin_fun16 rax, k2, %%USE_GFNI
 
     pop     rdx
     lea     rax, [rdx]
 
     vpxorq    zmm0, zmm0
-    lfsr_updt16  0
+    lfsr_updt16  rax, 0, k2, zmm0  ; W (zmm0) used in LFSR update - not set to zero
 
     FUNC_RESTORE
 
@@ -669,16 +680,19 @@ asm_ZucInitialization_16_gfni_avx512:
     mov         r8d, 0xAAAAAAAA
     kmovd       k1, r8d
 
+    mov         r9d, 0x0000FFFF
+    kmovd       k2, r9d
+
     ; Generate N*4B of keystream in N rounds
 %assign N 1
 %assign idx 16
 %rep %%NUM_ROUNDS
-    bits_reorg16 N, 1, APPEND(zmm, idx)
-    nonlin_fun16 1, %%USE_GFNI
+    bits_reorg16 rax, N, k2, APPEND(zmm, idx)
+    nonlin_fun16 rax, k2, %%USE_GFNI, zmm0
     ; OFS_X3 XOR W (zmm0)
     vpxorq      APPEND(zmm, idx), zmm0
     vpxorq      zmm0, zmm0
-    lfsr_updt16  N
+    lfsr_updt16  rax, N, k2, zmm0  ; W (zmm0) used in LFSR update - not set to zero
 %assign N N+1
 %assign idx (idx + 1)
 %endrep
@@ -740,22 +754,23 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 
     ret
 
-%macro CIPHER64B 4
+%macro CIPHER64B 5
 %define %%NROUNDS  %1
-%define %%KMASK    %2
-%define %%USE_GFNI %3
-%define %%OFFSET   %4
+%define %%BYTE_MASK %2
+%define %%LANE_MASK %3
+%define %%USE_GFNI  %4
+%define %%OFFSET    %5
 
         ; Generate 64B of keystream in 16 rounds
 %assign N 1
 %assign idx 16
 %rep %%NROUNDS
-        bits_reorg16 N, 1, APPEND(zmm, idx)
-        nonlin_fun16 1, %%USE_GFNI
+        bits_reorg16 rax, N, %%LANE_MASK, APPEND(zmm, idx)
+        nonlin_fun16 rax, %%LANE_MASK, %%USE_GFNI, zmm0
         ; OFS_X3 XOR W (zmm0)
         vpxorq  APPEND(zmm, idx), zmm0
         vpxorq   zmm0, zmm0
-        lfsr_updt16  N
+        lfsr_updt16  rax, N, %%LANE_MASK, zmm0  ; W (zmm0) used in LFSR update - not set to zero
 %assign N (N + 1)
 %assign idx (idx + 1)
 %endrep
@@ -776,7 +791,7 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 %assign k 12
 %rep 16
         mov     APPEND(r, k), [pIn + i]
-        vmovdqu32 APPEND(zmm, j){%%KMASK}, [APPEND(r, k) + %%OFFSET]
+        vmovdqu32 APPEND(zmm, j){%%BYTE_MASK}, [APPEND(r, k) + %%OFFSET]
 %assign k 12 + ((j + 1) % 4)
 %assign j (j + 1)
 %assign i (i + 8)
@@ -804,7 +819,7 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 %assign k 12
 %rep 16
         mov     APPEND(r, k), [pOut + i]
-        vmovdqu32 [APPEND(r, k) + %%OFFSET]{%%KMASK}, APPEND(zmm, j)
+        vmovdqu32 [APPEND(r, k) + %%OFFSET]{%%BYTE_MASK}, APPEND(zmm, j)
 %assign k 12 + ((j + 1) % 4)
 %assign j (j + 1)
 %assign i (i + 8)
@@ -839,6 +854,8 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
         kmovd   k1, r10d
         mov     r10d, 0x0000FFFF
         kmovd   k2, r10d
+        kmovd   k3, r10d
+
         xor     buf_idx, buf_idx
 
 %%loop:
@@ -847,7 +864,7 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 
         vmovdqa64 zmm12, [rel mask31]
 
-        CIPHER64B 16, k2, %%USE_GFNI, buf_idx
+        CIPHER64B 16, k2, k3, %%USE_GFNI, buf_idx
 
         sub     length, 64
         add     buf_idx, 64
@@ -911,7 +928,7 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 APPEND(%%_num_final_rounds_is_,I):
         mov     r10d, ((1 << I) - 1)
         kmovd   k2, r10d
-        CIPHER64B I, k2, %%USE_GFNI, buf_idx
+        CIPHER64B I, k2, k3, %%USE_GFNI, buf_idx
         REORDER_LFSR rax, I
         shl     length, 2
         add     buf_idx, length

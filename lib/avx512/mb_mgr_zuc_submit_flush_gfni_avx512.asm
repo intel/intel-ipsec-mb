@@ -30,4 +30,5 @@
 %define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_gfni_avx512
 %define ZUC_EEA3_16_BUFFER zuc_eea3_16_buffer_job_gfni_avx512
 %define ZUC_EIA3_16_BUFFER zuc_eia3_16_buffer_job_gfni_avx512
+%define ZUC_INIT_16        asm_ZucInitialization_16_gfni_avx512
 %include "avx512/mb_mgr_zuc_submit_flush_avx512.asm"

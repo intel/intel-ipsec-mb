@@ -40,6 +40,7 @@
 %define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_no_gfni_avx512
 %define ZUC_EEA3_16_BUFFER zuc_eea3_16_buffer_job_no_gfni_avx512
 %define ZUC_EIA3_16_BUFFER zuc_eia3_16_buffer_job_no_gfni_avx512
+%define ZUC_INIT_16        asm_ZucInitialization_16_avx512
 %endif
 
 section .data
@@ -49,6 +50,8 @@ extern zuc_eea3_16_buffer_job_no_gfni_avx512
 extern zuc_eia3_16_buffer_job_no_gfni_avx512
 extern zuc_eea3_16_buffer_job_gfni_avx512
 extern zuc_eia3_16_buffer_job_gfni_avx512
+extern asm_ZucInitialization_16_avx512
+extern asm_ZucInitialization_16_gfni_avx512
 
 %ifdef LINUX
 %define arg1    rdi
@@ -95,6 +98,7 @@ SUBMIT_JOB_ZUC_EEA3:
 %define lane             r8
 %define unused_lanes     rbx
 %define len2             r13
+%define tmp2             r13
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -124,6 +128,16 @@ SUBMIT_JOB_ZUC_EEA3:
         add	qword [state + _zuc_lanes_in_use], 1
 
         mov     [state + _zuc_job_in_lane + lane*8], job
+%ifndef LINUX
+        mov     tmp2, rcx
+%endif
+        mov     rcx, lane
+        mov     tmp, 1
+        shl     tmp, cl
+%ifndef LINUX
+        mov     rcx, tmp2
+%endif
+        or      [state + _zuc_init_not_done], WORD(tmp)
         mov     tmp, [job + _src]
         add     tmp, [job + _cipher_start_src_offset_in_bytes]
         mov     [state + _zuc_args_in + lane*8], tmp
@@ -160,27 +174,37 @@ SUBMIT_JOB_ZUC_EEA3:
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
-        sub     rsp, 48
+        ;; 32 bytes for 4 parameters
+        sub     rsp, 32
 %endif
         lea     arg1, [r11 + _zuc_args_keys]
         lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
+        lea     arg3, [r11 + _zuc_state]
+        movzx   DWORD(arg4), word [r11 + _zuc_init_not_done]
+
+        call    ZUC_INIT_16
+
+%ifndef LINUX
+        add     rsp, 32
 %endif
+        mov     r11, [rsp + _gpr_save + 8*8]
+
+        mov     word [r11 + _zuc_init_not_done], 0 ; Init done for all lanes
+
+        ;; If Windows, reserve memory in stack for parameter transferring
+%ifndef LINUX
+        ;; 32 bytes for 4 parameters (already aligned to 16 bytes)
+        sub     rsp, 32
+%endif
+        mov     arg1, r11
+        lea     arg2, [r11 + _zuc_args_in]
+        lea     arg3, [r11 + _zuc_args_out]
+        lea     arg4, [r11 + _zuc_lens]
 
         call    ZUC_EEA3_16_BUFFER
 
 %ifndef LINUX
-        add     rsp, 48
+        add     rsp, 32
 %endif
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -291,6 +315,7 @@ FLUSH_JOB_ZUC_EEA3:
         kmovw           k5, DWORD(tmp4)
         mov             DWORD(tmp3), DWORD(tmp5)
         not             WORD(tmp3)
+        or              [state + _zuc_init_not_done], WORD(tmp3)
         kmovw           k6, DWORD(tmp3)         ; mask of NULL jobs in k4, k5 and k6
         mov             DWORD(tmp3), DWORD(tmp5)
         xor             tmp5, tmp5
@@ -332,33 +357,40 @@ FLUSH_JOB_ZUC_EEA3:
 
         ; Move state into r11, as register for state will be used
         ; to pass parameter to next function
-        mov     r11, state
+        mov     r12, state
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
-        sub     rsp, 48
+        ;; 32 bytes for 4 parameters
+        sub     rsp, 32
 %endif
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
+        lea     arg1, [r12 + _zuc_args_keys]
+        lea     arg2, [r12 + _zuc_args_IV]
+        lea     arg3, [r12 + _zuc_state]
+        movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
+
+        call    ZUC_INIT_16
+
+%ifndef LINUX
+        add     rsp, 32
 %endif
+        mov     word [r12 + _zuc_init_not_done], 0
+
+        ;; If Windows, reserve memory in stack for parameter transferring
+%ifndef LINUX
+        ;; 32 bytes for 4 parameters (already aligned to 16 bytes)
+        sub     rsp, 32
+%endif
+        mov     arg1, r12
+        lea     arg2, [r12 + _zuc_args_in]
+        lea     arg3, [r12 + _zuc_args_out]
+        lea     arg4, [r12 + _zuc_lens]
 
         call    ZUC_EEA3_16_BUFFER
 
 %ifndef LINUX
-        add     rsp, 48
+        add     rsp, 32
 %endif
-
         pop     idx ;; Restore valid idx
         pop     tmp3 ;; Restore NULL jobs mask
         kmovq   k6, tmp3

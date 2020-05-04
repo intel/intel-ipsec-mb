@@ -41,6 +41,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "include/ipsec_ooo_mgr.h"
 #include "intel-ipsec-mb.h"
 #include "immintrin.h"
 #include "include/wireless_common.h"
@@ -218,28 +219,6 @@ typedef struct zuc_iv_8_s {
 /**
  *****************************************************************************
  * @description
- *      Packed structure to store the ZUC state for 16 packets. *
- *****************************************************************************/
-typedef struct zuc_state_16_s {
-    uint32_t lfsrState[16][16];
-    /**< State registers of the LFSR */
-    uint32_t fR1[16];
-    /**< register of F */
-    uint32_t fR2[16];
-    /**< register of F */
-    uint32_t bX0[16];
-    /**< Output X0 of the bit reorganization for 16 packets */
-    uint32_t bX1[16];
-    /**< Output X1 of the bit reorganization for 16 packets */
-    uint32_t bX2[16];
-    /**< Output X2 of the bit reorganization for 16 packets */
-    uint32_t bX3[16];
-    /**< Output X3 of the bit reorganization for 16 packets */
-} ZucState16_t;
-
-/**
- *****************************************************************************
- * @description
  *      Structure to store pointers to the 16 keys to be used as input to
  *      @ref asm_ZucInitialization_16 and @ref asm_ZucGenKeystream64B_16
  *****************************************************************************/
@@ -378,11 +357,13 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys,
                                                    ZucIv16_t *pIvs,
-                                                   ZucState16_t *pState);
+                                                   ZucState16_t *pState,
+                                                   uint16_t lane_mask);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
                                                         ZucIv16_t *pIvs,
-                                                        ZucState16_t *pState);
+                                                        ZucState16_t *pState,
+                                                        uint16_t lane_mask);
 
 /**
  ******************************************************************************
@@ -960,20 +941,16 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[8],
                                 const void * const job_in_lane[8]);
 
 IMB_DLL_LOCAL
-void zuc_eea3_16_buffer_job_no_gfni_avx512(const void * const pKey[16],
-                                           const void * const pIv[16],
+void zuc_eea3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo,
                                            const void * const pBufferIn[16],
                                            void *pBufferOut[16],
-                                           const uint16_t lengthInBytes[16],
-                                           const void * const job_in_lane[16]);
+                                           const uint16_t lengthInBytes[16]);
 
 IMB_DLL_LOCAL
-void zuc_eea3_16_buffer_job_gfni_avx512(const void * const pKey[16],
-                                        const void * const pIv[16],
+void zuc_eea3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo,
                                         const void * const pBufferIn[16],
                                         void *pBufferOut[16],
-                                        const uint16_t lengthInBytes[16],
-                                        const void * const job_in_lane[16]);
+                                        const uint16_t lengthInBytes[16]);
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],

@@ -239,6 +239,19 @@ END_FIELDS
 %assign _ZUC_ARGS_X16_size	_FIELD_OFFSET
 %assign _ZUC_ARGS_X16_align	_STRUCT_ALIGN
 
+START_FIELDS	; ZUC_STATE_X16
+;;	name		size	 align
+FIELD	_zucstate_lfsr,	16*16*4, 64	; array of 16x16 LFSR register values
+FIELD	_zucstate_fr1,	16*4,	 64	; array of 16 fR1
+FIELD	_zucstate_fr2,	16*4,	 64	; array of 16 fR2
+FIELD	_zucstate_bX0,	16*4,	 64	; array of 16 bX0
+FIELD	_zucstate_bX1,	16*4,	 64	; array of 16 bX1
+FIELD	_zucstate_bX2,	16*4,	 64	; array of 16 bX2
+FIELD	_zucstate_bX3,	16*4,	 64	; array of 16 bX3
+END_FIELDS
+%assign _ZUC_STATE_X16_size	_FIELD_OFFSET
+%assign _ZUC_STATE_X16_align	_STRUCT_ALIGN
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 START_FIELDS	; MB_MGR_ZUC_OOO
@@ -248,6 +261,8 @@ FIELD	_zuc_lens,	16*2,	32
 FIELD	_zuc_unused_lanes, 8,	8
 FIELD	_zuc_job_in_lane, 16*8,	8
 FIELD	_zuc_lanes_in_use, 8,	8
+FIELD   _zuc_state, _ZUC_STATE_X16_size, _ZUC_STATE_X16_align
+FIELD   _zuc_init_not_done , 2, 16
 FIELD   _zuc_road_block,   8,   8
 END_FIELDS
 %assign _MB_MGR_ZUC_OOO_size	_FIELD_OFFSET
@@ -257,6 +272,13 @@ _zuc_args_in	equ	_zuc_args + _zucarg_in
 _zuc_args_out	equ	_zuc_args + _zucarg_out
 _zuc_args_keys	equ	_zuc_args + _zucarg_keys
 _zuc_args_IV	equ	_zuc_args + _zucarg_IV
+_zuc_state_lfsr equ     _zuc_state + _zucstate_lfsr
+_zuc_state_fr1  equ     _zuc_state + _zucstate_fr1
+_zuc_state_fr2  equ     _zuc_state + _zucstate_fr2
+_zuc_state_bX0  equ     _zuc_state + _zucstate_bX0
+_zuc_state_bX1  equ     _zuc_state + _zucstate_bX1
+_zuc_state_bX2  equ     _zuc_state + _zucstate_bX2
+_zuc_state_bX3  equ     _zuc_state + _zucstate_bX3
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define HMAC Out Of Order Data Structures
