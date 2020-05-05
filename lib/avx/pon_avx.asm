@@ -1174,7 +1174,8 @@ submit_job_pon_dec_no_ctr_avx:
 align 64
 MKGLOBAL(hec_32_avx,function,)
 hec_32_avx:
-        movbe   eax, [arg1]
+        mov     eax, [arg1]
+        bswap   eax
         HEC_COMPUTE_32 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
         bswap   eax
         ret
@@ -1182,7 +1183,8 @@ hec_32_avx:
 align 64
 MKGLOBAL(hec_64_avx,function,)
 hec_64_avx:
-        movbe   rax, [arg1]
+        mov     rax, [arg1]
+        bswap   rax
         HEC_COMPUTE_64 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
         bswap   rax
         ret

@@ -885,12 +885,8 @@ DEC_NO_CTR_FN_NAME:
 align 64
 MKGLOBAL(HEC_32,function,)
 HEC_32:
-%ifndef NO_AESNI
-        movbe   eax, [arg1]
-%else
         mov     eax, [arg1]
         bswap   eax
-%endif
         HEC_COMPUTE_32 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
         bswap   eax
         ret
@@ -898,12 +894,8 @@ HEC_32:
 align 64
 MKGLOBAL(HEC_64,function,)
 HEC_64:
-%ifndef NO_AESNI
-        movbe   rax, [arg1]
-%else
         mov     rax, [arg1]
         bswap   rax
-%endif
         HEC_COMPUTE_64 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
         bswap   rax
         ret
