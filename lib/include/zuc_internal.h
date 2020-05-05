@@ -802,30 +802,31 @@ IMB_DLL_LOCAL void asm_ZucCipherNx32B_8_avx2(ZucState8_t *pState,
  *
  * @description
  *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate 64 bytes of
- *      keystream for sixteen packets in parallel and will XOR this keystream
- *      with the input text, producing 64 bytes of output for all 16 packets.
+ *      stage of the ZUC algorithm. The function will generate a multiple of
+ *      64 bytes of keystream for sixteen packets in parallel and will XOR this
+ *      keystream with the input text, producing 64 bytes of output
+ *      for all 16 packets.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState16_t
  * @param[in] pIn                   Array of pointers to 16 input buffers.
  * @param[out] pOut                 Array of pointers to 16 output buffers.
- * @param[in] bufOffset             Offset into pIn and pOut
+ * @param[in] length                Length to encrypt (multiple of 64 bytes)
  *
  * @pre
  *      A successful call to @ref asm_ZucInitialization_16 to initialize the ZUC
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipher64B_16_avx512(ZucState16_t *pState,
-                                              const uint64_t *pIn[16],
-                                              uint64_t *pOut[16],
-                                              uint64_t bufOffset);
+IMB_DLL_LOCAL void asm_ZucCipherNx64B_16_avx512(ZucState16_t *pState,
+                                                const uint64_t *pIn[16],
+                                                uint64_t *pOut[16],
+                                                const uint64_t length);
 
-IMB_DLL_LOCAL void asm_ZucCipher64B_16_gfni_avx512(ZucState16_t *pState,
-                                                   const uint64_t *pIn[16],
-                                                   uint64_t *pOut[16],
-                                                   uint64_t bufOffset);
+IMB_DLL_LOCAL void asm_ZucCipherNx64B_16_gfni_avx512(ZucState16_t *pState,
+                                                     const uint64_t *pIn[16],
+                                                     uint64_t *pOut[16],
+                                                     const uint64_t length);
 
 /**
  ******************************************************************************

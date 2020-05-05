@@ -408,7 +408,6 @@ void _zuc_eea3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
 
         const uint64_t *pIn64[NUM_AVX512_BUFS]= {NULL};
         uint64_t *pOut64[NUM_AVX512_BUFS] = {NULL};
-        uint64_t bufOffset = 0;
 
         /* rounded down minimum length */
         bytes = numKeyStreamsPerPkt * ZUC_KEYSTR_LEN;
@@ -436,26 +435,12 @@ void _zuc_eea3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        /* Loop for 64 bytes at a time generating 16 key-streams per loop */
-        while (numKeyStreamsPerPkt) {
-                /* Generate 64 bytes of KeyStream for 16 buffers
-                 * and XOR with input */
-                if (use_gfni)
-                        asm_ZucCipher64B_16_gfni_avx512(&state, pIn64, pOut64,
-                                                        bufOffset);
-                else
-                        asm_ZucCipher64B_16_avx512(&state, pIn64, pOut64,
-                                                   bufOffset);
-                bufOffset += 64;
-
-                /* Update keystream count */
-                numKeyStreamsPerPkt--;
-        }
-
-        for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                pIn64[i] += (bufOffset >> 3);
-                pOut64[i] += (bufOffset >> 3);
-        }
+        if (use_gfni)
+                asm_ZucCipherNx64B_16_gfni_avx512(&state, pIn64, pOut64,
+                                                  numKeyStreamsPerPkt * 64);
+        else
+                asm_ZucCipherNx64B_16_avx512(&state, pIn64, pOut64,
+                                             numKeyStreamsPerPkt * 64);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
