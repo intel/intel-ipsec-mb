@@ -63,7 +63,7 @@ class Variant(object):
         n = len(sizes)
 
         if n != len(self.avg_times):
-            print "Error!"
+            print ("Error!")
             return None
 
         sumx = sum(sizes)
@@ -114,12 +114,12 @@ class VarList(list):
         if tolerance is None:
             tolerance = 5.0
         if tolerance < 0.0:
-            print "Bad argument: Tolerance must not be less than 0%"
+            print ("Bad argument: Tolerance must not be less than 0%")
             exit(1)
-        print "TOLERANCE: {:.2f}%".format(tolerance)
+        print ("TOLERANCE: %6.2f "%(tolerance))
 
         warning = False
-        print "NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE A\tINTERCEPT A\tSLOPE B\tINTERCEPT B"
+        print ("NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE A\tINTERCEPT A\tSLOPE B\tINTERCEPT B")
         for i, obj_a in enumerate(self):
             obj_b = list_b.find_obj(obj_a.params)
             if obj_b != None:
@@ -134,12 +134,9 @@ class VarList(list):
                 if (obj_a.slope > 0.001 and obj_b.slope > 0.001 and
                         diff_slope > slope_bv) or diff_intercept > intercept_bv:
                     warning = True
-                    print "{}\t{}\t{}\t{}".format(i + 1,
-                                                  obj_b.get_params_str(),
-                                                  obj_a.get_lin_func_str(),
-                                                  obj_b.get_lin_func_str())
+                    print (str(i+1)+ "\t" + obj_b.get_params_str()+ "\t" + obj_a.get_lin_func_str() + "\t" + obj_b.get_lin_func_str())
         if not warning:
-            print "No differences found."
+            print ("No differences found.")
         return warning
 
     def printout(self):
@@ -147,13 +144,9 @@ class VarList(list):
         Prints out readable representation of the list
         """
 
-        print "NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE \tINTERCEPT"
+        print ("NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE \tINTERCEPT")
         for i, obj in enumerate(self):
-            print "{}\t{}\t{}".format(i + 1,
-                                      obj.get_params_str(),
-                                      obj.get_lin_func_str())
-
-
+            print (str(i+1) + "\t" + obj.get_params_str() + "\t" + obj.get_lin_func_str())
 
 class Parser(object):
     """
@@ -186,32 +179,32 @@ class Parser(object):
         try:
             f = open(self.fname, 'r')
         except IOError:
-            print "Error reading {} file.".format(self.fname)
+            print ("Error reading %s file." % (self.fname))
             exit(1)
         else:
             with f:
-                cols = zip(*(line.strip().split('\t') for line in f))
+                cols = list(zip(*(line.strip().split('\t') for line in f)))
 
         # Reading first column with payload sizes, ommiting first 5 rows
         sizes = self.convert2int(cols[0][PAR_NUM:])
         if self.verbose:
-            print "Available buffer sizes:\n"
-            print sizes
-            print "========================================================"
-            print "\n\nVariants:\n"
+            print ("Available buffer sizes:\n")
+            print (sizes)
+            print ("========================================================")
+            print ("\n\nVariants:\n")
 
         # Reading remaining columns contaning performance data
         for row in cols[1:]:
             # First rows are run options
             arch, c_mode, c_dir, h_alg, key_size = row[:PAR_NUM]
             if self.verbose:
-                print arch, c_mode, c_dir, h_alg, key_size
+                print (arch, c_mode, c_dir, h_alg, key_size)
 
             # Getting average times
             avg_times = self.convert2int(row[PAR_NUM:])
             if self.verbose:
-                print avg_times
-                print "------"
+                print (avg_times)
+                print ("------")
 
             # Putting new object to the result list
             v_list.append(Variant(arch=arch, cipher=c_mode, dir=c_dir,
@@ -220,8 +213,8 @@ class Parser(object):
             # Finding linear function representation of data set
             v_list[-1].lin_reg(sizes)
             if self.verbose:
-                print "({}, {})".format(v_list[-1].slope, v_list[-1].intercept)
-                print "============\n"
+                print (v_list[-1].slope, v_list[-1].intercept)
+                print ("============\n")
         return v_list, sizes
 
 class DiffTool(object):
@@ -241,17 +234,17 @@ class DiffTool(object):
         """
         Prints usage
         """
-        print "This tool compares file_b against file_a printing out differences."
-        print "Usage:"
-        print "\tipsec_diff_tool.py [-v] [-a] file_a file_b [tol]\n"
-        print "\t-v - verbose"
-        print "\t-a - takes only one argument: name of the file to analyze"
-        print "\tfile_a, file_b - text files containing output from ipsec_perf tool"
-        print "\ttol - tolerance [%], must be >= 0, default 5\n"
-        print "Examples:"
-        print "\tipsec_diff_tool.py file01.txt file02.txt 10"
-        print "\tipsec_diff_tool.py -a file02.txt"
-        print "\tipsec_diff_tool.py -v -a file01.txt"
+        print ("This tool compares file_b against file_a printing out differences.")
+        print ("Usage:")
+        print ("\tipsec_diff_tool.py [-v] [-a] file_a file_b [tol]\n")
+        print ("\t-v - verbose")
+        print ("\t-a - takes only one argument: name of the file to analyze")
+        print ("\tfile_a, file_b - text files containing output from ipsec_perf tool")
+        print ("\ttol - tolerance [%], must be >= 0, default 5\n")
+        print ("Examples:")
+        print ("\tipsec_diff_tool.py file01.txt file02.txt 10")
+        print ("\tipsec_diff_tool.py -a file02.txt")
+        print ("\tipsec_diff_tool.py -v -a file01.txt")
 
 
     def parse_args(self):
@@ -295,8 +288,8 @@ class DiffTool(object):
             parser_b = Parser(self.fname_b, self.verbose)
             list_b, sizes_b = parser_b.load()
             if sizes_a != sizes_b:
-                print "Error. Buffer size lists in two compared " \
-                        "data sets differ! Aborting.\n"
+                print ("Error. Buffer size lists in two compared " \
+                        "data sets differ! Aborting.\n")
                 exit(1)
             warning = list_a.compare(list_b, self.tolerance) # Compares list_b against list_a
             if warning:
@@ -305,4 +298,5 @@ class DiffTool(object):
             list_a.printout() # Takes only one file and prints it out
 
 if __name__ == '__main__':
+    print('Python', sys.version)
     DiffTool().run()
