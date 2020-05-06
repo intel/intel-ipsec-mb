@@ -738,7 +738,7 @@ asm_ZucInitialization_8_avx2:
     vinserti128 ymm6, ymm6, [rsp + 64 + 32*6 + 16], 0x01
     vinserti128 ymm7, ymm7, [rsp + 64 + 32*7 + 16], 0x01
 
-    TRANSPOSE8_U32 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9
+    TRANSPOSE8_U32_PRELOADED ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9
 
     store32B_kstr8 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
 

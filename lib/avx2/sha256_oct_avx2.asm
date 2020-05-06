@@ -479,7 +479,7 @@ lloop:
 
 	vmovdqa	[YTMP0], g
 	vmovdqa	[YTMP1], h
-	TRANSPOSE8_U32	TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7,   TMP0, TMP1
+	TRANSPOSE8_U32_PRELOADED TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7,   TMP0, TMP1
 	DBGPRINTL_YMM "transposed input ", TT0, TT1, TT2, TT3, TT4, TT5, TT6, TT7
 	vmovdqa	TMP1, [rel PSHUFFLE_BYTE_FLIP_MASK]
 	vmovdqa	g, [YTMP0]

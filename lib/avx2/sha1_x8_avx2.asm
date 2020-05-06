@@ -336,7 +336,7 @@ lloop:
 			     inp0, inp1, inp2, inp3, inp4, inp5, \
 			     inp6, inp7, IDX
 
-	TRANSPOSE8_U32	T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
+	TRANSPOSE8_U32_PRELOADED T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
 	DBGPRINTL_YMM "Sha1-AVX2 incoming transposed input", T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
 	vpshufb	T0, T0, F
 	vmovdqa	[rsp+(I*8+0)*32],T0
