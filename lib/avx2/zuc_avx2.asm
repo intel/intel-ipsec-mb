@@ -36,9 +36,19 @@ section .data
 default rel
 
 align 32
-EK_d:
-dw	0x44D7, 0x26BC, 0x626B, 0x135E, 0x5789, 0x35E2, 0x7135, 0x09AF,
-dw	0x4D78, 0x2F13, 0x6BC4, 0x1AF1, 0x5E26, 0x3C4D, 0x789A, 0x47AC
+Ek_d:
+dd	0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
+dd	0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
+
+align 32
+shuf_mask_key:
+dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF, 0x04FFFFFF, 0x05FFFFFF, 0x06FFFFFF, 0x07FFFFFF,
+dd      0x08FFFFFF, 0x09FFFFFF, 0x0AFFFFFF, 0x0BFFFFFF, 0x0CFFFFFF, 0x0DFFFFFF, 0x0EFFFFFF, 0x0FFFFFFF,
+
+align 32
+shuf_mask_iv:
+dd      0xFFFFFF00, 0xFFFFFF01, 0xFFFFFF02, 0xFFFFFF03, 0xFFFFFF04, 0xFFFFFF05, 0xFFFFFF06, 0xFFFFFF07,
+dd      0xFFFFFF08, 0xFFFFFF09, 0xFFFFFF0A, 0xFFFFFF0B, 0xFFFFFF0C, 0xFFFFFF0D, 0xFFFFFF0E, 0xFFFFFF0F,
 
 align 32
 mask31:
@@ -519,22 +529,35 @@ align 64
     ; LFSR_S16 = (LFSR_S15++) = eax
 %endmacro
 
-
 ;
-;   key_expand_8()
+; Initialize LFSR registers for a single lane
 ;
-%macro  key_expand_8  2
-    movzx       r8d, byte [rdi +  (%1 + 0)]
-    movzx       r9d, word [rbx + ((%1 + 0)*2)]
-    movzx       r10d, byte [rsi + (%1 + 0)]
-    make_u31    r11d, r8d, r9d, r10d
-    mov         [rax +  (((%1 + 0)*32)+(%2*4))], r11d
+; This macro initializes 8 LFSR registers are a time.
+; so it needs to be called twice.
+;
+; From spec, s_i (LFSR) registers need to be loaded as follows:
+;
+; For 0 <= i <= 15, let s_i= k_i || d_i || iv_i.
+; Where k_i is each byte of the key, d_i is a 15-bit constant
+; and iv_i is each byte of the IV.
+;
+%macro INIT_LFSR 7
+%define %%KEY       %1 ;; [in] Key pointer
+%define %%IV        %2 ;; [in] IV pointer
+%define %%SHUF_KEY  %3 ;; [in] Shuffle key mask
+%define %%SHUF_IV   %4 ;; [in] Shuffle key mask
+%define %%EKD_MASK  %5 ;; [in] Shuffle key mask
+%define %%LFSR      %6 ;; [out] YMM register to contain initialized LFSR regs
+%define %%YTMP      %7 ;; [clobbered] YMM temporary register
 
-    movzx       r12d, byte [rdi +  (%1 + 1)]
-    movzx       r13d, word [rbx + ((%1 + 1)*2)]
-    movzx       r14d, byte [rsi +  (%1 + 1)]
-    make_u31    r15d, r12d, r13d, r14d
-    mov         [rax +  (((%1 + 1)*32)+(%2*4))], r15d
+    vbroadcastf128  %%LFSR, [%%KEY]
+    vbroadcastf128  %%YTMP, [%%IV]
+    vpshufb         %%LFSR, %%SHUF_KEY
+    vpsrld          %%LFSR, 1
+    vpshufb         %%YTMP, %%SHUF_IV
+    vpor            %%LFSR, %%YTMP
+    vpor            %%LFSR, %%EKD_MASK
+
 %endmacro
 
 
@@ -553,114 +576,56 @@ asm_ZucInitialization_8_avx2:
 
     FUNC_SAVE
 
-    lea     rax, [pState]      ; load pointer to LFSR
-    push    pState             ; Save LFSR Pointer to stack
+    ;;; Initialize all LFSR registers in two steps:
+    ;;; first, registers 0-7, then registers 8-15
 
-    ; setup the key pointer for first buffer key expand
-    mov     rbx, [pKe]      ; load the pointer to the array of keys into rbx
+%assign off 0
+%rep 2
+    ; Set read-only registers for shuffle masks for key, IV and Ek_d for 8 registers
+    vmovdqa ymm13, [rel shuf_mask_key + off]
+    vmovdqa ymm14, [rel shuf_mask_iv + off]
+    vmovdqa ymm15, [rel Ek_d + off]
 
-    push    pKe             ; save rdi (key pointer) to the stack
-    lea     rdi, [rbx]      ; load the pointer to the first key into rdi
-
-
-    ; setup the IV pointer for first buffer key expand
-    mov     rcx, [pIv]      ; load the pointer to the array of IV's
-    push    pIv             ; save the IV pointer to the stack
-    lea     rsi, [rcx]      ; load the first IV pointer
-
-    lea     rbx, [EK_d]     ; load D variables
-
-    ; Expand key packet 1
-    key_expand_8  0, 0
-    key_expand_8  2, 0
-    key_expand_8  4, 0
-    key_expand_8  6, 0
-    key_expand_8  8, 0
-    key_expand_8  10, 0
-    key_expand_8  12, 0
-    key_expand_8  14, 0
-
-
-    ;; Expand keys for packets 2-7
-%assign idx 1
-%rep 6
-    pop     rdx             ; get IV array pointer from Stack
-    mov     rcx, [rdx+8*idx]      ; load offset to next IV in array
-    lea     rsi, [rcx]    ; load pointer to next IV
-
-    pop     rbx             ; get Key array pointer from Stack
-    mov     rcx, [rbx+8*idx]      ; load offset to next key in array
-    lea     rdi, [rcx]    ; load pointer to next Key
-
-    push    rbx             ; save Key pointer
-    push    rdx             ; save IV pointer
-
-    lea     rbx, [EK_d]
-
-    ; Expand key packet N
-    key_expand_8  0, idx
-    key_expand_8  2, idx
-    key_expand_8  4, idx
-    key_expand_8  6, idx
-    key_expand_8  8, idx
-    key_expand_8  10, idx
-    key_expand_8  12, idx
-    key_expand_8  14, idx
+    ; Set 8xLFSR registers for all packets
+%assign idx 0
+%rep 8
+    mov     r9, [pKe+8*idx]  ; Load Key N pointer
+    mov     r10, [pIv+8*idx] ; Load IV N pointer
+    INIT_LFSR r9, r10, ymm13, ymm14, ymm15, APPEND(ymm, idx), ymm12
 %assign idx (idx + 1)
 %endrep
 
-    ; Expand eighth packet key
-    pop     rdx             ; get IV array pointer from Stack
-    mov     rcx, [rdx+56]      ; load offset to IV 8 in array
-    lea     rsi, [rcx]   ; load pointer to IV 8
+    ; Store 8xLFSR registers in memory (reordering first,
+    ; so all SX registers are together)
+    TRANSPOSE8_U32  ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9
 
-    pop     rbx             ; get Key array pointer from Stack
-    mov     rcx, [rbx+56]      ; load offset to key 8 in array
-    lea     rdi, [rcx]   ; load pointer to Key 8
-    lea     rbx, [EK_d]
+%assign i 0
+%rep 8
+    vmovdqa [pState + 8*off + 32*i], APPEND(ymm, i)
+%assign i (i+1)
+%endrep
 
-    ; Expand key packet 8
-    key_expand_8  0, 7
-    key_expand_8  2, 7
-    key_expand_8  4, 7
-    key_expand_8  6, 7
-    key_expand_8  8, 7
-    key_expand_8  10, 7
-    key_expand_8  12, 7
-    key_expand_8  14, 7
+%assign off (off + 32)
+%endrep
 
     ; Load read-only registers
     vmovdqa  ymm12, [rel mask31]
 
+    mov rax, pState
+
     ; Shift LFSR 32-times, update state variables
 %assign N 0
 %rep 32
-    pop     rdx
-    lea     rax, [rdx]
-    push    rdx
-
     bits_reorg8 N, 0
     nonlin_fun8 1
     vpsrld  ymm0,1         ; Shift out LSB of W
-
-    pop     rdx
-    lea     rax, [rdx]
-    push    rdx
-
     lfsr_updt8  N           ; W (ymm0) used in LFSR update - not set to zero
 %assign N N+1
 %endrep
 
     ; And once more, initial round from keygen phase = 33 times
-    pop     rdx
-    lea     rax, [rdx]
-    push    rdx
-
     bits_reorg8 0, 0
     nonlin_fun8 0
-
-    pop     rdx
-    lea     rax, [rdx]
 
     vpxor    ymm0, ymm0
     lfsr_updt8  0
