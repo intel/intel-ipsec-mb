@@ -775,60 +775,37 @@ asm_ZucGenKeystream8B_8_avx2:
     ret
 
 ;;
-;; void asm_ZucCipher32B_8_avx2(state4_t *pSta, u32 *pKeyStr[8], u64 *pIn[8],
+;; void asm_ZucCipher32B_8_avx2(state4_t *pSta, u64 *pIn[8],
 ;;                             u64 *pOut[8], u64 bufOff);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
-;;  RDX    - pKeyStr
-;;  R8     - pIn
-;;  R9     - pOut
-;;  rsp+40 - bufOff
+;;  RDX    - pIn
+;;  R8     - pOut
+;;  R9     - bufOff
 ;;
 ;; LIN64
 ;;  RDI - pSta
-;;  RSI - pKeyStr
-;;  RDX - pIn
-;;  RCX - pOut
-;;  R8  - bufOff
+;;  RSI - pIn
+;;  RDX - pOut
+;;  RCX  - bufOff
 ;;
 MKGLOBAL(asm_ZucCipher32B_8_avx2,function,internal)
 asm_ZucCipher32B_8_avx2:
 
 %ifdef LINUX
         %define         pState  rdi
-        %define         pKS     rsi
-        %define         pIn     rdx
-        %define         pOut    rcx
-        %define         bufOff  r8
+        %define         pIn     rsi
+        %define         pOut    rdx
+        %define         bufOff  rcx
 %else
         %define         pState  rcx
-        %define         pKS     rdx
-        %define         pIn     r8
-        %define         pOut    r9
-        %define         bufOff  r10
+        %define         pIn     rdx
+        %define         pOut    r8
+        %define         bufOff  r9
 %endif
 
-        ;; Store parameter from stack in register
-%ifndef LINUX
-        mov     bufOff, [rsp + 40]
-%endif
         FUNC_SAVE
-
-        ; Store 8 keystream pointers and input registers in the stack
-        sub     rsp, 12*8
-
-%assign i 0
-%rep 2
-    vmovdqu     ymm0, [pKS + 32*i]
-    vmovdqu     [rsp + 32*i], ymm0
-%assign i (i+1)
-%endrep
-
-        mov     [rsp + 64], pKS
-        mov     [rsp + 72], pIn
-        mov     [rsp + 80], pOut
-        mov     [rsp + 88], bufOff
 
         ; Load state pointer in RAX
         mov     rax, pState
@@ -836,32 +813,36 @@ asm_ZucCipher32B_8_avx2:
         ; Load read-only registers
         vmovdqa ymm12, [rel mask31]
 
+        ; Allocate stack frame to store keystreams
+        mov     r10, rsp
+        sub     rsp, 32*8
+        and     rsp, -31
+
         ; Generate 32B of keystream in 8 rounds
+%assign idx 0
 %assign N 1
 %rep 8
         bits_reorg8 N, 1, ymm10
         nonlin_fun8 1
         ; OFS_XR XOR W (ymm0)
         vpxor   ymm10, ymm0
-        store4B_kstr8 ymm10
+        vmovdqa [rsp + idx*32], ymm10
         vpxor   ymm0, ymm0
         lfsr_updt8  N
 %assign N N+1
+%assign idx (idx+1)
 %endrep
 
-        ;; Reorder LFSR registers, as not all 16 rounds have been completed
-        REORDER_LFSR rax
+%assign N 0
+%assign idx 8
+%rep 8
+        vmovdqa APPEND(ymm, idx), [rsp + N*32]
+%assign N N+1
+%assign idx (idx+1)
+%endrep
 
-        ;; Restore input parameters
-        mov     pKS,    [rsp + 64]
-        mov     pIn,    [rsp + 72]
-        mov     pOut,   [rsp + 80]
-        mov     bufOff, [rsp + 88]
-
-        ;; Restore rsp pointer to value before pushing keystreams
-        ;; and input parameters
-        add     rsp, 12*8
-
+        TRANSPOSE8_U32 ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, \
+                       ymm15, ymm0, ymm1
         ;; XOR Input buffer with keystream in rounds of 32B
 
         ;; Read all 8 streams
@@ -882,25 +863,7 @@ asm_ZucCipher32B_8_avx2:
         vmovdqu ymm6, [r14 + bufOff]
         vmovdqu ymm7, [r15 + bufOff]
 
-        ;; Read all 8 keystreams
-        mov     r12, [pKS]
-        mov     r13, [pKS + 8]
-        mov     r14, [pKS + 16]
-        mov     r15, [pKS + 24]
-        vmovdqa ymm8, [r12]
-        vmovdqa ymm9, [r13]
-        vmovdqa ymm10, [r14]
-        vmovdqa ymm11, [r15]
-
-        mov     r12, [pKS + 32]
-        mov     r13, [pKS + 40]
-        mov     r14, [pKS + 48]
-        mov     r15, [pKS + 56]
-        vmovdqa ymm12, [r12]
-        vmovdqa ymm13, [r13]
-        vmovdqa ymm14, [r14]
-        vmovdqa ymm15, [r15]
-
+        ; Shuffle all keystreams
         vpshufb ymm8,  [rel swap_mask]
         vpshufb ymm9,  [rel swap_mask]
         vpshufb ymm10, [rel swap_mask]
@@ -941,6 +904,21 @@ asm_ZucCipher32B_8_avx2:
         vmovdqu [r13 + bufOff], ymm13
         vmovdqu [r14 + bufOff], ymm14
         vmovdqu [r15 + bufOff], ymm15
+
+        ;; Reorder LFSR registers, as not all 16 rounds have been completed
+        REORDER_LFSR rax
+
+        ;; Clear stack frame containing keystream information
+%ifdef SAFE_DATA
+        vpxor   ymm0, ymm0
+%assign i 0
+%rep 8
+	vmovdqa [rsp + i*32], ymm0
+%assign i (i+1)
+%endrep
+%endif
+        ; Restore rsp
+        mov     rsp, r10
 
         FUNC_RESTORE
 

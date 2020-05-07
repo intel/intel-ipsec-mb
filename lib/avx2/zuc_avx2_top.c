@@ -348,7 +348,6 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         uint32_t bytes = find_min_length16(length);
         uint32_t numKeyStreamsPerPkt = bytes/KEYSTR_ROUND_LEN;
         uint32_t remainBytes[NUM_AVX2_BUFS] = {0};
-        DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][KEYSTR_ROUND_LEN], 64);
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
         /* structure to store the 8 IV's */
@@ -359,8 +358,6 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
 
         const uint64_t *pIn64[NUM_AVX2_BUFS]= {NULL};
         uint64_t *pOut64[NUM_AVX2_BUFS] = {NULL};
-        uint64_t *pKeyStream64 = NULL;
-        uint32_t *pKeyStrArr[NUM_AVX2_BUFS] = {NULL};
         uint64_t bufOffset = 0;
 
         /* rounded down minimum length */
@@ -384,14 +381,13 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
-                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
         }
 
         /* Loop for 32 bytes at a time generating 8 key-streams per loop */
         while (numKeyStreamsPerPkt) {
                 /* Generate 32 bytes of KeyStream for 8 buffers
                  * and XOR with input */
-                asm_ZucCipher32B_8_avx2(&state, (uint32_t **)pKeyStrArr, pIn64,
+                asm_ZucCipher32B_8_avx2(&state, pIn64,
                                        pOut64, bufOffset);
                 bufOffset += 32;
 
@@ -447,11 +443,12 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                                                                 remainBytes[i]];
 
                         while (numKeyStreamsPerPkt--) {
+                                DECLARE_ALIGNED(uint32_t keyStream[8], 64);
+                                uint64_t *pKeyStream64 = (uint64_t *) keyStream;
+
                                 /* Generate the key stream 32 bytes at a time */
-                                asm_ZucGenKeystream32B_avx(
-                                                       (uint32_t *) keyStr[0],
+                                asm_ZucGenKeystream32B_avx(keyStream,
                                                        &singlePktState);
-                                pKeyStream64 = (uint64_t *) keyStr[0];
                                 asm_XorKeyStream32B_avx2(pIn64[0], pOut64[0],
                                                         pKeyStream64);
                                 pIn64[0] += 4;
@@ -468,8 +465,10 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                                 uint32_t offset = length[i] - numBytesLeftOver;
                                 const uint64_t num4BRounds =
                                         ((numBytesLeftOver - 1) / 4) + 1;
+                                DECLARE_ALIGNED(uint32_t keyStream[8], 64);
+                                uint64_t *pKeyStream64 = (uint64_t *) keyStream;
 
-                                asm_ZucGenKeystream_avx((uint32_t *)&keyStr[0],
+                                asm_ZucGenKeystream_avx(keyStream,
                                                         &singlePktState,
                                                         num4BRounds);
                                 /* copy the remaining bytes into temporary
@@ -481,7 +480,6 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                                 memset(&tempSrc[numBytesLeftOver], 0,
                                        32 - numBytesLeftOver);
 
-                                pKeyStream64 = (uint64_t *) &keyStr[0][0];
                                 pTempSrc64 = (uint64_t *) &tempSrc[0];
                                 pTempDst64 = (uint64_t *) &tempDst[0];
                                 asm_XorKeyStream32B_avx2(pTempSrc64, pTempDst64,
@@ -498,7 +496,6 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         }
 #ifdef SAFE_DATA
         /* Clear sensitive data in stack */
-        clear_mem(keyStr, sizeof(keyStr));
         clear_mem(&singlePktState, sizeof(singlePktState));
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));

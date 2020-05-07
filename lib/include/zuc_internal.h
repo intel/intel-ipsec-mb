@@ -782,9 +782,6 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_4_avx(ZucState4_t *pState,
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState8_t
  *
- * @param[in,out] pKeyStr           Array of pointers to buffers that will
- *                                  contain the generated keystreams for all
- *                                  8 packets.
  * @param[in] pIn                   Array of pointers to 8 input buffers.
  * @param[out] pOut                 Array of pointers to 8 output buffers.
  * @param[in] bufOffset             Offset into pIn and pOut
@@ -795,7 +792,6 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_4_avx(ZucState4_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucCipher32B_8_avx2(ZucState8_t *pState,
-                                           uint32_t *pKeyStr[8],
                                            const uint64_t *pIn[8],
                                            uint64_t *pOut[8],
                                            uint64_t bufOffset);
