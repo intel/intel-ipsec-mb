@@ -1001,6 +1001,12 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_DOCSIS_CRC32:
                         /* No operation needed */
                         break;
+                case IMB_AUTH_AES_GMAC_128:
+                case IMB_AUTH_AES_GMAC_192:
+                case IMB_AUTH_AES_GMAC_256:
+                        memset(gdata_key, AUTH_KEY_PATTERN,
+                               sizeof(keys->gdata_key));
+                        break;
                 default:
                         fprintf(stderr, "Unsupported hash algo\n");
                         return -1;
