@@ -649,6 +649,7 @@ void _zuc_eia3_1_buffer_sse_no_aesni(const void *pKey,
         uint32_t remainingBits = lengthInBits;
         uint32_t T = 0;
         const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
+        unsigned int i = 0;
 
         memset(&zucState, 0, sizeof(ZucState_t));
 
@@ -667,7 +668,8 @@ void _zuc_eia3_1_buffer_sse_no_aesni(const void *pKey,
                 else
                         asm_ZucGenKeystream64B_sse_no_aesni(&keyStream[16],
                                                             &zucState);
-                T = asm_Eia3Round64BSSE_no_aesni(T, &keyStream[0], pIn8);
+                for (i = 0; i < 4; i ++)
+                        T = asm_Eia3Round16BSSE_no_aesni(T, &keyStream[i*4], &pIn8[i*16]);
                 memcpy(&keyStream[0], &keyStream[16], 16 * sizeof(uint32_t));
                 pIn8 = &pIn8[ZUC_KEYSTR_LEN];
         }
@@ -701,7 +703,7 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                      const uint32_t lengthInBits[NUM_SSE_BUFS],
                                      uint32_t *pMacI[NUM_SSE_BUFS])
 {
-        unsigned int i = 0;
+        unsigned int i, j;
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size */
@@ -754,8 +756,10 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                         asm_ZucGenKeystream64B_4_sse_no_aesni(&state,
                                                               pKeyStrArr);
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
-                        T[i] = asm_Eia3Round64BSSE_no_aesni(T[i], &keyStr[i][0],
-                                                            pIn8[i]);
+                        for (j = 0; j < 4; j++)
+                                T[i] = asm_Eia3Round16BSSE_no_aesni(T[i],
+                                                                    &keyStr[i][j*16],
+                                                                    &pIn8[i][j*16]);
                         memcpy(&keyStr[i][0], &keyStr[i][64],
                                16 * sizeof(uint32_t));
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
@@ -814,8 +818,10 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                 asm_ZucGenKeystream64B_sse_no_aesni(
                                                            &keyStr32[16],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round64BSSE_no_aesni(T[i], &keyStr32[0],
-                                                            pIn8[i]);
+                        for (j = 0; j < 4; j++)
+                                T[i] = asm_Eia3Round16BSSE_no_aesni(T[i],
+                                                               &keyStr32[j*4],
+                                                               &pIn8[i][j*16]);
                         memcpy(keyStr32, &keyStr32[16], 16 * sizeof(uint32_t));
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }
@@ -890,7 +896,7 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                    const uint16_t lengthInBits[NUM_SSE_BUFS],
                                    const void * const job_in_lane[NUM_SSE_BUFS])
 {
-        unsigned int i = 0;
+        unsigned int i, j;
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size */
@@ -946,8 +952,9 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                 for (i = 0; i < NUM_SSE_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        T[i] = asm_Eia3Round64BSSE_no_aesni(T[i], &keyStr[i][0],
-                                                            pIn8[i]);
+                        for (j = 0; j < 4; j++)
+                                T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], &keyStr[i][j*16],
+                                                                    &pIn8[i][j*16]);
                         memcpy(&keyStr[i][0], &keyStr[i][64],
                                16 * sizeof(uint32_t));
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
@@ -1009,8 +1016,9 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                 asm_ZucGenKeystream64B_sse_no_aesni(
                                                            &keyStr32[16],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round64BSSE_no_aesni(T[i], &keyStr32[0],
-                                                            pIn8[i]);
+                        for (j = 0; j < 4; j++)
+                                T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], &keyStr32[j*4],
+                                                                    &pIn8[i][j*16]);
                         memcpy(keyStr32, &keyStr32[16], 16 * sizeof(uint32_t));
                         pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
                 }

@@ -34,8 +34,8 @@
 %define ZUC_INIT_4 asm_ZucInitialization_4_sse
 %define ZUC_KEYGEN64B_4 asm_ZucGenKeystream64B_4_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
-%define ZUC_EIA3ROUND64B asm_Eia3Round64BSSE
-%define ZUC_EIA3REMAINDER64B asm_Eia3RemainderSSE
+%define ZUC_EIA3ROUND16B asm_Eia3Round16BSSE
+%define ZUC_EIA3REMAINDER asm_Eia3RemainderSSE
 %define USE_GFNI 0
 %endif
 
@@ -874,8 +874,8 @@ ZUC_CIPHER64B_4:
 ;;      RDX - N_BITS (number data bits to process)
 ;;
 align 16
-MKGLOBAL(ZUC_EIA3REMAINDER64B,function,internal)
-ZUC_EIA3REMAINDER64B:
+MKGLOBAL(ZUC_EIA3REMAINDER,function,internal)
+ZUC_EIA3REMAINDER:
 %ifdef LINUX
 	%define		KS	rdi
 	%define		DATA	rsi
@@ -1038,27 +1038,27 @@ Eia3RoundsSSE_byte_loop_end:
         ret
 
 ;;
-;;extern uint32_t Zuc_Eia3_Round64B_sse(uint32_t T, const void *KS, const void *DATA)
+;;extern uint32_t Zuc_Eia3_Round16B_sse(uint32_t T, const void *KS, const void *DATA)
 ;;
 ;; Updates authentication tag T based on keystream KS and DATA.
-;; - it processes 64 bytes of DATA
+;; - it processes 16 bytes of DATA
 ;; - reads data in 16 byte chunks and bit reverses them
 ;; - reads and re-arranges KS
 ;; - employs clmul for the XOR & ROL part
-;; - copies top 64 butes of KS to bottom (for the next round)
+;; - copies top 16 bytes of KS to bottom (for the next round)
 ;;
 ;; WIN64
 ;;	RCX - T
-;;	RDX - KS pointer to key stream (2 x 64 bytes)
+;;	RDX - KS pointer to key stream (2 x 16 bytes)
 ;;;     R8  - DATA pointer to data
 ;; LIN64
 ;;	RDI - T
-;;	RSI - KS pointer to key stream (2 x 64 bytes)
+;;	RSI - KS pointer to key stream (2 x 16 bytes)
 ;;      RDX - DATA pointer to data
 ;;
 align 16
-MKGLOBAL(ZUC_EIA3ROUND64B,function,internal)
-ZUC_EIA3ROUND64B:
+MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)
+ZUC_EIA3ROUND16B:
 
 %ifdef LINUX
 	%define		T	edi
@@ -1079,10 +1079,8 @@ ZUC_EIA3ROUND64B:
 
         pxor    xmm9, xmm9
 
-%assign I 0
-%rep 4
         ;; read 16 bytes and reverse bits
-        movdqu  xmm0, [DATA + 16*I]
+        movdqu  xmm0, [DATA]
         movdqa  xmm1, xmm0
         pand    xmm1, xmm7
 
@@ -1102,21 +1100,12 @@ ZUC_EIA3ROUND64B:
         ;; ZUC authentication part
         ;; - 4x32 data bits
         ;; - set up KS
-%if I != 0
-        movdqa  xmm0, xmm12
-        movdqu  xmm2, [KS + (I*16) + (4*4)]
-        movdqa  xmm12, xmm2
-        palignr xmm2, xmm0, 8
-        pshufd  xmm1, xmm0, 0x61
-        pshufd  xmm11, xmm2, 0x61
-%else
-        movdqu  xmm2, [KS + (I*16) + (0*4)]
-        movdqu  xmm3, [KS + (I*16) + (4*4)]
+        movdqu  xmm2, [KS + (0*4)]
+        movdqu  xmm3, [KS + (4*4)]
         movdqa  xmm12, xmm3
         palignr xmm3, xmm2, 8
         pshufd  xmm1, xmm2, 0x61
         pshufd  xmm11, xmm3, 0x61
-%endif
 
         ;;  - set up DATA
         movdqa  xmm0, xmm8
@@ -1139,9 +1128,6 @@ ZUC_EIA3ROUND64B:
         pxor    xmm13, xmm14
         pxor    xmm9, xmm3
         pxor    xmm9, xmm13
-
-%assign I (I + 1)
-%endrep
 
         ;; - update T
         movq    rax, xmm9
