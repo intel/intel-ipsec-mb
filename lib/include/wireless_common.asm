@@ -42,7 +42,7 @@ db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
 section .text
 
-; Function which XOR's 64 bytes of the input buffer with 64 bytes of the
+; Function which XOR's 16 bytes of the input buffer with 16 bytes of the
 ; KeyStream, placing the result in the output buffer.
 ; KeyStream bytes must be swapped on 32 bit boundary before this operation
 %macro xor_keystream 1
@@ -67,65 +67,26 @@ section .text
         %define	        %%pIn	rcx
         %define	        %%pOut	rdx
         %define	        %%pKS	r8
-
-        mov             rax, rsp
-        sub             rsp, 48
-        and             rsp, ~15
-        %%MOVDQA        [rsp], xmm6
-        %%MOVDQA        [rsp + 16], xmm7
-        %%MOVDQA        [rsp + 32], xmm8
 %endif
-        %define         XKEY0   xmm0
-        %define         XKEY1   xmm1
-        %define         XKEY2   xmm2
-        %define         XKEY3   xmm3
-        %define         XIN0    xmm4
-        %define         XIN1    xmm5
-        %define         XIN2    xmm6
-        %define         XIN3    xmm7
-        %define         XSHUF   xmm8
 
-        %%MOVDQA        XSHUF, [rel swap_mask]
-        %%MOVDQA        XKEY0, [%%pKS]
-        %%MOVDQA        XKEY1, [%%pKS + 16]
-        %%MOVDQA        XKEY2, [%%pKS + 32]
-        %%MOVDQA        XKEY3, [%%pKS + 48]
+        %define         %%XKEY    xmm0
+        %define         %%XIN     xmm1
 
-        %%PSHUFB        XKEY0, XSHUF
-        %%PSHUFB        XKEY1, XSHUF
-        %%PSHUFB        XKEY2, XSHUF
-        %%PSHUFB        XKEY3, XSHUF
+        %%MOVDQA        %%XKEY,   [%%pKS]
+        %%PSHUFB        %%XKEY,   [rel swap_mask]
+        %%MOVDQU        %%XIN,    [%%pIn]
+        %%PXOR          %%XKEY,   %%XIN
+        %%MOVDQU        [%%pOut], %%XKEY
 
-        %%MOVDQU        XIN0, [%%pIn]
-        %%MOVDQU        XIN1, [%%pIn + 16]
-        %%MOVDQU        XIN2, [%%pIn + 32]
-        %%MOVDQU        XIN3, [%%pIn + 48]
-
-        %%PXOR          XKEY0, XIN0
-        %%PXOR          XKEY1, XIN1
-        %%PXOR          XKEY2, XIN2
-        %%PXOR          XKEY3, XIN3
-
-        %%MOVDQU        [%%pOut],      XKEY0
-        %%MOVDQU        [%%pOut + 16], XKEY1
-        %%MOVDQU        [%%pOut + 32], XKEY2
-        %%MOVDQU        [%%pOut + 48], XKEY3
-
-%ifndef LINUX
-        %%MOVDQA        xmm6, [rsp]
-        %%MOVDQA        xmm7, [rsp + 16]
-        %%MOVDQA        xmm8, [rsp + 32]
-        mov             rsp,rax
-%endif
 %endmacro
 
-MKGLOBAL(asm_XorKeyStream64B_avx,function,internal)
-asm_XorKeyStream64B_avx:
+MKGLOBAL(asm_XorKeyStream16B_avx,function,internal)
+asm_XorKeyStream16B_avx:
         xor_keystream AVX
         ret
 
-MKGLOBAL(asm_XorKeyStream64B_sse,function,internal)
-asm_XorKeyStream64B_sse:
+MKGLOBAL(asm_XorKeyStream16B_sse,function,internal)
+asm_XorKeyStream16B_sse:
         xor_keystream SSE
         ret
 

@@ -178,36 +178,36 @@ memcpy_keystrm(uint8_t *pDst, const uint8_t *pSrc, const uint32_t len)
  ******************************************************************************
  *
  * @description
- *      Definition of the external SSE function that XOR's 64 bytes of input
- *      with 64 bytes of keystream, swapping keystream bytes every 4 bytes.
+ *      Definition of the external SSE function that XOR's 16 bytes of input
+ *      with 16 bytes of keystream, swapping keystream bytes every 4 bytes.
  *
  * @param[in]  pIn              Pointer to the input buffer
  * @param[out] pOut             Pointer to the output buffer
- * @param[in]  pKey             Pointer to the new 64 byte keystream
+ * @param[in]  pKey             Pointer to the new 16 byte keystream
  *
  * @pre
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_XorKeyStream64B_sse(const void *pIn, void *pOut,
-                                        const void *pKey);
+IMB_DLL_LOCAL void asm_XorKeyStream16B_sse(const void *pIn, void *pOut,
+                                           const void *pKey);
 
 /**
  ******************************************************************************
  *
  * @description
- *      Definition of the external AVX function that XOR's 64 bytes of input
- *      with 64 bytes of keystream, swapping keystream bytes every 4 bytes.
+ *      Definition of the external AVX function that XOR's 16 bytes of input
+ *      with 16 bytes of keystream, swapping keystream bytes every 4 bytes.
  *
  * @param[in]  pIn              Pointer to the input buffer
  * @param[out] pOut             Pointer to the output buffer
- * @param[in]  pKey             Pointer to the new 64 byte keystream
+ * @param[in]  pKey             Pointer to the new 16 byte keystream
  *
  * @pre
  *      None
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_XorKeyStream64B_avx(const void *pIn, void *pOut,
+IMB_DLL_LOCAL void asm_XorKeyStream16B_avx(const void *pIn, void *pOut,
                                            const void *pKey);
 
 /**
