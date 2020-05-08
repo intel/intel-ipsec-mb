@@ -633,6 +633,7 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
                             const uint32_t lengthInBits,
                             uint32_t *pMacI)
 {
+        unsigned int i;
         DECLARE_ALIGNED(ZucState_t zucState, 64);
         DECLARE_ALIGNED(uint32_t keyStream[16 * 2], 64);
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
@@ -659,7 +660,8 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
                         asm_ZucGenKeystream8B_avx(&keyStream[16], &zucState);
                 else
                         asm_ZucGenKeystream64B_avx(&keyStream[16], &zucState);
-                T = asm_Eia3Round64BAVX(T, &keyStream[0], pIn8);
+                for (i = 0; i < 4; i++)
+                        T = asm_Eia3Round16BAVX(T, &keyStream[i*4], &pIn8[i*16]);
                 /* Copy the last keystream generated to the first 64 bytes */
                 memcpy(&keyStream[0], &keyStream[16], 64);
                 pIn8 = &pIn8[ZUC_KEYSTR_LEN];
@@ -693,7 +695,7 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                             const uint32_t lengthInBits[NUM_AVX_BUFS],
                             uint32_t *pMacI[NUM_AVX_BUFS])
 {
-        unsigned int i = 0;
+        unsigned int i, j;
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size */
@@ -744,8 +746,9 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                 else
                         asm_ZucGenKeystream64B_4_avx(&state, pKeyStrArr);
                 for (i = 0; i < NUM_AVX_BUFS; i++) {
-                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
-                                                   pIn8[i]);
+                        for (j = 0; j < 4; j++)
+                                T[i] = asm_Eia3Round16BAVX(T[i], &keyStr[i][j*16],
+                                                           &pIn8[i][j*16]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][64], 64);
@@ -803,7 +806,9 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                         else
                                 asm_ZucGenKeystream64B_avx(&keyStr32[16],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr32[0], pIn8[i]);
+                        for (j = 0; j < 4; j++)
+                                T[i] = asm_Eia3Round16BAVX(T[i], &keyStr32[j*4],
+                                                           &pIn8[i][j*16]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(keyStr32, &keyStr32[16], 64);
@@ -877,7 +882,7 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                                const uint16_t lengthInBits[NUM_AVX_BUFS],
                                const void * const job_in_lane[NUM_AVX_BUFS])
 {
-        unsigned int i = 0;
+        unsigned int i, j;
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size */
@@ -930,8 +935,9 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 for (i = 0; i < NUM_AVX_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;
-                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
-                                                   pIn8[i]);
+                        for (j = 0; j < 4; j++)
+                                T[i] = asm_Eia3Round16BAVX(T[i], &keyStr[i][j*16],
+                                                           &pIn8[i][j*16]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][64], 64);
@@ -992,7 +998,9 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         else
                                 asm_ZucGenKeystream64B_avx(&keyStr32[16],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr32[0], pIn8[i]);
+                        for (j = 0; j < 4; j++)
+                                T[i] = asm_Eia3Round16BAVX(T[i], &keyStr32[j*4],
+                                                           &pIn8[i][j*16]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(keyStr32, &keyStr32[16], 64);
