@@ -318,8 +318,7 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
 {
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-
-        unsigned int i, j;
+        unsigned int i;
         /* Calculate the minimum input packet size */
         uint32_t bytes1 = (length[0] < length[1] ?
                            length[0] : length[1]);
@@ -327,9 +326,9 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                            length[2] : length[3]);
         /* min number of bytes */
         uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
-        uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
+        uint32_t numKeyStreamsPerPkt = bytes/KEYSTR_ROUND_LEN;
         uint32_t remainBytes[NUM_SSE_BUFS] = {0};
-        DECLARE_ALIGNED(uint8_t keyStr[NUM_SSE_BUFS][64], 64);
+        DECLARE_ALIGNED(uint8_t keyStr[NUM_SSE_BUFS][KEYSTR_ROUND_LEN], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
@@ -345,7 +344,7 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
         uint64_t bufOffset = 0;
 
         /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * ZUC_KEYSTR_LEN;
+        bytes = numKeyStreamsPerPkt * KEYSTR_ROUND_LEN;
 
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState4_t));
@@ -368,14 +367,14 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                 pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
         }
 
-        /* Loop for 64 bytes at a time generating 4 key-streams per loop */
+        /* Loop for 16 bytes at a time generating 4 key-streams per loop */
         while (numKeyStreamsPerPkt) {
-                /* Generate 64 bytes of KeyStream for 4 buffers
+                /* Generate 16 bytes of KeyStream for 4 buffers
                  * and XOR with input */
-                asm_ZucCipher64B_4_sse_no_aesni(&state,
+                asm_ZucCipher16B_4_sse_no_aesni(&state,
                                                 (uint32_t **)pKeyStrArr, pIn64,
                                                 pOut64, bufOffset);
-                bufOffset += 64;
+                bufOffset += 16;
                 /* Update keystream count */
                 numKeyStreamsPerPkt--;
         }
@@ -414,8 +413,8 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                         singlePktState.bX2 = state.bX2[i];
                         singlePktState.bX3 = state.bX3[i];
 
-                        numKeyStreamsPerPkt = remainBytes[i] / ZUC_KEYSTR_LEN;
-                        numBytesLeftOver = remainBytes[i]  % ZUC_KEYSTR_LEN;
+                        numKeyStreamsPerPkt = remainBytes[i] / KEYSTR_ROUND_LEN;
+                        numBytesLeftOver = remainBytes[i]  % KEYSTR_ROUND_LEN;
 
                         pTempBufInPtr = pBufferIn[i];
                         pTempBufOutPtr = pBufferOut[i];
@@ -428,49 +427,43 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                                                 remainBytes[i]];
 
                         while (numKeyStreamsPerPkt--) {
-                                /* Generate the key stream 64 bytes at a time */
-                                for (j = 0; j < 4; j++)
-                                        asm_ZucGenKeystream16B_sse_no_aesni(
-                                                       (uint32_t *) &keyStr[0][j*16],
+                                /* Generate the key stream 16 bytes at a time */
+                                asm_ZucGenKeystream16B_sse_no_aesni(
+                                                       (uint32_t *) keyStr[0],
                                                        &singlePktState);
                                 pKeyStream64 = (uint64_t *) keyStr[0];
-                                for (j = 0; j < 4; j++)
-                                        asm_XorKeyStream16B_sse(&pIn64[0][j*2],
-                                                                &pOut64[0][j*2],
-                                                                &pKeyStream64[j*2]);
-                                pIn64[0] += 8;
-                                pOut64[0] += 8;
+                                asm_XorKeyStream16B_sse(pIn64[0], pOut64[0],
+                                                        pKeyStream64);
+                                pIn64[0] += 2;
+                                pOut64[0] += 2;
                         }
 
 
-                        /* Check for remaining 0 to 63 bytes */
+                        /* Check for remaining 0 to 15 bytes */
                         if (numBytesLeftOver) {
-                                DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
-                                DECLARE_ALIGNED(uint8_t tempDst[64], 64);
+                                DECLARE_ALIGNED(uint8_t tempSrc[KEYSTR_ROUND_LEN], 64);
+                                DECLARE_ALIGNED(uint8_t tempDst[KEYSTR_ROUND_LEN], 64);
                                 uint64_t *pTempSrc64;
                                 uint64_t *pTempDst64;
                                 uint32_t offset = length[i] - numBytesLeftOver;
 
-                                for (j = 0; j < 4; j++)
-                                        asm_ZucGenKeystream16B_sse_no_aesni(
-                                                       (uint32_t *) &keyStr[0][j*16],
+                                asm_ZucGenKeystream16B_sse_no_aesni(
+                                                       (uint32_t *) keyStr[0],
                                                        &singlePktState);
                                 /* copy the remaining bytes into temporary
-                                 * buffer and XOR with the 64-bytes of
+                                 * buffer and XOR with the 16 bytes of
                                  * keystream. Then copy on the valid bytes back
                                  * to the output buffer */
                                 memcpy(&tempSrc[0], &pTempBufInPtr[offset],
                                        numBytesLeftOver);
                                 memset(&tempSrc[numBytesLeftOver], 0,
-                                       64 - numBytesLeftOver);
+                                       16 - numBytesLeftOver);
 
                                 pKeyStream64 = (uint64_t *) &keyStr[0][0];
                                 pTempSrc64 = (uint64_t *) &tempSrc[0];
                                 pTempDst64 = (uint64_t *) &tempDst[0];
-                                for (j = 0; j < 4; j++)
-                                        asm_XorKeyStream16B_sse(&pTempSrc64[j*2],
-                                                                &pTempDst64[j*2],
-                                                                &pKeyStream64[j*2]);
+                                asm_XorKeyStream16B_sse(pTempSrc64, pTempDst64,
+                                                        pKeyStream64);
 
                                 memcpy(&pTempBufOutPtr[offset],
                                        &tempDst[0], numBytesLeftOver);

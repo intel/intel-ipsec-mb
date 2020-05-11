@@ -736,7 +736,7 @@ asm_ZucGenKeystream8B_4_avx:
     ret
 
 ;;
-;; void asm_ZucCipher64B_4_avx(state4_t *pSta, u32 *pKeyStr[4], u64 *pIn[4],
+;; void asm_ZucCipher16B_4_avx(state4_t *pSta, u32 *pKeyStr[4], u64 *pIn[4],
 ;;                             u64 *pOut[4], u64 bufOff);
 ;;
 ;; WIN64
@@ -753,8 +753,8 @@ asm_ZucGenKeystream8B_4_avx:
 ;;  RCX - pOut
 ;;  R8  - bufOff
 ;;
-MKGLOBAL(asm_ZucCipher64B_4_avx,function,internal)
-asm_ZucCipher64B_4_avx:
+MKGLOBAL(asm_ZucCipher16B_4_avx,function,internal)
+asm_ZucCipher16B_4_avx:
 
 %ifdef LINUX
         %define         pState  rdi
@@ -797,9 +797,9 @@ asm_ZucCipher64B_4_avx:
         ; Load read-only registers
         vmovdqa xmm12, [rel mask31]
 
-        ; Generate 64B of keystream in 16 rounds
+        ; Generate 16B of keystream in 4 rounds
 %assign N 1
-%rep 16
+%rep 4
         bits_reorg4 N
         nonlin_fun4 1
         store_kstr4
@@ -820,26 +820,24 @@ asm_ZucCipher64B_4_avx:
 
         vmovdqa  xmm15, [rel swap_mask]
 
-%assign off 0
-%rep 4
         ;; XOR Input buffer with keystream in rounds of 16B
         mov     r12, [pIn]
         mov     r13, [pIn + 8]
         mov     r14, [pIn + 16]
         mov     r15, [pIn + 24]
-        vmovdqu xmm0, [r12 + bufOff + off]
-        vmovdqu xmm1, [r13 + bufOff + off]
-        vmovdqu xmm2, [r14 + bufOff + off]
-        vmovdqu xmm3, [r15 + bufOff + off]
+        vmovdqu xmm0, [r12 + bufOff]
+        vmovdqu xmm1, [r13 + bufOff]
+        vmovdqu xmm2, [r14 + bufOff]
+        vmovdqu xmm3, [r15 + bufOff]
 
         mov     r12, [pKS]
         mov     r13, [pKS + 8]
         mov     r14, [pKS + 16]
         mov     r15, [pKS + 24]
-        vmovdqa xmm4, [r12 + off]
-        vmovdqa xmm5, [r13 + off]
-        vmovdqa xmm6, [r14 + off]
-        vmovdqa xmm7, [r15 + off]
+        vmovdqa xmm4, [r12]
+        vmovdqa xmm5, [r13]
+        vmovdqa xmm6, [r14]
+        vmovdqa xmm7, [r15]
 
         vpshufb xmm4, xmm15
         vpshufb xmm5, xmm15
@@ -856,12 +854,14 @@ asm_ZucCipher64B_4_avx:
         mov     r14, [pOut + 16]
         mov     r15, [pOut + 24]
 
-        vmovdqu [r12 + bufOff + off], xmm4
-        vmovdqu [r13 + bufOff + off], xmm5
-        vmovdqu [r14 + bufOff + off], xmm6
-        vmovdqu [r15 + bufOff + off], xmm7
-%assign off (off + 16)
-%endrep
+        vmovdqu [r12 + bufOff], xmm4
+        vmovdqu [r13 + bufOff], xmm5
+        vmovdqu [r14 + bufOff], xmm6
+        vmovdqu [r15 + bufOff], xmm7
+
+        ;; Reorder memory for LFSR registers, as not all 16 rounds
+        ;; will be completed
+        REORDER_LFSR rax, 4
 
         FUNC_RESTORE
 

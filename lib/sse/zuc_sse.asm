@@ -29,8 +29,8 @@
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
 
-%ifndef ZUC_CIPHER64B_4
-%define ZUC_CIPHER64B_4 asm_ZucCipher64B_4_sse
+%ifndef ZUC_CIPHER16B_4
+%define ZUC_CIPHER16B_4 asm_ZucCipher16B_4_sse
 %define ZUC_INIT_4 asm_ZucInitialization_4_sse
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
@@ -771,8 +771,8 @@ ZUC_KEYGEN8B_4:
 ;;  RCX - pOut
 ;;  R8  - bufOff
 ;;
-MKGLOBAL(ZUC_CIPHER64B_4,function,internal)
-ZUC_CIPHER64B_4:
+MKGLOBAL(ZUC_CIPHER16B_4,function,internal)
+ZUC_CIPHER16B_4:
 
 %ifdef LINUX
         %define         pState  rdi
@@ -815,9 +815,9 @@ ZUC_CIPHER64B_4:
         ; Load read-only registers
         movdqa  xmm12, [rel mask31]
 
-        ; Generate 64B of keystream in 16 rounds
+        ; Generate 16B of keystream in 16 rounds
 %assign N 1
-%rep 16
+%rep 4
         bits_reorg4 N
         nonlin_fun4 1, USE_GFNI
         store_kstr4
@@ -838,26 +838,24 @@ ZUC_CIPHER64B_4:
 
         movdqa  xmm15, [rel swap_mask]
 
-%assign off 0
-%rep 4
         ;; XOR Input buffer with keystream in rounds of 16B
         mov     r12, [pIn]
         mov     r13, [pIn + 8]
         mov     r14, [pIn + 16]
         mov     r15, [pIn + 24]
-        movdqu  xmm0, [r12 + bufOff + off]
-        movdqu  xmm1, [r13 + bufOff + off]
-        movdqu  xmm2, [r14 + bufOff + off]
-        movdqu  xmm3, [r15 + bufOff + off]
+        movdqu  xmm0, [r12 + bufOff]
+        movdqu  xmm1, [r13 + bufOff]
+        movdqu  xmm2, [r14 + bufOff]
+        movdqu  xmm3, [r15 + bufOff]
 
         mov     r12, [pKS]
         mov     r13, [pKS + 8]
         mov     r14, [pKS + 16]
         mov     r15, [pKS + 24]
-        movdqa  xmm4, [r12 + off]
-        movdqa  xmm5, [r13 + off]
-        movdqa  xmm6, [r14 + off]
-        movdqa  xmm7, [r15 + off]
+        movdqa  xmm4, [r12]
+        movdqa  xmm5, [r13]
+        movdqa  xmm6, [r14]
+        movdqa  xmm7, [r15]
 
         pshufb  xmm4, xmm15
         pshufb  xmm5, xmm15
@@ -874,12 +872,14 @@ ZUC_CIPHER64B_4:
         mov     r14, [pOut + 16]
         mov     r15, [pOut + 24]
 
-        movdqu  [r12 + bufOff + off], xmm4
-        movdqu  [r13 + bufOff + off], xmm5
-        movdqu  [r14 + bufOff + off], xmm6
-        movdqu  [r15 + bufOff + off], xmm7
-%assign off (off + 16)
-%endrep
+        movdqu  [r12 + bufOff], xmm4
+        movdqu  [r13 + bufOff], xmm5
+        movdqu  [r14 + bufOff], xmm6
+        movdqu  [r15 + bufOff], xmm7
+
+        ;; Reorder memory for LFSR registers, as not all 16 rounds
+        ;; will be completed
+        REORDER_LFSR rax, 4
 
         FUNC_RESTORE
 
