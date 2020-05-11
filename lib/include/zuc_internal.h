@@ -350,12 +350,6 @@ IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_sse(uint32_t *pKeystream,
-                                              ZucState_t *pState);
-
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_sse_no_aesni(uint32_t *pKeystream,
-                                                       ZucState_t *pState);
-
 IMB_DLL_LOCAL void asm_ZucGenKeystream64B_avx(uint32_t *pKeystream,
                                               ZucState_t *pState);
 
@@ -402,6 +396,12 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream32B_avx(uint32_t *pKeystream,
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream16B_avx(uint32_t *pKeystream,
                                               ZucState_t *pState);
+
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_sse(uint32_t *pKeystream,
+                                              ZucState_t *pState);
+
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_sse_no_aesni(uint32_t *pKeystream,
+                                                       ZucState_t *pState);
 
 /**
  ******************************************************************************

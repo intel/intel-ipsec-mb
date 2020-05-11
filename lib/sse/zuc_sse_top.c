@@ -46,6 +46,7 @@
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #define NUM_SSE_BUFS 4
+#define KEYSTR_ROUND_LEN 16
 
 static inline
 void _zuc_eea3_1_buffer_sse(const void *pKey,
@@ -54,15 +55,14 @@ void _zuc_eea3_1_buffer_sse(const void *pKey,
                             void *pBufferOut,
                             const uint32_t length)
 {
-        unsigned int i;
-        DECLARE_ALIGNED(ZucState_t zucState, 64);
-        DECLARE_ALIGNED(uint8_t keyStream[64], 64);
+        DECLARE_ALIGNED(ZucState_t zucState, 16);
+        DECLARE_ALIGNED(uint8_t keyStream[KEYSTR_ROUND_LEN], 16);
         const uint64_t *pIn64 = NULL;
         uint64_t *pOut64 = NULL, *pKeyStream64 = NULL;
         uint64_t *pTemp64 = NULL, *pdstTemp64 = NULL;
 
-        uint32_t numKeyStreamsPerPkt = length/ ZUC_KEYSTR_LEN;
-        uint32_t numBytesLeftOver = length % ZUC_KEYSTR_LEN;
+        uint32_t numKeyStreamsPerPkt = length/ KEYSTR_ROUND_LEN;
+        const uint32_t numBytesLeftOver = length % KEYSTR_ROUND_LEN;
 
         /* need to set the LFSR state to zero */
         memset(&zucState, 0, sizeof(ZucState_t));
@@ -76,24 +76,22 @@ void _zuc_eea3_1_buffer_sse(const void *pKey,
         pIn64 = (const uint64_t *) pBufferIn;
 
         while (numKeyStreamsPerPkt--) {
-                /* Generate the key stream 64 bytes at a time */
-                asm_ZucGenKeystream64B_sse((uint32_t *) &keyStream[0],
+                /* Generate the key stream 16 bytes at a time */
+                asm_ZucGenKeystream16B_sse((uint32_t *) &keyStream[0],
                                            &zucState);
 
                 /* XOR The Keystream generated with the input buffer here */
                 pKeyStream64 = (uint64_t *) keyStream;
-                for (i = 0; i < 4; i++)
-                        asm_XorKeyStream16B_sse(&pIn64[i*2], &pOut64[i*2],
-                                                &pKeyStream64[i*2]);
-                pIn64 += 8;
-                pOut64 += 8;
+                asm_XorKeyStream16B_sse(pIn64, pOut64, pKeyStream64);
+                pIn64 += 2;
+                pOut64 += 2;
         }
 
-        /* Check for remaining 0 to 63 bytes */
+        /* Check for remaining 0 to 15 bytes */
         if (numBytesLeftOver) {
-                /* buffer to store 64 bytes of keystream */
-                DECLARE_ALIGNED(uint8_t tempSrc[64], 64);
-                DECLARE_ALIGNED(uint8_t tempDst[64], 64);
+                /* buffer to store 16 bytes of keystream */
+                DECLARE_ALIGNED(uint8_t tempSrc[KEYSTR_ROUND_LEN], 16);
+                DECLARE_ALIGNED(uint8_t tempDst[KEYSTR_ROUND_LEN], 16);
                 const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
                 uint8_t *pOut8 = (uint8_t *) pBufferOut;
                 const uint64_t num4BRounds = ((numBytesLeftOver - 1) / 4) + 1;
@@ -111,9 +109,8 @@ void _zuc_eea3_1_buffer_sse(const void *pKey,
                 pTemp64 = (uint64_t *) &tempSrc[0];
                 pdstTemp64 = (uint64_t *) &tempDst[0];
 
-                for (i = 0; i < 4; i++)
-                        asm_XorKeyStream16B_sse(&pTemp64[i*2], &pdstTemp64[i*2],
-                                                &pKeyStream64[i*2]);
+                asm_XorKeyStream16B_sse(pTemp64, pdstTemp64,
+                                        pKeyStream64);
                 memcpy(&pOut8[length - numBytesLeftOver], &tempDst[0],
                        numBytesLeftOver);
 #ifdef SAFE_DATA
@@ -259,9 +256,10 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
 
                         while (numKeyStreamsPerPkt--) {
                                 /* Generate the key stream 64 bytes at a time */
-                                asm_ZucGenKeystream64B_sse(
-                                                       (uint32_t *) keyStr[0],
-                                                       &singlePktState);
+                                for (j = 0; j < 4; j++)
+                                        asm_ZucGenKeystream16B_sse(
+                                                           (uint32_t *) &keyStr[0][j*16],
+                                                           &singlePktState);
                                 pKeyStream64 = (uint64_t *) keyStr[0];
                                 for (j = 0; j < 4; j++)
                                         asm_XorKeyStream16B_sse(&pIn64[0][j*2],
@@ -448,8 +446,9 @@ void _zuc_eea3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 
                         while (numKeyStreamsPerPkt--) {
                                 /* Generate the key stream 64 bytes at a time */
-                                asm_ZucGenKeystream64B_sse(
-                                                       (uint32_t *) keyStr[0],
+                                for (j = 0; j < 4; j++)
+                                        asm_ZucGenKeystream16B_sse(
+                                                       (uint32_t *) &keyStr[0][j*16],
                                                        &singlePktState);
                                 pKeyStream64 = (uint64_t *) keyStr[0];
                                 for (j = 0; j < 4; j++)
@@ -468,10 +467,12 @@ void _zuc_eea3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                                 uint64_t *pTempSrc64;
                                 uint64_t *pTempDst64;
                                 uint32_t offset = length[i] - numBytesLeftOver;
+                                const uint64_t num4BRounds =
+                                        ((numBytesLeftOver - 1) / 4) + 1;
 
-                                asm_ZucGenKeystream64B_sse(
-                                                       (uint32_t *) &keyStr[0],
-                                                       &singlePktState);
+                                asm_ZucGenKeystream_sse((uint32_t *) keyStr,
+                                                        &singlePktState,
+                                                        num4BRounds);
                                 /* copy the remaining bytes into temporary
                                  * buffer and XOR with the 64-bytes of
                                  * keystream. Then copy on the valid bytes back
@@ -729,10 +730,9 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
                             const uint32_t lengthInBits,
                             uint32_t *pMacI)
 {
-        unsigned int i;
-        DECLARE_ALIGNED(ZucState_t zucState, 64);
-        DECLARE_ALIGNED(uint32_t keyStream[16 * 2], 64);
-        const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
+        DECLARE_ALIGNED(ZucState_t zucState, 16);
+        DECLARE_ALIGNED(uint32_t keyStream[4 * 2], 64);
+        const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         /* generate a key-stream 2 words longer than the input message */
         const uint32_t N = lengthInBits + (2 * ZUC_WORD_BITS);
         uint32_t L = (N + 31) / ZUC_WORD_BITS;
@@ -744,32 +744,31 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
         memset(&zucState, 0, sizeof(ZucState_t));
 
         asm_ZucInitialization_sse(pKey, pIv, &(zucState));
-        asm_ZucGenKeystream64B_sse(pZuc, &zucState);
+        asm_ZucGenKeystream16B_sse(pZuc, &zucState);
 
         /* loop over the message bits */
         while (remainingBits >= keyStreamLengthInBits) {
                 remainingBits -=  keyStreamLengthInBits;
                 L -= (keyStreamLengthInBits / 32);
 
-                /* Generate the next key stream 8 bytes or 64 bytes */
+                /* Generate the next key stream 8 bytes or 16 bytes */
                 if (!remainingBits)
-                        asm_ZucGenKeystream8B_sse(&keyStream[16], &zucState);
+                        asm_ZucGenKeystream8B_sse(&keyStream[4], &zucState);
                 else
-                        asm_ZucGenKeystream64B_sse(&keyStream[16], &zucState);
-                for (i = 0; i < 4; i++)
-                        T = asm_Eia3Round16BSSE(T, &keyStream[i*4], &pIn8[i*16]);
+                        asm_ZucGenKeystream16B_sse(&keyStream[4], &zucState);
+                T = asm_Eia3Round16BSSE(T, keyStream, pIn8);
                 /* Copy the last keystream generated
-                 * to the first 64 bytes */
-                memcpy(&keyStream[0], &keyStream[16], 64);
-                pIn8 = &pIn8[ZUC_KEYSTR_LEN];
+                 * to the first 16 bytes */
+                memcpy(&keyStream[0], &keyStream[4], KEYSTR_ROUND_LEN);
+                pIn8 = &pIn8[KEYSTR_ROUND_LEN];
         }
 
         /*
-         * If remaining bits has more than 14 ZUC WORDS (double words),
+         * If remaining bits has more than 2 ZUC WORDS (double words),
          * keystream needs to have up to another 2 ZUC WORDS (8B)
          */
-        if (remainingBits > (14 * 32))
-                asm_ZucGenKeystream8B_sse(&keyStream[16], &zucState);
+        if (remainingBits > (2 * 32))
+                asm_ZucGenKeystream8B_sse(&keyStream[4], &zucState);
         T ^= asm_Eia3RemainderSSE(&keyStream[0], pIn8, remainingBits);
         T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
                          remainingBits % 32);
@@ -918,8 +917,9 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                                 asm_ZucGenKeystream8B_sse(&keyStr32[16],
                                                           &singlePktState);
                         else
-                                asm_ZucGenKeystream64B_sse(&keyStr32[16],
-                                                           &singlePktState);
+                                for (j = 0; j < 4; j++)
+                                        asm_ZucGenKeystream16B_sse(&keyStr32[16 + 4*j],
+                                                                   &singlePktState);
                         for (j = 0; j < 4; j++)
                                 T[i] = asm_Eia3Round16BSSE(T[i], &keyStr32[j*4],
                                                            &pIn8[i][j*16]);
@@ -1130,8 +1130,9 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                                 asm_ZucGenKeystream8B_sse(&keyStr32[16],
                                                           &singlePktState);
                         else
-                                asm_ZucGenKeystream64B_sse(&keyStr32[16],
-                                                           &singlePktState);
+                                for (j = 0; j < 4; j++)
+                                        asm_ZucGenKeystream16B_sse(&keyStr32[16 + 4*j],
+                                                                   &singlePktState);
                         for (j = 0; j < 4; j++)
                                 T[i] = asm_Eia3Round16BSSE(T[i], &keyStr32[j*4],
                                                            &pIn8[i][j*16]);

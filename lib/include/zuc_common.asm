@@ -760,7 +760,7 @@ asm_ZucGenKeystream8B_avx:
     ret
 
 ;;
-;; void asm_ZucGenKeystream64B_sse(uint32_t * pKeystream, uint32_t * pState);
+;; void asm_ZucGenKeystream16B_sse(uint32_t * pKeystream, uint32_t * pState);
 ;;
 ;; WIN64
 ;;	RCX - KS (key stream pointer)
@@ -770,15 +770,15 @@ asm_ZucGenKeystream8B_avx:
 ;;	RSI - STATE (state pointer)
 ;;
 align 16
-MKGLOBAL(asm_ZucGenKeystream64B_sse,function,internal)
-asm_ZucGenKeystream64B_sse:
+MKGLOBAL(asm_ZucGenKeystream16B_sse,function,internal)
+asm_ZucGenKeystream16B_sse:
 
-    ZUC_KEYGEN SSE, 16
+    ZUC_KEYGEN SSE, 4
 
     ret
 
 ;;
-;; void asm_ZucGenKeystream64B_sse_no_aesni(uint32_t * pKeystream, uint32_t * pState);
+;; void asm_ZucGenKeystream16B_sse_no_aesni(uint32_t * pKeystream, uint32_t * pState);
 ;;
 ;; WIN64
 ;;	RCX - KS (key stream pointer)
@@ -788,10 +788,10 @@ asm_ZucGenKeystream64B_sse:
 ;;	RSI - STATE (state pointer)
 ;;
 align 16
-MKGLOBAL(asm_ZucGenKeystream64B_sse_no_aesni,function,internal)
-asm_ZucGenKeystream64B_sse_no_aesni:
+MKGLOBAL(asm_ZucGenKeystream16B_sse_no_aesni,function,internal)
+asm_ZucGenKeystream16B_sse_no_aesni:
 
-    ZUC_KEYGEN SSE_NO_AESNI, 16
+    ZUC_KEYGEN SSE_NO_AESNI, 4
 
     ret
 
