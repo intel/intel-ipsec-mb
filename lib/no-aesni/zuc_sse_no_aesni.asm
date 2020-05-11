@@ -28,7 +28,7 @@
 %include "include/aesni_emu.inc"
 %define ZUC_CIPHER64B_4 asm_ZucCipher64B_4_sse_no_aesni
 %define ZUC_INIT_4 asm_ZucInitialization_4_sse_no_aesni
-%define ZUC_KEYGEN64B_4 asm_ZucGenKeystream64B_4_sse_no_aesni
+%define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse_no_aesni
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse_no_aesni
 %define ZUC_EIA3ROUND16B asm_Eia3Round16BSSE_no_aesni
 %define ZUC_EIA3REMAINDER asm_Eia3RemainderSSE_no_aesni

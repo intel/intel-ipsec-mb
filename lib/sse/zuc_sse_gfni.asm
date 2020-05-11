@@ -28,6 +28,6 @@
 %define USE_GFNI 1
 %define ZUC_CIPHER64B_4 asm_ZucCipher64B_4_gfni_sse
 %define ZUC_INIT_4 asm_ZucInitialization_4_gfni_sse
-%define ZUC_KEYGEN64B_4 asm_ZucGenKeystream64B_4_gfni_sse
+%define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_gfni_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_gfni_sse
 %include "sse/zuc_sse.asm"

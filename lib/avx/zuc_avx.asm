@@ -29,6 +29,8 @@
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
 
+%define APPEND(a,b) a %+ b
+
 section .data
 default rel
 
@@ -617,6 +619,26 @@ asm_ZucInitialization_4_avx:
 
     ret
 
+%macro REORDER_LFSR 2
+%define %%STATE      %1
+%define %%NUM_ROUNDS %2
+
+%assign %%i 0
+%rep 16
+    vmovdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
+%assign %%i (%%i+1)
+%endrep
+
+%assign %%i 0
+%assign %%j %%NUM_ROUNDS
+%rep 16
+    vmovdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
+%assign %%i (%%i+1)
+%assign %%j ((%%j+1) % 16)
+%endrep
+
+%endmacro
+
 ;
 ; Generate N*4 bytes of keystream
 ; for 4 buffers (where N is number of rounds)
@@ -665,6 +687,10 @@ asm_ZucInitialization_4_avx:
 %assign N N+1
 %endrep
 
+    ;; Reorder memory for LFSR registers, as not all 16 rounds
+    ;; will be completed (can be 4 or 2)
+    REORDER_LFSR rax, %%NUM_ROUNDS
+
     ;; Restore rsp pointer to value before pushing keystreams
     mov         rsp, r10
 
@@ -674,7 +700,7 @@ asm_ZucInitialization_4_avx:
 %endmacro
 
 ;
-;; void asm_ZucGenKeystream64B_4_avx(state4_t *pSta, u32* pKeyStr[4]);
+;; void asm_ZucGenKeystream16B_4_avx(state4_t *pSta, u32* pKeyStr[4]);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
@@ -684,10 +710,10 @@ asm_ZucInitialization_4_avx:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-MKGLOBAL(asm_ZucGenKeystream64B_4_avx,function,internal)
-asm_ZucGenKeystream64B_4_avx:
+MKGLOBAL(asm_ZucGenKeystream16B_4_avx,function,internal)
+asm_ZucGenKeystream16B_4_avx:
 
-    KEYGEN_4_AVX 16
+    KEYGEN_4_AVX 4
 
     ret
 

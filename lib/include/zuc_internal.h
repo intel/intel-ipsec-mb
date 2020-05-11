@@ -471,7 +471,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
  *
  * @description
  *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate 64 bytes of
+ *      stage of the ZUC algorithm. The function will generate 16 bytes of
  *      keystream for four packets in parallel.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
@@ -486,16 +486,16 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_sse(ZucState4_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_sse(ZucState4_t *pState,
                                                 uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_sse_no_aesni(ZucState4_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_sse_no_aesni(ZucState4_t *pState,
                                                          uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_gfni_sse(ZucState4_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_gfni_sse(ZucState4_t *pState,
                                                      uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_avx(ZucState4_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_avx(ZucState4_t *pState,
                                                 uint32_t *pKeyStr[4]);
 
 /**

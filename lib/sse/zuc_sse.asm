@@ -32,12 +32,14 @@
 %ifndef ZUC_CIPHER64B_4
 %define ZUC_CIPHER64B_4 asm_ZucCipher64B_4_sse
 %define ZUC_INIT_4 asm_ZucInitialization_4_sse
-%define ZUC_KEYGEN64B_4 asm_ZucGenKeystream64B_4_sse
+%define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
 %define ZUC_EIA3ROUND16B asm_Eia3Round16BSSE
 %define ZUC_EIA3REMAINDER asm_Eia3RemainderSSE
 %define USE_GFNI 0
 %endif
+
+%define APPEND(a,b) a %+ b
 
 section .data
 default rel
@@ -638,6 +640,26 @@ ZUC_INIT_4:
 
     ret
 
+%macro REORDER_LFSR 2
+%define %%STATE      %1
+%define %%NUM_ROUNDS %2
+
+%assign %%i 0
+%rep 16
+    movdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
+%assign %%i (%%i+1)
+%endrep
+
+%assign %%i 0
+%assign %%j %%NUM_ROUNDS
+%rep 16
+    movdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
+%assign %%i (%%i+1)
+%assign %%j ((%%j+1) % 16)
+%endrep
+
+%endmacro
+
 ;
 ; Generate N*4 bytes of keystream
 ; for 4 buffers (where N is number of rounds)
@@ -684,6 +706,10 @@ ZUC_INIT_4:
 %assign N N+1
 %endrep
 
+    ;; Reorder memory for LFSR registers, as not all 16 rounds
+    ;; will be completed (can be 4 or 2)
+    REORDER_LFSR rax, %%NUM_ROUNDS
+
     ;; Restore rsp pointer to value before pushing keystreams
     mov         rsp, r10
 
@@ -692,7 +718,7 @@ ZUC_INIT_4:
 %endmacro
 
 ;;
-;; void asm_ZucGenKeystream64B_4_sse(state4_t *pSta, u32* pKeyStr[4]);
+;; void asm_ZucGenKeystream16B_4_sse(state4_t *pSta, u32* pKeyStr[4]);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
@@ -702,10 +728,10 @@ ZUC_INIT_4:
 ;;  RDI    - pSta
 ;;  RSI    - pKeyStr
 ;;
-MKGLOBAL(ZUC_KEYGEN64B_4,function,internal)
-ZUC_KEYGEN64B_4:
+MKGLOBAL(ZUC_KEYGEN16B_4,function,internal)
+ZUC_KEYGEN16B_4:
 
-        KEYGEN_4_SSE 16
+        KEYGEN_4_SSE 4
 
         ret
 
@@ -728,7 +754,7 @@ ZUC_KEYGEN8B_4:
         ret
 
 ;;
-;; void asm_ZucCipher64B_4_sse(state4_t *pSta, u32 *pKeyStr[4], u64 *pIn[4],
+;; void asm_ZucCipher16B_4_sse(state4_t *pSta, u32 *pKeyStr[4], u64 *pIn[4],
 ;;                             u64 *pOut[4], u64 bufOff);
 ;;
 ;; WIN64
