@@ -144,10 +144,7 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
         uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
         uint32_t remainBytes[NUM_AVX_BUFS] = {0};
-        DECLARE_ALIGNED(uint8_t keyStr1[64], 64);
-        DECLARE_ALIGNED(uint8_t keyStr2[64], 64);
-        DECLARE_ALIGNED(uint8_t keyStr3[64], 64);
-        DECLARE_ALIGNED(uint8_t keyStr4[64], 64);
+        DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX_BUFS][ZUC_KEYSTR_LEN], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
@@ -155,16 +152,10 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         uint32_t numBytesLeftOver = 0;
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
-
-        const uint64_t *pIn64_0 = NULL;
-        const uint64_t *pIn64_1 = NULL;
-        const uint64_t *pIn64_2 = NULL;
-        const uint64_t *pIn64_3 = NULL;
-        uint64_t *pOut64_0 = NULL;
-        uint64_t *pOut64_1 = NULL;
-        uint64_t *pOut64_2 = NULL;
-        uint64_t *pOut64_3 = NULL;
+        const uint64_t *pIn64[NUM_AVX_BUFS]= {NULL};
+        uint64_t *pOut64[NUM_AVX_BUFS] = {NULL};
         uint64_t *pKeyStream64 = NULL;
+        uint32_t *pKeyStrArr[NUM_AVX_BUFS] = {NULL};
 
         /* rounded down minimum length */
         bytes = numKeyStreamsPerPkt * ZUC_KEYSTR_LEN;
@@ -172,64 +163,39 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState4_t));
 
-        /* Calculate the number of bytes left over for each packet */
-        for (i=0; i< NUM_AVX_BUFS; i++)
+        /*
+         * Calculate the number of bytes left over for each packet,
+         * and setup the Keys and IVs
+         */
+        for (i = 0; i< NUM_AVX_BUFS; i++) {
                 remainBytes[i] = length[i] - bytes;
-
-        /* Setup the Keys */
-        keys.pKey1 = pKey[0];
-        keys.pKey2 = pKey[1];
-        keys.pKey3 = pKey[2];
-        keys.pKey4 = pKey[3];
-
-        /* setup the IV's */
-        ivs.pIv1 = pIv[0];
-        ivs.pIv2 = pIv[1];
-        ivs.pIv3 = pIv[2];
-        ivs.pIv4 = pIv[3];
+                keys.pKeys[i] = pKey[i];
+                ivs.pIvs[i] = pIv[i];
+        }
 
         asm_ZucInitialization_4_avx( &keys,  &ivs, &state);
 
-        pOut64_0 = (uint64_t *) pBufferOut[0];
-        pOut64_1 = (uint64_t *) pBufferOut[1];
-        pOut64_2 = (uint64_t *) pBufferOut[2];
-        pOut64_3 = (uint64_t *) pBufferOut[3];
-
-        pIn64_0 = (const uint64_t *) pBufferIn[0];
-        pIn64_1 = (const uint64_t *) pBufferIn[1];
-        pIn64_2 = (const uint64_t *) pBufferIn[2];
-        pIn64_3 = (const uint64_t *) pBufferIn[3];
+        for (i = 0; i < NUM_AVX_BUFS; i++) {
+                pOut64[i] = (uint64_t *) pBufferOut[i];
+                pIn64[i] = (const uint64_t *) pBufferIn[i];
+                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
+        }
 
         /* Loop for 64 bytes at a time generating 4 key-streams per loop */
         while (numKeyStreamsPerPkt) {
                 /* Generate 64 bytes at a time */
-                asm_ZucGenKeystream64B_4_avx(&state,
-                                             (uint32_t *) keyStr1,
-                                             (uint32_t *) keyStr2,
-                                             (uint32_t *) keyStr3,
-                                             (uint32_t *) keyStr4);
+                asm_ZucGenKeystream64B_4_avx(&state, pKeyStrArr);
 
                 /* XOR the KeyStream with the input buffers and store in output
                  * buffer*/
-                pKeyStream64 = (uint64_t *) keyStr1;
-                asm_XorKeyStream64B_avx(pIn64_0, pOut64_0, pKeyStream64);
-                pIn64_0 += 8;
-                pOut64_0 += 8;
+                for (i = 0; i < NUM_AVX_BUFS; i++) {
+                        pKeyStream64 = (uint64_t *) pKeyStrArr[i];
+                        asm_XorKeyStream64B_avx(pIn64[i], pOut64[i],
+                                                pKeyStream64);
+                        pIn64[i] += 8;
+                        pOut64[i] += 8;
+                }
 
-                pKeyStream64 = (uint64_t *) keyStr2;
-                asm_XorKeyStream64B_avx(pIn64_1, pOut64_1, pKeyStream64);
-                pIn64_1 += 8;
-                pOut64_1 += 8;
-
-                pKeyStream64 = (uint64_t *) keyStr3;
-                asm_XorKeyStream64B_avx(pIn64_2, pOut64_2, pKeyStream64);
-                pIn64_2 += 8;
-                pOut64_2 += 8;
-
-                pKeyStream64 = (uint64_t *) keyStr4;
-                asm_XorKeyStream64B_avx(pIn64_3, pOut64_3, pKeyStream64);
-                pIn64_3 += 8;
-                pOut64_3 += 8;
 
                 /* Update keystream count */
                 numKeyStreamsPerPkt--;
@@ -273,20 +239,21 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
 
                         /* update the output and input pointers here to point
                          * to the i'th buffers */
-                        pOut64_0 = (uint64_t *) &pTempBufOutPtr[length[i] -
+                        pOut64[0] = (uint64_t *) &pTempBufOutPtr[length[i] -
                                                                 remainBytes[i]];
-                        pIn64_0 = (const uint64_t *) &pTempBufInPtr[length[i] -
+                        pIn64[0] = (const uint64_t *) &pTempBufInPtr[length[i] -
                                                                 remainBytes[i]];
 
                         while (numKeyStreamsPerPkt--) {
                                 /* Generate the key stream 64 bytes at a time */
-                                asm_ZucGenKeystream64B_avx((uint32_t *) keyStr1,
+                                asm_ZucGenKeystream64B_avx(
+                                                       (uint32_t *) keyStr[0],
                                                        &singlePktState);
-                                pKeyStream64 = (uint64_t *) keyStr1;
-                                asm_XorKeyStream64B_avx(pIn64_0, pOut64_0,
+                                pKeyStream64 = (uint64_t *) keyStr[0];
+                                asm_XorKeyStream64B_avx(pIn64[0], pOut64[0],
                                                         pKeyStream64);
-                                pIn64_0 += 8;
-                                pOut64_0 += 8;
+                                pIn64[0] += 8;
+                                pOut64[0] += 8;
                         }
 
 
@@ -300,7 +267,7 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                                 const uint64_t num4BRounds =
                                         ((numBytesLeftOver - 1) / 4) + 1;
 
-                                asm_ZucGenKeystream_avx((uint32_t *)&keyStr1,
+                                asm_ZucGenKeystream_avx((uint32_t *)&keyStr[0],
                                                         &singlePktState,
                                                         num4BRounds);
                                 /* copy the remaining bytes into temporary
@@ -312,7 +279,7 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                                 memset(&tempSrc[numBytesLeftOver], 0,
                                        64 - numBytesLeftOver);
 
-                                pKeyStream64 = (uint64_t *) &keyStr1[0];
+                                pKeyStream64 = (uint64_t *) &keyStr[0][0];
                                 pTempSrc64 = (uint64_t *) &tempSrc[0];
                                 pTempDst64 = (uint64_t *) &tempDst[0];
                                 asm_XorKeyStream64B_avx(pTempSrc64, pTempDst64,
@@ -329,10 +296,7 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         }
 #ifdef SAFE_DATA
         /* Clear sensitive data in stack */
-        clear_mem(keyStr1, sizeof(keyStr1));
-        clear_mem(keyStr2, sizeof(keyStr2));
-        clear_mem(keyStr3, sizeof(keyStr3));
-        clear_mem(keyStr4, sizeof(keyStr4));
+        clear_mem(keyStr, sizeof(keyStr));
         clear_mem(&singlePktState, sizeof(singlePktState));
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
@@ -381,38 +345,24 @@ void zuc_eea3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState4_t));
 
-        /* Calculate the number of bytes left over for each packet */
-        for (i = 0; i < NUM_AVX_BUFS; i++)
+        /*
+         * Calculate the number of bytes left over for each packet,
+         * and setup the Keys and IVs
+         */
+        for (i = 0; i < NUM_AVX_BUFS; i++) {
                 remainBytes[i] = length[i] - bytes;
-
-        /* Setup the Keys */
-        keys.pKey1 = pKey[0];
-        keys.pKey2 = pKey[1];
-        keys.pKey3 = pKey[2];
-        keys.pKey4 = pKey[3];
-
-        /* setup the IV's */
-        ivs.pIv1 = pIv[0];
-        ivs.pIv2 = pIv[1];
-        ivs.pIv3 = pIv[2];
-        ivs.pIv4 = pIv[3];
+                keys.pKeys[i] = pKey[i];
+                ivs.pIvs[i] = pIv[i];
+        }
 
         asm_ZucInitialization_4_avx(&keys,  &ivs, &state);
 
-        pOut64[0] = (uint64_t *) pBufferOut[0];
-        pOut64[1] = (uint64_t *) pBufferOut[1];
-        pOut64[2] = (uint64_t *) pBufferOut[2];
-        pOut64[3] = (uint64_t *) pBufferOut[3];
+        for (i = 0; i < NUM_AVX_BUFS; i++) {
+                pOut64[i] = (uint64_t *) pBufferOut[i];
+                pIn64[i] = (const uint64_t *) pBufferIn[i];
+                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
+        }
 
-        pIn64[0] = (const uint64_t *) pBufferIn[0];
-        pIn64[1] = (const uint64_t *) pBufferIn[1];
-        pIn64[2] = (const uint64_t *) pBufferIn[2];
-        pIn64[3] = (const uint64_t *) pBufferIn[3];
-
-        pKeyStrArr[0] = (uint32_t *) &keyStr[0][0];
-        pKeyStrArr[1] = (uint32_t *) &keyStr[1][0];
-        pKeyStrArr[2] = (uint32_t *) &keyStr[2][0];
-        pKeyStrArr[3] = (uint32_t *) &keyStr[3][0];
 
         /* Loop for 64 bytes at a time generating 4 key-streams per loop */
         while (numKeyStreamsPerPkt) {
@@ -524,10 +474,7 @@ void zuc_eea3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         }
 #ifdef SAFE_DATA
         /* Clear sensitive data in stack */
-        clear_mem(keyStr[0], sizeof(keyStr[0]));
-        clear_mem(keyStr[1], sizeof(keyStr[1]));
-        clear_mem(keyStr[2], sizeof(keyStr[2]));
-        clear_mem(keyStr[3], sizeof(keyStr[3]));
+        clear_mem(keyStr, sizeof(keyStr));
         clear_mem(&singlePktState, sizeof(singlePktState));
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
@@ -766,33 +713,26 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
+        uint32_t *pKeyStrArr[NUM_AVX_BUFS] = {NULL};
 
-        for (i = 0; i < NUM_AVX_BUFS; i++)
+        for (i = 0; i < NUM_AVX_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
+                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
+                keys.pKeys[i] = pKey[i];
+                ivs.pIvs[i] = pIv[i];
+        }
 
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState4_t));
 
-        /* Setup the Keys */
-        keys.pKey1 = pKey[0];
-        keys.pKey2 = pKey[1];
-        keys.pKey3 = pKey[2];
-        keys.pKey4 = pKey[3];
-
-        /* setup the IV's */
-        ivs.pIv1 = pIv[0];
-        ivs.pIv2 = pIv[1];
-        ivs.pIv3 = pIv[2];
-        ivs.pIv4 = pIv[3];
-
         asm_ZucInitialization_4_avx( &keys,  &ivs, &state);
 
         /* Generate 64 bytes at a time */
-        asm_ZucGenKeystream64B_4_avx(&state,
-                                     (uint32_t *) keyStr[0],
-                                     (uint32_t *) keyStr[1],
-                                     (uint32_t *) keyStr[2],
-                                     (uint32_t *) keyStr[3]);
+        asm_ZucGenKeystream64B_4_avx(&state, pKeyStrArr);
+
+        /* Point at the next 64 bytes of the key */
+        for (i = 0; i < NUM_AVX_BUFS; i++)
+                pKeyStrArr[i] = (uint32_t *) &keyStr[i][ZUC_KEYSTR_LEN];
 
         /* loop over the message bits */
         while (remainCommonBits >= keyStreamLengthInBits) {
@@ -800,17 +740,9 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 64 bytes */
                 if (!remainCommonBits)
-                        asm_ZucGenKeystream8B_4_avx(&state,
-                                     (uint32_t *) &keyStr[0][64],
-                                     (uint32_t *) &keyStr[1][64],
-                                     (uint32_t *) &keyStr[2][64],
-                                     (uint32_t *) &keyStr[3][64]);
+                        asm_ZucGenKeystream8B_4_avx(&state, pKeyStrArr);
                 else
-                        asm_ZucGenKeystream64B_4_avx(&state,
-                                     (uint32_t *) &keyStr[0][64],
-                                     (uint32_t *) &keyStr[1][64],
-                                     (uint32_t *) &keyStr[2][64],
-                                     (uint32_t *) &keyStr[3][64]);
+                        asm_ZucGenKeystream64B_4_avx(&state, pKeyStrArr);
                 for (i = 0; i < NUM_AVX_BUFS; i++) {
                         T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
                                                    pIn8[i]);
@@ -965,33 +897,26 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
+        uint32_t *pKeyStrArr[NUM_AVX_BUFS] = {NULL};
 
-        for (i = 0; i < NUM_AVX_BUFS; i++)
+        for (i = 0; i < NUM_AVX_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
+                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
+                keys.pKeys[i] = pKey[i];
+                ivs.pIvs[i] = pIv[i];
+        }
 
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState4_t));
 
-        /* Setup the Keys */
-        keys.pKey1 = pKey[0];
-        keys.pKey2 = pKey[1];
-        keys.pKey3 = pKey[2];
-        keys.pKey4 = pKey[3];
-
-        /* setup the IV's */
-        ivs.pIv1 = pIv[0];
-        ivs.pIv2 = pIv[1];
-        ivs.pIv3 = pIv[2];
-        ivs.pIv4 = pIv[3];
-
         asm_ZucInitialization_4_avx( &keys,  &ivs, &state);
 
         /* Generate 64 bytes at a time */
-        asm_ZucGenKeystream64B_4_avx(&state,
-                                     (uint32_t *) keyStr[0],
-                                     (uint32_t *) keyStr[1],
-                                     (uint32_t *) keyStr[2],
-                                     (uint32_t *) keyStr[3]);
+        asm_ZucGenKeystream64B_4_avx(&state, pKeyStrArr);
+
+        /* Point at the next 64 bytes of the key */
+        for (i = 0; i < NUM_AVX_BUFS; i++)
+                pKeyStrArr[i] = (uint32_t *) &keyStr[i][ZUC_KEYSTR_LEN];
 
         /* loop over the message bits */
         while (remainCommonBits >= keyStreamLengthInBits) {
@@ -999,17 +924,9 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 64 bytes */
                 if (!remainCommonBits)
-                        asm_ZucGenKeystream8B_4_avx(&state,
-                                     (uint32_t *) &keyStr[0][64],
-                                     (uint32_t *) &keyStr[1][64],
-                                     (uint32_t *) &keyStr[2][64],
-                                     (uint32_t *) &keyStr[3][64]);
+                        asm_ZucGenKeystream8B_4_avx(&state, pKeyStrArr);
                 else
-                        asm_ZucGenKeystream64B_4_avx(&state,
-                                     (uint32_t *) &keyStr[0][64],
-                                     (uint32_t *) &keyStr[1][64],
-                                     (uint32_t *) &keyStr[2][64],
-                                     (uint32_t *) &keyStr[3][64]);
+                        asm_ZucGenKeystream64B_4_avx(&state, pKeyStrArr);
                 for (i = 0; i < NUM_AVX_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
                                 continue;

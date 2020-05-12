@@ -647,30 +647,25 @@ ZUC_INIT_4:
 
 %ifdef LINUX
 	%define		pState	rdi
-	%define		pKS1	rsi
-	%define		pKS2	rdx
-	%define		pKS3	rcx
-	%define		pKS4	r8
+	%define		pKS	rsi
 %else
 	%define		pState	rcx
-	%define		pKS1	rdx
-	%define		pKS2	r8
-	%define		pKS3	r9
-        %define         pKS4    rax
-%endif
-
-%ifndef LINUX
-    mov         rax, [rsp + 8*5] ; 5th parameter from stack
+	%define		pKS	rdx
 %endif
 
     FUNC_SAVE
 
     ; Store 4 keystream pointers on the stack
-    sub     rsp, 4*8
-    mov     [rsp],      pKS1
-    mov     [rsp + 8],  pKS2
-    mov     [rsp + 16], pKS3
-    mov     [rsp + 24], pKS4
+    mov         r10, rsp
+    sub         rsp, 4*8
+    and         rsp, -15
+%assign i 0
+%rep 2
+    movdqa      xmm0, [pKS + 16*i]
+    movdqa      [rsp + 16*i], xmm0
+%assign i (i+1)
+%endrep
+
 
     ; Load state pointer in RAX
     mov         rax, pState
@@ -690,28 +685,22 @@ ZUC_INIT_4:
 %endrep
 
     ;; Restore rsp pointer to value before pushing keystreams
-    add         rsp, 4*8
+    mov         rsp, r10
 
     FUNC_RESTORE
 
 %endmacro
 
 ;;
-;; void asm_ZucGenKeystream64B_4_sse(state4_t *pSta, u32* pKeyStr1, u32* pKeyStr2, u32* pKeyStr3, u32* pKeyStr4);
+;; void asm_ZucGenKeystream64B_4_sse(state4_t *pSta, u32* pKeyStr[4]);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
-;;  RDX    - pKeyStr1
-;;  R8     - pKeyStr2
-;;  R9     - pKeyStr3
-;;  Stack  - pKeyStr4
+;;  RDX    - pKeyStr
 ;;
 ;; LIN64
-;;  RDI - pSta
-;;  RSI - pKeyStr1
-;;  RDX - pKeyStr2
-;;  RCX - pKeyStr3
-;;  R8  - pKeyStr4
+;;  RDI    - pSta
+;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN64B_4,function,internal)
 ZUC_KEYGEN64B_4:
@@ -721,21 +710,15 @@ ZUC_KEYGEN64B_4:
         ret
 
 ;;
-;; void asm_ZucGenKeystream8B_4_sse(state4_t *pSta, u32* pKeyStr1, u32* pKeyStr2, u32* pKeyStr3, u32* pKeyStr4);
+;; void asm_ZucGenKeystream8B_4_sse(state4_t *pSta, u32* pKeyStr[4]);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
-;;  RDX    - pKeyStr1
-;;  R8     - pKeyStr2
-;;  R9     - pKeyStr3
-;;  Stack  - pKeyStr4
+;;  RDX    - pKeyStr
 ;;
 ;; LIN64
-;;  RDI - pSta
-;;  RSI - pKeyStr1
-;;  RDX - pKeyStr2
-;;  RCX - pKeyStr3
-;;  R8  - pKeyStr4
+;;  RDI    - pSta
+;;  RSI    - pKeyStr
 ;;
 MKGLOBAL(ZUC_KEYGEN8B_4,function,internal)
 ZUC_KEYGEN8B_4:

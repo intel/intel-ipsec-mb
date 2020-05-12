@@ -145,14 +145,8 @@ typedef struct zuc_state_4_s {
  *      @ref asm_ZucInitialization_4 and @ref asm_ZucGenKeystream64B_4
  *****************************************************************************/
 typedef struct zuc_key_4_s {
-    const uint8_t *pKey1;
-    /**< Pointer to 128-bit key for packet 1 */
-    const uint8_t *pKey2;
-    /**< Pointer to 128-bit key for packet 2 */
-    const uint8_t *pKey3;
-    /**< Pointer to 128-bit key for packet 3 */
-    const uint8_t *pKey4;
-    /**< Pointer to 128-bit key for packet 4 */
+    const uint8_t *pKeys[4];
+    /**< Array of pointers to 128-bit keys for the 4 packets */
 } ZucKey4_t;
 
 /**
@@ -162,14 +156,8 @@ typedef struct zuc_key_4_s {
  *      @ref asm_ZucInitialization_4 and @ref asm_ZucGenKeystream64B_4
  *****************************************************************************/
 typedef struct zuc_iv_4_s {
-    const uint8_t *pIv1;
-    /**< Pointer to 128-bit initialization vector for packet 1 */
-    const uint8_t *pIv2;
-    /**< Pointer to 128-bit initialization vector for packet 2 */
-    const uint8_t *pIv3;
-    /**< Pointer to 128-bit initialization vector for packet 3 */
-    const uint8_t *pIv4;
-    /**< Pointer to 128-bit initialization vector for packet 4 */
+    const uint8_t *pIvs[4];
+    /**< Array of pointers to 128-bit IV's for the 4 packets */
 } ZucIv4_t;
 
 /**
@@ -467,18 +455,9 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState4_t
  *
- * @param[in,out] pKeyStr1          Pointer to an input buffer that will
- *                                  contain the generated keystream for packet
- *                                  one.
- * @param[in,out] pKeyStr2          Pointer to an input buffer that will
- *                                  contain the generated keystream for packet
- *                                  two.
- * @param[in,out] pKeyStr3          Pointer to an input buffer that will
- *                                  contain the generated keystream for packet
- *                                  three.
- * @param[in,out] pKeyStr4          Pointer to an input buffer that will
- *                                  contain the generated keystream for packet
- *                                  four.
+ * @param[in,out] pKeyStr           Array of pointers to 4 input buffers that
+ *                                  will contain the generated keystream for
+ *                                  these 4 packets.
  *
  * @pre
  *      A successful call to @ref asm_ZucInitialization_4 to initialize the ZUC
@@ -486,28 +465,16 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_sse(ZucState4_t *pState,
-                                                uint32_t *pKeyStr1,
-                                                uint32_t *pKeyStr2,
-                                                uint32_t *pKeyStr3,
-                                                uint32_t *pKeyStr4);
+                                                uint32_t *pKeyStr[4]);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_sse_no_aesni(ZucState4_t *pState,
-                                                         uint32_t *pKeyStr1,
-                                                         uint32_t *pKeyStr2,
-                                                         uint32_t *pKeyStr3,
-                                                         uint32_t *pKeyStr4);
+                                                         uint32_t *pKeyStr[4]);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_gfni_sse(ZucState4_t *pState,
-                                                     uint32_t *pKeyStr1,
-                                                     uint32_t *pKeyStr2,
-                                                     uint32_t *pKeyStr3,
-                                                     uint32_t *pKeyStr4);
+                                                     uint32_t *pKeyStr[4]);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream64B_4_avx(ZucState4_t *pState,
-                                                uint32_t *pKeyStr1,
-                                                uint32_t *pKeyStr2,
-                                                uint32_t *pKeyStr3,
-                                                uint32_t *pKeyStr4);
+                                                uint32_t *pKeyStr[4]);
 
 /**
  ******************************************************************************
@@ -568,18 +535,9 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState,
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState4_t
  *
- * @param[in,out] pKeyStr1          Pointer to an input buffer that will
- *                                  contain the generated keystream for packet
- *                                  one.
- * @param[in,out] pKeyStr2          Pointer to an input buffer that will
- *                                  contain the generated keystream for packet
- *                                  two.
- * @param[in,out] pKeyStr3          Pointer to an input buffer that will
- *                                  contain the generated keystream for packet
- *                                  three.
- * @param[in,out] pKeyStr4          Pointer to an input buffer that will
- *                                  contain the generated keystream for packet
- *                                  four.
+ * @param[in,out] pKeyStr           Array of pointers to 4 input buffers that
+ *                                  will contain the generated keystream for
+ *                                  these 4 packets.
  *
  * @pre
  *      A successful call to @ref asm_ZucInitialization_4 to initialize the ZUC
@@ -587,28 +545,16 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse(ZucState4_t *pState,
-                                               uint32_t *pKeyStr1,
-                                               uint32_t *pKeyStr2,
-                                               uint32_t *pKeyStr3,
-                                               uint32_t *pKeyStr4);
+                                               uint32_t *pKeyStr[4]);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse_no_aesni(ZucState4_t *pState,
-                                                        uint32_t *pKeyStr1,
-                                                        uint32_t *pKeyStr2,
-                                                        uint32_t *pKeyStr3,
-                                                        uint32_t *pKeyStr4);
+                                                        uint32_t *pKeyStr[4]);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_gfni_sse(ZucState4_t *pState,
-                                                    uint32_t *pKeyStr1,
-                                                    uint32_t *pKeyStr2,
-                                                    uint32_t *pKeyStr3,
-                                                    uint32_t *pKeyStr4);
+                                                    uint32_t *pKeyStr[4]);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
-                                               uint32_t *pKeyStr1,
-                                               uint32_t *pKeyStr2,
-                                               uint32_t *pKeyStr3,
-                                               uint32_t *pKeyStr4);
+                                               uint32_t *pKeyStr[4]);
 
 /**
  ******************************************************************************
