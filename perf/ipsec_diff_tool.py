@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 **********************************************************************
@@ -35,6 +35,7 @@ import sys
 
 # Number of parameters (ARCH, CIPHER_MODE, DIR, HASH_ALG, KEY_SIZE)
 PAR_NUM = 5
+col_max = 12
 
 class Variant(object):
     """
@@ -75,17 +76,17 @@ class Variant(object):
 
     def get_params_str(self):
         """
-        Returns all parameters concatenated into one string
+        Returns all parameters concatenated into one string -- now returns them as an array 
         """
-        return "\t".join(i for i in self.params)
+        return (self.params)
 
     def get_lin_func_str(self):
         """
-        Returns string having linear coefficients
+        Returns string having linear coefficients 
         """
         slope = "{:.5f}".format(self.slope)
         intercept = "{:.5f}".format(self.intercept)
-        return "{}\t{}".format(slope, intercept)
+        return (slope + " "*(col_max-len(str(slope)))+ intercept + " "*(col_max-len(str(intercept))))
 
 class VarList(list):
     """
@@ -116,10 +117,12 @@ class VarList(list):
         if tolerance < 0.0:
             print ("Bad argument: Tolerance must not be less than 0%")
             exit(1)
-        print ("TOLERANCE: %6.2f "%(tolerance))
+        print ("TOLERANCE: %6.2f"%(tolerance)+"%")
 
         warning = False
-        print ("NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE A\tINTERCEPT A\tSLOPE B\tINTERCEPT B")
+
+        headings=["NO","ARCH","CIPHER","DIR","HASH","KEYSZ","SLOPE A","INTERCEPT", "SLOPE B", "INTERCEPT B"]
+        print( "".join(j.ljust(col_max) for j in headings))
         for i, obj_a in enumerate(self):
             obj_b = list_b.find_obj(obj_a.params)
             if obj_b != None:
@@ -134,7 +137,13 @@ class VarList(list):
                 if (obj_a.slope > 0.001 and obj_b.slope > 0.001 and
                         diff_slope > slope_bv) or diff_intercept > intercept_bv:
                     warning = True
-                    print (str(i+1)+ "\t" + obj_b.get_params_str()+ "\t" + obj_a.get_lin_func_str() + "\t" + obj_b.get_lin_func_str())
+                    data = (obj_b.get_params_str())
+                    number = i +1 
+                    print (str(number)  + " "*(col_max-len(str(number))) 
+					+ "".join(j.ljust(col_max) for j in data)
+					+ obj_a.get_lin_func_str() 
+					+ obj_b.get_lin_func_str())
+
         if not warning:
             print ("No differences found.")
         return warning
@@ -143,10 +152,15 @@ class VarList(list):
         """
         Prints out readable representation of the list
         """
-
-        print ("NO\tARCH\tCIPHER\tDIR\tHASH\tKEYSZ\tSLOPE \tINTERCEPT")
+        
+        headings=["NO","ARCH","CIPHER","DIR","HASH","KEYSZ","SLOPE A","INTERCEPT"]
+        print( "".join(j.ljust(col_max) for j in headings) )
         for i, obj in enumerate(self):
-            print (str(i+1) + "\t" + obj.get_params_str() + "\t" + obj.get_lin_func_str())
+            number = i+1
+            data = obj.get_params_str() 
+            print (str(number)  + " "*(col_max-len(str(number))) 
+				+ "".join(j.ljust(col_max) for j in data) 
+				+ obj.get_lin_func_str())
 
 class Parser(object):
     """
@@ -298,5 +312,4 @@ class DiffTool(object):
             list_a.printout() # Takes only one file and prints it out
 
 if __name__ == '__main__':
-    print('Python', sys.version)
     DiffTool().run()
