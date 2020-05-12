@@ -116,7 +116,6 @@ section .text
 %define OFS_X0  (OFS_R2 + (4*4))
 %define OFS_X1  (OFS_X0 + (4*4))
 %define OFS_X2  (OFS_X1 + (4*4))
-%define OFS_X3  (OFS_X2 + (4*4))
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*10
@@ -203,12 +202,13 @@ section .text
 ;
 ;   params
 ;       %1 - round number
+;       %2 - XMM register storing X3
 ;       rax - LFSR pointer
 ;   uses
 ;
 ;   return
 ;
-%macro  bits_reorg4 1
+%macro  bits_reorg4 1-2
     ;
     ; xmm15 = LFSR_S15
     ; xmm14 = LFSR_S14
@@ -243,10 +243,12 @@ section .text
     psrld       xmm5, 15
     por         xmm7, xmm5
     movdqa      [rax + OFS_X2], xmm7    ; BRC_X2
+%if (%0 == 2)
     pslld       xmm2, 16
     psrld       xmm0, 15
     por         xmm2, xmm0
-    movdqa      [rax + OFS_X3], xmm2    ; BRC_X3
+    movdqa      %2, xmm2    ; BRC_X3
+%endif
 %endmacro
 
 ;
@@ -355,29 +357,41 @@ section .text
 
 
 ;
-;   store_kstr4()
+;   store16B_kstr4()
 ;
-;   params
-;
-;   uses
-;       xmm0 as input
-;   return
-;
-%macro  store_kstr4 0
-    pxor        xmm0, [rax + OFS_X3]
+%macro  store16B_kstr4 4
+%define %%DATA16B_L0  %1  ; [in] 16 bytes of keystream for lane 0
+%define %%DATA16B_L1  %2  ; [in] 16 bytes of keystream for lane 1
+%define %%DATA16B_L2  %3  ; [in] 16 bytes of keystream for lane 2
+%define %%DATA16B_L3  %4  ; [in] 16 bytes of keystream for lane 3
 
     mov         rcx, [rsp]
     mov         rdx, [rsp + 8]
     mov         r8,  [rsp + 16]
     mov         r9,  [rsp + 24]
-    pextrd      r15d, xmm0, 3
-    pextrd      r14d, xmm0, 2
-    pextrd      r13d, xmm0, 1
-    movd        r12d, xmm0
-    mov         [r9], r15d
-    mov         [r8], r14d
-    mov         [rdx], r13d
-    mov         [rcx], r12d
+    movdqu      [rcx], %%DATA16B_L0
+    movdqu      [rdx], %%DATA16B_L1
+    movdqu      [r8],  %%DATA16B_L2
+    movdqu      [r9],  %%DATA16B_L3
+%endmacro
+
+;
+;   store4B_kstr4()
+;
+;   params
+;
+;   %1 - XMM register with OFS_X3
+;   return
+;
+%macro  store4B_kstr4 1
+    mov         rcx, [rsp]
+    mov         rdx, [rsp + 8]
+    mov         r8,  [rsp + 16]
+    mov         r9,  [rsp + 24]
+    pextrd      [r9], %1, 3
+    pextrd      [r8], %1, 2
+    pextrd      [rdx], %1, 1
+    movd        [rcx], %1
     add         rcx, 4
     add         rdx, 4
     add         r8, 4
@@ -660,6 +674,31 @@ ZUC_INIT_4:
 
 %endmacro
 
+%macro TRANSPOSE4_U32 6
+%define %%r0 %1
+%define %%r1 %2
+%define %%r2 %3
+%define %%r3 %4
+%define %%t0 %5
+%define %%t1 %6
+
+        movdqa  %%t0, %%r0
+	shufps	%%t0, %%r1, 0x44	; t0 = {b1 b0 a1 a0}
+	shufps	%%r0, %%r1, 0xEE	; r0 = {b3 b2 a3 a2}
+        movdqa  %%t1, %%r2
+	shufps  %%t1, %%r3, 0x44	; t1 = {d1 d0 c1 c0}
+	shufps	%%r2, %%r3, 0xEE	; r2 = {d3 d2 c3 c2}
+
+        movdqa  %%r1, %%t0
+	shufps	%%r1, %%t1, 0xDD	; r1 = {d1 c1 b1 a1}
+        movdqa  %%r3, %%r0
+	shufps	%%r3, %%r2, 0xDD	; r3 = {d3 c3 b3 a3}
+	shufps	%%r0, %%r2, 0x88	; r2 = {d2 c2 b2 a2}
+        movdqa  %%r2, %%r0
+	shufps	%%t0, %%t1, 0x88	; r0 = {d0 c0 b0 a0}
+        movdqa  %%r0, %%t0
+%endmacro
+
 ;
 ; Generate N*4 bytes of keystream
 ; for 4 buffers (where N is number of rounds)
@@ -678,16 +717,17 @@ ZUC_INIT_4:
     FUNC_SAVE
 
     ; Store 4 keystream pointers on the stack
+    ; and reserve memory for storing keystreams for all 4 buffers
     mov         r10, rsp
-    sub         rsp, 4*8
+    sub         rsp, (4*8 + %%NUM_ROUNDS * 16)
     and         rsp, -15
+
 %assign i 0
 %rep 2
     movdqa      xmm0, [pKS + 16*i]
     movdqa      [rsp + 16*i], xmm0
 %assign i (i+1)
 %endrep
-
 
     ; Load state pointer in RAX
     mov         rax, pState
@@ -698,13 +738,45 @@ ZUC_INIT_4:
     ; Generate N*4B of keystream in N rounds
 %assign N 1
 %rep %%NUM_ROUNDS
-    bits_reorg4 N
+    bits_reorg4 N, xmm10
     nonlin_fun4 1, USE_GFNI
-    store_kstr4
+    ; OFS_X3 XOR W (xmm0) and store in stack
+    pxor        xmm10, xmm0
+    movdqa [rsp + 4*8 + (N-1)*16], xmm10
     pxor        xmm0, xmm0
     lfsr_updt4  N
 %assign N N+1
 %endrep
+
+%if (%%NUM_ROUNDS == 4)
+    ;; Load all OFS_X3
+%assign i 0
+%rep 4
+    movdqa      APPEND(xmm,i), [rsp + 4*8 + i*16]
+%assign i (i+1)
+%endrep
+
+    TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+
+    store16B_kstr4 xmm0, xmm1, xmm2, xmm3
+%else ;; NUM_ROUNDS != 4
+%assign idx 0
+%rep %%NUM_ROUNDS
+    movdqa  APPEND(xmm, idx), [rsp + 4*8 + idx*16]
+    store4B_kstr4 APPEND(xmm, idx)
+%assign idx (idx + 1)
+%endrep
+%endif ;; NUM_ROUNDS == 4
+
+        ;; Clear stack frame containing keystream information
+%ifdef SAFE_DATA
+    pxor    xmm0, xmm0
+%assign i 0
+%rep (2+%%NUM_ROUNDS)
+    movdqa  [rsp + i*16], xmm0
+%assign i (i+1)
+%endrep
+%endif
 
     ;; Reorder memory for LFSR registers, as not all 16 rounds
     ;; will be completed (can be 4 or 2)
@@ -794,16 +866,15 @@ ZUC_CIPHER16B_4:
         FUNC_SAVE
 
         ; Store 4 keystream pointers and input registers in the stack
+        mov     r10, rsp
         sub     rsp, 8*8
-        mov     r12, [pKS]
-        mov     r13, [pKS + 8]
-        mov     r14, [pKS + 16]
-        mov     r15, [pKS + 24]
-        mov     [rsp],      r12
-        mov     [rsp + 8],  r13
-        mov     [rsp + 16], r14
-        mov     [rsp + 24], r15
-
+        and     rsp, -15
+%assign i 0
+%rep 2
+        movdqa  xmm0, [pKS + 16*i]
+        movdqa  [rsp + 16*i], xmm0
+%assign i (i+1)
+%endrep
         mov     [rsp + 32], pKS
         mov     [rsp + 40], pIn
         mov     [rsp + 48], pOut
@@ -818,9 +889,11 @@ ZUC_CIPHER16B_4:
         ; Generate 16B of keystream in 16 rounds
 %assign N 1
 %rep 4
-        bits_reorg4 N
+        bits_reorg4 N, xmm10
         nonlin_fun4 1, USE_GFNI
-        store_kstr4
+        ; OFS_XR XOR W (xmm0)
+        pxor    xmm10, xmm0
+        store4B_kstr4 xmm10
         pxor    xmm0, xmm0
         lfsr_updt4  N
 %assign N N+1
@@ -834,7 +907,7 @@ ZUC_CIPHER16B_4:
 
         ;; Restore rsp pointer to value before pushing keystreams
         ;; and input parameters
-        add     rsp, 8*8
+        mov     rsp, r10
 
         movdqa  xmm15, [rel swap_mask]
 

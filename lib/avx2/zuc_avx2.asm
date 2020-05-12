@@ -435,14 +435,10 @@ align 64
     mov         rdx, [rsp + 8]
     mov         r8,  [rsp + 16]
     mov         r9,  [rsp + 24]
-    vpextrd     r15d, XWORD(%1), 3
-    vpextrd     r14d, XWORD(%1), 2
-    vpextrd     r13d, XWORD(%1), 1
-    vmovd       r12d, XWORD(%1)
-    mov         [r9], r15d
-    mov         [r8], r14d
-    mov         [rdx], r13d
-    mov         [rcx], r12d
+    vpextrd     [r9],  XWORD(%1), 3
+    vpextrd     [r8],  XWORD(%1), 2
+    vpextrd     [rdx], XWORD(%1), 1
+    vmovd       [rcx], XWORD(%1)
     add         rcx, 4
     add         rdx, 4
     add         r8, 4
@@ -457,14 +453,10 @@ align 64
     mov         rdx, [rsp + 40]
     mov         r8,  [rsp + 48]
     mov         r9,  [rsp + 56]
-    vpextrd     r15d, XWORD(%1), 3
-    vpextrd     r14d, XWORD(%1), 2
-    vpextrd     r13d, XWORD(%1), 1
-    vmovd       r12d, XWORD(%1)
-    mov         [r9], r15d
-    mov         [r8], r14d
-    mov         [rdx], r13d
-    mov         [rcx], r12d
+    vpextrd     [r9],  XWORD(%1), 3
+    vpextrd     [r8],  XWORD(%1), 2
+    vpextrd     [rdx], XWORD(%1), 1
+    vmovd       [rcx], XWORD(%1)
     add         rcx, 4
     add         rdx, 4
     add         r8, 4
