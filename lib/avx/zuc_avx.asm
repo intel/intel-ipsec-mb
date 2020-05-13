@@ -764,35 +764,37 @@ asm_ZucGenKeystream8B_4_avx:
     ret
 
 ;;
-;; void asm_ZucCipher16B_4_avx(state4_t *pSta, u64 *pIn[4],
-;;                             u64 *pOut[4], u64 bufOff);
+;; void asm_ZucCipherNx16B_4_avx(state4_t *pSta, u64 *pIn[4],
+;;                               u64 *pOut[4], u64 length);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
 ;;  RDX    - pIn
 ;;  R8     - pOut
-;;  R9     - bufOff
+;;  R9     - length
 ;;
 ;; LIN64
 ;;  RDI - pSta
 ;;  RSI - pIn
 ;;  RDX - pOut
-;;  RCX - bufOff
+;;  RCX - length
 ;;
-MKGLOBAL(asm_ZucCipher16B_4_avx,function,internal)
-asm_ZucCipher16B_4_avx:
+MKGLOBAL(asm_ZucCipherNx16B_4_avx,function,internal)
+asm_ZucCipherNx16B_4_avx:
 
 %ifdef LINUX
         %define         pState  rdi
         %define         pIn     rsi
         %define         pOut    rdx
-        %define         bufOff  rcx
+        %define         length  rcx
 %else
         %define         pState  rcx
         %define         pIn     rdx
         %define         pOut    r8
-        %define         bufOff  r9
+        %define         length  r9
 %endif
+
+%define buf_idx r10
 
         FUNC_SAVE
 
@@ -800,9 +802,14 @@ asm_ZucCipher16B_4_avx:
         mov     r11, rsp
         sub     rsp, (4 * 16)
         and     rsp, -15
+        xor     buf_idx, buf_idx
 
         ; Load state pointer in RAX
         mov     rax, pState
+
+loop:
+        or      length, length
+        jz      exit_loop
 
         ; Load read-only registers
         vmovdqa xmm12, [rel mask31]
@@ -827,10 +834,10 @@ asm_ZucCipher16B_4_avx:
         mov     r13, [pIn + 8]
         mov     r14, [pIn + 16]
         mov     r15, [pIn + 24]
-        vmovdqu xmm0, [r12 + bufOff]
-        vmovdqu xmm1, [r13 + bufOff]
-        vmovdqu xmm2, [r14 + bufOff]
-        vmovdqu xmm3, [r15 + bufOff]
+        vmovdqu xmm0, [r12 + buf_idx]
+        vmovdqu xmm1, [r13 + buf_idx]
+        vmovdqu xmm2, [r14 + buf_idx]
+        vmovdqu xmm3, [r15 + buf_idx]
 
 %assign i 4
 %rep 4
@@ -855,17 +862,36 @@ asm_ZucCipher16B_4_avx:
         mov     r14, [pOut + 16]
         mov     r15, [pOut + 24]
 
-        vmovdqu [r12 + bufOff], xmm4
-        vmovdqu [r13 + bufOff], xmm5
-        vmovdqu [r14 + bufOff], xmm6
-        vmovdqu [r15 + bufOff], xmm7
+        vmovdqu [r12 + buf_idx], xmm4
+        vmovdqu [r13 + buf_idx], xmm5
+        vmovdqu [r14 + buf_idx], xmm6
+        vmovdqu [r15 + buf_idx], xmm7
 
-        ;; Restore rsp pointer
-        mov     rsp, r11
+        sub     length, 16
+        add     buf_idx, 16
 
         ;; Reorder memory for LFSR registers, as not all 16 rounds
         ;; will be completed
         REORDER_LFSR rax, 4
+
+        jmp     loop
+
+exit_loop:
+
+        ;; update in/out pointers
+        vmovq           xmm0, buf_idx
+        vpshufd         xmm0, xmm0, 0x5
+        vpaddq          xmm1, xmm0, [pIn]
+        vpaddq          xmm2, xmm0, [pIn + 16]
+        vmovdqa         [pIn], xmm1
+        vmovdqa         [pIn + 16], xmm2
+        vpaddq          xmm1, xmm0, [pOut]
+        vpaddq          xmm2, xmm0, [pOut + 16]
+        vmovdqa         [pOut], xmm1
+        vmovdqa         [pOut + 16], xmm2
+
+        ;; Restore rsp pointer
+        mov     rsp, r11
 
         FUNC_RESTORE
 

@@ -29,8 +29,8 @@
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
 
-%ifndef ZUC_CIPHER16B_4
-%define ZUC_CIPHER16B_4 asm_ZucCipher16B_4_sse
+%ifndef ZUC_CIPHERNx16B_4
+%define ZUC_CIPHERNx16B_4 asm_ZucCipherNx16B_4_sse
 %define ZUC_INIT_4 asm_ZucInitialization_4_sse
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
@@ -794,35 +794,37 @@ ZUC_KEYGEN8B_4:
         ret
 
 ;;
-;; void asm_ZucCipher16B_4_sse(state4_t *pSta, u64 *pIn[4],
-;;                             u64 *pOut[4], u64 bufOff);
+;; void asm_ZucCipherNx16B_4_sse(state4_t *pSta, u64 *pIn[4],
+;;                               u64 *pOut[4], u64 length);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
 ;;  RDX    - pIn
 ;;  R8     - pOut
-;;  R9     - bufOff
+;;  R9     - length
 ;;
 ;; LIN64
 ;;  RDI - pSta
 ;;  RSI - pIn
 ;;  RDX - pOut
-;;  RCX - bufOff
+;;  RCX - length
 ;;
-MKGLOBAL(ZUC_CIPHER16B_4,function,internal)
-ZUC_CIPHER16B_4:
+MKGLOBAL(ZUC_CIPHERNx16B_4,function,internal)
+ZUC_CIPHERNx16B_4:
 
 %ifdef LINUX
         %define         pState  rdi
         %define         pIn     rsi
         %define         pOut    rdx
-        %define         bufOff  rcx
+        %define         length  rcx
 %else
         %define         pState  rcx
         %define         pIn     rdx
         %define         pOut    r8
-        %define         bufOff  r9
+        %define         length  r9
 %endif
+
+%define buf_idx r10
 
         FUNC_SAVE
 
@@ -830,9 +832,14 @@ ZUC_CIPHER16B_4:
         mov     r11, rsp
         sub     rsp, (4 * 16)
         and     rsp, -15
+        xor     buf_idx, buf_idx
 
         ; Load state pointer in RAX
         mov     rax, pState
+
+loop:
+        or      length, length
+        jz      exit_loop
 
         ; Load read-only registers
         movdqa  xmm12, [rel mask31]
@@ -857,10 +864,10 @@ ZUC_CIPHER16B_4:
         mov     r13, [pIn + 8]
         mov     r14, [pIn + 16]
         mov     r15, [pIn + 24]
-        movdqu  xmm0, [r12 + bufOff]
-        movdqu  xmm1, [r13 + bufOff]
-        movdqu  xmm2, [r14 + bufOff]
-        movdqu  xmm3, [r15 + bufOff]
+        movdqu  xmm0, [r12 + buf_idx]
+        movdqu  xmm1, [r13 + buf_idx]
+        movdqu  xmm2, [r14 + buf_idx]
+        movdqu  xmm3, [r15 + buf_idx]
 
 %assign i 4
 %rep 4
@@ -885,17 +892,40 @@ ZUC_CIPHER16B_4:
         mov     r14, [pOut + 16]
         mov     r15, [pOut + 24]
 
-        movdqu  [r12 + bufOff], xmm4
-        movdqu  [r13 + bufOff], xmm5
-        movdqu  [r14 + bufOff], xmm6
-        movdqu  [r15 + bufOff], xmm7
+        movdqu  [r12 + buf_idx], xmm4
+        movdqu  [r13 + buf_idx], xmm5
+        movdqu  [r14 + buf_idx], xmm6
+        movdqu  [r15 + buf_idx], xmm7
 
-        ;; Restore rsp pointer
-        mov     rsp, r11
+        sub     length, 16
+        add     buf_idx, 16
 
         ;; Reorder memory for LFSR registers, as not all 16 rounds
         ;; will be completed
         REORDER_LFSR rax, 4
+
+        jmp     loop
+
+exit_loop:
+
+        ;; update in/out pointers
+        movq           xmm0, buf_idx
+        pshufd         xmm0, xmm0, 0x5
+        movdqa         xmm1, xmm0
+        movdqa         xmm2, xmm0
+        paddq          xmm1, [pIn]
+        paddq          xmm2, [pIn + 16]
+        movdqa         [pIn], xmm1
+        movdqa         [pIn + 16], xmm2
+        movdqa         xmm1, xmm0
+        movdqa         xmm2, xmm0
+        paddq          xmm1, [pOut]
+        paddq          xmm2, [pOut + 16]
+        movdqa         [pOut], xmm1
+        movdqa         [pOut + 16], xmm2
+
+        ;; Restore rsp pointer
+        mov     rsp, r11
 
         FUNC_RESTORE
 

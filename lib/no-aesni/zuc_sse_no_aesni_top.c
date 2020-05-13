@@ -337,7 +337,6 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
         uint8_t *pTempBufOutPtr = NULL;
         const uint64_t *pIn64[NUM_SSE_BUFS] = {NULL};
         uint64_t *pOut64[NUM_SSE_BUFS] = {NULL};
-        uint64_t bufOffset = 0;
 
         /* rounded down minimum length */
         bytes = numKeyStreamsPerPkt * KEYSTR_ROUND_LEN;
@@ -362,21 +361,8 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        /* Loop encrypting 16 bytes of 4 buffers at a time */
-        while (numKeyStreamsPerPkt) {
-                /* Generate 16 bytes of KeyStream for 4 buffers
-                 * and XOR with input */
-                asm_ZucCipher16B_4_sse_no_aesni(&state, pIn64, pOut64,
-                                                bufOffset);
-                bufOffset += 16;
-                /* Update keystream count */
-                numKeyStreamsPerPkt--;
-        }
-
-        for (i = 0; i < NUM_SSE_BUFS; i++) {
-                pIn64[i] += (bufOffset >> 3);
-                pOut64[i] += (bufOffset >> 3);
-        }
+        asm_ZucCipherNx16B_4_sse_no_aesni(&state, pIn64, pOut64,
+                                          numKeyStreamsPerPkt * 16);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_SSE_BUFS; i++) {
