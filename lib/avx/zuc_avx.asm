@@ -764,59 +764,42 @@ asm_ZucGenKeystream8B_4_avx:
     ret
 
 ;;
-;; void asm_ZucCipher16B_4_avx(state4_t *pSta, u32 *pKeyStr[4], u64 *pIn[4],
+;; void asm_ZucCipher16B_4_avx(state4_t *pSta, u64 *pIn[4],
 ;;                             u64 *pOut[4], u64 bufOff);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
-;;  RDX    - pKeyStr
-;;  R8     - pIn
-;;  R9     - pOut
-;;  rsp+40 - bufOff
+;;  RDX    - pIn
+;;  R8     - pOut
+;;  R9     - bufOff
 ;;
 ;; LIN64
 ;;  RDI - pSta
-;;  RSI - pKeyStr
-;;  RDX - pIn
-;;  RCX - pOut
-;;  R8  - bufOff
+;;  RSI - pIn
+;;  RDX - pOut
+;;  RCX - bufOff
 ;;
 MKGLOBAL(asm_ZucCipher16B_4_avx,function,internal)
 asm_ZucCipher16B_4_avx:
 
 %ifdef LINUX
         %define         pState  rdi
-        %define         pKS     rsi
-        %define         pIn     rdx
-        %define         pOut    rcx
-        %define         bufOff  r8
+        %define         pIn     rsi
+        %define         pOut    rdx
+        %define         bufOff  rcx
 %else
         %define         pState  rcx
-        %define         pKS     rdx
-        %define         pIn     r8
-        %define         pOut    r9
-        %define         bufOff  r10
+        %define         pIn     rdx
+        %define         pOut    r8
+        %define         bufOff  r9
 %endif
 
-%ifndef LINUX
-        mov     bufOff, [rsp + 40]
-%endif
         FUNC_SAVE
 
-        ; Store 4 keystream pointers and input registers in the stack
-        mov     r10, rsp
-        sub     rsp, 8*8
+        ; Reserve memory for storing keystreams for all 4 buffers
+        mov     r11, rsp
+        sub     rsp, (4 * 16)
         and     rsp, -15
-%assign i 0
-%rep 2
-        vmovdqa xmm0, [pKS + 16*i]
-        vmovdqa [rsp + 16*i], xmm0
-%assign i (i+1)
-%endrep
-        mov     [rsp + 32], pKS
-        mov     [rsp + 40], pIn
-        mov     [rsp + 48], pOut
-        mov     [rsp + 56], bufOff
 
         ; Load state pointer in RAX
         mov     rax, pState
@@ -829,23 +812,13 @@ asm_ZucCipher16B_4_avx:
 %rep 4
         bits_reorg4 N, xmm10
         nonlin_fun4 1
-        ; OFS_XR XOR W (xmm0)
+        ; OFS_X3 XOR W (xmm0) and store in stack
         vpxor   xmm10, xmm0
-        store4B_kstr4 xmm10
+        vmovdqa [rsp + (N-1)*16], xmm10
         vpxor   xmm0, xmm0
         lfsr_updt4  N
 %assign N N+1
 %endrep
-
-        ;; Restore input parameters
-        mov     pKS,    [rsp + 32]
-        mov     pIn,    [rsp + 40]
-        mov     pOut,   [rsp + 48]
-        mov     bufOff, [rsp + 56]
-
-        ;; Restore rsp pointer to value before pushing keystreams
-        ;; and input parameters
-        mov     rsp, r10
 
         vmovdqa  xmm15, [rel swap_mask]
 
@@ -859,14 +832,13 @@ asm_ZucCipher16B_4_avx:
         vmovdqu xmm2, [r14 + bufOff]
         vmovdqu xmm3, [r15 + bufOff]
 
-        mov     r12, [pKS]
-        mov     r13, [pKS + 8]
-        mov     r14, [pKS + 16]
-        mov     r15, [pKS + 24]
-        vmovdqa xmm4, [r12]
-        vmovdqa xmm5, [r13]
-        vmovdqa xmm6, [r14]
-        vmovdqa xmm7, [r15]
+%assign i 4
+%rep 4
+        vmovdqa     APPEND(xmm,i), [rsp + (i-4)*16]
+%assign i (i+1)
+%endrep
+
+        TRANSPOSE4_U32 xmm4, xmm5, xmm6, xmm7, xmm8, xmm9
 
         vpshufb xmm4, xmm15
         vpshufb xmm5, xmm15
@@ -887,6 +859,9 @@ asm_ZucCipher16B_4_avx:
         vmovdqu [r13 + bufOff], xmm5
         vmovdqu [r14 + bufOff], xmm6
         vmovdqu [r15 + bufOff], xmm7
+
+        ;; Restore rsp pointer
+        mov     rsp, r11
 
         ;; Reorder memory for LFSR registers, as not all 16 rounds
         ;; will be completed

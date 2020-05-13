@@ -639,9 +639,6 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState4_t
  *
- * @param[in,out] pKeyStr           Array of pointers to buffers that will
- *                                  contain the generated keystreams for all
- *                                  4 packets.
  * @param[in] pIn                   Array of pointers to 4 input buffers.
  * @param[out] pOut                 Array of pointers to 4 output buffers.
  * @param[in] bufOffset             Offset into pIn and pOut
@@ -652,25 +649,21 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucCipher16B_4_sse(ZucState4_t *pState,
-                                          uint32_t *pKeyStr[4],
                                           const uint64_t *pIn[4],
                                           uint64_t *pOut[4],
                                           uint64_t bufOffset);
 
 IMB_DLL_LOCAL void asm_ZucCipher16B_4_sse_no_aesni(ZucState4_t *pState,
-                                                   uint32_t *pKeyStr[4],
                                                    const uint64_t *pIn[4],
                                                    uint64_t *pOut[4],
                                                    uint64_t bufOffset);
 
 IMB_DLL_LOCAL void asm_ZucCipher16B_4_gfni_sse(ZucState4_t *pState,
-                                               uint32_t *pKeyStr[4],
                                                const uint64_t *pIn[4],
                                                uint64_t *pOut[4],
                                                uint64_t bufOffset);
 
 IMB_DLL_LOCAL void asm_ZucCipher16B_4_avx(ZucState4_t *pState,
-                                          uint32_t *pKeyStr[4],
                                           const uint64_t *pIn[4],
                                           uint64_t *pOut[4],
                                           uint64_t bufOffset);

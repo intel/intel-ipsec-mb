@@ -794,59 +794,42 @@ ZUC_KEYGEN8B_4:
         ret
 
 ;;
-;; void asm_ZucCipher16B_4_sse(state4_t *pSta, u32 *pKeyStr[4], u64 *pIn[4],
+;; void asm_ZucCipher16B_4_sse(state4_t *pSta, u64 *pIn[4],
 ;;                             u64 *pOut[4], u64 bufOff);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
-;;  RDX    - pKeyStr
-;;  R8     - pIn
-;;  R9     - pOut
-;;  rsp+40 - bufOff
+;;  RDX    - pIn
+;;  R8     - pOut
+;;  R9     - bufOff
 ;;
 ;; LIN64
 ;;  RDI - pSta
-;;  RSI - pKeyStr
-;;  RDX - pIn
-;;  RCX - pOut
-;;  R8  - bufOff
+;;  RSI - pIn
+;;  RDX - pOut
+;;  RCX - bufOff
 ;;
 MKGLOBAL(ZUC_CIPHER16B_4,function,internal)
 ZUC_CIPHER16B_4:
 
 %ifdef LINUX
         %define         pState  rdi
-        %define         pKS     rsi
-        %define         pIn     rdx
-        %define         pOut    rcx
-        %define         bufOff  r8
+        %define         pIn     rsi
+        %define         pOut    rdx
+        %define         bufOff  rcx
 %else
         %define         pState  rcx
-        %define         pKS     rdx
-        %define         pIn     r8
-        %define         pOut    r9
-        %define         bufOff  r10
+        %define         pIn     rdx
+        %define         pOut    r8
+        %define         bufOff  r9
 %endif
 
-%ifndef LINUX
-        mov     bufOff, [rsp + 40]
-%endif
         FUNC_SAVE
 
-        ; Store 4 keystream pointers and input registers in the stack
-        mov     r10, rsp
-        sub     rsp, 8*8
+        ; Reserve memory for storing keystreams for all 4 buffers
+        mov     r11, rsp
+        sub     rsp, (4 * 16)
         and     rsp, -15
-%assign i 0
-%rep 2
-        movdqa  xmm0, [pKS + 16*i]
-        movdqa  [rsp + 16*i], xmm0
-%assign i (i+1)
-%endrep
-        mov     [rsp + 32], pKS
-        mov     [rsp + 40], pIn
-        mov     [rsp + 48], pOut
-        mov     [rsp + 56], bufOff
 
         ; Load state pointer in RAX
         mov     rax, pState
@@ -859,23 +842,13 @@ ZUC_CIPHER16B_4:
 %rep 4
         bits_reorg4 N, xmm10
         nonlin_fun4 1, USE_GFNI
-        ; OFS_XR XOR W (xmm0)
+        ; OFS_XR XOR W (xmm0) and store in stack
         pxor    xmm10, xmm0
-        store4B_kstr4 xmm10
+        movdqa  [rsp + (N-1)*16], xmm10
         pxor    xmm0, xmm0
         lfsr_updt4  N
 %assign N N+1
 %endrep
-
-        ;; Restore input parameters
-        mov     pKS,    [rsp + 32]
-        mov     pIn,    [rsp + 40]
-        mov     pOut,   [rsp + 48]
-        mov     bufOff, [rsp + 56]
-
-        ;; Restore rsp pointer to value before pushing keystreams
-        ;; and input parameters
-        mov     rsp, r10
 
         movdqa  xmm15, [rel swap_mask]
 
@@ -889,14 +862,13 @@ ZUC_CIPHER16B_4:
         movdqu  xmm2, [r14 + bufOff]
         movdqu  xmm3, [r15 + bufOff]
 
-        mov     r12, [pKS]
-        mov     r13, [pKS + 8]
-        mov     r14, [pKS + 16]
-        mov     r15, [pKS + 24]
-        movdqa  xmm4, [r12]
-        movdqa  xmm5, [r13]
-        movdqa  xmm6, [r14]
-        movdqa  xmm7, [r15]
+%assign i 4
+%rep 4
+        movdqa  APPEND(xmm,i), [rsp + (i-4)*16]
+%assign i (i+1)
+%endrep
+
+        TRANSPOSE4_U32 xmm4, xmm5, xmm6, xmm7, xmm8, xmm9
 
         pshufb  xmm4, xmm15
         pshufb  xmm5, xmm15
@@ -917,6 +889,9 @@ ZUC_CIPHER16B_4:
         movdqu  [r13 + bufOff], xmm5
         movdqu  [r14 + bufOff], xmm6
         movdqu  [r15 + bufOff], xmm7
+
+        ;; Restore rsp pointer
+        mov     rsp, r11
 
         ;; Reorder memory for LFSR registers, as not all 16 rounds
         ;; will be completed
