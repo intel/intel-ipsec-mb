@@ -71,9 +71,13 @@
 
 #define SEED 0xdeadcafe
 #define PT_PATTERN 0x4444444444444444ULL
-#define CIPH_KEY_PATTERN 0x8888888888888888ULL
+#define CIPH_KEY_PATTERN 0x3333333333333333ULL
 #define AUTH_KEY_PATTERN 0xCCCCCCCCCCCCCCCCULL
 #define STACK_DEPTH 8192
+
+#define MAX_OOO_MGR_SIZE 8192
+#define OOO_MGR_FIRST aes128_ooo
+#define OOO_MGR_LAST  zuc_eia3_ooo
 
 enum arch_type_e {
         ARCH_SSE = 0,
@@ -601,6 +605,7 @@ static int
 search_patterns(const void *ptr, const size_t mem_size)
 {
         const uint8_t *ptr8 = (const uint8_t *) ptr;
+        uint64_t end_of_ooo_pattern = 0xDEADCAFEDEADCAFE;
         size_t i;
 
         if (mem_size < sizeof(uint64_t)) {
@@ -611,6 +616,9 @@ search_patterns(const void *ptr, const size_t mem_size)
         for (i = 0; i <= (mem_size - (sizeof(uint64_t))); i++) {
                 const uint64_t string = ((const uint64_t *) ptr8)[0];
                 int ret = -1;
+
+                if (string == end_of_ooo_pattern)
+                        return ret;
 
                 if (string == CIPH_KEY_PATTERN) {
                         fprintf(stderr, "Part of CIPHER_KEY is present\n");
@@ -1315,6 +1323,7 @@ perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch,
 {
         uint8_t *rsp_ptr;
         uint32_t simd_size = 0;
+        void **ooo_ptr;
 
         dump_gps();
         switch (arch) {
@@ -1361,6 +1370,20 @@ perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch,
                 fprintf(stderr, "Pattern found in MB_MGR after "
                                 "%s data\n", dir);
                 return -1;
+        }
+
+        /* search OOO managers */
+        for (ooo_ptr = &mgr->OOO_MGR_FIRST;
+             ooo_ptr <= &mgr->OOO_MGR_LAST;
+             ooo_ptr++) {
+                void *ooo_mgr_p = *ooo_ptr;
+
+                if (search_patterns(ooo_mgr_p, MAX_OOO_MGR_SIZE) == 0) {
+                        fprintf(stderr, "Pattern found in 000 "
+                                "MGR (%d) after %s data\n", (int)
+                                (ooo_ptr - &mgr->OOO_MGR_FIRST), dir);
+                        return -1;
+                }
         }
 
         return 0;
