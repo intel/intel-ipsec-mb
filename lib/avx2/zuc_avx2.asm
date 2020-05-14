@@ -775,62 +775,79 @@ asm_ZucGenKeystream8B_8_avx2:
     ret
 
 ;;
-;; void asm_ZucCipher32B_8_avx2(state4_t *pSta, u64 *pIn[8],
+;; void asm_ZucCipherNx32B_8_avx2(state4_t *pSta, u64 *pIn[8],
 ;;                             u64 *pOut[8], u64 bufOff);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
 ;;  RDX    - pIn
 ;;  R8     - pOut
-;;  R9     - bufOff
+;;  R9     - length
 ;;
 ;; LIN64
 ;;  RDI - pSta
 ;;  RSI - pIn
 ;;  RDX - pOut
-;;  RCX  - bufOff
+;;  RCX - length
 ;;
-MKGLOBAL(asm_ZucCipher32B_8_avx2,function,internal)
-asm_ZucCipher32B_8_avx2:
+MKGLOBAL(asm_ZucCipherNx32B_8_avx2,function,internal)
+asm_ZucCipherNx32B_8_avx2:
 
 %ifdef LINUX
         %define         pState  rdi
         %define         pIn     rsi
         %define         pOut    rdx
-        %define         bufOff  rcx
+        %define         length  rcx
+
+        %define         nrounds r8
 %else
         %define         pState  rcx
         %define         pIn     rdx
         %define         pOut    r8
-        %define         bufOff  r9
+        %define         length  r9
+
+        %define         nrounds rdi
 %endif
+
+%define buf_idx r11
+
+        or      length, length
+        jz      exit_cipher32
 
         FUNC_SAVE
 
         ; Load state pointer in RAX
         mov     rax, pState
 
-        ; Load read-only registers
-        vmovdqa ymm12, [rel mask31]
-
         ; Allocate stack frame to store keystreams
         mov     r10, rsp
         sub     rsp, 32*8
         and     rsp, -31
+        xor     buf_idx, buf_idx
+
+        ; Calculate number of rounds to be done (length / 4 bytes)
+        mov     nrounds, length
+        shr     nrounds, 2
+
+loop_cipher32:
+%assign M 0
+%rep 2
+        ; Load read-only registers
+        vmovdqa ymm12, [rel mask31]
 
         ; Generate 32B of keystream in 8 rounds
-%assign idx 0
 %assign N 1
+%assign round (M * 8 + N)
 %rep 8
-        bits_reorg8 N, 1, ymm10
+        bits_reorg8 round, 1, ymm10
         nonlin_fun8 1
         ; OFS_XR XOR W (ymm0)
         vpxor   ymm10, ymm0
-        vmovdqa [rsp + idx*32], ymm10
+        vmovdqa [rsp + (N-1)*32], ymm10
         vpxor   ymm0, ymm0
-        lfsr_updt8  N
+        lfsr_updt8  round
 %assign N N+1
-%assign idx (idx+1)
+%assign round (round + 1)
 %endrep
 
 %assign N 0
@@ -850,18 +867,18 @@ asm_ZucCipher32B_8_avx2:
         mov     r13, [pIn + 8]
         mov     r14, [pIn + 16]
         mov     r15, [pIn + 24]
-        vmovdqu ymm0, [r12 + bufOff]
-        vmovdqu ymm1, [r13 + bufOff]
-        vmovdqu ymm2, [r14 + bufOff]
-        vmovdqu ymm3, [r15 + bufOff]
+        vmovdqu ymm0, [r12 + buf_idx]
+        vmovdqu ymm1, [r13 + buf_idx]
+        vmovdqu ymm2, [r14 + buf_idx]
+        vmovdqu ymm3, [r15 + buf_idx]
         mov     r12, [pIn + 32]
         mov     r13, [pIn + 40]
         mov     r14, [pIn + 48]
         mov     r15, [pIn + 56]
-        vmovdqu ymm4, [r12 + bufOff]
-        vmovdqu ymm5, [r13 + bufOff]
-        vmovdqu ymm6, [r14 + bufOff]
-        vmovdqu ymm7, [r15 + bufOff]
+        vmovdqu ymm4, [r12 + buf_idx]
+        vmovdqu ymm5, [r13 + buf_idx]
+        vmovdqu ymm6, [r14 + buf_idx]
+        vmovdqu ymm7, [r15 + buf_idx]
 
         ; Shuffle all keystreams
         vpshufb ymm8,  [rel swap_mask]
@@ -890,23 +907,55 @@ asm_ZucCipher32B_8_avx2:
         mov     r14, [pOut + 16]
         mov     r15, [pOut + 24]
 
-        vmovdqu [r12 + bufOff], ymm8
-        vmovdqu [r13 + bufOff], ymm9
-        vmovdqu [r14 + bufOff], ymm10
-        vmovdqu [r15 + bufOff], ymm11
+        vmovdqu [r12 + buf_idx], ymm8
+        vmovdqu [r13 + buf_idx], ymm9
+        vmovdqu [r14 + buf_idx], ymm10
+        vmovdqu [r15 + buf_idx], ymm11
 
         mov     r12, [pOut + 32]
         mov     r13, [pOut + 40]
         mov     r14, [pOut + 48]
         mov     r15, [pOut + 56]
 
-        vmovdqu [r12 + bufOff], ymm12
-        vmovdqu [r13 + bufOff], ymm13
-        vmovdqu [r14 + bufOff], ymm14
-        vmovdqu [r15 + bufOff], ymm15
+        vmovdqu [r12 + buf_idx], ymm12
+        vmovdqu [r13 + buf_idx], ymm13
+        vmovdqu [r14 + buf_idx], ymm14
+        vmovdqu [r15 + buf_idx], ymm15
 
-        ;; Reorder LFSR registers, as not all 16 rounds have been completed
+        sub     length, 32
+        add     buf_idx, 32
+
+        or      length, length
+        jz      exit_loop_cipher32
+
+%assign M (M+1)
+%endrep
+        jmp     loop_cipher32
+exit_loop_cipher32:
+
+        ;; Reorder memory for LFSR registers, based on number of rounds left
+        ;; after multiple of 16 rounds (can be 0 or 8)
+
+        and     nrounds, 0xf
+        jz      exit_reorder_cipher32
+
+        ;; Reorder memory for LFSR registers, since there were rounds left
+        ;; after multiple of 16 rounds
         REORDER_LFSR rax
+
+exit_reorder_cipher32:
+        ;; update in/out pointers
+        vmovq           xmm0, buf_idx
+        vpshufd         xmm0, xmm0, 0x5
+        vperm2f128      ymm0, ymm0, 0x0
+        vpaddq          ymm1, ymm0, [pIn]
+        vpaddq          ymm2, ymm0, [pIn + 32]
+        vmovdqa         [pIn], ymm1
+        vmovdqa         [pIn + 32], ymm2
+        vpaddq          ymm1, ymm0, [pOut]
+        vpaddq          ymm2, ymm0, [pOut + 32]
+        vmovdqa         [pOut], ymm1
+        vmovdqa         [pOut + 32], ymm2
 
         ;; Clear stack frame containing keystream information
 %ifdef SAFE_DATA
@@ -921,6 +970,8 @@ asm_ZucCipher32B_8_avx2:
         mov     rsp, r10
 
         FUNC_RESTORE
+
+exit_cipher32:
 
         ret
 
