@@ -817,11 +817,15 @@ ZUC_CIPHERNx16B_4:
         %define         pIn     rsi
         %define         pOut    rdx
         %define         length  rcx
+
+        %define         nrounds r8
 %else
         %define         pState  rcx
         %define         pIn     rdx
         %define         pOut    r8
         %define         length  r9
+
+        %define         nrounds rdi
 %endif
 
 %define buf_idx r10
@@ -837,24 +841,33 @@ ZUC_CIPHERNx16B_4:
         ; Load state pointer in RAX
         mov     rax, pState
 
-loop:
-        or      length, length
-        jz      exit_loop
+        ; Calculate number of rounds to be done (length / 4 bytes)
+        mov     nrounds, length
+        shr     nrounds, 2
 
         ; Load read-only registers
         movdqa  xmm12, [rel mask31]
 
+        or      length, length
+        jz      exit_loop
+
+loop:
+
+%assign M 0
+%rep 4
         ; Generate 16B of keystream in 16 rounds
 %assign N 1
+%assign round (M * 4 + N)
 %rep 4
-        bits_reorg4 N, xmm10
+        bits_reorg4 round, xmm10
         nonlin_fun4 1, USE_GFNI
         ; OFS_XR XOR W (xmm0) and store in stack
         pxor    xmm10, xmm0
         movdqa  [rsp + (N-1)*16], xmm10
         pxor    xmm0, xmm0
-        lfsr_updt4  N
+        lfsr_updt4  round
 %assign N N+1
+%assign round (round + 1)
 %endrep
 
         movdqa  xmm15, [rel swap_mask]
@@ -900,14 +913,38 @@ loop:
         sub     length, 16
         add     buf_idx, 16
 
-        ;; Reorder memory for LFSR registers, as not all 16 rounds
-        ;; will be completed
-        REORDER_LFSR rax, 4
+        or      length, length
+        jz      exit_loop
 
+%assign M (M+1)
+%endrep
         jmp     loop
-
 exit_loop:
 
+        ;; Reorder memory for LFSR registers, based on number of rounds left
+        ;; after multiple of 16 rounds (can be 0, 4, 8 or 12)
+
+        and     nrounds, 0xf
+        jz      exit_reorder
+
+        cmp     nrounds, 4
+        je      rounds_left_4
+
+        cmp     nrounds, 8
+        je      rounds_left_8
+
+        REORDER_LFSR rax, 12
+        jmp     exit_reorder
+
+rounds_left_8:
+        REORDER_LFSR rax, 8
+        jmp     exit_reorder
+
+rounds_left_4:
+        REORDER_LFSR rax, 4
+        jmp     exit_reorder
+
+exit_reorder:
         ;; update in/out pointers
         movq           xmm0, buf_idx
         pshufd         xmm0, xmm0, 0x5
