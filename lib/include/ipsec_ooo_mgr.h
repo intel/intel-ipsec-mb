@@ -140,6 +140,7 @@ typedef struct {
         uint64_t unused_lanes;
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
+        uint64_t road_block;
 } MB_MGR_AES_OOO;
 
 /* DOCSIS AES out-of-order scheduler fields */
@@ -155,6 +156,7 @@ typedef struct {
         DECLARE_ALIGNED(imb_uint128_t crc_init[16], 16);
         DECLARE_ALIGNED(uint16_t crc_len[16], 16);
         DECLARE_ALIGNED(uint8_t crc_done[16], 16);
+        uint64_t road_block;
 } MB_MGR_DOCSIS_AES_OOO;
 
 /* AES XCBC out-of-order scheduler fields */
@@ -172,6 +174,7 @@ typedef struct {
          */
         uint64_t unused_lanes;
         XCBC_LANE_DATA ldata[8];
+        uint64_t road_block;
 } MB_MGR_AES_XCBC_OOO;
 
 /* AES-CCM out-of-order scheduler structure */
@@ -186,6 +189,7 @@ typedef struct {
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(uint8_t init_blocks[16 * (4 * 16)], 64);
+        uint64_t road_block;
 } MB_MGR_CCM_OOO;
 
 
@@ -201,6 +205,7 @@ typedef struct {
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(uint8_t scratch[16 * 16], 32);
+        uint64_t road_block;
 } MB_MGR_CMAC_OOO;
 
 
@@ -214,6 +219,7 @@ typedef struct {
         uint64_t unused_lanes;
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
+        uint64_t road_block;
 } MB_MGR_DES_OOO;
 
 /* ZUC out-of-order scheduler fields */
@@ -223,6 +229,7 @@ typedef struct {
         uint64_t unused_lanes;
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
+        uint64_t road_block;
 } MB_MGR_ZUC_OOO;
 
 /* HMAC-SHA1 and HMAC-SHA256/224 */
@@ -260,6 +267,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA1_LANES];
         uint32_t num_lanes_inuse;
+        uint64_t road_block;
 } MB_MGR_HMAC_SHA_1_OOO;
 
 typedef struct {
@@ -268,6 +276,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_SHA256_LANES];
         uint32_t num_lanes_inuse;
+        uint64_t road_block;
 } MB_MGR_HMAC_SHA_256_OOO;
 
 typedef struct {
@@ -275,6 +284,7 @@ typedef struct {
         DECLARE_ALIGNED(uint16_t lens[8], 16);
         uint64_t unused_lanes;
         HMAC_SHA512_LANE_DATA ldata[AVX512_NUM_SHA512_LANES];
+        uint64_t road_block;
 } MB_MGR_HMAC_SHA_512_OOO;
 
 /* MD5-HMAC out-of-order scheduler fields */
@@ -288,6 +298,7 @@ typedef struct {
         uint64_t unused_lanes;
         HMAC_SHA1_LANE_DATA ldata[AVX512_NUM_MD5_LANES];
         uint32_t num_lanes_inuse;
+        uint64_t road_block;
 } MB_MGR_HMAC_MD5_OOO;
 
 #endif /* IMB_IPSEC_MB_INTERNAL_H */

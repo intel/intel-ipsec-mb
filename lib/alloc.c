@@ -36,6 +36,74 @@
 #include "ipsec_ooo_mgr.h"
 #include "cpu_feature.h"
 
+#define IMB_OOO_ROAD_BLOCK 0xDEADCAFEDEADCAFEULL
+
+/*
+ * Set last 8 bytes of OOO mgrs to predefined pattern
+ *
+ * This is to assist in searching for sensitive data remaining
+ * in the heap after algorthmic code completes
+ */
+static void set_ooo_mgr_road_block(IMB_MGR *mgr)
+{
+        MB_MGR_AES_OOO *aes128_ooo = mgr->aes128_ooo;
+        MB_MGR_AES_OOO *aes192_ooo = mgr->aes192_ooo;
+        MB_MGR_AES_OOO *aes256_ooo = mgr->aes256_ooo;
+        MB_MGR_DOCSIS_AES_OOO *docsis128_sec_ooo = mgr->docsis128_sec_ooo;
+        MB_MGR_DOCSIS_AES_OOO *docsis128_crc32_sec_ooo =
+                mgr->docsis128_crc32_sec_ooo;
+        MB_MGR_DOCSIS_AES_OOO *docsis256_sec_ooo = mgr->docsis256_sec_ooo;
+        MB_MGR_DOCSIS_AES_OOO *docsis256_crc32_sec_ooo =
+                mgr->docsis256_crc32_sec_ooo;
+        MB_MGR_DES_OOO *des_enc_ooo = mgr->des_enc_ooo;
+        MB_MGR_DES_OOO *des_dec_ooo = mgr->des_dec_ooo;
+        MB_MGR_DES_OOO *des3_enc_ooo = mgr->des3_enc_ooo;
+        MB_MGR_DES_OOO *des3_dec_ooo = mgr->des3_dec_ooo;
+        MB_MGR_DES_OOO *docsis_des_enc_ooo = mgr->docsis_des_enc_ooo;
+        MB_MGR_DES_OOO *docsis_des_dec_ooo = mgr->docsis_des_dec_ooo;
+        MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = mgr->hmac_sha_1_ooo;
+        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = mgr->hmac_sha_224_ooo;
+        MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = mgr->hmac_sha_256_ooo;
+        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_384_ooo = mgr->hmac_sha_384_ooo;
+        MB_MGR_HMAC_SHA_512_OOO *hmac_sha_512_ooo = mgr->hmac_sha_512_ooo;
+        MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = mgr->hmac_md5_ooo;
+        MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = mgr->aes_xcbc_ooo;
+        MB_MGR_CCM_OOO *aes_ccm_ooo = mgr->aes_ccm_ooo;
+        MB_MGR_CMAC_OOO *aes_cmac_ooo = mgr->aes_cmac_ooo;
+        MB_MGR_ZUC_OOO *zuc_eea3_ooo = mgr->zuc_eea3_ooo;
+        MB_MGR_ZUC_OOO *zuc_eia3_ooo = mgr->zuc_eia3_ooo;
+
+        aes128_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        aes192_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        aes256_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+
+        docsis128_sec_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        docsis128_crc32_sec_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        docsis256_sec_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        docsis256_crc32_sec_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+
+        des_enc_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        des_dec_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        des3_enc_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        des3_dec_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        docsis_des_enc_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        docsis_des_dec_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+
+        hmac_sha_1_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        hmac_sha_224_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        hmac_sha_256_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        hmac_sha_384_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        hmac_sha_512_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        hmac_md5_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+
+        aes_xcbc_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        aes_ccm_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        aes_cmac_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+
+        zuc_eea3_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        zuc_eia3_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+}
+
 static void *
 alloc_aligned_mem(const size_t size)
 {
@@ -175,6 +243,8 @@ IMB_MGR *alloc_mb_mgr(uint64_t flags)
         ptr->zuc_eia3_ooo = alloc_aligned_mem(sizeof(MB_MGR_ZUC_OOO));
         if (ptr->zuc_eia3_ooo == NULL)
                 goto exit_fail;
+
+        set_ooo_mgr_road_block(ptr);
 
         return ptr;
 
