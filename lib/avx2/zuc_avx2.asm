@@ -549,7 +549,7 @@ align 64
 ;
 ; Initialize LFSR registers for a single lane
 ;
-; This macro initializes 8 LFSR registers are a time.
+; This macro initializes 8 LFSR registers at time.
 ; so it needs to be called twice.
 ;
 ; From spec, s_i (LFSR) registers need to be loaded as follows:
