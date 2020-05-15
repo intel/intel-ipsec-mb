@@ -35,7 +35,7 @@ import sys
 
 # Number of parameters (ARCH, CIPHER_MODE, DIR, HASH_ALG, KEY_SIZE)
 PAR_NUM = 5
-COL_MAX = 12
+COL_MAX = 13
 
 class Variant(object):
     """
@@ -229,7 +229,7 @@ class Parser(object):
             # Finding linear function representation of data set
             v_list[-1].lin_reg(sizes)
             if self.verbose:
-                print(({}, {}).format(v_list[-1].slope, v_list[-1].intercept))
+                print("({},{})".format(v_list[-1].slope, v_list[-1].intercept))
                 print("============\n")
         return v_list, sizes
 
