@@ -1674,6 +1674,9 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         ret = 0;
 
 exit:
+        /* clear data */
+        imb_clear_mem((void *)data, sizeof(struct data));
+
         if (ret < 0) {
                 printf("Failures in\n");
                 print_algo_info(params);
