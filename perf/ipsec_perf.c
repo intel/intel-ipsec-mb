@@ -2340,7 +2340,7 @@ static void usage(void)
                 "                   Note: RDTSC is used by default.\n"
                 "--quick: reduces number of test iterations by x10\n"
                 "         (less precise but quicker)\n"
-                "--smoke: very quick, unprecise and without print out\n"
+                "--smoke: very quick, imprecise and without print out\n"
                 "         (for validation only)\n"
                 "--job-size: size of the cipher & MAC job in bytes. It can be:\n"
                 "            - single value: test single size\n"
