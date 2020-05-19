@@ -38,7 +38,6 @@
 
 #define SNOW3GIVLEN 8
 #define PAD_LEN 16
-cipher_test_vector_t *vecList[MAX_DATA_LEN];
 
 int snow3g_test(struct IMB_MGR *mb_mgr);
 static

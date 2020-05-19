@@ -43,8 +43,6 @@
 #define PAD_LEN 16
 #define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
 
-cipher_test_vector_t *vecList[MAX_DATA_LEN];
-
 int kasumi_test(struct IMB_MGR *mb_mgr);
 static int
 validate_kasumi_f8_1_block(struct IMB_MGR *mb_mgr, const unsigned job_api);
