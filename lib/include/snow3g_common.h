@@ -3152,7 +3152,6 @@ snow3g_8_buffer_ks_32_8_multi(const snow3g_key_schedule_t * const pKey[],
                 const uint32_t blocks = bytes_left / small_block_size;
 
                 length_sub(tLenInBytes, num_lanes, blocks * small_block_size);
-                bytes_left -= blocks * small_block_size;
 
                 /* generates 8 sets at a time on all streams */
                 for (i = 0; i < blocks; i++) {
@@ -3281,7 +3280,6 @@ snow3g_8_buffer_ks_32_8(const snow3g_key_schedule_t *pKey,
                 const uint32_t blocks = bytes_left / small_block_size;
 
                 length_sub(lengthInBytes, num_lanes, blocks * small_block_size);
-                bytes_left -= blocks * small_block_size;
 
                 /* generates 8 sets at a time on all streams */
                 for (i = 0; i < blocks; i++) {
