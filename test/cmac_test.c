@@ -1201,7 +1201,7 @@ test_cmac(struct IMB_MGR *mb_mgr,
                         job->msg_len_to_hash_in_bytes = vec->len;
                         break;
                 default:
-                        printf("Invalid CMAC type specifed\n");
+                        printf("Invalid CMAC type specified\n");
                         goto end;
                 }
                 job->u.CMAC._key_expanded = expkey;
@@ -1273,7 +1273,7 @@ test_cmac(struct IMB_MGR *mb_mgr,
                         job->msg_len_to_hash_in_bytes = vec->len;
                         break;
                 default:
-                        printf("Invalid CMAC type specifed\n");
+                        printf("Invalid CMAC type specified\n");
                         goto end;
                 }
                 job->u.CMAC._key_expanded = expkey;
