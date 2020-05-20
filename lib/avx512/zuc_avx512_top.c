@@ -225,7 +225,6 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         const uint64_t *pIn64[NUM_AVX512_BUFS]= {NULL};
         uint64_t *pOut64[NUM_AVX512_BUFS] = {NULL};
         uint64_t *pKeyStream64 = NULL;
-        uint32_t *pKeyStrArr[NUM_AVX512_BUFS] = {NULL};
 
         /* rounded down minimum length */
         bytes = numKeyStreamsPerPkt * ZUC_KEYSTR_LEN;
@@ -251,34 +250,14 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
-                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
         }
 
-        /* Loop for 64 bytes at a time generating 16 key-streams per loop */
-        while (numKeyStreamsPerPkt) {
-                /* Generate 64 bytes at a time */
-                if (use_gfni)
-                        asm_ZucGenKeystream64B_16_gfni_avx512(&state,
-                                                 (uint32_t **)pKeyStrArr);
-                else
-                        asm_ZucGenKeystream64B_16_avx512(&state,
-                                                 (uint32_t **)pKeyStrArr);
-
-                /* XOR the KeyStream with the input buffers and store in output
-                 * buffer*/
-                for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                        pKeyStream64 = (uint64_t *) pKeyStrArr[i];
-                        asm_XorKeyStream64B_avx512(pIn64[i], pOut64[i],
-                                                   pKeyStream64);
-                        pIn64[i] += 8;
-                        pOut64[i] += 8;
-                }
-
-                /* Update keystream count */
-                numKeyStreamsPerPkt--;
-
-        }
-
+        if (use_gfni)
+                asm_ZucCipherNx64B_16_gfni_avx512(&state, pIn64, pOut64,
+                                                  numKeyStreamsPerPkt * 64);
+        else
+                asm_ZucCipherNx64B_16_avx512(&state, pIn64, pOut64,
+                                             numKeyStreamsPerPkt * 64);
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 if (remainBytes[i]) {
