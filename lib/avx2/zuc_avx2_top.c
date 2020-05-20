@@ -188,7 +188,6 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         const uint64_t *pIn64[NUM_AVX2_BUFS]= {NULL};
         uint64_t *pOut64[NUM_AVX2_BUFS] = {NULL};
         uint64_t *pKeyStream64 = NULL;
-        uint32_t *pKeyStrArr[NUM_AVX2_BUFS] = {NULL};
 
         /* rounded down minimum length */
         bytes = numKeyStreamsPerPkt * KEYSTR_ROUND_LEN;
@@ -211,28 +210,11 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
-                pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
         }
 
-        /* Loop for 32 bytes at a time generating 8 key-streams per loop */
-        while (numKeyStreamsPerPkt) {
-                /* Generate 32 bytes at a time */
-                asm_ZucGenKeystream32B_8_avx2(&state, (uint32_t **)pKeyStrArr);
-
-                /* XOR the KeyStream with the input buffers and store in output
-                 * buffer*/
-                for (i = 0; i < NUM_AVX2_BUFS; i++) {
-                        pKeyStream64 = (uint64_t *) pKeyStrArr[i];
-                        asm_XorKeyStream32B_avx2(pIn64[i], pOut64[i],
-                                                 pKeyStream64);
-                        pIn64[i] += 4;
-                        pOut64[i] += 4;
-                }
-
-                /* Update keystream count */
-                numKeyStreamsPerPkt--;
-
-        }
+        /* Encrypt common length of all buffers (multiple of 32 bytes) */
+        asm_ZucCipherNx32B_8_avx2(&state, pIn64, pOut64,
+                                  numKeyStreamsPerPkt * KEYSTR_ROUND_LEN);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
