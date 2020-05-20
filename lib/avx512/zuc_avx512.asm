@@ -206,6 +206,32 @@ align 64
         mov     rsp, [rsp + GP_OFFSET + 40]
 %endmacro
 
+; This macro reorder the LFSR registers
+; after N rounds (1 <= N <= 15), since the registers
+; are shifted every round
+;
+; The macro clobbers ZMM0-15
+;
+%macro REORDER_LFSR 2
+%define %%STATE      %1
+%define %%NUM_ROUNDS %2
+
+%assign i 0
+%rep 16
+    vmovdqa64 APPEND(zmm,i), [%%STATE + 64*i]
+%assign i (i+1)
+%endrep
+
+%assign i 0
+%assign j %%NUM_ROUNDS
+%rep 16
+    vmovdqa64 [%%STATE + 64*i], APPEND(zmm,j)
+%assign i (i+1)
+%assign j ((j+1) % 16)
+%endrep
+
+%endmacro
+
 
 ;
 ;   bits_reorg16()
@@ -714,50 +740,23 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 
     ret
 
-%macro CIPHER_16_AVX512 1
-%define %%USE_GFNI      %1 ; [in] If 1, then GFNI instructions may be used
-
-%ifdef LINUX
-        %define         pState  rdi
-        %define         pIn     rsi
-        %define         pOut    rdx
-        %define         length  rcx
-%else
-        %define         pState  rcx
-        %define         pIn     rdx
-        %define         pOut    r8
-        %define         length  r9
-%endif
-
-%define buf_idx r11
-
-        FUNC_SAVE
-
-        ; Load state pointer in RAX
-        mov     rax, pState
-
-        ; Load read-only registers
-        mov     r10d, 0xAAAAAAAA
-        kmovd   k1, r10d
-        xor     buf_idx, buf_idx
-
-%%loop:
-        or      length, length
-        jz      %%exit_loop
-
-        vmovdqa64 zmm12, [rel mask31]
+%macro CIPHER64B 4
+%define %%NROUNDS  %1
+%define %%KMASK    %2
+%define %%USE_GFNI %3
+%define %%OFFSET   %4
 
         ; Generate 64B of keystream in 16 rounds
 %assign N 1
 %assign idx 16
-%rep 16
+%rep %%NROUNDS
         bits_reorg16 N, 1, APPEND(zmm, idx)
         nonlin_fun16 1, %%USE_GFNI
         ; OFS_X3 XOR W (zmm0)
         vpxorq  APPEND(zmm, idx), zmm0
         vpxorq   zmm0, zmm0
         lfsr_updt16  N
-%assign N N+1
+%assign N (N + 1)
 %assign idx (idx + 1)
 %endrep
 
@@ -777,7 +776,7 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 %assign k 12
 %rep 16
         mov     APPEND(r, k), [pIn + i]
-        vmovdqu64 APPEND(zmm, j), [APPEND(r, k) + buf_idx]
+        vmovdqu32 APPEND(zmm, j){%%KMASK}, [APPEND(r, k) + %%OFFSET]
 %assign k 12 + ((j + 1) % 4)
 %assign j (j + 1)
 %assign i (i + 8)
@@ -805,11 +804,50 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 %assign k 12
 %rep 16
         mov     APPEND(r, k), [pOut + i]
-        vmovdqu64 [APPEND(r, k) + buf_idx], APPEND(zmm, j)
+        vmovdqu32 [APPEND(r, k) + %%OFFSET]{%%KMASK}, APPEND(zmm, j)
 %assign k 12 + ((j + 1) % 4)
 %assign j (j + 1)
 %assign i (i + 8)
 %endrep
+
+%endmacro
+
+%macro CIPHER_16_AVX512 1
+%define %%USE_GFNI      %1 ; [in] If 1, then GFNI instructions may be used
+
+%ifdef LINUX
+        %define         pState  rdi
+        %define         pIn     rsi
+        %define         pOut    rdx
+        %define         length  rcx
+%else
+        %define         pState  rcx
+        %define         pIn     rdx
+        %define         pOut    r8
+        %define         length  r9
+%endif
+
+%define buf_idx r11
+
+        FUNC_SAVE
+
+        ; Load state pointer in RAX
+        mov     rax, pState
+
+        ; Load read-only registers
+        mov     r10d, 0xAAAAAAAA
+        kmovd   k1, r10d
+        mov     r10d, 0x0000FFFF
+        kmovd   k2, r10d
+        xor     buf_idx, buf_idx
+
+%%loop:
+        cmp     length, 64
+        jl      %%exit_loop
+
+        vmovdqa64 zmm12, [rel mask31]
+
+        CIPHER64B 16, k2, %%USE_GFNI, buf_idx
 
         sub     length, 64
         add     buf_idx, 64
@@ -817,6 +855,71 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 
 %%exit_loop:
 
+        shr     length, 2 ;; number of rounds left
+        jz      %%no_final_rounds
+
+        vmovdqa64 zmm12, [rel mask31]
+
+        cmp     length, 8
+        je      %%_num_final_rounds_is_8
+        jl      %%_final_rounds_is_1_7
+
+        ; Final blocks 9-16
+        cmp     length, 12
+        je      %%_num_final_rounds_is_12
+        jl      %%_final_rounds_is_9_11
+
+        ; Final blocks 13-15
+        cmp     length, 15
+        je      %%_num_final_rounds_is_15
+        cmp     length, 14
+        je      %%_num_final_rounds_is_14
+        cmp     length, 13
+        je      %%_num_final_rounds_is_13
+
+%%_final_rounds_is_9_11:
+        cmp     length, 11
+        je      %%_num_final_rounds_is_11
+        cmp     length, 10
+        je      %%_num_final_rounds_is_10
+        cmp     length, 9
+        je      %%_num_final_rounds_is_9
+
+%%_final_rounds_is_1_7:
+        cmp     length, 4
+        je      %%_num_final_rounds_is_4
+        jl      %%_final_rounds_is_1_3
+
+        ; Final blocks 5-7
+        cmp     length, 7
+        je      %%_num_final_rounds_is_7
+        cmp     length, 6
+        je      %%_num_final_rounds_is_6
+        cmp     length, 5
+        je      %%_num_final_rounds_is_5
+
+%%_final_rounds_is_1_3:
+        cmp     length, 3
+        je      %%_num_final_rounds_is_3
+        cmp     length, 2
+        je      %%_num_final_rounds_is_2
+
+        jmp     %%_num_final_rounds_is_1
+
+%assign I 1
+%rep 15
+APPEND(%%_num_final_rounds_is_,I):
+        mov     r10d, ((1 << I) - 1)
+        kmovd   k2, r10d
+        CIPHER64B I, k2, %%USE_GFNI, buf_idx
+        REORDER_LFSR rax, I
+        shl     length, 2
+        add     buf_idx, length
+        jmp     %%no_final_rounds
+%assign I (I + 1)
+%endrep
+
+%%no_final_rounds:
         ;; update in/out pointers
         vpbroadcastq    zmm0, buf_idx
         vpaddq          zmm1, zmm0, [pIn]
@@ -833,20 +936,20 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 %endmacro
 
 ;;
-;; void asm_ZucCipherNx64B_16_avx512(state16_t *pSta, u64 *pIn[16],
-;;                                 u64 *pOut[16], u64 length);
-MKGLOBAL(asm_ZucCipherNx64B_16_avx512,function,internal)
-asm_ZucCipherNx64B_16_avx512:
+;; void asm_ZucCipherNx4B_16_avx512(state16_t *pSta, u64 *pIn[16],
+;;                                  u64 *pOut[16], u64 length);
+MKGLOBAL(asm_ZucCipherNx4B_16_avx512,function,internal)
+asm_ZucCipherNx4B_16_avx512:
 
         CIPHER_16_AVX512 0
 
         ret
 
 ;;
-;; void asm_ZucCipherNx64B_16_gfni_avx512(state16_t *pSta, u64 *pIn[16],
-;;                                      u64 *pOut[16], u64 length);
-MKGLOBAL(asm_ZucCipherNx64B_16_gfni_avx512,function,internal)
-asm_ZucCipherNx64B_16_gfni_avx512:
+;; void asm_ZucCipherNx4B_16_gfni_avx512(state16_t *pSta, u64 *pIn[16],
+;;                                       u64 *pOut[16], u64 length);
+MKGLOBAL(asm_ZucCipherNx4B_16_gfni_avx512,function,internal)
+asm_ZucCipherNx4B_16_gfni_avx512:
 
         CIPHER_16_AVX512 1
 

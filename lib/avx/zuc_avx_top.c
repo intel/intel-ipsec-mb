@@ -690,8 +690,8 @@ void _zuc_eia3_1_buffer_avx(const void *pKey,
         DECLARE_ALIGNED(uint32_t keyStream[16 * 2], 64);
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
         /* generate a key-stream 2 words longer than the input message */
-        const uint32_t N = lengthInBits + (2 * ZUC_WORD);
-        uint32_t L = (N + 31) / ZUC_WORD;
+        const uint32_t N = lengthInBits + (2 * ZUC_WORD_BITS);
+        uint32_t L = (N + 31) / ZUC_WORD_BITS;
         uint32_t *pZuc = (uint32_t *) &keyStream[0];
         uint32_t remainingBits = lengthInBits;
         uint32_t T = 0;
@@ -823,8 +823,8 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_AVX_BUFS; i++) {
-                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD);
-                uint32_t L = ((N + 31) / ZUC_WORD) -
+                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD_BITS);
+                uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
                              numKeyStr*(keyStreamLengthInBits / 32);
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;
@@ -1027,8 +1027,8 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 if (job_in_lane[i] == NULL)
                         continue;
 
-                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD);
-                uint32_t L = ((N + 31) / ZUC_WORD) -
+                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD_BITS);
+                uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
                              numKeyStr*(keyStreamLengthInBits / 32);
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;

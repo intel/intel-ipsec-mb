@@ -211,7 +211,7 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         /* Calculate the minimum input packet size from all packets */
         uint32_t bytes = find_min_length32(length);
 
-        uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
+        uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
         uint32_t remainBytes[NUM_AVX512_BUFS] = {0};
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX512_BUFS][64], 64);
         /* structure to store the 16 keys */
@@ -227,7 +227,7 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         uint64_t *pKeyStream64 = NULL;
 
         /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * ZUC_KEYSTR_LEN;
+        bytes = numKeyStreamsPerPkt * 4;
 
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState16_t));
@@ -253,11 +253,11 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         }
 
         if (use_gfni)
-                asm_ZucCipherNx64B_16_gfni_avx512(&state, pIn64, pOut64,
-                                                  numKeyStreamsPerPkt * 64);
+                asm_ZucCipherNx4B_16_gfni_avx512(&state, pIn64, pOut64,
+                                                  numKeyStreamsPerPkt * 4);
         else
-                asm_ZucCipherNx64B_16_avx512(&state, pIn64, pOut64,
-                                             numKeyStreamsPerPkt * 64);
+                asm_ZucCipherNx4B_16_avx512(&state, pIn64, pOut64,
+                                             numKeyStreamsPerPkt * 4);
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 if (remainBytes[i]) {
@@ -375,7 +375,7 @@ void _zuc_eea3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
         /* Calculate the minimum input packet size from all packets */
         uint32_t bytes = find_min_length16(length);
 
-        uint32_t numKeyStreamsPerPkt = bytes/ZUC_KEYSTR_LEN;
+        uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
         uint32_t remainBytes[NUM_AVX512_BUFS] = {0};
         /* structure to store the 16 keys */
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
@@ -389,7 +389,7 @@ void _zuc_eea3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
         uint64_t *pOut64[NUM_AVX512_BUFS] = {NULL};
 
         /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * ZUC_KEYSTR_LEN;
+        bytes = numKeyStreamsPerPkt * 4;
 
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState16_t));
@@ -415,11 +415,11 @@ void _zuc_eea3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
         }
 
         if (use_gfni)
-                asm_ZucCipherNx64B_16_gfni_avx512(&state, pIn64, pOut64,
-                                                  numKeyStreamsPerPkt * 64);
+                asm_ZucCipherNx4B_16_gfni_avx512(&state, pIn64, pOut64,
+                                                 numKeyStreamsPerPkt * 4);
         else
-                asm_ZucCipherNx64B_16_avx512(&state, pIn64, pOut64,
-                                             numKeyStreamsPerPkt * 64);
+                asm_ZucCipherNx4B_16_avx512(&state, pIn64, pOut64,
+                                            numKeyStreamsPerPkt * 4);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
@@ -709,8 +709,8 @@ void _zuc_eia3_1_buffer_avx512(const void *pKey,
         DECLARE_ALIGNED(uint32_t keyStream[16 * 2], 64);
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
         /* generate a key-stream 2 words longer than the input message */
-        const uint32_t N = lengthInBits + (2 * ZUC_WORD);
-        uint32_t L = (N + 31) / ZUC_WORD;
+        const uint32_t N = lengthInBits + (2 * ZUC_WORD_BITS);
+        uint32_t L = (N + 31) / ZUC_WORD_BITS;
         uint32_t *pZuc = (uint32_t *) &keyStream[0];
         uint32_t remainingBits = lengthInBits;
         uint32_t T = 0;
@@ -847,8 +847,8 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD);
-                uint32_t L = ((N + 31) / ZUC_WORD) -
+                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD_BITS);
+                uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
                              numKeyStr*(keyStreamLengthInBits / 32);
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;
@@ -1063,8 +1063,8 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
                 if (job_in_lane[i] == NULL)
                         continue;
 
-                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD);
-                uint32_t L = ((N + 31) / ZUC_WORD) -
+                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD_BITS);
+                uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
                              numKeyStr*(keyStreamLengthInBits / 32);
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;
