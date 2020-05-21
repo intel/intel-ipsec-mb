@@ -58,6 +58,7 @@ FIELD	_aes_lens,      16*2,	16
 FIELD	_aes_unused_lanes, 8,	8
 FIELD	_aes_job_in_lane, 16*8,	8
 FIELD	_aes_lanes_in_use, 8,	8
+FIELD   _aes_road_block, 8, 8
 END_FIELDS
 %assign _MB_MGR_AES_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_AES_OOO_align	_STRUCT_ALIGN
@@ -81,6 +82,7 @@ FIELD	_docsis_aes_lanes_in_use, 8,              8
 FIELD	_docsis_crc_init,         16*16,	  64
 FIELD	_docsis_crc_len,          16*2,           16
 FIELD	_docsis_crc_done,         16*1,           16
+FIELD   _docsis_crc_road_block,   8, 		  8
 END_FIELDS
 %assign _MB_MGR_DOCSIS_AES_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_DOCSIS_AES_OOO_align	_STRUCT_ALIGN
@@ -124,6 +126,7 @@ FIELD	_aes_xcbc_args,	_AES_XCBC_ARGS_X8_size, _AES_XCBC_ARGS_X8_align
 FIELD	_aes_xcbc_lens,		16,	16
 FIELD	_aes_xcbc_unused_lanes, 8,	8
 FIELD	_aes_xcbc_ldata, _XCBC_LANE_DATA_size*8, _XCBC_LANE_DATA_align
+FIELD   _aes_xcbc_road_block,   8,      8
 END_FIELDS
 %assign _MB_MGR_AES_XCBC_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_AES_XCBC_OOO_align	_STRUCT_ALIGN
@@ -146,6 +149,7 @@ FIELD	_aes_cmac_unused_lanes, 8,      8
 FIELD	_aes_cmac_job_in_lane,  16*8,	8
 FIELD   _aes_cmac_num_lanes_inuse, 8,   8
 FIELD   _aes_cmac_scratch,  16*16,   32
+FIELD   _aes_cmac_road_block,   8,      8
 END_FIELDS
 %assign _MB_MGR_CMAC_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_CMAC_OOO_align	_STRUCT_ALIGN
@@ -168,6 +172,7 @@ FIELD	_aes_ccm_unused_lanes, 8,      8
 FIELD	_aes_ccm_job_in_lane,  16*8,	8
 FIELD   _aes_ccm_num_lanes_inuse, 8,   8
 FIELD   _aes_ccm_init_blocks,  16*4*16,   64
+FIELD   _aes_ccm_road_block,   8,      8
 END_FIELDS
 %assign _MB_MGR_CCM_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_CCM_OOO_align	_STRUCT_ALIGN
@@ -204,6 +209,7 @@ FIELD	_des_lens,	16*2,	16
 FIELD	_des_unused_lanes, 8,	8
 FIELD	_des_job_in_lane, 16*8,	8
 FIELD	_des_lanes_in_use, 8,	8
+FIELD   _des_road_block,   8,   8
 END_FIELDS
 %assign _MB_MGR_DES_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_DES_OOO_align	_STRUCT_ALIGN
@@ -240,6 +246,7 @@ FIELD	_zuc_lens,	16*2,	32
 FIELD	_zuc_unused_lanes, 8,	8
 FIELD	_zuc_job_in_lane, 16*8,	8
 FIELD	_zuc_lanes_in_use, 8,	8
+FIELD   _zuc_road_block,   8,   8
 END_FIELDS
 %assign _MB_MGR_ZUC_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_ZUC_OOO_align	_STRUCT_ALIGN
@@ -301,6 +308,7 @@ FIELD	_lens,		32,	32
 FIELD	_unused_lanes,	8,	8
 FIELD	_ldata,		_HMAC_SHA1_LANE_DATA_size*MAX_SHA1_LANES, _HMAC_SHA1_LANE_DATA_align
 FIELD   _num_lanes_inuse_sha1, 4,     4
+FIELD   _road_block_sha1,      8,     8
 END_FIELDS
 %assign _MB_MGR_HMAC_SHA_1_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_HMAC_SHA_1_OOO_align	_STRUCT_ALIGN
@@ -327,6 +335,7 @@ FIELD	_lens_sha256,		 16*2,	16
 FIELD	_unused_lanes_sha256,	 8,	8
 FIELD	_ldata_sha256,		 _HMAC_SHA1_LANE_DATA_size * MAX_SHA256_LANES, _HMAC_SHA1_LANE_DATA_align
 FIELD   _num_lanes_inuse_sha256, 4,     4
+FIELD   _road_block_sha256,      8,     8
 END_FIELDS
 %assign _MB_MGR_HMAC_SHA_256_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_HMAC_SHA_256_OOO_align	_STRUCT_ALIGN
@@ -354,6 +363,7 @@ FIELD	_args_sha512,		_SHA512_ARGS_size,  _SHA512_ARGS_align
 FIELD	_lens_sha512,		16,	16
 FIELD	_unused_lanes_sha512,	8,	                8
 FIELD	_ldata_sha512,		_SHA512_LANE_DATA_size * MAX_SHA512_LANES, _SHA512_LANE_DATA_align
+FIELD   _road_block_sha512,     8,      8
 END_FIELDS
 %assign _MB_MGR_HMAC_SHA_512_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_HMAC_SHA_512_OOO_align	_STRUCT_ALIGN
@@ -384,6 +394,7 @@ FIELD	_lens_md5,	MAX_MD5_LANES*2,	16
 FIELD	_unused_lanes_md5, 8,	8
 FIELD	_ldata_md5,	_HMAC_SHA1_LANE_DATA_size * MAX_MD5_LANES, _HMAC_SHA1_LANE_DATA_align
 FIELD   _num_lanes_inuse_md5, 4,     8
+FIELD   _road_block_md5,   8,   8
 END_FIELDS
 %assign _MB_MGR_HMAC_MD5_OOO_size	_FIELD_OFFSET
 %assign _MB_MGR_HMAC_MD5_OOO_align	_STRUCT_ALIGN
