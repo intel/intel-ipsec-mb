@@ -63,7 +63,7 @@ XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
 AS = nasm
 AFLAGS = -fwin64 -Xvc -DWIN_ABI
 
-TEST_OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj kasumi_test.obj snow3g_test.obj direct_api_test.obj clear_mem_test.obj hec_test.obj
+TEST_OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj kasumi_test.obj snow3g_test.obj direct_api_test.obj clear_mem_test.obj hec_test.obj xcbc_test.obj
 
 XVALID_OBJS = ipsec_xvalid.obj misc.obj
 
@@ -149,6 +149,9 @@ clear_mem_test.obj: clear_mem_test.c gcm_ctr_vectors_test.h
 
 hec_test.obj: hec_test.c gcm_ctr_vectors_test.h
         $(CC) /c $(CFLAGS) hec_test.c
+
+xcbc_test.obj: xcbc_test.c gcm_ctr_vectors_test.h
+        $(CC) /c $(CFLAGS) xcbc_test.c
 
 clean:
         del /q $(TEST_OBJS) $(TEST_APP).* $(XVALID_OBJS) $(XVALID_APP).*

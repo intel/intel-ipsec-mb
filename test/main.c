@@ -53,6 +53,7 @@ extern int snow3g_test(struct IMB_MGR *mb_mgr);
 extern int direct_api_test(struct IMB_MGR *mb_mgr);
 extern int clear_mem_test(struct IMB_MGR *mb_mgr);
 extern int hec_test(struct IMB_MGR *mb_mgr);
+extern int xcbc_test(struct IMB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -284,6 +285,7 @@ main(int argc, char **argv)
                 errors += do_test(p_mgr);
                 errors += ctr_test(p_mgr);
                 errors += pon_test(p_mgr);
+                errors += xcbc_test(p_mgr);
                 if (do_gcm)
                         errors += gcm_test(p_mgr);
                 errors += customop_test(p_mgr);

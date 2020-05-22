@@ -1514,7 +1514,6 @@ is_job_invalid(const IMB_JOB *job)
 
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
-        case IMB_AUTH_AES_XCBC:
         case IMB_AUTH_MD5:
         case IMB_AUTH_HMAC_SHA_224:
         case IMB_AUTH_HMAC_SHA_256:
@@ -1532,6 +1531,23 @@ is_job_invalid(const IMB_JOB *job)
                         return 1;
                 }
                 if (job->msg_len_to_hash_in_bytes == 0) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_AES_XCBC:
+                if (job->src == NULL) {
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg] &&
+                    job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_fips[job->hash_alg]) {
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
