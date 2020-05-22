@@ -110,16 +110,33 @@ endstruc
 %define XTMP		xmm15
 
 section .text
-%ifdef CBC_MAC
+
+%ifdef AES_XCBC_X8
+%define ARG_IN   _aesxcbcarg_in
+%define ARG_KEYS _aesxcbcarg_keys
+%define ARG_IV   _aesxcbcarg_ICV
+
+MKGLOBAL(AES_XCBC_X8,function,internal)
+AES_XCBC_X8:
+
+%else
+
+%define ARG_IN   _aesarg_in
+%define ARG_KEYS _aesarg_keys
+%define ARG_IV   _aesarg_IV
+
+%ifdef CBC_XCBC_MAC
 MKGLOBAL(aes128_cbc_mac_x8,function,internal)
 aes128_cbc_mac_x8:
 %else
 MKGLOBAL(aes_cbc_enc_128_x8,function,internal)
 aes_cbc_enc_128_x8:
 %endif
-	sub	rsp, STACK_size
+%endif ;; AES_XCBC_X8
+
+        sub	rsp, STACK_size
 	mov	[GPR_SAVE_AREA + 8*0], rbp
-%ifdef CBC_MAC
+%ifdef CBC_XCBC_MAC
 	mov	[GPR_SAVE_AREA + 8*1], rbx
 	mov	[GPR_SAVE_AREA + 8*2], r12
 	mov	[GPR_SAVE_AREA + 8*3], r13
@@ -136,42 +153,42 @@ aes_cbc_enc_128_x8:
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	mov	        IN0,	[ARG + _aesarg_in + 8*0]
-	mov	        IN2,	[ARG + _aesarg_in + 8*2]
-	mov	        IN4,	[ARG + _aesarg_in + 8*4]
-	mov	        IN6,	[ARG + _aesarg_in + 8*6]
+	mov	        IN0,	[ARG + ARG_IN + 8*0]
+	mov	        IN2,	[ARG + ARG_IN + 8*2]
+	mov	        IN4,	[ARG + ARG_IN + 8*4]
+	mov	        IN6,	[ARG + ARG_IN + 8*6]
 
-	mov		TMP, [ARG + _aesarg_in + 8*1]
+	mov		TMP, [ARG + ARG_IN + 8*1]
 	VMOVDQ		XDATA0, [IN0]		; load first block of plain text
 	VMOVDQ		XDATA1, [TMP]		; load first block of plain text
-	mov		TMP, [ARG + _aesarg_in + 8*3]
+	mov		TMP, [ARG + ARG_IN + 8*3]
 	VMOVDQ		XDATA2, [IN2]		; load first block of plain text
 	VMOVDQ		XDATA3, [TMP]		; load first block of plain text
-	mov		TMP, [ARG + _aesarg_in + 8*5]
+	mov		TMP, [ARG + ARG_IN + 8*5]
 	VMOVDQ		XDATA4, [IN4]		; load first block of plain text
 	VMOVDQ		XDATA5, [TMP]		; load first block of plain text
-	mov		TMP, [ARG + _aesarg_in + 8*7]
+	mov		TMP, [ARG + ARG_IN + 8*7]
 	VMOVDQ		XDATA6, [IN6]		; load first block of plain text
 	VMOVDQ		XDATA7, [TMP]		; load first block of plain text
 
 
-	VPXOR2		XDATA0, [ARG + _aesarg_IV + 16*0]  ; plaintext XOR IV
-	VPXOR2		XDATA1, [ARG + _aesarg_IV + 16*1]  ; plaintext XOR IV
-	VPXOR2		XDATA2, [ARG + _aesarg_IV + 16*2]  ; plaintext XOR IV
-	VPXOR2		XDATA3, [ARG + _aesarg_IV + 16*3]  ; plaintext XOR IV
-	VPXOR2		XDATA4, [ARG + _aesarg_IV + 16*4]  ; plaintext XOR IV
-	VPXOR2		XDATA5, [ARG + _aesarg_IV + 16*5]  ; plaintext XOR IV
-	VPXOR2		XDATA6, [ARG + _aesarg_IV + 16*6]  ; plaintext XOR IV
-	VPXOR2		XDATA7, [ARG + _aesarg_IV + 16*7]  ; plaintext XOR IV
+	VPXOR2		XDATA0, [ARG + ARG_IV + 16*0]  ; plaintext XOR IV
+	VPXOR2		XDATA1, [ARG + ARG_IV + 16*1]  ; plaintext XOR IV
+	VPXOR2		XDATA2, [ARG + ARG_IV + 16*2]  ; plaintext XOR IV
+	VPXOR2		XDATA3, [ARG + ARG_IV + 16*3]  ; plaintext XOR IV
+	VPXOR2		XDATA4, [ARG + ARG_IV + 16*4]  ; plaintext XOR IV
+	VPXOR2		XDATA5, [ARG + ARG_IV + 16*5]  ; plaintext XOR IV
+	VPXOR2		XDATA6, [ARG + ARG_IV + 16*6]  ; plaintext XOR IV
+	VPXOR2		XDATA7, [ARG + ARG_IV + 16*7]  ; plaintext XOR IV
 
-	mov		KEYS0,	[ARG + _aesarg_keys + 8*0]
-	mov		KEYS1,	[ARG + _aesarg_keys + 8*1]
-	mov		KEYS2,	[ARG + _aesarg_keys + 8*2]
-	mov		KEYS3,	[ARG + _aesarg_keys + 8*3]
-	mov		KEYS4,	[ARG + _aesarg_keys + 8*4]
-	mov		KEYS5,	[ARG + _aesarg_keys + 8*5]
-	mov		KEYS6,	[ARG + _aesarg_keys + 8*6]
-	mov		KEYS7,	[ARG + _aesarg_keys + 8*7]
+	mov		KEYS0,	[ARG + ARG_KEYS + 8*0]
+	mov		KEYS1,	[ARG + ARG_KEYS + 8*1]
+	mov		KEYS2,	[ARG + ARG_KEYS + 8*2]
+	mov		KEYS3,	[ARG + ARG_KEYS + 8*3]
+	mov		KEYS4,	[ARG + ARG_KEYS + 8*4]
+	mov		KEYS5,	[ARG + ARG_KEYS + 8*5]
+	mov		KEYS6,	[ARG + ARG_KEYS + 8*6]
+	mov		KEYS7,	[ARG + ARG_KEYS + 8*7]
 
 	VPXOR2		XDATA0, [KEYS0 + 16*0]		; 0. ARK
 	VPXOR2		XDATA1, [KEYS1 + 16*0]		; 0. ARK
@@ -269,7 +286,9 @@ aes_cbc_enc_128_x8:
 	vaesenc		XDATA3, [KEYS3 + 16*9]	; 9. ENC
 	vaesenc		XDATA4, [KEYS4 + 16*9]	; 9. ENC
 	vaesenc		XDATA5, [KEYS5 + 16*9]	; 9. ENC
+%ifndef CBC_XCBC_MAC
 	mov		TMP, [ARG + _aesarg_out + 8*0]
+%endif
 	vaesenc		XDATA6, XKEY6_9       	; 9. ENC
 	vaesenc		XDATA7, [KEYS7 + 16*9]	; 9. ENC
 
@@ -283,7 +302,7 @@ aes_cbc_enc_128_x8:
 	vaesenclast	XDATA6, [KEYS6 + 16*10]	; 10. ENC
 	vaesenclast	XDATA7, [KEYS7 + 16*10]	; 10. ENC
 
-%ifndef CBC_MAC
+%ifndef CBC_XCBC_MAC
 	VMOVDQ		[TMP], XDATA0		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*1]
 	VMOVDQ		[TMP], XDATA1		; write back ciphertext
@@ -304,16 +323,16 @@ aes_cbc_enc_128_x8:
 	je		done
 
 main_loop:
-	mov		TMP, [ARG + _aesarg_in + 8*1]
+	mov		TMP, [ARG + ARG_IN + 8*1]
 	VPXOR2		XDATA0, [IN0 + IDX]	; load next block of plain text
 	VPXOR2		XDATA1, [TMP + IDX]	; load next block of plain text
-	mov		TMP, [ARG + _aesarg_in + 8*3]
+	mov		TMP, [ARG + ARG_IN + 8*3]
 	VPXOR2		XDATA2, [IN2 + IDX]	; load next block of plain text
 	VPXOR2		XDATA3, [TMP + IDX]	; load next block of plain text
-	mov		TMP, [ARG + _aesarg_in + 8*5]
+	mov		TMP, [ARG + ARG_IN + 8*5]
 	VPXOR2		XDATA4, [IN4 + IDX]	; load next block of plain text
 	VPXOR2		XDATA5, [TMP + IDX]	; load next block of plain text
-	mov		TMP, [ARG + _aesarg_in + 8*7]
+	mov		TMP, [ARG + ARG_IN + 8*7]
 	VPXOR2		XDATA6, [IN6 + IDX]	; load next block of plain text
 	VPXOR2		XDATA7, [TMP + IDX]	; load next block of plain text
 
@@ -404,7 +423,9 @@ main_loop:
 	vaesenc		XDATA3, [KEYS3 + 16*9]	; 9. ENC
 	vaesenc		XDATA4, [KEYS4 + 16*9]	; 9. ENC
 	vaesenc		XDATA5, [KEYS5 + 16*9]	; 9. ENC
+%ifndef CBC_XCBC_MAC
 	mov		TMP, [ARG + _aesarg_out + 8*0]
+%endif
 	vaesenc		XDATA6, XKEY6_9       	; 9. ENC
 	vaesenc		XDATA7, [KEYS7 + 16*9]	; 9. ENC
 
@@ -418,7 +439,7 @@ main_loop:
 	vaesenclast	XDATA6, [KEYS6 + 16*10]	; 10. ENC
 	vaesenclast	XDATA7, [KEYS7 + 16*10]	; 10. ENC
 
-%ifndef CBC_MAC
+%ifndef CBC_XCBC_MAC
         ;; no ciphertext write back for CBC-MAC
 	VMOVDQ		[TMP + IDX], XDATA0		; write back ciphertext
 	mov		TMP, [ARG + _aesarg_out + 8*1]
@@ -442,27 +463,27 @@ main_loop:
 
 done:
 	;; update IV for AES128-CBC / store digest for CBC-MAC
-	vmovdqa	[ARG + _aesarg_IV + 16*0], XDATA0
-	vmovdqa	[ARG + _aesarg_IV + 16*1], XDATA1
-	vmovdqa	[ARG + _aesarg_IV + 16*2], XDATA2
-	vmovdqa	[ARG + _aesarg_IV + 16*3], XDATA3
-	vmovdqa	[ARG + _aesarg_IV + 16*4], XDATA4
-	vmovdqa	[ARG + _aesarg_IV + 16*5], XDATA5
-	vmovdqa	[ARG + _aesarg_IV + 16*6], XDATA6
-	vmovdqa	[ARG + _aesarg_IV + 16*7], XDATA7
+	vmovdqa	[ARG + ARG_IV + 16*0], XDATA0
+	vmovdqa	[ARG + ARG_IV + 16*1], XDATA1
+	vmovdqa	[ARG + ARG_IV + 16*2], XDATA2
+	vmovdqa	[ARG + ARG_IV + 16*3], XDATA3
+	vmovdqa	[ARG + ARG_IV + 16*4], XDATA4
+	vmovdqa	[ARG + ARG_IV + 16*5], XDATA5
+	vmovdqa	[ARG + ARG_IV + 16*6], XDATA6
+	vmovdqa	[ARG + ARG_IV + 16*7], XDATA7
 
 	;; update IN and OUT
 	vmovd	xmm0, [LEN_AREA]
 	vpshufd	xmm0, xmm0, 0x44
-	vpaddq	xmm1, xmm0, [ARG + _aesarg_in + 16*0]
-	vpaddq	xmm2, xmm0, [ARG + _aesarg_in + 16*1]
-	vpaddq	xmm3, xmm0, [ARG + _aesarg_in + 16*2]
-	vpaddq	xmm4, xmm0, [ARG + _aesarg_in + 16*3]
-	vmovdqa	[ARG + _aesarg_in + 16*0], xmm1
-	vmovdqa	[ARG + _aesarg_in + 16*1], xmm2
-	vmovdqa	[ARG + _aesarg_in + 16*2], xmm3
-	vmovdqa	[ARG + _aesarg_in + 16*3], xmm4
-%ifndef CBC_MAC
+	vpaddq	xmm1, xmm0, [ARG + ARG_IN + 16*0]
+	vpaddq	xmm2, xmm0, [ARG + ARG_IN + 16*1]
+	vpaddq	xmm3, xmm0, [ARG + ARG_IN + 16*2]
+	vpaddq	xmm4, xmm0, [ARG + ARG_IN + 16*3]
+	vmovdqa	[ARG + ARG_IN + 16*0], xmm1
+	vmovdqa	[ARG + ARG_IN + 16*1], xmm2
+	vmovdqa	[ARG + ARG_IN + 16*2], xmm3
+	vmovdqa	[ARG + ARG_IN + 16*3], xmm4
+%ifndef CBC_XCBC_MAC
 	vpaddq	xmm5, xmm0, [ARG + _aesarg_out + 16*0]
 	vpaddq	xmm6, xmm0, [ARG + _aesarg_out + 16*1]
 	vpaddq	xmm7, xmm0, [ARG + _aesarg_out + 16*2]
@@ -475,7 +496,7 @@ done:
 
         ;; XMMs are saved at a higher level
 	mov	rbp, [GPR_SAVE_AREA + 8*0]
-%ifdef CBC_MAC
+%ifdef CBC_XCBC_MAC
 	mov	rbx, [GPR_SAVE_AREA + 8*1]
 	mov	r12, [GPR_SAVE_AREA + 8*2]
 	mov	r13, [GPR_SAVE_AREA + 8*3]

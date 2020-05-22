@@ -27,5 +27,5 @@
 
 ;;; Routine to compute CBC-MAC. It is based on 128 bit CBC AES encrypt code.
 
-%define CBC_MAC 1
+%define CBC_XCBC_MAC 1
 %include "avx/aes_cbc_enc_128_x8.asm"
