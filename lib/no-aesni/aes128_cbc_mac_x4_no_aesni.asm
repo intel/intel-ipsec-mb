@@ -29,5 +29,5 @@
 
 %include "include/aesni_emu.inc"
 %define AES_CBC_ENC_X4
-%define CBC_MAC
+%define CBC_XCBC_MAC
 %include "sse/aes_cbc_enc_128_x4.asm"
