@@ -105,14 +105,14 @@ endstruc
 section .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; struct AES_XCBC_ARGS_x8 {
-;;     void*    in[8];
-;;     UINT128* keys[8];
-;;     UINT128  ICV[8];
+;; struct AES_XCBC_ARGS_x16 {
+;;     void*    in[16];
+;;     UINT128* keys[16];
+;;     UINT128  ICV[16];
 ;; }
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void aes_xcbc_mac_128_x4(AES_XCBC_ARGS_x8 *args, UINT64 len);
-;; arg 1: ARG : addr of AES_XCBC_ARGS_x8 structure
+;; void aes_xcbc_mac_128_x4(AES_XCBC_ARGS_x16 *args, UINT64 len);
+;; arg 1: ARG : addr of AES_XCBC_ARGS_x16 structure
 
 %ifdef AES_XCBC_X4
 %define ARG_IN   _aesxcbcarg_in

@@ -36,7 +36,7 @@
 %define FLUSH_JOB_AES_XCBC flush_job_aes_xcbc_sse
 %endif
 
-; void AES_XCBC_X4(AES_XCBC_ARGS_x8 *args, UINT64 len_in_bytes);
+; void AES_XCBC_X4(AES_XCBC_ARGS_x16 *args, UINT64 len_in_bytes);
 extern AES_XCBC_X4
 
 section .data

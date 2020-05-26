@@ -100,14 +100,14 @@ _docsis_crc_args_done    equ   _docsis_aes_args + _docsis_crc_done
 ;;;; Define XCBC Out of Order Data Structures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-START_FIELDS	; AES_XCBC_ARGS_X8
+START_FIELDS	; AES_XCBC_ARGS_X16
 ;;	name			size	align
-FIELD	_aesxcbcarg_in,		8*8,	8	; array of 8 pointers to in text
-FIELD	_aesxcbcarg_keys,	8*8,	8	; array of 8 pointers to keys
-FIELD	_aesxcbcarg_ICV,	16*8,	32	; array of 8 128-bit ICV's
+FIELD	_aesxcbcarg_in,		16*8,	8	; array of 16 pointers to in text
+FIELD	_aesxcbcarg_keys,	16*8,	8	; array of 16 pointers to keys
+FIELD	_aesxcbcarg_ICV,	16*16,	32	; array of 16 128-bit ICV's
 END_FIELDS
-%assign _AES_XCBC_ARGS_X8_size	_FIELD_OFFSET
-%assign _AES_XCBC_ARGS_X8_align	_STRUCT_ALIGN
+%assign _AES_XCBC_ARGS_X16_size	_FIELD_OFFSET
+%assign _AES_XCBC_ARGS_X16_align _STRUCT_ALIGN
 
 START_FIELDS	; XCBC_LANE_DATA
 ;;;	name		size	align
@@ -122,10 +122,10 @@ END_FIELDS
 
 START_FIELDS	; MB_MGR_AES_XCBC_OOO
 ;;	name		size	align
-FIELD	_aes_xcbc_args,	_AES_XCBC_ARGS_X8_size, _AES_XCBC_ARGS_X8_align
-FIELD	_aes_xcbc_lens,		16,	16
+FIELD	_aes_xcbc_args,	_AES_XCBC_ARGS_X16_size, _AES_XCBC_ARGS_X16_align
+FIELD	_aes_xcbc_lens,		16*2,	32
 FIELD	_aes_xcbc_unused_lanes, 8,	8
-FIELD	_aes_xcbc_ldata, _XCBC_LANE_DATA_size*8, _XCBC_LANE_DATA_align
+FIELD	_aes_xcbc_ldata, _XCBC_LANE_DATA_size*16, _XCBC_LANE_DATA_align
 FIELD   _aes_xcbc_road_block,   8,      8
 END_FIELDS
 %assign _MB_MGR_AES_XCBC_OOO_size	_FIELD_OFFSET

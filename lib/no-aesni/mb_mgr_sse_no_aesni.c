@@ -723,16 +723,11 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         }
 
         /* Init AES/XCBC OOO fields */
-        aes_xcbc_ooo->lens[0] = 0;
-        aes_xcbc_ooo->lens[1] = 0;
-        aes_xcbc_ooo->lens[2] = 0;
-        aes_xcbc_ooo->lens[3] = 0;
-        aes_xcbc_ooo->lens[4] = 0xFFFF;
-        aes_xcbc_ooo->lens[5] = 0xFFFF;
-        aes_xcbc_ooo->lens[6] = 0xFFFF;
-        aes_xcbc_ooo->lens[7] = 0xFFFF;
+        memset(aes_xcbc_ooo->lens, 0xff,
+               sizeof(aes_xcbc_ooo->lens));
         aes_xcbc_ooo->unused_lanes = 0xFF03020100;
         for (j = 0; j < 4; j++) {
+                aes_xcbc_ooo->lens[j] = 0xFFFF;
                 aes_xcbc_ooo->ldata[j].job_in_lane = NULL;
                 aes_xcbc_ooo->ldata[j].final_block[16] = 0x80;
                 memset(aes_xcbc_ooo->ldata[j].final_block + 17, 0x00, 15);

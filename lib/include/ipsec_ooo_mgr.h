@@ -107,10 +107,10 @@ typedef struct {
 } MD5_ARGS;
 
 typedef struct {
-        const uint8_t *in[8];
-        const uint32_t *keys[8];
-        DECLARE_ALIGNED(imb_uint128_t ICV[8], 32);
-} AES_XCBC_ARGS_x8;
+        const uint8_t *in[16];
+        const uint32_t *keys[16];
+        DECLARE_ALIGNED(imb_uint128_t ICV[16], 32);
+} AES_XCBC_ARGS_x16;
 
 typedef struct {
         const uint8_t *in[AVX512_NUM_DES_LANES];
@@ -167,13 +167,13 @@ typedef struct {
 } XCBC_LANE_DATA;
 
 typedef struct {
-        AES_XCBC_ARGS_x8 args;
-        DECLARE_ALIGNED(uint16_t lens[8], 16);
+        AES_XCBC_ARGS_x16 args;
+        DECLARE_ALIGNED(uint16_t lens[16], 32);
         /* each byte is index (0...3) of unused lanes
          * byte 4 is set to FF as a flag
          */
         uint64_t unused_lanes;
-        XCBC_LANE_DATA ldata[8];
+        XCBC_LANE_DATA ldata[16];
         uint64_t road_block;
 } MB_MGR_AES_XCBC_OOO;
 
