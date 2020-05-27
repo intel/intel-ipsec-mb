@@ -1638,7 +1638,62 @@ static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
 }
 
 /**
- * @brief GF2 modular multiplication/reduction
+ * @brief Wrapper around PCLMULQDQ operation for emulation purpose
+ *
+ * The operation carries modular multiply 64-bits x 64-bits and
+ * produces 128-bit output. 'imm8' selectes multiply inputs.
+ *
+ * @param[in] a    128-bit input
+ * @param[in] b    128-bit input
+ * @param[in] imm8 multiply variant selector
+ * @return 128-bit output
+ */
+static inline __m128i
+pclmulqdq_wrap(const __m128i a, const __m128i b, const uint32_t imm8)
+{
+#ifdef NO_AESNI
+        union xmm_reg av, bv;
+
+        _mm_storeu_si128((__m128i *) &av.qword[0], a);
+        _mm_storeu_si128((__m128i *) &bv.qword[0], b);
+        emulate_PCLMULQDQ(&av, &bv, imm8);
+
+        return _mm_loadu_si128((const __m128i *) &av.qword[0]);
+#else
+        return _mm_clmulepi64_si128(a, b, imm8);
+#endif
+}
+
+/**
+ * @brief GF2 modular reduction 128-bits to 64-bits
+ *
+ * SNOW3GCONSTANT/0x1b reduction polynomial applied.
+ *
+ * @param[in] m   128-bit input
+ * @return 128-bit output (only least significant 64-bits are valid)
+ */
+static inline __m128i reduce128_to_64(const __m128i m)
+{
+        static const uint64_t red_poly[2] = { SNOW3GCONSTANT, 0 };
+        const __m128i p = _mm_loadu_si128((const __m128i *)&red_poly[0]);
+        __m128i x, t;
+
+        /* start reduction */
+        x = pclmulqdq_wrap(m, p, 0x01); /* top 64-bits of m x p */
+        t = _mm_xor_si128(m, x);
+
+        /*
+         * repeat multiply and xor in case
+         * 'x' product was bigger than 64 bits
+         */
+        x = pclmulqdq_wrap(x, p, 0x01);
+        t = _mm_xor_si128(t, x);
+
+        return t;
+}
+
+/**
+ * @brief GF2 modular multiplication 64-bits x 64-bits with reduction
  *
  * Implements MUL64 function from the standard.
  * SNOW3GCONSTANT/0x1b reduction polynomial applied.
@@ -1649,19 +1704,15 @@ static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
  */
 static inline uint64_t multiply_and_reduce64(uint64_t a, uint64_t b)
 {
-        uint64_t msk;
-        uint64_t res = 0;
-        uint64_t i = 64;
+        const __m128i av = _mm_cvtsi64_si128(a);
+        const __m128i bv = _mm_cvtsi64_si128(b);
+        __m128i m;
 
-        while (i--) {
-                msk = ((int64_t)res >> 63) & SNOW3GCONSTANT;
-                res <<= 1;
-                res ^= msk;
-                msk = ((int64_t)b >> 63) & a;
-                b <<= 1;
-                res ^= msk;
-        }
-        return res;
+        m = pclmulqdq_wrap(av, bv, 0x00);  /*  m = a x b */
+
+        m = reduce128_to_64(m); /* reduction */
+
+        return _mm_cvtsi128_si64(m);
 }
 
 #ifdef AVX2
@@ -3925,6 +3976,7 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         lengthInQwords = lengthInBits / 64;
 
         E = 0;
+
         /* all blocks except the last one */
         for (i = 0; i < lengthInQwords; i++) {
                 V = BSWAP64(inputBuffer[i]);
