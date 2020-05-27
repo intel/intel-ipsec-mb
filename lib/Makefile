@@ -129,22 +129,22 @@ CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
 
 # Set generic architectural optimizations
-OPT_SSE := -msse4.2 -maes
+OPT_SSE := -msse4.2 -maes -mpclmul
 OPT_AVX := -mavx -maes
 OPT_AVX2 := -mavx2 -maes
 OPT_AVX512 := -mavx2 -maes # -mavx512f is not available until gcc 4.9
-OPT_NOAESNI := -msse4.2 -mno-aes
+OPT_NOAESNI := -msse4.2 -mno-aes -mno-pclmul
 
 # Set architectural optimizations for GCC/CC
 ifeq ($(CC),$(filter $(CC),gcc cc))
 GCC_VERSION = $(shell $(CC) -dumpversion | cut -d. -f1)
 GCC_GE_V5 = $(shell [ $(GCC_VERSION) -ge 5 ] && echo true)
 ifeq ($(GCC_GE_V5),true)
-OPT_SSE := -march=nehalem -maes
+OPT_SSE := -march=nehalem -maes -mpclmul
 OPT_AVX := -march=sandybridge -maes
 OPT_AVX2 := -march=haswell -maes
 OPT_AVX512 := -march=broadwell
-OPT_NOAESNI := -march=nehalem
+OPT_NOAESNI := -march=nehalem -mno-pclmul
 endif
 endif
 
