@@ -91,14 +91,14 @@ MKGLOBAL(SUBMIT_JOB_ZUC_EEA3,function,internal)
 SUBMIT_JOB_ZUC_EEA3:
 
 ; idx needs to be in rbp
+%define tmp              rbp
 %define len              rbp
 %define idx              rbp
-%define tmp              rbp
 
 %define lane             r8
 %define unused_lanes     rbx
-%define len2             r13
 %define tmp2             r13
+%define tmp3             r14
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -149,7 +149,14 @@ SUBMIT_JOB_ZUC_EEA3:
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_cipher_in_bytes]
 
-        VPINSRW_M256 state + _zuc_lens, xmm0, xmm1, tmp, lane, len, scale_x16
+        ;; Update lane len
+        vmovdqa64       ymm0, [state + _zuc_lens]
+        SHIFT_GP        1, lane, tmp3, tmp2, left
+        kmovq           k1, tmp3
+
+        vpbroadcastw    ymm1, WORD(len)
+        vmovdqu16       ymm0{k1}, ymm1
+        vmovdqa64       [state + _zuc_lens], ymm0
 
         cmp     qword [state + _zuc_lanes_in_use], 16
         jne     return_null_submit_eea3
@@ -159,10 +166,6 @@ SUBMIT_JOB_ZUC_EEA3:
         ; and it can be returned (leaving the lane id in "idx"), without executing
         ; any crypto code
         vpxor   ymm1, ymm1
-        ; Read 2x16 bytes, to avoid store-to-load forwarding,
-        ; as zuc_lens is updated with 16-byte granularity
-        vmovdqa xmm0, [state + _zuc_lens]
-        vinserti128 ymm0, [state + _zuc_lens + 2*8], 1
         vpcmpw  k1, ymm0, ymm1, 0
         kmovw   DWORD(idx), k1
         bsf     DWORD(idx), DWORD(tmp)
@@ -221,7 +224,7 @@ len_is_0_submit_eea3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_AES
-        VPINSRW_M256 state + _zuc_lens, xmm0, xmm1, len2, idx, 0xFFFF, scale_x16
+        VPINSRW_M256 state + _zuc_lens, xmm0, xmm1, tmp2, idx, 0xFFFF, scale_x16
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -287,10 +290,7 @@ FLUSH_JOB_ZUC_EEA3:
 
         ; Find if a job has been finished (length is zero)
         vpxor           ymm1, ymm1
-        ; Read 2x16 bytes, to avoid store-to-load forwarding,
-        ; as zuc_lens is updated with 16-byte granularity
-        vmovdqa         xmm0, [state + _zuc_lens]
-        vinserti128     ymm0, [state + _zuc_lens + 2*8], 1
+        vmovdqa         ymm0, [state + _zuc_lens]
         vpcmpw          k1, ymm0, ymm1, 0
         kmovw           DWORD(idx), k1
         bsf             DWORD(idx), DWORD(tmp)
@@ -452,7 +452,8 @@ SUBMIT_JOB_ZUC_EIA3:
 
 %define lane             r8
 %define unused_lanes     rbx
-%define len2             r13
+%define tmp2             r13
+%define tmp3             r14
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -493,7 +494,14 @@ SUBMIT_JOB_ZUC_EIA3:
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_hash_in_bits]
 
-        VPINSRW_M256 state + _zuc_lens, xmm0, xmm1, tmp, lane, len, scale_x16
+        ;; Update lane len
+        vmovdqa64       ymm0, [state + _zuc_lens]
+        SHIFT_GP        1, lane, tmp3, tmp2, left
+        kmovq           k1, tmp3
+
+        vpbroadcastw    ymm1, WORD(len)
+        vmovdqu16       ymm0{k1}, ymm1
+        vmovdqa64       [state + _zuc_lens], ymm0
 
         cmp     qword [state + _zuc_lanes_in_use], 16
         jne     return_null_submit_eia3
@@ -503,10 +511,6 @@ SUBMIT_JOB_ZUC_EIA3:
         ; and it can be returned (leaving the lane id in "idx"), without executing
         ; any crypto code
         vpxor   ymm1, ymm1
-        ; Read 2x16 bytes, to avoid store-to-load forwarding,
-        ; as zuc_lens is updated with 16-byte granularity
-        vmovdqa         xmm0, [state + _zuc_lens]
-        vinserti128     ymm0, [state + _zuc_lens + 2*8], 1
         vpcmpw  k1, ymm0, ymm1, 0
         kmovw   DWORD(idx), k1
         bsf     DWORD(idx), DWORD(tmp)
@@ -555,7 +559,7 @@ len_is_0_submit_eia3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_HMAC
-        VPINSRW_M256 state + _zuc_lens, xmm0, xmm1, len2, idx, 0xFFFF, scale_x16
+        VPINSRW_M256 state + _zuc_lens, xmm0, xmm1, tmp2, idx, 0xFFFF, scale_x16
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -621,10 +625,7 @@ FLUSH_JOB_ZUC_EIA3:
 
         ; Find if a job has been finished (length is zero)
         vpxor   ymm1, ymm1
-        ; Read 2x16 bytes, to avoid store-to-load forwarding,
-        ; as zuc_lens is updated with 16-byte granularity
-        vmovdqa xmm0, [state + _zuc_lens]
-        vinserti128 ymm0, [state + _zuc_lens + 2*8], 1
+        vmovdqa ymm0, [state + _zuc_lens]
         vpcmpw  k1, ymm0, ymm1, 0
         kmovw   DWORD(idx), k1
         bsf     DWORD(idx), DWORD(tmp)
