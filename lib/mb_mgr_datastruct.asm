@@ -105,6 +105,7 @@ START_FIELDS	; AES_XCBC_ARGS_X16
 FIELD	_aesxcbcarg_in,		16*8,	8	; array of 16 pointers to in text
 FIELD	_aesxcbcarg_keys,	16*8,	8	; array of 16 pointers to keys
 FIELD	_aesxcbcarg_ICV,	16*16,	32	; array of 16 128-bit ICV's
+FIELD	_aesxcbcarg_key_tab,    16*16*11, 64	; array of 128-bit round keys
 END_FIELDS
 %assign _AES_XCBC_ARGS_X16_size	_FIELD_OFFSET
 %assign _AES_XCBC_ARGS_X16_align _STRUCT_ALIGN

@@ -110,6 +110,7 @@ typedef struct {
         const uint8_t *in[16];
         const uint32_t *keys[16];
         DECLARE_ALIGNED(imb_uint128_t ICV[16], 32);
+        DECLARE_ALIGNED(imb_uint128_t key_tab[11][16], 64);
 } AES_XCBC_ARGS_x16;
 
 typedef struct {

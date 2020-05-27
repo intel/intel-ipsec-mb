@@ -104,6 +104,10 @@ endstruc
 %define R2_K4_7         zmm4
 %define R2_K8_11        zmm5
 
+%define MAC_TYPE_NONE   0
+%define MAC_TYPE_CBC    1
+%define MAC_TYPE_XCBC   2
+
 ;; Save registers states
 %macro FUNC_SAVE 0
         sub             rsp, STACK_size
@@ -282,14 +286,14 @@ endstruc
 ; - 16 lanes, 1 block per lane
 ; - performs AES encrypt rounds 1-NROUNDS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro AESENC_ROUNDS_x16 5
+%macro AESENC_ROUNDS_x16 6
 %define %%L00_03  %1              ; [in/out] ZMM with lane 0-3 blocks
 %define %%L04_07  %2              ; [in/out] ZMM with lane 4-7 blocks
 %define %%L08_11  %3              ; [in/out] ZMM with lane 8-11 blocks
 %define %%L12_15  %4              ; [in/out] ZMM with lane 12-15 blocks
-%define %%NROUNDS %5              ; [in] number of aes rounds
+%define %%KP      %5              ; [in] key table pointer
+%define %%NROUNDS %6              ; [in] number of aes rounds
 
-%define %%KP ARG + _aesarg_key_tab
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
@@ -363,9 +367,13 @@ endstruc
 %define %%ZTMP3         %27 ;; [clobbered] tmp ZMM register
 %define %%TMP0          %28 ;; [clobbered] tmp GP register
 %define %%TMP1          %29 ;; [clobbered] tmp GP register
-%define %%CBC_MAC       %30 ;; CBC-MAC flag
+%define %%MAC_TYPE      %30 ;; MAC_TYPE_NONE/CBC/XCBC flag
 
+%if %%MAC_TYPE == MAC_TYPE_XCBC
+%define %%KP    ARG + _aes_xcbc_args_key_tab
+%else
 %define %%KP    ARG + _aesarg_key_tab
+%endif
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
@@ -421,7 +429,7 @@ endstruc
         vpternlogq      %%B0L12_15, %%ZIV12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
         ;; encrypt block 0 lanes
-        AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%NROUNDS
+        AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%KP, %%NROUNDS
 
         ;; xor plaintext block with last cipher block and round zero key
         vpternlogq      %%B1L00_03, %%B0L00_03, R0_K0_3, 0x96
@@ -430,7 +438,7 @@ endstruc
         vpternlogq      %%B1L12_15, %%B0L12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
         ;; encrypt block 1 lanes
-        AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%NROUNDS
+        AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%KP, %%NROUNDS
 
         ;; xor plaintext block with last cipher block and round zero key
         vpternlogq      %%B2L00_03, %%B1L00_03, R0_K0_3, 0x96
@@ -439,7 +447,7 @@ endstruc
         vpternlogq      %%B2L12_15, %%B1L12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
         ;; encrypt block 2 lanes
-        AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%NROUNDS
+        AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%KP, %%NROUNDS
 
         ;; xor plaintext block with last cipher block and round zero key
         vpternlogq      %%B3L00_03, %%B2L00_03, R0_K0_3, 0x96
@@ -448,7 +456,7 @@ endstruc
         vpternlogq      %%B3L12_15, %%B2L12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
         ;; encrypt block 3 lanes
-        AESENC_ROUNDS_x16 %%B3L00_03, %%B3L04_07, %%B3L08_11, %%B3L12_15, %%NROUNDS
+        AESENC_ROUNDS_x16 %%B3L00_03, %%B3L04_07, %%B3L08_11, %%B3L12_15, %%KP, %%NROUNDS
 
         ;; store last cipher block
         vmovdqa64       %%ZIV00_03, %%B3L00_03
@@ -457,7 +465,7 @@ endstruc
         vmovdqa64       %%ZIV12_15, %%B3L12_15
 
         ;; Don't write back ciphertext for CBC-MAC
-%if %%CBC_MAC == 0
+%if %%MAC_TYPE == MAC_TYPE_NONE
         ;; write back cipher text for lanes 0-3
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
@@ -486,7 +494,7 @@ endstruc
         LOAD_STORE_x4 12, 13, 14, 15, OUT, %%IDX, %%B0L12_15, %%B1L12_15, \
                       %%B2L12_15, %%B3L12_15, %%TMP0, %%TMP1, STORE
 
-%endif ;; !CBC_MAC
+%endif ;; MAC_TYPE
         sub             %%LENGTH, 64
         add             %%IDX, 64
         jmp             %%encrypt_16_start
@@ -506,12 +514,12 @@ endstruc
         add     	IN_L9, %%IDX
         add     	IN_L10, %%IDX
         add     	IN_L11, %%IDX
-%if %%CBC_MAC == 0 ;; skip out pointer update for CBC_MAC
+%if %%MAC_TYPE == MAC_TYPE_NONE ;; skip out pointer update for CBC_MAC/XCBC
         vpaddq          %%ZTMP0, %%ZTMP2, [OUT]
         vpaddq          %%ZTMP1, %%ZTMP2, [OUT + 64]
         vmovdqa64       [OUT], %%ZTMP0
         vmovdqa64       [OUT + 64], %%ZTMP1
-%endif ;; !CBC_MAC
+%endif ;; MAC_TYPE
 
 %%encrypt_16_done:
 %endmacro
@@ -549,9 +557,13 @@ endstruc
 %define %%TMP0          %27 ;; [clobbered] tmp GP register
 %define %%TMP1          %28 ;; [clobbered] tmp GP register
 %define %%NUM_BLKS      %29 ;; [in] number of blocks (numerical value)
-%define %%CBC_MAC       %30 ;; CBC_MAC flag
+%define %%MAC_TYPE      %30 ;; MAC_TYPE_NONE/CBC/XCBC flag
 
+%if %%MAC_TYPE == MAC_TYPE_XCBC
+%define %%KP    ARG + _aesxcbcarg_key_tab
+%else
 %define %%KP    ARG + _aesarg_key_tab
+%endif
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
@@ -606,7 +618,7 @@ endstruc
         vpternlogq      %%B0L12_15, %%ZIV12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
         ;; encrypt block 0 lanes
-        AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%NROUNDS
+        AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%KP, %%NROUNDS
 
 %if %%NUM_BLKS == 1
         ;; store last cipher block
@@ -624,7 +636,7 @@ endstruc
         vpternlogq      %%B1L12_15, %%B0L12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
         ;; encrypt block 1 lanes
-        AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%NROUNDS
+        AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%KP, %%NROUNDS
 %endif
 %if %%NUM_BLKS == 2
         ;; store last cipher block
@@ -642,7 +654,7 @@ endstruc
         vpternlogq      %%B2L12_15, %%B1L12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
         ;; encrypt block 2 lanes
-        AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%NROUNDS
+        AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%KP, %%NROUNDS
 %endif
 %if %%NUM_BLKS == 3
         ;; store last cipher block
@@ -652,7 +664,7 @@ endstruc
         vmovdqa64       %%ZIV12_15, %%B2L12_15
 %endif
         ;; Don't write back ciphertext for CBC-MAC
-%if %%CBC_MAC == 0
+%if %%MAC_TYPE == MAC_TYPE_NONE
         ;; write back cipher text for lanes 0-3
         TRANSPOSE_4x4 %%B0L00_03, %%B1L00_03, %%B2L00_03, %%B3L00_03, \
                       %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
@@ -690,12 +702,12 @@ endstruc
         vpaddq          %%ZTMP1, %%ZTMP2, [IN + 64]
         vmovdqa64       [IN], %%ZTMP0
         vmovdqa64       [IN + 64], %%ZTMP1
-%if %%CBC_MAC == 0 ;; skip out pointer update for CBC-MAC
+%if %%MAC_TYPE == MAC_TYPE_NONE ;; skip out pointer update for CBC_MAC/XCBC
         vpaddq          %%ZTMP0, %%ZTMP2, [OUT]
         vpaddq          %%ZTMP1, %%ZTMP2, [OUT + 64]
         vmovdqa64       [OUT], %%ZTMP0
         vmovdqa64       [OUT + 64], %%ZTMP1
-%endif ;; !CBC_MAC
+%endif ;; MAC_TYPE
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -708,47 +720,59 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro CBC_ENC 2
 %define %%ROUNDS        %1
-%define %%CBC_MAC       %2
+%define %%MAC_TYPE      %2
 
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
+
+%if %%MAC_TYPE == MAC_TYPE_XCBC
+%define %%KP    ARG + _aes_xcbc_args_key_tab
+%define %%IV    ARG + _aes_xcbc_args_ICV
+%define %%IN    ARG + _aes_xcbc_args_in
+%else
+%define %%KP    ARG + _aesarg_key_tab
+%define %%IV    ARG + _aesarg_IV
+%define %%IN    ARG + _aesarg_in
+%define %%OUT   ARG + _aesarg_out
+%endif
 
         ;; load transpose tables
         vmovdqa64       TAB_A0B0A1B1, [rel A0B0A1B1]
         vmovdqa64       TAB_A2B2A3B3, [rel A2B2A3B3]
 
         ;; load IV's per lane
-        vmovdqa64       ZIV00_03, [ARG + _aesarg_IV + 16*0]
-        vmovdqa64       ZIV04_07, [ARG + _aesarg_IV + 16*4]
-        vmovdqa64       ZIV08_11, [ARG + _aesarg_IV + 16*8]
-        vmovdqa64       ZIV12_15, [ARG + _aesarg_IV + 16*12]
+        vmovdqa64       ZIV00_03, [%%IV + 16*0]
+        vmovdqa64       ZIV04_07, [%%IV + 16*4]
+        vmovdqa64       ZIV08_11, [%%IV + 16*8]
+        vmovdqa64       ZIV12_15, [%%IV + 16*12]
 
 	;; preload some input pointers
-        mov     IN_L0, [ARG + _aesarg_in + 8*0]
-        mov     IN_L1, [ARG + _aesarg_in + 8*1]
-        mov     IN_L2, [ARG + _aesarg_in + 8*2]
-        mov     IN_L3, [ARG + _aesarg_in + 8*3]
-        mov     IN_L8, [ARG + _aesarg_in + 8*8]
-        mov     IN_L9, [ARG + _aesarg_in + 8*9]
-        mov     IN_L10, [ARG + _aesarg_in + 8*10]
-        mov     IN_L11, [ARG + _aesarg_in + 8*11]
+        mov     IN_L0, [%%IN + 8*0]
+        mov     IN_L1, [%%IN + 8*1]
+        mov     IN_L2, [%%IN + 8*2]
+        mov     IN_L3, [%%IN + 8*3]
+        mov     IN_L8, [%%IN + 8*8]
+        mov     IN_L9, [%%IN + 8*9]
+        mov     IN_L10, [%%IN + 8*10]
+        mov     IN_L11, [%%IN + 8*11]
 
-	lea 	IN, [ARG + _aesarg_in]
-	lea     OUT, [ARG + _aesarg_out]
-
+        lea     IN, [%%IN]
+%if %%MAC_TYPE == MAC_TYPE_NONE
+        lea     OUT, [%%OUT]
+%endif
 	;; preload some round keys
-        vmovdqu64 R0_K0_3, [ARG + _aesarg_key_tab + %%K00_03_OFFSET]
-        vmovdqu64 R0_K4_7, [ARG + _aesarg_key_tab + %%K04_07_OFFSET]
-        vmovdqu64 R0_K8_11,[ARG + _aesarg_key_tab + %%K08_11_OFFSET]
-        vmovdqu64 R2_K0_3, [ARG + _aesarg_key_tab + %%K00_03_OFFSET + 2 * (16*16)]
-        vmovdqu64 R2_K4_7, [ARG + _aesarg_key_tab + %%K04_07_OFFSET + 2 * (16*16)]
-        vmovdqu64 R2_K8_11,[ARG + _aesarg_key_tab + %%K08_11_OFFSET + 2 * (16*16)]
+        vmovdqu64 R0_K0_3, [%%KP + %%K00_03_OFFSET]
+        vmovdqu64 R0_K4_7, [%%KP + %%K04_07_OFFSET]
+        vmovdqu64 R0_K8_11,[%%KP + %%K08_11_OFFSET]
+        vmovdqu64 R2_K0_3, [%%KP + %%K00_03_OFFSET + 2 * (16*16)]
+        vmovdqu64 R2_K4_7, [%%KP + %%K04_07_OFFSET + 2 * (16*16)]
+        vmovdqu64 R2_K8_11,[%%KP + %%K08_11_OFFSET + 2 * (16*16)]
 
         ENCRYPT_16_PARALLEL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                             LEN, %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, \
                             ZT6, ZT7, ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, \
-                            ZT15, ZT16, ZT17, ZT18, ZT19, IA1, IA2, %%CBC_MAC
+                            ZT15, ZT16, ZT17, ZT18, ZT19, IA1, IA2, %%MAC_TYPE
 
         ;; get num remaining blocks
         shr             LEN, 4
@@ -763,25 +787,25 @@ endstruc
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 3, %%CBC_MAC
+                         ZT18, ZT19, IA1, IA2, 3, %%MAC_TYPE
         jmp             %%_cbc_enc_done
 %%_final_blocks_1:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 1, %%CBC_MAC
+                         ZT18, ZT19, IA1, IA2, 1, %%MAC_TYPE
         jmp             %%_cbc_enc_done
 %%_final_blocks_2:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 2, %%CBC_MAC
+                         ZT18, ZT19, IA1, IA2, 2, %%MAC_TYPE
 %%_cbc_enc_done:
         ;; store IV's per lane
-        vmovdqa64       [ARG + _aesarg_IV + 16*0],  ZIV00_03
-        vmovdqa64       [ARG + _aesarg_IV + 16*4],  ZIV04_07
-        vmovdqa64       [ARG + _aesarg_IV + 16*8],  ZIV08_11
-        vmovdqa64       [ARG + _aesarg_IV + 16*12], ZIV12_15
+        vmovdqa64       [%%IV + 16*0],  ZIV00_03
+        vmovdqa64       [%%IV + 16*4],  ZIV04_07
+        vmovdqa64       [%%IV + 16*8],  ZIV08_11
+        vmovdqa64       [%%IV + 16*12], ZIV12_15
 %endmacro
 
 
@@ -808,7 +832,7 @@ section .text
 MKGLOBAL(aes_cbc_enc_128_vaes_avx512,function,internal)
 aes_cbc_enc_128_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 9, 0
+        CBC_ENC 9, MAC_TYPE_NONE
         FUNC_RESTORE
 
 %ifdef SAFE_DATA
@@ -823,7 +847,7 @@ aes_cbc_enc_128_vaes_avx512:
 MKGLOBAL(aes_cbc_enc_192_vaes_avx512,function,internal)
 aes_cbc_enc_192_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 11, 0
+        CBC_ENC 11, MAC_TYPE_NONE
         FUNC_RESTORE
 
 %ifdef SAFE_DATA
@@ -837,7 +861,7 @@ aes_cbc_enc_192_vaes_avx512:
 MKGLOBAL(aes_cbc_enc_256_vaes_avx512,function,internal)
 aes_cbc_enc_256_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 13, 0
+        CBC_ENC 13, MAC_TYPE_NONE
         FUNC_RESTORE
         ret
 
@@ -847,7 +871,7 @@ aes_cbc_enc_256_vaes_avx512:
 MKGLOBAL(aes128_cbc_mac_vaes_avx512,function,internal)
 aes128_cbc_mac_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 9, 1
+        CBC_ENC 9, MAC_TYPE_CBC
         FUNC_RESTORE
 
 %ifdef SAFE_DATA
@@ -862,7 +886,22 @@ aes128_cbc_mac_vaes_avx512:
 MKGLOBAL(aes256_cbc_mac_vaes_avx512,function,internal)
 aes256_cbc_mac_vaes_avx512:
         FUNC_SAVE
-        CBC_ENC 13, 1
+        CBC_ENC 13, MAC_TYPE_CBC
+        FUNC_RESTORE
+
+%ifdef SAFE_DATA
+	clear_all_zmms_asm
+%endif ;; SAFE_DATA
+
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  void aes_xcbc_mac_128_vaes_avx512(AES_XCBC_ARGS_x16 *args, uint64_t len_in_bytes);
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes_xcbc_mac_128_vaes_avx512,function,internal)
+aes_xcbc_mac_128_vaes_avx512:
+        FUNC_SAVE
+        CBC_ENC 9, MAC_TYPE_XCBC
         FUNC_RESTORE
 
 %ifdef SAFE_DATA
