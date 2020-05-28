@@ -1163,7 +1163,7 @@ init_mb_mgr_avx512(IMB_MGR *state)
                sizeof(docsis_des_dec_ooo->args));
 
         /* Init ZUC out-of-order fields */
-        memset(zuc_eea3_ooo->lens, 0xFF,
+        memset(zuc_eea3_ooo->lens, 0,
                sizeof(zuc_eea3_ooo->lens));
         memset(zuc_eea3_ooo->job_in_lane, 0,
                sizeof(zuc_eea3_ooo->job_in_lane));

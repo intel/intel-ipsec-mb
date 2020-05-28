@@ -38,20 +38,20 @@
 %define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_no_gfni_avx512
 %define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_no_gfni_avx512
 %define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_no_gfni_avx512
-%define ZUC_EEA3_16_BUFFER zuc_eea3_16_buffer_job_no_gfni_avx512
 %define ZUC_EIA3_16_BUFFER zuc_eia3_16_buffer_job_no_gfni_avx512
 %define ZUC_INIT_16        asm_ZucInitialization_16_avx512
+%define ZUC_CIPHER         asm_ZucCipher_16_avx512
 %endif
 
 section .data
 default rel
 
-extern zuc_eea3_16_buffer_job_no_gfni_avx512
 extern zuc_eia3_16_buffer_job_no_gfni_avx512
-extern zuc_eea3_16_buffer_job_gfni_avx512
 extern zuc_eia3_16_buffer_job_gfni_avx512
 extern asm_ZucInitialization_16_avx512
 extern asm_ZucInitialization_16_gfni_avx512
+extern asm_ZucCipher_16_avx512
+extern asm_ZucCipher_16_gfni_avx512
 
 %ifdef LINUX
 %define arg1    rdi
@@ -91,14 +91,15 @@ MKGLOBAL(SUBMIT_JOB_ZUC_EEA3,function,internal)
 SUBMIT_JOB_ZUC_EEA3:
 
 ; idx needs to be in rbp
-%define tmp              rbp
 %define len              rbp
 %define idx              rbp
 
 %define lane             r8
 %define unused_lanes     rbx
+%define tmp              r12
 %define tmp2             r13
 %define tmp3             r14
+%define min_len          r14
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -128,16 +129,11 @@ SUBMIT_JOB_ZUC_EEA3:
         add	qword [state + _zuc_lanes_in_use], 1
 
         mov     [state + _zuc_job_in_lane + lane*8], job
-%ifndef LINUX
-        mov     tmp2, rcx
-%endif
-        mov     rcx, lane
-        mov     tmp, 1
-        shl     tmp, cl
-%ifndef LINUX
-        mov     rcx, tmp2
-%endif
+        ; New job that needs init (update bit in zuc_init_not_done bitmask)
+        SHIFT_GP        1, lane, tmp, tmp2, left
+        kmovq   k1, tmp
         or      [state + _zuc_init_not_done], WORD(tmp)
+
         mov     tmp, [job + _src]
         add     tmp, [job + _cipher_start_src_offset_in_bytes]
         mov     [state + _zuc_args_in + lane*8], tmp
@@ -151,25 +147,30 @@ SUBMIT_JOB_ZUC_EEA3:
 
         ;; Update lane len
         vmovdqa64       ymm0, [state + _zuc_lens]
-        SHIFT_GP        1, lane, tmp3, tmp2, left
-        kmovq           k1, tmp3
-
         vpbroadcastw    ymm1, WORD(len)
         vmovdqu16       ymm0{k1}, ymm1
         vmovdqa64       [state + _zuc_lens], ymm0
 
+        ;; Find min length for lanes 0-7
+        vphminposuw     xmm2, xmm0
+
         cmp     qword [state + _zuc_lanes_in_use], 16
         jne     return_null_submit_eea3
 
-        ; Search for zero length (if all lengths are non zero, execute crypto code)
-        ; If at least one of the lengths is zero, it means that the job has been completed
-        ; and it can be returned (leaving the lane id in "idx"), without executing
-        ; any crypto code
-        vpxor   ymm1, ymm1
-        vpcmpw  k1, ymm0, ymm1, 0
-        kmovw   DWORD(idx), k1
-        bsf     DWORD(idx), DWORD(tmp)
-        jnz     len_is_0_submit_eea3
+        ; Find min length for lanes 8-15
+        vpextrw         DWORD(min_len), xmm2, 0   ; min value
+        vpextrw         DWORD(idx), xmm2, 1   ; min index
+        vextracti128    xmm1, ymm0, 1
+        vphminposuw     xmm2, xmm1
+        vpextrw         DWORD(tmp), xmm2, 0       ; min value
+        cmp             DWORD(min_len), DWORD(tmp)
+        jle             use_min
+        vpextrw         DWORD(idx), xmm2, 1   ; min index
+        add             DWORD(idx), 8               ; but index +8
+        mov             min_len, tmp                    ; min len
+use_min:
+        cmp             min_len, 0
+        je              len_is_0_submit_eea3
 
         ; Move state into r11, as register for state will be used
         ; to pass parameter to next function
@@ -196,25 +197,22 @@ SUBMIT_JOB_ZUC_EEA3:
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 32 bytes for 4 parameters (already aligned to 16 bytes)
-        sub     rsp, 32
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 40
 %endif
-        mov     arg1, r11
+        lea     arg1, [r11 + _zuc_state]
         lea     arg2, [r11 + _zuc_args_in]
         lea     arg3, [r11 + _zuc_args_out]
         lea     arg4, [r11 + _zuc_lens]
+        mov     arg5, min_len
 
-        call    ZUC_EEA3_16_BUFFER
+        call    ZUC_CIPHER
 
 %ifndef LINUX
-        add     rsp, 32
+        add     rsp, 40
 %endif
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
-
-        ;; Clear all lengths (function will encrypt whole buffers)
-        vpxor   ymm0, ymm0
-        vmovdqa [state + _zuc_lens], ymm0
 
 len_is_0_submit_eea3:
         ; process completed job "idx"
@@ -224,7 +222,6 @@ len_is_0_submit_eea3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_AES
-        VPINSRW_M256 state + _zuc_lens, xmm0, xmm1, tmp2, idx, 0xFFFF, scale_x16
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -259,13 +256,15 @@ FLUSH_JOB_ZUC_EEA3:
 
 %define tmp2             rax
 
-; idx needs to be in rbp
+; idx needs to be in rbp (will be maintained after function calls)
 %define tmp              rbp
 %define idx              rbp
 
 %define tmp3             r8
 %define tmp4             r9
 %define tmp5             r10
+%define null_jobs_mask   r13 ; Will be maintained after function calls
+%define min_len          r14 ; Will be maintained after function calls
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -288,15 +287,7 @@ FLUSH_JOB_ZUC_EEA3:
         cmp     qword [state + _zuc_lanes_in_use], 0
         jz      return_null_flush_eea3
 
-        ; Find if a job has been finished (length is zero)
-        vpxor           ymm1, ymm1
-        vmovdqa         ymm0, [state + _zuc_lens]
-        vpcmpw          k1, ymm0, ymm1, 0
-        kmovw           DWORD(idx), k1
-        bsf             DWORD(idx), DWORD(tmp)
-        jnz             len_is_0_flush_eea3
-
-        ; find a lane with a non-null job
+        ; Find lanes with NULL jobs
         vpxorq          zmm0, zmm0
         vmovdqu64       zmm1, [state + _zuc_job_in_lane]
         vmovdqu64       zmm2, [state + _zuc_job_in_lane + (8*8)]
@@ -313,51 +304,73 @@ FLUSH_JOB_ZUC_EEA3:
         kmovw           k4, DWORD(tmp3)
         not             BYTE(tmp4)
         kmovw           k5, DWORD(tmp4)
-        mov             DWORD(tmp3), DWORD(tmp5)
-        not             WORD(tmp3)
-        or              [state + _zuc_init_not_done], WORD(tmp3)
-        kmovw           k6, DWORD(tmp3)         ; mask of NULL jobs in k4, k5 and k6
-        mov             DWORD(tmp3), DWORD(tmp5)
-        xor             tmp5, tmp5
-        bsf             WORD(tmp5), WORD(tmp3)   ; index of the 1st set bit in tmp5
+        mov             DWORD(null_jobs_mask), DWORD(tmp5)
+        not             WORD(null_jobs_mask)
+        kmovw           k6, DWORD(null_jobs_mask)         ; mask of NULL jobs in k4, k5 and k6
+        ;; - Update lengths of NULL lanes to 0xFFFF, to find minimum
+        vmovdqa         ymm0, [state + _zuc_lens]
+        mov             WORD(tmp3), 0xffff
+        vpbroadcastw    ymm1, WORD(tmp3)
+        vmovdqu16       ymm0{k6}, ymm1
+        vmovdqa64       [state + _zuc_lens], ymm0
 
-        ;; copy good lane data into NULL lanes
+        ; Find if a job has been finished (length is zero)
+        vpxor           ymm1, ymm1
+        vpcmpw          k1, ymm0, ymm1, 0
+        kmovw           DWORD(idx), k1
+        bsf             DWORD(idx), DWORD(tmp)
+        jnz             len_is_0_flush_eea3
+
+        ;; Find min length for lanes 0-7
+        vphminposuw     xmm2, xmm0
+
+        ; extract min length of lanes 0-7
+        vpextrw         DWORD(min_len), xmm2, 0   ; min value
+        vpextrw         DWORD(idx), xmm2, 1   ; min index
+
+        ;; Update lens and find min for lanes 8-15
+        vextracti128    xmm1, ymm0, 1
+        vphminposuw     xmm2, xmm1
+        vpextrw         DWORD(tmp3), xmm2, 0       ; min value
+        cmp             DWORD(min_len), DWORD(tmp3)
+        jle             use_min_flush
+        vpextrw         DWORD(idx), xmm2, 1   ; min index
+        add             DWORD(idx), 8               ; but index +8
+        mov             min_len, tmp3                    ; min len
+use_min_flush:
+
+        ; Move state into r12, as register for state will be used
+        ; to pass parameter to next function
+        mov     r12, state
+
+        ;; copy good lane data (with minimum length) into NULL lanes
         ;; - k1(L8)/k2(H8)    - masks of non-null jobs
         ;; - k4(L8)/k5(H8)/k6 - masks of NULL jobs
-        ;; - tmp5 index of 1st non-null job
+        ;; - idx index of job with minimum length
 
         ;; - in pointer
-        mov             tmp3, [state + _zuc_args_in + tmp5*8]
+        mov             tmp3, [state + _zuc_args_in + idx*8]
         vpbroadcastq    zmm1, tmp3
         vmovdqu64       [state + _zuc_args_in + (0*PTR_SZ)]{k4}, zmm1
         vmovdqu64       [state + _zuc_args_in + (8*PTR_SZ)]{k5}, zmm1
         ;; - out pointer
-        mov             tmp3, [state + _zuc_args_out + tmp5*8]
+        mov             tmp3, [state + _zuc_args_out + idx*8]
         vpbroadcastq    zmm1, tmp3
         vmovdqu64       [state + _zuc_args_out + (0*PTR_SZ)]{k4}, zmm1
         vmovdqu64       [state + _zuc_args_out + (8*PTR_SZ)]{k5}, zmm1
         ;; - key pointer
-        mov             tmp3, [state + _zuc_args_keys + tmp5*8]
+        mov             tmp3, [state + _zuc_args_keys + idx*8]
         vpbroadcastq    zmm1, tmp3
         vmovdqu64       [state + _zuc_args_keys + (0*PTR_SZ)]{k4}, zmm1
         vmovdqu64       [state + _zuc_args_keys + (8*PTR_SZ)]{k5}, zmm1
         ;; - IV pointer
-        mov             tmp3, [state + _zuc_args_IV + tmp5*8]
+        mov             tmp3, [state + _zuc_args_IV + idx*8]
         vpbroadcastq    zmm1, tmp3
         vmovdqu64       [state + _zuc_args_IV + (0*PTR_SZ)]{k4}, zmm1
         vmovdqu64       [state + _zuc_args_IV + (8*PTR_SZ)]{k5}, zmm1
-        ;; - len
-        mov             WORD(tmp3), [state + _zuc_lens + tmp5*2]
-        vpbroadcastw    zmm1, WORD(tmp3)
-        vmovdqu16       [state + _zuc_lens]{k6}, zmm1
 
-        kmovq   tmp3, k6
-        push    tmp3 ;; Save NULL jobs mask
-        push    tmp5 ;; Save valid idx
-
-        ; Move state into r11, as register for state will be used
-        ; to pass parameter to next function
-        mov     r12, state
+        cmp     word [r12 + _zuc_init_not_done], 0
+        je      skip_init_flush
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
@@ -376,35 +389,43 @@ FLUSH_JOB_ZUC_EEA3:
 %endif
         mov     word [r12 + _zuc_init_not_done], 0
 
+skip_init_flush:
+        ;; Copy state from valid lane into NULL job masks
+        kmovq   k6, null_jobs_mask
+
+        ;; Copy LFSR registers
+%assign off 0
+%rep 16
+        mov     DWORD(tmp4), [r12 + _zuc_state_lfsr + off + idx*4]
+        vpbroadcastd    zmm0, DWORD(tmp4)
+        vmovdqa32 [r12 + _zuc_state_lfsr + off]{k6}, zmm0
+%assign off (off + 64)
+%endrep
+        ;; Copy FR1-2, X0-3
+        mov   DWORD(tmp4), [r12 + _zuc_state_fr1 + idx*4]
+        vpbroadcastd    zmm0, DWORD(tmp4)
+        vmovdqa32 [r12 + _zuc_state_fr1]{k6}, zmm0
+        mov   DWORD(tmp4), [r12 + _zuc_state_fr2 + idx*4]
+        vpbroadcastd    zmm0, DWORD(tmp4)
+        vmovdqa32 [r12 + _zuc_state_fr2]{k6}, zmm0
+
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 32 bytes for 4 parameters (already aligned to 16 bytes)
-        sub     rsp, 32
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 40
 %endif
-        mov     arg1, r12
+        lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
         lea     arg4, [r12 + _zuc_lens]
+        mov     arg5, min_len
 
-        call    ZUC_EEA3_16_BUFFER
+        call    ZUC_CIPHER
 
 %ifndef LINUX
-        add     rsp, 32
+        add     rsp, 40
 %endif
-        pop     idx ;; Restore valid idx
-        pop     tmp3 ;; Restore NULL jobs mask
-        kmovq   k6, tmp3
         mov     state, [rsp + _gpr_save + 8*8]
-
-        ;; Clear all lengths on valid jobs and set 0xFFFF to non-valid jobs
-        ;; (crypto code above will encrypt all valid buffers)
-        vpxor   ymm0, ymm0
-        knotw   k6, k6  ;; Non-NULL jobs mask
-        vmovdqu16 [state + _zuc_lens]{k6}, ymm0
-
-        vpternlogq ymm0, ymm0, ymm0, 0x0F ;; YMM0 = 0xFF...FF
-        knotw    k6, k6 ;; NULL jobs mask
-        vmovdqu16 [state + _zuc_lens]{k6}, ymm0
 
 len_is_0_flush_eea3:
         ; process completed job "idx"
@@ -413,7 +434,6 @@ len_is_0_flush_eea3:
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        VPINSRW_M256 state + _zuc_lens, xmm0, xmm1, tmp4, idx, 0xFFFF, scale_x16
         or      dword [job_rax + _status], STS_COMPLETED_AES
         shl     unused_lanes, 4
         or      unused_lanes, idx

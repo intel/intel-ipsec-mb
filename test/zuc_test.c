@@ -451,6 +451,10 @@ test_output(const uint8_t *out, const uint8_t *ref, const uint32_t bytelen,
                         printf("%s : PASS\n", err_msg);
 #endif
         }
+#ifdef DEBUG
+        else
+                printf("%s : PASS\n", err_msg);
+#endif
         fflush(stdout);
 
         return ret;
