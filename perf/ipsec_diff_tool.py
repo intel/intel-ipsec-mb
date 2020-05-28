@@ -32,10 +32,11 @@
 """
 
 import sys
-
 # Number of parameters (ARCH, CIPHER_MODE, DIR, HASH_ALG, KEY_SIZE)
 PAR_NUM = 5
-COL_MAX = 13
+COL_WIDTH = 14
+CYCLE_COST = False
+PACKET_SIZE = 0
 
 class Variant(object):
     """
@@ -86,9 +87,9 @@ class Variant(object):
         """
         slope = "{:.5f}".format(self.slope)
         intercept = "{:.5f}".format(self.intercept)
-        return (slope + " "*(COL_MAX-len(str(slope)))
-                      + intercept
-                      + " "*(COL_MAX-len(str(intercept))))
+        return (slope + " "*(COL_WIDTH-len(str(slope)))\
+                      + intercept\
+                      + " "*(COL_WIDTH-len(str(intercept))))
 
 class VarList(list):
     """
@@ -122,9 +123,18 @@ class VarList(list):
         print("TOLERANCE: {:.2f}%".format(tolerance))
 
         warning = False
+        #Checks if CYCLE_COST has been set to true with the
+        #-c flag and prints the appropriate values
+        if CYCLE_COST:
+            headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
+                        "KEYSZ", "SLOPE A", "INTERCEPT", "SLOPE B",
+                        "INTERCEPT B", "CYCLE COST A", "CYCLE COST B"]
+            print("Buffer size: {}".format(PACKET_SIZE))
+        else:
+            headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
+                        "KEYSZ", "SLOPE A", "INTERCEPT", "SLOPE B", "INTERCEPT B"]
+        print("".join(j.ljust(COL_WIDTH) for j in headings))
 
-        headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH", "KEYSZ", "SLOPE A", "INTERCEPT", "SLOPE B", "INTERCEPT B"]
-        print("".join(j.ljust(COL_MAX) for j in headings))
         for i, obj_a in enumerate(self):
             obj_b = list_b.find_obj(obj_a.params)
             if obj_b != None:
@@ -141,28 +151,51 @@ class VarList(list):
                     warning = True
                     data = (obj_b.get_params())
                     number = i +1
-                    print(str(number) + " "*(COL_MAX-len(str(number)))
-                                      + "".join(j.ljust(COL_MAX) for j in data)
-                                      + obj_a.get_lin_func_str()
-                                      + obj_b.get_lin_func_str())
+                    if CYCLE_COST:
+                        cycle_cost_a = "{:.5f}".format(obj_a.slope * int(PACKET_SIZE) + obj_a.intercept)
+                        cycle_cost_b = "{:.5f}".format(obj_b.slope * int(PACKET_SIZE) + obj_b.intercept)
+                        print(str(number) + " "*(COL_WIDTH-len(str(number)))\
+                                          + "".join(j.ljust(COL_WIDTH) for j in data)\
+                                          + obj_a.get_lin_func_str()\
+                                          + obj_b.get_lin_func_str()\
+                                          + cycle_cost_a\
+                                          + " "*(COL_WIDTH-len(str(cycle_cost_a)))\
+                                          + cycle_cost_b)
 
+                    else:
+                        print(str(number) + " "*(COL_WIDTH-len(str(number)))\
+                                          + "".join(j.ljust(COL_WIDTH) for j in data)\
+                                          + obj_a.get_lin_func_str()\
+                                          + obj_b.get_lin_func_str())
         if not warning:
             print("No differences found.")
         return warning
 
     def printout(self):
         """
-        Prints out readable representation of the list
+        Prints out readable representation of the list. Self.analyze is set to true.
         """
-        
-        headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH", "KEYSZ", "SLOPE A", "INTERCEPT"]
-        print("".join(j.ljust(COL_MAX) for j in headings))
+        if CYCLE_COST:
+            headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
+                        "KEYSZ", "SLOPE A", "INTERCEPT", "CYCLE COST A"]
+            print("Buffer size: {}".format(PACKET_SIZE))
+        else:
+            headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
+                        "KEYSZ", "SLOPE A", "INTERCEPT"]
+        print("".join(j.ljust(COL_WIDTH) for j in headings))
         for i, obj in enumerate(self):
             number = i+1
             data = obj.get_params()
-            print (str(number)  + " "*(COL_MAX-len(str(number)))
-				+ "".join(j.ljust(COL_MAX) for j in data)
-				+ obj.get_lin_func_str())
+            if CYCLE_COST:
+                cycle_cost_a = "{:.5f}".format(obj.slope * int(PACKET_SIZE) + obj.intercept)
+                print (str(number)  + " "*(COL_WIDTH-len(str(number)))\
+				                    + "".join(j.ljust(COL_WIDTH) for j in data)\
+				                    + obj.get_lin_func_str()\
+                                    + cycle_cost_a)
+            else:
+                print (str(number)  + " "*(COL_WIDTH-len(str(number)))\
+				                    + "".join(j.ljust(COL_WIDTH) for j in data)\
+				                    + obj.get_lin_func_str())
 
 class Parser(object):
     """
@@ -267,25 +300,61 @@ class DiffTool(object):
         """
         Get commandline arguments
         """
+        global PACKET_SIZE
+        global CYCLE_COST
+        for i in range(len(sys.argv)):
+            arg = sys.argv[i]
+            if arg == "-c":
+                CYCLE_COST = True
+                if sys.argv[i+1].isdigit():
+                    PACKET_SIZE = sys.argv[i+1]
+                else:
+                    print("Please enter a number for the packet size for cycle cost")
+                    exit(1)
+            if arg == "-v":
+                self.verbose = True
+            if arg == "-a":
+                self.analyze = True
         if len(sys.argv) < 3 or sys.argv[1] == "-h":
             self.usage()
             exit(1)
-        if sys.argv[1] == "-a":
-            self.analyze = True
-            self.fname_a = sys.argv[2]
-        elif sys.argv[2] == "-a":
-            if sys.argv[1] == "-v":
-                self.verbose = True
-            self.analyze = True
+        if self.analyze:
+            if self.verbose:
+                #-a -v
+                if CYCLE_COST:
+                    #-a -v -c
+                    self.fname_a = sys.argv[5]
+                else:
+                    #-a -v
+                    self.fname_a = sys.argv[3]
+            elif CYCLE_COST:
+                #-a -c
+                self.fname_a = sys.argv[4]
+            else:
+                #-a
+                self.fname_a = sys.argv[2]
+        elif self.verbose:
+            #-v
+            if CYCLE_COST:
+                #-v -c
+                self.fname_a = sys.argv[4]
+                self.fname_b = sys.argv[5]
+                if len(sys.argv) >= 7:
+                    self.tolerance = float(sys.argv[6])
+            else:
+                #-v
+                self.fname_a = sys.argv[2]
+                self.fname_b = sys.argv[3]
+                if len(sys.argv) >= 5:
+                    self.tolerance = float(sys.argv[4])
+        elif CYCLE_COST:
+            #-c
             self.fname_a = sys.argv[3]
-        elif sys.argv[1] == "-v":
-            self.verbose = True
-            self.fname_a = sys.argv[2]
-            self.fname_b = sys.argv[3]
-            if len(sys.argv) >= 5:
-                self.tolerance = float(sys.argv[4])
-
+            self.fname_b = sys.argv[4]
+            if len(sys.argv) >= 6:
+                self.tolerance = float(sys.argv[5])
         else:
+            #no args
             self.fname_a = sys.argv[1]
             self.fname_b = sys.argv[2]
             if len(sys.argv) >= 4:
@@ -305,7 +374,7 @@ class DiffTool(object):
             list_b, sizes_b = parser_b.load()
             if sizes_a != sizes_b:
                 print("Error. Buffer size lists in two compared " \
-                        "data sets differ! Aborting.\n")
+                       "data sets differ! Aborting.\n")
                 exit(1)
             warning = list_a.compare(list_b, self.tolerance) # Compares list_b against list_a
             if warning:
