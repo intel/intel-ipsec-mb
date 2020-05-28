@@ -54,5 +54,8 @@ help:
 README:
 	pandoc -f markdown -t plain $@.md -o $@
 
+.PHONY: TAGS
 TAGS:
 	find ./ -name "*.[ch]" -print | etags -
+	find ./ -name '*.asm'  | etags -a -
+	find ./ -name '*.inc'  | etags -a -
