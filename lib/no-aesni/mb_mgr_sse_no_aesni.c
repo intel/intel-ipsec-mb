@@ -732,6 +732,7 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
                 aes_xcbc_ooo->ldata[j].final_block[16] = 0x80;
                 memset(aes_xcbc_ooo->ldata[j].final_block + 17, 0x00, 15);
         }
+        aes_xcbc_ooo->num_lanes_inuse = 0;
 
         /* Init AES-CCM auth out-of-order fields */
         memset(aes_ccm_ooo, 0, sizeof(MB_MGR_CCM_OOO));

@@ -688,6 +688,7 @@ init_mb_mgr_avx2(IMB_MGR *state)
                 aes_xcbc_ooo->ldata[j].final_block[16] = 0x80;
                 memset(aes_xcbc_ooo->ldata[j].final_block + 17, 0x00, 15);
         }
+        aes_xcbc_ooo->num_lanes_inuse = 0;
 
         /* Init AES-CCM auth out-of-order fields */
         for (j = 0; j < 8; j++) {
