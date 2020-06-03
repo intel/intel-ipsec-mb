@@ -280,11 +280,6 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
 
-                        singlePktState.bX0 = state.bX0[i];
-                        singlePktState.bX1 = state.bX1[i];
-                        singlePktState.bX2 = state.bX2[i];
-                        singlePktState.bX3 = state.bX3[i];
-
                         numKeyStreamsPerPkt = remainBytes[i] / ZUC_KEYSTR_LEN;
                         numBytesLeftOver = remainBytes[i]  % ZUC_KEYSTR_LEN;
 
@@ -688,11 +683,6 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
 
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
-
-                        singlePktState.bX0 = state.bX0[i];
-                        singlePktState.bX1 = state.bX1[i];
-                        singlePktState.bX2 = state.bX2[i];
-                        singlePktState.bX3 = state.bX3[i];
                 }
 
                 while (remainBits >= keyStreamLengthInBits) {
@@ -905,11 +895,6 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
 
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
-
-                        singlePktState.bX0 = state.bX0[i];
-                        singlePktState.bX1 = state.bX1[i];
-                        singlePktState.bX2 = state.bX2[i];
-                        singlePktState.bX3 = state.bX3[i];
                 }
 
                 while (remainBits >= keyStreamLengthInBits) {
