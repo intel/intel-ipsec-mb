@@ -175,6 +175,7 @@ typedef struct {
          */
         uint64_t unused_lanes;
         XCBC_LANE_DATA ldata[16];
+        uint64_t num_lanes_inuse;
         uint64_t road_block;
 } MB_MGR_AES_XCBC_OOO;
 

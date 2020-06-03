@@ -127,6 +127,7 @@ FIELD	_aes_xcbc_args,	_AES_XCBC_ARGS_X16_size, _AES_XCBC_ARGS_X16_align
 FIELD	_aes_xcbc_lens,		16*2,	32
 FIELD	_aes_xcbc_unused_lanes, 8,	8
 FIELD	_aes_xcbc_ldata, _XCBC_LANE_DATA_size*16, _XCBC_LANE_DATA_align
+FIELD   _aes_xcbc_num_lanes_inuse, 8,   8
 FIELD   _aes_xcbc_road_block,   8,      8
 END_FIELDS
 %assign _MB_MGR_AES_XCBC_OOO_size	_FIELD_OFFSET
@@ -135,7 +136,7 @@ END_FIELDS
 _aes_xcbc_args_in	equ	_aes_xcbc_args + _aesxcbcarg_in
 _aes_xcbc_args_keys	equ	_aes_xcbc_args + _aesxcbcarg_keys
 _aes_xcbc_args_ICV	equ	_aes_xcbc_args + _aesxcbcarg_ICV
-
+_aes_xcbc_args_key_tab  equ     _aes_xcbc_args + _aesxcbcarg_key_tab
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define CMAC Out of Order Data Structures
