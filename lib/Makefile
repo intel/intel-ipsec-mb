@@ -130,9 +130,9 @@ CFLAGS += $(OPT)
 
 # Set generic architectural optimizations
 OPT_SSE := -msse4.2 -maes -mpclmul
-OPT_AVX := -mavx -maes
-OPT_AVX2 := -mavx2 -maes
-OPT_AVX512 := -mavx2 -maes # -mavx512f is not available until gcc 4.9
+OPT_AVX := -mavx -maes -mpclmul
+OPT_AVX2 := -mavx2 -maes -mpclmul
+OPT_AVX512 := -mavx2 -maes -mpclmul # -mavx512f is not available until gcc 4.9
 OPT_NOAESNI := -msse4.2 -mno-aes -mno-pclmul
 
 # Set architectural optimizations for GCC/CC
@@ -141,9 +141,9 @@ GCC_VERSION = $(shell $(CC) -dumpversion | cut -d. -f1)
 GCC_GE_V5 = $(shell [ $(GCC_VERSION) -ge 5 ] && echo true)
 ifeq ($(GCC_GE_V5),true)
 OPT_SSE := -march=nehalem -maes -mpclmul
-OPT_AVX := -march=sandybridge -maes
-OPT_AVX2 := -march=haswell -maes
-OPT_AVX512 := -march=broadwell
+OPT_AVX := -march=sandybridge -maes -mpclmul
+OPT_AVX2 := -march=haswell -maes -mpclmul
+OPT_AVX512 := -march=broadwell -maes -mpclmul
 OPT_NOAESNI := -march=nehalem -mno-pclmul
 endif
 endif
@@ -153,10 +153,10 @@ ifeq ($(CC),$(filter $(CC),clang))
 CLANG_VERSION = $(shell $(CC) --version | head -n 1 | cut -d ' ' -f 3)
 CLANG_GE_V381 = $(shell test "$(CLANG_VERSION)" \> "3.8.0" && echo true)
 ifeq ($(CLANG_GE_V381),true)
-OPT_SSE := -march=nehalem -maes
-OPT_AVX := -march=sandybridge -maes
-OPT_AVX2 := -march=haswell -maes
-OPT_AVX512 := -march=broadwell
+OPT_SSE := -march=nehalem -maes -mpclmul
+OPT_AVX := -march=sandybridge -maes -mpclmul
+OPT_AVX2 := -march=haswell -maes -mpclmul
+OPT_AVX512 := -march=broadwell -maes -mpclmul
 endif
 # remove CFLAGS that clang warns about
 CFLAGS := $(subst -fno-delete-null-pointer-checks,,$(CFLAGS))
