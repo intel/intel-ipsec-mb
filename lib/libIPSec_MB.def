@@ -502,3 +502,7 @@ EXPORTS
     zuc_eea3_4_buffer_gfni_sse                  @476
     zuc_eea3_n_buffer_gfni_sse                  @477
     zuc_eia3_n_buffer_gfni_sse                  @478
+    ghash_pre_sse_no_aesni                      @479
+    ghash_pre_sse                               @480
+    ghash_pre_avx_gen2                          @481
+    ghash_pre_vaes_avx512                       @482

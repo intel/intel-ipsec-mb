@@ -2813,6 +2813,66 @@ exit_dec_IV:
 	ret
 
 %ifdef GCM128_MODE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   ghash_pre_avx_gen2
+;       (const void *key, struct gcm_key_data *key_data)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(ghash_pre_avx_gen2,function,)
+ghash_pre_avx_gen2:
+;; Parameter is passed through register
+%ifdef SAFE_PARAM
+        ;; Check key != NULL
+        cmp     arg1, 0
+        jz      exit_ghash_pre
+
+        ;; Check key_data != NULL
+        cmp     arg2, 0
+        jz      exit_ghash_pre
+%endif
+
+%ifidn __OUTPUT_FORMAT__, win64
+        push    r14
+        mov     r14, rsp
+
+        sub     rsp, VARIABLE_OFFSET
+        and     rsp, ~63                                 ; align rsp to 64 bytes
+
+        ; only xmm6 needs to be maintained
+        vmovdqa [rsp + LOCAL_STORAGE + 0*16],xmm6
+%endif
+        vmovdqu xmm6, [arg1]
+        vpshufb  xmm6, [rel SHUF_MASK]
+        ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
+        vmovdqa  xmm2, xmm6
+        vpsllq   xmm6, xmm6, 1
+        vpsrlq   xmm2, xmm2, 63
+        vmovdqa  xmm1, xmm2
+        vpslldq  xmm2, xmm2, 8
+        vpsrldq  xmm1, xmm1, 8
+        vpor     xmm6, xmm6, xmm2
+        ;reduction
+        vpshufd  xmm2, xmm1, 00100100b
+        vpcmpeqd xmm2, [rel TWOONE]
+        vpand    xmm2, xmm2, [rel POLY]
+        vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vmovdqu  [arg2 + HashKey], xmm6                 ; store HashKey<<1 mod poly
+
+        PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+
+%ifdef SAFE_DATA
+        clear_scratch_gps_asm
+        clear_scratch_zmms_asm
+%endif
+%ifidn __OUTPUT_FORMAT__, win64
+        vmovdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]
+        mov     rsp, r14
+        pop     r14
+
+%endif
+exit_ghash_pre:
+        ret
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   ghash_avx_gen2
 ;        const struct gcm_key_data *key_data,

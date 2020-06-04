@@ -864,6 +864,18 @@ ghash_vaes_avx512(struct gcm_key_data *key_data, const void *in,
                   const uint64_t in_len, void *tag,
                   const uint64_t tag_len);
 
+IMB_DLL_EXPORT void
+ghash_pre_sse_no_aesni(const void *key, struct gcm_key_data *key_data);
+
+IMB_DLL_EXPORT void
+ghash_pre_sse(const void *key, struct gcm_key_data *key_data);
+
+IMB_DLL_EXPORT void
+ghash_pre_avx_gen2(const void *key, struct gcm_key_data *key_data);
+
+IMB_DLL_EXPORT void
+ghash_pre_vaes_avx512(const void *key, struct gcm_key_data *key_data);
+
 /*
  * GMAC API for SSE/AVX/AVX2/AVX512/AESNI emulation
  */

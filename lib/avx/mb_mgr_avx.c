@@ -864,6 +864,7 @@ init_mb_mgr_avx(IMB_MGR *state)
         state->gcm192_pre          = aes_gcm_pre_192_avx_gen2;
         state->gcm256_pre          = aes_gcm_pre_256_avx_gen2;
         state->ghash               = ghash_avx_gen2;
+        state->ghash_pre           = ghash_pre_avx_gen2;
 
         state->gmac128_init        = imb_aes_gmac_init_128_avx_gen2;
         state->gmac192_init        = imb_aes_gmac_init_192_avx_gen2;

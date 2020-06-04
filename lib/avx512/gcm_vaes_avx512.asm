@@ -4750,6 +4750,50 @@ exit_dec_IV:
         ret
 
 %ifdef GCM128_MODE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void   ghash_pre_avx512
+;       (const void *key, struct gcm_key_data *key_data)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(ghash_pre_vaes_avx512,function,)
+ghash_pre_vaes_avx512:
+;; Parameter is passed through register
+%ifdef SAFE_PARAM
+        ;; Check key != NULL
+        cmp     arg1, 0
+        jz      exit_ghash_pre
+
+        ;; Check key_data != NULL
+        cmp     arg2, 0
+        jz      exit_ghash_pre
+%endif
+
+        FUNC_SAVE
+
+        vmovdqu xmm6, [arg1]
+        vpshufb  xmm6, [rel SHUF_MASK]
+        ;;;;;;;;;;;;;;;  PRECOMPUTATION of HashKey<<1 mod poly from the HashKey;;;;;;;;;;;;;;;
+        vmovdqa  xmm2, xmm6
+        vpsllq   xmm6, xmm6, 1
+        vpsrlq   xmm2, xmm2, 63
+        vmovdqa  xmm1, xmm2
+        vpslldq  xmm2, xmm2, 8
+        vpsrldq  xmm1, xmm1, 8
+        vpor     xmm6, xmm6, xmm2
+        ;reduction
+        vpshufd  xmm2, xmm1, 00100100b
+        vpcmpeqd xmm2, [rel TWOONE]
+        vpand    xmm2, xmm2, [rel POLY]
+        vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        vmovdqu  [arg2 + HashKey], xmm6                 ; store HashKey<<1 mod poly
+
+        PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+
+        FUNC_RESTORE
+exit_ghash_pre:
+
+        ret
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   ghash_vaes_avx512
 ;        const struct gcm_key_data *key_data,

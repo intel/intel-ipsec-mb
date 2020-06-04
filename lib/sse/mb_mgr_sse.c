@@ -1104,6 +1104,7 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->gcm192_pre          = aes_gcm_pre_192_sse;
         state->gcm256_pre          = aes_gcm_pre_256_sse;
         state->ghash               = ghash_sse;
+        state->ghash_pre           = ghash_pre_sse;
 
         state->gmac128_init        = imb_aes_gmac_init_128_sse;
         state->gmac192_init        = imb_aes_gmac_init_192_sse;

@@ -855,6 +855,7 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->gcm192_pre          = aes_gcm_pre_192_sse_no_aesni;
         state->gcm256_pre          = aes_gcm_pre_256_sse_no_aesni;
         state->ghash               = ghash_sse_no_aesni;
+        state->ghash_pre           = ghash_pre_sse_no_aesni;
 
         state->gmac128_init        = imb_aes_gmac_init_128_sse_no_aesni;
         state->gmac192_init        = imb_aes_gmac_init_192_sse_no_aesni;
