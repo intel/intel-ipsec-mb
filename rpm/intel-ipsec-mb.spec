@@ -46,7 +46,9 @@ Group:              Development/Tools
 ExclusiveArch:      x86_64
 Source0:            https://github.com/intel/%{githubname}/archive/v%{githubver}.tar.gz
 URL:                https://github.com/intel/%{githubname}
-BuildRequires:      gcc, make, nasm
+BuildRequires:      make
+BuildRequires:      gcc >= 4.8.3
+BuildRequires:      nasm >= 2.14
 
 %description
 IPSEC cryptography library optimized for Intel Architecture
