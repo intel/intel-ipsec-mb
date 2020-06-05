@@ -634,14 +634,13 @@ static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                                          IMB_DIR_DECRYPT, 1);
                 else
                         IMB_SNOW3G_F8_1_BUFFER_BIT(mb_mgr, pKeySched, pIV,
-                                                   /*midBuff*/ dstBuff,
-                                                   /*dstBuff*/ midBuff,
+                                                   dstBuff, midBuff,
                                                    bit_len, head_offset);
 
-                if (membitcmp(midBuff /*dstBuff*/, srcBuff, bit_len, 4) != 0) {
+                if (membitcmp(midBuff, srcBuff, bit_len, 4) != 0) {
                         printf("Test6: snow3g_f8_1_bitbuffer(Dec) buffer:%d "
                                "size:%d offset:4\n", i, bit_len);
-                        snow3g_hexdump("Actual:", &dstBuff[0],
+                        snow3g_hexdump("Actual:", &midBuff[0],
                                        (length * 8 + 4 + 7) / 8);
                         snow3g_hexdump("Expected:", &srcBuff[0],
                                        (length * 8 + 4 + 7) / 8);
