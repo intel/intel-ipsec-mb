@@ -45,11 +45,13 @@ extern AES_XCBC_X16
 section .data
 default rel
 
-align 16
-dupw:	;ddq 0x01000100010001000100010001000100
-	dq 0x0100010001000100, 0x0100010001000100
-x80:    ;ddq 0x00000000000000000000000000000080
-        dq 0x0000000000000080, 0x0000000000000000
+align 64
+byte_len_to_mask_table:
+        dw      0x0000, 0x0001, 0x0003, 0x0007,
+        dw      0x000f, 0x001f, 0x003f, 0x007f,
+        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
+        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
+        dw      0xffff
 
 section .text
 
@@ -172,27 +174,25 @@ endstruc
 
 %endmacro
 
-; clear IVs, final block buffers and round key's in NULL lanes
-%macro CLEAR_IV_KEYS_SCRATCH_IN_NULL_LANES 3
+; clear final block buffers and round key's in NULL lanes
+%macro CLEAR_KEYS_FINAL_BLK_IN_NULL_LANES 3
 %define %%NULL_MASK     %1 ; [clobbered] GP to store NULL lane mask
-%define %%XTMP          %2 ; [clobbered] temp XMM reg
+%define %%YTMP          %2 ; [clobbered] temp YMM reg
 %define %%MASK_REG      %3 ; [in] mask register
 
-        vpxorq          %%XTMP, %%XTMP
+        vpxor           %%YTMP, %%YTMP
         kmovw           DWORD(%%NULL_MASK), %%MASK_REG
 %assign k 0 ; outer loop to iterate through lanes
 %rep 16
         bt              %%NULL_MASK, k
         jnc             %%_skip_clear %+ k
 
-        ;; clean lane scratch and IV buffers
-        vmovdqa64       [state + _xcbc_final_block + (k*16)], %%XTMP
-        vmovdqa64       [state + _xcbc_final_block + 16 + (k*16)], %%XTMP
-        vmovdqa64       [state + _aes_xcbc_args_ICV + (k*16)], %%XTMP
+        ;; clear final blocks and ICV buffers
+        vmovdqa         [state + _aes_xcbc_ldata + k * _XCBC_LANE_DATA_size + _xcbc_final_block], %%YTMP
 
 %assign j 0 ; inner loop to iterate through round keys
 %rep NUM_KEYS
-        vmovdqa64       [state + _aes_xcbc_args_key_tab + j + (k*16)], %%XTMP
+        vmovdqa         [state + _aes_xcbc_args_key_tab + j + (k*16)], XWORD(%%YTMP)
 %assign j (j + 256)
 
 %endrep
@@ -316,7 +316,7 @@ endstruc
         shr             tmp, 8
         kmovw           k5, DWORD(tmp)
 
-        mov             tmp, [state + _aes_xcbc_args_in + tmp2*8] ;; todo - keys
+        mov             tmp, [state + _aes_xcbc_args_in + tmp2*8]
         vpbroadcastq    zmm1, tmp
         vmovdqa64       [state + _aes_xcbc_args_in + (0*PTR_SZ)]{k4}, zmm1
         vmovdqa64       [state + _aes_xcbc_args_in + (8*PTR_SZ)]{k5}, zmm1
@@ -415,8 +415,34 @@ endstruc
 
 	; copy 12 bytes
 	vmovdqa	xmm0, [state + _aes_xcbc_args_ICV + idx]
-	vmovq	[icv], xmm0
-	vpextrd	[icv + 8], xmm0, 2 ;; @todo - opt
+        mov     tmp, 0xfff
+        kmovw   k1, DWORD(tmp)
+        vmovdqu8 [icv]{k1}, xmm0
+
+%ifdef SAFE_DATA
+        vpxor   ymm0, ymm0
+%ifidn %%SUBMIT_FLUSH, SUBMIT
+        ;; Clear final block (32 bytes)
+        vmovdqa [lane_data + _xcbc_final_block], ymm0
+
+        ;; Clear expanded keys
+%assign round 0
+%rep NUM_KEYS
+        vmovdqa [state + _aes_xcbc_args_key_tab + round * (16*16) + idx], xmm0
+%assign round (round + 1)
+%endrep
+
+%else ;; FLUSH
+        ;; Clear keys and final blocks of returned job and "NULL lanes"
+        shr     idx, 4 ;; divide by 16 to restore lane idx
+        xor     DWORD(tmp), DWORD(tmp)
+        bts     DWORD(tmp), DWORD(idx)
+        kmovw   k1, DWORD(tmp)
+        korw    k6, k1, k6
+        ;; k6 contains the mask of the jobs
+        CLEAR_KEYS_FINAL_BLK_IN_NULL_LANES tmp, ymm0, k6
+%endif
+%endif
 
 %%_return:
 
@@ -449,8 +475,15 @@ endstruc
 	sub	p, last_len	; adjust data pointer
 	lea	p2, [lane_data + _xcbc_final_block + 16] ; upper part of final
 	sub	p2, last_len	; adjust data pointer backwards
-	memcpy_avx_16_1 p2, p, last_len, tmp, tmp2
-        vmovdqa	xmm0, [rel x80]	; fill reg with padding
+
+        lea     tmp, [rel byte_len_to_mask_table]
+        kmovw   k1, word [tmp + last_len*2]
+
+        vmovdqu8 xmm0{k1}, [p]
+        vmovdqu8 [p2]{k1}, xmm0
+
+        mov     tmp, 0x80
+        vmovq   xmm0, tmp
 	vmovdqu	[lane_data + _xcbc_final_block + 16], xmm0 ; add padding
 	vmovdqu	xmm0, [p2]	; load final block to process
 	mov	tmp, [job + _k3] ; load K3 address
