@@ -1250,6 +1250,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         uint32_t aux;
         uint8_t gcm_key[32];
 
+        memset(&job_template, 0, sizeof(IMB_JOB));
+
         if ((params->cipher_mode == TEST_AESDOCSIS8) ||
             (params->cipher_mode == TEST_CNTR8))
                 size_aes = params->size_aes + 8;
