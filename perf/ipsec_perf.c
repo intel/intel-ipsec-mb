@@ -2225,6 +2225,7 @@ run_tests(void *arg)
                 fprintf(stderr, "Cannot allocate memory\n");
                 goto exit_failure;
         }
+        memset(variant_list, 0, total_variants * sizeof(struct variant_s));
 
         at_size = NUM_RUNS * params.num_sizes * sizeof(uint64_t);
         for (variant = 0, variant_ptr = variant_list;
@@ -2294,8 +2295,12 @@ exit:
         return;
 #endif
 exit_failure:
-        if (variant_list != NULL)
+        if (variant_list != NULL) {
+                /* Freeing variants list */
+                for (i = 0; i < total_variants; i++)
+                        free(variant_list[i].avg_times);
                 free(variant_list);
+        }
         free_mem(&buf, &keys);
         free_mb_mgr(p_mgr);
         exit(EXIT_FAILURE);
