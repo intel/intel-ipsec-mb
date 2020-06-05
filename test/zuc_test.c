@@ -190,10 +190,10 @@ int zuc_test(struct IMB_MGR *mb_mgr)
         const uint32_t numBuffs[] = {4, 8, 9, 16, 17};
         uint32_t i;
         uint32_t status = PASS_STATUS;
-        uint8_t *pKeys[MAXBUFS];
-        uint8_t *pIV[MAXBUFS];
-        uint8_t *pSrcData[MAXBUFS];
-        uint8_t *pDstData[MAXBUFS];
+        uint8_t *pKeys[MAXBUFS] = {0};
+        uint8_t *pIV[MAXBUFS] = {0};
+        uint8_t *pSrcData[MAXBUFS] = {0};
+        uint8_t *pDstData[MAXBUFS] = {0};
 
         printf("Running Functional Tests\n");
         fflush(stdout);
@@ -205,6 +205,7 @@ int zuc_test(struct IMB_MGR *mb_mgr)
         }
         if (createData(pDstData, MAXBUFS)) {
                 printf("createData() error\n");
+                freePtrArray(pSrcData, MAXBUFS);
                 return FAIL_STATUS;
         }
 
