@@ -74,7 +74,7 @@ https://github.com/intel/%{githubname}
 %postun -p /sbin/ldconfig
 
 %build
-make %{?_smp_mflags}
+make SAFE_PARAM=y SAFE_DATA=y %{?_smp_mflags}
 
 %install
 install -d %{buildroot}/%{_licensedir}/%{name}-%{fullversion}
