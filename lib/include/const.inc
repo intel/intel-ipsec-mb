@@ -165,4 +165,25 @@ extern padding_0x80_tab16
         PSLB_COMMON avx, right, %1,%2,%3,%4
 %endm
 
+;; Variable shift GP register
+%macro SHIFT_GP 5
+%define %%VAL           %1 ;; [in] GP reg or imm value to be shifted
+%define %%NBITS         %2 ;; [in] GP reg with number of bits to be shifted
+%define %%OUT           %3 ;; [out] GP containing shifted result
+%define %%TMP           %4 ;; [clobbered] tmp GP to save rcx
+%define %%DIR           %5 ;; [in] direction to shift "left" or "right"
+
+        mov     %%TMP, rcx       ; save rcx
+
+        mov     rcx, %%NBITS
+        mov     %%OUT, %%VAL
+%ifidn %%DIR, left
+        shl     %%OUT, cl
+%else
+        shr     %%OUT, cl
+%endif
+
+        mov     rcx, %%TMP       ; restore rcx
+%endmacro
+
 %endif ; end ifndef _CONST_INC_
