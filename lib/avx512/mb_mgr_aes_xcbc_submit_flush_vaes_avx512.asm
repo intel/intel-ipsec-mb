@@ -265,15 +265,8 @@ endstruc
 %%_end_fast_copy:
         ;; Update lane len
         vmovdqa64 ymm0, [state + _aes_xcbc_lens]
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, lane
-        mov     tmp, 1
-        shl     tmp, cl
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
+
+        SHIFT_GP 1, lane, tmp, tmp3, left
         kmovq   k1, tmp
 
         vpbroadcastw    ymm1, WORD(len)
@@ -376,15 +369,8 @@ endstruc
 
         ;; Update lane len
         vmovdqa64 ymm0, [state + _aes_xcbc_lens]
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, idx
-        mov     tmp, 1
-        shl     tmp, cl
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
+
+        SHIFT_GP 1, idx, tmp, tmp3, left
         kmovq   k1, tmp
 
         mov             tmp3, 16
