@@ -30,6 +30,7 @@
 %include "include/reg_sizes.asm"
 %include "include/os.asm"
 %include "include/clear_regs.asm"
+%include "include/aes_common.asm"
 %include "mb_mgr_datastruct.asm"
 
 ;; In System V AMD64 ABI
@@ -347,124 +348,94 @@ section .text
 
 ;; ===================================================================
 ;; ===================================================================
-;; AES128/256 CBC decryption on 1 to 8 blocks
+;; AES128/256 CBC decryption on 1 to 16 blocks
 ;; ===================================================================
-%macro AES_CBC_DEC_1_TO_8 27-34
-%define %%SRC        %1  ; [in] GP with pointer to source buffer
-%define %%DST        %2  ; [in] GP with pointer to destination buffer
-%define %%NUMBL      %3  ; [in] numerical constant with number of blocks to process
-%define %%OFFS       %4  ; [in/out] GP with src/dst buffer offset
-%define %%NBYTES     %5  ; [in/out] GP with number of bytes to decrypt
-%define %%XKEY0      %6  ; [in] XMM with preloaded key 0 / ARK (xmm0 - xmm15)
-%define %%KEY_PTR    %7  ; [in] GP with pointer to expanded AES decrypt keys
-%define %%XIV        %8  ; [in/out] IV in / last cipher text block on out (xmm0 - xmm15)
-%define %%XD0        %9  ; [clobbered] temporary XMM (any xmm)
-%define %%XD1        %10 ; [clobbered] temporary XMM (any xmm)
-%define %%XD2        %11 ; [clobbered] temporary XMM (any xmm)
-%define %%XD3        %12 ; [clobbered] temporary XMM (any xmm)
-%define %%XD4        %13 ; [clobbered] temporary XMM (any xmm)
-%define %%XD5        %14 ; [clobbered] temporary XMM (any xmm)
-%define %%XD6        %15 ; [clobbered] temporary XMM (any xmm)
-%define %%XD7        %16 ; [clobbered] temporary XMM (any xmm)
-%define %%XC0        %17 ; [out] block of clear text (xmm0 - xmm15)
-%define %%XC1        %18 ; [out] block of clear text (xmm0 - xmm15)
-%define %%XC2        %19 ; [out] block of clear text (xmm0 - xmm15)
-%define %%XC3        %20 ; [out] block of clear text (xmm0 - xmm15)
-%define %%XC4        %21 ; [out] block of clear text (xmm0 - xmm15)
-%define %%XC5        %22 ; [out] block of clear text (xmm0 - xmm15)
-%define %%XC6        %23 ; [out] block of clear text (xmm0 - xmm15)
-%define %%XC7        %24 ; [out] block of clear text (xmm0 - xmm15)
-%define %%XTKEY      %25 ; [clobbered] temporary XMM (xmm0 - xmm15)
-%define %%NROUNDS    %26 ; [in] Number of rounds (9 or 13)
-%define %%XCRCB0     %27 ; [out] XMM (any) to receive copy of clear text, or "no_reg_copy"
-%define %%XCRCB1     %28 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB2     %29 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB3     %30 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB4     %31 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB5     %32 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB6     %33 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
-%define %%XCRCB7     %34 ; [optional/out] clear text XMM (XCRCB0 != "no_reg_copy")
+%macro AES_CBC_DEC_1_TO_16 17
+%define %%SRC           %1  ; [in] GP with pointer to source buffer
+%define %%DST           %2  ; [in] GP with pointer to destination buffer
+%define %%NUMBL         %3  ; [in] numerical constant with number of blocks to process
+%define %%OFFS          %4  ; [in/out] GP with src/dst buffer offset
+%define %%NBYTES        %5  ; [in/out] GP with number of bytes to decrypt
+%define %%KEY_PTR       %6  ; [in] GP with pointer to expanded AES decrypt keys
+%define %%ZIV           %7  ; [in/out] IV in / last cipher text block on out (xmm0 - xmm15)
+%define %%NROUNDS       %8  ; [in] number of rounds; numerical value
+%define %%CIPHER_00_03  %9  ; [out] ZMM next 0-3 cipher blocks
+%define %%CIPHER_04_07  %10 ; [out] ZMM next 4-7 cipher blocks
+%define %%CIPHER_08_11  %11 ; [out] ZMM next 8-11 cipher blocks
+%define %%CIPHER_12_15  %12 ; [out] ZMM next 12-15 cipher blocks
+%define %%ZT1           %13 ; [clobbered] ZMM temporary
+%define %%ZT2           %14 ; [clobbered] ZMM temporary
+%define %%ZT3           %15 ; [clobbered] ZMM temporary
+%define %%ZT4           %16 ; [clobbered] ZMM temporary
+%define %%ZT5           %17 ; [clobbered] ZMM temporary
+
+        vinserti32x4    %%ZIV, XWORD(%%ZIV), 1
+        vinserti32x4    %%ZIV, XWORD(%%ZIV), 2
+        vinserti32x4    %%ZIV, XWORD(%%ZIV), 3
+
 
         ;; /////////////////////////////////////////////////
-        ;; load cipher text blocks XD0-XD7
-%assign i 0
-%rep %%NUMBL
-        vmovdqu64       %%XD %+ i, [%%SRC + %%OFFS + (i*16)]
-%assign i (i+1)
+        ;; load cipher text
+        ZMM_LOAD_BLOCKS_0_16 %%NUMBL, %%SRC, %%OFFS, \
+                %%CIPHER_00_03, %%CIPHER_04_07, \
+                %%CIPHER_08_11, %%CIPHER_12_15
+
+        ;; /////////////////////////////////////////////////
+        ;; prepare cipher text blocks for an XOR after AESDEC rounds
+        valignq         %%ZT1, %%CIPHER_00_03, %%ZIV, 6
+%if %%NUMBL > 4
+        valignq         %%ZT2, %%CIPHER_04_07, %%CIPHER_00_03, 6
+%endif
+%if %%NUMBL > 8
+        valignq         %%ZT3, %%CIPHER_08_11, %%CIPHER_04_07, 6
+%endif
+%if %%NUMBL > 12
+        valignq         %%ZT4, %%CIPHER_12_15, %%CIPHER_08_11, 6
+%endif
+
+        ;; /////////////////////////////////////////////////
+        ;; update IV with the last cipher block
+%if %%NUMBL < 4
+        valignq         %%ZIV, %%CIPHER_00_03, %%CIPHER_00_03, ((%%NUMBL % 4) * 2)
+%elif %%NUMBL == 4
+        vmovdqa64       %%ZIV, %%CIPHER_00_03
+%elif %%NUMBL < 8
+        valignq         %%ZIV, %%CIPHER_04_07, %%CIPHER_04_07, ((%%NUMBL % 4) * 2)
+%elif %%NUMBL == 8
+        vmovdqa64       %%ZIV, %%CIPHER_04_07
+%elif %%NUMBL < 12
+        valignq         %%ZIV, %%CIPHER_08_11, %%CIPHER_08_11, ((%%NUMBL % 4) * 2)
+%elif %%NUMBL == 12
+        vmovdqa64       %%ZIV, %%CIPHER_08_11
+%elif %%NUMBL < 16
+        valignq         %%ZIV, %%CIPHER_12_15, %%CIPHER_12_15, ((%%NUMBL % 4) * 2)
+%else ;; %%NUMBL == 16
+        vmovdqa64       %%ZIV, %%CIPHER_12_15
+%endif
+
+        ;; /////////////////////////////////////////////////
+        ;; AES rounds including XOR
+%assign j 0
+%rep (%%NROUNDS + 2)
+     vbroadcastf64x2    %%ZT5, [%%KEY_PTR + (j * 16)]
+     ZMM_AESDEC_ROUND_BLOCKS_0_16 %%CIPHER_00_03, %%CIPHER_04_07, \
+                        %%CIPHER_08_11, %%CIPHER_12_15, \
+                        %%ZT5, j, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        %%NUMBL, %%NROUNDS
+%assign j (j + 1)
 %endrep
 
         ;; /////////////////////////////////////////////////
-        ;; perform ARK => result in XC0-XC7
-%assign i 0
-%rep %%NUMBL
-	vpxorq          %%XC %+ i, %%XD %+ i, %%XKEY0
-%assign i (i+1)
-%endrep
+        ;; write plain text back to output
+        ZMM_STORE_BLOCKS_0_16 %%NUMBL, %%DST, %%OFFS, \
+                %%CIPHER_00_03, %%CIPHER_04_07, \
+                %%CIPHER_08_11, %%CIPHER_12_15
 
-        ;; AES rounds 1 to 9/13 & CRC blocks 0 to 8
-%assign crc_block 0
-%assign round 1
-%rep %%NROUNDS
-
-        ;; /////////////////////////////////////////////////
-        ;; AES decrypt round
-%assign i 0
-        vmovdqa64       %%XTKEY, [%%KEY_PTR + (round*16)]
-%rep %%NUMBL
-	vaesdec         %%XC %+ i, %%XC %+ i, %%XTKEY
-%assign i (i+1)
-%endrep ;; number of blocks
-%assign round (round + 1)
-
-%endrep ;; 9/13 x AES round (8 is max number of CRC blocks)
-
-        ;; /////////////////////////////////////////////////
-        ;; AES round 10/14 (the last one)
-        vmovdqa64       %%XTKEY, [%%KEY_PTR + (round*16)]
-%assign i 0
-%rep %%NUMBL
-	vaesdeclast     %%XC %+ i, %%XC %+ i, %%XTKEY
-%assign i (i+1)
-%endrep ;; number of blocks
-
-        ;; /////////////////////////////////////////////////
-        ;; AES-CBC final XOR operations against IV / cipher text blocks
-        ;; put the last cipher text block into XIV
-        vpxorq          %%XC0, %%XC0, %%XIV
-
-%assign i_ciph 1
-%assign i_data 0
-%rep (%%NUMBL - 1)
-        vpxorq          %%XC %+ i_ciph, %%XC %+ i_ciph, %%XD %+ i_data
-%assign i_ciph (i_ciph + 1)
-%assign i_data (i_data + 1)
-%endrep
-
-%assign i (%%NUMBL - 1)
-        vmovdqa64       %%XIV, %%XD %+ i
-
-        ;; /////////////////////////////////////////////////
-        ;; store clear text
-%assign i 0
-%rep %%NUMBL
-	vmovdqu64       [%%DST + %%OFFS + (i*16)], %%XC %+ i
-%assign i (i+1)
-%endrep
-
-        ;; \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-        ;; Copy clear text into different registers for CRC
-%ifnidn %%XCRCB0, no_reg_copy
-%assign i 0
-%rep %%NUMBL
-        vmovdqa64       %%XCRCB %+ i, %%XC %+ i
-%assign i (i+1)
-%endrep
-%endif          ;; !no_reg_copy
         ;; /////////////////////////////////////////////////
         ;; update lengths and offset
         add             %%OFFS, (%%NUMBL * 16)
         sub             %%NBYTES, (%%NUMBL * 16)
-%endmacro       ;; AES_CBC_DEC_1_TO_8
+%endmacro       ;; AES_CBC_DEC_1_TO_16
 
 ;; ===================================================================
 ;; ===================================================================
@@ -696,6 +667,8 @@ section .text
 %define %%NUM_BLOCKS %%GT1
 %define %%OFFSET     %%GT2
 
+%xdefine %%ZIV ZWORD(%%XIV)
+
         ;; Usable for AVX encoding
 %xdefine %%XCIPH0 XWORD(%%ZT1)
 %xdefine %%XCIPH1 XWORD(%%ZT2)
@@ -705,6 +678,11 @@ section .text
 %xdefine %%XCIPH5 XWORD(%%ZT6)
 %xdefine %%XCIPH6 XWORD(%%ZT7)
 %xdefine %%XCIPH7 XWORD(%%ZT8)
+
+%xdefine %%ZCIPH0 %%ZT1
+%xdefine %%ZCIPH1 %%ZT2
+%xdefine %%ZCIPH2 %%ZT3
+%xdefine %%ZCIPH3 %%ZT4
 
 %xdefine %%XCRC_TMP    XWORD(%%ZT9)
 %xdefine %%XCRC_MUL    XWORD(%%ZT10)
@@ -738,13 +716,12 @@ section .text
         prefetchw       [%%SRC + 1*64]
 
         vmovdqa64       %%XCRC_MUL, [rel rk1]
+        vmovdqa64       %%XKEY0, [%%KEYS + (0*16)]
 
         xor     %%OFFSET, %%OFFSET
 
         cmp     %%NUM_BYTES, 16
         jb      %%_check_partial_block
-
-        vmovdqa64       %%XKEY0, [%%KEYS + 0*16]
 
         mov     %%NUM_BLOCKS, %%NUM_BYTES
         shr     %%NUM_BLOCKS, 4
@@ -775,15 +752,23 @@ section .text
 %%_eq %+ align_blocks :
         ;; Start building the pipeline by decrypting number of blocks
         ;; - later cipher & CRC operations get stitched
-        AES_CBC_DEC_1_TO_8 %%SRC, %%DST, align_blocks, %%OFFSET, %%NUM_BYTES, \
-                           %%XKEY0, %%KEYS, %%XIV, \
-                           %%XT0, %%XT1, %%XT2, %%XT3, \
-                           %%XT4, %%XT5, %%XT6, %%XT7, \
-                           %%XCIPH0, %%XCIPH1, %%XCIPH2, %%XCIPH3, \
-                           %%XCIPH4, %%XCIPH5, %%XCIPH6, %%XCIPH7, \
-                           %%XTMP0, %%NROUNDS, \
-                           %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,     \
-                           %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
+        AES_CBC_DEC_1_TO_16 %%SRC, %%DST, align_blocks, %%OFFSET, %%NUM_BYTES, \
+                           %%KEYS, %%ZIV, %%NROUNDS, \
+                           %%ZCIPH0, %%ZCIPH1, %%ZCIPH2, %%ZCIPH3, \
+                           %%ZT24, %%ZT25, %%ZT26, %%ZT27, %%ZT28
+
+        vmovdqa64          %%XCRC0, XWORD(%%ZCIPH0)
+        vextracti32x4      %%XCRC1, %%ZCIPH0, 1
+        vextracti32x4      %%XCRC2, %%ZCIPH0, 2
+        vextracti32x4      %%XCRC3, %%ZCIPH0, 3
+
+        vmovdqa64          %%XCRC4, XWORD(%%ZCIPH1)
+        vextracti32x4      %%XCRC5, %%ZCIPH1, 1
+        vextracti32x4      %%XCRC6, %%ZCIPH1, 2
+        vextracti32x4      %%XCRC7, %%ZCIPH1, 3
+
+        vextracti32x4       %%XIV, %%ZIV, 3
+
         cmp     %%NUM_BYTES, (8*16)
         jae     %%_eq %+ align_blocks %+ _next_8
 
