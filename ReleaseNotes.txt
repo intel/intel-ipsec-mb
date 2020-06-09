@@ -13,12 +13,14 @@ Library
   for AES-GMAC, GHASH and hash calculation for AAD in AES-GCM
 - ZUC-EEA3 and ZUC-EIA3 Multi-buffer implemented for SSE using
   GFNI instructions.
+- AES-XCBC-128 implementation for AVX512 (VAES)
 
 LibTestApp
 - CCM tests extended to test AES-CCM-256
 - CMAC tests extended to test AES-CMAC-256
 - HEC tests added to test app
 - AES-GMAC SGL tests added to test app
+- AES-XCBC-128 tests added to test app
 
 LibPerfApp
 - AES-CCM-256 support added

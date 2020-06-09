@@ -92,7 +92,7 @@ implementations.
     | Integrity         +-----------------------------------------------------|
     |                   | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(3)|
     |-------------------+--------+--------+--------+--------+--------+--------|
-    | AES-XCBC-96       | N      | Y   x4 | Y   x8 | N      | N      | N      |
+    | AES-XCBC-96       | N      | Y   x4 | Y   x8 | N      | N      | Y x16  |
     | HMAC-MD5-96       | Y(1)   | Y x4x2 | Y x4x2 | Y x8x2 | N      | N      |
     | HMAC-SHA1-96      | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
     | HMAC-SHA2-224_112 | N      | Y(2)x4 | Y   x4 | Y   x8 | Y  x16 | N      |
