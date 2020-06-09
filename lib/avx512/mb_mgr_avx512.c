@@ -722,12 +722,14 @@ IMB_JOB *
 SUBMIT_JOB_DOCSIS128_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job);
 
 extern void aes_docsis128_dec_crc32_avx512(IMB_JOB *job);
+extern void aes_docsis128_dec_crc32_vaes_avx512(IMB_JOB *job);
 
 __forceinline
 IMB_JOB *
 SUBMIT_JOB_DOCSIS256_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job);
 
 extern void aes_docsis256_dec_crc32_avx512(IMB_JOB *job);
+extern void aes_docsis256_dec_crc32_vaes_avx512(IMB_JOB *job);
 
 static IMB_JOB *
 submit_aes_docsis128_dec_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
@@ -822,7 +824,24 @@ IMB_JOB *
 submit_job_docsis128_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
                                              IMB_JOB *job)
 {
-        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(state, job, 16);
+        (void) state;
+
+        if (job->msg_len_to_hash_in_bytes == 0) {
+                if (job->msg_len_to_cipher_in_bytes == 0) {
+                        /* NO cipher, NO CRC32 */
+                        job->status |= STS_COMPLETED_AES;
+                        return job;
+                }
+
+                /* Cipher, NO CRC32 */
+                return SUBMIT_JOB_DOCSIS128_SEC_DEC(state, job);
+        }
+
+        /* Cipher + CRC32 // CRC32 */
+        aes_docsis128_dec_crc32_vaes_avx512(job);
+
+        return job;
+
 }
 
 __forceinline
@@ -830,7 +849,23 @@ IMB_JOB *
 submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
                                              IMB_JOB *job)
 {
-        return SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(state, job, 32);
+        (void) state;
+
+        if (job->msg_len_to_hash_in_bytes == 0) {
+                if (job->msg_len_to_cipher_in_bytes == 0) {
+                        /* NO cipher, NO CRC32 */
+                        job->status |= STS_COMPLETED_AES;
+                        return job;
+                }
+
+                /* Cipher, NO CRC32 */
+                return SUBMIT_JOB_DOCSIS256_SEC_DEC(state, job);
+        }
+
+        /* Cipher + CRC32 // CRC32 */
+        aes_docsis256_dec_crc32_vaes_avx512(job);
+
+        return job;
 }
 
 static IMB_JOB *
