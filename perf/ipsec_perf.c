@@ -40,6 +40,7 @@
 #include <intrin.h>
 #define strdup _strdup
 #define __forceinline static __forceinline
+#define __func__ __FUNCTION__
 #else
 #include <x86intrin.h>
 #define __forceinline static inline __attribute__((always_inline))

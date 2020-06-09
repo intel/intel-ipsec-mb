@@ -39,6 +39,7 @@
 #include <intrin.h>
 #define strdup _strdup
 #define BSWAP64 _byteswap_uint64
+#define __func__ __FUNCTION__
 #else
 #include <x86intrin.h>
 #define BSWAP64 __builtin_bswap64

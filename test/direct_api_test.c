@@ -38,6 +38,10 @@
 #define BUF_SIZE ((uint32_t)sizeof(struct gcm_key_data))
 #define NUM_BUFS 8
 
+#ifdef _WIN32
+#define __func__ __FUNCTION__
+#endif
+
 int
 direct_api_test(struct IMB_MGR *mb_mgr);
 

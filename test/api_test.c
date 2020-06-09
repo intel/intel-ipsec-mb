@@ -33,6 +33,10 @@
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
 
+#ifdef _WIN32
+#define __func__ __FUNCTION__
+#endif
+
 int api_test(struct IMB_MGR *mb_mgr);
 
 /*
