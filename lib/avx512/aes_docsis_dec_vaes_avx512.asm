@@ -73,17 +73,25 @@ default rel
 ;;;   {0x01, 0x02, 0x03, 0x04}:
 ;;;     Result     Poly       Init        RefIn  RefOut  XorOut
 ;;;     0xB63CFBCD 0x04C11DB7 0xFFFFFFFF  true   true    0xFFFFFFFF
-align 16
-rk1:
-        dq 0x00000000ccaa009e, 0x00000001751997d0
 
 align 16
 rk5:
         dq 0x00000000ccaa009e, 0x0000000163cd6124
-
-align 16
 rk7:
         dq 0x00000001f7011640, 0x00000001db710640
+
+align 16
+
+fold_by_16: ;; fold by 16x128-bits
+        dq 0x00000000e95c1271, 0x00000000ce3371cb
+fold_by_8: ;; fold by 8x128-bits
+        dq 0x000000014a7fe880, 0x00000001e88ef372
+fold_by_4: ;; fold by 4x128-bits
+        dq 0x00000001c6e41596, 0x0000000154442bd4
+fold_by_2: ;; fold by 2x128-bits
+        dq 0x000000015a546366, 0x00000000f1da05aa
+fold_by_1: ;; fold by 1x128-bits
+        dq 0x00000000ccaa009e, 0x00000001751997d0
 
 align 16
 pshufb_shf_table:
@@ -254,7 +262,7 @@ section .text
 %define %%xtmp3         %9  ; [clobbered] temporary XMM
 
         ;; load CRC constants
-        vmovdqa64       %%xcrckey, [rel rk1] ; rk1 and rk2 in xcrckey
+        vmovdqa64       %%xcrckey, [rel fold_by_1]
 
         cmp             %%bytes_to_crc, 32
         jae             %%_at_least_32_bytes
@@ -369,11 +377,6 @@ section .text
 %define %%ZT4           %16 ; [clobbered] ZMM temporary
 %define %%ZT5           %17 ; [clobbered] ZMM temporary
 
-        vinserti32x4    %%ZIV, XWORD(%%ZIV), 1
-        vinserti32x4    %%ZIV, XWORD(%%ZIV), 2
-        vinserti32x4    %%ZIV, XWORD(%%ZIV), 3
-
-
         ;; /////////////////////////////////////////////////
         ;; load cipher text
         ZMM_LOAD_BLOCKS_0_16 %%NUMBL, %%SRC, %%OFFS, \
@@ -381,7 +384,7 @@ section .text
                 %%CIPHER_08_11, %%CIPHER_12_15
 
         ;; /////////////////////////////////////////////////
-        ;; prepare cipher text blocks for an XOR after AESDEC rounds
+        ;; prepare cipher text blocks for an XOR after AES-DEC rounds
         valignq         %%ZT1, %%CIPHER_00_03, %%ZIV, 6
 %if %%NUMBL > 4
         valignq         %%ZT2, %%CIPHER_04_07, %%CIPHER_00_03, 6
@@ -439,192 +442,253 @@ section .text
 
 ;; ===================================================================
 ;; ===================================================================
-;; CRC32 on 1 to 16 blocks
+;; CRC32 on 1 to 16 blocks (first_crc case only)
 ;; ===================================================================
-%macro CRC32_1_TO_16 10
-%define %%CRC_TYPE   %1  ; [in] CRC operation: "first_crc" or "next_crc"
-%define %%CRC_MUL    %2  ; [in] XMM with CRC multiplier
-%define %%CRC_IN_OUT %3  ; [in/out] current CRC value
-%define %%XTMP       %4  ; [clobbered] temporary XMM
-%define %%XTMP2      %5  ; [clobbered] temporary XMM
-%define %%NUMBL      %6  ; [in] number of blocks of clear text to compute CRC on
-%define %%ZCRCIN0    %7  ; [in] clear text 4 blocks
-%define %%ZCRCIN1    %8  ; [in] clear text 4 blocks
-%define %%ZCRCIN2    %9  ; [in] clear text 4 blocks
-%define %%ZCRCIN3    %10 ; [in] clear text 4 blocks
+%macro CRC32_FIRST_1_TO_16 13
+%define %%CRC_MUL    %1  ; [in] XMM with CRC multiplier
+%define %%CRC_IN_OUT %2  ; [in/out] current CRC value
+%define %%XTMP       %3  ; [clobbered] temporary XMM
+%define %%XTMP2      %4  ; [clobbered] temporary XMM
+%define %%NUMBL      %5  ; [in] number of blocks of clear text to compute CRC on
+%define %%ZCRCIN0    %6  ; [in] clear text 4 blocks
+%define %%ZCRCIN1    %7  ; [in] clear text 4 blocks
+%define %%ZCRCIN2    %8  ; [in] clear text 4 blocks
+%define %%ZCRCIN3    %9  ; [in] clear text 4 blocks
+%define %%ZCRCSUM0   %10 ; [clobbered] temporary ZMM
+%define %%ZCRCSUM1   %11 ; [clobbered] temporary ZMM
+%define %%ZCRCSUM2   %12 ; [clobbered] temporary ZMM
+%define %%ZCRCSUM3   %13 ; [clobbered] temporary ZMM
 
-%if %%NUMBL > 0
-        vextracti32x4   %%XTMP2, %%ZCRCIN0, 0
-        ;; block 0 - check first vs next
-        CRC_UPDATE16    no_load, %%CRC_IN_OUT, %%CRC_MUL, %%XTMP2, %%XTMP, %%CRC_TYPE
+%xdefine %%ZTMP0 ZWORD(%%XTMP)
+%xdefine %%ZTMP1 ZWORD(%%XTMP2)
 
-        ;; blocks 1 to 7 - no difference between first / next here
-%assign crc_block 1
-%rep (%%NUMBL - 1)
-%if crc_block < 4
-        vextracti32x4   %%XTMP2, %%ZCRCIN0, (crc_block % 4)
-%elif crc_block < 8
-        vextracti32x4   %%XTMP2, %%ZCRCIN1, (crc_block % 4)
-%elif crc_block < 12
-        vextracti32x4   %%XTMP2, %%ZCRCIN2, (crc_block % 4)
+%if (%%NUMBL == 0)
+        ;; do nothing
+%elif (%%NUMBL == 1)
+        vpxorq          %%CRC_IN_OUT, XWORD(%%ZCRCIN0)
+%elif (%%NUMBL == 16)
+        vmovdqa64       %%ZCRCSUM0, %%ZCRCIN0
+        vmovdqa64       %%ZCRCSUM1, %%ZCRCIN1
+        vmovdqa64       %%ZCRCSUM2, %%ZCRCIN2
+        vmovdqa64       %%ZCRCSUM3, %%ZCRCIN3
+
+        ;; Add current CRC sum into block 0
+        vmovdqa64       %%CRC_IN_OUT, %%CRC_IN_OUT
+        vpxorq          %%ZCRCSUM0, %%ZCRCSUM0, ZWORD(%%CRC_IN_OUT)
+        ;; fold 16 x 128 bits -> 8 x 128 bits
+        vbroadcastf64x2 %%ZTMP0, [rel fold_by_8]
+        vpclmulqdq      %%ZTMP1, %%ZCRCSUM0, %%ZTMP0, 0x01
+        vpclmulqdq      %%ZCRCSUM0, %%ZCRCSUM0, %%ZTMP0, 0x10
+        vpternlogq      %%ZCRCSUM0, %%ZCRCSUM2, %%ZTMP1, 0x96
+
+        vpclmulqdq      %%ZTMP1, %%ZCRCSUM1, %%ZTMP0, 0x01
+        vpclmulqdq      %%ZCRCSUM1, %%ZCRCSUM1, %%ZTMP0, 0x10
+        vpternlogq      %%ZCRCSUM1, %%ZCRCSUM3, %%ZTMP1, 0x96
+
+        ;; fold 8 x 128 bits -> 4 x 128 bits
+        vbroadcastf64x2 %%ZTMP0, [rel fold_by_4]
+        vpclmulqdq      %%ZTMP1, %%ZCRCSUM0, %%ZTMP0, 0x01
+        vpclmulqdq      %%ZCRCSUM0, %%ZCRCSUM0, %%ZTMP0, 0x10
+        vpternlogq      %%ZCRCSUM0, %%ZCRCSUM1, %%ZTMP1, 0x96
+
+        ;; fold 4 x 128 bits -> 2 x 128 bits
+        vbroadcastf64x2 YWORD(%%ZTMP0), [rel fold_by_2]
+        vextracti64x4   YWORD(%%ZCRCSUM1), %%ZCRCSUM0, 1
+        vpclmulqdq      YWORD(%%ZTMP1), YWORD(%%ZCRCSUM0), YWORD(%%ZTMP0), 0x01
+        vpclmulqdq      YWORD(%%ZCRCSUM0), YWORD(%%ZCRCSUM0), YWORD(%%ZTMP0), 0x10
+        vpternlogq      YWORD(%%ZCRCSUM0), YWORD(%%ZCRCSUM1), YWORD(%%ZTMP1), 0x96
+
+        ;; fold 2 x 128 bits -> 1 x 128 bits
+        vmovdqa64       XWORD(%%ZTMP0), [rel fold_by_1]
+        vextracti64x2   XWORD(%%ZCRCSUM1), YWORD(%%ZCRCSUM0), 1
+        vpclmulqdq      XWORD(%%ZTMP1), XWORD(%%ZCRCSUM0), XWORD(%%ZTMP0), 0x01
+        vpclmulqdq      XWORD(%%ZCRCSUM0), XWORD(%%ZCRCSUM0), XWORD(%%ZTMP0), 0x10
+        vpternlogq      XWORD(%%ZCRCSUM0), XWORD(%%ZCRCSUM1), XWORD(%%ZTMP1), 0x96
+        vmovdqa64       %%CRC_IN_OUT, XWORD(%%ZCRCSUM0)
+
 %else
-        vextracti32x4   %%XTMP2, %%ZCRCIN3, (crc_block % 4)
+
+        vpxorq          %%ZCRCSUM0, %%ZCRCSUM0
+        vpxorq          %%ZCRCSUM1, %%ZCRCSUM1
+        vpxorq          %%ZCRCSUM2, %%ZCRCSUM2
+        vpxorq          %%ZCRCSUM3, %%ZCRCSUM3
+
+        vmovdqa64       %%ZCRCSUM0, %%ZCRCIN0
+%if %%NUMBL > 4
+        vmovdqa64       %%ZCRCSUM1, %%ZCRCIN1
 %endif
-        CRC_UPDATE16    no_load, %%CRC_IN_OUT, %%CRC_MUL, %%XTMP2, %%XTMP, next_crc
-%assign crc_block (crc_block + 1)
+%if %%NUMBL > 8
+        vmovdqa64       %%ZCRCSUM2, %%ZCRCIN2
+%endif
+%if %%NUMBL > 12
+        vmovdqa64       %%ZCRCSUM3, %%ZCRCIN3
+%endif
+
+        ;; Add current CRC sum into block 0
+        vmovdqa64       %%CRC_IN_OUT, %%CRC_IN_OUT
+        vpxorq          %%ZCRCSUM0, %%ZCRCSUM0, ZWORD(%%CRC_IN_OUT)
+
+%assign blocks_left %%NUMBL
+
+%if (%%NUMBL >= 12)
+        vbroadcastf64x2 %%ZTMP0, [rel fold_by_4]
+        vpclmulqdq      %%ZTMP1, %%ZCRCSUM0, %%ZTMP0, 0x01
+        vpclmulqdq      %%ZCRCSUM0, %%ZCRCSUM0, %%ZTMP0, 0x10
+        vpternlogq      %%ZCRCSUM0, %%ZCRCSUM1, %%ZTMP1, 0x96
+
+        vpclmulqdq      %%ZTMP1, %%ZCRCSUM0, %%ZTMP0, 0x01
+        vpclmulqdq      %%ZCRCSUM0, %%ZCRCSUM0, %%ZTMP0, 0x10
+        vpternlogq      %%ZCRCSUM0, %%ZCRCSUM2, %%ZTMP1, 0x96
+        vmovdqa64       %%ZCRCSUM1, %%ZCRCSUM3
+
+%assign blocks_left (blocks_left - 8)
+
+%elif (%%NUMBL >= 8)
+        vbroadcastf64x2 %%ZTMP0, [rel fold_by_4]
+        vpclmulqdq      %%ZTMP1, %%ZCRCSUM0, %%ZTMP0, 0x01
+        vpclmulqdq      %%ZCRCSUM0, %%ZCRCSUM0, %%ZTMP0, 0x10
+        vpternlogq      %%ZCRCSUM0, %%ZCRCSUM1, %%ZTMP1, 0x96
+        vmovdqa64       %%ZCRCSUM1, %%ZCRCSUM2
+
+%assign blocks_left (blocks_left - 4)
+%endif
+
+        ;; 1 to 8 blocks left in ZCRCSUM0 and ZCRCSUM1
+
+%if blocks_left >= 4
+        ;; fold 4 x 128 bits -> 2 x 128 bits
+        vbroadcastf64x2 YWORD(%%ZTMP0), [rel fold_by_2]
+        vextracti64x4   YWORD(%%ZCRCSUM3), %%ZCRCSUM0, 1
+        vpclmulqdq      YWORD(%%ZTMP1), YWORD(%%ZCRCSUM0), YWORD(%%ZTMP0), 0x01
+        vpclmulqdq      YWORD(%%ZCRCSUM0), YWORD(%%ZCRCSUM0), YWORD(%%ZTMP0), 0x10
+        vpternlogq      YWORD(%%ZCRCSUM0), YWORD(%%ZCRCSUM3), YWORD(%%ZTMP1), 0x96
+
+        ;; fold 2 x 128 bits -> 1 x 128 bits
+        vmovdqa64       XWORD(%%ZTMP0), [rel fold_by_1]
+        vextracti64x2   XWORD(%%ZCRCSUM3), YWORD(%%ZCRCSUM0), 1
+        vpclmulqdq      XWORD(%%ZTMP1), XWORD(%%ZCRCSUM0), XWORD(%%ZTMP0), 0x01
+        vpclmulqdq      XWORD(%%ZCRCSUM0), XWORD(%%ZCRCSUM0), XWORD(%%ZTMP0), 0x10
+        vpternlogq      XWORD(%%ZCRCSUM0), XWORD(%%ZCRCSUM3), XWORD(%%ZTMP1), 0x96
+
+        vmovdqa64       %%CRC_IN_OUT, XWORD(%%ZCRCSUM0)
+
+        vmovdqa64       %%ZCRCSUM0, %%ZCRCSUM1
+
+%assign blocks_left (blocks_left - 4)
+
+%else
+        vmovdqa64       %%CRC_IN_OUT, XWORD(%%ZCRCSUM0)
+        vshufi64x2      %%ZCRCSUM0, %%ZCRCSUM0, %%ZCRCSUM0, 0011_1001b
+
+%assign blocks_left (blocks_left - 1)
+%endif
+
+%rep blocks_left
+        vmovdqa64       %%XTMP, XWORD(%%ZCRCSUM0)
+        CRC_CLMUL       %%CRC_IN_OUT, %%CRC_MUL, %%XTMP, %%XTMP2
+        vshufi64x2      %%ZCRCSUM0, %%ZCRCSUM0, %%ZCRCSUM0, 0011_1001b
 %endrep
+
 %endif  ;; %%NUMBL > 0
 
-%endmacro       ;; CRC32_1_TO_16
+%endmacro       ;; CRC32_FIRST_1_TO_16
 
 ;; ===================================================================
 ;; ===================================================================
-;; Stitched AES128/256 CBC decryption & CRC32 on 1 to 8 blocks
-;; XCRCINx - on input they include clear text input for CRC.
-;;           They get updated towards the end of the macro with
-;;           just decrypted set of blocks.
+;; Stitched AES128/256 CBC decryption & CRC32 on 16 blocks
 ;; ===================================================================
-%macro AES_CBC_DEC_CRC32_1_TO_8 39
+%macro AES_CBC_DEC_CRC32_16 22
 %define %%SRC        %1  ; [in] GP with pointer to source buffer
 %define %%DST        %2  ; [in] GP with pointer to destination buffer
-%define %%NUMBL      %3  ; [in] numerical constant with number of blocks to cipher
-%define %%NUMBL_CRC  %4  ; [in] numerical constant with number of blocks to CRC32
-%define %%OFFS       %5  ; [in/out] GP with src/dst buffer offset
-%define %%NBYTES     %6  ; [in/out] GP with number of bytes to decrypt
-%define %%XKEY0      %7  ; [in] XMM with preloaded key 0 / AES ARK (any xmm)
-%define %%KEY_PTR    %8  ; [in] GP with pointer to expanded AES decrypt keys
-%define %%XIV        %9  ; [in/out] IV in / last cipher text block on out (xmm0 - xmm15)
-%define %%XD0        %10 ; [clobbered] temporary XMM (any xmm)
-%define %%XD1        %11 ; [clobbered] temporary XMM (any xmm)
-%define %%XD2        %12 ; [clobbered] temporary XMM (any xmm)
-%define %%XD3        %13 ; [clobbered] temporary XMM (any xmm)
-%define %%XD4        %14 ; [clobbered] temporary XMM (any xmm)
-%define %%XD5        %15 ; [clobbered] temporary XMM (any xmm)
-%define %%XD6        %16 ; [clobbered] temporary XMM (any xmm)
-%define %%XD7        %17 ; [clobbered] temporary XMM (any xmm)
-%define %%XC0        %18 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%XC1        %19 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%XC2        %20 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%XC3        %21 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%XC4        %22 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%XC5        %23 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%XC6        %24 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%XC7        %25 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%XTKEY      %26 ; [clobbered] temporary XMM (xmm0 - xmm15) - for AES
-%define %%NROUNDS    %27 ; [in] Number of rounds (9 or 13)
-%define %%CRC_TYPE   %28 ; [in] CRC operation: "first_crc" or "next_crc"
-%define %%CRC_MUL    %29 ; [in] XMM with CRC multiplier (xmm0 - xmm15)
-%define %%CRC_IN_OUT %30 ; [in/out] current CRC value
-%define %%XTMP       %31 ; [clobbered] temporary XMM (xmm0 - xmm15) - for CRC
-%define %%XCRCIN0    %32 ; [in/out] clear text block
-%define %%XCRCIN1    %33 ; [in/out] clear text block
-%define %%XCRCIN2    %34 ; [in/out] clear text block
-%define %%XCRCIN3    %35 ; [in/out] clear text block
-%define %%XCRCIN4    %36 ; [in/out] clear text block
-%define %%XCRCIN5    %37 ; [in/out] clear text block
-%define %%XCRCIN6    %38 ; [in/out] clear text block
-%define %%XCRCIN7    %39 ; [in/out] clear text block
+%define %%OFFS       %3  ; [in/out] GP with src/dst buffer offset
+%define %%NBYTES     %4  ; [in/out] GP with number of bytes to decrypt
+%define %%KEY_PTR    %5  ; [in] GP with pointer to expanded AES decrypt keys
+%define %%ZIV        %6  ; [in/out] IV in / last cipher text block on out
+%define %%ZD0        %7  ; [clobbered] temporary ZMM
+%define %%ZD1        %8  ; [clobbered] temporary ZMM
+%define %%ZD2        %9  ; [clobbered] temporary ZMM
+%define %%ZD3        %10 ; [clobbered] temporary ZMM
+%define %%ZC0        %11 ; [clobbered] temporary ZMM
+%define %%ZC1        %12 ; [clobbered] temporary ZMM
+%define %%ZC2        %13 ; [clobbered] temporary ZMM
+%define %%ZC3        %14 ; [clobbered] temporary ZMM
+%define %%ZTMP0      %15 ; [clobbered] temporary ZMM
+%define %%ZTMP1      %16 ; [clobbered] temporary ZMM
+%define %%NROUNDS    %17 ; [in] Number of rounds (9 or 13)
+%define %%ZCRC_SUM0  %18 ; [in/out] current CRC value
+%define %%ZCRC_SUM1  %19 ; [in/out] current CRC value
+%define %%ZCRC_SUM2  %20 ; [in/out] current CRC value
+%define %%ZCRC_SUM3  %21 ; [in/out] current CRC value
+%define %%LAST_BLOCK %22 ; [out] xmm to store the last clear text block
 
         ;; /////////////////////////////////////////////////
-        ;; load cipher text blocks XD0-XD7
-%assign i 0
-%rep %%NUMBL
-        vmovdqu64       %%XD %+ i, [%%SRC + %%OFFS + (i*16)]
-%assign i (i+1)
-%endrep
+        ;; load cipher text blocks
+        ZMM_LOAD_BLOCKS_0_16 16, %%SRC, %%OFFS, \
+                %%ZC0, %%ZC1, %%ZC2, %%ZC3
 
         ;; /////////////////////////////////////////////////
-        ;; perform ARK => result in XC0-XC7
-%assign i 0
-%rep %%NUMBL
-	vpxorq          %%XC %+ i, %%XD %+ i, %%XKEY0
-%assign i (i+1)
-%endrep
+        ;; prepare cipher text blocks for an XOR after AES-DEC rounds
+        valignq         %%ZD0, %%ZC0, %%ZIV, 6
+        valignq         %%ZD1, %%ZC1, %%ZC0, 6
+        valignq         %%ZD2, %%ZC2, %%ZC1, 6
+        valignq         %%ZD3, %%ZC3, %%ZC2, 6
 
-        ;; AES rounds 1 to 9/13 & CRC blocks 0 to 8
-%assign crc_block 0
-%assign round 1
-%rep %%NROUNDS
+        ;; /////////////////////////////////////////////////
+        ;; update IV for the next round (block 3 in ZIV)
+        vmovdqa64       %%ZIV, %%ZC3
 
+        ;; /////////////////////////////////////////////////
+        ;; AES rounds 0 to 10/14 & CRC
+
+%assign round 0
+%rep (%%NROUNDS + 2)
         ;; /////////////////////////////////////////////////
         ;; AES decrypt round
-%assign i 0
-        vmovdqa64       %%XTKEY, [%%KEY_PTR + (round*16)]
-%rep %%NUMBL
-	vaesdec         %%XC %+ i, %%XC %+ i, %%XTKEY
-%assign i (i+1)
-%endrep
+        vbroadcastf64x2 %%ZTMP0, [%%KEY_PTR + (round*16)]
+        ZMM_AESDEC_ROUND_BLOCKS_0_16 %%ZC0, %%ZC1, %%ZC2, %%ZC3, \
+                        %%ZTMP0, round, %%ZD0, %%ZD1, %%ZD2, %%ZD3, \
+                        16, %%NROUNDS
 %assign round (round + 1)
-
-                ;; \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-                ;; CRC on previously decrypted blocks
-%if crc_block < %%NUMBL_CRC
-%ifidn %%CRC_TYPE, first_crc
-%if crc_block > 0
-                CRC_CLMUL       %%CRC_IN_OUT, %%CRC_MUL, %%XCRCIN %+ crc_block, %%XTMP
-%else
-                vpxorq          %%CRC_IN_OUT, %%CRC_IN_OUT, %%XCRCIN %+ crc_block
-%endif
-%endif          ;; first_crc
-%ifidn %%CRC_TYPE, next_crc
-                CRC_CLMUL       %%CRC_IN_OUT, %%CRC_MUL, %%XCRCIN %+ crc_block, %%XTMP
-%endif          ;; next_crc
-%endif          ;; crc_block < %%NUMBL_CRC
-%assign crc_block (crc_block + 1)
-
-%endrep ;; 9/13 x AES round (8 is max number of CRC blocks)
-
-        ;; /////////////////////////////////////////////////
-        ;; AES round 10/14 (the last one)
-        vmovdqa64       %%XTKEY, [%%KEY_PTR + (round*16)]
-%assign i 0
-%rep %%NUMBL
-	vaesdeclast     %%XC %+ i, %%XC %+ i, %%XTKEY
-%assign i (i+1)
 %endrep
-
-        ;; /////////////////////////////////////////////////
-        ;; AES-CBC final XOR operations against IV / cipher text blocks
-        ;; put the last cipher text block into XIV
-        vpxorq          %%XC0, %%XC0, %%XIV
-
-%assign i_ciph 1
-%assign i_data 0
-%rep (%%NUMBL - 1)
-        vpxorq          %%XC %+ i_ciph, %%XC %+ i_ciph, %%XD %+ i_data
-%assign i_ciph (i_ciph + 1)
-%assign i_data (i_data + 1)
-%endrep
-
-%assign i (%%NUMBL - 1)
-        vmovdqa64       %%XIV, %%XD %+ i
 
         ;; /////////////////////////////////////////////////
         ;; store clear text
-%assign i 0
-%rep %%NUMBL
-	vmovdqu64       [%%DST + %%OFFS + (i*16)], %%XC %+ i
-%assign i (i+1)
-%endrep
+        ZMM_STORE_BLOCKS_0_16 16, %%DST, %%OFFS, \
+                %%ZC0, %%ZC1, %%ZC2, %%ZC3
 
                 ;; \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-                ;; CRC - keep clear text blocks for the next round
-%assign i 0
-%rep %%NUMBL
-                vmovdqa64       %%XCRCIN %+ i, %%XC %+ i
-%assign i (i+1)
-%endrep
+                ;; CRC just decrypted blocks
+                vbroadcastf64x2 %%ZTMP0, [rel fold_by_16]
+	        vpclmulqdq	%%ZTMP1, %%ZCRC_SUM0, %%ZTMP0, 0x10
+	        vpclmulqdq	%%ZCRC_SUM0, %%ZCRC_SUM0, %%ZTMP0, 0x01
+                vpternlogq      %%ZCRC_SUM0, %%ZTMP1, %%ZC0, 0x96
+
+                vpclmulqdq	%%ZTMP1, %%ZCRC_SUM1, %%ZTMP0, 0x10
+	        vpclmulqdq	%%ZCRC_SUM1, %%ZCRC_SUM1, %%ZTMP0, 0x01
+                vpternlogq      %%ZCRC_SUM1, %%ZTMP1, %%ZC1, 0x96
+
+	        vpclmulqdq	%%ZTMP1, %%ZCRC_SUM2, %%ZTMP0, 0x10
+	        vpclmulqdq	%%ZCRC_SUM2, %%ZCRC_SUM2, %%ZTMP0, 0x01
+                vpternlogq      %%ZCRC_SUM2, %%ZTMP1, %%ZC2, 0x96
+
+                vpclmulqdq	%%ZTMP1, %%ZCRC_SUM3, %%ZTMP0, 0x10
+	        vpclmulqdq	%%ZCRC_SUM3, %%ZCRC_SUM3, %%ZTMP0, 0x01
+                vpternlogq      %%ZCRC_SUM3, %%ZTMP1, %%ZC3, 0x96
+
+                vextracti64x2   %%LAST_BLOCK, %%ZC3, 3
 
         ;; /////////////////////////////////////////////////
         ;; update lengths and offset
-        add             %%OFFS, (%%NUMBL * 16)
-        sub             %%NBYTES, (%%NUMBL * 16)
+        add             %%OFFS, (16 * 16)
+        sub             %%NBYTES, (16 * 16)
 
-%endmacro       ;; AES_CBC_DEC_CRC32_1_TO_8
+%endmacro       ;; AES_CBC_DEC_CRC32_16
 
 ;; ===================================================================
 ;; ===================================================================
-;; DOCSIS SEC BPI (AES based) decryption + CRC32
+;; DOCSIS SEC BPI decryption + CRC32
+;; This macro is handling the case when the two components are
+;; executed together.
 ;; ===================================================================
 %macro DOCSIS_DEC_CRC32 40
 %define %%KEYS       %1   ;; [in] GP with pointer to expanded keys (decrypt)
@@ -634,21 +698,21 @@ section .text
 %define %%KEYS_ENC   %5   ;; [in] GP with pointer to expanded keys (encrypt)
 %define %%GT1        %6   ;; [clobbered] temporary GP
 %define %%GT2        %7   ;; [clobbered] temporary GP
-%define %%XCRC_INIT  %8   ;; [in/out] CRC initial value (xmm0 - xmm15)
+%define %%XCRC_INIT  %8   ;; [in/out] CRC initial value
 %define %%XIV        %9   ;; [in/out] cipher IV
-%define %%ZT1        %10  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT2        %11  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT3        %12  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT4        %13  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT5        %14  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT6        %15  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT7        %16  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT8        %17  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT9        %18  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT10       %19  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT11       %20  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT12       %21  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
-%define %%ZT13       %22  ;; [clobbered] temporary ZMM (zmm0 - zmm15)
+%define %%ZT1        %10  ;; [clobbered] temporary ZMM
+%define %%ZT2        %11  ;; [clobbered] temporary ZMM
+%define %%ZT3        %12  ;; [clobbered] temporary ZMM
+%define %%ZT4        %13  ;; [clobbered] temporary ZMM
+%define %%ZT5        %14  ;; [clobbered] temporary ZMM
+%define %%ZT6        %15  ;; [clobbered] temporary ZMM
+%define %%ZT7        %16  ;; [clobbered] temporary ZMM
+%define %%ZT8        %17  ;; [clobbered] temporary ZMM
+%define %%ZT9        %18  ;; [clobbered] temporary ZMM
+%define %%ZT10       %19  ;; [clobbered] temporary ZMM
+%define %%ZT11       %20  ;; [clobbered] temporary ZMM
+%define %%ZT12       %21  ;; [clobbered] temporary ZMM
+%define %%ZT13       %22  ;; [clobbered] temporary ZMM
                           ;; no ZT14 - taken by XIV
                           ;; no ZT15 - taken by CRC_INIT
 %define %%ZT16       %23  ;; [clobbered] temporary ZMM
@@ -675,66 +739,464 @@ section .text
 
 %xdefine %%ZIV ZWORD(%%XIV)
 
-        ;; Usable for AVX encoding
-%xdefine %%XCIPH0 XWORD(%%ZT1)
-%xdefine %%XCIPH1 XWORD(%%ZT2)
-%xdefine %%XCIPH2 XWORD(%%ZT3)
-%xdefine %%XCIPH3 XWORD(%%ZT4)
-%xdefine %%XCIPH4 XWORD(%%ZT5)
-%xdefine %%XCIPH5 XWORD(%%ZT6)
-%xdefine %%XCIPH6 XWORD(%%ZT7)
-%xdefine %%XCIPH7 XWORD(%%ZT8)
+%xdefine %%XTMP0  XWORD(%%ZT1)
+%xdefine %%XTMP1  XWORD(%%ZT2)
 
-%xdefine %%ZCIPH0 %%ZT1
-%xdefine %%ZCIPH1 %%ZT2
-%xdefine %%ZCIPH2 %%ZT3
-%xdefine %%ZCIPH3 %%ZT4
-
-%xdefine %%XCRC_TMP    XWORD(%%ZT9)
-%xdefine %%XCRC_MUL    XWORD(%%ZT10)
+%xdefine %%XCRC_TMP    XWORD(%%ZT3)
+%xdefine %%XCRC_MUL    XWORD(%%ZT4)
 %xdefine %%XCRC_IN_OUT %%XCRC_INIT
 
-%xdefine %%XTMP0  XWORD(%%ZT11)
-%xdefine %%XTMP1  XWORD(%%ZT12)
+%xdefine %%ZCRC0 %%ZT5
+%xdefine %%ZCRC1 %%ZT6
+%xdefine %%ZCRC2 %%ZT7
+%xdefine %%ZCRC3 %%ZT8
+%xdefine %%XCRC0 XWORD(%%ZCRC0)
 
-        ;; Usable for AVX512 only encoding
-%xdefine %%XCRC0 XWORD(%%ZT16)
-%xdefine %%XCRC1 XWORD(%%ZT17)
-%xdefine %%XCRC2 XWORD(%%ZT18)
-%xdefine %%XCRC3 XWORD(%%ZT19)
-%xdefine %%XCRC4 XWORD(%%ZT20)
-%xdefine %%XCRC5 XWORD(%%ZT21)
-%xdefine %%XCRC6 XWORD(%%ZT22)
-%xdefine %%XCRC7 XWORD(%%ZT23)
+%xdefine %%ZCIPH0 %%ZT9
+%xdefine %%ZCIPH1 %%ZT10
+%xdefine %%ZCIPH2 %%ZT11
+%xdefine %%ZCIPH3 %%ZT12
 
-%xdefine %%XT0 XWORD(%%ZT24)
-%xdefine %%XT1 XWORD(%%ZT25)
-%xdefine %%XT2 XWORD(%%ZT26)
-%xdefine %%XT3 XWORD(%%ZT27)
-%xdefine %%XT4 XWORD(%%ZT28)
-%xdefine %%XT5 XWORD(%%ZT29)
-%xdefine %%XT6 XWORD(%%ZT30)
-%xdefine %%XT7 XWORD(%%ZT31)
+%xdefine %%ZTMP0 %%ZT20
+%xdefine %%ZTMP1 %%ZT21
+%xdefine %%ZTMP2 %%ZT22
+%xdefine %%ZTMP3 %%ZT23
+%xdefine %%ZTMP4 %%ZT24
+%xdefine %%ZTMP5 %%ZT25
+%xdefine %%ZTMP6 %%ZT26
+%xdefine %%ZTMP7 %%ZT27
+%xdefine %%ZTMP8 %%ZT28
+%xdefine %%ZTMP9 %%ZT29
 
-%xdefine %%XKEY0  XWORD(%%ZT32)
+%xdefine %%ZCRC_IN_OUT0   ZWORD(%%XCRC_IN_OUT)
+%xdefine %%ZCRC_IN_OUT1   %%ZT30
+%xdefine %%ZCRC_IN_OUT2   %%ZT31
+%xdefine %%ZCRC_IN_OUT3   %%ZT32
 
-        prefetchw       [%%SRC + 0*64]
-        prefetchw       [%%SRC + 1*64]
-
-        vmovdqa64       %%XCRC_MUL, [rel rk1]
-        vmovdqa64       %%XKEY0, [%%KEYS + (0*16)]
+        vmovdqa64       %%XCRC_MUL, [rel fold_by_1]
+        vmovdqa64       %%XCRC_INIT, %%XCRC_INIT
 
         xor     %%OFFSET, %%OFFSET
 
         cmp     %%NUM_BYTES, 16
         jb      %%_check_partial_block
 
+        cmp     %%NUM_BYTES, (16 * 16) + 16
+        jb      %%_below_17_blocks
+
+        cmp     %%NUM_BYTES, (32 * 16) + 16
+        jb      %%_below_33_blocks
+
+        ;; =====================================================================
+        ;; =====================================================================
+        ;; Part handling messages bigger-equal 33 blocks
+        ;; - decrypt & crc performed per 16 block basis
+        ;; =====================================================================
+
+        ;; Decrypt 16 blocks first.
+        ;; Make sure IV is in the top 128 bits of ZMM.
+        vshufi64x2      %%ZIV, %%ZIV, %%ZIV, 0000_0000b
+
+        AES_CBC_DEC_1_TO_16     %%SRC, %%DST, 16, %%OFFSET, %%NUM_BYTES, \
+                                %%KEYS, %%ZIV, %%NROUNDS, \
+                                %%ZTMP0, %%ZCRC_IN_OUT1, \
+                                %%ZCRC_IN_OUT2, %%ZCRC_IN_OUT3, \
+                                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
+
+        ;; Start of CRC is just reading the data and adding initial value.
+        ;; In the next round multiply and add operations will apply.
+        vpxorq          %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP0
+
+        vextracti64x2   %%XCRC0, %%ZCRC_IN_OUT3, 3
+
+%%_main_loop:
+        cmp     %%NUM_BYTES, (16 * 16) + 16
+        jb      %%_main_loop_exit
+
+        ;; Stitched cipher and CRC on 16 blocks
+        AES_CBC_DEC_CRC32_16    %%SRC, %%DST, %%OFFSET, %%NUM_BYTES, \
+                                %%KEYS, %%ZIV, \
+                                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                                %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
+                                %%NROUNDS, \
+                                %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT1, \
+                                %%ZCRC_IN_OUT2, %%ZCRC_IN_OUT3, \
+                                %%XCRC0
+
+        jmp     %%_main_loop
+
+%%_main_loop_exit:
+        ;; Up to 16 (inclusive) blocks left to process
+        ;; - decrypt the blocks first
+        ;; - then crc decrypted blocks minus one block
+
+        ;; broadcast IV across ZMM (4th and 1st 128-bit positions are only important really)
+        vshufi64x2      %%ZIV, %%ZIV, %%ZIV, 1111_1111b
+
         mov     %%NUM_BLOCKS, %%NUM_BYTES
         shr     %%NUM_BLOCKS, 4
-        and     %%NUM_BLOCKS, 7
-        jz	%%_eq8
+        and     %%NUM_BLOCKS, 15
+        jz	%%_decrypt_eq0
 
-	;; 1 to 7 blocks
+        cmp     %%NUM_BLOCKS, 8
+        jg      %%_decrypt_gt8
+        je      %%_decrypt_eq8
+
+        ;; 1 to 7 blocks
+	cmp	%%NUM_BLOCKS, 4
+	jg	%%_decrypt_gt4
+	je	%%_decrypt_eq4
+
+%%_decrypt_lt4:
+        ;; 1 to 3 blocks
+	cmp	%%NUM_BLOCKS, 2
+	jg	%%_decrypt_eq3
+	je	%%_decrypt_eq2
+        jmp     %%_decrypt_eq1
+
+%%_decrypt_gt4:
+        ;; 5 to 7
+	cmp	%%NUM_BLOCKS, 6
+	jg	%%_decrypt_eq7
+	je	%%_decrypt_eq6
+        jmp     %%_decrypt_eq5
+
+%%_decrypt_gt8:
+        ;; 9 to 15
+	cmp	%%NUM_BLOCKS, 12
+	jg	%%_decrypt_gt12
+	je	%%_decrypt_eq12
+
+        ;; 9 to 11
+	cmp	%%NUM_BLOCKS, 10
+	jg	%%_decrypt_eq11
+	je	%%_decrypt_eq10
+        jmp     %%_decrypt_eq9
+
+%%_decrypt_gt12:
+        ;; 13 to 15
+	cmp	%%NUM_BLOCKS, 14
+	jg	%%_decrypt_eq15
+	je	%%_decrypt_eq14
+        jmp     %%_decrypt_eq13
+
+%assign number_of_blocks 1
+%rep 15
+%%_decrypt_eq %+ number_of_blocks :
+        ;; decrypt selected number of blocks
+        AES_CBC_DEC_1_TO_16 %%SRC, %%DST, number_of_blocks, %%OFFSET, %%NUM_BYTES, \
+                        %%KEYS, %%ZIV, %%NROUNDS, \
+                        %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
+                        %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
+
+        ;; extract & save the last decrypted block as crc for it is done separately
+        ;; towards the end of this macro
+%if number_of_blocks < 5
+        vextracti64x2   %%XCRC0, %%ZTMP6, (number_of_blocks - 1)
+%elif  number_of_blocks < 9
+        vextracti64x2   %%XCRC0, %%ZTMP7, (number_of_blocks - 4 - 1)
+%elif  number_of_blocks < 13
+        vextracti64x2   %%XCRC0, %%ZTMP8, (number_of_blocks - 8 - 1)
+%else
+        vextracti64x2   %%XCRC0, %%ZTMP9, (number_of_blocks - 12 - 1)
+%endif
+
+        ;; set number of blocks for CRC
+        mov             %%NUM_BLOCKS, (number_of_blocks - 1)
+
+        ;; extract latest IV into XIV for partial block processing
+        vextracti32x4   %%XIV, %%ZIV, 3
+        jmp             %%_decrypt_done_fold_by8
+
+%assign number_of_blocks (number_of_blocks + 1)
+%endrep
+
+%%_decrypt_eq0:
+        ;; Special case. Check if there are full 16 blocks for decrypt
+        ;; - it can happen here because the main loop checks for 17 blocks
+        ;; If yes then decrypt them and fall through to folding/crc section
+        ;; identifying 15 blocks for CRC
+        cmp             %%NUM_BYTES, (16 * 16)
+        jb              %%_cbc_decrypt_done
+
+        AES_CBC_DEC_1_TO_16 %%SRC, %%DST, 16, %%OFFSET, %%NUM_BYTES, \
+                        %%KEYS, %%ZIV, %%NROUNDS, \
+                        %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
+                        %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
+
+        mov             %%NUM_BLOCKS, 15
+        vextracti32x4   %%XIV, %%ZIV, 3
+        vextracti64x2   %%XCRC0, %%ZTMP9, 3
+
+%%_decrypt_done_fold_by8:
+        ;; Register content at this point:
+        ;; ZTMP6 - ZTMP9 => decrypted blocks (16 to 31)
+        ;; ZCRC_IN_OUT0 - ZCRC_IN_OUT3 - fold by 16 CRC sums
+        ;; NUM_BLOCKS - number of blocks to CRC
+
+        ;; fold 16 x 128 bits -> 8 x 128 bits
+        vbroadcastf64x2 %%ZTMP2, [rel fold_by_8]
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT0, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT2, %%ZTMP1, 0x96
+
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT3, %%ZTMP1, 0x96
+
+%%_decrypt_done_no_fold_16_to_8:
+        ;; CRC 8 blocks of already decrypted text
+        test            %%NUM_BLOCKS, 8
+        jz              %%_skip_crc_by8
+
+        vbroadcastf64x2 %%ZTMP2, [rel fold_by_8]
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT0, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT0, %%ZTMP6, %%ZTMP1, 0x96
+
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT1, %%ZTMP7, %%ZTMP1, 0x96
+
+        vmovdqa64       %%ZTMP6, %%ZTMP8
+        vmovdqa64       %%ZTMP7, %%ZTMP9
+
+%%_skip_crc_by8:
+        ;; fold 8 x 128 bits -> 4 x 128 bits
+        vbroadcastf64x2 %%ZTMP2, [rel fold_by_4]
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT0, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT1, %%ZTMP1, 0x96
+
+        ;; CRC 4 blocks of already decrypted text
+        test            %%NUM_BLOCKS, 4
+        jz              %%_skip_crc_by4
+
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT0, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT0, %%ZTMP6, %%ZTMP1, 0x96
+
+        vmovdqa64       %%ZTMP6, %%ZTMP7
+
+%%_skip_crc_by4:
+        ;; fold 4 x 128 bits -> 2 x 128 bits
+        vbroadcastf64x2 YWORD(%%ZTMP2), [rel fold_by_2]
+        vextracti64x4   YWORD(%%ZCRC_IN_OUT1), %%ZCRC_IN_OUT0, 1
+        vpclmulqdq      YWORD(%%ZTMP1), YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZTMP2), 0x01
+        vpclmulqdq      YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZTMP2), 0x10
+        vpternlogq      YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZCRC_IN_OUT1), YWORD(%%ZTMP1), 0x96
+
+        ;; CRC 2 blocks of already decrypted text
+        test            %%NUM_BLOCKS, 2
+        jz              %%_skip_crc_by2
+
+        vpclmulqdq      YWORD(%%ZTMP1), YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZTMP2), 0x01
+        vpclmulqdq      YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZTMP2), 0x10
+        vpternlogq      YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZTMP6), YWORD(%%ZTMP1), 0x96
+
+        vshufi64x2      %%ZTMP6, %%ZTMP6, %%ZTMP6, 1110_1110b
+
+%%_skip_crc_by2:
+        ;; fold 2 x 128 bits -> 1 x 128 bits
+        vmovdqa64       XWORD(%%ZTMP2), [rel fold_by_1]
+        vextracti64x2   XWORD(%%ZCRC_IN_OUT1), YWORD(%%ZCRC_IN_OUT0), 1
+        vpclmulqdq      XWORD(%%ZTMP1), XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP2), 0x01
+        vpclmulqdq      XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP2), 0x10
+        vpternlogq      XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZCRC_IN_OUT1), XWORD(%%ZTMP1), 0x96
+
+        ;; CRC 1 block of already decrypted text
+        test            %%NUM_BLOCKS, 1
+        jz              %%_skip_crc_by1
+
+        vpclmulqdq      XWORD(%%ZTMP1), XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP2), 0x01
+        vpclmulqdq      XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP2), 0x10
+        vpternlogq      XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP6), XWORD(%%ZTMP1), 0x96
+
+%%_skip_crc_by1:
+        jmp             %%_check_partial_block
+
+%%_cbc_decrypt_done:
+        ;; No blocks left to compute CRC for. Just fold the sums from 16x128-bits into 1x128-bits.
+        ;; Register content at this point:
+        ;; ZCRC_IN_OUT0 - ZCRC_IN_OUT3 - fold by 16 CRC sums
+        ;; XCRC0 - includes the last decrypted block to be passed to partial check case
+
+        ;; fold 16 x 128 bits -> 8 x 128 bits
+        vbroadcastf64x2 %%ZTMP2, [rel fold_by_8]
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT0, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT2, %%ZTMP1, 0x96
+
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT3, %%ZTMP1, 0x96
+
+%%_cbc_decrypt_done_fold_8_to_4:
+        ;; fold 8 x 128 bits -> 4 x 128 bits
+        vbroadcastf64x2 %%ZTMP2, [rel fold_by_4]
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT0, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT1, %%ZTMP1, 0x96
+
+        ;; fold 4 x 128 bits -> 2 x 128 bits
+        vbroadcastf64x2 YWORD(%%ZTMP2), [rel fold_by_2]
+        vextracti64x4   YWORD(%%ZCRC_IN_OUT1), %%ZCRC_IN_OUT0, 1
+        vpclmulqdq      YWORD(%%ZTMP1), YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZTMP2), 0x01
+        vpclmulqdq      YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZTMP2), 0x10
+        vpternlogq      YWORD(%%ZCRC_IN_OUT0), YWORD(%%ZCRC_IN_OUT1), YWORD(%%ZTMP1), 0x96
+
+        ;; fold 2 x 128 bits -> 1 x 128 bits
+        vmovdqa64       XWORD(%%ZTMP2), [rel fold_by_1]
+        vextracti64x2   XWORD(%%ZCRC_IN_OUT1), YWORD(%%ZCRC_IN_OUT0), 1
+        vpclmulqdq      XWORD(%%ZTMP1), XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP2), 0x01
+        vpclmulqdq      XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZTMP2), 0x10
+        vpternlogq      XWORD(%%ZCRC_IN_OUT0), XWORD(%%ZCRC_IN_OUT1), XWORD(%%ZTMP1), 0x96
+
+        ;; - keep the last block out from the calculation
+        ;;   (this may be a partial block - additional checks follow)
+        jmp             %%_check_partial_block
+
+
+        ;; =====================================================================
+        ;; =====================================================================
+        ;; Part handling messages from 16 - 32 blocks
+        ;; =====================================================================
+%%_below_33_blocks:
+        ;; Decrypt 16 blocks first
+        ;; Make sure IV is in the top 128 bits of ZMM.
+        vshufi64x2      %%ZIV, %%ZIV, %%ZIV, 0000_0000b
+
+        AES_CBC_DEC_1_TO_16     %%SRC, %%DST, 16, %%OFFSET, %%NUM_BYTES, \
+                                %%KEYS, %%ZIV, %%NROUNDS, \
+                                %%ZTMP0, %%ZCRC_IN_OUT1, \
+                                %%ZCRC_IN_OUT2, %%ZCRC_IN_OUT3, \
+                                %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
+
+        ;; Start of CRC is just reading the data and adding initial value.
+        vpxorq          %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP0
+
+        ;; Use fold by 8 approach to start the CRC.
+        ;; ZCRC_IN_OUT0 and ZCRC_IN_OUT1 include CRC sums.
+        vbroadcastf64x2 %%ZTMP2, [rel fold_by_8]
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT0, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT0, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT0, %%ZCRC_IN_OUT2, %%ZTMP1, 0x96
+
+        vpclmulqdq      %%ZTMP1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x01
+        vpclmulqdq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT1, %%ZTMP2, 0x10
+        vpternlogq      %%ZCRC_IN_OUT1, %%ZCRC_IN_OUT3, %%ZTMP1, 0x96
+
+        ;; Decrypt rest of the message.
+        mov     %%NUM_BLOCKS, %%NUM_BYTES
+        shr     %%NUM_BLOCKS, 4
+        and     %%NUM_BLOCKS, 15
+        jz	%%_decrypt2_eq0
+
+        cmp     %%NUM_BLOCKS, 8
+        jg      %%_decrypt2_gt8
+        je      %%_decrypt2_eq8
+
+        ;; 1 to 7 blocks
+	cmp	%%NUM_BLOCKS, 4
+	jg	%%_decrypt2_gt4
+	je	%%_decrypt2_eq4
+
+%%_decrypt2_lt4:
+        ;; 1 to 3 blocks
+	cmp	%%NUM_BLOCKS, 2
+	jg	%%_decrypt2_eq3
+	je	%%_decrypt2_eq2
+        jmp     %%_decrypt2_eq1
+
+%%_decrypt2_gt4:
+        ;; 5 to 7
+	cmp	%%NUM_BLOCKS, 6
+	jg	%%_decrypt2_eq7
+	je	%%_decrypt2_eq6
+        jmp     %%_decrypt2_eq5
+
+%%_decrypt2_gt8:
+        ;; 9 to 15
+	cmp	%%NUM_BLOCKS, 12
+	jg	%%_decrypt2_gt12
+	je	%%_decrypt2_eq12
+
+        ;; 9 to 11
+	cmp	%%NUM_BLOCKS, 10
+	jg	%%_decrypt2_eq11
+	je	%%_decrypt2_eq10
+        jmp     %%_decrypt2_eq9
+
+%%_decrypt2_gt12:
+        ;; 13 to 15
+	cmp	%%NUM_BLOCKS, 14
+	jg	%%_decrypt2_eq15
+	je	%%_decrypt2_eq14
+        jmp     %%_decrypt2_eq13
+
+%assign number_of_blocks 1
+%rep 15
+%%_decrypt2_eq %+ number_of_blocks :
+        AES_CBC_DEC_1_TO_16 %%SRC, %%DST, number_of_blocks, %%OFFSET, %%NUM_BYTES, \
+                        %%KEYS, %%ZIV, %%NROUNDS, \
+                        %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
+                        %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
+
+%if number_of_blocks < 5
+        vextracti64x2   %%XCRC0, %%ZTMP6, (number_of_blocks - 1)
+%elif  number_of_blocks < 9
+        vextracti64x2   %%XCRC0, %%ZTMP7, (number_of_blocks - 4 - 1)
+%elif  number_of_blocks < 13
+        vextracti64x2   %%XCRC0, %%ZTMP8, (number_of_blocks - 8 - 1)
+%else
+        vextracti64x2   %%XCRC0, %%ZTMP9, (number_of_blocks - 12 - 1)
+%endif
+
+        ;; Update XIV
+        mov             %%NUM_BLOCKS, (number_of_blocks - 1)
+
+        ;; Extract latest IV
+        vextracti32x4   %%XIV, %%ZIV, 3
+        jmp             %%_decrypt_done_no_fold_16_to_8
+
+%assign number_of_blocks (number_of_blocks + 1)
+%endrep
+
+%%_decrypt2_eq0:
+        ;; Special case. Check if there are full 16 blocks for decrypt.
+        ;; If yes then decrypt them and fall through to folding/crc section
+        ;; identifying 15 blocks for CRC
+        cmp             %%NUM_BYTES, (16 * 16)
+        jb              %%_cbc_decrypt_done_fold_8_to_4
+
+        AES_CBC_DEC_1_TO_16 %%SRC, %%DST, 16, %%OFFSET, %%NUM_BYTES, \
+                        %%KEYS, %%ZIV, %%NROUNDS, \
+                        %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
+                        %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
+
+        mov             %%NUM_BLOCKS, 15
+        vextracti32x4   %%XIV, %%ZIV, 3
+        vextracti64x2   %%XCRC0, %%ZTMP9, 3
+        jmp             %%_decrypt_done_no_fold_16_to_8
+
+        ;; =====================================================================
+        ;; =====================================================================
+        ;; Part handling messages up to from 1 to 16 blocks
+        ;; =====================================================================
+%%_below_17_blocks:
+        ;; Make sure IV is in the top 128 bits of ZMM.
+        vshufi64x2      %%ZIV, %%ZIV, %%ZIV, 0000_0000b
+
+        mov     %%NUM_BLOCKS, %%NUM_BYTES
+        shr     %%NUM_BLOCKS, 4
+        and     %%NUM_BLOCKS, 15
+        jz	%%_eq16
+
+        cmp     %%NUM_BLOCKS, 8
+        jg      %%_gt8
+        je      %%_eq8
+
+        ;; 1 to 7 blocks
 	cmp	%%NUM_BLOCKS, 4
 	jg	%%_gt4
 	je	%%_eq4
@@ -753,107 +1215,75 @@ section .text
 	je	%%_eq6
         jmp     %%_eq5
 
-%assign align_blocks 1
-%rep 8
-%%_eq %+ align_blocks :
+%%_gt8:
+        ;; 9 to 15
+	cmp	%%NUM_BLOCKS, 12
+	jg	%%_gt12
+	je	%%_eq12
+
+        ;; 9 to 11
+	cmp	%%NUM_BLOCKS, 10
+	jg	%%_eq11
+	je	%%_eq10
+        jmp     %%_eq9
+
+%%_gt12:
+        ;; 13 to 15
+	cmp	%%NUM_BLOCKS, 14
+	jg	%%_eq15
+	je	%%_eq14
+        jmp     %%_eq13
+
+%assign number_of_blocks 1
+%rep 16
+%%_eq %+ number_of_blocks :
         ;; Start building the pipeline by decrypting number of blocks
         ;; - later cipher & CRC operations get stitched
-        AES_CBC_DEC_1_TO_16 %%SRC, %%DST, align_blocks, %%OFFSET, %%NUM_BYTES, \
+        AES_CBC_DEC_1_TO_16 %%SRC, %%DST, number_of_blocks, %%OFFSET, %%NUM_BYTES, \
                            %%KEYS, %%ZIV, %%NROUNDS, \
-                           %%ZCIPH0, %%ZCIPH1, %%ZCIPH2, %%ZCIPH3, \
-                           %%ZT24, %%ZT25, %%ZT26, %%ZT27, %%ZT28
+                           %%ZCRC0, %%ZCRC1, %%ZCRC2, %%ZCRC3, \
+                           %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5
 
         vextracti32x4       %%XIV, %%ZIV, 3
 
-        cmp     %%NUM_BYTES, (8*16)
-        jae     %%_eq %+ align_blocks %+ _next_8
-
-        ;; Less than 8 blocks remaining in the message:
+        ;; Less than 16 blocks remaining in the message:
         ;; - compute CRC on decrypted blocks (minus one, in case it is the last one)
         ;; - then check for any partial block left
-%assign align_blocks_for_crc (align_blocks - 1)
-        CRC32_1_TO_16   first_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP0, XWORD(%%ZT24), align_blocks_for_crc, \
-                        %%ZCIPH0, %%ZCIPH1, %%ZCIPH2, %%ZCIPH3
+%assign number_of_blocks_to_crc (number_of_blocks - 1)
+        CRC32_FIRST_1_TO_16     %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP0, %%XTMP1, \
+                                number_of_blocks_to_crc, \
+                                %%ZCRC0, %%ZCRC1, %%ZCRC2, %%ZCRC3, \
+                                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
 
-        ;; @todo temporary solution
-%if align_blocks_for_crc < 4
-        vextracti32x4   %%XCRC0, %%ZCIPH0, (align_blocks_for_crc % 4)
-%elif align_blocks_for_crc < 8
-        vextracti32x4   %%XCRC0, %%ZCIPH1, (align_blocks_for_crc % 4)
+%if number_of_blocks_to_crc == 0
+%elif number_of_blocks_to_crc < 4
+        vextracti32x4   %%XCRC0, %%ZCRC0, (number_of_blocks_to_crc % 4)
+%elif number_of_blocks_to_crc < 8
+        vextracti32x4   %%XCRC0, %%ZCRC1, (number_of_blocks_to_crc % 4)
+%elif number_of_blocks_to_crc < 12
+        vextracti32x4   %%XCRC0, %%ZCRC2, (number_of_blocks_to_crc % 4)
+%else ;; number_of_blocks_to_crc < 16
+        vextracti32x4   %%XCRC0, %%ZCRC3, (number_of_blocks_to_crc % 4)
 %endif
         jmp     %%_check_partial_block
 
-%%_eq %+ align_blocks %+ _next_8:
-        vmovdqa64          %%XCRC0, XWORD(%%ZCIPH0)
-        vextracti32x4      %%XCRC1, %%ZCIPH0, 1
-        vextracti32x4      %%XCRC2, %%ZCIPH0, 2
-        vextracti32x4      %%XCRC3, %%ZCIPH0, 3
-
-        vmovdqa64          %%XCRC4, XWORD(%%ZCIPH1)
-        vextracti32x4      %%XCRC5, %%ZCIPH1, 1
-        vextracti32x4      %%XCRC6, %%ZCIPH1, 2
-        vextracti32x4      %%XCRC7, %%ZCIPH1, 3
-
-        ;;  8 or more blocks remaining in the message
-        ;; - compute CRC on decrypted blocks while decrypting next 8 blocks
-        ;; - next jump to the main loop to do parallel decrypt and crc32
-        AES_CBC_DEC_CRC32_1_TO_8 %%SRC, %%DST, 8, align_blocks, %%OFFSET, %%NUM_BYTES, \
-                                 %%XKEY0, %%KEYS, %%XIV, \
-                                 %%XT0, %%XT1, %%XT2, %%XT3, \
-                                 %%XT4, %%XT5, %%XT6, %%XT7, \
-                                 %%XCIPH0, %%XCIPH1, %%XCIPH2, %%XCIPH3, \
-                                 %%XCIPH4, %%XCIPH5, %%XCIPH6, %%XCIPH7, \
-                                 %%XTMP0, %%NROUNDS, \
-                                 first_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP1, \
-                                 %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,       \
-                                 %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
-        jmp	%%_main_loop
-
-%assign align_blocks (align_blocks + 1)
+%assign number_of_blocks (number_of_blocks + 1)
 %endrep
 
-%%_main_loop:
-        cmp     %%NUM_BYTES, (8 * 16)
-        jb      %%_exit_loop
-
-        prefetchw       [%%SRC + %%OFFSET + 2*64]
-        prefetchw       [%%SRC + %%OFFSET + 3*64]
-        ;; Stitched cipher and CRC
-        ;; - ciphered blocks: n + 0, n + 1, n + 2, n + 3, n + 4, n + 5, n + 6, n + 7
-        ;; - crc'ed blocks: n - 8, n - 7, n - 6, n - 5, n - 4, n - 3, n - 2, n - 1
-        AES_CBC_DEC_CRC32_1_TO_8 %%SRC, %%DST, 8, 8, %%OFFSET, %%NUM_BYTES, \
-                              %%XKEY0, %%KEYS, %%XIV, \
-                              %%XT0, %%XT1, %%XT2, %%XT3, \
-                              %%XT4, %%XT5, %%XT6, %%XT7, \
-                              %%XCIPH0, %%XCIPH1, %%XCIPH2, %%XCIPH3, \
-                              %%XCIPH4, %%XCIPH5, %%XCIPH6, %%XCIPH7, \
-                              %%XTMP0, %%NROUNDS, \
-                              next_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP1, \
-                              %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,       \
-                              %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
-       jmp	%%_main_loop
-
-%%_exit_loop:
-        ;; Calculate CRC for already decrypted blocks
-        ;; - keep the last block out from the calculation
-        ;;   (this may be a partial block - additional checks follow)
-        vinserti32x4    %%ZCIPH0, %%XCRC0, 0
-        vinserti32x4    %%ZCIPH0, %%XCRC1, 1
-        vinserti32x4    %%ZCIPH0, %%XCRC2, 2
-        vinserti32x4    %%ZCIPH0, %%XCRC3, 3
-        vinserti32x4    %%ZCIPH1, %%XCRC4, 0
-        vinserti32x4    %%ZCIPH1, %%XCRC5, 1
-        vinserti32x4    %%ZCIPH1, %%XCRC6, 2
-        vinserti32x4    %%ZCIPH1, %%XCRC7, 3
-
-        CRC32_1_TO_16   next_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP0, XWORD(%%ZT24), 7, \
-                        %%ZCIPH0, %%ZCIPH1, %%ZCIPH2, %%ZCIPH3
-        ;; @todo temporary solution
-        vextracti32x4   %%XCRC0, %%ZCIPH1, 3
-
+        ;; =====================================================================
+        ;; =====================================================================
+        ;; Part handling decrypt & CRC of partial block and
+        ;; CRC of the second last block.
+        ;; Register content at entry to this section:
+        ;;     XCRC0 - last 16 bytes of clear text to compute crc on (optional)
+        ;;     XCRC_IN_OUT - 128-bit crc fold product
+        ;;     OFFSET - current offset
+        ;;     NUM_BYTES - number of bytes left to decrypt
+        ;;     XIV - IV for decrypt operation
+        ;; =====================================================================
 %%_check_partial_block:
-        or      %%NUM_BYTES, %%NUM_BYTES
-        jz      %%_no_partial_bytes
+        or              %%NUM_BYTES, %%NUM_BYTES
+        jz              %%_no_partial_bytes
 
         ;; AES128/256-CFB on the partial block
         lea             %%GT1, [rel byte_len_to_mask_table]
@@ -874,7 +1304,7 @@ section .text
         ;; - whole message is decrypted the focus moves to complete CRC
         ;;     - XCRC_IN_OUT includes folded data from all payload apart from
         ;;       the last full block and (potential) partial bytes
-        ;;     - max 2 blocks (minus 1) remain for CRC calculation
+        ;;     - max 2 blocks (minus 1 byte) remain for CRC calculation
         ;; - %%OFFSET == 0 is used to check
         ;;   if message consists of partial block only
         or      %%OFFSET, %%OFFSET
@@ -980,9 +1410,14 @@ section .text
 
 %endmacro       ;; DOCSIS_DEC_CRC32
 
+;; ===================================================================
+;; ===================================================================
+;; MACRO IMPLEMENTING API FOR STITCHED DOCSIS DECRYPT AND CRC32
+;; ===================================================================
 %macro AES_DOCSIS_DEC_CRC32 1
-%define %%NROUNDS %1 ; [in] Number of rounds (9 or 13)
-	mov	        rax, rsp
+%define %%NROUNDS %1    ; [in] Number of rounds (9 or 13)
+
+        mov	        rax, rsp
 	sub	        rsp, STACKFRAME_size
 	and	        rsp, -64
 	mov	        [rsp + _rsp_save], rax	; original SP
@@ -995,9 +1430,6 @@ section .text
 
         mov             tmp1, [job + _src]
         add             tmp1, [job + _hash_start_src_offset_in_bytes]   ; CRC only start
-
-        prefetchw       [tmp1 + 0*64]
-        prefetchw       [tmp1 + 1*64]
 
         cmp             qword [job + _msg_len_to_cipher_in_bytes], 0
         jz              %%aes_docsis_dec_crc32_avx512__no_cipher
