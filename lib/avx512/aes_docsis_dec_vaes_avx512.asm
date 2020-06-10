@@ -439,37 +439,43 @@ section .text
 
 ;; ===================================================================
 ;; ===================================================================
-;; CRC32 on 1 to 8 blocks
+;; CRC32 on 1 to 16 blocks
 ;; ===================================================================
-%macro CRC32_1_TO_8 6-13
+%macro CRC32_1_TO_16 10
 %define %%CRC_TYPE   %1  ; [in] CRC operation: "first_crc" or "next_crc"
-%define %%CRC_MUL    %2  ; [in] XMM with CRC multiplier (xmm0 - xmm15)
+%define %%CRC_MUL    %2  ; [in] XMM with CRC multiplier
 %define %%CRC_IN_OUT %3  ; [in/out] current CRC value
-%define %%XTMP       %4  ; [clobbered] temporary XMM (xmm0 - xmm15)
-%define %%NUMBL      %5  ; [in] number of blocks of clear text to compute CRC on
-%define %%CRCIN0     %6  ; [in] clear text block
-%define %%CRCIN1     %7  ; [in] clear text block
-%define %%CRCIN2     %8  ; [in] clear text block
-%define %%CRCIN3     %9  ; [in] clear text block
-%define %%CRCIN4     %10 ; [in] clear text block
-%define %%CRCIN5     %11 ; [in] clear text block
-%define %%CRCIN6     %12 ; [in] clear text block
-%define %%CRCIN7     %13 ; [in] clear text block
+%define %%XTMP       %4  ; [clobbered] temporary XMM
+%define %%XTMP2      %5  ; [clobbered] temporary XMM
+%define %%NUMBL      %6  ; [in] number of blocks of clear text to compute CRC on
+%define %%ZCRCIN0    %7  ; [in] clear text 4 blocks
+%define %%ZCRCIN1    %8  ; [in] clear text 4 blocks
+%define %%ZCRCIN2    %9  ; [in] clear text 4 blocks
+%define %%ZCRCIN3    %10 ; [in] clear text 4 blocks
 
 %if %%NUMBL > 0
+        vextracti32x4   %%XTMP2, %%ZCRCIN0, 0
         ;; block 0 - check first vs next
-        CRC_UPDATE16    no_load, %%CRC_IN_OUT, %%CRC_MUL, %%CRCIN0, %%XTMP, %%CRC_TYPE
+        CRC_UPDATE16    no_load, %%CRC_IN_OUT, %%CRC_MUL, %%XTMP2, %%XTMP, %%CRC_TYPE
 
         ;; blocks 1 to 7 - no difference between first / next here
 %assign crc_block 1
 %rep (%%NUMBL - 1)
-        CRC_UPDATE16    no_load, %%CRC_IN_OUT, %%CRC_MUL, %%CRCIN %+ crc_block, \
-                        %%XTMP, next_crc
+%if crc_block < 4
+        vextracti32x4   %%XTMP2, %%ZCRCIN0, (crc_block % 4)
+%elif crc_block < 8
+        vextracti32x4   %%XTMP2, %%ZCRCIN1, (crc_block % 4)
+%elif crc_block < 12
+        vextracti32x4   %%XTMP2, %%ZCRCIN2, (crc_block % 4)
+%else
+        vextracti32x4   %%XTMP2, %%ZCRCIN3, (crc_block % 4)
+%endif
+        CRC_UPDATE16    no_load, %%CRC_IN_OUT, %%CRC_MUL, %%XTMP2, %%XTMP, next_crc
 %assign crc_block (crc_block + 1)
 %endrep
 %endif  ;; %%NUMBL > 0
 
-%endmacro       ;; CRC32_1_TO_8
+%endmacro       ;; CRC32_1_TO_16
 
 ;; ===================================================================
 ;; ===================================================================
@@ -757,6 +763,27 @@ section .text
                            %%ZCIPH0, %%ZCIPH1, %%ZCIPH2, %%ZCIPH3, \
                            %%ZT24, %%ZT25, %%ZT26, %%ZT27, %%ZT28
 
+        vextracti32x4       %%XIV, %%ZIV, 3
+
+        cmp     %%NUM_BYTES, (8*16)
+        jae     %%_eq %+ align_blocks %+ _next_8
+
+        ;; Less than 8 blocks remaining in the message:
+        ;; - compute CRC on decrypted blocks (minus one, in case it is the last one)
+        ;; - then check for any partial block left
+%assign align_blocks_for_crc (align_blocks - 1)
+        CRC32_1_TO_16   first_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP0, XWORD(%%ZT24), align_blocks_for_crc, \
+                        %%ZCIPH0, %%ZCIPH1, %%ZCIPH2, %%ZCIPH3
+
+        ;; @todo temporary solution
+%if align_blocks_for_crc < 4
+        vextracti32x4   %%XCRC0, %%ZCIPH0, (align_blocks_for_crc % 4)
+%elif align_blocks_for_crc < 8
+        vextracti32x4   %%XCRC0, %%ZCIPH1, (align_blocks_for_crc % 4)
+%endif
+        jmp     %%_check_partial_block
+
+%%_eq %+ align_blocks %+ _next_8:
         vmovdqa64          %%XCRC0, XWORD(%%ZCIPH0)
         vextracti32x4      %%XCRC1, %%ZCIPH0, 1
         vextracti32x4      %%XCRC2, %%ZCIPH0, 2
@@ -767,22 +794,6 @@ section .text
         vextracti32x4      %%XCRC6, %%ZCIPH1, 2
         vextracti32x4      %%XCRC7, %%ZCIPH1, 3
 
-        vextracti32x4       %%XIV, %%ZIV, 3
-
-        cmp     %%NUM_BYTES, (8*16)
-        jae     %%_eq %+ align_blocks %+ _next_8
-
-        ;; Less than 8 blocks remaining in the message:
-        ;; - compute CRC on decrypted blocks (minus one, in case it is the last one)
-        ;; - then check for any partial block left
-%assign align_blocks_for_crc (align_blocks - 1)
-        CRC32_1_TO_8    first_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP0, align_blocks_for_crc, \
-                        %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,     \
-                        %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
-        vmovdqa64       %%XCRC0, %%XCRC %+ align_blocks_for_crc
-        jmp     %%_check_partial_block
-
-%%_eq %+ align_blocks %+ _next_8:
         ;;  8 or more blocks remaining in the message
         ;; - compute CRC on decrypted blocks while decrypting next 8 blocks
         ;; - next jump to the main loop to do parallel decrypt and crc32
@@ -826,10 +837,19 @@ section .text
         ;; Calculate CRC for already decrypted blocks
         ;; - keep the last block out from the calculation
         ;;   (this may be a partial block - additional checks follow)
-        CRC32_1_TO_8    next_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP0, 7, \
-                        %%XCRC0, %%XCRC1, %%XCRC2, %%XCRC3,     \
-                        %%XCRC4, %%XCRC5, %%XCRC6, %%XCRC7
-        vmovdqa64       %%XCRC0, %%XCRC7
+        vinserti32x4    %%ZCIPH0, %%XCRC0, 0
+        vinserti32x4    %%ZCIPH0, %%XCRC1, 1
+        vinserti32x4    %%ZCIPH0, %%XCRC2, 2
+        vinserti32x4    %%ZCIPH0, %%XCRC3, 3
+        vinserti32x4    %%ZCIPH1, %%XCRC4, 0
+        vinserti32x4    %%ZCIPH1, %%XCRC5, 1
+        vinserti32x4    %%ZCIPH1, %%XCRC6, 2
+        vinserti32x4    %%ZCIPH1, %%XCRC7, 3
+
+        CRC32_1_TO_16   next_crc, %%XCRC_MUL, %%XCRC_IN_OUT, %%XTMP0, XWORD(%%ZT24), 7, \
+                        %%ZCIPH0, %%ZCIPH1, %%ZCIPH2, %%ZCIPH3
+        ;; @todo temporary solution
+        vextracti32x4   %%XCRC0, %%ZCIPH1, 3
 
 %%_check_partial_block:
         or      %%NUM_BYTES, %%NUM_BYTES
