@@ -32,11 +32,15 @@
 """
 
 import sys
+
 # Number of parameters (ARCH, CIPHER_MODE, DIR, HASH_ALG, KEY_SIZE)
 PAR_NUM = 5
 COL_WIDTH = 14
 CYCLE_COST = False
 PACKET_SIZE = 0
+SLOPE = False
+THROUGHPUT = False
+CLOCK_SPEED = 0
 
 class Variant(object):
     """
@@ -91,6 +95,27 @@ class Variant(object):
                       + intercept\
                       + " "*(COL_WIDTH-len(str(intercept))))
 
+    def print_row_compare(self, obj_b):
+        """
+	Returns throughput and cycle cost
+        """
+        cycle_cost_a = self.slope * int(PACKET_SIZE) + self.intercept
+        formatted_a = "{:.5f}".format(cycle_cost_a)
+        if obj_b != None:
+            cycle_cost_b = obj_b.slope * int(PACKET_SIZE) + obj_b.intercept
+            formatted_b = "{:.5f}".format(cycle_cost_b)
+        if THROUGHPUT:
+            throughput_a = "{:.5f}".format((int(CLOCK_SPEED) / cycle_cost_a) * int(PACKET_SIZE))
+            if obj_b is None:
+                return (throughput_a)
+            else:
+                throughput_b = "{:.5f}".format((int(CLOCK_SPEED) / cycle_cost_b) * int(PACKET_SIZE))
+                return (throughput_a + " "*(COL_WIDTH-len(str(throughput_a))) + throughput_b)
+        if obj_b is None:
+            return (formatted_a)
+        else:
+            return (formatted_a + " "*(COL_WIDTH-len(str(formatted_a))) + formatted_b)
+
 class VarList(list):
     """
     Class used to store all test variants as a list of objects
@@ -123,50 +148,53 @@ class VarList(list):
         print("TOLERANCE: {:.2f}%".format(tolerance))
 
         warning = False
-        #Checks if CYCLE_COST has been set to true with the
-        #-c flag and prints the appropriate values
+        #Checks if CYCLE_COST/THROUGHPUT/SLOPE has been set to true with the
+        #commandline flags and prints the appropriate values
         if CYCLE_COST:
             headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
-                        "KEYSZ", "SLOPE A", "INTERCEPT", "SLOPE B",
-                        "INTERCEPT B", "CYCLE COST A", "CYCLE COST B"]
-            print("Buffer size: {}".format(PACKET_SIZE))
+                        "KEYSZ", "CYCLE COST A", "CYCLE COST B"]
+            print("Buffer size: {} bytes".format(PACKET_SIZE))
+        elif THROUGHPUT:
+            headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
+                        "KEYSZ", "THROUGHPUT A", "THROUGHPUT B"]
+            print("Buffer size: {} bytes".format(PACKET_SIZE))
+            print("Clock speed: {} MHz\nThroughput unit: Mbps".format(CLOCK_SPEED))
         else:
             headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
-                        "KEYSZ", "SLOPE A", "INTERCEPT", "SLOPE B", "INTERCEPT B"]
+                        "KEYSZ", "SLOPE A", "INTERCEPT A", "SLOPE B", "INTERCEPT B"]
+
         print("".join(j.ljust(COL_WIDTH) for j in headings))
 
         for i, obj_a in enumerate(self):
             obj_b = list_b.find_obj(obj_a.params)
-            if obj_b != None:
-                if obj_a.slope < 0.0:
-                    obj_a.slope = 0
-                if obj_b.slope < 0.0:
-                    obj_b.slope = 0
-                slope_bv = 0.01 * tolerance * obj_a.slope # border value
-                intercept_bv = 0.01 * tolerance * obj_a.intercept
-                diff_slope = obj_b.slope - obj_a.slope
-                diff_intercept = obj_b.intercept - obj_a.intercept
-                if (obj_a.slope > 0.001 and obj_b.slope > 0.001 and
-                        diff_slope > slope_bv) or diff_intercept > intercept_bv:
-                    warning = True
-                    data = (obj_b.get_params())
-                    number = i +1
-                    if CYCLE_COST:
-                        cycle_cost_a = "{:.5f}".format(obj_a.slope * int(PACKET_SIZE) + obj_a.intercept)
-                        cycle_cost_b = "{:.5f}".format(obj_b.slope * int(PACKET_SIZE) + obj_b.intercept)
-                        print(str(number) + " "*(COL_WIDTH-len(str(number)))\
-                                          + "".join(j.ljust(COL_WIDTH) for j in data)\
-                                          + obj_a.get_lin_func_str()\
-                                          + obj_b.get_lin_func_str()\
-                                          + cycle_cost_a\
-                                          + " "*(COL_WIDTH-len(str(cycle_cost_a)))\
-                                          + cycle_cost_b)
-
-                    else:
-                        print(str(number) + " "*(COL_WIDTH-len(str(number)))\
-                                          + "".join(j.ljust(COL_WIDTH) for j in data)\
-                                          + obj_a.get_lin_func_str()\
-                                          + obj_b.get_lin_func_str())
+            if obj_b is None:
+                continue
+            if obj_a.slope < 0.0:
+                obj_a.slope = 0
+            if obj_b.slope < 0.0:
+                obj_b.slope = 0
+            slope_bv = 0.01 * tolerance * obj_a.slope # border value
+            intercept_bv = 0.01 * tolerance * obj_a.intercept
+            diff_slope = obj_b.slope - obj_a.slope
+            diff_intercept = obj_b.intercept - obj_a.intercept
+            if (obj_a.slope > 0.001 and obj_b.slope > 0.001 and
+                    diff_slope > slope_bv) or diff_intercept > intercept_bv:
+                warning = True
+                data = (obj_b.get_params())
+                number = i +1
+                if CYCLE_COST:
+                    print(str(number) + " "*(COL_WIDTH-len(str(number)))\
+                                      + "".join(j.ljust(COL_WIDTH) for j in data)\
+                                      + obj_a.print_row_compare(obj_b))
+                elif THROUGHPUT:
+                    print(str(number) + " "*(COL_WIDTH-len(str(number)))\
+                                      + "".join(j.ljust(COL_WIDTH) for j in data)\
+                                      + obj_a.print_row_compare(obj_b))
+                else:
+                    print(str(number) + " "*(COL_WIDTH-len(str(number)))\
+                                      + "".join(j.ljust(COL_WIDTH) for j in data)\
+                                      + obj_a.get_lin_func_str()\
+                                      + obj_b.get_lin_func_str())
         if not warning:
             print("No differences found.")
         return warning
@@ -177,25 +205,32 @@ class VarList(list):
         """
         if CYCLE_COST:
             headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
-                        "KEYSZ", "SLOPE A", "INTERCEPT", "CYCLE COST A"]
-            print("Buffer size: {}".format(PACKET_SIZE))
+                        "KEYSZ", "CYCLE COST A"]
+            print("Buffer size: {} bytes".format(PACKET_SIZE))
+        elif THROUGHPUT:
+            headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
+                        "KEYSZ", "THROUGHPUT A"]
+            print("Buffer size: {} bytes".format(PACKET_SIZE))
+            print("Clock speed: {} MHz\nThroughput unit: Mbps".format(CLOCK_SPEED))
         else:
             headings = ["NO", "ARCH", "CIPHER", "DIR", "HASH",
-                        "KEYSZ", "SLOPE A", "INTERCEPT"]
+                        "KEYSZ", "SLOPE A", "INTERCEPT A"]
         print("".join(j.ljust(COL_WIDTH) for j in headings))
         for i, obj in enumerate(self):
             number = i+1
             data = obj.get_params()
             if CYCLE_COST:
-                cycle_cost_a = "{:.5f}".format(obj.slope * int(PACKET_SIZE) + obj.intercept)
                 print (str(number)  + " "*(COL_WIDTH-len(str(number)))\
-				                    + "".join(j.ljust(COL_WIDTH) for j in data)\
-				                    + obj.get_lin_func_str()\
-                                    + cycle_cost_a)
+		                    + "".join(j.ljust(COL_WIDTH) for j in data)\
+                                    + obj.print_row_compare(None))
+            elif THROUGHPUT:
+                print (str(number)  + " "*(COL_WIDTH-len(str(number)))\
+		                    + "".join(j.ljust(COL_WIDTH) for j in data)\
+                                    + obj.print_row_compare(None))
             else:
                 print (str(number)  + " "*(COL_WIDTH-len(str(number)))\
-				                    + "".join(j.ljust(COL_WIDTH) for j in data)\
-				                    + obj.get_lin_func_str())
+		                    + "".join(j.ljust(COL_WIDTH) for j in data)\
+		                    + obj.get_lin_func_str())
 
 class Parser(object):
     """
@@ -285,15 +320,20 @@ class DiffTool(object):
         """
         print("This tool compares file_b against file_a printing out differences.")
         print("Usage:")
-        print("\tipsec_diff_tool.py [-v] [-a] file_a file_b [tol]\n")
+        print("\tipsec_diff_tool.py [-v] [-a] [-c] [-t] [-s] file_a file_b [tol]\n")
         print("\t-v - verbose")
-        print("\t-a - takes only one argument: name of the file to analyze")
+        print("\t-a - takes only one file to analyze")
+        print("\t-c - takes packet size as argument and then it will calculate cycle cost")
+        print("\t-t - takes packet size and clock speed as arguments and then it will calculate throughput")
+        print("\t-s - calulates the slope and intercept")
         print("\tfile_a, file_b - text files containing output from ipsec_perf tool")
         print("\ttol - tolerance [%], must be >= 0, default 5\n")
         print("Examples:")
-        print("\tipsec_diff_tool.py file01.txt file02.txt 10")
-        print("\tipsec_diff_tool.py -a file02.txt")
-        print("\tipsec_diff_tool.py -v -a file01.txt")
+        print("\tipsec_diff_tool.py -s file01.txt file02.txt 10")
+        print("\tipsec_diff_tool.py -a -s file02.txt")
+        print("\tipsec_diff_tool.py -v -a -s file01.txt")
+        print("\tipsec_diff_tool.py -c 512 file01.txt file02.txt")
+        print("\tipsec_diff_tool.py -t 512 2200 file01.txt file02.txt")
 
 
     def parse_args(self):
@@ -302,6 +342,13 @@ class DiffTool(object):
         """
         global PACKET_SIZE
         global CYCLE_COST
+        global THROUGHPUT
+        global SLOPE
+        global CLOCK_SPEED
+
+        if len(sys.argv) < 3 or sys.argv[1] == "-h":
+            self.usage()
+            exit(1)
         for i in range(len(sys.argv)):
             arg = sys.argv[i]
             if arg == "-c":
@@ -315,50 +362,27 @@ class DiffTool(object):
                 self.verbose = True
             if arg == "-a":
                 self.analyze = True
-        if len(sys.argv) < 3 or sys.argv[1] == "-h":
-            self.usage()
-            exit(1)
-        if self.analyze:
-            if self.verbose:
-                #-a -v
-                if CYCLE_COST:
-                    #-a -v -c
-                    self.fname_a = sys.argv[5]
+            if arg == "-s":
+                SLOPE = True
+            if arg == "-t":
+                THROUGHPUT = True
+                if sys.argv[i+1].isdigit() and sys.argv[i+2].isdigit():
+                    PACKET_SIZE = sys.argv[i+1]
+                    CLOCK_SPEED = sys.argv[i+2]
                 else:
-                    #-a -v
-                    self.fname_a = sys.argv[3]
-            elif CYCLE_COST:
-                #-a -c
-                self.fname_a = sys.argv[4]
-            else:
-                #-a
-                self.fname_a = sys.argv[2]
-        elif self.verbose:
-            #-v
-            if CYCLE_COST:
-                #-v -c
-                self.fname_a = sys.argv[4]
-                self.fname_b = sys.argv[5]
-                if len(sys.argv) >= 7:
-                    self.tolerance = float(sys.argv[6])
-            else:
-                #-v
-                self.fname_a = sys.argv[2]
-                self.fname_b = sys.argv[3]
-                if len(sys.argv) >= 5:
-                    self.tolerance = float(sys.argv[4])
-        elif CYCLE_COST:
-            #-c
-            self.fname_a = sys.argv[3]
-            self.fname_b = sys.argv[4]
-            if len(sys.argv) >= 6:
-                self.tolerance = float(sys.argv[5])
+                    print("Please enter values for the packet size and clock speed for throughput")
+                    exit(1)
+        length = len(sys.argv)
+        if self.analyze:
+            self.fname_a = sys.argv[length-1]
         else:
-            #no args
-            self.fname_a = sys.argv[1]
-            self.fname_b = sys.argv[2]
-            if len(sys.argv) >= 4:
-                self.tolerance = float(sys.argv[3])
+            if sys.argv[length-1].isdecimal():
+                self.tolerance = float(sys.argv[length-1])
+                self.fname_a = sys.argv[length-3]
+                self.fname_b = sys.argv[length-2]
+            else:
+                self.fname_a = sys.argv[length-2]
+                self.fname_b = sys.argv[length-1]
 
     def run(self):
         """
