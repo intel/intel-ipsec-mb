@@ -30,8 +30,21 @@
 ;;; Updates In pointer at end
 
 
-%ifndef AES_XCBC_X4
-%define AES_XCBC_X4 aes_xcbc_mac_128_x4
-%endif
-%define CBC_XCBC_MAC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; struct AES_XCBC_ARGS_x16 {
+;;     void*    in[16];
+;;     UINT128* keys[16];
+;;     UINT128  ICV[16];
+;; }
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void aes_xcbc_mac_128_x4(AES_XCBC_ARGS_x16 *args, UINT64 len);
+;; arg 1: ARG : addr of AES_XCBC_ARGS_x16 structure
+
+%define FUNC     aes_xcbc_mac_128_x4
+%define MODE     CBC_XCBC_MAC
+%define OFFSET   16
+%define ARG_IN   _aesxcbcarg_in
+%define ARG_KEYS _aesxcbcarg_keys
+%define ARG_IV   _aesxcbcarg_ICV
+
 %include "sse/aes_cbc_enc_128_x4.asm"

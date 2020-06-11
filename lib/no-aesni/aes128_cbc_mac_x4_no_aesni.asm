@@ -28,6 +28,12 @@
 ;;; Routine to compute CBC-MAC based on 128 bit CBC AES encryption code
 
 %include "include/aesni_emu.inc"
-%define AES_CBC_ENC_X4
-%define CBC_XCBC_MAC
+
+%define FUNC     aes128_cbc_mac_x4_no_aesni
+%define MODE     CBC_XCBC_MAC
+%define OFFSET   16
+%define ARG_IN   _aesarg_in
+%define ARG_KEYS _aesarg_keys
+%define ARG_IV   _aesarg_IV
+
 %include "sse/aes_cbc_enc_128_x4.asm"

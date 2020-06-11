@@ -26,5 +26,12 @@
 ;;
 
 %include "include/aesni_emu.inc"
-%define AES_XCBC_X4 aes_xcbc_mac_128_x4_no_aesni
-%include "sse/aes_xcbc_mac_128_x4.asm"
+
+%define FUNC     aes_xcbc_mac_128_x4_no_aesni
+%define MODE     CBC_XCBC_MAC
+%define OFFSET   16
+%define ARG_IN   _aesxcbcarg_in
+%define ARG_KEYS _aesxcbcarg_keys
+%define ARG_IV   _aesxcbcarg_ICV
+
+%include "sse/aes_cbc_enc_128_x4.asm"

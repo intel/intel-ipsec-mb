@@ -72,13 +72,10 @@ endstruc
 %define IN3	r14
 %define KEYS3	rbp
 
-%ifndef CBC_XCBC_MAC
-;; No cipher text write back for CBC-MAC
 %define OUT0	r9
 %define OUT1	r11
 %define OUT2	r13
 %define OUT3	r15
-%endif
 
 %define XDATA0		xmm0
 %define XDATA1		xmm1
@@ -104,68 +101,17 @@ endstruc
 
 section .text
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; struct AES_XCBC_ARGS_x16 {
-;;     void*    in[16];
-;;     UINT128* keys[16];
-;;     UINT128  ICV[16];
-;; }
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void aes_xcbc_mac_128_x4(AES_XCBC_ARGS_x16 *args, UINT64 len);
-;; arg 1: ARG : addr of AES_XCBC_ARGS_x16 structure
-
-%ifdef AES_XCBC_X4
-%define ARG_IN   _aesxcbcarg_in
-%define ARG_KEYS _aesxcbcarg_keys
-%define ARG_IV   _aesxcbcarg_ICV
-
-MKGLOBAL(AES_XCBC_X4,function,internal)
-AES_XCBC_X4:
-
-%else
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; struct AES_ARGS {
-;;     void*    in[8];
-;;     void*    out[8];
-;;     UINT128* keys[8];
-;;     UINT128  IV[8];
-;; }
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; void aes_cbc_enc_128_x4(AES_ARGS *args, UINT64 len);
-;; arg 1: ARG : addr of AES_ARGS structure
-;; arg 2: LEN : len (in units of bytes)
-
-%define ARG_IN   _aesarg_in
-%define ARG_KEYS _aesarg_keys
-%define ARG_IV   _aesarg_IV
-
-%ifndef AES_CBC_ENC_X4
-
-%ifdef CBC_XCBC_MAC
-MKGLOBAL(aes128_cbc_mac_x4,function,internal)
-aes128_cbc_mac_x4:
-%else
-MKGLOBAL(aes_cbc_enc_128_x4,function,internal)
-aes_cbc_enc_128_x4:
-%endif
-
-%else ;; AES_CBC_ENC_X4 already defined
-
-%ifdef CBC_XCBC_MAC
-MKGLOBAL(aes128_cbc_mac_x4_no_aesni,function,internal)
-aes128_cbc_mac_x4_no_aesni:
-%else
-MKGLOBAL(aes_cbc_enc_128_x4_no_aesni,function,internal)
-aes_cbc_enc_128_x4_no_aesni:
-
-%endif ;; CBC_XCBC_MAC
-%endif ;; AES_CBC_ENC_X4
-%endif ;; AES_XCBC_X4
+%macro AES_CBC_X4 5-6
+%define %%MODE          %1
+%define %%OFFSET        %2
+%define %%ARG_IV        %3
+%define %%ARG_KEYS      %4
+%define %%ARG_IN        %5
+%define %%ARG_OUT       %6
 
         sub	rsp, STACK_size
 	mov	[rsp + _gpr_save + 8*0], rbp
-%ifdef CBC_XCBC_MAC
+%ifidn %%MODE, CBC_XCBC_MAC
 	mov	[rsp + _gpr_save + 8*1], rbx
 	mov	[rsp + _gpr_save + 8*2], r12
 	mov	[rsp + _gpr_save + 8*3], r13
@@ -176,35 +122,35 @@ aes_cbc_enc_128_x4_no_aesni:
 	mov	[rsp + _gpr_save + 8*7], rdi
 %endif
 %endif
-	mov	IDX, 16
+	mov	IDX, %%OFFSET
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	mov	        IN0,	[ARG + ARG_IN + 8*0]
-	mov	        IN1,	[ARG + ARG_IN + 8*1]
-	mov	        IN2,	[ARG + ARG_IN + 8*2]
-	mov	        IN3,	[ARG + ARG_IN + 8*3]
+	mov	        IN0,	[ARG + %%ARG_IN + 8*0]
+	mov	        IN1,	[ARG + %%ARG_IN + 8*1]
+	mov	        IN2,	[ARG + %%ARG_IN + 8*2]
+	mov	        IN3,	[ARG + %%ARG_IN + 8*3]
 
 	MOVDQ		XDATA0, [IN0]		; load first block of plain text
 	MOVDQ		XDATA1, [IN1]		; load first block of plain text
 	MOVDQ		XDATA2, [IN2]		; load first block of plain text
 	MOVDQ		XDATA3, [IN3]		; load first block of plain text
 
-	mov		KEYS0,	[ARG + ARG_KEYS + 8*0]
-	mov		KEYS1,	[ARG + ARG_KEYS + 8*1]
-	mov		KEYS2,	[ARG + ARG_KEYS + 8*2]
-	mov		KEYS3,	[ARG + ARG_KEYS + 8*3]
+	mov		KEYS0,	[ARG + %%ARG_KEYS + 8*0]
+	mov		KEYS1,	[ARG + %%ARG_KEYS + 8*1]
+	mov		KEYS2,	[ARG + %%ARG_KEYS + 8*2]
+	mov		KEYS3,	[ARG + %%ARG_KEYS + 8*3]
 
-	pxor		XDATA0, [ARG + ARG_IV + 16*0] ; plaintext XOR IV
-	pxor		XDATA1, [ARG + ARG_IV + 16*1] ; plaintext XOR IV
-	pxor		XDATA2, [ARG + ARG_IV + 16*2] ; plaintext XOR IV
-	pxor		XDATA3, [ARG + ARG_IV + 16*3] ; plaintext XOR IV
+	pxor		XDATA0, [ARG + %%ARG_IV + 16*0] ; plaintext XOR IV
+	pxor		XDATA1, [ARG + %%ARG_IV + 16*1] ; plaintext XOR IV
+	pxor		XDATA2, [ARG + %%ARG_IV + 16*2] ; plaintext XOR IV
+	pxor		XDATA3, [ARG + %%ARG_IV + 16*3] ; plaintext XOR IV
 
 %ifndef CBC_XCBC_MAC
-	mov		OUT0,	[ARG + _aesarg_out + 8*0]
-	mov		OUT1,	[ARG + _aesarg_out + 8*1]
-	mov		OUT2,	[ARG + _aesarg_out + 8*2]
-	mov		OUT3,	[ARG + _aesarg_out + 8*3]
+	mov		OUT0,	[ARG + %%ARG_OUT + 8*0]
+	mov		OUT1,	[ARG + %%ARG_OUT + 8*1]
+	mov		OUT2,	[ARG + %%ARG_OUT + 8*2]
+	mov		OUT3,	[ARG + %%ARG_OUT + 8*3]
 %endif
 
 	pxor		XDATA0, [KEYS0 + 16*0]		; 0. ARK
@@ -276,16 +222,16 @@ aes_cbc_enc_128_x4_no_aesni:
 	aesenclast	XDATA2, [KEYS2 + 16*10]	; 10. ENC
 	aesenclast	XDATA3, [KEYS3 + 16*10]	; 10. ENC
 
-%ifndef CBC_XCBC_MAC
+%ifnidn %%MODE, CBC_XCBC_MAC
 	MOVDQ		[OUT0], XDATA0		; write back ciphertext
 	MOVDQ		[OUT1], XDATA1		; write back ciphertext
 	MOVDQ		[OUT2], XDATA2		; write back ciphertext
 	MOVDQ		[OUT3], XDATA3		; write back ciphertext
 %endif
 	cmp		LEN, IDX
-	je		done
+	jle		%%_done
 
-main_loop:
+%%_main_loop:
 	pxor2		XDATA0, [IN0 + IDX]	; plaintext XOR IV
 	pxor2		XDATA1, [IN1 + IDX]	; plaintext XOR IV
 	pxor2		XDATA2, [IN2 + IDX]	; plaintext XOR IV
@@ -346,7 +292,7 @@ main_loop:
 	aesenclast	XDATA2, [KEYS2 + 16*10]	; 10. ENC
 	aesenclast	XDATA3, [KEYS3 + 16*10]	; 10. ENC
 
-%ifndef CBC_XCBC_MAC
+%ifnidn %%MODE, CBC_XCBC_MAC
         ;; No cipher text write back for CBC-MAC
 	MOVDQ		[OUT0 + IDX], XDATA0	; write back ciphertext
 	MOVDQ		[OUT1 + IDX], XDATA1	; write back ciphertext
@@ -354,40 +300,40 @@ main_loop:
 	MOVDQ		[OUT3 + IDX], XDATA3	; write back ciphertext
 %endif
 
-	add	IDX, 16
+	add	IDX, %%OFFSET
 	cmp	LEN, IDX
-	jne	main_loop
+	jg	%%_main_loop
 
-done:
+%%_done:
 	;; update IV / store digest for CBC-MAC
-	movdqa	[ARG + ARG_IV + 16*0], XDATA0
-	movdqa	[ARG + ARG_IV + 16*1], XDATA1
-	movdqa	[ARG + ARG_IV + 16*2], XDATA2
-	movdqa	[ARG + ARG_IV + 16*3], XDATA3
+	movdqa	[ARG + %%ARG_IV + 16*0], XDATA0
+	movdqa	[ARG + %%ARG_IV + 16*1], XDATA1
+	movdqa	[ARG + %%ARG_IV + 16*2], XDATA2
+	movdqa	[ARG + %%ARG_IV + 16*3], XDATA3
 
 	;; update IN and OUT
 	add	IN0, LEN
-	mov	[ARG + ARG_IN + 8*0], IN0
+	mov	[ARG + %%ARG_IN + 8*0], IN0
 	add	IN1, LEN
-	mov	[ARG + ARG_IN + 8*1], IN1
+	mov	[ARG + %%ARG_IN + 8*1], IN1
 	add	IN2, LEN
-	mov	[ARG + ARG_IN + 8*2], IN2
+	mov	[ARG + %%ARG_IN + 8*2], IN2
 	add	IN3, LEN
-	mov	[ARG + ARG_IN + 8*3], IN3
+	mov	[ARG + %%ARG_IN + 8*3], IN3
 
-%ifndef CBC_XCBC_MAC
+%ifnidn %%MODE, CBC_XCBC_MAC
         ;; No OUT pointer updates for CBC-MAC
 	add	OUT0, LEN
-	mov	[ARG + _aesarg_out + 8*0], OUT0
+	mov	[ARG + %%ARG_OUT + 8*0], OUT0
 	add	OUT1, LEN
-	mov	[ARG + _aesarg_out + 8*1], OUT1
+	mov	[ARG + %%ARG_OUT + 8*1], OUT1
 	add	OUT2, LEN
-	mov	[ARG + _aesarg_out + 8*2], OUT2
+	mov	[ARG + %%ARG_OUT + 8*2], OUT2
 	add	OUT3, LEN
-	mov	[ARG + _aesarg_out + 8*3], OUT3
+	mov	[ARG + %%ARG_OUT + 8*3], OUT3
 %endif
 
-%ifdef CBC_XCBC_MAC
+%ifidn %%MODE, CBC_XCBC_MAC
 	mov	rbx, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]
 	mov	r13, [rsp + _gpr_save + 8*3]
@@ -405,7 +351,39 @@ done:
 	clear_all_xmms_sse_asm
 %endif ;; SAFE_DATA
 
-	ret
+%endmacro
+
+%ifndef FUNC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; struct AES_ARGS {
+;;     void*    in[8];
+;;     void*    out[8];
+;;     UINT128* keys[8];
+;;     UINT128  IV[8];
+;; }
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; void aes_cbc_enc_128_x4(AES_ARGS *args, UINT64 len);
+;; arg 1: ARG : addr of AES_ARGS structure
+;; arg 2: LEN : len (in units of bytes)
+%define FUNC     aes_cbc_enc_128_x4
+%define MODE     CBC
+%define OFFSET   16
+%define ARG_IN   _aesarg_in
+%define ARG_OUT  _aesarg_out
+%define ARG_KEYS _aesarg_keys
+%define ARG_IV   _aesarg_IV
+
+%endif ;; FUNC
+
+MKGLOBAL(FUNC,function,internal)
+FUNC:
+%ifdef ARG_OUT
+        AES_CBC_X4 MODE, OFFSET, ARG_IV, ARG_KEYS, ARG_IN, ARG_OUT
+%else
+        AES_CBC_X4 MODE, OFFSET, ARG_IV, ARG_KEYS, ARG_IN
+%endif
+        ret
+
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
