@@ -174,7 +174,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
         uint32_t bytes = find_min_length32(length);
-        uint32_t numKeyStreamsPerPkt = bytes/KEYSTR_ROUND_LEN;
+        uint32_t numKeyStreamsPerPkt = bytes/ ZUC_WORD_BYTES;
         uint32_t remainBytes[NUM_AVX2_BUFS] = {0};
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][KEYSTR_ROUND_LEN], 64);
         /* structure to store the 8 keys */
@@ -190,7 +190,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         uint64_t *pKeyStream64 = NULL;
 
         /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * KEYSTR_ROUND_LEN;
+        bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
 
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState8_t));
@@ -212,9 +212,8 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        /* Encrypt common length of all buffers (multiple of 32 bytes) */
-        asm_ZucCipherNx32B_8_avx2(&state, pIn64, pOut64,
-                                  numKeyStreamsPerPkt * KEYSTR_ROUND_LEN);
+        /* Encrypt common length of all buffers (multiple of 4 bytes) */
+        asm_ZucCipherNx4B_8_avx2(&state, pIn64, pOut64, bytes);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
@@ -328,7 +327,7 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
         uint32_t bytes = find_min_length16(length);
-        uint32_t numKeyStreamsPerPkt = bytes/KEYSTR_ROUND_LEN;
+        uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
         uint32_t remainBytes[NUM_AVX2_BUFS] = {0};
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
@@ -342,7 +341,7 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         uint64_t *pOut64[NUM_AVX2_BUFS] = {NULL};
 
         /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * KEYSTR_ROUND_LEN;
+        bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
 
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState8_t));
@@ -364,8 +363,7 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        asm_ZucCipherNx32B_8_avx2(&state, pIn64, pOut64,
-                                  numKeyStreamsPerPkt * KEYSTR_ROUND_LEN);
+        asm_ZucCipherNx4B_8_avx2(&state, pIn64, pOut64, bytes);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX2_BUFS; i++) {

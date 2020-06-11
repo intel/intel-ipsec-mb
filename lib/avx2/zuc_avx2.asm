@@ -29,6 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
 %include "include/transpose_avx2.asm"
+%include "include/memcpy.asm"
 
 %define APPEND(a,b) a %+ b
 
@@ -179,9 +180,17 @@ align 64
         mov     rsp, [rsp + GP_OFFSET + 40]
 %endmacro
 
-%macro REORDER_LFSR 1
+; This macro reorder the LFSR registers
+; after N rounds (1 <= N <= 15), since the registers
+; are shifted every round
+;
+; The macro clobbers YMM0-15
+;
+%macro REORDER_LFSR 2
 %define %%STATE      %1
+%define %%NUM_ROUNDS %2
 
+%if %%NUM_ROUNDS != 16
 %assign i 0
 %rep 16
     vmovdqa APPEND(ymm,i), [%%STATE + 32*i]
@@ -189,13 +198,13 @@ align 64
 %endrep
 
 %assign i 0
-%assign j 8
+%assign j %%NUM_ROUNDS
 %rep 16
     vmovdqa [%%STATE + 32*i], APPEND(ymm,j)
 %assign i (i+1)
 %assign j ((j+1) % 16)
 %endrep
-
+%endif ;; %%NUM_ROUNDS != 16
 
 %endmacro
 
@@ -710,7 +719,7 @@ asm_ZucInitialization_8_avx2:
     ;; Reorder LFSR registers, as not all 16 rounds have been completed
     ;; (No need to do if NUM_ROUNDS != 8, as it would indicate that
     ;; these would be the final rounds)
-    REORDER_LFSR rax
+    REORDER_LFSR rax, 8
 
 %else ;; NUM_ROUNDS == 8
 %assign idx 0
@@ -775,7 +784,148 @@ asm_ZucGenKeystream8B_8_avx2:
     ret
 
 ;;
-;; void asm_ZucCipherNx32B_8_avx2(state4_t *pSta, u64 *pIn[8],
+;; Encrypt N*4B bytes on all 8 buffers
+;; where N is number of rounds (up to 8)
+
+%macro CIPHERNx4B_8 3-4
+%define %%NROUNDS        %1
+%define %%INITIAL_ROUND  %2
+%define %%OFFSET         %3
+%define %%PARTIAL_LENGTH %4
+
+%ifdef LINUX
+%define %%TMP1 r8
+%define %%TMP2 r9
+%else
+%define %%TMP1 rdi
+%define %%TMP2 rsi
+%endif
+        ; Load read-only registers
+        vmovdqa ymm12, [rel mask31]
+
+        ; Generate N*4B of keystream in N rounds
+%assign N 1
+%assign round (%%INITIAL_ROUND + N)
+%rep %%NROUNDS
+        bits_reorg8 round, 1, ymm10
+        nonlin_fun8 1
+        ; OFS_XR XOR W (ymm0)
+        vpxor   ymm10, ymm0
+        vmovdqa [rsp + (N-1)*32], ymm10
+        vpxor   ymm0, ymm0
+        lfsr_updt8  round
+%assign N N+1
+%assign round (round + 1)
+%endrep
+
+%assign N 0
+%assign idx 8
+%rep %%NROUNDS
+        vmovdqa APPEND(ymm, idx), [rsp + N*32]
+%assign N N+1
+%assign idx (idx+1)
+%endrep
+
+        TRANSPOSE8_U32 ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, \
+                       ymm15, ymm0, ymm1
+        ;; XOR Input buffer with keystream in rounds of 32B
+
+        mov     r12, [pIn]
+        mov     r13, [pIn + 8]
+        mov     r14, [pIn + 16]
+        mov     r15, [pIn + 24]
+%if (%0 == 4)
+        ;; Save GP registers
+        push    %%TMP1
+        push    %%TMP2
+
+        simd_load_avx2 ymm0, r12 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_load_avx2 ymm1, r13 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_load_avx2 ymm2, r14 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_load_avx2 ymm3, r15 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+%else
+        vmovdqu ymm0, [r12 + %%OFFSET]
+        vmovdqu ymm1, [r13 + %%OFFSET]
+        vmovdqu ymm2, [r14 + %%OFFSET]
+        vmovdqu ymm3, [r15 + %%OFFSET]
+%endif
+
+        mov     r12, [pIn + 32]
+        mov     r13, [pIn + 40]
+        mov     r14, [pIn + 48]
+        mov     r15, [pIn + 56]
+%if (%0 == 4)
+        simd_load_avx2 ymm4, r12 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_load_avx2 ymm5, r13 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_load_avx2 ymm6, r14 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_load_avx2 ymm7, r15 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+%else
+        vmovdqu ymm4, [r12 + %%OFFSET]
+        vmovdqu ymm5, [r13 + %%OFFSET]
+        vmovdqu ymm6, [r14 + %%OFFSET]
+        vmovdqu ymm7, [r15 + %%OFFSET]
+%endif
+        ; Shuffle all keystreams and XOR with plaintext
+%assign %%I 0
+%assign %%J 8
+%rep 8
+        vpshufb ymm %+ %%J, [rel swap_mask]
+        vpxor   ymm %+ %%J, ymm %+ %%I
+%assign %%I (%%I + 1)
+%assign %%J (%%J + 1)
+%endrep
+
+        ;; Write output
+        mov     r12, [pOut]
+        mov     r13, [pOut + 8]
+        mov     r14, [pOut + 16]
+        mov     r15, [pOut + 24]
+
+%if (%0 == 4)
+        add     r12, %%OFFSET
+        add     r13, %%OFFSET
+        add     r14, %%OFFSET
+        add     r15, %%OFFSET
+        simd_store_avx2 r12, ymm8, %%PARTIAL_LENGTH,  %%TMP1, %%TMP2
+        simd_store_avx2 r13, ymm9, %%PARTIAL_LENGTH,  %%TMP1, %%TMP2
+        simd_store_avx2 r14, ymm10, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_store_avx2 r15, ymm11, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+%else
+        vmovdqu [r12 + %%OFFSET], ymm8
+        vmovdqu [r13 + %%OFFSET], ymm9
+        vmovdqu [r14 + %%OFFSET], ymm10
+        vmovdqu [r15 + %%OFFSET], ymm11
+%endif
+
+        mov     r12, [pOut + 32]
+        mov     r13, [pOut + 40]
+        mov     r14, [pOut + 48]
+        mov     r15, [pOut + 56]
+
+%if (%0 == 4)
+        add     r12, %%OFFSET
+        add     r13, %%OFFSET
+        add     r14, %%OFFSET
+        add     r15, %%OFFSET
+        simd_store_avx2 r12, ymm12, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_store_avx2 r13, ymm13, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_store_avx2 r14, ymm14, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        simd_store_avx2 r15, ymm15, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+
+        ; Restore registers
+        pop %%TMP2
+        pop %%TMP1
+%else
+        vmovdqu [r12 + %%OFFSET], ymm12
+        vmovdqu [r13 + %%OFFSET], ymm13
+        vmovdqu [r14 + %%OFFSET], ymm14
+        vmovdqu [r15 + %%OFFSET], ymm15
+%endif
+
+%endmacro
+
+;;
+;; void asm_ZucCipherNx4B_8_avx2(state4_t *pSta, u64 *pIn[8],
 ;;                             u64 *pOut[8], u64 bufOff);
 ;;
 ;; WIN64
@@ -790,8 +940,8 @@ asm_ZucGenKeystream8B_8_avx2:
 ;;  RDX - pOut
 ;;  RCX - length
 ;;
-MKGLOBAL(asm_ZucCipherNx32B_8_avx2,function,internal)
-asm_ZucCipherNx32B_8_avx2:
+MKGLOBAL(asm_ZucCipherNx4B_8_avx2,function,internal)
+asm_ZucCipherNx4B_8_avx2:
 
 %ifdef LINUX
         %define         pState  rdi
@@ -829,121 +979,73 @@ asm_ZucCipherNx32B_8_avx2:
         mov     nrounds, length
         shr     nrounds, 2
 
-loop_cipher32:
-%assign M 0
-%rep 2
-        ; Load read-only registers
-        vmovdqa ymm12, [rel mask31]
+loop_cipher64:
+        cmp     length, 64
+        jl      exit_loop_cipher64
 
-        ; Generate 32B of keystream in 8 rounds
-%assign N 1
-%assign round (M * 8 + N)
-%rep 8
-        bits_reorg8 round, 1, ymm10
-        nonlin_fun8 1
-        ; OFS_XR XOR W (ymm0)
-        vpxor   ymm10, ymm0
-        vmovdqa [rsp + (N-1)*32], ymm10
-        vpxor   ymm0, ymm0
-        lfsr_updt8  round
-%assign N N+1
-%assign round (round + 1)
-%endrep
+        CIPHERNx4B_8 8, 0, buf_idx
 
-%assign N 0
-%assign idx 8
-%rep 8
-        vmovdqa APPEND(ymm, idx), [rsp + N*32]
-%assign N N+1
-%assign idx (idx+1)
-%endrep
-
-        TRANSPOSE8_U32 ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, \
-                       ymm15, ymm0, ymm1
-        ;; XOR Input buffer with keystream in rounds of 32B
-
-        ;; Read all 8 streams
-        mov     r12, [pIn]
-        mov     r13, [pIn + 8]
-        mov     r14, [pIn + 16]
-        mov     r15, [pIn + 24]
-        vmovdqu ymm0, [r12 + buf_idx]
-        vmovdqu ymm1, [r13 + buf_idx]
-        vmovdqu ymm2, [r14 + buf_idx]
-        vmovdqu ymm3, [r15 + buf_idx]
-        mov     r12, [pIn + 32]
-        mov     r13, [pIn + 40]
-        mov     r14, [pIn + 48]
-        mov     r15, [pIn + 56]
-        vmovdqu ymm4, [r12 + buf_idx]
-        vmovdqu ymm5, [r13 + buf_idx]
-        vmovdqu ymm6, [r14 + buf_idx]
-        vmovdqu ymm7, [r15 + buf_idx]
-
-        ; Shuffle all keystreams
-        vpshufb ymm8,  [rel swap_mask]
-        vpshufb ymm9,  [rel swap_mask]
-        vpshufb ymm10, [rel swap_mask]
-        vpshufb ymm11, [rel swap_mask]
-
-        vpshufb ymm12, [rel swap_mask]
-        vpshufb ymm13, [rel swap_mask]
-        vpshufb ymm14, [rel swap_mask]
-        vpshufb ymm15, [rel swap_mask]
-
-        ;; XOR Input with Keystream and write output for all 8 buffers
-        vpxor   ymm8,  ymm0
-        vpxor   ymm9,  ymm1
-        vpxor   ymm10, ymm2
-        vpxor   ymm11, ymm3
-
-        vpxor   ymm12, ymm4
-        vpxor   ymm13, ymm5
-        vpxor   ymm14, ymm6
-        vpxor   ymm15, ymm7
-
-        mov     r12, [pOut]
-        mov     r13, [pOut + 8]
-        mov     r14, [pOut + 16]
-        mov     r15, [pOut + 24]
-
-        vmovdqu [r12 + buf_idx], ymm8
-        vmovdqu [r13 + buf_idx], ymm9
-        vmovdqu [r14 + buf_idx], ymm10
-        vmovdqu [r15 + buf_idx], ymm11
-
-        mov     r12, [pOut + 32]
-        mov     r13, [pOut + 40]
-        mov     r14, [pOut + 48]
-        mov     r15, [pOut + 56]
-
-        vmovdqu [r12 + buf_idx], ymm12
-        vmovdqu [r13 + buf_idx], ymm13
-        vmovdqu [r14 + buf_idx], ymm14
-        vmovdqu [r15 + buf_idx], ymm15
-
-        sub     length, 32
         add     buf_idx, 32
+        sub     length, 32
 
-        or      length, length
-        jz      exit_loop_cipher32
+        CIPHERNx4B_8 8, 8, buf_idx
 
-%assign M (M+1)
+        add     buf_idx, 32
+        sub     length, 32
+
+        jmp     loop_cipher64
+exit_loop_cipher64:
+
+        ; Check if at least 32 bytes are left to encrypt
+        cmp     length, 32
+        jl      less_than_32
+
+        CIPHERNx4B_8 8, 0, buf_idx, length
+        REORDER_LFSR rax, 8
+
+        add     buf_idx, 32
+        sub     length, 32
+
+        ; Check if there are more bytes left to encrypt
+less_than_32:
+
+        and     nrounds, 0x7
+        jz      exit_final_rounds
+
+_final_rounds_is_1_7:
+        cmp     nrounds, 4
+        je      _num_final_rounds_is_4
+        jl      _final_rounds_is_1_3
+
+        ; Final blocks 5-7
+        cmp     nrounds, 7
+        je      _num_final_rounds_is_7
+        cmp     nrounds, 6
+        je      _num_final_rounds_is_6
+        cmp     nrounds, 5
+        je      _num_final_rounds_is_5
+
+_final_rounds_is_1_3:
+        cmp     nrounds, 3
+        je      _num_final_rounds_is_3
+        cmp     nrounds, 2
+        je      _num_final_rounds_is_2
+
+        jmp     _num_final_rounds_is_1
+
+        ; Perform encryption of last bytes (<= 31 bytes) and reorder LFSR registers
+%assign I 1
+%rep 7
+APPEND(_num_final_rounds_is_,I):
+        CIPHERNx4B_8 I, 0, buf_idx, length
+        REORDER_LFSR rax, I
+        shl     nrounds, 2
+        add     buf_idx, nrounds
+        jmp     exit_final_rounds
+%assign I (I + 1)
 %endrep
-        jmp     loop_cipher32
-exit_loop_cipher32:
 
-        ;; Reorder memory for LFSR registers, based on number of rounds left
-        ;; after multiple of 16 rounds (can be 0 or 8)
-
-        and     nrounds, 0xf
-        jz      exit_reorder_cipher32
-
-        ;; Reorder memory for LFSR registers, since there were rounds left
-        ;; after multiple of 16 rounds
-        REORDER_LFSR rax
-
-exit_reorder_cipher32:
+exit_final_rounds:
         ;; update in/out pointers
         vmovq           xmm0, buf_idx
         vpshufd         xmm0, xmm0, 0x5

@@ -758,8 +758,8 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_4_avx(ZucState4_t *pState,
  * @description
  *      Definition of the external function that implements the working
  *      stage of the ZUC algorithm. The function will generate a multiple of
- *      32 bytes of keystream for 8 packets in parallel and will XOR this
- *      keystream with the input text, producing 32 bytes of output
+ *      4 bytes of keystream for 8 packets in parallel and will XOR this
+ *      keystream with the input text, producing multiple of 4 bytes of output
  *      for all 8 packets.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
@@ -767,14 +767,14 @@ IMB_DLL_LOCAL void asm_ZucCipher64B_4_avx(ZucState4_t *pState,
  *
  * @param[in] pIn                   Array of pointers to 8 input buffers.
  * @param[out] pOut                 Array of pointers to 8 output buffers.
- * @param[in] length                Length to encrypt (multiple of 32 bytes)
+ * @param[in] length                Length to encrypt (multiple of 4 bytes)
  *
  * @pre
  *      A successful call to @ref asm_ZucInitialization_8 to initialize the ZUC
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipherNx32B_8_avx2(ZucState8_t *pState,
+IMB_DLL_LOCAL void asm_ZucCipherNx4B_8_avx2(ZucState8_t *pState,
                                              const uint64_t *pIn[8],
                                              uint64_t *pOut[8],
                                              const uint64_t length);
