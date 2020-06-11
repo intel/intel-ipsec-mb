@@ -610,4 +610,133 @@
         %%PINSRB %%DST, [%%SRC + 0], 0
 %%end_load:
 %endm
+
+%macro simd_load_avx2 5
+%define %%DST       %1    ; [out] destination YMM register
+%define %%SRC       %2    ; [in] pointer to src data
+%define %%SIZE      %3    ; [in] length in bytes (0-32 bytes)
+%define %%IDX       %4    ; [clobbered] Temp GP register to store src idx
+%define %%TMP       %5    ; [clobbered] Temp GP register
+
+        test    %%SIZE, 32
+        jz      %%_skip_32
+        vmovdqu %%DST, [%%SRC]
+        jmp     %%end_load
+
+%%_skip_32:
+        vpxor   %%DST, %%DST ; clear YMM register
+        or      %%SIZE, %%SIZE
+        je      %%end_load
+
+        lea     %%IDX, [%%SRC]
+        mov     %%TMP, %%SIZE
+        cmp     %%SIZE, 16
+        jle     %%_check_size
+
+        add     %%IDX, 16
+        sub     %%TMP, 16
+
+%%_check_size:
+%assign %%I 1
+%rep 16
+        cmp     %%TMP, %%I
+        je      APPEND(%%_size_, %%I)
+%assign %%I (%%I+1)
+%endrep
+
+%%_size_16:
+        vmovdqu XWORD(%%DST), [%%IDX]
+        jmp    %%end_load
+%%_size_15:
+        vpinsrb XWORD(%%DST), [%%IDX + 14], 14
+%%_size_14:
+        vpinsrb XWORD(%%DST), [%%IDX + 13], 13
+%%_size_13:
+        vpinsrb XWORD(%%DST), [%%IDX + 12], 12
+%%_size_12:
+        vpinsrb XWORD(%%DST), [%%IDX + 11], 11
+%%_size_11:
+        vpinsrb XWORD(%%DST), [%%IDX + 10], 10
+%%_size_10:
+        vpinsrb XWORD(%%DST), [%%IDX + 9], 9
+%%_size_9:
+        vpinsrb XWORD(%%DST), [%%IDX + 8], 8
+%%_size_8:
+        vpinsrq XWORD(%%DST), [%%IDX], 0
+        jmp    %%_check_higher_16
+%%_size_7:
+        vpinsrb XWORD(%%DST), [%%IDX + 6], 6
+%%_size_6:
+        vpinsrb XWORD(%%DST), [%%IDX + 5], 5
+%%_size_5:
+        vpinsrb XWORD(%%DST), [%%IDX + 4], 4
+%%_size_4:
+        vpinsrb XWORD(%%DST), [%%IDX + 3], 3
+%%_size_3:
+        vpinsrb XWORD(%%DST), [%%IDX + 2], 2
+%%_size_2:
+        vpinsrb XWORD(%%DST), [%%IDX + 1], 1
+%%_size_1:
+        vpinsrb XWORD(%%DST), [%%IDX + 0], 0
+%%_check_higher_16:
+        test    %%SIZE, 16
+        jz      %%end_load
+
+        ; Move last bytes loaded to upper half and load 16 bytes in lower half
+        vinserti128 %%DST, XWORD(%%DST), 1
+        vinserti128 %%DST, [%%SRC], 0
+%%end_load:
+%endm
+
+%macro simd_store_avx2 5
+%define %%DST      %1    ; register: pointer to dst (not modified)
+%define %%SRC      %2    ; register: src data (clobbered)
+%define %%SIZE     %3    ; register: length in bytes (not modified)
+%define %%TMP      %4    ; 64-bit temp GPR (clobbered)
+%define %%IDX      %5    ; 64-bit temp GPR to store dst idx (clobbered)
+
+        xor %%IDX, %%IDX        ; zero idx
+
+        test    %%SIZE, 32
+        jz      %%lt32
+        vmovdqu [%%DST], %%SRC
+        jmp     %%end
+%%lt32:
+
+        test    %%SIZE, 16
+        jz      %%lt16
+        vmovdqu [%%DST], XWORD(%%SRC)
+        ; Move upper half to lower half for further stores
+        vperm2i128 %%SRC, %%SRC, %%SRC, 0x81
+        add     %%IDX, 16
+%%lt16:
+
+        test    %%SIZE, 8
+        jz      %%lt8
+        vmovq  [%%DST + %%IDX], XWORD(%%SRC)
+        vpsrldq XWORD(%%SRC), 8
+        add     %%IDX, 8
+%%lt8:
+
+        vmovq %%TMP, XWORD(%%SRC)     ; use GPR from now on
+
+        test    %%SIZE, 4
+        jz      %%lt4
+        mov     [%%DST + %%IDX], DWORD(%%TMP)
+        shr     %%TMP, 32
+        add     %%IDX, 4
+%%lt4:
+
+        test    %%SIZE, 2
+        jz      %%lt2
+        mov     [%%DST + %%IDX], WORD(%%TMP)
+        shr     %%TMP, 16
+        add     %%IDX, 2
+%%lt2:
+        test    %%SIZE, 1
+        jz      %%end
+        mov     [%%DST + %%IDX], BYTE(%%TMP)
+%%end:
+%endm
+
 %endif ; ifndef __MEMCPY_ASM__
