@@ -302,7 +302,7 @@ section .text
 
 	add	IDX, %%OFFSET
 	cmp	LEN, IDX
-	jg	%%_main_loop
+	ja	%%_main_loop
 
 %%_done:
 	;; update IV / store digest for CBC-MAC

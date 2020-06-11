@@ -272,7 +272,8 @@ asm_noaesni_lib_objs := \
 	mb_mgr_aes_xcbc_flush_sse_no_aesni.o \
 	mb_mgr_aes_xcbc_submit_sse_no_aesni.o \
 	mb_mgr_zuc_submit_flush_sse_no_aesni.o \
-	ethernet_fcs_sse_no_aesni.o
+	ethernet_fcs_sse_no_aesni.o \
+	aes_cbcs_1_9_enc_128_x4_no_aesni.o
 
 #
 # List of ASM modules (sse directory)
@@ -358,7 +359,8 @@ asm_sse_lib_objs := \
 	mb_mgr_hmac_sha_256_submit_ni_sse.o \
 	mb_mgr_zuc_submit_flush_sse.o \
 	mb_mgr_zuc_submit_flush_gfni_sse.o \
-	ethernet_fcs_sse.o
+	ethernet_fcs_sse.o \
+	aes_cbcs_1_9_enc_128_x4.o
 
 #
 # List of ASM modules (avx directory)
