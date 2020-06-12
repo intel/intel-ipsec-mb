@@ -28,6 +28,23 @@
 %ifndef _CONST_INC_
 %define _CONST_INC_
 
+align 16
+len_shift_dword_tab:
+        db 0x00, 0x01, 0x02, 0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        db 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x02, 0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x02, 0x03, 0xff, 0xff, 0xff, 0xff,
+        db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x02, 0x03,
+
+;;; Table used to zero index
+align 16
+len_mask_dword_tab:
+        dw 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+        dw 0xffff, 0xffff, 0x0000, 0x0000, 0xffff, 0xffff, 0xffff, 0xffff,
+        dw 0xffff, 0xffff, 0xffff, 0xffff, 0x0000, 0x0000, 0xffff, 0xffff,
+        dw 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x0000, 0x0000,
+
+%define len_tab_dword_diff 64
+
 ;;; Tables used to insert word into a SIMD register
 extern len_shift_tab
 extern len_mask_tab
@@ -114,6 +131,95 @@ extern padding_0x80_tab16
 %%lower_128:
         vmovdqa %%tmp_simd1, [%%mem_addr]
         XVPINSRW %%tmp_simd1, %%tmp_simd2, %%tmp_gp, %%idx, %%val, %%scale_idx
+        vmovdqa [%%mem_addr], %%tmp_simd1
+%%exit:
+%endmacro
+
+; PINSRD_COMMON insert dword into 128 bit SIMD register
+%macro PINSRD_COMMON 7
+
+%define %%type          %1 ; instruction type - sse or avx
+%define %%dest          %2 ; dest XMM reg to insert word
+%define %%tmp_simd      %3 ; XMM reg to clobber
+%define %%tmp_gp        %4 ; GP reg to clobber
+%define %%idx           %5 ; dword index to insert value into XMM
+%define %%val           %6 ; dword value to insert into idx
+%define %%scale_idx     %7 ; flag to set if index is to be scaled x16
+
+%ifidn  %%scale_idx, scale_x16
+        shl     %%idx, 4     ; scale idx up x16
+%endif
+%ifnum  %%val
+        ;; immediate value passed on
+        mov     DWORD(%%tmp_gp), %%val
+%ifidn  %%type, sse
+        movd    %%tmp_simd, DWORD(%%tmp_gp)
+%else
+        vmovd   %%tmp_simd, DWORD(%%tmp_gp)
+%endif
+%else
+        ;; register name passed on
+%ifidn  %%type, sse
+        movd    %%tmp_simd, DWORD(%%val)
+%else
+        vmovd   %%tmp_simd, DWORD(%%val)
+%endif
+%endif
+        lea     %%tmp_gp, [rel len_shift_dword_tab]
+        ;; check type - SSE or AVX
+%ifidn  %%type, sse
+        pshufb  %%tmp_simd, [%%tmp_gp + %%idx]
+        pand    %%dest, [%%tmp_gp + len_tab_dword_diff + %%idx]
+        por     %%dest, %%tmp_simd
+%else
+        vpshufb %%tmp_simd, [%%tmp_gp + %%idx]
+        vpand   %%dest, [%%tmp_gp + len_tab_dword_diff + %%idx]
+        vpor    %%dest, %%tmp_simd
+%endif
+%ifidn  %%scale_idx, scale_x16
+        shr     %%idx, 4     ; reset idx
+%endif
+%endmacro
+
+;;; Call SSE macro
+%define XPINSRD PINSRD_COMMON sse,
+
+;;; Call AVX macro
+%define XVPINSRD PINSRD_COMMON avx,
+
+
+;;; VPINSRD_M256 insert dword into 32 byte memory range
+%macro VPINSRD_M256 7
+
+%define %%mem_addr      %1 ; 16 byte aligned memory address to insert word
+%define %%tmp_simd1     %2 ; XMM reg to clobber
+%define %%tmp_simd2     %3 ; XMM reg to clobber
+%define %%tmp_gp        %4 ; GP reg to clobber
+%define %%idx           %5 ; dword index to insert value
+%define %%val           %6 ; dword value to insert into idx
+%define %%scale_idx     %7 ; flag to set if index is to be scaled x16
+
+%ifidn  %%scale_idx, scale_x16
+        cmp     %%idx, 4
+        jl      %%lower_128
+        sub     %%idx, 4
+%else ;; idx is multipled by 16
+        cmp     %%idx, 64
+        jl      %%lower_128
+        sub     %%idx, 64
+%endif
+        vmovdqa %%tmp_simd1, [%%mem_addr + 2*8]
+        XVPINSRD %%tmp_simd1, %%tmp_simd2, %%tmp_gp, %%idx, %%val, %%scale_idx
+        vmovdqa [%%mem_addr + 2*8], %%tmp_simd1
+%ifidn  %%scale_idx, scale_x16
+        add     %%idx, 4
+%else
+        add     %%idx, 64
+%endif
+        jmp     %%exit
+%%lower_128:
+        vmovdqa %%tmp_simd1, [%%mem_addr]
+        XVPINSRD %%tmp_simd1, %%tmp_simd2, %%tmp_gp, %%idx, %%val, %%scale_idx
         vmovdqa [%%mem_addr], %%tmp_simd1
 %%exit:
 %endmacro
