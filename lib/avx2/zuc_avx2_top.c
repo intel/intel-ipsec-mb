@@ -170,7 +170,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                             void *pBufferOut[NUM_AVX2_BUFS],
                             const uint32_t length[NUM_AVX2_BUFS])
 {
-        DECLARE_ALIGNED(ZucState8_t state, 64);
+        DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
         uint32_t bytes = find_min_length32(length);
@@ -193,7 +193,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
 
         /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState8_t));
+        memset(&state, 0, sizeof(ZucState16_t));
 
         /*
          * Calculate the number of bytes left over for each packet,
@@ -316,23 +316,17 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
 #endif
 }
 
-void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
-                                const void * const pIv[NUM_AVX2_BUFS],
+void zuc_eea3_8_buffer_job_avx2(MB_MGR_ZUC_OOO *ooo,
                                 const void * const pBufferIn[NUM_AVX2_BUFS],
                                 void *pBufferOut[NUM_AVX2_BUFS],
-                                const uint16_t length[NUM_AVX2_BUFS],
-                                const void * const job_in_lane[NUM_AVX2_BUFS])
+                                const uint16_t length[NUM_AVX2_BUFS])
 {
-        DECLARE_ALIGNED(ZucState8_t state, 64);
+        ZucState16_t *state = &ooo->state16;
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
         uint32_t bytes = find_min_length16(length);
         uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
         uint32_t remainBytes[NUM_AVX2_BUFS] = {0};
-        /* structure to store the 8 keys */
-        DECLARE_ALIGNED(ZucKey8_t keys, 64);
-        /* structure to store the 8 IV's */
-        DECLARE_ALIGNED(ZucIv8_t ivs, 64);
         uint32_t numBytesLeftOver = 0;
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
@@ -343,56 +337,48 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         /* rounded down minimum length */
         bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
 
-        /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState8_t));
-
         /*
          * Calculate the number of bytes left over for each packet,
          * and setup the Keys and IVs
          */
-        for (i = 0; i < NUM_AVX2_BUFS; i++) {
+        for (i = 0; i < NUM_AVX2_BUFS; i++)
                 remainBytes[i] = length[i] - bytes;
-                keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
-        }
-
-        asm_ZucInitialization_8_avx2(&keys,  &ivs, &state);
 
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        asm_ZucCipherNx4B_8_avx2(&state, pIn64, pOut64, bytes);
+        asm_ZucCipherNx4B_8_avx2(state, pIn64, pOut64, bytes);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
-                if (remainBytes[i] && job_in_lane[i]) {
+                if (remainBytes[i] && ooo->job_in_lane[i]) {
                         /* need to copy the zuc state to single packet state */
-                        singlePktState.lfsrState[0] = state.lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state.lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state.lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state.lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state.lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state.lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state.lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state.lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state.lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state.lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state.lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state.lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state.lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state.lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state.lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state.lfsrState[15][i];
+                        singlePktState.lfsrState[0] = state->lfsrState[0][i];
+                        singlePktState.lfsrState[1] = state->lfsrState[1][i];
+                        singlePktState.lfsrState[2] = state->lfsrState[2][i];
+                        singlePktState.lfsrState[3] = state->lfsrState[3][i];
+                        singlePktState.lfsrState[4] = state->lfsrState[4][i];
+                        singlePktState.lfsrState[5] = state->lfsrState[5][i];
+                        singlePktState.lfsrState[6] = state->lfsrState[6][i];
+                        singlePktState.lfsrState[7] = state->lfsrState[7][i];
+                        singlePktState.lfsrState[8] = state->lfsrState[8][i];
+                        singlePktState.lfsrState[9] = state->lfsrState[9][i];
+                        singlePktState.lfsrState[10] = state->lfsrState[10][i];
+                        singlePktState.lfsrState[11] = state->lfsrState[11][i];
+                        singlePktState.lfsrState[12] = state->lfsrState[12][i];
+                        singlePktState.lfsrState[13] = state->lfsrState[13][i];
+                        singlePktState.lfsrState[14] = state->lfsrState[14][i];
+                        singlePktState.lfsrState[15] = state->lfsrState[15][i];
 
-                        singlePktState.fR1 = state.fR1[i];
-                        singlePktState.fR2 = state.fR2[i];
+                        singlePktState.fR1 = state->fR1[i];
+                        singlePktState.fR2 = state->fR2[i];
 
-                        singlePktState.bX0 = state.bX0[i];
-                        singlePktState.bX1 = state.bX1[i];
-                        singlePktState.bX2 = state.bX2[i];
-                        singlePktState.bX3 = state.bX3[i];
+                        singlePktState.bX0 = state->bX0[i];
+                        singlePktState.bX1 = state->bX1[i];
+                        singlePktState.bX2 = state->bX2[i];
+                        singlePktState.bX3 = state->bX3[i];
 
                         numKeyStreamsPerPkt = remainBytes[i] / KEYSTR_ROUND_LEN;
                         numBytesLeftOver = remainBytes[i]  % KEYSTR_ROUND_LEN;
@@ -462,8 +448,7 @@ void zuc_eea3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
 #ifdef SAFE_DATA
         /* Clear sensitive data in stack */
         clear_mem(&singlePktState, sizeof(singlePktState));
-        clear_mem(&state, sizeof(state));
-        clear_mem(&keys, sizeof(keys));
+        clear_mem(state, sizeof(state));
 #endif
 }
 
@@ -643,7 +628,7 @@ void _zuc_eia3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                              uint32_t *pMacI[NUM_AVX2_BUFS])
 {
         unsigned int i = 0;
-        DECLARE_ALIGNED(ZucState8_t state, 64);
+        DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         uint32_t commonBits = find_min_length32(lengthInBits);
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][2*KEYSTR_ROUND_LEN], 64);
@@ -666,7 +651,7 @@ void _zuc_eia3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         }
 
         /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState8_t));
+        memset(&state, 0, sizeof(ZucState16_t));
 
         asm_ZucInitialization_8_avx2(&keys,  &ivs, &state);
 
@@ -823,7 +808,7 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                                 const void * const job_in_lane[NUM_AVX2_BUFS])
 {
         unsigned int i = 0;
-        DECLARE_ALIGNED(ZucState8_t state, 64);
+        DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         uint32_t commonBits = find_min_length16(lengthInBits);
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][2*KEYSTR_ROUND_LEN], 64);
@@ -846,7 +831,7 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         }
 
         /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState8_t));
+        memset(&state, 0, sizeof(ZucState16_t));
 
         asm_ZucInitialization_8_avx2(&keys,  &ivs, &state);
 

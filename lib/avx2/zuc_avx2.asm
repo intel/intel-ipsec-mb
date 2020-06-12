@@ -30,6 +30,7 @@
 %include "include/zuc_sbox.inc"
 %include "include/transpose_avx2.asm"
 %include "include/memcpy.asm"
+%include "mb_mgr_datastruct.asm"
 
 %define APPEND(a,b) a %+ b
 
@@ -110,11 +111,11 @@ align 64
 
 %define MASK31  ymm12
 
-%define OFS_R1  (16*(4*8))
-%define OFS_R2  (OFS_R1 + (4*8))
-%define OFS_X0  (OFS_R2 + (4*8))
-%define OFS_X1  (OFS_X0 + (4*8))
-%define OFS_X2  (OFS_X1 + (4*8))
+%define OFS_R1  (16*(4*16))
+%define OFS_R2  (OFS_R1 + (4*16))
+%define OFS_X0  (OFS_R2 + (4*16))
+%define OFS_X1  (OFS_X0 + (4*16))
+%define OFS_X2  (OFS_X1 + (4*16))
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*10
@@ -193,14 +194,14 @@ align 64
 %if %%NUM_ROUNDS != 16
 %assign i 0
 %rep 16
-    vmovdqa APPEND(ymm,i), [%%STATE + 32*i]
+    vmovdqa APPEND(ymm,i), [%%STATE + 64*i]
 %assign i (i+1)
 %endrep
 
 %assign i 0
 %assign j %%NUM_ROUNDS
 %rep 16
-    vmovdqa [%%STATE + 32*i], APPEND(ymm,j)
+    vmovdqa [%%STATE + 64*i], APPEND(ymm,j)
 %assign i (i+1)
 %assign j ((j+1) % 16)
 %endrep
@@ -227,16 +228,10 @@ align 64
 ;
 ;   bits_reorg8()
 ;
-;   params
-;       %1 - round number
-;       %2 - Calculate X3 (1 = yes)
-;       %3 - YMM register storing X3
-;       rax - LFSR pointer
-;   uses
-;
-;   return
-;
 %macro  bits_reorg8 2-3
+%define %%STATE     %1 ; [in] ZUC state
+%define %%ROUND_NUM %2 ; [in] Round number
+%define %%X3        %3 ; [out] YMM register containing X3 of all lanes
     ;
     ; ymm15 = LFSR_S15
     ; ymm14 = LFSR_S14
@@ -247,33 +242,33 @@ align 64
     ; ymm2  = LFSR_S2
     ; ymm0  = LFSR_S0
     ;
-    vmovdqa     ymm15, [rax + ((15 + %1) % 16)*32]
-    vmovdqa     ymm14, [rax + ((14 + %1) % 16)*32]
-    vmovdqa     ymm11, [rax + ((11 + %1) % 16)*32]
-    vmovdqa     ymm9,  [rax + (( 9 + %1) % 16)*32]
-    vmovdqa     ymm7,  [rax + (( 7 + %1) % 16)*32]
-    vmovdqa     ymm5,  [rax + (( 5 + %1) % 16)*32]
-    vmovdqa     ymm2,  [rax + (( 2 + %1) % 16)*32]
-    vmovdqa     ymm0,  [rax + (( 0 + %1) % 16)*32]
+    vmovdqa     ymm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm14, [%%STATE + ((14 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm11, [%%STATE + ((11 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm9,  [%%STATE + (( 9 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm7,  [%%STATE + (( 7 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm5,  [%%STATE + (( 5 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm2,  [%%STATE + (( 2 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
 
     vpxor       ymm1, ymm1
     vpslld      ymm15, 1
     vpblendw    ymm3,  ymm14, ymm1, 0xAA
     vpblendw    ymm15, ymm3, ymm15, 0xAA
 
-    vmovdqa     [rax + OFS_X0], ymm15   ; BRC_X0
+    vmovdqa     [%%STATE + OFS_X0], ymm15   ; BRC_X0
     vpslld      ymm11, 16
     vpsrld      ymm9, 15
     vpor        ymm11, ymm9
-    vmovdqa     [rax + OFS_X1], ymm11   ; BRC_X1
+    vmovdqa     [%%STATE + OFS_X1], ymm11   ; BRC_X1
     vpslld      ymm7, 16
     vpsrld      ymm5, 15
     vpor        ymm7, ymm5
-    vmovdqa     [rax + OFS_X2], ymm7    ; BRC_X2
-%if (%2 == 1)
+    vmovdqa     [%%STATE + OFS_X2], ymm7    ; BRC_X2
+%if (%0 == 3)
     vpslld      ymm2, 16
     vpsrld      ymm0, 15
-    vpor        %3, ymm2, ymm0 ; Store BRC_X3 in YMM register
+    vpor        %%X3, ymm2, ymm0 ; Store BRC_X3 in YMM register
 %endif
 %endmacro
 
@@ -301,25 +296,23 @@ align 64
 ;
 ;   nonlin_fun8()
 ;
-;   params
-;       %1 == 1, then calculate W
-;   uses
-;
 ;   return
-;       ymm0 = W value, updates F_R1[] / F_R2[]
+;       W value, updates F_R1[] / F_R2[]
 ;
-%macro nonlin_fun8  1
+%macro nonlin_fun8  1-2
+%define %%STATE     %1  ; [in] ZUC state
+%define %%W         %2  ; [out] YMM register to contain W for all lanes
 
-%if (%1 == 1)
-    vmovdqa     ymm0, [rax + OFS_X0]
-    vpxor       ymm0, [rax + OFS_R1]
-    vpaddd      ymm0, [rax + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
+%if (%0 == 2)
+    vmovdqa     %%W, [%%STATE + OFS_X0]
+    vpxor       %%W, [%%STATE + OFS_R1]
+    vpaddd      %%W, [%%STATE + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
 %endif
 
-    vmovdqa     ymm1, [rax + OFS_R1]
-    vmovdqa     ymm2, [rax + OFS_R2]
-    vpaddd      ymm1, [rax + OFS_X1]    ; W1 = F_R1 + BRC_X1
-    vpxor       ymm2, [rax + OFS_X2]    ; W2 = F_R2 ^ BRC_X2
+    vmovdqa     ymm1, [%%STATE + OFS_R1]
+    vmovdqa     ymm2, [%%STATE + OFS_R2]
+    vpaddd      ymm1, [%%STATE + OFS_X1]    ; W1 = F_R1 + BRC_X1
+    vpxor       ymm2, [%%STATE + OFS_X2]    ; W2 = F_R2 ^ BRC_X2
 
     vpslld      ymm3, ymm1, 16
     vpsrld      ymm4, ymm1, 16
@@ -367,8 +360,8 @@ align 64
     vpshufb     ymm1, [rel rev_S0_S1_shuf]
     vpshufb     ymm2, [rel rev_S1_S0_shuf]
 
-    vmovdqa     [rax + OFS_R1], ymm1
-    vmovdqa     [rax + OFS_R2], ymm2
+    vmovdqa     [%%STATE + OFS_R1], ymm1
+    vmovdqa     [%%STATE + OFS_R2], ymm2
 %endmacro
 
 ;
@@ -500,13 +493,11 @@ align 64
 ;
 ;   lfsr_updt8()
 ;
-;   params
-;       %1 - round number
-;   uses
-;       ymm0 as input (ZERO or W)
-;   return
 ;
-%macro  lfsr_updt8  1
+%macro  lfsr_updt8  3
+%define %%STATE     %1 ; [in] ZUC state
+%define %%ROUND_NUM %2 ; [in] Round number
+%define %%W         %3 ; [in/clobbered] YMM register to contain W for all lanes
     ;
     ; ymm1  = LFSR_S0
     ; ymm4  = LFSR_S4
@@ -514,26 +505,26 @@ align 64
     ; ymm13 = LFSR_S13
     ; ymm15 = LFSR_S15
     ;
-    vmovdqa     ymm1,  [rax + (( 0 + %1) % 16)*32]
-    vmovdqa     ymm4,  [rax + (( 4 + %1) % 16)*32]
-    vmovdqa     ymm10, [rax + ((10 + %1) % 16)*32]
-    vmovdqa     ymm13, [rax + ((13 + %1) % 16)*32]
-    vmovdqa     ymm15, [rax + ((15 + %1) % 16)*32]
+    vmovdqa     ymm1,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     ymm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
 
     ; Calculate LFSR feedback
-    add_mod31   ymm0, ymm1
+    add_mod31   %%W, ymm1
     rot_mod31   ymm1, 8
-    add_mod31   ymm0, ymm1
+    add_mod31   %%W, ymm1
     rot_mod31   ymm4, 20
-    add_mod31   ymm0, ymm4
+    add_mod31   %%W, ymm4
     rot_mod31   ymm10, 21
-    add_mod31   ymm0, ymm10
+    add_mod31   %%W, ymm10
     rot_mod31   ymm13, 17
-    add_mod31   ymm0, ymm13
+    add_mod31   %%W, ymm13
     rot_mod31   ymm15, 15
-    add_mod31   ymm0, ymm15
+    add_mod31   %%W, ymm15
 
-    vmovdqa     [rax + (( 0 + %1) % 16)*32], ymm0
+    vmovdqa     [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64], %%W
 
     ; LFSR_S16 = (LFSR_S15++) = eax
 %endmacro
@@ -585,6 +576,14 @@ asm_ZucInitialization_8_avx2:
 
     FUNC_SAVE
 
+    ; Zero out state
+    vpxor   ymm0, ymm0
+%assign I 0
+%rep 16
+    vmovdqa [pState + I*64], ymm0 ; Zero out LFSR's (only lower half is used)
+%assign I (I + 1)
+%endrep
+
     ;;; Initialize all LFSR registers in two steps:
     ;;; first, registers 0-7, then registers 8-15
 
@@ -610,7 +609,7 @@ asm_ZucInitialization_8_avx2:
 
 %assign i 0
 %rep 8
-    vmovdqa [pState + 8*off + 32*i], APPEND(ymm, i)
+    vmovdqa [pState + 8*off*2 + 64*i], APPEND(ymm, i)
 %assign i (i+1)
 %endrep
 
@@ -625,19 +624,19 @@ asm_ZucInitialization_8_avx2:
     ; Shift LFSR 32-times, update state variables
 %assign N 0
 %rep 32
-    bits_reorg8 N, 0
-    nonlin_fun8 1
-    vpsrld  ymm0,1         ; Shift out LSB of W
-    lfsr_updt8  N           ; W (ymm0) used in LFSR update - not set to zero
+    bits_reorg8 rax, N
+    nonlin_fun8 rax, ymm0
+    vpsrld  ymm0,1           ; Shift out LSB of W
+    lfsr_updt8  rax, N, ymm0 ; W (ymm0) used in LFSR update - not set to zero
 %assign N N+1
 %endrep
 
     ; And once more, initial round from keygen phase = 33 times
-    bits_reorg8 0, 0
-    nonlin_fun8 0
+    bits_reorg8 rax, 0
+    nonlin_fun8 rax
 
     vpxor    ymm0, ymm0
-    lfsr_updt8  0
+    lfsr_updt8  rax, 0, ymm0
 
     FUNC_RESTORE
 
@@ -682,13 +681,13 @@ asm_ZucInitialization_8_avx2:
     ; Generate N*4B of keystream in N rounds
 %assign N 1
 %rep %%NUM_ROUNDS
-    bits_reorg8 N, 1, ymm10
-    nonlin_fun8 1
+    bits_reorg8 rax, N, ymm10
+    nonlin_fun8 rax, ymm0
     ; OFS_X3 XOR W (ymm0) and store in stack
     vpxor   ymm10, ymm0
     vmovdqa [rsp + 64 + (N-1)*32], ymm10
     vpxor        ymm0, ymm0
-    lfsr_updt8  N
+    lfsr_updt8  rax, N, ymm0
 %assign N N+1
 %endrep
 
@@ -807,13 +806,13 @@ asm_ZucGenKeystream8B_8_avx2:
 %assign N 1
 %assign round (%%INITIAL_ROUND + N)
 %rep %%NROUNDS
-        bits_reorg8 round, 1, ymm10
-        nonlin_fun8 1
+        bits_reorg8 rax, round, ymm10
+        nonlin_fun8 rax, ymm0
         ; OFS_XR XOR W (ymm0)
         vpxor   ymm10, ymm0
         vmovdqa [rsp + (N-1)*32], ymm10
         vpxor   ymm0, ymm0
-        lfsr_updt8  round
+        lfsr_updt8  rax, round, ymm0
 %assign N N+1
 %assign round (round + 1)
 %endrep
