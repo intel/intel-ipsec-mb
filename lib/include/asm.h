@@ -203,6 +203,15 @@ void aes128_ecbenc_x3_sse_no_aesni(const void *in, void *keys,
 void aes128_ecbenc_x3_avx(const void *in, void *keys,
                           void *out1, void *out2, void *out3);
 
+/* AES-CBCS */
+void aes_cbcs_1_9_dec_128_sse(const void *in, const uint8_t *IV,
+                              const void *keys, void *out,
+                              uint64_t len_bytes);
+void aes_cbcs_1_9_dec_128_sse_no_aesni(const void *in, const uint8_t *IV,
+                                       const void *keys, void *out,
+                                       uint64_t len_bytes);
+
+
 /* stitched AES128-CNTR, CRC32 and BIP */
 IMB_JOB *submit_job_pon_enc_avx(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_avx(IMB_JOB *job);

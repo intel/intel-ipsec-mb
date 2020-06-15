@@ -48,6 +48,12 @@
 %define AES_CBC_DEC_128 aes_cbc_dec_128_sse
 %endif
 
+%ifdef CBCS
+%define OFFSET 160
+%else
+%define OFFSET 16
+%endif
+
 %define MOVDQ	movdqu
 
 %ifdef LINUX
@@ -66,6 +72,7 @@
 
 %define IDX		rax
 %define TMP		IDX
+%define TMP2            r11
 %define XDATA0		xmm0
 %define XDATA1		xmm1
 %define XDATA2		xmm2
@@ -92,7 +99,19 @@ AES_CBC_DEC_128:
 %ifndef LINUX
 	mov	LEN, [rsp + 8*5]
 %endif
-
+%ifdef CBCS
+        ;; convert CBCS length to standard number of CBC blocks
+        ;; ((len + 9 blocks) / 160) = num blocks to decrypt
+        push    rdx
+        mov     rdx, 0          ;; store and zero rdx for div
+        mov     TMP, LEN
+        add     TMP, 9*16
+        mov     TMP2, 160
+        div     TMP2            ;; divide by 160
+        mov     LEN, TMP        ;; store result in LEN
+        shl     LEN, 4          ;; multiply by 16 to get num bytes
+        pop     rdx
+%endif
 	mov	TMP, LEN
 	and	TMP, 3*16
 	jz	initial_4
@@ -102,8 +121,8 @@ AES_CBC_DEC_128:
 
 initial_2:
 	; load cipher text
-	movdqu	XDATA0, [IN + 0*16]
-	movdqu	XDATA1, [IN + 1*16]
+	movdqu	XDATA0, [IN + 0*OFFSET]
+	movdqu	XDATA1, [IN + 1*OFFSET]
 
 	movdqa	XKEY0, [KEYS + 0*16]
 
@@ -119,7 +138,7 @@ initial_2:
 	aesdec	XDATA0, [KEYS + 1*16]	; 1. DEC
 	aesdec	XDATA1, [KEYS + 1*16]
 
-	mov	IDX, 2*16
+	mov	IDX, 2*OFFSET
 
 	aesdec	XDATA0, XKEY2		; 2. DEC
 	aesdec	XDATA1, XKEY2
@@ -161,18 +180,18 @@ initial_2:
 	pxor	XDATA0, IV_TMP
 	pxor	XDATA1, XSAVED0
 
-	movdqu	[OUT + 0*16], XDATA0
-	movdqu	[OUT + 1*16], XDATA1
+	movdqu	[OUT + 0*OFFSET], XDATA0
+	movdqu	[OUT + 1*OFFSET], XDATA1
 
-	cmp	LEN, 2*16
-	je	done
+	sub	LEN, 2*16
+	jz	done
 	jmp	main_loop
 
 
 	align 16
 initial_1:
 	; load cipher text
-	movdqu	XDATA0, [IN + 0*16]
+	movdqu	XDATA0, [IN + 0*OFFSET]
 
 	movdqa	XKEY0, [KEYS + 0*16]
 
@@ -185,7 +204,7 @@ initial_1:
 
 	aesdec	XDATA0, [KEYS + 1*16]	; 1. DEC
 
-	mov	IDX, 1*16
+	mov	IDX, 1*OFFSET
 
 	aesdec	XDATA0, XKEY2		; 2. DEC
 
@@ -217,18 +236,18 @@ initial_1:
 
 	pxor	XDATA0, IV_TMP
 
-	movdqu	[OUT + 0*16], XDATA0
+	movdqu	[OUT + 0*OFFSET], XDATA0
 
-	cmp	LEN, 1*16
-	je	done
+	sub	LEN, 1*16
+	jz	done
 	jmp	main_loop
 
 
 initial_3:
 	; load cipher text
-	movdqu	XDATA0, [IN + 0*16]
-	movdqu	XDATA1, [IN + 1*16]
-	movdqu	XDATA2, [IN + 2*16]
+	movdqu	XDATA0, [IN + 0*OFFSET]
+	movdqu	XDATA1, [IN + 1*OFFSET]
+	movdqu	XDATA2, [IN + 2*OFFSET]
 
 	movdqa	XKEY0, [KEYS + 0*16]
 
@@ -251,7 +270,7 @@ initial_3:
 
 	movdqa	XKEY, [KEYS + 3*16]
 
-	mov	IDX, 3*16
+	mov	IDX, 3*OFFSET
 
 	aesdec	XDATA0, XKEY2		; 2. DEC
 	aesdec	XDATA1, XKEY2
@@ -308,22 +327,22 @@ initial_3:
 	pxor	XDATA1, XSAVED0
 	pxor	XDATA2, XSAVED1
 
-	movdqu	[OUT + 0*16], XDATA0
-	movdqu	[OUT + 1*16], XDATA1
-	movdqu	[OUT + 2*16], XDATA2
+	movdqu	[OUT + 0*OFFSET], XDATA0
+	movdqu	[OUT + 1*OFFSET], XDATA1
+	movdqu	[OUT + 2*OFFSET], XDATA2
 
-	cmp	LEN, 3*16
-	je	done
+	sub	LEN, 3*16
+	jz	done
 	jmp	main_loop
 
 
 	align 16
 initial_4:
 	; load cipher text
-	movdqu	XDATA0, [IN + 0*16]
-	movdqu	XDATA1, [IN + 1*16]
-	movdqu	XDATA2, [IN + 2*16]
-	movdqu	XDATA3, [IN + 3*16]
+	movdqu	XDATA0, [IN + 0*OFFSET]
+	movdqu	XDATA1, [IN + 1*OFFSET]
+	movdqu	XDATA2, [IN + 2*OFFSET]
+	movdqu	XDATA3, [IN + 3*OFFSET]
 
 	movdqa	XKEY0, [KEYS + 0*16]
 
@@ -349,7 +368,7 @@ initial_4:
 
 	movdqa	XKEY, [KEYS + 3*16]
 
-	mov	IDX, 4*16
+	mov	IDX, 4*OFFSET
 
 	aesdec	XDATA0, XKEY2		; 2. DEC
 	aesdec	XDATA1, XKEY2
@@ -417,22 +436,22 @@ initial_4:
 	pxor	XDATA2, XSAVED1
 	pxor	XDATA3, XSAVED2
 
-	movdqu	[OUT + 0*16], XDATA0
-	movdqu	[OUT + 1*16], XDATA1
-	movdqu	[OUT + 2*16], XDATA2
-	movdqu	[OUT + 3*16], XDATA3
+	movdqu	[OUT + 0*OFFSET], XDATA0
+	movdqu	[OUT + 1*OFFSET], XDATA1
+	movdqu	[OUT + 2*OFFSET], XDATA2
+	movdqu	[OUT + 3*OFFSET], XDATA3
 
-	cmp	LEN, 4*16
+	sub	LEN, 4*16
 	jz	done
 	jmp	main_loop
 
 	align 16
 main_loop:
 	; load cipher text
-	movdqu	XDATA0, [IN + IDX + 0*16]
-	movdqu	XDATA1, [IN + IDX + 1*16]
-	movdqu	XDATA2, [IN + IDX + 2*16]
-	movdqu	XDATA3, [IN + IDX + 3*16]
+	movdqu	XDATA0, [IN + IDX + 0*OFFSET]
+	movdqu	XDATA1, [IN + IDX + 1*OFFSET]
+	movdqu	XDATA2, [IN + IDX + 2*OFFSET]
+	movdqu	XDATA3, [IN + IDX + 3*OFFSET]
 
 	; save cipher text
 	movdqa	XSAVED0, XDATA0
@@ -447,7 +466,7 @@ main_loop:
 	pxor	XDATA2, XKEY0
 	pxor	XDATA3, XKEY0
 
-	add	IDX, 4*16
+	add	IDX, 4*OFFSET
 
 	aesdec	XDATA0, XKEY		; 1. DEC
 	aesdec	XDATA1, XKEY
@@ -512,15 +531,15 @@ main_loop:
 	pxor	XDATA2, XSAVED1
 	pxor	XDATA3, XSAVED2
 
-	movdqu	[OUT + IDX + 0*16 - 4*16], XDATA0
-	movdqu	[OUT + IDX + 1*16 - 4*16], XDATA1
-	movdqu	[OUT + IDX + 2*16 - 4*16], XDATA2
-	movdqu	[OUT + IDX + 3*16 - 4*16], XDATA3
+	movdqu	[OUT + IDX + 0*OFFSET - 4*OFFSET], XDATA0
+	movdqu	[OUT + IDX + 1*OFFSET - 4*OFFSET], XDATA1
+	movdqu	[OUT + IDX + 2*OFFSET - 4*OFFSET], XDATA2
+	movdqu	[OUT + IDX + 3*OFFSET - 4*OFFSET], XDATA3
 
 	movdqa	XIV, XSAVED3
 
-	CMP	IDX, LEN
-	jne	main_loop
+        sub     LEN, 4*16
+	jnz	main_loop
 
 done:
 
@@ -528,7 +547,7 @@ done:
 	clear_all_xmms_sse_asm
 %endif ;; SAFE_DATA
 
-	ret
+        ret
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
