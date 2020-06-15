@@ -106,6 +106,31 @@ db      0x09, 0x0A, 0x0B, 0x08, 0x0D, 0x0E, 0x0F, 0x0C
 db      0x01, 0x02, 0x03, 0x00, 0x05, 0x06, 0x07, 0x04,
 db      0x09, 0x0A, 0x0B, 0x08, 0x0D, 0x0E, 0x0F, 0x0C
 
+align 16
+broadcast_word:
+db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
+db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
+
+align 16
+all_ffs:
+dw      0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff
+
+align 16
+all_threes:
+dw      0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003
+
+align 16
+all_fffcs:
+dw      0xfffc, 0xfffc, 0xfffc, 0xfffc, 0xfffc, 0xfffc, 0xfffc, 0xfffc
+
+align 16
+all_1fs:
+dw      0x001f, 0x001f, 0x001f, 0x001f, 0x001f, 0x001f, 0x001f, 0x001f
+
+align 16
+all_20s:
+dw      0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020
+
 section .text
 align 64
 
@@ -785,12 +810,14 @@ asm_ZucGenKeystream8B_8_avx2:
 ;;
 ;; Encrypt N*4B bytes on all 8 buffers
 ;; where N is number of rounds (up to 8)
-
-%macro CIPHERNx4B_8 3-4
+;; In final call, an array of final bytes is read
+;; from memory and only these final bytes are of
+;; plaintext are read and XOR'ed.
+%macro CIPHERNx4B_8 4
 %define %%NROUNDS        %1
 %define %%INITIAL_ROUND  %2
 %define %%OFFSET         %3
-%define %%PARTIAL_LENGTH %4
+%define %%LAST_CALL      %4
 
 %ifdef LINUX
 %define %%TMP1 r8
@@ -833,15 +860,20 @@ asm_ZucGenKeystream8B_8_avx2:
         mov     r13, [pIn + 8]
         mov     r14, [pIn + 16]
         mov     r15, [pIn + 24]
-%if (%0 == 4)
+%if (%%LAST_CALL == 1)
         ;; Save GP registers
-        push    %%TMP1
-        push    %%TMP2
+        mov     [rsp + 32*8 + 16 + 8],  %%TMP1
+        mov     [rsp + 32*8 + 16 + 16], %%TMP2
 
-        simd_load_avx2 ymm0, r12 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_load_avx2 ymm1, r13 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_load_avx2 ymm2, r14 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_load_avx2 ymm3, r15 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        ;; Read in r10 the word containing the number of final bytes to read for each lane
+        movzx  r10d, word [rsp + 8*32]
+        simd_load_avx2 ymm0, r12 + %%OFFSET, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 2]
+        simd_load_avx2 ymm1, r13 + %%OFFSET, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 4]
+        simd_load_avx2 ymm2, r14 + %%OFFSET, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 6]
+        simd_load_avx2 ymm3, r15 + %%OFFSET, r10, %%TMP1, %%TMP2
 %else
         vmovdqu ymm0, [r12 + %%OFFSET]
         vmovdqu ymm1, [r13 + %%OFFSET]
@@ -853,11 +885,15 @@ asm_ZucGenKeystream8B_8_avx2:
         mov     r13, [pIn + 40]
         mov     r14, [pIn + 48]
         mov     r15, [pIn + 56]
-%if (%0 == 4)
-        simd_load_avx2 ymm4, r12 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_load_avx2 ymm5, r13 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_load_avx2 ymm6, r14 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_load_avx2 ymm7, r15 + %%OFFSET, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+%if (%%LAST_CALL == 1)
+        movzx  r10d, word [rsp + 8*32 + 8]
+        simd_load_avx2 ymm4, r12 + %%OFFSET, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 10]
+        simd_load_avx2 ymm5, r13 + %%OFFSET, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 12]
+        simd_load_avx2 ymm6, r14 + %%OFFSET, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 14]
+        simd_load_avx2 ymm7, r15 + %%OFFSET, r10, %%TMP1, %%TMP2
 %else
         vmovdqu ymm4, [r12 + %%OFFSET]
         vmovdqu ymm5, [r13 + %%OFFSET]
@@ -880,15 +916,20 @@ asm_ZucGenKeystream8B_8_avx2:
         mov     r14, [pOut + 16]
         mov     r15, [pOut + 24]
 
-%if (%0 == 4)
+%if (%%LAST_CALL == 1)
         add     r12, %%OFFSET
         add     r13, %%OFFSET
         add     r14, %%OFFSET
         add     r15, %%OFFSET
-        simd_store_avx2 r12, ymm8, %%PARTIAL_LENGTH,  %%TMP1, %%TMP2
-        simd_store_avx2 r13, ymm9, %%PARTIAL_LENGTH,  %%TMP1, %%TMP2
-        simd_store_avx2 r14, ymm10, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_store_avx2 r15, ymm11, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        ;; Read in r10 the word containing the number of final bytes to write for each lane
+        movzx  r10d, word [rsp + 8*32]
+        simd_store_avx2 r12, ymm8,  r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 2]
+        simd_store_avx2 r13, ymm9,  r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 4]
+        simd_store_avx2 r14, ymm10, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 6]
+        simd_store_avx2 r15, ymm11, r10, %%TMP1, %%TMP2
 %else
         vmovdqu [r12 + %%OFFSET], ymm8
         vmovdqu [r13 + %%OFFSET], ymm9
@@ -901,19 +942,23 @@ asm_ZucGenKeystream8B_8_avx2:
         mov     r14, [pOut + 48]
         mov     r15, [pOut + 56]
 
-%if (%0 == 4)
+%if (%%LAST_CALL == 1)
         add     r12, %%OFFSET
         add     r13, %%OFFSET
         add     r14, %%OFFSET
         add     r15, %%OFFSET
-        simd_store_avx2 r12, ymm12, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_store_avx2 r13, ymm13, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_store_avx2 r14, ymm14, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_store_avx2 r15, ymm15, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 8]
+        simd_store_avx2 r12, ymm12, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 10]
+        simd_store_avx2 r13, ymm13, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 12]
+        simd_store_avx2 r14, ymm14, r10, %%TMP1, %%TMP2
+        movzx  r10d, word [rsp + 8*32 + 14]
+        simd_store_avx2 r15, ymm15, r10, %%TMP1, %%TMP2
 
         ; Restore registers
-        pop %%TMP2
-        pop %%TMP1
+        mov     %%TMP1, [rsp + 32*8 + 16 + 8]
+        mov     %%TMP2, [rsp + 32*8 + 16 + 16]
 %else
         vmovdqu [r12 + %%OFFSET], ymm12
         vmovdqu [r13 + %%OFFSET], ymm13
@@ -924,130 +969,169 @@ asm_ZucGenKeystream8B_8_avx2:
 %endmacro
 
 ;;
-;; void asm_ZucCipherNx4B_8_avx2(state4_t *pSta, u64 *pIn[8],
-;;                             u64 *pOut[8], u64 bufOff);
+;; void asm_ZucCipher_8_avx2(state16_t *pSta, u64 *pIn[8],
+;;                           u64 *pOut[8], u16 lengths, u64 min_length);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
 ;;  RDX    - pIn
 ;;  R8     - pOut
-;;  R9     - length
+;;  R9     - lengths
+;;  rsp + 40 - min_length
 ;;
 ;; LIN64
 ;;  RDI - pSta
 ;;  RSI - pIn
 ;;  RDX - pOut
-;;  RCX - length
+;;  RCX - lengths
+;;  R8  - min_length
 ;;
-MKGLOBAL(asm_ZucCipherNx4B_8_avx2,function,internal)
-asm_ZucCipherNx4B_8_avx2:
+MKGLOBAL(asm_ZucCipher_8_avx2,function,internal)
+asm_ZucCipher_8_avx2:
 
 %ifdef LINUX
         %define         pState  rdi
         %define         pIn     rsi
         %define         pOut    rdx
-        %define         length  rcx
-
-        %define         nrounds r8
+        %define         lengths rcx
+        %define         arg5    r8
 %else
         %define         pState  rcx
         %define         pIn     rdx
         %define         pOut    r8
-        %define         length  r9
-
-        %define         nrounds rdi
+        %define         lengths r9
+        %define         arg5    [rsp + 40]
 %endif
 
+%define min_length r10
 %define buf_idx r11
 
-        or      length, length
+        mov     min_length, arg5
+
+        or      min_length, min_length
         jz      exit_cipher32
 
         FUNC_SAVE
 
+        ;; Convert all lengths from UINT16_MAX (indicating that lane is not valid) to min length
+        vmovd   xmm0, DWORD(min_length)
+        vpshufb xmm0, xmm0, [rel broadcast_word]
+        vmovdqa xmm1, [lengths]
+        vpcmpeqw xmm2, xmm2 ;; Get all ff's in XMM register
+        vpcmpeqw xmm3, xmm1, xmm2 ;; Mask with FFFF in NULL jobs
+
+        vpand   xmm4, xmm3, xmm0 ;; Length of valid job in all NULL jobs
+        vpxor   xmm2, xmm3 ;; Mask with 0000 in NULL jobs
+        vpand   xmm1, xmm2 ;; Zero out lengths of NULL jobs
+        vpor    xmm1, xmm4 ;; XMM1 contain updated lengths
+
+        ; Round up to nearest multiple of 4 bytes
+        vpaddw  xmm0, [rel all_threes]
+        vpand   xmm0, [rel all_fffcs]
+
+        ; Calculate remaining bytes to encrypt after function call
+        vpsubw  xmm2, xmm1, xmm0
+        vpxor   xmm3, xmm3
+        vpcmpgtw xmm4, xmm2, xmm3 ;; Mask with FFFF in lengths > 0
+        ; Set to zero the lengths of the lanes which are going to be completed (lengths < 0)
+        vpand   xmm2, xmm4
+        vmovdqa [lengths], xmm2 ; Update in memory the final updated lengths
+
+        ; Calculate number of bytes to encrypt after round of 32 bytes (up to 31 bytes),
+        ; for each lane, and store it in stack to be used in the last round
+        vpsubw  xmm1, xmm2 ; Bytes to encrypt in all lanes
+        vpand   xmm1, [rel all_1fs] ; Number of final bytes (up to 31 bytes) for each lane
+        vpcmpeqw xmm2, xmm1, xmm3 ;; Mask with FFFF in lengths == 0
+        vpand   xmm2, [rel all_20s] ;; 32 in positions where lengths was 0
+        vpor    xmm1, xmm2          ;; Number of final bytes (up to 32 bytes) for each lane
+
+        ; Allocate stack frame to store keystreams (32*8 bytes), number of final bytes (16 bytes),
+        ; space for rsp (8 bytes) and 2 GP registers (16 bytes) that will be clobbered later
+        mov     rax, rsp
+        sub     rsp, (32*8 + 16 + 16 + 8)
+        and     rsp, -31
+        xor     buf_idx, buf_idx
+        vmovdqu [rsp + 32*8], xmm1
+        mov     [rsp + 32*8 + 16], rax
+
         ; Load state pointer in RAX
         mov     rax, pState
 
-        ; Allocate stack frame to store keystreams
-        mov     r10, rsp
-        sub     rsp, 32*8
-        and     rsp, -31
-        xor     buf_idx, buf_idx
-
-        ; Calculate number of rounds to be done (length / 4 bytes)
-        mov     nrounds, length
-        shr     nrounds, 2
-
 loop_cipher64:
-        cmp     length, 64
+        cmp     min_length, 64
         jl      exit_loop_cipher64
 
-        CIPHERNx4B_8 8, 0, buf_idx
+        CIPHERNx4B_8 8, 0, buf_idx, 0
 
         add     buf_idx, 32
-        sub     length, 32
+        sub     min_length, 32
 
-        CIPHERNx4B_8 8, 8, buf_idx
+        CIPHERNx4B_8 8, 8, buf_idx, 0
 
         add     buf_idx, 32
-        sub     length, 32
+        sub     min_length, 32
 
         jmp     loop_cipher64
 exit_loop_cipher64:
 
         ; Check if at least 32 bytes are left to encrypt
-        cmp     length, 32
+        cmp     min_length, 32
         jl      less_than_32
 
-        CIPHERNx4B_8 8, 0, buf_idx, length
+        CIPHERNx4B_8 8, 0, buf_idx, 0
         REORDER_LFSR rax, 8
 
         add     buf_idx, 32
-        sub     length, 32
+        sub     min_length, 32
 
         ; Check if there are more bytes left to encrypt
 less_than_32:
 
-        and     nrounds, 0x7
+        mov     r15, min_length
+        add     r15, 3
+        shr     r15, 2 ;; number of rounds left (round up length to nearest multiple of 4B)
         jz      exit_final_rounds
 
-_final_rounds_is_1_7:
-        cmp     nrounds, 4
+_final_rounds_is_1_8:
+        cmp     r15, 4
         je      _num_final_rounds_is_4
         jl      _final_rounds_is_1_3
 
-        ; Final blocks 5-7
-        cmp     nrounds, 7
+        ; Final rounds 5-8
+        cmp     r15, 8
+        je      _num_final_rounds_is_8
+        cmp     r15, 7
         je      _num_final_rounds_is_7
-        cmp     nrounds, 6
+        cmp     r15, 6
         je      _num_final_rounds_is_6
-        cmp     nrounds, 5
+        cmp     r15, 5
         je      _num_final_rounds_is_5
 
 _final_rounds_is_1_3:
-        cmp     nrounds, 3
+        cmp     r15, 3
         je      _num_final_rounds_is_3
-        cmp     nrounds, 2
+        cmp     r15, 2
         je      _num_final_rounds_is_2
 
         jmp     _num_final_rounds_is_1
 
         ; Perform encryption of last bytes (<= 31 bytes) and reorder LFSR registers
 %assign I 1
-%rep 7
+%rep 8
 APPEND(_num_final_rounds_is_,I):
-        CIPHERNx4B_8 I, 0, buf_idx, length
+        CIPHERNx4B_8 I, 0, buf_idx, 1
         REORDER_LFSR rax, I
-        shl     nrounds, 2
-        add     buf_idx, nrounds
+        add     buf_idx, (I*4)
         jmp     exit_final_rounds
 %assign I (I + 1)
 %endrep
 
 exit_final_rounds:
         ;; update in/out pointers
+
+        ; Brodcast buf_idx in all qwords of ymm0
         vmovq           xmm0, buf_idx
-        vpshufd         xmm0, xmm0, 0x5
+        vpshufd         xmm0, xmm0, 0x44
         vperm2f128      ymm0, ymm0, 0x0
         vpaddq          ymm1, ymm0, [pIn]
         vpaddq          ymm2, ymm0, [pIn + 32]
@@ -1068,7 +1152,7 @@ exit_final_rounds:
 %endrep
 %endif
         ; Restore rsp
-        mov     rsp, r10
+        mov     rsp, [rsp + 32*8 + 16]
 
         FUNC_RESTORE
 

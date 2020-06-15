@@ -173,9 +173,9 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
-        uint32_t bytes = find_min_length32(length);
-        uint32_t numKeyStreamsPerPkt = bytes/ ZUC_WORD_BYTES;
-        uint32_t remainBytes[NUM_AVX2_BUFS] = {0};
+        uint16_t bytes = (uint16_t) find_min_length32(length);
+        uint32_t numKeyStreamsPerPkt;
+        uint16_t remainBytes[NUM_AVX2_BUFS] = {0};
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][KEYSTR_ROUND_LEN], 64);
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
@@ -189,9 +189,6 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         uint64_t *pOut64[NUM_AVX2_BUFS] = {NULL};
         uint64_t *pKeyStream64 = NULL;
 
-        /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
-
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState16_t));
 
@@ -200,7 +197,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
          * and setup the Keys and IVs
          */
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
-                remainBytes[i] = length[i] - bytes;
+                remainBytes[i] = length[i];
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
         }
@@ -212,8 +209,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        /* Encrypt common length of all buffers (multiple of 4 bytes) */
-        asm_ZucCipherNx4B_8_avx2(&state, pIn64, pOut64, bytes);
+        asm_ZucCipher_8_avx2(&state, pIn64, pOut64, remainBytes, bytes);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
@@ -313,142 +309,6 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         clear_mem(&singlePktState, sizeof(singlePktState));
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
-#endif
-}
-
-void zuc_eea3_8_buffer_job_avx2(MB_MGR_ZUC_OOO *ooo,
-                                const void * const pBufferIn[NUM_AVX2_BUFS],
-                                void *pBufferOut[NUM_AVX2_BUFS],
-                                const uint16_t length[NUM_AVX2_BUFS])
-{
-        ZucState16_t *state = &ooo->state16;
-        DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        unsigned int i = 0;
-        uint32_t bytes = find_min_length16(length);
-        uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
-        uint32_t remainBytes[NUM_AVX2_BUFS] = {0};
-        uint32_t numBytesLeftOver = 0;
-        const uint8_t *pTempBufInPtr = NULL;
-        uint8_t *pTempBufOutPtr = NULL;
-
-        const uint64_t *pIn64[NUM_AVX2_BUFS]= {NULL};
-        uint64_t *pOut64[NUM_AVX2_BUFS] = {NULL};
-
-        /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
-
-        /*
-         * Calculate the number of bytes left over for each packet,
-         * and setup the Keys and IVs
-         */
-        for (i = 0; i < NUM_AVX2_BUFS; i++)
-                remainBytes[i] = length[i] - bytes;
-
-        for (i = 0; i < NUM_AVX2_BUFS; i++) {
-                pOut64[i] = (uint64_t *) pBufferOut[i];
-                pIn64[i] = (const uint64_t *) pBufferIn[i];
-        }
-
-        asm_ZucCipherNx4B_8_avx2(state, pIn64, pOut64, bytes);
-
-        /* process each packet separately for the remaining bytes */
-        for (i = 0; i < NUM_AVX2_BUFS; i++) {
-                if (remainBytes[i] && ooo->job_in_lane[i]) {
-                        /* need to copy the zuc state to single packet state */
-                        singlePktState.lfsrState[0] = state->lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state->lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state->lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state->lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state->lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state->lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state->lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state->lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state->lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state->lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state->lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state->lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state->lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state->lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state->lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state->lfsrState[15][i];
-
-                        singlePktState.fR1 = state->fR1[i];
-                        singlePktState.fR2 = state->fR2[i];
-
-                        singlePktState.bX0 = state->bX0[i];
-                        singlePktState.bX1 = state->bX1[i];
-                        singlePktState.bX2 = state->bX2[i];
-                        singlePktState.bX3 = state->bX3[i];
-
-                        numKeyStreamsPerPkt = remainBytes[i] / KEYSTR_ROUND_LEN;
-                        numBytesLeftOver = remainBytes[i]  % KEYSTR_ROUND_LEN;
-
-                        pTempBufInPtr = pBufferIn[i];
-                        pTempBufOutPtr = pBufferOut[i];
-
-                        /* update the output and input pointers here to point
-                         * to the i'th buffers */
-                        pOut64[0] = (uint64_t *) &pTempBufOutPtr[length[i] -
-                                                                remainBytes[i]];
-                        pIn64[0] = (const uint64_t *) &pTempBufInPtr[length[i] -
-                                                                remainBytes[i]];
-
-                        while (numKeyStreamsPerPkt--) {
-                                DECLARE_ALIGNED(uint32_t keyStream[8], 64);
-                                uint64_t *pKeyStream64 = (uint64_t *) keyStream;
-
-                                /* Generate the key stream 32 bytes at a time */
-                                asm_ZucGenKeystream32B_avx(keyStream,
-                                                       &singlePktState);
-                                asm_XorKeyStream32B_avx2(pIn64[0], pOut64[0],
-                                                        pKeyStream64);
-                                pIn64[0] += 4;
-                                pOut64[0] += 4;
-                        }
-
-
-                        /* Check for remaining 0 to 31 bytes */
-                        if (numBytesLeftOver) {
-                                DECLARE_ALIGNED(uint8_t tempSrc[32], 64);
-                                DECLARE_ALIGNED(uint8_t tempDst[32], 64);
-                                uint64_t *pTempSrc64;
-                                uint64_t *pTempDst64;
-                                uint32_t offset = length[i] - numBytesLeftOver;
-                                const uint64_t num4BRounds =
-                                        ((numBytesLeftOver - 1) / 4) + 1;
-                                DECLARE_ALIGNED(uint32_t keyStream[8], 64);
-                                uint64_t *pKeyStream64 = (uint64_t *) keyStream;
-
-                                asm_ZucGenKeystream_avx(keyStream,
-                                                        &singlePktState,
-                                                        num4BRounds);
-                                /* copy the remaining bytes into temporary
-                                 * buffer and XOR with the 32 bytes of
-                                 * keystream. Then copy on the valid bytes back
-                                 * to the output buffer */
-                                memcpy(&tempSrc[0], &pTempBufInPtr[offset],
-                                       numBytesLeftOver);
-                                memset(&tempSrc[numBytesLeftOver], 0,
-                                       32 - numBytesLeftOver);
-
-                                pTempSrc64 = (uint64_t *) &tempSrc[0];
-                                pTempDst64 = (uint64_t *) &tempDst[0];
-                                asm_XorKeyStream32B_avx2(pTempSrc64, pTempDst64,
-                                                        pKeyStream64);
-
-                                memcpy(&pTempBufOutPtr[offset],
-                                       &tempDst[0], numBytesLeftOver);
-#ifdef SAFE_DATA
-                                clear_mem(tempSrc, sizeof(tempSrc));
-                                clear_mem(tempDst, sizeof(tempDst));
-#endif
-                        }
-                }
-        }
-#ifdef SAFE_DATA
-        /* Clear sensitive data in stack */
-        clear_mem(&singlePktState, sizeof(singlePktState));
-        clear_mem(state, sizeof(state));
 #endif
 }
 
