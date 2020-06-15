@@ -627,28 +627,53 @@ default rel
 ;;; In PRECOMPUTE, the commands filling Hashkey_i_k are not required for avx512
 ;;; functions, but are kept to allow users to switch cpu architectures between calls
 ;;; of pre, init, update, and finalize.
-%macro  PRECOMPUTE 8
-%define %%GDATA %1
-%define %%HK    %2
-%define %%T1    %3
-%define %%T2    %4
-%define %%T3    %5
-%define %%T4    %6
-%define %%T5    %7
-%define %%T6    %8
+%macro  PRECOMPUTE 9
+%define %%GDATA %1      ;; [in/out] GPR, pointer to GCM key data structure, content updated
+%define %%HK    %2      ;; [in] xmm, hash key
+%define %%T1    %3      ;; [clobbered] xmm
+%define %%T2    %4      ;; [clobbered] xmm
+%define %%T3    %5      ;; [clobbered] xmm
+%define %%T4    %6      ;; [clobbered] xmm
+%define %%T5    %7      ;; [clobbered] xmm
+%define %%T6    %8      ;; [clobbered] xmm
+%define %%T7    %9      ;; [clobbered] xmm
 
-        vmovdqa  %%T5, %%HK
+%xdefine %%ZT1 ZWORD(%%T1)
+%xdefine %%ZT2 ZWORD(%%T2)
+%xdefine %%ZT3 ZWORD(%%T3)
+%xdefine %%ZT4 ZWORD(%%T4)
+%xdefine %%ZT5 ZWORD(%%T5)
+%xdefine %%ZT6 ZWORD(%%T6)
+%xdefine %%ZT7 ZWORD(%%T7)
 
-        ;; GHASH keys 2 to 48
-%assign max_hkey_idx 48
+        vmovdqa64       %%T5, %%HK
+        vinserti64x2    %%ZT7, %%HK, 3
 
-%assign i 2
-%rep (max_hkey_idx - 1)
-        GHASH_MUL %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2 ;  %%T5 = HashKey^i<<1 mod poly
-        vmovdqu  [%%GDATA + HashKey_ %+ i], %%T5           ;  [HashKey_i] = %%T5
-%assign i (i + 1)
+        ;; calculate HashKey^2<<1 mod poly
+        GHASH_MUL       %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2
+        vmovdqu64       [%%GDATA + HashKey_2], %%T5
+        vinserti64x2    %%ZT7, %%T5, 2
+
+        ;; calculate HashKey^3<<1 mod poly
+        GHASH_MUL       %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2
+        vmovdqu64       [%%GDATA + HashKey_3], %%T5
+        vinserti64x2    %%ZT7, %%T5, 1
+
+        ;; calculate HashKey^4<<1 mod poly
+        GHASH_MUL       %%T5, %%HK, %%T1, %%T3, %%T4, %%T6, %%T2
+        vmovdqu64       [%%GDATA + HashKey_4], %%T5
+        vinserti64x2    %%ZT7, %%T5, 0
+
+        ;; switch to 4x128-bit computations now
+        vshufi64x2      %%ZT5, %%ZT5, %%ZT5, 0x00       ;; broadcast HashKey^4 across all ZT5
+
+        ;; calculate HashKey^5<<1 mod poly, HashKey^6<<1 mod poly, ... HashKey^48<<1 mod poly
+%assign i 8
+%rep ((48 - 4) / 4)
+        GHASH_MUL       %%ZT7, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
+        vmovdqu64       [%%GDATA + HashKey_ %+ i], %%ZT7
+%assign i (i + 4)
 %endrep
-
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4132,7 +4157,7 @@ FN_NAME(precomp,_):
         vmovdqu  [arg1 + HashKey], xmm6                 ; store HashKey<<1 mod poly
 
 
-        PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+        PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7
 
         FUNC_RESTORE
 exit_precomp:
@@ -4788,7 +4813,7 @@ ghash_pre_vaes_avx512:
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vmovdqu  [arg2 + HashKey], xmm6                 ; store HashKey<<1 mod poly
 
-        PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
+        PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7
 
         FUNC_RESTORE
 exit_ghash_pre:
