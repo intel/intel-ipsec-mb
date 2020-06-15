@@ -162,19 +162,19 @@ SUBMIT_JOB_ZUC_EEA3:
         mov     r12, state
 
         ;; Save state into stack
-        sub     rsp, (16*32 + 6*32) ; LFSR registers + X0-X3 + R1-R2
+        sub     rsp, (16*32 + 2*32) ; LFSR registers + R1-R2
 
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         vmovdqa ymm0, [r12 + _zuc_state + 64*I]
         vmovdqu [rsp + 32*I], ymm0
 %assign I (I + 1)
 %endrep
 
-        ;; Zero out state
+        ;; Zero out state (LFSR + R1-R2)
         vpxor   ymm0, ymm0
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         vmovdqa [r12 + _zuc_state + 64*I], ymm0
 %assign I (I + 1)
 %endrep
@@ -199,7 +199,7 @@ SUBMIT_JOB_ZUC_EEA3:
 
         ;; Restore state from stack for lanes that did not need init
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         ; First 4 lanes
         vmovdqu xmm0, [rsp + 32*I] ; State before init
         vmovdqa xmm1, [r12 + _zuc_state + 64*I] ; State after init
@@ -241,7 +241,7 @@ APPEND3(skip_submit_lane_,I,J):
 %endrep
 
 skip_submit_restoring_state:
-        add     rsp, (16*32 + 6*32) ; Restore stack pointer
+        add     rsp, (16*32 + 2*32) ; Restore stack pointer
 
         mov     word [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
 
@@ -383,19 +383,19 @@ APPEND(skip_eea3_,I):
         je      skip_flush_init
 
         ;; Save state into stack
-        sub     rsp, (16*32 + 6*32) ; LFSR registers + X0-X3 + R1-R2
+        sub     rsp, (16*32 + 2*32) ; LFSR registers + R1-R2
 
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         vmovdqa ymm0, [r12 + _zuc_state + 64*I]
         vmovdqu [rsp + 32*I], ymm0
 %assign I (I + 1)
 %endrep
 
-        ;; Zero out state
+        ;; Zero out state (LFSR + R1-R2)
         vpxor   ymm0, ymm0
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         vmovdqa [r12 + _zuc_state + 64*I], ymm0
 %assign I (I + 1)
 %endrep
@@ -419,7 +419,7 @@ APPEND(skip_eea3_,I):
 
         ;; Restore state from stack for lanes that did not need init
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         ; First 4 lanes
         vmovdqu xmm0, [rsp + 32*I] ; State before init
         vmovdqa xmm1, [r12 + _zuc_state + 64*I] ; State after init
@@ -461,7 +461,7 @@ APPEND3(skip_flush_lane_,I,J):
 %endrep
 
 skip_flush_restoring_state:
-        add     rsp, (16*32 + 6*32) ; Restore stack pointer
+        add     rsp, (16*32 + 2*32) ; Restore stack pointer
 
         mov     word [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
 
@@ -469,7 +469,7 @@ skip_flush_init:
 
         ;; Copy state from good lane to NULL lanes
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         ; Read dword from good lane and broadcast to NULL lanes
         mov     r13d, [r12 + _zuc_state + 64*I + idx*4]
 
