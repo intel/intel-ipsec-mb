@@ -579,13 +579,14 @@ default rel
 ;;; GH = GH * HK * x mod poly which is equivalent to GH*HashKey mod poly.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro  GHASH_MUL  7
-%define %%GH %1         ; 16 Bytes
-%define %%HK %2         ; 16 Bytes
-%define %%T1 %3
-%define %%T2 %4
-%define %%T3 %5
-%define %%T4 %6
-%define %%T5 %7
+%define %%GH %1         ;; [in/out] xmm/ymm/zmm with multiply operand(s) (128-bits)
+%define %%HK %2         ;; [in] xmm/ymm/zmm with hash key value(s) (128-bits)
+%define %%T1 %3         ;; [clobbered] xmm/ymm/zmm
+%define %%T2 %4         ;; [clobbered] xmm/ymm/zmm
+%define %%T3 %5         ;; [clobbered] xmm/ymm/zmm
+%define %%T4 %6         ;; [clobbered] xmm/ymm/zmm
+%define %%T5 %7         ;; [clobbered] xmm/ymm/zmm
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         vpclmulqdq      %%T1, %%GH, %%HK, 0x11  ; %%T1 = a1*b1
