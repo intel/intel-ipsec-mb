@@ -627,7 +627,7 @@ default rel
 ;;; In PRECOMPUTE, the commands filling Hashkey_i_k are not required for avx512
 ;;; functions, but are kept to allow users to switch cpu architectures between calls
 ;;; of pre, init, update, and finalize.
-%macro  PRECOMPUTE 9
+%macro  PRECOMPUTE 10
 %define %%GDATA %1      ;; [in/out] GPR, pointer to GCM key data structure, content updated
 %define %%HK    %2      ;; [in] xmm, hash key
 %define %%T1    %3      ;; [clobbered] xmm
@@ -637,6 +637,7 @@ default rel
 %define %%T5    %7      ;; [clobbered] xmm
 %define %%T6    %8      ;; [clobbered] xmm
 %define %%T7    %9      ;; [clobbered] xmm
+%define %%T8    %10     ;; [clobbered] xmm
 
 %xdefine %%ZT1 ZWORD(%%T1)
 %xdefine %%ZT2 ZWORD(%%T2)
@@ -645,6 +646,7 @@ default rel
 %xdefine %%ZT5 ZWORD(%%T5)
 %xdefine %%ZT6 ZWORD(%%T6)
 %xdefine %%ZT7 ZWORD(%%T7)
+%xdefine %%ZT8 ZWORD(%%T8)
 
         vmovdqa64       %%T5, %%HK
         vinserti64x2    %%ZT7, %%HK, 3
@@ -666,10 +668,23 @@ default rel
 
         ;; switch to 4x128-bit computations now
         vshufi64x2      %%ZT5, %%ZT5, %%ZT5, 0x00       ;; broadcast HashKey^4 across all ZT5
+        vmovdqa64       %%ZT8, %%ZT7                    ;; save HashKey^4 to HashKey^1 in ZT8
 
-        ;; calculate HashKey^5<<1 mod poly, HashKey^6<<1 mod poly, ... HashKey^48<<1 mod poly
-%assign i 8
-%rep ((48 - 4) / 4)
+        ;; calculate HashKey^5<<1 mod poly, HashKey^6<<1 mod poly, ... HashKey^8<<1 mod poly
+        GHASH_MUL       %%ZT7, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
+        vmovdqu64       [%%GDATA + HashKey_8], %%ZT7    ;; HashKey^8 to HashKey^5 in ZT7 now
+        vshufi64x2      %%ZT5, %%ZT7, %%ZT7, 0x00       ;; broadcast HashKey^8 across all ZT5
+
+        ;; calculate HashKey^9<<1 mod poly, HashKey^10<<1 mod poly, ... HashKey^48<<1 mod poly
+        ;; use HashKey^8 as multiplier against ZT8 and ZT7 - this allows deeper ooo execution
+%assign i 12
+%rep ((48 - 8) / 8)
+        ;; compute HashKey^(4 + n), HashKey^(3 + n), ... HashKey^(1 + n)
+        GHASH_MUL       %%ZT8, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
+        vmovdqu64       [%%GDATA + HashKey_ %+ i], %%ZT8
+%assign i (i + 4)
+
+        ;; compute HashKey^(8 + n), HashKey^(7 + n), ... HashKey^(5 + n)
         GHASH_MUL       %%ZT7, %%ZT5, %%ZT1, %%ZT3, %%ZT4, %%ZT6, %%ZT2
         vmovdqu64       [%%GDATA + HashKey_ %+ i], %%ZT7
 %assign i (i + 4)
@@ -4157,7 +4172,7 @@ FN_NAME(precomp,_):
         vmovdqu  [arg1 + HashKey], xmm6                 ; store HashKey<<1 mod poly
 
 
-        PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7
+        PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
 
         FUNC_RESTORE
 exit_precomp:
@@ -4813,7 +4828,7 @@ ghash_pre_vaes_avx512:
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vmovdqu  [arg2 + HashKey], xmm6                 ; store HashKey<<1 mod poly
 
-        PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7
+        PRECOMPUTE arg2, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
 
         FUNC_RESTORE
 exit_ghash_pre:
