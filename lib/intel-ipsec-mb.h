@@ -218,7 +218,8 @@ typedef enum {
         IMB_CIPHER_CNTR_BITLEN,       /* 128-EEA2/NEA2 (3GPP) */
         IMB_CIPHER_ZUC_EEA3,          /* 128-EEA3/NEA3 (3GPP) */
         IMB_CIPHER_SNOW3G_UEA2_BITLEN,/* 128-UEA2 (3GPP) */
-        IMB_CIPHER_KASUMI_UEA1_BITLEN /* 128-UEA1 (3GPP) */
+        IMB_CIPHER_KASUMI_UEA1_BITLEN,/* 128-UEA1 (3GPP) */
+        IMB_CIPHER_CBCS_1_9 /* MPEG CENC (ISO 23001-7) */
 } JOB_CIPHER_MODE;
 
 typedef enum {
@@ -897,6 +898,7 @@ typedef struct IMB_MGR {
         void *aes_cmac_ooo;
         void *zuc_eea3_ooo;
         void *zuc_eia3_ooo;
+        void *aes128_cbcs_ooo;
 } IMB_MGR;
 
 /* ========================================================================== */
