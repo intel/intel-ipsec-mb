@@ -1541,6 +1541,8 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         }
 
         for (i = 0; i < job_iter; i++) {
+                int goto_exit = 0;
+
                 job = IMB_GET_NEXT_JOB(enc_mb_mgr);
                 /*
                  * Encrypt + generate digest from encrypted message
@@ -1643,7 +1645,7 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                                      tag_size_to_check);
                         byte_hexdump("Output digest", out_digest,
                                      tag_size_to_check);
-                        goto exit;
+                        goto_exit = 1;
                 }
 
                 if (params->cipher_mode != IMB_CIPHER_NULL &&
@@ -1652,7 +1654,7 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                                 "\nDecrypted text and plaintext don't match\n");
                         byte_hexdump("Plaintext (orig)", test_buf, buf_size);
                         byte_hexdump("Decrypted msg", src_dst_buf, buf_size);
-                        goto exit;
+                        goto_exit = 1;
                 }
 
                 if ((params->hash_alg == IMB_AUTH_PON_CRC_BIP) &&
@@ -1667,9 +1669,12 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                                              src_dst_buf + 8 + plen, 4);
                                 byte_hexdump("Calculated CRC",
                                              out_digest + 4, 4);
-                                goto exit;
+                                goto_exit = 1;
                         }
                 }
+
+                if (goto_exit)
+                        goto exit;
         }
 
         ret = 0;
