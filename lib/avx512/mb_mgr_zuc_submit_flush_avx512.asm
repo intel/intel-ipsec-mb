@@ -133,6 +133,8 @@ SUBMIT_JOB_ZUC_EEA3:
         SHIFT_GP        1, lane, tmp, tmp2, left
         kmovq   k1, tmp
         or      [state + _zuc_init_not_done], WORD(tmp)
+        not     tmp
+        and     [state + _zuc_unused_lane_bitmask], WORD(tmp)
 
         mov     tmp, [job + _src]
         add     tmp, [job + _cipher_start_src_offset_in_bytes]
@@ -225,6 +227,20 @@ len_is_0_submit_eea3:
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
+        SHIFT_GP        1, idx, tmp, tmp2, left
+        or      [state + _zuc_unused_lane_bitmask], WORD(tmp)
+
+        ; Clear ZUC state of lane that is returned
+%ifdef SAFE_DATA
+        vpxorq          zmm0, zmm0
+        SHIFT_GP        1, idx, tmp3, tmp2, left
+        kmovq           k1, tmp3
+%assign i 0
+%rep (16 + 6)
+        vmovdqa32       [state + _zuc_state]{k1}, zmm0
+%assign i (i + 1)
+%endrep
+%endif
 
 return_submit_eea3:
 
@@ -427,7 +443,24 @@ skip_init_flush:
 %endif
         mov     state, [rsp + _gpr_save + 8*8]
 
+        ; Prepare bitmask to clear ZUC state with lane
+        ; that is returned and NULL lanes
+%ifdef SAFE_DATA
+        SHIFT_GP        1, idx, tmp1, tmp2, left
+        movzx   DWORD(tmp3), word [state + _zuc_unused_lane_bitmask]
+        or      tmp3, tmp1 ;; bitmask with NULL lanes and job to return
+        kmovq   k1, tmp3
+
+        jmp     skip_flush_clear_state
+%endif
 len_is_0_flush_eea3:
+%ifdef SAFE_DATA
+        ; Prepare bitmask to clear ZUC state with lane that is returned
+        SHIFT_GP        1, idx, tmp3, tmp4, left
+        kmovq           k1, tmp3
+
+skip_flush_clear_state:
+%endif
         ; process completed job "idx"
         ;; - decrement number of jobs in use
         sub	qword [state + _zuc_lanes_in_use], 1
@@ -438,6 +471,18 @@ len_is_0_flush_eea3:
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
+
+        SHIFT_GP        1, idx, tmp3, tmp4, left
+        or      [state + _zuc_unused_lane_bitmask], WORD(tmp3)
+        ; Clear ZUC state using k1 bitmask set above
+%ifdef SAFE_DATA
+        vpxorq          zmm0, zmm0
+%assign i 0
+%rep (16 + 6)
+        vmovdqa32       [state + _zuc_state]{k1}, zmm0
+%assign i (i + 1)
+%endrep
+%endif
 
 return_flush_eea3:
 
