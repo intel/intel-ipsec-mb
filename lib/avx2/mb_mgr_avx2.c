@@ -489,6 +489,7 @@ init_mb_mgr_avx2(IMB_MGR *state)
         memset(&zuc_eea3_ooo->state16, 0,
                sizeof(zuc_eea3_ooo->state16));
         zuc_eea3_ooo->init_not_done = 0;
+        zuc_eea3_ooo->unused_lane_bitmask = 0xff;
 
         memset(zuc_eia3_ooo->lens, 0xFF,
                sizeof(zuc_eia3_ooo->lens));
@@ -499,6 +500,7 @@ init_mb_mgr_avx2(IMB_MGR *state)
         memset(&zuc_eia3_ooo->state16, 0,
                sizeof(zuc_eia3_ooo->state16));
         zuc_eia3_ooo->init_not_done = 0;
+        zuc_eia3_ooo->unused_lane_bitmask = 0xff;
 
 
         /* Init HMAC/SHA1 out-of-order fields */

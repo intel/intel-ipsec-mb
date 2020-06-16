@@ -255,6 +255,7 @@ typedef struct {
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(ZucState16_t state16, 64);
         uint16_t init_not_done;
+        uint16_t unused_lane_bitmask;
         uint64_t road_block;
 } MB_MGR_ZUC_OOO;
 
