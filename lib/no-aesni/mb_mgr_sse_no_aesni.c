@@ -118,6 +118,10 @@ JOB_AES_HMAC *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 uint32_t hec_32_sse_no_aesni(const uint8_t *in);
 uint64_t hec_64_sse_no_aesni(const uint8_t *in);
 
+IMB_JOB *submit_job_aes128_cbcs_1_9_enc_sse_no_aesni(MB_MGR_AES_OOO *state,
+                                                     IMB_JOB *job);
+IMB_JOB *flush_job_aes128_cbcs_1_9_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
+
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
 
@@ -248,6 +252,17 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 
 #define FLUSH_JOB_AES256_CMAC_AUTH    flush_job_aes256_cmac_auth_sse_no_aesni
 #define SUBMIT_JOB_AES256_CMAC_AUTH   submit_job_aes256_cmac_auth_sse_no_aesni
+
+/* ====================================================================== */
+
+#define SUBMIT_JOB_AES128_CBCS_1_9_ENC \
+        submit_job_aes128_cbcs_1_9_enc_sse_no_aesni
+#define FLUSH_JOB_AES128_CBCS_1_9_ENC  \
+        flush_job_aes128_cbcs_1_9_enc_sse_no_aesni
+#define SUBMIT_JOB_AES128_CBCS_1_9_DEC \
+        submit_job_aes128_cbcs_1_9_dec_sse_no_aesni
+#define AES_CBCS_1_9_DEC_128           \
+        aes_cbcs_1_9_dec_128_sse_no_aesni
 
 /* ====================================================================== */
 
@@ -455,6 +470,7 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+        MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
 
         /* Init AES out-of-order fields */
         memset(aes128_ooo->lens, 0xFF,
@@ -762,6 +778,13 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         }
         aes_cmac_ooo->unused_lanes = 0xF3210;
         aes_cmac_ooo->num_lanes_inuse = 0;
+
+        /* Init AES-CBCS out-of-order fields */
+        memset(aes128_cbcs_ooo->lens, 0xFF, sizeof(aes128_cbcs_ooo->lens));
+        memset(aes128_cbcs_ooo->job_in_lane, 0,
+               sizeof(aes128_cbcs_ooo->job_in_lane));
+        aes128_cbcs_ooo->num_lanes_inuse = 0;
+        aes128_cbcs_ooo->unused_lanes = 0xF3210;
 
         /* Init "in order" components */
         state->next_job = 0;

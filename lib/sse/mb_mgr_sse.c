@@ -174,6 +174,10 @@ void aes_cmac_256_subkey_gen_sse(const void *key_exp,
 uint32_t hec_32_sse(const uint8_t *in);
 uint64_t hec_64_sse(const uint8_t *in);
 
+IMB_JOB *submit_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state,
+                                            IMB_JOB *job);
+IMB_JOB *flush_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state);
+
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
 
@@ -300,6 +304,13 @@ uint64_t hec_64_sse(const uint8_t *in);
 
 #define FLUSH_JOB_AES256_CMAC_AUTH    flush_job_aes256_cmac_auth_ptr
 #define SUBMIT_JOB_AES256_CMAC_AUTH   submit_job_aes256_cmac_auth_ptr
+
+/* ====================================================================== */
+
+#define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_sse
+#define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_sse
+#define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_sse
+#define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_sse
 
 /* ====================================================================== */
 
@@ -603,6 +614,7 @@ init_mb_mgr_sse(IMB_MGR *state)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+        MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
 
         state->features = cpu_feature_adjust(state->flags,
                                              cpu_feature_detect());
@@ -1006,6 +1018,13 @@ init_mb_mgr_sse(IMB_MGR *state)
         } else {
                 aes_cmac_ooo->unused_lanes = 0xF3210;
         }
+
+        /* Init AES-CBCS out-of-order fields */
+        memset(aes128_cbcs_ooo->lens, 0xFF, sizeof(aes128_cbcs_ooo->lens));
+        memset(aes128_cbcs_ooo->job_in_lane, 0,
+               sizeof(aes128_cbcs_ooo->job_in_lane));
+        aes128_cbcs_ooo->num_lanes_inuse = 0;
+        aes128_cbcs_ooo->unused_lanes = 0xF3210;
 
         /* Init "in order" components */
         state->next_job = 0;
