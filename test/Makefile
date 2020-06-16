@@ -68,7 +68,7 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
 	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \
 	ecb_test.c zuc_test.c kasumi_test.c snow3g_test.c direct_api_test.c clear_mem_test.c \
-	hec_test.c xcbc_test.c
+	hec_test.c xcbc_test.c aes_cbcs_test.c
 
 %.o:%.asm
 ifeq ($(USE_YASM),y)
@@ -117,6 +117,7 @@ direct_api_test.o: direct_api_test.c
 clear_mem_test.o: clear_mem_test.c
 hec_test.o: hec_test.c
 xcbc_test.o: xcbc_test.c
+aes_cbcs_test.o: aes_cbcs_test.c
 
 .PHONY: clean
 clean:
