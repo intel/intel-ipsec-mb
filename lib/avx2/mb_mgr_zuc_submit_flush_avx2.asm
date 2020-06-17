@@ -286,46 +286,40 @@ SUBMIT_JOB_ZUC_EEA3:
         cmp     word [r12 + _zuc_init_not_done], 0xff ; Init done for all lanes
         je      skip_submit_restoring_state
 
+        ; Load mask for lanes 0-3
+        movzx   DWORD(tmp), word [r12 + _zuc_init_not_done]
+        mov     tmp2, tmp
+        and     tmp2, 0xf
+        lea     tmp3, [rel bitmask_to_dword_tab]
+        shl     tmp2, 4 ; Multiply by 16 to move through the table
+        add     tmp3, tmp2
+        vmovdqa xmm2, [tmp3] ; Mask for first 4 lanes
+
+        ; Load mask for lanes 4-7
+        and     tmp, 0xf0
+        lea     tmp3, [rel bitmask_to_dword_tab]
+        add     tmp3, tmp ; tmp already multipied by 16 to move through the table
+        vmovdqa xmm5, [tmp3]
+
         ;; Restore state from stack for lanes that did not need init
 %assign I 0
 %rep (16 + 2)
         ; First 4 lanes
         vmovdqu xmm0, [rsp + 32*I] ; State before init
         vmovdqa xmm1, [r12 + _zuc_state + 64*I] ; State after init
-%assign J 0
-%rep 4
-        test    word [r12 + _zuc_init_not_done], (1 << J)
-        jnz     APPEND3(skip_submit_lane_,I,J)
-        ;; Extract dword from ymm0
-        vpextrd tmp2, xmm0, J ; value
-        mov     r8, (J << 4) ; index
 
-        XVPINSRD xmm1, xmm2, tmp3, r8, tmp2, no_scale
-
-APPEND3(skip_submit_lane_,I,J):
-%assign J (J+1)
-%endrep
-        vmovdqa [r12 + _zuc_state + 64*I], xmm1 ; Save new state
+        vpand   xmm3, xmm2, xmm1 ;; Zero out lanes that need to be restored in current state
+        vpandn  xmm4, xmm2, xmm0 ;; Zero out lanes that do not need to be restored in saved state
+        vpor    xmm4, xmm3       ;; Combine both states
+        vmovdqa [r12 + _zuc_state + 64*I], xmm4 ; Save new state
 
         ; Next 4 lanes
         vmovdqu xmm0, [rsp + 32*I + 16] ; State before init
         vmovdqa xmm1, [r12 + _zuc_state + 64*I + 16] ; State after init
-%assign J 4
-%assign K 0
-%rep 4
-        test    word [r12 + _zuc_init_not_done], (1 << J)
-        jnz     APPEND3(skip_submit_lane_,I,J)
-        ;; Extract dword from ymm0
-        vpextrd tmp2, xmm0, K ; value
-        mov     r8, (K << 4) ; index
-
-        XVPINSRD xmm1, xmm2, tmp3, r8, tmp2, no_scale
-
-APPEND3(skip_submit_lane_,I,J):
-%assign J (J+1)
-%assign K (K+1)
-%endrep
-        vmovdqa [r12 + _zuc_state + 64*I + 16], xmm1 ; Save new state
+        vpand   xmm3, xmm5, xmm1 ;; Zero out lanes that need to be restored in current state
+        vpandn  xmm4, xmm5, xmm0 ;; Zero out lanes that do not need to be restored in saved state
+        vpor    xmm4, xmm3       ;; Combine both states
+        vmovdqa [r12 + _zuc_state + 64*I + 16], xmm4 ; Save new state
 %assign I (I + 1)
 %endrep
 
