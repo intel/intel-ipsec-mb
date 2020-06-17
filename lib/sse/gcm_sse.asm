@@ -2936,7 +2936,7 @@ ghash_pre_sse_no_aesni:
 
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
-        clear_scratch_zmms_asm
+        clear_scratch_xmms_sse_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
         movdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]

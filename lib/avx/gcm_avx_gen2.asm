@@ -2862,7 +2862,7 @@ ghash_pre_avx_gen2:
 
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
-        clear_scratch_zmms_asm
+        clear_scratch_xmms_avx_asm
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
         vmovdqu xmm6, [rsp + LOCAL_STORAGE + 0*16]
