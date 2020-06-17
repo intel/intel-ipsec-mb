@@ -33,6 +33,8 @@
 %include "include/aes_common.asm"
 %include "mb_mgr_datastruct.asm"
 
+extern ethernet_fcs_avx512
+
 ;; In System V AMD64 ABI
 ;;	callee saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
@@ -42,15 +44,18 @@
 
 struc STACKFRAME
 _rsp_save:      resq    1
+_job_save:      resq    1
 _gpr_save:	resq	4
 endstruc
 
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
+%define arg3	rdx
 %else
 %define arg1	rcx
 %define arg2	rdx
+%define arg3	r8
 %endif
 
 %define job     arg1
@@ -1471,8 +1476,13 @@ section .text
 
 %%aes_docsis_dec_crc32_avx512__no_cipher:
         ;; tmp1 - already points to hash start
-        mov             tmp2, [job + _msg_len_to_hash_in_bytes]
-        ETHERNET_FCS_CRC tmp1, tmp2, rax, xmm15, tmp3, xmm0, xmm1, xmm2, xmm3
+        ;; job is arg1
+        mov             [rsp + _job_save], job
+        mov             arg2, [job + _msg_len_to_hash_in_bytes]
+        xor             arg3, arg3
+        mov             arg1, tmp1
+        call            ethernet_fcs_avx512
+        mov             job, [rsp + _job_save]
 
 %%aes_docsis_dec_crc32_avx512__exit:
         mov             tmp1, [job + _auth_tag_output]
