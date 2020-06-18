@@ -158,6 +158,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes_docsis_dec_avx512.obj \
 	$(OBJ_DIR)\aes_docsis_enc_avx512.obj \
 	$(OBJ_DIR)\aes_docsis_dec_vaes_avx512.obj \
+	$(OBJ_DIR)\aes_docsis_enc_vaes_avx512.obj \
 	$(OBJ_DIR)\aes128_cbc_mac_x4.obj \
 	$(OBJ_DIR)\aes128_cbc_mac_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes128_cbc_mac_x8_sse.obj \

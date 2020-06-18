@@ -800,35 +800,17 @@ submit_job_aes_docsis256_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state,
 extern IMB_JOB *
 flush_job_aes_docsis256_enc_crc32_avx512(MB_MGR_DOCSIS_AES_OOO *state);
 
-__forceinline
-IMB_JOB *
-submit_job_docsis128_sec_crc_enc_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
-                                             IMB_JOB *job)
-{
-        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(state, job, 16);
-}
+extern IMB_JOB *
+submit_job_aes_docsis128_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                               IMB_JOB *job);
+extern IMB_JOB *
+flush_job_aes_docsis128_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state);
 
-__forceinline
-IMB_JOB *
-submit_job_docsis256_sec_crc_enc_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
-                                             IMB_JOB *job)
-{
-        return SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(state, job, 32);
-}
-
-__forceinline
-IMB_JOB *
-flush_job_docsis128_sec_crc_enc_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state)
-{
-        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(state, 16);
-}
-
-__forceinline
-IMB_JOB *
-flush_job_docsis256_sec_crc_enc_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state)
-{
-        return FLUSH_JOB_DOCSIS_SEC_CRC_ENC(state, 32);
-}
+extern IMB_JOB *
+submit_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
+                                               IMB_JOB *job);
+extern IMB_JOB *
+flush_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state);
 
 __forceinline
 IMB_JOB *
@@ -997,13 +979,14 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 aes_cntr_ccm_256_avx512 = aes_cntr_ccm_256_vaes_avx512;
 
                 submit_job_docsis128_sec_crc_enc_fn =
-                        submit_job_docsis128_sec_crc_enc_vaes_avx512;
+                        submit_job_aes_docsis128_enc_crc32_vaes_avx512;
                 submit_job_docsis256_sec_crc_enc_fn =
-                        submit_job_docsis256_sec_crc_enc_vaes_avx512;
+                        submit_job_aes_docsis256_enc_crc32_vaes_avx512;
                 flush_job_docsis128_sec_crc_enc_fn =
-                        flush_job_docsis128_sec_crc_enc_vaes_avx512;
+                        flush_job_aes_docsis128_enc_crc32_vaes_avx512;
                 flush_job_docsis256_sec_crc_enc_fn =
-                        flush_job_docsis256_sec_crc_enc_vaes_avx512;
+                        flush_job_aes_docsis256_enc_crc32_vaes_avx512;
+
                 submit_job_docsis128_sec_crc_dec_fn =
                         submit_job_docsis128_sec_crc_dec_vaes_avx512;
                 submit_job_docsis256_sec_crc_dec_fn =
@@ -1115,21 +1098,26 @@ init_mb_mgr_avx512(IMB_MGR *state)
         }
 
         if (vaes_support) {
-                /* init 16 lanes */
-                memset(docsis128_crc32_sec_ooo->lens, 0,
+                /*
+                 * @todo temporary switch from 16 to 8 lanes
+                 * as the new algorithmic code evolves
+                 */
+                memset(docsis128_crc32_sec_ooo->lens, 0xFF,
                        sizeof(docsis128_crc32_sec_ooo->lens));
+                memset(&docsis128_crc32_sec_ooo->lens[0], 0,
+                       sizeof(docsis128_crc32_sec_ooo->lens[0]) * 8);
                 memset(docsis128_crc32_sec_ooo->job_in_lane, 0,
                        sizeof(docsis128_crc32_sec_ooo->job_in_lane));
-                docsis128_crc32_sec_ooo->unused_lanes =
-                        0xFEDCBA9876543210;
+                docsis128_crc32_sec_ooo->unused_lanes = 0xF76543210;
                 docsis128_crc32_sec_ooo->num_lanes_inuse = 0;
 
-                memset(docsis256_crc32_sec_ooo->lens, 0,
+                memset(docsis256_crc32_sec_ooo->lens, 0xFF,
                        sizeof(docsis256_crc32_sec_ooo->lens));
+                memset(&docsis256_crc32_sec_ooo->lens[0], 0,
+                       sizeof(docsis256_crc32_sec_ooo->lens[0]) * 8);
                 memset(docsis256_crc32_sec_ooo->job_in_lane, 0,
                        sizeof(docsis256_crc32_sec_ooo->job_in_lane));
-                docsis256_crc32_sec_ooo->unused_lanes =
-                        0xFEDCBA9876543210;
+                docsis256_crc32_sec_ooo->unused_lanes = 0xF76543210;
                 docsis256_crc32_sec_ooo->num_lanes_inuse = 0;
         } else {
                 /* init 8 lanes */
