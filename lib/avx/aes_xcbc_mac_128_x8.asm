@@ -27,8 +27,11 @@
 
 ;;; routine to do 128 bit AES XCBC
 
-%ifndef AES_XCBC_X8
-%define AES_XCBC_X8 aes_xcbc_mac_128_x8
-%define CBC_XCBC_MAC
-%endif
+%define FUNC     aes_xcbc_mac_128_x8
+%define MODE     CBC_XCBC_MAC
+%define OFFSET   16
+%define ARG_IN   _aesxcbcarg_in
+%define ARG_KEYS _aesxcbcarg_keys
+%define ARG_IV   _aesxcbcarg_ICV
+
 %include "avx/aes_cbc_enc_128_x8.asm"
