@@ -366,9 +366,7 @@ asm_sse_lib_objs := \
 	mb_mgr_zuc_submit_flush_gfni_sse.o \
 	ethernet_fcs_sse.o \
 	aes_cbcs_1_9_enc_128_x4.o \
-	aes128_cbcs_1_9_dec_by4_sse.o \
-	aes_cbcs_1_9_enc_128_x8.o \
-	aes128_cbcs_1_9_dec_by8_avx.o
+	aes128_cbcs_1_9_dec_by4_sse.o
 
 #
 # List of ASM modules (avx directory)
@@ -426,7 +424,12 @@ asm_avx_lib_objs := \
 	mb_mgr_hmac_sha_512_flush_avx.o \
 	mb_mgr_hmac_sha_512_submit_avx.o \
 	mb_mgr_zuc_submit_flush_avx.o \
-	ethernet_fcs_avx.o
+	ethernet_fcs_avx.o \
+	aes_cbcs_1_9_enc_128_x8.o \
+	aes128_cbcs_1_9_dec_by8_avx.o \
+	mb_mgr_aes128_cbcs_1_9_submit_avx.o \
+	mb_mgr_aes128_cbcs_1_9_flush_avx.o
+
 
 #
 # List of ASM modules (avx2 directory)
