@@ -273,6 +273,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\mb_mgr_aes128_cbcs_1_9_submit_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes128_cbcs_1_9_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes_cbcs_1_9_enc_128_x8.obj \
+	$(OBJ_DIR)\aes128_cbcs_1_9_dec_by8_avx.obj
 
 lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_avx.obj \

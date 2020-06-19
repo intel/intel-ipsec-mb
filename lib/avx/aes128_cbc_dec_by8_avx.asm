@@ -57,16 +57,17 @@
 %define p_IV	rsi
 %define p_keys	rdx
 %define p_out	rcx
-%define num_bytes r8
+%define len     r8
 %else
 %define p_in	rcx
 %define p_IV	rdx
 %define p_keys	r8
 %define p_out	r9
-%define num_bytes rax
 %endif
 
+%define num_bytes rax
 %define tmp	r10
+%define tmp2    r11
 
 %macro do_aes_load 1
 	do_aes %1, 1
@@ -88,7 +89,7 @@
 
 %assign i 0
 %rep %%by
-	VMOVDQ	CONCAT(xdata,i), [p_in  + i*16]
+	VMOVDQ	CONCAT(xdata,i), [p_in  + i*OFFSET]
 %assign i (i+1)
 %endrep
 
@@ -101,7 +102,7 @@
 %assign i (i+1)
 %endrep
 
-	add	p_in, 16*%%by
+	add	p_in, OFFSET*%%by
 
 	vmovdqa	xkeytmp, [p_keys + 1*16]
 %assign i 0
@@ -184,16 +185,16 @@
 %assign i 1
 %if (%%by > 1)
 %rep (%%by - 1)
-	VMOVDQ	xIV, [p_in  + (i-1)*16 - 16*%%by]
+	VMOVDQ	xIV, [p_in  + (i-1)*OFFSET - OFFSET*%%by]
 	vpxor	CONCAT(xdata,i), CONCAT(xdata,i), xIV
 %assign i (i+1)
 %endrep
 %endif
-	VMOVDQ	xIV, [p_in  + (i-1)*16 - 16*%%by]
+	VMOVDQ	xIV, [p_in  + (i-1)*OFFSET - OFFSET*%%by]
 
 %assign i 0
 %rep %%by
-	VMOVDQ	[p_out  + i*16], CONCAT(xdata,i)
+	VMOVDQ	[p_out  + i*OFFSET], CONCAT(xdata,i)
 %assign i (i+1)
 %endrep
 %endmacro
@@ -204,15 +205,34 @@
 
 section .text
 
+%ifndef AES_CBC_DEC_128_X8
 ;; aes_cbc_dec_128_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
-MKGLOBAL(aes_cbc_dec_128_avx,function,internal)
-aes_cbc_dec_128_avx:
+%define AES_CBC_DEC_128_X8 aes_cbc_dec_128_avx
+%define OFFSET 16
+%endif
+
+MKGLOBAL(AES_CBC_DEC_128_X8,function,internal)
+AES_CBC_DEC_128_X8:
 
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
+%else
+        mov     num_bytes, len
 %endif
 
 	vmovdqu	xIV, [p_IV]
+
+%ifdef CBCS
+        ;; convert CBCS length to standard number of CBC blocks
+        ;; ((num_bytes + 9 blocks) / 160) = num blocks to decrypt
+        mov     tmp2, rdx
+        mov     rdx, 0          ;; store and zero rdx for div
+        add     num_bytes, 9*16
+        mov     tmp, 160
+        div     tmp             ;; divide by 160
+        shl     num_bytes, 4    ;; multiply by 16 to get num bytes
+        mov     rdx, tmp2
+%endif
 
 	mov	tmp, num_bytes
 	and	tmp, 7*16
@@ -229,28 +249,28 @@ lt4:
 	je	eq2
 eq1:
 	do_aes_load	1
-	add	p_out, 1*16
+	add	p_out, 1*OFFSET
 	and	num_bytes, ~7*16
 	jz	do_return2
 	jmp	main_loop2
 
 eq2:
 	do_aes_load	2
-	add	p_out, 2*16
+	add	p_out, 2*OFFSET
 	and	num_bytes, ~7*16
 	jz	do_return2
 	jmp	main_loop2
 
 eq3:
 	do_aes_load	3
-	add	p_out, 3*16
+	add	p_out, 3*OFFSET
 	and	num_bytes, ~7*16
 	jz	do_return2
 	jmp	main_loop2
 
 eq4:
 	do_aes_load	4
-	add	p_out, 4*16
+	add	p_out, 4*OFFSET
 	and	num_bytes, ~7*16
 	jz	do_return2
 	jmp	main_loop2
@@ -262,21 +282,21 @@ gt4:
 
 eq5:
 	do_aes_load	5
-	add	p_out, 5*16
+	add	p_out, 5*OFFSET
 	and	num_bytes, ~7*16
 	jz	do_return2
 	jmp	main_loop2
 
 eq6:
 	do_aes_load	6
-	add	p_out, 6*16
+	add	p_out, 6*OFFSET
 	and	num_bytes, ~7*16
 	jz	do_return2
 	jmp	main_loop2
 
 eq7:
 	do_aes_load	7
-	add	p_out, 7*16
+	add	p_out, 7*OFFSET
 	and	num_bytes, ~7*16
 	jz	do_return2
 	jmp	main_loop2
@@ -292,7 +312,7 @@ mult_of_8_blks:
 main_loop2:
 	; num_bytes is a multiple of 8 and >0
 	do_aes_noload	8
-	add	p_out,	8*16
+	add	p_out,	8*OFFSET
 	sub	num_bytes, 8*16
 	jne	main_loop2
 

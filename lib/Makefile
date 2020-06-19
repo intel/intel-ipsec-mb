@@ -367,7 +367,8 @@ asm_sse_lib_objs := \
 	ethernet_fcs_sse.o \
 	aes_cbcs_1_9_enc_128_x4.o \
 	aes128_cbcs_1_9_dec_by4_sse.o \
-	aes_cbcs_1_9_enc_128_x8.o
+	aes_cbcs_1_9_enc_128_x8.o \
+	aes128_cbcs_1_9_dec_by8_avx.o
 
 #
 # List of ASM modules (avx directory)

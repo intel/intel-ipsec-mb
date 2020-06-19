@@ -210,6 +210,9 @@ void aes_cbcs_1_9_dec_128_sse(const void *in, const uint8_t *IV,
 void aes_cbcs_1_9_dec_128_sse_no_aesni(const void *in, const uint8_t *IV,
                                        const void *keys, void *out,
                                        uint64_t len_bytes);
+void aes_cbcs_1_9_dec_128_avx(const void *in, const uint8_t *IV,
+                              const void *keys, void *out,
+                              uint64_t len_bytes);
 
 
 /* stitched AES128-CNTR, CRC32 and BIP */
