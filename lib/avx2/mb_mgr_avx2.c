@@ -78,6 +78,10 @@ void aes_cmac_256_subkey_gen_avx2(const void *key_exp,
 uint32_t hec_32_avx(const uint8_t *in);
 uint64_t hec_64_avx(const uint8_t *in);
 
+IMB_JOB *submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state,
+                                            IMB_JOB *job);
+IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
+
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
@@ -265,6 +269,13 @@ uint32_t ethernet_fcs_avx(const void *msg, uint64_t len, const void *tag_ouput);
 
 /* ====================================================================== */
 
+#define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_avx
+#define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_avx
+#define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_avx
+#define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_avx
+
+/* ====================================================================== */
+
 /*
  * GCM submit / flush API for AVX2 arch
  */
@@ -402,6 +413,7 @@ init_mb_mgr_avx2(IMB_MGR *state)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+        MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
 
 
         state->features = cpu_feature_adjust(state->flags,
@@ -718,6 +730,17 @@ init_mb_mgr_avx2(IMB_MGR *state)
         }
         aes_cmac_ooo->unused_lanes = 0xF76543210;
         aes_cmac_ooo->num_lanes_inuse = 0;
+
+        /* Init AES CBC-S out-of-order fields */
+        memset(aes128_cbcs_ooo->lens, 0xFF,
+               sizeof(aes128_cbcs_ooo->lens));
+        memset(&aes128_cbcs_ooo->lens[0], 0,
+               sizeof(aes128_cbcs_ooo->lens[0]) * 8);
+        memset(aes128_cbcs_ooo->job_in_lane, 0,
+               sizeof(aes128_cbcs_ooo->job_in_lane));
+        aes128_cbcs_ooo->unused_lanes = 0xF76543210;
+        aes128_cbcs_ooo->num_lanes_inuse = 0;
+
 
         /* Init "in order" components */
         state->next_job = 0;

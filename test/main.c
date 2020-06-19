@@ -304,9 +304,7 @@ main(int argc, char **argv)
                 errors += sha_test(p_mgr);
                 errors += chained_test(p_mgr);
                 errors += hec_test(p_mgr);
-                /* CBC-S only supported on SSE and NO_AESNI for now */
-                if (atype == ARCH_SSE || atype == ARCH_NO_AESNI)
-                        errors += aes_cbcs_test(p_mgr);
+                errors += aes_cbcs_test(p_mgr);
                 errors += api_test(p_mgr);
                 errors += direct_api_test(p_mgr);
                 errors += clear_mem_test(p_mgr);

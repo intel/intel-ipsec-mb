@@ -181,7 +181,6 @@ SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
         return job;
 }
 
-#ifdef SUBMIT_JOB_AES128_CBCS_1_9_DEC
 __forceinline
 IMB_JOB *
 SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
@@ -194,7 +193,6 @@ SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
         job->status |= STS_COMPLETED_AES;
         return job;
 }
-#endif
 
 /* ========================================================================= */
 /* DOCSIS functions */
@@ -422,9 +420,8 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
-#ifdef SUBMIT_JOB_AES128_CBCS_1_9_ENC
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
-#endif
+
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES128_ENC(aes128_ooo, job);
@@ -493,10 +490,8 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return submit_snow3g_uea2_job(state, job);
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == job->cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
-#ifdef SUBMIT_JOB_AES128_CBCS_1_9_ENC
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
                 return SUBMIT_JOB_AES128_CBCS_1_9_ENC(aes128_cbcs_ooo, job);
-#endif
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= STS_COMPLETED_AES;
                 return job;
@@ -511,9 +506,8 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
-#ifdef SUBMIT_JOB_AES128_CBCS_1_9_ENC
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
-#endif
+
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
                         return FLUSH_JOB_AES128_ENC(aes128_ooo);
@@ -550,10 +544,8 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
         /* assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
          * IMB_CIPHER_CCM or IMB_CIPHER_NULL */
-#ifdef FLUSH_JOB_AES128_CBCS_1_9_ENC
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
                 return FLUSH_JOB_AES128_CBCS_1_9_ENC(aes128_cbcs_ooo);
-#endif
         } else {
                 return NULL;
         }
@@ -634,10 +626,8 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                 return submit_snow3g_uea2_job(state, job);
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == job->cipher_mode) {
                 return submit_kasumi_uea1_job(state, job);
-#ifdef SUBMIT_JOB_AES128_CBCS_1_9_DEC
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
                 return SUBMIT_JOB_AES128_CBCS_1_9_DEC(job);
-#endif
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= STS_COMPLETED_AES;
