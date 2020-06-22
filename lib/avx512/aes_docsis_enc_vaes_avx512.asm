@@ -36,6 +36,7 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 %include "include/clear_regs.asm"
+%include "include/aes_common.asm"
 
 %define APPEND(a,b) a %+ b
 
@@ -1113,12 +1114,9 @@ section .text
         mov             %%GT6, [%%JOB + _src]
         add             %%GT6, [%%JOB + _hash_start_src_offset_in_bytes]
 
-        prefetchw       [%%GT6 + 0*64]
-        prefetchw       [%%GT6 + 1*64]
-
         vmovdqa64       XWORD(%%ZT1), [rel rk1]
 
-        cmp             qword [%%JOB + _msg_len_to_cipher_in_bytes], (3 * 16)
+        cmp             qword [%%JOB + _msg_len_to_cipher_in_bytes], (2 * 16)
         jae             %%_crc_in_chunks
 
         ;; this is short message - compute whole CRC in one go
