@@ -536,45 +536,6 @@ section .text
 
 ;; =====================================================================
 ;; =====================================================================
-;; CRC32 computation middle round only
-;; - uses K registers to allow/disallow update of lane's CRC value
-;; =====================================================================
-%macro CRC32_MID_ROUND 7
-%define %%ARG           %1      ; [in] GP with pointer to OOO manager / arguments
-%define %%LANEID        %2      ; [in] numerical value with lane id
-%define %%XDATA         %3      ; [in] an XMM (any) with input data block for CRC calculation
-%define %%XCRC_VAL      %4      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_MUL      %5      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_TMP      %6      ; [clobbered] temporary XMM (xmm0-15)
-%define %%LANEDAT       %7      ; [in/out] CRC cumulative sum
-
-%if %%LANEID < 7
-
-        ;; use K registers
-%assign kreg (%%LANEID + 1)
-
-        ;; The most common case: next block for CRC
-        vmovdqa64       %%XCRC_VAL, %%LANEDAT
-        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
-        vmovdqa64       %%LANEDAT{APPEND(k,kreg)}, %%XCRC_VAL
-
-%else
-
-        cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_DONE
-        je              %%_crc_lane_done
-
-        ;; The most common case: next block for CRC
-        vmovdqa64       %%XCRC_VAL, %%LANEDAT
-        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
-        vmovdqa64       %%LANEDAT, %%XCRC_VAL
-%%_crc_lane_done:
-
-%endif  ;; !(%%LANEID < 7)
-
-%endmacro       ; CRC32_MID_ROUND
-
-;; =====================================================================
-;; =====================================================================
 ;; AES128/256-CBC encryption combined with CRC32 operations
 ;; =====================================================================
 %macro AES_CBC_ENC_CRC32_PARALLEL 48
@@ -640,46 +601,46 @@ section .text
 %define %%CRC32 %%GT11
 %define %%IDX   %%GT12
 
-%define %%XCIPH0 XWORD(%%ZT0)
-%define %%XCIPH1 XWORD(%%ZT1)
-%define %%XCIPH2 XWORD(%%ZT2)
-%define %%XCIPH3 XWORD(%%ZT3)
-%define %%XCIPH4 XWORD(%%ZT4)
-%define %%XCIPH5 XWORD(%%ZT5)
-%define %%XCIPH6 XWORD(%%ZT6)
-%define %%XCIPH7 XWORD(%%ZT7)
+%xdefine %%XCIPH0 XWORD(%%ZT0)
+%xdefine %%XCIPH1 XWORD(%%ZT1)
+%xdefine %%XCIPH2 XWORD(%%ZT2)
+%xdefine %%XCIPH3 XWORD(%%ZT3)
+%xdefine %%XCIPH4 XWORD(%%ZT4)
+%xdefine %%XCIPH5 XWORD(%%ZT5)
+%xdefine %%XCIPH6 XWORD(%%ZT6)
+%xdefine %%XCIPH7 XWORD(%%ZT7)
 
-%define %%XCRC_MUL XWORD(%%ZT8)
-%define %%XCRC_TMP XWORD(%%ZT9)
-%define %%XCRC_DAT XWORD(%%ZT10)
-%define %%XCRC_VAL XWORD(%%ZT11)
-%define %%XCRC_TMP2 XWORD(%%ZT12)
-%define %%XTMP  %%XCRC_TMP2
+%xdefine %%XCRC_MUL XWORD(%%ZT8)
+%xdefine %%XCRC_TMP XWORD(%%ZT9)
+%xdefine %%XCRC_DAT XWORD(%%ZT10)
+%xdefine %%XCRC_VAL XWORD(%%ZT11)
+%xdefine %%XCRC_TMP2 XWORD(%%ZT12)
+%xdefine %%XTMP  %%XCRC_TMP2
 
 ;; used for loading plain text
-%define %%XDATA0 XWORD(%%ZT16)
-%define %%XDATA1 XWORD(%%ZT17)
-%define %%XDATA2 XWORD(%%ZT18)
-%define %%XDATA3 XWORD(%%ZT19)
-%define %%XDATA4 XWORD(%%ZT20)
-%define %%XDATA5 XWORD(%%ZT21)
-%define %%XDATA6 XWORD(%%ZT22)
-%define %%XDATA7 XWORD(%%ZT23)
+%xdefine %%XDATA0 XWORD(%%ZT16)
+%xdefine %%XDATA1 XWORD(%%ZT17)
+%xdefine %%XDATA2 XWORD(%%ZT18)
+%xdefine %%XDATA3 XWORD(%%ZT19)
+%xdefine %%XDATA4 XWORD(%%ZT20)
+%xdefine %%XDATA5 XWORD(%%ZT21)
+%xdefine %%XDATA6 XWORD(%%ZT22)
+%xdefine %%XDATA7 XWORD(%%ZT23)
 
 ;; used for current CRC sums
-%define %%XDATB0 XWORD(%%ZT27)
-%define %%XDATB1 XWORD(%%ZT28)
-%define %%XDATB2 XWORD(%%ZT29)
-%define %%XDATB3 XWORD(%%ZT30)
-%define %%XDATB4 XWORD(%%ZT31)
-%define %%XDATB5 XWORD(%%ZT13)
-%define %%XDATB6 XWORD(%%ZT14)
-%define %%XDATB7 XWORD(%%ZT15)
+%xdefine %%XDATB0 XWORD(%%ZT27)
+%xdefine %%XDATB1 XWORD(%%ZT28)
+%xdefine %%XDATB2 XWORD(%%ZT29)
+%xdefine %%XDATB3 XWORD(%%ZT30)
+%xdefine %%XDATB4 XWORD(%%ZT31)
+%xdefine %%XDATB5 XWORD(%%ZT13)
+%xdefine %%XDATB6 XWORD(%%ZT14)
+%xdefine %%XDATB7 XWORD(%%ZT15)
 
 
         xor             %%IDX, %%IDX
 
-        vmovdqa64       %%XCRC_MUL, [rel rk1]
+        vbroadcasti32x4 ZWORD(%%XCRC_MUL), [rel rk1]
 
         vmovdqa64       %%XCIPH0, [%%ARG + _aesarg_IV + 16*0]
         vmovdqa64       %%XCIPH1, [%%ARG + _aesarg_IV + 16*1]
@@ -718,18 +679,25 @@ section .text
                     APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
                     %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
                     %%GP1, %%IDX, 0, %%GT8, %%GT9, %%CRC32, APPEND(%%XDATB, crc_lane)
-%if crc_lane < 7
-        ;; lanes 0 to 6 use k1 to k7
-        ;; lane 7 uses condition check
-%assign k_reg (crc_lane + 1)
-        kmovb           APPEND(k,k_reg), [%%ARG + _docsis_crc_args_done + (crc_lane * 1)]
-%endif
 %assign crc_lane (crc_lane + 1)
 %endrep
+        ;; lanes 0 to 3 use k1
+        ;; lanes 4 to 7 use k2
+        kmovd           k1, [%%ARG + _docsis_crc_args_done + 0]
+        kmovd           k2, [%%ARG + _docsis_crc_args_done + 4]
 
         ;; check if only 16 bytes in this execution
         sub             %%LEN, 16
         je              %%_encrypt_the_last_block
+
+        vinserti32x4    ZWORD(%%XDATB0), %%XDATB1, 1
+        vinserti32x4    ZWORD(%%XDATB0), %%XDATB2, 2
+        vinserti32x4    ZWORD(%%XDATB0), %%XDATB3, 3
+
+        vmovdqa64       %%XDATB1, %%XDATB4
+        vinserti32x4    ZWORD(%%XDATB1), %%XDATB5, 1
+        vinserti32x4    ZWORD(%%XDATB1), %%XDATB6, 2
+        vinserti32x4    ZWORD(%%XDATB1), %%XDATB7, 3
 
 %%_main_enc_loop:
         ;; if 16 bytes left (for CRC) then
@@ -766,17 +734,49 @@ section .text
         vaesenc         %%XCIPH6, [%%KEYS6 + 16*i]
         vaesenc         %%XCIPH7, [%%KEYS7 + 16*i]
 
-%if (i > 1) && (crc_lane < 8)
+%if (i == 2)
         ;; don't start with AES round 1
-        mov             %%GP1, [%%ARG + _aesarg_in + (8 * crc_lane)]
-        vmovdqu64       APPEND(%%XDATA,crc_lane), [%%GP1 + %%IDX + 16]
+        mov             %%GP1, [%%ARG + _aesarg_in + (8 * 0)]
+        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 1)]
+        vmovdqu64       %%XDATA0, [%%GP1 + %%IDX + 16]
+        vmovdqu64       %%XDATA1, [%%GT8 + %%IDX + 16]
+        mov             %%GP1, [%%ARG + _aesarg_in + (8 * 2)]
+        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 3)]
+        vmovdqu64       %%XDATA2, [%%GP1 + %%IDX + 16]
+        vmovdqu64       %%XDATA3, [%%GT8 + %%IDX + 16]
+%elif (i == 3)
+        ;; The most common case: next block for CRC
+        vmovdqa64       %%XDATB3, %%XDATA0
+        vinserti32x4    ZWORD(%%XDATB3), %%XDATA1, 1
+        vinserti32x4    ZWORD(%%XDATB3), %%XDATA2, 2
+        vinserti32x4    ZWORD(%%XDATB3), %%XDATA3, 3
 
-        CRC32_MID_ROUND %%ARG, crc_lane, APPEND(%%XDATA, crc_lane), \
-                        %%XCRC_VAL, %%XCRC_MUL, %%XCRC_TMP, \
-                        APPEND(%%XDATB, crc_lane)
+        vpclmulqdq      ZWORD(%%XTMP), ZWORD(%%XDATB0), ZWORD(%%XCRC_MUL), 0x01
+        vpclmulqdq      ZWORD(%%XDATB2), ZWORD(%%XDATB0), ZWORD(%%XCRC_MUL), 0x10
+        vpternlogq      ZWORD(%%XDATB2), ZWORD(%%XTMP), ZWORD(%%XDATB3), 0x96 ; XCRC = XCRC ^ XTMP ^ DATA
+        vmovdqu16       ZWORD(%%XDATB0){k1}, ZWORD(%%XDATB2)
+%elif (i == 4)
+        ;; don't start with AES round 1
+        mov             %%GP1, [%%ARG + _aesarg_in + (8 * 4)]
+        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 5)]
+        vmovdqu64       %%XDATA4, [%%GP1 + %%IDX + 16]
+        vmovdqu64       %%XDATA5, [%%GT8 + %%IDX + 16]
+        mov             %%GP1, [%%ARG + _aesarg_in + (8 * 6)]
+        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 7)]
+        vmovdqu64       %%XDATA6, [%%GP1 + %%IDX + 16]
+        vmovdqu64       %%XDATA7, [%%GT8 + %%IDX + 16]
+%elif (i == 5)
+        ;; The most common case: next block for CRC
+        vmovdqa64       %%XDATB3, %%XDATA4
+        vinserti32x4    ZWORD(%%XDATB3), %%XDATA5, 1
+        vinserti32x4    ZWORD(%%XDATB3), %%XDATA6, 2
+        vinserti32x4    ZWORD(%%XDATB3), %%XDATA7, 3
 
-%assign crc_lane (crc_lane + 1)
-%endif  ;; i > 1 && crc_lane < 8
+        vpclmulqdq      ZWORD(%%XTMP), ZWORD(%%XDATB1), ZWORD(%%XCRC_MUL), 0x01
+        vpclmulqdq      ZWORD(%%XDATB2), ZWORD(%%XDATB1), ZWORD(%%XCRC_MUL), 0x10
+        vpternlogq      ZWORD(%%XDATB2), ZWORD(%%XTMP), ZWORD(%%XDATB3), 0x96 ; XCRC = XCRC ^ XTMP ^ DATA
+        vmovdqu16       ZWORD(%%XDATB1){k2}, ZWORD(%%XDATB2)
+%endif
 
 %assign i (i + 1)
 %endrep
@@ -826,6 +826,15 @@ section .text
         vpbroadcastw    %%XCRC_TMP2, WORD(%%IDX)
         vpsubw          %%XCRC_TMP, %%XCRC_TMP, %%XCRC_TMP2
         vmovdqa64       [%%ARG + _docsis_crc_args_len + 2*0], %%XCRC_TMP
+
+        vextracti32x4   %%XDATB7, ZWORD(%%XDATB1), 3
+        vextracti32x4   %%XDATB6, ZWORD(%%XDATB1), 2
+        vextracti32x4   %%XDATB5, ZWORD(%%XDATB1), 1
+        vmovdqa64       %%XDATB4, %%XDATB1
+        vextracti32x4   %%XDATB3, ZWORD(%%XDATB0), 3
+        vextracti32x4   %%XDATB2, ZWORD(%%XDATB0), 2
+        vextracti32x4   %%XDATB1, ZWORD(%%XDATB0), 1
+        vmovdqa64       %%XDATB0, %%XDATB0
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; - load key pointers to perform AES rounds
