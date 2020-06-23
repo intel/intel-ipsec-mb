@@ -601,55 +601,55 @@ section .text
 %define %%CRC32 %%GT11
 %define %%IDX   %%GT12
 
-%xdefine %%XCIPH0 XWORD(%%ZT0)
-%xdefine %%XCIPH1 XWORD(%%ZT1)
-%xdefine %%XCIPH2 XWORD(%%ZT2)
-%xdefine %%XCIPH3 XWORD(%%ZT3)
-%xdefine %%XCIPH4 XWORD(%%ZT4)
-%xdefine %%XCIPH5 XWORD(%%ZT5)
-%xdefine %%XCIPH6 XWORD(%%ZT6)
-%xdefine %%XCIPH7 XWORD(%%ZT7)
+;; used for IV and AES rounds
+%xdefine %%ZCIPH0 %%ZT0
+%xdefine %%ZCIPH1 %%ZT1
+%xdefine %%ZCIPH2 %%ZT2
+%xdefine %%ZCIPH3 %%ZT3
 
-%xdefine %%XCRC_MUL XWORD(%%ZT8)
-%xdefine %%XCRC_TMP XWORD(%%ZT9)
-%xdefine %%XCRC_DAT XWORD(%%ZT10)
-%xdefine %%XCRC_VAL XWORD(%%ZT11)
-%xdefine %%XCRC_TMP2 XWORD(%%ZT12)
+%xdefine %%XCIPH0 XWORD(%%ZCIPH0)
+%xdefine %%XCIPH1 XWORD(%%ZCIPH1)
+%xdefine %%XCIPH2 XWORD(%%ZCIPH2)
+%xdefine %%XCIPH3 XWORD(%%ZCIPH3)
+
+;; used for per lane CRC multiply
+%xdefine %%ZCRC_MUL %%ZT4
+%xdefine %%XCRC_MUL XWORD(%%ZCRC_MUL)
+%xdefine %%XCRC_TMP XWORD(%%ZT5)
+%xdefine %%XCRC_DAT XWORD(%%ZT6)
+%xdefine %%XCRC_VAL XWORD(%%ZT7)
+%xdefine %%XCRC_TMP2 XWORD(%%ZT8)
 %xdefine %%XTMP  %%XCRC_TMP2
 
 ;; used for loading plain text
-%xdefine %%XDATA0 XWORD(%%ZT16)
-%xdefine %%XDATA1 XWORD(%%ZT17)
-%xdefine %%XDATA2 XWORD(%%ZT18)
-%xdefine %%XDATA3 XWORD(%%ZT19)
-%xdefine %%XDATA4 XWORD(%%ZT20)
-%xdefine %%XDATA5 XWORD(%%ZT21)
-%xdefine %%XDATA6 XWORD(%%ZT22)
-%xdefine %%XDATA7 XWORD(%%ZT23)
+%xdefine %%ZDATA0 %%ZT9
+%xdefine %%ZDATA1 %%ZT10
+%xdefine %%ZDATA2 %%ZT11
+%xdefine %%ZDATA3 %%ZT12
+
+%xdefine %%XDATA0 XWORD(%%ZDATA0)
+%xdefine %%XDATA1 XWORD(%%ZDATA1)
+%xdefine %%XDATA2 XWORD(%%ZDATA2)
+%xdefine %%XDATA3 XWORD(%%ZDATA3)
 
 ;; used for current CRC sums
-%xdefine %%XDATB0 XWORD(%%ZT27)
-%xdefine %%XDATB1 XWORD(%%ZT28)
-%xdefine %%XDATB2 XWORD(%%ZT29)
-%xdefine %%XDATB3 XWORD(%%ZT30)
-%xdefine %%XDATB4 XWORD(%%ZT31)
-%xdefine %%XDATB5 XWORD(%%ZT13)
-%xdefine %%XDATB6 XWORD(%%ZT14)
-%xdefine %%XDATB7 XWORD(%%ZT15)
+%xdefine %%ZDATB0 %%ZT13
+%xdefine %%ZDATB1 %%ZT14
+%xdefine %%ZDATB2 %%ZT15
+%xdefine %%ZDATB3 %%ZT16
+
+%xdefine %%XDATB0 XWORD(%%ZDATB0)
+%xdefine %%XDATB1 XWORD(%%ZDATB1)
+%xdefine %%XDATB2 XWORD(%%ZDATB2)
+%xdefine %%XDATB3 XWORD(%%ZDATB3)
 
 
         xor             %%IDX, %%IDX
 
-        vbroadcasti32x4 ZWORD(%%XCRC_MUL), [rel rk1]
+        vbroadcasti32x4 %%ZCRC_MUL, [rel rk1]
 
-        vmovdqa64       %%XCIPH0, [%%ARG + _aesarg_IV + 16*0]
-        vmovdqa64       %%XCIPH1, [%%ARG + _aesarg_IV + 16*1]
-        vmovdqa64       %%XCIPH2, [%%ARG + _aesarg_IV + 16*2]
-        vmovdqa64       %%XCIPH3, [%%ARG + _aesarg_IV + 16*3]
-        vmovdqa64       %%XCIPH4, [%%ARG + _aesarg_IV + 16*4]
-        vmovdqa64       %%XCIPH5, [%%ARG + _aesarg_IV + 16*5]
-        vmovdqa64       %%XCIPH6, [%%ARG + _aesarg_IV + 16*6]
-        vmovdqa64       %%XCIPH7, [%%ARG + _aesarg_IV + 16*7]
+        vmovdqu64       %%ZCIPH0, [%%ARG + _aesarg_IV + 16*0]
+        vmovdqu64       %%ZCIPH1, [%%ARG + _aesarg_IV + 16*4]
 
         mov             %%KEYS0, [%%ARG + _aesarg_keys + 8*0]
         mov             %%KEYS1, [%%ARG + _aesarg_keys + 8*1]
@@ -668,19 +668,55 @@ section .text
         ;; - load plain text block
         ;; - do the initial CRC round
         ;; - keep CRC lane status in K register (lanes 0 to 6)
+        vmovdqu64       %%ZDATB0, [%%ARG + _docsis_crc_args_init + (16 * 0)]
+        vmovdqu64       %%ZDATB1, [%%ARG + _docsis_crc_args_init + (16 * 4)]
+
+        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 0)]
+        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 1)]
+        vmovdqu64       %%ZDATA0, [%%GT8 + %%IDX]
+        vinserti32x4    %%ZDATA0, [%%GT9 + %%IDX], 1
+        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 2)]
+        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 3)]
+        vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX], 2
+        vinserti32x4    %%ZDATA0, [%%GT9 + %%IDX], 3
+
+        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 4)]
+        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 5)]
+        vmovdqu64       %%ZDATA1, [%%GT8 + %%IDX]
+        vinserti32x4    %%ZDATA1, [%%GT9 + %%IDX], 1
+        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 6)]
+        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 7)]
+        vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX], 2
+        vinserti32x4    %%ZDATA1, [%%GT9 + %%IDX], 3
+
+
 %assign crc_lane 0
 %rep 8
-        mov             %%GP1, [%%ARG + _aesarg_in + (8 * crc_lane)]
-        vmovdqu64       APPEND(%%XDATA, crc_lane), [%%GP1 + %%IDX]
 
-        vmovdqa64       APPEND(%%XDATB, crc_lane), [%%ARG + _docsis_crc_args_init + (16 *crc_lane)]
+%if crc_lane < 4
+        vextracti32x4   XWORD(%%ZT17), %%ZDATA0, crc_lane
+        vextracti32x4   XWORD(%%ZT18), %%ZDATB0, crc_lane
+%else
+        vextracti32x4   XWORD(%%ZT17), %%ZDATA1, crc_lane - 4
+        vextracti32x4   XWORD(%%ZT18), %%ZDATB1, crc_lane - 4
+%endif
 
-        CRC32_ROUND first_possible, last_possible, %%ARG, crc_lane, \
-                    APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
-                    %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                    %%GP1, %%IDX, 0, %%GT8, %%GT9, %%CRC32, APPEND(%%XDATB, crc_lane)
+        CRC32_ROUND     first_possible, last_possible, %%ARG, crc_lane, \
+                        XWORD(%%ZT17), %%XCRC_VAL, %%XCRC_DAT, \
+                        %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+                        %%GP1, %%IDX, 0, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT18)
+
+%if crc_lane < 4
+        vinserti32x4    %%ZDATB0, XWORD(%%ZT18), crc_lane
+        vinserti32x4    %%ZDATA0, XWORD(%%ZT17), crc_lane
+%else
+        vinserti32x4    %%ZDATB1, XWORD(%%ZT18), crc_lane - 4
+        vinserti32x4    %%ZDATA1, XWORD(%%ZT17), crc_lane - 4
+%endif
+
 %assign crc_lane (crc_lane + 1)
 %endrep
+
         ;; lanes 0 to 3 use k1
         ;; lanes 4 to 7 use k2
         kmovd           k1, [%%ARG + _docsis_crc_args_done + 0]
@@ -689,15 +725,6 @@ section .text
         ;; check if only 16 bytes in this execution
         sub             %%LEN, 16
         je              %%_encrypt_the_last_block
-
-        vinserti32x4    ZWORD(%%XDATB0), %%XDATB1, 1
-        vinserti32x4    ZWORD(%%XDATB0), %%XDATB2, 2
-        vinserti32x4    ZWORD(%%XDATB0), %%XDATB3, 3
-
-        vmovdqa64       %%XDATB1, %%XDATB4
-        vinserti32x4    ZWORD(%%XDATB1), %%XDATB5, 1
-        vinserti32x4    ZWORD(%%XDATB1), %%XDATB6, 2
-        vinserti32x4    ZWORD(%%XDATB1), %%XDATB7, 3
 
 %%_main_enc_loop:
         ;; if 16 bytes left (for CRC) then
@@ -711,71 +738,66 @@ section .text
         ;;      - plain-text = XDATAx
         ;;      - ARK = [%%KEYSx + 16*0]
 
-        vpternlogq      %%XCIPH0, %%XDATA0, [%%KEYS0 + 16*0], 0x96
-        vpternlogq      %%XCIPH1, %%XDATA1, [%%KEYS1 + 16*0], 0x96
-        vpternlogq      %%XCIPH2, %%XDATA2, [%%KEYS2 + 16*0], 0x96
-        vpternlogq      %%XCIPH3, %%XDATA3, [%%KEYS3 + 16*0], 0x96
-        vpternlogq      %%XCIPH4, %%XDATA4, [%%KEYS4 + 16*0], 0x96
-        vpternlogq      %%XCIPH5, %%XDATA5, [%%KEYS5 + 16*0], 0x96
-        vpternlogq      %%XCIPH6, %%XDATA6, [%%KEYS6 + 16*0], 0x96
-        vpternlogq      %%XCIPH7, %%XDATA7, [%%KEYS7 + 16*0], 0x96
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*0], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*0], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*0], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*0], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*0], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*0], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*0], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*0], 3
+
+        vpternlogq      %%ZCIPH0, %%ZDATA0, %%ZT17, 0x96
+        vpternlogq      %%ZCIPH1, %%ZDATA1, %%ZT18, 0x96
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 1 to NROUNDS (9 or 13)
 %assign crc_lane 0
 %assign i 1
 %rep %%NROUNDS
-        vaesenc         %%XCIPH0, [%%KEYS0 + 16*i]
-        vaesenc         %%XCIPH1, [%%KEYS1 + 16*i]
-        vaesenc         %%XCIPH2, [%%KEYS2 + 16*i]
-        vaesenc         %%XCIPH3, [%%KEYS3 + 16*i]
-        vaesenc         %%XCIPH4, [%%KEYS4 + 16*i]
-        vaesenc         %%XCIPH5, [%%KEYS5 + 16*i]
-        vaesenc         %%XCIPH6, [%%KEYS6 + 16*i]
-        vaesenc         %%XCIPH7, [%%KEYS7 + 16*i]
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*i], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*i], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*i], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*i], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*i], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*i], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*i], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*i], 3
+
+        vaesenc         %%ZCIPH0, %%ZCIPH0, %%ZT17
+        vaesenc         %%ZCIPH1, %%ZCIPH1, %%ZT18
 
 %if (i == 2)
         ;; don't start with AES round 1
         mov             %%GP1, [%%ARG + _aesarg_in + (8 * 0)]
         mov             %%GT8, [%%ARG + _aesarg_in + (8 * 1)]
         vmovdqu64       %%XDATA0, [%%GP1 + %%IDX + 16]
-        vmovdqu64       %%XDATA1, [%%GT8 + %%IDX + 16]
+        vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX + 16], 1
         mov             %%GP1, [%%ARG + _aesarg_in + (8 * 2)]
         mov             %%GT8, [%%ARG + _aesarg_in + (8 * 3)]
-        vmovdqu64       %%XDATA2, [%%GP1 + %%IDX + 16]
-        vmovdqu64       %%XDATA3, [%%GT8 + %%IDX + 16]
+        vinserti32x4    %%ZDATA0, [%%GP1 + %%IDX + 16], 2
+        vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX + 16], 3
 %elif (i == 3)
         ;; The most common case: next block for CRC
-        vmovdqa64       %%XDATB3, %%XDATA0
-        vinserti32x4    ZWORD(%%XDATB3), %%XDATA1, 1
-        vinserti32x4    ZWORD(%%XDATB3), %%XDATA2, 2
-        vinserti32x4    ZWORD(%%XDATB3), %%XDATA3, 3
-
-        vpclmulqdq      ZWORD(%%XTMP), ZWORD(%%XDATB0), ZWORD(%%XCRC_MUL), 0x01
-        vpclmulqdq      ZWORD(%%XDATB2), ZWORD(%%XDATB0), ZWORD(%%XCRC_MUL), 0x10
-        vpternlogq      ZWORD(%%XDATB2), ZWORD(%%XTMP), ZWORD(%%XDATB3), 0x96 ; XCRC = XCRC ^ XTMP ^ DATA
-        vmovdqu16       ZWORD(%%XDATB0){k1}, ZWORD(%%XDATB2)
+        vpclmulqdq      %%ZT19, %%ZDATB0, %%ZCRC_MUL, 0x01
+        vpclmulqdq      %%ZT20, %%ZDATB0, %%ZCRC_MUL, 0x10
+        vpternlogq      %%ZT20, %%ZT19, %%ZDATA0, 0x96 ; XCRC = XCRC ^ XTMP ^ DATA
+        vmovdqu16       %%ZDATB0{k1}, %%ZT20
 %elif (i == 4)
-        ;; don't start with AES round 1
         mov             %%GP1, [%%ARG + _aesarg_in + (8 * 4)]
         mov             %%GT8, [%%ARG + _aesarg_in + (8 * 5)]
-        vmovdqu64       %%XDATA4, [%%GP1 + %%IDX + 16]
-        vmovdqu64       %%XDATA5, [%%GT8 + %%IDX + 16]
+        vmovdqu64       %%XDATA1, [%%GP1 + %%IDX + 16]
+        vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX + 16], 1
         mov             %%GP1, [%%ARG + _aesarg_in + (8 * 6)]
         mov             %%GT8, [%%ARG + _aesarg_in + (8 * 7)]
-        vmovdqu64       %%XDATA6, [%%GP1 + %%IDX + 16]
-        vmovdqu64       %%XDATA7, [%%GT8 + %%IDX + 16]
+        vinserti32x4    %%ZDATA1, [%%GP1 + %%IDX + 16], 2
+        vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX + 16], 3
 %elif (i == 5)
         ;; The most common case: next block for CRC
-        vmovdqa64       %%XDATB3, %%XDATA4
-        vinserti32x4    ZWORD(%%XDATB3), %%XDATA5, 1
-        vinserti32x4    ZWORD(%%XDATB3), %%XDATA6, 2
-        vinserti32x4    ZWORD(%%XDATB3), %%XDATA7, 3
-
-        vpclmulqdq      ZWORD(%%XTMP), ZWORD(%%XDATB1), ZWORD(%%XCRC_MUL), 0x01
-        vpclmulqdq      ZWORD(%%XDATB2), ZWORD(%%XDATB1), ZWORD(%%XCRC_MUL), 0x10
-        vpternlogq      ZWORD(%%XDATB2), ZWORD(%%XTMP), ZWORD(%%XDATB3), 0x96 ; XCRC = XCRC ^ XTMP ^ DATA
-        vmovdqu16       ZWORD(%%XDATB1){k2}, ZWORD(%%XDATB2)
+        vpclmulqdq      %%ZT19, %%ZDATB1, %%ZCRC_MUL, 0x01
+        vpclmulqdq      %%ZT20, %%ZDATB1, %%ZCRC_MUL, 0x10
+        vpternlogq      %%ZT20, %%ZT19, %%ZDATA1, 0x96 ; XCRC = XCRC ^ XTMP ^ DATA
+        vmovdqu16       %%ZDATB1{k2}, %%ZT20
 %endif
 
 %assign i (i + 1)
@@ -783,14 +805,17 @@ section .text
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 10 or 14
-        vaesenclast     %%XCIPH0, [%%KEYS0 + 16*i]
-        vaesenclast     %%XCIPH1, [%%KEYS1 + 16*i]
-        vaesenclast     %%XCIPH2, [%%KEYS2 + 16*i]
-        vaesenclast     %%XCIPH3, [%%KEYS3 + 16*i]
-        vaesenclast     %%XCIPH4, [%%KEYS4 + 16*i]
-        vaesenclast     %%XCIPH5, [%%KEYS5 + 16*i]
-        vaesenclast     %%XCIPH6, [%%KEYS6 + 16*i]
-        vaesenclast     %%XCIPH7, [%%KEYS7 + 16*i]
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*i], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*i], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*i], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*i], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*i], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*i], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*i], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*i], 3
+
+        vaesenclast     %%ZCIPH0, %%ZCIPH0, %%ZT17
+        vaesenclast     %%ZCIPH1, %%ZCIPH1, %%ZT18
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store cipher text
@@ -799,19 +824,19 @@ section .text
         mov             %%GT8, [%%ARG + _aesarg_out + 8*0]
         mov             %%GP1, [%%ARG + _aesarg_out + 8*1]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH0
-        vmovdqu64       [%%GP1 + %%IDX], %%XCIPH1
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*2]
         mov             %%GP1, [%%ARG + _aesarg_out + 8*3]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH2
-        vmovdqu64       [%%GP1 + %%IDX], %%XCIPH3
+        vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH0, 2
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 3
         mov             %%GT8, [%%ARG + _aesarg_out + 8*4]
         mov             %%GP1, [%%ARG + _aesarg_out + 8*5]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH4
-        vmovdqu64       [%%GP1 + %%IDX], %%XCIPH5
+        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH1
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*6]
         mov             %%GP1, [%%ARG + _aesarg_out + 8*7]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH6
-        vmovdqu64       [%%GP1 + %%IDX], %%XCIPH7
+        vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH1, 2
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 3
 
         add             %%IDX, 16
         sub             %%LEN, 16
@@ -827,15 +852,6 @@ section .text
         vpsubw          %%XCRC_TMP, %%XCRC_TMP, %%XCRC_TMP2
         vmovdqa64       [%%ARG + _docsis_crc_args_len + 2*0], %%XCRC_TMP
 
-        vextracti32x4   %%XDATB7, ZWORD(%%XDATB1), 3
-        vextracti32x4   %%XDATB6, ZWORD(%%XDATB1), 2
-        vextracti32x4   %%XDATB5, ZWORD(%%XDATB1), 1
-        vmovdqa64       %%XDATB4, %%XDATB1
-        vextracti32x4   %%XDATB3, ZWORD(%%XDATB0), 3
-        vextracti32x4   %%XDATB2, ZWORD(%%XDATB0), 2
-        vextracti32x4   %%XDATB1, ZWORD(%%XDATB0), 1
-        vmovdqa64       %%XDATB0, %%XDATB0
-
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; - load key pointers to perform AES rounds
         ;; - use ternary logic for: plain-text XOR IV and AES ARK(0)
@@ -843,75 +859,113 @@ section .text
         ;;      - plain-text = XDATAx
         ;;      - ARK = [%%KEYSx + 16*0]
 
-        vpternlogq      %%XCIPH0, %%XDATA0, [%%KEYS0 + 16*0], 0x96
-        vpternlogq      %%XCIPH1, %%XDATA1, [%%KEYS1 + 16*0], 0x96
-        vpternlogq      %%XCIPH2, %%XDATA2, [%%KEYS2 + 16*0], 0x96
-        vpternlogq      %%XCIPH3, %%XDATA3, [%%KEYS3 + 16*0], 0x96
-        vpternlogq      %%XCIPH4, %%XDATA4, [%%KEYS4 + 16*0], 0x96
-        vpternlogq      %%XCIPH5, %%XDATA5, [%%KEYS5 + 16*0], 0x96
-        vpternlogq      %%XCIPH6, %%XDATA6, [%%KEYS6 + 16*0], 0x96
-        vpternlogq      %%XCIPH7, %%XDATA7, [%%KEYS7 + 16*0], 0x96
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*0], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*0], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*0], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*0], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*0], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*0], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*0], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*0], 3
+
+        vpternlogq      %%ZCIPH0, %%ZDATA0, %%ZT17, 0x96
+        vpternlogq      %%ZCIPH1, %%ZDATA1, %%ZT18, 0x96
+
+                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                ;; CRC: load new data
+                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 0)]
+                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 1)]
+                vmovdqu64       %%XDATA0, [%%GP1 + %%IDX + 16]
+                vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX + 16], 1
+                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 2)]
+                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 3)]
+                vinserti32x4    %%ZDATA0, [%%GP1 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX + 16], 3
+
+                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 4)]
+                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 5)]
+                vmovdqu64       %%XDATA1, [%%GP1 + %%IDX + 16]
+                vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX + 16], 1
+                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 6)]
+                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 7)]
+                vinserti32x4    %%ZDATA1, [%%GP1 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX + 16], 3
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 1 to NROUNDS (9 or 13)
 %assign crc_lane 0
 %assign i 1
 %rep %%NROUNDS
-        vaesenc         %%XCIPH0, [%%KEYS0 + 16*i]
-        vaesenc         %%XCIPH1, [%%KEYS1 + 16*i]
-        vaesenc         %%XCIPH2, [%%KEYS2 + 16*i]
-        vaesenc         %%XCIPH3, [%%KEYS3 + 16*i]
-        vaesenc         %%XCIPH4, [%%KEYS4 + 16*i]
-        vaesenc         %%XCIPH5, [%%KEYS5 + 16*i]
-        vaesenc         %%XCIPH6, [%%KEYS6 + 16*i]
-        vaesenc         %%XCIPH7, [%%KEYS7 + 16*i]
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*i], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*i], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*i], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*i], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*i], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*i], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*i], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*i], 3
 
-%if (i > 1) && (crc_lane < 8)
-        ;; don't start with AES round 1
-        mov             %%GP1, [%%ARG + _aesarg_in + (8 * crc_lane)]
-        vmovdqu64       APPEND(%%XDATA, crc_lane), [%%GP1 + %%IDX + 16]
+        vaesenc         %%ZCIPH0, %%ZCIPH0, %%ZT17
+        vaesenc         %%ZCIPH1, %%ZCIPH1, %%ZT18
 
-        CRC32_ROUND no_first, last_possible, %%ARG, crc_lane, \
-                    APPEND(%%XDATA, crc_lane), %%XCRC_VAL, %%XCRC_DAT, \
-                    %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                    %%GP1, %%IDX, 16, %%GT8, %%GT9, %%CRC32, APPEND(%%XDATB, crc_lane)
+%if (crc_lane < 4)
+        vextracti32x4   XWORD(%%ZT19), %%ZDATA0, crc_lane
+        vextracti32x4   XWORD(%%ZT20), %%ZDATB0, crc_lane
+        CRC32_ROUND     no_first, last_possible, %%ARG, crc_lane, \
+                        XWORD(%%ZT19), %%XCRC_VAL, %%XCRC_DAT, \
+                        %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+                        %%GP1, %%IDX, 16, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT20)
+        vinserti32x4    %%ZDATB0, XWORD(%%ZT20), crc_lane
+        vinserti32x4    %%ZDATA0, XWORD(%%ZT19), crc_lane
+%elif (crc_lane < 8)
+        vextracti32x4   XWORD(%%ZT19), %%ZDATA1, crc_lane - 4
+        vextracti32x4   XWORD(%%ZT20), %%ZDATB1, crc_lane - 4
+        CRC32_ROUND     no_first, last_possible, %%ARG, crc_lane, \
+                        XWORD(%%ZT19), %%XCRC_VAL, %%XCRC_DAT, \
+                        %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
+                        %%GP1, %%IDX, 16, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT20)
+        vinserti32x4    %%ZDATB1, XWORD(%%ZT20), crc_lane - 4
+        vinserti32x4    %%ZDATA1, XWORD(%%ZT19), crc_lane - 4
+%endif
+
 %assign crc_lane (crc_lane + 1)
-%endif  ;; i > 1 && crc_lane < 8
-
 %assign i (i + 1)
 %endrep
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 10 or 14
-        vaesenclast     %%XCIPH0, [%%KEYS0 + 16*i]
-        vaesenclast     %%XCIPH1, [%%KEYS1 + 16*i]
-        vaesenclast     %%XCIPH2, [%%KEYS2 + 16*i]
-        vaesenclast     %%XCIPH3, [%%KEYS3 + 16*i]
-        vaesenclast     %%XCIPH4, [%%KEYS4 + 16*i]
-        vaesenclast     %%XCIPH5, [%%KEYS5 + 16*i]
-        vaesenclast     %%XCIPH6, [%%KEYS6 + 16*i]
-        vaesenclast     %%XCIPH7, [%%KEYS7 + 16*i]
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*i], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*i], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*i], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*i], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*i], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*i], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*i], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*i], 3
+
+        vaesenclast     %%ZCIPH0, %%ZCIPH0, %%ZT17
+        vaesenclast     %%ZCIPH1, %%ZCIPH1, %%ZT18
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store cipher text
         ;; - XCIPHx is an IV for the next block
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*0]
-        mov             %%GT9, [%%ARG + _aesarg_out + 8*1]
+        mov             %%GP1, [%%ARG + _aesarg_out + 8*1]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH0
-        vmovdqu64       [%%GT9 + %%IDX], %%XCIPH1
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*2]
-        mov             %%GT9, [%%ARG + _aesarg_out + 8*3]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH2
-        vmovdqu64       [%%GT9 + %%IDX], %%XCIPH3
+        mov             %%GP1, [%%ARG + _aesarg_out + 8*3]
+        vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH0, 2
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 3
         mov             %%GT8, [%%ARG + _aesarg_out + 8*4]
-        mov             %%GT9, [%%ARG + _aesarg_out + 8*5]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH4
-        vmovdqu64       [%%GT9 + %%IDX], %%XCIPH5
+        mov             %%GP1, [%%ARG + _aesarg_out + 8*5]
+        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH1
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*6]
-        mov             %%GT9, [%%ARG + _aesarg_out + 8*7]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH6
-        vmovdqu64       [%%GT9 + %%IDX], %%XCIPH7
+        mov             %%GP1, [%%ARG + _aesarg_out + 8*7]
+        vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH1, 2
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 3
 
         add             %%IDX, 16
         sub             %%LEN, 16
@@ -926,82 +980,83 @@ section .text
         ;;      - plain-text = XDATAx
         ;;      - ARK = [%%KEYSx + 16*0]
 
-        vpternlogq      %%XCIPH0, %%XDATA0, [%%KEYS0 + 16*0], 0x96
-        vpternlogq      %%XCIPH1, %%XDATA1, [%%KEYS1 + 16*0], 0x96
-        vpternlogq      %%XCIPH2, %%XDATA2, [%%KEYS2 + 16*0], 0x96
-        vpternlogq      %%XCIPH3, %%XDATA3, [%%KEYS3 + 16*0], 0x96
-        vpternlogq      %%XCIPH4, %%XDATA4, [%%KEYS4 + 16*0], 0x96
-        vpternlogq      %%XCIPH5, %%XDATA5, [%%KEYS5 + 16*0], 0x96
-        vpternlogq      %%XCIPH6, %%XDATA6, [%%KEYS6 + 16*0], 0x96
-        vpternlogq      %%XCIPH7, %%XDATA7, [%%KEYS7 + 16*0], 0x96
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*0], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*0], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*0], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*0], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*0], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*0], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*0], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*0], 3
+
+        vpternlogq      %%ZCIPH0, %%ZDATA0, %%ZT17, 0x96
+        vpternlogq      %%ZCIPH1, %%ZDATA1, %%ZT18, 0x96
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 1 to NROUNDS (9 or 13)
-%assign crc_lane 0
 %assign i 1
 %rep %%NROUNDS
-        vaesenc         %%XCIPH0, [%%KEYS0 + 16*i]
-        vaesenc         %%XCIPH1, [%%KEYS1 + 16*i]
-        vaesenc         %%XCIPH2, [%%KEYS2 + 16*i]
-        vaesenc         %%XCIPH3, [%%KEYS3 + 16*i]
-        vaesenc         %%XCIPH4, [%%KEYS4 + 16*i]
-        vaesenc         %%XCIPH5, [%%KEYS5 + 16*i]
-        vaesenc         %%XCIPH6, [%%KEYS6 + 16*i]
-        vaesenc         %%XCIPH7, [%%KEYS7 + 16*i]
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*i], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*i], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*i], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*i], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*i], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*i], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*i], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*i], 3
 
-%if crc_lane < 8
-        ;; save CRC sum from registers back into the context structure
-        vmovdqa64       [%%ARG + _docsis_crc_args_init + (16 * crc_lane)], APPEND(%%XDATB, crc_lane)
-%endif
-%assign crc_lane (crc_lane + 1)
+        vaesenc         %%ZCIPH0, %%ZCIPH0, %%ZT17
+        vaesenc         %%ZCIPH1, %%ZCIPH1, %%ZT18
 %assign i (i + 1)
 %endrep
 
+                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                ;; CRC: CRC sum from registers back into the context structure
+                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 0)], %%ZDATB0
+                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 4)], %%ZDATB1
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 10 or 14
-        vaesenclast     %%XCIPH0, [%%KEYS0 + 16*i]
-        vaesenclast     %%XCIPH1, [%%KEYS1 + 16*i]
-        vaesenclast     %%XCIPH2, [%%KEYS2 + 16*i]
-        vaesenclast     %%XCIPH3, [%%KEYS3 + 16*i]
-        vaesenclast     %%XCIPH4, [%%KEYS4 + 16*i]
-        vaesenclast     %%XCIPH5, [%%KEYS5 + 16*i]
-        vaesenclast     %%XCIPH6, [%%KEYS6 + 16*i]
-        vaesenclast     %%XCIPH7, [%%KEYS7 + 16*i]
+        vinserti32x4    %%ZT17, [%%KEYS0 + 16*i], 0
+        vinserti32x4    %%ZT17, [%%KEYS1 + 16*i], 1
+        vinserti32x4    %%ZT17, [%%KEYS2 + 16*i], 2
+        vinserti32x4    %%ZT17, [%%KEYS3 + 16*i], 3
+        vinserti32x4    %%ZT18, [%%KEYS4 + 16*i], 0
+        vinserti32x4    %%ZT18, [%%KEYS5 + 16*i], 1
+        vinserti32x4    %%ZT18, [%%KEYS6 + 16*i], 2
+        vinserti32x4    %%ZT18, [%%KEYS7 + 16*i], 3
+
+        vaesenclast     %%ZCIPH0, %%ZCIPH0, %%ZT17
+        vaesenclast     %%ZCIPH1, %%ZCIPH1, %%ZT18
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store cipher text
         ;; - XCIPHx is an IV for the next block
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*0]
-        mov             %%GT9, [%%ARG + _aesarg_out + 8*1]
+        mov             %%GP1, [%%ARG + _aesarg_out + 8*1]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH0
-        vmovdqu64       [%%GT9 + %%IDX], %%XCIPH1
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*2]
-        mov             %%GT9, [%%ARG + _aesarg_out + 8*3]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH2
-        vmovdqu64       [%%GT9 + %%IDX], %%XCIPH3
+        mov             %%GP1, [%%ARG + _aesarg_out + 8*3]
+        vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH0, 2
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 3
         mov             %%GT8, [%%ARG + _aesarg_out + 8*4]
-        mov             %%GT9, [%%ARG + _aesarg_out + 8*5]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH4
-        vmovdqu64       [%%GT9 + %%IDX], %%XCIPH5
+        mov             %%GP1, [%%ARG + _aesarg_out + 8*5]
+        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH1
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*6]
-        mov             %%GT9, [%%ARG + _aesarg_out + 8*7]
-        vmovdqu64       [%%GT8 + %%IDX], %%XCIPH6
-        vmovdqu64       [%%GT9 + %%IDX], %%XCIPH7
+        mov             %%GP1, [%%ARG + _aesarg_out + 8*7]
+        vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH1, 2
+        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 3
 
         add             %%IDX, 16
 
 %%_enc_done:
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; update IV
-        vmovdqa64       [%%ARG + _aesarg_IV + 16*0], %%XCIPH0
-        vmovdqa64       [%%ARG + _aesarg_IV + 16*1], %%XCIPH1
-        vmovdqa64       [%%ARG + _aesarg_IV + 16*2], %%XCIPH2
-        vmovdqa64       [%%ARG + _aesarg_IV + 16*3], %%XCIPH3
-        vmovdqa64       [%%ARG + _aesarg_IV + 16*4], %%XCIPH4
-        vmovdqa64       [%%ARG + _aesarg_IV + 16*5], %%XCIPH5
-        vmovdqa64       [%%ARG + _aesarg_IV + 16*6], %%XCIPH6
-        vmovdqa64       [%%ARG + _aesarg_IV + 16*7], %%XCIPH7
+        vmovdqu64       [%%ARG + _aesarg_IV + 16*0], %%ZCIPH0
+        vmovdqu64       [%%ARG + _aesarg_IV + 16*4], %%ZCIPH1
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; update IN and OUT pointers
