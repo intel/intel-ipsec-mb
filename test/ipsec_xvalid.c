@@ -294,6 +294,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
+                .name = "aes-cbcs-1-9",
+                .values.job_params = {
+                        .cipher_mode = IMB_CIPHER_CBCS_1_9,
+                        .key_size = 16
+                }
+        },
+        {
                 .name = "null",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_NULL,
@@ -557,6 +564,7 @@ const uint8_t key_sizes[][3] = {
                 {16, 16, 1}, /* IMB_CIPHER_ZUC_EEA3 */
                 {16, 16, 1}, /* IMB_CIPHER_SNOW3G_UEA2 */
                 {16, 16, 1}, /* IMB_CIPHER_KASUMI_UEA1_BITLEN */
+                {16, 16, 1}, /* IMB_CIPHER_CBCS_1_9 */
 };
 
 uint8_t custom_test = 0;
@@ -874,6 +882,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
         switch (job->cipher_mode) {
         case IMB_CIPHER_CBC:
         case IMB_CIPHER_DOCSIS_SEC_BPI:
+        case IMB_CIPHER_CBCS_1_9:
                 job->enc_keys = enc_keys;
                 job->dec_keys = dec_keys;
                 job->iv_len_in_bytes = 16;
@@ -1035,6 +1044,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_CIPHER_CNTR_BITLEN:
                 case IMB_CIPHER_DOCSIS_SEC_BPI:
                 case IMB_CIPHER_ECB:
+                case IMB_CIPHER_CBCS_1_9:
                         memset(enc_keys, (int)CIPH_KEY_PATTERN,
                                sizeof(keys->enc_keys));
                         memset(dec_keys, (int)CIPH_KEY_PATTERN,
@@ -1226,6 +1236,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_CIPHER_CNTR_BITLEN:
         case IMB_CIPHER_DOCSIS_SEC_BPI:
         case IMB_CIPHER_ECB:
+        case IMB_CIPHER_CBCS_1_9:
                 switch (params->key_size) {
                 case IMB_KEY_AES_128_BYTES:
                         IMB_AES_KEYEXP_128(mb_mgr, ciph_key, enc_keys,
@@ -1850,7 +1861,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         JOB_HASH_ALG    hash_alg;
         JOB_CIPHER_MODE c_mode;
 
-        for (c_mode = IMB_CIPHER_CBC; c_mode <= IMB_CIPHER_KASUMI_UEA1_BITLEN;
+        for (c_mode = IMB_CIPHER_CBC; c_mode <= IMB_CIPHER_CBCS_1_9;
              c_mode++) {
                 /* Skip IMB_CIPHER_CUSTOM */
                 if (c_mode == IMB_CIPHER_CUSTOM)
