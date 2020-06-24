@@ -61,16 +61,16 @@
 %define IV		rsi
 %define KEYS		rdx
 %define OUT		rcx
-%define LEN		r8
+%define BYTES		r8
 %else
 %define IN		rcx
 %define IV		rdx
 %define KEYS		r8
 %define OUT		r9
-%define LEN		r10
 %endif
 
-%define IDX		rax
+%define LEN             rax
+%define IDX             r10
 %define TMP		IDX
 %define TMP2            r11
 %define XDATA0		xmm0
@@ -98,19 +98,19 @@ MKGLOBAL(AES_CBC_DEC_128,function,internal)
 AES_CBC_DEC_128:
 %ifndef LINUX
 	mov	LEN, [rsp + 8*5]
+%else
+        mov     LEN, BYTES
 %endif
 %ifdef CBCS
         ;; convert CBCS length to standard number of CBC blocks
         ;; ((len + 9 blocks) / 160) = num blocks to decrypt
-        push    rdx
+        mov     TMP2, rdx
         mov     rdx, 0          ;; store and zero rdx for div
-        mov     TMP, LEN
-        add     TMP, 9*16
-        mov     TMP2, 160
-        div     TMP2            ;; divide by 160
-        mov     LEN, TMP        ;; store result in LEN
+        add     LEN, 9*16
+        mov     TMP, 160
+        div     TMP             ;; divide by 160
         shl     LEN, 4          ;; multiply by 16 to get num bytes
-        pop     rdx
+        mov     rdx, TMP2
 %endif
 	mov	TMP, LEN
 	and	TMP, 3*16
