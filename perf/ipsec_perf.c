@@ -90,8 +90,8 @@
 
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
-#define CIPHER_MODES_AES 7	/* CBC, CNTR, CNTR+8, CNTR_BITLEN,
-                                   CNTR_BITLEN-4, ECB, NULL_CIPHER */
+#define CIPHER_MODES_AES 8	/* CBC, CNTR, CNTR+8, CNTR_BITLEN,
+                                   CNTR_BITLEN-4, ECB, CBCS_1_9, NULL_CIPHER */
 #define CIPHER_MODES_DOCSIS_AES 2 /* AES DOCSIS, AES DOCSIS+8 */
 #define CIPHER_MODES_DOCSIS_DES 2 /* DES DOCSIS, DES DOCSIS+4 */
 #define CIPHER_MODES_DES 1	/* DES */
@@ -211,6 +211,7 @@ enum test_cipher_mode_e {
         TEST_ZUC_EEA3,
         TEST_SNOW3G_UEA2,
         TEST_KASUMI_UEA1,
+        TEST_CBCS_1_9,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -481,6 +482,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 .name = "kasumi-uea1",
                 .values.job_params = {
                         .cipher_mode = TEST_KASUMI_UEA1,
+                        .aes_key_size = 16
+                }
+        },
+        {
+                .name = "aes-cbcs-1-9",
+                .values.job_params = {
+                        .cipher_mode = TEST_CBCS_1_9,
                         .aes_key_size = 16
                 }
         },
@@ -1223,6 +1231,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_KASUMI_UEA1:
                 c_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN;
                 break;
+        case TEST_CBCS_1_9:
+                c_mode = IMB_CIPHER_CBCS_1_9;
+                break;
         default:
                 break;
         }
@@ -1459,7 +1470,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.cipher_start_src_offset_in_bits = 0;
                 job_template.key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 8;
-        } else if (job_template.cipher_mode == IMB_CIPHER_ECB)
+        } else if (job_template.cipher_mode == IMB_CIPHER_CBCS_1_9)
+                job_template.key_len_in_bytes = 16; /* cbcs-128 support only */
+        else if (job_template.cipher_mode == IMB_CIPHER_ECB)
                 job_template.iv_len_in_bytes = 0;
 
         if (job_template.hash_alg == IMB_AUTH_PON_CRC_BIP) {
@@ -2020,7 +2033,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4", "ECB",
                 "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES", "DOCDES+4",
                 "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR", "ZUC_EEA3",
-                "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN"
+                "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN", "CBCS_1_9"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
