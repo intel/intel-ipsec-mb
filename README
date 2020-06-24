@@ -64,6 +64,7 @@ Table 1. List of supported cipher algorithms and their implementations.
     | KASUMI-F8     | Y      | N      | N      | N      | N      | N      |
     | ZUC-EEA3      | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
     | SNOW3G-UEA2   | N      | Y      | Y      | Y      | N      | N      |
+    | AES128-CBCS(9)| N      | Y(1)   | Y(3)   | N      | N      | N      |
     +---------------------------------------------------------------------+
 
 Notes:
@@ -74,6 +75,7 @@ Notes:
 (6) - decryption is by16 and encryption is x16
 (7) - same as AES128-CBC for AVX, combines cipher and CRC32
 (8) - decryption is by16 and encryption is x16
+(9) - currently 1:9 crypt:skip pattern supported
 
 Legend:
 byY - single buffer Y blocks at a time

@@ -4,6 +4,11 @@ Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 Unreleased
 ========================================================================
 
+General
+- Restructured project to move all library code into new 'lib' directory
+- Renamed LibPerfApp directory to perf
+- Renamed LibTestApp directory to test
+
 Library
 - AES-CCM-256 implementation for SSE, AVX and AVX512 (VAES)
 - AES-CMAC-256 implementation for SSE, AVX and AVX512 (VAES)
@@ -14,17 +19,21 @@ Library
 - ZUC-EEA3 and ZUC-EIA3 Multi-buffer implemented for SSE using
   GFNI instructions.
 - AES-XCBC-128 implementation for AVX512 (VAES)
+- AES-CBCS-128 implementation for SSE and AVX (1:9 crypt:skip pattern)
 
-LibTestApp
+Test Applications
 - CCM tests extended to test AES-CCM-256
 - CMAC tests extended to test AES-CMAC-256
 - HEC tests added to test app
 - AES-GMAC SGL tests added to test app
 - AES-XCBC-128 tests added to test app
+- AES-CBCS-128 tests added to test app
+- AES-CBCS-128 support added to xvalidation app
 
-LibPerfApp
+Performance Application
 - AES-CCM-256 support added
 - AES-CMAC-256 support added
+- AES-CBCS-128 support added
 
 
 v0.54 April 2020
