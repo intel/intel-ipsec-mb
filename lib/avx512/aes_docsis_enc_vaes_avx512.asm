@@ -632,16 +632,16 @@ section .text
 %define %%ZT31  %47     ; [clobbered] ZMM register (zmm16 - zmm31)
 %define %%NROUNDS %48   ; [in] Number of rounds (9 or 13, based on key size)
 
-;; %define %%KEYS0 %%GT0
-;; %define %%KEYS1 %%GT1
-;; %define %%KEYS2 %%GT2
-;; %define %%KEYS3 %%GT3
-;; %define %%KEYS4 %%GT4
-;; %define %%KEYS5 %%GT5
-;; %define %%KEYS6 %%GT6
-;; %define %%KEYS7 %%GT7
+%xdefine %%INP0 %%GT0
+%xdefine %%INP1 %%GT1
+%xdefine %%INP2 %%GT2
+%xdefine %%INP3 %%GT3
+%xdefine %%INP4 %%GT4
+%xdefine %%INP5 %%GT5
+%xdefine %%INP6 %%GT6
+%xdefine %%INP7 %%GT7
 
-%define %%GP1   %%GT10
+;; @todo look into GT8 - GT11
 %define %%CRC32 %%GT11
 %define %%IDX   %%GT12
 
@@ -698,6 +698,15 @@ section .text
         vmovdqa64       %%ZCIPH2, [%%ARG + _aesarg_IV + 16*8]
         vmovdqa64       %%ZCIPH3, [%%ARG + _aesarg_IV + 16*12]
 
+        mov             %%INP0, [%%ARG + _aesarg_in + (PTR_SZ * 0)]
+        mov             %%INP1, [%%ARG + _aesarg_in + (PTR_SZ * 1)]
+        mov             %%INP2, [%%ARG + _aesarg_in + (PTR_SZ * 2)]
+        mov             %%INP3, [%%ARG + _aesarg_in + (PTR_SZ * 3)]
+        mov             %%INP4, [%%ARG + _aesarg_in + (PTR_SZ * 4)]
+        mov             %%INP5, [%%ARG + _aesarg_in + (PTR_SZ * 5)]
+        mov             %%INP6, [%%ARG + _aesarg_in + (PTR_SZ * 6)]
+        mov             %%INP7, [%%ARG + _aesarg_in + (PTR_SZ * 7)]
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Pipeline start
 
@@ -710,23 +719,15 @@ section .text
         vmovdqu64       %%ZDATB2, [%%ARG + _docsis_crc_args_init + (16 * 8)]
         vmovdqu64       %%ZDATB3, [%%ARG + _docsis_crc_args_init + (16 * 12)]
 
-        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 0)]
-        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 1)]
-        vmovdqu64       %%XDATA0, [%%GT8 + %%IDX]
-        vinserti32x4    %%ZDATA0, [%%GT9 + %%IDX], 1
-        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 2)]
-        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 3)]
-        vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX], 2
-        vinserti32x4    %%ZDATA0, [%%GT9 + %%IDX], 3
+        vmovdqu64       %%XDATA0, [%%INP0 + %%IDX]
+        vinserti32x4    %%ZDATA0, [%%INP1 + %%IDX], 1
+        vinserti32x4    %%ZDATA0, [%%INP2 + %%IDX], 2
+        vinserti32x4    %%ZDATA0, [%%INP3 + %%IDX], 3
 
-        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 4)]
-        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 5)]
-        vmovdqu64       %%XDATA1, [%%GT8 + %%IDX]
-        vinserti32x4    %%ZDATA1, [%%GT9 + %%IDX], 1
-        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 6)]
-        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 7)]
-        vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX], 2
-        vinserti32x4    %%ZDATA1, [%%GT9 + %%IDX], 3
+        vmovdqu64       %%XDATA1, [%%INP4 + %%IDX]
+        vinserti32x4    %%ZDATA1, [%%INP5 + %%IDX], 1
+        vinserti32x4    %%ZDATA1, [%%INP6 + %%IDX], 2
+        vinserti32x4    %%ZDATA1, [%%INP7 + %%IDX], 3
 
         mov             %%GT8, [%%ARG + _aesarg_in + (8 * 8)]
         mov             %%GT9, [%%ARG + _aesarg_in + (8 * 9)]
@@ -766,7 +767,7 @@ section .text
         CRC32_ROUND     first_possible, last_possible, %%ARG, crc_lane, \
                         XWORD(%%ZT17), %%XCRC_VAL, %%XCRC_DAT, \
                         %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                        %%GP1, %%IDX, 0, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT18)
+                        %%GT10, %%IDX, 0, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT18)
 
 %if crc_lane < 4
         vinserti32x4    %%ZDATA0, XWORD(%%ZT17), crc_lane
@@ -834,14 +835,10 @@ section .text
                 ;;      in between AES rounds
 %if (i == 1)
                 ;; Load one block of data from lanes 0 to 3 in ZDATA0
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 0)]
-                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 1)]
-                vmovdqu64       %%XDATA0, [%%GP1 + %%IDX + 16]
-                vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX + 16], 1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 2)]
-                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 3)]
-                vinserti32x4    %%ZDATA0, [%%GP1 + %%IDX + 16], 2
-                vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX + 16], 3
+                vmovdqu64       %%XDATA0, [%%INP0 + %%IDX + 16]
+                vinserti32x4    %%ZDATA0, [%%INP1 + %%IDX + 16], 1
+                vinserti32x4    %%ZDATA0, [%%INP2 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA0, [%%INP3 + %%IDX + 16], 3
 %elif (i == 2)
                 ;; CRC update for lanes 0 to 3
                 vpclmulqdq      %%ZT19, %%ZDATB0, %%ZCRC_MUL, 0x01
@@ -850,14 +847,10 @@ section .text
                 vmovdqu16       %%ZDATB0{k1}, %%ZT20
 %elif (i == 3)
                 ;; Load one block of data from lanes 4 to 7 in ZDATA1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 4)]
-                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 5)]
-                vmovdqu64       %%XDATA1, [%%GP1 + %%IDX + 16]
-                vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX + 16], 1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 6)]
-                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 7)]
-                vinserti32x4    %%ZDATA1, [%%GP1 + %%IDX + 16], 2
-                vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX + 16], 3
+                vmovdqu64       %%XDATA1, [%%INP4 + %%IDX + 16]
+                vinserti32x4    %%ZDATA1, [%%INP5 + %%IDX + 16], 1
+                vinserti32x4    %%ZDATA1, [%%INP6 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA1, [%%INP7 + %%IDX + 16], 3
 %elif (i == 4)
                 ;; CRC update for lanes 4 to 7
                 vpclmulqdq      %%ZT19, %%ZDATB1, %%ZCRC_MUL, 0x01
@@ -866,13 +859,13 @@ section .text
                 vmovdqu16       %%ZDATB1{k2}, %%ZT20
 %elif (i == 5)
                 ;; Load one block of data from lanes 8 to 11 in ZDATA2
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 8)]
+                mov             %%GT9, [%%ARG + _aesarg_in + (8 * 8)]
                 mov             %%GT8, [%%ARG + _aesarg_in + (8 * 9)]
-                vmovdqu64       %%XDATA2, [%%GP1 + %%IDX + 16]
+                vmovdqu64       %%XDATA2, [%%GT9 + %%IDX + 16]
                 vinserti32x4    %%ZDATA2, [%%GT8 + %%IDX + 16], 1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 10)]
+                mov             %%GT9, [%%ARG + _aesarg_in + (8 * 10)]
                 mov             %%GT8, [%%ARG + _aesarg_in + (8 * 11)]
-                vinserti32x4    %%ZDATA2, [%%GP1 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA2, [%%GT9 + %%IDX + 16], 2
                 vinserti32x4    %%ZDATA2, [%%GT8 + %%IDX + 16], 3
 %elif (i == 6)
                 ;; CRC update for lanes 8 to 11
@@ -882,13 +875,13 @@ section .text
                 vmovdqu16       %%ZDATB2{k3}, %%ZT20
 %elif (i == 7)
                 ;; Load one block of data from lanes 12 to 15 in ZDATA3
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 12)]
+                mov             %%GT9, [%%ARG + _aesarg_in + (8 * 12)]
                 mov             %%GT8, [%%ARG + _aesarg_in + (8 * 13)]
-                vmovdqu64       %%XDATA3, [%%GP1 + %%IDX + 16]
+                vmovdqu64       %%XDATA3, [%%GT9 + %%IDX + 16]
                 vinserti32x4    %%ZDATA3, [%%GT8 + %%IDX + 16], 1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 14)]
+                mov             %%GT9, [%%ARG + _aesarg_in + (8 * 14)]
                 mov             %%GT8, [%%ARG + _aesarg_in + (8 * 15)]
-                vinserti32x4    %%ZDATA3, [%%GP1 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA3, [%%GT9 + %%IDX + 16], 2
                 vinserti32x4    %%ZDATA3, [%%GT8 + %%IDX + 16], 3
 %elif (i == 8)
                 ;; CRC update for lanes 12 to 15
@@ -915,40 +908,40 @@ section .text
         ;; - ZCIPHx is an IV for the next round
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*0]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*1]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*1]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH0
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH0, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*2]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*3]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*3]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH0, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH0, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*4]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*5]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*5]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH1
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH1, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*6]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*7]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*7]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH1, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH1, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*8]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*9]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*9]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH2, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH2, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*10]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*11]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*11]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH2, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH2, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH2, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*12]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*13]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*13]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH3
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH3, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH3, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*14]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*15]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*15]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH3, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH3, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH3, 3
 
         add             %%IDX, 16
         sub             %%LEN, 16
@@ -978,40 +971,32 @@ section .text
 
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 ;; CRC: load new data
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 0)]
-                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 1)]
-                vmovdqu64       %%XDATA0, [%%GP1 + %%IDX + 16]
-                vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX + 16], 1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 2)]
-                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 3)]
-                vinserti32x4    %%ZDATA0, [%%GP1 + %%IDX + 16], 2
-                vinserti32x4    %%ZDATA0, [%%GT8 + %%IDX + 16], 3
+                vmovdqu64       %%XDATA0, [%%INP0 + %%IDX + 16]
+                vinserti32x4    %%ZDATA0, [%%INP1 + %%IDX + 16], 1
+                vinserti32x4    %%ZDATA0, [%%INP2 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA0, [%%INP3 + %%IDX + 16], 3
 
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 4)]
-                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 5)]
-                vmovdqu64       %%XDATA1, [%%GP1 + %%IDX + 16]
-                vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX + 16], 1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 6)]
-                mov             %%GT8, [%%ARG + _aesarg_in + (8 * 7)]
-                vinserti32x4    %%ZDATA1, [%%GP1 + %%IDX + 16], 2
-                vinserti32x4    %%ZDATA1, [%%GT8 + %%IDX + 16], 3
+                vmovdqu64       %%XDATA1, [%%INP4 + %%IDX + 16]
+                vinserti32x4    %%ZDATA1, [%%INP5 + %%IDX + 16], 1
+                vinserti32x4    %%ZDATA1, [%%INP6 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA1, [%%INP7 + %%IDX + 16], 3
 
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 8)]
+                mov             %%GT9, [%%ARG + _aesarg_in + (8 * 8)]
                 mov             %%GT8, [%%ARG + _aesarg_in + (8 * 9)]
-                vmovdqu64       %%XDATA2, [%%GP1 + %%IDX + 16]
+                vmovdqu64       %%XDATA2, [%%GT9 + %%IDX + 16]
                 vinserti32x4    %%ZDATA2, [%%GT8 + %%IDX + 16], 1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 10)]
+                mov             %%GT9, [%%ARG + _aesarg_in + (8 * 10)]
                 mov             %%GT8, [%%ARG + _aesarg_in + (8 * 11)]
-                vinserti32x4    %%ZDATA2, [%%GP1 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA2, [%%GT9 + %%IDX + 16], 2
                 vinserti32x4    %%ZDATA2, [%%GT8 + %%IDX + 16], 3
 
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 12)]
+                mov             %%GT9, [%%ARG + _aesarg_in + (8 * 12)]
                 mov             %%GT8, [%%ARG + _aesarg_in + (8 * 13)]
-                vmovdqu64       %%XDATA3, [%%GP1 + %%IDX + 16]
+                vmovdqu64       %%XDATA3, [%%GT9 + %%IDX + 16]
                 vinserti32x4    %%ZDATA3, [%%GT8 + %%IDX + 16], 1
-                mov             %%GP1, [%%ARG + _aesarg_in + (8 * 14)]
+                mov             %%GT9, [%%ARG + _aesarg_in + (8 * 14)]
                 mov             %%GT8, [%%ARG + _aesarg_in + (8 * 15)]
-                vinserti32x4    %%ZDATA3, [%%GP1 + %%IDX + 16], 2
+                vinserti32x4    %%ZDATA3, [%%GT9 + %%IDX + 16], 2
                 vinserti32x4    %%ZDATA3, [%%GT8 + %%IDX + 16], 3
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1055,7 +1040,7 @@ section .text
                 CRC32_ROUND     no_first, last_possible, %%ARG, crc_lane, \
                                 XWORD(%%ZT19), %%XCRC_VAL, %%XCRC_DAT, \
                                 %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                                %%GP1, %%IDX, 16, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT20)
+                                %%GT10, %%IDX, 16, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT20)
 
 %if crc_lane < 4
                 vinserti32x4    %%ZDATA0, XWORD(%%ZT19), crc_lane
@@ -1081,40 +1066,40 @@ section .text
         ;; - ZCIPHx is an IV for the next round
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*0]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*1]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*1]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH0
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH0, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*2]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*3]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*3]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH0, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH0, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*4]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*5]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*5]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH1
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH1, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*6]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*7]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*7]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH1, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH1, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*8]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*9]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*9]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH2, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH2, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*10]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*11]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*11]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH2, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH2, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH2, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*12]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*13]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*13]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH3
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH3, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH3, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*14]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*15]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*15]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH3, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH3, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH3, 3
 
         add             %%IDX, 16
         sub             %%LEN, 16
@@ -1166,40 +1151,40 @@ section .text
         ;; - ZCIPHx is an IV for the next round
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*0]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*1]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*1]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH0
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH0, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*2]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*3]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*3]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH0, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH0, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH0, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*4]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*5]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*5]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH1
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH1, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*6]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*7]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*7]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH1, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH1, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH1, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*8]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*9]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*9]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH2, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH2, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*10]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*11]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*11]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH2, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH2, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH2, 3
 
         mov             %%GT8, [%%ARG + _aesarg_out + 8*12]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*13]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*13]
         vmovdqu64       [%%GT8 + %%IDX], %%XCIPH3
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH3, 1
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH3, 1
         mov             %%GT8, [%%ARG + _aesarg_out + 8*14]
-        mov             %%GP1, [%%ARG + _aesarg_out + 8*15]
+        mov             %%GT9, [%%ARG + _aesarg_out + 8*15]
         vextracti32x4   [%%GT8 + %%IDX], %%ZCIPH3, 2
-        vextracti32x4   [%%GP1 + %%IDX], %%ZCIPH3, 3
+        vextracti32x4   [%%GT9 + %%IDX], %%ZCIPH3, 3
 
         add             %%IDX, 16
 
