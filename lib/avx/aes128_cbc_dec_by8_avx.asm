@@ -226,7 +226,7 @@ AES_CBC_DEC_128_X8:
         ;; convert CBCS length to standard number of CBC blocks
         ;; ((num_bytes + 9 blocks) / 160) = num blocks to decrypt
         mov     tmp2, rdx
-        mov     rdx, 0          ;; store and zero rdx for div
+        xor     rdx, rdx        ;; store and zero rdx for div
         add     num_bytes, 9*16
         mov     tmp, 160
         div     tmp             ;; divide by 160
