@@ -1098,26 +1098,19 @@ init_mb_mgr_avx512(IMB_MGR *state)
         }
 
         if (vaes_support) {
-                /*
-                 * @todo temporary switch from 16 to 8 lanes
-                 * as the new algorithmic code evolves
-                 */
-                memset(docsis128_crc32_sec_ooo->lens, 0xFF,
+                /* init 16 lanes */
+                memset(docsis128_crc32_sec_ooo->lens, 0,
                        sizeof(docsis128_crc32_sec_ooo->lens));
-                memset(&docsis128_crc32_sec_ooo->lens[0], 0,
-                       sizeof(docsis128_crc32_sec_ooo->lens[0]) * 8);
                 memset(docsis128_crc32_sec_ooo->job_in_lane, 0,
                        sizeof(docsis128_crc32_sec_ooo->job_in_lane));
-                docsis128_crc32_sec_ooo->unused_lanes = 0xF76543210;
+                docsis128_crc32_sec_ooo->unused_lanes = 0xFEDCBA9876543210;
                 docsis128_crc32_sec_ooo->num_lanes_inuse = 0;
 
-                memset(docsis256_crc32_sec_ooo->lens, 0xFF,
+                memset(docsis256_crc32_sec_ooo->lens, 0,
                        sizeof(docsis256_crc32_sec_ooo->lens));
-                memset(&docsis256_crc32_sec_ooo->lens[0], 0,
-                       sizeof(docsis256_crc32_sec_ooo->lens[0]) * 8);
                 memset(docsis256_crc32_sec_ooo->job_in_lane, 0,
                        sizeof(docsis256_crc32_sec_ooo->job_in_lane));
-                docsis256_crc32_sec_ooo->unused_lanes = 0xF76543210;
+                docsis256_crc32_sec_ooo->unused_lanes = 0xFEDCBA9876543210;
                 docsis256_crc32_sec_ooo->num_lanes_inuse = 0;
         } else {
                 /* init 8 lanes */
