@@ -176,7 +176,7 @@ typedef struct {
         uint64_t unused_lanes;
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
-        DECLARE_ALIGNED(imb_uint128_t crc_init[16], 16);
+        DECLARE_ALIGNED(imb_uint128_t crc_init[16], 64);
         DECLARE_ALIGNED(uint16_t crc_len[16], 16);
         DECLARE_ALIGNED(uint8_t crc_done[16], 16);
         uint64_t road_block;
