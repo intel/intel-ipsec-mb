@@ -641,7 +641,7 @@ section .text
 %xdefine %%INP6 %%GT6
 %xdefine %%INP7 %%GT7
 
-;; @todo look into GT8 - GT11
+;; GT8 - GT11 used as temporary registers
 %define %%CRC32 %%GT11
 %define %%IDX   %%GT12
 
@@ -687,9 +687,22 @@ section .text
 %xdefine %%XDATB2 XWORD(%%ZDATB2)
 %xdefine %%XDATB3 XWORD(%%ZDATB3)
 
+;; ZT17 to ZT20 used as temporary registers
+
+;; ZT21 to ZT31 used to preload keys
+%xdefine %%KEYSET0ARK   %%ZT21
+%xdefine %%KEYSET1ARK   %%ZT22
+%xdefine %%KEYSET2ARK   %%ZT23
+%xdefine %%KEYSET3ARK   %%ZT24
+
+%xdefine %%KEYSET0LAST  %%ZT25
+%xdefine %%KEYSET1LAST  %%ZT26
+%xdefine %%KEYSET2LAST  %%ZT27
+%xdefine %%KEYSET3LAST  %%ZT28
 
         xor             %%IDX, %%IDX
 
+        ;; broadcast CRC multiplier
         vbroadcasti32x4 %%ZCRC_MUL, [rel rk1]
 
         ;; load IV's
@@ -698,6 +711,7 @@ section .text
         vmovdqa64       %%ZCIPH2, [%%ARG + _aesarg_IV + 16*8]
         vmovdqa64       %%ZCIPH3, [%%ARG + _aesarg_IV + 16*12]
 
+        ;; pre-load 8 input pointers
         mov             %%INP0, [%%ARG + _aesarg_in + (PTR_SZ * 0)]
         mov             %%INP1, [%%ARG + _aesarg_in + (PTR_SZ * 1)]
         mov             %%INP2, [%%ARG + _aesarg_in + (PTR_SZ * 2)]
@@ -706,6 +720,19 @@ section .text
         mov             %%INP5, [%%ARG + _aesarg_in + (PTR_SZ * 5)]
         mov             %%INP6, [%%ARG + _aesarg_in + (PTR_SZ * 6)]
         mov             %%INP7, [%%ARG + _aesarg_in + (PTR_SZ * 7)]
+
+        ;; pre-load ARK keys
+        vmovdqa64       %%KEYSET0ARK, [%%ARG + _aesarg_key_tab + (16 * 0)]
+        vmovdqa64       %%KEYSET1ARK, [%%ARG + _aesarg_key_tab + (16 * 4)]
+        vmovdqa64       %%KEYSET2ARK, [%%ARG + _aesarg_key_tab + (16 * 8)]
+        vmovdqa64       %%KEYSET3ARK, [%%ARG + _aesarg_key_tab + (16 * 12)]
+
+        ;; pre-load last round keys
+%assign key_offset ((%%NROUNDS + 1) * (16 * 16))
+        vmovdqa64       %%KEYSET0LAST, [%%ARG + _aesarg_key_tab + key_offset + (16 * 0)]
+        vmovdqa64       %%KEYSET1LAST, [%%ARG + _aesarg_key_tab + key_offset + (16 * 4)]
+        vmovdqa64       %%KEYSET2LAST, [%%ARG + _aesarg_key_tab + key_offset + (16 * 8)]
+        vmovdqa64       %%KEYSET3LAST, [%%ARG + _aesarg_key_tab + key_offset + (16 * 12)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Pipeline start
@@ -813,10 +840,10 @@ section .text
         ;;      - plain-text = XDATAx
         ;;      - ARK = [%%KEYSx + 16*0]
 
-        vpternlogq      %%ZCIPH0, %%ZDATA0, [%%ARG + _aesarg_key_tab + (16 * 0)], 0x96
-        vpternlogq      %%ZCIPH1, %%ZDATA1, [%%ARG + _aesarg_key_tab + (16 * 4)], 0x96
-        vpternlogq      %%ZCIPH2, %%ZDATA2, [%%ARG + _aesarg_key_tab + (16 * 8)], 0x96
-        vpternlogq      %%ZCIPH3, %%ZDATA3, [%%ARG + _aesarg_key_tab + (16 * 12)], 0x96
+        vpternlogq      %%ZCIPH0, %%ZDATA0, %%KEYSET0ARK, 0x96
+        vpternlogq      %%ZCIPH1, %%ZDATA1, %%KEYSET1ARK, 0x96
+        vpternlogq      %%ZCIPH2, %%ZDATA2, %%KEYSET2ARK, 0x96
+        vpternlogq      %%ZCIPH3, %%ZDATA3, %%KEYSET3ARK, 0x96
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 1 to NROUNDS (9 or 13)
@@ -896,12 +923,10 @@ section .text
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 10 or 14
-%assign key_offset (i * (16 * 16))
-
-        vaesenclast     %%ZCIPH0, %%ZCIPH0, [%%ARG + _aesarg_key_tab + key_offset + (16 * 0)]
-        vaesenclast     %%ZCIPH1, %%ZCIPH1, [%%ARG + _aesarg_key_tab + key_offset + (16 * 4)]
-        vaesenclast     %%ZCIPH2, %%ZCIPH2, [%%ARG + _aesarg_key_tab + key_offset + (16 * 8)]
-        vaesenclast     %%ZCIPH3, %%ZCIPH3, [%%ARG + _aesarg_key_tab + key_offset + (16 * 12)]
+        vaesenclast     %%ZCIPH0, %%ZCIPH0, %%KEYSET0LAST
+        vaesenclast     %%ZCIPH1, %%ZCIPH1, %%KEYSET1LAST
+        vaesenclast     %%ZCIPH2, %%ZCIPH2, %%KEYSET2LAST
+        vaesenclast     %%ZCIPH3, %%ZCIPH3, %%KEYSET3LAST
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Store 16 cipher text blocks
@@ -960,14 +985,13 @@ section .text
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; - load key pointers to perform AES rounds
         ;; - use ternary logic for: plain-text XOR IV and AES ARK(0)
-        ;;      - IV = XCIPHx
-        ;;      - plain-text = XDATAx
-        ;;      - ARK = [%%KEYSx + 16*0]
+        ;;      - IV = ZCIPHx
+        ;;      - plain-text = ZDATAx
 
-        vpternlogq      %%ZCIPH0, %%ZDATA0, [%%ARG + _aesarg_key_tab + (16 * 0)], 0x96
-        vpternlogq      %%ZCIPH1, %%ZDATA1, [%%ARG + _aesarg_key_tab + (16 * 4)], 0x96
-        vpternlogq      %%ZCIPH2, %%ZDATA2, [%%ARG + _aesarg_key_tab + (16 * 8)], 0x96
-        vpternlogq      %%ZCIPH3, %%ZDATA3, [%%ARG + _aesarg_key_tab + (16 * 12)], 0x96
+        vpternlogq      %%ZCIPH0, %%ZDATA0, %%KEYSET0ARK, 0x96
+        vpternlogq      %%ZCIPH1, %%ZDATA1, %%KEYSET1ARK, 0x96
+        vpternlogq      %%ZCIPH2, %%ZDATA2, %%KEYSET2ARK, 0x96
+        vpternlogq      %%ZCIPH3, %%ZDATA3, %%KEYSET3ARK, 0x96
 
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 ;; CRC: load new data
@@ -1015,10 +1039,10 @@ section .text
         vaesenc         %%ZCIPH3, %%ZCIPH3, [%%ARG + _aesarg_key_tab + key_offset + (16 * 12)]
 %elif (i == (%%NROUNDS + 1))
 %assign key_offset (i * (16 * 16))
-        vaesenclast     %%ZCIPH0, %%ZCIPH0, [%%ARG + _aesarg_key_tab + key_offset + (16 * 0)]
-        vaesenclast     %%ZCIPH1, %%ZCIPH1, [%%ARG + _aesarg_key_tab + key_offset + (16 * 4)]
-        vaesenclast     %%ZCIPH2, %%ZCIPH2, [%%ARG + _aesarg_key_tab + key_offset + (16 * 8)]
-        vaesenclast     %%ZCIPH3, %%ZCIPH3, [%%ARG + _aesarg_key_tab + key_offset + (16 * 12)]
+        vaesenclast     %%ZCIPH0, %%ZCIPH0, %%KEYSET0LAST
+        vaesenclast     %%ZCIPH1, %%ZCIPH1, %%KEYSET1LAST
+        vaesenclast     %%ZCIPH2, %%ZCIPH2, %%KEYSET2LAST
+        vaesenclast     %%ZCIPH3, %%ZCIPH3, %%KEYSET3LAST
 %endif
 
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1112,10 +1136,10 @@ section .text
         ;;      - IV = ZCIPHx
         ;;      - plain-text = ZDATAx
 
-        vpternlogq      %%ZCIPH0, %%ZDATA0, [%%ARG + _aesarg_key_tab + (16 * 0)], 0x96
-        vpternlogq      %%ZCIPH1, %%ZDATA1, [%%ARG + _aesarg_key_tab + (16 * 4)], 0x96
-        vpternlogq      %%ZCIPH2, %%ZDATA2, [%%ARG + _aesarg_key_tab + (16 * 8)], 0x96
-        vpternlogq      %%ZCIPH3, %%ZDATA3, [%%ARG + _aesarg_key_tab + (16 * 12)], 0x96
+        vpternlogq      %%ZCIPH0, %%ZDATA0, %%KEYSET0ARK, 0x96
+        vpternlogq      %%ZCIPH1, %%ZDATA1, %%KEYSET1ARK, 0x96
+        vpternlogq      %%ZCIPH2, %%ZDATA2, %%KEYSET2ARK, 0x96
+        vpternlogq      %%ZCIPH3, %%ZDATA3, %%KEYSET3ARK, 0x96
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 1 to NROUNDS (9 or 13)
@@ -1141,10 +1165,10 @@ section .text
         ;; AES ROUNDS 10 or 14
 %assign key_offset (i * (16 * 16))
 
-        vaesenclast     %%ZCIPH0, %%ZCIPH0, [%%ARG + _aesarg_key_tab + key_offset + (16 * 0)]
-        vaesenclast     %%ZCIPH1, %%ZCIPH1, [%%ARG + _aesarg_key_tab + key_offset + (16 * 4)]
-        vaesenclast     %%ZCIPH2, %%ZCIPH2, [%%ARG + _aesarg_key_tab + key_offset + (16 * 8)]
-        vaesenclast     %%ZCIPH3, %%ZCIPH3, [%%ARG + _aesarg_key_tab + key_offset + (16 * 12)]
+        vaesenclast     %%ZCIPH0, %%ZCIPH0, %%KEYSET0LAST
+        vaesenclast     %%ZCIPH1, %%ZCIPH1, %%KEYSET1LAST
+        vaesenclast     %%ZCIPH2, %%ZCIPH2, %%KEYSET2LAST
+        vaesenclast     %%ZCIPH3, %%ZCIPH3, %%KEYSET3LAST
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Store 16 cipher text blocks
