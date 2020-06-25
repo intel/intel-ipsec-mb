@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2020, Intel Corporation
+;; Copyright (c) 2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -34,7 +34,6 @@
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/const.inc"
 %include "include/clear_regs.asm"
 
 %define APPEND(a,b) a %+ b
@@ -85,15 +84,11 @@ map_4bits_to_8bits:
         db 1111_0000b, 1111_0011b, 1111_1100b, 1111_1111b
 
 align 16
-len_masks:
-        dq 0x000000000000FFFF, 0x0000000000000000
-        dq 0x00000000FFFF0000, 0x0000000000000000
-        dq 0x0000FFFF00000000, 0x0000000000000000
-        dq 0xFFFF000000000000, 0x0000000000000000
-        dq 0x0000000000000000, 0x000000000000FFFF
-        dq 0x0000000000000000, 0x00000000FFFF0000
-        dq 0x0000000000000000, 0x0000FFFF00000000
-        dq 0x0000000000000000, 0xFFFF000000000000
+map_index_0_15_to_mask:
+        dw (1 << 0),  (1 << 1),  (1 << 2),  (1 << 3)
+        dw (1 << 4),  (1 << 5),  (1 << 6),  (1 << 7)
+        dw (1 << 8),  (1 << 9),  (1 << 10), (1 << 11)
+        dw (1 << 12), (1 << 13), (1 << 14), (1 << 15)
 
 ;;; Precomputed constants for CRC32 (Ethernet FCS)
 ;;;   Details of the CRC algorithm and 4 byte buffer of
@@ -1298,7 +1293,7 @@ section .text
 %define %%len           %%GT0
 %define %%tmp           %%GT0
 %define %%lane          %%GT1
-%define %%iv            %%GT2
+%define %%tmp2          %%GT2
 
         add             qword [%%STATE + _aes_lanes_in_use], 1
 
@@ -1313,7 +1308,12 @@ section .text
         mov             %%len, [%%JOB + _msg_len_to_cipher_in_bytes]
         ;; DOCSIS may pass size unaligned to block size
         and             %%len, -16
-        VPINSRW_M256    %%STATE + _aes_lens, xmm0, xmm1, %%tmp, %%lane, %%len, scale_x16
+        lea             %%tmp2, [rel map_index_0_15_to_mask]
+        kmovw           k1, [%%tmp2 + %%lane*2]
+        vpbroadcastw    ymm1, WORD(%%len)
+        vmovdqu16       ymm0, [%%STATE + _aes_lens]
+        vmovdqu16       ymm0{k1}, ymm1
+        vmovdqu16       [%%STATE + _aes_lens], ymm0
 
         ;; Insert expanded keys
         mov             %%tmp, [%%JOB + _enc_keys]
@@ -1333,8 +1333,8 @@ section .text
         mov             byte [%%STATE + _docsis_crc_args_done + %%lane], CRC_LANE_STATE_DONE
 
         ;; Set IV
-        mov             %%iv, [%%JOB + _iv]
-        vmovdqu64       xmm0, [%%iv]
+        mov             %%tmp2, [%%JOB + _iv]
+        vmovdqu64       xmm0, [%%tmp2]
         shl             %%lane, 4       ; multiply by 16
         vmovdqa64       [%%STATE + _aes_args_IV + %%lane], xmm0
 
