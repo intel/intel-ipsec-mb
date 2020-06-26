@@ -632,41 +632,42 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  *
  * @description
  *      Definition of the external function that implements the working
- *      stage of the ZUC algorithm. The function will generate Nx16 bytes of
- *      keystream for four packets in parallel and will XOR this keystream
- *      with the input text, producing Nx16 bytes of output for all four packets.
+ *      stage of the ZUC algorithm. The function will generate a multiple of
+ *      4 bytes of keystream for 4 packets in parallel and will XOR this
+ *      keystream with the input text, producing multiple of 4 bytes of output
+ *      for all 4 packets.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState4_t
  *
  * @param[in] pIn                   Array of pointers to 4 input buffers.
  * @param[out] pOut                 Array of pointers to 4 output buffers.
- * @param[in] length                Length of buffers to encrypt (multiple of 16B)
+ * @param[in] length                Length to encrypt (multiple of 4 bytes)
  *
  * @pre
  *      A successful call to @ref asm_ZucInitialization_4 to initialize the ZUC
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipherNx16B_4_sse(ZucState4_t *pState,
-                                            const uint64_t *pIn[4],
-                                            uint64_t *pOut[4],
-                                            const uint64_t length);
+IMB_DLL_LOCAL void asm_ZucCipherNx4B_4_sse(ZucState4_t *pState,
+                                           const uint64_t *pIn[4],
+                                           uint64_t *pOut[4],
+                                           const uint64_t length);
 
-IMB_DLL_LOCAL void asm_ZucCipherNx16B_4_sse_no_aesni(ZucState4_t *pState,
-                                                     const uint64_t *pIn[4],
-                                                     uint64_t *pOut[4],
-                                                     const uint64_t length);
+IMB_DLL_LOCAL void asm_ZucCipherNx4B_4_sse_no_aesni(ZucState4_t *pState,
+                                                    const uint64_t *pIn[4],
+                                                    uint64_t *pOut[4],
+                                                    const uint64_t length);
 
-IMB_DLL_LOCAL void asm_ZucCipherNx16B_4_gfni_sse(ZucState4_t *pState,
-                                                 const uint64_t *pIn[4],
-                                                 uint64_t *pOut[4],
-                                                 const uint64_t length);
+IMB_DLL_LOCAL void asm_ZucCipherNx4B_4_gfni_sse(ZucState4_t *pState,
+                                                const uint64_t *pIn[4],
+                                                uint64_t *pOut[4],
+                                                const uint64_t length);
 
-IMB_DLL_LOCAL void asm_ZucCipherNx16B_4_avx(ZucState4_t *pState,
-                                            const uint64_t *pIn[4],
-                                            uint64_t *pOut[4],
-                                            const uint64_t length);
+IMB_DLL_LOCAL void asm_ZucCipherNx4B_4_avx(ZucState4_t *pState,
+                                           const uint64_t *pIn[4],
+                                           uint64_t *pOut[4],
+                                           const uint64_t length);
 
 /**
  ******************************************************************************

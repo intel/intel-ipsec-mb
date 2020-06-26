@@ -326,7 +326,7 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                            length[2] : length[3]);
         /* min number of bytes */
         uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
-        uint32_t numKeyStreamsPerPkt = bytes/KEYSTR_ROUND_LEN;
+        uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
         uint32_t remainBytes[NUM_SSE_BUFS] = {0};
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
@@ -339,7 +339,7 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
         uint64_t *pOut64[NUM_SSE_BUFS] = {NULL};
 
         /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * KEYSTR_ROUND_LEN;
+        bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
 
         /* Need to set the LFSR state to zero */
         memset(&state, 0, sizeof(ZucState4_t));
@@ -361,8 +361,7 @@ void zuc_eea3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        asm_ZucCipherNx16B_4_sse_no_aesni(&state, pIn64, pOut64,
-                                          numKeyStreamsPerPkt * 16);
+        asm_ZucCipherNx4B_4_sse_no_aesni(&state, pIn64, pOut64, bytes);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_SSE_BUFS; i++) {

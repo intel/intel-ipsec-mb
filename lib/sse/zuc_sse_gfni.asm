@@ -26,7 +26,7 @@
 ;;
 
 %define USE_GFNI 1
-%define ZUC_CIPHERNx16B_4 asm_ZucCipherNx16B_4_gfni_sse
+%define ZUC_CIPHERNx4B_4 asm_ZucCipherNx4B_4_gfni_sse
 %define ZUC_INIT_4 asm_ZucInitialization_4_gfni_sse
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_gfni_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_gfni_sse
