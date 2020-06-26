@@ -45,9 +45,14 @@ broadcast_word:
 db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 
-extern zuc_eea3_4_buffer_job_avx
+align 16
+all_ffs_top_64bits:
+db      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+db      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+
 extern zuc_eia3_4_buffer_job_avx
 extern asm_ZucInitialization_4_avx
+extern asm_ZucCipher_4_avx
 
 %ifdef LINUX
 %define arg1    rdi
@@ -92,12 +97,13 @@ SUBMIT_JOB_ZUC_EEA3:
 ; idx needs to be in rbp
 %define len              rbp
 %define idx              rbp
-%define tmp              rbp
 
 %define lane             r8
 %define unused_lanes     rbx
-%define len2             r13
+%define tmp              r11
 %define tmp2             r13
+%define tmp3             r14
+%define min_len          r15
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -140,19 +146,22 @@ SUBMIT_JOB_ZUC_EEA3:
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_cipher_in_bytes]
 
-        vmovdqa xmm0, [state + _zuc_lens]
+        vmovq   xmm0, [state + _zuc_lens]
         XVPINSRW xmm0, xmm1, tmp, lane, len, scale_x16
-        vmovdqa [state + _zuc_lens], xmm0
+        vmovq   [state + _zuc_lens], xmm0
 
         cmp     unused_lanes, 0xff
         jne     return_null_submit_eea3
 
+        ; Set all ffs in top 64 bits to invalid them
+        vpor    xmm0, [rel all_ffs_top_64bits]
+
         ; Find minimum length (searching for zero length,
         ; to retrieve already encrypted buffers)
         vphminposuw     xmm1, xmm0
-        vpextrw len2, xmm1, 0   ; min value
+        vpextrw min_len, xmm1, 0   ; min value
         vpextrw idx, xmm1, 1    ; min index (0...3)
-        cmp     len2, 0
+        cmp     min_len, 0
         je      len_is_0_submit_eea3
 
         ; Move state into r12, as register for state will be used
@@ -194,10 +203,10 @@ SUBMIT_JOB_ZUC_EEA3:
         test    word [r12 + _zuc_init_not_done], (1 << J)
         jnz     APPEND3(skip_submit_lane_,I,J)
         ;; Extract dword from xmm0
-        vpextrd r15d, xmm0, J ; value
+        vpextrd DWORD(tmp2), xmm0, J ; value
         mov     r8, (J << 4) ; index
 
-        XVPINSRD xmm1, xmm2, r14, r8, r15, no_scale
+        XVPINSRD xmm1, xmm2, tmp3, r8, tmp2, no_scale
 
 APPEND3(skip_submit_lane_,I,J):
 %assign J (J+1)
@@ -212,25 +221,23 @@ skip_submit_restoring_state:
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 32 bytes for 4 parameters
-        sub     rsp, 32
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 40
 %endif
-        mov     arg1, r12
+        lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
         lea     arg4, [r12 + _zuc_lens]
+        mov     arg5, min_len
 
-        call    zuc_eea3_4_buffer_job_avx
+        call    asm_ZucCipher_4_avx
 
 %ifndef LINUX
-        add     rsp, 32
+        add     rsp, 40
 %endif
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
-
-        ;; Clear all lengths (function will encrypt whole buffers)
-        mov     qword [state + _zuc_lens], 0
 
 len_is_0_submit_eea3:
         ; process completed job "idx"
@@ -238,8 +245,6 @@ len_is_0_submit_eea3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_AES
-        ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
-        mov     word [state + _zuc_lens + idx*2], 0xFFFF
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -281,6 +286,7 @@ FLUSH_JOB_ZUC_EEA3:
 %define tmp3             r8
 %define tmp4             r9
 %define tmp5             r10
+%define min_len          r14 ; Will be maintained after function calls
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -304,13 +310,29 @@ FLUSH_JOB_ZUC_EEA3:
         bt      unused_lanes, 32+7
         jc      return_null_flush_eea3
 
+        ; Set length = 0xFFFF in NULL jobs
+        vmovq   xmm0, [state + _zuc_lens]
+        mov     DWORD(tmp3), 0xffff
+%assign I 0
+%rep 4
+        cmp     qword [state + _zuc_job_in_lane + I*8], 0
+        jne     APPEND(skip_copy_ffs_,I)
+        pinsrw  xmm0, DWORD(tmp3), I
+APPEND(skip_copy_ffs_,I):
+%assign I (I+1)
+%endrep
+
+        vmovq   [state + _zuc_lens], xmm0
+
+        ; Set all ffs in top 64 bits to invalid them
+        vpor    xmm0, [rel all_ffs_top_64bits]
+
         ; Find minimum length (searching for zero length,
         ; to retrieve already encrypted buffers)
-        vmovdqa xmm0, [state + _zuc_lens]
         vphminposuw     xmm1, xmm0
-        vpextrw len2, xmm1, 0   ; min value
+        vpextrw min_len, xmm1, 0   ; min value
         vpextrw idx, xmm1, 1    ; min index (0...3)
-        cmp     len2, 0
+        cmp     min_len, 0
         je      len_is_0_flush_eea3
 
         ; copy good_lane to empty lanes
@@ -318,24 +340,6 @@ FLUSH_JOB_ZUC_EEA3:
         mov     tmp2, [state + _zuc_args_out + idx*8]
         mov     tmp3, [state + _zuc_args_keys + idx*8]
         mov     tmp4, [state + _zuc_args_IV + idx*8]
-        mov     WORD(tmp5), [state + _zuc_lens + idx*2]
-
-        ; Set valid length in NULL jobs
-        vmovd   xmm0, DWORD(tmp5)
-        vpshufb xmm0, xmm0, [rel broadcast_word]
-        vmovdqa xmm1, [state + _zuc_lens]
-
-        vpcmpeqw xmm2, xmm2 ;; Get all ff's in XMM register
-        vpcmpeqw xmm3, xmm1, xmm2 ;; Mask with FFFF in NULL jobs
-        vmovq   [rsp + _null_len_save], xmm3 ;; Save lengths with FFFF in NULL jobs
-
-        vpand   xmm4, xmm3, xmm0 ;; Length of valid job in all NULL jobs
-
-        vpxor   xmm2, xmm3 ;; Mask with 0000 in NULL jobs
-        vpand   xmm1, xmm2 ;; Zero out lengths of NULL jobs
-
-        vpor    xmm1, xmm4
-        vmovq   [state + _zuc_lens], xmm1
 
 %assign I 0
 %rep 4
@@ -393,7 +397,7 @@ APPEND(skip_eea3_,I):
         vpextrd r15d, xmm0, J ; value
         mov     r8, (J << 4) ; index
 
-        XVPINSRD xmm1, xmm2, r14, r8, r15, no_scale
+        XVPINSRD xmm1, xmm2, r13, r8, r15, no_scale
 
 APPEND3(skip_flush_lane_,I,J):
 %assign J (J+1)
@@ -427,25 +431,21 @@ APPEND3(skip_eea3_copy_,I,J):
 %endrep
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 32 bytes for 4 parameters
-        sub     rsp, 32
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 40
 %endif
-        mov     arg1, r12
+        lea     arg1, [r12 + _zuc_state]
         lea     arg2, [r12 + _zuc_args_in]
         lea     arg3, [r12 + _zuc_args_out]
         lea     arg4, [r12 + _zuc_lens]
+        mov     arg5, min_len
 
-        call    zuc_eea3_4_buffer_job_avx
+        call    asm_ZucCipher_4_avx
 
 %ifndef LINUX
-        add     rsp, 32
+        add     rsp, 40
 %endif
-        mov     tmp5, [rsp + _null_len_save]
-
         mov     state, [rsp + _gpr_save + 8*8]
-
-        ;; Clear all lengths of valid jobs and set to FFFF to NULL jobs
-        mov     qword [state + _zuc_lens], tmp5
 
 len_is_0_flush_eea3:
         ; process completed job "idx"
@@ -453,8 +453,6 @@ len_is_0_flush_eea3:
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
         or      dword [job_rax + _status], STS_COMPLETED_AES
-        ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
-        mov     word [state + _zuc_lens + idx*2], 0xFFFF
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes

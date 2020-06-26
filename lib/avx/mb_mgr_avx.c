@@ -554,7 +554,7 @@ init_mb_mgr_avx(IMB_MGR *state)
         docsis256_crc32_sec_ooo->num_lanes_inuse = 0;
 
         /* Init ZUC out-of-order fields */
-        memset(zuc_eea3_ooo->lens, 0xFF,
+        memset(zuc_eea3_ooo->lens, 0,
                sizeof(zuc_eea3_ooo->lens));
         memset(zuc_eea3_ooo->job_in_lane, 0,
                sizeof(zuc_eea3_ooo->job_in_lane));

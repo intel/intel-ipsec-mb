@@ -31,8 +31,8 @@
 %include "include/memcpy.asm"
 %include "mb_mgr_datastruct.asm"
 
-%ifndef ZUC_CIPHERNx4B_4
-%define ZUC_CIPHERNx4B_4 asm_ZucCipherNx4B_4_sse
+%ifndef ZUC_CIPHER_4
+%define ZUC_CIPHER_4 asm_ZucCipher_4_sse
 %define ZUC_INIT_4 asm_ZucInitialization_4_sse
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_sse
@@ -126,6 +126,39 @@ align 16
 rot24_mod32:
 db      0x01, 0x02, 0x03, 0x00, 0x05, 0x06, 0x07, 0x04,
 db      0x09, 0x0A, 0x0B, 0x08, 0x0D, 0x0E, 0x0F, 0x0C
+
+align 16
+broadcast_word:
+db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
+db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
+
+align 16
+all_ffs:
+dw      0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff
+
+align 16
+all_threes:
+dw      0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003
+
+align 16
+all_fffcs:
+dw      0xfffc, 0xfffc, 0xfffc, 0xfffc, 0xfffc, 0xfffc, 0xfffc, 0xfffc
+
+align 16
+all_0fs:
+dw      0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f, 0x000f
+
+align 16
+all_10s:
+dw      0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010
+
+; Stack frame for ZucCipher function
+struc STACK
+_keystr_save    resq  2*4 ; Space for 4 keystreams
+_rsp_save:      resq    1 ; Space for rsp pointer
+_gpr_save:      resq    2 ; Space for GP registers
+_rem_bytes_save resq    1 ; Space for number of remaining bytes
+endstruc
 
 section .text
 
@@ -808,13 +841,15 @@ ZUC_KEYGEN8B_4:
 
 ;;
 ;; Encrypt N*4B bytes on all 4 buffers
-;; where N is number of rounds (up to 8)
-
-%macro CIPHERNx4B_4 3-4
+;; where N is number of rounds (up to 4)
+;; In final call, an array of final bytes is read
+;; from memory and only these final bytes are of
+;; plaintext are read and XOR'ed.
+%macro CIPHERNx4B_4 4
 %define %%NROUNDS        %1
 %define %%INITIAL_ROUND  %2
 %define %%OFFSET         %3
-%define %%PARTIAL_LENGTH %4
+%define %%LAST_CALL      %4
 
 %ifdef LINUX
 %define %%TMP1 r8
@@ -834,7 +869,7 @@ ZUC_KEYGEN8B_4:
         nonlin_fun4 rax, USE_GFNI, xmm0
         ; OFS_XR XOR W (xmm0) and store in stack
         pxor    xmm10, xmm0
-        movdqa  [rsp + (%%N-1)*16], xmm10
+        movdqa  [rsp + _keystr_save + (%%N-1)*16], xmm10
         pxor    xmm0, xmm0
         lfsr_updt4  rax, %%round, xmm0
 %assign %%N (%%N + 1)
@@ -844,7 +879,7 @@ ZUC_KEYGEN8B_4:
 %assign %%N 0
 %assign %%idx 4
 %rep %%NROUNDS
-        movdqa  APPEND(xmm, %%idx), [rsp + %%N*16]
+        movdqa  APPEND(xmm, %%idx), [rsp + _keystr_save + %%N*16]
 %assign %%N (%%N + 1)
 %assign %%idx (%%idx+1)
 %endrep
@@ -858,15 +893,20 @@ ZUC_KEYGEN8B_4:
         mov     r13, [pIn + 8]
         mov     r14, [pIn + 16]
         mov     r15, [pIn + 24]
-%if (%0 == 4)
+%if (%%LAST_CALL == 4)
         ;; Save GP registers
-        push    %%TMP1
-        push    %%TMP2
+        mov     [rsp + _gpr_save],  %%TMP1
+        mov     [rsp + _gpr_save + 8], %%TMP2
 
-        simd_load_sse_16_1 xmm0, r12 + %%OFFSET, %%PARTIAL_LENGTH
-        simd_load_sse_16_1 xmm1, r13 + %%OFFSET, %%PARTIAL_LENGTH
-        simd_load_sse_16_1 xmm2, r14 + %%OFFSET, %%PARTIAL_LENGTH
-        simd_load_sse_16_1 xmm3, r15 + %%OFFSET, %%PARTIAL_LENGTH
+        ;; Read in r10 the word containing the number of final bytes to read for each lane
+        movzx  r10d, word [rsp + _rem_bytes_save]
+        simd_load_sse_16_1 xmm0, r12 + %%OFFSET, r10
+        movzx  r10d, word [rsp + _rem_bytes_save + 2]
+        simd_load_sse_16_1 xmm1, r13 + %%OFFSET, r10
+        movzx  r10d, word [rsp + _rem_bytes_save + 4]
+        simd_load_sse_16_1 xmm2, r14 + %%OFFSET, r10
+        movzx  r10d, word [rsp + _rem_bytes_save + 6]
+        simd_load_sse_16_1 xmm3, r15 + %%OFFSET, r10
 %else
         movdqu  xmm0, [r12 + %%OFFSET]
         movdqu  xmm1, [r13 + %%OFFSET]
@@ -889,19 +929,19 @@ ZUC_KEYGEN8B_4:
         mov     r14, [pOut + 16]
         mov     r15, [pOut + 24]
 
-%if (%0 == 4)
-        add     r12, %%OFFSET
-        add     r13, %%OFFSET
-        add     r14, %%OFFSET
-        add     r15, %%OFFSET
-        simd_store_sse r12, xmm4, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_store_sse r13, xmm5, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_store_sse r14, xmm6, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
-        simd_store_sse r15, xmm7, %%PARTIAL_LENGTH, %%TMP1, %%TMP2
+%if (%%LAST_CALL == 1)
+        movzx  r10d, word [rsp + _rem_bytes_save]
+        simd_store_sse r12, xmm4, r10, %%TMP1, %%TMP2, %%OFFSET
+        movzx  r10d, word [rsp + _rem_bytes_save + 2]
+        simd_store_sse r13, xmm5, r10, %%TMP1, %%TMP2, %%OFFSET
+        movzx  r10d, word [rsp + _rem_bytes_save + 4]
+        simd_store_sse r14, xmm6, r10, %%TMP1, %%TMP2, %%OFFSET
+        movzx  r10d, word [rsp + _rem_bytes_save + 6]
+        simd_store_sse r15, xmm7, r10, %%TMP1, %%TMP2, %%OFFSET
 
         ; Restore registers
-        pop %%TMP2
-        pop %%TMP1
+        mov     %%TMP1, [rsp + _gpr_save]
+        mov     %%TMP2, [rsp + _gpr_save + 8]
 %else
         movdqu  [r12 + %%OFFSET], xmm4
         movdqu  [r13 + %%OFFSET], xmm5
@@ -911,113 +951,160 @@ ZUC_KEYGEN8B_4:
 %endmacro
 
 ;;
-;; void asm_ZucCipherNx4B_4_sse(state4_t *pSta, u64 *pIn[4],
-;;                              u64 *pOut[4], u64 length);
+;; void asm_ZucCipher_4_sse(state16_t *pSta, u64 *pIn[4],
+;;                          u64 *pOut[4], u16 *length[4], u64 min_length);
 ;;
 ;; WIN64
 ;;  RCX    - pSta
 ;;  RDX    - pIn
 ;;  R8     - pOut
-;;  R9     - length
+;;  R9     - lengths
+;;  rsp + 40 - min_length
 ;;
 ;; LIN64
 ;;  RDI - pSta
 ;;  RSI - pIn
 ;;  RDX - pOut
-;;  RCX - length
+;;  RCX - lengths
+;;  R8  - min_length
 ;;
-MKGLOBAL(ZUC_CIPHERNx4B_4,function,internal)
-ZUC_CIPHERNx4B_4:
+MKGLOBAL(ZUC_CIPHER_4,function,internal)
+ZUC_CIPHER_4:
 
 %ifdef LINUX
         %define         pState  rdi
         %define         pIn     rsi
         %define         pOut    rdx
-        %define         length  rcx
+        %define         lengths rcx
+        %define         arg5    r8
 
         %define         nrounds r8
 %else
         %define         pState  rcx
         %define         pIn     rdx
         %define         pOut    r8
-        %define         length  r9
+        %define         lengths r9
+        %define         arg5    [rsp + 40]
 
         %define         nrounds rdi
 %endif
 
+%define min_length r10
 %define buf_idx r11
 
-        or      length, length
+        mov     min_length, arg5
+
+        or      min_length, min_length
         jz      exit_cipher
 
         FUNC_SAVE
 
-        ; Reserve memory for storing keystreams for all 4 buffers
-        mov     r10, rsp
-        sub     rsp, (4 * 16)
+        ;; Convert all lengths from UINT16_MAX (indicating that lane is not valid) to min length
+        movd    xmm0, DWORD(min_length)
+        pshufb  xmm0, [rel broadcast_word]
+        movq    xmm1, [lengths]
+        pcmpeqw xmm2, xmm2 ;; Get all ff's in XMM register
+        movdqa  xmm3, xmm1
+        pcmpeqw xmm3, xmm2 ;; Mask with FFFF in NULL jobs
+
+        movdqa  xmm4, xmm3
+        pand    xmm4, xmm0 ;; Length of valid job in all NULL jobs
+        pxor    xmm2, xmm3 ;; Mask with 0000 in NULL jobs
+        pand    xmm1, xmm2 ;; Zero out lengths of NULL jobs
+        por     xmm1, xmm4 ;; XMM1 contain updated lengths
+
+        ; Round up to nearest multiple of 4 bytes
+        paddw   xmm0, [rel all_threes]
+        pand    xmm0, [rel all_fffcs]
+
+        ; Calculate remaining bytes to encrypt after function call
+        movdqa  xmm2, xmm1
+        psubw   xmm2, xmm0
+        pxor    xmm3, xmm3
+        movdqa  xmm4, xmm2
+        pcmpgtw xmm4, xmm3 ;; Mask with FFFF in lengths > 0
+        ; Set to zero the lengths of the lanes which are going to be completed (lengths < 0)
+        pand    xmm2, xmm4
+        movq    [lengths], xmm2 ; Update in memory the final updated lengths
+
+        ; Calculate number of bytes to encrypt after rounds of 16 bytes (up to 15 bytes),
+        ; for each lane, and store it in stack to be used in the last round
+        psubw   xmm1, xmm2 ; Bytes to encrypt in all lanes
+        pand    xmm1, [rel all_0fs] ; Number of final bytes (up to 15 bytes) for each lane
+        movdqa  xmm2, xmm1
+        pcmpeqw xmm2, xmm3 ;; Mask with FFFF in lengths == 0
+        pand    xmm2, [rel all_10s] ;; 16 in positions where lengths was 0
+        por     xmm1, xmm2          ;; Number of final bytes (up to 16 bytes) for each lane
+
+        ; Allocate stack frame to store keystreams (16*4 bytes), number of final bytes (8 bytes),
+        ; space for rsp (8 bytes) and 2 GP registers (16 bytes) that will be clobbered later
+        mov     rax, rsp
+        sub     rsp, STACK_size
         and     rsp, -15
         xor     buf_idx, buf_idx
+        movq    [rsp + _rem_bytes_save], xmm1
+        mov     [rsp + _rsp_save], rax
 
         ; Load state pointer in RAX
         mov     rax, pState
 
-        ; Calculate number of rounds to be done (length / 4 bytes)
-        mov     nrounds, length
-        shr     nrounds, 2
-
 loop_cipher64:
-        cmp     length, 64
+        cmp     min_length, 64
         jl      exit_loop_cipher64
 
 %assign round_off 0
 %rep 4
-        CIPHERNx4B_4 4, round_off, buf_idx
+        CIPHERNx4B_4 4, round_off, buf_idx, 0
 
         add     buf_idx, 16
-        sub     length, 16
+        sub     min_length, 16
 %assign round_off (round_off + 4)
 %endrep
         jmp     loop_cipher64
 exit_loop_cipher64:
 
         ; Check if there are more bytes left to encrypt
-        and     nrounds, 0xf
+        mov     r15, min_length
+        add     r15, 3
+        shr     r15, 2 ;; number of rounds left (round up length to nearest multiple of 4B)
         jz      exit_final_rounds
 
-        cmp     nrounds, 8
+        cmp     r15, 8
         je      _num_final_rounds_is_8
         jb      _final_rounds_is_1_7
 
-        ; Final blocks 9-15
-        cmp     nrounds, 12
+        ; Final blocks 9-16
+        cmp     r15, 12
         je      _num_final_rounds_is_12
-        ja      _final_rounds_is_13_15
+        ja      _final_rounds_is_13_16
 
         ; Final blocks 9-11
-        cmp     nrounds, 10
+        cmp     r15, 10
         je      _num_final_rounds_is_10
         jb      _num_final_rounds_is_9
         ja      _num_final_rounds_is_11
 
-_final_rounds_is_13_15:
-        cmp     nrounds, 14
+_final_rounds_is_13_16:
+        cmp     r15, 16
+        je      _num_final_rounds_is_16
+        cmp     r15, 14
         je      _num_final_rounds_is_14
         jb      _num_final_rounds_is_13
         ja      _num_final_rounds_is_15
 
 _final_rounds_is_1_7:
-        cmp     nrounds, 4
+        cmp     r15, 4
         je      _num_final_rounds_is_4
         jl      _final_rounds_is_1_3
 
         ; Final blocks 5-7
-        cmp     nrounds, 6
+        cmp     r15, 6
         je      _num_final_rounds_is_6
         jb      _num_final_rounds_is_5
         ja      _num_final_rounds_is_7
 
 _final_rounds_is_1_3:
-        cmp     nrounds, 2
+        cmp     r15, 2
         je      _num_final_rounds_is_2
         ja      _num_final_rounds_is_3
 
@@ -1025,7 +1112,7 @@ _final_rounds_is_1_3:
 %assign I 1
 %rep 4
 APPEND(_num_final_rounds_is_,I):
-        CIPHERNx4B_4 I, 0, buf_idx, length
+        CIPHERNx4B_4 I, 0, buf_idx, 1
         REORDER_LFSR rax, I
         add     buf_idx, (I*4)
         jmp     exit_final_rounds
@@ -1035,10 +1122,9 @@ APPEND(_num_final_rounds_is_,I):
 %assign I 5
 %rep 4
 APPEND(_num_final_rounds_is_,I):
-        CIPHERNx4B_4 4, 0, buf_idx
+        CIPHERNx4B_4 4, 0, buf_idx, 0
         add     buf_idx, 16
-        sub     length, 16
-        CIPHERNx4B_4 (I-4), 4, buf_idx, length
+        CIPHERNx4B_4 (I-4), 4, buf_idx, 1
         add     buf_idx, ((I-4)*4)
         REORDER_LFSR rax, I
         jmp     exit_final_rounds
@@ -1048,12 +1134,11 @@ APPEND(_num_final_rounds_is_,I):
 %assign I 9
 %rep 4
 APPEND(_num_final_rounds_is_,I):
-        CIPHERNx4B_4 4, 0, buf_idx
+        CIPHERNx4B_4 4, 0, buf_idx, 0
         add     buf_idx, 16
-        CIPHERNx4B_4 4, 4, buf_idx
+        CIPHERNx4B_4 4, 4, buf_idx, 0
         add     buf_idx, 16
-        sub     length, 32
-        CIPHERNx4B_4 (I-8), 8, buf_idx, length
+        CIPHERNx4B_4 (I-8), 8, buf_idx, 1
         add     buf_idx, ((I-8)*4)
         REORDER_LFSR rax, I
         jmp     exit_final_rounds
@@ -1061,16 +1146,15 @@ APPEND(_num_final_rounds_is_,I):
 %endrep
 
 %assign I 13
-%rep 3
+%rep 4
 APPEND(_num_final_rounds_is_,I):
-        CIPHERNx4B_4 4, 0, buf_idx
+        CIPHERNx4B_4 4, 0, buf_idx, 0
         add     buf_idx, 16
-        CIPHERNx4B_4 4, 4, buf_idx
+        CIPHERNx4B_4 4, 4, buf_idx, 0
         add     buf_idx, 16
-        CIPHERNx4B_4 4, 8, buf_idx
+        CIPHERNx4B_4 4, 8, buf_idx, 0
         add     buf_idx, 16
-        sub     length, 48
-        CIPHERNx4B_4 (I-12), 12, buf_idx, length
+        CIPHERNx4B_4 (I-12), 12, buf_idx, 1
         add     buf_idx, ((I-12)*4)
         REORDER_LFSR rax, I
         jmp     exit_final_rounds
@@ -1080,7 +1164,7 @@ APPEND(_num_final_rounds_is_,I):
 exit_final_rounds:
         ;; update in/out pointers
         movq           xmm0, buf_idx
-        pshufd         xmm0, xmm0, 0x5
+        pshufd         xmm0, xmm0, 0x44
         movdqa         xmm1, xmm0
         movdqa         xmm2, xmm0
         paddq          xmm1, [pIn]
@@ -1094,8 +1178,17 @@ exit_final_rounds:
         movdqa         [pOut], xmm1
         movdqa         [pOut + 16], xmm2
 
-        ;; Restore rsp pointer
-        mov     rsp, r10
+        ;; Clear stack frame containing keystream information
+%ifdef SAFE_DATA
+        pxor    xmm0, xmm0
+%assign i 0
+%rep 4
+	movdqa  [rsp + _keystr_save + i*16], xmm0
+%assign i (i+1)
+%endrep
+%endif
+        ; Restore rsp
+        mov     rsp, [rsp + _rsp_save]
 
         FUNC_RESTORE
 

@@ -612,40 +612,47 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  *      Definition of the external function that implements the working
  *      stage of the ZUC algorithm. The function will generate a multiple of
  *      4 bytes of keystream for 4 packets in parallel and will XOR this
- *      keystream with the input text, producing multiple of 4 bytes of output
- *      for all 4 packets.
+ *      keystream with the input text, producing output of up to the minimum
+ *      length of all bytes, rounded up to the nearest multiple of 4 bytes.
+ *      "lengths" array is updated after the function call, with the remaining
+ *      bytes to encrypt.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState16_t
  *
  * @param[in] pIn                   Array of pointers to 4 input buffers.
  * @param[out] pOut                 Array of pointers to 4 output buffers.
- * @param[in] length                Length to encrypt (multiple of 4 bytes)
+ * @param[in/out] lengths           Remaining length of buffers to encrypt
+ * @param[in] minLength             Common length for all buffers to encrypt
  *
  * @pre
  *      A successful call to @ref asm_ZucInitialization_4 to initialize the ZUC
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipherNx4B_4_sse(ZucState16_t *pState,
-                                           const uint64_t *pIn[4],
-                                           uint64_t *pOut[4],
-                                           const uint64_t length);
+IMB_DLL_LOCAL void asm_ZucCipher_4_sse(ZucState16_t *pState,
+                                      const uint64_t *pIn[4],
+                                      uint64_t *pOut[4],
+                                      uint16_t lengths[4],
+                                      const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipherNx4B_4_sse_no_aesni(ZucState16_t *pState,
-                                                    const uint64_t *pIn[4],
-                                                    uint64_t *pOut[4],
-                                                    const uint64_t length);
-
-IMB_DLL_LOCAL void asm_ZucCipherNx4B_4_gfni_sse(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucCipher_4_sse_no_aesni(ZucState16_t *pState,
                                                 const uint64_t *pIn[4],
                                                 uint64_t *pOut[4],
-                                                const uint64_t length);
+                                                uint16_t lengths[4],
+                                                const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipherNx4B_4_avx(ZucState16_t *pState,
-                                           const uint64_t *pIn[4],
-                                           uint64_t *pOut[4],
-                                           const uint64_t length);
+IMB_DLL_LOCAL void asm_ZucCipher_4_gfni_sse(ZucState16_t *pState,
+                                            const uint64_t *pIn[4],
+                                            uint64_t *pOut[4],
+                                            uint16_t lengths[4],
+                                            const uint64_t minLength);
+
+IMB_DLL_LOCAL void asm_ZucCipher_4_avx(ZucState16_t *pState,
+                                       const uint64_t *pIn[4],
+                                       uint64_t *pOut[4],
+                                       uint16_t lengths[4],
+                                       const uint64_t minLength);
 
 /**
  ******************************************************************************
@@ -806,30 +813,6 @@ IMB_DLL_LOCAL uint32_t asm_Eia3Round16BAVX(uint32_t T, const void *ks,
 IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX(const void *ks, const void *data,
                                             const uint64_t n_words);
 
-
-IMB_DLL_LOCAL
-void zuc_eea3_4_buffer_job_no_gfni_sse(MB_MGR_ZUC_OOO *ooo,
-                                       const void * const pBufferIn[4],
-                                       void *pBufferOut[4],
-                                       const uint16_t lengthInBytes[4]);
-
-IMB_DLL_LOCAL
-void zuc_eea3_4_buffer_job_gfni_sse(MB_MGR_ZUC_OOO *ooo,
-                                    const void * const pBufferIn[4],
-                                    void *pBufferOut[4],
-                                    const uint16_t lengthInBytes[4]);
-
-IMB_DLL_LOCAL
-void zuc_eea3_4_buffer_job_sse_no_aesni(MB_MGR_ZUC_OOO *ooo,
-                                        const void * const pBufferIn[4],
-                                        void *pBufferOut[4],
-                                        const uint16_t lengthInBytes[4]);
-
-IMB_DLL_LOCAL
-void zuc_eea3_4_buffer_job_avx(MB_MGR_ZUC_OOO *ooo,
-                               const void * const pBufferIn[4],
-                               void *pBufferOut[4],
-                               const uint16_t lengthInBytes[4]);
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],

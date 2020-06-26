@@ -144,8 +144,8 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                            length[2] : length[3]);
         /* min number of bytes */
         uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
-        uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
-        uint32_t remainBytes[NUM_SSE_BUFS] = {0};
+        uint32_t numKeyStreamsPerPkt;
+        uint16_t remainBytes[NUM_SSE_BUFS] = {0};
         DECLARE_ALIGNED(uint8_t keyStr[NUM_SSE_BUFS][KEYSTR_ROUND_LEN], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
@@ -158,15 +158,12 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
         uint64_t *pOut64[NUM_SSE_BUFS] = {NULL};
         uint64_t *pKeyStream64 = NULL;
 
-        /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
-
         /*
          * Calculate the number of bytes left over for each packet,
          * and setup the Keys and IVs
          */
         for (i = 0; i < NUM_SSE_BUFS; i++) {
-                remainBytes[i] = length[i] - bytes;
+                remainBytes[i] = length[i];
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
         }
@@ -181,11 +178,13 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        /* Encrypt common length of all buffers (multiple of 4 bytes) */
+        /* Encrypt common length of all buffers */
         if (use_gfni)
-                asm_ZucCipherNx4B_4_gfni_sse(&state, pIn64, pOut64, bytes);
+                asm_ZucCipher_4_gfni_sse(&state, pIn64, pOut64,
+                                             remainBytes, (uint16_t) bytes);
         else
-                asm_ZucCipherNx4B_4_sse(&state, pIn64, pOut64, bytes);
+                asm_ZucCipher_4_sse(&state, pIn64, pOut64,
+                                        remainBytes, (uint16_t) bytes);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_SSE_BUFS; i++) {
@@ -287,171 +286,6 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
         clear_mem(&state, sizeof(state));
         clear_mem(&keys, sizeof(keys));
 #endif
-}
-
-static inline
-void _zuc_eea3_4_buffer_job(MB_MGR_ZUC_OOO *ooo,
-                            const void * const pBufferIn[NUM_SSE_BUFS],
-                            void *pBufferOut[NUM_SSE_BUFS],
-                            const uint16_t length[NUM_SSE_BUFS],
-                            const unsigned use_gfni)
-{
-        ZucState16_t *state = &ooo->state16;
-        DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        unsigned int i;
-        /* Calculate the minimum input packet size */
-        uint32_t bytes1 = (length[0] < length[1] ?
-                           length[0] : length[1]);
-        uint32_t bytes2 = (length[2] < length[3] ?
-                           length[2] : length[3]);
-        /* min number of bytes */
-        uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
-        uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
-        uint32_t remainBytes[NUM_SSE_BUFS] = {0};
-        uint32_t numBytesLeftOver = 0;
-        const uint8_t *pTempBufInPtr = NULL;
-        uint8_t *pTempBufOutPtr = NULL;
-
-        const uint64_t *pIn64[NUM_SSE_BUFS] = {NULL};
-        uint64_t *pOut64[NUM_SSE_BUFS] = {NULL};
-
-        /* rounded down minimum length */
-        bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
-
-        /*
-         * Calculate the number of bytes left over for each packet
-         */
-        for (i = 0; i < NUM_SSE_BUFS; i++)
-                remainBytes[i] = length[i] - bytes;
-
-        for (i = 0; i < NUM_SSE_BUFS; i++) {
-                pOut64[i] = (uint64_t *) pBufferOut[i];
-                pIn64[i] = (const uint64_t *) pBufferIn[i];
-        }
-
-        if (use_gfni)
-                asm_ZucCipherNx4B_4_gfni_sse(state, pIn64, pOut64, bytes);
-        else
-                asm_ZucCipherNx4B_4_sse(state, pIn64, pOut64, bytes);
-
-        /* process each packet separately for the remaining bytes */
-        for (i = 0; i < NUM_SSE_BUFS; i++) {
-                if (remainBytes[i] && ooo->job_in_lane[i]) {
-                        /* need to copy the zuc state to single packet state */
-                        singlePktState.lfsrState[0] = state->lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state->lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state->lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state->lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state->lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state->lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state->lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state->lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state->lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state->lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state->lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state->lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state->lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state->lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state->lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state->lfsrState[15][i];
-
-                        singlePktState.fR1 = state->fR1[i];
-                        singlePktState.fR2 = state->fR2[i];
-
-                        singlePktState.bX0 = state->bX0[i];
-                        singlePktState.bX1 = state->bX1[i];
-                        singlePktState.bX2 = state->bX2[i];
-                        singlePktState.bX3 = state->bX3[i];
-
-                        numKeyStreamsPerPkt = remainBytes[i] / KEYSTR_ROUND_LEN;
-                        numBytesLeftOver = remainBytes[i]  % KEYSTR_ROUND_LEN;
-
-                        pTempBufInPtr = pBufferIn[i];
-                        pTempBufOutPtr = pBufferOut[i];
-
-                        /* update the output and input pointers here to point
-                         * to the i'th buffers */
-                        pOut64[0] = (uint64_t *) &pTempBufOutPtr[length[i] -
-                                                                remainBytes[i]];
-                        pIn64[0] = (const uint64_t *) &pTempBufInPtr[length[i] -
-                                                                remainBytes[i]];
-
-                        while (numKeyStreamsPerPkt--) {
-                                DECLARE_ALIGNED(uint32_t keyStream[4], 64);
-                                uint64_t *pKeyStream64 = (uint64_t *) keyStream;
-
-                                /* Generate the key stream 16 bytes at a time */
-                                asm_ZucGenKeystream16B_sse(keyStream,
-                                                           &singlePktState);
-                                asm_XorKeyStream16B_sse(pIn64[0], pOut64[0],
-                                                        pKeyStream64);
-                                pIn64[0] += 2;
-                                pOut64[0] += 2;
-                        }
-
-
-                        /* Check for remaining 0 to 15 bytes */
-                        if (numBytesLeftOver) {
-                                DECLARE_ALIGNED(uint8_t tempSrc[KEYSTR_ROUND_LEN], 64);
-                                DECLARE_ALIGNED(uint8_t tempDst[KEYSTR_ROUND_LEN], 64);
-                                uint64_t *pTempSrc64;
-                                uint64_t *pTempDst64;
-                                uint32_t offset = length[i] - numBytesLeftOver;
-                                const uint64_t num4BRounds =
-                                        ((numBytesLeftOver - 1) / 4) + 1;
-                                DECLARE_ALIGNED(uint32_t keyStream[8], 64);
-                                uint64_t *pKeyStream64 = (uint64_t *) keyStream;
-
-                                asm_ZucGenKeystream_sse(keyStream,
-                                                        &singlePktState,
-                                                        num4BRounds);
-                                /* copy the remaining bytes into temporary
-                                 * buffer and XOR with the 16 bytes of
-                                 * keystream. Then copy on the valid bytes back
-                                 * to the output buffer */
-                                memcpy(&tempSrc[0], &pTempBufInPtr[offset],
-                                       numBytesLeftOver);
-                                memset(&tempSrc[numBytesLeftOver], 0,
-                                       KEYSTR_ROUND_LEN - numBytesLeftOver);
-
-                                pTempSrc64 = (uint64_t *) &tempSrc[0];
-                                pTempDst64 = (uint64_t *) &tempDst[0];
-                                asm_XorKeyStream16B_sse(pTempSrc64,
-                                                        pTempDst64,
-                                                        pKeyStream64);
-
-                                memcpy(&pTempBufOutPtr[offset],
-                                       &tempDst[0], numBytesLeftOver);
-#ifdef SAFE_DATA
-                                clear_mem(tempSrc, sizeof(tempSrc));
-                                clear_mem(tempDst, sizeof(tempDst));
-#endif
-                        }
-                }
-        }
-#ifdef SAFE_DATA
-        /* Clear sensitive data in stack */
-        clear_mem(&singlePktState, sizeof(singlePktState));
-        clear_mem(state, sizeof(state));
-#endif
-}
-
-void
-zuc_eea3_4_buffer_job_no_gfni_sse(MB_MGR_ZUC_OOO *ooo,
-                                  const void * const pBufferIn[NUM_SSE_BUFS],
-                                  void *pBufferOut[NUM_SSE_BUFS],
-                                  const uint16_t length[NUM_SSE_BUFS])
-{
-        _zuc_eea3_4_buffer_job(ooo, pBufferIn, pBufferOut, length, 0);
-}
-
-void
-zuc_eea3_4_buffer_job_gfni_sse(MB_MGR_ZUC_OOO *ooo,
-                               const void * const pBufferIn[NUM_SSE_BUFS],
-                               void *pBufferOut[NUM_SSE_BUFS],
-                               const uint16_t length[NUM_SSE_BUFS])
-{
-        _zuc_eea3_4_buffer_job(ooo, pBufferIn, pBufferOut, length, 1);
 }
 
 void zuc_eea3_1_buffer_sse(const void *pKey,

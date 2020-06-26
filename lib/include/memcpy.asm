@@ -373,36 +373,54 @@
 ;    SIZE    : register: length in bytes (not modified)
 ;    TMP     : 64-bit temp GPR (clobbered)
 ;    IDX     : 64-bit GPR to store dst index/offset (clobbered)
+;    OFFSET  ; Offset to be applied to destination pointer (optional)
 ;
 ; The name indicates the options. The name is of the form:
 ; simd_store_<VEC>
 ; where <VEC> is the SIMD instruction type e.g. "sse" or "avx"
 
 
-%macro simd_store_sse 5
-        __simd_store %1,%2,%3,%4,%5,SSE
+%macro simd_store_sse 5-6
+%if %0 == 6
+        __simd_store %1,%2,%3,%4,%5,SSE,16,%6
+%else
+        __simd_store %1,%2,%3,%4,%5,SSE,16
+%endif
 %endm
 
-%macro simd_store_avx 5
-        __simd_store %1,%2,%3,%4,%5,AVX
+%macro simd_store_avx 5-6
+%if %0 == 6
+        __simd_store %1,%2,%3,%4,%5,AVX,16,%6
+%else
+        __simd_store %1,%2,%3,%4,%5,AVX,16
+%endif
 %endm
 
-%macro simd_store_sse_15 5
+%macro simd_store_sse_15 5-6
+%if %0 == 6
+        __simd_store %1,%2,%3,%4,%5,SSE,15,%6
+%else
         __simd_store %1,%2,%3,%4,%5,SSE,15
+%endif
 %endm
 
-%macro simd_store_avx_15 5
+%macro simd_store_avx_15 5-6
+%if %0 == 6
+        __simd_store %1,%2,%3,%4,%5,AVX,15,%6
+%else
         __simd_store %1,%2,%3,%4,%5,AVX,15
+%endif
 %endm
 
-%macro __simd_store 6-7
+%macro __simd_store 7-8
 %define %%DST      %1    ; register: pointer to dst (not modified)
 %define %%SRC      %2    ; register: src data (clobbered)
 %define %%SIZE     %3    ; register: length in bytes (not modified)
 %define %%TMP      %4    ; 64-bit temp GPR (clobbered)
 %define %%IDX      %5    ; 64-bit temp GPR to store dst idx (clobbered)
 %define %%SIMDTYPE %6    ; "SSE" or "AVX"
-%define %%MAX_LEN  %7    ; [optional] maximum length to be stored, default 16
+%define %%MAX_LEN  %7    ; maximum length to be stored
+%define %%OFFSET   %8    ; offset to be applied to destination pointer
 
 %define %%PSRLDQ _PSRLDQ %%SIMDTYPE,
 
@@ -415,22 +433,22 @@
 %endif
 
 ;; determine max byte size for store operation
-%if %0 > 6
 %assign max_length_to_store %%MAX_LEN
-%else
-%assign max_length_to_store 16
-%endif
 
 %if max_length_to_store > 16
 %error "__simd_store macro invoked with MAX_LEN bigger than 16!"
 %endif
 
-        xor %%IDX, %%IDX        ; zero idx
+%if %0 == 8
+        mov     %%IDX, %%OFFSET
+%else
+        xor     %%IDX, %%IDX        ; zero idx
+%endif
 
 %if max_length_to_store == 16
         test    %%SIZE, 16
         jz      %%lt16
-        %%MOVDQU [%%DST], %%SRC
+        %%MOVDQU [%%DST + %%IDX], %%SRC
         jmp     %%end
 %%lt16:
 %endif
