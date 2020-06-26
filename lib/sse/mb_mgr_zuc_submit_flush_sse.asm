@@ -39,6 +39,7 @@
 %define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_no_gfni_sse
 %define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_no_gfni_sse
 %define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_no_gfni_sse
+%define ZUC_INIT_4        asm_ZucInitialization_4_sse
 %endif
 
 section .data
@@ -51,6 +52,7 @@ db      0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01
 
 extern ZUC_EEA3_4_BUFFER
 extern ZUC_EIA3_4_BUFFER
+extern ZUC_INIT_4
 
 %ifdef LINUX
 %define arg1    rdi
@@ -75,6 +77,7 @@ extern ZUC_EIA3_4_BUFFER
 
 ; This routine and its callee clobbers all GPRs
 struc STACK
+_state_save    resq     2*(16+6) ; Space for ZUC LFSR + R1-2 + X0-3
 _gpr_save:      resq    10
 _null_len_save: resq    1
 _rsp_save:      resq    1
@@ -83,6 +86,7 @@ endstruc
 section .text
 
 %define APPEND(a,b) a %+ b
+%define APPEND3(a,b,c) a %+ b %+ c
 
 ; JOB* SUBMIT_JOB_ZUC_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -98,6 +102,7 @@ SUBMIT_JOB_ZUC_EEA3:
 %define lane             r8
 %define unused_lanes     rbx
 %define len2             r13
+%define tmp2             r13
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -125,6 +130,10 @@ SUBMIT_JOB_ZUC_EEA3:
         mov     [state + _zuc_unused_lanes], unused_lanes
 
         mov     [state + _zuc_job_in_lane + lane*8], job
+        ; New job that needs init (update bit in zuc_init_not_done bitmask)
+        SHIFT_GP        1, lane, tmp, tmp2, left
+        or      [state + _zuc_init_not_done], BYTE(tmp)
+
         mov     tmp, [job + _src]
         add     tmp, [job + _cipher_start_src_offset_in_bytes]
         mov     [state + _zuc_args_in + lane*8], tmp
@@ -151,33 +160,75 @@ SUBMIT_JOB_ZUC_EEA3:
         cmp     len2, 0
         je      len_is_0_submit_eea3
 
-        ; Move state into r11, as register for state will be used
+        ; Move state into r12, as register for state will be used
         ; to pass parameter to next function
-        mov     r11, state
+        mov     r12, state
+
+%assign I 0
+%rep (16 + 6)
+        movdqa  xmm0, [r12 + _zuc_state + 64*I]
+        movdqa  [rsp + _state_save + 16*I], xmm0
+%assign I (I + 1)
+%endrep
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
-        sub     rsp, 48
+        ;; 24 bytes for 3 parameters
+        sub     rsp, 24
 %endif
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
+        lea     arg1, [r12 + _zuc_args_keys]
+        lea     arg2, [r12 + _zuc_args_IV]
+        lea     arg3, [r12 + _zuc_state]
+
+        call    ZUC_INIT_4
+
+%ifndef LINUX
+        add     rsp, 24
 %endif
+
+        cmp     byte [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
+        je      skip_submit_restoring_state
+
+        ;; Restore state from stack for lanes that did not need init
+%assign I 0
+%rep (16 + 6)
+        movdqa  xmm0, [rsp + _state_save + 16*I] ; State before init
+        movdqa  xmm1, [r12 + _zuc_state + 64*I] ; State after init
+%assign J 0
+%rep 4
+        test    word [r12 + _zuc_init_not_done], (1 << J)
+        jnz     APPEND3(skip_submit_lane_,I,J)
+        ;; Extract dword from xmm0
+        pextrd  r15d, xmm0, J ; value
+        mov     r8, (J << 4) ; index
+
+        XPINSRD xmm1, xmm2, r14, r8, r15, no_scale
+
+APPEND3(skip_submit_lane_,I,J):
+%assign J (J+1)
+%endrep
+        movdqa  [r12 + _zuc_state + 64*I], xmm1 ; Save new state
+
+%assign I (I + 1)
+%endrep
+
+skip_submit_restoring_state:
+        mov     byte [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
+
+        ;; If Windows, reserve memory in stack for parameter transferring
+%ifndef LINUX
+        ;; 32 bytes for 4 parameters
+        sub     rsp, 32
+%endif
+        mov     arg1, r12
+        lea     arg2, [r12 + _zuc_args_in]
+        lea     arg3, [r12 + _zuc_args_out]
+        lea     arg4, [r12 + _zuc_lens]
 
         call    ZUC_EEA3_4_BUFFER
 
 %ifndef LINUX
-        add     rsp, 48
+        add     rsp, 32
 %endif
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -303,33 +354,96 @@ APPEND(skip_eea3_,I):
 %assign I (I+1)
 %endrep
 
-        ; Move state into r11, as register for state will be used
+        ; Move state into r12, as register for state will be used
         ; to pass parameter to next function
-        mov     r11, state
+        mov     r12, state
+
+        cmp     word [r12 + _zuc_init_not_done], 0
+        je      skip_flush_init
+
+%assign I 0
+%rep (16 + 6)
+        movdqa  xmm0, [r12 + _zuc_state + 64*I]
+        movdqa  [rsp + _state_save + 16*I], xmm0
+%assign I (I + 1)
+%endrep
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 48 bytes for 6 parameters (already aligned to 16 bytes)
-        sub     rsp, 48
+        ;; 24 bytes for 3 parameters
+        sub     rsp, 24
 %endif
-        lea     arg1, [r11 + _zuc_args_keys]
-        lea     arg2, [r11 + _zuc_args_IV]
-        lea     arg3, [r11 + _zuc_args_in]
-        lea     arg4, [r11 + _zuc_args_out]
-%ifdef LINUX
-        lea     arg5, [r11 + _zuc_lens]
-        lea     arg6, [r11 + _zuc_job_in_lane]
-%else
-        lea     r12, [r11 + _zuc_lens]
-        mov     arg5, r12
-        lea     r12, [r11 + _zuc_job_in_lane]
-        mov     arg6, r12
+        lea     arg1, [r12 + _zuc_args_keys]
+        lea     arg2, [r12 + _zuc_args_IV]
+        lea     arg3, [r12 + _zuc_state]
+
+        call    ZUC_INIT_4
+
+%ifndef LINUX
+        add     rsp, 24
 %endif
+        cmp     word [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
+        je      skip_flush_restoring_state
+
+        ;; Restore state from stack for lanes that did not need init
+%assign I 0
+%rep (16 + 6)
+        movdqa  xmm0, [rsp + _state_save + 16*I] ; State before init
+        movdqa  xmm1, [r12 + _zuc_state + 64*I] ; State after init
+%assign J 0
+%rep 4
+        test    word [r12 + _zuc_init_not_done], (1 << J)
+        jnz     APPEND3(skip_flush_lane_,I,J)
+        ;; Extract dword from xmm0
+        pextrd  r15d, xmm0, J ; value
+        mov     r8, (J << 4) ; index
+
+        XPINSRD xmm1, xmm2, r14, r8, r15, no_scale
+
+APPEND3(skip_flush_lane_,I,J):
+%assign J (J+1)
+%endrep
+        movdqa  [r12 + _zuc_state + 64*I], xmm1 ; Save new state
+%assign I (I + 1)
+%endrep
+
+skip_flush_restoring_state:
+        mov     word [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
+
+skip_flush_init:
+
+        ;; Copy state from good lane to NULL lanes
+%assign I 0
+%rep (16 + 6)
+        ; Read dword from good lane and broadcast to NULL lanes
+        mov     r13d, [r12 + _zuc_state + 64*I + idx*4]
+        movdqa  xmm1, [r12 + _zuc_state + 64*I] ; State after init
+%assign J 0
+%rep 4
+        cmp     qword [r12 + _zuc_job_in_lane + J*8], 0
+        jne     APPEND3(skip_eea3_copy_,I,J)
+        pinsrd  xmm1, r13d, J
+
+APPEND3(skip_eea3_copy_,I,J):
+%assign J (J+1)
+%endrep
+        movdqa  [r12 + _zuc_state + 64*I], xmm1 ; Save new state
+%assign I (I+1)
+%endrep
+        ;; If Windows, reserve memory in stack for parameter transferring
+%ifndef LINUX
+        ;; 32 bytes for 4 parameters
+        sub     rsp, 32
+%endif
+        mov     arg1, r12
+        lea     arg2, [r12 + _zuc_args_in]
+        lea     arg3, [r12 + _zuc_args_out]
+        lea     arg4, [r12 + _zuc_lens]
 
         call    ZUC_EEA3_4_BUFFER
 
 %ifndef LINUX
-        add     rsp, 48
+        add     rsp, 32
 %endif
         mov     tmp5, [rsp + _null_len_save]
 

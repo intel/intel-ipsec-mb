@@ -134,8 +134,7 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                             const uint32_t length[NUM_SSE_BUFS],
                             const unsigned use_gfni)
 {
-
-        DECLARE_ALIGNED(ZucState4_t state, 64);
+        DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i;
         /* Calculate the minimum input packet size */
@@ -161,9 +160,6 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
 
         /* rounded down minimum length */
         bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
-
-        /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState4_t));
 
         /*
          * Calculate the number of bytes left over for each packet,
@@ -294,15 +290,13 @@ void _zuc_eea3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
 }
 
 static inline
-void _zuc_eea3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
-                            const void * const pIv[NUM_SSE_BUFS],
+void _zuc_eea3_4_buffer_job(MB_MGR_ZUC_OOO *ooo,
                             const void * const pBufferIn[NUM_SSE_BUFS],
                             void *pBufferOut[NUM_SSE_BUFS],
                             const uint16_t length[NUM_SSE_BUFS],
-                            const void * const job_in_lane[NUM_SSE_BUFS],
                             const unsigned use_gfni)
 {
-        DECLARE_ALIGNED(ZucState4_t state, 64);
+        ZucState16_t *state = &ooo->state16;
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i;
         /* Calculate the minimum input packet size */
@@ -314,10 +308,6 @@ void _zuc_eea3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         uint32_t bytes = (bytes1 < bytes2) ? bytes1 : bytes2;
         uint32_t numKeyStreamsPerPkt = bytes / ZUC_WORD_BYTES;
         uint32_t remainBytes[NUM_SSE_BUFS] = {0};
-        /* structure to store the 4 keys */
-        DECLARE_ALIGNED(ZucKey4_t keys, 64);
-        /* structure to store the 4 IV's */
-        DECLARE_ALIGNED(ZucIv4_t ivs, 64);
         uint32_t numBytesLeftOver = 0;
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
@@ -328,23 +318,11 @@ void _zuc_eea3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         /* rounded down minimum length */
         bytes = numKeyStreamsPerPkt * ZUC_WORD_BYTES;
 
-        /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState4_t));
-
         /*
-         * Calculate the number of bytes left over for each packet,
-         * and setup the Keys and IVs
+         * Calculate the number of bytes left over for each packet
          */
-        for (i = 0; i < NUM_SSE_BUFS; i++) {
+        for (i = 0; i < NUM_SSE_BUFS; i++)
                 remainBytes[i] = length[i] - bytes;
-                keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
-        }
-
-        if (use_gfni)
-                asm_ZucInitialization_4_gfni_sse(&keys, &ivs, &state);
-        else
-                asm_ZucInitialization_4_sse(&keys, &ivs, &state);
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
@@ -352,38 +330,38 @@ void _zuc_eea3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         }
 
         if (use_gfni)
-                asm_ZucCipherNx4B_4_gfni_sse(&state, pIn64, pOut64, bytes);
+                asm_ZucCipherNx4B_4_gfni_sse(state, pIn64, pOut64, bytes);
         else
-                asm_ZucCipherNx4B_4_sse(&state, pIn64, pOut64, bytes);
+                asm_ZucCipherNx4B_4_sse(state, pIn64, pOut64, bytes);
 
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_SSE_BUFS; i++) {
-                if (remainBytes[i] && job_in_lane[i]) {
+                if (remainBytes[i] && ooo->job_in_lane[i]) {
                         /* need to copy the zuc state to single packet state */
-                        singlePktState.lfsrState[0] = state.lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state.lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state.lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state.lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state.lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state.lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state.lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state.lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state.lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state.lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state.lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state.lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state.lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state.lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state.lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state.lfsrState[15][i];
+                        singlePktState.lfsrState[0] = state->lfsrState[0][i];
+                        singlePktState.lfsrState[1] = state->lfsrState[1][i];
+                        singlePktState.lfsrState[2] = state->lfsrState[2][i];
+                        singlePktState.lfsrState[3] = state->lfsrState[3][i];
+                        singlePktState.lfsrState[4] = state->lfsrState[4][i];
+                        singlePktState.lfsrState[5] = state->lfsrState[5][i];
+                        singlePktState.lfsrState[6] = state->lfsrState[6][i];
+                        singlePktState.lfsrState[7] = state->lfsrState[7][i];
+                        singlePktState.lfsrState[8] = state->lfsrState[8][i];
+                        singlePktState.lfsrState[9] = state->lfsrState[9][i];
+                        singlePktState.lfsrState[10] = state->lfsrState[10][i];
+                        singlePktState.lfsrState[11] = state->lfsrState[11][i];
+                        singlePktState.lfsrState[12] = state->lfsrState[12][i];
+                        singlePktState.lfsrState[13] = state->lfsrState[13][i];
+                        singlePktState.lfsrState[14] = state->lfsrState[14][i];
+                        singlePktState.lfsrState[15] = state->lfsrState[15][i];
 
-                        singlePktState.fR1 = state.fR1[i];
-                        singlePktState.fR2 = state.fR2[i];
+                        singlePktState.fR1 = state->fR1[i];
+                        singlePktState.fR2 = state->fR2[i];
 
-                        singlePktState.bX0 = state.bX0[i];
-                        singlePktState.bX1 = state.bX1[i];
-                        singlePktState.bX2 = state.bX2[i];
-                        singlePktState.bX3 = state.bX3[i];
+                        singlePktState.bX0 = state->bX0[i];
+                        singlePktState.bX1 = state->bX1[i];
+                        singlePktState.bX2 = state->bX2[i];
+                        singlePktState.bX3 = state->bX3[i];
 
                         numKeyStreamsPerPkt = remainBytes[i] / KEYSTR_ROUND_LEN;
                         numBytesLeftOver = remainBytes[i]  % KEYSTR_ROUND_LEN;
@@ -454,33 +432,26 @@ void _zuc_eea3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
 #ifdef SAFE_DATA
         /* Clear sensitive data in stack */
         clear_mem(&singlePktState, sizeof(singlePktState));
-        clear_mem(&state, sizeof(state));
-        clear_mem(&keys, sizeof(keys));
+        clear_mem(state, sizeof(state));
 #endif
 }
 
 void
-zuc_eea3_4_buffer_job_no_gfni_sse(const void * const pKey[NUM_SSE_BUFS],
-                                  const void * const pIv[NUM_SSE_BUFS],
+zuc_eea3_4_buffer_job_no_gfni_sse(MB_MGR_ZUC_OOO *ooo,
                                   const void * const pBufferIn[NUM_SSE_BUFS],
                                   void *pBufferOut[NUM_SSE_BUFS],
-                                  const uint16_t length[NUM_SSE_BUFS],
-                                  const void * const job_in_lane[NUM_SSE_BUFS])
+                                  const uint16_t length[NUM_SSE_BUFS])
 {
-        _zuc_eea3_4_buffer_job(pKey, pIv, pBufferIn, pBufferOut,
-                               length, job_in_lane, 0);
+        _zuc_eea3_4_buffer_job(ooo, pBufferIn, pBufferOut, length, 0);
 }
 
 void
-zuc_eea3_4_buffer_job_gfni_sse(const void * const pKey[NUM_SSE_BUFS],
-                               const void * const pIv[NUM_SSE_BUFS],
+zuc_eea3_4_buffer_job_gfni_sse(MB_MGR_ZUC_OOO *ooo,
                                const void * const pBufferIn[NUM_SSE_BUFS],
                                void *pBufferOut[NUM_SSE_BUFS],
-                               const uint16_t length[NUM_SSE_BUFS],
-                               const void * const job_in_lane[NUM_SSE_BUFS])
+                               const uint16_t length[NUM_SSE_BUFS])
 {
-        _zuc_eea3_4_buffer_job(pKey, pIv, pBufferIn, pBufferOut,
-                               length, job_in_lane, 1);
+        _zuc_eea3_4_buffer_job(ooo, pBufferIn, pBufferOut, length, 1);
 }
 
 void zuc_eea3_1_buffer_sse(const void *pKey,
@@ -744,7 +715,7 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                             const unsigned use_gfni)
 {
         unsigned int i;
-        DECLARE_ALIGNED(ZucState4_t state, 64);
+        DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size */
         uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
@@ -771,9 +742,6 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
         }
-
-        /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState4_t));
 
         if (use_gfni) {
                 asm_ZucInitialization_4_gfni_sse(&keys, &ivs, &state);
@@ -948,7 +916,7 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                             const unsigned use_gfni)
 {
         unsigned int i;
-        DECLARE_ALIGNED(ZucState4_t state, 64);
+        DECLARE_ALIGNED(ZucState16_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size */
         uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
@@ -975,9 +943,6 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
         }
-
-        /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState4_t));
 
         if (use_gfni) {
                 asm_ZucInitialization_4_gfni_sse(&keys, &ivs, &state);
