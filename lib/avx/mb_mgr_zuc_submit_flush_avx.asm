@@ -77,7 +77,7 @@ extern asm_ZucCipher_4_avx
 
 ; This routine and its callee clobbers all GPRs
 struc STACK
-_state_save    resq     2*(16+6) ; Space for ZUC LFSR + R1-2 + X0-3
+_state_save    resq     2*(16+2) ; Space for ZUC LFSR + R1-2
 _gpr_save:      resq    10
 _null_len_save: resq    1
 _rsp_save:      resq    1
@@ -169,7 +169,7 @@ SUBMIT_JOB_ZUC_EEA3:
         mov     r12, state
 
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         vmovdqa  xmm0, [r12 + _zuc_state + 64*I]
         vmovdqa  [rsp + _state_save + 16*I], xmm0
 %assign I (I + 1)
@@ -195,7 +195,7 @@ SUBMIT_JOB_ZUC_EEA3:
 
         ;; Restore state from stack for lanes that did not need init
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         vmovdqa  xmm0, [rsp + _state_save + 16*I] ; State before init
         vmovdqa  xmm1, [r12 + _zuc_state + 64*I] ; State after init
 %assign J 0
@@ -361,7 +361,7 @@ APPEND(skip_eea3_,I):
         je      skip_flush_init
 
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         vmovdqa  xmm0, [r12 + _zuc_state + 64*I]
         vmovdqa  [rsp + _state_save + 16*I], xmm0
 %assign I (I + 1)
@@ -386,7 +386,7 @@ APPEND(skip_eea3_,I):
 
         ;; Restore state from stack for lanes that did not need init
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         vmovdqa  xmm0, [rsp + _state_save + 16*I] ; State before init
         vmovdqa  xmm1, [r12 + _zuc_state + 64*I] ; State after init
 %assign J 0
@@ -413,7 +413,7 @@ skip_flush_init:
 
         ;; Copy state from good lane to NULL lanes
 %assign I 0
-%rep (16 + 6)
+%rep (16 + 2)
         ; Read dword from good lane and broadcast to NULL lanes
         mov     r13d, [r12 + _zuc_state + 64*I + idx*4]
 

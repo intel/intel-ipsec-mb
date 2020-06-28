@@ -203,11 +203,6 @@ void _zuc_eea3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
 
-                        singlePktState.bX0 = state.bX0[i];
-                        singlePktState.bX1 = state.bX1[i];
-                        singlePktState.bX2 = state.bX2[i];
-                        singlePktState.bX3 = state.bX3[i];
-
                         numKeyStreamsPerPkt = remainBytes[i] / KEYSTR_ROUND_LEN;
                         numBytesLeftOver = remainBytes[i]  % KEYSTR_ROUND_LEN;
 
@@ -598,11 +593,6 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
 
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
-
-                        singlePktState.bX0 = state.bX0[i];
-                        singlePktState.bX1 = state.bX1[i];
-                        singlePktState.bX2 = state.bX2[i];
-                        singlePktState.bX3 = state.bX3[i];
                 }
 
                 while (remainBits >= keyStreamLengthInBits) {
@@ -794,11 +784,6 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
 
                         singlePktState.fR1 = state.fR1[i];
                         singlePktState.fR2 = state.fR2[i];
-
-                        singlePktState.bX0 = state.bX0[i];
-                        singlePktState.bX1 = state.bX1[i];
-                        singlePktState.bX2 = state.bX2[i];
-                        singlePktState.bX3 = state.bX3[i];
                 }
 
                 while (remainBits >= keyStreamLengthInBits) {

@@ -673,10 +673,10 @@ ZUC_INIT_4:
 %assign j (j + 1)
 %endrep
 
-    ; Zero out state (LFSR and X0-X3)
+    ; Zero out state (LFSR and R1-R2)
     pxor    xmm0, xmm0
 %assign I 0
-%rep (16 + 4)
+%rep (16 + 2)
     movdqa  [pState + I*64], xmm0 ; Zero out only lower 128 bits
 %assign I (I + 1)
 %endrep
