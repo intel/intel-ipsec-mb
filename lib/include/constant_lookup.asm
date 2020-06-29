@@ -61,6 +61,7 @@ align 16
 idx_tab64:
         dq 0x0,  0x1
 
+align 16
 add_2:
         dq 0x2, 0x2
 
@@ -575,6 +576,7 @@ exit64_sse:
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
 ; arg 3 : size of table to look up
+align 32
 MKGLOBAL(lookup_64bit_avx,function,internal)
 lookup_64bit_avx:
         ;; Number of loop iters = matrix size / 2 (number of values in XMM)
