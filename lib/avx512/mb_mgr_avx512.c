@@ -812,8 +812,7 @@ submit_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
 extern IMB_JOB *
 flush_job_aes_docsis256_enc_crc32_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state);
 
-__forceinline
-IMB_JOB *
+static IMB_JOB *
 submit_job_docsis128_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
                                              IMB_JOB *job)
 {
@@ -834,11 +833,9 @@ submit_job_docsis128_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
         aes_docsis128_dec_crc32_vaes_avx512(job);
 
         return job;
-
 }
 
-__forceinline
-IMB_JOB *
+static IMB_JOB *
 submit_job_docsis256_sec_crc_dec_vaes_avx512(MB_MGR_DOCSIS_AES_OOO *state,
                                              IMB_JOB *job)
 {
