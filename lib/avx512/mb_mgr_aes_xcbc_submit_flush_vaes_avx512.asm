@@ -189,7 +189,7 @@ endstruc
 
         ;; clear final blocks and ICV buffers
         vmovdqa         [state + _aes_xcbc_ldata + k * _XCBC_LANE_DATA_size + _xcbc_final_block], %%YTMP
-
+        vmovdqa         [state + _aes_xcbc_args_ICV + k * 16], XWORD(%%YTMP)
 %assign j 0 ; inner loop to iterate through round keys
 %rep NUM_KEYS
         vmovdqa         [state + _aes_xcbc_args_key_tab + j + (k*16)], XWORD(%%YTMP)
