@@ -652,4 +652,40 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
         vmovdqa64       %%r1, %%t0
         vmovdqa64       %%r3, %%t1
 %endmacro
+
+; 4x4 128-BIT TRANSPOSE
+;
+; addr0-addr3    [in]  pointers to the next 64-byte block of data to be fetch for all 4 lanes
+; r0-r3          [out] zmm registers which will contain the data transposed
+; t0-t1          [clobbered] zmm temporary registers
+; PERM_INDEX1-2  [clobbered] zmm registers for shuffle mask storing and temporary ZMM register
+%macro TRANSPOSE4_U128_INPLACE 8
+%define %%r0 %1
+%define %%r1 %2
+%define %%r2 %3
+%define %%r3 %4
+%define %%t0 %5
+%define %%t1 %6
+%define %%PERM_INDEX1 %7
+%define %%PERM_INDEX2 %8
+
+%define %%t2 %%PERM_INDEX1
+
+        vmovdqa64       %%PERM_INDEX1, [rel PSHUFFLE_TRANSPOSE_MASK1]
+        vmovdqa64       %%PERM_INDEX2, [rel PSHUFFLE_TRANSPOSE_MASK2]
+
+        vmovdqa64       %%t0, %%r0
+        vpermt2q        %%r0, %%PERM_INDEX1,%%r1 ; 0 4 2 6
+        vpermt2q        %%t0, %%PERM_INDEX2,%%r1 ; 1 5 3 7
+
+        vmovdqa64       %%t1, %%r2
+        vpermt2q        %%r2, %%PERM_INDEX1,%%r3 ; 8 12 10 14
+        vpermt2q        %%t1, %%PERM_INDEX2,%%r3 ; 9 13 11 15
+
+        vshufi64x2      %%t2, %%r0, %%r2, 0x44 ; 0 4 8  12
+        vshufi64x2      %%r2, %%r0, %%r2, 0xee ; 2 6 10 14
+        vmovdqa64       %%r0, %%t2
+        vshufi64x2      %%r1, %%t0, %%t1, 0x44 ; 1 5 9  13
+        vshufi64x2      %%r3, %%t0, %%t1, 0xee ; 3 7 11 15
+%endmacro
 %endif ;; _TRANSPOSE_AVX512_ASM_
