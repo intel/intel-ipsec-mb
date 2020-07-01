@@ -33,7 +33,9 @@
 %include "include/aes_common.asm"
 %include "mb_mgr_datastruct.asm"
 
-extern ethernet_fcs_avx512
+default rel
+
+extern ethernet_fcs_avx512_local
 
 ;; In System V AMD64 ABI
 ;;	callee saves: RBX, RBP, R12-R15
@@ -71,7 +73,6 @@ endstruc
 
 
 section .data
-default rel
 
 ;;; Precomputed constants for CRC32 (Ethernet FCS)
 ;;;   Details of the CRC algorithm and 4 byte buffer of
@@ -1481,7 +1482,7 @@ section .text
         mov             arg2, [job + _msg_len_to_hash_in_bytes]
         xor             arg3, arg3
         mov             arg1, tmp1
-        call            ethernet_fcs_avx512
+        call            ethernet_fcs_avx512_local
         mov             job, [rsp + _job_save]
 
 %%aes_docsis_dec_crc32_avx512__exit:

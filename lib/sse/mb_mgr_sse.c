@@ -1056,6 +1056,7 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->sha512              = sha512_sse;
         state->md5_one_block       = md5_one_block_sse;
         state->aes128_cfb_one      = aes_cfb_128_one_sse;
+        state->crc32_ethernet_fcs  = ethernet_fcs_sse;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
         if (state->features & IMB_FEATURE_GFNI) {

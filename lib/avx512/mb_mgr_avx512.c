@@ -378,6 +378,9 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
 extern uint32_t
 ethernet_fcs_avx512(const void *msg, uint64_t len, const void *tag_ouput);
 
+extern uint32_t
+ethernet_fcs_avx(const void *msg, uint64_t len, const void *tag_ouput);
+
 #define ETHERNET_FCS ethernet_fcs_avx512
 
 /* ====================================================================== */
@@ -1576,6 +1579,12 @@ init_mb_mgr_avx512(IMB_MGR *state)
 
         state->hec_32              = hec_32_avx;
         state->hec_64              = hec_64_avx;
+        state->crc32_ethernet_fcs  = ethernet_fcs_avx;
+
+        if ((state->features & IMB_FEATURE_VPCLMULQDQ) ==
+            IMB_FEATURE_VPCLMULQDQ) {
+                state->crc32_ethernet_fcs  = ethernet_fcs_avx512;
+        }
 
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
                 submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;

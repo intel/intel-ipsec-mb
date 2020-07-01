@@ -705,6 +705,7 @@ typedef size_t (*snow3g_key_sched_size_t)(void);
 typedef uint32_t (*hec_32_t)(const uint8_t *);
 typedef uint64_t (*hec_64_t)(const uint8_t *);
 
+typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t, const void *);
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
@@ -860,12 +861,11 @@ typedef struct IMB_MGR {
         aes_gmac_finalize_t     gmac128_finalize;
         aes_gmac_finalize_t     gmac192_finalize;
         aes_gmac_finalize_t     gmac256_finalize;
-
         hec_32_t                hec_32;
         hec_64_t                hec_64;
-
         cmac_subkey_gen_t       cmac_subkey_gen_256;
         aes_gcm_pre_t           ghash_pre;
+        crc32_fn_t              crc32_ethernet_fcs;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1645,6 +1645,10 @@ IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
 /* HEC compute functions */
 #define IMB_HEC_32(_mgr, _in)((_mgr)->hec_32(_in))
 #define IMB_HEC_64(_mgr, _in)((_mgr)->hec_64(_in))
+
+/* CRC32 Ethernet FCS function */
+#define IMB_CRC32_ETHERNET_FCS(_mgr,_in,_len,_tag_out) \
+        (_mgr)->crc32_ethernet_fcs(_in,_len,_tag_out)
 
 /* Auxiliary functions */
 

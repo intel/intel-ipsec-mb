@@ -899,9 +899,9 @@ init_mb_mgr_avx(IMB_MGR *state)
         state->gmac128_finalize    = imb_aes_gmac_finalize_128_avx_gen2;
         state->gmac192_finalize    = imb_aes_gmac_finalize_192_avx_gen2;
         state->gmac256_finalize    = imb_aes_gmac_finalize_256_avx_gen2;
-
         state->hec_32              = hec_32_avx;
         state->hec_64              = hec_64_avx;
+        state->crc32_ethernet_fcs  = ethernet_fcs_avx;
 }
 
 #include "mb_mgr_code.h"

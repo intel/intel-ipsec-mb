@@ -894,6 +894,7 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
 
         state->hec_32              = hec_32_sse_no_aesni;
         state->hec_64              = hec_64_sse_no_aesni;
+        state->crc32_ethernet_fcs  = ethernet_fcs_sse_no_aesni;
 }
 
 #include "mb_mgr_code.h"

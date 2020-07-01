@@ -55,6 +55,7 @@ extern int clear_mem_test(struct IMB_MGR *mb_mgr);
 extern int hec_test(struct IMB_MGR *mb_mgr);
 extern int xcbc_test(struct IMB_MGR *mb_mgr);
 extern int aes_cbcs_test(struct IMB_MGR *mb_mgr);
+extern int crc_test(struct IMB_MGR *mb_mgr);
 
 #include "do_test.h"
 
@@ -308,6 +309,7 @@ main(int argc, char **argv)
                 errors += api_test(p_mgr);
                 errors += direct_api_test(p_mgr);
                 errors += clear_mem_test(p_mgr);
+                errors += crc_test(p_mgr);
                 free_mb_mgr(p_mgr);
         }
 

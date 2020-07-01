@@ -51,12 +51,6 @@
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
 
-%define	fetch_dist	1024
-
-default rel
-section .text
-
-
 %ifndef LINUX
 	%xdefine	arg1 rcx
 	%xdefine	arg2 rdx
@@ -78,13 +72,18 @@ section .text
 
 
 %ifndef LINUX
-	%define VARIABLE_OFFSET 16*10
+%define VARIABLE_OFFSET 16*10
 %endif
 
-align 16
+default rel
+section .text
 
-MKGLOBAL(ethernet_fcs_avx512,function,internal)
+align 32
+
+MKGLOBAL(ethernet_fcs_avx512,function,)
+MKGLOBAL(ethernet_fcs_avx512_local,function,internal)
 ethernet_fcs_avx512:
+ethernet_fcs_avx512_local:
 
         ;; Note: Passing initial CRC not currently supported
         ;not		init_crc_low32             ;; uncomment to enabled initial CRC passing
@@ -418,43 +417,39 @@ exact_16_left:
 	vpxor	xmm7, xmm0      ; xor the initial crc value
 	jmp	done_128
 
-
 section .data
-align 32
 
-%ifndef USE_CONSTS
+align 64
 ; precomputed constants
-rk_1: dq 0x00000000e95c1271
-rk_2: dq 0x00000000ce3371cb
-rk1:  dq 0x00000000ccaa009e
-rk2:  dq 0x00000001751997d0
-rk3:  dq 0x000000014a7fe880
-rk4:  dq 0x00000001e88ef372
-rk5:  dq 0x00000000ccaa009e
-rk6:  dq 0x0000000163cd6124
-rk7:  dq 0x00000001f7011640
-rk8:  dq 0x00000001db710640
-rk9:  dq 0x00000001d7cfc6ac
-rk10: dq 0x00000001ea89367e
-rk11: dq 0x000000018cb44e58
-rk12: dq 0x00000000df068dc2
-rk13: dq 0x00000000ae0b5394
-rk14: dq 0x00000001c7569e54
-rk15: dq 0x00000001c6e41596
-rk16: dq 0x0000000154442bd4
-rk17: dq 0x0000000174359406
-rk18: dq 0x000000003db1ecdc
-rk19: dq 0x000000015a546366
-rk20: dq 0x00000000f1da05aa
+rk_1:   dq 0x00000000e95c1271
+rk_2:   dq 0x00000000ce3371cb
+rk1:    dq 0x00000000ccaa009e
+rk2:    dq 0x00000001751997d0
+rk3:    dq 0x000000014a7fe880
+rk4:    dq 0x00000001e88ef372
+rk5:    dq 0x00000000ccaa009e
+rk6:    dq 0x0000000163cd6124
+rk7:    dq 0x00000001f7011640
+rk8:    dq 0x00000001db710640
+rk9:    dq 0x00000001d7cfc6ac
+rk10:   dq 0x00000001ea89367e
+rk11:   dq 0x000000018cb44e58
+rk12:   dq 0x00000000df068dc2
+rk13:   dq 0x00000000ae0b5394
+rk14:   dq 0x00000001c7569e54
+rk15:   dq 0x00000001c6e41596
+rk16:   dq 0x0000000154442bd4
+rk17:   dq 0x0000000174359406
+rk18:   dq 0x000000003db1ecdc
+rk19:   dq 0x000000015a546366
+rk20:   dq 0x00000000f1da05aa
 
-rk_1b: dq 0x00000000ccaa009e
-rk_2b: dq 0x00000001751997d0
+rk_1b:  dq 0x00000000ccaa009e
+rk_2b:  dq 0x00000001751997d0
 	dq 0x0000000000000000
 	dq 0x0000000000000000
-%else
-INCLUDE_CONSTS
-%endif
 
+align 16
 pshufb_shf_table:
 ; use these values for shift constants for the pshufb instruction
 ; different alignments result in values as shown:
@@ -473,12 +468,13 @@ pshufb_shf_table:
 ;       dq 0x04030201008f8e8d, 0x0c0b0a0908070605 ; shl 3  (16-13) / shr13
 ;       dq 0x0504030201008f8e, 0x0d0c0b0a09080706 ; shl 2  (16-14) / shr14
 ;       dq 0x060504030201008f, 0x0e0d0c0b0a090807 ; shl 1  (16-15) / shr15
-dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
-dq 0x0706050403020100, 0x000e0d0c0b0a0908
+        dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
+        dq 0x0706050403020100, 0x000e0d0c0b0a0908
 
-mask:  dq     0xFFFFFFFFFFFFFFFF, 0x0000000000000000
-mask2: dq     0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF
-mask3: dq     0x8080808080808080, 0x8080808080808080
+align 16
+mask:   dq     0xFFFFFFFFFFFFFFFF, 0x0000000000000000
+mask2:  dq     0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF
+mask3:  dq     0x8080808080808080, 0x8080808080808080
 
 align 64
 byte_len_to_mask_table:
@@ -487,3 +483,7 @@ byte_len_to_mask_table:
         dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
         dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
         dw      0xffff
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

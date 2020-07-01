@@ -299,7 +299,7 @@ section .text
 ;; arg3 - place to store computed CRC value (can be NULL)
 ;; Returns CRC value through RAX
 align 32
-MKGLOBAL(ETHERNET_FCS_FN, function,internal)
+MKGLOBAL(ETHERNET_FCS_FN, function,)
 ETHERNET_FCS_FN:
         ETHERNET_FCS_CRC arg1, arg2, arg3, rax, tmp, xmm1, xmm2, xmm3, xmm4, xmm5, xmm0
 	ret
