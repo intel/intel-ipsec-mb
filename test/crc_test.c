@@ -167,7 +167,7 @@ test_crc_polynomial(void (*fn_crc_setup)(void),
 
         fn_crc_setup();
 
-        for (n = 1; n < sizeof(buffer); n++) {
+        for (n = 0; n < sizeof(buffer); n++) {
                 uint32_t reference_crc, received_crc;
 
                 randomize_buffer(buffer, n);
@@ -180,7 +180,7 @@ test_crc_polynomial(void (*fn_crc_setup)(void),
                                (unsigned long) n,
                                (unsigned long) received_crc,
                                (unsigned long) reference_crc);
-                        hexdump(stdout, "", buffer, n);
+                        hexdump(stdout, "buffer content", buffer, n);
                         return 1;
                 }
         }

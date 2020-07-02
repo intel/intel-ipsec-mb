@@ -67,8 +67,8 @@
 %define msg             arg1
 %define len             arg2
 %define out             arg3
-%define init_crc        arg4
-%define init_crc_low32  DWORD(arg4)
+%define init_crc        rax
+%define init_crc_low32  eax
 
 
 %ifndef LINUX
@@ -107,12 +107,15 @@ ethernet_fcs_avx512_local:
 	vmovdqa		[rsp + 16*9], xmm15
 %endif
 
+        or              len, len
+        jz              cleanup
+
 	; check if smaller than 256B
 	cmp		len, 256
 	jl		less_than_256
 
 	; load the initial crc value
-        vmovd		xmm10, init_crc_low32   ; initial crc
+        vmovd		xmm10, init_crc_low32
 
 	; receive the initial 64B data, xor the initial crc value
 	vmovdqu8	zmm0, [msg+16*0]

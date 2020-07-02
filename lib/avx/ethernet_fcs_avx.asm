@@ -69,10 +69,6 @@ pshufb_shf_table:
         dq 0x0706050403020100, 0x000e0d0c0b0a0908
 
 align 16
-init_crc_value:
-        dq 0x00000000FFFFFFFF, 0x0000000000000000
-
-align 16
 mask:
         dq 0xFFFFFFFFFFFFFFFF, 0x0000000000000000
 
@@ -159,7 +155,6 @@ section .text
         vpxor           %%XCRC, %%XT2
         vpxor           %%XCRC, %%XT1
         vpextrd         DWORD(%%CRC), %%XCRC, 2 ; 32-bit CRC value
-        not             DWORD(%%CRC)
 %endmacro
 
 ;;; ============================================================================
@@ -177,7 +172,11 @@ section .text
 %define %%xcrckey       %10 ; [clobbered] temporary XMM
 
         ;; load initial CRC value
-        vmovdqa %%xcrc, [rel init_crc_value]
+        mov     DWORD(%%ethernet_fcs), 0xFFFFFFFF
+        vmovd   %%xcrc, DWORD(%%ethernet_fcs)
+
+        or      %%bytes_to_crc, %%bytes_to_crc
+        je      %%_crc_done
 
         ;; load CRC constants
         vmovdqa %%xcrckey, [rel rk1] ; rk1 and rk2 in xcrckey
@@ -277,6 +276,7 @@ section .text
         CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey, no_fold
 
 %%_crc_done:
+        not             DWORD(%%ethernet_fcs)
         or              %%p_fcs_out, %%p_fcs_out
         jz              %%_skip_writing_crc
         mov             [%%p_fcs_out], DWORD(%%ethernet_fcs)
