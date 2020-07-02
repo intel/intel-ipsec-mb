@@ -27,4 +27,5 @@
 
 %include "include/aesni_emu.inc"
 %define ETHERNET_FCS_FN ethernet_fcs_sse_no_aesni
+%define ETHERNET_FCS_FN_LOCAL ethernet_fcs_sse_no_aesni_local
 %include "sse/ethernet_fcs_sse.asm"

@@ -32,6 +32,10 @@
 %define ETHERNET_FCS_FN ethernet_fcs_sse
 %endif
 
+%ifndef ETHERNET_FCS_FN_LOCAL
+%define ETHERNET_FCS_FN_LOCAL ethernet_fcs_sse_local
+%endif
+
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
@@ -300,7 +304,10 @@ section .text
 ;; Returns CRC value through RAX
 align 32
 MKGLOBAL(ETHERNET_FCS_FN, function,)
+MKGLOBAL(ETHERNET_FCS_FN_LOCAL, function,internal)
 ETHERNET_FCS_FN:
+        xor             arg3, arg3
+ETHERNET_FCS_FN_LOCAL:
         ETHERNET_FCS_CRC arg1, arg2, arg3, rax, tmp, xmm1, xmm2, xmm3, xmm4, xmm5, xmm0
 	ret
 

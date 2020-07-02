@@ -83,6 +83,7 @@ align 32
 MKGLOBAL(ethernet_fcs_avx512,function,)
 MKGLOBAL(ethernet_fcs_avx512_local,function,internal)
 ethernet_fcs_avx512:
+        xor             arg3, arg3
 ethernet_fcs_avx512_local:
 
         ;; Note: Passing initial CRC not currently supported

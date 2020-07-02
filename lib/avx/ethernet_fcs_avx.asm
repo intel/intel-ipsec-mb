@@ -289,7 +289,10 @@ section .text
 
 align 32
 MKGLOBAL(ethernet_fcs_avx,function,)
+MKGLOBAL(ethernet_fcs_avx_local,function,internal)
 ethernet_fcs_avx:
+        xor             arg3, arg3
+ethernet_fcs_avx_local:
         ETHERNET_FCS_CRC arg1, arg2, arg3, rax, tmp, xmm1, xmm2, xmm3, xmm4, xmm5
 	ret
 

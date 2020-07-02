@@ -260,9 +260,13 @@ void aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
 
 /* ====================================================================== */
 
-uint32_t ethernet_fcs_avx(const void *msg, uint64_t len, const void *tag_ouput);
+uint32_t
+ethernet_fcs_avx_local(const void *msg, const uint64_t len,
+                       const void *tag_ouput);
+uint32_t
+ethernet_fcs_avx(const void *msg, const uint64_t len);
 
-#define ETHERNET_FCS ethernet_fcs_avx
+#define ETHERNET_FCS ethernet_fcs_avx_local
 
 /* ====================================================================== */
 

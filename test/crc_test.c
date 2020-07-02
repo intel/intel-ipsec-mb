@@ -222,7 +222,7 @@ crc32_ethernet_fcs_ref_calc(const void *p, uint64_t len)
 static uint32_t
 crc32_ethernet_fcs_tested_calc(const void *p, uint64_t len)
 {
-        return IMB_CRC32_ETHERNET_FCS(p_mgr, p, len, NULL);
+        return IMB_CRC32_ETHERNET_FCS(p_mgr, p, len);
 }
 
 int

@@ -376,12 +376,18 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
 /* ====================================================================== */
 
 extern uint32_t
-ethernet_fcs_avx512(const void *msg, uint64_t len, const void *tag_ouput);
+ethernet_fcs_avx512_local(const void *msg, const uint64_t len,
+                          const void *tag_ouput);
+extern uint32_t
+ethernet_fcs_avx512(const void *msg, const uint64_t len);
 
 extern uint32_t
-ethernet_fcs_avx(const void *msg, uint64_t len, const void *tag_ouput);
+ethernet_fcs_avx_local(const void *msg, const uint64_t len,
+                       const void *tag_ouput);
+extern uint32_t
+ethernet_fcs_avx(const void *msg, const uint64_t len);
 
-#define ETHERNET_FCS ethernet_fcs_avx512
+#define ETHERNET_FCS ethernet_fcs_avx_local
 
 /* ====================================================================== */
 

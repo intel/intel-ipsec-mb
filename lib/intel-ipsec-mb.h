@@ -705,7 +705,7 @@ typedef size_t (*snow3g_key_sched_size_t)(void);
 typedef uint32_t (*hec_32_t)(const uint8_t *);
 typedef uint64_t (*hec_64_t)(const uint8_t *);
 
-typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t, const void *);
+typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 /* ========================================================================== */
 /* Multi-buffer manager flags passed to alloc_mb_mgr() */
 
@@ -1647,8 +1647,8 @@ IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
 #define IMB_HEC_64(_mgr, _in)((_mgr)->hec_64(_in))
 
 /* CRC32 Ethernet FCS function */
-#define IMB_CRC32_ETHERNET_FCS(_mgr,_in,_len,_tag_out) \
-        (_mgr)->crc32_ethernet_fcs(_in,_len,_tag_out)
+#define IMB_CRC32_ETHERNET_FCS(_mgr,_in,_len) \
+        (_mgr)->crc32_ethernet_fcs(_in,_len)
 
 /* Auxiliary functions */
 

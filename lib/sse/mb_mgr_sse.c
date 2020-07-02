@@ -323,9 +323,13 @@ IMB_JOB *flush_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state);
 
 /* ====================================================================== */
 
-uint32_t ethernet_fcs_sse(const void *msg, uint64_t len, const void *tag_ouput);
+uint32_t
+ethernet_fcs_sse_local(const void *msg, const uint64_t len,
+                       const void *tag_ouput);
+uint32_t
+ethernet_fcs_sse(const void *msg, const uint64_t len);
 
-#define ETHERNET_FCS ethernet_fcs_sse
+#define ETHERNET_FCS ethernet_fcs_sse_local
 
 /* ====================================================================== */
 
