@@ -112,14 +112,14 @@ ethernet_fcs_avx512_local:
 	jl		less_than_256
 
 	; load the initial crc value
-        vmovd		xmm10, init_crc_low32     ; initial crc
+        vmovd		xmm10, init_crc_low32   ; initial crc
 
 	; receive the initial 64B data, xor the initial crc value
 	vmovdqu8	zmm0, [msg+16*0]
 	vmovdqu8	zmm4, [msg+16*4]
 	vpxorq		zmm0, zmm10
-	vbroadcasti32x4	zmm10, [rk3]	;xmm10 has rk3 and rk4
-					;imm value of pclmulqdq instruction will determine which constant to use
+	vbroadcasti32x4	zmm10, [rel rk3]        ;xmm10 has rk3 and rk4
+					        ;imm value of pclmulqdq instruction will determine which constant to use
 
 	sub		len, 256
 	cmp		len, 256
@@ -127,7 +127,7 @@ ethernet_fcs_avx512_local:
 
 	vmovdqu8	zmm7, [msg+16*8]
 	vmovdqu8	zmm8, [msg+16*12]
-	vbroadcasti32x4 zmm16, [rk_1]	;zmm16 has rk-1 and rk-2
+	vbroadcasti32x4 zmm16, [rel rk_1]       ;zmm16 has rk-1 and rk-2
 	sub		len, 256
 
 fold_256_B_loop:
@@ -199,15 +199,15 @@ fold_128_B_loop:
 
 fold_128_B_register:
 	; fold the 8 128b parts into 1 xmm register with different constants
-	vmovdqu8	zmm16, [rk9]		; multiply by rk9-rk16
-	vmovdqu8	zmm11, [rk17]		; multiply by rk17-rk20, rk1,rk2, 0,0
+	vmovdqu8	zmm16, [rel rk9]	; multiply by rk9-rk16
+	vmovdqu8	zmm11, [rel rk17]	; multiply by rk17-rk20, rk1,rk2, 0,0
 	vpclmulqdq	zmm1, zmm0, zmm16, 0x01
 	vpclmulqdq	zmm2, zmm0, zmm16, 0x10
 	vextracti64x2	xmm7, zmm4, 3		; save last that has no multiplicand
 
 	vpclmulqdq	zmm5, zmm4, zmm11, 0x01
 	vpclmulqdq	zmm6, zmm4, zmm11, 0x10
-	vmovdqa		xmm10, [rk1]		; Needed later in reduction loop
+	vmovdqa		xmm10, [rel rk1]	; Needed later in reduction loop
 	vpternlogq	zmm1, zmm2, zmm5, 0x96	; xor ABC
 	vpternlogq	zmm1, zmm6, zmm7, 0x96	; xor ABC
 
@@ -257,12 +257,11 @@ get_last_two_xmms:
 
 	; get rid of the extra data that was loaded before
 	; load the shift constant
-	lea		rax, [pshufb_shf_table]
-	add		rax, len
-	vmovdqu		xmm0, [rax]
+	lea		rax, [rel pshufb_shf_table]
+	vmovdqu		xmm0, [rax + len]
 
 	vpshufb		xmm7, xmm0
-	vpxor		xmm0, [mask3]
+	vpxor		xmm0, [rel mask3]
 	vpshufb		xmm2, xmm0
 
 	vpblendvb	xmm2, xmm2, xmm1, xmm0
@@ -273,7 +272,7 @@ get_last_two_xmms:
 
 done_128:
 	; compute crc of a 128-bit value
-	vmovdqa		xmm10, [rk5]
+	vmovdqa		xmm10, [rel rk5]
 	vmovdqa		xmm0, xmm7
 
 	;64b fold
@@ -290,13 +289,13 @@ done_128:
 
 	;barrett reduction
 barrett:
-	vpand		xmm7, [mask2]
+	vpand		xmm7, [rel mask2]
 	vmovdqa		xmm1, xmm7
 	vmovdqa		xmm2, xmm7
-	vmovdqa		xmm10, [rk7]
+	vmovdqa		xmm10, [rel rk7]
 
 	vpclmulqdq	xmm7, xmm10, 0
-        vpternlogq      xmm7, xmm2, [mask], 0x28
+        vpternlogq      xmm7, xmm2, [rel mask], 0x28
 	vmovdqa		xmm2, xmm7
 	vpclmulqdq	xmm7, xmm10, 0x10
         vpternlogq      zmm7, zmm2, zmm1, 0x96
@@ -341,7 +340,7 @@ less_than_256:
 	jl	less_than_32
 
 	; if there is, load the constants
-	vmovdqa	xmm10, [rk1]    ; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [rel rk1]    ; rk1 and rk2 in xmm10
 
 	vmovd	xmm0, init_crc_low32	; get the initial crc value
 	vmovdqu	xmm7, [msg]		; load the plaintext
@@ -373,7 +372,7 @@ less_than_32:
 	vpxor	xmm7, xmm0		; xor the initial crc value
 	add	msg, 16
 	sub	len, 16
-	vmovdqa	xmm10, [rk1]		; rk1 and rk2 in xmm10
+	vmovdqa	xmm10, [rel rk1]		; rk1 and rk2 in xmm10
 	jmp	get_last_two_xmms
 
 align 16
@@ -388,7 +387,7 @@ less_than_16_left:
         cmp	len, 4
 	jl	only_less_than_4
 
-	lea	rax,[pshufb_shf_table]
+	lea	rax, [rel pshufb_shf_table]
 	vmovdqu	xmm0, [rax + len]
 	vpshufb	xmm7,xmm0
 	jmp	done_128
