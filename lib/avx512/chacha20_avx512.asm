@@ -205,16 +205,21 @@ section .text
         vmovdqa64       %%D_H_KS7, %%STATE_IN_D_H
 %endif
 %rep 10
+%if %%NUM_BLOCKS == 4
         quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
         column_to_diag %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
         quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
         diag_to_column %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
-%if %%NUM_BLOCKS == 8
+%else
+        quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
         quarter_round %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        column_to_diag %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
         column_to_diag %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
         quarter_round %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        diag_to_column %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
         diag_to_column %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
-%endif
+%endif ;; %%NUM_BLOCKS == 4
 %endrep
 
         vpaddd %%A_L_KS0, %%STATE_IN_A_L
