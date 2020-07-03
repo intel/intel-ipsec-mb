@@ -41,11 +41,11 @@ constants:
 dd      0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
 
 align 64
-add_4:
-dd      0x00000004, 0x00000000, 0x00000000, 0x00000000
-dd      0x00000004, 0x00000000, 0x00000000, 0x00000000
-dd      0x00000004, 0x00000000, 0x00000000, 0x00000000
-dd      0x00000004, 0x00000000, 0x00000000, 0x00000000
+add_8:
+dd      0x00000008, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000008, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000008, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000008, 0x00000000, 0x00000000, 0x00000000
 
 align 64
 set_1_4:
@@ -53,6 +53,15 @@ dd      0x00000001, 0x00000000, 0x00000000, 0x00000000
 dd      0x00000002, 0x00000000, 0x00000000, 0x00000000
 dd      0x00000003, 0x00000000, 0x00000000, 0x00000000
 dd      0x00000004, 0x00000000, 0x00000000, 0x00000000
+
+align 64
+set_5_8:
+dd      0x00000005, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000006, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000007, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000008, 0x00000000, 0x00000000, 0x00000000
+
+%define APPEND(a,b) a %+ b
 
 %ifdef LINUX
 %define arg1    rdi
@@ -160,93 +169,175 @@ section .text
 %endmacro
 
 ;;
-;; Generates 64*4 bytes of keystream
+;; Generates up to 64*8 bytes of keystream
 ;;
-%macro GENERATE_KS 12
-%define %%STATE_IN_A   %1  ;; [in] ZMM containing state "A" part
-%define %%STATE_IN_B   %2  ;; [in] ZMM containing state "B" part
-%define %%STATE_IN_C   %3  ;; [in] ZMM containing state "C" part
-%define %%STATE_IN_D   %4  ;; [in] ZMM containing state "D" part
-%define %%A_KS0        %5  ;; [out] ZMM A / Bytes 0-63    of KS
-%define %%B_KS1        %6  ;; [out] ZMM B / Bytes 64-127  of KS
-%define %%C_KS2        %7  ;; [out] ZMM C / Bytes 128-191 of KS
-%define %%D_KS3        %8  ;; [out] ZMM D / Bytes 192-255 of KS
-%define %%ZTMP0        %9  ;; [clobbered] Temp ZMM reg
-%define %%ZTMP1        %10 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP2        %11 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP3        %12 ;; [clobbered] Temp ZMM reg
+%macro GENERATE_KS 21
+%define %%STATE_IN_A_L   %1  ;; [in] ZMM containing state "A" part
+%define %%STATE_IN_B_L   %2  ;; [in] ZMM containing state "B" part
+%define %%STATE_IN_C_L   %3  ;; [in] ZMM containing state "C" part
+%define %%STATE_IN_D_L   %4  ;; [in] ZMM containing state "D" part
+%define %%STATE_IN_A_H   %5  ;; [in] ZMM containing state "A" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_B_H   %6  ;; [in] ZMM containing state "B" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_C_H   %7  ;; [in] ZMM containing state "C" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_D_H   %8  ;; [in] ZMM containing state "D" part (or "none" in NUM_BLOCKS == 4)
+%define %%A_L_KS0        %9  ;; [out] ZMM A / Bytes 0-63    of KS
+%define %%B_L_KS1        %10 ;; [out] ZMM B / Bytes 64-127  of KS
+%define %%C_L_KS2        %11 ;; [out] ZMM C / Bytes 128-191 of KS
+%define %%D_L_KS3        %12 ;; [out] ZMM D / Bytes 192-255 of KS
+%define %%A_H_KS4        %13 ;; [out] ZMM A / Bytes 256-319 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%B_H_KS5        %14 ;; [out] ZMM B / Bytes 320-383 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%C_H_KS6        %15 ;; [out] ZMM C / Bytes 384-447 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%D_H_KS7        %16 ;; [out] ZMM D / Bytes 448-511 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%ZTMP0          %17 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP1          %18 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP2          %19 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP3          %20 ;; [clobbered] Temp ZMM reg
+%define %%NUM_BLOCKS     %21 ;; [in] Num blocks to encrypt (4 or 8)
 
-        vmovdqa64       %%A_KS0, %%STATE_IN_A
-        vmovdqa64       %%B_KS1, %%STATE_IN_B
-        vmovdqa64       %%C_KS2, %%STATE_IN_C
-        vmovdqa64       %%D_KS3, %%STATE_IN_D
+        vmovdqa64       %%A_L_KS0, %%STATE_IN_A_L
+        vmovdqa64       %%B_L_KS1, %%STATE_IN_B_L
+        vmovdqa64       %%C_L_KS2, %%STATE_IN_C_L
+        vmovdqa64       %%D_L_KS3, %%STATE_IN_D_L
+%if %%NUM_BLOCKS == 8
+        vmovdqa64       %%A_H_KS4, %%STATE_IN_A_H
+        vmovdqa64       %%B_H_KS5, %%STATE_IN_B_H
+        vmovdqa64       %%C_H_KS6, %%STATE_IN_C_H
+        vmovdqa64       %%D_H_KS7, %%STATE_IN_D_H
+%endif
 %rep 10
-        quarter_round %%A_KS0, %%B_KS1, %%C_KS2, %%D_KS3
-        column_to_diag %%B_KS1, %%C_KS2, %%D_KS3
-        quarter_round %%A_KS0, %%B_KS1, %%C_KS2, %%D_KS3
-        diag_to_column %%B_KS1, %%C_KS2, %%D_KS3
+        quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        column_to_diag %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        diag_to_column %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+%if %%NUM_BLOCKS == 8
+        quarter_round %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        column_to_diag %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        quarter_round %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        diag_to_column %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+%endif
 %endrep
 
-        vpaddd %%A_KS0, %%STATE_IN_A
-        vpaddd %%B_KS1, %%STATE_IN_B
-        vpaddd %%C_KS2, %%STATE_IN_C
-        vpaddd %%D_KS3, %%STATE_IN_D
+        vpaddd %%A_L_KS0, %%STATE_IN_A_L
+        vpaddd %%B_L_KS1, %%STATE_IN_B_L
+        vpaddd %%C_L_KS2, %%STATE_IN_C_L
+        vpaddd %%D_L_KS3, %%STATE_IN_D_L
 
-        TRANSPOSE4_U128_INPLACE %%A_KS0, %%B_KS1, %%C_KS2, %%D_KS3, \
+        TRANSPOSE4_U128_INPLACE %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
                                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
+%if %%NUM_BLOCKS == 8
+        vpaddd %%A_H_KS4, %%STATE_IN_A_H
+        vpaddd %%B_H_KS5, %%STATE_IN_B_H
+        vpaddd %%C_H_KS6, %%STATE_IN_C_H
+        vpaddd %%D_H_KS7, %%STATE_IN_D_H
+
+        TRANSPOSE4_U128_INPLACE %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7, \
+                                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
+%endif
 %endmacro
 
 ;
-; Encrypts up to 16 16-byte blocks of data
+; Encrypts up to 32 16-byte blocks of data
 ;
-%macro ENCRYPT_4_16_PARALLEL 21
-%define %%STATE_IN_A    %1  ;; [in] ZMM containing state "A" part
-%define %%STATE_IN_B    %2  ;; [in] ZMM containing state "B" part
-%define %%STATE_IN_C    %3  ;; [in] ZMM containing state "C" part
-%define %%STATE_IN_D    %4  ;; [in] ZMM containing state "D" part
-%define %%A_KS0         %5  ;; [out] ZMM A / Bytes 0-63    of KS
-%define %%B_KS1         %6  ;; [out] ZMM B / Bytes 64-127  of KS
-%define %%C_KS2         %7  ;; [out] ZMM C / Bytes 128-191 of KS
-%define %%D_KS3         %8  ;; [out] ZMM D / Bytes 192-255 of KS
-%define %%ZTMP0         %9  ;; [clobbered] Temp ZMM reg
-%define %%ZTMP1         %10 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP2         %11 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP3         %12 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP4         %13 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP5         %14 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP6         %15 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP7         %16 ;; [clobbered] Temp ZMM reg
-%define %%SRC           %17 ;; [in] Source pointer
-%define %%DST           %18 ;; [in] Destination pointer
-%define %%OFF           %19 ;; [in] Offset for source/destination pointers
-%define %%KMASK         %20 ;; [in] Mask register
-%define %%NUM_BLOCKS    %21 ;; [in] Number of 16-byte blocks of data to encrypt (4, 8, 12, 16)
+%macro ENCRYPT_4_32_PARALLEL 29
+%define %%STATE_IN_A_L   %1  ;; [in] ZMM containing state "A" part
+%define %%STATE_IN_B_L   %2  ;; [in] ZMM containing state "B" part
+%define %%STATE_IN_C_L   %3  ;; [in] ZMM containing state "C" part
+%define %%STATE_IN_D_L   %4  ;; [in] ZMM containing state "D" part
+%define %%STATE_IN_A_H   %5  ;; [in] ZMM containing state "A" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_B_H   %6  ;; [in] ZMM containing state "B" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_C_H   %7  ;; [in] ZMM containing state "C" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_D_H   %8  ;; [in] ZMM containing state "D" part (or "none" in NUM_BLOCKS == 4)
+%define %%A_L_KS0        %9  ;; [out] ZMM A / Bytes 0-63    of KS
+%define %%B_L_KS1        %10 ;; [out] ZMM B / Bytes 64-127  of KS
+%define %%C_L_KS2        %11 ;; [out] ZMM C / Bytes 128-191 of KS
+%define %%D_L_KS3        %12 ;; [out] ZMM D / Bytes 192-255 of KS
+%define %%A_H_KS4        %13 ;; [out] ZMM A / Bytes 256-319 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%B_H_KS5        %14 ;; [out] ZMM B / Bytes 320-383 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%C_H_KS6        %15 ;; [out] ZMM C / Bytes 384-447 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%D_H_KS7        %16 ;; [out] ZMM D / Bytes 448-511 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%ZTMP0          %17 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP1          %18 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP2          %19 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP3          %20 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP4          %21 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP5          %22 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP6          %23 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP7          %24 ;; [clobbered] Temp ZMM reg
+%define %%SRC            %25 ;; [in] Source pointer
+%define %%DST            %26 ;; [in] Destination pointer
+%define %%OFF            %27 ;; [in/out] Offset for source/destination pointers
+%define %%KMASK          %28 ;; [in] Mask register
+%define %%NUM_BLOCKS     %29 ;; [in] Number of 16-byte blocks of data to encrypt (4-32 in steps of 4)
 
+%if %%NUM_BLOCKS > 16
+        ; Generate 64*8 bytes of keystream
+        GENERATE_KS %%STATE_IN_A_L, %%STATE_IN_B_L, %%STATE_IN_C_L, %%STATE_IN_D_L, \
+                    %%STATE_IN_A_H, %%STATE_IN_B_H, %%STATE_IN_C_H, %%STATE_IN_D_H, \
+                    %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
+                    %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7, \
+                    %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, 8
+%else
         ; Generate 64*4 bytes of keystream
-        GENERATE_KS %%STATE_IN_A, %%STATE_IN_B, %%STATE_IN_C, %%STATE_IN_D, \
-                    %%A_KS0, %%B_KS1, %%C_KS2, %%D_KS3, \
-                    %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
+        GENERATE_KS %%STATE_IN_A_L, %%STATE_IN_B_L, %%STATE_IN_C_L, %%STATE_IN_D_L, \
+                    no_reg, no_reg, no_reg, no_reg, \
+                    %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
+                    no_reg, no_reg, no_reg, no_reg, \
+                    %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, 4
+%endif ;; %%NUM_BLOCKS > 16
 
-        ; Load plaintext
+        ; Load plaintext (0-255 bytes)
+%if %%NUM_BLOCKS < 16
         ZMM_LOAD_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%SRC, %%OFF, %%ZTMP4, \
+                                    %%ZTMP5, %%ZTMP6, %%ZTMP7, %%KMASK
+%else
+        ZMM_LOAD_BLOCKS_0_16 16, %%SRC, %%OFF, %%ZTMP4, \
+                             %%ZTMP5, %%ZTMP6, %%ZTMP7
+%endif
+
+        ; XOR KS with plaintext and store resulting ciphertext
+        vpxorq  %%ZTMP4, %%A_L_KS0
+%if %%NUM_BLOCKS >= 8
+        vpxorq  %%ZTMP5, %%B_L_KS1
+%endif
+%if %%NUM_BLOCKS >= 12
+        vpxorq  %%ZTMP6, %%C_L_KS2
+%endif
+%if %%NUM_BLOCKS >= 16
+        vpxorq  %%ZTMP7, %%D_L_KS3
+%endif
+
+%if %%NUM_BLOCKS < 16
+        ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%DST, %%OFF, %%ZTMP4, \
+                                     %%ZTMP5, %%ZTMP6, %%ZTMP7, %%KMASK
+%else
+        ZMM_STORE_BLOCKS_0_16 16, %%DST, %%OFF, %%ZTMP4, \
+                              %%ZTMP5, %%ZTMP6, %%ZTMP7
+%endif
+
+%if %%NUM_BLOCKS > 16
+        ; Update offset into src/dst pointers
+        add     off, 64*4
+        ; Load plaintext (256-511 bytes)
+        ZMM_LOAD_MASKED_BLOCKS_0_16 (%%NUM_BLOCKS - 16), %%SRC, %%OFF, %%ZTMP4, \
                                     %%ZTMP5, %%ZTMP6, %%ZTMP7, %%KMASK
 
         ; XOR KS with plaintext and store resulting ciphertext
-%if %%NUM_BLOCKS >= 4
-        vpxorq  %%ZTMP4, %%A_KS0
+        vpxorq  %%ZTMP4, %%A_H_KS4
+%if %%NUM_BLOCKS >= 24
+        vpxorq  %%ZTMP5, %%B_H_KS5
 %endif
-%if %%NUM_BLOCKS >= 8
-        vpxorq  %%ZTMP5, %%B_KS1
+%if %%NUM_BLOCKS >= 28
+        vpxorq  %%ZTMP6, %%C_H_KS6
 %endif
-%if %%NUM_BLOCKS >= 12
-        vpxorq  %%ZTMP6, %%C_KS2
-%endif
-%if %%NUM_BLOCKS == 16
-        vpxorq  %%ZTMP7, %%D_KS3
+%if %%NUM_BLOCKS == 32
+        vpxorq  %%ZTMP7, %%D_H_KS7
 %endif
 
-        ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%DST, %%OFF, %%ZTMP4, \
+        ZMM_STORE_MASKED_BLOCKS_0_16 (%%NUM_BLOCKS - 16), %%DST, %%OFF, %%ZTMP4, \
                                      %%ZTMP5, %%ZTMP6, %%ZTMP7, %%KMASK
+        ; Update offset into src/dst pointers
+        add     off, 64*4
+%endif ;; %%NUM_BLOCKS > 16
 %endmacro
 
 align 32
@@ -276,8 +367,16 @@ submit_job_chacha20_enc_dec_avx512:
         vmovdqu8  xmm3{k1}, [tmp]               ; Load Nonce (12 bytes)
         vpslldq   xmm3, 4
         vshufi64x2 zmm3, zmm3, 0                ; Brodcast 128 bits to 512 bits
-        vporq      zmm3, [rel set_1_4]          ; Set first 4 block counters
         vbroadcastf64x2 zmm0, [rel constants]
+
+        ;; Prepare chacha states 4-7
+        vmovdqa64 zmm4, zmm0
+        vmovdqa64 zmm5, zmm1
+        vmovdqa64 zmm6, zmm2
+        vmovdqa64 zmm7, zmm3
+
+        vporq      zmm3, [rel set_1_4]          ; Set first 4 block counters
+        vporq      zmm7, [rel set_5_8]          ; Set next 4 block counters
 
         xor     off, off
 
@@ -290,18 +389,20 @@ submit_job_chacha20_enc_dec_avx512:
 
         mov     dst, [job + _dst]
 start_loop:
-        cmp     len, 64*4
+        cmp     len, 128*4
         jb      exit_loop
 
-        ENCRYPT_4_16_PARALLEL zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+        ENCRYPT_4_32_PARALLEL zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
                               zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
-                              src, dst, off, k1, 16
-        ; Update remaining length and src/dst index
-        sub     len, 64*4
-        add     off, 64*4
+                              zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                              src, dst, off, k1, 32
+
+        ; Update remaining length
+        sub     len, 128*4
 
         ; Increment block counters
-        vpaddd  zmm3, [rel add_4]
+        vpaddd  zmm3, [rel add_8]
+        vpaddd  zmm7, [rel add_8]
 
         jmp     start_loop
 
@@ -324,39 +425,26 @@ exit_loop:
         kmovq   k1, tmp2
 _no_mask_update:
         ; Check how many 64-byte blocks are left (including partial block)
-        cmp     len, 64
-        jbe     _1_block_left
 
-        cmp     len, 128
-        jbe     _2_blocks_left
+%assign i 1
+%rep 7
+        cmp     len, 64*i
+        jbe     APPEND(blocks_left_, i)
+%assign i (i+1)
+%endrep
 
-        cmp     len, 192
-        jbe     _3_blocks_left
-
-_4_blocks_left:
-        ENCRYPT_4_16_PARALLEL zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+%assign i 8
+%rep 8
+APPEND(blocks_left_, i):
+        ENCRYPT_4_32_PARALLEL zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
                               zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
-                              src, dst, off, k1, 16
+                              zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                              src, dst, off, k1, (i*4)
+%if (i != 1)
         jmp no_partial_block
-
-_3_blocks_left:
-        ENCRYPT_4_16_PARALLEL zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                              zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
-                              src, dst, off, k1, 12
-
-        jmp no_partial_block
-
-_2_blocks_left:
-        ENCRYPT_4_16_PARALLEL zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                              zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
-                              src, dst, off, k1, 8
-
-        jmp no_partial_block
-
-_1_block_left:
-        ENCRYPT_4_16_PARALLEL zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                              zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, \
-                              src, dst, off, k1, 4
+%endif
+%assign i (i-1)
+%endrep
 
 no_partial_block:
 
