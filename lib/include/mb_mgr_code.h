@@ -1028,6 +1028,11 @@ is_job_invalid(const IMB_JOB *job)
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
+                if (job->cipher_mode == IMB_CIPHER_CBCS_1_9 &&
+                    job->msg_len_to_cipher_in_bytes > ((1ULL << (60)) - 1)) {
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;

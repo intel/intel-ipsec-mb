@@ -163,6 +163,7 @@ typedef struct {
         uint64_t unused_lanes;
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
+        DECLARE_ALIGNED(uint64_t lens64[16], 64);
         uint64_t road_block;
 } MB_MGR_AES_OOO;
 

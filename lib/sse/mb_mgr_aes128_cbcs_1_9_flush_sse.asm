@@ -25,6 +25,188 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_ENC_X4 aes_cbcs_1_9_enc_128_x4
-%define FLUSH_JOB_AES_ENC flush_job_aes128_cbcs_1_9_enc_sse
-%include "sse/mb_mgr_aes_flush_sse.asm"
+%include "include/os.asm"
+%include "imb_job.asm"
+%include "mb_mgr_datastruct.asm"
+
+%include "include/reg_sizes.asm"
+
+%define NUM_LANES 4
+
+; void aes_cbcs_1_9_enc_128_x4(AES_ARGS *args, UINT64 len_in_bytes);
+extern aes_cbcs_1_9_enc_128_x4
+
+section .text
+
+%define APPEND(a,b) a %+ b
+
+%ifdef LINUX
+%define arg1	rdi
+%define arg2	rsi
+%else
+%define arg1	rcx
+%define arg2	rdx
+%endif
+
+%define state	arg1
+%define job	arg2
+%define len2	arg2
+
+%define job_rax          rax
+
+%define unused_lanes     rbx
+%define tmp1             rbx
+
+%define good_lane        rdx
+%define iv               rdx
+
+%define tmp2             rax
+
+; idx needs to be in rbp
+%define tmp              rbp
+%define idx              rbp
+
+%define tmp3             r8
+
+; STACK_SPACE needs to be an odd multiple of 8
+; This routine and its callee clobbers all GPRs
+struc STACK
+_gpr_save:	resq	8
+_rsp_save:	resq	1
+endstruc
+
+; JOB* flush_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(flush_job_aes128_cbcs_1_9_enc_sse,function,internal)
+flush_job_aes128_cbcs_1_9_enc_sse:
+
+        mov	rax, rsp
+        sub	rsp, STACK_size
+        and	rsp, -16
+
+	mov	[rsp + _gpr_save + 8*0], rbx
+	mov	[rsp + _gpr_save + 8*1], rbp
+	mov	[rsp + _gpr_save + 8*2], r12
+	mov	[rsp + _gpr_save + 8*3], r13
+	mov	[rsp + _gpr_save + 8*4], r14
+	mov	[rsp + _gpr_save + 8*5], r15
+%ifndef LINUX
+	mov	[rsp + _gpr_save + 8*6], rsi
+	mov	[rsp + _gpr_save + 8*7], rdi
+%endif
+	mov	[rsp + _rsp_save], rax	; original SP
+
+	; check for empty
+	mov	unused_lanes, [state + _aes_unused_lanes]
+	bt	unused_lanes, ((NUM_LANES * 4) + 3)
+	jc	return_null
+
+	; find a lane with a non-null job
+	xor	good_lane, good_lane
+        mov     tmp3, 1
+	cmp	qword [state + _aes_job_in_lane + 1*8], 0
+	cmovne	good_lane, tmp3
+        inc     tmp3
+	cmp	qword [state + _aes_job_in_lane + 2*8], 0
+	cmovne	good_lane, tmp3
+        inc     tmp3
+	cmp	qword [state + _aes_job_in_lane + 3*8], 0
+	cmovne	good_lane, tmp3
+
+	; copy good_lane to empty lanes
+	mov	tmp1, [state + _aes_args_in + good_lane*8]
+	mov	tmp2, [state + _aes_args_out + good_lane*8]
+	mov	tmp3, [state + _aes_args_keys + good_lane*8]
+	shl	good_lane, 4 ; multiply by 16
+	movdqa	xmm2, [state + _aes_args_IV + good_lane]
+
+%assign I 0
+%rep NUM_LANES
+	cmp	qword [state + _aes_job_in_lane + I*8], 0
+	jne	APPEND(skip_,I)
+	mov	[state + _aes_args_in + I*8], tmp1
+	mov	[state + _aes_args_out + I*8], tmp2
+	mov	[state + _aes_args_keys + I*8], tmp3
+	movdqa	[state + _aes_args_IV + I*16], xmm2
+        mov     qword [state + _aes_lens_64 + 8*I], 0xffffffffffffffff
+APPEND(skip_,I):
+%assign I (I+1)
+%endrep
+
+	; Find min length
+        mov     len2, [state + _aes_lens_64 + 8*0]
+        xor     idx, idx
+        mov     tmp3, 1
+
+        cmp     len2, [state + _aes_lens_64 + 8*1]
+        cmova   len2, [state + _aes_lens_64 + 8*1]
+        cmova   idx, tmp3
+        inc     tmp3
+
+        cmp     len2, [state + _aes_lens_64 + 8*2]
+        cmova   len2, [state + _aes_lens_64 + 8*2]
+        cmova   idx, tmp3
+        inc     tmp3
+
+        cmp     len2, [state + _aes_lens_64 + 8*3]
+        cmova   len2, [state + _aes_lens_64 + 8*3]
+        cmova   idx, tmp3
+
+        or	len2, len2
+	jz	len_is_0
+
+%assign I 0
+%rep NUM_LANES
+        sub [state + _aes_lens_64 + 8*I], len2
+%assign I (I+1)
+%endrep
+
+	; "state" and "args" are the same address, arg1
+	; len is arg2
+	call	aes_cbcs_1_9_enc_128_x4
+	; state and idx are intact
+
+len_is_0:
+	; process completed job "idx"
+	mov	job_rax, [state + _aes_job_in_lane + idx*8]
+	mov	unused_lanes, [state + _aes_unused_lanes]
+	mov	qword [state + _aes_job_in_lane + idx*8], 0
+	or	dword [job_rax + _status], STS_COMPLETED_AES
+	shl	unused_lanes, 4
+	or	unused_lanes, idx
+	mov	[state + _aes_unused_lanes], unused_lanes
+%ifdef SAFE_DATA
+        ;; clear returned jobs and "NULL lanes"
+%assign I 0
+%rep NUM_LANES
+	cmp	qword [state + _aes_job_in_lane + I*8], 0
+	jne	APPEND(skip_clear_,I)
+APPEND(skip_clear_,I):
+%assign I (I+1)
+%endrep
+%endif
+
+return:
+	mov	rbx, [rsp + _gpr_save + 8*0]
+	mov	rbp, [rsp + _gpr_save + 8*1]
+	mov	r12, [rsp + _gpr_save + 8*2]
+	mov	r13, [rsp + _gpr_save + 8*3]
+	mov	r14, [rsp + _gpr_save + 8*4]
+	mov	r15, [rsp + _gpr_save + 8*5]
+%ifndef LINUX
+	mov	rsi, [rsp + _gpr_save + 8*6]
+	mov	rdi, [rsp + _gpr_save + 8*7]
+%endif
+	mov	rsp, [rsp + _rsp_save]	; original SP
+
+	ret
+
+return_null:
+	xor	job_rax, job_rax
+	jmp	return
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif
+
