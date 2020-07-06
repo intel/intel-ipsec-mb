@@ -273,24 +273,25 @@ SUBMIT_JOB_ZUC_EEA3:
         cmp     byte [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      skip_submit_restoring_state
 
+        ;; Load mask containing FF's in lanes which init has just been done
+        movzx   DWORD(tmp3), byte [r12 + _zuc_init_not_done]
+        lea     tmp2, [rel bitmask_to_dword_tab]
+        shl     tmp3, 4 ; Multiply by 16 to move through the table
+        movdqa  xmm2, [tmp3 + tmp2]
+
         ;; Restore state from stack for lanes that did not need init
 %assign I 0
 %rep (16 + 2)
         movdqa  xmm0, [rsp + _state_save + 16*I] ; State before init
         movdqa  xmm1, [r12 + _zuc_state + 64*I] ; State after init
-%assign J 0
-%rep 4
-        test    word [r12 + _zuc_init_not_done], (1 << J)
-        jnz     APPEND3(skip_submit_lane_,I,J)
-        ;; Extract dword from xmm0
-        pextrd  DWORD(tmp2), xmm0, J ; value
-        mov     r8, (J << 4) ; index
 
-        XPINSRD xmm1, xmm2, tmp3, r8, tmp2, no_scale
+        movdqa  xmm3, xmm2
+        ; Zero out lanes that need to be restored in current state
+        pand    xmm1, xmm3
+        ; Zero out lanes that do not need to be restored in saved state
+        pandn   xmm3, xmm0
+        por     xmm1, xmm3
 
-APPEND3(skip_submit_lane_,I,J):
-%assign J (J+1)
-%endrep
         movdqa  [r12 + _zuc_state + 64*I], xmm1 ; Save new state
 
 %assign I (I + 1)
@@ -479,24 +480,25 @@ APPEND(skip_eea3_,I):
         cmp     word [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
         je      skip_flush_restoring_state
 
+        ;; Load mask containing FF's in lanes which init has just been done
+        movzx   DWORD(tmp3), byte [r12 + _zuc_init_not_done]
+        lea     tmp2, [rel bitmask_to_dword_tab]
+        shl     tmp3, 4 ; Multiply by 16 to move through the table
+        movdqa  xmm2, [tmp3 + tmp2]
+
         ;; Restore state from stack for lanes that did not need init
 %assign I 0
 %rep (16 + 2)
         movdqa  xmm0, [rsp + _state_save + 16*I] ; State before init
         movdqa  xmm1, [r12 + _zuc_state + 64*I] ; State after init
-%assign J 0
-%rep 4
-        test    word [r12 + _zuc_init_not_done], (1 << J)
-        jnz     APPEND3(skip_flush_lane_,I,J)
-        ;; Extract dword from xmm0
-        pextrd  r15d, xmm0, J ; value
-        mov     r8, (J << 4) ; index
 
-        XPINSRD xmm1, xmm2, r13, r8, r15, no_scale
+        movdqa  xmm3, xmm2
+        ; Zero out lanes that need to be restored in current state
+        pand    xmm1, xmm3
+        ; Zero out lanes that do not need to be restored in saved state
+        pandn   xmm3, xmm0
+        por     xmm1, xmm3
 
-APPEND3(skip_flush_lane_,I,J):
-%assign J (J+1)
-%endrep
         movdqa  [r12 + _zuc_state + 64*I], xmm1 ; Save new state
 %assign I (I + 1)
 %endrep
