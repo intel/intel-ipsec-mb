@@ -50,6 +50,33 @@ all_ffs_top_64bits:
 db      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 db      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 
+clear_lane_mask_tab:
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+
+clear_lane_mask_tab_start:
+dd      0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+
+align 16
+bitmask_to_dword_tab:
+dd      0x00000000, 0x00000000, 0x00000000, 0x00000000
+dd      0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, 0x00000000
+dd      0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000
+dd      0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000
+dd      0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000
+dd      0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF
+dd      0xFFFFFFFF, 0x00000000, 0x00000000, 0xFFFFFFFF
+dd      0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF
+dd      0x00000000, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF
+dd      0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0xFFFFFFFF
+dd      0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
+
 extern zuc_eia3_4_buffer_job_avx
 extern asm_ZucInitialization_4_avx
 extern asm_ZucCipher_4_avx
@@ -87,6 +114,50 @@ section .text
 
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
+
+;; Clear state for multiple lanes in the OOO managers
+%macro CLEAR_ZUC_STATE 5
+%define %%STATE         %1 ;; [in] ZUC OOO manager pointer
+%define %%LANE_MASK     %2 ;; [in/clobbered] bitmask with lanes to clear
+%define %%TMP           %3 ;; [clobbered] Temporary GP register
+%define %%XTMP1         %4 ;; [clobbered] Temporary XMM register
+%define %%XTMP2         %5 ;; [clobbered] Temporary XMM register
+
+        lea     %%TMP, [rel bitmask_to_dword_tab]
+        shl     %%LANE_MASK, 4 ; Multiply by 16 to move through the table
+        vmovdqa %%XTMP1, [%%TMP + %%LANE_MASK]
+
+        ;; Clear state for lanes
+%assign I 0
+%rep (16 + 6)
+        vpandn  %%XTMP2, %%XTMP1, [%%STATE + _zuc_state + I*64]
+        vmovdqa [%%STATE + _zuc_state + I*64], %%XTMP2
+
+%assign I (I + 1)
+%endrep
+%endmacro
+
+;; Clear state for a specified lane in the OOO manager
+%macro CLEAR_ZUC_LANE_STATE 5
+%define %%STATE         %1 ;; [in] ZUC OOO manager pointer
+%define %%LANE          %2 ;; [in/clobbered] lane index
+%define %%TMP           %3 ;; [clobbered] Temporary GP register
+%define %%XTMP1         %4 ;; [clobbered] Temporary YMM register
+%define %%XTMP2         %5 ;; [clobbered] Temporary YMM register
+
+        shl     %%LANE, 2
+        lea     %%TMP, [rel clear_lane_mask_tab_start]
+        sub     %%TMP, %%LANE
+        vmovdqu %%XTMP1, [%%TMP]
+%assign I 0
+%rep (16 + 6)
+        vmovdqa %%XTMP2, [%%STATE + _zuc_state + I*64]
+        vpand   %%XTMP2, %%XTMP1
+        vmovdqa [%%STATE + _zuc_state + I*64], %%XTMP2
+%assign I (I + 1)
+%endrep
+
+%endmacro
 
 ; JOB* SUBMIT_JOB_ZUC_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -134,6 +205,8 @@ SUBMIT_JOB_ZUC_EEA3:
         ; New job that needs init (update bit in zuc_init_not_done bitmask)
         SHIFT_GP        1, lane, tmp, tmp2, left
         or      [state + _zuc_init_not_done], BYTE(tmp)
+        not     tmp
+        and     [state + _zuc_unused_lane_bitmask], BYTE(tmp)
 
         mov     tmp, [job + _src]
         add     tmp, [job + _cipher_start_src_offset_in_bytes]
@@ -217,6 +290,15 @@ APPEND3(skip_submit_lane_,I,J):
 %endrep
 
 skip_submit_restoring_state:
+%ifdef SAFE_DATA
+        ;; Clear stack containing state info
+        vpxor   xmm0, xmm0
+%assign I 0
+%rep (16 + 2)
+        vmovdqa [rsp + _state_save + 16*I], xmm0
+%assign I (I + 1)
+%endrep
+%endif
         mov     byte [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
 
         ;; If Windows, reserve memory in stack for parameter transferring
@@ -248,6 +330,13 @@ len_is_0_submit_eea3:
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
+        SHIFT_GP        1, idx, tmp, tmp2, left
+        or      [state + _zuc_unused_lane_bitmask], BYTE(tmp)
+
+%ifdef SAFE_DATA
+        ; Clear ZUC state of the lane that is returned
+        CLEAR_ZUC_LANE_STATE state, idx, tmp, xmm0, xmm1
+%endif
 
 return_submit_eea3:
 
@@ -407,6 +496,15 @@ APPEND3(skip_flush_lane_,I,J):
 %endrep
 
 skip_flush_restoring_state:
+%ifdef SAFE_DATA
+        ;; Clear stack containing state info
+        vpxor   xmm0, xmm0
+%assign I 0
+%rep (16 + 2)
+        vmovdqa [rsp + _state_save + 16*I], xmm0
+%assign I (I + 1)
+%endrep
+%endif
         mov     word [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
 
 skip_flush_init:
@@ -447,7 +545,24 @@ APPEND3(skip_eea3_copy_,I,J):
 %endif
         mov     state, [rsp + _gpr_save + 8*8]
 
+        ; Clear ZUC state of the lane that is returned and NULL lanes
+%ifdef SAFE_DATA
+        SHIFT_GP        1, idx, tmp1, tmp2, left
+        movzx   DWORD(tmp3), byte [state + _zuc_unused_lane_bitmask]
+        or      tmp3, tmp1 ;; bitmask with NULL lanes and job to return
+
+        CLEAR_ZUC_STATE state, tmp3, tmp2, xmm0, xmm1
+        jmp     skip_flush_clear_state
+%endif
+
 len_is_0_flush_eea3:
+%ifdef SAFE_DATA
+        ; Clear ZUC state of the lane that is returned
+        mov     tmp2, idx
+        CLEAR_ZUC_LANE_STATE state, tmp2, tmp3, xmm0, xmm1
+
+skip_flush_clear_state:
+%endif
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -457,6 +572,8 @@ len_is_0_flush_eea3:
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
 
+        SHIFT_GP        1, idx, tmp3, tmp4, left
+        or      [state + _zuc_unused_lane_bitmask], BYTE(tmp3)
 return_flush_eea3:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
