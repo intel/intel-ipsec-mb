@@ -64,9 +64,6 @@ void _zuc_eea3_1_buffer_sse(const void *pKey,
         uint32_t numKeyStreamsPerPkt = length/ KEYSTR_ROUND_LEN;
         const uint32_t numBytesLeftOver = length % KEYSTR_ROUND_LEN;
 
-        /* need to set the LFSR state to zero */
-        memset(&zucState, 0, sizeof(ZucState_t));
-
         /* initialize the zuc state */
         asm_ZucInitialization_sse(pKey, pIv, &(zucState));
 
@@ -491,8 +488,6 @@ void _zuc_eia3_1_buffer_sse(const void *pKey,
         uint32_t remainingBits = lengthInBits;
         uint32_t T = 0;
         const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
-
-        memset(&zucState, 0, sizeof(ZucState_t));
 
         asm_ZucInitialization_sse(pKey, pIv, &(zucState));
         asm_ZucGenKeystream16B_sse(pZuc, &zucState);

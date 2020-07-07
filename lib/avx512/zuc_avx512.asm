@@ -605,14 +605,6 @@ align 64
 
     kmovw   k2, lane_mask
 
-    ; Zero out state (for not initialized LFSR's)
-    vpxorq  zmm0, zmm0
-%assign I 0
-%rep 16
-    vmovdqa32 [pState + I*64]{k2}, zmm0 ; Zero out LFSR's
-%assign I (I + 1)
-%endrep
-
     ; Set LFSR registers for Packet 1
     mov     r9, [pKe]   ; Load Key 1 pointer
     mov     r10, [pIv]  ; Load IV 1 pointer

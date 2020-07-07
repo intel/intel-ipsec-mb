@@ -593,11 +593,11 @@ asm_ZucInitialization_8_avx2:
 
     FUNC_SAVE
 
-    ; Zero out state
+    ; Zero out R1/R2 (only lower half is used)
     vpxor   ymm0, ymm0
 %assign I 0
-%rep 16
-    vmovdqa [pState + I*64], ymm0 ; Zero out LFSR's (only lower half is used)
+%rep 2
+    vmovdqa [pState + OFS_R1 + I*64], ymm0
 %assign I (I + 1)
 %endrep
 

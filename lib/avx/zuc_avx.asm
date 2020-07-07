@@ -592,11 +592,11 @@ asm_ZucInitialization_4_avx:
 %assign j (j + 1)
 %endrep
 
-    ; Zero out state (LFSR and R1-R2)
+    ; Zero out R1-R2 (only lower 128 bits)
     vpxor   xmm0, xmm0
 %assign I 0
-%rep (16 + 2)
-    vmovdqa [pState + I*64], xmm0 ; Zero out only lower 128 bits
+%rep 2
+    vmovdqa [pState + OFS_R1 + I*64], xmm0
 %assign I (I + 1)
 %endrep
 

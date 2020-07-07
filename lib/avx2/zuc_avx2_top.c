@@ -102,9 +102,6 @@ void _zuc_eea3_1_buffer_avx2(const void *pKey,
         uint32_t numKeyStreamsPerPkt = length/ KEYSTR_ROUND_LEN;
         uint32_t numBytesLeftOver = length % KEYSTR_ROUND_LEN;
 
-        /* need to set the LFSR state to zero */
-        memset(&zucState, 0, sizeof(ZucState_t));
-
         /* initialize the zuc state */
         asm_ZucInitialization_avx(pKey, pIv, &(zucState));
 
@@ -188,9 +185,6 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         const uint64_t *pIn64[NUM_AVX2_BUFS]= {NULL};
         uint64_t *pOut64[NUM_AVX2_BUFS] = {NULL};
         uint64_t *pKeyStream64 = NULL;
-
-        /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState16_t));
 
         /*
          * Calculate the number of bytes left over for each packet,
@@ -438,8 +432,6 @@ void _zuc_eia3_1_buffer_avx2(const void *pKey,
         uint32_t T = 0;
         const uint8_t *pIn8 = (const uint8_t *) pBufferIn;
 
-        memset(&zucState, 0, sizeof(ZucState_t));
-
         asm_ZucInitialization_avx(pKey, pIv, &(zucState));
         asm_ZucGenKeystream32B_avx(pZuc, &zucState);
 
@@ -504,9 +496,6 @@ void _zuc_eia3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
         }
-
-        /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState16_t));
 
         asm_ZucInitialization_8_avx2(&keys,  &ivs, &state);
 
@@ -679,9 +668,6 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
         }
-
-        /* Need to set the LFSR state to zero */
-        memset(&state, 0, sizeof(ZucState16_t));
 
         asm_ZucInitialization_8_avx2(&keys,  &ivs, &state);
 

@@ -260,14 +260,6 @@ SUBMIT_JOB_ZUC_EEA3:
 %assign I (I + 1)
 %endrep
 
-        ;; Zero out state (LFSR + R1-R2)
-        vpxor   ymm0, ymm0
-%assign I 0
-%rep (16 + 2)
-        vmovdqa [r12 + _zuc_state + 64*I], ymm0
-%assign I (I + 1)
-%endrep
-
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
         ;; 32 bytes for 4 parameters
@@ -488,14 +480,6 @@ APPEND(skip_eea3_,I):
 %rep (16 + 2)
         vmovdqa ymm0, [r12 + _zuc_state + 64*I]
         vmovdqu [rsp + 32*I], ymm0
-%assign I (I + 1)
-%endrep
-
-        ;; Zero out state (LFSR + R1-R2)
-        vpxor   ymm0, ymm0
-%assign I 0
-%rep (16 + 2)
-        vmovdqa [r12 + _zuc_state + 64*I], ymm0
 %assign I (I + 1)
 %endrep
 
