@@ -39,37 +39,6 @@
 ; void aes_cbcs_1_9_enc_128_x8(AES_ARGS *args, UINT64 len_in_bytes);
 extern AES_CBCS_ENC_X8
 
-section .data
-default rel
-align 16
-len_masks:
-	;ddq 0x0000000000000000000000000000FFFF
-	dq 0x000000000000FFFF, 0x0000000000000000
-	;ddq 0x000000000000000000000000FFFF0000
-	dq 0x00000000FFFF0000, 0x0000000000000000
-	;ddq 0x00000000000000000000FFFF00000000
-	dq 0x0000FFFF00000000, 0x0000000000000000
-	;ddq 0x0000000000000000FFFF000000000000
-	dq 0xFFFF000000000000, 0x0000000000000000
-	;ddq 0x000000000000FFFF0000000000000000
-	dq 0x0000000000000000, 0x000000000000FFFF
-	;ddq 0x00000000FFFF00000000000000000000
-	dq 0x0000000000000000, 0x00000000FFFF0000
-	;ddq 0x0000FFFF000000000000000000000000
-	dq 0x0000000000000000, 0x0000FFFF00000000
-	;ddq 0xFFFF0000000000000000000000000000
-	dq 0x0000000000000000, 0xFFFF000000000000
-dupw:
-	;ddq 0x01000100010001000100010001000100
-	dq 0x0100010001000100, 0x0100010001000100
-one:	dq  1
-two:	dq  2
-three:	dq  3
-four:	dq  4
-five:	dq  5
-six:	dq  6
-seven:	dq  7
-
 section .text
 
 %define APPEND(a,b) a %+ b
@@ -88,7 +57,6 @@ section .text
 
 %define job_rax          rax
 
-%if 1
 %define unused_lanes     rbx
 %define tmp1             rbx
 
@@ -102,7 +70,6 @@ section .text
 %define idx              rbp
 
 %define tmp3             r8
-%endif
 
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
@@ -140,20 +107,16 @@ FLUSH_JOB_AES_CBCS_ENC:
 
 	; find a lane with a non-null job
 	xor	good_lane, good_lane
-	cmp	qword [state + _aes_job_in_lane + 1*8], 0
-	cmovne	good_lane, [rel one]
-	cmp	qword [state + _aes_job_in_lane + 2*8], 0
-	cmovne	good_lane, [rel two]
-	cmp	qword [state + _aes_job_in_lane + 3*8], 0
-	cmovne	good_lane, [rel three]
-	cmp	qword [state + _aes_job_in_lane + 4*8], 0
-	cmovne	good_lane, [rel four]
-	cmp	qword [state + _aes_job_in_lane + 5*8], 0
-	cmovne	good_lane, [rel five]
-	cmp	qword [state + _aes_job_in_lane + 6*8], 0
-	cmovne	good_lane, [rel six]
-	cmp	qword [state + _aes_job_in_lane + 7*8], 0
-	cmovne	good_lane, [rel seven]
+        mov     tmp3, 1
+%assign I 1
+%rep 7
+	cmp	qword [state + _aes_job_in_lane + I*8], 0
+	cmovne	good_lane, tmp3
+%if I != 7
+        inc     tmp3
+%endif
+%assign I (I+1)
+%endrep
 
 	; copy good_lane to empty lanes
 	mov	tmp1, [state + _aes_args_in + good_lane*8]
@@ -161,7 +124,6 @@ FLUSH_JOB_AES_CBCS_ENC:
 	mov	tmp3, [state + _aes_args_keys + good_lane*8]
 	shl	good_lane, 4 ; multiply by 16
 	vmovdqa	xmm2, [state + _aes_args_IV + good_lane]
-	vmovdqa	xmm0, [state + _aes_lens]
 
 %assign I 0
 %rep 8
@@ -171,21 +133,34 @@ FLUSH_JOB_AES_CBCS_ENC:
 	mov	[state + _aes_args_out + I*8], tmp2
 	mov	[state + _aes_args_keys + I*8], tmp3
 	vmovdqa	[state + _aes_args_IV + I*16], xmm2
-	vpor	xmm0, xmm0, [rel len_masks + 16*I]
+        mov     qword [state + _aes_lens_64 + 8*I], 0xffffffffffffffff
 APPEND(skip_,I):
 %assign I (I+1)
 %endrep
 
 	; Find min length
-	vphminposuw	xmm1, xmm0
-	vpextrw	DWORD(len2), xmm1, 0	; min value
-	vpextrw	DWORD(idx), xmm1, 1	; min index (0...3)
-	cmp	len2, 0
-	je	len_is_0
+        mov     len2, [state + _aes_lens_64 + 8*0]
+        xor     idx, idx
+        mov     tmp3, 1
+%assign I 1
+%rep 7
+        cmp     len2, [state + _aes_lens_64 + 8*I]
+        cmova   len2, [state + _aes_lens_64 + 8*I]
+        cmova   idx, tmp3
+%if I != 7
+        inc     tmp3
+%endif
+%assign I (I+1)
+%endrep
 
-	vpshufb	xmm1, xmm1, [rel dupw]   ; duplicate words across all lanes
-	vpsubw	xmm0, xmm0, xmm1
-	vmovdqa	[state + _aes_lens], xmm0
+        or	len2, len2
+	jz	len_is_0
+
+%assign I 0
+%rep 8
+        sub [state + _aes_lens_64 + 8*I], len2
+%assign I (I+1)
+%endrep
 
 	; "state" and "args" are the same address, arg1
 	; len is arg2

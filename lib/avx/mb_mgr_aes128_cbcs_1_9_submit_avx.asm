@@ -40,14 +40,6 @@
 ; void aes_cbcs_1_9_enc_128_x8(AES_ARGS *args, UINT64 len_in_bytes);
 extern AES_CBCS_ENC_X8
 
-section .data
-default rel
-
-align 16
-dupw:
-	;ddq 0x01000100010001000100010001000100
-	dq 0x0100010001000100, 0x0100010001000100
-
 section .text
 
 %ifdef LINUX
@@ -64,18 +56,17 @@ section .text
 
 %define job_rax          rax
 
-%if 1
 ; idx needs to be in rbp
 %define len              rbp
 %define idx              rbp
 %define tmp              rbp
 
 %define lane             r8
+%define tmp2             r8
 
 %define iv               r9
 
 %define unused_lanes     rbx
-%endif
 
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
@@ -116,10 +107,7 @@ SUBMIT_JOB_AES_CBCS_ENC:
 	mov	[state + _aes_unused_lanes], unused_lanes
 
 	mov	[state + _aes_job_in_lane + lane*8], job
-
-        vmovdqa xmm0, [state + _aes_lens]
-        XVPINSRW xmm0, xmm1, tmp, lane, len, scale_x16
-        vmovdqa [state + _aes_lens], xmm0
+        mov     [state + _aes_lens_64 + lane*8], len
 
 	mov	tmp, [job + _src]
 	add	tmp, [job + _cipher_start_src_offset_in_bytes]
@@ -136,16 +124,28 @@ SUBMIT_JOB_AES_CBCS_ENC:
 	jne	return_null
 
 	; Find min length
-	vmovdqa	xmm0, [state + _aes_lens]
-	vphminposuw	xmm1, xmm0
-	vpextrw	DWORD(len2), xmm1, 0	; min value
-	vpextrw	DWORD(idx), xmm1, 1	; min index (0...7)
-	cmp	len2, 0
-	je	len_is_0
+        mov     len2, [state + _aes_lens_64 + 8*0]
+        xor     idx, idx
+        mov     tmp2, 1
+%assign I 1
+%rep 7
+        cmp     len2, [state + _aes_lens_64 + 8*I]
+        cmova   len2, [state + _aes_lens_64 + 8*I]
+        cmova   idx, tmp2
+%if I != 7
+        inc     tmp2
+%endif
+%assign I (I+1)
+%endrep
 
-	vpshufb	xmm1, xmm1, [rel dupw]   ; duplicate words across all lanes
-	vpsubw	xmm0, xmm0, xmm1
-	vmovdqa	[state + _aes_lens], xmm0
+        or	len2, len2
+	jz	len_is_0
+
+%assign I 0
+%rep 8
+        sub [state + _aes_lens_64 + 8*I], len2
+%assign I (I+1)
+%endrep
 
 	; "state" and "args" are the same address, arg1
 	; len is arg2
