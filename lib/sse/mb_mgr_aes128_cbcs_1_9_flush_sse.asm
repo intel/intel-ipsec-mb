@@ -33,8 +33,13 @@
 
 %define NUM_LANES 4
 
+%ifndef AES_CBCS_ENC_X4
+%define AES_CBCS_ENC_X4 aes_cbcs_1_9_enc_128_x4
+%define FLUSH_JOB_AES_CBCS_ENC flush_job_aes128_cbcs_1_9_enc_sse
+%endif
+
 ; void aes_cbcs_1_9_enc_128_x4(AES_ARGS *args, UINT64 len_in_bytes);
-extern aes_cbcs_1_9_enc_128_x4
+extern AES_CBCS_ENC_X4
 
 section .text
 
@@ -78,8 +83,8 @@ endstruc
 ; JOB* flush_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-MKGLOBAL(flush_job_aes128_cbcs_1_9_enc_sse,function,internal)
-flush_job_aes128_cbcs_1_9_enc_sse:
+MKGLOBAL(FLUSH_JOB_AES_CBCS_ENC,function,internal)
+FLUSH_JOB_AES_CBCS_ENC:
 
         mov	rax, rsp
         sub	rsp, STACK_size
@@ -164,7 +169,7 @@ APPEND(skip_,I):
 
 	; "state" and "args" are the same address, arg1
 	; len is arg2
-	call	aes_cbcs_1_9_enc_128_x4
+	call	AES_CBCS_ENC_X4
 	; state and idx are intact
 
 len_is_0:

@@ -25,6 +25,6 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_ENC_X4 aes_cbcs_1_9_enc_128_x4_no_aesni
-%define FLUSH_JOB_AES_ENC flush_job_aes128_cbcs_1_9_enc_sse_no_aesni
-%include "sse/mb_mgr_aes_flush_sse.asm"
+%define AES_CBCS_ENC_X4 aes_cbcs_1_9_enc_128_x4_no_aesni
+%define FLUSH_JOB_AES_CBCS_ENC flush_job_aes128_cbcs_1_9_enc_sse_no_aesni
+%include "sse/mb_mgr_aes128_cbcs_1_9_flush_sse.asm"

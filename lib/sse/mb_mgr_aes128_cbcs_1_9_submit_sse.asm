@@ -32,8 +32,13 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
+%ifndef AES_CBCS_ENC_X4
+%define AES_CBCS_ENC_X4 aes_cbcs_1_9_enc_128_x4
+%define SUBMIT_JOB_AES_CBCS_ENC submit_job_aes128_cbcs_1_9_enc_sse
+%endif
+
 ; void aes_cbcs_1_9_enc_128_x4(AES_ARGS *args, UINT64 len_in_bytes);
-extern aes_cbcs_1_9_enc_128_x4
+extern AES_CBCS_ENC_X4
 
 %ifdef LINUX
 %define arg1	rdi
@@ -73,8 +78,8 @@ section .text
 ; JOB* submit_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-MKGLOBAL(submit_job_aes128_cbcs_1_9_enc_sse,function,internal)
-submit_job_aes128_cbcs_1_9_enc_sse:
+MKGLOBAL(SUBMIT_JOB_AES_CBCS_ENC,function,internal)
+SUBMIT_JOB_AES_CBCS_ENC:
 
         mov	rax, rsp
         sub	rsp, STACK_size
@@ -155,7 +160,7 @@ submit_job_aes128_cbcs_1_9_enc_sse:
 
 	; "state" and "args" are the same address, arg1
 	; len is arg2
-	call	aes_cbcs_1_9_enc_128_x4
+	call	AES_CBCS_ENC_X4
 	; state and idx are intact
 
 len_is_0:
