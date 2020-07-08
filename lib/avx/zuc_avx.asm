@@ -155,11 +155,11 @@ align 64
 
 %define MASK31  xmm12
 
-%define OFS_R1  (16*(4*16))
-%define OFS_R2  (OFS_R1 + (4*16))
-%define OFS_X0  (OFS_R2 + (4*16))
-%define OFS_X1  (OFS_X0 + (4*16))
-%define OFS_X2  (OFS_X1 + (4*16))
+%define OFS_R1  (16*16)
+%define OFS_R2  (OFS_R1 + 16)
+%define OFS_X0  (OFS_R2 + 16)
+%define OFS_X1  (OFS_X0 + 16)
+%define OFS_X2  (OFS_X1 + 16)
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*10
@@ -286,14 +286,14 @@ align 64
     ; xmm2  = LFSR_S2
     ; xmm0  = LFSR_S0
     ;
-    vmovdqa     xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm14, [%%STATE + ((14 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm11, [%%STATE + ((11 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm9,  [%%STATE + (( 9 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm7,  [%%STATE + (( 7 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm5,  [%%STATE + (( 5 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm2,  [%%STATE + (( 2 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm14, [%%STATE + ((14 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm11, [%%STATE + ((11 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm9,  [%%STATE + (( 9 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm7,  [%%STATE + (( 7 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm5,  [%%STATE + (( 5 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm2,  [%%STATE + (( 2 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16]
 
     vpxor       xmm1, xmm1
     vpslld      xmm15, 1
@@ -508,11 +508,11 @@ align 64
     ; xmm13 = LFSR_S13
     ; xmm15 = LFSR_S15
     ;
-    vmovdqa     xmm1,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*64]
-    vmovdqa     xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
+    vmovdqa     xmm1,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*16]
+    vmovdqa     xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*16]
 
     ; Calculate LFSR feedback
     add_mod31   %%W, xmm1
@@ -527,7 +527,7 @@ align 64
     rot_mod31   xmm15, 15
     add_mod31   %%W, xmm15
 
-    vmovdqa     [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64], %%W
+    vmovdqa     [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16], %%W
 
     ; LFSR_S16 = (LFSR_S15++) = eax
 %endmacro
@@ -596,7 +596,7 @@ asm_ZucInitialization_4_avx:
     vpxor   xmm0, xmm0
 %assign I 0
 %rep 2
-    vmovdqa [pState + OFS_R1 + I*64], xmm0
+    vmovdqa [pState + OFS_R1 + I*16], xmm0
 %assign I (I + 1)
 %endrep
 
@@ -626,7 +626,7 @@ asm_ZucInitialization_4_avx:
 
 %assign i 0
 %rep 4
-    vmovdqa [pState + 4*4*off + 64*i], APPEND(xmm, i)
+    vmovdqa [pState + 4*off + 16*i], APPEND(xmm, i)
 %assign i (i+1)
 %endrep
 
@@ -669,14 +669,14 @@ asm_ZucInitialization_4_avx:
 %if %%NUM_ROUNDS != 16
 %assign %%i 0
 %rep 16
-    vmovdqa APPEND(xmm,%%i), [%%STATE + 64*%%i]
+    vmovdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
 %assign %%i (%%i+1)
 %endrep
 
 %assign %%i 0
 %assign %%j %%NUM_ROUNDS
 %rep 16
-    vmovdqa [%%STATE + 64*%%i], APPEND(xmm,%%j)
+    vmovdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
 %assign %%i (%%i+1)
 %assign %%j ((%%j+1) % 16)
 %endrep

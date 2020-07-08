@@ -167,7 +167,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                             void *pBufferOut[NUM_AVX2_BUFS],
                             const uint32_t length[NUM_AVX2_BUFS])
 {
-        DECLARE_ALIGNED(ZucState16_t state, 64);
+        DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
         uint16_t bytes = (uint16_t) find_min_length32(length);
@@ -475,7 +475,7 @@ void _zuc_eia3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                              uint32_t *pMacI[NUM_AVX2_BUFS])
 {
         unsigned int i = 0;
-        DECLARE_ALIGNED(ZucState16_t state, 64);
+        DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         uint32_t commonBits = find_min_length32(lengthInBits);
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][2*KEYSTR_ROUND_LEN], 64);
@@ -647,7 +647,7 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                                 const void * const job_in_lane[NUM_AVX2_BUFS])
 {
         unsigned int i = 0;
-        DECLARE_ALIGNED(ZucState16_t state, 64);
+        DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         uint32_t commonBits = find_min_length16(lengthInBits);
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][2*KEYSTR_ROUND_LEN], 64);

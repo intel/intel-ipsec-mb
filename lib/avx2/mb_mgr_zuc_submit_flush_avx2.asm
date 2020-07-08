@@ -136,14 +136,14 @@ section .text
 %assign I 0
 %rep (16 + 6)
         ; First 4 lanes
-        vmovdqa xmm2, [%%STATE + _zuc_state + I*64]
+        vmovdqa xmm2, [%%STATE + _zuc_state + I*32]
         vpandn  xmm2, xmm0, xmm2
-        vmovdqa [%%STATE + _zuc_state + I*64], xmm2
+        vmovdqa [%%STATE + _zuc_state + I*32], xmm2
 
         ; Next 4 lanes
-        vmovdqa xmm3, [%%STATE + _zuc_state + I*64 + 16]
+        vmovdqa xmm3, [%%STATE + _zuc_state + I*32 + 16]
         vpandn  xmm3, xmm1, xmm3
-        vmovdqa [%%STATE + _zuc_state + I*64 + 16], xmm3
+        vmovdqa [%%STATE + _zuc_state + I*32 + 16], xmm3
 %assign I (I + 1)
 %endrep
 %endmacro
@@ -162,9 +162,9 @@ section .text
         vmovdqu %%YTMP1, [%%TMP]
 %assign I 0
 %rep (16 + 6)
-        vmovdqa %%YTMP2, [%%STATE + _zuc_state + I*64]
+        vmovdqa %%YTMP2, [%%STATE + _zuc_state + I*32]
         vpand   %%YTMP2, %%YTMP1
-        vmovdqa [%%STATE + _zuc_state + I*64], %%YTMP2
+        vmovdqa [%%STATE + _zuc_state + I*32], %%YTMP2
 %assign I (I + 1)
 %endrep
 
@@ -255,7 +255,7 @@ SUBMIT_JOB_ZUC_EEA3:
 
 %assign I 0
 %rep (16 + 2)
-        vmovdqa ymm0, [r12 + _zuc_state + 64*I]
+        vmovdqa ymm0, [r12 + _zuc_state + 32*I]
         vmovdqu [rsp + 32*I], ymm0
 %assign I (I + 1)
 %endrep
@@ -298,20 +298,20 @@ SUBMIT_JOB_ZUC_EEA3:
 %rep (16 + 2)
         ; First 4 lanes
         vmovdqu xmm0, [rsp + 32*I] ; State before init
-        vmovdqa xmm1, [r12 + _zuc_state + 64*I] ; State after init
+        vmovdqa xmm1, [r12 + _zuc_state + 32*I] ; State after init
 
         vpand   xmm3, xmm2, xmm1 ;; Zero out lanes that need to be restored in current state
         vpandn  xmm4, xmm2, xmm0 ;; Zero out lanes that do not need to be restored in saved state
         vpor    xmm4, xmm3       ;; Combine both states
-        vmovdqa [r12 + _zuc_state + 64*I], xmm4 ; Save new state
+        vmovdqa [r12 + _zuc_state + 32*I], xmm4 ; Save new state
 
         ; Next 4 lanes
         vmovdqu xmm0, [rsp + 32*I + 16] ; State before init
-        vmovdqa xmm1, [r12 + _zuc_state + 64*I + 16] ; State after init
+        vmovdqa xmm1, [r12 + _zuc_state + 32*I + 16] ; State after init
         vpand   xmm3, xmm5, xmm1 ;; Zero out lanes that need to be restored in current state
         vpandn  xmm4, xmm5, xmm0 ;; Zero out lanes that do not need to be restored in saved state
         vpor    xmm4, xmm3       ;; Combine both states
-        vmovdqa [r12 + _zuc_state + 64*I + 16], xmm4 ; Save new state
+        vmovdqa [r12 + _zuc_state + 32*I + 16], xmm4 ; Save new state
 %assign I (I + 1)
 %endrep
 
@@ -478,7 +478,7 @@ APPEND(skip_eea3_,I):
 
 %assign I 0
 %rep (16 + 2)
-        vmovdqa ymm0, [r12 + _zuc_state + 64*I]
+        vmovdqa ymm0, [r12 + _zuc_state + 32*I]
         vmovdqu [rsp + 32*I], ymm0
 %assign I (I + 1)
 %endrep
@@ -505,7 +505,7 @@ APPEND(skip_eea3_,I):
 %rep (16 + 2)
         ; First 4 lanes
         vmovdqu xmm0, [rsp + 32*I] ; State before init
-        vmovdqa xmm1, [r12 + _zuc_state + 64*I] ; State after init
+        vmovdqa xmm1, [r12 + _zuc_state + 32*I] ; State after init
 %assign J 0
 %rep 4
         test    word [r12 + _zuc_init_not_done], (1 << J)
@@ -519,11 +519,11 @@ APPEND(skip_eea3_,I):
 APPEND3(skip_flush_lane_,I,J):
 %assign J (J+1)
 %endrep
-        vmovdqa [r12 + _zuc_state + 64*I], xmm1 ; Save new state
+        vmovdqa [r12 + _zuc_state + 32*I], xmm1 ; Save new state
 
         ; Next 4 lanes
         vmovdqu xmm0, [rsp + 32*I + 16] ; State before init
-        vmovdqa xmm1, [r12 + _zuc_state + 64*I + 16] ; State after init
+        vmovdqa xmm1, [r12 + _zuc_state + 32*I + 16] ; State after init
 %assign J 4
 %assign K 0
 %rep 4
@@ -539,7 +539,7 @@ APPEND3(skip_flush_lane_,I,J):
 %assign J (J+1)
 %assign K (K+1)
 %endrep
-        vmovdqa [r12 + _zuc_state + 64*I + 16], xmm1 ; Save new state
+        vmovdqa [r12 + _zuc_state + 32*I + 16], xmm1 ; Save new state
 %assign I (I + 1)
 %endrep
 
@@ -563,10 +563,10 @@ skip_flush_init:
 %assign I 0
 %rep (16 + 2)
         ; Read dword from good lane and broadcast to NULL lanes
-        mov     r13d, [r12 + _zuc_state + 64*I + idx*4]
+        mov     r13d, [r12 + _zuc_state + 32*I + idx*4]
 
         ; First 4 lanes
-        vmovdqa xmm1, [r12 + _zuc_state + 64*I] ; State after init
+        vmovdqa xmm1, [r12 + _zuc_state + 32*I] ; State after init
 %assign J 0
 %rep 4
         cmp     qword [r12 + _zuc_job_in_lane + J*8], 0
@@ -578,10 +578,10 @@ skip_flush_init:
 APPEND3(skip_eea3_copy_,I,J):
 %assign J (J+1)
 %endrep
-        vmovdqa [r12 + _zuc_state + 64*I], xmm1 ; Save new state
+        vmovdqa [r12 + _zuc_state + 32*I], xmm1 ; Save new state
 
         ; Next 4 lanes
-        vmovdqa xmm1, [r12 + _zuc_state + 64*I + 16] ; State after init
+        vmovdqa xmm1, [r12 + _zuc_state + 32*I + 16] ; State after init
 %assign J 4
 %assign K 0
 %rep 4
@@ -595,7 +595,7 @@ APPEND3(skip_eea3_copy_,I,J):
 %assign J (J+1)
 %assign K (K+1)
 %endrep
-        vmovdqa [r12 + _zuc_state + 64*I + 16], xmm1 ; Save new state
+        vmovdqa [r12 + _zuc_state + 32*I + 16], xmm1 ; Save new state
 %assign I (I+1)
 %endrep
 

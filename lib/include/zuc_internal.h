@@ -97,6 +97,50 @@
 /**
  *****************************************************************************
  * @description
+ *      Packed structure to store the ZUC state for 4 packets. *
+ *****************************************************************************/
+typedef struct zuc_state_4_s {
+    uint32_t lfsrState[16][4];
+    /**< State registers of the LFSR */
+    uint32_t fR1[4];
+    /**< register of F */
+    uint32_t fR2[4];
+    /**< register of F */
+    uint32_t bX0[4];
+    /**< Output X0 of the bit reorganization for 4 packets */
+    uint32_t bX1[4];
+    /**< Output X1 of the bit reorganization for 4 packets */
+    uint32_t bX2[4];
+    /**< Output X2 of the bit reorganization for 4 packets */
+    uint32_t bX3[4];
+    /**< Output X3 of the bit reorganization for 4 packets */
+} ZucState4_t;
+
+/**
+ *****************************************************************************
+ * @description
+ *      Packed structure to store the ZUC state for 8 packets. *
+ *****************************************************************************/
+typedef struct zuc_state_8_s {
+    uint32_t lfsrState[16][8];
+    /**< State registers of the LFSR */
+    uint32_t fR1[8];
+    /**< register of F */
+    uint32_t fR2[8];
+    /**< register of F */
+    uint32_t bX0[8];
+    /**< Output X0 of the bit reorganization for 8 packets */
+    uint32_t bX1[8];
+    /**< Output X1 of the bit reorganization for 8 packets */
+    uint32_t bX2[8];
+    /**< Output X2 of the bit reorganization for 8 packets */
+    uint32_t bX3[8];
+    /**< Output X3 of the bit reorganization for 8 packets */
+} ZucState8_t;
+
+/**
+ *****************************************************************************
+ * @description
  *      Packed structure to store the ZUC state for a single packet. *
  *****************************************************************************/
 typedef struct zuc_state_s {
@@ -230,7 +274,7 @@ IMB_DLL_LOCAL void asm_ZucInitialization_avx(const void *pKey,
  *                                  vectors that will be used when initializing
  *                                  the ZUC state.
  * @param[in,out] pState            Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t that will be populated
+ *                                  @ref ZucState4_t that will be populated
  *                                  with the initialized ZUC state.
  *
  * @pre
@@ -239,19 +283,19 @@ IMB_DLL_LOCAL void asm_ZucInitialization_avx(const void *pKey,
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucInitialization_4_sse(ZucKey4_t *pKeys,
                                                ZucIv4_t *pIvs,
-                                               ZucState16_t *pState);
+                                               ZucState4_t *pState);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_4_sse_no_aesni(ZucKey4_t *pKeys,
                                                         ZucIv4_t *pIvs,
-                                                        ZucState16_t *pState);
+                                                        ZucState4_t *pState);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_4_gfni_sse(ZucKey4_t *pKeys,
                                                     ZucIv4_t *pIvs,
-                                                    ZucState16_t *pState);
+                                                    ZucState4_t *pState);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
                                                ZucIv4_t *pIvs,
-                                               ZucState16_t *pState);
+                                               ZucState4_t *pState);
 
 /**
  ******************************************************************************
@@ -267,7 +311,7 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
  *                                  vectors that will be used when initializing
  *                                  the ZUC state.
  * @param[in,out] pState            Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t that will be populated
+ *                                  @ref ZucState8_t that will be populated
  *                                  with the initialized ZUC state.
  *
  * @pre
@@ -276,7 +320,7 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
                                                 ZucIv8_t *pIvs,
-                                                ZucState16_t *pState);
+                                                ZucState8_t *pState);
 
 /**
  ******************************************************************************
@@ -453,7 +497,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
  *      keystream for four packets in parallel.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
+ *                                  @ref ZucState4_t
  *
  * @param[in,out] pKeyStr           Array of pointers to 4 input buffers that
  *                                  will contain the generated keystream for
@@ -464,16 +508,16 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream_avx(void *pKeystream,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_sse(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_sse(ZucState4_t *pState,
                                                 uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_sse_no_aesni(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_sse_no_aesni(ZucState4_t *pState,
                                                          uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_gfni_sse(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_gfni_sse(ZucState4_t *pState,
                                                      uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_avx(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_avx(ZucState4_t *pState,
                                                 uint32_t *pKeyStr[4]);
 
 /**
@@ -485,7 +529,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_avx(ZucState16_t *pState,
  *      keystream for eight packets in parallel.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
+ *                                  @ref ZucState8_t
  *
  * @param[in,out] pKeyStr           Array of pointers to 8 input buffers that
  *                                  will contain the generated keystream for
@@ -496,7 +540,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream16B_4_avx(ZucState16_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_avx2(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_avx2(ZucState8_t *pState,
                                                  uint32_t *pKeyStr[8]);
 
 /**
@@ -533,7 +577,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState,
  *      keystream for four packets in parallel.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
+ *                                  @ref ZucState4_t
  *
  * @param[in,out] pKeyStr           Array of pointers to 4 input buffers that
  *                                  will contain the generated keystream for
@@ -544,16 +588,16 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse(ZucState4_t *pState,
                                                uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse_no_aesni(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_sse_no_aesni(ZucState4_t *pState,
                                                         uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_gfni_sse(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_gfni_sse(ZucState4_t *pState,
                                                     uint32_t *pKeyStr[4]);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
                                                uint32_t *pKeyStr[4]);
 
 /**
@@ -565,7 +609,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState16_t *pState,
  *      keystream for eight packets in parallel.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
+ *                                  @ref ZucState8_t
  *
  * @param[in,out] pKeyStr           Array of pointers to 8 input buffers that
  *                                  will contain the generated keystream for
@@ -576,7 +620,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState16_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState,
                                                 uint32_t *pKeyStr[8]);
 
 /**
@@ -618,7 +662,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  *      bytes to encrypt.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
+ *                                  @ref ZucState4_t
  *
  * @param[in] pIn                   Array of pointers to 4 input buffers.
  * @param[out] pOut                 Array of pointers to 4 output buffers.
@@ -630,25 +674,25 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipher_4_sse(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucCipher_4_sse(ZucState4_t *pState,
                                       const uint64_t *pIn[4],
                                       uint64_t *pOut[4],
                                       uint16_t lengths[4],
                                       const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipher_4_sse_no_aesni(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucCipher_4_sse_no_aesni(ZucState4_t *pState,
                                                 const uint64_t *pIn[4],
                                                 uint64_t *pOut[4],
                                                 uint16_t lengths[4],
                                                 const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipher_4_gfni_sse(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucCipher_4_gfni_sse(ZucState4_t *pState,
                                             const uint64_t *pIn[4],
                                             uint64_t *pOut[4],
                                             uint16_t lengths[4],
                                             const uint64_t minLength);
 
-IMB_DLL_LOCAL void asm_ZucCipher_4_avx(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucCipher_4_avx(ZucState4_t *pState,
                                        const uint64_t *pIn[4],
                                        uint64_t *pOut[4],
                                        uint16_t lengths[4],
@@ -667,7 +711,7 @@ IMB_DLL_LOCAL void asm_ZucCipher_4_avx(ZucState16_t *pState,
  *      bytes to encrypt.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
- *                                  @ref ZucState16_t
+ *                                  @ref ZucState8_t
  *
  * @param[in] pIn                   Array of pointers to 8 input buffers.
  * @param[out] pOut                 Array of pointers to 8 output buffers.
@@ -679,7 +723,7 @@ IMB_DLL_LOCAL void asm_ZucCipher_4_avx(ZucState16_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucCipher_8_avx2(ZucState16_t *pState,
+IMB_DLL_LOCAL void asm_ZucCipher_8_avx2(ZucState8_t *pState,
                                         const uint64_t *pIn[8],
                                         uint64_t *pOut[8],
                                         const uint16_t lengths[8],

@@ -500,8 +500,8 @@ init_mb_mgr_avx2(IMB_MGR *state)
                sizeof(zuc_eea3_ooo->job_in_lane));
         zuc_eea3_ooo->unused_lanes = 0xF76543210;
         zuc_eea3_ooo->num_lanes_inuse = 0;
-        memset(&zuc_eea3_ooo->state16, 0,
-               sizeof(zuc_eea3_ooo->state16));
+        memset(&zuc_eea3_ooo->state, 0,
+               sizeof(zuc_eea3_ooo->state));
         zuc_eea3_ooo->init_not_done = 0;
         zuc_eea3_ooo->unused_lane_bitmask = 0xff;
 
@@ -511,8 +511,8 @@ init_mb_mgr_avx2(IMB_MGR *state)
                sizeof(zuc_eia3_ooo->job_in_lane));
         zuc_eia3_ooo->unused_lanes = 0xF76543210;
         zuc_eia3_ooo->num_lanes_inuse = 0;
-        memset(&zuc_eia3_ooo->state16, 0,
-               sizeof(zuc_eia3_ooo->state16));
+        memset(&zuc_eia3_ooo->state, 0,
+               sizeof(zuc_eia3_ooo->state));
         zuc_eia3_ooo->init_not_done = 0;
         zuc_eia3_ooo->unused_lane_bitmask = 0xff;
 

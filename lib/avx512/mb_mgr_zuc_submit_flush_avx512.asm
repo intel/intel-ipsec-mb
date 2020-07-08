@@ -80,6 +80,9 @@ _gpr_save:      resq    10
 _rsp_save:      resq    1
 endstruc
 
+%define OFS_R1  (16*(4*16))
+%define OFS_R2  (OFS_R1 + (4*16))
+
 section .text
 
 %define APPEND(a,b) a %+ b
@@ -412,18 +415,18 @@ skip_init_flush:
         ;; Copy LFSR registers
 %assign off 0
 %rep 16
-        mov     DWORD(tmp4), [r12 + _zuc_state_lfsr + off + idx*4]
+        mov     DWORD(tmp4), [r12 + _zuc_state + off + idx*4]
         vpbroadcastd    zmm0, DWORD(tmp4)
-        vmovdqa32 [r12 + _zuc_state_lfsr + off]{k6}, zmm0
+        vmovdqa32 [r12 + _zuc_state + off]{k6}, zmm0
 %assign off (off + 64)
 %endrep
-        ;; Copy FR1-2, X0-3
-        mov   DWORD(tmp4), [r12 + _zuc_state_fr1 + idx*4]
+        ;; Copy R1-2
+        mov   DWORD(tmp4), [r12 + _zuc_state + OFS_R1 + idx*4]
         vpbroadcastd    zmm0, DWORD(tmp4)
-        vmovdqa32 [r12 + _zuc_state_fr1]{k6}, zmm0
-        mov   DWORD(tmp4), [r12 + _zuc_state_fr2 + idx*4]
+        vmovdqa32 [r12 + _zuc_state + OFS_R1]{k6}, zmm0
+        mov   DWORD(tmp4), [r12 + _zuc_state + OFS_R2 + idx*4]
         vpbroadcastd    zmm0, DWORD(tmp4)
-        vmovdqa32 [r12 + _zuc_state_fr2]{k6}, zmm0
+        vmovdqa32 [r12 + _zuc_state + OFS_R2]{k6}, zmm0
 
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX

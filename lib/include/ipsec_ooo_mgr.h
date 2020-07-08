@@ -75,6 +75,10 @@
 #define SHA256_DIGEST_SZ (NUM_SHA_256_DIGEST_WORDS * AVX512_NUM_SHA256_LANES)
 #define SHA512_DIGEST_SZ (NUM_SHA_512_DIGEST_WORDS * AVX512_NUM_SHA512_LANES)
 
+/* Maximum size of the ZUC state (LFSR (16) + X0-X3 (4) + R1-R2 (2)).
+   For AVX512, each takes 16 double words, defining the maximum required size */
+#define MAX_ZUC_STATE_SZ 16*(16 + 4 + 2)
+
 /**
  *****************************************************************************
  * @description
@@ -254,7 +258,7 @@ typedef struct {
         uint64_t unused_lanes;
         IMB_JOB *job_in_lane[16];
         uint64_t num_lanes_inuse;
-        DECLARE_ALIGNED(ZucState16_t state16, 64);
+        DECLARE_ALIGNED(uint32_t state[MAX_ZUC_STATE_SZ], 64);
         uint16_t init_not_done;
         uint16_t unused_lane_bitmask;
         uint64_t road_block;

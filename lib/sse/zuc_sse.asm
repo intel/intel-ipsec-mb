@@ -164,11 +164,11 @@ section .text
 
 %define MASK31  xmm12
 
-%define OFS_R1  (16*(4*16))
-%define OFS_R2  (OFS_R1 + (4*16))
-%define OFS_X0  (OFS_R2 + (4*16))
-%define OFS_X1  (OFS_X0 + (4*16))
-%define OFS_X2  (OFS_X1 + (4*16))
+%define OFS_R1  (16*16)
+%define OFS_R2  (OFS_R1 + 16)
+%define OFS_X0  (OFS_R2 + 16)
+%define OFS_X1  (OFS_X0 + 16)
+%define OFS_X2  (OFS_X1 + 16)
 
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -287,7 +287,7 @@ section .text
     mov         %%TMP, %%ROUND_NUM
     add         %%TMP, %%REG_IDX
     and         %%TMP, 0xf
-    shl         %%TMP, 6
+    shl         %%TMP, 4
     add         %%TMP, %%STATE
     movdqa      %%LFSR, [%%TMP]
 
@@ -306,7 +306,7 @@ section .text
     mov         %%TMP, %%ROUND_NUM
     add         %%TMP, %%REG_IDX
     and         %%TMP, 0xf
-    shl         %%TMP, 6
+    shl         %%TMP, 4
     add         %%TMP, %%STATE
     movdqa      [%%TMP], %%LFSR
 
@@ -331,14 +331,14 @@ section .text
     ; xmm0  = LFSR_S0
     ;
 %ifnum %%ROUND_NUM
-    movdqa      xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm14, [%%STATE + ((14 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm11, [%%STATE + ((11 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm9,  [%%STATE + (( 9 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm7,  [%%STATE + (( 7 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm5,  [%%STATE + (( 5 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm2,  [%%STATE + (( 2 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
+    movdqa      xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm14, [%%STATE + ((14 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm11, [%%STATE + ((11 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm9,  [%%STATE + (( 9 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm7,  [%%STATE + (( 7 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm5,  [%%STATE + (( 5 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm2,  [%%STATE + (( 2 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16]
 %else
     load_lfsr %%STATE, %%ROUND_NUM, 15, %%TMP, xmm15
     load_lfsr %%STATE, %%ROUND_NUM, 14, %%TMP, xmm14
@@ -577,11 +577,11 @@ section .text
     ; xmm15 = LFSR_S15
     ;
 %ifnum %%ROUND_NUM
-    movdqa      xmm1,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*64]
-    movdqa      xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
+    movdqa      xmm1,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*16]
+    movdqa      xmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*16]
 %else
     load_lfsr %%STATE, %%ROUND_NUM, 0, %%TMP, xmm1
     load_lfsr %%STATE, %%ROUND_NUM, 4, %%TMP, xmm4
@@ -604,7 +604,7 @@ section .text
     add_mod31   %%W, xmm15
 
 %ifnum %%ROUND_NUM
-    movdqa      [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64], %%W
+    movdqa      [%%STATE + (( 0 + %%ROUND_NUM) % 16)*16], %%W
 %else
     store_lfsr %%STATE, %%ROUND_NUM, 0, %%TMP, %%W
 %endif
@@ -677,7 +677,7 @@ ZUC_INIT_4:
     pxor    xmm0, xmm0
 %assign I 0
 %rep 2
-    movdqa  [pState + OFS_R1 + I*64], xmm0
+    movdqa  [pState + OFS_R1 + I*16], xmm0
 %assign I (I + 1)
 %endrep
 
@@ -708,7 +708,7 @@ ZUC_INIT_4:
 
 %assign i 0
 %rep 4
-    movdqa  [pState + 4*4*off + 64*i], APPEND(xmm, i)
+    movdqa  [pState + 4*off + 16*i], APPEND(xmm, i)
 %assign i (i+1)
 %endrep
 
@@ -754,14 +754,14 @@ exit_loop:
 %if %%NUM_ROUNDS != 16
 %assign %%i 0
 %rep 16
-    movdqa APPEND(xmm,%%i), [%%STATE + 64*%%i]
+    movdqa APPEND(xmm,%%i), [%%STATE + 16*%%i]
 %assign %%i (%%i+1)
 %endrep
 
 %assign %%i 0
 %assign %%j %%NUM_ROUNDS
 %rep 16
-    movdqa [%%STATE + 64*%%i], APPEND(xmm,%%j)
+    movdqa [%%STATE + 16*%%i], APPEND(xmm,%%j)
 %assign %%i (%%i+1)
 %assign %%j ((%%j+1) % 16)
 %endrep
@@ -1007,7 +1007,7 @@ ZUC_KEYGEN8B_4:
 %endmacro
 
 ;;
-;; void asm_ZucCipher_4_sse(state16_t *pSta, u64 *pIn[4],
+;; void asm_ZucCipher_4_sse(state4_t *pSta, u64 *pIn[4],
 ;;                          u64 *pOut[4], u16 *length[4], u64 min_length);
 ;;
 ;; WIN64

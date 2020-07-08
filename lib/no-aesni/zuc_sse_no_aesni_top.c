@@ -131,7 +131,7 @@ void _zuc_eea3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                             const uint32_t length[NUM_SSE_BUFS])
 {
 
-        DECLARE_ALIGNED(ZucState16_t state, 64);
+        DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i;
         /* Calculate the minimum input packet size */
@@ -497,7 +497,7 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                      uint32_t *pMacI[NUM_SSE_BUFS])
 {
         unsigned int i;
-        DECLARE_ALIGNED(ZucState16_t state, 64);
+        DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size */
         uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
@@ -682,7 +682,7 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                    const void * const job_in_lane[NUM_SSE_BUFS])
 {
         unsigned int i;
-        DECLARE_ALIGNED(ZucState16_t state, 64);
+        DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size */
         uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
