@@ -249,6 +249,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\cntr_ccm_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbc_dec_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbc_enc_vaes_avx512.obj \
+	$(OBJ_DIR)\aes_cbcs_enc_vaes_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes192_submit_avx512.obj \
