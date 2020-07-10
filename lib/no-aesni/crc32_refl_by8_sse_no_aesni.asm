@@ -26,7 +26,5 @@
 ;;
 
 %include "include/aesni_emu.inc"
-%define ETHERNET_FCS_FN       ethernet_fcs_sse_no_aesni
-%define ETHERNET_FCS_FN_LOCAL ethernet_fcs_sse_no_aesni_local
-%define CRC32_REFL_FN         crc32_refl_by8_sse_no_aesni
-%include "sse/ethernet_fcs_sse.asm"
+%define CRC32_REFL_FN   crc32_refl_by8_sse_no_aesni
+%include "sse/crc32_refl_by8_sse.asm"

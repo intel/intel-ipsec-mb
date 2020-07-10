@@ -258,6 +258,8 @@ lib_objs1 = \
 	$(OBJ_DIR)\const.obj \
 	$(OBJ_DIR)\wireless_common.obj \
 	$(OBJ_DIR)\constant_lookup.obj \
+	$(OBJ_DIR)\crc32_refl_by8_sse_no_aesni.obj \
+	$(OBJ_DIR)\crc32_refl_by8_sse.obj \
 	$(OBJ_DIR)\ethernet_fcs_sse.obj \
 	$(OBJ_DIR)\ethernet_fcs_avx.obj \
 	$(OBJ_DIR)\ethernet_fcs_sse_no_aesni.obj \
