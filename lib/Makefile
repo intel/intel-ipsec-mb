@@ -431,8 +431,8 @@ asm_avx_lib_objs := \
 	aes_cbcs_1_9_enc_128_x8.o \
 	aes128_cbcs_1_9_dec_by8_avx.o \
 	mb_mgr_aes128_cbcs_1_9_submit_avx.o \
-	mb_mgr_aes128_cbcs_1_9_flush_avx.o
-
+	mb_mgr_aes128_cbcs_1_9_flush_avx.o \
+	crc32_refl_by8_avx.o
 
 #
 # List of ASM modules (avx2 directory)

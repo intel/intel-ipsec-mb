@@ -29,6 +29,8 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 
+extern crc32_refl_by8_avx
+
 [bits 64]
 default rel
 
@@ -56,7 +58,7 @@ struc STACK_FRAME
 _scratch_buf:   resq    2
 _gpr_save:      resq    1
 _rsp_save:      resq    1
-_xmm_save:      resq    10 * 2
+_xmm_save:      resq    8 * 2
 endstruc
 
 section .text
@@ -84,6 +86,7 @@ ETHERNET_FCS_FN:
         vmovdqa         [rsp + _xmm_save + 16*6], xmm12
         vmovdqa         [rsp + _xmm_save + 16*7], xmm13
 %endif
+        lea             arg4, [rel rk1]
         mov             arg3, arg2
         mov             arg2, arg1
         xor             DWORD(arg1), DWORD(arg1)
@@ -120,6 +123,7 @@ ETHERNET_FCS_FN_LOCAL:
         mov             [rsp + _rsp_save], rax
         mov             [rsp + _gpr_save], arg3
 
+        lea             arg4, [rel rk1]
         mov             arg3, arg2
         mov             arg2, arg1
         xor             DWORD(arg1), DWORD(arg1)
@@ -135,319 +139,6 @@ ETHERNET_FCS_FN_LOCAL:
 .local_fn_exit:
         mov             rsp, [rsp + _rsp_save]
         ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; arg1 - initial CRC value
-;; arg2 - buffer pointer
-;; arg3 - buffer size
-;; Returns CRC value through EAX
-align 32
-crc32_refl_by8_avx:
-        not             DWORD(arg1)
-
-        ;; check if smaller than 256B
-        cmp             arg3, 256
-        jl              .less_than_256
-
-        ;; load the initial crc value
-        vmovd           xmm10, DWORD(arg1)      ; initial crc
-
-        ;; load initial 64B data, xor the initial crc value
-        vmovdqu         xmm0, [arg2 + 16 * 0]
-        vmovdqu         xmm1, [arg2 + 16 * 1]
-        vmovdqu         xmm2, [arg2 + 16 * 2]
-        vmovdqu         xmm3, [arg2 + 16 * 3]
-        vmovdqu         xmm4, [arg2 + 16 * 4]
-        vmovdqu         xmm5, [arg2 + 16 * 5]
-        vmovdqu         xmm6, [arg2 + 16 * 6]
-        vmovdqu         xmm7, [arg2 + 16 * 7]
-
-        ;; XOR the initial_crc value
-        vpxor           xmm0, xmm10
-        vmovdqa         xmm10, [rel rk3]        ; xmm10 has rk3 and rk4
-                                                ; imm value of pclmulqdq instruction
-                                                ; will determine which constant to use
-
-        ;; subtract 256 instead of 128 to save one instruction from the loop
-        sub             arg3, 256
-
-        ;; In this section of the code, there is ((128 * x) + y) bytes of buffer
-        ;; where, 0 <= y < 128.
-        ;; The fold_128_B_loop loop will fold 128 bytes at a time until
-        ;; there is (128 + y) bytes of buffer left
-
-        ;; Fold 128 bytes at a time.
-        ;; This section of the code folds 8 xmm registers in parallel
-.fold_128_B_loop:
-        add             arg2, 128
-        vmovdqu         xmm9, [arg2 + 16 * 0]
-        vmovdqu         xmm12, [arg2 + 16 * 1]
-        vpclmulqdq      xmm8, xmm0, xmm10, 0x10
-        vpclmulqdq      xmm0, xmm0, xmm10 , 0x1
-        vpclmulqdq      xmm13, xmm1, xmm10, 0x10
-        vpclmulqdq      xmm1, xmm1, xmm10 , 0x1
-        vpxor           xmm0, xmm9
-        vxorps          xmm0, xmm8
-        vpxor           xmm1, xmm12
-        vxorps          xmm1, xmm13
-
-        vmovdqu         xmm9, [arg2 + 16 * 2]
-        vmovdqu         xmm12, [arg2 + 16 * 3]
-        vpclmulqdq      xmm8, xmm2, xmm10, 0x10
-        vpclmulqdq      xmm2, xmm2, xmm10 , 0x1
-        vpclmulqdq      xmm13, xmm3, xmm10, 0x10
-        vpclmulqdq      xmm3, xmm3, xmm10 , 0x1
-        vpxor           xmm2, xmm9
-        vxorps          xmm2, xmm8
-        vpxor           xmm3, xmm12
-        vxorps          xmm3, xmm13
-
-        vmovdqu         xmm9, [arg2 + 16 * 4]
-        vmovdqu         xmm12, [arg2 + 16 * 5]
-        vpclmulqdq      xmm8, xmm4, xmm10, 0x10
-        vpclmulqdq      xmm4, xmm4, xmm10 , 0x1
-        vpclmulqdq      xmm13, xmm5, xmm10, 0x10
-        vpclmulqdq      xmm5, xmm5, xmm10 , 0x1
-        vpxor           xmm4, xmm9
-        vxorps          xmm4, xmm8
-        vpxor           xmm5, xmm12
-        vxorps          xmm5, xmm13
-
-        vmovdqu         xmm9, [arg2 + 16 * 6]
-        vmovdqu         xmm12, [arg2 + 16 * 7]
-        vpclmulqdq      xmm8, xmm6, xmm10, 0x10
-        vpclmulqdq      xmm6, xmm6, xmm10 , 0x1
-        vpclmulqdq      xmm13, xmm7, xmm10, 0x10
-        vpclmulqdq      xmm7, xmm7, xmm10 , 0x1
-        vpxor           xmm6, xmm9
-        vxorps          xmm6, xmm8
-        vpxor           xmm7, xmm12
-        vxorps          xmm7, xmm13
-
-        sub             arg3, 128
-        jge             .fold_128_B_loop
-
-
-        add             arg2, 128
-        ;; At this point, the buffer pointer is pointing at the last
-        ;; y bytes of the buffer, where 0 <= y < 128.
-        ;; The 128B of folded data is in 8 of the xmm registers:
-        ;;     xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
-
-        ;; fold the 8 xmm registers into 1 xmm register with different constants
-        vmovdqa         xmm10, [rel rk9]
-        vpclmulqdq      xmm8, xmm0, xmm10, 0x1
-        vpclmulqdq      xmm0, xmm0, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vxorps          xmm7, xmm0
-
-        vmovdqa         xmm10, [rel rk11]
-        vpclmulqdq      xmm8, xmm1, xmm10, 0x1
-        vpclmulqdq      xmm1, xmm1, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vxorps          xmm7, xmm1
-
-        vmovdqa         xmm10, [rel rk13]
-        vpclmulqdq      xmm8, xmm2, xmm10, 0x1
-        vpclmulqdq      xmm2, xmm2, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vpxor           xmm7, xmm2
-
-        vmovdqa         xmm10, [rel rk15]
-        vpclmulqdq      xmm8, xmm3, xmm10, 0x1
-        vpclmulqdq      xmm3, xmm3, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vxorps          xmm7, xmm3
-
-        vmovdqa         xmm10, [rel rk17]
-        vpclmulqdq      xmm8, xmm4, xmm10, 0x1
-        vpclmulqdq      xmm4, xmm4, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vpxor           xmm7, xmm4
-
-        vmovdqa         xmm10, [rel rk19]
-        vpclmulqdq      xmm8, xmm5, xmm10, 0x1
-        vpclmulqdq      xmm5, xmm5, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vxorps          xmm7, xmm5
-
-        vmovdqa         xmm10, [rel rk1]
-        vpclmulqdq      xmm8, xmm6, xmm10, 0x1
-        vpclmulqdq      xmm6, xmm6, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vpxor           xmm7, xmm6
-
-
-        ;; Instead of 128, we add 128-16 to the loop counter to save 1
-        ;; instruction from the loop below.
-        ;; Instead of a cmp instruction, we use the negative flag with the jl instruction
-        add             arg3, 128 - 16
-        jl              .final_reduction_for_128
-
-        ;; There are 16 + y bytes left to reduce.
-        ;; 16 bytes is in register xmm7 and the rest is in memory
-        ;; we can fold 16 bytes at a time if y>=16
-        ;; continue folding 16B at a time
-.16B_reduction_loop:
-        vpclmulqdq      xmm8, xmm7, xmm10, 0x1
-        vpclmulqdq      xmm7, xmm7, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vmovdqu         xmm0, [arg2]
-        vpxor           xmm7, xmm0
-        add             arg2, 16
-        sub             arg3, 16
-        ;; Instead of a cmp instruction, we utilize the flags with the jge instruction.
-        ;; Equivalent of check if there is any more 16B in the buffer to be folded.
-        jge             .16B_reduction_loop
-
-        ;; Now we have 16+z bytes left to reduce, where 0<= z < 16.
-        ;; First, we reduce the data in the xmm7 register
-.final_reduction_for_128:
-        add             arg3, 16
-        je              .128_done
-
-        ;; Here we are getting data that is less than 16 bytes.
-        ;; Since we know that there was data before the pointer, we can offset
-        ;; the input pointer before the actual point, to receive exactly 16 bytes.
-        ;; After that the registers need to be adjusted.
-.get_last_two_xmms:
-
-        vmovdqa         xmm2, xmm7
-        vmovdqu         xmm1, [arg2 - 16 + arg3]
-
-        ;; Get rid of the extra data that was loaded before
-        ;; load the shift constant
-        lea             rax, [rel pshufb_shf_table]
-        add             rax, arg3
-        vmovdqu         xmm0, [rax]
-
-        vpshufb         xmm7, xmm0
-        vpxor           xmm0, [rel mask3]
-        vpshufb         xmm2, xmm0
-
-        vpblendvb       xmm2, xmm2, xmm1, xmm0
-
-        vpclmulqdq      xmm8, xmm7, xmm10, 0x1
-        vpclmulqdq      xmm7, xmm7, xmm10, 0x10
-        vpxor           xmm7, xmm8
-        vpxor           xmm7, xmm2
-
-.128_done:
-        ;; compute crc of a 128-bit value
-        vmovdqa         xmm10, [rel rk5]
-        vmovdqa         xmm0, xmm7
-
-        ;; 64b fold
-        vpclmulqdq      xmm7, xmm10, 0
-        vpsrldq         xmm0, 8
-        vpxor           xmm7, xmm0
-
-        ;; 32b fold
-        vmovdqa         xmm0, xmm7
-        vpslldq         xmm7, 4
-        vpclmulqdq      xmm7, xmm10, 0x10
-        vpxor           xmm7, xmm0
-
-        ;; barrett reduction
-.barrett:
-        vpand           xmm7, [rel mask2]
-        vmovdqa         xmm1, xmm7
-        vmovdqa         xmm2, xmm7
-        vmovdqa         xmm10, [rel rk7]
-
-        vpclmulqdq      xmm7, xmm10, 0
-        vpxor           xmm7, xmm2
-        vpand           xmm7, [rel mask]
-        vmovdqa         xmm2, xmm7
-        vpclmulqdq      xmm7, xmm10, 0x10
-        vpxor           xmm7, xmm2
-        vpxor           xmm7, xmm1
-        vpextrd         eax, xmm7, 2
-
-.cleanup:
-        not             eax
-        ret
-
-align 32
-.less_than_256:
-        ;; check if there is enough buffer to be able to fold 16B at a time
-        cmp             arg3, 32
-        jl              .less_than_32
-
-        ;; if there is, load the constants
-        vmovdqa         xmm10, [rel rk1]        ; rk1 and rk2 in xmm10
-
-        vmovd           xmm0, DWORD(arg1)       ; get the initial crc value
-        vmovdqu         xmm7, [arg2]            ; load the plaintext
-        vpxor           xmm7, xmm0
-
-        ;; update the buffer pointer
-        add             arg2, 16
-
-        ; update the counter
-        ;; - subtract 32 instead of 16 to save one instruction from the loop
-        sub             arg3, 32
-
-        jmp             .16B_reduction_loop
-
-
-align 32
-.less_than_32:
-        ;; Move initial crc to the return value.
-        ;; This is necessary for zero-length buffers.
-        mov             eax, DWORD(arg1)
-        test            arg3, arg3
-        je              .cleanup
-
-        vmovd           xmm0, DWORD(arg1)       ; get the initial crc value
-
-        cmp             arg3, 16
-        je              .exact_16_left
-        jl              .less_than_16_left
-
-        vmovdqu         xmm7, [arg2]            ; load the plaintext
-        vpxor           xmm7, xmm0              ; xor the initial crc value
-        add             arg2, 16
-        sub             arg3, 16
-        vmovdqa         xmm10, [rel rk1]        ; rk1 and rk2 in xmm10
-        jmp             .get_last_two_xmms
-
-align 32
-.less_than_16_left:
-        simd_load_avx_15_1 xmm7, arg2, arg3
-        vpxor           xmm7, xmm0              ; xor the initial crc value
-
-        cmp             arg3, 4
-        jl              .only_less_than_4
-
-        lea             rax, [rel pshufb_shf_table]
-        vmovdqu         xmm0, [rax + arg3]
-        vpshufb         xmm7,xmm0
-        jmp             .128_done
-
-align 32
-.exact_16_left:
-        vmovdqu         xmm7, [arg2]
-        vpxor           xmm7, xmm0              ; xor the initial crc value
-        jmp             .128_done
-
-.only_less_than_4:
-        cmp             arg3, 3
-        jl              .only_less_than_3
-        vpslldq         xmm7, 5
-        jmp             .barrett
-
-.only_less_than_3:
-        cmp             arg3, 2
-        jl              .only_less_than_2
-        vpslldq         xmm7, 6
-        jmp             .barrett
-
-.only_less_than_2:
-        vpslldq         xmm7, 7
-        jmp             .barrett
 
 section .data
 
@@ -473,25 +164,6 @@ rk17: dq 0x0000000174359406
 rk18: dq 0x000000003db1ecdc
 rk19: dq 0x000000015a546366
 rk20: dq 0x00000000f1da05aa
-
-align 16
-mask:
-        dq     0xFFFFFFFFFFFFFFFF, 0x0000000000000000
-
-align 16
-mask2:
-        dq     0xFFFFFFFF00000000, 0xFFFFFFFFFFFFFFFF
-
-align 16
-mask3:
-        dq     0x8080808080808080, 0x8080808080808080
-
-align 16
-pshufb_shf_table:
-;; use these values for shift constants for the pshufb instruction
-        dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
-        dq 0x0706050403020100, 0x000e0d0c0b0a0908
-
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
