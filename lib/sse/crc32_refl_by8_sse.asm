@@ -28,6 +28,7 @@
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
+%include "include/crc32_refl.inc"
 
 %ifndef CRC32_REFL_FN
 %define CRC32_REFL_FN crc32_refl_by8_sse
@@ -47,22 +48,6 @@ default rel
 %define arg3            r8
 %define arg4            r9
 %endif
-
-struc STACK_FRAME
-rk1:            resq    2       ; fold by 1 x 128-bits
-
-rk3:            resq    2       ; fold by 8 x 128-bits
-
-rk5:            resq    2       ; 128-bits to 64-bits fold
-rk7:            resq    2       ; barrett reduction 64-bits to 32-bits
-
-rk9:            resq    2       ; fold by 7 x 128-bits
-rk11:           resq    2       ; fold by 6 x 128-bits
-rk13:           resq    2       ; fold by 5 x 128-bits
-rk15:           resq    2       ; fold by 4 x 128-bits
-rk17:           resq    2       ; fold by 3 x 128-bits
-rk19:           resq    2       ; fold by 2 x 128-bits
-endstruc
 
 section .text
 
