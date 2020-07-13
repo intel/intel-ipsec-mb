@@ -71,6 +71,10 @@ section .text
 align 32
 MKGLOBAL(ETHERNET_FCS_FN, function,)
 ETHERNET_FCS_FN:
+%ifdef SAFE_PARAM
+        or              arg1, arg1
+        jz              .wrong_param
+%endif
         mov             rax, rsp
         sub             rsp, STACK_FRAME_size
         and             rsp, -16
@@ -102,8 +106,11 @@ ETHERNET_FCS_FN:
         vmovdqa         xmm12, [rsp + _xmm_save + 16*6]
         vmovdqa         xmm13, [rsp + _xmm_save + 16*7]
 %endif
+%ifdef SAFE_DATA
         clear_scratch_xmms_avx_asm
+%endif
         mov             rsp, [rsp + _rsp_save]
+.wrong_param:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

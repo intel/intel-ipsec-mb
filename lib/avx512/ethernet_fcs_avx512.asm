@@ -62,6 +62,10 @@ section .text
 align 32
 MKGLOBAL(ethernet_fcs_avx512, function,)
 ethernet_fcs_avx512:
+%ifdef SAFE_PARAM
+        or              arg1, arg1
+        jz              .wrong_param
+%endif
         mov             rax, rsp
         sub             rsp, STACK_FRAME_size
         and             rsp, -16
@@ -93,8 +97,11 @@ ethernet_fcs_avx512:
         vmovdqa         xmm12, [rsp + _xmm_save + 16*6]
         vmovdqa         xmm13, [rsp + _xmm_save + 16*7]
 %endif
-        clear_scratch_xmms_avx_asm
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%endif
         mov             rsp, [rsp + _rsp_save]
+.wrong_param:
         ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
