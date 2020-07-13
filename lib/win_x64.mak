@@ -398,7 +398,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\alloc.obj \
 	$(OBJ_DIR)\version.obj \
 	$(OBJ_DIR)\cpu_feature.obj \
-	$(OBJ_DIR)\aesni_emu.obj
+	$(OBJ_DIR)\aesni_emu.obj \
+	$(OBJ_DIR)\crc32_refl_const.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \

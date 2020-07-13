@@ -236,7 +236,8 @@ asm_generic_lib_objs := \
 	aes128_ecbenc_x3.o \
 	zuc_common.o \
 	wireless_common.o \
-	constant_lookup.o
+	constant_lookup.o \
+	crc32_refl_const.o
 
 #
 # List of ASM modules (no-aesni directory)

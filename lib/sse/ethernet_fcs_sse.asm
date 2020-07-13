@@ -28,6 +28,7 @@
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
+%include "include/crc32_refl_const.inc"
 
 [bits 64]
 default rel
@@ -63,8 +64,6 @@ _rsp_save:      resq    1
 _xmm_save:      resq    8 * 2
 endstruc
 
-extern CRC32_REFL_FN
-
 section .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -90,7 +89,7 @@ ETHERNET_FCS_FN:
         movdqa          [rsp + _xmm_save + 16*6], xmm12
         movdqa          [rsp + _xmm_save + 16*7], xmm13
 %endif
-        lea             arg4, [rel rk1]
+        lea             arg4, [rel crc32_ethernet_fcs_const]
         mov             arg3, arg2
         mov             arg2, arg1
         xor             DWORD(arg1), DWORD(arg1)
@@ -127,7 +126,7 @@ ETHERNET_FCS_FN_LOCAL:
         mov             [rsp + _rsp_save], rax
         mov             [rsp + _gpr_save], arg3
 
-        lea             arg4, [rel rk1]
+        lea             arg4, [rel crc32_ethernet_fcs_const]
         mov             arg3, arg2
         mov             arg2, arg1
         xor             DWORD(arg1), DWORD(arg1)
@@ -143,37 +142,6 @@ ETHERNET_FCS_FN_LOCAL:
 .local_fn_exit:
         mov             rsp, [rsp + _rsp_save]
         ret
-
-
-section .data
-
-;; precomputed constants
-align 16
-
-rk1:  dq 0x00000000ccaa009e
-rk2:  dq 0x00000001751997d0
-
-rk3:  dq 0x000000014a7fe880
-rk4:  dq 0x00000001e88ef372
-
-rk5:  dq 0x00000000ccaa009e
-rk6:  dq 0x0000000163cd6124
-
-rk7:  dq 0x00000001f7011640
-rk8:  dq 0x00000001db710640
-
-rk9:  dq 0x00000001d7cfc6ac
-rk10: dq 0x00000001ea89367e
-rk11: dq 0x000000018cb44e58
-rk12: dq 0x00000000df068dc2
-rk13: dq 0x00000000ae0b5394
-rk14: dq 0x00000001c7569e54
-rk15: dq 0x00000001c6e41596
-rk16: dq 0x0000000154442bd4
-rk17: dq 0x0000000174359406
-rk18: dq 0x000000003db1ecdc
-rk19: dq 0x000000015a546366
-rk20: dq 0x00000000f1da05aa
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
