@@ -37,13 +37,13 @@ align 64
 MKGLOBAL(crc32_ethernet_fcs_const,data,internal)
 crc32_ethernet_fcs_const:
         dq 0x00000000ccaa009e
-        dq 0x00000001751997d0
-        dq 0x000000014a7fe880
-        dq 0x00000001e88ef372
-        dq 0x00000000ccaa009e
         dq 0x0000000163cd6124
         dq 0x00000001f7011640
         dq 0x00000001db710640
+        dq 0x00000000e95c1271
+        dq 0x00000000ce3371cb
+        dq 0x000000014a7fe880
+        dq 0x00000001e88ef372
         dq 0x00000001d7cfc6ac
         dq 0x00000001ea89367e
         dq 0x000000018cb44e58
@@ -56,6 +56,10 @@ crc32_ethernet_fcs_const:
         dq 0x000000003db1ecdc
         dq 0x000000015a546366
         dq 0x00000000f1da05aa
+        dq 0x00000000ccaa009e
+        dq 0x00000001751997d0
+        dq 0x0000000000000000
+	dq 0x0000000000000000
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
