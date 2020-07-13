@@ -83,9 +83,7 @@ CRC32_REFL_FN:
 
         ;; XOR the initial_crc value
         pxor            xmm0, xmm10
-        movdqa          xmm10, [arg4 + rk3]     ; xmm10 has rk3 and rk4
-                                                ; imm value of pclmulqdq instruction
-                                                ; will determine which constant to use
+        movdqa          xmm10, [arg4 + crc32_const_fold_8x128b]
 
         ;; subtract 256 instead of 128 to save one instruction from the loop
         sub             arg3, 256
@@ -162,49 +160,49 @@ CRC32_REFL_FN:
         ;;     xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
 
         ;; fold the 8 xmm registers into 1 xmm register with different constants
-        movdqa          xmm10, [arg4 + rk9]
+        movdqa          xmm10, [arg4 + crc32_const_fold_7x128b]
         movdqa          xmm8, xmm0
         pclmulqdq       xmm8, xmm10, 0x1
         pclmulqdq       xmm0, xmm10, 0x10
         pxor            xmm7, xmm8
         xorps           xmm7, xmm0
 
-        movdqa          xmm10, [arg4 + rk11]
+        movdqa          xmm10, [arg4 + crc32_const_fold_6x128b]
         movdqa          xmm8, xmm1
         pclmulqdq       xmm8, xmm10, 0x1
         pclmulqdq       xmm1, xmm10, 0x10
         pxor            xmm7, xmm8
         xorps           xmm7, xmm1
 
-        movdqa          xmm10, [arg4 + rk13]
+        movdqa          xmm10, [arg4 + crc32_const_fold_5x128b]
         movdqa          xmm8, xmm2
         pclmulqdq       xmm8, xmm10, 0x1
         pclmulqdq       xmm2, xmm10, 0x10
         pxor            xmm7, xmm8
         pxor            xmm7, xmm2
 
-        movdqa          xmm10, [arg4 + rk15]
+        movdqa          xmm10, [arg4 + crc32_const_fold_4x128b]
         movdqa          xmm8, xmm3
         pclmulqdq       xmm8, xmm10, 0x1
         pclmulqdq       xmm3, xmm10, 0x10
         pxor            xmm7, xmm8
         xorps           xmm7, xmm3
 
-        movdqa          xmm10, [arg4 + rk17]
+        movdqa          xmm10, [arg4 + crc32_const_fold_3x128b]
         movdqa          xmm8, xmm4
         pclmulqdq       xmm8, xmm10, 0x1
         pclmulqdq       xmm4, xmm10, 0x10
         pxor            xmm7, xmm8
         pxor            xmm7, xmm4
 
-        movdqa          xmm10, [arg4 + rk19]
+        movdqa          xmm10, [arg4 + crc32_const_fold_2x128b]
         movdqa          xmm8, xmm5
         pclmulqdq       xmm8, xmm10, 0x1
         pclmulqdq       xmm5, xmm10, 0x10
         pxor            xmm7, xmm8
         xorps           xmm7, xmm5
 
-        movdqa          xmm10, [arg4 + rk1]
+        movdqa          xmm10, [arg4 + crc32_const_fold_1x128b]
         movdqa          xmm8, xmm6
         pclmulqdq       xmm8, xmm10, 0x1
         pclmulqdq       xmm6, xmm10, 0x10
@@ -271,7 +269,7 @@ CRC32_REFL_FN:
 
 .128_done:
         ;; compute crc of a 128-bit value
-        movdqa          xmm10, [arg4 + rk5]
+        movdqa          xmm10, [arg4 + crc32_const_fold_128b_to_64b]
         movdqa          xmm0, xmm7
 
         ;; 64b fold
@@ -290,7 +288,7 @@ CRC32_REFL_FN:
         pand            xmm7, [rel mask2]
         movdqa          xmm1, xmm7
         movdqa          xmm2, xmm7
-        movdqa          xmm10, [arg4 + rk7]
+        movdqa          xmm10, [arg4 + crc32_const_reduce_64b_to_32b]
 
         pclmulqdq       xmm7, xmm10, 0
         pxor            xmm7, xmm2
@@ -312,7 +310,7 @@ align 32
         jl              .less_than_32
 
         ;; if there is, load the constants
-        movdqa          xmm10, [arg4 + rk1]     ; rk1 and rk2 in xmm10
+        movdqa          xmm10, [arg4 + crc32_const_fold_1x128b]
 
         movd            xmm0, DWORD(arg1)       ; get the initial crc value
         movdqu          xmm7, [arg2]            ; load the plaintext
@@ -344,7 +342,7 @@ align 32
         pxor            xmm7, xmm0              ; xor the initial crc value
         add             arg2, 16
         sub             arg3, 16
-        movdqa          xmm10, [arg4 + rk1]     ; rk1 and rk2 in xmm10
+        movdqa          xmm10, [arg4 + crc32_const_fold_1x128b]
         jmp             .get_last_two_xmms
 
 align 32

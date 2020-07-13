@@ -79,9 +79,7 @@ crc32_refl_by8_avx:
 
         ;; XOR the initial_crc value
         vpxor           xmm0, xmm10
-        vmovdqa         xmm10, [arg4 + rk3]     ; xmm10 has rk3 and rk4
-                                                ; imm value of pclmulqdq instruction
-                                                ; will determine which constant to use
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_8x128b]
 
         ;; subtract 256 instead of 128 to save one instruction from the loop
         sub             arg3, 256
@@ -150,43 +148,43 @@ crc32_refl_by8_avx:
         ;;     xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
 
         ;; fold the 8 xmm registers into 1 xmm register with different constants
-        vmovdqa         xmm10, [arg4 + rk9]
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_7x128b]
         vpclmulqdq      xmm8, xmm0, xmm10, 0x1
         vpclmulqdq      xmm0, xmm0, xmm10, 0x10
         vpxor           xmm7, xmm8
         vxorps          xmm7, xmm0
 
-        vmovdqa         xmm10, [arg4 + rk11]
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_6x128b]
         vpclmulqdq      xmm8, xmm1, xmm10, 0x1
         vpclmulqdq      xmm1, xmm1, xmm10, 0x10
         vpxor           xmm7, xmm8
         vxorps          xmm7, xmm1
 
-        vmovdqa         xmm10, [arg4 + rk13]
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_5x128b]
         vpclmulqdq      xmm8, xmm2, xmm10, 0x1
         vpclmulqdq      xmm2, xmm2, xmm10, 0x10
         vpxor           xmm7, xmm8
         vpxor           xmm7, xmm2
 
-        vmovdqa         xmm10, [arg4 + rk15]
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_4x128b]
         vpclmulqdq      xmm8, xmm3, xmm10, 0x1
         vpclmulqdq      xmm3, xmm3, xmm10, 0x10
         vpxor           xmm7, xmm8
         vxorps          xmm7, xmm3
 
-        vmovdqa         xmm10, [arg4 + rk17]
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_3x128b]
         vpclmulqdq      xmm8, xmm4, xmm10, 0x1
         vpclmulqdq      xmm4, xmm4, xmm10, 0x10
         vpxor           xmm7, xmm8
         vpxor           xmm7, xmm4
 
-        vmovdqa         xmm10, [arg4 + rk19]
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_2x128b]
         vpclmulqdq      xmm8, xmm5, xmm10, 0x1
         vpclmulqdq      xmm5, xmm5, xmm10, 0x10
         vpxor           xmm7, xmm8
         vxorps          xmm7, xmm5
 
-        vmovdqa         xmm10, [arg4 + rk1]
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_1x128b]
         vpclmulqdq      xmm8, xmm6, xmm10, 0x1
         vpclmulqdq      xmm6, xmm6, xmm10, 0x10
         vpxor           xmm7, xmm8
@@ -249,7 +247,7 @@ crc32_refl_by8_avx:
 
 .128_done:
         ;; compute crc of a 128-bit value
-        vmovdqa         xmm10, [arg4 + rk5]
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_128b_to_64b]
         vmovdqa         xmm0, xmm7
 
         ;; 64b fold
@@ -268,7 +266,7 @@ crc32_refl_by8_avx:
         vpand           xmm7, [rel mask2]
         vmovdqa         xmm1, xmm7
         vmovdqa         xmm2, xmm7
-        vmovdqa         xmm10, [arg4 + rk7]
+        vmovdqa         xmm10, [arg4 + crc32_const_reduce_64b_to_32b]
 
         vpclmulqdq      xmm7, xmm10, 0
         vpxor           xmm7, xmm2
@@ -290,7 +288,7 @@ align 32
         jl              .less_than_32
 
         ;; if there is, load the constants
-        vmovdqa         xmm10, [arg4 + rk1]     ; rk1 and rk2 in xmm10
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_1x128b]
 
         vmovd           xmm0, DWORD(arg1)       ; get the initial crc value
         vmovdqu         xmm7, [arg2]            ; load the plaintext
@@ -324,7 +322,7 @@ align 32
         vpxor           xmm7, xmm0              ; xor the initial crc value
         add             arg2, 16
         sub             arg3, 16
-        vmovdqa         xmm10, [arg4 + rk1]     ; rk1 and rk2 in xmm10
+        vmovdqa         xmm10, [arg4 + crc32_const_fold_1x128b]
         jmp             .get_last_two_xmms
 
 align 32
