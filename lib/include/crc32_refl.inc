@@ -29,10 +29,6 @@
 %define crc32_refl_inc_included
 
 struc CRC32_REFL_CONSTANTS
-crc32_const_fold_128b_to_64b:
-                resq    2       ; 128-bits to 64-bits fold
-crc32_const_reduce_64b_to_32b:
-                resq    2       ; barrett reduction 64-bits to 32-bits
 crc32_const_fold_16x128b:
                 resq    2       ; fold by 16 x 128-bits
 crc32_const_fold_8x128b:
@@ -53,6 +49,10 @@ crc32_const_fold_1x128b:
                 resq    2       ; fold by 1 x 128-bits
 crc32_const_null_padding:
                 resq    2
+crc32_const_fold_128b_to_64b:
+                resq    2       ; 128-bits to 64-bits fold
+crc32_const_reduce_64b_to_32b:
+                resq    2       ; barrett reduction 64-bits to 32-bits
 endstruc
 
 %endif ;; crc32_refl_inc_included

@@ -32,6 +32,7 @@
 extern crc32_refl_by8_sse_no_aesni
 extern crc32_refl_by8_sse
 extern crc32_refl_by8_avx
+extern crc32_refl_by16_vclmul_avx512
 
 ;; structures with constants
 extern crc32_ethernet_fcs_const

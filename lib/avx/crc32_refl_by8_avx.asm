@@ -25,6 +25,16 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+;; Authors of original CRC implementation:
+;;     Erdinc Ozturk
+;;     Vinodh Gopal
+;;     James Guilford
+;;     Greg Tucker
+;;
+;; Reference paper titled:
+;;     "Fast CRC Computation for Generic Polynomials Using PCLMULQDQ Instruction"
+;;     URL: http://download.intel.com/design/intarch/papers/323102.pdf
+
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
@@ -297,12 +307,10 @@ align 32
         ;; update the buffer pointer
         add             arg2, 16
 
-        ; update the counter
+        ;; update the counter
         ;; - subtract 32 instead of 16 to save one instruction from the loop
         sub             arg3, 32
-
         jmp             .16B_reduction_loop
-
 
 align 32
 .less_than_32:

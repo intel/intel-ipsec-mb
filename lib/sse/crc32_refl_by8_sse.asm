@@ -25,6 +25,16 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
+;; Authors of original CRC implementation:
+;;     Erdinc Ozturk
+;;     Vinodh Gopal
+;;     James Guilford
+;;     Greg Tucker
+;;
+;; Reference paper titled:
+;;     "Fast CRC Computation for Generic Polynomials Using PCLMULQDQ Instruction"
+;;     URL: http://download.intel.com/design/intarch/papers/323102.pdf
+
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"

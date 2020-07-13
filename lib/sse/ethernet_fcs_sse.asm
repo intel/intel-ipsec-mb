@@ -26,9 +26,9 @@
 ;;
 
 %include "include/os.asm"
-%include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32_refl_const.inc"
+%include "include/clear_regs.asm"
 
 [bits 64]
 default rel
@@ -106,6 +106,7 @@ ETHERNET_FCS_FN:
         movdqa          xmm12, [rsp + _xmm_save + 16*6]
         movdqa          xmm13, [rsp + _xmm_save + 16*7]
 %endif
+        clear_scratch_xmms_sse_asm
         mov             rsp, [rsp + _rsp_save]
         ret
 

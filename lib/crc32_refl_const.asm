@@ -33,33 +33,22 @@ default rel
 section .data
 
 ;; Ethernet FCS CRC32 0x04c11db7
+;; http://www.ietf.org/rfc/rfc1952.txt
 align 64
 MKGLOBAL(crc32_ethernet_fcs_const,data,internal)
 crc32_ethernet_fcs_const:
-        dq 0x00000000ccaa009e
-        dq 0x0000000163cd6124
-        dq 0x00000001f7011640
-        dq 0x00000001db710640
-        dq 0x00000000e95c1271
-        dq 0x00000000ce3371cb
-        dq 0x000000014a7fe880
-        dq 0x00000001e88ef372
-        dq 0x00000001d7cfc6ac
-        dq 0x00000001ea89367e
-        dq 0x000000018cb44e58
-        dq 0x00000000df068dc2
-        dq 0x00000000ae0b5394
-        dq 0x00000001c7569e54
-        dq 0x00000001c6e41596
-        dq 0x0000000154442bd4
-        dq 0x0000000174359406
-        dq 0x000000003db1ecdc
-        dq 0x000000015a546366
-        dq 0x00000000f1da05aa
-        dq 0x00000000ccaa009e
-        dq 0x00000001751997d0
-        dq 0x0000000000000000
-	dq 0x0000000000000000
+        dq 0x00000000e95c1271, 0x00000000ce3371cb   ; 2048-bits fold
+        dq 0x00000000910eeec1, 0x0000000033fff533   ; 1024-bits fold
+        dq 0x000000000cbec0ed, 0x0000000031f8303f   ; 896-bits fold
+        dq 0x0000000057c54819, 0x00000000df068dc2   ; 768-bits fold
+        dq 0x00000000ae0b5394, 0x000000001c279815   ; 640-bits fold
+        dq 0x000000001d9513d7, 0x000000008f352d95   ; 512-bits fold
+        dq 0x00000000af449247, 0x000000003db1ecdc   ; 384-bits fold
+        dq 0x0000000081256527, 0x00000000f1da05aa   ; 256-bits fold
+        dq 0x00000000ccaa009e, 0x00000000ae689191   ; 128-bits fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+	dq 0x00000000ccaa009e, 0x00000000b8bc6765   ; 128-bits to 64-bits fold
+	dq 0x00000001f7011640, 0x00000001db710640   ; 64-bits to 32-bits reduction
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

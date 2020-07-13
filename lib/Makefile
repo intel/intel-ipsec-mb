@@ -500,7 +500,8 @@ asm_avx512_lib_objs := \
 	mb_mgr_zuc_submit_flush_avx512.o \
 	mb_mgr_zuc_submit_flush_gfni_avx512.o \
 	chacha20_avx512.o \
-	ethernet_fcs_avx512.o
+	ethernet_fcs_avx512.o \
+	crc32_refl_by16_vclmul_avx512.o
 
 #
 # GCM object file lists
