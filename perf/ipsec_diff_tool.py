@@ -105,11 +105,12 @@ class Variant(object):
             cycle_cost_b = obj_b.slope * int(PACKET_SIZE) + obj_b.intercept
             formatted_b = "{:.5f}".format(cycle_cost_b)
         if THROUGHPUT:
-            throughput_a = "{:.5f}".format((int(CLOCK_SPEED) / cycle_cost_a) * int(PACKET_SIZE))
+            packet_size_bits = int(PACKET_SIZE) * 8
+            throughput_a = "{:.2f}".format((int(CLOCK_SPEED) * packet_size_bits) /cycle_cost_a )
             if obj_b is None:
                 return (throughput_a)
             else:
-                throughput_b = "{:.5f}".format((int(CLOCK_SPEED) / cycle_cost_b) * int(PACKET_SIZE))
+                throughput_b = "{:.2f}".format((int(CLOCK_SPEED) * packet_size_bits) / cycle_cost_b)
                 return (throughput_a + " "*(COL_WIDTH-len(str(throughput_a))) + throughput_b)
         if obj_b is None:
             return (formatted_a)
@@ -324,11 +325,13 @@ class DiffTool(object):
         print("\t-v - verbose")
         print("\t-a - takes only one file to analyze")
         print("\t-c - takes packet size as argument and then it will calculate cycle cost")
-        print("\t-t - takes packet size and clock speed as arguments and then it will calculate throughput")
+        print("\t-t - takes packet size and clock speed as arguments and then it will calculate throughput in Mbps")
         print("\t-s - calulates the slope and intercept")
         print("\tfile_a, file_b - text files containing output from ipsec_perf tool")
         print("\ttol - tolerance [%], must be >= 0, default 5\n")
         print("Examples:")
+        print("\tdefault no arguments prints slope and intercept")
+        print("\tipsec_diff_tool.py file01.txt file02.txt")
         print("\tipsec_diff_tool.py -s file01.txt file02.txt 10")
         print("\tipsec_diff_tool.py -a -s file02.txt")
         print("\tipsec_diff_tool.py -v -a -s file01.txt")
@@ -408,3 +411,4 @@ class DiffTool(object):
 
 if __name__ == '__main__':
     DiffTool().run()
+
