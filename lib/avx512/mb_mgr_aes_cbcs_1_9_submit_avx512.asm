@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2020, Intel Corporation
+;; Copyright (c) 2020, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,122 +25,23 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "include/os.asm"
-%include "imb_job.asm"
-%include "mb_mgr_datastruct.asm"
+%define CBCS
+%include "avx512/mb_mgr_aes_submit_avx512.asm"
 
-%include "include/reg_sizes.asm"
-%include "include/const.inc"
-%ifndef AES_CBC_ENC_X16
-%define AES_CBC_ENC_X16 aes_cbc_enc_128_vaes_avx512
+
+%define AES_CBCS_ENC_X16 aes_cbcs_1_9_enc_128_vaes_avx512
 %define NUM_KEYS 11
-%define SUBMIT_JOB_AES_ENC submit_job_aes128_enc_vaes_avx512
-%endif
+%define SUBMIT_JOB_AES_CBCS_ENC submit_job_aes128_cbcs_1_9_enc_vaes_avx512
 
-; void AES_CBC_ENC_X16(AES_ARGS_x16 *args, UINT64 len_in_bytes);
-extern AES_CBC_ENC_X16
+; void AES_CBCS_ENC_X16(AES_ARGS_x16 *args, UINT64 len_in_bytes);
+extern AES_CBCS_ENC_X16
 
-section .text
-
-%ifdef LINUX
-%define arg1    rdi
-%define arg2    rsi
-%else
-%define arg1    rcx
-%define arg2    rdx
-%endif
-
-%define state   arg1
-%define job     arg2
-%define len2    arg2
-
-%define job_rax          rax
-
-%if 1
-; idx needs to be in rbp
-%define len              rbp
-%define idx              rbp
-%define tmp              r10
-%define tmp2             r11
-%define tmp3             r12
-
-%define lane             r8
-
-%define iv               r9
-
-%define unused_lanes     rbx
-%endif
-
-; STACK_SPACE needs to be an odd multiple of 8
-; This routine and its callee clobbers all GPRs
-struc STACK
-_gpr_save:      resq    8
-_rsp_save:      resq    1
-endstruc
-
-
-%macro INSERT_KEYS 6
-%define %%KP    %1 ; [in] GP reg with pointer to expanded keys
-%define %%LANE  %2 ; [in] GP reg with lane number
-%define %%NKEYS %3 ; [in] number of round keys (numerical value)
-%define %%COL   %4 ; [clobbered] GP reg
-%define %%ZTMP  %5 ; [clobbered] ZMM reg
-%define %%IA0   %6 ; [clobbered] GP reg
-
-
-%assign ROW (16*16)
-
-        mov             %%COL, %%LANE
-        shl             %%COL, 4
-        lea             %%IA0, [state + _aes_args_key_tab]
-        add             %%COL, %%IA0
-
-        vmovdqu64       %%ZTMP, [%%KP]
-        vextracti64x2   [%%COL + ROW*0], %%ZTMP, 0
-        vextracti64x2   [%%COL + ROW*1], %%ZTMP, 1
-        vextracti64x2   [%%COL + ROW*2], %%ZTMP, 2
-        vextracti64x2   [%%COL + ROW*3], %%ZTMP, 3
-
-        vmovdqu64       %%ZTMP, [%%KP + 64]
-        vextracti64x2   [%%COL + ROW*4], %%ZTMP, 0
-        vextracti64x2   [%%COL + ROW*5], %%ZTMP, 1
-        vextracti64x2   [%%COL + ROW*6], %%ZTMP, 2
-        vextracti64x2   [%%COL + ROW*7], %%ZTMP, 3
-
-%if %%NKEYS > 11 ; 192 or 256 - copy 4 more keys
-        vmovdqu64       %%ZTMP, [%%KP + 128]
-        vextracti64x2   [%%COL + ROW*11], %%ZTMP, 3
-%else   ; 128 - copy 3 more keys
-        mov             %%IA0, 0x3f
-        kmovq           k1, %%IA0
-        vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 128]
-%endif
-        vextracti64x2   [%%COL + ROW*8], %%ZTMP, 0
-        vextracti64x2   [%%COL + ROW*9], %%ZTMP, 1
-        vextracti64x2   [%%COL + ROW*10], %%ZTMP, 2
-
-%if %%NKEYS == 15 ; 256 - 3 more keys
-        mov             %%IA0, 0x3f
-        kmovq           k1, %%IA0
-        vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 192]
-        vextracti64x2   [%%COL + ROW*12], %%ZTMP, 0
-        vextracti64x2   [%%COL + ROW*13], %%ZTMP, 1
-        vextracti64x2   [%%COL + ROW*14], %%ZTMP, 2
-%elif %%NKEYS == 13   ; 192 - 1 more key
-        mov             %%IA0, 0x3
-        kmovq           k1, %%IA0
-        vmovdqu64       %%ZTMP{k1}{z}, [%%KP + 192]
-        vextracti64x2   [%%COL + ROW*12], %%ZTMP, 0
-%endif
-%endmacro
-
-%ifndef CBCS
 
 ; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
-MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
-SUBMIT_JOB_AES_ENC:
+MKGLOBAL(SUBMIT_JOB_AES_CBCS_ENC,function,internal)
+SUBMIT_JOB_AES_CBCS_ENC:
 
         mov     rax, rsp
         sub     rsp, STACK_size
@@ -163,7 +64,7 @@ SUBMIT_JOB_AES_ENC:
         and     lane, 0xF
         shr     unused_lanes, 4
         mov     len, [job + _msg_len_to_cipher_in_bytes]
-        and     len, -16                ; DOCSIS may pass size unaligned to block size
+        and     len, -16                ; Length needs to be multiple of block size
         mov     iv, [job + _iv]
         mov     [state + _aes_unused_lanes], unused_lanes
         add     qword [state + _aes_lanes_in_use], 1
@@ -171,20 +72,21 @@ SUBMIT_JOB_AES_ENC:
         mov     [state + _aes_job_in_lane + lane*8], job
 
         ;; Update lane len
-        vmovdqa64       ymm0, [state + _aes_lens]
-        mov             tmp2, rcx       ; save rcx
-        mov             rcx, lane
-        mov             tmp, 1
-        shl             tmp, cl
-        mov             rcx, tmp2       ; restore rcx
-        kmovq           k1, tmp
+        vpbroadcastq    zmm5, len
+        lea             tmp, [rel index_to_lane16_mask]
+        mov             WORD(tmp), [tmp + lane*2]
+        kmovb           k1, DWORD(tmp)
+        shr             tmp, 8
+        kmovb           k2, DWORD(tmp)
 
-        vpbroadcastw    ymm1, WORD(len)
-        vmovdqu16       ymm0{k1}, ymm1
-        vmovdqa64       [state + _aes_lens], ymm0
+        vmovdqa64 zmm6, [state + _aes_lens_64]
+        vmovdqa64 zmm7, [state + _aes_lens_64 + 64]
 
-        ;; Find min length for lanes 0-7
-        vphminposuw     xmm2, xmm0
+        vmovdqa64 zmm6{k1}, zmm5
+        vmovdqa64 zmm7{k2}, zmm5
+
+        vmovdqa64 [state + _aes_lens_64], zmm6
+        vmovdqa64 [state + _aes_lens_64 + 64], zmm7
 
         ;; Update input pointer
         mov     tmp, [job + _src]
@@ -205,28 +107,35 @@ SUBMIT_JOB_AES_ENC:
         cmp     qword [state + _aes_lanes_in_use], 16
         jne     return_null
 
-        ; Find min length for lanes 8-15
-        vpextrw         DWORD(len2), xmm2, 0   ; min value
-        vpextrw         DWORD(idx), xmm2, 1   ; min index
-        vextracti128    xmm1, ymm0, 1
-        vphminposuw     xmm2, xmm1
-        vpextrw         DWORD(tmp), xmm2, 0       ; min value
-        cmp             DWORD(len2), DWORD(tmp)
-        jle             use_min
-        vpextrw         DWORD(idx), xmm2, 1   ; min index
-        add             DWORD(idx), 8               ; but index +8
-        mov             len2, tmp                    ; min len
-use_min:
-        cmp             len2, 0
-        je              len_is_0
+	; Find min length
+        vpsllq          zmm8, zmm6, 4
+        vpsllq          zmm9, zmm7, 4
+        vporq           zmm8, zmm8, [rel index_to_lane16]
+        vporq           zmm9, zmm9, [rel index_to_lane16 + 64]
+        vpminuq         zmm8, zmm8, zmm9
+        vextracti64x4   ymm9, zmm8, 1
+        vpminuq         ymm8, ymm9, ymm8
+        vextracti32x4   xmm9, ymm8, 1
+        vpminuq         xmm8, xmm9, xmm8
+        vpsrldq         xmm9, xmm8, 8
+        vpminuq         xmm8, xmm9, xmm8
+        vmovq           len2, xmm8
+        mov             idx, len2
+        and             idx, 0xf
+        shr             len2, 4
 
-        vpbroadcastw    ymm3, WORD(len2)
-        vpsubw          ymm0, ymm0, ymm3
-        vmovdqa         [state + _aes_lens], ymm0
+        or	len2, len2
+	jz	len_is_0
+
+        vpbroadcastq    zmm5, len2
+        vpsubq          zmm6, zmm6, zmm5
+        vpsubq          zmm7, zmm7, zmm5
+        vmovdqa64       [state + _aes_lens_64], zmm6
+        vmovdqa64       [state + _aes_lens_64 + 64], zmm7
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2
-        call    AES_CBC_ENC_X16
+        call    AES_CBCS_ENC_X16
         ; state and idx are intact
 
 len_is_0:
@@ -277,8 +186,27 @@ return_null:
         xor     job_rax, job_rax
         jmp     return
 
+section .data
+default rel
+
+align 64
+index_to_lane16:
+        dq      0x0000000000000000, 0x0000000000000001
+        dq      0x0000000000000002, 0x0000000000000003
+        dq      0x0000000000000004, 0x0000000000000005
+        dq      0x0000000000000006, 0x0000000000000007
+        dq      0x0000000000000008, 0x0000000000000009
+        dq      0x000000000000000a, 0x000000000000000b
+        dq      0x000000000000000c, 0x000000000000000d
+        dq      0x000000000000000e, 0x000000000000000f
+
+align 16
+index_to_lane16_mask:
+        dw      0x0001, 0x0002, 0x0004, 0x0008,
+        dw      0x0010, 0x0020, 0x0040, 0x0080,
+        dw      0x0100, 0x0200, 0x0400, 0x0800,
+        dw      0x1000, 0x2000, 0x4000, 0x8000,
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif
-
-%endif ;; CBCS
