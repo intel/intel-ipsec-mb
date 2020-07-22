@@ -254,6 +254,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\mb_mgr_aes_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_cbcs_1_9_submit_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes_cbcs_1_9_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes192_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes192_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_submit_avx512.obj \
