@@ -138,6 +138,12 @@ IMB_JOB *submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state,
                                             IMB_JOB *job);
 IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 
+IMB_JOB *submit_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state,
+                                               IMB_JOB *job);
+IMB_JOB *flush_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state);
+
+
+
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
@@ -394,10 +400,10 @@ ethernet_fcs_avx(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
-#define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_avx
-#define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_avx
-#define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_avx
-#define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_avx
+#define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_avx512
+#define FLUSH_JOB_AES128_CBCS_1_9_ENC  flush_job_aes128_cbcs_1_9_enc_avx512
+#define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_avx512
+#define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_avx512
 
 /* ====================================================================== */
 
@@ -738,6 +744,20 @@ static IMB_JOB *
         (MB_MGR_AES_XCBC_OOO *state) = flush_job_aes_xcbc_avx;
 
 
+static IMB_JOB *
+(*submit_job_aes128_cbcs_1_9_enc_avx512)
+        (MB_MGR_AES_OOO *state, IMB_JOB *job) =
+        submit_job_aes128_cbcs_1_9_enc_avx;
+
+static IMB_JOB *
+(*flush_job_aes128_cbcs_1_9_enc_avx512)
+        (MB_MGR_AES_OOO *state) = flush_job_aes128_cbcs_1_9_enc_avx;
+
+static void
+(*aes_cbcs_1_9_dec_128_avx512) (const void *in, const uint8_t *IV,
+                                const void *keys, void *out,
+                                uint64_t len_bytes) = aes_cbcs_1_9_dec_128_avx;
+
 /* ====================================================================== */
 
 __forceinline
@@ -1003,6 +1023,12 @@ init_mb_mgr_avx512(IMB_MGR *state)
 
                 submit_job_aes_xcbc_avx512 = submit_job_aes_xcbc_vaes_avx512;
                 flush_job_aes_xcbc_avx512 = flush_job_aes_xcbc_vaes_avx512;
+
+                submit_job_aes128_cbcs_1_9_enc_avx512 =
+                        submit_job_aes128_cbcs_1_9_enc_vaes_avx512;
+                flush_job_aes128_cbcs_1_9_enc_avx512 =
+                        flush_job_aes128_cbcs_1_9_enc_vaes_avx512;
+                aes_cbcs_1_9_dec_128_avx512 = aes_cbcs_1_9_dec_128_vaes_avx512;
         }
 
         if ((state->features & IMB_FEATURE_GFNI) &&
@@ -1509,14 +1535,25 @@ init_mb_mgr_avx512(IMB_MGR *state)
         }
 
         /* Init AES CBC-S out-of-order fields */
-        memset(aes128_cbcs_ooo->lens, 0xFF,
-               sizeof(aes128_cbcs_ooo->lens));
-        memset(&aes128_cbcs_ooo->lens[0], 0,
-               sizeof(aes128_cbcs_ooo->lens[0]) * 8);
-        memset(aes128_cbcs_ooo->job_in_lane, 0,
-               sizeof(aes128_cbcs_ooo->job_in_lane));
-        aes128_cbcs_ooo->unused_lanes = 0xF76543210;
-        aes128_cbcs_ooo->num_lanes_inuse = 0;
+        if (vaes_support) {
+                /* init 16 lanes */
+                memset(aes128_cbcs_ooo->lens, 0,
+                       sizeof(aes128_cbcs_ooo->lens));
+                memset(aes128_cbcs_ooo->job_in_lane, 0,
+                       sizeof(aes128_cbcs_ooo->job_in_lane));
+                aes128_cbcs_ooo->unused_lanes = 0xFEDCBA9876543210;
+                aes128_cbcs_ooo->num_lanes_inuse = 0;
+
+        } else {
+                memset(aes128_cbcs_ooo->lens, 0xFF,
+                       sizeof(aes128_cbcs_ooo->lens));
+                memset(&aes128_cbcs_ooo->lens[0], 0,
+                       sizeof(aes128_cbcs_ooo->lens[0]) * 8);
+                memset(aes128_cbcs_ooo->job_in_lane, 0,
+                       sizeof(aes128_cbcs_ooo->job_in_lane));
+                aes128_cbcs_ooo->unused_lanes = 0xF76543210;
+                aes128_cbcs_ooo->num_lanes_inuse = 0;
+        }
 
         /* Init "in order" components */
         state->next_job = 0;

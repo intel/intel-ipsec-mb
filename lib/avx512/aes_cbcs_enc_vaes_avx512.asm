@@ -33,7 +33,7 @@
 %include "include/clear_regs.asm"
 
 struc STACK
-_gpr_save:      resq    4
+_gpr_save:      resq    1
 endstruc
 
 %define GPR_SAVE_AREA   rsp + _gpr_save
@@ -105,22 +105,12 @@ endstruc
 %macro FUNC_SAVE 0
         sub             rsp, STACK_size
         mov             [GPR_SAVE_AREA + 8*0], rbp
-%ifndef LINUX
-        mov             [GPR_SAVE_AREA + 8*1], rsi
-        mov             [GPR_SAVE_AREA + 8*2], rdi
-%endif
-	mov             [GPR_SAVE_AREA + 8*3], r15
 %endmacro
 
 ;; Restore register states
 %macro FUNC_RESTORE 0
         ;; XMMs are saved at a higher level
         mov             rbp, [GPR_SAVE_AREA + 8*0]
-%ifndef LINUX
-        mov             rsi, [GPR_SAVE_AREA + 8*1]
-        mov             rdi, [GPR_SAVE_AREA + 8*2]
-%endif
-	mov             r15, [GPR_SAVE_AREA + 8*3]
         add             rsp, STACK_size
         vzeroupper
 %endmacro
@@ -600,16 +590,20 @@ endstruc
 
         ;; convert CBCS length to standard number of CBC blocks
         ;; ((num_bytes + 9 blocks) / 160) = num blocks to decrypt
-        mov     IA1, rdx        ;; save rdx
-        xor     rdx, rdx        ;; zero rdx for div
+%ifdef LINUX
+        ;; save rdx, only on Linux, as for Windows, rdx = len, which is updated here
+        mov     IA1, rdx
+%endif
         mov     rax, LEN        ;; mov len to rax for div
+        xor     rdx, rdx        ;; zero rdx for div
         add     rax, (%%OFFSET-16) ;; add 9 blocks
         mov     IA2, 160
         div     IA2             ;; divide rax by 160
         shl     rax, 4          ;; multiply by 16 to get num bytes
         mov     LEN, rax        ;; set LEN
+%ifdef LINUX
         mov     rdx, IA1        ;; restore rdx
-
+%endif
 
         ;; load IV's per lane
         vmovdqa64       ZIV00_03, [%%IV + 16*0]
