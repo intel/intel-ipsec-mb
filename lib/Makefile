@@ -471,6 +471,7 @@ asm_avx512_lib_objs := \
 	aes_cbc_dec_vaes_avx512.o \
 	aes_cbc_enc_vaes_avx512.o \
 	aes_cbcs_enc_vaes_avx512.o \
+	aes_cbcs_dec_vaes_avx512.o \
 	aes_docsis_dec_avx512.o \
 	aes_docsis_enc_avx512.o \
 	aes_docsis_dec_vaes_avx512.o \

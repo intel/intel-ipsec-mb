@@ -71,6 +71,13 @@
 %endif
 
 %define tmp        r10
+%define tmp2       r11
+
+%ifdef CBCS
+%define OFFSET 160
+%else
+%define OFFSET 16
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; macro to preload keys
@@ -111,10 +118,15 @@
 %define %%NROUNDS               %14     ; [in] number of rounds; numerical value
 
         ;; load plain/cipher text
+%ifdef CBCS
+        ZMM_LOAD_BLOCKS_0_16_OFFSET %%num_final_blocks, %%CIPH_IN, \
+                OFFSET, %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+                %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
+%else
         ZMM_LOAD_BLOCKS_0_16 %%num_final_blocks, %%CIPH_IN, 0, \
                 %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
                 %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
-
+%endif
         ;; Prepare final cipher text blocks to
         ;; be XOR'd later after AESDEC
         valignq         %%ZT1, %%CIPHER_PLAIN_0_3, %%LAST_CIPH_BLK, 6
@@ -185,9 +197,15 @@
 %endif
 
         ;; write plain text back to output
+%ifdef CBCS
+        ZMM_STORE_BLOCKS_0_16_OFFSET %%num_final_blocks, %%PLAIN_OUT, \
+                OFFSET, %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+                %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
+%else
         ZMM_STORE_BLOCKS_0_16 %%num_final_blocks, %%PLAIN_OUT, 0, \
                 %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
                 %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
+%endif
 
 %endmacro       ; FINAL_BLOCKS
 
@@ -211,11 +229,16 @@
 %define %%NROUNDS               %13     ; [in] number of rounds; numerical value
 %define %%IA0                   %14     ; [clobbered] GP temporary
 
+%ifdef CBCS
+       ZMM_LOAD_BLOCKS_0_16_OFFSET 16, %%CIPH_IN, OFFSET, \
+                %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+                %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
+%else
         vmovdqu8        %%CIPHER_PLAIN_0_3, [%%CIPH_IN]
         vmovdqu8        %%CIPHER_PLAIN_4_7, [%%CIPH_IN + 64]
         vmovdqu8        %%CIPHER_PLAIN_8_11, [%%CIPH_IN + 128]
         vmovdqu8        %%CIPHER_PLAIN_12_15, [%%CIPH_IN + 192]
-
+%endif
         ;; prepare first set of cipher blocks for later XOR'ing
         valignq         %%ZT1, %%CIPHER_PLAIN_0_3, %%LAST_CIPH_BLK, 6
         valignq         %%ZT2, %%CIPHER_PLAIN_4_7, %%CIPHER_PLAIN_0_3, 6
@@ -242,15 +265,20 @@
         vpxorq          %%CIPHER_PLAIN_12_15, %%CIPHER_PLAIN_12_15, %%ZT4
 
         ;; write plain text back to output
+%ifdef CBCS
+       ZMM_STORE_BLOCKS_0_16_OFFSET 16, %%PLAIN_OUT, OFFSET, \
+                %%CIPHER_PLAIN_0_3, %%CIPHER_PLAIN_4_7, \
+                %%CIPHER_PLAIN_8_11, %%CIPHER_PLAIN_12_15
+%else
         vmovdqu8        [%%PLAIN_OUT], %%CIPHER_PLAIN_0_3
         vmovdqu8        [%%PLAIN_OUT + 64], %%CIPHER_PLAIN_4_7
         vmovdqu8        [%%PLAIN_OUT + 128], %%CIPHER_PLAIN_8_11
         vmovdqu8        [%%PLAIN_OUT + 192], %%CIPHER_PLAIN_12_15
-
+%endif
         ;; adjust input pointer and length
         sub             %%LENGTH, (16 * 16)
-        add             %%CIPH_IN, (16 * 16)
-        add             %%PLAIN_OUT, (16 * 16)
+        add             %%CIPH_IN, (16 * OFFSET)
+        add             %%PLAIN_OUT, (16 * OFFSET)
 
 %endmacro       ; DECRYPT_16_PARALLEL
 
@@ -436,6 +464,7 @@
 
 section .text
 
+%ifndef CBCS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; aes_cbc_dec_128_vaes_avx512(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -488,3 +517,4 @@ aes_cbc_dec_256_vaes_avx512:
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif
 
+%endif ;; CBCS

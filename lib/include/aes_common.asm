@@ -127,6 +127,79 @@
 %endmacro
 
 ;; =============================================================================
+;; Loads specified number of AES blocks at offsets into ZMM registers
+;; DATA_OFFSET specifies the offset between blocks to load
+%macro ZMM_LOAD_BLOCKS_0_16_OFFSET 4-7
+%define %%NUM_BLOCKS    %1 ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%INP           %2 ; [in] input data pointer to read from
+%define %%DATA_OFFSET   %3 ; [in] offset to the output pointer (GP or numerical)
+%define %%DST0          %4 ; [out] ZMM register with loaded data
+%define %%DST1          %5 ; [out] ZMM register with loaded data
+%define %%DST2          %6 ; [out] ZMM register with loaded data
+%define %%DST3          %7 ; [out] ZMM register with loaded data
+
+%assign src_offset  0
+%assign idx         0
+%assign dst_idx     0
+%xdefine %%DSTREG %%DST %+ dst_idx
+
+%rep %%NUM_BLOCKS
+
+;; update DST register except for first block
+%if (idx % 4) == 0
+%if idx != 0
+%assign dst_idx (dst_idx + 1)
+%undef   %%DSTREG
+%xdefine %%DSTREG %%DST %+ dst_idx
+%endif
+        vmovdqu64        XWORD(%%DSTREG), [%%INP + src_offset]
+%else
+        vinserti64x2    %%DSTREG, [%%INP + src_offset], (idx % 4)
+%endif
+%assign src_offset  (src_offset + %%DATA_OFFSET)
+%assign idx         (idx + 1)
+%endrep ;; %%NUM_BLOCKS
+
+%endmacro
+
+;; =============================================================================
+;; Stores specified number of AES blocks at offsets from ZMM registers to memory
+;; DATA_OFFSET specifies the offset between blocks to store
+%macro ZMM_STORE_BLOCKS_0_16_OFFSET 4-7
+%define %%NUM_BLOCKS    %1 ; [in] numerical value, number of AES blocks (0 to 16)
+%define %%OUTP          %2 ; [in] input data pointer to read from
+%define %%DATA_OFFSET   %3 ; [in] offset to the output pointer (GP or numerical)
+%define %%SRC0          %4 ; [out] ZMM register with loaded data
+%define %%SRC1          %5 ; [out] ZMM register with loaded data
+%define %%SRC2          %6 ; [out] ZMM register with loaded data
+%define %%SRC3          %7 ; [out] ZMM register with loaded data
+
+%assign dst_offset  0
+%assign idx         0
+%assign src_idx     0
+%xdefine %%SRCREG %%SRC %+ src_idx
+
+%rep %%NUM_BLOCKS
+
+;; update SRC register except for first block
+%if (idx % 4) == 0
+%if idx != 0
+%assign src_idx (src_idx + 1)
+%undef   %%SRCREG
+%xdefine %%SRCREG %%SRC %+ src_idx
+%endif
+        vmovdqu64        [%%OUTP + dst_offset], XWORD(%%SRCREG)
+
+%else
+        vextracti64x2    [%%OUTP + dst_offset], %%SRCREG, (idx % 4)
+%endif
+%assign dst_offset  (dst_offset + %%DATA_OFFSET)
+%assign idx         (idx + 1)
+%endrep ;; %%NUM_BLOCKS
+
+%endmacro
+
+;; =============================================================================
 ;; Loads specified number of AES blocks into ZMM registers using mask register
 ;; for the last loaded register (xmm, ymm or zmm).
 ;; Loads take place at 1 byte granularity.
