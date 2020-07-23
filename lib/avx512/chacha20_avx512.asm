@@ -30,7 +30,6 @@
 %include "include/clear_regs.asm"
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
-%include "include/transpose_avx512.asm"
 %include "include/aes_common.asm"
 
 section .data
@@ -119,6 +118,120 @@ section .text
 
 %endmacro
 
+;
+; Macro tranposing 16x16 u32 from 16 ZMM registers
+; Note that the registers are tranposed in a different
+; order, so first register (IN00) containing row 0
+; will not contain the first column of the matrix, but
+; row 1 and same with other registers.
+; This is done to minimize the number of registers used.
+;
+%macro TRANSPOSE_STATE_KS 18
+%define %%IN00_OUT01  %1 ; [in/out] Input row 0, Output column 1
+%define %%IN01_OUT02  %2 ; [in/out] Input row 1, Output column 2
+%define %%IN02_OUT15  %3 ; [in/out] Input row 2, Output column 15
+%define %%IN03_OUT04  %4 ; [in/out] Input row 3, Output column 4
+%define %%IN04_OUT08  %5 ; [in/out] Input row 4, Output column 8
+%define %%IN05_OUT09  %6 ; [in/out] Input row 5, Output column 9
+%define %%IN06_OUT13  %7 ; [in/out] Input row 6, Output column 13
+%define %%IN07_OUT07  %8 ; [in/out] Input row 7, Output column 7
+%define %%IN08_OUT05  %9 ; [in/out] Input row 8, Output column 5
+%define %%IN09_OUT00 %10 ; [in/out] Input row 9, Output column 0
+%define %%IN10_OUT06 %11 ; [in/out] Input row 10, Output column 6
+%define %%IN11_OUT11 %12 ; [in/out] Input row 11, Output column 11
+%define %%IN12_OUT12 %13 ; [in/out] Input row 12, Output column 12
+%define %%IN13_OUT03 %14 ; [in/out] Input row 13, Output column 3
+%define %%IN14_OUT14 %15 ; [in/out] Input row 14, Output column 14
+%define %%IN15_OUT10 %16 ; [in/out] Input row 15, Output column 10
+%define %%T0   %17
+%define %%T1   %18
+
+        ;; Deal with first lanes 0-7
+        ; T0, T1 free
+        vpunpckldq      %%T0, %%IN00_OUT01, %%IN01_OUT02
+        vpunpckhdq      %%IN00_OUT01, %%IN00_OUT01, %%IN01_OUT02
+        vpunpckldq      %%T1, %%IN02_OUT15, %%IN03_OUT04
+        vpunpckhdq      %%IN02_OUT15, %%IN02_OUT15, %%IN03_OUT04
+
+        ; IN01_OUT02, IN03_OUT04 free
+        vpunpcklqdq     %%IN03_OUT04, %%T0, %%T1
+        vpunpckhqdq     %%IN01_OUT02, %%T0, %%T1
+        vpunpcklqdq     %%T0, %%IN00_OUT01, %%IN02_OUT15
+        vpunpckhqdq     %%IN00_OUT01, %%IN00_OUT01, %%IN02_OUT15
+
+        ; IN02_OUT15, T1 free
+        vpunpckldq      %%T1, %%IN04_OUT08, %%IN05_OUT09
+        vpunpckhdq      %%IN04_OUT08, %%IN04_OUT08, %%IN05_OUT09
+        vpunpckldq      %%IN02_OUT15, %%IN06_OUT13, %%IN07_OUT07
+        vpunpckhdq      %%IN06_OUT13, %%IN06_OUT13, %%IN07_OUT07
+
+        ; IN07_OUT07, IN05_OUT09 free
+        vpunpcklqdq     %%IN07_OUT07, %%T1, %%IN02_OUT15
+        vpunpckhqdq     %%IN05_OUT09, %%T1, %%IN02_OUT15
+        vpunpcklqdq     %%IN02_OUT15, %%IN04_OUT08, %%IN06_OUT13
+        vpunpckhqdq     %%IN04_OUT08, %%IN04_OUT08, %%IN06_OUT13
+
+        ; T1, IN06_OUT13 free
+        vshufi64x2      %%T1, %%IN03_OUT04, %%IN07_OUT07, 0x44
+        vshufi64x2      %%IN03_OUT04, %%IN03_OUT04, %%IN07_OUT07, 0xee
+        vshufi64x2      %%IN06_OUT13, %%IN01_OUT02, %%IN05_OUT09, 0x44
+        vshufi64x2      %%IN01_OUT02, %%IN01_OUT02, %%IN05_OUT09, 0xee
+        vshufi64x2      %%IN07_OUT07, %%T0, %%IN02_OUT15, 0x44
+        vshufi64x2      %%IN02_OUT15, %%T0, %%IN02_OUT15, 0xee
+        vshufi64x2      %%IN05_OUT09, %%IN00_OUT01, %%IN04_OUT08, 0x44
+        vshufi64x2      %%IN00_OUT01, %%IN00_OUT01, %%IN04_OUT08, 0xee
+
+        ;; Deal with lanes 8-15
+        vpunpckldq      %%T0, %%IN08_OUT05, %%IN09_OUT00
+        vpunpckhdq      %%IN08_OUT05, %%IN08_OUT05, %%IN09_OUT00
+        vpunpckldq      %%IN04_OUT08, %%IN10_OUT06, %%IN11_OUT11
+        vpunpckhdq      %%IN10_OUT06, %%IN10_OUT06, %%IN11_OUT11
+
+        vpunpcklqdq     %%IN09_OUT00, %%T0, %%IN04_OUT08
+        vpunpckhqdq     %%IN04_OUT08, %%T0, %%IN04_OUT08
+        vpunpcklqdq     %%IN11_OUT11, %%IN08_OUT05, %%IN10_OUT06
+        vpunpckhqdq     %%IN08_OUT05, %%IN08_OUT05, %%IN10_OUT06
+
+        vpunpckldq      %%T0, %%IN12_OUT12, %%IN13_OUT03
+        vpunpckhdq      %%IN12_OUT12, %%IN12_OUT12, %%IN13_OUT03
+        vpunpckldq      %%IN10_OUT06, %%IN14_OUT14, %%IN15_OUT10
+        vpunpckhdq      %%IN14_OUT14, %%IN14_OUT14, %%IN15_OUT10
+
+        vpunpcklqdq     %%IN13_OUT03, %%T0, %%IN10_OUT06
+        vpunpckhqdq     %%IN10_OUT06, %%T0, %%IN10_OUT06
+        vpunpcklqdq     %%IN15_OUT10, %%IN12_OUT12, %%IN14_OUT14
+        vpunpckhqdq     %%IN12_OUT12, %%IN12_OUT12, %%IN14_OUT14
+
+        vshufi64x2      %%IN14_OUT14, %%IN09_OUT00, %%IN13_OUT03, 0x44
+        vshufi64x2      %%IN09_OUT00, %%IN09_OUT00, %%IN13_OUT03, 0xee
+        vshufi64x2      %%T0, %%IN04_OUT08, %%IN10_OUT06, 0x44
+        vshufi64x2      %%IN10_OUT06, %%IN04_OUT08, %%IN10_OUT06, 0xee
+        vshufi64x2      %%IN13_OUT03, %%IN11_OUT11, %%IN15_OUT10, 0x44
+        vshufi64x2      %%IN11_OUT11, %%IN11_OUT11, %%IN15_OUT10, 0xee
+        vshufi64x2      %%IN15_OUT10, %%IN08_OUT05, %%IN12_OUT12, 0x44
+        vshufi64x2      %%IN08_OUT05, %%IN08_OUT05, %%IN12_OUT12, 0xee
+
+        vshufi64x2      %%IN12_OUT12, %%IN03_OUT04, %%IN09_OUT00, 0xdd
+        vshufi64x2      %%IN04_OUT08, %%IN03_OUT04, %%IN09_OUT00, 0x88
+        vshufi64x2      %%IN03_OUT04, %%T1, %%IN14_OUT14, 0xdd
+        vshufi64x2      %%IN09_OUT00, %%T1, %%IN14_OUT14, 0x88
+        vshufi64x2      %%IN14_OUT14, %%IN02_OUT15, %%IN11_OUT11, 0xdd
+        vshufi64x2      %%T1, %%IN02_OUT15, %%IN11_OUT11, 0x88
+        vshufi64x2      %%IN11_OUT11, %%IN00_OUT01, %%IN08_OUT05, 0x88
+        vshufi64x2      %%IN02_OUT15, %%IN00_OUT01, %%IN08_OUT05, 0xdd
+        vshufi64x2      %%IN00_OUT01, %%IN06_OUT13, %%T0, 0x88
+        vshufi64x2      %%IN08_OUT05, %%IN06_OUT13, %%T0, 0xdd
+        vshufi64x2      %%T0, %%IN01_OUT02, %%IN10_OUT06, 0x88
+        vshufi64x2      %%IN06_OUT13, %%IN01_OUT02, %%IN10_OUT06, 0xdd
+        vshufi64x2      %%IN01_OUT02, %%IN07_OUT07, %%IN13_OUT03, 0x88
+        vshufi64x2      %%IN10_OUT06, %%IN07_OUT07, %%IN13_OUT03, 0xdd
+        vshufi64x2      %%IN13_OUT03, %%IN05_OUT09, %%IN15_OUT10, 0x88
+        vshufi64x2      %%IN07_OUT07, %%IN05_OUT09, %%IN15_OUT10, 0xdd
+
+        vmovdqa64       %%IN05_OUT09, %%T0
+        vmovdqa64       %%IN15_OUT10, %%T1
+%endmacro
+
 ;;
 ;; Performs a full chacha20 round on 16 states,
 ;; consisting of 4 quarter rounds, which are done in parallel
@@ -186,37 +299,37 @@ section .text
 ;; Generates 64*16 bytes of keystream
 ;;
 %macro GENERATE_KS 32
-%define %%ZMM_DWORD0       %1   ;; [out] ZMM containing dword 0 of all states and bytes 0-63 of keystream
-%define %%ZMM_DWORD1       %2   ;; [out] ZMM containing dword 1 of all states and bytes 64-127 of keystream
-%define %%ZMM_DWORD2       %3   ;; [out] ZMM containing dword 2 of all states and bytes 128-191 of keystream
-%define %%ZMM_DWORD3       %4   ;; [out] ZMM containing dword 3 of all states and bytes 192-255 of keystream
-%define %%ZMM_DWORD4       %5   ;; [out] ZMM containing dword 4 of all states and bytes 256-319 of keystream
-%define %%ZMM_DWORD5       %6   ;; [out] ZMM containing dword 5 of all states and bytes 320-383 of keystream
-%define %%ZMM_DWORD6       %7   ;; [out] ZMM containing dword 6 of all states and bytes 384-447 of keystream
+%define %%ZMM_DWORD0       %1   ;; [out] ZMM containing dword 0 of all states and bytes 64-127  of keystream
+%define %%ZMM_DWORD1       %2   ;; [out] ZMM containing dword 1 of all states and bytes 128-191 of keystream
+%define %%ZMM_DWORD2       %3   ;; [out] ZMM containing dword 2 of all states and bytes 960-1023 of keystream
+%define %%ZMM_DWORD3       %4   ;; [out] ZMM containing dword 3 of all states and bytes 256-319 of keystream
+%define %%ZMM_DWORD4       %5   ;; [out] ZMM containing dword 4 of all states and bytes 512-575 of keystream
+%define %%ZMM_DWORD5       %6   ;; [out] ZMM containing dword 5 of all states and bytes 576-639 of keystream
+%define %%ZMM_DWORD6       %7   ;; [out] ZMM containing dword 6 of all states and bytes 832-895 of keystream
 %define %%ZMM_DWORD7       %8   ;; [out] ZMM containing dword 7 of all states and bytes 448-511 of keystream
-%define %%ZMM_DWORD8       %9   ;; [out] ZMM containing dword 8 of all states and bytes 512-575 of keystream
-%define %%ZMM_DWORD9       %10  ;; [out] ZMM containing dword 9 of all states and bytes 576-639 of keystream
-%define %%ZMM_DWORD10      %11  ;; [out] ZMM containing dword 10 of all states and bytes 640-703 of keystream
+%define %%ZMM_DWORD8       %9   ;; [out] ZMM containing dword 8 of all states and bytes 320-383 of keystream
+%define %%ZMM_DWORD9       %10  ;; [out] ZMM containing dword 9 of all states and bytes 0-63 of keystream
+%define %%ZMM_DWORD10      %11  ;; [out] ZMM containing dword 10 of all states and bytes 384-447 of keystream
 %define %%ZMM_DWORD11      %12  ;; [out] ZMM containing dword 11 of all states and bytes 704-767 of keystream
 %define %%ZMM_DWORD12      %13  ;; [out] ZMM containing dword 12 of all states and bytes 768-831 of keystream
-%define %%ZMM_DWORD13      %14  ;; [out] ZMM containing dword 13 of all states and bytes 832-895 of keystream
+%define %%ZMM_DWORD13      %14  ;; [out] ZMM containing dword 13 of all states and bytes 192-255 of keystream
 %define %%ZMM_DWORD14      %15  ;; [out] ZMM containing dword 14 of all states and bytes 896-959 of keystream
-%define %%ZMM_DWORD15      %16  ;; [out] ZMM containing dword 15 of all states and bytes 960-1023 of keystream
-%define %%ZMM_DWORD_ORIG0  %17  ;; [in/clobbered] ZMM containing dword 0 of all states
-%define %%ZMM_DWORD_ORIG1  %18  ;; [in/clobbered] ZMM containing dword 1 of all states
-%define %%ZMM_DWORD_ORIG2  %19  ;; [in/clobbered] ZMM containing dword 2 of all states
-%define %%ZMM_DWORD_ORIG3  %20  ;; [in/clobbered] ZMM containing dword 3 of all states
-%define %%ZMM_DWORD_ORIG4  %21  ;; [in/clobbered] ZMM containing dword 4 of all states
-%define %%ZMM_DWORD_ORIG5  %22  ;; [in/clobbered] ZMM containing dword 5 of all states
-%define %%ZMM_DWORD_ORIG6  %23  ;; [in/clobbered] ZMM containing dword 6 of all states
-%define %%ZMM_DWORD_ORIG7  %24  ;; [in/clobbered] ZMM containing dword 7 of all states
-%define %%ZMM_DWORD_ORIG8  %25  ;; [in/clobbered] ZMM containing dword 8 of all states
-%define %%ZMM_DWORD_ORIG9  %26  ;; [in/clobbered] ZMM containing dword 9 of all states
-%define %%ZMM_DWORD_ORIG10 %27  ;; [in/clobbered] ZMM containing dword 10 of all states
-%define %%ZMM_DWORD_ORIG11 %28  ;; [in/clobbered] ZMM containing dword 11 of all states
+%define %%ZMM_DWORD15      %16  ;; [out] ZMM containing dword 15 of all states and bytes 640-703 of keystream
+%define %%ZMM_DWORD_ORIG0  %17  ;; [in/clobbered] ZMM containing dword 0 of all states / Temp ZMM register
+%define %%ZMM_DWORD_ORIG1  %18  ;; [in/clobbered] ZMM containing dword 1 of all states / Temp ZMM register
+%define %%ZMM_DWORD_ORIG2  %19  ;; [in] ZMM containing dword 2 of all states
+%define %%ZMM_DWORD_ORIG3  %20  ;; [in] ZMM containing dword 3 of all states
+%define %%ZMM_DWORD_ORIG4  %21  ;; [in] ZMM containing dword 4 of all states
+%define %%ZMM_DWORD_ORIG5  %22  ;; [in] ZMM containing dword 5 of all states
+%define %%ZMM_DWORD_ORIG6  %23  ;; [in] ZMM containing dword 6 of all states
+%define %%ZMM_DWORD_ORIG7  %24  ;; [in] ZMM containing dword 7 of all states
+%define %%ZMM_DWORD_ORIG8  %25  ;; [in] ZMM containing dword 8 of all states
+%define %%ZMM_DWORD_ORIG9  %26  ;; [in] ZMM containing dword 9 of all states
+%define %%ZMM_DWORD_ORIG10 %27  ;; [in] ZMM containing dword 10 of all states
+%define %%ZMM_DWORD_ORIG11 %28  ;; [in] ZMM containing dword 11 of all states
 %define %%ZMM_DWORD_ORIG12 %29  ;; [in] ZMM containing dword 12 of all states
-%define %%ZMM_DWORD_ORIG13 %30  ;; [in/clobbered] ZMM containing dword 13 of all states
-%define %%ZMM_DWORD_ORIG14 %31  ;; [in/clobbered] ZMM containing dword 14 of all states
+%define %%ZMM_DWORD_ORIG13 %30  ;; [in] ZMM containing dword 13 of all states
+%define %%ZMM_DWORD_ORIG14 %31  ;; [in] ZMM containing dword 14 of all states
 %define %%ZMM_DWORD_ORIG15 %32  ;; [in] ZMM containing dword 15 of all states
 
 %assign i 0
@@ -251,16 +364,11 @@ section .text
 %endrep
 
         ;; Transpose states to form the 64*16 bytes of keystream
-        ;; (ZMM_DWORD_ORIG12 is skipped, since that contains the counter values,
-        ;; that should be preserved)
-        TRANSPOSE16_U32 %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                        %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
-                        %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
-                        %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
-                        %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, %%ZMM_DWORD_ORIG3, \
-                        %%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, \
-                        %%ZMM_DWORD_ORIG8, %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
-                        %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14
+        TRANSPOSE_STATE_KS %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
+                           %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                           %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                           %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
+                           %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1
 %endmacro
 
 %macro ENCRYPT_1_16_BLOCKS 22
@@ -316,7 +424,6 @@ submit_job_chacha20_enc_dec_avx512:
 %define iv      r11
 %define tmp     r11
 %define keys    rdx
-%define tmp2    rdx
 %define off     rax
 
         xor     off, off
@@ -362,32 +469,19 @@ start_loop:
                     zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
                     zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
-        ENCRYPT_1_16_BLOCKS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                            zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+        ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
                             zmm0, src, dst, off, k1, 16
 
         ; Update remaining length
         sub     len, 64*16
         add     off, 64*16
 
-        ; Prepare next 16 chacha20 states from IV, key, constants and counter values
+        ; Reload first two registers zmm0 and 1,
+        ; as they have been overwritten by the previous macros
         vpbroadcastd zmm0, [rel constants]
         vpbroadcastd zmm1, [rel constants + 4]
-        vpbroadcastd zmm2, [rel constants + 8]
-        vpbroadcastd zmm3, [rel constants + 12]
 
-        vpbroadcastd zmm4, [keys]
-        vpbroadcastd zmm5, [keys + 4]
-        vpbroadcastd zmm6, [keys + 8]
-        vpbroadcastd zmm7, [keys + 12]
-        vpbroadcastd zmm8, [keys + 16]
-        vpbroadcastd zmm9, [keys + 20]
-        vpbroadcastd zmm10, [keys + 24]
-        vpbroadcastd zmm11, [keys + 28]
-
-        vpbroadcastd zmm13, [iv]
-        vpbroadcastd zmm14, [iv + 4]
-        vpbroadcastd zmm15, [iv + 8]
         ; Increment counter values
         vpaddd      zmm12, [rel add_16]
 
@@ -461,8 +555,8 @@ APPEND(final_num_blocks_is_, I):
         kmovq   k1, [tmp + len*8]
 
 APPEND(no_mask_update, I):
-        ENCRYPT_1_16_BLOCKS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                            zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+        ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
                             zmm0, src, dst, off, k1, I
         jmp     no_partial_block
 
