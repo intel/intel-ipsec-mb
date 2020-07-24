@@ -30,6 +30,7 @@
 %include "include/clear_regs.asm"
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
+%include "include/transpose_avx512.asm"
 %include "include/aes_common.asm"
 
 section .data
@@ -38,6 +39,20 @@ default rel
 align 16
 constants:
 dd      0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
+
+align 64
+add_1_4:
+dd      0x00000001, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000002, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000003, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000004, 0x00000000, 0x00000000, 0x00000000
+
+align 64
+add_5_8:
+dd      0x00000005, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000006, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000007, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000008, 0x00000000, 0x00000000, 0x00000000
 
 align 64
 add_16:
@@ -233,6 +248,132 @@ section .text
 %endmacro
 
 ;;
+;; Performs a quarter round on all 4 columns,
+;; resulting in a full round
+;;
+%macro QUARTER_ROUND_X4 4
+%define %%A %1 ;; [in/out] ZMM register containing value A of all 4 columns
+%define %%B %2 ;; [in/out] ZMM register containing value B of all 4 columns
+%define %%C %3 ;; [in/out] ZMM register containing value C of all 4 columns
+%define %%D %4 ;; [in/out] ZMM register containing value D of all 4 columns
+
+        vpaddd          %%A, %%B
+        vpxorq          %%D, %%A
+        vprold          %%D, 16
+        vpaddd          %%C, %%D
+        vpxorq          %%B, %%C
+        vprold          %%B, 12
+        vpaddd          %%A, %%B
+        vpxorq          %%D, %%A
+        vprold          %%D, 8
+        vpaddd          %%C, %%D
+        vpxorq          %%B, %%C
+        vprold          %%B, 7
+
+%endmacro
+
+;;
+;; Rotates the registers to prepare the data
+;; from column round to diagonal round
+;;
+%macro COLUMN_TO_DIAG 3
+%define %%B %1 ;; [in/out] ZMM register containing value B of all 4 columns
+%define %%C %2 ;; [in/out] ZMM register containing value C of all 4 columns
+%define %%D %3 ;; [in/out] ZMM register containing value D of all 4 columns
+
+        vpshufd         %%B, %%B, 0x39 ; 0b00111001 ;; 0,3,2,1
+        vpshufd         %%C, %%C, 0x4E ; 0b01001110 ;; 1,0,3,2
+        vpshufd         %%D, %%D, 0x93 ; 0b10010011 ;; 2,1,0,3
+
+%endmacro
+
+;;
+;; Rotates the registers to prepare the data
+;; from diagonal round to column round
+;;
+%macro DIAG_TO_COLUMN 3
+%define %%B %1 ;; [in/out] ZMM register containing value B of all 4 columns
+%define %%C %2 ;; [in/out] ZMM register containing value C of all 4 columns
+%define %%D %3 ;; [in/out] ZMM register containing value D of all 4 columns
+
+        vpshufd         %%B, %%B, 0x93 ; 0b10010011 ; 2,1,0,3
+        vpshufd         %%C, %%C, 0x4E ; 0b01001110 ;  1,0,3,2
+        vpshufd         %%D, %%D, 0x39 ; 0b00111001 ;  0,3,2,1
+
+%endmacro
+;;
+;; Generates up to 64*8 bytes of keystream
+;;
+%macro GENERATE_512_KS 21
+%define %%A_L_KS0        %1  ;; [out] ZMM A / Bytes 0-63    of KS
+%define %%B_L_KS1        %2  ;; [out] ZMM B / Bytes 64-127  of KS
+%define %%C_L_KS2        %3  ;; [out] ZMM C / Bytes 128-191 of KS
+%define %%D_L_KS3        %4  ;; [out] ZMM D / Bytes 192-255 of KS
+%define %%A_H_KS4        %5  ;; [out] ZMM A / Bytes 256-319 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%B_H_KS5        %6  ;; [out] ZMM B / Bytes 320-383 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%C_H_KS6        %7  ;; [out] ZMM C / Bytes 384-447 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%D_H_KS7        %8  ;; [out] ZMM D / Bytes 448-511 of KS (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_A_L   %9  ;; [in] ZMM containing state "A" part
+%define %%STATE_IN_B_L   %10 ;; [in] ZMM containing state "B" part
+%define %%STATE_IN_C_L   %11 ;; [in] ZMM containing state "C" part
+%define %%STATE_IN_D_L   %12 ;; [in] ZMM containing state "D" part
+%define %%STATE_IN_A_H   %13 ;; [in] ZMM containing state "A" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_B_H   %14 ;; [in] ZMM containing state "B" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_C_H   %15 ;; [in] ZMM containing state "C" part (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_D_H   %16 ;; [in] ZMM containing state "D" part (or "none" in NUM_BLOCKS == 4)
+%define %%ZTMP0          %17 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP1          %18 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP2          %19 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP3          %20 ;; [clobbered] Temp ZMM reg
+%define %%NUM_BLOCKS     %21 ;; [in] Num blocks to encrypt (4 or 8)
+
+        vmovdqa64       %%A_L_KS0, %%STATE_IN_A_L
+        vmovdqa64       %%B_L_KS1, %%STATE_IN_B_L
+        vmovdqa64       %%C_L_KS2, %%STATE_IN_C_L
+        vmovdqa64       %%D_L_KS3, %%STATE_IN_D_L
+%if %%NUM_BLOCKS == 8
+        vmovdqa64       %%A_H_KS4, %%STATE_IN_A_H
+        vmovdqa64       %%B_H_KS5, %%STATE_IN_B_H
+        vmovdqa64       %%C_H_KS6, %%STATE_IN_C_H
+        vmovdqa64       %%D_H_KS7, %%STATE_IN_D_H
+%endif
+%rep 10
+%if %%NUM_BLOCKS == 4
+        QUARTER_ROUND_X4 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        COLUMN_TO_DIAG %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        QUARTER_ROUND_X4 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        DIAG_TO_COLUMN %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+%else
+        QUARTER_ROUND_X4 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        QUARTER_ROUND_X4 %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        COLUMN_TO_DIAG %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        COLUMN_TO_DIAG %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        QUARTER_ROUND_X4 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        QUARTER_ROUND_X4 %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        DIAG_TO_COLUMN %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        DIAG_TO_COLUMN %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+%endif ;; %%NUM_BLOCKS == 4
+%endrep
+
+        vpaddd %%A_L_KS0, %%STATE_IN_A_L
+        vpaddd %%B_L_KS1, %%STATE_IN_B_L
+        vpaddd %%C_L_KS2, %%STATE_IN_C_L
+        vpaddd %%D_L_KS3, %%STATE_IN_D_L
+
+        TRANSPOSE4_U128_INPLACE %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
+                                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
+%if %%NUM_BLOCKS == 8
+        vpaddd %%A_H_KS4, %%STATE_IN_A_H
+        vpaddd %%B_H_KS5, %%STATE_IN_B_H
+        vpaddd %%C_H_KS6, %%STATE_IN_C_H
+        vpaddd %%D_H_KS7, %%STATE_IN_D_H
+
+        TRANSPOSE4_U128_INPLACE %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7, \
+                                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
+%endif
+%endmacro
+
+;;
 ;; Performs a full chacha20 round on 16 states,
 ;; consisting of 4 quarter rounds, which are done in parallel
 ;;
@@ -298,7 +439,7 @@ section .text
 ;;
 ;; Generates 64*16 bytes of keystream
 ;;
-%macro GENERATE_KS 32
+%macro GENERATE_1K_KS 32
 %define %%ZMM_DWORD0       %1   ;; [out] ZMM containing dword 0 of all states and bytes 64-127  of keystream
 %define %%ZMM_DWORD1       %2   ;; [out] ZMM containing dword 1 of all states and bytes 128-191 of keystream
 %define %%ZMM_DWORD2       %3   ;; [out] ZMM containing dword 2 of all states and bytes 960-1023 of keystream
@@ -414,6 +555,58 @@ section .text
         vmovdqu8 [%%DST + %%OFF + 64*%%I]{%%KMASK}, APPEND(%%KS, %%I)
 %endmacro
 
+%macro PREPARE_NEXT_STATES_4_TO_8 15
+%define %%STATE_IN_A_L   %1  ;; [out] ZMM containing state "A" part for states 1-4
+%define %%STATE_IN_B_L   %2  ;; [out] ZMM containing state "B" part for states 1-4
+%define %%STATE_IN_C_L   %3  ;; [out] ZMM containing state "C" part for states 1-4
+%define %%STATE_IN_D_L   %4  ;; [out] ZMM containing state "D" part for states 1-4
+%define %%STATE_IN_A_H   %5  ;; [out] ZMM containing state "A" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_B_H   %6  ;; [out] ZMM containing state "B" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_C_H   %7  ;; [out] ZMM containing state "C" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
+%define %%STATE_IN_D_H   %8  ;; [out] ZMM containing state "D" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
+%define %%ZTMP0          %9  ;; [clobbered] ZMM temp reg
+%define %%ZTMP1          %10 ;; [clobbered] ZMM temp reg
+%define %%LAST_BLK_CNT   %11 ;; [in] Last block counter
+%define %%IV             %12 ;; [in] Pointer to IV
+%define %%KEYS           %13 ;; [in/clobbered] Pointer to keys
+%define %%KMASK          %14 ;; [clobbered] Mask register
+%define %%NUM_BLOCKS     %15 ;; [in] Number of state blocks to prepare (numerical)
+
+        ;; Prepare next 8 states (or 4, if 4 or less blocks left)
+        vbroadcastf64x2  %%STATE_IN_B_L, [%%KEYS]            ; Load key bytes 0-15
+        vbroadcastf64x2  %%STATE_IN_C_L, [%%KEYS + 16]       ; Load key bytes 16-31
+        mov       %%KEYS, 0xfff ; Reuse %%KEYS register, as it is not going to be used again
+        kmovq     %%KMASK, %%KEYS
+        vmovdqu8  XWORD(%%STATE_IN_D_L){%%KMASK}, [%%IV] ; Load Nonce (12 bytes)
+        vpslldq   XWORD(%%STATE_IN_D_L), 4
+        vshufi64x2 %%STATE_IN_D_L, %%STATE_IN_D_L, 0 ; Brodcast 128 bits to 512 bits
+        vbroadcastf64x2 %%STATE_IN_A_L, [rel constants]
+
+%if %%NUM_BLOCKS == 8
+        ;; Prepare chacha states 4-7
+        vmovdqa64 %%STATE_IN_A_H, %%STATE_IN_A_L
+        vmovdqa64 %%STATE_IN_B_H, %%STATE_IN_B_L
+        vmovdqa64 %%STATE_IN_C_H, %%STATE_IN_C_L
+        vmovdqa64 %%STATE_IN_D_H, %%STATE_IN_D_L
+%endif
+
+        ; Broadcast last block counter
+        vmovq   XWORD(%%ZTMP0), %%LAST_BLK_CNT
+        vshufi32x4 %%ZTMP0, %%ZTMP0, 0x00
+%if %%NUM_BLOCKS == 4
+        ; Add 1-4 to construct next block counters
+        vpaddq  %%ZTMP0, [rel add_1_4]
+        vporq   %%STATE_IN_D_L, %%ZTMP0
+%else
+        ; Add 1-8 to construct next block counters
+        vmovdqa64 %%ZTMP1, %%ZTMP0
+        vpaddq  %%ZTMP0, [rel add_1_4]
+        vpaddq  %%ZTMP1, [rel add_5_8]
+        vporq   %%STATE_IN_D_L, %%ZTMP0
+        vporq   %%STATE_IN_D_H, %%ZTMP1
+%endif
+%endmacro
+
 align 32
 MKGLOBAL(submit_job_chacha20_enc_dec_avx512,function,internal)
 submit_job_chacha20_enc_dec_avx512:
@@ -422,8 +615,8 @@ submit_job_chacha20_enc_dec_avx512:
 %define dst     r9
 %define len     r10
 %define iv      r11
-%define tmp     r11
 %define keys    rdx
+%define tmp     rdx
 %define off     rax
 
         xor     off, off
@@ -437,6 +630,10 @@ submit_job_chacha20_enc_dec_avx512:
         mov     dst, [job + _dst]
         mov     keys, [job + _enc_keys]
         mov     iv, [job + _iv]
+
+        ; If less than or equal to 64*8 bytes, prepare directly states for up to 8 blocks
+        cmp     len, 64*8
+        jbe     exit_loop
 
         ; Prepare first 16 chacha20 states from IV, key, constants and counter values
         vpbroadcastd zmm0, [rel constants]
@@ -459,15 +656,15 @@ submit_job_chacha20_enc_dec_avx512:
         ;; Set first 16 counter values
         vmovdqa64 zmm12, [rel set_1_16]
 
-align 32
-start_loop:
         cmp     len, 64*16
         jb      exit_loop
 
-        GENERATE_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                    zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                    zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                    zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+align 32
+start_loop:
+        GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
         ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
                             zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
@@ -485,7 +682,8 @@ start_loop:
         ; Increment counter values
         vpaddd      zmm12, [rel add_16]
 
-        jmp     start_loop
+        cmp     len, 64*16
+        jae     start_loop
 
 exit_loop:
 
@@ -493,11 +691,53 @@ exit_loop:
         or      len, len
         jz      no_partial_block
 
+        cmp     len, 64*8
+        ja      more_than_8_blocks_left
+
+        cmp     len, 64*4
+        ja      more_than_4_blocks_left
+
+        ;; up to 4 blocks left
+
+        ; Get last block counter dividing offset by 64
+        shr     off, 6
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                                   zmm8, zmm9, off, iv, keys, k2, 4
+        shl     off, 6 ; Restore offset
+
+        ; Use same first 4 registers as the output of GENERATE_1K_KS,
+        ; to be able to use common code later on to encrypt
+        GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, none, none, none, none, \
+                        zmm0, zmm1, zmm2, zmm3, none, none, none, none, \
+                        zmm8, zmm9, zmm10, zmm11, 4
+
+        jmp ks_gen_done
+
+more_than_4_blocks_left:
+        ;; up to 8 blocks left
+
+        ; Get last block counter dividing offset by 64
+        shr     off, 6
+        ;; up to 8 blocks left
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                                   zmm8, zmm9, off, iv, keys, k2, 8
+        shl     off, 6 ; Restore offset
+
+        ; Use same first 8 registers as the output of GENERATE_1K_KS,
+        ; to be able to use common code later on to encrypt
+        GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                        zmm8, zmm9, zmm10, zmm11, 8
+
+        jmp ks_gen_done
+more_than_8_blocks_left:
         ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
-        GENERATE_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                    zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                    zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                    zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+        GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+
+ks_gen_done:
 
         ; Calculate number of final blocks
         mov     tmp, len
