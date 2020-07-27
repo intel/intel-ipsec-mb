@@ -32,7 +32,11 @@
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
-#include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
+#ifdef LINUX
+#include <stdlib.h> /* posix_memalign() and free() */
+#else
+#include <malloc.h> /* _aligned_malloc() and aligned_free() */
+#endif
 #include "misc.h"
 
 #ifdef _WIN32
