@@ -1282,7 +1282,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 memcpy(k2, ciph_key, 16);
                 break;
         case IMB_CIPHER_CHACHA20:
-                memset(k2, (int)CIPH_KEY_PATTERN, 32);
+                memcpy(k2, ciph_key, 32);
                 break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
