@@ -134,14 +134,16 @@ section .text
 %endmacro
 
 ;
-; Macro tranposing 16x16 u32 from 16 ZMM registers
+; Macro adding original state values to processed state values
+; and transposing 16x16 u32 from first 16 ZMM registers,
+; creating keystreams.
 ; Note that the registers are tranposed in a different
 ; order, so first register (IN00) containing row 0
 ; will not contain the first column of the matrix, but
 ; row 1 and same with other registers.
-; This is done to minimize the number of registers used.
+; This is done to minimize the number of registers clobbered.
 ;
-%macro TRANSPOSE_STATE_KS 18
+%macro ADD_TRANSPOSE_STATE_KS 32
 %define %%IN00_OUT01  %1 ; [in/out] Input row 0, Output column 1
 %define %%IN01_OUT02  %2 ; [in/out] Input row 1, Output column 2
 %define %%IN02_OUT15  %3 ; [in/out] Input row 2, Output column 15
@@ -158,68 +160,102 @@ section .text
 %define %%IN13_OUT03 %14 ; [in/out] Input row 13, Output column 3
 %define %%IN14_OUT14 %15 ; [in/out] Input row 14, Output column 14
 %define %%IN15_OUT10 %16 ; [in/out] Input row 15, Output column 10
-%define %%T0   %17
-%define %%T1   %18
+%define %%IN_ORIG00  %17 ; [in/clobbered] Original input row 0
+%define %%IN_ORIG01  %18 ; [in/clobbered] Original input row 1
+%define %%IN_ORIG02  %19 ; [in] Original input row 2
+%define %%IN_ORIG03  %20 ; [in] Original input row 3
+%define %%IN_ORIG04  %21 ; [in] Original input row 4
+%define %%IN_ORIG05  %22 ; [in] Original input row 5
+%define %%IN_ORIG06  %23 ; [in] Original input row 6
+%define %%IN_ORIG07  %24 ; [in] Original input row 7
+%define %%IN_ORIG08  %25 ; [in] Original input row 8
+%define %%IN_ORIG09  %26 ; [in] Original input row 9
+%define %%IN_ORIG10  %27 ; [in] Original input row 10
+%define %%IN_ORIG11  %28 ; [in] Original input row 11
+%define %%IN_ORIG12  %29 ; [in] Original input row 12
+%define %%IN_ORIG13  %30 ; [in] Original input row 13
+%define %%IN_ORIG14  %31 ; [in] Original input row 14
+%define %%IN_ORIG15  %32 ; [in] Original input row 15
+
+        vpaddd %%IN00_OUT01, %%IN_ORIG00
+        vpaddd %%IN01_OUT02, %%IN_ORIG01
+        vpaddd %%IN02_OUT15, %%IN_ORIG02
+        vpaddd %%IN03_OUT04, %%IN_ORIG03
 
         ;; Deal with first lanes 0-7
         ; T0, T1 free
-        vpunpckldq      %%T0, %%IN00_OUT01, %%IN01_OUT02
+        vpunpckldq      %%IN_ORIG00, %%IN00_OUT01, %%IN01_OUT02
         vpunpckhdq      %%IN00_OUT01, %%IN00_OUT01, %%IN01_OUT02
-        vpunpckldq      %%T1, %%IN02_OUT15, %%IN03_OUT04
+        vpunpckldq      %%IN_ORIG01, %%IN02_OUT15, %%IN03_OUT04
         vpunpckhdq      %%IN02_OUT15, %%IN02_OUT15, %%IN03_OUT04
 
         ; IN01_OUT02, IN03_OUT04 free
-        vpunpcklqdq     %%IN03_OUT04, %%T0, %%T1
-        vpunpckhqdq     %%IN01_OUT02, %%T0, %%T1
-        vpunpcklqdq     %%T0, %%IN00_OUT01, %%IN02_OUT15
+        vpunpcklqdq     %%IN03_OUT04, %%IN_ORIG00, %%IN_ORIG01
+        vpunpckhqdq     %%IN01_OUT02, %%IN_ORIG00, %%IN_ORIG01
+        vpunpcklqdq     %%IN_ORIG00, %%IN00_OUT01, %%IN02_OUT15
         vpunpckhqdq     %%IN00_OUT01, %%IN00_OUT01, %%IN02_OUT15
 
+        vpaddd %%IN04_OUT08, %%IN_ORIG04
+        vpaddd %%IN05_OUT09, %%IN_ORIG05
+        vpaddd %%IN06_OUT13, %%IN_ORIG06
+        vpaddd %%IN07_OUT07, %%IN_ORIG07
+
         ; IN02_OUT15, T1 free
-        vpunpckldq      %%T1, %%IN04_OUT08, %%IN05_OUT09
+        vpunpckldq      %%IN_ORIG01, %%IN04_OUT08, %%IN05_OUT09
         vpunpckhdq      %%IN04_OUT08, %%IN04_OUT08, %%IN05_OUT09
         vpunpckldq      %%IN02_OUT15, %%IN06_OUT13, %%IN07_OUT07
         vpunpckhdq      %%IN06_OUT13, %%IN06_OUT13, %%IN07_OUT07
 
         ; IN07_OUT07, IN05_OUT09 free
-        vpunpcklqdq     %%IN07_OUT07, %%T1, %%IN02_OUT15
-        vpunpckhqdq     %%IN05_OUT09, %%T1, %%IN02_OUT15
+        vpunpcklqdq     %%IN07_OUT07, %%IN_ORIG01, %%IN02_OUT15
+        vpunpckhqdq     %%IN05_OUT09, %%IN_ORIG01, %%IN02_OUT15
         vpunpcklqdq     %%IN02_OUT15, %%IN04_OUT08, %%IN06_OUT13
         vpunpckhqdq     %%IN04_OUT08, %%IN04_OUT08, %%IN06_OUT13
 
         ; T1, IN06_OUT13 free
-        vshufi64x2      %%T1, %%IN03_OUT04, %%IN07_OUT07, 0x44
+        vshufi64x2      %%IN_ORIG01, %%IN03_OUT04, %%IN07_OUT07, 0x44
         vshufi64x2      %%IN03_OUT04, %%IN03_OUT04, %%IN07_OUT07, 0xee
         vshufi64x2      %%IN06_OUT13, %%IN01_OUT02, %%IN05_OUT09, 0x44
         vshufi64x2      %%IN01_OUT02, %%IN01_OUT02, %%IN05_OUT09, 0xee
-        vshufi64x2      %%IN07_OUT07, %%T0, %%IN02_OUT15, 0x44
-        vshufi64x2      %%IN02_OUT15, %%T0, %%IN02_OUT15, 0xee
+        vshufi64x2      %%IN07_OUT07, %%IN_ORIG00, %%IN02_OUT15, 0x44
+        vshufi64x2      %%IN02_OUT15, %%IN_ORIG00, %%IN02_OUT15, 0xee
         vshufi64x2      %%IN05_OUT09, %%IN00_OUT01, %%IN04_OUT08, 0x44
         vshufi64x2      %%IN00_OUT01, %%IN00_OUT01, %%IN04_OUT08, 0xee
 
         ;; Deal with lanes 8-15
-        vpunpckldq      %%T0, %%IN08_OUT05, %%IN09_OUT00
+        vpaddd %%IN08_OUT05, %%IN_ORIG08
+        vpaddd %%IN09_OUT00, %%IN_ORIG09
+        vpaddd %%IN10_OUT06, %%IN_ORIG10
+        vpaddd %%IN11_OUT11, %%IN_ORIG11
+
+        vpunpckldq      %%IN_ORIG00, %%IN08_OUT05, %%IN09_OUT00
         vpunpckhdq      %%IN08_OUT05, %%IN08_OUT05, %%IN09_OUT00
         vpunpckldq      %%IN04_OUT08, %%IN10_OUT06, %%IN11_OUT11
         vpunpckhdq      %%IN10_OUT06, %%IN10_OUT06, %%IN11_OUT11
 
-        vpunpcklqdq     %%IN09_OUT00, %%T0, %%IN04_OUT08
-        vpunpckhqdq     %%IN04_OUT08, %%T0, %%IN04_OUT08
+        vpunpcklqdq     %%IN09_OUT00, %%IN_ORIG00, %%IN04_OUT08
+        vpunpckhqdq     %%IN04_OUT08, %%IN_ORIG00, %%IN04_OUT08
         vpunpcklqdq     %%IN11_OUT11, %%IN08_OUT05, %%IN10_OUT06
         vpunpckhqdq     %%IN08_OUT05, %%IN08_OUT05, %%IN10_OUT06
 
-        vpunpckldq      %%T0, %%IN12_OUT12, %%IN13_OUT03
+        vpaddd %%IN12_OUT12, %%IN_ORIG12
+        vpaddd %%IN13_OUT03, %%IN_ORIG13
+        vpaddd %%IN14_OUT14, %%IN_ORIG14
+        vpaddd %%IN15_OUT10, %%IN_ORIG15
+
+        vpunpckldq      %%IN_ORIG00, %%IN12_OUT12, %%IN13_OUT03
         vpunpckhdq      %%IN12_OUT12, %%IN12_OUT12, %%IN13_OUT03
         vpunpckldq      %%IN10_OUT06, %%IN14_OUT14, %%IN15_OUT10
         vpunpckhdq      %%IN14_OUT14, %%IN14_OUT14, %%IN15_OUT10
 
-        vpunpcklqdq     %%IN13_OUT03, %%T0, %%IN10_OUT06
-        vpunpckhqdq     %%IN10_OUT06, %%T0, %%IN10_OUT06
+        vpunpcklqdq     %%IN13_OUT03, %%IN_ORIG00, %%IN10_OUT06
+        vpunpckhqdq     %%IN10_OUT06, %%IN_ORIG00, %%IN10_OUT06
         vpunpcklqdq     %%IN15_OUT10, %%IN12_OUT12, %%IN14_OUT14
         vpunpckhqdq     %%IN12_OUT12, %%IN12_OUT12, %%IN14_OUT14
 
         vshufi64x2      %%IN14_OUT14, %%IN09_OUT00, %%IN13_OUT03, 0x44
         vshufi64x2      %%IN09_OUT00, %%IN09_OUT00, %%IN13_OUT03, 0xee
-        vshufi64x2      %%T0, %%IN04_OUT08, %%IN10_OUT06, 0x44
+        vshufi64x2      %%IN_ORIG00, %%IN04_OUT08, %%IN10_OUT06, 0x44
         vshufi64x2      %%IN10_OUT06, %%IN04_OUT08, %%IN10_OUT06, 0xee
         vshufi64x2      %%IN13_OUT03, %%IN11_OUT11, %%IN15_OUT10, 0x44
         vshufi64x2      %%IN11_OUT11, %%IN11_OUT11, %%IN15_OUT10, 0xee
@@ -228,23 +264,23 @@ section .text
 
         vshufi64x2      %%IN12_OUT12, %%IN03_OUT04, %%IN09_OUT00, 0xdd
         vshufi64x2      %%IN04_OUT08, %%IN03_OUT04, %%IN09_OUT00, 0x88
-        vshufi64x2      %%IN03_OUT04, %%T1, %%IN14_OUT14, 0xdd
-        vshufi64x2      %%IN09_OUT00, %%T1, %%IN14_OUT14, 0x88
+        vshufi64x2      %%IN03_OUT04, %%IN_ORIG01, %%IN14_OUT14, 0xdd
+        vshufi64x2      %%IN09_OUT00, %%IN_ORIG01, %%IN14_OUT14, 0x88
         vshufi64x2      %%IN14_OUT14, %%IN02_OUT15, %%IN11_OUT11, 0xdd
-        vshufi64x2      %%T1, %%IN02_OUT15, %%IN11_OUT11, 0x88
+        vshufi64x2      %%IN_ORIG01, %%IN02_OUT15, %%IN11_OUT11, 0x88
         vshufi64x2      %%IN11_OUT11, %%IN00_OUT01, %%IN08_OUT05, 0x88
         vshufi64x2      %%IN02_OUT15, %%IN00_OUT01, %%IN08_OUT05, 0xdd
-        vshufi64x2      %%IN00_OUT01, %%IN06_OUT13, %%T0, 0x88
-        vshufi64x2      %%IN08_OUT05, %%IN06_OUT13, %%T0, 0xdd
-        vshufi64x2      %%T0, %%IN01_OUT02, %%IN10_OUT06, 0x88
+        vshufi64x2      %%IN00_OUT01, %%IN06_OUT13, %%IN_ORIG00, 0x88
+        vshufi64x2      %%IN08_OUT05, %%IN06_OUT13, %%IN_ORIG00, 0xdd
+        vshufi64x2      %%IN_ORIG00, %%IN01_OUT02, %%IN10_OUT06, 0x88
         vshufi64x2      %%IN06_OUT13, %%IN01_OUT02, %%IN10_OUT06, 0xdd
         vshufi64x2      %%IN01_OUT02, %%IN07_OUT07, %%IN13_OUT03, 0x88
         vshufi64x2      %%IN10_OUT06, %%IN07_OUT07, %%IN13_OUT03, 0xdd
         vshufi64x2      %%IN13_OUT03, %%IN05_OUT09, %%IN15_OUT10, 0x88
         vshufi64x2      %%IN07_OUT07, %%IN05_OUT09, %%IN15_OUT10, 0xdd
 
-        vmovdqa64       %%IN05_OUT09, %%T0
-        vmovdqa64       %%IN15_OUT10, %%T1
+        vmovdqa64       %%IN05_OUT09, %%IN_ORIG00
+        vmovdqa64       %%IN15_OUT10, %%IN_ORIG01
 %endmacro
 
 ;;
@@ -498,18 +534,18 @@ section .text
                        %%ZMM_DWORD15, %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14
 %endrep
 
-%assign %%I 0
-%rep 16
-        vpaddd APPEND(%%ZMM_DWORD, %%I), APPEND(%%ZMM_DWORD_ORIG, %%I)
-%assign %%I (%%I + 1)
-%endrep
-
-        ;; Transpose states to form the 64*16 bytes of keystream
-        TRANSPOSE_STATE_KS %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
-                           %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
-                           %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
-                           %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
-                           %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1
+        ;; Add original states to processed states and transpose
+        ;; these states to form the 64*16 bytes of keystream
+        ADD_TRANSPOSE_STATE_KS %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
+                               %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                               %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                               %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
+                               %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
+                               %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
+                               %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
+                               %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
+                               %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
+                               %%ZMM_DWORD_ORIG15
 %endmacro
 
 %macro ENCRYPT_1_16_BLOCKS 22
