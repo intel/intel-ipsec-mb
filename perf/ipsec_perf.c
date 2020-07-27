@@ -1486,7 +1486,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         else if (job_template.cipher_mode == IMB_CIPHER_ECB)
                 job_template.iv_len_in_bytes = 0;
         else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20)
-                job_template.iv_len_in_bytes = 16;
+                job_template.iv_len_in_bytes = 12;
 
         if (job_template.hash_alg == IMB_AUTH_PON_CRC_BIP) {
                 /* create XGEM header template */
