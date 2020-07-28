@@ -109,9 +109,16 @@ rk7:
 
 align 16
 pshufb_shf_table:
-        ;;  use these values for shift registers with the pshufb instruction
-        dq 0x8786858483828100, 0x8f8e8d8c8b8a8988
-        dq 0x0706050403020100, 0x000e0d0c0b0a0908
+        ;; Values for shifting XMM registers with the pshufb instruction.
+        ;; Some usages of this table:
+        ;; - pshufb with pattern from [pshufb_shf_table + <index>]
+        ;;   results with shifting <index> bytes from LSB to MSB
+        ;; - pshufb with pattern from [pshufb_shf_table pointer + 16 - <index]
+        ;;   results in shifting XMM left by <index> bytes
+        ;; - pshufb with pattern from [pshufb_shf_table + <index>] xor'ed with 0x80 pattern
+        ;;   results with shifting XMM right by <index> bytes
+        dq 0x8786858483828180, 0x8f8e8d8c8b8a8988
+        dq 0x0706050403020100, 0x0f0e0d0c0b0a0908
 
 align 16
 init_crc_value:
