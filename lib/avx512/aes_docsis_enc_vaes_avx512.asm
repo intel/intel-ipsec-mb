@@ -446,9 +446,7 @@ section .text
 %endif  ; no_last
 
         ;; The most common case: next block for CRC
-        vmovdqa64       %%XCRC_VAL, %%LANEDAT
-        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
-        vmovdqa64       %%LANEDAT, %%XCRC_VAL
+        CRC_CLMUL       %%LANEDAT, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
         sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
 %ifidn %%LAST, no_last
 %ifidn %%FIRST, no_first
