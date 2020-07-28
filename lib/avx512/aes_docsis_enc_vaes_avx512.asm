@@ -1634,16 +1634,19 @@ section .text
 
         vmovdqa64       xmm8, [%%STATE + _docsis_crc_args_init + %%idx]
 
+        lea             %%GT5, [rel byte_len_to_mask_ref_table]
+        kmovw           k7, [%%GT5 + %%GT3*2]
+        vmovdqu8        xmm9{k7}{z}, [%%GT4 - 16 + %%GT3]
         lea             %%GT5, [rel pshufb_shf_table]
         vmovdqu64       xmm10, [%%GT5 + %%GT3]
-        vmovdqu64       xmm9, [%%GT4 - 16 + %%GT3]
+
         vmovdqa64       xmm11, xmm8
         vpshufb         xmm8, xmm10  ; top num_bytes with LSB xcrc
         vpxorq          xmm10, [rel mask3]
         vpshufb         xmm11, xmm10 ; bottom (16 - num_bytes) with MSB xcrc
 
         ;; data num_bytes (top) blended with MSB bytes of CRC (bottom)
-        vpblendvb       xmm11, xmm9, xmm10
+        vporq           xmm11, xmm11, xmm9
 
         ;; final CRC calculation
         vmovdqa64       xmm9, [rel rk1]
@@ -1665,9 +1668,9 @@ section .text
         ;; - keep CRC value in init field
         CRC32_REDUCE_128_TO_32 %%GT7, xmm8, xmm9, xmm10, xmm11
         mov             [%%GT4 + %%GT3], DWORD(%%GT7)
-        shl             %%idx, 1
-        mov             [%%STATE + _docsis_crc_args_init + %%idx*8], DWORD(%%GT7)
-        shr             %%idx, 1
+        shl             %%idx, 4
+        mov             [%%STATE + _docsis_crc_args_init + %%idx], DWORD(%%GT7)
+        shr             %%idx, 4
 
 %%_crc_is_complete:
         mov             %%GT3, [%%job_rax + _msg_len_to_cipher_in_bytes]
