@@ -135,14 +135,27 @@ align 16
 mask3:
         dq 0x8080808080808080, 0x8080808080808080
 
-;;; partial block read/write table
+;;; partial block read/write bytes mask table
+;;; - 1's start from bit 0
 align 64
 byte_len_to_mask_table:
-        dw      0x0000, 0x0001, 0x0003, 0x0007,
-        dw      0x000f, 0x001f, 0x003f, 0x007f,
-        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
-        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
-        dw      0xffff
+        dw      0x0000, 0x0001, 0x0003, 0x0007
+        dw      0x000f, 0x001f, 0x003f, 0x007f
+        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff
+        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff
+        dw      0xffff, 0xffff, 0xffff, 0xffff
+        dw      0xffff, 0xffff, 0xffff, 0xffff
+
+;;; partial block read/write bytes reflected mask table
+;;; - 1's start from bit 15
+align 64
+byte_len_to_mask_ref_table:
+        dw      0x0000, 0x8000, 0xc000, 0xe000
+        dw      0xf000, 0xf800, 0xfc00, 0xfe00
+        dw      0xff00, 0xff80, 0xffc0, 0xffe0
+        dw      0xfff0, 0xfff8, 0xfffc, 0xfffe
+        dw      0xffff, 0xffff, 0xffff, 0xffff
+        dw      0xffff, 0xffff, 0xffff, 0xffff
 
 section .text
 
@@ -470,19 +483,36 @@ section .text
         ;; Partial block case (the last block)
         ;; - last CRC round is specific
         ;; - followed by CRC reduction and write back of the CRC
-        vmovdqa64       %%XCRC_VAL, %%LANEDAT
-        movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + %%LANEID*2] ; GT9 = bytes_to_crc
+        ;; - then construction of plain text block for encryption
+
+        movzx           DWORD(%%GT9), word [%%ARG + _docsis_crc_args_len + %%LANEID*2] ; GT9 = bytes_to_crc
+        mov             %%IN, [%%ARG + _aesarg_in + 8*%%LANEID]
+        lea             %%IN, [%%IN + %%IDX + %%OFFS]
+
+        lea             %%GT8, [rel byte_len_to_mask_ref_table]
+        kmovw           k7, [%%GT8 + %%GT9*2]
+        vmovdqu8        %%XCRC_DAT{k7}{z}, [%%IN + %%GT9 - 16]
+
+        lea             %%GT8, [rel byte_len_to_mask_table]
+        kmovw           k7, [%%GT8 + %%GT9*2]
+        vmovdqu8        %%XDATA{k7}{z}, [%%IN]
+
         lea             %%GT8, [rel pshufb_shf_table]
         vmovdqu64       %%XCRC_TMP, [%%GT8 + %%GT9]
-        mov             %%IN, [%%ARG + _aesarg_in + 8*%%LANEID]
-        lea             %%GT8, [%%IN + %%IDX + %%OFFS]
-        vmovdqu64       %%XCRC_DAT, [%%GT8 - 16 + %%GT9]  ; XCRC_DAT = data for CRC
-        vmovdqa64       %%XCRC_TMP2, %%XCRC_VAL
-        vpshufb         %%XCRC_VAL, %%XCRC_TMP  ; top bytes_to_crc with LSB XCRC_VAL
+        vpshufb         %%XCRC_VAL, %%LANEDAT, %%XCRC_TMP
+        ;; XCRC_VAL register contents at this stage:
+        ;; MS byte [ < LSB bytes of CRC sum : size =  bytes_to_crc> |
+        ;;           < zero padding : size = (16 - bytes_to_crc>) ] LS byte
         vpxorq          %%XCRC_TMP, [rel mask3]
-        vpshufb         %%XCRC_TMP2, %%XCRC_TMP ; bottom (16 - bytes_to_crc) with MSB XCRC_VAL
+        vpshufb         %%XCRC_TMP2, %%LANEDAT, %%XCRC_TMP
+        ;; XCRC_TMP2 register contents at this stage:
+        ;; MS byte [ < zero padding : size =  bytes_to_crc> |
+        ;;           < MSB bytes of CRC sum : size = (16 - bytes_to_crc>) ] LS byte
 
-        vpblendvb       %%XCRC_DAT, %%XCRC_TMP2, %%XCRC_DAT, %%XCRC_TMP
+        ;; XCRC_DAT register content after the OR operation:
+        ;; MS byte [ < plain text : size = bytes_to_crc > |
+        ;;           < MSB of CRC sum : size = (16 - bytes_to_crc > ] LS byte
+        vporq           %%XCRC_DAT, %%XCRC_DAT, %%XCRC_TMP2
 
         CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
         CRC32_REDUCE_128_TO_32 %%CRC32, %%XCRC_VAL, %%XCRC_TMP, %%XCRC_DAT, %%XCRC_TMP2
@@ -491,15 +521,17 @@ section .text
         vmovd           %%LANEDAT,  DWORD(%%CRC32)
 
         ;; write back CRC value into source buffer
-        movzx           %%GT9, word [%%ARG + _docsis_crc_args_len + %%LANEID*2]
-        lea             %%GT8, [%%IN + %%IDX + %%OFFS]
-        mov             [%%GT8 + %%GT9], DWORD(%%CRC32)
+        mov             [%%IN + %%GT9], DWORD(%%CRC32)
 
-        ;; reload the data for cipher (includes just computed CRC) - @todo store to load
-        vmovdqu64       %%XDATA, [%%IN + %%IDX + %%OFFS]
+        ;; combine already loaded plain text with computed CRC  for cipher operation
+        ;; - shift left CRC value in LANEDAT by bytes_to_crc number of bytes
+        sub             %%GT8, %%GT9
+        vmovdqu64       %%XCRC_TMP, [%%GT8 + 16]
+        vpshufb         %%XCRC_TMP2, %%LANEDAT, %%XCRC_TMP
+        vporq           %%XDATA, %%XDATA, %%XCRC_TMP2
 
+        ;; set size to CRC to zero and mark as done
         mov             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 0
-        ;; mark as done
         mov             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_DONE
 %ifnidn %%FIRST, no_first
         jmp             %%_crc_lane_done
