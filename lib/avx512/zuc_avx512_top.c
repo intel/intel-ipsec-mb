@@ -626,8 +626,8 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 if (use_gfni) {
                         for (i = 0; i < NUM_AVX512_BUFS; i+=4)
                                 asm_Eia3Round64B_4_VPCLMUL(&T[i],
-                                                 (const void **)&pKeyStrArr0[i],
-                                                 (const void **)&pIn8[i]);
+                                        (const void * const *)&pKeyStrArr0[i],
+                                        (const void **)&pIn8[i]);
                 }
                 for (i = 0; i < NUM_AVX512_BUFS; i++) {
                         if (!use_gfni)
@@ -829,8 +829,8 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
                 if (use_gfni) {
                         for (i = 0; i < NUM_AVX512_BUFS; i+=4)
                                 asm_Eia3Round64B_4_VPCLMUL(&T[i],
-                                                 (const void **)&pKeyStrArr0[i],
-                                                 (const void **)&pIn8[i]);
+                                        (const void * const *)&pKeyStrArr0[i],
+                                        (const void **)&pIn8[i]);
                 }
                 for (i = 0; i < NUM_AVX512_BUFS; i++) {
                         if (job_in_lane[i] == NULL)
