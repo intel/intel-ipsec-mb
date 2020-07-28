@@ -1628,11 +1628,10 @@ section .text
         mov             %%GT4, [%%STATE + _aes_args_in + %%idx*8]
 
         shl             %%idx, 4        ;; scale idx up to x16
+        vmovdqa64       xmm8, [%%STATE + _docsis_crc_args_init + %%idx]
 
         or              %%GT3, %%GT3
-        jz              %%_crc_read_reduce
-
-        vmovdqa64       xmm8, [%%STATE + _docsis_crc_args_init + %%idx]
+        jz              %%_crc_reduce
 
         lea             %%GT5, [rel byte_len_to_mask_ref_table]
         kmovw           k7, [%%GT5 + %%GT3*2]
@@ -1651,42 +1650,55 @@ section .text
         ;; final CRC calculation
         vmovdqa64       xmm9, [rel rk1]
         CRC_CLMUL       xmm8, xmm9, xmm11, xmm12
-        jmp             %%_crc_reduce
-
-        ;; complete the last block
-
-%%_crc_read_reduce:
-        vmovdqa64       xmm8, [%%STATE + _docsis_crc_args_init + %%idx]
 
 %%_crc_reduce:
-        shr             %%idx, 4        ;; scale idx back to normal
-
+        ;; %%idx - is scaled up x16 at this point
         ;; GT3 - offset in bytes to put the CRC32 value into
         ;; GT4 - src buffer pointer
         ;; xmm8 - current CRC value for reduction
         ;; - write CRC value into SRC buffer for further cipher
         ;; - keep CRC value in init field
         CRC32_REDUCE_128_TO_32 %%GT7, xmm8, xmm9, xmm10, xmm11
-        mov             [%%GT4 + %%GT3], DWORD(%%GT7)
-        shl             %%idx, 4
         mov             [%%STATE + _docsis_crc_args_init + %%idx], DWORD(%%GT7)
-        shr             %%idx, 4
+        shr             %%idx, 4        ;; scale idx back to normal
 
+        ;; load partial block bytes with just computed CRC into xmm3
+        lea             %%GT2, [rel byte_len_to_mask_table]
+        kmovw           k2, [%%GT2 + %%GT3*2]
+        kmovw           k1, [%%GT2 + %%GT3*2 + 4*2]     ;; assume cipher size = crc size + 4
+        vmovdqu8        xmm3{k2}{z}, [%%GT4]
+        vmovd           xmm2, DWORD(%%GT7)
+        lea             %%GT2, [rel pshufb_shf_table + 16]
+        sub             %%GT2, %%GT3
+        vmovdqu64       xmm1, [%%GT2]
+        vpshufb         xmm2, xmm2, xmm1
+        vporq           xmm3, xmm3, xmm2
+        vmovdqu8        [%%GT4]{k1}, xmm3
+
+        ;; xmm3 - plain text for cipher
+        ;; k1 - mask for masked store
+        jmp             %%_partial_block_cipher_no_load
+
+align 32
 %%_crc_is_complete:
         mov             %%GT3, [%%job_rax + _msg_len_to_cipher_in_bytes]
         and             %%GT3, 0xf
         jz              %%_no_partial_block_cipher
 
         ;; AES128/256-CFB on the partial block
-        mov             %%GT4, [%%STATE + _aes_args_in + %%idx*8]
-        mov             %%GT5, [%%STATE + _aes_args_out + %%idx*8]
-        mov             %%GT6, [%%job_rax + _enc_keys]
-        shl             %%idx, 1
-        vmovdqa64       xmm2, [%%STATE + _aes_args_IV + %%idx*8]
-        shr             %%idx, 1
         lea             %%GT2, [rel byte_len_to_mask_table]
         kmovw           k1, [%%GT2 + %%GT3*2]
+        mov             %%GT4, [%%STATE + _aes_args_in + %%idx*8]
         vmovdqu8        xmm3{k1}{z}, [%%GT4]
+
+align 32
+%%_partial_block_cipher_no_load:
+        mov             %%GT5, [%%STATE + _aes_args_out + %%idx*8]
+        mov             %%GT6, [%%job_rax + _enc_keys]
+        shl             %%idx, 4
+        vmovdqa64       xmm2, [%%STATE + _aes_args_IV + %%idx]
+        shr             %%idx, 4
+
         vpxorq          xmm1, xmm2, [%%GT6 + 0*16]
 %assign i 1
 %rep %%NROUNDS
@@ -1694,15 +1706,17 @@ section .text
 %assign i (i + 1)
 %endrep
         vaesenclast     xmm1, [%%GT6 + i*16]
+
         vpxorq          xmm1, xmm1, xmm3
         vmovdqu8        [%%GT5]{k1}, xmm1
 
+align 32
 %%_no_partial_block_cipher:
         ;; - copy CRC value into auth tag
         ;; - process completed job "idx"
-        shl             %%idx, 1
-        mov             DWORD(%%GT7), [%%STATE + _docsis_crc_args_init + %%idx*8]
-        shr             %%idx, 1
+        shl             %%idx, 4
+        mov             DWORD(%%GT7), [%%STATE + _docsis_crc_args_init + %%idx]
+        shr             %%idx, 4
         mov             %%GT6, [%%job_rax + _auth_tag_output]
         mov             [%%GT6], DWORD(%%GT7)
 
