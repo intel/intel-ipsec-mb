@@ -748,16 +748,6 @@ section .text
         vmovdqa64       %%ZCIPH2, [%%ARG + _aesarg_IV + 16*8]
         vmovdqa64       %%ZCIPH3, [%%ARG + _aesarg_IV + 16*12]
 
-        ;; pre-load 8 input pointers
-        mov             %%INP0, [%%ARG + _aesarg_in + (PTR_SZ * 0)]
-        mov             %%INP1, [%%ARG + _aesarg_in + (PTR_SZ * 1)]
-        mov             %%INP2, [%%ARG + _aesarg_in + (PTR_SZ * 2)]
-        mov             %%INP3, [%%ARG + _aesarg_in + (PTR_SZ * 3)]
-        mov             %%INP4, [%%ARG + _aesarg_in + (PTR_SZ * 4)]
-        mov             %%INP5, [%%ARG + _aesarg_in + (PTR_SZ * 5)]
-        mov             %%INP6, [%%ARG + _aesarg_in + (PTR_SZ * 6)]
-        mov             %%INP7, [%%ARG + _aesarg_in + (PTR_SZ * 7)]
-
         ;; pre-load ARK keys
         vmovdqa64       %%KEYSET0ARK, [%%ARG + _aesarg_key_tab + (16 * 0)]
         vmovdqa64       %%KEYSET1ARK, [%%ARG + _aesarg_key_tab + (16 * 4)]
@@ -775,58 +765,22 @@ section .text
         ;; Pipeline start
 
         ;; CRC32 rounds on all lanes - first and last cases are possible
+        ;; - pre-load 8 input pointers
         ;; - load current CRC sums
         ;; - load plain text blocks
         ;; - do the initial CRC round
-        vmovdqu64       %%ZDATB0, [%%ARG + _docsis_crc_args_init + (16 * 0)]
-        vmovdqu64       %%ZDATB1, [%%ARG + _docsis_crc_args_init + (16 * 4)]
-        vmovdqu64       %%ZDATB2, [%%ARG + _docsis_crc_args_init + (16 * 8)]
-        vmovdqu64       %%ZDATB3, [%%ARG + _docsis_crc_args_init + (16 * 12)]
-
-        vmovdqu64       %%XDATA0, [%%INP0 + %%IDX]
-        vinserti32x4    %%ZDATA0, [%%INP1 + %%IDX], 1
-        vinserti32x4    %%ZDATA0, [%%INP2 + %%IDX], 2
-        vinserti32x4    %%ZDATA0, [%%INP3 + %%IDX], 3
-
-        vmovdqu64       %%XDATA1, [%%INP4 + %%IDX]
-        vinserti32x4    %%ZDATA1, [%%INP5 + %%IDX], 1
-        vinserti32x4    %%ZDATA1, [%%INP6 + %%IDX], 2
-        vinserti32x4    %%ZDATA1, [%%INP7 + %%IDX], 3
-
-        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 8)]
-        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 9)]
-        vmovdqu64       %%XDATA2, [%%GT8 + %%IDX]
-        vinserti32x4    %%ZDATA2, [%%GT9 + %%IDX], 1
-        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 10)]
-        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 11)]
-        vinserti32x4    %%ZDATA2, [%%GT8 + %%IDX], 2
-        vinserti32x4    %%ZDATA2, [%%GT9 + %%IDX], 3
-
-        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 12)]
-        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 13)]
-        vmovdqu64       %%XDATA3, [%%GT8 + %%IDX]
-        vinserti32x4    %%ZDATA3, [%%GT9 + %%IDX], 1
-        mov             %%GT8, [%%ARG + _aesarg_in + (8 * 14)]
-        mov             %%GT9, [%%ARG + _aesarg_in + (8 * 15)]
-        vinserti32x4    %%ZDATA3, [%%GT8 + %%IDX], 2
-        vinserti32x4    %%ZDATA3, [%%GT9 + %%IDX], 3
 
 %assign crc_lane 0
 %rep 16
 
-%if crc_lane < 4
-        vextracti32x4   XWORD(%%ZT17), %%ZDATA0, crc_lane
-        vextracti32x4   XWORD(%%ZT18), %%ZDATB0, crc_lane
-%elif crc_lane < 8
-        vextracti32x4   XWORD(%%ZT17), %%ZDATA1, crc_lane - 4
-        vextracti32x4   XWORD(%%ZT18), %%ZDATB1, crc_lane - 4
-%elif crc_lane < 12
-        vextracti32x4   XWORD(%%ZT17), %%ZDATA2, crc_lane - 8
-        vextracti32x4   XWORD(%%ZT18), %%ZDATB2, crc_lane - 8
+%if crc_lane < 8
+        mov             APPEND(%%INP,crc_lane), [%%ARG + _aesarg_in + (PTR_SZ * crc_lane)]
+        vmovdqu64       XWORD(%%ZT17), [APPEND(%%INP,crc_lane) + %%IDX]
 %else
-        vextracti32x4   XWORD(%%ZT17), %%ZDATA3, crc_lane - 12
-        vextracti32x4   XWORD(%%ZT18), %%ZDATB3, crc_lane - 12
+        mov             %%GT8, [%%ARG + _aesarg_in + (PTR_SZ * crc_lane)]
+        vmovdqu64       XWORD(%%ZT17), [%%GT8 + %%IDX]
 %endif
+        vmovdqa64       XWORD(%%ZT18), [%%ARG + _docsis_crc_args_init + (16 * crc_lane)]
 
         CRC32_ROUND     first_possible, last_possible, %%ARG, crc_lane, \
                         XWORD(%%ZT17), %%XCRC_VAL, %%XCRC_DAT, \
@@ -1188,15 +1142,33 @@ section .text
         vaesenc         %%ZCIPH1, %%ZCIPH1, [%%ARG + _aesarg_key_tab + key_offset + (16 * 4)]
         vaesenc         %%ZCIPH2, %%ZCIPH2, [%%ARG + _aesarg_key_tab + key_offset + (16 * 8)]
         vaesenc         %%ZCIPH3, %%ZCIPH3, [%%ARG + _aesarg_key_tab + key_offset + (16 * 12)]
-%assign i (i + 1)
-%endrep
 
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 ;; CRC: CRC sum from registers back into the context structure
-                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 0)], %%ZDATB0
-                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 4)], %%ZDATB1
-                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 8)], %%ZDATB2
-                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 12)], %%ZDATB3
+%if i == 2
+                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 0)], XWORD(%%ZDATB0)
+                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 4)], XWORD(%%ZDATB1)
+                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 8)], XWORD(%%ZDATB2)
+                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 12)], XWORD(%%ZDATB3)
+%elif i == 4
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 1)], %%ZDATB0, 1
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 5)], %%ZDATB1, 1
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 9)], %%ZDATB2, 1
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 13)], %%ZDATB3, 1
+%elif i == 6
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 2)], %%ZDATB0, 2
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 6)], %%ZDATB1, 2
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 10)], %%ZDATB2, 2
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 14)], %%ZDATB3, 2
+%elif i == 8
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 3)], %%ZDATB0, 3
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 7)], %%ZDATB1, 3
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 11)], %%ZDATB2, 3
+                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 15)], %%ZDATB3, 3
+%endif
+
+%assign i (i + 1)
+%endrep
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES ROUNDS 10 or 14
@@ -1414,7 +1386,8 @@ section .text
         add             %%GT6, [%%JOB + _msg_len_to_hash_in_bytes]
         mov             [%%GT6], DWORD(%%GT7)
         shl             %%lane, 4
-        mov             [%%STATE + _docsis_crc_args_init + %%lane], DWORD(%%GT7)
+        vmovd           XWORD(%%ZT0), DWORD(%%GT7)
+        vmovdqa64       [%%STATE + _docsis_crc_args_init + %%lane], XWORD(%%ZT0)
         shr             %%lane, 4
         jmp             %%_crc_complete
 
@@ -1659,7 +1632,8 @@ section .text
         ;; - write CRC value into SRC buffer for further cipher
         ;; - keep CRC value in init field
         CRC32_REDUCE_128_TO_32 %%GT7, xmm8, xmm9, xmm10, xmm11
-        mov             [%%STATE + _docsis_crc_args_init + %%idx], DWORD(%%GT7)
+        vmovd           xmm11, DWORD(%%GT7)
+        vmovdqa64       [%%STATE + _docsis_crc_args_init + %%idx], xmm11
         shr             %%idx, 4        ;; scale idx back to normal
 
         ;; load partial block bytes with just computed CRC into xmm3
@@ -1715,10 +1689,10 @@ align 32
         ;; - copy CRC value into auth tag
         ;; - process completed job "idx"
         shl             %%idx, 4
-        mov             DWORD(%%GT7), [%%STATE + _docsis_crc_args_init + %%idx]
+        vmovdqa64       xmm0, [%%STATE + _docsis_crc_args_init + %%idx]
         shr             %%idx, 4
         mov             %%GT6, [%%job_rax + _auth_tag_output]
-        mov             [%%GT6], DWORD(%%GT7)
+        vmovd           [%%GT6], xmm0
 
         mov             %%unused_lanes, [%%STATE + _aes_unused_lanes]
         mov             qword [%%STATE + _aes_job_in_lane + %%idx*8], 0
