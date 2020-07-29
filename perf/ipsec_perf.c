@@ -46,7 +46,12 @@
 #define __forceinline static inline __attribute__((always_inline))
 #include <unistd.h>
 #include <pthread.h>
+#if defined (__FreeBSD__)
+#include <sys/cpuset.h>
+typedef cpuset_t cpu_set_t;
+#else
 #include <sched.h>
+#endif
 #endif
 
 #include <intel-ipsec-mb.h>
@@ -927,7 +932,12 @@ static int set_affinity(const int cpu)
         CPU_SET(cpu, &cpuset);
 
         /* Set affinity of current process to cpu */
+#if defined(__FreeBSD__)
+	ret = cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1,
+				sizeof(cpuset), &cpuset);
+#else
         ret = sched_setaffinity(0, sizeof(cpuset), &cpuset);
+#endif
 #endif /* _WIN32 */
 
         return ret;
@@ -1096,6 +1106,9 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
         const size_t alignment = 64;
         uint8_t *buf = NULL;
         imb_uint128_t *keys = NULL;
+#ifdef LINUX
+	int ret;
+#endif
 
         if (p_keys == NULL || p_buffer == NULL) {
                 fprintf(stderr, "Internal buffer allocation error!\n");
@@ -1103,7 +1116,12 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
         }
 
 #ifdef LINUX
-        buf = (uint8_t *) memalign(alignment, bufs_size);
+        ret = posix_memalign((void **) &buf, alignment, bufs_size);
+
+	if (ret != 0) {
+                fprintf(stderr, "Could not malloc buf\n");
+                exit(EXIT_FAILURE);
+        }
 #else
         buf = (uint8_t *) _aligned_malloc(bufs_size, alignment);
 #endif
@@ -1113,7 +1131,12 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
         }
 
 #ifdef LINUX
-        keys = (imb_uint128_t *) memalign(alignment, keys_size);
+        ret = posix_memalign((void **) &keys, alignment, keys_size);
+	if (ret != 0) {
+                fprintf(stderr, "Could not allocate memory for keys!\n");
+                free_mem(&buf, &keys);
+                exit(EXIT_FAILURE);
+        }
 #else
         keys = (imb_uint128_t *) _aligned_malloc(keys_size, alignment);
 #endif
