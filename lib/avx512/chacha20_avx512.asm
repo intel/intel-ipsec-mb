@@ -142,26 +142,28 @@ section .text
 ; will not contain the first column of the matrix, but
 ; row 1 and same with other registers.
 ; This is done to minimize the number of registers clobbered.
+; Once transposition is done, keystream is XOR'd with the plaintext
+; and output buffer is written.
 ;
-%macro ADD_TRANSPOSE_STATE_KS 32
-%define %%IN00_OUT01  %1 ; [in/out] Input row 0, Output column 1
-%define %%IN01_OUT02  %2 ; [in/out] Input row 1, Output column 2
-%define %%IN02_OUT15  %3 ; [in/out] Input row 2, Output column 15
-%define %%IN03_OUT04  %4 ; [in/out] Input row 3, Output column 4
-%define %%IN04_OUT08  %5 ; [in/out] Input row 4, Output column 8
-%define %%IN05_OUT09  %6 ; [in/out] Input row 5, Output column 9
-%define %%IN06_OUT13  %7 ; [in/out] Input row 6, Output column 13
-%define %%IN07_OUT07  %8 ; [in/out] Input row 7, Output column 7
-%define %%IN08_OUT05  %9 ; [in/out] Input row 8, Output column 5
-%define %%IN09_OUT00 %10 ; [in/out] Input row 9, Output column 0
-%define %%IN10_OUT06 %11 ; [in/out] Input row 10, Output column 6
-%define %%IN11_OUT11 %12 ; [in/out] Input row 11, Output column 11
-%define %%IN12_OUT12 %13 ; [in/out] Input row 12, Output column 12
-%define %%IN13_OUT03 %14 ; [in/out] Input row 13, Output column 3
-%define %%IN14_OUT14 %15 ; [in/out] Input row 14, Output column 14
-%define %%IN15_OUT10 %16 ; [in/out] Input row 15, Output column 10
-%define %%IN_ORIG00  %17 ; [in/clobbered] Original input row 0
-%define %%IN_ORIG01  %18 ; [in/clobbered] Original input row 1
+%macro GENERATE_1K_KS_AND_ENCRYPT 35
+%define %%IN00_KS01  %1 ; [in/clobbered] Input row 0 of state, bytes 64-127 of keystream
+%define %%IN01_KS02  %2 ; [in/clobbered] Input row 1 of state, bytes 128-191 of keystream
+%define %%IN02_KS15  %3 ; [in/clobbered] Input row 2 of state, bytes 960-1023 of keystream
+%define %%IN03_KS04  %4 ; [in/clobbered] Input row 3 of state, bytes 256-319 of keystream
+%define %%IN04_KS08  %5 ; [in/clobbered] Input row 4 of state, bytes 512-575 of keystream
+%define %%IN05       %6 ; [in/clobbered] Input row 5 of state, bytes 576-639 of keystream
+%define %%IN06_KS13  %7 ; [in/clobbered] Input row 6 of state, bytes 832-895 of keystream
+%define %%IN07_KS07  %8 ; [in/clobbered] Input row 7 of state, bytes 448-511 of keystream
+%define %%IN08_KS05  %9 ; [in/clobbered] Input row 8 of state, bytes 320-383 of keystream
+%define %%IN09_KS00 %10 ; [in/clobbered] Input row 9 of state, bytes 0-63 of keystream
+%define %%IN10_KS06 %11 ; [in/clobbered] Input row 10 of state, bytes 384-447 of keystream
+%define %%IN11_KS11 %12 ; [in/clobbered] Input row 11 of state, bytes 704-767 of keystream
+%define %%IN12_KS12 %13 ; [in/clobbered] Input row 12 of state, bytes 768-831 of keystream
+%define %%IN13_KS03 %14 ; [in/clobbered] Input row 13 of state, bytes 192-255 of keystream
+%define %%IN14_KS14 %15 ; [in/clobbered] Input row 14 of state, bytes 896-959 of keystream
+%define %%IN15      %16 ; [in/clobbered] Input row 15 of state, bytes 640-703 of keystream
+%define %%IN_ORIG00_KS09  %17 ; [in/clobbered] Original input row 0, bytes 576-639 of keystream
+%define %%IN_ORIG01_KS10  %18 ; [in/clobbered] Original input row 1, bytes 640-703 of keystream
 %define %%IN_ORIG02  %19 ; [in] Original input row 2
 %define %%IN_ORIG03  %20 ; [in] Original input row 3
 %define %%IN_ORIG04  %21 ; [in] Original input row 4
@@ -176,111 +178,158 @@ section .text
 %define %%IN_ORIG13  %30 ; [in] Original input row 13
 %define %%IN_ORIG14  %31 ; [in] Original input row 14
 %define %%IN_ORIG15  %32 ; [in] Original input row 15
+%define %%SRC        %33 ; [in] Source pointer
+%define %%DST        %34 ; [in] Destination pointer
+%define %%OFF        %35 ; [in] Offset into src/dst pointers
 
-        vpaddd %%IN00_OUT01, %%IN_ORIG00
-        vpaddd %%IN01_OUT02, %%IN_ORIG01
-        vpaddd %%IN02_OUT15, %%IN_ORIG02
-        vpaddd %%IN03_OUT04, %%IN_ORIG03
+        vpaddd %%IN00_KS01, %%IN_ORIG00_KS09
+        vpaddd %%IN01_KS02, %%IN_ORIG01_KS10
+        vpaddd %%IN02_KS15, %%IN_ORIG02
+        vpaddd %%IN03_KS04, %%IN_ORIG03
 
         ;; Deal with first lanes 0-7
         ; T0, T1 free
-        vpunpckldq      %%IN_ORIG00, %%IN00_OUT01, %%IN01_OUT02
-        vpunpckhdq      %%IN00_OUT01, %%IN00_OUT01, %%IN01_OUT02
-        vpunpckldq      %%IN_ORIG01, %%IN02_OUT15, %%IN03_OUT04
-        vpunpckhdq      %%IN02_OUT15, %%IN02_OUT15, %%IN03_OUT04
+        vpunpckldq      %%IN_ORIG00_KS09, %%IN00_KS01, %%IN01_KS02
+        vpunpckhdq      %%IN00_KS01, %%IN00_KS01, %%IN01_KS02
+        vpunpckldq      %%IN_ORIG01_KS10, %%IN02_KS15, %%IN03_KS04
+        vpunpckhdq      %%IN02_KS15, %%IN02_KS15, %%IN03_KS04
 
-        ; IN01_OUT02, IN03_OUT04 free
-        vpunpcklqdq     %%IN03_OUT04, %%IN_ORIG00, %%IN_ORIG01
-        vpunpckhqdq     %%IN01_OUT02, %%IN_ORIG00, %%IN_ORIG01
-        vpunpcklqdq     %%IN_ORIG00, %%IN00_OUT01, %%IN02_OUT15
-        vpunpckhqdq     %%IN00_OUT01, %%IN00_OUT01, %%IN02_OUT15
+        ; IN01_KS02, IN03_KS04 free
+        vpunpcklqdq     %%IN03_KS04, %%IN_ORIG00_KS09, %%IN_ORIG01_KS10
+        vpunpckhqdq     %%IN01_KS02, %%IN_ORIG00_KS09, %%IN_ORIG01_KS10
+        vpunpcklqdq     %%IN_ORIG00_KS09, %%IN00_KS01, %%IN02_KS15
+        vpunpckhqdq     %%IN00_KS01, %%IN00_KS01, %%IN02_KS15
 
-        vpaddd %%IN04_OUT08, %%IN_ORIG04
-        vpaddd %%IN05_OUT09, %%IN_ORIG05
-        vpaddd %%IN06_OUT13, %%IN_ORIG06
-        vpaddd %%IN07_OUT07, %%IN_ORIG07
+        vpaddd %%IN04_KS08, %%IN_ORIG04
+        vpaddd %%IN05, %%IN_ORIG05
+        vpaddd %%IN06_KS13, %%IN_ORIG06
+        vpaddd %%IN07_KS07, %%IN_ORIG07
 
-        ; IN02_OUT15, T1 free
-        vpunpckldq      %%IN_ORIG01, %%IN04_OUT08, %%IN05_OUT09
-        vpunpckhdq      %%IN04_OUT08, %%IN04_OUT08, %%IN05_OUT09
-        vpunpckldq      %%IN02_OUT15, %%IN06_OUT13, %%IN07_OUT07
-        vpunpckhdq      %%IN06_OUT13, %%IN06_OUT13, %%IN07_OUT07
+        ; IN02_KS15, T1 free
+        vpunpckldq      %%IN_ORIG01_KS10, %%IN04_KS08, %%IN05
+        vpunpckhdq      %%IN04_KS08, %%IN04_KS08, %%IN05
+        vpunpckldq      %%IN02_KS15, %%IN06_KS13, %%IN07_KS07
+        vpunpckhdq      %%IN06_KS13, %%IN06_KS13, %%IN07_KS07
 
-        ; IN07_OUT07, IN05_OUT09 free
-        vpunpcklqdq     %%IN07_OUT07, %%IN_ORIG01, %%IN02_OUT15
-        vpunpckhqdq     %%IN05_OUT09, %%IN_ORIG01, %%IN02_OUT15
-        vpunpcklqdq     %%IN02_OUT15, %%IN04_OUT08, %%IN06_OUT13
-        vpunpckhqdq     %%IN04_OUT08, %%IN04_OUT08, %%IN06_OUT13
+        ; IN07_KS07, IN05 free
+        vpunpcklqdq     %%IN07_KS07, %%IN_ORIG01_KS10, %%IN02_KS15
+        vpunpckhqdq     %%IN05, %%IN_ORIG01_KS10, %%IN02_KS15
+        vpunpcklqdq     %%IN02_KS15, %%IN04_KS08, %%IN06_KS13
+        vpunpckhqdq     %%IN04_KS08, %%IN04_KS08, %%IN06_KS13
 
-        ; T1, IN06_OUT13 free
-        vshufi64x2      %%IN_ORIG01, %%IN03_OUT04, %%IN07_OUT07, 0x44
-        vshufi64x2      %%IN03_OUT04, %%IN03_OUT04, %%IN07_OUT07, 0xee
-        vshufi64x2      %%IN06_OUT13, %%IN01_OUT02, %%IN05_OUT09, 0x44
-        vshufi64x2      %%IN01_OUT02, %%IN01_OUT02, %%IN05_OUT09, 0xee
-        vshufi64x2      %%IN07_OUT07, %%IN_ORIG00, %%IN02_OUT15, 0x44
-        vshufi64x2      %%IN02_OUT15, %%IN_ORIG00, %%IN02_OUT15, 0xee
-        vshufi64x2      %%IN05_OUT09, %%IN00_OUT01, %%IN04_OUT08, 0x44
-        vshufi64x2      %%IN00_OUT01, %%IN00_OUT01, %%IN04_OUT08, 0xee
+        ; T1, IN06_KS13 free
+        vshufi64x2      %%IN_ORIG01_KS10, %%IN03_KS04, %%IN07_KS07, 0x44
+        vshufi64x2      %%IN03_KS04, %%IN03_KS04, %%IN07_KS07, 0xee
+        vshufi64x2      %%IN06_KS13, %%IN01_KS02, %%IN05, 0x44
+        vshufi64x2      %%IN01_KS02, %%IN01_KS02, %%IN05, 0xee
+        vshufi64x2      %%IN07_KS07, %%IN_ORIG00_KS09, %%IN02_KS15, 0x44
+        vshufi64x2      %%IN02_KS15, %%IN_ORIG00_KS09, %%IN02_KS15, 0xee
+        vshufi64x2      %%IN05, %%IN00_KS01, %%IN04_KS08, 0x44
+        vshufi64x2      %%IN00_KS01, %%IN00_KS01, %%IN04_KS08, 0xee
 
         ;; Deal with lanes 8-15
-        vpaddd %%IN08_OUT05, %%IN_ORIG08
-        vpaddd %%IN09_OUT00, %%IN_ORIG09
-        vpaddd %%IN10_OUT06, %%IN_ORIG10
-        vpaddd %%IN11_OUT11, %%IN_ORIG11
+        vpaddd %%IN08_KS05, %%IN_ORIG08
+        vpaddd %%IN09_KS00, %%IN_ORIG09
+        vpaddd %%IN10_KS06, %%IN_ORIG10
+        vpaddd %%IN11_KS11, %%IN_ORIG11
 
-        vpunpckldq      %%IN_ORIG00, %%IN08_OUT05, %%IN09_OUT00
-        vpunpckhdq      %%IN08_OUT05, %%IN08_OUT05, %%IN09_OUT00
-        vpunpckldq      %%IN04_OUT08, %%IN10_OUT06, %%IN11_OUT11
-        vpunpckhdq      %%IN10_OUT06, %%IN10_OUT06, %%IN11_OUT11
+        vpunpckldq      %%IN_ORIG00_KS09, %%IN08_KS05, %%IN09_KS00
+        vpunpckhdq      %%IN08_KS05, %%IN08_KS05, %%IN09_KS00
+        vpunpckldq      %%IN04_KS08, %%IN10_KS06, %%IN11_KS11
+        vpunpckhdq      %%IN10_KS06, %%IN10_KS06, %%IN11_KS11
 
-        vpunpcklqdq     %%IN09_OUT00, %%IN_ORIG00, %%IN04_OUT08
-        vpunpckhqdq     %%IN04_OUT08, %%IN_ORIG00, %%IN04_OUT08
-        vpunpcklqdq     %%IN11_OUT11, %%IN08_OUT05, %%IN10_OUT06
-        vpunpckhqdq     %%IN08_OUT05, %%IN08_OUT05, %%IN10_OUT06
+        vpunpcklqdq     %%IN09_KS00, %%IN_ORIG00_KS09, %%IN04_KS08
+        vpunpckhqdq     %%IN04_KS08, %%IN_ORIG00_KS09, %%IN04_KS08
+        vpunpcklqdq     %%IN11_KS11, %%IN08_KS05, %%IN10_KS06
+        vpunpckhqdq     %%IN08_KS05, %%IN08_KS05, %%IN10_KS06
 
-        vpaddd %%IN12_OUT12, %%IN_ORIG12
-        vpaddd %%IN13_OUT03, %%IN_ORIG13
-        vpaddd %%IN14_OUT14, %%IN_ORIG14
-        vpaddd %%IN15_OUT10, %%IN_ORIG15
+        vpaddd %%IN12_KS12, %%IN_ORIG12
+        vpaddd %%IN13_KS03, %%IN_ORIG13
+        vpaddd %%IN14_KS14, %%IN_ORIG14
+        vpaddd %%IN15, %%IN_ORIG15
 
-        vpunpckldq      %%IN_ORIG00, %%IN12_OUT12, %%IN13_OUT03
-        vpunpckhdq      %%IN12_OUT12, %%IN12_OUT12, %%IN13_OUT03
-        vpunpckldq      %%IN10_OUT06, %%IN14_OUT14, %%IN15_OUT10
-        vpunpckhdq      %%IN14_OUT14, %%IN14_OUT14, %%IN15_OUT10
+        vpunpckldq      %%IN_ORIG00_KS09, %%IN12_KS12, %%IN13_KS03
+        vpunpckhdq      %%IN12_KS12, %%IN12_KS12, %%IN13_KS03
+        vpunpckldq      %%IN10_KS06, %%IN14_KS14, %%IN15
+        vpunpckhdq      %%IN14_KS14, %%IN14_KS14, %%IN15
 
-        vpunpcklqdq     %%IN13_OUT03, %%IN_ORIG00, %%IN10_OUT06
-        vpunpckhqdq     %%IN10_OUT06, %%IN_ORIG00, %%IN10_OUT06
-        vpunpcklqdq     %%IN15_OUT10, %%IN12_OUT12, %%IN14_OUT14
-        vpunpckhqdq     %%IN12_OUT12, %%IN12_OUT12, %%IN14_OUT14
+        vpunpcklqdq     %%IN13_KS03, %%IN_ORIG00_KS09, %%IN10_KS06
+        vpunpckhqdq     %%IN10_KS06, %%IN_ORIG00_KS09, %%IN10_KS06
+        vpunpcklqdq     %%IN15, %%IN12_KS12, %%IN14_KS14
+        vpunpckhqdq     %%IN12_KS12, %%IN12_KS12, %%IN14_KS14
 
-        vshufi64x2      %%IN14_OUT14, %%IN09_OUT00, %%IN13_OUT03, 0x44
-        vshufi64x2      %%IN09_OUT00, %%IN09_OUT00, %%IN13_OUT03, 0xee
-        vshufi64x2      %%IN_ORIG00, %%IN04_OUT08, %%IN10_OUT06, 0x44
-        vshufi64x2      %%IN10_OUT06, %%IN04_OUT08, %%IN10_OUT06, 0xee
-        vshufi64x2      %%IN13_OUT03, %%IN11_OUT11, %%IN15_OUT10, 0x44
-        vshufi64x2      %%IN11_OUT11, %%IN11_OUT11, %%IN15_OUT10, 0xee
-        vshufi64x2      %%IN15_OUT10, %%IN08_OUT05, %%IN12_OUT12, 0x44
-        vshufi64x2      %%IN08_OUT05, %%IN08_OUT05, %%IN12_OUT12, 0xee
+        vshufi64x2      %%IN14_KS14, %%IN09_KS00, %%IN13_KS03, 0x44
+        vshufi64x2      %%IN09_KS00, %%IN09_KS00, %%IN13_KS03, 0xee
+        vshufi64x2      %%IN_ORIG00_KS09, %%IN04_KS08, %%IN10_KS06, 0x44
+        vshufi64x2      %%IN10_KS06, %%IN04_KS08, %%IN10_KS06, 0xee
+        vshufi64x2      %%IN13_KS03, %%IN11_KS11, %%IN15, 0x44
+        vshufi64x2      %%IN11_KS11, %%IN11_KS11, %%IN15, 0xee
+        vshufi64x2      %%IN15, %%IN08_KS05, %%IN12_KS12, 0x44
+        vshufi64x2      %%IN08_KS05, %%IN08_KS05, %%IN12_KS12, 0xee
 
-        vshufi64x2      %%IN12_OUT12, %%IN03_OUT04, %%IN09_OUT00, 0xdd
-        vshufi64x2      %%IN04_OUT08, %%IN03_OUT04, %%IN09_OUT00, 0x88
-        vshufi64x2      %%IN03_OUT04, %%IN_ORIG01, %%IN14_OUT14, 0xdd
-        vshufi64x2      %%IN09_OUT00, %%IN_ORIG01, %%IN14_OUT14, 0x88
-        vshufi64x2      %%IN14_OUT14, %%IN02_OUT15, %%IN11_OUT11, 0xdd
-        vshufi64x2      %%IN_ORIG01, %%IN02_OUT15, %%IN11_OUT11, 0x88
-        vshufi64x2      %%IN11_OUT11, %%IN00_OUT01, %%IN08_OUT05, 0x88
-        vshufi64x2      %%IN02_OUT15, %%IN00_OUT01, %%IN08_OUT05, 0xdd
-        vshufi64x2      %%IN00_OUT01, %%IN06_OUT13, %%IN_ORIG00, 0x88
-        vshufi64x2      %%IN08_OUT05, %%IN06_OUT13, %%IN_ORIG00, 0xdd
-        vshufi64x2      %%IN_ORIG00, %%IN01_OUT02, %%IN10_OUT06, 0x88
-        vshufi64x2      %%IN06_OUT13, %%IN01_OUT02, %%IN10_OUT06, 0xdd
-        vshufi64x2      %%IN01_OUT02, %%IN07_OUT07, %%IN13_OUT03, 0x88
-        vshufi64x2      %%IN10_OUT06, %%IN07_OUT07, %%IN13_OUT03, 0xdd
-        vshufi64x2      %%IN13_OUT03, %%IN05_OUT09, %%IN15_OUT10, 0x88
-        vshufi64x2      %%IN07_OUT07, %%IN05_OUT09, %%IN15_OUT10, 0xdd
+        vshufi64x2      %%IN12_KS12, %%IN03_KS04, %%IN09_KS00, 0xdd
+        vpxorq          %%IN12_KS12, [%%SRC + %%OFF + 64*12]
+        vmovdqu64       [%%DST + %%OFF + 64*12], %%IN12_KS12
 
-        vmovdqa64       %%IN05_OUT09, %%IN_ORIG00
-        vmovdqa64       %%IN15_OUT10, %%IN_ORIG01
+        vshufi64x2      %%IN04_KS08, %%IN03_KS04, %%IN09_KS00, 0x88
+        vpxorq          %%IN04_KS08, [%%SRC + %%OFF + 64*8]
+        vmovdqu64       [%%DST + %%OFF + 64*8], %%IN04_KS08
+
+        vshufi64x2      %%IN09_KS00, %%IN_ORIG01_KS10, %%IN14_KS14, 0x88
+        vpxorq          %%IN09_KS00, [%%SRC + %%OFF]
+        vmovdqu64       [%%DST + %%OFF], %%IN09_KS00
+
+        vshufi64x2      %%IN03_KS04, %%IN_ORIG01_KS10, %%IN14_KS14, 0xdd
+        vpxorq          %%IN03_KS04, [%%SRC + %%OFF + 64*4]
+        vmovdqu64       [%%DST + %%OFF + 64*4], %%IN03_KS04
+
+        vshufi64x2      %%IN14_KS14, %%IN02_KS15, %%IN11_KS11, 0xdd
+        vpxorq          %%IN14_KS14, [%%SRC + %%OFF + 64*14]
+        vmovdqu64       [%%DST + %%OFF + 64*14], %%IN14_KS14
+
+        vshufi64x2      %%IN_ORIG01_KS10, %%IN02_KS15, %%IN11_KS11, 0x88
+        vpxorq          %%IN_ORIG01_KS10, [%%SRC + %%OFF + 64*10]
+        vmovdqu64       [%%DST + %%OFF + 64*10], %%IN_ORIG01_KS10
+
+        vshufi64x2      %%IN11_KS11, %%IN00_KS01, %%IN08_KS05, 0x88
+        vpxorq          %%IN11_KS11, [%%SRC + %%OFF + 64*11]
+        vmovdqu64       [%%DST + %%OFF + 64*11], %%IN11_KS11
+
+        vshufi64x2      %%IN02_KS15, %%IN00_KS01, %%IN08_KS05, 0xdd
+        vpxorq          %%IN02_KS15, [%%SRC + %%OFF + 64*15]
+        vmovdqu64       [%%DST + %%OFF + 64*15], %%IN02_KS15
+
+        vshufi64x2      %%IN00_KS01, %%IN06_KS13, %%IN_ORIG00_KS09, 0x88
+        vpxorq          %%IN00_KS01, [%%SRC + %%OFF + 64*1]
+        vmovdqu64       [%%DST + %%OFF + 64*1], %%IN00_KS01
+
+        vshufi64x2      %%IN08_KS05, %%IN06_KS13, %%IN_ORIG00_KS09, 0xdd
+        vpxorq          %%IN08_KS05, [%%SRC + %%OFF + 64*5]
+        vmovdqu64       [%%DST + %%OFF + 64*5], %%IN08_KS05
+
+        vshufi64x2      %%IN_ORIG00_KS09, %%IN01_KS02, %%IN10_KS06, 0x88
+        vpxorq          %%IN_ORIG00_KS09, [%%SRC + %%OFF + 64*9]
+        vmovdqu64       [%%DST + %%OFF + 64*9], %%IN_ORIG00_KS09
+
+        vshufi64x2      %%IN06_KS13, %%IN01_KS02, %%IN10_KS06, 0xdd
+        vpxorq          %%IN06_KS13, [%%SRC + %%OFF + 64*13]
+        vmovdqu64       [%%DST + %%OFF + 64*13], %%IN06_KS13
+
+        vshufi64x2      %%IN01_KS02, %%IN07_KS07, %%IN13_KS03, 0x88
+        vpxorq          %%IN01_KS02, [%%SRC + %%OFF + 64*2]
+        vmovdqu64       [%%DST + %%OFF + 64*2], %%IN01_KS02
+
+        vshufi64x2      %%IN10_KS06, %%IN07_KS07, %%IN13_KS03, 0xdd
+        vpxorq          %%IN10_KS06, [%%SRC + %%OFF + 64*6]
+        vmovdqu64       [%%DST + %%OFF + 64*6], %%IN10_KS06
+
+        vshufi64x2      %%IN13_KS03, %%IN05, %%IN15, 0x88
+        vpxorq          %%IN13_KS03, [%%SRC + %%OFF + 64*3]
+        vmovdqu64       [%%DST + %%OFF + 64*3], %%IN13_KS03
+
+        vshufi64x2      %%IN07_KS07, %%IN05, %%IN15, 0xdd
+        vpxorq          %%IN07_KS07, [%%SRC + %%OFF + 64*7]
+        vmovdqu64       [%%DST + %%OFF + 64*7], %%IN07_KS07
 %endmacro
 
 ;;
@@ -470,6 +519,236 @@ section .text
 
         ; B <<< 7
         ZMM_ROLS_X4 %%ZMM_DWORD_B1, %%ZMM_DWORD_B2, %%ZMM_DWORD_B3, %%ZMM_DWORD_B4, 7
+%endmacro
+
+;;
+;; Generates 64*16 bytes of keystream and encrypt up to 1KB of input data
+;;
+%macro ENCRYPT_1K 35
+%define %%ZMM_DWORD0       %1   ;; [clobbered] ZMM to contain dword 0 of all states
+%define %%ZMM_DWORD1       %2   ;; [clobbered] ZMM to contain dword 1 of all states
+%define %%ZMM_DWORD2       %3   ;; [clobbered] ZMM to contain dword 2 of all states
+%define %%ZMM_DWORD3       %4   ;; [clobbered] ZMM to contain dword 3 of all states
+%define %%ZMM_DWORD4       %5   ;; [clobbered] ZMM to contain dword 4 of all states
+%define %%ZMM_DWORD5       %6   ;; [clobbered] ZMM to contain dword 5 of all states
+%define %%ZMM_DWORD6       %7   ;; [clobbered] ZMM to contain dword 6 of all states
+%define %%ZMM_DWORD7       %8   ;; [clobbered] ZMM to contain dword 7 of all states
+%define %%ZMM_DWORD8       %9   ;; [clobbered] ZMM to contain dword 8 of all states
+%define %%ZMM_DWORD9       %10  ;; [clobbered] ZMM to contain dword 9 of all states
+%define %%ZMM_DWORD10      %11  ;; [clobbered] ZMM to contain dword 10 of all states
+%define %%ZMM_DWORD11      %12  ;; [clobbered] ZMM to contain dword 11 of all states
+%define %%ZMM_DWORD12      %13  ;; [clobbered] ZMM to contain dword 12 of all states
+%define %%ZMM_DWORD13      %14  ;; [clobbered] ZMM to contain dword 13 of all states
+%define %%ZMM_DWORD14      %15  ;; [clobbered] ZMM to contain dword 14 of all states
+%define %%ZMM_DWORD15      %16  ;; [clobbered] ZMM to contain dword 15 of all states
+%define %%ZMM_DWORD_ORIG0  %17  ;; [in/clobbered] ZMM containing dword 0 of all states / Temp ZMM register
+%define %%ZMM_DWORD_ORIG1  %18  ;; [in/clobbered] ZMM containing dword 1 of all states / Temp ZMM register
+%define %%ZMM_DWORD_ORIG2  %19  ;; [in] ZMM containing dword 2 of all states
+%define %%ZMM_DWORD_ORIG3  %20  ;; [in] ZMM containing dword 3 of all states
+%define %%ZMM_DWORD_ORIG4  %21  ;; [in] ZMM containing dword 4 of all states
+%define %%ZMM_DWORD_ORIG5  %22  ;; [in] ZMM containing dword 5 of all states
+%define %%ZMM_DWORD_ORIG6  %23  ;; [in] ZMM containing dword 6 of all states
+%define %%ZMM_DWORD_ORIG7  %24  ;; [in] ZMM containing dword 7 of all states
+%define %%ZMM_DWORD_ORIG8  %25  ;; [in] ZMM containing dword 8 of all states
+%define %%ZMM_DWORD_ORIG9  %26  ;; [in] ZMM containing dword 9 of all states
+%define %%ZMM_DWORD_ORIG10 %27  ;; [in] ZMM containing dword 10 of all states
+%define %%ZMM_DWORD_ORIG11 %28  ;; [in] ZMM containing dword 11 of all states
+%define %%ZMM_DWORD_ORIG12 %29  ;; [in] ZMM containing dword 12 of all states
+%define %%ZMM_DWORD_ORIG13 %30  ;; [in] ZMM containing dword 13 of all states
+%define %%ZMM_DWORD_ORIG14 %31  ;; [in] ZMM containing dword 14 of all states
+%define %%ZMM_DWORD_ORIG15 %32  ;; [in] ZMM containing dword 15 of all states
+%define %%SRC              %33  ;; [in] Source pointer
+%define %%DST              %34  ;; [in] Destination pointer
+%define %%OFF              %35  ;; [in] Offset into src/dst pointers
+
+%assign i 0
+%rep 16
+        vmovdqa64 APPEND(%%ZMM_DWORD, i), APPEND(%%ZMM_DWORD_ORIG, i)
+%assign i (i + 1)
+%endrep
+
+%rep 10
+
+        ;;; Each full round consists of 8 quarter rounds, 4 column rounds and 4 diagonal rounds
+        ;;; For first 4 column rounds:
+        ;;; A = 0, 1, 2, 3;   B = 4, 5, 6, 7;
+        ;;; C = 8, 9, 10, 11; D = 12, 13, 14, 15
+        CHACHA20_ROUND %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
+                       %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                       %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                       %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15
+        ;;; For 4 diagonal rounds:
+        ;;; A = 0, 1, 2, 3;   B = 5, 6, 7, 4;
+        ;;; C = 10, 11, 8, 9; D = 15, 12, 13, 14
+        CHACHA20_ROUND %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
+                       %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, %%ZMM_DWORD4, \
+                       %%ZMM_DWORD10, %%ZMM_DWORD11, %%ZMM_DWORD8, %%ZMM_DWORD9, \
+                       %%ZMM_DWORD15, %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14
+%endrep
+
+        ;; Add original states to processed states, transpose
+        ;; these states to form the 64*16 bytes of keystream,
+        ;; XOR with plaintext and write ciphertext out
+        GENERATE_1K_KS_AND_ENCRYPT %%ZMM_DWORD0, %%ZMM_DWORD1, %%ZMM_DWORD2, %%ZMM_DWORD3, \
+                                   %%ZMM_DWORD4, %%ZMM_DWORD5, %%ZMM_DWORD6, %%ZMM_DWORD7, \
+                                   %%ZMM_DWORD8, %%ZMM_DWORD9, %%ZMM_DWORD10, %%ZMM_DWORD11, \
+                                   %%ZMM_DWORD12, %%ZMM_DWORD13, %%ZMM_DWORD14, %%ZMM_DWORD15, \
+                                   %%ZMM_DWORD_ORIG0, %%ZMM_DWORD_ORIG1, %%ZMM_DWORD_ORIG2, \
+                                   %%ZMM_DWORD_ORIG3,%%ZMM_DWORD_ORIG4, %%ZMM_DWORD_ORIG5, \
+                                   %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
+                                   %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
+                                   %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
+                                   %%ZMM_DWORD_ORIG15, %%SRC, %%DST, %%OFF
+%endmacro
+
+;
+; Macro adding original state values to processed state values
+; and transposing 16x16 u32 from first 16 ZMM registers,
+; creating keystreams.
+; Note that the registers are tranposed in a different
+; order, so first register (IN00) containing row 0
+; will not contain the first column of the matrix, but
+; row 1 and same with other registers.
+; This is done to minimize the number of registers clobbered.
+;
+%macro ADD_TRANSPOSE_STATE_KS 32
+%define %%IN00_OUT01  %1 ; [in/out] Input row 0, Output column 1
+%define %%IN01_OUT02  %2 ; [in/out] Input row 1, Output column 2
+%define %%IN02_OUT15  %3 ; [in/out] Input row 2, Output column 15
+%define %%IN03_OUT04  %4 ; [in/out] Input row 3, Output column 4
+%define %%IN04_OUT08  %5 ; [in/out] Input row 4, Output column 8
+%define %%IN05_OUT09  %6 ; [in/out] Input row 5, Output column 9
+%define %%IN06_OUT13  %7 ; [in/out] Input row 6, Output column 13
+%define %%IN07_OUT07  %8 ; [in/out] Input row 7, Output column 7
+%define %%IN08_OUT05  %9 ; [in/out] Input row 8, Output column 5
+%define %%IN09_OUT00 %10 ; [in/out] Input row 9, Output column 0
+%define %%IN10_OUT06 %11 ; [in/out] Input row 10, Output column 6
+%define %%IN11_OUT11 %12 ; [in/out] Input row 11, Output column 11
+%define %%IN12_OUT12 %13 ; [in/out] Input row 12, Output column 12
+%define %%IN13_OUT03 %14 ; [in/out] Input row 13, Output column 3
+%define %%IN14_OUT14 %15 ; [in/out] Input row 14, Output column 14
+%define %%IN15_OUT10 %16 ; [in/out] Input row 15, Output column 10
+%define %%IN_ORIG00  %17 ; [in/clobbered] Original input row 0
+%define %%IN_ORIG01  %18 ; [in/clobbered] Original input row 1
+%define %%IN_ORIG02  %19 ; [in] Original input row 2
+%define %%IN_ORIG03  %20 ; [in] Original input row 3
+%define %%IN_ORIG04  %21 ; [in] Original input row 4
+%define %%IN_ORIG05  %22 ; [in] Original input row 5
+%define %%IN_ORIG06  %23 ; [in] Original input row 6
+%define %%IN_ORIG07  %24 ; [in] Original input row 7
+%define %%IN_ORIG08  %25 ; [in] Original input row 8
+%define %%IN_ORIG09  %26 ; [in] Original input row 9
+%define %%IN_ORIG10  %27 ; [in] Original input row 10
+%define %%IN_ORIG11  %28 ; [in] Original input row 11
+%define %%IN_ORIG12  %29 ; [in] Original input row 12
+%define %%IN_ORIG13  %30 ; [in] Original input row 13
+%define %%IN_ORIG14  %31 ; [in] Original input row 14
+%define %%IN_ORIG15  %32 ; [in] Original input row 15
+
+        vpaddd %%IN00_OUT01, %%IN_ORIG00
+        vpaddd %%IN01_OUT02, %%IN_ORIG01
+        vpaddd %%IN02_OUT15, %%IN_ORIG02
+        vpaddd %%IN03_OUT04, %%IN_ORIG03
+
+        ;; Deal with first lanes 0-7
+        ; T0, T1 free
+        vpunpckldq      %%IN_ORIG00, %%IN00_OUT01, %%IN01_OUT02
+        vpunpckhdq      %%IN00_OUT01, %%IN00_OUT01, %%IN01_OUT02
+        vpunpckldq      %%IN_ORIG01, %%IN02_OUT15, %%IN03_OUT04
+        vpunpckhdq      %%IN02_OUT15, %%IN02_OUT15, %%IN03_OUT04
+
+        ; IN01_OUT02, IN03_OUT04 free
+        vpunpcklqdq     %%IN03_OUT04, %%IN_ORIG00, %%IN_ORIG01
+        vpunpckhqdq     %%IN01_OUT02, %%IN_ORIG00, %%IN_ORIG01
+        vpunpcklqdq     %%IN_ORIG00, %%IN00_OUT01, %%IN02_OUT15
+        vpunpckhqdq     %%IN00_OUT01, %%IN00_OUT01, %%IN02_OUT15
+
+        vpaddd %%IN04_OUT08, %%IN_ORIG04
+        vpaddd %%IN05_OUT09, %%IN_ORIG05
+        vpaddd %%IN06_OUT13, %%IN_ORIG06
+        vpaddd %%IN07_OUT07, %%IN_ORIG07
+
+        ; IN02_OUT15, T1 free
+        vpunpckldq      %%IN_ORIG01, %%IN04_OUT08, %%IN05_OUT09
+        vpunpckhdq      %%IN04_OUT08, %%IN04_OUT08, %%IN05_OUT09
+        vpunpckldq      %%IN02_OUT15, %%IN06_OUT13, %%IN07_OUT07
+        vpunpckhdq      %%IN06_OUT13, %%IN06_OUT13, %%IN07_OUT07
+
+        ; IN07_OUT07, IN05_OUT09 free
+        vpunpcklqdq     %%IN07_OUT07, %%IN_ORIG01, %%IN02_OUT15
+        vpunpckhqdq     %%IN05_OUT09, %%IN_ORIG01, %%IN02_OUT15
+        vpunpcklqdq     %%IN02_OUT15, %%IN04_OUT08, %%IN06_OUT13
+        vpunpckhqdq     %%IN04_OUT08, %%IN04_OUT08, %%IN06_OUT13
+
+        ; T1, IN06_OUT13 free
+        vshufi64x2      %%IN_ORIG01, %%IN03_OUT04, %%IN07_OUT07, 0x44
+        vshufi64x2      %%IN03_OUT04, %%IN03_OUT04, %%IN07_OUT07, 0xee
+        vshufi64x2      %%IN06_OUT13, %%IN01_OUT02, %%IN05_OUT09, 0x44
+        vshufi64x2      %%IN01_OUT02, %%IN01_OUT02, %%IN05_OUT09, 0xee
+        vshufi64x2      %%IN07_OUT07, %%IN_ORIG00, %%IN02_OUT15, 0x44
+        vshufi64x2      %%IN02_OUT15, %%IN_ORIG00, %%IN02_OUT15, 0xee
+        vshufi64x2      %%IN05_OUT09, %%IN00_OUT01, %%IN04_OUT08, 0x44
+        vshufi64x2      %%IN00_OUT01, %%IN00_OUT01, %%IN04_OUT08, 0xee
+
+        ;; Deal with lanes 8-15
+        vpaddd %%IN08_OUT05, %%IN_ORIG08
+        vpaddd %%IN09_OUT00, %%IN_ORIG09
+        vpaddd %%IN10_OUT06, %%IN_ORIG10
+        vpaddd %%IN11_OUT11, %%IN_ORIG11
+
+        vpunpckldq      %%IN_ORIG00, %%IN08_OUT05, %%IN09_OUT00
+        vpunpckhdq      %%IN08_OUT05, %%IN08_OUT05, %%IN09_OUT00
+        vpunpckldq      %%IN04_OUT08, %%IN10_OUT06, %%IN11_OUT11
+        vpunpckhdq      %%IN10_OUT06, %%IN10_OUT06, %%IN11_OUT11
+
+        vpunpcklqdq     %%IN09_OUT00, %%IN_ORIG00, %%IN04_OUT08
+        vpunpckhqdq     %%IN04_OUT08, %%IN_ORIG00, %%IN04_OUT08
+        vpunpcklqdq     %%IN11_OUT11, %%IN08_OUT05, %%IN10_OUT06
+        vpunpckhqdq     %%IN08_OUT05, %%IN08_OUT05, %%IN10_OUT06
+
+        vpaddd %%IN12_OUT12, %%IN_ORIG12
+        vpaddd %%IN13_OUT03, %%IN_ORIG13
+        vpaddd %%IN14_OUT14, %%IN_ORIG14
+        vpaddd %%IN15_OUT10, %%IN_ORIG15
+
+        vpunpckldq      %%IN_ORIG00, %%IN12_OUT12, %%IN13_OUT03
+        vpunpckhdq      %%IN12_OUT12, %%IN12_OUT12, %%IN13_OUT03
+        vpunpckldq      %%IN10_OUT06, %%IN14_OUT14, %%IN15_OUT10
+        vpunpckhdq      %%IN14_OUT14, %%IN14_OUT14, %%IN15_OUT10
+
+        vpunpcklqdq     %%IN13_OUT03, %%IN_ORIG00, %%IN10_OUT06
+        vpunpckhqdq     %%IN10_OUT06, %%IN_ORIG00, %%IN10_OUT06
+        vpunpcklqdq     %%IN15_OUT10, %%IN12_OUT12, %%IN14_OUT14
+        vpunpckhqdq     %%IN12_OUT12, %%IN12_OUT12, %%IN14_OUT14
+
+        vshufi64x2      %%IN14_OUT14, %%IN09_OUT00, %%IN13_OUT03, 0x44
+        vshufi64x2      %%IN09_OUT00, %%IN09_OUT00, %%IN13_OUT03, 0xee
+        vshufi64x2      %%IN_ORIG00, %%IN04_OUT08, %%IN10_OUT06, 0x44
+        vshufi64x2      %%IN10_OUT06, %%IN04_OUT08, %%IN10_OUT06, 0xee
+        vshufi64x2      %%IN13_OUT03, %%IN11_OUT11, %%IN15_OUT10, 0x44
+        vshufi64x2      %%IN11_OUT11, %%IN11_OUT11, %%IN15_OUT10, 0xee
+        vshufi64x2      %%IN15_OUT10, %%IN08_OUT05, %%IN12_OUT12, 0x44
+        vshufi64x2      %%IN08_OUT05, %%IN08_OUT05, %%IN12_OUT12, 0xee
+
+        vshufi64x2      %%IN12_OUT12, %%IN03_OUT04, %%IN09_OUT00, 0xdd
+        vshufi64x2      %%IN04_OUT08, %%IN03_OUT04, %%IN09_OUT00, 0x88
+        vshufi64x2      %%IN03_OUT04, %%IN_ORIG01, %%IN14_OUT14, 0xdd
+        vshufi64x2      %%IN09_OUT00, %%IN_ORIG01, %%IN14_OUT14, 0x88
+        vshufi64x2      %%IN14_OUT14, %%IN02_OUT15, %%IN11_OUT11, 0xdd
+        vshufi64x2      %%IN_ORIG01, %%IN02_OUT15, %%IN11_OUT11, 0x88
+        vshufi64x2      %%IN11_OUT11, %%IN00_OUT01, %%IN08_OUT05, 0x88
+        vshufi64x2      %%IN02_OUT15, %%IN00_OUT01, %%IN08_OUT05, 0xdd
+        vshufi64x2      %%IN00_OUT01, %%IN06_OUT13, %%IN_ORIG00, 0x88
+        vshufi64x2      %%IN08_OUT05, %%IN06_OUT13, %%IN_ORIG00, 0xdd
+        vshufi64x2      %%IN_ORIG00, %%IN01_OUT02, %%IN10_OUT06, 0x88
+        vshufi64x2      %%IN06_OUT13, %%IN01_OUT02, %%IN10_OUT06, 0xdd
+        vshufi64x2      %%IN01_OUT02, %%IN07_OUT07, %%IN13_OUT03, 0x88
+        vshufi64x2      %%IN10_OUT06, %%IN07_OUT07, %%IN13_OUT03, 0xdd
+        vshufi64x2      %%IN13_OUT03, %%IN05_OUT09, %%IN15_OUT10, 0x88
+        vshufi64x2      %%IN07_OUT07, %%IN05_OUT09, %%IN15_OUT10, 0xdd
+
+        vmovdqa64       %%IN05_OUT09, %%IN_ORIG00
+        vmovdqa64       %%IN15_OUT10, %%IN_ORIG01
 %endmacro
 
 ;;
@@ -697,14 +976,10 @@ submit_job_chacha20_enc_dec_avx512:
 
 align 32
 start_loop:
-        GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
-                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
-
-        ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
-                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
-                            zmm0, src, dst, off, k1, 16
+        ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off
 
         ; Update remaining length
         sub     len, 64*16
