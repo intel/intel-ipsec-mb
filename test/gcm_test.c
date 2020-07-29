@@ -1857,9 +1857,10 @@ static int test_ghash(void)
 
 	printf("GHASH test vectors:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
-	        struct gcm_key_data gdata_key = {0};
+	        struct gcm_key_data gdata_key;
                 struct gcm_ctr_vector const *vector = &ghash_vectors[vect];
 
+                memset(&gdata_key, 0, sizeof(struct gcm_key_data));
                 IMB_GHASH_PRE(p_gcm_mgr, vector->K, &gdata_key);
                 IMB_GHASH(p_gcm_mgr, &gdata_key, vector->P, vector->Plen,
                           T_test, vector->Tlen);
@@ -1927,7 +1928,7 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
                  const uint64_t seg_size,
                  const unsigned job_api)
 {
-        struct gcm_key_data key = {0};
+        struct gcm_key_data key;
         struct gcm_context_data ctx;
         const uint8_t *iv = vector->IV;
         const uint64_t iv_len = vector->IVlen;
@@ -1938,6 +1939,7 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
         uint32_t i;
         uint8_t T_test[16];
 
+        memset(&key, 0, sizeof(struct gcm_key_data));
         if (job_api)
                 aes_gmac_job(p_gcm_mgr, vector->K, &key, vector->Klen, in_ptr,
                              seg_size, iv, iv_len, T_test, vector->Tlen);
