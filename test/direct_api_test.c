@@ -49,6 +49,9 @@ direct_api_test(struct IMB_MGR *mb_mgr);
 jmp_buf env;
 
 #ifndef DEBUG
+#ifndef _WIN32
+static void seg_handler(int signum) __attribute__((noreturn));
+#endif
 /* Signal handler to handle segfaults */
 static void
 seg_handler(int signum)
@@ -1114,10 +1117,10 @@ direct_api_test(struct IMB_MGR *mb_mgr)
 {
         int errors = 0;
 #ifndef DEBUG
-#ifdef _WIN32
-        void *handler;
-#else
+#if defined(__linux__)
         sighandler_t handler;
+#else
+        void *handler;
 #endif
 #endif
         printf("Invalid Direct API arguments test:\n");
