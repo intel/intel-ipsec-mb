@@ -32,6 +32,11 @@
 #include "intel-ipsec-mb.h"
 #include "include/chacha20.h"
 
+#include "clear_regs_mem.h"
+
+#define CLEAR_MEM clear_mem
+#define CLEAR_VAR clear_var
+
 #define ROT_L(a, N) ((uint32_t) a << N | (uint32_t) a >> (32 - N))
 
 static uint32_t constants[4] = {0x61707865, 0x3320646e, 0x79622d32, 0x6b206574};
@@ -39,88 +44,86 @@ static uint32_t constants[4] = {0x61707865, 0x3320646e, 0x79622d32, 0x6b206574};
 static inline void
 quarter_round(uint32_t vec[4])
 {
-        uint32_t temp_a = vec[0];
-        uint32_t temp_b = vec[1];
-        uint32_t temp_c = vec[2];
-        uint32_t temp_d = vec[3];
+        uint32_t *a = &vec[0];
+        uint32_t *b = &vec[1];
+        uint32_t *c = &vec[2];
+        uint32_t *d = &vec[3];
 
-        temp_a += temp_b;
-        temp_d ^= temp_a;
-        temp_d = ROT_L(temp_d, 16);
+        *a += *b;
+        *d ^= *a;
+        *d = ROT_L(*d, 16);
 
-        temp_c += temp_d;
-        temp_b ^= temp_c;
-        temp_b = ROT_L(temp_b, 12);
+        *c += *d;
+        *b ^= *c;
+        *b = ROT_L(*b, 12);
 
-        temp_a += temp_b;
-        temp_d ^= temp_a;
-        temp_d = ROT_L(temp_d, 8);
+        *a += *b;
+        *d ^= *a;
+        *d = ROT_L(*d, 8);
 
-        temp_c += temp_d;
-        temp_b ^= temp_c;
-        temp_b = ROT_L(temp_b, 7);
-
-        vec[0] = temp_a;
-        vec[1] = temp_b;
-        vec[2] = temp_c;
-        vec[3] = temp_d;
+        *c += *d;
+        *b ^= *c;
+        *b = ROT_L(*b, 7);
 }
 
 static inline void
-column_round(uint32_t vec[16])
+column_round(uint32_t vec[16], uint32_t cols[4][4])
+{
+        unsigned int i, j;
+
+        for (i = 0; i < 4; i++)
+                for (j = 0; j < 4; j++)
+                        cols[i][j] = vec[j*4 + i];
+
+        for (i = 0; i < 4; i++)
+                quarter_round(cols[i]);
+
+        for (i = 0; i < 4; i++)
+                for (j = 0; j < 4; j++)
+                        vec[i*4 + j] = cols[j][i];
+}
+
+static inline void
+diagonal_round(uint32_t vec[16], uint32_t diags[4][4])
 {
         unsigned int i;
-        uint32_t col1[4] = {vec[0], vec[4], vec[8], vec[12]};
-        uint32_t col2[4] = {vec[1], vec[5], vec[9], vec[13]};
-        uint32_t col3[4] = {vec[2], vec[6], vec[10], vec[14]};
-        uint32_t col4[4] = {vec[3], vec[7], vec[11], vec[15]};
 
-        quarter_round(col1);
-        quarter_round(col2);
-        quarter_round(col3);
-        quarter_round(col4);
+        diags[0][0] = vec[0]; diags[0][1] =  vec[5];
+        diags[0][2] = vec[10]; diags[0][3] = vec[15];
+        diags[1][0] = vec[1]; diags[1][1] =  vec[6];
+        diags[1][2] = vec[11]; diags[1][3] = vec[12];
+        diags[2][0] = vec[2]; diags[2][1] =  vec[7];
+        diags[2][2] = vec[8]; diags[2][3] = vec[13];
+        diags[3][0] = vec[3]; diags[3][1] =  vec[4];
+        diags[3][2] = vec[9]; diags[3][3] = vec[14];
 
-        for (i = 0; i < 4; i++) {
-                vec[i*4 + 0] = col1[i];
-                vec[i*4 + 1] = col2[i];
-                vec[i*4 + 2] = col3[i];
-                vec[i*4 + 3] = col4[i];
-        }
-}
+        for (i = 0; i < 4; i++)
+                quarter_round(diags[i]);
 
-static inline void
-diagonal_round(uint32_t vec[16])
-{
-        uint32_t dia1[4] = {vec[0], vec[5], vec[10], vec[15]};
-        uint32_t dia2[4] = {vec[1], vec[6], vec[11], vec[12]};
-        uint32_t dia3[4] = {vec[2], vec[7], vec[8], vec[13]};
-        uint32_t dia4[4] = {vec[3], vec[4], vec[9], vec[14]};
-
-        quarter_round(dia1);
-        quarter_round(dia2);
-        quarter_round(dia3);
-        quarter_round(dia4);
-
-        vec[0] = dia1[0]; vec[1] = dia2[0];
-        vec[2] = dia3[0]; vec[3] = dia4[0];
-        vec[4] = dia4[1]; vec[5] = dia1[1];
-        vec[6] = dia2[1]; vec[7] = dia3[1];
-        vec[8] = dia3[2]; vec[9] = dia4[2];
-        vec[10] = dia1[2]; vec[11] = dia2[2];
-        vec[12] = dia2[3]; vec[13] = dia3[3];
-        vec[14] = dia4[3]; vec[15] = dia1[3];
+        vec[0] = diags[0][0]; vec[1] = diags[1][0];
+        vec[2] = diags[2][0]; vec[3] = diags[3][0];
+        vec[4] = diags[3][1]; vec[5] = diags[0][1];
+        vec[6] = diags[1][1]; vec[7] = diags[2][1];
+        vec[8] = diags[2][2]; vec[9] = diags[3][2];
+        vec[10] = diags[0][2]; vec[11] = diags[1][2];
+        vec[12] = diags[1][3]; vec[13] = diags[2][3];
+        vec[14] = diags[3][3]; vec[15] = diags[0][3];
 }
 
 static inline void
 full_20_rounds(uint32_t vec[16])
 {
         unsigned int i;
+        uint32_t temp_mem[4][4];
 
         /* Perform 20 rounds (interleaving column and diagonal rounds) */
         for (i = 0; i < 10; i++) {
-                column_round(vec);
-                diagonal_round(vec);
+                column_round(vec, temp_mem);
+                diagonal_round(vec, temp_mem);
         }
+#ifdef SAFE_DATA
+        CLEAR_MEM(temp_mem, sizeof(temp_mem));
+#endif
 }
 
 static inline void
@@ -135,6 +138,9 @@ chacha_block(uint32_t chacha_state[16])
 
         for (i = 0; i < 16; i++)
                 chacha_state[i] += temp_vec[i];
+#ifdef SAFE_DATA
+        CLEAR_MEM(temp_vec, sizeof(temp_vec));
+#endif
 }
 
 static inline void
@@ -182,4 +188,7 @@ chacha20_enc_dec_basic(const void *input, void *output, const uint64_t len,
                 for (j = 0; j < 64; j++)
                         out[i+j] = in[i+j] ^ keystr[j];
         }
+#ifdef SAFE_DATA
+        CLEAR_MEM(chacha_state, sizeof(chacha_state));
+#endif
 }
