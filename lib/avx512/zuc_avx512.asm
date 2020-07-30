@@ -156,6 +156,16 @@ dw      0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f
 section .text
 align 64
 
+%ifdef LINUX
+%define arg1 rdi
+%define arg2 rsi
+%define arg3 rdx
+%else
+%define arg1 rcx
+%define arg2 rdx
+%define arg3 r8
+%endif
+
 %define MASK31  zmm12
 
 %define OFS_R1  (16*(4*16))
@@ -708,14 +718,15 @@ asm_ZucInitialization_16_gfni_avx512:
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
 %define %%USE_GFNI      %2 ; [in] If 1, then GFNI instructions may be used
 
-%ifdef LINUX
-	%define		pState	rdi
-	%define		pKS	rsi
-%else
-	%define		pState	rcx
-	%define		pKS	rdx
-%endif
+    %define	pState	  arg1
+    %define     pKS	  arg2
+    %define     numRounds arg3
 
+%ifnum %%NUM_ROUNDS
+%define %%MAX_ROUNDS %%NUM_ROUNDS
+%else
+%define %%MAX_ROUNDS 16
+%endif
     FUNC_SAVE
 
     ; Load state pointer in RAX
@@ -730,20 +741,33 @@ asm_ZucInitialization_16_gfni_avx512:
     kmovd       k2, r9d
 
     ; Generate N*4B of keystream in N rounds
+%ifnnum %%NUM_ROUNDS
+        mov r10, numRounds
+%endif
 %assign N 1
 %assign idx 16
-%rep %%NUM_ROUNDS
+%rep %%MAX_ROUNDS
     bits_reorg16 rax, N, k2, working, none, none, none, APPEND(zmm, idx)
     nonlin_fun16 rax, k2, %%USE_GFNI, working, none, none, none, none, none, zmm0
     ; OFS_X3 XOR W (zmm0)
     vpxorq      APPEND(zmm, idx), zmm0
     vpxorq      zmm0, zmm0
     lfsr_updt16  rax, N, k2, zmm0  ; W (zmm0) used in LFSR update - not set to zero
+%ifnnum %%NUM_ROUNDS
+    dec r10
+    jz  %%exit_loop
+%endif
 %assign N N+1
 %assign idx (idx + 1)
 %endrep
 
+%%exit_loop:
+%ifnum %%NUM_ROUNDS
     mov         r8d, ((1 << %%NUM_ROUNDS) - 1)
+%else
+    SHIFT_GP 1, numRounds, r8d, r13, left
+    sub         r8d, 1
+%endif
     kmovd       k1, r8d
     ; ZMM16-31 contain the keystreams for each round
     ; Perform a 32-bit 16x16 transpose to have up to 64 bytes
@@ -797,6 +821,26 @@ MKGLOBAL(asm_ZucGenKeystream8B_16_gfni_avx512,function,internal)
 asm_ZucGenKeystream8B_16_gfni_avx512:
 
     KEYGEN_16_AVX512 2, 1
+
+    ret
+
+;;
+;; void asm_ZucGenKeystream_16_avx512(state16_t *pSta, u32* pKeyStr[16], u64 numRounds)
+;;
+MKGLOBAL(asm_ZucGenKeystream_16_avx512,function,internal)
+asm_ZucGenKeystream_16_avx512:
+
+    KEYGEN_16_AVX512 arg3, 0
+
+    ret
+
+;;
+;; void asm_ZucGenKeystream_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16], u64 numRounds)
+;;
+MKGLOBAL(asm_ZucGenKeystream_16_gfni_avx512,function,internal)
+asm_ZucGenKeystream_16_gfni_avx512:
+
+    KEYGEN_16_AVX512 arg3, 1
 
     ret
 
