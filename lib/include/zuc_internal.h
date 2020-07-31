@@ -859,15 +859,18 @@ IMB_DLL_LOCAL uint32_t asm_Eia3RemainderSSE_no_aesni(const void *ks,
 IMB_DLL_LOCAL uint32_t asm_Eia3Round64BAVX(uint32_t T, const void *ks,
                                            const void *data);
 
-IMB_DLL_LOCAL void asm_Eia3Round64B_4_VPCLMUL(uint32_t *T,
-                                              const void * const *ks,
-                                              const void **data);
-
 IMB_DLL_LOCAL uint32_t asm_Eia3Round32BAVX(uint32_t T, const void *ks,
                                            const void *data);
 
 IMB_DLL_LOCAL uint32_t asm_Eia3Round16BAVX(uint32_t T, const void *ks,
                                            const void *data);
+
+IMB_DLL_LOCAL void asm_Eia3Round64BAVX512(uint32_t *T, const void *ks,
+                                          const void *data);
+
+IMB_DLL_LOCAL void asm_Eia3Round64B_4_VPCLMUL(uint32_t *T,
+                                              const void * const *ks,
+                                              const void **data);
 
 /**
  ******************************************************************************
@@ -887,6 +890,28 @@ IMB_DLL_LOCAL uint32_t asm_Eia3Round16BAVX(uint32_t T, const void *ks,
  *****************************************************************************/
 IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX(const void *ks, const void *data,
                                             const uint64_t n_words);
+
+/**
+ ******************************************************************************
+ * @description
+ *      Definition of the external function to return the final authentication
+ *      tag of the message.
+ *
+ * @param[in/out] T                 Pointer to authentication tag to be updated
+ *
+ * @param[in] ks                    Pointer to key stream
+ *
+ * @param[in] data                  Pointer to the data
+ *
+ * @param[in] n_bits                Number of data bits to be processed
+ *
+ * @pre
+ *      None
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_Eia3RemainderAVX512(uint32_t *T, const void *ks,
+                                           const void *data,
+                                           const uint64_t n_bits);
 
 
 IMB_DLL_LOCAL

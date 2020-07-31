@@ -527,7 +527,7 @@ void _zuc_eia3_1_buffer_avx512(const void *pKey,
                         asm_ZucGenKeystream8B_avx(&keyStream[16], &zucState);
                 else
                         asm_ZucGenKeystream64B_avx(&keyStream[16], &zucState);
-                T = asm_Eia3Round64BAVX(T, &keyStream[0], pIn8);
+                asm_Eia3Round64BAVX512(&T, &keyStream[0], pIn8);
                 /* Copy the last keystream generated
                  * to the first 64 bytes */
                 memcpy(&keyStream[0], &keyStream[16], 64);
@@ -540,7 +540,7 @@ void _zuc_eia3_1_buffer_avx512(const void *pKey,
          */
         if (remainingBits > (14 * 32))
                 asm_ZucGenKeystream8B_avx(&keyStream[16], &zucState);
-        T ^= asm_Eia3RemainderAVX(&keyStream[0], pIn8, remainingBits);
+        asm_Eia3RemainderAVX512(&T, &keyStream[0], pIn8, remainingBits);
         T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
                          remainingBits % 32);
 
@@ -631,8 +631,8 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 }
                 for (i = 0; i < NUM_AVX512_BUFS; i++) {
                         if (!use_gfni)
-                                T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
-                                                           pIn8[i]);
+                                asm_Eia3Round64BAVX512(&T[i], &keyStr[i][0],
+                                                       pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][64], 64);
@@ -685,7 +685,7 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                         else
                                 asm_ZucGenKeystream64B_avx(&keyStr32[16],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr32[0], pIn8[i]);
+                        asm_Eia3Round64BAVX512(&T[i], &keyStr32[0], pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(keyStr32, &keyStr32[16], 64);
@@ -703,7 +703,7 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                T[i] ^= asm_Eia3RemainderAVX(keyStr32, pIn8[i], remainBits);
+                asm_Eia3RemainderAVX512(&T[i], keyStr32, pIn8[i], remainBits);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
@@ -837,8 +837,8 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
                                 continue;
 
                         if (!use_gfni)
-                                T[i] = asm_Eia3Round64BAVX(T[i], &keyStr[i][0],
-                                                           pIn8[i]);
+                                asm_Eia3Round64BAVX512(&T[i], &keyStr[i][0],
+                                                       pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(&keyStr[i][0], &keyStr[i][64], 64);
@@ -894,7 +894,7 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
                         else
                                 asm_ZucGenKeystream64B_avx(&keyStr32[16],
                                                            &singlePktState);
-                        T[i] = asm_Eia3Round64BAVX(T[i], &keyStr32[0], pIn8[i]);
+                        asm_Eia3Round64BAVX512(&T[i], &keyStr32[0], pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(keyStr32, &keyStr32[16], 64);
@@ -912,7 +912,7 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                T[i] ^= asm_Eia3RemainderAVX(keyStr32, pIn8[i], remainBits);
+                asm_Eia3RemainderAVX512(&T[i], keyStr32, pIn8[i], remainBits);
                 T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 

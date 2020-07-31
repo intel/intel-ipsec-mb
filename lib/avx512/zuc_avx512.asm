@@ -153,6 +153,9 @@ all_3fs:
 dw      0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f
 dw      0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f
 
+bit_mask_table:
+db	0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe
+
 section .text
 align 64
 
@@ -1275,6 +1278,286 @@ asm_Eia3Round64B_4_VPCLMUL:
         FUNC_RESTORE
 
         ret
+
+;;
+;; extern void asm_Eia3RemainderAVX512(uint32_t *T, const void *ks,
+;;                                     const void *data, uint64_t n_bits)
+;;
+;; Returns authentication update value to be XOR'ed with current authentication tag
+;;
+;; WIN64
+;;	RCX - T (digest pointer)
+;;	RDX - KS (key stream pointer)
+;; 	R8  - DATA (data pointer)
+;;      R9  - N_BITS (number data bits to process)
+;; LIN64
+;;      RDI - T (digest pointer)
+;;	RSI - KS (key stream pointer)
+;;	RDX - DATA (data pointer)
+;;      RCX - N_BITS (number data bits to process)
+;;
+align 64
+MKGLOBAL(asm_Eia3RemainderAVX512,function,internal)
+asm_Eia3RemainderAVX512:
+
+%ifdef LINUX
+	%define		T	rdi
+	%define		KS	rsi
+	%define		DATA	rdx
+	%define		N_BITS	rcx
+%else
+        %define         T       rcx
+	%define		KS	rdx
+	%define		DATA	r8
+	%define		N_BITS	r9
+%endif
+        FUNC_SAVE
+
+        vmovdqa  xmm5, [bit_reverse_table_l]
+        vmovdqa  xmm6, [bit_reverse_table_h]
+        vmovdqa  xmm7, [bit_reverse_and_table]
+        vmovdqa  xmm10, [data_mask_64bits]
+        vpxor    xmm9, xmm9
+
+%assign I 0
+%rep 3
+        cmp     N_BITS, 128
+        jb      Eia3RoundsAVX512_dq_end
+
+        ;; read 16 bytes and reverse bits
+        vmovdqu xmm0, [DATA]
+        vpand   xmm1, xmm0, xmm7
+
+        vpandn  xmm2, xmm7, xmm0
+        vpsrld  xmm2, 4
+
+        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor    xmm8, xmm4
+        ; xmm8 - bit reversed data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+%if I != 0
+        vmovdqa  xmm11, xmm12
+        vmovdqu  xmm12, [KS + (4*4)]
+%else
+        vmovdqu  xmm11, [KS + (0*4)]
+        vmovdqu  xmm12, [KS + (4*4)]
+%endif
+        vpalignr xmm13, xmm12, xmm11, 8
+        vpshufd  xmm2, xmm11, 0x61
+        vpshufd  xmm3, xmm13, 0x61
+
+        ;;  - set up DATA
+        vpand    xmm13, xmm10, xmm8
+        vpshufd  xmm0, xmm13, 0xdc
+
+        vpsrldq  xmm8, 8
+        vpshufd  xmm1, xmm8, 0xdc
+
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm2, 0x00
+        vpclmulqdq xmm14, xmm0, xmm2, 0x11
+        vpclmulqdq xmm15, xmm1, xmm3, 0x00
+        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
+
+        vpternlogq xmm13, xmm14, xmm8, 0x96
+        vpternlogq xmm9, xmm13, xmm15, 0x96
+
+        lea     DATA, [DATA + 16]
+        lea     KS, [KS + 16]
+        sub     N_BITS, 128
+%assign I (I + 1)
+%endrep
+Eia3RoundsAVX512_dq_end:
+
+%rep 3
+        cmp     N_BITS, 32
+        jb      Eia3RoundsAVX_dw_end
+
+        ;; swap dwords in KS
+        vmovq   xmm1, [KS]
+        vpshufd xmm4, xmm1, 0xf1
+
+        ;;  bit-reverse 4 bytes of data
+        vmovd   xmm0, [DATA]
+        vpand   xmm1, xmm0, xmm7
+
+        vpandn  xmm2, xmm7, xmm0
+        vpsrld  xmm2, 4
+
+        vpshufb xmm0, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor    xmm0, xmm3
+
+        ;; rol & xor
+        vpclmulqdq xmm0, xmm4, 0
+        vpxor    xmm9, xmm0
+
+        lea     DATA, [DATA + 4]
+        lea     KS, [KS + 4]
+        sub     N_BITS, 32
+%endrep
+
+Eia3RoundsAVX_dw_end:
+        vmovq   rax, xmm9
+        shr     rax, 32
+
+        or      N_BITS, N_BITS
+        jz      Eia3RoundsAVX_byte_loop_end
+
+        ;; get 64-bit key stream for the last data bits (less than 32)
+        mov     KS, [KS]
+
+        ;; process remaining data bytes and bits
+Eia3RoundsAVX_byte_loop:
+        or      N_BITS, N_BITS
+        jz      Eia3RoundsAVX_byte_loop_end
+
+        cmp     N_BITS, 8
+        jb      Eia3RoundsAVX_byte_partial
+
+        movzx   r11, byte [DATA]
+        sub     N_BITS, 8
+        jmp     Eia3RoundsAVX_byte_read
+
+Eia3RoundsAVX_byte_partial:
+        ;; process remaining bits (up to 7)
+        lea     r11, [bit_mask_table]
+        movzx   r10, byte [r11 + N_BITS]
+        movzx   r11, byte [DATA]
+        and     r11, r10
+        xor     N_BITS, N_BITS
+Eia3RoundsAVX_byte_read:
+
+%assign DATATEST 0x80
+%rep 8
+        xor     r10, r10
+        test    r11, DATATEST
+        cmovne  r10, KS
+        xor     rax, r10
+        rol     KS, 1
+%assign DATATEST (DATATEST >> 1)
+%endrep                 ; byte boundary
+        lea     DATA, [DATA + 1]
+        jmp     Eia3RoundsAVX_byte_loop
+
+Eia3RoundsAVX_byte_loop_end:
+
+        mov     r10d, [T]
+        xor     eax, r10d
+        mov     [T], eax
+
+        FUNC_RESTORE
+
+        ret
+
+;;
+;;extern void asm_Eia3Round64BAVX512(uint32_t *T, const void *KS, const void *DATA)
+;;
+;; Updates authentication tag T based on keystream KS and DATA.
+;; - it processes 64 bytes of DATA
+;; - reads data in 16 byte chunks and bit reverses them
+;; - reads and re-arranges KS
+;; - employs clmul for the XOR & ROL part
+;;
+;; WIN64
+;;	RCX - T pointer to digest
+;;	RDX - KS pointer to key stream (2 x 64 bytes)
+;;;     R8  - DATA pointer to data
+;; LIN64
+;;	RDI - T pointer to digest
+;;	RSI - KS pointer to key stream (2 x 64 bytes)
+;;      RDX - DATA pointer to data
+;;
+align 64
+MKGLOBAL(asm_Eia3Round64BAVX512,function,internal)
+asm_Eia3Round64BAVX512:
+
+%ifdef LINUX
+	%define		T	rdi
+	%define		KS	rsi
+	%define		DATA	rdx
+%else
+	%define		T	rcx
+	%define		KS	rdx
+	%define		DATA	r8
+%endif
+
+        FUNC_SAVE
+
+        vmovdqa  xmm5, [bit_reverse_table_l]
+        vmovdqa  xmm6, [bit_reverse_table_h]
+        vmovdqa  xmm7, [bit_reverse_and_table]
+        vmovdqa  xmm10, [data_mask_64bits]
+        vpxor    xmm9, xmm9
+
+%assign I 0
+%rep 4
+        ;; read 16 bytes and reverse bits
+        vmovdqu  xmm0, [DATA + 16*I]
+        vpand    xmm1, xmm0, xmm7
+
+        vpandn   xmm2, xmm7, xmm0
+        vpsrld   xmm2, 4
+
+        vpshufb  xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb  xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor     xmm8, xmm4
+        ; xmm8 - bit reversed data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+%if I != 0
+        vmovdqa  xmm11, xmm12
+        vmovdqu  xmm12, [KS + (I*16) + (4*4)]
+%else
+        vmovdqu  xmm11, [KS + (I*16) + (0*4)]
+        vmovdqu  xmm12, [KS + (I*16) + (4*4)]
+%endif
+        vpalignr xmm13, xmm12, xmm11, 8
+        vpshufd  xmm2, xmm11, 0x61
+        vpshufd  xmm3, xmm13, 0x61
+
+        ;;  - set up DATA
+        vpand    xmm13, xmm10, xmm8
+        vpshufd  xmm0, xmm13, 0xdc
+
+        vpsrldq  xmm8, 8
+        vpshufd  xmm1, xmm8, 0xdc
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm2, 0x00
+        vpclmulqdq xmm14, xmm0, xmm2, 0x11
+        vpclmulqdq xmm15, xmm1, xmm3, 0x00
+        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
+
+        vpternlogq xmm13, xmm14, xmm8, 0x96
+        vpternlogq xmm9, xmm13, xmm15, 0x96
+
+%assign I (I + 1)
+%endrep
+
+        ;; - update T
+        vmovq   rax, xmm9
+        shr     rax, 32
+        mov     r10d, [T]
+        xor     eax, r10d
+        mov     [T], eax
+
+        FUNC_RESTORE
+
+        ret
+
 
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
