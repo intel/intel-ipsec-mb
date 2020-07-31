@@ -59,3 +59,22 @@ TAGS:
 	find ./ -name "*.[ch]" -print | etags -
 	find ./ -name '*.asm'  | etags -a -
 	find ./ -name '*.inc'  | etags -a -
+
+# Check spelling in the code with codespell.
+# See https://github.com/codespell-project/codespell for more details.
+# Codespell options explained:
+# -d        -- disable colours (emacs colours it anyway)
+# -L        -- List of words to be ignored
+# -S <skip> -- skip file types
+# -I FILE   -- File containing words to be ignored
+#
+CODESPELL ?= codespell
+CS_IGNORE_WORDS ?= iinclude,struc,fo,ue,od,ba
+
+.PHONY: spellcheck
+spellcheck:
+	$(CODESPELL) -d -L $(CS_IGNORE_WORDS) \
+	-S "*.obj,*.o,*.a,*.so,*.lib,*~,*.so,*.so.*,*.d,ipsec_perf" \
+	-S "ipsec_MB_testapp,ipsec_xvalid_test" \
+	./lib ./perf ./test README README.md SECURITY.md CONTRIBUTING \
+	Makefile win_x64.mak ReleaseNotes.txt LICENSE $(CS_EXTRA_OPTS)
