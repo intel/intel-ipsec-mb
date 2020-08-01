@@ -32,7 +32,12 @@
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
+
+#if defined (__linux__) || defined (__FreeBSD__)
+#include <stdlib.h>
+#else
 #include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
