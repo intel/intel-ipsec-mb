@@ -32,9 +32,9 @@
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
-#include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
 
 #ifdef _WIN32
+#include <malloc.h> /* memalign() or _aligned_malloc()/aligned_free() */
 #include <windows.h>
 #include <process.h>
 #include <intrin.h>
@@ -42,6 +42,7 @@
 #define __forceinline static __forceinline
 #define __func__ __FUNCTION__
 #else
+#include <stdlib.h>
 #include <x86intrin.h>
 #define __forceinline static inline __attribute__((always_inline))
 #include <unistd.h>
