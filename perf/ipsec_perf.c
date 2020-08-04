@@ -69,6 +69,8 @@ typedef cpuset_t cpu_set_t;
 #define DEFAULT_JOB_SIZE_MAX (2 * 1024)
 /* number of bytes to increase buffer size when testing range of buffers */
 #define DEFAULT_JOB_SIZE_STEP 16
+/* max number of elements in list */
+#define MAX_LIST 32
 /* max offset applied to a buffer - this is to avoid collisions in L1 */
 #define MAX_BUFFER_OFFSET 4096
 /* max value of sha_size_incr */
@@ -755,6 +757,9 @@ enum range {
 uint32_t job_sizes[NUM_RANGE] = {DEFAULT_JOB_SIZE_MIN,
                                  DEFAULT_JOB_SIZE_STEP,
                                  DEFAULT_JOB_SIZE_MAX};
+uint32_t job_size_list[MAX_LIST];
+uint32_t job_size_count = 0;
+
 uint32_t job_iter = 0;
 uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
 uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
@@ -1807,10 +1812,15 @@ process_variant(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
         const uint32_t sizes = params->num_sizes;
         uint64_t *times = &variant_ptr->avg_times[run];
         uint32_t sz;
+        uint32_t size_aes;
 
         for (sz = 0; sz < sizes; sz++) {
-                const uint32_t size_aes = job_sizes[RANGE_MIN] +
+                if (job_size_count == 0)
+                        size_aes = job_sizes[RANGE_MIN] +
                                         (sz * job_sizes[RANGE_STEP]);
+                else
+                        size_aes = job_size_list[sz];
+
                 uint32_t num_iter;
 
                 params->aad_size = 0;
@@ -2113,8 +2123,11 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         }
         printf("\n");
         for (sz = 0; sz < sizes; sz++) {
-                printf("%d", job_sizes[RANGE_MIN] +
-                             (sz * job_sizes[RANGE_STEP]));
+                if (job_size_count == 0)
+                        printf("%d", job_sizes[RANGE_MIN] +
+                                     (sz * job_sizes[RANGE_STEP]));
+                else
+                        printf("%d", job_size_list[sz]);
                 for (col = 0; col < total_variants; col++) {
                         uint64_t *time_ptr =
                                 &variant_list[col].avg_times[sz * NUM_RUNS];
@@ -2155,7 +2168,10 @@ run_tests(void *arg)
 
         p_mgr = info->p_mgr;
 
-        params.num_sizes = ((max_size - min_size) / step_size) + 1;
+        if (job_size_count == 0)
+                params.num_sizes = ((max_size - min_size) / step_size) + 1;
+        else
+                params.num_sizes = job_size_count;
 
         params.core = (uint32_t)info->core;
 
@@ -2402,6 +2418,7 @@ static void usage(void)
                 "         (for validation only)\n"
                 "--job-size: size of the cipher & MAC job in bytes. It can be:\n"
                 "            - single value: test single size\n"
+                "            - list: test multiple sizes separated by commas\n"
                 "            - range: test multiple sizes with following format"
                 " min:step:max (e.g. 16:16:256)\n"
                 "            (-o still applies for MAC)\n"
@@ -2537,6 +2554,87 @@ exit:
 }
 
 static int
+parse_list(const char * const *argv, const int index, const int argc,
+           uint32_t *list, uint32_t *min, uint32_t *max)
+{
+        char *token;
+        uint32_t number;
+        uint8_t count = 0;
+        uint32_t temp_min;
+        uint32_t temp_max;
+
+        if (list == NULL || argv == NULL || index < 0 || argc < 0) {
+                fprintf(stderr, "%s() internal error!\n", __func__);
+                exit(EXIT_FAILURE);
+        }
+
+        if (index >= (argc - 1)) {
+                fprintf(stderr, "'%s' requires an argument!\n", argv[index]);
+                exit(EXIT_FAILURE);
+        }
+
+        char *copy_arg = strdup(argv[index + 1]);
+
+        if (copy_arg == NULL)
+                return -1;
+
+        errno = 0;
+        token = strtok(copy_arg, ",");
+
+        /* Parse first value */
+        if (token != NULL) {
+                number = strtoul(token, NULL, 10);
+
+                if (errno == EINVAL || errno == ERANGE ||
+                                number == 0)
+                        goto err_list;
+
+                list[count++] = number;
+                temp_min = number;
+                temp_max = number;
+        } else
+                goto err_list;
+
+        token = strtok(NULL, ",");
+
+        while (token != NULL) {
+                if (count == MAX_LIST) {
+                        fprintf(stderr, "Using only the first %u sizes\n",
+                                MAX_LIST);
+                        break;
+                }
+
+                number = strtoul(token, NULL, 10);
+
+                if (errno == EINVAL || errno == ERANGE ||
+                                number == 0)
+                        goto err_list;
+
+                list[count++] = number;
+
+                if (number < temp_min)
+                        temp_min = number;
+                if (number > temp_max)
+                        temp_max = number;
+
+                token = strtok(NULL, ",");
+        }
+
+        if (min)
+                *min = temp_min;
+        if (max)
+                *max = temp_max;
+
+        free(copy_arg);
+        return count;
+
+err_list:
+        free(copy_arg);
+        fprintf(stderr, "Could not parse list of sizes");
+        exit(EXIT_FAILURE);
+}
+
+static int
 parse_range(const char * const *argv, const int index, const int argc,
             uint32_t range_values[NUM_RANGE])
 {
@@ -2595,12 +2693,10 @@ parse_range(const char * const *argv, const int index, const int argc,
 
         goto end_range;
 no_range:
-        /* Try parsing as single value */
-        get_next_num_arg(argv, index, argc, &job_sizes[RANGE_MIN],
-                     sizeof(job_sizes[RANGE_MIN]));
-
-        job_sizes[RANGE_MAX] = job_sizes[RANGE_MIN];
-
+        /* Try parsing as a list/single value */
+        job_size_count = parse_list(argv, index, argc, job_size_list,
+                                    &job_sizes[RANGE_MIN],
+                                    &job_sizes[RANGE_MAX]);
 end_range:
         free(copy_arg);
         return (index + 1);
