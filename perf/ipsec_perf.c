@@ -759,6 +759,17 @@ uint32_t job_sizes[NUM_RANGE] = {DEFAULT_JOB_SIZE_MIN,
                                  DEFAULT_JOB_SIZE_MAX};
 uint32_t job_size_list[MAX_LIST];
 uint32_t job_size_count = 0;
+uint32_t imix_list[MAX_LIST];
+uint32_t distribution_total[MAX_LIST];
+uint32_t *job_size_imix_list = NULL;
+uint32_t *cipher_size_list = NULL;
+uint32_t *hash_size_list = NULL;
+uint64_t *xgem_hdr_list = NULL;
+uint32_t imix_list_count = 0;
+uint32_t average_job_size = 0;
+
+/* Size of IMIX list (needs to be multiple of 2) */
+#define JOB_SIZE_IMIX_LIST 1024
 
 uint32_t job_iter = 0;
 uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
@@ -1280,6 +1291,141 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         return c_mode;
 }
 
+static uint32_t
+get_next_size(const uint32_t index)
+{
+        const uint32_t i = index & (JOB_SIZE_IMIX_LIST - 1);
+
+        return job_size_imix_list[i];
+}
+
+static inline void
+set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
+               const uint32_t i, const uint32_t index)
+{
+        uint32_t list_idx;
+
+        /* If IMIX testing is being done, set the buffer size to cipher and hash
+         * going through the list of sizes precalculated */
+        if (imix_list_count != 0) {
+                list_idx = i & (JOB_SIZE_IMIX_LIST - 1);
+
+                job->msg_len_to_cipher_in_bytes = cipher_size_list[list_idx];
+                job->msg_len_to_hash_in_bytes = hash_size_list[list_idx];
+        }
+
+        if (job->hash_alg == IMB_AUTH_PON_CRC_BIP) {
+                uint64_t *p_src =
+                        (uint64_t *) get_src_buffer(index, p_buffer);
+
+                job->src = (const uint8_t *)p_src;
+                if (imix_list_count != 0)
+                        p_src[0] = xgem_hdr_list[list_idx];
+                else
+                        p_src[0] = xgem_hdr_list[0];
+        } else
+                job->src = get_src_buffer(index, p_buffer);
+
+        job->dst = get_dst_buffer(index, p_buffer);
+        if (job->cipher_mode == IMB_CIPHER_GCM) {
+                job->u.GCM.aad = job->src;
+        } else if (job->cipher_mode == IMB_CIPHER_CCM) {
+                job->u.CCM.aad = job->src;
+                job->enc_keys = job->dec_keys =
+                        (const uint32_t *) get_key_pointer(index,
+                                                           p_keys);
+        } else if (job->cipher_mode == IMB_CIPHER_DES3) {
+                static const void *ks_ptr[3];
+
+                ks_ptr[0] = ks_ptr[1] = ks_ptr[2] =
+                        get_key_pointer(index, p_keys);
+                job->enc_keys =
+                        job->dec_keys = ks_ptr;
+        } else {
+                job->enc_keys = job->dec_keys =
+                        (const uint32_t *) get_key_pointer(index,
+                                                           p_keys);
+        }
+}
+
+static void
+set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
+               uint64_t *xgem_hdr_list, struct params_s *params)
+{
+        unsigned int i, list_size;
+        uint32_t job_size;
+
+        if (imix_list_count != 0)
+                list_size = JOB_SIZE_IMIX_LIST;
+        else
+                list_size = 1;
+
+        for (i = 0; i < list_size; i++) {
+                if (imix_list_count != 0)
+                        job_size = job_size_imix_list[i];
+                else
+                        job_size = params->size_aes;
+
+                if ((params->cipher_mode == TEST_AESDOCSIS8) ||
+                    (params->cipher_mode == TEST_CNTR8))
+                        cipher_size_list[i] = job_size + 8;
+                else if (params->cipher_mode == TEST_DESDOCSIS4)
+                        cipher_size_list[i] = job_size + 4;
+                else if ((params->cipher_mode == TEST_CNTR_BITLEN) ||
+                         (params->cipher_mode == TEST_SNOW3G_UEA2) ||
+                         (params->cipher_mode == TEST_KASUMI_UEA1))
+                        cipher_size_list[i] = job_size * 8;
+                else if (params->cipher_mode == TEST_CNTR_BITLEN4)
+                        cipher_size_list[i] = job_size * 8 - 4;
+                else if ((params->cipher_mode == TEST_NULL_CIPHER) ||
+                         (params->cipher_mode == TEST_PON_NO_CNTR))
+                        cipher_size_list[i] = 0;
+                else
+                        cipher_size_list[i] = job_size;
+
+                if ((params->hash_alg == TEST_HASH_CCM) ||
+                    (params->hash_alg == TEST_HASH_GCM))
+                        hash_size_list[i] = job_size;
+                else
+                        hash_size_list[i] = job_size + sha_size_incr;
+
+                /*
+                 * CMAC bit level version is done in bits (length is
+                 * converted to bits and it is decreased by 4 bits,
+                 * to force the CMAC bitlen path)
+                 */
+                if (params->hash_alg == TEST_HASH_CMAC_BITLEN)
+                        hash_size_list[i] = hash_size_list[i] * 8 - 4;
+                else if ((params->hash_alg == TEST_ZUC_EIA3) ||
+                         (params->hash_alg == TEST_SNOW3G_UIA2))
+                        hash_size_list[i] *= 8;
+                else if (params->hash_alg == TEST_PON_CRC_BIP)
+                        hash_size_list[i] = job_size + 8;
+                else if (params->hash_alg == TEST_NULL_HASH)
+                        hash_size_list[i] = 0;
+
+                if (((params->cipher_mode == TEST_AESDOCSIS) ||
+                    (params->cipher_mode == TEST_AESDOCSIS8)) &&
+                    (params->hash_alg == TEST_DOCSIS_CRC32)) {
+                        const uint32_t ciph_adjust = /* SA + DA */
+                               DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2 /* ETH TYPE */;
+
+                        cipher_size_list[i] -= ciph_adjust;
+                        hash_size_list[i] = job_size - DOCSIS_CRC32_TAG_SIZE;
+                }
+
+                if (params->hash_alg == TEST_PON_CRC_BIP) {
+                        /* create XGEM header template */
+                        const uint64_t pli =
+                                (cipher_size_list[i] << 2) & 0xffff;
+
+                        xgem_hdr_list[i] = ((pli >> 8) & 0xff) |
+                                        ((pli & 0xff) << 8);
+                }
+
+        }
+}
+
 /* Performs test using AES_HMAC or DOCSIS */
 static uint64_t
 do_test(IMB_MGR *mb_mgr, struct params_s *params,
@@ -1296,30 +1442,24 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         static DECLARE_ALIGNED(uint8_t	k2[16], 16);
         static DECLARE_ALIGNED(uint8_t	k3[16], 16);
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
-        uint64_t xgem_hdr = 0;
-        uint32_t size_aes;
         uint64_t time = 0;
         uint32_t aux;
         uint8_t gcm_key[32];
 
         memset(&job_template, 0, sizeof(IMB_JOB));
 
-        if ((params->cipher_mode == TEST_AESDOCSIS8) ||
-            (params->cipher_mode == TEST_CNTR8))
-                size_aes = params->size_aes + 8;
-        else if (params->cipher_mode == TEST_DESDOCSIS4)
-                size_aes = params->size_aes + 4;
-        else
-                size_aes = params->size_aes;
+        /* Set cipher and hash length arrays to be used in each job,
+           and set the XGEM header in case PON is used. */
+        set_size_lists(cipher_size_list, hash_size_list, xgem_hdr_list, params);
 
-        if (params->cipher_mode == TEST_CNTR_BITLEN)
-                job_template.msg_len_to_cipher_in_bits = size_aes * 8;
-        else if (params->cipher_mode == TEST_CNTR_BITLEN4)
-                job_template.msg_len_to_cipher_in_bits = size_aes * 8 - 4;
-        else
-                job_template.msg_len_to_cipher_in_bytes = size_aes;
-
-        job_template.msg_len_to_hash_in_bytes = size_aes + sha_size_incr;
+        /*
+         * If single size is used, set the cipher and hash lengths in the
+         * job template, so they don't have to be set in every job
+         */
+        if (imix_list_count == 0) {
+                job_template.msg_len_to_cipher_in_bytes = cipher_size_list[0];
+                job_template.msg_len_to_hash_in_bytes = hash_size_list[0];
+        }
         job_template.hash_start_src_offset_in_bytes = 0;
         job_template.cipher_start_src_offset_in_bytes = sha_size_incr;
         job_template.iv = (uint8_t *) &iv;
@@ -1356,13 +1496,6 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.CMAC._key_expanded = k1_expanded;
                 job_template.u.CMAC._skey1 = k2;
                 job_template.u.CMAC._skey2 = k3;
-                /*
-                 * CMAC bit level version is done in bits (length is
-                 * converted to bits and it is decreased by 4 bits,
-                 * to force the CMAC bitlen path)
-                 */
-                job_template.msg_len_to_hash_in_bits =
-                        (job_template.msg_len_to_hash_in_bytes * 8) - 4;
                 job_template.hash_alg = IMB_AUTH_AES_CMAC_BITLEN;
                 break;
         case TEST_HASH_CMAC_256:
@@ -1373,29 +1506,20 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 break;
         case TEST_PON_CRC_BIP:
                 job_template.hash_alg = IMB_AUTH_PON_CRC_BIP;
-                job_template.msg_len_to_hash_in_bytes = size_aes + 8;
                 job_template.cipher_start_src_offset_in_bytes = 8;
-                if (params->cipher_mode == TEST_PON_NO_CNTR)
-                        job_template.msg_len_to_cipher_in_bytes = 0;
                 break;
         case TEST_ZUC_EIA3:
                 job_template.hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN;
-                job_template.msg_len_to_hash_in_bits =
-                        (job_template.msg_len_to_hash_in_bytes * 8);
                 job_template.u.ZUC_EIA3._key = k3;
                 job_template.u.ZUC_EIA3._iv = (uint8_t *) &auth_iv;
                 break;
         case TEST_SNOW3G_UIA2:
                 job_template.hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN;
-                job_template.msg_len_to_hash_in_bits =
-                        (job_template.msg_len_to_hash_in_bytes * 8);
                 job_template.u.SNOW3G_UIA2._key = k3;
                 job_template.u.SNOW3G_UIA2._iv = (uint8_t *)&auth_iv;
                 break;
         case TEST_KASUMI_UIA1:
                 job_template.hash_alg = IMB_AUTH_KASUMI_UIA1;
-                job_template.msg_len_to_hash_in_bytes =
-                        job_template.msg_len_to_hash_in_bytes;
                 job_template.u.KASUMI_UIA1._key = k3;
                 break;
         case TEST_AES_GMAC_128:
@@ -1471,8 +1595,6 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.GCM.aad_len_in_bytes = params->aad_size;
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == IMB_CIPHER_CCM) {
-                job_template.msg_len_to_cipher_in_bytes = size_aes;
-                job_template.msg_len_to_hash_in_bytes = size_aes;
                 job_template.hash_start_src_offset_in_bytes = 0;
                 job_template.cipher_start_src_offset_in_bytes = 0;
                 job_template.u.CCM.aad_len_in_bytes = params->aad_size;
@@ -1493,20 +1615,12 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                         DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2 /* ETH TYPE */;
 
                 job_template.cipher_start_src_offset_in_bytes = ciph_adjust;
-                job_template.msg_len_to_cipher_in_bytes =
-                        size_aes - ciph_adjust;
                 job_template.hash_start_src_offset_in_bytes = 0;
-                job_template.msg_len_to_hash_in_bytes =
-                        size_aes - DOCSIS_CRC32_TAG_SIZE;
         } else if (job_template.cipher_mode == IMB_CIPHER_SNOW3G_UEA2_BITLEN) {
-                job_template.msg_len_to_cipher_in_bits =
-                        (job_template.msg_len_to_cipher_in_bytes * 8);
                 job_template.cipher_start_src_offset_in_bits = 0;
                 job_template.key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 16;
         } else if (job_template.cipher_mode == IMB_CIPHER_KASUMI_UEA1_BITLEN) {
-                job_template.msg_len_to_cipher_in_bits =
-                        (job_template.msg_len_to_cipher_in_bytes * 8);
                 job_template.cipher_start_src_offset_in_bits = 0;
                 job_template.key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 8;
@@ -1516,14 +1630,6 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.iv_len_in_bytes = 0;
         else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20)
                 job_template.iv_len_in_bytes = 12;
-
-        if (job_template.hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                /* create XGEM header template */
-                const uint64_t pli =
-                        (job_template.msg_len_to_cipher_in_bytes << 2) & 0xffff;
-
-                xgem_hdr = ((pli >> 8) & 0xff) | ((pli & 0xff) << 8);
-        }
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
@@ -1536,35 +1642,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 *job = job_template;
 
-                if (job->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                        uint64_t *p_src =
-                                (uint64_t *) get_src_buffer(index, p_buffer);
-
-                        job->src = (const uint8_t *)p_src;
-                        p_src[0] = xgem_hdr;
-                } else {
-                        job->src = get_src_buffer(index, p_buffer);
-                }
-                job->dst = get_dst_buffer(index, p_buffer);
-                if (job->cipher_mode == IMB_CIPHER_GCM) {
-                        job->u.GCM.aad = job->src;
-                } else if (job->cipher_mode == IMB_CIPHER_CCM) {
-                        job->u.CCM.aad = job->src;
-                        job->enc_keys = job->dec_keys =
-                                (const uint32_t *) get_key_pointer(index,
-                                                                   p_keys);
-                } else if (job->cipher_mode == IMB_CIPHER_DES3) {
-                        static const void *ks_ptr[3];
-
-                        ks_ptr[0] = ks_ptr[1] = ks_ptr[2] =
-                                get_key_pointer(index, p_keys);
-                        job->enc_keys =
-                                job->dec_keys = ks_ptr;
-                } else {
-                        job->enc_keys = job->dec_keys =
-                                (const uint32_t *) get_key_pointer(index,
-                                                                   p_keys);
-                }
+                set_job_fields(job, p_buffer, p_keys, i, index);
 
                 index = get_next_index(index);
 #ifdef DEBUG
@@ -1661,6 +1739,8 @@ do_test_gcm(struct params_s *params,
                         for (i = 0; i < num_iter; i++) {
                                 uint8_t *pb = get_dst_buffer(index, p_buffer);
 
+                                if (imix_list_count != 0)
+                                        size_aes = get_next_size(i);
                                 IMB_AES128_GCM_ENC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
                                                    pb,
@@ -1674,6 +1754,8 @@ do_test_gcm(struct params_s *params,
                         for (i = 0; i < num_iter; i++) {
                                 uint8_t *pb = get_dst_buffer(index, p_buffer);
 
+                                if (imix_list_count != 0)
+                                        size_aes = get_next_size(i);
                                 IMB_AES192_GCM_ENC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
                                                    pb,
@@ -1687,6 +1769,8 @@ do_test_gcm(struct params_s *params,
                         for (i = 0; i < num_iter; i++) {
                                 uint8_t *pb = get_dst_buffer(index, p_buffer);
 
+                                if (imix_list_count != 0)
+                                        size_aes = get_next_size(i);
                                 IMB_AES256_GCM_ENC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
                                                    pb,
@@ -1716,6 +1800,8 @@ do_test_gcm(struct params_s *params,
                         for (i = 0; i < num_iter; i++) {
                                 uint8_t *pb = get_dst_buffer(index, p_buffer);
 
+                                if (imix_list_count != 0)
+                                        size_aes = get_next_size(i);
                                 IMB_AES128_GCM_DEC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
                                                    pb,
@@ -1729,6 +1815,8 @@ do_test_gcm(struct params_s *params,
                         for (i = 0; i < num_iter; i++) {
                                 uint8_t *pb = get_dst_buffer(index, p_buffer);
 
+                                if (imix_list_count != 0)
+                                        size_aes = get_next_size(i);
                                 IMB_AES192_GCM_DEC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
                                                    pb,
@@ -1742,6 +1830,8 @@ do_test_gcm(struct params_s *params,
                         for (i = 0; i < num_iter; i++) {
                                 uint8_t *pb = get_dst_buffer(index, p_buffer);
 
+                                if (imix_list_count != 0)
+                                        size_aes = get_next_size(i);
                                 IMB_AES256_GCM_DEC(mb_mgr, &gdata_key,
                                                    &gdata_ctx,
                                                    pb,
@@ -1809,10 +1899,13 @@ process_variant(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 struct variant_s *variant_ptr, const uint32_t run,
                 uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
-        const uint32_t sizes = params->num_sizes;
+        uint32_t sizes = params->num_sizes;
         uint64_t *times = &variant_ptr->avg_times[run];
         uint32_t sz;
         uint32_t size_aes;
+
+        if (imix_list_count != 0)
+                sizes = 1;
 
         for (sz = 0; sz < sizes; sz++) {
                 if (job_size_count == 0)
@@ -2064,7 +2157,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
             const uint32_t total_variants, uint8_t *p_buffer,
             imb_uint128_t *p_keys)
 {
-        const uint32_t sizes = params->num_sizes;
+        uint32_t sizes = params->num_sizes;
         uint32_t col;
         uint32_t sz;
 
@@ -2122,8 +2215,13 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 printf("\tAES-%u", par.aes_key_size * 8);
         }
         printf("\n");
+        /* If IMIX is used, only show the average size */
+        if (imix_list_count != 0)
+                sizes = 1;
         for (sz = 0; sz < sizes; sz++) {
-                if (job_size_count == 0)
+                if (imix_list_count != 0)
+                        printf("%d", average_job_size);
+                else if (job_size_count == 0)
                         printf("%d", job_sizes[RANGE_MIN] +
                                      (sz * job_sizes[RANGE_STEP]));
                 else
@@ -2422,6 +2520,13 @@ static void usage(void)
                 "            - range: test multiple sizes with following format"
                 " min:step:max (e.g. 16:16:256)\n"
                 "            (-o still applies for MAC)\n"
+                "--imix: set numbers that establish ocurrence proportions"
+                " between packet sizes.\n"
+                "        It requires a list of sizes through --job-size.\n"
+                "        (e.g. --imix 4,6 --job-size 64,128 will generate\n"
+                "        a series of job sizes where on average 4 out of 10\n"
+                "        packets will be 64B long and 6 out of 10 packets\n"
+                "        will be 128B long)\n"
                 "--aad-size: size of AAD for AEAD algorithms\n"
                 "--job-iter: number of tests iterations for each job size\n"
                 "--no-progress-bar: Don't display progress bar\n",
@@ -2585,8 +2690,7 @@ parse_list(const char * const *argv, const int index, const int argc,
         if (token != NULL) {
                 number = strtoul(token, NULL, 10);
 
-                if (errno == EINVAL || errno == ERANGE ||
-                                number == 0)
+                if (errno || number == 0)
                         goto err_list;
 
                 list[count++] = number;
@@ -2606,8 +2710,7 @@ parse_list(const char * const *argv, const int index, const int argc,
 
                 number = strtoul(token, NULL, 10);
 
-                if (errno == EINVAL || errno == ERANGE ||
-                                number == 0)
+                if (errno || number == 0)
                         goto err_list;
 
                 list[count++] = number;
@@ -2630,7 +2733,7 @@ parse_list(const char * const *argv, const int index, const int argc,
 
 err_list:
         free(copy_arg);
-        fprintf(stderr, "Could not parse list of sizes");
+        fprintf(stderr, "Could not parse list of sizes\n");
         exit(EXIT_FAILURE);
 }
 
@@ -2715,6 +2818,9 @@ int main(int argc, char *argv[])
         unsigned int hash_algo_set = 0;
         unsigned int aead_algo_set = 0;
         unsigned int cipher_dir_set = 0;
+        /* 1 size by default on job sizes list */
+        uint32_t num_sizes_list = 1;
+
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
 #else
@@ -2856,6 +2962,15 @@ int main(int argc, char *argv[])
                                        JOB_SIZE_TOP);
                                 return EXIT_FAILURE;
                         }
+                } else if (strcmp(argv[i], "--imix") == 0) {
+                        imix_list_count = parse_list((const char * const *)argv,
+                                          i, argc, imix_list, NULL, NULL);
+                        if (imix_list_count == 0) {
+                                fprintf(stderr,
+                                       "Invalid IMIX distribution list\n");
+                                return EXIT_FAILURE;
+                        }
+                        i++;
                 } else if (strcmp(argv[i], "--aad-size") == 0) {
                         /* Get AAD size for both GCM and CCM */
                         i = get_next_num_arg((const char * const *)argv, i,
@@ -2917,6 +3032,73 @@ int main(int argc, char *argv[])
                                 CCM_AAD_SIZE_MAX);
                         return EXIT_FAILURE;
                 }
+        }
+
+        if ((imix_list_count != 0)) {
+                if (imix_list_count != job_size_count) {
+                        fprintf(stderr,
+                                "IMIX distribution list must have the same "
+                                "number of items as the job list\n");
+                        return EXIT_FAILURE;
+                }
+                job_size_imix_list = malloc(JOB_SIZE_IMIX_LIST*4);
+                if (job_size_imix_list == NULL) {
+                        fprintf(stderr,
+                                "Memory allocation for IMIX list failed\n");
+                        return EXIT_FAILURE;
+                }
+
+                num_sizes_list = JOB_SIZE_IMIX_LIST;
+		/*
+		 * Calculate accumulated distribution of
+		 * probabilities per job size
+		 */
+		distribution_total[0] = imix_list[0];
+		for (i = 1; i < (int)imix_list_count; i++)
+			distribution_total[i] = imix_list[i] +
+				distribution_total[i-1];
+
+                /* Use always same seed */
+                srand(0);
+		/* Calculate a random sequence of packet sizes,
+                   based on distribution */
+		for (i = 0; i < (int)JOB_SIZE_IMIX_LIST; i++) {
+			uint16_t random_number = rand() %
+				distribution_total[imix_list_count - 1];
+                        uint16_t j;
+
+			for (j = 0; j < imix_list_count; j++)
+				if (random_number < distribution_total[j])
+					break;
+
+			job_size_imix_list[i] = job_size_list[j];
+		}
+
+		/* Calculate average buffer size for the IMIX distribution */
+		for (i = 0; i < (int)imix_list_count; i++)
+			average_job_size += job_size_list[i] *
+				imix_list[i];
+
+		average_job_size /=
+				distribution_total[imix_list_count - 1];
+        }
+        cipher_size_list = (uint32_t *) malloc(sizeof(uint32_t) *
+                                num_sizes_list);
+        if (cipher_size_list == NULL) {
+                fprintf(stderr, "Could not malloc cipher size list\n");
+                exit(EXIT_FAILURE);
+        }
+        hash_size_list = (uint32_t *) malloc(sizeof(uint32_t) *
+                                num_sizes_list);
+        if (hash_size_list == NULL) {
+                fprintf(stderr, "Could not malloc hash size list\n");
+                exit(EXIT_FAILURE);
+        }
+        xgem_hdr_list = (uint64_t *) malloc(sizeof(uint64_t) *
+                                num_sizes_list);
+        if (xgem_hdr_list == NULL) {
+                fprintf(stderr, "Could not malloc xgem hdr list\n");
+                exit(EXIT_FAILURE);
         }
 
         if (job_sizes[RANGE_MIN] == 0) {
@@ -3060,6 +3242,11 @@ int main(int argc, char *argv[])
 
         if (use_unhalted_cycles)
                 machine_fini();
+
+        free(job_size_imix_list);
+        free(cipher_size_list);
+        free(hash_size_list);
+        free(xgem_hdr_list);
 
         return EXIT_SUCCESS;
 }
