@@ -1741,7 +1741,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 ; calculate the number of 16byte blocks in the message
 ; process (number of 16byte blocks) mod 8 '%%_initial_num_blocks_is_# .. %%_initial_blocks_encrypted'
 ; process 8 16 byte blocks at a time until all are done '%%_encrypt_by_8_new .. %%_eight_cipher_left'
-; if there is a block of less tahn 16 bytes process it '%%_zero_cipher_left .. %%_multiple_of_16_bytes'
+; if there is a block of less than 16 bytes process it '%%_zero_cipher_left .. %%_multiple_of_16_bytes'
 	cmp	%%PLAIN_CYPH_LEN, 0
 	je	%%_multiple_of_16_bytes
 
@@ -1882,7 +1882,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         je      %%_multiple_of_16_bytes
 
 	mov	[%%GDATA_CTX + PBlockLen], r13		; ctx_data.partial_blck_length = r13
-        ; handle the last <16 Byte block seperately
+        ; handle the last <16 Byte block separately
 
         vpaddd   xmm9, [ONE]                            ; INCR CNT to get Yn
         vmovdqu [%%GDATA_CTX + CurCount], xmm9          ; my_ctx_data.current_counter = xmm9

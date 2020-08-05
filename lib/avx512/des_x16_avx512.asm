@@ -31,9 +31,9 @@
 ;;   (2) Intel Corporation
 
 ;; In System V AMD64 ABI
-;;	calle saves: RBX, RBP, R12-R15
+;;	callee saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
+;;	callee saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
@@ -933,7 +933,7 @@ endstruc
         ;; set up the key schedule
         ;; - load first half of the keys & transpose
         ;; - transpose and store
-        ;; note: we can use IV registers as temprary ones here
+        ;; note: we can use IV registers as temporary ones here
 %assign IDX 0
 %rep 16
         mov             IA0, [%%STATE_KEYS + (IDX*PTR_SZ)]
@@ -948,7 +948,7 @@ endstruc
 %endrep
         ;; - load second half of the keys & transpose
         ;; - transpose and store
-        ;; note: we can use IV registers as temprary ones here
+        ;; note: we can use IV registers as temporary ones here
 %assign IDX 0
 %rep 16
         mov             IA0, [%%STATE_KEYS + (IDX*PTR_SZ)]
@@ -1031,7 +1031,7 @@ endstruc
         ;; set up the key schedule
         ;; - load first half of the keys & transpose
         ;; - transpose and store
-        ;; note: we can use IV registers as temprary ones here
+        ;; note: we can use IV registers as temporary ones here
 
 %assign IDX 0
 %rep 16
@@ -1048,7 +1048,7 @@ endstruc
 %endrep
         ;; - load second half of the keys & transpose
         ;; - transpose and store
-        ;; note: we can use IV registers as temprary ones here
+        ;; note: we can use IV registers as temporary ones here
 %assign IDX 0
 %rep 16
         mov             IA0, [%%STATE_KEYS + (IDX*PTR_SZ)]

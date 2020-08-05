@@ -1120,7 +1120,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %if %%num_initial_blocks > 0
                 ;; NOTE: 'jl' is never taken for %%num_initial_blocks = 0
-                ;;      This macro is executed for lenght 128 and up,
+                ;;      This macro is executed for length 128 and up,
                 ;;      zero length is checked in GCM_ENC_DEC.
                 ;; If the last block is partial then the xor will be done later
                 ;; in ENCRYPT_FINAL_PARTIAL_BLOCK.
@@ -2701,7 +2701,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 ; calculate the number of 16byte blocks in the message
 ; process (number of 16byte blocks) mod 8 '%%_initial_num_blocks_is_# .. %%_initial_blocks_encrypted'
 ; process 8 16 byte blocks at a time until all are done '%%_encrypt_by_8_new .. %%_eight_cipher_left'
-; if there is a block of less tahn 16 bytes process it '%%_zero_cipher_left .. %%_multiple_of_16_bytes'
+; if there is a block of less than 16 bytes process it '%%_zero_cipher_left .. %%_multiple_of_16_bytes'
 
 %ifidn __OUTPUT_FORMAT__, win64
         cmp     %%PLAIN_CYPH_LEN, 0

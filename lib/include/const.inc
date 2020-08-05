@@ -203,7 +203,7 @@ extern padding_0x80_tab16
         cmp     %%idx, 4
         jl      %%lower_128
         sub     %%idx, 4
-%else ;; idx is multipled by 16
+%else ;; idx is multiplied by 16
         cmp     %%idx, 64
         jl      %%lower_128
         sub     %%idx, 64

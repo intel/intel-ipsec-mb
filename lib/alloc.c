@@ -42,7 +42,7 @@
  * Set last 8 bytes of OOO mgrs to predefined pattern
  *
  * This is to assist in searching for sensitive data remaining
- * in the heap after algorthmic code completes
+ * in the heap after algorithmic code completes
  */
 static void set_ooo_mgr_road_block(IMB_MGR *mgr)
 {
@@ -144,7 +144,7 @@ free_mem(void *ptr)
  * it is recommended to use this API.
  *
  * @param flags multi-buffer manager flags
- *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extenstions,
+ *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
  *
  * @return Pointer to allocated memory for MB_MGR structure

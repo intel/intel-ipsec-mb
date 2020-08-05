@@ -1641,7 +1641,7 @@ static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
  * @brief Wrapper around PCLMULQDQ operation for emulation purpose
  *
  * The operation carries modular multiply 64-bits x 64-bits and
- * produces 128-bit output. 'imm8' selectes multiply inputs.
+ * produces 128-bit output. 'imm8' selects multiply inputs.
  *
  * @param[in] a    128-bit input
  * @param[in] b    128-bit input

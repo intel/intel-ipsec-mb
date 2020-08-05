@@ -230,7 +230,7 @@
 ;
 ; This macro takes 4 registers as input (r0-r3)
 ; and transposes their content (64-bit elements)
-; outputing the data in registers (o0,r1,o2,r3),
+; outputting the data in registers (o0,r1,o2,r3),
 ; using two additional registers
 %macro TRANSPOSE4_U64 6
 %define %%r0 %1 ; [in]     ymm register for row 0 input (c0-c1 a1-a0)

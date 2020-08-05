@@ -26,9 +26,9 @@
 ;;
 
 ;; In System V AMD64 ABI
-;;	calle saves: RBX, RBP, R12-R15
+;;	callee saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
+;;	callee saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 ;;
 ;; Linux/Windows clobbers: xmm0 - xmm15
 ;;

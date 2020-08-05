@@ -75,7 +75,7 @@
  * @description
  *      Macro will loop through keystream of length 64bytes and xor with the
  *      input buffer placing the result in the output buffer.
- *      KeyStream bytes must be swaped on 32bit boundary before this operation
+ *      KeyStream bytes must be swapped on 32bit boundary before this operation
  *
  *****************************************************************************/
 #define ZUC_XOR_KEYSTREAM(pIn64, pOut64, pKeyStream64)		\
@@ -769,7 +769,7 @@ IMB_DLL_LOCAL void asm_ZucCipher_16_gfni_avx512(ZucState16_t *pState,
  ******************************************************************************
  * @description
  *      Definition of the external function to update the authentication tag
- *      based on keystream and data (SSE varient)
+ *      based on keystream and data (SSE variant)
  *
  * @param[in] T                     Authentication tag
  *

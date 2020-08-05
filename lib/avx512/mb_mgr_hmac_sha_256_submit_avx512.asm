@@ -26,9 +26,9 @@
 ;;
 
 ;; In System V AMD64 ABI
-;;	calle saves: RBX, RBP, R12-R15
+;;	callee saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
+;;	callee saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
 ;;			-----------------------------------------------------------

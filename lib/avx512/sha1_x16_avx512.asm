@@ -207,7 +207,7 @@ section .text
 ; where register X (0 <= X <= 7) will contain bytes 0-31 from lane X in the first half
 ; and 0-31 bytes from lane X+8 in the second half.
 ; The last 8 registers will contain the last 32 bytes of all lanes,
-; where register Y (8 <= Y <= 15) wil contain bytes 32-63 from lane Y-8 in the first half
+; where register Y (8 <= Y <= 15) will contain bytes 32-63 from lane Y-8 in the first half
 ; and 32-63 bytes from lane Y in the second half.
 ; This method helps reducing the number of shuffles required to transpose the data.
 %macro MSG_SCHED_ROUND_00_15 6

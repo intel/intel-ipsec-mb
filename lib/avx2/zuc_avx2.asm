@@ -1121,7 +1121,7 @@ APPEND(_num_final_rounds_is_,I):
 exit_final_rounds:
         ;; update in/out pointers
 
-        ; Brodcast buf_idx in all qwords of ymm0
+        ; Broadcast buf_idx in all qwords of ymm0
         vmovq           xmm0, buf_idx
         vpshufd         xmm0, xmm0, 0x44
         vperm2f128      ymm0, ymm0, 0x0

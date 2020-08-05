@@ -34,9 +34,9 @@
 ;;; It is designed to manage partial blocks of DOCSIS 3.1 SEC BPI
 
 ;; In System V AMD64 ABI
-;;	calle saves: RBX, RBP, R12-R15
+;;	callee saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
+;;	callee saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
 ;;			-----------------------------------------------------------
@@ -147,7 +147,7 @@ section .text
 ;; AES CFB128 one block encrypt/decrypt implementation.
 ;; The function doesn't update IV. The result of operation can be found in OUT.
 ;;
-;; It is primarly designed to process partial block of
+;; It is primarily designed to process partial block of
 ;; DOCSIS 3.1 AES Packet PDU Encryption (I.10)
 ;;
 ;; It process up to one block only (up to 16 bytes).
@@ -177,7 +177,7 @@ aes_cfb_128_one_avx512:
 ;; AES CFB256 one block encrypt/decrypt implementation.
 ;; The function doesn't update IV. The result of operation can be found in OUT.
 ;;
-;; It is primarly designed to process partial block of
+;; It is primarily designed to process partial block of
 ;; DOCSIS 3.1 AES Packet PDU Encryption (I.10)
 ;;
 ;; It process up to one block only (up to 16 bytes).

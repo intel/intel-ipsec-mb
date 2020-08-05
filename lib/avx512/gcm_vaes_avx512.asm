@@ -1349,7 +1349,7 @@ default rel
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; This macro is used to "warm-up" pipeline for GHASH_8_ENCRYPT_8_PARALLEL
-;;; macro code. It is called only for data lenghts 128 and above.
+;;; macro code. It is called only for data lengths 128 and above.
 ;;; The flow is as follows:
 ;;; - encrypt the initial %%num_initial_blocks blocks (can be 0)
 ;;; - encrypt the next 8 blocks and stitch with
@@ -1506,7 +1506,7 @@ default rel
         mov             %%IA0, 0xffff_ffff_ffff_ffff
 %if %%num_initial_blocks > 0
         ;; NOTE: 'jge' is always taken for %%num_initial_blocks = 0
-        ;;      This macro is executed for lenght 128 and up,
+        ;;      This macro is executed for length 128 and up,
         ;;      zero length is checked in GCM_ENC_DEC.
         ;; We know there is partial block if:
         ;;      LENGTH - 16*num_initial_blocks < 128
@@ -3369,7 +3369,7 @@ default rel
 %%_initial_blocks_encrypted:
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
 
-        ;; move cipher blocks from intial blocks to input of by8 macro
+        ;; move cipher blocks from initial blocks to input of by8 macro
         ;; and for GHASH_LAST_8/7
         ;; - ghash value already xor'ed into block 0
         vmovdqa64       %%BLK0, %%ZTMP0
@@ -3704,7 +3704,7 @@ default rel
 %define %%SHUF_MASK     %36     ; [in] ZMM with BE/LE shuffle mask
 %define %%ENC_DEC       %37     ; [in] ENC (encrypt) or DEC (decrypt) selector
 %define %%NBLOCKS       %38     ; [in] number of blocks: multiple of 16
-%define %%DEPTH_BLK     %39     ; [in] pipline depth, number of blocks (mulitple of 16)
+%define %%DEPTH_BLK     %39     ; [in] pipline depth, number of blocks (multiple of 16)
 
 %assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
@@ -3939,7 +3939,7 @@ default rel
 %define %%GTM                   %32     ; [in/out] ZMM GHASH sum (medium)
 %define %%ADDBE_4x4             %33     ; [in] ZMM 4x128bits with value 4 (big endian)
 %define %%ADDBE_1234            %34     ; [in] ZMM 4x128bits with values 1, 2, 3 & 4 (big endian)
-%define %%GHASH                 %35     ; [clobbered] ZMM with intermidiate GHASH value
+%define %%GHASH                 %35     ; [clobbered] ZMM with intermediate GHASH value
 %define %%ENC_DEC               %36     ; [in] ENC (encrypt) or DEC (decrypt) selector
 %define %%NUM_BLOCKS            %37     ; [in] number of blocks to process in the loop
 %define %%DEPTH_BLK             %38     ; [in] pipeline depth in blocks

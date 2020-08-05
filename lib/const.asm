@@ -38,7 +38,7 @@ MKGLOBAL(shift_tab_16,data,internal)
 ;;; The following tables are used to insert a word into
 ;;; a SIMD register and must be defined together.
 ;;; If resized, update len_tab_diff definition in const.inc module.
-;;; Other modifications may require updates to dependant modules.
+;;; Other modifications may require updates to dependent modules.
 
 ;;; Table used to shuffle word to correct index
 ;;; Used by macros:

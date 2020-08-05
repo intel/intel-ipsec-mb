@@ -1656,9 +1656,9 @@ IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
 /**
  * @brief DES key schedule set up
  *
- * \a ks buffer needs to accomodate \a DES_KEY_SCHED_SIZE (128) bytes of data.
+ * \a ks buffer needs to accommodate \a DES_KEY_SCHED_SIZE (128) bytes of data.
  *
- * @param ks destination buffer to accomodate DES key schedule
+ * @param ks destination buffer to accommodate DES key schedule
  * @param key a pointer to an 8 byte DES key
  *
  * @return Operation status
@@ -1816,7 +1816,7 @@ IMB_DLL_EXPORT void aes_cfb_128_one_avx512(void *out, const void *in,
 
 /*
  * Direct GCM API.
- * Note that GCM is also availabe through job API.
+ * Note that GCM is also available through job API.
  */
 /**
  * @brief GCM-AES Encryption

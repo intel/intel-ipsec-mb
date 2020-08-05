@@ -42,7 +42,7 @@
 %ifdef LINUX
 ;;; macro to declare global symbols
 ;;;  - name : symbol name
-;;;  - type : funtion or data
+;;;  - type : function or data
 ;;;  - scope : internal, private, default
 %define MKGLOBAL(name,type,scope) global name %+ : %+ type scope
 %endif                          ; LINUX
@@ -50,7 +50,7 @@
 %ifdef WIN_ABI
 ;;; macro to declare global symbols
 ;;;  - name : symbol name
-;;;  - type : funtion or data
+;;;  - type : function or data
 ;;;  - scope : internal, private, default (ignored in win64 coff format)
 %define MKGLOBAL(name,type,scope) global name
 %endif                          ; WIN_ABI

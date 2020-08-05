@@ -894,7 +894,7 @@ section .text
         kmovq     %%KMASK, %%KEYS
         vmovdqu8  XWORD(%%STATE_IN_D_L){%%KMASK}, [%%IV] ; Load Nonce (12 bytes)
         vpslldq   XWORD(%%STATE_IN_D_L), 4
-        vshufi64x2 %%STATE_IN_D_L, %%STATE_IN_D_L, 0 ; Brodcast 128 bits to 512 bits
+        vshufi64x2 %%STATE_IN_D_L, %%STATE_IN_D_L, 0 ; Broadcast 128 bits to 512 bits
         vbroadcastf64x2 %%STATE_IN_A_L, [rel constants]
 
 %if %%NUM_BLOCKS == 8

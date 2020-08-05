@@ -1464,7 +1464,7 @@ section .text
         vmovdqa64       [%%STATE + _aes_args_keys + (0 * PTR_SZ)]{k4}, zmm1
         vmovdqa64       [%%STATE + _aes_args_keys + (8 * PTR_SZ)]{k5}, zmm1
 
-        ;; - CRC lenghts
+        ;; - CRC lengths
         mov             WORD(%%tmp), [%%STATE + _docsis_crc_args_len + %%good_lane*2]
         vpbroadcastw    ymm3, WORD(%%tmp)
         vmovdqa64       ymm1, [%%STATE + _docsis_crc_args_len]

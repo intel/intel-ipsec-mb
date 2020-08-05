@@ -874,7 +874,7 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 %rep 16
 %if %%LAST_ROUND == 1
         ;; Read length to encrypt for the lane stored in stack
-        ;; and construct byte mask to write to ouput pointer
+        ;; and construct byte mask to write to output pointer
         movzx    r12d, word [rsp + (j-16)*2]
         SHIFT_GP 1, r12, r14, r13, left
         sub     r14, 1

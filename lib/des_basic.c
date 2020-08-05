@@ -46,7 +46,7 @@ void permute_operation(uint32_t *pa, uint32_t *pb,
         *pa ^= (t << n);
 }
 
-/* inital permutation */
+/* initial permutation */
 __forceinline
 void ip_z(uint32_t *pl, uint32_t *pr)
 {
@@ -57,7 +57,7 @@ void ip_z(uint32_t *pl, uint32_t *pr)
         permute_operation(pr, pl, 1, 0x55555555);
 }
 
-/* final permuation */
+/* final permutation */
 __forceinline
 void fp_z(uint32_t *pl, uint32_t *pr)
 {

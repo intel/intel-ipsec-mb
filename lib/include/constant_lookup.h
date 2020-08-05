@@ -30,7 +30,7 @@
 
 #include "intel-ipsec-mb.h"
 
-/* instrinsic include is needed for data types used in prototypes */
+/* intrinsic include is needed for data types used in prototypes */
 #ifdef LINUX
 #include <x86intrin.h>
 #else

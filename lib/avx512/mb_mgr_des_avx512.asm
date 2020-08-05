@@ -26,9 +26,9 @@
 ;;
 
 ;; In System V AMD64 ABI
-;;	calle saves: RBX, RBP, R12-R15
+;;	callee saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
-;;	calle saves: RBX, RBP, RDI, RSI, RSP, R12-R15
+;;	callee saves: RBX, RBP, RDI, RSI, RSP, R12-R15
 
 ;;
 ;; Registers:		RAX RBX RCX RDX RBP RSI RDI R8  R9  R10 R11 R12 R13 R14 R15
@@ -108,7 +108,7 @@ extern des3_x16_cbc_dec_avx512
 %define %%DES_DOCSIS %1
 %define %%ENC_DEC %2
 
-        ;; get unsued lane and increment number of lanes in use
+        ;; get unused lane and increment number of lanes in use
         mov	IA0, [STATE + _des_unused_lanes]
         mov     LANE, IA0
         and	LANE, 0xF           ;; just a nibble
