@@ -222,7 +222,7 @@ Macros
 ======
 
 Macros should be used where possible to reduce code duplication. All macros
-should be properly documented, specifiying input/output parameters and
+should be properly documented, specifying input/output parameters and
 their types.
 
 Example:

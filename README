@@ -119,7 +119,7 @@ implementations.
 
 Notes:
 (1) - MD5 over one block implemented in C
-(2) - Implementation using SHANI extentions is x2
+(2) - Implementation using SHANI extensions is x2
 (3) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
 (4) - used only with AES128-DOCSIS cipher
 (5) - x8 on selected CPU's supporting GFNI

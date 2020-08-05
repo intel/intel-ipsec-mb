@@ -360,7 +360,7 @@ API
   when, and how to call the GCM code, independent of how it is calling
   the multi-buffer code.
 
-  For example, the application might be enqueing multi-buffer requests
+  For example, the application might be enqueuing multi-buffer requests
   for a separate thread to process. In this scenario, if a particular
   packet used GCM, then the application could choose whether to call
   the GCM routines directly, or whether to enqueue those requests and
@@ -441,7 +441,7 @@ Multi-Buffer API: Two Sets of Functions
         funcs->init_mb_mgr(&mb_mgr);
 
   For simplicity in the rest of this document, the functions will be
-  refered to no suffix.
+  referred to no suffix.
 
 API: Overview
 
@@ -539,7 +539,7 @@ API: Job Fields
   One selects the AES mode (CBC versus counter-mode) using
   "cipher_mode".
 
-  One selects the hash algorith (SHA1-HMAC, AES-XCBC, or MD5-HMAC)
+  One selects the hash algorithm (SHA1-HMAC, AES-XCBC, or MD5-HMAC)
   using "hash_alg".
 
   The data to be encrypted/decrypted is defined by
