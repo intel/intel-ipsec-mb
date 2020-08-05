@@ -558,7 +558,7 @@ void _zuc_eia3_4_buffer_sse(const void * const pKey[NUM_SSE_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_SSE_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
-        uint32_t *pKeyStrArr[NUM_SSE_BUFS] = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_SSE_BUFS], 16) = {NULL};
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
@@ -754,7 +754,7 @@ void _zuc_eia3_4_buffer_job(const void * const pKey[NUM_SSE_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_SSE_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
-        uint32_t *pKeyStrArr[NUM_SSE_BUFS] = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_SSE_BUFS], 16) = {NULL};
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];

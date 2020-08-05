@@ -574,8 +574,8 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX512_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
-        uint32_t *pKeyStrArr0[NUM_AVX512_BUFS] = {NULL};
-        uint32_t *pKeyStrArr64[NUM_AVX512_BUFS] = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr0[NUM_AVX512_BUFS], 64) = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr64[NUM_AVX512_BUFS], 64) = {NULL};
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
@@ -777,8 +777,8 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX512_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
-        uint32_t *pKeyStrArr0[NUM_AVX512_BUFS] = {NULL};
-        uint32_t *pKeyStrArr64[NUM_AVX512_BUFS] = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr0[NUM_AVX512_BUFS], 64) = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr64[NUM_AVX512_BUFS], 64) = {NULL};
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];

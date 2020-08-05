@@ -488,7 +488,7 @@ void _zuc_eia3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX2_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
-        uint32_t *pKeyStrArr[NUM_AVX2_BUFS] = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX2_BUFS], 32) = {NULL};
 
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
@@ -660,7 +660,7 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX2_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
-        uint32_t *pKeyStrArr[NUM_AVX2_BUFS] = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX2_BUFS], 32) = {NULL};
 
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
