@@ -3096,7 +3096,7 @@ static const uint8_t C3[] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-/* truncated vector 1 to test various buffer lenghts */
+/* truncated vector 1 to test various buffer lengths */
 
 /* Single encrypted block with trailing plaintext */
 static const uint8_t K4[] = {
@@ -3545,7 +3545,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
                                        sizeof(padding), text_len))
                                 goto end;
                 } else if (dir == IMB_DIR_DECRYPT) {
-                        printf("Expected decrypt job, recieved none!\n");
+                        printf("Expected decrypt job, received none!\n");
                         goto end;
                 }
         }

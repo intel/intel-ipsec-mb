@@ -744,7 +744,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
         uint8_t *opad = keys->opad;
         struct gcm_key_data *gdata_key = &keys->gdata_key;
 
-        /* Force partial byte, by substracting 3 bits from the full length */
+        /* Force partial byte, by subtracting 3 bits from the full length */
         if (params->cipher_mode == IMB_CIPHER_CNTR_BITLEN)
                 job->msg_len_to_cipher_in_bits = buf_size * 8 - 3;
         else
@@ -756,7 +756,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
         job->iv = cipher_iv;
 
         if (params->cipher_mode == IMB_CIPHER_PON_AES_CNTR) {
-                /* Substract XGEM header */
+                /* Subtract XGEM header */
                 job->msg_len_to_cipher_in_bytes -= 8;
                 job->cipher_start_src_offset_in_bytes = 8;
                 /* If no crypto needed, set msg_len_to_cipher to 0 */

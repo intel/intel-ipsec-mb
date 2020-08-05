@@ -77,7 +77,7 @@ test_gcm_api(struct IMB_MGR *mgr)
 
         seg_err = setjmp(env);
         if (seg_err) {
-                printf("%s: segfault occured!\n", __func__);
+                printf("%s: segfault occurred!\n", __func__);
                 return 1;
         }
 
@@ -357,7 +357,7 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
 
         seg_err = setjmp(env);
         if (seg_err) {
-                printf("%s: segfault occured!\n", __func__);
+                printf("%s: segfault occurred!\n", __func__);
                 return 1;
         }
 
@@ -442,7 +442,7 @@ test_hash_api(struct IMB_MGR *mgr)
 
         seg_err = setjmp(env);
         if (seg_err) {
-                printf("%s: segfault occured!\n", __func__);
+                printf("%s: segfault occurred!\n", __func__);
                 return 1;
         }
 
@@ -572,7 +572,7 @@ test_aes_api(struct IMB_MGR *mgr)
 
         seg_err = setjmp(env);
         if (seg_err) {
-                printf("%s: segfault occured!\n", __func__);
+                printf("%s: segfault occurred!\n", __func__);
                 return 1;
         }
 
@@ -615,7 +615,7 @@ test_zuc_api(struct IMB_MGR *mgr)
 
         seg_err = setjmp(env);
         if (seg_err) {
-                printf("%s: segfault occured!\n", __func__);
+                printf("%s: segfault occurred!\n", __func__);
                 return 1;
         }
 
@@ -717,7 +717,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
 
         seg_err = setjmp(env);
         if (seg_err) {
-                printf("%s: segfault occured!\n", __func__);
+                printf("%s: segfault occurred!\n", __func__);
                 return 1;
         }
 
@@ -891,7 +891,7 @@ test_snow3g_api(struct IMB_MGR *mgr)
 
         seg_err = setjmp(env);
         if (seg_err) {
-                printf("%s: segfault occured!\n", __func__);
+                printf("%s: segfault occurred!\n", __func__);
                 return 1;
         }
 
@@ -1070,7 +1070,7 @@ test_clear_mem_api(void)
 
         seg_err = setjmp(env);
         if (seg_err) {
-                printf("%s: segfault occured!\n", __func__);
+                printf("%s: segfault occurred!\n", __func__);
                 return 1;
         }
 

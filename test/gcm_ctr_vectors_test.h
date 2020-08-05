@@ -59,7 +59,7 @@ struct gcm_ctr_vector {
 	uint64_t       Plen;       // length of our plaintext
 	//outputs of encryption
 	const uint8_t* C;          // same length as PT
-	const uint8_t* T;          // Authenication tag
+	const uint8_t* T;          // Authentication tag
 	uint8_t        Tlen;       // AT length can be 0 to 128bits
 };
 
