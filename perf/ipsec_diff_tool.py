@@ -124,7 +124,7 @@ class VarList(list):
 
     def find_obj(self, params):
         """
-        Finds first occurence of object containing given parameters
+        Finds first occurrence of object containing given parameters
         """
         ret_val = None
         matches = (obj for obj in self if obj.params == params)
@@ -235,7 +235,7 @@ class VarList(list):
 
 class Parser(object):
     """
-    Class used to parse a text file contaning performance data
+    Class used to parse a text file containing performance data
     """
 
     def __init__(self, fname, verbose):
@@ -255,7 +255,7 @@ class Parser(object):
     def load(self):
         """
         Reads a text file by columns, stores data in objects
-        for further comparision of performance
+        for further comparison of performance
         """
 
         v_list = VarList()
@@ -270,7 +270,7 @@ class Parser(object):
             with f:
                 cols = list(zip(*(line.strip().split('\t') for line in f)))
 
-        # Reading first column with payload sizes, ommiting first 5 rows
+        # Reading first column with payload sizes, omitting first 5 rows
         sizes = self.convert2int(cols[0][PAR_NUM:])
         if self.verbose:
             print("Available buffer sizes:\n")
@@ -278,7 +278,7 @@ class Parser(object):
             print("========================================================")
             print("\n\nVariants:\n")
 
-        # Reading remaining columns contaning performance data
+        # Reading remaining columns containing performance data
         for row in cols[1:]:
             # First rows are run options
             arch, c_mode, c_dir, h_alg, key_size = row[:PAR_NUM]
@@ -326,7 +326,7 @@ class DiffTool(object):
         print("\t-a - takes only one file to analyze")
         print("\t-c - takes packet size as argument and then it will calculate cycle cost")
         print("\t-t - takes packet size and clock speed as arguments and then it will calculate throughput in Mbps")
-        print("\t-s - calulates the slope and intercept")
+        print("\t-s - calculates the slope and intercept")
         print("\tfile_a, file_b - text files containing output from ipsec_perf tool")
         print("\ttol - tolerance [%], must be >= 0, default 5\n")
         print("Examples:")

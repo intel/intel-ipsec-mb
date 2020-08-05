@@ -875,7 +875,7 @@ static unsigned bitcount(const uint64_t val)
 }
 
 /* Get the next core in core mask
-   Set last_core to negative to start from beginnig of core_mask */
+   Set last_core to negative to start from beginning of core_mask */
 static int next_core(const uint64_t core_mask,
                      const int last_core)
 {

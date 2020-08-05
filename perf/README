@@ -38,7 +38,7 @@ Required tools:
 Simply run "make" to compile the tool.
 To clean the build please run "make clean".
 
-You can point to another directory contaning IPSec MB library by setting
+You can point to another directory containing IPSec MB library by setting
 LIB_LOC. for ex:
 	LIB_LOC=../ipsec_mb_lib make
 
