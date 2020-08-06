@@ -93,9 +93,21 @@ typedef struct {
 #endif
 
 /*
+ * Architecture definitions
+ */
+typedef enum {
+        IMB_ARCH_NONE = 0,
+        IMB_ARCH_NOAESNI,
+        IMB_ARCH_SSE,
+        IMB_ARCH_AVX,
+        IMB_ARCH_AVX2,
+        IMB_ARCH_AVX512,
+        IMB_ARCH_NUM,
+} IMB_ARCH;
+
+/*
  * Algorithm constants
  */
-
 #define DES_KEY_SCHED_SIZE (16 * 8) /* 16 rounds x 8 bytes */
 #define DES_BLOCK_SIZE 8
 
@@ -964,6 +976,15 @@ IMB_DLL_EXPORT IMB_JOB *flush_job_sse(IMB_MGR *state);
 IMB_DLL_EXPORT uint32_t queue_size_sse(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *get_completed_job_sse(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *get_next_job_sse(IMB_MGR *state);
+
+/**
+ * @brief Automatically initialize most performant
+ *        Multi-buffer manager based on CPU features
+ *
+ * @param [in]  state Pointer to MB_MGR struct
+ * @param [out] arch Pointer to arch enum to be set (can be NULL)
+ */
+IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 
 /*
  * Wrapper macros to call arch API's set up
