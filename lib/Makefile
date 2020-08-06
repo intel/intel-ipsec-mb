@@ -221,7 +221,8 @@ c_lib_objs := \
 	snow3g_avx2.o \
 	snow3g_tables.o \
 	snow3g_iv.o \
-	mb_mgr_auto.o
+	mb_mgr_auto.o \
+	error.o
 
 #
 # List of ASM modules (root directory/common)

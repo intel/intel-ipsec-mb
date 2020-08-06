@@ -30,6 +30,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -149,6 +150,41 @@ typedef enum {
         STS_INTERNAL_ERROR,
         STS_ERROR
 } JOB_STS;
+
+/*
+ * Library error types
+ */
+enum {
+      IMB_ERR_MIN = 2000,
+      IMB_ERR_NULL_MBMGR,
+      IMB_ERR_JOB_NULL_SRC,
+      IMB_ERR_JOB_NULL_DST,
+      IMB_ERR_JOB_NULL_KEY,
+      IMB_ERR_JOB_NULL_IV,
+      IMB_ERR_JOB_NULL_AUTH,
+      IMB_ERR_JOB_NULL_AAD,
+      IMB_ERR_JOB_CIPH_LEN,
+      IMB_ERR_JOB_AUTH_LEN,
+      IMB_ERR_JOB_IV_LEN,
+      IMB_ERR_JOB_KEY_LEN,
+      IMB_ERR_JOB_AUTH_TAG_LEN,
+      IMB_ERR_JOB_AAD_LEN,
+      IMB_ERR_JOB_SRC_OFFSET,
+      IMB_ERR_JOB_CHAIN_ORDER,
+      IMB_ERR_CIPH_MODE,
+      IMB_ERR_HASH_ALGO,
+      IMB_ERR_MAX
+};
+
+/*
+ * IMB_ERR_MIN should be higher than __ELASTERROR
+ * to avoid overlap with standard error values
+ */
+#ifdef __ELASTERROR
+#if __ELASTERROR > 2000
+#error "Library error codes conflict with errno.h - please update IMB_ERR_MIN!"
+#endif
+#endif
 
 /*
  * Define enums from API v0.53, so applications that were using this version
@@ -769,7 +805,11 @@ typedef struct IMB_MGR {
         /*
          * Reserved for the future
          */
-        uint64_t reserved[6];
+        uint64_t reserved[5];
+        uint32_t reserved2[1];
+
+        /* per mb_mgr error status */
+        int imb_errno;
 
         /*
          * ARCH handlers / API
@@ -944,6 +984,25 @@ IMB_DLL_EXPORT const char *imb_get_version_str(void);
  * @return library version number
  */
 IMB_DLL_EXPORT unsigned imb_get_version(void);
+
+
+/**
+ * @brief API to get error status
+ *
+ * @param mb_mgr Pointer to multi-buffer manager
+ *
+ * @retval Integer error type
+ */
+IMB_DLL_EXPORT int imb_get_errno(IMB_MGR *mb_mgr);
+
+/**
+ * @brief API to get description for \a errnum
+ *
+ * @param errnum error type
+ *
+ * @retval String description of \a errnum
+ */
+IMB_DLL_EXPORT const char *imb_get_strerror(int errnum);
 
 /*
  * get_next_job returns a job object. This must be filled in and returned

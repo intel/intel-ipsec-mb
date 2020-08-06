@@ -35,6 +35,7 @@
 #include "intel-ipsec-mb.h"
 #include "ipsec_ooo_mgr.h"
 #include "cpu_feature.h"
+#include "error.h"
 
 #define IMB_OOO_ROAD_BLOCK 0xDEADCAFEDEADCAFEULL
 
@@ -157,11 +158,13 @@ IMB_MGR *alloc_mb_mgr(uint64_t flags)
         ptr = alloc_aligned_mem(sizeof(IMB_MGR));
         IMB_ASSERT(ptr != NULL);
         if (ptr != NULL) {
+                imb_set_errno(ptr, 0);
                 ptr->flags = flags; /* save the flags for future use in init */
                 ptr->features = cpu_feature_adjust(flags, cpu_feature_detect());
-        } else
+        } else {
+                imb_set_errno(ptr, ENOMEM);
                 return NULL;
-
+        }
 
         /* Allocate memory for OOO */
         ptr->aes128_ooo = alloc_aligned_mem(sizeof(MB_MGR_AES_OOO));
@@ -255,6 +258,8 @@ IMB_MGR *alloc_mb_mgr(uint64_t flags)
         return ptr;
 
 exit_fail:
+        imb_set_errno(ptr, ENOMEM);
+
         free_mem(ptr->aes128_ooo);
         free_mem(ptr->aes192_ooo);
         free_mem(ptr->aes256_ooo);

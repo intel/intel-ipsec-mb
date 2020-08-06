@@ -1869,7 +1869,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         struct IMB_JOB *job;
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
-        int i, jobs_rx = 0, ret = -1;
+        int i, err, jobs_rx = 0, ret = -1;
 
         if (targets == NULL)
                 goto end_alloc;
@@ -1918,7 +1918,15 @@ test_aes_many(struct IMB_MGR *mb_mgr,
                 job->hash_alg = IMB_AUTH_NULL;
 
                 job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job != NULL) {
+                if (job == NULL) {
+                        /* no job returned - check for error */
+                        err = imb_get_errno(mb_mgr);
+                        if (err != 0) {
+                                printf("Error: %s!\n", imb_get_strerror(err));
+                                goto end;
+                        }
+                } else {
+                        /* got job back */
                         jobs_rx++;
                         if (!aes_job_ok(job, out_text, job->user_data, padding,
                                        sizeof(padding), text_len))
@@ -1927,6 +1935,12 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         }
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                err = imb_get_errno(mb_mgr);
+                if (err != 0) {
+                        printf("Error: %s!\n", imb_get_strerror(err));
+                        goto end;
+                }
+
                 jobs_rx++;
                 if (!aes_job_ok(job, out_text, job->user_data, padding,
                                sizeof(padding), text_len))
@@ -1940,8 +1954,13 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         ret = 0;
 
  end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
-                ;
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                err = imb_get_errno(mb_mgr);
+                if (err != 0) {
+                        printf("Error: %s!\n", imb_get_strerror(err));
+                        goto end;
+                }
+        }
 
 end_alloc:
         if (targets != NULL) {

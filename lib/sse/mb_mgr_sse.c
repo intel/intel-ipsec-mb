@@ -43,6 +43,7 @@
 #include "include/des.h"
 #include "cpu_feature.h"
 #include "noaesni.h"
+#include "error.h"
 
 IMB_JOB *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
                                         IMB_JOB *job);
@@ -631,6 +632,15 @@ init_mb_mgr_sse(IMB_MGR *state)
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
 
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
+#endif
         state->features = cpu_feature_adjust(state->flags,
                                              cpu_feature_detect());
 

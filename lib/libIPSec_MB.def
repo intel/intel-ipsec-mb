@@ -538,3 +538,5 @@ EXPORTS
     crc7_fp_header_sse_no_aesni                 @512
     crc7_fp_header_avx                          @513
     crc7_fp_header_avx512                       @514
+    imb_get_errno				@515
+    imb_get_strerror				@516

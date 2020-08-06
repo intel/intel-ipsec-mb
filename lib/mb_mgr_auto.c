@@ -28,6 +28,7 @@
 #include "intel-ipsec-mb.h"
 #include "cpu_feature.h"
 #include "include/noaesni.h"
+#include "error.h"
 
 /**
  * @brief Automatically initialize most performant
@@ -50,9 +51,14 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
 
+        /* reset error status */
+        imb_set_errno(state, 0);
+
 #ifdef SAFE_PARAM
-        if (state == NULL)
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
                 return;
+        }
 #endif
         if ((state->features & detect_avx512) == detect_avx512) {
                 init_mb_mgr_avx512(state);
@@ -82,6 +88,8 @@ init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch)
                 arch_detected = IMB_ARCH_NOAESNI;
                 goto init_mb_mgr_auto_ret;
         }
+
+        imb_set_errno(state, ENODEV);
 
  init_mb_mgr_auto_ret:
         if (arch != NULL)
