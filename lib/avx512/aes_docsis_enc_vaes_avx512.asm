@@ -76,6 +76,36 @@ endstruc
 section .data
 default rel
 
+align  16
+crc_state_to_start_x16:
+%rep 8
+        db CRC_LANE_STATE_TO_START, CRC_LANE_STATE_TO_START
+%endrep
+
+align  16
+crc_state_in_progress_x16:
+%rep 8
+        db CRC_LANE_STATE_IN_PROGRESS, CRC_LANE_STATE_IN_PROGRESS
+%endrep
+
+align  16
+crc_state_done_x16:
+%rep 8
+        db CRC_LANE_STATE_DONE, CRC_LANE_STATE_DONE
+%endrep
+
+align  32
+dw_16_x16:
+%rep 4
+        dw 16, 16, 16, 16
+%endrep
+
+align  32
+dw_15_x16:
+%rep 4
+        dw 15, 15, 15, 15
+%endrep
+
 align 16
 map_4bits_to_8bits:
         db 0000_0000b, 0000_0011b, 0000_1100b, 0000_1111b
@@ -431,126 +461,277 @@ section .text
 
 ;; =====================================================================
 ;; =====================================================================
-;; CRC32 computation round
+;; CRC32 FIRST computation round
 ;; =====================================================================
-%macro CRC32_ROUND 17
-%define %%FIRST         %1      ; [in] "first_possible" or "no_first"
-%define %%LAST          %2      ; [in] "last_possible" or "no_last"
-%define %%ARG           %3      ; [in] GP with pointer to OOO manager / arguments
+%macro CRC32_ROUND_FIRST 14
+%define %%ARG           %1      ; [in] pointer to OOO structure / arguments
+%define %%ZDATA0        %2      ; [in] ZMM with block of data for CRC (lanes 0 to 3)
+%define %%ZDATA1        %3      ; [in] ZMM with block of data for CRC (lanes 4 to 7)
+%define %%ZDATA2        %4      ; [in] ZMM with block of data for CRC (lanes 8 to 11)
+%define %%ZDATA3        %5      ; [in] ZMM with block of data for CRC (lanes 12 to 15)
+%define %%ZCRCS0        %6      ; [in/out] ZMM with CRC sums (lanes 0 to 3)
+%define %%ZCRCS1        %7      ; [in/out] ZMM with CRC sums (lanes 4 to 7)
+%define %%ZCRCS2        %8      ; [in/out] ZMM with CRC sums (lanes 8 to 11)
+%define %%ZCRCS3        %9      ; [in/out] ZMM with CRC sums (lanes 12 to 15)
+%define %%tmp1          %10     ; [clobbered] temporary GPR
+%define %%tmp2          %11     ; [clobbered] temporary GPR
+%define %%tmp3          %12     ; [clobbered] temporary GPR
+%define %%ZT0           %13     ; [clobbered] temporary ZMM
+%define %%KREG          %14     ; [out] k register to put mask into (k5 to k7)
+
+        vmovdqa64       XWORD(%%ZT0), [%%ARG + _docsis_crc_args_done]
+        vpcmpeqb        %%KREG, XWORD(%%ZT0), [rel crc_state_to_start_x16]
+        ktestw          %%KREG, %%KREG
+        jz              %%_crc32_round_first_done
+
+        kmovw           DWORD(%%tmp3), %%KREG
+        lea             %%tmp1, [rel map_4bits_to_8bits]
+
+        ;; - get 4 x 8-bit masks for null lanes out of 16-bit mask
+        ;; - update CRC sums
+
+        mov             DWORD(%%tmp2), DWORD(%%tmp3)
+        and             DWORD(%%tmp2), 15
+        shr             DWORD(%%tmp3), 4
+        kmovb           k1, [%%tmp1 + %%tmp2]
+        vpxorq          %%ZCRCS0{k1}, %%ZCRCS0, %%ZDATA0
+
+        mov             DWORD(%%tmp2), DWORD(%%tmp3)
+        and             DWORD(%%tmp2), 15
+        shr             DWORD(%%tmp3), 4
+        kmovb           k2, [%%tmp1 + %%tmp2]
+        vpxorq          %%ZCRCS1{k2}, %%ZCRCS1, %%ZDATA1
+
+        mov             DWORD(%%tmp2), DWORD(%%tmp3)
+        and             DWORD(%%tmp2), 15
+        shr             DWORD(%%tmp3), 4
+        kmovb           k3, [%%tmp1 + %%tmp2]
+        vpxorq          %%ZCRCS2{k3}, %%ZCRCS2, %%ZDATA2
+
+        and             DWORD(%%tmp3), 15
+        kmovb           k4, [%%tmp1 + %%tmp3]
+        vpxorq          %%ZCRCS3{k4}, %%ZCRCS3, %%ZDATA3
+
+%%_crc32_round_first_done:
+%endmacro       ; CRC32_ROUND_FIRST
+
+;; =====================================================================
+;; =====================================================================
+;; CRC32 UPDATE computation round (more than 15 bytes left in the buffer)
+;; =====================================================================
+%macro CRC32_ROUND_UPDATE 17
+%define %%ARG           %1      ; [in] pointer to OOO manager
+%define %%ZDATA0        %2      ; [in] ZMM with block of data for CRC (lanes 0 to 3)
+%define %%ZDATA1        %3      ; [in] ZMM with block of data for CRC (lanes 4 to 7)
+%define %%ZDATA2        %4      ; [in] ZMM with block of data for CRC (lanes 8 to 11)
+%define %%ZDATA3        %5      ; [in] ZMM with block of data for CRC (lanes 12 to 15)
+%define %%ZCRCS0        %6      ; [in/out] ZMM with CRC sums (lanes 0 to 3)
+%define %%ZCRCS1        %7      ; [in/out] ZMM with CRC sums (lanes 4 to 7)
+%define %%ZCRCS2        %8      ; [in/out] ZMM with CRC sums (lanes 8 to 11)
+%define %%ZCRCS3        %9      ; [in/out] ZMM with CRC sums (lanes 12 to 15)
+%define %%KREG1         %10     ; [out] k register to put 'update' mask into (k5 to k7)
+%define %%KREG2         %11     ; [out] k register to put 'last' mask into (k5 to k7)
+%define %%ZCRC_MUL      %12     ; [in] ZMM with CRC fold constant
+%define %%tmp1          %13     ; [clobbered] temporary GPR
+%define %%tmp2          %14     ; [clobbered] temporary GPR
+%define %%tmp3          %15     ; [clobbered] temporary GPR
+%define %%ZT0           %16     ; [clobbered] temporary ZMM
+%define %%ZT1           %17     ; [clobbered] temporary ZMM
+
+        vmovdqa64       XWORD(%%ZT0), [%%ARG + _docsis_crc_args_done]
+        vmovdqu64       YWORD(%%ZT1), [%%ARG + _docsis_crc_args_len]
+        vpcmpeqb        %%KREG2, XWORD(%%ZT0), [rel crc_state_in_progress_x16]
+        vpcmpgtw        %%KREG1, YWORD(%%ZT1), [rel dw_15_x16]
+        kandw           %%KREG1, %%KREG1, %%KREG2       ;; KREG1 = in_progress && >= 16
+        kxorw           %%KREG2, %%KREG2, %%KREG1       ;; KREG2 = in_progress && < 16
+        ktestw          %%KREG1, %%KREG1
+        jz              %%_crc32_round_update_done
+
+        lea             %%tmp1, [rel map_4bits_to_8bits]
+        kmovw           DWORD(%%tmp3), %%KREG1
+
+        ;; get 4 x 8-bit masks for null lanes out of 16-bit mask
+        mov             DWORD(%%tmp2), DWORD(%%tmp3)
+        shr             DWORD(%%tmp3), 4
+        and             DWORD(%%tmp2), 15
+        jz              %%_crc_update_nibble1
+        kmovb           k1, [%%tmp1 + %%tmp2]
+
+        vpclmulqdq      %%ZT0, %%ZCRCS0, %%ZCRC_MUL, 0x01
+        vpclmulqdq      %%ZT1, %%ZCRCS0, %%ZCRC_MUL, 0x10
+        vpternlogq      %%ZT1, %%ZT0, %%ZDATA0, 0x96
+        vmovdqa64       %%ZCRCS0{k1}, %%ZT1
+
+%%_crc_update_nibble1:
+        mov             DWORD(%%tmp2), DWORD(%%tmp3)
+        shr             DWORD(%%tmp3), 4
+        and             DWORD(%%tmp2), 15
+        jz              %%_crc_update_nibble2
+        kmovb           k2, [%%tmp1 + %%tmp2]
+
+        vpclmulqdq      %%ZT0, %%ZCRCS1, %%ZCRC_MUL, 0x01
+        vpclmulqdq      %%ZT1, %%ZCRCS1, %%ZCRC_MUL, 0x10
+        vpternlogq      %%ZT1, %%ZT0, %%ZDATA1, 0x96
+        vmovdqa64       %%ZCRCS1{k2}, %%ZT1
+
+%%_crc_update_nibble2:
+        mov             DWORD(%%tmp2), DWORD(%%tmp3)
+        shr             DWORD(%%tmp3), 4
+        and             DWORD(%%tmp2), 15
+        jz              %%_crc_update_nibble3
+        kmovb           k3, [%%tmp1 + %%tmp2]
+
+        vpclmulqdq      %%ZT0, %%ZCRCS2, %%ZCRC_MUL, 0x01
+        vpclmulqdq      %%ZT1, %%ZCRCS2, %%ZCRC_MUL, 0x10
+        vpternlogq      %%ZT1, %%ZT0, %%ZDATA2, 0x96
+        vmovdqa64       %%ZCRCS2{k3}, %%ZT1
+
+%%_crc_update_nibble3:
+        and             DWORD(%%tmp3), 15
+        jz              %%_crc_update_nibble4
+        kmovb           k4, [%%tmp1 + %%tmp2]
+
+        vpclmulqdq      %%ZT0, %%ZCRCS3, %%ZCRC_MUL, 0x01
+        vpclmulqdq      %%ZT1, %%ZCRCS3, %%ZCRC_MUL, 0x10
+        vpternlogq      %%ZT1, %%ZT0, %%ZDATA3, 0x96
+        vmovdqa64       %%ZCRCS3{k4}, %%ZT1
+%%_crc_update_nibble4:
+
+%%_crc32_round_update_done:
+%endmacro       ; CRC32_ROUND_UPDATE
+
+;; =====================================================================
+;; =====================================================================
+;; CRC32 computation round (last partial block)
+;; =====================================================================
+%macro CRC32_ROUND_LAST 24
+%define %%ARG           %1      ; [in] GP with pointer to OOO manager / arguments
+%define %%IDX           %2      ; [in] GP with data offset (last partial only)
+%define %%OFFS          %3      ; [in] numerical offset (last partial only)
 %define %%LANEID        %4      ; [in] numerical value with lane id
-%define %%XDATA         %5      ; [in] an XMM (any) with input data block for CRC calculation
-%define %%XCRC_VAL      %6      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_DAT      %7      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_MUL      %8      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_TMP      %9      ; [clobbered] temporary XMM (xmm0-15)
-%define %%XCRC_TMP2     %10     ; [clobbered] temporary XMM (xmm0-15)
-%define %%IN            %11     ; [clobbered] temporary GPR (last partial only)
-%define %%IDX           %12     ; [in] GP with data offset (last partial only)
-%define %%OFFS          %13     ; [in] numerical offset (last partial only)
-%define %%GT8           %14     ; [clobbered] temporary GPR (last partial only)
-%define %%GT9           %15     ; [clobbered] temporary GPR (last partial only)
-%define %%CRC32         %16     ; [clobbered] temporary GPR (last partial only)
-%define %%LANEDAT       %17     ; [in/out] CRC cumulative sum
+%define %%ZDATA0        %5      ; [in/out] ZMM with block of data for lanes 0 - 3
+%define %%ZDATA1        %6      ; [in/out] ZMM with block of data for lanes 4 - 7
+%define %%ZDATA2        %7      ; [in/out] ZMM with block of data for lanes 8 - 11
+%define %%ZDATA3        %8      ; [in/out] ZMM with block of data for lanes 12 - 15
+%define %%ZCRCS0        %9      ; [in/out] ZMM with CRC sum for lanes 0 - 3
+%define %%ZCRCS1        %10     ; [in/out] ZMM with CRC sum for lanes 4 - 7
+%define %%ZCRCS2        %11     ; [in/out] ZMM with CRC sum for lanes 8 - 11
+%define %%ZCRCS3        %12     ; [in/out] ZMM with CRC sum for lanes 12 - 15
+%define %%ZCRC_MUL      %13     ; [in] ZMM with CRC fold constant
+%define %%ZT0           %14     ; [clobbered] temporary ZMM
+%define %%ZT1           %15     ; [clobbered] temporary ZMM
+%define %%ZT2           %16     ; [clobbered] temporary ZMM
+%define %%ZT3           %17     ; [clobbered] temporary ZMM
+%define %%ZT4           %18     ; [clobbered] temporary ZMM
+%define %%ZT5           %19     ; [clobbered] temporary ZMM
+%define %%GT0           %20     ; [clobbered] temporary GPR
+%define %%GT1           %21     ; [clobbered] temporary GPR
+%define %%GT2           %22     ; [clobbered] temporary GPR
+%define %%GT3           %23     ; [clobbered] temporary GPR
+%define %%KREG          %24     ; [clobbered] K register
 
-        cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_DONE
-        je              %%_crc_lane_done
+%xdefine %%IN           %%GT0
 
-%ifnidn %%FIRST, no_first
-        cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_TO_START
-        je              %%_crc_lane_first_round
-%endif  ; !no_first
+%xdefine %%XCRCS        XWORD(%%ZT0)
+%xdefine %%XDATA        XWORD(%%ZT1)
 
-%ifnidn %%LAST, no_last
+        ;; bit test on k-register was slower than these 2 x cmp
+        ;; perhaps this is something that could be explored in the future
+        cmp             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_IN_PROGRESS
+        jne             %%_crc_lane_done
+
         cmp             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
-        jb              %%_crc_lane_last_partial
-%endif  ; no_last
+        jae             %%_crc_lane_done
 
-        ;; The most common case: next block for CRC
-        CRC_CLMUL       %%LANEDAT, %%XCRC_MUL, %%XDATA, %%XCRC_TMP
-        sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
-%ifidn %%LAST, no_last
-%ifidn %%FIRST, no_first
-        ;; no jump needed - just fall through
+%if %%LANEID == 0
+        vmovdqa64       %%XCRCS, XWORD(%%ZCRCS0)
+%elif %%LANEID < 4
+        vextracti32x4   %%XCRCS, %%ZCRCS0, %%LANEID
+%elif %%LANEID == 4
+        vmovdqa64       %%XCRCS, XWORD(%%ZCRCS1)
+%elif %%LANEID < 8
+        vextracti32x4   %%XCRCS, %%ZCRCS1, %%LANEID - 4
+%elif %%LANEID == 8
+        vmovdqa64       %%XCRCS, XWORD(%%ZCRCS2)
+%elif %%LANEID < 12
+        vextracti32x4   %%XCRCS, %%ZCRCS2, %%LANEID - 8
+%elif %%LANEID == 12
+        vmovdqa64       %%XCRCS, XWORD(%%ZCRCS3)
 %else
-        jmp             %%_crc_lane_done
-%endif  ; no_first
-%else
-        jmp             %%_crc_lane_done
-%endif  ; np_last
+        vextracti32x4   %%XCRCS, %%ZCRCS3, %%LANEID - 12
+%endif
 
-%ifnidn %%LAST, no_last
-%%_crc_lane_last_partial:
         ;; Partial block case (the last block)
         ;; - last CRC round is specific
         ;; - followed by CRC reduction and write back of the CRC
         ;; - then construction of plain text block for encryption
 
-        movzx           DWORD(%%GT9), word [%%ARG + _docsis_crc_args_len + %%LANEID*2] ; GT9 = bytes_to_crc
-        mov             %%IN, [%%ARG + _aesarg_in + 8*%%LANEID]
+        movzx           DWORD(%%GT2), word [%%ARG + _docsis_crc_args_len + %%LANEID*2]
+        ;; GT2 = bytes_to_crc
+        mov             %%IN, [%%ARG + _aesarg_in + PTR_SZ * %%LANEID]
         lea             %%IN, [%%IN + %%IDX + %%OFFS]
 
-        lea             %%GT8, [rel byte_len_to_mask_ref_table]
-        kmovw           k7, [%%GT8 + %%GT9*2]
-        vmovdqu8        %%XCRC_DAT{k7}{z}, [%%IN + %%GT9 - 16]
+        lea             %%GT1, [rel byte_len_to_mask_ref_table]
+        kmovw           %%KREG, [%%GT1 + %%GT2*2]
+        vmovdqu8        XWORD(%%ZT3){%%KREG}{z}, [%%IN + %%GT2 - 16]
+        ;; XWORD(%%ZT3) = partial bytes of plain text block shifted and aligned to MSB
 
-        lea             %%GT8, [rel byte_len_to_mask_table]
-        kmovw           k7, [%%GT8 + %%GT9*2]
-        vmovdqu8        %%XDATA{k7}{z}, [%%IN]
+        lea             %%GT1, [rel byte_len_to_mask_table]
+        kmovw           %%KREG, [%%GT1 + %%GT2*2]
+        vmovdqu8        %%XDATA{%%KREG}{z}, [%%IN]
+        ;; XDATA = partial bytes of plain text block aligned to LSB
 
-        lea             %%GT8, [rel pshufb_shf_table]
-        vmovdqu64       %%XCRC_TMP, [%%GT8 + %%GT9]
-        vpshufb         %%XCRC_VAL, %%LANEDAT, %%XCRC_TMP
-        ;; XCRC_VAL register contents at this stage:
+        lea             %%GT1, [rel pshufb_shf_table]
+        vmovdqu64       XWORD(%%ZT4), [%%GT1 + %%GT2]
+        vpshufb         XWORD(%%ZT2), %%XCRCS, XWORD(%%ZT4)
+        ;; XWORD(%%ZT2) register contents at this stage:
         ;; MS byte [ < LSB bytes of CRC sum : size =  bytes_to_crc> |
         ;;           < zero padding : size = (16 - bytes_to_crc>) ] LS byte
-        vpxorq          %%XCRC_TMP, [rel mask3]
-        vpshufb         %%XCRC_TMP2, %%LANEDAT, %%XCRC_TMP
-        ;; XCRC_TMP2 register contents at this stage:
+        vpxorq          XWORD(%%ZT4), [rel mask3]
+        vpshufb         XWORD(%%ZT5), %%XCRCS, XWORD(%%ZT4)
+        ;; XWORD(%%ZT5) register contents at this stage:
         ;; MS byte [ < zero padding : size =  bytes_to_crc> |
         ;;           < MSB bytes of CRC sum : size = (16 - bytes_to_crc>) ] LS byte
 
-        ;; XCRC_DAT register content after the OR operation:
+        ;; XWORD(%%ZT3) register content after the OR operation:
         ;; MS byte [ < plain text : size = bytes_to_crc > |
         ;;           < MSB of CRC sum : size = (16 - bytes_to_crc > ] LS byte
-        vporq           %%XCRC_DAT, %%XCRC_DAT, %%XCRC_TMP2
+        vporq           XWORD(%%ZT3), XWORD(%%ZT3), XWORD(%%ZT5)
 
-        CRC_CLMUL       %%XCRC_VAL, %%XCRC_MUL, %%XCRC_DAT, %%XCRC_TMP
-        CRC32_REDUCE_128_TO_32 %%CRC32, %%XCRC_VAL, %%XCRC_TMP, %%XCRC_DAT, %%XCRC_TMP2
+        CRC_CLMUL       XWORD(%%ZT2), XWORD(%%ZCRC_MUL), XWORD(%%ZT3), XWORD(%%ZT4)
+        CRC32_REDUCE_128_TO_32 %%GT3, XWORD(%%ZT2), XWORD(%%ZT4), XWORD(%%ZT3), XWORD(%%ZT5)
 
         ;; save final CRC value in init
-        vmovd           %%LANEDAT,  DWORD(%%CRC32)
+        vmovd           %%XCRCS, DWORD(%%GT3)
 
         ;; write back CRC value into source buffer
-        mov             [%%IN + %%GT9], DWORD(%%CRC32)
+        mov             [%%IN + %%GT2], DWORD(%%GT3)
 
         ;; combine already loaded plain text with computed CRC  for cipher operation
-        ;; - shift left CRC value in LANEDAT by bytes_to_crc number of bytes
-        sub             %%GT8, %%GT9
-        vmovdqu64       %%XCRC_TMP, [%%GT8 + 16]
-        vpshufb         %%XCRC_TMP2, %%LANEDAT, %%XCRC_TMP
-        vporq           %%XDATA, %%XDATA, %%XCRC_TMP2
+        ;; - shift left CRC value in XCRCS by bytes_to_crc number of bytes
+        sub             %%GT1, %%GT2
+        vmovdqu64       XWORD(%%ZT4), [%%GT1 + 16]
+        vpshufb         XWORD(%%ZT5), %%XCRCS, XWORD(%%ZT4)
+        vporq           %%XDATA, %%XDATA, XWORD(%%ZT5)
 
-        ;; set size to CRC to zero and mark as done
-        mov             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 0
-        mov             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_DONE
-%ifnidn %%FIRST, no_first
-        jmp             %%_crc_lane_done
-%endif  ; no_first
-%endif  ; no_last
-
-%ifnidn %%FIRST, no_first
-%%_crc_lane_first_round:
-        ;; Case of less than 16 bytes will not happen here since
-        ;; submit code takes care of it.
-        ;; in the first round just XOR initial CRC with the first block
-        vpxorq          %%LANEDAT, %%LANEDAT, %%XDATA
-        ;; mark first block as done
-        mov             byte [%%ARG + _docsis_crc_args_done + %%LANEID], CRC_LANE_STATE_IN_PROGRESS
-        sub             word [%%ARG + _docsis_crc_args_len + 2*%%LANEID], 16
-%endif  ; no_first
+        ;; - put updated data block into adequate ZMM for encryption
+        ;; - put computed CRC value into current CRC sum too
+%if %%LANEID < 4
+        vinserti32x4    %%ZDATA0, %%XDATA, %%LANEID
+        vinserti32x4    %%ZCRCS0, %%XCRCS, %%LANEID
+%elif %%LANEID < 8
+        vinserti32x4    %%ZDATA1, %%XDATA, %%LANEID - 4
+        vinserti32x4    %%ZCRCS1, %%XCRCS, %%LANEID - 4
+%elif %%LANEID < 12
+        vinserti32x4    %%ZDATA2, %%XDATA, %%LANEID - 8
+        vinserti32x4    %%ZCRCS2, %%XCRCS, %%LANEID - 8
+%else
+        vinserti32x4    %%ZDATA3, %%XDATA, %%LANEID - 12
+        vinserti32x4    %%ZCRCS3, %%XCRCS, %%LANEID - 12
+%endif
 
 %%_crc_lane_done:
-%endmacro       ; CRC32_ROUND
+%endmacro       ; CRC32_ROUND_LAST
 
 ;; =====================================================================
 ;; =====================================================================
@@ -679,7 +860,6 @@ section .text
 %xdefine %%INP7 %%GT7
 
 ;; GT8 - GT11 used as temporary registers
-%define %%CRC32 %%GT11
 %define %%IDX   %%GT12
 
 ;; used for IV and AES rounds
@@ -695,12 +875,6 @@ section .text
 
 ;; used for per lane CRC multiply
 %xdefine %%ZCRC_MUL %%ZT4
-%xdefine %%XCRC_MUL XWORD(%%ZCRC_MUL)
-%xdefine %%XCRC_TMP XWORD(%%ZT5)
-%xdefine %%XCRC_DAT XWORD(%%ZT6)
-%xdefine %%XCRC_VAL XWORD(%%ZT7)
-%xdefine %%XCRC_TMP2 XWORD(%%ZT8)
-%xdefine %%XTMP  %%XCRC_TMP2
 
 ;; used for loading plain text
 %xdefine %%ZDATA0 %%ZT9
@@ -725,6 +899,7 @@ section .text
 %xdefine %%XDATB3 XWORD(%%ZDATB3)
 
 ;; ZT17 to ZT20 used as temporary registers
+;; ZT5 to ZT8 used as temporary registers
 
 ;; ZT21 to ZT31 used to preload keys
 %xdefine %%KEYSET0ARK   %%ZT21
@@ -770,39 +945,88 @@ section .text
         ;; - load plain text blocks
         ;; - do the initial CRC round
 
+        vmovdqa64       %%ZDATB0, [%%ARG + _docsis_crc_args_init + (16 * 0)]
+        vmovdqa64       %%ZDATB1, [%%ARG + _docsis_crc_args_init + (16 * 4)]
+        vmovdqa64       %%ZDATB2, [%%ARG + _docsis_crc_args_init + (16 * 8)]
+        vmovdqa64       %%ZDATB3, [%%ARG + _docsis_crc_args_init + (16 * 12)]
+
+        mov             %%INP0, [%%ARG + _aesarg_in + (PTR_SZ * 0)]
+        mov             %%INP1, [%%ARG + _aesarg_in + (PTR_SZ * 1)]
+        vmovdqu64       XWORD(%%ZDATA0), [%%INP0 + %%IDX]
+        vinserti32x4    %%ZDATA0, [%%INP1 + %%IDX], 1
+        mov             %%INP2, [%%ARG + _aesarg_in + (PTR_SZ * 2)]
+        mov             %%INP3, [%%ARG + _aesarg_in + (PTR_SZ * 3)]
+        vinserti32x4    %%ZDATA0, [%%INP2 + %%IDX], 2
+        vinserti32x4    %%ZDATA0, [%%INP3 + %%IDX], 3
+
+        mov             %%INP4, [%%ARG + _aesarg_in + (PTR_SZ * 4)]
+        mov             %%INP5, [%%ARG + _aesarg_in + (PTR_SZ * 5)]
+        vmovdqu64       XWORD(%%ZDATA1), [%%INP4 + %%IDX]
+        vinserti32x4    %%ZDATA1, [%%INP5 + %%IDX], 1
+        mov             %%INP6, [%%ARG + _aesarg_in + (PTR_SZ * 6)]
+        mov             %%INP7, [%%ARG + _aesarg_in + (PTR_SZ * 7)]
+        vinserti32x4    %%ZDATA1, [%%INP6 + %%IDX], 2
+        vinserti32x4    %%ZDATA1, [%%INP7 + %%IDX], 3
+
+        mov             %%GT8, [%%ARG + _aesarg_in + (PTR_SZ * 8)]
+        mov             %%GT9, [%%ARG + _aesarg_in + (PTR_SZ * 9)]
+        vmovdqu64       XWORD(%%ZDATA2), [%%GT8 + %%IDX]
+        vinserti32x4    %%ZDATA2, [%%GT9 + %%IDX], 1
+        mov             %%GT8, [%%ARG + _aesarg_in + (PTR_SZ * 10)]
+        mov             %%GT9, [%%ARG + _aesarg_in + (PTR_SZ * 11)]
+        vinserti32x4    %%ZDATA2, [%%GT8 + %%IDX], 2
+        vinserti32x4    %%ZDATA2, [%%GT9 + %%IDX], 3
+
+        mov             %%GT8, [%%ARG + _aesarg_in + (PTR_SZ * 12)]
+        mov             %%GT9, [%%ARG + _aesarg_in + (PTR_SZ * 13)]
+        vmovdqu64       XWORD(%%ZDATA3), [%%GT8 + %%IDX]
+        vinserti32x4    %%ZDATA3, [%%GT9 + %%IDX], 1
+        mov             %%GT8, [%%ARG + _aesarg_in + (PTR_SZ * 14)]
+        mov             %%GT9, [%%ARG + _aesarg_in + (PTR_SZ * 15)]
+        vinserti32x4    %%ZDATA3, [%%GT8 + %%IDX], 2
+        vinserti32x4    %%ZDATA3, [%%GT9 + %%IDX], 3
+
+        CRC32_ROUND_FIRST %%ARG, \
+                        %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                        %%ZDATB0, %%ZDATB1, %%ZDATB2, %%ZDATB3, \
+                        %%GT8, %%GT9, %%GT10, %%ZT20, k7
+
+        CRC32_ROUND_UPDATE %%ARG, \
+                        %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                        %%ZDATB0, %%ZDATB1, %%ZDATB2, %%ZDATB3, \
+                        k5, k6, %%ZCRC_MUL, %%GT8, %%GT9, %%GT10, %%ZT17, %%ZT18
+
+        ktestw          k6, k6
+        jz              %%_no_last_crc_blocks
+
 %assign crc_lane 0
 %rep 16
-
-%if crc_lane < 8
-        mov             APPEND(%%INP,crc_lane), [%%ARG + _aesarg_in + (PTR_SZ * crc_lane)]
-        vmovdqu64       XWORD(%%ZT17), [APPEND(%%INP,crc_lane) + %%IDX]
-%else
-        mov             %%GT8, [%%ARG + _aesarg_in + (PTR_SZ * crc_lane)]
-        vmovdqu64       XWORD(%%ZT17), [%%GT8 + %%IDX]
-%endif
-        vmovdqa64       XWORD(%%ZT18), [%%ARG + _docsis_crc_args_init + (16 * crc_lane)]
-
-        CRC32_ROUND     first_possible, last_possible, %%ARG, crc_lane, \
-                        XWORD(%%ZT17), %%XCRC_VAL, %%XCRC_DAT, \
-                        %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                        %%GT10, %%IDX, 0, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT18)
-
-%if crc_lane < 4
-        vinserti32x4    %%ZDATA0, XWORD(%%ZT17), crc_lane
-        vinserti32x4    %%ZDATB0, XWORD(%%ZT18), crc_lane
-%elif crc_lane < 8
-        vinserti32x4    %%ZDATA1, XWORD(%%ZT17), crc_lane - 4
-        vinserti32x4    %%ZDATB1, XWORD(%%ZT18), crc_lane - 4
-%elif crc_lane < 12
-        vinserti32x4    %%ZDATA2, XWORD(%%ZT17), crc_lane - 8
-        vinserti32x4    %%ZDATB2, XWORD(%%ZT18), crc_lane - 8
-%else
-        vinserti32x4    %%ZDATA3, XWORD(%%ZT17), crc_lane - 12
-        vinserti32x4    %%ZDATB3, XWORD(%%ZT18), crc_lane - 12
-%endif
-
+        CRC32_ROUND_LAST %%ARG, %%IDX, 0, crc_lane, \
+                        %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                        %%ZDATB0, %%ZDATB1, %%ZDATB2, %%ZDATB3, \
+                        %%ZCRC_MUL, \
+                        %%ZT17, %%ZT18, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
+                        %%GT8, %%GT9, %%GT10, %%GT11, k1
 %assign crc_lane (crc_lane + 1)
 %endrep
+
+%%_no_last_crc_blocks:
+
+        ;; Update CRC lenghts and state
+        ;; - subtract 16 from CRC length for first (k7) and update cases (k5)
+        ;;   - k5 = k5 | k7 is a mask of lane in_progress now. It will be used later on.
+        ;; - zero the length for the last partial block cases (k6)
+        ;; - change crc status from first to in_progress (k7)
+        ;; - change crc status from in_progress to done (k6)
+        korw            k5, k7, k5
+        vmovdqu64       YWORD(%%ZT19), [%%ARG + _docsis_crc_args_len]
+        vmovdqa64       XWORD(%%ZT20), [%%ARG + _docsis_crc_args_done]
+        vpsubw          YWORD(%%ZT19){k6}, YWORD(%%ZT19), YWORD(%%ZT19)
+        vpsubw          YWORD(%%ZT19){k5}, YWORD(%%ZT19), [rel dw_16_x16]
+        vmovdqu8        XWORD(%%ZT20){k7}, [rel crc_state_in_progress_x16]
+        vmovdqu8        XWORD(%%ZT20){k6}, [rel crc_state_done_x16]
+        vmovdqu64       [%%ARG + _docsis_crc_args_len], YWORD(%%ZT19)
+        vmovdqu64       [%%ARG + _docsis_crc_args_done], XWORD(%%ZT20)
 
         ;; check if only 16 bytes in this execution
         sub             %%LEN, 16
@@ -814,10 +1038,14 @@ section .text
         ;; k2 => lanes 4 to 7
         ;; k3 => lanes 8 to 11
         ;; k4 => lanes 12 to 15
-        kmovd           k1, [%%ARG + _docsis_crc_args_done + 0]
-        kmovd           k2, [%%ARG + _docsis_crc_args_done + 4]
-        kmovd           k3, [%%ARG + _docsis_crc_args_done + 8]
-        kmovd           k4, [%%ARG + _docsis_crc_args_done + 12]
+        vmovq           %%GT8, XWORD(%%ZT20)
+        vpextrq         %%GT9, XWORD(%%ZT20), 1
+        kmovd           k1, DWORD(%%GT8)
+        shr             %%GT8, 32
+        kmovd           k2, DWORD(%%GT8)
+        kmovd           k3, DWORD(%%GT9)
+        shr             %%GT9, 32
+        kmovd           k4, DWORD(%%GT9)
 
 %%_main_enc_loop:
         ;; if 16 bytes left (for CRC) then
@@ -970,7 +1198,7 @@ section .text
         ;; - all subtracts get accumulated and are done here
         vmovdqa64       YWORD(%%ZT17), [%%ARG + _docsis_crc_args_len]
         vpbroadcastw    YWORD(%%ZT18), WORD(%%IDX)
-        vpsubw          YWORD(%%ZT17), YWORD(%%ZT17), YWORD(%%ZT18)
+        vpsubw          YWORD(%%ZT17){k5}, YWORD(%%ZT17), YWORD(%%ZT18)
         vmovdqa64       [%%ARG + _docsis_crc_args_len], YWORD(%%ZT17)
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1014,6 +1242,11 @@ section .text
                 vinserti32x4    %%ZDATA3, [%%GT9 + %%IDX + 16], 2
                 vinserti32x4    %%ZDATA3, [%%GT8 + %%IDX + 16], 3
 
+                CRC32_ROUND_UPDATE %%ARG, \
+                                 %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                                 %%ZDATB0, %%ZDATB1, %%ZDATB2, %%ZDATB3, \
+                                 k5, k6, %%ZCRC_MUL, %%GT8, %%GT9, %%GT10, %%ZT17, %%ZT18
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; CRC 16 lanes and mix it with AES rounds
 
@@ -1037,44 +1270,28 @@ section .text
 %endif
 
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                ;; CRC update on one of the lanes
-%if crc_lane < 4
-                vextracti32x4   XWORD(%%ZT19), %%ZDATA0, crc_lane
-                vextracti32x4   XWORD(%%ZT20), %%ZDATB0, crc_lane
-%elif crc_lane < 8
-                vextracti32x4   XWORD(%%ZT19), %%ZDATA1, crc_lane - 4
-                vextracti32x4   XWORD(%%ZT20), %%ZDATB1, crc_lane - 4
-%elif crc_lane < 12
-                vextracti32x4   XWORD(%%ZT19), %%ZDATA2, crc_lane - 8
-                vextracti32x4   XWORD(%%ZT20), %%ZDATB2, crc_lane - 8
-%else
-                vextracti32x4   XWORD(%%ZT19), %%ZDATA3, crc_lane - 12
-                vextracti32x4   XWORD(%%ZT20), %%ZDATB3, crc_lane - 12
-%endif
-
-                CRC32_ROUND     no_first, last_possible, %%ARG, crc_lane, \
-                                XWORD(%%ZT19), %%XCRC_VAL, %%XCRC_DAT, \
-                                %%XCRC_MUL, %%XCRC_TMP, %%XCRC_TMP2, \
-                                %%GT10, %%IDX, 16, %%GT8, %%GT9, %%CRC32, XWORD(%%ZT20)
-
-%if crc_lane < 4
-                vinserti32x4    %%ZDATA0, XWORD(%%ZT19), crc_lane
-                vinserti32x4    %%ZDATB0, XWORD(%%ZT20), crc_lane
-%elif crc_lane < 8
-                vinserti32x4    %%ZDATA1, XWORD(%%ZT19), crc_lane - 4
-                vinserti32x4    %%ZDATB1, XWORD(%%ZT20), crc_lane - 4
-%elif crc_lane < 12
-                vinserti32x4    %%ZDATA2, XWORD(%%ZT19), crc_lane - 8
-                vinserti32x4    %%ZDATB2, XWORD(%%ZT20), crc_lane - 8
-%else
-                vinserti32x4    %%ZDATA3, XWORD(%%ZT19), crc_lane - 12
-                vinserti32x4    %%ZDATB3, XWORD(%%ZT20), crc_lane - 12
-%endif
+                ;; CRC LAST round update on one of the lanes
+                CRC32_ROUND_LAST   %%ARG, %%IDX, 16, crc_lane, \
+                        %%ZDATA0, %%ZDATA1, %%ZDATA2, %%ZDATA3, \
+                        %%ZDATB0, %%ZDATB1, %%ZDATB2, %%ZDATB3, \
+                        %%ZCRC_MUL, \
+                        %%ZT17, %%ZT18, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
+                        %%GT8, %%GT9, %%GT10, %%GT11, k1
 
 %assign crc_lane (crc_lane + 1)
 %assign i (i + 1)
 %endrep
 
+                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                ;; CRC update lengths and status
+                ;; k5 - bit mask of lanes that have been 'updated'
+                ;; k6 - mask of lanes that have been finished
+                vmovdqu64       YWORD(%%ZT19), [%%ARG + _docsis_crc_args_len]
+                vmovdqa64       XWORD(%%ZT20), [%%ARG + _docsis_crc_args_done]
+                vpsubw          YWORD(%%ZT19){k5}, [rel dw_16_x16]
+                vmovdqu8        XWORD(%%ZT20){k6}, [rel crc_state_done_x16]
+                vmovdqu64       [%%ARG + _docsis_crc_args_len], YWORD(%%ZT19)
+                vmovdqu64       [%%ARG + _docsis_crc_args_done], XWORD(%%ZT20)
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Store 16 cipher text blocks
@@ -1146,25 +1363,13 @@ section .text
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 ;; CRC: CRC sum from registers back into the context structure
 %if i == 2
-                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 0)], XWORD(%%ZDATB0)
-                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 4)], XWORD(%%ZDATB1)
-                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 8)], XWORD(%%ZDATB2)
-                vmovdqu64       [%%ARG + _docsis_crc_args_init + (16 * 12)], XWORD(%%ZDATB3)
+                vmovdqa64       [%%ARG + _docsis_crc_args_init + (16 * 0)], %%ZDATB0
 %elif i == 4
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 1)], %%ZDATB0, 1
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 5)], %%ZDATB1, 1
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 9)], %%ZDATB2, 1
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 13)], %%ZDATB3, 1
+                vmovdqa64       [%%ARG + _docsis_crc_args_init + (16 * 4)], %%ZDATB1
 %elif i == 6
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 2)], %%ZDATB0, 2
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 6)], %%ZDATB1, 2
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 10)], %%ZDATB2, 2
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 14)], %%ZDATB3, 2
+                vmovdqa64       [%%ARG + _docsis_crc_args_init + (16 * 8)], %%ZDATB2
 %elif i == 8
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 3)], %%ZDATB0, 3
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 7)], %%ZDATB1, 3
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 11)], %%ZDATB2, 3
-                vextracti32x4   [%%ARG + _docsis_crc_args_init + (16 * 15)], %%ZDATB3, 3
+                vmovdqa64       [%%ARG + _docsis_crc_args_init + (16 * 12)], %%ZDATB3
 %endif
 
 %assign i (i + 1)
