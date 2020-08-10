@@ -225,6 +225,43 @@ crc32_ethernet_fcs_tested_calc(const void *p, uint64_t len)
         return IMB_CRC32_ETHERNET_FCS(p_mgr, p, len);
 }
 
+/**
+ * @brief CRC32 Ethernet FCS setup function
+ */
+static void
+crc16_x25_setup(void)
+{
+        crc32_ref_init_lut(0x10210000UL, m_lut);
+}
+
+/**
+ * @brief CRC32 Ethernet FCS reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc16_x25_ref_calc(const void *p, uint64_t len)
+{
+        return (~crc32_ref_calc_lut(p, len, 0xffffUL, m_lut)) & 0xffff;
+}
+
+/**
+ * @brief CRC32 Ethernet FCS tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc16_x25_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC16_X25(p_mgr, p, len);
+}
+
 int
 crc_test(struct IMB_MGR *mb_mgr)
 {
@@ -238,6 +275,11 @@ crc_test(struct IMB_MGR *mb_mgr)
                                       crc32_ethernet_fcs_ref_calc,
                                       crc32_ethernet_fcs_tested_calc,
                                       "CRC32 ETHERNET FCS 0x04c11db7");
+
+        errors += test_crc_polynomial(crc16_x25_setup,
+                                      crc16_x25_ref_calc,
+                                      crc16_x25_tested_calc,
+                                      "CRC16 X25 0x1021");
 
 	if (0 == errors)
 		printf("...Pass\n");
