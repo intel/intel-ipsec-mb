@@ -1,0 +1,111 @@
+;;
+;; Copyright (c) 2020, Intel Corporation
+;;
+;; Redistribution and use in source and binary forms, with or without
+;; modification, are permitted provided that the following conditions are met:
+;;
+;;     * Redistributions of source code must retain the above copyright notice,
+;;       this list of conditions and the following disclaimer.
+;;     * Redistributions in binary form must reproduce the above copyright
+;;       notice, this list of conditions and the following disclaimer in the
+;;       documentation and/or other materials provided with the distribution.
+;;     * Neither the name of Intel Corporation nor the names of its contributors
+;;       may be used to endorse or promote products derived from this software
+;;       without specific prior written permission.
+;;
+;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+;; DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+;; FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+;; DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+;; SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+;; CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+;; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+;;
+
+%include "include/os.asm"
+%include "include/reg_sizes.asm"
+%include "include/clear_regs.asm"
+%include "include/crc32_refl_const.inc"
+%include "include/crc32_refl.inc"
+
+%ifndef LINUX
+%xdefine	arg1 rcx
+%xdefine	arg2 rdx
+%xdefine	arg3 r8
+%xdefine        arg4 r9
+%else
+%xdefine	arg1 rdi
+%xdefine	arg2 rsi
+%xdefine	arg3 rdx
+%xdefine        arg4 rcx
+%endif
+
+struc STACK_FRAME
+_scratch_buf:   resq    2
+_gpr_save:      resq    1
+_rsp_save:      resq    1
+_xmm_save:      resq    8 * 2
+endstruc
+
+
+section .text
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; arg1 - buffer pointer
+;; arg2 - buffer size in bytes
+;; Returns CRC value through RAX
+align 32
+MKGLOBAL(crc16_x25_avx512, function,)
+crc16_x25_avx512:
+%ifdef SAFE_PARAM
+        or              arg1, arg1
+        jz              .wrong_param
+%endif
+        mov             rax, rsp
+        sub             rsp, STACK_FRAME_size
+        and             rsp, -16
+        mov             [rsp + _rsp_save], rax
+%ifndef LINUX
+        vmovdqa         [rsp + _xmm_save + 16*0], xmm6
+        vmovdqa         [rsp + _xmm_save + 16*1], xmm7
+        vmovdqa         [rsp + _xmm_save + 16*2], xmm8
+        vmovdqa         [rsp + _xmm_save + 16*3], xmm9
+        vmovdqa         [rsp + _xmm_save + 16*4], xmm10
+        vmovdqa         [rsp + _xmm_save + 16*5], xmm11
+        vmovdqa         [rsp + _xmm_save + 16*6], xmm12
+        vmovdqa         [rsp + _xmm_save + 16*7], xmm13
+%endif
+        lea             arg4, [rel crc16_x25_ccitt_const]
+        mov             arg3, arg2
+        mov             arg2, arg1
+        mov             DWORD(arg1), 0xffff0000
+
+        call            crc32_refl_by16_vclmul_avx512
+
+        and             eax, 0xffff
+
+%ifndef LINUX
+        vmovdqa         xmm6,  [rsp + _xmm_save + 16*0]
+        vmovdqa         xmm7,  [rsp + _xmm_save + 16*1]
+        vmovdqa         xmm8,  [rsp + _xmm_save + 16*2]
+        vmovdqa         xmm9,  [rsp + _xmm_save + 16*3]
+        vmovdqa         xmm10, [rsp + _xmm_save + 16*4]
+        vmovdqa         xmm11, [rsp + _xmm_save + 16*5]
+        vmovdqa         xmm12, [rsp + _xmm_save + 16*6]
+        vmovdqa         xmm13, [rsp + _xmm_save + 16*7]
+%endif
+%ifdef SAFE_DATA
+        clear_scratch_zmms_asm
+%endif
+        mov             rsp, [rsp + _rsp_save]
+.wrong_param:
+        ret
+
+%ifdef LINUX
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif

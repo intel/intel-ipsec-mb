@@ -276,6 +276,7 @@ asm_noaesni_lib_objs := \
 	mb_mgr_aes_xcbc_submit_sse_no_aesni.o \
 	mb_mgr_zuc_submit_flush_sse_no_aesni.o \
 	ethernet_fcs_sse_no_aesni.o \
+	crc16_x25_sse_no_aesni.o \
 	aes_cbcs_1_9_enc_128_x4_no_aesni.o \
 	aes128_cbcs_1_9_dec_by4_sse_no_aesni.o \
 	mb_mgr_aes128_cbcs_1_9_submit_sse.o \
@@ -369,6 +370,7 @@ asm_sse_lib_objs := \
 	mb_mgr_zuc_submit_flush_sse.o \
 	mb_mgr_zuc_submit_flush_gfni_sse.o \
 	ethernet_fcs_sse.o \
+	crc16_x25_sse.o \
 	aes_cbcs_1_9_enc_128_x4.o \
 	aes128_cbcs_1_9_dec_by4_sse.o \
 	crc32_refl_by8_sse.o
@@ -430,6 +432,7 @@ asm_avx_lib_objs := \
 	mb_mgr_hmac_sha_512_submit_avx.o \
 	mb_mgr_zuc_submit_flush_avx.o \
 	ethernet_fcs_avx.o \
+	crc16_x25_avx.o \
 	aes_cbcs_1_9_enc_128_x8.o \
 	aes128_cbcs_1_9_dec_by8_avx.o \
 	mb_mgr_aes128_cbcs_1_9_submit_avx.o \
@@ -504,6 +507,7 @@ asm_avx512_lib_objs := \
 	mb_mgr_zuc_submit_flush_gfni_avx512.o \
 	chacha20_avx512.o \
 	ethernet_fcs_avx512.o \
+	crc16_x25_avx512.o \
 	crc32_refl_by16_vclmul_avx512.o \
 	mb_mgr_aes_cbcs_1_9_submit_avx512.o \
 	mb_mgr_aes_cbcs_1_9_flush_avx512.o
