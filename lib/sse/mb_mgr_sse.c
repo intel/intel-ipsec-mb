@@ -331,6 +331,9 @@ ethernet_fcs_sse(const void *msg, const uint64_t len);
 
 #define ETHERNET_FCS ethernet_fcs_sse_local
 
+uint32_t
+crc16_x25_sse(const void *msg, const uint64_t len);
+
 /* ====================================================================== */
 
 /*
@@ -1063,6 +1066,7 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->md5_one_block       = md5_one_block_sse;
         state->aes128_cfb_one      = aes_cfb_128_one_sse;
         state->crc32_ethernet_fcs  = ethernet_fcs_sse;
+        state->crc16_x25           = crc16_x25_sse;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
         if (state->features & IMB_FEATURE_GFNI) {

@@ -274,6 +274,9 @@ ethernet_fcs_sse_no_aesni(const void *msg, const uint64_t len);
 
 #define ETHERNET_FCS ethernet_fcs_sse_no_aesni_local
 
+uint32_t
+crc16_x25_sse_no_aesni(const void *msg, const uint64_t len);
+
 /* ====================================================================== */
 
 /*
@@ -900,6 +903,7 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->hec_32              = hec_32_sse_no_aesni;
         state->hec_64              = hec_64_sse_no_aesni;
         state->crc32_ethernet_fcs  = ethernet_fcs_sse_no_aesni;
+        state->crc16_x25           = crc16_x25_sse_no_aesni;
 }
 
 #include "mb_mgr_code.h"

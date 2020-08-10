@@ -268,6 +268,9 @@ ethernet_fcs_avx(const void *msg, const uint64_t len);
 
 #define ETHERNET_FCS ethernet_fcs_avx_local
 
+uint32_t
+crc16_x25_avx(const void *msg, const uint64_t len);
+
 /* ====================================================================== */
 
 #define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_avx
@@ -908,6 +911,7 @@ init_mb_mgr_avx(IMB_MGR *state)
         state->hec_32              = hec_32_avx;
         state->hec_64              = hec_64_avx;
         state->crc32_ethernet_fcs  = ethernet_fcs_avx;
+        state->crc16_x25           = crc16_x25_avx;
 }
 
 #include "mb_mgr_code.h"

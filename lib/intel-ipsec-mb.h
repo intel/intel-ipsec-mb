@@ -879,6 +879,7 @@ typedef struct IMB_MGR {
         cmac_subkey_gen_t       cmac_subkey_gen_256;
         aes_gcm_pre_t           ghash_pre;
         crc32_fn_t              crc32_ethernet_fcs;
+        crc32_fn_t              crc16_x25;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1671,6 +1672,10 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /* CRC32 Ethernet FCS function */
 #define IMB_CRC32_ETHERNET_FCS(_mgr,_in,_len) \
         (_mgr)->crc32_ethernet_fcs(_in,_len)
+
+/* CRC16 X25 function */
+#define IMB_CRC16_X25(_mgr,_in,_len) \
+        (_mgr)->crc16_x25(_in,_len)
 
 /* Auxiliary functions */
 
