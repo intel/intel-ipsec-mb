@@ -36,6 +36,6 @@ extern crc32_refl_by16_vclmul_avx512
 
 ;; structures with constants
 extern crc32_ethernet_fcs_const
-
+extern crc16_x25_ccitt_const
 
 %endif ;; crc32_refl_const_inc_included
