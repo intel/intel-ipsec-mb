@@ -54,10 +54,8 @@ default rel
 %endif
 
 struc STACK_FRAME
-_scratch_buf:   resq    2
-_gpr_save:      resq    1
-_rsp_save:      resq    1
 _xmm_save:      resq    8 * 2
+_rsp_save:      resq    1
 endstruc
 
 section .text
@@ -75,11 +73,11 @@ CRC16_X25_FN:
         or              arg1, arg1
         jz              .wrong_param
 %endif
+%ifndef LINUX
         mov             rax, rsp
         sub             rsp, STACK_FRAME_size
         and             rsp, -16
         mov             [rsp + _rsp_save], rax
-%ifndef LINUX
         movdqa          [rsp + _xmm_save + 16*0], xmm6
         movdqa          [rsp + _xmm_save + 16*1], xmm7
         movdqa          [rsp + _xmm_save + 16*2], xmm8
@@ -98,6 +96,9 @@ CRC16_X25_FN:
 
         and             eax, 0xffff
 
+%ifdef SAFE_DATA
+        clear_scratch_xmms_sse_asm
+%endif
 %ifndef LINUX
         movdqa          xmm6,  [rsp + _xmm_save + 16*0]
         movdqa          xmm7,  [rsp + _xmm_save + 16*1]
@@ -107,11 +108,8 @@ CRC16_X25_FN:
         movdqa          xmm11, [rsp + _xmm_save + 16*5]
         movdqa          xmm12, [rsp + _xmm_save + 16*6]
         movdqa          xmm13, [rsp + _xmm_save + 16*7]
-%endif
-%ifdef SAFE_DATA
-        clear_scratch_xmms_sse_asm
-%endif
         mov             rsp, [rsp + _rsp_save]
+%endif
 .wrong_param:
         ret
 

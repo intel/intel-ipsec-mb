@@ -54,7 +54,6 @@ default rel
 %endif
 
 struc STACK_FRAME
-_scratch_buf:   resq    2
 _gpr_save:      resq    1
 _rsp_save:      resq    1
 _xmm_save:      resq    8 * 2
