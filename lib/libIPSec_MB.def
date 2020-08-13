@@ -506,3 +506,11 @@ EXPORTS
     ghash_pre_sse                               @480
     ghash_pre_avx_gen2                          @481
     ghash_pre_vaes_avx512                       @482
+    ethernet_fcs_sse_no_aesni                   @483
+    ethernet_fcs_sse                            @484
+    ethernet_fcs_avx                            @485
+    ethernet_fcs_avx512                         @486
+    crc16_x25_sse                               @487
+    crc16_x25_sse_no_aesni                      @488
+    crc16_x25_avx                               @489
+    crc16_x25_avx512                            @490
