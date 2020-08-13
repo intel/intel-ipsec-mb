@@ -271,16 +271,19 @@ submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
 
         /* Use bit length API if
          * - msg length is not a multiple of bytes
-         * - bit offset passed
+         * - bit offset is not a multiple of bytes
          */
-        if ((msg_bitlen & 0x07) || msg_bitoff) {
+        if ((msg_bitlen & 0x07) || (msg_bitoff & 0x07)) {
                 IMB_SNOW3G_F8_1_BUFFER_BIT(state, key, job->iv, job->src,
                                            job->dst, msg_bitlen, msg_bitoff);
         } else {
                 const uint32_t msg_bytelen = msg_bitlen >> 3;
+                const uint32_t msg_byteoff = msg_bitoff >> 3;
+                const void *src = job->src + msg_byteoff;
+                void *dst = job->dst + msg_byteoff;
 
-                IMB_SNOW3G_F8_1_BUFFER(state, key, job->iv, job->src,
-                                       job->dst, msg_bytelen);
+                IMB_SNOW3G_F8_1_BUFFER(state, key, job->iv, src,
+                                       dst, msg_bytelen);
         }
 
         job->status |= STS_COMPLETED_AES;
@@ -300,16 +303,19 @@ submit_kasumi_uea1_job(IMB_MGR *state, IMB_JOB *job)
 
         /* Use bit length API if
          * - msg length is not a multiple of bytes
-         * - bit offset passed
+         * - bit offset is not a multiple of bytes
          */
-        if ((msg_bitlen & 0x07) || msg_bitoff) {
+        if ((msg_bitlen & 0x07) || (msg_bitoff & 0x07)) {
                 IMB_KASUMI_F8_1_BUFFER_BIT(state, key, iv, job->src, job->dst,
                                            msg_bitlen, msg_bitoff);
 
         } else {
                 const uint32_t msg_bytelen = msg_bitlen >> 3;
+                const uint32_t msg_byteoff = msg_bitoff >> 3;
+                const void *src = job->src + msg_byteoff;
+                void *dst = job->dst + msg_byteoff;
 
-                IMB_KASUMI_F8_1_BUFFER(state, key, iv, job->src, job->dst,
+                IMB_KASUMI_F8_1_BUFFER(state, key, iv, src, dst,
                                        msg_bytelen);
         }
 
