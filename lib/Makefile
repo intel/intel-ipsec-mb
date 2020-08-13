@@ -283,7 +283,8 @@ asm_noaesni_lib_objs := \
 	mb_mgr_aes128_cbcs_1_9_flush_sse.o \
 	mb_mgr_aes128_cbcs_1_9_submit_sse_no_aesni.o \
 	mb_mgr_aes128_cbcs_1_9_flush_sse_no_aesni.o \
-	crc32_refl_by8_sse_no_aesni.o
+	crc32_refl_by8_sse_no_aesni.o \
+	crc32_by8_sse_no_aesni.o
 
 #
 # List of ASM modules (sse directory)
@@ -373,7 +374,8 @@ asm_sse_lib_objs := \
 	crc16_x25_sse.o \
 	aes_cbcs_1_9_enc_128_x4.o \
 	aes128_cbcs_1_9_dec_by4_sse.o \
-	crc32_refl_by8_sse.o
+	crc32_refl_by8_sse.o \
+	crc32_by8_sse.o
 
 #
 # List of ASM modules (avx directory)
