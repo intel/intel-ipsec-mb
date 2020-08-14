@@ -1012,7 +1012,7 @@ section .text
 
 %%_no_last_crc_blocks:
 
-        ;; Update CRC lenghts and state
+        ;; Update CRC lengths and state
         ;; - subtract 16 from CRC length for first (k7) and update cases (k5)
         ;;   - k5 = k5 | k7 is a mask of lane in_progress now. It will be used later on.
         ;; - zero the length for the last partial block cases (k6)

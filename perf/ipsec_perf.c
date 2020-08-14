@@ -2520,7 +2520,7 @@ static void usage(void)
                 "            - range: test multiple sizes with following format"
                 " min:step:max (e.g. 16:16:256)\n"
                 "            (-o still applies for MAC)\n"
-                "--imix: set numbers that establish ocurrence proportions"
+                "--imix: set numbers that establish occurrence proportions"
                 " between packet sizes.\n"
                 "        It requires a list of sizes through --job-size.\n"
                 "        (e.g. --imix 4,6 --job-size 64,128 will generate\n"
