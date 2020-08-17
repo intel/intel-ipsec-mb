@@ -512,6 +512,7 @@ asm_avx512_lib_objs := \
 	ethernet_fcs_avx512.o \
 	crc16_x25_avx512.o \
 	crc32_refl_by16_vclmul_avx512.o \
+	crc32_by16_vclmul_avx512.o \
 	mb_mgr_aes_cbcs_1_9_submit_avx512.o \
 	mb_mgr_aes_cbcs_1_9_flush_avx512.o
 
