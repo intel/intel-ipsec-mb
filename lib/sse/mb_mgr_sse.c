@@ -334,6 +334,9 @@ ethernet_fcs_sse(const void *msg, const uint64_t len);
 uint32_t
 crc16_x25_sse(const void *msg, const uint64_t len);
 
+uint32_t
+crc32_sctp_sse(const void *msg, const uint64_t len);
+
 /* ====================================================================== */
 
 /*
@@ -1067,6 +1070,7 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->aes128_cfb_one      = aes_cfb_128_one_sse;
         state->crc32_ethernet_fcs  = ethernet_fcs_sse;
         state->crc16_x25           = crc16_x25_sse;
+        state->crc32_sctp          = crc32_sctp_sse;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
         if (state->features & IMB_FEATURE_GFNI) {

@@ -514,3 +514,7 @@ EXPORTS
     crc16_x25_sse_no_aesni                      @488
     crc16_x25_avx                               @489
     crc16_x25_avx512                            @490
+    crc32_sctp_sse                              @491
+    crc32_sctp_sse_no_aesni                     @492
+    crc32_sctp_avx                              @493
+    crc32_sctp_avx512                           @494

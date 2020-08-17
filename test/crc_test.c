@@ -122,6 +122,58 @@ crc32_ref_calc_lut(const uint8_t *data,
 }
 
 /**
+ * @brief Initializes look-up-table (LUT) for given 32 bit polynomial
+ *
+ * @param poly CRC polynomial
+ * @param lut pointer to 256 x 32bits look-up-table to be initialized
+ */
+static void
+crc32_init_lut(const uint32_t poly, uint32_t *lut)
+{
+        uint_fast32_t i, j;
+
+        if (lut == NULL)
+                return;
+
+        for (i = 0; i < 256; i++) {
+                uint_fast32_t crc = (i << 24);
+
+                for (j = 0; j < 8; j++)
+                        if (crc & 0x80000000UL)
+                                crc = (crc << 1) ^ poly;
+                        else
+                                crc <<= 1;
+
+                lut[i] = crc;
+        }
+}
+
+/**
+ * @brief Calculates 32 bit CRC using LUT method.
+ *
+ * @param crc CRC initial value
+ * @param data pointer to data block to calculate CRC for
+ * @param data_len size of data block
+ * @param lut 256x32bits look-up-table pointer
+ *
+ * @return New CRC value
+ */
+static uint32_t
+crc32_calc_lut(const uint8_t *data,
+               uint64_t data_len,
+               uint32_t crc,
+               const uint32_t *lut)
+{
+        if (data == NULL || lut == NULL)
+                return crc;
+
+        while (data_len--)
+                crc = lut[(crc >> 24) ^ *data++] ^ (crc << 8);
+
+        return crc;
+}
+
+/**
  * @brief Function randomizing buffer contents
  *
  * @param p pointer to the buffer
@@ -226,7 +278,7 @@ crc32_ethernet_fcs_tested_calc(const void *p, uint64_t len)
 }
 
 /**
- * @brief CRC32 Ethernet FCS setup function
+ * @brief CRC16 X25 setup function
  */
 static void
 crc16_x25_setup(void)
@@ -235,7 +287,7 @@ crc16_x25_setup(void)
 }
 
 /**
- * @brief CRC32 Ethernet FCS reference calculation function
+ * @brief CRC16 X25 reference calculation function
  *
  * @param p pointer to the buffer to calculate CRC on
  * @param len size of the buffer
@@ -249,7 +301,7 @@ crc16_x25_ref_calc(const void *p, uint64_t len)
 }
 
 /**
- * @brief CRC32 Ethernet FCS tested calculation function
+ * @brief CRC16 X25 tested calculation function
  *
  * @param p pointer to the buffer to calculate CRC on
  * @param len size of the buffer
@@ -260,6 +312,43 @@ static uint32_t
 crc16_x25_tested_calc(const void *p, uint64_t len)
 {
         return IMB_CRC16_X25(p_mgr, p, len);
+}
+
+/**
+ * @brief CRC32 SCTP setup function
+ */
+static void
+crc32_sctp_setup(void)
+{
+        crc32_init_lut(0x1edc6f41, m_lut);
+}
+
+/**
+ * @brief CRC32 SCTP reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc32_sctp_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut);
+}
+
+/**
+ * @brief CRC32 SCTP tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc32_sctp_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC32_SCTP(p_mgr, p, len);
 }
 
 int
@@ -280,6 +369,11 @@ crc_test(struct IMB_MGR *mb_mgr)
                                       crc16_x25_ref_calc,
                                       crc16_x25_tested_calc,
                                       "CRC16 X25 0x1021");
+
+        errors += test_crc_polynomial(crc32_sctp_setup,
+                                      crc32_sctp_calc,
+                                      crc32_sctp_tested_calc,
+                                      "CRC32 SCTP 0x1edc6f41 (Castagnoli93)");
 
 	if (0 == errors)
 		printf("...Pass\n");
