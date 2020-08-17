@@ -388,27 +388,22 @@ extern uint32_t
 ethernet_fcs_avx512_local(const void *msg, const uint64_t len,
                           const void *tag_ouput);
 extern uint32_t
-ethernet_fcs_avx512(const void *msg, const uint64_t len);
-
-extern uint32_t
-crc16_x25_avx512(const void *msg, const uint64_t len);
-
-extern uint32_t
 ethernet_fcs_avx_local(const void *msg, const uint64_t len,
                        const void *tag_ouput);
-extern uint32_t
-ethernet_fcs_avx(const void *msg, const uint64_t len);
-
-extern uint32_t
-crc16_x25_avx(const void *msg, const uint64_t len);
 
 #define ETHERNET_FCS ethernet_fcs_avx_local
 
-extern uint32_t
-crc32_sctp_avx(const void *msg, const uint64_t len);
+extern uint32_t ethernet_fcs_avx512(const void *msg, const uint64_t len);
+extern uint32_t crc16_x25_avx512(const void *msg, const uint64_t len);
+extern uint32_t crc32_sctp_avx512(const void *msg, const uint64_t len);
+extern uint32_t crc24_lte_a_avx512(const void *msg, const uint64_t len);
+extern uint32_t crc24_lte_b_avx512(const void *msg, const uint64_t len);
 
-extern uint32_t
-crc32_sctp_avx512(const void *msg, const uint64_t len);
+extern uint32_t ethernet_fcs_avx(const void *msg, const uint64_t len);
+extern uint32_t crc16_x25_avx(const void *msg, const uint64_t len);
+extern uint32_t crc32_sctp_avx(const void *msg, const uint64_t len);
+extern uint32_t crc24_lte_a_avx(const void *msg, const uint64_t len);
+extern uint32_t crc24_lte_b_avx(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -1640,12 +1635,16 @@ init_mb_mgr_avx512(IMB_MGR *state)
         state->crc32_ethernet_fcs  = ethernet_fcs_avx;
         state->crc16_x25           = crc16_x25_avx;
         state->crc32_sctp          = crc32_sctp_avx;
+        state->crc24_lte_a         = crc24_lte_a_avx;
+        state->crc24_lte_b         = crc24_lte_b_avx;
 
         if ((state->features & IMB_FEATURE_VPCLMULQDQ) ==
             IMB_FEATURE_VPCLMULQDQ) {
                 state->crc32_ethernet_fcs  = ethernet_fcs_avx512;
                 state->crc16_x25           = crc16_x25_avx512;
                 state->crc32_sctp          = crc32_sctp_avx512;
+                state->crc24_lte_a         = crc24_lte_a_avx512;
+                state->crc24_lte_b         = crc24_lte_b_avx512;
         }
 
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {

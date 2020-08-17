@@ -269,16 +269,14 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 uint32_t
 ethernet_fcs_sse_no_aesni_local(const void *msg, const uint64_t len,
                                 const void *tag_ouput);
-uint32_t
-ethernet_fcs_sse_no_aesni(const void *msg, const uint64_t len);
 
 #define ETHERNET_FCS ethernet_fcs_sse_no_aesni_local
 
-uint32_t
-crc16_x25_sse_no_aesni(const void *msg, const uint64_t len);
-
-uint32_t
-crc32_sctp_sse_no_aesni(const void *msg, const uint64_t len);
+uint32_t ethernet_fcs_sse_no_aesni(const void *msg, const uint64_t len);
+uint32_t crc16_x25_sse_no_aesni(const void *msg, const uint64_t len);
+uint32_t crc32_sctp_sse_no_aesni(const void *msg, const uint64_t len);
+uint32_t crc24_lte_a_sse_no_aesni(const void *msg, const uint64_t len);
+uint32_t crc24_lte_b_sse_no_aesni(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -908,6 +906,8 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->crc32_ethernet_fcs  = ethernet_fcs_sse_no_aesni;
         state->crc16_x25           = crc16_x25_sse_no_aesni;
         state->crc32_sctp          = crc32_sctp_sse_no_aesni;
+        state->crc24_lte_a         = crc24_lte_a_sse_no_aesni;
+        state->crc24_lte_b         = crc24_lte_b_sse_no_aesni;
 }
 
 #include "mb_mgr_code.h"

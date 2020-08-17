@@ -351,6 +351,86 @@ crc32_sctp_tested_calc(const void *p, uint64_t len)
         return IMB_CRC32_SCTP(p_mgr, p, len);
 }
 
+/**
+ * @brief CRC32 LTE24 A setup function
+ *
+ * 3GPP TS 36.212-880-Multiplexing and channel coding
+ * LTE CRC24A polynomial 0x864CFB
+ */
+static void
+crc32_lte24a_setup(void)
+{
+        crc32_init_lut(0x864CFBUL << 8, m_lut);
+}
+
+/**
+ * @brief CRC32 LTE24A reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc32_lte24a_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut) >> 8;
+}
+
+/**
+ * @brief CRC32 LTE24A tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc32_lte24a_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC24_LTE_A(p_mgr, p, len);
+}
+
+/**
+ * @brief CRC32 LTE24B setup function
+ *
+ * 3GPP TS 36.212-880-Multiplexing and channel coding
+ * LTE CRC24A polynomial 0x800063
+ */
+static void
+crc32_lte24b_setup(void)
+{
+        crc32_init_lut(0x800063UL << 8, m_lut);
+}
+
+/**
+ * @brief CRC32 LTE24B reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc32_lte24b_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut) >> 8;
+}
+
+/**
+ * @brief CRC32 LTE24B tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc32_lte24b_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC24_LTE_B(p_mgr, p, len);
+}
+
 int
 crc_test(struct IMB_MGR *mb_mgr)
 {
@@ -359,6 +439,8 @@ crc_test(struct IMB_MGR *mb_mgr)
         p_mgr = mb_mgr;
 
         srand(0x20200701);
+
+        /* reflected CRC32 functions */
 
         errors += test_crc_polynomial(crc32_ethernet_fcs_setup,
                                       crc32_ethernet_fcs_ref_calc,
@@ -370,10 +452,22 @@ crc_test(struct IMB_MGR *mb_mgr)
                                       crc16_x25_tested_calc,
                                       "CRC16 X25 0x1021");
 
+        /* CRC32 functions */
+
         errors += test_crc_polynomial(crc32_sctp_setup,
                                       crc32_sctp_calc,
                                       crc32_sctp_tested_calc,
                                       "CRC32 SCTP 0x1edc6f41 (Castagnoli93)");
+
+        errors += test_crc_polynomial(crc32_lte24a_setup,
+                                      crc32_lte24a_calc,
+                                      crc32_lte24a_tested_calc,
+                                      "LTE CRC24A 0x864cFB");
+
+        errors += test_crc_polynomial(crc32_lte24b_setup,
+                                      crc32_lte24b_calc,
+                                      crc32_lte24b_tested_calc,
+                                      "LTE CRC24B 0x800063");
 
 	if (0 == errors)
 		printf("...Pass\n");

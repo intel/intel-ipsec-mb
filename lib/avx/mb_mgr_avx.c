@@ -263,16 +263,14 @@ void aes128_cbc_mac_x8(AES_ARGS *args, uint64_t len);
 uint32_t
 ethernet_fcs_avx_local(const void *msg, const uint64_t len,
                        const void *tag_ouput);
-uint32_t
-ethernet_fcs_avx(const void *msg, const uint64_t len);
 
 #define ETHERNET_FCS ethernet_fcs_avx_local
 
-uint32_t
-crc16_x25_avx(const void *msg, const uint64_t len);
-
-uint32_t
-crc32_sctp_avx(const void *msg, const uint64_t len);
+uint32_t ethernet_fcs_avx(const void *msg, const uint64_t len);
+uint32_t crc16_x25_avx(const void *msg, const uint64_t len);
+uint32_t crc32_sctp_avx(const void *msg, const uint64_t len);
+uint32_t crc24_lte_a_avx(const void *msg, const uint64_t len);
+uint32_t crc24_lte_b_avx(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -916,6 +914,8 @@ init_mb_mgr_avx(IMB_MGR *state)
         state->crc32_ethernet_fcs  = ethernet_fcs_avx;
         state->crc16_x25           = crc16_x25_avx;
         state->crc32_sctp          = crc32_sctp_avx;
+        state->crc24_lte_a         = crc24_lte_a_avx;
+        state->crc24_lte_b         = crc24_lte_b_avx;
 }
 
 #include "mb_mgr_code.h"

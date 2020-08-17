@@ -881,6 +881,8 @@ typedef struct IMB_MGR {
         crc32_fn_t              crc32_ethernet_fcs;
         crc32_fn_t              crc16_x25;
         crc32_fn_t              crc32_sctp;
+        crc32_fn_t              crc24_lte_a;
+        crc32_fn_t              crc24_lte_b;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1681,6 +1683,14 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /* CRC32 SCTP function */
 #define IMB_CRC32_SCTP(_mgr,_in,_len) \
         (_mgr)->crc32_sctp(_in,_len)
+
+/* LTE CRC24A function */
+#define IMB_CRC24_LTE_A(_mgr,_in,_len) \
+        (_mgr)->crc24_lte_a(_in,_len)
+
+/* LTE CRC24B function */
+#define IMB_CRC24_LTE_B(_mgr,_in,_len) \
+        (_mgr)->crc24_lte_b(_in,_len)
 
 /* Auxiliary functions */
 

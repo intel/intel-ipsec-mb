@@ -50,6 +50,42 @@ crc32_sctp_const:
         dq 0xd7a0166500000000, 0x3aab457600000000   ; 128->64 reduction
         dq 0x000000011f91caf6, 0x000000011edc6f41   ; 64->32 reduction
 
+;; 3GPP TS 36.212-880-Multiplexing and channel coding
+;; LTE CRC24A polynomial 0x864CFB
+align 64
+MKGLOBAL(crc32_lte24_a_const,data,internal)
+crc32_lte24_a_const:
+        dq 0x00000000a79dfd00, 0x0000000009e45400   ; 2048-b fold
+        dq 0x000000002e6a9100, 0x000000008a322000   ; 1024-b fold
+        dq 0x0000000054e2ed00, 0x00000000fd99d400   ; 896-b fold
+        dq 0x000000009f23d400, 0x000000006d688300   ; 768-b fold
+        dq 0x00000000ae2a4900, 0x00000000e84f6300   ; 640-b fold
+        dq 0x00000000467d2400, 0x000000001f428700   ; 512-b fold
+        dq 0x000000005b703800, 0x000000006c1c3500   ; 384-b fold
+        dq 0x000000009d89a200, 0x0000000066dd1f00   ; 256-b fold
+        dq 0x0000000064e4d700, 0x000000002c8c9d00   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0xfd7e0c0000000000, 0xd9fe8c0000000000   ; 128->64 reduction
+        dq 0x00000001f845fe24, 0x00000001864cfb00   ; 64->32 reduction
+
+;; 3GPP TS 36.212-880-Multiplexing and channel coding
+;; LTE CRC24B polynomial 0x800063
+align 64
+MKGLOBAL(crc32_lte24_b_const,data,internal)
+crc32_lte24_b_const:
+        dq 0x00000000427ce200, 0x00000000f4390500   ; 2048-b fold
+        dq 0x00000000016d3800, 0x0000000078202200   ; 1024-b fold
+        dq 0x00000000777d9800, 0x000000008d622b00   ; 896-b fold
+        dq 0x0000000042004300, 0x000000000d562200   ; 768-b fold
+        dq 0x00000000f95b0f00, 0x0000000005356d00   ; 640-b fold
+        dq 0x00000000a0660100, 0x00000000b5015b00   ; 512-b fold
+        dq 0x0000000089012300, 0x00000000a5686300   ; 384-b fold
+        dq 0x0000000084560100, 0x000000005634d200   ; 256-b fold
+        dq 0x0000000080140500, 0x0000000042000100   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0x0900020000000000, 0x9004210000000000   ; 128->64 reduction
+        dq 0x00000001ffff83ff, 0x0000000180006300   ; 64->32 reduction
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif

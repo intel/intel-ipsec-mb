@@ -326,16 +326,14 @@ IMB_JOB *flush_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state);
 uint32_t
 ethernet_fcs_sse_local(const void *msg, const uint64_t len,
                        const void *tag_ouput);
-uint32_t
-ethernet_fcs_sse(const void *msg, const uint64_t len);
 
 #define ETHERNET_FCS ethernet_fcs_sse_local
 
-uint32_t
-crc16_x25_sse(const void *msg, const uint64_t len);
-
-uint32_t
-crc32_sctp_sse(const void *msg, const uint64_t len);
+uint32_t ethernet_fcs_sse(const void *msg, const uint64_t len);
+uint32_t crc16_x25_sse(const void *msg, const uint64_t len);
+uint32_t crc32_sctp_sse(const void *msg, const uint64_t len);
+uint32_t crc24_lte_a_sse(const void *msg, const uint64_t len);
+uint32_t crc24_lte_b_sse(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -1071,6 +1069,8 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->crc32_ethernet_fcs  = ethernet_fcs_sse;
         state->crc16_x25           = crc16_x25_sse;
         state->crc32_sctp          = crc32_sctp_sse;
+        state->crc24_lte_a         = crc24_lte_a_sse;
+        state->crc24_lte_b         = crc24_lte_b_sse;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
         if (state->features & IMB_FEATURE_GFNI) {

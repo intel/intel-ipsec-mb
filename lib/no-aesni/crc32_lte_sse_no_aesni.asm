@@ -25,18 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%ifndef crc32_const_inc_included
-%define crc32_const_inc_included
-
-;; functions
-extern crc32_by8_sse_no_aesni
-extern crc32_by8_sse
-extern crc32_by8_avx
-extern crc32_by16_vclmul_avx512
-
-;; structures with constants
-extern crc32_sctp_const
-extern crc32_lte24_a_const
-extern crc32_lte24_b_const
-
-%endif ;; crc32_const_inc_included
+%include "include/aesni_emu.inc"
+%define CRC32_LTE24A_FN     crc24_lte_a_sse_no_aesni
+%define CRC32_LTE24B_FN     crc24_lte_b_sse_no_aesni
+%define CRC32_FN            crc32_by8_sse_no_aesni
+%include "sse/crc32_lte_sse.asm"

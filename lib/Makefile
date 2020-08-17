@@ -286,7 +286,8 @@ asm_noaesni_lib_objs := \
 	mb_mgr_aes128_cbcs_1_9_flush_sse_no_aesni.o \
 	crc32_refl_by8_sse_no_aesni.o \
 	crc32_by8_sse_no_aesni.o \
-	crc32_sctp_sse_no_aesni.o
+	crc32_sctp_sse_no_aesni.o \
+	crc32_lte_sse_no_aesni.o
 
 #
 # List of ASM modules (sse directory)
@@ -378,7 +379,8 @@ asm_sse_lib_objs := \
 	aes_cbcs_1_9_enc_128_x4.o \
 	aes128_cbcs_1_9_dec_by4_sse.o \
 	crc32_refl_by8_sse.o \
-	crc32_by8_sse.o
+	crc32_by8_sse.o \
+	crc32_lte_sse.o
 
 #
 # List of ASM modules (avx directory)
@@ -444,7 +446,8 @@ asm_avx_lib_objs := \
 	mb_mgr_aes128_cbcs_1_9_flush_avx.o \
 	crc32_refl_by8_avx.o \
 	crc32_by8_avx.o \
-	crc32_sctp_avx.o
+	crc32_sctp_avx.o \
+	crc32_lte_avx.o
 
 #
 # List of ASM modules (avx2 directory)
@@ -519,7 +522,8 @@ asm_avx512_lib_objs := \
 	crc32_by16_vclmul_avx512.o \
 	mb_mgr_aes_cbcs_1_9_submit_avx512.o \
 	mb_mgr_aes_cbcs_1_9_flush_avx512.o \
-	crc32_sctp_avx512.o
+	crc32_sctp_avx512.o \
+	crc32_lte_avx512.o
 
 #
 # GCM object file lists

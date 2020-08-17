@@ -518,3 +518,11 @@ EXPORTS
     crc32_sctp_sse_no_aesni                     @492
     crc32_sctp_avx                              @493
     crc32_sctp_avx512                           @494
+    crc24_lte_a_sse                             @495
+    crc24_lte_a_sse_no_aesni                    @496
+    crc24_lte_a_avx                             @497
+    crc24_lte_a_avx512                          @498
+    crc24_lte_b_sse                             @499
+    crc24_lte_b_sse_no_aesni                    @500
+    crc24_lte_b_avx                             @501
+    crc24_lte_b_avx512                          @502
