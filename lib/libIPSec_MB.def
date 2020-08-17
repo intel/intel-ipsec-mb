@@ -526,3 +526,15 @@ EXPORTS
     crc24_lte_b_sse_no_aesni                    @500
     crc24_lte_b_avx                             @501
     crc24_lte_b_avx512                          @502
+    crc16_fp_data_sse                           @503
+    crc16_fp_data_sse_no_aesni                  @504
+    crc16_fp_data_avx                           @505
+    crc16_fp_data_avx512                        @506
+    crc11_fp_header_sse                         @507
+    crc11_fp_header_sse_no_aesni                @508
+    crc11_fp_header_avx                         @509
+    crc11_fp_header_avx512                      @510
+    crc7_fp_header_sse                          @511
+    crc7_fp_header_sse_no_aesni                 @512
+    crc7_fp_header_avx                          @513
+    crc7_fp_header_avx512                       @514

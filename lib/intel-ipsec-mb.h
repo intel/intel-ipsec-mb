@@ -883,6 +883,9 @@ typedef struct IMB_MGR {
         crc32_fn_t              crc32_sctp;
         crc32_fn_t              crc24_lte_a;
         crc32_fn_t              crc24_lte_b;
+        crc32_fn_t              crc16_fp_data;
+        crc32_fn_t              crc11_fp_header;
+        crc32_fn_t              crc7_fp_header;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1691,6 +1694,18 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /* LTE CRC24B function */
 #define IMB_CRC24_LTE_B(_mgr,_in,_len) \
         (_mgr)->crc24_lte_b(_in,_len)
+
+/* Framing Protocol CRC16 function (3GPP TS 25.435, 3GPP TS 25.427)*/
+#define IMB_CRC16_FP_DATA(_mgr,_in,_len) \
+        (_mgr)->crc16_fp_data(_in,_len)
+
+/* Framing Protocol CRC11 function (3GPP TS 25.435, 3GPP TS 25.427)*/
+#define IMB_CRC11_FP_HEADER(_mgr,_in,_len) \
+        (_mgr)->crc11_fp_header(_in,_len)
+
+/* Framing Protocol CRC7 function (3GPP TS 25.435, 3GPP TS 25.427)*/
+#define IMB_CRC7_FP_HEADER(_mgr,_in,_len) \
+        (_mgr)->crc7_fp_header(_in,_len)
 
 /* Auxiliary functions */
 

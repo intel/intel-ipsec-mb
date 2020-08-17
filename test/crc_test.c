@@ -431,6 +431,129 @@ crc32_lte24b_tested_calc(const void *p, uint64_t len)
         return IMB_CRC24_LTE_B(p_mgr, p, len);
 }
 
+/**
+ * @brief CRC16 Framing Protocol setup function
+ *
+ * 3GPP TS 25.435, 3GPP TS 25.427
+ * Framing Protocol CRC polynomial
+ * CRC16 0x8005 for data
+ */
+static void
+crc16_fp_data_setup(void)
+{
+        crc32_init_lut(0x8005UL << 16, m_lut);
+}
+
+/**
+ * @brief CRC16 Framing Protocol reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc16_fp_data_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut) >> 16;
+}
+
+/**
+ * @brief CRC16 Framing Protocol tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc16_fp_data_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC16_FP_DATA(p_mgr, p, len);
+}
+
+/**
+ * @brief CRC11 Framing Protocol setup function
+ *
+ * 3GPP TS 25.435, 3GPP TS 25.427
+ * Framing Protocol CRC polynomial
+ * CRC11 0x307 for EDCH header
+ */
+static void
+crc11_fp_header_setup(void)
+{
+        crc32_init_lut(0x307UL << 21, m_lut);
+}
+
+/**
+ * @brief CRC11 Framing Protocol reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc11_fp_header_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut) >> 21;
+}
+
+/**
+ * @brief CRC11 Framing Protocol tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc11_fp_header_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC11_FP_HEADER(p_mgr, p, len);
+}
+
+/**
+ * @brief CRC7 Framing Protocol setup function
+ *
+ * 3GPP TS 25.435, 3GPP TS 25.427
+ * Framing Protocol CRC polynomial
+ * CRC7 0x45 for header
+ */
+static void
+crc7_fp_header_setup(void)
+{
+        crc32_init_lut(0x45UL << 25, m_lut);
+}
+
+/**
+ * @brief CRC7 Framing Protocol reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc7_fp_header_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut) >> 25;
+}
+
+/**
+ * @brief CRC7 Framing Protocol tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc7_fp_header_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC7_FP_HEADER(p_mgr, p, len);
+}
+
 int
 crc_test(struct IMB_MGR *mb_mgr)
 {
@@ -468,6 +591,21 @@ crc_test(struct IMB_MGR *mb_mgr)
                                       crc32_lte24b_calc,
                                       crc32_lte24b_tested_calc,
                                       "LTE CRC24B 0x800063");
+
+        errors += test_crc_polynomial(crc16_fp_data_setup,
+                                      crc16_fp_data_calc,
+                                      crc16_fp_data_tested_calc,
+                                      "Framing Protocol Data CRC16 0x8005");
+
+        errors += test_crc_polynomial(crc11_fp_header_setup,
+                                      crc11_fp_header_calc,
+                                      crc11_fp_header_tested_calc,
+                                      "Framing Protocol Header CRC11 0x307");
+
+        errors += test_crc_polynomial(crc7_fp_header_setup,
+                                      crc7_fp_header_calc,
+                                      crc7_fp_header_tested_calc,
+                                      "Framing Protocol Header CRC7 0x45");
 
 	if (0 == errors)
 		printf("...Pass\n");

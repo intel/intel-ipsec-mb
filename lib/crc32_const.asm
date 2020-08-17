@@ -86,6 +86,63 @@ crc32_lte24_b_const:
         dq 0x0900020000000000, 0x9004210000000000   ; 128->64 reduction
         dq 0x00000001ffff83ff, 0x0000000180006300   ; 64->32 reduction
 
+;; 3GPP TS 25.435, 3GPP TS 25.427
+;; Framing Protocol CRC polynomial
+;; CRC16 0x8005 for data
+align 64
+MKGLOBAL(crc32_fp_data_crc16_const,data,internal)
+crc32_fp_data_crc16_const:
+        dq 0x000000007f870000, 0x00000000fe630000   ; 2048-b fold
+        dq 0x00000000fffb0000, 0x0000000086930000   ; 1024-b fold
+        dq 0x000000000e5a0000, 0x00000000bf840000   ; 896-b fold
+        dq 0x00000000871f0000, 0x000000006dd20000   ; 768-b fold
+        dq 0x00000000ff070000, 0x0000000075530000   ; 640-b fold
+        dq 0x00000000807d0000, 0x00000000f9e30000   ; 512-b fold
+        dq 0x0000000007120000, 0x0000000063320000   ; 384-b fold
+        dq 0x0000000000070000, 0x0000000087730000   ; 256-b fold
+        dq 0x00000000ff830000, 0x00000000f9130000   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0x8663000000000000, 0x807b000000000000   ; 128->64 reduction
+        dq 0x00000001fffbffe7, 0x0000000180050000   ; 64->32 reduction
+
+;; 3GPP TS 25.435, 3GPP TS 25.427
+;; Framing Protocol CRC polynomial
+;; CRC11 0x307 for EDCH header
+align 64
+MKGLOBAL(crc32_fp_header_crc11_const,data,internal)
+crc32_fp_header_crc11_const:
+        dq 0x00000000cda00000, 0x00000000e4e00000   ; 2048-b fold
+        dq 0x00000000d6a00000, 0x00000000c2000000   ; 1024-b fold
+        dq 0x0000000010c00000, 0x00000000e8200000   ; 896-b fold
+        dq 0x000000008c000000, 0x0000000097600000   ; 768-b fold
+        dq 0x0000000018800000, 0x0000000093200000   ; 640-b fold
+        dq 0x000000007c000000, 0x0000000051c00000   ; 512-b fold
+        dq 0x000000005c200000, 0x000000001ac00000   ; 384-b fold
+        dq 0x00000000b8800000, 0x0000000017e00000   ; 256-b fold
+        dq 0x0000000004c00000, 0x00000000a0800000   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0xe140000000000000, 0x6100000000000000   ; 128->64 reduction
+        dq 0x000000017208e3d8, 0x0000000160e00000   ; 64->32 reduction
+
+;; 3GPP TS 25.435, 3GPP TS 25.427
+;; Framing Protocol CRC polynomial
+;; CRC7 0x45 for header
+align 64
+MKGLOBAL(crc32_fp_header_crc7_const,data,internal)
+crc32_fp_header_crc7_const:
+        dq 0x000000008a000000, 0x000000009e000000   ; 2048-b fold
+        dq 0x00000000a8000000, 0x00000000da000000   ; 1024-b fold
+        dq 0x000000002a000000, 0x0000000054000000   ; 896-b fold
+        dq 0x0000000068000000, 0x00000000d0000000   ; 768-b fold
+        dq 0x000000001a000000, 0x0000000034000000   ; 640-b fold
+        dq 0x0000000064000000, 0x00000000c8000000   ; 512-b fold
+        dq 0x00000000dc000000, 0x0000000032000000   ; 384-b fold
+        dq 0x00000000f2000000, 0x000000006e000000   ; 256-b fold
+        dq 0x000000005e000000, 0x00000000bc000000   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0x9e00000000000000, 0xea00000000000000   ; 128->64 reduction
+        dq 0x00000001f79d6171, 0x000000018a000000   ; 64->32 reduction
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif

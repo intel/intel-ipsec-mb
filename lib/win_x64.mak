@@ -284,6 +284,10 @@ lib_objs1 = \
 	$(OBJ_DIR)\crc32_lte_sse_no_aesni.obj \
 	$(OBJ_DIR)\crc32_lte_avx.obj \
 	$(OBJ_DIR)\crc32_lte_avx512.obj \
+	$(OBJ_DIR)\crc32_fp_sse.obj \
+	$(OBJ_DIR)\crc32_fp_sse_no_aesni.obj \
+	$(OBJ_DIR)\crc32_fp_avx.obj \
+	$(OBJ_DIR)\crc32_fp_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_vaes_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_vaes_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.obj \

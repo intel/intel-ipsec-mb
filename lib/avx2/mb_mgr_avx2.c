@@ -273,6 +273,9 @@ uint32_t crc16_x25_avx(const void *msg, const uint64_t len);
 uint32_t crc32_sctp_avx(const void *msg, const uint64_t len);
 uint32_t crc24_lte_a_avx(const void *msg, const uint64_t len);
 uint32_t crc24_lte_b_avx(const void *msg, const uint64_t len);
+uint32_t crc16_fp_data_avx(const void *msg, const uint64_t len);
+uint32_t crc11_fp_header_avx(const void *msg, const uint64_t len);
+uint32_t crc7_fp_header_avx(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -859,6 +862,9 @@ init_mb_mgr_avx2(IMB_MGR *state)
         state->crc32_sctp          = crc32_sctp_avx;
         state->crc24_lte_a         = crc24_lte_a_avx;
         state->crc24_lte_b         = crc24_lte_b_avx;
+        state->crc16_fp_data       = crc16_fp_data_avx;
+        state->crc11_fp_header     = crc11_fp_header_avx;
+        state->crc7_fp_header      = crc7_fp_header_avx;
 }
 
 #include "mb_mgr_code.h"
