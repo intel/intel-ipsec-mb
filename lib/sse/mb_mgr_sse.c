@@ -337,6 +337,8 @@ uint32_t crc24_lte_b_sse(const void *msg, const uint64_t len);
 uint32_t crc16_fp_data_sse(const void *msg, const uint64_t len);
 uint32_t crc11_fp_header_sse(const void *msg, const uint64_t len);
 uint32_t crc7_fp_header_sse(const void *msg, const uint64_t len);
+uint32_t crc10_iuup_data_sse(const void *msg, const uint64_t len);
+uint32_t crc6_iuup_header_sse(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -1077,6 +1079,8 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->crc16_fp_data       = crc16_fp_data_sse;
         state->crc11_fp_header     = crc11_fp_header_sse;
         state->crc7_fp_header      = crc7_fp_header_sse;
+        state->crc10_iuup_data     = crc10_iuup_data_sse;
+        state->crc6_iuup_header    = crc6_iuup_header_sse;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
         if (state->features & IMB_FEATURE_GFNI) {

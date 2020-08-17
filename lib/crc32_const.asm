@@ -143,6 +143,44 @@ crc32_fp_header_crc7_const:
         dq 0x9e00000000000000, 0xea00000000000000   ; 128->64 reduction
         dq 0x00000001f79d6171, 0x000000018a000000   ; 64->32 reduction
 
+;; 3GPP TS 25.415
+;; IuUP CRC polynomial
+;; CRC10 0x233 for data
+align 64
+MKGLOBAL(crc32_iuup_data_crc10_const,data,internal)
+crc32_iuup_data_crc10_const:
+        dq 0x00000000e5000000, 0x00000000fdc00000   ; 2048-b fold
+        dq 0x0000000039400000, 0x000000005c400000   ; 1024-b fold
+        dq 0x0000000020c00000, 0x0000000028800000   ; 896-b fold
+        dq 0x0000000002c00000, 0x0000000099800000   ; 768-b fold
+        dq 0x000000007ac00000, 0x00000000a9400000   ; 640-b fold
+        dq 0x00000000dac00000, 0x00000000e8400000   ; 512-b fold
+        dq 0x00000000d6000000, 0x0000000014400000   ; 384-b fold
+        dq 0x00000000c7000000, 0x000000004cc00000   ; 256-b fold
+        dq 0x00000000fb000000, 0x0000000092c00000   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0xa800000000000000, 0xb240000000000000   ; 128->64 reduction
+        dq 0x00000001f083a337, 0x000000018cc00000   ; 64->32 reduction
+
+;; 3GPP TS 25.415
+;; IuUP CRC polynomial
+;; CRC6 0x2f for header
+align 64
+MKGLOBAL(crc32_iuup_header_crc6_const,data,internal)
+crc32_iuup_header_crc6_const:
+        dq 0x00000000c4000000, 0x0000000068000000   ; 2048-b fold
+        dq 0x00000000bc000000, 0x0000000034000000   ; 1024-b fold
+        dq 0x0000000010000000, 0x0000000040000000   ; 896-b fold
+        dq 0x00000000b0000000, 0x0000000004000000   ; 768-b fold
+        dq 0x0000000064000000, 0x000000002c000000   ; 640-b fold
+        dq 0x00000000f4000000, 0x00000000a8000000   ; 512-b fold
+        dq 0x000000004c000000, 0x000000008c000000   ; 384-b fold
+        dq 0x0000000070000000, 0x000000007c000000   ; 256-b fold
+        dq 0x0000000068000000, 0x000000001c000000   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0x3400000000000000, 0xc400000000000000   ; 128->64 reduction
+        dq 0x00000001c8af6983, 0x00000001bc000000   ; 64->32 reduction
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif

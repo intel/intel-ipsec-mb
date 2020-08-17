@@ -554,6 +554,88 @@ crc7_fp_header_tested_calc(const void *p, uint64_t len)
         return IMB_CRC7_FP_HEADER(p_mgr, p, len);
 }
 
+/**
+ * @brief CRC10 IUUP setup function
+ *
+ * 3GPP TS 25.415
+ * IuUP CRC polynomial
+ * CRC10 0x233 for data
+ */
+static void
+crc10_iuup_data_setup(void)
+{
+        crc32_init_lut(0x233UL << 22, m_lut);
+}
+
+/**
+ * @brief CRC10 IUUP reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc10_iuup_data_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut) >> 22;
+}
+
+/**
+ * @brief CRC10 IUUP tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc10_iuup_data_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC10_IUUP_DATA(p_mgr, p, len);
+}
+
+/**
+ * @brief CRC6 IUUP setup function
+ *
+ * 3GPP TS 25.415
+ * IuUP CRC polynomial
+ * CRC6 0x2f for header
+ */
+static void
+crc6_iuup_header_setup(void)
+{
+        crc32_init_lut(0x2fUL << 26, m_lut);
+}
+
+/**
+ * @brief CRC6 IUUP reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc6_iuup_header_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut) >> 26;
+}
+
+/**
+ * @brief CRC6 IUUP tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc6_iuup_header_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC6_IUUP_HEADER(p_mgr, p, len);
+}
+
 int
 crc_test(struct IMB_MGR *mb_mgr)
 {
@@ -606,6 +688,16 @@ crc_test(struct IMB_MGR *mb_mgr)
                                       crc7_fp_header_calc,
                                       crc7_fp_header_tested_calc,
                                       "Framing Protocol Header CRC7 0x45");
+
+        errors += test_crc_polynomial(crc10_iuup_data_setup,
+                                      crc10_iuup_data_calc,
+                                      crc10_iuup_data_tested_calc,
+                                      "IUUP Data CRC10 0x233");
+
+        errors += test_crc_polynomial(crc6_iuup_header_setup,
+                                      crc6_iuup_header_calc,
+                                      crc6_iuup_header_tested_calc,
+                                      "IUUP Header CRC6 0x2f");
 
 	if (0 == errors)
 		printf("...Pass\n");
