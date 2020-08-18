@@ -339,6 +339,8 @@ uint32_t crc11_fp_header_sse(const void *msg, const uint64_t len);
 uint32_t crc7_fp_header_sse(const void *msg, const uint64_t len);
 uint32_t crc10_iuup_data_sse(const void *msg, const uint64_t len);
 uint32_t crc6_iuup_header_sse(const void *msg, const uint64_t len);
+uint32_t crc32_wimax_ofdma_data_sse(const void *msg, const uint64_t len);
+uint32_t crc8_wimax_ofdma_hcs_sse(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -1081,6 +1083,8 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->crc7_fp_header      = crc7_fp_header_sse;
         state->crc10_iuup_data     = crc10_iuup_data_sse;
         state->crc6_iuup_header    = crc6_iuup_header_sse;
+        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_sse;
+        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_sse;
 
         state->eea3_1_buffer       = zuc_eea3_1_buffer_sse;
         if (state->features & IMB_FEATURE_GFNI) {

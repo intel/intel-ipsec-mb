@@ -888,6 +888,8 @@ typedef struct IMB_MGR {
         crc32_fn_t              crc7_fp_header;
         crc32_fn_t              crc10_iuup_data;
         crc32_fn_t              crc6_iuup_header;
+        crc32_fn_t              crc32_wimax_ofdma_data;
+        crc32_fn_t              crc8_wimax_ofdma_hcs;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1716,6 +1718,14 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /* IUUP CRC6 function (3GPP TS 25.415) */
 #define IMB_CRC6_IUUP_HEADER(_mgr,_in,_len) \
         (_mgr)->crc6_iuup_header(_in,_len)
+
+/* WIMAX OFDMA DATA CRC32 function (IEEE 802.16) */
+#define IMB_CRC32_WIMAX_OFDMA_DATA(_mgr,_in,_len) \
+        (_mgr)->crc32_wimax_ofdma_data(_in,_len)
+
+/* WIMAX OFDMA HCS CRC8 function (IEEE 802.16) */
+#define IMB_CRC8_WIMAX_OFDMA_HCS(_mgr,_in,_len) \
+        (_mgr)->crc8_wimax_ofdma_hcs(_in,_len)
 
 /* Auxiliary functions */
 

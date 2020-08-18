@@ -282,6 +282,9 @@ uint32_t crc11_fp_header_sse_no_aesni(const void *msg, const uint64_t len);
 uint32_t crc7_fp_header_sse_no_aesni(const void *msg, const uint64_t len);
 uint32_t crc10_iuup_data_sse_no_aesni(const void *msg, const uint64_t len);
 uint32_t crc6_iuup_header_sse_no_aesni(const void *msg, const uint64_t len);
+uint32_t
+crc32_wimax_ofdma_data_sse_no_aesni(const void *msg, const uint64_t len);
+uint32_t crc8_wimax_ofdma_hcs_sse_no_aesni(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -918,6 +921,8 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->crc7_fp_header      = crc7_fp_header_sse_no_aesni;
         state->crc10_iuup_data     = crc10_iuup_data_sse_no_aesni;
         state->crc6_iuup_header    = crc6_iuup_header_sse_no_aesni;
+        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_sse_no_aesni;
+        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_sse_no_aesni;
 }
 
 #include "mb_mgr_code.h"

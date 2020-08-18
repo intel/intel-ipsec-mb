@@ -636,6 +636,84 @@ crc6_iuup_header_tested_calc(const void *p, uint64_t len)
         return IMB_CRC6_IUUP_HEADER(p_mgr, p, len);
 }
 
+/**
+ * @brief CRC32 WIMAX OFDMA setup function
+ *
+ * WIMAX OFDMA DATA CRC32 0x4c11db7 (IEEE 802.16)
+ */
+static void
+crc32_wimax_ofdma_data_setup(void)
+{
+        crc32_init_lut(0x4c11db7, m_lut);
+}
+
+/**
+ * @brief CRC32 WIMAX OFDMA reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc32_wimax_ofdma_data_calc(const void *p, uint64_t len)
+{
+        return ~crc32_calc_lut(p, len, 0xffffffffUL, m_lut);
+}
+
+/**
+ * @brief CRC32 WIMAX OFDMA tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc32_wimax_ofdma_data_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC32_WIMAX_OFDMA_DATA(p_mgr, p, len);
+}
+
+/**
+ * @brief CRC8 HCS WIMAX OFDMA setup function
+ *
+ * WIMAX OFDMA CRC8 HCS 0x07 (IEEE 802.16)
+ */
+static void
+crc8_wimax_ofdma_hcs_setup(void)
+{
+        crc32_init_lut(0x07 << 24, m_lut);
+}
+
+/**
+ * @brief CRC8 HCS WIMAX OFDMA reference calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc8_wimax_ofdma_hcs_calc(const void *p, uint64_t len)
+{
+        return crc32_calc_lut(p, len, 0x0UL, m_lut) >> 24;
+}
+
+/**
+ * @brief CRC8 HCS WIMAX OFDMA tested calculation function
+ *
+ * @param p pointer to the buffer to calculate CRC on
+ * @param len size of the buffer
+ *
+ * @return CRC value
+ */
+static uint32_t
+crc8_wimax_ofdma_hcs_tested_calc(const void *p, uint64_t len)
+{
+        return IMB_CRC8_WIMAX_OFDMA_HCS(p_mgr, p, len);
+}
+
 int
 crc_test(struct IMB_MGR *mb_mgr)
 {
@@ -698,6 +776,16 @@ crc_test(struct IMB_MGR *mb_mgr)
                                       crc6_iuup_header_calc,
                                       crc6_iuup_header_tested_calc,
                                       "IUUP Header CRC6 0x2f");
+
+        errors += test_crc_polynomial(crc32_wimax_ofdma_data_setup,
+                                      crc32_wimax_ofdma_data_calc,
+                                      crc32_wimax_ofdma_data_tested_calc,
+                                      "WIMAX OFDMA CRC32 0x04c11db7");
+
+        errors += test_crc_polynomial(crc8_wimax_ofdma_hcs_setup,
+                                      crc8_wimax_ofdma_hcs_calc,
+                                      crc8_wimax_ofdma_hcs_tested_calc,
+                                      "WIMAX OFDMA CRC8 HCS 0x07");
 
 	if (0 == errors)
 		printf("...Pass\n");

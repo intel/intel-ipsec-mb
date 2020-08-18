@@ -181,6 +181,40 @@ crc32_iuup_header_crc6_const:
         dq 0x3400000000000000, 0xc400000000000000   ; 128->64 reduction
         dq 0x00000001c8af6983, 0x00000001bc000000   ; 64->32 reduction
 
+;; WIMAX OFDMA DATA CRC32 0x4c11db7 (IEEE 802.16)
+align 64
+MKGLOBAL(crc32_wimax_ofdma_data_const,data,internal)
+crc32_wimax_ofdma_data_const:
+        dq 0x0000000088fe2237, 0x00000000cbcf3bcb   ; 2048-b fold
+        dq 0x00000000567fddeb, 0x0000000010bd4d7c   ; 1024-b fold
+        dq 0x000000003a06a4c6, 0x000000002ecc3300   ; 896-b fold
+        dq 0x000000001d49ada7, 0x000000007606eeeb   ; 768-b fold
+        dq 0x00000000f91a84e2, 0x00000000e2ca9d03   ; 640-b fold
+        dq 0x00000000e6228b11, 0x000000008833794c   ; 512-b fold
+        dq 0x000000008c3828a8, 0x0000000064bf7a9b   ; 384-b fold
+        dq 0x0000000075be46b7, 0x00000000569700e5   ; 256-b fold
+        dq 0x00000000e8a45605, 0x00000000c5b9cd4c   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0xf200aa6600000000, 0x490d678d00000000   ; 128->64 reduction
+        dq 0x0000000104d101df, 0x0000000104c11db7   ; 64->32 reduction
+
+;; WIMAX OFDMA HCS CRC8 0x07 (IEEE 802.16)
+align 64
+MKGLOBAL(crc32_wimax_ofdma_hcs8_const,data,internal)
+crc32_wimax_ofdma_hcs8_const:
+        dq 0x00000000d9000000, 0x00000000df000000   ; 2048-b fold
+        dq 0x00000000f1000000, 0x0000000029000000   ; 1024-b fold
+        dq 0x00000000fb000000, 0x0000000097000000   ; 896-b fold
+        dq 0x00000000fe000000, 0x00000000c8000000   ; 768-b fold
+        dq 0x000000007f000000, 0x0000000064000000   ; 640-b fold
+        dq 0x00000000bc000000, 0x0000000032000000   ; 512-b fold
+        dq 0x000000005e000000, 0x0000000019000000   ; 384-b fold
+        dq 0x000000002f000000, 0x000000008f000000   ; 256-b fold
+        dq 0x0000000094000000, 0x00000000c4000000   ; 128-b fold
+        dq 0x0000000000000000, 0x0000000000000000   ; padding
+        dq 0x7900000000000000, 0x6200000000000000   ; 128->64 reduction
+        dq 0x0000000107156a16, 0x0000000107000000   ; 64->32 reduction
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif

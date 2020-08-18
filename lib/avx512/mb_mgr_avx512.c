@@ -403,6 +403,10 @@ extern uint32_t crc11_fp_header_avx512(const void *msg, const uint64_t len);
 extern uint32_t crc7_fp_header_avx512(const void *msg, const uint64_t len);
 extern uint32_t crc10_iuup_data_avx512(const void *msg, const uint64_t len);
 extern uint32_t crc6_iuup_header_avx512(const void *msg, const uint64_t len);
+extern uint32_t
+crc32_wimax_ofdma_data_avx512(const void *msg, const uint64_t len);
+extern uint32_t
+crc8_wimax_ofdma_hcs_avx512(const void *msg, const uint64_t len);
 
 extern uint32_t ethernet_fcs_avx(const void *msg, const uint64_t len);
 extern uint32_t crc16_x25_avx(const void *msg, const uint64_t len);
@@ -414,6 +418,8 @@ extern uint32_t crc11_fp_header_avx(const void *msg, const uint64_t len);
 extern uint32_t crc7_fp_header_avx(const void *msg, const uint64_t len);
 extern uint32_t crc10_iuup_data_avx(const void *msg, const uint64_t len);
 extern uint32_t crc6_iuup_header_avx(const void *msg, const uint64_t len);
+extern uint32_t crc32_wimax_ofdma_data_avx(const void *msg, const uint64_t len);
+extern uint32_t crc8_wimax_ofdma_hcs_avx(const void *msg, const uint64_t len);
 
 /* ====================================================================== */
 
@@ -1652,6 +1658,8 @@ init_mb_mgr_avx512(IMB_MGR *state)
         state->crc7_fp_header      = crc7_fp_header_avx;
         state->crc10_iuup_data     = crc10_iuup_data_avx;
         state->crc6_iuup_header    = crc6_iuup_header_avx;
+        state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx;
+        state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
 
         if ((state->features & IMB_FEATURE_VPCLMULQDQ) ==
             IMB_FEATURE_VPCLMULQDQ) {
@@ -1665,6 +1673,8 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 state->crc7_fp_header      = crc7_fp_header_avx512;
                 state->crc10_iuup_data     = crc10_iuup_data_avx512;
                 state->crc6_iuup_header    = crc6_iuup_header_avx512;
+                state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx512;
+                state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx512;
         }
 
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
