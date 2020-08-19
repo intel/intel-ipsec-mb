@@ -832,6 +832,8 @@ fill_job(IMB_JOB *job, const struct params_s *params,
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 job->u.ZUC_EIA3._key  = k2;
                 job->u.ZUC_EIA3._iv  = auth_iv;
+                job->msg_len_to_hash_in_bits =
+                        (job->msg_len_to_hash_in_bytes * 8);
                 break;
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 job->u.SNOW3G_UIA2._key = k2;
