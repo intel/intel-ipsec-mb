@@ -231,7 +231,7 @@ extern padding_0x80_tab16
 %define %%dir           %2 ; [in] shift direction - left or right
 %define %%reg           %3 ; [in/out] XMM reg to shift bytes
 %define %%num           %4 ; [in] GP reg containing number of bytes to shift
-%define %%shuf_tab      %5 ; [out] XMM reg to store shuffle table
+%define %%shuf_tab      %5 ; [clobbered] XMM reg to store shuffle table
 %define %%tmp_gp        %6 ; [clobbered] GP reg to clobber
 
         ;; load shift table into %%shuf_tab

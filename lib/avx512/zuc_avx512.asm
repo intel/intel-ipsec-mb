@@ -153,8 +153,16 @@ all_3fs:
 dw      0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f
 dw      0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f
 
+align 16
 bit_mask_table:
-db	0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc
+db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe
 
 byte64_len_to_mask_table:
         dq      0x0000000000000000, 0x0000000000000001
@@ -1344,6 +1352,10 @@ asm_Eia3RemainderAVX512:
 	%define		DATA	r8
 	%define		N_BITS	r9
 %endif
+
+%define N_BYTES rbx
+%define OFFSET  r15
+
         FUNC_SAVE
 
         vmovdqa  xmm5, [bit_reverse_table_l]
@@ -1352,13 +1364,14 @@ asm_Eia3RemainderAVX512:
         vmovdqa  xmm10, [data_mask_64bits]
         vpxor    xmm9, xmm9
 
+        xor     OFFSET, OFFSET
 %assign I 0
 %rep 3
         cmp     N_BITS, 128
         jb      Eia3RoundsAVX512_dq_end
 
         ;; read 16 bytes and reverse bits
-        vmovdqu xmm0, [DATA]
+        vmovdqu xmm0, [DATA + OFFSET]
         vpand   xmm1, xmm0, xmm7
 
         vpandn  xmm2, xmm7, xmm0
@@ -1375,7 +1388,7 @@ asm_Eia3RemainderAVX512:
         ;; - set up KS
 %if I != 0
         vmovdqa  xmm11, xmm12
-        vmovdqu  xmm12, [KS + (4*4)]
+        vmovdqu  xmm12, [KS + OFFSET + (4*4)]
 %else
         vmovdqu  xmm11, [KS + (0*4)]
         vmovdqu  xmm12, [KS + (4*4)]
@@ -1391,7 +1404,6 @@ asm_Eia3RemainderAVX512:
         vpsrldq  xmm8, 8
         vpshufd  xmm1, xmm8, 0xdc
 
-
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
         vpclmulqdq xmm13, xmm0, xmm2, 0x00
@@ -1402,89 +1414,108 @@ asm_Eia3RemainderAVX512:
         vpternlogq xmm13, xmm14, xmm8, 0x96
         vpternlogq xmm9, xmm13, xmm15, 0x96
 
-        lea     DATA, [DATA + 16]
-        lea     KS, [KS + 16]
+        add     OFFSET, 16
         sub     N_BITS, 128
 %assign I (I + 1)
 %endrep
 Eia3RoundsAVX512_dq_end:
 
-%rep 3
-        cmp     N_BITS, 32
-        jb      Eia3RoundsAVX_dw_end
+        or      N_BITS, N_BITS
+        jz      Eia3RoundsAVX_end
 
-        ;; swap dwords in KS
-        vmovq   xmm1, [KS]
-        vpshufd xmm4, xmm1, 0xf1
+        ; Get number of bytes
+        mov     N_BYTES, N_BITS
+        add     N_BYTES, 7
+        shr     N_BYTES, 3
 
-        ;;  bit-reverse 4 bytes of data
-        vmovd   xmm0, [DATA]
+        lea     r10, [rel byte64_len_to_mask_table]
+        kmovq   k1, [r10 + N_BYTES*8]
+
+        ;; Set up KS
+        vmovdqu xmm1, [KS + OFFSET]
+        vmovdqu xmm2, [KS + OFFSET + 16]
+        vpalignr xmm13, xmm2, xmm1, 8
+        vpshufd xmm11, xmm1, 0x61
+        vpshufd xmm12, xmm13, 0x61
+
+        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        vmovdqu8 xmm0{k1}{z}, [DATA + OFFSET]
+        ; check if there is a partial byte (less than 8 bits in last byte)
+        mov     rax, N_BITS
+        and     rax, 0x7
+        shl     rax, 4
+        lea     r10, [rel bit_mask_table]
+        add     r10, rax
+
+        ; Get mask to clear last bits
+        vmovdqa xmm3, [r10]
+
+        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
+        ; to apply mask, then restore by shifting right same amount of bytes
+        mov     r10, 16
+        sub     r10, N_BYTES
+        XVPSLLB xmm0, r10, xmm4, r11
+        vpandq  xmm0, xmm3
+        XVPSRLB xmm0, r10, xmm4, r11
+
+        ; Bit reverse input data
         vpand   xmm1, xmm0, xmm7
 
         vpandn  xmm2, xmm7, xmm0
         vpsrld  xmm2, 4
 
-        vpshufb xmm0, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
         vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
 
-        vpor    xmm0, xmm3
+        vpor    xmm8, xmm3
 
-        ;; rol & xor
-        vpclmulqdq xmm0, xmm4, 0
-        vpxor    xmm9, xmm0
+        ;; Set up DATA
+        vpand   xmm13, xmm10, xmm8
+        vpshufd xmm0, xmm13, 0xdc ; D 0-3 || Os || D 4-7 || 0s
 
-        lea     DATA, [DATA + 4]
-        lea     KS, [KS + 4]
-        sub     N_BITS, 32
-%endrep
+        vpsrldq xmm8, 8
+        vpshufd xmm1, xmm8, 0xdc ; D 8-11 || 0s || D 12-15 || 0s
 
-Eia3RoundsAVX_dw_end:
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm11, 0x00
+        vpclmulqdq xmm14, xmm0, xmm11, 0x11
+        vpclmulqdq xmm15, xmm1, xmm12, 0x00
+        vpclmulqdq xmm8, xmm1, xmm12, 0x11
+        vpternlogq xmm9, xmm14, xmm13, 0x96
+        vpternlogq xmm9, xmm15, xmm8, 0x96
+
+Eia3RoundsAVX_end:
+        mov     r11d, [T]
         vmovq   rax, xmm9
         shr     rax, 32
+        xor     eax, r11d
 
-        or      N_BITS, N_BITS
-        jz      Eia3RoundsAVX_byte_loop_end
+        ; Read keyStr[N_BITS / 32]
+        lea     r10, [N_BITS + OFFSET*8] ; Restore original N_BITS
+        shr     r10, 5
+        mov     r11, [KS + r10*4]
 
-        ;; get 64-bit key stream for the last data bits (less than 32)
-        mov     KS, [KS]
+        ; Rotate left by N_BITS % 32
+        mov     r12, rcx ; Save RCX
+        mov     rcx, N_BITS
+        and     rcx, 0x1F
+        rol     r11, cl
+        mov     rcx, r12 ; Restore RCX
 
-        ;; process remaining data bytes and bits
-Eia3RoundsAVX_byte_loop:
-        or      N_BITS, N_BITS
-        jz      Eia3RoundsAVX_byte_loop_end
+        ; XOR with previous digest calculation
+        xor     eax, r11d
 
-        cmp     N_BITS, 8
-        jb      Eia3RoundsAVX_byte_partial
+       ; Read keyStr[L - 1] (last double word of keyStr)
+        lea     r10, [N_BITS + OFFSET*8] ; Restore original N_BITS
+        add     r10, (31 + 64)
+        shr     r10, 5 ; L
+        dec     r10
+        mov     r11d, [KS + r10 * 4]
 
-        movzx   r11, byte [DATA]
-        sub     N_BITS, 8
-        jmp     Eia3RoundsAVX_byte_read
-
-Eia3RoundsAVX_byte_partial:
-        ;; process remaining bits (up to 7)
-        lea     r11, [bit_mask_table]
-        movzx   r10, byte [r11 + N_BITS]
-        movzx   r11, byte [DATA]
-        and     r11, r10
-        xor     N_BITS, N_BITS
-Eia3RoundsAVX_byte_read:
-
-%assign DATATEST 0x80
-%rep 8
-        xor     r10, r10
-        test    r11, DATATEST
-        cmovne  r10, KS
-        xor     rax, r10
-        rol     KS, 1
-%assign DATATEST (DATATEST >> 1)
-%endrep                 ; byte boundary
-        lea     DATA, [DATA + 1]
-        jmp     Eia3RoundsAVX_byte_loop
-
-Eia3RoundsAVX_byte_loop_end:
-
-        mov     r10d, [T]
-        xor     eax, r10d
+        ; XOR with previous digest calculation and bswap it
+        xor     eax, r11d
+        bswap   eax
         mov     [T], eax
 
         FUNC_RESTORE

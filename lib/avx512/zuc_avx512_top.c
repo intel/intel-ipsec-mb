@@ -541,13 +541,7 @@ void _zuc_eia3_1_buffer_avx512(const void *pKey,
         if (remainingBits > (14 * 32))
                 asm_ZucGenKeystream8B_avx(&keyStream[16], &zucState);
         asm_Eia3RemainderAVX512(&T, &keyStream[0], pIn8, remainingBits);
-        T ^= rotate_left(load_uint64(&keyStream[remainingBits / 32]),
-                         remainingBits % 32);
-
-        /* save the final MAC-I result */
-        uint32_t keyBlock = keyStream[L - 1];
-        *pMacI = bswap4(T ^ keyBlock);
-
+        *pMacI = T;
 }
 
 static inline
@@ -701,14 +695,8 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                         asm_ZucGenKeystream8B_avx(&keyStr32[16],
                                                   &singlePktState);
 
-                uint32_t keyBlock = keyStr32[L - 1];
-
                 asm_Eia3RemainderAVX512(&T[i], keyStr32, pIn8[i], remainBits);
-                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
-                                 remainBits % 32);
-
-                /* save the final MAC-I result */
-                *(pMacI[i]) = bswap4(T[i] ^ keyBlock);
+                *(pMacI[i]) = T[i];
         }
 
 #ifdef SAFE_DATA
@@ -895,14 +883,7 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                         asm_ZucGenKeystream8B_avx(&keyStr32[16],
                                                   &singlePktState);
 
-                uint32_t keyBlock = keyStr32[L - 1];
-
                 asm_Eia3RemainderAVX512(tag, keyStr32, pIn8[i], remainBits);
-                *tag ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
-                                 remainBits % 32);
-
-                /* save the final MAC-I result */
-                *tag = bswap4(*tag ^ keyBlock);
         }
 
 #ifdef SAFE_DATA
