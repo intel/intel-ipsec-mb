@@ -22,6 +22,8 @@ Library
 - AES-CBCS-128 implementation for SSE and AVX (1:9 crypt:skip pattern)
 - Chacha20 scalar implementation
 - Chacha20 AVX512 implementation
+- Automatic multi-buffer manager initialization API added
+- Error handling API added
 
 Test Applications
 - CCM tests extended to test AES-CCM-256
@@ -32,6 +34,7 @@ Test Applications
 - AES-CBCS-128 tests added to test app
 - AES-CBCS-128 support added to xvalidation app
 - Chacha20 tests added to test and xvalidation app
+- Automatic architecture detection done by default
 
 Performance Application
 - AES-CCM-256 support added
