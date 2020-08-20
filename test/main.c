@@ -72,7 +72,8 @@ usage(const char *name)
 		"--no-sse: Don't do SSE\n"
                 "--no-gcm: Don't run GCM tests\n"
                 "--auto-detect: auto detects current architecture "
-                "to run the tests\n"
+                "to run the tests\n  Note: Auto detection "
+                "option now run by default and will be removed in the future\n"
 		"--shani-on: use SHA extensions, default: auto-detect\n"
 		"--shani-off: don't use SHA extensions\n", name);
 }
@@ -191,6 +192,11 @@ main(int argc, char **argv)
         /* Print available CPU features */
         print_hw_features();
 
+        /* detect all available architectures */
+        detect_arch(&do_aesni_emu, &do_sse, &do_avx,
+                    &do_avx2, &do_avx512, &do_gcm);
+
+
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
 			usage(argv[0]);
@@ -212,16 +218,12 @@ main(int argc, char **argv)
 		} else if (strcmp(argv[i], "--no-gcm") == 0) {
                         do_gcm = 0;
 		} else if (strcmp(argv[i], "--auto-detect") == 0) {
-                        auto_detect = 1;
+                        (void) auto_detect; /* legacy option - to be removed */
 		} else {
 			usage(argv[0]);
 			return EXIT_FAILURE;
 		}
 	}
-
-        if (auto_detect)
-                detect_arch(&do_aesni_emu, &do_sse, &do_avx,
-                            &do_avx2, &do_avx512, &do_gcm);
 
         for (i = 0; i < ARCH_NUMOF; i++) {
                 const enum arch_type atype = arch_type_tab[i];
