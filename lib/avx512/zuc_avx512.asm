@@ -128,10 +128,8 @@ dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
 
 align 64
 shuf_mask_tags:
-db      0x04, 0x05, 0x06, 0x07, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-db      0xFF, 0xFF, 0xFF, 0xFF, 0x04, 0x05, 0x06, 0x07, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-db      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x04, 0x05, 0x06, 0x07, 0xFF, 0xFF, 0xFF, 0xFF
-db      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x04, 0x05, 0x06, 0x07
+dd      0x01, 0x05, 0x09, 0x0D, 0x11, 0x15, 0x19, 0x1D, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+dd      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x05, 0x09, 0x0D, 0x11, 0x15, 0x19, 0x1D
 
 align 64
 all_ffs:
@@ -198,6 +196,10 @@ byte64_len_to_mask_table:
         dq      0x0fffffffffffffff, 0x1fffffffffffffff
         dq      0x3fffffffffffffff, 0x7fffffffffffffff
         dq      0xffffffffffffffff
+
+align 64
+add_64:
+dq      64, 64, 64, 64, 64, 64, 64, 64
 
 section .text
 align 64
@@ -1163,27 +1165,28 @@ asm_ZucCipher_16_gfni_avx512:
         ret
 
 ;;
-;;extern void asm_Eia3Round64B_4_VPCLMUL(uint32_t *T, const void **KS, const void **DATA)
+;;extern void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T, const void **KS, const void **DATA)
 ;;
-;; Updates authentication tag T of 4 buffers based on keystream KS and DATA.
+;; Updates authentication tag T of 16 buffers based on keystream KS and DATA.
 ;; - it processes 64 bytes of DATA
 ;; - reads data in 16 byte chunks and bit reverses them
 ;; - reads and re-arranges KS
 ;; - employs clmul for the XOR & ROL part
 ;; - copies top 64 bytes of KS to bottom (for the next round)
+;; - Updates Data pointers for next rounds
 ;;
 ;; WIN64
-;;	RCX - T: Array of digests for all 4 buffers
-;;	RDX - KS: Array of pointers to key stream (2 x 64 bytes) for all 4 buffers
-;;      R8  - DATA: Array of pointers to data for all 4 buffers
+;;	RCX - T: Array of digests for all 16 buffers
+;;	RDX - KS: Array of pointers to key stream (2 x 64 bytes) for all 16 buffers
+;;      R8  - DATA: Array of pointers to data for all 16 buffers
 ;; LIN64
-;;	RDI - T: Array of digests for all 4 buffers
-;;	RSI - KS: Array of pointers to key stream (2 x 64 bytes) for all 4 buffers
-;;      RDX - DATA: Array of pointers to data for all 4 buffers
+;;	RDI - T: Array of digests for all 16 buffers
+;;	RSI - KS: Array of pointers to key stream (2 x 64 bytes) for all 16 buffers
+;;      RDX - DATA: Array of pointers to data for all 16 buffers
 ;;
 align 64
-MKGLOBAL(asm_Eia3Round64B_4_VPCLMUL,function,internal)
-asm_Eia3Round64B_4_VPCLMUL:
+MKGLOBAL(asm_Eia3Round64B_16_VPCLMUL,function,internal)
+asm_Eia3Round64B_16_VPCLMUL:
 
 %ifdef LINUX
 	%define		T	rdi
@@ -1214,6 +1217,11 @@ asm_Eia3Round64B_4_VPCLMUL:
 %define         KS_TRANS2       zmm22
 %define         KS_TRANS3       zmm23
 
+%define         DIGEST_0        zmm28
+%define         DIGEST_1        zmm29
+%define         DIGEST_2        zmm30
+%define         DIGEST_3        zmm31
+
         FUNC_SAVE
 
         vmovdqa64       zmm5,  [rel bit_reverse_table_l]
@@ -1221,20 +1229,24 @@ asm_Eia3Round64B_4_VPCLMUL:
         vmovdqa64       zmm7,  [rel bit_reverse_and_table]
         vmovdqa64       zmm10, [rel data_mask_64bits]
 
-        vpxorq          zmm9, zmm9
-        mov             DATA_ADDR0, [DATA + 0*8]
-        mov             DATA_ADDR1, [DATA + 1*8]
-        mov             DATA_ADDR2, [DATA + 2*8]
-        mov             DATA_ADDR3, [DATA + 3*8]
+
+%assign IDX 0
+%rep 4
+        vpxorq          APPEND(DIGEST_, IDX), APPEND(DIGEST_, IDX)
+
+        mov             DATA_ADDR0, [DATA + IDX*32 + 0*8]
+        mov             DATA_ADDR1, [DATA + IDX*32 + 1*8]
+        mov             DATA_ADDR2, [DATA + IDX*32 + 2*8]
+        mov             DATA_ADDR3, [DATA + IDX*32 + 3*8]
 
         TRANSPOSE4_U128 DATA_ADDR0, DATA_ADDR1, DATA_ADDR2, DATA_ADDR3, \
                         DATA_TRANS0, DATA_TRANS1, DATA_TRANS2, DATA_TRANS3, \
                         zmm24, zmm25, zmm26, zmm27
 
-        mov             KS_ADDR0,   [KS + 0*8]
-        mov             KS_ADDR1,   [KS + 1*8]
-        mov             KS_ADDR2,   [KS + 2*8]
-        mov             KS_ADDR3,   [KS + 3*8]
+        mov             KS_ADDR0,   [KS + IDX*32 + 0*8]
+        mov             KS_ADDR1,   [KS + IDX*32 + 1*8]
+        mov             KS_ADDR2,   [KS + IDX*32 + 2*8]
+        mov             KS_ADDR3,   [KS + IDX*32 + 3*8]
 
         TRANSPOSE4_U128 KS_ADDR0, KS_ADDR1, KS_ADDR2, KS_ADDR3, \
                         KS_TRANS0, KS_TRANS1, KS_TRANS2, KS_TRANS3, \
@@ -1280,41 +1292,55 @@ asm_Eia3Round64B_4_VPCLMUL:
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
-%if I != 0
         vpclmulqdq      zmm13, APPEND(DATA_TRANS, I), zmm2, 0x00
         vpclmulqdq      zmm14, APPEND(DATA_TRANS, I), zmm2, 0x11
         vpclmulqdq      zmm15, zmm1, zmm3, 0x00
         vpclmulqdq      zmm8,  zmm1, zmm3, 0x11
 
         vpternlogq      zmm13, zmm14, zmm8, 0x96
-        vpternlogq      zmm9, zmm13, zmm15, 0x96
-%else
-        vpclmulqdq      zmm9, APPEND(DATA_TRANS, I), zmm2, 0x00
-        vpclmulqdq      zmm13, APPEND(DATA_TRANS, I), zmm2, 0x11
-        vpclmulqdq      zmm14, zmm1, zmm3, 0x00
-        vpclmulqdq      zmm15, zmm1, zmm3, 0x11
-
-        vpxorq          zmm14, zmm15
-        vpternlogq      zmm9, zmm13, zmm14, 0x96
-%endif
+        vpternlogq      APPEND(DIGEST_, IDX), zmm13, zmm15, 0x96
 
 %assign J (J + 1)
 %assign I (I + 1)
 %endrep
 
-        ;; - update tags
-        vmovdqu         xmm1, [T] ; Input tags
+        ; Memcpy KS 64-127 bytes to 0-63 bytes
+        vmovdqu64       zmm0, [KS_ADDR0 + 64]
+        vmovdqu64       zmm1, [KS_ADDR1 + 64]
+        vmovdqu64       zmm2, [KS_ADDR2 + 64]
+        vmovdqu64       zmm3, [KS_ADDR3 + 64]
+        vmovdqu64       [KS_ADDR0], zmm0
+        vmovdqu64       [KS_ADDR1], zmm1
+        vmovdqu64       [KS_ADDR2], zmm2
+        vmovdqu64       [KS_ADDR3], zmm3
 
-        ; Get result tags for 4 buffers in different position in each lane
-        ; and blend these tags into an XMM register.
+%assign IDX (IDX + 1)
+%endrep
+
+        ;; - update tags
+        mov             r9, 0x00FF
+        mov             r10, 0xFF00
+        kmovq           k1, r9
+        kmovq           k2, r10
+
+        vmovdqu64       zmm4, [T] ; Input tags
+        vmovdqa64       zmm0, [rel shuf_mask_tags]
+        vmovdqa64       zmm1, [rel shuf_mask_tags + 64]
+        ; Get result tags for 16 buffers in different position in each lane
+        ; and blend these tags into an ZMM register.
         ; Then, XOR the results with the previous tags and write out the result.
-        vpshufb         zmm9, [rel shuf_mask_tags]
-        vextracti32x4   xmm0, zmm9, 1
-        vextracti32x4   xmm2, zmm9, 2
-        vextracti32x4   xmm3, zmm9, 3
-        vpternlogq      xmm9, xmm0, xmm2, 0xFE ; A OR B OR C
-        vpternlogq      xmm1, xmm9, xmm3, 0x1E ; A XOR (B OR C)
-        vmovdqu         [T], xmm1
+        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
+        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
+        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
+        vmovdqu64       [T], zmm4
+
+        ; Update data pointers
+        vmovdqu64       zmm0, [DATA]
+        vmovdqu64       zmm1, [DATA + 64]
+        vpaddq          zmm0, [rel add_64]
+        vpaddq          zmm1, [rel add_64]
+        vmovdqu64       [DATA], zmm0
+        vmovdqu64       [DATA + 64], zmm1
 
         FUNC_RESTORE
 
@@ -1617,6 +1643,131 @@ asm_Eia3Round64BAVX512:
         mov     r10d, [T]
         xor     eax, r10d
         mov     [T], eax
+
+        FUNC_RESTORE
+
+        ret
+
+align 64
+MKGLOBAL(asm_Eia3Round64BAVX512_16,function,internal)
+asm_Eia3Round64BAVX512_16:
+
+%ifdef LINUX
+	%define		T	rdi
+	%define		KS	rsi
+	%define		DATA	rdx
+%else
+	%define		T	rcx
+	%define		KS	rdx
+	%define		DATA	r8
+%endif
+
+%define         DIGEST_0        zmm28
+%define         DIGEST_1        zmm29
+%define         DIGEST_2        zmm30
+%define         DIGEST_3        zmm31
+
+%define         DATA_ADDR       r10
+%define         KS_ADDR         r11
+
+        FUNC_SAVE
+
+        vmovdqa  xmm5, [bit_reverse_table_l]
+        vmovdqa  xmm6, [bit_reverse_table_h]
+        vmovdqa  xmm7, [bit_reverse_and_table]
+        vmovdqa  xmm10, [data_mask_64bits]
+
+%assign I 0
+%rep 4
+%assign J 0
+%rep 4
+
+        vpxor   xmm9, xmm9
+        mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
+        mov     KS_ADDR, [KS + 8*(I*4 + J)]
+
+%assign K 0
+%rep 4
+        ;; read 16 bytes and reverse bits
+        vmovdqu  xmm0, [DATA_ADDR + 16*K]
+        vpand    xmm1, xmm0, xmm7
+
+        vpandn   xmm2, xmm7, xmm0
+        vpsrld   xmm2, 4
+
+        vpshufb  xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb  xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor     xmm8, xmm4
+        ; xmm8 - bit reversed data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+%if K != 0
+        vmovdqa  xmm11, xmm12
+        vmovdqu  xmm12, [KS_ADDR + (K*16) + (4*4)]
+%else
+        vmovdqu  xmm11, [KS_ADDR + (K*16) + (0*4)]
+        vmovdqu  xmm12, [KS_ADDR + (K*16) + (4*4)]
+%endif
+        vpalignr xmm13, xmm12, xmm11, 8
+        vpshufd  xmm2, xmm11, 0x61
+        vpshufd  xmm3, xmm13, 0x61
+
+        ;;  - set up DATA
+        vpand    xmm13, xmm10, xmm8
+        vpshufd  xmm0, xmm13, 0xdc
+
+        vpsrldq  xmm8, 8
+        vpshufd  xmm1, xmm8, 0xdc
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm2, 0x00
+        vpclmulqdq xmm14, xmm0, xmm2, 0x11
+        vpclmulqdq xmm15, xmm1, xmm3, 0x00
+        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
+
+        vpternlogq xmm13, xmm14, xmm8, 0x96
+        vpternlogq xmm9, xmm13, xmm15, 0x96
+
+%assign K (K + 1)
+%endrep
+
+        vinserti32x4 APPEND(DIGEST_, I), xmm9, J
+        ; Memcpy KS 64-127 bytes to 0-63 bytes
+        vmovdqu64       zmm0, [KS_ADDR + 64]
+        vmovdqu64       [KS_ADDR], zmm0
+%assign J (J + 1)
+%endrep
+%assign I (I + 1)
+%endrep
+
+        ;; - update tags
+        mov             r9, 0x00FF
+        mov             r10, 0xFF00
+        kmovq           k1, r9
+        kmovq           k2, r10
+
+        vmovdqu64       zmm4, [T] ; Input tags
+        vmovdqa64       zmm0, [rel shuf_mask_tags]
+        vmovdqa64       zmm1, [rel shuf_mask_tags + 64]
+        ; Get result tags for 16 buffers in different position in each lane
+        ; and blend these tags into an ZMM register.
+        ; Then, XOR the results with the previous tags and write out the result.
+        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
+        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
+        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
+        vmovdqu64       [T], zmm4
+
+        ; Update data pointers
+        vmovdqu64       zmm0, [DATA]
+        vmovdqu64       zmm1, [DATA + 64]
+        vpaddq          zmm0, [rel add_64]
+        vpaddq          zmm1, [rel add_64]
+        vmovdqu64       [DATA], zmm0
+        vmovdqu64       [DATA + 64], zmm1
 
         FUNC_RESTORE
 
