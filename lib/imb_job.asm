@@ -97,6 +97,13 @@ END_FIELDS
 %assign _ZUC_EIA3_spec_fields_size	_FIELD_OFFSET
 %assign _ZUC_EIA3_spec_fields_align	_STRUCT_ALIGN
 
+START_FIELDS	; POLY1305 Specific Fields
+;;;	name				size	align
+FIELD	__poly1305_key,		 	8,	8	; ptr to 32 byte key
+END_FIELDS
+
+%assign _POLY1305_spec_fields_size	_FIELD_OFFSET
+%assign _POLY1305_spec_fields_align	_STRUCT_ALIGN
 
 START_FIELDS	; IMB_JOB
 ;;;	name				size	align
@@ -120,7 +127,8 @@ UNION	_u,	_HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
 		_CBCMAC_spec_fields_size, _CBCMAC_spec_fields_align, \
                 _AES_CMAC_spec_fields_size, _AES_CMAC_spec_fields_align, \
                 _GCM_spec_fields_size, _GCM_spec_fields_align, \
-                _ZUC_EIA3_spec_fields_size, _ZUC_EIA3_spec_fields_align
+                _ZUC_EIA3_spec_fields_size, _ZUC_EIA3_spec_fields_align, \
+                _POLY1305_spec_fields_size, _POLY1305_spec_fields_align
 
 FIELD	_status,			4,	4	; JOB_STS
 FIELD	_cipher_mode,			4,	4	; JOB_CIPHER_MODE
@@ -153,4 +161,4 @@ END_FIELDS
 %assign _gcm_aad_len	                _u + __gcm_aad_len
 %assign _zuc_eia3_key                   _u + __zuc_eia3_key
 %assign _zuc_eia3_iv                    _u + __zuc_eia3_iv
-
+%assign _poly1305_key	                _u + __poly1305_key

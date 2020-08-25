@@ -173,7 +173,8 @@ enum {
       IMB_ERR_JOB_CHAIN_ORDER,
       IMB_ERR_CIPH_MODE,
       IMB_ERR_HASH_ALGO,
-      IMB_ERR_MAX
+      IMB_ERR_JOB_NULL_AUTH_KEY,
+      IMB_ERR_MAX       /* don't move this one */
 };
 
 /*
@@ -305,6 +306,7 @@ typedef enum {
         IMB_AUTH_AES_GMAC_192,       /* AES-GMAC (192-bit key) */
         IMB_AUTH_AES_GMAC_256,       /* AES-GMAC (256-bit key) */
         IMB_AUTH_AES_CMAC_256,       /* AES256-CMAC */
+        IMB_AUTH_POLY1305,           /* POLY1305 */
         IMB_AUTH_NUM
 } JOB_HASH_ALG;
 
@@ -423,6 +425,9 @@ typedef struct IMB_JOB {
                         const void *_iv;
                         uint64_t iv_len_in_bytes;
                 } GMAC; /* Used with AES_GMAC_128/192/256 */
+                struct _POLY1305_specific_fields {
+                        const void *_key; /* pointer to 32 byte key */
+                } POLY1305;
         } u;
 
         JOB_STS status;

@@ -240,7 +240,8 @@ asm_generic_lib_objs := \
 	wireless_common.o \
 	constant_lookup.o \
 	crc32_refl_const.o \
-	crc32_const.o
+	crc32_const.o \
+	poly1305.o
 
 #
 # List of ASM modules (no-aesni directory)

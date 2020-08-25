@@ -92,6 +92,8 @@ imb_get_strerror(int errnum)
                 return "Invalid cipher mode";
         case IMB_ERR_HASH_ALGO:
                 return "Invalid hash algorithm";
+        case IMB_ERR_JOB_NULL_AUTH_KEY:
+                return "Null pointer to authentication key";
         default:
                 return strerror(errnum);
         }

@@ -194,6 +194,7 @@ fill_in_job(struct IMB_JOB *job,
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AUTH_AES_CMAC_256 */
+                16, /* IMB_AUTH_POLY1305 */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         const uint64_t msg_len_to_cipher = 32;
@@ -378,6 +379,10 @@ fill_in_job(struct IMB_JOB *job,
                 job->u.GMAC._key = (struct gcm_key_data *) dust_bin;
                 job->u.GMAC._iv = dust_bin;
                 job->u.GMAC.iv_len_in_bytes = 12;
+                job->auth_tag_output_len_in_bytes = 16;
+                break;
+        case IMB_AUTH_POLY1305:
+                job->u.POLY1305._key = dust_bin;
                 job->auth_tag_output_len_in_bytes = 16;
                 break;
         default:

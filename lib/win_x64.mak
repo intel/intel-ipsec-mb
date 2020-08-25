@@ -435,7 +435,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\crc32_const.obj \
 	$(OBJ_DIR)\crc32_refl_by16_vclmul_avx512.obj \
 	$(OBJ_DIR)\crc32_by16_vclmul_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_auto.obj
+	$(OBJ_DIR)\mb_mgr_auto.obj \
+	$(OBJ_DIR)\poly1305.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \

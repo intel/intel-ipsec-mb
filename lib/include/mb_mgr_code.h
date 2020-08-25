@@ -727,6 +727,7 @@ __forceinline
 IMB_JOB *
 SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
+        extern void poly1305_mac(IMB_JOB *);
         MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
@@ -850,6 +851,10 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 process_gmac(state, job, IMB_KEY_AES_256_BYTES);
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
+        case IMB_AUTH_POLY1305:
+                poly1305_mac(job);
+                job->status |= STS_COMPLETED_HMAC;
+                return job;
         default: /* assume IMB_AUTH_GCM,IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL */
                 job->status |= STS_COMPLETED_HMAC;
                 return job;
@@ -955,6 +960,7 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_AES_GMAC_128 */
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
+                16, /* IMB_AUTH_POLY1305 */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -985,6 +991,7 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AUTH_AES_CMAC_256 */
+                16, /* IMB_AUTH_POLY1305 */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1955,6 +1962,24 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_POLY1305:
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->u.POLY1305._key == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH_KEY);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
                 break;
