@@ -753,54 +753,36 @@ void zuc_eia3_1_buffer_avx512(const void *pKey,
 }
 
 static inline
-void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
-                             const void * const pIv[NUM_AVX512_BUFS],
-                             const void * const pBufferIn[NUM_AVX512_BUFS],
-                             uint32_t *pMacI[NUM_AVX512_BUFS],
-                             const uint16_t lengthInBits[NUM_AVX512_BUFS],
-                             const void * const job_in_lane[NUM_AVX512_BUFS],
+void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                              const unsigned use_gfni)
 {
         unsigned int i = 0;
-        DECLARE_ALIGNED(ZucState16_t state, 64);
+        ZucState16_t *state = (ZucState16_t *) ooo->state;
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size from all packets */
-        uint32_t commonBits = find_min_length16(lengthInBits);
+        uint32_t commonBits = find_min_length16(ooo->lens);
 
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX512_BUFS][2*64], 64);
-        /* structure to store the 16 keys */
-        DECLARE_ALIGNED(ZucKey16_t keys, 64);
-        /* structure to store the 16 IV's */
-        DECLARE_ALIGNED(ZucIv16_t ivs, 64);
         const uint8_t *pIn8[NUM_AVX512_BUFS] = {NULL};
         uint32_t remainCommonBits = commonBits;
         uint32_t numKeyStr = 0;
-        uint32_t T[NUM_AVX512_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr0[NUM_AVX512_BUFS], 64) = {NULL};
         DECLARE_ALIGNED(uint32_t *pKeyStrArr64[NUM_AVX512_BUFS], 64) = {NULL};
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                pIn8[i] = (const uint8_t *) pBufferIn[i];
+                pIn8[i] = (const uint8_t *) ooo->args.in[i];
                 pKeyStrArr0[i] = (uint32_t *) &keyStr[i][0];
-                keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
         }
 
-        if (use_gfni) {
-                asm_ZucInitialization_16_gfni_avx512(&keys,  &ivs, &state,
-                                                     0xFFFF);
-
+        if (use_gfni)
                 /* Generate 64 bytes at a time */
-                asm_ZucGenKeystream64B_16_gfni_avx512(&state,
+                asm_ZucGenKeystream64B_16_gfni_avx512(state,
                                                       (uint32_t **)pKeyStrArr0);
-        } else {
-                asm_ZucInitialization_16_avx512(&keys,  &ivs, &state, 0xFFFF);
-
+        else
                 /* Generate 64 bytes at a time */
-                asm_ZucGenKeystream64B_16_avx512(&state,
+                asm_ZucGenKeystream64B_16_avx512(state,
                                                  (uint32_t **)pKeyStrArr0);
-        }
 
         /* Point at the next 64 bytes of the key */
         for (i = 0; i < NUM_AVX512_BUFS; i++)
@@ -813,31 +795,33 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
                 /* Generate the next key stream 8 bytes or 64 bytes */
                 if (use_gfni) {
                         if (!remainCommonBits)
-                                asm_ZucGenKeystream8B_16_gfni_avx512(&state,
+                                asm_ZucGenKeystream8B_16_gfni_avx512(state,
                                                      (uint32_t **)pKeyStrArr64);
                         else
-                                asm_ZucGenKeystream64B_16_gfni_avx512(&state,
+                                asm_ZucGenKeystream64B_16_gfni_avx512(state,
                                                      (uint32_t **)pKeyStrArr64);
                 } else {
                         if (!remainCommonBits)
-                                asm_ZucGenKeystream8B_16_avx512(&state,
+                                asm_ZucGenKeystream8B_16_avx512(state,
                                                      (uint32_t **)pKeyStrArr64);
                         else
-                                asm_ZucGenKeystream64B_16_avx512(&state,
+                                asm_ZucGenKeystream64B_16_avx512(state,
                                                      (uint32_t **)pKeyStrArr64);
                 }
                 if (use_gfni) {
                         for (i = 0; i < NUM_AVX512_BUFS; i+=4)
-                                asm_Eia3Round64B_4_VPCLMUL(&T[i],
+                                asm_Eia3Round64B_4_VPCLMUL(&ooo->args.digest[i],
                                         (const void * const *)&pKeyStrArr0[i],
                                         (const void **)&pIn8[i]);
                 }
                 for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                        if (job_in_lane[i] == NULL)
+                        if (ooo->job_in_lane[i] == NULL)
                                 continue;
 
+                        uint32_t *tag = &ooo->args.digest[i];
+
                         if (!use_gfni)
-                                asm_Eia3Round64BAVX512(&T[i], &keyStr[i][0],
+                                asm_Eia3Round64BAVX512(tag, &keyStr[i][0],
                                                        pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
@@ -848,39 +832,40 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
 
         /* Process each packet separately for the remaining bits */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                if (job_in_lane[i] == NULL)
+                if (ooo->job_in_lane[i] == NULL)
                         continue;
 
-                const uint32_t N = lengthInBits[i] + (2 * ZUC_WORD_BITS);
+                const uint32_t N = ooo->lens[i] + (2 * ZUC_WORD_BITS);
                 uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
                              numKeyStr*(keyStreamLengthInBits / 32);
-                uint32_t remainBits = lengthInBits[i] -
+                uint32_t remainBits = ooo->lens[i] -
                                       numKeyStr*keyStreamLengthInBits;
                 uint32_t *keyStr32 = (uint32_t *) keyStr[i];
+                uint32_t *tag = &ooo->args.digest[i];
 
                 /* If remaining bits are more than 56 bytes, we need to generate
                  * at least 8B more of keystream, so we need to copy
                  * the zuc state to single packet state first */
                 if (remainBits > (14*32)) {
-                        singlePktState.lfsrState[0] = state.lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state.lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state.lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state.lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state.lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state.lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state.lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state.lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state.lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state.lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state.lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state.lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state.lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state.lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state.lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state.lfsrState[15][i];
+                        singlePktState.lfsrState[0] = state->lfsrState[0][i];
+                        singlePktState.lfsrState[1] = state->lfsrState[1][i];
+                        singlePktState.lfsrState[2] = state->lfsrState[2][i];
+                        singlePktState.lfsrState[3] = state->lfsrState[3][i];
+                        singlePktState.lfsrState[4] = state->lfsrState[4][i];
+                        singlePktState.lfsrState[5] = state->lfsrState[5][i];
+                        singlePktState.lfsrState[6] = state->lfsrState[6][i];
+                        singlePktState.lfsrState[7] = state->lfsrState[7][i];
+                        singlePktState.lfsrState[8] = state->lfsrState[8][i];
+                        singlePktState.lfsrState[9] = state->lfsrState[9][i];
+                        singlePktState.lfsrState[10] = state->lfsrState[10][i];
+                        singlePktState.lfsrState[11] = state->lfsrState[11][i];
+                        singlePktState.lfsrState[12] = state->lfsrState[12][i];
+                        singlePktState.lfsrState[13] = state->lfsrState[13][i];
+                        singlePktState.lfsrState[14] = state->lfsrState[14][i];
+                        singlePktState.lfsrState[15] = state->lfsrState[15][i];
 
-                        singlePktState.fR1 = state.fR1[i];
-                        singlePktState.fR2 = state.fR2[i];
+                        singlePktState.fR1 = state->fR1[i];
+                        singlePktState.fR2 = state->fR2[i];
                 }
 
                 while (remainBits >= keyStreamLengthInBits) {
@@ -894,7 +879,7 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
                         else
                                 asm_ZucGenKeystream64B_avx(&keyStr32[16],
                                                            &singlePktState);
-                        asm_Eia3Round64BAVX512(&T[i], &keyStr32[0], pIn8[i]);
+                        asm_Eia3Round64BAVX512(tag, &keyStr32[0], pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 64 bytes */
                         memcpy(keyStr32, &keyStr32[16], 64);
@@ -912,45 +897,31 @@ void _zuc_eia3_16_buffer_job(const void * const pKey[NUM_AVX512_BUFS],
 
                 uint32_t keyBlock = keyStr32[L - 1];
 
-                asm_Eia3RemainderAVX512(&T[i], keyStr32, pIn8[i], remainBits);
-                T[i] ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
+                asm_Eia3RemainderAVX512(tag, keyStr32, pIn8[i], remainBits);
+                *tag ^= rotate_left(load_uint64(&keyStr32[remainBits / 32]),
                                  remainBits % 32);
 
                 /* save the final MAC-I result */
-                *(pMacI[i]) = bswap4(T[i] ^ keyBlock);
+                *tag = bswap4(*tag ^ keyBlock);
         }
 
 #ifdef SAFE_DATA
         /* Clear sensitive data (in registers and stack) */
         clear_mem(keyStr, sizeof(keyStr));
         clear_mem(&singlePktState, sizeof(singlePktState));
-        clear_mem(&state, sizeof(state));
-        clear_mem(&keys, sizeof(keys));
 #endif
 }
 
 void
-zuc_eia3_16_buffer_job_no_gfni_avx512(const void * const pKey[NUM_AVX512_BUFS],
-                              const void * const pIv[NUM_AVX512_BUFS],
-                              const void * const pBufferIn[NUM_AVX512_BUFS],
-                              uint32_t *pMacI[NUM_AVX512_BUFS],
-                              const uint16_t lengthInBits[NUM_AVX512_BUFS],
-                              const void * const job_in_lane[NUM_AVX512_BUFS])
+zuc_eia3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
 {
-        _zuc_eia3_16_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
-                                job_in_lane, 0);
+        _zuc_eia3_16_buffer_job(ooo, 0);
 }
 
 void
-zuc_eia3_16_buffer_job_gfni_avx512(const void * const pKey[NUM_AVX512_BUFS],
-                              const void * const pIv[NUM_AVX512_BUFS],
-                              const void * const pBufferIn[NUM_AVX512_BUFS],
-                              uint32_t *pMacI[NUM_AVX512_BUFS],
-                              const uint16_t lengthInBits[NUM_AVX512_BUFS],
-                              const void * const job_in_lane[NUM_AVX512_BUFS])
+zuc_eia3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
 {
-        _zuc_eia3_16_buffer_job(pKey, pIv, pBufferIn, pMacI, lengthInBits,
-                                job_in_lane, 1);
+        _zuc_eia3_16_buffer_job(ooo, 1);
 }
 
 static inline

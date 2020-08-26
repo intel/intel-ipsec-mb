@@ -155,6 +155,7 @@ typedef struct {
         uint16_t *out[16];
         const uint16_t *keys[16];
         const uint16_t *iv[16];
+        DECLARE_ALIGNED(uint32_t digest[16], 64);
 } ZUC_ARGS_x16;
 
 /* AES out-of-order scheduler fields */

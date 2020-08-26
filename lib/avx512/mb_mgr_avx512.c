@@ -1280,6 +1280,7 @@ init_mb_mgr_avx512(IMB_MGR *state)
                sizeof(zuc_eia3_ooo->state));
         zuc_eia3_ooo->init_not_done = 0;
         zuc_eia3_ooo->unused_lane_bitmask = 0xffff;
+        memset(zuc_eia3_ooo->args.digest, 0, sizeof(zuc_eia3_ooo->args.digest));
 
         /* Init HMAC/SHA1 out-of-order fields */
         hmac_sha_1_ooo->lens[0] = 0;

@@ -955,20 +955,10 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
                                 const void * const job_in_lane[8]);
 
 IMB_DLL_LOCAL
-void zuc_eia3_16_buffer_job_no_gfni_avx512(const void * const pKey[16],
-                                           const void * const pIv[16],
-                                           const void * const pBufferIn[16],
-                                           uint32_t *pMacI[16],
-                                           const uint16_t lengthInBits[16],
-                                           const void * const job_in_lane[16]);
+void zuc_eia3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo);
 
 IMB_DLL_LOCAL
-void zuc_eia3_16_buffer_job_gfni_avx512(const void * const pKey[16],
-                                        const void * const pIv[16],
-                                        const void * const pBufferIn[16],
-                                        uint32_t *pMacI[16],
-                                        const uint16_t lengthInBits[16],
-                                        const void * const job_in_lane[16]);
+void zuc_eia3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo);
 
 /* the s-boxes */
 extern const uint8_t S0[256];
