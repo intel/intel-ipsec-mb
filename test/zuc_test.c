@@ -791,12 +791,17 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 memcpy(pSrcData[i], vector.message, byteLength);
         }
 
-        IMB_ZUC_EIA3_N_BUFFER(mb_mgr,
-                              (const void * const *)pKeys,
-                              (const void * const *)pIV,
-                              (const void * const *)pSrcData,
-                              bitLength, (uint32_t **)pDstData,
-                              numBuffs);
+        if (job_api)
+                submit_eia3_jobs(mb_mgr, pKeys, pIV,
+                                 pSrcData, pDstData,
+                                 bitLength, numBuffs);
+        else
+                IMB_ZUC_EIA3_N_BUFFER(mb_mgr,
+                                      (const void * const *)pKeys,
+                                      (const void * const *)pIV,
+                                      (const void * const *)pSrcData,
+                                      bitLength, (uint32_t **)pDstData,
+                                      numBuffs);
 
         for (i = 0; i < numBuffs; i++) {
                 vector = testEIA3_vectors[i % NUM_ZUC_EIA3_TESTS];
