@@ -39,6 +39,19 @@
 
 int api_test(struct IMB_MGR *mb_mgr);
 
+enum {
+      TEST_UNEXPECTED_JOB = 1,
+      TEST_INVALID_JOB,
+      TEST_AUTH_SRC_NULL = 100,
+      TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
+      TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
+      TEST_CIPH_SRC_NULL = 200,
+      TEST_CIPH_DST_NULL,
+      TEST_CIPH_IV_NULL,
+      TEST_CIPH_ENC_KEY_NULL,
+      TEST_CIPH_DEC_KEY_NULL,
+};
+
 /*
  * @brief Performs JOB API behavior tests
  */
@@ -53,14 +66,15 @@ test_job_api(struct IMB_MGR *mb_mgr)
         /* ======== test 1 */
         job = IMB_GET_NEXT_JOB(mb_mgr);
         if (job == NULL) {
-                printf("%s: test 1, unexpected job = NULL\n", __func__);
+                printf("%s: test %d, unexpected job = NULL\n",
+                       __func__, TEST_UNEXPECTED_JOB);
                 return 1;
         }
         printf(".");
         err = imb_get_errno(mb_mgr);
         if (err != 0) {
-                printf("%s: test 1, unexpected error: %s\n",
-                       __func__, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_UNEXPECTED_JOB, imb_get_strerror(err));
                 return 1;
         }
 	printf(".");
@@ -70,22 +84,23 @@ test_job_api(struct IMB_MGR *mb_mgr)
         job_next = IMB_SUBMIT_JOB(mb_mgr);
         if (job != job_next) {
                 /* Invalid job should be returned straight away */
-                printf("%s: test 2, unexpected job != job_next\n", __func__);
+                printf("%s: test %d, unexpected job != job_next\n",
+                       __func__, TEST_INVALID_JOB);
                 return 1;
         }
         printf(".");
         err = imb_get_errno(mb_mgr);
         if (err == 0) {
-                printf("%s: test 2, unexpected error: %s\n",
-                       __func__, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_JOB, imb_get_strerror(err));
                 return 1;
         }
         printf(".");
 
         if (job_next->status != STS_INVALID_ARGS) {
                 /* Invalid job is returned, and status should be INVALID_ARGS */
-                printf("%s: test 2, unexpected job->status != "
-                       "STS_INVALID_ARGS\n", __func__);
+                printf("%s: test %d, unexpected job->status != "
+                       "STS_INVALID_ARGS\n", __func__, TEST_INVALID_JOB);
                 return 1;
         }
 	printf(".");
@@ -93,15 +108,15 @@ test_job_api(struct IMB_MGR *mb_mgr)
         job_next = IMB_GET_NEXT_JOB(mb_mgr);
         if (job == job_next) {
                 /* get next job should point to a new job slot */
-                printf("%s: test 2, unexpected job == get_next_job()\n",
-                       __func__);
+                printf("%s: test %d, unexpected job == get_next_job()\n",
+                       __func__, TEST_INVALID_JOB);
                 return 1;
         }
 	printf(".");
         err = imb_get_errno(mb_mgr);
         if (err != 0) {
-                printf("%s: test 2, unexpected error: %s\n",
-                       __func__, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_JOB, imb_get_strerror(err));
                 return 1;
         }
 	printf(".");
@@ -109,15 +124,15 @@ test_job_api(struct IMB_MGR *mb_mgr)
         job = IMB_GET_COMPLETED_JOB(mb_mgr);
         if (job) {
                 /* there should not be any completed jobs left */
-                printf("%s: test 2, unexpected completed job\n",
-                       __func__);
+                printf("%s: test %d, unexpected completed job\n",
+                       __func__, TEST_INVALID_JOB);
                 return 1;
         }
         printf(".");
         err = imb_get_errno(mb_mgr);
         if (err != 0) {
-                printf("%s: test 2, unexpected error: %s\n",
-                       __func__, imb_get_strerror(err));
+                printf("%s: test %d, unexpected error: %s\n",
+                       __func__, TEST_INVALID_JOB, imb_get_strerror(err));
                 return 1;
         }
 	printf(".");
@@ -475,8 +490,8 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
 
-        /* ======== test 100
-         * SRC = NULL
+        /*
+         * SRC = NULL test
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
@@ -492,14 +507,14 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 template_job.src = NULL;
                                 if (!is_submit_invalid(mb_mgr,
                                                        &template_job,
-                                                       100,
+                                                       TEST_AUTH_SRC_NULL,
                                                        IMB_ERR_JOB_NULL_SRC))
                                         return 1;
                                 printf(".");
                         }
 
-        /* ======== test 101
-         * AUTH_TAG_OUTPUT = NULL
+        /*
+         * AUTH_TAG_OUTPUT = NULL test
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
@@ -514,14 +529,14 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                             hash, order);
                                 template_job.auth_tag_output = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       101,
-                                                       IMB_ERR_JOB_NULL_AUTH))
+                                                 TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
+                                                 IMB_ERR_JOB_NULL_AUTH))
                                         return 1;
                                 printf(".");
                         }
 
-        /* ======== test 102
-         * AUTH_TAG_OUTPUT_LEN = 0
+        /*
+         * AUTH_TAG_OUTPUT_LEN = 0 test
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
@@ -536,8 +551,8 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                             hash, order);
                                 template_job.auth_tag_output_len_in_bytes = 0;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                      102,
-                                                      IMB_ERR_JOB_AUTH_TAG_LEN))
+                                                  TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
+                                                  IMB_ERR_JOB_AUTH_TAG_LEN))
                                         return 1;
                                 printf(".");
                         }
@@ -569,8 +584,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
 
-        /* ======== test 200
-         * SRC = NULL
+        /*
+         * SRC = NULL test
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
@@ -585,14 +600,14 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                             hash, order);
                                 template_job.src = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       200,
+                                                       TEST_CIPH_SRC_NULL,
                                                        IMB_ERR_JOB_NULL_SRC))
                                         return 1;
                                 printf(".");
                         }
 
-        /* ======== test 201
-         * DST = NULL
+        /*
+         * DST = NULL test
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
@@ -607,14 +622,14 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                             hash, order);
                                 template_job.dst = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       201,
+                                                       TEST_CIPH_DST_NULL,
                                                        IMB_ERR_JOB_NULL_DST))
                                         return 1;
                                 printf(".");
                         }
 
-        /* ======== test 202
-         * IV = NULL
+        /*
+         * IV = NULL test
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
@@ -629,13 +644,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                             hash, order);
                                 template_job.iv = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       202,
+                                                       TEST_CIPH_IV_NULL,
                                                        IMB_ERR_JOB_NULL_IV))
                                         return 1;
                                 printf(".");
                         }
 
-        /* ======== test 203 (encrypt)
+        /* ======== (encrypt test)
          * AES_ENC_KEY_EXPANDED = NULL
          * AES_DEC_KEY_EXPANDED = NULL
          */
@@ -656,7 +671,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_DES3:
                                 template_job.enc_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       203,
+                                                       TEST_CIPH_ENC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
                                 break;
@@ -668,7 +683,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         printf(".");
                 }
 
-        /* ======== test 204 (decrypt)
+        /* ======== (decrypt test)
          * AES_ENC_KEY_EXPANDED = NULL
          * AES_DEC_KEY_EXPANDED = NULL
          */
@@ -686,7 +701,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_DOCSIS_DES:
                                 template_job.dec_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       204,
+                                                       TEST_CIPH_DEC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
                                 break;
@@ -694,21 +709,21 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         case IMB_CIPHER_CCM:
                                 template_job.enc_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       204,
+                                                       TEST_CIPH_DEC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
                                 break;
                         case IMB_CIPHER_DOCSIS_SEC_BPI:
                                 template_job.enc_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       204,
+                                                       TEST_CIPH_DEC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
                                 template_job.enc_keys =
                                         template_job.dec_keys;
                                 template_job.dec_keys = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
-                                                       204,
+                                                       TEST_CIPH_DEC_KEY_NULL,
                                                        IMB_ERR_JOB_NULL_KEY))
                                         return 1;
                                 break;
