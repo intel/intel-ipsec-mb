@@ -35,6 +35,10 @@
 #include "intel-ipsec-mb.h"
 #include "error.h"
 
+#ifndef LINUX
+#pragma warning(disable : 4996)
+#endif
+
 int imb_get_errno(IMB_MGR *mb_mgr)
 {
         /* try get IMB_MGR error status first */
