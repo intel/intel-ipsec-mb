@@ -995,7 +995,9 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 48, /* IMB_AUTH_SHA_384 */
                 64, /* IMB_AUTH_SHA_512 */
                 4,  /* IMB_AUTH_AES_CMAC 3GPP */
+                8,  /* IMB_AUTH_PON_CRC_BIP */
                 4,  /* IMB_AUTH_ZUC_EIA3_BITLEN */
+                4,  /* IMB_AUTH_DOCSIS_CRC32 */
                 4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN */
                 4,  /* IMB_AUTH_KASUMI_UIA1 */
                 16, /* IMB_AUTH_AES_GMAC_128 */
@@ -1103,6 +1105,11 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->iv_len_in_bytes != UINT64_C(0)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
                         INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
@@ -1542,6 +1549,18 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                                             job->cipher_mode);
                                 return 1;
                         }
+                        if (job->iv == NULL) {
+                                imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                                INVALID_PRN("cipher_mode:%d\n",
+                                            job->cipher_mode);
+                                return 1;
+                        }
+                        if (job->enc_keys == NULL) {
+                                imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                                INVALID_PRN("cipher_mode:%d\n",
+                                            job->cipher_mode);
+                                return 1;
+                        }
                 }
                 break;
         case IMB_CIPHER_ZUC_EEA3:
@@ -1965,7 +1984,8 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(8)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         /* 64-bits:
                          * - BIP 32-bits
                          * - CRC 32-bits
@@ -2009,6 +2029,11 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
@@ -2058,7 +2083,8 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         /* Ethernet FCS CRC is 32-bits */
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
@@ -2100,6 +2126,11 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
                 break;
         case IMB_AUTH_KASUMI_UIA1:
                 if (job->src == NULL) {
@@ -2125,6 +2156,11 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
