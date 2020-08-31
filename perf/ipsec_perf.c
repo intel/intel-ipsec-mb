@@ -111,6 +111,7 @@ typedef cpuset_t cpu_set_t;
 #define CIPHER_MODES_SNOW3G 1   /* SNOW3G-UEA2 */
 #define CIPHER_MODES_KASUMI 1   /* KASUMI-UEA1 */
 #define CIPHER_MODES_GMAC 1     /* NULL */
+#define CIPHER_MODES_POLY1305 1 /* CHACHA20 */
 #define DIRECTIONS 2		/* ENC, DEC */
 #define HASH_ALGS_AES 11	/* SHA1, SHA256, SHA224, SHA384,
                                    SHA512, XCBC, MD5, NULL_HASH,
@@ -126,6 +127,7 @@ typedef cpuset_t cpu_set_t;
 #define HASH_ALGS_SNOW3G 1      /* SNOW3G-UIA2 */
 #define HASH_ALGS_KASUMI 1      /* KASUMI-UIA1 */
 #define HASH_ALGS_GMAC 3        /* AES-GMAC-128/192/256 */
+#define HASH_ALGS_CHACHA20 1    /* POLY1305 */
 #define KEY_SIZES_AES 3		/* 16, 24, 32 */
 #define KEY_SIZES_DOCSIS_AES 2	/* 16, 32 */
 #define KEY_SIZES_DOCSIS_DES 1	/* 8 */
@@ -138,6 +140,7 @@ typedef cpuset_t cpu_set_t;
 #define KEY_SIZES_SNOW3G 1      /* 16 */
 #define KEY_SIZES_KASUMI 1      /* 16 */
 #define KEY_SIZES_GMAC   1      /* 0 (no cipher key) */
+#define KEY_SIZES_CHACHA20 1    /* There is only one */
 
 #define IA32_MSR_FIXED_CTR_CTRL      0x38D
 #define IA32_MSR_PERF_GLOBAL_CTR     0x38F
@@ -149,9 +152,11 @@ typedef cpuset_t cpu_set_t;
 #define VARIANTS_PER_ARCH_AES (CIPHER_MODES_AES * DIRECTIONS *  \
                                HASH_ALGS_AES * KEY_SIZES_AES)
 #define VARIANTS_PER_ARCH_DOCSIS_DES (CIPHER_MODES_DOCSIS_DES * DIRECTIONS *  \
-                                  HASH_ALGS_DOCSIS_DES * KEY_SIZES_DOCSIS_DES)
+                                      HASH_ALGS_DOCSIS_DES *  \
+                                      KEY_SIZES_DOCSIS_DES)
 #define VARIANTS_PER_ARCH_DOCSIS_AES (CIPHER_MODES_DOCSIS_AES * DIRECTIONS *  \
-                                  HASH_ALGS_DOCSIS_AES * KEY_SIZES_DOCSIS_AES)
+                                      HASH_ALGS_DOCSIS_AES *  \
+                                      KEY_SIZES_DOCSIS_AES)
 #define VARIANTS_PER_ARCH_GCM (CIPHER_MODES_GCM * DIRECTIONS *  \
                                HASH_ALGS_GCM * KEY_SIZES_GCM)
 #define VARIANTS_PER_ARCH_CCM (CIPHER_MODES_CCM * DIRECTIONS *  \
@@ -161,16 +166,21 @@ typedef cpuset_t cpu_set_t;
 #define VARIANTS_PER_ARCH_3DES (CIPHER_MODES_3DES * DIRECTIONS *  \
                                 HASH_ALGS_3DES * KEY_SIZES_3DES)
 #define VARIANTS_PER_ARCH_PON (CIPHER_MODES_PON * DIRECTIONS *  \
-                                HASH_ALGS_PON * KEY_SIZES_PON)
+                               HASH_ALGS_PON * KEY_SIZES_PON)
 
-#define VARIANTS_PER_ARCH_ZUC (CIPHER_MODES_ZUC * DIRECTIONS * \
-                                HASH_ALGS_ZUC * KEY_SIZES_ZUC)
-#define VARIANTS_PER_ARCH_SNOW3G (CIPHER_MODES_SNOW3G * DIRECTIONS *    \
+#define VARIANTS_PER_ARCH_ZUC (CIPHER_MODES_ZUC * DIRECTIONS *  \
+                               HASH_ALGS_ZUC * KEY_SIZES_ZUC)
+#define VARIANTS_PER_ARCH_SNOW3G (CIPHER_MODES_SNOW3G * DIRECTIONS *  \
                                   HASH_ALGS_SNOW3G * KEY_SIZES_SNOW3G)
-#define VARIANTS_PER_ARCH_KASUMI (CIPHER_MODES_KASUMI * DIRECTIONS *    \
+#define VARIANTS_PER_ARCH_KASUMI (CIPHER_MODES_KASUMI * DIRECTIONS *  \
                                   HASH_ALGS_KASUMI * KEY_SIZES_KASUMI)
-#define VARIANTS_PER_ARCH_GMAC (CIPHER_MODES_GMAC * DIRECTIONS *   \
-                                  HASH_ALGS_GMAC * KEY_SIZES_GMAC)
+#define VARIANTS_PER_ARCH_GMAC (CIPHER_MODES_GMAC * DIRECTIONS *  \
+                                HASH_ALGS_GMAC * KEY_SIZES_GMAC)
+#define VARIANTS_PER_ARCH_CHACHA20_POLY1305 (HASH_ALGS_CHACHA20 *  \
+                                             DIRECTIONS *  \
+                                             CIPHER_MODES_POLY1305 *  \
+                                             KEY_SIZES_CHACHA20)
+
 enum arch_type_e {
         ARCH_SSE = 0,
         ARCH_AVX,
@@ -192,6 +202,7 @@ enum test_type_e {
         TTYPE_SNOW3G,
         TTYPE_KASUMI,
         TTYPE_AES_GMAC,
+        TTYPE_CHACHA20_POLY1305,
         TTYPE_CUSTOM,
         NUM_TTYPES
 };
@@ -249,6 +260,7 @@ enum test_hash_alg_e {
         TEST_AES_GMAC_192,
         TEST_AES_GMAC_256,
         TEST_HASH_CMAC_256,
+        TEST_HASH_POLY1305,
         TEST_NUM_HASH_TESTS
 };
 
@@ -626,6 +638,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_HASH_CMAC_256,
                 }
         },
+        {
+                .name = "poly-1305",
+                .values.job_params = {
+                        .hash_alg = TEST_HASH_POLY1305,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -741,6 +759,7 @@ const uint32_t auth_tag_length_bytes[] = {
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* AES_CMAC_256 */
+                16, /* POLY1305 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -784,8 +803,8 @@ struct custom_job_params custom_job_params = {
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
 /* AES, DOCSIS DES, DOCSIS AES, GCM, CCM, DES, 3DES, PON, ZUC,
- * KASUMI, GMAC, CUSTOM */
-uint8_t test_types[NUM_TTYPES] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 };
+ * KASUMI, GMAC, CHACHA20-POLY1305, CUSTOM */
+uint8_t test_types[NUM_TTYPES] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 };
 
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
@@ -1504,6 +1523,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.CMAC._skey2 = k3;
                 job_template.hash_alg = IMB_AUTH_AES_CMAC_256;
                 break;
+        case TEST_HASH_POLY1305:
+                job_template.u.POLY1305._key = k1_expanded;
+                job_template.hash_alg = IMB_AUTH_POLY1305;
+                break;
         case TEST_PON_CRC_BIP:
                 job_template.hash_alg = IMB_AUTH_PON_CRC_BIP;
                 job_template.cipher_start_src_offset_in_bytes = 8;
@@ -2040,6 +2063,12 @@ do_variants(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 c_start = TEST_NULL_CIPHER;
                 c_end = TEST_NULL_CIPHER;
                 break;
+        case TTYPE_CHACHA20_POLY1305:
+                h_start = TEST_HASH_POLY1305;
+                h_end = TEST_HASH_POLY1305;
+                c_start = TEST_CHACHA20;
+                c_end = TEST_CHACHA20;
+                break;
         case TTYPE_CUSTOM:
                 h_start = params->hash_alg;
                 h_end = params->hash_alg;
@@ -2104,6 +2133,9 @@ run_dir_test(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
             params->test_type == TTYPE_SNOW3G ||
             params->test_type == TTYPE_KASUMI)
                 end_k = IMB_KEY_AES_128_BYTES;
+
+        if (params->test_type == TTYPE_CHACHA20_POLY1305)
+                start_k = IMB_KEY_AES_256_BYTES;
 
         if (params->test_type == TTYPE_AES_GMAC) {
                 start_k = 0;
@@ -2173,7 +2205,8 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4", "ECB",
                 "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES", "DOCDES+4",
                 "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR", "ZUC_EEA3",
-                "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN", "CBCS_1_9"
+                "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN", "CBCS_1_9",
+                "CHACHA20"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
@@ -2182,7 +2215,8 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
                 "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "CRC32",
                 "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN",
-                "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1", "CMAC_256"
+                "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1", "GMAC-128",
+                "GMAC-192", "GMAC-256", "CMAC_256", "POLY1305"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
@@ -2359,6 +2393,10 @@ run_tests(void *arg)
                         break;
                 case TTYPE_AES_GMAC:
                         variants_per_arch = VARIANTS_PER_ARCH_GMAC;
+                        max_arch = NUM_ARCHS;
+                        break;
+                case TTYPE_CHACHA20_POLY1305:
+                        variants_per_arch = VARIANTS_PER_ARCH_CHACHA20_POLY1305;
                         max_arch = NUM_ARCHS;
                         break;
                 case TTYPE_CUSTOM:
