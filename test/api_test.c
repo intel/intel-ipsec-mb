@@ -50,6 +50,7 @@ enum {
       TEST_CIPH_IV_NULL,
       TEST_CIPH_ENC_KEY_NULL,
       TEST_CIPH_DEC_KEY_NULL,
+      TEST_CIPH_MSG_LEN_ZERO,
 };
 
 /*
@@ -743,6 +744,39 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                         }
                         printf(".");
                 }
+
+        /*
+         * Zero msg length test
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
+                        for (cipher = IMB_CIPHER_CBC;
+                             cipher <= IMB_CIPHER_CHACHA20; cipher++) {
+                                if (cipher == IMB_CIPHER_NULL ||
+                                    cipher == IMB_CIPHER_CUSTOM)
+                                        continue;
+
+                                IMB_JOB *job = &template_job;
+
+                                fill_in_job(job, cipher, dir, hash, order);
+
+                                switch (cipher) {
+                                /* skip ciphers that allow msg length 0 */
+                                case IMB_CIPHER_GCM:
+                                case IMB_CIPHER_CCM:
+                                case IMB_CIPHER_DOCSIS_SEC_BPI:
+                                case IMB_CIPHER_PON_AES_CNTR:
+                                        break;
+                                default:
+                                        job->msg_len_to_cipher_in_bytes = 0;
+                                        if (!is_submit_invalid(mb_mgr, job,
+                                                         TEST_CIPH_MSG_LEN_ZERO,
+                                                         IMB_ERR_JOB_CIPH_LEN))
+                                                return 1;
+                                }
+                                printf(".");
+                        }
 
         /* clean up */
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
