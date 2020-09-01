@@ -794,7 +794,7 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                                 asm_ZucGenKeystream16B_sse_no_aesni(
                                                         &keyStr32[4],
                                                         &singlePktState);
-                        T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], &keyStr32[4],
+                        T[i] = asm_Eia3Round16BSSE_no_aesni(T[i], keyStr32,
                                                             pIn8[i]);
                         /* Copy the last keystream generated
                          * to the first 16 bytes */
