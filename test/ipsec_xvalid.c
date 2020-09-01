@@ -1886,7 +1886,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         JOB_HASH_ALG    hash_alg;
         JOB_CIPHER_MODE c_mode;
 
-        for (c_mode = IMB_CIPHER_CBC; c_mode <= IMB_CIPHER_CBCS_1_9;
+        for (c_mode = IMB_CIPHER_CBC; c_mode < IMB_CIPHER_NUM;
              c_mode++) {
                 /* Skip IMB_CIPHER_CUSTOM */
                 if (c_mode == IMB_CIPHER_CUSTOM)
@@ -1900,7 +1900,7 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 for (key_sz = min_sz; key_sz <= max_sz; key_sz += step_sz) {
                         params->key_size = key_sz;
                         for (hash_alg = IMB_AUTH_HMAC_SHA_1;
-                             hash_alg <= IMB_AUTH_AES_GMAC_256;
+                             hash_alg < IMB_AUTH_NUM;
                              hash_alg++) {
                                 /* Skip IMB_AUTH_CUSTOM */
                                 if (hash_alg == IMB_AUTH_CUSTOM)

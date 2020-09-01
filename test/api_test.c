@@ -507,7 +507,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash <= IMB_AUTH_AES_CMAC_256; hash++) {
+                             hash < IMB_AUTH_NUM; hash++) {
                                 if (hash == IMB_AUTH_NULL ||
                                     hash == IMB_AUTH_CUSTOM)
                                         continue;
@@ -530,7 +530,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash <= IMB_AUTH_AES_CMAC_256; hash++) {
+                             hash < IMB_AUTH_NUM; hash++) {
                                 if (hash == IMB_AUTH_NULL ||
                                     hash == IMB_AUTH_CUSTOM)
                                         continue;
@@ -552,7 +552,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
-                             hash <= IMB_AUTH_AES_CMAC_256; hash++) {
+                             hash < IMB_AUTH_NUM; hash++) {
                                 if (hash == IMB_AUTH_NULL ||
                                     hash == IMB_AUTH_CUSTOM)
                                         continue;
@@ -601,7 +601,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC;
-                             cipher <= IMB_CIPHER_CHACHA20; cipher++) {
+                             cipher < IMB_CIPHER_NUM; cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
@@ -623,7 +623,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC;
-                             cipher <= IMB_CIPHER_CHACHA20; cipher++) {
+                             cipher < IMB_CIPHER_NUM; cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
@@ -645,7 +645,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC;
-                             cipher <= IMB_CIPHER_CHACHA20; cipher++) {
+                             cipher < IMB_CIPHER_NUM; cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
@@ -666,7 +666,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
-                for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_CHACHA20;
+                for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
                      cipher++) {
                         fill_in_job(&template_job, cipher, IMB_DIR_ENCRYPT,
                                     hash, order);
@@ -691,7 +691,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
-                for (cipher = IMB_CIPHER_CBC; cipher <= IMB_CIPHER_CHACHA20;
+                for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
                      cipher++) {
                         fill_in_job(&template_job, cipher, IMB_DIR_DECRYPT,
                                     hash, order);
@@ -752,7 +752,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (cipher = IMB_CIPHER_CBC;
-                             cipher <= IMB_CIPHER_CHACHA20; cipher++) {
+                             cipher < IMB_CIPHER_NUM; cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
