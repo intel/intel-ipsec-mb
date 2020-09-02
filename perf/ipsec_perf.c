@@ -247,6 +247,7 @@ enum test_hash_alg_e {
         TEST_MD5,
         TEST_HASH_CMAC, /* added here to be included in AES tests */
         TEST_HASH_CMAC_BITLEN,
+        TEST_HASH_CMAC_256,
         TEST_NULL_HASH,
         TEST_DOCSIS_CRC32,
         TEST_HASH_GCM, /* Additional field used by GCM, not translated */
@@ -259,7 +260,6 @@ enum test_hash_alg_e {
         TEST_AES_GMAC_128,
         TEST_AES_GMAC_192,
         TEST_AES_GMAC_256,
-        TEST_HASH_CMAC_256,
         TEST_HASH_POLY1305,
         TEST_NUM_HASH_TESTS
 };
@@ -2213,10 +2213,10 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         };
         const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
                 "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
-                "MD5", "CMAC", "CMAC_BITLEN", "NULL_HASH", "CRC32",
-                "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN",
+                "MD5", "CMAC", "CMAC_BITLEN", "CMAC_256", "NULL_HASH",
+                "CRC32", "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN",
                 "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1", "GMAC-128",
-                "GMAC-192", "GMAC-256", "CMAC_256", "POLY1305"
+                "GMAC-192", "GMAC-256", "POLY1305"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
