@@ -1016,96 +1016,79 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
         case IMB_CIPHER_CBCS_1_9:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_ENCRYPT &&
                     job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->dec_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(16) &&
                     job->key_len_in_bytes != UINT64_C(24) &&
                     job->key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes & UINT64_C(15)) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_mode == IMB_CIPHER_CBCS_1_9 &&
                     job->msg_len_to_cipher_in_bytes > ((1ULL << (60)) - 1)) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         case IMB_CIPHER_ECB:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(16) &&
                     job->key_len_in_bytes != UINT64_C(24) &&
                     job->key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes & UINT64_C(15)) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(0)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
@@ -1118,35 +1101,29 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
         case IMB_CIPHER_CNTR_BITLEN:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(16) &&
                     job->key_len_in_bytes != UINT64_C(24) &&
                     job->key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(16) &&
                     job->iv_len_in_bytes != UINT64_C(12)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 /*
@@ -1156,7 +1133,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                  */
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
@@ -1170,87 +1146,72 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
         case IMB_CIPHER_DOCSIS_SEC_BPI:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->enc_keys == NULL) {
                         /* it has to be set regardless of direction (AES-CFB) */
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->dec_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if ((job->key_len_in_bytes != UINT64_C(16)) &&
                     (job->key_len_in_bytes != UINT64_C(32))) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         case IMB_CIPHER_GCM:
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 /* Same key structure used for encrypt and decrypt */
                 if (job->cipher_direction == IMB_DIR_ENCRYPT &&
                     job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->dec_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(16) &&
                     job->key_len_in_bytes != UINT64_C(24) &&
                     job->key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->hash_alg != IMB_AUTH_AES_GMAC) {
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
@@ -1258,100 +1219,82 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 /* no checks here */
                 if (job->cipher_func == NULL) {
                         imb_set_errno(state, EFAULT);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         case IMB_CIPHER_DES:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_ENCRYPT &&
                     job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->dec_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(8)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes & UINT64_C(7)) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(8)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         case IMB_CIPHER_DOCSIS_DES:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_ENCRYPT &&
                     job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_DECRYPT &&
                     job->dec_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(8)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(8)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
@@ -1359,33 +1302,26 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 if (job->msg_len_to_cipher_in_bytes != 0) {
                         if (job->src == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                         if (job->dst == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->enc_keys == NULL) {
                         /* AES-CTR and CBC-MAC use only encryption keys */
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 /* currently only AES-CCM-128 and AES-CCM-256 supported */
                 if (job->key_len_in_bytes != UINT64_C(16) &&
                     job->key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 /*
@@ -1397,49 +1333,40 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 if (job->iv_len_in_bytes > UINT64_C(13) ||
                     job->iv_len_in_bytes < UINT64_C(7)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->hash_alg != IMB_AUTH_AES_CCM) {
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         case IMB_CIPHER_DES3:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(24)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes & UINT64_C(7)) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(8)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->cipher_direction == IMB_DIR_ENCRYPT) {
@@ -1448,15 +1375,11 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
 
                         if (ks_ptr == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                         if (ks_ptr[0] == NULL || ks_ptr[1] == NULL ||
                             ks_ptr[2] == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                 } else {
@@ -1465,15 +1388,11 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
 
                         if (ks_ptr == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                         if (ks_ptr[0] == NULL || ks_ptr[1] == NULL ||
                             ks_ptr[2] == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                 }
@@ -1492,12 +1411,10 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                  */
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
 
@@ -1505,12 +1422,10 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                  * as there are always 8 bytes that are not ciphered */
                 if (job->src == job->dst) {
                         imb_set_errno(state, EINVAL);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->hash_alg != IMB_AUTH_PON_CRC_BIP) {
                         imb_set_errno(state, IMB_ERR_HASH_ALGO);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 /*
@@ -1522,8 +1437,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         /* message size needs to be aligned to 4 bytes */
                         if ((job->msg_len_to_cipher_in_bytes & 3) != 0) {
                                 imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
 
@@ -1532,21 +1445,15 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         if ((job->msg_len_to_cipher_in_bytes >
                              (max_pon_len - 8))) {
                                 imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
 
                         if (job->key_len_in_bytes != UINT64_C(16)) {
                                 imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                         if (job->iv_len_in_bytes != UINT64_C(16)) {
                                 imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                         if (job->iv == NULL) {
@@ -1566,157 +1473,128 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
         case IMB_CIPHER_ZUC_EEA3:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes == 0 ||
                     job->msg_len_to_cipher_in_bytes > ZUC_MAX_BYTELEN) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bits == 0 ||
                     job->msg_len_to_cipher_in_bits > SNOW3G_MAX_BITLEN) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bits == 0 ||
                     job->msg_len_to_cipher_in_bits > KASUMI_MAX_LEN) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(8)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         case IMB_CIPHER_CHACHA20:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->dst == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->enc_keys == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(12)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
         default:
                 imb_set_errno(state, IMB_ERR_CIPH_MODE);
-                INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                 return 1;
         }
 
@@ -1729,7 +1607,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
         case IMB_AUTH_HMAC_SHA_512:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes !=
@@ -1737,24 +1614,20 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                     job->auth_tag_output_len_in_bytes !=
                     auth_tag_len_fips[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->msg_len_to_hash_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
         case IMB_AUTH_AES_XCBC:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes !=
@@ -1762,12 +1635,10 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                     job->auth_tag_output_len_in_bytes !=
                     auth_tag_len_fips[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
@@ -1777,23 +1648,19 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                                return 1;
+                        return 1;
                 }
                 if ((job->u.GCM.aad_len_in_bytes > 0) &&
                     (job->u.GCM.aad == NULL)) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->cipher_mode != IMB_CIPHER_GCM) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                                return 1;
+                        return 1;
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 /*
@@ -1808,65 +1675,54 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                                return 1;
+                        return 1;
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 /* This GMAC mode is to be used as stand-alone,
                  * not combined with GCM */
                 if (job->cipher_mode == IMB_CIPHER_GCM) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
-                                return 1;
+                        return 1;
                 }
                 if (job->u.GMAC._key == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->u.GMAC._iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->u.GMAC.iv_len_in_bytes == 0) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
         case IMB_AUTH_CUSTOM:
                 if (job->hash_func == NULL) {
                         imb_set_errno(state, EFAULT);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
         case IMB_AUTH_AES_CCM:
                 if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->u.CCM.aad_len_in_bytes > 46) {
                         /* 3 x AES_BLOCK - 2 bytes for AAD len */
                         imb_set_errno(state, IMB_ERR_JOB_AAD_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if ((job->u.CCM.aad_len_in_bytes > 0) &&
                     (job->u.CCM.aad == NULL)) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 /* M can be any even number from 4 to 16 */
@@ -1874,12 +1730,10 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                     job->auth_tag_output_len_in_bytes > UINT64_C(16) ||
                     ((job->auth_tag_output_len_in_bytes & 1) != 0)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
                 }
                 if (job->cipher_mode != IMB_CIPHER_CCM) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 /*
@@ -1891,18 +1745,15 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 if (job->msg_len_to_cipher_in_bytes !=
                     job->msg_len_to_hash_in_bytes) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->cipher_start_src_offset_in_bytes !=
                     job->hash_start_src_offset_in_bytes) {
                         imb_set_errno(state, IMB_ERR_JOB_SRC_OFFSET);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
@@ -1917,14 +1768,12 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                  */
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if ((job->u.CMAC._key_expanded == NULL) ||
                     (job->u.CMAC._skey1 == NULL) ||
                     (job->u.CMAC._skey2 == NULL)) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 /* T is 128 bits but 96 bits is also allowed due to
@@ -1933,12 +1782,10 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(4) ||
                     job->auth_tag_output_len_in_bytes > UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
@@ -1950,17 +1797,14 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 if (job->auth_tag_output_len_in_bytes !=
                     auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
@@ -1981,7 +1825,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                          * than max length)
                          */
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes !=
@@ -1991,45 +1834,37 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                          * - CRC 32-bits
                          */
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->cipher_mode != IMB_CIPHER_PON_AES_CNTR) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if ((job->msg_len_to_hash_in_bits < ZUC_MIN_BITLEN) ||
                     (job->msg_len_to_hash_in_bits > ZUC_MAX_BITLEN)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->u.ZUC_EIA3._key == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->u.ZUC_EIA3._iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
@@ -2055,7 +1890,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                  */
                 if (job->cipher_mode != IMB_CIPHER_DOCSIS_SEC_BPI) {
                         imb_set_errno(state, IMB_ERR_CIPH_MODE);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->msg_len_to_cipher_in_bytes &&
@@ -2068,26 +1902,22 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         if ((job->msg_len_to_cipher_in_bytes + ciph_adjust) >
                             job->msg_len_to_hash_in_bytes) {
                                 imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
-                                INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
                         }
                         if (job->cipher_start_src_offset_in_bytes <
                             (job->hash_start_src_offset_in_bytes + 12)) {
                                 imb_set_errno(state, IMB_ERR_JOB_SRC_OFFSET);
-                                INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                                 return 1;
                         }
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes !=
                     auth_tag_len_ipsec[job->hash_alg]) {
                         /* Ethernet FCS CRC is 32-bits */
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if ((job->cipher_direction == IMB_DIR_ENCRYPT &&
@@ -2095,35 +1925,29 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                     (job->cipher_direction == IMB_DIR_DECRYPT &&
                      job->chain_order != IMB_ORDER_CIPHER_HASH)) {
                         imb_set_errno(state, IMB_ERR_JOB_CHAIN_ORDER);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if ((job->msg_len_to_hash_in_bits == 0) ||
                     (job->msg_len_to_hash_in_bits > SNOW3G_MAX_BITLEN)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->u.SNOW3G_UIA2._key == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->u.SNOW3G_UIA2._iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
@@ -2135,7 +1959,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
         case IMB_AUTH_KASUMI_UIA1:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 /*
@@ -2146,17 +1969,14 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                     (job->msg_len_to_hash_in_bytes >
                      (KASUMI_MAX_LEN / BYTESIZE))) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->u.KASUMI_UIA1._key == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 if (job->auth_tag_output == NULL) {
@@ -2167,7 +1987,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 break;
         default:
                 imb_set_errno(state, IMB_ERR_HASH_ALGO);
-                INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                 return 1;
         }
         return 0;
