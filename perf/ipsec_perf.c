@@ -216,6 +216,7 @@ enum test_cipher_mode_e {
         TEST_CNTR_BITLEN, /* CNTR-BITLEN */
         TEST_CNTR_BITLEN4, /* CNTR-BITLEN with 4 less bits in the last byte */
         TEST_ECB,
+        TEST_CBCS_1_9,
         TEST_NULL_CIPHER,
         TEST_AESDOCSIS,
         TEST_AESDOCSIS8, /* AES DOCSIS with increased buffer size by 8 */
@@ -230,7 +231,6 @@ enum test_cipher_mode_e {
         TEST_ZUC_EEA3,
         TEST_SNOW3G_UEA2,
         TEST_KASUMI_UEA1,
-        TEST_CBCS_1_9,
         TEST_CHACHA20,
         TEST_NUM_CIPHER_TESTS
 };
@@ -2203,9 +2203,9 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         };
         const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = {
                 "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4", "ECB",
-                "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES", "DOCDES+4",
-                "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR", "ZUC_EEA3",
-                "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN", "CBCS_1_9",
+                "CBCS_1_9", "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES",
+                "DOCDES+4", "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR",
+                "ZUC_EEA3", "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN",
                 "CHACHA20"
         };
         const char *c_dir_names[2] = {
