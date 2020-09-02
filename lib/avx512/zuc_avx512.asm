@@ -156,6 +156,41 @@ dw      0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f, 0x003f
 bit_mask_table:
 db	0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe
 
+byte64_len_to_mask_table:
+        dq      0x0000000000000000, 0x0000000000000001
+        dq      0x0000000000000003, 0x0000000000000007
+        dq      0x000000000000000f, 0x000000000000001f
+        dq      0x000000000000003f, 0x000000000000007f
+        dq      0x00000000000000ff, 0x00000000000001ff
+        dq      0x00000000000003ff, 0x00000000000007ff
+        dq      0x0000000000000fff, 0x0000000000001fff
+        dq      0x0000000000003fff, 0x0000000000007fff
+        dq      0x000000000000ffff, 0x000000000001ffff
+        dq      0x000000000003ffff, 0x000000000007ffff
+        dq      0x00000000000fffff, 0x00000000001fffff
+        dq      0x00000000003fffff, 0x00000000007fffff
+        dq      0x0000000000ffffff, 0x0000000001ffffff
+        dq      0x0000000003ffffff, 0x0000000007ffffff
+        dq      0x000000000fffffff, 0x000000001fffffff
+        dq      0x000000003fffffff, 0x000000007fffffff
+        dq      0x00000000ffffffff, 0x00000001ffffffff
+        dq      0x00000003ffffffff, 0x00000007ffffffff
+        dq      0x0000000fffffffff, 0x0000001fffffffff
+        dq      0x0000003fffffffff, 0x0000007fffffffff
+        dq      0x000000ffffffffff, 0x000001ffffffffff
+        dq      0x000003ffffffffff, 0x000007ffffffffff
+        dq      0x00000fffffffffff, 0x00001fffffffffff
+        dq      0x00003fffffffffff, 0x00007fffffffffff
+        dq      0x0000ffffffffffff, 0x0001ffffffffffff
+        dq      0x0003ffffffffffff, 0x0007ffffffffffff
+        dq      0x000fffffffffffff, 0x001fffffffffffff
+        dq      0x003fffffffffffff, 0x007fffffffffffff
+        dq      0x00ffffffffffffff, 0x01ffffffffffffff
+        dq      0x03ffffffffffffff, 0x07ffffffffffffff
+        dq      0x0fffffffffffffff, 0x1fffffffffffffff
+        dq      0x3fffffffffffffff, 0x7fffffffffffffff
+        dq      0xffffffffffffffff
+
 section .text
 align 64
 
@@ -768,8 +803,8 @@ asm_ZucInitialization_16_gfni_avx512:
 %ifnum %%NUM_ROUNDS
     mov         r8d, ((1 << %%NUM_ROUNDS) - 1)
 %else
-    SHIFT_GP 1, numRounds, r8d, r13, left
-    sub         r8d, 1
+    lea         r13, [rel byte64_len_to_mask_table]
+    mov         r8, [r13 + numRounds*8]
 %endif
     kmovd       k1, r8d
     ; ZMM16-31 contain the keystreams for each round
@@ -884,7 +919,9 @@ asm_ZucGenKeystream_16_gfni_avx512:
                         zmm8, zmm9, zmm10, zmm11, zmm12, zmm13
 
         ;; XOR Input buffer with keystream
-
+%if %%LAST_ROUND == 1
+        lea     rbx, [rel byte64_len_to_mask_table]
+%endif
         ;; Read all 16 streams using registers r12-15 into registers zmm0-15
 %assign i 0
 %assign j 0
@@ -894,9 +931,7 @@ asm_ZucGenKeystream_16_gfni_avx512:
         ;; Read number of bytes left to encrypt for the lane stored in stack
         ;; and construct byte mask to read from input pointer
         movzx   r12d, word [rsp + j*2]
-        SHIFT_GP 1, r12, r14, r13, left
-        sub     r14, 1
-        kmovq   %%BYTE_MASK, r14
+        kmovq   %%BYTE_MASK, [rbx + r12*8]
 %endif
         mov     APPEND(r, k), [pIn + i]
         vmovdqu8 APPEND(zmm, j){%%BYTE_MASK}{z}, [APPEND(r, k) + %%OFFSET]
@@ -922,10 +957,8 @@ asm_ZucGenKeystream_16_gfni_avx512:
 %if %%LAST_ROUND == 1
         ;; Read length to encrypt for the lane stored in stack
         ;; and construct byte mask to write to output pointer
-        movzx    r12d, word [rsp + (j-16)*2]
-        SHIFT_GP 1, r12, r14, r13, left
-        sub     r14, 1
-        kmovq   %%BYTE_MASK, r14
+        movzx   r12d, word [rsp + (j-16)*2]
+        kmovq   %%BYTE_MASK, [rbx + r12*8]
 %endif
         mov     APPEND(r, k), [pOut + i]
         vmovdqu8 [APPEND(r, k) + %%OFFSET]{%%BYTE_MASK}, APPEND(zmm, j)

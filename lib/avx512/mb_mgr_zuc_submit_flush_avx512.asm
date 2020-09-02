@@ -46,6 +46,10 @@
 section .data
 default rel
 
+index_to_mask:
+dw      0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040, 0x0080
+dw      0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000, 0x8000
+
 extern zuc_eia3_16_buffer_job_no_gfni_avx512
 extern zuc_eia3_16_buffer_job_gfni_avx512
 extern asm_ZucInitialization_16_avx512
@@ -133,8 +137,9 @@ SUBMIT_JOB_ZUC_EEA3:
 
         mov     [state + _zuc_job_in_lane + lane*8], job
         ; New job that needs init (update bit in zuc_init_not_done bitmask)
-        SHIFT_GP        1, lane, tmp, tmp2, left
-        kmovq   k1, tmp
+        lea     tmp2, [rel index_to_mask]
+        movzx   DWORD(tmp), word [tmp2 + lane*2]
+        kmovw   k1, DWORD(tmp)
         or      [state + _zuc_init_not_done], WORD(tmp)
         not     tmp
         and     [state + _zuc_unused_lane_bitmask], WORD(tmp)
@@ -230,14 +235,14 @@ len_is_0_submit_eea3:
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
-        SHIFT_GP        1, idx, tmp, tmp2, left
+        lea     tmp2, [rel index_to_mask]
+        movzx   DWORD(tmp), word [tmp2 + idx*2]
         or      [state + _zuc_unused_lane_bitmask], WORD(tmp)
 
         ; Clear ZUC state of lane that is returned
 %ifdef SAFE_DATA
         vpxorq          zmm0, zmm0
-        SHIFT_GP        1, idx, tmp3, tmp2, left
-        kmovq           k1, tmp3
+        kmovw           k1, [tmp2 + idx*2]
 %assign i 0
 %rep (16 + 6)
         vmovdqa32       [state + _zuc_state]{k1}, zmm0
@@ -449,7 +454,8 @@ skip_init_flush:
         ; Prepare bitmask to clear ZUC state with lane
         ; that is returned and NULL lanes
 %ifdef SAFE_DATA
-        SHIFT_GP        1, idx, tmp1, tmp2, left
+        lea     tmp2, [rel index_to_mask]
+        movzx   DWORD(tmp1), word [tmp2 + idx*2]
         movzx   DWORD(tmp3), word [state + _zuc_unused_lane_bitmask]
         or      tmp3, tmp1 ;; bitmask with NULL lanes and job to return
         kmovq   k1, tmp3
@@ -459,8 +465,8 @@ skip_init_flush:
 len_is_0_flush_eea3:
 %ifdef SAFE_DATA
         ; Prepare bitmask to clear ZUC state with lane that is returned
-        SHIFT_GP        1, idx, tmp3, tmp4, left
-        kmovq           k1, tmp3
+        lea     tmp3, [rel index_to_mask]
+        kmovw   k1, [tmp3 + idx*2]
 
 skip_flush_clear_state:
 %endif
@@ -475,7 +481,8 @@ skip_flush_clear_state:
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
 
-        SHIFT_GP        1, idx, tmp3, tmp4, left
+        lea     tmp4, [rel index_to_mask]
+        movzx   DWORD(tmp3), word [tmp4 + idx*2]
         or      [state + _zuc_unused_lane_bitmask], WORD(tmp3)
         ; Clear ZUC state using k1 bitmask set above
 %ifdef SAFE_DATA
@@ -564,7 +571,8 @@ SUBMIT_JOB_ZUC_EIA3:
 
         ;; Update lane len
         vmovdqa64       ymm0, [state + _zuc_lens]
-        SHIFT_GP        1, lane, tmp3, tmp2, left
+        lea             tmp2, [rel index_to_mask]
+        movzx           DWORD(tmp3), word [tmp2 + lane*2]
         kmovq           k1, tmp3
 
         vpbroadcastw    ymm1, WORD(len)
