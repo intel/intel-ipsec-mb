@@ -1429,8 +1429,8 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                         const uint32_t ciph_adjust = /* SA + DA */
                                DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2 /* ETH TYPE */;
 
-                        cipher_size_list[i] -= ciph_adjust;
-                        hash_size_list[i] = job_size - DOCSIS_CRC32_TAG_SIZE;
+                        hash_size_list[i] = cipher_size_list[i] + ciph_adjust;
+                        cipher_size_list[i] -= DOCSIS_CRC32_TAG_SIZE;
                 }
 
                 if (params->hash_alg == TEST_PON_CRC_BIP) {
