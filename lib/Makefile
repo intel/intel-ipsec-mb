@@ -97,9 +97,10 @@ YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUD
 NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
 NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
 
+DEBUG_OPT ?= -O0
 ifeq ($(DEBUG),y)
 CFLAGS += -g -DDEBUG
-OPT = -O0
+OPT = $(DEBUG_OPT)
 LDFLAGS += -g
 else
 OPT = -O3
@@ -746,6 +747,8 @@ help:
 	@echo "          - this option will produce library not fit for debugging"
 	@echo "SHARED=y (default)"
 	@echo "          - this option will produce shared library"
+	@echo "DEBUG_OPT=<optimization level>"
+	@echo "		- this option will modify the optimization level when DEBUG is used"
 	@echo "DEBUG=y   - this option will produce library fit for debugging"
 	@echo "SHARED=n  - this option will produce static library"
 	@echo "OBJ_DIR=obj (default)"

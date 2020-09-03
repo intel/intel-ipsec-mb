@@ -44,8 +44,12 @@ IPSECLIB = "$(LIB_DIR)\libIPSec_MB.lib"
 INCDIR = -I..\lib -I..\lib\include
 !endif
 
+!if !defined(DEBUG_OPT)
+DEBUG_OPT = /Od
+!endif
+
 !ifdef DEBUG
-DCFLAGS = /Od /DDEBUG /Z7
+DCFLAGS = $(DEBUG_OPT) /DDEBUG /Z7
 DLFLAGS = /debug
 !else
 DCFLAGS = /O2 /Oi

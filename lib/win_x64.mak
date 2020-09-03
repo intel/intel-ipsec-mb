@@ -28,6 +28,8 @@
 # Available build options:
 # DEBUG=y   	- this option will produce library fit for debugging
 # DEBUG=n   	- this option will produce library not fit for debugging (default)
+# DEBUG_OPT=<optim level> - this option will modify the optimization level
+#                           when DEBUG is used
 # SHARED=y  	- this option will produce shared library (DLL) (default)
 # SHARED=n  	- this option will produce static library (lib)
 # SAFE_DATA=y   - this option will clear memory and registers containing
@@ -60,9 +62,12 @@ OBJ_DIR = obj
 !if !defined(LIB_DIR)
 LIB_DIR = .\
 !endif
+!if !defined(DEBUG_OPT)
+DEBUG_OPT = /Od
+!endif
 
 !ifdef DEBUG
-OPT = /Od
+OPT = $(DEBUG_OPT)
 DCFLAGS = /DDEBUG /Z7
 DAFLAGS = -gcv8
 DLFLAGS = /DEBUG
@@ -533,6 +538,8 @@ help:
 	@echo "          - this option will produce library not fit for debugging"
 	@echo "SHARED=y (default)"
 	@echo "          - this option will produce shared library"
+	@echo "DEBUG_OPT=<optimization level>"
+	@echo "		- this option will modify the optimization level when DEBUG is used"
 	@echo "DEBUG=y   - this option will produce library fit for debugging"
 	@echo "SHARED=n  - this option will produce static library"
 	@echo "OBJ_DIR=obj (default)"

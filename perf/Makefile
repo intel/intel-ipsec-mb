@@ -47,8 +47,9 @@ CFLAGS +=  -I../lib/include -I../lib
 LDFLAGS += -L$(LIB_DIR)
 endif
 
+DEBUG_OPT ?= -O0
 ifeq ($(DEBUG),y)
-CFLAGS += -g -DDEBUG -O0
+CFLAGS += -g -DDEBUG $(DEBUG_OPT)
 LDFLAGS += -g
 else
 CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2

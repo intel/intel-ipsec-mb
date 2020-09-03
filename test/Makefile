@@ -57,8 +57,9 @@ CFLAGS +=  -I../lib/include -I../lib
 LDFLAGS += -L$(LIB_DIR)
 endif
 
+DEBUG_OPT ?= -O0
 ifeq ($(DEBUG),y)
-CFLAGS += -O0 -DDEBUG
+CFLAGS += $(DEBUG_OPT) -DDEBUG
 LDFLAGS += -g
 else
 CFLAGS += -O3
