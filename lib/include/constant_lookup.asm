@@ -634,6 +634,10 @@ lookup_16x8bit_sse:
 %ifndef LINUX
 %undef arg_table
 %define arg_table   arg2
+
+        ; Read indices from memory, as __m128i parameters are stored
+        ; in stack (aligned to 16 bytes) and its address is passed through GP register on Windows
+        movdqa          arg_indexes, [arg1]
         mov             rax, rsp
         sub             rsp, (10 * 16)
         and             rsp, ~15
@@ -817,6 +821,9 @@ lookup_16x8bit_avx:
 %undef arg_table
 %define arg_table   arg2
 
+        ; Read indices from memory, as __m128i parameters are stored
+        ; in stack (aligned to 16 bytes) and its address is passed through GP register on Windows
+        vmovdqa         arg_indexes, [arg1]
         mov             rax, rsp
         sub             rsp, (10 * 16)
         and             rsp, ~15
