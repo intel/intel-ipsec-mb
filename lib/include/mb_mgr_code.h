@@ -738,9 +738,6 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
 
-#ifdef VERBOSE
-        printf("--------Enter SUBMIT_JOB_HASH --------------\n");
-#endif
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
 #ifdef HASH_USE_SHAEXT
@@ -932,22 +929,6 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 /* ========================================================================= */
 /* Job submit & flush functions */
 /* ========================================================================= */
-
-#ifdef DEBUG
-#define DEBUG_PUTS(s) \
-        fputs(s, stderr)
-#ifdef _WIN32
-#define INVALID_PRN(_fmt, ...)                                          \
-        fprintf(stderr, "%s():%d: " _fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
-
-#else
-#define INVALID_PRN(_fmt, ...)                                          \
-        fprintf(stderr, "%s():%d: " _fmt, __func__, __LINE__, __VA_ARGS__)
-#endif
-#else
-#define INVALID_PRN(_fmt, ...)
-#define DEBUG_PUTS(s)
-#endif
 
 #define SNOW3G_MAX_BITLEN (UINT32_MAX)
 
