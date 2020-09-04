@@ -1074,7 +1074,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->iv == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        INVALID_PRN("cipher_mode:%d\n", job->cipher_mode);
                         return 1;
                 }
                 break;
@@ -1439,14 +1438,10 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         }
                         if (job->iv == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                         if (job->enc_keys == NULL) {
                                 imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
-                                INVALID_PRN("cipher_mode:%d\n",
-                                            job->cipher_mode);
                                 return 1;
                         }
                 }
@@ -1850,7 +1845,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
@@ -1933,7 +1927,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
@@ -1962,7 +1955,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->auth_tag_output == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
-                        INVALID_PRN("hash_alg:%d\n", job->hash_alg);
                         return 1;
                 }
                 break;
