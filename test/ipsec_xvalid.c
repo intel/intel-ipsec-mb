@@ -1846,10 +1846,28 @@ process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
 
                         /* Check for sensitive data first, then normal cross
                          * architecture validation */
-                        if (safe_check && do_test(enc_mgr, enc_arch, dec_mgr,
-                                                  dec_arch, params,
-                                                  variant_data, 1) < 0)
-                                exit(EXIT_FAILURE);
+                        if (safe_check) {
+                                int result;
+
+                                result = do_test(enc_mgr, enc_arch, dec_mgr,
+                                                 dec_arch, params,
+                                                 variant_data, 1);
+                                if (result < 0) {
+                                        printf("=== Issue found. "
+                                               "Checking again...\n");
+                                        generate_patterns();
+                                        result = do_test(enc_mgr, enc_arch,
+                                                         dec_mgr, dec_arch,
+                                                         params, variant_data,
+                                                         1);
+
+                                        if (result < 0) {
+                                                printf("=== issue confirmed\n");
+                                                exit(EXIT_FAILURE);
+                                        }
+                                        printf("=== false positive\n");
+                                }
+                        }
 
                         if (do_test(enc_mgr, enc_arch, dec_mgr, dec_arch,
                                     params, variant_data, 0) < 0)
