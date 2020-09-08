@@ -31,5 +31,7 @@
 #define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
 
 void hexdump(FILE *fp, const char *msg, const void *p, size_t len);
+void hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len,
+                const void *start_ptr);
 
 #endif /* TESTAPP_UTILS_H */

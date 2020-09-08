@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "utils.h"
 
@@ -36,35 +37,64 @@
 #define snprintf _snprintf
 #endif
 
+/**
+ * @brief Dumps fragment of memory in hex and ASCII into `fp`
+ *
+ * @param fp file stream to print into
+ * @param msg optional extra header string message to print
+ * @param p start address of data block to be dumped
+ * @param len size of the data block to dump in bytes
+ * @param start_ptr can be
+ *          - pointer to data being dumped then first column of the dump will
+ *            display addresses
+ *          - NULL pointer then first column witll display indexes
+ */
+
 void
-hexdump(FILE *fp,
-        const char *msg,
-        const void *p,
-        size_t len)
+hexdump_ex(FILE *fp,
+           const char *msg,
+           const void *p,
+           size_t len,
+           const void *start_ptr)
 {
-        unsigned int i, out, ofs;
+        size_t ofs = 0;
         const unsigned char *data = p;
+        const char *start = (const char *) start_ptr;
 
-        fprintf(fp, "%s\n", msg);
+        if (msg != NULL)
+                fprintf(fp, "%s\n", msg);
 
-        ofs = 0;
         while (ofs < len) {
+                unsigned int i, out;
                 char line[120];
 
-                out = snprintf(line, sizeof(line), "%08x:", ofs);
+                out = snprintf(line, sizeof(line), "%p:", &start[ofs]);
+
                 for (i = 0; ((ofs + i) < len) && (i < 16); i++)
                         out += snprintf(line + out, sizeof(line) - out,
                                         " %02x", (data[ofs + i] & 0xff));
+
                 for (; i <= 16; i++)
                         out += snprintf(line + out, sizeof(line) - out, " | ");
+
                 for (i = 0; (ofs < len) && (i < 16); i++, ofs++) {
                         unsigned char c = data[ofs];
 
-                        if ((c < ' ') || (c > '~'))
+                        if (!isprint(c))
                                 c = '.';
                         out += snprintf(line + out,
                                         sizeof(line) - out, "%c", c);
                 }
                 fprintf(fp, "%s\n", line);
         }
+}
+
+/* Simpler version of hexdump_ex() displaying data indexes only */
+void
+hexdump(FILE *fp,
+        const char *msg,
+        const void *p,
+        size_t len)
+{
+        hexdump_ex(fp, msg, p, len, NULL);
 }
