@@ -875,7 +875,8 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->u.POLY1305._key = k1_expanded;
                 break;
         default:
-                printf("Unsupported hash algorithm\n");
+                printf("Unsupported hash algorithm %u, line %u\n",
+                       (unsigned) params->hash_alg, __LINE__);
                 return -1;
         }
 
@@ -1061,7 +1062,9 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                                sizeof(keys->gdata_key));
                         break;
                 default:
-                        fprintf(stderr, "Unsupported hash algo\n");
+                        fprintf(stderr,
+                                "Unsupported hash algorithm %u, line %u\n",
+                                (unsigned) params->hash_alg, __LINE__);
                         return -1;
                 }
 
@@ -1235,7 +1238,8 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 memcpy(k1_expanded, auth_key, 32);
                 break;
         default:
-                fprintf(stderr, "Unsupported hash algo\n");
+                fprintf(stderr, "Unsupported hash algorithm %u, line %u\n",
+                        (unsigned) params->hash_alg, __LINE__);
                 return -1;
         }
 
