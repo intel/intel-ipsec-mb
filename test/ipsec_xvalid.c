@@ -1664,8 +1664,11 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                                 goto exit;
 
                 if (job->status != STS_COMPLETED) {
-                        fprintf(stderr, "failed job, status:%d\n",
-                                job->status);
+                        int errc = imb_get_errno(enc_mb_mgr);
+
+                        fprintf(stderr,
+                                "failed job, status:%d, error code:%d '%s'\n",
+                                job->status, errc, imb_get_strerror(errc));
                         goto exit;
                 }
 
@@ -1714,8 +1717,11 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 }
 
                 if (job->status != STS_COMPLETED) {
-                        fprintf(stderr, "failed job, status:%d\n",
-                                job->status);
+                        int errc = imb_get_errno(dec_mb_mgr);
+
+                        fprintf(stderr,
+                                "failed job, status:%d, error code:%d '%s'\n",
+                                job->status, errc, imb_get_strerror(errc));
                         goto exit;
                 }
 
