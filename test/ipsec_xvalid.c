@@ -692,8 +692,15 @@ search_patterns(const void *ptr, const size_t mem_size)
                         ret = 0;
                 }
                 if (ret == 0) {
+                        size_t len_to_print = mem_size - i;
+
                         fprintf(stderr, "Offset = %zu bytes, Addr = %p\n",
                                 i, ptr8);
+
+                        if (len_to_print > 64)
+                                len_to_print = 64;
+
+                        hexdump_ex(stderr, NULL, ptr8, len_to_print, ptr8);
                         return 0;
                 }
                 ptr8++;
