@@ -1371,7 +1371,6 @@ APPEND(%%_skip_,I):
         jne             APPEND(%%_skip_clear_,I)
         mov             qword [%%STATE + _aes_args_keys + I*8], 0
         vmovdqa         [%%STATE + _docsis_crc_args_init + I*16], xmm0
-	vmovdqa         [%%STATE + _docsis_aes_args_IV + I*16], xmm0
 APPEND(%%_skip_clear_,I):
 %assign I (I+1)
 %endrep
