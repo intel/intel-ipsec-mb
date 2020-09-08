@@ -82,7 +82,7 @@ ASM_OBJECTS := misc.o
 
 OBJECTS := $(SOURCES:%.c=%.o)
 
-XVALID_SOURCES := ipsec_xvalid.c
+XVALID_SOURCES := ipsec_xvalid.c utils.c
 XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o) $(ASM_OBJECTS)
 
 all: $(TEST_APP) $(XVALID_APP)

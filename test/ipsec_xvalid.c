@@ -38,6 +38,7 @@
 #include <malloc.h> /* _aligned_malloc() and aligned_free() */
 #endif
 #include "misc.h"
+#include "utils.h"
 
 #ifdef _WIN32
 #include <intrin.h>
@@ -71,8 +72,6 @@
 /* Maximum key and digest size for SHA-512 */
 #define MAX_KEY_SIZE    SHA_512_BLOCK_SIZE
 #define MAX_DIGEST_SIZE SHA512_DIGEST_SIZE_IN_BYTES
-
-#define DIM(x) (sizeof(x)/sizeof(x[0]))
 
 #define SEED 0xdeadcafe
 #define STACK_DEPTH 8192
@@ -706,17 +705,8 @@ search_patterns(const void *ptr, const size_t mem_size)
 static void
 byte_hexdump(const char *message, const uint8_t *ptr, const uint32_t len)
 {
-        uint32_t ctr;
-
-        printf("%s:\n", message);
-        for (ctr = 0; ctr < len; ctr++) {
-                printf("0x%02X ", ptr[ctr] & 0xff);
-                if (!((ctr + 1) % 16))
-                        printf("\n");
-        }
-        printf("\n");
-        printf("\n");
-};
+        hexdump(stdout, message, ptr, len);
+}
 
 static void
 print_algo_info(const struct params_s *params)

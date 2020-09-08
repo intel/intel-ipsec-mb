@@ -69,7 +69,7 @@ AFLAGS = -fwin64 -Xvc -DWIN_ABI
 
 TEST_OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj kasumi_test.obj snow3g_test.obj direct_api_test.obj clear_mem_test.obj hec_test.obj xcbc_test.obj aes_cbcs_test.obj crc_test.obj chacha_test.obj poly1305_test.obj
 
-XVALID_OBJS = ipsec_xvalid.obj misc.obj
+XVALID_OBJS = ipsec_xvalid.obj utils.obj misc.obj
 
 all: $(TEST_APP).exe $(XVALID_APP).exe
 
@@ -121,7 +121,7 @@ aes_test.obj: aes_test.c utils.h
 ecb_test.obj: ecb_test.c utils.h
         $(CC) /c $(CFLAGS) ecb_test.c
 
-utils.obj: utils.c
+utils.obj: utils.c utils.h
         $(CC) /c $(CFLAGS) utils.c
 
 sha_test.obj: sha_test.c utils.h
