@@ -459,6 +459,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_AES_CMAC_256,
                 }
         },
+        {
+                .name = "poly-1305",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_POLY1305,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -555,6 +561,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AES_CMAC_256 */
+                16, /* IMB_AUTH_POLY1305 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -864,6 +871,9 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 break;
         case IMB_AUTH_DOCSIS_CRC32:
                 break;
+        case IMB_AUTH_POLY1305:
+                job->u.POLY1305._key = k1_expanded;
+                break;
         default:
                 printf("Unsupported hash algorithm\n");
                 return -1;
@@ -1013,6 +1023,10 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                                sizeof(keys->k1_expanded));
                         memset(k2, (int)AUTH_KEY_PATTERN, sizeof(keys->k2));
                         memset(k3, (int)AUTH_KEY_PATTERN, sizeof(keys->k3));
+                        break;
+                case IMB_AUTH_POLY1305:
+                        memset(k1_expanded, (int)AUTH_KEY_PATTERN,
+                               sizeof(keys->k1_expanded));
                         break;
                 case IMB_AUTH_HMAC_SHA_1:
                 case IMB_AUTH_HMAC_SHA_224:
@@ -1216,6 +1230,9 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_AUTH_PON_CRC_BIP:
         case IMB_AUTH_DOCSIS_CRC32:
                 /* No operation needed */
+                break;
+        case IMB_AUTH_POLY1305:
+                memcpy(k1_expanded, auth_key, 32);
                 break;
         default:
                 fprintf(stderr, "Unsupported hash algo\n");
