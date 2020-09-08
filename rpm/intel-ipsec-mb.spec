@@ -39,12 +39,13 @@
 
 Summary:            IPSEC cryptography library optimized for Intel Architecture
 Name:               %{githubname}
-Release:            1%{?dist}
+Release:            2%{?dist}
 Version:            %{fullversion}
 License:            BSD
 Group:              Development/Tools
 ExclusiveArch:      x86_64
-Source0:            https://github.com/intel/%{githubname}/archive/v%{githubver}.tar.gz
+Source0:            https://github.com/intel/%{githubname}/archive/v%{githubver}.tar.gz#/%{githubfull}.tar.gz
+Patch:              0001-Fix-for-executable-stack-in-v0.54-release.patch
 URL:                https://github.com/intel/%{githubname}
 BuildRequires:      make
 BuildRequires:      gcc >= 4.8.3
@@ -56,7 +57,7 @@ IPSEC cryptography library optimized for Intel Architecture
 %package -n intel-ipsec-mb-devel
 Summary:            IPSEC cryptography library optimized for Intel Architecture
 License:            BSD
-Requires:           intel-ipsec-mb >= %{fullversion}
+Requires:           %{name}%{?_isa} = %{version}-%{release}
 Group:              Development/Tools
 ExclusiveArch:      x86_64
 
@@ -67,47 +68,51 @@ For additional information please refer to:
 https://github.com/intel/%{githubname}
 
 %prep
-%autosetup -n %{githubfull}
+%autosetup -n %{githubfull} -p1
 
-%post -p /sbin/ldconfig
+%if 0%{?rhel} && 0%{?rhel} < 8
+%ldconfig_post
 
-%postun -p /sbin/ldconfig
+%ldconfig_postun
+%endif
 
 %build
-make SAFE_PARAM=y SAFE_DATA=y %{?_smp_mflags}
+make SAFE_PARAM=y SAFE_DATA=y EXTRA_CFLAGS='%{optflags}' %{?_smp_mflags}
 
 %install
-install -d %{buildroot}/%{_licensedir}/%{name}-%{fullversion}
-install -m 0644 %{_builddir}/%{githubfull}/LICENSE %{buildroot}/%{_licensedir}/%{name}-%{fullversion}
 
 # Install the library
-# - include directory not created in the 'install' target - workaround
 install -d %{buildroot}/%{_includedir}
-make install -C %{_builddir}/%{githubfull} PREFIX=%{_buildroot} HDR_DIR=%{buildroot}/%{_includedir} LIB_INSTALL_DIR=%{buildroot}/%{_libdir} MAN_DIR=%{buildroot}/%{_mandir}/man7 NOLDCONFIG=y
-# - workaround for no strip option in the 'install target'
-rm -f %{buildroot}/%{_libdir}/libIPSec_MB.so*
+install -m 0644 %{_builddir}/%{githubfull}/intel-ipsec-mb.h %{buildroot}/%{_includedir}
+install -d %{buildroot}/%{_libdir}
 install -s -m 0755 %{_builddir}/%{githubfull}/libIPSec_MB.so.%{fullversion} %{buildroot}/%{_libdir}
+install -d %{buildroot}/%{_mandir}/man7
+install -m 0444 libipsec-mb.7 %{buildroot}/%{_mandir}/man7
+install -m 0444 libipsec-mb-dev.7 %{buildroot}/%{_mandir}/man7
 cd %{buildroot}/%{_libdir}
 ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so.0
 ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 
 %files
 
-%{!?_licensedir:%global license %%doc}
-%license %{_licensedir}/%{name}-%{fullversion}/LICENSE
+%license LICENSE
 %doc README ReleaseNotes.txt
 
 %{_libdir}/libIPSec_MB.so.%{fullversion}
 %{_libdir}/libIPSec_MB.so.0
-%{_libdir}/libIPSec_MB.so
 
 %{_mandir}/man7/libipsec-mb.7.gz
 
-%files -n intel-ipsec-mb-devel
+%files -n %{name}-devel
 %{_includedir}/intel-ipsec-mb.h
 %{_mandir}/man7/libipsec-mb-dev.7.gz
+%{_libdir}/libIPSec_MB.so
 
 %changelog
+* Tue Sep 08 2020 Marcel Cornu <marcel.d.cornu@intel.com> 0.54.0-2
+- Updated to improve compliance with packaging guidelines
+- Added patch to fix executable stack issue
+
 * Thu May 14 2020 Marcel Cornu <marcel.d.cornu@intel.com> 0.54.0-1
 - Update for release package v0.54.0
 
