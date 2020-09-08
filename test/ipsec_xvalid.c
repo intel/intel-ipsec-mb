@@ -75,10 +75,14 @@
 #define DIM(x) (sizeof(x)/sizeof(x[0]))
 
 #define SEED 0xdeadcafe
-#define PT_PATTERN 0x4444444444444444ULL
-#define CIPH_KEY_PATTERN 0x3333333333333333ULL
-#define AUTH_KEY_PATTERN 0xCCCCCCCCCCCCCCCCULL
 #define STACK_DEPTH 8192
+
+static int pattern_auth_key;
+static int pattern_cipher_key;
+static int pattern_plain_text;
+static uint64_t pattern8_auth_key;
+static uint64_t pattern8_cipher_key;
+static uint64_t pattern8_plain_text;
 
 #define MAX_OOO_MGR_SIZE 8192
 #define OOO_MGR_FIRST aes128_ooo
@@ -623,6 +627,33 @@ generate_random_buf(uint8_t *buf, const uint32_t length)
                 buf[i] = (uint8_t) rand();
 }
 
+/** Generate random fill patterns */
+static void generate_patterns(void)
+{
+        /* randomize fill values - make sure they are unique and non-zero */
+        do {
+                pattern_auth_key = rand() & 255;
+                pattern_cipher_key = rand() & 255;
+                pattern_plain_text = rand() & 255;
+        } while (pattern_auth_key == pattern_cipher_key ||
+                 pattern_auth_key == pattern_plain_text ||
+                 pattern_cipher_key == pattern_plain_text ||
+                 pattern_auth_key == 0 ||
+                 pattern_cipher_key == 0 ||
+                 pattern_plain_text == 0);
+
+        memset(&pattern8_auth_key, pattern_auth_key,
+               sizeof(pattern8_auth_key));
+        memset(&pattern8_cipher_key, pattern_cipher_key,
+               sizeof(pattern8_cipher_key));
+        memset(&pattern8_plain_text, pattern_plain_text,
+               sizeof(pattern8_plain_text));
+
+        printf(">>> Patterns: AUTH_KEY = 0x%02x, CIPHER_KEY = 0x%02x, "
+               "PLAIN_TEXT = 0x%02x\n",
+               pattern_auth_key, pattern_cipher_key, pattern_plain_text);
+}
+
 /*
  * Searches across a block of memory if a pattern is present
  * (indicating there is some left over sensitive data)
@@ -648,15 +679,15 @@ search_patterns(const void *ptr, const size_t mem_size)
                 if (string == end_of_ooo_pattern)
                         return ret;
 
-                if (string == CIPH_KEY_PATTERN) {
+                if (string == pattern8_cipher_key) {
                         fprintf(stderr, "Part of CIPHER_KEY is present\n");
                         ret = 0;
                 }
-                if (string == AUTH_KEY_PATTERN) {
+                if (string == pattern8_auth_key) {
                         fprintf(stderr, "Part of AUTH_KEY is present\n");
                         ret = 0;
                 }
-                if (string == PT_PATTERN) {
+                if (string == pattern8_plain_text) {
                         fprintf(stderr,
                                 "Part of plain/ciphertext is present\n");
                         ret = 0;
@@ -1009,24 +1040,24 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         struct gcm_key_data *gdata_key = &keys->gdata_key;
         uint8_t i;
 
-        /* Set all expanded keys to CIPH_KEY_PATTERN/AUTH_KEY_PATTERN
+        /* Set all expanded keys to pattern_cipher_key/pattern_auth_key
          * if flag is set */
         if (force_pattern) {
                 switch (params->hash_alg) {
                 case IMB_AUTH_AES_XCBC:
-                        memset(k1_expanded, (int)AUTH_KEY_PATTERN,
+                        memset(k1_expanded, pattern_auth_key,
                                sizeof(keys->k1_expanded));
                         break;
                 case IMB_AUTH_AES_CMAC:
                 case IMB_AUTH_AES_CMAC_BITLEN:
                 case IMB_AUTH_AES_CMAC_256:
-                        memset(k1_expanded, (int)AUTH_KEY_PATTERN,
+                        memset(k1_expanded, pattern_auth_key,
                                sizeof(keys->k1_expanded));
-                        memset(k2, (int)AUTH_KEY_PATTERN, sizeof(keys->k2));
-                        memset(k3, (int)AUTH_KEY_PATTERN, sizeof(keys->k3));
+                        memset(k2, pattern_auth_key, sizeof(keys->k2));
+                        memset(k3, pattern_auth_key, sizeof(keys->k3));
                         break;
                 case IMB_AUTH_POLY1305:
-                        memset(k1_expanded, (int)AUTH_KEY_PATTERN,
+                        memset(k1_expanded, pattern_auth_key,
                                sizeof(keys->k1_expanded));
                         break;
                 case IMB_AUTH_HMAC_SHA_1:
@@ -1035,13 +1066,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_HMAC_SHA_384:
                 case IMB_AUTH_HMAC_SHA_512:
                 case IMB_AUTH_MD5:
-                        memset(ipad, (int)AUTH_KEY_PATTERN, sizeof(keys->ipad));
-                        memset(opad, (int)AUTH_KEY_PATTERN, sizeof(keys->opad));
+                        memset(ipad, pattern_auth_key, sizeof(keys->ipad));
+                        memset(opad, pattern_auth_key, sizeof(keys->opad));
                         break;
                 case IMB_AUTH_ZUC_EIA3_BITLEN:
                 case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 case IMB_AUTH_KASUMI_UIA1:
-                        memset(k3, (int)AUTH_KEY_PATTERN, sizeof(keys->k3));
+                        memset(k3, pattern_auth_key, sizeof(keys->k3));
                         break;
                 case IMB_AUTH_AES_CCM:
                 case IMB_AUTH_AES_GMAC:
@@ -1058,7 +1089,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_AES_GMAC_128:
                 case IMB_AUTH_AES_GMAC_192:
                 case IMB_AUTH_AES_GMAC_256:
-                        memset(gdata_key, (int)AUTH_KEY_PATTERN,
+                        memset(gdata_key, pattern_auth_key,
                                sizeof(keys->gdata_key));
                         break;
                 default:
@@ -1070,7 +1101,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
 
                 switch (params->cipher_mode) {
                 case IMB_CIPHER_GCM:
-                        memset(gdata_key, (int)CIPH_KEY_PATTERN,
+                        memset(gdata_key, pattern_cipher_key,
                                 sizeof(keys->gdata_key));
                         break;
                 case IMB_CIPHER_PON_AES_CNTR:
@@ -1081,24 +1112,24 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_CIPHER_DOCSIS_SEC_BPI:
                 case IMB_CIPHER_ECB:
                 case IMB_CIPHER_CBCS_1_9:
-                        memset(enc_keys, (int)CIPH_KEY_PATTERN,
+                        memset(enc_keys, pattern_cipher_key,
                                sizeof(keys->enc_keys));
-                        memset(dec_keys, (int)CIPH_KEY_PATTERN,
+                        memset(dec_keys, pattern_cipher_key,
                                sizeof(keys->dec_keys));
                         break;
                 case IMB_CIPHER_DES:
                 case IMB_CIPHER_DES3:
                 case IMB_CIPHER_DOCSIS_DES:
-                        memset(enc_keys, (int)CIPH_KEY_PATTERN,
+                        memset(enc_keys, pattern_cipher_key,
                                sizeof(keys->enc_keys));
                         break;
                 case IMB_CIPHER_ZUC_EEA3:
                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                 case IMB_CIPHER_KASUMI_UEA1_BITLEN:
-                        memset(k2, (int)CIPH_KEY_PATTERN, 16);
+                        memset(k2, pattern_cipher_key, 16);
                         break;
                 case IMB_CIPHER_CHACHA20:
-                        memset(k2, (int)CIPH_KEY_PATTERN, 32);
+                        memset(k2, pattern_cipher_key, 32);
                         break;
                 case IMB_CIPHER_NULL:
                         /* No operation needed */
@@ -1519,9 +1550,9 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
          * so they can be searched later on in the MB_MGR structure and stack.
          * Otherwise, just randomize the data */
         if (safe_check) {
-                memset(test_buf, (int)PT_PATTERN, buf_size);
-                memset(ciph_key, (int)CIPH_KEY_PATTERN, MAX_KEY_SIZE);
-                memset(auth_key, (int)AUTH_KEY_PATTERN, MAX_KEY_SIZE);
+                memset(test_buf, pattern_plain_text, buf_size);
+                memset(ciph_key, pattern_cipher_key, MAX_KEY_SIZE);
+                memset(auth_key, pattern_auth_key, MAX_KEY_SIZE);
         } else {
                 generate_random_buf(test_buf, buf_size);
                 generate_random_buf(ciph_key, MAX_KEY_SIZE);
@@ -2430,6 +2461,9 @@ int main(int argc, char *argv[])
         free_mb_mgr(p_mgr);
 
         srand(SEED);
+
+        if (safe_check)
+                generate_patterns();
 
         run_tests(safe_check);
 
