@@ -1407,8 +1407,7 @@ modify_docsis_crc32_test_buf(uint8_t *test_buf, const struct params_s *params,
  *  Returns -1 if sensitive information was found or 0 if not.
  */
 static int
-perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch,
-                    const char *dir)
+perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch, const char *dir)
 {
         uint8_t *rsp_ptr;
         uint32_t simd_size = 0;
@@ -1439,25 +1438,23 @@ perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch,
                 return -1;
         }
         if (search_patterns(gps, GP_MEM_SIZE) == 0) {
-                fprintf(stderr, "Pattern found in GP registers "
-                        "after %s data\n", dir);
+                fprintf(stderr, "Pattern found in GP registers after %s data\n",
+                        dir);
                 return -1;
         }
         if (search_patterns(simd_regs, simd_size) == 0) {
-                fprintf(stderr, "Pattern found in SIMD "
-                        "registers after %s data\n", dir);
+                fprintf(stderr,
+                        "Pattern found in SIMD registers after %s data\n",
+                        dir);
                 return -1;
         }
         rsp_ptr = rdrsp();
-        if (search_patterns((rsp_ptr - STACK_DEPTH),
-                            STACK_DEPTH) == 0) {
-                fprintf(stderr, "Pattern found in stack after "
-                        "%s data\n", dir);
+        if (search_patterns((rsp_ptr - STACK_DEPTH), STACK_DEPTH) == 0) {
+                fprintf(stderr, "Pattern found in stack after %s data\n", dir);
                 return -1;
         }
         if (search_patterns(mgr, sizeof(IMB_MGR)) == 0) {
-                fprintf(stderr, "Pattern found in MB_MGR after "
-                                "%s data\n", dir);
+                fprintf(stderr, "Pattern found in MB_MGR after %s data\n", dir);
                 return -1;
         }
 
@@ -1468,9 +1465,9 @@ perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch,
                 void *ooo_mgr_p = *ooo_ptr;
 
                 if (search_patterns(ooo_mgr_p, MAX_OOO_MGR_SIZE) == 0) {
-                        fprintf(stderr, "Pattern found in 000 "
-                                "MGR (%d) after %s data\n", (int)
-                                (ooo_ptr - &mgr->OOO_MGR_FIRST), dir);
+                        fprintf(stderr,
+                                "Pattern found in 000 MGR (%d) after %s data\n",
+                                (int)(ooo_ptr - &mgr->OOO_MGR_FIRST), dir);
                         return -1;
                 }
         }
@@ -1593,7 +1590,7 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
 
                 rsp_ptr = rdrsp();
                 if (search_patterns((rsp_ptr - STACK_DEPTH),
-                                     STACK_DEPTH) == 0) {
+                                    STACK_DEPTH) == 0) {
                         fprintf(stderr, "Pattern found in stack after "
                                 "expanding encryption keys\n");
                         goto exit;
@@ -1605,7 +1602,7 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
 
                 rsp_ptr = rdrsp();
                 if (search_patterns((rsp_ptr - STACK_DEPTH),
-                                     STACK_DEPTH) == 0) {
+                                    STACK_DEPTH) == 0) {
                         fprintf(stderr, "Pattern found in stack after "
                                 "expanding decryption keys\n");
                         goto exit;
@@ -1708,7 +1705,7 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                  * sensitive information after job is returned */
                 if (safe_check)
                         if (perform_safe_checks(dec_mb_mgr, dec_arch,
-                            "decrypting") < 0)
+                                                "decrypting") < 0)
                                 goto exit;
 
                 if (!job) {
