@@ -1337,7 +1337,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 memcpy(k2, ciph_key, 16);
                 break;
         case IMB_CIPHER_CHACHA20:
-                memcpy(k2, ciph_key, 32);
+                /* Use of:
+                 *     memcpy(k2, ciph_key, 32);
+                 * leaves sensitive data on the stack.
+                 * Copying data in 16 byte chunks instead.
+                 */
+                memcpy(k2, ciph_key, 16);
+                memcpy(k2 + 16, ciph_key + 16, 16);
                 break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
@@ -1543,6 +1549,9 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
          * set keys and plaintext to known values,
          * so they can be searched later on in the MB_MGR structure and stack.
          * Otherwise, just randomize the data */
+        generate_random_buf(cipher_iv, MAX_IV_SIZE);
+        generate_random_buf(auth_iv, MAX_IV_SIZE);
+        generate_random_buf(aad, MAX_AAD_SIZE);
         if (safe_check) {
                 memset(test_buf, pattern_plain_text, buf_size);
                 memset(ciph_key, pattern_cipher_key, MAX_KEY_SIZE);
@@ -1551,9 +1560,6 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 generate_random_buf(test_buf, buf_size);
                 generate_random_buf(ciph_key, MAX_KEY_SIZE);
                 generate_random_buf(auth_key, MAX_KEY_SIZE);
-                generate_random_buf(cipher_iv, MAX_IV_SIZE);
-                generate_random_buf(auth_iv, MAX_IV_SIZE);
-                generate_random_buf(aad, MAX_AAD_SIZE);
         }
 
         /* For PON, construct the XGEM header, setting valid PLI */
@@ -1579,7 +1585,8 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                 uint8_t *rsp_ptr;
 
                 /* Clear scratch registers before expanding keys to prevent
-                 * other functions from storing sensitive data in stack */
+                 * other functions from storing sensitive data in stack
+                 */
                 clear_scratch_simd(enc_arch);
                 if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key,
                                  params, 0) < 0)
@@ -1605,6 +1612,11 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                         goto exit;
                 }
 
+                /*
+                 * After testing key normal expansion functions,
+                 * it is time to setup the keys and key schedules filled
+                 * with specific patterns.
+                 */
                 if (prepare_keys(enc_mb_mgr, enc_keys, ciph_key, auth_key,
                                  params, 1) < 0)
                         goto exit;
