@@ -644,10 +644,12 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_avx512(ZucState16_t *pState,
-                                                   uint32_t *pKeyStr[16]);
+                                                   uint32_t *pKeyStr[16],
+                                                   const uint32_t lane_mask);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
-                                                        uint32_t *pKeyStr[16]);
+                                                      uint32_t *pKeyStr[16],
+                                                      const uint32_t lane_mask);
 
 /**
  ******************************************************************************

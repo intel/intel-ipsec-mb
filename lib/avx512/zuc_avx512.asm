@@ -304,21 +304,22 @@ align 64
 ;
 ; The macro clobbers ZMM0-15
 ;
-%macro REORDER_LFSR 2
+%macro REORDER_LFSR 3
 %define %%STATE      %1
 %define %%NUM_ROUNDS %2
+%define %%LANE_MASK  %3
 
 %if %%NUM_ROUNDS != 16
 %assign i 0
 %rep 16
-    vmovdqa64 APPEND(zmm,i), [%%STATE + 64*i]
+    vmovdqa32 APPEND(zmm,i){%%LANE_MASK}, [%%STATE + 64*i]
 %assign i (i+1)
 %endrep
 
 %assign i 0
 %assign j %%NUM_ROUNDS
 %rep 16
-    vmovdqa64 [%%STATE + 64*i], APPEND(zmm,j)
+    vmovdqa32 [%%STATE + 64*i]{%%LANE_MASK}, APPEND(zmm,j)
 %assign i (i+1)
 %assign j ((j+1) % 16)
 %endrep
@@ -491,7 +492,7 @@ align 64
 ;
 ;   store_kstr16()
 ;
-%macro  store_kstr16 17
+%macro  store_kstr16 21
 %define %%DATA64B_L0  %1  ; [in] 64 bytes of keystream for lane 0
 %define %%DATA64B_L1  %2  ; [in] 64 bytes of keystream for lane 1
 %define %%DATA64B_L2  %3  ; [in] 64 bytes of keystream for lane 2
@@ -508,43 +509,47 @@ align 64
 %define %%DATA64B_L13 %14 ; [in] 64 bytes of keystream for lane 13
 %define %%DATA64B_L14 %15 ; [in] 64 bytes of keystream for lane 14
 %define %%DATA64B_L15 %16 ; [in] 64 bytes of keystream for lane 15
-%define %%KMASK       %17 ; [in] K mask containing which dwords will be stored
+%define %%TMP0        %17 ; [clobbered] Temporary GP register
+%define %%TMP1        %18 ; [clobbered] Temporary GP register
+%define %%TMP2        %19 ; [clobbered] Temporary GP register
+%define %%TMP3        %20 ; [clobbered] Temporary GP register
+%define %%KMASK       %21 ; [in] K mask containing which dwords will be stored
 
-    mov         r8,    [pKS]
-    mov         r9,    [pKS + 8]
-    mov         r10,   [pKS + 16]
-    mov         r11,   [pKS + 24]
-    vmovdqu32   [r8]{%%KMASK},  %%DATA64B_L0
-    vmovdqu32   [r9]{%%KMASK},  %%DATA64B_L1
-    vmovdqu32   [r10]{%%KMASK}, %%DATA64B_L2
-    vmovdqu32   [r11]{%%KMASK}, %%DATA64B_L3
+    mov         %%TMP0,   [pKS]
+    mov         %%TMP1,   [pKS + 8]
+    mov         %%TMP2,   [pKS + 16]
+    mov         %%TMP3,   [pKS + 24]
+    vmovdqu32   [%%TMP0]{%%KMASK}, %%DATA64B_L0
+    vmovdqu32   [%%TMP1]{%%KMASK},  %%DATA64B_L1
+    vmovdqu32   [%%TMP2]{%%KMASK}, %%DATA64B_L2
+    vmovdqu32   [%%TMP3]{%%KMASK}, %%DATA64B_L3
 
-    mov         r8,    [pKS + 32]
-    mov         r9,    [pKS + 40]
-    mov         r10,   [pKS + 48]
-    mov         r11,   [pKS + 56]
-    vmovdqu32   [r8]{%%KMASK},  %%DATA64B_L4
-    vmovdqu32   [r9]{%%KMASK},  %%DATA64B_L5
-    vmovdqu32   [r10]{%%KMASK}, %%DATA64B_L6
-    vmovdqu32   [r11]{%%KMASK}, %%DATA64B_L7
+    mov         %%TMP0,   [pKS + 32]
+    mov         %%TMP1,    [pKS + 40]
+    mov         %%TMP2,   [pKS + 48]
+    mov         %%TMP3,   [pKS + 56]
+    vmovdqu32   [%%TMP0]{%%KMASK}, %%DATA64B_L4
+    vmovdqu32   [%%TMP1]{%%KMASK},  %%DATA64B_L5
+    vmovdqu32   [%%TMP2]{%%KMASK}, %%DATA64B_L6
+    vmovdqu32   [%%TMP3]{%%KMASK}, %%DATA64B_L7
 
-    mov         r8,    [pKS + 64]
-    mov         r9,    [pKS + 72]
-    mov         r10,   [pKS + 80]
-    mov         r11,   [pKS + 88]
-    vmovdqu32   [r8]{%%KMASK},  %%DATA64B_L8
-    vmovdqu32   [r9]{%%KMASK},  %%DATA64B_L9
-    vmovdqu32   [r10]{%%KMASK}, %%DATA64B_L10
-    vmovdqu32   [r11]{%%KMASK}, %%DATA64B_L11
+    mov         %%TMP0,   [pKS + 64]
+    mov         %%TMP1,    [pKS + 72]
+    mov         %%TMP2,   [pKS + 80]
+    mov         %%TMP3,   [pKS + 88]
+    vmovdqu32   [%%TMP0]{%%KMASK}, %%DATA64B_L8
+    vmovdqu32   [%%TMP1]{%%KMASK},  %%DATA64B_L9
+    vmovdqu32   [%%TMP2]{%%KMASK}, %%DATA64B_L10
+    vmovdqu32   [%%TMP3]{%%KMASK}, %%DATA64B_L11
 
-    mov         r8,    [pKS + 96]
-    mov         r9,    [pKS + 104]
-    mov         r10,   [pKS + 112]
-    mov         r11,   [pKS + 120]
-    vmovdqu32   [r8]{%%KMASK},  %%DATA64B_L12
-    vmovdqu32   [r9]{%%KMASK},  %%DATA64B_L13
-    vmovdqu32   [r10]{%%KMASK}, %%DATA64B_L14
-    vmovdqu32   [r11]{%%KMASK}, %%DATA64B_L15
+    mov         %%TMP0,   [pKS + 96]
+    mov         %%TMP1,    [pKS + 104]
+    mov         %%TMP2,   [pKS + 112]
+    mov         %%TMP3,   [pKS + 120]
+    vmovdqu32   [%%TMP0]{%%KMASK}, %%DATA64B_L12
+    vmovdqu32   [%%TMP1]{%%KMASK},  %%DATA64B_L13
+    vmovdqu32   [%%TMP2]{%%KMASK}, %%DATA64B_L14
+    vmovdqu32   [%%TMP3]{%%KMASK}, %%DATA64B_L15
 
 %endmacro
 
@@ -774,9 +779,10 @@ asm_ZucInitialization_16_gfni_avx512:
 ; Generate N*4 bytes of keystream
 ; for 16 buffers (where N is number of rounds)
 ;
-%macro KEYGEN_16_AVX512 2
+%macro KEYGEN_16_AVX512 2-3
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
 %define %%USE_GFNI      %2 ; [in] If 1, then GFNI instructions may be used
+%define %%LANE_MASK     %3 ; [in] Lane mask with lanes to generate keystream
 
     %define	pState	  arg1
     %define     pKS	  arg2
@@ -794,11 +800,15 @@ asm_ZucInitialization_16_gfni_avx512:
 
     ; Load read-only registers
     vmovdqa64   zmm12, [rel mask31]
-    mov         r8d, 0xAAAAAAAA
-    kmovd       k1, r8d
+    mov         r10d, 0xAAAAAAAA
+    kmovd       k1, r10d
 
-    mov         r9d, 0x0000FFFF
-    kmovd       k2, r9d
+%if (%0 == 3)
+    kmovd       k2, DWORD(%%LANE_MASK)
+%else
+    mov         r10d, 0x0000FFFF
+    kmovd       k2, r10d
+%endif
 
     ; Generate N*4B of keystream in N rounds
 %ifnnum %%NUM_ROUNDS
@@ -823,12 +833,12 @@ asm_ZucInitialization_16_gfni_avx512:
 
 %%exit_loop:
 %ifnum %%NUM_ROUNDS
-    mov         r8d, ((1 << %%NUM_ROUNDS) - 1)
+    mov         r12d, ((1 << %%NUM_ROUNDS) - 1)
 %else
     lea         r13, [rel byte64_len_to_mask_table]
-    mov         r8, [r13 + numRounds*8]
+    mov         r12, [r13 + numRounds*8]
 %endif
-    kmovd       k1, r8d
+    kmovd       k1, r12d
     ; ZMM16-31 contain the keystreams for each round
     ; Perform a 32-bit 16x16 transpose to have up to 64 bytes
     ; (NUM_ROUNDS * 4B) of each lane in a different register
@@ -838,8 +848,64 @@ asm_ZucInitialization_16_gfni_avx512:
                     zmm8, zmm9, zmm10, zmm11, zmm12, zmm13
 
     store_kstr16 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
-                 zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, k1
+                 zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                 rbx, r9, r10, r11, k1
 
+    ; Reorder LFSR registers
+%ifnum %%NUM_ROUNDS
+    REORDER_LFSR rax, %%NUM_ROUNDS, k2
+%else
+    cmp     numRounds, 16
+    je      %%_skip_reorder
+
+    cmp     numRounds, 8
+    je      %%_num_rounds_is_8
+    jb      %%_rounds_is_1_7
+
+    ; Final blocks 9-16
+    cmp     numRounds, 12
+    je      %%_num_rounds_is_12
+    jb      %%_rounds_is_9_11
+
+    ; Final blocks 13-15
+    cmp     numRounds, 14
+    je      %%_num_rounds_is_14
+    ja      %%_num_rounds_is_15
+    jb      %%_num_rounds_is_13
+
+%%_rounds_is_9_11:
+    cmp     numRounds, 10
+    je      %%_num_rounds_is_10
+    ja      %%_num_rounds_is_11
+    jb      %%_num_rounds_is_9
+
+%%_rounds_is_1_7:
+    cmp     numRounds, 4
+    je      %%_num_rounds_is_4
+    jb      %%_rounds_is_1_3
+
+    ; Final blocks 5-7
+    cmp     numRounds, 6
+    je      %%_num_rounds_is_6
+    ja      %%_num_rounds_is_7
+    jb      %%_num_rounds_is_5
+
+%%_rounds_is_1_3:
+    cmp     numRounds, 2
+    je      %%_num_rounds_is_2
+    ja      %%_num_rounds_is_3
+
+    ; Rounds = 1 if fall-through
+%assign I 1
+%rep 15
+APPEND(%%_num_rounds_is_,I):
+    REORDER_LFSR rax, I, k2
+    jmp     %%_skip_reorder
+%assign I (I + 1)
+%endrep
+
+%%_skip_reorder:
+%endif
     FUNC_RESTORE
 
 %endmacro
@@ -855,12 +921,13 @@ asm_ZucGenKeystream64B_16_avx512:
     ret
 
 ;;
-;; void asm_ZucGenKeystream8B_16_avx512(state16_t *pSta, u32* pKeyStr[16])
+;; void asm_ZucGenKeystream8B_16_avx512(state16_t *pSta, u32* pKeyStr[16],
+;;                                      const u32 lane_mask)
 ;;
 MKGLOBAL(asm_ZucGenKeystream8B_16_avx512,function,internal)
 asm_ZucGenKeystream8B_16_avx512:
 
-    KEYGEN_16_AVX512 2, 0
+    KEYGEN_16_AVX512 2, 0, arg3
 
     ret
 
@@ -875,12 +942,13 @@ asm_ZucGenKeystream64B_16_gfni_avx512:
     ret
 
 ;;
-;; void asm_ZucGenKeystream8B_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16])
+;; void asm_ZucGenKeystream8B_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16],
+;;                                           const u32 lane_mask)
 ;;
 MKGLOBAL(asm_ZucGenKeystream8B_16_gfni_avx512,function,internal)
 asm_ZucGenKeystream8B_16_gfni_avx512:
 
-    KEYGEN_16_AVX512 2, 1
+    KEYGEN_16_AVX512 2, 1, arg3
 
     ret
 
@@ -1129,7 +1197,7 @@ asm_ZucGenKeystream_16_gfni_avx512:
 %rep 16
 APPEND(%%_num_final_rounds_is_,I):
         CIPHER64B I, k2, k3, %%USE_GFNI, buf_idx, 1
-        REORDER_LFSR rax, I
+        REORDER_LFSR rax, I, k3
         add     buf_idx, min_length
         jmp     %%_no_final_rounds
 %assign I (I + 1)

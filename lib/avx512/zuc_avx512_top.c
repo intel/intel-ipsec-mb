@@ -605,14 +605,16 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 if (use_gfni) {
                         if (!remainCommonBits)
                                 asm_ZucGenKeystream8B_16_gfni_avx512(&state,
-                                                     (uint32_t **)pKeyStrArr64);
+                                                     (uint32_t **)pKeyStrArr64,
+                                                     0x0000FFFF);
                         else
                                 asm_ZucGenKeystream64B_16_gfni_avx512(&state,
                                                      (uint32_t **)pKeyStrArr64);
                 } else {
                         if (!remainCommonBits)
                                 asm_ZucGenKeystream8B_16_avx512(&state,
-                                                     (uint32_t **)pKeyStrArr64);
+                                                     (uint32_t **)pKeyStrArr64,
+                                                     0x0000FFFF);
                         else
                                 asm_ZucGenKeystream64B_16_avx512(&state,
                                                      (uint32_t **)pKeyStrArr64);
@@ -777,7 +779,8 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                 if (use_gfni) {
                         if (!remainCommonBits)
                                 asm_ZucGenKeystream8B_16_gfni_avx512(state,
-                                                     (uint32_t **)pKeyStrArr64);
+                                                     (uint32_t **)pKeyStrArr64,
+                                                     0x0000FFFF);
                         else
                                 asm_ZucGenKeystream64B_16_gfni_avx512(state,
                                                      (uint32_t **)pKeyStrArr64);
@@ -787,7 +790,8 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                 } else {
                         if (!remainCommonBits)
                                 asm_ZucGenKeystream8B_16_avx512(state,
-                                                     (uint32_t **)pKeyStrArr64);
+                                                     (uint32_t **)pKeyStrArr64,
+                                                     0x0000FFFF);
                         else
                                 asm_ZucGenKeystream64B_16_avx512(state,
                                                      (uint32_t **)pKeyStrArr64);
