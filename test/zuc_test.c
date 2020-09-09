@@ -809,8 +809,9 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                     memcmp(pDstData[i], &vector.mac,
                            sizeof(((struct test128EIA3_vectors_t *)0)->mac));
                 if (retTmp) {
-                        printf("Validate ZUC n block multi-vector test %u, "
-                               "index %u (Int): FAIL\n", (j + 1), i);
+                        printf("Validate ZUC n block multi-vector test "
+                               "# jobs = %u, index %u (Int): FAIL\n",
+                               numBuffs, i);
                         byte_hexdump("Expected",
                                      (const uint8_t *)&vector.mac,
                                      ZUC_DIGEST_LEN);
@@ -819,8 +820,9 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 }
 #ifdef DEBUG
                 else
-                        printf("Validate ZUC n block multi-vector test %u, "
-                               "index %u (Int): PASS\n", (j + 1), i);
+                        printf("Validate ZUC n block multi-vector test, "
+                               "# jobs = %u, index %u (Int): PASS\n",
+                               numBuffs, i);
 #endif
                 fflush(stdout);
         }
