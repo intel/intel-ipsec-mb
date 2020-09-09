@@ -202,6 +202,11 @@ align 64
 add_64:
 dq      64, 64, 64, 64, 64, 64, 64, 64
 
+align 32
+all_512w:
+dw      512, 512, 512, 512, 512, 512, 512, 512
+dw      512, 512, 512, 512, 512, 512, 512, 512
+
 align 64
 bswap_mask:
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
@@ -212,6 +217,16 @@ db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+
+align 64
+all_31w:
+dw      31, 31, 31, 31, 31, 31, 31, 31
+dw      31, 31, 31, 31, 31, 31, 31, 31
+
+align 64
+all_ffe0w:
+dw      0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0
+dw      0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0, 0xffe0
 
 section .text
 align 64
@@ -1245,7 +1260,8 @@ asm_ZucCipher_16_gfni_avx512:
         ret
 
 ;;
-;;extern void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T, const void **KS, const void **DATA)
+;;extern void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T, const void **KS, const void **DATA,
+;;                                        uint16_t *LEN)
 ;;
 ;; Updates authentication tag T of 16 buffers based on keystream KS and DATA.
 ;; - it processes 64 bytes of DATA
@@ -1254,15 +1270,18 @@ asm_ZucCipher_16_gfni_avx512:
 ;; - employs clmul for the XOR & ROL part
 ;; - copies top 64 bytes of KS to bottom (for the next round)
 ;; - Updates Data pointers for next rounds
+;; - Updates array of lengths
 ;;
 ;; WIN64
 ;;	RCX - T: Array of digests for all 16 buffers
 ;;	RDX - KS: Array of pointers to key stream (2 x 64 bytes) for all 16 buffers
 ;;      R8  - DATA: Array of pointers to data for all 16 buffers
+;;      R9  - LEN: Array of lengths for all 16 buffers
 ;; LIN64
 ;;	RDI - T: Array of digests for all 16 buffers
 ;;	RSI - KS: Array of pointers to key stream (2 x 64 bytes) for all 16 buffers
 ;;      RDX - DATA: Array of pointers to data for all 16 buffers
+;;      RCX - LEN: Array of lengths for all 16 buffers
 ;;
 align 64
 MKGLOBAL(asm_Eia3Round64B_16_VPCLMUL,function,internal)
@@ -1272,13 +1291,15 @@ asm_Eia3Round64B_16_VPCLMUL:
 	%define		T	rdi
 	%define		KS	rsi
 	%define		DATA	rdx
+	%define		LEN	rcx
 %else
 	%define		T	rcx
 	%define		KS	rdx
 	%define		DATA	r8
+	%define		LEN	r9
 %endif
 
-%define         DATA_ADDR0      r9
+%define         DATA_ADDR0      rbx
 %define         DATA_ADDR1      r10
 %define         DATA_ADDR2      r11
 %define         DATA_ADDR3      r12
@@ -1398,10 +1419,10 @@ asm_Eia3Round64B_16_VPCLMUL:
 %endrep
 
         ;; - update tags
-        mov             r9, 0x00FF
-        mov             r10, 0xFF00
-        kmovq           k1, r9
-        kmovq           k2, r10
+        mov             r12, 0x00FF
+        mov             r13, 0xFF00
+        kmovq           k1, r12
+        kmovq           k2, r13
 
         vmovdqu64       zmm4, [T] ; Input tags
         vmovdqa64       zmm0, [rel shuf_mask_tags]
@@ -1421,6 +1442,12 @@ asm_Eia3Round64B_16_VPCLMUL:
         vpaddq          zmm1, [rel add_64]
         vmovdqu64       [DATA], zmm0
         vmovdqu64       [DATA + 64], zmm1
+
+        ; Update array of lengths (subtract 512 bits from all lengths if valid lane)
+        vmovdqa         ymm2, [LEN]
+        vpcmpw          k1, ymm2, [rel all_ffs], 4
+        vpsubw          ymm2{k1}, [rel all_512w]
+        vmovdqa         [LEN], ymm2
 
         FUNC_RESTORE
 
@@ -1649,13 +1676,15 @@ asm_Eia3RemainderAVX512_16:
 %ifdef LINUX
         %define         T       rdi
         %define	        KS      rsi
-        %define	        DATA	rdx
-        %define	        N_BITS	rcx
+        %define	        DATA    rdx
+        %define         LEN     rcx
+        %define	        arg5    r8
 %else
         %define         T       rcx
-        %define		KS	rdx
-        %define		DATA	r8
-        %define		N_BITS	r9
+        %define	        KS      rdx
+        %define	        DATA    r8
+        %define	        LEN     r9
+        %define         arg5    [rsp + 40]
 %endif
 
 %define DIGEST_0        zmm28
@@ -1669,12 +1698,35 @@ asm_Eia3RemainderAVX512_16:
 %define N_BYTES         r14
 %define OFFSET          r15
 
-%define KS_ADDR0        r12
-%define KS_ADDR1        r13
-%define KS_ADDR2        rbx
-%define KS_ADDR3        rax
+%define MIN_LEN         r10
+%define IDX             rax
+
+        mov     MIN_LEN, arg5
 
         FUNC_SAVE
+
+        vpbroadcastw ymm0, MIN_LEN
+        ; Get mask of non-NULL lanes (lengths not set to UINT16_MAX, indicating that lane is not valid)
+        vmovdqa ymm1, [LEN]
+        vpcmpw k1, ymm1, [rel all_ffs], 4
+
+        ; Round up to nearest multiple of 32 bits
+        vpaddw  ymm0{k1}, [rel all_31w]
+        vpandq  ymm0, [rel all_ffe0w]
+
+        ; Calculate remaining bits to authenticate after function call
+        vpsubw  ymm2{k1}, ymm1, ymm0
+        vpxorq  ymm3, ymm3
+        vpcmpw  k2, ymm2, ymm3, 1 ; Get mask of lengths < 0
+        ; Set to zero the lengths of the lanes which are going to be completed
+        vmovdqu16 ymm2{k2}, ymm3 ; YMM2 contain final lengths
+        vmovdqu16 [LEN]{k1}, ymm2 ; Update in memory the final updated lengths
+
+        ; Calculate number of bits to authenticate (up to 511 bits),
+        ; for each lane, and store it in stack to be used later
+        vpsubw  ymm1{k1}{z}, ymm2 ; Bits to authenticate in all lanes (zero out length of NULL lanes)
+        sub     rsp, 32
+        vmovdqu [rsp], ymm1
 
         xor     OFFSET, OFFSET
 
@@ -1688,7 +1740,9 @@ asm_Eia3RemainderAVX512_16:
 %assign J 0
 %rep 4
 
-        lea     N_BITS, [N_BITS + OFFSET*8] ; Restore original N_BITS
+        ; Read  length to authenticate for each buffer
+        movzx   MIN_LEN, word [rsp + 2*(I*4 + J)]
+
         vpxor   xmm9, xmm9
 
         xor     OFFSET, OFFSET
@@ -1696,8 +1750,8 @@ asm_Eia3RemainderAVX512_16:
         mov     KS_ADDR, [KS + 8*(I*4 + J)]
 
 %assign K 0
-%rep 3
-        cmp     N_BITS, 128
+%rep 4
+        cmp     MIN_LEN, 128
         jb      APPEND3(Eia3RoundsAVX512_dq_end,I,J)
 
         ;; read 16 bytes and reverse bits
@@ -1744,22 +1798,21 @@ asm_Eia3RemainderAVX512_16:
         vpternlogq xmm13, xmm14, xmm8, 0x96
         vpternlogq xmm9, xmm13, xmm15, 0x96
         add     OFFSET, 16
-        sub     N_BITS, 128
+        sub     MIN_LEN, 128
 %assign K (K + 1)
 %endrep
 APPEND3(Eia3RoundsAVX512_dq_end,I,J):
 
-        or      N_BITS, N_BITS
+        or      MIN_LEN, MIN_LEN
         jz      APPEND3(Eia3RoundsAVX_end,I,J)
 
         ; Get number of bytes
-        mov     N_BYTES, N_BITS
+        mov     N_BYTES, MIN_LEN
         add     N_BYTES, 7
         shr     N_BYTES, 3
 
-        SHIFT_GP 1, N_BYTES, r10, r11, left
-        dec     r10
-        kmovq   k1, r10
+        lea     r11, [rel byte64_len_to_mask_table]
+        kmovq   k1, [r11 + N_BYTES*8]
 
         ;; Set up KS
         vmovdqu xmm1, [KS_ADDR + OFFSET]
@@ -1771,22 +1824,23 @@ APPEND3(Eia3RoundsAVX512_dq_end,I,J):
         ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
         vmovdqu8 xmm0{k1}{z}, [DATA_ADDR + OFFSET]
         ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     rax, N_BITS
+        mov     rax, MIN_LEN
         and     rax, 0x7
         shl     rax, 4
-        lea     r10, [rel bit_mask_table]
-        add     r10, rax
+        lea     r11, [rel bit_mask_table]
+        add     r11, rax
 
         ; Get mask to clear last bits
-        vmovdqa xmm3, [r10]
+        vmovdqa xmm3, [r11]
 
         ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
         ; to apply mask, then restore by shifting right same amount of bytes
-        mov     r10, 16
-        sub     r10, N_BYTES
-        XVPSLLB xmm0, r10, xmm4, r11
+        mov     r11, 16
+        sub     r11, N_BYTES
+        ; r13 = DATA_ADDR can be used at this stage
+        XVPSLLB xmm0, r11, xmm4, r13
         vpandq  xmm0, xmm3
-        XVPSRLB xmm0, r10, xmm4, r11
+        XVPSRLB xmm0, r11, xmm4, r13
 
         ; Bit reverse input data
         vpand   xmm1, xmm0, xmm7
@@ -1838,50 +1892,57 @@ APPEND3(Eia3RoundsAVX_end,I,J):
         vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
         vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
 
-%assign IDX 0
-%rep 4
-        mov      KS_ADDR0, [KS + 0*8]
-        mov      KS_ADDR1, [KS + 1*8]
-        mov      KS_ADDR2, [KS + 2*8]
-        mov      KS_ADDR3, [KS + 3*8]
+        vmovdqa64       [T], zmm4 ; Store temporary digests
 
-        ; Read keyStr[N_BITS / 32] from all buffers
-        lea     r10, [N_BITS + OFFSET*8] ; Restore original N_BITS
-        shr     r10, 5
-        vmovq   xmm0, [KS_ADDR0 + r10*4]
-        vpinsrq xmm0, [KS_ADDR1 + r10*4], 1
-        vmovq   xmm1, [KS_ADDR2 + r10*4]
-        vpinsrq xmm1, [KS_ADDR3 + r10*4], 1
-        vinserti128 ymm0, xmm1, 1 ; ymm0 contains all keyStr
-        ; Rotate left by N_BITS % 32
-        mov     r11, N_BITS
-        and     r11, 0x1F
-        vmovq   xmm2, r11
-        vpbroadcastq ymm3, xmm2 ;; ymm3 contains bits to rotate for all 4 lanes
-        vprolvq ymm0, ymm3
-        vpmovqd xmm1, ymm0 ; Down convert 4 qwords to 4 dwords (XOR later with xmm9)
+        ; These last steps should be done only for the buffers that
+        ; have no more data to authenticate
+        xor     IDX, IDX
+start_loop:
+        ; Update data pointer
+        movzx   ebx, word [rsp + IDX*2]
+        shr     ebx, 3 ; length authenticated in bytes
+        add     [DATA + IDX*8], rbx
+
+        cmp     word [LEN + 2*IDX], 0
+        jnz     skip_comput
+
+        ; Read digest
+        mov     ebx, [T + 4*IDX]
+
+        mov     KS_ADDR, [KS + IDX*8]
+
+        ; Read keyStr[MIN_LEN / 32]
+        movzx   MIN_LEN, word [rsp + 2*IDX]
+        mov     r15, MIN_LEN
+        shr     r15, 5
+        mov     r11, [KS_ADDR +r15*4]
+        ; Rotate left by MIN_LEN % 32
+        mov     r15, rcx
+        mov     rcx, MIN_LEN
+        and     rcx, 0x1F
+        rol     r11, cl
+        mov     rcx, r15
+        ; XOR with current digest
+        xor     ebx, r11d
 
         ; Read keystr[L - 1] (last dword of keyStr)
-        lea     r10, [N_BITS + OFFSET*8] ; Restore original N_BITS
-        add     r10, (31 + 64)
-        shr     r10, 5 ; L
-        dec     r10
-        vmovd   xmm0, [KS_ADDR0 + r10 * 4]
-        vpinsrd xmm0, [KS_ADDR1 + r10 * 4], 1
-        vpinsrd xmm0, [KS_ADDR2 + r10 * 4], 2
-        vpinsrd xmm0, [KS_ADDR3 + r10 * 4], 3
+        add     MIN_LEN, (31 + 64)
+        shr     MIN_LEN, 5 ; L
+        dec     MIN_LEN
+        mov     r11d, [KS_ADDR + MIN_LEN * 4]
+        ; XOR with current digest
+        xor     ebx, r11d
 
-        vpxorq  xmm5, xmm1, xmm0 ; A XOR B XOR C
+        ; byte swap and write digest out
+        bswap   ebx
+        mov     [T + 4*IDX], ebx
 
-        vinserti32x4 zmm6, xmm5, IDX
-%assign IDX (IDX + 1)
-%endrep
+skip_comput:
+        inc     IDX
+        cmp     IDX, 16
+        jne     start_loop
 
-        vpxorq  zmm4, zmm6
-        ; Bswap double words in xmm9 before storing
-        vpshufb zmm4, [rel bswap_mask]
-
-        vmovdqa64 [T], zmm4
+        add     rsp, 32
 
         FUNC_RESTORE
 
@@ -1995,10 +2056,12 @@ asm_Eia3Round64BAVX512_16:
 	%define		T	rdi
 	%define		KS	rsi
 	%define		DATA	rdx
+	%define		LEN	rcx
 %else
 	%define		T	rcx
 	%define		KS	rdx
 	%define		DATA	r8
+	%define		LEN	r9
 %endif
 
 %define         DIGEST_0        zmm28
@@ -2084,10 +2147,10 @@ asm_Eia3Round64BAVX512_16:
 %endrep
 
         ;; - update tags
-        mov             r9, 0x00FF
-        mov             r10, 0xFF00
-        kmovq           k1, r9
-        kmovq           k2, r10
+        mov             r12, 0x00FF
+        mov             r13, 0xFF00
+        kmovq           k1, r12
+        kmovq           k2, r13
 
         vmovdqu64       zmm4, [T] ; Input tags
         vmovdqa64       zmm0, [rel shuf_mask_tags]
@@ -2107,6 +2170,12 @@ asm_Eia3Round64BAVX512_16:
         vpaddq          zmm1, [rel add_64]
         vmovdqu64       [DATA], zmm0
         vmovdqu64       [DATA + 64], zmm1
+
+        ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
+        vmovdqa         ymm2, [LEN]
+        vpcmpw          k1, ymm2, [rel all_ffs], 4 ; k1 -> valid lanes
+        vpsubw          ymm2{k1}, [rel all_512w]
+        vmovdqa         [LEN], ymm2
 
         FUNC_RESTORE
 

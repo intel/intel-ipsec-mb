@@ -175,12 +175,12 @@ cipher_16(ZucState16_t *pState, const uint64_t *pIn[16], uint64_t *pOut[16],
 
 static inline void
 round64B_16(uint32_t *T, const void * const *ks, const void **data,
-            const unsigned use_gfni)
+            uint16_t *lens, const unsigned use_gfni)
 {
         if (use_gfni)
-                asm_Eia3Round64B_16_VPCLMUL(T, ks, data);
+                asm_Eia3Round64B_16_VPCLMUL(T, ks, data, lens);
         else
-                asm_Eia3Round64BAVX512_16(T, ks, data);
+                asm_Eia3Round64BAVX512_16(T, ks, data, lens);
 }
 
 static inline
@@ -626,12 +626,14 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr0[NUM_AVX512_BUFS], 64) = {NULL};
         DECLARE_ALIGNED(uint32_t *pKeyStrArr64[NUM_AVX512_BUFS], 64) = {NULL};
+        DECLARE_ALIGNED(uint16_t lens[NUM_AVX512_BUFS], 32);
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
                 pKeyStrArr0[i] = (uint32_t *) &keyStr[i][0];
                 keys.pKeys[i] = pKey[i];
                 ivs.pIvs[i] = pIv[i];
+                lens[i] = (uint16_t) lengthInBits[i];
         }
 
         init_16(&keys, &ivs, &state, 0xFFFF, use_gfni);
@@ -653,7 +655,7 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 else
                         keystr_64B_gen_16(&state, pKeyStrArr64, use_gfni);
                 round64B_16(T, (const void * const *)pKeyStrArr0,
-                            (const void **)pIn8, use_gfni);
+                            (const void **)pIn8, lens, use_gfni);
         }
 
         /* Process each packet separately for the remaining bits */
@@ -768,117 +770,87 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
 {
         unsigned int i = 0;
         ZucState16_t *state = (ZucState16_t *) ooo->state;
-        DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         /* Calculate the minimum input packet size from all packets */
-        uint32_t commonBits = find_min_length16(ooo->lens);
+        uint16_t remainCommonBits = find_min_length16(ooo->lens);
 
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX512_BUFS][2*64], 64);
-        const uint8_t *pIn8[NUM_AVX512_BUFS] = {NULL};
-        uint32_t remainCommonBits = commonBits;
-        uint32_t numKeyStr = 0;
-        const uint32_t keyStreamLengthInBits = ZUC_KEYSTR_LEN * 8;
+        const uint8_t **pIn8 = ooo->args.in;
+        uint32_t remainL;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr0[NUM_AVX512_BUFS], 64) = {NULL};
         DECLARE_ALIGNED(uint32_t *pKeyStrArr64[NUM_AVX512_BUFS], 64) = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArrInit[NUM_AVX512_BUFS], 64) = {NULL};
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                pIn8[i] = (const uint8_t *) ooo->args.in[i];
                 pKeyStrArr0[i] = (uint32_t *) &keyStr[i][0];
+                pKeyStrArrInit[i] = (uint32_t *) &keyStr[i][8];
         }
+        /*
+         * Generate first 8 bytes for new buffers.
+         * For old buffers, copy the previous 8 bytes of KS.
+         */
+        keystr_8B_gen_16(state, pKeyStrArr0, ooo->init_not_done, use_gfni);
+        /* If init has been done, it means that this is not a new buffer
+         * and therefore, there are previous 8 bytes of KS that need to
+         * be used. Else, set the bit of the mask for future calls
+         */
+        for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                if (!(ooo->init_not_done & (1 << i)))
+                        memcpy(pKeyStrArr0[i], &ooo->args.prev_ks[i], 8);
+                else
+                        ooo->init_not_done &= (uint16_t)(~(1 << i));
+        }
+        /* 2 KS words already done */
+        uint16_t L = ((remainCommonBits + 31) / 32);
 
-        /* Generate 64 bytes at a time */
-        keystr_64B_gen_16(state, pKeyStrArr0, use_gfni);
-
+        /* Generate first required bytes. If required KeyStream is less
+         * than 64B, we generate the the keystream and call Remainder
+         * straight away
+         */
+        if (L < 14) {
+                keystr_var_gen_16(state, pKeyStrArrInit, L, use_gfni);
+                asm_Eia3RemainderAVX512_16(ooo->args.digest,
+                                      (const void * const *)pKeyStrArr0,
+                                      (const void **)pIn8,
+                                      ooo->lens, remainCommonBits);
+                goto exit;
+        } else
+                keystr_var_gen_16(state, pKeyStrArrInit, 14, use_gfni);
+        L -= 14;
         /* Point at the next 64 bytes of the key */
         for (i = 0; i < NUM_AVX512_BUFS; i++)
                 pKeyStrArr64[i] = (uint32_t *) &keyStr[i][64];
 
-        /* loop over the message bits */
-        while (remainCommonBits >= keyStreamLengthInBits) {
-                remainCommonBits -= keyStreamLengthInBits;
-                numKeyStr++;
-                /* Generate the next key stream 8 bytes or 64 bytes */
-                /* Generate the next key stream 8 bytes or 64 bytes */
-                if (!remainCommonBits)
-                        keystr_8B_gen_16(state, pKeyStrArr64, 0x0000FFFF,
-                                         use_gfni);
-                else
+        while (remainCommonBits >= (64*8)) {
+                if (L < 16) {
+                        keystr_var_gen_16(state, pKeyStrArr64, L, use_gfni);
+                        L = 0;
+                } else {
                         keystr_64B_gen_16(state, pKeyStrArr64, use_gfni);
+                        L -= 16;
+                }
+
                 round64B_16(ooo->args.digest, (const void * const *)pKeyStrArr0,
-                            (const void **)pIn8, use_gfni);
+                            (const void **)pIn8, ooo->lens, use_gfni);
+                remainCommonBits -= 64*8;
         }
 
-        /* Process each packet separately for the remaining bits */
-        for (i = 0; i < NUM_AVX512_BUFS; i++) {
-                if (ooo->job_in_lane[i] == NULL)
-                        continue;
+        if (L)
+                keystr_var_gen_16(state, pKeyStrArr64, L, use_gfni);
+        asm_Eia3RemainderAVX512_16(ooo->args.digest,
+                (const void * const *)pKeyStrArr0,
+                (const void **)pIn8,
+                ooo->lens, remainCommonBits);
 
-                const uint32_t N = ooo->lens[i] + (2 * ZUC_WORD_BITS);
-                uint32_t L = ((N + 31) / ZUC_WORD_BITS) -
-                             numKeyStr*(keyStreamLengthInBits / 32);
-                uint32_t remainBits = ooo->lens[i] -
-                                      numKeyStr*keyStreamLengthInBits;
-                uint32_t *keyStr32 = (uint32_t *) keyStr[i];
-                uint32_t *tag = &ooo->args.digest[i];
-
-                /* If remaining bits are more than 56 bytes, we need to generate
-                 * at least 8B more of keystream, so we need to copy
-                 * the zuc state to single packet state first */
-                if (remainBits > (14*32)) {
-                        singlePktState.lfsrState[0] = state->lfsrState[0][i];
-                        singlePktState.lfsrState[1] = state->lfsrState[1][i];
-                        singlePktState.lfsrState[2] = state->lfsrState[2][i];
-                        singlePktState.lfsrState[3] = state->lfsrState[3][i];
-                        singlePktState.lfsrState[4] = state->lfsrState[4][i];
-                        singlePktState.lfsrState[5] = state->lfsrState[5][i];
-                        singlePktState.lfsrState[6] = state->lfsrState[6][i];
-                        singlePktState.lfsrState[7] = state->lfsrState[7][i];
-                        singlePktState.lfsrState[8] = state->lfsrState[8][i];
-                        singlePktState.lfsrState[9] = state->lfsrState[9][i];
-                        singlePktState.lfsrState[10] = state->lfsrState[10][i];
-                        singlePktState.lfsrState[11] = state->lfsrState[11][i];
-                        singlePktState.lfsrState[12] = state->lfsrState[12][i];
-                        singlePktState.lfsrState[13] = state->lfsrState[13][i];
-                        singlePktState.lfsrState[14] = state->lfsrState[14][i];
-                        singlePktState.lfsrState[15] = state->lfsrState[15][i];
-
-                        singlePktState.fR1 = state->fR1[i];
-                        singlePktState.fR2 = state->fR2[i];
-                }
-
-                while (remainBits >= keyStreamLengthInBits) {
-                        remainBits -= keyStreamLengthInBits;
-                        L -= (keyStreamLengthInBits / 32);
-
-                        /* Generate the next key stream 8 bytes or 64 bytes */
-                        if (!remainBits)
-                                asm_ZucGenKeystream8B_avx(&keyStr32[16],
-                                                          &singlePktState);
-                        else
-                                asm_ZucGenKeystream64B_avx(&keyStr32[16],
-                                                           &singlePktState);
-                        asm_Eia3Round64BAVX512(tag, &keyStr32[0], pIn8[i]);
-                        /* Copy the last keystream generated
-                         * to the first 64 bytes */
-                        memcpy(keyStr32, &keyStr32[16], 64);
-                        pIn8[i] = &pIn8[i][ZUC_KEYSTR_LEN];
-                }
-
-                /*
-                 * If remaining bits has more than 14 ZUC WORDS (double words),
-                 * keystream needs to have up to another 2 ZUC WORDS (8B)
-                 */
-
-                if (remainBits > (14 * 32))
-                        asm_ZucGenKeystream8B_avx(&keyStr32[16],
-                                                  &singlePktState);
-
-                asm_Eia3RemainderAVX512(tag, keyStr32, pIn8[i], remainBits);
-        }
+exit:
+        remainL = (((remainCommonBits + 31) / 32) + 2);
+        /* Copy last 2 KS words for next call */
+        for (i = 0; i < NUM_AVX512_BUFS; i++)
+                memcpy(&ooo->args.prev_ks[i],
+                       &pKeyStrArr0[i][remainL-2], 8);
 
 #ifdef SAFE_DATA
         /* Clear sensitive data (in registers and stack) */
         clear_mem(keyStr, sizeof(keyStr));
-        clear_mem(&singlePktState, sizeof(singlePktState));
 #endif
 }
 
