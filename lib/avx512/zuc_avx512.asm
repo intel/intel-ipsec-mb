@@ -33,6 +33,7 @@
 %include "mb_mgr_datastruct.asm"
 
 %define APPEND(a,b) a %+ b
+%define APPEND3(a,b,c) a %+ b %+ c
 
 section .data
 default rel
@@ -200,6 +201,17 @@ byte64_len_to_mask_table:
 align 64
 add_64:
 dq      64, 64, 64, 64, 64, 64, 64, 64
+
+align 64
+bswap_mask:
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
+db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
+db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
 section .text
 align 64
@@ -1543,6 +1555,265 @@ Eia3RoundsAVX_end:
         xor     eax, r11d
         bswap   eax
         mov     [T], eax
+
+        FUNC_RESTORE
+
+        ret
+
+;;
+;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;;
+;; WIN64
+;;      RCX - T: Array of digests for all 16 buffers
+;;      RDX - KS : Array of pointers to key stream for all 16 buffers
+;;      R8  - DATA : Array of pointers to data for all 16 buffers
+;;      R9  - N_BITS (number data bits to process)
+;; LIN64
+;;      RDI  - T: Array of digests for all 16 buffers
+;;      RSI  - KS : Array of pointers to key stream for all 16 buffers
+;;      RDX  - DATA : Array of pointers to data for all 16 buffers
+;;      RCX  - N_BITS (number data bits to process)
+;;
+align 64
+MKGLOBAL(asm_Eia3RemainderAVX512_16,function,internal)
+asm_Eia3RemainderAVX512_16:
+
+%ifdef LINUX
+        %define         T       rdi
+        %define	        KS      rsi
+        %define	        DATA	rdx
+        %define	        N_BITS	rcx
+%else
+        %define         T       rcx
+        %define		KS	rdx
+        %define		DATA	r8
+        %define		N_BITS	r9
+%endif
+
+%define DIGEST_0        zmm28
+%define DIGEST_1        zmm29
+%define DIGEST_2        zmm30
+%define DIGEST_3        zmm31
+
+%define DATA_ADDR       r12
+%define KS_ADDR         r13
+
+%define N_BYTES         r14
+%define OFFSET          r15
+
+%define KS_ADDR0        r12
+%define KS_ADDR1        r13
+%define KS_ADDR2        rbx
+%define KS_ADDR3        rax
+
+        FUNC_SAVE
+
+        xor     OFFSET, OFFSET
+
+        vmovdqa  xmm5, [bit_reverse_table_l]
+        vmovdqa  xmm6, [bit_reverse_table_h]
+        vmovdqa  xmm7, [bit_reverse_and_table]
+        vmovdqa  xmm10, [data_mask_64bits]
+
+%assign I 0
+%rep 4
+%assign J 0
+%rep 4
+
+        lea     N_BITS, [N_BITS + OFFSET*8] ; Restore original N_BITS
+        vpxor   xmm9, xmm9
+
+        xor     OFFSET, OFFSET
+        mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
+        mov     KS_ADDR, [KS + 8*(I*4 + J)]
+
+%assign K 0
+%rep 3
+        cmp     N_BITS, 128
+        jb      APPEND3(Eia3RoundsAVX512_dq_end,I,J)
+
+        ;; read 16 bytes and reverse bits
+        vmovdqu xmm0, [DATA_ADDR + OFFSET]
+        vpand   xmm1, xmm0, xmm7
+
+        vpandn  xmm2, xmm7, xmm0
+        vpsrld  xmm2, 4
+
+        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor    xmm8, xmm4
+        ; xmm8 - bit reversed data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+%if K != 0
+        vmovdqa  xmm11, xmm12
+        vmovdqu  xmm12, [KS_ADDR + OFFSET + (4*4)]
+%else
+        vmovdqu  xmm11, [KS_ADDR + (0*4)]
+        vmovdqu  xmm12, [KS_ADDR + (4*4)]
+%endif
+        vpalignr xmm13, xmm12, xmm11, 8
+        vpshufd  xmm2, xmm11, 0x61
+        vpshufd  xmm3, xmm13, 0x61
+
+        ;;  - set up DATA
+        vpand    xmm13, xmm10, xmm8
+        vpshufd  xmm0, xmm13, 0xdc
+
+        vpsrldq  xmm8, 8
+        vpshufd  xmm1, xmm8, 0xdc
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm2, 0x00
+        vpclmulqdq xmm14, xmm0, xmm2, 0x11
+        vpclmulqdq xmm15, xmm1, xmm3, 0x00
+        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
+
+        vpternlogq xmm13, xmm14, xmm8, 0x96
+        vpternlogq xmm9, xmm13, xmm15, 0x96
+        add     OFFSET, 16
+        sub     N_BITS, 128
+%assign K (K + 1)
+%endrep
+APPEND3(Eia3RoundsAVX512_dq_end,I,J):
+
+        or      N_BITS, N_BITS
+        jz      APPEND3(Eia3RoundsAVX_end,I,J)
+
+        ; Get number of bytes
+        mov     N_BYTES, N_BITS
+        add     N_BYTES, 7
+        shr     N_BYTES, 3
+
+        SHIFT_GP 1, N_BYTES, r10, r11, left
+        dec     r10
+        kmovq   k1, r10
+
+        ;; Set up KS
+        vmovdqu xmm1, [KS_ADDR + OFFSET]
+        vmovdqu xmm2, [KS_ADDR + OFFSET + 16]
+        vpalignr xmm13, xmm2, xmm1, 8
+        vpshufd xmm11, xmm1, 0x61
+        vpshufd xmm12, xmm13, 0x61
+
+        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        vmovdqu8 xmm0{k1}{z}, [DATA_ADDR + OFFSET]
+        ; check if there is a partial byte (less than 8 bits in last byte)
+        mov     rax, N_BITS
+        and     rax, 0x7
+        shl     rax, 4
+        lea     r10, [rel bit_mask_table]
+        add     r10, rax
+
+        ; Get mask to clear last bits
+        vmovdqa xmm3, [r10]
+
+        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
+        ; to apply mask, then restore by shifting right same amount of bytes
+        mov     r10, 16
+        sub     r10, N_BYTES
+        XVPSLLB xmm0, r10, xmm4, r11
+        vpandq  xmm0, xmm3
+        XVPSRLB xmm0, r10, xmm4, r11
+
+        ; Bit reverse input data
+        vpand   xmm1, xmm0, xmm7
+
+        vpandn  xmm2, xmm7, xmm0
+        vpsrld  xmm2, 4
+
+        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor    xmm8, xmm3
+
+        ;; Set up DATA
+        vpand   xmm13, xmm10, xmm8
+        vpshufd xmm0, xmm13, 0xdc ; D 0-3 || Os || D 4-7 || 0s
+
+        vpsrldq xmm8, 8
+        vpshufd xmm1, xmm8, 0xdc ; D 8-11 || 0s || D 12-15 || 0s
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm11, 0x00
+        vpclmulqdq xmm14, xmm0, xmm11, 0x11
+        vpclmulqdq xmm15, xmm1, xmm12, 0x00
+        vpclmulqdq xmm8, xmm1, xmm12, 0x11
+        vpternlogq xmm9, xmm14, xmm13, 0x96
+        vpternlogq xmm9, xmm15, xmm8, 0x96
+
+APPEND3(Eia3RoundsAVX_end,I,J):
+        vinserti32x4 APPEND(DIGEST_, I), xmm9, J
+%assign J (J + 1)
+%endrep
+%assign I (I + 1)
+%endrep
+
+        ;; - update tags
+        mov             rbx, 0x00FF
+        mov             r10, 0xFF00
+        kmovq           k1, rbx
+        kmovq           k2, r10
+
+        vmovdqu64       zmm4, [T] ; Input tags
+        vmovdqa64       zmm0, [rel shuf_mask_tags]
+        vmovdqa64       zmm1, [rel shuf_mask_tags + 64]
+        ; Get result tags for 16 buffers in different position in each lane
+        ; and blend these tags into an ZMM register.
+        ; Then, XOR the results with the previous tags and write out the result.
+        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
+        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
+        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
+
+%assign IDX 0
+%rep 4
+        mov      KS_ADDR0, [KS + 0*8]
+        mov      KS_ADDR1, [KS + 1*8]
+        mov      KS_ADDR2, [KS + 2*8]
+        mov      KS_ADDR3, [KS + 3*8]
+
+        ; Read keyStr[N_BITS / 32] from all buffers
+        lea     r10, [N_BITS + OFFSET*8] ; Restore original N_BITS
+        shr     r10, 5
+        vmovq   xmm0, [KS_ADDR0 + r10*4]
+        vpinsrq xmm0, [KS_ADDR1 + r10*4], 1
+        vmovq   xmm1, [KS_ADDR2 + r10*4]
+        vpinsrq xmm1, [KS_ADDR3 + r10*4], 1
+        vinserti128 ymm0, xmm1, 1 ; ymm0 contains all keyStr
+        ; Rotate left by N_BITS % 32
+        mov     r11, N_BITS
+        and     r11, 0x1F
+        vmovq   xmm2, r11
+        vpbroadcastq ymm3, xmm2 ;; ymm3 contains bits to rotate for all 4 lanes
+        vprolvq ymm0, ymm3
+        vpmovqd xmm1, ymm0 ; Down convert 4 qwords to 4 dwords (XOR later with xmm9)
+
+        ; Read keystr[L - 1] (last dword of keyStr)
+        lea     r10, [N_BITS + OFFSET*8] ; Restore original N_BITS
+        add     r10, (31 + 64)
+        shr     r10, 5 ; L
+        dec     r10
+        vmovd   xmm0, [KS_ADDR0 + r10 * 4]
+        vpinsrd xmm0, [KS_ADDR1 + r10 * 4], 1
+        vpinsrd xmm0, [KS_ADDR2 + r10 * 4], 2
+        vpinsrd xmm0, [KS_ADDR3 + r10 * 4], 3
+
+        vpxorq  xmm5, xmm1, xmm0 ; A XOR B XOR C
+
+        vinserti32x4 zmm6, xmm5, IDX
+%assign IDX (IDX + 1)
+%endrep
+
+        vpxorq  zmm4, zmm6
+        ; Bswap double words in xmm9 before storing
+        vpshufb zmm4, [rel bswap_mask]
+
+        vmovdqa64 [T], zmm4
 
         FUNC_RESTORE
 
