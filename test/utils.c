@@ -33,12 +33,29 @@
 
 #include "utils.h"
 
-#ifdef _WIN32
-#define snprintf _snprintf
-#endif
+static uint8_t hex_buffer[16 * 1024];
+
+/**
+ * @brief Simplistic memory copy (intentionally not using libc)
+ *
+ * @param dst destination buffer pointer
+ * @param src source buffer pointer
+ * @param length length of the buffer to copy in bytes
+ */
+static void memory_copy(void *dst, const void *src, size_t length)
+{
+        uint8_t *d = (uint8_t *) dst;
+        const uint8_t *s = (const uint8_t *) src;
+
+        while (length--)
+                *d++ = *s++;
+}
 
 /**
  * @brief Dumps fragment of memory in hex and ASCII into `fp`
+ *
+ * @note It is not multithread safe.
+ * @note It works on buffer sizes up to 16,384 bytes.
  *
  * @param fp file stream to print into
  * @param msg optional extra header string message to print
@@ -49,7 +66,6 @@
  *            display addresses
  *          - NULL pointer then first column witll display indexes
  */
-
 void
 hexdump_ex(FILE *fp,
            const char *msg,
@@ -58,38 +74,55 @@ hexdump_ex(FILE *fp,
            const void *start_ptr)
 {
         size_t ofs = 0;
-        const unsigned char *data = p;
+        const unsigned char *data = hex_buffer;
         const char *start = (const char *) start_ptr;
+
+        if (p == NULL)
+                return;
+
+        if (len > sizeof(hex_buffer))
+                len = sizeof(hex_buffer);
+
+        /*
+         * Make copy of the buffer and work on it.
+         * This is helping cases where stack area is printed and
+         * libc API's put data on the stack
+         */
+        memory_copy(hex_buffer, p, len);
 
         if (msg != NULL)
                 fprintf(fp, "%s\n", msg);
 
         while (ofs < len) {
-                unsigned int i, out;
-                char line[120];
+                unsigned int i;
 
-                out = snprintf(line, sizeof(line), "%p:", &start[ofs]);
+                fprintf(fp, "%p:", &start[ofs]);
 
                 for (i = 0; ((ofs + i) < len) && (i < 16); i++)
-                        out += snprintf(line + out, sizeof(line) - out,
-                                        " %02x", (data[ofs + i] & 0xff));
+                        fprintf(fp, " %02x", (data[ofs + i] & 0xff));
 
                 for (; i <= 16; i++)
-                        out += snprintf(line + out, sizeof(line) - out, " | ");
+                        fprintf(fp, " | ");
 
                 for (i = 0; (ofs < len) && (i < 16); i++, ofs++) {
                         unsigned char c = data[ofs];
 
                         if (!isprint(c))
                                 c = '.';
-                        out += snprintf(line + out,
-                                        sizeof(line) - out, "%c", c);
+                        fprintf(fp, "%c", c);
                 }
-                fprintf(fp, "%s\n", line);
+                fprintf(fp, "\n");
         }
 }
 
-/* Simpler version of hexdump_ex() displaying data indexes only */
+/**
+ * @brief Simpler version of hexdump_ex() displaying data indexes only
+ *
+ * @param fp file stream to print into
+ * @param msg optional extra header string message to print
+ * @param p start address of data block to be dumped
+ * @param len size of the data block to dump in bytes
+ */
 void
 hexdump(FILE *fp,
         const char *msg,
