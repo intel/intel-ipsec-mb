@@ -41,6 +41,9 @@
 !if !defined(SHARED)
 SHARED = y
 !endif
+!if !defined(DEBUG_OPT)
+DEBUG_OPT = /Od
+!endif
 
 # Available installation options:
 # PREFIX=<path> - path to install the library (c:\program files\ is default)
@@ -61,9 +64,6 @@ OBJ_DIR = obj
 !endif
 !if !defined(LIB_DIR)
 LIB_DIR = .\
-!endif
-!if !defined(DEBUG_OPT)
-DEBUG_OPT = /Od
 !endif
 
 !ifdef DEBUG
