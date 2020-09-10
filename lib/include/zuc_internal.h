@@ -346,12 +346,12 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
 IMB_DLL_LOCAL void asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys,
                                                    ZucIv16_t *pIvs,
                                                    ZucState16_t *pState,
-                                                   uint16_t lane_mask);
+                                                   const uint16_t lane_mask);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
-                                                        ZucIv16_t *pIvs,
-                                                        ZucState16_t *pState,
-                                                        uint16_t lane_mask);
+                                                      ZucIv16_t *pIvs,
+                                                      ZucState16_t *pState,
+                                                      const uint16_t lane_mask);
 
 /**
  ******************************************************************************

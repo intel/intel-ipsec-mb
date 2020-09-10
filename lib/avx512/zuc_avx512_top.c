@@ -119,6 +119,70 @@ find_min_length32(const uint32_t length[NUM_AVX512_BUFS])
         return (min_length1 < min_length2) ? min_length1 : min_length2;
 }
 
+static inline void
+init_16(ZucKey16_t *keys, ZucIv16_t *ivs, ZucState16_t *state,
+        const uint16_t lane_mask, const unsigned use_gfni)
+{
+        if (use_gfni)
+                asm_ZucInitialization_16_gfni_avx512(keys, ivs, state,
+                                                     lane_mask);
+        else
+                asm_ZucInitialization_16_avx512(keys, ivs, state, lane_mask);
+}
+
+static inline void
+keystr_64B_gen_16(ZucState16_t *state, uint32_t *pKeyStr[16],
+                  const unsigned use_gfni)
+{
+        if (use_gfni)
+                asm_ZucGenKeystream64B_16_gfni_avx512(state, pKeyStr);
+        else
+                asm_ZucGenKeystream64B_16_avx512(state, pKeyStr);
+}
+
+static inline void
+keystr_8B_gen_16(ZucState16_t *state, uint32_t *pKeyStr[16],
+                 const uint16_t lane_mask, const unsigned use_gfni)
+{
+        if (use_gfni)
+                asm_ZucGenKeystream8B_16_gfni_avx512(state, pKeyStr, lane_mask);
+        else
+                asm_ZucGenKeystream8B_16_avx512(state, pKeyStr, lane_mask);
+}
+
+static inline void
+keystr_var_gen_16(ZucState16_t *state, uint32_t *pKeyStr[16],
+                  const uint64_t numRounds, const unsigned use_gfni)
+{
+        if (use_gfni)
+                asm_ZucGenKeystream_16_gfni_avx512(state, pKeyStr, numRounds);
+        else
+                asm_ZucGenKeystream_16_avx512(state, pKeyStr, numRounds);
+}
+
+static inline void
+cipher_16(ZucState16_t *pState, const uint64_t *pIn[16], uint64_t *pOut[16],
+          const uint16_t lengths[16], const uint64_t minLength,
+          const unsigned use_gfni)
+{
+        if (use_gfni)
+                asm_ZucCipher_16_gfni_avx512(pState, pIn, pOut, lengths,
+                                             minLength);
+        else
+                asm_ZucCipher_16_avx512(pState, pIn, pOut, lengths,
+                                        minLength);
+}
+
+static inline void
+round64B_16(uint32_t *T, const void * const *ks, const void **data,
+            const unsigned use_gfni)
+{
+        if (use_gfni)
+                asm_Eia3Round64B_16_VPCLMUL(T, ks, data);
+        else
+                asm_Eia3Round64BAVX512_16(T, ks, data);
+}
+
 static inline
 void _zuc_eea3_1_buffer_avx512(const void *pKey,
                                const void *pIv,
@@ -233,23 +297,15 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 ivs.pIvs[i] = pIv[i];
         }
 
-        if (use_gfni)
-                asm_ZucInitialization_16_gfni_avx512(&keys, &ivs, &state,
-                                                     0xFFFF);
-        else
-                asm_ZucInitialization_16_avx512(&keys, &ivs, &state, 0xFFFF);
+        init_16(&keys, &ivs, &state, 0xFFFF, use_gfni);
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
                 pIn64[i] = (const uint64_t *) pBufferIn[i];
         }
 
-        if (use_gfni)
-                asm_ZucCipher_16_gfni_avx512(&state, pIn64, pOut64,
-                                             remainBytes, bytes);
-        else
-                asm_ZucCipher_16_avx512(&state, pIn64, pOut64,
-                                        remainBytes, bytes);
+        cipher_16(&state, pIn64, pOut64, remainBytes, bytes, use_gfni);
+
         /* process each packet separately for the remaining bytes */
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 if (remainBytes[i]) {
@@ -578,20 +634,9 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 ivs.pIvs[i] = pIv[i];
         }
 
-        if (use_gfni) {
-                asm_ZucInitialization_16_gfni_avx512(&keys,  &ivs, &state,
-                                                     0xFFFF);
-
-                /* Generate 64 bytes at a time */
-                asm_ZucGenKeystream64B_16_gfni_avx512(&state,
-                                                      (uint32_t **)pKeyStrArr0);
-        } else {
-                asm_ZucInitialization_16_avx512(&keys,  &ivs, &state, 0xFFFF);
-
-                /* Generate 64 bytes at a time */
-                asm_ZucGenKeystream64B_16_avx512(&state,
-                                                 (uint32_t **)pKeyStrArr0);
-        }
+        init_16(&keys, &ivs, &state, 0xFFFF, use_gfni);
+        /* Generate 64 bytes at a time */
+        keystr_64B_gen_16(&state, pKeyStrArr0, use_gfni);
 
         /* Point at the next 64 bytes of the key */
         for (i = 0; i < NUM_AVX512_BUFS; i++)
@@ -602,31 +647,13 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 64 bytes */
-                if (use_gfni) {
-                        if (!remainCommonBits)
-                                asm_ZucGenKeystream8B_16_gfni_avx512(&state,
-                                                     (uint32_t **)pKeyStrArr64,
-                                                     0x0000FFFF);
-                        else
-                                asm_ZucGenKeystream64B_16_gfni_avx512(&state,
-                                                     (uint32_t **)pKeyStrArr64);
-                } else {
-                        if (!remainCommonBits)
-                                asm_ZucGenKeystream8B_16_avx512(&state,
-                                                     (uint32_t **)pKeyStrArr64,
-                                                     0x0000FFFF);
-                        else
-                                asm_ZucGenKeystream64B_16_avx512(&state,
-                                                     (uint32_t **)pKeyStrArr64);
-                }
-                if (use_gfni)
-                        asm_Eia3Round64B_16_VPCLMUL(T,
-                                (const void * const *)pKeyStrArr0,
-                                (const void **)pIn8);
+                if (!remainCommonBits)
+                        keystr_8B_gen_16(&state, pKeyStrArr64, 0x0000FFFF,
+                                     use_gfni);
                 else
-                        asm_Eia3Round64BAVX512_16(T,
-                                (const void * const *)pKeyStrArr0,
-                                (const void **)pIn8);
+                        keystr_64B_gen_16(&state, pKeyStrArr64, use_gfni);
+                round64B_16(T, (const void * const *)pKeyStrArr0,
+                            (const void **)pIn8, use_gfni);
         }
 
         /* Process each packet separately for the remaining bits */
@@ -758,14 +785,8 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                 pKeyStrArr0[i] = (uint32_t *) &keyStr[i][0];
         }
 
-        if (use_gfni)
-                /* Generate 64 bytes at a time */
-                asm_ZucGenKeystream64B_16_gfni_avx512(state,
-                                                      (uint32_t **)pKeyStrArr0);
-        else
-                /* Generate 64 bytes at a time */
-                asm_ZucGenKeystream64B_16_avx512(state,
-                                                 (uint32_t **)pKeyStrArr0);
+        /* Generate 64 bytes at a time */
+        keystr_64B_gen_16(state, pKeyStrArr0, use_gfni);
 
         /* Point at the next 64 bytes of the key */
         for (i = 0; i < NUM_AVX512_BUFS; i++)
@@ -776,29 +797,14 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 64 bytes */
-                if (use_gfni) {
-                        if (!remainCommonBits)
-                                asm_ZucGenKeystream8B_16_gfni_avx512(state,
-                                                     (uint32_t **)pKeyStrArr64,
-                                                     0x0000FFFF);
-                        else
-                                asm_ZucGenKeystream64B_16_gfni_avx512(state,
-                                                     (uint32_t **)pKeyStrArr64);
-                        asm_Eia3Round64B_16_VPCLMUL(ooo->args.digest,
-                                        (const void * const *)pKeyStrArr0,
-                                        (const void **)pIn8);
-                } else {
-                        if (!remainCommonBits)
-                                asm_ZucGenKeystream8B_16_avx512(state,
-                                                     (uint32_t **)pKeyStrArr64,
-                                                     0x0000FFFF);
-                        else
-                                asm_ZucGenKeystream64B_16_avx512(state,
-                                                     (uint32_t **)pKeyStrArr64);
-                        asm_Eia3Round64BAVX512_16(ooo->args.digest,
-                                        (const void * const *)pKeyStrArr0,
-                                        (const void **)pIn8);
-                }
+                /* Generate the next key stream 8 bytes or 64 bytes */
+                if (!remainCommonBits)
+                        keystr_8B_gen_16(state, pKeyStrArr64, 0x0000FFFF,
+                                         use_gfni);
+                else
+                        keystr_64B_gen_16(state, pKeyStrArr64, use_gfni);
+                round64B_16(ooo->args.digest, (const void * const *)pKeyStrArr0,
+                            (const void **)pIn8, use_gfni);
         }
 
         /* Process each packet separately for the remaining bits */
