@@ -80,6 +80,8 @@ IMB_JOB *submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state,
                                             IMB_JOB *job);
 IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 
+IMB_JOB *submit_job_chacha20_enc_dec_avx(IMB_JOB *job);
+
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
@@ -162,7 +164,7 @@ IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 #define SUBMIT_JOB_AES_DEC SUBMIT_JOB_AES_DEC_AVX
 #define FLUSH_JOB_AES_DEC  FLUSH_JOB_AES_DEC_AVX
 
-
+#define SUBMIT_JOB_CHACHA20_ENC_DEC_VEC submit_job_chacha20_enc_dec_avx
 
 IMB_JOB *submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state,
                                   IMB_JOB *job);
