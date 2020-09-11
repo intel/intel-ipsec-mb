@@ -663,7 +663,8 @@ static int
 search_patterns(const void *ptr, const size_t mem_size)
 {
         const uint8_t *ptr8 = (const uint8_t *) ptr;
-        uint64_t end_of_ooo_pattern = 0xDEADCAFEDEADCAFE;
+        const size_t limit = mem_size - sizeof(uint64_t);
+        int ret = -1;
         size_t i;
 
         if (mem_size < sizeof(uint64_t)) {
@@ -671,42 +672,74 @@ search_patterns(const void *ptr, const size_t mem_size)
                 return -1;
         }
 
-        for (i = 0; i <= (mem_size - (sizeof(uint64_t))); i++) {
-                const uint64_t string = ((const uint64_t *) ptr8)[0];
-                int ret = -1;
-
-                if (string == end_of_ooo_pattern)
-                        return ret;
+        for (i = 0; i <= limit; i++) {
+                const uint64_t string = *((const uint64_t *) &ptr8[i]);
 
                 if (string == pattern8_cipher_key) {
                         fprintf(stderr, "Part of CIPHER_KEY is present\n");
                         ret = 0;
-                }
-                if (string == pattern8_auth_key) {
+                } else if (string == pattern8_auth_key) {
                         fprintf(stderr, "Part of AUTH_KEY is present\n");
                         ret = 0;
-                }
-                if (string == pattern8_plain_text) {
+                } else if (string == pattern8_plain_text) {
                         fprintf(stderr,
                                 "Part of plain/ciphertext is present\n");
                         ret = 0;
                 }
-                if (ret == 0) {
-                        size_t len_to_print = mem_size - i;
 
-                        fprintf(stderr, "Offset = %zu bytes, Addr = %p\n",
-                                i, ptr8);
+                if (ret != -1)
+                        break;
+        }
 
-                        if (len_to_print > 64)
-                                len_to_print = 64;
+        if (ret != -1) {
+                size_t len_to_print = mem_size - i;
 
-                        hexdump_ex(stderr, NULL, ptr8, len_to_print, ptr8);
-                        return 0;
-                }
-                ptr8++;
+                fprintf(stderr, "Offset = %zu bytes, Addr = %p, RSP = %p\n",
+                        i, &ptr8[i], rdrsp());
+
+                if (len_to_print > 64)
+                        len_to_print = 64;
+
+                hexdump_ex(stderr, NULL, &ptr8[i], len_to_print, &ptr8[i]);
+                return 0;
         }
 
         return -1;
+}
+
+static size_t
+calculate_ooo_mgr_size(const void *ptr)
+{
+        size_t i;
+
+        for (i = 0; i <= (MAX_OOO_MGR_SIZE - sizeof(uint64_t)); i++) {
+                const uint64_t end_of_ooo_pattern = 0xDEADCAFEDEADCAFE;
+                const uint8_t *ptr8 = (const uint8_t *) ptr;
+                const uint64_t string = *((const uint64_t *) &ptr8[i]);
+
+                if (string == end_of_ooo_pattern)
+                        return i + sizeof(uint64_t);
+        }
+
+        /* no marker found */
+        return MAX_OOO_MGR_SIZE;
+}
+
+static size_t
+get_ooo_mgr_size(const void *ptr, const unsigned index)
+{
+        static size_t mgr_sz_tab[64];
+
+        if (index >= DIM(mgr_sz_tab)) {
+                fprintf(stderr,
+                        "get_ooo_mgr_size() internal table too small!\n");
+                exit(EXIT_FAILURE);
+        }
+
+        if (mgr_sz_tab[index] == 0)
+                mgr_sz_tab[index] = calculate_ooo_mgr_size(ptr);
+
+        return mgr_sz_tab[index];
 }
 
 static void
@@ -1415,6 +1448,7 @@ perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch, const char *dir)
         uint8_t *rsp_ptr;
         uint32_t simd_size = 0;
         void **ooo_ptr;
+        unsigned i;
 
         dump_gps();
         switch (arch) {
@@ -1456,18 +1490,20 @@ perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch, const char *dir)
                 fprintf(stderr, "Pattern found in stack after %s data\n", dir);
                 return -1;
         }
+
         if (search_patterns(mgr, sizeof(IMB_MGR)) == 0) {
                 fprintf(stderr, "Pattern found in MB_MGR after %s data\n", dir);
                 return -1;
         }
 
         /* search OOO managers */
-        for (ooo_ptr = &mgr->OOO_MGR_FIRST;
+        for (ooo_ptr = &mgr->OOO_MGR_FIRST, i = 0;
              ooo_ptr <= &mgr->OOO_MGR_LAST;
-             ooo_ptr++) {
+             ooo_ptr++, i++) {
                 void *ooo_mgr_p = *ooo_ptr;
 
-                if (search_patterns(ooo_mgr_p, MAX_OOO_MGR_SIZE) == 0) {
+                if (search_patterns(ooo_mgr_p,
+                                    get_ooo_mgr_size(ooo_mgr_p, i)) == 0) {
                         fprintf(stderr,
                                 "Pattern found in 000 MGR (%d) after %s data\n",
                                 (int)(ooo_ptr - &mgr->OOO_MGR_FIRST), dir);
