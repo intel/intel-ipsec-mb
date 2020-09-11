@@ -223,7 +223,7 @@ IMB_JOB *flush_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state);
 #define FLUSH_JOB_AES_ENC  FLUSH_JOB_AES_ENC_AVX512
 #define SUBMIT_JOB_AES_DEC SUBMIT_JOB_AES_DEC_AVX512
 
-#define SUBMIT_JOB_CHACHA20_ENC_DEC_VEC submit_job_chacha20_enc_dec_avx512
+#define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_avx512
 
 IMB_JOB *submit_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state,
                                      IMB_JOB *job);

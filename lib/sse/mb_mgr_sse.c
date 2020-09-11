@@ -315,7 +315,7 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 #define SUBMIT_JOB_AES128_CBCS_1_9_DEC submit_job_aes128_cbcs_1_9_dec_sse
 #define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_sse
 
-#define SUBMIT_JOB_CHACHA20_ENC_DEC_VEC submit_job_chacha20_enc_dec_sse
+#define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_sse
 
 /* ====================================================================== */
 

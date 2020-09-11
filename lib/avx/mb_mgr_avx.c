@@ -164,7 +164,7 @@ IMB_JOB *submit_job_chacha20_enc_dec_avx(IMB_JOB *job);
 #define SUBMIT_JOB_AES_DEC SUBMIT_JOB_AES_DEC_AVX
 #define FLUSH_JOB_AES_DEC  FLUSH_JOB_AES_DEC_AVX
 
-#define SUBMIT_JOB_CHACHA20_ENC_DEC_VEC submit_job_chacha20_enc_dec_avx
+#define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_avx
 
 IMB_JOB *submit_job_hmac_avx(MB_MGR_HMAC_SHA_1_OOO *state,
                                   IMB_JOB *job);
