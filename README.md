@@ -108,6 +108,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
 | HEC               | N      | Y      | Y      | N      | N      | N      |
+| POLY1305          | Y      | N      | N      | N      | N      | N      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  
