@@ -54,14 +54,17 @@ PREFIX = c:\Program Files
 INSTDIR = $(PREFIX)\intel-ipsec-mb
 
 LIBBASE = libIPSec_MB
+
 !if "$(SHARED)" == "y"
 LIBNAME = $(LIBBASE).dll
 !else
 LIBNAME = $(LIBBASE).lib
 !endif
+
 !if !defined(OBJ_DIR)
 OBJ_DIR = obj
 !endif
+
 !if !defined(LIB_DIR)
 LIB_DIR = .\
 !endif
@@ -109,6 +112,13 @@ LINKFLAGS = $(DLFLAGS) /nologo /machine:X64
 AS = nasm
 AFLAGS = $(DAFLAGS) -fwin64 -Xvc -DWIN_ABI -Iinclude/ \
 	-I./ -Iavx/ -Iavx2/ -Iavx512/ -Isse/
+
+# dependency
+!ifndef DEPTOOL
+DEPTOOL = ..\mkdep.bat
+!endif
+DEPFLAGS=/I. /Iinclude /Ino-aesni
+DEPALL=lib.dep
 
 # warning messages
 
@@ -467,7 +477,7 @@ gcm_objs = \
 
 all_objs = $(lib_objs1) $(lib_objs2) $(gcm_objs)
 
-all: $(LIB_DIR)\$(LIBNAME)
+all: $(LIB_DIR)\$(LIBNAME) $(DEPALL)
 
 $(LIB_DIR)\$(LIBNAME): $(all_objs)
 !if "$(SHARED)" == "y"
@@ -488,38 +498,47 @@ $(LIB_DIR)\$(LIBNAME): $(all_objs)
 
 $(all_objs): $(OBJ_DIR) $(LIB_DIR)
 
+$(DEPALL): $(all_objs)
+        @type $(OBJ_DIR)\*.dep > $@ 2> nul
+
 {.\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {.\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {sse\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {sse\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {avx\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx2\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {avx2\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx512\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {avx512\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {no-aesni\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS_NO_SIMD) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 {no-aesni\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
@@ -565,7 +584,7 @@ help:
 clean:
 	-del /q $(OBJ_DIR)\*.obj
 	-del /q $(OBJ_DIR)\*.dep
-	-del /q $(LIB_DIR)\$(LIBBASE).dll $(LIB_DIR)\$(LIBBASE).lib $(LIB_DIR)\$(LIBBASE).exp
+	-del /q $(LIB_DIR)\$(LIBBASE).dll $(LIB_DIR)\$(LIBBASE).lib $(LIB_DIR)\$(LIBBASE).exp $(DEPALL)
 
 install:
 	-md "$(INSTDIR)"
@@ -589,6 +608,6 @@ uninstall:
 	-del /Q "$(INSTDIR)\intel-ipsec-mb.h"
 	-rd "$(INSTDIR)"
 
-!if exist($(OBJ_DIR)\*.obj.dep)
-!include ($(OBJ_DIR)\*.obj.dep)
+!if exist($(DEPALL))
+!include $(DEPALL)
 !endif
