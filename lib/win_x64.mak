@@ -492,40 +492,40 @@ $(all_objs): $(OBJ_DIR) $(LIB_DIR)
 	$(CC) /Fo$@ /c $(CFLAGS) $<
 
 {.\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -o $@ $(AFLAGS) $<
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {sse\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS) $<
 
 {sse\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -o $@ $(AFLAGS) $<
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
 
 {avx\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -o $@ $(AFLAGS) $<
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx2\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
 
 {avx2\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -o $@ $(AFLAGS) $<
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {avx512\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /arch:AVX /Fo$@ /c $(CFLAGS) $<
 
 {avx512\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -o $@ $(AFLAGS) $<
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {no-aesni\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS_NO_SIMD) $<
 
 {no-aesni\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -o $@ $(AFLAGS) $<
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 {include\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -o $@ $(AFLAGS) $<
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
@@ -564,6 +564,7 @@ help:
 
 clean:
 	-del /q $(OBJ_DIR)\*.obj
+	-del /q $(OBJ_DIR)\*.dep
 	-del /q $(LIB_DIR)\$(LIBBASE).dll $(LIB_DIR)\$(LIBBASE).lib $(LIB_DIR)\$(LIBBASE).exp
 
 install:
@@ -587,3 +588,7 @@ uninstall:
 	-del /Q "$(INSTDIR)\$(LIBBASE).lib"
 	-del /Q "$(INSTDIR)\intel-ipsec-mb.h"
 	-rd "$(INSTDIR)"
+
+!if exist($(OBJ_DIR)\*.obj.dep)
+!include ($(OBJ_DIR)\*.obj.dep)
+!endif
