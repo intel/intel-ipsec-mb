@@ -146,25 +146,22 @@ Table 3. Encryption and integrity algorithm combinations
     | AES192-CBC,   | HMAC-SHA1-96, HMAC-SHA2-224_112, HMAC-SHA2-256_128, |
     | AES256-CBC,   | HMAC-SHA2-384_192, HMAC-SHA2-512_256,               |
     | AES128-CTR,   | AES128-CMAC-96,                                     |
-    | AES192-CTR,   | NULL                                                |
-    | AES256-CTR,   |                                                     |
-    | AES128-ECB,   |                                                     |
-    | AES192-ECB,   |                                                     |
-    | AES256-ECB,   |                                                     |
+    | AES192-CTR,   | NULL,                                               |
+    | AES256-CTR,   | KASUMI-F9,                                          |
+    | AES128-ECB,   | ZUC-EIA3,                                           |
+    | AES192-ECB,   | SNOW3G-UIA3,                                        |
+    | AES256-ECB,   | POLY1305                                            |
     | NULL,         |                                                     |
     | AES128-DOCSIS,|                                                     |
     | DES-DOCSIS,   |                                                     |
     | 3DES,         |                                                     |
     | DES,          |                                                     |
-    | Chacha20,     |
+    | Chacha20,     |                                                     |
+    | KASUMI-F8,    |                                                     |
+    | ZUC-EEA3,     |                                                     |
+    | SNOW3G-UEA3   |                                                     |
     |---------------+-----------------------------------------------------|
     | AES128-DOCSIS | DOCSIS-CRC32                                        |
-    |---------------+-----------------------------------------------------|
-    | KASUMI-F8     | KASUMI-F9                                           |
-    |---------------+-----------------------------------------------------|
-    | ZUC-EEA3      | ZUC-EIA3                                            |
-    |---------------+-----------------------------------------------------|
-    | SNOW3G-UEA3   | SNOW3G-UIA3                                         |
     +---------------+-----------------------------------------------------+
 
 
