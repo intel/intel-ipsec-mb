@@ -633,6 +633,20 @@ len_is_0_submit_eia3:
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
+        lea     tmp2, [rel index_to_mask]
+        movzx   DWORD(tmp), word [tmp2 + idx*2]
+        or      [state + _zuc_unused_lane_bitmask], WORD(tmp)
+
+        ; Clear ZUC state of lane that is returned
+%ifdef SAFE_DATA
+        vpxorq          zmm0, zmm0
+        kmovw           k1, [tmp2 + idx*2]
+%assign i 0
+%rep (16 + 6)
+        vmovdqa32       [state + _zuc_state]{k1}, zmm0
+%assign i (i + 1)
+%endrep
+%endif
 
 return_submit_eia3:
 
@@ -780,7 +794,25 @@ skip_init_flush_eia3:
 %endif
         mov     state, [rsp + _gpr_save + 8*8]
 
+        ; Prepare bitmask to clear ZUC state with lane
+        ; that is returned and NULL lanes
+%ifdef SAFE_DATA
+        lea     tmp2, [rel index_to_mask]
+        movzx   DWORD(tmp1), word [tmp2 + idx*2]
+        movzx   DWORD(tmp3), word [state + _zuc_unused_lane_bitmask]
+        or      tmp3, tmp1 ;; bitmask with NULL lanes and job to return
+        kmovq   k1, tmp3
+
+        jmp     skip_flush_clear_state_eia3
+%endif
 len_is_0_flush_eia3:
+%ifdef SAFE_DATA
+        ; Prepare bitmask to clear ZUC state with lane that is returned
+        lea     tmp3, [rel index_to_mask]
+        kmovw   k1, [tmp3 + idx*2]
+
+skip_flush_clear_state_eia3:
+%endif
         ; process completed job "idx"
         ;; - decrement number of jobs in use
         sub	qword [state + _zuc_lanes_in_use], 1
@@ -795,6 +827,19 @@ len_is_0_flush_eia3:
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
+
+        lea     tmp4, [rel index_to_mask]
+        movzx   DWORD(tmp3), word [tmp4 + idx*2]
+        or      [state + _zuc_unused_lane_bitmask], WORD(tmp3)
+        ; Clear ZUC state using k1 bitmask set above
+%ifdef SAFE_DATA
+        vpxorq          zmm0, zmm0
+%assign i 0
+%rep (16 + 6)
+        vmovdqa32       [state + _zuc_state]{k1}, zmm0
+%assign i (i + 1)
+%endrep
+%endif
 
 return_flush_eia3:
 
