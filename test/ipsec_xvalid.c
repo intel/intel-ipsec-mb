@@ -743,12 +743,6 @@ get_ooo_mgr_size(const void *ptr, const unsigned index)
 }
 
 static void
-byte_hexdump(const char *message, const uint8_t *ptr, const uint32_t len)
-{
-        hexdump(stdout, message, ptr, len);
-}
-
-static void
 print_algo_info(const struct params_s *params)
 {
         struct custom_job_params *job_params;
@@ -1777,10 +1771,10 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                     memcmp(in_digest, out_digest, tag_size_to_check) != 0) {
                         fprintf(stderr,
                                 "\nInput and output tags don't match\n");
-                        byte_hexdump("Input digest", in_digest,
-                                     tag_size_to_check);
-                        byte_hexdump("Output digest", out_digest,
-                                     tag_size_to_check);
+                        hexdump(stdout, "Input digest", in_digest,
+                                tag_size_to_check);
+                        hexdump(stdout, "Output digest", out_digest,
+                                tag_size_to_check);
                         goto_exit = 1;
                 }
 
@@ -1788,8 +1782,8 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                     memcmp(src_dst_buf, test_buf, buf_size) != 0) {
                         fprintf(stderr,
                                 "\nDecrypted text and plaintext don't match\n");
-                        byte_hexdump("Plaintext (orig)", test_buf, buf_size);
-                        byte_hexdump("Decrypted msg", src_dst_buf, buf_size);
+                        hexdump(stdout, "Plaintext (orig)", test_buf, buf_size);
+                        hexdump(stdout, "Decrypted msg", src_dst_buf, buf_size);
                         goto_exit = 1;
                 }
 
@@ -1801,10 +1795,10 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
                                    out_digest + 4, 4) != 0) {
                                 fprintf(stderr, "\nDecrypted CRC and calculated"
                                         " CRC don't match\n");
-                                byte_hexdump("Decrypted CRC",
-                                             src_dst_buf + 8 + plen, 4);
-                                byte_hexdump("Calculated CRC",
-                                             out_digest + 4, 4);
+                                hexdump(stdout, "Decrypted CRC",
+                                        src_dst_buf + 8 + plen, 4);
+                                hexdump(stdout, "Calculated CRC",
+                                        out_digest + 4, 4);
                                 goto_exit = 1;
                         }
                 }
