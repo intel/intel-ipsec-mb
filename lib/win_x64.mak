@@ -248,6 +248,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\des_key.obj \
 	$(OBJ_DIR)\des_basic.obj \
 	$(OBJ_DIR)\chacha20.obj \
+	$(OBJ_DIR)\chacha20_sse.obj \
 	$(OBJ_DIR)\chacha20_avx512.obj \
 	$(OBJ_DIR)\des_x16_avx512.obj \
 	$(OBJ_DIR)\cntr_vaes_avx512.obj \
