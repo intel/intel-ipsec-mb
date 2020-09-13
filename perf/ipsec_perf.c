@@ -1079,7 +1079,7 @@ static void free_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
                 *p_buffer = NULL;
         }
 
-#ifdef LINUX
+#if defined (__linux__) || defined(__FreeBSD__)
         if (keys != NULL)
                 free(keys);
 
@@ -1142,7 +1142,7 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
         const size_t alignment = 64;
         uint8_t *buf = NULL;
         imb_uint128_t *keys = NULL;
-#ifdef LINUX
+#if defined (__linux__) || defined(__FreeBSD__)
 	int ret;
 #endif
 
@@ -1151,7 +1151,7 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
                 exit(EXIT_FAILURE);
         }
 
-#ifdef LINUX
+#if defined (__linux__) || defined(__FreeBSD__)
         ret = posix_memalign((void **) &buf, alignment, bufs_size);
 
 	if (ret != 0) {
@@ -1166,7 +1166,7 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
                 exit(EXIT_FAILURE);
         }
 
-#ifdef LINUX
+#if defined (__linux__) || defined(__FreeBSD__)
         ret = posix_memalign((void **) &keys, alignment, keys_size);
 	if (ret != 0) {
                 fprintf(stderr, "Could not allocate memory for keys!\n");
