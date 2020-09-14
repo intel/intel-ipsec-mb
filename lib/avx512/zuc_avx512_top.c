@@ -543,16 +543,6 @@ void zuc_eea3_n_buffer_gfni_avx512(const void * const pKey[],
                            length, numBuffers, 1);
 }
 
-static inline uint64_t rotate_left(uint64_t u, size_t r)
-{
-        return (((u) << (r)) | ((u) >> (64 - (r))));
-}
-
-static inline uint64_t load_uint64(const void *ptr)
-{
-        return *((const uint64_t *)ptr);
-}
-
 static inline
 void _zuc_eia3_1_buffer_avx512(const void *pKey,
                                const void *pIv,
