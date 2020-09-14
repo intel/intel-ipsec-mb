@@ -40,7 +40,7 @@ INCDIR = -I"$(PREFIX)\$(INSTNAME)"
 LIB_DIR = ..\lib
 !endif
 IPSECLIB = "$(LIB_DIR)\libIPSec_MB.lib"
-INCDIR = -I..\lib -I..\lib\include
+INCDIR = -I$(LIB_DIR) -I.\
 !endif
 
 !ifdef WINRING0_DIR
@@ -67,16 +67,25 @@ CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
-all: $(APP).exe
+OBJECTS = ipsec_perf.obj msr.obj
 
-$(APP).exe: ipsec_perf.obj msr.obj $(IPSECLIB)
-        $(LNK) $(LFLAGS) ipsec_perf.obj msr.obj $(IPSECLIB)
+# dependency
+!ifndef DEPTOOL
+DEPTOOL = ..\mkdep.bat
+!endif
+DEPFLAGS = $(INCDIR)
 
-ipsec_perf.obj: ipsec_perf.c
-        $(CC) /c $(CFLAGS) ipsec_perf.c
+all: $(APP).exe perf.dep
 
-msr.obj: msr.c
-        $(CC) /c $(CFLAGS) msr.c
+$(APP).exe: $(OBJECTS) $(IPSECLIB)
+        $(LNK) $(LFLAGS) $(OBJECTS) $(IPSECLIB)
+
+perf.dep: $(OBJECTS)
+        @type *.obj.dep > $@ 2> nul
+
+.c.obj:
+	$(CC) /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
 clean:
-	del /q ipsec_perf.obj msr.obj $(APP).exe $(APP).pdb $(APP).ilk
+	del /q $(OBJECTS) perf.dep *.obj.dep $(APP).exe $(APP).pdb $(APP).ilk
