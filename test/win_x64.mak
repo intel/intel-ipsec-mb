@@ -41,7 +41,7 @@ INCDIR = -I"$(PREFIX)\$(INSTNAME)"
 LIB_DIR = ..\lib
 !endif
 IPSECLIB = "$(LIB_DIR)\libIPSec_MB.lib"
-INCDIR = -I..\lib -I..\lib\include
+INCDIR = -I$(LIB_DIR) -I.\
 !endif
 
 !if !defined(DEBUG_OPT)
@@ -56,10 +56,12 @@ DCFLAGS = /O2 /Oi
 DLFLAGS =
 !endif
 
+# compiler
 CC = cl
 # _CRT_SECURE_NO_WARNINGS disables warning C4996 about unsecure snprintf() being used
 CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y- /W3 /WX- /Gm- /fp:precise /EHsc $(EXTRA_CFLAGS) $(INCDIR)
 
+#linker
 LNK = link
 TEST_LFLAGS = /out:$(TEST_APP).exe $(DLFLAGS)
 XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
@@ -67,11 +69,17 @@ XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
 AS = nasm
 AFLAGS = -fwin64 -Xvc -DWIN_ABI
 
+# dependency
+!ifndef DEPTOOL
+DEPTOOL = ..\mkdep.bat
+!endif
+DEPFLAGS = $(INCDIR)
+
 TEST_OBJS = main.obj gcm_test.obj ctr_test.obj customop_test.obj des_test.obj ccm_test.obj cmac_test.obj hmac_sha1_test.obj hmac_sha256_sha512_test.obj utils.obj hmac_md5_test.obj aes_test.obj sha_test.obj chained_test.obj api_test.obj pon_test.obj ecb_test.obj zuc_test.obj kasumi_test.obj snow3g_test.obj direct_api_test.obj clear_mem_test.obj hec_test.obj xcbc_test.obj aes_cbcs_test.obj crc_test.obj chacha_test.obj poly1305_test.obj
 
-XVALID_OBJS = ipsec_xvalid.obj utils.obj misc.obj
+XVALID_OBJS = ipsec_xvalid.obj misc.obj utils.obj
 
-all: $(TEST_APP).exe $(XVALID_APP).exe
+all: $(TEST_APP).exe $(XVALID_APP).exe tests.dep
 
 $(TEST_APP).exe: $(TEST_OBJS) $(IPSECLIB)
         $(LNK) $(TEST_LFLAGS) $(TEST_OBJS) $(IPSECLIB)
@@ -79,95 +87,19 @@ $(TEST_APP).exe: $(TEST_OBJS) $(IPSECLIB)
 $(XVALID_APP).exe: $(XVALID_OBJS) $(IPSECLIB)
         $(LNK) $(XVALID_LFLAGS) $(XVALID_OBJS) $(IPSECLIB)
 
-misc.obj: misc.asm
-        $(AS) -o $@ $(AFLAGS) misc.asm
+tests.dep: $(TEST_OBJS) $(XVALID_OBJS)
+        @type *.obj.dep > $@ 2> nul
 
-main.obj: main.c do_test.h
-        $(CC) /c $(CFLAGS) main.c
+.c.obj:
+	$(CC) /c $(CFLAGS) $<
+        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
 
-gcm_test.obj: gcm_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) gcm_test.c
-
-ctr_test.obj: ctr_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) ctr_test.c
-
-pon_test.obj: pon_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) pon_test.c
-
-customop_test.obj: customop_test.c customop_test.h
-        $(CC) /c $(CFLAGS) customop_test.c
-
-des_test.obj: des_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) des_test.c
-
-ccm_test.obj: ccm_test.c gcm_ctr_vectors_test.h utils.h
-        $(CC) /c $(CFLAGS) ccm_test.c
-
-cmac_test.obj: cmac_test.c utils.h
-        $(CC) /c $(CFLAGS) cmac_test.c
-
-hmac_sha1_test.obj: hmac_sha1_test.c utils.h
-        $(CC) /c $(CFLAGS) hmac_sha1_test.c
-
-hmac_sha256_sha512_test.obj: hmac_sha256_sha512_test.c utils.h
-        $(CC) /c $(CFLAGS) hmac_sha256_sha512_test.c
-
-hmac_md5_test.obj: hmac_md5_test.c utils.h
-        $(CC) /c $(CFLAGS) hmac_md5_test.c
-
-aes_test.obj: aes_test.c utils.h
-        $(CC) /c $(CFLAGS) aes_test.c
-
-ecb_test.obj: ecb_test.c utils.h
-        $(CC) /c $(CFLAGS) ecb_test.c
-
-utils.obj: utils.c utils.h
-        $(CC) /c $(CFLAGS) utils.c
-
-sha_test.obj: sha_test.c utils.h
-        $(CC) /c $(CFLAGS) sha_test.c
-
-chained_test.obj: chained_test.c utils.h
-        $(CC) /c $(CFLAGS) chained_test.c
-
-api_test.obj: api_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) api_test.c
-
-zuc_test.obj: zuc_test.c zuc_test_vectors.h
-        $(CC) /c $(CFLAGS) zuc_test.c
-
-kasumi_test.obj: kasumi_test.c kasumi_test_vectors.h
-        $(CC) /c $(CFLAGS) kasumi_test.c
-
-snow3g_test.obj: snow3g_test.c snow3g_test_vectors.h
-        $(CC) /c $(CFLAGS) snow3g_test.c
-
-direct_api_test.obj: direct_api_test.c
-        $(CC) /c $(CFLAGS) direct_api_test.c
-
-ipsec_xvalid.obj: ipsec_xvalid.c misc.h
-        $(CC) /c $(CFLAGS) ipsec_xvalid.c
-
-clear_mem_test.obj: clear_mem_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) clear_mem_test.c
-
-hec_test.obj: hec_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) hec_test.c
-
-xcbc_test.obj: xcbc_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) xcbc_test.c
-
-aes_cbcs_test.obj: aes_cbcs_test.c gcm_ctr_vectors_test.h
-        $(CC) /c $(CFLAGS) aes_cbcs_test.c
-
-crc_test.obj: crc_test.c utils.h
-        $(CC) /c $(CFLAGS) crc_test.c
-
-chacha_test.obj: chacha_test.c
-        $(CC) /c $(CFLAGS) chacha_test.c
-
-poly1305_test.obj: poly1305_test.c
-        $(CC) /c $(CFLAGS) poly1305_test.c
+.asm.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 clean:
-        del /q $(TEST_OBJS) $(TEST_APP).* $(XVALID_OBJS) $(XVALID_APP).*
+        del /q $(TEST_OBJS) tests.dep *.obj.dep $(TEST_APP).* $(XVALID_OBJS) $(XVALID_APP).*
+
+!if exist(tests.dep)
+!include tests.dep
+!endif
