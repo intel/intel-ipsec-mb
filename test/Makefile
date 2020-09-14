@@ -102,14 +102,27 @@ $(XVALID_APP): $(XVALID_OBJECTS)
 clean:
 	-rm -f $(OBJECTS) $(TEST_APP) $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS)
 
-SOURCES_STYLE := $(foreach infile,$(SOURCES) $(XVALID_SOURCES),-f $(infile))
+# style check section
 CHECKPATCH?=checkpatch.pl
+CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,AVOID_EXTERNS,COMPLEX_MACRO,USE_FUNC,CONSTANT_COMPARISON,MISSING_SPACE,NEW_TYPEDEFS
+
+%.c_style_check : %.c
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+
+%.h_style_check : %.h
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+
+%.asm_style_check : %.asm
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+
+%.inc_style_check : %.inc
+	$(CHECKPATCH) $(CHECKPATCH_FLAGS) -f $<
+
+SOURCES_ALL := $(wildcard *.[ch]) $(wildcard *.asm) $(wildcard *.inc)
+SOURCES_STYLE := $(foreach infile,$(SOURCES_ALL),$(infile)_style_check)
+
 .PHONY: style
-style:
-	$(CHECKPATCH) --no-tree --no-signoff --emacs --no-color \
---ignore CODE_INDENT,INITIALISED_STATIC,LEADING_SPACE,SPLIT_STRING,\
-UNSPECIFIED_INT,ARRAY_SIZE,BLOCK_COMMENT_STYLE,GLOBAL_INITIALISERS,\
-AVOID_EXTERNS,COMPLEX_MACRO,USE_FUNC,CONSTANT_COMPARISON,MISSING_SPACE $(SOURCES_STYLE)
+style: $(SOURCES_STYLE)
 
 # if target not clean or rinse then make dependencies
 ifneq ($(MAKECMDGOALS),clean)
