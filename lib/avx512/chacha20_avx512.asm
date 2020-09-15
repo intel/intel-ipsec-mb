@@ -1116,6 +1116,9 @@ APPEND(no_mask_update, I):
 
 no_partial_block:
 
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%endif
         mov     rax, job
         or      dword [rax + _status], STS_COMPLETED_AES
 
