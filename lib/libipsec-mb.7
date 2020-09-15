@@ -73,12 +73,15 @@ More information can be found at
 
 .SS ENCRYPTION ALGORITHMS
 AES128-GCM, AES192-GCM, AES256-GCM, AES128-CBC, AES192-CBC, AES256-CBC,
-AES128-CTR, AES192-CTR, AES256-CTR, AES128-CCM, NULL, AES128-DOCSIS, DES-DOCSIS, 3DES and DES.
+AES128-CTR, AES192-CTR, AES256-CTR, AES128-CCM, AES256-CCM, AES128-ECB,
+AES192-ECB, AES256-ECB, NULL, AES128-DOCSIS, AES256-DOCSIS, DES-DOCSIS,
+3DES, DES, KASUMI-F8, ZUC-EEA3, SNOW3G-UEA2, AES128-CBCS and Chacha20.
 
 .SS INTEGRITY ALGORITHMS
 AES-XCBC-96, HMAC-MD5-96, HMAC-SHA1-96, HMAC-SHA2-224_112, HMAC-SHA2-256_128,
-HMAC-SHA2-384_192, HMAC-SHA2-512_256, AES128-GMAC, AES192-GMAC, AES256-GMAC, NULL,
-AES128-CCM, AES128-CMAC-96.
+HMAC-SHA2-384_192, HMAC-SHA2-512_256, AES128-GMAC, AES192-GMAC, AES256-GMAC,
+NULL, AES128-CCM, AES256-CCM, AES128-CMAC-96, AES256-CMAC-96, KASUMI-F9,
+ZUC-EIA3, SNOW3G-UIA2, DOCSIS-CRC32, HEC and POLY1305.
 
 .SS RECOMMENDATIONS
 DES algorithm should be avoided and AES encryption should be used instead.
@@ -88,6 +91,8 @@ DES algorithm should be avoided and AES encryption should be used instead.
 HMAC-MD5-96 is a legacy algorithm and HMAC-SHA1 is recommended to use instead.
 .br
 DES, 3DES and HMAC-MD5-96 are implemented in the library to support legacy applications.
+.br
+AES-ECB algorithm should be avoided and AES-CBC or AES-CNTR encryption should be used instead.
 
 .SS KEY STORAGE
 The library doesn't offer any solution for secure key storage or storage of sensitive information.

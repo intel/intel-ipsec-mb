@@ -199,7 +199,7 @@ alternative algorithms instead.
 |---+--------------------+----------------+-------------------|
 | 3 | HMAC-MD5 integrity | Legacy         | HMAC-SHA1         |
 |---+--------------------+----------------+-------------------|
-| 3 | AES-ECB encryption | Avoid          | AES-CBC, AES-CNTR |
+| 4 | AES-ECB encryption | Avoid          | AES-CBC, AES-CNTR |
 +-------------------------------------------------------------+
 ```
 Intel(R) Multi-Buffer Crypto for IPsec Library depends on C library and
