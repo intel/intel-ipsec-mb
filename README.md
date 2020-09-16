@@ -19,8 +19,7 @@ Intel Multi-Buffer Crypto for IPsec Library is highly-optimized software
 implementations of the core cryptographic processing for IPsec,
 which provides industry-leading performance on a range of Intel(R) Processors.
 
-For information on how to build and use this library, see the
-Intel White Paper:
+For information on how the library works, see the Intel White Paper:
 "Fast Multi-buffer IPsec Implementations on Intel Architecture Processors".
 Jim Guilford, Sean Gulley, et. al.
 
@@ -283,12 +282,12 @@ Clean the build:
 or   
 `> nmake /f win_x64.mak clean SHARED=n`
 
-Build with additional safety features:  
-- SAFE_DATA clears sensitive information stored in stack/registers  
+Build without safety features:  
+- SAFE_DATA clears sensitive information stored temporarily on stack, registers or internal data structures  
 - SAFE_PARAM adds extra checks on input parameters  
 - SAFE_LOOKUP uses constant-time lookups (enabled by default)  
 
-`> nmake /f win_x64.mak SAFE_DATA=y SAFE_PARAM=y`
+`> nmake /f win_x64.mak SAFE_DATA=n SAFE_PARAM=n`
 
 Build with debugging information:   
 `> nmake /f win_x64.mak DEBUG=y`
@@ -362,15 +361,12 @@ options are listed below as the "Options for Increased Security" and are
 enabled through various build flags.
 
 ### Options for Increased Security
-There are three build options that can be enabled to increase safety in the
-code and help protect external functions from incorrect input data.
-SAFE_DATA and SAFE_PARAM options are disabled by default, due to
-the potential performance impact associated to the extra code added.
-SAFE_LOOKUP option is enabled by default, and can be disabled
-by setting the parameter equal to "n" (e.g. make SAFE_LOOKUP=n).
+There are three build options that are used to increase safety in
+the code and help protect external functions from incorrect input data.
+The SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP options are enabled by default.
+Due to the potential performance impact associated to the extra code, these
+can be disabled by setting the parameter equal to "n" (e.g. make SAFE_LOOKUP=n).
 
-These options (explained below) can be enabled when building the library,
-by setting the parameter equal to "y" (e.g. make SAFE_DATA=y).
 No specific code has been added, and no specific validation or security
 tests have been performed to help protect against or check for side-channel
 attacks.

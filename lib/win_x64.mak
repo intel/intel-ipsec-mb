@@ -81,12 +81,12 @@ DAFLAGS =
 DLFLAGS = /RELEASE
 !endif
 
-!if "$(SAFE_DATA)" == "y"
+!if "$(SAFE_DATA)" != "n"
 DCFLAGS = $(DCFLAGS) /DSAFE_DATA
 DAFLAGS = $(DAFLAGS) -DSAFE_DATA
 !endif
 
-!if "$(SAFE_PARAM)" == "y"
+!if "$(SAFE_PARAM)" != "n"
 DCFLAGS = $(DCFLAGS) /DSAFE_PARAM
 DAFLAGS = $(DAFLAGS) -DSAFE_PARAM
 !endif

@@ -107,13 +107,13 @@ OPT = -O3
 CFLAGS += -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
-ifeq ($(SAFE_DATA),y)
+ifneq ($(SAFE_DATA),n)
 CFLAGS += -DSAFE_DATA
 NASM_FLAGS += -DSAFE_DATA
 YASM_FLAGS += -DSAFE_DATA
 endif
 
-ifeq ($(SAFE_PARAM),y)
+ifneq ($(SAFE_PARAM),n)
 CFLAGS += -DSAFE_PARAM
 NASM_FLAGS += -DSAFE_PARAM
 YASM_FLAGS += -DSAFE_PARAM

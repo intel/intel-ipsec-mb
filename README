@@ -27,9 +27,9 @@ Intel Multi-Buffer Crypto for IPsec Library is highly-optimized software
 implementations of the core cryptographic processing for IPsec, which
 provides industry-leading performance on a range of Intel(R) Processors.
 
-For information on how to build and use this library, see the Intel
-White Paper: "Fast Multi-buffer IPsec Implementations on Intel
-Architecture Processors". Jim Guilford, Sean Gulley, et. al.
+For information on how the library works, see the Intel White Paper:
+“Fast Multi-buffer IPsec Implementations on Intel Architecture Processors”.
+Jim Guilford, Sean Gulley, et. al.
 
 The easiest way to find it is to search the Internet for the title and
 Intel White Paper.
@@ -70,7 +70,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 
 Notes:
 (1,2) - By default, decryption is by4 and encryption is x4.
-        On CPU's supporting GFNI, decryption is by8 and encryption is x8.
+        On CPU’s supporting GFNI, decryption is by8 and encryption is x8.
 (3,4) - decryption is by8 and encryption is x8
 (5) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
 (6) - decryption is by16 and encryption is x16
@@ -123,7 +123,7 @@ Notes:
 (2) - Implementation using SHANI extensions is x2
 (3) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
 (4) - used only with AES128-DOCSIS cipher
-(5) - x8 on selected CPU's supporting GFNI
+(5) - x8 on selected CPU’s supporting GFNI
 
 Legend:
 byY- single buffer Y blocks at a time
@@ -298,12 +298,13 @@ Clean the build:
 or
 > nmake /f win_x64.mak clean SHARED=n
 
-Build with additional safety features:
-- SAFE_DATA clears sensitive information stored in stack/registers
+Build without safety features:
+- SAFE_DATA clears sensitive information stored temporarily on stack,
+            registers or internal data structures
 - SAFE_PARAM adds extra checks on input parameters
 - SAFE_LOOKUP uses constant-time lookups (enabled by default)
 
-> nmake /f win_x64.mak SAFE_DATA=y SAFE_PARAM=y
+> nmake /f win_x64.mak SAFE_DATA=n SAFE_PARAM=n
 
 Build with debugging information:
 > nmake /f win_x64.mak DEBUG=y
@@ -361,7 +362,7 @@ criteria is beyond the scope of this document and should be determined
 based upon usage, appropriate standards and consultation with a
 cryptographic expert. This library includes some algorithms, which are
 considered cryptographically weak and are included only for legacy and
-interoperability reasons. See the "Recommendations" section for more
+interoperability reasons. See the “Recommendations” section for more
 details.
 
 Secure creation of key material is not a part of this library. This
@@ -381,20 +382,18 @@ counter-measures depends on the threats to that system, and cannot be
 determined by a general library such as this one. In order to provide
 the most flexible implementation, this library allows certain
 counter-measures to be enabled or disabled at compile time. These
-options are listed below as the "Options for Increased Security" and are
+options are listed below as the “Options for Increased Security” and are
 enabled through various build flags.
 
 Options for Increased Security
 
-There are three build options that can be enabled to increase safety in
-the code and help protect external functions from incorrect input data.
-SAFE_DATA and SAFE_PARAM options are disabled by default, due to the
-potential performance impact associated to the extra code added.
-SAFE_LOOKUP option is enabled by default, and can be disabled by setting
-the parameter equal to "n" (e.g. make SAFE_LOOKUP=n).
+There are three build options that are used to increase safety in the
+code and help protect external functions from incorrect input data. The
+SAFE_DATA, SAFE_PARAM and SAFE_LOOKUP options are enabled by default.
+Due to the potential performance impact associated to the extra code,
+these can be disabled by setting the parameter equal to “n” (e.g. make
+SAFE_LOOKUP=n).
 
-These options (explained below) can be enabled when building the
-library, by setting the parameter equal to "y" (e.g. make SAFE_DATA=y).
 No specific code has been added, and no specific validation or security
 tests have been performed to help protect against or check for
 side-channel attacks.
@@ -422,7 +421,7 @@ following:
 - SNOW3G: all architectures
 - ZUC: all architectures
 
-If SAFE_LOOKUP is not enabled in the build (e.g. make SAFE_LOOKUP=n)
+If SAFE_LOOKUP is not enabled in the build (e.g. make SAFE_LOOKUP=n)
 then the algorithms listed above may be susceptible to timing attacks
 which could expose the cryptographic key.
 
@@ -434,7 +433,7 @@ FORCE CLEARING/ZEROING OF MEMORY
 
 To assist in clearing sensitive application data such as keys, plaintext
 etc. the library provides the imb_clear_mem() API. This API zeros
-'size' bytes of memory pointed to by 'mem' followed by the sfence
+‘size’ bytes of memory pointed to by ‘mem’ followed by the sfence
 instruction to ensure memory is cleared before the function returns.
 
 
@@ -542,9 +541,9 @@ https://www.etsi.org/security-algorithms-and-codes/cellular-algorithm-licences
 10. LEGAL DISCLAIMER
 
 
-THIS SOFTWARE IS PROVIDED BY INTEL"AS IS". NO LICENSE, EXPRESS OR
+THIS SOFTWARE IS PROVIDED BY INTEL“AS IS”. NO LICENSE, EXPRESS OR
 IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL PROPERTY RIGHTS
-ARE GRANTED THROUGH USE. EXCEPT AS PROVIDED IN INTEL'S TERMS AND
+ARE GRANTED THROUGH USE. EXCEPT AS PROVIDED IN INTEL’S TERMS AND
 CONDITIONS OF SALE, INTEL ASSUMES NO LIABILITY WHATSOEVER AND INTEL
 DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY, RELATING TO SALE AND/OR
 USE OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING TO

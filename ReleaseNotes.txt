@@ -24,6 +24,7 @@ Library
 - Chacha20 AVX512 implementation
 - Automatic multi-buffer manager initialization API added
 - Error handling API added
+- Build with SAFE_DATA and SAFE_PARAM options by default
 
 Test Applications
 - CCM tests extended to test AES-CCM-256
