@@ -376,13 +376,33 @@ endstruc
         mov             tmp3, 16
         vpbroadcastw    ymm1, WORD(tmp3)
         vmovdqu16       ymm0{k1}, ymm1
+
+%ifidn %%SUBMIT_FLUSH, FLUSH
+        ;; reset null lane lens to UINT16_MAX on flush
+        mov             WORD(tmp3), 0xffff
+        vpbroadcastw    ymm3, WORD(tmp3)
+        vmovdqu16       ymm0{k6}, ymm3
+%endif
+
         vmovdqa64       [state + _aes_xcbc_lens], ymm0
 
         ;; Find min length for lanes 0-7
         vphminposuw xmm2, xmm0
 
         lea	tmp, [lane_data + _xcbc_final_block]
-	mov	[state + _aes_xcbc_args_in + 8*idx], tmp
+
+%ifidn %%SUBMIT_FLUSH, FLUSH
+        ;; update input pointers for idx (processed) lane
+        ;; and null lanes to point to idx lane final block
+        vpbroadcastq    zmm1, tmp
+        korw            k4, k6, k1 ;; create mask with all lanes to be updated (k4)
+        kshiftrw        k5, k4, 8  ;; lanes 8-15 mask in k5
+        vmovdqa64       [state + _aes_xcbc_args_in + (0*PTR_SZ)]{k4}, zmm1
+        vmovdqa64       [state + _aes_xcbc_args_in + (8*PTR_SZ)]{k5}, zmm1
+%else
+        ;; only update processed lane input pointer on submit
+        mov	[state + _aes_xcbc_args_in + 8*idx], tmp
+%endif
 
 	jmp	%%_start_loop
 
