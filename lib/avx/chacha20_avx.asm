@@ -49,10 +49,16 @@ align 16
 shuf_mask_rotl16:
 db      2, 3, 0, 1, 6, 7, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13
 
+align 16
+poly_clamp_r:
+dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
+
 %ifdef LINUX
 %define arg1    rdi
+%define arg2    rsi
 %else
 %define arg1    rcx
+%define arg2    rdx
 %endif
 
 %define job     arg1
@@ -318,6 +324,37 @@ no_partial_block:
         mov     rax, job
         or      dword [rax + _status], STS_COMPLETED_AES
 
+        ret
+
+;;
+;; void poly1305_key_gen_avx(IMB_JOB *job, void *poly_key)
+align 32
+MKGLOBAL(poly1305_key_gen_avx,function,internal)
+poly1305_key_gen_avx:
+        ;; prepare chacha state from IV, key
+        mov     rax, [job + _enc_keys]
+        vmovdqu xmm1, [rax]          ; Load key bytes 0-15
+        vmovdqu xmm2, [rax + 16]     ; Load key bytes 16-31
+
+        ;;  copy nonce (12 bytes)
+        mov     rax, [job + _iv]
+        vmovq   xmm3, [rax]
+        vpinsrd xmm3, [rax + 8], 2
+        vpslldq xmm3, 4
+        vmovdqa xmm0, [rel constants]
+
+        ;; run one round of chacha20
+        generate_ks xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
+
+        ;; clamp R and store poly1305 key
+        ;; R = KEY[0..15] & 0xffffffc0ffffffc0ffffffc0fffffff
+        vpand   xmm4, [rel poly_clamp_r]
+        vmovdqu [arg2 + 0 * 16], xmm4
+        vmovdqu [arg2 + 1 * 16], xmm5
+
+%ifdef SAFE_DATA
+        clear_all_xmms_avx_asm
+%endif
         ret
 
 %ifdef LINUX
