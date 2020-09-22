@@ -527,6 +527,14 @@ struct str_value_mapping aead_algo_str_map[] = {
                         .key_size = 0
                 }
         },
+        {
+                .name = "chacha20-poly1305",
+                .values.job_params = {
+                        .cipher_mode = IMB_CIPHER_CHACHA20_POLY1305,
+                        .hash_alg = IMB_AUTH_CHACHA20_POLY1305,
+                        .key_size = 32
+                }
+        },
 };
 
 /* This struct stores all information about performed test case */
@@ -565,6 +573,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AES_CMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
+                16, /* IMB_AUTH_CHACHA20_POLY1305 */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -587,6 +596,7 @@ const uint8_t key_sizes[][3] = {
                 {16, 16, 1}, /* IMB_CIPHER_KASUMI_UEA1_BITLEN */
                 {16, 16, 1}, /* IMB_CIPHER_CBCS_1_9 */
                 {32, 32, 1}, /* IMB_CIPHER_CHACHA20 */
+                {32, 32, 1}, /* IMB_CIPHER_CHACHA20_POLY1305 */
 };
 
 uint8_t custom_test = 0;
@@ -929,6 +939,10 @@ fill_job(IMB_JOB *job, const struct params_s *params,
         case IMB_AUTH_POLY1305:
                 job->u.POLY1305._key = k1_expanded;
                 break;
+        case IMB_AUTH_CHACHA20_POLY1305:
+                job->u.CHACHA20_POLY1305.aad_len_in_bytes = params->aad_size;
+                job->u.CHACHA20_POLY1305.aad = aad;
+                break;
         default:
                 printf("Unsupported hash algorithm %u, line %u\n",
                        (unsigned) params->hash_alg, __LINE__);
@@ -1031,6 +1045,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                         (job->msg_len_to_cipher_in_bytes * 8);
                 break;
         case IMB_CIPHER_CHACHA20:
+        case IMB_CIPHER_CHACHA20_POLY1305:
                 job->enc_keys = k2;
                 job->dec_keys = k2;
                 job->iv_len_in_bytes = 12;
@@ -1108,6 +1123,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_SHA_512:
                 case IMB_AUTH_PON_CRC_BIP:
                 case IMB_AUTH_DOCSIS_CRC32:
+                case IMB_AUTH_CHACHA20_POLY1305:
                         /* No operation needed */
                         break;
                 case IMB_AUTH_AES_GMAC_128:
@@ -1153,6 +1169,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         memset(k2, pattern_cipher_key, 16);
                         break;
                 case IMB_CIPHER_CHACHA20:
+                case IMB_CIPHER_CHACHA20_POLY1305:
                         memset(k2, pattern_cipher_key, 32);
                         break;
                 case IMB_CIPHER_NULL:
@@ -1287,6 +1304,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_AUTH_SHA_512:
         case IMB_AUTH_PON_CRC_BIP:
         case IMB_AUTH_DOCSIS_CRC32:
+        case IMB_AUTH_CHACHA20_POLY1305:
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:
@@ -1364,6 +1382,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 memcpy(k2, ciph_key, 16);
                 break;
         case IMB_CIPHER_CHACHA20:
+        case IMB_CIPHER_CHACHA20_POLY1305:
                 /* Use of:
                  *     memcpy(k2, ciph_key, 32);
                  * leaves sensitive data on the stack.
@@ -2045,6 +2064,11 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                                     (hash_alg == IMB_AUTH_AES_GMAC_128 ||
                                      hash_alg == IMB_AUTH_AES_GMAC_192 ||
                                      hash_alg == IMB_AUTH_AES_GMAC_256))
+                                        continue;
+                                if ((c_mode == IMB_CIPHER_CHACHA20_POLY1305 &&
+                                     hash_alg != IMB_AUTH_CHACHA20_POLY1305) ||
+                                    (c_mode != IMB_CIPHER_CHACHA20_POLY1305 &&
+                                     hash_alg == IMB_AUTH_CHACHA20_POLY1305))
                                         continue;
 
                                 params->hash_alg = hash_alg;
