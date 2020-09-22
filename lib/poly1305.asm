@@ -282,7 +282,7 @@ section .text
 ;; =============================================================================
 ;; Computes hash for the final partial block
 ;; =============================================================================
-%macro POLY1305_PARTIAL_BLOCK 14
+%macro POLY1305_PARTIAL_BLOCK 15
 %define %%BUF     %1    ; [in/clobbered] pointer to 16 byte scratch buffer
 %define %%MSG     %2    ; [in] GPR pointer to input message
 %define %%LEN     %3    ; [in] GPR message length
@@ -297,6 +297,7 @@ section .text
 %define %%T3      %12   ; [clobbered] GPR register
 %define %%GP_RAX  %13   ; [clobbered] RAX register
 %define %%GP_RDX  %14   ; [clobbered] RDX register
+%define %%PAD_16  %15   ; [in] text "pad_to_16" or "no_padding"
 
         ;; clear the scratch buffer
         xor     %%T1, %%T1
@@ -306,13 +307,18 @@ section .text
         ;; copy message bytes into the scratch buffer
         memcpy_sse_16_1 %%BUF, %%MSG, %%LEN, %%T1, %%T2
 
+%ifnidn %%PAD_16,pad_to_16
         ;; pad the message in the scratch buffer
         mov     byte [%%BUF + %%LEN], 0x01
-
+%endif
         ;; A += MSG[i]
         add     %%A0, [%%BUF + 0]
         adc     %%A1, [%%BUF + 8]
+%ifnidn %%PAD_16,pad_to_16
         adc     %%A2, 0                 ;; no padding bit
+%else
+        adc     %%A2, 1                 ;; padding bit please
+%endif
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
@@ -449,7 +455,7 @@ poly1305_mac:
         sub     rsp, 16
 
         POLY1305_PARTIAL_BLOCK rsp, msg, len, _a0, _a1, _a2, _r0, _r1, \
-                               gp6, gp7, gp8, gp9, rax, rdx
+                               gp6, gp7, gp8, gp9, rax, rdx, no_padding
 
         ;; remove the stack frame (memory is cleared as part of the macro)
         add     rsp, 16
@@ -461,6 +467,127 @@ poly1305_mac:
 
 .poly1305_mac_exit:
         FUNC_EXIT
+        ret
+
+;; =============================================================================
+;; =============================================================================
+;; void poly1305_aead_update(const void *msg, const uint64_t msg_len,
+;;                           void *hash, const void *key)
+;; arg1 - message pointer
+;; arg2 - message length in bytes
+;; arg3 - pointer to current hash value (size 24 bytes)
+;; arg4 - key pointer (size 32 bytes)
+align 32
+MKGLOBAL(poly1305_aead_update,function,internal)
+poly1305_aead_update:
+
+%ifdef SAFE_PARAM
+        or      arg1, arg1
+        jz      .poly1305_update_exit
+
+        or      arg3, arg3
+        jz      .poly1305_update_exit
+
+        or      arg4, arg4
+        jz      .poly1305_update_exit
+%endif
+
+        FUNC_ENTRY
+
+%ifdef LINUX
+%xdefine _a0 gp3
+%xdefine _a1 gp4
+%xdefine _a2 gp5
+%xdefine _r0 gp6
+%xdefine _r1 gp7
+%xdefine _len arg2
+%xdefine _arg3 arg4             ; use rcx, arg3 = rdx
+%else
+%xdefine _a0 gp3
+%xdefine _a1 rdi
+%xdefine _a2 gp5                ; = arg4 / r9
+%xdefine _r0 gp6
+%xdefine _r1 gp7
+%xdefine _len gp2               ; rsi
+%xdefine _arg3 arg3             ; arg
+%endif
+
+        ;; load R
+        mov     _r0, [arg4 + 0 * 8]
+        mov     _r1, [arg4 + 1 * 8]
+
+        ;; load accumulator / current hash value
+        ;; note: arg4 can't be used beyond this point
+%ifdef LINUX
+        mov     _arg3, arg3             ; note: _arg3 = arg4 (linux)
+%endif
+        mov     _a0, [_arg3 + 0 * 8]
+        mov     _a1, [_arg3 + 1 * 8]
+        mov     _a2, [_arg3 + 2 * 8]    ; note: _a2 = arg4 (win)
+
+%ifndef LINUX
+        mov     _len, arg2      ;; arg2 = rdx on Windows
+%endif
+        POLY1305_BLOCKS arg1, _len, _a0, _a1, _a2, _r0, _r1, \
+                        gp10, gp11, gp8, gp9, rax, rdx
+
+        or      _len, _len
+        jz      .poly1305_update_no_partial_block
+
+        ;; create stack frame for the partial block scratch buffer
+        sub     rsp, 16
+
+        POLY1305_PARTIAL_BLOCK rsp, arg1, _len, _a0, _a1, _a2, _r0, _r1, \
+                               gp10, gp11, gp8, gp9, rax, rdx, pad_to_16
+
+        ;; remove the stack frame (memory is cleared as part of the macro)
+        add     rsp, 16
+
+.poly1305_update_no_partial_block:
+        ;; save accumulator back
+        mov     [_arg3 + 0 * 8], _a0
+        mov     [_arg3 + 1 * 8], _a1
+        mov     [_arg3 + 2 * 8], _a2
+
+        FUNC_EXIT
+.poly1305_update_exit:
+        ret
+
+;; =============================================================================
+;; =============================================================================
+;; void poly1305_aead_complete(const void *hash, const void *key, void *tag)
+;; arg1 - pointer to current hash value (size 24 bytes)
+;; arg2 - key pointer (size 32 bytes)
+;; arg3 - pointer to store computed authentication tag (16 bytes)
+align 32
+MKGLOBAL(poly1305_aead_complete,function,internal)
+poly1305_aead_complete:
+%ifdef SAFE_PARAM
+        or      arg1, arg1
+        jz      .poly1305_complete_exit
+
+        or      arg2, arg2
+        jz      .poly1305_complete_exit
+
+        or      arg3, arg3
+        jz      .poly1305_complete_exit
+%endif
+
+        FUNC_ENTRY
+
+%xdefine _a0 gp6
+%xdefine _a1 gp7
+%xdefine _a2 gp8
+
+        ;; load accumulator / current hash value
+        mov     _a0, [arg1 + 0 * 8]
+        mov     _a1, [arg1 + 1 * 8]
+        mov     _a2, [arg1 + 2 * 8]
+
+        POLY1305_FINALIZE arg2, arg3, _a0, _a1, _a2, gp9, gp10, gp11
+
+        FUNC_EXIT
+.poly1305_complete_exit:
         ret
 
 %ifdef LINUX
