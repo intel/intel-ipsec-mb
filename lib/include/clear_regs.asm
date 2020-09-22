@@ -121,7 +121,11 @@
 ;
 %macro clear_scratch_xmms_avx_asm 0
 %ifdef LINUX
-        vzeroall
+%assign i 0
+%rep 16
+        vpxor   xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
 ; On Windows, XMM0-XMM5 registers are scratch registers
 %else
 %assign i 0
@@ -141,7 +145,11 @@
 %macro clear_scratch_ymms_asm 0
 ; On Linux, all YMM registers are scratch registers
 %ifdef LINUX
-        vzeroall
+%assign i 0
+%rep 16
+        vpxor   ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
 ; On Windows, YMM0-YMM5 registers are scratch registers.
 ; YMM6-YMM15 upper 128 bits are scratch registers too, but
 ; the lower 128 bits are to be restored after calling these function
@@ -167,10 +175,8 @@
 %macro clear_scratch_zmms_asm 0
 ; On Linux, all ZMM registers are scratch registers
 %ifdef LINUX
-        vzeroall
-        ;; vzeroall only clears the first 16 ZMM registers
-%assign i 16
-%rep 16
+%assign i 0
+%rep 32
         vpxorq  ymm %+ i, ymm %+ i
 %assign i (i+1)
 %endrep
@@ -208,15 +214,22 @@
 ; This macro clears all XMM registers on AVX
 ;
 %macro clear_all_xmms_avx_asm 0
-        vzeroall
+%assign i 0
+%rep 16
+        vpxor   xmm %+ i, xmm %+ i
+%assign i (i+1)
+%endrep
 %endmacro
 
 ;
 ; This macro clears all YMM registers
-
 ;
 %macro clear_all_ymms_asm 0
-        vzeroall
+%assign i 0
+%rep 16
+        vpxor   ymm %+ i, ymm %+ i
+%assign i (i+1)
+%endrep
 %endmacro
 
 ;
@@ -227,10 +240,8 @@
 ; also the upper 256 bits
 ;
 %macro clear_all_zmms_asm 0
-        vzeroall
-        ;; vzeroall only clears the first 16 ZMM registers
-%assign i 16
-%rep 16
+%assign i 0
+%rep 32
         vpxorq  ymm %+ i, ymm %+ i
 %assign i (i+1)
 %endrep
