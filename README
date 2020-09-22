@@ -28,8 +28,8 @@ implementations of the core cryptographic processing for IPsec, which
 provides industry-leading performance on a range of Intel(R) Processors.
 
 For information on how the library works, see the Intel White Paper:
-“Fast Multi-buffer IPsec Implementations on Intel Architecture Processors”.
-Jim Guilford, Sean Gulley, et. al.
+“Fast Multi-buffer IPsec Implementations on Intel Architecture
+Processors”. Jim Guilford, Sean Gulley, et. al.
 
 The easiest way to find it is to search the Internet for the title and
 Intel White Paper.
@@ -66,11 +66,12 @@ Table 1. List of supported cipher algorithms and their implementations.
     | SNOW3G-UEA2   | N      | Y      | Y      | Y      | N      | N      |
     | AES128-CBCS(9)| N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
     | Chacha20      | N      | Y      | Y      | N      | Y      | N      |
+    | Chacha20 AEAD | N      | Y      | Y      | N      | Y      | N      |
     +---------------------------------------------------------------------+
 
 Notes:
 (1,2) - By default, decryption is by4 and encryption is x4.
-        On CPU’s supporting GFNI, decryption is by8 and encryption is x8.
+On CPU’s supporting GFNI, decryption is by8 and encryption is x8.
 (3,4) - decryption is by8 and encryption is x8
 (5) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
 (6) - decryption is by16 and encryption is x16
@@ -116,6 +117,7 @@ implementations.
     | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
     | HEC               | N      | Y      | Y      | N      | N      | N      |
     | POLY1305          | Y      | N      | N      | N      | N      | N      |
+    | POLY1305 AEAD     | Y      | N      | N      | N      | N      | N      |
     +-------------------------------------------------------------------------+
 
 Notes:
@@ -162,6 +164,8 @@ Table 3. Encryption and integrity algorithm combinations
     | SNOW3G-UEA3   |                                                     |
     |---------------+-----------------------------------------------------|
     | AES128-DOCSIS | DOCSIS-CRC32                                        |
+    |---------------+-----------------------------------------------------|
+    | CHACHA20 AEAD | POLY1305 AEAD                                       |
     +---------------+-----------------------------------------------------+
 
 
@@ -300,7 +304,7 @@ or
 
 Build without safety features:
 - SAFE_DATA clears sensitive information stored temporarily on stack,
-            registers or internal data structures
+registers or internal data structures
 - SAFE_PARAM adds extra checks on input parameters
 - SAFE_LOOKUP uses constant-time lookups (enabled by default)
 
@@ -433,7 +437,7 @@ FORCE CLEARING/ZEROING OF MEMORY
 
 To assist in clearing sensitive application data such as keys, plaintext
 etc. the library provides the imb_clear_mem() API. This API zeros
-‘size’ bytes of memory pointed to by ‘mem’ followed by the sfence
+_‘size’_ bytes of memory pointed to by _‘mem’_ followed by the _sfence_
 instruction to ensure memory is cleared before the function returns.
 
 

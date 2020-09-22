@@ -58,6 +58,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | SNOW3G-UEA2   | N      | Y      | Y      | Y      | N      | N      |
 | AES128-CBCS(9)| N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | Chacha20      | N      | Y      | Y      | N      | Y      | N      |
+| Chacha20 AEAD | N      | Y      | Y      | N      | Y      | N      |
 +---------------------------------------------------------------------+
 ```
 Notes:  
@@ -108,6 +109,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
 | HEC               | N      | Y      | Y      | N      | N      | N      |
 | POLY1305          | Y      | N      | N      | N      | N      | N      |
+| POLY1305 AEAD     | Y      | N      | N      | N      | N      | N      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  
@@ -154,6 +156,8 @@ Table 3. Encryption and integrity algorithm combinations
 | SNOW3G-UEA3   |                                                     |
 |---------------+-----------------------------------------------------|
 | AES128-DOCSIS | DOCSIS-CRC32                                        |
+|---------------+-----------------------------------------------------|
+| CHACHA20 AEAD | POLY1305 AEAD                                       |
 +---------------+-----------------------------------------------------+
 ```
 
@@ -298,7 +302,7 @@ For more build options and their explanation run:
 `> nmake /f win_x64.mak help`
 
 FreeBSD (64-bit only)
--------------------
+---------------------
 
 Required tools:  
 - GNU make  

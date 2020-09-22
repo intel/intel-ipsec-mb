@@ -270,6 +270,7 @@ typedef enum {
         IMB_CIPHER_KASUMI_UEA1_BITLEN,/* 128-UEA1 (3GPP) */
         IMB_CIPHER_CBCS_1_9,          /* MPEG CENC (ISO 23001-7) */
         IMB_CIPHER_CHACHA20,
+        IMB_CIPHER_CHACHA20_POLY1305, /* AEAD CHACHA20 */
         IMB_CIPHER_NUM
 } JOB_CIPHER_MODE;
 
@@ -307,6 +308,7 @@ typedef enum {
         IMB_AUTH_AES_GMAC_256,       /* AES-GMAC (256-bit key) */
         IMB_AUTH_AES_CMAC_256,       /* AES256-CMAC */
         IMB_AUTH_POLY1305,           /* POLY1305 */
+        IMB_AUTH_CHACHA20_POLY1305,  /* AEAD POLY1305 */
         IMB_AUTH_NUM
 } JOB_HASH_ALG;
 

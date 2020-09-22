@@ -198,6 +198,7 @@ fill_in_job(struct IMB_JOB *job,
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AUTH_AES_CMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
+                16, /* IMB_AUTH_CHACHA20_POLY1305 */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         const uint64_t msg_len_to_cipher = 32;
@@ -287,6 +288,11 @@ fill_in_job(struct IMB_JOB *job,
                 job->iv_len_in_bytes = 8;
                 break;
         case IMB_CIPHER_CHACHA20:
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 12;
+                break;
+        case IMB_CIPHER_CHACHA20_POLY1305:
+                job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
                 job->key_len_in_bytes = UINT64_C(32);
                 job->iv_len_in_bytes = 12;
                 break;
@@ -390,6 +396,14 @@ fill_in_job(struct IMB_JOB *job,
                 break;
         case IMB_AUTH_POLY1305:
                 job->u.POLY1305._key = dust_bin;
+                job->auth_tag_output_len_in_bytes = 16;
+                break;
+        case IMB_AUTH_CHACHA20_POLY1305:
+                job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305;
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 12;
+                job->u.CHACHA20_POLY1305.aad = dust_bin;
+                job->u.CHACHA20_POLY1305.aad_len_in_bytes = 12;
                 job->auth_tag_output_len_in_bytes = 16;
                 break;
         default:
@@ -598,6 +612,13 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_POLY1305)
                                         continue;
 
+                                /* skip disallowed combos */
+                                if ((hash == IMB_AUTH_CHACHA20_POLY1305 &&
+                                     cipher != IMB_CIPHER_CHACHA20_POLY1305) ||
+                                    (hash != IMB_AUTH_CHACHA20_POLY1305 &&
+                                     cipher == IMB_CIPHER_CHACHA20_POLY1305))
+                                        continue;
+
                                 fill_in_job(&template_job, cipher, dir,
                                             hash, order);
                                 switch (hash) {
@@ -616,9 +637,15 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         template_job.msg_len_to_hash_in_bytes =
                                                 (20008 / 8); /* 2501 bytes */
                                         break;
+                                case IMB_AUTH_CHACHA20_POLY1305:
+                                        /* CHACHA20 limit (2^32 - 1) x 64 */
+                                        template_job.msg_len_to_hash_in_bytes =
+                                                ((1ULL << 38) - 64) + 1;
+                                        break;
                                 default:
                                         template_job.msg_len_to_hash_in_bytes =
                                                 ((1 << 16) - 1);
+                                        break;
                                 }
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                   TEST_AUTH_MSG_LEN_GT_MAX,
@@ -888,14 +915,16 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 fill_in_job(job, cipher, dir, hash, order);
 
                                 switch (cipher) {
-                                /* skip ciphers that have no max limit */
+                                        /* skip ciphers with no max limit */
                                 case IMB_CIPHER_GCM:
                                 case IMB_CIPHER_CUSTOM:
                                 case IMB_CIPHER_CNTR:
                                 case IMB_CIPHER_CNTR_BITLEN:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_NULL:
-                                case IMB_CIPHER_CHACHA20:
+                                        continue;
+                                        /* not allowed with null hash */
+                                case IMB_CIPHER_CHACHA20_POLY1305:
                                         continue;
                                 case IMB_CIPHER_ZUC_EEA3:
                                         /* max is 8188 bytes */
@@ -916,10 +945,16 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         job->msg_len_to_cipher_in_bytes =
                                                 ((1ULL << 60) + 1);
                                         break;
+                                case IMB_CIPHER_CHACHA20:
+                                        /* Chacha20 limit (2^32 - 1) x 64 */
+                                        job->msg_len_to_cipher_in_bytes =
+                                                ((1ULL << 38) - 64) + 1;
+                                        break;
                                 default:
                                         /* most MB max len is 2^16 - 2 */
                                         job->msg_len_to_cipher_in_bytes =
                                                 ((1 << 16) - 1);
+                                        break;
                                 }
                                 if (!is_submit_invalid(mb_mgr, job,
                                                        TEST_CIPH_MSG_LEN_GT_MAX,

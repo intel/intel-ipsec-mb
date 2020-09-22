@@ -20,11 +20,13 @@ Library
   GFNI instructions.
 - AES-XCBC-128 implementation for AVX512 (VAES)
 - AES-CBCS-128 implementation for SSE and AVX (1:9 crypt:skip pattern)
-- Chacha20 scalar implementation
-- Chacha20 AVX512 implementation
+- Chacha20 SSE, AVX and AVX512 implementations
 - Automatic multi-buffer manager initialization API added
 - Error handling API added
 - Build with SAFE_DATA and SAFE_PARAM options by default
+- Poly1305 scalar implementation
+- AEAD Chacha20-Poly1305 implementation
+- CRC implementation for RNC, LTE, WiMAX, SCTP, Ethernet and CRC16 CCIT 
 
 Test Applications
 - CCM tests extended to test AES-CCM-256
@@ -35,6 +37,9 @@ Test Applications
 - AES-CBCS-128 tests added to test app
 - AES-CBCS-128 support added to xvalidation app
 - Chacha20 tests added to test and xvalidation app
+- Poly1305 tests added to test and xvalidation app
+- AEAD Chacha20-Poly1305 tests added to test and xvalidation app
+- CRC tests added
 - Automatic architecture detection done by default
 
 Performance Application
@@ -42,6 +47,8 @@ Performance Application
 - AES-CMAC-256 support added
 - AES-CBCS-128 support added
 - Chacha20 support added
+- Poly1305 support added
+- AEAD Chacha20-Poly1305 support added
 
 
 v0.54 April 2020

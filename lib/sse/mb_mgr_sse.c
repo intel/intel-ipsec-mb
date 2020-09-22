@@ -32,18 +32,19 @@
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_sse
 
 #include "intel-ipsec-mb.h"
-#include "ipsec_ooo_mgr.h"
+#include "include/ipsec_ooo_mgr.h"
 #include "include/kasumi_internal.h"
 #include "include/zuc_internal.h"
 #include "include/snow3g.h"
 #include "include/gcm.h"
+#include "include/chacha20_poly1305.h"
 
-#include "save_xmms.h"
-#include "asm.h"
+#include "include/save_xmms.h"
+#include "include/asm.h"
 #include "include/des.h"
-#include "cpu_feature.h"
-#include "noaesni.h"
-#include "error.h"
+#include "include/cpu_feature.h"
+#include "include/noaesni.h"
+#include "include/error.h"
 
 IMB_JOB *submit_job_aes128_enc_sse(MB_MGR_AES_OOO *state,
                                         IMB_JOB *job);
@@ -316,6 +317,7 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 #define AES_CBCS_1_9_DEC_128           aes_cbcs_1_9_dec_128_sse
 
 #define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_sse
+#define SUBMIT_JOB_CHACHA20_POLY1305 aead_chacha20_poly1305_sse
 
 /* ====================================================================== */
 
