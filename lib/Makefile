@@ -241,7 +241,8 @@ asm_generic_lib_objs := \
 	constant_lookup.o \
 	crc32_refl_const.o \
 	crc32_const.o \
-	poly1305.o
+	poly1305.o \
+	chacha20_poly1305.o
 
 #
 # List of ASM modules (no-aesni directory)

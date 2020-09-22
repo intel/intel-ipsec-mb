@@ -428,6 +428,11 @@ typedef struct IMB_JOB {
                 struct _POLY1305_specific_fields {
                         const void *_key; /* pointer to 32 byte key */
                 } POLY1305;
+                struct _CHACHA20_POLY1305_specific_fields {
+                        /* Additional Authentication Data (AAD) */
+                        const void *aad;
+                        uint64_t aad_len_in_bytes;    /* Length of AAD */
+                } CHACHA20_POLY1305;
         } u;
 
         JOB_STS status;
