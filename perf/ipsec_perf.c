@@ -232,6 +232,7 @@ enum test_cipher_mode_e {
         TEST_SNOW3G_UEA2,
         TEST_KASUMI_UEA1,
         TEST_CHACHA20,
+        TEST_AEAD_CHACHA20,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -261,6 +262,7 @@ enum test_hash_alg_e {
         TEST_AES_GMAC_192,
         TEST_AES_GMAC_256,
         TEST_HASH_POLY1305,
+        TEST_AEAD_POLY1305,
         TEST_NUM_HASH_TESTS
 };
 
@@ -703,6 +705,14 @@ struct str_value_mapping aead_algo_str_map[] = {
                         .aes_key_size = 0
                 }
         },
+        {
+                .name = "chacha20-poly1305",
+                .values.job_params = {
+                        .cipher_mode = TEST_AEAD_CHACHA20,
+                        .hash_alg = TEST_AEAD_POLY1305,
+                        .aes_key_size = IMB_KEY_AES_256_BYTES
+                }
+        },
 };
 
 struct str_value_mapping cipher_dir_str_map[] = {
@@ -760,6 +770,7 @@ const uint32_t auth_tag_length_bytes[] = {
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* AES_CMAC_256 */
                 16, /* POLY1305 */
+                16, /* AEAD CHACHA20-POLY1305 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1304,6 +1315,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_CHACHA20:
                 c_mode = IMB_CIPHER_CHACHA20;
                 break;
+        case TEST_AEAD_CHACHA20:
+                c_mode = IMB_CIPHER_CHACHA20_POLY1305;
+                break;
         default:
                 break;
         }
@@ -1360,6 +1374,8 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
                         get_key_pointer(index, p_keys);
                 job->enc_keys =
                         job->dec_keys = ks_ptr;
+        } else if (job->cipher_mode == IMB_CIPHER_CHACHA20_POLY1305) {
+                job->u.CHACHA20_POLY1305.aad = job->src;
         } else {
                 job->enc_keys = job->dec_keys =
                         (const uint32_t *) get_key_pointer(index,
@@ -1527,6 +1543,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.POLY1305._key = k1_expanded;
                 job_template.hash_alg = IMB_AUTH_POLY1305;
                 break;
+        case TEST_AEAD_POLY1305:
+                job_template.hash_alg = IMB_AUTH_CHACHA20_POLY1305;
+                break;
         case TEST_PON_CRC_BIP:
                 job_template.hash_alg = IMB_AUTH_PON_CRC_BIP;
                 job_template.cipher_start_src_offset_in_bytes = 8;
@@ -1653,6 +1672,15 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.iv_len_in_bytes = 0;
         else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20)
                 job_template.iv_len_in_bytes = 12;
+        else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20_POLY1305) {
+                job_template.hash_start_src_offset_in_bytes = 0;
+                job_template.cipher_start_src_offset_in_bytes = 0;
+                job_template.enc_keys = k1_expanded;
+                job_template.dec_keys = k1_expanded;
+                job_template.u.CHACHA20_POLY1305.aad_len_in_bytes =
+                        params->aad_size;
+                job_template.iv_len_in_bytes = 12;
+        }
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
@@ -2206,7 +2234,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "CBCS_1_9", "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES",
                 "DOCDES+4", "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR",
                 "ZUC_EEA3", "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN",
-                "CHACHA20"
+                "CHACHA20", "CHACHA20_AEAD"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
@@ -2216,7 +2244,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "MD5", "CMAC", "CMAC_BITLEN", "CMAC_256", "NULL_HASH",
                 "CRC32", "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN",
                 "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1", "GMAC-128",
-                "GMAC-192", "GMAC-256", "POLY1305"
+                "GMAC-192", "GMAC-256", "POLY1305", "POLY1305_AEAD"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
