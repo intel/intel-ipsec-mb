@@ -168,6 +168,36 @@ detect_arch(int *p_do_aesni_emu, int *p_do_sse, int *p_do_avx,
         free_mb_mgr(p_mgr);
 }
 
+static const char *
+get_component(const IMB_MGR *p_mgr, IMB_ARCH arch)
+{
+        uint64_t features = p_mgr->features;
+
+        switch (arch) {
+        case IMB_ARCH_NOAESNI:
+                return "NO-AESNI";
+        case IMB_ARCH_SSE:
+                if ((features & IMB_FEATURE_GFNI) &&
+                    (features & IMB_FEATURE_SHANI))
+                        return "SSE-SHANI-GFNI";
+                if (features & IMB_FEATURE_SHANI)
+                        return "SSE-SHANI";
+                return "SSE";
+        case IMB_ARCH_AVX:
+                return "AVX";
+        case IMB_ARCH_AVX2:
+                return "AVX2";
+        case IMB_ARCH_AVX512:
+                if ((features & IMB_FEATURE_VAES) &&
+                    (features & IMB_FEATURE_GFNI) &&
+                    (features & IMB_FEATURE_VPCLMULQDQ))
+                        return "AVX512-VAES-GFNI-VCLMUL";
+                return "AVX512";
+        default:
+                return "Invalid component";
+        }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -228,6 +258,7 @@ main(int argc, char **argv)
 
         for (i = 0; i < ARCH_NUMOF; i++) {
                 const enum arch_type atype = arch_type_tab[i];
+                const char *component = NULL;
 
                 switch (atype) {
                 case ARCH_SSE:
@@ -239,6 +270,7 @@ main(int argc, char **argv)
                                 return EXIT_FAILURE;
                         }
                         init_mb_mgr_sse(p_mgr);
+                        component = get_component(p_mgr, IMB_ARCH_SSE);
                         break;
                 case ARCH_AVX:
                         if (!do_avx)
@@ -249,6 +281,7 @@ main(int argc, char **argv)
                                 return EXIT_FAILURE;
                         }
                         init_mb_mgr_avx(p_mgr);
+                        component = get_component(p_mgr, IMB_ARCH_AVX);
                         break;
                 case ARCH_AVX2:
                         if (!do_avx2)
@@ -259,6 +292,7 @@ main(int argc, char **argv)
                                 return EXIT_FAILURE;
                         }
                         init_mb_mgr_avx2(p_mgr);
+                        component = get_component(p_mgr, IMB_ARCH_AVX2);
                         break;
                 case ARCH_AVX512:
                         if (!do_avx512)
@@ -269,6 +303,7 @@ main(int argc, char **argv)
                                 return EXIT_FAILURE;
                         }
                         init_mb_mgr_avx512(p_mgr);
+                        component = get_component(p_mgr, IMB_ARCH_AVX512);
                         break;
                 case ARCH_NO_AESNI:
                         if (!do_aesni_emu)
@@ -279,13 +314,14 @@ main(int argc, char **argv)
                                 return EXIT_FAILURE;
                         }
                         init_mb_mgr_sse(p_mgr);
+                        component = get_component(p_mgr, IMB_ARCH_NOAESNI);
                         break;
                 default:
                         printf("Architecture type '%d' error!\n", (int) atype);
                         continue;
                 }
-
-                printf("Testing %s interface\n", arch_str_tab[i]);
+                printf("Testing %s interface [%s]\n",
+                       arch_str_tab[i], component);
 
                 errors += known_answer_test(p_mgr);
                 errors += do_test(p_mgr);
