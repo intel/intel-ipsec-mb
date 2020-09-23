@@ -45,12 +45,15 @@ enum {
       TEST_AUTH_SRC_NULL = 100,
       TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
       TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
+      TEST_AUTH_MSG_LEN_ZERO,
+      TEST_AUTH_MSG_LEN_GT_MAX,
       TEST_CIPH_SRC_NULL = 200,
       TEST_CIPH_DST_NULL,
       TEST_CIPH_IV_NULL,
       TEST_CIPH_ENC_KEY_NULL,
       TEST_CIPH_DEC_KEY_NULL,
       TEST_CIPH_MSG_LEN_ZERO,
+      TEST_CIPH_MSG_LEN_GT_MAX
 };
 
 /*
@@ -177,7 +180,7 @@ fill_in_job(struct IMB_JOB *job,
                 0,  /* IMB_AUTH_NULL */
                 16, /* IMB_AUTH_AES_GMAC */
                 0,  /* IMB_AUTH_CUSTOM */
-                16,  /* IMB_AUTH_AES_CCM */
+                16, /* IMB_AUTH_AES_CCM */
                 16, /* IMB_AUTH_AES_CMAC */
                 20, /* IMB_AUTH_SHA_1 */
                 28, /* IMB_AUTH_SHA_224 */
@@ -293,7 +296,6 @@ fill_in_job(struct IMB_JOB *job,
 
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
-        case IMB_AUTH_AES_XCBC:
         case IMB_AUTH_MD5:
         case IMB_AUTH_HMAC_SHA_224:
         case IMB_AUTH_HMAC_SHA_256:
@@ -305,6 +307,11 @@ fill_in_job(struct IMB_JOB *job,
         case IMB_AUTH_SHA_384:
         case IMB_AUTH_SHA_512:
         case IMB_AUTH_NULL:
+                break;
+        case IMB_AUTH_AES_XCBC:
+                job->u.XCBC._k1_expanded = (const uint32_t *) dust_bin;
+                job->u.XCBC._k2 = dust_bin;
+                job->u.XCBC._k3 = dust_bin;
                 break;
         case IMB_AUTH_CUSTOM:
                 job->hash_func = dummy_cipher_hash_func;
@@ -572,6 +579,87 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 printf(".");
                         }
 
+        /*
+         * AUTH_MSG_LEN > MAX
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
+                        for (hash = IMB_AUTH_HMAC_SHA_1;
+                             hash < IMB_AUTH_NUM; hash++) {
+                                /* skip algorithms with no max length limit */
+                                if (hash == IMB_AUTH_NULL ||
+                                    hash == IMB_AUTH_CUSTOM ||
+                                    hash == IMB_AUTH_PON_CRC_BIP ||
+                                    hash == IMB_AUTH_AES_GMAC ||
+                                    hash == IMB_AUTH_AES_GMAC_128 ||
+                                    hash == IMB_AUTH_AES_GMAC_192 ||
+                                    hash == IMB_AUTH_AES_GMAC_256 ||
+                                    hash == IMB_AUTH_POLY1305)
+                                        continue;
+
+                                fill_in_job(&template_job, cipher, dir,
+                                            hash, order);
+                                switch (hash) {
+                                case IMB_AUTH_ZUC_EIA3_BITLEN:
+                                        /* (2^32) - 32 is max */
+                                        template_job.msg_len_to_hash_in_bytes =
+                                                ((1ULL << 32) - 31);
+                                        break;
+                                case IMB_AUTH_SNOW3G_UIA2_BITLEN:
+                                        /* (2^32) is max */
+                                        template_job.msg_len_to_hash_in_bits =
+                                                ((1ULL << 32) + 1);
+                                        break;
+                                case IMB_AUTH_KASUMI_UIA1:
+                                        /* 20000 bits (2500 bytes) is max */
+                                        template_job.msg_len_to_hash_in_bytes =
+                                                (20008 / 8); /* 2501 bytes */
+                                        break;
+                                default:
+                                        template_job.msg_len_to_hash_in_bytes =
+                                                ((1 << 16) - 1);
+                                }
+                                if (!is_submit_invalid(mb_mgr, &template_job,
+                                                  TEST_AUTH_MSG_LEN_GT_MAX,
+                                                  IMB_ERR_JOB_AUTH_LEN))
+                                        return 1;
+                                printf(".");
+                        }
+
+        /*
+         * AUTH_MSG_LEN = 0
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
+                        for (hash = IMB_AUTH_HMAC_SHA_1;
+                             hash < IMB_AUTH_NUM; hash++) {
+
+                                switch (hash) {
+                                /* skip algos with that accept 0 len */
+                                case IMB_AUTH_HMAC_SHA_1:
+                                case IMB_AUTH_HMAC_SHA_224:
+                                case IMB_AUTH_HMAC_SHA_256:
+                                case IMB_AUTH_HMAC_SHA_384:
+                                case IMB_AUTH_HMAC_SHA_512:
+                                case IMB_AUTH_MD5:
+                                case IMB_AUTH_KASUMI_UIA1:
+                                        fill_in_job(&template_job, cipher, dir,
+                                                    hash, order);
+                                        template_job.msg_len_to_hash_in_bytes
+                                                = 0;
+                                        break;
+                                default:
+                                        continue;
+                                }
+                                if (!is_submit_invalid(mb_mgr, &template_job,
+                                                       TEST_AUTH_MSG_LEN_ZERO,
+                                                       IMB_ERR_JOB_AUTH_LEN))
+                                        return 1;
+                                printf(".");
+                        }
+
         /* clean up */
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
@@ -751,7 +839,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 }
 
         /*
-         * Zero msg length test
+         * CIPHER_MSG_LEN = 0
          */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
@@ -780,6 +868,64 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                                          IMB_ERR_JOB_CIPH_LEN))
                                                 return 1;
                                 }
+                                printf(".");
+                        }
+
+        /*
+         * CIPHER_MSG_LEN > MAX
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
+                        for (cipher = IMB_CIPHER_CBC;
+                             cipher < IMB_CIPHER_NUM; cipher++) {
+                                if (cipher == IMB_CIPHER_NULL ||
+                                    cipher == IMB_CIPHER_CUSTOM)
+                                        continue;
+
+                                IMB_JOB *job = &template_job;
+
+                                fill_in_job(job, cipher, dir, hash, order);
+
+                                switch (cipher) {
+                                /* skip ciphers that have no max limit */
+                                case IMB_CIPHER_GCM:
+                                case IMB_CIPHER_CUSTOM:
+                                case IMB_CIPHER_CNTR:
+                                case IMB_CIPHER_CNTR_BITLEN:
+                                case IMB_CIPHER_PON_AES_CNTR:
+                                case IMB_CIPHER_NULL:
+                                case IMB_CIPHER_CHACHA20:
+                                        continue;
+                                case IMB_CIPHER_ZUC_EEA3:
+                                        /* max is 8188 bytes */
+                                        job->msg_len_to_cipher_in_bytes = 8190;
+                                        break;
+                                case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
+                                        /* max is 2^32 bits */
+                                        job->msg_len_to_cipher_in_bits =
+                                                ((1ULL << 32));
+                                        break;
+                                case IMB_CIPHER_KASUMI_UEA1_BITLEN:
+                                        /* max is 20000 bits */
+                                        job->msg_len_to_cipher_in_bits =
+                                                20008;
+                                        break;
+                                case IMB_CIPHER_CBCS_1_9:
+                                        /* max is 2^60 bytes */
+                                        job->msg_len_to_cipher_in_bytes =
+                                                ((1ULL << 60) + 1);
+                                        break;
+                                default:
+                                        /* most MB max len is 2^16 - 2 */
+                                        job->msg_len_to_cipher_in_bytes =
+                                                ((1 << 16) - 1);
+                                }
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_CIPH_MSG_LEN_GT_MAX,
+                                                       IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
                                 printf(".");
                         }
 
