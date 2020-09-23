@@ -388,7 +388,7 @@ test_xcbc(struct IMB_MGR *mb_mgr,
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_NULL;
                 job->hash_alg = IMB_AUTH_AES_XCBC;
-                job->msg_len_to_hash_in_bits = vec->len;
+                job->msg_len_to_hash_in_bytes = vec->len;
                 job->u.XCBC._k1_expanded = k1_exp;
                 job->u.XCBC._k2 = k2;
                 job->u.XCBC._k3 = k3;
@@ -439,7 +439,7 @@ test_xcbc(struct IMB_MGR *mb_mgr,
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
                 job->cipher_mode = IMB_CIPHER_NULL;
                 job->hash_alg = IMB_AUTH_AES_XCBC;
-                job->msg_len_to_hash_in_bits = vec->len;
+                job->msg_len_to_hash_in_bytes = vec->len;
                 job->u.XCBC._k1_expanded = k1_exp;
                 job->u.XCBC._k2 = k2;
                 job->u.XCBC._k3 = k3;
