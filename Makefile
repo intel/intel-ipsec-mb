@@ -51,8 +51,8 @@ uninstall:
 help:
 	$(MAKE) -C lib help
 
-README:
-	pandoc -f markdown -t plain $@.md -o $@
+README: README.md
+	pandoc -f markdown -t plain $< -o $@
 
 .PHONY: TAGS
 TAGS:
