@@ -38,8 +38,12 @@ constants:
 dd      0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
 
 align 16
-add_1:
+dword_1:
 dd      0x00000001, 0x00000000, 0x00000000, 0x00000000
+
+align 16
+dword_2:
+dd      0x00000002, 0x00000000, 0x00000000, 0x00000000
 
 align 16
 shuf_mask_rotl8:
@@ -108,6 +112,44 @@ section .text
 
 %endmacro
 
+%macro quarter_round_x2 9
+%define %%A_L    %1 ;; [in/out] XMM register containing value A of all 4 columns
+%define %%B_L    %2 ;; [in/out] XMM register containing value B of all 4 columns
+%define %%C_L    %3 ;; [in/out] XMM register containing value C of all 4 columns
+%define %%D_L    %4 ;; [in/out] XMM register containing value D of all 4 columns
+%define %%A_H    %5 ;; [in/out] XMM register containing value A of all 4 columns
+%define %%B_H    %6 ;; [in/out] XMM register containing value B of all 4 columns
+%define %%C_H    %7 ;; [in/out] XMM register containing value C of all 4 columns
+%define %%D_H    %8 ;; [in/out] XMM register containing value D of all 4 columns
+%define %%XTMP   %9 ;; [clobbered] Temporary XMM register
+
+        paddd   %%A_L, %%B_L
+        paddd   %%A_H, %%B_H
+        pxor    %%D_L, %%A_L
+        pxor    %%D_H, %%A_H
+        PROLD   %%D_L, 16, %%XTMP
+        PROLD   %%D_H, 16, %%XTMP
+        paddd   %%C_L, %%D_L
+        paddd   %%C_H, %%D_H
+        pxor    %%B_L, %%C_L
+        pxor    %%B_H, %%C_H
+        PROLD   %%B_L, 12, %%XTMP
+        PROLD   %%B_H, 12, %%XTMP
+        paddd   %%A_L, %%B_L
+        paddd   %%A_H, %%B_H
+        pxor    %%D_L, %%A_L
+        pxor    %%D_H, %%A_H
+        PROLD   %%D_L, 8, %%XTMP
+        PROLD   %%D_H, 8, %%XTMP
+        paddd   %%C_L, %%D_L
+        paddd   %%C_H, %%D_H
+        pxor    %%B_L, %%C_L
+        pxor    %%B_H, %%C_H
+        PROLD   %%B_L, 7, %%XTMP
+        PROLD   %%B_H, 7, %%XTMP
+
+%endmacro
+
 ;;
 ;; Rotates the registers to prepare the data
 ;; from column round to diagonal round
@@ -139,33 +181,64 @@ section .text
 %endmacro
 
 ;;
-;; Generates 64 bytes of keystream
+;; Generates 64 or 128 bytes of keystream
+;; States IN A-C are the same for first 64 and last 64 bytes
+;; State IN D differ because of the different block count
 ;;
-%macro generate_ks 9
-%define %%STATE_IN_A    %1  ;; [in] XMM containing state A
-%define %%STATE_IN_B    %2  ;; [in] XMM containing state B
-%define %%STATE_IN_C    %3  ;; [in] XMM containing state C
-%define %%STATE_IN_D    %4  ;; [in] XMM containing state D
-%define %%A_KS0         %5  ;; [out] XMM to contain keystream 0-15 bytes
-%define %%B_KS1         %6  ;; [out] XMM to contain keystream 0-15 bytes
-%define %%C_KS2         %7  ;; [out] XMM to contain keystream 0-15 bytes
-%define %%D_KS3         %8  ;; [out] XMM to contain keystream 0-15 bytes
-%define %%XTMP          %9  ;; [clobbered] Temporary XMM register
-        movdqa  %%A_KS0, %%STATE_IN_A
-        movdqa  %%B_KS1, %%STATE_IN_B
-        movdqa  %%C_KS2, %%STATE_IN_C
-        movdqa  %%D_KS3, %%STATE_IN_D
+%macro generate_ks 9-14
+%define %%STATE_IN_A      %1  ;; [in] XMM containing state A
+%define %%STATE_IN_B      %2  ;; [in] XMM containing state B
+%define %%STATE_IN_C      %3  ;; [in] XMM containing state C
+%define %%STATE_IN_D_L    %4  ;; [in] XMM containing state D (low block count)
+%define %%A_L_KS0         %5  ;; [out] XMM to contain keystream 0-15 bytes
+%define %%B_L_KS1         %6  ;; [out] XMM to contain keystream 16-31 bytes
+%define %%C_L_KS2         %7  ;; [out] XMM to contain keystream 32-47 bytes
+%define %%D_L_KS3         %8  ;; [out] XMM to contain keystream 48-63 bytes
+%define %%XTMP            %9  ;; [clobbered] Temporary XMM register
+%define %%STATE_IN_D_H    %10  ;; [in] XMM containing state D (high block count)
+%define %%A_H_KS4         %11  ;; [out] XMM to contain keystream 64-79 bytes
+%define %%B_H_KS5         %12  ;; [out] XMM to contain keystream 80-95 bytes
+%define %%C_H_KS6         %13  ;; [out] XMM to contain keystream 96-111 bytes
+%define %%D_H_KS7         %14  ;; [out] XMM to contain keystream 112-127 bytes
+
+        movdqa  %%A_L_KS0, %%STATE_IN_A
+        movdqa  %%B_L_KS1, %%STATE_IN_B
+        movdqa  %%C_L_KS2, %%STATE_IN_C
+        movdqa  %%D_L_KS3, %%STATE_IN_D_L
+%if %0 == 14
+        movdqa  %%A_H_KS4, %%STATE_IN_A
+        movdqa  %%B_H_KS5, %%STATE_IN_B
+        movdqa  %%C_H_KS6, %%STATE_IN_C
+        movdqa  %%D_H_KS7, %%STATE_IN_D_H
+%endif
 %rep 10
-        quarter_round %%A_KS0, %%B_KS1, %%C_KS2, %%D_KS3, %%XTMP
-        column_to_diag %%B_KS1, %%C_KS2, %%D_KS3
-        quarter_round %%A_KS0, %%B_KS1, %%C_KS2, %%D_KS3, %%XTMP
-        diag_to_column %%B_KS1, %%C_KS2, %%D_KS3
+%if %0 == 14
+        quarter_round_x2 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
+                %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7, %%XTMP
+        column_to_diag %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        column_to_diag %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        quarter_round_x2 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
+                %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7, %%XTMP
+        diag_to_column %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        diag_to_column %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+%else
+        quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, %%XTMP
+        column_to_diag %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, %%XTMP
+        diag_to_column %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+%endif
 %endrep
 
-        paddd   %%A_KS0, %%STATE_IN_A
-        paddd   %%B_KS1, %%STATE_IN_B
-        paddd   %%C_KS2, %%STATE_IN_C
-        paddd   %%D_KS3, %%STATE_IN_D
+        paddd   %%A_L_KS0, %%STATE_IN_A
+        paddd   %%B_L_KS1, %%STATE_IN_B
+        paddd   %%C_L_KS2, %%STATE_IN_C
+        paddd   %%D_L_KS3, %%STATE_IN_D_L
+%if %0 == 14
+        paddd   %%A_H_KS4, %%STATE_IN_A
+        paddd   %%B_H_KS5, %%STATE_IN_B
+        paddd   %%C_H_KS6, %%STATE_IN_C
+        paddd   %%D_H_KS7, %%STATE_IN_D_H
+%endif
 %endmacro
 
 align 32
@@ -178,7 +251,7 @@ submit_job_chacha20_enc_dec_sse:
 %define tmp     r11
 %define tmp2    rax
 
-        ; Prepare chacha state from IV, key
+        ; Prepare first 2 chacha states from IV, key
         mov     tmp, [job + _enc_keys]
         movdqu  xmm1, [tmp]          ; Load key bytes 0-15
         movdqu  xmm2, [tmp + 16]     ; Load key bytes 16-31
@@ -189,73 +262,147 @@ submit_job_chacha20_enc_dec_sse:
         pslldq  xmm3, 4
         movdqa  xmm0, [rel constants]
 
+        movdqa  xmm8, xmm3
+
+        por     xmm3, [rel dword_1]
+        por     xmm8, [rel dword_2]
+
         mov     len, [job + _msg_len_to_cipher_in_bytes]
         mov     src, [job + _src]
         add     src, [job + _cipher_start_src_offset_in_bytes]
 
         mov     dst, [job + _dst]
 start_loop:
-        cmp     len, 64
+        cmp     len, 128
         jb      exit_loop
 
-        ; Increment block counter and generate 64 bytes of keystream
-        paddd   xmm3, [rel add_1]
-        generate_ks xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm12
+        ; Generate 128 bytes of keystream
+        generate_ks xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                    xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
 
-        ; Load plaintext
-        movdqu  xmm8,  [src]
-        movdqu  xmm9,  [src + 16]
-        movdqu  xmm10, [src + 32]
-        movdqu  xmm11, [src + 48]
+        ; Load plaintext, XOR with KS and store ciphertext
+        movdqu  xmm14, [src]
+        movdqu  xmm15, [src + 16]
+        pxor    xmm14, xmm4
+        pxor    xmm15, xmm5
+        movdqu  [dst], xmm14
+        movdqu  [dst + 16], xmm15
 
-        ; XOR KS with plaintext and store resulting ciphertext
-        pxor    xmm8,  xmm4
-        pxor    xmm9,  xmm5
-        pxor    xmm10, xmm6
-        pxor    xmm11, xmm7
+        movdqu  xmm14, [src + 16*2]
+        movdqu  xmm15, [src + 16*3]
+        pxor    xmm14, xmm6
+        pxor    xmm15, xmm7
+        movdqu  [dst + 16*2], xmm14
+        movdqu  [dst + 16*3], xmm15
 
-        movdqu [dst], xmm8
-        movdqu [dst + 16], xmm9
-        movdqu [dst + 32], xmm10
-        movdqu [dst + 48], xmm11
+        movdqu  xmm14, [src + 16*4]
+        movdqu  xmm15, [src + 16*5]
+        pxor    xmm14, xmm9
+        pxor    xmm15, xmm10
+        movdqu  [dst + 16*4], xmm14
+        movdqu  [dst + 16*5], xmm15
+
+        movdqu  xmm14, [src + 16*6]
+        movdqu  xmm15, [src + 16*7]
+        pxor    xmm14, xmm11
+        pxor    xmm15, xmm12
+        movdqu  [dst + 16*6], xmm14
+        movdqu  [dst + 16*7], xmm15
+
+        ; Update pointers
+        add     src, 128
+        add     dst, 128
+
+        sub     len, 128
+
+        ; Increment block counters
+        paddd   xmm3, [rel dword_2]
+        paddd   xmm8, [rel dword_2]
+
+        jmp     start_loop
+
+exit_loop:
+
+        cmp     len, 64
+        jbe     gen_64b_only
+
+        ; Generate 128 bytes of keystream
+        generate_ks xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                    xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+
+        ; Load plaintext, XOR with KS and store ciphertext
+        movdqu  xmm14, [src]
+        movdqu  xmm15, [src + 16]
+        pxor    xmm14, xmm4
+        pxor    xmm15, xmm5
+        movdqu  [dst], xmm14
+        movdqu  [dst + 16], xmm15
+
+        movdqu  xmm14, [src + 16*2]
+        movdqu  xmm15, [src + 16*3]
+        pxor    xmm14, xmm6
+        pxor    xmm15, xmm7
+        movdqu  [dst + 16*2], xmm14
+        movdqu  [dst + 16*3], xmm15
 
         ; Update pointers
         add     src, 64
         add     dst, 64
 
         sub     len, 64
+        jz      no_partial_block
 
-        jmp     start_loop
+        jmp     less_equal_64
 
-exit_loop:
+gen_64b_only:
 
-        ; Check if there are partial block (less than 64 bytes)
+        ; Generate 64 bytes of keystream
+        generate_ks xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, xmm12, xmm13
+
+less_equal_64:
         or      len, len
         jz      no_partial_block
 
-        ; Increment block counter and generate 64 bytes of keystream
-        paddd   xmm3, [rel add_1]
-        generate_ks xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm12
+        cmp     len, 64
+        jne     less_than_64
 
+        ; Load plaintext, XOR with KS and store ciphertext
+        movdqu  xmm14, [src]
+        movdqu  xmm15, [src + 16]
+        pxor    xmm14, xmm9
+        pxor    xmm15, xmm10
+        movdqu  [dst], xmm14
+        movdqu  [dst + 16], xmm15
+
+        movdqu  xmm14, [src + 16*2]
+        movdqu  xmm15, [src + 16*3]
+        pxor    xmm14, xmm11
+        pxor    xmm15, xmm12
+        movdqu  [dst + 16*2], xmm14
+        movdqu  [dst + 16*3], xmm15
+
+        jmp     no_partial_block
+
+less_than_64:
         cmp     len, 48
         jb      less_than_48
 
-        ; Load plaintext
-        movdqu  xmm8, [src]
-        movdqu  xmm9, [src + 16]
-        movdqu  xmm10, [src + 32]
+        ; Load plaintext and XOR with keystream
+        movdqu  xmm13, [src]
+        movdqu  xmm14, [src + 16]
+        movdqu  xmm15, [src + 32]
 
-        ; XOR KS with plaintext and store resulting ciphertext
-        pxor    xmm8, xmm4
-        pxor    xmm9, xmm5
-        pxor    xmm10, xmm6
+        pxor    xmm13, xmm9
+        pxor    xmm14, xmm10
+        pxor    xmm15, xmm11
 
-        movdqu [dst], xmm8
-        movdqu [dst + 16], xmm9
-        movdqu [dst + 32], xmm10
+        ; Store resulting ciphertext
+        movdqu [dst], xmm13
+        movdqu [dst + 16], xmm14
+        movdqu [dst + 32], xmm15
 
-        ; Store last KS in xmm4, for partial block
-        movdqu  xmm4, xmm7
+        ; Store last KS in xmm9, for partial block
+        movdqu  xmm9, xmm12
 
         sub     len, 48
         add     src, 48
@@ -266,19 +413,19 @@ less_than_48:
         cmp     len, 32
         jb      less_than_32
 
-        ; Load plaintext
-        movdqu  xmm8, [src]
-        movdqu  xmm9, [src + 16]
+        ; Load plaintext and XOR with keystream
+        movdqu  xmm13, [src]
+        movdqu  xmm14, [src + 16]
 
-        ; XOR KS with plaintext and store resulting ciphertext
-        pxor    xmm8, xmm4
-        pxor    xmm9, xmm5
+        pxor    xmm13, xmm9
+        pxor    xmm14, xmm10
 
-        movdqu [dst], xmm8
-        movdqu [dst + 16], xmm9
+        ; Store resulting ciphertext
+        movdqu [dst], xmm13
+        movdqu [dst + 16], xmm14
 
-        ; Store last KS in xmm4, for partial block
-        movdqu  xmm4, xmm6
+        ; Store last KS in xmm9, for partial block
+        movdqu  xmm9, xmm11
 
         sub     len, 32
         add     src, 32
@@ -290,16 +437,16 @@ less_than_32:
         cmp     len, 16
         jb      check_partial
 
-        ; Load plaintext
-        movdqu  xmm8, [src]
+        ; Load plaintext and XOR with keystream
+        movdqu  xmm13, [src]
 
-        ; XOR KS with plaintext and store resulting ciphertext
-        pxor    xmm8, xmm4
+        pxor    xmm13, xmm9
 
-        movdqu [dst], xmm8
+        ; Store resulting ciphertext
+        movdqu [dst], xmm13
 
-        ; Store last KS in xmm4, for partial block
-        movdqu  xmm4, xmm5
+        ; Store last KS in xmm9, for partial block
+        movdqu  xmm9, xmm10
 
         sub     len, 16
         add     src, 16
@@ -313,7 +460,7 @@ check_partial:
         simd_load_sse_15_1 xmm8, src, len
 
         ; XOR KS with plaintext and store resulting ciphertext
-        pxor    xmm8, xmm4
+        pxor    xmm8, xmm9
 
         simd_store_sse_15 dst, xmm8, len, tmp, tmp2
 
