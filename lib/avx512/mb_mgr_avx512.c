@@ -962,6 +962,14 @@ init_mb_mgr_avx512(IMB_MGR *state)
         unsigned int j, vaes_support = 0;
         uint8_t *p;
         size_t size;
+
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
+#endif
+
         MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
@@ -993,12 +1001,6 @@ init_mb_mgr_avx512(IMB_MGR *state)
         /* reset error status */
         imb_set_errno(state, 0);
 
-#ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return;
-        }
-#endif
         state->features = cpu_feature_adjust(state->flags,
                                              cpu_feature_detect());
 
