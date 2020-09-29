@@ -498,22 +498,16 @@ submit_job_chacha20_enc_dec_sse:
         movdqa  xmm3, [rel constants3]
 
         ; Broadcast 8 dwords from key into XMM4-11
-        movd    xmm4, [keys]
-        movd    xmm5, [keys + 4]
-        pshufd  xmm4, xmm4, 0
-        pshufd  xmm5, xmm5, 0
-        movd    xmm6, [keys + 8]
-        movd    xmm7, [keys + 12]
-        pshufd  xmm6, xmm6, 0
-        pshufd  xmm7, xmm7, 0
-        movd    xmm8, [keys + 16]
-        movd    xmm9, [keys + 20]
-        pshufd  xmm8, xmm8, 0
-        pshufd  xmm9, xmm9, 0
-        movd    xmm10, [keys + 24]
-        movd    xmm11, [keys + 28]
-        pshufd  xmm10, xmm10, 0
-        pshufd  xmm11, xmm11, 0
+        movdqu  xmm12, [keys]
+        movdqu  xmm15, [keys + 16]
+        pshufd  xmm4, xmm12, 0x0
+        pshufd  xmm5, xmm12, 0x55
+        pshufd  xmm6, xmm12, 0xAA
+        pshufd  xmm7, xmm12, 0xFF
+        pshufd  xmm8, xmm15, 0x0
+        pshufd  xmm9, xmm15, 0x55
+        pshufd  xmm10, xmm15, 0xAA
+        pshufd  xmm11, xmm15, 0xFF
 
         ; Broadcast 3 dwords from IV into XMM13-15
         movd    xmm13, [iv]
