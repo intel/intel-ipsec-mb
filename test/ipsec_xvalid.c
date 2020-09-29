@@ -1887,7 +1887,8 @@ process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                          * which are non-multiple of block size
                          */
                         if (params->cipher_mode == IMB_CIPHER_CBC ||
-                            params->cipher_mode == IMB_CIPHER_ECB)
+                            params->cipher_mode == IMB_CIPHER_ECB ||
+                            params->cipher_mode == IMB_CIPHER_CBCS_1_9)
                                 if ((buf_size % AES_BLOCK_SIZE)  != 0)
                                         continue;
 
