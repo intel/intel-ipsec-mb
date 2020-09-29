@@ -104,11 +104,11 @@ section .text
 
 ;; 4x4 32-bit transpose function
 %macro TRANSPOSE4_U32 6
-%define %%r0 %1 ;; [in/out] Input first row / output first column
+%define %%r0 %1 ;; [in/out] Input first row / output third column
 %define %%r1 %2 ;; [in/out] Input second row / output second column
-%define %%r2 %3 ;; [in/out] Input third row / output third column
+%define %%r2 %3 ;; [in/clobbered] Input third row
 %define %%r3 %4 ;; [in/out] Input fourth row / output fourth column
-%define %%t0 %5 ;; [clobbered] Temporary XMM register
+%define %%t0 %5 ;; [out] Temporary XMM register / output first column
 %define %%t1 %6 ;; [clobbered] Temporary XMM register
 
         movdqa  %%t0, %%r0
@@ -122,10 +122,8 @@ section .text
         shufps	%%r1, %%t1, 0xDD	; r1 = {d1 c1 b1 a1}
         movdqa  %%r3, %%r0
         shufps	%%r3, %%r2, 0xDD	; r3 = {d3 c3 b3 a3}
-        shufps	%%r0, %%r2, 0x88	; r2 = {d2 c2 b2 a2}
-        movdqa  %%r2, %%r0
-        shufps	%%t0, %%t1, 0x88	; r0 = {d0 c0 b0 a0}
-        movdqa  %%r0, %%t0
+        shufps	%%r0, %%r2, 0x88	; r0 = {d2 c2 b2 a2}
+        shufps	%%t0, %%t1, 0x88	; t0 = {d0 c0 b0 a0}
 %endmacro
 
 ; Rotate dwords on a XMM registers to the left N_BITS
@@ -554,18 +552,20 @@ start_loop:
         ; Transpose to get 0-63 bytes of KS
         TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm14, xmm15
 
-        movdqu  xmm14, [src + off]
+        ; xmm14, xmm1, xmm0, xmm3
+        ; xmm2, xmm15 free to use
+        movdqu  xmm2, [src + off]
         movdqu  xmm15, [src + off + 16*4]
-        pxor    xmm0, xmm14
+        pxor    xmm14, xmm2
         pxor    xmm1, xmm15
-        movdqu  [dst + off], xmm0
+        movdqu  [dst + off], xmm14
         movdqu  [dst + off + 16*4], xmm1
 
-        movdqu  xmm14, [src + off + 16*8]
+        movdqu  xmm2, [src + off + 16*8]
         movdqu  xmm15, [src + off + 16*12]
-        pxor    xmm2, xmm14
+        pxor    xmm0, xmm2
         pxor    xmm3, xmm15
-        movdqu  [dst + off + 16*8], xmm2
+        movdqu  [dst + off + 16*8], xmm0
         movdqu  [dst + off + 16*12], xmm3
 
         ; Restore registers and use xmm0, xmm1 now that they are free
@@ -575,52 +575,58 @@ start_loop:
         ; Transpose to get bytes 64-127 of KS
         TRANSPOSE4_U32 xmm4, xmm5, xmm6, xmm7, xmm0, xmm1
 
-        movdqu  xmm0, [src + off + 16]
+        ; xmm0, xmm5, xmm4, xmm7
+        ; xmm6, xmm1 free to use
+        movdqu  xmm6, [src + off + 16]
         movdqu  xmm1, [src + off + 16*5]
-        pxor    xmm4, xmm0
+        pxor    xmm0, xmm6
         pxor    xmm5, xmm1
-        movdqu  [dst + off + 16], xmm4
+        movdqu  [dst + off + 16], xmm0
         movdqu  [dst + off + 16*5], xmm5
 
-        movdqu  xmm0, [src + off + 16*9]
+        movdqu  xmm6, [src + off + 16*9]
         movdqu  xmm1, [src + off + 16*13]
-        pxor    xmm6, xmm0
+        pxor    xmm4, xmm6
         pxor    xmm7, xmm1
-        movdqu  [dst + off + 16*9], xmm6
+        movdqu  [dst + off + 16*9], xmm4
         movdqu  [dst + off + 16*13], xmm7
 
         ; Transpose to get bytes 128-191 of KS
         TRANSPOSE4_U32 xmm8, xmm9, xmm10, xmm11, xmm0, xmm1
 
-        movdqu  xmm0, [src + off + 16*2]
+        ; xmm0, xmm9, xmm8, xmm11
+        ; xmm10, xmm1 free to use
+        movdqu  xmm10, [src + off + 16*2]
         movdqu  xmm1, [src + off + 16*6]
-        pxor    xmm8, xmm0
+        pxor    xmm0, xmm10
         pxor    xmm9, xmm1
-        movdqu  [dst + off + 16*2], xmm8
+        movdqu  [dst + off + 16*2], xmm0
         movdqu  [dst + off + 16*6], xmm9
 
-        movdqu  xmm0, [src + off + 16*10]
+        movdqu  xmm10, [src + off + 16*10]
         movdqu  xmm1, [src + off + 16*14]
-        pxor    xmm10, xmm0
+        pxor    xmm8, xmm10
         pxor    xmm11, xmm1
-        movdqu  [dst + off + 16*10], xmm10
+        movdqu  [dst + off + 16*10], xmm8
         movdqu  [dst + off + 16*14], xmm11
 
         ; Transpose to get bytes 192-255 of KS
         TRANSPOSE4_U32 xmm12, xmm13, xmm14, xmm15, xmm0, xmm1
 
-        movdqu  xmm0, [src + off + 16*3]
+        ; xmm0, xmm13, xmm12, xmm15
+        ; xmm14, xmm1 free to use
+        movdqu  xmm14, [src + off + 16*3]
         movdqu  xmm1, [src + off + 16*7]
-        pxor    xmm12, xmm0
+        pxor    xmm0, xmm14
         pxor    xmm13, xmm1
-        movdqu  [dst + off + 16*3], xmm12
+        movdqu  [dst + off + 16*3], xmm0
         movdqu  [dst + off + 16*7], xmm13
 
-        movdqu  xmm0, [src + off + 16*11]
+        movdqu  xmm14, [src + off + 16*11]
         movdqu  xmm1, [src + off + 16*15]
-        pxor    xmm14, xmm0
+        pxor    xmm12, xmm14
         pxor    xmm15, xmm1
-        movdqu  [dst + off + 16*11], xmm14
+        movdqu  [dst + off + 16*11], xmm12
         movdqu  [dst + off + 16*15], xmm15
         ; Update remaining length
         sub     len, 64*4
