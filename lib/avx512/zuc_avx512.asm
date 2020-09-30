@@ -164,7 +164,7 @@ db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
 db      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe
 
 byte64_len_to_mask_table:
-        dq      0x0000000000000000, 0x0000000000000001
+        dq      0xffffffffffffffff, 0x0000000000000001
         dq      0x0000000000000003, 0x0000000000000007
         dq      0x000000000000000f, 0x000000000000001f
         dq      0x000000000000003f, 0x000000000000007f
@@ -1222,7 +1222,7 @@ APPEND(%%_num_final_rounds_is_,I):
         add             rsp, 32
         ;; update in/out pointers
         add             buf_idx, 3
-        and             buf_idx, 0xfc
+        and             buf_idx, 0xfffffffffffffffc
         vpbroadcastq    zmm0, buf_idx
         vpaddq          zmm1, zmm0, [pIn]
         vpaddq          zmm2, zmm0, [pIn + 64]
