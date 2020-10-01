@@ -49,36 +49,57 @@
 
 #define NUM_AVX2_BUFS 8
 
-static inline int
-find_min_length16(const uint16_t length[NUM_AVX2_BUFS])
+static inline uint16_t
+find_min_length16(const uint16_t length[NUM_AVX2_BUFS],
+                  unsigned int *allCommonBits)
 {
+        static const uint16_t bcast_mask[8] = {
+                0x0001, 0x0001, 0x0001, 0x0001,
+                0x0001, 0x0001, 0x0001, 0x0001
+        };
+
         __m128i xmm_lengths = _mm_loadu_si128((const __m128i *)length);
+        __m128i shuf_mask = _mm_loadu_si128((const __m128i *) bcast_mask);
+        /* Broadcast first word of the array */
+        __m128i bcast_first = _mm_shuffle_epi8(xmm_lengths, shuf_mask);
+        /* Compare if all lengths are the same value */
+        __m128i res = _mm_cmpeq_epi16(xmm_lengths, bcast_first);
+        *allCommonBits = (_mm_movemask_epi8(res) == 0xFFFF);
 
         xmm_lengths = _mm_minpos_epu16(xmm_lengths);
+
         return _mm_extract_epi16(xmm_lengths, 0);
 }
 
-static inline int
-find_min_length32(const uint32_t length[NUM_AVX2_BUFS])
+static inline uint16_t
+find_min_length32(const uint32_t length[NUM_AVX2_BUFS],
+                  unsigned int *allCommonBits)
 {
-        static const uint64_t lo_mask[2] = {
-                0x0d0c090805040100UL, 0xFFFFFFFFFFFFFFFFUL
-        };
-        static const uint64_t hi_mask[2] = {
-                0xFFFFFFFFFFFFFFFFUL, 0x0d0c090805040100UL
+        static const uint16_t bcast_mask[8] = {
+                0x0001, 0x0001, 0x0001, 0x0001,
+                0x0001, 0x0001, 0x0001, 0x0001
         };
 
         /* Calculate the minimum input packet size */
         __m128i length1 = _mm_loadu_si128((const __m128i *) length);
         __m128i length2 = _mm_loadu_si128((const __m128i *) &length[4]);
-        __m128i shuf_hi_mask = _mm_loadu_si128((const __m128i *) hi_mask);
-        __m128i shuf_lo_mask = _mm_loadu_si128((const __m128i *) lo_mask);
 
-        length1 = _mm_shuffle_epi8(length1, shuf_lo_mask);
-        length2 = _mm_shuffle_epi8(length2, shuf_hi_mask);
+        /*
+         * Shift left double words on one of the vectors by 16 bits,
+         * and OR with the other vector, assuming all lengths are less than
+         * UINT16_MAX (valid for ZUC)
+         */
+        length1 = _mm_slli_epi32(length1, 16);
 
         /* Contains array of 16-bit lengths */
         length1 = _mm_or_si128(length1, length2);
+
+        __m128i shuf_mask = _mm_loadu_si128((const __m128i *) bcast_mask);
+        /* Broadcast first word of the array */
+        __m128i bcast_first = _mm_shuffle_epi8(length1, shuf_mask);
+        /* Compare if all lengths are the same value */
+        __m128i res = _mm_cmpeq_epi16(length1, bcast_first);
+        *allCommonBits = (_mm_movemask_epi8(res) == 0xFFFF);
 
         length1 = _mm_minpos_epu16(length1);
 
@@ -170,7 +191,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
         unsigned int i = 0;
-        uint16_t bytes = (uint16_t) find_min_length32(length);
+        uint16_t bytes = (uint16_t) find_min_length32(length, &i);
         uint32_t numKeyStreamsPerPkt;
         uint16_t remainBytes[NUM_AVX2_BUFS] = {0};
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][KEYSTR_ROUND_LEN], 64);
@@ -477,18 +498,19 @@ void _zuc_eia3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        uint32_t commonBits = find_min_length32(lengthInBits);
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][2*KEYSTR_ROUND_LEN], 64);
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
         /* structure to store the 8 IV's */
         DECLARE_ALIGNED(ZucIv8_t ivs, 64);
         const uint8_t *pIn8[NUM_AVX2_BUFS] = {NULL};
-        uint32_t remainCommonBits = commonBits;
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX2_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX2_BUFS], 32) = {NULL};
+        unsigned int allCommonBits;
+        uint32_t remainCommonBits = find_min_length32(lengthInBits,
+                                                      &allCommonBits);
 
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
@@ -510,7 +532,7 @@ void _zuc_eia3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 32 bytes */
-                if (!remainCommonBits)
+                if (!remainCommonBits && allCommonBits)
                         asm_ZucGenKeystream8B_8_avx2(&state,
                                                      (uint32_t **)pKeyStrArr);
                 else
@@ -649,18 +671,19 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
         unsigned int i = 0;
         DECLARE_ALIGNED(ZucState8_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        uint32_t commonBits = find_min_length16(lengthInBits);
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][2*KEYSTR_ROUND_LEN], 64);
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
         /* structure to store the 8 IV's */
         DECLARE_ALIGNED(ZucIv8_t ivs, 64);
         const uint8_t *pIn8[NUM_AVX2_BUFS] = {NULL};
-        uint32_t remainCommonBits = commonBits;
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_AVX2_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         DECLARE_ALIGNED(uint32_t *pKeyStrArr[NUM_AVX2_BUFS], 32) = {NULL};
+        unsigned int allCommonBits;
+        uint32_t remainCommonBits = find_min_length16(lengthInBits,
+                                                      &allCommonBits);
 
         for (i = 0; i < NUM_AVX2_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
@@ -682,7 +705,7 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[NUM_AVX2_BUFS],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 32 bytes */
-                if (!remainCommonBits)
+                if (!remainCommonBits && allCommonBits)
                         asm_ZucGenKeystream8B_8_avx2(&state,
                                                      (uint32_t **)pKeyStrArr);
                 else

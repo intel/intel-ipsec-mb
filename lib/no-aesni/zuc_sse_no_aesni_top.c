@@ -499,24 +499,35 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
         unsigned int i;
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        /* Calculate the minimum input packet size */
-        uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
-                           lengthInBits[0] : lengthInBits[1]);
-        uint32_t bits2 = (lengthInBits[2] < lengthInBits[3] ?
-                           lengthInBits[2] : lengthInBits[3]);
-        /* min number of bytes */
-        uint32_t commonBits = (bits1 < bits2) ? bits1 : bits2;
         DECLARE_ALIGNED(uint8_t keyStr[NUM_SSE_BUFS][2*KEYSTR_ROUND_LEN], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
         DECLARE_ALIGNED(ZucIv4_t ivs, 64);
         const uint8_t *pIn8[NUM_SSE_BUFS] = {NULL};
-        uint32_t remainCommonBits = commonBits;
+        uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_SSE_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         uint32_t *pKeyStrArr[NUM_SSE_BUFS] = {NULL};
+        unsigned int allCommonBits;
+
+        /* Check if all lengths are equal */
+        if ((lengthInBits[0] == lengthInBits[1]) &&
+            (lengthInBits[0] == lengthInBits[2]) &&
+            (lengthInBits[0] == lengthInBits[3])) {
+                remainCommonBits = lengthInBits[0];
+                allCommonBits = 1;
+        } else {
+                /* Calculate the minimum input packet size */
+                uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
+                                   lengthInBits[0] : lengthInBits[1]);
+                uint32_t bits2 = (lengthInBits[2] < lengthInBits[3] ?
+                                   lengthInBits[2] : lengthInBits[3]);
+
+                remainCommonBits = (bits1 < bits2) ? bits1 : bits2;
+                allCommonBits = 0;
+        }
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
@@ -539,7 +550,7 @@ void _zuc_eia3_4_buffer_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 16 bytes */
-                if (!remainCommonBits)
+                if (!remainCommonBits && allCommonBits)
                         asm_ZucGenKeystream8B_4_sse_no_aesni(&state,
                                                              pKeyStrArr);
                 else
@@ -684,24 +695,35 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
         unsigned int i;
         DECLARE_ALIGNED(ZucState4_t state, 64);
         DECLARE_ALIGNED(ZucState_t singlePktState, 64);
-        /* Calculate the minimum input packet size */
-        uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
-                           lengthInBits[0] : lengthInBits[1]);
-        uint32_t bits2 = (lengthInBits[2] < lengthInBits[3] ?
-                           lengthInBits[2] : lengthInBits[3]);
-        /* min number of bytes */
-        uint32_t commonBits = (bits1 < bits2) ? bits1 : bits2;
         DECLARE_ALIGNED(uint8_t keyStr[NUM_SSE_BUFS][2*KEYSTR_ROUND_LEN], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
         DECLARE_ALIGNED(ZucIv4_t ivs, 64);
         const uint8_t *pIn8[NUM_SSE_BUFS] = {NULL};
-        uint32_t remainCommonBits = commonBits;
+        uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
         uint32_t T[NUM_SSE_BUFS] = {0};
         const uint32_t keyStreamLengthInBits = KEYSTR_ROUND_LEN * 8;
         uint32_t *pKeyStrArr[NUM_SSE_BUFS] = {NULL};
+        unsigned int allCommonBits;
+
+        /* Check if all lengths are equal */
+        if ((lengthInBits[0] == lengthInBits[1]) &&
+            (lengthInBits[0] == lengthInBits[2]) &&
+            (lengthInBits[0] == lengthInBits[3])) {
+                remainCommonBits = lengthInBits[0];
+                allCommonBits = 1;
+        } else {
+                /* Calculate the minimum input packet size */
+                uint32_t bits1 = (lengthInBits[0] < lengthInBits[1] ?
+                                   lengthInBits[0] : lengthInBits[1]);
+                uint32_t bits2 = (lengthInBits[2] < lengthInBits[3] ?
+                                   lengthInBits[2] : lengthInBits[3]);
+
+                remainCommonBits = (bits1 < bits2) ? bits1 : bits2;
+                allCommonBits = 0;
+        }
 
         for (i = 0; i < NUM_SSE_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
@@ -724,7 +746,7 @@ zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[NUM_SSE_BUFS],
                 remainCommonBits -= keyStreamLengthInBits;
                 numKeyStr++;
                 /* Generate the next key stream 8 bytes or 16 bytes */
-                if (!remainCommonBits)
+                if (!remainCommonBits && allCommonBits)
                         asm_ZucGenKeystream8B_4_sse_no_aesni(&state,
                                                              pKeyStrArr);
                 else
