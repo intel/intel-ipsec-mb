@@ -589,7 +589,7 @@ section .text
 %%_crc_update_nibble3:
         and             DWORD(%%tmp3), 15
         jz              %%_crc_update_nibble4
-        kmovb           k4, [%%tmp1 + %%tmp2]
+        kmovb           k4, [%%tmp1 + %%tmp3]
 
         vpclmulqdq      %%ZT0, %%ZCRCS3, %%ZCRC_MUL, 0x01
         vpclmulqdq      %%ZT1, %%ZCRCS3, %%ZCRC_MUL, 0x10
@@ -1134,7 +1134,7 @@ section .text
                 vpclmulqdq      %%ZT19, %%ZDATB3, %%ZCRC_MUL, 0x01
                 vpclmulqdq      %%ZT20, %%ZDATB3, %%ZCRC_MUL, 0x10
                 vpternlogq      %%ZT20, %%ZT19, %%ZDATA3, 0x96
-                vmovdqu16       %%ZDATB3{k3}, %%ZT20
+                vmovdqu16       %%ZDATB3{k4}, %%ZT20
 %endif
 
 %assign i (i + 1)
@@ -1288,6 +1288,7 @@ section .text
                 ;; k6 - mask of lanes that have been finished
                 vmovdqu64       YWORD(%%ZT19), [%%ARG + _docsis_crc_args_len]
                 vmovdqa64       XWORD(%%ZT20), [%%ARG + _docsis_crc_args_done]
+                vpsubw          YWORD(%%ZT19){k6}, YWORD(%%ZT19), YWORD(%%ZT19)
                 vpsubw          YWORD(%%ZT19){k5}, [rel dw_16_x16]
                 vmovdqu8        XWORD(%%ZT20){k6}, [rel crc_state_done_x16]
                 vmovdqu64       [%%ARG + _docsis_crc_args_len], YWORD(%%ZT19)
