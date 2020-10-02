@@ -32,6 +32,8 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
+%define NUM_LANES 4
+
 %ifndef AES_CBCS_ENC_X4
 %define AES_CBCS_ENC_X4 aes_cbcs_1_9_enc_128_x4
 %define SUBMIT_JOB_AES_CBCS_ENC submit_job_aes128_cbcs_1_9_enc_sse
@@ -63,6 +65,7 @@ extern AES_CBCS_ENC_X4
 %define tmp2             r8
 
 %define iv               r9
+%define tmp3             r9
 
 %define unused_lanes     rbx
 
@@ -118,7 +121,7 @@ SUBMIT_JOB_AES_CBCS_ENC:
 
         ;; insert len into proper lane
         mov     len, [job + _msg_len_to_cipher_in_bytes]
-        and     len, -16        ; DOCSIS may pass size unaligned to block size
+        and     len, -16        ; Buffer might not be aligned to block size
 
         shr     lane, 4
         mov     [state + _aes_lens_64 + lane*8], len
@@ -152,9 +155,26 @@ SUBMIT_JOB_AES_CBCS_ENC:
         cmp	len2, 0
 	je	len_is_0
 
+        ; Round up to multiple of 16*10
+        ; N = (length + 159) / 160 --> Number of 160-byte blocks
+        mov     rax, len2
+        xor     rdx, rdx ;; zero rdx for div
+        add     rax, 159
+        mov     tmp2, 160
+        div     tmp2
+        ; Number of 160-byte blocks in rax
+        mov     tmp2, 160
+        mul     tmp2
+        ; Number of bytes to process in rax
+        mov     len2, rax
+
+        xor     tmp2, tmp2
 %assign I 0
-%rep 4
-        sub [state + _aes_lens_64 + 8*I], len2
+%rep NUM_LANES
+        mov     tmp3, [state + _aes_lens_64 + 8*I]
+        sub     tmp3, len2
+        cmovs   tmp3, tmp2 ; 0 if negative number
+        mov     [state + _aes_lens_64 + 8*I], tmp3
 %assign I (I+1)
 %endrep
 

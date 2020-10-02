@@ -54,7 +54,6 @@ section .text
 %endif
 
 %define state	arg1
-%define job	arg2
 %define len2	arg2
 
 %define job_rax          rax
@@ -63,7 +62,6 @@ section .text
 %define tmp1             rbx
 
 %define good_lane        rdx
-%define iv               rdx
 
 %define tmp2             rax
 
@@ -80,9 +78,8 @@ _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
 
-; JOB* flush_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job)
+; JOB* flush_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state)
 ; arg 1 : state
-; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_CBCS_ENC,function,internal)
 FLUSH_JOB_AES_CBCS_ENC:
 
@@ -161,9 +158,26 @@ APPEND(skip_,I):
         or	len2, len2
 	jz	len_is_0
 
+        ; Round up to multiple of 16*10
+        ; N = (length + 159) / 160 --> Number of 160-byte blocks
+        mov     rax, len2
+        xor     rdx, rdx ;; zero rdx for div
+        add     rax, 159
+        mov     tmp1, 160
+        div     tmp1
+        ; Number of 160-byte blocks in rax
+        mov     tmp1, 160
+        mul     tmp1
+        ; Number of bytes to process in rax
+        mov     len2, rax
+
+        xor     tmp1, tmp1
 %assign I 0
 %rep NUM_LANES
-        sub [state + _aes_lens_64 + 8*I], len2
+        mov     tmp3, [state + _aes_lens_64 + 8*I]
+        sub     tmp3, len2
+        cmovs   tmp3, tmp1 ; 0 if negative number
+        mov     [state + _aes_lens_64 + 8*I], tmp3
 %assign I (I+1)
 %endrep
 
