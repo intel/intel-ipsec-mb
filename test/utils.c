@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include "utils.h"
 
@@ -130,4 +131,78 @@ hexdump(FILE *fp,
         size_t len)
 {
         hexdump_ex(fp, msg, p, len, NULL);
+}
+
+/* =================================================================== */
+/* =================================================================== */
+/* BASIC TEST SUITE PASS/FAIL TRACKER API */
+/* =================================================================== */
+/* =================================================================== */
+
+/**
+ * @brief Start of the test suite
+ *
+ * @param ctx test suite context structure
+ * @param alg_name name of the algorithm being tested
+ */
+void
+test_suite_start(struct test_suite_context *ctx,
+                 const char *alg_name)
+{
+        assert(ctx != NULL);
+        assert(alg_name != NULL);
+
+        ctx->alg_name = alg_name;
+        ctx->pass = ctx->fail = 0;
+}
+
+/**
+ * @brief Test result update
+ *
+ * It can be run after each test or after a group of tests.
+ *
+ * @param ctx test suite context structure
+ * @param passed number of tests that passed
+ * @param failed number of tests that failed
+ */
+void
+test_suite_update(struct test_suite_context *ctx,
+                  const unsigned passed,
+                  const unsigned failed)
+{
+        assert(ctx != NULL);
+
+        ctx->pass += passed;
+        ctx->fail += failed;
+}
+
+/**
+ * @brief Test suite end function
+ *
+ * Checks gathered stats and prints the message on the console
+ *
+ * @param ctx test suite context structure
+ *
+ * @return Operation status
+ * @retval 0 all tests passed
+ * @retval >0 failed tests detected, returning number of fails
+ */
+int test_suite_end(struct test_suite_context *ctx)
+{
+        const char *result = "PASS";
+        int ret = 0;
+
+        assert(ctx != NULL);
+
+        if (ctx->fail > 0) {
+                result = "FAIL";
+                ret = (int) ctx->fail;
+        }
+
+        if (ctx->fail == 0 && ctx->pass == 0)
+                result = "NOT_EXECUTED";
+
+        printf("[INFO] [ALGO] %s %s\n", ctx->alg_name, result);
+
+        return ret;
 }

@@ -34,4 +34,15 @@ void hexdump(FILE *fp, const char *msg, const void *p, size_t len);
 void hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len,
                 const void *start_ptr);
 
+struct test_suite_context {
+        unsigned pass;
+        unsigned fail;
+        const char *alg_name;
+};
+
+void test_suite_start(struct test_suite_context *ctx, const char *alg_name);
+void test_suite_update(struct test_suite_context *ctx, const unsigned passed,
+                      const unsigned failed);
+int test_suite_end(struct test_suite_context *ctx);
+
 #endif /* TESTAPP_UTILS_H */

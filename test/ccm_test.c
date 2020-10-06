@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
@@ -2435,16 +2436,18 @@ test_ccm(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr,
+                         struct test_suite_context *ctx,
+                         const int num_jobs)
 {
 	const int vectors_cnt = sizeof(ccm_vectors) / sizeof(ccm_vectors[0]);
 	int vect;
-	int errors = 0;
 
 	printf("AES-CCM-128 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
                 const int idx = vect - 1;
+
 #ifdef DEBUG
 		printf("Standard vector [%d/%d] NONCELen:%d PktLen:%d "
                        "AADLen:%d AUTHlen:%d\n",
@@ -2460,37 +2463,45 @@ test_ccm_128_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
                 if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_ENCRYPT, 1,
                              num_jobs, 16)) {
                         printf("error #%d encrypt in-place\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_DECRYPT, 1,
                              num_jobs, 16)) {
                         printf("error #%d decrypt in-place\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_ENCRYPT, 0,
                              num_jobs, 16)) {
                         printf("error #%d encrypt out-of-place\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ccm(mb_mgr, &ccm_vectors[idx], IMB_DIR_DECRYPT, 0,
                              num_jobs, 16)) {
                         printf("error #%d decrypt out-of-place\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
-static int
-test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr,
+                         struct test_suite_context *ctx,
+                         const int num_jobs)
 {
 	const int vectors_cnt = DIM(ccm_256_vectors);
 	int vect;
-	int errors = 0;
 
 	printf("AES-CCM-256 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
@@ -2510,73 +2521,80 @@ test_ccm_256_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
                 if (test_ccm(mb_mgr, &ccm_256_vectors[idx], IMB_DIR_ENCRYPT, 1,
                              num_jobs, 32)) {
                         printf("error #%d encrypt in-place\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ccm(mb_mgr, &ccm_256_vectors[idx], IMB_DIR_DECRYPT, 1,
                              num_jobs, 32)) {
                         printf("error #%d decrypt in-place\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ccm(mb_mgr, &ccm_256_vectors[idx], IMB_DIR_ENCRYPT, 0,
                              num_jobs, 32)) {
                         printf("error #%d encrypt out-of-place\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ccm(mb_mgr, &ccm_256_vectors[idx], IMB_DIR_DECRYPT, 0,
                              num_jobs, 32)) {
                         printf("error #%d decrypt out-of-place\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
 
 int
 ccm_test(struct IMB_MGR *mb_mgr)
 {
+        struct test_suite_context ctx;
         int errors = 0;
 
         /* AES-CCM-128 tests */
-        errors += test_ccm_128_std_vectors(mb_mgr, 1);
-        errors += test_ccm_128_std_vectors(mb_mgr, 3);
-        errors += test_ccm_128_std_vectors(mb_mgr, 4);
-        errors += test_ccm_128_std_vectors(mb_mgr, 5);
-        errors += test_ccm_128_std_vectors(mb_mgr, 7);
-        errors += test_ccm_128_std_vectors(mb_mgr, 8);
-        errors += test_ccm_128_std_vectors(mb_mgr, 9);
-        errors += test_ccm_128_std_vectors(mb_mgr, 10);
-        errors += test_ccm_128_std_vectors(mb_mgr, 13);
-        errors += test_ccm_128_std_vectors(mb_mgr, 14);
-        errors += test_ccm_128_std_vectors(mb_mgr, 15);
-        errors += test_ccm_128_std_vectors(mb_mgr, 17);
-        errors += test_ccm_128_std_vectors(mb_mgr, 18);
-        errors += test_ccm_128_std_vectors(mb_mgr, 19);
+        test_suite_start(&ctx, "AES-CCM-128");
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 1);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 3);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 4);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 5);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 7);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 8);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 9);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 10);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 13);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 14);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 15);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 17);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 18);
+        test_ccm_128_std_vectors(mb_mgr, &ctx, 19);
+        errors += test_suite_end(&ctx);
 
         /* AES-CCM-256 tests */
-        errors += test_ccm_256_std_vectors(mb_mgr, 1);
-        errors += test_ccm_256_std_vectors(mb_mgr, 3);
-        errors += test_ccm_256_std_vectors(mb_mgr, 4);
-        errors += test_ccm_256_std_vectors(mb_mgr, 5);
-        errors += test_ccm_256_std_vectors(mb_mgr, 7);
-        errors += test_ccm_256_std_vectors(mb_mgr, 8);
-        errors += test_ccm_256_std_vectors(mb_mgr, 9);
-        errors += test_ccm_256_std_vectors(mb_mgr, 10);
-        errors += test_ccm_256_std_vectors(mb_mgr, 13);
-        errors += test_ccm_256_std_vectors(mb_mgr, 14);
-        errors += test_ccm_256_std_vectors(mb_mgr, 15);
-        errors += test_ccm_256_std_vectors(mb_mgr, 17);
-        errors += test_ccm_256_std_vectors(mb_mgr, 18);
-        errors += test_ccm_256_std_vectors(mb_mgr, 19);
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        test_suite_start(&ctx, "AES-CCM-256");
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 1);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 3);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 4);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 5);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 7);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 8);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 9);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 10);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 13);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 14);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 15);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 17);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 18);
+        test_ccm_256_std_vectors(mb_mgr, &ctx, 19);
+        errors += test_suite_end(&ctx);
 
 	return errors;
 }
