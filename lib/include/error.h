@@ -32,7 +32,7 @@
  * declare global variable to store
  * process wide error status
  */
-IMB_DLL_LOCAL int imb_errno;
+extern int imb_errno;
 
 /**
  * @brief API to set error status

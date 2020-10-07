@@ -39,6 +39,8 @@
 #pragma warning(disable : 4996)
 #endif
 
+IMB_DLL_LOCAL int imb_errno;
+
 int imb_get_errno(IMB_MGR *mb_mgr)
 {
         /* try get IMB_MGR error status first */
