@@ -485,12 +485,13 @@ test_xcbc(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_xcbc_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_xcbc_std_vectors(struct IMB_MGR *mb_mgr,
+                      struct test_suite_context *ctx,
+                      const int num_jobs)
 {
 	const int vectors_cnt = DIM(xcbc_vectors);
 	int vect;
-	int errors = 0;
 
 	printf("AES-XCBC-128 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
@@ -507,33 +508,34 @@ test_xcbc_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
                 if (test_xcbc(mb_mgr, &xcbc_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs)) {
                         printf("error #%d encrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_xcbc(mb_mgr, &xcbc_vectors[idx],
                               IMB_DIR_DECRYPT, num_jobs)) {
                         printf("error #%d decrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
 	}
 	printf("\n");
-        return errors;
 }
 
 int
 xcbc_test(struct IMB_MGR *mb_mgr)
 {
-        int i, errors = 0;
+        struct test_suite_context ctx;
+        int i, errors;
 
+        test_suite_start(&ctx, "AES-XCBC-128");
         /* AES-XCBC 128 with standard vectors */
         for (i = 1; i < 20; i++)
-                errors += test_xcbc_std_vectors(mb_mgr, i);
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+                test_xcbc_std_vectors(mb_mgr, &ctx, i);
+        errors = test_suite_end(&ctx);
 
 	return errors;
 }

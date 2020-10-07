@@ -33,12 +33,12 @@
 #include <intel-ipsec-mb.h>
 
 #include "gcm_ctr_vectors_test.h"
-
-#define DIM(x) (sizeof(x)/sizeof(x[0]))
+#include "utils.h"
 
 int hec_test(struct IMB_MGR *mb_mgr);
 
-static int test_32_bit(IMB_MGR *mgr)
+static void
+test_32_bit(IMB_MGR *mgr, struct test_suite_context *ctx)
 {
         static const uint32_t pf19_hec13[] = {
                 0x660e4758, 0xcc076e69, 0xcb1f206b,
@@ -51,9 +51,6 @@ static int test_32_bit(IMB_MGR *mgr)
                 0xd4182064, 0x9a0a6572, 0x2f162020
         };
         unsigned i;
-        int errors = 0;
-
-        printf("HEC 32-bit:\n");
 
         for (i = 0; i < DIM(pf19_hec13); i++) {
                 const uint32_t in = pf19_hec13[i] & (~0xfff10000);
@@ -69,25 +66,18 @@ static int test_32_bit(IMB_MGR *mgr)
                 if (out != expected_out) {
                         printf("\tHEC 32 - mismatch!\t0x%08lx\n",
                                (unsigned long) out);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
                 } else {
+                        test_suite_update(ctx, 1, 0);
 #ifdef DEBUG
                         printf("\tHEC 32 - Pass\n");
-#else
-                        printf(".");
 #endif
                 }
         }
-
-        if (errors == 0)
-                printf("Pass\n");
-        else
-                printf("Fail\n");
-
-        return errors;
 }
 
-static int test_64_bit(IMB_MGR *mgr)
+static void
+test_64_bit(IMB_MGR *mgr, struct test_suite_context *ctx)
 {
         static const uint64_t pf51_hec13[] = {
                 0x550a4e4f502d4758, 0x48172c696e614b20, 0x8b0c696b616f7269,
@@ -103,9 +93,6 @@ static int test_64_bit(IMB_MGR *mgr)
                 0xa808696863692d6e, 0xd21748202c6f754c, 0x8604726567726562
         };
         unsigned i;
-        int errors = 0;
-
-        printf("HEC 64-bit:\n");
 
         for (i = 0; i < DIM(pf51_hec13); i++) {
                 const uint64_t in = pf51_hec13[i] & (~0xfff1000000000000ULL);
@@ -121,32 +108,29 @@ static int test_64_bit(IMB_MGR *mgr)
                 if (out != expected_out) {
                         printf("\tHEC 64 - mismatch!\t0x%016llx\n",
                                (unsigned long long) out);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
                 } else {
+                        test_suite_update(ctx, 1, 0);
 #ifdef DEBUG
                         printf("\tHEC 64 - Pass\n");
-#else
-                        printf(".");
 #endif
                 }
         }
-
-        if (errors == 0)
-                printf("Pass\n");
-        else
-                printf("Fail\n");
-
-        return errors;
 }
 
 int
 hec_test(struct IMB_MGR *mb_mgr)
 {
-        int errors = 0;
+        int errors;
+        struct test_suite_context ctx;
+
+        test_suite_start(&ctx, "HEC");
 
         /* functional validation */
-        errors += test_32_bit(mb_mgr);
-        errors += test_64_bit(mb_mgr);
+        test_32_bit(mb_mgr, &ctx);
+        test_64_bit(mb_mgr, &ctx);
+
+        errors = test_suite_end(&ctx);
 
         return errors;
 }

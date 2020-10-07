@@ -32,6 +32,7 @@
 
 #include "intel-ipsec-mb.h"
 #include "gcm_ctr_vectors_test.h"
+#include "utils.h"
 
 #define MAX_RAND 1024
 #define PATTERN 0x66
@@ -71,9 +72,10 @@ static void print_bytes(uint8_t *ptr, int size)
 
 int clear_mem_test(struct IMB_MGR *mb_mgr)
 {
+        struct test_suite_context ctx;
         (void)mb_mgr;
 
-        int i, errors = 0;
+        int i, errors;
         uint8_t *buf, padding[16];
         unsigned seed = 7890;
 
@@ -82,6 +84,7 @@ int clear_mem_test(struct IMB_MGR *mb_mgr)
         memset(padding, 0xff, sizeof(padding));
         srand(seed);
 
+        test_suite_start(&ctx, "CLEAR-MEM");
         for (i = 0; i < 100; i++) {
                 const unsigned r = (rand() % MAX_RAND) +
                         sizeof(padding) * 2 + 1;
@@ -92,8 +95,8 @@ int clear_mem_test(struct IMB_MGR *mb_mgr)
                 buf = malloc(r);
                 if (buf == NULL) {
                         printf("Failed to allocate buffer memory!\n");
-                        errors++;
-                        return errors;
+                        test_suite_update(&ctx, 0, 1);
+                        break;
                 }
 
                 /* set whole buffer to 1's */
@@ -112,15 +115,17 @@ int clear_mem_test(struct IMB_MGR *mb_mgr)
                 if (validate_bytes_zero(clear_zn, sz)) {
                         printf("Found non-zero bytes in clear zone!\n");
                         print_bytes(clear_zn, sz);
-                        errors++;
-                }
+                        test_suite_update(&ctx, 0, 1);
+                } else
+                        test_suite_update(&ctx, 1, 0);
 
                 /* validate head */
                 if (memcmp(buf, padding, sizeof(padding)) != 0) {
                         printf("Found mismatch in head!\n");
                         print_bytes(padding, sizeof(padding));
-                        errors++;
-                }
+                        test_suite_update(&ctx, 0, 1);
+                } else
+                        test_suite_update(&ctx, 1, 0);
 
                 /* validate tail */
                 if (memcmp(buf + sizeof(padding) + sz,
@@ -128,15 +133,16 @@ int clear_mem_test(struct IMB_MGR *mb_mgr)
                         printf("Found mismatch in tail!\n");
                         print_bytes(buf + sizeof(padding) + sz,
                                     sizeof(padding));
-                        errors++;
-                }
+                        test_suite_update(&ctx, 0, 1);
+                } else
+                        test_suite_update(&ctx, 1, 0);
 
                 free(buf);
 
                 printf(".");
         }
 
-        printf("%s\n", errors ? "Fail" : "Pass");
+        errors = test_suite_end(&ctx);
 
-        return 0;
+        return errors;
 }

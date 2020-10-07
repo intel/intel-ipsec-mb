@@ -43,6 +43,7 @@
 
 #include "zuc_test_vectors.h"
 #include "gcm_ctr_vectors_test.h"
+#include "utils.h"
 
 #define MAXBUFS 17
 #define PASS_STATUS 0
@@ -189,24 +190,30 @@ int zuc_test(struct IMB_MGR *mb_mgr)
 
         const uint32_t numBuffs[] = {4, 8, 9, 16, 17};
         uint32_t i;
-        uint32_t status = PASS_STATUS;
+        int errors = 0;
         uint8_t *pKeys[MAXBUFS] = {0};
         uint8_t *pIV[MAXBUFS] = {0};
         uint8_t *pSrcData[MAXBUFS] = {0};
         uint8_t *pDstData[MAXBUFS] = {0};
+        struct test_suite_context eea3_ctx;
+        struct test_suite_context eia3_ctx;
 
-        printf("Running Functional Tests\n");
-        fflush(stdout);
+        test_suite_start(&eea3_ctx, "ZUC-EEA3");
+        test_suite_start(&eia3_ctx, "ZUC-EIA3");
 
         /*Create test data buffers + populate with random data*/
         if (createData(pSrcData, MAXBUFS)) {
                 printf("createData() error\n");
-                return FAIL_STATUS;
+                test_suite_update(&eea3_ctx, 0, 1);
+                test_suite_update(&eia3_ctx, 0, 1);
+                goto exit_zuc_test;
         }
         if (createData(pDstData, MAXBUFS)) {
                 printf("createData() error\n");
                 freePtrArray(pSrcData, MAXBUFS);
-                return FAIL_STATUS;
+                test_suite_update(&eea3_ctx, 0, 1);
+                test_suite_update(&eia3_ctx, 0, 1);
+                goto exit_zuc_test;
         }
 
         /*Create random keys and vectors*/
@@ -215,96 +222,95 @@ int zuc_test(struct IMB_MGR *mb_mgr)
                 printf("createKeyVecData() error\n");
                 freePtrArray(pSrcData, MAXBUFS);
                 freePtrArray(pDstData, MAXBUFS);
-                return FAIL_STATUS;
+                test_suite_update(&eea3_ctx, 0, 1);
+                test_suite_update(&eia3_ctx, 0, 1);
+                goto exit_zuc_test;
         }
 
         if (validate_zuc_algorithm(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0],
                                    pIV[0]))
-                status = 1;
+                test_suite_update(&eea3_ctx, 0, 1);
         else
-                printf("validate ZUC algorithm: PASS\n");
+                test_suite_update(&eea3_ctx, 1, 0);
 
         /* Direct API tests */
         if (validate_zuc_EEA_1_block(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0],
                                      pIV[0], 0))
-                status = 1;
+                test_suite_update(&eea3_ctx, 0, 1);
         else
-                printf("validate ZUC EEA 1 buffer (direct API): PASS\n");
+                test_suite_update(&eea3_ctx, 1, 0);
 
         if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV, 0))
-                status = 1;
+                test_suite_update(&eea3_ctx, 0, 1);
         else
-                printf("validate ZUC EEA 4 buffers (direct API): PASS\n");
+                test_suite_update(&eea3_ctx, 1, 0);
 
         for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
                                              pIV, numBuffs[i], 0))
-                        status = 1;
+                        test_suite_update(&eea3_ctx, 0, 1);
                 else
-                        printf("validate ZUC EEA N buffers (%u) (direct API): "
-                               "PASS\n", numBuffs[i]);
+                        test_suite_update(&eea3_ctx, 1, 0);
         }
 
         if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0],
                                      pIV[0], 0))
-                status = 1;
+                test_suite_update(&eia3_ctx, 0, 1);
         else
-                printf("validate ZUC EIA 1 buffer (direct API): PASS\n");
+                test_suite_update(&eia3_ctx, 1, 0);
 
         for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
                                              pIV, numBuffs[i], 0))
-                        status = 1;
+                        test_suite_update(&eia3_ctx, 0, 1);
                 else
-                        printf("validate ZUC EIA N buffers (%u) "
-                               "(direct API): PASS\n", numBuffs[i]);
+                        test_suite_update(&eia3_ctx, 1, 0);
         }
 
         /* Job API tests */
         if (validate_zuc_EEA_1_block(mb_mgr, pSrcData[0], pSrcData[0], pKeys[0],
                                      pIV[0], 1))
-                status = 1;
+                test_suite_update(&eea3_ctx, 0, 1);
         else
-                printf("validate ZUC EEA 1 buffer (job API): PASS\n");
+                test_suite_update(&eea3_ctx, 1, 0);
 
         if (validate_zuc_EEA_4_block(mb_mgr, pSrcData, pSrcData, pKeys, pIV, 1))
-                status = 1;
+                test_suite_update(&eea3_ctx, 0, 1);
         else
-                printf("validate ZUC EEA 4 buffers (job API): PASS\n");
+                test_suite_update(&eea3_ctx, 1, 0);
 
         for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EEA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
                                              pIV, numBuffs[i], 1))
-                        status = 1;
+                        test_suite_update(&eea3_ctx, 0, 1);
                 else
-                        printf("validate ZUC EEA N buffers (%u) (job API): "
-                               "PASS\n", numBuffs[i]);
+                        test_suite_update(&eea3_ctx, 1, 0);
         }
 
         if (validate_zuc_EIA_1_block(mb_mgr, pSrcData[0], pDstData[0], pKeys[0],
                                      pIV[0], 1))
-                status = 1;
+                test_suite_update(&eia3_ctx, 0, 1);
         else
-                printf("validate ZUC EIA 1 buffer (job API): PASS\n");
+                test_suite_update(&eia3_ctx, 1, 0);
 
         for (i = 0; i < DIM(numBuffs); i++) {
                 if (validate_zuc_EIA_n_block(mb_mgr, pSrcData, pDstData, pKeys,
                                              pIV, numBuffs[i], 1))
-                        status = 1;
+                        test_suite_update(&eia3_ctx, 0, 1);
                 else
-                        printf("validate ZUC EIA N buffers (%u) "
-                               "(job API): PASS\n", numBuffs[i]);
+                        test_suite_update(&eia3_ctx, 1, 0);
         }
 
+exit_zuc_test:
         freePtrArray(pKeys, MAXBUFS);    /*Free the key buffers*/
         freePtrArray(pIV, MAXBUFS);      /*Free the vector buffers*/
         freePtrArray(pSrcData, MAXBUFS); /*Free the source buffers*/
         freePtrArray(pDstData, MAXBUFS); /*Free the destination buffers*/
-        if (status)
-                return status;
 
-        printf("The Functional Test application completed\n");
-        return 0;
+        errors += test_suite_end(&eea3_ctx);
+        errors += test_suite_end(&eia3_ctx);
+
+        return errors;
 }
 
 static inline int

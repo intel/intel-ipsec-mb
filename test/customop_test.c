@@ -32,8 +32,7 @@
 #include <intel-ipsec-mb.h>
 
 #include "customop_test.h"
-
-#define DIM(_a)	(sizeof(_a) / sizeof(_a[0]))
+#include "utils.h"
 
 #ifdef DEBUG
 #ifdef _WIN32
@@ -141,7 +140,8 @@ static const struct cipher_attr_s cipher_attr_tab[] = {
 };
 
 static int
-job_check(const struct IMB_JOB *job)
+job_check(const struct IMB_JOB *job,
+          struct test_suite_context *ctx)
 {
 #ifdef DEBUG
         struct test_vec_s *done = job->user_data;
@@ -161,8 +161,10 @@ job_check(const struct IMB_JOB *job)
                         for (i = 0; i < job->msg_len_to_cipher_in_bytes; i++) {
                                 if (job->dst[i] != 1) {
                                         TRACE("NG add-on encryption %u\n", i);
+                                        test_suite_update(ctx, 0, 1);
                                         return -1;
-                                }
+                                } else
+                                        test_suite_update(ctx, 1, 0);
                         }
                         TRACE("Addon encryption passes Seq:%u\n", done->seq);
                 } else {
@@ -171,8 +173,10 @@ job_check(const struct IMB_JOB *job)
                         for (i = 0; i < job->msg_len_to_cipher_in_bytes; i++) {
                                 if (job->dst[i] != 2) {
                                         TRACE("NG add-on decryption %u\n", i);
+                                        test_suite_update(ctx, 0, 1);
                                         return -1;
-                                }
+                                } else
+                                        test_suite_update(ctx, 1, 0);
                         }
                         TRACE("Addon decryption passes Seq:%u\n", done->seq);
                 }
@@ -184,8 +188,10 @@ job_check(const struct IMB_JOB *job)
                 for (i = 0; i < job->auth_tag_output_len_in_bytes; i++) {
                         if (job->auth_tag_output[i] != 3) {
                                 TRACE("NG add-on hashing %u\n", i);
+                                test_suite_update(ctx, 0, 1);
                                 return -1;
-                        }
+                        } else
+                                test_suite_update(ctx, 1, 0);
                 }
                 TRACE("Addon hashing passes Seq:%u\n", done->seq);
         }
@@ -199,8 +205,10 @@ customop_test(struct IMB_MGR *mgr)
         struct test_vec_s test_tab[DIM(cipher_attr_tab) * DIM(auth_attr_tab)];
         struct IMB_JOB *job;
         unsigned i, j, seq;
-        int result = 0;
+        struct test_suite_context ctx;
+        int errors;
 
+        test_suite_start(&ctx, "CUSTOM-OP");
         memset(test_tab, 0, sizeof(test_tab));
         for (i = 0, seq = 0; i < DIM(cipher_attr_tab); i++) {
                 for (j = 0; j < DIM(auth_attr_tab); j++) {
@@ -218,7 +226,7 @@ customop_test(struct IMB_MGR *mgr)
 
                 while ((job = IMB_GET_NEXT_JOB(mgr)) == NULL) {
                         job = IMB_FLUSH_JOB(mgr);
-                        result |= job_check(job);
+                        job_check(job, &ctx);
                 }
 
                 job->cipher_func = cipher_addon;
@@ -249,13 +257,13 @@ customop_test(struct IMB_MGR *mgr)
 
                 job = IMB_SUBMIT_JOB(mgr);
                 while (job) {
-                        result |= job_check(job);
+                        job_check(job, &ctx);
                         job = IMB_GET_COMPLETED_JOB(mgr);
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mgr)) != NULL)
-                result |= job_check(job);
+                job_check(job, &ctx);
 
         /* decryption */
         for (i = 0; i < seq; i++) {
@@ -263,7 +271,7 @@ customop_test(struct IMB_MGR *mgr)
 
                 while ((job = IMB_GET_NEXT_JOB(mgr)) == NULL) {
                         job = IMB_FLUSH_JOB(mgr);
-                        result |= job_check(job);
+                        job_check(job, &ctx);
                 }
 
                 job->cipher_func = cipher_addon;
@@ -294,18 +302,15 @@ customop_test(struct IMB_MGR *mgr)
 
                 job = IMB_SUBMIT_JOB(mgr);
                 while (job) {
-                        result |= job_check(job);
+                        job_check(job, &ctx);
                         job = IMB_GET_COMPLETED_JOB(mgr);
                 }
         }
 
         while ((job = IMB_FLUSH_JOB(mgr)) != NULL)
-                result |= job_check(job);
+                job_check(job, &ctx);
 
-        if (result)
-                fprintf(stdout, "Custom cipher/auth test failed!\n");
-        else
-                fprintf(stdout, "Custom cipher/auth test passed\n");
+        errors = test_suite_end(&ctx);
 
-        return result;
+        return errors;
 }

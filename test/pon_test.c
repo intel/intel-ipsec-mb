@@ -622,7 +622,7 @@ test_pon(struct IMB_MGR *mb_mgr,
 }
 
 static int
-test_pon_std_vectors(struct IMB_MGR *mb_mgr)
+test_pon_std_vectors(struct IMB_MGR *mb_mgr, struct test_suite_context *ctx)
 {
 	const int vectors_cnt = sizeof(pon_vectors) / sizeof(pon_vectors[0]);
 	int vect;
@@ -657,8 +657,9 @@ test_pon_std_vectors(struct IMB_MGR *mb_mgr)
                              pon_vectors[vect].bip_out,
                              IMB_DIR_ENCRYPT, IMB_ORDER_HASH_CIPHER)) {
                         printf("error #%d encrypt\n", vect + 1);
-                        errors++;
-                }
+                        test_suite_update(ctx, 0, 1);
+                } else
+                        test_suite_update(ctx, 1, 0);
 
                 if (test_pon(mb_mgr,
                              expkey,
@@ -671,8 +672,9 @@ test_pon_std_vectors(struct IMB_MGR *mb_mgr)
                              pon_vectors[vect].bip_out,
                              IMB_DIR_DECRYPT, IMB_ORDER_CIPHER_HASH)) {
                         printf("error #%d decrypt\n", vect + 1);
-                        errors++;
-                }
+                        test_suite_update(ctx, 0, 1);
+                } else
+                        test_suite_update(ctx, 1, 0);
 	}
 	printf("\n");
 	return errors;
@@ -680,12 +682,12 @@ test_pon_std_vectors(struct IMB_MGR *mb_mgr)
 
 int pon_test(struct IMB_MGR *mb_mgr)
 {
-        int errors = test_pon_std_vectors(mb_mgr);
+        int errors;
+        struct test_suite_context ctx;
 
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        test_suite_start(&ctx, "PON-128-BIP-CRC32");
+        test_pon_std_vectors(mb_mgr, &ctx);
+        errors = test_suite_end(&ctx);
 
 	return errors;
 }

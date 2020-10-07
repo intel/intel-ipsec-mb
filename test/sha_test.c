@@ -537,13 +537,19 @@ test_sha(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_sha_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_sha_vectors(struct IMB_MGR *mb_mgr,
+                 struct test_suite_context *sha1_ctx,
+                 struct test_suite_context *sha224_ctx,
+                 struct test_suite_context *sha256_ctx,
+                 struct test_suite_context *sha384_ctx,
+                 struct test_suite_context *sha512_ctx,
+                 const int num_jobs)
 {
 	const int vectors_cnt =
                 sizeof(sha_vectors) / sizeof(sha_vectors[0]);
 	int vect;
-	int errors = 0;
+        struct test_suite_context *ctx;
 
 	printf("SHA standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
@@ -556,30 +562,54 @@ test_sha_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
                        sha_vectors[idx].test_case,
                        (int) sha_vectors[idx].data_len,
                        (int) sha_vectors[idx].digest_len);
-#else
-		printf(".");
 #endif
+                switch (sha_vectors[idx].sha_type) {
+                case 1:
+                        ctx = sha1_ctx;
+                        break;
+                case 224:
+                        ctx = sha224_ctx;
+                        break;
+                case 256:
+                        ctx = sha256_ctx;
+                        break;
+                case 384:
+                        ctx = sha384_ctx;
+                        break;
+                case 512:
+                default:
+                        ctx = sha512_ctx;
+                        break;
+                }
 
                 if (test_sha(mb_mgr, &sha_vectors[idx], num_jobs)) {
                         printf("error #%d\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 	}
-	printf("\n");
-	return errors;
 }
 
 int
 sha_test(struct IMB_MGR *mb_mgr)
 {
-        int errors = 0;
+        struct test_suite_context sha1_ctx, sha224_ctx, sha256_ctx;
+        struct test_suite_context sha384_ctx, sha512_ctx;
+        int errors;
 
-        errors += test_sha_vectors(mb_mgr, 1);
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        test_suite_start(&sha1_ctx, "SHA1");
+        test_suite_start(&sha224_ctx, "SHA224");
+        test_suite_start(&sha256_ctx, "SHA256");
+        test_suite_start(&sha384_ctx, "SHA384");
+        test_suite_start(&sha512_ctx, "SHA512");
+        test_sha_vectors(mb_mgr, &sha1_ctx, &sha224_ctx,
+                         &sha256_ctx, &sha384_ctx, &sha512_ctx, 1);
+        errors = test_suite_end(&sha1_ctx);
+        errors += test_suite_end(&sha224_ctx);
+        errors += test_suite_end(&sha256_ctx);
+        errors += test_suite_end(&sha384_ctx);
+        errors += test_suite_end(&sha512_ctx);
 
 	return errors;
 }

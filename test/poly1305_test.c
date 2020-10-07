@@ -543,15 +543,15 @@ test_poly1305(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
+static void
 test_poly1305_vectors(struct IMB_MGR *mb_mgr,
                       const int num_jobs,
                       const struct poly1305_vector *vec_array,
                       const size_t vec_array_size,
+                      struct test_suite_context *ctx,
                       const char *banner)
 {
 	size_t vect;
-	int errors = 0;
 
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_array_size; vect++) {
@@ -566,34 +566,35 @@ test_poly1305_vectors(struct IMB_MGR *mb_mgr,
                 if (test_poly1305(mb_mgr, &vec_array[vect],
                                   IMB_DIR_ENCRYPT, num_jobs)) {
                         printf("error #%d encrypt\n", (int) vect + 1);
-                        errors++;
-                }
+                        test_suite_update(ctx, 0, 1);
+                } else
+                        test_suite_update(ctx, 1, 0);
 
                 if (test_poly1305(mb_mgr, &vec_array[vect],
                                   IMB_DIR_DECRYPT, num_jobs)) {
                         printf("error #%d decrypt\n", (int) vect + 1);
-                        errors++;
-                }
+                        test_suite_update(ctx, 0, 1);
+                } else
+                        test_suite_update(ctx, 1, 0);
 	}
 	printf("\n");
-        return errors;
 }
 
 
 int
 poly1305_test(struct IMB_MGR *mb_mgr)
 {
-        int i, errors = 0;
+        struct test_suite_context ctx;
+        int i, errors;
 
+        test_suite_start(&ctx, "POLY1305");
         for (i = 1; i < 20; i++)
-                errors += test_poly1305_vectors(mb_mgr, i, rfc7539_vectors,
-                                                DIM(rfc7539_vectors),
-                                                "Poly1305 RFC7539 vectors");
+                test_poly1305_vectors(mb_mgr, i, rfc7539_vectors,
+                                      DIM(rfc7539_vectors),
+                                      &ctx,
+                                      "Poly1305 RFC7539 vectors");
 
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        errors = test_suite_end(&ctx);
 
 	return errors;
 }

@@ -40,33 +40,53 @@
 #define PAD_LEN 16
 
 int snow3g_test(struct IMB_MGR *mb_mgr);
-static
-int validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, unsigned int job_api);
-static
-int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr, unsigned int job_api);
-static
-int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api);
-static
-int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api);
-static
-int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api);
-static
-int validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
-                                          uint32_t job_api);
-static
-int validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api);
-static
-int validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
-                                             uint32_t job_api);
-static
-int validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api);
-static
-int membitcmp(const uint8_t *input, const uint8_t *output,
-              const uint32_t bitlength, const uint32_t offset);
+static void
+validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, unsigned int job_api,
+                           struct test_suite_context *uea2_ctx,
+                           struct test_suite_context *uia2_ctx);
+static void
+validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr, unsigned int job_api,
+                              struct test_suite_context *uea2_ctx,
+                              struct test_suite_context *uia2_ctx);
+static void
+validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                            struct test_suite_context *uea2_ctx,
+                            struct test_suite_context *uia2_ctx);
+static void
+validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                            struct test_suite_context *uea2_ctx,
+                            struct test_suite_context *uia2_ctx);
+static void
+validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                            struct test_suite_context *uea2_ctx,
+                            struct test_suite_context *uia2_ctx);
+static void
+validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
+                                      uint32_t job_api,
+                                      struct test_suite_context *uea2_ctx,
+                                      struct test_suite_context *uia2_ctx);
+static void
+validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                            struct test_suite_context *uea2_ctx,
+                            struct test_suite_context *uia2_ctx);
+static void
+validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
+                                  uint32_t job_api,
+                                  struct test_suite_context *uea2_ctx,
+                                  struct test_suite_context *uia2_ctx);
+static void
+validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                   struct test_suite_context *uea2_ctx,
+                   struct test_suite_context *uia2_ctx);
+static int
+membitcmp(const uint8_t *input, const uint8_t *output,
+          const uint32_t bitlength, const uint32_t offset);
 
 /* snow3g validation function pointer table */
 struct {
-        int (*func)(struct IMB_MGR *, uint32_t job_api);
+        void (*func)(struct IMB_MGR *, uint32_t job_api,
+                     struct test_suite_context *uea2_ctx,
+                     struct test_suite_context *uia2_ctx);
         const char *func_name;
 } snow3g_func_tab[] = {
         {validate_snow3g_f8_1_bitblock,
@@ -192,7 +212,10 @@ submit_uia2_job(struct IMB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
         return 0;
 }
 
-static int validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api)
+static void
+validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                           struct test_suite_context *uea2_ctx,
+                           struct test_suite_context *uia2_ctx)
 {
         int numVectors, i, length;
         size_t size = 0;
@@ -206,46 +229,43 @@ static int validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api)
         uint8_t srcBuff[MAX_DATA_LEN];
         uint8_t dstBuff[MAX_DATA_LEN];
         uint8_t *pSrcBuff = srcBuff;
-        uint8_t *pIV;
-        int ret = 1;
+        uint8_t *pIV = NULL;
+        int status = -1;
 
+        (void) uia2_ctx;
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F8_1_BUFFER (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         memset(srcBuff, 0, sizeof(srcBuff));
         memset(dstBuff, 0, sizeof(dstBuff));
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f8_1_buffer_exit;
         }
 
         pIV = malloc(SNOW3G_IV_LEN_IN_BYTES);
         if (!pIV) {
                 printf("malloc(pIV):failed !\n");
-                return ret;
+                goto snow3g_f8_1_buffer_exit;
         }
 
         pKey = malloc(keyLen);
         if (!pKey) {
                 printf("malloc(pKey):failed !\n");
-                free(pIV);
-                return ret;
+                goto snow3g_f8_1_buffer_exit;
         }
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
-        if (!size) {
-                free(pIV);
-                free(pKey);
-                return ret;
-        }
+        if (!size)
+                goto snow3g_f8_1_buffer_exit;
 
         pKeySched = malloc(size);
         if (!pKeySched) {
                 printf("malloc(IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr)): failed ! "
                        "\n");
-                free(pIV);
-                free(pKey);
-                return ret;
+                goto snow3g_f8_1_buffer_exit;
         }
 
         /*Copy the data for for Snow3g 1 Packet version*/
@@ -286,7 +306,6 @@ static int validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api)
                         snow3g_hexdump("Expected:", dstBuff, length);
                         goto snow3g_f8_1_buffer_exit;
                 }
-                printf(".");
 
                 memcpy(dstBuff, testVectors[i].plaintext, length);
 
@@ -309,20 +328,20 @@ static int validate_snow3g_f8_1_block(struct IMB_MGR *mb_mgr, uint32_t job_api)
                         snow3g_hexdump("Expected:", dstBuff, length);
                         goto snow3g_f8_1_buffer_exit;
                 }
-                printf(".");
         } /* for numVectors */
 
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f8_1_buffer_exit:
         free(pIV);
         free(pKey);
         free(pKeySched);
 
-        printf("\n");
-
-        return ret;
+        if (status < 0)
+                test_suite_update(uea2_ctx, 0, 1);
+        else
+                test_suite_update(uea2_ctx, 1, 0);
 }
 
 /* Shift right a buffer by "offset" bits, "offset" < 8 */
@@ -364,8 +383,11 @@ static void copy_test_bufs(uint8_t *plainBuff, uint8_t *wrkBuff,
         memcpy(ciphBuff + PAD_LEN, dst_test, byte_len);
 }
 
-static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
-                                         uint32_t job_api)
+static void
+validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
+                              uint32_t job_api,
+                              struct test_suite_context *uea2_ctx,
+                              struct test_suite_context *uia2_ctx)
 {
         int numVectors, i, length;
         size_t size = 0;
@@ -384,45 +406,42 @@ static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
         uint8_t dstBuff[MAX_DATA_LEN];
         /* Adding extra byte for offset tests (shifting up to 7 bits) */
         uint8_t padding[PAD_LEN + 1];
-        uint8_t *pIV;
-        int ret = 1;
+        uint8_t *pIV = NULL;
+        int status = -1;
 
+        (void) uia2_ctx;
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F8_1_BUFFER_BIT: (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         memset(padding, -1, sizeof(padding));
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f8_1_buffer_bit_exit;
         }
 
         pIV = malloc(SNOW3G_IV_LEN_IN_BYTES);
         if (!pIV) {
                 printf("malloc(pIV):failed !\n");
-                return ret;
+                goto snow3g_f8_1_buffer_bit_exit;
         }
 
         pKey = malloc(keyLen);
         if (!pKey) {
                 printf("malloc(pKey):failed !\n");
-                free(pIV);
-                return ret;
+                goto snow3g_f8_1_buffer_bit_exit;
         }
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
-        if (!size) {
-                free(pIV);
-                free(pKey);
-                return ret;
-        }
+        if (!size)
+                goto snow3g_f8_1_buffer_bit_exit;
 
         pKeySched = malloc(size);
         if (!pKeySched) {
                 printf("malloc(IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr)): failed ! "
                        "\n");
-                free(pIV);
-                free(pKey);
-                return ret;
+                goto snow3g_f8_1_buffer_bit_exit;
         }
 
         /*Copy the data for for Snow3g 1 Packet version*/
@@ -501,7 +520,6 @@ static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                                        PAD_LEN + 1);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
-                printf(".");
 
                 /* reset working buffer */
                 memset(midBufBefPad, -1, (byte_len + PAD_LEN * 2));
@@ -542,7 +560,6 @@ static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                                        PAD_LEN + 1);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
-                printf(".");
 
                 /* Another test with Standard 3GPP table */
                 head_offset = 0;
@@ -571,7 +588,6 @@ static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                         snow3g_hexdump("Expected:", &dstBuff[0], length);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
-                printf(".");
 
                 /*Validate Decrypt*/
                 if (job_api) {
@@ -591,7 +607,6 @@ static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                         snow3g_hexdump("Expected:", &srcBuff[0], length);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
-                printf(".");
 
                 memcpy(srcBuff, testStandardVectors[i].plaintext, length);
 
@@ -624,7 +639,6 @@ static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                                        (length * 8 + 4 + 7) / 8);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
-                printf(".");
 
                 /*Validate Decrypt*/
                 if (job_api)
@@ -646,23 +660,26 @@ static int validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                                        (length * 8 + 4 + 7) / 8);
                         goto snow3g_f8_1_buffer_bit_exit;
                 }
-                printf(".");
         }  /* for numVectors */
 
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f8_1_buffer_bit_exit:
         free(pIV);
         free(pKey);
         free(pKeySched);
 
-        printf("\n");
-
-        return ret;
+        if (status < 0)
+                test_suite_update(uea2_ctx, 0, 1);
+        else
+                test_suite_update(uea2_ctx, 1, 0);
 }
 
-static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
+static void
+validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                            struct test_suite_context *uea2_ctx,
+                            struct test_suite_context *uia2_ctx)
 {
         int length, numVectors, i = 0, j = 0, numPackets = 2;
         size_t size = 0;
@@ -677,10 +694,13 @@ static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
         uint8_t *pIV[NUM_SUPPORTED_BUFFERS];
         uint32_t packetLen[NUM_SUPPORTED_BUFFERS];
         int keyLen = MAX_KEY_LEN;
-        int ret = 1;
+        int status = -1;
 
+        (void) uia2_ctx;
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F8_2_BUFFER: (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         memset(pSrcBuff, 0, sizeof(pSrcBuff));
         memset(pDstBuff, 0, sizeof(pDstBuff));
@@ -690,12 +710,12 @@ static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f8_2_buffer_exit;
         }
 
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
         if (!size)
-                return ret;
+                goto snow3g_f8_2_buffer_exit;
 
         /* Test with all vectors */
         for (j = 0; j < numVectors; j++) {
@@ -781,7 +801,6 @@ static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[0]);
                                 goto snow3g_f8_2_buffer_exit;
                         }
-                        printf(".");
                 }
 
                 /* Set the source buffer with ciphertext, and clear destination
@@ -814,7 +833,6 @@ static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[i]);
                                 goto snow3g_f8_2_buffer_exit;
                         }
-                        printf(".");
                 }
 
                 /* TEST OUT-OF-PLACE ENCRYPTION/DECRYPTION */
@@ -844,7 +862,6 @@ static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[0]);
                                 goto snow3g_f8_2_buffer_exit;
                         }
-                        printf(".");
                 }
                 /* Set the source buffer with ciphertext, and clear destination
                  * buffer */
@@ -878,7 +895,6 @@ static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[i]);
                                 goto snow3g_f8_2_buffer_exit;
                         }
-                        printf(".");
                 }
                 /* free buffers before next iteration */
                 for (i = 0; i < numPackets; i++) {
@@ -906,7 +922,7 @@ static int validate_snow3g_f8_2_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
         }
 
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f8_2_buffer_exit:
         for (i = 0; i < numPackets; i++) {
@@ -921,12 +937,16 @@ snow3g_f8_2_buffer_exit:
                 if (pIV[i] != NULL)
                         free(pIV[i]);
         }
-        printf("\n");
-
-        return ret;
+        if (status < 0)
+                test_suite_update(uea2_ctx, 0, 1);
+        else
+                test_suite_update(uea2_ctx, 1, 0);
 }
 
-static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
+static void
+validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                            struct test_suite_context *uea2_ctx,
+                            struct test_suite_context *uia2_ctx)
 {
         int length, numVectors, i = 0, j = 0, numPackets = 4;
         size_t size = 0;
@@ -943,10 +963,13 @@ static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
         uint32_t bitOffsets[NUM_SUPPORTED_BUFFERS];
         uint32_t bitLens[NUM_SUPPORTED_BUFFERS];
         int keyLen = MAX_KEY_LEN;
-        int ret = 1;
+        int status = -1;
 
+        (void) uia2_ctx;
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F8_4_BUFFER: (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         memset(pSrcBuff, 0, sizeof(pSrcBuff));
         memset(pDstBuff, 0, sizeof(pDstBuff));
@@ -956,12 +979,12 @@ static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f8_4_buffer_exit;
         }
 
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
         if (!size)
-                return ret;
+                goto snow3g_f8_4_buffer_exit;
 
         /* Test with all vectors */
         for (j = 0; j < numVectors; j++) {
@@ -1048,7 +1071,6 @@ static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[i]);
                                 goto snow3g_f8_4_buffer_exit;
                         }
-                        printf(".");
                 }
 
                 /* Set the source buffer with ciphertext, and clear destination
@@ -1085,7 +1107,6 @@ static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[i]);
                                 goto snow3g_f8_4_buffer_exit;
                         }
-                        printf(".");
                 }
                 /* TEST OUT-OF-PLACE ENCRYPTION/DECRYPTION */
                 /*Test the encrypt*/
@@ -1117,7 +1138,6 @@ static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[i]);
                                 goto snow3g_f8_4_buffer_exit;
                         }
-                        printf(".");
                 }
 
                 /* Set the source buffer with ciphertext, and clear destination
@@ -1155,7 +1175,6 @@ static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[i]);
                                 goto snow3g_f8_4_buffer_exit;
                         }
-                        printf(".");
                 }
                 /* free buffers before next iteration */
                 for (i = 0; i < numPackets; i++) {
@@ -1257,11 +1276,10 @@ static int validate_snow3g_f8_4_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                        packetLen[i]);
                         goto snow3g_f8_4_buffer_exit;
                 }
-                printf(".");
         }
 
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f8_4_buffer_exit:
         for (i = 0; i < numPackets; i++) {
@@ -1276,12 +1294,16 @@ snow3g_f8_4_buffer_exit:
                 if (pIV[i] != NULL)
                         free(pIV[i]);
         }
-        printf("\n");
-
-        return ret;
+        if (status < 0)
+                test_suite_update(uea2_ctx, 0, 1);
+        else
+                test_suite_update(uea2_ctx, 1, 0);
 }
 
-static int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
+static void
+validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                            struct test_suite_context *uea2_ctx,
+                            struct test_suite_context *uia2_ctx)
 {
         int length, numVectors, i, j, numPackets = 8;
         size_t size = 0;
@@ -1298,10 +1320,13 @@ static int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
         uint32_t bitOffsets[NUM_SUPPORTED_BUFFERS];
         uint32_t bitLens[NUM_SUPPORTED_BUFFERS];
         int keyLen = MAX_KEY_LEN;
-        int ret = 1;
+        int status = -1;
 
+        (void) uia2_ctx;
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F8_8_BUFFER: (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         memset(pSrcBuff, 0, sizeof(pSrcBuff));
         memset(pDstBuff, 0, sizeof(pDstBuff));
@@ -1311,12 +1336,12 @@ static int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f8_8_buffer_exit;
         }
 
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
         if (!size)
-                return ret;
+                goto snow3g_f8_8_buffer_exit;
 
         /* Test with all vectors */
         for (j = 0; j < numVectors; j++) {
@@ -1409,7 +1434,6 @@ static int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[i]);
                                 goto snow3g_f8_8_buffer_exit;
                         }
-                        printf(".");
                 }
 
                 /*Test the decrypt*/
@@ -1448,7 +1472,6 @@ static int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                                packetLen[i]);
                                 goto snow3g_f8_8_buffer_exit;
                         }
-                        printf(".");
                 }
                 /* free buffers before next iteration */
                 for (i = 0; i < numPackets; i++) {
@@ -1556,10 +1579,9 @@ static int validate_snow3g_f8_8_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                        packetLen[i]);
                         goto snow3g_f8_8_buffer_exit;
                 }
-                printf(".");
         }
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f8_8_buffer_exit:
         for (i = 0; i < numPackets; i++) {
@@ -1574,13 +1596,18 @@ snow3g_f8_8_buffer_exit:
                 if (pIV[i] != NULL)
                         free(pIV[i]);
         }
-        printf("\n");
 
-        return ret;
+        if (status < 0)
+                test_suite_update(uea2_ctx, 0, 1);
+        else
+                test_suite_update(uea2_ctx, 1, 0);
 }
 
-static int validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
-                                                 uint32_t job_api)
+static void
+validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
+                                      uint32_t job_api,
+                                      struct test_suite_context *uea2_ctx,
+                                      struct test_suite_context *uia2_ctx)
 {
         int length, numVectors, i, j, numPackets = 8;
         size_t size = 0;
@@ -1605,10 +1632,13 @@ static int validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
         uint32_t bitOffsets[NUM_SUPPORTED_BUFFERS];
         uint32_t bitLens[NUM_SUPPORTED_BUFFERS];
 
-        int ret = 1;
+        int status = -1;
 
+        (void) uia2_ctx;
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F8_8_BUFFER_MULTIKEY: (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         memset(pSrcBuff, 0, sizeof(pSrcBuff));
         memset(pDstBuff, 0, sizeof(pDstBuff));
@@ -1619,13 +1649,13 @@ static int validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f8_8_buffer_multikey_exit;
         }
 
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
         if (!size) {
                 printf("snow3g_key_sched_multi_size() failure !\n");
-                return ret;
+                goto snow3g_f8_8_buffer_multikey_exit;
         }
 
         for (i = 0; i < numPackets; i++) {
@@ -1702,7 +1732,6 @@ static int validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
                                        packetLen[i]);
                         goto snow3g_f8_8_buffer_multikey_exit;
                 }
-                printf(".");
         }
 
         /*Test the decrypt*/
@@ -1729,10 +1758,9 @@ static int validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
                                        packetLen[i]);
                         goto snow3g_f8_8_buffer_multikey_exit;
                 }
-                printf(".");
         }
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f8_8_buffer_multikey_exit:
         for (i = 0; i < numPackets; i++) {
@@ -1746,14 +1774,18 @@ snow3g_f8_8_buffer_multikey_exit:
                         free(pKey[i]);
                 if (pKeySched[i] != NULL)
                         free(pKeySched[i]);
-
         }
-        printf("\n");
 
-        return ret;
+        if (status < 0)
+                test_suite_update(uea2_ctx, 0, 1);
+        else
+                test_suite_update(uea2_ctx, 1, 0);
 }
 
-static int validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
+static void
+validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                            struct test_suite_context *uea2_ctx,
+                            struct test_suite_context *uia2_ctx)
 {
         int length, numVectors, i, numPackets = 16;
         size_t size = 0;
@@ -1770,10 +1802,13 @@ static int validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
         uint32_t bitOffsets[NUM_SUPPORTED_BUFFERS];
         uint32_t bitLens[NUM_SUPPORTED_BUFFERS];
         int keyLen = MAX_KEY_LEN;
-        int ret = 1;
+        int status = -1;
 
+        (void) uia2_ctx;
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F8_N_BUFFER: (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         memset(pSrcBuff, 0, sizeof(pSrcBuff));
         memset(pDstBuff, 0, sizeof(pDstBuff));
@@ -1784,12 +1819,12 @@ static int validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f8_n_buffer_exit;
         }
 
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
         if (!size)
-                return ret;
+                goto snow3g_f8_n_buffer_exit;
 
         /*vectors are in bits used to round up to bytes*/
         length = testVectors[0].dataLenInBytes;
@@ -1873,7 +1908,6 @@ static int validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                        packetLen[0]);
                         goto snow3g_f8_n_buffer_exit;
                 }
-                printf(".");
 
                 /*Test the Decrypt*/
                 if (job_api)
@@ -1902,10 +1936,9 @@ static int validate_snow3g_f8_n_blocks(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                        packetLen[0]);
                         goto snow3g_f8_n_buffer_exit;
                 }
-                printf(".");
         }
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f8_n_buffer_exit:
         for (i = 0; i < numPackets; i++) {
@@ -1920,13 +1953,18 @@ snow3g_f8_n_buffer_exit:
                 if (pIV[i] != NULL)
                         free(pIV[i]);
         }
-        printf("\n");
 
-        return ret;
+        if (status < 0)
+                test_suite_update(uea2_ctx, 0, 1);
+        else
+                test_suite_update(uea2_ctx, 1, 0);
 }
 
-static int validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
-                                             uint32_t job_api)
+static void
+validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
+                                  uint32_t job_api,
+                                  struct test_suite_context *uea2_ctx,
+                                  struct test_suite_context *uia2_ctx)
 {
         int length, numVectors, i, numPackets = NUM_SUPPORTED_BUFFERS;
         size_t size = 0;
@@ -1942,11 +1980,14 @@ static int validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
         uint32_t packetLen[NUM_SUPPORTED_BUFFERS];
         uint32_t bitOffsets[NUM_SUPPORTED_BUFFERS];
         uint32_t bitLens[NUM_SUPPORTED_BUFFERS];
+        int status = -1;
 
-        int ret = 1;
+        (void) uia2_ctx;
 
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F8_N_BUFFER_MULTIKEY: (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         memset(pSrcBuff, 0, sizeof(pSrcBuff));
         memset(pDstBuff, 0, sizeof(pDstBuff));
@@ -1957,14 +1998,12 @@ static int validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f8_n_buffer_multikey_exit;
         }
 
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
-        if (!size) {
-                printf("snow3g_key_sched_multi_size() failure !\n");
-                return ret;
-        }
+        if (!size)
+                goto snow3g_f8_n_buffer_multikey_exit;
 
         for (i = 0; i < numPackets; i++) {
                 length = testVectors[0].dataLenInBytes;
@@ -2041,7 +2080,6 @@ static int validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
                                        packetLen[i]);
                         goto snow3g_f8_n_buffer_multikey_exit;
                 }
-                printf(".");
 
                 /*Test the Decrypt*/
                 if (job_api)
@@ -2072,10 +2110,9 @@ static int validate_snow3g_f8_n_blocks_multi(struct IMB_MGR *mb_mgr,
                                        packetLen[i]);
                         goto snow3g_f8_n_buffer_multikey_exit;
                 }
-                printf(".");
         }
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f8_n_buffer_multikey_exit:
         for (i = 0; i < numPackets; i++) {
@@ -2091,12 +2128,16 @@ snow3g_f8_n_buffer_multikey_exit:
                         free(pKeySched[i]);
 
         }
-        printf("\n");
-
-        return ret;
+        if (status < 0)
+                test_suite_update(uea2_ctx, 0, 1);
+        else
+                test_suite_update(uea2_ctx, 1, 0);
 }
 
-static int validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api)
+static void
+validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api,
+                   struct test_suite_context *uea2_ctx,
+                   struct test_suite_context *uia2_ctx)
 {
         int numVectors, i, inputLen;
         size_t size = 0;
@@ -2109,43 +2150,40 @@ static int validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api)
         int keyLen = MAX_KEY_LEN;
         uint8_t srcBuff[MAX_DATA_LEN];
         uint8_t digest[DIGEST_LEN];
-        uint8_t *pIV;
-        int ret = 1;
+        uint8_t *pIV = NULL;
+        int status = -1;
 
+        (void) uea2_ctx;
+#ifdef DEBUG
         printf("Testing IMB_SNOW3G_F9_1_BUFFER: (%s):\n",
                job_api ? "Job API" : "Direct API");
+#endif
 
         if (!numVectors) {
                 printf("No Snow3G test vectors found !\n");
-                return ret;
+                goto snow3g_f9_1_buffer_exit;
         }
 
         pIV = malloc(SNOW3G_IV_LEN_IN_BYTES);
         if (!pIV) {
                 printf("malloc(pIV):failed !\n");
-                return ret;
+                goto snow3g_f9_1_buffer_exit;
         }
 
         pKey = malloc(keyLen);
         if (!pKey) {
                 printf("malloc(pKey):failed !\n");
-                free(pIV);
-                return ret;
+                goto snow3g_f9_1_buffer_exit;
         }
         size = IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr);
-        if (!size) {
-                free(pIV);
-                free(pKey);
-                return ret;
-        }
+        if (!size)
+                goto snow3g_f9_1_buffer_exit;
 
         pKeySched = malloc(size);
         if (!pKeySched) {
                 printf("malloc(IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr)): "
                        "failed !\n");
-                free(pIV);
-                free(pKey);
-                return ret;
+                goto snow3g_f9_1_buffer_exit;
         }
 
         /*Get test data for for Snow3g 1 Packet version*/
@@ -2180,19 +2218,20 @@ static int validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api)
                                        DIGEST_LEN);
                         goto snow3g_f9_1_buffer_exit;
                 }
-                printf(".");
 
         } /* for numVectors */
         /* no errors detected */
-        ret = 0;
+        status = 0;
 
 snow3g_f9_1_buffer_exit:
         free(pIV);
         free(pKey);
         free(pKeySched);
-        printf("\n");
 
-        return ret;
+        if (status < 0)
+                test_suite_update(uia2_ctx, 0, 1);
+        else
+                test_suite_update(uia2_ctx, 1, 0);
 }
 
 static int validate_f8_iv_gen(void)
@@ -2201,7 +2240,9 @@ static int validate_f8_iv_gen(void)
         uint8_t IV[16];
         const uint32_t numVectors = MAX_BIT_BUFFERS;
 
+#ifdef DEBUG
         printf("Testing snow3g_f8_iv_gen:\n");
+#endif
 
         /* skip first vector as it's not part of test data */
         for (i = 1; i < numVectors; i++) {
@@ -2222,11 +2263,9 @@ static int validate_f8_iv_gen(void)
                         snow3g_hexdump("Expected",
                                        snow3g_f8_linear_bitvectors.iv[i], 16);
                         return 1;
-                } else
-                        printf(".");
+                }
         }
 
-        printf("\n");
         return 0;
 }
 
@@ -2237,7 +2276,9 @@ static int validate_f9_iv_gen(void)
         /* snow3g f9 test vectors are located at index 2 */
         const uint32_t numVectors = numSnow3gHashTestVectors[2];
 
+#ifdef DEBUG
         printf("Testing snow3g_f9_iv_gen:\n");
+#endif
 
         /* 6 test sets */
         for (i = 0; i < numVectors; i++) {
@@ -2257,50 +2298,45 @@ static int validate_f9_iv_gen(void)
                         snow3g_hexdump("Actual", IV, 16);
                         snow3g_hexdump("Expected", snow_f9_vectors[i].iv, 16);
                         return 1;
-                } else
-                        printf(".");
+                }
         }
 
-        printf("\n");
         return 0;
 }
 
 int snow3g_test(struct IMB_MGR *mb_mgr)
 {
-        int status = 0;
+        int errors = 0;
         uint32_t i;
+        struct test_suite_context uea2_ctx;
+        struct test_suite_context uia2_ctx;
+
+        test_suite_start(&uea2_ctx, "SNOW3G-UEA2");
+        test_suite_start(&uia2_ctx, "SNOW3G-UIA2");
 
         if (validate_f8_iv_gen()) {
                 printf("validate_snow3g_f8_iv_gen:: FAIL\n");
-                status = 1;
-        }
+                test_suite_update(&uea2_ctx, 0, 1);
+        } else
+                test_suite_update(&uea2_ctx, 1, 0);
         if (validate_f9_iv_gen()) {
                 printf("validate_snow3g_f9_iv_gen:: FAIL\n");
-                status = 1;
-        }
+                test_suite_update(&uia2_ctx, 0, 1);
+        } else
+                test_suite_update(&uia2_ctx, 1, 0);
 
         /* validate direct api */
-        for (i = 0; i < DIM(snow3g_func_tab); i++) {
-                if (snow3g_func_tab[i].func(mb_mgr, 0)) {
-                        printf("%s:: FAIL\n", snow3g_func_tab[i].func_name);
-                        status = 1;
-                }
-        }
+        for (i = 0; i < DIM(snow3g_func_tab); i++)
+                snow3g_func_tab[i].func(mb_mgr, 0, &uea2_ctx, &uia2_ctx);
 
         /* validate job api */
-        for (i = 0; i < DIM(snow3g_func_tab); i++) {
-                if (snow3g_func_tab[i].func(mb_mgr, 1)) {
-                        printf("%s:: FAIL\n", snow3g_func_tab[i].func_name);
-                        status = 1;
-                }
-        }
+        for (i = 0; i < DIM(snow3g_func_tab); i++)
+                snow3g_func_tab[i].func(mb_mgr, 1, &uea2_ctx, &uia2_ctx);
 
-        if (!status)
-                printf("ALL TESTS PASSED.\n");
-        else
-                printf("WE HAVE TEST FAILURES !\n");
+        errors += test_suite_end(&uea2_ctx);
+        errors += test_suite_end(&uia2_ctx);
 
-        return status;
+        return errors;
 }
 
 int membitcmp(const uint8_t *input, const uint8_t *output,
