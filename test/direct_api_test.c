@@ -34,6 +34,7 @@
 
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
+#include "utils.h"
 
 #define BUF_SIZE ((uint32_t)sizeof(struct gcm_key_data))
 #define NUM_BUFS 8
@@ -1115,7 +1116,8 @@ test_clear_mem_api(void)
 int
 direct_api_test(struct IMB_MGR *mb_mgr)
 {
-        int errors = 0;
+        struct test_suite_context ts;
+        int errors = 0, run = 0;
 #ifndef DEBUG
 #if defined(__linux__)
         sighandler_t handler;
@@ -1124,11 +1126,14 @@ direct_api_test(struct IMB_MGR *mb_mgr)
 #endif
 #endif
         printf("Invalid Direct API arguments test:\n");
+        test_suite_start(&ts, "INVALID-ARGS");
 
 #ifndef DEBUG
         handler = signal(SIGSEGV, seg_handler);
 #endif
+
         errors += test_clear_mem_api();
+        run++;
 
         if ((mb_mgr->features & IMB_FEATURE_SAFE_PARAM) == 0) {
                 printf("SAFE_PARAM feature disabled, "
@@ -1137,22 +1142,33 @@ direct_api_test(struct IMB_MGR *mb_mgr)
         }
 
         errors += test_gcm_api(mb_mgr);
-        errors += test_key_exp_gen_api(mb_mgr);
-        errors += test_hash_api(mb_mgr);
-        errors += test_aes_api(mb_mgr);
-        errors += test_zuc_api(mb_mgr);
-        errors += test_kasumi_api(mb_mgr);
-        errors += test_snow3g_api(mb_mgr);
+        run++;
 
-dir_api_exit:
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        errors += test_key_exp_gen_api(mb_mgr);
+        run++;
+
+        errors += test_hash_api(mb_mgr);
+        run++;
+
+        errors += test_aes_api(mb_mgr);
+        run++;
+
+        errors += test_zuc_api(mb_mgr);
+        run++;
+
+        errors += test_kasumi_api(mb_mgr);
+        run++;
+
+        errors += test_snow3g_api(mb_mgr);
+        run++;
+
+        test_suite_update(&ts, run - errors, errors);
+
+ dir_api_exit:
+        errors = test_suite_end(&ts);
 
 #ifndef DEBUG
         signal(SIGSEGV, handler);
 #endif
-
 	return errors;
 }
