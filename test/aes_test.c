@@ -1972,17 +1972,22 @@ end_alloc:
         return ret;
 }
 
-static int
-test_aes_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
+static void
+test_aes_vectors(struct IMB_MGR *mb_mgr,
+                 struct test_suite_context *ctx128,
+                 struct test_suite_context *ctx192,
+                 struct test_suite_context *ctx256,
+                 const int vec_cnt,
                  const struct aes_vector *vec_tab, const char *banner,
                  const JOB_CIPHER_MODE cipher, const int num_jobs)
 {
-	int vect, errors = 0;
+	int vect;
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
+                struct test_suite_context *ctx;
 #ifdef DEBUG
 		printf("[%d/%d] Standard vector key_len:%d\n",
                        vect + 1, vec_cnt,
@@ -1994,15 +1999,18 @@ test_aes_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                 case 16:
                         IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].K, enc_keys,
                                            dec_keys);
+                        ctx = ctx128;
                         break;
                 case 24:
                         IMB_AES_KEYEXP_192(mb_mgr, vec_tab[vect].K, enc_keys,
                                            dec_keys);
+                        ctx = ctx192;
                         break;
                 case 32:
                 default:
                         IMB_AES_KEYEXP_256(mb_mgr, vec_tab[vect].K, enc_keys,
                                            dec_keys);
+                        ctx = ctx256;
                         break;
                 }
 
@@ -2014,7 +2022,9 @@ test_aes_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                   cipher, 0,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_aes_many(mb_mgr, enc_keys, dec_keys,
@@ -2025,7 +2035,9 @@ test_aes_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                   cipher, 0,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_aes_many(mb_mgr, enc_keys, dec_keys,
@@ -2036,7 +2048,9 @@ test_aes_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                   cipher, 1,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_aes_many(mb_mgr, enc_keys, dec_keys,
@@ -2047,11 +2061,12 @@ test_aes_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                   cipher, 1,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
 static int
@@ -2234,17 +2249,21 @@ test_docrc_many(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_docrc_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
+static void
+test_docrc_vectors(struct IMB_MGR *mb_mgr,
+                   struct test_suite_context *ctx128,
+                   struct test_suite_context *ctx256,
+                   const int vec_cnt,
                    const struct docsis_crc_vector *vec_tab,
                    const char *banner, const int num_jobs)
 {
-	int vect, errors = 0;
+	int vect;
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
+                struct test_suite_context *ctx;
 #ifdef DEBUG
 		printf("[%d/%d] Standard vector\n",
                        vect + 1, vec_cnt);
@@ -2255,11 +2274,13 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                 case 16:
                         IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].key, enc_keys,
                                            dec_keys);
+                        ctx = ctx128;
                         break;
                 case 32:
                 default:
                         IMB_AES_KEYEXP_256(mb_mgr, vec_tab[vect].key, enc_keys,
                                            dec_keys);
+                        ctx = ctx256;
                         break;
                 }
 
@@ -2269,7 +2290,9 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                     IMB_DIR_ENCRYPT, IMB_ORDER_HASH_CIPHER, 1,
                                     num_jobs)) {
                         printf("error #%d encrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_docrc_many(mb_mgr, enc_keys, dec_keys,
@@ -2277,12 +2300,13 @@ test_docrc_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                     IMB_DIR_DECRYPT, IMB_ORDER_CIPHER_HASH, 1,
                                     num_jobs)) {
                         printf("error #%d decrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
 	}
 	printf("\n");
-	return errors;
 }
 
 static int
@@ -2374,34 +2398,49 @@ aes_test(struct IMB_MGR *mb_mgr)
         };
         unsigned i;
         int errors = 0;
+        struct test_suite_context ctx128;
+        struct test_suite_context ctx192;
+        struct test_suite_context ctx256;
 
+        test_suite_start(&ctx128, "AES-CBC-128");
+        test_suite_start(&ctx192, "AES-CBC-192");
+        test_suite_start(&ctx256, "AES-CBC-256");
         for (i = 0; i < DIM(num_jobs_tab); i++)
-                errors += test_aes_vectors(mb_mgr, DIM(aes_vectors),
-                                           aes_vectors,
-                                           "AES-CBC standard test vectors",
-                                           IMB_CIPHER_CBC,
-                                           num_jobs_tab[i]);
+                test_aes_vectors(mb_mgr, &ctx128, &ctx192, &ctx256,
+                                 DIM(aes_vectors),
+                                 aes_vectors,
+                                 "AES-CBC standard test vectors",
+                                 IMB_CIPHER_CBC,
+                                 num_jobs_tab[i]);
+        errors += test_suite_end(&ctx128);
+        errors += test_suite_end(&ctx192);
+        errors += test_suite_end(&ctx256);
+
+        test_suite_start(&ctx128, "DOCSIS-SEC-128");
+        test_suite_start(&ctx256, "DOCSIS-SEC-256");
         for (i = 0; i < DIM(num_jobs_tab); i++)
-                errors += test_aes_vectors(mb_mgr, DIM(docsis_vectors),
-                                           docsis_vectors,
-                                           "AES-DOCSIS standard test vectors",
-                                           IMB_CIPHER_DOCSIS_SEC_BPI,
-                                           num_jobs_tab[i]);
+                test_aes_vectors(mb_mgr, &ctx128, &ctx192, &ctx256,
+                                 DIM(docsis_vectors),
+                                 docsis_vectors,
+                                 "AES-DOCSIS standard test vectors",
+                                 IMB_CIPHER_DOCSIS_SEC_BPI,
+                                 num_jobs_tab[i]);
+        errors += test_suite_end(&ctx128);
+        errors += test_suite_end(&ctx256);
+
         if (!cfb128_validate(mb_mgr))
                 errors++;
 
+        test_suite_start(&ctx128, "DOCSIS-SEC-128-CRC32");
+        test_suite_start(&ctx256, "DOCSIS-SEC-256-CRC32");
         for (i = 0; i < DIM(num_jobs_tab); i++)
-                errors +=
-                        test_docrc_vectors(mb_mgr,
-                                           DIM(docsis_crc_tab),
-                                           docsis_crc_tab,
-                                           "AES-DOCSIS+CRC32 vectors",
-                                           num_jobs_tab[i]);
+                test_docrc_vectors(mb_mgr, &ctx128, &ctx256,
+                                   DIM(docsis_crc_tab),
+                                   docsis_crc_tab,
+                                   "AES-DOCSIS+CRC32 vectors",
+                                   num_jobs_tab[i]);
+        errors += test_suite_end(&ctx128);
+        errors += test_suite_end(&ctx256);
 
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
-
-	return errors;
+        return errors;
 }

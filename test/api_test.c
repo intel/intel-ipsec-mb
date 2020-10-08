@@ -32,6 +32,7 @@
 
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
+#include "utils.h"
 
 #ifdef _WIN32
 #define __func__ __FUNCTION__
@@ -975,16 +976,23 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 int
 api_test(struct IMB_MGR *mb_mgr)
 {
-        int errors = 0;
+        int errors = 0, run = 0;
+        struct test_suite_context ctx;
+
+        test_suite_start(&ctx, "INVALID-JOB-ARGS");
 
         errors += test_job_api(mb_mgr);
+        run++;
+
         errors += test_job_invalid_mac_args(mb_mgr);
+        run++;
+
         errors += test_job_invalid_cipher_args(mb_mgr);
+        run++;
 
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        test_suite_update(&ctx, run - errors, errors);
 
-	return errors;
+        test_suite_end(&ctx);
+
+        return errors;
 }

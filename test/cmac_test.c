@@ -1321,12 +1321,13 @@ test_cmac(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_cmac_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_cmac_std_vectors(struct IMB_MGR *mb_mgr,
+                      struct test_suite_context *ctx,
+                      const int num_jobs)
 {
 	const int vectors_cnt = DIM(cmac_vectors);
 	int vect;
-	int errors = 0;
 
 	printf("AES-CMAC-128 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
@@ -1343,26 +1344,29 @@ test_cmac_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs, CMAC_128)) {
                         printf("error #%d encrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
                               IMB_DIR_DECRYPT, num_jobs, CMAC_128)) {
                         printf("error #%d decrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
-
 	}
 	printf("\n");
-        return errors;
 }
 
-static int
-test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr,
+                          struct test_suite_context *ctx,
+                          const int num_jobs)
 {
 	const int vectors_cnt = DIM(cmac_256_vectors);
 	int vect;
-	int errors = 0;
 
 	printf("AES-CMAC-256 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
@@ -1379,27 +1383,28 @@ test_cmac_256_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
                 if (test_cmac(mb_mgr, &cmac_256_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs, CMAC_256)) {
                         printf("error #%d encrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
-
                 if (test_cmac(mb_mgr, &cmac_256_vectors[idx],
                               IMB_DIR_DECRYPT, num_jobs, CMAC_256)) {
                         printf("error #%d decrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
-
 	}
 	printf("\n");
-        return errors;
 }
 
-static int
-test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr,
+                             struct test_suite_context *ctx,
+                             const int num_jobs)
 {
 	const int vectors_cnt = sizeof(cmac_vectors) / sizeof(cmac_vectors[0]);
 	int vect;
-	int errors = 0;
-
 
         printf("AES-CMAC-128 BITLEN standard test vectors "
                "(N jobs = %d):\n", num_jobs);
@@ -1418,27 +1423,31 @@ test_cmac_bitlen_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs, CMAC_128_BITLEN)) {
                         printf("error #%d encrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_cmac(mb_mgr, &cmac_vectors[idx],
                               IMB_DIR_DECRYPT, num_jobs, CMAC_128_BITLEN)) {
                         printf("error #%d decrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
 	}
         printf("\n");
-        return errors;
 }
 
-static int
-test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr,
+                              struct test_suite_context *ctx,
+                              const int num_jobs)
 {
 	const int vectors_cnt =
                 sizeof(cmac_3gpp_vectors) / sizeof(cmac_3gpp_vectors[0]);
 	int vect;
-	int errors = 0;
 
 	printf("AES-CMAC-128 BITLEN 3GPP test vectors (N jobs = %d):\n",
                num_jobs);
@@ -1457,45 +1466,50 @@ test_cmac_bitlen_3gpp_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
                 if (test_cmac(mb_mgr, &cmac_3gpp_vectors[idx],
                               IMB_DIR_ENCRYPT, num_jobs, CMAC_128_BITLEN)) {
                         printf("error #%d encrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_cmac(mb_mgr, &cmac_3gpp_vectors[idx],
                               IMB_DIR_DECRYPT, num_jobs, CMAC_128_BITLEN)) {
                         printf("error #%d decrypt\n", vect);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
 	}
 	printf("\n");
-	return errors;
 }
 
 int
 cmac_test(struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
+        struct test_suite_context ctx;
 
         /* CMAC 128 with standard vectors */
+        test_suite_start(&ctx, "AES-CMAC-128");
         for (i = 1; i < 20; i++)
-                errors += test_cmac_std_vectors(mb_mgr, i);
+                test_cmac_std_vectors(mb_mgr, &ctx, i);
+        errors += test_suite_end(&ctx);
 
         /* CMAC 128 BITLEN with standard vectors */
+        test_suite_start(&ctx, "AES-CMAC-128-Bit-length");
         for (i = 1; i < 20; i++)
-                errors += test_cmac_bitlen_std_vectors(mb_mgr, i);
+                test_cmac_bitlen_std_vectors(mb_mgr, &ctx, i);
 
         /* CMAC 128 BITLEN with 3GPP vectors */
         for (i = 1; i < 20; i++)
-                errors += test_cmac_bitlen_3gpp_vectors(mb_mgr, i);
+                test_cmac_bitlen_3gpp_vectors(mb_mgr, &ctx, i);
+        errors += test_suite_end(&ctx);
 
         /* CMAC 256 with standard vectors */
+        test_suite_start(&ctx, "AES-CMAC-256");
         for (i = 1; i < 20; i++)
-                errors += test_cmac_256_std_vectors(mb_mgr, i);
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+                test_cmac_256_std_vectors(mb_mgr, &ctx, i);
+        errors += test_suite_end(&ctx);
 
 	return errors;
 }

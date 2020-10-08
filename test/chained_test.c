@@ -377,14 +377,16 @@ test_chained_many(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_chained_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
-                 const struct chained_vector *vec_tab, const char *banner,
-                 const JOB_CIPHER_MODE cipher,
-                 const JOB_HASH_ALG hash,
-                 unsigned hash_block_size, int num_jobs)
+static void
+test_chained_vectors(struct IMB_MGR *mb_mgr,
+                     struct test_suite_context *ctx,
+                     const int vec_cnt,
+                     const struct chained_vector *vec_tab, const char *banner,
+                     const JOB_CIPHER_MODE cipher,
+                     const JOB_HASH_ALG hash,
+                     unsigned hash_block_size, int num_jobs)
 {
-        int vect, errors = 0;
+        int vect;
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
         uint8_t *buf = NULL;
@@ -471,7 +473,9 @@ test_chained_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                         printf("error #%d %s %s\n", vect + 1,
                                                test_sets[i].set_name,
                                                place_str[in_place]);
-                                        errors++;
+                                        test_suite_update(ctx, 0, 1);
+                                } else {
+                                        test_suite_update(ctx, 1, 0);
                                 }
                         }
                 }
@@ -481,7 +485,6 @@ test_chained_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
 exit:
         free(buf);
         free(hash_key);
-        return errors;
 }
 
 int
@@ -492,17 +495,18 @@ chained_test(struct IMB_MGR *mb_mgr)
         };
         unsigned i;
         int errors = 0;
+        struct test_suite_context ctx;
 
+        test_suite_start(&ctx, "CHAINED-OP");
         for (i = 0; i < DIM(num_jobs_tab); i++)
-                errors += test_chained_vectors(mb_mgr, DIM(chained_vectors),
-                                   chained_vectors,
-                                   "AES-CBC + SHA1-HMAC standard test vectors",
-                                   IMB_CIPHER_CBC, IMB_AUTH_HMAC_SHA_1,
-                                   SHA1_BLOCK_SIZE, num_jobs_tab[i]);
-        if (0 == errors)
-                printf("...Pass\n");
-        else
-                printf("...Fail\n");
+                test_chained_vectors(mb_mgr, &ctx,
+                                     DIM(chained_vectors),
+                                     chained_vectors,
+                                     "AES-CBC + SHA1-HMAC standard test vectors",
+                                     IMB_CIPHER_CBC, IMB_AUTH_HMAC_SHA_1,
+                                     SHA1_BLOCK_SIZE, num_jobs_tab[i]);
+
+        errors += test_suite_end(&ctx);
 
         return errors;
 }

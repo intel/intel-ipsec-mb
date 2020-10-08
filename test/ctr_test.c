@@ -1360,17 +1360,21 @@ test_ctr(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_ctr_vectors(struct IMB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
+static void
+test_ctr_vectors(struct IMB_MGR *mb_mgr,
+                 struct test_suite_context *ctx128,
+                 struct test_suite_context *ctx192,
+                 struct test_suite_context *ctx256,
+                 const struct gcm_ctr_vector *vectors,
                  const uint32_t vectors_cnt, const JOB_CIPHER_MODE alg)
 {
 	uint32_t vect;
-	int errors = 0;
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
         DECLARE_ALIGNED(uint32_t dust[4*15], 16);
 
 	printf("AES-CTR standard test vectors:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
+                struct test_suite_context *ctx;
 #ifdef DEBUG
                 if (alg == IMB_CIPHER_CNTR)
 		        printf("Standard vector %d/%d  Keylen:%d "
@@ -1394,17 +1398,20 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                 case BITS_128:
                         IMB_AES_KEYEXP_128(mb_mgr, vectors[vect].K,
                                            expkey, dust);
+                        ctx = ctx128;
                         break;
                 case BITS_192:
                         IMB_AES_KEYEXP_192(mb_mgr, vectors[vect].K,
                                            expkey, dust);
+                        ctx = ctx192;
                         break;
                 case BITS_256:
                         IMB_AES_KEYEXP_256(mb_mgr, vectors[vect].K,
                                            expkey, dust);
+                        ctx = ctx256;
                         break;
                 default:
-                        return -1;
+                        return;
                 }
 
                 if (test_ctr(mb_mgr,
@@ -1415,7 +1422,9 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                              (unsigned) vectors[vect].Plen,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, alg)) {
                         printf("error #%d encrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ctr(mb_mgr,
@@ -1426,7 +1435,9 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                              (unsigned) vectors[vect].Plen,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, alg)) {
                         printf("error #%d decrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (vectors[vect].IVlen == 12) {
@@ -1454,7 +1465,9 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                                      IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                                      alg)) {
                                 printf("error #%d encrypt\n", vect + 1);
-                                errors++;
+                                test_suite_update(ctx, 0, 1);
+                        } else {
+                                test_suite_update(ctx, 1, 0);
                         }
 
                         if (test_ctr(mb_mgr,
@@ -1465,34 +1478,48 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr, const struct gcm_ctr_vector *vectors,
                                      IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                                      alg)) {
                                 printf("error #%d decrypt\n", vect + 1);
-                                errors++;
+                                test_suite_update(ctx, 0, 1);
+                        } else {
+                                test_suite_update(ctx, 1, 0);
                         }
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
 int
 ctr_test(struct IMB_MGR *mb_mgr)
 {
-        int errors;
-
+        int errors = 0;
+        struct test_suite_context ctx128;
+        struct test_suite_context ctx192;
+        struct test_suite_context ctx256;
 	const uint32_t ctr_vec_cnt = DIM(ctr_vectors);
 	const uint32_t ctr_bit_vec_cnt = DIM(ctr_bit_vectors);
 
         /* Standard CTR vectors */
-        errors = test_ctr_vectors(mb_mgr, ctr_vectors, ctr_vec_cnt,
-                                  IMB_CIPHER_CNTR);
+        test_suite_start(&ctx128, "AES-CTR-128");
+        test_suite_start(&ctx192, "AES-CTR-192");
+        test_suite_start(&ctx256, "AES-CTR-256");
+        test_ctr_vectors(mb_mgr,
+                         &ctx128, &ctx192, &ctx256,
+                         ctr_vectors, ctr_vec_cnt,
+                         IMB_CIPHER_CNTR);
+        errors += test_suite_end(&ctx128);
+        errors += test_suite_end(&ctx192);
+        errors += test_suite_end(&ctx256);
 
         /* CTR_BITLEN vectors */
-        errors += test_ctr_vectors(mb_mgr, ctr_bit_vectors, ctr_bit_vec_cnt,
-                                   IMB_CIPHER_CNTR_BITLEN);
+        test_suite_start(&ctx128, "AES-CTR-128-Bit-length");
+        test_suite_start(&ctx128, "AES-CTR-192-Bit-length");
+        test_suite_start(&ctx128, "AES-CTR-256-Bit-length");
+        test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256,
+                         ctr_bit_vectors, ctr_bit_vec_cnt,
+                         IMB_CIPHER_CNTR_BITLEN);
+        errors += test_suite_end(&ctx128);
+        errors += test_suite_end(&ctx192);
+        errors += test_suite_end(&ctx256);
 
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
 
 	return errors;
 }

@@ -204,7 +204,8 @@ static int
 test_crc_polynomial(void (*fn_crc_setup)(void),
                     uint32_t (*fn_crc_calc)(const void *, uint64_t),
                     uint32_t (*fn_crc)(const void *, uint64_t),
-                    const char *title)
+                    const char *title,
+                    struct test_suite_context *ctx)
 {
         uint8_t buffer[2048];
         size_t n;
@@ -212,7 +213,10 @@ test_crc_polynomial(void (*fn_crc_setup)(void),
         if (fn_crc_setup == NULL || fn_crc_calc == NULL ||
             fn_crc == NULL || title == NULL) {
                 printf("crc_test: NULL parameter passed!\n");
+                test_suite_update(ctx, 0, 1);
                 return 1;
+        } else {
+                test_suite_update(ctx, 1, 0);
         }
 
         printf("Starting CRC Test: %s\n", title);
@@ -233,7 +237,10 @@ test_crc_polynomial(void (*fn_crc_setup)(void),
                                (unsigned long) received_crc,
                                (unsigned long) reference_crc);
                         hexdump(stdout, "buffer content", buffer, n);
+                        test_suite_update(ctx, 0, 1);
                         return 1;
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
         }
 
@@ -717,6 +724,7 @@ crc8_wimax_ofdma_hcs_tested_calc(const void *p, uint64_t len)
 int
 crc_test(struct IMB_MGR *mb_mgr)
 {
+        struct test_suite_context ctx;
         int errors = 0;
 
         p_mgr = mb_mgr;
@@ -725,72 +733,91 @@ crc_test(struct IMB_MGR *mb_mgr)
 
         /* reflected CRC32 functions */
 
-        errors += test_crc_polynomial(crc32_ethernet_fcs_setup,
-                                      crc32_ethernet_fcs_ref_calc,
-                                      crc32_ethernet_fcs_tested_calc,
-                                      "CRC32 ETHERNET FCS 0x04c11db7");
+        test_suite_start(&ctx, "ETH-CR32");
+        test_crc_polynomial(crc32_ethernet_fcs_setup,
+                            crc32_ethernet_fcs_ref_calc,
+                            crc32_ethernet_fcs_tested_calc,
+                            "CRC32 ETHERNET FCS 0x04c11db7", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc16_x25_setup,
-                                      crc16_x25_ref_calc,
-                                      crc16_x25_tested_calc,
-                                      "CRC16 X25 0x1021");
+        test_suite_start(&ctx, "X25-CRC16");
+        test_crc_polynomial(crc16_x25_setup,
+                            crc16_x25_ref_calc,
+                            crc16_x25_tested_calc,
+                            "CRC16 X25 0x1021", &ctx);
+        errors += test_suite_end(&ctx);
 
         /* CRC32 functions */
 
-        errors += test_crc_polynomial(crc32_sctp_setup,
-                                      crc32_sctp_calc,
-                                      crc32_sctp_tested_calc,
-                                      "CRC32 SCTP 0x1edc6f41 (Castagnoli93)");
+        test_suite_start(&ctx, "SCTP-CRC32");
+        test_crc_polynomial(crc32_sctp_setup,
+                            crc32_sctp_calc,
+                            crc32_sctp_tested_calc,
+                            "CRC32 SCTP 0x1edc6f41 (Castagnoli93)", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc32_lte24a_setup,
-                                      crc32_lte24a_calc,
-                                      crc32_lte24a_tested_calc,
-                                      "LTE CRC24A 0x864cFB");
+        test_suite_start(&ctx, "LTE-A-CRC24");
+        test_crc_polynomial(crc32_lte24a_setup,
+                            crc32_lte24a_calc,
+                            crc32_lte24a_tested_calc,
+                            "LTE CRC24A 0x864cFB", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc32_lte24b_setup,
-                                      crc32_lte24b_calc,
-                                      crc32_lte24b_tested_calc,
-                                      "LTE CRC24B 0x800063");
+        test_suite_start(&ctx, "LTE-B-CRC24");
+        test_crc_polynomial(crc32_lte24b_setup,
+                            crc32_lte24b_calc,
+                            crc32_lte24b_tested_calc,
+                            "LTE CRC24B 0x800063", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc16_fp_data_setup,
-                                      crc16_fp_data_calc,
-                                      crc16_fp_data_tested_calc,
-                                      "Framing Protocol Data CRC16 0x8005");
+        test_suite_start(&ctx, "FP-CRC16");
+        test_crc_polynomial(crc16_fp_data_setup,
+                            crc16_fp_data_calc,
+                            crc16_fp_data_tested_calc,
+                            "Framing Protocol Data CRC16 0x8005", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc11_fp_header_setup,
-                                      crc11_fp_header_calc,
-                                      crc11_fp_header_tested_calc,
-                                      "Framing Protocol Header CRC11 0x307");
+        test_suite_start(&ctx, "FP-CRC11");
+        test_crc_polynomial(crc11_fp_header_setup,
+                            crc11_fp_header_calc,
+                            crc11_fp_header_tested_calc,
+                            "Framing Protocol Header CRC11 0x307", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc7_fp_header_setup,
-                                      crc7_fp_header_calc,
-                                      crc7_fp_header_tested_calc,
-                                      "Framing Protocol Header CRC7 0x45");
+        test_suite_start(&ctx, "FP-CRC7");
+        test_crc_polynomial(crc7_fp_header_setup,
+                            crc7_fp_header_calc,
+                            crc7_fp_header_tested_calc,
+                            "Framing Protocol Header CRC7 0x45", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc10_iuup_data_setup,
-                                      crc10_iuup_data_calc,
-                                      crc10_iuup_data_tested_calc,
-                                      "IUUP Data CRC10 0x233");
+        test_suite_start(&ctx, "IUUP-CRC10");
+        test_crc_polynomial(crc10_iuup_data_setup,
+                            crc10_iuup_data_calc,
+                            crc10_iuup_data_tested_calc,
+                            "IUUP Data CRC10 0x233", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc6_iuup_header_setup,
-                                      crc6_iuup_header_calc,
-                                      crc6_iuup_header_tested_calc,
-                                      "IUUP Header CRC6 0x2f");
+        test_suite_start(&ctx, "IUUP-CRC6");
+        test_crc_polynomial(crc6_iuup_header_setup,
+                            crc6_iuup_header_calc,
+                            crc6_iuup_header_tested_calc,
+                            "IUUP Header CRC6 0x2f", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc32_wimax_ofdma_data_setup,
-                                      crc32_wimax_ofdma_data_calc,
-                                      crc32_wimax_ofdma_data_tested_calc,
-                                      "WIMAX OFDMA CRC32 0x04c11db7");
+        test_suite_start(&ctx, "WIMAX-OFDMA-CRC32");
+        test_crc_polynomial(crc32_wimax_ofdma_data_setup,
+                            crc32_wimax_ofdma_data_calc,
+                            crc32_wimax_ofdma_data_tested_calc,
+                            "WIMAX OFDMA CRC32 0x04c11db7", &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_crc_polynomial(crc8_wimax_ofdma_hcs_setup,
-                                      crc8_wimax_ofdma_hcs_calc,
-                                      crc8_wimax_ofdma_hcs_tested_calc,
-                                      "WIMAX OFDMA CRC8 HCS 0x07");
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        test_suite_start(&ctx, "WIMAX-OFDMA-CRC8");
+        test_crc_polynomial(crc8_wimax_ofdma_hcs_setup,
+                            crc8_wimax_ofdma_hcs_calc,
+                            crc8_wimax_ofdma_hcs_tested_calc,
+                            "WIMAX OFDMA CRC8 HCS 0x07", &ctx);
+        errors += test_suite_end(&ctx);
 
 	return errors;
 }

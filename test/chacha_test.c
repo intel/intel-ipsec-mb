@@ -346,12 +346,14 @@ end_alloc:
         return ret;
 }
 
-static int
-test_chacha_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
-                 const struct chacha_vector *vec_tab, const char *banner,
-                 const JOB_CIPHER_MODE cipher, const int num_jobs)
+static void
+test_chacha_vectors(struct IMB_MGR *mb_mgr,
+                    struct test_suite_context *ctx,
+                    const int vec_cnt,
+                    const struct chacha_vector *vec_tab, const char *banner,
+                    const JOB_CIPHER_MODE cipher, const int num_jobs)
 {
-	int vect, errors = 0;
+	int vect;
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
@@ -375,7 +377,9 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                   cipher, 0,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_chacha_many(mb_mgr, enc_keys, dec_keys,
@@ -386,7 +390,9 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                   cipher, 0,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_chacha_many(mb_mgr, enc_keys, dec_keys,
@@ -397,7 +403,9 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                   cipher, 1,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_chacha_many(mb_mgr, enc_keys, dec_keys,
@@ -408,11 +416,12 @@ test_chacha_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                                   cipher, 1,
                                   vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
 int
@@ -423,18 +432,16 @@ chacha_test(struct IMB_MGR *mb_mgr)
         };
         unsigned i;
         int errors = 0;
+        struct test_suite_context ctx;
 
+        test_suite_start(&ctx, "CHACHA20-256");
         for (i = 0; i < DIM(num_jobs_tab); i++)
-                errors += test_chacha_vectors(mb_mgr, DIM(chacha_vectors),
-                                           chacha_vectors,
-                                           "CHACHA20 standard test vectors",
-                                           IMB_CIPHER_CHACHA20,
-                                           num_jobs_tab[i]);
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+                test_chacha_vectors(mb_mgr, &ctx,
+                                    DIM(chacha_vectors),
+                                    chacha_vectors,
+                                    "CHACHA20 standard test vectors",
+                                    IMB_CIPHER_CHACHA20, num_jobs_tab[i]);
+        errors = test_suite_end(&ctx);
 
 	return errors;
 }

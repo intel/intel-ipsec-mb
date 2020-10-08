@@ -435,15 +435,15 @@ test_aead(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
+static void
 test_aead_vectors(struct IMB_MGR *mb_mgr,
+                  struct test_suite_context *ctx,
                   const int num_jobs,
                   const struct aead_vector *vec_array,
                   const size_t vec_array_size,
                   const char *banner)
 {
 	size_t vect;
-	int errors = 0;
 
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_array_size; vect++) {
@@ -459,50 +459,55 @@ test_aead_vectors(struct IMB_MGR *mb_mgr,
                               IMB_DIR_ENCRYPT, num_jobs, 1)) {
                         printf("error #%u encrypt in-place\n",
                                (unsigned) vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_aead(mb_mgr, &vec_array[vect],
                               IMB_DIR_DECRYPT, num_jobs, 1)) {
                         printf("error #%u decrypt in-place\n",
                                (unsigned) vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_aead(mb_mgr, &vec_array[vect],
                               IMB_DIR_ENCRYPT, num_jobs, 0)) {
                         printf("error #%u encrypt out-of-place\n",
                                (unsigned) vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_aead(mb_mgr, &vec_array[vect],
                               IMB_DIR_DECRYPT, num_jobs, 0)) {
                         printf("error #%u decrypt out-of-place\n",
                                (unsigned) vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
-
 	}
 	printf("\n");
-        return errors;
-}
 
+}
 
 int
 chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
+        struct test_suite_context ctx;
 
+        test_suite_start(&ctx, "AEAD-CHACHA20-256-POLY1305");
         for (i = 1; i < 20; i++)
-                errors += test_aead_vectors(mb_mgr, i, aead_vectors,
-                                            DIM(aead_vectors),
-                                            "AEAD Chacha20-Poly1305 vectors");
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+                test_aead_vectors(mb_mgr, &ctx, i,
+                                  aead_vectors,
+                                  DIM(aead_vectors),
+                                  "AEAD Chacha20-Poly1305 vectors");
+        errors = test_suite_end(&ctx);
 
 	return errors;
 }
