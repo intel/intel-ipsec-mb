@@ -1646,10 +1646,11 @@ job_aes_gcm_dec_256(const struct gcm_key_data *key,
 
 /*****************************************************************************/
 
-static int
+static void
 test_gcm_vectors(struct gcm_ctr_vector const *vector,
                  gcm_enc_dec_fn_t encfn,
-                 gcm_enc_dec_fn_t decfn)
+                 gcm_enc_dec_fn_t decfn,
+                 struct test_suite_context *ts)
 {
 	struct gcm_key_data gdata_key;
 	struct gcm_context_data gdata_ctx;
@@ -1662,22 +1663,17 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
         const uint8_t *iv = vector->IV;
         uint64_t iv_len = vector->IVlen;
 
-#ifdef DEBUG
-        printf("Testing GCM128 std vectors\n");
-#endif
         if (vector->Plen != 0) {
 	        /* Allocate space for the calculated ciphertext */
 		ct_test = malloc(vector->Plen);
 		if (ct_test == NULL) {
 			fprintf(stderr, "Can't allocate ciphertext memory\n");
-			is_error = 1;
 		        goto test_gcm_vectors_exit;
 		}
 	        /* Allocate space for the calculated plaintext */
 		pt_test = malloc(vector->Plen);
 		if (pt_test == NULL) {
 			fprintf(stderr, "Can't allocate plaintext memory\n");
-			is_error = 1;
 		        goto test_gcm_vectors_exit;
 		}
 	}
@@ -1685,13 +1681,11 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 	T_test = malloc(vector->Tlen);
 	if (T_test == NULL) {
 		fprintf(stderr, "Can't allocate tag memory\n");
-		is_error = 1;
                 goto test_gcm_vectors_exit;
 	}
 	T2_test = malloc(vector->Tlen);
 	if (T2_test == NULL) {
 		fprintf(stderr, "Can't allocate tag(2) memory\n");
-		is_error = 1;
                 goto test_gcm_vectors_exit;
 	}
 	/* This is only required once for a given key */
@@ -1715,16 +1709,24 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
               ct_test, vector->P, vector->Plen,
               iv, iv_len, vector->A,
               vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(ct_test, vector->C, vector->Plen,
-                               "encrypted cypher text (C)");
-	is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
+	is_error = check_data(ct_test, vector->C, vector->Plen,
+                              "encrypted cipher text (C)");
+        is_error |= check_data(T_test, vector->T, vector->Tlen, "tag (T)");
+        if (is_error)
+                test_suite_update(ts, 0, 1);
+        else
+                test_suite_update(ts, 1, 0);
 
 	/* test of in-place encrypt */
 	memcpy(pt_test, vector->P, vector->Plen);
 	encfn(&gdata_key, &gdata_ctx, pt_test, pt_test, vector->Plen,
               iv, iv_len, vector->A, vector->Alen, T_test, vector->Tlen);
-	is_error |= check_data(pt_test, vector->C, vector->Plen,
-                               "encrypted cypher text(in-place)");
+	is_error = check_data(pt_test, vector->C, vector->Plen,
+                              "encrypted cipher text(in-place)");
+        if (is_error)
+                test_suite_update(ts, 0, 1);
+        else
+                test_suite_update(ts, 1, 0);
 	memset(ct_test, 0, vector->Plen);
 	memset(T_test, 0, vector->Tlen);
 
@@ -1734,24 +1736,32 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 	decfn(&gdata_key, &gdata_ctx, pt_test, vector->C, vector->Plen,
               iv, iv_len, vector->A, vector->Alen,
               T_test, vector->Tlen);
-	is_error |= check_data(pt_test, vector->P, vector->Plen,
-                               "decrypted plain text (P)");
+	is_error = check_data(pt_test, vector->P, vector->Plen,
+                              "decrypted plain text (P)");
 	/*
          * GCM decryption outputs a 16 byte tag value
          * that must be verified against the expected tag value
          */
 	is_error |= check_data(T_test, vector->T, vector->Tlen,
                                "decrypted tag (T)");
+        if (is_error)
+                test_suite_update(ts, 0, 1);
+        else
+                test_suite_update(ts, 1, 0);
 
 	/* test in in-place decrypt */
 	memcpy(ct_test, vector->C, vector->Plen);
 	decfn(&gdata_key, &gdata_ctx, ct_test, ct_test, vector->Plen,
               iv, iv_len, vector->A, vector->Alen,
               T_test, vector->Tlen);
-	is_error |= check_data(ct_test, vector->P, vector->Plen,
-                               "plain text (P) - in-place");
+	is_error = check_data(ct_test, vector->P, vector->Plen,
+                              "plain text (P) - in-place");
 	is_error |= check_data(T_test, vector->T, vector->Tlen,
                                "decrypted tag (T) - in-place");
+        if (is_error)
+                test_suite_update(ts, 0, 1);
+        else
+                test_suite_update(ts, 1, 0);
 	/* enc -> dec */
 	encfn(&gdata_key, &gdata_ctx, ct_test, vector->P, vector->Plen,
               iv, iv_len, vector->A, vector->Alen,
@@ -1761,10 +1771,14 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 	decfn(&gdata_key, &gdata_ctx, pt_test, ct_test, vector->Plen,
               iv, iv_len, vector->A, vector->Alen,
               T2_test, vector->Tlen);
-	is_error |= check_data(pt_test, vector->P, vector->Plen,
-                               "self decrypted plain text (P)");
+	is_error = check_data(pt_test, vector->P, vector->Plen,
+                              "self decrypted plain text (P)");
 	is_error |= check_data(T_test, T2_test, vector->Tlen,
                                "self decrypted tag (T)");
+        if (is_error)
+                test_suite_update(ts, 0, 1);
+        else
+                test_suite_update(ts, 1, 0);
 
 	memset(pt_test, 0, vector->Plen);
 
@@ -1777,15 +1791,15 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 		free(T_test);
 	if (NULL != T2_test)
 		free(T2_test);
-
-	return is_error;
 }
 
-static int test_gcm_std_vectors(void)
+static void
+test_gcm_std_vectors(struct test_suite_context *ts128,
+                     struct test_suite_context *ts192,
+                     struct test_suite_context *ts256)
 {
-	int const vectors_cnt = sizeof(gcm_vectors) / sizeof(gcm_vectors[0]);
+	const int vectors_cnt = DIM(gcm_vectors);
 	int vect;
-	int is_error = 0;
 
 	printf("AES-GCM standard test vectors:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
@@ -1803,73 +1817,75 @@ static int test_gcm_std_vectors(void)
 #endif
                 switch (gcm_vectors[vect].Klen) {
                 case BITS_128:
-			is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     aes_gcm_enc_128,
-                                                     aes_gcm_dec_128);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     sgl_aes_gcm_enc_128,
-                                                     sgl_aes_gcm_dec_128);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     job_aes_gcm_enc_128,
-                                                     job_aes_gcm_dec_128);
+			test_gcm_vectors(&gcm_vectors[vect],
+                                         aes_gcm_enc_128, aes_gcm_dec_128,
+                                         ts128);
+			test_gcm_vectors(&gcm_vectors[vect],
+                                         sgl_aes_gcm_enc_128,
+                                         sgl_aes_gcm_dec_128,
+                                         ts128);
+			test_gcm_vectors(&gcm_vectors[vect],
+                                         job_aes_gcm_enc_128,
+                                         job_aes_gcm_dec_128,
+                                         ts128);
                         break;
                 case BITS_192:
-                        is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     aes_gcm_enc_192,
-                                                     aes_gcm_dec_192);
-                        is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     sgl_aes_gcm_enc_192,
-                                                     sgl_aes_gcm_dec_192);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     job_aes_gcm_enc_192,
-                                                     job_aes_gcm_dec_192);
+                        test_gcm_vectors(&gcm_vectors[vect],
+                                         aes_gcm_enc_192, aes_gcm_dec_192,
+                                         ts192);
+                        test_gcm_vectors(&gcm_vectors[vect],
+                                         sgl_aes_gcm_enc_192,
+                                         sgl_aes_gcm_dec_192,
+                                         ts192);
+			test_gcm_vectors(&gcm_vectors[vect],
+                                         job_aes_gcm_enc_192,
+                                         job_aes_gcm_dec_192,
+                                         ts192);
                         break;
                 case BITS_256:
-			is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     aes_gcm_enc_256,
-                                                     aes_gcm_dec_256);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     sgl_aes_gcm_enc_256,
-                                                     sgl_aes_gcm_dec_256);
-			is_error |= test_gcm_vectors(&gcm_vectors[vect],
-                                                     job_aes_gcm_enc_256,
-                                                     job_aes_gcm_dec_256);
+			test_gcm_vectors(&gcm_vectors[vect],
+                                         aes_gcm_enc_256, aes_gcm_dec_256,
+                                         ts256);
+			test_gcm_vectors(&gcm_vectors[vect],
+                                         sgl_aes_gcm_enc_256,
+                                         sgl_aes_gcm_dec_256,
+                                         ts256);
+			test_gcm_vectors(&gcm_vectors[vect],
+                                         job_aes_gcm_enc_256,
+                                         job_aes_gcm_dec_256,
+                                         ts256);
                         break;
                 default:
-                        is_error = -1;
-                        break;
+                        printf("ERROR: wrong key size error in the table\n");
+                        return;
 		}
-		if (0 != is_error)
-			return is_error;
 	}
 	printf("\n");
-	return is_error;
 }
 
-static int test_ghash(void)
+static void
+test_ghash(struct test_suite_context *ts)
 {
-	int const vectors_cnt = sizeof(ghash_vectors) /
-                                sizeof(ghash_vectors[0]);
+	const int vectors_cnt = DIM(ghash_vectors);
 	int vect;
-	int is_error = 0;
-
-	uint8_t T_test[16];
 
 	printf("GHASH test vectors:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
 	        struct gcm_key_data gdata_key;
                 struct gcm_ctr_vector const *vector = &ghash_vectors[vect];
+                uint8_t T_test[16];
 
                 memset(&gdata_key, 0, sizeof(struct gcm_key_data));
                 IMB_GHASH_PRE(p_gcm_mgr, vector->K, &gdata_key);
                 IMB_GHASH(p_gcm_mgr, &gdata_key, vector->P, vector->Plen,
                           T_test, vector->Tlen);
 
-	        is_error |= check_data(T_test, vector->T, vector->Tlen,
-                                       "generated tag (T)");
+	        if (check_data(T_test, vector->T, vector->Tlen,
+                               "generated tag (T)"))
+                        test_suite_update(ts, 0, 1);
+                else
+                        test_suite_update(ts, 1, 0);
         }
-
-	return is_error;
 }
 
 static void
@@ -1923,10 +1939,13 @@ aes_gmac_job(IMB_MGR *mb_mgr,
 }
 
 #define MAX_SEG_SIZE 64
-static int
+static void
 test_gmac_vector(const struct gcm_ctr_vector *vector,
                  const uint64_t seg_size,
-                 const unsigned job_api)
+                 const unsigned job_api,
+                 struct test_suite_context *ts128,
+                 struct test_suite_context *ts192,
+                 struct test_suite_context *ts256)
 {
         struct gcm_key_data key;
         struct gcm_context_data ctx;
@@ -1938,6 +1957,13 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
         const uint8_t *in_ptr = vector->P;
         uint32_t i;
         uint8_t T_test[16];
+        struct test_suite_context *ts = ts128;
+
+        if (vector->Klen ==  BITS_192)
+                ts = ts192;
+
+        if (vector->Klen ==  BITS_256)
+                ts = ts256;
 
         memset(&key, 0, sizeof(struct gcm_key_data));
         if (job_api)
@@ -2015,48 +2041,62 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
                 }
         }
 
-        return check_data(T_test, vector->T, vector->Tlen,
-                               "generated tag (T)");
+        if (check_data(T_test, vector->T, vector->Tlen, "generated tag (T)"))
+                test_suite_update(ts, 0, 1);
+        else
+                test_suite_update(ts, 1, 0);
 }
 
-static int test_gmac(void)
+static void
+test_gmac(struct test_suite_context *ts128,
+          struct test_suite_context *ts192,
+          struct test_suite_context *ts256)
 {
-	int const vectors_cnt = DIM(gmac_vectors);
+	const int vectors_cnt = DIM(gmac_vectors);
 	int vect;
-	int is_error = 0;
-        const struct gcm_ctr_vector *vector;
-        uint64_t seg_size;
 
 	printf("GMAC test vectors:\n");
 	for (vect = 0; vect < vectors_cnt; vect++) {
-                /* Using direct API, which allows SGL */
-                for (seg_size = 1; seg_size <= MAX_SEG_SIZE; seg_size++) {
-                        vector = &gmac_vectors[vect];
-                        is_error |= test_gmac_vector(vector, seg_size, 0);
-                }
-                /* Using job API */
-                is_error |= test_gmac_vector(vector, vector->Plen, 1);
-        }
+                const struct gcm_ctr_vector *vector = &gmac_vectors[vect];
+                uint64_t seg_size;
 
-	return is_error;
+                /* Using direct API, which allows SGL */
+                for (seg_size = 1; seg_size <= MAX_SEG_SIZE; seg_size++)
+                        test_gmac_vector(vector, seg_size, 0,
+                                         ts128, ts192, ts256);
+
+                /* Using job API */
+                test_gmac_vector(vector, vector->Plen, 1,
+                                 ts128, ts192, ts256);
+        }
 }
 
 int gcm_test(IMB_MGR *p_mgr)
 {
+        struct test_suite_context ts128, ts192, ts256;
 	int errors = 0;
 
         p_gcm_mgr = p_mgr;
 
-	errors = test_gcm_std_vectors();
+        test_suite_start(&ts128, "AES-GCM-128");
+        test_suite_start(&ts192, "AES-GCM-192");
+        test_suite_start(&ts256, "AES-GCM-256");
+	test_gcm_std_vectors(&ts128, &ts192, &ts256);
+        errors = test_suite_end(&ts128);
+        errors += test_suite_end(&ts192);
+        errors += test_suite_end(&ts256);
 
-	errors += test_gmac();
+        test_suite_start(&ts128, "AES-GMAC-128");
+        test_suite_start(&ts192, "AES-GMAC-192");
+        test_suite_start(&ts256, "AES-GMAC-256");
+	test_gmac(&ts128, &ts192, &ts256);
+        errors += test_suite_end(&ts128);
+        errors += test_suite_end(&ts192);
+        errors += test_suite_end(&ts256);
 
-        errors += test_ghash();
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        test_suite_start(&ts128, "GHASH");
+        test_ghash(&ts128);
+        errors += test_suite_end(&ts128);
 
 	return errors;
 }
