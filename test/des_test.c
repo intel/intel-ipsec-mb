@@ -34,10 +34,7 @@
 #include <intel-ipsec-mb.h>
 
 #include "gcm_ctr_vectors_test.h"
-
-#ifndef DIM
-#define DIM(x) (sizeof(x) / sizeof(x[0]))
-#endif
+#include "utils.h"
 
 int des_test(const enum arch_type arch, struct IMB_MGR *mb_mgr);
 
@@ -577,13 +574,16 @@ test_des(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_des_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
+static void
+test_des_vectors(struct IMB_MGR *mb_mgr,
+                 const enum arch_type arch,
                  const int vec_cnt,
-                 const struct des_vector *vec_tab, const char *banner,
-                 const JOB_CIPHER_MODE cipher)
+                 const struct des_vector *vec_tab,
+                 const char *banner,
+                 const JOB_CIPHER_MODE cipher,
+                 struct test_suite_context *ctx)
 {
-	int vect, errors = 0;
+	int vect;
         uint64_t ks[16];
 
 	printf("%s:\n", banner);
@@ -604,7 +604,9 @@ test_des_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                              cipher, 0)) {
                         printf("error #%d encrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_des(mb_mgr, arch, ks, NULL, NULL,
@@ -614,7 +616,9 @@ test_des_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                              cipher, 0)) {
                         printf("error #%d decrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_des(mb_mgr, arch, ks, NULL, NULL,
@@ -624,7 +628,9 @@ test_des_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                              cipher, 1)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_des(mb_mgr, arch, ks, NULL, NULL,
@@ -634,19 +640,23 @@ test_des_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                              cipher, 1)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
-static int
-test_des3_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
+static void
+test_des3_vectors(struct IMB_MGR *mb_mgr,
+                  const enum arch_type arch,
                   const int vec_cnt,
-                  const struct des3_vector *vec_tab, const char *banner)
+                  const struct des3_vector *vec_tab,
+                  const char *banner,
+                  struct test_suite_context *ctx)
 {
-	int vect, errors = 0;
+	int vect;
         uint64_t ks1[16];
         uint64_t ks2[16];
         uint64_t ks3[16];
@@ -671,7 +681,9 @@ test_des3_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                              IMB_CIPHER_DES3, 0)) {
                         printf("error #%d encrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_des(mb_mgr, arch, ks1, ks2, ks3,
@@ -681,7 +693,9 @@ test_des3_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                              IMB_CIPHER_DES3, 0)) {
                         printf("error #%d decrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_des(mb_mgr, arch, ks1, ks2, ks3,
@@ -691,7 +705,9 @@ test_des3_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH,
                              IMB_CIPHER_DES3, 1)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_des(mb_mgr, arch, ks1, ks2, ks3,
@@ -701,39 +717,41 @@ test_des3_vectors(struct IMB_MGR *mb_mgr, const enum arch_type arch,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER,
                              IMB_CIPHER_DES3, 1)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
 int
 des_test(const enum arch_type arch,
          struct IMB_MGR *mb_mgr)
 {
+        struct test_suite_context ctx;
         int errors;
 
-        errors = test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
-                                  "DES standard test vectors", IMB_CIPHER_DES);
+        test_suite_start(&ctx, "DES-CBC-64");
+        test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
+                         "DES standard test vectors", IMB_CIPHER_DES, &ctx);
+        errors = test_suite_end(&ctx);
 
-        errors += test_des_vectors(mb_mgr, arch, DIM(docsis_vectors),
-                                   docsis_vectors,
-                                   "DOCSIS DES standard test vectors",
-                                   IMB_CIPHER_DOCSIS_DES);
+        test_suite_start(&ctx, "DOCSIS-DES-64");
+        test_des_vectors(mb_mgr, arch, DIM(docsis_vectors),
+                         docsis_vectors,
+                         "DOCSIS DES standard test vectors",
+                         IMB_CIPHER_DOCSIS_DES, &ctx);
+        errors += test_suite_end(&ctx);
 
-        errors += test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
-                                  "3DES (single key) standard test vectors",
-                                   IMB_CIPHER_DES3);
-
-        errors += test_des3_vectors(mb_mgr, arch, DIM(des3_vectors),
-                                    des3_vectors,
-                                    "3DES (multiple keys) test vectors");
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        test_suite_start(&ctx, "3DES-CBC-192");
+        test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
+                         "3DES (single key) standard test vectors",
+                         IMB_CIPHER_DES3, &ctx);
+        test_des3_vectors(mb_mgr, arch, DIM(des3_vectors),
+                          des3_vectors,
+                          "3DES (multiple keys) test vectors", &ctx);
+        errors += test_suite_end(&ctx);
 
 	return errors;
 }
