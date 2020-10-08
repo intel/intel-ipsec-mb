@@ -418,121 +418,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
 }
 
 static int
-test_des_one(struct IMB_MGR *mb_mgr,
-             const enum arch_type arch,
-             const uint64_t *ks,
-             const uint64_t *ks2,
-             const uint64_t *ks3,
-             const void *iv,
-             const uint8_t *in_text,
-             const uint8_t *out_text,
-             unsigned text_len,
-             int dir,
-             int order,
-             JOB_CIPHER_MODE cipher,
-             const int in_place)
-{
-        const void *ks_ptr[3]; /* 3DES */
-        struct IMB_JOB *job;
-        uint8_t padding[16];
-        uint8_t *target = malloc(text_len + (sizeof(padding) * 2));
-        int ret = -1;
-
-        assert(target != NULL);
-
-        memset(target, -1, text_len + (sizeof(padding) * 2));
-        memset(padding, -1, sizeof(padding));
-
-        if (in_place) {
-                /* copy input text to the allocated buffer */
-                memcpy(target + sizeof(padding), in_text, text_len);
-        }
-
-        /* Used in 3DES only */
-        ks_ptr[0] = ks;
-        ks_ptr[1] = ks2;
-        ks_ptr[2] = ks3;
-
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
-                ;
-
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->cipher_direction = dir;
-        job->chain_order = order;
-        if (!in_place) {
-                job->dst = target + sizeof(padding);
-                job->src = in_text;
-        } else {
-                job->dst = target + sizeof(padding);
-                job->src = target + sizeof(padding);
-        }
-        job->cipher_mode = cipher;
-        if (cipher == IMB_CIPHER_DES3) {
-                job->enc_keys = (const void *) ks_ptr;
-                job->dec_keys = (const void *) ks_ptr;
-                job->key_len_in_bytes = 24;
-        } else {
-                job->enc_keys = ks;
-                job->dec_keys = ks;
-                job->key_len_in_bytes = 8;
-        }
-        job->iv = iv;
-        job->iv_len_in_bytes = 8;
-        job->cipher_start_src_offset_in_bytes = 0;
-        job->msg_len_to_cipher_in_bytes = text_len;
-
-        job->hash_alg = IMB_AUTH_NULL;
-
-        if (arch == ARCH_AVX512) {
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (job) {
-                        printf("%d Unexpected return from submit_job\n",
-                               __LINE__);
-                        goto end;
-                }
-                job = IMB_FLUSH_JOB(mb_mgr);
-                if (!job) {
-                        printf("%d Unexpected null return from flush_job\n",
-                               __LINE__);
-                        goto end;
-                }
-        } else {
-                job = IMB_SUBMIT_JOB(mb_mgr);
-                if (!job) {
-                        printf("%d Unexpected null return from submit_job\n",
-                               __LINE__);
-                        goto end;
-                }
-        }
-        if (job->status != STS_COMPLETED) {
-                printf("%d Error status:%d", __LINE__, job->status);
-                goto end;
-        }
-        if (memcmp(out_text, target + sizeof(padding), text_len)) {
-                printf("mismatched\n");
-                goto end;
-        }
-        if (memcmp(padding, target, sizeof(padding))) {
-                printf("overwrite head\n");
-                goto end;
-        }
-        if (memcmp(padding, target + sizeof(padding) + text_len,
-                   sizeof(padding))) {
-                printf("overwrite tail\n");
-                goto end;
-        }
-        ret = 0;
- end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
-                ;
-
-        free(target);
-        return ret;
-}
-
-static int
 test_des(struct IMB_MGR *mb_mgr,
-         const enum arch_type arch,
          const uint64_t *ks,
          const uint64_t *ks2,
          const uint64_t *ks3,
@@ -549,24 +435,24 @@ test_des(struct IMB_MGR *mb_mgr,
 
         if (cipher == IMB_CIPHER_DES3) {
                 if (ks2 == NULL && ks3 == NULL) {
-                        ret |= test_des_one(mb_mgr, arch, ks, ks, ks, iv,
-                                            in_text, out_text, text_len, dir,
-                                            order, cipher, in_place);
+                        ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text,
+                                             out_text, text_len, dir, order,
+                                             cipher, in_place, 1);
                         ret |= test_des_many(mb_mgr, ks, ks, ks, iv, in_text,
                                              out_text, text_len, dir, order,
                                              cipher, in_place, 32);
                 } else {
-                        ret |= test_des_one(mb_mgr, arch, ks, ks2, ks3, iv,
-                                            in_text, out_text, text_len, dir,
-                                            order, cipher, in_place);
+                        ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text,
+                                             out_text, text_len, dir, order,
+                                             cipher, in_place, 1);
                         ret |= test_des_many(mb_mgr, ks, ks2, ks3, iv, in_text,
                                              out_text, text_len, dir, order,
                                              cipher, in_place, 32);
                 }
         } else {
-                ret |= test_des_one(mb_mgr, arch, ks, NULL, NULL, iv, in_text,
-                                    out_text, text_len, dir, order, cipher,
-                                    in_place);
+                ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text,
+                                     out_text, text_len, dir, order, cipher,
+                                     in_place, 1);
                 ret |= test_des_many(mb_mgr, ks, NULL, NULL, iv, in_text,
                                      out_text, text_len, dir, order, cipher,
                                      in_place, 32);
@@ -576,7 +462,6 @@ test_des(struct IMB_MGR *mb_mgr,
 
 static void
 test_des_vectors(struct IMB_MGR *mb_mgr,
-                 const enum arch_type arch,
                  const int vec_cnt,
                  const struct des_vector *vec_tab,
                  const char *banner,
@@ -597,7 +482,7 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
 #endif
                 des_key_schedule(ks, vec_tab[vect].K);
 
-                if (test_des(mb_mgr, arch, ks, NULL, NULL,
+                if (test_des(mb_mgr, ks, NULL, NULL,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -609,7 +494,7 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, arch, ks, NULL, NULL,
+                if (test_des(mb_mgr, ks, NULL, NULL,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
@@ -621,7 +506,7 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, arch, ks, NULL, NULL,
+                if (test_des(mb_mgr, ks, NULL, NULL,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -633,7 +518,7 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, arch, ks, NULL, NULL,
+                if (test_des(mb_mgr, ks, NULL, NULL,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
@@ -650,7 +535,6 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
 
 static void
 test_des3_vectors(struct IMB_MGR *mb_mgr,
-                  const enum arch_type arch,
                   const int vec_cnt,
                   const struct des3_vector *vec_tab,
                   const char *banner,
@@ -674,7 +558,7 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
                 des_key_schedule(ks2, vec_tab[vect].K2);
                 des_key_schedule(ks3, vec_tab[vect].K3);
 
-                if (test_des(mb_mgr, arch, ks1, ks2, ks3,
+                if (test_des(mb_mgr, ks1, ks2, ks3,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -686,7 +570,7 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, arch, ks1, ks2, ks3,
+                if (test_des(mb_mgr, ks1, ks2, ks3,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
@@ -698,7 +582,7 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, arch, ks1, ks2, ks3,
+                if (test_des(mb_mgr, ks1, ks2, ks3,
                              vec_tab[vect].IV,
                              vec_tab[vect].P, vec_tab[vect].C,
                              (unsigned) vec_tab[vect].Plen,
@@ -710,7 +594,7 @@ test_des3_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (test_des(mb_mgr, arch, ks1, ks2, ks3,
+                if (test_des(mb_mgr, ks1, ks2, ks3,
                              vec_tab[vect].IV,
                              vec_tab[vect].C, vec_tab[vect].P,
                              (unsigned) vec_tab[vect].Plen,
@@ -732,24 +616,24 @@ des_test(const enum arch_type arch,
         struct test_suite_context ctx;
         int errors;
 
+        (void) arch;
+
         test_suite_start(&ctx, "DES-CBC-64");
-        test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
+        test_des_vectors(mb_mgr, DIM(vectors), vectors,
                          "DES standard test vectors", IMB_CIPHER_DES, &ctx);
         errors = test_suite_end(&ctx);
 
         test_suite_start(&ctx, "DOCSIS-DES-64");
-        test_des_vectors(mb_mgr, arch, DIM(docsis_vectors),
-                         docsis_vectors,
+        test_des_vectors(mb_mgr, DIM(docsis_vectors), docsis_vectors,
                          "DOCSIS DES standard test vectors",
                          IMB_CIPHER_DOCSIS_DES, &ctx);
         errors += test_suite_end(&ctx);
 
         test_suite_start(&ctx, "3DES-CBC-192");
-        test_des_vectors(mb_mgr, arch, DIM(vectors), vectors,
+        test_des_vectors(mb_mgr, DIM(vectors), vectors,
                          "3DES (single key) standard test vectors",
                          IMB_CIPHER_DES3, &ctx);
-        test_des3_vectors(mb_mgr, arch, DIM(des3_vectors),
-                          des3_vectors,
+        test_des3_vectors(mb_mgr, DIM(des3_vectors), des3_vectors,
                           "3DES (multiple keys) test vectors", &ctx);
         errors += test_suite_end(&ctx);
 
