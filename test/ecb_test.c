@@ -704,17 +704,22 @@ test_ecb_many(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
+static void
 test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                  const struct ecb_vector *vec_tab, const char *banner,
-                 const JOB_CIPHER_MODE cipher, const int num_jobs)
+                 const JOB_CIPHER_MODE cipher, const int num_jobs,
+                 struct test_suite_context *ts128,
+                 struct test_suite_context *ts192,
+                 struct test_suite_context *ts256)
 {
-	int vect, errors = 0;
+	int vect;
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15*4], 16);
 
 	printf("%s (N jobs = %d):\n", banner, num_jobs);
 	for (vect = 0; vect < vec_cnt; vect++) {
+                struct test_suite_context *ctx = NULL;
+
 #ifdef DEBUG
 		printf("[%d/%d] Standard vector key_len:%d\n",
                        vect + 1, vec_cnt,
@@ -722,19 +727,23 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
 #else
 		printf(".");
 #endif
+
                 switch (vec_tab[vect].Klen) {
                 case 16:
                         IMB_AES_KEYEXP_128(mb_mgr, vec_tab[vect].K, enc_keys,
                                            dec_keys);
+                        ctx = ts128;
                         break;
                 case 24:
                         IMB_AES_KEYEXP_192(mb_mgr, vec_tab[vect].K, enc_keys,
                                            dec_keys);
+                        ctx = ts192;
                         break;
                 case 32:
                 default:
                         IMB_AES_KEYEXP_256(mb_mgr, vec_tab[vect].K, enc_keys,
                                            dec_keys);
+                        ctx = ts256;
                         break;
                 }
 
@@ -744,7 +753,9 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 0,
                              vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ecb_many(mb_mgr, enc_keys, dec_keys,
@@ -753,7 +764,9 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 0,
                              vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ecb_many(mb_mgr, enc_keys, dec_keys,
@@ -762,7 +775,9 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                              IMB_DIR_ENCRYPT, IMB_ORDER_CIPHER_HASH, cipher, 1,
                              vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d encrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 
                 if (test_ecb_many(mb_mgr, enc_keys, dec_keys,
@@ -771,32 +786,37 @@ test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                              IMB_DIR_DECRYPT, IMB_ORDER_HASH_CIPHER, cipher, 1,
                              vec_tab[vect].Klen, num_jobs)) {
                         printf("error #%d decrypt in-place\n", vect + 1);
-                        errors++;
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
 int
 ecb_test(struct IMB_MGR *mb_mgr)
 {
+        struct test_suite_context ts128, ts192, ts256;
         const int num_jobs_tab[] = {
                 1, 3, 4, 5, 7, 8, 9, 15, 16, 17
         };
         unsigned i;
         int errors = 0;
 
+        test_suite_start(&ts128, "AES-ECB-128");
+        test_suite_start(&ts192, "AES-ECB-192");
+        test_suite_start(&ts256, "AES-ECB-256");
+
         for (i = 0; i < DIM(num_jobs_tab); i++)
-                errors += test_ecb_vectors(mb_mgr, DIM(ecb_vectors),
-                                           ecb_vectors,
-                                           "AES-ECB standard test vectors",
-                                           IMB_CIPHER_ECB,
-                                           num_jobs_tab[i]);
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+                test_ecb_vectors(mb_mgr, DIM(ecb_vectors), ecb_vectors,
+                                 "AES-ECB standard test vectors",
+                                 IMB_CIPHER_ECB, num_jobs_tab[i],
+                                 &ts128, &ts192, &ts256);
+
+        errors = test_suite_end(&ts128);
+        errors += test_suite_end(&ts192);
+        errors += test_suite_end(&ts256);
 
 	return errors;
 }
