@@ -498,13 +498,13 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
+static void
+test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr,
+                          const int num_jobs,
+                          struct test_suite_context *ts)
 {
-	const int vectors_cnt =
-                sizeof(hmac_md5_vectors) / sizeof(hmac_md5_vectors[0]);
+	const int vectors_cnt = DIM(hmac_md5_vectors);
 	int vect;
-	int errors = 0;
 
 	printf("HMAC-MD5 standard test vectors (N jobs = %d):\n", num_jobs);
 	for (vect = 1; vect <= vectors_cnt; vect++) {
@@ -523,33 +523,24 @@ test_hmac_md5_std_vectors(struct IMB_MGR *mb_mgr, const int num_jobs)
 
                 if (test_hmac_md5(mb_mgr, &hmac_md5_vectors[idx], num_jobs)) {
                         printf("error #%d\n", vect);
-                        errors++;
+                        test_suite_update(ts, 0, 1);
+                } else {
+                        test_suite_update(ts, 1, 0);
                 }
 	}
 	printf("\n");
-	return errors;
 }
 
 int
 hmac_md5_test(struct IMB_MGR *mb_mgr)
 {
-        int errors = 0;
+        struct test_suite_context ts;
+        int num_jobs, errors = 0;
 
-        errors += test_hmac_md5_std_vectors(mb_mgr, 1);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 3);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 4);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 5);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 7);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 8);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 9);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 15);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 16);
-        errors += test_hmac_md5_std_vectors(mb_mgr, 17);
-
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+        test_suite_start(&ts, "HMAC-MD5");
+        for (num_jobs = 1; num_jobs <= 17; num_jobs++)
+                test_hmac_md5_std_vectors(mb_mgr, num_jobs, &ts);
+        errors = test_suite_end(&ts);
 
 	return errors;
 }
