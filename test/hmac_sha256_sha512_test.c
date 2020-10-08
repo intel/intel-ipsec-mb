@@ -1037,15 +1037,14 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
         return ret;
 }
 
-static int
-test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr, const int sha_type,
-                           const int num_jobs)
+static void
+test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr,
+                           const int sha_type,
+                           const int num_jobs,
+                           struct test_suite_context *ts)
 {
-	const int vectors_cnt =
-                sizeof(hmac_sha256_sha512_vectors) /
-                sizeof(hmac_sha256_sha512_vectors[0]);
+	const int vectors_cnt = DIM(hmac_sha256_sha512_vectors);
 	int vect;
-	int errors = 0;
 
 	printf("HMAC-SHA%d standard test vectors (N jobs = %d):\n",
                sha_type, num_jobs);
@@ -1080,11 +1079,12 @@ test_hmac_shax_std_vectors(struct IMB_MGR *mb_mgr, const int sha_type,
                 if (test_hmac_shax(mb_mgr, &hmac_sha256_sha512_vectors[idx],
                                    num_jobs, sha_type)) {
                         printf("error #%d\n", vect);
-                        errors++;
+                        test_suite_update(ts, 0, 1);
+                } else {
+                        test_suite_update(ts, 1, 0);
                 }
         }
 	printf("\n");
-	return errors;
 }
 
 int
@@ -1093,21 +1093,24 @@ hmac_sha256_sha512_test(struct IMB_MGR *mb_mgr)
         const int sha_types_tab[] = {
                 224, 256, 384, 512
         };
+        static const char * const sha_names_tab[] = {
+                "HMAC-SHA224", "HMAC-SHA256", "HMAC-SHA384", "HMAC-SHA512"
+        };
         const int num_jobs_tab[] = {
                 1, 3, 4, 5, 7, 8, 9, 15, 16, 17
         };
         unsigned i, j;
         int errors = 0;
 
-        for (i = 0; i < DIM(sha_types_tab); i++)
+        for (i = 0; i < DIM(sha_types_tab); i++) {
+                struct test_suite_context ts;
+
+                test_suite_start(&ts, sha_names_tab[i]);
                 for (j = 0; j < DIM(num_jobs_tab); j++)
-                        errors += test_hmac_shax_std_vectors(mb_mgr,
-                                                             sha_types_tab[i],
-                                                             num_jobs_tab[j]);
-	if (0 == errors)
-		printf("...Pass\n");
-	else
-		printf("...Fail\n");
+                        test_hmac_shax_std_vectors(mb_mgr, sha_types_tab[i],
+                                                   num_jobs_tab[j], &ts);
+                errors += test_suite_end(&ts);
+        }
 
 	return errors;
 }
