@@ -34,12 +34,40 @@ section .data
 default rel
 
 align 16
+constants0:
+dd      0x61707865, 0x61707865, 0x61707865, 0x61707865
+
+align 16
+constants1:
+dd      0x3320646e, 0x3320646e, 0x3320646e, 0x3320646e
+
+align 16
+constants2:
+dd      0x79622d32, 0x79622d32, 0x79622d32, 0x79622d32
+
+align 16
+constants3:
+dd      0x6b206574, 0x6b206574, 0x6b206574, 0x6b206574
+
+align 16
 constants:
 dd      0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
 
 align 16
-add_1:
+dword_1:
 dd      0x00000001, 0x00000000, 0x00000000, 0x00000000
+
+align 16
+dword_2:
+dd      0x00000002, 0x00000000, 0x00000000, 0x00000000
+
+align 16
+dword_1_4:
+dd      0x00000001, 0x00000002, 0x00000003, 0x00000004
+
+align 16
+dword_4:
+dd      0x00000004, 0x00000004, 0x00000004, 0x00000004
 
 align 16
 shuf_mask_rotl8:
@@ -53,6 +81,13 @@ align 16
 poly_clamp_r:
 dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
 
+struc STACK
+_STATE:         reso    16      ; Space to store first 4 states
+_XMM_SAVE:      reso    2       ; Space to store up to 2 temporary XMM registers
+_RSP_SAVE:      resq    1       ; Space to store rsp pointer
+endstruc
+%define STACK_SIZE STACK_size
+
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -63,21 +98,43 @@ dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
 
 %define job     arg1
 
+%define APPEND(a,b) a %+ b
+
 section .text
 
-; VPROLD reg, imm, tmp
+;; 4x4 32-bit transpose function
+%macro TRANSPOSE4_U32 6
+%define %%r0 %1 ;; [in/out] Input first row / output third column
+%define %%r1 %2 ;; [in/out] Input second row / output second column
+%define %%r2 %3 ;; [in/clobbered] Input third row
+%define %%r3 %4 ;; [in/out] Input fourth row / output fourth column
+%define %%t0 %5 ;; [out] Temporary XMM register / output first column
+%define %%t1 %6 ;; [clobbered] Temporary XMM register
+
+        vshufps	%%t0, %%r0, %%r1, 0x44	; t0 = {b1 b0 a1 a0}
+        vshufps %%r0, %%r1, 0xEE	; r0 = {b3 b2 a3 a2}
+        vshufps %%t1, %%r2, %%r3, 0x44	; t1 = {d1 d0 c1 c0}
+        vshufps	%%r2, %%r3, 0xEE	; r2 = {d3 d2 c3 c2}
+
+        vshufps	%%r1, %%t0, %%t1, 0xDD	; r1 = {d1 c1 b1 a1}
+        vshufps	%%r3, %%r0, %%r2, 0xDD	; r3 = {d3 c3 b3 a3}
+        vshufps	%%r0, %%r2, 0x88	; r0 = {d2 c2 b2 a2}
+        vshufps	%%t0, %%t1, 0x88	; t0 = {d0 c0 b0 a0}
+%endmacro
+
+; Rotate dwords on a XMM registers to the left N_BITS
 %macro VPROLD 3
-%define %%reg %1
-%define %%imm %2
-%define %%tmp %3
-%if %%imm == 8
-        vpshufb %%reg, [rel shuf_mask_rotl8]
-%elif %%imm == 16
-        vpshufb %%reg, [rel shuf_mask_rotl16]
+%define %%XMM_IN %1 ; [in/out] XMM register to be rotated
+%define %%N_BITS %2 ; [immediate] Number of bits to rotate
+%define %%XTMP   %3 ; [clobbered] XMM temporary register
+%if %%N_BITS == 8
+        vpshufb %%XMM_IN, [rel shuf_mask_rotl8]
+%elif %%N_BITS == 16
+        vpshufb %%XMM_IN, [rel shuf_mask_rotl16]
 %else
-        vpsrld  %%tmp, %%reg, (32-%%imm)
-        vpslld  %%reg, %%imm
-        vpor    %%reg, %%tmp
+        vpsrld  %%XTMP, %%XMM_IN, (32-%%N_BITS)
+        vpslld  %%XMM_IN, %%N_BITS
+        vpor    %%XMM_IN, %%XTMP
 %endif
 %endmacro
 
@@ -104,6 +161,44 @@ section .text
         vpaddd  %%C, %%D
         vpxor   %%B, %%C
         VPROLD  %%B, 7, %%XTMP
+
+%endmacro
+
+%macro quarter_round_x2 9
+%define %%A_L    %1 ;; [in/out] XMM register containing value A of all 4 columns
+%define %%B_L    %2 ;; [in/out] XMM register containing value B of all 4 columns
+%define %%C_L    %3 ;; [in/out] XMM register containing value C of all 4 columns
+%define %%D_L    %4 ;; [in/out] XMM register containing value D of all 4 columns
+%define %%A_H    %5 ;; [in/out] XMM register containing value A of all 4 columns
+%define %%B_H    %6 ;; [in/out] XMM register containing value B of all 4 columns
+%define %%C_H    %7 ;; [in/out] XMM register containing value C of all 4 columns
+%define %%D_H    %8 ;; [in/out] XMM register containing value D of all 4 columns
+%define %%XTMP   %9 ;; [clobbered] Temporary XMM register
+
+        vpaddd  %%A_L, %%B_L
+        vpaddd  %%A_H, %%B_H
+        vpxor   %%D_L, %%A_L
+        vpxor   %%D_H, %%A_H
+        VPROLD  %%D_L, 16, %%XTMP
+        VPROLD  %%D_H, 16, %%XTMP
+        vpaddd  %%C_L, %%D_L
+        vpaddd  %%C_H, %%D_H
+        vpxor   %%B_L, %%C_L
+        vpxor   %%B_H, %%C_H
+        VPROLD  %%B_L, 12, %%XTMP
+        VPROLD  %%B_H, 12, %%XTMP
+        vpaddd  %%A_L, %%B_L
+        vpaddd  %%A_H, %%B_H
+        vpxor   %%D_L, %%A_L
+        vpxor   %%D_H, %%A_H
+        VPROLD  %%D_L, 8, %%XTMP
+        VPROLD  %%D_H, 8, %%XTMP
+        vpaddd  %%C_L, %%D_L
+        vpaddd  %%C_H, %%D_H
+        vpxor   %%B_L, %%C_L
+        vpxor   %%B_H, %%C_H
+        VPROLD  %%B_L, 7, %%XTMP
+        VPROLD  %%B_H, 7, %%XTMP
 
 %endmacro
 
@@ -138,33 +233,219 @@ section .text
 %endmacro
 
 ;;
-;; Generates 64 bytes of keystream
+;; Generates 64 or 128 bytes of keystream
+;; States IN A-C are the same for first 64 and last 64 bytes
+;; State IN D differ because of the different block count
 ;;
-%macro generate_ks 9
-%define %%STATE_IN_A    %1  ;; [in] XMM containing state A
-%define %%STATE_IN_B    %2  ;; [in] XMM containing state B
-%define %%STATE_IN_C    %3  ;; [in] XMM containing state C
-%define %%STATE_IN_D    %4  ;; [in] XMM containing state D
-%define %%A_KS0         %5  ;; [out] XMM to contain keystream 0-15 bytes
-%define %%B_KS1         %6  ;; [out] XMM to contain keystream 0-15 bytes
-%define %%C_KS2         %7  ;; [out] XMM to contain keystream 0-15 bytes
-%define %%D_KS3         %8  ;; [out] XMM to contain keystream 0-15 bytes
-%define %%XTMP          %9  ;; [clobbered] Temporary XMM register
-        vmovdqa %%A_KS0, %%STATE_IN_A
-        vmovdqa %%B_KS1, %%STATE_IN_B
-        vmovdqa %%C_KS2, %%STATE_IN_C
-        vmovdqa %%D_KS3, %%STATE_IN_D
+%macro GENERATE_64_128_KS 9-14
+%define %%STATE_IN_A      %1  ;; [in] XMM containing state A
+%define %%STATE_IN_B      %2  ;; [in] XMM containing state B
+%define %%STATE_IN_C      %3  ;; [in] XMM containing state C
+%define %%STATE_IN_D_L    %4  ;; [in] XMM containing state D (low block count)
+%define %%A_L_KS0         %5  ;; [out] XMM to contain keystream 0-15 bytes
+%define %%B_L_KS1         %6  ;; [out] XMM to contain keystream 16-31 bytes
+%define %%C_L_KS2         %7  ;; [out] XMM to contain keystream 32-47 bytes
+%define %%D_L_KS3         %8  ;; [out] XMM to contain keystream 48-63 bytes
+%define %%XTMP            %9  ;; [clobbered] Temporary XMM register
+%define %%STATE_IN_D_H    %10  ;; [in] XMM containing state D (high block count)
+%define %%A_H_KS4         %11  ;; [out] XMM to contain keystream 64-79 bytes
+%define %%B_H_KS5         %12  ;; [out] XMM to contain keystream 80-95 bytes
+%define %%C_H_KS6         %13  ;; [out] XMM to contain keystream 96-111 bytes
+%define %%D_H_KS7         %14  ;; [out] XMM to contain keystream 112-127 bytes
+
+        vmovdqa %%A_L_KS0, %%STATE_IN_A
+        vmovdqa %%B_L_KS1, %%STATE_IN_B
+        vmovdqa %%C_L_KS2, %%STATE_IN_C
+        vmovdqa %%D_L_KS3, %%STATE_IN_D_L
+%if %0 == 14
+        vmovdqa %%A_H_KS4, %%STATE_IN_A
+        vmovdqa %%B_H_KS5, %%STATE_IN_B
+        vmovdqa %%C_H_KS6, %%STATE_IN_C
+        vmovdqa %%D_H_KS7, %%STATE_IN_D_H
+%endif
 %rep 10
-        quarter_round %%A_KS0, %%B_KS1, %%C_KS2, %%D_KS3, %%XTMP
-        column_to_diag %%B_KS1, %%C_KS2, %%D_KS3
-        quarter_round %%A_KS0, %%B_KS1, %%C_KS2, %%D_KS3, %%XTMP
-        diag_to_column %%B_KS1, %%C_KS2, %%D_KS3
+%if %0 == 14
+        quarter_round_x2 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
+                %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7, %%XTMP
+        column_to_diag %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        column_to_diag %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+        quarter_round_x2 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
+                %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7, %%XTMP
+        diag_to_column %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        diag_to_column %%B_H_KS5, %%C_H_KS6, %%D_H_KS7
+%else
+        quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, %%XTMP
+        column_to_diag %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+        quarter_round %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, %%XTMP
+        diag_to_column %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
+%endif
 %endrep
 
-        vpaddd  %%A_KS0, %%STATE_IN_A
-        vpaddd  %%B_KS1, %%STATE_IN_B
-        vpaddd  %%C_KS2, %%STATE_IN_C
-        vpaddd  %%D_KS3, %%STATE_IN_D
+        vpaddd  %%A_L_KS0, %%STATE_IN_A
+        vpaddd  %%B_L_KS1, %%STATE_IN_B
+        vpaddd  %%C_L_KS2, %%STATE_IN_C
+        vpaddd  %%D_L_KS3, %%STATE_IN_D_L
+%if %0 == 14
+        vpaddd  %%A_H_KS4, %%STATE_IN_A
+        vpaddd  %%B_H_KS5, %%STATE_IN_B
+        vpaddd  %%C_H_KS6, %%STATE_IN_C
+        vpaddd  %%D_H_KS7, %%STATE_IN_D_H
+%endif
+%endmacro
+
+; Perform 4 times the operation in first parameter
+%macro XMM_OP_X4 9
+%define %%OP         %1 ; [immediate] Instruction
+%define %%DST_SRC1_1 %2 ; [in/out] First source/Destination 1
+%define %%DST_SRC1_2 %3 ; [in/out] First source/Destination 2
+%define %%DST_SRC1_3 %4 ; [in/out] First source/Destination 3
+%define %%DST_SRC1_4 %5 ; [in/out] First source/Destination 4
+%define %%SRC2_1     %6 ; [in] Second source 1
+%define %%SRC2_2     %7 ; [in] Second source 2
+%define %%SRC2_3     %8 ; [in] Second source 3
+%define %%SRC2_4     %9 ; [in] Second source 4
+
+        %%OP %%DST_SRC1_1, %%SRC2_1
+        %%OP %%DST_SRC1_2, %%SRC2_2
+        %%OP %%DST_SRC1_3, %%SRC2_3
+        %%OP %%DST_SRC1_4, %%SRC2_4
+%endmacro
+
+%macro XMM_ROLS_X4  6
+%define %%XMM_OP1_1      %1
+%define %%XMM_OP1_2      %2
+%define %%XMM_OP1_3      %3
+%define %%XMM_OP1_4      %4
+%define %%BITS_TO_ROTATE %5
+%define %%XTMP           %6
+
+        ; Store temporary register when bits to rotate is not 8 and 16,
+        ; as the register will be clobbered in these cases,
+        ; containing needed information
+%if %%BITS_TO_ROTATE != 8 && %%BITS_TO_ROTATE != 16
+        vmovdqa [rsp + _XMM_SAVE], %%XTMP
+%endif
+        VPROLD  %%XMM_OP1_1, %%BITS_TO_ROTATE, %%XTMP
+        VPROLD  %%XMM_OP1_2, %%BITS_TO_ROTATE, %%XTMP
+        VPROLD  %%XMM_OP1_3, %%BITS_TO_ROTATE, %%XTMP
+        VPROLD  %%XMM_OP1_4, %%BITS_TO_ROTATE, %%XTMP
+%if %%BITS_TO_ROTATE != 8 && %%BITS_TO_ROTATE != 16
+        vmovdqa %%XTMP, [rsp + _XMM_SAVE]
+%endif
+%endmacro
+
+;;
+;; Performs a full chacha20 round on 4 states,
+;; consisting of 4 quarter rounds, which are done in parallel
+;;
+%macro CHACHA20_ROUND 16
+%define %%XMM_DWORD_A1  %1  ;; [in/out] XMM register containing dword A for first quarter round
+%define %%XMM_DWORD_A2  %2  ;; [in/out] XMM register containing dword A for second quarter round
+%define %%XMM_DWORD_A3  %3  ;; [in/out] XMM register containing dword A for third quarter round
+%define %%XMM_DWORD_A4  %4  ;; [in/out] XMM register containing dword A for fourth quarter round
+%define %%XMM_DWORD_B1  %5  ;; [in/out] XMM register containing dword B for first quarter round
+%define %%XMM_DWORD_B2  %6  ;; [in/out] XMM register containing dword B for second quarter round
+%define %%XMM_DWORD_B3  %7  ;; [in/out] XMM register containing dword B for third quarter round
+%define %%XMM_DWORD_B4  %8  ;; [in/out] XMM register containing dword B for fourth quarter round
+%define %%XMM_DWORD_C1  %9  ;; [in/out] XMM register containing dword C for first quarter round
+%define %%XMM_DWORD_C2 %10  ;; [in/out] XMM register containing dword C for second quarter round
+%define %%XMM_DWORD_C3 %11  ;; [in/out] XMM register containing dword C for third quarter round
+%define %%XMM_DWORD_C4 %12  ;; [in/out] XMM register containing dword C for fourth quarter round
+%define %%XMM_DWORD_D1 %13  ;; [in/out] XMM register containing dword D for first quarter round
+%define %%XMM_DWORD_D2 %14  ;; [in/out] XMM register containing dword D for second quarter round
+%define %%XMM_DWORD_D3 %15  ;; [in/out] XMM register containing dword D for third quarter round
+%define %%XMM_DWORD_D4 %16  ;; [in/out] XMM register containing dword D for fourth quarter round
+
+        ; A += B
+        XMM_OP_X4 vpaddd, %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4, \
+                         %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4
+        ; D ^= A
+        XMM_OP_X4 vpxor, %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4, \
+                        %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4
+
+        ; D <<< 16
+        XMM_ROLS_X4 %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4, 16, \
+                    %%XMM_DWORD_B1
+
+        ; C += D
+        XMM_OP_X4 vpaddd, %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4, \
+                         %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4
+        ; B ^= C
+        XMM_OP_X4 vpxor, %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4, \
+                        %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4
+
+        ; B <<< 12
+        XMM_ROLS_X4 %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4, 12, \
+                    %%XMM_DWORD_D1
+
+        ; A += B
+        XMM_OP_X4 vpaddd, %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4, \
+                          %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4
+        ; D ^= A
+        XMM_OP_X4 vpxor, %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4, \
+                          %%XMM_DWORD_A1, %%XMM_DWORD_A2, %%XMM_DWORD_A3, %%XMM_DWORD_A4
+
+        ; D <<< 8
+        XMM_ROLS_X4 %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4, 8, \
+                    %%XMM_DWORD_B1
+
+        ; C += D
+        XMM_OP_X4 vpaddd, %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4, \
+                          %%XMM_DWORD_D1, %%XMM_DWORD_D2, %%XMM_DWORD_D3, %%XMM_DWORD_D4
+        ; B ^= C
+        XMM_OP_X4 vpxor, %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4, \
+                          %%XMM_DWORD_C1, %%XMM_DWORD_C2, %%XMM_DWORD_C3, %%XMM_DWORD_C4
+
+        ; B <<< 7
+        XMM_ROLS_X4 %%XMM_DWORD_B1, %%XMM_DWORD_B2, %%XMM_DWORD_B3, %%XMM_DWORD_B4, 7, \
+                    %%XMM_DWORD_D1
+%endmacro
+
+;;
+;; Encodes 4 Chacha20 states, outputting 256 bytes of keystream
+;; Data still needs to be transposed to get the keystream in the correct order
+;;
+%macro GENERATE_256_KS 16
+%define %%XMM_DWORD_0   %1  ;; [out] XMM register to contain encoded dword 0 of the 4 Chacha20 states
+%define %%XMM_DWORD_1   %2  ;; [out] XMM register to contain encoded dword 1 of the 4 Chacha20 states
+%define %%XMM_DWORD_2   %3  ;; [out] XMM register to contain encoded dword 2 of the 4 Chacha20 states
+%define %%XMM_DWORD_3   %4  ;; [out] XMM register to contain encoded dword 3 of the 4 Chacha20 states
+%define %%XMM_DWORD_4   %5  ;; [out] XMM register to contain encoded dword 4 of the 4 Chacha20 states
+%define %%XMM_DWORD_5   %6  ;; [out] XMM register to contain encoded dword 5 of the 4 Chacha20 states
+%define %%XMM_DWORD_6   %7  ;; [out] XMM register to contain encoded dword 6 of the 4 Chacha20 states
+%define %%XMM_DWORD_7   %8  ;; [out] XMM register to contain encoded dword 7 of the 4 Chacha20 states
+%define %%XMM_DWORD_8   %9  ;; [out] XMM register to contain encoded dword 8 of the 4 Chacha20 states
+%define %%XMM_DWORD_9  %10  ;; [out] XMM register to contain encoded dword 9 of the 4 Chacha20 states
+%define %%XMM_DWORD_10 %11  ;; [out] XMM register to contain encoded dword 10 of the 4 Chacha20 states
+%define %%XMM_DWORD_11 %12  ;; [out] XMM register to contain encoded dword 11 of the 4 Chacha20 states
+%define %%XMM_DWORD_12 %13  ;; [out] XMM register to contain encoded dword 12 of the 4 Chacha20 states
+%define %%XMM_DWORD_13 %14  ;; [out] XMM register to contain encoded dword 13 of the 4 Chacha20 states
+%define %%XMM_DWORD_14 %15  ;; [out] XMM register to contain encoded dword 14 of the 4 Chacha20 states
+%define %%XMM_DWORD_15 %16  ;; [out] XMM register to contain encoded dword 15 of the 4 Chacha20 states
+
+%assign i 0
+%rep 16
+        vmovdqa APPEND(%%XMM_DWORD_, i), [rsp + _STATE + 16*i]
+%assign i (i + 1)
+%endrep
+
+%rep 10
+        CHACHA20_ROUND %%XMM_DWORD_0, %%XMM_DWORD_1, %%XMM_DWORD_2, %%XMM_DWORD_3, \
+                       %%XMM_DWORD_4, %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, \
+                       %%XMM_DWORD_8, %%XMM_DWORD_9, %%XMM_DWORD_10, %%XMM_DWORD_11, \
+                       %%XMM_DWORD_12, %%XMM_DWORD_13, %%XMM_DWORD_14, %%XMM_DWORD_15
+
+        CHACHA20_ROUND %%XMM_DWORD_0, %%XMM_DWORD_1, %%XMM_DWORD_2, %%XMM_DWORD_3, \
+                       %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, %%XMM_DWORD_4, \
+                       %%XMM_DWORD_10, %%XMM_DWORD_11, %%XMM_DWORD_8, %%XMM_DWORD_9, \
+                       %%XMM_DWORD_15, %%XMM_DWORD_12, %%XMM_DWORD_13, %%XMM_DWORD_14
+%endrep
+
+%assign i 0
+%rep 16
+        vpaddd  APPEND(%%XMM_DWORD_, i), [rsp + _STATE + 16*i]
+%assign i (i + 1)
+%endrep
 %endmacro
 
 align 32
@@ -174,114 +455,284 @@ submit_job_chacha20_enc_dec_avx:
 %define src     r8
 %define dst     r9
 %define len     r10
-%define tmp     r11
-%define tmp2    rax
+%define iv      r11
+%define keys    rdx
+%define off     rax
+%define tmp     iv
+%define tmp2    keys
 
-        ; Prepare chacha state from IV, key
-        mov     tmp, [job + _enc_keys]
-        vmovdqu xmm1, [tmp]          ; Load key bytes 0-15
-        vmovdqu xmm2, [tmp + 16]     ; Load key bytes 16-31
-        mov     tmp, [job + _iv]
-        ; Read nonce (12 bytes)
-        vmovq   xmm3, [tmp]
-        vpinsrd xmm3, [tmp + 8], 2
-        vpslldq xmm3, 4
-        vmovdqa xmm0, [rel constants]
-
+        ; Read pointers and length
         mov     len, [job + _msg_len_to_cipher_in_bytes]
+
+        ; Check if there is nothing to encrypt
+        or      len, len
+        jz      exit
+
+        mov     keys, [job + _enc_keys]
+        mov     iv, [job + _iv]
         mov     src, [job + _src]
         add     src, [job + _cipher_start_src_offset_in_bytes]
-
         mov     dst, [job + _dst]
-start_loop:
-        cmp     len, 64
+
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -16
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
+
+        xor     off, off
+
+        ; If less than or equal to 64*2 bytes, prepare directly states for
+        ; up to 2 blocks
+        cmp     len, 64*2
+        jbe     check_1_or_2_blocks_left
+
+        ; Prepare first 4 chacha states
+        vmovdqa xmm0, [rel constants0]
+        vmovdqa xmm1, [rel constants1]
+        vmovdqa xmm2, [rel constants2]
+        vmovdqa xmm3, [rel constants3]
+
+        ; Broadcast 8 dwords from key into XMM4-11
+        vmovdqu xmm12, [keys]
+        vmovdqu xmm15, [keys + 16]
+        vpshufd xmm4, xmm12, 0x0
+        vpshufd xmm5, xmm12, 0x55
+        vpshufd xmm6, xmm12, 0xAA
+        vpshufd xmm7, xmm12, 0xFF
+        vpshufd xmm8, xmm15, 0x0
+        vpshufd xmm9, xmm15, 0x55
+        vpshufd xmm10, xmm15, 0xAA
+        vpshufd xmm11, xmm15, 0xFF
+
+        ; Broadcast 3 dwords from IV into XMM13-15
+        vmovd   xmm13, [iv]
+        vmovd   xmm14, [iv + 4]
+        vpshufd xmm13, xmm13, 0
+        vpshufd xmm14, xmm14, 0
+        vmovd   xmm15, [iv + 8]
+        vpshufd xmm15, xmm15, 0
+
+        ; Set block counters for first 4 Chacha20 states
+        vmovdqa xmm12, [rel dword_1_4]
+
+%assign i 0
+%rep 16
+        vmovdqa [rsp + _STATE + 16*i], xmm %+ i
+%assign i (i + 1)
+%endrep
+
+        cmp     len, 64*4
         jb      exit_loop
 
-        ; Increment block counter and generate 64 bytes of keystream
-        vpaddd  xmm3, [rel add_1]
-        generate_ks xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm12
+align 32
+start_loop:
 
-        ; Load plaintext
-        vmovdqu  xmm8,  [src]
-        vmovdqu  xmm9,  [src + 16]
-        vmovdqu  xmm10, [src + 32]
-        vmovdqu  xmm11, [src + 48]
+        ; Generate 256 bytes of keystream
+        GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
 
-        ; XOR KS with plaintext and store resulting ciphertext
-        vpxor    xmm8,  xmm4
-        vpxor    xmm9,  xmm5
-        vpxor    xmm10, xmm6
-        vpxor    xmm11, xmm7
+        ;; Transpose state to get keystream and XOR with plaintext
+        ;; to get ciphertext
 
-        vmovdqu [dst], xmm8
-        vmovdqu [dst + 16], xmm9
-        vmovdqu [dst + 32], xmm10
-        vmovdqu [dst + 48], xmm11
+        ; Save registers to be used as temp registers
+        vmovdqa [rsp + _XMM_SAVE], xmm14
+        vmovdqa [rsp + _XMM_SAVE + 16], xmm15
 
-        ; Update pointers
-        add     src, 64
-        add     dst, 64
+        ; Transpose to get 0-15, 64-79, 128-143, 192-207 bytes of KS
+        TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm14, xmm15
 
-        sub     len, 64
+        ; xmm14, xmm1, xmm0, xmm3
+        ; xmm2, xmm15 free to use
+        vmovdqu xmm2, [src + off]
+        vmovdqu xmm15, [src + off + 16*4]
+        vpxor   xmm14, xmm2
+        vpxor   xmm1, xmm15
+        vmovdqu [dst + off], xmm14
+        vmovdqu [dst + off + 16*4], xmm1
 
-        jmp     start_loop
+        vmovdqu xmm2, [src + off + 16*8]
+        vmovdqu xmm15, [src + off + 16*12]
+        vpxor   xmm0, xmm2
+        vpxor   xmm3, xmm15
+        vmovdqu [dst + off + 16*8], xmm0
+        vmovdqu [dst + off + 16*12], xmm3
+
+        ; Restore registers and use xmm0, xmm1 now that they are free
+        vmovdqa xmm14, [rsp + _XMM_SAVE]
+        vmovdqa xmm15, [rsp + _XMM_SAVE + 16]
+
+        ; Transpose to get 16-31, 80-95, 144-159, 208-223 bytes of KS
+        TRANSPOSE4_U32 xmm4, xmm5, xmm6, xmm7, xmm0, xmm1
+
+        ; xmm0, xmm5, xmm4, xmm7
+        ; xmm6, xmm1 free to use
+        vmovdqu xmm6, [src + off + 16]
+        vmovdqu xmm1, [src + off + 16*5]
+        vpxor   xmm0, xmm6
+        vpxor   xmm5, xmm1
+        vmovdqu [dst + off + 16], xmm0
+        vmovdqu [dst + off + 16*5], xmm5
+
+        vmovdqu xmm6, [src + off + 16*9]
+        vmovdqu xmm1, [src + off + 16*13]
+        vpxor   xmm4, xmm6
+        vpxor   xmm7, xmm1
+        vmovdqu [dst + off + 16*9], xmm4
+        vmovdqu [dst + off + 16*13], xmm7
+
+        ; Transpose to get 32-47, 96-111, 160-175, 224-239 bytes of KS
+        TRANSPOSE4_U32 xmm8, xmm9, xmm10, xmm11, xmm0, xmm1
+
+        ; xmm0, xmm9, xmm8, xmm11
+        ; xmm10, xmm1 free to use
+        vmovdqu xmm10, [src + off + 16*2]
+        vmovdqu xmm1, [src + off + 16*6]
+        vpxor   xmm0, xmm10
+        vpxor   xmm9, xmm1
+        vmovdqu [dst + off + 16*2], xmm0
+        vmovdqu [dst + off + 16*6], xmm9
+
+        vmovdqu xmm10, [src + off + 16*10]
+        vmovdqu xmm1, [src + off + 16*14]
+        vpxor   xmm8, xmm10
+        vpxor   xmm11, xmm1
+        vmovdqu [dst + off + 16*10], xmm8
+        vmovdqu [dst + off + 16*14], xmm11
+
+        ; Transpose to get 48-63, 112-127, 176-191, 240-255 bytes of KS
+        TRANSPOSE4_U32 xmm12, xmm13, xmm14, xmm15, xmm0, xmm1
+
+        ; xmm0, xmm13, xmm12, xmm15
+        ; xmm14, xmm1 free to use
+        vmovdqu xmm14, [src + off + 16*3]
+        vmovdqu xmm1, [src + off + 16*7]
+        vpxor   xmm0, xmm14
+        vpxor   xmm13, xmm1
+        vmovdqu [dst + off + 16*3], xmm0
+        vmovdqu [dst + off + 16*7], xmm13
+
+        vmovdqu xmm14, [src + off + 16*11]
+        vmovdqu xmm1, [src + off + 16*15]
+        vpxor   xmm12, xmm14
+        vpxor   xmm15, xmm1
+        vmovdqu [dst + off + 16*11], xmm12
+        vmovdqu [dst + off + 16*15], xmm15
+        ; Update remaining length
+        sub     len, 64*4
+        add     off, 64*4
+
+        ; Update counter values
+        vmovdqa xmm12, [rsp + 16*12]
+        vpaddd  xmm12, [rel dword_4]
+        vmovdqa [rsp + 16*12], xmm12
+
+        cmp     len, 64*4
+        jae     start_loop
 
 exit_loop:
 
-        ; Check if there are partial block (less than 64 bytes)
+        ; Check if there are no more bytes to encrypt
         or      len, len
         jz      no_partial_block
 
-        ; Increment block counter and generate 64 bytes of keystream
-        vpaddd   xmm3, [rel add_1]
-        generate_ks xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm12
+        cmp     len, 64*2
+        ja      more_than_2_blocks_left
+
+check_1_or_2_blocks_left:
+        cmp     len, 64
+        ja      two_blocks_left
+
+        ;; 1 block left
+
+        ; Get last block counter dividing offset by 64
+        shr     off, 6
+
+        ; Prepare next chacha state from IV, key
+        vmovdqu xmm1, [keys]          ; Load key bytes 0-15
+        vmovdqu xmm2, [keys + 16]     ; Load key bytes 16-31
+        ; Read nonce (12 bytes)
+        vmovq   xmm3, [iv]
+        vpinsrd xmm3, [iv + 8], 2
+        vpslldq xmm3, 4
+        vpinsrd xmm3, DWORD(off), 0
+        vmovdqa xmm0, [rel constants]
+
+        ; Increase block counter
+        vpaddd  xmm3, [rel dword_1]
+        shl     off, 6 ; Restore offset
+
+        ; Generate 64 bytes of keystream
+        GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm9, xmm10, xmm11, \
+                           xmm12, xmm13
+
+        cmp     len, 64
+        jne     less_than_64
+
+        ;; Exactly 64 bytes left
+
+        ; Load plaintext, XOR with KS and store ciphertext
+        vmovdqu xmm14, [src + off]
+        vmovdqu xmm15, [src + off + 16]
+        vpxor   xmm14, xmm9
+        vpxor   xmm15, xmm10
+        vmovdqu [dst + off], xmm14
+        vmovdqu [dst + off + 16], xmm15
+
+        vmovdqu xmm14, [src + off + 16*2]
+        vmovdqu xmm15, [src + off + 16*3]
+        vpxor   xmm14, xmm11
+        vpxor   xmm15, xmm12
+        vmovdqu [dst + off + 16*2], xmm14
+        vmovdqu [dst + off + 16*3], xmm15
+
+        jmp     no_partial_block
+
+less_than_64:
 
         cmp     len, 48
         jb      less_than_48
 
-        ; Load plaintext
-        vmovdqu  xmm8, [src]
-        vmovdqu  xmm9, [src + 16]
-        vmovdqu  xmm10, [src + 32]
+        ; Load plaintext and XOR with keystream
+        vmovdqu xmm13, [src + off]
+        vmovdqu xmm14, [src + off + 16]
+        vmovdqu xmm15, [src + off + 32]
 
-        ; XOR KS with plaintext and store resulting ciphertext
-        vpxor    xmm8, xmm4
-        vpxor    xmm9, xmm5
-        vpxor    xmm10, xmm6
+        vpxor   xmm13, xmm9
+        vpxor   xmm14, xmm10
+        vpxor   xmm15, xmm11
 
-        vmovdqu [dst], xmm8
-        vmovdqu [dst + 16], xmm9
-        vmovdqu [dst + 32], xmm10
+        ; Store resulting ciphertext
+        vmovdqu [dst + off], xmm13
+        vmovdqu [dst + off + 16], xmm14
+        vmovdqu [dst + off + 32], xmm15
 
-        ; Store last KS in xmm4, for partial block
-        vmovdqu  xmm4, xmm7
+        ; Store last KS in xmm9, for partial block
+        vmovdqu xmm9, xmm12
 
         sub     len, 48
-        add     src, 48
-        add     dst, 48
+        add     off, 48
 
         jmp     check_partial
 less_than_48:
         cmp     len, 32
         jb      less_than_32
 
-        ; Load plaintext
-        vmovdqu  xmm8, [src]
-        vmovdqu  xmm9, [src + 16]
+        ; Load plaintext and XOR with keystream
+        vmovdqu xmm13, [src + off]
+        vmovdqu xmm14, [src + off + 16]
 
-        ; XOR KS with plaintext and store resulting ciphertext
-        vpxor    xmm8, xmm4
-        vpxor    xmm9, xmm5
+        vpxor   xmm13, xmm9
+        vpxor   xmm14, xmm10
 
-        vmovdqu [dst], xmm8
-        vmovdqu [dst + 16], xmm9
+        ; Store resulting ciphertext
+        vmovdqu [dst + off], xmm13
+        vmovdqu [dst + off + 16], xmm14
 
-        ; Store last KS in xmm4, for partial block
-        vmovdqu  xmm4, xmm6
+        ; Store last KS in xmm9, for partial block
+        vmovdqu xmm9, xmm11
 
         sub     len, 32
-        add     src, 32
-        add     dst, 32
+        add     off, 32
 
         jmp     check_partial
 
@@ -289,38 +740,267 @@ less_than_32:
         cmp     len, 16
         jb      check_partial
 
-        ; Load plaintext
-        vmovdqu  xmm8, [src]
+        ; Load plaintext and XOR with keystream
+        vmovdqu xmm13, [src + off]
 
-        ; XOR KS with plaintext and store resulting ciphertext
-        vpxor    xmm8, xmm4
+        vpxor   xmm13, xmm9
 
-        vmovdqu [dst], xmm8
+        ; Store resulting ciphertext
+        vmovdqu [dst + off], xmm13
 
-        ; Store last KS in xmm4, for partial block
-        vmovdqu  xmm4, xmm5
+        ; Store last KS in xmm9, for partial block
+        vmovdqu xmm9, xmm10
 
         sub     len, 16
-        add     src, 16
-        add     dst, 16
+        add     off, 16
 
 check_partial:
         or      len, len
         jz      no_partial_block
 
+        add     src, off
+        add     dst, off
         ; Load plaintext
         simd_load_avx_15_1 xmm8, src, len
 
         ; XOR KS with plaintext and store resulting ciphertext
-        vpxor    xmm8, xmm4
+        vpxor   xmm8, xmm9
 
         simd_store_avx_15 dst, xmm8, len, tmp, tmp2
+
+        jmp     no_partial_block
+
+two_blocks_left:
+
+        ; Get last block counter dividing offset by 64
+        shr     off, 6
+
+        ; Prepare next 2 chacha states from IV, key
+        vmovdqu xmm1, [keys]          ; Load key bytes 0-15
+        vmovdqu xmm2, [keys + 16]     ; Load key bytes 16-31
+        ; Read nonce (12 bytes)
+        vmovq   xmm3, [iv]
+        vpinsrd xmm3, [iv + 8], 2
+        vpslldq xmm3, 4
+        vpinsrd xmm3, DWORD(off), 0
+        vmovdqa xmm0, [rel constants]
+
+        vmovdqa xmm8, xmm3
+
+        ; Increase block counters
+        vpaddd  xmm3, [rel dword_1]
+        vpaddd  xmm8, [rel dword_2]
+
+        shl     off, 6 ; Restore offset
+
+        ; Generate 128 bytes of keystream
+        GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+
+        cmp     len, 128
+        jb      between_64_127
+
+        ; Load plaintext, XOR with KS and store ciphertext
+        vmovdqu xmm14, [src + off]
+        vmovdqu xmm15, [src + off + 16]
+        vpxor   xmm14, xmm4
+        vpxor   xmm15, xmm5
+        vmovdqu [dst + off], xmm14
+        vmovdqu [dst + off + 16], xmm15
+
+        vmovdqu xmm14, [src + off + 16*2]
+        vmovdqu xmm15, [src + off + 16*3]
+        vpxor   xmm14, xmm6
+        vpxor   xmm15, xmm7
+        vmovdqu [dst + off + 16*2], xmm14
+        vmovdqu [dst + off + 16*3], xmm15
+
+        vmovdqu xmm14, [src + off + 16*4]
+        vmovdqu xmm15, [src + off + 16*5]
+        vpxor   xmm14, xmm9
+        vpxor   xmm15, xmm10
+        vmovdqu [dst + off + 16*4], xmm14
+        vmovdqu [dst + off + 16*5], xmm15
+
+        vmovdqu xmm14, [src + off + 16*6]
+        vmovdqu xmm15, [src + off + 16*7]
+        vpxor   xmm14, xmm11
+        vpxor   xmm15, xmm12
+        vmovdqu [dst + off + 16*6], xmm14
+        vmovdqu [dst + off + 16*7], xmm15
+
+        jmp     no_partial_block
+
+between_64_127:
+        ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
+        vmovdqu xmm14, [src + off]
+        vmovdqu xmm15, [src + off + 16]
+        vpxor   xmm14, xmm4
+        vpxor   xmm15, xmm5
+        vmovdqu [dst + off], xmm14
+        vmovdqu [dst + off + 16], xmm15
+
+        vmovdqu xmm14, [src + off + 16*2]
+        vmovdqu xmm15, [src + off + 16*3]
+        vpxor   xmm14, xmm6
+        vpxor   xmm15, xmm7
+        vmovdqu [dst + off + 16*2], xmm14
+        vmovdqu [dst + off + 16*3], xmm15
+
+        sub     len, 64
+        add     off, 64
+        ; Handle rest up to 63 bytes in "less_than_64"
+        jmp     less_than_64
+
+more_than_2_blocks_left:
+
+        ; Generate 256 bytes of keystream
+        GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+
+        ;; Transpose state to get keystream and XOR with plaintext
+        ;; to get ciphertext
+
+        ; Save registers to be used as temp registers
+        vmovdqa [rsp + _XMM_SAVE], xmm14
+        vmovdqa [rsp + _XMM_SAVE + 16], xmm15
+
+        ; Transpose to get 0-15, 64-79, 128-143, 192-207 bytes of KS
+        TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm14, xmm15
+
+        ; xmm14, xmm1, xmm0, xmm3
+        vmovdqa xmm2, xmm0
+        vmovdqa xmm0, xmm14
+        ; xmm0-3 containing [64*I : 64*I + 15] (I = 0-3) bytes of KS
+
+        ; Restore registers and save xmm0,xmm1 and use them instead
+        vmovdqa xmm14, [rsp + _XMM_SAVE]
+        vmovdqa xmm15, [rsp + _XMM_SAVE + 16]
+
+        vmovdqa [rsp + _XMM_SAVE], xmm2
+        vmovdqa [rsp + _XMM_SAVE + 16], xmm3
+
+        ; Transpose to get 16-31, 80-95, 144-159, 208-223 bytes of KS
+        TRANSPOSE4_U32 xmm4, xmm5, xmm6, xmm7, xmm2, xmm3
+
+        ; xmm2, xmm5, xmm4, xmm7
+        vmovdqa xmm6, xmm4
+        vmovdqa xmm4, xmm2
+        ; xmm4-7 containing [64*I + 16 : 64*I + 31] (I = 0-3) bytes of KS
+
+        ; Transpose to get 32-47, 96-111, 160-175, 224-239 bytes of KS
+        TRANSPOSE4_U32 xmm8, xmm9, xmm10, xmm11, xmm2, xmm3
+
+        ; xmm2, xmm9, xmm8, xmm11
+        vmovdqa xmm10, xmm8
+        vmovdqa xmm8, xmm2
+        ; xmm8-11 containing [64*I + 32 : 64*I + 47] (I = 0-3) bytes of KS
+
+        ; Transpose to get 48-63, 112-127, 176-191, 240-255 bytes of KS
+        TRANSPOSE4_U32 xmm12, xmm13, xmm14, xmm15, xmm2, xmm3
+
+        ; xmm2, xmm13, xmm12, xmm15
+        vmovdqa xmm14, xmm12
+        vmovdqa xmm12, xmm2
+        ; xmm12-15 containing [64*I + 48 : 64*I + 63] (I = 0-3) bytes of KS
+
+        ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
+        vmovdqu xmm2, [src + off]
+        vmovdqu xmm3, [src + off + 16]
+        vpxor   xmm0, xmm2
+        vpxor   xmm4, xmm3
+        vmovdqu [dst + off], xmm0
+        vmovdqu [dst + off + 16], xmm4
+
+        vmovdqu xmm2, [src + off + 16*2]
+        vmovdqu xmm3, [src + off + 16*3]
+        vpxor   xmm8, xmm2
+        vpxor   xmm12, xmm3
+        vmovdqu [dst + off + 16*2], xmm8
+        vmovdqu [dst + off + 16*3], xmm12
+
+        vmovdqu xmm2, [src + off + 16*4]
+        vmovdqu xmm3, [src + off + 16*5]
+        vpxor   xmm1, xmm2
+        vpxor   xmm5, xmm3
+        vmovdqu [dst + off + 16*4], xmm1
+        vmovdqu [dst + off + 16*5], xmm5
+
+        vmovdqu xmm2, [src + off + 16*6]
+        vmovdqu xmm3, [src + off + 16*7]
+        vpxor   xmm9, xmm2
+        vpxor   xmm13, xmm3
+        vmovdqu [dst + off + 16*6], xmm9
+        vmovdqu [dst + off + 16*7], xmm13
+
+        ; Restore xmm2,xmm3
+        vmovdqa xmm2, [rsp + _XMM_SAVE]
+        vmovdqa xmm3, [rsp + _XMM_SAVE + 16]
+
+        sub     len, 128
+        add     off, 128
+        ; Use now xmm0,xmm1 as scratch registers
+
+        ; Check if there is at least 64 bytes more to process
+        cmp     len, 64
+        jb      between_129_191
+
+        ; Encrypt next 64 bytes (128-191)
+        vmovdqu xmm0, [src + off]
+        vmovdqu xmm1, [src + off + 16]
+        vpxor   xmm2, xmm0
+        vpxor   xmm6, xmm1
+        vmovdqu [dst + off], xmm2
+        vmovdqu [dst + off + 16], xmm6
+
+        vmovdqu xmm0, [src + off + 16*2]
+        vmovdqu xmm1, [src + off + 16*3]
+        vpxor   xmm10, xmm0
+        vpxor   xmm14, xmm1
+        vmovdqu [dst + off + 16*2], xmm10
+        vmovdqu [dst + off + 16*3], xmm14
+
+        add     off, 64
+        sub     len, 64
+
+        ; Check if there are remaining bytes to process
+        or      len, len
+        jz      no_partial_block
+
+        ; move last 64 bytes of KS to xmm9-12 (used in less_than_64)
+        vmovdqa xmm9, xmm3
+        vmovdqa xmm10, xmm7
+        ; xmm11 is OK
+        vmovdqa xmm12, xmm15
+
+        jmp     less_than_64
+
+between_129_191:
+        ; move bytes 128-191 of KS to xmm9-12 (used in less_than_64)
+        vmovdqa xmm9, xmm2
+        vmovdqa xmm11, xmm10
+        vmovdqa xmm10, xmm6
+        vmovdqa xmm12, xmm14
+
+        jmp     less_than_64
 
 no_partial_block:
 
 %ifdef SAFE_DATA
         clear_all_xmms_avx_asm
+        ; Clear stack frame
+%assign i 0
+%rep 16
+        vmovdqa [rsp + _STATE + 16*i], xmm0
+%assign i (i + 1)
+%endrep
+        vmovdqa [rsp + _XMM_SAVE], xmm0
+        vmovdqa [rsp + _XMM_SAVE + 16], xmm0
 %endif
+
+        mov     rsp, [rsp + _RSP_SAVE]
+
+exit:
         mov     rax, job
         or      dword [rax + _status], STS_COMPLETED_AES
 
@@ -333,18 +1013,17 @@ MKGLOBAL(poly1305_key_gen_avx,function,internal)
 poly1305_key_gen_avx:
         ;; prepare chacha state from IV, key
         mov     rax, [job + _enc_keys]
+        vmovdqa xmm0, [rel constants]
         vmovdqu xmm1, [rax]          ; Load key bytes 0-15
         vmovdqu xmm2, [rax + 16]     ; Load key bytes 16-31
-
         ;;  copy nonce (12 bytes)
         mov     rax, [job + _iv]
         vmovq   xmm3, [rax]
         vpinsrd xmm3, [rax + 8], 2
         vpslldq xmm3, 4
-        vmovdqa xmm0, [rel constants]
 
         ;; run one round of chacha20
-        generate_ks xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
+        GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 
         ;; clamp R and store poly1305 key
         ;; R = KEY[0..15] & 0xffffffc0ffffffc0ffffffc0fffffff
