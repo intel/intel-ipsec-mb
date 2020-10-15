@@ -543,7 +543,7 @@ start_loop:
         movdqa [rsp + _XMM_SAVE], xmm14
         movdqa [rsp + _XMM_SAVE + 16], xmm15
 
-        ; Transpose to get 0-63 bytes of KS
+        ; Transpose to get 16-31, 80-95, 144-159, 208-223 bytes of KS
         TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm14, xmm15
 
         ; xmm14, xmm1, xmm0, xmm3
@@ -585,7 +585,7 @@ start_loop:
         movdqu  [dst + off + 16*9], xmm4
         movdqu  [dst + off + 16*13], xmm7
 
-        ; Transpose to get bytes 128-191 of KS
+        ; Transpose to get 32-47, 96-111, 160-175, 224-239 bytes of KS
         TRANSPOSE4_U32 xmm8, xmm9, xmm10, xmm11, xmm0, xmm1
 
         ; xmm0, xmm9, xmm8, xmm11
@@ -604,7 +604,7 @@ start_loop:
         movdqu  [dst + off + 16*10], xmm8
         movdqu  [dst + off + 16*14], xmm11
 
-        ; Transpose to get bytes 192-255 of KS
+        ; Transpose to get 48-63, 112-127, 176-191, 240-255 bytes of KS
         TRANSPOSE4_U32 xmm12, xmm13, xmm14, xmm15, xmm0, xmm1
 
         ; xmm0, xmm13, xmm12, xmm15
@@ -659,13 +659,11 @@ check_1_or_2_blocks_left:
         movq    xmm3, [iv]
         pinsrd  xmm3, [iv + 8], 2
         pslldq  xmm3, 4
+        pinsrd  xmm3, DWORD(off), 0
         movdqa  xmm0, [rel constants]
 
-        ; Insert next block count
-        inc     DWORD(off)
-        movd    xmm4, DWORD(off)
-        por     xmm3, xmm4
-        dec     DWORD(off)
+        ; Increase block counter
+        paddd   xmm3, [rel dword_1]
         shl     off, 6 ; Restore offset
 
         ; Generate 64 bytes of keystream
@@ -789,18 +787,14 @@ two_blocks_left:
         movq    xmm3, [iv]
         pinsrd  xmm3, [iv + 8], 2
         pslldq  xmm3, 4
+        pinsrd  xmm3, DWORD(off), 0
         movdqa  xmm0, [rel constants]
 
         movdqa  xmm8, xmm3
 
-        ; Insert next block counts
-        inc     DWORD(off)
-        movd    xmm4, DWORD(off)
-        por     xmm3, xmm4
-        inc     DWORD(off)
-        movd    xmm5, DWORD(off)
-        por     xmm8, xmm5
-        sub     off, 2
+        ; Increase block counters
+        paddd   xmm3, [rel dword_1]
+        paddd   xmm8, [rel dword_2]
         shl     off, 6 ; Restore offset
 
         ; Generate 128 bytes of keystream
@@ -864,69 +858,136 @@ between_64_127:
 
 more_than_2_blocks_left:
 
-        ;; First generate 128 bytes of KS to encrypt next 128 bytes
+        ; Generate 256 bytes of keystream
+        GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
 
-        ; Get last block counter dividing offset by 64
-        shr     off, 6
+        ;; Transpose state to get keystream and XOR with plaintext
+        ;; to get ciphertext
 
-        ; Prepare next 2 chacha states from IV, key
-        movdqu  xmm1, [keys]          ; Load key bytes 0-15
-        movdqu  xmm2, [keys + 16]     ; Load key bytes 16-31
-        ; Read nonce (12 bytes)
-        movq    xmm3, [iv]
-        pinsrd  xmm3, [iv + 8], 2
-        pslldq  xmm3, 4
-        movdqa  xmm0, [rel constants]
+        ; Save registers to be used as temp registers
+        movdqa  [rsp + _XMM_SAVE], xmm14
+        movdqa  [rsp + _XMM_SAVE + 16], xmm15
 
-        movdqa  xmm8, xmm3
+        ; Transpose to get 0-15, 64-79, 128-143, 192-207 bytes of KS
+        TRANSPOSE4_U32 xmm0, xmm1, xmm2, xmm3, xmm14, xmm15
 
-        ; Insert next block counts
-        inc     DWORD(off)
-        movd    xmm4, DWORD(off)
-        por     xmm3, xmm4
-        inc     DWORD(off)
-        movd    xmm5, DWORD(off)
-        por     xmm8, xmm5
-        sub     off, 2
-        shl     off, 6 ; Restore offset
+        ; xmm14, xmm1, xmm0, xmm3
+        movdqa  xmm2, xmm0
+        movdqa  xmm0, xmm14
+        ; xmm0-3 containing [64*I : 64*I + 15] (I = 0-3) bytes of KS
 
-        ; Generate 128 bytes of keystream
-        GENERATE_64_128_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                           xmm13, xmm8, xmm9, xmm10, xmm11, xmm12
+        ; Restore registers and save xmm0,xmm1 and use them instead
+        movdqa  xmm14, [rsp + _XMM_SAVE]
+        movdqa  xmm15, [rsp + _XMM_SAVE + 16]
 
-        ; Load plaintext, XOR with KS and store ciphertext
-        movdqu  xmm14, [src + off]
-        movdqu  xmm15, [src + off + 16]
-        pxor    xmm14, xmm4
-        pxor    xmm15, xmm5
-        movdqu  [dst + off], xmm14
-        movdqu  [dst + off + 16], xmm15
+        movdqa  [rsp + _XMM_SAVE], xmm2
+        movdqa  [rsp + _XMM_SAVE + 16], xmm3
 
-        movdqu  xmm14, [src + off + 16*2]
-        movdqu  xmm15, [src + off + 16*3]
-        pxor    xmm14, xmm6
-        pxor    xmm15, xmm7
-        movdqu  [dst + off + 16*2], xmm14
-        movdqu  [dst + off + 16*3], xmm15
+        ; Transpose to get 16-31, 80-95, 144-159, 208-223 bytes of KS
+        TRANSPOSE4_U32 xmm4, xmm5, xmm6, xmm7, xmm2, xmm3
 
-        movdqu  xmm14, [src + off + 16*4]
-        movdqu  xmm15, [src + off + 16*5]
-        pxor    xmm14, xmm9
-        pxor    xmm15, xmm10
-        movdqu  [dst + off + 16*4], xmm14
-        movdqu  [dst + off + 16*5], xmm15
+        ; xmm2, xmm5, xmm4, xmm7
+        movdqa  xmm6, xmm4
+        movdqa  xmm4, xmm2
+        ; xmm4-7 containing [64*I + 16 : 64*I + 31] (I = 0-3) bytes of KS
 
-        movdqu  xmm14, [src + off + 16*6]
-        movdqu  xmm15, [src + off + 16*7]
-        pxor    xmm14, xmm11
-        pxor    xmm15, xmm12
-        movdqu  [dst + off + 16*6], xmm14
-        movdqu  [dst + off + 16*7], xmm15
+        ; Transpose to get 32-47, 96-111, 160-175, 224-239 bytes of KS
+        TRANSPOSE4_U32 xmm8, xmm9, xmm10, xmm11, xmm2, xmm3
+
+        ; xmm2, xmm9, xmm8, xmm11
+        movdqa  xmm10, xmm8
+        movdqa  xmm8, xmm2
+        ; xmm8-11 containing [64*I + 32 : 64*I + 47] (I = 0-3) bytes of KS
+
+        ; Transpose to get 48-63, 112-127, 176-191, 240-255 bytes of KS
+        TRANSPOSE4_U32 xmm12, xmm13, xmm14, xmm15, xmm2, xmm3
+
+        ; xmm2, xmm13, xmm12, xmm15
+        movdqa  xmm14, xmm12
+        movdqa  xmm12, xmm2
+        ; xmm12-15 containing [64*I + 48 : 64*I + 63] (I = 0-3) bytes of KS
+
+        ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
+        movdqu  xmm2, [src + off]
+        movdqu  xmm3, [src + off + 16]
+        pxor    xmm0, xmm2
+        pxor    xmm4, xmm3
+        movdqu  [dst + off], xmm0
+        movdqu  [dst + off + 16], xmm4
+
+        movdqu  xmm2, [src + off + 16*2]
+        movdqu  xmm3, [src + off + 16*3]
+        pxor    xmm8, xmm2
+        pxor    xmm12, xmm3
+        movdqu  [dst + off + 16*2], xmm8
+        movdqu  [dst + off + 16*3], xmm12
+
+        movdqu  xmm2, [src + off + 16*4]
+        movdqu  xmm3, [src + off + 16*5]
+        pxor    xmm1, xmm2
+        pxor    xmm5, xmm3
+        movdqu  [dst + off + 16*4], xmm1
+        movdqu  [dst + off + 16*5], xmm5
+
+        movdqu  xmm2, [src + off + 16*6]
+        movdqu  xmm3, [src + off + 16*7]
+        pxor    xmm9, xmm2
+        pxor    xmm13, xmm3
+        movdqu  [dst + off + 16*6], xmm9
+        movdqu  [dst + off + 16*7], xmm13
+
+        ; Restore xmm2,xmm3
+        movdqa  xmm2, [rsp + _XMM_SAVE]
+        movdqa  xmm3, [rsp + _XMM_SAVE + 16]
 
         sub     len, 128
         add     off, 128
+        ; Use now xmm0,xmm1 as scratch registers
 
-        jmp     check_1_or_2_blocks_left
+        ; Check if there is at least 64 bytes more to process
+        cmp     len, 64
+        jb      between_129_191
+
+        ; Encrypt next 64 bytes (128-191)
+        movdqu  xmm0, [src + off]
+        movdqu  xmm1, [src + off + 16]
+        pxor    xmm2, xmm0
+        pxor    xmm6, xmm1
+        movdqu  [dst + off], xmm2
+        movdqu  [dst + off + 16], xmm6
+
+        movdqu  xmm0, [src + off + 16*2]
+        movdqu  xmm1, [src + off + 16*3]
+        pxor    xmm10, xmm0
+        pxor    xmm14, xmm1
+        movdqu  [dst + off + 16*2], xmm10
+        movdqu  [dst + off + 16*3], xmm14
+
+        add     off, 64
+        sub     len, 64
+
+        ; Check if there are remaining bytes to process
+        or      len, len
+        jz      no_partial_block
+
+        ; move last 64 bytes of KS to xmm9-12 (used in less_than_64)
+        movdqa  xmm9, xmm3
+        movdqa  xmm10, xmm7
+        ; xmm11 is OK
+        movdqa  xmm12, xmm15
+
+        jmp     less_than_64
+
+between_129_191:
+        ; move bytes 128-191 of KS to xmm9-12 (used in less_than_64)
+        movdqa  xmm9, xmm2
+        movdqa  xmm11, xmm10
+        movdqa  xmm10, xmm6
+        movdqa  xmm12, xmm14
+
+        jmp     less_than_64
+
 
 no_partial_block:
 
