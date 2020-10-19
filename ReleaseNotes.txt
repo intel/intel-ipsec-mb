@@ -1,7 +1,7 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v0.55 October 2020
 ========================================================================
 
 General
