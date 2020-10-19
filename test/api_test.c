@@ -887,6 +887,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_GCM:
                                 case IMB_CIPHER_CCM:
                                 case IMB_CIPHER_DOCSIS_SEC_BPI:
+                                case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                         break;
                                 default:

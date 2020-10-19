@@ -1561,7 +1561,6 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 break;
         case IMB_CIPHER_CHACHA20:
-        case IMB_CIPHER_CHACHA20_POLY1305:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
@@ -1585,6 +1584,37 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 /* Per RFC 7539, max cipher size is (2^32 - 1) x 64 */
                 if (job->msg_len_to_cipher_in_bytes == 0 ||
                     job->msg_len_to_cipher_in_bytes > ((1ULL << 38) - 64)) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(12)) {
+                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_CHACHA20_POLY1305:
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->enc_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (job->key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                /* Per RFC 7539, max cipher size is (2^32 - 1) x 64 */
+                if (job->msg_len_to_cipher_in_bytes > ((1ULL << 38) - 64)) {
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
