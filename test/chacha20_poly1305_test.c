@@ -218,9 +218,9 @@ static const uint8_t tag_vec2[] = {
     0x74, 0x36, 0xE3, 0x11, 0x3F, 0x51, 0x6D, 0xBF
 };
 
-static const uint8_t plain_vec2[] = { };
+static const uint8_t plain_vec2[] = {0};
 
-static const uint8_t cipher_vec2[] = { };
+static const uint8_t cipher_vec2[] = {0};
 
 struct aead_vector {
         const uint8_t *plain;
@@ -236,7 +236,7 @@ struct aead_vector {
          aad_vec0, sizeof(aad_vec0), iv_vec0, key_vec0, tag_vec0},
         {plain_vec1, cipher_vec1, sizeof(plain_vec1),
          aad_vec1, sizeof(aad_vec1), iv_vec1, key_vec1, tag_vec1},
-        {plain_vec2, cipher_vec2, sizeof(plain_vec2),
+        {plain_vec2, cipher_vec2, 0,
          aad_vec2, sizeof(aad_vec2), iv_vec2, key_vec2, tag_vec2},
 };
 
