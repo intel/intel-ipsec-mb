@@ -484,7 +484,8 @@ asm_avx2_lib_objs := \
 	mb_mgr_hmac_sha_384_submit_avx2.o \
 	mb_mgr_hmac_sha_512_flush_avx2.o \
 	mb_mgr_hmac_sha_512_submit_avx2.o \
-	mb_mgr_zuc_submit_flush_avx2.o
+	mb_mgr_zuc_submit_flush_avx2.o \
+	chacha20_avx2.o
 
 #
 # List of ASM modules (avx512 directory)

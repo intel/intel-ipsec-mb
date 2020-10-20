@@ -66,6 +66,8 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const int arch)
                 submit_job_chacha20_enc_dec_sse(job);
         else if (arch == 1)
                 submit_job_chacha20_enc_dec_avx(job);
+        else if (arch == 2)
+                submit_job_chacha20_enc_dec_avx2(job);
         else if (arch == 3)
                 submit_job_chacha20_enc_dec_avx512(job);
 
@@ -103,6 +105,12 @@ IMB_DLL_LOCAL
 IMB_JOB *aead_chacha20_poly1305_avx(IMB_JOB *job)
 {
         return aead_chacha20_poly1305(job, 1 /* AVX */);
+}
+
+IMB_DLL_LOCAL
+IMB_JOB *aead_chacha20_poly1305_avx2(IMB_JOB *job)
+{
+        return aead_chacha20_poly1305(job, 2 /* AVX2 */);
 }
 
 IMB_DLL_LOCAL
