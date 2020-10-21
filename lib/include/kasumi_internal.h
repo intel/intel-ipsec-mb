@@ -1619,7 +1619,7 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
         uint32_t i;
 
         /* Clear sensitive data in stack */
-        for (i = 0; i < dataCount; i++) {
+        for (i = 0; i < bufCount; i++) {
                 clear_mem(&A[i], sizeof(A[i]));
                 clear_mem(&temp[i], sizeof(temp[i]));
         }
