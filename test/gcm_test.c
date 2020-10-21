@@ -1853,11 +1853,13 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
                      struct test_suite_context *ts192,
                      struct test_suite_context *ts256,
                      const struct gcm_ctr_vector *vectors,
-                     const int vectors_cnt)
+                     const int vectors_cnt,
+                     const int test_sgl_api)
 {
 	int vect;
 
-	printf("AES-GCM standard test vectors:\n");
+	printf("AES-GCM (%s API) standard test vectors:\n",
+               test_sgl_api ? "SGL" : "Direct/JOB");
 	for (vect = 0; vect < vectors_cnt; vect++) {
 #ifdef DEBUG
 		printf("Standard vector %d/%d  Keylen:%d IVlen:%d PTLen:%d "
@@ -1873,43 +1875,55 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
 #endif
                 switch (vectors[vect].Klen) {
                 case BITS_128:
-			test_gcm_vectors(&vectors[vect],
-                                         aes_gcm_enc_128, aes_gcm_dec_128,
-                                         ts128);
-			test_gcm_vectors(&vectors[vect],
-                                         sgl_aes_gcm_enc_128,
-                                         sgl_aes_gcm_dec_128,
-                                         ts128);
-			test_gcm_vectors(&vectors[vect],
-                                         job_aes_gcm_enc_128,
-                                         job_aes_gcm_dec_128,
-                                         ts128);
+                        if (test_sgl_api) {
+                                test_gcm_vectors(&vectors[vect],
+                                                 sgl_aes_gcm_enc_128,
+                                                 sgl_aes_gcm_dec_128,
+                                                 ts128);
+                        } else {
+                                test_gcm_vectors(&vectors[vect],
+                                                 aes_gcm_enc_128,
+                                                 aes_gcm_dec_128,
+                                                 ts128);
+                                test_gcm_vectors(&vectors[vect],
+                                                 job_aes_gcm_enc_128,
+                                                 job_aes_gcm_dec_128,
+                                                 ts128);
+                        }
                         break;
                 case BITS_192:
-                        test_gcm_vectors(&vectors[vect],
-                                         aes_gcm_enc_192, aes_gcm_dec_192,
-                                         ts192);
-                        test_gcm_vectors(&vectors[vect],
-                                         sgl_aes_gcm_enc_192,
-                                         sgl_aes_gcm_dec_192,
-                                         ts192);
-			test_gcm_vectors(&vectors[vect],
-                                         job_aes_gcm_enc_192,
-                                         job_aes_gcm_dec_192,
-                                         ts192);
+                        if (test_sgl_api) {
+                                test_gcm_vectors(&vectors[vect],
+                                                 sgl_aes_gcm_enc_192,
+                                                 sgl_aes_gcm_dec_192,
+                                                 ts192);
+                        } else {
+                                test_gcm_vectors(&vectors[vect],
+                                                 aes_gcm_enc_192,
+                                                 aes_gcm_dec_192,
+                                                 ts192);
+			        test_gcm_vectors(&vectors[vect],
+                                                 job_aes_gcm_enc_192,
+                                                 job_aes_gcm_dec_192,
+                                                 ts192);
+                        }
                         break;
                 case BITS_256:
-			test_gcm_vectors(&vectors[vect],
-                                         aes_gcm_enc_256, aes_gcm_dec_256,
-                                         ts256);
-			test_gcm_vectors(&vectors[vect],
-                                         sgl_aes_gcm_enc_256,
-                                         sgl_aes_gcm_dec_256,
-                                         ts256);
-			test_gcm_vectors(&vectors[vect],
-                                         job_aes_gcm_enc_256,
-                                         job_aes_gcm_dec_256,
-                                         ts256);
+                        if (test_sgl_api) {
+                                test_gcm_vectors(&vectors[vect],
+                                                 sgl_aes_gcm_enc_256,
+                                                 sgl_aes_gcm_dec_256,
+                                                 ts256);
+                        } else {
+                                test_gcm_vectors(&vectors[vect],
+                                                 aes_gcm_enc_256,
+                                                 aes_gcm_dec_256,
+                                                 ts256);
+                                test_gcm_vectors(&vectors[vect],
+                                                 job_aes_gcm_enc_256,
+                                                 job_aes_gcm_dec_256,
+                                                 ts256);
+                        }
                         break;
                 default:
                         printf("ERROR: wrong key size error in the table\n");
@@ -2138,7 +2152,7 @@ int gcm_test(IMB_MGR *p_mgr)
         test_suite_start(&ts192, "AES-GCM-192");
         test_suite_start(&ts256, "AES-GCM-256");
 	test_gcm_std_vectors(&ts128, &ts192, &ts256,
-                             gcm_vectors, DIM(gcm_vectors));
+                             gcm_vectors, DIM(gcm_vectors), 0);
         errors = test_suite_end(&ts128);
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
@@ -2147,7 +2161,18 @@ int gcm_test(IMB_MGR *p_mgr)
         test_suite_start(&ts192, "AES-GCM-192 (Variable IV length)");
         test_suite_start(&ts256, "AES-GCM-256 (Variable IV length)");
 	test_gcm_std_vectors(&ts128, &ts192, &ts256,
-                             gcm_iv_vectors, DIM(gcm_iv_vectors));
+                             gcm_iv_vectors, DIM(gcm_iv_vectors), 0);
+        errors = test_suite_end(&ts128);
+        errors += test_suite_end(&ts192);
+        errors += test_suite_end(&ts256);
+
+        test_suite_start(&ts128, "SGL-GCM-128");
+        test_suite_start(&ts192, "SGL-GCM-192");
+        test_suite_start(&ts256, "SGL-GCM-256");
+	test_gcm_std_vectors(&ts128, &ts192, &ts256,
+                             gcm_vectors, DIM(gcm_vectors), 1);
+	test_gcm_std_vectors(&ts128, &ts192, &ts256,
+                             gcm_iv_vectors, DIM(gcm_iv_vectors), 1);
         errors = test_suite_end(&ts128);
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
