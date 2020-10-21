@@ -1216,7 +1216,6 @@ static const struct gcm_ctr_vector gcm_vectors[] = {
 	vector(9),
 	vector(10),
 	vector(11),
-	vector(12),
         vector(13),
         vector(14),
         vector(15),
@@ -1227,6 +1226,15 @@ static const struct gcm_ctr_vector gcm_vectors[] = {
         extra_vector(20),
         vector(21),
         extra_vector(22),
+};
+
+/* Variable IV vectrors (not 12 bytes) */
+static const struct gcm_ctr_vector gcm_iv_vectors[] = {
+	/*
+         * field order {K, Klen, IV, IVlen, A, Alen, P, Plen, C, T, Tlen};
+         * original vector does not have a valid sub hash key
+         */
+	vector(12),
 	vector(26),
 	vector(27),
 	vector(28)
@@ -1796,9 +1804,10 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 static void
 test_gcm_std_vectors(struct test_suite_context *ts128,
                      struct test_suite_context *ts192,
-                     struct test_suite_context *ts256)
+                     struct test_suite_context *ts256,
+                     const struct gcm_ctr_vector *vectors,
+                     const int vectors_cnt)
 {
-	const int vectors_cnt = DIM(gcm_vectors);
 	int vect;
 
 	printf("AES-GCM standard test vectors:\n");
@@ -1807,50 +1816,50 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
 		printf("Standard vector %d/%d  Keylen:%d IVlen:%d PTLen:%d "
                        "AADlen:%d Tlen:%d\n",
                        vect + 1, vectors_cnt,
-                       (int) gcm_vectors[vect].Klen,
-                       (int) gcm_vectors[vect].IVlen,
-                       (int) gcm_vectors[vect].Plen,
-                       (int) gcm_vectors[vect].Alen,
-                       (int) gcm_vectors[vect].Tlen);
+                       (int) vectors[vect].Klen,
+                       (int) vectors[vect].IVlen,
+                       (int) vectors[vect].Plen,
+                       (int) vectors[vect].Alen,
+                       (int) vectors[vect].Tlen);
 #else
 		printf(".");
 #endif
-                switch (gcm_vectors[vect].Klen) {
+                switch (vectors[vect].Klen) {
                 case BITS_128:
-			test_gcm_vectors(&gcm_vectors[vect],
+			test_gcm_vectors(&vectors[vect],
                                          aes_gcm_enc_128, aes_gcm_dec_128,
                                          ts128);
-			test_gcm_vectors(&gcm_vectors[vect],
+			test_gcm_vectors(&vectors[vect],
                                          sgl_aes_gcm_enc_128,
                                          sgl_aes_gcm_dec_128,
                                          ts128);
-			test_gcm_vectors(&gcm_vectors[vect],
+			test_gcm_vectors(&vectors[vect],
                                          job_aes_gcm_enc_128,
                                          job_aes_gcm_dec_128,
                                          ts128);
                         break;
                 case BITS_192:
-                        test_gcm_vectors(&gcm_vectors[vect],
+                        test_gcm_vectors(&vectors[vect],
                                          aes_gcm_enc_192, aes_gcm_dec_192,
                                          ts192);
-                        test_gcm_vectors(&gcm_vectors[vect],
+                        test_gcm_vectors(&vectors[vect],
                                          sgl_aes_gcm_enc_192,
                                          sgl_aes_gcm_dec_192,
                                          ts192);
-			test_gcm_vectors(&gcm_vectors[vect],
+			test_gcm_vectors(&vectors[vect],
                                          job_aes_gcm_enc_192,
                                          job_aes_gcm_dec_192,
                                          ts192);
                         break;
                 case BITS_256:
-			test_gcm_vectors(&gcm_vectors[vect],
+			test_gcm_vectors(&vectors[vect],
                                          aes_gcm_enc_256, aes_gcm_dec_256,
                                          ts256);
-			test_gcm_vectors(&gcm_vectors[vect],
+			test_gcm_vectors(&vectors[vect],
                                          sgl_aes_gcm_enc_256,
                                          sgl_aes_gcm_dec_256,
                                          ts256);
-			test_gcm_vectors(&gcm_vectors[vect],
+			test_gcm_vectors(&vectors[vect],
                                          job_aes_gcm_enc_256,
                                          job_aes_gcm_dec_256,
                                          ts256);
@@ -2081,7 +2090,17 @@ int gcm_test(IMB_MGR *p_mgr)
         test_suite_start(&ts128, "AES-GCM-128");
         test_suite_start(&ts192, "AES-GCM-192");
         test_suite_start(&ts256, "AES-GCM-256");
-	test_gcm_std_vectors(&ts128, &ts192, &ts256);
+	test_gcm_std_vectors(&ts128, &ts192, &ts256,
+                             gcm_vectors, DIM(gcm_vectors));
+        errors = test_suite_end(&ts128);
+        errors += test_suite_end(&ts192);
+        errors += test_suite_end(&ts256);
+
+        test_suite_start(&ts128, "AES-GCM-128 (Variable IV length)");
+        test_suite_start(&ts192, "AES-GCM-192 (Variable IV length)");
+        test_suite_start(&ts256, "AES-GCM-256 (Variable IV length)");
+	test_gcm_std_vectors(&ts128, &ts192, &ts256,
+                             gcm_iv_vectors, DIM(gcm_iv_vectors));
         errors = test_suite_end(&ts128);
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
