@@ -141,6 +141,7 @@ int clear_mem_test(struct IMB_MGR *mb_mgr)
 
                 printf(".");
         }
+        printf("\n");
 
         errors = test_suite_end(&ctx);
 
