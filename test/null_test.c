@@ -134,12 +134,15 @@ test_null_cipher(struct IMB_MGR *mb_mgr,
         DECLARE_ALIGNED(uint8_t all_zeros[BUF_SIZE], 16) = {0};
         int ret = -1;
 
+        memset(auth_key, 0x55, sizeof(auth_key));
+
         IMB_AES_KEYEXP_128(mb_mgr, auth_key, expkey, dust);
         IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
                 ;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
+        memset(job, 0, sizeof(*job));
         job->cipher_direction = cipher_dir;
         job->chain_order = chain_order;
         job->src = in_text;
