@@ -733,7 +733,7 @@ crc_test(struct IMB_MGR *mb_mgr)
 
         /* reflected CRC32 functions */
 
-        test_suite_start(&ctx, "ETH-CR32");
+        test_suite_start(&ctx, "ETH-CRC32");
         test_crc_polynomial(crc32_ethernet_fcs_setup,
                             crc32_ethernet_fcs_ref_calc,
                             crc32_ethernet_fcs_tested_calc,
