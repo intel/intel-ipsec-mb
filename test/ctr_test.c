@@ -1511,8 +1511,8 @@ ctr_test(struct IMB_MGR *mb_mgr)
 
         /* CTR_BITLEN vectors */
         test_suite_start(&ctx128, "AES-CTR-128-Bit-length");
-        test_suite_start(&ctx128, "AES-CTR-192-Bit-length");
-        test_suite_start(&ctx128, "AES-CTR-256-Bit-length");
+        test_suite_start(&ctx192, "AES-CTR-192-Bit-length");
+        test_suite_start(&ctx256, "AES-CTR-256-Bit-length");
         test_ctr_vectors(mb_mgr, &ctx128, &ctx192, &ctx256,
                          ctr_bit_vectors, ctr_bit_vec_cnt,
                          IMB_CIPHER_CNTR_BITLEN);
