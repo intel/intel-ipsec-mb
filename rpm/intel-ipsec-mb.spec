@@ -25,7 +25,7 @@
 
 # Versions numbers
 %global major        0
-%global minor        54
+%global minor        55
 %global patch        0
 %global fullversion  %{major}.%{minor}.%{patch}
 
@@ -39,13 +39,12 @@
 
 Summary:            IPSEC cryptography library optimized for Intel Architecture
 Name:               %{githubname}
-Release:            2%{?dist}
+Release:            1%{?dist}
 Version:            %{fullversion}
 License:            BSD
 Group:              Development/Tools
 ExclusiveArch:      x86_64
 Source0:            https://github.com/intel/%{githubname}/archive/v%{githubver}.tar.gz#/%{githubfull}.tar.gz
-Patch:              0001-Fix-for-executable-stack-in-v0.54-release.patch
 URL:                https://github.com/intel/%{githubname}
 BuildRequires:      make
 BuildRequires:      gcc >= 4.8.3
@@ -68,7 +67,7 @@ For additional information please refer to:
 https://github.com/intel/%{githubname}
 
 %prep
-%autosetup -n %{githubfull} -p1
+%autosetup -n %{githubfull}
 
 %if 0%{?rhel} && 0%{?rhel} < 8
 %ldconfig_post
@@ -77,18 +76,19 @@ https://github.com/intel/%{githubname}
 %endif
 
 %build
-make SAFE_PARAM=y SAFE_DATA=y EXTRA_CFLAGS='%{optflags}' %{?_smp_mflags}
+cd lib
+make EXTRA_CFLAGS='%{optflags}' %{?_smp_mflags}
 
 %install
 
 # Install the library
 install -d %{buildroot}/%{_includedir}
-install -m 0644 %{_builddir}/%{githubfull}/intel-ipsec-mb.h %{buildroot}/%{_includedir}
+install -m 0644 %{_builddir}/%{githubfull}/lib/intel-ipsec-mb.h %{buildroot}/%{_includedir}
 install -d %{buildroot}/%{_libdir}
-install -s -m 0755 %{_builddir}/%{githubfull}/libIPSec_MB.so.%{fullversion} %{buildroot}/%{_libdir}
+install -s -m 0755 %{_builddir}/%{githubfull}/lib/libIPSec_MB.so.%{fullversion} %{buildroot}/%{_libdir}
 install -d %{buildroot}/%{_mandir}/man7
-install -m 0444 libipsec-mb.7 %{buildroot}/%{_mandir}/man7
-install -m 0444 libipsec-mb-dev.7 %{buildroot}/%{_mandir}/man7
+install -m 0444 lib/libipsec-mb.7 %{buildroot}/%{_mandir}/man7
+install -m 0444 lib/libipsec-mb-dev.7 %{buildroot}/%{_mandir}/man7
 cd %{buildroot}/%{_libdir}
 ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so.0
 ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
@@ -109,6 +109,9 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %{_libdir}/libIPSec_MB.so
 
 %changelog
+* Thu Oct 29 2020 Marcel Cornu <marcel.d.cornu@intel.com> 0.55.0-1
+- Update for release package v0.55
+
 * Tue Sep 08 2020 Marcel Cornu <marcel.d.cornu@intel.com> 0.54.0-2
 - Updated to improve compliance with packaging guidelines
 - Added patch to fix executable stack issue
