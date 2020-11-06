@@ -386,10 +386,11 @@ section .text
         vpshufd         %%D, %%D, 0x39 ; 0b00111001 ;  0,3,2,1
 
 %endmacro
+
 ;;
 ;; Generates up to 64*8 bytes of keystream
 ;;
-%macro GENERATE_512_KS 21
+%macro GENERATE_512_KS 18
 %define %%A_L_KS0        %1  ;; [out] ZMM A / Bytes 0-63    of KS
 %define %%B_L_KS1        %2  ;; [out] ZMM B / Bytes 64-127  of KS
 %define %%C_L_KS2        %3  ;; [out] ZMM C / Bytes 128-191 of KS
@@ -402,26 +403,24 @@ section .text
 %define %%STATE_IN_B_L   %10 ;; [in] ZMM containing state "B" part
 %define %%STATE_IN_C_L   %11 ;; [in] ZMM containing state "C" part
 %define %%STATE_IN_D_L   %12 ;; [in] ZMM containing state "D" part
-%define %%STATE_IN_A_H   %13 ;; [in] ZMM containing state "A" part (or "none" in NUM_BLOCKS == 4)
-%define %%STATE_IN_B_H   %14 ;; [in] ZMM containing state "B" part (or "none" in NUM_BLOCKS == 4)
-%define %%STATE_IN_C_H   %15 ;; [in] ZMM containing state "C" part (or "none" in NUM_BLOCKS == 4)
-%define %%STATE_IN_D_H   %16 ;; [in] ZMM containing state "D" part (or "none" in NUM_BLOCKS == 4)
-%define %%ZTMP0          %17 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP1          %18 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP2          %19 ;; [clobbered] Temp ZMM reg
-%define %%ZTMP3          %20 ;; [clobbered] Temp ZMM reg
-%define %%NUM_BLOCKS     %21 ;; [in] Num blocks to encrypt (4 or 8)
+%define %%STATE_IN_D_H   %13 ;; [in] ZMM containing state "D" part (or "none" in NUM_BLOCKS == 4)
+%define %%ZTMP0          %14 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP1          %15 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP2          %16 ;; [clobbered] Temp ZMM reg
+%define %%ZTMP3          %17 ;; [clobbered] Temp ZMM reg
+%define %%NUM_BLOCKS     %18 ;; [in] Num blocks to encrypt (4 or 8)
 
         vmovdqa64       %%A_L_KS0, %%STATE_IN_A_L
         vmovdqa64       %%B_L_KS1, %%STATE_IN_B_L
         vmovdqa64       %%C_L_KS2, %%STATE_IN_C_L
         vmovdqa64       %%D_L_KS3, %%STATE_IN_D_L
 %if %%NUM_BLOCKS == 8
-        vmovdqa64       %%A_H_KS4, %%STATE_IN_A_H
-        vmovdqa64       %%B_H_KS5, %%STATE_IN_B_H
-        vmovdqa64       %%C_H_KS6, %%STATE_IN_C_H
+        vmovdqa64       %%A_H_KS4, %%STATE_IN_A_L
+        vmovdqa64       %%B_H_KS5, %%STATE_IN_B_L
+        vmovdqa64       %%C_H_KS6, %%STATE_IN_C_L
         vmovdqa64       %%D_H_KS7, %%STATE_IN_D_H
 %endif
+
 %rep 10
 %if %%NUM_BLOCKS == 4
         QUARTER_ROUND_X4 %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3
@@ -448,9 +447,9 @@ section .text
         TRANSPOSE4_U128_INPLACE %%A_L_KS0, %%B_L_KS1, %%C_L_KS2, %%D_L_KS3, \
                                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3
 %if %%NUM_BLOCKS == 8
-        vpaddd %%A_H_KS4, %%STATE_IN_A_H
-        vpaddd %%B_H_KS5, %%STATE_IN_B_H
-        vpaddd %%C_H_KS6, %%STATE_IN_C_H
+        vpaddd %%A_H_KS4, %%STATE_IN_A_L
+        vpaddd %%B_H_KS5, %%STATE_IN_B_L
+        vpaddd %%C_H_KS6, %%STATE_IN_C_L
         vpaddd %%D_H_KS7, %%STATE_IN_D_H
 
         TRANSPOSE4_U128_INPLACE %%A_H_KS4, %%B_H_KS5, %%C_H_KS6, %%D_H_KS7, \
@@ -870,22 +869,19 @@ section .text
         vmovdqu8 [%%DST + %%OFF + 64*%%I]{%%KMASK}, APPEND(%%KS, %%I)
 %endmacro
 
-%macro PREPARE_NEXT_STATES_4_TO_8 15
+%macro PREPARE_NEXT_STATES_4_TO_8 12
 %define %%STATE_IN_A_L   %1  ;; [out] ZMM containing state "A" part for states 1-4
 %define %%STATE_IN_B_L   %2  ;; [out] ZMM containing state "B" part for states 1-4
 %define %%STATE_IN_C_L   %3  ;; [out] ZMM containing state "C" part for states 1-4
 %define %%STATE_IN_D_L   %4  ;; [out] ZMM containing state "D" part for states 1-4
-%define %%STATE_IN_A_H   %5  ;; [out] ZMM containing state "A" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
-%define %%STATE_IN_B_H   %6  ;; [out] ZMM containing state "B" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
-%define %%STATE_IN_C_H   %7  ;; [out] ZMM containing state "C" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
-%define %%STATE_IN_D_H   %8  ;; [out] ZMM containing state "D" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
-%define %%ZTMP0          %9  ;; [clobbered] ZMM temp reg
-%define %%ZTMP1          %10 ;; [clobbered] ZMM temp reg
-%define %%LAST_BLK_CNT   %11 ;; [in] Last block counter
-%define %%IV             %12 ;; [in] Pointer to IV
-%define %%KEYS           %13 ;; [in/clobbered] Pointer to keys
-%define %%KMASK          %14 ;; [clobbered] Mask register
-%define %%NUM_BLOCKS     %15 ;; [in] Number of state blocks to prepare (numerical)
+%define %%STATE_IN_D_H   %5  ;; [out] ZMM containing state "D" part for states 5-8 (or "none" in NUM_BLOCKS == 4)
+%define %%ZTMP0          %6  ;; [clobbered] ZMM temp reg
+%define %%ZTMP1          %7  ;; [clobbered] ZMM temp reg
+%define %%LAST_BLK_CNT   %8  ;; [in] Last block counter
+%define %%IV             %9  ;; [in] Pointer to IV
+%define %%KEYS           %10 ;; [in/clobbered] Pointer to keys
+%define %%KMASK          %11 ;; [clobbered] Mask register
+%define %%NUM_BLOCKS     %12 ;; [in] Number of state blocks to prepare (numerical)
 
         ;; Prepare next 8 states (or 4, if 4 or less blocks left)
         vbroadcastf64x2  %%STATE_IN_B_L, [%%KEYS]            ; Load key bytes 0-15
@@ -898,10 +894,7 @@ section .text
         vbroadcastf64x2 %%STATE_IN_A_L, [rel constants]
 
 %if %%NUM_BLOCKS == 8
-        ;; Prepare chacha states 4-7
-        vmovdqa64 %%STATE_IN_A_H, %%STATE_IN_A_L
-        vmovdqa64 %%STATE_IN_B_H, %%STATE_IN_B_L
-        vmovdqa64 %%STATE_IN_C_H, %%STATE_IN_C_L
+        ;; Prepare chacha states 4-7 (A-C same as states 0-3)
         vmovdqa64 %%STATE_IN_D_H, %%STATE_IN_D_L
 %endif
 
@@ -910,13 +903,13 @@ section .text
         vshufi32x4 %%ZTMP0, %%ZTMP0, 0x00
 %if %%NUM_BLOCKS == 4
         ; Add 1-4 to construct next block counters
-        vpaddq  %%ZTMP0, [rel add_1_4]
+        vpaddd  %%ZTMP0, [rel add_1_4]
         vporq   %%STATE_IN_D_L, %%ZTMP0
 %else
         ; Add 1-8 to construct next block counters
         vmovdqa64 %%ZTMP1, %%ZTMP0
-        vpaddq  %%ZTMP0, [rel add_1_4]
-        vpaddq  %%ZTMP1, [rel add_5_8]
+        vpaddd  %%ZTMP0, [rel add_1_4]
+        vpaddd  %%ZTMP1, [rel add_5_8]
         vporq   %%STATE_IN_D_L, %%ZTMP0
         vporq   %%STATE_IN_D_H, %%ZTMP1
 %endif
@@ -1012,14 +1005,14 @@ exit_loop:
 
         ; Get last block counter dividing offset by 64
         shr     off, 6
-        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
                                    zmm8, zmm9, off, iv, keys, k2, 4
         shl     off, 6 ; Restore offset
 
         ; Use same first 4 registers as the output of GENERATE_1K_KS,
         ; to be able to use common code later on to encrypt
         GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, none, none, none, none, \
-                        zmm0, zmm1, zmm2, zmm3, none, none, none, none, \
+                        zmm0, zmm1, zmm2, zmm3, none, \
                         zmm8, zmm9, zmm10, zmm11, 4
 
         jmp ks_gen_done
@@ -1030,14 +1023,14 @@ more_than_4_blocks_left:
         ; Get last block counter dividing offset by 64
         shr     off, 6
         ;; up to 8 blocks left
-        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
                                    zmm8, zmm9, off, iv, keys, k2, 8
         shl     off, 6 ; Restore offset
 
         ; Use same first 8 registers as the output of GENERATE_1K_KS,
         ; to be able to use common code later on to encrypt
         GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
-                        zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                        zmm0, zmm1, zmm2, zmm3, zmm7, \
                         zmm8, zmm9, zmm10, zmm11, 8
 
         jmp ks_gen_done
