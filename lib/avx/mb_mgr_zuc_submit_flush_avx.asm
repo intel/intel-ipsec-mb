@@ -406,7 +406,7 @@ FLUSH_JOB_ZUC_EEA3:
 %rep 4
         cmp     qword [state + _zuc_job_in_lane + I*8], 0
         jne     APPEND(skip_copy_ffs_,I)
-        pinsrw  xmm0, DWORD(tmp3), I
+        vpinsrw xmm0, DWORD(tmp3), I
 APPEND(skip_copy_ffs_,I):
 %assign I (I+1)
 %endrep

@@ -462,7 +462,7 @@ APPEND(skip_clear_,I):
         mov     rcx, rbits
         mov     tmp3, 0xff
         shr     tmp3, cl
-        movq    xmm2, tmp3
+        vmovq   xmm2, tmp3
         XVPSLLB xmm2, r, xmm1, tmp2
 
         ;; pad final byte
@@ -474,7 +474,7 @@ APPEND(skip_clear_,I):
         mov     tmp2, tmp3
         shr     tmp2, 1
         xor     tmp2, tmp3 ; XOR to get OR mask
-        movq    xmm3, tmp2
+        vmovq   xmm3, tmp2
         ;; xmm1 contains shift table from previous shift
         vpshufb xmm3, xmm1
 
