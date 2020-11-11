@@ -41,6 +41,7 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *);
 IMB_JOB *submit_job_chacha20_enc_dec_avx(IMB_JOB *);
 IMB_JOB *submit_job_chacha20_enc_dec_avx2(IMB_JOB *);
 IMB_JOB *submit_job_chacha20_enc_dec_avx512(IMB_JOB *);
+IMB_JOB *submit_job_chacha20_poly_enc_avx512(IMB_JOB *, void *poly_key);
 
 void poly1305_key_gen_sse(const IMB_JOB *job, void *key);
 void poly1305_key_gen_avx(const IMB_JOB *job, void *key);

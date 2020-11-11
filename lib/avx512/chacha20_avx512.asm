@@ -41,6 +41,20 @@ constants:
 dd      0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
 
 align 64
+add_0_3:
+dd      0x00000000, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000001, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000002, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000003, 0x00000000, 0x00000000, 0x00000000
+
+align 64
+add_4_7:
+dd      0x00000004, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000005, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000006, 0x00000000, 0x00000000, 0x00000000
+dd      0x00000007, 0x00000000, 0x00000000, 0x00000000
+
+align 64
 add_1_4:
 dd      0x00000001, 0x00000000, 0x00000000, 0x00000000
 dd      0x00000002, 0x00000000, 0x00000000, 0x00000000
@@ -67,6 +81,13 @@ dd      0x00000001, 0x00000002, 0x00000003, 0x00000004
 dd      0x00000005, 0x00000006, 0x00000007, 0x00000008
 dd      0x00000009, 0x0000000a, 0x0000000b, 0x0000000c
 dd      0x0000000d, 0x0000000e, 0x0000000f, 0x00000010
+
+align 64
+set_0_15:
+dd      0x00000000, 0x00000001, 0x00000002, 0x00000003
+dd      0x00000004, 0x00000005, 0x00000006, 0x00000007
+dd      0x00000008, 0x00000009, 0x0000000a, 0x0000000b
+dd      0x0000000c, 0x0000000d, 0x0000000e, 0x0000000f
 
 align 64
 len_to_mask:
@@ -103,15 +124,25 @@ dq      0x03ffffffffffffff, 0x07ffffffffffffff
 dq      0x0fffffffffffffff, 0x1fffffffffffffff
 dq      0x3fffffffffffffff, 0x7fffffffffffffff
 
+align 32
+poly_clamp_r:
+dq      0x0ffffffc0fffffff, 0x0ffffffc0ffffffc
+dq      0xffffffffffffffff, 0xffffffffffffffff
+
 %define APPEND(a,b) a %+ b
+%define APPEND3(a,b,c) a %+ b %+ c
 
 %ifdef LINUX
 %define arg1    rdi
+%define arg2    rsi
 %else
 %define arg1    rcx
+%define arg2    rdx
 %endif
 
 %define job     arg1
+
+%define added_len r12
 
 section .text
 
@@ -133,6 +164,15 @@ section .text
 
 %endmacro
 
+%macro GEN_POLY_KEY 2
+%define %%AKEY_PTR      %1
+%define %%CHACHA_STATE  %2
+
+        vpandq  YWORD(%%CHACHA_STATE), [rel poly_clamp_r]
+        vmovdqa64 [%%AKEY_PTR], YWORD(%%CHACHA_STATE)
+
+%endmacro
+
 ;
 ; Macro adding original state values to processed state values
 ; and transposing 16x16 u32 from first 16 ZMM registers,
@@ -145,7 +185,7 @@ section .text
 ; Once transposition is done, keystream is XOR'd with the plaintext
 ; and output buffer is written.
 ;
-%macro GENERATE_1K_KS_AND_ENCRYPT 35
+%macro GENERATE_1K_KS_AND_ENCRYPT 36
 %define %%IN00_KS01  %1 ; [in/clobbered] Input row 0 of state, bytes 64-127 of keystream
 %define %%IN01_KS02  %2 ; [in/clobbered] Input row 1 of state, bytes 128-191 of keystream
 %define %%IN02_KS15  %3 ; [in/clobbered] Input row 2 of state, bytes 960-1023 of keystream
@@ -181,6 +221,7 @@ section .text
 %define %%SRC        %33 ; [in] Source pointer
 %define %%DST        %34 ; [in] Destination pointer
 %define %%OFF        %35 ; [in] Offset into src/dst pointers
+%define %%GEN_KEY    %36 ; [in] Generate poly key
 
         vpaddd %%IN00_KS01, %%IN_ORIG00_KS09
         vpaddd %%IN01_KS02, %%IN_ORIG01_KS10
@@ -267,6 +308,70 @@ section .text
         vshufi64x2      %%IN15, %%IN08_KS05, %%IN12_KS12, 0x44
         vshufi64x2      %%IN08_KS05, %%IN08_KS05, %%IN12_KS12, 0xee
 
+%ifidn %%GEN_KEY, gen_poly_key
+        vshufi64x2      %%IN12_KS12, %%IN03_KS04, %%IN09_KS00, 0xdd
+        vpxorq          %%IN12_KS12, [%%SRC + %%OFF + 64*11]
+        vmovdqu64       [%%DST + %%OFF + 64*11], %%IN12_KS12
+
+        vshufi64x2      %%IN04_KS08, %%IN03_KS04, %%IN09_KS00, 0x88
+        vpxorq          %%IN04_KS08, [%%SRC + %%OFF + 64*7]
+        vmovdqu64       [%%DST + %%OFF + 64*7], %%IN04_KS08
+
+        vshufi64x2      %%IN09_KS00, %%IN_ORIG01_KS10, %%IN14_KS14, 0x88
+        GEN_POLY_KEY    arg2, %%IN09_KS00
+
+        vshufi64x2      %%IN03_KS04, %%IN_ORIG01_KS10, %%IN14_KS14, 0xdd
+        vpxorq          %%IN03_KS04, [%%SRC + %%OFF + 64*3]
+        vmovdqu64       [%%DST + %%OFF + 64*3], %%IN03_KS04
+
+        vshufi64x2      %%IN14_KS14, %%IN02_KS15, %%IN11_KS11, 0xdd
+        vpxorq          %%IN14_KS14, [%%SRC + %%OFF + 64*13]
+        vmovdqu64       [%%DST + %%OFF + 64*13], %%IN14_KS14
+
+        vshufi64x2      %%IN_ORIG01_KS10, %%IN02_KS15, %%IN11_KS11, 0x88
+        vpxorq          %%IN_ORIG01_KS10, [%%SRC + %%OFF + 64*9]
+        vmovdqu64       [%%DST + %%OFF + 64*9], %%IN_ORIG01_KS10
+
+        vshufi64x2      %%IN11_KS11, %%IN00_KS01, %%IN08_KS05, 0x88
+        vpxorq          %%IN11_KS11, [%%SRC + %%OFF + 64*10]
+        vmovdqu64       [%%DST + %%OFF + 64*10], %%IN11_KS11
+
+        vshufi64x2      %%IN02_KS15, %%IN00_KS01, %%IN08_KS05, 0xdd
+        vpxorq          %%IN02_KS15, [%%SRC + %%OFF + 64*14]
+        vmovdqu64       [%%DST + %%OFF + 64*14], %%IN02_KS15
+
+        vshufi64x2      %%IN00_KS01, %%IN06_KS13, %%IN_ORIG00_KS09, 0x88
+        vpxorq          %%IN00_KS01, [%%SRC + %%OFF]
+        vmovdqu64       [%%DST + %%OFF], %%IN00_KS01
+
+        vshufi64x2      %%IN08_KS05, %%IN06_KS13, %%IN_ORIG00_KS09, 0xdd
+        vpxorq          %%IN08_KS05, [%%SRC + %%OFF + 64*4]
+        vmovdqu64       [%%DST + %%OFF + 64*4], %%IN08_KS05
+
+        vshufi64x2      %%IN_ORIG00_KS09, %%IN01_KS02, %%IN10_KS06, 0x88
+        vpxorq          %%IN_ORIG00_KS09, [%%SRC + %%OFF + 64*8]
+        vmovdqu64       [%%DST + %%OFF + 64*8], %%IN_ORIG00_KS09
+
+        vshufi64x2      %%IN06_KS13, %%IN01_KS02, %%IN10_KS06, 0xdd
+        vpxorq          %%IN06_KS13, [%%SRC + %%OFF + 64*12]
+        vmovdqu64       [%%DST + %%OFF + 64*12], %%IN06_KS13
+
+        vshufi64x2      %%IN01_KS02, %%IN07_KS07, %%IN13_KS03, 0x88
+        vpxorq          %%IN01_KS02, [%%SRC + %%OFF + 64]
+        vmovdqu64       [%%DST + %%OFF + 64], %%IN01_KS02
+
+        vshufi64x2      %%IN10_KS06, %%IN07_KS07, %%IN13_KS03, 0xdd
+        vpxorq          %%IN10_KS06, [%%SRC + %%OFF + 64*5]
+        vmovdqu64       [%%DST + %%OFF + 64*5], %%IN10_KS06
+
+        vshufi64x2      %%IN13_KS03, %%IN05, %%IN15, 0x88
+        vpxorq          %%IN13_KS03, [%%SRC + %%OFF + 64*2]
+        vmovdqu64       [%%DST + %%OFF + 64*2], %%IN13_KS03
+
+        vshufi64x2      %%IN07_KS07, %%IN05, %%IN15, 0xdd
+        vpxorq          %%IN07_KS07, [%%SRC + %%OFF + 64*6]
+        vmovdqu64       [%%DST + %%OFF + 64*6], %%IN07_KS07
+%else ; GEN_KEY != gen_poly_key
         vshufi64x2      %%IN12_KS12, %%IN03_KS04, %%IN09_KS00, 0xdd
         vpxorq          %%IN12_KS12, [%%SRC + %%OFF + 64*12]
         vmovdqu64       [%%DST + %%OFF + 64*12], %%IN12_KS12
@@ -330,6 +435,8 @@ section .text
         vshufi64x2      %%IN07_KS07, %%IN05, %%IN15, 0xdd
         vpxorq          %%IN07_KS07, [%%SRC + %%OFF + 64*7]
         vmovdqu64       [%%DST + %%OFF + 64*7], %%IN07_KS07
+%endif
+
 %endmacro
 
 ;;
@@ -523,7 +630,7 @@ section .text
 ;;
 ;; Generates 64*16 bytes of keystream and encrypt up to 1KB of input data
 ;;
-%macro ENCRYPT_1K 35
+%macro ENCRYPT_1K 36
 %define %%ZMM_DWORD0       %1   ;; [clobbered] ZMM to contain dword 0 of all states
 %define %%ZMM_DWORD1       %2   ;; [clobbered] ZMM to contain dword 1 of all states
 %define %%ZMM_DWORD2       %3   ;; [clobbered] ZMM to contain dword 2 of all states
@@ -559,6 +666,7 @@ section .text
 %define %%SRC              %33  ;; [in] Source pointer
 %define %%DST              %34  ;; [in] Destination pointer
 %define %%OFF              %35  ;; [in] Offset into src/dst pointers
+%define %%GEN_KEY          %36  ;; [in] Generate poly key
 
 %assign i 0
 %rep 16
@@ -597,7 +705,7 @@ section .text
                                    %%ZMM_DWORD_ORIG6, %%ZMM_DWORD_ORIG7, %%ZMM_DWORD_ORIG8, \
                                    %%ZMM_DWORD_ORIG9, %%ZMM_DWORD_ORIG10, %%ZMM_DWORD_ORIG11, \
                                    %%ZMM_DWORD_ORIG12, %%ZMM_DWORD_ORIG13, %%ZMM_DWORD_ORIG14, \
-                                   %%ZMM_DWORD_ORIG15, %%SRC, %%DST, %%OFF
+                                   %%ZMM_DWORD_ORIG15, %%SRC, %%DST, %%OFF, %%GEN_KEY
 %endmacro
 
 ;
@@ -826,7 +934,7 @@ section .text
                                %%ZMM_DWORD_ORIG15
 %endmacro
 
-%macro ENCRYPT_1_16_BLOCKS 22
+%macro ENCRYPT_1_16_BLOCKS 23
 %define %%KS0         %1 ; [in/clobbered] Bytes 0-63 of keystream
 %define %%KS1         %2 ; [in/clobbered] Bytes 64-127 of keystream
 %define %%KS2         %3 ; [in/clobbered] Bytes 128-191 of keystream
@@ -849,11 +957,46 @@ section .text
 %define %%OFF        %20 ; [in] Offset into src/dst pointers
 %define %%KMASK      %21 ; [in] Mask register for final block
 %define %%NUM_BLOCKS %22 ; [in] Number of blocks to encrypt
+%define %%GEN_KEY    %23 ; [in] Generate poly key
 
+%ifidn %%GEN_KEY, gen_poly_key
+%if %%NUM_BLOCKS != 16
+        ; Check if Poly key has been generated
+        or      added_len, added_len
+        jz      %%encrypt_key_calculated
+
+        ; Generate Poly key
+        GEN_POLY_KEY    arg2, %%KS0
         ; XOR Keystreams with blocks of input data
 %assign %%I 0
+%assign %%J 1
 %rep (%%NUM_BLOCKS - 1)
-        vpxorq    APPEND(%%KS, %%I), [%%SRC + %%OFF + 64*%%I]
+        vpxorq    APPEND(%%KS, %%J), [%%SRC + %%OFF + 64*%%I]
+%assign %%I (%%I + 1)
+%assign %%J (%%J + 1)
+%endrep
+        ; Final block which might have less than 64 bytes, so mask register is used
+        vmovdqu8 %%ZTMP{%%KMASK}, [%%SRC + %%OFF + 64*%%I]
+        vpxorq  APPEND(%%KS, %%J), %%ZTMP
+
+        ; Write out blocks of ciphertext
+%assign %%I 0
+%assign %%J 1
+%rep (%%NUM_BLOCKS - 1)
+        vmovdqu8 [%%DST + %%OFF + 64*%%I], APPEND(%%KS, %%J)
+%assign %%I (%%I + 1)
+%assign %%J (%%J + 1)
+%endrep
+        vmovdqu8 [%%DST + %%OFF + 64*%%I]{%%KMASK}, APPEND(%%KS, %%J)
+
+        jmp     %%encrypt_done
+%%encrypt_key_calculated:
+%endif ; %%GEN_KEY == gen_poly_key
+%endif ; %%NUM_BLOCKS != 16
+
+%assign %%I 0
+%rep (%%NUM_BLOCKS - 1)
+        vpxorq  APPEND(%%KS, %%I), [%%SRC + %%OFF + 64*%%I]
 %assign %%I (%%I + 1)
 %endrep
         ; Final block which might have less than 64 bytes, so mask register is used
@@ -867,9 +1010,11 @@ section .text
 %assign %%I (%%I + 1)
 %endrep
         vmovdqu8 [%%DST + %%OFF + 64*%%I]{%%KMASK}, APPEND(%%KS, %%I)
+%%encrypt_done:
+
 %endmacro
 
-%macro PREPARE_NEXT_STATES_4_TO_8 12
+%macro PREPARE_NEXT_STATES_4_TO_8 13
 %define %%STATE_IN_A_L   %1  ;; [out] ZMM containing state "A" part for states 1-4
 %define %%STATE_IN_B_L   %2  ;; [out] ZMM containing state "B" part for states 1-4
 %define %%STATE_IN_C_L   %3  ;; [out] ZMM containing state "C" part for states 1-4
@@ -882,6 +1027,7 @@ section .text
 %define %%KEYS           %10 ;; [in/clobbered] Pointer to keys
 %define %%KMASK          %11 ;; [clobbered] Mask register
 %define %%NUM_BLOCKS     %12 ;; [in] Number of state blocks to prepare (numerical)
+%define %%GEN_KEY        %13 ;; [in] Generate poly key
 
         ;; Prepare next 8 states (or 4, if 4 or less blocks left)
         vbroadcastf64x2  %%STATE_IN_B_L, [%%KEYS]            ; Load key bytes 0-15
@@ -901,6 +1047,22 @@ section .text
         ; Broadcast last block counter
         vmovq   XWORD(%%ZTMP0), %%LAST_BLK_CNT
         vshufi32x4 %%ZTMP0, %%ZTMP0, 0x00
+
+%ifidn %%GEN_KEY, gen_poly_key
+%if %%NUM_BLOCKS == 4
+        ; Add 0-3 to construct next block counters
+        vpaddd  %%ZTMP0, [rel add_0_3]
+        vporq   %%STATE_IN_D_L, %%ZTMP0
+%else
+        ; Add 0-7 to construct next block counters
+        vmovdqa64 %%ZTMP1, %%ZTMP0
+        vpaddd  %%ZTMP0, [rel add_0_3]
+        vpaddd  %%ZTMP1, [rel add_4_7]
+        vporq   %%STATE_IN_D_L, %%ZTMP0
+        vporq   %%STATE_IN_D_H, %%ZTMP1
+%endif
+
+%else ; %%GEN == gen_poly_key
 %if %%NUM_BLOCKS == 4
         ; Add 1-4 to construct next block counters
         vpaddd  %%ZTMP0, [rel add_1_4]
@@ -913,6 +1075,7 @@ section .text
         vporq   %%STATE_IN_D_L, %%ZTMP0
         vporq   %%STATE_IN_D_H, %%ZTMP1
 %endif
+%endif ; %%GEN == gen_poly_key
 %endmacro
 
 align 32
@@ -972,7 +1135,7 @@ start_loop:
         ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                    zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
                    zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
-                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off
+                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, 0
 
         ; Update remaining length
         sub     len, 64*16
@@ -1006,7 +1169,7 @@ exit_loop:
         ; Get last block counter dividing offset by 64
         shr     off, 6
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 4
+                                   zmm8, zmm9, off, iv, keys, k2, 4, no_key
         shl     off, 6 ; Restore offset
 
         ; Use same first 4 registers as the output of GENERATE_1K_KS,
@@ -1024,7 +1187,7 @@ more_than_4_blocks_left:
         shr     off, 6
         ;; up to 8 blocks left
         PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
-                                   zmm8, zmm9, off, iv, keys, k2, 8
+                                   zmm8, zmm9, off, iv, keys, k2, 8, no_key
         shl     off, 6 ; Restore offset
 
         ; Use same first 8 registers as the output of GENERATE_1K_KS,
@@ -1098,10 +1261,9 @@ APPEND(final_num_blocks_is_, I):
         and     len, 63
         kmovq   k1, [tmp + len*8]
 
-APPEND(no_mask_update, I):
         ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
                             zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
-                            zmm0, src, dst, off, k1, I
+                            zmm0, src, dst, off, k1, I, 0
         jmp     no_partial_block
 
 %assign I (I + 1)
@@ -1114,6 +1276,274 @@ no_partial_block:
 %endif
         mov     rax, job
         or      dword [rax + _status], STS_COMPLETED_AES
+
+        ret
+
+align 32
+MKGLOBAL(submit_job_chacha20_poly_enc_avx512,function,internal)
+submit_job_chacha20_poly_enc_avx512:
+
+%define src     r8
+%define dst     r9
+%define len     r10
+%define iv      r11
+%define keys    r13
+%define tmp     r13
+%define off     rax
+
+        sub     rsp, 16
+        mov     [rsp], r12
+        mov     [rsp + 8], r13
+
+        mov     added_len, 64
+        xor     off, off
+
+        mov     tmp, 0xffffffffffffffff
+        kmovq   k1, tmp
+
+        mov     len, [job + _msg_len_to_cipher_in_bytes]
+        add     len, 64 ; 64 bytes more to generate Poly key
+        mov     src, [job + _src]
+        add     src, [job + _cipher_start_src_offset_in_bytes]
+        mov     dst, [job + _dst]
+        mov     keys, [job + _enc_keys]
+        mov     iv, [job + _iv]
+
+        ; If less than or equal to 64*8 bytes, prepare directly states for up to 8 blocks
+        cmp     len, 64*8
+        jbe     exit_loop_poly
+
+        ; Prepare first 16 chacha20 states from IV, key, constants and counter values
+        vpbroadcastd zmm0, [rel constants]
+        vpbroadcastd zmm1, [rel constants + 4]
+        vpbroadcastd zmm2, [rel constants + 8]
+        vpbroadcastd zmm3, [rel constants + 12]
+
+        vpbroadcastd zmm4, [keys]
+        vpbroadcastd zmm5, [keys + 4]
+        vpbroadcastd zmm6, [keys + 8]
+        vpbroadcastd zmm7, [keys + 12]
+        vpbroadcastd zmm8, [keys + 16]
+        vpbroadcastd zmm9, [keys + 20]
+        vpbroadcastd zmm10, [keys + 24]
+        vpbroadcastd zmm11, [keys + 28]
+
+        vpbroadcastd zmm13, [iv]
+        vpbroadcastd zmm14, [iv + 4]
+        vpbroadcastd zmm15, [iv + 8]
+        ;; Set first 16 counter values (including 0 for poly key)
+        vmovdqa64 zmm12, [rel set_0_15]
+
+        cmp     len, 64*16
+        jb      exit_loop_poly
+
+        ; Generate Poly key and encrypt 15*16 bytes
+        ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, gen_poly_key
+
+        ; Clear added_len, indicating that Poly key has been generated
+        xor     added_len, added_len
+
+        ; Update remaining length
+        sub     len, 64*16
+        add     off, 64*15
+
+        ; Reload first two registers zmm0 and 1,
+        ; as they have been overwritten by the previous macros
+        vpbroadcastd zmm0, [rel constants]
+        vpbroadcastd zmm1, [rel constants + 4]
+
+        ; Increment counter values
+        vpaddd  zmm12, [rel add_16]
+
+        cmp     len, 64*16
+        jb      exit_loop_poly
+
+align 32
+start_loop_poly:
+        ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, \
+                   off, no_gen_poly_key
+
+        ; Update remaining length
+        sub     len, 64*16
+        add     off, 64*16
+
+        ; Reload first two registers zmm0 and 1,
+        ; as they have been overwritten by the previous macros
+        vpbroadcastd zmm0, [rel constants]
+        vpbroadcastd zmm1, [rel constants + 4]
+
+        ; Increment counter values
+        vpaddd      zmm12, [rel add_16]
+
+        cmp     len, 64*16
+        jae     start_loop_poly
+
+exit_loop_poly:
+
+        ; Check if there are partial block (less than 16*64 bytes)
+        or      len, len
+        jz      no_partial_block_poly
+
+        cmp     len, 64*8
+        ja      more_than_8_blocks_left_poly
+
+        cmp     len, 64*4
+        ja      more_than_4_blocks_left_poly
+
+        ;; up to 4 blocks left
+
+        ; Get last block counter dividing offset by 64
+        shr     off, 6
+        ; Check if Poly key has been generated
+        or      added_len, added_len
+        jz      prepare_four_states
+
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
+                                   zmm8, zmm9, off, iv, keys, k2, 4, gen_poly_key
+        jmp     four_states_prepared
+
+prepare_four_states:
+
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
+                                   zmm8, zmm9, off, iv, keys, k2, 4, no_key
+
+four_states_prepared:
+        shl     off, 6 ; Restore offset
+
+        ; Use same first 4 registers as the output of GENERATE_1K_KS,
+        ; to be able to use common code later on to encrypt
+        GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, none, none, none, none, \
+                        zmm0, zmm1, zmm2, zmm3, none, \
+                        zmm8, zmm9, zmm10, zmm11, 4
+
+        jmp ks_gen_done_poly
+
+more_than_4_blocks_left_poly:
+        ;; up to 8 blocks left
+
+        ; Get last block counter dividing offset by 64
+        shr     off, 6
+        ;; up to 8 blocks left
+
+        ; Check if Poly key has been generated
+        or      added_len, added_len
+        jz      prepare_eight_states
+
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
+                                   zmm8, zmm9, off, iv, keys, k2, 8, gen_poly_key
+        jmp     eight_states_prepared
+
+prepare_eight_states:
+
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
+                                   zmm8, zmm9, off, iv, keys, k2, 8, no_key
+eight_states_prepared:
+        shl     off, 6 ; Restore offset
+
+        ; Use same first 8 registers as the output of GENERATE_1K_KS,
+        ; to be able to use common code later on to encrypt
+        GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                        zmm0, zmm1, zmm2, zmm3, zmm7, \
+                        zmm8, zmm9, zmm10, zmm11, 8
+
+        jmp ks_gen_done_poly
+more_than_8_blocks_left_poly:
+        ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
+        GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+
+ks_gen_done_poly:
+
+        ; Reduce number of bytes used for the Poly key
+        sub     len, added_len
+
+        ; Calculate number of final blocks
+        mov     tmp, len
+        add     tmp, 63
+        shr     tmp, 6
+        jz      final_num_blocks_is_0_poly
+
+        cmp     tmp, 8
+        je      final_num_blocks_is_8_poly
+        jb      final_num_blocks_is_1_7_poly
+
+        ; Final blocks 9-16
+        cmp     tmp, 12
+        je      final_num_blocks_is_12_poly
+        jb      final_num_blocks_is_9_11_poly
+
+        ; Final blocks 13-16
+        cmp     tmp, 14
+        je      final_num_blocks_is_14_poly
+        jb      final_num_blocks_is_13_poly
+
+        cmp     tmp, 15
+        je      final_num_blocks_is_15_poly
+        jmp     final_num_blocks_is_16_poly
+
+final_num_blocks_is_9_11_poly:
+        cmp     tmp, 10
+        je      final_num_blocks_is_10_poly
+        jb      final_num_blocks_is_9_poly
+        ja      final_num_blocks_is_11_poly
+
+final_num_blocks_is_1_7_poly:
+        ; Final blocks 1-7
+        cmp     tmp, 4
+        je      final_num_blocks_is_4_poly
+        jb      final_num_blocks_is_1_3_poly
+
+        ; Final blocks 5-7
+        cmp     tmp, 6
+        je      final_num_blocks_is_6_poly
+        jb      final_num_blocks_is_5_poly
+        ja      final_num_blocks_is_7_poly
+
+final_num_blocks_is_1_3_poly:
+        cmp     tmp, 2
+        je      final_num_blocks_is_2_poly
+        ja      final_num_blocks_is_3_poly
+
+        ; 1 final block if no jump
+%assign I 1
+%rep 16
+APPEND3(final_num_blocks_is_, I, _poly):
+
+        lea     tmp, [rel len_to_mask]
+        and     len, 63
+        kmovq   k1, [tmp + len*8]
+
+        ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
+                            zmm0, src, dst, off, k1, I, gen_poly_key
+        jmp     no_partial_block_poly
+
+%assign I (I + 1)
+%endrep
+
+final_num_blocks_is_0_poly:
+        ; Generate Poly key
+        GEN_POLY_KEY    arg2, zmm25
+
+no_partial_block_poly:
+
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%endif
+        mov     rax, job
+        or      dword [rax + _status], STS_COMPLETED_AES
+
+        mov     r12, [rsp]
+        mov     r13, [rsp + 8]
+        add     rsp, 16
 
         ret
 

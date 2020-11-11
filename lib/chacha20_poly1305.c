@@ -33,47 +33,69 @@
 #include "include/chacha20_poly1305.h"
 
 __forceinline
-IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const int arch)
+IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
 {
-        uint8_t poly_key[32];
+        DECLARE_ALIGNED(uint8_t poly_key[32], 32);
         uint64_t hash[3] = {0, 0, 0};
         const uint64_t aad_len = job->u.CHACHA20_POLY1305.aad_len_in_bytes;
         const uint64_t hash_len = job->msg_len_to_hash_in_bytes;
         uint64_t last[2];
 
-        /* generate key for authentication */
-        if (arch == 0)
-                poly1305_key_gen_sse(job, poly_key);
-        else
-                poly1305_key_gen_avx(job, poly_key);
+        if (job->cipher_direction == IMB_DIR_ENCRYPT) {
+                switch (arch) {
+                case IMB_ARCH_SSE:
+                        submit_job_chacha20_enc_dec_sse(job);
+                        poly1305_key_gen_sse(job, poly_key);
+                        break;
+                case IMB_ARCH_AVX:
+                        submit_job_chacha20_enc_dec_avx(job);
+                        poly1305_key_gen_avx(job, poly_key);
+                        break;
+                case IMB_ARCH_AVX2:
+                        submit_job_chacha20_enc_dec_avx2(job);
+                        poly1305_key_gen_avx(job, poly_key);
+                        break;
+                case IMB_ARCH_AVX512:
+                default:
+                        submit_job_chacha20_poly_enc_avx512(job, poly_key);
+                }
 
-        /* Calculate hash over AAD */
-        poly1305_aead_update(job->u.CHACHA20_POLY1305.aad, aad_len,
-                             hash, poly_key);
+                /* Calculate hash over AAD */
+                poly1305_aead_update(job->u.CHACHA20_POLY1305.aad, aad_len,
+                                     hash, poly_key);
 
-        if (job->cipher_direction == IMB_DIR_DECRYPT) {
+                /* compute hash after cipher on encrypt */
+                poly1305_aead_update(job->dst, hash_len, hash, poly_key);
+        } else {
+                /* generate key for authentication */
+                if (arch == IMB_ARCH_SSE)
+                        poly1305_key_gen_sse(job, poly_key);
+                else
+                        poly1305_key_gen_avx(job, poly_key);
+
+                /* Calculate hash over AAD */
+                poly1305_aead_update(job->u.CHACHA20_POLY1305.aad, aad_len,
+                                     hash, poly_key);
+
                 /* compute hash first on decrypt */
                 poly1305_aead_update(job->src +
                                      job->hash_start_src_offset_in_bytes,
                                      hash_len, hash, poly_key);
-        }
 
-        /*
-         * On encrypt, cipher first and then hash
-         * On decrypt, hash first and then cipher
-         */
-        if (arch == 0)
-                submit_job_chacha20_enc_dec_sse(job);
-        else if (arch == 1)
-                submit_job_chacha20_enc_dec_avx(job);
-        else if (arch == 2)
-                submit_job_chacha20_enc_dec_avx2(job);
-        else if (arch == 3)
-                submit_job_chacha20_enc_dec_avx512(job);
-
-        if (job->cipher_direction == IMB_DIR_ENCRYPT) {
-                /* compute hash after cipher on encrypt */
-                poly1305_aead_update(job->dst, hash_len, hash, poly_key);
+                switch (arch) {
+                case IMB_ARCH_SSE:
+                        submit_job_chacha20_enc_dec_sse(job);
+                        break;
+                case IMB_ARCH_AVX:
+                        submit_job_chacha20_enc_dec_avx(job);
+                        break;
+                case IMB_ARCH_AVX2:
+                        submit_job_chacha20_enc_dec_avx2(job);
+                        break;
+                case IMB_ARCH_AVX512:
+                default:
+                        submit_job_chacha20_enc_dec_avx512(job);
+                }
         }
 
         /*
@@ -98,23 +120,23 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const int arch)
 IMB_DLL_LOCAL
 IMB_JOB *aead_chacha20_poly1305_sse(IMB_JOB *job)
 {
-        return aead_chacha20_poly1305(job, 0 /* SSE */);
+        return aead_chacha20_poly1305(job, IMB_ARCH_SSE);
 }
 
 IMB_DLL_LOCAL
 IMB_JOB *aead_chacha20_poly1305_avx(IMB_JOB *job)
 {
-        return aead_chacha20_poly1305(job, 1 /* AVX */);
+        return aead_chacha20_poly1305(job, IMB_ARCH_AVX);
 }
 
 IMB_DLL_LOCAL
 IMB_JOB *aead_chacha20_poly1305_avx2(IMB_JOB *job)
 {
-        return aead_chacha20_poly1305(job, 2 /* AVX2 */);
+        return aead_chacha20_poly1305(job, IMB_ARCH_AVX2);
 }
 
 IMB_DLL_LOCAL
 IMB_JOB *aead_chacha20_poly1305_avx512(IMB_JOB *job)
 {
-        return aead_chacha20_poly1305(job, 3 /* AVX512 */);
+        return aead_chacha20_poly1305(job, IMB_ARCH_AVX512);
 }
