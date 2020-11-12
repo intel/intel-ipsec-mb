@@ -586,6 +586,15 @@ poly1305_aead_complete:
 
         POLY1305_FINALIZE arg2, arg3, _a0, _a1, _a2, gp9, gp10, gp11
 
+        ;; clear Poly key
+%ifdef SAFE_DATA
+        xor     rax, rax
+        mov     [arg2], rax
+        mov     [arg2 + 8], rax
+        mov     [arg2 + 16], rax
+        mov     [arg2 + 24], rax
+%endif
+
         FUNC_EXIT
 .poly1305_complete_exit:
         ret
