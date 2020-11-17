@@ -80,6 +80,7 @@ endstruc
 %define ZT5             zmm21
 %define ZT6             zmm22
 %define ZT7             zmm23
+
 %define ZT8             zmm24
 %define ZT9             zmm25
 %define ZT10            zmm26
@@ -88,11 +89,12 @@ endstruc
 %define ZT13            zmm29
 %define ZT14            zmm30
 %define ZT15            zmm31
+%define ZT19            zmm15
 
 %define ZT16            zmm12
 %define ZT17            zmm13
 %define ZT18            zmm14
-%define ZT19            zmm15
+
 
 %define R0_K0_3         zmm0
 %define R0_K4_7         zmm1
@@ -224,13 +226,13 @@ endstruc
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ENCRYPT_16_PARALLEL - Encode all blocks up to multiple of 4
+; ENCRYPT_16x2_PARALLEL - Encode all blocks up to multiple of 2
 ; - Operation
 ;   - loop encrypting %%LENGTH bytes of input data
-;   - each loop encrypts 4 blocks across 16 lanes
-;   - stop when %%LENGTH is less than 64 bytes (4 blocks)
+;   - each loop encrypts 2 blocks across 16 lanes
+;   - stop when %%LENGTH is less than 32 bytes (2 blocks)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro ENCRYPT_16_PARALLEL 30
+%macro ENCRYPT_16x2_PARALLEL 17
 %define %%ZIV00_03      %1  ;; [in] lane 0-3 IVs
 %define %%ZIV04_07      %2  ;; [in] lane 4-7 IVs
 %define %%ZIV08_11      %3  ;; [in] lane 8-11 IVs
@@ -238,158 +240,94 @@ endstruc
 %define %%LENGTH        %5  ;; [in/out] GP register with length in bytes
 %define %%NROUNDS       %6  ;; [in] Number of AES rounds; numerical value
 %define %%IDX           %7  ;; [clobbered] GP reg to maintain idx
-%define %%B0L00_03      %8  ;; [clobbered] tmp ZMM register
-%define %%B0L04_07      %9  ;; [clobbered] tmp ZMM register
-%define %%B0L08_11      %10 ;; [clobbered] tmp ZMM register
-%define %%B0L12_15      %11 ;; [clobbered] tmp ZMM register
-%define %%B1L00_03      %12 ;; [clobbered] tmp ZMM register
-%define %%B1L04_07      %13 ;; [clobbered] tmp ZMM register
-%define %%B1L08_11      %14 ;; [clobbered] tmp ZMM register
-%define %%B1L12_15      %15 ;; [clobbered] tmp ZMM register
-%define %%B2L00_03      %16 ;; [clobbered] tmp ZMM register
-%define %%B2L04_07      %17 ;; [clobbered] tmp ZMM register
-%define %%B2L08_11      %18 ;; [clobbered] tmp ZMM register
-%define %%B2L12_15      %19 ;; [clobbered] tmp ZMM register
-%define %%B3L00_03      %20 ;; [clobbered] tmp ZMM register
-%define %%B3L04_07      %21 ;; [clobbered] tmp ZMM register
-%define %%B3L08_11      %22 ;; [clobbered] tmp ZMM register
-%define %%B3L12_15      %23 ;; [clobbered] tmp ZMM register
-%define %%ZTMP0         %24 ;; [clobbered] tmp ZMM register
-%define %%ZTMP1         %25 ;; [clobbered] tmp ZMM register
-%define %%ZTMP2         %26 ;; [clobbered] tmp ZMM register
-%define %%ZTMP3         %27 ;; [clobbered] tmp ZMM register
-%define %%TMP0          %28 ;; [clobbered] tmp GP register
-%define %%TMP1          %29 ;; [clobbered] tmp GP register
-%define %%OFFSET        %30 ;; offset between blocks (numerical value)
+%define %%L00_03        %8  ;; [clobbered] tmp ZMM register
+%define %%L04_07        %9  ;; [clobbered] tmp ZMM register
+%define %%L08_11        %10 ;; [clobbered] tmp ZMM register
+%define %%L12_15        %11 ;; [clobbered] tmp ZMM register
+%define %%ZTMP0         %12 ;; [clobbered] tmp ZMM register
+%define %%ZTMP1         %13 ;; [clobbered] tmp ZMM register
+%define %%ZTMP2         %14 ;; [clobbered] tmp ZMM register
+%define %%TMP0          %15 ;; [clobbered] tmp GP register
+%define %%TMP1          %16 ;; [clobbered] tmp GP register
+%define %%OFFSET        %17 ;; offset between blocks (numerical value)
 
 %define %%KP            ARG + _aesarg_key_tab
 %define %%K00_03_OFFSET 0
 %define %%K04_07_OFFSET 64
 %define %%K08_11_OFFSET 128
 %define %%K12_15_OFFSET 192
+%define %%NEXT_L00_03   %%ZIV00_03
+%define %%NEXT_L04_07   %%ZIV04_07
+%define %%NEXT_L08_11   %%ZIV08_11
+%define %%NEXT_L12_15   %%ZIV12_15
 
-        ;; check for at least 4 blocks
-        cmp             %%LENGTH, 64
-        jl              %%encrypt_16_done
+
+        ;; check for at least 2 blocks
+        cmp             %%LENGTH, 32
+        jl              %%encrypt_16x2_done
 
         xor             %%IDX, %%IDX
         ;; skip length check on first loop
-        jmp             %%encrypt_16_first
+        jmp             %%encrypt_16x2_first
 
-%%encrypt_16_start:
-        cmp             %%LENGTH, 64
-        jl              %%encrypt_16_end
+%%encrypt_16x2_start:
+        cmp             %%LENGTH, 32
+        jl              %%encrypt_16x2_end
 
-%%encrypt_16_first:
+%%encrypt_16x2_first:
 
         ;; load and XOR block 0 lanes with IV and round 0 key
-        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%B0L00_03, LOAD
-        vpternlogq      %%B0L00_03, %%ZIV00_03, [%%KP + %%K00_03_OFFSET], 0x96
+        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%L00_03, LOAD
+        vpternlogq      %%L00_03, %%ZIV00_03, [%%KP + %%K00_03_OFFSET], 0x96
 
-        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%B0L04_07, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B0L04_07, %%ZIV04_07, [%%KP + %%K04_07_OFFSET], 0x96
+        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%L04_07, %%TMP0, %%TMP1, LOAD
+        vpternlogq      %%L04_07, %%ZIV04_07, [%%KP + %%K04_07_OFFSET], 0x96
 
-        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%B0L08_11, LOAD
-        vpternlogq      %%B0L08_11, %%ZIV08_11, [%%KP + %%K08_11_OFFSET], 0x96
+        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%L08_11, LOAD
+        vpternlogq      %%L08_11, %%ZIV08_11, [%%KP + %%K08_11_OFFSET], 0x96
 
-        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%B0L12_15, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B0L12_15, %%ZIV12_15, [%%KP + %%K12_15_OFFSET], 0x96
+        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%L12_15, %%TMP0, %%TMP1, LOAD
+        vpternlogq      %%L12_15, %%ZIV12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
-        ;; encrypt block 0 lanes
-        AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%NROUNDS
+        ;; encrypt first block lanes
+        AESENC_ROUNDS_x16 %%L00_03, %%L04_07, %%L08_11, %%L12_15, %%NROUNDS
 
         ;; store ciphertext
-        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%B0L00_03, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%B0L04_07, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%B0L08_11, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%B0L12_15, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%L00_03, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%L04_07, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%L08_11, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%L12_15, %%TMP0, %%TMP1, STORE
 
 
         ;; load and XOR block 1 lanes with block 0 and round 0 key
         add     %%IDX, %%OFFSET
 
-        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%B1L00_03, LOAD
-        vpternlogq      %%B1L00_03, %%B0L00_03, [%%KP + %%K00_03_OFFSET], 0x96
+        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%NEXT_L00_03, LOAD
+        vpternlogq      %%NEXT_L00_03, %%L00_03, [%%KP + %%K00_03_OFFSET], 0x96
 
-        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%B1L04_07, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B1L04_07, %%B0L04_07, [%%KP + %%K04_07_OFFSET], 0x96
+        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%NEXT_L04_07, %%TMP0, %%TMP1, LOAD
+        vpternlogq      %%NEXT_L04_07, %%L04_07, [%%KP + %%K04_07_OFFSET], 0x96
 
-        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%B1L08_11, LOAD
-        vpternlogq      %%B1L08_11, %%B0L08_11, [%%KP + %%K08_11_OFFSET], 0x96
+        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%NEXT_L08_11, LOAD
+        vpternlogq      %%NEXT_L08_11, %%L08_11, [%%KP + %%K08_11_OFFSET], 0x96
 
-        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%B1L12_15, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B1L12_15, %%B0L12_15, [%%KP + %%K12_15_OFFSET], 0x96
+        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%NEXT_L12_15, %%TMP0, %%TMP1, LOAD
+        vpternlogq      %%NEXT_L12_15, %%L12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
-        ;; encrypt block 1 lanes
-        AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%NROUNDS
-
-        ;; store ciphertext
-        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%B1L00_03, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%B1L04_07, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%B1L08_11, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%B1L12_15, %%TMP0, %%TMP1, STORE
-
-
-        ;; load and XOR block 2 lanes with block 1 and round 0 key
-        add     %%IDX, %%OFFSET
-
-        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%B2L00_03, LOAD
-        vpternlogq      %%B2L00_03, %%B1L00_03, [%%KP + %%K00_03_OFFSET], 0x96
-
-        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%B2L04_07, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B2L04_07, %%B1L04_07, [%%KP + %%K04_07_OFFSET], 0x96
-
-        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%B2L08_11, LOAD
-        vpternlogq      %%B2L08_11, %%B1L08_11, [%%KP + %%K08_11_OFFSET], 0x96
-
-        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%B2L12_15, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B2L12_15, %%B1L12_15, [%%KP + %%K12_15_OFFSET], 0x96
-
-        ;; encrypt block 2 lanes
-        AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%NROUNDS
+        ;; encrypt block next lanes
+        AESENC_ROUNDS_x16 %%NEXT_L00_03, %%NEXT_L04_07, %%NEXT_L08_11, %%NEXT_L12_15, %%NROUNDS
 
         ;; store ciphertext
-        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%B2L00_03, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%B2L04_07, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%B2L08_11, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%B2L12_15, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%NEXT_L00_03, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%NEXT_L04_07, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%NEXT_L08_11, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%NEXT_L12_15, %%TMP0, %%TMP1, STORE
 
-
-        ;; load and XOR block 3 lanes with block 2 and round 0 key
-        add     %%IDX, %%OFFSET
-
-        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%B3L00_03, LOAD
-        vpternlogq      %%B3L00_03, %%B2L00_03, [%%KP + %%K00_03_OFFSET], 0x96
-
-        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%B3L04_07, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B3L04_07, %%B2L04_07, [%%KP + %%K04_07_OFFSET], 0x96
-
-        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%B3L08_11, LOAD
-        vpternlogq      %%B3L08_11, %%B2L08_11, [%%KP + %%K08_11_OFFSET], 0x96
-
-        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%B3L12_15, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B3L12_15, %%B2L12_15, [%%KP + %%K12_15_OFFSET], 0x96
-
-        ;; encrypt block 3 lanes
-        AESENC_ROUNDS_x16 %%B3L00_03, %%B3L04_07, %%B3L08_11, %%B3L12_15, %%NROUNDS
-
-        ;; store ciphertext
-        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%B3L00_03, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%B3L04_07, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%B3L08_11, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%B3L12_15, %%TMP0, %%TMP1, STORE
-
-        ;; store last cipher block
-        vmovdqa64       %%ZIV00_03, %%B3L00_03
-        vmovdqa64       %%ZIV04_07, %%B3L04_07
-        vmovdqa64       %%ZIV08_11, %%B3L08_11
-        vmovdqa64       %%ZIV12_15, %%B3L12_15
-
-        sub             %%LENGTH, 64
+        sub             %%LENGTH, 32
         add             %%IDX, %%OFFSET
-        jmp             %%encrypt_16_start
+        jmp             %%encrypt_16x2_start
 
-%%encrypt_16_end:
+%%encrypt_16x2_end:
         ;; update in/out pointers
         vpbroadcastq    %%ZTMP2, %%IDX
         vpaddq          %%ZTMP0, %%ZTMP2, [IN]
@@ -409,13 +347,13 @@ endstruc
         vmovdqa64       [OUT], %%ZTMP0
         vmovdqa64       [OUT + 64], %%ZTMP1
 
-%%encrypt_16_done:
+%%encrypt_16x2_done:
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; ENCRYPT_16_FINAL Encodes final blocks (less than 4) across 16 lanes
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro ENCRYPT_16_FINAL 30
+%macro ENCRYPT_16_FINAL 29
 %define %%ZIV00_03      %1  ;; [in] lane 0-3 IVs
 %define %%ZIV04_07      %2  ;; [in] lane 4-7 IVs
 %define %%ZIV08_11      %3  ;; [in] lane 8-11 IVs
@@ -441,11 +379,10 @@ endstruc
 %define %%ZTMP0         %23 ;; [clobbered] tmp ZMM register
 %define %%ZTMP1         %24 ;; [clobbered] tmp ZMM register
 %define %%ZTMP2         %25 ;; [clobbered] tmp ZMM register
-%define %%ZTMP3         %26 ;; [clobbered] tmp ZMM register
-%define %%TMP0          %27 ;; [clobbered] tmp GP register
-%define %%TMP1          %28 ;; [clobbered] tmp GP register
-%define %%NUM_BLKS      %29 ;; [in] number of blocks (numerical value)
-%define %%OFFSET        %30 ;; offset between blocks (numerical value)
+%define %%TMP0          %26 ;; [clobbered] tmp GP register
+%define %%TMP1          %27 ;; [clobbered] tmp GP register
+%define %%NUM_BLKS      %28 ;; [in] number of blocks (numerical value)
+%define %%OFFSET        %29 ;; offset between blocks (numerical value)
 
 %define %%KP            ARG + _aesarg_key_tab
 %define %%K00_03_OFFSET 0
@@ -632,36 +569,19 @@ endstruc
         vmovdqu64 R2_K4_7, [%%KP + %%K04_07_OFFSET + 2 * (16*16)]
         vmovdqu64 R2_K8_11,[%%KP + %%K08_11_OFFSET + 2 * (16*16)]
 
-        ENCRYPT_16_PARALLEL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
+        ENCRYPT_16x2_PARALLEL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                             LEN, %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, \
-                            ZT6, ZT7, ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, \
-                            ZT15, ZT16, ZT17, ZT18, ZT19, IA1, IA2, %%OFFSET
+                            ZT6, IA1, IA2, %%OFFSET
 
         ;; get num remaining blocks
         shr             LEN, 4
         and             LEN, 3
         je              %%_cbc_enc_done
-        cmp             LEN, 2
-        je              %%_final_blocks_2
-        jb              %%_final_blocks_1
 
-%%_final_blocks_3:
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
                          %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
-                         ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 3, %%OFFSET
-        jmp             %%_cbc_enc_done
-%%_final_blocks_1:
-        ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
-                         %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
-                         ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 1, %%OFFSET
-        jmp             %%_cbc_enc_done
-%%_final_blocks_2:
-        ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
-                         %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
-                         ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
-                         ZT18, ZT19, IA1, IA2, 2, %%OFFSET
+                         ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7, ZT16, ZT17, \
+                         ZT18, IA1, IA2, 1, %%OFFSET
 %%_cbc_enc_done:
         ;; store IV's per lane
         vmovdqa64       [%%IV + 16*0],  ZIV00_03
