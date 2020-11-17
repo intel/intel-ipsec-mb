@@ -351,38 +351,25 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ENCRYPT_16_FINAL Encodes final blocks (less than 4) across 16 lanes
+; ENCRYPT_16_FINAL Encodes final block across 16 lanes
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro ENCRYPT_16_FINAL 29
+%macro ENCRYPT_16_FINAL 16
 %define %%ZIV00_03      %1  ;; [in] lane 0-3 IVs
 %define %%ZIV04_07      %2  ;; [in] lane 4-7 IVs
 %define %%ZIV08_11      %3  ;; [in] lane 8-11 IVs
 %define %%ZIV12_15      %4  ;; [in] lane 12-15 IVs
 %define %%NROUNDS       %5  ;; [in] Number of AES rounds; numerical value
 %define %%IDX           %6  ;; [clobbered] GP reg to maintain idx
-%define %%B0L00_03      %7  ;; [clobbered] tmp ZMM register
-%define %%B0L04_07      %8  ;; [clobbered] tmp ZMM register
-%define %%B0L08_11      %9  ;; [clobbered] tmp ZMM register
-%define %%B0L12_15      %10 ;; [clobbered] tmp ZMM register
-%define %%B1L00_03      %11 ;; [clobbered] tmp ZMM register
-%define %%B1L04_07      %12 ;; [clobbered] tmp ZMM register
-%define %%B1L08_11      %13 ;; [clobbered] tmp ZMM register
-%define %%B1L12_15      %14 ;; [clobbered] tmp ZMM register
-%define %%B2L00_03      %15 ;; [clobbered] tmp ZMM register
-%define %%B2L04_07      %16 ;; [clobbered] tmp ZMM register
-%define %%B2L08_11      %17 ;; [clobbered] tmp ZMM register
-%define %%B2L12_15      %18 ;; [clobbered] tmp ZMM register
-%define %%B3L00_03      %19 ;; [clobbered] tmp ZMM register
-%define %%B3L04_07      %20 ;; [clobbered] tmp ZMM register
-%define %%B3L08_11      %21 ;; [clobbered] tmp ZMM register
-%define %%B3L12_15      %22 ;; [clobbered] tmp ZMM register
-%define %%ZTMP0         %23 ;; [clobbered] tmp ZMM register
-%define %%ZTMP1         %24 ;; [clobbered] tmp ZMM register
-%define %%ZTMP2         %25 ;; [clobbered] tmp ZMM register
-%define %%TMP0          %26 ;; [clobbered] tmp GP register
-%define %%TMP1          %27 ;; [clobbered] tmp GP register
-%define %%NUM_BLKS      %28 ;; [in] number of blocks (numerical value)
-%define %%OFFSET        %29 ;; offset between blocks (numerical value)
+%define %%L00_03        %7  ;; [clobbered] tmp ZMM register
+%define %%L04_07        %8  ;; [clobbered] tmp ZMM register
+%define %%L08_11        %9  ;; [clobbered] tmp ZMM register
+%define %%L12_15        %10 ;; [clobbered] tmp ZMM register
+%define %%ZTMP0         %11 ;; [clobbered] tmp ZMM register
+%define %%ZTMP1         %12 ;; [clobbered] tmp ZMM register
+%define %%ZTMP2         %13 ;; [clobbered] tmp ZMM register
+%define %%TMP0          %14 ;; [clobbered] tmp GP register
+%define %%TMP1          %15 ;; [clobbered] tmp GP register
+%define %%OFFSET        %16 ;; offset between blocks (numerical value)
 
 %define %%KP            ARG + _aesarg_key_tab
 %define %%K00_03_OFFSET 0
@@ -393,102 +380,32 @@ endstruc
         xor             %%IDX, %%IDX
 
         ;; load and XOR block 0 lanes with IV and round 0 key
-        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%B0L00_03, LOAD
-        vpternlogq      %%B0L00_03, %%ZIV00_03, [%%KP + %%K00_03_OFFSET], 0x96
+        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%L00_03, LOAD
+        vpternlogq      %%L00_03, %%ZIV00_03, [%%KP + %%K00_03_OFFSET], 0x96
 
-        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%B0L04_07, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B0L04_07, %%ZIV04_07, [%%KP + %%K04_07_OFFSET], 0x96
+        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%L04_07, %%TMP0, %%TMP1, LOAD
+        vpternlogq      %%L04_07, %%ZIV04_07, [%%KP + %%K04_07_OFFSET], 0x96
 
-        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%B0L08_11 , LOAD
-        vpternlogq      %%B0L08_11, %%ZIV08_11, [%%KP + %%K08_11_OFFSET], 0x96
+        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%L08_11 , LOAD
+        vpternlogq      %%L08_11, %%ZIV08_11, [%%KP + %%K08_11_OFFSET], 0x96
 
-        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%B0L12_15, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B0L12_15, %%ZIV12_15, [%%KP + %%K12_15_OFFSET], 0x96
+        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%L12_15, %%TMP0, %%TMP1, LOAD
+        vpternlogq      %%L12_15, %%ZIV12_15, [%%KP + %%K12_15_OFFSET], 0x96
 
-        ;; encrypt block 0 lanes
-        AESENC_ROUNDS_x16 %%B0L00_03, %%B0L04_07, %%B0L08_11, %%B0L12_15, %%NROUNDS
-
-        ;; store ciphertext
-        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%B0L00_03, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%B0L04_07, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%B0L08_11, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%B0L12_15, %%TMP0, %%TMP1, STORE
-
-%if %%NUM_BLKS == 1
-        ;; store last cipher block
-        vmovdqa64       %%ZIV00_03, %%B0L00_03
-        vmovdqa64       %%ZIV04_07, %%B0L04_07
-        vmovdqa64       %%ZIV08_11, %%B0L08_11
-        vmovdqa64       %%ZIV12_15, %%B0L12_15
-%endif
-
-%if %%NUM_BLKS > 1
-
-        ;; load and XOR block 1 lanes with block 0 and round 0 key
-        add     %%IDX, %%OFFSET
-
-        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%B1L00_03, LOAD
-        vpternlogq      %%B1L00_03, %%B0L00_03, [%%KP + %%K00_03_OFFSET], 0x96
-
-        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%B1L04_07, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B1L04_07, %%B0L04_07, [%%KP + %%K04_07_OFFSET], 0x96
-
-        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%B1L08_11 , LOAD
-        vpternlogq      %%B1L08_11, %%B0L08_11, [%%KP + %%K08_11_OFFSET], 0x96
-
-        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%B1L12_15, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B1L12_15, %%B0L12_15, [%%KP + %%K12_15_OFFSET], 0x96
-
-        ;; encrypt block 1 lanes
-        AESENC_ROUNDS_x16 %%B1L00_03, %%B1L04_07, %%B1L08_11, %%B1L12_15, %%NROUNDS
+        ;; encrypt all lanes
+        AESENC_ROUNDS_x16 %%L00_03, %%L04_07, %%L08_11, %%L12_15, %%NROUNDS
 
         ;; store ciphertext
-        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%B1L00_03, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%B1L04_07, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%B1L08_11, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%B1L12_15, %%TMP0, %%TMP1, STORE
-
-%endif ;; BLKS > 1
-
-%if %%NUM_BLKS == 2
-        ;; store last cipher block
-        vmovdqa64       %%ZIV00_03, %%B1L00_03
-        vmovdqa64       %%ZIV04_07, %%B1L04_07
-        vmovdqa64       %%ZIV08_11, %%B1L08_11
-        vmovdqa64       %%ZIV12_15, %%B1L12_15
-%endif
-
-%if %%NUM_BLKS > 2
-        ;; load and XOR block 2 lanes with block 1 and round 0 key
-        add     %%IDX, %%OFFSET
-
-        LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%B2L00_03, LOAD
-        vpternlogq      %%B2L00_03, %%B1L00_03, [%%KP + %%K00_03_OFFSET], 0x96
-
-        LOAD_STORE_4x1 4, 5, 6, 7, IN, %%IDX, %%B2L04_07, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B2L04_07, %%B1L04_07, [%%KP + %%K04_07_OFFSET], 0x96
-
-        LOAD_STORE_4x1_PRELOAD IN_L8, IN_L9, IN_L10, IN_L11, %%IDX, %%B2L08_11 , LOAD
-        vpternlogq      %%B2L08_11, %%B1L08_11, [%%KP + %%K08_11_OFFSET], 0x96
-
-        LOAD_STORE_4x1 12, 13, 14, 15, IN, %%IDX, %%B2L12_15, %%TMP0, %%TMP1, LOAD
-        vpternlogq      %%B2L12_15, %%B1L12_15, [%%KP + %%K12_15_OFFSET], 0x96
-
-        ;; encrypt block 2 lanes
-        AESENC_ROUNDS_x16 %%B2L00_03, %%B2L04_07, %%B2L08_11, %%B2L12_15, %%NROUNDS
-
-        ;; store ciphertext
-        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%B2L00_03, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%B2L04_07, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%B2L08_11, %%TMP0, %%TMP1, STORE
-        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%B2L12_15, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 0, 1, 2, 3, OUT, %%IDX, %%L00_03, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 4, 5, 6, 7, OUT, %%IDX, %%L04_07, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 8, 9, 10, 11, OUT, %%IDX, %%L08_11, %%TMP0, %%TMP1, STORE
+        LOAD_STORE_4x1 12, 13, 14, 15, OUT, %%IDX, %%L12_15, %%TMP0, %%TMP1, STORE
 
         ;; store last cipher block
-        vmovdqa64       %%ZIV00_03, %%B2L00_03
-        vmovdqa64       %%ZIV04_07, %%B2L04_07
-        vmovdqa64       %%ZIV08_11, %%B2L08_11
-        vmovdqa64       %%ZIV12_15, %%B2L12_15
-%endif ;; BLKS > 2
+        vmovdqa64       %%ZIV00_03, %%L00_03
+        vmovdqa64       %%ZIV04_07, %%L04_07
+        vmovdqa64       %%ZIV08_11, %%L08_11
+        vmovdqa64       %%ZIV12_15, %%L12_15
 
         ;; update in/out pointers
         add             %%IDX, %%OFFSET
@@ -579,9 +496,8 @@ endstruc
         je              %%_cbc_enc_done
 
         ENCRYPT_16_FINAL ZIV00_03, ZIV04_07, ZIV08_11, ZIV12_15, \
-                         %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7,  \
-                         ZT0, ZT1, ZT2, ZT3, ZT4, ZT5, ZT6, ZT7, ZT16, ZT17, \
-                         ZT18, IA1, IA2, 1, %%OFFSET
+                         %%ROUNDS, IA0, ZT0, ZT1, ZT2, ZT3, ZT4, \
+                         ZT5, ZT6, IA1, IA2, %%OFFSET
 %%_cbc_enc_done:
         ;; store IV's per lane
         vmovdqa64       [%%IV + 16*0],  ZIV00_03
