@@ -71,6 +71,9 @@ SUBMIT_JOB_AES_CBCS_ENC:
 
         mov     [state + _aes_job_in_lane + lane*8], job
 
+        mov     tmp, 0xfff
+        kmovq   k3, tmp
+
         ;; Update lane len
         vpbroadcastq    zmm5, len
         lea             tmp, [rel index_to_lane16_mask]
@@ -85,8 +88,8 @@ SUBMIT_JOB_AES_CBCS_ENC:
         vmovdqa64 zmm6{k1}, zmm5
         vmovdqa64 zmm7{k2}, zmm5
 
-        vmovdqa64 [state + _aes_lens_64], zmm6
-        vmovdqa64 [state + _aes_lens_64 + 64], zmm7
+        vmovdqa64 [state + _aes_lens_64]{k3}, zmm6
+        vmovdqa64 [state + _aes_lens_64 + 64]{k3}, zmm7
 
         ;; Update input pointer
         mov     tmp, [job + _src]
@@ -104,7 +107,7 @@ SUBMIT_JOB_AES_CBCS_ENC:
         shl     lane, 4 ; multiply by 16
         vmovdqa [state + _aes_args_IV + lane], xmm1
 
-        cmp     qword [state + _aes_lanes_in_use], 16
+        cmp     qword [state + _aes_lanes_in_use], 12
         jne     return_null
 
 	; Find min length
@@ -130,8 +133,8 @@ SUBMIT_JOB_AES_CBCS_ENC:
         vpbroadcastq    zmm5, len2
         vpsubq          zmm6, zmm6, zmm5
         vpsubq          zmm7, zmm7, zmm5
-        vmovdqa64       [state + _aes_lens_64], zmm6
-        vmovdqa64       [state + _aes_lens_64 + 64], zmm7
+        vmovdqa64       [state + _aes_lens_64]{k3}, zmm6
+        vmovdqa64       [state + _aes_lens_64 + 64]{k3}, zmm7
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2

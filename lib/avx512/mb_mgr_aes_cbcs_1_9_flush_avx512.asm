@@ -93,6 +93,9 @@ FLUSH_JOB_AES_CBCS_ENC:
         vmovdqa64       [state + _aes_args_out + (0*PTR_SZ)]{k4}, zmm1
         vmovdqa64       [state + _aes_args_out + (8*PTR_SZ)]{k5}, zmm1
 
+        mov             tmp, 0xfff
+        kmovq           k3, tmp
+
         ;; - set len to MAX
         vmovdqa64 zmm6, [state + _aes_lens_64]
         vmovdqa64 zmm7, [state + _aes_lens_64 + 64]
@@ -103,8 +106,8 @@ FLUSH_JOB_AES_CBCS_ENC:
         vmovdqa64 zmm6{k4}, zmm1
         vmovdqa64 zmm7{k5}, zmm1
 
-        vmovdqa64 [state + _aes_lens_64], zmm6
-        vmovdqa64 [state + _aes_lens_64 + 64], zmm7
+        vmovdqa64 [state + _aes_lens_64]{k3}, zmm6
+        vmovdqa64 [state + _aes_lens_64 + 64]{k3}, zmm7
 
         ;; scale up good lane idx before copying IV and keys
         shl             tmp2, 4
@@ -135,8 +138,8 @@ FLUSH_JOB_AES_CBCS_ENC:
         vpbroadcastq    zmm5, len2
         vpsubq          zmm6, zmm6, zmm5
         vpsubq          zmm7, zmm7, zmm5
-        vmovdqa64       [state + _aes_lens_64], zmm6
-        vmovdqa64       [state + _aes_lens_64 + 64], zmm7
+        vmovdqa64       [state + _aes_lens_64]{k3}, zmm6
+        vmovdqa64       [state + _aes_lens_64 + 64]{k3}, zmm7
 
         ; "state" and "args" are the same address, arg1
         ; len is arg2

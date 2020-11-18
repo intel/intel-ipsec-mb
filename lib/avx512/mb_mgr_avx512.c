@@ -1574,12 +1574,14 @@ init_mb_mgr_avx512(IMB_MGR *state)
 
         /* Init AES CBC-S out-of-order fields */
         if (vaes_support) {
-                /* init 16 lanes */
-                memset(aes128_cbcs_ooo->lens, 0,
-                       sizeof(aes128_cbcs_ooo->lens));
+                /* init 12 lanes */
+                memset(aes128_cbcs_ooo->lens64, 0xFF,
+                       sizeof(aes128_cbcs_ooo->lens64));
+                memset(&aes128_cbcs_ooo->lens64[0], 0,
+                       sizeof(aes128_cbcs_ooo->lens64[0]) * 12);
                 memset(aes128_cbcs_ooo->job_in_lane, 0,
                        sizeof(aes128_cbcs_ooo->job_in_lane));
-                aes128_cbcs_ooo->unused_lanes = 0xFEDCBA9876543210;
+                aes128_cbcs_ooo->unused_lanes = 0xBA9876543210;
                 aes128_cbcs_ooo->num_lanes_inuse = 0;
 
         } else {
