@@ -2323,9 +2323,9 @@ run_tests(const unsigned int safe_check)
         free(variant_data);
 }
 
-static void usage(void)
+static void usage(const char *app_name)
 {
-        fprintf(stderr, "Usage: exhaustive_test [args], "
+        fprintf(stderr, "Usage: %s [args], "
                 "where args are zero or more\n"
                 "-h: print this message\n"
                 "-v: verbose, prints extra information\n"
@@ -2355,7 +2355,7 @@ static void usage(void)
                 "--safe-check: check if keys, IVs, plaintext or tags "
                 "get cleared from IMB_MGR upon job completion (off by default; "
                 "requires library compiled with SAFE_DATA)\n",
-                MAX_NUM_JOBS);
+                app_name, MAX_NUM_JOBS);
 }
 
 static int
@@ -2569,7 +2569,7 @@ int main(int argc, char *argv[])
 
         for (i = 1; i < argc; i++)
                 if (strcmp(argv[i], "-h") == 0) {
-                        usage();
+                        usage(argv[0]);
                         return EXIT_SUCCESS;
                 } else if (strcmp(argv[i], "-v") == 0) {
                         verbose = 1;
@@ -2687,7 +2687,7 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--imix") == 0) {
                         imix_enabled = 1;
                 } else {
-                        usage();
+                        usage(argv[0]);
                         return EXIT_FAILURE;
                 }
 
