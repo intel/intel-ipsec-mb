@@ -1607,6 +1607,9 @@ do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
         uint8_t *auth_key = data->auth_key;
         unsigned int num_processed_jobs = 0;
 
+        if (num_jobs == 0)
+                return ret;
+
         /* If performing a test searching for sensitive information,
          * set keys and plaintext to known values,
          * so they can be searched later on in the MB_MGR structure and stack.
