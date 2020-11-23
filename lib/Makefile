@@ -51,7 +51,7 @@ YASM ?= yasm
 NASM ?= nasm
 
 # Detect NASM version (minimum version required: 2.14)
-NASM_VERSION = $(shell nasm -v | cut -d " " -f 3)
+NASM_VERSION = $(shell $(NASM) -v | cut -d " " -f 3)
 
 NASM_MAJOR_REQ = 2
 NASM_MINOR_REQ = 14
