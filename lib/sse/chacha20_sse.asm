@@ -102,6 +102,115 @@ endstruc
 
 section .text
 
+%macro ENCRYPT_0B_64B 14
+%define %%SRC  %1 ; [in/out] Source pointer
+%define %%DST  %2 ; [in/out] Destination pointer
+%define %%LEN  %3 ; [in/clobbered] Length to encrypt
+%define %%OFF  %4 ; [in] Offset into src/dst
+%define %%KS0  %5 ; [in/out] Bytes 0-15 of keystream
+%define %%KS1  %6 ; [in/out] Bytes 16-31 of keystream
+%define %%KS2  %7 ; [in/out] Bytes 32-47 of keystream
+%define %%KS3  %8 ; [in/out] Bytes 48-63 of keystream
+%define %%PT0  %9 ; [in/clobbered] Bytes 0-15 of plaintext
+%define %%PT1  %10 ; [in/clobbered] Bytes 16-31 of plaintext
+%define %%PT2  %11 ; [in/clobbered] Bytes 32-47 of plaintext
+%define %%PT3  %12 ; [in/clobbered] Bytes 48-63 of plaintext
+%define %%TMP  %13 ; [clobbered] Temporary GP register
+%define %%TMP2 %14 ; [clobbered] Temporary GP register
+
+        or      %%LEN, %%LEN
+        jz      %%end_encrypt
+
+        cmp     %%LEN, 16
+        jbe     %%up_to_16B
+
+        cmp     %%LEN, 32
+        jbe     %%up_to_32B
+
+        cmp     %%LEN, 48
+        jbe     %%up_to_48B
+
+%%up_to_64B:
+        movdqu  %%PT0, [%%SRC + %%OFF]
+        movdqu  %%PT1, [%%SRC + %%OFF + 16]
+        movdqu  %%PT2, [%%SRC + %%OFF + 32]
+        pxor    %%PT0, %%KS0
+        pxor    %%PT1, %%KS1
+        pxor    %%PT2, %%KS2
+        movdqu  [%%DST + %%OFF], %%PT0
+        movdqu  [%%DST + %%OFF + 16], %%PT1
+        movdqu  [%%DST + %%OFF + 32], %%PT2
+
+        add     %%SRC, %%OFF
+        add     %%DST, %%OFF
+        add     %%SRC, 48
+        add     %%DST, 48
+        sub     %%LEN, 48
+        simd_load_sse_16_1 %%PT3, %%SRC, %%LEN
+
+        ; XOR KS with plaintext and store resulting ciphertext
+        pxor    %%PT3, %%KS3
+
+        simd_store_sse %%DST, %%PT3, %%LEN, %%TMP, %%TMP2
+
+        jmp     %%end_encrypt
+
+%%up_to_48B:
+        movdqu  %%PT0, [%%SRC + %%OFF]
+        movdqu  %%PT1, [%%SRC + %%OFF + 16]
+        pxor    %%PT0, %%KS0
+        pxor    %%PT1, %%KS1
+        movdqu  [%%DST + %%OFF], %%PT0
+        movdqu  [%%DST + %%OFF + 16], %%PT1
+
+        add     %%SRC, %%OFF
+        add     %%DST, %%OFF
+        add     %%SRC, 32
+        add     %%DST, 32
+        sub     %%LEN, 32
+        simd_load_sse_16_1 %%PT2, %%SRC, %%LEN
+
+        ; XOR KS with plaintext and store resulting ciphertext
+        pxor    %%PT2, %%KS2
+
+        simd_store_sse %%DST, %%PT2, %%LEN, %%TMP, %%TMP2
+
+        jmp     %%end_encrypt
+
+%%up_to_32B:
+        movdqu  %%PT0, [%%SRC + %%OFF]
+        pxor    %%PT0, %%KS0
+        movdqu  [%%DST + %%OFF], %%PT0
+
+        add     %%SRC, %%OFF
+        add     %%DST, %%OFF
+        add     %%SRC, 16
+        add     %%DST, 16
+        sub     %%LEN, 16
+        simd_load_sse_16_1 %%PT1, %%SRC, %%LEN
+
+        ; XOR KS with plaintext and store resulting ciphertext
+        pxor    %%PT1, %%KS1
+
+        simd_store_sse %%DST, %%PT1, %%LEN, %%TMP, %%TMP2
+
+        jmp     %%end_encrypt
+
+%%up_to_16B:
+        add     %%SRC, %%OFF
+        add     %%DST, %%OFF
+        simd_load_sse_16_1 %%PT0, %%SRC, %%LEN
+
+        ; XOR KS with plaintext and store resulting ciphertext
+        pxor    %%PT0, %%KS0
+
+        simd_store_sse %%DST, %%PT0, %%LEN, %%TMP, %%TMP2
+
+%%end_encrypt:
+        add     %%SRC, %%LEN
+        add     %%DST, %%LEN
+%endmacro
+
 ;; 4x4 32-bit transpose function
 %macro TRANSPOSE4_U32 6
 %define %%r0 %1 ;; [in/out] Input first row / output third column
@@ -694,84 +803,8 @@ check_1_or_2_blocks_left:
 
 less_than_64:
 
-        cmp     len, 48
-        jb      less_than_48
-
-        ; Load plaintext and XOR with keystream
-        movdqu  xmm13, [src + off]
-        movdqu  xmm14, [src + off + 16]
-        movdqu  xmm15, [src + off + 32]
-
-        pxor    xmm13, xmm9
-        pxor    xmm14, xmm10
-        pxor    xmm15, xmm11
-
-        ; Store resulting ciphertext
-        movdqu [dst + off], xmm13
-        movdqu [dst + off + 16], xmm14
-        movdqu [dst + off + 32], xmm15
-
-        ; Store last KS in xmm9, for partial block
-        movdqu  xmm9, xmm12
-
-        sub     len, 48
-        add     off, 48
-
-        jmp     check_partial
-less_than_48:
-        cmp     len, 32
-        jb      less_than_32
-
-        ; Load plaintext and XOR with keystream
-        movdqu  xmm13, [src + off]
-        movdqu  xmm14, [src + off + 16]
-
-        pxor    xmm13, xmm9
-        pxor    xmm14, xmm10
-
-        ; Store resulting ciphertext
-        movdqu [dst + off], xmm13
-        movdqu [dst + off + 16], xmm14
-
-        ; Store last KS in xmm9, for partial block
-        movdqu  xmm9, xmm11
-
-        sub     len, 32
-        add     off, 32
-
-        jmp     check_partial
-
-less_than_32:
-        cmp     len, 16
-        jb      check_partial
-
-        ; Load plaintext and XOR with keystream
-        movdqu  xmm13, [src + off]
-
-        pxor    xmm13, xmm9
-
-        ; Store resulting ciphertext
-        movdqu [dst + off], xmm13
-
-        ; Store last KS in xmm9, for partial block
-        movdqu  xmm9, xmm10
-
-        sub     len, 16
-        add     off, 16
-
-check_partial:
-        or      len, len
-        jz      no_partial_block
-
-        add     src, off
-        add     dst, off
-        ; Load plaintext
-        simd_load_sse_15_1 xmm8, src, len
-
-        ; XOR KS with plaintext and store resulting ciphertext
-        pxor    xmm8, xmm9
-
-        simd_store_sse_15 dst, xmm8, len, tmp, tmp2
+        ENCRYPT_0B_64B    src, dst, len, off, xmm9, xmm10, xmm11, xmm12, \
+                        xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block
 
