@@ -200,7 +200,8 @@ c_lib_objs := \
 	alloc.o \
 	aes_xcbc_expand_key.o \
 	md5_one_block.o \
-	sha_one_block.o \
+	sha_sse.o \
+	sha_avx.o \
 	des_key.o \
 	des_basic.o \
 	version.o \

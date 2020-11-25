@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright (c) 2018-2020, Intel Corporation
+  Copyright (c) 2020, Intel Corporation
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
@@ -30,11 +30,6 @@
 /* ========================================================================== */
 /* One block SHA1 computation for IPAD / OPAD usage only */
 
-void sha1_one_block_sse(const void *data, void *digest)
-{
-        sha_generic_1block(data, digest, 0 /* SSE */, 1 /* SHA1 */);
-}
-
 void sha1_one_block_avx(const void *data, void *digest)
 {
         sha_generic_1block(data, digest, 1 /* AVX */, 1 /* SHA1 */);
@@ -55,12 +50,6 @@ void sha1_one_block_avx512(const void *data, void *digest)
 /*
  * SHA1 API for use in HMAC-SHA1 when key is longer than the block size
  */
-
-void sha1_sse(const void *data, const uint64_t length, void *digest)
-{
-        sha_generic(data, length, digest, 0 /* SSE */, 1, SHA1_BLOCK_SIZE,
-                    SHA1_PAD_SIZE);
-}
 
 void sha1_avx(const void *data, const uint64_t length, void *digest)
 {
@@ -83,11 +72,6 @@ void sha1_avx512(const void *data, const uint64_t length, void *digest)
 /* ========================================================================== */
 /* One block SHA224 computation for IPAD / OPAD usage only */
 
-void sha224_one_block_sse(const void *data, void *digest)
-{
-        sha_generic_1block(data, digest, 0 /* SSE */, 224 /* SHA224 */);
-}
-
 void sha224_one_block_avx(const void *data, void *digest)
 {
         sha_generic_1block(data, digest, 1 /* AVX */, 224 /* SHA224 */);
@@ -107,12 +91,6 @@ void sha224_one_block_avx512(const void *data, void *digest)
 /*
  * SHA224 API for use in HMAC-SHA224 when key is longer than the block size
  */
-void sha224_sse(const void *data, const uint64_t length, void *digest)
-{
-        sha_generic(data, length, digest, 0 /* SSE */, 224, SHA_256_BLOCK_SIZE,
-                    SHA224_PAD_SIZE);
-}
-
 void sha224_avx(const void *data, const uint64_t length, void *digest)
 {
         sha_generic(data, length, digest, 1 /* AVX */, 224, SHA_256_BLOCK_SIZE,
@@ -133,12 +111,6 @@ void sha224_avx512(const void *data, const uint64_t length, void *digest)
 
 /* ========================================================================== */
 /* One block SHA256 computation for IPAD / OPAD usage only */
-
-void sha256_one_block_sse(const void *data, void *digest)
-{
-        sha_generic_1block(data, digest, 0 /* SSE */, 256 /* SHA256 */);
-}
-
 void sha256_one_block_avx(const void *data, void *digest)
 {
         sha_generic_1block(data, digest, 1 /* AVX */, 256 /* SHA256 */);
@@ -158,12 +130,6 @@ void sha256_one_block_avx512(const void *data, void *digest)
 /*
  * SHA256 API for use in HMAC-SHA256 when key is longer than the block size
  */
-void sha256_sse(const void *data, const uint64_t length, void *digest)
-{
-        sha_generic(data, length, digest, 0 /* SSE */, 256, SHA_256_BLOCK_SIZE,
-                    SHA256_PAD_SIZE);
-}
-
 void sha256_avx(const void *data, const uint64_t length, void *digest)
 {
         sha_generic(data, length, digest, 1 /* AVX */, 256, SHA_256_BLOCK_SIZE,
@@ -184,12 +150,6 @@ void sha256_avx512(const void *data, const uint64_t length, void *digest)
 
 /* ========================================================================== */
 /* One block SHA384 computation for IPAD / OPAD usage only */
-
-void sha384_one_block_sse(const void *data, void *digest)
-{
-        sha_generic_1block(data, digest, 0 /* SSE */, 384 /* SHA384 */);
-}
-
 void sha384_one_block_avx(const void *data, void *digest)
 {
         sha_generic_1block(data, digest, 1 /* AVX */, 384 /* SHA384 */);
@@ -209,12 +169,6 @@ void sha384_one_block_avx512(const void *data, void *digest)
 /*
  * SHA384 API for use in HMAC-SHA384 when key is longer than the block size
  */
-void sha384_sse(const void *data, const uint64_t length, void *digest)
-{
-        sha_generic(data, length, digest, 0 /* SSE */, 384, SHA_384_BLOCK_SIZE,
-                    SHA384_PAD_SIZE);
-}
-
 void sha384_avx(const void *data, const uint64_t length, void *digest)
 {
         sha_generic(data, length, digest, 1 /* AVX */, 384, SHA_384_BLOCK_SIZE,
@@ -235,12 +189,6 @@ void sha384_avx512(const void *data, const uint64_t length, void *digest)
 
 /* ========================================================================== */
 /* One block SHA512 computation for IPAD / OPAD usage only */
-
-void sha512_one_block_sse(const void *data, void *digest)
-{
-        sha_generic_1block(data, digest, 0 /* SSE */, 512 /* SHA512 */);
-}
-
 void sha512_one_block_avx(const void *data, void *digest)
 {
         sha_generic_1block(data, digest, 1 /* AVX */, 512 /* SHA512 */);
@@ -260,12 +208,6 @@ void sha512_one_block_avx512(const void *data, void *digest)
 /*
  * SHA512 API for use in HMAC-SHA512 when key is longer than the block size
  */
-void sha512_sse(const void *data, const uint64_t length, void *digest)
-{
-        sha_generic(data, length, digest, 0 /* SSE */, 512, SHA_512_BLOCK_SIZE,
-                    SHA512_PAD_SIZE);
-}
-
 void sha512_avx(const void *data, const uint64_t length, void *digest)
 {
         sha_generic(data, length, digest, 1 /* AVX */, 512, SHA_512_BLOCK_SIZE,
