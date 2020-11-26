@@ -200,10 +200,12 @@ fill_in_job(struct IMB_JOB *job,
                 16, /* IMB_AUTH_AES_CMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305 */
+                16, /* IMB_AUTH_CHACHA20_POLY1305_SGL */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         const uint64_t msg_len_to_cipher = 32;
         const uint64_t msg_len_to_hash = 48;
+        struct chacha20_poly1305_context_data chacha_ctx;
 
         if (job == NULL)
                 return;
@@ -294,6 +296,11 @@ fill_in_job(struct IMB_JOB *job,
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305:
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 12;
+                break;
+        case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+                job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
                 job->key_len_in_bytes = UINT64_C(32);
                 job->iv_len_in_bytes = 12;
                 break;
@@ -406,6 +413,15 @@ fill_in_job(struct IMB_JOB *job,
                 job->u.CHACHA20_POLY1305.aad = dust_bin;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = 12;
                 job->auth_tag_output_len_in_bytes = 16;
+                break;
+        case IMB_AUTH_CHACHA20_POLY1305_SGL:
+                job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 12;
+                job->u.CHACHA20_POLY1305.aad = dust_bin;
+                job->u.CHACHA20_POLY1305.aad_len_in_bytes = 12;
+                job->auth_tag_output_len_in_bytes = 16;
+                job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
                 break;
         default:
                 break;
@@ -620,6 +636,12 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                      cipher == IMB_CIPHER_CHACHA20_POLY1305))
                                         continue;
 
+                                if ((hash == IMB_AUTH_CHACHA20_POLY1305_SGL &&
+                                  cipher != IMB_CIPHER_CHACHA20_POLY1305_SGL) ||
+                                  (hash != IMB_AUTH_CHACHA20_POLY1305_SGL &&
+                                  cipher == IMB_CIPHER_CHACHA20_POLY1305_SGL))
+                                        continue;
+
                                 fill_in_job(&template_job, cipher, dir,
                                             hash, order);
                                 switch (hash) {
@@ -639,6 +661,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                 (20008 / 8); /* 2501 bytes */
                                         break;
                                 case IMB_AUTH_CHACHA20_POLY1305:
+                                case IMB_AUTH_CHACHA20_POLY1305_SGL:
                                         /* CHACHA20 limit (2^32 - 1) x 64 */
                                         template_job.msg_len_to_hash_in_bytes =
                                                 ((1ULL << 38) - 64) + 1;
@@ -888,6 +911,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CCM:
                                 case IMB_CIPHER_DOCSIS_SEC_BPI:
                                 case IMB_CIPHER_CHACHA20_POLY1305:
+                                case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                         break;
                                 default:
@@ -927,6 +951,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         continue;
                                         /* not allowed with null hash */
                                 case IMB_CIPHER_CHACHA20_POLY1305:
+                                case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                         continue;
                                 case IMB_CIPHER_ZUC_EEA3:
                                         /* max is 8188 bytes */

@@ -33,6 +33,11 @@
 #include <intel-ipsec-mb.h>
 #include "utils.h"
 
+#define AAD_SZ 24
+#define IV_SZ 12
+#define KEY_SZ 32
+#define DIGEST_SZ 16
+
 int chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 
 /*
@@ -523,11 +528,294 @@ test_aead_vectors(struct IMB_MGR *mb_mgr,
 
 }
 
+/** Generate random buffer */
+static void
+generate_random_buf(uint8_t *buf, const uint32_t length)
+{
+        uint32_t i;
+
+        for (i = 0; i < length; i++)
+                buf[i] = (uint8_t) rand();
+}
+
+static void
+test_sgl(struct IMB_MGR *mb_mgr,
+         struct test_suite_context *ctx,
+         const uint32_t buffer_sz,
+         const uint32_t seg_sz,
+         const JOB_CIPHER_DIRECTION cipher_dir,
+         const unsigned encrypt_on_update_only)
+{
+        struct IMB_JOB *job;
+        uint8_t *in_buffer = NULL;
+        uint8_t **segments = NULL;
+        uint32_t *segment_sizes = NULL;
+        uint32_t num_segments;
+        uint8_t linear_digest[DIGEST_SZ];
+        uint8_t sgl_digest[DIGEST_SZ];
+        uint8_t key[KEY_SZ];
+        unsigned int i, segments_to_update;
+        uint8_t aad[AAD_SZ];
+        uint8_t iv[IV_SZ];
+        struct chacha20_poly1305_context_data chacha_ctx;
+        uint32_t last_seg_sz = buffer_sz % seg_sz;
+
+        num_segments = (buffer_sz + (seg_sz - 1)) / seg_sz;
+        if (last_seg_sz == 0)
+                last_seg_sz = seg_sz;
+
+        in_buffer = malloc(buffer_sz);
+        if (in_buffer == NULL) {
+                fprintf(stderr, "Could not allocate memory for input buffer\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+
+        generate_random_buf(in_buffer, buffer_sz);
+        generate_random_buf(key, KEY_SZ);
+        generate_random_buf(iv, IV_SZ);
+        generate_random_buf(aad, AAD_SZ);
+
+        segments = malloc(num_segments * 8);
+        if (segments == NULL) {
+                fprintf(stderr,
+                        "Could not allocate memory for segments array\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+        memset(segments, 0, num_segments * 8);
+
+        segment_sizes = malloc(num_segments * 4);
+        if (segment_sizes == NULL) {
+                fprintf(stderr,
+                        "Could not allocate memory for array of sizes\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+
+        for (i = 0; i < (num_segments - 1); i++) {
+                segments[i] = malloc(seg_sz);
+                if (segments[i] == NULL) {
+                        fprintf(stderr,
+                                "Could not allocate memory for segment %u\n",
+                                i);
+                        test_suite_update(ctx, 0, 1);
+                        goto exit;
+                }
+                memcpy(segments[i], in_buffer + seg_sz * i, seg_sz);
+                segment_sizes[i] = seg_sz;
+        }
+        segments[i] = malloc(last_seg_sz);
+        if (segments[i] == NULL) {
+                fprintf(stderr, "Could not allocate memory for segment %u\n",
+                        i);
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+        memcpy(segments[i], in_buffer + seg_sz * i, last_seg_sz);
+        segment_sizes[i] = last_seg_sz;
+
+        /* Process linear (single segment) buffer */
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = cipher_dir;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305;
+        job->hash_alg = IMB_AUTH_CHACHA20_POLY1305;
+        job->enc_keys = key;
+        job->dec_keys = key;
+        job->src = in_buffer;
+        job->dst = in_buffer;
+        job->key_len_in_bytes = KEY_SZ;
+
+        job->u.CHACHA20_POLY1305.aad = aad;
+        job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
+
+        job->iv = iv;
+        job->iv_len_in_bytes = IV_SZ;
+        job->msg_len_to_cipher_in_bytes = buffer_sz;
+        job->cipher_start_src_offset_in_bytes = 0;
+
+        job->msg_len_to_hash_in_bytes = buffer_sz;
+        job->hash_start_src_offset_in_bytes = 0;
+        job->auth_tag_output = linear_digest;
+        job->auth_tag_output_len_in_bytes = DIGEST_SZ;
+
+        job = IMB_SUBMIT_JOB(mb_mgr);
+
+        if (job->status == STS_COMPLETED)
+                test_suite_update(ctx, 1, 0);
+        else {
+                fprintf(stderr, "job status returned as not successful"
+                                " for the linear buffer\n");
+                test_suite_update(ctx, 0, 1);
+                goto exit;
+        }
+
+        /* Process multi-segment buffer */
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = cipher_dir;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+        job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+        job->enc_keys = key;
+        job->dec_keys = key;
+        job->key_len_in_bytes = KEY_SZ;
+
+        job->u.CHACHA20_POLY1305.aad = aad;
+        job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
+        job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
+
+        job->iv = iv;
+        job->iv_len_in_bytes = IV_SZ;
+        job->cipher_start_src_offset_in_bytes = 0;
+
+        job->hash_start_src_offset_in_bytes = 0;
+        job->auth_tag_output = sgl_digest;
+        job->auth_tag_output_len_in_bytes = DIGEST_SZ;
+
+        if (encrypt_on_update_only) {
+                i = 0; /* Start update from segment 0 */
+                segments_to_update = num_segments;
+                job->src = NULL;
+                job->dst = NULL;
+                job->msg_len_to_cipher_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = 0;
+        } else {
+                i = 1; /* Start update from segment 1 */
+                segments_to_update = num_segments - 1;
+                job->src = segments[0];
+                job->dst = segments[0];
+                job->msg_len_to_cipher_in_bytes = segment_sizes[0];
+                job->msg_len_to_hash_in_bytes = segment_sizes[0];
+        }
+        job->sgl_state = IMB_SGL_INIT;
+        job = IMB_SUBMIT_JOB(mb_mgr);
+
+        for (; i < segments_to_update; i++) {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job->cipher_direction = cipher_dir;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+                job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+                job->enc_keys = key;
+                job->dec_keys = key;
+                job->key_len_in_bytes = KEY_SZ;
+
+                job->u.CHACHA20_POLY1305.aad = aad;
+                job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
+                job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
+
+                job->iv = iv;
+                job->iv_len_in_bytes = IV_SZ;
+                job->cipher_start_src_offset_in_bytes = 0;
+
+                job->hash_start_src_offset_in_bytes = 0;
+                job->auth_tag_output = sgl_digest;
+                job->auth_tag_output_len_in_bytes = DIGEST_SZ;
+                job->src = segments[i];
+                job->dst = segments[i];
+                job->msg_len_to_cipher_in_bytes = segment_sizes[i];
+                job->msg_len_to_hash_in_bytes = segment_sizes[i];
+                job->sgl_state = IMB_SGL_UPDATE;
+                job = IMB_SUBMIT_JOB(mb_mgr);
+        }
+
+        job = IMB_GET_NEXT_JOB(mb_mgr);
+        job->cipher_direction = cipher_dir;
+        job->chain_order = IMB_ORDER_HASH_CIPHER;
+        job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+        job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+        job->enc_keys = key;
+        job->dec_keys = key;
+        job->key_len_in_bytes = KEY_SZ;
+
+        job->u.CHACHA20_POLY1305.aad = aad;
+        job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
+        job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
+
+        job->iv = iv;
+        job->iv_len_in_bytes = IV_SZ;
+        job->cipher_start_src_offset_in_bytes = 0;
+
+        job->hash_start_src_offset_in_bytes = 0;
+        job->auth_tag_output = sgl_digest;
+        job->auth_tag_output_len_in_bytes = DIGEST_SZ;
+        if ((num_segments > 1) && (encrypt_on_update_only == 0)) {
+                job->src = segments[i];
+                job->dst = segments[i];
+                job->msg_len_to_cipher_in_bytes = segment_sizes[i];
+                job->msg_len_to_hash_in_bytes = segment_sizes[i];
+        } else {
+                job->src = NULL;
+                job->dst = NULL;
+                job->msg_len_to_cipher_in_bytes = 0;
+                job->msg_len_to_hash_in_bytes = 0;
+        }
+        job->sgl_state = IMB_SGL_COMPLETE;
+        job = IMB_SUBMIT_JOB(mb_mgr);
+
+        if (job->status == STS_COMPLETED) {
+                for (i = 0; i < (num_segments - 1); i++) {
+                        if (memcmp(in_buffer + i*seg_sz, segments[i],
+                                   seg_sz) != 0) {
+                                printf("ciphertext mismatched "
+                                       "in segment number %u "
+                                       "(segment size = %u)\n",
+                                       i, seg_sz);
+                                hexdump(stderr, "Linear output",
+                                        in_buffer + i*seg_sz, seg_sz);
+                                hexdump(stderr, "SGL output", segments[i],
+                                        seg_sz);
+                                test_suite_update(ctx, 0, 1);
+                                goto exit;
+                        }
+                }
+                /* Check last segment */
+                if (memcmp(in_buffer + i*seg_sz, segments[i],
+                           last_seg_sz) != 0) {
+                        printf("ciphertext mismatched "
+                               "in segment number %u (segment size = %u)\n",
+                               i, seg_sz);
+                        hexdump(stderr, "Linear output",
+                                in_buffer + i*seg_sz, last_seg_sz);
+                        hexdump(stderr, "SGL output", segments[i], last_seg_sz);
+                        test_suite_update(ctx, 0, 1);
+                }
+                if (memcmp(sgl_digest, linear_digest, 16) != 0) {
+                        printf("hash mismatched (segment size = %u)\n",
+                               seg_sz);
+                        hexdump(stderr, "Linear digest",
+                                linear_digest, DIGEST_SZ);
+                        hexdump(stderr, "SGL digest", sgl_digest, DIGEST_SZ);
+                        test_suite_update(ctx, 0, 1);
+                } else {
+                        test_suite_update(ctx, 1, 0);
+                }
+        } else {
+                fprintf(stderr, "job status returned as not successful"
+                                " for the segmented buffer\n");
+                test_suite_update(ctx, 0, 1);
+        }
+
+exit:
+        free(in_buffer);
+        if (segments != NULL) {
+                for (i = 0; i < num_segments; i++)
+                        free(segments[i]);
+                free(segments);
+        }
+        free(segment_sizes);
+}
+
+#define BUFFER_SZ 2032
+#define SEG_SZ_STEP 4
+#define MAX_SEG_SZ 2048
 int
 chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
 {
         int i, errors = 0;
         struct test_suite_context ctx;
+        uint32_t seg_sz;
 
         test_suite_start(&ctx, "AEAD-CHACHA20-256-POLY1305");
         for (i = 1; i < 20; i++)
@@ -535,6 +823,14 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
                                   aead_vectors,
                                   DIM(aead_vectors),
                                   "AEAD Chacha20-Poly1305 vectors");
+        for (seg_sz = SEG_SZ_STEP; seg_sz <= MAX_SEG_SZ;
+             seg_sz += SEG_SZ_STEP) {
+                test_sgl(mb_mgr, &ctx, BUFFER_SZ, seg_sz, IMB_DIR_ENCRYPT, 0);
+                test_sgl(mb_mgr, &ctx, BUFFER_SZ, seg_sz, IMB_DIR_DECRYPT, 0);
+                test_sgl(mb_mgr, &ctx, BUFFER_SZ, seg_sz, IMB_DIR_ENCRYPT, 1);
+                test_sgl(mb_mgr, &ctx, BUFFER_SZ, seg_sz, IMB_DIR_DECRYPT, 1);
+        }
+
         errors = test_suite_end(&ctx);
 
 	return errors;
