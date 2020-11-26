@@ -174,6 +174,7 @@ enum {
       IMB_ERR_CIPH_MODE,
       IMB_ERR_HASH_ALGO,
       IMB_ERR_JOB_NULL_AUTH_KEY,
+      IMB_ERR_JOB_NULL_SGL_CTX,
       IMB_ERR_MAX       /* don't move this one */
 };
 
@@ -271,6 +272,7 @@ typedef enum {
         IMB_CIPHER_CBCS_1_9,          /* MPEG CENC (ISO 23001-7) */
         IMB_CIPHER_CHACHA20,
         IMB_CIPHER_CHACHA20_POLY1305, /* AEAD CHACHA20 */
+        IMB_CIPHER_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support*/
         IMB_CIPHER_NUM
 } JOB_CIPHER_MODE;
 
@@ -309,6 +311,7 @@ typedef enum {
         IMB_AUTH_AES_CMAC_256,       /* AES256-CMAC */
         IMB_AUTH_POLY1305,           /* POLY1305 */
         IMB_AUTH_CHACHA20_POLY1305,  /* AEAD POLY1305 */
+        IMB_AUTH_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support*/
         IMB_AUTH_NUM
 } JOB_HASH_ALG;
 
@@ -322,6 +325,12 @@ typedef enum {
         IMB_KEY_AES_192_BYTES = 24,
         IMB_KEY_AES_256_BYTES = 32
 } AES_KEY_SIZE_BYTES;
+
+typedef enum {
+        IMB_SGL_INIT = 0,
+        IMB_SGL_UPDATE,
+        IMB_SGL_COMPLETE
+} IMB_JOB_SGL_STATE;
 
 typedef struct IMB_JOB {
         /*
@@ -434,6 +443,8 @@ typedef struct IMB_JOB {
                         /* Additional Authentication Data (AAD) */
                         const void *aad;
                         uint64_t aad_len_in_bytes;    /* Length of AAD */
+                        /* Chacha20-Poly1305 context */
+                        struct chacha20_poly1305_context_data *ctx;
                 } CHACHA20_POLY1305;
         } u;
 
@@ -460,6 +471,8 @@ typedef struct IMB_JOB {
          */
         int (*cipher_func)(struct IMB_JOB *);
         int (*hash_func)(struct IMB_JOB *);
+
+        IMB_JOB_SGL_STATE sgl_state;
 } IMB_JOB;
 
 
@@ -492,6 +505,24 @@ struct gcm_context_data {
         uint8_t  orig_IV[GCM_BLOCK_LEN];
         uint8_t  current_counter[GCM_BLOCK_LEN];
         uint64_t partial_block_length;
+};
+
+/**
+ * @brief holds Chacha20-Poly1305 operation context
+ */
+struct chacha20_poly1305_context_data {
+        uint64_t hash[3]; /* Intermediate computation of hash value */
+        uint64_t aad_len; /* Total AAD length */
+        uint64_t hash_len; /* Total length to digest (excluding AAD) */
+        uint8_t last_ks[64]; /* Last 64 bytes of KS */
+        uint8_t poly_key[32]; /* Poly key */
+        uint8_t poly_scratch[16]; /* Scratchpad to compute Poly on 16 bytes */
+        uint64_t last_block_count; /* Last block count used in last segment */
+        /* Amount of bytes still to use of keystream (up to 63 bytes) */
+        uint64_t remain_ks_bytes;
+        /* Amount of ciphertext bytes still to use of previous segment
+         * to authenticate (up to 16 bytes) */
+        uint64_t remain_ct_bytes;
 };
 
 /* Authenticated Tag Length in bytes.

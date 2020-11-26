@@ -473,6 +473,8 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_CHACHA20_ENC_DEC(job);
         } else if (IMB_CIPHER_CHACHA20_POLY1305 == job->cipher_mode) {
                 return SUBMIT_JOB_CHACHA20_POLY1305(job);
+        } else if (IMB_CIPHER_CHACHA20_POLY1305_SGL == job->cipher_mode) {
+                return SUBMIT_JOB_CHACHA20_POLY1305_SGL(job);
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
                 MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
@@ -621,6 +623,8 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_CHACHA20_ENC_DEC(job);
         } else if (IMB_CIPHER_CHACHA20_POLY1305 == job->cipher_mode) {
                 return SUBMIT_JOB_CHACHA20_POLY1305(job);
+        } else if (IMB_CIPHER_CHACHA20_POLY1305_SGL == job->cipher_mode) {
+                return SUBMIT_JOB_CHACHA20_POLY1305_SGL(job);
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
                 MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;
@@ -1616,6 +1620,7 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305:
+        case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
@@ -2075,12 +2080,16 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 break;
         case IMB_AUTH_CHACHA20_POLY1305:
-                if (job->cipher_mode != IMB_CIPHER_CHACHA20_POLY1305) {
-                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
                 }
-                if (job->src == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                if (job->msg_len_to_hash_in_bytes != 0 && job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->cipher_mode != IMB_CIPHER_CHACHA20_POLY1305) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }
                 if (job->u.CHACHA20_POLY1305.aad == NULL &&
@@ -2094,6 +2103,37 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->auth_tag_output_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_CHACHA20_POLY1305_SGL:
+                if (job->msg_len_to_hash_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_hash_in_bytes != 0 && job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->cipher_mode != IMB_CIPHER_CHACHA20_POLY1305_SGL) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
+                        return 1;
+                }
+                if (job->u.CHACHA20_POLY1305.aad == NULL &&
+                    job->u.CHACHA20_POLY1305.aad_len_in_bytes > 0) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes != UINT64_C(16)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->u.CHACHA20_POLY1305.ctx == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SGL_CTX);
                         return 1;
                 }
                 break;

@@ -96,6 +96,8 @@ imb_get_strerror(int errnum)
                 return "Invalid hash algorithm";
         case IMB_ERR_JOB_NULL_AUTH_KEY:
                 return "Null pointer to authentication key";
+        case IMB_ERR_JOB_NULL_SGL_CTX:
+                return "Null pointer to SGL context";
         default:
                 return strerror(errnum);
         }

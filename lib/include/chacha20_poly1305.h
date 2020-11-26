@@ -36,8 +36,16 @@ IMB_JOB *aead_chacha20_poly1305_avx(IMB_JOB *job);
 IMB_JOB *aead_chacha20_poly1305_avx2(IMB_JOB *job);
 IMB_JOB *aead_chacha20_poly1305_avx512(IMB_JOB *job);
 
+IMB_JOB *aead_chacha20_poly1305_sgl_sse(IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_sgl_avx(IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_sgl_avx2(IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_sgl_avx512(IMB_JOB *job);
+
 /* external symbols needed to implement the above */
 IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *);
+IMB_JOB *submit_job_chacha20_enc_dec_ks_sse(IMB_JOB *, uint8_t *last_ks,
+                                            uint64_t *remain_ks_bytes,
+                                            uint64_t *last_block_count);
 IMB_JOB *submit_job_chacha20_enc_dec_avx(IMB_JOB *);
 IMB_JOB *submit_job_chacha20_enc_dec_avx2(IMB_JOB *);
 IMB_JOB *submit_job_chacha20_enc_dec_avx512(IMB_JOB *);
