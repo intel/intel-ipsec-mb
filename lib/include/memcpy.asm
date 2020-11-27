@@ -30,7 +30,6 @@
 
 %include "include/reg_sizes.asm"
 
-
 ; This section defines a series of macros to copy small to medium amounts
 ; of data from memory to memory, where the size is variable but limited.
 ;

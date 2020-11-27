@@ -27,9 +27,14 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+
+#define HASH_LEN_CLAMP    0xfffffffffffffff0ULL
+#define HASH_REMAIN_CLAMP 0x000000000000000fULL
 
 #include "intel-ipsec-mb.h"
 #include "include/clear_regs_mem.h"
+#include "include/memcpy.h"
 #include "include/chacha20_poly1305.h"
 
 __forceinline
@@ -37,7 +42,11 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
 {
         struct chacha20_poly1305_context_data *ctx =
                                                 job->u.CHACHA20_POLY1305.ctx;
-        const uint64_t hash_len = job->msg_len_to_hash_in_bytes;
+        const uint64_t hash_len =
+                        (job->msg_len_to_hash_in_bytes & HASH_LEN_CLAMP);
+        const uint64_t remain_ct_bytes =
+                        (job->msg_len_to_hash_in_bytes & HASH_REMAIN_CLAMP);
+        const uint8_t *remain_ct_ptr;
 
         (void) arch; /* TODO: use arch */
 
@@ -45,10 +54,12 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         ctx->hash[1] = 0;
         ctx->hash[2] = 0;
         ctx->aad_len = job->u.CHACHA20_POLY1305.aad_len_in_bytes;
-        ctx->hash_len = hash_len;
+        ctx->hash_len = job->msg_len_to_hash_in_bytes;
         ctx->last_block_count = 0;
         ctx->remain_ks_bytes = 0;
+        ctx->remain_ct_bytes = remain_ct_bytes;
 
+        /* Generate Poly key */
         poly1305_key_gen_sse(job, ctx->poly_key);
 
         /* Calculate hash over AAD */
@@ -61,15 +72,30 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                                                    &ctx->remain_ks_bytes,
                                                    &ctx->last_block_count);
 
-                /* compute hash after cipher on encrypt */
+                /*
+                 * Compute hash after cipher on encrypt
+                 * (only on multiple of 16 bytes)
+                 */
                 poly1305_aead_update(job->dst, hash_len, ctx->hash,
                                      ctx->poly_key);
+                remain_ct_ptr = job->dst + hash_len;
+                /* Copy last bytes of ciphertext (less than 16 bytes) */
+                memcpy_fn_sse_16(ctx->poly_scratch, remain_ct_ptr,
+                                 remain_ct_bytes);
         } else {
-                /* compute hash first on decrypt */
+                /*
+                 * Compute hash first on decrypt
+                 * (only on multiple of 16 bytes)
+                 */
                 poly1305_aead_update(job->src +
                                      job->hash_start_src_offset_in_bytes,
                                      hash_len, ctx->hash, ctx->poly_key);
 
+                remain_ct_ptr = job->src + job->hash_start_src_offset_in_bytes
+                                + hash_len;
+                /* Copy last bytes of ciphertext (less than 16 bytes) */
+                memcpy_fn_sse_16(ctx->poly_scratch, remain_ct_ptr,
+                                 remain_ct_bytes);
                 submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
                                                    &ctx->remain_ks_bytes,
                                                    &ctx->last_block_count);
@@ -81,27 +107,91 @@ void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
 {
         struct chacha20_poly1305_context_data *ctx =
                                                 job->u.CHACHA20_POLY1305.ctx;
-        const uint64_t hash_len = job->msg_len_to_hash_in_bytes;
+        uint64_t hash_len = job->msg_len_to_hash_in_bytes;
+        uint64_t bytes_to_copy = 0;
+        uint64_t remain_bytes_to_fill = (16 - ctx->remain_ct_bytes);
+        uint64_t remain_ct_bytes;
+        const uint8_t *remain_ct_ptr;
+
+        /* Need to copy more bytes into scratchpad */
+        if ((ctx->remain_ct_bytes > 0) && (remain_bytes_to_fill > 0)) {
+                if (hash_len < remain_bytes_to_fill)
+                        bytes_to_copy = hash_len;
+                else
+                        bytes_to_copy = remain_bytes_to_fill;
+        }
 
         (void) arch; /* TODO: use arch */
 
         /* Increment total hash length */
-        ctx->hash_len += hash_len;
+        ctx->hash_len += job->msg_len_to_hash_in_bytes;
 
         if (job->cipher_direction == IMB_DIR_ENCRYPT) {
                 submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
                                                    &ctx->remain_ks_bytes,
                                                    &ctx->last_block_count);
 
+                /* Copy more bytes on Poly scratchpad */
+                memcpy_fn_sse_16(ctx->poly_scratch + ctx->remain_ct_bytes,
+                       job->dst,
+                       bytes_to_copy);
+                ctx->remain_ct_bytes += bytes_to_copy;
+
+                /*
+                 * Compute hash on remaining bytes of previous segment and
+                 * first bytes of this segment (if there are 16 bytes)
+                 */
+                if (ctx->remain_ct_bytes == 16) {
+                        poly1305_aead_update(ctx->poly_scratch, 16, ctx->hash,
+                                             ctx->poly_key);
+                        ctx->remain_ct_bytes = 0;
+                }
+
+                hash_len -= bytes_to_copy;
+                remain_ct_bytes = hash_len & HASH_REMAIN_CLAMP;
+                hash_len &= hash_len & HASH_LEN_CLAMP;
+
                 /* compute hash after cipher on encrypt */
-                poly1305_aead_update(job->dst, hash_len, ctx->hash,
-                                     ctx->poly_key);
-        } else {
-                /* compute hash first on decrypt */
-                poly1305_aead_update(job->src +
-                                     job->hash_start_src_offset_in_bytes,
+                poly1305_aead_update(job->dst + bytes_to_copy,
                                      hash_len, ctx->hash, ctx->poly_key);
 
+                remain_ct_ptr = job->dst + bytes_to_copy + hash_len;
+                /* copy last bytes of ciphertext (less than 16 bytes) */
+                memcpy_fn_sse_16(ctx->poly_scratch, remain_ct_ptr,
+                                 remain_ct_bytes);
+                ctx->remain_ct_bytes += remain_ct_bytes;
+        } else {
+                /* Copy more bytes on Poly scratchpad */
+                memcpy_fn_sse_16(ctx->poly_scratch + ctx->remain_ct_bytes,
+                                 job->src + job->hash_start_src_offset_in_bytes,
+                                 bytes_to_copy);
+                ctx->remain_ct_bytes += bytes_to_copy;
+
+                /*
+                 * Compute hash on remaining bytes of previous segment and
+                 * first bytes of this segment (if there are 16 bytes)
+                 */
+                if (ctx->remain_ct_bytes == 16) {
+                        poly1305_aead_update(ctx->poly_scratch, 16, ctx->hash,
+                                             ctx->poly_key);
+                        ctx->remain_ct_bytes = 0;
+                }
+
+                hash_len -= bytes_to_copy;
+                remain_ct_bytes = hash_len & HASH_REMAIN_CLAMP;
+                hash_len &= hash_len & HASH_LEN_CLAMP;
+
+                /* compute hash first on decrypt */
+                poly1305_aead_update(job->src +
+                             job->hash_start_src_offset_in_bytes +
+                             bytes_to_copy, hash_len, ctx->hash, ctx->poly_key);
+
+                remain_ct_ptr = job->src + job->hash_start_src_offset_in_bytes
+                                + bytes_to_copy + hash_len;
+                /* copy last bytes of ciphertext (less than 16 bytes) */
+                memcpy_fn_sse_16(ctx->poly_scratch, remain_ct_ptr,
+                                 remain_ct_bytes);
+                ctx->remain_ct_bytes += remain_ct_bytes;
                 submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
                                                    &ctx->remain_ks_bytes,
                                                    &ctx->last_block_count);
@@ -113,33 +203,84 @@ void complete_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
 {
         struct chacha20_poly1305_context_data *ctx =
                                                 job->u.CHACHA20_POLY1305.ctx;
-        const uint64_t hash_len = job->msg_len_to_hash_in_bytes;
+        uint64_t hash_len = job->msg_len_to_hash_in_bytes;
         uint64_t last[2];
+        uint64_t bytes_to_copy = 0;
+        uint64_t remain_bytes_to_fill = (16 - ctx->remain_ct_bytes);
 
         (void) arch; /* TODO: use arch */
 
+        /* Need to copy more bytes into scratchpad */
+        if ((ctx->remain_ct_bytes > 0) && (remain_bytes_to_fill > 0)) {
+                if (hash_len < remain_bytes_to_fill)
+                        bytes_to_copy = hash_len;
+                else
+                        bytes_to_copy = remain_bytes_to_fill;
+        }
+
         /* Increment total hash length */
-        ctx->hash_len += hash_len;
+        ctx->hash_len += job->msg_len_to_hash_in_bytes;
 
-        if (hash_len != 0) {
-                if (job->cipher_direction == IMB_DIR_ENCRYPT) {
-                        submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
-                                                   &ctx->remain_ks_bytes,
-                                                   &ctx->last_block_count);
+        if (job->cipher_direction == IMB_DIR_ENCRYPT) {
+                submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
+                                           &ctx->remain_ks_bytes,
+                                           &ctx->last_block_count);
 
-                        /* compute hash after cipher on encrypt */
-                        poly1305_aead_update(job->dst, hash_len, ctx->hash,
+                /* Copy more bytes on Poly scratchpad */
+                memcpy_fn_sse_16(ctx->poly_scratch + ctx->remain_ct_bytes,
+                                 job->dst,
+                                 bytes_to_copy);
+                ctx->remain_ct_bytes += bytes_to_copy;
+
+                /*
+                 * Compute hash on remaining bytes of previous segment and
+                 * first bytes of this segment (can be less than 16,
+                 * as this is the last segment)
+                 */
+                if (ctx->remain_ct_bytes > 0) {
+                        poly1305_aead_update(ctx->poly_scratch,
+                                             ctx->remain_ct_bytes,
+                                             ctx->hash,
                                              ctx->poly_key);
-                } else {
-                        /* compute hash first on decrypt */
-                        poly1305_aead_update(job->src +
-                                    job->hash_start_src_offset_in_bytes,
-                                    hash_len, ctx->hash, ctx->poly_key);
-
-                        submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
-                                                   &ctx->remain_ks_bytes,
-                                                   &ctx->last_block_count);
+                        ctx->remain_ct_bytes = 0;
                 }
+                hash_len -= bytes_to_copy;
+                /* compute hash after cipher on encrypt */
+                if (hash_len != 0)
+                        poly1305_aead_update(job->dst + bytes_to_copy,
+                                             hash_len, ctx->hash,
+                                             ctx->poly_key);
+        } else {
+                /* Copy more bytes on Poly scratchpad */
+                memcpy_fn_sse_16(ctx->poly_scratch + ctx->remain_ct_bytes,
+                                 job->src + job->hash_start_src_offset_in_bytes,
+                                 bytes_to_copy);
+                ctx->remain_ct_bytes += bytes_to_copy;
+
+                /*
+                 * Compute hash on remaining bytes of previous segment and
+                 * first bytes of this segment (can be less than 16,
+                 * as this is the last segment)
+                 */
+                if (ctx->remain_ct_bytes > 0) {
+                        poly1305_aead_update(ctx->poly_scratch,
+                                             ctx->remain_ct_bytes,
+                                             ctx->hash,
+                                             ctx->poly_key);
+                        ctx->remain_ct_bytes = 0;
+                }
+
+                hash_len -= bytes_to_copy;
+                /* compute hash first on decrypt */
+                if (hash_len != 0)
+                        poly1305_aead_update(job->src +
+                                job->hash_start_src_offset_in_bytes +
+                                bytes_to_copy,
+                                hash_len, ctx->hash, ctx->poly_key);
+
+                submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
+                                           &ctx->remain_ks_bytes,
+                                           &ctx->last_block_count);
         }
 
         /*
@@ -153,6 +294,11 @@ void complete_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         /* Finalize AEAD Poly1305 (final reduction and +S) */
         poly1305_aead_complete(ctx->hash, ctx->poly_key, job->auth_tag_output);
 
+        /* Clear sensitive data from the context */
+#ifdef SAFE_DATA
+        clear_mem(ctx->last_ks, sizeof(ctx->last_ks));
+        clear_mem(ctx->poly_key, sizeof(ctx->poly_key));
+#endif
         job->status |= STS_COMPLETED;
 }
 
