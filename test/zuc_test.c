@@ -75,6 +75,9 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                              uint8_t **pDstData, uint8_t **pKeys,
                              uint8_t **pIV, uint32_t numBuffs,
                              const unsigned int job_api);
+int validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
+                         uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
+                         uint32_t numBuffs);
 
 static void byte_hexdump(const char *message, const uint8_t *ptr, int len);
 
@@ -197,9 +200,11 @@ int zuc_test(struct IMB_MGR *mb_mgr)
         uint8_t *pDstData[MAXBUFS] = {0};
         struct test_suite_context eea3_ctx;
         struct test_suite_context eia3_ctx;
+        struct test_suite_context eea3_256_ctx;
 
         test_suite_start(&eea3_ctx, "ZUC-EEA3");
         test_suite_start(&eia3_ctx, "ZUC-EIA3");
+        test_suite_start(&eea3_256_ctx, "ZUC-EEA3-256");
 
         /*Create test data buffers + populate with random data*/
         if (createData(pSrcData, MAXBUFS)) {
@@ -216,8 +221,9 @@ int zuc_test(struct IMB_MGR *mb_mgr)
                 goto exit_zuc_test;
         }
 
-        /*Create random keys and vectors*/
-        if (createKeyVecData(ZUC_KEY_LEN_IN_BYTES, pKeys, ZUC_IV_LEN_IN_BYTES,
+        /* Create random keys and vectors */
+        if (createKeyVecData(ZUC256_KEY_LEN_IN_BYTES, pKeys,
+                             ZUC256_IV_LEN_IN_BYTES,
                              pIV, MAXBUFS)) {
                 printf("createKeyVecData() error\n");
                 freePtrArray(pSrcData, MAXBUFS);
@@ -301,6 +307,16 @@ int zuc_test(struct IMB_MGR *mb_mgr)
                         test_suite_update(&eia3_ctx, 1, 0);
         }
 
+        /* ZUC-EEA3-256 tests */
+        for (i = 0; i < DIM(numBuffs); i++) {
+                if (validate_zuc256_EEA3(mb_mgr, pSrcData, pDstData, pKeys,
+                                         pIV, numBuffs[i]))
+                        test_suite_update(&eea3_256_ctx, 0, 1);
+                else
+                        test_suite_update(&eea3_256_ctx, 1, 0);
+        }
+
+
 exit_zuc_test:
         freePtrArray(pKeys, MAXBUFS);    /*Free the key buffers*/
         freePtrArray(pIV, MAXBUFS);      /*Free the vector buffers*/
@@ -309,6 +325,7 @@ exit_zuc_test:
 
         errors += test_suite_end(&eea3_ctx);
         errors += test_suite_end(&eia3_ctx);
+        errors += test_suite_end(&eea3_256_ctx);
 
         return errors;
 }
@@ -316,7 +333,9 @@ exit_zuc_test:
 static inline int
 submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                  uint8_t **src, uint8_t **dst, const uint32_t *lens,
-                 int dir, const unsigned int num_jobs)
+                 int dir, const unsigned int num_jobs,
+                 const unsigned int key_len,
+                 const unsigned int iv_len)
 {
         IMB_JOB *job;
         unsigned int i;
@@ -330,9 +349,9 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 job->src = src[i];
                 job->dst = dst[i];
                 job->iv = ivs[i];
-                job->iv_len_in_bytes = 16;
+                job->iv_len_in_bytes = iv_len;
                 job->enc_keys = keys[i];
-                job->key_len_in_bytes = 16;
+                job->key_len_in_bytes = key_len;
 
                 job->cipher_start_src_offset_in_bytes = 0;
                 job->msg_len_to_cipher_in_bytes = lens[i];
@@ -474,6 +493,7 @@ validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
         uint32_t i;
         int ret = 0;
 
+        /* ZUC-128-EEA3 */
         for (i = 0; i < NUM_ZUC_EEA3_TESTS; i++) {
                 char msg[50];
                 int retTmp;
@@ -489,7 +509,9 @@ validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                 if (job_api)
                         submit_eea3_jobs(mb_mgr, &pKeys, &pIV, &pSrcData,
                                          &pDstData, &byteLength,
-                                         IMB_DIR_ENCRYPT, 1);
+                                         IMB_DIR_ENCRYPT, 1,
+                                         ZUC_KEY_LEN_IN_BYTES,
+                                         ZUC_IV_LEN_IN_BYTES);
                 else
                         IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData,
                                               pDstData, byteLength);
@@ -516,23 +538,24 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         unsigned int i;
         uint32_t packetLen[MAXBUFS];
         int ret = 0;
-        struct test128EEA3_vectors_t vector;
+        const struct test128EEA3_vectors_t *vector;
 
         for (i = 0; i < num_buffers; i++) {
-                vector = testEEA3_vectors[buf_idx[i]];
-                packetLen[i] = (vector.length_in_bits + 7) / 8;
-                memcpy(pKeys[i], vector.CK, ZUC_KEY_LEN_IN_BYTES);
-                zuc_eea3_iv_gen(vector.count, vector.Bearer,
-                        vector.Direction, pIV[i]);
+                vector = &testEEA3_vectors[buf_idx[i]];
+                packetLen[i] = (vector->length_in_bits + 7) / 8;
+                memcpy(pKeys[i], vector->CK, ZUC_KEY_LEN_IN_BYTES);
+                zuc_eea3_iv_gen(vector->count, vector->Bearer,
+                        vector->Direction, pIV[i]);
                 if (dir == IMB_DIR_ENCRYPT)
-                        memcpy(pSrcData[i], vector.plaintext, packetLen[i]);
+                        memcpy(pSrcData[i], vector->plaintext, packetLen[i]);
                 else
-                        memcpy(pSrcData[i], vector.ciphertext, packetLen[i]);
+                        memcpy(pSrcData[i], vector->ciphertext, packetLen[i]);
         }
 
         if (job_api)
                 submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData,
-                                 pDstData, packetLen, dir, num_buffers);
+                                 pDstData, packetLen, dir, num_buffers,
+                                 ZUC_KEY_LEN_IN_BYTES, ZUC_IV_LEN_IN_BYTES);
         else {
                 if (type == TEST_4_BUFFER)
                         IMB_ZUC_EEA3_4_BUFFER(mb_mgr,
@@ -555,7 +578,7 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 char msg_start[50];
                 char msg[100];
 
-                vector = testEEA3_vectors[buf_idx[i]];
+                vector = &testEEA3_vectors[buf_idx[i]];
                 if (var_bufs)
                         snprintf(msg_start, sizeof(msg_start),
                                  "Validate ZUC %c block multi-vector",
@@ -569,16 +592,80 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                         snprintf(msg, sizeof(msg),
                                  "%s test %u, index %u (Enc):",
                                  msg_start, buf_idx[i] + 1, i);
-                        retTmp = test_output(pDst8, vector.ciphertext,
+                        retTmp = test_output(pDst8, vector->ciphertext,
                                              packetLen[i],
-                                             vector.length_in_bits, msg);
+                                             vector->length_in_bits, msg);
                 } else { /* DECRYPT */
                         snprintf(msg, sizeof(msg),
                                  "%s test %u, index %u (Dec):",
                                  msg_start, buf_idx[i] + 1, i);
-                        retTmp = test_output(pDst8, vector.plaintext,
+                        retTmp = test_output(pDst8, vector->plaintext,
                                              packetLen[i],
-                                             vector.length_in_bits, msg);
+                                             vector->length_in_bits, msg);
+                }
+                if (retTmp < 0)
+                        ret = retTmp;
+        }
+
+        return ret;
+}
+
+static int
+submit_and_verify_zuc256(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
+                         uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
+                         JOB_CIPHER_DIRECTION dir,
+                         const unsigned int var_bufs,
+                         const unsigned int num_buffers,
+                         const uint32_t *buf_idx)
+{
+        unsigned int i;
+        uint32_t packetLen[MAXBUFS];
+        int ret = 0;
+        const struct test256EEA3_vectors_t *vector;
+
+        for (i = 0; i < num_buffers; i++) {
+                vector = &test256EEA3_vectors[buf_idx[i]];
+                packetLen[i] = (vector->length_in_bits + 7) / 8;
+                memcpy(pKeys[i], vector->CK, ZUC256_KEY_LEN_IN_BYTES);
+                memcpy(pIV[i], vector->IV, ZUC256_IV_LEN_IN_BYTES);
+                if (dir == IMB_DIR_ENCRYPT)
+                        memcpy(pSrcData[i], vector->plaintext, packetLen[i]);
+                else
+                        memcpy(pSrcData[i], vector->ciphertext, packetLen[i]);
+        }
+
+        submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData,
+                         pDstData, packetLen, dir, num_buffers,
+                         ZUC256_KEY_LEN_IN_BYTES, ZUC256_IV_LEN_IN_BYTES);
+
+        for (i = 0; i < num_buffers; i++) {
+                uint8_t *pDst8 = (uint8_t *)pDstData[i];
+                int retTmp;
+                char msg_start[50];
+                char msg[100];
+
+                vector = &test256EEA3_vectors[buf_idx[i]];
+                if (var_bufs)
+                        snprintf(msg_start, sizeof(msg_start),
+                                 "Validate ZUC-256 multi-vector");
+                else
+                        snprintf(msg_start, sizeof(msg_start),
+                                 "Validate ZUC-256");
+
+                if (dir == IMB_DIR_ENCRYPT) {
+                        snprintf(msg, sizeof(msg),
+                                 "%s test %u, index %u (Enc):",
+                                 msg_start, buf_idx[i] + 1, i);
+                        retTmp = test_output(pDst8, vector->ciphertext,
+                                             packetLen[i],
+                                             vector->length_in_bits, msg);
+                } else { /* DECRYPT */
+                        snprintf(msg, sizeof(msg),
+                                 "%s test %u, index %u (Dec):",
+                                 msg_start, buf_idx[i] + 1, i);
+                        retTmp = test_output(pDst8, vector->plaintext,
+                                             packetLen[i],
+                                             vector->length_in_bits, msg);
                 }
                 if (retTmp < 0)
                         ret = retTmp;
@@ -679,6 +766,52 @@ int validate_zuc_EEA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
 
         return ret;
 };
+
+int validate_zuc256_EEA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
+                         uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
+                         uint32_t numBuffs)
+{
+        uint32_t i, j;
+        int ret = 0;
+        int retTmp;
+        uint32_t buf_idx[MAXBUFS];
+
+        assert(numBuffs > 0);
+        for (i = 0; i < NUM_ZUC_256_EEA3_TESTS; i++) {
+                for (j = 0; j < numBuffs; j++)
+                        buf_idx[j] = i;
+
+                retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData,
+                                                  pKeys, pIV, IMB_DIR_ENCRYPT,
+                                                  0, numBuffs, buf_idx);
+                if (retTmp < 0)
+                        ret = retTmp;
+
+                retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData,
+                                                  pKeys, pIV, IMB_DIR_DECRYPT,
+                                                  0, numBuffs, buf_idx);
+                if (retTmp < 0)
+                        ret = retTmp;
+        }
+
+        /* Get all test vectors and encrypt them together */
+        for (i = 0; i < numBuffs; i++)
+                buf_idx[i] = i % NUM_ZUC_256_EEA3_TESTS;
+
+        retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData, pKeys,
+                                          pIV, IMB_DIR_ENCRYPT,
+                                          1, numBuffs, buf_idx);
+        if (retTmp < 0)
+                ret = retTmp;
+
+        retTmp = submit_and_verify_zuc256(mb_mgr, pSrcData, pDstData, pKeys,
+                                          pIV, IMB_DIR_DECRYPT,
+                                          1, numBuffs, buf_idx);
+        if (retTmp < 0)
+                ret = retTmp;
+
+        return ret;
+}
 
 int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                              uint8_t *pDstData, uint8_t *pKeys, uint8_t *pIV,
