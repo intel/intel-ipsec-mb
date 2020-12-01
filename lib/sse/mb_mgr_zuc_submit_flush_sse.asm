@@ -32,13 +32,16 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
-%ifndef SUBMIT_JOB_ZUC_EEA3
-%define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_no_gfni_sse
-%define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_no_gfni_sse
+%ifndef SUBMIT_JOB_ZUC128_EEA3
+%define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_no_gfni_sse
+%define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_no_gfni_sse
+%define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_no_gfni_sse
+%define FLUSH_JOB_ZUC256_EEA3 flush_job_zuc256_eea3_no_gfni_sse
 %define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_no_gfni_sse
 %define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_no_gfni_sse
 %define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_no_gfni_sse
-%define ZUC_INIT_4        asm_ZucInitialization_4_sse
+%define ZUC128_INIT_4        asm_ZucInitialization_4_sse
+%define ZUC256_INIT_4     asm_Zuc256Initialization_4_sse
 %define ZUC_CIPHER_4      asm_ZucCipher_4_sse
 %endif
 
@@ -83,7 +86,8 @@ dd      0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 
 extern ZUC_EIA3_4_BUFFER
-extern ZUC_INIT_4
+extern ZUC128_INIT_4
+extern ZUC256_INIT_4
 extern ZUC_CIPHER_4
 
 %ifdef LINUX
@@ -166,11 +170,8 @@ section .text
 
 %endmacro
 
-; JOB* SUBMIT_JOB_ZUC_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
-; arg 1 : state
-; arg 2 : job
-MKGLOBAL(SUBMIT_JOB_ZUC_EEA3,function,internal)
-SUBMIT_JOB_ZUC_EEA3:
+%macro SUBMIT_JOB_ZUC_EEA3 1
+%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -231,7 +232,7 @@ SUBMIT_JOB_ZUC_EEA3:
         movq    [state + _zuc_lens], xmm0
 
         cmp     unused_lanes, 0xff
-        jne     return_null_submit_eea3
+        jne     %%return_null_submit_eea3
 
         ; Set all ffs in top 64 bits to invalid them
         por     xmm0, [rel all_ffs_top_64bits]
@@ -242,7 +243,7 @@ SUBMIT_JOB_ZUC_EEA3:
         pextrw  min_len, xmm1, 0   ; min value
         pextrw  idx, xmm1, 1    ; min index (0...3)
         cmp     min_len, 0
-        je      len_is_0_submit_eea3
+        je      %%len_is_0_submit_eea3
 
         ; Move state into r12, as register for state will be used
         ; to pass parameter to next function
@@ -264,14 +265,18 @@ SUBMIT_JOB_ZUC_EEA3:
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
 
-        call    ZUC_INIT_4
+%if %%KEY_SIZE == 128
+        call    ZUC128_INIT_4
+%else
+        call    ZUC256_INIT_4
+%endif
 
 %ifndef LINUX
         add     rsp, 24
 %endif
 
         cmp     byte [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
-        je      skip_submit_restoring_state
+        je      %%skip_submit_restoring_state
 
         ;; Load mask containing FF's in lanes which init has just been done
         movzx   DWORD(tmp3), byte [r12 + _zuc_init_not_done]
@@ -297,7 +302,7 @@ SUBMIT_JOB_ZUC_EEA3:
 %assign I (I + 1)
 %endrep
 
-skip_submit_restoring_state:
+%%skip_submit_restoring_state:
 %ifdef SAFE_DATA
         ;; Clear stack containing state info
         pxor    xmm0, xmm0
@@ -328,7 +333,7 @@ skip_submit_restoring_state:
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
 
-len_is_0_submit_eea3:
+%%len_is_0_submit_eea3:
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -345,7 +350,7 @@ len_is_0_submit_eea3:
         CLEAR_ZUC_LANE_STATE state, idx, tmp, xmm0, xmm1
 %endif
 
-return_submit_eea3:
+%%return_submit_eea3:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -361,14 +366,14 @@ return_submit_eea3:
 
         ret
 
-return_null_submit_eea3:
+%%return_null_submit_eea3:
         xor     job_rax, job_rax
-        jmp     return_submit_eea3
+        jmp     %%return_submit_eea3
+%endmacro
 
-; JOB* FLUSH_JOB_ZUC_EEA3(MB_MGR_ZUC_OOO *state)
-; arg 1 : state
-MKGLOBAL(FLUSH_JOB_ZUC_EEA3,function,internal)
-FLUSH_JOB_ZUC_EEA3:
+
+%macro FLUSH_JOB_ZUC_EEA3 1
+%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -404,7 +409,7 @@ FLUSH_JOB_ZUC_EEA3:
         ; check for empty
         mov     unused_lanes, [state + _zuc_unused_lanes]
         bt      unused_lanes, 32+7
-        jc      return_null_flush_eea3
+        jc      %%return_null_flush_eea3
 
         ; Set length = 0xFFFF in NULL jobs
         movq    xmm0, [state + _zuc_lens]
@@ -412,9 +417,9 @@ FLUSH_JOB_ZUC_EEA3:
 %assign I 0
 %rep 4
         cmp     qword [state + _zuc_job_in_lane + I*8], 0
-        jne     APPEND(skip_copy_ffs_,I)
+        jne     APPEND(%%skip_copy_ffs_,I)
         pinsrw  xmm0, DWORD(tmp3), I
-APPEND(skip_copy_ffs_,I):
+APPEND(%%skip_copy_ffs_,I):
 %assign I (I+1)
 %endrep
 
@@ -429,7 +434,7 @@ APPEND(skip_copy_ffs_,I):
         pextrw  min_len, xmm1, 0   ; min value
         pextrw  idx, xmm1, 1    ; min index (0...3)
         cmp     min_len, 0
-        je      len_is_0_flush_eea3
+        je      %%len_is_0_flush_eea3
 
         ; copy good_lane to empty lanes
         mov     tmp1, [state + _zuc_args_in + idx*8]
@@ -440,12 +445,12 @@ APPEND(skip_copy_ffs_,I):
 %assign I 0
 %rep 4
         cmp     qword [state + _zuc_job_in_lane + I*8], 0
-        jne     APPEND(skip_eea3_,I)
+        jne     APPEND(%%skip_eea3_,I)
         mov     [state + _zuc_args_in + I*8], tmp1
         mov     [state + _zuc_args_out + I*8], tmp2
         mov     [state + _zuc_args_keys + I*8], tmp3
         mov     [state + _zuc_args_IV + I*8], tmp4
-APPEND(skip_eea3_,I):
+APPEND(%%skip_eea3_,I):
 %assign I (I+1)
 %endrep
 
@@ -454,7 +459,7 @@ APPEND(skip_eea3_,I):
         mov     r12, state
 
         cmp     word [r12 + _zuc_init_not_done], 0
-        je      skip_flush_init
+        je      %%skip_flush_init
 
 %assign I 0
 %rep (16 + 2)
@@ -472,13 +477,17 @@ APPEND(skip_eea3_,I):
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
 
-        call    ZUC_INIT_4
+%if %%KEY_SIZE == 128
+        call    ZUC128_INIT_4
+%else
+        call    ZUC256_INIT_4
+%endif
 
 %ifndef LINUX
         add     rsp, 24
 %endif
         cmp     word [r12 + _zuc_init_not_done], 0x0f ; Init done for all lanes
-        je      skip_flush_restoring_state
+        je      %%skip_flush_restoring_state
 
         ;; Load mask containing FF's in lanes which init has just been done
         movzx   DWORD(tmp3), byte [r12 + _zuc_init_not_done]
@@ -503,7 +512,7 @@ APPEND(skip_eea3_,I):
 %assign I (I + 1)
 %endrep
 
-skip_flush_restoring_state:
+%%skip_flush_restoring_state:
 %ifdef SAFE_DATA
         ;; Clear stack containing state info
         pxor    xmm0, xmm0
@@ -515,7 +524,7 @@ skip_flush_restoring_state:
 %endif
         mov     word [r12 + _zuc_init_not_done], 0 ; Init done for all lanes
 
-skip_flush_init:
+%%skip_flush_init:
 
         ;; Copy state from good lane to NULL lanes
 %assign I 0
@@ -526,10 +535,10 @@ skip_flush_init:
 %assign J 0
 %rep 4
         cmp     qword [r12 + _zuc_job_in_lane + J*8], 0
-        jne     APPEND3(skip_eea3_copy_,I,J)
+        jne     APPEND3(%%skip_eea3_copy_,I,J)
         pinsrd  xmm1, r13d, J
 
-APPEND3(skip_eea3_copy_,I,J):
+APPEND3(%%skip_eea3_copy_,I,J):
 %assign J (J+1)
 %endrep
         movdqa  [r12 + _zuc_state + 16*I], xmm1 ; Save new state
@@ -560,16 +569,16 @@ APPEND3(skip_eea3_copy_,I,J):
         or      tmp3, tmp1 ;; bitmask with NULL lanes and job to return
 
         CLEAR_ZUC_STATE state, tmp3, tmp2, xmm0, xmm1
-        jmp     skip_flush_clear_state
+        jmp     %%skip_flush_clear_state
 %endif
 
-len_is_0_flush_eea3:
+%%len_is_0_flush_eea3:
 %ifdef SAFE_DATA
         ; Clear ZUC state of the lane that is returned
         mov     tmp2, idx
         CLEAR_ZUC_LANE_STATE state, tmp2, tmp3, xmm0, xmm1
 
-skip_flush_clear_state:
+%%skip_flush_clear_state:
 %endif
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
@@ -582,7 +591,7 @@ skip_flush_clear_state:
 
         SHIFT_GP        1, idx, tmp3, tmp4, left
         or      [state + _zuc_unused_lane_bitmask], BYTE(tmp3)
-return_flush_eea3:
+%%return_flush_eea3:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -598,9 +607,43 @@ return_flush_eea3:
 
         ret
 
-return_null_flush_eea3:
+%%return_null_flush_eea3:
         xor     job_rax, job_rax
-        jmp     return_flush_eea3
+        jmp     %%return_flush_eea3
+%endmacro
+
+; JOB* SUBMIT_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
+SUBMIT_JOB_ZUC128_EEA3:
+
+        SUBMIT_JOB_ZUC_EEA3 128
+
+; JOB* SUBMIT_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_ZUC256_EEA3,function,internal)
+SUBMIT_JOB_ZUC256_EEA3:
+
+        SUBMIT_JOB_ZUC_EEA3 256
+
+; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
+FLUSH_JOB_ZUC128_EEA3:
+
+        FLUSH_JOB_ZUC_EEA3 128
+
+; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
+FLUSH_JOB_ZUC256_EEA3:
+
+        FLUSH_JOB_ZUC_EEA3 256
+
 
 ; JOB* SUBMIT_JOB_ZUC_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
 ; arg 1 : state

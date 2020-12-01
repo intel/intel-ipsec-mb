@@ -72,6 +72,7 @@ static void set_ooo_mgr_road_block(IMB_MGR *mgr)
         MB_MGR_CCM_OOO *aes_ccm_ooo = mgr->aes_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = mgr->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = mgr->zuc_eea3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = mgr->zuc256_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = mgr->zuc_eia3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = mgr->aes128_cbcs_ooo;
 
@@ -103,6 +104,7 @@ static void set_ooo_mgr_road_block(IMB_MGR *mgr)
         aes_cmac_ooo->road_block = IMB_OOO_ROAD_BLOCK;
 
         zuc_eea3_ooo->road_block = IMB_OOO_ROAD_BLOCK;
+        zuc256_eea3_ooo->road_block = IMB_OOO_ROAD_BLOCK;
         zuc_eia3_ooo->road_block = IMB_OOO_ROAD_BLOCK;
 
         aes128_cbcs_ooo->road_block = IMB_OOO_ROAD_BLOCK;
@@ -213,6 +215,9 @@ IMB_MGR *alloc_mb_mgr(uint64_t flags)
         ptr->zuc_eea3_ooo = alloc_aligned_mem(sizeof(MB_MGR_ZUC_OOO));
         if (ptr->zuc_eea3_ooo == NULL)
                 goto exit_fail;
+        ptr->zuc256_eea3_ooo = alloc_aligned_mem(sizeof(MB_MGR_ZUC_OOO));
+        if (ptr->zuc256_eea3_ooo == NULL)
+                goto exit_fail;
 
         ptr->hmac_sha_1_ooo = alloc_aligned_mem(sizeof(MB_MGR_HMAC_SHA_1_OOO));
         if (ptr->hmac_sha_1_ooo == NULL)
@@ -274,6 +279,7 @@ exit_fail:
         free_mem(ptr->docsis_des_enc_ooo);
         free_mem(ptr->docsis_des_dec_ooo);
         free_mem(ptr->zuc_eea3_ooo);
+        free_mem(ptr->zuc256_eea3_ooo);
 
         free_mem(ptr->hmac_sha_1_ooo);
         free_mem(ptr->hmac_sha_224_ooo);
@@ -317,6 +323,7 @@ void free_mb_mgr(IMB_MGR *ptr)
                 free_mem(ptr->docsis_des_enc_ooo);
                 free_mem(ptr->docsis_des_dec_ooo);
                 free_mem(ptr->zuc_eea3_ooo);
+                free_mem(ptr->zuc256_eea3_ooo);
 
                 free_mem(ptr->hmac_sha_1_ooo);
                 free_mem(ptr->hmac_sha_224_ooo);

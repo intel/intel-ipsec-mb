@@ -24,11 +24,14 @@
 ;; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
-%define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_gfni_sse
-%define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_gfni_sse
+%define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_gfni_sse
+%define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_gfni_sse
+%define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_gfni_sse
+%define FLUSH_JOB_ZUC256_EEA3 flush_job_zuc256_eea3_gfni_sse
 %define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_gfni_sse
 %define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_gfni_sse
 %define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_gfni_sse
-%define ZUC_INIT_4 asm_ZucInitialization_4_gfni_sse
+%define ZUC128_INIT_4 asm_ZucInitialization_4_gfni_sse
+%define ZUC256_INIT_4 asm_Zuc256Initialization_4_gfni_sse
 %define ZUC_CIPHER_4      asm_ZucCipher_4_gfni_sse
 %include "sse/mb_mgr_zuc_submit_flush_sse.asm"

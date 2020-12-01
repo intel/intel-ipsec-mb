@@ -427,6 +427,7 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
 
         if (IMB_CIPHER_CBC == job->cipher_mode) {
@@ -496,7 +497,11 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                         return AES_CNTR_CCM_256(job);
                 }
         } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
-                return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
+                if (16 == job->key_len_in_bytes) {
+                        return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
+                } else { /* assume 32 */
+                        return SUBMIT_JOB_ZUC256_EEA3(zuc256_eea3_ooo, job);
+                }
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == job->cipher_mode) {
@@ -517,6 +522,7 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
 
         if (IMB_CIPHER_CBC == job->cipher_mode) {
@@ -552,7 +558,11 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         } else if (IMB_CIPHER_CUSTOM == job->cipher_mode) {
                 return FLUSH_JOB_CUSTOM_CIPHER(job);
         } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
-                return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
+                if (16 == job->key_len_in_bytes) {
+                        return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
+                } else { /* assume 32 */
+                        return FLUSH_JOB_ZUC256_EEA3(zuc256_eea3_ooo);
+                }
         /* assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
          * IMB_CIPHER_CCM or IMB_CIPHER_NULL */
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
@@ -567,6 +577,7 @@ IMB_JOB *
 SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
 
         if (IMB_CIPHER_CBC == job->cipher_mode) {
                 if (16 == job->key_len_in_bytes) {
@@ -636,7 +647,11 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                         return AES_CNTR_CCM_256(job);
                 }
         } else if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
-                return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
+                if (16 == job->key_len_in_bytes) {
+                        return SUBMIT_JOB_ZUC_EEA3(zuc_eea3_ooo, job);
+                } else { /* assume 32 */
+                        return SUBMIT_JOB_ZUC256_EEA3(zuc256_eea3_ooo, job);
+                }
         } else if (IMB_CIPHER_SNOW3G_UEA2_BITLEN == job->cipher_mode) {
                 return submit_snow3g_uea2_job(state, job);
         } else if (IMB_CIPHER_KASUMI_UEA1_BITLEN == job->cipher_mode) {
@@ -655,6 +670,7 @@ IMB_JOB *
 FLUSH_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 {
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
 
         if (IMB_CIPHER_GCM == job->cipher_mode)
                 return FLUSH_JOB_AES_GCM_DEC(state, job);
@@ -676,8 +692,13 @@ FLUSH_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
         if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode)
                 return FLUSH_JOB_DOCSIS_DES_DEC(docsis_des_dec_ooo);
 #endif /* FLUSH_JOB_DOCSIS_DES_DEC */
-        if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode)
-                return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
+        if (IMB_CIPHER_ZUC_EEA3 == job->cipher_mode) {
+                if (16 == job->key_len_in_bytes) {
+                        return FLUSH_JOB_ZUC_EEA3(zuc_eea3_ooo);
+                } else { /* assume 32 */
+                        return FLUSH_JOB_ZUC256_EEA3(zuc256_eea3_ooo);
+                }
+        }
         (void) state;
         return NULL;
 }
@@ -1484,7 +1505,8 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
                 }
-                if (job->key_len_in_bytes != UINT64_C(16)) {
+                if (job->key_len_in_bytes != UINT64_C(16) &&
+                    job->key_len_in_bytes != UINT64_C(32)) {
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
                         return 1;
                 }
@@ -1493,7 +1515,8 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
-                if (job->iv_len_in_bytes != UINT64_C(16)) {
+                if (job->iv_len_in_bytes != UINT64_C(16) &&
+                    job->iv_len_in_bytes != UINT64_C(25)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }

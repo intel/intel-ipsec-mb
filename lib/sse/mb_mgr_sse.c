@@ -163,6 +163,14 @@ IMB_JOB *submit_job_zuc_eea3_gfni_sse(MB_MGR_ZUC_OOO *state,
                                       IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eea3_gfni_sse(MB_MGR_ZUC_OOO *state);
 
+IMB_JOB *submit_job_zuc256_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
+                                         IMB_JOB *job);
+IMB_JOB *flush_job_zuc256_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *submit_job_zuc256_eea3_gfni_sse(MB_MGR_ZUC_OOO *state,
+                                      IMB_JOB *job);
+IMB_JOB *flush_job_zuc256_eea3_gfni_sse(MB_MGR_ZUC_OOO *state);
+
 IMB_JOB *submit_job_zuc_eia3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eia3_no_gfni_sse(MB_MGR_ZUC_OOO *state);
@@ -228,6 +236,8 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 #define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_sse
 #define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_sse
 #define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_sse
+#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_sse
+#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_sse
 
 #define AES_CBC_DEC_128       aes128_cbc_dec_ptr
 #define AES_CBC_DEC_192       aes192_cbc_dec_ptr
@@ -610,6 +620,15 @@ static IMB_JOB *
 (*flush_job_zuc_eia3_sse)
         (MB_MGR_ZUC_OOO *state) = flush_job_zuc_eia3_no_gfni_sse;
 
+static IMB_JOB *
+(*submit_job_zuc256_eea3_sse)
+        (MB_MGR_ZUC_OOO *state, IMB_JOB *job) =
+                        submit_job_zuc256_eea3_no_gfni_sse;
+
+static IMB_JOB *
+(*flush_job_zuc256_eea3_sse)
+        (MB_MGR_ZUC_OOO *state) = flush_job_zuc256_eea3_no_gfni_sse;
+
 void
 init_mb_mgr_sse(IMB_MGR *state)
 {
@@ -644,6 +663,7 @@ init_mb_mgr_sse(IMB_MGR *state)
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
 
         /* reset error status */
@@ -662,6 +682,8 @@ init_mb_mgr_sse(IMB_MGR *state)
                 flush_job_zuc_eea3_sse = flush_job_zuc_eea3_gfni_sse;
                 submit_job_zuc_eia3_sse = submit_job_zuc_eia3_gfni_sse;
                 flush_job_zuc_eia3_sse = flush_job_zuc_eia3_gfni_sse;
+                submit_job_zuc256_eea3_sse = submit_job_zuc256_eea3_gfni_sse;
+                flush_job_zuc256_eea3_sse = flush_job_zuc256_eea3_gfni_sse;
         }
 
         /* Init AES out-of-order fields */
@@ -771,6 +793,17 @@ init_mb_mgr_sse(IMB_MGR *state)
                sizeof(zuc_eia3_ooo->state));
         zuc_eia3_ooo->init_not_done = 0;
         zuc_eia3_ooo->unused_lane_bitmask = 0x0f;
+
+        memset(zuc256_eea3_ooo->lens, 0,
+               sizeof(zuc256_eea3_ooo->lens));
+        memset(zuc256_eea3_ooo->job_in_lane, 0,
+               sizeof(zuc256_eea3_ooo->job_in_lane));
+        zuc256_eea3_ooo->unused_lanes = 0xFF03020100;
+        zuc256_eea3_ooo->num_lanes_inuse = 0;
+        memset(&zuc256_eea3_ooo->state, 0,
+               sizeof(zuc256_eea3_ooo->state));
+        zuc256_eea3_ooo->init_not_done = 0;
+        zuc256_eea3_ooo->unused_lane_bitmask = 0x0f;
 
         /* Init HMAC/SHA1 out-of-order fields */
         hmac_sha_1_ooo->lens[0] = 0;

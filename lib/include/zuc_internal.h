@@ -301,6 +301,42 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
  ******************************************************************************
  * @description
  *      Definition of the external function that implements the initialization
+ *      stage of the ZUC-256 algorithm for 4 packets. The function will
+ *      initialize the state for 4 individual packets.
+ *
+ * @param[in] pKey                  Pointer to an array of 256-bit initial keys
+ *                                  that will be used when initializing the ZUC
+ *                                  state.
+ * @param[in] pIv                   Pointer to an array of 200-bit initial
+ *                                  vectors that will be used when initializing
+ *                                  the ZUC state (first 17 bytes are full
+ *                                  bytes, in last 8 bytes, only the lower
+ *                                  6 bits are used)
+ * @param[in,out] pState            Pointer to a ZUC state structure of type
+ *                                  @ref ZucState4_t that will be populated
+ *                                  with the initialized ZUC state.
+ *
+ * @pre
+ *      None
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_Zuc256Initialization_4_sse(ZucKey4_t *pKeys,
+                                                  ZucIv4_t *pIvs,
+                                                  ZucState4_t *pState);
+
+IMB_DLL_LOCAL void asm_Zuc256Initialization_4_sse_no_aesni(ZucKey4_t *pKeys,
+                                                           ZucIv4_t *pIvs,
+                                                           ZucState4_t *pState);
+
+IMB_DLL_LOCAL void asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys,
+                                                       ZucIv4_t *pIvs,
+                                                       ZucState4_t *pState);
+
+
+/**
+ ******************************************************************************
+ * @description
+ *      Definition of the external function that implements the initialization
  *      stage of the ZUC algorithm for 8 packets. The function will initialize
  *      the state for 8 individual packets.
  *
