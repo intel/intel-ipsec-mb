@@ -337,8 +337,6 @@ end_loop:
 
 	mov	p, [job_rax + _auth_tag_output]
 
-        vzeroupper
-
         ; copy 12 bytes
         mov	DWORD(tmp),  [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 0*SHA1_DIGEST_ROW_SIZE]
         mov	DWORD(tmp2), [state + _args_digest + SHA1_DIGEST_WORD_SIZE*idx + 1*SHA1_DIGEST_ROW_SIZE]
@@ -384,6 +382,8 @@ clear_ret:
 %endif
 
 return:
+        vzeroupper
+
         DBGPRINTL "---------- exit sha1 submit -----------"
         mov	rbp, [rsp + _gpr_save + 8*0]
         mov	r12, [rsp + _gpr_save + 8*1]

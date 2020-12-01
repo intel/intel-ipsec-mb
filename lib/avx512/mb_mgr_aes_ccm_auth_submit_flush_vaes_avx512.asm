@@ -620,6 +620,9 @@ endstruc
 %endif ;; SAFE_DATA
 
 %%_return:
+%ifndef SAFE_DATA
+        vzeroupper
+%endif
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]

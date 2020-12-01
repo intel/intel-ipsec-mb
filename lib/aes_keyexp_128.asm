@@ -329,6 +329,8 @@ aes_keyexp_128_avx_return:
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
         clear_scratch_xmms_avx_asm
+%else
+        vzeroupper
 %endif
         ret
 

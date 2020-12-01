@@ -315,8 +315,6 @@ end_loop:
 
         mov	p, [job_rax + _auth_tag_output]
 
-        vzeroupper
-
 %ifdef SHA224
         cmp     qword [job_rax + _auth_tag_output_len_in_bytes], 14
         jne     copy_full_digest
@@ -408,6 +406,8 @@ clear_ret:
 %endif ;; SAFE_DATA
 
 return:
+        vzeroupper
+
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

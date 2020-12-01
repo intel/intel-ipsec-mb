@@ -111,7 +111,7 @@ asm_XorKeyStream32B_avx2:
         vpxor           YKEY, YIN
 
         vmovdqu         [pOut], YKEY
-
+        vzeroupper
         ret
 
 MKGLOBAL(asm_XorKeyStream64B_avx512,function,internal)
@@ -133,7 +133,7 @@ asm_XorKeyStream64B_avx512:
         vmovdqu64       ZIN,    [pIn]
         vpxorq          ZKEY,   ZIN
         vmovdqu64       [pOut], ZKEY
-
+        vzeroupper
         ret
 
 %ifdef LINUX

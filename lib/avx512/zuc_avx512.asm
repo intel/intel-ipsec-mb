@@ -1944,8 +1944,8 @@ skip_comput:
 
         add     rsp, 32
 
+        vzeroupper
         FUNC_RESTORE
-
         ret
 
 ;;

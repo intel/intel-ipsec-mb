@@ -562,6 +562,8 @@ endstruc
         CLEAR_IV_KEYS_SCRATCH_IN_NULL_LANES tmp4, xmm0, k6
 %endif ;; SUBMIT
 
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
 %%_return:

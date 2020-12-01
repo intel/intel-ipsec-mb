@@ -448,6 +448,8 @@ endstruc
         ;; k6 contains the mask of the jobs
         CLEAR_KEYS_FINAL_BLK_IN_NULL_LANES tmp, ymm0, k6
 %endif
+%else
+        vzeroupper
 %endif
 
 %%_return:

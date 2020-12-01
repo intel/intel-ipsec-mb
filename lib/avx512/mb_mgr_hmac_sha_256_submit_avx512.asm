@@ -333,8 +333,6 @@ end_loop:
 	mov	[state + _unused_lanes_sha256], unused_lanes
 	sub	dword [state + _num_lanes_inuse_sha256], 1
 
-        vzeroupper
-
 	mov	p, [job_rax + _auth_tag_output]
 
 %ifdef SHA224
@@ -427,6 +425,8 @@ clear_ret:
 %endif ;; SAFE_DATA
 
 return:
+        vzeroupper
+
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

@@ -778,7 +778,7 @@ MKGLOBAL(asm_ZucGenKeystream32B_8_avx2,function,internal)
 asm_ZucGenKeystream32B_8_avx2:
 
     KEYGEN_8_AVX2 8
-
+    vzeroupper
     ret
 
 ;;
@@ -796,7 +796,7 @@ MKGLOBAL(asm_ZucGenKeystream8B_8_avx2,function,internal)
 asm_ZucGenKeystream8B_8_avx2:
 
     KEYGEN_8_AVX2 2
-
+    vzeroupper
     ret
 
 ;;
@@ -1149,7 +1149,7 @@ exit_final_rounds:
         FUNC_RESTORE
 
 exit_cipher32:
-
+        vzeroupper
         ret
 
 ;----------------------------------------------------------------------------------------

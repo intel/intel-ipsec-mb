@@ -251,6 +251,7 @@ len_is_0_submit_eea3:
 %endif
 
 return_submit_eea3:
+        vzeroupper
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -482,6 +483,8 @@ skip_flush_clear_state:
 %endrep
 %endif
 
+        vzeroupper
+
 return_flush_eea3:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
@@ -649,6 +652,7 @@ len_is_0_submit_eia3:
 %endif
 
 return_submit_eia3:
+        vzeroupper
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -840,6 +844,8 @@ skip_flush_clear_state_eia3:
 %assign i (i + 1)
 %endrep
 %endif
+
+        vzeroupper
 
 return_flush_eia3:
 

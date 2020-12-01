@@ -516,6 +516,7 @@ void _zuc_eea3_n_buffer(const void * const pKey[],
         CLEAR_SCRATCH_GPS();
         CLEAR_SCRATCH_SIMD_REGS();
 #endif
+        _mm256_zeroupper();
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
@@ -931,6 +932,8 @@ void _zuc_eia3_n_buffer(const void * const pKey[],
                                           pMacI[i]);
                 i++;
         }
+
+        _mm256_zeroupper();
 
 #ifdef SAFE_DATA
         /* Clear sensitive data in registers */

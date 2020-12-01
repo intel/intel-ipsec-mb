@@ -454,7 +454,9 @@ section .text
         mov     rsp, [rsp + _rsp_save]  ; original SP
 
 %ifdef SAFE_DATA
-       clear_all_zmms_asm
+        clear_all_zmms_asm
+%else
+        vzeroupper
 %endif ;; SAFE_DATA
 
 %endmacro
