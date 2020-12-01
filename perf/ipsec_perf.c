@@ -495,6 +495,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
+                .name = "zuc-eea3-256",
+                .values.job_params = {
+                        .cipher_mode = TEST_ZUC_EEA3,
+                        .aes_key_size = 32
+                }
+        },
+        {
                 .name = "snow3g-uea2",
                 .values.job_params = {
                         .cipher_mode = TEST_SNOW3G_UEA2,
@@ -1649,8 +1656,13 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.key_len_in_bytes = 24;
                 job_template.iv_len_in_bytes = 8;
         } else if (job_template.cipher_mode == IMB_CIPHER_ZUC_EEA3) {
-                job_template.key_len_in_bytes = 16;
-                job_template.iv_len_in_bytes = 16;
+                if (params->aes_key_size == 16) {
+                        job_template.key_len_in_bytes = 16;
+                        job_template.iv_len_in_bytes = 16;
+                } else {
+                        job_template.key_len_in_bytes = 32;
+                        job_template.iv_len_in_bytes = 25;
+                }
         } else if (job_template.cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI &&
                    job_template.hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                 const uint64_t ciph_adjust = /* SA + DA */
