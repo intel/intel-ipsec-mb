@@ -67,7 +67,7 @@
 #define MAX_CCM_AAD_SIZE 46
 #define MAX_AAD_SIZE 1024
 
-#define MAX_IV_SIZE 16
+#define MAX_IV_SIZE 25 /* IV size for ZUC-256 */
 
 #define MAX_NUM_JOBS 32
 #define IMIX_ITER 1000
@@ -287,6 +287,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ZUC_EEA3,
                         .key_size = 16
+                }
+        },
+        {
+                .name = "zuc-eea3-256",
+                .values.job_params = {
+                        .cipher_mode = IMB_CIPHER_ZUC_EEA3,
+                        .key_size = 32
                 }
         },
         {
@@ -594,7 +601,7 @@ const uint8_t key_sizes[][3] = {
                 {16, 16, 1}, /* IMB_CIPHER_PON_AES_CNTR */
                 {16, 32, 8}, /* IMB_CIPHER_ECB */
                 {16, 32, 8}, /* IMB_CIPHER_CNTR_BITLEN */
-                {16, 16, 1}, /* IMB_CIPHER_ZUC_EEA3 */
+                {16, 32, 16}, /* IMB_CIPHER_ZUC_EEA3 */
                 {16, 16, 1}, /* IMB_CIPHER_SNOW3G_UEA2 */
                 {16, 16, 1}, /* IMB_CIPHER_KASUMI_UEA1_BITLEN */
                 {16, 16, 1}, /* IMB_CIPHER_CBCS_1_9 */
@@ -1191,11 +1198,11 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         memset(enc_keys, pattern_cipher_key,
                                sizeof(keys->enc_keys));
                         break;
-                case IMB_CIPHER_ZUC_EEA3:
                 case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                 case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                         memset(k2, pattern_cipher_key, 16);
                         break;
+                case IMB_CIPHER_ZUC_EEA3:
                 case IMB_CIPHER_CHACHA20:
                 case IMB_CIPHER_CHACHA20_POLY1305:
                         memset(k2, pattern_cipher_key, 32);
@@ -1404,11 +1411,11 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_CIPHER_DOCSIS_DES:
                 des_key_schedule((uint64_t *) enc_keys, ciph_key);
                 break;
-        case IMB_CIPHER_ZUC_EEA3:
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
         case IMB_CIPHER_KASUMI_UEA1_BITLEN:
                 memcpy(k2, ciph_key, 16);
                 break;
+        case IMB_CIPHER_ZUC_EEA3:
         case IMB_CIPHER_CHACHA20:
         case IMB_CIPHER_CHACHA20_POLY1305:
                 /* Use of:
