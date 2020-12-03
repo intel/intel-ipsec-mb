@@ -609,10 +609,10 @@ ifeq ($(SHARED),y)
 else
 	$(AR) -qcs $@ $^
 endif
-ifneq ($(SAFE_PARAM), y)
+ifeq ($(SAFE_PARAM), n)
 	@echo "NOTE:" $(SAFE_PARAM_MSG1) $(SAFE_PARAM_MSG2)
 endif
-ifneq ($(SAFE_DATA), y)
+ifeq ($(SAFE_DATA), n)
 	@echo "NOTE:" $(SAFE_DATA_MSG1) $(SAFE_DATA_MSG2)
 endif
 ifeq ($(SAFE_LOOKUP), n)
@@ -759,15 +759,15 @@ help:
 	@echo "          - this option can be used to change build directory"
 	@echo "LIB_DIR=. (default)"
 	@echo "          - this option can be used to change the library directory"
-	@echo "SAFE_DATA=n (default)"
+	@echo "SAFE_DATA=n"
 	@echo "          - Sensitive data not cleared from registers and memory"
 	@echo "            at operation end"
-	@echo "SAFE_DATA=y"
+	@echo "SAFE_DATA=y (default)"
 	@echo "          - Sensitive data cleared from registers and memory"
 	@echo "            at operation end"
-	@echo "SAFE_PARAM=n (default)"
+	@echo "SAFE_PARAM=n"
 	@echo "          - API input parameters not checked"
-	@echo "SAFE_PARAM=y"
+	@echo "SAFE_PARAM=y (default)"
 	@echo "          - API input parameters checked"
 	@echo "SAFE_LOOKUP=n"
 	@echo "          - Lookups depending on sensitive data might not be constant time"

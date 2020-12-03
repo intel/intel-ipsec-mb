@@ -488,10 +488,10 @@ $(LIB_DIR)\$(LIBNAME): $(all_objs)
 !else
 	$(LIB_TOOL) $(LIBFLAGS) /out:$@ $(all_objs)
 !endif
-!if "$(SAFE_PARAM)" != "y"
+!if "$(SAFE_PARAM)" == "n"
 	@echo NOTE:  $(SAFE_PARAM_MSG1) $(SAFE_PARAM_MSG2)
 !endif
-!if "$(SAFE_DATA)" != "y"
+!if "$(SAFE_DATA)" == "n"
 	@echo NOTE:  $(SAFE_DATA_MSG1) $(SAFE_DATA_MSG2)
 !endif
 
@@ -569,15 +569,15 @@ help:
 	@echo "          - this option can be used to change build directory"
 	@echo "LIB_DIR=. (default)"
 	@echo "          - this option can be used to change the library directory"
-	@echo "SAFE_DATA=n (default)"
+	@echo "SAFE_DATA=n"
 	@echo "          - Sensitive data not cleared from registers and memory"
 	@echo "            at operation end"
-	@echo "SAFE_DATA=y"
+	@echo "SAFE_DATA=y (default)"
 	@echo "          - Sensitive data cleared from registers and memory"
 	@echo "            at operation end"
-	@echo "SAFE_PARAM=n (default)"
+	@echo "SAFE_PARAM=n"
 	@echo "          - API input parameters not checked"
-	@echo "SAFE_PARAM=y"
+	@echo "SAFE_PARAM=y (default)"
 	@echo "          - API input parameters checked"
 	@echo "SAFE_LOOKUP=n"
 	@echo "          - Lookups depending on sensitive data might not be constant time"
