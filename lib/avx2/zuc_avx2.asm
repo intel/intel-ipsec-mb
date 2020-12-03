@@ -42,6 +42,13 @@ Ek_d:
 dd	0x0044D700, 0x0026BC00, 0x00626B00, 0x00135E00, 0x00578900, 0x0035E200, 0x00713500, 0x0009AF00
 dd	0x004D7800, 0x002F1300, 0x006BC400, 0x001AF100, 0x005E2600, 0x003C4D00, 0x00789A00, 0x0047AC00
 
+align 16
+EK256_d64:
+dd      0x00220000, 0x002F0000, 0x00240000, 0x002A0000,
+dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
 align 32
 shuf_mask_key:
 dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF, 0x04FFFFFF, 0x05FFFFFF, 0x06FFFFFF, 0x07FFFFFF,
@@ -51,6 +58,18 @@ align 32
 shuf_mask_iv:
 dd      0xFFFFFF00, 0xFFFFFF01, 0xFFFFFF02, 0xFFFFFF03, 0xFFFFFF04, 0xFFFFFF05, 0xFFFFFF06, 0xFFFFFF07,
 dd      0xFFFFFF08, 0xFFFFFF09, 0xFFFFFF0A, 0xFFFFFF0B, 0xFFFFFF0C, 0xFFFFFF0D, 0xFFFFFF0E, 0xFFFFFF0F,
+
+align 16
+shuf_mask_iv_17_19:
+db      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0x02, 0xFF
+
+align 16
+clear_iv_mask:
+db      0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00
+
+align 16
+shuf_mask_iv_20_23:
+db      0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0x02, 0xFF, 0xFF, 0xFF, 0x03, 0xFF
 
 align 32
 mask31:
@@ -547,7 +566,7 @@ align 64
 %endmacro
 
 ;
-; Initialize LFSR registers for a single lane
+; Initialize LFSR registers for a single lane, for ZUC-128
 ;
 ; This macro initializes 8 LFSR registers at time.
 ; so it needs to be called twice.
@@ -558,7 +577,7 @@ align 64
 ; Where k_i is each byte of the key, d_i is a 15-bit constant
 ; and iv_i is each byte of the IV.
 ;
-%macro INIT_LFSR 7
+%macro INIT_LFSR_128 7
 %define %%KEY       %1 ;; [in] Key pointer
 %define %%IV        %2 ;; [in] IV pointer
 %define %%SHUF_KEY  %3 ;; [in] Shuffle key mask
@@ -577,9 +596,144 @@ align 64
 
 %endmacro
 
+;
+; Initialize LFSR registers for a single lane, for ZUC-256
+;
+%macro INIT_LFSR_256 7
+%define %%KEY       %1 ;; [in] Key pointer
+%define %%IV        %2 ;; [in] IV pointer
+%define %%LFSR0_7   %3 ;; [out] YMM register to contain initialized LFSR regs 0-7
+%define %%LFSR8_15  %4 ;; [out] YMM register to contain initialized LFSR regs 8-15
+%define %%XTMP      %5 ;; [clobbered] XMM temporary register
+%define %%XTMP2     %6 ;; [clobbered] XMM temporary register
+%define %%TMP       %7 ;; [clobbered] GP temporary register
 
-MKGLOBAL(asm_ZucInitialization_8_avx2,function,internal)
-asm_ZucInitialization_8_avx2:
+    ; s0 - s7
+    vpxor          %%LFSR0_7, %%LFSR0_7
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY], 3      ; s0
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 1], 7  ; s1
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 2], 11 ; s2
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 3], 15 ; s3
+
+    vpsrld         XWORD(%%LFSR0_7), 1
+
+    vpor           XWORD(%%LFSR0_7), [rel EK256_d64] ; s0 - s3
+
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 21], 1 ; s0
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 16], 0 ; s0
+
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 22], 5 ; s1
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 17], 4 ; s1
+
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 23], 9 ; s2
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 18], 8 ; s2
+
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 24], 13 ; s3
+    vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 19], 12 ; s3
+
+    vpxor          %%XTMP, %%XTMP
+    vpinsrb        %%XTMP, [%%KEY + 4], 3   ; s4
+    vpinsrb        %%XTMP, [%%IV], 7        ; s5
+    vpinsrb        %%XTMP, [%%IV + 1], 11   ; s6
+    vpinsrb        %%XTMP, [%%IV + 10], 15  ; s7
+
+    vpsrld         %%XTMP, 1
+
+    vpinsrb        %%XTMP, [%%KEY + 25], 1 ; s4
+    vpinsrb        %%XTMP, [%%KEY + 20], 0 ; s4
+
+    vpinsrb        %%XTMP, [%%KEY + 5], 5 ; s5
+    vpinsrb        %%XTMP, [%%KEY + 26], 4 ; s5
+
+    vpinsrb        %%XTMP, [%%KEY + 6], 9 ; s6
+    vpinsrb        %%XTMP, [%%KEY + 27], 8 ; s6
+
+    vpinsrb        %%XTMP, [%%KEY + 7], 13 ; s7
+    vpinsrb        %%XTMP, [%%IV + 2], 12 ; s7
+
+    vpor           %%XTMP, [rel EK256_d64 + 16] ; s4 - s7
+
+    vmovd          %%XTMP2, [%%IV + 17]
+    vpshufb        %%XTMP2, [rel shuf_mask_iv_17_19]
+    vpand          %%XTMP2, [rel clear_iv_mask]
+
+    vpor           %%XTMP, %%XTMP2
+
+    vinserti128    %%LFSR0_7, %%XTMP, 1
+
+    ; s8 - s15
+    vpxor          %%LFSR8_15, %%LFSR8_15
+    vpinsrb        XWORD(%%LFSR8_15), [%%KEY + 8], 3   ; s8
+    vpinsrb        XWORD(%%LFSR8_15), [%%KEY + 9], 7   ; s9
+    vpinsrb        XWORD(%%LFSR8_15), [%%IV + 5], 11   ; s10
+    vpinsrb        XWORD(%%LFSR8_15), [%%KEY + 11], 15 ; s11
+
+    vpsrld         XWORD(%%LFSR8_15), 1
+
+    vpinsrb        XWORD(%%LFSR8_15), [%%IV + 3], 1 ; s8
+    vpinsrb        XWORD(%%LFSR8_15), [%%IV + 11], 0 ; s8
+
+    vpinsrb        XWORD(%%LFSR8_15), [%%IV + 12], 5 ; s9
+    vpinsrb        XWORD(%%LFSR8_15), [%%IV + 4], 4 ; s9
+
+    vpinsrb        XWORD(%%LFSR8_15), [%%KEY + 10], 9 ; s10
+    vpinsrb        XWORD(%%LFSR8_15), [%%KEY + 28], 8 ; s10
+
+    vpinsrb        XWORD(%%LFSR8_15), [%%IV + 6], 13 ; s11
+    vpinsrb        XWORD(%%LFSR8_15), [%%IV + 13], 12 ; s11
+
+    vpor           XWORD(%%LFSR8_15), [rel EK256_d64 + 32] ; s8 - s11
+
+    vmovd          %%XTMP, [%%IV + 20]
+    vpshufb        %%XTMP, [rel shuf_mask_iv_20_23]
+    vpand          %%XTMP, [rel clear_iv_mask]
+
+    vpor           XWORD(%%LFSR8_15), %%XTMP
+
+    vpxor          %%XTMP, %%XTMP
+    vpinsrb        %%XTMP, [%%KEY + 12], 3   ; s12
+    vpinsrb        %%XTMP, [%%KEY + 13], 7   ; s13
+    vpinsrb        %%XTMP, [%%KEY + 14], 11  ; s14
+    vpinsrb        %%XTMP, [%%KEY + 15], 15  ; s15
+
+    vpsrld         %%XTMP, 1
+
+    vpinsrb        %%XTMP, [%%IV + 7], 1 ; s12
+    vpinsrb        %%XTMP, [%%IV + 14], 0 ; s12
+
+    vpinsrb        %%XTMP, [%%IV + 15], 5 ; s13
+    vpinsrb        %%XTMP, [%%IV + 8], 4 ; s13
+
+    vpinsrb        %%XTMP, [%%IV + 16], 9 ; s14
+    vpinsrb        %%XTMP, [%%IV + 9], 8 ; s14
+
+    vpinsrb        %%XTMP, [%%KEY + 30], 13 ; s15
+    vpinsrb        %%XTMP, [%%KEY + 29], 12 ; s15
+
+    vpor           %%XTMP, [rel EK256_d64 + 48] ; s12 - s15
+
+    movzx          DWORD(%%TMP), byte [%%IV + 24]
+    and            DWORD(%%TMP), 0x0000003f
+    shl            DWORD(%%TMP), 16
+    vmovd          %%XTMP2, DWORD(%%TMP)
+
+    movzx          DWORD(%%TMP), byte [%%KEY + 31]
+    shl            DWORD(%%TMP), 12
+    and            DWORD(%%TMP), 0x000f0000 ; high nibble of K_31
+    vpinsrd        %%XTMP2, DWORD(%%TMP), 2
+
+    movzx          DWORD(%%TMP), byte [%%KEY + 31]
+    shl            DWORD(%%TMP), 16
+    and            DWORD(%%TMP), 0x000f0000 ; low nibble of K_31
+    vpinsrd        %%XTMP2, DWORD(%%TMP), 3
+
+    vpor           %%XTMP, %%XTMP2
+    vinserti128    %%LFSR8_15, %%XTMP, 1
+%endmacro
+
+
+%macro ZUC_INIT_8 1
+%define %%KEY_SIZE %1 ; [constant] Key size (128 or 256)
 
 %ifdef LINUX
 	%define		pKe	rdi
@@ -604,6 +758,7 @@ asm_ZucInitialization_8_avx2:
     ;;; Initialize all LFSR registers in two steps:
     ;;; first, registers 0-7, then registers 8-15
 
+%if %%KEY_SIZE == 128
 %assign off 0
 %rep 2
     ; Set read-only registers for shuffle masks for key, IV and Ek_d for 8 registers
@@ -616,7 +771,7 @@ asm_ZucInitialization_8_avx2:
 %rep 8
     mov     r9, [pKe+8*idx]  ; Load Key N pointer
     mov     r10, [pIv+8*idx] ; Load IV N pointer
-    INIT_LFSR r9, r10, ymm13, ymm14, ymm15, APPEND(ymm, idx), ymm12
+    INIT_LFSR_128 r9, r10, ymm13, ymm14, ymm15, APPEND(ymm, idx), ymm12
 %assign idx (idx + 1)
 %endrep
 
@@ -632,6 +787,48 @@ asm_ZucInitialization_8_avx2:
 
 %assign off (off + 32)
 %endrep
+%else ;; %%KEY_SIZE == 256
+
+    ;;; Initialize all LFSR registers
+%assign off 0
+%rep 8
+    ;; Load key and IV for each packet
+    mov     r9,  [pKe + off]
+    mov     r10, [pIv + off]
+
+    ; Initialize S0-15 for each packet
+    INIT_LFSR_256 r9, r10, ymm0, ymm1, xmm2, xmm3, r11
+
+%assign i 0
+%rep 2
+    vmovdqa [pState + 256*i + 4*off], APPEND(ymm, i)
+%assign i (i+1)
+%endrep
+
+%assign off (off + 8)
+%endrep
+
+    ; Read, transpose and store, so all S_X from the 8 packets are in the same register
+%assign off 0
+%rep 2
+
+%assign i 0
+%rep 8
+    vmovdqa APPEND(ymm, i), [pState + 32*i + off]
+%assign i (i+1)
+%endrep
+
+    TRANSPOSE8_U32 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9
+
+%assign i 0
+%rep 8
+    vmovdqa [pState + 32*i + off], APPEND(ymm, i)
+%assign i (i+1)
+%endrep
+
+%assign off (off + 256)
+%endrep
+%endif ;; %%KEY_SIZE == 256
 
     ; Load read-only registers
     vmovdqa  ymm12, [rel mask31]
@@ -658,6 +855,15 @@ asm_ZucInitialization_8_avx2:
     FUNC_RESTORE
 
     ret
+%endmacro
+
+MKGLOBAL(asm_ZucInitialization_8_avx2,function,internal)
+asm_ZucInitialization_8_avx2:
+        ZUC_INIT_8 128
+
+MKGLOBAL(asm_Zuc256Initialization_8_avx2,function,internal)
+asm_Zuc256Initialization_8_avx2:
+        ZUC_INIT_8 256
 
 ;
 ; Generate N*4 bytes of keystream

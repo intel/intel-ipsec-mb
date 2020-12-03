@@ -366,6 +366,33 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
  ******************************************************************************
  * @description
  *      Definition of the external function that implements the initialization
+ *      stage of the ZUC-256 algorithm for 8 packets. The function will
+ *      initialize the state for 8 individual packets.
+ *
+ * @param[in] pKey                  Pointer to an array of 256-bit initial keys
+ *                                  that will be used when initializing the ZUC
+ *                                  state.
+ * @param[in] pIv                   Pointer to an array of 200-bit initial
+ *                                  vectors that will be used when initializing
+ *                                  the ZUC state (first 17 bytes are full
+ *                                  bytes, in last 8 bytes, only the lower
+ *                                  6 bits are used)
+ * @param[in,out] pState            Pointer to a ZUC state structure of type
+ *                                  @ref ZucState8_t that will be populated
+ *                                  with the initialized ZUC state.
+ *
+ * @pre
+ *      None
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys,
+                                                   ZucIv8_t *pIvs,
+                                                   ZucState8_t *pState);
+
+/**
+ ******************************************************************************
+ * @description
+ *      Definition of the external function that implements the initialization
  *      stage of the ZUC algorithm for 16 packets. The function will initialize
  *      the state for 16 individual packets.
  *

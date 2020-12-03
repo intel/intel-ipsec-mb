@@ -71,6 +71,11 @@ IMB_JOB *submit_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eea3_avx2(MB_MGR_ZUC_OOO *state);
 
+IMB_JOB *flush_job_zuc256_eea3_avx2(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *submit_job_zuc256_eea3_avx2(MB_MGR_ZUC_OOO *state,
+                                     IMB_JOB *job);
+
 IMB_JOB *submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
@@ -85,11 +90,6 @@ IMB_JOB *submit_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state,
 IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 
 IMB_JOB *submit_job_chacha20_enc_dec_avx2(IMB_JOB *job);
-
-IMB_JOB *flush_job_zuc256_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc256_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
-                                            IMB_JOB *job);
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
@@ -120,8 +120,8 @@ IMB_JOB *submit_job_zuc256_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
 #define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx2
 #define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx2
 #define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx2
-#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_no_gfni_sse
-#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_no_gfni_sse
+#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_avx2
+#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_avx2
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx
@@ -555,12 +555,12 @@ init_mb_mgr_avx2(IMB_MGR *state)
                sizeof(zuc256_eea3_ooo->lens));
         memset(zuc256_eea3_ooo->job_in_lane, 0,
                sizeof(zuc256_eea3_ooo->job_in_lane));
-        zuc256_eea3_ooo->unused_lanes = 0xFF03020100;
+        zuc256_eea3_ooo->unused_lanes = 0xF76543210;
         zuc256_eea3_ooo->num_lanes_inuse = 0;
         memset(&zuc256_eea3_ooo->state, 0,
                sizeof(zuc256_eea3_ooo->state));
         zuc256_eea3_ooo->init_not_done = 0;
-        zuc256_eea3_ooo->unused_lane_bitmask = 0x0f;
+        zuc256_eea3_ooo->unused_lane_bitmask = 0xff;
 
 
         /* Init HMAC/SHA1 out-of-order fields */

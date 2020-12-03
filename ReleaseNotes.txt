@@ -7,7 +7,7 @@ Unreleased
 General
 
 Library
-- ZUC-EEA3-256 support for SSE and AVX
+- ZUC-EEA3-256 support for SSE, AVX and AVX2
 
 Test Applications
 - ZUC-EEA3-256 tests added to test and xvalidation app
