@@ -24,11 +24,14 @@
 ;; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
-%define SUBMIT_JOB_ZUC_EEA3 submit_job_zuc_eea3_gfni_avx512
-%define FLUSH_JOB_ZUC_EEA3 flush_job_zuc_eea3_gfni_avx512
+%define SUBMIT_JOB_ZUC128_EEA3 submit_job_zuc_eea3_gfni_avx512
+%define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_gfni_avx512
+%define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_gfni_avx512
+%define FLUSH_JOB_ZUC256_EEA3 flush_job_zuc256_eea3_gfni_avx512
 %define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_gfni_avx512
 %define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_gfni_avx512
 %define ZUC_EIA3_16_BUFFER zuc_eia3_16_buffer_job_gfni_avx512
-%define ZUC_INIT_16        asm_ZucInitialization_16_gfni_avx512
+%define ZUC128_INIT_16        asm_ZucInitialization_16_gfni_avx512
 %define ZUC_CIPHER         asm_ZucCipher_16_gfni_avx512
+%define ZUC256_INIT_16     asm_Zuc256Initialization_16_gfni_avx512
 %include "avx512/mb_mgr_zuc_submit_flush_avx512.asm"

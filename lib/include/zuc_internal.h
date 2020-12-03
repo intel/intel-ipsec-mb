@@ -422,6 +422,39 @@ IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
 
 /**
  ******************************************************************************
+ * @description
+ *      Definition of the external function that implements the initialization
+ *      stage of the ZUC-256 algorithm for 16 packets. The function will
+ *      initialize the state for 16 individual packets.
+ *
+ * @param[in] pKey                  Pointer to an array of 256-bit initial keys
+ *                                  that will be used when initializing the ZUC
+ *                                  state.
+ * @param[in] pIv                   Pointer to an array of 200-bit initial
+ *                                  vectors that will be used when initializing
+ *                                  the ZUC state (first 17 bytes are full
+ *                                  bytes, in last 8 bytes, only the lower
+ *                                  6 bits are used)
+ * @param[in,out] pState            Pointer to a ZUC state structure of type
+ *                                  @ref ZucState16_t that will be populated
+ *                                  with the initialized ZUC state.
+ *
+ * @pre
+ *      None
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys,
+                                                   ZucIv16_t *pIvs,
+                                                   ZucState16_t *pState,
+                                                   const uint16_t lane_mask);
+
+IMB_DLL_LOCAL void asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys,
+                                                      ZucIv16_t *pIvs,
+                                                      ZucState16_t *pState,
+                                                      const uint16_t lane_mask);
+
+/**
+ ******************************************************************************
  *
  * @description
  *      Definition of the external function that implements the working
