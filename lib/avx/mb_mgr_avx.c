@@ -70,6 +70,11 @@ IMB_JOB *submit_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eea3_avx(MB_MGR_ZUC_OOO *state);
 
+IMB_JOB *flush_job_zuc256_eea3_avx(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *submit_job_zuc256_eea3_avx(MB_MGR_ZUC_OOO *state,
+                                    IMB_JOB *job);
+
 IMB_JOB *submit_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eia3_avx(MB_MGR_ZUC_OOO *state);
@@ -83,10 +88,6 @@ IMB_JOB *flush_job_aes128_cbcs_1_9_enc_avx(MB_MGR_AES_OOO *state);
 
 IMB_JOB *submit_job_chacha20_enc_dec_avx(IMB_JOB *job);
 
-IMB_JOB *flush_job_zuc256_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state);
-
-IMB_JOB *submit_job_zuc256_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
-                                            IMB_JOB *job);
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
@@ -113,8 +114,8 @@ IMB_JOB *submit_job_zuc256_eea3_no_gfni_sse(MB_MGR_ZUC_OOO *state,
 #define FLUSH_JOB_ZUC_EEA3    flush_job_zuc_eea3_avx
 #define SUBMIT_JOB_ZUC_EIA3   submit_job_zuc_eia3_avx
 #define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx
-#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_no_gfni_sse
-#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_no_gfni_sse
+#define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_avx
+#define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_avx
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx
