@@ -1782,7 +1782,7 @@ resume_dec:
 
         ; If less than or equal to 64*8 bytes, prepare directly states for up to 8 blocks
         cmp     len, 64*8
-        jbe     exit_loop
+        jbe     exit_loop_dec
 
         ; Prepare first 16 chacha20 states from IV, key, constants and counter values
         vpbroadcastd zmm0, [rel constants]
