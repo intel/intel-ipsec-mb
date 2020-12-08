@@ -38,6 +38,32 @@
 #include "include/chacha20_poly1305.h"
 
 __forceinline
+void memcpy_asm(void *dst, const void *src, const size_t size,
+                const IMB_ARCH arch)
+{
+        if (arch == IMB_ARCH_SSE)
+                memcpy_fn_sse_16(dst, src, size);
+        else
+                memcpy_fn_avx_16(dst, src, size);
+}
+
+__forceinline
+void submit_job_chacha20_enc_dec_ks(IMB_JOB *job, uint8_t *last_ks,
+                                    uint64_t *remain_ks_bytes,
+                                    uint64_t *last_block_count,
+                                    const IMB_ARCH arch)
+{
+        if (arch == IMB_ARCH_SSE)
+                submit_job_chacha20_enc_dec_ks_sse(job, last_ks,
+                                                   remain_ks_bytes,
+                                                   last_block_count);
+        else
+                submit_job_chacha20_enc_dec_ks_avx(job, last_ks,
+                                                   remain_ks_bytes,
+                                                   last_block_count);
+}
+
+__forceinline
 void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
 {
         struct chacha20_poly1305_context_data *ctx =
@@ -47,8 +73,6 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         const uint64_t remain_ct_bytes =
                         (job->msg_len_to_hash_in_bytes & HASH_REMAIN_CLAMP);
         const uint8_t *remain_ct_ptr;
-
-        (void) arch; /* TODO: use arch */
 
         ctx->hash[0] = 0;
         ctx->hash[1] = 0;
@@ -60,7 +84,10 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         ctx->remain_ct_bytes = remain_ct_bytes;
 
         /* Generate Poly key */
-        poly1305_key_gen_sse(job, ctx->poly_key);
+        if (arch == IMB_ARCH_SSE)
+                poly1305_key_gen_sse(job, ctx->poly_key);
+        else
+                poly1305_key_gen_avx(job, ctx->poly_key);
 
         /* Calculate hash over AAD */
         poly1305_aead_update(job->u.CHACHA20_POLY1305.aad,
@@ -68,9 +95,9 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                              ctx->hash, ctx->poly_key);
 
         if (job->cipher_direction == IMB_DIR_ENCRYPT) {
-                submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
-                                                   &ctx->remain_ks_bytes,
-                                                   &ctx->last_block_count);
+                submit_job_chacha20_enc_dec_ks(job, ctx->last_ks,
+                                               &ctx->remain_ks_bytes,
+                                               &ctx->last_block_count, arch);
 
                 /*
                  * Compute hash after cipher on encrypt
@@ -80,8 +107,8 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                                      ctx->poly_key);
                 remain_ct_ptr = job->dst + hash_len;
                 /* Copy last bytes of ciphertext (less than 16 bytes) */
-                memcpy_fn_sse_16(ctx->poly_scratch, remain_ct_ptr,
-                                 remain_ct_bytes);
+                memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
+                           arch);
         } else {
                 /*
                  * Compute hash first on decrypt
@@ -94,11 +121,11 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                 remain_ct_ptr = job->src + job->hash_start_src_offset_in_bytes
                                 + hash_len;
                 /* Copy last bytes of ciphertext (less than 16 bytes) */
-                memcpy_fn_sse_16(ctx->poly_scratch, remain_ct_ptr,
-                                 remain_ct_bytes);
-                submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
-                                                   &ctx->remain_ks_bytes,
-                                                   &ctx->last_block_count);
+                memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
+                           arch);
+                submit_job_chacha20_enc_dec_ks(job, ctx->last_ks,
+                                               &ctx->remain_ks_bytes,
+                                               &ctx->last_block_count, arch);
         }
 }
 
@@ -121,20 +148,17 @@ void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                         bytes_to_copy = remain_bytes_to_fill;
         }
 
-        (void) arch; /* TODO: use arch */
-
         /* Increment total hash length */
         ctx->hash_len += job->msg_len_to_hash_in_bytes;
 
         if (job->cipher_direction == IMB_DIR_ENCRYPT) {
-                submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
-                                                   &ctx->remain_ks_bytes,
-                                                   &ctx->last_block_count);
+                submit_job_chacha20_enc_dec_ks(job, ctx->last_ks,
+                                               &ctx->remain_ks_bytes,
+                                               &ctx->last_block_count, arch);
 
                 /* Copy more bytes on Poly scratchpad */
-                memcpy_fn_sse_16(ctx->poly_scratch + ctx->remain_ct_bytes,
-                       job->dst,
-                       bytes_to_copy);
+                memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
+                           job->dst, bytes_to_copy, arch);
                 ctx->remain_ct_bytes += bytes_to_copy;
 
                 /*
@@ -157,14 +181,14 @@ void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
 
                 remain_ct_ptr = job->dst + bytes_to_copy + hash_len;
                 /* copy last bytes of ciphertext (less than 16 bytes) */
-                memcpy_fn_sse_16(ctx->poly_scratch, remain_ct_ptr,
-                                 remain_ct_bytes);
+                memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
+                           arch);
                 ctx->remain_ct_bytes += remain_ct_bytes;
         } else {
                 /* Copy more bytes on Poly scratchpad */
-                memcpy_fn_sse_16(ctx->poly_scratch + ctx->remain_ct_bytes,
-                                 job->src + job->hash_start_src_offset_in_bytes,
-                                 bytes_to_copy);
+                memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
+                           job->src + job->hash_start_src_offset_in_bytes,
+                           bytes_to_copy, arch);
                 ctx->remain_ct_bytes += bytes_to_copy;
 
                 /*
@@ -189,12 +213,12 @@ void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                 remain_ct_ptr = job->src + job->hash_start_src_offset_in_bytes
                                 + bytes_to_copy + hash_len;
                 /* copy last bytes of ciphertext (less than 16 bytes) */
-                memcpy_fn_sse_16(ctx->poly_scratch, remain_ct_ptr,
-                                 remain_ct_bytes);
+                memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
+                           arch);
                 ctx->remain_ct_bytes += remain_ct_bytes;
-                submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
-                                                   &ctx->remain_ks_bytes,
-                                                   &ctx->last_block_count);
+                submit_job_chacha20_enc_dec_ks(job, ctx->last_ks,
+                                               &ctx->remain_ks_bytes,
+                                               &ctx->last_block_count, arch);
         }
 }
 
@@ -208,8 +232,6 @@ void complete_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         uint64_t bytes_to_copy = 0;
         uint64_t remain_bytes_to_fill = (16 - ctx->remain_ct_bytes);
 
-        (void) arch; /* TODO: use arch */
-
         /* Need to copy more bytes into scratchpad */
         if ((ctx->remain_ct_bytes > 0) && (remain_bytes_to_fill > 0)) {
                 if (hash_len < remain_bytes_to_fill)
@@ -222,14 +244,13 @@ void complete_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         ctx->hash_len += job->msg_len_to_hash_in_bytes;
 
         if (job->cipher_direction == IMB_DIR_ENCRYPT) {
-                submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
+                submit_job_chacha20_enc_dec_ks(job, ctx->last_ks,
                                            &ctx->remain_ks_bytes,
-                                           &ctx->last_block_count);
+                                           &ctx->last_block_count, arch);
 
                 /* Copy more bytes on Poly scratchpad */
-                memcpy_fn_sse_16(ctx->poly_scratch + ctx->remain_ct_bytes,
-                                 job->dst,
-                                 bytes_to_copy);
+                memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
+                           job->dst, bytes_to_copy, arch);
                 ctx->remain_ct_bytes += bytes_to_copy;
 
                 /*
@@ -252,9 +273,9 @@ void complete_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                                              ctx->poly_key);
         } else {
                 /* Copy more bytes on Poly scratchpad */
-                memcpy_fn_sse_16(ctx->poly_scratch + ctx->remain_ct_bytes,
-                                 job->src + job->hash_start_src_offset_in_bytes,
-                                 bytes_to_copy);
+                memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
+                           job->src + job->hash_start_src_offset_in_bytes,
+                           bytes_to_copy, arch);
                 ctx->remain_ct_bytes += bytes_to_copy;
 
                 /*
@@ -278,9 +299,9 @@ void complete_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                                 bytes_to_copy,
                                 hash_len, ctx->hash, ctx->poly_key);
 
-                submit_job_chacha20_enc_dec_ks_sse(job, ctx->last_ks,
+                submit_job_chacha20_enc_dec_ks(job, ctx->last_ks,
                                            &ctx->remain_ks_bytes,
-                                           &ctx->last_block_count);
+                                           &ctx->last_block_count, arch);
         }
 
         /*

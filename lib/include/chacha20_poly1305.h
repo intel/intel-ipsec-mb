@@ -47,6 +47,9 @@ IMB_JOB *submit_job_chacha20_enc_dec_ks_sse(IMB_JOB *, uint8_t *last_ks,
                                             uint64_t *remain_ks_bytes,
                                             uint64_t *last_block_count);
 IMB_JOB *submit_job_chacha20_enc_dec_avx(IMB_JOB *);
+IMB_JOB *submit_job_chacha20_enc_dec_ks_avx(IMB_JOB *, uint8_t *last_ks,
+                                            uint64_t *remain_ks_bytes,
+                                            uint64_t *last_block_count);
 IMB_JOB *submit_job_chacha20_enc_dec_avx2(IMB_JOB *);
 IMB_JOB *submit_job_chacha20_enc_dec_avx512(IMB_JOB *);
 IMB_JOB *submit_job_chacha20_poly_enc_avx512(IMB_JOB *, void *poly_key);
