@@ -516,6 +516,7 @@ init_mb_mgr_avx(IMB_MGR *state)
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
 
         /* reset error status */
         imb_set_errno(state, 0);
@@ -628,6 +629,17 @@ init_mb_mgr_avx(IMB_MGR *state)
                sizeof(zuc256_eea3_ooo->state));
         zuc256_eea3_ooo->init_not_done = 0;
         zuc256_eea3_ooo->unused_lane_bitmask = 0x0f;
+
+        memset(zuc256_eia3_ooo->lens, 0xFF,
+               sizeof(zuc256_eia3_ooo->lens));
+        memset(zuc256_eia3_ooo->job_in_lane, 0,
+               sizeof(zuc256_eia3_ooo->job_in_lane));
+        zuc256_eia3_ooo->unused_lanes = 0xFF03020100;
+        zuc256_eia3_ooo->num_lanes_inuse = 0;
+        memset(&zuc256_eia3_ooo->state, 0,
+               sizeof(zuc256_eia3_ooo->state));
+        zuc256_eia3_ooo->init_not_done = 0;
+        zuc256_eia3_ooo->unused_lane_bitmask = 0x0f;
 
         /* Init HMAC/SHA1 out-of-order fields */
         hmac_sha_1_ooo->lens[0] = 0;

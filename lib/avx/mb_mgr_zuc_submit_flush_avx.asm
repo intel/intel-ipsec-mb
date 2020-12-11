@@ -777,12 +777,6 @@ FLUSH_JOB_ZUC256_EEA3:
         jmp     %%return_submit_eia3
 %endmacro
 
-
-; JOB* FLUSH_JOB_ZUC_EIA3(MB_MGR_ZUC_OOO *state)
-; arg 1 : state
-MKGLOBAL(FLUSH_JOB_ZUC_EIA3,function,internal)
-FLUSH_JOB_ZUC_EIA3:
-
 %macro FLUSH_JOB_ZUC_EIA3 1
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 

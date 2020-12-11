@@ -758,6 +758,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
 
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
@@ -843,7 +844,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                return SUBMIT_JOB_ZUC256_EIA3(zuc_eia3_ooo, job);
+                return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
                                job->u.SNOW3G_UIA2._key,
@@ -897,6 +898,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
 
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
@@ -943,7 +945,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                return FLUSH_JOB_ZUC256_EIA3(zuc_eia3_ooo);
+                return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo);
         default: /* assume GCM or IMB_AUTH_NULL */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
                         job->status |= STS_COMPLETED_HMAC;

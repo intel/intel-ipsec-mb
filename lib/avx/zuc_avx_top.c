@@ -866,6 +866,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 ivs.pIvs[i] = pIv[i];
         }
 
+        /* TODO: Handle 8 and 16-byte digest cases */
         asm_Zuc256Initialization_4_avx( &keys,  &ivs, &state, 4);
 
         asm_ZucGenKeystream4B_4_avx(&state, pKeyStrArr);
@@ -917,7 +918,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 /* If remaining bits are more than 4 bytes, we need to generate
                  * at least 4B more of keystream, so we need to copy
                  * the zuc state to single packet state first */
-                if (remainBits > (32)) {
+                if (remainBits > 32) {
                         singlePktState.lfsrState[0] = state.lfsrState[0][i];
                         singlePktState.lfsrState[1] = state.lfsrState[1][i];
                         singlePktState.lfsrState[2] = state.lfsrState[2][i];
@@ -946,7 +947,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                         /* Generate the next key stream 4 bytes or 16 bytes */
                         if (!remainBits)
                                 asm_ZucGenKeystream_avx(&keyStr32[4],
-                                                          &singlePktState, 1);
+                                                        &singlePktState, 1);
                         else
                                 asm_ZucGenKeystream16B_avx(&keyStr32[4],
                                                            &singlePktState);

@@ -1010,6 +1010,7 @@ typedef struct IMB_MGR {
         void *zuc_eia3_ooo;
         void *aes128_cbcs_ooo;
         void *zuc256_eea3_ooo;
+        void *zuc256_eia3_ooo;
 } IMB_MGR;
 
 /* ========================================================================== */

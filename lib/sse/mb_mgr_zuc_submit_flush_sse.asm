@@ -37,9 +37,12 @@
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_no_gfni_sse
 %define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_no_gfni_sse
 %define FLUSH_JOB_ZUC256_EEA3 flush_job_zuc256_eea3_no_gfni_sse
-%define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_no_gfni_sse
-%define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_no_gfni_sse
+%define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_no_gfni_sse
+%define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_no_gfni_sse
+%define FLUSH_JOB_ZUC256_EIA3 flush_job_zuc256_eia3_no_gfni_sse
+%define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_no_gfni_sse
 %define ZUC_EIA3_4_BUFFER zuc_eia3_4_buffer_job_no_gfni_sse
+%define ZUC256_EIA3_4_BUFFER zuc256_eia3_4_buffer_job_no_gfni_sse
 %define ZUC128_INIT_4        asm_ZucInitialization_4_sse
 %define ZUC256_INIT_4     asm_Zuc256Initialization_4_sse
 %define ZUC_CIPHER_4      asm_ZucCipher_4_sse
@@ -86,6 +89,7 @@ dd      0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
 
 extern ZUC_EIA3_4_BUFFER
+extern ZUC256_EIA3_4_BUFFER
 extern ZUC128_INIT_4
 extern ZUC256_INIT_4
 extern ZUC_CIPHER_4
@@ -264,6 +268,11 @@ section .text
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
+%if %%KEY_SIZE == 256
+        ;; Setting "tag size" to 2 in case of ciphering
+        ;; (dummy size, just for constant selecion at Initialization)
+        mov     arg4, 2
+%endif
 
 %if %%KEY_SIZE == 128
         call    ZUC128_INIT_4
@@ -476,6 +485,11 @@ APPEND(%%skip_eea3_,I):
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
+%if %%KEY_SIZE == 256
+        ;; Setting "tag size" to 2 in case of ciphering
+        ;; (dummy size, just for constant selecion at Initialization)
+        mov     arg4, 2
+%endif
 
 %if %%KEY_SIZE == 128
         call    ZUC128_INIT_4
@@ -628,28 +642,23 @@ SUBMIT_JOB_ZUC256_EEA3:
 
         SUBMIT_JOB_ZUC_EEA3 256
 
-; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
-; arg 2 : job
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 FLUSH_JOB_ZUC128_EEA3:
 
         FLUSH_JOB_ZUC_EEA3 128
 
-; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
-; arg 2 : job
 MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
 FLUSH_JOB_ZUC256_EEA3:
 
         FLUSH_JOB_ZUC_EEA3 256
 
 
-; JOB* SUBMIT_JOB_ZUC_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
-; arg 1 : state
-; arg 2 : job
-MKGLOBAL(SUBMIT_JOB_ZUC_EIA3,function,internal)
-SUBMIT_JOB_ZUC_EIA3:
+%macro SUBMIT_JOB_ZUC_EIA3 1
+%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -702,7 +711,7 @@ SUBMIT_JOB_ZUC_EIA3:
         movdqa  [state + _zuc_lens], xmm0
 
         cmp     unused_lanes, 0xff
-        jne     return_null_submit_eia3
+        jne     %%return_null_submit_eia3
 
         ; Find minimum length (searching for zero length,
         ; to retrieve already encrypted buffers)
@@ -710,7 +719,7 @@ SUBMIT_JOB_ZUC_EIA3:
         pextrw  len2, xmm1, 0   ; min value
         pextrw  idx, xmm1, 1    ; min index (0...3)
         cmp     len2, 0
-        je      len_is_0_submit_eia3
+        je      %%len_is_0_submit_eia3
 
         ; Move state into r11, as register for state will be used
         ; to pass parameter to next function
@@ -735,7 +744,11 @@ SUBMIT_JOB_ZUC_EIA3:
         mov     arg6, r12
 %endif
 
+%if %%KEY_SIZE == 128
         call    ZUC_EIA3_4_BUFFER
+%else
+        call    ZUC256_EIA3_4_BUFFER
+%endif
 
 %ifndef LINUX
         add     rsp, 48
@@ -746,7 +759,7 @@ SUBMIT_JOB_ZUC_EIA3:
         ;; Clear all lengths (function will authenticate all buffers)
         mov     qword [state + _zuc_lens], 0
 
-len_is_0_submit_eia3:
+%%len_is_0_submit_eia3:
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -758,7 +771,7 @@ len_is_0_submit_eia3:
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
 
-return_submit_eia3:
+%%return_submit_eia3:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -774,14 +787,13 @@ return_submit_eia3:
 
         ret
 
-return_null_submit_eia3:
+%%return_null_submit_eia3:
         xor     job_rax, job_rax
-        jmp     return_submit_eia3
+        jmp     %%return_submit_eia3
+%endmacro
 
-; JOB* FLUSH_JOB_ZUC_EEA3(MB_MGR_ZUC_OOO *state)
-; arg 1 : state
-MKGLOBAL(FLUSH_JOB_ZUC_EIA3,function,internal)
-FLUSH_JOB_ZUC_EIA3:
+%macro FLUSH_JOB_ZUC_EIA3 1
+%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -816,7 +828,7 @@ FLUSH_JOB_ZUC_EIA3:
         ; check for empty
         mov     unused_lanes, [state + _zuc_unused_lanes]
         bt      unused_lanes, 32+7
-        jc      return_null_flush_eia3
+        jc      %%return_null_flush_eia3
 
         ; Find minimum length (searching for zero length,
         ; to retrieve already authenticated buffers)
@@ -825,7 +837,7 @@ FLUSH_JOB_ZUC_EIA3:
         pextrw  len2, xmm1, 0   ; min value
         pextrw  idx, xmm1, 1    ; min index (0...3)
         cmp     len2, 0
-        je      len_is_0_flush_eia3
+        je      %%len_is_0_flush_eia3
 
         ; copy good_lane to empty lanes
         mov     tmp1, [state + _zuc_args_in + idx*8]
@@ -857,12 +869,12 @@ FLUSH_JOB_ZUC_EIA3:
 %assign I 0
 %rep 4
         cmp     qword [state + _zuc_job_in_lane + I*8], 0
-        jne     APPEND(skip_eia3_,I)
+        jne     APPEND(%%skip_eia3_,I)
         mov     [state + _zuc_args_in + I*8], tmp1
         mov     [state + _zuc_args_out + I*8], tmp2
         mov     [state + _zuc_args_keys + I*8], tmp3
         mov     [state + _zuc_args_IV + I*8], tmp4
-APPEND(skip_eia3_,I):
+APPEND(%%skip_eia3_,I):
 %assign I (I+1)
 %endrep
 
@@ -888,7 +900,12 @@ APPEND(skip_eia3_,I):
         mov     arg6, r12
 %endif
 
+%if %%KEY_SIZE == 128
         call    ZUC_EIA3_4_BUFFER
+%else
+        call    ZUC256_EIA3_4_BUFFER
+%endif
+
 
 %ifndef LINUX
         add     rsp, 48
@@ -900,7 +917,7 @@ APPEND(skip_eia3_,I):
         ;; Clear all lengths of valid jobs and set to FFFF to NULL jobs
         mov     qword [state + _zuc_lens], tmp5
 
-len_is_0_flush_eia3:
+%%len_is_0_flush_eia3:
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
@@ -912,7 +929,7 @@ len_is_0_flush_eia3:
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
 
-return_flush_eia3:
+%%return_flush_eia3:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -928,9 +945,36 @@ return_flush_eia3:
 
         ret
 
-return_null_flush_eia3:
+%%return_null_flush_eia3:
         xor     job_rax, job_rax
-        jmp     return_flush_eia3
+        jmp     %%return_flush_eia3
+%endmacro
+
+; JOB* SUBMIT_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
+SUBMIT_JOB_ZUC128_EIA3:
+        SUBMIT_JOB_ZUC_EIA3 128
+
+; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
+SUBMIT_JOB_ZUC256_EIA3:
+        SUBMIT_JOB_ZUC_EIA3 256
+
+; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
+; arg 1 : state
+MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
+FLUSH_JOB_ZUC128_EIA3:
+        FLUSH_JOB_ZUC_EIA3 128
+
+; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state)
+; arg 1 : state
+MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
+FLUSH_JOB_ZUC256_EIA3:
+        FLUSH_JOB_ZUC_EIA3 256
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

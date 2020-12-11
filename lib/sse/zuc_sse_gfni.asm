@@ -31,4 +31,5 @@
 %define ZUC256_INIT_4 asm_Zuc256Initialization_4_gfni_sse
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_gfni_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_gfni_sse
+%define ZUC_KEYGEN4B_4 asm_ZucGenKeystream4B_4_gfni_sse
 %include "sse/zuc_sse.asm"
