@@ -2114,6 +2114,12 @@ do_variants(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 h_end = params->hash_alg;
                 c_start = params->cipher_mode;
                 c_end = params->cipher_mode;
+
+                /* DOCSIS-CRC32 requires specific cipher mode */
+                if (params->hash_alg == TEST_DOCSIS_CRC32) {
+                        c_start = TEST_AESDOCSIS;
+                        c_end = TEST_AESDOCSIS;
+                }
                 break;
         default:
                 break;
