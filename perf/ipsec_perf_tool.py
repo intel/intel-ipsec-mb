@@ -37,6 +37,7 @@ import os
 import sys
 import subprocess
 import platform
+import time
 
 # number of variants to run
 TOTAL_VARIANTS = 0
@@ -46,7 +47,7 @@ ENVS = None
 TODO_Q = None
 DONE_Q = None
 # don't output info to stderr if set
-QUIET = 0
+QUIET = False
 # perf application name
 PERF_APP = ''
 # exit on error flag
@@ -182,7 +183,7 @@ def init_vars():
 
     # init vars
     TOTAL_VARIANTS = 0
-    QUIET = 0
+    QUIET = False
 
     # include perf directory in PATH
     path = '{}:{}'.format(os.getenv('PATH'), os.getenv('PWD'))
@@ -290,21 +291,21 @@ def parse_args(args):
                 offset = args[i+1].strip()
             except:
                 print('error: parsing --offset argument', file=sys.stderr)
-                exit(1)
+                sys.exit(1)
         if args[i] == '--algs':
             try:
                 algs = args[i+1].strip().split(',')
             except:
                 print('error: parsing --args argument', file=sys.stderr)
-                exit(1)
+                sys.exit(1)
         if args[i] == '--job-size':
             try:
                 sizes = args[i+1].strip()
             except:
                 print('error: parsing --job-size argument', file=sys.stderr)
-                exit(1)
+                sys.exit(1)
         if args[i] == '--quiet':
-            QUIET = 1
+            QUIET = True
         if args[i] == '--help' or args[i] == 'h':
             print_usage(args)
             sys.exit()
@@ -329,7 +330,7 @@ def run_test(core=None):
 
         # skip if error encountered
         if EXIT_ERROR is True:
-            if QUIET == 0:
+            if QUIET is False:
                 print('{} {}'.format(variant.get_info(), '...skipped'), file=sys.stderr)
             TODO_Q.task_done()
             continue
@@ -339,7 +340,7 @@ def run_test(core=None):
             variant.set_core(core)
 
         # print variant information
-        if QUIET == 0:
+        if QUIET is False:
             print(variant.get_info(), file=sys.stderr)
 
         # run variant
@@ -354,6 +355,13 @@ def run_test(core=None):
 
 
 def main():
+    """
+    Main function to:
+    - parse command line args
+    - generate and enqueue list of variants to run
+    - schedule variants across selected cores
+    - post process results and print to stdout
+    """
     global TOTAL_VARIANTS
     global QUIET
     global TODO_Q
@@ -373,7 +381,7 @@ def main():
     archs, cores, directions, offset, algs, sizes = parse_args(sys.argv)
 
     # print args
-    if QUIET == 0:
+    if QUIET is False:
         print('Testing:', file=sys.stderr)
         print('  Architectures: {}'.format(archs), file=sys.stderr)
         print('  Algorithms: {}'.format(algs), file=sys.stderr)
@@ -420,13 +428,14 @@ def main():
                                    offset=offset, sizes=sizes, aead_alg=aead_alg))
                 TOTAL_VARIANTS += 1
 
-    """
-    If cores selected start a new thread on each core
-    otherwise start single thread without specifying a core
+    # take starting timestamp
+    start_ts = time.time()
 
-    Each thread takes a variant from the todo queue
-    and places it in the done queue when complete
-    """
+    # If cores selected start a new thread on each core
+    # otherwise start single thread without specifying a core
+    #
+    # Each thread takes a variant from the todo queue
+    # and places it in the done queue when complete
     if cores is None:
         threading.Thread(target=run_test).start()
     else:
@@ -436,10 +445,19 @@ def main():
     # wait for all threads to complete
     TODO_Q.join()
 
+    # take end timestamp
+    end_ts = time.time()
+
     # exit if error encountered
     if EXIT_ERROR is True:
         print('Error encountered while running tests!', file=sys.stderr)
         sys.exit(1)
+
+    # output time taken to complete
+    runtime = end_ts - start_ts
+    if QUIET is False:
+        print("Time to complete: {:.3f} seconds" \
+              .format(runtime), file=sys.stderr)
 
     # transfer completed runs from the
     # done queue to the results list
