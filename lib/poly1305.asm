@@ -172,11 +172,11 @@ section .text
         ;; M2 => T3:T0
 
         ;; M3 = (A2 * R1)
-        mov     %%GP_RAX, %%R1
-        mul     %%A2
-        ;; M3 => GP_RDX:GP_RAX
         ;; Note: because A2 is clamped to 2-bits and R1 to 60-bits
-        ;;       RDX is always 0 and the product is 62-bits long
+        ;;       top 64 bits of the multiply product will always be zero.
+        ;;       It is OK to use imul here then.
+        imul    %%A2, %%R1
+        ;; M3 => (zero) : %%A2
 
         ;; Add 4 x M's, 128-bit products, together to form
         ;; 4 x 64-bit t-words:
@@ -202,12 +202,12 @@ section .text
         ;;   M1.hi => T2
         ;;   M2.lo => T0
         ;;   M2.hi => T3
-        ;;   M3.lo => GP_RAX
-        ;;   M3.hi => GP_RDX
+        ;;   M3.lo => A2
+        ;;   M3.hi => (zero)
 
         add     %%A1, %%T1      ;; t1, carry to t2
         adc     %%T2, %%T0      ;; t2, carry to t3
-        adc     %%T3, %%GP_RAX  ;; t3
+        adc     %%T3, %%A2      ;; t3
 
         ;; Now t3:t2:t1:t0 = T3:T2:A1:A0
 
