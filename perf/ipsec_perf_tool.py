@@ -139,17 +139,42 @@ class Variant:
 
     def get_info(self):
         """Get variant details"""
-        info = ''
 
-        info += str(self.idx)
-        info += '\t{}'.format(self.arch)
-        info += '\t{}'.format(self.direction)
-        info += '\t{}'.format(self.cipher_alg)
-        info += '\t{}'.format(self.hash_alg)
-        info += '\t{}'.format(self.aead_alg)
-        info += '\t{}'.format(self.offset)
-        info += '\t{}'.format(self.sizes)
-        info += '\t{}'.format(self.core)
+        if self.idx is None:
+            idx = ''
+        else:
+            idx = self.idx
+
+        if self.cipher_alg is None:
+            cipher_alg = ''
+        else:
+            cipher_alg = self.cipher_alg
+
+        if self.hash_alg is None:
+            hash_alg = ''
+        else:
+            hash_alg = self.hash_alg
+
+        if self.aead_alg is None:
+            aead_alg = ''
+        else:
+            aead_alg = self.aead_alg
+
+        if self.core is None:
+            core = ''
+        else:
+            core = self.core
+
+        if self.direction is None:
+            direction = 'n/a'
+        else:
+            direction = self.direction
+
+        alg = '{}{}{}'.format(cipher_alg, hash_alg, aead_alg)
+
+        info = '{0:<5} {1:<4} {2:<6} {3:<7} {4:<40}'\
+            .format(idx, core, self.arch, direction, alg)
+
         return info
 
 
@@ -368,7 +393,8 @@ def main():
     global DONE_Q
     global EXIT_ERROR
 
-    header = '\nidx\tarch\tdir\tcipher\thash\taead\toffset\tsizes\tcore'
+    header = '\n{0:<5} {1:<4} {2:<6} {3:<7} {4:<40}'\
+        .format('NO', 'CORE', 'ARCH', 'DIR', 'ALG')
     result = [] # list to store parsed results
     cipher_algos = [] # list of cipher algorithms to run
     hash_algos = [] # list of hash algorithms to run
