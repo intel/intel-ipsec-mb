@@ -142,12 +142,6 @@ section .text
         mul     %%A0
         mov     %%T1, %%GP_RAX
         mov     %%T2, %%GP_RDX
-        ;; M1 += (A1 * R0)
-        mov     %%GP_RAX, %%R0
-        mul     %%A1
-        add     %%T1, %%GP_RAX
-        adc     %%T2, %%GP_RDX
-        ;; M1 => T2:T1
 
         ;; M0 = (A0 * R0) M0
         mov     %%GP_RAX, %%R0
@@ -156,20 +150,29 @@ section .text
         mov     %%T3, %%GP_RDX  ;; T3 is temporary storage for A1
         ;; M0 => T3:A0
 
+        ;; M1 += (A1 * R0)
+        mov     %%GP_RAX, %%R0
+        mul     %%A1
+        add     %%T1, %%GP_RAX
+        adc     %%T2, %%GP_RDX
+        ;; M1 => T2:T1
+
         ;; M2 = (A1 * R1)
         mov     %%GP_RAX, %%R1
         mul     %%A1
         mov     %%A1, %%T3      ;; put M0.hi into A1
         ;; M0 => A1:A0
-        mov     %%T0, %%GP_RAX
-        mov     %%T3, %%GP_RDX
+        ;; M2 => RDX:RAX
 
         ;; M2 += (A2 * R0)
-        mov     %%GP_RAX, %%R0
-        mul     %%A2
-        add     %%T0, %%GP_RAX
-        adc     %%T3, %%GP_RDX
-        ;; M2 => T3:T0
+        ;; Note: because A2 is clamped to 2-bits and R0 to 60-bits
+        ;;       top 64 bits of the multiply product will always be zero.
+        ;;       It is OK to use imul here then.
+        mov     %%T0, %%A2
+        imul    %%T0, %%R0
+        add     %%GP_RAX, %%T0
+        adc     %%GP_RDX, 0
+        ;; M2 => RDX:RAX
 
         ;; M3 = (A2 * R1)
         ;; Note: because A2 is clamped to 2-bits and R1 to 60-bits
@@ -196,20 +199,20 @@ section .text
         ;; Note: t4 & M3.hi ignored as they are always zero (see note above)
         ;;
         ;; Register mapping:
-        ;;   M0.lo => A1
+        ;;   M0.lo => A0
         ;;   M0.hi => A1
         ;;   M1.lo => T1
         ;;   M1.hi => T2
-        ;;   M2.lo => T0
-        ;;   M2.hi => T3
+        ;;   M2.lo => RAX
+        ;;   M2.hi => RDX
         ;;   M3.lo => A2
         ;;   M3.hi => (zero)
 
         add     %%A1, %%T1      ;; t1, carry to t2
-        adc     %%T2, %%T0      ;; t2, carry to t3
-        adc     %%T3, %%A2      ;; t3
+        adc     %%T2, %%GP_RAX  ;; t2, carry to t3
+        adc     %%GP_RDX, %%A2  ;; t3
 
-        ;; Now t3:t2:t1:t0 = T3:T2:A1:A0
+        ;; Now t3:t2:t1:t0 = RDX:T2:A1:A0
 
         ;; New accumulator values:
         ;; A0 := t0 (already set)
@@ -225,18 +228,18 @@ section .text
         ;;    k = (t3:t2 & ~3) + (t3:t2 >> 2)
         ;;           Y     x4  +    Y     x1
         mov     %%T0, %%T2
-        mov     %%T1, %%T3
+        mov     %%T1, %%GP_RDX
         and     %%T0, -4
 
-        shrd    %%T2, %%T3, 2
-        shr     %%T3, 2
+        shrd    %%T2, %%GP_RDX, 2
+        shr     %%GP_RDX, 2
 
         add     %%A0, %%T0
         adc     %%A1, %%T1
         adc     %%A2, 0
 
         add     %%A0, %%T2
-        adc     %%A1, %%T3
+        adc     %%A1, %%GP_RDX
         adc     %%A2, 0
 %endmacro
 
