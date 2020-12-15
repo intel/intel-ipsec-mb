@@ -2162,7 +2162,7 @@ int gcm_test(IMB_MGR *p_mgr)
         test_suite_start(&ts256, "AES-GCM-256 (Variable IV length)");
 	test_gcm_std_vectors(&ts128, &ts192, &ts256,
                              gcm_iv_vectors, DIM(gcm_iv_vectors), 0);
-        errors = test_suite_end(&ts128);
+        errors += test_suite_end(&ts128);
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
 
@@ -2173,7 +2173,7 @@ int gcm_test(IMB_MGR *p_mgr)
                              gcm_vectors, DIM(gcm_vectors), 1);
 	test_gcm_std_vectors(&ts128, &ts192, &ts256,
                              gcm_iv_vectors, DIM(gcm_iv_vectors), 1);
-        errors = test_suite_end(&ts128);
+        errors += test_suite_end(&ts128);
         errors += test_suite_end(&ts192);
         errors += test_suite_end(&ts256);
 
