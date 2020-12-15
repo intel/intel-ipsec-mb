@@ -395,7 +395,8 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys,
                                                    ZucIv8_t *pIvs,
-                                                   ZucState8_t *pState);
+                                                   ZucState8_t *pState,
+                                                   const unsigned tag_sz);
 
 /**
  ******************************************************************************
@@ -761,6 +762,29 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream4B_4_avx(ZucState4_t *pState,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_8_avx2(ZucState8_t *pState,
+                                                uint32_t *pKeyStr[8]);
+
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 4 bytes of
+ *      keystream for eight packets in parallel.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState8_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to 8 input buffers that
+ *                                  will contain the generated keystream for
+ *                                  these 8 packets.
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_8 to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_ZucGenKeystream4B_8_avx2(ZucState8_t *pState,
                                                 uint32_t *pKeyStr[8]);
 
 /**
@@ -1138,6 +1162,14 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
                                 uint32_t *pMacI[8],
                                 const uint16_t lengthInBits[8],
                                 const void * const job_in_lane[8]);
+
+IMB_DLL_LOCAL
+void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[8],
+                                   const void * const pIv[8],
+                                   const void * const pBufferIn[8],
+                                   uint32_t *pMacI[8],
+                                   const uint16_t lengthInBits[8],
+                                   const void * const job_in_lane[8]);
 
 IMB_DLL_LOCAL
 void zuc_eia3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo);

@@ -49,6 +49,27 @@ dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
 dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
 
+align 16
+EK256_EIA3_4:
+dd      0x00220000, 0x002F0000, 0x00250000, 0x002A0000,
+dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
+align 16
+EK256_EIA3_8:
+dd      0x00230000, 0x002F0000, 0x00240000, 0x002A0000,
+dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
+align 16
+EK256_EIA3_16:
+dd      0x00230000, 0x002F0000, 0x00250000, 0x002A0000,
+dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
 align 32
 shuf_mask_key:
 dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF, 0x04FFFFFF, 0x05FFFFFF, 0x06FFFFFF, 0x07FFFFFF,
@@ -599,7 +620,7 @@ align 64
 ;
 ; Initialize LFSR registers for a single lane, for ZUC-256
 ;
-%macro INIT_LFSR_256 7
+%macro INIT_LFSR_256 8
 %define %%KEY       %1 ;; [in] Key pointer
 %define %%IV        %2 ;; [in] IV pointer
 %define %%LFSR0_7   %3 ;; [out] YMM register to contain initialized LFSR regs 0-7
@@ -607,6 +628,7 @@ align 64
 %define %%XTMP      %5 ;; [clobbered] XMM temporary register
 %define %%XTMP2     %6 ;; [clobbered] XMM temporary register
 %define %%TMP       %7 ;; [clobbered] GP temporary register
+%define %%CONSTANTS %8 ;; [in] Address to constants
 
     ; s0 - s7
     vpxor          %%LFSR0_7, %%LFSR0_7
@@ -617,7 +639,7 @@ align 64
 
     vpsrld         XWORD(%%LFSR0_7), 1
 
-    vpor           XWORD(%%LFSR0_7), [rel EK256_d64] ; s0 - s3
+    vpor           XWORD(%%LFSR0_7), [%%CONSTANTS] ; s0 - s3
 
     vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 21], 1 ; s0
     vpinsrb        XWORD(%%LFSR0_7), [%%KEY + 16], 0 ; s0
@@ -651,7 +673,7 @@ align 64
     vpinsrb        %%XTMP, [%%KEY + 7], 13 ; s7
     vpinsrb        %%XTMP, [%%IV + 2], 12 ; s7
 
-    vpor           %%XTMP, [rel EK256_d64 + 16] ; s4 - s7
+    vpor           %%XTMP, [%%CONSTANTS + 16] ; s4 - s7
 
     vmovd          %%XTMP2, [%%IV + 17]
     vpshufb        %%XTMP2, [rel shuf_mask_iv_17_19]
@@ -682,7 +704,7 @@ align 64
     vpinsrb        XWORD(%%LFSR8_15), [%%IV + 6], 13 ; s11
     vpinsrb        XWORD(%%LFSR8_15), [%%IV + 13], 12 ; s11
 
-    vpor           XWORD(%%LFSR8_15), [rel EK256_d64 + 32] ; s8 - s11
+    vpor           XWORD(%%LFSR8_15), [%%CONSTANTS + 32] ; s8 - s11
 
     vmovd          %%XTMP, [%%IV + 20]
     vpshufb        %%XTMP, [rel shuf_mask_iv_20_23]
@@ -710,7 +732,7 @@ align 64
     vpinsrb        %%XTMP, [%%KEY + 30], 13 ; s15
     vpinsrb        %%XTMP, [%%KEY + 29], 12 ; s15
 
-    vpor           %%XTMP, [rel EK256_d64 + 48] ; s12 - s15
+    vpor           %%XTMP, [%%CONSTANTS + 48] ; s12 - s15
 
     movzx          DWORD(%%TMP), byte [%%IV + 24]
     and            DWORD(%%TMP), 0x0000003f
@@ -739,10 +761,12 @@ align 64
 	%define		pKe	rdi
 	%define		pIv	rsi
 	%define		pState	rdx
+	%define		tag_sz	rcx ; Only used in ZUC-256
 %else
 	%define		pKe	rcx
 	%define		pIv	rdx
 	%define		pState	r8
+	%define		tag_sz	r9 ; Only used in ZUC-256
 %endif
 
     FUNC_SAVE
@@ -789,15 +813,23 @@ align 64
 %endrep
 %else ;; %%KEY_SIZE == 256
 
+    ; Get pointer to constants (depending on tag size, this will point at
+    ; constants for encryption, authentication with 4-byte, 8-byte or 16-byte tags)
+    lea    r13, [rel EK256_d64]
+    bsf    DWORD(tag_sz), DWORD(tag_sz)
+    dec    DWORD(tag_sz)
+    shl    DWORD(tag_sz), 6
+    add    r13, tag_sz
+
     ;;; Initialize all LFSR registers
 %assign off 0
 %rep 8
     ;; Load key and IV for each packet
-    mov     r9,  [pKe + off]
+    mov     r12,  [pKe + off]
     mov     r10, [pIv + off]
 
     ; Initialize S0-15 for each packet
-    INIT_LFSR_256 r9, r10, ymm0, ymm1, xmm2, xmm3, r11
+    INIT_LFSR_256 r12, r10, ymm0, ymm1, xmm2, xmm3, r11, r13
 
 %assign i 0
 %rep 2
@@ -938,11 +970,6 @@ asm_Zuc256Initialization_8_avx2:
 
     store32B_kstr8 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
 
-    ;; Reorder LFSR registers, as not all 16 rounds have been completed
-    ;; (No need to do if NUM_ROUNDS != 8, as it would indicate that
-    ;; these would be the final rounds)
-    REORDER_LFSR rax, 8
-
 %else ;; NUM_ROUNDS == 8
 %assign idx 0
 %rep %%NUM_ROUNDS
@@ -951,6 +978,9 @@ asm_Zuc256Initialization_8_avx2:
 %assign idx (idx + 1)
 %endrep
 %endif ;; NUM_ROUNDS == 8
+
+    ;; Reorder LFSR registers, as not all 16 rounds have been completed
+    REORDER_LFSR rax, %%NUM_ROUNDS
 
         ;; Clear stack frame containing keystream information
 %ifdef SAFE_DATA
@@ -1002,6 +1032,24 @@ MKGLOBAL(asm_ZucGenKeystream8B_8_avx2,function,internal)
 asm_ZucGenKeystream8B_8_avx2:
 
     KEYGEN_8_AVX2 2
+    vzeroupper
+    ret
+
+;;
+;; void asm_ZucGenKeystream4B_8_avx2(state8_t *pSta, u32* pKeyStr[8])
+;;
+;; WIN64
+;;  RCX    - pSta
+;;  RDX    - pKeyStr
+;;
+;; LIN64
+;;  RDI    - pSta
+;;  RSI    - pKeyStr
+;;
+MKGLOBAL(asm_ZucGenKeystream4B_8_avx2,function,internal)
+asm_ZucGenKeystream4B_8_avx2:
+
+    KEYGEN_8_AVX2 1
     vzeroupper
     ret
 
