@@ -120,127 +120,102 @@ section .text
 %define %%A2      %3    ; [in/out] GPR with accumulator bits 195:128
 %define %%R0      %4    ; [in] GPR with R constant bits 63:0
 %define %%R1      %5    ; [in] GPR with R constant bits 127:64
-%define %%T0      %6    ; [clobbered] GPR register
+%define %%C1      %6    ; [in] C1 = R1 + (R1 >> 2)
 %define %%T1      %7    ; [clobbered] GPR register
 %define %%T2      %8    ; [clobbered] GPR register
 %define %%T3      %9    ; [clobbered] GPR register
 %define %%GP_RAX  %10   ; [clobbered] RAX register
 %define %%GP_RDX  %11   ; [clobbered] RDX register
 
-        ;; Schoolbook multiply of 3 by 2 64-bit words:
+        ;; Combining 64-bit x 64-bit multiplication with reduction steps
         ;;
-        ;;               A2      A1      A0
-        ;;         x             R1      R0
-        ;; ---------------------------------
-        ;;            R0*A2   R0*A1   R0*A0
-        ;; +  R1*A2   R1*A1   R1*A0
+        ;; NOTES:
+        ;;   1) A2 here is only two bits so anything above is subject of reduction.
+        ;;      Constant C1 = R1 + (R1 >> 2) simplifies multiply with less operations
+        ;;   2) Magic 5x comes from mod 2^130-5 property and incorporating
+        ;;      reduction into multiply phase.
+        ;;      See "Cheating at modular arithmetic" and "Poly1305's prime: 2^130 - 5"
+        ;;      paragraphs at https://loup-vaillant.fr/tutorials/poly1305-design for more details.
         ;;
-        ;; =     M3      M2      M1      M0 (4 x 128-bit products)
+        ;; Flow of the code below is as follows:
+        ;;
+        ;;          A2        A1        A0
+        ;;        x           R1        R0
+        ;;   -----------------------------
+        ;;       A2×R0     A1×R0     A0×R0
+        ;;   +             A0×R1
+        ;;   +           5xA2xR1   5xA1xR1
+        ;;   -----------------------------
+        ;;     [0|L2L] [L1H|L1L] [L0H|L0L]
+        ;;
+        ;;   Registers:  T3:T2     T1:A0
+        ;;
+        ;; Completing the multiply and adding (with carry) 3x128-bit limbs into
+        ;; 192-bits again (3x64-bits):
+        ;; A0 = L0L
+        ;; A1 = L0H + L1L
+        ;; T3 = L1H + L2L
 
-        ;; M1 = (A0 * R1)
         mov     %%GP_RAX, %%R1
         mul     %%A0
-        mov     %%T1, %%GP_RAX
-        mov     %%T2, %%GP_RDX
-
-        ;; M0 = (A0 * R0) M0
+        mov     %%T2, %%GP_RAX
         mov     %%GP_RAX, %%R0
+        mov     %%T3, %%GP_RDX
+
+        ;; T1:A0 = (A0 * R0)
         mul     %%A0
         mov     %%A0, %%GP_RAX  ;; A0 not used in other operations
-        mov     %%T3, %%GP_RDX  ;; T3 is temporary storage for A1
-        ;; M0 => T3:A0
-
-        ;; M1 += (A1 * R0)
         mov     %%GP_RAX, %%R0
-        mul     %%A1
-        add     %%T1, %%GP_RAX
-        adc     %%T2, %%GP_RDX
-        ;; M1 => T2:T1
-
-        ;; M2 = (A1 * R1)
-        mov     %%GP_RAX, %%R1
-        mul     %%A1
-        mov     %%A1, %%T3      ;; put M0.hi into A1
-        ;; M0 => A1:A0
-        ;; M2 => RDX:RAX
-
-        ;; M2 += (A2 * R0)
-        ;; Note: because A2 is clamped to 2-bits and R0 to 60-bits
-        ;;       top 64 bits of the multiply product will always be zero.
-        ;;       It is OK to use imul here then.
-        mov     %%T0, %%A2
-        imul    %%T0, %%R0
-        add     %%GP_RAX, %%T0
-        adc     %%GP_RDX, 0
-        ;; M2 => RDX:RAX
-
-        ;; M3 = (A2 * R1)
-        ;; Note: because A2 is clamped to 2-bits and R1 to 60-bits
-        ;;       top 64 bits of the multiply product will always be zero.
-        ;;       It is OK to use imul here then.
-        imul    %%A2, %%R1
-        ;; M3 => (zero) : %%A2
-
-        ;; Add 4 x M's, 128-bit products, together to form
-        ;; 4 x 64-bit t-words:
-        ;;
-        ;;      64-bits | 64-bits
-        ;; M0 =   M0.hi | M0.lo
-        ;; M1 =   M1.hi | M1.lo
-        ;; M2 =   M2.hi | M2.lo
-        ;; M3 =   M3.hi | M3.lo
-        ;;
-        ;;   M3.hi   M3.lo   M2.lo   M1.lo   M0.lo
-        ;; +         M2.hi   M1.hi   M0.hi
-        ;;   -------------------------------------
-        ;;   t4      t3      t2      t1      t0
-        ;;           +carry  +carry
-        ;;
-        ;; Note: t4 & M3.hi ignored as they are always zero (see note above)
-        ;;
-        ;; Register mapping:
-        ;;   M0.lo => A0
-        ;;   M0.hi => A1
-        ;;   M1.lo => T1
-        ;;   M1.hi => T2
-        ;;   M2.lo => RAX
-        ;;   M2.hi => RDX
-        ;;   M3.lo => A2
-        ;;   M3.hi => (zero)
-
-        add     %%A1, %%T1      ;; t1, carry to t2
-        adc     %%T2, %%GP_RAX  ;; t2, carry to t3
-        adc     %%GP_RDX, %%A2  ;; t3
-
-        ;; Now t3:t2:t1:t0 = RDX:T2:A1:A0
-
-        ;; New accumulator values:
-        ;; A0 := t0 (already set)
-        ;; A1 := t1 (already set)
-        ;; A2 := t2 & 3 (clamped to 2-bits only)
-        mov     %%A2, %%T2
-        and     %%A2, 3
-
-        ;; Partial reduction (just to fit into 130 bits)
-        ;;    k = (t3:t2 >> 2) * 5
-        ;;    A2:A1:A0 += k
-        ;; k is computed as follows:
-        ;;    k = (t3:t2 & ~3) + (t3:t2 >> 2)
-        ;;           Y     x4  +    Y     x1
-        mov     %%T0, %%T2
         mov     %%T1, %%GP_RDX
-        and     %%T0, -4
 
-        shrd    %%T2, %%GP_RDX, 2
-        shr     %%GP_RDX, 2
+        ;; T3:T2 += (A1 * R0)
+        mul     %%A1
+        add     %%T2, %%GP_RAX
+        mov     %%GP_RAX, %%C1
+        adc     %%T3, %%GP_RDX
 
-        add     %%A0, %%T0
-        adc     %%A1, %%T1
-        adc     %%A2, 0
+        ;; T1:A0 += (A1 * R1x5)
+        mul     %%A1
+        mov     %%A1, %%A2      ;; use A1 for A2
+        add     %%A0, %%GP_RAX
+        adc     %%T1, %%GP_RDX
 
-        add     %%A0, %%T2
-        adc     %%A1, %%GP_RDX
-        adc     %%A2, 0
+        ;; NOTE: A2 is clamped to 2-bits,
+        ;;       R1/R0 is clamped to 60-bits,
+        ;;       their product is less than 2^64.
+
+        ;; T3:T2 += (A2 * R1x5)
+        imul    %%A1, %%C1
+        add     %%T2, %%A1
+        mov     %%A1, %%T1 ;; T1:A0 => A1:A0
+        adc     %%T3, 0
+
+        ;; T3:A1 += (A2 * R0)
+        imul    %%A2, %%R0
+        add     %%A1, %%T2
+        adc     %%T3, %%A2
+
+        ;; At this point, 3 64-bit limbs are in T3:A1:A0
+        ;; T3 can span over more than 2 bits so final partial reduction step is needed.
+        ;;
+        ;; Partial reduction (just to fit into 130 bits)
+        ;;    A2 = T3 & 3
+        ;;    k = (T3 & ~3) + (T3 >> 2)
+        ;;         Y    x4  +  Y    x1
+        ;;    A2:A1:A0 += k
+        ;;
+        ;; Result will be in A2:A1:A0
+        mov     %%T1, %%T3
+        mov     DWORD(%%A2), DWORD(%%T3)
+        and     %%T1, ~3
+        shr     %%T3, 2
+        and     DWORD(%%A2), 3
+        add     %%T1, %%T3
+
+        ;; A2:A1:A0 += k (kept in T1)
+        add     %%A0, %%T1
+        adc     %%A1, 0
+        adc     DWORD(%%A2), 0
 %endmacro
 
 ;; =============================================================================
@@ -261,6 +236,10 @@ section .text
 %define %%T3      %11   ; [clobbered] GPR register
 %define %%GP_RAX  %12   ; [clobbered] RAX register
 %define %%GP_RDX  %13   ; [clobbered] RDX register
+
+        mov     %%T0, %%R1
+        shr     %%T0, 2
+        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
 %%_poly1305_blocks_loop:
         cmp     %%LEN, POLY1305_BLOCK_SIZE
@@ -322,6 +301,10 @@ section .text
 %else
         adc     %%A2, 1                 ;; padding bit please
 %endif
+
+        mov     %%T0, %%R1
+        shr     %%T0, 2
+        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
