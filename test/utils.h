@@ -37,8 +37,8 @@ void hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len,
                 const void *start_ptr);
 
 int update_flags_and_archs(const char *arg, uint8_t *arch_support,
-                            uint64_t *features);
-int detect_arch_and_features(uint8_t *arch_support, uint64_t *features);
+                            uint64_t *flags);
+int detect_arch(uint8_t *arch_support);
 void print_tested_arch(const uint64_t features, const IMB_ARCH arch);
 
 struct test_suite_context {

@@ -2521,8 +2521,6 @@ int main(int argc, char *argv[])
         unsigned int hash_algo_set = 0;
         unsigned int aead_algo_set = 0;
         unsigned int safe_check = 0;
-        uint64_t features = 0;
-
 
         for (i = 1; i < argc; i++)
                 if (strcmp(argv[i], "-h") == 0) {
@@ -2658,7 +2656,7 @@ int main(int argc, char *argv[])
         }
 
         /* detect available architectures and features*/
-        if (detect_arch_and_features(arch_support, &features) < 0)
+        if (detect_arch(arch_support) < 0)
                 return EXIT_FAILURE;
 
         /* disable tests depending on instruction sets supported */

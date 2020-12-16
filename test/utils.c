@@ -150,11 +150,11 @@ hexdump(FILE *fp,
 int
 update_flags_and_archs(const char *arg,
                         uint8_t arch_support[IMB_ARCH_NUM],
-                        uint64_t *features)
+                        uint64_t *flags)
 {
         int match = 1;
 
-        if (arch_support == NULL || features == NULL || arg == NULL) {
+        if (arch_support == NULL || flags == NULL || arg == NULL) {
                 fprintf(stderr, "Inputs not passed correctly\n");
                 return -1;
         }
@@ -172,11 +172,9 @@ update_flags_and_archs(const char *arg,
         else if (strcmp(arg, "--no-aesni-emu") == 0)
                 arch_support[IMB_ARCH_NOAESNI] = 0;
         else if (strcmp(arg, "--shani-on") == 0)
-                *features &= (~IMB_FLAG_SHANI_OFF);
+                *flags &= (~IMB_FLAG_SHANI_OFF);
         else if (strcmp(arg, "--shani-off") == 0)
-                *features |= IMB_FLAG_SHANI_OFF;
-        else if (strcmp(arg, "--no-gcm") == 0)
-                *features &= (~IMB_FEATURE_PCLMULQDQ);
+                *flags |= IMB_FLAG_SHANI_OFF;
         else
                 match = 0;
         return match;
@@ -191,8 +189,7 @@ update_flags_and_archs(const char *arg,
  *         -1 - bad input or issues with alloc_mb_mgr
  */
 int
-detect_arch_and_features(uint8_t arch_support[IMB_ARCH_NUM],
-                         uint64_t *features)
+detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
 {
         const uint64_t detect_sse =
                 IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
@@ -200,13 +197,12 @@ detect_arch_and_features(uint8_t arch_support[IMB_ARCH_NUM],
                 IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
-        const uint64_t detect_pclmulqdq = IMB_FEATURE_PCLMULQDQ;
         const uint64_t detect_aesni = IMB_FEATURE_AESNI;
 
         IMB_MGR *p_mgr = NULL;
         IMB_ARCH arch_id;
 
-        if (arch_support == NULL || features == NULL) {
+        if (arch_support == NULL) {
                 fprintf(stderr, "Inputs not passed correctly\n");
                 return -1;
         }
@@ -231,9 +227,6 @@ detect_arch_and_features(uint8_t arch_support[IMB_ARCH_NUM],
 
         if ((p_mgr->features & detect_sse) != detect_sse)
                 arch_support[IMB_ARCH_SSE] = 0;
-
-        if ((p_mgr->features & detect_pclmulqdq) != detect_pclmulqdq)
-                *features &= (~IMB_FEATURE_PCLMULQDQ);
 
         if ((p_mgr->features & detect_aesni) != detect_aesni)
                 arch_support[IMB_ARCH_NOAESNI] = 0;

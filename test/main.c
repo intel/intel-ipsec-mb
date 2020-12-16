@@ -73,7 +73,6 @@ usage(const char *name)
 		"--no-avx2: Don't do AVX2\n"
 		"--no-avx: Don't do AVX\n"
 		"--no-sse: Don't do SSE\n"
-                "--no-gcm: Don't run GCM tests\n"
                 "--auto-detect: auto detects current architecture "
                 "to run the tests\n  Note: Auto detection "
                 "option now run by default and will be removed in the future\n"
@@ -127,7 +126,6 @@ main(int argc, char **argv)
         uint8_t arch_support[IMB_ARCH_NUM];
         int i, atype, auto_detect = 0;
         uint64_t flags = 0;
-        uint64_t features = 0;
         int errors = 0;
 
         /* Check version number */
@@ -140,7 +138,7 @@ main(int argc, char **argv)
         print_hw_features();
 
         /* Detect available architectures and features */
-        if (detect_arch_and_features(arch_support, &features) < 0)
+        if (detect_arch(arch_support) < 0)
                 return EXIT_FAILURE;
 
 	for (i = 1; i < argc; i++) {
@@ -198,8 +196,7 @@ main(int argc, char **argv)
                 errors += ctr_test(p_mgr);
                 errors += pon_test(p_mgr);
                 errors += xcbc_test(p_mgr);
-                if (features & IMB_FEATURE_PCLMULQDQ)
-                        errors += gcm_test(p_mgr);
+                errors += gcm_test(p_mgr);
                 errors += customop_test(p_mgr);
                 errors += des_test(atype, p_mgr);
                 errors += ccm_test(p_mgr);
