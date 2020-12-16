@@ -139,9 +139,13 @@ IMB_JOB *aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job);
 
 IMB_JOB *aes_cntr_ccm_256_vaes_avx512(IMB_JOB *job);
 
-IMB_JOB *submit_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state,
+IMB_JOB *submit_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
-IMB_JOB *flush_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state);
+IMB_JOB *flush_job_zuc256_eia3_no_gfni_avx512(MB_MGR_ZUC_OOO *state);
+
+IMB_JOB *submit_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_zuc256_eia3_gfni_avx512(MB_MGR_ZUC_OOO *state);
 
 void aes_cmac_256_subkey_gen_avx512(const void *key_exp,
                                     void *key1, void *key2);
@@ -189,8 +193,8 @@ IMB_JOB *flush_job_aes128_cbcs_1_9_enc_vaes_avx512(MB_MGR_AES_OOO *state);
 #define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx512
 #define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_avx512
 #define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_avx512
-#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_avx
-#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_avx
+#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_avx512
+#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_avx512
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx512
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx512
@@ -787,6 +791,15 @@ static IMB_JOB *
         (MB_MGR_ZUC_OOO *state) = flush_job_zuc_eia3_no_gfni_avx512;
 
 static IMB_JOB *
+(*submit_job_zuc256_eia3_avx512)
+        (MB_MGR_ZUC_OOO *state, IMB_JOB *job) =
+                        submit_job_zuc256_eia3_no_gfni_avx512;
+
+static IMB_JOB *
+(*flush_job_zuc256_eia3_avx512)
+        (MB_MGR_ZUC_OOO *state) = flush_job_zuc256_eia3_no_gfni_avx512;
+
+static IMB_JOB *
 (*submit_job_aes_xcbc_avx512)
         (MB_MGR_AES_XCBC_OOO *state,
          IMB_JOB *job) = submit_job_aes_xcbc_avx;
@@ -1023,6 +1036,7 @@ init_mb_mgr_avx512(IMB_MGR *state)
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
+        MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
 
         /* reset error status */
@@ -1105,6 +1119,10 @@ init_mb_mgr_avx512(IMB_MGR *state)
                                 submit_job_zuc256_eea3_gfni_avx512;
                 flush_job_zuc256_eea3_avx512 =
                                 flush_job_zuc256_eea3_gfni_avx512;
+                submit_job_zuc256_eia3_avx512 =
+                                submit_job_zuc256_eia3_gfni_avx512;
+                flush_job_zuc256_eia3_avx512 =
+                                flush_job_zuc256_eia3_gfni_avx512;
         }
 
         /* Init AES out-of-order fields */
@@ -1327,6 +1345,19 @@ init_mb_mgr_avx512(IMB_MGR *state)
                sizeof(zuc256_eea3_ooo->state));
         zuc256_eea3_ooo->init_not_done = 0;
         zuc256_eea3_ooo->unused_lane_bitmask = 0xffff;
+
+        memset(zuc256_eia3_ooo->lens, 0xFF,
+               sizeof(zuc256_eia3_ooo->lens));
+        memset(zuc256_eia3_ooo->job_in_lane, 0,
+               sizeof(zuc256_eia3_ooo->job_in_lane));
+        zuc256_eia3_ooo->unused_lanes = 0xFEDCBA9876543210;
+        zuc256_eia3_ooo->num_lanes_inuse = 0;
+        memset(&zuc256_eia3_ooo->state, 0,
+               sizeof(zuc256_eia3_ooo->state));
+        zuc256_eia3_ooo->init_not_done = 0;
+        zuc256_eia3_ooo->unused_lane_bitmask = 0xffff;
+        memset(zuc256_eia3_ooo->args.digest, 0,
+               sizeof(zuc256_eia3_ooo->args.digest));
 
         /* Init HMAC/SHA1 out-of-order fields */
         hmac_sha_1_ooo->lens[0] = 0;

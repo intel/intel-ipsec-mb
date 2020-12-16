@@ -48,6 +48,28 @@ EK256_d64:
 dd      0x00220000, 0x002F0000, 0x00240000, 0x002A0000, 0x006D0000, 0x00400000, 0x00400000, 0x00400000
 dd      0x00400000, 0x00400000, 0x00400000, 0x00400000, 0x00400000, 0x00520000, 0x00100000, 0x00300000
 
+
+align 64
+EK256_EIA3_4:
+dd      0x00220000, 0x002F0000, 0x00250000, 0x002A0000,
+dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
+align 64
+EK256_EIA3_8:
+dd      0x00230000, 0x002F0000, 0x00240000, 0x002A0000,
+dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
+align 64
+EK256_EIA3_16:
+dd      0x00230000, 0x002F0000, 0x00250000, 0x002A0000,
+dd      0x006D0000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00400000, 0x00400000, 0x00400000,
+dd      0x00400000, 0x00520000, 0x00100000, 0x00300000
+
 align 64
 shuf_mask_key:
 dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF, 0x04FFFFFF, 0x05FFFFFF, 0x06FFFFFF, 0x07FFFFFF,
@@ -687,13 +709,14 @@ align 64
 ;
 ; Initialize LFSR registers for a single lane, for ZUC-256
 ;
-%macro INIT_LFSR_256 6
-%define %%KEY   %1 ;; [in] Key pointer
-%define %%IV    %2 ;; [in] IV pointer
-%define %%LFSR  %3 ;; [out] ZMM register to contain initialized LFSR regs
-%define %%XTMP  %4 ;; [clobbered] XMM temporary register
-%define %%XTMP2 %5 ;; [clobbered] XMM temporary register
-%define %%TMP   %6 ;; [clobbered] GP temporary register
+%macro INIT_LFSR_256 7
+%define %%KEY       %1 ;; [in] Key pointer
+%define %%IV        %2 ;; [in] IV pointer
+%define %%LFSR      %3 ;; [out] ZMM register to contain initialized LFSR regs
+%define %%XTMP      %4 ;; [clobbered] XMM temporary register
+%define %%XTMP2     %5 ;; [clobbered] XMM temporary register
+%define %%TMP       %6 ;; [clobbered] GP temporary register
+%define %%CONSTANTS %7 ;; [in] Address to constants
 
     ; s0 - s3
     vpxorq          %%XTMP, %%XTMP
@@ -704,7 +727,7 @@ align 64
 
     vpsrld          %%XTMP, 1
 
-    vporq           %%XTMP, [rel EK256_d64] ; s0 - s3
+    vporq           %%XTMP, [%%CONSTANTS] ; s0 - s3
 
     vpinsrb         %%XTMP, %%XTMP, [%%KEY + 21], 1 ; s0
     vpinsrb         %%XTMP, %%XTMP, [%%KEY + 16], 0 ; s0
@@ -740,7 +763,7 @@ align 64
     vpinsrb         %%XTMP, %%XTMP, [%%KEY + 7], 13 ; s7
     vpinsrb         %%XTMP, %%XTMP, [%%IV + 2], 12 ; s7
 
-    vporq           %%XTMP, [rel EK256_d64 + 16] ; s4 - s7
+    vporq           %%XTMP, [%%CONSTANTS + 16] ; s4 - s7
 
     vmovd           %%XTMP2, [%%IV + 17]
     vpshufb         %%XTMP2, [rel shuf_mask_iv_17_19]
@@ -771,7 +794,7 @@ align 64
     vpinsrb         %%XTMP, %%XTMP, [%%IV + 6], 13 ; s11
     vpinsrb         %%XTMP, %%XTMP, [%%IV + 13], 12 ; s11
 
-    vporq           %%XTMP, [rel EK256_d64 + 32] ; s8 - s11
+    vporq           %%XTMP, [%%CONSTANTS + 32] ; s8 - s11
 
     vmovd           %%XTMP2, [%%IV + 20]
     vpshufb         %%XTMP2, [rel shuf_mask_iv_20_23]
@@ -802,7 +825,7 @@ align 64
     vpinsrb         %%XTMP, %%XTMP, [%%KEY + 30], 13 ; s15
     vpinsrb         %%XTMP, %%XTMP, [%%KEY + 29], 12 ; s15
 
-    vporq           %%XTMP, [rel EK256_d64 + 48] ; s12 - s15
+    vporq           %%XTMP, [%%CONSTANTS + 48] ; s12 - s15
 
     movzx           DWORD(%%TMP), byte [%%IV + 24]
     and             DWORD(%%TMP), 0x0000003f
@@ -833,11 +856,13 @@ align 64
 	%define		pIv	  rsi
 	%define		pState	  rdx
         %define         lane_mask ecx
+	%define		arg5	  r8 ; Only used in ZUC-256
 %else
 	%define		pKe	  rcx
 	%define		pIv	  rdx
 	%define		pState	  r8
         %define         lane_mask r9d
+	%define		arg5	  [rsp + 40] ; Only used in ZUC-256
 %endif
 
 %define         %%X0    zmm16
@@ -847,11 +872,27 @@ align 64
 %define         %%R1    zmm20
 %define         %%R2    zmm21
 
+%define tag_sz r10
+
+%if %%KEY_SIZE == 256
+    mov    tag_sz, arg5
+%endif
+
     FUNC_SAVE
 
     mov rax, pState
 
     kmovw   k2, lane_mask
+
+%if %%KEY_SIZE == 256
+    ; Get pointer to constants (depending on tag size, this will point at
+    ; constants for encryption, authentication with 4-byte, 8-byte or 16-byte tags)
+    lea    r13, [rel EK256_d64]
+    bsf    DWORD(tag_sz), DWORD(tag_sz)
+    dec    DWORD(tag_sz)
+    shl    DWORD(tag_sz), 6
+    add    r13, tag_sz
+%endif
 
     ; Set LFSR registers for Packet 1
     mov     r9, [pKe]   ; Load Key 1 pointer
@@ -860,7 +901,7 @@ align 64
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, zmm0, zmm1
 %else
-    INIT_LFSR_256 r9, r10, zmm0, xmm3, xmm5, r11
+    INIT_LFSR_256 r9, r10, zmm0, xmm3, xmm5, r11, r13
 %endif
     ; Set LFSR registers for Packets 2-15
 %assign idx 1
@@ -872,7 +913,7 @@ align 64
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, APPEND(zmm, reg_lfsr), APPEND(zmm, reg_tmp)
 %else
-    INIT_LFSR_256 r9, r10, APPEND(zmm, reg_lfsr), xmm3, xmm5, r11
+    INIT_LFSR_256 r9, r10, APPEND(zmm, reg_lfsr), xmm3, xmm5, r11, r13
 %endif
 %assign idx (idx + 1)
 %assign reg_lfsr (reg_lfsr + 2)
@@ -885,7 +926,7 @@ align 64
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, zmm30, zmm31
 %else
-    INIT_LFSR_256 r9, r10, zmm30, xmm3, xmm5, r11
+    INIT_LFSR_256 r9, r10, zmm30, xmm3, xmm5, r11, r13
 %endif
     ; Store LFSR registers in memory (reordering first, so all S0 regs
     ; are together, then all S1 regs... until S15)
@@ -1044,6 +1085,11 @@ asm_Zuc256Initialization_16_gfni_avx512:
     mov         r12, [r13 + numRounds*8]
 %endif
     kmovd       k1, r12d
+
+; Store all 4 bytes of keystream in a single 64-byte buffer
+%if %%NUM_ROUNDS == 1
+     vmovdqa32 [pKS]{k2}, zmm16
+%else
     ; ZMM16-31 contain the keystreams for each round
     ; Perform a 32-bit 16x16 transpose to have up to 64 bytes
     ; (NUM_ROUNDS * 4B) of each lane in a different register
@@ -1055,6 +1101,7 @@ asm_Zuc256Initialization_16_gfni_avx512:
     store_kstr16 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                  zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
                  rbx, r9, r10, r11, k1
+%endif
 
     ; Reorder LFSR registers
 %ifnum %%NUM_ROUNDS
@@ -1137,6 +1184,17 @@ asm_ZucGenKeystream8B_16_avx512:
     ret
 
 ;;
+;; void asm_ZucGenKeystream4B_16_avx512(state16_t *pSta, u32 pKeyStr[16],
+;;                                      const u32 lane_mask)
+;;
+MKGLOBAL(asm_ZucGenKeystream4B_16_avx512,function,internal)
+asm_ZucGenKeystream4B_16_avx512:
+
+    KEYGEN_16_AVX512 1, 0, arg3
+
+    ret
+
+;;
 ;; void asm_ZucGenKeystream64B_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16])
 ;;
 MKGLOBAL(asm_ZucGenKeystream64B_16_gfni_avx512,function,internal)
@@ -1154,6 +1212,17 @@ MKGLOBAL(asm_ZucGenKeystream8B_16_gfni_avx512,function,internal)
 asm_ZucGenKeystream8B_16_gfni_avx512:
 
     KEYGEN_16_AVX512 2, 1, arg3
+
+    ret
+
+;;
+;; void asm_ZucGenKeystream4B_16_gfni_avx512(state16_t *pSta, u32 pKeyStr[16],
+;;                                           const u32 lane_mask)
+;;
+MKGLOBAL(asm_ZucGenKeystream4B_16_gfni_avx512,function,internal)
+asm_ZucGenKeystream4B_16_gfni_avx512:
+
+    KEYGEN_16_AVX512 1, 1, arg3
 
     ret
 
@@ -1845,23 +1914,8 @@ Eia3RoundsAVX_end:
 
         ret
 
-;;
-;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
-;;
-;; WIN64
-;;      RCX - T: Array of digests for all 16 buffers
-;;      RDX - KS : Array of pointers to key stream for all 16 buffers
-;;      R8  - DATA : Array of pointers to data for all 16 buffers
-;;      R9  - N_BITS (number data bits to process)
-;; LIN64
-;;      RDI  - T: Array of digests for all 16 buffers
-;;      RSI  - KS : Array of pointers to key stream for all 16 buffers
-;;      RDX  - DATA : Array of pointers to data for all 16 buffers
-;;      RCX  - N_BITS (number data bits to process)
-;;
-align 64
-MKGLOBAL(asm_Eia3RemainderAVX512_16,function,internal)
-asm_Eia3RemainderAVX512_16:
+%macro REMAINDER_16 1
+%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 
 %ifdef LINUX
         %define         T       rdi
@@ -1942,7 +1996,7 @@ asm_Eia3RemainderAVX512_16:
 %assign K 0
 %rep 4
         cmp     MIN_LEN, 128
-        jb      APPEND3(Eia3RoundsAVX512_dq_end,I,J)
+        jb      APPEND3(%%Eia3RoundsAVX512_dq_end,I,J)
 
         ;; read 16 bytes and reverse bits
         vmovdqu xmm0, [DATA_ADDR + OFFSET]
@@ -1991,10 +2045,10 @@ asm_Eia3RemainderAVX512_16:
         sub     MIN_LEN, 128
 %assign K (K + 1)
 %endrep
-APPEND3(Eia3RoundsAVX512_dq_end,I,J):
+APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
 
         or      MIN_LEN, MIN_LEN
-        jz      APPEND3(Eia3RoundsAVX_end,I,J)
+        jz      APPEND3(%%Eia3RoundsAVX_end,I,J)
 
         ; Get number of bytes
         mov     N_BYTES, MIN_LEN
@@ -2059,7 +2113,7 @@ APPEND3(Eia3RoundsAVX512_dq_end,I,J):
         vpternlogq xmm9, xmm14, xmm13, 0x96
         vpternlogq xmm9, xmm15, xmm8, 0x96
 
-APPEND3(Eia3RoundsAVX_end,I,J):
+APPEND3(%%Eia3RoundsAVX_end,I,J):
         vinserti32x4 APPEND(DIGEST_, I), xmm9, J
 %assign J (J + 1)
 %endrep
@@ -2087,14 +2141,14 @@ APPEND3(Eia3RoundsAVX_end,I,J):
         ; These last steps should be done only for the buffers that
         ; have no more data to authenticate
         xor     IDX, IDX
-start_loop:
+%%start_loop:
         ; Update data pointer
         movzx   ebx, word [rsp + IDX*2]
         shr     ebx, 3 ; length authenticated in bytes
         add     [DATA + IDX*8], rbx
 
         cmp     word [LEN + 2*IDX], 0
-        jnz     skip_comput
+        jnz     %%skip_comput
 
         ; Read digest
         mov     ebx, [T + 4*IDX]
@@ -2115,6 +2169,7 @@ start_loop:
         ; XOR with current digest
         xor     ebx, r11d
 
+%if %%KEY_SIZE == 128
         ; Read keystr[L - 1] (last dword of keyStr)
         add     MIN_LEN, (31 + 64)
         shr     MIN_LEN, 5 ; L
@@ -2122,21 +2177,61 @@ start_loop:
         mov     r11d, [KS_ADDR + MIN_LEN * 4]
         ; XOR with current digest
         xor     ebx, r11d
+%endif
 
         ; byte swap and write digest out
         bswap   ebx
         mov     [T + 4*IDX], ebx
 
-skip_comput:
+%%skip_comput:
         inc     IDX
         cmp     IDX, 16
-        jne     start_loop
+        jne     %%start_loop
 
         add     rsp, 32
 
         vzeroupper
         FUNC_RESTORE
         ret
+%endmacro
+
+;;
+;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;;
+;; WIN64
+;;      RCX - T: Array of digests for all 16 buffers
+;;      RDX - KS : Array of pointers to key stream for all 16 buffers
+;;      R8  - DATA : Array of pointers to data for all 16 buffers
+;;      R9  - N_BITS (number data bits to process)
+;; LIN64
+;;      RDI  - T: Array of digests for all 16 buffers
+;;      RSI  - KS : Array of pointers to key stream for all 16 buffers
+;;      RDX  - DATA : Array of pointers to data for all 16 buffers
+;;      RCX  - N_BITS (number data bits to process)
+;;
+align 64
+MKGLOBAL(asm_Eia3RemainderAVX512_16,function,internal)
+asm_Eia3RemainderAVX512_16:
+        REMAINDER_16 128
+
+;;
+;; extern void asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;;
+;; WIN64
+;;      RCX - T: Array of digests for all 16 buffers
+;;      RDX - KS : Array of pointers to key stream for all 16 buffers
+;;      R8  - DATA : Array of pointers to data for all 16 buffers
+;;      R9  - N_BITS (number data bits to process)
+;; LIN64
+;;      RDI  - T: Array of digests for all 16 buffers
+;;      RSI  - KS : Array of pointers to key stream for all 16 buffers
+;;      RDX  - DATA : Array of pointers to data for all 16 buffers
+;;      RCX  - N_BITS (number data bits to process)
+;;
+align 64
+MKGLOBAL(asm_Eia3_256_RemainderAVX512_16,function,internal)
+asm_Eia3_256_RemainderAVX512_16:
+        REMAINDER_16 256
 
 ;;
 ;;extern void asm_Eia3Round64BAVX512(uint32_t *T, const void *KS, const void *DATA)

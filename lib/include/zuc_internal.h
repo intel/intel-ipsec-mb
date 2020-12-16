@@ -455,12 +455,14 @@ IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
 IMB_DLL_LOCAL void asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys,
                                                    ZucIv16_t *pIvs,
                                                    ZucState16_t *pState,
-                                                   const uint16_t lane_mask);
+                                                   const uint16_t lane_mask,
+                                                   const unsigned tag_sz);
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys,
                                                       ZucIv16_t *pIvs,
                                                       ZucState16_t *pState,
-                                                      const uint16_t lane_mask);
+                                                      const uint16_t lane_mask,
+                                                      const unsigned tag_sz);
 
 /**
  ******************************************************************************
@@ -820,6 +822,33 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  *
  * @description
  *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 4 bytes of
+ *      keystream for sixteen packets in parallel.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState16_t
+ *
+ * @param[in,out] pKeyStr           Pointer to buffer to write consecutively 4
+ *                                  bytes of keystream for the 16 input buffers
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_16 to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_ZucGenKeystream4B_16_avx512(ZucState16_t *pState,
+                                                   uint32_t pKeyStr[16],
+                                                   const uint32_t lane_mask);
+
+IMB_DLL_LOCAL void asm_ZucGenKeystream4B_16_gfni_avx512(ZucState16_t *pState,
+                                                      uint32_t pKeyStr[16],
+                                                      const uint32_t lane_mask);
+
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
  *      stage of the ZUC algorithm. The function will generate N*4 bytes of
  *      keystream for sixteen packets in parallel.
  *
@@ -1091,6 +1120,12 @@ IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX512_16(uint32_t *T,
                                                   uint16_t *lens,
                                                   const uint64_t commonBits);
 
+IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16(uint32_t *T,
+                                                  const void * const ks,
+                                                  const void **data,
+                                                  uint16_t *lens,
+                                                  const uint64_t commonBits);
+
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
                                     const void * const pIv[4],
@@ -1176,6 +1211,12 @@ void zuc_eia3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo);
 
 IMB_DLL_LOCAL
 void zuc_eia3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo);
+
+IMB_DLL_LOCAL
+void zuc256_eia3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo);
+
+IMB_DLL_LOCAL
+void zuc256_eia3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo);
 
 /* the s-boxes */
 extern const uint8_t S0[256];

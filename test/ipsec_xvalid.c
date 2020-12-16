@@ -471,7 +471,7 @@ struct str_value_mapping hash_algo_str_map[] = {
                 }
         },
         {
-                .name = "zuc-eia3-256",
+                .name = "ZUC-EIA3-256",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN,
                 }

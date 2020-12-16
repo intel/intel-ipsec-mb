@@ -858,6 +858,108 @@ zuc_eia3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
 }
 
 static inline
+void _zuc256_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
+                                const unsigned use_gfni)
+{
+        unsigned int i = 0;
+        ZucState16_t *state = (ZucState16_t *) ooo->state;
+        /* Calculate the minimum input packet size from all packets */
+        uint16_t remainCommonBits = find_min_length16(ooo->lens);
+
+        DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX512_BUFS][2*64], 64);
+        const uint8_t **pIn8 = ooo->args.in;
+        uint32_t remainL;
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr0[NUM_AVX512_BUFS], 64) = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArr64[NUM_AVX512_BUFS], 64) = {NULL};
+        DECLARE_ALIGNED(uint32_t *pKeyStrArrInit[NUM_AVX512_BUFS], 64) = {NULL};
+
+        for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                pKeyStrArr0[i] = (uint32_t *) &keyStr[i][0];
+                pKeyStrArrInit[i] = (uint32_t *) &keyStr[i][8];
+        }
+        /*
+         * Generate first 8 bytes for new buffers.
+         * For old buffers, copy the previous 8 bytes of KS.
+         */
+        keystr_8B_gen_16(state, pKeyStrArr0, ooo->init_not_done, use_gfni);
+        /* If init has been done, it means that this is not a new buffer
+         * and therefore, there are previous 8 bytes of KS that need to
+         * be used. Else, set the bit of the mask for future calls
+         */
+        for (i = 0; i < NUM_AVX512_BUFS; i++) {
+                if (!(ooo->init_not_done & (1 << i)))
+                        memcpy(pKeyStrArr0[i], &ooo->args.prev_ks[i], 8);
+                else
+                        ooo->init_not_done &= (uint16_t)(~(1 << i));
+        }
+        /* 2 KS words already done */
+        uint16_t L = ((remainCommonBits + 31) / 32);
+
+        /* Generate first required bytes. If required KeyStream is less
+         * than 64B, we generate the the keystream and call Remainder
+         * straight away
+         */
+        if (L < 14) {
+                keystr_var_gen_16(state, pKeyStrArrInit, L, use_gfni);
+                asm_Eia3_256_RemainderAVX512_16(ooo->args.digest,
+                                      (const void * const *)pKeyStrArr0,
+                                      (const void **)pIn8,
+                                      ooo->lens, remainCommonBits);
+                goto exit;
+        } else
+                keystr_var_gen_16(state, pKeyStrArrInit, 14, use_gfni);
+        L -= 14;
+        /* Point at the next 64 bytes of the key */
+        for (i = 0; i < NUM_AVX512_BUFS; i++)
+                pKeyStrArr64[i] = (uint32_t *) &keyStr[i][64];
+
+        while (remainCommonBits >= (64*8)) {
+                if (L < 16) {
+                        keystr_var_gen_16(state, pKeyStrArr64, L, use_gfni);
+                        L = 0;
+                } else {
+                        keystr_64B_gen_16(state, pKeyStrArr64, use_gfni);
+                        L -= 16;
+                }
+
+                round64B_16(ooo->args.digest, (const void * const *)pKeyStrArr0,
+                            (const void **)pIn8, ooo->lens, use_gfni);
+                remainCommonBits -= 64*8;
+        }
+
+        if (L)
+                keystr_var_gen_16(state, pKeyStrArr64, L, use_gfni);
+        asm_Eia3_256_RemainderAVX512_16(ooo->args.digest,
+                (const void * const *)pKeyStrArr0,
+                (const void **)pIn8,
+                ooo->lens, remainCommonBits);
+
+exit:
+        remainL = (((remainCommonBits + 31) / 32) + 2);
+        /* Copy last 2 KS words for next call */
+        for (i = 0; i < NUM_AVX512_BUFS; i++)
+                memcpy(&ooo->args.prev_ks[i],
+                       &pKeyStrArr0[i][remainL-2], 8);
+
+#ifdef SAFE_DATA
+        /* Clear sensitive data (in registers and stack) */
+        clear_mem(keyStr, sizeof(keyStr));
+#endif
+}
+
+void
+zuc256_eia3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
+{
+        _zuc256_eia3_16_buffer_job(ooo, 0);
+}
+
+void
+zuc256_eia3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
+{
+        _zuc256_eia3_16_buffer_job(ooo, 1);
+}
+
+static inline
 void _zuc_eia3_n_buffer(const void * const pKey[],
                         const void * const pIv[],
                         const void * const pBufferIn[],

@@ -38,11 +38,15 @@
 %define SUBMIT_JOB_ZUC256_EEA3 submit_job_zuc256_eea3_no_gfni_avx512
 %define FLUSH_JOB_ZUC128_EEA3 flush_job_zuc_eea3_no_gfni_avx512
 %define FLUSH_JOB_ZUC256_EEA3 flush_job_zuc256_eea3_no_gfni_avx512
-%define SUBMIT_JOB_ZUC_EIA3 submit_job_zuc_eia3_no_gfni_avx512
-%define FLUSH_JOB_ZUC_EIA3 flush_job_zuc_eia3_no_gfni_avx512
+%define SUBMIT_JOB_ZUC128_EIA3 submit_job_zuc_eia3_no_gfni_avx512
+%define FLUSH_JOB_ZUC128_EIA3 flush_job_zuc_eia3_no_gfni_avx512
+%define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_no_gfni_avx512
+%define FLUSH_JOB_ZUC256_EIA3 flush_job_zuc256_eia3_no_gfni_avx512
 %define ZUC_EIA3_16_BUFFER zuc_eia3_16_buffer_job_no_gfni_avx512
+%define ZUC256_EIA3_16_BUFFER zuc256_eia3_16_buffer_job_no_gfni_avx512
 %define ZUC128_INIT_16     asm_ZucInitialization_16_avx512
 %define ZUC256_INIT_16     asm_Zuc256Initialization_16_avx512
+%define ZUC_KEYGEN4B_16    asm_ZucGenKeystream4B_16_avx512
 %define ZUC_CIPHER         asm_ZucCipher_16_avx512
 %endif
 
@@ -55,12 +59,16 @@ dw      0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000, 0x8000
 
 extern zuc_eia3_16_buffer_job_no_gfni_avx512
 extern zuc_eia3_16_buffer_job_gfni_avx512
+extern zuc256_eia3_16_buffer_job_no_gfni_avx512
+extern zuc256_eia3_16_buffer_job_gfni_avx512
 extern asm_ZucInitialization_16_avx512
 extern asm_ZucInitialization_16_gfni_avx512
 extern asm_ZucCipher_16_avx512
 extern asm_ZucCipher_16_gfni_avx512
 extern asm_Zuc256Initialization_16_avx512
 extern asm_Zuc256Initialization_16_gfni_avx512
+extern asm_ZucGenKeystream4B_16_avx512
+extern asm_ZucGenKeystream4B_16_gfni_avx512
 
 %ifdef LINUX
 %define arg1    rdi
@@ -68,14 +76,12 @@ extern asm_Zuc256Initialization_16_gfni_avx512
 %define arg3    rdx
 %define arg4    rcx
 %define arg5    r8
-%define arg6    r9
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
-%define arg5    [rsp + 32]
-%define arg6    [rsp + 40]
+%define arg5    qword [rsp + 32]
 %endif
 
 %define state   arg1
@@ -188,6 +194,7 @@ section .text
         ; to pass parameter to next function
         mov     r11, state
 
+%if %%KEY_SIZE == 128
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
         ;; 32 bytes for 4 parameters
@@ -198,16 +205,30 @@ section .text
         lea     arg3, [r11 + _zuc_state]
         movzx   DWORD(arg4), word [r11 + _zuc_init_not_done]
 
-
-%if %%KEY_SIZE == 128
         call    ZUC128_INIT_16
-%else
-        call    ZUC256_INIT_16
-%endif
 
 %ifndef LINUX
         add     rsp, 32
 %endif
+%else ;; %%KEY_SIZE == 256
+        ;; If Windows, reserve memory in stack for parameter transferring
+%ifndef LINUX
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 40
+%endif
+        lea     arg1, [r11 + _zuc_args_keys]
+        lea     arg2, [r11 + _zuc_args_IV]
+        lea     arg3, [r11 + _zuc_state]
+        movzx   DWORD(arg4), word [r11 + _zuc_init_not_done]
+        mov     arg5, 2
+
+        call    ZUC256_INIT_16
+
+%ifndef LINUX
+        add     rsp, 40
+%endif
+%endif ;; %%KEY_SIZE == 128
+
         mov     r11, [rsp + _gpr_save + 8*8]
 
         mov     word [r11 + _zuc_init_not_done], 0 ; Init done for all lanes
@@ -391,6 +412,7 @@ section .text
         cmp     word [r12 + _zuc_init_not_done], 0
         je      %%skip_init_flush
 
+%if %%KEY_SIZE == 128
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
         ;; 32 bytes for 4 parameters
@@ -401,15 +423,29 @@ section .text
         lea     arg3, [r12 + _zuc_state]
         movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
 
-%if %%KEY_SIZE == 128
         call    ZUC128_INIT_16
-%else
-        call    ZUC256_INIT_16
-%endif
 
 %ifndef LINUX
         add     rsp, 32
 %endif
+%else ;; %%KEY_SIZE == 256
+        ;; If Windows, reserve memory in stack for parameter transferring
+%ifndef LINUX
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 40
+%endif
+        lea     arg1, [r12 + _zuc_args_keys]
+        lea     arg2, [r12 + _zuc_args_IV]
+        lea     arg3, [r12 + _zuc_state]
+        movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
+        mov     arg5, 2
+
+        call    ZUC256_INIT_16
+
+%ifndef LINUX
+        add     rsp, 40
+%endif
+%endif ;; %%KEY_SIZE == 128
         mov     word [r12 + _zuc_init_not_done], 0
 
 %%skip_init_flush:
@@ -530,26 +566,21 @@ MKGLOBAL(SUBMIT_JOB_ZUC256_EEA3,function,internal)
 SUBMIT_JOB_ZUC256_EEA3:
         SUBMIT_JOB_ZUC_EEA3 256
 
-; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
-; arg 2 : job
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 FLUSH_JOB_ZUC128_EEA3:
         FLUSH_JOB_ZUC_EEA3 128
 
-; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
-; arg 2 : job
 MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
 FLUSH_JOB_ZUC256_EEA3:
         FLUSH_JOB_ZUC_EEA3 256
 
 
-; JOB* SUBMIT_JOB_ZUC_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
-; arg 1 : state
-; arg 2 : job
-MKGLOBAL(SUBMIT_JOB_ZUC_EIA3,function,internal)
-SUBMIT_JOB_ZUC_EIA3:
+%macro SUBMIT_JOB_ZUC_EIA3 1
+%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -616,7 +647,7 @@ SUBMIT_JOB_ZUC_EIA3:
         vmovdqa64       [state + _zuc_lens], ymm0
 
         cmp     qword [state + _zuc_lanes_in_use], 16
-        jne     return_null_submit_eia3
+        jne     %%return_null_submit_eia3
 
         ;; Find min length for lanes 0-7
         vphminposuw     xmm2, xmm0
@@ -628,20 +659,22 @@ SUBMIT_JOB_ZUC_EIA3:
         vphminposuw     xmm2, xmm1
         vpextrw         DWORD(tmp), xmm2, 0       ; min value
         cmp             DWORD(min_len), DWORD(tmp)
-        jle             use_min_eia3
+        jle             %%use_min_eia3
         vpextrw         DWORD(idx), xmm2, 1   ; min index
         add             DWORD(idx), 8               ; but index +8
         mov             min_len, tmp                    ; min len
-use_min_eia3:
+%%use_min_eia3:
         or              min_len, min_len
-        jz              len_is_0_submit_eia3
+        jz              %%len_is_0_submit_eia3
 
         ; Move state into r12, as register for state will be used
         ; to pass parameter to next function
         mov     r12, state
 
+%if %%KEY_SIZE == 128
+        ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 32 bytes for 4 parameters for INIT function and for 1 parameter for 16_BUFFER function
+        ;; 32 bytes for 4 parameters
         sub     rsp, 32
 %endif
         lea     arg1, [r12 + _zuc_args_keys]
@@ -651,9 +684,50 @@ use_min_eia3:
 
         call    ZUC128_INIT_16
 
+%ifndef LINUX
+        add     rsp, 32
+%endif
+%else ;; %%KEY_SIZE == 256
+        ;; If Windows, reserve memory in stack for parameter transferring
+%ifndef LINUX
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 40
+%endif
+        lea     arg1, [r12 + _zuc_args_keys]
+        lea     arg2, [r12 + _zuc_args_IV]
+        lea     arg3, [r12 + _zuc_state]
+        movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
+        mov     arg5, 4
+
+        call    ZUC256_INIT_16
+
+%ifndef LINUX
+        ;; 32 bytes for 4 parameters (RSP was 40 bytes down, so we need 4 bytes up)
+        add     rsp, 8
+%endif
+
+        lea     arg1, [r12 + _zuc_state]
+        lea     arg2, [r12 + _zuc_args_digest]
+        movzx   DWORD(arg3), word [r12 + _zuc_init_not_done]
+
+        ; Generate first 4 bytes of keystream, used as the initial value of digests
+        call    ZUC_KEYGEN4B_16
+
+%ifndef LINUX
+        add     rsp, 32
+%endif
+%endif ;; %%KEY_SIZE == 128
+
+%ifndef LINUX
+        sub     rsp, 32
+%endif
         mov     arg1, r12
 
+%if %%KEY_SIZE == 128
         call    ZUC_EIA3_16_BUFFER
+%else
+        call    ZUC256_EIA3_16_BUFFER
+%endif
 
 %ifndef LINUX
         add     rsp, 32
@@ -661,7 +735,7 @@ use_min_eia3:
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
 
-len_is_0_submit_eia3:
+%%len_is_0_submit_eia3:
         ; process completed job "idx"
         ;; - decrement number of jobs in use
         sub	qword [state + _zuc_lanes_in_use], 1
@@ -691,7 +765,7 @@ len_is_0_submit_eia3:
 %endrep
 %endif
 
-return_submit_eia3:
+%%return_submit_eia3:
         vzeroupper
 
         mov     rbx, [rsp + _gpr_save + 8*0]
@@ -708,14 +782,13 @@ return_submit_eia3:
 
         ret
 
-return_null_submit_eia3:
+%%return_null_submit_eia3:
         xor     job_rax, job_rax
-        jmp     return_submit_eia3
+        jmp     %%return_submit_eia3
+%endmacro
 
-; JOB* FLUSH_JOB_ZUC_EIA3(MB_MGR_ZUC_OOO *state)
-; arg 1 : state
-MKGLOBAL(FLUSH_JOB_ZUC_EIA3,function,internal)
-FLUSH_JOB_ZUC_EIA3:
+%macro FLUSH_JOB_ZUC_EIA3 1
+%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 
 %define unused_lanes     rbx
 %define tmp1             rbx
@@ -748,7 +821,7 @@ FLUSH_JOB_ZUC_EIA3:
 
         ; check for empty
         cmp     qword [state + _zuc_lanes_in_use], 0
-        jz      return_null_flush_eia3
+        jz      %%return_null_flush_eia3
 
         ; find a lane with a null job
         vpxorq          zmm0, zmm0
@@ -770,7 +843,7 @@ FLUSH_JOB_ZUC_EIA3:
         vpcmpw          k4, ymm0, ymm1, 0
         kmovw           DWORD(tmp), k4
         bsf             DWORD(idx), DWORD(tmp)
-        jnz             len_is_0_flush_eia3
+        jnz             %%len_is_0_flush_eia3
 
         ;; Find min length for lanes 0-7
         vphminposuw     xmm2, xmm0
@@ -784,11 +857,11 @@ FLUSH_JOB_ZUC_EIA3:
         vphminposuw     xmm2, xmm1
         vpextrw         DWORD(tmp3), xmm2, 0       ; min value
         cmp             DWORD(min_len), DWORD(tmp3)
-        jle             use_min_flush_eia3
+        jle             %%use_min_flush_eia3
         vpextrw         DWORD(idx), xmm2, 1   ; min index
         add             DWORD(idx), 8               ; but index +8
         mov             min_len, tmp3                    ; min len
-use_min_flush_eia3:
+%%use_min_flush_eia3:
 
         ;; copy good lane data into NULL lanes
         ;; - k1(L8)/k2(H8)/k3 - masks of NULL jobs
@@ -814,13 +887,15 @@ use_min_flush_eia3:
         ; to pass parameter to next function
         mov     r12, state
 
+        cmp     word [r12 + _zuc_init_not_done], 0
+        je      %%skip_init_flush_eia3
+
+%if %%KEY_SIZE == 128
+        ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
-        ;; 32 bytes for 4 parameters for INIT function and for 1 parameter for 16_BUFFER function
+        ;; 32 bytes for 4 parameters
         sub     rsp, 32
 %endif
-        cmp     word [r12 + _zuc_init_not_done], 0
-        je      skip_init_flush_eia3
-
         lea     arg1, [r12 + _zuc_args_keys]
         lea     arg2, [r12 + _zuc_args_IV]
         lea     arg3, [r12 + _zuc_state]
@@ -828,10 +903,51 @@ use_min_flush_eia3:
 
         call    ZUC128_INIT_16
 
-skip_init_flush_eia3:
+%ifndef LINUX
+        add     rsp, 32
+%endif
+%else ;; %%KEY_SIZE == 256
+        ;; If Windows, reserve memory in stack for parameter transferring
+%ifndef LINUX
+        ;; 40 bytes for 4 parameters
+        sub     rsp, 40
+%endif
+        lea     arg1, [r12 + _zuc_args_keys]
+        lea     arg2, [r12 + _zuc_args_IV]
+        lea     arg3, [r12 + _zuc_state]
+        movzx   DWORD(arg4), word [r12 + _zuc_init_not_done]
+        mov     arg5, 4
+
+        call    ZUC256_INIT_16
+
+%ifndef LINUX
+        ;; 32 bytes for 4 parameters (RSP was 40 bytes down, so we need 4 bytes up)
+        add     rsp, 8
+%endif
+
+        lea     arg1, [r12 + _zuc_state]
+        lea     arg2, [r12 + _zuc_args_digest]
+        movzx   DWORD(arg3), word [r12 + _zuc_init_not_done]
+
+        ; Generate first 4 bytes of keystream, used as the initial value of digests
+        call    ZUC_KEYGEN4B_16
+
+%ifndef LINUX
+        add     rsp, 32
+%endif
+%endif ;; %%KEY_SIZE == 128
+
+%%skip_init_flush_eia3:
+%ifndef LINUX
+        sub     rsp, 32
+%endif
         mov     arg1, r12
 
+%if %%KEY_SIZE == 128
         call    ZUC_EIA3_16_BUFFER
+%else
+        call    ZUC256_EIA3_16_BUFFER
+%endif
 
 %ifndef LINUX
         add     rsp, 32
@@ -847,15 +963,15 @@ skip_init_flush_eia3:
         or      tmp3, tmp1 ;; bitmask with NULL lanes and job to return
         kmovq   k1, tmp3
 
-        jmp     skip_flush_clear_state_eia3
+        jmp     %%skip_flush_clear_state_eia3
 %endif
-len_is_0_flush_eia3:
+%%len_is_0_flush_eia3:
 %ifdef SAFE_DATA
         ; Prepare bitmask to clear ZUC state with lane that is returned
         lea     tmp3, [rel index_to_mask]
         kmovw   k1, [tmp3 + idx*2]
 
-skip_flush_clear_state_eia3:
+%%skip_flush_clear_state_eia3:
 %endif
         ; process completed job "idx"
         ;; - decrement number of jobs in use
@@ -887,7 +1003,7 @@ skip_flush_clear_state_eia3:
 
         vzeroupper
 
-return_flush_eia3:
+%%return_flush_eia3:
 
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
@@ -903,9 +1019,36 @@ return_flush_eia3:
 
         ret
 
-return_null_flush_eia3:
+%%return_null_flush_eia3:
         xor     job_rax, job_rax
-        jmp     return_flush_eia3
+        jmp     %%return_flush_eia3
+%endmacro
+
+; JOB* SUBMIT_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
+SUBMIT_JOB_ZUC128_EIA3:
+        SUBMIT_JOB_ZUC_EIA3 128
+
+; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
+; arg 1 : state
+; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
+SUBMIT_JOB_ZUC256_EIA3:
+        SUBMIT_JOB_ZUC_EIA3 256
+
+; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
+; arg 1 : state
+MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
+FLUSH_JOB_ZUC128_EIA3:
+        FLUSH_JOB_ZUC_EIA3 128
+
+; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state)
+; arg 1 : state
+MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
+FLUSH_JOB_ZUC256_EIA3:
+        FLUSH_JOB_ZUC_EIA3 256
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
