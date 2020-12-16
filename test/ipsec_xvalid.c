@@ -145,7 +145,7 @@ struct str_value_mapping {
         union params    values;
 };
 
-struct str_value_mapping arch_str_map[] = {
+const struct str_value_mapping arch_str_map[] = {
         {.name = "NONE",        .values.arch_type = IMB_ARCH_NONE },
         {.name = "SSE",         .values.arch_type = IMB_ARCH_SSE },
         {.name = "NO-AESNI",    .values.arch_type = IMB_ARCH_NOAESNI },
@@ -154,10 +154,6 @@ struct str_value_mapping arch_str_map[] = {
         {.name = "AVX512",      .values.arch_type = IMB_ARCH_AVX512 }
 };
 
-struct str_value_mapping ext_arch_str_map[] = {
-        {.name = "SSE-SHANI-GFNI",           .values.arch_type = ARCH_SSE },
-        {.name = "AVX512-VAES-GFNI-VCLMUL",  .values.arch_type = ARCH_AVX512 }
-};
 struct str_value_mapping cipher_algo_str_map[] = {
         {
                 .name = "AES-CBC-128",
@@ -1476,7 +1472,7 @@ modify_docsis_crc32_test_buf(uint8_t *test_buf,
  *  Returns -1 if sensitive information was found or 0 if not.
  */
 static int
-perform_safe_checks(IMB_MGR *mgr, IMB_ARCH arch, const char *dir)
+perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
 {
         uint8_t *rsp_ptr;
         uint32_t simd_size = 0;
@@ -1548,7 +1544,7 @@ perform_safe_checks(IMB_MGR *mgr, IMB_ARCH arch, const char *dir)
 }
 
 static void
-clear_scratch_simd(IMB_ARCH arch)
+clear_scratch_simd(const IMB_ARCH arch)
 {
         switch (arch) {
         case IMB_ARCH_SSE:
@@ -1572,8 +1568,8 @@ clear_scratch_simd(IMB_ARCH arch)
 
 /* Performs test using AES_HMAC or DOCSIS */
 static int
-do_test(IMB_MGR *enc_mb_mgr, IMB_ARCH enc_arch,
-        IMB_MGR *dec_mb_mgr, IMB_ARCH dec_arch,
+do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
+        IMB_MGR *dec_mb_mgr, const IMB_ARCH dec_arch,
         const struct params_s *params, struct data *data,
         const unsigned safe_check, const unsigned imix,
         const unsigned num_jobs)
@@ -1991,9 +1987,9 @@ exit:
                 printf("Failures in\n");
                 print_algo_info(params);
                 printf("Encrypting ");
-                print_component(enc_mb_mgr->features, enc_arch);
+                print_tested_arch(enc_mb_mgr->features, enc_arch);
                 printf("Decrypting ");
-                print_component(dec_mb_mgr->features, dec_arch);
+                print_tested_arch(dec_mb_mgr->features, dec_arch);
                 if (imix) {
                         printf("Job #%u, buffer size = %u\n", i, buf_sizes[i]);
                         unsigned int j;
@@ -2012,8 +2008,8 @@ exit:
 
 /* Runs test for each buffer size */
 static void
-process_variant(IMB_MGR *enc_mgr, IMB_ARCH enc_arch,
-                IMB_MGR *dec_mgr, IMB_ARCH dec_arch,
+process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
+                IMB_MGR *dec_mgr, const IMB_ARCH dec_arch,
                 struct params_s *params, struct data *variant_data,
                 const unsigned int safe_check)
 {
@@ -2125,7 +2121,7 @@ process_variant(IMB_MGR *enc_mgr, IMB_ARCH enc_arch,
 
 /* Sets cipher direction and key size  */
 static void
-run_test(IMB_ARCH enc_arch, IMB_ARCH dec_arch,
+run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
          struct params_s *params, struct data *variant_data,
          const unsigned int safe_check)
 {
@@ -2162,7 +2158,7 @@ run_test(IMB_ARCH enc_arch, IMB_ARCH dec_arch,
         }
 
         printf("Encrypting ");
-        print_component(enc_mgr->features, enc_arch);
+        print_tested_arch(enc_mgr->features, enc_arch);
 
         if (dec_arch == IMB_ARCH_NOAESNI)
                 dec_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
@@ -2194,7 +2190,7 @@ run_test(IMB_ARCH enc_arch, IMB_ARCH dec_arch,
         }
 
         printf("Decrypting ");
-        print_component(dec_mgr->features, dec_arch);
+        print_tested_arch(dec_mgr->features, dec_arch);
 
         if (custom_test) {
                 params->key_size = custom_job_params.key_size;
@@ -2310,10 +2306,12 @@ run_tests(const unsigned int safe_check)
                                min_size, max_size, step_size);
         }
         /* Performing tests for each selected architecture */
-        for (enc_arch = 1; enc_arch < IMB_ARCH_NUM; enc_arch++) {
+        for (enc_arch = IMB_ARCH_NOAESNI; enc_arch < IMB_ARCH_NUM;
+             enc_arch++) {
                 if (enc_archs[enc_arch] == 0)
                         continue;
-                for (dec_arch = 1; dec_arch < IMB_ARCH_NUM; dec_arch++) {
+                for (dec_arch = IMB_ARCH_NOAESNI; dec_arch < IMB_ARCH_NUM;
+                     dec_arch++) {
                         if (dec_archs[dec_arch] == 0)
                                 continue;
                         run_test(enc_arch, dec_arch, &params, variant_data,
@@ -2332,9 +2330,9 @@ static void usage(const char *app_name)
                 "-h: print this message\n"
                 "-v: verbose, prints extra information\n"
                 "--enc-arch: encrypting with architecture "
-                "(AESNI_EMU/SSE/AVX/AVX2/AVX512)\n"
+                "(NO-AESNI/SSE/AVX/AVX2/AVX512)\n"
                 "--dec-arch: decrypting with architecture "
-                "(AESNI_EMU/SSE/AVX/AVX2/AVX512)\n"
+                "(NO-AESNI/SSE/AVX/AVX2/AVX512)\n"
                 "--cipher-algo: Select cipher algorithm to run on the custom "
                 "test\n"
                 "--hash-algo: Select hash algorithm to run on the custom test\n"
@@ -2428,7 +2426,7 @@ check_string_arg(const char *param, const char *arg,
         }
 
         for (i = 0; i < num_avail_opts; i++)
-                if (strcmp(arg, map[i].name) == 0 && strcmp(arg, "NONE") != 0)
+                if (strcmp(arg, map[i].name) == 0)
                         return &(map[i].values);
 
         /* Argument is not listed in the available options */
@@ -2532,16 +2530,22 @@ int main(int argc, char *argv[])
                         return EXIT_SUCCESS;
                 } else if (strcmp(argv[i], "-v") == 0) {
                         verbose = 1;
-                } else if (arch_and_feature_set(argv[i], enc_archs, &flags)) {
-                        if (!arch_and_feature_set(argv[i], dec_archs, &flags)) {
+                } else if (update_flags_and_archs(argv[i],
+                                                   enc_archs,
+                                                   &flags)) {
+                        if (!update_flags_and_archs(argv[i],
+                                                     dec_archs,
+                                                     &flags)) {
                                 fprintf(stderr,
-                                       "Same archs and should be available\n");
+                                       "Same archs should be available\n");
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--enc-arch") == 0) {
+
+                        /* Use index 1 to skip arch_str_map.name = "NONE" */
                         values = check_string_arg(argv[i], argv[i+1],
-                                                  arch_str_map,
-                                                  DIM(arch_str_map));
+                                                  arch_str_map + 1,
+                                                  DIM(arch_str_map) - 1);
                         if (values == NULL)
                                 return EXIT_FAILURE;
 
@@ -2553,9 +2557,10 @@ int main(int argc, char *argv[])
                         enc_archs[values->arch_type] = 1;
                         i++;
                 } else if (strcmp(argv[i], "--dec-arch") == 0) {
+                        /* Use index 1 to skip arch_str_map.name = "NONE" */
                         values = check_string_arg(argv[i], argv[i+1],
-                                                  arch_str_map,
-                                                  DIM(arch_str_map));
+                                                  arch_str_map + 1,
+                                                  DIM(arch_str_map) - 1);
                         if (values == NULL)
                                 return EXIT_FAILURE;
 

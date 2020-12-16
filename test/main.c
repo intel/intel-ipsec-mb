@@ -126,7 +126,6 @@ main(int argc, char **argv)
 {
         uint8_t arch_support[IMB_ARCH_NUM];
         int i, atype, auto_detect = 0;
-        IMB_MGR *p_mgr = NULL;
         uint64_t flags = 0;
         uint64_t features = 0;
         int errors = 0;
@@ -148,7 +147,9 @@ main(int argc, char **argv)
 		if (strcmp(argv[i], "-h") == 0) {
 			usage(argv[0]);
 			return EXIT_SUCCESS;
-		} else if (arch_and_feature_set(argv[i], arch_support, &flags))
+		} else if (update_flags_and_archs(argv[i],
+                                                   arch_support,
+                                                   &flags))
 			continue;
 		else if (strcmp(argv[i], "--auto-detect") == 0)
                         (void) auto_detect; /* legacy option - to be removed */
@@ -158,8 +159,10 @@ main(int argc, char **argv)
 		}
 	}
 
-        /* Go through architectures skipping NOAESNI */
-        for (atype = IMB_ARCH_SSE; atype < IMB_ARCH_NUM; atype++) {
+        /* Go through architectures */
+        for (atype = IMB_ARCH_NOAESNI; atype < IMB_ARCH_NUM; atype++) {
+                IMB_MGR *p_mgr = NULL;
+
                 if (!arch_support[atype])
                         continue;
                 if (arch_support[atype] == IMB_ARCH_NOAESNI)
@@ -188,7 +191,7 @@ main(int argc, char **argv)
                         break;
                 }
 
-                print_component(p_mgr->features, arch_support[atype]);
+                print_tested_arch(p_mgr->features, atype);
 
                 errors += known_answer_test(p_mgr);
                 errors += do_test(p_mgr);

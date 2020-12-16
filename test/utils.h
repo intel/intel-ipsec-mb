@@ -36,9 +36,10 @@ void hexdump(FILE *fp, const char *msg, const void *p, size_t len);
 void hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len,
                 const void *start_ptr);
 
-int arch_and_feature_set(char *arg, uint8_t *arch_support, uint64_t *features);
+int update_flags_and_archs(const char *arg, uint8_t *arch_support,
+                            uint64_t *features);
 int detect_arch_and_features(uint8_t *arch_support, uint64_t *features);
-void print_component(uint64_t features, IMB_ARCH arch);
+void print_tested_arch(const uint64_t features, const IMB_ARCH arch);
 
 struct test_suite_context {
         unsigned pass;

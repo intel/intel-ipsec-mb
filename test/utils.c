@@ -37,8 +37,8 @@
 
 static uint8_t hex_buffer[16 * 1024];
 static const char *arch_str_tab[IMB_ARCH_NUM] = {
-        "NONE", "NO_AESNI", "SSE", "AVX", "AVX2", "AVX512"
-        };
+        "NONE", "NO-AESNI", "SSE", "AVX", "AVX2", "AVX512"
+};
 
 /**
  * @brief Simplistic memory copy (intentionally not using libc)
@@ -137,12 +137,22 @@ hexdump(FILE *fp,
         hexdump_ex(fp, msg, p, len, NULL);
 }
 
+/**
+ * @brief Parse command line arguments and update arch_support
+ *        and flags accordingly
+ *
+ * @param arg command line argument
+ * @param arch_support table of supported architectures
+ * @param flags MB manager flags to be passed to alloc_mb_mgr()
+ *
+ * @return 1 if arg was recognised, 0 otherwise
+ */
 int
-arch_and_feature_set(char         *arg,
-                     uint8_t arch_support[IMB_ARCH_NUM],
-                     uint64_t     *features)
+update_flags_and_archs(const char *arg,
+                        uint8_t arch_support[IMB_ARCH_NUM],
+                        uint64_t *features)
 {
-        uint8_t match = 1;
+        int match = 1;
 
         if (arch_support == NULL || features == NULL || arg == NULL) {
                 fprintf(stderr, "Inputs not passed correctly\n");
@@ -158,9 +168,9 @@ arch_and_feature_set(char         *arg,
         else if (strcmp(arg, "--no-sse") == 0)
                 arch_support[IMB_ARCH_SSE] = 0;
         else if (strcmp(arg, "--aesni-emu") == 0)
-                arch_support[IMB_ARCH_NOAESNI] = 0;
-        else if (strcmp(arg, "--no-aesni-emu") == 0)
                 arch_support[IMB_ARCH_NOAESNI] = 1;
+        else if (strcmp(arg, "--no-aesni-emu") == 0)
+                arch_support[IMB_ARCH_NOAESNI] = 0;
         else if (strcmp(arg, "--shani-on") == 0)
                 *features &= (~IMB_FLAG_SHANI_OFF);
         else if (strcmp(arg, "--shani-off") == 0)
@@ -172,9 +182,17 @@ arch_and_feature_set(char         *arg,
         return match;
 }
 
+/**
+ * @brief fill table of supported architectures
+ *
+ * @param arch_support table of supported architectures
+ *
+ * @return  0 - architectures identified correctly
+ *         -1 - bad input or issues with alloc_mb_mgr
+ */
 int
 detect_arch_and_features(uint8_t arch_support[IMB_ARCH_NUM],
-                         uint64_t     *features)
+                         uint64_t *features)
 {
         const uint64_t detect_sse =
                 IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
@@ -215,51 +233,56 @@ detect_arch_and_features(uint8_t arch_support[IMB_ARCH_NUM],
                 arch_support[IMB_ARCH_SSE] = 0;
 
         if ((p_mgr->features & detect_pclmulqdq) != detect_pclmulqdq)
-                *features |= IMB_FEATURE_PCLMULQDQ;
+                *features &= (~IMB_FEATURE_PCLMULQDQ);
 
         if ((p_mgr->features & detect_aesni) != detect_aesni)
-                arch_support[IMB_ARCH_NOAESNI] = 1;
+                arch_support[IMB_ARCH_NOAESNI] = 0;
 
         free_mb_mgr(p_mgr);
 
         return 0;
 }
 
+/**
+ * @brief Print architecture name
+ *
+ * @param features value witch bits set for enabled features
+ * @param arch architecture
+ */
 void
-print_component(uint64_t features, IMB_ARCH arch)
+print_tested_arch(const uint64_t features, const IMB_ARCH arch)
 {
-        printf("using %s interface [", arch_str_tab[arch]);
+        const char *feat = "";
+
         switch (arch) {
         case IMB_ARCH_NOAESNI:
-                printf("NO-AESNI");
+        case IMB_ARCH_AVX2:
+        case IMB_ARCH_AVX:
                 break;
         case IMB_ARCH_SSE:
-                if ((features & IMB_FEATURE_GFNI) &&
-                    (features & IMB_FEATURE_SHANI))
-                        printf("SSE-SHANI-GFNI");
-                if (features & IMB_FEATURE_SHANI)
-                        printf("SSE-SHANI");
-                printf("SSE");
-                break;
-        case IMB_ARCH_AVX:
-                printf("AVX");
-                break;
-        case IMB_ARCH_AVX2:
-                printf("AVX2");
+                if (features & IMB_FEATURE_SHANI) {
+                        if ((features & IMB_FEATURE_GFNI))
+                                feat = "-SHANI-GFNI";
+                        else
+                            feat = "-SHANI";
+                }
                 break;
         case IMB_ARCH_AVX512:
                 if ((features & IMB_FEATURE_VAES) &&
                     (features & IMB_FEATURE_GFNI) &&
                     (features & IMB_FEATURE_VPCLMULQDQ))
-                        printf("AVX512-VAES-GFNI-VCLMUL");
-                else
-                        printf("AVX512");
+                        feat = "-VAES-GFNI-VCMUL";
                 break;
         default:
-                printf("Invalid component");
-                break;
+                printf("Invalid component\n");
+                return;
         }
-        printf("]\n");
+
+        printf("[INFO] [ARCH] using %s interface [%s%s]\n",
+                arch_str_tab[arch],
+                arch_str_tab[arch],
+                feat);
+
 }
 
 /* =================================================================== */
