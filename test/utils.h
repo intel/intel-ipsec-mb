@@ -28,11 +28,17 @@
 #ifndef TESTAPP_UTILS_H
 #define TESTAPP_UTILS_H
 
+#include <intel-ipsec-mb.h>
+
 #define DIM(_x) (sizeof(_x)/sizeof(_x[0]))
 
 void hexdump(FILE *fp, const char *msg, const void *p, size_t len);
 void hexdump_ex(FILE *fp, const char *msg, const void *p, size_t len,
                 const void *start_ptr);
+
+int arch_and_feature_set(char *arg, uint8_t *arch_support, uint64_t *features);
+int detect_arch_and_features(uint8_t *arch_support, uint64_t *features);
+void print_component(uint64_t features, IMB_ARCH arch);
 
 struct test_suite_context {
         unsigned pass;

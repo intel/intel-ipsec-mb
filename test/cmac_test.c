@@ -1496,7 +1496,7 @@ cmac_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&ctx);
 
         /* CMAC 128 BITLEN with standard vectors */
-        test_suite_start(&ctx, "AES-CMAC-128-Bit-length");
+        test_suite_start(&ctx, "AES-CMAC-128-BIT-LENGTH");
         for (i = 1; i < 20; i++)
                 test_cmac_bitlen_std_vectors(mb_mgr, &ctx, i);
 

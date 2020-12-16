@@ -90,15 +90,6 @@ static uint64_t pattern8_plain_text;
 #define OOO_MGR_FIRST aes128_ooo
 #define OOO_MGR_LAST  zuc_eia3_ooo
 
-enum arch_type_e {
-        ARCH_SSE = 0,
-        ARCH_AESNI_EMU,
-        ARCH_AVX,
-        ARCH_AVX2,
-        ARCH_AVX512,
-        NUM_ARCHS
-};
-
 /* Struct storing cipher parameters */
 struct params_s {
         JOB_CIPHER_MODE         cipher_mode; /* CBC, CNTR, DES, GCM etc. */
@@ -145,7 +136,7 @@ struct custom_job_params {
 };
 
 union params {
-        enum arch_type_e         arch_type;
+        IMB_ARCH                 arch_type;
         struct custom_job_params job_params;
 };
 
@@ -155,177 +146,182 @@ struct str_value_mapping {
 };
 
 struct str_value_mapping arch_str_map[] = {
-        {.name = "SSE",         .values.arch_type = ARCH_SSE },
-        {.name = "AESNI_EMU",   .values.arch_type = ARCH_AESNI_EMU },
-        {.name = "AVX",         .values.arch_type = ARCH_AVX },
-        {.name = "AVX2",        .values.arch_type = ARCH_AVX2 },
-        {.name = "AVX512",      .values.arch_type = ARCH_AVX512 }
+        {.name = "NONE",        .values.arch_type = IMB_ARCH_NONE },
+        {.name = "SSE",         .values.arch_type = IMB_ARCH_SSE },
+        {.name = "NO-AESNI",    .values.arch_type = IMB_ARCH_NOAESNI },
+        {.name = "AVX",         .values.arch_type = IMB_ARCH_AVX },
+        {.name = "AVX2",        .values.arch_type = IMB_ARCH_AVX2 },
+        {.name = "AVX512",      .values.arch_type = IMB_ARCH_AVX512 }
 };
 
+struct str_value_mapping ext_arch_str_map[] = {
+        {.name = "SSE-SHANI-GFNI",           .values.arch_type = ARCH_SSE },
+        {.name = "AVX512-VAES-GFNI-VCLMUL",  .values.arch_type = ARCH_AVX512 }
+};
 struct str_value_mapping cipher_algo_str_map[] = {
         {
-                .name = "aes-cbc-128",
+                .name = "AES-CBC-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
                         .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
-                .name = "aes-cbc-192",
+                .name = "AES-CBC-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
                         .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
-                .name = "aes-cbc-256",
+                .name = "AES-CBC-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
                         .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
-                .name = "aes-ctr-128",
+                .name = "AES-CTR-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
                         .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
-                .name = "aes-ctr-192",
+                .name = "AES-CTR-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
                         .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
-                .name = "aes-ctr-256",
+                .name = "AES-CTR-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
                         .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
-                .name = "aes-ctr-bit-128",
+                .name = "AES-CTR-128-BIT-LENGTH",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
                         .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
-                .name = "aes-ctr-bit-192",
+                .name = "AES-CTR-192-BIT-LENGTH",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
                         .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
-                .name = "aes-ctr-bit-256",
+                .name = "AES-CTR-256-BIT-LENGTH",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
                         .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
-                .name = "aes-ecb-128",
+                .name = "AES-ECB-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
                         .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
-                .name = "aes-ecb-192",
+                .name = "AES-ECB-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
                         .key_size = IMB_KEY_AES_192_BYTES
                 }
         },
         {
-                .name = "aes-ecb-256",
+                .name = "AES-ECB-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
                         .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
-                .name = "aes-docsis-128",
+                .name = "DOCSIS-SEC-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
                         .key_size = IMB_KEY_AES_128_BYTES
                 }
         },
         {
-                .name = "aes-docsis-256",
+                .name = "DOCSIS-SEC-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
                         .key_size = IMB_KEY_AES_256_BYTES
                 }
         },
         {
-                .name = "des-docsis",
+                .name = "DOCSIS-DES-64",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DOCSIS_DES,
                         .key_size = 8
                 }
         },
         {
-                .name = "des-cbc",
+                .name = "DES-CBC-64",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DES,
                         .key_size = 8
                 }
         },
         {
-                .name = "3des-cbc",
+                .name = "3DES-CBC-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DES3,
                         .key_size = 24
                 }
         },
         {
-                .name = "zuc-eea3",
+                .name = "ZUC-EEA3",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ZUC_EEA3,
                         .key_size = 16
                 }
         },
         {
-                .name = "zuc-eea3-256",
+                .name = "ZUC-EEA3-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ZUC_EEA3,
                         .key_size = 32
                 }
         },
         {
-                .name = "snow3g-uea2",
+                .name = "SNOW3G-UEA2",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_SNOW3G_UEA2_BITLEN,
                         .key_size = 16
                 }
         },
         {
-                .name = "kasumi-uea1",
+                .name = "KASUMI-F8",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_KASUMI_UEA1_BITLEN,
                         .key_size = 16
                 }
         },
         {
-                .name = "aes-cbcs-1-9",
+                .name = "AES-CBCS-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBCS_1_9,
                         .key_size = 16
                 }
         },
         {
-                .name = "chacha20",
+                .name = "CHACHA20-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CHACHA20,
                         .key_size = 32
                 }
         },
         {
-                .name = "null",
+                .name = "NULL-CIPHER",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_NULL,
                         .key_size = 0
@@ -335,145 +331,145 @@ struct str_value_mapping cipher_algo_str_map[] = {
 
 struct str_value_mapping hash_algo_str_map[] = {
         {
-                .name = "sha1-hmac",
+                .name = "HMAC-SHA1",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_HMAC_SHA_1
                 }
         },
         {
-                .name = "sha224-hmac",
+                .name = "HMAC-SHA224",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_HMAC_SHA_224
                 }
         },
         {
-                .name = "sha256-hmac",
+                .name = "HMAC-SHA256",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_HMAC_SHA_256
                 }
         },
         {
-                .name = "sha384-hmac",
+                .name = "HMAC-SHA384",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_HMAC_SHA_384
                 }
         },
         {
-                .name = "sha512-hmac",
+                .name = "HMAC-SHA512",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_HMAC_SHA_512
                 }
         },
         {
-                .name = "aes-xcbc",
+                .name = "AES-XCBC-128",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_XCBC
                 }
         },
         {
-                .name = "md5-hmac",
+                .name = "HMAC-MD5",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_MD5
                 }
         },
         {
-                .name = "aes-cmac",
+                .name = "AES-CMAC-128",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_CMAC
                 }
         },
         {
-                .name = "null",
+                .name = "NULL-HASH",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_NULL
                 }
         },
         {
-                .name = "aes-cmac-bitlen",
+                .name = "AES-CMAC-128-BIT-LENGTH",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_CMAC_BITLEN
                 }
         },
         {
-                .name = "sha1",
+                .name = "SHA1",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA_1
                 }
         },
         {
-                .name = "sha224",
+                .name = "SHA224",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA_224
                 }
         },
         {
-                .name = "sha256",
+                .name = "SHA256",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA_256
                 }
         },
         {
-                .name = "sha384",
+                .name = "SHA384",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA_384
                 }
         },
         {
-                .name = "sha512",
+                .name = "SHA512",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SHA_512
                 }
         },
         {
-                .name = "zuc-eia3",
+                .name = "ZUC-EIA3",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN,
                 }
         },
         {
-                .name = "snow3g-uia2",
+                .name = "SNOW3G-UIA2",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN,
                 }
         },
         {
-                .name = "kasumi-uia1",
+                .name = "KASUMI-F9",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_KASUMI_UIA1,
                 }
         },
         {
-                .name = "docsis-crc32",
+                .name = "DOCSIS-SEC-128-CRC32",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_DOCSIS_CRC32,
                 }
         },
         {
-                .name = "aes-gmac-128",
+                .name = "AES-GMAC-128",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_GMAC_128,
                 }
         },
         {
-                .name = "aes-gmac-192",
+                .name = "AES-GMAC-192",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_GMAC_192,
                 }
         },
         {
-                .name = "aes-gmac-256",
+                .name = "AES-GMAC-256",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_GMAC_256,
                 }
         },
         {
-                .name = "aes-cmac-256",
+                .name = "AES-CMAC-256",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_AES_CMAC_256,
                 }
         },
         {
-                .name = "poly-1305",
+                .name = "POLY1305",
                 .values.job_params = {
                         .hash_alg = IMB_AUTH_POLY1305,
                 }
@@ -482,7 +478,7 @@ struct str_value_mapping hash_algo_str_map[] = {
 
 struct str_value_mapping aead_algo_str_map[] = {
         {
-                .name = "aes-gcm-128",
+                .name = "AES-GCM-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
@@ -490,7 +486,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
-                .name = "aes-gcm-192",
+                .name = "AES-GCM-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
@@ -498,7 +494,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
-                .name = "aes-gcm-256",
+                .name = "AES-GCM-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
@@ -506,7 +502,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
-                .name = "aes-ccm-128",
+                .name = "AES-CCM-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CCM,
                         .hash_alg = IMB_AUTH_AES_CCM,
@@ -514,7 +510,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
-                .name = "aes-ccm-256",
+                .name = "AES-CCM-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CCM,
                         .hash_alg = IMB_AUTH_AES_CCM,
@@ -522,7 +518,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
-                .name = "pon-128",
+                .name = "PON-128-BIP-CRC32",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
                         .hash_alg = IMB_AUTH_PON_CRC_BIP,
@@ -538,7 +534,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
-                .name = "chacha20-poly1305",
+                .name = "AEAD-CHACHA20-256-POLY1305",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CHACHA20_POLY1305,
                         .hash_alg = IMB_AUTH_CHACHA20_POLY1305,
@@ -634,8 +630,8 @@ struct custom_job_params custom_job_params = {
 };
 
 /* AESNI_EMU disabled by default */
-uint8_t enc_archs[NUM_ARCHS] = {1, 0, 1, 1, 1};
-uint8_t dec_archs[NUM_ARCHS] = {1, 0, 1, 1, 1};
+uint8_t enc_archs[IMB_ARCH_NUM] = {0, 1, 0, 1, 1, 1};
+uint8_t dec_archs[IMB_ARCH_NUM] = {0, 1, 0, 1, 1, 1};
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
@@ -797,7 +793,7 @@ print_algo_info(const struct params_s *params)
                 if (job_params->cipher_mode == params->cipher_mode &&
                     job_params->hash_alg == params->hash_alg &&
                     job_params->key_size == params->key_size) {
-                        printf("AEAD algo = %s\n", aead_algo_str_map[i].name);
+                        printf("AEAD algo = %s ", aead_algo_str_map[i].name);
                         return;
                 }
         }
@@ -814,21 +810,9 @@ print_algo_info(const struct params_s *params)
         for (i = 0; i < DIM(hash_algo_str_map); i++) {
                 job_params = &hash_algo_str_map[i].values.job_params;
                 if (job_params->hash_alg == params->hash_alg) {
-                        printf("Hash algo = %s\n", hash_algo_str_map[i].name);
+                        printf("Hash algo = %s ", hash_algo_str_map[i].name);
                         break;
                 }
-        }
-}
-
-static void
-print_arch_info(const enum arch_type_e arch)
-{
-        uint32_t i;
-
-        for (i = 0; i < DIM(arch_str_map); i++) {
-                if (arch_str_map[i].values.arch_type == arch)
-                        printf("Architecture = %s\n",
-                               arch_str_map[i].name);
         }
 }
 
@@ -1492,7 +1476,7 @@ modify_docsis_crc32_test_buf(uint8_t *test_buf,
  *  Returns -1 if sensitive information was found or 0 if not.
  */
 static int
-perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch, const char *dir)
+perform_safe_checks(IMB_MGR *mgr, IMB_ARCH arch, const char *dir)
 {
         uint8_t *rsp_ptr;
         uint32_t simd_size = 0;
@@ -1501,20 +1485,20 @@ perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch, const char *dir)
 
         dump_gps();
         switch (arch) {
-        case ARCH_SSE:
-        case ARCH_AESNI_EMU:
+        case IMB_ARCH_SSE:
+        case IMB_ARCH_NOAESNI:
                 dump_xmms_sse();
                 simd_size = XMM_MEM_SIZE;
                 break;
-        case ARCH_AVX:
+        case IMB_ARCH_AVX:
                 dump_xmms_avx();
                 simd_size = XMM_MEM_SIZE;
                 break;
-        case ARCH_AVX2:
+        case IMB_ARCH_AVX2:
                 dump_ymms();
                 simd_size = YMM_MEM_SIZE;
                 break;
-        case ARCH_AVX512:
+        case IMB_ARCH_AVX512:
                 dump_zmms();
                 simd_size = ZMM_MEM_SIZE;
                 break;
@@ -1564,20 +1548,20 @@ perform_safe_checks(IMB_MGR *mgr, const enum arch_type_e arch, const char *dir)
 }
 
 static void
-clear_scratch_simd(const enum arch_type_e arch)
+clear_scratch_simd(IMB_ARCH arch)
 {
         switch (arch) {
-        case ARCH_SSE:
-        case ARCH_AESNI_EMU:
+        case IMB_ARCH_SSE:
+        case IMB_ARCH_NOAESNI:
                 clr_scratch_xmms_sse();
                 break;
-        case ARCH_AVX:
+        case IMB_ARCH_AVX:
                 clr_scratch_xmms_avx();
                 break;
-        case ARCH_AVX2:
+        case IMB_ARCH_AVX2:
                 clr_scratch_ymms();
                 break;
-        case ARCH_AVX512:
+        case IMB_ARCH_AVX512:
                 clr_scratch_zmms();
                 break;
         default:
@@ -1588,8 +1572,8 @@ clear_scratch_simd(const enum arch_type_e arch)
 
 /* Performs test using AES_HMAC or DOCSIS */
 static int
-do_test(IMB_MGR *enc_mb_mgr, const enum arch_type_e enc_arch,
-        IMB_MGR *dec_mb_mgr, const enum arch_type_e dec_arch,
+do_test(IMB_MGR *enc_mb_mgr, IMB_ARCH enc_arch,
+        IMB_MGR *dec_mb_mgr, IMB_ARCH dec_arch,
         const struct params_s *params, struct data *data,
         const unsigned safe_check, const unsigned imix,
         const unsigned num_jobs)
@@ -2007,9 +1991,9 @@ exit:
                 printf("Failures in\n");
                 print_algo_info(params);
                 printf("Encrypting ");
-                print_arch_info(enc_arch);
+                print_component(enc_mb_mgr->features, enc_arch);
                 printf("Decrypting ");
-                print_arch_info(dec_arch);
+                print_component(dec_mb_mgr->features, dec_arch);
                 if (imix) {
                         printf("Job #%u, buffer size = %u\n", i, buf_sizes[i]);
                         unsigned int j;
@@ -2028,8 +2012,8 @@ exit:
 
 /* Runs test for each buffer size */
 static void
-process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
-                IMB_MGR *dec_mgr, const enum arch_type_e dec_arch,
+process_variant(IMB_MGR *enc_mgr, IMB_ARCH enc_arch,
+                IMB_MGR *dec_mgr, IMB_ARCH dec_arch,
                 struct params_s *params, struct data *variant_data,
                 const unsigned int safe_check)
 {
@@ -2040,7 +2024,7 @@ process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
         unsigned int i, j;
 
         if (verbose) {
-                printf("Testing ");
+                printf("[INFO] ");
                 print_algo_info(params);
         }
 
@@ -2103,6 +2087,8 @@ process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                                                          1, 0, 1);
 
                                         if (result < 0) {
+                                                if (verbose)
+                                                        printf("FAIL\n");
                                                 printf("=== issue confirmed\n");
                                                 exit(EXIT_FAILURE);
                                         }
@@ -2125,23 +2111,28 @@ process_variant(IMB_MGR *enc_mgr, const enum arch_type_e enc_arch,
                         for (j = 0; j < IMIX_ITER; j++) {
                                 if (do_test(enc_mgr, enc_arch, dec_mgr,
                                             dec_arch, params, variant_data,
-                                            0, 1, i) < 0)
+                                            0, 1, i) < 0) {
+                                        if (verbose)
+                                                printf("FAIL\n");
                                         exit(EXIT_FAILURE);
+                                }
                         }
                 }
         }
+        if (verbose)
+                printf("PASS\n");
 }
 
 /* Sets cipher direction and key size  */
 static void
-run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
+run_test(IMB_ARCH enc_arch, IMB_ARCH dec_arch,
          struct params_s *params, struct data *variant_data,
          const unsigned int safe_check)
 {
         IMB_MGR *enc_mgr = NULL;
         IMB_MGR *dec_mgr = NULL;
 
-        if (enc_arch == ARCH_AESNI_EMU)
+        if (enc_arch == IMB_ARCH_NOAESNI)
                 enc_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
         else
                 enc_mgr = alloc_mb_mgr(flags);
@@ -2152,17 +2143,17 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         }
 
         switch (enc_arch) {
-        case ARCH_SSE:
-        case ARCH_AESNI_EMU:
+        case IMB_ARCH_SSE:
+        case IMB_ARCH_NOAESNI:
                 init_mb_mgr_sse(enc_mgr);
                 break;
-        case ARCH_AVX:
+        case IMB_ARCH_AVX:
                 init_mb_mgr_avx(enc_mgr);
                 break;
-        case ARCH_AVX2:
+        case IMB_ARCH_AVX2:
                 init_mb_mgr_avx2(enc_mgr);
                 break;
-        case ARCH_AVX512:
+        case IMB_ARCH_AVX512:
                 init_mb_mgr_avx512(enc_mgr);
                 break;
         default:
@@ -2170,7 +2161,10 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
                 exit(EXIT_FAILURE);
         }
 
-        if (dec_arch == ARCH_AESNI_EMU)
+        printf("Encrypting ");
+        print_component(enc_mgr->features, enc_arch);
+
+        if (dec_arch == IMB_ARCH_NOAESNI)
                 dec_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
         else
                 dec_mgr = alloc_mb_mgr(flags);
@@ -2181,23 +2175,26 @@ run_test(const enum arch_type_e enc_arch, const enum arch_type_e dec_arch,
         }
 
         switch (dec_arch) {
-        case ARCH_SSE:
-        case ARCH_AESNI_EMU:
+        case IMB_ARCH_SSE:
+        case IMB_ARCH_NOAESNI:
                 init_mb_mgr_sse(dec_mgr);
                 break;
-        case ARCH_AVX:
+        case IMB_ARCH_AVX:
                 init_mb_mgr_avx(dec_mgr);
                 break;
-        case ARCH_AVX2:
+        case IMB_ARCH_AVX2:
                 init_mb_mgr_avx2(dec_mgr);
                 break;
-        case ARCH_AVX512:
+        case IMB_ARCH_AVX512:
                 init_mb_mgr_avx512(dec_mgr);
                 break;
         default:
                 fprintf(stderr, "Invalid architecture\n");
                 exit(EXIT_FAILURE);
         }
+
+        printf("Decrypting ");
+        print_component(dec_mgr->features, dec_arch);
 
         if (custom_test) {
                 params->key_size = custom_job_params.key_size;
@@ -2290,7 +2287,7 @@ run_tests(const unsigned int safe_check)
 {
         struct params_s params;
         struct data *variant_data = NULL;
-        enum arch_type_e enc_arch, dec_arch;
+        IMB_ARCH enc_arch, dec_arch;
         const uint32_t min_size = job_sizes[RANGE_MIN];
         const uint32_t max_size = job_sizes[RANGE_MAX];
         const uint32_t step_size = job_sizes[RANGE_STEP];
@@ -2313,17 +2310,12 @@ run_tests(const unsigned int safe_check)
                                min_size, max_size, step_size);
         }
         /* Performing tests for each selected architecture */
-        for (enc_arch = ARCH_SSE; enc_arch < NUM_ARCHS; enc_arch++) {
+        for (enc_arch = 1; enc_arch < IMB_ARCH_NUM; enc_arch++) {
                 if (enc_archs[enc_arch] == 0)
                         continue;
-                printf("\nEncrypting with ");
-                print_arch_info(enc_arch);
-
-                for (dec_arch = ARCH_SSE; dec_arch < NUM_ARCHS; dec_arch++) {
+                for (dec_arch = 1; dec_arch < IMB_ARCH_NUM; dec_arch++) {
                         if (dec_archs[dec_arch] == 0)
                                 continue;
-                        printf("\tDecrypting with ");
-                        print_arch_info(dec_arch);
                         run_test(enc_arch, dec_arch, &params, variant_data,
                                  safe_check);
                 }
@@ -2419,51 +2411,6 @@ get_next_num_arg(const char * const *argv, const int index, const int argc,
         return index + 1;
 }
 
-static int
-detect_arch(unsigned int arch_support[NUM_ARCHS])
-{
-        const uint64_t detect_sse =
-                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
-        const uint64_t detect_avx =
-                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
-        const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
-        const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
-        IMB_MGR *p_mgr = NULL;
-        enum arch_type_e arch_id;
-
-        if (arch_support == NULL) {
-                fprintf(stderr, "Array not passed correctly\n");
-                return -1;
-        }
-
-        for (arch_id = ARCH_SSE; arch_id < NUM_ARCHS; arch_id++)
-                arch_support[arch_id] = 1;
-
-        p_mgr = alloc_mb_mgr(0);
-        if (p_mgr == NULL) {
-                fprintf(stderr, "Architecture detect error!\n");
-                return -1;
-        }
-
-        if ((p_mgr->features & detect_avx512) != detect_avx512)
-                arch_support[ARCH_AVX512] = 0;
-
-        if ((p_mgr->features & detect_avx2) != detect_avx2)
-                arch_support[ARCH_AVX2] = 0;
-
-        if ((p_mgr->features & detect_avx) != detect_avx)
-                arch_support[ARCH_AVX] = 0;
-
-        if ((p_mgr->features & detect_sse) != detect_sse) {
-                arch_support[ARCH_SSE] = 0;
-                arch_support[ARCH_AESNI_EMU] = 0;
-        }
-
-        free_mb_mgr(p_mgr);
-
-        return 0;
-}
-
 /*
  * Check string argument is supported and if it is, return values associated
  * with it.
@@ -2481,7 +2428,7 @@ check_string_arg(const char *param, const char *arg,
         }
 
         for (i = 0; i < num_avail_opts; i++)
-                if (strcmp(arg, map[i].name) == 0)
+                if (strcmp(arg, map[i].name) == 0 && strcmp(arg, "NONE") != 0)
                         return &(map[i].values);
 
         /* Argument is not listed in the available options */
@@ -2570,12 +2517,14 @@ int main(int argc, char *argv[])
 {
         int i;
         unsigned int arch_id;
-        unsigned int arch_support[NUM_ARCHS];
+        uint8_t arch_support[IMB_ARCH_NUM];
         const union params *values;
         unsigned int cipher_algo_set = 0;
         unsigned int hash_algo_set = 0;
         unsigned int aead_algo_set = 0;
         unsigned int safe_check = 0;
+        uint64_t features = 0;
+
 
         for (i = 1; i < argc; i++)
                 if (strcmp(argv[i], "-h") == 0) {
@@ -2583,25 +2532,12 @@ int main(int argc, char *argv[])
                         return EXIT_SUCCESS;
                 } else if (strcmp(argv[i], "-v") == 0) {
                         verbose = 1;
-                } else if (strcmp(argv[i], "--no-avx512") == 0) {
-                        enc_archs[ARCH_AVX512] = 0;
-                        dec_archs[ARCH_AVX512] = 0;
-                } else if (strcmp(argv[i], "--no-avx2") == 0) {
-                        enc_archs[ARCH_AVX2] = 0;
-                        dec_archs[ARCH_AVX2] = 0;
-                } else if (strcmp(argv[i], "--no-avx") == 0) {
-                        enc_archs[ARCH_AVX] = 0;
-                        dec_archs[ARCH_AVX] = 0;
-                } else if (strcmp(argv[i], "--no-sse") == 0) {
-                        enc_archs[ARCH_SSE] = 0;
-                        dec_archs[ARCH_SSE] = 0;
-                } else if (strcmp(argv[i], "--aesni-emu") == 0) {
-                        enc_archs[ARCH_AESNI_EMU] = 1;
-                        dec_archs[ARCH_AESNI_EMU] = 1;
-                } else if (strcmp(argv[i], "--shani-on") == 0) {
-                        flags &= (~IMB_FLAG_SHANI_OFF);
-                } else if (strcmp(argv[i], "--shani-off") == 0) {
-                        flags |= IMB_FLAG_SHANI_OFF;
+                } else if (arch_and_feature_set(argv[i], enc_archs, &flags)) {
+                        if (!arch_and_feature_set(argv[i], dec_archs, &flags)) {
+                                fprintf(stderr,
+                                       "Same archs and should be available\n");
+                                return EXIT_FAILURE;
+                        }
                 } else if (strcmp(argv[i], "--enc-arch") == 0) {
                         values = check_string_arg(argv[i], argv[i+1],
                                                   arch_str_map,
@@ -2716,11 +2652,12 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
-        if (detect_arch(arch_support) < 0)
+        /* detect available architectures and features*/
+        if (detect_arch_and_features(arch_support, &features) < 0)
                 return EXIT_FAILURE;
 
         /* disable tests depending on instruction sets supported */
-        for (arch_id = 0; arch_id < NUM_ARCHS; arch_id++) {
+        for (arch_id = IMB_ARCH_NOAESNI; arch_id < IMB_ARCH_NUM; arch_id++) {
                 if (arch_support[arch_id] == 0) {
                         enc_archs[arch_id] = 0;
                         dec_archs[arch_id] = 0;
@@ -2743,12 +2680,6 @@ int main(int argc, char *argv[])
                                 "if --safe-check is enabled\n");
                 free_mb_mgr(p_mgr);
                 return EXIT_FAILURE;
-        }
-        if (enc_archs[ARCH_SSE] || dec_archs[ARCH_SSE]) {
-                init_mb_mgr_sse(p_mgr);
-                fprintf(stderr, "%s SHA extensions (shani) for SSE arch\n",
-                        (p_mgr->features & IMB_FEATURE_SHANI) ?
-                        "Using" : "Not using");
         }
         free_mb_mgr(p_mgr);
 

@@ -121,99 +121,14 @@ print_hw_features(void)
         free_mb_mgr(p_mgr);
 }
 
-static void
-detect_arch(int *p_do_aesni_emu, int *p_do_sse, int *p_do_avx,
-            int *p_do_avx2, int *p_do_avx512, int *p_do_pclmulqdq)
-{
-        const uint64_t detect_sse =
-                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
-        const uint64_t detect_avx =
-                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
-        const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
-        const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
-        const uint64_t detect_pclmulqdq = IMB_FEATURE_PCLMULQDQ;
-        IMB_MGR *p_mgr = NULL;
-
-        if (p_do_aesni_emu == NULL || p_do_sse == NULL ||
-            p_do_avx == NULL || p_do_avx2 == NULL ||
-            p_do_avx512 == NULL)
-                return;
-
-        *p_do_aesni_emu = 1;
-        *p_do_sse = 1;
-        *p_do_avx = 1;
-        *p_do_avx2 = 1;
-        *p_do_avx512 = 1;
-        *p_do_pclmulqdq = 1;
-
-        p_mgr = alloc_mb_mgr(0);
-        if (p_mgr == NULL) {
-                printf("Architecture auto detect error!\n");
-                return;
-        }
-
-        if ((p_mgr->features & detect_avx512) != detect_avx512)
-                *p_do_avx512 = 0;
-
-        if ((p_mgr->features & detect_avx2) != detect_avx2)
-                *p_do_avx2 = 0;
-
-        if ((p_mgr->features & detect_avx) != detect_avx)
-                *p_do_avx = 0;
-
-        if ((p_mgr->features & detect_sse) != detect_sse)
-                *p_do_sse = 0;
-
-        if ((p_mgr->features & detect_pclmulqdq) != detect_pclmulqdq)
-                *p_do_pclmulqdq = 0;
-
-        free_mb_mgr(p_mgr);
-}
-
-static const char *
-get_component(const IMB_MGR *p_mgr, IMB_ARCH arch)
-{
-        uint64_t features = p_mgr->features;
-
-        switch (arch) {
-        case IMB_ARCH_NOAESNI:
-                return "NO-AESNI";
-        case IMB_ARCH_SSE:
-                if ((features & IMB_FEATURE_GFNI) &&
-                    (features & IMB_FEATURE_SHANI))
-                        return "SSE-SHANI-GFNI";
-                if (features & IMB_FEATURE_SHANI)
-                        return "SSE-SHANI";
-                return "SSE";
-        case IMB_ARCH_AVX:
-                return "AVX";
-        case IMB_ARCH_AVX2:
-                return "AVX2";
-        case IMB_ARCH_AVX512:
-                if ((features & IMB_FEATURE_VAES) &&
-                    (features & IMB_FEATURE_GFNI) &&
-                    (features & IMB_FEATURE_VPCLMULQDQ))
-                        return "AVX512-VAES-GFNI-VCLMUL";
-                return "AVX512";
-        default:
-                return "Invalid component";
-        }
-}
-
 int
 main(int argc, char **argv)
 {
-        const char *arch_str_tab[ARCH_NUMOF] = {
-                "SSE", "AVX", "AVX2", "AVX512", "NO_AESNI"
-        };
-        enum arch_type arch_type_tab[ARCH_NUMOF] = {
-                ARCH_SSE, ARCH_AVX, ARCH_AVX2, ARCH_AVX512, ARCH_NO_AESNI
-        };
-        int i, do_sse = 1, do_avx = 1, do_avx2 = 1, do_avx512 = 1;
-        int do_aesni_emu = 1, do_gcm = 1;
-        int auto_detect = 0;
+        uint8_t arch_support[IMB_ARCH_NUM];
+        int i, atype, auto_detect = 0;
         IMB_MGR *p_mgr = NULL;
         uint64_t flags = 0;
+        uint64_t features = 0;
         int errors = 0;
 
         /* Check version number */
@@ -225,112 +140,62 @@ main(int argc, char **argv)
         /* Print available CPU features */
         print_hw_features();
 
-        /* detect all available architectures */
-        detect_arch(&do_aesni_emu, &do_sse, &do_avx,
-                    &do_avx2, &do_avx512, &do_gcm);
-
+        /* Detect available architectures and features */
+        if (detect_arch_and_features(arch_support, &features) < 0)
+                return EXIT_FAILURE;
 
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
 			usage(argv[0]);
 			return EXIT_SUCCESS;
-		} else if (strcmp(argv[i], "--no-aesni-emu") == 0) {
-			do_aesni_emu = 0;
-		} else if (strcmp(argv[i], "--no-avx512") == 0) {
-			do_avx512 = 0;
-		} else if (strcmp(argv[i], "--no-avx2") == 0) {
-			do_avx2 = 0;
-		} else if (strcmp(argv[i], "--no-avx") == 0) {
-			do_avx = 0;
-		} else if (strcmp(argv[i], "--no-sse") == 0) {
-			do_sse = 0;
-		} else if (strcmp(argv[i], "--shani-on") == 0) {
-                        flags &= (~IMB_FLAG_SHANI_OFF);
-		} else if (strcmp(argv[i], "--shani-off") == 0) {
-                        flags |= IMB_FLAG_SHANI_OFF;
-		} else if (strcmp(argv[i], "--no-gcm") == 0) {
-                        do_gcm = 0;
-		} else if (strcmp(argv[i], "--auto-detect") == 0) {
+		} else if (arch_and_feature_set(argv[i], arch_support, &flags))
+			continue;
+		else if (strcmp(argv[i], "--auto-detect") == 0)
                         (void) auto_detect; /* legacy option - to be removed */
-		} else {
+		else {
 			usage(argv[0]);
 			return EXIT_FAILURE;
 		}
 	}
 
-        for (i = 0; i < ARCH_NUMOF; i++) {
-                const enum arch_type atype = arch_type_tab[i];
-                const char *component = NULL;
+        /* Go through architectures skipping NOAESNI */
+        for (atype = IMB_ARCH_SSE; atype < IMB_ARCH_NUM; atype++) {
+                if (!arch_support[atype])
+                        continue;
+                if (arch_support[atype] == IMB_ARCH_NOAESNI)
+                        p_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
+                else
+                        p_mgr = alloc_mb_mgr(flags);
+
+                if (p_mgr == NULL) {
+                        printf("Error allocating MB_MGR structure!\n");
+                        return EXIT_FAILURE;
+                }
 
                 switch (atype) {
-                case ARCH_SSE:
-                        if (!do_sse)
-                                continue;
-                        p_mgr = alloc_mb_mgr(flags);
-                        if (p_mgr == NULL) {
-                                printf("Error allocating MB_MGR structure!\n");
-                                return EXIT_FAILURE;
-                        }
+                case IMB_ARCH_SSE:
+                case IMB_ARCH_NOAESNI:
                         init_mb_mgr_sse(p_mgr);
-                        component = get_component(p_mgr, IMB_ARCH_SSE);
                         break;
-                case ARCH_AVX:
-                        if (!do_avx)
-                                continue;
-                        p_mgr = alloc_mb_mgr(flags);
-                        if (p_mgr == NULL) {
-                                printf("Error allocating MB_MGR structure!\n");
-                                return EXIT_FAILURE;
-                        }
+                case IMB_ARCH_AVX:
                         init_mb_mgr_avx(p_mgr);
-                        component = get_component(p_mgr, IMB_ARCH_AVX);
                         break;
-                case ARCH_AVX2:
-                        if (!do_avx2)
-                                continue;
-                        p_mgr = alloc_mb_mgr(flags);
-                        if (p_mgr == NULL) {
-                                printf("Error allocating MB_MGR structure!\n");
-                                return EXIT_FAILURE;
-                        }
+                case IMB_ARCH_AVX2:
                         init_mb_mgr_avx2(p_mgr);
-                        component = get_component(p_mgr, IMB_ARCH_AVX2);
                         break;
-                case ARCH_AVX512:
-                        if (!do_avx512)
-                                continue;
-                        p_mgr = alloc_mb_mgr(flags);
-                        if (p_mgr == NULL) {
-                                printf("Error allocating MB_MGR structure!\n");
-                                return EXIT_FAILURE;
-                        }
+                case IMB_ARCH_AVX512:
                         init_mb_mgr_avx512(p_mgr);
-                        component = get_component(p_mgr, IMB_ARCH_AVX512);
                         break;
-                case ARCH_NO_AESNI:
-                        if (!do_aesni_emu)
-                                continue;
-                        p_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
-                        if (p_mgr == NULL) {
-                                printf("Error allocating MB_MGR structure!\n");
-                                return EXIT_FAILURE;
-                        }
-                        init_mb_mgr_sse(p_mgr);
-                        component = get_component(p_mgr, IMB_ARCH_NOAESNI);
-                        break;
-                default:
-                        printf("Architecture type '%d' error!\n", (int) atype);
-                        continue;
                 }
-                printf("Testing %s interface [%s]\n",
-                       arch_str_tab[i], component);
+
+                print_component(p_mgr->features, arch_support[atype]);
 
                 errors += known_answer_test(p_mgr);
                 errors += do_test(p_mgr);
                 errors += ctr_test(p_mgr);
                 errors += pon_test(p_mgr);
                 errors += xcbc_test(p_mgr);
-                if (do_gcm)
+                if (features & IMB_FEATURE_PCLMULQDQ)
                         errors += gcm_test(p_mgr);
                 errors += customop_test(p_mgr);
                 errors += des_test(atype, p_mgr);

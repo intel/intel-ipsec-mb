@@ -33,8 +33,12 @@
 #include <assert.h>
 
 #include "utils.h"
+#include <intel-ipsec-mb.h>
 
 static uint8_t hex_buffer[16 * 1024];
+static const char *arch_str_tab[IMB_ARCH_NUM] = {
+        "NONE", "NO_AESNI", "SSE", "AVX", "AVX2", "AVX512"
+        };
 
 /**
  * @brief Simplistic memory copy (intentionally not using libc)
@@ -131,6 +135,131 @@ hexdump(FILE *fp,
         size_t len)
 {
         hexdump_ex(fp, msg, p, len, NULL);
+}
+
+int
+arch_and_feature_set(char         *arg,
+                     uint8_t arch_support[IMB_ARCH_NUM],
+                     uint64_t     *features)
+{
+        uint8_t match = 1;
+
+        if (arch_support == NULL || features == NULL || arg == NULL) {
+                fprintf(stderr, "Inputs not passed correctly\n");
+                return -1;
+        }
+
+        if (strcmp(arg, "--no-avx512") == 0)
+                arch_support[IMB_ARCH_AVX512] = 0;
+        else if (strcmp(arg, "--no-avx2") == 0)
+                arch_support[IMB_ARCH_AVX2] = 0;
+        else if (strcmp(arg, "--no-avx") == 0)
+                arch_support[IMB_ARCH_AVX] = 0;
+        else if (strcmp(arg, "--no-sse") == 0)
+                arch_support[IMB_ARCH_SSE] = 0;
+        else if (strcmp(arg, "--aesni-emu") == 0)
+                arch_support[IMB_ARCH_NOAESNI] = 0;
+        else if (strcmp(arg, "--no-aesni-emu") == 0)
+                arch_support[IMB_ARCH_NOAESNI] = 1;
+        else if (strcmp(arg, "--shani-on") == 0)
+                *features &= (~IMB_FLAG_SHANI_OFF);
+        else if (strcmp(arg, "--shani-off") == 0)
+                *features |= IMB_FLAG_SHANI_OFF;
+        else if (strcmp(arg, "--no-gcm") == 0)
+                *features &= (~IMB_FEATURE_PCLMULQDQ);
+        else
+                match = 0;
+        return match;
+}
+
+int
+detect_arch_and_features(uint8_t arch_support[IMB_ARCH_NUM],
+                         uint64_t     *features)
+{
+        const uint64_t detect_sse =
+                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx =
+                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
+        const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        const uint64_t detect_pclmulqdq = IMB_FEATURE_PCLMULQDQ;
+        const uint64_t detect_aesni = IMB_FEATURE_AESNI;
+
+        IMB_MGR *p_mgr = NULL;
+        IMB_ARCH arch_id;
+
+        if (arch_support == NULL || features == NULL) {
+                fprintf(stderr, "Inputs not passed correctly\n");
+                return -1;
+        }
+
+        for (arch_id = IMB_ARCH_NOAESNI; arch_id < IMB_ARCH_NUM; arch_id++)
+                arch_support[arch_id] = 1;
+
+        p_mgr = alloc_mb_mgr(0);
+        if (p_mgr == NULL) {
+                fprintf(stderr, "Architecture detect error!\n");
+                return -1;
+        }
+
+        if ((p_mgr->features & detect_avx512) != detect_avx512)
+                arch_support[IMB_ARCH_AVX512] = 0;
+
+        if ((p_mgr->features & detect_avx2) != detect_avx2)
+                arch_support[IMB_ARCH_AVX2] = 0;
+
+        if ((p_mgr->features & detect_avx) != detect_avx)
+                arch_support[IMB_ARCH_AVX] = 0;
+
+        if ((p_mgr->features & detect_sse) != detect_sse)
+                arch_support[IMB_ARCH_SSE] = 0;
+
+        if ((p_mgr->features & detect_pclmulqdq) != detect_pclmulqdq)
+                *features |= IMB_FEATURE_PCLMULQDQ;
+
+        if ((p_mgr->features & detect_aesni) != detect_aesni)
+                arch_support[IMB_ARCH_NOAESNI] = 1;
+
+        free_mb_mgr(p_mgr);
+
+        return 0;
+}
+
+void
+print_component(uint64_t features, IMB_ARCH arch)
+{
+        printf("using %s interface [", arch_str_tab[arch]);
+        switch (arch) {
+        case IMB_ARCH_NOAESNI:
+                printf("NO-AESNI");
+                break;
+        case IMB_ARCH_SSE:
+                if ((features & IMB_FEATURE_GFNI) &&
+                    (features & IMB_FEATURE_SHANI))
+                        printf("SSE-SHANI-GFNI");
+                if (features & IMB_FEATURE_SHANI)
+                        printf("SSE-SHANI");
+                printf("SSE");
+                break;
+        case IMB_ARCH_AVX:
+                printf("AVX");
+                break;
+        case IMB_ARCH_AVX2:
+                printf("AVX2");
+                break;
+        case IMB_ARCH_AVX512:
+                if ((features & IMB_FEATURE_VAES) &&
+                    (features & IMB_FEATURE_GFNI) &&
+                    (features & IMB_FEATURE_VPCLMULQDQ))
+                        printf("AVX512-VAES-GFNI-VCLMUL");
+                else
+                        printf("AVX512");
+                break;
+        default:
+                printf("Invalid component");
+                break;
+        }
+        printf("]\n");
 }
 
 /* =================================================================== */
