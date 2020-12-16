@@ -470,6 +470,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = IMB_AUTH_POLY1305,
                 }
         },
+        {
+                .name = "zuc-eia3-256",
+                .values.job_params = {
+                        .hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -577,6 +583,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 16, /* IMB_AUTH_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305_SGL */
+                4,  /* IMB_ZUC256_EIA3_BITLEN */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -919,6 +926,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                         (uint8_t *) opad;
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 job->u.ZUC_EIA3._key  = k2;
                 job->u.ZUC_EIA3._iv  = auth_iv;
                 job->msg_len_to_hash_in_bits =
@@ -1128,6 +1136,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                         memset(opad, pattern_auth_key, sizeof(keys->opad));
                         break;
                 case IMB_AUTH_ZUC_EIA3_BITLEN:
+                case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 case IMB_AUTH_KASUMI_UIA1:
                         memset(k3, pattern_auth_key, sizeof(keys->k3));
@@ -1302,9 +1311,10 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
 
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC256_EIA3_BITLEN:
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
         case IMB_AUTH_KASUMI_UIA1:
-                memcpy(k3, auth_key, sizeof(keys->k3));
+                memcpy(k2, auth_key, sizeof(keys->k2));
                 break;
         case IMB_AUTH_AES_GMAC_128:
                 IMB_AES128_GCM_PRE(mb_mgr, auth_key, gdata_key);
