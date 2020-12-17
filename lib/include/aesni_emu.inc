@@ -166,12 +166,22 @@
 %assign reg_idx 0
 %rep NUM_XMM_REGS
 	movdqa	XMM(reg_idx), [rsp + XMM_OFFSET + (reg_idx * XMM_SZ)]
+%ifdef SAFE_DATA
+        mov     qword [rsp + XMM_OFFSET + (reg_idx * XMM_SZ)], 0
+        mov     qword [rsp + XMM_OFFSET + (reg_idx * XMM_SZ) + 8], 0
+%endif
 %assign reg_idx reg_idx + 1
 %endrep
 
 	;; Destination XMM gets overwritten with result from func
         movdqa  %%src_dst, [rsp + ARG1_OFFSET]
 
+%ifdef SAFE_DATA
+        mov     qword [rsp + ARG1_OFFSET], 0
+        mov     qword [rsp + ARG1_OFFSET + 8], 0
+        mov     qword [rsp + ARG2_OFFSET], 0
+        mov     qword [rsp + ARG2_OFFSET + 8], 0
+%endif
         RESTORE_GP_REGS
 %endmacro
 
