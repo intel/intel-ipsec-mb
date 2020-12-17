@@ -626,8 +626,8 @@ struct custom_job_params custom_job_params = {
 };
 
 /* AESNI_EMU disabled by default */
-uint8_t enc_archs[IMB_ARCH_NUM] = {0, 1, 0, 1, 1, 1};
-uint8_t dec_archs[IMB_ARCH_NUM] = {0, 1, 0, 1, 1, 1};
+uint8_t enc_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1};
+uint8_t dec_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1};
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
