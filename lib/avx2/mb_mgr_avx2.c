@@ -80,6 +80,10 @@ IMB_JOB *submit_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eia3_avx2(MB_MGR_ZUC_OOO *state);
 
+IMB_JOB *submit_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state);
+
 void aes_cmac_256_subkey_gen_avx2(const void *key_exp,
                                   void *key1, void *key2);
 uint32_t hec_32_avx(const uint8_t *in);
@@ -122,6 +126,8 @@ IMB_JOB *submit_job_chacha20_enc_dec_avx2(IMB_JOB *job);
 #define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_avx2
 #define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_avx2
 #define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_avx2
+#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_avx
+#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_avx
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_avx
 #define AES_CBC_DEC_192       aes_cbc_dec_192_avx

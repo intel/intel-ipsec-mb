@@ -179,6 +179,10 @@ IMB_JOB *submit_job_zuc_eia3_gfni_sse(MB_MGR_ZUC_OOO *state,
                                         IMB_JOB *job);
 IMB_JOB *flush_job_zuc_eia3_gfni_sse(MB_MGR_ZUC_OOO *state);
 
+IMB_JOB *submit_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state);
+
 void aes_cmac_256_subkey_gen_sse(const void *key_exp,
                                  void *key1, void *key2);
 uint32_t hec_32_sse(const uint8_t *in);
@@ -238,6 +242,8 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 #define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_sse
 #define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_sse
 #define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_sse
+#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_avx
+#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_avx
 
 #define AES_CBC_DEC_128       aes128_cbc_dec_ptr
 #define AES_CBC_DEC_192       aes192_cbc_dec_ptr

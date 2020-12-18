@@ -312,6 +312,7 @@ typedef enum {
         IMB_AUTH_POLY1305,           /* POLY1305 */
         IMB_AUTH_CHACHA20_POLY1305,  /* AEAD POLY1305 */
         IMB_AUTH_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support*/
+        IMB_AUTH_ZUC256_EIA3_BITLEN,    /* 256-EIA3/NIA3 (3GPP) */
         IMB_AUTH_NUM
 } JOB_HASH_ALG;
 

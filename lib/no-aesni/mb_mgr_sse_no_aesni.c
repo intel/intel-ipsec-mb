@@ -121,6 +121,10 @@ JOB_AES_HMAC *submit_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
                                                IMB_JOB *job);
 JOB_AES_HMAC *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 
+IMB_JOB *submit_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state,
+                                        IMB_JOB *job);
+IMB_JOB *flush_job_zuc256_eia3_avx(MB_MGR_ZUC_OOO *state);
+
 uint32_t hec_32_sse_no_aesni(const uint8_t *in);
 uint64_t hec_64_sse_no_aesni(const uint8_t *in);
 
@@ -178,6 +182,8 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 #define FLUSH_JOB_ZUC_EIA3    flush_job_zuc_eia3_sse_no_aesni
 #define SUBMIT_JOB_ZUC256_EEA3   submit_job_zuc256_eea3_sse_no_aesni
 #define FLUSH_JOB_ZUC256_EEA3    flush_job_zuc256_eea3_sse_no_aesni
+#define SUBMIT_JOB_ZUC256_EIA3   submit_job_zuc256_eia3_avx
+#define FLUSH_JOB_ZUC256_EIA3    flush_job_zuc256_eia3_avx
 
 #define AES_CBC_DEC_128       aes_cbc_dec_128_sse_no_aesni
 #define AES_CBC_DEC_192       aes_cbc_dec_192_sse_no_aesni

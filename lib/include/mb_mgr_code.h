@@ -842,6 +842,8 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 return job;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
+        case IMB_AUTH_ZUC256_EIA3_BITLEN:
+                return SUBMIT_JOB_ZUC256_EIA3(zuc_eia3_ooo, job);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
                 IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
                                job->u.SNOW3G_UIA2._key,
@@ -940,6 +942,8 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 return FLUSH_JOB_AES256_CMAC_AUTH(aes_cmac_ooo);
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
+        case IMB_AUTH_ZUC256_EIA3_BITLEN:
+                return FLUSH_JOB_ZUC256_EIA3(zuc_eia3_ooo);
         default: /* assume GCM or IMB_AUTH_NULL */
                 if (!(job->status & STS_COMPLETED_HMAC)) {
                         job->status |= STS_COMPLETED_HMAC;
@@ -982,6 +986,7 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
+                4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -1013,6 +1018,7 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AUTH_AES_CMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
+                4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1921,6 +1927,33 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 }
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if ((job->msg_len_to_hash_in_bits < ZUC_MIN_BITLEN) ||
+                    (job->msg_len_to_hash_in_bits > ZUC_MAX_BITLEN)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
+                        return 1;
+                }
+                if (job->u.ZUC_EIA3._key == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (job->u.ZUC_EIA3._iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 if (job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;

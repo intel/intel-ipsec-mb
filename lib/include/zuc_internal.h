@@ -334,7 +334,8 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys,
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
                                                   ZucIv4_t *pIvs,
-                                                  ZucState4_t *pState);
+                                                  ZucState4_t *pState,
+                                                  const unsigned tag_sz);
 
 
 /**
@@ -700,6 +701,9 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_gfni_sse(ZucState4_t *pState,
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_4_avx(ZucState4_t *pState,
                                                uint32_t *pKeyStr[4]);
 
+IMB_DLL_LOCAL void asm_ZucGenKeystream4B_4_avx(ZucState4_t *pState,
+                                               uint32_t *pKeyStr[4]);
+
 /**
  ******************************************************************************
  *
@@ -1053,6 +1057,14 @@ void zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_avx(const void * const pKey[4],
+                               const void * const pIv[4],
+                               const void * const pBufferIn[4],
+                               uint32_t *pMacI[4],
+                               const uint16_t lengthInBits[4],
+                               const void * const job_in_lane[4]);
+
+IMB_DLL_LOCAL
+void zuc256_eia3_4_buffer_job_avx(const void * const pKey[4],
                                const void * const pIv[4],
                                const void * const pBufferIn[4],
                                uint32_t *pMacI[4],
