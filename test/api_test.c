@@ -202,6 +202,7 @@ fill_in_job(struct IMB_JOB *job,
                 16, /* IMB_AUTH_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305_SGL */
+                4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         const uint64_t msg_len_to_cipher = 32;
@@ -367,6 +368,7 @@ fill_in_job(struct IMB_JOB *job,
                 job->iv_len_in_bytes = 16;
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
+        case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 job->u.ZUC_EIA3._key = dust_bin;
                 job->u.ZUC_EIA3._iv = dust_bin;
                 job->auth_tag_output_len_in_bytes = 4;
@@ -647,6 +649,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                             hash, order, &chacha_ctx);
                                 switch (hash) {
                                 case IMB_AUTH_ZUC_EIA3_BITLEN:
+                                case IMB_AUTH_ZUC256_EIA3_BITLEN:
                                         /* (2^32) - 32 is max */
                                         template_job.msg_len_to_hash_in_bytes =
                                                 ((1ULL << 32) - 31);
