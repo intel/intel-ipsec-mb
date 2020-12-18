@@ -263,6 +263,7 @@ enum test_hash_alg_e {
         TEST_AES_GMAC_256,
         TEST_HASH_POLY1305,
         TEST_AEAD_POLY1305,
+        TEST_ZUC256_EIA3,
         TEST_NUM_HASH_TESTS
 };
 
@@ -651,6 +652,12 @@ struct str_value_mapping hash_algo_str_map[] = {
                 .name = "poly-1305",
                 .values.job_params = {
                         .hash_alg = TEST_HASH_POLY1305,
+                }
+        },
+        {
+                .name = "zuc-eia3-256",
+                .values.job_params = {
+                        .hash_alg = TEST_ZUC256_EIA3,
                 }
         },
 };
@@ -1439,6 +1446,7 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                 if (params->hash_alg == TEST_HASH_CMAC_BITLEN)
                         hash_size_list[i] = hash_size_list[i] * 8 - 4;
                 else if ((params->hash_alg == TEST_ZUC_EIA3) ||
+                         (params->hash_alg == TEST_ZUC256_EIA3) ||
                          (params->hash_alg == TEST_SNOW3G_UIA2))
                         hash_size_list[i] *= 8;
                 else if (params->hash_alg == TEST_PON_CRC_BIP)
@@ -1559,6 +1567,11 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 break;
         case TEST_ZUC_EIA3:
                 job_template.hash_alg = IMB_AUTH_ZUC_EIA3_BITLEN;
+                job_template.u.ZUC_EIA3._key = k3;
+                job_template.u.ZUC_EIA3._iv = (uint8_t *) &auth_iv;
+                break;
+        case TEST_ZUC256_EIA3:
+                job_template.hash_alg = IMB_AUTH_ZUC256_EIA3_BITLEN;
                 job_template.u.ZUC_EIA3._key = k3;
                 job_template.u.ZUC_EIA3._iv = (uint8_t *) &auth_iv;
                 break;
