@@ -167,7 +167,8 @@ fill_in_job(struct IMB_JOB *job,
             const JOB_CIPHER_MODE cipher_mode,
             const JOB_CIPHER_DIRECTION cipher_direction,
             const JOB_HASH_ALG hash_alg,
-            const JOB_CHAIN_ORDER chain_order)
+            const JOB_CHAIN_ORDER chain_order,
+            struct chacha20_poly1305_context_data *chacha_ctx)
 {
         const uint64_t tag_len_tab[] = {
                 0,  /* INVALID selection */
@@ -205,7 +206,6 @@ fill_in_job(struct IMB_JOB *job,
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         const uint64_t msg_len_to_cipher = 32;
         const uint64_t msg_len_to_hash = 48;
-        struct chacha20_poly1305_context_data chacha_ctx;
 
         if (job == NULL)
                 return;
@@ -421,7 +421,7 @@ fill_in_job(struct IMB_JOB *job,
                 job->u.CHACHA20_POLY1305.aad = dust_bin;
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = 12;
                 job->auth_tag_output_len_in_bytes = 16;
-                job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
+                job->u.CHACHA20_POLY1305.ctx = chacha_ctx;
                 break;
         default:
                 break;
@@ -536,6 +536,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         JOB_CHAIN_ORDER order;
         struct IMB_JOB template_job;
         struct IMB_JOB *job;
+        struct chacha20_poly1305_context_data chacha_ctx;
 
 	printf("Invalid JOB MAC arguments test:\n");
 
@@ -556,7 +557,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
-                                            hash, order);
+                                            hash, order, &chacha_ctx);
                                 template_job.src = NULL;
                                 if (!is_submit_invalid(mb_mgr,
                                                        &template_job,
@@ -579,7 +580,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
-                                            hash, order);
+                                            hash, order, &chacha_ctx);
                                 template_job.auth_tag_output = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                  TEST_AUTH_AUTH_TAG_OUTPUT_NULL,
@@ -601,7 +602,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
-                                            hash, order);
+                                            hash, order, &chacha_ctx);
                                 template_job.auth_tag_output_len_in_bytes = 0;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                   TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
@@ -643,7 +644,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
-                                            hash, order);
+                                            hash, order, &chacha_ctx);
                                 switch (hash) {
                                 case IMB_AUTH_ZUC_EIA3_BITLEN:
                                         /* (2^32) - 32 is max */
@@ -697,7 +698,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 case IMB_AUTH_MD5:
                                 case IMB_AUTH_KASUMI_UIA1:
                                         fill_in_job(&template_job, cipher, dir,
-                                                    hash, order);
+                                                    hash, order, &chacha_ctx);
                                         template_job.msg_len_to_hash_in_bytes
                                                 = 0;
                                         break;
@@ -731,6 +732,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         JOB_CHAIN_ORDER order;
         struct IMB_JOB template_job;
         struct IMB_JOB *job;
+        struct chacha20_poly1305_context_data chacha_ctx;
 
 	printf("Invalid JOB CIPHER arguments test:\n");
 
@@ -751,7 +753,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
-                                            hash, order);
+                                            hash, order, &chacha_ctx);
                                 template_job.src = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_CIPH_SRC_NULL,
@@ -773,7 +775,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
-                                            hash, order);
+                                            hash, order, &chacha_ctx);
                                 template_job.dst = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_CIPH_DST_NULL,
@@ -795,7 +797,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
-                                            hash, order);
+                                            hash, order, &chacha_ctx);
                                 template_job.iv = NULL;
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_CIPH_IV_NULL,
@@ -813,7 +815,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
                      cipher++) {
                         fill_in_job(&template_job, cipher, IMB_DIR_ENCRYPT,
-                                    hash, order);
+                                    hash, order, &chacha_ctx);
                         switch (cipher) {
                         case IMB_CIPHER_NULL:
                         case IMB_CIPHER_CUSTOM:
@@ -838,7 +840,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
                      cipher++) {
                         fill_in_job(&template_job, cipher, IMB_DIR_DECRYPT,
-                                    hash, order);
+                                    hash, order, &chacha_ctx);
                         switch (cipher) {
                         case IMB_CIPHER_GCM:
                         case IMB_CIPHER_CBC:
@@ -903,7 +905,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                                 IMB_JOB *job = &template_job;
 
-                                fill_in_job(job, cipher, dir, hash, order);
+                                fill_in_job(job, cipher, dir, hash, order,
+                                            &chacha_ctx);
 
                                 switch (cipher) {
                                 /* skip ciphers that allow msg length 0 */
@@ -938,7 +941,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                                 IMB_JOB *job = &template_job;
 
-                                fill_in_job(job, cipher, dir, hash, order);
+                                fill_in_job(job, cipher, dir, hash, order,
+                                            &chacha_ctx);
 
                                 switch (cipher) {
                                         /* skip ciphers with no max limit */
