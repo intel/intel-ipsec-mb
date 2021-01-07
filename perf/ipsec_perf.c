@@ -2565,6 +2565,7 @@ static void usage(void)
                 "-c: Use cold cache, it uses warm as default\n"
                 "-w: Use warm cache\n"
                 "--arch: run only tests on specified architecture (SSE/AVX/AVX2/AVX512)\n"
+                "--arch-best: detect available architectures and run only on the best one\n"
                 "--cipher-algo: Select cipher algorithm to run on the custom test\n"
                 "--cipher-dir: Select cipher direction to run on the custom test  "
                                "(encrypt/decrypt) (default = encrypt)\n"
@@ -2890,6 +2891,67 @@ end_range:
 
 }
 
+/**
+ * @brief Update table of supported architectures
+ *
+ * @param arch_support [in/out] table of architectures to run tests on
+ *
+ * @return  0 - architectures identified correctly
+ *         -1 - bad input or issues with alloc_mb_mgr
+ */
+static int
+detect_best_arch(uint8_t arch_support[NUM_ARCHS])
+{
+        const uint64_t detect_sse =
+                IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx =
+                IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
+        const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
+        const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        IMB_MGR *p_mgr = NULL;
+        uint64_t detected_features = 0;
+
+        if (arch_support == NULL) {
+                fprintf(stderr, "Arch detection: wrong argument!\n");
+                return -1;
+        }
+
+        p_mgr = alloc_mb_mgr(0);
+        if (p_mgr == NULL) {
+                fprintf(stderr, "Arch detection: initialization error!\n");
+                return -1;
+        }
+
+        detected_features = p_mgr->features;
+
+        free_mb_mgr(p_mgr);
+
+        memset(arch_support, 0, NUM_ARCHS * sizeof(arch_support[0]));
+
+        if ((detected_features & detect_avx512) == detect_avx512) {
+                arch_support[ARCH_AVX512] = 1;
+                return 0;
+        }
+
+        if ((detected_features & detect_avx2) == detect_avx2) {
+                arch_support[ARCH_AVX2] = 1;
+                return 0;
+        }
+
+        if ((detected_features & detect_avx) == detect_avx) {
+                arch_support[ARCH_AVX] = 1;
+                return 0;
+        }
+
+        if ((detected_features & detect_sse) == detect_sse) {
+                arch_support[ARCH_SSE] = 1;
+                return 0;
+        }
+
+        fprintf(stderr, "Arch detection: no architecture available!\n");
+        return -1;
+}
+
 int main(int argc, char *argv[])
 {
         uint32_t num_t = 0;
@@ -2978,6 +3040,9 @@ int main(int argc, char *argv[])
                         memset(archs, 0, sizeof(archs));
                         archs[values->arch_type] = 1;
                         i++;
+                } else if (strcmp(argv[i], "--arch-best") == 0) {
+                        if (detect_best_arch(archs) != 0)
+                                return EXIT_FAILURE;
                 } else if (strcmp(argv[i], "--cipher-algo") == 0) {
                         values = check_string_arg(argv[i], argv[i+1],
                                         cipher_algo_str_map,
