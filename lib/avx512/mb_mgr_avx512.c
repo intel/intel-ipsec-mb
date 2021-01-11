@@ -1869,6 +1869,8 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 state->gmac192_finalize    = imb_aes_gmac_finalize_192_avx512;
                 state->gmac256_finalize    = imb_aes_gmac_finalize_256_avx512;
         }
+
+        state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
 }
 
 #include "mb_mgr_code.h"

@@ -66,4 +66,12 @@ void poly1305_aead_complete(const void *hash, const void *key, void *tag);
 void gen_keystr_poly_key_avx512(const void *key, const void *iv,
                                 const uint64_t len, void *ks);
 
+void init_chacha20_poly1305_sse(const void *key,
+                                struct chacha20_poly1305_context_data *ctx,
+                                const void *iv, const void *aad,
+                                const uint64_t aad_len);
+void init_chacha20_poly1305_avx(const void *key,
+                                struct chacha20_poly1305_context_data *ctx,
+                                const void *iv, const void *aad,
+                                const uint64_t aad_len);
 #endif /* IMB_CHACHA20POLY1305_H */

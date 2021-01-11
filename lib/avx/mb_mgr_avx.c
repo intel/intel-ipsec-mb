@@ -984,6 +984,8 @@ init_mb_mgr_avx(IMB_MGR *state)
         state->crc6_iuup_header    = crc6_iuup_header_avx;
         state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx;
         state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx;
+
+        state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
 }
 
 #include "mb_mgr_code.h"

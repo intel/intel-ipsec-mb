@@ -977,6 +977,8 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->crc6_iuup_header    = crc6_iuup_header_sse_no_aesni;
         state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_sse_no_aesni;
         state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_sse_no_aesni;
+
+        state->chacha20_poly1305_init = init_chacha20_poly1305_sse;
 }
 
 #include "mb_mgr_code.h"

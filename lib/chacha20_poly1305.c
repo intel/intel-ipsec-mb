@@ -487,3 +487,51 @@ IMB_JOB *aead_chacha20_poly1305_sgl_avx512(IMB_JOB *job)
 {
         return aead_chacha20_poly1305_sgl(job, IMB_ARCH_AVX512);
 }
+
+__forceinline
+void init_chacha20_poly1305_direct(const void *key,
+                                   struct chacha20_poly1305_context_data *ctx,
+                                   const void *iv, const void *aad,
+                                   const uint64_t aad_len, const IMB_ARCH arch)
+{
+        ctx->hash[0] = 0;
+        ctx->hash[1] = 0;
+        ctx->hash[2] = 0;
+        ctx->aad_len = aad_len;
+        ctx->hash_len = 0;
+        ctx->last_block_count = 0;
+        ctx->remain_ks_bytes = 0;
+        ctx->remain_ct_bytes = 0;
+
+        /* Store IV */
+        memcpy_asm(ctx->IV, iv, 12, arch);
+
+        /* Generate Poly key */
+        if (arch == IMB_ARCH_SSE)
+                poly1305_key_gen_sse(key, iv, ctx->poly_key);
+        else
+                poly1305_key_gen_avx(key, iv, ctx->poly_key);
+
+        /* Calculate hash over AAD */
+        poly1305_aead_update(aad, aad_len, ctx->hash, ctx->poly_key);
+}
+
+IMB_DLL_LOCAL
+void init_chacha20_poly1305_sse(const void *key,
+                                struct chacha20_poly1305_context_data *ctx,
+                                const void *iv, const void *aad,
+                                const uint64_t aad_len)
+{
+        init_chacha20_poly1305_direct(key, ctx, iv, aad,
+                                      aad_len, IMB_ARCH_SSE);
+}
+
+IMB_DLL_LOCAL
+void init_chacha20_poly1305_avx(const void *key,
+                                struct chacha20_poly1305_context_data *ctx,
+                                const void *iv, const void *aad,
+                                const uint64_t aad_len)
+{
+        init_chacha20_poly1305_direct(key, ctx, iv, aad,
+                                      aad_len, IMB_ARCH_AVX);
+}

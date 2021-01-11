@@ -524,6 +524,7 @@ struct chacha20_poly1305_context_data {
         /* Amount of ciphertext bytes still to use of previous segment
          * to authenticate (up to 16 bytes) */
         uint64_t remain_ct_bytes;
+        uint8_t IV[12]; /* IV (12 bytes) */
 };
 
 /* Authenticated Tag Length in bytes.
@@ -659,6 +660,9 @@ typedef void (*aes_gmac_finalize_t)(const struct gcm_key_data *,
                                   struct gcm_context_data *,
                                   uint8_t *, const uint64_t);
 
+typedef void (*chacha_poly_init_t)(const void *,
+                                   struct chacha20_poly1305_context_data *,
+                                   const void *, const void *, uint64_t);
 typedef void (*ghash_t)(struct gcm_key_data *, const void *,
                         const uint64_t, void *, const uint64_t);
 
@@ -977,6 +981,8 @@ typedef struct IMB_MGR {
         crc32_fn_t              crc32_wimax_ofdma_data;
         crc32_fn_t              crc8_wimax_ofdma_hcs;
 
+        chacha_poly_init_t          chacha20_poly1305_init;
+
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
         int              next_job;     /* byte offset */
@@ -1292,6 +1298,10 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
         ((_mgr)->ghash_pre((_key_in), (_key_exp)))
 #define IMB_GHASH(_mgr, _key, _in, _in_len, _out, _out_len) \
         ((_mgr)->ghash((_key), (_in), (_in_len), (_out), (_out_len)))
+
+/* Chacha20-Poly1305 direct API's */
+#define IMB_CHACHA20_POLY1305_INIT(_mgr, _key, _ctx, _iv, _aad, _aadl)        \
+        ((_mgr)->chacha20_poly1305_init((_key), (_ctx), (_iv), (_aad), (_aadl)))
 
 /* ZUC EEA3/EIA3 functions */
 
