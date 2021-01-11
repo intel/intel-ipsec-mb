@@ -85,9 +85,9 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
 
         /* Generate Poly key */
         if (arch == IMB_ARCH_SSE)
-                poly1305_key_gen_sse(job, ctx->poly_key);
+                poly1305_key_gen_sse(job->enc_keys, job->iv, ctx->poly_key);
         else
-                poly1305_key_gen_avx(job, ctx->poly_key);
+                poly1305_key_gen_avx(job->enc_keys, job->iv, ctx->poly_key);
 
         /* Calculate hash over AAD */
         poly1305_aead_update(job->u.CHACHA20_POLY1305.aad,
@@ -355,15 +355,15 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                 switch (arch) {
                 case IMB_ARCH_SSE:
                         submit_job_chacha20_enc_dec_sse(job);
-                        poly1305_key_gen_sse(job, ks);
+                        poly1305_key_gen_sse(job->enc_keys, job->iv, ks);
                         break;
                 case IMB_ARCH_AVX:
                         submit_job_chacha20_enc_dec_avx(job);
-                        poly1305_key_gen_avx(job, ks);
+                        poly1305_key_gen_avx(job->enc_keys, job->iv, ks);
                         break;
                 case IMB_ARCH_AVX2:
                         submit_job_chacha20_enc_dec_avx2(job);
-                        poly1305_key_gen_avx(job, ks);
+                        poly1305_key_gen_avx(job->enc_keys, job->iv, ks);
                         break;
                 case IMB_ARCH_AVX512:
                 default:
@@ -382,11 +382,11 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                 /* generate key for authentication */
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                        poly1305_key_gen_sse(job, ks);
+                        poly1305_key_gen_sse(job->enc_keys, job->iv, ks);
                         break;
                 case IMB_ARCH_AVX:
                 case IMB_ARCH_AVX2:
-                        poly1305_key_gen_avx(job, ks);
+                        poly1305_key_gen_avx(job->enc_keys, job->iv, ks);
                         break;
                 case IMB_ARCH_AVX512:
                 default:
