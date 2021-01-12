@@ -29,6 +29,7 @@
 %include "imb_job.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
+%include "include/chacha_poly_defines.asm"
 
 section .data
 default rel
@@ -94,11 +95,13 @@ endstruc
 %define arg2    rsi
 %define arg3    rdx
 %define arg4    rcx
+%define arg5    r8
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
+%define arg5    [rsp + 40]
 %endif
 
 %define job     arg1
@@ -1075,29 +1078,33 @@ exit:
         ret
 
 align 32
-MKGLOBAL(submit_job_chacha20_enc_dec_ks_sse,function,internal)
-submit_job_chacha20_enc_dec_ks_sse:
+MKGLOBAL(chacha20_enc_dec_ks_sse,function,internal)
+chacha20_enc_dec_ks_sse:
 
-%define src     r12
-%define dst     r13
-%define len     r10
-%define iv      r11
-%define keys    r15
+%define blk_cnt r10
+
+%define prev_ks r13
+%define remain_ks r12
+%define ctx     r11
+
+%define src     arg1
+%define dst     arg2
+%define len     arg3
+%define keys    arg4
+
+%define iv      r15
 %define off     rax
 %define tmp     iv
-%define tmp2    keys
 %define tmp3    r14
 %define tmp4    rbp
 %define tmp5    rbx
-
 %ifdef LINUX
-%define blk_cnt r8
+%define tmp2 r9
 %else
-%define blk_cnt rdi
+%define tmp2 rdi
 %endif
 
-%define prev_ks arg2
-%define remain_ks arg3
+        mov     ctx, arg5
 
         mov     rax, rsp
         sub     rsp, STACK_SIZE
@@ -1113,22 +1120,17 @@ submit_job_chacha20_enc_dec_ks_sse:
 %endif
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
-        ; Read pointers and length
-        mov     len, [job + _msg_len_to_cipher_in_bytes]
-
         ; Check if there is nothing to encrypt
         or      len, len
         jz      exit_ks
 
         xor     off, off
-        mov     blk_cnt, [arg4]
-
-        mov     src, [job + _src]
-        add     src, [job + _cipher_start_src_offset_in_bytes]
-        mov     dst, [job + _dst]
+        mov     blk_cnt, [ctx + LastBlkCount]
+        lea     prev_ks, [ctx + LastKs]
+        mov     remain_ks, [ctx + RemainKsBytes]
 
         ; Check if there are any remaining bytes of keystream
-        mov     tmp3, [remain_ks]
+        mov     tmp3, remain_ks
         or      tmp3, tmp3
         jz      no_remain_ks_bytes
 
@@ -1149,7 +1151,7 @@ submit_job_chacha20_enc_dec_ks_sse:
                         xmm0, xmm1, xmm2, xmm3, tmp, tmp2, prev_ks
 
         ; Update remain bytes of KS
-        sub     [remain_ks], tmp5
+        sub     [ctx + RemainKsBytes], tmp5
         ; Restore pointer to previous KS
         sub     prev_ks, tmp4
 
@@ -1158,9 +1160,8 @@ submit_job_chacha20_enc_dec_ks_sse:
 
 no_remain_ks_bytes:
         ; Reset remaining number of KS bytes
-        mov     qword [remain_ks], 0
-        mov     keys, [job + _enc_keys]
-        mov     iv, [job + _iv]
+        mov     qword [ctx + RemainKsBytes], 0
+        lea     iv, [ctx + IV]
 
         ; If less than or equal to 64*2 bytes, prepare directly states for
         ; up to 2 blocks
@@ -1387,7 +1388,7 @@ less_than_64_ks:
         ; Update remain number of KS bytes
         mov     tmp, 64
         sub     tmp, tmp5
-        mov     [remain_ks], tmp
+        mov     [ctx + RemainKsBytes], tmp
         jmp     no_partial_block_ks
 
 two_blocks_left_ks:
@@ -1610,7 +1611,8 @@ between_129_191_ks:
 
 no_partial_block_ks:
 
-        mov     [arg4], blk_cnt
+        mov     [ctx + LastBlkCount], blk_cnt
+
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
         ; Clear stack frame
@@ -1624,9 +1626,6 @@ no_partial_block_ks:
 %endif
 
 exit_ks:
-        mov     rax, job
-        or      dword [rax + _status], STS_COMPLETED_AES
-
         mov     r12, [rsp + _GP_SAVE]
         mov     r13, [rsp + _GP_SAVE + 8]
         mov     r14, [rsp + _GP_SAVE + 16]
