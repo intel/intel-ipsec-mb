@@ -163,7 +163,7 @@ main(int argc, char **argv)
 
                 if (!arch_support[atype])
                         continue;
-                if (arch_support[atype] == IMB_ARCH_NOAESNI)
+                if (atype == IMB_ARCH_NOAESNI)
                         p_mgr = alloc_mb_mgr(flags | IMB_FLAG_AESNI_OFF);
                 else
                         p_mgr = alloc_mb_mgr(flags);
