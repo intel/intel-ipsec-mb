@@ -544,6 +544,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
          const uint32_t buffer_sz,
          const uint32_t seg_sz,
          const JOB_CIPHER_DIRECTION cipher_dir,
+         const unsigned job_api,
          const unsigned encrypt_on_update_only)
 {
         struct IMB_JOB *job;
@@ -652,46 +653,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
         }
 
         /* Process multi-segment buffer */
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->cipher_direction = cipher_dir;
-        job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
-        job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
-        job->enc_keys = key;
-        job->dec_keys = key;
-        job->key_len_in_bytes = KEY_SZ;
-
-        job->u.CHACHA20_POLY1305.aad = aad;
-        job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
-        job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
-
-        job->iv = iv;
-        job->iv_len_in_bytes = IV_SZ;
-        job->cipher_start_src_offset_in_bytes = 0;
-
-        job->hash_start_src_offset_in_bytes = 0;
-        job->auth_tag_output = sgl_digest;
-        job->auth_tag_output_len_in_bytes = DIGEST_SZ;
-
-        if (encrypt_on_update_only) {
-                i = 0; /* Start update from segment 0 */
-                segments_to_update = num_segments;
-                job->src = NULL;
-                job->dst = NULL;
-                job->msg_len_to_cipher_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = 0;
-        } else {
-                i = 1; /* Start update from segment 1 */
-                segments_to_update = num_segments - 1;
-                job->src = segments[0];
-                job->dst = segments[0];
-                job->msg_len_to_cipher_in_bytes = segment_sizes[0];
-                job->msg_len_to_hash_in_bytes = segment_sizes[0];
-        }
-        job->sgl_state = IMB_SGL_INIT;
-        job = IMB_SUBMIT_JOB(mb_mgr);
-
-        for (; i < segments_to_update; i++) {
+        if (job_api) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
                 job->cipher_direction = cipher_dir;
                 job->chain_order = IMB_ORDER_HASH_CIPHER;
@@ -712,47 +674,121 @@ test_sgl(struct IMB_MGR *mb_mgr,
                 job->hash_start_src_offset_in_bytes = 0;
                 job->auth_tag_output = sgl_digest;
                 job->auth_tag_output_len_in_bytes = DIGEST_SZ;
-                job->src = segments[i];
-                job->dst = segments[i];
-                job->msg_len_to_cipher_in_bytes = segment_sizes[i];
-                job->msg_len_to_hash_in_bytes = segment_sizes[i];
-                job->sgl_state = IMB_SGL_UPDATE;
+
+                if (encrypt_on_update_only) {
+                        i = 0; /* Start update from segment 0 */
+                        segments_to_update = num_segments;
+                        job->src = NULL;
+                        job->dst = NULL;
+                        job->msg_len_to_cipher_in_bytes = 0;
+                        job->msg_len_to_hash_in_bytes = 0;
+                } else {
+                        i = 1; /* Start update from segment 1 */
+                        segments_to_update = num_segments - 1;
+                        job->src = segments[0];
+                        job->dst = segments[0];
+                        job->msg_len_to_cipher_in_bytes = segment_sizes[0];
+                        job->msg_len_to_hash_in_bytes = segment_sizes[0];
+                }
+                job->sgl_state = IMB_SGL_INIT;
                 job = IMB_SUBMIT_JOB(mb_mgr);
-        }
-
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->cipher_direction = cipher_dir;
-        job->chain_order = IMB_ORDER_HASH_CIPHER;
-        job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
-        job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
-        job->enc_keys = key;
-        job->dec_keys = key;
-        job->key_len_in_bytes = KEY_SZ;
-
-        job->u.CHACHA20_POLY1305.aad = aad;
-        job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
-        job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
-
-        job->iv = iv;
-        job->iv_len_in_bytes = IV_SZ;
-        job->cipher_start_src_offset_in_bytes = 0;
-
-        job->hash_start_src_offset_in_bytes = 0;
-        job->auth_tag_output = sgl_digest;
-        job->auth_tag_output_len_in_bytes = DIGEST_SZ;
-        if ((num_segments > 1) && (encrypt_on_update_only == 0)) {
-                job->src = segments[i];
-                job->dst = segments[i];
-                job->msg_len_to_cipher_in_bytes = segment_sizes[i];
-                job->msg_len_to_hash_in_bytes = segment_sizes[i];
         } else {
-                job->src = NULL;
-                job->dst = NULL;
-                job->msg_len_to_cipher_in_bytes = 0;
-                job->msg_len_to_hash_in_bytes = 0;
+                IMB_CHACHA20_POLY1305_INIT(mb_mgr, key, &chacha_ctx, iv,
+                                           aad, AAD_SZ);
+                i = 0; /* Start update from segment 0 */
+                segments_to_update = num_segments;
         }
-        job->sgl_state = IMB_SGL_COMPLETE;
-        job = IMB_SUBMIT_JOB(mb_mgr);
+
+        for (; i < segments_to_update; i++) {
+                if (job_api) {
+                        job = IMB_GET_NEXT_JOB(mb_mgr);
+                        job->cipher_direction = cipher_dir;
+                        job->chain_order = IMB_ORDER_HASH_CIPHER;
+                        job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+                        job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+                        job->enc_keys = key;
+                        job->dec_keys = key;
+                        job->key_len_in_bytes = KEY_SZ;
+
+                        job->u.CHACHA20_POLY1305.aad = aad;
+                        job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
+                        job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
+
+                        job->iv = iv;
+                        job->iv_len_in_bytes = IV_SZ;
+                        job->cipher_start_src_offset_in_bytes = 0;
+
+                        job->hash_start_src_offset_in_bytes = 0;
+                        job->auth_tag_output = sgl_digest;
+                        job->auth_tag_output_len_in_bytes = DIGEST_SZ;
+                        job->src = segments[i];
+                        job->dst = segments[i];
+                        job->msg_len_to_cipher_in_bytes = segment_sizes[i];
+                        job->msg_len_to_hash_in_bytes = segment_sizes[i];
+                        job->sgl_state = IMB_SGL_UPDATE;
+                        job = IMB_SUBMIT_JOB(mb_mgr);
+                } else {
+                        if (cipher_dir == IMB_DIR_ENCRYPT)
+                                IMB_CHACHA20_POLY1305_ENC_UPDATE(mb_mgr, key,
+                                                              &chacha_ctx,
+                                                              segments[i],
+                                                              segments[i],
+                                                              segment_sizes[i]);
+                        else
+                                IMB_CHACHA20_POLY1305_DEC_UPDATE(mb_mgr, key,
+                                                              &chacha_ctx,
+                                                              segments[i],
+                                                              segments[i],
+                                                              segment_sizes[i]);
+                }
+        }
+
+        if (job_api) {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job->cipher_direction = cipher_dir;
+                job->chain_order = IMB_ORDER_HASH_CIPHER;
+                job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+                job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+                job->enc_keys = key;
+                job->dec_keys = key;
+                job->key_len_in_bytes = KEY_SZ;
+
+                job->u.CHACHA20_POLY1305.aad = aad;
+                job->u.CHACHA20_POLY1305.aad_len_in_bytes = AAD_SZ;
+                job->u.CHACHA20_POLY1305.ctx = &chacha_ctx;
+
+                job->iv = iv;
+                job->iv_len_in_bytes = IV_SZ;
+                job->cipher_start_src_offset_in_bytes = 0;
+
+                job->hash_start_src_offset_in_bytes = 0;
+                job->auth_tag_output = sgl_digest;
+                job->auth_tag_output_len_in_bytes = DIGEST_SZ;
+                if ((num_segments > 1) && (encrypt_on_update_only == 0)) {
+                        job->src = segments[i];
+                        job->dst = segments[i];
+                        job->msg_len_to_cipher_in_bytes = segment_sizes[i];
+                        job->msg_len_to_hash_in_bytes = segment_sizes[i];
+                } else {
+                        job->src = NULL;
+                        job->dst = NULL;
+                        job->msg_len_to_cipher_in_bytes = 0;
+                        job->msg_len_to_hash_in_bytes = 0;
+                }
+                job->sgl_state = IMB_SGL_COMPLETE;
+                job = IMB_SUBMIT_JOB(mb_mgr);
+        } else {
+                if (cipher_dir == IMB_DIR_ENCRYPT)
+                        IMB_CHACHA20_POLY1305_ENC_FINALIZE(mb_mgr,
+                                                           &chacha_ctx,
+                                                           sgl_digest,
+                                                           DIGEST_SZ);
+                else
+                        IMB_CHACHA20_POLY1305_DEC_FINALIZE(mb_mgr,
+                                                           &chacha_ctx,
+                                                           sgl_digest,
+                                                           DIGEST_SZ);
+        }
 
         if (job->status == STS_COMPLETED) {
                 for (i = 0; i < (num_segments - 1); i++) {
@@ -807,7 +843,7 @@ exit:
         free(segment_sizes);
 }
 
-#define BUFFER_SZ 2032
+#define BUF_SZ 2032
 #define SEG_SZ_STEP 4
 #define MAX_SEG_SZ 2048
 int
@@ -825,10 +861,14 @@ chacha20_poly1305_test(struct IMB_MGR *mb_mgr)
                                   "AEAD Chacha20-Poly1305 vectors");
         for (seg_sz = SEG_SZ_STEP; seg_sz <= MAX_SEG_SZ;
              seg_sz += SEG_SZ_STEP) {
-                test_sgl(mb_mgr, &ctx, BUFFER_SZ, seg_sz, IMB_DIR_ENCRYPT, 0);
-                test_sgl(mb_mgr, &ctx, BUFFER_SZ, seg_sz, IMB_DIR_DECRYPT, 0);
-                test_sgl(mb_mgr, &ctx, BUFFER_SZ, seg_sz, IMB_DIR_ENCRYPT, 1);
-                test_sgl(mb_mgr, &ctx, BUFFER_SZ, seg_sz, IMB_DIR_DECRYPT, 1);
+                /* Job API */
+                test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_ENCRYPT, 1, 0);
+                test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_DECRYPT, 1, 0);
+                test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_ENCRYPT, 1, 1);
+                test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_DECRYPT, 1, 1);
+                /* Direct API */
+                test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_ENCRYPT, 0, 1);
+                test_sgl(mb_mgr, &ctx, BUF_SZ, seg_sz, IMB_DIR_DECRYPT, 0, 1);
         }
 
         errors = test_suite_end(&ctx);
