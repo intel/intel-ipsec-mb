@@ -90,4 +90,8 @@ void update_dec_chacha20_poly1305_avx(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
                                      const uint64_t len);
+void finalize_chacha20_poly1305_sse(struct chacha20_poly1305_context_data *ctx,
+                                    void *tag, const uint64_t tag_len);
+void finalize_chacha20_poly1305_avx(struct chacha20_poly1305_context_data *ctx,
+                                    void *tag, const uint64_t tag_len);
 #endif /* IMB_CHACHA20POLY1305_H */

@@ -295,6 +295,12 @@
 %endif
 
 %if (%%MAXSIZE >= 16)
+        test    %%SIZE, 16
+        jz      %%lt16
+        mov	%%TMP0, [%%SRC]
+        mov	%%TMP1, [%%SRC + 8]
+        mov	[%%DST], %%TMP0
+        mov	[%%DST + 8], %%TMP1
 %%lt16:
 	test	%%SIZE, 8
 	jz	%%lt8

@@ -929,6 +929,7 @@ init_mb_mgr_avx2(IMB_MGR *state)
         state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
         state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_avx;
         state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_avx;
+        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_avx;
 }
 
 #include "mb_mgr_code.h"

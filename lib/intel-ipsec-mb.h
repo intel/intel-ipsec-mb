@@ -666,9 +666,8 @@ typedef void (*chacha_poly_init_t)(const void *,
 typedef void (*chacha_poly_enc_dec_update_t)(const void *,
                                      struct chacha20_poly1305_context_data *,
                                      void *, const void *, const uint64_t);
-typedef void (*chacha_poly_enc_dec_finalize_t)(
-                                     struct chacha20_poly1305_context_data *,
-                                     uint8_t *, uint64_t);
+typedef void (*chacha_poly_finalize_t)(struct chacha20_poly1305_context_data *,
+                                    void *, const uint64_t);
 typedef void (*ghash_t)(struct gcm_key_data *, const void *,
                         const uint64_t, void *, const uint64_t);
 
@@ -990,6 +989,7 @@ typedef struct IMB_MGR {
         chacha_poly_init_t           chacha20_poly1305_init;
         chacha_poly_enc_dec_update_t chacha20_poly1305_enc_update;
         chacha_poly_enc_dec_update_t chacha20_poly1305_dec_update;
+        chacha_poly_finalize_t       chacha20_poly1305_finalize;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1318,6 +1318,12 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 #define IMB_CHACHA20_POLY1305_DEC_UPDATE(_mgr, _key, _ctx, _out, _in, _len)    \
         ((_mgr)->chacha20_poly1305_dec_update((_key), (_ctx), (_out), (_in), \
                                               (_len)))
+
+#define IMB_CHACHA20_POLY1305_ENC_FINALIZE(_mgr, _ctx, _tag, _tagl)      \
+        ((_mgr)->chacha20_poly1305_finalize((_ctx), (_tag), (_tagl)))
+
+#define IMB_CHACHA20_POLY1305_DEC_FINALIZE(_mgr, _ctx, _tag, _tagl)      \
+        ((_mgr)->chacha20_poly1305_finalize((_ctx), (_tag), (_tagl)))
 
 /* ZUC EEA3/EIA3 functions */
 

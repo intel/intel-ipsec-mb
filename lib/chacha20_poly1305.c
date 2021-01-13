@@ -668,3 +668,53 @@ void update_dec_chacha20_poly1305_avx(const void *key,
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
                                         IMB_DIR_DECRYPT, IMB_ARCH_AVX);
 }
+
+__forceinline
+void
+finalize_chacha20_poly1305_direct(struct chacha20_poly1305_context_data *ctx,
+                                  void *tag, const uint64_t tag_len,
+                                  const IMB_ARCH arch)
+{
+        uint64_t last[2];
+        uint8_t auth_tag[16];
+
+        if (ctx->remain_ct_bytes > 0) {
+                poly1305_aead_update(ctx->poly_scratch,
+                                     ctx->remain_ct_bytes,
+                                     ctx->hash,
+                                     ctx->poly_key);
+                ctx->remain_ct_bytes = 0;
+        }
+
+        /*
+         * Construct extra block with AAD and message lengths for
+         * authentication
+         */
+        last[0] = ctx->aad_len;
+        last[1] = ctx->hash_len;
+        poly1305_aead_update(last, sizeof(last), ctx->hash, ctx->poly_key);
+
+        /* Finalize AEAD Poly1305 (final reduction and +S) */
+        poly1305_aead_complete(ctx->hash, ctx->poly_key, auth_tag);
+
+        /* Copy N bytes of tag */
+        memcpy_asm((uint8_t *) tag, auth_tag, tag_len, arch);
+
+        /* Clear sensitive data from the context */
+#ifdef SAFE_DATA
+        clear_mem(ctx->last_ks, sizeof(ctx->last_ks));
+        clear_mem(ctx->poly_key, sizeof(ctx->poly_key));
+#endif
+}
+
+void finalize_chacha20_poly1305_sse(struct chacha20_poly1305_context_data *ctx,
+                                    void *tag, const uint64_t tag_len)
+{
+        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_SSE);
+}
+
+void finalize_chacha20_poly1305_avx(struct chacha20_poly1305_context_data *ctx,
+                                    void *tag, const uint64_t tag_len)
+{
+        finalize_chacha20_poly1305_direct(ctx, tag, tag_len, IMB_ARCH_AVX);
+}
