@@ -30,6 +30,7 @@
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
 %include "include/transpose_avx2.asm"
+%include "include/chacha_poly_defines.asm"
 
 section .data
 default rel
@@ -79,7 +80,8 @@ db      2, 3, 0, 1, 6, 7, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13
 
 struc STACK
 _STATE:         reso    32      ; Space to store first 8 states
-_YMM_SAVE:      reso    4       ; Space to store up to 2 temporary YMM registers
+_YMM_SAVE:      reso    4       ; Space to store up to 4 temporary YMM registers
+_GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
 %define STACK_SIZE STACK_size
@@ -87,9 +89,15 @@ endstruc
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
+%define arg5    r8
 %else
 %define arg1    rcx
 %define arg2    rdx
+%define arg3    r8
+%define arg4    r9
+%define arg5    [rsp + 40]
 %endif
 
 %define job     arg1
@@ -97,6 +105,62 @@ endstruc
 %define APPEND(a,b) a %+ b
 
 section .text
+
+%macro ENCRYPT_0B_64B 10-11
+%define %%SRC  %1 ; [in/out] Source pointer
+%define %%DST  %2 ; [in/out] Destination pointer
+%define %%LEN  %3 ; [in/clobbered] Length to encrypt
+%define %%OFF  %4 ; [in] Offset into src/dst
+%define %%KS0  %5 ; [in/out] Bytes 0-31 of keystream
+%define %%KS1  %6 ; [in/out] Bytes 32-63 of keystream
+%define %%PT0  %7 ; [in/clobbered] Bytes 0-31 of plaintext
+%define %%PT1  %8 ; [in/clobbered] Bytes 32-63 of plaintext
+%define %%TMP  %9 ; [clobbered] Temporary GP register
+%define %%TMP2 %10 ; [clobbered] Temporary GP register
+%define %%KS_PTR %11 ; [in] Pointer to keystream
+
+        or      %%LEN, %%LEN
+        jz      %%end_encrypt
+
+        cmp     %%LEN, 32
+        jbe     %%up_to_32B
+
+%%up_to_64B:
+        vmovdqu  %%PT0, [%%SRC + %%OFF]
+%if %0 == 11
+        vmovdqu  %%KS0, [%%KS_PTR]
+        vmovdqu  %%KS1, [%%KS_PTR + 32]
+%endif
+        vpxor    %%PT0, %%KS0
+        vmovdqu  [%%DST + %%OFF], %%PT0
+
+        add     %%SRC, %%OFF
+        add     %%DST, %%OFF
+        add     %%SRC, 32
+        add     %%DST, 32
+        sub     %%LEN, 32
+
+        simd_load_avx2 %%PT1, %%SRC, %%LEN, %%TMP, %%TMP2
+        vpxor    %%PT1, %%KS1
+        simd_store_avx2 %%DST, %%PT1, %%LEN, %%TMP, %%TMP2
+
+        jmp     %%end_encrypt
+
+%%up_to_32B:
+        add     %%SRC, %%OFF
+        add     %%DST, %%OFF
+        ; XOR KS with plaintext and store resulting ciphertext
+%if %0 == 11
+        vmovdqu  %%KS0, [%%KS_PTR]
+%endif
+        simd_load_avx2 %%PT0, %%SRC, %%LEN, %%TMP, %%TMP2
+        vpxor    %%PT0, %%KS0
+        simd_store_avx2 %%DST, %%PT0, %%LEN, %%TMP, %%TMP2
+
+%%end_encrypt:
+        add     %%SRC, %%LEN
+        add     %%DST, %%LEN
+%endmacro
 
 ; Rotate dwords on a YMM registers to the left N_BITS
 %macro VPROLD 3
@@ -870,6 +934,450 @@ no_partial_block:
 exit:
         mov     rax, job
         or      dword [rax + _status], STS_COMPLETED_AES
+        clear_all_ymms_asm
+
+        ret
+
+align 32
+MKGLOBAL(chacha20_enc_dec_ks_avx2,function,internal)
+chacha20_enc_dec_ks_avx2:
+
+%define blk_cnt r10
+
+%define prev_ks r13
+%define remain_ks r12
+%define ctx     r11
+
+%define src     arg1
+%define dst     arg2
+%define len     arg3
+%define keys    arg4
+
+%define iv      r15
+%define off     rax
+%define tmp     iv
+%define tmp3    r14
+%define tmp4    rbp
+%define tmp5    rbx
+%ifdef LINUX
+%define tmp2 r9
+%else
+%define tmp2 rdi
+%endif
+
+        ; Check if there is nothing to encrypt
+        or      len, len
+        jz      exit_ks
+
+        mov     ctx, arg5
+
+        mov     rax, rsp
+        sub     rsp, STACK_SIZE
+        and     rsp, -32
+        mov     [rsp + _GP_SAVE], r12
+        mov     [rsp + _GP_SAVE + 8], r13
+        mov     [rsp + _GP_SAVE + 16], r14
+        mov     [rsp + _GP_SAVE + 24], r15
+        mov     [rsp + _GP_SAVE + 32], rbx
+        mov     [rsp + _GP_SAVE + 40], rbp
+%ifndef LINUX
+        mov     [rsp + _GP_SAVE + 48], rdi
+%endif
+        mov     [rsp + _RSP_SAVE], rax ; save RSP
+
+        xor     off, off
+        mov     blk_cnt, [ctx + LastBlkCount]
+        lea     prev_ks, [ctx + LastKs]
+        mov     remain_ks, [ctx + RemainKsBytes]
+
+        ; Check if there are any remaining bytes of keystream
+        mov     tmp3, remain_ks
+        or      tmp3, tmp3
+        jz      no_remain_ks_bytes
+
+        mov     tmp4, 64
+        sub     tmp4, tmp3
+
+        ; Adjust pointer of previous KS to point at start of unused KS
+        add     prev_ks, tmp4
+
+        ; Set remaining bytes to length of input segment, if lower
+        cmp     len, tmp3
+        cmovbe  tmp3, len
+
+        mov     tmp5, tmp3
+        ; Read up to 63 bytes of KS and XOR the first bytes of message
+        ; with the previous unused bytes of keystream
+        ENCRYPT_0B_64B    src, dst, tmp3, off, ymm9, ymm10, \
+                        ymm0, ymm1, tmp, tmp2, prev_ks
+
+        ; Update remain bytes of KS
+        sub     [ctx + RemainKsBytes], tmp5
+        ; Restore pointer to previous KS
+        sub     prev_ks, tmp4
+
+        sub     len, tmp5
+        jz      no_partial_block_ks
+
+no_remain_ks_bytes:
+        ; Reset remaining number of KS bytes
+        mov     qword [ctx + RemainKsBytes], 0
+        lea     iv, [ctx + IV]
+
+        ; If less than or equal to 64*4 bytes, prepare directly states for up to 4 blocks
+        cmp     len, 64*4
+        jbe     exit_loop_ks
+
+        ; Prepare first 8 chacha states from IV, key, constants and counter values
+        vbroadcastss ymm0, [rel constants]
+        vbroadcastss ymm1, [rel constants + 4]
+        vbroadcastss ymm2, [rel constants + 8]
+        vbroadcastss ymm3, [rel constants + 12]
+
+        vbroadcastss ymm4, [keys]
+        vbroadcastss ymm5, [keys + 4]
+        vbroadcastss ymm6, [keys + 8]
+        vbroadcastss ymm7, [keys + 12]
+        vbroadcastss ymm8, [keys + 16]
+        vbroadcastss ymm9, [keys + 20]
+        vbroadcastss ymm10, [keys + 24]
+        vbroadcastss ymm11, [keys + 28]
+
+        vbroadcastss ymm13, [iv]
+        vbroadcastss ymm14, [iv + 4]
+        vbroadcastss ymm15, [iv + 8]
+
+        ; Set block counters for next 8 Chacha20 states
+        vmovd    xmm12, DWORD(blk_cnt)
+        vpshufd  xmm12, xmm12, 0
+        vperm2i128 ymm12, ymm12, ymm12, 0
+        vpaddd  ymm12, [rel dword_1_8]
+
+%assign i 0
+%rep 16
+        vmovdqa [rsp + _STATE + 32*i], ymm %+ i
+%assign i (i + 1)
+%endrep
+
+        cmp     len, 64*8
+        jb      exit_loop_ks
+
+align 32
+start_loop_ks:
+
+        ; Generate 512 bytes of keystream
+        GENERATE_512_KS ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, \
+                        ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, ymm15
+
+        ;; Transpose state to get keystream and XOR with plaintext
+        ;; to get ciphertext
+
+        ; Save registers to be used as temp registers
+        vmovdqa [rsp + _YMM_SAVE], ymm14
+        vmovdqa [rsp + _YMM_SAVE + 32], ymm15
+
+        ; Transpose to get [64*I : 64*I + 31] (I = 0-7) bytes of KS
+        TRANSPOSE8_U32 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm14, ymm15
+
+        vpxor   ymm0, [src + off]
+        vpxor   ymm1, [src + off + 64]
+        vmovdqu [dst + off], ymm0
+        vmovdqu [dst + off + 64], ymm1
+
+        vpxor   ymm2, [src + off + 64*2]
+        vpxor   ymm3, [src + off + 64*3]
+        vmovdqu [dst + off + 64*2], ymm2
+        vmovdqu [dst + off + 64*3], ymm3
+
+        vpxor   ymm4, [src + off + 64*4]
+        vpxor   ymm5, [src + off + 64*5]
+        vmovdqu [dst + off + 64*4], ymm4
+        vmovdqu [dst + off + 64*5], ymm5
+
+        vpxor   ymm6, [src + off + 64*6]
+        vpxor   ymm7, [src + off + 64*7]
+        vmovdqu [dst + off + 64*6], ymm6
+        vmovdqu [dst + off + 64*7], ymm7
+
+        ; Restore registers and use ymm0, ymm1 now that they are free
+        vmovdqa ymm14, [rsp + _YMM_SAVE]
+        vmovdqa ymm15, [rsp + _YMM_SAVE + 32]
+
+        ; Transpose to get [64*I + 32 : 64*I + 63] (I = 0-7) bytes of KS
+        TRANSPOSE8_U32 ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, ymm15, ymm0, ymm1
+
+        vpxor   ymm8, [src + off + 32]
+        vpxor   ymm9, [src + off + 64 + 32]
+        vmovdqu [dst + off + 32], ymm8
+        vmovdqu [dst + off + 64 + 32], ymm9
+
+        vpxor   ymm10, [src + off + 64*2 + 32]
+        vpxor   ymm11, [src + off + 64*3 + 32]
+        vmovdqu [dst + off + 64*2 + 32], ymm10
+        vmovdqu [dst + off + 64*3 + 32], ymm11
+
+        vpxor   ymm12, [src + off + 64*4 + 32]
+        vpxor   ymm13, [src + off + 64*5 + 32]
+        vmovdqu [dst + off + 64*4 + 32], ymm12
+        vmovdqu [dst + off + 64*5 + 32], ymm13
+
+        vpxor   ymm14, [src + off + 64*6 + 32]
+        vpxor   ymm15, [src + off + 64*7 + 32]
+        vmovdqu [dst + off + 64*6 + 32], ymm14
+        vmovdqu [dst + off + 64*7 + 32], ymm15
+
+        ; Update remaining length
+        sub     len, 64*8
+        add     off, 64*8
+        add     blk_cnt, 8
+
+        ; Update counter values
+        vmovdqa ymm12, [rsp + 32*12]
+        vpaddd  ymm12, [rel dword_8]
+        vmovdqa [rsp + 32*12], ymm12
+
+        cmp     len, 64*8
+        jae     start_loop_ks
+
+exit_loop_ks:
+
+        ; Check if there are no more bytes to encrypt
+        or      len, len
+        jz      no_partial_block_ks
+
+        cmp     len, 64*4
+        ja      more_than_4_blocks_left_ks
+
+        cmp     len, 64*2
+        ja      more_than_2_blocks_left_ks
+
+        ;; up to 2 blocks left
+
+        ; Get last block counter dividing offset by 64
+        PREPARE_NEXT_STATES_2_TO_4 ymm4, ymm5, ymm6, ymm7, none, \
+                                   ymm8, ymm9, blk_cnt, iv, keys, 2
+
+        GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, none, none, none, none, \
+                        ymm4, ymm5, ymm6, ymm7, none, ymm10, 2
+
+        cmp     len, 64*2
+        jbe     less_than_2_full_blocks_ks
+
+        ; XOR next 128 bytes
+        vpxor   ymm8, [src + off]
+        vpxor   ymm9, [src + off + 32]
+        vmovdqu [dst + off], ymm8
+        vmovdqu [dst + off + 32], ymm9
+
+        vpxor   ymm10, [src + off + 32*2]
+        vpxor   ymm11, [src + off + 32*3]
+        vmovdqu [dst + off + 32*2], ymm10
+        vmovdqu [dst + off + 32*3], ymm11
+
+        add     blk_cnt, 2
+
+        jmp     no_partial_block_ks
+
+more_than_2_blocks_left_ks:
+
+        ; Get last block counter dividing offset by 64
+        PREPARE_NEXT_STATES_2_TO_4 ymm4, ymm5, ymm6, ymm7, ymm12, \
+                                   ymm8, ymm9, blk_cnt, iv, keys, 4
+
+        GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
+                        ymm4, ymm5, ymm6, ymm7, ymm12, ymm13, 4
+
+
+        cmp     len, 64*4
+        jb      less_than_4_full_blocks_ks
+
+        ; XOR next 256 bytes
+        vpxor   ymm0, [src + off]
+        vpxor   ymm8, [src + off + 32]
+        vmovdqu [dst + off], ymm0
+        vmovdqu [dst + off + 32], ymm8
+
+        vpxor   ymm1, [src + off + 32*2]
+        vpxor   ymm9, [src + off + 32*3]
+        vmovdqu [dst + off + 32*2], ymm1
+        vmovdqu [dst + off + 32*3], ymm9
+
+        vpxor   ymm2, [src + off + 32*4]
+        vpxor   ymm10, [src + off + 32*5]
+        vmovdqu [dst + off + 32*4], ymm2
+        vmovdqu [dst + off + 32*5], ymm10
+
+        vpxor   ymm3, [src + off + 32*6]
+        vpxor   ymm11, [src + off + 32*7]
+        vmovdqu [dst + off + 32*6], ymm3
+        vmovdqu [dst + off + 32*7], ymm11
+
+        add     blk_cnt, 4
+
+        jmp     no_partial_block_ks
+
+more_than_4_blocks_left_ks:
+        ; Generate 512 bytes of keystream
+        GENERATE_512_KS ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, \
+                        ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, ymm15
+
+        ; Save registers to be used as temp registers
+        vmovdqa [rsp + _YMM_SAVE], ymm14
+        vmovdqa [rsp + _YMM_SAVE + 32], ymm15
+
+        ; Transpose to get [64*I : 64*I + 31] (I = 0-7) bytes of KS
+        TRANSPOSE8_U32 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm14, ymm15
+
+        ; Restore registers and save another two registers to be used as temp registers
+        vmovdqa ymm14, [rsp + _YMM_SAVE]
+        vmovdqa ymm15, [rsp + _YMM_SAVE + 32]
+        vmovdqa [rsp + _YMM_SAVE], ymm0
+        vmovdqa [rsp + _YMM_SAVE + 32], ymm1
+
+        ; Transpose to get [64*I + 32 : 64*I + 63] (I = 0-7) bytes of KS
+        TRANSPOSE8_U32 ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, ymm15, ymm0, ymm1
+
+        ; Restore registers
+        vmovdqa ymm0, [rsp + _YMM_SAVE]
+        vmovdqa ymm1, [rsp + _YMM_SAVE + 32]
+
+        ; XOR next 256 bytes
+        vpxor   ymm0, [src + off]
+        vpxor   ymm8, [src + off + 32]
+        vmovdqu [dst + off], ymm0
+        vmovdqu [dst + off + 32], ymm8
+
+        vpxor   ymm1, [src + off + 32*2]
+        vpxor   ymm9, [src + off + 32*3]
+        vmovdqu [dst + off + 32*2], ymm1
+        vmovdqu [dst + off + 32*3], ymm9
+
+        vpxor   ymm2, [src + off + 32*4]
+        vpxor   ymm10, [src + off + 32*5]
+        vmovdqu [dst + off + 32*4], ymm2
+        vmovdqu [dst + off + 32*5], ymm10
+
+        vpxor   ymm3, [src + off + 32*6]
+        vpxor   ymm11, [src + off + 32*7]
+        vmovdqu [dst + off + 32*6], ymm3
+        vmovdqu [dst + off + 32*7], ymm11
+
+        ; Update remaining length
+        sub     len, 64*4
+        add     off, 64*4
+        add     blk_cnt, 4
+
+        or      len, len
+        jz      no_partial_block_ks
+
+        ; Move last 256 bytes of KS to registers YMM0-3,YMM8-11
+        vmovdqa ymm0, ymm4
+        vmovdqa ymm1, ymm5
+        vmovdqa ymm2, ymm6
+        vmovdqa ymm3, ymm7
+        vmovdqa ymm8, ymm12
+        vmovdqa ymm9, ymm13
+        vmovdqa ymm10, ymm14
+        vmovdqa ymm11, ymm15
+
+        cmp     len, 64*2
+        jb      less_than_2_full_blocks_ks
+
+less_than_4_full_blocks_ks:
+        ; XOR next 128 bytes
+        vpxor   ymm0, [src + off]
+        vpxor   ymm8, [src + off + 32]
+        vmovdqu [dst + off], ymm0
+        vmovdqu [dst + off + 32], ymm8
+
+        vpxor   ymm1, [src + off + 32*2]
+        vpxor   ymm9, [src + off + 32*3]
+        vmovdqu [dst + off + 32*2], ymm1
+        vmovdqu [dst + off + 32*3], ymm9
+
+        ; Update remaining length
+        sub     len, 64*2
+        add     off, 64*2
+        add     blk_cnt, 2
+
+        or      len, len
+        jz      no_partial_block_ks
+
+        ; Move last 128 bytes of KS to registers YMM0-1,YMM8-9
+        vmovdqa ymm0, ymm2
+        vmovdqa ymm1, ymm3
+        vmovdqa ymm8, ymm10
+        vmovdqa ymm9, ymm11
+
+less_than_2_full_blocks_ks:
+
+        cmp     len, 64
+        jb      less_than_1_full_block_ks
+
+        ; XOR next 64 bytes
+        vpxor   ymm0, [src + off]
+        vpxor   ymm8, [src + off + 32]
+        vmovdqu [dst + off], ymm0
+        vmovdqu [dst + off + 32], ymm8
+
+        ; Update remaining length
+        sub     len, 64
+        add     off, 64
+        inc     blk_cnt
+
+        or      len, len
+        jz      no_partial_block_ks
+
+        ; Move last 64 bytes of KS to registers YMM0,YMM8
+        vmovdqa ymm0, ymm1
+        vmovdqa ymm8, ymm9
+
+less_than_1_full_block_ks:
+
+        ; Preserve len
+        mov     tmp5, len
+        ENCRYPT_0B_64B    src, dst, len, off, ymm0, ymm8, \
+                        ymm1, ymm2, tmp, tmp2
+        inc     blk_cnt
+
+        ; Save last 64-byte block of keystream,
+        ; in case it is needed in next segments
+        vmovdqu  [prev_ks], ymm0
+        vmovdqu  [prev_ks + 32], ymm8
+
+        ; Update remain number of KS bytes
+        mov     tmp, 64
+        sub     tmp, tmp5
+        mov     [ctx + RemainKsBytes], tmp
+
+no_partial_block_ks:
+
+        mov     [ctx + LastBlkCount], blk_cnt
+
+%ifdef SAFE_DATA
+        vpxor ymm0, ymm0
+        ; Clear stack frame
+%assign i 0
+%rep 16
+        vmovdqa [rsp + _STATE + 32*i], ymm0
+%assign i (i + 1)
+%endrep
+        vmovdqa [rsp + _YMM_SAVE], ymm0
+        vmovdqa [rsp + _YMM_SAVE + 32], ymm0
+%endif
+
+        mov     r12, [rsp + _GP_SAVE]
+        mov     r13, [rsp + _GP_SAVE + 8]
+        mov     r14, [rsp + _GP_SAVE + 16]
+        mov     r15, [rsp + _GP_SAVE + 24]
+        mov     rbx, [rsp + _GP_SAVE + 32]
+        mov     rbp, [rsp + _GP_SAVE + 40]
+%ifndef LINUX
+        mov     rdi, [rsp + _GP_SAVE + 48]
+%endif
+        mov     rsp, [rsp + _RSP_SAVE]
+
+exit_ks:
         clear_all_ymms_asm
 
         ret
