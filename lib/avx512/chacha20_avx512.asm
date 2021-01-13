@@ -32,6 +32,7 @@
 %include "include/reg_sizes.asm"
 %include "include/transpose_avx512.asm"
 %include "include/aes_common.asm"
+%include "include/chacha_poly_defines.asm"
 
 section .data
 default rel
@@ -137,11 +138,13 @@ dq      0xffffffffffffffff, 0xffffffffffffffff
 %define arg2    rsi
 %define arg3    rdx
 %define arg4    rcx
+%define arg5    r8
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
+%define arg5    [rsp + 40]
 %endif
 
 %define job     arg1
@@ -938,7 +941,7 @@ section .text
                                %%ZMM_DWORD_ORIG15
 %endmacro
 
-%macro ENCRYPT_1_16_BLOCKS 23
+%macro ENCRYPT_1_16_BLOCKS 23-24
 %define %%KS0         %1 ; [in/clobbered] Bytes 0-63 of keystream
 %define %%KS1         %2 ; [in/clobbered] Bytes 64-127 of keystream
 %define %%KS2         %3 ; [in/clobbered] Bytes 128-191 of keystream
@@ -962,6 +965,7 @@ section .text
 %define %%KMASK      %21 ; [in] Mask register for final block
 %define %%NUM_BLOCKS %22 ; [in] Number of blocks to encrypt
 %define %%GEN_KEY    %23 ; [in] Generate poly key
+%define %%LAST_KS    %24 ; [in] Pointer to last KS pointer
 
 %ifidn %%GEN_KEY, gen_poly_key
 %if %%NUM_BLOCKS != 16
@@ -1005,6 +1009,9 @@ section .text
 %endrep
         ; Final block which might have less than 64 bytes, so mask register is used
         vmovdqu8 %%ZTMP{%%KMASK}, [%%SRC + %%OFF + 64*%%I]
+%if %0 == 24
+        vmovdqu64 [%%LAST_KS], APPEND(%%KS, %%I)
+%endif
         vpxorq  APPEND(%%KS, %%I), %%ZTMP
 
         ; Write out blocks of ciphertext
@@ -1968,6 +1975,296 @@ no_partial_block_dec:
 %ifndef LINUX
         pop     rsi
 %endif
+        ret
+
+align 32
+MKGLOBAL(chacha20_enc_dec_ks_avx512,function,internal)
+chacha20_enc_dec_ks_avx512:
+
+%define blk_cnt r10
+
+%define prev_ks r13
+%define remain_ks r12
+%define ctx     r11
+
+%define src     arg1
+%define dst     arg2
+%define len     arg3
+%define keys    arg4
+
+%define iv      r15
+%define off     rax
+%define tmp     iv
+%define tmp3    r14
+%define tmp4    rbp
+%define tmp5    rbx
+%ifdef LINUX
+%define tmp2 r9
+%else
+%define tmp2 rdi
+%endif
+
+        ; Check if there is nothing to encrypt
+        or      len, len
+        jz      exit_ks
+
+        mov     ctx, arg5
+
+        sub     rsp, 8*7
+        mov     [rsp], r12
+        mov     [rsp + 8], r13
+        mov     [rsp + 16], r14
+        mov     [rsp + 24], r15
+        mov     [rsp + 32], rbx
+        mov     [rsp + 40], rbp
+%ifndef LINUX
+        mov     [rsp + 48], rdi
+%endif
+
+        xor     off, off
+        mov     blk_cnt, [ctx + LastBlkCount]
+        lea     prev_ks, [ctx + LastKs]
+        mov     remain_ks, [ctx + RemainKsBytes]
+
+        ; Check if there are any remaining bytes of keystream
+        mov     tmp3, remain_ks
+        or      tmp3, tmp3
+        jz      no_remain_ks_bytes
+
+        mov     tmp4, 64
+        sub     tmp4, tmp3
+
+        ; Adjust pointer of previous KS to point at start of unused KS
+        add     prev_ks, tmp4
+
+        ; Set remaining bytes to length of input segment, if lower
+        cmp     len, tmp3
+        cmovbe  tmp3, len
+
+        mov     tmp5, tmp3
+        lea     tmp, [rel len_to_mask]
+        and     tmp3, 63
+        kmovq   k1, [tmp + tmp3*8]
+
+
+        ; Read up to 63 bytes of KS and XOR the first bytes of message
+        ; with the previous unused bytes of keystream
+        vmovdqu8 zmm0{k1}, [src]
+        vmovdqu8 zmm1{k1}, [prev_ks]
+        vpxorq  zmm1, zmm0
+        vmovdqu8 [dst]{k1}, zmm1
+        add     src, tmp3
+        add     dst, tmp3
+
+        ; Update remain bytes of KS
+        sub     [ctx + RemainKsBytes], tmp5
+        ; Restore pointer to previous KS
+        sub     prev_ks, tmp4
+
+        sub     len, tmp5
+        jz      no_partial_block_ks
+
+no_remain_ks_bytes:
+
+        ; Reset remaining number of KS bytes
+        mov     qword [ctx + RemainKsBytes], 0
+        lea     iv, [ctx + IV]
+
+        mov     tmp5, 0xffffffffffffffff
+        kmovq   k1, tmp5
+
+        ; If less than or equal to 64*8 bytes, prepare directly states for up to 8 blocks
+        cmp     len, 64*8
+        jbe     exit_loop_ks
+
+        ; Prepare first 16 chacha20 states from IV, key, constants and counter values
+        vpbroadcastd zmm0, [rel constants]
+        vpbroadcastd zmm1, [rel constants + 4]
+        vpbroadcastd zmm2, [rel constants + 8]
+        vpbroadcastd zmm3, [rel constants + 12]
+
+        vpbroadcastd zmm4, [keys]
+        vpbroadcastd zmm5, [keys + 4]
+        vpbroadcastd zmm6, [keys + 8]
+        vpbroadcastd zmm7, [keys + 12]
+        vpbroadcastd zmm8, [keys + 16]
+        vpbroadcastd zmm9, [keys + 20]
+        vpbroadcastd zmm10, [keys + 24]
+        vpbroadcastd zmm11, [keys + 28]
+
+        vpbroadcastd zmm13, [iv]
+        vpbroadcastd zmm14, [iv + 4]
+        vpbroadcastd zmm15, [iv + 8]
+        ;; Set block counter s for the next 16 Chacha20 states
+        vpbroadcastd zmm12, DWORD(blk_cnt)
+        vpaddd zmm12, [rel set_1_16]
+
+        cmp     len, 64*16
+        jb      exit_loop_ks
+
+align 32
+start_loop_ks:
+        ENCRYPT_1K zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                   zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                   zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                   zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15, src, dst, off, 0
+
+        ; Update remaining length
+        sub     len, 64*16
+        add     off, 64*16
+        add     blk_cnt, 16
+
+        ; Reload first two registers zmm0 and 1,
+        ; as they have been overwritten by the previous macros
+        vpbroadcastd zmm0, [rel constants]
+        vpbroadcastd zmm1, [rel constants + 4]
+
+        ; Increment counter values
+        vpaddd      zmm12, [rel add_16]
+
+        cmp     len, 64*16
+        jae     start_loop_ks
+
+exit_loop_ks:
+
+        ; Check if there are partial block (less than 16*64 bytes)
+        or      len, len
+        jz      no_partial_block_ks
+
+        cmp     len, 64*8
+        ja      more_than_8_blocks_left_ks
+
+        cmp     len, 64*4
+        ja      more_than_4_blocks_left_ks
+
+        ;; up to 4 blocks left
+
+        ; Get last block counter dividing offset by 64
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
+                                   zmm8, zmm9, blk_cnt, iv, keys, k2, 4, no_key
+
+        ; Use same first 4 registers as the output of GENERATE_1K_KS,
+        ; to be able to use common code later on to encrypt
+        GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, none, none, none, none, \
+                        zmm0, zmm1, zmm2, zmm3, none, \
+                        zmm8, zmm9, zmm10, zmm11, 4
+
+        jmp ks_gen_done_ks
+
+more_than_4_blocks_left_ks:
+        ;; up to 8 blocks left
+
+        ; Get last block counter dividing offset by 64
+        ;; up to 8 blocks left
+        PREPARE_NEXT_STATES_4_TO_8 zmm0, zmm1, zmm2, zmm3, zmm7, \
+                                   zmm8, zmm9, blk_cnt, iv, keys, k2, 8, no_key
+
+        ; Use same first 8 registers as the output of GENERATE_1K_KS,
+        ; to be able to use common code later on to encrypt
+        GENERATE_512_KS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                        zmm0, zmm1, zmm2, zmm3, zmm7, \
+                        zmm8, zmm9, zmm10, zmm11, 8
+
+        jmp ks_gen_done_ks
+more_than_8_blocks_left_ks:
+        ; Generate another 64*16 bytes of keystream and XOR only the leftover plaintext
+        GENERATE_1K_KS zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
+                       zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, \
+                       zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, \
+                       zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
+
+ks_gen_done_ks:
+
+        ; Calculate number of final blocks
+        mov     tmp, len
+        add     tmp, 63
+        shr     tmp, 6
+
+        cmp     tmp, 8
+        je      final_num_blocks_is_8_ks
+        jb      final_num_blocks_is_1_7_ks
+
+        ; Final blocks 9-16
+        cmp     tmp, 12
+        je      final_num_blocks_is_12_ks
+        jb      final_num_blocks_is_9_11_ks
+
+        ; Final blocks 13-16
+        cmp     tmp, 14
+        je      final_num_blocks_is_14_ks
+        jb      final_num_blocks_is_13_ks
+
+        cmp     tmp, 15
+        je      final_num_blocks_is_15_ks
+        jmp     final_num_blocks_is_16_ks
+
+final_num_blocks_is_9_11_ks:
+        cmp     tmp, 10
+        je      final_num_blocks_is_10_ks
+        jb      final_num_blocks_is_9_ks
+        ja      final_num_blocks_is_11_ks
+
+final_num_blocks_is_1_7_ks:
+        ; Final blocks 1-7
+        cmp     tmp, 4
+        je      final_num_blocks_is_4_ks
+        jb      final_num_blocks_is_1_3_ks
+
+        ; Final blocks 5-7
+        cmp     tmp, 6
+        je      final_num_blocks_is_6_ks
+        jb      final_num_blocks_is_5_ks
+        ja      final_num_blocks_is_7_ks
+
+final_num_blocks_is_1_3_ks:
+        cmp     tmp, 2
+        je      final_num_blocks_is_2_ks
+        ja      final_num_blocks_is_3_ks
+
+        ; 1 final block if no jump
+%assign I 1
+%rep 16
+APPEND3(final_num_blocks_is_, I, _ks):
+
+        lea     tmp, [rel len_to_mask]
+        and     len, 63
+        kmovq   k1, [tmp + len*8]
+
+        ENCRYPT_1_16_BLOCKS zmm25, zmm16, zmm17, zmm29, zmm19, zmm24, zmm26, zmm23, \
+                            zmm20, zmm21, zmm31, zmm27, zmm28, zmm22, zmm30, zmm18, \
+                            zmm0, src, dst, off, k1, I, 0, prev_ks
+        add     blk_cnt, I
+
+        ; Update remain number of KS bytes
+        mov     tmp, 64
+        sub     tmp, len
+        and     tmp, 63
+        mov     [ctx + RemainKsBytes], tmp
+
+        jmp     no_partial_block_ks
+
+%assign I (I + 1)
+%endrep
+
+no_partial_block_ks:
+
+        mov     [ctx + LastBlkCount], blk_cnt
+
+        mov     r12, [rsp]
+        mov     r13, [rsp + 8]
+        mov     r14, [rsp + 16]
+        mov     r15, [rsp + 24]
+        mov     rbx, [rsp + 32]
+        mov     rbp, [rsp + 40]
+%ifndef LINUX
+        mov     rdi, [rsp + 48]
+%endif
+        add     rsp, 8*7
+%ifdef SAFE_DATA
+        clear_all_zmms_asm
+%endif
+
+exit_ks:
         ret
 
 %ifdef LINUX

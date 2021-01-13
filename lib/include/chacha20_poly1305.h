@@ -55,6 +55,9 @@ void chacha20_enc_dec_ks_avx2(const void *src, void *dst,
                               const uint64_t length, const void *key,
                               const struct chacha20_poly1305_context_data *ctx);
 IMB_JOB *submit_job_chacha20_enc_dec_avx512(IMB_JOB *);
+void chacha20_enc_dec_ks_avx512(const void *src, void *dst,
+                              const uint64_t length, const void *key,
+                              const struct chacha20_poly1305_context_data *ctx);
 IMB_JOB *submit_job_chacha20_poly_enc_avx512(IMB_JOB *, void *poly_key);
 IMB_JOB *submit_job_chacha20_poly_dec_avx512(IMB_JOB *, const void *ks,
                                              const uint64_t len_to_xor);
@@ -89,6 +92,10 @@ void update_enc_chacha20_poly1305_avx2(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
                                      const uint64_t len);
+void update_enc_chacha20_poly1305_avx512(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len);
 void update_dec_chacha20_poly1305_sse(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
@@ -98,6 +105,10 @@ void update_dec_chacha20_poly1305_avx(const void *key,
                                      void *dst, const void *src,
                                      const uint64_t len);
 void update_dec_chacha20_poly1305_avx2(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len);
+void update_dec_chacha20_poly1305_avx512(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
                                      const uint64_t len);

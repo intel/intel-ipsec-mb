@@ -57,8 +57,10 @@ void chacha20_enc_dec_ks(const void *src, void *dst,
                 chacha20_enc_dec_ks_sse(src, dst, length, key, ctx);
         else if (arch == IMB_ARCH_AVX)
                 chacha20_enc_dec_ks_avx(src, dst, length, key, ctx);
-        else
+        else if (arch == IMB_ARCH_AVX2)
                 chacha20_enc_dec_ks_avx2(src, dst, length, key, ctx);
+        else /* IMB_ARCH_AVX512 */
+                chacha20_enc_dec_ks_avx512(src, dst, length, key, ctx);
 }
 
 __forceinline
@@ -662,6 +664,16 @@ void update_enc_chacha20_poly1305_avx2(const void *key,
                                         IMB_DIR_ENCRYPT, IMB_ARCH_AVX2);
 }
 
+
+void update_enc_chacha20_poly1305_avx512(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len)
+{
+        update_chacha20_poly1305_direct(key, ctx, dst, src, len,
+                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX512);
+}
+
 void update_dec_chacha20_poly1305_sse(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
@@ -687,6 +699,15 @@ void update_dec_chacha20_poly1305_avx2(const void *key,
 {
         update_chacha20_poly1305_direct(key, ctx, dst, src, len,
                                         IMB_DIR_DECRYPT, IMB_ARCH_AVX2);
+}
+
+void update_dec_chacha20_poly1305_avx512(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len)
+{
+        update_chacha20_poly1305_direct(key, ctx, dst, src, len,
+                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX512);
 }
 
 __forceinline
