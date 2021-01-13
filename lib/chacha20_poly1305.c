@@ -541,3 +541,130 @@ void init_chacha20_poly1305_avx(const void *key,
         init_chacha20_poly1305_direct(key, ctx, iv, aad,
                                       aad_len, IMB_ARCH_AVX);
 }
+
+__forceinline
+void update_chacha20_poly1305_direct(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len,
+                                     const JOB_CIPHER_DIRECTION dir,
+                                     const IMB_ARCH arch)
+{
+        uint64_t bytes_to_copy = 0;
+        uint64_t remain_bytes_to_fill = (16 - ctx->remain_ct_bytes);
+        uint64_t remain_ct_bytes;
+        const uint8_t *remain_ct_ptr;
+        const uint8_t *src8 = (const uint8_t *) src;
+        uint8_t *dst8 = (uint8_t *) dst;
+        uint64_t length = len;
+
+        /* Need to copy more bytes into scratchpad */
+        if ((ctx->remain_ct_bytes > 0) && (remain_bytes_to_fill > 0)) {
+                if (len < remain_bytes_to_fill)
+                        bytes_to_copy = length;
+                else
+                        bytes_to_copy = remain_bytes_to_fill;
+        }
+
+        /* Increment total hash length */
+        ctx->hash_len += length;
+
+        if (dir == IMB_DIR_ENCRYPT) {
+                chacha20_enc_dec_ks(src, dst, length, key, ctx, arch);
+
+                /* Copy more bytes on Poly scratchpad */
+                memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
+                           dst, bytes_to_copy, arch);
+                ctx->remain_ct_bytes += bytes_to_copy;
+
+                /*
+                 * Compute hash on remaining bytes of previous segment and
+                 * first bytes of this segment (if there are 16 bytes)
+                 */
+                if (ctx->remain_ct_bytes == 16) {
+                        poly1305_aead_update(ctx->poly_scratch, 16, ctx->hash,
+                                             ctx->poly_key);
+                        ctx->remain_ct_bytes = 0;
+                }
+
+                length -= bytes_to_copy;
+                remain_ct_bytes = length & HASH_REMAIN_CLAMP;
+                length &= length & HASH_LEN_CLAMP;
+
+                /* compute hash after cipher on encrypt */
+                poly1305_aead_update(dst8 + bytes_to_copy,
+                                     length, ctx->hash, ctx->poly_key);
+
+                remain_ct_ptr = dst8 + bytes_to_copy + length;
+                /* copy last bytes of ciphertext (less than 16 bytes) */
+                memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
+                           arch);
+                ctx->remain_ct_bytes += remain_ct_bytes;
+        } else {
+                /* Copy more bytes on Poly scratchpad */
+                memcpy_asm(ctx->poly_scratch + ctx->remain_ct_bytes,
+                           src, bytes_to_copy, arch);
+                ctx->remain_ct_bytes += bytes_to_copy;
+
+                /*
+                 * Compute hash on remaining bytes of previous segment and
+                 * first bytes of this segment (if there are 16 bytes)
+                 */
+                if (ctx->remain_ct_bytes == 16) {
+                        poly1305_aead_update(ctx->poly_scratch, 16, ctx->hash,
+                                             ctx->poly_key);
+                        ctx->remain_ct_bytes = 0;
+                }
+
+                length -= bytes_to_copy;
+                remain_ct_bytes = length & HASH_REMAIN_CLAMP;
+                length &= length & HASH_LEN_CLAMP;
+
+                /* compute hash first on decrypt */
+                poly1305_aead_update(src8 + bytes_to_copy, length, ctx->hash,
+                                     ctx->poly_key);
+
+                remain_ct_ptr = src8 + bytes_to_copy + length;
+                /* copy last bytes of ciphertext (less than 16 bytes) */
+                memcpy_asm(ctx->poly_scratch, remain_ct_ptr, remain_ct_bytes,
+                           arch);
+                ctx->remain_ct_bytes += remain_ct_bytes;
+                chacha20_enc_dec_ks(src, dst, len, key, ctx, arch);
+        }
+}
+
+void update_enc_chacha20_poly1305_sse(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len)
+{
+        update_chacha20_poly1305_direct(key, ctx, dst, src, len,
+                                        IMB_DIR_ENCRYPT, IMB_ARCH_SSE);
+}
+
+void update_enc_chacha20_poly1305_avx(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len)
+{
+        update_chacha20_poly1305_direct(key, ctx, dst, src, len,
+                                        IMB_DIR_ENCRYPT, IMB_ARCH_AVX);
+}
+
+void update_dec_chacha20_poly1305_sse(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len)
+{
+        update_chacha20_poly1305_direct(key, ctx, dst, src, len,
+                                        IMB_DIR_DECRYPT, IMB_ARCH_SSE);
+}
+
+void update_dec_chacha20_poly1305_avx(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len)
+{
+        update_chacha20_poly1305_direct(key, ctx, dst, src, len,
+                                        IMB_DIR_DECRYPT, IMB_ARCH_AVX);
+}

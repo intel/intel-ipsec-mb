@@ -74,4 +74,20 @@ void init_chacha20_poly1305_avx(const void *key,
                                 struct chacha20_poly1305_context_data *ctx,
                                 const void *iv, const void *aad,
                                 const uint64_t aad_len);
+void update_enc_chacha20_poly1305_sse(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len);
+void update_enc_chacha20_poly1305_avx(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len);
+void update_dec_chacha20_poly1305_sse(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len);
+void update_dec_chacha20_poly1305_avx(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len);
 #endif /* IMB_CHACHA20POLY1305_H */

@@ -662,7 +662,13 @@ typedef void (*aes_gmac_finalize_t)(const struct gcm_key_data *,
 
 typedef void (*chacha_poly_init_t)(const void *,
                                    struct chacha20_poly1305_context_data *,
-                                   const void *, const void *, uint64_t);
+                                   const void *, const void *, const uint64_t);
+typedef void (*chacha_poly_enc_dec_update_t)(const void *,
+                                     struct chacha20_poly1305_context_data *,
+                                     void *, const void *, const uint64_t);
+typedef void (*chacha_poly_enc_dec_finalize_t)(
+                                     struct chacha20_poly1305_context_data *,
+                                     uint8_t *, uint64_t);
 typedef void (*ghash_t)(struct gcm_key_data *, const void *,
                         const uint64_t, void *, const uint64_t);
 
@@ -981,7 +987,9 @@ typedef struct IMB_MGR {
         crc32_fn_t              crc32_wimax_ofdma_data;
         crc32_fn_t              crc8_wimax_ofdma_hcs;
 
-        chacha_poly_init_t          chacha20_poly1305_init;
+        chacha_poly_init_t           chacha20_poly1305_init;
+        chacha_poly_enc_dec_update_t chacha20_poly1305_enc_update;
+        chacha_poly_enc_dec_update_t chacha20_poly1305_dec_update;
 
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
@@ -1302,6 +1310,14 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 /* Chacha20-Poly1305 direct API's */
 #define IMB_CHACHA20_POLY1305_INIT(_mgr, _key, _ctx, _iv, _aad, _aadl)        \
         ((_mgr)->chacha20_poly1305_init((_key), (_ctx), (_iv), (_aad), (_aadl)))
+
+#define IMB_CHACHA20_POLY1305_ENC_UPDATE(_mgr, _key, _ctx, _out, _in, _len)    \
+        ((_mgr)->chacha20_poly1305_enc_update((_key), (_ctx), (_out), (_in), \
+                                              (_len)))
+
+#define IMB_CHACHA20_POLY1305_DEC_UPDATE(_mgr, _key, _ctx, _out, _in, _len)    \
+        ((_mgr)->chacha20_poly1305_dec_update((_key), (_ctx), (_out), (_in), \
+                                              (_len)))
 
 /* ZUC EEA3/EIA3 functions */
 

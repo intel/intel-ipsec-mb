@@ -979,6 +979,8 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_sse_no_aesni;
 
         state->chacha20_poly1305_init = init_chacha20_poly1305_sse;
+        state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_sse;
+        state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_sse;
 }
 
 #include "mb_mgr_code.h"
