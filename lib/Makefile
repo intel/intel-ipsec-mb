@@ -81,6 +81,9 @@ INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
 
 CC ?= gcc
 
+# if "-z ibt" is supported then assume "-z shstk, -z cet-report=error, -fcf-protection" are also supported
+CC_HAS_CET = $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l)
+
 CFLAGS := -DLINUX -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
@@ -88,6 +91,10 @@ CFLAGS := -DLINUX -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
+
+ifeq ($(CC_HAS_CET),1)
+CFLAGS += -fcf-protection
+endif
 
 ASM_INCLUDE_DIRS := .
 
@@ -169,7 +176,10 @@ ifeq ($(SHARED),y)
 CFLAGS += -fPIC
 LIBNAME = $(LIB).so.$(VERSION)
 LIBPERM = 0755
-LDFLAGS += -z noexecstack -z relro -z now
+LDFLAGS += -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
+ifeq ($(CC_HAS_CET),1)
+LDFLAGS += -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
+endif
 else
 CFLAGS += -fPIE
 LIBNAME = $(LIB).a
@@ -605,7 +615,7 @@ all: $(LIB_DIR)/$(LIBNAME)
 
 $(LIB_DIR)/$(LIBNAME): $(target_obj_files)
 ifeq ($(SHARED),y)
-	$(CC) -shared -Wl,-soname,$(LIB).so.$(SO_VERSION) -o $@ $^ -lc
+	$(CC) -shared $(LDFLAGS) -Wl,-soname,$(LIB).so.$(SO_VERSION) -o $@ $^ -lc
 	ln -f -s $(LIBNAME) $(LIB_DIR)/$(LIB).so.$(SO_VERSION)
 	ln -f -s $(LIB).so.$(SO_VERSION) $(LIB_DIR)/$(LIB).so
 else

@@ -35,7 +35,17 @@ CFLAGS = -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-pthread -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
 
+# if "-z ibt" is supported then assume "-z shstk, -z cet-report=error, -fcf-protection" are also supported
+CC_HAS_CET = $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l)
+
+ifeq ($(CC_HAS_CET),1)
+CFLAGS += -fcf-protection
+endif
+
 LDFLAGS = -fPIE -z noexecstack -z relro -z now -pthread
+ifeq ($(CC_HAS_CET),1)
+LDFLAGS += -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
+endif
 LDLIBS = -lIPSec_MB
 
 ifeq ("$(shell test -e $(INSTPATH) && echo -n yes)","yes")
