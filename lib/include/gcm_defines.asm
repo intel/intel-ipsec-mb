@@ -197,12 +197,12 @@ section .text
 ;;define the fields of gcm_context_data struct
 ;; struct gcm_context_data {
 ;;         // init, update and finalize context data
-;;         uint8_t  aad_hash[GCM_BLOCK_LEN];
+;;         uint8_t  aad_hash[IMB_GCM_BLOCK_LEN];
 ;;         uint64_t aad_length;
 ;;         uint64_t in_length;
-;;         uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
-;;         uint8_t  orig_IV[GCM_BLOCK_LEN];
-;;         uint8_t  current_counter[GCM_BLOCK_LEN];
+;;         uint8_t  partial_block_enc_key[IMB_GCM_BLOCK_LEN];
+;;         uint8_t  orig_IV[IMB_GCM_BLOCK_LEN];
+;;         uint8_t  current_counter[IMB_GCM_BLOCK_LEN];
 ;;         uint64_t  partial_block_length;
 ;; };
 

@@ -542,21 +542,22 @@ typedef struct kasumi_key_sched_s {
 } kasumi_key_sched_t;
 
 /* GCM data structures */
-#define GCM_BLOCK_LEN   16
+#define IMB_GCM_BLOCK_LEN   16
 
 /**
  * @brief holds GCM operation context
  */
 struct gcm_context_data {
         /* init, update and finalize context data */
-        uint8_t  aad_hash[GCM_BLOCK_LEN];
+        uint8_t  aad_hash[IMB_GCM_BLOCK_LEN];
         uint64_t aad_length;
         uint64_t in_length;
-        uint8_t  partial_block_enc_key[GCM_BLOCK_LEN];
-        uint8_t  orig_IV[GCM_BLOCK_LEN];
-        uint8_t  current_counter[GCM_BLOCK_LEN];
+        uint8_t  partial_block_enc_key[IMB_GCM_BLOCK_LEN];
+        uint8_t  orig_IV[IMB_GCM_BLOCK_LEN];
+        uint8_t  current_counter[IMB_GCM_BLOCK_LEN];
         uint64_t partial_block_length;
 };
+#undef IMB_GCM_BLOCK_LEN
 
 /**
  * @brief holds Chacha20-Poly1305 operation context
@@ -599,9 +600,8 @@ struct chacha20_poly1305_context_data {
 #define IMB_GCM_192_KEY_LEN (24)
 #define IMB_GCM_256_KEY_LEN (32)
 
-/* #define GCM_BLOCK_LEN   16 */
-#define GCM_ENC_KEY_LEN 16
-#define GCM_KEY_SETS    (15) /*exp key + 14 exp round keys*/
+#define IMB_GCM_ENC_KEY_LEN 16
+#define IMB_GCM_KEY_SETS    (15) /*exp key + 14 exp round keys*/
 
 /**
  * @brief holds intermediate key data needed to improve performance
@@ -612,7 +612,7 @@ struct chacha20_poly1305_context_data {
 __declspec(align(64))
 #endif /* WIN32 */
 struct gcm_key_data {
-        uint8_t expanded_keys[GCM_ENC_KEY_LEN * GCM_KEY_SETS];
+        uint8_t expanded_keys[IMB_GCM_ENC_KEY_LEN * IMB_GCM_KEY_SETS];
         union {
                 /* Storage for precomputed hash keys */
                 struct {
@@ -621,7 +621,7 @@ struct gcm_key_data {
                          * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
                          * (Hashkey^48<<1 mod poly)
                          */
-                        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 8];
+                        uint8_t shifted_hkey[IMB_GCM_ENC_KEY_LEN * 8];
                         /*
                          * This is needed for Karatsuba multiply purposes.
                          * Storage for XOR of High 64 bits and low 64 bits
@@ -630,7 +630,7 @@ struct gcm_key_data {
                          * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
                          * (Hashkey^128<<1 mod poly)
                          */
-                        uint8_t shifted_hkey_k[GCM_ENC_KEY_LEN * 8];
+                        uint8_t shifted_hkey_k[IMB_GCM_ENC_KEY_LEN * 8];
                 } sse_avx;
                 struct {
                         /*
@@ -638,14 +638,14 @@ struct gcm_key_data {
                          * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
                          * (Hashkey^48<<1 mod poly)
                          */
-                        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 8];
+                        uint8_t shifted_hkey[IMB_GCM_ENC_KEY_LEN * 8];
                 } avx2_avx512;
                 struct {
                         /*
                          * (HashKey<<1 mod poly), (HashKey^2<<1 mod poly), ...,
                          * (Hashkey^48<<1 mod poly)
                          */
-                        uint8_t shifted_hkey[GCM_ENC_KEY_LEN * 48];
+                        uint8_t shifted_hkey[IMB_GCM_ENC_KEY_LEN * 48];
                 } vaes_avx512;
         } ghash_keys;
 }
@@ -654,6 +654,9 @@ __attribute__((aligned(64)));
 #else
 ;
 #endif
+
+#undef IMB_GCM_ENC_KEY_LEN
+#undef IMB_GCM_KEY_SETS
 
 /* ========================================================================== */
 /* API data type definitions */
