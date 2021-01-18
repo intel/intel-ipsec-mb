@@ -933,7 +933,7 @@ no_partial_block:
 
 exit:
         mov     rax, job
-        or      dword [rax + _status], STS_COMPLETED_AES
+        or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
         clear_all_ymms_asm
 
         ret

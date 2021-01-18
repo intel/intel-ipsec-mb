@@ -269,7 +269,7 @@ typedef struct {
 /* HMAC-SHA1 and HMAC-SHA256/224 */
 typedef struct {
         /* YMM aligned access to extra_block */
-        DECLARE_ALIGNED(uint8_t extra_block[2 * SHA1_BLOCK_SIZE+8], 32);
+        DECLARE_ALIGNED(uint8_t extra_block[2 * IMB_SHA1_BLOCK_SIZE+8], 32);
         IMB_JOB *job_in_lane;
         uint8_t outer_block[64];
         uint32_t outer_done;
@@ -281,8 +281,8 @@ typedef struct {
 
 /* HMAC-SHA512/384 */
 typedef struct {
-        DECLARE_ALIGNED(uint8_t extra_block[2 * SHA_512_BLOCK_SIZE + 16], 32);
-        uint8_t outer_block[SHA_512_BLOCK_SIZE];
+        DECLARE_ALIGNED(uint8_t extra_block[2*IMB_SHA_512_BLOCK_SIZE + 16], 32);
+        uint8_t outer_block[IMB_SHA_512_BLOCK_SIZE];
         IMB_JOB *job_in_lane;
         uint32_t outer_done;
         uint32_t extra_blocks; /* num extra blocks (1 or 2) */

@@ -244,7 +244,7 @@ extern des3_x16_cbc_dec_avx512
         ;; - clear job pointer
         mov     rax, [STATE + _des_job_in_lane + MIN_IDX*8]
         mov     qword [STATE + _des_job_in_lane + MIN_IDX*8], 0
-        or	dword [rax + _status], STS_COMPLETED_AES
+        or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
 %ifdef SAFE_DATA
         ;; Clear IV
@@ -402,7 +402,7 @@ extern des3_x16_cbc_dec_avx512
         mov	[STATE + _des_unused_lanes], IA0
         ;; - mark job as complete
         mov     rax, [STATE + _des_job_in_lane + MIN_IDX*8]
-        or	dword [rax + _status], STS_COMPLETED_AES
+        or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
         ;; - clear job pointer
         mov     qword [STATE + _des_job_in_lane + MIN_IDX*8], 0
 %ifdef SAFE_DATA

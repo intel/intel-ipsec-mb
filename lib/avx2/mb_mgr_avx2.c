@@ -353,7 +353,7 @@ submit_job_aes_gcm_dec_avx2(IMB_MGR *state, IMB_JOB *job)
                                    job->auth_tag_output_len_in_bytes);
         }
 
-        job->status = STS_COMPLETED;
+        job->status = IMB_STATUS_COMPLETED;
         return job;
 }
 
@@ -406,7 +406,7 @@ submit_job_aes_gcm_enc_avx2(IMB_MGR *state, IMB_JOB *job)
                                    job->auth_tag_output_len_in_bytes);
         }
 
-        job->status = STS_COMPLETED;
+        job->status = IMB_STATUS_COMPLETED;
         return job;
 }
 
@@ -674,16 +674,16 @@ init_mb_mgr_avx2(IMB_MGR *state)
                 MB_MGR_HMAC_SHA_512_OOO *ctx = hmac_sha_384_ooo;
 
                 ctx->ldata[j].job_in_lane = NULL;
-                ctx->ldata[j].extra_block[SHA_384_BLOCK_SIZE] = 0x80;
-                memset(ctx->ldata[j].extra_block + (SHA_384_BLOCK_SIZE + 1),
-                       0x00, SHA_384_BLOCK_SIZE + 7);
+                ctx->ldata[j].extra_block[IMB_SHA_384_BLOCK_SIZE] = 0x80;
+                memset(ctx->ldata[j].extra_block + (IMB_SHA_384_BLOCK_SIZE + 1),
+                       0x00, IMB_SHA_384_BLOCK_SIZE + 7);
                 p = ctx->ldata[j].outer_block;
                 /* special end point because this length is constant */
-                memset(p + SHA384_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
-                       SHA_384_BLOCK_SIZE -
-                       SHA384_DIGEST_SIZE_IN_BYTES  - 1 - 2);
+                memset(p + IMB_SHA384_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
+                       IMB_SHA_384_BLOCK_SIZE -
+                       IMB_SHA384_DIGEST_SIZE_IN_BYTES  - 1 - 2);
                 /* mark the end */
-                p[SHA384_DIGEST_SIZE_IN_BYTES] = 0x80;
+                p[IMB_SHA384_DIGEST_SIZE_IN_BYTES] = 0x80;
                 /* hmac outer block length always of fixed size,
                  * it is OKey length, a whole message block length, 1024 bits,
                  * with padding plus the length of the inner digest,
@@ -691,8 +691,8 @@ init_mb_mgr_avx2(IMB_MGR *state)
                  * The input message block needs to be converted to big endian
                  * within the sha implementation before use.
                  */
-                p[SHA_384_BLOCK_SIZE - 2] = 0x05;
-                p[SHA_384_BLOCK_SIZE - 1] = 0x80;
+                p[IMB_SHA_384_BLOCK_SIZE - 2] = 0x05;
+                p[IMB_SHA_384_BLOCK_SIZE - 1] = 0x80;
         }
 
         /* Init HMAC/SHA512 out-of-order fields */
@@ -709,16 +709,16 @@ init_mb_mgr_avx2(IMB_MGR *state)
                 MB_MGR_HMAC_SHA_512_OOO *ctx = hmac_sha_512_ooo;
 
                 ctx->ldata[j].job_in_lane = NULL;
-                ctx->ldata[j].extra_block[SHA_512_BLOCK_SIZE] = 0x80;
-                memset(ctx->ldata[j].extra_block + (SHA_512_BLOCK_SIZE + 1),
-                       0x00, SHA_512_BLOCK_SIZE + 7);
+                ctx->ldata[j].extra_block[IMB_SHA_512_BLOCK_SIZE] = 0x80;
+                memset(ctx->ldata[j].extra_block + (IMB_SHA_512_BLOCK_SIZE + 1),
+                       0x00, IMB_SHA_512_BLOCK_SIZE + 7);
                 p = ctx->ldata[j].outer_block;
                 /* special end point because this length is constant */
-                memset(p + SHA512_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
-                       SHA_512_BLOCK_SIZE -
-                       SHA512_DIGEST_SIZE_IN_BYTES  - 1 - 2);
+                memset(p + IMB_SHA512_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
+                       IMB_SHA_512_BLOCK_SIZE -
+                       IMB_SHA512_DIGEST_SIZE_IN_BYTES  - 1 - 2);
                 /* mark the end */
-                p[SHA512_DIGEST_SIZE_IN_BYTES] = 0x80;
+                p[IMB_SHA512_DIGEST_SIZE_IN_BYTES] = 0x80;
                 /* hmac outer block length always of fixed size,
                  * it is OKey length, a whole message block length, 1024 bits,
                  * with padding plus the length of the inner digest,
@@ -726,8 +726,8 @@ init_mb_mgr_avx2(IMB_MGR *state)
                  * The input message block needs to be converted to big endian
                  * within the sha implementation before use.
                  */
-                p[SHA_512_BLOCK_SIZE - 2] = 0x06;
-                p[SHA_512_BLOCK_SIZE - 1] = 0x00;
+                p[IMB_SHA_512_BLOCK_SIZE - 2] = 0x06;
+                p[IMB_SHA_512_BLOCK_SIZE - 1] = 0x00;
         }
 
         /* Init HMAC/MD5 out-of-order fields */

@@ -1556,7 +1556,7 @@ sgl_aes_gcm_dec_256(const struct gcm_key_data *key,
  *****************************************************************************/
 static void
 aes_gcm_job(IMB_MGR *mb_mgr,
-            JOB_CHAIN_ORDER order,
+            IMB_CHAIN_ORDER order,
             const struct gcm_key_data *key,
             uint64_t key_len,
             uint8_t *out, const uint8_t *in, uint64_t len,
@@ -1593,12 +1593,12 @@ aes_gcm_job(IMB_MGR *mb_mgr,
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         while (job) {
-                if (job->status != STS_COMPLETED)
+                if (job->status != IMB_STATUS_COMPLETED)
                         fprintf(stderr, "failed job, status:%d\n", job->status);
                 job = IMB_GET_COMPLETED_JOB(mb_mgr);
         }
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                if (job->status != STS_COMPLETED)
+                if (job->status != IMB_STATUS_COMPLETED)
                         fprintf(stderr, "failed job, status:%d\n", job->status);
         }
 }
@@ -1613,7 +1613,7 @@ job_aes_gcm_enc_128(const struct gcm_key_data *key,
 {
         (void) ctx; /* unused */
         aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key,
-                    IMB_KEY_AES_128_BYTES,
+                    IMB_KEY_128_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1629,7 +1629,7 @@ job_aes_gcm_dec_128(const struct gcm_key_data *key,
 {
         (void) ctx; /* unused */
         aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key,
-                    IMB_KEY_AES_128_BYTES,
+                    IMB_KEY_128_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1645,7 +1645,7 @@ job_aes_gcm_enc_192(const struct gcm_key_data *key,
 {
         (void) ctx; /* unused */
         aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key,
-                    IMB_KEY_AES_192_BYTES,
+                    IMB_KEY_192_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1661,7 +1661,7 @@ job_aes_gcm_dec_192(const struct gcm_key_data *key,
 {
         (void) ctx; /* unused */
         aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key,
-                    IMB_KEY_AES_192_BYTES,
+                    IMB_KEY_192_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1677,7 +1677,7 @@ job_aes_gcm_enc_256(const struct gcm_key_data *key,
 {
         (void) ctx; /* unused */
         aes_gcm_job(p_gcm_mgr, IMB_ORDER_CIPHER_HASH, key,
-                    IMB_KEY_AES_256_BYTES,
+                    IMB_KEY_256_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1693,7 +1693,7 @@ job_aes_gcm_dec_256(const struct gcm_key_data *key,
 {
         (void) ctx; /* unused */
         aes_gcm_job(p_gcm_mgr, IMB_ORDER_HASH_CIPHER, key,
-                    IMB_KEY_AES_256_BYTES,
+                    IMB_KEY_256_BYTES,
                     out, in, len,
                     iv, iv_len, aad, aad_len,
                     auth_tag, auth_tag_len);
@@ -1998,12 +1998,12 @@ aes_gmac_job(IMB_MGR *mb_mgr,
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         while (job) {
-                if (job->status != STS_COMPLETED)
+                if (job->status != IMB_STATUS_COMPLETED)
                         fprintf(stderr, "failed job, status:%d\n", job->status);
                 job = IMB_GET_COMPLETED_JOB(mb_mgr);
         }
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
-                if (job->status != STS_COMPLETED)
+                if (job->status != IMB_STATUS_COMPLETED)
                         fprintf(stderr, "failed job, status:%d\n", job->status);
         }
 }

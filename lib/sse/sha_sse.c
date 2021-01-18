@@ -42,7 +42,7 @@ void sha1_one_block_sse(const void *data, void *digest)
 
 void sha1_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 1, SHA1_BLOCK_SIZE,
+        sha_generic(data, length, digest, 0 /* SSE */, 1, IMB_SHA1_BLOCK_SIZE,
                     SHA1_PAD_SIZE);
 }
 
@@ -60,8 +60,8 @@ void sha224_one_block_sse(const void *data, void *digest)
  */
 void sha224_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 224, SHA_256_BLOCK_SIZE,
-                    SHA224_PAD_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 224,
+                    IMB_SHA_256_BLOCK_SIZE, SHA224_PAD_SIZE);
 }
 
 /* ========================================================================== */
@@ -78,8 +78,8 @@ void sha256_one_block_sse(const void *data, void *digest)
  */
 void sha256_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 256, SHA_256_BLOCK_SIZE,
-                    SHA256_PAD_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 256,
+                    IMB_SHA_256_BLOCK_SIZE, SHA256_PAD_SIZE);
 }
 
 /* ========================================================================== */
@@ -96,8 +96,8 @@ void sha384_one_block_sse(const void *data, void *digest)
  */
 void sha384_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 384, SHA_384_BLOCK_SIZE,
-                    SHA384_PAD_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 384,
+                    IMB_SHA_384_BLOCK_SIZE, SHA384_PAD_SIZE);
 }
 
 /* ========================================================================== */
@@ -114,6 +114,6 @@ void sha512_one_block_sse(const void *data, void *digest)
  */
 void sha512_sse(const void *data, const uint64_t length, void *digest)
 {
-        sha_generic(data, length, digest, 0 /* SSE */, 512, SHA_512_BLOCK_SIZE,
-                    SHA512_PAD_SIZE);
+        sha_generic(data, length, digest, 0 /* SSE */, 512,
+                    IMB_SHA_512_BLOCK_SIZE, SHA512_PAD_SIZE);
 }

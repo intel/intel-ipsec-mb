@@ -41,7 +41,8 @@ int null_test(struct IMB_MGR *mb_mgr);
 static void
 test_null_hash(struct IMB_MGR *mb_mgr,
                struct test_suite_context *ctx,
-               JOB_CIPHER_DIRECTION cipher_dir, JOB_CHAIN_ORDER chain_order)
+               IMB_CIPHER_DIRECTION cipher_dir,
+               IMB_CHAIN_ORDER chain_order)
 {
         DECLARE_ALIGNED(uint8_t cipher_key[16], 16);
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
@@ -122,7 +123,8 @@ end:
 static void
 test_null_cipher(struct IMB_MGR *mb_mgr,
                  struct test_suite_context *ctx,
-                 JOB_CIPHER_DIRECTION cipher_dir, JOB_CHAIN_ORDER chain_order)
+                 IMB_CIPHER_DIRECTION cipher_dir,
+                 IMB_CHAIN_ORDER chain_order)
 {
         DECLARE_ALIGNED(uint8_t auth_key[16], 16);
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
@@ -166,7 +168,7 @@ test_null_cipher(struct IMB_MGR *mb_mgr,
                        __LINE__);
                 goto end;
         }
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d Error status:%d", __LINE__, job->status);
                 goto end;
         }

@@ -1828,7 +1828,7 @@ aes_job_ok(const struct IMB_JOB *job,
 {
         const int num = (const int)((uint64_t)job->user_data2);
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d error status:%d, job %d",
                        __LINE__, job->status, num);
                 return 0;
@@ -1861,7 +1861,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
               const unsigned text_len,
               const int dir,
               const int order,
-              const JOB_CIPHER_MODE cipher,
+              const IMB_CIPHER_MODE cipher,
               const int in_place,
               const int key_len,
               const int num_jobs)
@@ -1979,7 +1979,7 @@ test_aes_vectors(struct IMB_MGR *mb_mgr,
                  struct test_suite_context *ctx256,
                  const int vec_cnt,
                  const struct aes_vector *vec_tab, const char *banner,
-                 const JOB_CIPHER_MODE cipher, const int num_jobs)
+                 const IMB_CIPHER_MODE cipher, const int num_jobs)
 {
 	int vect;
         DECLARE_ALIGNED(uint32_t enc_keys[15*4], 16);
@@ -2080,7 +2080,7 @@ docrc_job_ok(const struct IMB_JOB *job,
         const int num = (const int)((uint64_t)job->user_data2);
         const unsigned text_len = (unsigned) p_vec->frame_len;
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d error status:%d, job %d",
                        __LINE__, job->status, num);
                 return 0;

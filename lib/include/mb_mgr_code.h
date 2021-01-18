@@ -63,7 +63,7 @@ __forceinline
 void ADV_JOBS(int *ptr)
 {
         *ptr += sizeof(IMB_JOB);
-        if (*ptr >= (int) (MAX_JOBS * sizeof(IMB_JOB)))
+        if (*ptr >= (int) (IMB_MAX_JOBS * sizeof(IMB_JOB)))
                 *ptr = 0;
 }
 
@@ -80,7 +80,7 @@ SUBMIT_JOB_AES128_DEC(IMB_JOB *job)
                         job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -93,7 +93,7 @@ SUBMIT_JOB_AES192_DEC(IMB_JOB *job)
                         job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes);
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -106,7 +106,7 @@ SUBMIT_JOB_AES256_DEC(IMB_JOB *job)
                         job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -118,7 +118,7 @@ SUBMIT_JOB_AES_ECB_128_ENC(IMB_JOB *job)
                         job->enc_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -130,7 +130,7 @@ SUBMIT_JOB_AES_ECB_192_ENC(IMB_JOB *job)
                         job->enc_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -142,7 +142,7 @@ SUBMIT_JOB_AES_ECB_256_ENC(IMB_JOB *job)
                         job->enc_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -154,7 +154,7 @@ SUBMIT_JOB_AES_ECB_128_DEC(IMB_JOB *job)
                         job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -166,7 +166,7 @@ SUBMIT_JOB_AES_ECB_192_DEC(IMB_JOB *job)
                         job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -178,7 +178,7 @@ SUBMIT_JOB_AES_ECB_256_DEC(IMB_JOB *job)
                         job->dec_keys,
                         job->dst,
                         job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -191,7 +191,7 @@ SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
                              job->dec_keys,
                              job->dst,
                              job->msg_len_to_cipher_in_bytes & (~15));
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -209,11 +209,11 @@ __forceinline
 IMB_JOB *
 JOB_CUSTOM_CIPHER(IMB_JOB *job)
 {
-        if (!(job->status & STS_COMPLETED_AES)) {
+        if (!(job->status & IMB_STATUS_COMPLETED_CIPHER)) {
                 if (job->cipher_func(job))
-                        job->status = STS_INTERNAL_ERROR;
+                        job->status = IMB_STATUS_INTERNAL_ERROR;
                 else
-                        job->status |= STS_COMPLETED_AES;
+                        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         }
         return job;
 }
@@ -236,11 +236,11 @@ __forceinline
 IMB_JOB *
 JOB_CUSTOM_HASH(IMB_JOB *job)
 {
-        if (!(job->status & STS_COMPLETED_HMAC)) {
+        if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
                 if (job->hash_func(job))
-                        job->status = STS_INTERNAL_ERROR;
+                        job->status = IMB_STATUS_INTERNAL_ERROR;
                 else
-                        job->status |= STS_COMPLETED_HMAC;
+                        job->status |= IMB_STATUS_COMPLETED_AUTH;
         }
         return job;
 }
@@ -286,7 +286,7 @@ submit_snow3g_uea2_job(IMB_MGR *state, IMB_JOB *job)
                                        dst, msg_bytelen);
         }
 
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -319,7 +319,7 @@ submit_kasumi_uea1_job(IMB_MGR *state, IMB_JOB *job)
                                        msg_bytelen);
         }
 
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -511,7 +511,7 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
                 return SUBMIT_JOB_AES128_CBCS_1_9_ENC(aes128_cbcs_ooo, job);
         } else { /* assume IMB_CIPHER_NULL */
-                job->status |= STS_COMPLETED_AES;
+                job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
         }
 }
@@ -664,7 +664,7 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_AES128_CBCS_1_9_DEC(job);
         } else {
                 /* assume IMB_CIPHER_NULL */
-                job->status |= STS_COMPLETED_AES;
+                job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
         }
 }
@@ -713,7 +713,7 @@ FLUSH_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
 
 __forceinline
 void
-process_gmac(IMB_MGR *state, IMB_JOB *job, const AES_KEY_SIZE_BYTES key_size)
+process_gmac(IMB_MGR *state, IMB_JOB *job, const IMB_KEY_SIZE_BYTES key_size)
 {
         struct gcm_context_data ctx;
         const struct gcm_key_data *key = job->u.GMAC._key;
@@ -722,13 +722,13 @@ process_gmac(IMB_MGR *state, IMB_JOB *job, const AES_KEY_SIZE_BYTES key_size)
         const uint8_t *src = job->src + job->hash_start_src_offset_in_bytes;
         const uint64_t src_len = job->msg_len_to_hash_in_bytes;
 
-        if (key_size == IMB_KEY_AES_128_BYTES) {
+        if (key_size == IMB_KEY_128_BYTES) {
                 IMB_AES128_GMAC_INIT(state, key, &ctx, iv, iv_len);
                 IMB_AES128_GMAC_UPDATE(state, key, &ctx, src, src_len);
                 IMB_AES128_GMAC_FINALIZE(state, key, &ctx,
                                          job->auth_tag_output,
                                          job->auth_tag_output_len_in_bytes);
-        } else if (key_size == IMB_KEY_AES_192_BYTES) {
+        } else if (key_size == IMB_KEY_192_BYTES) {
                 IMB_AES192_GMAC_INIT(state, key, &ctx, iv, iv_len);
                 IMB_AES192_GMAC_UPDATE(state, key, &ctx, src, src_len);
                 IMB_AES192_GMAC_FINALIZE(state, key, &ctx,
@@ -815,31 +815,31 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 IMB_SHA1(state,
                          job->src + job->hash_start_src_offset_in_bytes,
                          job->msg_len_to_hash_in_bytes, job->auth_tag_output);
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_SHA_224:
                 IMB_SHA224(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_SHA_256:
                 IMB_SHA256(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_SHA_384:
                 IMB_SHA384(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_SHA_512:
                 IMB_SHA512(state,
                            job->src + job->hash_start_src_offset_in_bytes,
                            job->msg_len_to_hash_in_bytes, job->auth_tag_output);
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC_EIA3(zuc_eia3_ooo, job);
@@ -852,7 +852,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                                job->src + job->hash_start_src_offset_in_bytes,
                                job->msg_len_to_hash_in_bits,
                                job->auth_tag_output);
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_KASUMI_UIA1:
                 IMB_KASUMI_F9_1_BUFFER(state, (const kasumi_key_sched_t *)
@@ -860,26 +860,26 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                                job->src + job->hash_start_src_offset_in_bytes,
                                (const uint32_t) job->msg_len_to_hash_in_bytes,
                                job->auth_tag_output);
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_AES_GMAC_128:
-                process_gmac(state, job, IMB_KEY_AES_128_BYTES);
-                job->status |= STS_COMPLETED_HMAC;
+                process_gmac(state, job, IMB_KEY_128_BYTES);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_AES_GMAC_192:
-                process_gmac(state, job, IMB_KEY_AES_192_BYTES);
-                job->status |= STS_COMPLETED_HMAC;
+                process_gmac(state, job, IMB_KEY_192_BYTES);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_AES_GMAC_256:
-                process_gmac(state, job, IMB_KEY_AES_256_BYTES);
-                job->status |= STS_COMPLETED_HMAC;
+                process_gmac(state, job, IMB_KEY_256_BYTES);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_POLY1305:
                 poly1305_mac(job);
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         default: /* assume IMB_AUTH_GCM,IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL */
-                job->status |= STS_COMPLETED_HMAC;
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         }
 }
@@ -947,8 +947,8 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo);
         default: /* assume GCM or IMB_AUTH_NULL */
-                if (!(job->status & STS_COMPLETED_HMAC)) {
-                        job->status |= STS_COMPLETED_HMAC;
+                if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
+                        job->status |= IMB_STATUS_COMPLETED_AUTH;
                         return job;
                 }
                 /* if HMAC is complete then return NULL */
@@ -965,7 +965,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 #define MB_MAX_LEN16 ((1 << 16) - 2)
 
 __forceinline int
-is_job_invalid(MB_MGR *state, const IMB_JOB *job)
+is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
 {
         const uint64_t auth_tag_len_fips[] = {
                 0,  /* INVALID selection */
@@ -2004,9 +2004,9 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                 if (job->msg_len_to_cipher_in_bytes &&
                     job->msg_len_to_hash_in_bytes) {
                         const uint64_t ciph_adjust =
-                                DOCSIS_CRC32_MIN_ETH_PDU_SIZE -
+                                IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE -
                                 2 - /* ETH TYPE */
-                                DOCSIS_CRC32_TAG_SIZE;
+                                IMB_DOCSIS_CRC32_TAG_SIZE;
 
                         if ((job->msg_len_to_cipher_in_bytes + ciph_adjust) >
                             job->msg_len_to_hash_in_bytes) {
@@ -2077,7 +2077,8 @@ is_job_invalid(MB_MGR *state, const IMB_JOB *job)
                  * KASUMI-UIA1 needs to be at least 8 bytes
                  * (IV + direction bit + '1' + 0s to align to byte boundary)
                  */
-                if ((job->msg_len_to_hash_in_bytes < (KASUMI_BLOCK_SIZE + 1)) ||
+                if ((job->msg_len_to_hash_in_bytes <
+                     (IMB_KASUMI_BLOCK_SIZE + 1)) ||
                     (job->msg_len_to_hash_in_bytes >
                      (KASUMI_MAX_LEN / BYTESIZE))) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_LEN);
@@ -2205,10 +2206,10 @@ IMB_JOB *FLUSH_JOB_AES(IMB_MGR *state, IMB_JOB *job)
 __forceinline
 IMB_JOB *RESUBMIT_JOB(IMB_MGR *state, IMB_JOB *job)
 {
-        while (job != NULL && job->status < STS_COMPLETED) {
-                if (job->status == STS_COMPLETED_HMAC)
+        while (job != NULL && job->status < IMB_STATUS_COMPLETED) {
+                if (job->status == IMB_STATUS_COMPLETED_AUTH)
                         job = SUBMIT_JOB_AES(state, job);
-                else /* assumed job->status = STS_COMPLETED_AES */
+                else /* assumed job->status = IMB_STATUS_COMPLETED_CIPHER */
                         job = SUBMIT_JOB_HASH(state, job);
         }
 
@@ -2232,7 +2233,7 @@ void complete_job(IMB_MGR *state, IMB_JOB *job)
 {
         if (job->chain_order == IMB_ORDER_CIPHER_HASH) {
                 /* while() loop optimized for cipher_hash order */
-                while (job->status < STS_COMPLETED) {
+                while (job->status < IMB_STATUS_COMPLETED) {
                         IMB_JOB *tmp = FLUSH_JOB_AES(state, job);
 
                         if (tmp == NULL)
@@ -2242,7 +2243,7 @@ void complete_job(IMB_MGR *state, IMB_JOB *job)
                 }
         } else {
                 /* while() loop optimized for hash_cipher order */
-                while (job->status < STS_COMPLETED) {
+                while (job->status < IMB_STATUS_COMPLETED) {
                         IMB_JOB *tmp = FLUSH_JOB_HASH(state, job);
 
                         if (tmp == NULL)
@@ -2268,13 +2269,13 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
 
         if (run_check) {
                 if (is_job_invalid(state, job)) {
-                        job->status = STS_INVALID_ARGS;
+                        job->status = IMB_STATUS_INVALID_ARGS;
                 } else {
-                        job->status = STS_BEING_PROCESSED;
+                        job->status = IMB_STATUS_BEING_PROCESSED;
                         job = submit_new_job(state, job);
                 }
         } else {
-                job->status = STS_BEING_PROCESSED;
+                job->status = IMB_STATUS_BEING_PROCESSED;
                 job = submit_new_job(state, job);
         }
 
@@ -2298,7 +2299,7 @@ submit_job_and_check(IMB_MGR *state, const int run_check)
 
         /* not full */
         job = JOBS(state, state->earliest_job);
-        if (job->status < STS_COMPLETED) {
+        if (job->status < IMB_STATUS_COMPLETED) {
                 job = NULL;
                 goto exit;
         }
@@ -2410,7 +2411,7 @@ QUEUE_SIZE(IMB_MGR *state)
                 return 0;
         a = state->next_job / sizeof(IMB_JOB);
         b = state->earliest_job / sizeof(IMB_JOB);
-        return ((a-b) & (MAX_JOBS-1));
+        return ((a-b) & (IMB_MAX_JOBS-1));
 }
 
 IMB_JOB *
@@ -2431,7 +2432,7 @@ GET_COMPLETED_JOB(IMB_MGR *state)
                 return NULL;
 
         job = JOBS(state, state->earliest_job);
-        if (job->status < STS_COMPLETED)
+        if (job->status < IMB_STATUS_COMPLETED)
                 return NULL;
 
         ADV_JOBS(&state->earliest_job);

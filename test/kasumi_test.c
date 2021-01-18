@@ -170,7 +170,7 @@ submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 printf("%d error status:%d, job %d",
                                        __LINE__, job->status, i);
                                 return -1;
@@ -209,7 +209,7 @@ submit_kasumi_f9_job(struct IMB_MGR *mb_mgr, kasumi_key_sched_t *key,
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job != NULL) {
-                if (job->status != STS_COMPLETED) {
+                if (job->status != IMB_STATUS_COMPLETED) {
                         printf("%d error status:%d",
                                __LINE__, job->status);
                         return -1;
@@ -1225,7 +1225,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
         for (i = 0; i < NUM_SUPPORTED_BUFFERS; i++) {
                 bitOffsets[i] = 0;
 
-                key[i] = malloc(KASUMI_KEY_SIZE);
+                key[i] = malloc(IMB_KASUMI_KEY_SIZE);
                 if (!key[i]) {
                         printf("malloc(key[%u]:failed !\n", i);
                         goto exit;
@@ -1248,7 +1248,7 @@ static int validate_kasumi_f8_n_blocks(IMB_MGR *mgr, const unsigned job_api)
                         goto exit;
                 }
 
-                memset(key[i], 0xAA, KASUMI_KEY_SIZE);
+                memset(key[i], 0xAA, IMB_KASUMI_KEY_SIZE);
                 if (IMB_KASUMI_INIT_F8_KEY_SCHED(mgr, key[i], pKeySched[i])) {
                         printf("IMB_KASUMI_INIT_F8_KEY_SCHED() error\n");
                         goto exit;
@@ -1484,7 +1484,7 @@ static int validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api)
         uint8_t *pKey = NULL;
         int keyLen = 16;
         uint8_t srcBuff[MAX_DATA_LEN];
-        uint8_t digest[KASUMI_DIGEST_SIZE];
+        uint8_t digest[IMB_KASUMI_DIGEST_SIZE];
         int numKasumiF9TestVectors, i;
         hash_test_vector_t *kasumiF9_test_vectors = NULL;
         int ret = 1;
@@ -1521,7 +1521,7 @@ static int validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api)
                 memcpy(srcBuff, kasumiF9_test_vectors[i].input, byteLen);
 
                 memcpy(digest, kasumiF9_test_vectors[i].exp_out,
-                       KASUMI_DIGEST_SIZE);
+                       IMB_KASUMI_DIGEST_SIZE);
 
                 if (IMB_KASUMI_INIT_F9_KEY_SCHED(mgr, pKey, pKeySched)) {
                         printf("IMB_KASUMI_INIT_F9_KEY_SCHED()error\n");
@@ -1538,11 +1538,12 @@ static int validate_kasumi_f9(IMB_MGR *mgr, const unsigned job_api)
 
                 /* Compare the digest with the expected in the vectors */
                 if (memcmp(digest, kasumiF9_test_vectors[i].exp_out,
-                           KASUMI_DIGEST_SIZE) != 0) {
-                        hexdump(stdout, "Actual", digest, KASUMI_DIGEST_SIZE);
+                           IMB_KASUMI_DIGEST_SIZE) != 0) {
+                        hexdump(stdout, "Actual", digest,
+                                IMB_KASUMI_DIGEST_SIZE);
                         hexdump(stdout, "Expected",
                                 kasumiF9_test_vectors[i].exp_out,
-                                KASUMI_DIGEST_SIZE);
+                                IMB_KASUMI_DIGEST_SIZE);
                         printf("F9 integrity %d Failed\n", i);
                         goto exit;
                 }
@@ -1571,7 +1572,7 @@ static int validate_kasumi_f9_user(IMB_MGR *mgr, const unsigned job_api)
 
         uint64_t iv[MAX_IV_LEN];
         uint8_t srcBuff[MAX_DATA_LEN];
-        uint8_t digest[KASUMI_DIGEST_SIZE];
+        uint8_t digest[IMB_KASUMI_DIGEST_SIZE];
         uint32_t direction;
         int ret = 1;
 
@@ -1619,10 +1620,11 @@ static int validate_kasumi_f9_user(IMB_MGR *mgr, const unsigned job_api)
 
                 /* Compare the digest with the expected in the vectors */
                 if (memcmp(digest, kasumiF9_vectors[i].exp_out,
-                           KASUMI_DIGEST_SIZE) != 0) {
-                        hexdump(stdout, "digest", digest, KASUMI_DIGEST_SIZE);
+                           IMB_KASUMI_DIGEST_SIZE) != 0) {
+                        hexdump(stdout, "digest", digest,
+                                IMB_KASUMI_DIGEST_SIZE);
                         hexdump(stdout, "exp_out", kasumiF9_vectors[i].exp_out,
-                                KASUMI_DIGEST_SIZE);
+                                IMB_KASUMI_DIGEST_SIZE);
                         printf("direction %d\n", direction);
                         printf("F9 integrity %d Failed\n", i);
                         goto exit;

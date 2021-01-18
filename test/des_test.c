@@ -287,7 +287,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
               unsigned text_len,
               int dir,
               int order,
-              JOB_CIPHER_MODE cipher,
+              IMB_CIPHER_MODE cipher,
               const int in_place,
               const int num_jobs)
 {
@@ -353,7 +353,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
                         const int num = (const int)((uint64_t)job->user_data);
 
                         jobs_rx++;
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 printf("%d error status:%d, job %d",
                                        __LINE__, job->status, num);
                                 goto end;
@@ -380,7 +380,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
                 const int num = (const int)((uint64_t)job->user_data);
 
                 jobs_rx++;
-                if (job->status != STS_COMPLETED) {
+                if (job->status != IMB_STATUS_COMPLETED) {
                         printf("%d Error status:%d, job %d",
                                __LINE__, job->status, num);
                         goto end;
@@ -428,7 +428,7 @@ test_des(struct IMB_MGR *mb_mgr,
          unsigned text_len,
          int dir,
          int order,
-         JOB_CIPHER_MODE cipher,
+         IMB_CIPHER_MODE cipher,
          const int in_place)
 {
         int ret = 0;
@@ -465,7 +465,7 @@ test_des_vectors(struct IMB_MGR *mb_mgr,
                  const int vec_cnt,
                  const struct des_vector *vec_tab,
                  const char *banner,
-                 const JOB_CIPHER_MODE cipher,
+                 const IMB_CIPHER_MODE cipher,
                  struct test_suite_context *ctx)
 {
 	int vect;

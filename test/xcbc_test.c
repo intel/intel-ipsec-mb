@@ -312,7 +312,7 @@ xcbc_job_ok(const struct xcbc_rfc3566_vector *vec,
 {
         const size_t auth_len = job->auth_tag_output_len_in_bytes;
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d Error status:%d", __LINE__, job->status);
                 return 0;
         }

@@ -159,7 +159,7 @@ submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 printf("%d error status:%d, job %d",
                                        __LINE__, job->status, i);
                                 return -1;
@@ -199,7 +199,7 @@ submit_uia2_job(struct IMB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (job != NULL) {
-                if (job->status != STS_COMPLETED) {
+                if (job->status != IMB_STATUS_COMPLETED) {
                         printf("%d error status:%d",
                                __LINE__, job->status);
                         return -1;

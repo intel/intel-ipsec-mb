@@ -131,7 +131,7 @@ void init_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                                     job->dst, job->msg_len_to_cipher_in_bytes,
                                     job->enc_keys, ctx, arch);
         }
-        job->status |= STS_COMPLETED;
+        job->status |= IMB_STATUS_COMPLETED;
 }
 
 __forceinline
@@ -227,7 +227,7 @@ void update_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                                     job->dst, job->msg_len_to_cipher_in_bytes,
                                     job->enc_keys, ctx, arch);
         }
-        job->status |= STS_COMPLETED;
+        job->status |= IMB_STATUS_COMPLETED;
 }
 
 __forceinline
@@ -330,7 +330,7 @@ void complete_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         clear_mem(ctx->last_ks, sizeof(ctx->last_ks));
         clear_mem(ctx->poly_key, sizeof(ctx->poly_key));
 #endif
-        job->status |= STS_COMPLETED;
+        job->status |= IMB_STATUS_COMPLETED;
 }
 
 __forceinline
@@ -445,7 +445,7 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         /* Finalize AEAD Poly1305 (final reduction and +S) */
         poly1305_aead_complete(hash, ks, job->auth_tag_output);
 
-        job->status |= STS_COMPLETED;
+        job->status |= IMB_STATUS_COMPLETED;
 
         return job;
 }
@@ -551,7 +551,7 @@ void update_chacha20_poly1305_direct(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
                                      const uint64_t len,
-                                     const JOB_CIPHER_DIRECTION dir,
+                                     const IMB_CIPHER_DIRECTION dir,
                                      const IMB_ARCH arch)
 {
         uint64_t bytes_to_copy = 0;

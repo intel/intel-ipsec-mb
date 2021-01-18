@@ -48,14 +48,14 @@
 
 struct cipher_attr_s {
         const char *name;
-        JOB_CIPHER_MODE mode;
+        IMB_CIPHER_MODE mode;
         unsigned key_len;
         unsigned iv_len;
 };
 
 struct auth_attr_s {
         const char *name;
-        JOB_HASH_ALG hash;
+        IMB_HASH_ALG hash;
         unsigned tag_len;
 };
 
@@ -150,7 +150,7 @@ job_check(const struct IMB_JOB *job,
         TRACE("done Seq:%u Cipher:%s Auth:%s\n",
               done->seq, done->cipher->name, done->auth->name);
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 TRACE("failed job status:%d\n", job->status);
                 return -1;
         }

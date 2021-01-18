@@ -673,7 +673,7 @@ docsis_des_enc_basic(const void *input, void *output, const int size,
 #endif
         const uint64_t *in = input;
         uint64_t *out = output;
-        const int nblocks = size / DES_BLOCK_SIZE;
+        const int nblocks = size / IMB_DES_BLOCK_SIZE;
         const int partial = size & 7;
         int n;
         uint64_t iv = *ivec;
@@ -713,7 +713,7 @@ docsis_des_dec_basic(const void *input, void *output, const int size,
 #endif
         const uint64_t *in = input;
         uint64_t *out = output;
-        const int nblocks = size / DES_BLOCK_SIZE;
+        const int nblocks = size / IMB_DES_BLOCK_SIZE;
         const int partial = size & 7;
         int n;
         uint64_t iv = *ivec;

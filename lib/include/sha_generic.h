@@ -259,7 +259,7 @@ sha_generic(const void *data, const uint64_t length, void *digest,
                 return;
 #endif
 
-        uint8_t cb[SHA_512_BLOCK_SIZE]; /* biggest possible */
+        uint8_t cb[IMB_SHA_512_BLOCK_SIZE]; /* biggest possible */
         union {
                 uint32_t digest1[NUM_SHA_256_DIGEST_WORDS];
                 uint64_t digest2[NUM_SHA_512_DIGEST_WORDS];

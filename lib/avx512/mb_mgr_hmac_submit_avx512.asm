@@ -325,7 +325,7 @@ return_null:
         align	16
 end_loop:
         mov	job_rax, [lane_data + _job_in_lane]
-        or	dword [job_rax + _status], STS_COMPLETED_HMAC
+        or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         mov	qword [lane_data + _job_in_lane], 0
 
         mov	unused_lanes, [state + _unused_lanes]

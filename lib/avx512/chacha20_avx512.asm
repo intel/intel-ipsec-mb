@@ -1284,7 +1284,7 @@ no_partial_block:
         clear_all_zmms_asm
 %endif
         mov     rax, job
-        or      dword [rax + _status], STS_COMPLETED_AES
+        or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
         ret
 
@@ -1548,7 +1548,7 @@ no_partial_block_poly:
         clear_all_zmms_asm
 %endif
         mov     rax, job
-        or      dword [rax + _status], STS_COMPLETED_AES
+        or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
         mov     r12, [rsp]
         mov     r13, [rsp + 8]
@@ -1970,7 +1970,7 @@ no_partial_block_dec:
 %endrep
 %endif
         mov     rax, job
-        or      dword [rax + _status], STS_COMPLETED_AES
+        or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
 %ifndef LINUX
         pop     rsi

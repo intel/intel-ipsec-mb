@@ -832,7 +832,7 @@ section .text
         movd    [tmp], xbip
 
         ;; set job status
-        or      dword [job + _status], STS_COMPLETED
+        or      dword [job + _status], IMB_STATUS_COMPLETED
 
         ;;  return job
         mov     rax, job

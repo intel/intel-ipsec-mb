@@ -69,7 +69,7 @@ typedef struct hash_test_vector_s {
         uint32_t lengthInBytes;
         uint8_t key[MAX_DATA_LEN];
         uint32_t keyLenInBytes;
-        uint8_t exp_out[KASUMI_BLOCK_SIZE];
+        uint8_t exp_out[IMB_KASUMI_BLOCK_SIZE];
 } hash_test_vector_t;
 
 typedef struct hash_iv_test_vector_s {
@@ -77,7 +77,7 @@ typedef struct hash_iv_test_vector_s {
         uint32_t lengthInBits;
         uint8_t key[MAX_DATA_LEN];
         uint32_t keyLenInBytes;
-        uint8_t exp_out[KASUMI_BLOCK_SIZE];
+        uint8_t exp_out[IMB_KASUMI_BLOCK_SIZE];
         uint8_t iv[MAX_DATA_LEN];
         uint32_t ivLenInBytes;
         uint32_t direction;

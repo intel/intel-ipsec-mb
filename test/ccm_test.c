@@ -2176,7 +2176,7 @@ ccm_job_ok(const struct ccm_rfc3610_vector *vec,
            const int dir,
            const int in_place)
 {
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d Error status:%d", __LINE__, job->status);
                 return 0;
         }

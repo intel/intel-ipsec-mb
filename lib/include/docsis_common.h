@@ -54,8 +54,8 @@
 /* DOCSIS SEC BPI / AES  (AES128-CBC + AES128-CFB) */
 /* ========================================================================= */
 
-#ifndef AES_BLOCK_SIZE
-#define AES_BLOCK_SIZE 16
+#ifndef IMB_AES_BLOCK_SIZE
+#define IMB_AES_BLOCK_SIZE 16
 #endif
 
 IMB_DLL_LOCAL void aes_cfb_256_one_sse_no_aesni(void *out, const void *in,
@@ -102,22 +102,23 @@ DOCSIS_LAST_BLOCK(IMB_JOB *job, const uint64_t key_size)
                 return job;
 
         IMB_ASSERT((job->cipher_direction == IMB_DIR_DECRYPT) ||
-                   (job->status & STS_COMPLETED_AES));
+                   (job->status & IMB_STATUS_COMPLETED_CIPHER));
 
-        partial_bytes = job->msg_len_to_cipher_in_bytes & (AES_BLOCK_SIZE - 1);
-        offset = job->msg_len_to_cipher_in_bytes & (~(AES_BLOCK_SIZE - 1));
+        partial_bytes = job->msg_len_to_cipher_in_bytes &
+                        (IMB_AES_BLOCK_SIZE - 1);
+        offset = job->msg_len_to_cipher_in_bytes & (~(IMB_AES_BLOCK_SIZE - 1));
 
         if (!partial_bytes)
                 return job;
 
         /* in either case IV has to be the last cipher-text block */
         if (job->cipher_direction == IMB_DIR_ENCRYPT)
-                iv = job->dst + offset - AES_BLOCK_SIZE;
+                iv = job->dst + offset - IMB_AES_BLOCK_SIZE;
         else
                 iv = job->src + job->cipher_start_src_offset_in_bytes +
-                        offset - AES_BLOCK_SIZE;
+                        offset - IMB_AES_BLOCK_SIZE;
 
-        IMB_ASSERT(partial_bytes <= AES_BLOCK_SIZE);
+        IMB_ASSERT(partial_bytes <= IMB_AES_BLOCK_SIZE);
         if (key_size == 16)
                 AES_CFB_128_ONE(job->dst + offset,
                             job->src + job->cipher_start_src_offset_in_bytes +
@@ -145,8 +146,8 @@ __forceinline
 IMB_JOB *
 DOCSIS_FIRST_BLOCK(IMB_JOB *job, const uint64_t key_size)
 {
-        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
-        IMB_ASSERT(job->msg_len_to_cipher_in_bytes <= AES_BLOCK_SIZE);
+        IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
+        IMB_ASSERT(job->msg_len_to_cipher_in_bytes <= IMB_AES_BLOCK_SIZE);
         if (key_size == 16)
                 AES_CFB_128_ONE(job->dst,
                             job->src + job->cipher_start_src_offset_in_bytes,
@@ -158,7 +159,7 @@ DOCSIS_FIRST_BLOCK(IMB_JOB *job, const uint64_t key_size)
                             job->iv, job->enc_keys,
                             job->msg_len_to_cipher_in_bytes);
 
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -178,7 +179,7 @@ SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
         IMB_JOB *tmp;
 
         if (key_size == 16) {
-                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                if (job->msg_len_to_cipher_in_bytes >= IMB_AES_BLOCK_SIZE) {
                         tmp = SUBMIT_JOB_AES128_ENC((MB_MGR_AES_OOO *)state,
                                                     job);
 
@@ -186,7 +187,7 @@ SUBMIT_JOB_DOCSIS_SEC_ENC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
                 } else
                         return DOCSIS_FIRST_BLOCK(job, 16);
         } else { /* Key length = 32 */
-                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                if (job->msg_len_to_cipher_in_bytes >= IMB_AES_BLOCK_SIZE) {
                         tmp = SUBMIT_JOB_AES256_ENC((MB_MGR_AES_OOO *)state,
                                                     job);
 
@@ -263,13 +264,13 @@ SUBMIT_JOB_DOCSIS_SEC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
         (void) state;
 
         if (key_size == 16) {
-                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                if (job->msg_len_to_cipher_in_bytes >= IMB_AES_BLOCK_SIZE) {
                         DOCSIS_LAST_BLOCK(job, 16);
                         return SUBMIT_JOB_AES128_DEC(job);
                 } else
                         return DOCSIS_FIRST_BLOCK(job, 16);
         } else { /* 32 */
-                if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+                if (job->msg_len_to_cipher_in_bytes >= IMB_AES_BLOCK_SIZE) {
                         DOCSIS_LAST_BLOCK(job, 32);
                         return SUBMIT_JOB_AES256_DEC(job);
                 } else
@@ -296,7 +297,8 @@ IMB_JOB *
 SUBMIT_JOB_DOCSIS_SEC_CRC_ENC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
                               const uint64_t key_size)
 {
-        if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
+        if (job->msg_len_to_hash_in_bytes >=
+            IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
                 uint32_t *p_crc = (uint32_t *) job->auth_tag_output;
 
                 (*p_crc) =
@@ -362,7 +364,7 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
 {
         (void) state;
 
-        if (job->msg_len_to_cipher_in_bytes >= AES_BLOCK_SIZE) {
+        if (job->msg_len_to_cipher_in_bytes >= IMB_AES_BLOCK_SIZE) {
                 DOCSIS_LAST_BLOCK(job, key_size);
                 if (key_size == 16)
                         job = SUBMIT_JOB_AES128_DEC(job);
@@ -372,7 +374,8 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
                 job = DOCSIS_FIRST_BLOCK(job, key_size);
         }
 
-        if (job->msg_len_to_hash_in_bytes >= DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
+        if (job->msg_len_to_hash_in_bytes >=
+            IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE) {
                 uint32_t *p_crc = (uint32_t *) job->auth_tag_output;
 
                 (*p_crc) =
@@ -417,13 +420,13 @@ __forceinline
 IMB_JOB *
 DOCSIS_DES_ENC(IMB_JOB *job)
 {
-        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
         docsis_des_enc_basic(job->src + job->cipher_start_src_offset_in_bytes,
                              job->dst,
                              (int) job->msg_len_to_cipher_in_bytes,
                              job->enc_keys,
                              (const uint64_t *)job->iv);
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -437,13 +440,13 @@ __forceinline
 IMB_JOB *
 DOCSIS_DES_DEC(IMB_JOB *job)
 {
-        IMB_ASSERT(!(job->status & STS_COMPLETED_AES));
+        IMB_ASSERT(!(job->status & IMB_STATUS_COMPLETED_CIPHER));
         docsis_des_dec_basic(job->src + job->cipher_start_src_offset_in_bytes,
                              job->dst,
                              (int) job->msg_len_to_cipher_in_bytes,
                              job->dec_keys,
                              (const uint64_t *)job->iv);
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 

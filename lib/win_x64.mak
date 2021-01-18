@@ -97,7 +97,7 @@ DAFLAGS = $(DAFLAGS) -DSAFE_LOOKUP
 !endif
 
 CC = cl
-CFLAGS_ALL = $(EXTRA_CFLAGS) /I. /Iinclude /Ino-aesni \
+CFLAGS_ALL = $(EXTRA_CFLAGS) /DNO_COMPAT_IMB_API_053 /I. /Iinclude /Ino-aesni \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc
 
 CFLAGS = $(CFLAGS_ALL) $(OPT) $(DCFLAGS)

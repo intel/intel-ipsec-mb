@@ -589,7 +589,7 @@ ecb_job_ok(const struct IMB_JOB *job,
 {
         const int num = (const int)((uint64_t)job->user_data2);
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d error status:%d, job %d",
                        __LINE__, job->status, num);
                 return 0;
@@ -621,7 +621,7 @@ test_ecb_many(struct IMB_MGR *mb_mgr,
               unsigned text_len,
               int dir,
               int order,
-              JOB_CIPHER_MODE cipher,
+              IMB_CIPHER_MODE cipher,
               const int in_place,
               const int key_len,
               const int num_jobs)
@@ -707,7 +707,7 @@ test_ecb_many(struct IMB_MGR *mb_mgr,
 static void
 test_ecb_vectors(struct IMB_MGR *mb_mgr, const int vec_cnt,
                  const struct ecb_vector *vec_tab, const char *banner,
-                 const JOB_CIPHER_MODE cipher, const int num_jobs,
+                 const IMB_CIPHER_MODE cipher, const int num_jobs,
                  struct test_suite_context *ts128,
                  struct test_suite_context *ts192,
                  struct test_suite_context *ts256)

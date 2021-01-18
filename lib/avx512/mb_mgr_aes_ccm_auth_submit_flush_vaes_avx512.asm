@@ -586,7 +586,7 @@ endstruc
         mov     job_rax, min_job
 
         mov     qword [state + _aes_ccm_job_in_lane + min_idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_HMAC
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
 %ifdef SAFE_DATA
        vpxorq   ZWORD(xtmp0), ZWORD(xtmp0)

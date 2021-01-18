@@ -259,7 +259,7 @@ section .text
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_AES
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -511,7 +511,7 @@ section .text
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_AES
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
         shl     unused_lanes, 4
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -742,7 +742,7 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_HMAC
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         ; Copy digest to auth tag output
         mov     r10d, [state + _zuc_args_digest + idx*4]
         mov     r11, [job_rax + _auth_tag_output]
@@ -979,7 +979,7 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_HMAC
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         ; Copy digest to auth tag output
         mov     r10d, [state + _zuc_args_digest + idx*4]
         mov     r11, [job_rax + _auth_tag_output]

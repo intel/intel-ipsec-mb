@@ -399,7 +399,7 @@ sha_job_ok(const struct sha_vector *vec,
            const uint8_t *padding,
            const size_t sizeof_padding)
 {
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("line:%d job error status:%d ", __LINE__, job->status);
                 return 0;
         }

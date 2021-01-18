@@ -73,8 +73,8 @@
 #define IMIX_ITER 1000
 
 /* Maximum key and digest size for SHA-512 */
-#define MAX_KEY_SIZE    SHA_512_BLOCK_SIZE
-#define MAX_DIGEST_SIZE SHA512_DIGEST_SIZE_IN_BYTES
+#define MAX_KEY_SIZE    IMB_SHA_512_BLOCK_SIZE
+#define MAX_DIGEST_SIZE IMB_SHA512_DIGEST_SIZE_IN_BYTES
 
 #define SEED 0xdeadcafe
 #define STACK_DEPTH 8192
@@ -92,8 +92,8 @@ static uint64_t pattern8_plain_text;
 
 /* Struct storing cipher parameters */
 struct params_s {
-        JOB_CIPHER_MODE         cipher_mode; /* CBC, CNTR, DES, GCM etc. */
-        JOB_HASH_ALG            hash_alg; /* SHA-1 or others... */
+        IMB_CIPHER_MODE         cipher_mode; /* CBC, CNTR, DES, GCM etc. */
+        IMB_HASH_ALG            hash_alg; /* SHA-1 or others... */
         uint32_t		key_size;
         uint32_t		buf_size;
         uint64_t		aad_size;
@@ -102,10 +102,10 @@ struct params_s {
 
 /* Struct storing all expanded keys */
 struct cipher_auth_keys {
-        uint8_t temp_buf[SHA_512_BLOCK_SIZE];
+        uint8_t temp_buf[IMB_SHA_512_BLOCK_SIZE];
         DECLARE_ALIGNED(uint32_t dust[15 * 4], 16);
-        uint8_t ipad[SHA512_DIGEST_SIZE_IN_BYTES];
-        uint8_t opad[SHA512_DIGEST_SIZE_IN_BYTES];
+        uint8_t ipad[IMB_SHA512_DIGEST_SIZE_IN_BYTES];
+        uint8_t opad[IMB_SHA512_DIGEST_SIZE_IN_BYTES];
         DECLARE_ALIGNED(uint32_t k1_expanded[15 * 4], 16);
         DECLARE_ALIGNED(uint8_t	k2[32], 16);
         DECLARE_ALIGNED(uint8_t	k3[16], 16);
@@ -130,8 +130,8 @@ struct data {
 };
 
 struct custom_job_params {
-        JOB_CIPHER_MODE         cipher_mode; /* CBC, CNTR, DES, GCM etc. */
-        JOB_HASH_ALG            hash_alg; /* SHA-1 or others... */
+        IMB_CIPHER_MODE         cipher_mode; /* CBC, CNTR, DES, GCM etc. */
+        IMB_HASH_ALG            hash_alg; /* SHA-1 or others... */
         uint32_t                key_size;
 };
 
@@ -159,98 +159,98 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 .name = "AES-CBC-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
-                        .key_size = IMB_KEY_AES_128_BYTES
+                        .key_size = IMB_KEY_128_BYTES
                 }
         },
         {
                 .name = "AES-CBC-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
-                        .key_size = IMB_KEY_AES_192_BYTES
+                        .key_size = IMB_KEY_192_BYTES
                 }
         },
         {
                 .name = "AES-CBC-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CBC,
-                        .key_size = IMB_KEY_AES_256_BYTES
+                        .key_size = IMB_KEY_256_BYTES
                 }
         },
         {
                 .name = "AES-CTR-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
-                        .key_size = IMB_KEY_AES_128_BYTES
+                        .key_size = IMB_KEY_128_BYTES
                 }
         },
         {
                 .name = "AES-CTR-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
-                        .key_size = IMB_KEY_AES_192_BYTES
+                        .key_size = IMB_KEY_192_BYTES
                 }
         },
         {
                 .name = "AES-CTR-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR,
-                        .key_size = IMB_KEY_AES_256_BYTES
+                        .key_size = IMB_KEY_256_BYTES
                 }
         },
         {
                 .name = "AES-CTR-128-BIT-LENGTH",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                        .key_size = IMB_KEY_AES_128_BYTES
+                        .key_size = IMB_KEY_128_BYTES
                 }
         },
         {
                 .name = "AES-CTR-192-BIT-LENGTH",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                        .key_size = IMB_KEY_AES_192_BYTES
+                        .key_size = IMB_KEY_192_BYTES
                 }
         },
         {
                 .name = "AES-CTR-256-BIT-LENGTH",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CNTR_BITLEN,
-                        .key_size = IMB_KEY_AES_256_BYTES
+                        .key_size = IMB_KEY_256_BYTES
                 }
         },
         {
                 .name = "AES-ECB-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
-                        .key_size = IMB_KEY_AES_128_BYTES
+                        .key_size = IMB_KEY_128_BYTES
                 }
         },
         {
                 .name = "AES-ECB-192",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
-                        .key_size = IMB_KEY_AES_192_BYTES
+                        .key_size = IMB_KEY_192_BYTES
                 }
         },
         {
                 .name = "AES-ECB-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_ECB,
-                        .key_size = IMB_KEY_AES_256_BYTES
+                        .key_size = IMB_KEY_256_BYTES
                 }
         },
         {
                 .name = "DOCSIS-SEC-128",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
-                        .key_size = IMB_KEY_AES_128_BYTES
+                        .key_size = IMB_KEY_128_BYTES
                 }
         },
         {
                 .name = "DOCSIS-SEC-256",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_DOCSIS_SEC_BPI,
-                        .key_size = IMB_KEY_AES_256_BYTES
+                        .key_size = IMB_KEY_256_BYTES
                 }
         },
         {
@@ -484,7 +484,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
-                        .key_size = IMB_KEY_AES_128_BYTES
+                        .key_size = IMB_KEY_128_BYTES
                 }
         },
         {
@@ -492,7 +492,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
-                        .key_size = IMB_KEY_AES_192_BYTES
+                        .key_size = IMB_KEY_192_BYTES
                 }
         },
         {
@@ -500,7 +500,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_GCM,
                         .hash_alg = IMB_AUTH_AES_GMAC,
-                        .key_size = IMB_KEY_AES_256_BYTES
+                        .key_size = IMB_KEY_256_BYTES
                 }
         },
         {
@@ -508,7 +508,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CCM,
                         .hash_alg = IMB_AUTH_AES_CCM,
-                        .key_size = IMB_KEY_AES_128_BYTES
+                        .key_size = IMB_KEY_128_BYTES
                 }
         },
         {
@@ -516,7 +516,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_CCM,
                         .hash_alg = IMB_AUTH_AES_CCM,
-                        .key_size = IMB_KEY_AES_256_BYTES
+                        .key_size = IMB_KEY_256_BYTES
                 }
         },
         {
@@ -524,7 +524,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
                         .hash_alg = IMB_AUTH_PON_CRC_BIP,
-                        .key_size = IMB_KEY_AES_128_BYTES
+                        .key_size = IMB_KEY_128_BYTES
                 }
         },
         {
@@ -573,7 +573,7 @@ const uint8_t auth_tag_length_bytes[] = {
                 4,  /* IMB_AES_CMAC_BITLEN (3GPP) */
                 8,  /* IMB_PON */
                 4,  /* IMB_ZUC_EIA3_BITLEN */
-                DOCSIS_CRC32_TAG_SIZE, /* IMB_AUTH_DOCSIS_CRC32 */
+                IMB_DOCSIS_CRC32_TAG_SIZE, /* IMB_AUTH_DOCSIS_CRC32 */
                 4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN (3GPP) */
                 4,  /* IMB_AUTH_KASUMI_UIA1 (3GPP) */
                 16, /* IMB_AUTH_AES_GMAC_128 */
@@ -825,7 +825,7 @@ static int
 fill_job(IMB_JOB *job, const struct params_s *params,
          uint8_t *buf, uint8_t *digest, const uint8_t *aad,
          const uint32_t buf_size, const uint8_t tag_size,
-         JOB_CIPHER_DIRECTION cipher_dir,
+         IMB_CIPHER_DIRECTION cipher_dir,
          struct cipher_auth_keys *keys, uint8_t *cipher_iv,
          uint8_t *auth_iv, unsigned index)
 {
@@ -863,16 +863,19 @@ fill_job(IMB_JOB *job, const struct params_s *params,
         if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32 &&
             params->cipher_mode == IMB_CIPHER_DOCSIS_SEC_BPI) {
                 if (buf_size >=
-                    (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE)) {
+                    (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE +
+                     IMB_DOCSIS_CRC32_TAG_SIZE)) {
                         const uint64_t cipher_adjust = /* SA + DA only */
-                                DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2;
+                                IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE - 2;
 
                         job->cipher_start_src_offset_in_bytes += cipher_adjust;
                         job->msg_len_to_cipher_in_bytes -= cipher_adjust;
-                        job->msg_len_to_hash_in_bytes -= DOCSIS_CRC32_TAG_SIZE;
-                } else if (buf_size > DOCSIS_CRC32_TAG_SIZE) {
+                        job->msg_len_to_hash_in_bytes -=
+                                IMB_DOCSIS_CRC32_TAG_SIZE;
+                } else if (buf_size > IMB_DOCSIS_CRC32_TAG_SIZE) {
                         job->msg_len_to_cipher_in_bytes = 0;
-                        job->msg_len_to_hash_in_bytes -= DOCSIS_CRC32_TAG_SIZE;
+                        job->msg_len_to_hash_in_bytes -=
+                                IMB_DOCSIS_CRC32_TAG_SIZE;
                 } else {
                         job->msg_len_to_cipher_in_bytes = 0;
                         job->msg_len_to_hash_in_bytes = 0;
@@ -1228,70 +1231,70 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 break;
         case IMB_AUTH_HMAC_SHA_1:
                 /* compute ipad hash */
-                memset(buf, 0x36, SHA1_BLOCK_SIZE);
-                for (i = 0; i < SHA1_BLOCK_SIZE; i++)
+                memset(buf, 0x36, IMB_SHA1_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA1_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, SHA1_BLOCK_SIZE);
-                for (i = 0; i < SHA1_BLOCK_SIZE; i++)
+                memset(buf, 0x5c, IMB_SHA1_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA1_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA1_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
         case IMB_AUTH_HMAC_SHA_224:
                 /* compute ipad hash */
-                memset(buf, 0x36, SHA_256_BLOCK_SIZE);
-                for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
+                memset(buf, 0x36, IMB_SHA_256_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, SHA_256_BLOCK_SIZE);
-                for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
+                memset(buf, 0x5c, IMB_SHA_256_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA224_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
         case IMB_AUTH_HMAC_SHA_256:
                 /* compute ipad hash */
-                memset(buf, 0x36, SHA_256_BLOCK_SIZE);
-                for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
+                memset(buf, 0x36, IMB_SHA_256_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, SHA_256_BLOCK_SIZE);
-                for (i = 0; i < SHA_256_BLOCK_SIZE; i++)
+                memset(buf, 0x5c, IMB_SHA_256_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA_256_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA256_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
         case IMB_AUTH_HMAC_SHA_384:
                 /* compute ipad hash */
-                memset(buf, 0x36, SHA_384_BLOCK_SIZE);
-                for (i = 0; i < SHA_384_BLOCK_SIZE; i++)
+                memset(buf, 0x36, IMB_SHA_384_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA_384_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, SHA_384_BLOCK_SIZE);
-                for (i = 0; i < SHA_384_BLOCK_SIZE; i++)
+                memset(buf, 0x5c, IMB_SHA_384_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA_384_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA384_ONE_BLOCK(mb_mgr, buf, opad);
 
                 break;
         case IMB_AUTH_HMAC_SHA_512:
                 /* compute ipad hash */
-                memset(buf, 0x36, SHA_512_BLOCK_SIZE);
-                for (i = 0; i < SHA_512_BLOCK_SIZE; i++)
+                memset(buf, 0x36, IMB_SHA_512_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA_512_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, ipad);
 
                 /* compute opad hash */
-                memset(buf, 0x5c, SHA_512_BLOCK_SIZE);
-                for (i = 0; i < SHA_512_BLOCK_SIZE; i++)
+                memset(buf, 0x5c, IMB_SHA_512_BLOCK_SIZE);
+                for (i = 0; i < IMB_SHA_512_BLOCK_SIZE; i++)
                         buf[i] ^= auth_key[i];
                 IMB_SHA512_ONE_BLOCK(mb_mgr, buf, opad);
 
@@ -1351,13 +1354,13 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         switch (params->cipher_mode) {
         case IMB_CIPHER_GCM:
                 switch (params->key_size) {
-                case IMB_KEY_AES_128_BYTES:
+                case IMB_KEY_128_BYTES:
                         IMB_AES128_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
-                case IMB_KEY_AES_192_BYTES:
+                case IMB_KEY_192_BYTES:
                         IMB_AES192_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
-                case IMB_KEY_AES_256_BYTES:
+                case IMB_KEY_256_BYTES:
                         IMB_AES256_GCM_PRE(mb_mgr, ciph_key, gdata_key);
                         break;
                 default:
@@ -1386,15 +1389,15 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_CIPHER_ECB:
         case IMB_CIPHER_CBCS_1_9:
                 switch (params->key_size) {
-                case IMB_KEY_AES_128_BYTES:
+                case IMB_KEY_128_BYTES:
                         IMB_AES_KEYEXP_128(mb_mgr, ciph_key, enc_keys,
                                            dec_keys);
                         break;
-                case IMB_KEY_AES_192_BYTES:
+                case IMB_KEY_192_BYTES:
                         IMB_AES_KEYEXP_192(mb_mgr, ciph_key, enc_keys,
                                           dec_keys);
                         break;
-                case IMB_KEY_AES_256_BYTES:
+                case IMB_KEY_256_BYTES:
                         IMB_AES_KEYEXP_256(mb_mgr, ciph_key, enc_keys,
                                            dec_keys);
                         break;
@@ -1475,10 +1478,10 @@ modify_docsis_crc32_test_buf(uint8_t *test_buf,
                              const IMB_JOB *job, const uint32_t buf_size)
 {
         if (buf_size >=
-            (DOCSIS_CRC32_MIN_ETH_PDU_SIZE + DOCSIS_CRC32_TAG_SIZE)) {
+            (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE + IMB_DOCSIS_CRC32_TAG_SIZE)) {
                 /* Set plaintext CRC32 in the test buffer */
-                memcpy(&test_buf[buf_size - DOCSIS_CRC32_TAG_SIZE],
-                       job->auth_tag_output, DOCSIS_CRC32_TAG_SIZE);
+                memcpy(&test_buf[buf_size - IMB_DOCSIS_CRC32_TAG_SIZE],
+                       job->auth_tag_output, IMB_DOCSIS_CRC32_TAG_SIZE);
         }
 }
 
@@ -1651,14 +1654,14 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                         if (params->cipher_mode == IMB_CIPHER_CBC ||
                             params->cipher_mode == IMB_CIPHER_ECB ||
                             params->cipher_mode == IMB_CIPHER_CBCS_1_9) {
-                                random_num += (AES_BLOCK_SIZE - 1);
-                                random_num &= (~(AES_BLOCK_SIZE - 1));
+                                random_num += (IMB_AES_BLOCK_SIZE - 1);
+                                random_num &= (~(IMB_AES_BLOCK_SIZE - 1));
                         }
 
                         if (params->cipher_mode == IMB_CIPHER_DES ||
                             params->cipher_mode == IMB_CIPHER_DES3) {
-                                random_num += (DES_BLOCK_SIZE - 1);
-                                random_num &= (~(DES_BLOCK_SIZE - 1));
+                                random_num += (IMB_DES_BLOCK_SIZE - 1);
+                                random_num &= (~(IMB_DES_BLOCK_SIZE - 1));
                         }
 
                         /*
@@ -1667,7 +1670,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                          * byte boundary)
                          */
                         if (params->hash_alg == IMB_AUTH_KASUMI_UIA1)
-                                if (random_num < (KASUMI_BLOCK_SIZE + 1))
+                                if (random_num < (IMB_KASUMI_BLOCK_SIZE + 1))
                                         random_num = 16;
 
                         buf_sizes[i] = random_num;
@@ -1687,9 +1690,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
 
                 if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32) {
                         if (buf_sizes[i] >=
-                            (DOCSIS_CRC32_MIN_ETH_PDU_SIZE +
-                             DOCSIS_CRC32_TAG_SIZE))
-                                tag_size_to_check[i] = DOCSIS_CRC32_TAG_SIZE;
+                            (IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE +
+                             IMB_DOCSIS_CRC32_TAG_SIZE))
+                                tag_size_to_check[i] =
+                                                IMB_DOCSIS_CRC32_TAG_SIZE;
                         else
                                 tag_size_to_check[i] = 0;
                 }
@@ -1796,7 +1800,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 if (job) {
                         unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 int errc = imb_get_errno(enc_mb_mgr);
 
                                 fprintf(stderr,
@@ -1830,7 +1834,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 while (job != NULL) {
                         unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 int errc = imb_get_errno(enc_mb_mgr);
 
                                 fprintf(stderr,
@@ -1895,7 +1899,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 if (job != NULL) {
                         unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 int errc = imb_get_errno(dec_mb_mgr);
 
                                 fprintf(stderr,
@@ -1920,7 +1924,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 while (job != NULL) {
                         unsigned idx = (unsigned)((uintptr_t) job->user_data);
 
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 int errc = imb_get_errno(enc_mb_mgr);
 
                                 fprintf(stderr,
@@ -2066,12 +2070,12 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
                         if (params->cipher_mode == IMB_CIPHER_CBC ||
                             params->cipher_mode == IMB_CIPHER_ECB ||
                             params->cipher_mode == IMB_CIPHER_CBCS_1_9)
-                                if ((buf_size % AES_BLOCK_SIZE)  != 0)
+                                if ((buf_size % IMB_AES_BLOCK_SIZE)  != 0)
                                         continue;
 
                         if (params->cipher_mode == IMB_CIPHER_DES ||
                             params->cipher_mode == IMB_CIPHER_DES3)
-                                if ((buf_size % DES_BLOCK_SIZE)  != 0)
+                                if ((buf_size % IMB_DES_BLOCK_SIZE)  != 0)
                                         continue;
 
                         /*
@@ -2080,7 +2084,7 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
                          * byte boundary)
                          */
                         if (params->hash_alg == IMB_AUTH_KASUMI_UIA1)
-                                if (buf_size < (KASUMI_BLOCK_SIZE + 1))
+                                if (buf_size < (IMB_KASUMI_BLOCK_SIZE + 1))
                                         continue;
 
                         /* Check for sensitive data first, then normal cross
@@ -2219,8 +2223,8 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                 goto exit;
         }
 
-        JOB_HASH_ALG    hash_alg;
-        JOB_CIPHER_MODE c_mode;
+        IMB_HASH_ALG    hash_alg;
+        IMB_CIPHER_MODE c_mode;
 
         for (c_mode = IMB_CIPHER_CBC; c_mode < IMB_CIPHER_NUM;
              c_mode++) {

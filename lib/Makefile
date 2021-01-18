@@ -81,7 +81,7 @@ INCLUDES := $(foreach i,$(INCLUDE_DIRS),-I $i)
 
 CC ?= gcc
 
-CFLAGS := -DLINUX $(EXTRA_CFLAGS) $(INCLUDES) \
+CFLAGS := -DLINUX -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \

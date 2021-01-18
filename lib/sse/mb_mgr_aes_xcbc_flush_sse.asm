@@ -189,7 +189,7 @@ end_loop:
         mov     icv,  [job_rax + _auth_tag_output]
         mov     unused_lanes, [state + _aes_xcbc_unused_lanes]
         mov     qword [lane_data + _xcbc_job_in_lane], 0
-        or      dword [job_rax + _status], STS_COMPLETED_HMAC
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         shl     unused_lanes, 8
         or      unused_lanes, idx
         shl     idx, 4 ; multiply by 16

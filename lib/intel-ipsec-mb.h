@@ -109,47 +109,47 @@ typedef enum {
 /*
  * Algorithm constants
  */
-#define DES_KEY_SCHED_SIZE (16 * 8) /* 16 rounds x 8 bytes */
-#define DES_BLOCK_SIZE 8
+#define IMB_DES_KEY_SCHED_SIZE (16 * 8) /* 16 rounds x 8 bytes */
+#define IMB_DES_BLOCK_SIZE 8
 
-#define AES_BLOCK_SIZE 16
+#define IMB_AES_BLOCK_SIZE 16
 
-#define SHA1_DIGEST_SIZE_IN_BYTES   20
-#define SHA224_DIGEST_SIZE_IN_BYTES 28
-#define SHA256_DIGEST_SIZE_IN_BYTES 32
-#define SHA384_DIGEST_SIZE_IN_BYTES 48
-#define SHA512_DIGEST_SIZE_IN_BYTES 64
+#define IMB_SHA1_DIGEST_SIZE_IN_BYTES   20
+#define IMB_SHA224_DIGEST_SIZE_IN_BYTES 28
+#define IMB_SHA256_DIGEST_SIZE_IN_BYTES 32
+#define IMB_SHA384_DIGEST_SIZE_IN_BYTES 48
+#define IMB_SHA512_DIGEST_SIZE_IN_BYTES 64
 
-#define SHA1_BLOCK_SIZE 64    /* 512 bits is 64 byte blocks */
-#define SHA_256_BLOCK_SIZE 64 /* 512 bits is 64 byte blocks */
-#define SHA_384_BLOCK_SIZE 128
-#define SHA_512_BLOCK_SIZE 128
+#define IMB_SHA1_BLOCK_SIZE 64    /* 512 bits is 64 byte blocks */
+#define IMB_SHA_256_BLOCK_SIZE 64 /* 512 bits is 64 byte blocks */
+#define IMB_SHA_384_BLOCK_SIZE 128
+#define IMB_SHA_512_BLOCK_SIZE 128
 
-#define KASUMI_KEY_SIZE         16
-#define KASUMI_IV_SIZE          8
-#define KASUMI_BLOCK_SIZE       8
-#define KASUMI_DIGEST_SIZE      4
+#define IMB_KASUMI_KEY_SIZE         16
+#define IMB_KASUMI_IV_SIZE          8
+#define IMB_KASUMI_BLOCK_SIZE       8
+#define IMB_KASUMI_DIGEST_SIZE      4
 
 /**
  * Minimum Ethernet frame size to calculate CRC32
  * Source Address (6 bytes) + Destination Address (6 bytes) + Type/Len (2 bytes)
  */
-#define DOCSIS_CRC32_MIN_ETH_PDU_SIZE 14
-#define DOCSIS_CRC32_TAG_SIZE         4
+#define IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE 14
+#define IMB_DOCSIS_CRC32_TAG_SIZE         4
 
 /*
  * Job structure definitions
  */
 
 typedef enum {
-        STS_BEING_PROCESSED = 0,
-        STS_COMPLETED_AES =   1,
-        STS_COMPLETED_HMAC =  2,
-        STS_COMPLETED =       3, /* COMPLETED_AES | COMPLETED_HMAC */
-        STS_INVALID_ARGS =    4,
-        STS_INTERNAL_ERROR,
-        STS_ERROR
-} JOB_STS;
+        IMB_STATUS_BEING_PROCESSED  = 0,
+        IMB_STATUS_COMPLETED_CIPHER = 1,
+        IMB_STATUS_COMPLETED_AUTH   = 2,
+        IMB_STATUS_COMPLETED        = 3, /* COMPLETED_CIPHER | COMPLETED_AUTH */
+        IMB_STATUS_INVALID_ARGS     = 4,
+        IMB_STATUS_INTERNAL_ERROR,
+        IMB_STATUS_ERROR
+} IMB_STATUS;
 
 /*
  * Library error types
@@ -176,7 +176,7 @@ enum {
       IMB_ERR_JOB_NULL_AUTH_KEY,
       IMB_ERR_JOB_NULL_SGL_CTX,
       IMB_ERR_MAX       /* don't move this one */
-};
+} IMB_ERR;
 
 /*
  * IMB_ERR_MIN should be higher than __ELASTERROR
@@ -191,6 +191,7 @@ enum {
 /*
  * Define enums from API v0.53, so applications that were using this version
  * will still be compiled successfully.
+ * Note: this list has been extended with new names after version 0.55.
  * This list does not need to be extended for new enums.
  */
 #ifndef NO_COMPAT_IMB_API_053
@@ -239,12 +240,61 @@ enum {
 #define CIPHER_HASH             IMB_ORDER_CIPHER_HASH
 
 /***** Previous key size enums *****/
-#define AES_128_BYTES           IMB_KEY_AES_128_BYTES
-#define AES_192_BYTES           IMB_KEY_AES_192_BYTES
-#define AES_256_BYTES           IMB_KEY_AES_256_BYTES
+#define AES_128_BYTES           IMB_KEY_128_BYTES
+#define AES_192_BYTES           IMB_KEY_192_BYTES
+#define AES_256_BYTES           IMB_KEY_256_BYTES
+#define IMB_KEY_AES_128_BYTES   IMB_KEY_128_BYTES
+#define IMB_KEY_AES_192_BYTES   IMB_KEY_192_BYTES
+#define IMB_KEY_AES_256_BYTES   IMB_KEY_256_BYTES
+#define AES_KEY_SIZE_BYTES      IMB_KEY_SIZE_BYTES
 
 #define MB_MGR                  IMB_MGR
 #define JOB_AES_HMAC            IMB_JOB
+#define JOB_STS                 IMB_STATUS
+#define IMB_JOB_STS             IMB_STATUS
+#define JOB_CIPHER_MODE         IMB_CIPHER_MODE
+#define JOB_CIPHER_DIRECTION    IMB_CIPHER_DIRECTION
+#define JOB_HASH_ALG            IMB_HASH_ALG
+#define JOB_CHAIN_ORDER         IMB_CHAIN_ORDER
+#define MAX_JOBS                IMB_MAX_JOBS
+
+#define STS_BEING_PROCESSED     IMB_STATUS_BEING_PROCESSED
+#define STS_COMPLETED_AES       IMB_STATUS_COMPLETED_CIPHER
+#define STS_COMPLETED_HMAC      IMB_STATUS_COMPLETED_AUTH
+#define STS_COMPLETED           IMB_STATUS_COMPLETED
+#define STS_INVALID_ARGS        IMB_STATUS_INVALID_ARGS
+#define STS_INTERNAL_ERROR      IMB_STATUS_INTERNAL_ERROR
+#define STS_ERROR               IMB_STATUS_ERROR
+
+#define MAX_TAG_LEN             IMB_MAX_TAG_LEN
+#define GCM_IV_DATA_LEN         IMB_GCM_IV_DATA_LEN
+#define GCM_128_KEY_LEN         IMB_GCM_128_KEY_LEN
+#define GCM_192_KEY_LEN         IMB_GCM_192_KEY_LEN
+#define GCM_256_KEY_LEN         IMB_GCM_256_KEY_LEN
+
+#define DES_KEY_SCHED_SIZE      IMB_DES_KEY_SCHED_SIZE
+#define DES_BLOCK_SIZE          IMB_DES_BLOCK_SIZE
+
+#define AES_BLOCK_SIZE          IMB_AES_BLOCK_SIZE
+
+#define SHA1_DIGEST_SIZE_IN_BYTES   IMB_SHA1_DIGEST_SIZE_IN_BYTES
+#define SHA224_DIGEST_SIZE_IN_BYTES IMB_SHA224_DIGEST_SIZE_IN_BYTES
+#define SHA256_DIGEST_SIZE_IN_BYTES IMB_SHA256_DIGEST_SIZE_IN_BYTES
+#define SHA384_DIGEST_SIZE_IN_BYTES IMB_SHA384_DIGEST_SIZE_IN_BYTES
+#define SHA512_DIGEST_SIZE_IN_BYTES IMB_SHA512_DIGEST_SIZE_IN_BYTES
+
+#define SHA1_BLOCK_SIZE    IMB_SHA1_BLOCK_SIZE
+#define SHA_256_BLOCK_SIZE IMB_SHA_256_BLOCK_SIZE
+#define SHA_384_BLOCK_SIZE IMB_SHA_384_BLOCK_SIZE
+#define SHA_512_BLOCK_SIZE IMB_SHA_512_BLOCK_SIZE
+
+#define KASUMI_KEY_SIZE    IMB_KASUMI_KEY_SIZE
+#define KASUMI_IV_SIZE     IMB_KASUMI_IV_SIZE
+#define KASUMI_BLOCK_SIZE  IMB_KASUMI_BLOCK_SIZE
+#define KASUMI_DIGEST_SIZE IMB_KASUMI_DIGEST_SIZE
+
+#define DOCSIS_CRC32_MIN_ETH_PDU_SIZE IMB_DOCSIS_CRC32_MIN_ETH_PDU_SIZE
+#define DOCSIS_CRC32_TAG_SIZE         IMB_DOCSIS_CRC32_TAG_SIZE
 
 /***** Previous fields in IMB_JOB/JOB_AES_HMAC *****/
 #define aes_enc_key_expanded enc_keys
@@ -274,12 +324,12 @@ typedef enum {
         IMB_CIPHER_CHACHA20_POLY1305, /* AEAD CHACHA20 */
         IMB_CIPHER_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support*/
         IMB_CIPHER_NUM
-} JOB_CIPHER_MODE;
+} IMB_CIPHER_MODE;
 
 typedef enum {
         IMB_DIR_ENCRYPT = 1,
         IMB_DIR_DECRYPT
-} JOB_CIPHER_DIRECTION;
+} IMB_CIPHER_DIRECTION;
 
 typedef enum {
         IMB_AUTH_HMAC_SHA_1 = 1,    /* HMAC-SHA1 */
@@ -314,24 +364,24 @@ typedef enum {
         IMB_AUTH_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support*/
         IMB_AUTH_ZUC256_EIA3_BITLEN,    /* 256-EIA3/NIA3 (3GPP) */
         IMB_AUTH_NUM
-} JOB_HASH_ALG;
+} IMB_HASH_ALG;
 
 typedef enum {
         IMB_ORDER_CIPHER_HASH = 1,
         IMB_ORDER_HASH_CIPHER
-} JOB_CHAIN_ORDER;
+} IMB_CHAIN_ORDER;
 
 typedef enum {
-        IMB_KEY_AES_128_BYTES = 16,
-        IMB_KEY_AES_192_BYTES = 24,
-        IMB_KEY_AES_256_BYTES = 32
-} AES_KEY_SIZE_BYTES;
+        IMB_KEY_128_BYTES = 16,
+        IMB_KEY_192_BYTES = 24,
+        IMB_KEY_256_BYTES = 32
+} IMB_KEY_SIZE_BYTES;
 
 typedef enum {
         IMB_SGL_INIT = 0,
         IMB_SGL_UPDATE,
         IMB_SGL_COMPLETE
-} IMB_JOB_SGL_STATE;
+} IMB_SGL_STATE;
 
 typedef struct IMB_JOB {
         /*
@@ -449,17 +499,17 @@ typedef struct IMB_JOB {
                 } CHACHA20_POLY1305;
         } u;
 
-        JOB_STS status;
+        IMB_STATUS status;
         /* IMB_CIPHER_CBC, IMB_CIPHER_CNTR, IMB_CIPHER_GCM, etc. */
-        JOB_CIPHER_MODE cipher_mode;
+        IMB_CIPHER_MODE cipher_mode;
         /* IMB_DIR_ENCRYPT/IMB_DIR_DECRYPT */
-        JOB_CIPHER_DIRECTION cipher_direction;
-        JOB_HASH_ALG hash_alg; /* IMB_AUTH_SHA_1 or others... */
+        IMB_CIPHER_DIRECTION cipher_direction;
+        IMB_HASH_ALG hash_alg; /* IMB_AUTH_SHA_1 or others... */
         /* IMB_ORDER_CIPHER_HASH or IMB_ORDER_HASH_CIPHER.
         * For AES-CCM, when encrypting, IMB_ORDER_HASH_CIPHER
         * must be selected, and when decrypting,
         * IMB_ORDER_CIPHER_HASH must be selected. */
-        JOB_CHAIN_ORDER chain_order;
+        IMB_CHAIN_ORDER chain_order;
 
         void *user_data;
         void *user_data2;
@@ -473,7 +523,7 @@ typedef struct IMB_JOB {
         int (*cipher_func)(struct IMB_JOB *);
         int (*hash_func)(struct IMB_JOB *);
 
-        IMB_JOB_SGL_STATE sgl_state;
+        IMB_SGL_STATE sgl_state;
 } IMB_JOB;
 
 
@@ -529,7 +579,7 @@ struct chacha20_poly1305_context_data {
 
 /* Authenticated Tag Length in bytes.
  * Valid values are 16 (most likely), 12 or 8. */
-#define MAX_TAG_LEN (16)
+#define IMB_MAX_TAG_LEN (16)
 
 /*
  * IV data is limited to 16 bytes as follows:
@@ -540,14 +590,14 @@ struct chacha20_poly1305_context_data {
  * 4 byte value 0x00000001 is padded automatically by the library -
  *    there is no need to add these 4 bytes on application side anymore.
  */
-#define GCM_IV_DATA_LEN (12)
+#define IMB_GCM_IV_DATA_LEN (12)
 
 #define LONGEST_TESTED_AAD_LENGTH (2 * 1024)
 
 /* Key lengths of 128 and 256 supported */
-#define GCM_128_KEY_LEN (16)
-#define GCM_192_KEY_LEN (24)
-#define GCM_256_KEY_LEN (32)
+#define IMB_GCM_128_KEY_LEN (16)
+#define IMB_GCM_192_KEY_LEN (24)
+#define IMB_GCM_256_KEY_LEN (32)
 
 /* #define GCM_BLOCK_LEN   16 */
 #define GCM_ENC_KEY_LEN 16
@@ -847,7 +897,7 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 /* ========================================================================== */
 /* TOP LEVEL (IMB_MGR) Data structure fields */
 
-#define MAX_JOBS 128
+#define IMB_MAX_JOBS 128
 
 typedef struct IMB_MGR {
         /*
@@ -994,7 +1044,7 @@ typedef struct IMB_MGR {
         /* in-order scheduler fields */
         int              earliest_job; /* byte offset, -1 if none */
         int              next_job;     /* byte offset */
-        IMB_JOB     jobs[MAX_JOBS];
+        IMB_JOB     jobs[IMB_MAX_JOBS];
 
         /* out of order managers */
         void *aes128_ooo;

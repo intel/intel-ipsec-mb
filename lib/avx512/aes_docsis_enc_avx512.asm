@@ -1350,7 +1350,7 @@ APPEND(%%_skip_,I):
 
         mov             %%unused_lanes, [%%STATE + _aes_unused_lanes]
         mov             qword [%%STATE + _aes_job_in_lane + %%idx*8], 0
-        or              dword [%%job_rax + _status], STS_COMPLETED_AES
+        or              dword [%%job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
         shl             %%unused_lanes, 4
         or              %%unused_lanes, %%idx
         mov             [%%STATE + _aes_unused_lanes], %%unused_lanes

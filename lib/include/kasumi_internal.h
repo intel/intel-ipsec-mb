@@ -177,7 +177,7 @@ typedef union _ku64 {
 typedef union SafeBuffer {
         uint64_t b64;
         uint32_t b32[2];
-        uint8_t b8[KASUMI_BLOCK_SIZE];
+        uint8_t b8[IMB_KASUMI_BLOCK_SIZE];
 } SafeBuf;
 
 /*---------------------------------------------------------------------
@@ -679,11 +679,11 @@ kasumi_compute_sched(const uint8_t modifier,
 #endif
         uint32_t i = 0;
         const uint8_t *const key = (const uint8_t * const)pKey;
-        uint8_t ModKey[KASUMI_KEY_SIZE] = {0}; /* Modified key */
+        uint8_t ModKey[IMB_KASUMI_KEY_SIZE] = {0}; /* Modified key */
         kasumi_key_sched_t *pLocalCtx = (kasumi_key_sched_t *)pCtx;
 
         /* Construct the modified key*/
-        for (i = 0; i < KASUMI_KEY_SIZE; i++)
+        for (i = 0; i < IMB_KASUMI_KEY_SIZE; i++)
                 ModKey[i] = (uint8_t)key[i] ^ modifier;
 
         kasumi_key_schedule_sk(pLocalCtx->sk16, pKey);
@@ -788,25 +788,25 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                 /* KASUMI it to produce the next block of keystream */
                 kasumi_1_block(pCtx->sk16, b.b16 );
 
-                if (lengthInBytes > KASUMI_BLOCK_SIZE) {
+                if (lengthInBytes > IMB_KASUMI_BLOCK_SIZE) {
                         pBufferIn = xor_keystrm_rev(pBufferOut, pBufferIn,
                                                     b.b64[0]);
-                        pBufferOut += KASUMI_BLOCK_SIZE;
+                        pBufferOut += IMB_KASUMI_BLOCK_SIZE;
                         /* loop variant */
                         /* done another 64 bits */
-                        lengthInBytes -= KASUMI_BLOCK_SIZE;
+                        lengthInBytes -= IMB_KASUMI_BLOCK_SIZE;
 
                         /* apply the modifier and update the block count */
                         b.b64[0] ^= a.b64[0];
                         b.b16[0] ^= (uint16_t)++blkcnt;
-                } else if (lengthInBytes < KASUMI_BLOCK_SIZE) {
+                } else if (lengthInBytes < IMB_KASUMI_BLOCK_SIZE) {
                         /* end of the loop, handle the last bytes */
                         memcpy_keystrm(safeInBuf.b8, pBufferIn,
                                        lengthInBytes);
                         xor_keystrm_rev(b.b8, safeInBuf.b8, b.b64[0]);
                         memcpy_keystrm(pBufferOut, b.b8, lengthInBytes);
                         lengthInBytes = 0;
-                /* lengthInBytes == KASUMI_BLOCK_SIZE */
+                /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
                 } else {
                         xor_keystrm_rev(pBufferOut, pBufferIn, b.b64[0]);
                         lengthInBytes = 0;
@@ -826,7 +826,8 @@ preserve_bits(kasumi_union_t *c,
               SafeBuf *safeOutBuf, SafeBuf *safeInBuf,
               const uint8_t bit_len, const uint8_t byte_len)
 {
-        const uint64_t mask = UINT64_MAX << (KASUMI_BLOCK_SIZE * 8 - bit_len);
+        const uint64_t mask = UINT64_MAX << (IMB_KASUMI_BLOCK_SIZE * 8 -
+                                                bit_len);
 
         /* Clear the last bits of the keystream and the input
          * (input only in out-of-place case) */
@@ -930,7 +931,7 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                 safeInBuf.b8[0] = (safeInBuf.b8[0] & mask8) |
                                 (pcBufferOut[0] & ~mask8);
                 xor_keystrm_rev(pcBufferOut, safeInBuf.b8, c.b64[0]);
-                pcBufferIn += KASUMI_BLOCK_SIZE;
+                pcBufferIn += IMB_KASUMI_BLOCK_SIZE;
         } else {
                 /* At least 64 bits to produce (including offset) */
                 pcBufferIn = xor_keystrm_rev(pcBufferOut, pcBufferIn, c.b64[0]);
@@ -938,8 +939,8 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 
         if (remainOffset != 0)
                 shiftrem = b.b64[0] << (64 - remainOffset);
-        cipherLengthInBits -= KASUMI_BLOCK_SIZE * 8 - remainOffset;
-        pcBufferOut += KASUMI_BLOCK_SIZE;
+        cipherLengthInBits -= IMB_KASUMI_BLOCK_SIZE * 8 - remainOffset;
+        pcBufferOut += IMB_KASUMI_BLOCK_SIZE;
         /* apply the modifier and update the block count */
         b.b64[0] ^= a.b64[0];
         b.b16[0] ^= (uint16_t)++blkcnt;
@@ -950,11 +951,11 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                 c.b64[0] = (b.b64[0] >> remainOffset) | shiftrem;
                 if (remainOffset != 0)
                         shiftrem = b.b64[0] << (64 - remainOffset);
-                if (cipherLengthInBits >= KASUMI_BLOCK_SIZE * 8) {
+                if (cipherLengthInBits >= IMB_KASUMI_BLOCK_SIZE * 8) {
                         pcBufferIn = xor_keystrm_rev(pcBufferOut,
                                                      pcBufferIn, c.b64[0]);
-                        cipherLengthInBits -= KASUMI_BLOCK_SIZE * 8;
-                        pcBufferOut += KASUMI_BLOCK_SIZE;
+                        cipherLengthInBits -= IMB_KASUMI_BLOCK_SIZE * 8;
+                        pcBufferOut += IMB_KASUMI_BLOCK_SIZE;
                         /* loop variant */
 
                         /* apply the modifier and update the block count */
@@ -1044,12 +1045,12 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                 /* xor and write keystream */
                 pBufferIn1 =
                     xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
-                pBufferOut1 += KASUMI_BLOCK_SIZE;
+                pBufferOut1 += IMB_KASUMI_BLOCK_SIZE;
                 pBufferIn2 =
                     xor_keystrm_rev(pBufferOut2, pBufferIn2, b2.b64[0]);
-                pBufferOut2 += KASUMI_BLOCK_SIZE;
+                pBufferOut2 += IMB_KASUMI_BLOCK_SIZE;
                 /* loop variant */
-                length -= KASUMI_BLOCK_SIZE; /* done another 64 bits */
+                length -= IMB_KASUMI_BLOCK_SIZE; /* done another 64 bits */
 
                 /* apply the modifier and update the block count */
                 b1.b64[0] ^= a1.b64[0];
@@ -1065,40 +1066,40 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
         if (lengthInBytes1 > 0 && lengthInBytes2 > 0) {
                 /* final round for 1 of the packets */
                 kasumi_2_blocks(pCtx->sk16, b1.b16, b2.b16);
-                if (lengthInBytes1 > KASUMI_BLOCK_SIZE) {
+                if (lengthInBytes1 > IMB_KASUMI_BLOCK_SIZE) {
                         pBufferIn1 = xor_keystrm_rev(pBufferOut1,
                                                      pBufferIn1, b1.b64[0]);
-                        pBufferOut1 += KASUMI_BLOCK_SIZE;
+                        pBufferOut1 += IMB_KASUMI_BLOCK_SIZE;
                         b1.b64[0] ^= a1.b64[0];
                         b1.b16[0] ^= (uint16_t)++blkcnt;
-                        lengthInBytes1 -= KASUMI_BLOCK_SIZE;
-                } else if (lengthInBytes1 < KASUMI_BLOCK_SIZE) {
+                        lengthInBytes1 -= IMB_KASUMI_BLOCK_SIZE;
+                } else if (lengthInBytes1 < IMB_KASUMI_BLOCK_SIZE) {
                         memcpy_keystrm(safeInBuf.b8, pBufferIn1,
                                        lengthInBytes1);
                         xor_keystrm_rev(temp.b8, safeInBuf.b8, b1.b64[0]);
                         memcpy_keystrm(pBufferOut1, temp.b8,
                                        lengthInBytes1);
                         lengthInBytes1 = 0;
-                /* lengthInBytes1 == KASUMI_BLOCK_SIZE */
+                /* lengthInBytes1 == IMB_KASUMI_BLOCK_SIZE */
                 } else {
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         lengthInBytes1 = 0;
                 }
-                if (lengthInBytes2 > KASUMI_BLOCK_SIZE) {
+                if (lengthInBytes2 > IMB_KASUMI_BLOCK_SIZE) {
                         pBufferIn2 = xor_keystrm_rev(pBufferOut2,
                                                      pBufferIn2, b2.b64[0]);
-                        pBufferOut2 += KASUMI_BLOCK_SIZE;
+                        pBufferOut2 += IMB_KASUMI_BLOCK_SIZE;
                         b2.b64[0] ^= a2.b64[0];
                         b2.b16[0] ^= (uint16_t)++blkcnt;
-                        lengthInBytes2 -= KASUMI_BLOCK_SIZE;
-                } else if (lengthInBytes2 < KASUMI_BLOCK_SIZE) {
+                        lengthInBytes2 -= IMB_KASUMI_BLOCK_SIZE;
+                } else if (lengthInBytes2 < IMB_KASUMI_BLOCK_SIZE) {
                         memcpy_keystrm(safeInBuf.b8, pBufferIn2,
                                        lengthInBytes2);
                         xor_keystrm_rev(temp.b8, safeInBuf.b8, b2.b64[0]);
                         memcpy_keystrm(pBufferOut2, temp.b8,
                                        lengthInBytes2);
                         lengthInBytes2 = 0;
-                /* lengthInBytes2 == KASUMI_BLOCK_SIZE */
+                /* lengthInBytes2 == IMB_KASUMI_BLOCK_SIZE */
                 } else {
                         xor_keystrm_rev(pBufferOut2, pBufferIn2, b2.b64[0]);
                         lengthInBytes2 = 0;
@@ -1136,17 +1137,17 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                 /* KASUMI it to produce the next block of keystream */
                 kasumi_1_block(pCtx->sk16, b1.b16);
 
-                if (lengthInBytes1 > KASUMI_BLOCK_SIZE) {
+                if (lengthInBytes1 > IMB_KASUMI_BLOCK_SIZE) {
                         pBufferIn1 = xor_keystrm_rev(pBufferOut1,
                                                      pBufferIn1, b1.b64[0]);
-                        pBufferOut1 += KASUMI_BLOCK_SIZE;
+                        pBufferOut1 += IMB_KASUMI_BLOCK_SIZE;
                         /* loop variant */
-                        lengthInBytes1 -= KASUMI_BLOCK_SIZE;
+                        lengthInBytes1 -= IMB_KASUMI_BLOCK_SIZE;
 
                         /* apply the modifier and update the block count */
                         b1.b64[0] ^= a1.b64[0];
                         b1.b16[0] ^= (uint16_t)++blkcnt;
-                } else if (lengthInBytes1 < KASUMI_BLOCK_SIZE) {
+                } else if (lengthInBytes1 < IMB_KASUMI_BLOCK_SIZE) {
                         /* end of the loop, handle the last bytes */
                         memcpy_keystrm(safeInBuf.b8, pBufferIn1,
                                        lengthInBytes1);
@@ -1154,7 +1155,7 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                         memcpy_keystrm(pBufferOut1, temp.b8,
                                        lengthInBytes1);
                         lengthInBytes1 = 0;
-                /* lengthInBytes1 == KASUMI_BLOCK_SIZE */
+                /* lengthInBytes1 == IMB_KASUMI_BLOCK_SIZE */
                 } else {
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         lengthInBytes1 = 0;
@@ -1216,19 +1217,19 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
                  * packets */
                 kasumi_3_blocks(pCtx->sk16, b1.b16, b2.b16, b3.b16);
 
-                if (lengthInBytes > KASUMI_BLOCK_SIZE) {
+                if (lengthInBytes > IMB_KASUMI_BLOCK_SIZE) {
                         /* xor and write keystream */
                         pBufferIn1 = xor_keystrm_rev(pBufferOut1,
                                                      pBufferIn1, b1.b64[0]);
-                        pBufferOut1 += KASUMI_BLOCK_SIZE;
+                        pBufferOut1 += IMB_KASUMI_BLOCK_SIZE;
                         pBufferIn2 = xor_keystrm_rev(pBufferOut2,
                                                      pBufferIn2, b2.b64[0]);
-                        pBufferOut2 += KASUMI_BLOCK_SIZE;
+                        pBufferOut2 += IMB_KASUMI_BLOCK_SIZE;
                         pBufferIn3 = xor_keystrm_rev(pBufferOut3,
                                                      pBufferIn3, b3.b64[0]);
-                        pBufferOut3 += KASUMI_BLOCK_SIZE;
+                        pBufferOut3 += IMB_KASUMI_BLOCK_SIZE;
                         /* loop variant */
-                        lengthInBytes -= KASUMI_BLOCK_SIZE;
+                        lengthInBytes -= IMB_KASUMI_BLOCK_SIZE;
 
                         /* apply the modifier and update the block count */
                         b1.b64[0] ^= a1.b64[0];
@@ -1237,7 +1238,7 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
                         b2.b16[0] ^= (uint16_t)blkcnt;
                         b3.b64[0] ^= a3.b64[0];
                         b3.b16[0] ^= (uint16_t)blkcnt;
-                } else if (lengthInBytes < KASUMI_BLOCK_SIZE) {
+                } else if (lengthInBytes < IMB_KASUMI_BLOCK_SIZE) {
                         /* end of the loop, handle the last bytes */
                         memcpy_keystrm(safeInBuf1.b8, pBufferIn1,
                                        lengthInBytes);
@@ -1254,7 +1255,7 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
                         xor_keystrm_rev(b3.b8, safeInBuf3.b8, b3.b64[0]);
                         memcpy_keystrm(pBufferOut3, b3.b8, lengthInBytes);
                         lengthInBytes = 0;
-                /* lengthInBytes == KASUMI_BLOCK_SIZE */
+                /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
                 } else {
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         xor_keystrm_rev(pBufferOut2, pBufferIn2, b2.b64[0]);
@@ -1336,22 +1337,22 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                  * packets */
                 kasumi_4_blocks(pCtx->sk16, pTemp);
 
-                if (lengthInBytes > KASUMI_BLOCK_SIZE) {
+                if (lengthInBytes > IMB_KASUMI_BLOCK_SIZE) {
                         /* xor and write keystream */
                         pBufferIn1 = xor_keystrm_rev(pBufferOut1,
                                                      pBufferIn1, b1.b64[0]);
-                        pBufferOut1 += KASUMI_BLOCK_SIZE;
+                        pBufferOut1 += IMB_KASUMI_BLOCK_SIZE;
                         pBufferIn2 = xor_keystrm_rev(pBufferOut2,
                                                      pBufferIn2, b2.b64[0]);
-                        pBufferOut2 += KASUMI_BLOCK_SIZE;
+                        pBufferOut2 += IMB_KASUMI_BLOCK_SIZE;
                         pBufferIn3 = xor_keystrm_rev(pBufferOut3,
                                                      pBufferIn3, b3.b64[0]);
-                        pBufferOut3 += KASUMI_BLOCK_SIZE;
+                        pBufferOut3 += IMB_KASUMI_BLOCK_SIZE;
                         pBufferIn4 = xor_keystrm_rev(pBufferOut4,
                                                      pBufferIn4, b4.b64[0]);
-                        pBufferOut4 += KASUMI_BLOCK_SIZE;
+                        pBufferOut4 += IMB_KASUMI_BLOCK_SIZE;
                         /* loop variant */
-                        lengthInBytes -= KASUMI_BLOCK_SIZE;
+                        lengthInBytes -= IMB_KASUMI_BLOCK_SIZE;
 
                         /* apply the modifier and update the block count */
                         b1.b64[0] ^= a1.b64[0];
@@ -1362,7 +1363,7 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                         b3.b16[0] ^= (uint16_t)blkcnt;
                         b4.b64[0] ^= a4.b64[0];
                         b4.b16[0] ^= (uint16_t)blkcnt;
-                } else if (lengthInBytes < KASUMI_BLOCK_SIZE) {
+                } else if (lengthInBytes < IMB_KASUMI_BLOCK_SIZE) {
                         /* end of the loop, handle the last bytes */
                         memcpy_keystrm(safeInBuf1.b8, pBufferIn1,
                                        lengthInBytes);
@@ -1384,7 +1385,7 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                         xor_keystrm_rev(b4.b8, safeInBuf4.b8, b4.b64[0]);
                         memcpy_keystrm(pBufferOut4, b4.b8, lengthInBytes);
                         lengthInBytes = 0;
-                /* lengthInBytes == KASUMI_BLOCK_SIZE */
+                /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
                 } else {
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         xor_keystrm_rev(pBufferOut2, pBufferIn2, b2.b64[0]);
@@ -1530,8 +1531,8 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                 * [dataCount - 1]
                 */
                 same_size_blocks =
-                    ((dataLen[dataCount - 1] + KASUMI_BLOCK_SIZE - 1) /
-                     KASUMI_BLOCK_SIZE) -
+                    ((dataLen[dataCount - 1] + IMB_KASUMI_BLOCK_SIZE - 1) /
+                     IMB_KASUMI_BLOCK_SIZE) -
                     blkcnt;
 
                 /* process streams of complete blocks */
@@ -1547,7 +1548,7 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                                                 temp[packet_idx].b64[0]);
 
                         /* length already done since the start of the packets */
-                        len += KASUMI_BLOCK_SIZE;
+                        len += IMB_KASUMI_BLOCK_SIZE;
 
                         /* block idx is incremented and rewritten in the
                          * keystream */
@@ -1566,7 +1567,7 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                 /* process incomplete blocks without overwriting past the buffer
                  * end */
                 while ((dataCount > 0) &&
-                       (dataLen[dataCount - 1] < (len + KASUMI_BLOCK_SIZE))) {
+                       (dataLen[dataCount - 1] < (len+IMB_KASUMI_BLOCK_SIZE))) {
 
                         dataCount--;
                         /* incomplete block is copied into a temp buffer */
@@ -1586,7 +1587,7 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                 KASUMI_SAFE_BUFFER is defined, the last block (complete or not)
                 of the packets*/
                 while ((dataCount > 0) &&
-                       (dataLen[dataCount - 1] <= (len + KASUMI_BLOCK_SIZE))) {
+                       (dataLen[dataCount-1] <= (len+IMB_KASUMI_BLOCK_SIZE))) {
 
                         dataCount--;
                         xor_keystrm_rev(pDataOut[dataCount] + len,
@@ -1609,7 +1610,7 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
                 } /* while packet_idx */
 
                 /* length already done since the start of the packets */
-                len += KASUMI_BLOCK_SIZE;
+                len += IMB_KASUMI_BLOCK_SIZE;
 
                 /* the remaining packets, if any, have now at least one valid
                 block, which might be complete or not */

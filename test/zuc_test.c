@@ -375,7 +375,7 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 printf("%d error status:%d, job %d",
                                        __LINE__, job->status, i);
                                 return -1;
@@ -385,7 +385,7 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (job->status != STS_COMPLETED) {
+                if (job->status != IMB_STATUS_COMPLETED) {
                         printf("%d error status:%d, job %d",
                                __LINE__, job->status, i);
                         return -1;
@@ -431,7 +431,7 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
-                        if (job->status != STS_COMPLETED) {
+                        if (job->status != IMB_STATUS_COMPLETED) {
                                 printf("%d error status:%d, job %d",
                                        __LINE__, job->status, i);
                                 return -1;
@@ -441,7 +441,7 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
 
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
-                if (job->status != STS_COMPLETED) {
+                if (job->status != IMB_STATUS_COMPLETED) {
                         printf("%d error status:%d, job %d",
                                __LINE__, job->status, i);
                         return -1;
@@ -551,7 +551,7 @@ validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
 static int
 submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                   uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                  const unsigned int job_api, JOB_CIPHER_DIRECTION dir,
+                  const unsigned int job_api, IMB_CIPHER_DIRECTION dir,
                   enum test_type type, const unsigned int var_bufs,
                   const unsigned int num_buffers, const uint32_t *buf_idx)
 {
@@ -633,7 +633,7 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
 static int
 submit_and_verify_zuc256(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                          uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
-                         JOB_CIPHER_DIRECTION dir,
+                         IMB_CIPHER_DIRECTION dir,
                          const unsigned int var_bufs,
                          const unsigned int num_buffers,
                          const uint32_t *buf_idx)

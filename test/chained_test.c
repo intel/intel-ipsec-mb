@@ -56,8 +56,8 @@ struct chained_vector {
 };
 
 const struct test_set {
-        JOB_CIPHER_DIRECTION dir;
-        JOB_CHAIN_ORDER order;
+        IMB_CIPHER_DIRECTION dir;
+        IMB_CHAIN_ORDER order;
         const char *set_name;
 } test_sets[] = {
         {
@@ -145,7 +145,7 @@ chained_job_ok(const IMB_JOB *job,
                const uint8_t *padding,
                const size_t sizeof_padding)
 {
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d error status:%d, job %d",
                        __LINE__, job->status, num_vec);
                 return 0;
@@ -213,10 +213,10 @@ test_chained_many(struct IMB_MGR *mb_mgr,
                   const void *enc_keys,
                   const void *dec_keys,
                   const struct chained_vector *vec,
-                  JOB_CIPHER_DIRECTION dir,
-                  JOB_CHAIN_ORDER order,
-                  JOB_CIPHER_MODE cipher,
-                  JOB_HASH_ALG hash,
+                  IMB_CIPHER_DIRECTION dir,
+                  IMB_CHAIN_ORDER order,
+                  IMB_CIPHER_MODE cipher,
+                  IMB_HASH_ALG hash,
                   const void *ipad_hash,
                   const void *opad_hash,
                   const unsigned in_place,
@@ -382,8 +382,8 @@ test_chained_vectors(struct IMB_MGR *mb_mgr,
                      struct test_suite_context *ctx,
                      const int vec_cnt,
                      const struct chained_vector *vec_tab, const char *banner,
-                     const JOB_CIPHER_MODE cipher,
-                     const JOB_HASH_ALG hash,
+                     const IMB_CIPHER_MODE cipher,
+                     const IMB_HASH_ALG hash,
                      unsigned hash_block_size, int num_jobs)
 {
         int vect;

@@ -347,7 +347,7 @@ section .text
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_AES
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -598,7 +598,7 @@ APPEND3(%%skip_eea3_copy_,I,J):
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_AES
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_CIPHER
         shl     unused_lanes, 8
         or      unused_lanes, idx
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -764,7 +764,7 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_HMAC
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
         mov     word [state + _zuc_lens + idx*2], 0xFFFF
         shl     unused_lanes, 8
@@ -922,7 +922,7 @@ APPEND(%%skip_eia3_,I):
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
         mov     unused_lanes, [state + _zuc_unused_lanes]
         mov     qword [state + _zuc_job_in_lane + idx*8], 0
-        or      dword [job_rax + _status], STS_COMPLETED_HMAC
+        or      dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
         ;; TODO: fix double store (above setting the length to 0 and now setting to FFFFF)
         mov     word [state + _zuc_lens + idx*2], 0xFFFF
         shl     unused_lanes, 8

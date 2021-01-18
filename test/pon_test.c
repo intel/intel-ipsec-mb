@@ -485,7 +485,7 @@ test_pon(struct IMB_MGR *mb_mgr,
         if (iv != NULL) {
                 job->enc_keys = expkey;
                 job->dec_keys = expkey;
-                job->key_len_in_bytes = IMB_KEY_AES_128_BYTES;
+                job->key_len_in_bytes = IMB_KEY_128_BYTES;
                 job->iv = iv;
                 job->iv_len_in_bytes = 16;
                 job->msg_len_to_cipher_in_bytes = (uint64_t) len_to_cipher;
@@ -510,7 +510,7 @@ test_pon(struct IMB_MGR *mb_mgr,
                 goto end;
         }
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d Error status:%d", __LINE__, job->status);
                 goto end;
         }

@@ -785,7 +785,7 @@ hmac_shax_job_ok(const struct hmac_rfc4231_vector *vec,
                 break;
         }
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("line:%d job error status:%d ", __LINE__, job->status);
                 return 0;
         }
@@ -825,10 +825,10 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
         uint8_t padding[16];
         uint8_t **auths = malloc(num_jobs * sizeof(void *));
         int i = 0, jobs_rx = 0, ret = -1;
-        uint8_t key[SHA_512_BLOCK_SIZE];
-        uint8_t buf[SHA_512_BLOCK_SIZE];
-        DECLARE_ALIGNED(uint8_t ipad_hash[SHA512_DIGEST_SIZE_IN_BYTES], 16);
-        DECLARE_ALIGNED(uint8_t opad_hash[SHA512_DIGEST_SIZE_IN_BYTES], 16);
+        uint8_t key[IMB_SHA_512_BLOCK_SIZE];
+        uint8_t buf[IMB_SHA_512_BLOCK_SIZE];
+        DECLARE_ALIGNED(uint8_t ipad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
+        DECLARE_ALIGNED(uint8_t opad_hash[IMB_SHA512_DIGEST_SIZE_IN_BYTES], 16);
         int key_len = 0;
         size_t digest_len = 0;
         size_t block_size = 0;
@@ -841,19 +841,19 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
         switch (sha_type) {
         case 224:
                 digest_len = vec->hmac_sha224_len;
-                block_size = SHA_256_BLOCK_SIZE;
+                block_size = IMB_SHA_256_BLOCK_SIZE;
                 break;
         case 256:
                 digest_len = vec->hmac_sha256_len;
-                block_size = SHA_256_BLOCK_SIZE;
+                block_size = IMB_SHA_256_BLOCK_SIZE;
                 break;
         case 384:
                 digest_len = vec->hmac_sha384_len;
-                block_size = SHA_384_BLOCK_SIZE;
+                block_size = IMB_SHA_384_BLOCK_SIZE;
                 break;
         case 512:
                 digest_len = vec->hmac_sha512_len;
-                block_size = SHA_512_BLOCK_SIZE;
+                block_size = IMB_SHA_512_BLOCK_SIZE;
                 break;
         default:
                 fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",
@@ -885,19 +885,19 @@ test_hmac_shax(struct IMB_MGR *mb_mgr,
                 switch (sha_type) {
                 case 224:
                         IMB_SHA224(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = SHA224_DIGEST_SIZE_IN_BYTES;
+                        key_len = IMB_SHA224_DIGEST_SIZE_IN_BYTES;
                         break;
                 case 256:
                         IMB_SHA256(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = SHA256_DIGEST_SIZE_IN_BYTES;
+                        key_len = IMB_SHA256_DIGEST_SIZE_IN_BYTES;
                         break;
                 case 384:
                         IMB_SHA384(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = SHA384_DIGEST_SIZE_IN_BYTES;
+                        key_len = IMB_SHA384_DIGEST_SIZE_IN_BYTES;
                         break;
                 case 512:
                         IMB_SHA512(mb_mgr, vec->key, vec->key_len, key);
-                        key_len = SHA512_DIGEST_SIZE_IN_BYTES;
+                        key_len = IMB_SHA512_DIGEST_SIZE_IN_BYTES;
                         break;
                 default:
                         fprintf(stderr, "Wrong SHA type selection 'SHA-%d'!\n",

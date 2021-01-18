@@ -476,7 +476,7 @@ align 32
 %%do_return2:
 %ifidn %%CNTR_TYPE, CCM
 	mov	rax, job
-	or	dword [rax + _status], STS_COMPLETED_AES
+	or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 %endif
 
 %ifidn %%CNTR_TYPE, CNTR_BIT

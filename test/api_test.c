@@ -102,10 +102,10 @@ test_job_api(struct IMB_MGR *mb_mgr)
         }
         printf(".");
 
-        if (job_next->status != STS_INVALID_ARGS) {
+        if (job_next->status != IMB_STATUS_INVALID_ARGS) {
                 /* Invalid job is returned, and status should be INVALID_ARGS */
                 printf("%s: test %d, unexpected job->status != "
-                       "STS_INVALID_ARGS\n", __func__, TEST_INVALID_JOB);
+                       "IMB_STATUS_INVALID_ARGS\n", __func__, TEST_INVALID_JOB);
                 return 1;
         }
 	printf(".");
@@ -164,10 +164,10 @@ static int dummy_cipher_hash_func(struct IMB_JOB *job)
  */
 static void
 fill_in_job(struct IMB_JOB *job,
-            const JOB_CIPHER_MODE cipher_mode,
-            const JOB_CIPHER_DIRECTION cipher_direction,
-            const JOB_HASH_ALG hash_alg,
-            const JOB_CHAIN_ORDER chain_order,
+            const IMB_CIPHER_MODE cipher_mode,
+            const IMB_CIPHER_DIRECTION cipher_direction,
+            const IMB_HASH_ALG hash_alg,
+            const IMB_CHAIN_ORDER chain_order,
             struct chacha20_poly1305_context_data *chacha_ctx)
 {
         const uint64_t tag_len_tab[] = {
@@ -512,10 +512,10 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
                 }
         }
 
-        if (job_ret->status != STS_INVALID_ARGS) {
+        if (job_ret->status != IMB_STATUS_INVALID_ARGS) {
                 printf("%s : test %d, hash_alg %d, chain_order %d, "
                        "cipher_dir %d, cipher_mode %d : "
-                       "unexpected job->status %d != STS_INVALID_ARGS\n",
+                       "unexpected job->status %d != IMB_STATUS_INVALID_ARGS\n",
                        __func__, test_num, (int) job_ret->hash_alg,
                        (int) job_ret->chain_order,
                        (int) job_ret->cipher_direction,
@@ -532,10 +532,10 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
 static int
 test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
 {
-        JOB_HASH_ALG hash;
-        JOB_CIPHER_DIRECTION dir;
-        const JOB_CIPHER_MODE cipher = IMB_CIPHER_NULL;
-        JOB_CHAIN_ORDER order;
+        IMB_HASH_ALG hash;
+        IMB_CIPHER_DIRECTION dir;
+        const IMB_CIPHER_MODE cipher = IMB_CIPHER_NULL;
+        IMB_CHAIN_ORDER order;
         struct IMB_JOB template_job;
         struct IMB_JOB *job;
         struct chacha20_poly1305_context_data chacha_ctx;
@@ -729,10 +729,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
 static int
 test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 {
-        const JOB_HASH_ALG hash = IMB_AUTH_NULL;
-        JOB_CIPHER_DIRECTION dir;
-        JOB_CIPHER_MODE cipher;
-        JOB_CHAIN_ORDER order;
+        const IMB_HASH_ALG hash = IMB_AUTH_NULL;
+        IMB_CIPHER_DIRECTION dir;
+        IMB_CIPHER_MODE cipher;
+        IMB_CHAIN_ORDER order;
         struct IMB_JOB template_job;
         struct IMB_JOB *job;
         struct chacha20_poly1305_context_data chacha_ctx;

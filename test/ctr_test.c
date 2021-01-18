@@ -1274,7 +1274,7 @@ test_ctr(struct IMB_MGR *mb_mgr,
          unsigned text_len,
          int dir,
          int order,
-         const JOB_CIPHER_MODE alg)
+         const IMB_CIPHER_MODE alg)
 {
         uint32_t text_byte_len;
         struct IMB_JOB *job;
@@ -1324,7 +1324,7 @@ test_ctr(struct IMB_MGR *mb_mgr,
                 printf("%d Unexpected null return from submit_job\n", __LINE__);
                 goto end;
         }
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 printf("%d Error status:%d", __LINE__, job->status);
                 goto end;
         }
@@ -1366,7 +1366,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                  struct test_suite_context *ctx192,
                  struct test_suite_context *ctx256,
                  const struct gcm_ctr_vector *vectors,
-                 const uint32_t vectors_cnt, const JOB_CIPHER_MODE alg)
+                 const uint32_t vectors_cnt, const IMB_CIPHER_MODE alg)
 {
 	uint32_t vect;
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);

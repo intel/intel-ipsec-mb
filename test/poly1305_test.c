@@ -416,7 +416,7 @@ poly1305_job_ok(struct IMB_MGR *mb_mgr,
 {
         const size_t auth_len = job->auth_tag_output_len_in_bytes;
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 const int errcode = imb_get_errno(mb_mgr);
 
                 printf("Error!: job status %d, errno %d => %s\n",

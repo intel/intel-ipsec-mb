@@ -31,11 +31,11 @@
 ;;;; Define constants
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define STS_BEING_PROCESSED	0
-%define STS_COMPLETED_AES	1
-%define STS_COMPLETED_HMAC	2
-%define STS_COMPLETED		3
-%define STS_INVALID_ARGS	4
+%define IMB_STATUS_BEING_PROCESSED      0
+%define IMB_STATUS_COMPLETED_CIPHER        1
+%define IMB_STATUS_COMPLETED_AUTH       2
+%define IMB_STATUS_COMPLETED            3
+%define IMB_STATUS_INVALID_ARGS	        4
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define IMB_JOB structure
@@ -130,11 +130,11 @@ UNION	_u,	_HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
                 _ZUC_EIA3_spec_fields_size, _ZUC_EIA3_spec_fields_align, \
                 _POLY1305_spec_fields_size, _POLY1305_spec_fields_align
 
-FIELD	_status,			4,	4	; JOB_STS
-FIELD	_cipher_mode,			4,	4	; JOB_CIPHER_MODE
-FIELD	_cipher_direction,		4,	4	; JOB_CIPHER_DIRECTION
-FIELD	_hash_alg,			4,	4	; JOB_HASH_ALG
-FIELD	_chain_order,			4,	4	; JOB_CHAIN_ORDER
+FIELD	_status,			4,	4	; IMB_JOB_STS
+FIELD	_cipher_mode,			4,	4	; IMB_JOB_CIPHER_MODE
+FIELD	_cipher_direction,		4,	4	; IMB_JOB_CIPHER_DIRECTION
+FIELD	_hash_alg,			4,	4	; IMB_JOB_HASH_ALG
+FIELD	_chain_order,			4,	4	; IMB_JOB_CHAIN_ORDER
 FIELD	_user_data,			8,	8
 FIELD	_user_data2,			8,	8
 END_FIELDS

@@ -1041,7 +1041,7 @@ section .text
         mov             tmp1, [job + _auth_tag_output]
 	mov             [tmp1], eax        ; store CRC32 value
 
-        or              qword [job + _status], STS_COMPLETED_AES
+        or              qword [job + _status], IMB_STATUS_COMPLETED_CIPHER
 
         ;; restore stack pointer and registers
         mov             r12, [rsp + _gpr_save + 0*8]

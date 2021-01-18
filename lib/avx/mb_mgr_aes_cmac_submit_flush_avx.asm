@@ -357,7 +357,7 @@ APPEND(skip_,I):
         mov	job_rax, [state + _aes_cmac_job_in_lane + idx*8]
 
  	mov	qword [state + _aes_cmac_job_in_lane + idx*8], 0
- 	or	dword [job_rax + _status], STS_COMPLETED_HMAC
+ 	or	dword [job_rax + _status], IMB_STATUS_COMPLETED_AUTH
 
 %ifdef SAFE_DATA
         vpxor   xmm0, xmm0

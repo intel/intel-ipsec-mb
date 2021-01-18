@@ -109,17 +109,17 @@ IMB_JOB *submit_job_aes_cntr_sse_no_aesni(IMB_JOB *job);
 
 IMB_JOB *submit_job_aes_cntr_bit_sse_no_aesni(IMB_JOB *job);
 
-JOB_AES_HMAC *submit_job_zuc_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
+IMB_JOB *submit_job_zuc_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
                                                IMB_JOB *job);
-JOB_AES_HMAC *flush_job_zuc_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
+IMB_JOB *flush_job_zuc_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 
-JOB_AES_HMAC *submit_job_zuc256_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
+IMB_JOB *submit_job_zuc256_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
                                                IMB_JOB *job);
-JOB_AES_HMAC *flush_job_zuc256_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
+IMB_JOB *flush_job_zuc256_eea3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 
-JOB_AES_HMAC *submit_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
+IMB_JOB *submit_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
                                                IMB_JOB *job);
-JOB_AES_HMAC *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
+IMB_JOB *flush_job_zuc_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state);
 
 IMB_JOB *submit_job_zuc256_eia3_sse_no_aesni(MB_MGR_ZUC_OOO *state,
                                              IMB_JOB *job);
@@ -351,7 +351,7 @@ submit_job_aes_gcm_dec_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
                                    job->auth_tag_output_len_in_bytes);
         }
 
-        job->status = STS_COMPLETED;
+        job->status = IMB_STATUS_COMPLETED;
         return job;
 }
 
@@ -404,7 +404,7 @@ submit_job_aes_gcm_enc_sse_no_aesni(IMB_MGR *state, IMB_JOB *job)
                                    job->auth_tag_output_len_in_bytes);
         }
 
-        job->status = STS_COMPLETED;
+        job->status = IMB_STATUS_COMPLETED;
         return job;
 }
 
@@ -441,7 +441,7 @@ submit_job_aes_cntr_sse_no_aesni(IMB_JOB *job)
                              job->msg_len_to_cipher_in_bytes,
                              job->iv_len_in_bytes);
 
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -472,7 +472,7 @@ submit_job_aes_cntr_bit_sse_no_aesni(IMB_JOB *job)
                                               job->msg_len_to_cipher_in_bits,
                                               job->iv_len_in_bytes);
 
-        job->status |= STS_COMPLETED_AES;
+        job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
 
@@ -723,16 +723,16 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
                 MB_MGR_HMAC_SHA_512_OOO *ctx = hmac_sha_384_ooo;
 
                 ctx->ldata[j].job_in_lane = NULL;
-                ctx->ldata[j].extra_block[SHA_384_BLOCK_SIZE] = 0x80;
-                memset(ctx->ldata[j].extra_block + (SHA_384_BLOCK_SIZE + 1),
-                       0x00, SHA_384_BLOCK_SIZE + 7);
+                ctx->ldata[j].extra_block[IMB_SHA_384_BLOCK_SIZE] = 0x80;
+                memset(ctx->ldata[j].extra_block + (IMB_SHA_384_BLOCK_SIZE + 1),
+                       0x00, IMB_SHA_384_BLOCK_SIZE + 7);
 
                 p = ctx->ldata[j].outer_block;
-                memset(p + SHA384_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
+                memset(p + IMB_SHA384_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
                        /* special end point because this length is constant */
-                       SHA_384_BLOCK_SIZE -
-                       SHA384_DIGEST_SIZE_IN_BYTES - 1 - 2);
-                p[SHA384_DIGEST_SIZE_IN_BYTES] = 0x80; /* mark the end */
+                       IMB_SHA_384_BLOCK_SIZE -
+                       IMB_SHA384_DIGEST_SIZE_IN_BYTES - 1 - 2);
+                p[IMB_SHA384_DIGEST_SIZE_IN_BYTES] = 0x80; /* mark the end */
                 /*
                  * hmac outer block length always of fixed size, it is OKey
                  * length, a whole message block length, 1024 bits, with padding
@@ -741,8 +741,8 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
                  * converted to big endian within the sha implementation
                  * before use.
                  */
-                p[SHA_384_BLOCK_SIZE - 2] = 0x05;
-                p[SHA_384_BLOCK_SIZE - 1] = 0x80;
+                p[IMB_SHA_384_BLOCK_SIZE - 2] = 0x05;
+                p[IMB_SHA_384_BLOCK_SIZE - 1] = 0x80;
         }
 
         /* Init HMAC/SHA512 out-of-order fields */
@@ -759,16 +759,16 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
                 MB_MGR_HMAC_SHA_512_OOO *ctx = hmac_sha_512_ooo;
 
                 ctx->ldata[j].job_in_lane = NULL;
-                ctx->ldata[j].extra_block[SHA_512_BLOCK_SIZE] = 0x80;
-                memset(ctx->ldata[j].extra_block + (SHA_512_BLOCK_SIZE + 1),
-                       0x00, SHA_512_BLOCK_SIZE + 7);
+                ctx->ldata[j].extra_block[IMB_SHA_512_BLOCK_SIZE] = 0x80;
+                memset(ctx->ldata[j].extra_block + (IMB_SHA_512_BLOCK_SIZE + 1),
+                       0x00, IMB_SHA_512_BLOCK_SIZE + 7);
 
                 p = ctx->ldata[j].outer_block;
-                memset(p + SHA512_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
+                memset(p + IMB_SHA512_DIGEST_SIZE_IN_BYTES  + 1, 0x00,
                        /* special end point because this length is constant */
-                       SHA_512_BLOCK_SIZE -
-                       SHA512_DIGEST_SIZE_IN_BYTES  - 1 - 2);
-                p[SHA512_DIGEST_SIZE_IN_BYTES] = 0x80; /* mark the end */
+                       IMB_SHA_512_BLOCK_SIZE -
+                       IMB_SHA512_DIGEST_SIZE_IN_BYTES  - 1 - 2);
+                p[IMB_SHA512_DIGEST_SIZE_IN_BYTES] = 0x80; /* mark the end */
                 /*
                  * hmac outer block length always of fixed size, it is OKey
                  * length, a whole message block length, 1024 bits, with padding
@@ -777,8 +777,8 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
                  * converted to big endian within the sha implementation
                  * before use.
                  */
-                p[SHA_512_BLOCK_SIZE - 2] = 0x06;
-                p[SHA_512_BLOCK_SIZE - 1] = 0x00;
+                p[IMB_SHA_512_BLOCK_SIZE - 2] = 0x06;
+                p[IMB_SHA_512_BLOCK_SIZE - 1] = 0x00;
         }
 
         /* Init HMAC/MD5 out-of-order fields */

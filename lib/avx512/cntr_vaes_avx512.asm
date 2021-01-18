@@ -1499,7 +1499,7 @@ default rel
 %%_enc_dec_done:
 %ifidn %%CNTR_TYPE, CCM
 	mov	rax, %%JOB
-	or	dword [rax + _status], STS_COMPLETED_AES
+	or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 %endif
 
 %endmacro                       ; CNTR_ENC_DEC

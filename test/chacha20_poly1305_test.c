@@ -256,7 +256,7 @@ aead_job_ok(struct IMB_MGR *mb_mgr,
         const size_t auth_len = job->auth_tag_output_len_in_bytes;
         const uint8_t *out_text = (const uint8_t *) job->dst;
 
-        if (job->status != STS_COMPLETED) {
+        if (job->status != IMB_STATUS_COMPLETED) {
                 const int errcode = imb_get_errno(mb_mgr);
 
                 printf("Error!: job status %d, errno %d => %s\n",
@@ -543,7 +543,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
          struct test_suite_context *ctx,
          const uint32_t buffer_sz,
          const uint32_t seg_sz,
-         const JOB_CIPHER_DIRECTION cipher_dir,
+         const IMB_CIPHER_DIRECTION cipher_dir,
          const unsigned job_api,
          const unsigned encrypt_on_update_only)
 {
@@ -650,7 +650,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
 
         job = IMB_SUBMIT_JOB(mb_mgr);
 
-        if (job->status == STS_COMPLETED)
+        if (job->status == IMB_STATUS_COMPLETED)
                 test_suite_update(ctx, 1, 0);
         else {
                 fprintf(stderr, "job status returned as not successful"
@@ -797,7 +797,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
                                                            DIGEST_SZ);
         }
 
-        if (job->status == STS_COMPLETED) {
+        if (job->status == IMB_STATUS_COMPLETED) {
                 for (i = 0; i < (num_segments - 1); i++) {
                         if (memcmp(in_buffer + i*seg_sz, segments[i],
                                    seg_sz) != 0) {

@@ -1121,7 +1121,7 @@ section .text
         vmovd   [tmp], xbip     ; tmp already holds _auth_tag_output
 
         ;; set job status
-        or      dword [job + _status], STS_COMPLETED
+        or      dword [job + _status], IMB_STATUS_COMPLETED
 
         ;;  return job
         mov     rax, job
