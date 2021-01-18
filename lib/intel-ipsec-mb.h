@@ -593,8 +593,6 @@ struct chacha20_poly1305_context_data {
  */
 #define IMB_GCM_IV_DATA_LEN (12)
 
-#define LONGEST_TESTED_AAD_LENGTH (2 * 1024)
-
 /* Key lengths of 128 and 256 supported */
 #define IMB_GCM_128_KEY_LEN (16)
 #define IMB_GCM_192_KEY_LEN (24)
