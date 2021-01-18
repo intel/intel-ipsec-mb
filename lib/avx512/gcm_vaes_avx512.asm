@@ -4840,7 +4840,7 @@ exit_ghash_pre:
 ;        const struct gcm_key_data *key_data,
 ;        const void   *in,
 ;        const u64    in_len,
-;        void         *tag,
+;        void         *io_tag,
 ;        const u64    tag_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(ghash_vaes_avx512,function,)
@@ -4870,7 +4870,10 @@ ghash_vaes_avx512:
         jz      exit_ghash
 %endif
 
-        vpxor   xmm0, xmm0
+        ;; copy tag to xmm0
+        vmovdqu	xmm0, [arg4]
+        vpshufb xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
+
         CALC_AAD_HASH arg2, arg3, xmm0, arg1, zmm1, zmm2, zmm3, zmm4, zmm5, \
                       zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, zmm12, zmm13, \
                       zmm15, zmm16, zmm17, zmm18, zmm19, r10, r11, r12, k1

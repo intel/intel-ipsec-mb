@@ -1946,6 +1946,7 @@ test_ghash(struct test_suite_context *ts)
                 uint8_t T_test[16];
 
                 memset(&gdata_key, 0, sizeof(struct gcm_key_data));
+                memset(T_test, 0, sizeof(T_test));
                 IMB_GHASH_PRE(p_gcm_mgr, vector->K, &gdata_key);
                 IMB_GHASH(p_gcm_mgr, &gdata_key, vector->P, vector->Plen,
                           T_test, vector->Tlen);

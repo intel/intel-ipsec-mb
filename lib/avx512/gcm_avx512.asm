@@ -3869,7 +3869,10 @@ ghash_avx512:
         jz      exit_ghash
 %endif
 
-        vpxor   xmm0, xmm0
+        ;; copy tag to xmm0
+        vmovdqu	xmm0, [arg4]
+        vpshufb xmm0, [rel SHUF_MASK] ; perform a 16Byte swap
+
         CALC_AAD_HASH arg2, arg3, xmm0, arg1, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, \
                       r10, r11, r12
 

@@ -1355,8 +1355,8 @@ IMB_DLL_EXPORT void init_mb_mgr_auto(IMB_MGR *state, IMB_ARCH *arch);
 
 #define IMB_GHASH_PRE(_mgr, _key_in, _key_exp)          \
         ((_mgr)->ghash_pre((_key_in), (_key_exp)))
-#define IMB_GHASH(_mgr, _key, _in, _in_len, _out, _out_len) \
-        ((_mgr)->ghash((_key), (_in), (_in_len), (_out), (_out_len)))
+#define IMB_GHASH(_mgr, _key, _in, _in_len, _io_auth, _out_len) \
+        ((_mgr)->ghash((_key), (_in), (_in_len), (_io_auth), (_out_len)))
 
 /* Chacha20-Poly1305 direct API's */
 #define IMB_CHACHA20_POLY1305_INIT(_mgr, _key, _ctx, _iv, _aad, _aadl)        \
