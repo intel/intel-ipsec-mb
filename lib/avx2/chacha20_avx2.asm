@@ -80,7 +80,7 @@ db      2, 3, 0, 1, 6, 7, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13
 
 struc STACK
 _STATE:         reso    32      ; Space to store first 8 states
-_YMM_SAVE:      reso    4       ; Space to store up to 4 temporary YMM registers
+_YMM_SAVE:      resy    2       ; Space to store up to 2 temporary YMM registers
 _GP_SAVE:       resq    7       ; Space to store up to 7 GP registers
 _RSP_SAVE:      resq    1       ; Space to store rsp pointer
 endstruc
