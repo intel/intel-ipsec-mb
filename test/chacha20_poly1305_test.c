@@ -572,6 +572,13 @@ test_sgl(struct IMB_MGR *mb_mgr,
                 goto exit;
         }
 
+        /*
+         * Initialize tags with different values, to make sure the comparison
+         * is false if they are not updated by the library
+         */
+        memset(sgl_digest, 0, DIGEST_SZ);
+        memset(linear_digest, 0xFF, DIGEST_SZ);
+
         generate_random_buf(in_buffer, buffer_sz);
         generate_random_buf(key, KEY_SZ);
         generate_random_buf(iv, IV_SZ);
