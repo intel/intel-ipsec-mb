@@ -785,6 +785,8 @@ const uint32_t auth_tag_length_bytes[] = {
                 16, /* AES_CMAC_256 */
                 16, /* POLY1305 */
                 16, /* AEAD CHACHA20-POLY1305 */
+                16, /* AEAD CHACHA20 with SGL support*/
+                4,  /* ZUC-256-EIA3 */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
