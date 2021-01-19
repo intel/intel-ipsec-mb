@@ -625,11 +625,16 @@ endif
 install: $(LIB_DIR)/$(LIBNAME)
 	install -d $(HDR_DIR)
 	install -m 0644 $(IMB_HDR) $(HDR_DIR)
-	install -d $(LIB_INSTALL_DIR)
-	install -s -m $(LIBPERM) $(LIB_DIR)/$(LIBNAME) $(LIB_INSTALL_DIR)
 	install -d $(MAN_DIR)
 	install -m 0444 $(MAN1) $(MAN_DIR)
 	install -m 0444 $(MAN2) $(MAN_DIR)
+	install -d $(LIB_INSTALL_DIR)
+ifeq ($(SHARED),y)
+	install -s -m $(LIBPERM) $(LIB_DIR)/$(LIBNAME) $(LIB_INSTALL_DIR)
+else
+	# must not strip symbol table for static libs
+	install -m $(LIBPERM) $(LIB_DIR)/$(LIBNAME) $(LIB_INSTALL_DIR)
+endif
 ifeq ($(SHARED),y)
 	cd $(LIB_INSTALL_DIR); \
 		ln -f -s $(LIB).so.$(VERSION) $(LIB).so.$(SO_VERSION); \
