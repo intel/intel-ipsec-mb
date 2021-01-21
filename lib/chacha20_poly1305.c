@@ -364,8 +364,7 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
         if (job->cipher_direction == IMB_DIR_ENCRYPT) {
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                        submit_job_chacha20_enc_dec_sse(job);
-                        poly1305_key_gen_sse(job->enc_keys, job->iv, ks);
+                        submit_job_chacha20_poly_enc_sse(job, ks);
                         break;
                 case IMB_ARCH_AVX:
                         submit_job_chacha20_enc_dec_avx(job);

@@ -61,6 +61,7 @@ void chacha20_enc_dec_ks_avx512(const void *src, void *dst,
 IMB_JOB *submit_job_chacha20_poly_enc_avx512(IMB_JOB *, void *poly_key);
 IMB_JOB *submit_job_chacha20_poly_dec_avx512(IMB_JOB *, const void *ks,
                                              const uint64_t len_to_xor);
+IMB_JOB *submit_job_chacha20_poly_enc_sse(IMB_JOB *, void *poly_key);
 
 void poly1305_key_gen_sse(const void *key, const void *iv, void *poly_key);
 void poly1305_key_gen_avx(const void *key, const void *iv, void *poly_key);
