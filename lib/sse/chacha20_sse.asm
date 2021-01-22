@@ -620,7 +620,7 @@ section .text
 ;; Encodes 4 Chacha20 states, outputting 256 bytes of keystream
 ;; Data still needs to be transposed to get the keystream in the correct order
 ;;
-%macro GENERATE_256_KS 16
+%macro GENERATE_256_KS 17
 %define %%XMM_DWORD_0   %1  ;; [out] XMM register to contain encoded dword 0 of the 4 Chacha20 states
 %define %%XMM_DWORD_1   %2  ;; [out] XMM register to contain encoded dword 1 of the 4 Chacha20 states
 %define %%XMM_DWORD_2   %3  ;; [out] XMM register to contain encoded dword 2 of the 4 Chacha20 states
@@ -637,6 +637,7 @@ section .text
 %define %%XMM_DWORD_13 %14  ;; [out] XMM register to contain encoded dword 13 of the 4 Chacha20 states
 %define %%XMM_DWORD_14 %15  ;; [out] XMM register to contain encoded dword 14 of the 4 Chacha20 states
 %define %%XMM_DWORD_15 %16  ;; [out] XMM register to contain encoded dword 15 of the 4 Chacha20 states
+%define %%LOOP_IDX     %17  ;; [clobbered] GP register to contain loop index
 
 %assign i 0
 %rep 16
@@ -644,7 +645,8 @@ section .text
 %assign i (i + 1)
 %endrep
 
-%rep 10
+        mov     DWORD(%%LOOP_IDX), 10
+%%start_loop:
         CHACHA20_ROUND %%XMM_DWORD_0, %%XMM_DWORD_1, %%XMM_DWORD_2, %%XMM_DWORD_3, \
                        %%XMM_DWORD_4, %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, \
                        %%XMM_DWORD_8, %%XMM_DWORD_9, %%XMM_DWORD_10, %%XMM_DWORD_11, \
@@ -654,7 +656,9 @@ section .text
                        %%XMM_DWORD_5, %%XMM_DWORD_6, %%XMM_DWORD_7, %%XMM_DWORD_4, \
                        %%XMM_DWORD_10, %%XMM_DWORD_11, %%XMM_DWORD_8, %%XMM_DWORD_9, \
                        %%XMM_DWORD_15, %%XMM_DWORD_12, %%XMM_DWORD_13, %%XMM_DWORD_14
-%endrep
+
+        dec     DWORD(%%LOOP_IDX)
+        jnz     %%start_loop
 
 %assign i 0
 %rep 16
@@ -675,6 +679,8 @@ submit_job_chacha20_enc_dec_sse:
 %define off     rax
 %define tmp     iv
 %define tmp2    keys
+
+        push    r13
 
         ; Read pointers and length
         mov     len, [job + _msg_len_to_cipher_in_bytes]
@@ -745,7 +751,7 @@ start_loop:
 
         ; Generate 256 bytes of keystream
         GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, r13
 
         ;; Transpose state to get keystream and XOR with plaintext
         ;; to get ciphertext
@@ -952,7 +958,7 @@ more_than_2_blocks_left:
 
         ; Generate 256 bytes of keystream
         GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, r13
 
         ;; Transpose state to get keystream and XOR with plaintext
         ;; to get ciphertext
@@ -1056,6 +1062,7 @@ exit:
         mov     rax, job
         or      dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
 
+        pop     r13
         ret
 
 align 32
@@ -1195,7 +1202,7 @@ start_loop_ks:
 
         ; Generate 256 bytes of keystream
         GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, tmp4
 
         ;; Transpose state to get keystream and XOR with plaintext
         ;; to get ciphertext
@@ -1416,7 +1423,7 @@ more_than_2_blocks_left_ks:
 
         ; Generate 256 bytes of keystream
         GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, tmp4
 
         ;; Transpose state to get keystream and XOR with plaintext
         ;; to get ciphertext
@@ -1591,6 +1598,7 @@ submit_job_chacha20_poly_enc_sse:
         and     rsp, -16
         mov     [rsp + _GP_SAVE], r12
         mov     [rsp + _GP_SAVE + 8], r13
+        mov     [rsp + _GP_SAVE + 16], r14
         mov     [rsp + _RSP_SAVE], rax ; save RSP
 
         mov     added_len, 64
@@ -1652,7 +1660,7 @@ submit_job_chacha20_poly_enc_sse:
 
         ; Generate Poly key and encrypt 192 bytes of keystream
         GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, r14
 
         ;; Transpose state to get keystream and XOR with plaintext
         ;; to get ciphertext
@@ -1756,7 +1764,7 @@ start_loop_poly:
 
         ; Generate 256 bytes of keystream
         GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, r14
 
         ;; Transpose state to get keystream and XOR with plaintext
         ;; to get ciphertext
@@ -2006,7 +2014,7 @@ more_than_2_blocks_left_poly:
 
         ; Generate 256 bytes of keystream
         GENERATE_256_KS xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, \
-                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15
+                        xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, r14
 
         ;; Transpose state to get keystream and XOR with plaintext
         ;; to get ciphertext
@@ -2151,6 +2159,7 @@ no_partial_block_poly:
 
         mov     r12, [rsp + _GP_SAVE]
         mov     r13, [rsp + _GP_SAVE + 8]
+        mov     r14, [rsp + _GP_SAVE + 16]
         mov     rsp, [rsp + _RSP_SAVE]
 
         mov     rax, job
