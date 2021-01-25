@@ -113,6 +113,49 @@ section .text
 ;
 ; Encrypts up to 64 bytes of data.
 ;
+%macro ENCRYPT_64B 10-11
+%define %%SRC     %1 ; [in] Source pointer
+%define %%DST     %2 ; [in] Destination pointer
+%define %%REG_OFF %3 ; [in] Offset into src/dst (register)
+%define %%IMM_OFF %4 ; [in] Offset into src/dst (immediate)
+%define %%KS0     %5 ; [in/clobbered] Bytes 0-15 of keystream
+%define %%KS1     %6 ; [in/clobbered] Bytes 16-31 of keystream
+%define %%KS2     %7 ; [in/clobbered] Bytes 32-47 of keystream
+%define %%KS3     %8 ; [in/clobbered] Bytes 48-63 of keystream
+%define %%XT0     %9 ; [clobbered] Temporary XMM
+%define %%XT1    %10 ; [clobbered] Temporary XMM
+%define %%KS_PTR %11 ; [in] Pointer to keystream
+
+        movdqu  %%XT0, [%%SRC + %%REG_OFF + %%IMM_OFF]
+        movdqu  %%XT1, [%%SRC + %%REG_OFF + %%IMM_OFF + 16]
+%if %0 == 11
+        pxor    %%XT0, [%%KS_PTR]
+        pxor    %%XT1, [%%KS_PTR + 16]
+%else
+        pxor    %%XT0, %%KS0
+        pxor    %%XT1, %%KS1
+%endif
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF], %%XT0
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 16], %%XT1
+
+        movdqu  %%XT0, [%%SRC + %%REG_OFF + %%IMM_OFF + 32]
+        movdqu  %%XT1, [%%SRC + %%REG_OFF + %%IMM_OFF + 48]
+%if %0 == 11
+        pxor    %%XT0, [%%KS_PTR + 32]
+        pxor    %%XT1, [%%KS_PTR + 48]
+%else
+        pxor    %%XT0, %%KS2
+        pxor    %%XT1, %%KS3
+%endif
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 32], %%XT0
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 48], %%XT1
+%endmacro
+
+;
+; Encrypts 64 bytes of data.
+; Keystream needs to be aligned to 16 bytes,
+; if pointer is passed
+;
 %macro ENCRYPT_1B_64B 15-16
 %define %%SRC     %1  ; [in/out] Source pointer
 %define %%DST     %2  ; [in/out] Destination pointer
@@ -835,21 +878,8 @@ check_1_or_2_blocks_left:
         jne     less_than_64
 
         ;; Exactly 64 bytes left
-
-        ; Load plaintext, XOR with KS and store ciphertext
-        movdqu  xmm14, [src + off]
-        movdqu  xmm15, [src + off + 16]
-        pxor    xmm14, xmm9
-        pxor    xmm15, xmm10
-        movdqu  [dst + off], xmm14
-        movdqu  [dst + off + 16], xmm15
-
-        movdqu  xmm14, [src + off + 16*2]
-        movdqu  xmm15, [src + off + 16*3]
-        pxor    xmm14, xmm11
-        pxor    xmm15, xmm12
-        movdqu  [dst + off + 16*2], xmm14
-        movdqu  [dst + off + 16*3], xmm15
+        ENCRYPT_64B src, dst, off, 0, xmm9, xmm10, xmm11, xmm12, \
+                    xmm5, xmm6
 
         jmp     no_partial_block
 
@@ -889,52 +919,19 @@ two_blocks_left:
         cmp     len, 128
         jb      between_64_127
 
-        ; Load plaintext, XOR with KS and store ciphertext
-        movdqu  xmm14, [src + off]
-        movdqu  xmm15, [src + off + 16]
-        pxor    xmm14, xmm4
-        pxor    xmm15, xmm5
-        movdqu  [dst + off], xmm14
-        movdqu  [dst + off + 16], xmm15
+        ; Load 128 bytes of plaintext, XOR with KS and store ciphertext
+        ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
+                    xmm0, xmm1
 
-        movdqu  xmm14, [src + off + 16*2]
-        movdqu  xmm15, [src + off + 16*3]
-        pxor    xmm14, xmm6
-        pxor    xmm15, xmm7
-        movdqu  [dst + off + 16*2], xmm14
-        movdqu  [dst + off + 16*3], xmm15
-
-        movdqu  xmm14, [src + off + 16*4]
-        movdqu  xmm15, [src + off + 16*5]
-        pxor    xmm14, xmm9
-        pxor    xmm15, xmm10
-        movdqu  [dst + off + 16*4], xmm14
-        movdqu  [dst + off + 16*5], xmm15
-
-        movdqu  xmm14, [src + off + 16*6]
-        movdqu  xmm15, [src + off + 16*7]
-        pxor    xmm14, xmm11
-        pxor    xmm15, xmm12
-        movdqu  [dst + off + 16*6], xmm14
-        movdqu  [dst + off + 16*7], xmm15
+        ENCRYPT_64B src, dst, off, 64, xmm9, xmm10, xmm11, xmm12, \
+                    xmm0, xmm1
 
         jmp     no_partial_block
 
 between_64_127:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
-        movdqu  xmm14, [src + off]
-        movdqu  xmm15, [src + off + 16]
-        pxor    xmm14, xmm4
-        pxor    xmm15, xmm5
-        movdqu  [dst + off], xmm14
-        movdqu  [dst + off + 16], xmm15
-
-        movdqu  xmm14, [src + off + 16*2]
-        movdqu  xmm15, [src + off + 16*3]
-        pxor    xmm14, xmm6
-        pxor    xmm15, xmm7
-        movdqu  [dst + off + 16*2], xmm14
-        movdqu  [dst + off + 16*3], xmm15
+        ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
+                    xmm0, xmm1
 
         sub     len, 64
 
@@ -997,33 +994,11 @@ more_than_2_blocks_left:
         ; xmm12-15 containing [64*I + 48 : 64*I + 63] (I = 0-3) bytes of KS
 
         ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
-        movdqu  xmm2, [src + off]
-        movdqu  xmm3, [src + off + 16]
-        pxor    xmm0, xmm2
-        pxor    xmm4, xmm3
-        movdqu  [dst + off], xmm0
-        movdqu  [dst + off + 16], xmm4
+        ENCRYPT_64B src, dst, off, 0, xmm0, xmm4, xmm8, xmm12, \
+                    xmm2, xmm3
 
-        movdqu  xmm2, [src + off + 16*2]
-        movdqu  xmm3, [src + off + 16*3]
-        pxor    xmm8, xmm2
-        pxor    xmm12, xmm3
-        movdqu  [dst + off + 16*2], xmm8
-        movdqu  [dst + off + 16*3], xmm12
-
-        movdqu  xmm2, [src + off + 16*4]
-        movdqu  xmm3, [src + off + 16*5]
-        pxor    xmm1, xmm2
-        pxor    xmm5, xmm3
-        movdqu  [dst + off + 16*4], xmm1
-        movdqu  [dst + off + 16*5], xmm5
-
-        movdqu  xmm2, [src + off + 16*6]
-        movdqu  xmm3, [src + off + 16*7]
-        pxor    xmm9, xmm2
-        pxor    xmm13, xmm3
-        movdqu  [dst + off + 16*6], xmm9
-        movdqu  [dst + off + 16*7], xmm13
+        ENCRYPT_64B src, dst, off, 64, xmm1, xmm5, xmm9, xmm13, \
+                    xmm2, xmm3
 
         ; Restore xmm2,xmm3
         movdqa  xmm2, [rsp + _XMM_SAVE]
@@ -1038,24 +1013,11 @@ more_than_2_blocks_left:
         jb      between_129_191
 
         ; Encrypt next 64 bytes (128-191)
-        movdqu  xmm0, [src + off]
-        movdqu  xmm1, [src + off + 16]
-        pxor    xmm2, xmm0
-        pxor    xmm6, xmm1
-        movdqu  [dst + off], xmm2
-        movdqu  [dst + off + 16], xmm6
-
-        movdqu  xmm0, [src + off + 16*2]
-        movdqu  xmm1, [src + off + 16*3]
-        pxor    xmm10, xmm0
-        pxor    xmm14, xmm1
-        movdqu  [dst + off + 16*2], xmm10
-        movdqu  [dst + off + 16*3], xmm14
+        ENCRYPT_64B src, dst, off, 0, xmm2, xmm6, xmm10, xmm14, \
+                    xmm0, xmm1
 
         sub     len, 64
-
         ; Check if there are remaining bytes to process
-        or      len, len
         jz      no_partial_block
 
         ENCRYPT_1B_64B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
@@ -1364,19 +1326,8 @@ check_1_or_2_blocks_left_ks:
         ;; Exactly 64 bytes left
 
         ; Load plaintext, XOR with KS and store ciphertext
-        movdqu  xmm14, [src + off]
-        movdqu  xmm15, [src + off + 16]
-        pxor    xmm14, xmm9
-        pxor    xmm15, xmm10
-        movdqu  [dst + off], xmm14
-        movdqu  [dst + off + 16], xmm15
-
-        movdqu  xmm14, [src + off + 16*2]
-        movdqu  xmm15, [src + off + 16*3]
-        pxor    xmm14, xmm11
-        pxor    xmm15, xmm12
-        movdqu  [dst + off + 16*2], xmm14
-        movdqu  [dst + off + 16*3], xmm15
+        ENCRYPT_64B src, dst, off, 0, xmm9, xmm10, xmm11, xmm12, \
+                    xmm14, xmm15
 
         inc     blk_cnt
 
@@ -1429,34 +1380,12 @@ two_blocks_left_ks:
         cmp     len, 128
         jb      between_64_127_ks
 
-        ; Load plaintext, XOR with KS and store ciphertext
-        movdqu  xmm14, [src + off]
-        movdqu  xmm15, [src + off + 16]
-        pxor    xmm14, xmm4
-        pxor    xmm15, xmm5
-        movdqu  [dst + off], xmm14
-        movdqu  [dst + off + 16], xmm15
+        ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
+        ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
+                    xmm14, xmm15
 
-        movdqu  xmm14, [src + off + 16*2]
-        movdqu  xmm15, [src + off + 16*3]
-        pxor    xmm14, xmm6
-        pxor    xmm15, xmm7
-        movdqu  [dst + off + 16*2], xmm14
-        movdqu  [dst + off + 16*3], xmm15
-
-        movdqu  xmm14, [src + off + 16*4]
-        movdqu  xmm15, [src + off + 16*5]
-        pxor    xmm14, xmm9
-        pxor    xmm15, xmm10
-        movdqu  [dst + off + 16*4], xmm14
-        movdqu  [dst + off + 16*5], xmm15
-
-        movdqu  xmm14, [src + off + 16*6]
-        movdqu  xmm15, [src + off + 16*7]
-        pxor    xmm14, xmm11
-        pxor    xmm15, xmm12
-        movdqu  [dst + off + 16*6], xmm14
-        movdqu  [dst + off + 16*7], xmm15
+        ENCRYPT_64B src, dst, off, 64, xmm9, xmm10, xmm11, xmm12, \
+                    xmm14, xmm15
 
         add     blk_cnt, 2
 
@@ -1464,19 +1393,8 @@ two_blocks_left_ks:
 
 between_64_127_ks:
         ; Load plaintext, XOR with KS and store ciphertext for first 64 bytes
-        movdqu  xmm14, [src + off]
-        movdqu  xmm15, [src + off + 16]
-        pxor    xmm14, xmm4
-        pxor    xmm15, xmm5
-        movdqu  [dst + off], xmm14
-        movdqu  [dst + off + 16], xmm15
-
-        movdqu  xmm14, [src + off + 16*2]
-        movdqu  xmm15, [src + off + 16*3]
-        pxor    xmm14, xmm6
-        pxor    xmm15, xmm7
-        movdqu  [dst + off + 16*2], xmm14
-        movdqu  [dst + off + 16*3], xmm15
+        ENCRYPT_64B src, dst, off, 0, xmm4, xmm5, xmm6, xmm7, \
+                    xmm14, xmm15
 
         sub     len, 64
         add     off, 64
@@ -1539,33 +1457,11 @@ more_than_2_blocks_left_ks:
         ; xmm12-15 containing [64*I + 48 : 64*I + 63] (I = 0-3) bytes of KS
 
         ; Encrypt first 128 bytes of plaintext (there are at least two 64 byte blocks to process)
-        movdqu  xmm2, [src + off]
-        movdqu  xmm3, [src + off + 16]
-        pxor    xmm0, xmm2
-        pxor    xmm4, xmm3
-        movdqu  [dst + off], xmm0
-        movdqu  [dst + off + 16], xmm4
+        ENCRYPT_64B src, dst, off, 0, xmm0, xmm4, xmm8, xmm12, \
+                    xmm2, xmm3
 
-        movdqu  xmm2, [src + off + 16*2]
-        movdqu  xmm3, [src + off + 16*3]
-        pxor    xmm8, xmm2
-        pxor    xmm12, xmm3
-        movdqu  [dst + off + 16*2], xmm8
-        movdqu  [dst + off + 16*3], xmm12
-
-        movdqu  xmm2, [src + off + 16*4]
-        movdqu  xmm3, [src + off + 16*5]
-        pxor    xmm1, xmm2
-        pxor    xmm5, xmm3
-        movdqu  [dst + off + 16*4], xmm1
-        movdqu  [dst + off + 16*5], xmm5
-
-        movdqu  xmm2, [src + off + 16*6]
-        movdqu  xmm3, [src + off + 16*7]
-        pxor    xmm9, xmm2
-        pxor    xmm13, xmm3
-        movdqu  [dst + off + 16*6], xmm9
-        movdqu  [dst + off + 16*7], xmm13
+        ENCRYPT_64B src, dst, off, 64, xmm1, xmm5, xmm9, xmm13, \
+                    xmm2, xmm3
 
         ; Restore xmm2,xmm3
         movdqa  xmm2, [rsp + _XMM_SAVE]
@@ -1581,19 +1477,8 @@ more_than_2_blocks_left_ks:
         jb      between_129_191_ks
 
         ; Encrypt next 64 bytes (128-191)
-        movdqu  xmm0, [src + off]
-        movdqu  xmm1, [src + off + 16]
-        pxor    xmm2, xmm0
-        pxor    xmm6, xmm1
-        movdqu  [dst + off], xmm2
-        movdqu  [dst + off + 16], xmm6
-
-        movdqu  xmm0, [src + off + 16*2]
-        movdqu  xmm1, [src + off + 16*3]
-        pxor    xmm10, xmm0
-        pxor    xmm14, xmm1
-        movdqu  [dst + off + 16*2], xmm10
-        movdqu  [dst + off + 16*3], xmm14
+        ENCRYPT_64B src, dst, off, 0, xmm2, xmm6, xmm10, xmm14, \
+                    xmm0, xmm1
 
         add     off, 64
         sub     len, 64
