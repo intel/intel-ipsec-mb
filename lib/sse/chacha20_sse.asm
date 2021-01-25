@@ -110,25 +110,26 @@ endstruc
 
 section .text
 
-%macro ENCRYPT_0B_64B 14-15
-%define %%SRC  %1 ; [in/out] Source pointer
-%define %%DST  %2 ; [in/out] Destination pointer
-%define %%LEN  %3 ; [in/clobbered] Length to encrypt
-%define %%OFF  %4 ; [in] Offset into src/dst
-%define %%KS0  %5 ; [in/out] Bytes 0-15 of keystream
-%define %%KS1  %6 ; [in/out] Bytes 16-31 of keystream
-%define %%KS2  %7 ; [in/out] Bytes 32-47 of keystream
-%define %%KS3  %8 ; [in/out] Bytes 48-63 of keystream
-%define %%PT0  %9 ; [in/clobbered] Bytes 0-15 of plaintext
-%define %%PT1  %10 ; [in/clobbered] Bytes 16-31 of plaintext
-%define %%PT2  %11 ; [in/clobbered] Bytes 32-47 of plaintext
-%define %%PT3  %12 ; [in/clobbered] Bytes 48-63 of plaintext
-%define %%TMP  %13 ; [clobbered] Temporary GP register
-%define %%TMP2 %14 ; [clobbered] Temporary GP register
-%define %%KS_PTR %15 ; [in] Pointer to keystream
-
-        or      %%LEN, %%LEN
-        jz      %%end_encrypt
+;
+; Encrypts up to 64 bytes of data.
+;
+%macro ENCRYPT_1B_64B 15-16
+%define %%SRC     %1  ; [in/out] Source pointer
+%define %%DST     %2  ; [in/out] Destination pointer
+%define %%LEN     %3  ; [in/clobbered] Length to encrypt
+%define %%REG_OFF %4  ; [in] Offset into src/dst (register)
+%define %%IMM_OFF %5  ; [in] Offset into src/dst (immediate)
+%define %%KS0     %6  ; [in/clobbered] Bytes 0-15 of keystream
+%define %%KS1     %7  ; [in/clobbered] Bytes 16-31 of keystream
+%define %%KS2     %8  ; [in/clobbered] Bytes 32-47 of keystream
+%define %%KS3     %9  ; [in/clobbered] Bytes 48-63 of keystream
+%define %%PT0     %10 ; [clobbered] Bytes 0-15 of plaintext
+%define %%PT1     %11 ; [clobbered] Bytes 16-31 of plaintext
+%define %%PT2     %12 ; [clobbered] Bytes 32-47 of plaintext
+%define %%PT3     %13 ; [clobbered] Bytes 48-63 of plaintext
+%define %%TMP     %14 ; [clobbered] Temporary GP register
+%define %%TMP2    %15 ; [clobbered] Temporary GP register
+%define %%KS_PTR  %16 ; [in] Pointer to keystream
 
         cmp     %%LEN, 16
         jbe     %%up_to_16B
@@ -139,11 +140,35 @@ section .text
         cmp     %%LEN, 48
         jbe     %%up_to_48B
 
-%%up_to_64B:
-        movdqu  %%PT0, [%%SRC + %%OFF]
-        movdqu  %%PT1, [%%SRC + %%OFF + 16]
-        movdqu  %%PT2, [%%SRC + %%OFF + 32]
-%if %0 == 15
+        cmp     %%LEN, 64
+        jb      %%up_to_63B
+
+        movdqu  %%PT0, [%%SRC + %%REG_OFF + %%IMM_OFF]
+        movdqu  %%PT1, [%%SRC + %%REG_OFF + %%IMM_OFF + 16]
+        movdqu  %%PT2, [%%SRC + %%REG_OFF + %%IMM_OFF + 32]
+        movdqu  %%PT3, [%%SRC + %%REG_OFF + %%IMM_OFF + 48]
+%if %0 == 16
+        movdqu  %%KS0, [%%KS_PTR]
+        movdqu  %%KS1, [%%KS_PTR + 16]
+        movdqu  %%KS2, [%%KS_PTR + 32]
+        movdqu  %%KS3, [%%KS_PTR + 48]
+%endif
+        pxor    %%PT0, %%KS0
+        pxor    %%PT1, %%KS1
+        pxor    %%PT2, %%KS2
+        pxor    %%PT3, %%KS3
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF], %%PT0
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 16], %%PT1
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 32], %%PT2
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 48], %%PT3
+
+        jmp     %%end_encrypt
+
+%%up_to_63B:
+        movdqu  %%PT0, [%%SRC + %%REG_OFF + %%IMM_OFF]
+        movdqu  %%PT1, [%%SRC + %%REG_OFF + %%IMM_OFF + 16]
+        movdqu  %%PT2, [%%SRC + %%REG_OFF + %%IMM_OFF + 32]
+%if %0 == 16
         movdqu  %%KS0, [%%KS_PTR]
         movdqu  %%KS1, [%%KS_PTR + 16]
         movdqu  %%KS2, [%%KS_PTR + 32]
@@ -151,19 +176,17 @@ section .text
         pxor    %%PT0, %%KS0
         pxor    %%PT1, %%KS1
         pxor    %%PT2, %%KS2
-        movdqu  [%%DST + %%OFF], %%PT0
-        movdqu  [%%DST + %%OFF + 16], %%PT1
-        movdqu  [%%DST + %%OFF + 32], %%PT2
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF], %%PT0
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 16], %%PT1
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 32], %%PT2
 
-        add     %%SRC, %%OFF
-        add     %%DST, %%OFF
-        add     %%SRC, 48
-        add     %%DST, 48
-        sub     %%LEN, 48
-        simd_load_sse_16_1 %%PT3, %%SRC, %%LEN
+        lea     %%SRC, [%%SRC + %%REG_OFF + 48 + %%IMM_OFF]
+        lea     %%DST, [%%DST + %%REG_OFF + 48 + %%IMM_OFF]
+        sub     %%LEN, (48 + %%IMM_OFF)
+        simd_load_sse_15_1 %%PT3, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
-%if %0 == 15
+%if %0 == 16
         movdqu  %%KS3, [%%KS_PTR + 48]
 %endif
         pxor    %%PT3, %%KS3
@@ -173,26 +196,24 @@ section .text
         jmp     %%end_encrypt
 
 %%up_to_48B:
-        movdqu  %%PT0, [%%SRC + %%OFF]
-        movdqu  %%PT1, [%%SRC + %%OFF + 16]
-%if %0 == 15
+        movdqu  %%PT0, [%%SRC + %%REG_OFF + %%IMM_OFF]
+        movdqu  %%PT1, [%%SRC + %%REG_OFF + %%IMM_OFF + 16]
+%if %0 == 16
         movdqu  %%KS0, [%%KS_PTR]
         movdqu  %%KS1, [%%KS_PTR + 16]
 %endif
         pxor    %%PT0, %%KS0
         pxor    %%PT1, %%KS1
-        movdqu  [%%DST + %%OFF], %%PT0
-        movdqu  [%%DST + %%OFF + 16], %%PT1
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF], %%PT0
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF + 16], %%PT1
 
-        add     %%SRC, %%OFF
-        add     %%DST, %%OFF
-        add     %%SRC, 32
-        add     %%DST, 32
-        sub     %%LEN, 32
+        lea     %%SRC, [%%SRC + %%REG_OFF + 32 + %%IMM_OFF]
+        lea     %%DST, [%%DST + %%REG_OFF + 32 + %%IMM_OFF]
+        sub     %%LEN, (32 + %%IMM_OFF)
         simd_load_sse_16_1 %%PT2, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
-%if %0 == 15
+%if %0 == 16
         movdqu  %%KS2, [%%KS_PTR + 32]
 %endif
         pxor    %%PT2, %%KS2
@@ -202,22 +223,20 @@ section .text
         jmp     %%end_encrypt
 
 %%up_to_32B:
-        movdqu  %%PT0, [%%SRC + %%OFF]
-%if %0 == 15
+        movdqu  %%PT0, [%%SRC + %%REG_OFF + %%IMM_OFF]
+%if %0 == 16
         movdqu  %%KS0, [%%KS_PTR]
 %endif
         pxor    %%PT0, %%KS0
-        movdqu  [%%DST + %%OFF], %%PT0
+        movdqu  [%%DST + %%REG_OFF + %%IMM_OFF], %%PT0
 
-        add     %%SRC, %%OFF
-        add     %%DST, %%OFF
-        add     %%SRC, 16
-        add     %%DST, 16
-        sub     %%LEN, 16
+        lea     %%SRC, [%%SRC + %%REG_OFF + 16 + %%IMM_OFF]
+        lea     %%DST, [%%DST + %%REG_OFF + 16 + %%IMM_OFF]
+        sub     %%LEN, (16 + %%IMM_OFF)
         simd_load_sse_16_1 %%PT1, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
-%if %0 == 15
+%if %0 == 16
         movdqu  %%KS1, [%%KS_PTR + 16]
 %endif
         pxor    %%PT1, %%KS1
@@ -227,12 +246,12 @@ section .text
         jmp     %%end_encrypt
 
 %%up_to_16B:
-        add     %%SRC, %%OFF
-        add     %%DST, %%OFF
+        lea     %%SRC, [%%SRC + %%REG_OFF + %%IMM_OFF]
+        lea     %%DST, [%%DST + %%REG_OFF + %%IMM_OFF]
         simd_load_sse_16_1 %%PT0, %%SRC, %%LEN
 
         ; XOR KS with plaintext and store resulting ciphertext
-%if %0 == 15
+%if %0 == 16
         movdqu  %%KS0, [%%KS_PTR]
 %endif
         pxor    %%PT0, %%KS0
@@ -836,7 +855,7 @@ check_1_or_2_blocks_left:
 
 less_than_64:
 
-        ENCRYPT_0B_64B    src, dst, len, off, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, off, src
 
         jmp     no_partial_block
@@ -918,9 +937,12 @@ between_64_127:
         movdqu  [dst + off + 16*3], xmm15
 
         sub     len, 64
-        add     off, 64
-        ; Handle rest up to 63 bytes in "less_than_64"
-        jmp     less_than_64
+
+        ; Handle rest up to 63 bytes
+        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm9, xmm10, xmm11, xmm12, \
+                        xmm0, xmm1, xmm2, xmm3, off, src
+
+        jmp     no_partial_block
 
 more_than_2_blocks_left:
 
@@ -1030,30 +1052,20 @@ more_than_2_blocks_left:
         movdqu  [dst + off + 16*2], xmm10
         movdqu  [dst + off + 16*3], xmm14
 
-        add     off, 64
         sub     len, 64
 
         ; Check if there are remaining bytes to process
         or      len, len
         jz      no_partial_block
 
-        ; move last 64 bytes of KS to xmm9-12 (used in less_than_64)
-        movdqa  xmm9, xmm3
-        movdqa  xmm10, xmm7
-        ; xmm11 is OK
-        movdqa  xmm12, xmm15
+        ENCRYPT_1B_64B  src, dst, len, off, 64, xmm3, xmm7, xmm11, xmm15, \
+                        xmm0, xmm1, xmm2, xmm4, off, src
 
-        jmp     less_than_64
+        jmp     no_partial_block
 
 between_129_191:
-        ; move bytes 128-191 of KS to xmm9-12 (used in less_than_64)
-        movdqa  xmm9, xmm2
-        movdqa  xmm11, xmm10
-        movdqa  xmm10, xmm6
-        movdqa  xmm12, xmm14
-
-        jmp     less_than_64
-
+        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
+                        xmm0, xmm1, xmm4, xmm3, off, src
 
 no_partial_block:
 
@@ -1147,7 +1159,7 @@ chacha20_enc_dec_ks_sse:
         mov     tmp5, tmp3
         ; Read up to 63 bytes of KS and XOR the first bytes of message
         ; with the previous unused bytes of keystream
-        ENCRYPT_0B_64B    src, dst, tmp3, off, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_64B  src, dst, tmp3, off, 0, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, tmp, tmp2, prev_ks
 
         ; Update remain bytes of KS
@@ -1374,7 +1386,7 @@ less_than_64_ks:
 
         ; Preserve len
         mov     tmp5, len
-        ENCRYPT_0B_64B    src, dst, len, off, xmm9, xmm10, xmm11, xmm12, \
+        ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
                         xmm0, xmm1, xmm2, xmm3, src, off
 
         inc     blk_cnt
