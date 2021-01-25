@@ -391,7 +391,10 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
                 /* generate key for authentication */
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                        poly1305_key_gen_sse(job->enc_keys, job->iv, ks);
+                        len_to_gen = (cipher_len >= (256 - 64)) ?
+                                                256 : (cipher_len + 64);
+                        gen_keystr_poly_key_sse(job->enc_keys, job->iv,
+                                                len_to_gen, ks);
                         break;
                 case IMB_ARCH_AVX:
                 case IMB_ARCH_AVX2:
@@ -416,7 +419,8 @@ IMB_JOB *aead_chacha20_poly1305(IMB_JOB *job, const IMB_ARCH arch)
 
                 switch (arch) {
                 case IMB_ARCH_SSE:
-                        submit_job_chacha20_enc_dec_sse(job);
+                        submit_job_chacha20_poly_dec_sse(job, ks + 64,
+                                                         len_to_gen - 64);
                         break;
                 case IMB_ARCH_AVX:
                         submit_job_chacha20_enc_dec_avx(job);

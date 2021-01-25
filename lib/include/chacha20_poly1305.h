@@ -46,6 +46,8 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *);
 void chacha20_enc_dec_ks_sse(const void *src, void *dst,
                              const uint64_t length, const void *key,
                              const struct chacha20_poly1305_context_data *ctx);
+IMB_JOB *submit_job_chacha20_poly_dec_sse(IMB_JOB *, const void *ks,
+                                          const uint64_t len_to_xor);
 IMB_JOB *submit_job_chacha20_enc_dec_avx(IMB_JOB *);
 void chacha20_enc_dec_ks_avx(const void *src, void *dst,
                              const uint64_t length, const void *key,
@@ -69,6 +71,9 @@ void poly1305_key_gen_avx(const void *key, const void *iv, void *poly_key);
 void poly1305_aead_update(const void *msg, const uint64_t msg_len,
                           void *hash, const void *key);
 void poly1305_aead_complete(const void *hash, const void *key, void *tag);
+
+void gen_keystr_poly_key_sse(const void *key, const void *iv,
+                             const uint64_t len, void *ks);
 
 void gen_keystr_poly_key_avx512(const void *key, const void *iv,
                                 const uint64_t len, void *ks);
