@@ -154,7 +154,7 @@ typedef enum {
 /*
  * Library error types
  */
-enum {
+typedef enum {
       IMB_ERR_MIN = 2000,
       IMB_ERR_NULL_MBMGR,
       IMB_ERR_JOB_NULL_SRC,
