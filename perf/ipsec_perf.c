@@ -88,6 +88,7 @@ typedef cpuset_t cpu_set_t;
 #define CCM_AAD_SIZE_MAX 46
 #define DEFAULT_GCM_AAD_SIZE 12
 #define DEFAULT_CCM_AAD_SIZE 8
+#define DEFAULT_CHACHA_POLY_AAD_SIZE 12
 
 #define ITER_SCALE_SMOKE 2048
 #define ITER_SCALE_SHORT 200000
@@ -820,6 +821,7 @@ uint32_t average_job_size = 0;
 uint32_t job_iter = 0;
 uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
 uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
+uint64_t chacha_poly_aad_size = DEFAULT_CHACHA_POLY_AAD_SIZE;
 
 struct custom_job_params custom_job_params = {
         .cipher_mode  = TEST_NULL_CIPHER,
@@ -2002,6 +2004,9 @@ process_variant(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 if (params->cipher_mode == TEST_CCM)
                         params->aad_size = ccm_aad_size;
 
+                if (params->cipher_mode == TEST_AEAD_CHACHA20)
+                        params->aad_size = chacha_poly_aad_size;
+
                 /*
                  * If job size == 0, check AAD size
                  * (only allowed for GCM/CCM)
@@ -3149,6 +3154,7 @@ int main(int argc, char *argv[])
                                 return EXIT_FAILURE;
                         }
                         ccm_aad_size = gcm_aad_size;
+                        chacha_poly_aad_size = gcm_aad_size;
                 } else if (strcmp(argv[i], "--job-iter") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &job_iter, sizeof(job_iter));
