@@ -36,9 +36,6 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
-#define SHA1_BLOCK_SIZE     64
-#define SHA1_DIGEST_SIZE    20
-
 int chained_test(struct IMB_MGR *mb_mgr);
 
 struct chained_vector {
@@ -504,7 +501,7 @@ chained_test(struct IMB_MGR *mb_mgr)
                                      chained_vectors,
                                      "AES-CBC + SHA1-HMAC standard test vectors",
                                      IMB_CIPHER_CBC, IMB_AUTH_HMAC_SHA_1,
-                                     SHA1_BLOCK_SIZE, num_jobs_tab[i]);
+                                     IMB_SHA1_BLOCK_SIZE, num_jobs_tab[i]);
 
         errors += test_suite_end(&ctx);
 
