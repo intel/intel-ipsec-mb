@@ -29,7 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/crc32_const.inc"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 [bits 64]
 default rel
 
@@ -73,6 +73,7 @@ section .text
 align 32
 MKGLOBAL(CRC32_LTE24A_FN, function,)
 CRC32_LTE24A_FN:
+        endbranch64
 %ifdef SAFE_PARAM
         or              arg1, arg1
         jz              .wrong_param
@@ -126,6 +127,7 @@ CRC32_LTE24A_FN:
 align 32
 MKGLOBAL(CRC32_LTE24B_FN, function,)
 CRC32_LTE24B_FN:
+        endbranch64
 %ifdef SAFE_PARAM
         or              arg1, arg1
         jz              .wrong_param

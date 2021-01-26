@@ -29,7 +29,7 @@
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %ifdef LINUX
 %define KEY		rdi
 %define EXP_ENC_KEYS	rsi
@@ -117,7 +117,7 @@ section .text
 ;
 MKGLOBAL(aes_keyexp_192_sse,function,)
 aes_keyexp_192_sse:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_192_sse_return
@@ -208,7 +208,7 @@ aes_keyexp_192_sse_return:
 
 MKGLOBAL(aes_keyexp_192_sse_no_aesni,function,)
 aes_keyexp_192_sse_no_aesni:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_192_sse_no_aesni_return
@@ -303,7 +303,7 @@ MKGLOBAL(aes_keyexp_192_avx512,function,)
 aes_keyexp_192_avx:
 aes_keyexp_192_avx2:
 aes_keyexp_192_avx512:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_192_avx_return
@@ -318,7 +318,6 @@ aes_keyexp_192_avx512:
 	vmovdqa	[rsp + 0*16], xmm6
 	vmovdqa	[rsp + 1*16], xmm7
 %endif
-
 	vmovq xmm7, [KEY + 16]	; loading the AES key, 64 bits
         vmovq [EXP_ENC_KEYS + 16], xmm7  ; Storing key in memory where all key expansion
         vpshufd xmm4, xmm7, 01001111b

@@ -30,7 +30,7 @@
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 ; Uses the f() function of the aeskeygenassist result
 %macro key_expansion_256_sse 0
 	;; Assumes the xmm3 includes all zeros at this point.
@@ -97,7 +97,7 @@ section .text
 ;
 MKGLOBAL(aes_keyexp_256_sse,function,)
 aes_keyexp_256_sse:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_256_sse_return
@@ -205,7 +205,7 @@ aes_keyexp_256_sse_return:
 
 MKGLOBAL(aes_keyexp_256_sse_no_aesni,function,)
 aes_keyexp_256_sse_no_aesni:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_256_sse_no_aesni_return
@@ -317,7 +317,7 @@ MKGLOBAL(aes_keyexp_256_avx512,function,)
 aes_keyexp_256_avx:
 aes_keyexp_256_avx2:
 aes_keyexp_256_avx512:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_256_avx_return

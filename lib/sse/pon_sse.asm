@@ -29,7 +29,7 @@
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 ;;; This is implementation of stitched algorithms: AES128-CTR + CRC32 + BIP
 ;;; This combination is required by PON/xPON/gPON standard.
 ;;; Note: BIP is running XOR of double words
@@ -885,6 +885,7 @@ DEC_NO_CTR_FN_NAME:
 align 64
 MKGLOBAL(HEC_32,function,)
 HEC_32:
+        endbranch64
         mov     eax, [arg1]
         bswap   eax
         HEC_COMPUTE_32 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
@@ -894,6 +895,7 @@ HEC_32:
 align 64
 MKGLOBAL(HEC_64,function,)
 HEC_64:
+        endbranch64
         mov     rax, [arg1]
         bswap   rax
         HEC_COMPUTE_64 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4

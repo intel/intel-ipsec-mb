@@ -27,7 +27,7 @@
 
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 section .text
 ;
 ; This function clears all scratch GP registers
@@ -121,7 +121,7 @@ force_memset_zero:
 
 MKGLOBAL(imb_clear_mem,function,)
 imb_clear_mem:
-
+        endbranch64
 %ifdef LINUX
         cmp rdi, 0
 %else

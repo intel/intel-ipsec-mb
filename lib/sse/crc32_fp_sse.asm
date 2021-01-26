@@ -29,7 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/crc32_const.inc"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 [bits 64]
 default rel
 
@@ -77,6 +77,7 @@ section .text
 align 32
 MKGLOBAL(CRC16_FP_DATA_FN, function,)
 CRC16_FP_DATA_FN:
+        endbranch64
 %ifdef SAFE_PARAM
         or              arg1, arg1
         jz              .wrong_param
@@ -131,6 +132,7 @@ CRC16_FP_DATA_FN:
 align 32
 MKGLOBAL(CRC11_FP_HEADER_FN, function,)
 CRC11_FP_HEADER_FN:
+        endbranch64
 %ifdef SAFE_PARAM
         or              arg1, arg1
         jz              .wrong_param
@@ -184,6 +186,7 @@ CRC11_FP_HEADER_FN:
 align 32
 MKGLOBAL(CRC7_FP_HEADER_FN, function,)
 CRC7_FP_HEADER_FN:
+        endbranch64
 %ifdef SAFE_PARAM
         or              arg1, arg1
         jz              .wrong_param

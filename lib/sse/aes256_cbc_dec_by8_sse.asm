@@ -44,7 +44,7 @@
 
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %ifndef AES_CBC_DEC_256
 %define AES_CBC_DEC_256 aes_cbc_dec_256_by8_sse
 %endif
@@ -265,11 +265,10 @@ align 32
 ;; AES_CBC_DEC_256(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
 MKGLOBAL(AES_CBC_DEC_256,function,internal)
 AES_CBC_DEC_256:
-
+        endbranch64
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
 %endif
-
 	movdqu	xIV, [p_IV]
 
 	mov	tmp, num_bytes

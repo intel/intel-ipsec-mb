@@ -28,7 +28,7 @@
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 ;;; Routines to do 128/256 bit CFB AES encrypt/decrypt operations on one block only.
 ;;; It processes only one buffer at a time.
 ;;; It is designed to manage partial blocks of DOCSIS 3.1 SEC BPI
@@ -162,7 +162,7 @@ section .text
 MKGLOBAL(AES_CFB_128_ONE,function,)
 align 32
 AES_CFB_128_ONE:
-
+        endbranch64
         do_cfb 9
 
 	ret

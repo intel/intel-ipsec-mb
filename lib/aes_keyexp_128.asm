@@ -30,7 +30,7 @@
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %macro key_expansion_128_sse 0
 	;; Assumes the xmm3 includes all zeros at this point.
         pshufd	xmm2, xmm2, 11111111b
@@ -73,7 +73,7 @@ section .text
 ;
 MKGLOBAL(aes_keyexp_128_sse,function,)
 aes_keyexp_128_sse:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_128_sse_return
@@ -82,7 +82,6 @@ aes_keyexp_128_sse:
         cmp     EXP_DEC_KEYS, 0
         jz      aes_keyexp_128_sse_return
 %endif
-
         movdqu	xmm1, [KEY]	; loading the AES key
 	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
         movdqa	[EXP_DEC_KEYS + 16*10], xmm1  ; Storing key in memory
@@ -157,7 +156,7 @@ aes_keyexp_128_sse_return:
 
 MKGLOBAL(aes_keyexp_128_sse_no_aesni,function,)
 aes_keyexp_128_sse_no_aesni:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_128_sse_no_aesni_return
@@ -166,7 +165,6 @@ aes_keyexp_128_sse_no_aesni:
         cmp     EXP_DEC_KEYS, 0
         jz      aes_keyexp_128_sse_no_aesni_return
 %endif
-
         movdqu	xmm1, [KEY]	; loading the AES key
 	movdqa	[EXP_ENC_KEYS + 16*0], xmm1
         movdqa	[EXP_DEC_KEYS + 16*10], xmm1  ; Storing key in memory
@@ -250,7 +248,7 @@ MKGLOBAL(aes_keyexp_128_avx512,function,)
 aes_keyexp_128_avx:
 aes_keyexp_128_avx2:
 aes_keyexp_128_avx512:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_128_avx_return

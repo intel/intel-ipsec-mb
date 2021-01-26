@@ -33,6 +33,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
+%include "include/cet.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -138,7 +139,6 @@ endstruc
 ;;; SUBMIT_FLUSH [in] - SUBMIT, FLUSH job selection
 %macro GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE 1
 %define %%SUBMIT_FLUSH %1
-
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -520,12 +520,14 @@ align 64
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CMAC_AUTH,function,internal)
 SUBMIT_JOB_AES_CMAC_AUTH:
+        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE SUBMIT
 
 ; IMB_JOB * flush_job_aes_cmac_auth_sse(MB_MGR_CMAC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CMAC_AUTH,function,internal)
 FLUSH_JOB_AES_CMAC_AUTH:
+        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_SSE FLUSH
 
 

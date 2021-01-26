@@ -43,6 +43,7 @@
 ;
 %include "include/os.asm"
 %include "include/clear_regs.asm"
+%include "include/cet.inc"
 
 %ifndef AES_CBC_DEC_128
 %define AES_CBC_DEC_128 aes_cbc_dec_128_by8_sse
@@ -224,11 +225,10 @@ section .text
 align 32
 MKGLOBAL(AES_CBC_DEC_128,function,internal)
 AES_CBC_DEC_128:
-
+        endbranch64
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
 %endif
-
 	movdqu	xIV, [p_IV]
 
 	mov	tmp, num_bytes
@@ -307,11 +307,14 @@ mult_of_8_blks:
 	movdqa	xkey10, [p_keys + 10*16]
 
 main_loop2:
-	; num_bytes is a multiple of 8 and >0
-	do_aes_noload	8
-	add	p_out,	8*16
-	sub	num_bytes, 8*16
-	jne	main_loop2
+        endbranch64
+
+main_loop3:
+        ; num_bytes is a multiple of 8 and >0
+        do_aes_noload   8
+        add	p_out,	8*16
+        sub	num_bytes, 8*16
+        jne	main_loop3
 
 do_return2:
 
