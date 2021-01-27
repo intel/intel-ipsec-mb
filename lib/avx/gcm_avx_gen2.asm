@@ -1,3 +1,4 @@
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Copyright(c) 2011-2020 Intel Corporation All rights reserved.
 ;
@@ -117,7 +118,7 @@
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_sse_avx.asm"
 %include "include/memcpy.asm"
-
+%include "include/cet.inc"
 %ifndef GCM128_MODE
 %ifndef GCM192_MODE
 %ifndef GCM256_MODE
@@ -2057,7 +2058,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
-
+        endbranch64
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
         cmp     arg1, 0
@@ -2132,6 +2133,7 @@ exit_precomp:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
+        endbranch64
         push	r12
 	push	r13
 %ifidn __OUTPUT_FORMAT__, win64
@@ -2196,6 +2198,7 @@ exit_init:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
+        endbranch64
 	push	r12
 	push	r13
 %ifidn __OUTPUT_FORMAT__, win64
@@ -2271,7 +2274,7 @@ exit_init_IV:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
-
+        endbranch64
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -2315,7 +2318,7 @@ exit_update_enc:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
-
+        endbranch64
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -2359,7 +2362,7 @@ exit_update_dec:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
-
+        endbranch64
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
         cmp     arg1, 0
@@ -2425,7 +2428,7 @@ exit_enc_fin:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
-
+        endbranch64
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
         cmp     arg1, 0
@@ -2494,7 +2497,7 @@ exit_dec_fin:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
-
+        endbranch64
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -2570,7 +2573,7 @@ exit_enc:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
-
+        endbranch64
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -2819,6 +2822,7 @@ exit_dec_IV:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(ghash_pre_avx_gen2,function,)
 ghash_pre_avx_gen2:
+        endbranch64
 ;; Parameter is passed through register
 %ifdef SAFE_PARAM
         ;; Check key != NULL
@@ -2883,7 +2887,7 @@ exit_ghash_pre:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(ghash_avx_gen2,function,)
 ghash_avx_gen2:
-
+        endbranch64
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -3030,7 +3034,7 @@ exit_ghash:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
-
+        endbranch64
 	FUNC_SAVE
 
         ;; Check if plaintext_len == 0
