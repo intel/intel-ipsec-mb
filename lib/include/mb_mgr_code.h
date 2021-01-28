@@ -751,7 +751,6 @@ __forceinline
 IMB_JOB *
 SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 {
-        extern void poly1305_mac(IMB_JOB *);
         MB_MGR_HMAC_SHA_1_OOO *hmac_sha_1_ooo = state->hmac_sha_1_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_224_ooo = state->hmac_sha_224_ooo;
         MB_MGR_HMAC_SHA_256_OOO *hmac_sha_256_ooo = state->hmac_sha_256_ooo;
@@ -879,7 +878,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         case IMB_AUTH_POLY1305:
-                poly1305_mac(job);
+                POLY1305_MAC(job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         default: /* assume IMB_AUTH_GCM,IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL */

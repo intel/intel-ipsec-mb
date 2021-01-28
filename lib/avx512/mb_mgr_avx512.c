@@ -248,8 +248,9 @@ IMB_JOB *snow_v_sse(IMB_JOB *job);
 #define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_avx512
 #define SUBMIT_JOB_CHACHA20_POLY1305 aead_chacha20_poly1305_avx512
 #define SUBMIT_JOB_CHACHA20_POLY1305_SGL aead_chacha20_poly1305_sgl_avx512
-#define SUBMIT_JOB_SNOW_V snow_v_sse
+#define POLY1305_MAC poly1305_mac_avx512
 
+#define SUBMIT_JOB_SNOW_V snow_v_sse
 
 IMB_JOB *submit_job_hmac_avx512(MB_MGR_HMAC_SHA_1_OOO *state,
                                      IMB_JOB *job);
@@ -317,6 +318,8 @@ IMB_JOB *submit_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state,
 IMB_JOB *flush_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 
 IMB_JOB *submit_job_chacha20_enc_dec_avx512(IMB_JOB *job);
+
+void *poly1305_mac_avx512(IMB_JOB *job);
 
 __forceinline
 IMB_JOB *

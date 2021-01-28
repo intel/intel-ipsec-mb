@@ -68,9 +68,15 @@ IMB_JOB *submit_job_chacha20_poly_enc_sse(IMB_JOB *, void *poly_key);
 void poly1305_key_gen_sse(const void *key, const void *iv, void *poly_key);
 void poly1305_key_gen_avx(const void *key, const void *iv, void *poly_key);
 
-void poly1305_aead_update(const void *msg, const uint64_t msg_len,
-                          void *hash, const void *key);
-void poly1305_aead_complete(const void *hash, const void *key, void *tag);
+void poly1305_aead_update_scalar(const void *msg, const uint64_t msg_len,
+                                 void *hash, const void *key);
+void poly1305_aead_complete_scalar(const void *hash, const void *key,
+                                   void *tag);
+
+void poly1305_aead_update_avx512(const void *msg, const uint64_t msg_len,
+                                 void *hash, const void *key);
+void poly1305_aead_complete_avx512(const void *hash, const void *key,
+                                   void *tag);
 
 void gen_keystr_poly_key_sse(const void *key, const void *iv,
                              const uint64_t len, void *ks);

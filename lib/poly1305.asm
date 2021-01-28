@@ -403,11 +403,11 @@ section .text
 
 ;; =============================================================================
 ;; =============================================================================
-;; void poly1305_mac(IMB_JOB *job)
+;; void poly1305_mac_scalar(IMB_JOB *job)
 ;; arg1 - job structure
 align 32
-MKGLOBAL(poly1305_mac,function,internal)
-poly1305_mac:
+MKGLOBAL(poly1305_mac_scalar,function,internal)
+poly1305_mac_scalar:
         FUNC_ENTRY
 
 %ifndef LINUX
@@ -457,15 +457,15 @@ poly1305_mac:
 
 ;; =============================================================================
 ;; =============================================================================
-;; void poly1305_aead_update(const void *msg, const uint64_t msg_len,
-;;                           void *hash, const void *key)
+;; void poly1305_aead_update_scalar(const void *msg, const uint64_t msg_len,
+;;                                  void *hash, const void *key)
 ;; arg1 - message pointer
 ;; arg2 - message length in bytes
 ;; arg3 - pointer to current hash value (size 24 bytes)
 ;; arg4 - key pointer (size 32 bytes)
 align 32
-MKGLOBAL(poly1305_aead_update,function,internal)
-poly1305_aead_update:
+MKGLOBAL(poly1305_aead_update_scalar,function,internal)
+poly1305_aead_update_scalar:
 
 %ifdef SAFE_PARAM
         or      arg1, arg1
@@ -541,13 +541,13 @@ poly1305_aead_update:
 
 ;; =============================================================================
 ;; =============================================================================
-;; void poly1305_aead_complete(const void *hash, const void *key, void *tag)
+;; void poly1305_aead_complete_scalar(const void *hash, const void *key, void *tag)
 ;; arg1 - pointer to current hash value (size 24 bytes)
 ;; arg2 - key pointer (size 32 bytes)
 ;; arg3 - pointer to store computed authentication tag (16 bytes)
 align 32
-MKGLOBAL(poly1305_aead_complete,function,internal)
-poly1305_aead_complete:
+MKGLOBAL(poly1305_aead_complete_scalar,function,internal)
+poly1305_aead_complete_scalar:
 %ifdef SAFE_PARAM
         or      arg1, arg1
         jz      .poly1305_complete_exit
