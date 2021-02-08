@@ -437,7 +437,7 @@ aes_keyexp_256_avx_return:
 ;
 MKGLOBAL(aes_keyexp_256_enc_sse,function,)
 aes_keyexp_256_enc_sse:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_256_enc_sse_return
@@ -515,7 +515,7 @@ aes_keyexp_256_enc_sse_return:
 
 MKGLOBAL(aes_keyexp_256_enc_sse_no_aesni,function,)
 aes_keyexp_256_enc_sse_no_aesni:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_256_enc_sse_no_aesni_return
@@ -597,7 +597,7 @@ MKGLOBAL(aes_keyexp_256_enc_avx512,function,)
 aes_keyexp_256_enc_avx:
 aes_keyexp_256_enc_avx2:
 aes_keyexp_256_enc_avx512:
-
+        endbranch64
 %ifdef SAFE_PARAM
         cmp     KEY, 0
         jz      aes_keyexp_256_enc_avx_return
