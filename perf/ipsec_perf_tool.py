@@ -38,6 +38,8 @@ import sys
 import subprocess
 import platform
 import time
+import argparse
+import textwrap
 
 # number of variants to run
 TOTAL_VARIANTS = 0
@@ -178,25 +180,6 @@ class Variant:
         return info
 
 
-def print_usage(args):
-    """Print script usage"""
-    opts = '[--arch <archs>] [--cores <cores>] ' + \
-        '[--dirs <directions>] [--offset <offset>] ' + \
-        '[--algs <algo_types>] [--job-size <sizes>] [--quiet]'
-    print("Usage:")
-    print('{} {}'.format(args[0], opts))
-    print('\t--arch - list of architectures e.g. SSE,AVX,AVX2')
-    print('\t--cores - list/range of cores e.g. 2-8 or 3,4,5')
-    print('\t--dirs - cipher directions e.g. encrypt,decrypt')
-    print('\t--offset - offset for the SHA size increment, default is 24')
-    print('\t--algs - list of algorithm types e.g. cipher,hash,aead')
-    print('\t--job-size - size of the cipher & hash job in bytes. It can be:\n'
-          '            - single value: test single size\n'
-          '            - list: test multiple sizes separated by commas\n'
-          '            - range: test multiple sizes with following format'
-          ' min:step:max (e.g. 16:16:256)\n')
-
-
 def init_vars():
     """Initialize global variables"""
     global TOTAL_VARIANTS
@@ -282,62 +265,6 @@ def parse_results(variants):
     return out
 
 
-def parse_args(args):
-    """Parse command line arguments"""
-    global QUIET
-    archs = ['SSE', 'AVX', 'AVX2', 'AVX512']
-    cores = None
-    directions = ['encrypt', 'decrypt']
-    offset = None
-    algs = ['cipher', 'hash', 'aead']
-    sizes = None
-
-    for i in range(1, len(args)):
-        if args[i] == '--arch':
-            try:
-                archs = args[i+1].strip().split(',')
-            except:
-                print('error: parsing --arch argument', file=sys.stderr)
-                sys.exit(1)
-        if args[i] == '--cores':
-            try:
-                cores = parse_cores(args[i+1])
-            except:
-                print('error: parsing --cores argument', file=sys.stderr)
-                sys.exit(1)
-        if args[i] == '--dirs':
-            try:
-                directions = args[i+1].strip().split(',')
-            except:
-                print('error: parsing --dir argument', file=sys.stderr)
-                sys.exit(1)
-        if args[i] == '--offset':
-            try:
-                offset = args[i+1].strip()
-            except:
-                print('error: parsing --offset argument', file=sys.stderr)
-                sys.exit(1)
-        if args[i] == '--algs':
-            try:
-                algs = args[i+1].strip().split(',')
-            except:
-                print('error: parsing --args argument', file=sys.stderr)
-                sys.exit(1)
-        if args[i] == '--job-size':
-            try:
-                sizes = args[i+1].strip()
-            except:
-                print('error: parsing --job-size argument', file=sys.stderr)
-                sys.exit(1)
-        if args[i] == '--quiet':
-            QUIET = True
-        if args[i] == '--help' or args[i] == 'h':
-            print_usage(args)
-            sys.exit()
-
-    return archs, cores, directions, offset, algs, sizes
-
-
 def run_test(core=None):
     """
     Main processing thread function
@@ -379,6 +306,66 @@ def run_test(core=None):
         TODO_Q.task_done()
 
 
+def parse_args():
+    """Parse command line arguments"""
+    global QUIET
+    archs = ['SSE', 'AVX', 'AVX2', 'AVX512']
+    cores = None
+    directions = ['encrypt', 'decrypt']
+    offset = 24
+    alg_types = ['cipher-only', 'hash-only', 'aead-only']
+    sizes = None
+
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
+                                     description="Wrapper script for the ipsec-mb " \
+                                     "performance application enabling extended functionality")
+
+    # parse and validate args
+    parser.add_argument("-a", "--arch", choices=archs, default=None, action='append',
+                        help="set architecture to test (default is test all archs)")
+    parser.add_argument("-c", "--cores", default=cores, help="list/range of cores e.g. 2-8 or 3,4,5")
+    parser.add_argument("-d", "--direction", default=None,
+                        choices=directions, help="Cipher direction")
+    parser.add_argument("-o", "--offset", default=offset, type=int,
+                        help="offset for the SHA size increment, default is 24")
+    parser.add_argument("-t", "--alg-type", default=None, action='append', choices=alg_types,
+                        help="algorithm types to test")
+    parser.add_argument("-s", "--job-size", default=None,
+                        help=textwrap.dedent('''\
+                        size of the cipher & hash job in bytes.
+                        It can be:
+                           - single value: test single size
+                           - list: test multiple sizes separated by commas
+                           - range: test multiple sizes with following format
+                             min:step:max (e.g. 16:16:256)\n'''))
+    parser.add_argument("-q", "--quiet", default=False, action='store_true',
+                        help="disable verbose output")
+
+    args = parser.parse_args()
+
+    # convert values where necessary
+    if args.arch is not None:
+        archs = args.arch
+
+    if args.alg_type is not None:
+        alg_types = args.alg_type
+
+    if args.cores is not None:
+        try:
+            cores = parse_cores(args.cores)
+        except:
+            print("{}: error: argument -c/--cores: invalid value " \
+                  "{}".format(sys.argv[0], args.cores), file=sys.stderr)
+            sys.exit(1)
+
+    if args.direction is not None:
+        directions = [args.direction]
+
+    if args.quiet is True:
+        QUIET = True
+
+    return archs, cores, directions, str(args.offset), alg_types, args.job_size
+
 def main():
     """
     Main function to:
@@ -404,13 +391,13 @@ def main():
     init_vars()
 
     # parse command line  args
-    archs, cores, directions, offset, algs, sizes = parse_args(sys.argv)
+    archs, cores, directions, offset, alg_types, sizes = parse_args()
 
     # print args
     if QUIET is False:
         print('Testing:', file=sys.stderr)
         print('  Architectures: {}'.format(archs), file=sys.stderr)
-        print('  Algorithms: {}'.format(algs), file=sys.stderr)
+        print('  Algorithms: {}'.format(alg_types), file=sys.stderr)
         print('  Directions: {}'.format(directions), file=sys.stderr)
         if offset is not None:
             print('  Offset: {}'.format(offset), file=sys.stderr)
@@ -421,11 +408,11 @@ def main():
         print(header, file=sys.stderr)
 
     # get list of selected algorithms
-    if 'cipher' in algs:
+    if 'cipher-only' in alg_types:
         cipher_algos = get_algos('cipher')
-    if 'hash' in algs:
+    if 'hash-only' in alg_types:
         hash_algos = get_algos('hash')
-    if 'aead' in algs:
+    if 'aead-only' in alg_types:
         aead_algos = get_algos('aead')
 
     # fill todo queue with variants to test
