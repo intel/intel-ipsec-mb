@@ -39,7 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32_refl.inc"
-
+%include "include/cet.inc"
 %ifndef CRC32_REFL_FN
 %define CRC32_REFL_FN crc32_refl_by8_sse
 %endif
@@ -72,6 +72,7 @@ section .text
 align 32
 MKGLOBAL(CRC32_REFL_FN,function,internal)
 CRC32_REFL_FN:
+        endbranch64
         not             DWORD(arg1)
 
         ;; check if smaller than 256B

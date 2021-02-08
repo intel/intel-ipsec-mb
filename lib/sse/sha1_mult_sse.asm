@@ -29,7 +29,7 @@
 
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
-
+%include "include/cet.inc"
 %include "mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
 
@@ -297,7 +297,7 @@ align 32
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_mult_sse,function,internal)
 sha1_mult_sse:
-
+        endbranch64
 	sub	rsp, FRAMESZ
 
 	;; Initialize digests

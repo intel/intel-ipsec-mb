@@ -39,7 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32.inc"
-
+%include "include/cet.inc"
 %ifndef CRC32_FN
 %define CRC32_FN crc32_by8_sse
 %endif
@@ -72,6 +72,7 @@ section .text
 align 32
 MKGLOBAL(CRC32_FN,function,internal)
 CRC32_FN:
+        endbranch64
         ;; check if smaller than 256B
         cmp             arg3, 256
         jl              .less_than_256

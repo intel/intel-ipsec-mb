@@ -30,7 +30,7 @@
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 ; routine to do AES192 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
@@ -497,11 +497,13 @@ align 32
 ;; aes_cntr_192_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 MKGLOBAL(AES_CNTR_192,function,internal)
 AES_CNTR_192:
+        endbranch64
         DO_CNTR CNTR
 
 ;; aes_cntr_bit_192_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bits, UINT64 iv_len)
 MKGLOBAL(AES_CNTR_BIT_192,function,internal)
 AES_CNTR_BIT_192:
+        endbranch64
         DO_CNTR CNTR_BIT
 
 %ifdef LINUX

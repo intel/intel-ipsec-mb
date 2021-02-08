@@ -37,7 +37,7 @@
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-
+%include "include/cet.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -112,6 +112,7 @@ flush_job_hmac_sha_224_ni_sse:
 MKGLOBAL(flush_job_hmac_sha_256_ni_sse,function,internal)
 flush_job_hmac_sha_256_ni_sse:
 %endif
+        endbranch64
 	mov	rax, rsp
 	sub	rsp, STACK_size
 	and	rsp, -16
@@ -137,6 +138,7 @@ flush_job_hmac_sha_256_ni_sse:
 	DBGPRINTL64 "idx:", idx
 
 copy_lane_data:
+        endbranch64
 	; copy idx to empty lanes
 	mov	tmp, [state + _args_data_ptr_sha256 + PTR_SZ*idx]
 	xor	len2, len2
@@ -278,7 +280,7 @@ copy_full_digest:
 %endif
 
 clear_ret:
-
+        endbranch64
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
 
@@ -317,6 +319,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
+        endbranch64
         DBGPRINTL "exit sha256-ni-sse flush"
 
 	mov	rbx, [rsp + _gpr_save + 8*0]

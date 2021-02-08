@@ -44,7 +44,7 @@
 
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %ifndef AES_CBC_DEC_256
 %define AES_CBC_DEC_256 aes_cbc_dec_256_sse
 %endif
@@ -90,6 +90,7 @@ section .text
 
 MKGLOBAL(AES_CBC_DEC_256,function,internal)
 AES_CBC_DEC_256:
+        endbranch64
 %ifndef LINUX
 	mov	LEN, [rsp + 8*5]
 %endif

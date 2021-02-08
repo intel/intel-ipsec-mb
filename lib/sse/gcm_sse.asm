@@ -2720,7 +2720,7 @@ exit_dec:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,)
 FN_NAME(enc_var_iv,_):
-
+        endbranch64
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -2810,7 +2810,7 @@ exit_enc_IV:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,)
 FN_NAME(dec_var_iv,_):
-
+        endbranch64
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM

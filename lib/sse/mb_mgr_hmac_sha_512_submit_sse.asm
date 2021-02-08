@@ -31,7 +31,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
-
+%include "include/cet.inc"
 extern sha512_x2_sse
 
 section .data
@@ -104,7 +104,7 @@ endstruc
 ; arg 2 : rdx : job
 MKGLOBAL(FUNC,function,internal)
 FUNC:
-
+        endbranch64
 	mov	rax, rsp
 	sub	rsp, STACK_size
 	and	rsp, -16
@@ -162,7 +162,7 @@ fast_copy:
 %assign I (I+1)
 %endrep
 end_fast_copy:
-
+        endbranch64
 	mov	size_offset, extra_blocks
 	shl	size_offset, 7
 	sub	size_offset, last_len
@@ -203,6 +203,7 @@ ge128_bytes:
 
 	align	16
 start_loop:
+        endbranch64
 	; Find min length
 	movdqa	xmm0, [state + _lens_sha512]
 	phminposuw	xmm1, xmm0
@@ -398,6 +399,7 @@ clear_ret:
 %endif ;; SAFE_DATA
 
 return:
+        endbranch64
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 %ifndef LINUX

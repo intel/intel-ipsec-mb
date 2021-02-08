@@ -27,7 +27,7 @@
 
 %include "include/os.asm"
 %include "include/memcpy.asm"
-
+%include "include/cet.inc"
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -43,6 +43,7 @@ section .text
 ; void memcpy_fn_sse_16(void *dst, const void *src, const size_t size)
 MKGLOBAL(memcpy_fn_sse_16,function,internal)
 memcpy_fn_sse_16:
+        endbranch64
         memcpy_sse_16 arg1, arg2, arg3, r10, r11
 
         ret

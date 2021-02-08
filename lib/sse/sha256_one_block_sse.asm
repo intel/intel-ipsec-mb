@@ -29,7 +29,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 section .data
 default rel
 align 64
@@ -369,6 +369,7 @@ section .text
 MKGLOBAL(FUNC,function,internal)
 align 32
 FUNC:
+        endbranch64
 	push	rbx
 %ifndef LINUX
 	push	rsi

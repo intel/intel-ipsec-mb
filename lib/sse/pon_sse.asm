@@ -858,6 +858,7 @@ section .text
 align 32
 MKGLOBAL(ENC_FN_NAME,function,internal)
 ENC_FN_NAME:
+        endranch64
         AES128_CTR_PON ENC, CTR
         ret
 
@@ -865,6 +866,7 @@ ENC_FN_NAME:
 align 32
 MKGLOBAL(DEC_FN_NAME,function,internal)
 DEC_FN_NAME:
+        endbranch64
         AES128_CTR_PON DEC, CTR
         ret
 
@@ -872,6 +874,7 @@ DEC_FN_NAME:
 align 32
 MKGLOBAL(ENC_NO_CTR_FN_NAME,function,internal)
 ENC_NO_CTR_FN_NAME:
+        endbranch64
         AES128_CTR_PON ENC, NO_CTR
         ret
 
@@ -879,6 +882,7 @@ ENC_NO_CTR_FN_NAME:
 align 32
 MKGLOBAL(DEC_NO_CTR_FN_NAME,function,internal)
 DEC_NO_CTR_FN_NAME:
+        endbranch64
         AES128_CTR_PON DEC, NO_CTR
         ret
 

@@ -42,7 +42,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %include "mb_mgr_datastruct.asm"
 
 %ifdef LINUX
@@ -109,6 +109,7 @@ section .text
 MKGLOBAL(sha1_ni,function,internal)
 align 32
 sha1_ni:
+        endbranch64
 	sub		rsp, frame_size
 
         DBGPRINTL "enter sha1-ni-x2"

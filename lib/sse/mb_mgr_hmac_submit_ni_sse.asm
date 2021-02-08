@@ -47,7 +47,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
-
+%include "include/cet.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -117,7 +117,7 @@ endstruc
 ; arg 2 : rdx : job
 MKGLOBAL(submit_job_hmac_ni_sse,function,internal)
 submit_job_hmac_ni_sse:
-
+        endbranch64
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -171,7 +171,7 @@ fast_copy:
         movdqa	[lane_data + _extra_block + 2*16], xmm2
         movdqa	[lane_data + _extra_block + 3*16], xmm3
 end_fast_copy:
-
+        endbranch64
         mov	size_offset, extra_blocks
         shl	size_offset, 6
         sub	size_offset, last_len
@@ -210,6 +210,7 @@ ge64_bytes:
 
         align	16
 start_loop:
+        endbranch64
 	; Find min length - only two lanes available
 	xor     len2, len2
 	mov	p3, 0x10000
@@ -355,6 +356,7 @@ clear_ret:
 %endif
 
 return:
+        endbranch64
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 %ifndef LINUX
