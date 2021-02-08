@@ -31,7 +31,7 @@
 %include "include/transpose_avx2.asm"
 %include "include/memcpy.asm"
 %include "mb_mgr_datastruct.asm"
-
+%include "include/cet.inc"
 %define APPEND(a,b) a %+ b
 
 section .data
@@ -891,10 +891,12 @@ align 64
 
 MKGLOBAL(asm_ZucInitialization_8_avx2,function,internal)
 asm_ZucInitialization_8_avx2:
+        endbranch64
         ZUC_INIT_8 128
 
 MKGLOBAL(asm_Zuc256Initialization_8_avx2,function,internal)
 asm_Zuc256Initialization_8_avx2:
+        endbranch64
         ZUC_INIT_8 256
 
 ;
@@ -1012,7 +1014,7 @@ asm_Zuc256Initialization_8_avx2:
 ;;
 MKGLOBAL(asm_ZucGenKeystream32B_8_avx2,function,internal)
 asm_ZucGenKeystream32B_8_avx2:
-
+    endbranch64
     KEYGEN_8_AVX2 8
     vzeroupper
     ret
@@ -1030,7 +1032,7 @@ asm_ZucGenKeystream32B_8_avx2:
 ;;
 MKGLOBAL(asm_ZucGenKeystream8B_8_avx2,function,internal)
 asm_ZucGenKeystream8B_8_avx2:
-
+    endbranch64
     KEYGEN_8_AVX2 2
     vzeroupper
     ret
@@ -1048,7 +1050,7 @@ asm_ZucGenKeystream8B_8_avx2:
 ;;
 MKGLOBAL(asm_ZucGenKeystream4B_8_avx2,function,internal)
 asm_ZucGenKeystream4B_8_avx2:
-
+    endbranch64
     KEYGEN_8_AVX2 1
     vzeroupper
     ret
@@ -1234,7 +1236,7 @@ asm_ZucGenKeystream4B_8_avx2:
 ;;
 MKGLOBAL(asm_ZucCipher_8_avx2,function,internal)
 asm_ZucCipher_8_avx2:
-
+        endbranch64
 %ifdef LINUX
         %define         pState  rdi
         %define         pIn     rsi

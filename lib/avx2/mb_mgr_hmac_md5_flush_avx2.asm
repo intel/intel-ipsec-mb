@@ -29,6 +29,7 @@
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
+%include "include/cet.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 extern md5_x8x2_avx2
@@ -129,7 +130,7 @@ endstruc
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_md5_avx2,function,internal)
 flush_job_hmac_md5_avx2:
-
+        endbranch64
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -32
@@ -162,6 +163,7 @@ flush_job_hmac_md5_avx2:
 
 
 copy_lane_data:
+        endbranch64
         ; copy good lane (idx) to empty lanes
         mov	tmp, [state + _args_data_ptr_md5 + PTR_SZ*idx]
         ;; tackle lower 8 lanes
@@ -190,6 +192,7 @@ APPEND(upper_skip_,I):
 
         align	32
 start_loop0:
+        endbranch64
         ; Find min length
         vphminposuw	xmm2, xmm0
         vpextrw	DWORD(len2), xmm2, 0	; min value
@@ -340,6 +343,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
+        endbranch64
         DBGPRINTL "---------- exit md5 flush -----------"
         vzeroupper
 

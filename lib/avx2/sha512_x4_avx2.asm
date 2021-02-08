@@ -47,7 +47,7 @@
 %include "include/dbgprint.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 section .data
 default rel
 align 64
@@ -322,6 +322,7 @@ endstruc
 MKGLOBAL(sha512_x4_avx2,function,internal)
 align 32
 sha512_x4_avx2:
+        endbranch64
 	; general registers preserved in outer calling routine
 	; outer calling routine saves all the XMM registers
 
@@ -388,6 +389,7 @@ lloop:
 	jmp	Lrounds_16_xx
 align 16
 Lrounds_16_xx:
+        endbranch64
 %rep 16
 	ROUND_16_XX	T1, i
 %assign i (i+1)

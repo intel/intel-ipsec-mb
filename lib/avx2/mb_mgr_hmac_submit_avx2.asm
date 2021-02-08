@@ -33,7 +33,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 %include "include/const.inc"
-
+%include "include/cet.inc"
 extern sha1_x8_avx2
 
 section .data
@@ -101,7 +101,7 @@ endstruc
 ; arg 2 : rdx : job
 MKGLOBAL(submit_job_hmac_avx2,function,internal)
 submit_job_hmac_avx2:
-
+        endbranch64
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -32		; align to 32 byte boundary
@@ -155,7 +155,7 @@ fast_copy:
         vmovdqu    [lane_data + _extra_block + 0*32], ymm0
         vmovdqu    [lane_data + _extra_block + 1*32], ymm1
 end_fast_copy:
-
+        endbranch64
         mov	size_offset, extra_blocks
         shl	size_offset, 6
         sub	size_offset, last_len
@@ -198,6 +198,7 @@ ge64_bytes:
         align	16
 start_loop:
         ; Find min length
+        endbranch64
         vmovdqa	xmm0, [state + _lens]
         vphminposuw	xmm1, xmm0
         vpextrw	DWORD(len2), xmm1, 0	; min value
@@ -348,6 +349,7 @@ clear_ret:
 %endif
 
 return:
+        endbranch64
         vzeroupper
         DBGPRINTL "---------- exit sha1 submit -----------"
         mov	rbp, [rsp + _gpr_save + 8*0]

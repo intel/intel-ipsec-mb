@@ -29,6 +29,7 @@
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
+%include "include/cet.inc"
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 extern sha1_x8_avx2
@@ -118,7 +119,7 @@ endstruc
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_avx2,function,internal)
 flush_job_hmac_avx2:
-
+        endbranch64
 	mov	rax, rsp
 	sub	rsp, STACK_size
 	and	rsp, -32		; align stack to 32 byte boundary
@@ -143,6 +144,7 @@ flush_job_hmac_avx2:
 %endrep
 
 copy_lane_data:
+        endbranch64
 	; copy valid lane (idx) to empty lanes
 	vmovdqa	xmm0, [state + _lens]
 	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
@@ -301,6 +303,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
+        endbranch64
         vzeroupper
 	mov	rbp, [rsp + _gpr_save + 8*0]
 	mov	r12, [rsp + _gpr_save + 8*1]

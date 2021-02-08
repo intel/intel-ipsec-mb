@@ -31,7 +31,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
-
+%include "include/cet.inc"
 extern sha512_x4_avx2
 
 section .data
@@ -106,7 +106,7 @@ endstruc
 ; arg 2 : rdx : job
 MKGLOBAL(FUNC,function,internal)
 FUNC:
-
+        endbranch64
 	mov	rax, rsp
 	sub	rsp, STACK_size
 	and	rsp, -32
@@ -161,7 +161,7 @@ fast_copy:
 	vmovdqu	[lane_data + _extra_block_sha512 + 2*32], ymm2
 	vmovdqu	[lane_data + _extra_block_sha512 + 3*32], ymm3
 end_fast_copy:
-
+        endbranch64
 	mov	size_offset, extra_blocks
 	shl	size_offset, 7
 	sub	size_offset, last_len
@@ -205,6 +205,7 @@ ge128_bytes:
 	align	16
 start_loop:
 	; Find min length
+        endbranch64
 	vmovdqa	xmm0, [state + _lens_sha512]
 	vphminposuw	xmm1, xmm0
 	vpextrw	DWORD(len2), xmm1, 0	; min value
@@ -366,7 +367,7 @@ copy_full_digest:
 %endif
 
 clear_ret:
-
+        endbranch64
 %ifdef SAFE_DATA
         ;; Clear digest (48B/64B), outer_block (48B/64B) and extra_block (128B) of returned job
 %assign J 0
@@ -399,6 +400,7 @@ clear_ret:
 %endif ;; SAFE_DATA
 
 return:
+        endbranch64
         vzeroupper
 
 	mov	rbx, [rsp + _gpr_save + 8*0]

@@ -31,7 +31,7 @@
 %include "include/clear_regs.asm"
 %include "include/transpose_avx2.asm"
 %include "include/chacha_poly_defines.asm"
-
+%include "include/cet.inc"
 section .data
 default rel
 
@@ -556,7 +556,7 @@ section .text
 align 32
 MKGLOBAL(submit_job_chacha20_enc_dec_avx2,function,internal)
 submit_job_chacha20_enc_dec_avx2:
-
+        endbranch64
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -916,7 +916,7 @@ partial_block:
         simd_store_avx2 dst, ymm1, len, tmp, tmp2
 
 no_partial_block:
-
+        endbranch64
 %ifdef SAFE_DATA
         vpxor ymm0, ymm0
         ; Clear stack frame
@@ -941,7 +941,7 @@ exit:
 align 32
 MKGLOBAL(chacha20_enc_dec_ks_avx2,function,internal)
 chacha20_enc_dec_ks_avx2:
-
+        endbranch64
 %define blk_cnt r10
 
 %define prev_ks r13
@@ -1351,7 +1351,7 @@ less_than_1_full_block_ks:
         mov     [ctx + RemainKsBytes], tmp
 
 no_partial_block_ks:
-
+        endbranch64
         mov     [ctx + LastBlkCount], blk_cnt
 
 %ifdef SAFE_DATA
