@@ -44,7 +44,7 @@
 %include "include/transpose_avx512.asm"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 ; re-use K256 from sha256_oct_avx2.asm
 extern K256
 
@@ -574,6 +574,7 @@ section .text
 MKGLOBAL(sha256_x16_avx512,function,internal)
 align 64
 sha256_x16_avx512:
+        endbranch64
 	mov	rax, rsp
         sub     rsp, STACK_SPACE
 	and	rsp, ~63	; align stack to multiple of 64

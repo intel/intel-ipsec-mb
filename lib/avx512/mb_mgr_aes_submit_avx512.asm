@@ -28,7 +28,7 @@
 %include "include/os.asm"
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
-
+%include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 %ifndef AES_CBC_ENC_X16
@@ -141,7 +141,7 @@ endstruc
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_ENC,function,internal)
 SUBMIT_JOB_AES_ENC:
-
+        endbranch64
         mov     rax, rsp
         sub     rsp, STACK_size
         and     rsp, -16

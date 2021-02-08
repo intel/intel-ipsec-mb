@@ -44,7 +44,7 @@
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-
+%include "include/cet.inc"
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -149,9 +149,11 @@ align 32
 %ifdef SHA224
 MKGLOBAL(flush_job_hmac_sha_224_avx512,function,internal)
 flush_job_hmac_sha_224_avx512:
+        endbranch64
 %else
 MKGLOBAL(flush_job_hmac_sha_256_avx512,function,internal)
 flush_job_hmac_sha_256_avx512:
+        endbranch64
 %endif
 	mov	rax, rsp
 	sub	rsp, STACK_size

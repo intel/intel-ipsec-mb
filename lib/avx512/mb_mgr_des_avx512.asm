@@ -49,7 +49,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 %include "include/const.inc"
-
+%include "include/cet.inc"
 extern docsis_des_x16_enc_avx512
 extern docsis_des_x16_dec_avx512
 extern des_x16_cbc_enc_avx512
@@ -436,6 +436,7 @@ section .text
 align 64
 MKGLOBAL(submit_job_des_cbc_enc_avx512,function,internal)
 submit_job_des_cbc_enc_avx512:
+        endbranch64
         GENERIC_DES_SUBMIT DES, ENC
         ret
 
@@ -444,6 +445,7 @@ submit_job_des_cbc_enc_avx512:
 align 64
 MKGLOBAL(submit_job_des_cbc_dec_avx512,function,internal)
 submit_job_des_cbc_dec_avx512:
+        endbranch64
         GENERIC_DES_SUBMIT DES, DEC
         ret
 
@@ -452,6 +454,7 @@ submit_job_des_cbc_dec_avx512:
 align 64
 MKGLOBAL(submit_job_docsis_des_enc_avx512,function,internal)
 submit_job_docsis_des_enc_avx512:
+        endbranch64
         GENERIC_DES_SUBMIT DOCSIS, ENC
         ret
 
@@ -460,6 +463,7 @@ submit_job_docsis_des_enc_avx512:
 align 64
 MKGLOBAL(submit_job_docsis_des_dec_avx512,function,internal)
 submit_job_docsis_des_dec_avx512:
+        endbranch64
         GENERIC_DES_SUBMIT DOCSIS, DEC
         ret
 
@@ -468,6 +472,7 @@ submit_job_docsis_des_dec_avx512:
 align 64
 MKGLOBAL(submit_job_3des_cbc_enc_avx512,function,internal)
 submit_job_3des_cbc_enc_avx512:
+        endbranch64
         GENERIC_DES_SUBMIT 3DES, ENC
         ret
 
@@ -476,6 +481,7 @@ submit_job_3des_cbc_enc_avx512:
 align 64
 MKGLOBAL(submit_job_3des_cbc_dec_avx512,function,internal)
 submit_job_3des_cbc_dec_avx512:
+        endbranch64
         GENERIC_DES_SUBMIT 3DES, DEC
         ret
 
@@ -483,6 +489,7 @@ submit_job_3des_cbc_dec_avx512:
 align 64
 MKGLOBAL(flush_job_des_cbc_enc_avx512,function,internal)
 flush_job_des_cbc_enc_avx512:
+        endbranch64
         GENERIC_DES_FLUSH DES, ENC
         ret
 
@@ -490,6 +497,7 @@ flush_job_des_cbc_enc_avx512:
 align 64
 MKGLOBAL(flush_job_des_cbc_dec_avx512,function,internal)
 flush_job_des_cbc_dec_avx512:
+        endbranch64
         GENERIC_DES_FLUSH DES, DEC
         ret
 
@@ -497,6 +505,7 @@ flush_job_des_cbc_dec_avx512:
 align 64
 MKGLOBAL(flush_job_docsis_des_enc_avx512,function,internal)
 flush_job_docsis_des_enc_avx512:
+        endbranch64
         GENERIC_DES_FLUSH DOCSIS, ENC
         ret
 
@@ -504,6 +513,7 @@ flush_job_docsis_des_enc_avx512:
 align 64
 MKGLOBAL(flush_job_docsis_des_dec_avx512,function,internal)
 flush_job_docsis_des_dec_avx512:
+        endbranch64
         GENERIC_DES_FLUSH DOCSIS, DEC
         ret
 
@@ -511,6 +521,7 @@ flush_job_docsis_des_dec_avx512:
 align 64
 MKGLOBAL(flush_job_3des_cbc_enc_avx512,function,internal)
 flush_job_3des_cbc_enc_avx512:
+        endbranch64
         GENERIC_DES_FLUSH 3DES, ENC
         ret
 
@@ -518,6 +529,7 @@ flush_job_3des_cbc_enc_avx512:
 align 64
 MKGLOBAL(flush_job_3des_cbc_dec_avx512,function,internal)
 flush_job_3des_cbc_dec_avx512:
+        endbranch64
         GENERIC_DES_FLUSH 3DES, DEC
         ret
 

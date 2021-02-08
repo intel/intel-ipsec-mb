@@ -53,7 +53,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %ifdef LINUX
 %define arg1	rdi
 %define arg2	rsi
@@ -2361,6 +2361,7 @@ section .text
 align 64
 MKGLOBAL(des_x16_cbc_enc_avx512,function,internal)
 des_x16_cbc_enc_avx512:
+        endbranch64
         GENERIC_DES_ENC DES
         ret
 
@@ -2369,6 +2370,7 @@ des_x16_cbc_enc_avx512:
 align 64
 MKGLOBAL(des_x16_cbc_dec_avx512,function,internal)
 des_x16_cbc_dec_avx512:
+        endbranch64
         GENERIC_DES_DEC DES
 	ret
 
@@ -2377,6 +2379,7 @@ des_x16_cbc_dec_avx512:
 align 64
 MKGLOBAL(des3_x16_cbc_enc_avx512,function,internal)
 des3_x16_cbc_enc_avx512:
+        endbranch64
         GENERIC_DES_ENC 3DES
         ret
 
@@ -2385,6 +2388,7 @@ des3_x16_cbc_enc_avx512:
 align 64
 MKGLOBAL(des3_x16_cbc_dec_avx512,function,internal)
 des3_x16_cbc_dec_avx512:
+        endbranch64
         GENERIC_DES_DEC 3DES
 	ret
 
@@ -2393,6 +2397,7 @@ des3_x16_cbc_dec_avx512:
 align 64
 MKGLOBAL(docsis_des_x16_enc_avx512,function,internal)
 docsis_des_x16_enc_avx512:
+        endbranch64
         GENERIC_DES_ENC DOCSIS
 	ret
 
@@ -2401,6 +2406,7 @@ docsis_des_x16_enc_avx512:
 align 64
 MKGLOBAL(docsis_des_x16_dec_avx512,function,internal)
 docsis_des_x16_dec_avx512:
+        endbranch64
         GENERIC_DES_DEC DOCSIS
 	ret
 

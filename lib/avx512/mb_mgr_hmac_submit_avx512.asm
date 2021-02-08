@@ -46,7 +46,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
-
+%include "include/cet.inc"
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -121,7 +121,7 @@ endstruc
 ; arg 2 : rdx : job
 MKGLOBAL(submit_job_hmac_avx512,function,internal)
 submit_job_hmac_avx512:
-
+        enbranch64
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -32		; align to 32 byte boundary

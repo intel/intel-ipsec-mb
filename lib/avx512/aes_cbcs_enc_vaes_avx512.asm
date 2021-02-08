@@ -31,7 +31,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 struc STACK
 _gpr_save:      resq    1
 endstruc
@@ -447,6 +447,7 @@ section .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbcs_1_9_enc_128_vaes_avx512,function,internal)
 aes_cbcs_1_9_enc_128_vaes_avx512:
+        endbranch64
         FUNC_SAVE
         CBCS_ENC 9, 160
         FUNC_RESTORE

@@ -31,7 +31,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 struc STACK
 _gpr_save:      resq    4
 endstruc
@@ -831,6 +831,7 @@ section .text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_128_vaes_avx512,function,internal)
 aes_cbc_enc_128_vaes_avx512:
+        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_NONE
         FUNC_RESTORE
@@ -846,6 +847,7 @@ aes_cbc_enc_128_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_192_vaes_avx512,function,internal)
 aes_cbc_enc_192_vaes_avx512:
+        endbranch64
         FUNC_SAVE
         CBC_ENC 11, MAC_TYPE_NONE
         FUNC_RESTORE
@@ -860,6 +862,7 @@ aes_cbc_enc_192_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_cbc_enc_256_vaes_avx512,function,internal)
 aes_cbc_enc_256_vaes_avx512:
+        endbranch64
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_NONE
         FUNC_RESTORE
@@ -870,6 +873,7 @@ aes_cbc_enc_256_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes128_cbc_mac_vaes_avx512,function,internal)
 aes128_cbc_mac_vaes_avx512:
+        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_CBC
         FUNC_RESTORE
@@ -885,6 +889,7 @@ aes128_cbc_mac_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes256_cbc_mac_vaes_avx512,function,internal)
 aes256_cbc_mac_vaes_avx512:
+        endbranch64
         FUNC_SAVE
         CBC_ENC 13, MAC_TYPE_CBC
         FUNC_RESTORE
@@ -900,6 +905,7 @@ aes256_cbc_mac_vaes_avx512:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(aes_xcbc_mac_128_vaes_avx512,function,internal)
 aes_xcbc_mac_128_vaes_avx512:
+        endbranch64
         FUNC_SAVE
         CBC_ENC 9, MAC_TYPE_XCBC
         FUNC_RESTORE

@@ -29,7 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/crc32_const.inc"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 [bits 64]
 default rel
 
@@ -61,6 +61,7 @@ section .text
 align 32
 MKGLOBAL(crc32_wimax_ofdma_data_avx512, function,)
 crc32_wimax_ofdma_data_avx512:
+        endbranch64
 %ifdef SAFE_PARAM
         or              arg1, arg1
         jz              .wrong_param
@@ -114,6 +115,7 @@ crc32_wimax_ofdma_data_avx512:
 align 32
 MKGLOBAL(crc8_wimax_ofdma_hcs_avx512, function,)
 crc8_wimax_ofdma_hcs_avx512:
+        endbranch64
 %ifdef SAFE_PARAM
         or              arg1, arg1
         jz              .wrong_param

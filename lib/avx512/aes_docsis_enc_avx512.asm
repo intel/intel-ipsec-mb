@@ -36,7 +36,7 @@
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %define APPEND(a,b) a %+ b
 
 %define CRC_LANE_STATE_TO_START    0x01
@@ -1389,6 +1389,7 @@ APPEND(%%_skip_clear_,I):
 align 64
 MKGLOBAL(submit_job_aes_docsis128_enc_crc32_avx512,function,internal)
 submit_job_aes_docsis128_enc_crc32_avx512:
+        endbranch64
         FUNC_ENTRY
 
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
@@ -1410,6 +1411,7 @@ submit_job_aes_docsis128_enc_crc32_avx512:
 align 64
 MKGLOBAL(submit_job_aes_docsis256_enc_crc32_avx512,function,internal)
 submit_job_aes_docsis256_enc_crc32_avx512:
+        endbranch64
         FUNC_ENTRY
 
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
@@ -1429,6 +1431,7 @@ submit_job_aes_docsis256_enc_crc32_avx512:
 align 64
 MKGLOBAL(flush_job_aes_docsis128_enc_crc32_avx512,function,internal)
 flush_job_aes_docsis128_enc_crc32_avx512:
+        endbranch64
         FUNC_ENTRY
 
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \
@@ -1448,6 +1451,7 @@ flush_job_aes_docsis128_enc_crc32_avx512:
 align 64
 MKGLOBAL(flush_job_aes_docsis256_enc_crc32_avx512,function,internal)
 flush_job_aes_docsis256_enc_crc32_avx512:
+        endbranch64
         FUNC_ENTRY
 
         SUBMIT_FLUSH_DOCSIS_CRC32 arg1, arg2, \

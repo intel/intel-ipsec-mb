@@ -45,7 +45,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "include/transpose_avx512.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %define APPEND(a,b) a %+ b
 
 %ifdef LINUX
@@ -421,6 +421,7 @@ section .text
 MKGLOBAL(sha512_x8_avx512,function,internal)
 align 64
 sha512_x8_avx512:
+        endbranch64
         mov	rax, rsp
         sub     rsp, STACK_SPACE
         and	rsp, ~63	; align stack to multiple of 64

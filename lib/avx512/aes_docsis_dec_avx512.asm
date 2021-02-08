@@ -31,7 +31,7 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 %include "mb_mgr_datastruct.asm"
-
+%include "include/cet.inc"
 ;; In System V AMD64 ABI
 ;;	callee saves: RBX, RBP, R12-R15
 ;; Windows x64 ABI
@@ -1062,7 +1062,7 @@ section .text
 align 64
 MKGLOBAL(aes_docsis128_dec_crc32_avx512,function,internal)
 aes_docsis128_dec_crc32_avx512:
-
+        endbranch64
         AES_DOCSIS_DEC_CRC32 9
 
         ret
@@ -1070,7 +1070,7 @@ aes_docsis128_dec_crc32_avx512:
 align 64
 MKGLOBAL(aes_docsis256_dec_crc32_avx512,function,internal)
 aes_docsis256_dec_crc32_avx512:
-
+        endbranch64
         AES_DOCSIS_DEC_CRC32 13
 
         ret

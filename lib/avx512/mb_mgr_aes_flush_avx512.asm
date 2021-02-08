@@ -30,7 +30,7 @@
 %include "mb_mgr_datastruct.asm"
 %include "constants.asm"
 %include "include/reg_sizes.asm"
-
+%include "include/cet.inc"
 %ifndef AES_CBC_ENC_X16
 %define AES_CBC_ENC_X16 aes_cbc_enc_128_vaes_avx512
 %define FLUSH_JOB_AES_ENC flush_job_aes128_enc_vaes_avx512
@@ -154,7 +154,7 @@ endstruc
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_ENC,function,internal)
 FLUSH_JOB_AES_ENC:
-
+        endbranch64
         mov     rax, rsp
         sub     rsp, STACK_size
         and     rsp, -16

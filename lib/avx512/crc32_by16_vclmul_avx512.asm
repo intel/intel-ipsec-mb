@@ -39,7 +39,7 @@
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
 %include "include/crc32.inc"
-
+%include "include/cet.inc"
 [bits 64]
 default rel
 
@@ -72,6 +72,7 @@ section .text
 align 32
 MKGLOBAL(crc32_by16_vclmul_avx512,function,internal)
 crc32_by16_vclmul_avx512:
+        endbranch64
         vbroadcasti32x4 zmm18, [rel SHUF_MASK]
 
         ;; check if smaller than 256B

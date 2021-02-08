@@ -38,7 +38,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
-
+%include "include/cet.inc"
 extern sha512_x8_avx512
 
 section .data
@@ -113,10 +113,12 @@ align 64
 MKGLOBAL(submit_job_hmac_sha_512_avx512,function,internal)
 %define SHA_X_DIGEST_SIZE 512
 submit_job_hmac_sha_512_avx512:
+        endbranch64
 %else
 MKGLOBAL(submit_job_hmac_sha_384_avx512,function,internal)
 %define SHA_X_DIGEST_SIZE 384
 submit_job_hmac_sha_384_avx512:
+        endbranch64
 %endif
 
 	mov	rax, rsp

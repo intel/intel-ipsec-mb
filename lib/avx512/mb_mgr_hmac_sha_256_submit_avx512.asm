@@ -46,7 +46,7 @@
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
-
+%include "include/cet.inc"
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -117,9 +117,11 @@ endstruc
 %ifdef SHA224
 MKGLOBAL(submit_job_hmac_sha_224_avx512,function,internal)
 submit_job_hmac_sha_224_avx512:
+        endbranch64
 %else
 MKGLOBAL(submit_job_hmac_sha_256_avx512,function,internal)
 submit_job_hmac_sha_256_avx512:
+        endbranch64
 %endif
 	mov	rax, rsp
 	sub	rsp, STACK_size

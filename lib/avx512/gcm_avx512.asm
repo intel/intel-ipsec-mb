@@ -116,7 +116,7 @@
 %include "include/clear_regs.asm"
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_avx2_avx512.asm"
-
+%include "include/cet.inc"
 %include "mb_mgr_datastruct.asm"
 %include "imb_job.asm"
 %include "include/memcpy.asm"
@@ -3072,6 +3072,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
+        endbranch64
 ;; Parameter is passed through register
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
@@ -3147,6 +3148,7 @@ exit_precomp:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(init,_),function,)
 FN_NAME(init,_):
+        endbranch64
         push    r12
         push    r13
 %ifidn __OUTPUT_FORMAT__, win64
@@ -3211,6 +3213,7 @@ exit_init:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(init_var_iv,_),function,)
 FN_NAME(init_var_iv,_):
+        endbranch64
         push    r12
         push    r13
 %ifidn __OUTPUT_FORMAT__, win64
@@ -3286,7 +3289,7 @@ exit_init_IV:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
-
+        endbranch64
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -3331,7 +3334,7 @@ exit_update_enc:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
-
+        endbranch64
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -3374,7 +3377,7 @@ exit_update_dec:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
-
+        endbranch64
 ;; All parameters are passed through registers
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
@@ -3443,7 +3446,7 @@ exit_enc_fin:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
-
+        endbranch64
 ;; All parameters are passed through registers
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
@@ -3517,7 +3520,7 @@ exit_dec_fin:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_),function,)
 FN_NAME(enc,_):
-
+        endbranch64
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -3593,7 +3596,7 @@ exit_enc:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_),function,)
 FN_NAME(dec,_):
-
+        endbranch64
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -3672,7 +3675,7 @@ exit_dec:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,)
 FN_NAME(enc_var_iv,_):
-
+        endbranch64
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -3762,7 +3765,7 @@ exit_enc_IV:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,)
 FN_NAME(dec_var_iv,_):
-
+        endbranch64
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -3844,7 +3847,7 @@ exit_dec_IV:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(ghash_avx512,function,)
 ghash_avx512:
-
+        endbranch64
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -3989,7 +3992,7 @@ exit_ghash:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
-
+        endbranch64
 	FUNC_SAVE
 
         ;; Check if plaintext_len == 0

@@ -33,7 +33,7 @@
 %include "include/transpose_avx512.asm"
 %include "include/aes_common.asm"
 %include "include/chacha_poly_defines.asm"
-
+%include "include/cet.inc"
 section .data
 default rel
 
@@ -1090,7 +1090,7 @@ section .text
 align 32
 MKGLOBAL(submit_job_chacha20_enc_dec_avx512,function,internal)
 submit_job_chacha20_enc_dec_avx512:
-
+        endbranch64
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -1291,7 +1291,7 @@ no_partial_block:
 align 32
 MKGLOBAL(submit_job_chacha20_poly_enc_avx512,function,internal)
 submit_job_chacha20_poly_enc_avx512:
-
+        endbranch64
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -1559,7 +1559,7 @@ no_partial_block_poly:
 align 32
 MKGLOBAL(gen_keystr_poly_key_avx512,function,internal)
 gen_keystr_poly_key_avx512:
-
+        endbranch64
 %define keys    arg1
 %define iv      arg2
 %define len     arg3
@@ -1673,7 +1673,7 @@ more_than_256_ks:
 align 32
 MKGLOBAL(submit_job_chacha20_poly_dec_avx512,function,internal)
 submit_job_chacha20_poly_dec_avx512:
-
+        endbranch64
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -1980,7 +1980,7 @@ no_partial_block_dec:
 align 32
 MKGLOBAL(chacha20_enc_dec_ks_avx512,function,internal)
 chacha20_enc_dec_ks_avx512:
-
+        endbranch64
 %define blk_cnt r10
 
 %define prev_ks r13

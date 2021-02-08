@@ -29,7 +29,7 @@
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "constants.asm"
-
+%include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
 
@@ -557,6 +557,7 @@ section .text
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC128_EEA3,function,internal)
 SUBMIT_JOB_ZUC128_EEA3:
+        endbranch64
         SUBMIT_JOB_ZUC_EEA3 128
 
 ; JOB* SUBMIT_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
@@ -564,18 +565,21 @@ SUBMIT_JOB_ZUC128_EEA3:
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC256_EEA3,function,internal)
 SUBMIT_JOB_ZUC256_EEA3:
+        endbranch64
         SUBMIT_JOB_ZUC_EEA3 256
 
 ; JOB* FLUSH_JOB_ZUC128_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EEA3,function,internal)
 FLUSH_JOB_ZUC128_EEA3:
+        endbranch64
         FLUSH_JOB_ZUC_EEA3 128
 
 ; JOB* FLUSH_JOB_ZUC256_EEA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
 FLUSH_JOB_ZUC256_EEA3:
+        endbranch64
         FLUSH_JOB_ZUC_EEA3 256
 
 
@@ -1029,6 +1033,7 @@ FLUSH_JOB_ZUC256_EEA3:
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC128_EIA3,function,internal)
 SUBMIT_JOB_ZUC128_EIA3:
+        endbranch64
         SUBMIT_JOB_ZUC_EIA3 128
 
 ; JOB* SUBMIT_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state, IMB_JOB *job)
@@ -1036,18 +1041,21 @@ SUBMIT_JOB_ZUC128_EIA3:
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_ZUC256_EIA3,function,internal)
 SUBMIT_JOB_ZUC256_EIA3:
+        endbranch64
         SUBMIT_JOB_ZUC_EIA3 256
 
 ; JOB* FLUSH_JOB_ZUC128_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC128_EIA3,function,internal)
 FLUSH_JOB_ZUC128_EIA3:
+        endbranch64
         FLUSH_JOB_ZUC_EIA3 128
 
 ; JOB* FLUSH_JOB_ZUC256_EIA3(MB_MGR_ZUC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
 FLUSH_JOB_ZUC256_EIA3:
+        endbranch64
         FLUSH_JOB_ZUC_EIA3 256
 
 %ifdef LINUX

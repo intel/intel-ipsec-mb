@@ -36,7 +36,7 @@
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-
+%include "include/cet.inc"
 extern sha512_x8_avx512
 
 section .data
@@ -126,6 +126,7 @@ endstruc
 MKGLOBAL(flush_job_hmac_sha_512_avx512,function,internal)
 align 64
 flush_job_hmac_sha_512_avx512:
+        endbranch64
 %else
 ; JOB* flush_job_hmac_sha_512_avx512(MB_MGR_HMAC_SHA_512_OOO *state)
 ; arg 1 : state
@@ -133,6 +134,7 @@ flush_job_hmac_sha_512_avx512:
 MKGLOBAL(flush_job_hmac_sha_384_avx512,function,internal)
 align 64
 flush_job_hmac_sha_384_avx512:
+        endbranch64
 %endif
 	mov	rax, rsp
 	sub	rsp, STACK_size

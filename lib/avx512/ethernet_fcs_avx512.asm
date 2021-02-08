@@ -30,7 +30,7 @@
 %include "include/clear_regs.asm"
 %include "include/crc32_refl_const.inc"
 %include "include/crc32_refl.inc"
-
+%include "include/cet.inc"
 %ifndef LINUX
 %xdefine	arg1 rcx
 %xdefine	arg2 rdx
@@ -61,6 +61,7 @@ section .text
 align 32
 MKGLOBAL(ethernet_fcs_avx512, function,)
 ethernet_fcs_avx512:
+        endbranch64
 %ifdef SAFE_PARAM
         or              arg1, arg1
         jz              .wrong_param
@@ -113,6 +114,7 @@ ethernet_fcs_avx512:
 align 32
 MKGLOBAL(ethernet_fcs_avx512_local, function,internal)
 ethernet_fcs_avx512_local:
+        endbranch64
         mov             rax, rsp
         sub             rsp, STACK_FRAME_size
         and             rsp, -16

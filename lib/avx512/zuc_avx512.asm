@@ -31,7 +31,7 @@
 %include "include/transpose_avx512.asm"
 %include "include/const.inc"
 %include "mb_mgr_datastruct.asm"
-
+%include "include/cet.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
@@ -983,7 +983,7 @@ align 64
 ;;
 MKGLOBAL(asm_ZucInitialization_16_avx512,function,internal)
 asm_ZucInitialization_16_avx512:
-
+    endbranch64
     INIT_16_AVX512 0, 128
 
     ret
@@ -994,7 +994,7 @@ asm_ZucInitialization_16_avx512:
 ;;
 MKGLOBAL(asm_ZucInitialization_16_gfni_avx512,function,internal)
 asm_ZucInitialization_16_gfni_avx512:
-
+    endbranch64
     INIT_16_AVX512 1, 128
 
     ret
@@ -1005,7 +1005,7 @@ asm_ZucInitialization_16_gfni_avx512:
 ;;
 MKGLOBAL(asm_Zuc256Initialization_16_avx512,function,internal)
 asm_Zuc256Initialization_16_avx512:
-
+    endbranch64
     INIT_16_AVX512 0, 256
 
     ret
@@ -1016,7 +1016,7 @@ asm_Zuc256Initialization_16_avx512:
 ;;
 MKGLOBAL(asm_Zuc256Initialization_16_gfni_avx512,function,internal)
 asm_Zuc256Initialization_16_gfni_avx512:
-
+    endbranch64
     INIT_16_AVX512 1, 256
 
     ret
@@ -1167,7 +1167,7 @@ APPEND(%%_num_rounds_is_,I):
 ;;
 MKGLOBAL(asm_ZucGenKeystream64B_16_avx512,function,internal)
 asm_ZucGenKeystream64B_16_avx512:
-
+    endbranch64
     KEYGEN_16_AVX512 16, 0
 
     ret
@@ -1178,7 +1178,7 @@ asm_ZucGenKeystream64B_16_avx512:
 ;;
 MKGLOBAL(asm_ZucGenKeystream8B_16_avx512,function,internal)
 asm_ZucGenKeystream8B_16_avx512:
-
+    endbranch64
     KEYGEN_16_AVX512 2, 0, arg3
 
     ret
@@ -1189,7 +1189,7 @@ asm_ZucGenKeystream8B_16_avx512:
 ;;
 MKGLOBAL(asm_ZucGenKeystream4B_16_avx512,function,internal)
 asm_ZucGenKeystream4B_16_avx512:
-
+    endbranch64
     KEYGEN_16_AVX512 1, 0, arg3
 
     ret
@@ -1199,7 +1199,7 @@ asm_ZucGenKeystream4B_16_avx512:
 ;;
 MKGLOBAL(asm_ZucGenKeystream64B_16_gfni_avx512,function,internal)
 asm_ZucGenKeystream64B_16_gfni_avx512:
-
+    endbranch64
     KEYGEN_16_AVX512 16, 1
 
     ret
@@ -1210,7 +1210,7 @@ asm_ZucGenKeystream64B_16_gfni_avx512:
 ;;
 MKGLOBAL(asm_ZucGenKeystream8B_16_gfni_avx512,function,internal)
 asm_ZucGenKeystream8B_16_gfni_avx512:
-
+    endbranch64
     KEYGEN_16_AVX512 2, 1, arg3
 
     ret
@@ -1221,7 +1221,7 @@ asm_ZucGenKeystream8B_16_gfni_avx512:
 ;;
 MKGLOBAL(asm_ZucGenKeystream4B_16_gfni_avx512,function,internal)
 asm_ZucGenKeystream4B_16_gfni_avx512:
-
+    endbranch64
     KEYGEN_16_AVX512 1, 1, arg3
 
     ret
@@ -1231,7 +1231,7 @@ asm_ZucGenKeystream4B_16_gfni_avx512:
 ;;
 MKGLOBAL(asm_ZucGenKeystream_16_avx512,function,internal)
 asm_ZucGenKeystream_16_avx512:
-
+    endbranch64
     KEYGEN_16_AVX512 arg3, 0
 
     ret
@@ -1241,7 +1241,7 @@ asm_ZucGenKeystream_16_avx512:
 ;;
 MKGLOBAL(asm_ZucGenKeystream_16_gfni_avx512,function,internal)
 asm_ZucGenKeystream_16_gfni_avx512:
-
+    endbranch64
     KEYGEN_16_AVX512 arg3, 1
 
     ret
@@ -1502,7 +1502,7 @@ APPEND(%%_num_final_rounds_is_,I):
 ;;                              u64 min_length);
 MKGLOBAL(asm_ZucCipher_16_avx512,function,internal)
 asm_ZucCipher_16_avx512:
-
+        endbranch64
         CIPHER_16_AVX512 0
 
         ret
@@ -1513,7 +1513,7 @@ asm_ZucCipher_16_avx512:
 ;;                                   u64 min_length);
 MKGLOBAL(asm_ZucCipher_16_gfni_avx512,function,internal)
 asm_ZucCipher_16_gfni_avx512:
-
+        endbranch64
         CIPHER_16_AVX512 1
 
         ret
@@ -1545,7 +1545,7 @@ asm_ZucCipher_16_gfni_avx512:
 align 64
 MKGLOBAL(asm_Eia3Round64B_16_VPCLMUL,function,internal)
 asm_Eia3Round64B_16_VPCLMUL:
-
+        endbranch64
 %ifdef LINUX
 	%define		T	rdi
 	%define		KS	rsi
@@ -1732,7 +1732,7 @@ asm_Eia3Round64B_16_VPCLMUL:
 align 64
 MKGLOBAL(asm_Eia3RemainderAVX512,function,internal)
 asm_Eia3RemainderAVX512:
-
+        endbranch64
 %ifdef LINUX
 	%define		T	rdi
 	%define		KS	rsi
@@ -2212,6 +2212,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 align 64
 MKGLOBAL(asm_Eia3RemainderAVX512_16,function,internal)
 asm_Eia3RemainderAVX512_16:
+        endbranch64
         REMAINDER_16 128
 
 ;;
@@ -2231,6 +2232,7 @@ asm_Eia3RemainderAVX512_16:
 align 64
 MKGLOBAL(asm_Eia3_256_RemainderAVX512_16,function,internal)
 asm_Eia3_256_RemainderAVX512_16:
+        endbranch64
         REMAINDER_16 256
 
 ;;
@@ -2254,7 +2256,7 @@ asm_Eia3_256_RemainderAVX512_16:
 align 64
 MKGLOBAL(asm_Eia3Round64BAVX512,function,internal)
 asm_Eia3Round64BAVX512:
-
+        endbranch64
 %ifdef LINUX
 	%define		T	rdi
 	%define		KS	rsi
@@ -2336,7 +2338,7 @@ asm_Eia3Round64BAVX512:
 align 64
 MKGLOBAL(asm_Eia3Round64BAVX512_16,function,internal)
 asm_Eia3Round64BAVX512_16:
-
+        endbranch64
 %ifdef LINUX
 	%define		T	rdi
 	%define		KS	rsi
