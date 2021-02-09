@@ -29,7 +29,7 @@
 %include "include/os.asm"
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
-
+%include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"
@@ -506,12 +506,14 @@ align 64
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CMAC_AUTH,function,internal)
 SUBMIT_JOB_AES_CMAC_AUTH:
+        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_AVX SUBMIT
 
 ; IMB_JOB * flush_job_aes_cmac_auth_avx(MB_MGR_CMAC_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CMAC_AUTH,function,internal)
 FLUSH_JOB_AES_CMAC_AUTH:
+        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CMAC_AVX FLUSH
 
 

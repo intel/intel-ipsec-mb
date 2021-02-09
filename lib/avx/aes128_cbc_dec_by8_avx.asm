@@ -31,7 +31,7 @@
 
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
 
@@ -213,7 +213,7 @@ section .text
 
 MKGLOBAL(AES_CBC_DEC_128_X8,function,internal)
 AES_CBC_DEC_128_X8:
-
+        endbranch64
 %ifndef LINUX
 	mov	num_bytes, [rsp + 8*5]
 %else
@@ -310,11 +310,14 @@ mult_of_8_blks:
 	vmovdqa	xkey10, [p_keys + 10*16]
 
 main_loop2:
+        endbranch64
+
+main_loop3:
 	; num_bytes is a multiple of 8 and >0
 	do_aes_noload	8
 	add	p_out,	8*OFFSET
 	sub	num_bytes, 8*16
-	jne	main_loop2
+	jne	main_loop3
 
 do_return2:
 

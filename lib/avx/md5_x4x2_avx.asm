@@ -39,7 +39,7 @@
 %include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 extern MD5_TABLE
 
 section .data
@@ -341,7 +341,7 @@ rot44 equ  21
 align 32
 MKGLOBAL(md5_x4x2_avx,function,internal)
 md5_x4x2_avx:
-
+        endbranch64
         sub     rsp, STACK_SIZE
 
         ;; each row of transposed digests is split into 2 parts, the right half stored in A, and left half in A2
@@ -399,6 +399,7 @@ md5_x4x2_avx:
 %endrep
 
 lloop:
+        endbranch64
         ; save old digests
         vmovdqa  [AA], A
         vmovdqa  [BB], B

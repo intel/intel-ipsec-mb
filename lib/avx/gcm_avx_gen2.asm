@@ -2247,6 +2247,7 @@ iv_len_12_init_IV:
 	GCM_INIT arg1, arg2, arg3, arg5, arg6
 
 skip_iv_len_12_init_IV:
+        endbranch64
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
         clear_scratch_xmms_avx_asm
@@ -2652,7 +2653,7 @@ exit_dec:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc_var_iv,_),function,)
 FN_NAME(enc_var_iv,_):
-
+        endbranch64
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
@@ -2716,6 +2717,7 @@ iv_len_12_enc_IV:
 	GCM_INIT arg1, arg2, arg6, arg8, arg9
 
 skip_iv_len_12_enc_IV:
+        endbranch64
 	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC
 
 	GCM_COMPLETE arg1, arg2, arg10, arg11
@@ -2742,7 +2744,7 @@ exit_enc_IV:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec_var_iv,_),function,)
 FN_NAME(dec_var_iv,_):
-
+        endbranch64
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM

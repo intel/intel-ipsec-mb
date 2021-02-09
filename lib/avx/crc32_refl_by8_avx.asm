@@ -39,7 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32_refl.inc"
-
+%include "include/cet.inc"
 [bits 64]
 default rel
 
@@ -68,6 +68,7 @@ section .text
 align 32
 MKGLOBAL(crc32_refl_by8_avx,function,internal)
 crc32_refl_by8_avx:
+        endbranch64
         not             DWORD(arg1)
 
         ;; check if smaller than 256B

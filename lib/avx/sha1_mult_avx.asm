@@ -28,7 +28,7 @@
 %include "include/os.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 section .data
 default rel
 
@@ -297,7 +297,7 @@ align 32
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_mult_avx,function,internal)
 sha1_mult_avx:
-
+        endbranch64
 	sub	rsp, FRAMESZ
 
         ;; Initialize digests

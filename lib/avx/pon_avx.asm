@@ -1147,6 +1147,7 @@ section .text
 align 64
 MKGLOBAL(submit_job_pon_enc_avx,function,internal)
 submit_job_pon_enc_avx:
+        endbranch64
         AES128_CTR_PON ENC, CTR
         ret
 
@@ -1154,6 +1155,7 @@ submit_job_pon_enc_avx:
 align 64
 MKGLOBAL(submit_job_pon_dec_avx,function,internal)
 submit_job_pon_dec_avx:
+        endbranch64
         AES128_CTR_PON DEC, CTR
         ret
 
@@ -1161,6 +1163,7 @@ submit_job_pon_dec_avx:
 align 64
 MKGLOBAL(submit_job_pon_enc_no_ctr_avx,function,internal)
 submit_job_pon_enc_no_ctr_avx:
+        endbranch64
         AES128_CTR_PON ENC, NO_CTR
         ret
 
@@ -1168,6 +1171,7 @@ submit_job_pon_enc_no_ctr_avx:
 align 64
 MKGLOBAL(submit_job_pon_dec_no_ctr_avx,function,internal)
 submit_job_pon_dec_no_ctr_avx:
+        endbranch64
         AES128_CTR_PON DEC, NO_CTR
         ret
 

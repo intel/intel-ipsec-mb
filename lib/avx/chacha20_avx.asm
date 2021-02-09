@@ -30,7 +30,7 @@
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
 %include "include/chacha_poly_defines.asm"
-
+%include "include/cet.inc"
 section .data
 default rel
 
@@ -593,7 +593,7 @@ section .text
 align 32
 MKGLOBAL(submit_job_chacha20_enc_dec_avx,function,internal)
 submit_job_chacha20_enc_dec_avx:
-
+        endbranch64
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -897,6 +897,7 @@ less_than_32:
         add     off, 16
 
 check_partial:
+        endbranch64
         or      len, len
         jz      no_partial_block
 
@@ -1127,7 +1128,7 @@ between_129_191:
         jmp     less_than_64
 
 no_partial_block:
-
+        endbranch64
 %ifdef SAFE_DATA
         clear_all_xmms_avx_asm
         ; Clear stack frame
@@ -1151,7 +1152,7 @@ exit:
 align 32
 MKGLOBAL(chacha20_enc_dec_ks_avx,function,internal)
 chacha20_enc_dec_ks_avx:
-
+        endbranch64
 %define blk_cnt r10
 
 %define prev_ks r13
@@ -1442,7 +1443,7 @@ check_1_or_2_blocks_left_ks:
         jmp     no_partial_block_ks
 
 less_than_64_ks:
-
+        endbranch64
         ; Preserve len
         mov     tmp5, len
         ENCRYPT_0B_64B    src, dst, len, off, xmm9, xmm10, xmm11, xmm12, \
@@ -1681,7 +1682,7 @@ between_129_191_ks:
 
 
 no_partial_block_ks:
-
+        endbranch64
         mov     [ctx + LastBlkCount], blk_cnt
 
 %ifdef SAFE_DATA
@@ -1714,6 +1715,7 @@ exit_ks:
 align 32
 MKGLOBAL(poly1305_key_gen_avx,function,internal)
 poly1305_key_gen_avx:
+        endbranch64
         ;; prepare chacha state from IV, key
         vmovdqa xmm0, [rel constants]
         vmovdqu xmm1, [arg1]          ; Load key bytes 0-15

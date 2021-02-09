@@ -29,7 +29,7 @@
 ; Uses AVX instructions
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 section .data
 default rel
 align 16
@@ -253,6 +253,7 @@ ROTATE_ARGS
 MKGLOBAL(sha1_block_avx,function,internal)
 align 32
 sha1_block_avx:
+        endbranch64
 	push	rbx
 	push	rsi
 	push	rdi
@@ -310,6 +311,7 @@ loop1:
 	do_4i	MAGIC_F0
 
 loop1_5:
+        endbranch64
 	do_4i	MAGIC_F0
 
 	rotate_Xs
@@ -353,6 +355,7 @@ loop2:
 	do_4i	MAGIC_F1
 
 loop2_5:
+        endbranch64
 	do_4i	MAGIC_F1
 
 	rotate_Xs
@@ -396,6 +399,7 @@ loop3:
 	do_4i	MAGIC_F2
 
 loop3_5:
+        endbranch64
 	do_4i	MAGIC_F2
 
 	rotate_Xs

@@ -29,7 +29,7 @@
 %include "imb_job.asm"
 %include "mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-
+%include "include/cet.inc"
 extern md5_x4x2_avx
 
 section .data
@@ -118,7 +118,7 @@ endstruc
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_md5_avx,function,internal)
 flush_job_hmac_md5_avx:
-
+        endbranch64
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -157,6 +157,7 @@ flush_job_hmac_md5_avx:
 	cmovne	idx, [rel seven]
 
 copy_lane_data:
+        endbranch64
 	; copy good lane (idx) to empty lanes
 	vmovdqa	xmm0, [state + _lens_md5]
 	mov	tmp, [state + _args_data_ptr_md5 + PTR_SZ*idx]
@@ -301,7 +302,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
-
+        endbranch64
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]
