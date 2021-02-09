@@ -768,7 +768,6 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 
         uint32_t blkcnt;
         kasumi_union_t a, b; /* the modifier */
-        SafeBuf safeInBuf;
         const uint8_t *pBufferIn = (const uint8_t *) pIn;
         uint8_t *pBufferOut = (uint8_t *) pOut;
         uint32_t lengthInBytes = length;
@@ -800,14 +799,19 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                         b.b64[0] ^= a.b64[0];
                         b.b16[0] ^= (uint16_t)++blkcnt;
                 } else if (lengthInBytes < IMB_KASUMI_BLOCK_SIZE) {
+                        SafeBuf safeInBuf = {0};
+
                         /* end of the loop, handle the last bytes */
                         memcpy_keystrm(safeInBuf.b8, pBufferIn,
                                        lengthInBytes);
                         xor_keystrm_rev(b.b8, safeInBuf.b8, b.b64[0]);
                         memcpy_keystrm(pBufferOut, b.b8, lengthInBytes);
                         lengthInBytes = 0;
-                /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
+#ifdef SAFE_DATA
+                        clear_mem(&safeInBuf, sizeof(safeInBuf));
+#endif
                 } else {
+                        /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
                         xor_keystrm_rev(pBufferOut, pBufferIn, b.b64[0]);
                         lengthInBytes = 0;
                 }
@@ -816,7 +820,6 @@ kasumi_f8_1_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         /* Clear sensitive data in stack */
         clear_mem(&a, sizeof(a));
         clear_mem(&b, sizeof(b));
-        clear_mem(&safeInBuf, sizeof(safeInBuf));
 #endif
 }
 
@@ -869,7 +872,7 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         uint32_t remainOffset = offsetInBits % 8;
         uint32_t byteLength = (cipherLengthInBits + 7) / 8;
         SafeBuf safeOutBuf = {0};
-        SafeBuf safeInBuf;
+        SafeBuf safeInBuf = {0};
 
         /* IV Endianity  */
         a.b64[0] = BSWAP64(IV);
@@ -1009,7 +1012,7 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
         uint32_t blkcnt, length;
         kasumi_union_t a1, b1; /* the modifier */
         kasumi_union_t a2, b2; /* the modifier */
-        SafeBuf safeInBuf;
+        SafeBuf safeInBuf = {0};
 
         kasumi_union_t temp;
 
@@ -1080,8 +1083,8 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                         memcpy_keystrm(pBufferOut1, temp.b8,
                                        lengthInBytes1);
                         lengthInBytes1 = 0;
-                /* lengthInBytes1 == IMB_KASUMI_BLOCK_SIZE */
                 } else {
+                        /* lengthInBytes1 == IMB_KASUMI_BLOCK_SIZE */
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         lengthInBytes1 = 0;
                 }
@@ -1099,8 +1102,8 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                         memcpy_keystrm(pBufferOut2, temp.b8,
                                        lengthInBytes2);
                         lengthInBytes2 = 0;
-                /* lengthInBytes2 == IMB_KASUMI_BLOCK_SIZE */
                 } else {
+                        /* lengthInBytes2 == IMB_KASUMI_BLOCK_SIZE */
                         xor_keystrm_rev(pBufferOut2, pBufferIn2, b2.b64[0]);
                         lengthInBytes2 = 0;
                 }
@@ -1155,8 +1158,8 @@ kasumi_f8_2_buffer(const kasumi_key_sched_t *pCtx,
                         memcpy_keystrm(pBufferOut1, temp.b8,
                                        lengthInBytes1);
                         lengthInBytes1 = 0;
-                /* lengthInBytes1 == IMB_KASUMI_BLOCK_SIZE */
                 } else {
+                        /* lengthInBytes1 == IMB_KASUMI_BLOCK_SIZE */
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         lengthInBytes1 = 0;
                 }
@@ -1195,7 +1198,6 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
         kasumi_union_t a1, b1; /* the modifier */
         kasumi_union_t a2, b2; /* the modifier */
         kasumi_union_t a3, b3; /* the modifier */
-        SafeBuf safeInBuf1, safeInBuf2, safeInBuf3;
 
         /* IV Endianity  */
         a1.b64[0] = BSWAP64(IV1);
@@ -1239,24 +1241,29 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
                         b3.b64[0] ^= a3.b64[0];
                         b3.b16[0] ^= (uint16_t)blkcnt;
                 } else if (lengthInBytes < IMB_KASUMI_BLOCK_SIZE) {
+                        SafeBuf safeInBuf = {0};
+
                         /* end of the loop, handle the last bytes */
-                        memcpy_keystrm(safeInBuf1.b8, pBufferIn1,
+                        memcpy_keystrm(safeInBuf.b8, pBufferIn1,
                                        lengthInBytes);
-                        xor_keystrm_rev(b1.b8, safeInBuf1.b8, b1.b64[0]);
+                        xor_keystrm_rev(b1.b8, safeInBuf.b8, b1.b64[0]);
                         memcpy_keystrm(pBufferOut1, b1.b8, lengthInBytes);
 
-                        memcpy_keystrm(safeInBuf2.b8, pBufferIn2,
+                        memcpy_keystrm(safeInBuf.b8, pBufferIn2,
                                        lengthInBytes);
-                        xor_keystrm_rev(b2.b8, safeInBuf2.b8, b2.b64[0]);
+                        xor_keystrm_rev(b2.b8, safeInBuf.b8, b2.b64[0]);
                         memcpy_keystrm(pBufferOut2, b2.b8, lengthInBytes);
 
-                        memcpy_keystrm(safeInBuf3.b8, pBufferIn3,
+                        memcpy_keystrm(safeInBuf.b8, pBufferIn3,
                                        lengthInBytes);
-                        xor_keystrm_rev(b3.b8, safeInBuf3.b8, b3.b64[0]);
+                        xor_keystrm_rev(b3.b8, safeInBuf.b8, b3.b64[0]);
                         memcpy_keystrm(pBufferOut3, b3.b8, lengthInBytes);
                         lengthInBytes = 0;
-                /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
+#ifdef SAFE_DATA
+                        clear_mem(&safeInBuf, sizeof(safeInBuf));
+#endif
                 } else {
+                        /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         xor_keystrm_rev(pBufferOut2, pBufferIn2, b2.b64[0]);
                         xor_keystrm_rev(pBufferOut3, pBufferIn3, b3.b64[0]);
@@ -1271,9 +1278,6 @@ kasumi_f8_3_buffer(const kasumi_key_sched_t *pCtx,
         clear_mem(&b2, sizeof(b2));
         clear_mem(&a3, sizeof(a3));
         clear_mem(&b3, sizeof(b3));
-        clear_mem(&safeInBuf1, sizeof(safeInBuf1));
-        clear_mem(&safeInBuf2, sizeof(safeInBuf2));
-        clear_mem(&safeInBuf3, sizeof(safeInBuf3));
 #endif
 }
 
@@ -1313,7 +1317,6 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
         kasumi_union_t a3, b3; /* the modifier */
         kasumi_union_t a4, b4; /* the modifier */
         uint16_t *pTemp[4] = {b1.b16, b2.b16, b3.b16, b4.b16};
-        SafeBuf safeInBuf1, safeInBuf2, safeInBuf3, safeInBuf4;
 
         /* IV Endianity  */
         b1.b64[0] = BSWAP64(IV1);
@@ -1364,29 +1367,34 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
                         b4.b64[0] ^= a4.b64[0];
                         b4.b16[0] ^= (uint16_t)blkcnt;
                 } else if (lengthInBytes < IMB_KASUMI_BLOCK_SIZE) {
+                        SafeBuf safeInBuf = {0};
+
                         /* end of the loop, handle the last bytes */
-                        memcpy_keystrm(safeInBuf1.b8, pBufferIn1,
+                        memcpy_keystrm(safeInBuf.b8, pBufferIn1,
                                        lengthInBytes);
-                        xor_keystrm_rev(b1.b8, safeInBuf1.b8, b1.b64[0]);
+                        xor_keystrm_rev(b1.b8, safeInBuf.b8, b1.b64[0]);
                         memcpy_keystrm(pBufferOut1, b1.b8, lengthInBytes);
 
-                        memcpy_keystrm(safeInBuf2.b8, pBufferIn2,
+                        memcpy_keystrm(safeInBuf.b8, pBufferIn2,
                                        lengthInBytes);
-                        xor_keystrm_rev(b2.b8, safeInBuf2.b8, b2.b64[0]);
+                        xor_keystrm_rev(b2.b8, safeInBuf.b8, b2.b64[0]);
                         memcpy_keystrm(pBufferOut2, b2.b8, lengthInBytes);
 
-                        memcpy_keystrm(safeInBuf3.b8, pBufferIn3,
+                        memcpy_keystrm(safeInBuf.b8, pBufferIn3,
                                        lengthInBytes);
-                        xor_keystrm_rev(b3.b8, safeInBuf3.b8, b3.b64[0]);
+                        xor_keystrm_rev(b3.b8, safeInBuf.b8, b3.b64[0]);
                         memcpy_keystrm(pBufferOut3, b3.b8, lengthInBytes);
 
-                        memcpy_keystrm(safeInBuf4.b8, pBufferIn4,
+                        memcpy_keystrm(safeInBuf.b8, pBufferIn4,
                                        lengthInBytes);
-                        xor_keystrm_rev(b4.b8, safeInBuf4.b8, b4.b64[0]);
+                        xor_keystrm_rev(b4.b8, safeInBuf.b8, b4.b64[0]);
                         memcpy_keystrm(pBufferOut4, b4.b8, lengthInBytes);
                         lengthInBytes = 0;
-                /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
+#ifdef SAFE_DATA
+                        clear_mem(&safeInBuf, sizeof(safeInBuf));
+#endif
                 } else {
+                        /* lengthInBytes == IMB_KASUMI_BLOCK_SIZE */
                         xor_keystrm_rev(pBufferOut1, pBufferIn1, b1.b64[0]);
                         xor_keystrm_rev(pBufferOut2, pBufferIn2, b2.b64[0]);
                         xor_keystrm_rev(pBufferOut3, pBufferIn3, b3.b64[0]);
@@ -1404,10 +1412,6 @@ kasumi_f8_4_buffer(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
         clear_mem(&b3, sizeof(b3));
         clear_mem(&a4, sizeof(a4));
         clear_mem(&b4, sizeof(b4));
-        clear_mem(&safeInBuf1, sizeof(safeInBuf1));
-        clear_mem(&safeInBuf2, sizeof(safeInBuf2));
-        clear_mem(&safeInBuf3, sizeof(safeInBuf3));
-        clear_mem(&safeInBuf4, sizeof(safeInBuf4));
 #endif
 }
 
@@ -1453,7 +1457,7 @@ kasumi_f8_n_buffer(const kasumi_key_sched_t *pKeySchedule, const uint64_t IV[],
         uint32_t len = 0;
         uint32_t packet_idx, inner_idx, same_size_blocks;
         int sortNeeded = 0, tempLen = 0;
-        SafeBuf safeInBuf;
+        SafeBuf safeInBuf = {0};
 
         memcpy((void *)dataLen, lengths, dataCount * sizeof(uint32_t));
         memcpy((void *)pDataIn, pIn, dataCount * sizeof(void *));
@@ -1640,7 +1644,6 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn,
         kasumi_union_t a, b, mask;
         const uint64_t *pIn = (const uint64_t *)dataIn;
         uint32_t lengthInBytes = length;
-        SafeBuf safeBuf;
 
         /* Init */
         a.b64[0] = 0;
@@ -1663,6 +1666,8 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn,
         }
 
         if (lengthInBytes) {
+                SafeBuf safeBuf = {0};
+
                 /* Not a whole 8 byte block remaining */
                 mask.b64[0] = ~(mask.b64[0] >> (BYTESIZE * lengthInBytes));
                 memcpy(&safeBuf.b64, pIn, lengthInBytes);
@@ -1674,6 +1679,10 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn,
 
                 /* update */
                 b.b64[0] ^= a.b64[0];
+#ifdef SAFE_DATA
+                /* Clear sensitive data in stack */
+                clear_mem(&safeBuf, sizeof(safeBuf));
+#endif
         }
 
         /* Kasumi b */
@@ -1686,7 +1695,6 @@ kasumi_f9_1_buffer(const kasumi_key_sched_t *pCtx, const void *dataIn,
         clear_mem(&a, sizeof(a));
         clear_mem(&b, sizeof(b));
         clear_mem(&mask, sizeof(mask));
-        clear_mem(&safeBuf, sizeof(safeBuf));
 #endif
 }
 
