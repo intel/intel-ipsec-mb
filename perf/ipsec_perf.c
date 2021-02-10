@@ -2635,7 +2635,8 @@ static void usage(void)
                 "        will be 128B long)\n"
                 "--aad-size: size of AAD for AEAD algorithms\n"
                 "--job-iter: number of tests iterations for each job size\n"
-                "--no-progress-bar: Don't display progress bar\n",
+                "--no-progress-bar: Don't display progress bar\n"
+                "--print-info: Display system and algorithm information\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -2973,6 +2974,59 @@ detect_best_arch(uint8_t arch_support[NUM_ARCHS])
         return -1;
 }
 
+/**
+ * @brief Print system and application information
+ */
+static void print_info(void)
+{
+        uint32_t i;
+        uint32_t supported_archs[NUM_ARCHS];
+        uint8_t archs[NUM_ARCHS];
+
+        /* detect and print all archs */
+        if (detect_arch(supported_archs) < 0)
+                goto print_info_err;
+
+        printf("Supported architectures: ");
+        for (i = 0; i < DIM(arch_str_map); i++)
+                if (supported_archs[i])
+                        printf("%s ", arch_str_map[i].name);
+        printf("\n");
+
+        /* detect and print best arch */
+        if (detect_best_arch(archs) != 0)
+                goto print_info_err;
+
+        for (i = 0; i < DIM(arch_str_map); i++)
+                if (archs[i]) {
+                        printf("Best architecture: %s\n",
+                               arch_str_map[i].name);
+                        break;
+                }
+
+        /* print supported algorithms */
+        printf("Supported cipher algorithms: ");
+        for (i = 0; i < DIM(cipher_algo_str_map); i++)
+                printf("%s ", cipher_algo_str_map[i].name);
+        printf("\n");
+
+        printf("Supported hash algorithms: ");
+        for (i = 0; i < DIM(hash_algo_str_map); i++)
+                printf("%s ", hash_algo_str_map[i].name);
+        printf("\n");
+
+        printf("Supported aead algorithms: ");
+        for (i = 0; i < DIM(aead_algo_str_map); i++)
+                printf("%s ", aead_algo_str_map[i].name);
+        printf("\n");
+
+        return;
+
+ print_info_err:
+        fprintf(stderr, "%s() error!\n", __func__);
+        exit(EXIT_FAILURE);
+}
+
 int main(int argc, char *argv[])
 {
         uint32_t num_t = 0;
@@ -3173,6 +3227,9 @@ int main(int argc, char *argv[])
                         use_unhalted_cycles = 1;
                 } else if (strcmp(argv[i], "--no-progress-bar") == 0) {
                         silent_progress_bar = 1;
+                } else if (strcmp(argv[i], "--print-info") == 0) {
+                        print_info();
+                        return EXIT_SUCCESS;
                 } else {
                         usage();
                         return EXIT_FAILURE;
