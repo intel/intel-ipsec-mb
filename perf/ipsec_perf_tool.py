@@ -2,7 +2,7 @@
 
 """
 **********************************************************************
-  Copyright(c) 2020, Intel Corporation All rights reserved.
+  Copyright(c) 2021, Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -58,8 +58,11 @@ EXIT_ERROR = False
 
 class Variant:
     """Class to setup and run test case variant"""
-    def __init__(self, idx=None, arch=None, direction='encrypt', cipher_alg=None, \
-                 hash_alg=None, aead_alg=None, sizes=None, offset=None):
+    def __init__(self, idx=None, arch=None, direction='encrypt', cipher_alg=None,
+                 hash_alg=None, aead_alg=None, sizes=None, offset=None,
+                 cold_cache=False, shani_off=False, gcm_job_api=False,
+                 unhalted_cycles=False, quick_test=False, smoke_test=False,
+                 imix=None, aad_size=None, job_iter=None):
         """Build perf app command line"""
         global PERF_APP
 
@@ -75,12 +78,21 @@ class Variant:
         self.cmd_output = ''
         self.out = []
         self.core = None
+        self.cold_cache = cold_cache
+        self.shani_off = shani_off
+        self.gcm_job_api = gcm_job_api
+        self.unhalted_cycles = unhalted_cycles
+        self.quick_test = quick_test
+        self.smoke_test = smoke_test
+        self.imix = imix
+        self.aad_size = aad_size
+        self.job_iter = job_iter
 
         if self.arch is not None:
             self.cmd += ' --arch {}'.format(self.arch)
 
         if self.offset is not None:
-            self.cmd += ' -o {}'.format(str(self.offset))
+            self.cmd += ' -o {}'.format(self.offset)
 
         if self.aead_alg is not None:
             if self.cipher_alg is not None or \
@@ -109,6 +121,34 @@ class Variant:
         if self.sizes is not None:
             self.cmd += ' --job-size {}'.format(self.sizes)
 
+        if self.cold_cache is True:
+            self.cmd += ' -c'
+
+        if self.shani_off is True:
+            self.cmd += ' --shani-off'
+
+        if self.gcm_job_api is True:
+            self.cmd += ' --gcm-job-api'
+
+        if self.unhalted_cycles is True:
+            self.cmd += ' --unhalted-cycles'
+
+        if self.quick_test is True:
+            self.cmd += ' --quick'
+
+        if self.smoke_test is True:
+            self.cmd += ' --smoke'
+
+        if self.imix is not None:
+            self.cmd += ' --imix {}'.format(self.imix)
+
+        if self.aad_size is not None:
+            self.cmd += ' --aad-size {}'.format(self.aad_size)
+
+        if self.job_iter is not None:
+            self.cmd += ' --job-iter {}'.format(self.job_iter)
+
+
     def run(self):
         """Run perf app and store output"""
         try:
@@ -119,6 +159,11 @@ class Variant:
                                env=ENVS, check=True).stdout.decode('utf-8')
             return True
         except:
+            # on error - re-run and store stderr output
+            self.cmd_output = \
+                subprocess.run(self.cmd.split(), \
+                               stderr=subprocess.PIPE, \
+                               env=ENVS).stderr.decode('utf-8')
             return False
 
     def set_core(self, core):
@@ -180,7 +225,7 @@ class Variant:
         return info
 
 
-def init_vars():
+def init_global_vars():
     """Initialize global variables"""
     global TOTAL_VARIANTS
     global ENVS
@@ -215,17 +260,45 @@ def init_vars():
         PERF_APP = 'ipsec_perf'
 
 
-def get_algos(type):
-    """get algorithms from perf app output"""
+def get_info():
+    """get system and app info from perf app output"""
     global PERF_APP
+    archs = None
+    best_arch = None
+    cipher_algos = None
+    hash_algos = None
+    aead_algos = None
 
-    cmd = [PERF_APP, '--{}-algo'.format(type) ]
+    cmd = [PERF_APP, '--print-info'.format(type) ]
 
-    output = subprocess.run(cmd, stderr=subprocess.PIPE, \
-                            env=ENVS, check=False).stderr.decode('utf-8')
+    output = subprocess.run(cmd, stdout=subprocess.PIPE, \
+                            stderr=subprocess.PIPE, \
+                            env=ENVS, check=True).stdout.decode('utf-8')
 
-    output = output.split(' ')
-    return output[5:-1]
+    lines = output.rstrip().split('\n')
+    try:
+        for line in lines:
+            info = line.split(':')
+            if info[0] == 'Supported architectures':
+                archs = info[1].split()
+            if info[0] == 'Best architecture':
+                best_arch = info[1].split()
+            if info[0] == 'Supported cipher algorithms':
+                cipher_algos = info[1].split()
+            if info[0] == 'Supported hash algorithms':
+                hash_algos = info[1].split()
+            if info[0] == 'Supported aead algorithms':
+                aead_algos = info[1].split()
+    except:
+        print("Error parsing --print-info output:\n" \
+              "{}".format(output), file=sys.stderr)
+
+    if archs is None or best_arch is None or cipher_algos is None \
+       or hash_algos is None or aead_algos is None:
+        print("Error parsing system and app information", file=sys.stderr)
+        sys.exit(1)
+
+    return archs, best_arch, cipher_algos, hash_algos, aead_algos
 
 
 def parse_cores(core_str):
@@ -265,6 +338,110 @@ def parse_results(variants):
     return out
 
 
+def parse_args():
+    """Parse command line arguments"""
+    global QUIET
+    cores = None
+    directions = ['encrypt', 'decrypt']
+    offset = 24
+    alg_types = ['cipher-only', 'hash-only', 'aead-only']
+
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
+                                     description="Wrapper script for the ipsec-mb " \
+                                     "performance application enabling extended functionality")
+
+    # parse and validate args
+    parser.add_argument("-a", "--arch", choices=['SSE', 'AVX', 'AVX2', 'AVX512'],
+                        default=None, action='append',
+                        help="set architecture to test (default tests all supported archs)")
+    parser.add_argument("-c", "--cores", default=cores,
+                        help="list/range of cores e.g. 2-8 or 3,4,5")
+    parser.add_argument("-d", "--direction", default=None,
+                        choices=directions, help="Cipher direction")
+    parser.add_argument("-o", "--offset", default=offset, type=int,
+                        help="offset for the SHA size increment, default is 24")
+    parser.add_argument("-t", "--alg-type", default=None, action='append', choices=alg_types,
+                        help="algorithm types to test")
+    parser.add_argument("-s", "--job-size", default=None,
+                        help=textwrap.dedent('''\
+                        size of the cipher & hash job in bytes.
+                        It can be:
+                           - single value: test single size
+                           - list: test multiple sizes separated by commas
+                           - range: test multiple sizes with following format
+                             min:step:max (e.g. 16:16:256)\n'''))
+    parser.add_argument("-q", "--quiet", default=False, action='store_true',
+                        help="disable verbose output")
+    parser.add_argument("--cold-cache", default=False, action='store_true',
+                        help="use cold cache, it uses warm as default")
+    parser.add_argument("--arch-best", action='store_true',
+                        help="detect available architectures and run only on the best one")
+    parser.add_argument("--shani-off", action='store_true', help="don't use SHA extensions")
+    parser.add_argument("--gcm-job-api", action='store_true',
+                        help="use JOB API for GCM perf tests (raw GCM API is default)")
+    parser.add_argument("--unhalted-cycles", action='store_true',
+                        help=textwrap.dedent('''\
+                        measure using unhalted cycles (requires root).
+                        Note: RDTSC is used by default'''))
+    parser.add_argument("--quick", action='store_true',
+                        help=textwrap.dedent('''\
+                        reduces number of test iterations by x10
+                        (less precise but quicker)'''))
+    parser.add_argument("--smoke", action='store_true',
+                        help=textwrap.dedent('''\
+                        very quick, imprecise and without print out
+                        (for validation only)'''))
+    parser.add_argument("--imix", default=None,
+                        help=textwrap.dedent('''\
+                        set numbers that establish occurrence proportions between packet sizes.
+                        It requires a list of sizes through --job-size.
+                        (e.g. --imix 4,6 --job-size 64,128 will generate
+                        a series of job sizes where on average 4 out of 10
+                        packets will be 64B long and 6 out of 10 packets
+                        will be 128B long)'''))
+    parser.add_argument("--aad-size", default=None, type=int,
+                        help="size of AAD for AEAD algorithms")
+    parser.add_argument("--job-iter", default=None, type=int,
+                        help="number of tests iterations for each job size")
+
+
+    args = parser.parse_args()
+
+    # validate and convert values where necessary
+    if args.arch is not None and args.arch_best is True:
+        print("{}: error: argument -a/--arch cannot be used with " \
+              "--arch-best".format(sys.argv[0]), file=sys.stderr)
+        sys.exit(1)
+
+    if args.cores is not None:
+        try:
+            cores = parse_cores(args.cores)
+        except:
+            print("{}: error: argument -c/--cores: invalid value " \
+                  "{}".format(sys.argv[0], args.cores), file=sys.stderr)
+            sys.exit(1)
+
+    if args.imix is not None and args.job_size is None:
+        print("{}: error: argument --imix must be used with " \
+              "--job-size".format(sys.argv[0]), file=sys.stderr)
+        sys.exit(1)
+
+    if args.alg_type is not None:
+        alg_types = args.alg_type
+
+    if args.direction is not None:
+        directions = [args.direction]
+
+    if args.quiet is True:
+        QUIET = True
+
+    return args.arch, cores, directions, args.offset, \
+        alg_types, args.job_size, args.cold_cache, args.arch_best, \
+        args.shani_off, args.gcm_job_api, args.unhalted_cycles, \
+        args.quick, args.smoke, args.imix, \
+        args.aad_size, args.job_iter
+
+
 def run_test(core=None):
     """
     Main processing thread function
@@ -297,74 +474,15 @@ def run_test(core=None):
 
         # run variant
         if variant.run() is False:
-            print('error encountered in run: {}...'\
-                      .format(variant.get_cmd()), \
-                      file=sys.stderr)
+            print('Error encountered running: {}\nOutput:\n{}'\
+                  .format(variant.get_cmd(),
+                          variant.get_output()),
+                  file=sys.stderr)
             EXIT_ERROR = True
 
         DONE_Q.put(variant)
         TODO_Q.task_done()
 
-
-def parse_args():
-    """Parse command line arguments"""
-    global QUIET
-    archs = ['SSE', 'AVX', 'AVX2', 'AVX512']
-    cores = None
-    directions = ['encrypt', 'decrypt']
-    offset = 24
-    alg_types = ['cipher-only', 'hash-only', 'aead-only']
-    sizes = None
-
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
-                                     description="Wrapper script for the ipsec-mb " \
-                                     "performance application enabling extended functionality")
-
-    # parse and validate args
-    parser.add_argument("-a", "--arch", choices=archs, default=None, action='append',
-                        help="set architecture to test (default is test all archs)")
-    parser.add_argument("-c", "--cores", default=cores, help="list/range of cores e.g. 2-8 or 3,4,5")
-    parser.add_argument("-d", "--direction", default=None,
-                        choices=directions, help="Cipher direction")
-    parser.add_argument("-o", "--offset", default=offset, type=int,
-                        help="offset for the SHA size increment, default is 24")
-    parser.add_argument("-t", "--alg-type", default=None, action='append', choices=alg_types,
-                        help="algorithm types to test")
-    parser.add_argument("-s", "--job-size", default=None,
-                        help=textwrap.dedent('''\
-                        size of the cipher & hash job in bytes.
-                        It can be:
-                           - single value: test single size
-                           - list: test multiple sizes separated by commas
-                           - range: test multiple sizes with following format
-                             min:step:max (e.g. 16:16:256)\n'''))
-    parser.add_argument("-q", "--quiet", default=False, action='store_true',
-                        help="disable verbose output")
-
-    args = parser.parse_args()
-
-    # convert values where necessary
-    if args.arch is not None:
-        archs = args.arch
-
-    if args.alg_type is not None:
-        alg_types = args.alg_type
-
-    if args.cores is not None:
-        try:
-            cores = parse_cores(args.cores)
-        except:
-            print("{}: error: argument -c/--cores: invalid value " \
-                  "{}".format(sys.argv[0], args.cores), file=sys.stderr)
-            sys.exit(1)
-
-    if args.direction is not None:
-        directions = [args.direction]
-
-    if args.quiet is True:
-        QUIET = True
-
-    return archs, cores, directions, str(args.offset), alg_types, args.job_size
 
 def main():
     """
@@ -383,15 +501,26 @@ def main():
     header = '\n{0:<5} {1:<4} {2:<6} {3:<7} {4:<40}'\
         .format('NO', 'CORE', 'ARCH', 'DIR', 'ALG')
     result = [] # list to store parsed results
-    cipher_algos = [] # list of cipher algorithms to run
-    hash_algos = [] # list of hash algorithms to run
-    aead_algos = [] # list of AEAD algorithms to run
 
     # init global vars
-    init_vars()
+    init_global_vars()
+    supported_archs, best_arch, cipher_algos, hash_algos, aead_algos = get_info()
 
-    # parse command line  args
-    archs, cores, directions, offset, alg_types, sizes = parse_args()
+    # parse command line args
+    archs, cores, directions, offset, alg_types, sizes, cold_cache, arch_best, \
+        shani_off, gcm_job_api, unhalted_cycles, quick_test, smoke_test, \
+        imix, aad_size, job_iter = parse_args()
+
+    # validate requested archs are supported
+    if arch_best is True:
+        archs = best_arch
+    elif archs is None:
+        archs = supported_archs
+    else:
+        for arch in archs:
+            if arch not in supported_archs:
+                print('Error: {} arch not supported!'.format(arch), file=sys.stderr)
+                sys.exit(1)
 
     # print args
     if QUIET is False:
@@ -401,19 +530,25 @@ def main():
         print('  Directions: {}'.format(directions), file=sys.stderr)
         if offset is not None:
             print('  Offset: {}'.format(offset), file=sys.stderr)
+        if aad_size is not None:
+            print('  AAD size: {}'.format(aad_size), file=sys.stderr)
         if sizes is not None:
             print('  Sizes: {}'.format(sizes), file=sys.stderr)
+        if imix is not None:
+            print('  IMIX: {}'.format(imix), file=sys.stderr)
         if cores is not None:
             print('  Cores: {}'.format(cores), file=sys.stderr)
-        print(header, file=sys.stderr)
+        print('  Cache: {}'.format("cold" if cold_cache else "warm"), file=sys.stderr)
+        print('  SHANI: {}'.format("off" if shani_off else "on"), file=sys.stderr)
+        print('  GCM API: {}'.format("job" if gcm_job_api else "direct"), file=sys.stderr)
+        print('  Measuring using {}'.format("unhalted cycles" if unhalted_cycles \
+                                            else "rdtsc"), file=sys.stderr)
+        if quick_test is True or smoke_test is True:
+            print('  Test type: {}'.format("smoke" if smoke_test else "quick"), file=sys.stderr)
+        if job_iter is not None:
+            print('  Job iterations: {}'.format(job_iter), file=sys.stderr)
 
-    # get list of selected algorithms
-    if 'cipher-only' in alg_types:
-        cipher_algos = get_algos('cipher')
-    if 'hash-only' in alg_types:
-        hash_algos = get_algos('hash')
-    if 'aead-only' in alg_types:
-        aead_algos = get_algos('aead')
+        print(header, file=sys.stderr)
 
     # fill todo queue with variants to test
     for arch in archs:
@@ -422,8 +557,12 @@ def main():
                 # skip low performing ciphers for now
                 if 'des' in cipher_alg or 'kasumi' in cipher_alg:
                     continue
-                TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction, \
-                                   offset=offset, sizes=sizes, cipher_alg=cipher_alg))
+                TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
+                                   offset=offset, sizes=sizes, cipher_alg=cipher_alg,
+                                   cold_cache=cold_cache, shani_off=shani_off,
+                                   gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
+                                   quick_test=quick_test, smoke_test=smoke_test, imix=imix,
+                                   aad_size=aad_size, job_iter=job_iter))
                 TOTAL_VARIANTS += 1
 
         # skip direction for hash only algs
@@ -431,14 +570,22 @@ def main():
             # skip low performing algorithms for now
             if 'kasumi' in hash_alg:
                 continue
-            TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=None, \
-                               offset=offset, sizes=sizes, hash_alg=hash_alg))
+            TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=None,
+                               offset=offset, sizes=sizes, hash_alg=hash_alg,
+                               cold_cache=cold_cache, shani_off=shani_off,
+                               gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
+                               quick_test=quick_test, smoke_test=smoke_test, imix=imix,
+                               aad_size=aad_size, job_iter=job_iter))
             TOTAL_VARIANTS += 1
 
         for direction in directions:
             for aead_alg in aead_algos:
-                TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction, \
-                                   offset=offset, sizes=sizes, aead_alg=aead_alg))
+                TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
+                                   offset=offset, sizes=sizes, aead_alg=aead_alg,
+                                   cold_cache=cold_cache, shani_off=shani_off,
+                                   gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
+                                   quick_test=quick_test, smoke_test=smoke_test, imix=imix,
+                                   aad_size=aad_size, job_iter=job_iter))
                 TOTAL_VARIANTS += 1
 
     # take starting timestamp
