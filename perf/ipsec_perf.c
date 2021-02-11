@@ -2592,23 +2592,9 @@ static void usage(void)
                                "(encrypt/decrypt) (default = encrypt)\n"
                 "--hash-algo: Select hash algorithm to run on the custom test\n"
                 "--aead-algo: Select AEAD algorithm to run on the custom test\n"
-                "--no-avx512: Don't do AVX512\n"
-                "--no-avx2: Don't do AVX2\n"
-                "--no-avx: Don't do AVX\n"
-                "--no-sse: Don't do SSE\n"
                 "-o val: Use <val> for the SHA size increment, default is 24\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
-                "--no-gcm: do not run GCM perf tests\n"
-                "--no-aes: do not run standard AES + HMAC perf tests\n"
-                "--no-docsis: do not run DOCSIS cipher perf tests\n"
-                "--no-ccm: do not run CCM cipher perf tests\n"
-                "--no-des: do not run DES cipher perf tests\n"
-                "--no-3des: do not run 3DES cipher perf tests\n"
-                "--no-pon: do not run PON cipher perf tests\n"
-                "--no-zuc: do not run ZUC perf tests\n"
-                "--no-snow3g: do not run SNOW3G perf tests\n"
-                "--no-kasumi: do not run KASUMI perf tests\n"
                 "--gcm-job-api: use JOB API for GCM perf tests"
                 " (raw GCM API is default)\n"
                 "--threads num: <num> for the number of threads to run"
@@ -3058,43 +3044,10 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "-w") == 0) {
                         cache_type = WARM;
                         fprintf(stderr, "Warm cache, ");
-                } else if (strcmp(argv[i], "--no-avx512") == 0) {
-                        archs[ARCH_AVX512] = 0;
-                } else if (strcmp(argv[i], "--no-avx2") == 0) {
-                        archs[ARCH_AVX2] = 0;
-                } else if (strcmp(argv[i], "--no-avx") == 0) {
-                        archs[ARCH_AVX] = 0;
-                } else if (strcmp(argv[i], "--no-sse") == 0) {
-                        archs[ARCH_SSE] = 0;
                 } else if (strcmp(argv[i], "--shani-on") == 0) {
                         flags &= (~IMB_FLAG_SHANI_OFF);
                 } else if (strcmp(argv[i], "--shani-off") == 0) {
                         flags |= IMB_FLAG_SHANI_OFF;
-                } else if (strcmp(argv[i], "--no-gcm") == 0) {
-                        test_types[TTYPE_AES_GCM] = 0;
-                } else if (strcmp(argv[i], "--no-aes") == 0) {
-                        test_types[TTYPE_AES_HMAC] = 0;
-                } else if (strcmp(argv[i], "--no-docsis") == 0) {
-                        test_types[TTYPE_AES_DOCSIS_DES] = 0;
-                        test_types[TTYPE_AES_DOCSIS_AES] = 0;
-                } else if (strcmp(argv[i], "--no-docsis-des") == 0) {
-                        test_types[TTYPE_AES_DOCSIS_DES] = 0;
-                } else if (strcmp(argv[i], "--no-docsis-aes") == 0) {
-                        test_types[TTYPE_AES_DOCSIS_AES] = 0;
-                } else if (strcmp(argv[i], "--no-ccm") == 0) {
-                        test_types[TTYPE_AES_CCM] = 0;
-                } else if (strcmp(argv[i], "--no-des") == 0) {
-                        test_types[TTYPE_AES_DES] = 0;
-                } else if (strcmp(argv[i], "--no-3des") == 0) {
-                        test_types[TTYPE_AES_3DES] = 0;
-                } else if (strcmp(argv[i], "--no-pon") == 0) {
-                        test_types[TTYPE_PON] = 0;
-                } else if (strcmp(argv[i], "--no-zuc") == 0) {
-                        test_types[TTYPE_ZUC] = 0;
-                } else if (strcmp(argv[i], "--no-snow3g") == 0) {
-                        test_types[TTYPE_SNOW3G] = 0;
-                } else if (strcmp(argv[i], "--no-kasumi") == 0) {
-                        test_types[TTYPE_KASUMI] = 0;
                 } else if (strcmp(argv[i], "--gcm-job-api") == 0) {
                         use_gcm_job_api = 1;
                 } else if (strcmp(argv[i], "--quick") == 0) {
