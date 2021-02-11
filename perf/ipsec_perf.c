@@ -833,7 +833,7 @@ struct custom_job_params custom_job_params = {
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
 /* AES, DOCSIS DES, DOCSIS AES, GCM, CCM, DES, 3DES, PON, ZUC,
  * KASUMI, GMAC, CHACHA20-POLY1305, CUSTOM */
-uint8_t test_types[NUM_TTYPES] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 };
+uint8_t test_types[NUM_TTYPES] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
@@ -2580,18 +2580,21 @@ exit_failure:
 
 static void usage(void)
 {
-        fprintf(stderr, "Usage: ipsec_perf [args], "
-                "where args are zero or more\n"
+        fprintf(stderr, "Usage: ipsec_perf <ALGORITHM> [ARGS]\n"
+                "\nALGORITHM can be one or more of:\n"
+                "--cipher-algo: Select cipher algorithm to run on the custom test\n"
+                "--hash-algo: Select hash algorithm to run on the custom test\n"
+                "--aead-algo: Select AEAD algorithm to run on the custom test\n"
+                "             Note: AEAD algorithms cannot be used with "
+                "cipher or hash algorithms\n"
+                "\nARGS can be zero or more of:\n"
                 "-h: print this message\n"
                 "-c: Use cold cache, it uses warm as default\n"
                 "-w: Use warm cache\n"
                 "--arch: run only tests on specified architecture (SSE/AVX/AVX2/AVX512)\n"
                 "--arch-best: detect available architectures and run only on the best one\n"
-                "--cipher-algo: Select cipher algorithm to run on the custom test\n"
                 "--cipher-dir: Select cipher direction to run on the custom test  "
-                               "(encrypt/decrypt) (default = encrypt)\n"
-                "--hash-algo: Select hash algorithm to run on the custom test\n"
-                "--aead-algo: Select AEAD algorithm to run on the custom test\n"
+                "(encrypt/decrypt) (default = encrypt)\n"
                 "-o val: Use <val> for the SHA size increment, default is 24\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
@@ -3189,9 +3192,13 @@ int main(int argc, char *argv[])
                 }
 
         if (test_types[TTYPE_CUSTOM]) {
-		/* Disable all other tests when custom test is selected */
-                memset(test_types, 0, sizeof(test_types));
-                test_types[TTYPE_CUSTOM] = 1;
+                if (aead_algo_set == 0 && cipher_algo_set == 0 &&
+                    hash_algo_set == 0) {
+                        fprintf(stderr, "No cipher, hash or "
+                                "AEAD algorithms selected\n");
+                        usage();
+                        return EXIT_FAILURE;
+                }
                 if (aead_algo_set && (cipher_algo_set || hash_algo_set)) {
                         fprintf(stderr, "AEAD algorithm cannot be used "
                                         "combined with another cipher/hash "
