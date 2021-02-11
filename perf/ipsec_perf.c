@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright(c) 2017-2020, Intel Corporation All rights reserved.
+  Copyright(c) 2017-2021, Intel Corporation All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -99,88 +99,9 @@ typedef cpuset_t cpu_set_t;
 
 #define MAX_NUM_THREADS 16 /* Maximum number of threads that can be created */
 
-#define CIPHER_MODES_AES 8	/* CBC, CNTR, CNTR+8, CNTR_BITLEN,
-                                   CNTR_BITLEN-4, ECB, CBCS_1_9, NULL_CIPHER */
-#define CIPHER_MODES_DOCSIS_AES 2 /* AES DOCSIS, AES DOCSIS+8 */
-#define CIPHER_MODES_DOCSIS_DES 2 /* DES DOCSIS, DES DOCSIS+4 */
-#define CIPHER_MODES_DES 1	/* DES */
-#define CIPHER_MODES_GCM 1	/* GCM */
-#define CIPHER_MODES_CCM 1	/* CCM */
-#define CIPHER_MODES_3DES 1	/* 3DES */
-#define CIPHER_MODES_PON 2	/* PON, NO_CTR PON */
-#define CIPHER_MODES_ZUC 1	/* ZUC-EEA3 */
-#define CIPHER_MODES_SNOW3G 1   /* SNOW3G-UEA2 */
-#define CIPHER_MODES_KASUMI 1   /* KASUMI-UEA1 */
-#define CIPHER_MODES_GMAC 1     /* NULL */
-#define CIPHER_MODES_POLY1305 1 /* CHACHA20 */
-#define DIRECTIONS 2		/* ENC, DEC */
-#define HASH_ALGS_AES 11	/* SHA1, SHA256, SHA224, SHA384,
-                                   SHA512, XCBC, MD5, NULL_HASH,
-                                   CMAC, CMAC_BITLEN, CMAC_256 */
-#define HASH_ALGS_DOCSIS_DES 1	/* NULL_HASH */
-#define HASH_ALGS_DOCSIS_AES 2	/* NULL_HASH, DOCSIS_CRC32 */
-#define HASH_ALGS_GCM 1		/* GCM */
-#define HASH_ALGS_CCM 1		/* CCM */
-#define HASH_ALGS_DES 1		/* NULL_HASH for DES */
-#define HASH_ALGS_3DES 1	/* NULL_HASH for 3DES */
-#define HASH_ALGS_PON 1	        /* CRC32/BIP for PON */
-#define HASH_ALGS_ZUC 1	        /* ZUC-EIA3 */
-#define HASH_ALGS_SNOW3G 1      /* SNOW3G-UIA2 */
-#define HASH_ALGS_KASUMI 1      /* KASUMI-UIA1 */
-#define HASH_ALGS_GMAC 3        /* AES-GMAC-128/192/256 */
-#define HASH_ALGS_CHACHA20 1    /* POLY1305 */
-#define KEY_SIZES_AES 3		/* 16, 24, 32 */
-#define KEY_SIZES_DOCSIS_AES 2	/* 16, 32 */
-#define KEY_SIZES_DOCSIS_DES 1	/* 8 */
-#define KEY_SIZES_GCM 3		/* 16, 24, 32 */
-#define KEY_SIZES_CCM 2		/* 16, 32 */
-#define KEY_SIZES_DES 1		/* 8 */
-#define KEY_SIZES_3DES 1	/* 8 x 3 */
-#define KEY_SIZES_PON 1		/* 16 */
-#define KEY_SIZES_ZUC 1         /* 16 */
-#define KEY_SIZES_SNOW3G 1      /* 16 */
-#define KEY_SIZES_KASUMI 1      /* 16 */
-#define KEY_SIZES_GMAC   1      /* 0 (no cipher key) */
-#define KEY_SIZES_CHACHA20 1    /* There is only one */
-
 #define IA32_MSR_FIXED_CTR_CTRL      0x38D
 #define IA32_MSR_PERF_GLOBAL_CTR     0x38F
 #define IA32_MSR_CPU_UNHALTED_THREAD 0x30A
-
-/* Those defines tell how many different test cases are to be performed.
- * Have to be multiplied by number of chosen architectures.
- */
-#define VARIANTS_PER_ARCH_AES (CIPHER_MODES_AES * DIRECTIONS *  \
-                               HASH_ALGS_AES * KEY_SIZES_AES)
-#define VARIANTS_PER_ARCH_DOCSIS_DES (CIPHER_MODES_DOCSIS_DES * DIRECTIONS *  \
-                                      HASH_ALGS_DOCSIS_DES *  \
-                                      KEY_SIZES_DOCSIS_DES)
-#define VARIANTS_PER_ARCH_DOCSIS_AES (CIPHER_MODES_DOCSIS_AES * DIRECTIONS *  \
-                                      HASH_ALGS_DOCSIS_AES *  \
-                                      KEY_SIZES_DOCSIS_AES)
-#define VARIANTS_PER_ARCH_GCM (CIPHER_MODES_GCM * DIRECTIONS *  \
-                               HASH_ALGS_GCM * KEY_SIZES_GCM)
-#define VARIANTS_PER_ARCH_CCM (CIPHER_MODES_CCM * DIRECTIONS *  \
-                               HASH_ALGS_CCM * KEY_SIZES_CCM)
-#define VARIANTS_PER_ARCH_DES (CIPHER_MODES_DES * DIRECTIONS *  \
-                               HASH_ALGS_DES * KEY_SIZES_DES)
-#define VARIANTS_PER_ARCH_3DES (CIPHER_MODES_3DES * DIRECTIONS *  \
-                                HASH_ALGS_3DES * KEY_SIZES_3DES)
-#define VARIANTS_PER_ARCH_PON (CIPHER_MODES_PON * DIRECTIONS *  \
-                               HASH_ALGS_PON * KEY_SIZES_PON)
-
-#define VARIANTS_PER_ARCH_ZUC (CIPHER_MODES_ZUC * DIRECTIONS *  \
-                               HASH_ALGS_ZUC * KEY_SIZES_ZUC)
-#define VARIANTS_PER_ARCH_SNOW3G (CIPHER_MODES_SNOW3G * DIRECTIONS *  \
-                                  HASH_ALGS_SNOW3G * KEY_SIZES_SNOW3G)
-#define VARIANTS_PER_ARCH_KASUMI (CIPHER_MODES_KASUMI * DIRECTIONS *  \
-                                  HASH_ALGS_KASUMI * KEY_SIZES_KASUMI)
-#define VARIANTS_PER_ARCH_GMAC (CIPHER_MODES_GMAC * DIRECTIONS *  \
-                                HASH_ALGS_GMAC * KEY_SIZES_GMAC)
-#define VARIANTS_PER_ARCH_CHACHA20_POLY1305 (HASH_ALGS_CHACHA20 *  \
-                                             DIRECTIONS *  \
-                                             CIPHER_MODES_POLY1305 *  \
-                                             KEY_SIZES_CHACHA20)
 
 enum arch_type_e {
         ARCH_SSE = 0,
@@ -188,24 +109,6 @@ enum arch_type_e {
         ARCH_AVX2,
         ARCH_AVX512,
         NUM_ARCHS
-};
-
-enum test_type_e {
-        TTYPE_AES_HMAC,
-        TTYPE_AES_DOCSIS_DES,
-        TTYPE_AES_DOCSIS_AES,
-        TTYPE_AES_GCM,
-        TTYPE_AES_CCM,
-        TTYPE_AES_DES,
-        TTYPE_AES_3DES,
-        TTYPE_PON,
-        TTYPE_ZUC,
-        TTYPE_SNOW3G,
-        TTYPE_KASUMI,
-        TTYPE_AES_GMAC,
-        TTYPE_CHACHA20_POLY1305,
-        TTYPE_CUSTOM,
-        NUM_TTYPES
 };
 
 /* This enum will be mostly translated to IMB_CIPHER_MODE
@@ -271,14 +174,12 @@ enum test_hash_alg_e {
 /* Struct storing cipher parameters */
 struct params_s {
         IMB_CIPHER_DIRECTION	cipher_dir;
-        enum test_type_e	test_type; /* AES, DOCSIS, GCM */
         enum test_cipher_mode_e	cipher_mode;
         enum test_hash_alg_e	hash_alg;
         uint32_t		aes_key_size;
         uint32_t		size_aes;
         uint64_t		aad_size;
         uint32_t		num_sizes;
-        uint32_t		num_variants;
         uint32_t                core;
 };
 
@@ -831,10 +732,6 @@ struct custom_job_params custom_job_params = {
 };
 
 uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
-/* AES, DOCSIS DES, DOCSIS AES, GCM, CCM, DES, 3DES, PON, ZUC,
- * KASUMI, GMAC, CHACHA20-POLY1305, CUSTOM */
-uint8_t test_types[NUM_TTYPES] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
-
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
@@ -2044,212 +1941,6 @@ process_variant(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
         variant_ptr->arch = arch;
 }
 
-/* Sets cipher mode, hash algorithm */
-static void
-do_variants(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
-            const uint32_t run, struct variant_s **variant_ptr,
-            uint32_t *variant, uint8_t *p_buffer, imb_uint128_t *p_keys,
-            const int print_info)
-{
-        uint32_t hash_alg;
-        uint32_t h_start = TEST_SHA1;
-        uint32_t h_end = TEST_NULL_HASH;
-        uint32_t c_mode;
-        uint32_t c_start = TEST_CBC;
-        uint32_t c_end = TEST_NULL_CIPHER;
-
-        switch (params->test_type) {
-        case TTYPE_AES_DOCSIS_DES:
-                h_start = TEST_NULL_HASH;
-                c_start = TEST_DESDOCSIS;
-                c_end = TEST_DESDOCSIS4;
-                break;
-        case TTYPE_AES_DOCSIS_AES:
-                h_start = TEST_NULL_HASH;
-                h_end = TEST_DOCSIS_CRC32;
-                c_start = TEST_AESDOCSIS;
-                c_end = TEST_AESDOCSIS8;
-                break;
-        case TTYPE_AES_GCM:
-                h_start = TEST_HASH_GCM;
-                h_end = TEST_HASH_GCM;
-                c_start = TEST_GCM;
-                c_end = TEST_GCM;
-                break;
-        case TTYPE_AES_CCM:
-                h_start = TEST_HASH_CCM;
-                h_end = TEST_HASH_CCM;
-                c_start = TEST_CCM;
-                c_end = TEST_CCM;
-                break;
-        case TTYPE_AES_DES:
-                h_start = TEST_NULL_HASH;
-                h_end = TEST_NULL_HASH;
-                c_start = TEST_DES;
-                c_end = TEST_DES;
-                break;
-        case TTYPE_AES_3DES:
-                h_start = TEST_NULL_HASH;
-                h_end = TEST_NULL_HASH;
-                c_start = TEST_3DES;
-                c_end = TEST_3DES;
-                break;
-        case TTYPE_PON:
-                h_start = TEST_PON_CRC_BIP;
-                h_end = TEST_PON_CRC_BIP;
-                c_start = TEST_PON_CNTR;
-                c_end = TEST_PON_NO_CNTR;
-                break;
-        case TTYPE_ZUC:
-                h_start = TEST_ZUC_EIA3;
-                h_end = TEST_ZUC_EIA3;
-                c_start = TEST_ZUC_EEA3;
-                c_end = TEST_ZUC_EEA3;
-                break;
-        case TTYPE_SNOW3G:
-                h_start = TEST_SNOW3G_UIA2;
-                h_end = TEST_SNOW3G_UIA2;
-                c_start = TEST_SNOW3G_UEA2;
-                c_end = TEST_SNOW3G_UEA2;
-                break;
-        case TTYPE_KASUMI:
-                h_start = TEST_KASUMI_UIA1;
-                h_end = TEST_KASUMI_UIA1;
-                c_start = TEST_KASUMI_UEA1;
-                c_end = TEST_KASUMI_UEA1;
-                break;
-        case TTYPE_AES_GMAC:
-                h_start = TEST_AES_GMAC_128;
-                h_end = TEST_AES_GMAC_256;
-                c_start = TEST_NULL_CIPHER;
-                c_end = TEST_NULL_CIPHER;
-                break;
-        case TTYPE_CHACHA20_POLY1305:
-                h_start = TEST_HASH_POLY1305;
-                h_end = TEST_HASH_POLY1305;
-                c_start = TEST_CHACHA20;
-                c_end = TEST_CHACHA20;
-                break;
-        case TTYPE_CUSTOM:
-                h_start = params->hash_alg;
-                h_end = params->hash_alg;
-                c_start = params->cipher_mode;
-                c_end = params->cipher_mode;
-
-                /* DOCSIS-CRC32 requires specific cipher mode */
-                if (params->hash_alg == TEST_DOCSIS_CRC32) {
-                        c_start = TEST_AESDOCSIS;
-                        c_end = TEST_AESDOCSIS;
-                }
-                break;
-        default:
-                break;
-        }
-
-        for (c_mode = c_start; c_mode <= c_end; c_mode++) {
-                for (hash_alg = h_start; hash_alg <= h_end; hash_alg++) {
-                        int skip_variant = 0;
-
-                        if (c_mode != TEST_AESDOCSIS &&
-                            c_mode != TEST_AESDOCSIS8) {
-                                skip_variant =
-                                        (hash_alg == TEST_DOCSIS_CRC32);
-                        } else {
-                                skip_variant =
-                                        (hash_alg != TEST_DOCSIS_CRC32 &&
-                                         hash_alg != TEST_NULL_HASH);
-
-                                /* AES-DOCSIS supports only 16 & 32-byte keys */
-                                skip_variant |= (params->aes_key_size == 24);
-                        }
-
-                        if (skip_variant)
-                                continue;
-
-                        params->cipher_mode = (enum test_cipher_mode_e) c_mode;
-                        params->hash_alg = (enum test_hash_alg_e) hash_alg;
-
-                        process_variant(mgr, arch, params, *variant_ptr, run,
-                                        p_buffer, p_keys);
-                        /* update and print progress bar */
-                        if (print_info)
-                                prog_bar_update(*variant);
-                        (*variant)++;
-                        (*variant_ptr)++;
-                }
-        }
-}
-
-/* Sets cipher direction and key size  */
-static void
-run_dir_test(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
-             const uint32_t run, struct variant_s **variant_ptr,
-             uint32_t *variant, uint8_t *p_buffer, imb_uint128_t *p_keys,
-             const int print_info)
-{
-        uint32_t dir;
-        uint32_t k; /* Key size */
-        uint32_t start_k = IMB_KEY_128_BYTES;
-        uint32_t end_k = IMB_KEY_256_BYTES; /* Key size value limit */
-
-        if (params->test_type == TTYPE_AES_DOCSIS_DES ||
-            params->test_type == TTYPE_AES_DES ||
-            params->test_type == TTYPE_AES_3DES ||
-            params->test_type == TTYPE_PON ||
-            params->test_type == TTYPE_ZUC ||
-            params->test_type == TTYPE_SNOW3G ||
-            params->test_type == TTYPE_KASUMI)
-                end_k = IMB_KEY_128_BYTES;
-
-        if (params->test_type == TTYPE_CHACHA20_POLY1305)
-                start_k = IMB_KEY_256_BYTES;
-
-        if (params->test_type == TTYPE_AES_GMAC) {
-                start_k = 0;
-                end_k = 0;
-        }
-
-        switch (arch) {
-        case 0:
-                init_mb_mgr_sse(mgr);
-                break;
-        case 1:
-                init_mb_mgr_avx(mgr);
-                break;
-        case 2:
-                init_mb_mgr_avx2(mgr);
-                break;
-        default:
-        case 3:
-                init_mb_mgr_avx512(mgr);
-                break;
-        }
-
-        if (params->test_type == TTYPE_CUSTOM) {
-                params->cipher_dir = custom_job_params.cipher_dir;
-                params->aes_key_size = custom_job_params.aes_key_size;
-                params->cipher_mode = custom_job_params.cipher_mode;
-                params->hash_alg = custom_job_params.hash_alg;
-                do_variants(mgr, arch, params, run, variant_ptr,
-                            variant, p_buffer, p_keys, print_info);
-                return;
-        }
-
-        for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
-                params->cipher_dir = (IMB_CIPHER_DIRECTION) dir;
-                for (k = start_k; k <= end_k; k += 8) {
-                        /* AES-CCM-192 not currently supported */
-                        if((params->test_type == TTYPE_AES_CCM) &&
-                           (k == IMB_KEY_192_BYTES))
-                                continue;
-
-                        params->aes_key_size = k;
-                        do_variants(mgr, arch, params, run, variant_ptr,
-                                    variant, p_buffer, p_keys, print_info);
-                }
-        }
-}
-
 /* Generates output containing averaged times for each test variant */
 static void
 print_times(struct variant_s *variant_list, struct params_s *params,
@@ -2352,9 +2043,7 @@ run_tests(void *arg)
         struct thread_info *info = (struct thread_info *)arg;
         IMB_MGR *p_mgr = NULL;
         struct params_s params;
-        uint32_t num_variants[NUM_TTYPES] = {0};
-        uint32_t type, at_size, run, arch;
-        uint32_t variants_per_arch, max_arch;
+        uint32_t at_size, run, arch;
         uint32_t variant;
         uint32_t total_variants = 0;
         struct variant_s *variant_ptr = NULL;
@@ -2408,77 +2097,11 @@ run_tests(void *arg)
 
         init_mem(&buf, &keys);
 
-        for (type = TTYPE_AES_HMAC; type < NUM_TTYPES; type++) {
-                if (test_types[type] == 0)
+        /* Calculating number of all variants */
+        for (arch = 0; arch < NUM_ARCHS; arch++) {
+                if (archs[arch] == 0)
                         continue;
-
-                switch (type) {
-                default:
-                case TTYPE_AES_HMAC:
-                        variants_per_arch = VARIANTS_PER_ARCH_AES;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_AES_DOCSIS_AES:
-                        variants_per_arch = VARIANTS_PER_ARCH_DOCSIS_AES;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_AES_DOCSIS_DES:
-                        variants_per_arch = VARIANTS_PER_ARCH_DOCSIS_DES;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_AES_GCM:
-                        variants_per_arch = VARIANTS_PER_ARCH_GCM;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_AES_CCM:
-                        variants_per_arch = VARIANTS_PER_ARCH_CCM;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_AES_DES:
-                        variants_per_arch = VARIANTS_PER_ARCH_DES;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_AES_3DES:
-                        variants_per_arch = VARIANTS_PER_ARCH_3DES;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_PON:
-                        variants_per_arch = VARIANTS_PER_ARCH_PON;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_ZUC:
-                        variants_per_arch = VARIANTS_PER_ARCH_ZUC;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_SNOW3G:
-                        variants_per_arch = VARIANTS_PER_ARCH_SNOW3G;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_KASUMI:
-                        variants_per_arch = VARIANTS_PER_ARCH_KASUMI;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_AES_GMAC:
-                        variants_per_arch = VARIANTS_PER_ARCH_GMAC;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_CHACHA20_POLY1305:
-                        variants_per_arch = VARIANTS_PER_ARCH_CHACHA20_POLY1305;
-                        max_arch = NUM_ARCHS;
-                        break;
-                case TTYPE_CUSTOM:
-                        variants_per_arch = 1;
-                        max_arch = NUM_ARCHS;
-                        break;
-                }
-
-                /* Calculating number of all variants */
-                for (arch = 0; arch < max_arch; arch++) {
-                        if (archs[arch] == 0)
-                                continue;
-                        num_variants[type] += variants_per_arch;
-                }
-                total_variants += num_variants[type];
+                total_variants++;
         }
 
         if (total_variants == 0) {
@@ -2525,23 +2148,42 @@ run_tests(void *arg)
                 if (info->print_info)
                         prog_bar_init(total_variants);
 
-                for (type = TTYPE_AES_HMAC; type < NUM_TTYPES; type++) {
-                        if (test_types[type] == 0)
+                params.cipher_dir = custom_job_params.cipher_dir;
+                params.aes_key_size = custom_job_params.aes_key_size;
+                params.cipher_mode = custom_job_params.cipher_mode;
+                params.hash_alg = custom_job_params.hash_alg;
+
+                /* Performing tests for each selected architecture */
+                for (arch = 0; arch < NUM_ARCHS; arch++) {
+                        if (archs[arch] == 0)
                                 continue;
 
-                        max_arch = NUM_ARCHS;
-
-                        params.num_variants = num_variants[type];
-                        params.test_type = type;
-                        /* Performing tests for each selected architecture */
-                        for (arch = 0; arch < max_arch; arch++) {
-                                if (archs[arch] == 0)
-                                        continue;
-                                run_dir_test(p_mgr, arch, &params, run,
-                                             &variant_ptr, &variant, buf,
-                                             keys, info->print_info);
+                        switch (arch) {
+                        case 0:
+                                init_mb_mgr_sse(p_mgr);
+                                break;
+                        case 1:
+                                init_mb_mgr_avx(p_mgr);
+                                break;
+                        case 2:
+                                init_mb_mgr_avx2(p_mgr);
+                                break;
+                        default:
+                        case 3:
+                                init_mb_mgr_avx512(p_mgr);
+                                break;
                         }
-                } /* end for type */
+
+                        process_variant(p_mgr, arch, &params,
+                                        variant_ptr, run, buf, keys);
+
+                        /* update and print progress bar */
+                        if (info->print_info)
+                                prog_bar_update(variant);
+
+                        variant++;
+                        variant_ptr++;
+                }
                 if (info->print_info)
                         prog_bar_fini();
 
@@ -3085,7 +2727,6 @@ int main(int argc, char *argv[])
                                         values->job_params.cipher_mode;
                         custom_job_params.aes_key_size =
                                         values->job_params.aes_key_size;
-                        test_types[TTYPE_CUSTOM] = 1;
                         cipher_algo_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "--cipher-dir") == 0) {
@@ -3108,7 +2749,6 @@ int main(int argc, char *argv[])
 
                         custom_job_params.hash_alg =
                                         values->job_params.hash_alg;
-                        test_types[TTYPE_CUSTOM] = 1;
                         hash_algo_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "--aead-algo") == 0) {
@@ -3124,7 +2764,6 @@ int main(int argc, char *argv[])
                                         values->job_params.aes_key_size;
                         custom_job_params.hash_alg =
                                         values->job_params.hash_alg;
-                        test_types[TTYPE_CUSTOM] = 1;
                         aead_algo_set = 1;
                         i++;
                 } else if (strcmp(argv[i], "-o") == 0) {
@@ -3191,20 +2830,18 @@ int main(int argc, char *argv[])
                         return EXIT_FAILURE;
                 }
 
-        if (test_types[TTYPE_CUSTOM]) {
-                if (aead_algo_set == 0 && cipher_algo_set == 0 &&
-                    hash_algo_set == 0) {
-                        fprintf(stderr, "No cipher, hash or "
-                                "AEAD algorithms selected\n");
-                        usage();
-                        return EXIT_FAILURE;
-                }
-                if (aead_algo_set && (cipher_algo_set || hash_algo_set)) {
-                        fprintf(stderr, "AEAD algorithm cannot be used "
-                                        "combined with another cipher/hash "
-                                        "algorithm\n");
-                        return EXIT_FAILURE;
-                }
+        if (aead_algo_set == 0 && cipher_algo_set == 0 &&
+            hash_algo_set == 0) {
+                fprintf(stderr, "No cipher, hash or "
+                        "AEAD algorithms selected\n");
+                usage();
+                return EXIT_FAILURE;
+        }
+        if (aead_algo_set && (cipher_algo_set || hash_algo_set)) {
+                fprintf(stderr, "AEAD algorithm cannot be used "
+                        "combined with another cipher/hash "
+                        "algorithm\n");
+                return EXIT_FAILURE;
         }
 
         if (cipher_algo_set == 0 && aead_algo_set == 0 && cipher_dir_set) {
@@ -3213,8 +2850,7 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
         }
 
-        if (test_types[TTYPE_AES_CCM] ||
-                        custom_job_params.cipher_mode == TEST_CCM) {
+        if (custom_job_params.cipher_mode == TEST_CCM) {
                 if (ccm_aad_size > CCM_AAD_SIZE_MAX) {
                         fprintf(stderr, "AAD cannot be higher than %u in CCM\n",
                                 CCM_AAD_SIZE_MAX);
@@ -3289,16 +2925,10 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
 
-        if (job_sizes[RANGE_MIN] == 0) {
-                if (test_types[TTYPE_AES_HMAC] ||
-                    test_types[TTYPE_AES_DOCSIS_DES] ||
-                    test_types[TTYPE_AES_DOCSIS_AES] ||
-                    test_types[TTYPE_AES_DES] || test_types[TTYPE_AES_3DES] ||
-                    (test_types[TTYPE_CUSTOM] && aead_algo_set == 0)) {
-                        fprintf(stderr, "Buffer size cannot be 0 unless only "
-                                        "an AEAD algorithm is tested\n");
-                        return EXIT_FAILURE;
-                }
+        if (job_sizes[RANGE_MIN] == 0 && aead_algo_set == 0) {
+                fprintf(stderr, "Buffer size cannot be 0 unless only "
+                        "an AEAD algorithm is tested\n");
+                return EXIT_FAILURE;
         }
 
         /* Check num cores >= number of threads */
@@ -3339,12 +2969,10 @@ int main(int argc, char *argv[])
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
 
-        if (test_types[TTYPE_AES_GCM] ||
-                        (custom_job_params.cipher_mode == TEST_GCM))
+        if (custom_job_params.cipher_mode == TEST_GCM)
                 fprintf(stderr, "GCM AAD = %"PRIu64"\n", gcm_aad_size);
 
-        if (test_types[TTYPE_AES_CCM] ||
-                        (custom_job_params.cipher_mode == TEST_CCM))
+        if (custom_job_params.cipher_mode == TEST_CCM)
                 fprintf(stderr, "CCM AAD = %"PRIu64"\n", ccm_aad_size);
 
         if (archs[ARCH_SSE]) {
