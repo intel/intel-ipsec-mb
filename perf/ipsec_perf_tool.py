@@ -199,8 +199,10 @@ class Variant:
 
         if self.hash_alg is None:
             hash_alg = ''
-        else:
+        elif cipher_alg == '':
             hash_alg = self.hash_alg
+        else:
+            hash_alg = ' + ' + self.hash_alg
 
         if self.aead_alg is None:
             aead_alg = ''
@@ -344,7 +346,7 @@ def parse_args():
     cores = None
     directions = ['encrypt', 'decrypt']
     offset = 24
-    alg_types = ['cipher-only', 'hash-only', 'aead-only']
+    alg_types = ['cipher-only', 'hash-only', 'aead-only', 'cipher-hash-all']
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
                                      description="Wrapper script for the ipsec-mb " \
@@ -428,6 +430,9 @@ def parse_args():
 
     if args.alg_type is not None:
         alg_types = args.alg_type
+    else:
+        # strip all cipher hash combinations in default run
+        alg_types = alg_types[:-1]
 
     if args.direction is not None:
         directions = [args.direction]
@@ -590,6 +595,20 @@ def main():
                                        quick_test=quick_test, smoke_test=smoke_test, imix=imix,
                                        aad_size=aad_size, job_iter=job_iter))
                     TOTAL_VARIANTS += 1
+
+        if 'cipher-hash-all' in alg_types:
+            for direction in directions:
+                # all cipher + hash combinations
+                for cipher_alg in cipher_algos:
+                    for hash_alg in hash_algos:
+                        TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
+                                           offset=offset, sizes=sizes, cipher_alg=cipher_alg,
+                                           hash_alg=hash_alg, cold_cache=cold_cache,
+                                           shani_off=shani_off, gcm_job_api=gcm_job_api,
+                                           unhalted_cycles=unhalted_cycles, quick_test=quick_test,
+                                           smoke_test=smoke_test, imix=imix, aad_size=aad_size,
+                                           job_iter=job_iter))
+                        TOTAL_VARIANTS += 1
 
     # take starting timestamp
     start_ts = time.time()
