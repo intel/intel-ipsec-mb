@@ -552,41 +552,44 @@ def main():
 
     # fill todo queue with variants to test
     for arch in archs:
-        for direction in directions:
-            for cipher_alg in cipher_algos:
-                # skip low performing ciphers for now
-                if 'des' in cipher_alg or 'kasumi' in cipher_alg:
+        if 'cipher-only' in alg_types:
+            for direction in directions:
+                for cipher_alg in cipher_algos:
+                    # skip low performing ciphers for now
+                    if 'des' in cipher_alg or 'kasumi' in cipher_alg:
+                        continue
+                    TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
+                                       offset=offset, sizes=sizes, cipher_alg=cipher_alg,
+                                       cold_cache=cold_cache, shani_off=shani_off,
+                                       gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
+                                       quick_test=quick_test, smoke_test=smoke_test, imix=imix,
+                                       aad_size=aad_size, job_iter=job_iter))
+                    TOTAL_VARIANTS += 1
+
+        if 'hash-only' in alg_types:
+            # skip direction for hash only algs
+            for hash_alg in hash_algos:
+                # skip low performing algorithms for now
+                if 'kasumi' in hash_alg:
                     continue
-                TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
-                                   offset=offset, sizes=sizes, cipher_alg=cipher_alg,
+                TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=None,
+                                   offset=offset, sizes=sizes, hash_alg=hash_alg,
                                    cold_cache=cold_cache, shani_off=shani_off,
                                    gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
                                    quick_test=quick_test, smoke_test=smoke_test, imix=imix,
                                    aad_size=aad_size, job_iter=job_iter))
                 TOTAL_VARIANTS += 1
 
-        # skip direction for hash only algs
-        for hash_alg in hash_algos:
-            # skip low performing algorithms for now
-            if 'kasumi' in hash_alg:
-                continue
-            TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=None,
-                               offset=offset, sizes=sizes, hash_alg=hash_alg,
-                               cold_cache=cold_cache, shani_off=shani_off,
-                               gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
-                               quick_test=quick_test, smoke_test=smoke_test, imix=imix,
-                               aad_size=aad_size, job_iter=job_iter))
-            TOTAL_VARIANTS += 1
-
-        for direction in directions:
-            for aead_alg in aead_algos:
-                TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
-                                   offset=offset, sizes=sizes, aead_alg=aead_alg,
-                                   cold_cache=cold_cache, shani_off=shani_off,
-                                   gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
-                                   quick_test=quick_test, smoke_test=smoke_test, imix=imix,
-                                   aad_size=aad_size, job_iter=job_iter))
-                TOTAL_VARIANTS += 1
+        if 'aead-only' in alg_types:
+            for direction in directions:
+                for aead_alg in aead_algos:
+                    TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
+                                       offset=offset, sizes=sizes, aead_alg=aead_alg,
+                                       cold_cache=cold_cache, shani_off=shani_off,
+                                       gcm_job_api=gcm_job_api, unhalted_cycles=unhalted_cycles,
+                                       quick_test=quick_test, smoke_test=smoke_test, imix=imix,
+                                       aad_size=aad_size, job_iter=job_iter))
+                    TOTAL_VARIANTS += 1
 
     # take starting timestamp
     start_ts = time.time()
