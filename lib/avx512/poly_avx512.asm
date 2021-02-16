@@ -243,10 +243,11 @@ section .text
 
 ;; =============================================================================
 ;; =============================================================================
-;; Computes hash for 4 16-byte message blocks.
-;; It computes H4 = ((H0 + M1) * R^4 + M2 * R^3 + M3 * R^2 + M4 * R)
+;; Computes hash for 8 16-byte message blocks.
+;; It computes H8 = ((H0 + M1) * R^8 + M2 * R^7 + M3 * R^6 + M4 * R^5 +
+;;                   M5 * R^4 + M6 * R^3 + M7 * R^2 + M8 * R)
 ;;
-;; It first multiplies all 4 blocks with powers of R:
+;; It first multiplies all 8 blocks with powers of R:
 ;;
 ;;      a4      a3      a2      a1      a0
 ;; ×    b4      b3      b2      b1      b0
@@ -267,11 +268,11 @@ section .text
 
 ;; =============================================================================
 %macro POLY1305_MUL_REDUCE_VEC 32
-%define %%A0      %1  ; [in/out] ZMM register containing 1st 26-bit limb of the 4 blocks
-%define %%A1      %2  ; [in/out] ZMM register containing 2nd 26-bit limb of the 4 blocks
-%define %%A2      %3  ; [in/out] ZMM register containing 3rd 26-bit limb of the 4 blocks
-%define %%A3      %4  ; [in/out] ZMM register containing 4th 26-bit limb of the 4 blocks
-%define %%A4      %5  ; [in/out] ZMM register containing 5th 26-bit limb of the 4 blocks
+%define %%A0      %1  ; [in/out] ZMM register containing 1st 26-bit limb of the 8 blocks
+%define %%A1      %2  ; [in/out] ZMM register containing 2nd 26-bit limb of the 8 blocks
+%define %%A2      %3  ; [in/out] ZMM register containing 3rd 26-bit limb of the 8 blocks
+%define %%A3      %4  ; [in/out] ZMM register containing 4th 26-bit limb of the 8 blocks
+%define %%A4      %5  ; [in/out] ZMM register containing 5th 26-bit limb of the 8 blocks
 %define %%R0      %6  ; [in] ZMM register (R0) to include the 1st limb in IDX
 %define %%R1      %7  ; [in] ZMM register (R1) to include the 2nd limb in IDX
 %define %%R2      %8  ; [in] ZMM register (R2) to include the 3rd limb in IDX
@@ -281,11 +282,11 @@ section .text
 %define %%R2P     %12 ; [in] ZMM register (R2') to include the 3rd limb (multiplied by 5) in IDX
 %define %%R3P     %13 ; [in] ZMM register (R3') to include the 4th limb (multiplied by 5) in IDX
 %define %%R4P     %14 ; [in] ZMM register (R4') to include the 5th limb (multiplied by 5) in IDX
-%define %%P0      %15 ; [clobbered] ZMM register to contain p[0] of the 4 blocks
-%define %%P1      %16 ; [clobbered] ZMM register to contain p[1] of the 4 blocks
-%define %%P2      %17 ; [clobbered] ZMM register to contain p[2] of the 4 blocks
-%define %%P3      %18 ; [clobbered] ZMM register to contain p[3] of the 4 blocks
-%define %%P4      %19 ; [clobbered] ZMM register to contain p[4] of the 4 blocks
+%define %%P0      %15 ; [clobbered] ZMM register to contain p[0] of the 8 blocks
+%define %%P1      %16 ; [clobbered] ZMM register to contain p[1] of the 8 blocks
+%define %%P2      %17 ; [clobbered] ZMM register to contain p[2] of the 8 blocks
+%define %%P3      %18 ; [clobbered] ZMM register to contain p[3] of the 8 blocks
+%define %%P4      %19 ; [clobbered] ZMM register to contain p[4] of the 8 blocks
 %define %%MASK_26 %20 ; [in] ZMM register containing 26-bit mask
 %define %%ZTMP1   %21 ; [clobbered] Temporary ZMM register
 %define %%ZTMP2   %22 ; [clobbered] Temporary ZMM register
@@ -406,13 +407,28 @@ section .text
 
         ;; Add blocks
 
+        vextracti64x4   YWORD(%%ZTMP5), %%P0, 1
+        vextracti64x4   YWORD(%%ZTMP6), %%P1, 1
+        vextracti64x4   YWORD(%%ZTMP7), %%P2, 1
+        vextracti64x4   YWORD(%%ZTMP8), %%P3, 1
+        vextracti64x4   YWORD(%%ZTMP9), %%P4, 1
+
+        ; Transpose first 32 bytes of P0-P3
         TRANSPOSE4_U64  YWORD(%%P0), YWORD(%%P1), YWORD(%%P2), YWORD(%%P3), \
+                        YWORD(%%ZTMP1), YWORD(%%ZTMP2), YWORD(%%ZTMP3), YWORD(%%ZTMP4)
+
+        ; Transpose final 32 bytes of P0-P3
+        TRANSPOSE4_U64  YWORD(%%ZTMP5), YWORD(%%ZTMP6), YWORD(%%ZTMP7), YWORD(%%ZTMP8), \
                         YWORD(%%ZTMP1), YWORD(%%ZTMP2), YWORD(%%ZTMP3), YWORD(%%ZTMP4)
 
         ; Add all P0, P1, P2, P3
         vpaddq          %%P0, %%P1
         vpaddq          %%P0, %%P2
         vpaddq          %%P0, %%P3
+        vpaddq          %%P0, %%ZTMP5
+        vpaddq          %%P0, %%ZTMP6
+        vpaddq          %%P0, %%ZTMP7
+        vpaddq          %%P0, %%ZTMP8
 
         ; Add all P4
         vmovq           %%TMP, XWORD(%%P4) ; P4
@@ -423,6 +439,16 @@ section .text
         add             %%TMP, %%TMP2
         vpextrq         %%TMP2, XWORD(%%ZTMP1), 1 ; P4^4
         add             %%TMP, %%TMP2 ; %%TMP = P4 + P4^2 + P4^3 + P4^4
+
+        vmovq           %%TMP2, XWORD(%%ZTMP9) ; P4^5
+        add             %%TMP, %%TMP2
+        vpextrq         %%TMP2, XWORD(%%ZTMP9), 1 ; P4^6
+        add             %%TMP, %%TMP2
+        vextracti32x4   XWORD(%%ZTMP1), %%ZTMP9, 1
+        vmovq           %%TMP2, XWORD(%%ZTMP1) ; P4^7
+        add             %%TMP, %%TMP2
+        vpextrq         %%TMP2, XWORD(%%ZTMP1), 1 ; P4^8
+        add             %%TMP, %%TMP2 ; %%TMP = P4 + P4^2 + P4^3 + P4^4 + ... P^8
         vmovq           XWORD(%%A4), %%TMP
 
         ; Move P0-P4 to A0-A4
@@ -635,7 +661,7 @@ section .text
 
 %define %%MASK_26 zmm31
 
-        cmp     %%LEN, POLY1305_BLOCK_SIZE*4
+        cmp     %%LEN, POLY1305_BLOCK_SIZE*8
         jb      %%_final_loop
 
         vmovdqa64 %%MASK_26, [rel mask_26]
@@ -657,7 +683,7 @@ section .text
         xor     %%T0, %%T0
         ;; Prepare R0-R4 (for R)
         SPREAD_MULT_TO_26BIT_LIMBS %%R0, %%R1, %%T0, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 3
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 7
 
         ; Calculate R^2
         mov     %%T0, %%R1
@@ -672,7 +698,7 @@ section .text
 
         ;; Prepare R0-R4 (for R^2)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 2
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 6
 
         ; Calculate R^3
         mov     %%T0, %%R1
@@ -683,7 +709,7 @@ section .text
 
         ;; Prepare R0-R4 (for R^3)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 1
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 5
 
         ; Calculate R^4
         mov     %%T0, %%R1
@@ -693,6 +719,50 @@ section .text
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
         ;; Prepare R0-R4 (for R^4)
+        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 4
+
+        ; Calculate R^5
+        mov     %%T0, %%R1
+        shr     %%T0, 2
+        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
+
+        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+
+        ;; Prepare R0-R4 (for R^5)
+        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 3
+
+        ; Calculate R^6
+        mov     %%T0, %%R1
+        shr     %%T0, 2
+        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
+
+        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+
+        ;; Prepare R0-R4 (for R^6)
+        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 2
+
+        ; Calculate R^7
+        mov     %%T0, %%R1
+        shr     %%T0, 2
+        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
+
+        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+
+        ;; Prepare R0-R4 (for R^7)
+        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 1
+
+        ; Calculate R^8
+        mov     %%T0, %%R1
+        shr     %%T0, 2
+        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
+
+        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+
+        ;; Prepare R0-R4 (for R^8)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
                                    zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 0
 
@@ -737,6 +807,34 @@ section .text
 
         SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 3
 
+        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
+        mov     %%T2, [%%MSG + 64]
+        mov     %%T3, [%%MSG + 72]
+        mov     %%T0, 1 ; Add 2^128 to message
+
+        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 4
+
+        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
+        mov     %%T2, [%%MSG + 16*5]
+        mov     %%T3, [%%MSG + 16*5 + 8]
+        mov     %%T0, 1 ; Add 2^128 to message
+
+        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 5
+
+        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
+        mov     %%T2, [%%MSG + 16*6]
+        mov     %%T3, [%%MSG + 16*6 + 8]
+        mov     %%T0, 1 ; Add 2^128 to message
+
+        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 6
+
+        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
+        mov     %%T2, [%%MSG + 16*7]
+        mov     %%T3, [%%MSG + 16*7 + 8]
+        mov     %%T0, 1 ; Add 2^128 to message
+
+        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 7
+
         POLY1305_MUL_REDUCE_VEC zmm15, zmm16, zmm17, zmm18, zmm19, \
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
                                 zmm27, zmm28, zmm29, zmm30, \
@@ -745,10 +843,10 @@ section .text
                                 zmm0, zmm1, zmm2, zmm3, zmm4, \
                                 rax, rdx
 
-        add     %%MSG, POLY1305_BLOCK_SIZE*4
-        sub     %%LEN, POLY1305_BLOCK_SIZE*4
+        add     %%MSG, POLY1305_BLOCK_SIZE*8
+        sub     %%LEN, POLY1305_BLOCK_SIZE*8
 
-        cmp     %%LEN, POLY1305_BLOCK_SIZE*4
+        cmp     %%LEN, POLY1305_BLOCK_SIZE*8
         jae     %%_poly1305_blocks_loop
 
 %%_poly1305_blocks_loop_end:
