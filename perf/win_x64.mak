@@ -67,7 +67,10 @@ CFLAGS = /nologo /DNO_COMPAT_IMB_API_053 /D_CRT_SECURE_NO_WARNINGS $(DCFLAGS) /Y
 LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
-OBJECTS = ipsec_perf.obj msr.obj
+AS = nasm
+AFLAGS = -fwin64 -Xvc -DWIN_ABI
+
+OBJECTS = ipsec_perf.obj msr.obj misc.obj
 
 # dependency
 !ifndef DEPTOOL
@@ -86,6 +89,9 @@ perf.dep: $(OBJECTS)
 .c.obj:
 	$(CC) /c $(CFLAGS) $<
         $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
+
+.asm.obj:
+	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
 clean:
 	del /q $(OBJECTS) perf.dep *.obj.dep $(APP).exe $(APP).pdb $(APP).ilk

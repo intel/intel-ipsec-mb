@@ -26,6 +26,7 @@
 EXE=ipsec_perf
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
+NASM ?= nasm
 
 CFLAGS = -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
@@ -34,6 +35,8 @@ CFLAGS = -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-Wunreachable-code -Wmissing-noreturn -Wsign-compare -Wno-endif-labels \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-pthread -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
+
+NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error, -fcf-protection" are also supported
 CC_HAS_CET = $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l)
@@ -66,12 +69,17 @@ CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 endif
 
 SOURCES := ipsec_perf.c msr.c
-OBJECTS := $(SOURCES:%.c=%.o)
+ASM_SOURCES := misc.asm
+OBJECTS := $(SOURCES:%.c=%.o) $(ASM_SOURCES:%.asm=%.o)
 
 CHECKPATCH ?= checkpatch.pl
 CPPCHECK ?= cppcheck
 
 .PHONY: all clean style cppcheck
+
+# rule for compiling assembly code with producing dependencies
+%.o:%.asm
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 
 all: $(EXE)
 

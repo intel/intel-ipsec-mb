@@ -58,6 +58,7 @@ typedef cpuset_t cpu_set_t;
 #include <intel-ipsec-mb.h>
 
 #include "msr.h"
+#include "misc.h"
 
 /* memory size for test buffers */
 #define BUFSIZE (512 * 1024 * 1024)
@@ -750,6 +751,16 @@ static uint32_t pb_idx = PB_INIT_IDX;
 static uint32_t pb_mod = 0;
 
 static int silent_progress_bar = 0;
+
+/* Return rdtsc to core cycle scale factor */
+static double get_tsc_to_core_scale(void)
+{
+        /* use enough cycles for accurate measurement */
+        const uint64_t expected_cycles = 400000;
+        const uint64_t tsc_cycles = measure_tsc(expected_cycles);
+
+        return ((double)tsc_cycles / (double)expected_cycles);
+}
 
 static void prog_bar_init(const uint32_t total_num)
 {
@@ -2966,6 +2977,9 @@ int main(int argc, char *argv[])
                                 arch_str_map[arch_id].name);
                 }
         }
+
+        fprintf(stderr, "RDTSC scaling to core cycles: %.3f\n",
+                get_tsc_to_core_scale());
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
 
