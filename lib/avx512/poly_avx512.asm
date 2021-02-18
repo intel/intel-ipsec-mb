@@ -462,25 +462,6 @@ section .text
         vpextrq         %%TMP, XWORD(%%ZTMP1), 1
         vmovq           XWORD(%%A3), %%TMP
 
-        ; Carry propagation
-        vpsrlq          %%XTMP1, XWORD(%%A0), 26
-        vpandq          XWORD(%%A0), XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vpaddq          XWORD(%%A1), %%XTMP1
-        vpsrlq          %%XTMP1, XWORD(%%A1), 26
-        vpandq          XWORD(%%A1), XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vpaddq          XWORD(%%A2), %%XTMP1
-        vpsrlq          %%XTMP1, XWORD(%%A2), 26
-        vpandq          XWORD(%%A2), XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vpaddq          XWORD(%%A3), %%XTMP1
-        vpsrlq          %%XTMP1, XWORD(%%A3), 26
-        vpandq          XWORD(%%A3), XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vpaddq          XWORD(%%A4), %%XTMP1
-        vpsrlq          %%XTMP1, XWORD(%%A4), 26
-        vpandq          XWORD(%%A4), XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vmovdqa64       %%XTMP2, %%XTMP1
-        vpsllq          %%XTMP1, 2
-        vpaddq          %%XTMP1, %%XTMP2
-        vpaddq          XWORD(%%A0), %%XTMP1
 %endmacro
 
 ;; =============================================================================
@@ -850,6 +831,26 @@ section .text
         jae     %%_poly1305_blocks_loop
 
 %%_poly1305_blocks_loop_end:
+
+        ; Carry propagation
+        vpsrlq          xmm0, xmm15, 26
+        vpandq          xmm15, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpaddq          xmm16, xmm0
+        vpsrlq          xmm0, xmm16, 26
+        vpandq          xmm16, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpaddq          xmm17, xmm0
+        vpsrlq          xmm0, xmm17, 26
+        vpandq          xmm17, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpaddq          xmm18, xmm0
+        vpsrlq          xmm0, xmm18, 26
+        vpandq          xmm18, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpaddq          xmm19, xmm0
+        vpsrlq          xmm0, xmm19, 26
+        vpandq          xmm19, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vmovdqa64       xmm1, xmm0
+        vpsllq          xmm0, 2
+        vpaddq          xmm0, xmm1
+        vpaddq          xmm15, xmm0
 
         ; Put together A
         vmovq   %%A0, xmm15
