@@ -83,6 +83,8 @@ dq      0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000
 
 struc STACKFRAME
 _gpr_save:      resq    8
+_r_save:        resq    16 ; Memory to save limbs of powers of R
+_rp_save:       resq    8  ; Memory to save limbs of powers of R'
 endstruc
 
 section .text
@@ -556,79 +558,6 @@ section .text
 
 ;; =============================================================================
 ;; =============================================================================
-;; Spreads 130 bits contained in IN0, IN1 and IN2 into 5x26-bit limbs (R0-R4),
-;; storing them in the same qword index of 5 different registers.
-;; It also multiplies by 5 R1-R4, storing the values in R1P-R4P (R0'-R4')
-;; =============================================================================
-%macro SPREAD_MULT_TO_26BIT_LIMBS 17
-%define %%IN0   %1 ; [in/clobbered] Bits 0-63 of the value
-%define %%IN1   %2 ; [in/clobbered] Bits 64-127 of the value
-%define %%IN2   %3 ; [in/clobbered] Bits 128-129 of the value
-%define %%R0    %4 ; [in/out] ZMM register (R0) to include the 1st limb in IDX
-%define %%R1    %5 ; [in/out] ZMM register (R1) to include the 2nd limb in IDX
-%define %%R2    %6 ; [in/out] ZMM register (R2) to include the 3rd limb in IDX
-%define %%R3    %7 ; [in/out] ZMM register (R3) to include the 4th limb in IDX
-%define %%R4    %8 ; [in/out] ZMM register (R4) to include the 5th limb in IDX
-%define %%R1P   %9 ; [in/out] ZMM register (R1') to include the 2nd limb (multiplied by 5) in IDX
-%define %%R2P   %10 ; [in/out] ZMM register (R2') to include the 3rd limb (multiplied by 5) in IDX
-%define %%R3P   %11 ; [in/out] ZMM register (R3') to include the 4th limb (multiplied by 5) in IDX
-%define %%R4P   %12 ; [in/out] ZMM register (R4') to include the 5th limb (multiplied by 5) in IDX
-%define %%ZTMP  %13 ; [clobbered] Temporary ZMM register
-%define %%TMP0  %14 ; [clobbered] Temporary GP register
-%define %%TMP1  %15 ; [clobbered] Temporary GP register
-%define %%TMP2  %16 ; [clobbered] Temporary GP register
-%define %%IDX   %17 ; [constant] Index where the qword is inserted
-
-        mov     %%TMP0, %%IN0
-        and     %%TMP0, 0x3ffffff ;; First limb (R[25:0]) = R0
-        VPINSRQ_ZMM %%TMP0, %%R0, %%ZTMP, %%IDX
-
-        mov     %%TMP0, %%IN0
-        shr     %%TMP0, 26
-        and     %%TMP0, 0x3ffffff ;; Second limb (R[51:26]) = R1
-        VPINSRQ_ZMM %%TMP0, %%R1, %%ZTMP, %%IDX
-        mov     %%TMP1, %%TMP0
-        shl     %%TMP1, 2
-        add     %%TMP1, %%TMP0      ;; TMP1 = TMP0 + (TMP0 << 2) = 5*R1 = R1'
-        VPINSRQ_ZMM %%TMP1, %%R1P, %%ZTMP, %%IDX
-
-        mov     %%TMP0, %%IN0
-        shr     %%TMP0, 52 ;; R[63:52]
-        mov     %%TMP1, %%IN1
-        and     %%TMP1, 0x3fff ; R[77:64]
-        shl     %%TMP1, 12
-        or      %%TMP1, %%TMP0 ;; Third limb (R[77:52]) = R2
-        VPINSRQ_ZMM %%TMP1, %%R2, %%ZTMP, %%IDX
-        mov     %%TMP2, %%TMP1
-        shl     %%TMP2, 2
-        add     %%TMP2, %%TMP1      ;; TMP2 = TMP1 + (TMP1 << 2) = 5*R2 = R2'
-        VPINSRQ_ZMM %%TMP2, %%R2P, %%ZTMP, %%IDX
-
-        mov     %%TMP1, %%IN1
-        shr     %%TMP1, 14
-        and     %%TMP1, 0x3ffffff ; Fourth limb (R[103:78]) = R3
-        VPINSRQ_ZMM %%TMP1, %%R3, %%ZTMP, %%IDX
-        mov     %%TMP2, %%TMP1
-        shl     %%TMP2, 2
-        add     %%TMP2, %%TMP1      ;; TMP2 = TMP1 + (TMP1 << 2) = 5*R3 = R3'
-        VPINSRQ_ZMM %%TMP2, %%R3P, %%ZTMP, %%IDX
-
-        mov     %%TMP1, %%IN1
-        shr     %%TMP1, 40        ; Fifth limb (R[129:104]) = R4
-        mov     %%TMP2, %%IN2
-        shl     %%TMP2, 24
-        or      %%TMP1, %%TMP2
-        VPINSRQ_ZMM %%TMP1, %%R4, %%ZTMP, %%IDX
-
-        mov     %%TMP2, %%TMP1
-        shl     %%TMP2, 2
-        add     %%TMP2, %%TMP1      ;; TMP2 = TMP1 + (TMP1 << 2) = 5*R4 = R4'
-        VPINSRQ_ZMM %%TMP2, %%R4P, %%ZTMP, %%IDX
-
-%endmacro
-
-;; =============================================================================
-;; =============================================================================
 ;; Computes hash for message length being multiple of block size
 ;; =============================================================================
 %macro POLY1305_BLOCKS 13
@@ -661,16 +590,16 @@ section .text
         ; Spread accumulator into 26-bit limbs in quadwords
         SPREAD_INPUT_TO_26BIT_LIMBS %%A0, %%A1, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, %%T0, 0, %%A2
 
-%assign i 22
-%rep 9
-        vpxorq  APPEND(zmm, i), APPEND(zmm, i)
-%assign i (i+1)
-%endrep
+        ; Use memory in stack to save powers of R, before loading them into ZMM registers
+        ; The first 16*8 bytes will store the 16 bytes of the 8 powers of R
+        ; The last 64 bytes will store the last 2 bits of powers of R, spread in 8 qwords,
+        ; to be OR'd with the highest qwords (in zmm26)
+        mov     [rsp + _r_save + 16*7], %%R0
+        mov     [rsp + _r_save + 16*7 + 8], %%R1
 
         xor     %%T0, %%T0
-        ;; Prepare R0-R4 (for R)
-        SPREAD_MULT_TO_26BIT_LIMBS %%R0, %%R1, %%T0, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 7
+        mov     [rsp + _rp_save + 8*7], %%T0
+
 
         ; Calculate R^2
         mov     %%T0, %%R1
@@ -683,75 +612,110 @@ section .text
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        ;; Prepare R0-R4 (for R^2)
-        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 5
+        mov     [rsp + _r_save + 16*6], %%A0
+        mov     [rsp + _r_save + 16*6 + 8], %%A1
+        mov     %%T3, %%A2
+        shl     %%T3, 24
+        mov     [rsp + _rp_save + 8*5], %%T3
 
         ; Calculate R^3
-        mov     %%T0, %%R1
-        shr     %%T0, 2
-        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
-
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        ;; Prepare R0-R4 (for R^3)
-        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 3
+        mov     [rsp + _r_save + 16*5], %%A0
+        mov     [rsp + _r_save + 16*5 + 8], %%A1
+        mov     %%T3, %%A2
+        shl     %%T3, 24
+        mov     [rsp + _rp_save + 8*3], %%T3
 
         ; Calculate R^4
-        mov     %%T0, %%R1
-        shr     %%T0, 2
-        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
-
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        ;; Prepare R0-R4 (for R^4)
-        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 1
+        mov     [rsp + _r_save + 16*4], %%A0
+        mov     [rsp + _r_save + 16*4 + 8], %%A1
+        mov     %%T3, %%A2
+        shl     %%T3, 24
+        mov     [rsp + _rp_save + 8], %%T3
 
         ; Calculate R^5
-        mov     %%T0, %%R1
-        shr     %%T0, 2
-        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
-
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        ;; Prepare R0-R4 (for R^5)
-        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 6
+        mov     [rsp + _r_save + 16*3], %%A0
+        mov     [rsp + _r_save + 16*3 + 8], %%A1
+        mov     %%T3, %%A2
+        shl     %%T3, 24
+        mov     [rsp + _rp_save + 8*6], %%T3
 
         ; Calculate R^6
-        mov     %%T0, %%R1
-        shr     %%T0, 2
-        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
-
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        ;; Prepare R0-R4 (for R^6)
-        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 4
+        mov     [rsp + _r_save + 16*2], %%A0
+        mov     [rsp + _r_save + 16*2 + 8], %%A1
+        mov     %%T3, %%A2
+        shl     %%T3, 24
+        mov     [rsp + _rp_save + 8*4], %%T3
 
         ; Calculate R^7
-        mov     %%T0, %%R1
-        shr     %%T0, 2
-        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
-
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        ;; Prepare R0-R4 (for R^7)
-        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 2
+        mov     [rsp + _r_save + 16], %%A0
+        mov     [rsp + _r_save + 16 + 8], %%A1
+        mov     %%T3, %%A2
+        shl     %%T3, 24
+        mov     [rsp + _rp_save + 8*2], %%T3
+
 
         ; Calculate R^8
-        mov     %%T0, %%R1
-        shr     %%T0, 2
-        add     %%T0, %%R1      ;; T0 = R1 + (R1 >> 2)
-
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        ;; Prepare R0-R4 (for R^8)
-        SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 0
+        mov     [rsp + _r_save], %%A0
+        mov     [rsp + _r_save + 8], %%A1
+        mov     %%T3, %%A2
+        shl     %%T3, 24
+        mov     [rsp + _rp_save], %%T3
+
+        ; Interleave the powers of R to form 26-bit limbs
+        ;
+        ; zmm22 to have bits 0-25 of all 8 powers of R in 8 qwords
+        ; zmm23 to have bits 51-26 of all 8 powers of R in 8 qwords
+        ; zmm24 to have bits 77-52 of all 8 powers of R in 8 qwords
+        ; zmm25 to have bits 103-78 of all 8 powers of R in 8 qwords
+        ; zmm26 to have bits 127-104 of all 8 powers of R in 8 qwords
+        vmovdqu64 zmm0, [rsp + _r_save]
+        vmovdqu64 zmm1, [rsp + _r_save + 64]
+
+        vpunpckhqdq zmm26, zmm0, zmm1
+        vpunpcklqdq zmm22, zmm0, zmm1
+
+        vpsrlq  zmm24, zmm22, 52
+        vpsllq  zmm25, zmm26, 12
+        vporq   zmm24, zmm25
+        vpsrlq  zmm23, zmm22, 26
+        vpsrlq  zmm25, zmm26, 14
+        vpsrlq  zmm26, 40
+
+        vpandq  zmm22, %%MASK_26 ; R0
+        vpandq  zmm23, %%MASK_26 ; R1
+        vpandq  zmm24, %%MASK_26 ; R2
+        vpandq  zmm25, %%MASK_26 ; R3
+
+        ; rsp + _rp_save contains the 2 highest bits of the powers of R
+        vporq   zmm26, [rsp + _rp_save]   ; R4
+
+        ; zmm27 to have bits 51-26 of all 8 powers of R' in 8 qwords
+        ; zmm28 to have bits 77-52 of all 8 powers of R' in 8 qwords
+        ; zmm29 to have bits 103-78 of all 8 powers of R' in 8 qwords
+        ; zmm30 to have bits 127-104 of all 8 powers of R' in 8 qwords
+        vpsllq  zmm0, zmm23, 2
+        vpaddq  zmm27, zmm23, zmm0 ; R1' (R1*5)
+
+        vpsllq  zmm1, zmm24, 2
+        vpaddq  zmm28, zmm24, zmm1 ; R2' (R2*5)
+
+        vpsllq  zmm2, zmm25, 2
+        vpaddq  zmm29, zmm25, zmm2 ; R3' (R3*5)
+
+        vpsllq  zmm3, zmm26, 2
+        vpaddq  zmm30, zmm26, zmm3 ; R4' (R4*5)
 
 %%_poly1305_blocks_loop:
 
