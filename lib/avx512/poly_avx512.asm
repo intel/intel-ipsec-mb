@@ -38,6 +38,10 @@ align 64
 mask_26:
 dq      0x3ffffff, 0x3ffffff, 0x3ffffff, 0x3ffffff, 0x3ffffff, 0x3ffffff, 0x3ffffff, 0x3ffffff
 
+align 64
+high_bit:
+dq      0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000
+
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -508,18 +512,18 @@ section .text
 ;; Spreads 130 bits contained in IN0, IN1 and IN2 into 5x26-bit limbs,
 ;; storing them in the same qword index of 5 different registers
 ;; =============================================================================
-%macro SPREAD_INPUT_TO_26BIT_LIMBS 11
+%macro SPREAD_INPUT_TO_26BIT_LIMBS 10-11
 %define %%IN0   %1 ; [in/clobbered] Bits 0-63 of the value
 %define %%IN1   %2 ; [in/clobbered] Bits 64-127 of the value
-%define %%IN2   %3 ; [in/clobbered] Bits 128-129 of the value
-%define %%ZOUT0 %4 ; [in/out] ZMM register to include the 1st limb in IDX
-%define %%ZOUT1 %5 ; [in/out] ZMM register to include the 2nd limb in IDX
-%define %%ZOUT2 %6 ; [in/out] ZMM register to include the 3rd limb in IDX
-%define %%ZOUT3 %7 ; [in/out] ZMM register to include the 4th limb in IDX
-%define %%ZOUT4 %8 ; [in/out] ZMM register to include the 5th limb in IDX
-%define %%ZTMP  %9 ; [clobbered] Temporary ZMM register
-%define %%TMP   %10 ; [clobbered] Temporary GP register
-%define %%IDX   %11 ; [constant] Index where the qword is inserted
+%define %%ZOUT0 %3 ; [in/out] ZMM register to include the 1st limb in IDX
+%define %%ZOUT1 %4 ; [in/out] ZMM register to include the 2nd limb in IDX
+%define %%ZOUT2 %5 ; [in/out] ZMM register to include the 3rd limb in IDX
+%define %%ZOUT3 %6 ; [in/out] ZMM register to include the 4th limb in IDX
+%define %%ZOUT4 %7 ; [in/out] ZMM register to include the 5th limb in IDX
+%define %%ZTMP  %8 ; [clobbered] Temporary ZMM register
+%define %%TMP   %9 ; [clobbered] Temporary GP register
+%define %%IDX   %10 ; [constant] Index where the qword is inserted
+%define %%IN2   %11 ; [in] Bits 128-129 (optional)
 
         mov     %%TMP, %%IN0
         and     %%TMP, 0x3ffffff ;; First limb (A[25:0])
@@ -543,9 +547,11 @@ section .text
         VPINSRQ_ZMM %%TMP, %%ZOUT3, %%ZTMP, %%IDX
 
         shr     %%IN1, 26 ; A[127:104]
+%if %0 == 11
         shl     %%IN2, 24 ; A[130:128]
-        or      %%IN2, %%IN1
-        VPINSRQ_ZMM %%IN2, %%ZOUT4, %%ZTMP, %%IDX
+        or      %%IN1, %%IN2
+%endif
+        VPINSRQ_ZMM %%IN1, %%ZOUT4, %%ZTMP, %%IDX
 %endmacro
 
 ;; =============================================================================
@@ -653,7 +659,7 @@ section .text
 %endrep
 
         ; Spread accumulator into 26-bit limbs in quadwords
-        SPREAD_INPUT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, %%T0, 0
+        SPREAD_INPUT_TO_26BIT_LIMBS %%A0, %%A1, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, %%T0, 0, %%A2
 
 %assign i 22
 %rep 9
@@ -679,7 +685,7 @@ section .text
 
         ;; Prepare R0-R4 (for R^2)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 6
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 5
 
         ; Calculate R^3
         mov     %%T0, %%R1
@@ -690,7 +696,7 @@ section .text
 
         ;; Prepare R0-R4 (for R^3)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 5
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 3
 
         ; Calculate R^4
         mov     %%T0, %%R1
@@ -701,7 +707,7 @@ section .text
 
         ;; Prepare R0-R4 (for R^4)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 4
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 1
 
         ; Calculate R^5
         mov     %%T0, %%R1
@@ -712,7 +718,7 @@ section .text
 
         ;; Prepare R0-R4 (for R^5)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 3
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 6
 
         ; Calculate R^6
         mov     %%T0, %%R1
@@ -723,7 +729,7 @@ section .text
 
         ;; Prepare R0-R4 (for R^6)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 2
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 4
 
         ; Calculate R^7
         mov     %%T0, %%R1
@@ -734,7 +740,7 @@ section .text
 
         ;; Prepare R0-R4 (for R^7)
         SPREAD_MULT_TO_26BIT_LIMBS %%A0, %%A1, %%A2, zmm22, zmm23, zmm24, zmm25, \
-                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 1
+                                   zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 2
 
         ; Calculate R^8
         mov     %%T0, %%R1
@@ -748,73 +754,41 @@ section .text
                                    zmm26, zmm27, zmm28, zmm29, zmm30, zmm20, %%T1, %%T2, %%T3, 0
 
 %%_poly1305_blocks_loop:
-        ; Spread first 16 bytes of message into 26-bit limbs in quadwords
-        ; and add to previous accumulator
-        mov     %%T2, [%%MSG]
-        mov     %%T3, [%%MSG + 8]
-        mov     %%T0, 1 ; Add 2^128 to message
 
-%assign i 0
-%rep 5
-        vpxorq  APPEND(zmm, i), APPEND(zmm, i)
-%assign i (i+1)
-%endrep
-        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, %%T1, 0
+        ; Load next block of data (128 bytes)
+        vmovdqu64 zmm0, [%%MSG]
+        vmovdqu64 zmm1, [%%MSG + 64]
+
+        ; Interleave the data to form 26-bit limbs
+        ;
+        ; zmm0 to have bits 0-25 of all 8 blocks in 8 qwords
+        ; zmm1 to have bits 51-26 of all 8 blocks in 8 qwords
+        ; zmm2 to have bits 77-52 of all 8 blocks in 8 qwords
+        ; zmm3 to have bits 103-78 of all 8 blocks in 8 qwords
+        ; zmm4 to have bits 127-104 of all 8 blocks in 8 qwords
+        vpunpckhqdq zmm4, zmm0, zmm1
+        vpunpcklqdq zmm0, zmm0, zmm1
+
+        vpsrlq  zmm2, zmm0, 52
+        vpsllq  zmm3, zmm4, 12
+        vporq   zmm2, zmm3
+        vpsrlq  zmm1, zmm0, 26
+        vpsrlq  zmm3, zmm4, 14
+        vpsrlq  zmm4, 40
+        vpandq  zmm0, %%MASK_26
+        vpandq  zmm1, %%MASK_26
+        vpandq  zmm2, %%MASK_26
+        vpandq  zmm3, %%MASK_26
+
+        ; Add 2^128 to all 8 final qwords of the message
+        vporq   zmm4, [rel high_bit]
+
+        ; Add previous accumulator to first block of message
         vpaddq  zmm15, zmm0
         vpaddq  zmm16, zmm1
         vpaddq  zmm17, zmm2
         vpaddq  zmm18, zmm3
         vpaddq  zmm19, zmm4
-
-        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
-        mov     %%T2, [%%MSG + 16]
-        mov     %%T3, [%%MSG + 24]
-        mov     %%T0, 1 ; Add 2^128 to message
-
-        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 1
-
-        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
-        mov     %%T2, [%%MSG + 32]
-        mov     %%T3, [%%MSG + 40]
-        mov     %%T0, 1 ; Add 2^128 to message
-
-        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 2
-
-
-        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
-        mov     %%T2, [%%MSG + 48]
-        mov     %%T3, [%%MSG + 56]
-        mov     %%T0, 1 ; Add 2^128 to message
-
-        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 3
-
-        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
-        mov     %%T2, [%%MSG + 64]
-        mov     %%T3, [%%MSG + 72]
-        mov     %%T0, 1 ; Add 2^128 to message
-
-        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 4
-
-        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
-        mov     %%T2, [%%MSG + 16*5]
-        mov     %%T3, [%%MSG + 16*5 + 8]
-        mov     %%T0, 1 ; Add 2^128 to message
-
-        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 5
-
-        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
-        mov     %%T2, [%%MSG + 16*6]
-        mov     %%T3, [%%MSG + 16*6 + 8]
-        mov     %%T0, 1 ; Add 2^128 to message
-
-        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 6
-
-        ; Spread next 16 bytes of message into 26-bit limbs in quadwords
-        mov     %%T2, [%%MSG + 16*7]
-        mov     %%T3, [%%MSG + 16*7 + 8]
-        mov     %%T0, 1 ; Add 2^128 to message
-
-        SPREAD_INPUT_TO_26BIT_LIMBS %%T2, %%T3, %%T0, zmm15, zmm16, zmm17, zmm18, zmm19, zmm5, %%T1, 7
 
         POLY1305_MUL_REDUCE_VEC zmm15, zmm16, zmm17, zmm18, zmm19, \
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
