@@ -472,92 +472,6 @@ section .text
 
 ;; =============================================================================
 ;; =============================================================================
-;; Inserts quadword in ZMM register
-;; =============================================================================
-%macro VPINSRQ_ZMM 4
-%define %%IN    %1 ; [in] GP register containing the qword to insert
-%define %%ZOUT  %2 ; [in/out] ZMM register to contain the qword inserted
-%define %%ZTMP  %3 ; [clobbered] Temporary ZMM register
-%define %%IDX   %4 ; [constant] Index where the qword is inserted
-%if %%IDX == 0
-        vmovq   XWORD(%%ZTMP), %%IN
-%elif %%IDX == 1
-        vmovq   XWORD(%%ZTMP), %%IN
-        vpshufd XWORD(%%ZTMP), XWORD(%%ZTMP), 0x4E
-%elif %%IDX == 2
-        vmovq   XWORD(%%ZTMP), %%IN
-        vshufi32x4 %%ZTMP, %%ZTMP, 0xF3
-%elif %%IDX == 3
-        vmovq   XWORD(%%ZTMP), %%IN
-        vpshufd XWORD(%%ZTMP), XWORD(%%ZTMP), 0x4E
-        vshufi32x4 %%ZTMP, %%ZTMP, 0xF3
-%elif %%IDX == 4
-        vmovq   XWORD(%%ZTMP), %%IN
-        vshufi32x4 %%ZTMP, %%ZTMP, 0xCF
-%elif %%IDX == 5
-        vmovq   XWORD(%%ZTMP), %%IN
-        vpshufd XWORD(%%ZTMP), XWORD(%%ZTMP), 0x4E
-        vshufi32x4 %%ZTMP, %%ZTMP, 0xCF
-%elif %%IDX == 6
-        vmovq   XWORD(%%ZTMP), %%IN
-        vshufi32x4 %%ZTMP, %%ZTMP, 0x3F
-%else ; %%IDX == 7
-        vmovq   XWORD(%%ZTMP), %%IN
-        vpshufd XWORD(%%ZTMP), XWORD(%%ZTMP), 0x4E
-        vshufi32x4 %%ZTMP, %%ZTMP, 0x3F
-%endif
-        vporq   %%ZOUT, %%ZTMP
-%endmacro
-
-;; =============================================================================
-;; =============================================================================
-;; Spreads 130 bits contained in IN0, IN1 and IN2 into 5x26-bit limbs,
-;; storing them in the same qword index of 5 different registers
-;; =============================================================================
-%macro SPREAD_INPUT_TO_26BIT_LIMBS 10-11
-%define %%IN0   %1 ; [in/clobbered] Bits 0-63 of the value
-%define %%IN1   %2 ; [in/clobbered] Bits 64-127 of the value
-%define %%ZOUT0 %3 ; [in/out] ZMM register to include the 1st limb in IDX
-%define %%ZOUT1 %4 ; [in/out] ZMM register to include the 2nd limb in IDX
-%define %%ZOUT2 %5 ; [in/out] ZMM register to include the 3rd limb in IDX
-%define %%ZOUT3 %6 ; [in/out] ZMM register to include the 4th limb in IDX
-%define %%ZOUT4 %7 ; [in/out] ZMM register to include the 5th limb in IDX
-%define %%ZTMP  %8 ; [clobbered] Temporary ZMM register
-%define %%TMP   %9 ; [clobbered] Temporary GP register
-%define %%IDX   %10 ; [constant] Index where the qword is inserted
-%define %%IN2   %11 ; [in] Bits 128-129 (optional)
-
-        mov     %%TMP, %%IN0
-        and     %%TMP, 0x3ffffff ;; First limb (A[25:0])
-        VPINSRQ_ZMM %%TMP, %%ZOUT0, %%ZTMP, %%IDX
-
-        shr     %%IN0, 26
-        mov     %%TMP, %%IN0
-        and     %%TMP, 0x3ffffff ;; Second limb (A[51:26])
-        VPINSRQ_ZMM %%TMP, %%ZOUT1, %%ZTMP, %%IDX
-
-        shr     %%IN0, 26 ;; A[63:52]
-        mov     %%TMP, %%IN1
-        and     %%TMP, 0x3fff ; A[77:64]
-        shl     %%TMP, 12
-        or      %%TMP, %%IN0 ;; Third limb (A[77:52])
-        VPINSRQ_ZMM %%TMP, %%ZOUT2, %%ZTMP, %%IDX
-
-        shr     %%IN1, 14
-        mov     %%TMP, %%IN1
-        and     %%TMP, 0x3ffffff ; Fourth limb (A[103:78])
-        VPINSRQ_ZMM %%TMP, %%ZOUT3, %%ZTMP, %%IDX
-
-        shr     %%IN1, 26 ; A[127:104]
-%if %0 == 11
-        shl     %%IN2, 24 ; A[130:128]
-        or      %%IN1, %%IN2
-%endif
-        VPINSRQ_ZMM %%IN1, %%ZOUT4, %%ZTMP, %%IDX
-%endmacro
-
-;; =============================================================================
-;; =============================================================================
 ;; Computes hash for message length being multiple of block size
 ;; =============================================================================
 %macro POLY1305_BLOCKS 13
@@ -581,14 +495,33 @@ section .text
         jb      %%_final_loop
 
         vmovdqa64 %%MASK_26, [rel mask_26]
-%assign i 15
-%rep 5
-        vpxorq  APPEND(zmm, i), APPEND(zmm, i)
-%assign i (i+1)
-%endrep
 
         ; Spread accumulator into 26-bit limbs in quadwords
-        SPREAD_INPUT_TO_26BIT_LIMBS %%A0, %%A1, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20, %%T0, 0, %%A2
+        mov     %%T0, %%A0
+        and     %%T0, 0x3ffffff ;; First limb (A[25:0])
+        vmovq   xmm15, %%T0
+
+        shr     %%A0, 26
+        mov     %%T0, %%A0
+        and     %%T0, 0x3ffffff ;; Second limb (A[51:26])
+        vmovq   xmm16, %%T0
+
+        shr     %%A0, 26 ;; A[63:52]
+        mov     %%T0, %%A1
+        and     %%T0, 0x3fff ; A[77:64]
+        shl     %%T0, 12
+        or      %%T0, %%A0 ;; Third limb (A[77:52])
+        vmovq   xmm17, %%T0
+
+        shr     %%A1, 14
+        mov     %%T0, %%A1
+        and     %%T0, 0x3ffffff ; Fourth limb (A[103:78])
+        vmovq   xmm18, %%T0
+
+        shr     %%A1, 26 ; A[127:104]
+        shl     %%A2, 24 ; A[129:128]
+        or      %%A1, %%A2
+        vmovq   xmm19, %%A1
 
         ; Use memory in stack to save powers of R, before loading them into ZMM registers
         ; The first 16*8 bytes will store the 16 bytes of the 8 powers of R
@@ -754,13 +687,16 @@ section .text
         vpaddq  zmm18, zmm3
         vpaddq  zmm19, zmm4
 
+        ; zmm15-zmm19 contain the 8 blocks of message plus the previous accumulator
+        ; zmm22-26 contain the 5x26-bit limbs of the powers of R
+        ; zmm27-30 contain the 5x26-bit limbs of the powers of R' (5*R)
         POLY1305_MUL_REDUCE_VEC zmm15, zmm16, zmm17, zmm18, zmm19, \
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
                                 zmm27, zmm28, zmm29, zmm30, \
                                 zmm5, zmm6, zmm7, zmm8, zmm9, zmm31, \
                                 zmm10, zmm11, zmm12, zmm13, zmm14, \
                                 zmm0, zmm1, zmm2, zmm3, zmm4, \
-                                rax, rdx
+                                %%GP_RAX, %%GP_RDX
 
         add     %%MSG, POLY1305_BLOCK_SIZE*8
         sub     %%LEN, POLY1305_BLOCK_SIZE*8
