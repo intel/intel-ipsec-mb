@@ -42,6 +42,14 @@ align 64
 high_bit:
 dq      0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000, 0x1000000
 
+align 64
+byte_len_to_mask_table:
+        dw      0x0000, 0x0001, 0x0003, 0x0007,
+        dw      0x000f, 0x001f, 0x003f, 0x007f,
+        dw      0x00ff, 0x01ff, 0x03ff, 0x07ff,
+        dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
+        dw      0xffff
+
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -928,13 +936,10 @@ section .text
 %define %%GP_RDX  %14   ; [clobbered] RDX register
 %define %%PAD_16  %15   ; [in] text "pad_to_16" or "no_padding"
 
-        ;; clear the scratch buffer
-        xor     %%T1, %%T1
-        mov     [%%BUF + 0], %%T1
-        mov     [%%BUF + 8], %%T1
-
-        ;; copy message bytes into the scratch buffer
-        memcpy_sse_16_1 %%BUF, %%MSG, %%LEN, %%T1, %%T2
+        lea     %%T1, [rel byte_len_to_mask_table]
+        kmovq   k1, [%%T1 + %%LEN*2]
+        vmovdqu8 xmm0{k1}{z}, [%%MSG]
+        vmovdqu64 [%%BUF], xmm0
 
 %ifnidn %%PAD_16,pad_to_16
         ;; pad the message in the scratch buffer
@@ -958,9 +963,8 @@ section .text
 
 %ifdef SAFE_DATA
         ;; clear the scratch buffer
-        xor     %%T1, %%T1
-        mov     [%%BUF + 0], %%T1
-        mov     [%%BUF + 8], %%T1
+        vpxorq  xmm0, xmm0
+        vmovdqu64 [%%BUF], xmm0
 %endif
 
 %endmacro
