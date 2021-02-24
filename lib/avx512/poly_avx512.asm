@@ -484,14 +484,14 @@ section .text
 
         vpsrlq  zmm17, zmm15, 52
         vpsllq  zmm18, zmm19, 12
-        vporq   zmm17, zmm18
+
         vpsrlq  zmm16, zmm15, 26
-        vpsrlq  zmm18, zmm19, 14
+        vpsrlq  zmm20, zmm19, 14
         vpsrlq  zmm19, 40
         vpandq  zmm15, %%MASK_26
         vpandq  zmm16, %%MASK_26
-        vpandq  zmm17, %%MASK_26
-        vpandq  zmm18, %%MASK_26
+        vpternlogq zmm17, zmm18, %%MASK_26, 0xA8 ; (A OR B AND C)
+        vpandq  zmm18, zmm20, %%MASK_26
 
         ; Add 2^128 to all 8 final qwords of the message
         vporq   zmm19, [rel high_bit]
@@ -657,14 +657,13 @@ section .text
 
         vpsrlq  zmm2, zmm0, 52
         vpsllq  zmm3, zmm4, 12
-        vporq   zmm2, zmm3
         vpsrlq  zmm1, zmm0, 26
-        vpsrlq  zmm3, zmm4, 14
+        vpsrlq  zmm5, zmm4, 14
         vpsrlq  zmm4, 40
         vpandq  zmm0, %%MASK_26
         vpandq  zmm1, %%MASK_26
-        vpandq  zmm2, %%MASK_26
-        vpandq  zmm3, %%MASK_26
+        vpternlogq zmm2, zmm3, %%MASK_26, 0xA8 ; (A OR B AND C)
+        vpandq  zmm5, %%MASK_26
 
         ; Add 2^128 to all 8 final qwords of the message
         vporq   zmm4, [rel high_bit]
@@ -673,7 +672,7 @@ section .text
         vpaddq  zmm15, zmm0
         vpaddq  zmm16, zmm1
         vpaddq  zmm17, zmm2
-        vpaddq  zmm18, zmm3
+        vpaddq  zmm18, zmm5
         vpaddq  zmm19, zmm4
 
         ; zmm15-zmm19 contain the 8 blocks of message plus the previous accumulator
@@ -711,15 +710,14 @@ section .text
 
         vpsrlq  zmm24, zmm22, 52
         vpsllq  zmm25, zmm26, 12
-        vporq   zmm24, zmm25
         vpsrlq  zmm23, zmm22, 26
-        vpsrlq  zmm25, zmm26, 14
+        vpsrlq  zmm30, zmm26, 14
         vpsrlq  zmm26, 40
 
-        vpandq  zmm22, %%MASK_26 ; R0
-        vpandq  zmm23, %%MASK_26 ; R1
-        vpandq  zmm24, %%MASK_26 ; R2
-        vpandq  zmm25, %%MASK_26 ; R3
+        vpandq  zmm22, %%MASK_26                 ; R0
+        vpandq  zmm23, %%MASK_26                 ; R1
+        vpternlogq zmm24, zmm25, %%MASK_26, 0xA8 ; R2 (A OR B AND C)
+        vpandq  zmm25, zmm30, %%MASK_26          ; R3
 
         ; rsp + _rp_save contains the 2 highest bits of the powers of R
         vporq   zmm26, [rsp + _rp_save]   ; R4
@@ -756,14 +754,13 @@ section .text
 
         vpsrlq  zmm2, zmm0, 52
         vpsllq  zmm3, zmm4, 12
-        vporq   zmm2, zmm3
         vpsrlq  zmm1, zmm0, 26
-        vpsrlq  zmm3, zmm4, 14
+        vpsrlq  zmm5, zmm4, 14
         vpsrlq  zmm4, 40
         vpandq  zmm0, %%MASK_26
         vpandq  zmm1, %%MASK_26
-        vpandq  zmm2, %%MASK_26
-        vpandq  zmm3, %%MASK_26
+        vpternlogq zmm2, zmm3, %%MASK_26, 0xA8 ; (A OR B AND C)
+        vpandq  zmm3, zmm5, %%MASK_26
 
         ; Add 2^128 to all 8 final qwords of the message
         vporq   zmm4, [rel high_bit]
