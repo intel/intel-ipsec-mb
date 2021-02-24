@@ -278,7 +278,7 @@ section .text
 ;; multiplying by 5 in case of the carry of p4.
 ;;
 ;; =============================================================================
-%macro POLY1305_MUL_REDUCE_VEC 32
+%macro POLY1305_MUL_REDUCE_VEC 25
 %define %%A0      %1  ; [in/out] ZMM register containing 1st 26-bit limb of the 8 blocks
 %define %%A1      %2  ; [in/out] ZMM register containing 2nd 26-bit limb of the 8 blocks
 %define %%A2      %3  ; [in/out] ZMM register containing 3rd 26-bit limb of the 8 blocks
@@ -304,16 +304,6 @@ section .text
 %define %%ZTMP3   %23 ; [clobbered] Temporary ZMM register
 %define %%ZTMP4   %24 ; [clobbered] Temporary ZMM register
 %define %%ZTMP5   %25 ; [clobbered] Temporary ZMM register
-%define %%ZTMP6   %26 ; [clobbered] Temporary ZMM register
-%define %%ZTMP7   %27 ; [clobbered] Temporary ZMM register
-%define %%ZTMP8   %28 ; [clobbered] Temporary ZMM register
-%define %%ZTMP9   %29 ; [clobbered] Temporary ZMM register
-%define %%ZTMP10  %30 ; [clobbered] Temporary ZMM register
-%define %%TMP     %31 ; [clobbered] Temporary GP register
-%define %%TMP2    %32 ; [clobbered] Temporary GP register
-
-%define %%XTMP1 XWORD(%%ZTMP1)
-%define %%XTMP2 XWORD(%%ZTMP2)
 
         ; Calculate p[0] addends
         vpmuludq        %%ZTMP1, %%A0, %%R0
@@ -322,24 +312,24 @@ section .text
         vpmuludq        %%ZTMP4, %%A3, %%R2P
         vpmuludq        %%ZTMP5, %%A4, %%R1P
 
-        ; Calculate p[1] addends
-        vpmuludq        %%ZTMP6, %%A0, %%R1
-        vpmuludq        %%ZTMP7, %%A1, %%R0
-        vpmuludq        %%ZTMP8, %%A2, %%R4P
-        vpmuludq        %%ZTMP9, %%A3, %%R3P
-        vpmuludq        %%ZTMP10, %%A4, %%R2P
-
         ; Calculate p[0]
         vpaddq          %%P0, %%ZTMP1, %%ZTMP2
         vpaddq          %%P0, %%ZTMP3
         vpaddq          %%P0, %%ZTMP4
         vpaddq          %%P0, %%ZTMP5
 
+        ; Calculate p[1] addends
+        vpmuludq        %%ZTMP1, %%A0, %%R1
+        vpmuludq        %%ZTMP2, %%A1, %%R0
+        vpmuludq        %%ZTMP3, %%A2, %%R4P
+        vpmuludq        %%ZTMP4, %%A3, %%R3P
+        vpmuludq        %%ZTMP5, %%A4, %%R2P
+
         ; Calculate p[1]
-        vpaddq          %%P1, %%ZTMP6, %%ZTMP7
-        vpaddq          %%P1, %%ZTMP8
-        vpaddq          %%P1, %%ZTMP9
-        vpaddq          %%P1, %%ZTMP10
+        vpaddq          %%P1, %%ZTMP1, %%ZTMP2
+        vpaddq          %%P1, %%ZTMP3
+        vpaddq          %%P1, %%ZTMP4
+        vpaddq          %%P1, %%ZTMP5
 
         ; Calculate p[2] addends
         vpmuludq        %%ZTMP1, %%A0, %%R2
@@ -348,24 +338,24 @@ section .text
         vpmuludq        %%ZTMP4, %%A3, %%R4P
         vpmuludq        %%ZTMP5, %%A4, %%R3P
 
-        ; Calculate p[3] addends
-        vpmuludq        %%ZTMP6, %%A0, %%R3
-        vpmuludq        %%ZTMP7, %%A1, %%R2
-        vpmuludq        %%ZTMP8, %%A2, %%R1
-        vpmuludq        %%ZTMP9, %%A3, %%R0
-        vpmuludq        %%ZTMP10, %%A4, %%R4P
-
         ; Calculate p[2]
         vpaddq          %%P2, %%ZTMP1, %%ZTMP2
         vpaddq          %%P2, %%ZTMP3
         vpaddq          %%P2, %%ZTMP4
         vpaddq          %%P2, %%ZTMP5
 
+        ; Calculate p[3] addends
+        vpmuludq        %%ZTMP1, %%A0, %%R3
+        vpmuludq        %%ZTMP2, %%A1, %%R2
+        vpmuludq        %%ZTMP3, %%A2, %%R1
+        vpmuludq        %%ZTMP4, %%A3, %%R0
+        vpmuludq        %%ZTMP5, %%A4, %%R4P
+
         ; Calculate p[3]
-        vpaddq          %%P3, %%ZTMP6, %%ZTMP7
-        vpaddq          %%P3, %%ZTMP8
-        vpaddq          %%P3, %%ZTMP9
-        vpaddq          %%P3, %%ZTMP10
+        vpaddq          %%P3, %%ZTMP1, %%ZTMP2
+        vpaddq          %%P3, %%ZTMP3
+        vpaddq          %%P3, %%ZTMP4
+        vpaddq          %%P3, %%ZTMP5
 
         ; Calculate p[4] addends
         vpmuludq        %%ZTMP1, %%A0, %%R4
@@ -627,9 +617,7 @@ section .text
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
                                 zmm27, zmm28, zmm29, zmm30, \
                                 zmm5, zmm6, zmm7, zmm8, zmm9, zmm31, \
-                                zmm10, zmm11, zmm12, zmm13, zmm14, \
-                                zmm0, zmm1, zmm2, zmm3, zmm4, \
-                                %%GP_RAX, %%GP_RDX
+                                zmm10, zmm11, zmm12, zmm13, zmm14
 
         sub     %%LEN, 128
         add     %%MSG, 128
@@ -682,9 +670,7 @@ section .text
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
                                 zmm27, zmm28, zmm29, zmm30, \
                                 zmm5, zmm6, zmm7, zmm8, zmm9, zmm31, \
-                                zmm10, zmm11, zmm12, zmm13, zmm14, \
-                                zmm0, zmm1, zmm2, zmm3, zmm4, \
-                                %%GP_RAX, %%GP_RDX
+                                zmm10, zmm11, zmm12, zmm13, zmm14
 
         add     %%MSG, POLY1305_BLOCK_SIZE*8
         sub     %%T0, POLY1305_BLOCK_SIZE*8
@@ -779,9 +765,7 @@ section .text
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
                                 zmm27, zmm28, zmm29, zmm30, \
                                 zmm5, zmm6, zmm7, zmm8, zmm9, zmm31, \
-                                zmm10, zmm11, zmm12, zmm13, zmm14, \
-                                zmm0, zmm1, zmm2, zmm3, zmm4, \
-                                %%GP_RAX, %%GP_RDX
+                                zmm10, zmm11, zmm12, zmm13, zmm14
 
         ;; Add all blocks
         vmovdqa64       zmm0, zmm15
