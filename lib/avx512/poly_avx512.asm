@@ -306,66 +306,66 @@ section .text
 %define %%ZTMP5   %25 ; [clobbered] Temporary ZMM register
 
         ; Calculate p[0] addends
-        vpmuludq        %%ZTMP1, %%A0, %%R0
+        vpmuludq        %%P0, %%A0, %%R0
         vpmuludq        %%ZTMP2, %%A1, %%R4P
         vpmuludq        %%ZTMP3, %%A2, %%R3P
         vpmuludq        %%ZTMP4, %%A3, %%R2P
         vpmuludq        %%ZTMP5, %%A4, %%R1P
 
         ; Calculate p[0]
-        vpaddq          %%P0, %%ZTMP1, %%ZTMP2
+        vpaddq          %%P0, %%ZTMP2
         vpaddq          %%P0, %%ZTMP3
         vpaddq          %%P0, %%ZTMP4
         vpaddq          %%P0, %%ZTMP5
 
         ; Calculate p[1] addends
-        vpmuludq        %%ZTMP1, %%A0, %%R1
+        vpmuludq        %%P1, %%A0, %%R1
         vpmuludq        %%ZTMP2, %%A1, %%R0
         vpmuludq        %%ZTMP3, %%A2, %%R4P
         vpmuludq        %%ZTMP4, %%A3, %%R3P
         vpmuludq        %%ZTMP5, %%A4, %%R2P
 
         ; Calculate p[1]
-        vpaddq          %%P1, %%ZTMP1, %%ZTMP2
+        vpaddq          %%P1, %%ZTMP2
         vpaddq          %%P1, %%ZTMP3
         vpaddq          %%P1, %%ZTMP4
         vpaddq          %%P1, %%ZTMP5
 
         ; Calculate p[2] addends
-        vpmuludq        %%ZTMP1, %%A0, %%R2
+        vpmuludq        %%P2, %%A0, %%R2
         vpmuludq        %%ZTMP2, %%A1, %%R1
         vpmuludq        %%ZTMP3, %%A2, %%R0
         vpmuludq        %%ZTMP4, %%A3, %%R4P
         vpmuludq        %%ZTMP5, %%A4, %%R3P
 
         ; Calculate p[2]
-        vpaddq          %%P2, %%ZTMP1, %%ZTMP2
+        vpaddq          %%P2, %%ZTMP2
         vpaddq          %%P2, %%ZTMP3
         vpaddq          %%P2, %%ZTMP4
         vpaddq          %%P2, %%ZTMP5
 
         ; Calculate p[3] addends
-        vpmuludq        %%ZTMP1, %%A0, %%R3
+        vpmuludq        %%P3, %%A0, %%R3
         vpmuludq        %%ZTMP2, %%A1, %%R2
         vpmuludq        %%ZTMP3, %%A2, %%R1
         vpmuludq        %%ZTMP4, %%A3, %%R0
         vpmuludq        %%ZTMP5, %%A4, %%R4P
 
         ; Calculate p[3]
-        vpaddq          %%P3, %%ZTMP1, %%ZTMP2
+        vpaddq          %%P3, %%ZTMP2
         vpaddq          %%P3, %%ZTMP3
         vpaddq          %%P3, %%ZTMP4
         vpaddq          %%P3, %%ZTMP5
 
         ; Calculate p[4] addends
-        vpmuludq        %%ZTMP1, %%A0, %%R4
+        vpmuludq        %%P4, %%A0, %%R4
         vpmuludq        %%ZTMP2, %%A1, %%R3
         vpmuludq        %%ZTMP3, %%A2, %%R2
         vpmuludq        %%ZTMP4, %%A3, %%R1
         vpmuludq        %%ZTMP5, %%A4, %%R0
 
         ; Calculate p[4]
-        vpaddq          %%P4, %%ZTMP1, %%ZTMP2
+        vpaddq          %%P4, %%ZTMP2
         vpaddq          %%P4, %%ZTMP3
         vpaddq          %%P4, %%ZTMP4
         vpaddq          %%P4, %%ZTMP5
@@ -405,7 +405,6 @@ section .text
         vpandq          %%A2, %%P2, %%MASK_26 ; Clear top 32+6 bits
         vpandq          %%A3, %%P3, %%MASK_26 ; Clear top 32+6 bits
         vpandq          %%A4, %%P4, %%MASK_26 ; Clear top 32+6 bits
-
 %endmacro
 
 ;; =============================================================================
@@ -486,11 +485,11 @@ section .text
         ; Add 2^128 to all 8 final qwords of the message
         vporq   zmm19, [rel high_bit]
 
-        vpaddq  zmm15, zmm5
-        vpaddq  zmm16, zmm6
-        vpaddq  zmm17, zmm7
-        vpaddq  zmm18, zmm8
-        vpaddq  zmm19, zmm9
+        vpaddq  zmm5, zmm15
+        vpaddq  zmm6, zmm16
+        vpaddq  zmm7, zmm17
+        vpaddq  zmm8, zmm18
+        vpaddq  zmm9, zmm19
 
         ; Use memory in stack to save powers of R, before loading them into ZMM registers
         ; The first 16*8 bytes will contain the 16 bytes of the 8 powers of R
@@ -608,26 +607,24 @@ section .text
         vpaddq  zmm29, zmm25
         vpaddq  zmm30, zmm26
 
-        ; Perform first 8 multiplications by R^8
-
-        ; zmm15-zmm19 contain the 8 blocks of message plus the previous accumulator
-        ; zmm22-26 contain the 5x26-bit limbs of the powers of R^8
-        ; zmm27-30 contain the 5x26-bit limbs of the powers of R^8' (5*R^8)
-        POLY1305_MUL_REDUCE_VEC zmm15, zmm16, zmm17, zmm18, zmm19, \
-                                zmm22, zmm23, zmm24, zmm25, zmm26, \
-                                zmm27, zmm28, zmm29, zmm30, \
-                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm31, \
-                                zmm10, zmm11, zmm12, zmm13, zmm14
-
-        sub     %%LEN, 128
-        add     %%MSG, 128
-
         mov     %%T0, %%LEN
         and     %%T0, 0xffffffffffffff80 ; multiple of 128 bytes
 
 %%_poly1305_blocks_loop:
         cmp     %%T0, 128
         jbe     %%_poly1305_blocks_loop_end
+
+        ; zmm5-zmm9 contain the 8 blocks of message plus the previous accumulator
+        ; zmm22-26 contain the 5x26-bit limbs of the powers of R
+        ; zmm27-30 contain the 5x26-bit limbs of the powers of R' (5*R)
+        POLY1305_MUL_REDUCE_VEC zmm5, zmm6, zmm7, zmm8, zmm9, \
+                                zmm22, zmm23, zmm24, zmm25, zmm26, \
+                                zmm27, zmm28, zmm29, zmm30, \
+                                zmm15, zmm16, zmm17, zmm18, zmm19, zmm31, \
+                                zmm10, zmm11, zmm12, zmm13, zmm14
+
+        add     %%MSG, POLY1305_BLOCK_SIZE*8
+        sub     %%T0, POLY1305_BLOCK_SIZE*8
 
         ; Load next block of data (128 bytes)
         vmovdqu64 zmm0, [%%MSG]
@@ -638,7 +635,7 @@ section .text
         ; zmm0 to have bits 0-25 of all 8 blocks in 8 qwords
         ; zmm1 to have bits 51-26 of all 8 blocks in 8 qwords
         ; zmm2 to have bits 77-52 of all 8 blocks in 8 qwords
-        ; zmm3 to have bits 103-78 of all 8 blocks in 8 qwords
+        ; zmm10 to have bits 103-78 of all 8 blocks in 8 qwords
         ; zmm4 to have bits 127-104 of all 8 blocks in 8 qwords
         vpunpckhqdq zmm4, zmm0, zmm1
         vpunpcklqdq zmm0, zmm0, zmm1
@@ -646,34 +643,22 @@ section .text
         vpsrlq  zmm2, zmm0, 52
         vpsllq  zmm3, zmm4, 12
         vpsrlq  zmm1, zmm0, 26
-        vpsrlq  zmm5, zmm4, 14
+        vpsrlq  zmm10, zmm4, 14
         vpsrlq  zmm4, 40
         vpandq  zmm0, %%MASK_26
         vpandq  zmm1, %%MASK_26
         vpternlogq zmm2, zmm3, %%MASK_26, 0xA8 ; (A OR B AND C)
-        vpandq  zmm5, %%MASK_26
+        vpandq  zmm10, %%MASK_26
 
         ; Add 2^128 to all 8 final qwords of the message
         vporq   zmm4, [rel high_bit]
 
         ; Add new message blocks to previous accumulator
-        vpaddq  zmm15, zmm0
-        vpaddq  zmm16, zmm1
-        vpaddq  zmm17, zmm2
-        vpaddq  zmm18, zmm5
-        vpaddq  zmm19, zmm4
-
-        ; zmm15-zmm19 contain the 8 blocks of message plus the previous accumulator
-        ; zmm22-26 contain the 5x26-bit limbs of the powers of R
-        ; zmm27-30 contain the 5x26-bit limbs of the powers of R' (5*R)
-        POLY1305_MUL_REDUCE_VEC zmm15, zmm16, zmm17, zmm18, zmm19, \
-                                zmm22, zmm23, zmm24, zmm25, zmm26, \
-                                zmm27, zmm28, zmm29, zmm30, \
-                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm31, \
-                                zmm10, zmm11, zmm12, zmm13, zmm14
-
-        add     %%MSG, POLY1305_BLOCK_SIZE*8
-        sub     %%T0, POLY1305_BLOCK_SIZE*8
+        vpaddq  zmm5, zmm0
+        vpaddq  zmm6, zmm1
+        vpaddq  zmm7, zmm2
+        vpaddq  zmm8, zmm10
+        vpaddq  zmm9, zmm4
 
         jmp     %%_poly1305_blocks_loop
 
@@ -724,146 +709,97 @@ section .text
         vpsllq  zmm3, zmm26, 2
         vpaddq  zmm30, zmm26, zmm3 ; R4' (R4*5)
 
-        ; Load next block of data (128 bytes)
-        vmovdqu64 zmm0, [%%MSG]
-        vmovdqu64 zmm1, [%%MSG + 64]
-
-        ; Interleave the data to form 26-bit limbs
-        ;
-        ; zmm0 to have bits 0-25 of all 8 blocks in 8 qwords
-        ; zmm1 to have bits 51-26 of all 8 blocks in 8 qwords
-        ; zmm2 to have bits 77-52 of all 8 blocks in 8 qwords
-        ; zmm3 to have bits 103-78 of all 8 blocks in 8 qwords
-        ; zmm4 to have bits 127-104 of all 8 blocks in 8 qwords
-        vpunpckhqdq zmm4, zmm0, zmm1
-        vpunpcklqdq zmm0, zmm0, zmm1
-
-        vpsrlq  zmm2, zmm0, 52
-        vpsllq  zmm3, zmm4, 12
-        vpsrlq  zmm1, zmm0, 26
-        vpsrlq  zmm5, zmm4, 14
-        vpsrlq  zmm4, 40
-        vpandq  zmm0, %%MASK_26
-        vpandq  zmm1, %%MASK_26
-        vpternlogq zmm2, zmm3, %%MASK_26, 0xA8 ; (A OR B AND C)
-        vpandq  zmm3, zmm5, %%MASK_26
-
-        ; Add 2^128 to all 8 final qwords of the message
-        vporq   zmm4, [rel high_bit]
-
-        ; Add previous accumulator to first block of message
-        vpaddq  zmm15, zmm0
-        vpaddq  zmm16, zmm1
-        vpaddq  zmm17, zmm2
-        vpaddq  zmm18, zmm3
-        vpaddq  zmm19, zmm4
-
-        ; zmm15-zmm19 contain the 8 blocks of message plus the previous accumulator
+        ; zmm5-zmm9 contain the 8 blocks of message plus the previous accumulator
         ; zmm22-26 contain the 5x26-bit limbs of the powers of R
         ; zmm27-30 contain the 5x26-bit limbs of the powers of R' (5*R)
-        POLY1305_MUL_REDUCE_VEC zmm15, zmm16, zmm17, zmm18, zmm19, \
+        POLY1305_MUL_REDUCE_VEC zmm5, zmm6, zmm7, zmm8, zmm9, \
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
                                 zmm27, zmm28, zmm29, zmm30, \
-                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm31, \
+                                zmm15, zmm16, zmm17, zmm18, zmm19, zmm31, \
                                 zmm10, zmm11, zmm12, zmm13, zmm14
 
         ;; Add all blocks
-        vmovdqa64       zmm0, zmm15
-        vmovdqa64       zmm1, zmm16
-        vmovdqa64       zmm2, zmm17
-        vmovdqa64       zmm3, zmm18
-        vmovdqa64       zmm4, zmm19
-
-        vextracti64x4   YWORD(zmm5), zmm0, 1
-        vextracti64x4   YWORD(zmm6), zmm1, 1
-        vextracti64x4   YWORD(zmm7), zmm2, 1
-        vextracti64x4   YWORD(zmm8), zmm3, 1
-        vextracti64x4   YWORD(zmm9), zmm4, 1
+        vextracti64x4   ymm0, zmm5, 1
+        vextracti64x4   ymm1, zmm6, 1
+        vextracti64x4   ymm2, zmm7, 1
+        vextracti64x4   ymm3, zmm8, 1
+        vextracti64x4   ymm4, zmm9, 1
 
         ; Transpose first 32 bytes of P0-P3
-        TRANSPOSE4_U64  YWORD(zmm0), YWORD(zmm1), YWORD(zmm2), YWORD(zmm3), \
-                        YWORD(zmm10), YWORD(zmm11), YWORD(zmm12), ymm13
+        TRANSPOSE4_U64  ymm0, ymm1, ymm2, ymm3, ymm10, ymm11, ymm12, ymm13
 
         ; Transpose final 32 bytes of P0-P3
-        TRANSPOSE4_U64  YWORD(zmm5), YWORD(zmm6), YWORD(zmm7), YWORD(zmm8), \
-                        YWORD(zmm10), YWORD(zmm11), YWORD(zmm12), ymm13
+        TRANSPOSE4_U64  ymm5, ymm6, ymm7, ymm8, ymm10, ymm11, ymm12, ymm13
 
         ; Add all P0, P1, P2, P3
-        vpaddq          zmm0, zmm1
-        vpaddq          zmm0, zmm2
-        vpaddq          zmm0, zmm3
-        vpaddq          zmm0, zmm5
-        vpaddq          zmm0, zmm6
-        vpaddq          zmm0, zmm7
-        vpaddq          zmm0, zmm8
+        vpaddq          ymm0, ymm1
+        vpaddq          ymm2, ymm3
+        vpaddq          ymm5, ymm6
+        vpaddq          ymm7, ymm8
+        vpaddq          ymm0, ymm2
+        vpaddq          ymm0, ymm5
+        vpaddq          ymm0, ymm7
 
         ; Add all P4
-        vmovq           %%T0, XWORD(zmm4) ; P4
-        vpextrq         %%T1, XWORD(zmm4), 1 ; P4^2
+        vmovq           %%T0, xmm4 ; P4
+        vpextrq         %%T1, xmm4, 1 ; P4^2
         add             %%T0, %%T1
-        vextracti32x4   XWORD(zmm1), zmm4, 1
-        vmovq           %%T1, XWORD(zmm1) ; P4^3
+        vextracti32x4   xmm1, zmm4, 1
+        vmovq           %%T1, xmm1 ; P4^3
         add             %%T0, %%T1
-        vpextrq         %%T1, XWORD(zmm1), 1 ; P4^4
+        vpextrq         %%T1, xmm1, 1 ; P4^4
         add             %%T0, %%T1 ; %%T0 = P4 + P4^2 + P4^3 + P4^4
 
-        vmovq           %%T1, XWORD(zmm9) ; P4^5
+        vmovq           %%T1, xmm9 ; P4^5
         add             %%T0, %%T1
-        vpextrq         %%T1, XWORD(zmm9), 1 ; P4^6
+        vpextrq         %%T1, xmm9, 1 ; P4^6
         add             %%T0, %%T1
-        vextracti32x4   XWORD(zmm1), zmm9, 1
-        vmovq           %%T1, XWORD(zmm1) ; P4^7
+        vextracti32x4   xmm1, zmm9, 1
+        vmovq           %%T1, xmm1 ; P4^7
         add             %%T0, %%T1
-        vpextrq         %%T1, XWORD(zmm1), 1 ; P4^8
+        vpextrq         %%T1, xmm1, 1 ; P4^8
         add             %%T0, %%T1 ; %%T0 = P4 + P4^2 + P4^3 + P4^4 + ... P^8
-        vmovq           xmm19, %%T0
+        vmovq           xmm4, %%T0
 
-        ; Move P0-P4 to A0-A4
-        vmovq           %%T0, XWORD(zmm0)
-        vmovq           xmm15, %%T0
-        vpextrq         %%T0, XWORD(zmm0), 1
-        vmovq           xmm16, %%T0
-        vextracti32x4   XWORD(zmm1), zmm0, 1
-        vmovq           %%T0, XWORD(zmm1)
-        vmovq           xmm17, %%T0
-        vpextrq         %%T0, XWORD(zmm1), 1
-        vmovq           xmm18, %%T0
+        ; Extract 2nd, 3rd and 4th quadwords in ymm0 to ymm1-3
+        vpermq          ymm1, ymm0, 0xFD
+        vpermq          ymm2, ymm0, 0xFE
+        vpermq          ymm3, ymm0, 0xFF
 
         ; Carry propagation
-        vpsrlq          xmm0, xmm15, 26
-        vpandq          xmm15, XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vpaddq          xmm16, xmm0
-        vpsrlq          xmm0, xmm16, 26
-        vpandq          xmm16, XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vpaddq          xmm17, xmm0
-        vpsrlq          xmm0, xmm17, 26
-        vpandq          xmm17, XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vpaddq          xmm18, xmm0
-        vpsrlq          xmm0, xmm18, 26
-        vpandq          xmm18, XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vpaddq          xmm19, xmm0
-        vpsrlq          xmm0, xmm19, 26
-        vpandq          xmm19, XWORD(%%MASK_26) ; Clear top 32+6 bits
-        vmovdqa64       xmm1, xmm0
-        vpsllq          xmm0, 2
-        vpaddq          xmm0, xmm1
-        vpaddq          xmm15, xmm0
+        vpsrlq          xmm6, xmm0, 26
+        vpandq          xmm0, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpaddq          xmm1, xmm6
+        vpsrlq          xmm6, xmm1, 26
+        vpandq          xmm1, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpaddq          xmm2, xmm6
+        vpsrlq          xmm6, xmm2, 26
+        vpandq          xmm2, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpaddq          xmm3, xmm6
+        vpsrlq          xmm6, xmm3, 26
+        vpandq          xmm3, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpaddq          xmm4, xmm6
+        vpsrlq          xmm6, xmm4, 26
+        vpandq          xmm4, XWORD(%%MASK_26) ; Clear top 32+6 bits
+        vpsllq          xmm5, xmm6, 2
+        vpaddq          xmm6, xmm5
+        vpaddq          xmm0, xmm6
 
         ; Put together A
-        vmovq   %%A0, xmm15
-        vmovq   %%T0, xmm16
+        vmovq   %%A0, xmm0
+        vmovq   %%T0, xmm1
         shl     %%T0, 26
         or      %%A0, %%T0
-        vmovq   %%T0, xmm17
+        vmovq   %%T0, xmm2
         mov     %%T1, %%T0
         shl     %%T1, 52
         or      %%A0, %%T1
         shr     %%T0, 12
         mov     %%A1, %%T0
-        vmovq   %%T1, xmm18
+        vmovq   %%T1, xmm3
         shl     %%T1, 14
         or      %%A1, %%T1
-        vmovq   %%T0, xmm19
+        vmovq   %%T0, xmm4
         mov     %%T1, %%T0
         shl     %%T1, 40
         or      %%A1, %%T1
