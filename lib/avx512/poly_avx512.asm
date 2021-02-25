@@ -278,7 +278,7 @@ section .text
 ;; multiplying by 5 in case of the carry of p4.
 ;;
 ;; =============================================================================
-%macro POLY1305_MUL_REDUCE_VEC 25
+%macro POLY1305_MUL_REDUCE_VEC 28-29
 %define %%A0      %1  ; [in/out] ZMM register containing 1st 26-bit limb of the 8 blocks
 %define %%A1      %2  ; [in/out] ZMM register containing 2nd 26-bit limb of the 8 blocks
 %define %%A2      %3  ; [in/out] ZMM register containing 3rd 26-bit limb of the 8 blocks
@@ -304,9 +304,15 @@ section .text
 %define %%ZTMP3   %23 ; [clobbered] Temporary ZMM register
 %define %%ZTMP4   %24 ; [clobbered] Temporary ZMM register
 %define %%ZTMP5   %25 ; [clobbered] Temporary ZMM register
+%define %%ZTMP6   %26 ; [clobbered] Temporary ZMM register
+%define %%ZTMP7   %27 ; [clobbered] Temporary ZMM register
+%define %%ZTMP8   %28 ; [clobbered] Temporary ZMM register
+%define %%MSG     %29 ; [in] Pointer to message
 
         ; Calculate p[0] addends
         vpmuludq        %%P0, %%A0, %%R0
+        vpmuludq        %%P1, %%A0, %%R1
+        vpmuludq        %%P2, %%A0, %%R2
         vpmuludq        %%ZTMP2, %%A1, %%R4P
         vpmuludq        %%ZTMP3, %%A2, %%R3P
         vpmuludq        %%ZTMP4, %%A3, %%R2P
@@ -319,7 +325,6 @@ section .text
         vpaddq          %%P0, %%ZTMP5
 
         ; Calculate p[1] addends
-        vpmuludq        %%P1, %%A0, %%R1
         vpmuludq        %%ZTMP2, %%A1, %%R0
         vpmuludq        %%ZTMP3, %%A2, %%R4P
         vpmuludq        %%ZTMP4, %%A3, %%R3P
@@ -332,7 +337,6 @@ section .text
         vpaddq          %%P1, %%ZTMP5
 
         ; Calculate p[2] addends
-        vpmuludq        %%P2, %%A0, %%R2
         vpmuludq        %%ZTMP2, %%A1, %%R1
         vpmuludq        %%ZTMP3, %%A2, %%R0
         vpmuludq        %%ZTMP4, %%A3, %%R4P
@@ -370,6 +374,7 @@ section .text
         vpaddq          %%P4, %%ZTMP4
         vpaddq          %%P4, %%ZTMP5
 
+%if %0 == 28
         ; First pass of carry propagation
         vpsrlq          %%ZTMP1, %%P0, 26
         vpaddq          %%P1, %%ZTMP1
@@ -405,6 +410,82 @@ section .text
         vpandq          %%A2, %%P2, %%MASK_26 ; Clear top 32+6 bits
         vpandq          %%A3, %%P3, %%MASK_26 ; Clear top 32+6 bits
         vpandq          %%A4, %%P4, %%MASK_26 ; Clear top 32+6 bits
+%else ;; %0 == 29
+        ; Load next block of data (128 bytes)
+        vmovdqu64 %%ZTMP3, [%%MSG]
+        vmovdqu64 %%ZTMP4, [%%MSG + 64]
+
+        ; First pass of carry propagation
+        vpsrlq          %%ZTMP1, %%P0, 26
+        vpaddq          %%P1, %%ZTMP1
+        vpsrlq          %%ZTMP1, %%P1, 26
+        vpaddq          %%P2, %%ZTMP1
+        vpsrlq          %%ZTMP1, %%P2, 26
+        vpaddq          %%P3, %%ZTMP1
+        vpsrlq          %%ZTMP1, %%P3, 26
+        vpaddq          %%P4, %%ZTMP1
+
+        ; Interleave the data to form 26-bit limbs
+        ;
+        ; %%ZTMP3 to have bits 0-25 of all 8 blocks in 8 qwords
+        ; %%ZTMP4 to have bits 51-26 of all 8 blocks in 8 qwords
+        ; %%ZTMP5 to have bits 77-52 of all 8 blocks in 8 qwords
+        ; %%ZTMP8 to have bits 103-78 of all 8 blocks in 8 qwords
+        ; %%ZTMP7 to have bits 127-104 of all 8 blocks in 8 qwords
+
+        ; Add 2^128 to all 8 final qwords of the message
+        vpunpckhqdq     %%ZTMP7, %%ZTMP3, %%ZTMP4
+        vpunpcklqdq     %%ZTMP3, %%ZTMP3, %%ZTMP4
+        vpsrlq          %%ZTMP5, %%ZTMP3, 52
+        vpsllq          %%ZTMP6, %%ZTMP7, 12
+
+        vpsrlq          %%ZTMP1, %%P4, 26
+        vpsllq          %%ZTMP2, %%ZTMP1, 2
+        vpaddq          %%ZTMP1, %%ZTMP2 ; (*5)
+        vpandq          %%P0, %%MASK_26 ; Clear top 32+6 bits
+        vpandq          %%P1, %%MASK_26 ; Clear top 32+6 bits
+        vpandq          %%P2, %%MASK_26 ; Clear top 32+6 bits
+        vpandq          %%P3, %%MASK_26 ; Clear top 32+6 bits
+        vpandq          %%P4, %%MASK_26 ; Clear top 32+6 bits
+        vpaddq          %%P0, %%ZTMP1
+
+        ; Second pass of carry propagation
+        vpsrlq          %%ZTMP1, %%P0, 26
+        vpaddq          %%P1, %%ZTMP1
+        vpsrlq          %%ZTMP1, %%P1, 26
+
+        vpsrlq          %%ZTMP4, %%ZTMP3, 26
+        vpsrlq          %%ZTMP8, %%ZTMP7, 14
+        vpsrlq          %%ZTMP7, 40
+
+        vpaddq          %%P2, %%ZTMP1
+        vpsrlq          %%ZTMP1, %%P2, 26
+        vpaddq          %%P3, %%ZTMP1
+        vpsrlq          %%ZTMP1, %%P3, 26
+
+        vpandq          %%ZTMP3, %%MASK_26
+        vpandq          %%ZTMP4, %%MASK_26
+        vpternlogq      %%ZTMP5, %%ZTMP6, %%MASK_26, 0xA8 ; (A OR B AND C)
+        vpandq          %%ZTMP8, %%MASK_26
+
+        vpaddq          %%P4, %%ZTMP1
+
+        vpandq          %%A0, %%P0, %%MASK_26 ; Clear top 32+6 bits
+        vpandq          %%A1, %%P1, %%MASK_26 ; Clear top 32+6 bits
+        vporq           %%ZTMP7, [rel high_bit]
+
+        ; Add new message blocks to previous accumulator
+        vpaddq          %%A0, %%ZTMP3
+        vpaddq          %%A1, %%ZTMP4
+
+        vpandq          %%A2, %%P2, %%MASK_26 ; Clear top 32+6 bits
+        vpandq          %%A3, %%P3, %%MASK_26 ; Clear top 32+6 bits
+        vpandq          %%A4, %%P4, %%MASK_26 ; Clear top 32+6 bits
+
+        vpaddq          %%A2, %%ZTMP5
+        vpaddq          %%A3, %%ZTMP8
+        vpaddq          %%A4, %%ZTMP7
+%endif
 %endmacro
 
 ;; =============================================================================
@@ -614,6 +695,9 @@ section .text
         cmp     %%T0, 128
         jbe     %%_poly1305_blocks_loop_end
 
+        add     %%MSG, POLY1305_BLOCK_SIZE*8
+        sub     %%T0, POLY1305_BLOCK_SIZE*8
+
         ; zmm5-zmm9 contain the 8 blocks of message plus the previous accumulator
         ; zmm22-26 contain the 5x26-bit limbs of the powers of R
         ; zmm27-30 contain the 5x26-bit limbs of the powers of R' (5*R)
@@ -621,44 +705,8 @@ section .text
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
                                 zmm27, zmm28, zmm29, zmm30, \
                                 zmm15, zmm16, zmm17, zmm18, zmm19, zmm31, \
-                                zmm10, zmm11, zmm12, zmm13, zmm14
-
-        add     %%MSG, POLY1305_BLOCK_SIZE*8
-        sub     %%T0, POLY1305_BLOCK_SIZE*8
-
-        ; Load next block of data (128 bytes)
-        vmovdqu64 zmm0, [%%MSG]
-        vmovdqu64 zmm1, [%%MSG + 64]
-
-        ; Interleave the data to form 26-bit limbs
-        ;
-        ; zmm0 to have bits 0-25 of all 8 blocks in 8 qwords
-        ; zmm1 to have bits 51-26 of all 8 blocks in 8 qwords
-        ; zmm2 to have bits 77-52 of all 8 blocks in 8 qwords
-        ; zmm10 to have bits 103-78 of all 8 blocks in 8 qwords
-        ; zmm4 to have bits 127-104 of all 8 blocks in 8 qwords
-        vpunpckhqdq zmm4, zmm0, zmm1
-        vpunpcklqdq zmm0, zmm0, zmm1
-
-        vpsrlq  zmm2, zmm0, 52
-        vpsllq  zmm3, zmm4, 12
-        vpsrlq  zmm1, zmm0, 26
-        vpsrlq  zmm10, zmm4, 14
-        vpsrlq  zmm4, 40
-        vpandq  zmm0, %%MASK_26
-        vpandq  zmm1, %%MASK_26
-        vpternlogq zmm2, zmm3, %%MASK_26, 0xA8 ; (A OR B AND C)
-        vpandq  zmm10, %%MASK_26
-
-        ; Add 2^128 to all 8 final qwords of the message
-        vporq   zmm4, [rel high_bit]
-
-        ; Add new message blocks to previous accumulator
-        vpaddq  zmm5, zmm0
-        vpaddq  zmm6, zmm1
-        vpaddq  zmm7, zmm2
-        vpaddq  zmm8, zmm10
-        vpaddq  zmm9, zmm4
+                                zmm10, zmm11, zmm12, zmm13, zmm14, zmm0, zmm1, zmm2, \
+                                %%MSG
 
         jmp     %%_poly1305_blocks_loop
 
@@ -716,7 +764,7 @@ section .text
                                 zmm22, zmm23, zmm24, zmm25, zmm26, \
                                 zmm27, zmm28, zmm29, zmm30, \
                                 zmm15, zmm16, zmm17, zmm18, zmm19, zmm31, \
-                                zmm10, zmm11, zmm12, zmm13, zmm14
+                                zmm10, zmm11, zmm12, zmm13, zmm14, zmm0, zmm1, zmm2
 
         ;; Add all blocks
         vextracti64x4   ymm0, zmm5, 1
