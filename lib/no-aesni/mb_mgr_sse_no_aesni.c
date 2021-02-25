@@ -134,6 +134,8 @@ IMB_JOB *flush_job_aes128_cbcs_1_9_enc_sse_no_aesni(MB_MGR_AES_OOO *state);
 
 IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 
+IMB_JOB *snow_v_sse_no_aesni(IMB_JOB *job);
+
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
 
@@ -282,6 +284,8 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 #define SUBMIT_JOB_CHACHA20_ENC_DEC submit_job_chacha20_enc_dec_sse
 #define SUBMIT_JOB_CHACHA20_POLY1305 aead_chacha20_poly1305_sse
 #define SUBMIT_JOB_CHACHA20_POLY1305_SGL aead_chacha20_poly1305_sgl_sse
+
+#define SUBMIT_JOB_SNOW_V snow_v_sse_no_aesni
 
 /* ====================================================================== */
 

@@ -8,9 +8,11 @@ General
 
 Library
 - ZUC-EEA3-256 support for SSE, AVX, AVX2 and AVX512 (VAES)
+- SNOW-V support for SSE
 
 Test Applications
 - ZUC-EEA3-256 tests added to test and xvalidation app
+- SNOW-V tests added to test application
 
 Performance Application
 - ZUC-EEA3-256 support added

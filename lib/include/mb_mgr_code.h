@@ -510,6 +510,8 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return submit_kasumi_uea1_job(state, job);
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
                 return SUBMIT_JOB_AES128_CBCS_1_9_ENC(aes128_cbcs_ooo, job);
+        } else if (IMB_CIPHER_SNOW_V == job->cipher_mode) {
+                return SUBMIT_JOB_SNOW_V(job);
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -662,6 +664,8 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                 return submit_kasumi_uea1_job(state, job);
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
                 return SUBMIT_JOB_AES128_CBCS_1_9_DEC(job);
+        } else if (IMB_CIPHER_SNOW_V == job->cipher_mode) {
+                return SUBMIT_JOB_SNOW_V(job);
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -1655,6 +1659,32 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         return 1;
                 }
                 if (job->iv_len_in_bytes != UINT64_C(12)) {
+                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                break;
+        case IMB_CIPHER_SNOW_V:
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->msg_len_to_cipher_in_bytes != 0 && job->dst == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_DST);
+                        return 1;
+                }
+                if (job->iv == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                        return 1;
+                }
+                if (job->enc_keys == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
+                        return 1;
+                }
+                if (job->key_len_in_bytes != UINT64_C(32)) {
+                        imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
+                        return 1;
+                }
+                if (job->iv_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }

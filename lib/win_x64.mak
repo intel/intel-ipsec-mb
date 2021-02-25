@@ -457,7 +457,9 @@ lib_objs2 = \
 	$(OBJ_DIR)\crc32_by16_vclmul_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_auto.obj \
 	$(OBJ_DIR)\poly1305.obj \
-	$(OBJ_DIR)\chacha20_poly1305.obj
+	$(OBJ_DIR)\chacha20_poly1305.obj \
+	$(OBJ_DIR)\snow_v_sse_noaesni.obj \
+	$(OBJ_DIR)\snow_v_sse.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \

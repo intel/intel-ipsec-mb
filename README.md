@@ -60,6 +60,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | AES128-CBCS(9)| N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
 | Chacha20      | N      | Y      | Y      | Y      | Y      | N      |
 | Chacha20 AEAD | N      | Y      | Y      | Y      | Y      | N      |
+| SNOW-V        | N      | Y      | N      | N      | N      | N      |
 +---------------------------------------------------------------------+
 ```
 Notes:  
