@@ -919,6 +919,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305:
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_PON_AES_CNTR:
+                                case IMB_CIPHER_SNOW_V:
                                         break;
                                 default:
                                         job->msg_len_to_cipher_in_bytes = 0;
@@ -954,6 +955,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CNTR:
                                 case IMB_CIPHER_CNTR_BITLEN:
                                 case IMB_CIPHER_PON_AES_CNTR:
+                                case IMB_CIPHER_SNOW_V:
                                 case IMB_CIPHER_NULL:
                                         continue;
                                         /* not allowed with null hash */
