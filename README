@@ -118,14 +118,14 @@ implementations.
     | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
     | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
     | HEC               | N      | Y      | Y      | N      | N      | N      |
-    | POLY1305          | Y      | N      | N      | N      | N      | N      |
-    | POLY1305 AEAD     | Y      | N      | N      | N      | N      | N      |
+    | POLY1305          | Y      | N      | N      | N      | Y      | Y      |
+    | POLY1305 AEAD     | Y      | N      | N      | N      | Y      | Y      |
     +-------------------------------------------------------------------------+
 
 Notes:
 (1) - MD5 over one block implemented in C
 (2) - Implementation using SHANI extensions is x2
-(3) - AVX512 plus VAES, VPCLMULQDQ and GFNI extensions
+(3) - AVX512 plus VAES, VPCLMULQDQ, GFNI and IFMA extensions
 (4) - used only with AES128-DOCSIS cipher
 (5) - x8 on selected CPU’s supporting GFNI
 

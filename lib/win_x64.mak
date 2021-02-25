@@ -263,6 +263,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\chacha20_avx2.obj \
 	$(OBJ_DIR)\chacha20_avx512.obj \
 	$(OBJ_DIR)\poly_avx512.obj \
+	$(OBJ_DIR)\poly_fma_avx512.obj \
 	$(OBJ_DIR)\des_x16_avx512.obj \
 	$(OBJ_DIR)\cntr_vaes_avx512.obj \
 	$(OBJ_DIR)\cntr_ccm_vaes_avx512.obj \

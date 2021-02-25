@@ -319,7 +319,11 @@ IMB_JOB *flush_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 
 IMB_JOB *submit_job_chacha20_enc_dec_avx512(IMB_JOB *job);
 
-void *poly1305_mac_avx512(IMB_JOB *job);
+void poly1305_mac_fma_avx512(IMB_JOB *job);
+void poly1305_mac_plain_avx512(IMB_JOB *job);
+
+static void (*poly1305_mac_avx512)
+        (IMB_JOB *) = poly1305_mac_plain_avx512;
 
 __forceinline
 IMB_JOB *
@@ -1777,6 +1781,9 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;
                 submit_job_aes_cntr_bit_avx512 = vaes_submit_cntr_bit_avx512;
         }
+
+        if (state->features & IMB_FEATURE_AVX512_IFMA)
+                poly1305_mac_avx512 = poly1305_mac_fma_avx512;
 
         if ((state->features & (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) ==
             (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) {

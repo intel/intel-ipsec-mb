@@ -546,6 +546,7 @@ asm_avx512_lib_objs := \
 	mb_mgr_zuc_submit_flush_gfni_avx512.o \
 	chacha20_avx512.o \
         poly_avx512.o \
+        poly_fma_avx512.o \
 	ethernet_fcs_avx512.o \
 	crc16_x25_avx512.o \
 	crc32_refl_by16_vclmul_avx512.o \
