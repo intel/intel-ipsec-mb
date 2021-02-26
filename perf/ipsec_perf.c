@@ -138,6 +138,7 @@ enum test_cipher_mode_e {
         TEST_KASUMI_UEA1,
         TEST_CHACHA20,
         TEST_AEAD_CHACHA20,
+        TEST_SNOW_V,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -430,6 +431,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 .name = "chacha20",
                 .values.job_params = {
                         .cipher_mode = TEST_CHACHA20,
+                        .aes_key_size = 32
+                }
+        },
+        {
+                .name = "snow-v",
+                .values.job_params = {
+                        .cipher_mode = TEST_SNOW_V,
                         .aes_key_size = 32
                 }
         },
@@ -1244,6 +1252,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_AEAD_CHACHA20:
                 c_mode = IMB_CIPHER_CHACHA20_POLY1305;
                 break;
+        case TEST_SNOW_V:
+                c_mode = IMB_CIPHER_SNOW_V;
+                break;
         default:
                 break;
         }
@@ -1618,7 +1629,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.CHACHA20_POLY1305.aad_len_in_bytes =
                         params->aad_size;
                 job_template.iv_len_in_bytes = 12;
-        }
+        } else if (job_template.cipher_mode == IMB_CIPHER_SNOW_V)
+                job_template.iv_len_in_bytes = 16;
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
