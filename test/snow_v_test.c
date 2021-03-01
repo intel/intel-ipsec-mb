@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>		/* for memcmp() */
+#include <assert.h>
 
 #include <intel-ipsec-mb.h>
 #include "gcm_ctr_vectors_test.h"
@@ -631,16 +632,31 @@ static const snow_v_test_vectors_t snow_v_vectors_cov[] = {
 
 static void
 snow_v_single_test(IMB_MGR *p_mgr,
-                    struct test_suite_context *ts,
-                    const uint8_t *key,
-                    const uint8_t *iv,
-                    const uint8_t *plain,
-                    const size_t size,
-                    const uint8_t *expected)
+                   struct test_suite_context *ts,
+                   const uint8_t *key,
+                   const uint8_t *iv,
+                   const uint8_t *plain,
+                   const size_t size,
+                   const uint8_t *expected)
 {
-        uint8_t output[MAX_BUFFER_LENGTH_IN_BYTES];
+        const size_t pad_size = 16;
+        const size_t alloc_size = size + (2 * pad_size);
+        const int pad_pattern = 0xa5;
+        uint8_t *dst_ptr = NULL, *output = malloc(alloc_size);
         uint32_t pass = 0, fail = 0;
         struct IMB_JOB *job;
+
+        if (output == NULL) {
+                fprintf(stderr, "Error allocating %lu bytes!\n",
+                        (unsigned long) alloc_size);
+                exit(EXIT_FAILURE);
+        }
+
+        dst_ptr = &output[pad_size];
+
+        /* Prime padding blocks with a pattern */
+        memset(output, pad_pattern, pad_size);
+        memset(&output[alloc_size - pad_size], pad_pattern, pad_size);
 
         job = IMB_GET_NEXT_JOB(p_mgr);
 
@@ -654,28 +670,53 @@ snow_v_single_test(IMB_MGR *p_mgr,
 
         job->enc_keys = key;
         job->iv = iv;
-        job->dst = output;
+        job->dst = dst_ptr;
         job->src = plain;
         job->msg_len_to_cipher_in_bytes = size;
 
         job = IMB_SUBMIT_JOB(p_mgr);
         if (job == NULL) {
-                int err = 0;
+                const int err = imb_get_errno(p_mgr);
 
-                err = imb_get_errno(p_mgr);
                 if (err != 0)
                         printf("Error: %s!\n", imb_get_strerror(err));
                 fail++;
         } else {
-                const int mismatch = memcmp(output, expected, size);
+                uint8_t pad_block[16];
+                int fail_found = 0;
 
-                if (mismatch == 0)
-                        pass++;
-                else
+                /* check for vector match */
+                if (memcmp(dst_ptr, expected, size) != 0) {
+                        hexdump(stderr, "expected", expected, size);
+                        hexdump(stderr, "received", &output[pad_size], size);
+                        fail_found = 1;
+                }
+
+                /* check for buffer under/over-write */
+                assert(sizeof(pad_block) == pad_size);
+                memset(pad_block, pad_pattern, sizeof(pad_block));
+
+                if (memcmp(pad_block, output, pad_size) != 0) {
+                        hexdump(stderr, "underwrite detected", output,
+                                pad_size);
+                        fail_found = 1;
+                }
+
+                if (memcmp(pad_block, &output[alloc_size - pad_size],
+                            pad_size) != 0) {
+                        hexdump(stderr, "overwrite detected",
+                                &output[alloc_size - pad_size], pad_size);
+                        fail_found = 1;
+                }
+
+                if (fail_found)
                         fail++;
+                else
+                        pass++;
         }
 
         test_suite_update(ts, pass, fail);
+        free(output);
 }
 
 static void
