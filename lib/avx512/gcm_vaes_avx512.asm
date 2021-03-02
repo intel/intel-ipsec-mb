@@ -3412,12 +3412,50 @@ default rel
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
 
         ;; ==== GHASH - 32 blocks
-        GHASH_LAST_Nx16 %%GDATA_KEY, %%AAD_HASHz, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11, \
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
-                %%GH, %%GL, %%GM, big_loop_nblocks, big_loop_depth
+
+        vpxorq          %%ZTMP10, %%ZTMP10, %%ZTMP10
+
+%assign hashk      HashKey_32
+%assign cipher_blk (STACK_LOCAL_OFFSET + ((48 - 32) * 16))
+
+%rep (32 / 8)
+        ;; ghash blocks 0-3
+        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
+        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
+        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
+        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
+        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
+        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
+        ;; ghash blocks 4-7
+        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
+        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
+        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
+        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
+        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
+        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
+        ;; update sums
+        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
+        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
+        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
+        vpternlogq      %%ZTMP10, %%ZTMP3, %%ZTMP7, 0x96    ; TM2 += T0M2 + T1M1
+%assign hashk      (hashk + (8 * 16))
+%assign cipher_blk (cipher_blk + (8 * 16))
+%endrep
+
+        ;; integrate TM into TH and TL
+        vpxorq          %%GM, %%GM, %%ZTMP10
+        vpsrldq         %%ZTMP0, %%GM, 8
+        vpslldq         %%ZTMP1, %%GM, 8
+        vpxorq          %%GH, %%GH, %%ZTMP0
+        vpxorq          %%GL, %%GL, %%ZTMP1
+
+        ;; add TH and TL 128-bit words horizontally
+        VHPXORI4x128    %%GH, %%ZTMP0
+        VHPXORI4x128    %%GL, %%ZTMP1
+
+        ;; reduction
+        vmovdqa64       XWORD(%%ZTMP9), [rel POLY2]
+        VCLMUL_REDUCE   XWORD(%%AAD_HASHz), XWORD(%%ZTMP9), XWORD(%%GH), XWORD(%%GL), XWORD(%%ZTMP0), XWORD(%%ZTMP1)
 
         or              %%LENGTH, %%LENGTH
         jz              %%_ghash_done
@@ -3782,121 +3820,6 @@ default rel
         vmovdqa64       [rsp + stack_offset + (2 * 64)], %%B08_11
         vmovdqa64       [rsp + stack_offset + (3 * 64)], %%B12_15
 %endmacro                       ;INITIAL_BLOCKS_16
-
-;;; ===========================================================================
-;;; ===========================================================================
-;;; GHASH the last 16 blocks of cipher text (last part of by 32/64/128 code)
-%macro  GHASH_LAST_Nx16 23
-%define %%KP            %1      ; [in] pointer to expanded keys
-%define %%GHASH         %2      ; [out] ghash output
-%define %%T1            %3      ; [clobbered] temporary ZMM
-%define %%T2            %4      ; [clobbered] temporary ZMM
-%define %%T3            %5      ; [clobbered] temporary ZMM
-%define %%T4            %6      ; [clobbered] temporary ZMM
-%define %%T5            %7      ; [clobbered] temporary ZMM
-%define %%T6            %8      ; [clobbered] temporary ZMM
-%define %%T7            %9      ; [clobbered] temporary ZMM
-%define %%T8            %10     ; [clobbered] temporary ZMM
-%define %%T9            %11     ; [clobbered] temporary ZMM
-%define %%T10           %12     ; [clobbered] temporary ZMM
-%define %%T11           %13     ; [clobbered] temporary ZMM
-%define %%T12           %14     ; [clobbered] temporary ZMM
-%define %%T13           %15     ; [clobbered] temporary ZMM
-%define %%T14           %16     ; [clobbered] temporary ZMM
-%define %%T15           %17     ; [clobbered] temporary ZMM
-%define %%T16           %18     ; [clobbered] temporary ZMM
-%define %%GH            %19     ; [in/cloberred] ghash sum (high)
-%define %%GL            %20     ; [in/cloberred] ghash sum (low)
-%define %%GM            %21     ; [in/cloberred] ghash sum (medium)
-%define %%LOOP_BLK      %22     ; [in] numerical number of blocks handled by the loop
-%define %%DEPTH_BLK     %23     ; [in] numerical number, pipeline depth (ghash vs aes)
-
-%define %%T0H           %%T1
-%define %%T0L           %%T2
-%define %%T0M1          %%T3
-%define %%T0M2          %%T4
-
-%define %%T1H           %%T5
-%define %%T1L           %%T6
-%define %%T1M1          %%T7
-%define %%T1M2          %%T8
-
-%define %%T2H           %%T9
-%define %%T2L           %%T10
-%define %%T2M1          %%T11
-%define %%T2M2          %%T12
-
-%define %%BLK1          %%T13
-%define %%BLK2          %%T14
-
-%define %%HK1           %%T15
-%define %%HK2           %%T16
-
-%assign hashk      HashKey_ %+ %%DEPTH_BLK
-%assign cipher_blk (STACK_LOCAL_OFFSET + ((%%LOOP_BLK - %%DEPTH_BLK) * 16))
-
-        ;; load cipher blocks and ghash keys
-        vmovdqa64       %%BLK1, [rsp + cipher_blk]
-        vmovdqa64       %%BLK2, [rsp + cipher_blk + 64]
-        vmovdqu64       %%HK1, [%%KP + hashk]
-        vmovdqu64       %%HK2, [%%KP + hashk + 64]
-        ;; ghash blocks 0-3
-        vpclmulqdq      %%T0H, %%BLK1, %%HK1, 0x11      ; %%TH = a1*b1
-        vpclmulqdq      %%T0L, %%BLK1, %%HK1, 0x00      ; %%TL = a0*b0
-        vpclmulqdq      %%T0M1, %%BLK1, %%HK1, 0x01     ; %%TM1 = a1*b0
-        vpclmulqdq      %%T0M2, %%BLK1, %%HK1, 0x10     ; %%TM2 = a0*b1
-        ;; ghash blocks 4-7
-        vpclmulqdq      %%T1H, %%BLK2, %%HK2, 0x11      ; %%TTH = a1*b1
-        vpclmulqdq      %%T1L, %%BLK2, %%HK2, 0x00      ; %%TTL = a0*b0
-        vpclmulqdq      %%T1M1, %%BLK2, %%HK2, 0x01     ; %%TTM1 = a1*b0
-        vpclmulqdq      %%T1M2, %%BLK2, %%HK2, 0x10     ; %%TTM2 = a0*b1
-        vpternlogq      %%T0H, %%T1H, %%GH, 0x96        ; T0H = T0H + T1H + GH
-        vpternlogq      %%T0L, %%T1L, %%GL, 0x96        ; T0L = T0L + T1L + GL
-        vpternlogq      %%T0M1, %%T1M1, %%GM, 0x96      ; T0M1 = T0M1 + T1M1 + GM
-        vpxorq          %%T0M2, %%T0M2, %%T1M2          ; T0M2 = T0M2 + T1M2
-
-%rep ((%%DEPTH_BLK - 8) / 8)
-%assign hashk      (hashk + 128)
-%assign cipher_blk (cipher_blk + 128)
-
-        ;; remaining blocks
-        ;; load next 8 cipher blocks and corresponding ghash keys
-        vmovdqa64       %%BLK1, [rsp + cipher_blk]
-        vmovdqa64       %%BLK2, [rsp + cipher_blk + 64]
-        vmovdqu64       %%HK1, [%%KP + hashk]
-        vmovdqu64       %%HK2, [%%KP + hashk + 64]
-        ;; ghash blocks 0-3
-        vpclmulqdq      %%T1H, %%BLK1, %%HK1, 0x11      ; %%TH = a1*b1
-        vpclmulqdq      %%T1L, %%BLK1, %%HK1, 0x00      ; %%TL = a0*b0
-        vpclmulqdq      %%T1M1, %%BLK1, %%HK1, 0x01     ; %%TM1 = a1*b0
-        vpclmulqdq      %%T1M2, %%BLK1, %%HK1, 0x10     ; %%TM2 = a0*b1
-        ;; ghash blocks 4-7
-        vpclmulqdq      %%T2H, %%BLK2, %%HK2, 0x11      ; %%TTH = a1*b1
-        vpclmulqdq      %%T2L, %%BLK2, %%HK2, 0x00      ; %%TTL = a0*b0
-        vpclmulqdq      %%T2M1, %%BLK2, %%HK2, 0x01     ; %%TTM1 = a1*b0
-        vpclmulqdq      %%T2M2, %%BLK2, %%HK2, 0x10     ; %%TTM2 = a0*b1
-        ;; update sums
-        vpternlogq      %%T0H, %%T1H, %%T2H, 0x96       ; TH = T0H + T1H + T2H
-        vpternlogq      %%T0L, %%T1L, %%T2L, 0x96       ; TL = T0L + T1L + T2L
-        vpternlogq      %%T0M1, %%T1M1, %%T2M1, 0x96    ; TM1 = T0M1 + T1M1 xor T2M1
-        vpternlogq      %%T0M2, %%T1M2, %%T2M2, 0x96    ; TM2 = T0M2 + T1M1 xor T2M2
-%endrep
-
-        ;; integrate TM into TH and TL
-        vpxorq          %%T0M1, %%T0M1, %%T0M2
-        vpsrldq         %%T1M1, %%T0M1, 8
-        vpslldq         %%T1M2, %%T0M1, 8
-        vpxorq          %%T0H, %%T0H, %%T1M1
-        vpxorq          %%T0L, %%T0L, %%T1M2
-
-        ;; add TH and TL 128-bit words horizontally
-        VHPXORI4x128    %%T0H, %%T2M1
-        VHPXORI4x128    %%T0L, %%T2M2
-
-        ;; reduction
-        vmovdqa64       %%HK1, [rel POLY2]
-        VCLMUL_REDUCE   %%GHASH, %%HK1, %%T0H, %%T0L, %%T0M1, %%T0M2
-%endmacro
 
 ;;; ===========================================================================
 ;;; ===========================================================================
