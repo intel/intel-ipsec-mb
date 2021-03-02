@@ -559,9 +559,6 @@ $(DEPALL): $(all_objs)
 {no-aesni\}.asm{$(OBJ_DIR)}.obj:
 	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
 
-{include\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
-
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 

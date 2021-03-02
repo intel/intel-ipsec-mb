@@ -740,13 +740,6 @@ else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
 
-$(OBJ_DIR)/%.o:include/%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
-	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
-
 $(OBJ_DIR)/%.o:no-aesni/%.c
 	$(CC) -MMD $(OPT_NOAESNI) -c $(CFLAGS_NO_SIMD) $< -o $@
 
