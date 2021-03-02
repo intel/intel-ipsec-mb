@@ -284,9 +284,8 @@ section .text
 
 ;; =============================================================================
 ;; =============================================================================
-;; Computes hash for 8 16-byte message blocks.
-;; It computes H8 = ((H0 + M1) * R^8 + M2 * R^7 + M3 * R^6 + M4 * R^5 +
-;;                   M5 * R^4 + M6 * R^3 + M7 * R^2 + M8 * R)
+;; Computes hash for 8 16-byte message blocks,
+;; and adds new message blocks to accumulator.
 ;;
 ;; It first multiplies all 8 blocks with powers of R:
 ;;
@@ -294,16 +293,16 @@ section .text
 ;; ×    b2      b1      b0
 ;; ---------------------------------------
 ;;     a2×b0   a1×b0   a0×b0
-;; +   a1×b1   a0×b1 5×a4×b1
-;; +   a0×b2 5×a4×b2 5×a3×b2
+;; +   a1×b1   a0×b1 5×a2×b1
+;; +   a0×b2 5×a2×b2 5×a1×b2
 ;; ---------------------------------------
 ;;        p2      p1      p0
 ;;
 ;; Then, it propagates the carry (higher bits after bit 43) from lower limbs into higher limbs,
-;; multiplying by 5 in case of the carry of p4.
+;; multiplying by 5 in case of the carry of p2.
 ;;
 ;; =============================================================================
-%macro POLY1305_MUL_REDUCE_VEC 17
+%macro POLY1305_MUL_REDUCE_VEC 17-24
 %define %%A0      %1  ; [in/out] ZMM register containing 1st 44-bit limb of the 8 blocks
 %define %%A1      %2  ; [in/out] ZMM register containing 2nd 44-bit limb of the 8 blocks
 %define %%A2      %3  ; [in/out] ZMM register containing 3rd 44-bit limb of the 8 blocks
@@ -321,65 +320,160 @@ section .text
 %define %%MASK_42 %15 ; [in] ZMM register containing 42-bit mask
 %define %%MASK_44 %16 ; [in] ZMM register containing 44-bit mask
 %define %%ZTMP1   %17 ; [clobbered] Temporary ZMM register
+%define %%ZTMP2   %18 ; [clobbered] Temporary ZMM register
+%define %%ZTMP3   %19 ; [clobbered] Temporary ZMM register
+%define %%ZTMP4   %20 ; [clobbered] Temporary ZMM register
+%define %%ZTMP5   %21 ; [clobbered] Temporary ZMM register
+%define %%ZTMP6   %22 ; [clobbered] Temporary ZMM register
+%define %%MSG     %23 ; [in/out] Pointer to message
+%define %%LEN     %24 ; [in/out] Length left of message
 
-        ; Reset products
+%if %0 == 17
+        ; Reset accumulator and calculate products
         vpxorq  %%P0_L, %%P0_L
-        vpxorq  %%P0_H, %%P0_H
-        vpxorq  %%P1_L, %%P1_L
-        vpxorq  %%P1_H, %%P1_H
-        vpxorq  %%P2_L, %%P2_L
-        vpxorq  %%P2_H, %%P2_H
-
-        ; Calculate p[0]
-        vpmadd52luq %%P0_L, %%A0, %%R0
-        vpmadd52luq %%P0_L, %%A1, %%R2P
         vpmadd52luq %%P0_L, %%A2, %%R1P
-        vpmadd52huq %%P0_H, %%A0, %%R0
-        vpmadd52huq %%P0_H, %%A1, %%R2P
+        vpxorq  %%P0_H, %%P0_H
         vpmadd52huq %%P0_H, %%A2, %%R1P
-
-        ; Calculate p[1]
-        vpmadd52luq %%P1_L, %%A0, %%R1
-        vpmadd52luq %%P1_L, %%A1, %%R0
+        vpxorq  %%P1_L, %%P1_L
         vpmadd52luq %%P1_L, %%A2, %%R2P
-        vpmadd52huq %%P1_H, %%A0, %%R1
-        vpmadd52huq %%P1_H, %%A1, %%R0
+        vpxorq  %%P1_H, %%P1_H
         vpmadd52huq %%P1_H, %%A2, %%R2P
-
-        ; Calculate p[2]
-        vpmadd52luq %%P2_L, %%A0, %%R2
-        vpmadd52luq %%P2_L, %%A1, %%R1
+        vpxorq  %%P2_L, %%P2_L
         vpmadd52luq %%P2_L, %%A2, %%R0
-        vpmadd52huq %%P2_H, %%A0, %%R2
-        vpmadd52huq %%P2_H, %%A1, %%R1
+        vpxorq  %%P2_H, %%P2_H
         vpmadd52huq %%P2_H, %%A2, %%R0
 
+        vpmadd52luq %%P1_L, %%A0, %%R1
+        vpmadd52huq %%P1_H, %%A0, %%R1
+        vpmadd52luq %%P2_L, %%A0, %%R2
+        vpmadd52huq %%P2_H, %%A0, %%R2
+        vpmadd52luq %%P0_L, %%A0, %%R0
+        vpmadd52huq %%P0_H, %%A0, %%R0
+
+        vpmadd52luq %%P0_L, %%A1, %%R2P
+        vpmadd52huq %%P0_H, %%A1, %%R2P
+        vpmadd52luq %%P1_L, %%A1, %%R0
+        vpmadd52huq %%P1_H, %%A1, %%R0
+        vpmadd52luq %%P2_L, %%A1, %%R1
+        vpmadd52huq %%P2_H, %%A1, %%R1
+
         ; Carry propagation (first pass)
-        vpsrlq          %%ZTMP1, %%P0_L, 44
-        vpandq          %%A0, %%P0_L, %%MASK_44 ; Clear top 20 bits
-        vpsllq          %%P0_H, 8
-        vpaddq          %%P0_H, %%ZTMP1
-        vpaddq          %%P1_L, %%P0_H
-        vpandq          %%A1, %%P1_L, %%MASK_44 ; Clear top 20 bits
-        vpsrlq          %%ZTMP1, %%P1_L, 44
-        vpsllq          %%P1_H, 8
-        vpaddq          %%P1_H, %%ZTMP1
-        vpaddq          %%P2_L, %%P1_H
-        vpandq          %%A2, %%P2_L, %%MASK_42 ; Clear top 22 bits
-        vpsrlq          %%ZTMP1, %%P2_L, 42
-        vpsllq          %%P2_H, 10
-        vpaddq          %%P2_H, %%ZTMP1
+        vpsrlq  %%ZTMP1, %%P0_L, 44
+        vpandq  %%A0, %%P0_L, %%MASK_44 ; Clear top 20 bits
+        vpsllq  %%P0_H, 8
+        vpaddq  %%P0_H, %%ZTMP1
+        vpaddq  %%P1_L, %%P0_H
+        vpandq  %%A1, %%P1_L, %%MASK_44 ; Clear top 20 bits
+        vpsrlq  %%ZTMP1, %%P1_L, 44
+        vpsllq  %%P1_H, 8
+        vpaddq  %%P1_H, %%ZTMP1
+        vpaddq  %%P2_L, %%P1_H
+        vpandq  %%A2, %%P2_L, %%MASK_42 ; Clear top 22 bits
+        vpsrlq  %%ZTMP1, %%P2_L, 42
+        vpsllq  %%P2_H, 10
+        vpaddq  %%P2_H, %%ZTMP1
 
         ; Carry propagation (second pass)
 
         ; Multiply by 5 the highest bits (above 130 bits)
-        vpaddq          %%A0, %%P2_H
-        vpsllq          %%P2_H, 2
-        vpaddq          %%A0, %%P2_H
+        vpaddq  %%A0, %%P2_H
+        vpsllq  %%P2_H, 2
+        vpaddq  %%A0, %%P2_H
+        vpsrlq  %%ZTMP1, %%A0, 44
+        vpandq  %%A0, %%MASK_44
+        vpaddq  %%A1, %%ZTMP1
 
-        vpsrlq          %%ZTMP1, %%A0, 44
-        vpandq          %%A0, %%MASK_44
-        vpaddq          %%A1, %%ZTMP1
+%else
+        ;; This code interleaves hash computation with
+        ;; input loading of new blocks
+        add     %%MSG, POLY1305_BLOCK_SIZE*8
+        sub     %%LEN, POLY1305_BLOCK_SIZE*8
+
+        ; Load next block of data (128 bytes)
+        vmovdqu64 %%ZTMP5, [%%MSG]
+        vmovdqu64 %%ZTMP2, [%%MSG + 64]
+
+        ; Reset accumulator and calculate products
+        vpxorq  %%P0_L, %%P0_L
+        vpmadd52luq %%P0_L, %%A2, %%R1P
+        vpxorq  %%P0_H, %%P0_H
+        vpmadd52huq %%P0_H, %%A2, %%R1P
+        vpxorq  %%P1_L, %%P1_L
+        vpmadd52luq %%P1_L, %%A2, %%R2P
+        vpxorq  %%P1_H, %%P1_H
+        vpmadd52huq %%P1_H, %%A2, %%R2P
+        vpxorq  %%P2_L, %%P2_L
+        vpmadd52luq %%P2_L, %%A2, %%R0
+        vpxorq  %%P2_H, %%P2_H
+        vpmadd52huq %%P2_H, %%A2, %%R0
+
+        ; Continue multiplications
+        vpmadd52luq %%P1_L, %%A0, %%R1
+        vpmadd52huq %%P1_H, %%A0, %%R1
+        vpmadd52luq %%P2_L, %%A0, %%R2
+        vpmadd52huq %%P2_H, %%A0, %%R2
+        vpmadd52luq %%P0_L, %%A0, %%R0
+        vpmadd52huq %%P0_H, %%A0, %%R0
+
+        ; Interleave new blocks of data
+        vpunpckhqdq %%ZTMP3, %%ZTMP5, %%ZTMP2
+        vpunpcklqdq %%ZTMP5, %%ZTMP5, %%ZTMP2
+
+        ; Continue multiplications
+        vpmadd52luq %%P0_L, %%A1, %%R2P
+        vpmadd52huq %%P0_H, %%A1, %%R2P
+        vpmadd52luq %%P1_L, %%A1, %%R0
+        vpmadd52huq %%P1_H, %%A1, %%R0
+        vpmadd52luq %%P2_L, %%A1, %%R1
+        vpmadd52huq %%P2_H, %%A1, %%R1
+
+        ; Carry propagation (first pass)
+        vpsrlq  %%ZTMP1, %%P0_L, 44
+        vpandq  %%A0, %%P0_L, %%MASK_44 ; Clear top 20 bits
+        vpsllq  %%P0_H, 8
+        vpaddq  %%P0_H, %%ZTMP1
+
+        ; Highest 42-bit limbs of new blocks
+        vpsrlq  %%ZTMP6, %%ZTMP3, 24
+        vporq   %%ZTMP6, [rel high_bit] ; Add 2^128 to all 8 final qwords of the message
+
+        ; Continue carry propagation (first pass)
+        vpaddq  %%P1_L, %%P0_H
+        vpsrlq  %%ZTMP1, %%P1_L, 44
+        vpsllq  %%P1_H, 8
+        vpandq  %%A1, %%P1_L, %%MASK_44 ; Clear top 20 bits
+        vpaddq  %%P1_H, %%ZTMP1
+
+        ; Middle 44-bit limbs of new blocks
+        vpsrlq  %%ZTMP2, %%ZTMP5, 44
+        vpsllq  %%ZTMP4, %%ZTMP3, 20
+        vpternlogq %%ZTMP2, %%ZTMP4, %%MASK_44, 0xA8 ; (A OR B AND C)
+
+        ; Lowest 44-bit limbs of new blocks
+        vpandq  %%ZTMP5, %%MASK_44
+
+        ; Continue carry propagation (first pass)
+        vpaddq  %%P2_L, %%P1_H
+        vpandq  %%A2, %%P2_L, %%MASK_42 ; Clear top 22 bits
+        vpaddq  %%A2, %%ZTMP6 ; Add highest bits from new blocks to accumulator
+
+        vpsrlq  %%ZTMP1, %%P2_L, 42
+        vpsllq  %%P2_H, 10
+        vpaddq  %%P2_H, %%ZTMP1
+
+        ; Carry propagation (second pass)
+
+        ; Multiply by 5 the highest bits (above 130 bits)
+        vpaddq  %%A0, %%P2_H
+        vpsllq  %%P2_H, 2
+        vpaddq  %%A0, %%P2_H
+
+        vpsrlq  %%ZTMP1, %%A0, 44
+        vpandq  %%A0, %%MASK_44
+        vpaddq  %%A0, %%ZTMP5 ; Add low 42-bit bits from new blocks to accumulator
+        vpaddq  %%A1, %%ZTMP1
+        vpaddq  %%A1, %%ZTMP2 ; Add medium 42-bit bits from new blocks to accumulator
+%endif
 %endmacro
 
 ;; =============================================================================
@@ -572,37 +666,8 @@ section .text
                                 zmm22, zmm23, zmm24, \
                                 zmm25, zmm26, \
                                 zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
-                                %%MASK_42, %%MASK_44, zmm11
-
-        add     %%MSG, POLY1305_BLOCK_SIZE*8
-        sub     %%T0, POLY1305_BLOCK_SIZE*8
-
-        ; Load next block of data (128 bytes)
-        vmovdqu64 zmm0, [%%MSG]
-        vmovdqu64 zmm1, [%%MSG + 64]
-
-        ; Interleave the data to form 44-bit limbs
-        ;
-        ; zmm0 to have bits 0-43 of all 8 blocks in 8 qwords
-        ; zmm1 to have bits 87-44 of all 8 blocks in 8 qwords
-        ; zmm2 to have bits 127-88 of all 8 blocks in 8 qwords
-        vpunpckhqdq zmm2, zmm0, zmm1
-        vpunpcklqdq zmm0, zmm0, zmm1
-
-        vpsrlq  zmm1, zmm0, 44
-        vpsllq  zmm3, zmm2, 20
-        vpternlogq zmm1, zmm3, %%MASK_44, 0xA8  ; (A OR B AND C)
-
-        vpandq  zmm0, %%MASK_44
-        vpsrlq  zmm2, 24
-
-        ; Add 2^128 to all 8 final qwords of the message
-        vporq   zmm2, [rel high_bit]
-
-        ; Add new message blocks to previous accumulator
-        vpaddq  zmm13, zmm0
-        vpaddq  zmm14, zmm1
-        vpaddq  zmm15, zmm2
+                                %%MASK_42, %%MASK_44, zmm11, zmm0, zmm1, \
+                                zmm2, zmm3, zmm4, %%MSG, %%T0
 
         jmp     %%_poly1305_blocks_loop
 
