@@ -680,16 +680,6 @@ $(dep_target_files): | $(OBJ_DIR)
 # - dependency file construction is part of the compilation
 #
 
-$(OBJ_DIR)/%.o:%.c
-	$(CC) -MMD -c $(CFLAGS) $< -o $@
-
-$(OBJ_DIR)/%.o:%.asm
-ifeq ($(USE_YASM),y)
-	$(YASM) $(YASM_FLAGS) $< -o $@
-else
-	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
-endif
-
 $(OBJ_DIR)/%.o:x86_64/%.c
 	$(CC) -MMD $(OPT_X86) -c $(CFLAGS) $< -o $@
 

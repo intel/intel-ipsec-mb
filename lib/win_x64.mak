@@ -510,13 +510,6 @@ $(all_objs): $(OBJ_DIR) $(LIB_DIR)
 $(DEPALL): $(all_objs)
         @type $(OBJ_DIR)\*.dep > $@ 2> nul
 
-{.\}.c{$(OBJ_DIR)}.obj:
-	$(CC) /Fo$@ /c $(CFLAGS) $<
-        $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
-
-{.\}.asm{$(OBJ_DIR)}.obj:
-	$(AS) -MD $@.dep -o $@ $(AFLAGS) $<
-
 {x86_64\}.c{$(OBJ_DIR)}.obj:
 	$(CC) /Fo$@ /c $(CFLAGS) $<
         $(DEPTOOL) $< $@ "$(DEPFLAGS)" > $@.dep
