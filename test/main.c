@@ -100,6 +100,7 @@ print_hw_features(void)
                 { IMB_FEATURE_VAES, "VAES" },
                 { IMB_FEATURE_VPCLMULQDQ, "VPCLMULQDQ" },
                 { IMB_FEATURE_GFNI, "GFNI" },
+                { IMB_FEATURE_AVX512_IFMA, "AVX512-IFMA" },
         };
         IMB_MGR *p_mgr = NULL;
         unsigned i;

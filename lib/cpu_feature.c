@@ -168,6 +168,12 @@ static uint32_t detect_gfni(void)
         return (cpuid_7_0.ecx & (1 << 8));
 }
 
+static uint32_t detect_avx512_ifma(void)
+{
+        /* Check presence of AVX512-IFMA - bit 21 of EBX */
+        return (cpuid_7_0.ebx & (1 << 21));
+}
+
 uint64_t cpu_feature_detect(void)
 {
         static const struct {
@@ -190,6 +196,7 @@ uint64_t cpu_feature_detect(void)
                 { 7, IMB_FEATURE_VAES, detect_vaes },
                 { 7, IMB_FEATURE_VPCLMULQDQ, detect_vpclmulqdq },
                 { 7, IMB_FEATURE_GFNI, detect_gfni },
+                { 7, IMB_FEATURE_AVX512_IFMA, detect_avx512_ifma },
         };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;

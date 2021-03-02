@@ -263,8 +263,9 @@ print_tested_arch(const uint64_t features, const IMB_ARCH arch)
         case IMB_ARCH_AVX512:
                 if ((features & IMB_FEATURE_VAES) &&
                     (features & IMB_FEATURE_GFNI) &&
-                    (features & IMB_FEATURE_VPCLMULQDQ))
-                        feat = "-VAES-GFNI-VCMUL";
+                    (features & IMB_FEATURE_VPCLMULQDQ) &&
+                    (features & IMB_FEATURE_AVX512_IFMA))
+                        feat = "-VAES-GFNI-VCMUL-IFMA";
                 break;
         default:
                 printf("Invalid component\n");

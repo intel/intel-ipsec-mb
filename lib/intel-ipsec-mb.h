@@ -895,6 +895,7 @@ typedef uint32_t (*crc32_fn_t)(const void *, const uint64_t);
 #define IMB_FEATURE_SAFE_DATA  (1ULL << 14)
 #define IMB_FEATURE_SAFE_PARAM (1ULL << 15)
 #define IMB_FEATURE_GFNI       (1ULL << 16)
+#define IMB_FEATURE_AVX512_IFMA (1ULL << 17)
 
 /* ========================================================================== */
 /* TOP LEVEL (IMB_MGR) Data structure fields */
