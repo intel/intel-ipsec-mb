@@ -30,7 +30,7 @@
 %include "include/zuc_sbox.inc"
 %include "include/transpose_avx512.asm"
 %include "include/const.inc"
-%include "mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.asm"
 %include "include/cet.inc"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c

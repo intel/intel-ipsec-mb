@@ -42,7 +42,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 %include "include/cet.inc"
-%include "mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
 
 ; resdq = res0 => 16 bytes

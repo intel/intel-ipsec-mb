@@ -26,7 +26,7 @@
 ;;
 
 %include "include/datastruct.asm"
-%include "constants.asm"
+%include "include/constants.asm"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define constants

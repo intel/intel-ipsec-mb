@@ -117,8 +117,8 @@
 %include "include/gcm_defines.asm"
 %include "include/gcm_keys_avx2_avx512.asm"
 %include "include/cet.inc"
-%include "mb_mgr_datastruct.asm"
-%include "imb_job.asm"
+%include "include/mb_mgr_datastruct.asm"
+%include "include/imb_job.asm"
 %include "include/memcpy.asm"
 
 %ifndef GCM128_MODE

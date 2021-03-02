@@ -29,7 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
 %include "include/memcpy.asm"
-%include "mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.asm"
 %include "include/cet.inc"
 %ifndef ZUC_CIPHER_4
 %define ZUC_CIPHER_4 asm_ZucCipher_4_sse

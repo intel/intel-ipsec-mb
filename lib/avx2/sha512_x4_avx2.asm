@@ -45,7 +45,7 @@
 %include "include/dbgprint.asm"
 %include "include/transpose_avx2.asm"
 %include "include/dbgprint.asm"
-%include "mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
 section .data

@@ -27,8 +27,8 @@
 
 %include "include/os.asm"
 %include "include/const.inc"
-%include "imb_job.asm"
-%include "mb_mgr_datastruct.asm"
+%include "include/imb_job.asm"
+%include "include/mb_mgr_datastruct.asm"
 %include "include/cet.inc"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"

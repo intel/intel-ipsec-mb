@@ -26,7 +26,7 @@
 ;;
 
 %include "include/os.asm"
-%include "mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
 section .data

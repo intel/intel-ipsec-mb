@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2012-2020, Intel Corporation
+# Copyright (c) 2012-2021, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -137,6 +137,7 @@ CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
 
 # Set generic architectural optimizations
+OPT_X86 := -msse4.2
 OPT_SSE := -msse4.2 -maes -mpclmul
 OPT_AVX := -mavx -maes -mpclmul
 OPT_AVX2 := -mavx2 -maes -mpclmul
@@ -683,6 +684,16 @@ $(OBJ_DIR)/%.o:%.c
 	$(CC) -MMD -c $(CFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:%.asm
+ifeq ($(USE_YASM),y)
+	$(YASM) $(YASM_FLAGS) $< -o $@
+else
+	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+
+$(OBJ_DIR)/%.o:x86_64/%.c
+	$(CC) -MMD $(OPT_X86) -c $(CFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o:x86_64/%.asm
 ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else

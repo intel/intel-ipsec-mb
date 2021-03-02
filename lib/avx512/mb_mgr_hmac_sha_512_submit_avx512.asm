@@ -33,8 +33,8 @@
 ;; Clobbers ZMM0-31
 
 %include "include/os.asm"
-%include "imb_job.asm"
-%include "mb_mgr_datastruct.asm"
+%include "include/imb_job.asm"
+%include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
 %include "include/memcpy.asm"
 %include "include/const.inc"

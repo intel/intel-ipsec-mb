@@ -43,7 +43,7 @@
 %include "include/dbgprint.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
-%include "mb_mgr_datastruct.asm"
+%include "include/mb_mgr_datastruct.asm"
 
 %ifdef LINUX
 %define arg1	rdi

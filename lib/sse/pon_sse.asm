@@ -25,7 +25,7 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "imb_job.asm"
+%include "include/imb_job.asm"
 %include "include/os.asm"
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
