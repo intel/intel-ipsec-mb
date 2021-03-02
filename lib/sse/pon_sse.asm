@@ -858,7 +858,7 @@ section .text
 align 32
 MKGLOBAL(ENC_FN_NAME,function,internal)
 ENC_FN_NAME:
-        endranch64
+        endbranch64
         AES128_CTR_PON ENC, CTR
         ret
 
