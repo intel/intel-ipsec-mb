@@ -3362,13 +3362,13 @@ default rel
 %assign aesout_offset (aesout_offset + (16 * 16))
 %assign data_in_out_offset (data_in_out_offset + (16 * 16))
 
-        ;; ==== AES-CTR + GHASH - 16 blocks
+        ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
-%assign hkey_offset HashKey_48
+;; %assign hkey_offset HashKey_48
 
         GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
-                hkey_offset, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
                 %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
                 %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
@@ -3379,8 +3379,8 @@ default rel
                 %%GL, %%GH, %%GM, \
                 first_time, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
-%assign aesout_offset (aesout_offset + (16 * 16))
-%assign data_in_out_offset (data_in_out_offset + (16 * 16))
+;; %assign aesout_offset (aesout_offset + (16 * 16))
+;; %assign data_in_out_offset (data_in_out_offset + (16 * 16))
 
         add             %%DATA_OFFSET, (big_loop_nblocks * 16)
 
@@ -3388,21 +3388,69 @@ default rel
         cmp             %%LENGTH, (big_loop_nblocks * 16)
         jl              %%_no_more_big_nblocks
 
+        ;; ====
         ;; ==== AES-CTR + GHASH - 48 blocks loop
+        ;; ====
 %%_encrypt_big_nblocks:
-        GHASH_ENCRYPT_Nx16_PARALLEL \
-                %%PLAIN_CYPH_IN, %%CYPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
-                %%CTR_BLOCKz, %%SHUF_MASK, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11, \
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
+
+%assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
+%assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
+%assign data_in_out_offset 0
+
+        ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
                 %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%GH, %%GL, %%GM, \
-                %%ADDBE_4x4, %%ADDBE_1234, %%AAD_HASHz, \
-                %%ENC_DEC, big_loop_nblocks, big_loop_depth, %%CTR_CHECK
+                %%ADDBE_4x4, %%ADDBE_1234, \
+                %%GL, %%GH, %%GM, \
+                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
+%assign aesout_offset (aesout_offset + (16 * 16))
+%assign ghashin_offset (ghashin_offset + (16 * 16))
+%assign data_in_out_offset (data_in_out_offset + (16 * 16))
+
+        ;; ==== AES-CTR + GHASH - 16 blocks, reduction
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_16, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
+                %%GL, %%GH, %%GM, \
+                final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
+
+%assign aesout_offset (aesout_offset + (16 * 16))
+%assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
+%assign data_in_out_offset (data_in_out_offset + (16 * 16))
+
+        ;; === xor cipher block 0 with GHASH (ZT4)
+        vmovdqa64        %%AAD_HASHz, %%ZTMP4
+
+        ;; ==== AES-CTR + GHASH - 16 blocks, no reduction
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+                %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7, \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11,\
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15,\
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, \
+                %%GL, %%GH, %%GM, \
+                first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
+
+        add             %%DATA_OFFSET, (big_loop_nblocks * 16)
         sub             %%LENGTH, (big_loop_nblocks * 16)
         cmp             %%LENGTH, (big_loop_nblocks * 16)
         jge             %%_encrypt_big_nblocks
@@ -3821,141 +3869,6 @@ default rel
         vmovdqa64       [rsp + stack_offset + (3 * 64)], %%B12_15
 %endmacro                       ;INITIAL_BLOCKS_16
 
-;;; ===========================================================================
-;;; ===========================================================================
-;;; Encrypt & ghash multiples of 16 blocks
-
-%macro GHASH_ENCRYPT_Nx16_PARALLEL 39
-%define %%IN                    %1      ; [in] input buffer
-%define %%OUT                   %2      ; [in] output buffer
-%define %%GDATA_KEY             %3      ; [in] pointer to expanded keys
-%define %%DATA_OFFSET           %4      ; [in/out] data offset
-%define %%CTR_BE                %5      ; [in/out] ZMM last counter block
-%define %%SHFMSK                %6      ; [in] ZMM with byte swap mask for pshufb
-%define %%ZT0                   %7      ; [clobered] temporary ZMM register
-%define %%ZT1                   %8      ; [clobered] temporary ZMM register
-%define %%ZT2                   %9      ; [clobered] temporary ZMM register
-%define %%ZT3                   %10     ; [clobered] temporary ZMM register
-%define %%ZT4                   %11     ; [clobered] temporary ZMM register
-%define %%ZT5                   %12     ; [clobered] temporary ZMM register
-%define %%ZT6                   %13     ; [clobered] temporary ZMM register
-%define %%ZT7                   %14     ; [clobered] temporary ZMM register
-%define %%ZT8                   %15     ; [clobered] temporary ZMM register
-%define %%ZT9                   %16     ; [clobered] temporary ZMM register
-%define %%ZT10                  %17     ; [clobered] temporary ZMM register
-%define %%ZT11                  %18     ; [clobered] temporary ZMM register
-%define %%ZT12                  %19     ; [clobered] temporary ZMM register
-%define %%ZT13                  %20     ; [clobered] temporary ZMM register
-%define %%ZT14                  %21     ; [clobered] temporary ZMM register
-%define %%ZT15                  %22     ; [clobered] temporary ZMM register
-%define %%ZT16                  %23     ; [clobered] temporary ZMM register
-%define %%ZT17                  %24     ; [clobered] temporary ZMM register
-%define %%ZT18                  %25     ; [clobered] temporary ZMM register
-%define %%ZT19                  %26     ; [clobered] temporary ZMM register
-%define %%ZT20                  %27     ; [clobered] temporary ZMM register
-%define %%ZT21                  %28     ; [clobered] temporary ZMM register
-%define %%ZT22                  %29     ; [clobered] temporary ZMM register
-%define %%GTH                   %30     ; [in/out] ZMM GHASH sum (high)
-%define %%GTL                   %31     ; [in/out] ZMM GHASH sum (low)
-%define %%GTM                   %32     ; [in/out] ZMM GHASH sum (medium)
-%define %%ADDBE_4x4             %33     ; [in] ZMM 4x128bits with value 4 (big endian)
-%define %%ADDBE_1234            %34     ; [in] ZMM 4x128bits with values 1, 2, 3 & 4 (big endian)
-%define %%GHASH                 %35     ; [clobbered] ZMM with intermediate GHASH value
-%define %%ENC_DEC               %36     ; [in] ENC (encrypt) or DEC (decrypt) selector
-%define %%NUM_BLOCKS            %37     ; [in] number of blocks to process in the loop
-%define %%DEPTH_BLK             %38     ; [in] pipeline depth in blocks
-%define %%CTR_CHECK             %39     ; [in/out] counter to check byte overflow
-
-%assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
-%assign ghashin_offset (STACK_LOCAL_OFFSET + ((%%NUM_BLOCKS - %%DEPTH_BLK) * 16))
-%assign hkey_offset  HashKey_ %+ %%DEPTH_BLK
-%assign data_in_out_offset 0
-
-        ;; mid 16 blocks
-%if (%%DEPTH_BLK > 16)
-%rep ((%%DEPTH_BLK - 16) / 16)
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%OUT, %%IN, %%DATA_OFFSET, \
-                %%CTR_BE, %%CTR_CHECK, \
-                hkey_offset, aesout_offset, ghashin_offset, %%SHFMSK, \
-                %%ZT0,  %%ZT1,  %%ZT2,  %%ZT3, \
-                %%ZT4,  %%ZT5,  %%ZT6,  %%ZT7, \
-                %%ZT8,  %%ZT9,  %%ZT10, %%ZT11,\
-                %%ZT12, %%ZT13, %%ZT14, %%ZT15,\
-                %%ZT16, %%ZT17, %%ZT18, %%ZT19, \
-                %%ZT20, %%ZT21, %%ZT22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GTL, %%GTH, %%GTM, \
-                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
-
-%assign aesout_offset (aesout_offset + (16 * 16))
-%assign ghashin_offset (ghashin_offset + (16 * 16))
-%assign hkey_offset (hkey_offset + (16 * 16))
-%assign data_in_out_offset (data_in_out_offset + (16 * 16))
-%endrep
-%endif
-
-        ;; 16 blocks with reduction
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%OUT, %%IN, %%DATA_OFFSET, \
-                %%CTR_BE, %%CTR_CHECK, \
-                HashKey_16, aesout_offset, ghashin_offset, %%SHFMSK, \
-                %%ZT0,  %%ZT1,  %%ZT2,  %%ZT3, \
-                %%ZT4,  %%ZT5,  %%ZT6,  %%ZT7, \
-                %%ZT8,  %%ZT9,  %%ZT10, %%ZT11,\
-                %%ZT12, %%ZT13, %%ZT14, %%ZT15,\
-                %%ZT16, %%ZT17, %%ZT18, %%ZT19, \
-                %%ZT20, %%ZT21, %%ZT22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GTL, %%GTH, %%GTM, \
-                final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
-
-%assign aesout_offset (aesout_offset + (16 * 16))
-%assign data_in_out_offset (data_in_out_offset + (16 * 16))
-%assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
-%assign hkey_offset HashKey_ %+ %%NUM_BLOCKS
-
-        ;; === xor cipher block 0 with GHASH (ZT4)
-        vmovdqa64        %%GHASH, %%ZT4
-
-        ;; start the pipeline again
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%OUT, %%IN, %%DATA_OFFSET, \
-                %%CTR_BE, %%CTR_CHECK, \
-                hkey_offset, aesout_offset, ghashin_offset, %%SHFMSK, \
-                %%ZT0,  %%ZT1,  %%ZT2,  %%ZT3, \
-                %%ZT4,  %%ZT5,  %%ZT6,  %%ZT7, \
-                %%ZT8,  %%ZT9,  %%ZT10, %%ZT11,\
-                %%ZT12, %%ZT13, %%ZT14, %%ZT15,\
-                %%ZT16, %%ZT17, %%ZT18, %%ZT19, \
-                %%ZT20, %%ZT21, %%ZT22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GTL, %%GTH, %%GTM, \
-                first_time, %%ENC_DEC, data_in_out_offset, %%GHASH
-
-%if ((%%NUM_BLOCKS - %%DEPTH_BLK) > 16)
-%rep ((%%NUM_BLOCKS - %%DEPTH_BLK - 16 ) / 16)
-
-%assign aesout_offset (aesout_offset + (16 * 16))
-%assign data_in_out_offset (data_in_out_offset + (16 * 16))
-%assign ghashin_offset (ghashin_offset + (16 * 16))
-%assign hkey_offset (hkey_offset + (16 * 16))
-
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%OUT, %%IN, %%DATA_OFFSET, \
-                %%CTR_BE, %%CTR_CHECK, \
-                hkey_offset, aesout_offset, ghashin_offset, %%SHFMSK, \
-                %%ZT0,  %%ZT1,  %%ZT2,  %%ZT3, \
-                %%ZT4,  %%ZT5,  %%ZT6,  %%ZT7, \
-                %%ZT8,  %%ZT9,  %%ZT10, %%ZT11,\
-                %%ZT12, %%ZT13, %%ZT14, %%ZT15,\
-                %%ZT16, %%ZT17, %%ZT18, %%ZT19, \
-                %%ZT20, %%ZT21, %%ZT22, \
-                %%ADDBE_4x4, %%ADDBE_1234, \
-                %%GTL, %%GTH, %%GTM, \
-                no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
-%endrep
-%endif
-
-        add     %%DATA_OFFSET, (%%NUM_BLOCKS * 16)
-
-%endmacro                       ;GHASH_ENCRYPT_Nx16_PARALLEL
 ;;; ===========================================================================
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
