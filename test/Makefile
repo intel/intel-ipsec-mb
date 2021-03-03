@@ -50,7 +50,7 @@ CFLAGS += -fcf-protection
 endif
 
 YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__
-NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
+NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
 
 LDFLAGS = -fPIE -z noexecstack -z relro -z now
 ifeq ($(CC_HAS_CET),1)

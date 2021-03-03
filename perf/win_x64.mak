@@ -68,7 +68,7 @@ LNK = link
 LFLAGS = /out:$(APP).exe $(DLFLAGS)
 
 AS = nasm
-AFLAGS = -fwin64 -Xvc -DWIN_ABI
+AFLAGS = -Werror -fwin64 -Xvc -DWIN_ABI
 
 OBJECTS = ipsec_perf.obj msr.obj misc.obj
 

@@ -110,7 +110,7 @@ LINK_TOOL = link
 LINKFLAGS = $(DLFLAGS) /nologo /machine:X64
 
 AS = nasm
-AFLAGS = $(DAFLAGS) -fwin64 -Xvc -DWIN_ABI -Iinclude/ \
+AFLAGS = $(DAFLAGS) -Werror -fwin64 -Xvc -DWIN_ABI -Iinclude/ \
 	-I./ -Iavx/ -Iavx2/ -Iavx512/ -Isse/
 
 # dependency

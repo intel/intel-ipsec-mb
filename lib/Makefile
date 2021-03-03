@@ -102,7 +102,7 @@ YASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I $i)
 YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUDES)
 
 NASM_INCLUDES := $(foreach i,$(ASM_INCLUDE_DIRS),-I$i/)
-NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
+NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
 
 DEBUG_OPT ?= -O0
 ifeq ($(DEBUG),y)

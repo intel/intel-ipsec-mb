@@ -67,7 +67,7 @@ TEST_LFLAGS = /out:$(TEST_APP).exe $(DLFLAGS)
 XVALID_LFLAGS = /out:$(XVALID_APP).exe $(DLFLAGS)
 
 AS = nasm
-AFLAGS = -fwin64 -Xvc -DWIN_ABI
+AFLAGS = -Werror -fwin64 -Xvc -DWIN_ABI
 
 # dependency
 !ifndef DEPTOOL

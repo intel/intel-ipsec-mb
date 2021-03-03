@@ -36,7 +36,7 @@ CFLAGS = -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-pthread -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
 
-NASM_FLAGS := -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
+NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error, -fcf-protection" are also supported
 CC_HAS_CET = $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l)
