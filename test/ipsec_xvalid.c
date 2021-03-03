@@ -317,6 +317,13 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
+                .name = "SNOW_V",
+                .values.job_params = {
+                        .cipher_mode = IMB_CIPHER_SNOW_V,
+                        .key_size = 32
+                }
+        },
+        {
                 .name = "NULL-CIPHER",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_NULL,
@@ -608,6 +615,7 @@ const uint8_t key_sizes[][3] = {
                 {32, 32, 1}, /* IMB_CIPHER_CHACHA20 */
                 {32, 32, 1}, /* IMB_CIPHER_CHACHA20_POLY1305 */
                 {32, 32, 1}, /* IMB_CIPHER_CHACHA20_POLY1305_SGL */
+                {32, 32, 1}, /* IMB_CIPHER_SNOW_V */
 };
 
 uint8_t custom_test = 0;
@@ -1080,6 +1088,11 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->dec_keys = k2;
                 job->iv_len_in_bytes = 12;
                 break;
+        case IMB_CIPHER_SNOW_V:
+                job->enc_keys = k2;
+                job->dec_keys = k2;
+                job->iv_len_in_bytes = 16;
+                break;
         case IMB_CIPHER_NULL:
                 /* No operation needed */
                 break;
@@ -1203,6 +1216,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_CIPHER_CHACHA20:
                 case IMB_CIPHER_CHACHA20_POLY1305:
                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+                case IMB_CIPHER_SNOW_V:
                         memset(k2, pattern_cipher_key, 32);
                         break;
                 case IMB_CIPHER_NULL:
@@ -1419,6 +1433,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_CIPHER_CHACHA20:
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+        case IMB_CIPHER_SNOW_V:
                 /* Use of:
                  *     memcpy(k2, ciph_key, 32);
                  * leaves sensitive data on the stack.
