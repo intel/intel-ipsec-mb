@@ -472,9 +472,9 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
         } else if (IMB_CIPHER_CHACHA20 == job->cipher_mode) {
                 return SUBMIT_JOB_CHACHA20_ENC_DEC(job);
         } else if (IMB_CIPHER_CHACHA20_POLY1305 == job->cipher_mode) {
-                return SUBMIT_JOB_CHACHA20_POLY1305(job);
+                return SUBMIT_JOB_CHACHA20_POLY1305(state, job);
         } else if (IMB_CIPHER_CHACHA20_POLY1305_SGL == job->cipher_mode) {
-                return SUBMIT_JOB_CHACHA20_POLY1305_SGL(job);
+                return SUBMIT_JOB_CHACHA20_POLY1305_SGL(state, job);
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_ENC
                 MB_MGR_DES_OOO *docsis_des_enc_ooo = state->docsis_des_enc_ooo;
@@ -624,9 +624,9 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
         } else if (IMB_CIPHER_CHACHA20 == job->cipher_mode) {
                 return SUBMIT_JOB_CHACHA20_ENC_DEC(job);
         } else if (IMB_CIPHER_CHACHA20_POLY1305 == job->cipher_mode) {
-                return SUBMIT_JOB_CHACHA20_POLY1305(job);
+                return SUBMIT_JOB_CHACHA20_POLY1305(state, job);
         } else if (IMB_CIPHER_CHACHA20_POLY1305_SGL == job->cipher_mode) {
-                return SUBMIT_JOB_CHACHA20_POLY1305_SGL(job);
+                return SUBMIT_JOB_CHACHA20_POLY1305_SGL(state, job);
         } else if (IMB_CIPHER_DOCSIS_DES == job->cipher_mode) {
 #ifdef SUBMIT_JOB_DOCSIS_DES_DEC
                 MB_MGR_DES_OOO *docsis_des_dec_ooo = state->docsis_des_dec_ooo;

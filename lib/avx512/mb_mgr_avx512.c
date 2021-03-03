@@ -1782,8 +1782,25 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 submit_job_aes_cntr_bit_avx512 = vaes_submit_cntr_bit_avx512;
         }
 
-        if (state->features & IMB_FEATURE_AVX512_IFMA)
+        if (state->features & IMB_FEATURE_AVX512_IFMA) {
                 poly1305_mac_avx512 = poly1305_mac_fma_avx512;
+                state->chacha20_poly1305_init =
+                                        init_chacha20_poly1305_fma_avx512;
+                state->chacha20_poly1305_enc_update =
+                                        update_enc_chacha20_poly1305_fma_avx512;
+                state->chacha20_poly1305_dec_update =
+                                        update_dec_chacha20_poly1305_fma_avx512;
+                state->chacha20_poly1305_finalize =
+                                        finalize_chacha20_poly1305_fma_avx512;
+        } else {
+                state->chacha20_poly1305_init = init_chacha20_poly1305_avx512;
+                state->chacha20_poly1305_enc_update =
+                                        update_enc_chacha20_poly1305_avx512;
+                state->chacha20_poly1305_dec_update =
+                                        update_dec_chacha20_poly1305_avx512;
+                state->chacha20_poly1305_finalize =
+                                        finalize_chacha20_poly1305_avx512;
+        }
 
         if ((state->features & (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) ==
             (IMB_FEATURE_VAES | IMB_FEATURE_VPCLMULQDQ)) {
@@ -1883,12 +1900,6 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 state->gmac256_finalize    = imb_aes_gmac_finalize_256_avx512;
         }
 
-        state->chacha20_poly1305_init = init_chacha20_poly1305_avx;
-        state->chacha20_poly1305_enc_update =
-                                update_enc_chacha20_poly1305_avx512;
-        state->chacha20_poly1305_dec_update =
-                                update_dec_chacha20_poly1305_avx512;
-        state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_avx;
 }
 
 #include "mb_mgr_code.h"

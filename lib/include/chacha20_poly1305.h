@@ -31,15 +31,15 @@
 #include "intel-ipsec-mb.h"
 
 /* new internal API's */
-IMB_JOB *aead_chacha20_poly1305_sse(IMB_JOB *job);
-IMB_JOB *aead_chacha20_poly1305_avx(IMB_JOB *job);
-IMB_JOB *aead_chacha20_poly1305_avx2(IMB_JOB *job);
-IMB_JOB *aead_chacha20_poly1305_avx512(IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_sse(IMB_MGR *mgr, IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_avx(IMB_MGR *mgr, IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_avx2(IMB_MGR *mgr, IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_avx512(IMB_MGR *mgr, IMB_JOB *job);
 
-IMB_JOB *aead_chacha20_poly1305_sgl_sse(IMB_JOB *job);
-IMB_JOB *aead_chacha20_poly1305_sgl_avx(IMB_JOB *job);
-IMB_JOB *aead_chacha20_poly1305_sgl_avx2(IMB_JOB *job);
-IMB_JOB *aead_chacha20_poly1305_sgl_avx512(IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_sgl_sse(IMB_MGR *mgr, IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_sgl_avx(IMB_MGR *mgr, IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_sgl_avx2(IMB_MGR *mgr, IMB_JOB *job);
+IMB_JOB *aead_chacha20_poly1305_sgl_avx512(IMB_MGR *mgr, IMB_JOB *job);
 
 /* external symbols needed to implement the above */
 IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *);
@@ -78,6 +78,11 @@ void poly1305_aead_update_avx512(const void *msg, const uint64_t msg_len,
 void poly1305_aead_complete_avx512(const void *hash, const void *key,
                                    void *tag);
 
+void poly1305_aead_update_fma_avx512(const void *msg, const uint64_t msg_len,
+                                     void *hash, const void *key);
+void poly1305_aead_complete_fma_avx512(const void *hash, const void *key,
+                                       void *tag);
+
 void gen_keystr_poly_key_sse(const void *key, const void *iv,
                              const uint64_t len, void *ks);
 
@@ -89,6 +94,14 @@ void init_chacha20_poly1305_sse(const void *key,
                                 const void *iv, const void *aad,
                                 const uint64_t aad_len);
 void init_chacha20_poly1305_avx(const void *key,
+                                struct chacha20_poly1305_context_data *ctx,
+                                const void *iv, const void *aad,
+                                const uint64_t aad_len);
+void init_chacha20_poly1305_avx512(const void *key,
+                                struct chacha20_poly1305_context_data *ctx,
+                                const void *iv, const void *aad,
+                                const uint64_t aad_len);
+void init_chacha20_poly1305_fma_avx512(const void *key,
                                 struct chacha20_poly1305_context_data *ctx,
                                 const void *iv, const void *aad,
                                 const uint64_t aad_len);
@@ -108,6 +121,10 @@ void update_enc_chacha20_poly1305_avx512(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
                                      const uint64_t len);
+void update_enc_chacha20_poly1305_fma_avx512(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len);
 void update_dec_chacha20_poly1305_sse(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
@@ -124,8 +141,18 @@ void update_dec_chacha20_poly1305_avx512(const void *key,
                                      struct chacha20_poly1305_context_data *ctx,
                                      void *dst, const void *src,
                                      const uint64_t len);
+void update_dec_chacha20_poly1305_fma_avx512(const void *key,
+                                     struct chacha20_poly1305_context_data *ctx,
+                                     void *dst, const void *src,
+                                     const uint64_t len);
 void finalize_chacha20_poly1305_sse(struct chacha20_poly1305_context_data *ctx,
                                     void *tag, const uint64_t tag_len);
 void finalize_chacha20_poly1305_avx(struct chacha20_poly1305_context_data *ctx,
+                                    void *tag, const uint64_t tag_len);
+void finalize_chacha20_poly1305_avx512(
+                                    struct chacha20_poly1305_context_data *ctx,
+                                    void *tag, const uint64_t tag_len);
+void finalize_chacha20_poly1305_fma_avx512(
+                                    struct chacha20_poly1305_context_data *ctx,
                                     void *tag, const uint64_t tag_len);
 #endif /* IMB_CHACHA20POLY1305_H */
