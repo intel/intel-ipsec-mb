@@ -706,6 +706,7 @@ section .text
         add     %%MSG, 128
 
         and     %%LEN, 0x7f ; Get remaining lengths (LEN < 128 bytes)
+        vzeroupper
 %%_final_loop:
         cmp     %%LEN, POLY1305_BLOCK_SIZE
         jb      %%_poly1305_blocks_exit
