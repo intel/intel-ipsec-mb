@@ -328,19 +328,20 @@ section .text
 %define %%MSG     %23 ; [in/out] Pointer to message
 %define %%LEN     %24 ; [in/out] Length left of message
 
+        ;; Reset accumulator
+        vpxorq  %%P0_L, %%P0_L
+        vpxorq  %%P0_H, %%P0_H
+        vpxorq  %%P1_L, %%P1_L
+        vpxorq  %%P1_H, %%P1_H
+        vpxorq  %%P2_L, %%P2_L
+        vpxorq  %%P2_H, %%P2_H
 %if %0 == 17
         ; Reset accumulator and calculate products
-        vpxorq  %%P0_L, %%P0_L
         vpmadd52luq %%P0_L, %%A2, %%R1P
-        vpxorq  %%P0_H, %%P0_H
         vpmadd52huq %%P0_H, %%A2, %%R1P
-        vpxorq  %%P1_L, %%P1_L
         vpmadd52luq %%P1_L, %%A2, %%R2P
-        vpxorq  %%P1_H, %%P1_H
         vpmadd52huq %%P1_H, %%A2, %%R2P
-        vpxorq  %%P2_L, %%P2_L
         vpmadd52luq %%P2_L, %%A2, %%R0
-        vpxorq  %%P2_H, %%P2_H
         vpmadd52huq %%P2_H, %%A2, %%R0
 
         vpmadd52luq %%P1_L, %%A0, %%R1
@@ -384,85 +385,84 @@ section .text
         vpaddq  %%A1, %%ZTMP1
 
 %else
-        ;; This code interleaves hash computation with
+        ;; This code interleaves hash computation with input loading/splatting
+
+                ; Calculate products
+                vpmadd52luq %%P0_L, %%A2, %%R1P
+                vpmadd52huq %%P0_H, %%A2, %%R1P
+
         ;; input loading of new blocks
         add     %%MSG, POLY1305_BLOCK_SIZE*8
         sub     %%LEN, POLY1305_BLOCK_SIZE*8
+
+                vpmadd52luq %%P1_L, %%A2, %%R2P
+                vpmadd52huq %%P1_H, %%A2, %%R2P
 
         ; Load next block of data (128 bytes)
         vmovdqu64 %%ZTMP5, [%%MSG]
         vmovdqu64 %%ZTMP2, [%%MSG + 64]
 
-        ; Reset accumulator and calculate products
-        vpxorq  %%P0_L, %%P0_L
-        vpmadd52luq %%P0_L, %%A2, %%R1P
-        vpxorq  %%P0_H, %%P0_H
-        vpmadd52huq %%P0_H, %%A2, %%R1P
-        vpxorq  %%P1_L, %%P1_L
-        vpmadd52luq %%P1_L, %%A2, %%R2P
-        vpxorq  %%P1_H, %%P1_H
-        vpmadd52huq %%P1_H, %%A2, %%R2P
-        vpxorq  %%P2_L, %%P2_L
-        vpmadd52luq %%P2_L, %%A2, %%R0
-        vpxorq  %%P2_H, %%P2_H
-        vpmadd52huq %%P2_H, %%A2, %%R0
-
-        ; Continue multiplications
-        vpmadd52luq %%P1_L, %%A0, %%R1
-        vpmadd52huq %%P1_H, %%A0, %%R1
-        vpmadd52luq %%P2_L, %%A0, %%R2
-        vpmadd52huq %%P2_H, %%A0, %%R2
-        vpmadd52luq %%P0_L, %%A0, %%R0
-        vpmadd52huq %%P0_H, %%A0, %%R0
+                vpmadd52luq %%P0_L, %%A0, %%R0
+                vpmadd52huq %%P0_H, %%A0, %%R0
 
         ; Interleave new blocks of data
         vpunpckhqdq %%ZTMP3, %%ZTMP5, %%ZTMP2
         vpunpcklqdq %%ZTMP5, %%ZTMP5, %%ZTMP2
 
-        ; Continue multiplications
-        vpmadd52luq %%P0_L, %%A1, %%R2P
-        vpmadd52huq %%P0_H, %%A1, %%R2P
-        vpmadd52luq %%P1_L, %%A1, %%R0
-        vpmadd52huq %%P1_H, %%A1, %%R0
-        vpmadd52luq %%P2_L, %%A1, %%R1
-        vpmadd52huq %%P2_H, %%A1, %%R1
-
-        ; Carry propagation (first pass)
-        vpsrlq  %%ZTMP1, %%P0_L, 44
-        vpandq  %%A0, %%P0_L, %%MASK_44 ; Clear top 20 bits
-        vpsllq  %%P0_H, 8
-        vpaddq  %%P0_H, %%ZTMP1
+                vpmadd52luq %%P2_L, %%A2, %%R0
+                vpmadd52huq %%P2_H, %%A2, %%R0
 
         ; Highest 42-bit limbs of new blocks
         vpsrlq  %%ZTMP6, %%ZTMP3, 24
         vporq   %%ZTMP6, [rel high_bit] ; Add 2^128 to all 8 final qwords of the message
 
-        ; Continue carry propagation (first pass)
-        vpaddq  %%P1_L, %%P0_H
-        vpsrlq  %%ZTMP1, %%P1_L, 44
-        vpsllq  %%P1_H, 8
-        vpandq  %%A1, %%P1_L, %%MASK_44 ; Clear top 20 bits
-        vpaddq  %%P1_H, %%ZTMP1
+                vpmadd52luq %%P1_L, %%A0, %%R1
+                vpmadd52huq %%P1_H, %%A0, %%R1
 
         ; Middle 44-bit limbs of new blocks
         vpsrlq  %%ZTMP2, %%ZTMP5, 44
         vpsllq  %%ZTMP4, %%ZTMP3, 20
+
+                vpmadd52luq %%P0_L, %%A1, %%R2P
+                vpmadd52huq %%P0_H, %%A1, %%R2P
+
         vpternlogq %%ZTMP2, %%ZTMP4, %%MASK_44, 0xA8 ; (A OR B AND C)
 
         ; Lowest 44-bit limbs of new blocks
         vpandq  %%ZTMP5, %%MASK_44
 
-        ; Continue carry propagation (first pass)
-        vpaddq  %%P2_L, %%P1_H
+                vpmadd52luq %%P2_L, %%A0, %%R2
+                vpmadd52huq %%P2_H, %%A0, %%R2
+
+        ; Carry propagation (first pass)
+        vpsrlq  %%ZTMP1, %%P0_L, 44
+        vpsllq  %%P0_H, 8
+
+                vpmadd52luq %%P1_L, %%A1, %%R0
+                vpmadd52huq %%P1_H, %%A1, %%R0
+
+        ; Carry propagation (first pass) - continue
+        vpandq  %%A0, %%P0_L, %%MASK_44 ; Clear top 20 bits
+        vpaddq  %%P0_H, %%ZTMP1
+
+                vpmadd52luq %%P2_L, %%A1, %%R1
+                vpmadd52huq %%P2_H, %%A1, %%R1
+
+        ; Carry propagation (first pass) - continue
+        vpaddq  %%P1_L, %%P0_H
+        vpsllq  %%P1_H, 8
+        vpsrlq  %%ZTMP1, %%P1_L, 44
+        vpandq  %%A1, %%P1_L, %%MASK_44 ; Clear top 20 bits
+
+        vpaddq  %%P2_L, %%P1_H          ; P2_L += P1_H + P1_L[63:44]
+        vpaddq  %%P2_L, %%ZTMP1
         vpandq  %%A2, %%P2_L, %%MASK_42 ; Clear top 22 bits
         vpaddq  %%A2, %%ZTMP6 ; Add highest bits from new blocks to accumulator
-
         vpsrlq  %%ZTMP1, %%P2_L, 42
         vpsllq  %%P2_H, 10
         vpaddq  %%P2_H, %%ZTMP1
 
         ; Carry propagation (second pass)
-
         ; Multiply by 5 the highest bits (above 130 bits)
         vpaddq  %%A0, %%P2_H
         vpsllq  %%P2_H, 2
@@ -471,8 +471,8 @@ section .text
         vpsrlq  %%ZTMP1, %%A0, 44
         vpandq  %%A0, %%MASK_44
         vpaddq  %%A0, %%ZTMP5 ; Add low 42-bit bits from new blocks to accumulator
-        vpaddq  %%A1, %%ZTMP1
         vpaddq  %%A1, %%ZTMP2 ; Add medium 42-bit bits from new blocks to accumulator
+        vpaddq  %%A1, %%ZTMP1
 %endif
 %endmacro
 
@@ -512,10 +512,10 @@ section .text
 
         mov     %%T0, %%A1
         shrd    %%A0, %%T0, 44
-        and     %%A0, [rel mask_44] ;; Third limb (A[77:52])
+        and     %%A0, [rel mask_44] ;; Second limb (A[77:52])
         vmovq   xmm6, %%A0
 
-        shrd    %%A1, %%A2, 24 ;; Third limb (A[129:88])
+        shrd    %%A1, %%A2, 24
         and     %%A1, [rel mask_42] ;; Third limb (A[129:88])
         vmovq   xmm7, %%A1
 
