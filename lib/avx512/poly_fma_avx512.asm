@@ -125,30 +125,6 @@ endstruc
 section .text
 
 ;; =============================================================================
-;; Transposes the quadwords of 4 YMM registers
-;; =============================================================================
-%macro TRANSPOSE4_U64 8
-%define %%R0    %1 ; [in/out] YMM with Input row 0 / Output column 0
-%define %%R1    %2 ; [in/out] YMM with Input row 1 / Output column 1
-%define %%R2    %3 ; [in/out] YMM with Input row 2 / Output column 2
-%define %%R3    %4 ; [in/out] YMM with Input row 3 / Output column 3
-%define %%T0    %5 ; [clobbered] Temporary YMM register
-%define %%T1    %6 ; [clobbered] Temporary YMM register
-%define %%T2    %7 ; [clobbered] Temporary YMM register
-%define %%T3    %8 ; [clobbered] Temporary YMM register
-
-        vshufpd	%%T0, %%R0, %%R1, 0x0
-        vshufpd	%%T1, %%R0, %%R1, 0xF
-        vshufpd	%%T2, %%R2, %%R3, 0x0
-        vshufpd	%%T3, %%R2, %%R3, 0xF
-
-	vperm2i128 %%R0, %%T0, %%T2, 0x20
-	vperm2i128 %%R2, %%T0, %%T2, 0x31
-	vperm2i128 %%R1, %%T1, %%T3, 0x20
-	vperm2i128 %%R3, %%T1, %%T3, 0x31
-%endmacro
-
-;; =============================================================================
 ;; =============================================================================
 ;; Initializes POLY1305 context structure
 ;; =============================================================================
@@ -716,29 +692,30 @@ section .text
                                 zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
                                 %%MASK_42, %%MASK_44, zmm11
 
-        ;; Add all blocks
-        vextracti64x4   ymm5, zmm13, 1
-        vextracti64x4   ymm6, zmm14, 1
-        vextracti64x4   ymm7, zmm15, 1
+        ;; Add all blocks (horizontally)
+        vextracti64x4   ymm0, zmm13, 1
+        vextracti64x4   ymm1, zmm14, 1
+        vextracti64x4   ymm2, zmm15, 1
 
-        ; Transpose first 32 bytes of P0-P2
-        TRANSPOSE4_U64  ymm13, ymm14, ymm15, ymm3, ymm9, ymm10, ymm11, ymm12
+        vpaddq  ymm13, ymm0
+        vpaddq  ymm14, ymm1
+        vpaddq  ymm15, ymm2
 
-        ; Transpose final 32 bytes of P0-P2
-        TRANSPOSE4_U64  ymm5, ymm6, ymm7, ymm8, ymm9, ymm10, ymm11, ymm12
+        vextracti32x4   xmm10, ymm13, 1
+        vextracti32x4   xmm11, ymm14, 1
+        vextracti32x4   xmm12, ymm15, 1
 
-        ; Add all P0, P1, P2
-        vpaddq  ymm13, ymm14
-        vpaddq  ymm15, ymm3
-        vpaddq  ymm5, ymm6
-        vpaddq  ymm7, ymm8
-        vpaddq  ymm13, ymm15
-        vpaddq  ymm13, ymm5
-        vpaddq  ymm13, ymm7
+        vpaddq  xmm13, xmm10
+        vpaddq  xmm14, xmm11
+        vpaddq  xmm15, xmm12
 
-        ; Extract 2nd and 3rd quadwords in ymm13 to ymm14-15
-        vpermq  ymm14, ymm13, 0xFD
-        vpermq  ymm15, ymm13, 0xFE
+        vpsrldq xmm10, xmm13, 8
+        vpsrldq xmm11, xmm14, 8
+        vpsrldq xmm12, xmm15, 8
+
+        vpaddq  xmm13, xmm10
+        vpaddq  xmm14, xmm11
+        vpaddq  xmm15, xmm12
 
         ; Carry propagation
         vpsrlq  xmm0, xmm13, 44
