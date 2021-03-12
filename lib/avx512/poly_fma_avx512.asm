@@ -776,37 +776,37 @@ section .text
 ;; =============================================================================
 ;; Computes hash for the final partial block
 ;; =============================================================================
-%macro POLY1305_PARTIAL_BLOCK 15
-%define %%BUF     %1    ; [in/clobbered] pointer to 16 byte scratch buffer
-%define %%MSG     %2    ; [in] GPR pointer to input message
-%define %%LEN     %3    ; [in] GPR message length
-%define %%A0      %4    ; [in/out] accumulator bits 63..0
-%define %%A1      %5    ; [in/out] accumulator bits 127..64
-%define %%A2      %6    ; [in/out] accumulator bits 195..128
-%define %%R0      %7    ; [in] R constant bits 63..0
-%define %%R1      %8    ; [in] R constant bits 127..64
-%define %%T0      %9    ; [clobbered] GPR register
-%define %%T1      %10   ; [clobbered] GPR register
-%define %%T2      %11   ; [clobbered] GPR register
-%define %%T3      %12   ; [clobbered] GPR register
-%define %%GP_RAX  %13   ; [clobbered] RAX register
-%define %%GP_RDX  %14   ; [clobbered] RDX register
-%define %%PAD_16  %15   ; [in] text "pad_to_16" or "no_padding"
+%macro POLY1305_PARTIAL_BLOCK 14
+%define %%MSG     %1    ; [in] GPR pointer to input message
+%define %%LEN     %2    ; [in] GPR message length
+%define %%A0      %3    ; [in/out] accumulator bits 63..0
+%define %%A1      %4    ; [in/out] accumulator bits 127..64
+%define %%A2      %5    ; [in/out] accumulator bits 195..128
+%define %%R0      %6    ; [in] R constant bits 63..0
+%define %%R1      %7    ; [in] R constant bits 127..64
+%define %%T0      %8    ; [clobbered] GPR register
+%define %%T1      %9    ; [clobbered] GPR register
+%define %%T2      %10   ; [clobbered] GPR register
+%define %%T3      %11   ; [clobbered] GPR register
+%define %%GP_RAX  %12   ; [clobbered] RAX register
+%define %%GP_RDX  %13   ; [clobbered] RDX register
+%define %%PAD_16  %14   ; [in] text "pad_to_16" or "no_padding"
 
         lea     %%T1, [rel byte_len_to_mask_table]
         kmovw   k1, [%%T1 + %%LEN*2]
         vmovdqu8 xmm0{k1}{z}, [%%MSG]
 
 %ifnidn %%PAD_16,pad_to_16
-        ;; pad the message in the scratch buffer
+        ;; pad the message
         lea     %%T2, [rel pad_bit]
         shl     %%LEN, 4
         vporq   xmm0, [%%T2 + %%LEN]
 %endif
-        vmovdqu64 [%%BUF], xmm0
+        vmovq   %%T0, xmm0
+        vpextrq %%T1, xmm0, 1
         ;; A += MSG[i]
-        add     %%A0, [%%BUF + 0]
-        adc     %%A1, [%%BUF + 8]
+        add     %%A0, %%T0
+        adc     %%A1, %%T1
 %ifnidn %%PAD_16,pad_to_16
         adc     %%A2, 0                 ;; no padding bit
 %else
@@ -819,12 +819,6 @@ section .text
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-%ifdef SAFE_DATA
-        ;; clear the scratch buffer
-        vpxorq  xmm0, xmm0
-        vmovdqu64 [%%BUF], xmm0
-%endif
 
 %endmacro
 
@@ -979,14 +973,8 @@ poly1305_aead_update_fma_avx512:
         or      _len, _len
         jz      .poly1305_update_no_partial_block
 
-        ;; create stack frame for the partial block scratch buffer
-        sub     rsp, 16
-
-        POLY1305_PARTIAL_BLOCK rsp, arg1, _len, _a0, _a1, _a2, _r0, _r1, \
+        POLY1305_PARTIAL_BLOCK arg1, _len, _a0, _a1, _a2, _r0, _r1, \
                                gp10, gp11, gp8, gp9, rax, rdx, pad_to_16
-
-        ;; remove the stack frame (memory is cleared as part of the macro)
-        add     rsp, 16
 
 .poly1305_update_no_partial_block:
         ;; save accumulator back
@@ -1082,14 +1070,8 @@ poly1305_mac_fma_avx512:
         or      len, len
         jz      .poly1305_no_partial_block
 
-        ;; create stack frame for the partial block scratch buffer
-        sub     rsp, 16
-
-        POLY1305_PARTIAL_BLOCK rsp, msg, len, _a0, _a1, _a2, _r0, _r1, \
+        POLY1305_PARTIAL_BLOCK msg, len, _a0, _a1, _a2, _r0, _r1, \
                                gp6, gp7, gp8, gp9, rax, rdx, no_padding
-
-        ;; remove the stack frame (memory is cleared as part of the macro)
-        add     rsp, 16
 
 .poly1305_no_partial_block:
         mov     rax, [job + _poly1305_key]
