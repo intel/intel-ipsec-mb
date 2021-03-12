@@ -58,7 +58,7 @@ byte_len_to_mask_table:
         dw      0xffff
 
 align 16
-pad_bit:
+pad16_bit:
 dq      0x01, 0x0
 dq      0x0100, 0x0
 dq      0x010000, 0x0
@@ -75,6 +75,112 @@ dq      0x0, 0x0100000000
 dq      0x0, 0x010000000000
 dq      0x0, 0x01000000000000
 dq      0x0, 0x0100000000000000
+
+align 64
+pad64_bit:
+dq      0, 0, 0, 0, 0, 0, 0, 0
+dq      0x0100, 0, 0, 0, 0, 0, 0, 0
+dq      0x010000, 0, 0, 0, 0, 0, 0, 0
+dq      0x01000000, 0, 0, 0, 0, 0, 0, 0
+dq      0x0100000000, 0, 0, 0, 0, 0, 0, 0
+dq      0x010000000000, 0, 0, 0, 0, 0, 0, 0
+dq      0x01000000000000, 0, 0, 0, 0, 0, 0, 0
+dq      0x0100000000000000, 0, 0, 0, 0, 0, 0, 0
+dq      0, 0x01, 0, 0, 0, 0, 0, 0
+dq      0, 0x0100, 0, 0, 0, 0, 0, 0
+dq      0, 0x010000, 0, 0, 0, 0, 0, 0
+dq      0, 0x01000000, 0, 0, 0, 0, 0, 0
+dq      0, 0x0100000000, 0, 0, 0, 0, 0, 0
+dq      0, 0x010000000000, 0, 0, 0, 0, 0, 0
+dq      0, 0x01000000000000, 0, 0, 0, 0, 0, 0
+dq      0, 0x0100000000000000, 0, 0, 0, 0, 0, 0
+dq      0, 0, 0, 0, 0, 0, 0, 0
+dq      0, 0, 0x0100, 0, 0, 0, 0, 0
+dq      0, 0, 0x010000, 0, 0, 0, 0, 0
+dq      0, 0, 0x01000000, 0, 0, 0, 0, 0
+dq      0, 0, 0x0100000000, 0, 0, 0, 0, 0
+dq      0, 0, 0x010000000000, 0, 0, 0, 0, 0
+dq      0, 0, 0x01000000000000, 0, 0, 0, 0, 0
+dq      0, 0, 0x0100000000000000, 0, 0, 0, 0, 0
+dq      0, 0, 0, 0x01, 0, 0, 0, 0
+dq      0, 0, 0, 0x0100, 0, 0, 0, 0
+dq      0, 0, 0, 0x010000, 0, 0, 0, 0
+dq      0, 0, 0, 0x01000000, 0, 0, 0, 0
+dq      0, 0, 0, 0x0100000000, 0, 0, 0, 0
+dq      0, 0, 0, 0x010000000000, 0, 0, 0, 0
+dq      0, 0, 0, 0x01000000000000, 0, 0, 0, 0
+dq      0, 0, 0, 0x0100000000000000, 0, 0, 0, 0
+dq      0, 0, 0, 0, 0, 0, 0, 0
+dq      0, 0, 0, 0, 0x0100, 0, 0, 0
+dq      0, 0, 0, 0, 0x010000, 0, 0, 0
+dq      0, 0, 0, 0, 0x01000000, 0, 0, 0
+dq      0, 0, 0, 0, 0x0100000000, 0, 0, 0
+dq      0, 0, 0, 0, 0x010000000000, 0, 0, 0
+dq      0, 0, 0, 0, 0x01000000000000, 0, 0, 0
+dq      0, 0, 0, 0, 0x0100000000000000, 0, 0, 0
+dq      0, 0, 0, 0, 0, 0x01, 0, 0
+dq      0, 0, 0, 0, 0, 0x0100, 0, 0
+dq      0, 0, 0, 0, 0, 0x010000, 0, 0
+dq      0, 0, 0, 0, 0, 0x01000000, 0, 0
+dq      0, 0, 0, 0, 0, 0x0100000000, 0, 0
+dq      0, 0, 0, 0, 0, 0x010000000000, 0, 0
+dq      0, 0, 0, 0, 0, 0x01000000000000, 0, 0
+dq      0, 0, 0, 0, 0, 0x0100000000000000, 0, 0
+dq      0, 0, 0, 0, 0, 0, 0, 0
+dq      0, 0, 0, 0, 0, 0, 0x0100, 0
+dq      0, 0, 0, 0, 0, 0, 0x010000, 0
+dq      0, 0, 0, 0, 0, 0, 0x01000000, 0
+dq      0, 0, 0, 0, 0, 0, 0x0100000000, 0
+dq      0, 0, 0, 0, 0, 0, 0x010000000000, 0
+dq      0, 0, 0, 0, 0, 0, 0x01000000000000, 0
+dq      0, 0, 0, 0, 0, 0, 0x0100000000000000, 0
+dq      0, 0, 0, 0, 0, 0, 0, 0x01
+dq      0, 0, 0, 0, 0, 0, 0, 0x0100
+dq      0, 0, 0, 0, 0, 0, 0, 0x010000
+dq      0, 0, 0, 0, 0, 0, 0, 0x01000000
+dq      0, 0, 0, 0, 0, 0, 0, 0x0100000000
+dq      0, 0, 0, 0, 0, 0, 0, 0x010000000000
+dq      0, 0, 0, 0, 0, 0, 0, 0x01000000000000
+dq      0, 0, 0, 0, 0, 0, 0, 0x0100000000000000
+
+align 64
+byte64_len_to_mask_table:
+        dq      0x0000000000000000, 0x0000000000000001
+        dq      0x0000000000000003, 0x0000000000000007
+        dq      0x000000000000000f, 0x000000000000001f
+        dq      0x000000000000003f, 0x000000000000007f
+        dq      0x00000000000000ff, 0x00000000000001ff
+        dq      0x00000000000003ff, 0x00000000000007ff
+        dq      0x0000000000000fff, 0x0000000000001fff
+        dq      0x0000000000003fff, 0x0000000000007fff
+        dq      0x000000000000ffff, 0x000000000001ffff
+        dq      0x000000000003ffff, 0x000000000007ffff
+        dq      0x00000000000fffff, 0x00000000001fffff
+        dq      0x00000000003fffff, 0x00000000007fffff
+        dq      0x0000000000ffffff, 0x0000000001ffffff
+        dq      0x0000000003ffffff, 0x0000000007ffffff
+        dq      0x000000000fffffff, 0x000000001fffffff
+        dq      0x000000003fffffff, 0x000000007fffffff
+        dq      0x00000000ffffffff, 0x00000001ffffffff
+        dq      0x00000003ffffffff, 0x00000007ffffffff
+        dq      0x0000000fffffffff, 0x0000001fffffffff
+        dq      0x0000003fffffffff, 0x0000007fffffffff
+        dq      0x000000ffffffffff, 0x000001ffffffffff
+        dq      0x000003ffffffffff, 0x000007ffffffffff
+        dq      0x00000fffffffffff, 0x00001fffffffffff
+        dq      0x00003fffffffffff, 0x00007fffffffffff
+        dq      0x0000ffffffffffff, 0x0001ffffffffffff
+        dq      0x0003ffffffffffff, 0x0007ffffffffffff
+        dq      0x000fffffffffffff, 0x001fffffffffffff
+        dq      0x003fffffffffffff, 0x007fffffffffffff
+        dq      0x00ffffffffffffff, 0x01ffffffffffffff
+        dq      0x03ffffffffffffff, 0x07ffffffffffffff
+        dq      0x0fffffffffffffff, 0x1fffffffffffffff
+        dq      0x3fffffffffffffff, 0x7fffffffffffffff
+        dq      0xffffffffffffffff
+
+qword_high_bit_mask:
+dw      0, 0x1, 0x5, 0x15, 0x55, 0x57, 0x5f, 0x7f, 0xff
 
 %ifdef LINUX
 %define arg1    rdi
@@ -452,11 +558,64 @@ section .text
 %endif
 %endmacro
 
+
+;; =============================================================================
+;; =============================================================================
+;; Shuffle data blocks, so they match the right power of R.
+;; Powers of R are in this order: R^8 R^4 R^7 R^3 R^6 R^2 R^5 R
+;; Data blocks are coming in this order: A0 A4 A1 A5 A2 A6 A3 A7
+;; Generally the computation is: A0*R^8 + A1*R^7 + A2*R^6 + A3*R^5 +
+;;                               A4*R^4 + A5*R^3 + A6*R^2 + A7*R
+;; When there are less data blocks, less powers of R are used, so data needs to
+;; be shuffled. Example: if 4 blocks are left, only A0-A3 are available and only
+;; R-R^4 are used (A0*R^4 + A1*R^3 + A2*R^2 + A3*R), so A0-A3 need to be shifted
+;; =============================================================================
+%macro SHUFFLE_DATA_BLOCKS 5
+%define %%A_L           %1 ; [in/out] 0-43 bits of input data
+%define %%A_M           %2 ; [in/out] 44-87 bits of input data
+%define %%A_H           %3 ; [in/out] 88-129 bits of input data
+%define %%TMP           %4 ; [clobbered] Temporary GP register
+%define %%N_BLOCKS      %5 ; [in] Number of remaining input blocks
+
+%if %%N_BLOCKS == 1
+%define %%SHUF_MASK 0x39
+%define %%KMASK 0xffff
+%elif %%N_BLOCKS == 2
+%define %%SHUF_MASK 0x4E
+%define %%KMASK 0xffff
+%elif %%N_BLOCKS == 3
+%define %%SHUF_MASK 0x93
+%define %%KMASK 0xffff
+%elif %%N_BLOCKS == 4
+%define %%KMASK 0xffff
+%elif %%N_BLOCKS == 5
+%define %%SHUF_MASK 0x39
+%define %%KMASK 0xfff0
+%elif %%N_BLOCKS == 6
+%define %%SHUF_MASK 0x4E
+%define %%KMASK 0xff00
+%elif %%N_BLOCKS == 7
+%define %%SHUF_MASK 0x93
+%define %%KMASK 0xf000
+%endif
+
+        mov     %%TMP, %%KMASK
+        kmovq   k1, %%TMP
+        vpshufd %%A_L{k1}, %%A_L, 0x4E
+        vpshufd %%A_M{k1}, %%A_M, 0x4E
+        vpshufd %%A_H{k1}, %%A_H, 0x4E
+%if %%N_BLOCKS != 4
+        vshufi64x2 %%A_L, %%A_L, %%SHUF_MASK
+        vshufi64x2 %%A_M, %%A_M, %%SHUF_MASK
+        vshufi64x2 %%A_H, %%A_H, %%SHUF_MASK
+%endif
+%endmacro
+
 ;; =============================================================================
 ;; =============================================================================
 ;; Computes hash for message length being multiple of block size
 ;; =============================================================================
-%macro POLY1305_BLOCKS 13
+%macro POLY1305_BLOCKS 14
 %define %%MSG     %1    ; [in/out] GPR pointer to input message (updated)
 %define %%LEN     %2    ; [in/out] GPR in: length in bytes / out: length mod 16
 %define %%A0      %3    ; [in/out] accumulator bits 63..0
@@ -470,6 +629,7 @@ section .text
 %define %%T3      %11   ; [clobbered] GPR register
 %define %%GP_RAX  %12   ; [clobbered] RAX register
 %define %%GP_RDX  %13   ; [clobbered] RDX register
+%define %%PAD_16  %14   ; [in] text "pad_to_16" or "no_padding"
 
 %define %%MASK_42 zmm30
 %define %%MASK_44 zmm31
@@ -632,7 +792,7 @@ section .text
         and     %%T0, 0xffffffffffffff80 ; multiple of 128 bytes
 
 %%_poly1305_blocks_loop:
-        cmp     %%T0, 128
+        cmp     %%T0, POLY1305_BLOCK_SIZE*8
         jbe     %%_poly1305_blocks_loop_end
 
         ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
@@ -713,10 +873,156 @@ section .text
         vpsrldq xmm11, xmm14, 8
         vpsrldq xmm12, xmm15, 8
 
+        ; Finish folding and clear second qword
+        mov     %%T0, 0xfd
+        kmovq   k1, %%T0
+        vpaddq  xmm13{k1}{z}, xmm10
+        vpaddq  xmm14{k1}{z}, xmm11
+        vpaddq  xmm15{k1}{z}, xmm12
+
+        add     %%MSG, POLY1305_BLOCK_SIZE*8
+
+        and     %%LEN, (POLY1305_BLOCK_SIZE*8 - 1) ; Get remaining lengths (LEN < 128 bytes)
+        cmp     %%LEN, 32 ; If remaining bytes is <= 32, perform last blocks in scalar
+        jbe     %%_simd_to_gp
+
+        mov     %%T0, %%LEN
+        and     %%T0, 0x3f
+        lea     %%T1, [rel byte64_len_to_mask_table]
+        mov     %%T1, [%%T1 + 8*%%T0]
+
+        ; Load default byte masks
+        mov     %%T2, 0xffffffffffffffff
+        xor     %%T3, %%T3
+
+        cmp     %%LEN, 64
+        cmovb   %%T2, %%T1 ; Load mask for first 64 bytes
+        cmovg   %%T3, %%T1 ; Load mask for second 64 bytes
+
+        kmovq   k1, %%T2
+        kmovq   k2, %%T3
+        vmovdqu8 zmm0{k1}{z}, [%%MSG]
+        vmovdqu8 zmm1{k2}{z}, [%%MSG + 64]
+
+        ; Pad last block message, if partial
+%ifnidn %%PAD_16,pad_to_16
+        lea     %%T1, [rel pad64_bit]
+        shl     %%T0, 6
+
+        cmp     %%LEN, 64
+        ja      %%_pad_second_64b
+
+        vporq   zmm0, [%%T1 + %%T0]
+        jmp     %%_end_pad
+
+%%_pad_second_64b:
+        vporq   zmm1, [%%T1 + %%T0]
+
+%%_end_pad:
+%endif
+        mov     %%T0, %%LEN
+        and     %%T0, 0x70 ; Multiple of 16 bytes
+        ; Load last block of data (up to 112 bytes)
+        shr     %%T0, 3 ; Get number of full qwords
+
+        ; Interleave the data to form 44-bit limbs
+        ;
+        ; zmm13 to have bits 0-43 of all 8 blocks in 8 qwords
+        ; zmm14 to have bits 87-44 of all 8 blocks in 8 qwords
+        ; zmm15 to have bits 127-88 of all 8 blocks in 8 qwords
+        vpunpckhqdq zmm4, zmm0, zmm1
+        vpunpcklqdq zmm2, zmm0, zmm1
+
+        vpsrlq  zmm3, zmm2, 44
+        vpsllq  zmm28, zmm4, 20
+        vpternlogq zmm3, zmm28, %%MASK_44, 0xA8  ; (A OR B AND C)
+
+        vpandq  zmm2, %%MASK_44
+        vpsrlq  zmm4, 24
+
+        lea     %%T1, [rel qword_high_bit_mask]
+%ifnidn %%PAD_16,pad_to_16
+        kmovb   k1, [%%T1 + %%T0]
+%else
+        mov     %%T3, %%LEN
+        mov     %%T2, %%T0
+        add     %%T2, 2
+        and     %%T3, 0xf
+        cmovnz  %%T0, %%T2
+        kmovb   k1, [%%T1 + %%T0]
+%endif
+        ; Add 2^128 to final qwords of the message (all full blocks and partial block,
+        ; if "pad_to_16" is selected)
+        vporq   zmm4{k1}, [rel high_bit]
+
+        vpaddq  zmm13, zmm2
+        vpaddq  zmm14, zmm3
+        vpaddq  zmm15, zmm4
+
+        mov     %%T0, %%LEN
+        add     %%T0, 15
+        shr     %%T0, 4         ; Get number of 16-byte blocks (including partial blocks)
+        xor     %%LEN, %%LEN    ; All length will be consumed
+
+        ; No need to shuffle data blocks (data is in the right order)
+        cmp     %%T0, 8
+        je      %%_end_shuffle
+
+        cmp     %%T0, 4
+        je      %%_shuffle_blocks_4
+        jb      %%_shuffle_blocks_3
+
+        ; Number of 16-byte blocks > 4
+        cmp     %%T0, 6
+        je      %%_shuffle_blocks_6
+        ja      %%_shuffle_blocks_7
+        jmp     %%_shuffle_blocks_5
+
+%assign i 3
+%rep 5
+APPEND(%%_shuffle_blocks_, i):
+        SHUFFLE_DATA_BLOCKS zmm13, zmm14, zmm15, %%T1, i
+        jmp     %%_end_shuffle
+%assign i (i + 1)
+%endrep
+
+%%_end_shuffle:
+
+        ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
+        ; zmm22-24 contain the 3x44-bit limbs of the powers of R
+        ; zmm25-26 contain the 3x44-bit limbs of the powers of R' (5*4*R)
+        POLY1305_MUL_REDUCE_VEC zmm13, zmm14, zmm15, \
+                                zmm22, zmm23, zmm24, \
+                                zmm25, zmm26, \
+                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                                %%MASK_42, %%MASK_44, zmm11
+
+        ;; Add all blocks (horizontally)
+        vextracti64x4   ymm0, zmm13, 1
+        vextracti64x4   ymm1, zmm14, 1
+        vextracti64x4   ymm2, zmm15, 1
+
+        vpaddq  ymm13, ymm0
+        vpaddq  ymm14, ymm1
+        vpaddq  ymm15, ymm2
+
+        vextracti32x4   xmm10, ymm13, 1
+        vextracti32x4   xmm11, ymm14, 1
+        vextracti32x4   xmm12, ymm15, 1
+
         vpaddq  xmm13, xmm10
         vpaddq  xmm14, xmm11
         vpaddq  xmm15, xmm12
 
+        vpsrldq xmm10, xmm13, 8
+        vpsrldq xmm11, xmm14, 8
+        vpsrldq xmm12, xmm15, 8
+
+        vpaddq  xmm13, xmm10
+        vpaddq  xmm14, xmm11
+        vpaddq  xmm15, xmm12
+
+%%_simd_to_gp:
         ; Carry propagation
         vpsrlq  xmm0, xmm13, 44
         vpandq  xmm13, XWORD(%%MASK_44) ; Clear top 20 bits
@@ -745,13 +1051,11 @@ section .text
         or      %%A1, %%T0
         shr     %%A2, 40
 
-        add     %%MSG, 128
-
-        and     %%LEN, 0x7f ; Get remaining lengths (LEN < 128 bytes)
         vzeroupper
+
 %%_final_loop:
         cmp     %%LEN, POLY1305_BLOCK_SIZE
-        jb      %%_poly1305_blocks_exit
+        jb      %%_poly1305_blocks_partial
 
         ;; A += MSG[i]
         add     %%A0, [%%MSG + 0]
@@ -769,28 +1073,11 @@ section .text
         sub     %%LEN, POLY1305_BLOCK_SIZE
 
         jmp     %%_final_loop
-%%_poly1305_blocks_exit:
-%endmacro
 
-;; =============================================================================
-;; =============================================================================
-;; Computes hash for the final partial block
-;; =============================================================================
-%macro POLY1305_PARTIAL_BLOCK 14
-%define %%MSG     %1    ; [in] GPR pointer to input message
-%define %%LEN     %2    ; [in] GPR message length
-%define %%A0      %3    ; [in/out] accumulator bits 63..0
-%define %%A1      %4    ; [in/out] accumulator bits 127..64
-%define %%A2      %5    ; [in/out] accumulator bits 195..128
-%define %%R0      %6    ; [in] R constant bits 63..0
-%define %%R1      %7    ; [in] R constant bits 127..64
-%define %%T0      %8    ; [clobbered] GPR register
-%define %%T1      %9    ; [clobbered] GPR register
-%define %%T2      %10   ; [clobbered] GPR register
-%define %%T3      %11   ; [clobbered] GPR register
-%define %%GP_RAX  %12   ; [clobbered] RAX register
-%define %%GP_RDX  %13   ; [clobbered] RDX register
-%define %%PAD_16  %14   ; [in] text "pad_to_16" or "no_padding"
+%%_poly1305_blocks_partial:
+
+        or      %%LEN, %%LEN
+        jz      %%_poly1305_blocks_exit
 
         lea     %%T1, [rel byte_len_to_mask_table]
         kmovw   k1, [%%T1 + %%LEN*2]
@@ -798,7 +1085,7 @@ section .text
 
 %ifnidn %%PAD_16,pad_to_16
         ;; pad the message
-        lea     %%T2, [rel pad_bit]
+        lea     %%T2, [rel pad16_bit]
         shl     %%LEN, 4
         vporq   xmm0, [%%T2 + %%LEN]
 %endif
@@ -820,6 +1107,8 @@ section .text
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
+
+%%_poly1305_blocks_exit:
 %endmacro
 
 ;; =============================================================================
@@ -968,15 +1257,8 @@ poly1305_aead_update_fma_avx512:
         mov     _len, arg2      ;; arg2 = rdx on Windows
 %endif
         POLY1305_BLOCKS arg1, _len, _a0, _a1, _a2, _r0, _r1, \
-                        gp10, gp11, gp8, gp9, rax, rdx
+                        gp10, gp11, gp8, gp9, rax, rdx, pad_to_16
 
-        or      _len, _len
-        jz      .poly1305_update_no_partial_block
-
-        POLY1305_PARTIAL_BLOCK arg1, _len, _a0, _a1, _a2, _r0, _r1, \
-                               gp10, gp11, gp8, gp9, rax, rdx, pad_to_16
-
-.poly1305_update_no_partial_block:
         ;; save accumulator back
         mov     [_arg3 + 0 * 8], _a0
         mov     [_arg3 + 1 * 8], _a1
@@ -1065,15 +1347,8 @@ poly1305_mac_fma_avx512:
         add     msg, [job + _hash_start_src_offset_in_bytes]
         mov     len, [job + _msg_len_to_hash]
         POLY1305_BLOCKS msg, len, _a0, _a1, _a2, _r0, _r1, \
-                        gp6, gp7, gp8, gp9, rax, rdx
+                        gp6, gp7, gp8, gp9, rax, rdx, no_padding
 
-        or      len, len
-        jz      .poly1305_no_partial_block
-
-        POLY1305_PARTIAL_BLOCK msg, len, _a0, _a1, _a2, _r0, _r1, \
-                               gp6, gp7, gp8, gp9, rax, rdx, no_padding
-
-.poly1305_no_partial_block:
         mov     rax, [job + _poly1305_key]
         mov     rdx, [job + _auth_tag_output]
         POLY1305_FINALIZE rax, rdx, _a0, _a1, _a2, gp6, gp7, gp8
