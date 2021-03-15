@@ -253,6 +253,7 @@ CRC32_FN:
         ;; continue folding 16B at a time
 
 .16B_reduction_loop:
+        endbranch64
         movdqa          xmm8, xmm7
         pclmulqdq       xmm8, xmm10, 0x11
         pclmulqdq       xmm7, xmm10, 0x00
@@ -278,7 +279,7 @@ CRC32_FN:
         ;; the input pointer before the actual point, to receive exactly 16 bytes.
         ;; After that the registers need to be adjusted.
 .get_last_two_xmms:
-
+        endbranch64
         movdqa          xmm2, xmm7
         movdqu          xmm1, [arg2 - 16 + arg3]
         pshufb          xmm1, xmm11
@@ -306,6 +307,7 @@ CRC32_FN:
         pxor            xmm7, xmm2
 
 .128_done:
+        endbranch64
         ;; compute crc of a 128-bit value
         movdqa          xmm10, [arg4 + crc32_const_fold_128b_to_64b]
         movdqa          xmm0, xmm7
@@ -325,6 +327,7 @@ CRC32_FN:
 
         ;; barrett reduction
 .barrett:
+        endbranch64
         movdqa          xmm10, [arg4 + crc32_const_reduce_64b_to_32b]
         movdqa          xmm0, xmm7
         pclmulqdq       xmm7, xmm10, 0x01

@@ -312,6 +312,7 @@ section .text
         simd_store_sse %%DST, %%PT0, %%LEN, %%TMP, %%TMP2
 
 %%end_encrypt:
+        endbranch64
         add     %%SRC, %%LEN
         add     %%DST, %%LEN
 %endmacro
@@ -1353,7 +1354,7 @@ check_1_or_2_blocks_left_ks:
         jmp     no_partial_block_ks
 
 less_than_64_ks:
-
+        endbranch64
         ; Preserve len
         mov     tmp5, len
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \

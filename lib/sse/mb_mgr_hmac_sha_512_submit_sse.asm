@@ -366,7 +366,7 @@ copy_full_digest:
 %endif
 
 clear_ret:
-
+        endbranch64
 %ifdef SAFE_DATA
         ;; Clear digest (48B/64B), outer_block (48B/64B) and extra_block (128B) of returned job
 %assign J 0

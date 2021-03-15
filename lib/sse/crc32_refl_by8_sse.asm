@@ -257,7 +257,7 @@ CRC32_REFL_FN:
         ;; the input pointer before the actual point, to receive exactly 16 bytes.
         ;; After that the registers need to be adjusted.
 .get_last_two_xmms:
-
+        endbranch64
         movdqa          xmm2, xmm7
         movdqu          xmm1, [arg2 - 16 + arg3]
 
@@ -279,6 +279,7 @@ CRC32_REFL_FN:
         pxor            xmm7, xmm2
 
 .128_done:
+        endbranch64
         ;; compute crc of a 128-bit value
         movdqa          xmm10, [arg4 + crc32_const_fold_128b_to_64b]
         movdqa          xmm0, xmm7
@@ -296,6 +297,7 @@ CRC32_REFL_FN:
 
         ;; barrett reduction
 .barrett:
+        endbranch64
         pand            xmm7, [rel mask2]
         movdqa          xmm1, xmm7
         movdqa          xmm2, xmm7

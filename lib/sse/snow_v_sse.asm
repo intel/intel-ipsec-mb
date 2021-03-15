@@ -35,6 +35,7 @@
 %include "include/memcpy.asm"
 %include "include/imb_job.asm"
 %include "include/clear_regs.asm"
+%include "include/cet.inc"
 %ifndef SNOW_V
 %define SNOW_V snow_v_sse
 %endif
@@ -219,7 +220,7 @@ section .text
 
 MKGLOBAL(SNOW_V,function,)
 SNOW_V:
-
+        endbranch64
 ;; Registers usage
 ;; xmm0, xmm1, xmm2, xmm3   : temporary space
 ;; xmm4                     : generated keystream

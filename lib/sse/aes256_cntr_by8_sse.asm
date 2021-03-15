@@ -384,6 +384,7 @@ _iv_length_8:
         pinsrb	xcounter, [p_IV + 7], 8
 
 _finish_nonce_move:
+        endbranch64
         ; last byte = 1
         por     xcounter, [rel set_byte15]
 %else ;; CNTR/CNTR_BIT
@@ -413,6 +414,7 @@ _finish_nonce_move:
 %endif
 %endif ;; CNTR/CNTR_BIT/CCM
 %%_bswap_iv:
+        endbranch64
 	pshufb	xcounter, xbyteswap
 
         ;; calculate len
@@ -477,6 +479,7 @@ _finish_nonce_move:
 	add	p_out, 7*16
 	; fall through to chk
 %%_chk:
+        endbranch64
 	and	num_bytes, ~(7*16)
 	jz	%%_do_return2
 
@@ -503,6 +506,7 @@ align 32
         jnz    %%_last
 
 %%_do_return2:
+        endbranch64
 %ifidn %%CNTR_TYPE, CCM
 	mov	rax, job
 	or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER

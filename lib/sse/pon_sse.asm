@@ -355,6 +355,7 @@ section .text
 %define %%GPT2        %14       ; [clobbered] temporary GP
 
 %%_cipher_last_blocks:
+        endbranch64
         cmp     %%NUM_BYTES, 16
         jb      %%_partial_block_left
 
@@ -765,6 +766,7 @@ section .text
 
         ;; Partial bytes left - complete CRC calculation
 %%_crc_two_xmms:
+        endbranch64
         lea             tmp, [rel pshufb_shf_table]
         movdqu          xtmp2, [tmp + bytes_to_crc]
 %ifidn %%DIR, ENC
@@ -789,6 +791,7 @@ section .text
         pxor            xcrc, xtmp1
 
 %%_128_done:
+        endbranch64
         CRC32_REDUCE_128_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
 
 %%_crc_done:

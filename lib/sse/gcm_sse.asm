@@ -364,6 +364,7 @@ default rel
 	jg	%%_byte_loop_2
 	pinsrq	%%OUTPUT, %%TMP1, 0
 %%_done:
+        endbranch64
 
 %endmacro ; READ_SMALL_DATA_INPUT
 
@@ -508,6 +509,7 @@ default rel
         jl      %%_AAD_reduce
 
 %%_AAD_blocks:
+        endbranch64
         movdqu          %%XTMP0, [%%T1]
         pshufb          %%XTMP0, [rel SHUF_MASK]
 
@@ -612,7 +614,7 @@ default rel
 
 %%_data_read:				;Finished reading in data
 
-
+        endbranch64
 	movdqu	xmm9, [%%GDATA_CTX + PBlockEncKey]	;xmm9 = ctx_data.partial_block_enc_key
 
 	lea	r12, [SHIFT_MASK]
@@ -656,6 +658,7 @@ default rel
        	add	[%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
 %endif
 %%_dec_done:
+        endbranch64
 	movdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
 %else
@@ -690,6 +693,7 @@ default rel
        	add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
 %endif
 %%_encode_done:
+        endbranch64
 	movdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
 	pshufb	xmm9, [SHUF_MASK]	; shuffle xmm9 back to output as ciphertext
@@ -707,6 +711,7 @@ default rel
 %%_partial_fill:
 	mov	r13, %%PLAIN_CYPH_LEN
 %%_count_set:
+        endbranch64
 	movq	rax, xmm9
 	cmp	r13, 8
 	jle	%%_less_than_8_bytes_left
@@ -1895,6 +1900,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
 
 %%_initial_blocks_encrypted:
+        endbranch64
         cmp     r13, 0
         je      %%_zero_cipher_left
 
@@ -1935,6 +1941,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
 
 %%_eight_cipher_left:
+        endbranch64
 	GHASH_LAST_8	%%GDATA_KEY, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 
 
@@ -1979,6 +1986,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         movdqu  xmm2, [r12]                             ; get the appropriate shuffle mask
         pshufb  xmm1, xmm2                              ; shift right 16-r13 bytes
 %%_data_read:
+        endbranch64
         %ifidn  %%ENC_DEC, DEC
         movdqa  xmm2, xmm1
         pxor    xmm9, xmm1                              ; Plaintext XOR E(K, Yn)
@@ -2105,6 +2113,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         movdqu  [r10], xmm9
 
 %%_return_T_done:
+        endbranch64
 
 %ifdef SAFE_DATA
         ;; Clear sensitive data from context structure
@@ -2311,6 +2320,7 @@ iv_len_12_init_IV:
 	GCM_INIT arg1, arg2, arg3, arg5, arg6
 
 skip_iv_len_12_init_IV:
+        endbranch64
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
         clear_scratch_xmms_sse_asm
@@ -2784,6 +2794,7 @@ iv_len_12_enc_IV:
 	GCM_INIT arg1, arg2, arg6, arg8, arg9
 
 skip_iv_len_12_enc_IV:
+        endbranch64
 	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC
 
 	GCM_COMPLETE arg1, arg2, arg10, arg11
@@ -2874,6 +2885,7 @@ iv_len_12_dec_IV:
 	GCM_INIT arg1, arg2, arg6, arg8, arg9
 
 skip_iv_len_12_dec_IV:
+        endbranch64
 	GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC
 
 	GCM_COMPLETE arg1, arg2, arg10, arg11
@@ -3042,7 +3054,7 @@ exit_ghash:
 
         ; Finished reading in data
 %%_data_read:
-
+        endbranch64
 	lea	r12, [rel SHIFT_MASK]
 
         ; Adjust the shuffle mask pointer to be able to shift r13 bytes
@@ -3085,6 +3097,7 @@ exit_ghash:
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_LEN
 %endif
 %%_ghash_done:
+        endbranch64
 	movdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
         cmp     r15, 0
@@ -3098,6 +3111,7 @@ exit_ghash:
 %%_partial_fill:
         mov     r12, %%PLAIN_LEN
 %%offset_set:
+        endbranch64
         mov     %%DATA_OFFSET, r12
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK_GMAC
