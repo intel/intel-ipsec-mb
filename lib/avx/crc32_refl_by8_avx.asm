@@ -235,7 +235,7 @@ crc32_refl_by8_avx:
         ;; the input pointer before the actual point, to receive exactly 16 bytes.
         ;; After that the registers need to be adjusted.
 .get_last_two_xmms:
-
+        endbranch64
         vmovdqa         xmm2, xmm7
         vmovdqu         xmm1, [arg2 - 16 + arg3]
 
@@ -257,6 +257,7 @@ crc32_refl_by8_avx:
         vpxor           xmm7, xmm2
 
 .128_done:
+        endbranch64
         ;; compute crc of a 128-bit value
         vmovdqa         xmm10, [arg4 + crc32_const_fold_128b_to_64b]
         vmovdqa         xmm0, xmm7
@@ -274,6 +275,7 @@ crc32_refl_by8_avx:
 
         ;; barrett reduction
 .barrett:
+        endbranch64
         vpand           xmm7, [rel mask2]
         vmovdqa         xmm1, xmm7
         vmovdqa         xmm2, xmm7

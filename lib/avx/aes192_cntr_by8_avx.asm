@@ -314,6 +314,7 @@ section .text
         vmovdqu xcounter, [p_IV]
 %endif
 %%bswap_iv:
+        endbranch64
 	vpshufb	xcounter, xbyteswap
 
         ;; calculate len
@@ -378,6 +379,7 @@ section .text
 	add	p_out, 7*16
 	; fall through to chk
 %%chk:
+        endbranch64
 	and	num_bytes, ~(7*16)
 	jz	%%do_return2
 
@@ -405,6 +407,7 @@ align 32
         jnz    %%last
 
 %%do_return2:
+        endbranch64
 %ifidn %%CNTR_TYPE, CNTR_BIT
         pop r14
         pop r13

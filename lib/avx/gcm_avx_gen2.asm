@@ -344,6 +344,7 @@ section .text
 	jg	%%_byte_loop_2
 	vpinsrq	%%OUTPUT, %%TMP1, 0
 %%_done:
+        endbranch64
 
 %endmacro ; READ_SMALL_DATA_INPUT
 
@@ -471,6 +472,7 @@ section .text
         jl      %%_AAD_reduce
 
 %%_AAD_blocks:
+        endbranch64
         vmovdqu         %%XTMP0, [%%T1]
         vpshufb         %%XTMP0, [rel SHUF_MASK]
 
@@ -570,7 +572,7 @@ section .text
 	READ_SMALL_DATA_INPUT	xmm1, r10, %%PLAIN_CYPH_LEN, rax, r12, r15
 
 %%_data_read:				;Finished reading in data
-
+        endbranch64
 	vmovdqu	xmm9, [%%GDATA_CTX + PBlockEncKey]	;xmm9 = my_ctx_data.partial_block_enc_key
 
 	lea	r12, [SHIFT_MASK]
@@ -615,6 +617,7 @@ section .text
 	add	[%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
 %endif
 %%_dec_done:
+        endbranch64
 	vmovdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
 %else
@@ -649,6 +652,7 @@ section .text
 	add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
 %endif
 %%_encode_done:
+        endbranch64
 	vmovdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
 	vpshufb	xmm9, [SHUF_MASK]	; shuffle xmm9 back to output as ciphertext
@@ -667,6 +671,7 @@ section .text
 %%_partial_fill:
 	mov	r13, %%PLAIN_CYPH_LEN
 %%_count_set:
+        endbranch64
 	vmovq	rax, xmm9
 	cmp	r13, 8
 	jle	%%_less_than_8_bytes_left
@@ -1817,6 +1822,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         jmp     %%_initial_blocks_encrypted
 
 %%_initial_num_blocks_is_1:
+        endbranch64
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 1, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16
         jmp     %%_initial_blocks_encrypted
@@ -1826,6 +1832,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 
 %%_initial_blocks_encrypted:
+        endbranch64
         cmp     r13, 0
         je      %%_zero_cipher_left
 
@@ -1870,6 +1877,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 
 %%_eight_cipher_left:
+        endbranch64
 	GHASH_LAST_8	%%GDATA_KEY, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 
 
@@ -1916,6 +1924,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu  xmm2, [r12]                             ; get the appropriate shuffle mask
         vpshufb  xmm1, xmm2                              ; shift right 16-r13 bytes
 %%_data_read:
+        endbranch64
 %ifidn  %%ENC_DEC, DEC
         vmovdqa  xmm2, xmm1
         vpxor    xmm9, xmm1                              ; Plaintext XOR E(K, Yn)
@@ -2042,6 +2051,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu  [r10], xmm9
 
 %%_return_T_done:
+        endbranch64
 
 %ifdef SAFE_DATA
         ;; Clear sensitive data from context structure
@@ -2966,7 +2976,7 @@ exit_ghash:
 
         ; Finished reading in data
 %%_data_read:
-
+        endbranch64
 	lea	r12, [rel SHIFT_MASK]
         ; Adjust the shuffle mask pointer to be able to shift r13 bytes
         ; (16-r13 is the number of bytes in plaintext mod 16)
@@ -3008,6 +3018,7 @@ exit_ghash:
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_LEN
 %endif
 %%_ghash_done:
+        endbranch64
 	vmovdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
         cmp     r15, 0
@@ -3021,6 +3032,7 @@ exit_ghash:
 %%_partial_fill:
         mov     r12, %%PLAIN_LEN
 %%offset_set:
+        endbranch64
         mov     %%DATA_OFFSET, r12
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK_GMAC
