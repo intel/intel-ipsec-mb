@@ -158,6 +158,7 @@ section .text
         simd_store_avx2 %%DST, %%PT0, %%LEN, %%TMP, %%TMP2
 
 %%end_encrypt:
+        endbranch64
         add     %%SRC, %%LEN
         add     %%DST, %%LEN
 %endmacro
