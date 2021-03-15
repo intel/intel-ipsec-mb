@@ -35,7 +35,7 @@ section .text
 ; void clear_scratch_gps(void)
 MKGLOBAL(clear_scratch_gps,function,internal)
 clear_scratch_gps:
-
+        endbranch64
         clear_scratch_gps_asm
 
         ret
@@ -46,7 +46,7 @@ clear_scratch_gps:
 ; void clear_scratch_xmms_sse(void)
 MKGLOBAL(clear_scratch_xmms_sse,function,internal)
 clear_scratch_xmms_sse:
-
+        endbranch64
         clear_scratch_xmms_sse_asm
 
         ret
@@ -60,7 +60,7 @@ clear_scratch_xmms_sse:
 ; void clear_scratch_xmms_avx(void)
 MKGLOBAL(clear_scratch_xmms_avx,function,internal)
 clear_scratch_xmms_avx:
-
+        endbranch64
         clear_scratch_xmms_avx_asm
 
         ret
@@ -74,7 +74,7 @@ clear_scratch_xmms_avx:
 ; void clear_scratch_ymms(void)
 MKGLOBAL(clear_scratch_ymms,function,internal)
 clear_scratch_ymms:
-
+        endbranch64
         clear_scratch_ymms_asm
 
         ret
@@ -91,7 +91,7 @@ clear_scratch_ymms:
 ; void clear_scratch_zmms(void)
 MKGLOBAL(clear_scratch_zmms,function,internal)
 clear_scratch_zmms:
-
+        endbranch64
         clear_scratch_zmms_asm
 
         ret
@@ -102,7 +102,7 @@ clear_scratch_zmms:
 ; void force_memset_zero(void *mem, const size_t size)
 MKGLOBAL(force_memset_zero,function,internal)
 force_memset_zero:
-
+        endbranch64
 %ifdef LINUX
         mov rcx, rsi
 %else

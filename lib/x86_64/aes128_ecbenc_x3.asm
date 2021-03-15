@@ -36,7 +36,7 @@
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 %ifdef LINUX
 %define IN	rdi	; arg 1
 %define KEYS	rsi	; arg 2
@@ -63,7 +63,7 @@ section .text
 
 MKGLOBAL(aes128_ecbenc_x3_sse,function,internal)
 aes128_ecbenc_x3_sse:
-
+        endbranch64
 %ifndef LINUX
 	mov		OUT2, [rsp + 5*8]
 %endif
@@ -155,7 +155,7 @@ aes128_ecbenc_x3_sse_return:
 
 MKGLOBAL(aes128_ecbenc_x3_sse_no_aesni,function,internal)
 aes128_ecbenc_x3_sse_no_aesni:
-
+        endbranch64
 %ifndef LINUX
 	mov		OUT2, [rsp + 5*8]
 %endif
@@ -250,7 +250,7 @@ aes128_ecbenc_x3_sse_no_aesni_return:
 
 MKGLOBAL(aes128_ecbenc_x3_avx,function,internal)
 aes128_ecbenc_x3_avx:
-
+        endbranch64
 %ifndef LINUX
 	mov		OUT2, [rsp + 5*8]
 %endif
