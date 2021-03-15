@@ -185,6 +185,7 @@ flush_job_hmac_sha_256_avx512:
 %endrep
 
 copy_lane_data:
+        endbranch64
 	; copy idx to empty lanes
 	vmovdqa	ymm0, [state + _lens_sha256]
 	mov	tmp, [state + _args_data_ptr_sha256 + PTR_SZ*idx]
@@ -373,7 +374,7 @@ copy_full_digest:
 %endif
 
 clear_ret:
-
+        endbranch64
 %ifdef SAFE_DATA
         vpxorq  zmm0, zmm0
 
@@ -414,6 +415,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
+        endbranch64
         vzeroupper
 
 	mov	rbx, [rsp + _gpr_save + 8*0]

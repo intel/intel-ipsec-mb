@@ -258,6 +258,7 @@ len_is_0:
 %endif
 
 return:
+        endbranch64
 %ifndef SAFE_DATA
         vzeroupper
 %endif

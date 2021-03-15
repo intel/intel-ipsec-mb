@@ -720,6 +720,7 @@ default rel
         mov             %%TMP1, 0xffff
         kmovq           %%MASK, %%TMP1
 %%_read_small_data_end:
+        endbranch64
 %endmacro ; READ_SMALL_DATA_INPUT
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -888,6 +889,7 @@ default rel
 
         ; Less than 16x16 bytes remaining
 %%_less_than_16x16:
+        endbranch64
         ;; prep mask source address
         lea             %%T3, [rel byte64_len_to_mask_table]
         lea             %%T3, [%%T3 + %%T2*8]
@@ -1174,6 +1176,7 @@ default rel
                         ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
                         1, single_call
 %%_CALC_AAD_done:
+        endbranch64
         ;; result in AAD_HASH
 
 %endmacro ; CALC_AAD_HASH
@@ -1296,6 +1299,7 @@ default rel
         mov             %%LENGTH, %%PLAIN_CYPH_LEN
 
 %%_enc_dec_done:
+        endbranch64
         ;; output encrypted Bytes
 
         lea             %%IA0, [rel byte_len_to_mask_table]
@@ -1627,6 +1631,7 @@ default rel
         xor             %%LENGTH, %%LENGTH
         vmovdqu8        %%ZT4{%%MASKREG}{z}, %%ZT4
 %%_initial_blocks_done:
+        endbranch64
 %else
         ZMM_STORE_BLOCKS_0_16 8, %%CYPH_PLAIN_OUT, %%DATA_OFFSET, \
                         %%ZT3, %%ZT4, no_zmm, no_zmm
@@ -1934,7 +1939,7 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %%_small_initial_compute_done:
-
+        endbranch64
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; If using init/update/finalize, we need to xor any partial block data
         ;; into the hash.
@@ -2368,6 +2373,7 @@ default rel
         vpshufb         %%B08_11, %%SHFMSK
         vpshufb         %%B12_15, %%SHFMSK
 %%_16_blocks_ok:
+        endbranch64
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; pre-load constants
@@ -3087,6 +3093,7 @@ default rel
 %endrep
 
 %%_small_initial_blocks_encrypted:
+        endbranch64
 
 %endmacro                       ; GCM_ENC_DEC_SMALL
 
@@ -3527,6 +3534,7 @@ default rel
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%AAD_HASHx, \
                 %%GH, %%GL, %%GM
 %%_ghash_done:
+        endbranch64
         vmovdqu64       [%%GDATA_CTX + CurCount], XWORD(%%CTR_BLOCK_SAVE)
         vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASHx
 %%_enc_dec_done:
@@ -3589,6 +3597,7 @@ default rel
         vpshufb         %%B08_11, %%SHUF_MASK
         vpshufb         %%B12_15, %%SHUF_MASK
 %%_next_16_ok:
+        endbranch64
         vshufi64x2      %%CTR, %%B12_15, %%B12_15, 1111_1111b
         add             BYTE(%%CTR_CHECK), 16
 
@@ -4124,6 +4133,7 @@ default rel
         vmovdqu  [r10], xmm9
 
 %%_return_T_done:
+        endbranch64
 
 %ifdef SAFE_DATA
         ;; Clear sensitive data from context structure
@@ -4282,6 +4292,7 @@ iv_len_12_init_IV:
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
 
 skip_iv_len_12_init_IV:
+        endbranch64
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
         clear_scratch_zmms_asm
@@ -4696,6 +4707,7 @@ iv_len_12_enc_IV:
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
 
 skip_iv_len_12_enc_IV:
+        endbranch64
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
         GCM_COMPLETE arg1, arg2, arg10, arg11, single_call
 
@@ -4788,6 +4800,7 @@ iv_len_12_dec_IV:
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
 
 skip_iv_len_12_dec_IV:
+        endbranch64
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
         GCM_COMPLETE arg1, arg2, arg10, arg11, single_call
 
@@ -4991,6 +5004,7 @@ exit_ghash:
         mov             %%LENGTH, %%PLAIN_LEN
 
 %%_ghash_done:
+        endbranch64
         vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASH
 
         mov             %%DATA_OFFSET, %%LENGTH

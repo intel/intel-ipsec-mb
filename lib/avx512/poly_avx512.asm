@@ -30,7 +30,7 @@
 %include "include/memcpy.asm"
 %include "include/imb_job.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 [bits 64]
 default rel
 
@@ -986,7 +986,7 @@ section .text
 align 32
 MKGLOBAL(poly1305_aead_update_avx512,function,internal)
 poly1305_aead_update_avx512:
-
+        endbranch64
 %ifdef SAFE_PARAM
         or      arg1, arg1
         jz      .poly1305_update_exit
@@ -1062,7 +1062,7 @@ poly1305_aead_update_avx512:
 align 32
 MKGLOBAL(poly1305_aead_complete_avx512,function,internal)
 poly1305_aead_complete_avx512:
-
+        endbranch64
 %ifdef SAFE_PARAM
         or      arg1, arg1
         jz      .poly1305_complete_exit
@@ -1104,6 +1104,7 @@ poly1305_aead_complete_avx512:
 align 32
 MKGLOBAL(poly1305_mac_plain_avx512,function,internal)
 poly1305_mac_plain_avx512:
+        endbranch64
         FUNC_ENTRY
 
 %ifndef LINUX

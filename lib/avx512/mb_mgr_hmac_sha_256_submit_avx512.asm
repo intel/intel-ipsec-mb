@@ -174,7 +174,7 @@ fast_copy:
 	vmovdqu32	zmm0, [p - 64 + len]
 	vmovdqu32	[lane_data + _extra_block], zmm0
 end_fast_copy:
-
+        endbranch64
 	mov	size_offset, extra_blocks
 	shl	size_offset, 6
 	sub	size_offset, last_len
@@ -398,7 +398,7 @@ copy_full_digest:
 %endif
 
 clear_ret:
-
+        endbranch64
 %ifdef SAFE_DATA
         ;; Clear digest (28B/32B), outer_block (28B/32B) and extra_block (64B) of returned job
 %assign J 0
@@ -427,6 +427,7 @@ clear_ret:
 %endif ;; SAFE_DATA
 
 return:
+        endbranch64
         vzeroupper
 
 	mov	rbx, [rsp + _gpr_save + 8*0]

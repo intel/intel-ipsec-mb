@@ -306,6 +306,7 @@
         LOAD_KEYS %%KEYS, %%NROUNDS
 
 %%decrypt_16_parallel:
+        endbranch64
         cmp     %%LENGTH, 256
         jb      %%final_blocks
 
@@ -451,11 +452,13 @@
         jmp     %%cbc_dec_done
 
 %%final_num_blocks_is_1:
+        endbranch64
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 1, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
                      %%TMP, %%NROUNDS
 
 %%cbc_dec_done:
+        endbranch64
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

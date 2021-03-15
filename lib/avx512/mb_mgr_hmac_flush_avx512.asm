@@ -44,7 +44,7 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-
+%include "include/cet.inc"
 ;; %define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -145,7 +145,7 @@ endstruc
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_avx512,function,internal)
 flush_job_hmac_avx512:
-
+        endbranch64
 	mov	rax, rsp
 	sub	rsp, STACK_size
 	and	rsp, -32		; align stack to 32 byte boundary
@@ -172,6 +172,7 @@ flush_job_hmac_avx512:
 %endrep
 
 copy_lane_data:
+        endbranch64
 	; copy valid lane (idx) to empty lanes
 	vmovdqa	ymm0, [state + _lens]
 	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
@@ -350,6 +351,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
+        endbranch64
         DBGPRINTL "---------- exit hmac flush avx512 -----------"
         vzeroupper
 

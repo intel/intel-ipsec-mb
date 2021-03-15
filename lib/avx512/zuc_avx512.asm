@@ -1157,6 +1157,7 @@ APPEND(%%_num_rounds_is_,I):
 %endrep
 
 %%_skip_reorder:
+        endbranch64
 %endif
     FUNC_RESTORE
 
@@ -1478,6 +1479,7 @@ APPEND(%%_num_final_rounds_is_,I):
 %endrep
 
 %%_no_final_rounds:
+        endbranch64
         add             rsp, 32
         ;; update in/out pointers
         add             buf_idx, 3

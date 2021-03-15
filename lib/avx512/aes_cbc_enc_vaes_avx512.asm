@@ -388,10 +388,12 @@ endstruc
         jmp             %%encrypt_16_first
 
 %%encrypt_16_start:
+        endbranch64
         cmp             %%LENGTH, 64
         jl              %%encrypt_16_end
 
 %%encrypt_16_first:
+        endbranch64
         ;; load 4 plaintext blocks for lanes 0-3
         PRELOADED_LOAD_STORE_x4 IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, \
 				%%B0L00_03, %%B1L00_03, %%B2L00_03, \
@@ -801,6 +803,7 @@ endstruc
                          ZT8, ZT9, ZT10, ZT11, ZT12, ZT13, ZT14, ZT15, ZT16, ZT17, \
                          ZT18, ZT19, IA1, IA2, 2, %%MAC_TYPE
 %%_cbc_enc_done:
+        endbranch64
         ;; store IV's per lane
         vmovdqa64       [%%IV + 16*0],  ZIV00_03
         vmovdqa64       [%%IV + 16*4],  ZIV04_07

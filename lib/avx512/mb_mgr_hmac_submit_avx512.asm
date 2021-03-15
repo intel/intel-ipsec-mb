@@ -176,6 +176,7 @@ fast_copy:
 	vmovdqu32	[lane_data + _extra_block], zmm0
 
 end_fast_copy:
+        endbranch64
         mov	size_offset, extra_blocks
         shl	size_offset, 6
         sub	size_offset, last_len
@@ -382,6 +383,7 @@ clear_ret:
 %endif
 
 return:
+        endbranch64
         vzeroupper
 
         DBGPRINTL "---------- exit sha1 submit -----------"

@@ -1757,6 +1757,7 @@ endstruc
 %endif
 
 %%_transpose_out:
+        endbranch64
         ;; transpose data on output
         TRANSPOSE_OUT   ZW0, ZW1, ZW2, ZW3, ZW4, ZW5, ZW6, ZW7, ZW8, ZW9, ZW10, ZW11, ZW12, ZW13, ZW14, ZW15, ZTMP0, ZTMP1, ZTMP2, ZTMP3, ZTMP4, ZTMP5, ZTMP6, ZTMP7, ZTMP8, ZTMP9, ZTMP10, ZTMP11, ZTMP12, ZTMP13
 

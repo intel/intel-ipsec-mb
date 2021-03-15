@@ -1022,7 +1022,7 @@ section .text
 %endrep
         vmovdqu8 [%%DST + %%OFF + 64*%%I]{%%KMASK}, APPEND(%%KS, %%I)
 %%encrypt_done:
-
+        endbranch64
 %endmacro
 
 %macro PREPARE_NEXT_STATES_4_TO_8 13
@@ -1214,7 +1214,7 @@ more_than_8_blocks_left:
                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
 ks_gen_done:
-
+        endbranch64
         ; Calculate number of final blocks
         mov     tmp, len
         add     tmp, 63
@@ -1279,6 +1279,7 @@ APPEND(final_num_blocks_is_, I):
 %endrep
 
 no_partial_block:
+        endbranch64
 
 %ifdef SAFE_DATA
         clear_all_zmms_asm
@@ -1423,6 +1424,7 @@ prepare_four_states:
                                    zmm8, zmm9, off, iv, keys, k2, 4, no_key
 
 four_states_prepared:
+        endbranch64
         shl     off, 6 ; Restore offset
 
         ; Use same first 4 registers as the output of GENERATE_1K_KS,
@@ -1470,6 +1472,7 @@ more_than_8_blocks_left_poly:
                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
 ks_gen_done_poly:
+        endbranch64
 
         ; Reduce number of bytes used for the Poly key
         sub     len, added_len
@@ -1780,6 +1783,7 @@ APPEND(initial_dec_num_blocks_is_, I):
 %endrep
 
 resume_dec:
+        endbranch64
         ; Get remaining length to decrypt
         mov     len, [job + _msg_len_to_cipher_in_bytes]
         sub     len, off
@@ -1894,7 +1898,7 @@ more_than_8_blocks_left_dec:
                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
 ks_gen_done_dec:
-
+        endbranch64
         ; Calculate number of final blocks
         mov     tmp, len
         add     tmp, 63
@@ -1959,7 +1963,7 @@ APPEND(final_dec_num_blocks_is_, I):
 %endrep
 
 no_partial_block_dec:
-
+        endbranch64
 %ifdef SAFE_DATA
         clear_all_zmms_asm
         ; Clear stored keystreams in stack
@@ -2174,7 +2178,7 @@ more_than_8_blocks_left_ks:
                        zmm9, zmm10, zmm11, zmm12, zmm13, zmm14, zmm15
 
 ks_gen_done_ks:
-
+        endbranch64
         ; Calculate number of final blocks
         mov     tmp, len
         add     tmp, 63
@@ -2247,7 +2251,7 @@ APPEND3(final_num_blocks_is_, I, _ks):
 %endrep
 
 no_partial_block_ks:
-
+        endbranch64
         mov     [ctx + LastBlkCount], blk_cnt
 
         mov     r12, [rsp]

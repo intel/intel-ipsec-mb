@@ -375,6 +375,7 @@ section .text
         vpslldq         %%xcrc, 7
 
 %%_do_barret:
+        endbranch64
         CRC32_REDUCE_64_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
         jmp             %%_64_done
 
@@ -394,6 +395,7 @@ section .text
 
         ;; Partial bytes left - complete CRC calculation
 %%_crc_two_xmms:
+        endbranch64
         lea             %%tmp, [rel pshufb_shf_table]
         vmovdqu64       %%xtmp2, [%%tmp + %%bytes_to_crc]
         vmovdqu64       %%xtmp1, [%%p_in - 16 + %%bytes_to_crc]  ; xtmp1 = data for CRC
@@ -409,8 +411,10 @@ section .text
         CRC_CLMUL %%xcrc, %%xcrckey, %%xtmp3, %%xtmp1
 
 %%_128_done:
+        endbranch64
         CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
 %%_64_done:
+        endbranch64
 %endmacro
 
 ;; =====================================================================
@@ -1620,6 +1624,7 @@ section .text
         vmovdqa64       [%%STATE + _docsis_crc_args_init + %%lane], xmm8
 
 %%_crc_complete:
+        endbranch64
         cmp             qword [%%STATE + _aes_lanes_in_use], 16
         je              %%_load_lens
         xor             %%job_rax, %%job_rax    ; return NULL
@@ -1875,6 +1880,7 @@ align 32
 
 align 32
 %%_partial_block_cipher_no_load:
+        endbranch64
         mov             %%GT5, [%%STATE + _aes_args_out + %%idx*8]
         mov             %%GT6, [%%job_rax + _enc_keys]
         shl             %%idx, 4
@@ -1976,7 +1982,7 @@ align 32
 %endif  ;; SAFE_DATA
 
 %%_return:
-
+        endbranch64
 %endmacro
 
 ;; ===========================================================================
