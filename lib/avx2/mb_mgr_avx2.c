@@ -98,6 +98,7 @@ IMB_JOB *submit_job_chacha20_enc_dec_avx2(IMB_JOB *job);
 void *poly1305_mac_scalar(IMB_JOB *job);
 
 IMB_JOB *snow_v_sse(IMB_JOB *job);
+IMB_JOB *snow_v_aead_init_sse(IMB_JOB *job);
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
@@ -193,6 +194,7 @@ IMB_JOB *snow_v_sse(IMB_JOB *job);
 #define POLY1305_MAC poly1305_mac_scalar
 
 #define SUBMIT_JOB_SNOW_V snow_v_sse
+#define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_sse
 
 IMB_JOB *submit_job_hmac_avx2(MB_MGR_HMAC_SHA_1_OOO *state,
                                    IMB_JOB *job);

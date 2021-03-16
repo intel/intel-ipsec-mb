@@ -61,6 +61,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | Chacha20      | N      | Y      | Y      | Y      | Y      | N      |
 | Chacha20 AEAD | N      | Y      | Y      | Y      | Y      | N      |
 | SNOW-V        | N      | Y      | N      | N      | N      | N      |
+| SNOW-V AEAD   | N      | Y      | N      | N      | N      | N      |
 +---------------------------------------------------------------------+
 ```
 Notes:  
@@ -112,6 +113,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | HEC               | N      | Y      | Y      | N      | N      | N      |
 | POLY1305          | Y      | N      | N      | N      | Y      | Y      |
 | POLY1305 AEAD     | Y      | N      | N      | N      | Y      | Y      |
+| SNOW-V AEAD       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 +-------------------------------------------------------------------------+
 ```
 Notes:  

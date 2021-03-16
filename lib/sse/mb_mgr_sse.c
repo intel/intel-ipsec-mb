@@ -197,7 +197,9 @@ IMB_JOB *submit_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state,
 IMB_JOB *flush_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state);
 
 IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
+
 IMB_JOB *snow_v_sse(IMB_JOB *job);
+IMB_JOB *snow_v_aead_init_sse(IMB_JOB *job);
 
 void *poly1305_mac_scalar(IMB_JOB *job);
 
@@ -345,6 +347,7 @@ void *poly1305_mac_scalar(IMB_JOB *job);
 #define POLY1305_MAC poly1305_mac_scalar
 
 #define SUBMIT_JOB_SNOW_V snow_v_sse
+#define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_sse
 
 /* ====================================================================== */
 

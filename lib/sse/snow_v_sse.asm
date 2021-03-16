@@ -36,8 +36,13 @@
 %include "include/imb_job.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
+
 %ifndef SNOW_V
 %define SNOW_V snow_v_sse
+%endif
+
+%ifndef SNOW_V_AEAD_INIT
+%define SNOW_V_AEAD_INIT snow_v_aead_init_sse
 %endif
 
 section .data
@@ -64,6 +69,11 @@ sigma:
 dq 0xd0905010c080400
 dq 0xf0b07030e0a0602
 
+align 16
+aead_lsfr_b_lo:
+dq 0x20646b4578656c41
+dq 0x6d6f6854676E694a
+
 %ifdef LINUX
       %define arg1      rdi
       %define offset    rcx
@@ -75,6 +85,28 @@ dq 0xf0b07030e0a0602
 %define job     arg1
 
 section .text
+
+;; Registers usage
+;; xmm0, xmm1, xmm2, xmm3   : temporary space
+;; xmm4                     : generated keystream
+;; xmm5, xmm6, xmm7         : FSM (R1, R2, R3)
+;; xmm8, xmm9, xmm10, xmm11 : LFSR_A, LFSR_B
+;; xmm13, xmm14, xmm15      : constants gA, gB, inv_gA
+
+%define gA       xmm13
+%define gB       xmm14
+%define inv_gA   xmm15
+
+%define FSM_R1         xmm5
+%define FSM_R2         xmm6
+%define FSM_R3         xmm7
+
+%define LFSR_A_LDQ     xmm8   ;; LSFR A: (a7, ..., a0)
+%define LFSR_A_HDQ     xmm9   ;; LSFR A: (a15, ..., a8)
+%define LFSR_B_LDQ     xmm10  ;; LSFR B: (b7, ..., b0)
+%define LFSR_B_HDQ     xmm11  ;; LSFR B: (b15, ..., b8)
+
+%define temp4          xmm12
 
 ;; =============================================================================
 ;; =============================================================================
@@ -218,39 +250,32 @@ section .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+MKGLOBAL(SNOW_V_AEAD_INIT,function,)
+SNOW_V_AEAD_INIT:
+      endbranch64
+      ;; use offset to indicate AEAD mode
+      mov DWORD(offset), 1
+      movdqa LFSR_B_LDQ, [rel aead_lsfr_b_lo]
+      jmp snow_v_common_init
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 MKGLOBAL(SNOW_V,function,)
 SNOW_V:
-        endbranch64
-;; Registers usage
-;; xmm0, xmm1, xmm2, xmm3   : temporary space
-;; xmm4                     : generated keystream
-;; xmm5, xmm6, xmm7         : FSM (R1, R2, R3)
-;; xmm8, xmm9, xmm10, xmm11 : LFSR_A, LFSR_B
-;; xmm13, xmm14, xmm15      : constants gA, gB, inv_gA
+      endbranch64
+      ;; use offset to indicate AEAD mode
+      xor DWORD(offset), DWORD(offset)
+      pxor LFSR_B_LDQ, LFSR_B_LDQ
 
-%define gA       xmm13
-%define gB       xmm14
-%define inv_gA   xmm15
+snow_v_common_init:
 
-%define FSM_R1         xmm5
-%define FSM_R2         xmm6
-%define FSM_R3         xmm7
-
-%define LFSR_A_LDQ     xmm8   ;; LSFR A: (a7, ..., a0)
-%define LFSR_A_HDQ     xmm9   ;; LSFR A: (a15, ..., a8)
-%define LFSR_B_LDQ     xmm10  ;; LSFR B: (b7, ..., b0)
-%define LFSR_B_HDQ     xmm11  ;; LSFR B: (b15, ..., b8)
-
-%define temp4          xmm12
-
+      endbranch64
       ;; Init LSFR
-
       mov rax, [job + _enc_keys]
       movdqu   LFSR_A_HDQ, [rax]
       movdqu   LFSR_B_HDQ, [rax + 16]
       mov rax, [job + _iv]
       movdqu   LFSR_A_LDQ, [rax]
-      pxor LFSR_B_LDQ, LFSR_B_LDQ
 
       ;; Init FSM: R1 = R2 = R3 = 0
       pxor FSM_R1, FSM_R1
@@ -289,6 +314,36 @@ SNOW_V:
       pxor FSM_R1, temp4
 
       ;; At this point FSM and LSFR are initialized
+
+      or DWORD(offset), DWORD(offset)
+      jz no_aead
+
+      ;; in AEAD mode hkey = keystream_0 and endpad = keystream_1
+      mov r11, [job + _snow_v_reserved]
+      ;; generate hkey
+      SNOW_V_KEYSTREAM xmm4, LFSR_B_HDQ, FSM_R1, FSM_R2
+      movdqu [r11], xmm4
+
+      ;; generate endpad
+      SNOW_V_FSM_UPDATE FSM_R1, FSM_R2, FSM_R3, xmm1, xmm2
+      SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ,LFSR_B_LDQ, LFSR_B_HDQ, \
+                         xmm0, xmm1, xmm2, xmm3, gA, gB, inv_gA
+      SNOW_V_KEYSTREAM xmm4, LFSR_B_HDQ, FSM_R1, FSM_R2
+
+      SNOW_V_FSM_UPDATE FSM_R1, FSM_R2, FSM_R3, xmm1, xmm2
+      SNOW_V_LFSR_UPDATE LFSR_A_LDQ, LFSR_A_HDQ,LFSR_B_LDQ, LFSR_B_HDQ, \
+                         xmm0, xmm1, xmm2, xmm3, gA, gB, inv_gA
+
+      mov offset, [r11 + 24]
+      movdqu [r11 + 16], xmm4
+      or offset, offset
+      ;; if last 8 bytes endpad are not 0 skip encrypt/decrypt operation
+      ;; option used to calculate auth tag for decrypt and not overwrite
+      ;; cipher by plain when the same src/dst pointer is used
+      jnz no_partial_block_left
+
+no_aead:
+
       ;; Process input
       mov r10, [job + _src]
       add r10, [job + _cipher_start_src_offset_in_bytes]

@@ -137,6 +137,7 @@ IMB_JOB *submit_job_chacha20_enc_dec_sse(IMB_JOB *job);
 void *poly1305_mac_scalar(IMB_JOB *job);
 
 IMB_JOB *snow_v_sse_no_aesni(IMB_JOB *job);
+IMB_JOB *snow_v_aead_init_sse_no_aesni(IMB_JOB *job);
 
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
@@ -289,6 +290,7 @@ void aes128_cbc_mac_x4_no_aesni(AES_ARGS *args, uint64_t len);
 #define POLY1305_MAC poly1305_mac_scalar
 
 #define SUBMIT_JOB_SNOW_V snow_v_sse_no_aesni
+#define SUBMIT_JOB_SNOW_V_AEAD snow_v_aead_init_sse_no_aesni
 
 /* ====================================================================== */
 

@@ -46,6 +46,11 @@
 #include "intel-ipsec-mb.h"
 #include "error.h"
 
+#ifdef LINUX
+#define BSWAP64 __builtin_bswap64
+#else
+#define BSWAP64 _byteswap_uint64
+#endif
 /*
  * JOBS() and ADV_JOBS() moved into mb_mgr_code.h
  * get_next_job() and get_completed_job() API's are no longer inlines.
@@ -416,6 +421,66 @@ submit_docsis_dec_job(IMB_MGR *state, IMB_JOB *job)
         }
 }
 
+__forceinline
+IMB_JOB *
+submit_snow_v_aead_job(IMB_MGR *state, IMB_JOB *job)
+{
+        struct gcm_key_data gdata_key;
+        imb_uint128_t *auth = (imb_uint128_t *) job->auth_tag_output;
+        imb_uint128_t temp;
+        imb_uint128_t hkey_endpad[2];
+
+        temp.low = BSWAP64((job->u.SNOW_V_AEAD.aad_len_in_bytes << 3));
+        temp.high = BSWAP64((job->msg_len_to_cipher_in_bytes << 3));
+
+        /* if hkey_endpad[1].high == 0:
+         *      SUBMIT_JOB_SNOW_V_AEAD does enc/decrypt operation
+         *      and fills hkey_endpad with first 2 keystreams
+         * else
+         *      SUBMIT_JOB_SNOW_V_AEAD fills hkey_endpad with first
+         *      2 keystreams (no operations on src vector are done)
+         */
+        if(job->cipher_direction == IMB_DIR_ENCRYPT)
+                hkey_endpad[1].high = 0;
+        else
+                hkey_endpad[1].high = 1;
+
+        job->u.SNOW_V_AEAD.reserved = hkey_endpad;
+        job = SUBMIT_JOB_SNOW_V_AEAD(job);
+
+        memset(auth, 0, sizeof(imb_uint128_t));
+
+        /* GHASH key H */
+        IMB_GHASH_PRE(state, (void *)hkey_endpad,  &gdata_key);
+
+        /* push AAD into GHASH */
+        IMB_GHASH(state, &gdata_key, job->u.SNOW_V_AEAD.aad,
+                job->u.SNOW_V_AEAD.aad_len_in_bytes,
+                (void *)auth, sizeof(imb_uint128_t));
+
+        if (job->cipher_direction == IMB_DIR_ENCRYPT)
+                IMB_GHASH(state, &gdata_key, job->dst,
+                        job->msg_len_to_cipher_in_bytes,
+                        (void *)auth, sizeof(imb_uint128_t));
+        else
+                IMB_GHASH(state, &gdata_key, job->src,
+                        job->msg_len_to_cipher_in_bytes,
+                        (void *)auth, sizeof(imb_uint128_t));
+
+        IMB_GHASH(state, &gdata_key, (void *)&temp, sizeof(temp),
+                  (void *)auth, sizeof(imb_uint128_t));
+
+        /* The resulting AuthTag */
+        auth->low = auth->low ^ hkey_endpad[1].low;
+        auth->high = auth->high ^ hkey_endpad[1].high;
+
+        if (job->cipher_direction == IMB_DIR_DECRYPT) {
+                hkey_endpad[1].high = 0;
+                job = SUBMIT_JOB_SNOW_V_AEAD(job);
+        }
+        return job;
+}
+
 /* ========================================================================= */
 /* Cipher submit & flush functions */
 /* ========================================================================= */
@@ -512,6 +577,8 @@ SUBMIT_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_AES128_CBCS_1_9_ENC(aes128_cbcs_ooo, job);
         } else if (IMB_CIPHER_SNOW_V == job->cipher_mode) {
                 return SUBMIT_JOB_SNOW_V(job);
+        } else if (IMB_CIPHER_SNOW_V_AEAD == job->cipher_mode) {
+                return submit_snow_v_aead_job(state, job);
         } else { /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
                 return job;
@@ -567,8 +634,10 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 } else { /* assume 32 */
                         return FLUSH_JOB_ZUC256_EEA3(zuc256_eea3_ooo);
                 }
-        /* assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
-         * IMB_CIPHER_CCM or IMB_CIPHER_NULL */
+        /**
+         * assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
+         * IMB_CIPHER_CCM or IMB_CIPHER_NULL
+         */
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
                 return FLUSH_JOB_AES128_CBCS_1_9_ENC(aes128_cbcs_ooo);
         } else {
@@ -666,6 +735,8 @@ SUBMIT_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
                 return SUBMIT_JOB_AES128_CBCS_1_9_DEC(job);
         } else if (IMB_CIPHER_SNOW_V == job->cipher_mode) {
                 return SUBMIT_JOB_SNOW_V(job);
+        } else if (IMB_CIPHER_SNOW_V_AEAD == job->cipher_mode) {
+                return submit_snow_v_aead_job(state, job);
         } else {
                 /* assume IMB_CIPHER_NULL */
                 job->status |= IMB_STATUS_COMPLETED_CIPHER;
@@ -881,7 +952,11 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 POLY1305_MAC(job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
-        default: /* assume IMB_AUTH_GCM,IMB_AUTH_PON_CRC_BIP or IMB_AUTH_NULL */
+        /**
+         * assume IMB_AUTH_GCM, IMB_AUTH_PON_CRC_BIP, IMB_AUTH_SNOW_V_AEAD
+         * or IMB_AUTH_NULL
+         */
+        default:
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
         }
@@ -992,6 +1067,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
+                16, /* IMB_AUTH_SNOW_V_AEAD */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -1024,6 +1100,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_AES_CMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
+                16, /* IMB_AUTH_SNOW_V_AEAD */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1662,6 +1739,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         return 1;
                 }
                 break;
+        case IMB_CIPHER_SNOW_V_AEAD:
         case IMB_CIPHER_SNOW_V:
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
@@ -1685,6 +1763,11 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->iv_len_in_bytes != UINT64_C(16)) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                        return 1;
+                }
+                if (job->cipher_mode == IMB_CIPHER_SNOW_V_AEAD &&
+                    job->hash_alg != IMB_AUTH_SNOW_V_AEAD) {
+                        imb_set_errno(state, IMB_ERR_HASH_ALGO);
                         return 1;
                 }
                 break;
@@ -2199,6 +2282,25 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 }
                 if (job->u.CHACHA20_POLY1305.ctx == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SGL_CTX);
+                        return 1;
+                }
+                break;
+        case IMB_AUTH_SNOW_V_AEAD:
+                if ((job->u.SNOW_V_AEAD.aad_len_in_bytes > 0) &&
+                    (job->u.SNOW_V_AEAD.aad == NULL)) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AAD);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes != 16) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
+                if (job->cipher_mode != IMB_CIPHER_SNOW_V_AEAD) {
+                        imb_set_errno(state, IMB_ERR_CIPH_MODE);
                         return 1;
                 }
                 break;
