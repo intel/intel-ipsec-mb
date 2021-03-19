@@ -259,7 +259,7 @@ section .text
 ;; =============================================================================
 ;; Computes hash for message length being multiple of block size
 ;; =============================================================================
-%macro POLY1305_MUL_REDUCE 11
+%macro POLY1305_MUL_REDUCE 11-12
 %define %%A0      %1    ; [in/out] GPR with accumulator bits 63:0
 %define %%A1      %2    ; [in/out] GPR with accumulator bits 127:64
 %define %%A2      %3    ; [in/out] GPR with accumulator bits 195:128
@@ -271,6 +271,7 @@ section .text
 %define %%T3      %9    ; [clobbered] GPR register
 %define %%GP_RAX  %10   ; [clobbered] RAX register
 %define %%GP_RDX  %11   ; [clobbered] RDX register
+%define %%ONLY128 %12   ; [in] Used if input A2 is 0
 
         ;; Combining 64-bit x 64-bit multiplication with reduction steps
         ;;
@@ -322,7 +323,9 @@ section .text
 
         ;; T1:A0 += (A1 * R1x5)
         mul     %%A1
+%if %0 == 11
         mov     %%A1, %%A2      ;; use A1 for A2
+%endif
         add     %%A0, %%GP_RAX
         adc     %%T1, %%GP_RDX
 
@@ -330,6 +333,7 @@ section .text
         ;;       R1/R0 is clamped to 60-bits,
         ;;       their product is less than 2^64.
 
+%if %0 == 11
         ;; T3:T2 += (A2 * R1x5)
         imul    %%A1, %%C1
         add     %%T2, %%A1
@@ -340,6 +344,12 @@ section .text
         imul    %%A2, %%R0
         add     %%A1, %%T2
         adc     %%T3, %%A2
+        ;; If A2 == 0, just move and add T1-T2 to A1
+%else
+        mov     %%A1, %%T1
+        add     %%A1, %%T2
+        adc     %%T3, 0
+%endif
 
         ;; At this point, 3 64-bit limbs are in T3:A1:A0
         ;; T3 can span over more than 2 bits so final partial reduction step is needed.
@@ -698,9 +708,8 @@ section .text
 
         mov     %%A0, %%R0
         mov     %%A1, %%R1
-        xor     %%A2, %%A2
 
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX, no_A2
 
         mov     [rsp + _r_save + 16*6], %%A0
         mov     [rsp + _r_save + 16*6 + 8], %%A1
