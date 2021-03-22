@@ -216,9 +216,10 @@ dw      0, 0x1, 0x5, 0x15, 0x55, 0x57, 0x5f, 0x7f, 0xff
 %define APPEND(a,b) a %+ b
 
 struc STACKFRAME
-_gpr_save:      resq    8
 _r_save:        resq    16 ; Memory to save limbs of powers of R
 _rp_save:       resq    8  ; Memory to save limbs of powers of R'
+_gpr_save:      resq    8  ; Memory to save GP registers
+_rsp_save:      resq    1  ; Memory to save RSP pointer
 endstruc
 
 section .text
@@ -890,8 +891,8 @@ section .text
         ; zmm24 to have bits 77-52 of all 8 powers of R in 8 qwords
         ; zmm25 to have bits 103-78 of all 8 powers of R in 8 qwords
         ; zmm26 to have bits 127-104 of all 8 powers of R in 8 qwords
-        vmovdqu64 zmm0, [rsp + _r_save]
-        vmovdqu64 zmm1, [rsp + _r_save + 64]
+        vmovdqa64 zmm0, [rsp + _r_save]
+        vmovdqa64 zmm1, [rsp + _r_save + 64]
 
         vpunpckhqdq zmm26, zmm0, zmm1
         vpunpcklqdq zmm22, zmm0, zmm1
@@ -1174,6 +1175,14 @@ APPEND(%%_shuffle_blocks_, i):
         shr     %%T0, 24
         mov     %%A2, %%T0
 
+        ; Clear powers of R
+%ifdef SAFE_DATA
+        vpxorq  zmm0, zmm0
+        vmovdqa64 [rsp + _r_save], zmm0
+        vmovdqa64 [rsp + _r_save + 64], zmm0
+        vmovdqa64 [rsp + _rp_save], zmm0
+%endif
+
         vzeroupper
 %%_final_loop:
         cmp     %%LEN, POLY1305_BLOCK_SIZE
@@ -1278,7 +1287,9 @@ APPEND(%%_shuffle_blocks_, i):
 ;; Creates stack frame and saves registers
 ;; =============================================================================
 %macro FUNC_ENTRY 0
+        mov     rax, rsp
         sub     rsp, STACKFRAME_size
+        and     rsp, -64
 
         mov     [rsp + _gpr_save + 8*0], rbx
         mov     [rsp + _gpr_save + 8*1], rbp
@@ -1290,6 +1301,7 @@ APPEND(%%_shuffle_blocks_, i):
         mov     [rsp + _gpr_save + 8*6], rsi
         mov     [rsp + _gpr_save + 8*7], rdi
 %endif
+        mov     [rsp + _rsp_save], rax
 
 %endmacro       ; FUNC_ENTRY
 
@@ -1308,7 +1320,7 @@ APPEND(%%_shuffle_blocks_, i):
         mov     rsi, [rsp + _gpr_save + 8*6]
         mov     rdi, [rsp + _gpr_save + 8*7]
 %endif
-        add     rsp, STACKFRAME_size
+        mov     rsp, [rsp + _rsp_save]
 
 %ifdef SAFE_DATA
        clear_scratch_gps_asm

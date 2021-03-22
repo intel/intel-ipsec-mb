@@ -1060,6 +1060,14 @@ APPEND(%%_shuffle_blocks_, i):
         or      %%A1, %%T0
         shr     %%A2, 40
 
+        ; Clear powers of R
+%ifdef SAFE_DATA
+        vpxorq  zmm0, zmm0
+        vmovdqa64 [rsp + _r_save], zmm0
+        vmovdqa64 [rsp + _r_save + 64], zmm0
+        vmovdqa64 [rsp + _rp_save], zmm0
+%endif
+
         vzeroupper
 
 %%_final_loop:
