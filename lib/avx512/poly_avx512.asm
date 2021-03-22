@@ -862,6 +862,7 @@ section .text
         and     %%T0, 0xffffffffffffff80 ; multiple of 128 bytes
 
 %%_poly1305_blocks_loop:
+        endbranch64
         cmp     %%T0, POLY1305_BLOCK_SIZE*8
         jbe     %%_poly1305_blocks_loop_end
 
@@ -1185,6 +1186,7 @@ APPEND(%%_shuffle_blocks_, i):
 
         vzeroupper
 %%_final_loop:
+        endbranch64
         cmp     %%LEN, POLY1305_BLOCK_SIZE
         jb      %%_poly1305_blocks_partial
 

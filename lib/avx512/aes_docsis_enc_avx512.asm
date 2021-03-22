@@ -349,6 +349,7 @@ section .text
         sub             %%bytes_to_crc, 16
 
 %%_main_loop:
+        endbranch64
         cmp             %%bytes_to_crc, 16
         jb              %%_exit_loop
         CRC_UPDATE16 %%p_in, %%xcrc, %%xcrckey, %%xtmp1, %%xtmp2, next_crc
@@ -736,6 +737,7 @@ section .text
         je              %%_encrypt_the_last_block
 
 %%_main_enc_loop:
+        endbranch64
         ;; if 16 bytes left (for CRC) then
         ;; go to the code variant where CRC last block case is checked
         cmp             %%LEN, 16

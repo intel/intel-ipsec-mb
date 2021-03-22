@@ -315,6 +315,7 @@ default rel
         mov     %%T2, %%A_LEN           ; T2 = aadLen
 
 %%_get_AAD_loop128:
+        endbranch64
         cmp     %%T2, 128
         jl      %%_exit_AAD_loop128
 

@@ -1398,6 +1398,7 @@ asm_ZucGenKeystream_16_gfni_avx512:
 
         ;; Perform rounds of 64 bytes, where LFSR reordering is not needed
 %%loop:
+        endbranch64
         cmp     min_length, 64
         jl      %%exit_loop
 

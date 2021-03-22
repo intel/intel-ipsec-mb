@@ -30,7 +30,7 @@
 %include "include/memcpy.asm"
 %include "include/imb_job.asm"
 %include "include/clear_regs.asm"
-
+%include "include/cet.inc"
 [bits 64]
 default rel
 
@@ -801,6 +801,7 @@ section .text
         and     %%T0, 0xffffffffffffff80 ; multiple of 128 bytes
 
 %%_poly1305_blocks_loop:
+        endbranch64
         cmp     %%T0, POLY1305_BLOCK_SIZE*8
         jbe     %%_poly1305_blocks_loop_end
 
@@ -1071,6 +1072,7 @@ APPEND(%%_shuffle_blocks_, i):
         vzeroupper
 
 %%_final_loop:
+        endbranch64
         cmp     %%LEN, POLY1305_BLOCK_SIZE
         jb      %%_poly1305_blocks_partial
 
@@ -1225,7 +1227,7 @@ APPEND(%%_shuffle_blocks_, i):
 align 32
 MKGLOBAL(poly1305_aead_update_fma_avx512,function,internal)
 poly1305_aead_update_fma_avx512:
-
+        endbranch64
 %ifdef SAFE_PARAM
         or      arg1, arg1
         jz      .poly1305_update_exit
@@ -1295,7 +1297,7 @@ poly1305_aead_update_fma_avx512:
 align 32
 MKGLOBAL(poly1305_aead_complete_fma_avx512,function,internal)
 poly1305_aead_complete_fma_avx512:
-
+        endbranch64
 %ifdef SAFE_PARAM
         or      arg1, arg1
         jz      .poly1305_complete_exit
@@ -1340,6 +1342,7 @@ poly1305_aead_complete_fma_avx512:
 align 32
 MKGLOBAL(poly1305_mac_fma_avx512,function,internal)
 poly1305_mac_fma_avx512:
+        endbranch64
         FUNC_ENTRY
 
 %ifndef LINUX

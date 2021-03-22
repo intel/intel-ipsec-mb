@@ -199,6 +199,7 @@ crc32_refl_by16_vclmul_avx512:
         ;; continue folding 16B at a time
 
 .reduction_loop_16B:
+        endbranch64
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x1
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
 	vpxor		xmm7, xmm8

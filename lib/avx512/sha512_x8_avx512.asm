@@ -454,6 +454,7 @@ sha512_x8_avx512:
 
 align 32
 lloop:
+        endbranch64
 	;; Load 64-byte blocks of data into ZMM registers before
 	;; performing a 8x8 64-bit transpose.
 	;; To speed up the transpose, data is loaded in chunks of 32 bytes,

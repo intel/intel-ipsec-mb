@@ -302,6 +302,7 @@ endstruc
 %%_skip_copy %+ i:
         mov     DWORD(tmp2), i ;; store good lane idx
 %%_end_loop %+ i:
+        endbranch64
 %assign i (i - 1)
 %endrep
         kmovw           k6, DWORD(tmp)
@@ -334,7 +335,7 @@ endstruc
 %endif ; SUBMIT_FLUSH
 
 %%_start_loop:
-
+        endbranch64
         ; Find min length for lanes 8-15
         vpextrw         DWORD(len2), xmm2, 0   ; min value
         vpextrw         DWORD(idx), xmm2, 1   ; min index

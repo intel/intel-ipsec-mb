@@ -216,6 +216,7 @@ ge64_bytes:
 
 	align	16
 start_loop:
+        endbranch64
 	; Find min length
 	vmovdqa	xmm0, [state + _lens_sha256]
 	vphminposuw	xmm1, xmm0

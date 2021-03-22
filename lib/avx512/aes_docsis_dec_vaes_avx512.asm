@@ -330,6 +330,7 @@ section .text
         sub             %%bytes_to_crc, 16
 
 %%_main_loop:
+        endbranch64
         cmp             %%bytes_to_crc, 16
         jb              %%_exit_loop
         CRC_UPDATE16 %%p_in, %%xcrc, %%xcrckey, %%xtmp1, %%xtmp2, next_crc
@@ -818,6 +819,7 @@ section .text
         vextracti64x2   %%XCRC0, %%ZCRC_IN_OUT3, 3
 
 %%_main_loop:
+        endbranch64
         cmp     %%NUM_BYTES, (16 * 16) + 16
         jb      %%_main_loop_exit
 

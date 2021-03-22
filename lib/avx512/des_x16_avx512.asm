@@ -1540,6 +1540,7 @@ endstruc
         ;; This loop processes message in blocks of 64 bytes.
         ;; Anything smaller than 64 bytes is handled separately after the loop.
 %%_gen_des_enc_loop:
+        endbranch64
         cmp             OFFSET, SIZE
         jz              %%_gen_des_enc_loop_end
         ;; run loads
@@ -1860,6 +1861,7 @@ endstruc
         ;; This loop processes message in blocks of 64 bytes.
         ;; Anything smaller than 64 bytes is handled separately after the loop.
 %%_gen_des_dec_loop:
+        endbranch64
         cmp             OFFSET, SIZE
         jz              %%_gen_des_dec_loop_end
         ;; run loads

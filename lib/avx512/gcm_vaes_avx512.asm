@@ -767,6 +767,7 @@ default rel
         vmovdqa64       %%SHFMSK, [rel SHUF_MASK]
 
 %%_get_AAD_loop48x16:
+        endbranch64
         cmp             %%T2, (48*16)
         jl              %%_exit_AAD_loop48x16
 

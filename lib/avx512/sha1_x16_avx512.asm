@@ -282,6 +282,7 @@ sha1_x16_avx512:
 				   inp0, inp1, inp2, inp3, inp4, inp5, \
 				   inp6, inp7, IDX
 lloop:
+        endbranch64
 	vmovdqa32	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
 	add	IDX, 64
