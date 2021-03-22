@@ -560,9 +560,6 @@ def main():
         if 'cipher-only' in alg_types:
             for direction in directions:
                 for cipher_alg in cipher_algos:
-                    # skip low performing ciphers for now
-                    if 'des' in cipher_alg or 'kasumi' in cipher_alg:
-                        continue
                     TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=direction,
                                        offset=offset, sizes=sizes, cipher_alg=cipher_alg,
                                        cold_cache=cold_cache, shani_off=shani_off,
@@ -574,9 +571,6 @@ def main():
         if 'hash-only' in alg_types:
             # skip direction for hash only algs
             for hash_alg in hash_algos:
-                # skip low performing algorithms for now
-                if 'kasumi' in hash_alg:
-                    continue
                 TODO_Q.put(Variant(idx=TOTAL_VARIANTS, arch=arch, direction=None,
                                    offset=offset, sizes=sizes, hash_alg=hash_alg,
                                    cold_cache=cold_cache, shani_off=shani_off,
