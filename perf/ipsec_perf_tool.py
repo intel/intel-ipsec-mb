@@ -305,6 +305,7 @@ def get_info():
 
 def parse_cores(core_str):
     """Parse core list passed through command line"""
+    num_cores = os.cpu_count()
     cores = []
 
     # remove spaces
@@ -312,12 +313,18 @@ def parse_cores(core_str):
 
     # check if not a range
     if '-' not in core_str:
-        return list(map(int, core_str.strip().split(',')))
+        cores = list(map(int, core_str.strip().split(',')))
+    else:
+        # parse range e.g. 2-8
+        core_str = core_str.strip().split('-')
+        for i in range(int(core_str[0]), int(core_str[1]) + 1):
+            cores.append(i)
 
-    # parse range e.g. 2-8
-    core_str = core_str.strip().split('-')
-    for i in range(int(core_str[0]), int(core_str[1]) + 1):
-        cores.append(i)
+    # ensure valid cores specified
+    for core in cores:
+        if core < 0 or core >= num_cores:
+            print("Core {} out of range!".format(core), file=sys.stderr)
+            raise Exception()
 
     return cores
 
