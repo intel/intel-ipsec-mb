@@ -518,12 +518,6 @@ struct str_value_mapping hash_algo_str_map[] = {
                 }
         },
         {
-                .name = "docsis-crc32",
-                .values.job_params = {
-                        .hash_alg = TEST_DOCSIS_CRC32,
-                }
-        },
-        {
                 .name = "snow3g-uia2",
                 .values.job_params = {
                         .hash_alg = TEST_SNOW3G_UIA2,
@@ -635,6 +629,38 @@ struct str_value_mapping aead_algo_str_map[] = {
                 .values.job_params = {
                         .cipher_mode = TEST_AEAD_CHACHA20,
                         .hash_alg = TEST_AEAD_POLY1305,
+                        .aes_key_size = IMB_KEY_256_BYTES
+                }
+        },
+        {
+                .name = "aes-docsis-128-crc32",
+                .values.job_params = {
+                        .cipher_mode = TEST_AESDOCSIS,
+                        .hash_alg = TEST_DOCSIS_CRC32,
+                        .aes_key_size = IMB_KEY_128_BYTES
+                }
+        },
+                {
+                .name = "aes-docsis8-128-crc32",
+                .values.job_params = {
+                        .cipher_mode = TEST_AESDOCSIS8,
+                        .hash_alg = TEST_DOCSIS_CRC32,
+                        .aes_key_size = IMB_KEY_128_BYTES
+                }
+        },
+        {
+                .name = "aes-docsis-256-crc32",
+                .values.job_params = {
+                        .cipher_mode = TEST_AESDOCSIS,
+                        .hash_alg = TEST_DOCSIS_CRC32,
+                        .aes_key_size = IMB_KEY_256_BYTES
+                }
+        },
+        {
+                .name = "aes-docsis8-256-crc32",
+                .values.job_params = {
+                        .cipher_mode = TEST_AESDOCSIS8,
+                        .hash_alg = TEST_DOCSIS_CRC32,
                         .aes_key_size = IMB_KEY_256_BYTES
                 }
         },
