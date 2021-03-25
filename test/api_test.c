@@ -203,6 +203,7 @@ fill_in_job(struct IMB_JOB *job,
                 16, /* IMB_AUTH_CHACHA20_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
+                16  /* IMB_AUTH_SNOW_V_AEAD */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         const uint64_t msg_len_to_cipher = 32;
@@ -304,6 +305,16 @@ fill_in_job(struct IMB_JOB *job,
                 job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
                 job->key_len_in_bytes = UINT64_C(32);
                 job->iv_len_in_bytes = 12;
+                break;
+        case IMB_CIPHER_SNOW_V:
+                job->hash_alg = IMB_AUTH_NULL;
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 16;
+                break;
+        case IMB_CIPHER_SNOW_V_AEAD:
+                job->hash_alg = IMB_AUTH_SNOW_V_AEAD;
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 16;
                 break;
         default:
                 break;
@@ -424,6 +435,12 @@ fill_in_job(struct IMB_JOB *job,
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = 12;
                 job->auth_tag_output_len_in_bytes = 16;
                 job->u.CHACHA20_POLY1305.ctx = chacha_ctx;
+                break;
+        case IMB_AUTH_SNOW_V_AEAD:
+                job->cipher_mode = IMB_CIPHER_SNOW_V_AEAD;
+                job->key_len_in_bytes = UINT64_C(32);
+                job->iv_len_in_bytes = 16;
+                job->auth_tag_output_len_in_bytes = 16;
                 break;
         default:
                 break;
@@ -629,6 +646,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_AES_GMAC_128 ||
                                     hash == IMB_AUTH_AES_GMAC_192 ||
                                     hash == IMB_AUTH_AES_GMAC_256 ||
+                                    hash == IMB_AUTH_SNOW_V_AEAD ||
                                     hash == IMB_AUTH_POLY1305)
                                         continue;
 
@@ -692,7 +710,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                              hash < IMB_AUTH_NUM; hash++) {
 
                                 switch (hash) {
-                                /* skip algos with that accept 0 len */
+                                /*
+                                 * Cases below don't allow for zero length
+                                 * hash messages
+                                 */
                                 case IMB_AUTH_HMAC_SHA_1:
                                 case IMB_AUTH_HMAC_SHA_224:
                                 case IMB_AUTH_HMAC_SHA_256:
@@ -706,6 +727,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                                 = 0;
                                         break;
                                 default:
+                                        /*
+                                         * Skip algos that accept 0 length
+                                         * hash messages
+                                         */
                                         continue;
                                 }
                                 if (!is_submit_invalid(mb_mgr, &template_job,
@@ -920,6 +945,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW_V:
+                                case IMB_CIPHER_SNOW_V_AEAD:
+
                                         break;
                                 default:
                                         job->msg_len_to_cipher_in_bytes = 0;
@@ -956,6 +983,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 case IMB_CIPHER_CNTR_BITLEN:
                                 case IMB_CIPHER_PON_AES_CNTR:
                                 case IMB_CIPHER_SNOW_V:
+                                case IMB_CIPHER_SNOW_V_AEAD:
                                 case IMB_CIPHER_NULL:
                                         continue;
                                         /* not allowed with null hash */
