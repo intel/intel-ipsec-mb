@@ -114,6 +114,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | POLY1305          | Y      | N      | N      | N      | Y      | Y      |
 | POLY1305 AEAD     | Y      | N      | N      | N      | Y      | Y      |
 | SNOW-V AEAD       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| GHASH             | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 +-------------------------------------------------------------------------+
 ```
 Notes:  
