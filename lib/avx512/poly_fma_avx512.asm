@@ -223,8 +223,7 @@ dw      0, 0x1, 0x5, 0x15, 0x55, 0x57, 0x5f, 0x7f, 0xff
 %define APPEND(a,b) a %+ b
 
 struc STACKFRAME
-_r_save:        resq    32 ; Memory to save limbs of powers of R
-_rp_save:       resq    16 ; Memory to save limbs of powers of R'
+_r_save:        resz    6  ; Memory to save limbs of powers of R
 _gpr_save:      resq    8  ; Memory to save GP registers
 _rsp_save:      resq    1  ; Memory to save RSP
 endstruc
@@ -840,11 +839,12 @@ section .text
         ; The first 16*8 bytes will contain the 16 bytes of the 8 powers of R
         ; The last 64 bytes will contain the last 2 bits of powers of R, spread in 8 qwords,
         ; to be OR'd with the highest qwords (in zmm26)
-        mov     [rsp + _r_save + 16*7], %%R0
-        mov     [rsp + _r_save + 16*7 + 8], %%R1
+        vmovq   xmm3, %%R0
+        vpinsrq xmm3, %%R1, 1
+        vinserti32x4 zmm1, xmm3, 3
 
-        xor     %%T0, %%T0
-        mov     [rsp + _rp_save + 8*7], %%T0
+        vpxorq  zmm0, zmm0
+        vpxorq  zmm2, zmm2
 
         ; Calculate R^2
         mov     %%T0, %%R1
@@ -856,151 +856,129 @@ section .text
 
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX, no_A2
 
-        mov     [rsp + _r_save + 16*6], %%A0
-        mov     [rsp + _r_save + 16*6 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 8*5], %%T3
+        vmovq   xmm3, %%A0
+        vpinsrq xmm3, %%A1, 1
+        vinserti32x4 zmm1, xmm3, 2
+
+        vmovq   xmm4, %%A2
+        vinserti32x4 zmm2, xmm4, 2
 
         ; Calculate R^3
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        mov     [rsp + _r_save + 16*5], %%A0
-        mov     [rsp + _r_save + 16*5 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 8*3], %%T3
+        vmovq   xmm3, %%A0
+        vpinsrq xmm3, %%A1, 1
+        vinserti32x4 zmm1, xmm3, 1
+
+        vmovq   xmm4, %%A2
+        vinserti32x4 zmm2, xmm4, 1
 
         ; Calculate R^4
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-        mov     [rsp + _r_save + 16*4], %%A0
-        mov     [rsp + _r_save + 16*4 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 8], %%T3
+        vmovq   xmm3, %%A0
+        vpinsrq xmm3, %%A1, 1
+        vinserti32x4 zmm1, xmm3, 0
 
-        ; Calculate R^5
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+        vmovq   xmm4, %%A2
+        vinserti32x4 zmm2, xmm4, 0
 
-        mov     [rsp + _r_save + 16*3], %%A0
-        mov     [rsp + _r_save + 16*3 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 8*6], %%T3
+        ; Move 2 MSbits to top 24 bits, to be OR'ed later
+        vpsllq  zmm2, 40
 
-        ; Calculate R^6
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+        vpunpckhqdq zmm21, zmm1, zmm0
+        vpunpcklqdq zmm19, zmm1, zmm0
 
-        mov     [rsp + _r_save + 16*2], %%A0
-        mov     [rsp + _r_save + 16*2 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 8*4], %%T3
+        vpsrlq  zmm20, zmm19, 44
+        vpsllq  zmm4, zmm21, 20
+        vpternlogq zmm20, zmm4, [rel mask_44], 0xA8  ; (A OR B AND C)
 
-        ; Calculate R^7
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
+        vpandq  zmm19, [rel mask_44]
+        vpsrlq  zmm21, 24
 
-        mov     [rsp + _r_save + 16], %%A0
-        mov     [rsp + _r_save + 16 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 8*2], %%T3
+        ; zmm2 contains the 2 highest bits of the powers of R
+        vporq   zmm21, zmm2
 
-        ; Calculate R^8
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save], %%A0
-        mov     [rsp + _r_save + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save], %%T3
-
-        ; Calculate R^9
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save + 128 + 16*7], %%A0
-        mov     [rsp + _r_save + 128 + 16*7 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 64 + 8*7], %%T3
-
-        ; Calculate R^10
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save + 128 + 16*6], %%A0
-        mov     [rsp + _r_save + 128 + 16*6 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 64 + 8*5], %%T3
-
-        ; Calculate R^11
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save + 128 + 16*5], %%A0
-        mov     [rsp + _r_save + 128 + 16*5 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 64 + 8*3], %%T3
-
-        ; Calculate R^12
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save + 128 + 16*4], %%A0
-        mov     [rsp + _r_save + 128 + 16*4 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 64 + 8], %%T3
-
-        ; Calculate R^13
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save + 128 + 16*3], %%A0
-        mov     [rsp + _r_save + 128 + 16*3 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 64 + 8*6], %%T3
-
-        ; Calculate R^14
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save + 128 + 16*2], %%A0
-        mov     [rsp + _r_save + 128 + 16*2 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 64 + 8*4], %%T3
-
-        ; Calculate R^15
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save + 128 + 16], %%A0
-        mov     [rsp + _r_save + 128 + 16 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 64 + 8*2], %%T3
-
-        ; Calculate R^16
-        POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
-
-        mov     [rsp + _r_save + 128], %%A0
-        mov     [rsp + _r_save + 128 + 8], %%A1
-        mov     %%T3, %%A2
-        shl     %%T3, 40
-        mov     [rsp + _rp_save + 64], %%T3
-
-        ; Broadcast 44-bit limbs of R^16
+        ; Broadcast 44-bit limbs of R^4
         mov     %%T0, %%A0
-        and     %%T0, [rel mask_44] ;; First limb (R^16[43:0])
+        and     %%T0, [rel mask_44] ;; First limb (R^4[43:0])
         vpbroadcastq zmm22, %%T0
 
         mov     %%T0, %%A1
         shrd    %%A0, %%T0, 44
-        and     %%A0, [rel mask_44] ;; Second limb (R^16[87:44])
+        and     %%A0, [rel mask_44] ;; Second limb (R^4[87:44])
         vpbroadcastq zmm23, %%A0
 
         shrd    %%A1, %%A2, 24
-        and     %%A1, [rel mask_42] ;; Third limb (R^16[129:88])
+        and     %%A1, [rel mask_42] ;; Third limb (R^4[129:88])
         vpbroadcastq zmm24, %%A1
+
+        ; Generate 4*5*R^4
+        vpsllq  zmm25, zmm23, 2
+        vpsllq  zmm26, zmm24, 2
+
+        ; 5*R^4
+        vpaddq  zmm25, zmm23
+        vpaddq  zmm26, zmm24
+
+        ; 4*5*R^4
+        vpsllq  zmm25, 2
+        vpsllq  zmm26, 2
+
+        vpslldq zmm29, zmm19, 8
+        vpslldq zmm30, zmm20, 8
+        vpslldq zmm31, zmm21, 8
+
+        ; Calculate R^8-R^5
+        POLY1305_MUL_REDUCE_VEC zmm19, zmm20, zmm21, \
+                                zmm22, zmm23, zmm24, \
+                                zmm25, zmm26, \
+                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                                zmm11
+
+        ; Interleave powers of R: R^8 R^4 R^7 R^3 R^6 R^2 R^5 R
+        vporq   zmm19, zmm29
+        vporq   zmm20, zmm30
+        vporq   zmm21, zmm31
+
+        ; Broadcast R^8
+        vpbroadcastq zmm22, xmm19
+        vpbroadcastq zmm23, xmm20
+        vpbroadcastq zmm24, xmm21
+
+        ; Generate 4*5*R^8
+        vpsllq  zmm25, zmm23, 2
+        vpsllq  zmm26, zmm24, 2
+
+        ; 5*R^8
+        vpaddq  zmm25, zmm23
+        vpaddq  zmm26, zmm24
+
+        ; 4*5*R^8
+        vpsllq  zmm25, 2
+        vpsllq  zmm26, 2
+
+        ; Store R^8-R for later use
+        vmovdqa64 [rsp + _r_save], zmm19
+        vmovdqa64 [rsp + _r_save + 64], zmm20
+        vmovdqa64 [rsp + _r_save + 64*2], zmm21
+
+        ; Calculate R^16-R^9
+        POLY1305_MUL_REDUCE_VEC zmm19, zmm20, zmm21, \
+                                zmm22, zmm23, zmm24, \
+                                zmm25, zmm26, \
+                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                                zmm11
+
+        ; Store R^16-R^9 for later use
+        vmovdqa64 [rsp + _r_save + 64*3], zmm19
+        vmovdqa64 [rsp + _r_save + 64*4], zmm20
+        vmovdqa64 [rsp + _r_save + 64*5], zmm21
+
+        ; Broadcast R^16
+        vpbroadcastq zmm22, xmm19
+        vpbroadcastq zmm23, xmm20
+        vpbroadcastq zmm24, xmm21
 
         ; Generate 4*5*R^16
         vpsllq  zmm25, zmm23, 2
@@ -1041,26 +1019,10 @@ section .text
 
         ; First multiply by r^16-r^9
 
-        ; Interleave the powers of R to form 44-bit limbs
-        ;
-        ; zmm22 to have bits 0-43 of all 8 powers of R in 8 qwords
-        ; zmm23 to have bits 87-44 of all 8 powers of R in 8 qwords
-        ; zmm24 to have bits 129-88 of all 8 powers of R in 8 qwords
-        vmovdqa64 zmm0, [rsp + _r_save + 128]
-        vmovdqa64 zmm1, [rsp + _r_save + 128 + 64]
-
-        vpunpckhqdq zmm24, zmm0, zmm1
-        vpunpcklqdq zmm22, zmm0, zmm1
-
-        vpsrlq  zmm23, zmm22, 44
-        vpsllq  zmm25, zmm24, 20
-        vpternlogq zmm23, zmm25, [rel mask_44], 0xA8  ; (A OR B AND C)
-
-        vpandq  zmm22, [rel mask_44]
-        vpsrlq  zmm24, 24
-
-        ; rsp + _rp_save contains the 2 highest bits of the powers of R
-        vporq   zmm24, [rsp + _rp_save + 64]   ; R4
+        ; Read R^16-R^9
+        vmovdqa64 zmm22, [rsp + _r_save + 64*3]
+        vmovdqa64 zmm23, [rsp + _r_save + 64*4]
+        vmovdqa64 zmm24, [rsp + _r_save + 64*5]
 
         ; zmm25 to have bits 87-44 of all 8 powers of R' in 8 qwords
         ; zmm26 to have bits 129-88 of all 8 powers of R' in 8 qwords
@@ -1084,26 +1046,10 @@ section .text
 
         ; Then multiply by r^8-r
 
-        ; Interleave the powers of R to form 44-bit limbs
-        ;
-        ; zmm22 to have bits 0-43 of all 8 powers of R in 8 qwords
-        ; zmm23 to have bits 87-44 of all 8 powers of R in 8 qwords
-        ; zmm24 to have bits 129-88 of all 8 powers of R in 8 qwords
-        vmovdqa64 zmm0, [rsp + _r_save]
-        vmovdqa64 zmm1, [rsp + _r_save + 64]
-
-        vpunpckhqdq zmm24, zmm0, zmm1
-        vpunpcklqdq zmm22, zmm0, zmm1
-
-        vpsrlq  zmm23, zmm22, 44
-        vpsllq  zmm25, zmm24, 20
-        vpternlogq zmm23, zmm25, [rel mask_44], 0xA8  ; (A OR B AND C)
-
-        vpandq  zmm22, [rel mask_44]
-        vpsrlq  zmm24, 24
-
-        ; rsp + _rp_save contains the 2 highest bits of the powers of R
-        vporq   zmm24, [rsp + _rp_save]   ; R4
+        ; Read R^8-R
+        vmovdqa64 zmm22, [rsp + _r_save]
+        vmovdqa64 zmm23, [rsp + _r_save + 64]
+        vmovdqa64 zmm24, [rsp + _r_save + 64*2]
 
         ; zmm25 to have bits 87-44 of all 8 powers of R' in 8 qwords
         ; zmm26 to have bits 129-88 of all 8 powers of R' in 8 qwords
@@ -1402,10 +1348,10 @@ APPEND(%%_shuffle_blocks_, i):
         vpxorq  zmm0, zmm0
         vmovdqa64 [rsp + _r_save], zmm0
         vmovdqa64 [rsp + _r_save + 64], zmm0
-        vmovdqa64 [rsp + _r_save + 128], zmm0
-        vmovdqa64 [rsp + _r_save + 192], zmm0
-        vmovdqa64 [rsp + _rp_save], zmm0
-        vmovdqa64 [rsp + _rp_save + 64], zmm0
+        vmovdqa64 [rsp + _r_save + 64*2], zmm0
+        vmovdqa64 [rsp + _r_save + 64*3], zmm0
+        vmovdqa64 [rsp + _r_save + 64*4], zmm0
+        vmovdqa64 [rsp + _r_save + 64*5], zmm0
 %endif
 
         vzeroupper
