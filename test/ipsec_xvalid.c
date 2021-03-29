@@ -550,6 +550,14 @@ struct str_value_mapping aead_algo_str_map[] = {
                         .key_size = 32
                 }
         },
+        {
+                .name = "snow-v-aead",
+                .values.job_params = {
+                        .cipher_mode = IMB_CIPHER_SNOW_V_AEAD,
+                        .hash_alg = IMB_AUTH_SNOW_V_AEAD,
+                        .key_size = 32
+                }
+        },
 };
 
 /* This struct stores all information about performed test case */
@@ -586,11 +594,12 @@ const uint8_t auth_tag_length_bytes[] = {
                 16, /* IMB_AUTH_AES_GMAC_128 */
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
-                16, /* IMB_AES_CMAC_256 */
+                16, /* IMB_AUTH_AES_CMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305 */
                 16, /* IMB_AUTH_CHACHA20_POLY1305_SGL */
-                4,  /* IMB_ZUC256_EIA3_BITLEN */
+                4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
+                16, /* IMB_AUTH_SNOW_V_AEAD */
 };
 
 /* Minimum, maximum and step values of key sizes */
@@ -616,6 +625,7 @@ const uint8_t key_sizes[][3] = {
                 {32, 32, 1}, /* IMB_CIPHER_CHACHA20_POLY1305 */
                 {32, 32, 1}, /* IMB_CIPHER_CHACHA20_POLY1305_SGL */
                 {32, 32, 1}, /* IMB_CIPHER_SNOW_V */
+                {32, 32, 1}, /* IMB_CIPHER_SNOW_V_AEAD */
 };
 
 uint8_t custom_test = 0;
@@ -980,6 +990,10 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->u.CHACHA20_POLY1305.aad_len_in_bytes = params->aad_size;
                 job->u.CHACHA20_POLY1305.aad = aad;
                 break;
+        case IMB_AUTH_SNOW_V_AEAD:
+                job->u.SNOW_V_AEAD.aad_len_in_bytes = params->aad_size;
+                job->u.SNOW_V_AEAD.aad = aad;
+                break;
         default:
                 printf("Unsupported hash algorithm %u, line %u\n",
                        (unsigned) params->hash_alg, __LINE__);
@@ -1089,6 +1103,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->iv_len_in_bytes = 12;
                 break;
         case IMB_CIPHER_SNOW_V:
+        case IMB_CIPHER_SNOW_V_AEAD:
                 job->enc_keys = k2;
                 job->dec_keys = k2;
                 job->iv_len_in_bytes = 16;
@@ -1169,6 +1184,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_DOCSIS_CRC32:
                 case IMB_AUTH_CHACHA20_POLY1305:
                 case IMB_AUTH_CHACHA20_POLY1305_SGL:
+                case IMB_AUTH_SNOW_V_AEAD:
                         /* No operation needed */
                         break;
                 case IMB_AUTH_AES_GMAC_128:
@@ -1217,6 +1233,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_CIPHER_CHACHA20_POLY1305:
                 case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                 case IMB_CIPHER_SNOW_V:
+                case IMB_CIPHER_SNOW_V_AEAD:
                         memset(k2, pattern_cipher_key, 32);
                         break;
                 case IMB_CIPHER_NULL:
@@ -1354,6 +1371,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_AUTH_DOCSIS_CRC32:
         case IMB_AUTH_CHACHA20_POLY1305:
         case IMB_AUTH_CHACHA20_POLY1305_SGL:
+        case IMB_AUTH_SNOW_V_AEAD:
                 /* No operation needed */
                 break;
         case IMB_AUTH_POLY1305:
@@ -1434,6 +1452,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
         case IMB_CIPHER_SNOW_V:
+        case IMB_CIPHER_SNOW_V_AEAD:
                 /* Use of:
                  *     memcpy(k2, ciph_key, 32);
                  * leaves sensitive data on the stack.
@@ -2288,6 +2307,12 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                              hash_alg != IMB_AUTH_CHACHA20_POLY1305) ||
                             (c_mode != IMB_CIPHER_CHACHA20_POLY1305 &&
                              hash_alg == IMB_AUTH_CHACHA20_POLY1305))
+                                continue;
+
+                        if ((c_mode == IMB_CIPHER_SNOW_V_AEAD &&
+                             hash_alg != IMB_AUTH_SNOW_V_AEAD) ||
+                            (c_mode != IMB_CIPHER_SNOW_V_AEAD &&
+                             hash_alg == IMB_AUTH_SNOW_V_AEAD))
                                 continue;
 
                         /* This test app does not support SGL yet */
