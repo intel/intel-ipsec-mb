@@ -233,6 +233,8 @@ CRC32_REFL_FN:
         ;; continue folding 16B at a time
 
 .16B_reduction_loop:
+        endbranch64
+.16B_reduction_loop_2:
         movdqa          xmm8, xmm7
         pclmulqdq       xmm8, xmm10, 0x1
         pclmulqdq       xmm7, xmm10, 0x10
@@ -243,7 +245,7 @@ CRC32_REFL_FN:
         sub             arg3, 16
         ;; Instead of a cmp instruction, we utilize the flags with the jge instruction.
         ;; Equivalent of check if there is any more 16B in the buffer to be folded.
-        jge             .16B_reduction_loop
+        jge             .16B_reduction_loop_2
 
         ;; Now we have 16+z bytes left to reduce, where 0<= z < 16.
         ;; First, we reduce the data in the xmm7 register

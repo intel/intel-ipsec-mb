@@ -44,6 +44,7 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
+%use smartalign
 
 %ifndef AES_CBC_DEC_192
 %define AES_CBC_DEC_192 aes_cbc_dec_192_sse
@@ -467,10 +468,12 @@ initial_4:
 
 	cmp	LEN, 4*16
 	jz	done
-	jmp	main_loop
+	; fall through to main_loop
 
-	align 16
 main_loop:
+        endbranch64
+	align 16
+main_loop_2:
 	; load cipher text
 	movdqu	XDATA0, [IN + IDX + 0*16]
 	movdqu	XDATA1, [IN + IDX + 1*16]
@@ -579,7 +582,7 @@ main_loop:
 	movdqa	XIV, XSAVED3
 
 	CMP	IDX, LEN
-	jne	main_loop
+	jne	main_loop_2
 
 done:
 

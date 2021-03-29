@@ -497,10 +497,12 @@ initial_4:
 
 	cmp	LEN, 4*16
 	jz	done
-	jmp	main_loop
+	; fall through to main_loop
 
-	align 16
 main_loop:
+        endbranch64
+	align 16
+main_loop_2:
 	; load cipher text
 	movdqu	XDATA0, [IN + IDX + 0*16]
 	movdqu	XDATA1, [IN + IDX + 1*16]
@@ -622,8 +624,8 @@ main_loop:
 
 	movdqa	XIV, XSAVED3
 
-	CMP	IDX, LEN
-	jne	main_loop
+	cmp	IDX, LEN
+	jne	main_loop_2
 
 done:
 

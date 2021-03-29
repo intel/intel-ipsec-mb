@@ -395,10 +395,10 @@ default rel
         mov     %%T1, %%A_IN            ; T1 = AAD
         mov     %%T2, %%A_LEN           ; T2 = aadLen
 
-%%_get_AAD_loop128:
         cmp     %%T2, 128
         jl      %%_exit_AAD_loop128
 
+%%_get_AAD_loop128:
         movdqu          %%XTMP0, [%%T1 + 16*0]
         pshufb          %%XTMP0, [rel SHUF_MASK]
 
@@ -473,7 +473,9 @@ default rel
         je      %%_CALC_AAD_done
 
         add     %%T1, 128
-        jmp     %%_get_AAD_loop128
+
+        cmp     %%T2, 128
+        jnl     %%_get_AAD_loop128
 
 %%_exit_AAD_loop128:
         cmp     %%T2, 16
@@ -509,7 +511,6 @@ default rel
         jl      %%_AAD_reduce
 
 %%_AAD_blocks:
-        endbranch64
         movdqu          %%XTMP0, [%%T1]
         pshufb          %%XTMP0, [rel SHUF_MASK]
 
@@ -533,8 +534,7 @@ default rel
         add     %%T1, 16
         sub     %%T2, 16
         cmp     %%T2, 16
-        jl      %%_AAD_reduce
-        jmp     %%_AAD_blocks
+        jnl     %%_AAD_blocks
 
 %%_AAD_reduce:
         movdqa          %%XTMP4, %%XTMP3

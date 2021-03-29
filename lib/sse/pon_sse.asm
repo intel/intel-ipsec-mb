@@ -735,6 +735,7 @@ section .text
         sub     bytes_to_crc, 16
 
 %%_main_loop:
+        endbranch64
         cmp     bytes_to_crc, 16
         jb      %%_exit_loop
         DO_PON  p_keys, NUM_AES_ROUNDS, xcounter, p_in, p_out, xbip, \

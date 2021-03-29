@@ -949,6 +949,7 @@ section .text
 
     mov r15, 0
 %%start_loop:
+    endbranch64
     cmp r15, 32
     je  %%exit_loop
     ; Shift LFSR 32-times, update state variables
@@ -1362,20 +1363,21 @@ ZUC_CIPHER_4:
         ; Load state pointer in RAX
         mov     rax, pState
 
-loop_cipher64:
-        endbranch64
         cmp     min_length, 64
         jl      exit_loop_cipher64
 
+loop_cipher64:
+        sub     min_length, 4 * 16
 %assign round_off 0
 %rep 4
         CIPHERNx4B_4 4, round_off, buf_idx, 0
 
         add     buf_idx, 16
-        sub     min_length, 16
 %assign round_off (round_off + 4)
 %endrep
-        jmp     loop_cipher64
+        cmp     min_length, 64
+        jnl     loop_cipher64
+
 exit_loop_cipher64:
 
         ; Check if there are more bytes left to encrypt
