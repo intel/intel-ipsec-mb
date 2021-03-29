@@ -1324,11 +1324,8 @@ poly1305_aead_complete_fma_avx512:
 
         ;; clear Poly key
 %ifdef SAFE_DATA
-        xor     rax, rax
-        mov     [arg2], rax
-        mov     [arg2 + 8], rax
-        mov     [arg2 + 16], rax
-        mov     [arg2 + 24], rax
+        vpxorq  ymm0, ymm0
+        vmovdqu64 [arg2], ymm0
 %endif
 
         FUNC_EXIT
