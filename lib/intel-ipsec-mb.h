@@ -503,7 +503,7 @@ typedef struct IMB_JOB {
                 struct _SNOW_V_AEAD_specific_fields {
                         const void *aad;
                         uint64_t aad_len_in_bytes;
-                        void *reserved; /* store hKey and endPad */
+                        void *reserved;
                 } SNOW_V_AEAD;
         } u;
 
