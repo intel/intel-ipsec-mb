@@ -256,8 +256,6 @@ print_tested_arch(const uint64_t features, const IMB_ARCH arch)
                 if (features & IMB_FEATURE_SHANI) {
                         if ((features & IMB_FEATURE_GFNI))
                                 feat = "-SHANI-GFNI";
-                        else
-                            feat = "-SHANI";
                 }
                 break;
         case IMB_ARCH_AVX512:
