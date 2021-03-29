@@ -1330,6 +1330,14 @@ APPEND(%%_shuffle_blocks_, i):
 
 %endmacro
 
+;; =============================================================================
+;; =============================================================================
+;; void poly1305_aead_update_avx512(const void *msg, const uint64_t msg_len,
+;;                                  void *hash, const void *key)
+;; arg1 - Input message
+;; arg2 - Message length
+;; arg3 - Input/output hash
+;; arg4 - Poly1305 key
 align 32
 MKGLOBAL(poly1305_aead_update_avx512,function,internal)
 poly1305_aead_update_avx512:
@@ -1393,6 +1401,13 @@ poly1305_aead_update_avx512:
 .poly1305_update_exit:
         ret
 
+;; =============================================================================
+;; =============================================================================
+;; void poly1305_aead_complete_avx512(const void *hash, const void *key,
+;;                                    void *tag)
+;; arg1 - Input hash
+;; arg2 - Poly1305 key
+;; arg3 - Output tag
 align 32
 MKGLOBAL(poly1305_aead_complete_avx512,function,internal)
 poly1305_aead_complete_avx512:
