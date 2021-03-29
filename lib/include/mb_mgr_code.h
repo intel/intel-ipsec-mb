@@ -952,10 +952,10 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 POLY1305_MAC(job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
-        /**
-         * assume IMB_AUTH_GCM, IMB_AUTH_PON_CRC_BIP, IMB_AUTH_SNOW_V_AEAD
-         * or IMB_AUTH_NULL
-         */
+                /**
+                 * assume IMB_AUTH_GCM, IMB_AUTH_PON_CRC_BIP,
+                 *  IMB_AUTH_SNOW_V_AEAD or IMB_AUTH_NULL
+                 */
         default:
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
