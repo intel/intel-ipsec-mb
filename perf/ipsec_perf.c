@@ -90,6 +90,7 @@ typedef cpuset_t cpu_set_t;
 #define DEFAULT_GCM_AAD_SIZE 12
 #define DEFAULT_CCM_AAD_SIZE 8
 #define DEFAULT_CHACHA_POLY_AAD_SIZE 12
+#define DEFAULT_SNOW_V_AEAD_AAD_SIZE 16
 
 #define ITER_SCALE_SMOKE 2048
 #define ITER_SCALE_SHORT 200000
@@ -139,6 +140,7 @@ enum test_cipher_mode_e {
         TEST_CHACHA20,
         TEST_AEAD_CHACHA20,
         TEST_SNOW_V,
+        TEST_SNOW_V_AEAD,
         TEST_NUM_CIPHER_TESTS
 };
 
@@ -170,6 +172,7 @@ enum test_hash_alg_e {
         TEST_HASH_POLY1305,
         TEST_AEAD_POLY1305,
         TEST_ZUC256_EIA3,
+        TEST_AUTH_SNOW_V_AEAD,
         TEST_NUM_HASH_TESTS
 };
 
@@ -664,6 +667,14 @@ struct str_value_mapping aead_algo_str_map[] = {
                         .aes_key_size = IMB_KEY_256_BYTES
                 }
         },
+        {
+                .name = "snow-v-aead",
+                .values.job_params = {
+                        .cipher_mode = TEST_SNOW_V_AEAD,
+                        .aes_key_size = 32,
+                        .hash_alg = TEST_AUTH_SNOW_V_AEAD
+                }
+        },
 };
 
 struct str_value_mapping cipher_dir_str_map[] = {
@@ -724,6 +735,7 @@ const uint32_t auth_tag_length_bytes[] = {
                 16, /* AEAD CHACHA20-POLY1305 */
                 16, /* AEAD CHACHA20 with SGL support*/
                 4,  /* ZUC-256-EIA3 */
+                16,  /* SNOW-V AEAD */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -758,6 +770,7 @@ uint32_t job_iter = 0;
 uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
 uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
 uint64_t chacha_poly_aad_size = DEFAULT_CHACHA_POLY_AAD_SIZE;
+uint64_t snow_v_aad_size = DEFAULT_SNOW_V_AEAD_AAD_SIZE;
 
 struct custom_job_params custom_job_params = {
         .cipher_mode  = TEST_NULL_CIPHER,
@@ -1281,6 +1294,9 @@ translate_cipher_mode(const enum test_cipher_mode_e test_mode)
         case TEST_SNOW_V:
                 c_mode = IMB_CIPHER_SNOW_V;
                 break;
+        case TEST_SNOW_V_AEAD:
+                c_mode = IMB_CIPHER_SNOW_V_AEAD;
+                break;
         default:
                 break;
         }
@@ -1339,6 +1355,11 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
                         job->dec_keys = ks_ptr;
         } else if (job->cipher_mode == IMB_CIPHER_CHACHA20_POLY1305) {
                 job->u.CHACHA20_POLY1305.aad = job->src;
+        } else if (job->cipher_mode == IMB_CIPHER_SNOW_V_AEAD) {
+                job->u.SNOW_V_AEAD.aad = job->src;
+                job->enc_keys = job->dec_keys =
+                        (const uint32_t *) get_key_pointer(index,
+                                                           p_keys);
         } else {
                 job->enc_keys = job->dec_keys =
                         (const uint32_t *) get_key_pointer(index,
@@ -1555,6 +1576,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.u.GMAC._iv = (uint8_t *) &auth_iv;
                 job_template.u.GMAC.iv_len_in_bytes = 12;
                 break;
+        case TEST_AUTH_SNOW_V_AEAD:
+                job_template.hash_alg = IMB_AUTH_SNOW_V_AEAD;
+                break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */
                 job_template.u.HMAC._hashed_auth_key_xor_ipad =
@@ -1657,6 +1681,13 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.iv_len_in_bytes = 12;
         } else if (job_template.cipher_mode == IMB_CIPHER_SNOW_V)
                 job_template.iv_len_in_bytes = 16;
+        else if (job_template.cipher_mode == IMB_CIPHER_SNOW_V_AEAD &&
+                job_template.hash_alg == IMB_AUTH_SNOW_V_AEAD) {
+                job_template.key_len_in_bytes = 32;
+                job_template.iv_len_in_bytes = 16;
+                job_template.u.SNOW_V_AEAD.aad_len_in_bytes =
+                        params->aad_size;
+        }
 
 #ifndef _WIN32
         if (use_unhalted_cycles)
@@ -1957,6 +1988,9 @@ process_variant(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
                 if (params->cipher_mode == TEST_AEAD_CHACHA20)
                         params->aad_size = chacha_poly_aad_size;
 
+                if (params->cipher_mode == TEST_SNOW_V_AEAD)
+                        params->aad_size = snow_v_aad_size;
+
                 /*
                  * If job size == 0, check AAD size
                  * (only allowed for GCM/CCM)
@@ -2017,7 +2051,7 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "CBCS_1_9", "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES",
                 "DOCDES+4", "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR",
                 "ZUC_EEA3", "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN",
-                "CHACHA20", "CHACHA20_AEAD"
+                "CHACHA20", "CHACHA20_AEAD", "SNOW_V", "SNOW_V_AEAD"
         };
         const char *c_dir_names[2] = {
                 "ENCRYPT", "DECRYPT"
@@ -2027,7 +2061,8 @@ print_times(struct variant_s *variant_list, struct params_s *params,
                 "MD5", "CMAC", "CMAC_BITLEN", "CMAC_256", "NULL_HASH",
                 "CRC32", "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN",
                 "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1", "GMAC-128",
-                "GMAC-192", "GMAC-256", "POLY1305", "POLY1305_AEAD"
+                "GMAC-192", "GMAC-256", "POLY1305", "POLY1305_AEAD",
+                "ZUC256_EIA3", "SNOW_V_AEAD"
         };
         printf("ARCH");
         for (col = 0; col < total_variants; col++)
@@ -2857,6 +2892,7 @@ int main(int argc, char *argv[])
                         }
                         ccm_aad_size = gcm_aad_size;
                         chacha_poly_aad_size = gcm_aad_size;
+                        snow_v_aad_size = gcm_aad_size;
                 } else if (strcmp(argv[i], "--job-iter") == 0) {
                         i = get_next_num_arg((const char * const *)argv, i,
                                              argc, &job_iter, sizeof(job_iter));
