@@ -1130,6 +1130,9 @@ section .text
         vpsllq  zmm25, 2
         vpsllq  zmm26, 2
 
+        cmp     %%LEN, POLY1305_BLOCK_SIZE*32
+        jb      %%_len_256_511
+
         ; Store R^8-R for later use
         vmovdqa64 [rsp + _r_save], zmm19
         vmovdqa64 [rsp + _r_save + 64], zmm20
@@ -1265,8 +1268,11 @@ section .text
 
         and     %%LEN, (POLY1305_BLOCK_SIZE*16 - 1) ; Get remaining lengths (LEN < 256 bytes)
 
-        cmp     %%LEN, 128
-        jb      %%_less_than_127
+%%_less_than_256:
+        endbranch64
+
+        cmp     %%LEN, POLY1305_BLOCK_SIZE*8
+        jb      %%_less_than_128
 
         ; Read next 128 bytes
         ; Load first block of data (128 bytes)
@@ -1332,7 +1338,7 @@ section .text
         vpaddq  xmm14{k1}{z}, xmm11
         vpaddq  xmm15{k1}{z}, xmm12
 
-%%_less_than_127:
+%%_less_than_128:
         cmp     %%LEN, 32 ; If remaining bytes is <= 32, perform last blocks in scalar
         jbe     %%_simd_to_gp
 
@@ -1391,16 +1397,14 @@ section .text
         vpsrlq  zmm4, 24
 
         lea     %%T1, [rel qword_high_bit_mask]
-%ifnidn %%PAD_16,pad_to_16
-        kmovb   k1, [%%T1 + %%T0]
-%else
+%ifidn %%PAD_16,pad_to_16
         mov     %%T3, %%LEN
         mov     %%T2, %%T0
         add     %%T2, 2
         and     %%T3, 0xf
         cmovnz  %%T0, %%T2
-        kmovb   k1, [%%T1 + %%T0]
 %endif
+        kmovb   k1, [%%T1 + %%T0]
         ; Add 2^128 to final qwords of the message (all full blocks and partial block,
         ; if "pad_to_16" is selected)
         vporq   zmm4{k1}, [rel high_bit]
@@ -1437,6 +1441,7 @@ APPEND(%%_shuffle_blocks_, i):
 %endrep
 
 %%_end_shuffle:
+        endbranch64
 
         ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
         ; zmm22-24 contain the 3x44-bit limbs of the powers of R
@@ -1535,6 +1540,81 @@ APPEND(%%_shuffle_blocks_, i):
 
         jmp     %%_final_loop
 
+%%_len_256_511:
+
+        ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
+        ; zmm22-24 contain the 3x44-bit limbs of the powers of R
+        ; zmm25-26 contain the 3x44-bit limbs of the powers of R' (5*4*R)
+        POLY1305_MUL_REDUCE_VEC zmm13, zmm14, zmm15, \
+                                zmm22, zmm23, zmm24, \
+                                zmm25, zmm26, \
+                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                                zmm11
+
+        ; Then multiply by r^8-r
+
+        ; zmm19-zmm21 contains R^8-R, need to move it to zmm22-24,
+        ; as it might be used in other part of the code
+        vmovdqa64 zmm22, zmm19
+        vmovdqa64 zmm23, zmm20
+        vmovdqa64 zmm24, zmm21
+
+        ; zmm25 to have bits 87-44 of all 8 powers of R' in 8 qwords
+        ; zmm26 to have bits 129-88 of all 8 powers of R' in 8 qwords
+        vpsllq  zmm0, zmm23, 2
+        vpaddq  zmm25, zmm23, zmm0 ; R1' (R1*5)
+        vpsllq  zmm1, zmm24, 2
+        vpaddq  zmm26, zmm24, zmm1 ; R2' (R2*5)
+
+        ; 4*5*R^8
+        vpsllq  zmm25, 2
+        vpsllq  zmm26, 2
+
+        vpaddq  zmm13, zmm16
+        vpaddq  zmm14, zmm17
+        vpaddq  zmm15, zmm18
+
+        ; zmm13-zmm15 contain the 8 blocks of message plus the previous accumulator
+        ; zmm22-24 contain the 3x44-bit limbs of the powers of R
+        ; zmm25-26 contain the 3x44-bit limbs of the powers of R' (5*4*R)
+        POLY1305_MUL_REDUCE_VEC zmm13, zmm14, zmm15, \
+                                zmm22, zmm23, zmm24, \
+                                zmm25, zmm26, \
+                                zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, \
+                                zmm11
+
+        ;; Add all blocks (horizontally)
+        vextracti64x4   ymm0, zmm13, 1
+        vextracti64x4   ymm1, zmm14, 1
+        vextracti64x4   ymm2, zmm15, 1
+
+        vpaddq  ymm13, ymm0
+        vpaddq  ymm14, ymm1
+        vpaddq  ymm15, ymm2
+
+        vextracti32x4   xmm10, ymm13, 1
+        vextracti32x4   xmm11, ymm14, 1
+        vextracti32x4   xmm12, ymm15, 1
+
+        vpaddq  xmm13, xmm10
+        vpaddq  xmm14, xmm11
+        vpaddq  xmm15, xmm12
+
+        vpsrldq xmm10, xmm13, 8
+        vpsrldq xmm11, xmm14, 8
+        vpsrldq xmm12, xmm15, 8
+
+        ; Finish folding and clear second qword
+        mov     %%T0, 0xfd
+        kmovq   k1, %%T0
+        vpaddq  xmm13{k1}{z}, xmm10
+        vpaddq  xmm14{k1}{z}, xmm11
+        vpaddq  xmm15{k1}{z}, xmm12
+
+        add     %%MSG, POLY1305_BLOCK_SIZE*16
+        sub     %%LEN, POLY1305_BLOCK_SIZE*16
+
+        jmp     %%_less_than_256
 %%_poly1305_blocks_partial:
 
         or      %%LEN, %%LEN
