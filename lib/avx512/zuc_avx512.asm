@@ -80,17 +80,44 @@ shuf_mask_iv:
 dd      0xFFFFFF00, 0xFFFFFF01, 0xFFFFFF02, 0xFFFFFF03, 0xFFFFFF04, 0xFFFFFF05, 0xFFFFFF06, 0xFFFFFF07,
 dd      0xFFFFFF08, 0xFFFFFF09, 0xFFFFFF0A, 0xFFFFFF0B, 0xFFFFFF0C, 0xFFFFFF0D, 0xFFFFFF0E, 0xFFFFFF0F,
 
-align 16
-shuf_mask_iv_17_19:
-db      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0x02, 0xFF
+align 64
+shuf_mask_key256_first_high:
+dd      0x00FFFFFF, 0x01FFFFFF, 0x02FFFFFF, 0x03FFFFFF, 0x04FFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+dd      0x08FFFFFF, 0x09FFFFFF, 0xFFFFFFFF, 0x0BFFFFFF, 0x0CFFFFFF, 0x0DFFFFFF, 0x0EFFFFFF, 0x0FFFFFFF,
 
-align 16
-clear_iv_mask:
-db      0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x3F, 0x00
+align 64
+shuf_mask_key256_first_low:
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF05FF, 0xFFFF06FF, 0xFFFF07FF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF0AFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
 
-align 16
-shuf_mask_iv_20_23:
-db      0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0x02, 0xFF, 0xFF, 0xFF, 0x03, 0xFF
+align 64
+shuf_mask_key256_second:
+dd      0xFFFF0500, 0xFFFF0601, 0xFFFF0702, 0xFFFF0803, 0xFFFF0904, 0xFFFFFF0A, 0xFFFFFF0B, 0xFFFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFF0C, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF0FFFFF, 0xFF0F0E0D,
+
+align 64
+shuf_mask_iv256_first_high:
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00FFFFFF, 0x01FFFFFF, 0x0AFFFFFF,
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0x05FFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+
+align 64
+shuf_mask_iv256_first_low:
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFF02,
+dd      0xFFFF030B, 0xFFFF0C04, 0xFFFFFFFF, 0xFFFF060D, 0xFFFF070E, 0xFFFF0F08, 0xFFFFFF09, 0xFFFFFFFF,
+
+align 64
+shuf_mask_iv256_second:
+dd      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF01FFFF, 0xFF02FFFF, 0xFF03FFFF,
+dd      0xFF04FFFF, 0xFF05FFFF, 0xFF06FFFF, 0xFF07FFFF, 0xFF08FFFF, 0xFFFFFFFF, 0xFFFF00FF, 0xFFFFFFFF,
+
+align 64
+key_mask_low_4:
+dq      0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff
+dq      0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff, 0xff0fffffffff0fff
+
+align 64
+iv_mask_low_6:
+dq      0x3f3f3f3f3f3f3fff, 0x000000000000003f
 
 align 64
 mask31:
@@ -709,142 +736,44 @@ align 64
 ;
 ; Initialize LFSR registers for a single lane, for ZUC-256
 ;
-%macro INIT_LFSR_256 7
-%define %%KEY       %1 ;; [in] Key pointer
-%define %%IV        %2 ;; [in] IV pointer
-%define %%LFSR      %3 ;; [out] ZMM register to contain initialized LFSR regs
-%define %%XTMP      %4 ;; [clobbered] XMM temporary register
-%define %%XTMP2     %5 ;; [clobbered] XMM temporary register
-%define %%TMP       %6 ;; [clobbered] GP temporary register
-%define %%CONSTANTS %7 ;; [in] Address to constants
+%macro INIT_LFSR_256 11
+%define %%KEY         %1 ;; [in] Key pointer
+%define %%IV          %2 ;; [in] IV pointer
+%define %%LFSR        %3 ;; [out] ZMM register to contain initialized LFSR regs
+%define %%ZTMP1       %4 ;; [clobbered] ZMM temporary register
+%define %%ZTMP2       %5 ;; [clobbered] ZMM temporary register
+%define %%ZTMP3       %6 ;; [clobbered] ZMM temporary register
+%define %%ZTMP4       %7 ;; [clobbered] ZMM temporary register
+%define %%ZTMP5       %8 ;; [clobbered] ZMM temporary register
+%define %%CONSTANTS   %9 ;; [in] Address to constants
+%define %%SHIFT_MASK %10 ;; [in] Mask register to shift K_31
+%define %%IV_MASK    %11 ;; [in] Mask register to read IV (last 10 bytes)
 
-    ; s0 - s3
-    vpxorq          %%XTMP, %%XTMP
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY], 3      ; s0
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 1], 7  ; s1
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 2], 11  ; s2
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 3], 15 ; s3
+        vmovdqu8        XWORD(%%ZTMP4){%%IV_MASK}, [%%IV + 16]
+        ; Zero out first 2 bits of IV bytes 17-24
+        vpandq          XWORD(%%ZTMP4), [rel iv_mask_low_6]
+        vshufi32x4      %%ZTMP4, %%ZTMP4, 0
+        vbroadcasti64x2 %%ZTMP1, [%%KEY]
+        vbroadcasti64x2 %%ZTMP2, [%%KEY + 16]
+        vbroadcasti64x2 %%ZTMP3, [%%IV]
 
-    vpsrld          %%XTMP, 1
+        vpshufb         %%ZTMP5, %%ZTMP1, [rel shuf_mask_key256_first_high]
+        vpshufb         %%LFSR, %%ZTMP3, [rel shuf_mask_iv256_first_high]
+        vporq           %%LFSR, %%ZTMP5
+        vpsrld          %%LFSR, 1
 
-    vporq           %%XTMP, [%%CONSTANTS] ; s0 - s3
+        vpshufb         %%ZTMP5, %%ZTMP2, [rel shuf_mask_key256_second]
+        vpsrld          %%ZTMP5{%%SHIFT_MASK}, 4
+        vpandq          %%ZTMP5, [rel key_mask_low_4]
 
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 21], 1 ; s0
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 16], 0 ; s0
+        vpshufb         %%ZTMP1, [rel shuf_mask_key256_first_low]
+        vpshufb         %%ZTMP3, [rel shuf_mask_iv256_first_low]
+        vpshufb         %%ZTMP4, [rel shuf_mask_iv256_second]
 
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 22], 5 ; s1
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 17], 4 ; s1
+        vpternlogq      %%LFSR, %%ZTMP5, %%ZTMP1, 0xFE
+        vpternlogq      %%LFSR, %%ZTMP3, %%ZTMP4, 0xFE
 
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 23], 9 ; s2
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 18], 8 ; s2
-
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 24], 13 ; s3
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 19], 12 ; s3
-    vinserti32x4    %%LFSR, %%XTMP, 0
-
-    ; s4 - s7
-    vpxorq          %%XTMP, %%XTMP
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 4], 3      ; s4
-    vpinsrb         %%XTMP, %%XTMP, [%%IV], 7  ; s5
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 1], 11  ; s6
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 10], 15 ; s7
-
-    vpsrld          %%XTMP, 1
-
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 25], 1 ; s4
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 20], 0 ; s4
-
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 5], 5 ; s5
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 26], 4 ; s5
-
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 6], 9 ; s6
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 27], 8 ; s6
-
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 7], 13 ; s7
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 2], 12 ; s7
-
-    vporq           %%XTMP, [%%CONSTANTS + 16] ; s4 - s7
-
-    vmovd           %%XTMP2, [%%IV + 17]
-    vpshufb         %%XTMP2, [rel shuf_mask_iv_17_19]
-    vpandq          %%XTMP2, [rel clear_iv_mask]
-
-    vporq           %%XTMP, %%XTMP2
-
-    vinserti32x4    %%LFSR, %%XTMP, 1
-
-    ; s8 - s11
-    vpxorq          %%XTMP, %%XTMP
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 8], 3   ; s8
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 9], 7   ; s9
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 5], 11   ; s10
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 11], 15 ; s11
-
-    vpsrld          %%XTMP, 1
-
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 3], 1 ; s8
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 11], 0 ; s8
-
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 12], 5 ; s9
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 4], 4 ; s9
-
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 10], 9 ; s10
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 28], 8 ; s10
-
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 6], 13 ; s11
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 13], 12 ; s11
-
-    vporq           %%XTMP, [%%CONSTANTS + 32] ; s8 - s11
-
-    vmovd           %%XTMP2, [%%IV + 20]
-    vpshufb         %%XTMP2, [rel shuf_mask_iv_20_23]
-    vpandq          %%XTMP2, [rel clear_iv_mask]
-
-    vporq           %%XTMP, %%XTMP2
-
-    vinserti32x4    %%LFSR, %%XTMP, 2
-
-    ; s12 - s15
-    vpxorq          %%XTMP, %%XTMP
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 12], 3   ; s12
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 13], 7   ; s13
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 14], 11  ; s14
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 15], 15  ; s15
-
-    vpsrld          %%XTMP, 1
-
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 7], 1 ; s12
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 14], 0 ; s12
-
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 15], 5 ; s13
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 8], 4 ; s13
-
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 16], 9 ; s14
-    vpinsrb         %%XTMP, %%XTMP, [%%IV + 9], 8 ; s14
-
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 30], 13 ; s15
-    vpinsrb         %%XTMP, %%XTMP, [%%KEY + 29], 12 ; s15
-
-    vporq           %%XTMP, [%%CONSTANTS + 48] ; s12 - s15
-
-    movzx           DWORD(%%TMP), byte [%%IV + 24]
-    and             DWORD(%%TMP), 0x0000003f
-    shl             DWORD(%%TMP), 16
-    vmovd           %%XTMP2, DWORD(%%TMP)
-
-    movzx           DWORD(%%TMP), byte [%%KEY + 31]
-    shl             DWORD(%%TMP), 12
-    and             DWORD(%%TMP), 0x000f0000 ; high nibble of K_31
-    vpinsrd         %%XTMP2, DWORD(%%TMP), 2
-
-    movzx           DWORD(%%TMP), byte [%%KEY + 31]
-    shl             DWORD(%%TMP), 16
-    and             DWORD(%%TMP), 0x000f0000 ; low nibble of K_31
-    vpinsrd         %%XTMP2, DWORD(%%TMP), 3
-
-    vporq           %%XTMP, %%XTMP2
-
-    vinserti32x4    %%LFSR, %%XTMP, 3
+        vporq           %%LFSR, [%%CONSTANTS]
 %endmacro
 
 %macro INIT_16_AVX512 2
@@ -892,6 +821,10 @@ align 64
     dec    DWORD(tag_sz)
     shl    DWORD(tag_sz), 6
     add    r13, tag_sz
+    mov    r11, 0x4000 ; Mask to shift 4 bits only in the 15th dword
+    kmovq  k1, r11
+    mov    r11, 0x3ff ; Mask to read 10 bytes of IV
+    kmovq  k3, r11
 %endif
 
     ; Set LFSR registers for Packet 1
@@ -901,7 +834,7 @@ align 64
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, zmm0, zmm1
 %else
-    INIT_LFSR_256 r9, r10, zmm0, xmm3, xmm5, r11, r13
+    INIT_LFSR_256 r9, r10, zmm0, zmm3, zmm5, zmm7, zmm9, zmm11, r13, k1, k3
 %endif
     ; Set LFSR registers for Packets 2-15
 %assign idx 1
@@ -913,7 +846,7 @@ align 64
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, APPEND(zmm, reg_lfsr), APPEND(zmm, reg_tmp)
 %else
-    INIT_LFSR_256 r9, r10, APPEND(zmm, reg_lfsr), xmm3, xmm5, r11, r13
+    INIT_LFSR_256 r9, r10, APPEND(zmm, reg_lfsr), zmm3, zmm5, zmm7, zmm9, zmm11, r13, k1, k3
 %endif
 %assign idx (idx + 1)
 %assign reg_lfsr (reg_lfsr + 2)
@@ -926,7 +859,7 @@ align 64
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, zmm30, zmm31
 %else
-    INIT_LFSR_256 r9, r10, zmm30, xmm3, xmm5, r11, r13
+    INIT_LFSR_256 r9, r10, zmm30, zmm3, zmm5, zmm7, zmm9, zmm11, r13, k1, k3
 %endif
     ; Store LFSR registers in memory (reordering first, so all S0 regs
     ; are together, then all S1 regs... until S15)
