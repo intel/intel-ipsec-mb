@@ -197,7 +197,6 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
                 IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
-        const uint64_t detect_aesni = IMB_FEATURE_AESNI;
 
         IMB_MGR *p_mgr = NULL;
         IMB_ARCH arch_id;
@@ -227,9 +226,6 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
 
         if ((p_mgr->features & detect_sse) != detect_sse)
                 arch_support[IMB_ARCH_SSE] = 0;
-
-        if ((p_mgr->features & detect_aesni) != detect_aesni)
-                arch_support[IMB_ARCH_NOAESNI] = 0;
 
         free_mb_mgr(p_mgr);
 
