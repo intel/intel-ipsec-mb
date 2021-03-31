@@ -1692,7 +1692,11 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         while ((job = IMB_FLUSH_JOB(mb_mgr))) {
 #ifdef DEBUG
                 if (job->status != IMB_STATUS_COMPLETED) {
-                        fprintf(stderr, "failed job, status:%d\n", job->status);
+                        const int errc = imb_get_errno(mb_mgr);
+
+                        fprintf(stderr,
+                                "failed job, status:%d, error code:%d, %s\n",
+                                job->status, errc, imb_get_strerror(errc));
                         return 1;
                 }
 #endif
