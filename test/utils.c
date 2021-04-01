@@ -197,6 +197,7 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
                 IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        const uint64_t detect_noaesni = IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV;
 
         IMB_MGR *p_mgr = NULL;
         IMB_ARCH arch_id;
@@ -227,7 +228,19 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
         if ((p_mgr->features & detect_sse) != detect_sse)
                 arch_support[IMB_ARCH_SSE] = 0;
 
+        if ((p_mgr->features & detect_noaesni) != detect_noaesni)
+                arch_support[IMB_ARCH_NOAESNI] = 0;
+
         free_mb_mgr(p_mgr);
+
+        if (arch_support[IMB_ARCH_NOAESNI] == 0 &&
+            arch_support[IMB_ARCH_SSE] == 0 &&
+            arch_support[IMB_ARCH_AVX] == 0 &&
+            arch_support[IMB_ARCH_AVX2] == 0 &&
+            arch_support[IMB_ARCH_AVX512] == 0) {
+                fprintf(stderr, "No available architecture detected!\n");
+                return -1;
+        }
 
         return 0;
 }
