@@ -41,6 +41,7 @@
 #define strdup _strdup
 #define __forceinline static __forceinline
 #define __func__ __FUNCTION__
+#define strcasecmp _stricmp
 #else
 #include <stdlib.h>
 #include <x86intrin.h>
@@ -2470,7 +2471,7 @@ check_string_arg(const char *param, const char *arg,
         }
 
         for (i = 0; i < num_avail_opts; i++)
-                if (strcmp(arg, map[i].name) == 0)
+                if (strcasecmp(arg, map[i].name) == 0)
                         return &(map[i].values);
 
         /* Argument is not listed in the available options */
