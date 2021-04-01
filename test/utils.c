@@ -145,12 +145,15 @@ hexdump(FILE *fp,
  * @param arch_support table of supported architectures
  * @param flags MB manager flags to be passed to alloc_mb_mgr()
  *
- * @return 1 if arg was recognised, 0 otherwise
+ * @return Operation status
+ * @retval 1 if \a arg was recognised
+ * @retval 0 \a arg wasn't recognised
+ * @retval -1 argument error
  */
 int
 update_flags_and_archs(const char *arg,
-                        uint8_t arch_support[IMB_ARCH_NUM],
-                        uint64_t *flags)
+                       uint8_t arch_support[IMB_ARCH_NUM],
+                       uint64_t *flags)
 {
         int match = 1;
 
@@ -185,8 +188,9 @@ update_flags_and_archs(const char *arg,
  *
  * @param arch_support table of supported architectures
  *
- * @return  0 - architectures identified correctly
- *         -1 - bad input or issues with alloc_mb_mgr
+ * @return  Operation status
+ * @retval 0 architectures identified correctly
+ * @retval -1 bad input or issues with alloc_mb_mgr()
  */
 int
 detect_arch(uint8_t arch_support[IMB_ARCH_NUM])

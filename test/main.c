@@ -149,8 +149,8 @@ main(int argc, char **argv)
 			usage(argv[0]);
 			return EXIT_SUCCESS;
 		} else if (update_flags_and_archs(argv[i],
-                                                   arch_support,
-                                                   &flags))
+                                                  arch_support,
+                                                  &flags))
 			continue;
 		else if (strcmp(argv[i], "--auto-detect") == 0)
                         (void) auto_detect; /* legacy option - to be removed */
