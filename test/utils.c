@@ -35,11 +35,6 @@
 #include "utils.h"
 #include <intel-ipsec-mb.h>
 
-static uint8_t hex_buffer[16 * 1024];
-static const char *arch_str_tab[IMB_ARCH_NUM] = {
-        "NONE", "NO-AESNI", "SSE", "AVX", "AVX2", "AVX512"
-};
-
 /**
  * @brief Simplistic memory copy (intentionally not using libc)
  *
@@ -78,6 +73,7 @@ hexdump_ex(FILE *fp,
            size_t len,
            const void *start_ptr)
 {
+        static uint8_t hex_buffer[16 * 1024];
         size_t ofs = 0;
         const unsigned char *data = hex_buffer;
         const char *start = (const char *) start_ptr;
@@ -245,6 +241,9 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
 void
 print_tested_arch(const uint64_t features, const IMB_ARCH arch)
 {
+        static const char *arch_str_tab[IMB_ARCH_NUM] = {
+                "NONE", "NO-AESNI", "SSE", "AVX", "AVX2", "AVX512"
+        };
         const char *feat = "";
 
         switch (arch) {
