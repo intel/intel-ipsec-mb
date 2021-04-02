@@ -230,7 +230,7 @@ extern des3_x16_cbc_dec_avx512
 %endif                          ; DEC
         pop            MIN_IDX
 %endif                          ; DOCSIS
-        ;; fall trough
+        ;; fall through
 %%_des_submit_end:
         endbranch64
         ;; return a job
