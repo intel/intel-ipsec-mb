@@ -552,7 +552,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
-                .name = "snow-v-aead",
+                .name = "SNOW-V-AEAD",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_SNOW_V_AEAD,
                         .hash_alg = IMB_AUTH_SNOW_V_AEAD,
