@@ -1,5 +1,24 @@
 # Intel(R) Multi-Buffer Crypto for IPsec Library
 
+The library provides software crypto acceleration primarily targeting packet processing
+applications. It can be used for application such as: IPsec, TLS, Wireless (RAN), Cable or MPEG DRM.
+
+The library is used as software crypto provider in [DPDK](https://www.dpdk.org/),
+[Intel(R) QAT Engine](https://github.com/intel/QAT_Engine) and [FD.io](https://fd.io/).
+
+Using crypto interfaces from the above frameworks gives freedom to change providers
+without subsequent application modifications. The library can also be used directly
+through its native API.
+
+Key differentiating features:
+
+- operation chaining (encryption and authentication)
+- advanced cryptographic pipelining
+  - job manager with scheduling and dispatching functions
+  - API hides underlying implementation details from an application
+- multi-buffer and function stitching innovations
+- low level implementations using latest instruction extensions
+
 Contents
 ========
 1. Overview
@@ -28,41 +47,42 @@ Intel White Paper.
 
 Table 1. List of supported cipher algorithms and their implementations.
 ```
-+---------------------------------------------------------------------+
-|               |                   Implementation                    |
-| Encryption    +-----------------------------------------------------|
-|               | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(5)|
-|---------------+--------+--------+--------+--------+--------+--------|
-| AES128-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
-| AES192-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
-| AES256-GCM    | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
-| AES128-CCM    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| AES256-CCM    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| AES128-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
-| AES192-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
-| AES256-CBC    | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
-| AES128-CTR    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| AES192-CTR    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| AES256-CTR    | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| AES128-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
-| AES192-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
-| AES256-ECB    | N      | Y  by4 | Y  by4 | N      | N      | N      |
-| NULL          | Y      | N      | N      | N      | N      | N      |
-| AES128-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
-| AES256-DOCSIS | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
-| DES-DOCSIS    | Y      | N      | N      | N      | Y  x16 | N      |
-| 3DES          | Y      | N      | N      | N      | Y  x16 | N      |
-| DES           | Y      | N      | N      | N      | Y  x16 | N      |
-| KASUMI-F8     | Y      | N      | N      | N      | N      | N      |
-| ZUC-EEA3      | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
-| ZUC-EEA3-256  | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
-| SNOW3G-UEA2   | N      | Y      | Y      | Y      | N      | N      |
-| AES128-CBCS(9)| N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
-| Chacha20      | N      | Y      | Y      | Y      | Y      | N      |
-| Chacha20 AEAD | N      | Y      | Y      | Y      | Y      | N      |
-| SNOW-V        | N      | Y      | N      | N      | N      | N      |
-| SNOW-V AEAD   | N      | Y      | N      | N      | N      | N      |
-+---------------------------------------------------------------------+
++----------------------------------------------------------------------+
+|                |                   Implementation                    |
+| Encryption     +-----------------------------------------------------|
+|                | x86_64 | SSE    | AVX    | AVX2   | AVX512 | VAES(5)|
+|----------------+--------+--------+--------+--------+--------+--------|
+| AES128-GCM     | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| AES192-GCM     | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| AES256-GCM     | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| AES128-CCM     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES256-CCM     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES128-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
+| AES192-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
+| AES256-CBC     | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
+| AES128-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES192-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES256-CTR     | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| AES128-ECB     | N      | Y  by4 | Y  by4 | N      | N      | N      |
+| AES192-ECB     | N      | Y  by4 | Y  by4 | N      | N      | N      |
+| AES256-ECB     | N      | Y  by4 | Y  by4 | N      | N      | N      |
+| NULL           | Y      | N      | N      | N      | N      | N      |
+| AES128-DOCSIS  | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
+| AES256-DOCSIS  | N      | Y(2)   | Y(4)   | N      | Y(7)   | Y(8)   |
+| DES-DOCSIS     | Y      | N      | N      | N      | Y  x16 | N      |
+| 3DES           | Y      | N      | N      | N      | Y  x16 | N      |
+| DES            | Y      | N      | N      | N      | Y  x16 | N      |
+| KASUMI-F8      | Y      | N      | N      | N      | N      | N      |
+| ZUC-EEA3       | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
+| ZUC-EEA3-256   | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
+| SNOW3G-UEA2    | N      | Y      | Y      | Y      | N      | N      |
+| AES128-CBCS(9) | N      | Y(1)   | Y(3)   | N      | N      | Y(6)   |
+| Chacha20       | N      | Y      | Y      | Y      | Y      | N      |
+| Chacha20 AEAD  | N      | Y      | Y      | Y      | Y      | N      |
+| SNOW-V         | N      | Y      | N      | N      | N      | N      |
+| SNOW-V AEAD    | N      | Y      | N      | N      | N      | N      |
+| PON-AES128-CTR | N      | Y  by8 | Y  by8 | N      | N      | N      |
++----------------------------------------------------------------------+
 ```
 Notes:  
 (1,2) - By default, decryption is by4 and encryption is x4.  
@@ -108,6 +128,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | AES256-CMAC-96    | Y      | Y(5)x4 | Y   x8 | N      | N      | Y x16  |
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
 | ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
+| ZUC-EIA3-256(6)   | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
 | SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | N      |
 | HEC               | N      | Y      | Y      | N      | N      | N      |
@@ -115,14 +136,28 @@ Table 2. List of supported integrity algorithms and their implementations.
 | POLY1305 AEAD     | Y      | N      | N      | N      | Y      | Y      |
 | SNOW-V AEAD       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | GHASH             | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
+| CRC(7)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
+| PON-CRC-BIP(8)    | N      | Y      | Y      | N      | N      | N      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  
 (1) - MD5 over one block implemented in C  
 (2) - Implementation using SHANI extensions is x2  
-(3) - AVX512 plus VAES, VPCLMULQDQ, GFNI and IFMA extensions
-(4) - used only with AES128-DOCSIS cipher  
+(3) - AVX512 plus VAES, VPCLMULQDQ, GFNI and IFMA extensions  
+(4) - used only with AES256-DOCSIS and AES128-DOCSIS ciphers  
 (5) - x8 on selected CPU's supporting GFNI  
+(6) - 4 byte tag size is supported only  
+(7) - Supported CRC types:
+
+ - CRC32: Ethernet FCS, SCTP, WIMAX OFDMA  
+ - CRC24: LTE A, LTE B  
+ - CRC16: X25, FP data  
+ - CRC11: FP header  
+ - CRC10: IUUP data  
+ - CRC8: WIMAX OFDMA HCS  
+ - CRC7: FP header  
+ - CRC6: IUUP header  
+(8) - used only with PON-AES128-CTR cipher  
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  
@@ -141,28 +176,38 @@ Table 3. Encryption and integrity algorithm combinations
 |---------------+-----------------------------------------------------|
 | AES128-CCM    | AES128-CCM                                          |
 |---------------+-----------------------------------------------------|
+| AES256-CCM    | AES256-CCM                                          |
+|---------------+-----------------------------------------------------|
 | AES128-CBC,   | AES-XCBC-96,                                        |
 | AES192-CBC,   | HMAC-SHA1-96, HMAC-SHA2-224_112, HMAC-SHA2-256_128, |
 | AES256-CBC,   | HMAC-SHA2-384_192, HMAC-SHA2-512_256,               |
 | AES128-CTR,   | AES128-CMAC-96,                                     |
 | AES192-CTR,   | NULL,                                               |
 | AES256-CTR,   | KASUMI-F9,                                          |
-| AES128-ECB,   | ZUC-EIA3,                                           |
+| AES128-ECB,   | ZUC-EIA3, ZUC-EIA3-256,                             |
 | AES192-ECB,   | SNOW3G-UIA3,                                        |
-| AES256-ECB,   | POLY1305                                            |
-| NULL,         |                                                     |
+| AES256-ECB,   | POLY1305,                                           |
+| NULL,         | AES128-GMAC, AES192-GMAC, AES256-GMAC, GHASH        |
 | AES128-DOCSIS,|                                                     |
+| AES256-DOCSIS,|                                                     |
 | DES-DOCSIS,   |                                                     |
 | 3DES,         |                                                     |
 | DES,          |                                                     |
 | Chacha20,     |                                                     |
 | KASUMI-F8,    |                                                     |
 | ZUC-EEA3,     |                                                     |
+| ZUC-EEA3-256, |                                                     |
 | SNOW3G-UEA3   |                                                     |
+| SNOW-V        |                                                     |
 |---------------+-----------------------------------------------------|
-| AES128-DOCSIS | DOCSIS-CRC32                                        |
+| AES128-DOCSIS,| DOCSIS-CRC32                                        |
+| AES256-DOCSIS |                                                     |
+|---------------+-----------------------------------------------------|
+| PON-AES128-CTR| PON-CRC-BIP                                         |
 |---------------+-----------------------------------------------------|
 | CHACHA20 AEAD | POLY1305 AEAD                                       |
++---------------+-----------------------------------------------------+
+| SNOW-V AEAD   | SNOW-V AEAD (GHASH)                                 |
 +---------------+-----------------------------------------------------+
 ```
 
