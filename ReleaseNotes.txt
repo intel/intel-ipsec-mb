@@ -1,23 +1,49 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v1.0 April 2021
 ========================================================================
 
 General
+- Top level `lib` directory tidy up
+  - build scripts and header file left at the top level
+  - `lib/x86_64` directory created
+  - files requiring compilation moved from `lib/include`
+- Symbols not stripped from static library at installation
+- API name changes and unification
+  - mapping provided for backwards compatibility
+- NASM version check in the build script
+- CET enabling in the build scripts
 
 Library
+- CET enabling (endbranch opcodes added)
+- ZUC-EIA3-256 support for SSE, AVX, AVX2 and AVX512 (VAES)
+  - 4 byte tag length only
+- Chacha20 optimizations for SSE, AVX and AVX2
 - ZUC-EEA3-256 support for SSE, AVX, AVX2 and AVX512 (VAES)
 - SNOW-V and SNOW-V-AEAD support for SSE
-- Poly1305 AVX512 and AVX512-IFMA implementations added.
+- Poly1305 AVX512 and AVX512-IFMA implementations added
+- Chacha20-Poly1305 AEAD implementations extended to AVX512 and AVX512-IFMA
+- CBCS AVX512 optimizations
+- AVX/SSE transition fixes
+- Added SGL support for AEAD Chacha20-Poly1305
+- Poly1305 minor optimization in the scalar code
+- GHASH API change
+- IFMA CPU feature detection
 
 Test Applications
-- ZUC-EEA3-256 tests added to test and xvalidation app
-- SNOW-V and SNOW-V-AEAD tests added to test application
+- ZUC-EEA3-256 tests added to test and xvalidation applications
+- SNOW-V and SNOW-V-AEAD tests added to test and xvalidation applications
+- IMIX support added to the xvalidation application
+- AEAD Chacha20-Poly1305 tests added
 
 Performance Application
 - ZUC-EEA3-256 support added
-
+- SNOW-V and SNOW-V-AEAD support added
+- AEAD Chacha20-Poly1305 support added
+- Created `ipsec_perf_tool.py` to run multiple `ipsec_perf`
+  instances at the same time
+- DOCSIS cipher combined with CRC32 treated as AEAD algorithm
 
 v0.55 October 2020
 ========================================================================
