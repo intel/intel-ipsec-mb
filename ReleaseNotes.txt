@@ -30,6 +30,7 @@ Library
 - Poly1305 minor optimization in the scalar code
 - GHASH API change
 - IFMA CPU feature detection
+- SGL support added for AES-GCM through job API
 
 Test Applications
 - ZUC-EEA3-256 tests added to test and xvalidation applications

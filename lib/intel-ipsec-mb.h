@@ -325,6 +325,7 @@ typedef enum {
         IMB_CIPHER_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support*/
         IMB_CIPHER_SNOW_V,
         IMB_CIPHER_SNOW_V_AEAD,
+        IMB_CIPHER_GCM_SGL,
         IMB_CIPHER_NUM
 } IMB_CIPHER_MODE;
 
@@ -366,6 +367,7 @@ typedef enum {
         IMB_AUTH_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support*/
         IMB_AUTH_ZUC256_EIA3_BITLEN,    /* 256-EIA3/NIA3 (3GPP) */
         IMB_AUTH_SNOW_V_AEAD,
+        IMB_AUTH_GCM_SGL,
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 
@@ -470,6 +472,8 @@ typedef struct IMB_JOB {
                         /* Additional Authentication Data (AAD) */
                         const void *aad;
                         uint64_t aad_len_in_bytes;    /* Length of AAD */
+                        /* AES-GCM context (for SGL only) */
+                        struct gcm_context_data *ctx;
                 } GCM;
                 struct _ZUC_EIA3_specific_fields {
                         /* 16-byte aligned pointers */
