@@ -382,9 +382,7 @@ SUBMIT_JOB_DOCSIS_SEC_CRC_DEC(MB_MGR_DOCSIS_AES_OOO *state, IMB_JOB *job,
 #define AES_GCM_ENC_IV_256_VAES aes_gcm_enc_var_iv_256_vaes_avx512
 
 #define SUBMIT_JOB_AES_GCM_DEC submit_job_aes_gcm_dec_avx512
-#define FLUSH_JOB_AES_GCM_DEC  flush_job_aes_gcm_avx512
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_avx512
-#define FLUSH_JOB_AES_GCM_ENC  flush_job_aes_gcm_avx512
 
 /* ====================================================================== */
 
@@ -644,14 +642,6 @@ vaes_submit_gcm_enc_avx512(IMB_MGR *state, IMB_JOB *job)
 
         job->status = IMB_STATUS_COMPLETED;
         return job;
-}
-
-static IMB_JOB *
-flush_job_aes_gcm_avx512(IMB_MGR *state, IMB_JOB *job)
-{
-        (void) state;
-        (void) job;
-        return NULL;
 }
 
 static IMB_JOB *(*submit_job_aes_gcm_enc_avx512)

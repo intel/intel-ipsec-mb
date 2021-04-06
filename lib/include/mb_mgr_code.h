@@ -604,8 +604,6 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 } else  { /* assume 32 */
                         return FLUSH_JOB_AES256_ENC(aes256_ooo);
                 }
-        } else if (IMB_CIPHER_GCM == job->cipher_mode) {
-                return FLUSH_JOB_AES_GCM_ENC(state, job);
         } else if (IMB_CIPHER_DOCSIS_SEC_BPI == job->cipher_mode) {
                 return flush_docsis_enc_job(state, job);
 #ifdef FLUSH_JOB_DES_CBC_ENC
@@ -634,12 +632,12 @@ FLUSH_JOB_AES_ENC(IMB_MGR *state, IMB_JOB *job)
                 } else { /* assume 32 */
                         return FLUSH_JOB_ZUC256_EEA3(zuc256_eea3_ooo);
                 }
-        /**
-         * assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
-         * IMB_CIPHER_CCM or IMB_CIPHER_NULL
-         */
         } else if (IMB_CIPHER_CBCS_1_9 == job->cipher_mode) {
                 return FLUSH_JOB_AES128_CBCS_1_9_ENC(aes128_cbcs_ooo);
+        /**
+         * assume IMB_CIPHER_CNTR/CNTR_BITLEN, IMB_CIPHER_ECB,
+         * IMB_CIPHER_CCM, IMB_CIPHER_NULL or IMB_CIPHER_GCM
+         */
         } else {
                 return NULL;
         }
@@ -751,8 +749,6 @@ FLUSH_JOB_AES_DEC(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
 
-        if (IMB_CIPHER_GCM == job->cipher_mode)
-                return FLUSH_JOB_AES_GCM_DEC(state, job);
 #ifdef FLUSH_JOB_DES_CBC_DEC
         MB_MGR_DES_OOO *des_dec_ooo = state->des_dec_ooo;
 

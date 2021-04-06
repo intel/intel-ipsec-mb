@@ -172,9 +172,7 @@ IMB_JOB *snow_v_aead_init_sse(IMB_JOB *job);
 #define AES_GCM_ENC_IV_256   aes_gcm_enc_var_iv_256_avx_gen4
 
 #define SUBMIT_JOB_AES_GCM_DEC submit_job_aes_gcm_dec_avx2
-#define FLUSH_JOB_AES_GCM_DEC  flush_job_aes_gcm_dec_avx2
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_avx2
-#define FLUSH_JOB_AES_GCM_ENC  flush_job_aes_gcm_enc_avx2
 
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx
@@ -367,14 +365,6 @@ submit_job_aes_gcm_dec_avx2(IMB_MGR *state, IMB_JOB *job)
 }
 
 static IMB_JOB *
-flush_job_aes_gcm_dec_avx2(IMB_MGR *state, IMB_JOB *job)
-{
-        (void) state;
-        (void) job;
-        return NULL;
-}
-
-static IMB_JOB *
 submit_job_aes_gcm_enc_avx2(IMB_MGR *state, IMB_JOB *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
@@ -417,14 +407,6 @@ submit_job_aes_gcm_enc_avx2(IMB_MGR *state, IMB_JOB *job)
 
         job->status = IMB_STATUS_COMPLETED;
         return job;
-}
-
-static IMB_JOB *
-flush_job_aes_gcm_enc_avx2(IMB_MGR *state, IMB_JOB *job)
-{
-        (void) state;
-        (void) job;
-        return NULL;
 }
 
 /* ====================================================================== */

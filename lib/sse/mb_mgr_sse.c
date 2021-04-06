@@ -292,9 +292,7 @@ void *poly1305_mac_scalar(IMB_JOB *job);
 #define AES_GCM_ENC_IV_256   aes_gcm_enc_var_iv_256_sse
 
 #define SUBMIT_JOB_AES_GCM_DEC submit_job_aes_gcm_dec_sse
-#define FLUSH_JOB_AES_GCM_DEC  flush_job_aes_gcm_dec_sse
 #define SUBMIT_JOB_AES_GCM_ENC submit_job_aes_gcm_enc_sse
-#define FLUSH_JOB_AES_GCM_ENC  flush_job_aes_gcm_enc_sse
 
 /* ====================================================================== */
 
@@ -499,14 +497,6 @@ submit_job_aes_gcm_dec_sse(IMB_MGR *state, IMB_JOB *job)
 }
 
 static IMB_JOB *
-flush_job_aes_gcm_dec_sse(IMB_MGR *state, IMB_JOB *job)
-{
-        (void) state;
-        (void) job;
-        return NULL;
-}
-
-static IMB_JOB *
 submit_job_aes_gcm_enc_sse(IMB_MGR *state, IMB_JOB *job)
 {
         DECLARE_ALIGNED(struct gcm_context_data ctx, 16);
@@ -549,14 +539,6 @@ submit_job_aes_gcm_enc_sse(IMB_MGR *state, IMB_JOB *job)
 
         job->status = IMB_STATUS_COMPLETED;
         return job;
-}
-
-static IMB_JOB *
-flush_job_aes_gcm_enc_sse(IMB_MGR *state, IMB_JOB *job)
-{
-        (void) state;
-        (void) job;
-        return NULL;
 }
 
 IMB_DLL_LOCAL IMB_JOB *
