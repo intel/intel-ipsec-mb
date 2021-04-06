@@ -361,3 +361,13 @@ int test_suite_end(struct test_suite_context *ctx)
 
         return ret;
 }
+
+/** Generate random buffer */
+void
+generate_random_buf(uint8_t *buf, const uint32_t length)
+{
+        uint32_t i;
+
+        for (i = 0; i < length; i++)
+                buf[i] = (uint8_t) rand();
+}

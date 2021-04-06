@@ -680,16 +680,6 @@ clear_data(struct data *data)
         imb_clear_mem(&data->dec_keys, sizeof(struct cipher_auth_keys));
 }
 
-/** Generate random buffer */
-static void
-generate_random_buf(uint8_t *buf, const uint32_t length)
-{
-        uint32_t i;
-
-        for (i = 0; i < length; i++)
-                buf[i] = (uint8_t) rand();
-}
-
 /** Generate random fill patterns */
 static void generate_patterns(void)
 {

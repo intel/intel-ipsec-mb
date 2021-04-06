@@ -52,4 +52,6 @@ void test_suite_update(struct test_suite_context *ctx, const unsigned passed,
                       const unsigned failed);
 int test_suite_end(struct test_suite_context *ctx);
 
+void generate_random_buf(uint8_t *buf, const uint32_t length);
+
 #endif /* TESTAPP_UTILS_H */

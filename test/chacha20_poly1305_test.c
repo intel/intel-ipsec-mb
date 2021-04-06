@@ -528,16 +528,6 @@ test_aead_vectors(struct IMB_MGR *mb_mgr,
 
 }
 
-/** Generate random buffer */
-static void
-generate_random_buf(uint8_t *buf, const uint32_t length)
-{
-        uint32_t i;
-
-        for (i = 0; i < length; i++)
-                buf[i] = (uint8_t) rand();
-}
-
 static void
 test_sgl(struct IMB_MGR *mb_mgr,
          struct test_suite_context *ctx,

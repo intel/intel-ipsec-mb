@@ -37,6 +37,7 @@ Test Applications
 - SNOW-V and SNOW-V-AEAD tests added to test and xvalidation applications
 - IMIX support added to the xvalidation application
 - AEAD Chacha20-Poly1305 tests added
+- SGL tests added for AES-GCM through job API
 
 Performance Application
 - ZUC-EEA3-256 support added
