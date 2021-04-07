@@ -64,11 +64,13 @@
 %define KEYS		rdx
 %define OUT		rcx
 %define BYTES		r8
+%define NEXT_IV         r9
 %else
 %define IN		rcx
 %define IV		rdx
 %define KEYS		r8
 %define OUT		r9
+%define NEXT_IV         r11
 %endif
 
 %define LEN             rax
@@ -542,6 +544,13 @@ main_loop_2:
 	jnz	main_loop_2
 
 done:
+%ifdef CBCS
+%ifndef LINUX
+        mov	NEXT_IV, [rsp + 8*6]
+%endif
+        ;; store last cipher block as next_iv
+        movdqu  [NEXT_IV], XIV
+%endif
 
 %ifdef SAFE_DATA
 	clear_all_xmms_sse_asm

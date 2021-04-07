@@ -192,9 +192,15 @@ len_is_0:
 	shl	unused_lanes, 4
 	or	unused_lanes, idx
 	mov	[state + _aes_unused_lanes], unused_lanes
+
+        ;; store last cipher block as next_iv
+        shl     idx, 3 ; multiply by 8
+        mov     tmp2, [job_rax + _cbcs_next_iv]
+        movdqa  xmm0, [state + _aes_args_IV + idx*2]
+        movdqu  [tmp2], xmm0
+
 %ifdef SAFE_DATA
         ;; clear key pointers
-        shl     idx, 3 ; multiply by 8
         mov     qword [state + _aes_args_keys + idx], 0
 %endif
 

@@ -206,16 +206,16 @@ void aes128_ecbenc_x3_avx(const void *in, void *keys,
 /* AES-CBCS */
 void aes_cbcs_1_9_dec_128_sse(const void *in, const uint8_t *IV,
                               const void *keys, void *out,
-                              uint64_t len_bytes);
+                              uint64_t len_bytes, void *next_iv);
 void aes_cbcs_1_9_dec_128_sse_no_aesni(const void *in, const uint8_t *IV,
                                        const void *keys, void *out,
-                                       uint64_t len_bytes);
+                                       uint64_t len_bytes, void *next_iv);
 void aes_cbcs_1_9_dec_128_avx(const void *in, const uint8_t *IV,
                               const void *keys, void *out,
-                              uint64_t len_bytes);
+                              uint64_t len_bytes, void *next_iv);
 void aes_cbcs_1_9_dec_128_vaes_avx512(const void *in, const uint8_t *IV,
                                       const void *keys, void *out,
-                                      uint64_t len_bytes);
+                                      uint64_t len_bytes, void *next_iv);
 
 
 /* stitched AES128-CNTR, CRC32 and BIP */

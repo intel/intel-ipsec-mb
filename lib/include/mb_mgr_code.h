@@ -195,7 +195,8 @@ SUBMIT_JOB_AES128_CBCS_1_9_DEC(IMB_JOB *job)
                              job->iv,
                              job->dec_keys,
                              job->dst,
-                             job->msg_len_to_cipher_in_bytes & (~15));
+                             job->msg_len_to_cipher_in_bytes & (~15),
+                             job->cipher_fields.CBCS.next_iv);
         job->status |= IMB_STATUS_COMPLETED_CIPHER;
         return job;
 }
@@ -1291,6 +1292,11 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         if (job->msg_len_to_cipher_in_bytes >
                             ((1ULL << (60)) - 1)) {
                                 imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                                return 1;
+                        }
+                        if (job->cipher_fields.CBCS.next_iv == NULL) {
+                                imb_set_errno(state,
+                                              IMB_ERR_JOB_NULL_NEXT_IV);
                                 return 1;
                         }
                 } else if (job->cipher_direction == IMB_DIR_ENCRYPT &&

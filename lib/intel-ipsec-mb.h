@@ -175,6 +175,7 @@ typedef enum {
       IMB_ERR_HASH_ALGO,
       IMB_ERR_JOB_NULL_AUTH_KEY,
       IMB_ERR_JOB_NULL_SGL_CTX,
+      IMB_ERR_JOB_NULL_NEXT_IV,
       IMB_ERR_MAX       /* don't move this one */
 } IMB_ERR;
 
@@ -536,6 +537,12 @@ typedef struct IMB_JOB {
         int (*hash_func)(struct IMB_JOB *);
 
         IMB_SGL_STATE sgl_state;
+
+        union {
+                struct _CBCS_specific_fields {
+                        void *next_iv;
+                } CBCS;
+        } cipher_fields;
 } IMB_JOB;
 
 

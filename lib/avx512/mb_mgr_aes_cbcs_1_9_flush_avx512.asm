@@ -157,6 +157,12 @@ len_is_0:
         mov     [state + _aes_unused_lanes], unused_lanes
         sub     qword [state + _aes_lanes_in_use], 1
 
+        ;; store last cipher block as next_iv
+        lea     tmp3, [idx*8]
+        mov     tmp1, [job_rax + _cbcs_next_iv]
+        vmovdqa xmm0, [state + _aes_args_IV + tmp3*2]
+        vmovdqu [tmp1], xmm0
+
 %ifdef SAFE_DATA
         ; Set bit of lane of returned job
         xor     DWORD(tmp3), DWORD(tmp3)

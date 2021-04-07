@@ -195,6 +195,13 @@ len_is_0:
 	shl	unused_lanes, 4
 	or	unused_lanes, idx
 	mov	[state + _aes_unused_lanes], unused_lanes
+
+        ;; store last cipher block as next_iv
+        shl     idx, 3 ; multiply by 8
+        mov     tmp1, [job_rax + _cbcs_next_iv]
+        movdqa  xmm0, [state + _aes_args_IV + idx*2]
+        movdqu  [tmp1], xmm0
+
 %ifdef SAFE_DATA
         ;; clear returned jobs and "NULL lanes"
 %assign I 0

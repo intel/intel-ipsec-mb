@@ -39,7 +39,7 @@ MKGLOBAL(aes_cbcs_1_9_dec_128_vaes_avx512,function,internal)
 aes_cbcs_1_9_dec_128_vaes_avx512:
         endbranch64
 %ifndef LINUX
-        mov     len, [rsp + 8*5]
+        mov     len,     [rsp + 8*5]
 %else
         mov     len, num_bytes
 %endif
@@ -55,6 +55,12 @@ aes_cbcs_1_9_dec_128_vaes_avx512:
         mov     rdx, tmp2
 
         AES_CBC_DEC p_in, p_out, p_keys, p_IV, len, 9, tmp
+
+%ifndef LINUX
+        mov     next_iv, [rsp + 8*6]
+%endif
+        ;; store last cipher block as next iv
+        vextracti64x2 [next_iv], zIV, 3
 
 %ifdef SAFE_DATA
 	clear_all_zmms_asm

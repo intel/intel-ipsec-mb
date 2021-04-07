@@ -98,6 +98,8 @@ imb_get_strerror(int errnum)
                 return "Null pointer to authentication key";
         case IMB_ERR_JOB_NULL_SGL_CTX:
                 return "Null pointer to SGL context";
+        case IMB_ERR_JOB_NULL_NEXT_IV:
+                return "Null pointer to next IV";
         default:
                 return strerror(errnum);
         }

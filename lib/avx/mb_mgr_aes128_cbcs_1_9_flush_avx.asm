@@ -192,6 +192,13 @@ len_is_0:
 	shl	unused_lanes, 4
 	or	unused_lanes, idx
 	mov	[state + _aes_unused_lanes], unused_lanes
+
+        ;; store last cipher block as next iv
+        shl	idx, 3 ; multiply by 8
+        mov     tmp1, [job_rax + _cbcs_next_iv]
+        vmovdqa xmm0, [state + _aes_args_IV + idx*2]
+        vmovdqu [tmp1], xmm0
+
 %ifdef SAFE_DATA
         ;; Clear IVs of returned job and "NULL lanes"
         vpxor   xmm0, xmm0

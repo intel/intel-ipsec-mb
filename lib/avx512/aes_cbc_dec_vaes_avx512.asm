@@ -62,12 +62,14 @@
 %define p_keys     rdx
 %define p_out      rcx
 %define num_bytes  r8
+%define next_iv    r9
 %else
 %define p_in       rcx
 %define p_IV       rdx
 %define p_keys     r8
 %define p_out      r9
 %define num_bytes  rax
+%define next_iv    r11
 %endif
 
 %define tmp        r10

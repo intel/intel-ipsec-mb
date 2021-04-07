@@ -115,6 +115,14 @@ END_FIELDS
 %assign _SNOW_V_AEAD_spec_fields_size	_FIELD_OFFSET
 %assign _SNOW_V_AEAD_spec_fields_align	_STRUCT_ALIGN
 
+START_FIELDS	; CBCS Specific Fields
+;;;	name				size	align
+FIELD	__cbcs_next_iv,		        8,	8	; pointer to 16 byte buffer
+END_FIELDS
+
+%assign _CBCS_spec_fields_size	        _FIELD_OFFSET
+%assign _CBCS_spec_fields_align	        _STRUCT_ALIGN
+
 START_FIELDS	; IMB_JOB
 ;;;	name				size	align
 FIELD	_enc_keys,			8,	8	; pointer to enc keys
@@ -148,6 +156,15 @@ FIELD	_hash_alg,			4,	4	; IMB_JOB_HASH_ALG
 FIELD	_chain_order,			4,	4	; IMB_JOB_CHAIN_ORDER
 FIELD	_user_data,			8,	8
 FIELD	_user_data2,			8,	8
+FIELD	_cipher_func,			8,	8
+FIELD	_hash_func,			8,	8
+FIELD	_sgl_state,			4,	4	; IMB_SGL_STATE
+UNION	_cipher_fields, _CBCS_spec_fields_size, _CBCS_spec_fields_align, \
+                        _CBCS_spec_fields_size, _CBCS_spec_fields_align,
+                        ;; Duplicate CBCS member as workaround for UNION
+                        ;; macro requiring a minimum of 5 arguments
+                        ;; This should be replace by the next union
+                        ;; member when added in the future
 END_FIELDS
 
 %assign _msg_len_to_cipher_in_bytes _msg_len_to_cipher
@@ -176,3 +193,5 @@ END_FIELDS
 %assign	_snow_v_aad			_u + __snow_v_aad
 %assign	_snow_v_aad_len 		_u + __snow_v_aad_len
 %assign	_snow_v_reserved		_u + __snow_v_reserved
+%assign	_cbcs_next_iv 		        _cipher_fields + __cbcs_next_iv
+

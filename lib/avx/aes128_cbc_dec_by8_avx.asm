@@ -58,11 +58,13 @@
 %define p_keys	rdx
 %define p_out	rcx
 %define len     r8
+%define next_iv r9
 %else
 %define p_in	rcx
 %define p_IV	rdx
 %define p_keys	r8
 %define p_out	r9
+%define next_iv r11
 %endif
 
 %define num_bytes rax
@@ -320,7 +322,13 @@ main_loop3:
 	jne	main_loop3
 
 do_return2:
-
+%ifdef CBCS
+%ifndef LINUX
+	mov	next_iv, [rsp + 8*6]
+%endif
+        ;; store last cipher block as next iv
+        vmovdqu  [next_iv], xIV
+%endif
 %ifdef SAFE_DATA
 	clear_all_xmms_avx_asm
 %endif ;; SAFE_DATA

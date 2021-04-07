@@ -822,7 +822,8 @@ static IMB_JOB *
 static void
 (*aes_cbcs_1_9_dec_128_avx512) (const void *in, const uint8_t *IV,
                                 const void *keys, void *out,
-                                uint64_t len_bytes) = aes_cbcs_1_9_dec_128_avx;
+                                uint64_t len_bytes,
+                                void *next_iv) = aes_cbcs_1_9_dec_128_avx;
 
 /* ====================================================================== */
 

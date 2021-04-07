@@ -154,10 +154,16 @@ len_is_0:
         mov     [state + _aes_unused_lanes], unused_lanes
         sub     qword [state + _aes_lanes_in_use], 1
 
+        ;; store last cipher block as next_iv
+        shl	idx, 3 ; multiply by 8
+        mov     tmp2, [job_rax + _cbcs_next_iv]
+        vmovdqa xmm0, [state + _aes_args_IV + idx*2]
+        vmovdqu [tmp2], xmm0
+
 %ifdef SAFE_DATA
         ;; Clear IV
         vpxorq  xmm0, xmm0
-        shl     idx, 4 ; multiply by 16
+        shl     idx, 1 ; multiply by 2
         vmovdqa [state + _aes_args_IV + idx], xmm0
 
         ;; Clear expanded keys

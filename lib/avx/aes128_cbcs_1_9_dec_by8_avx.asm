@@ -26,6 +26,8 @@
 ;;
 
 %ifndef AES_CBC_DEC_128_X8
+;; aes_cbcs_1_9_dec_128_avx(void *in, void *IV, void *keys, void *out,
+;;                          UINT64 num_bytes, void *next_iv)
 %define AES_CBC_DEC_128_X8 aes_cbcs_1_9_dec_128_avx
 %define OFFSET 160
 %define CBCS
