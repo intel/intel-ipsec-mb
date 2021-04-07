@@ -51,6 +51,10 @@
 #else
 #define BSWAP64 _byteswap_uint64
 #endif
+
+#define CRC(func, state, job) *((uint32_t *)job->auth_tag_output) = \
+                func(state, job->src + job->hash_start_src_offset_in_bytes, \
+                     job->msg_len_to_hash_in_bytes)
 /*
  * JOBS() and ADV_JOBS() moved into mb_mgr_code.h
  * get_next_job() and get_completed_job() API's are no longer inlines.
@@ -1093,6 +1097,54 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 POLY1305_MAC(job);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
                 return job;
+        case IMB_AUTH_CRC32_ETHERNET_FCS:
+                CRC(IMB_CRC32_ETHERNET_FCS, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC32_SCTP:
+                CRC(IMB_CRC32_SCTP, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC32_WIMAX_OFDMA_DATA:
+                CRC(IMB_CRC32_WIMAX_OFDMA_DATA, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC24_LTE_A:
+                CRC(IMB_CRC24_LTE_A, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC24_LTE_B:
+                CRC(IMB_CRC24_LTE_B, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC16_X25:
+                CRC(IMB_CRC16_X25, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC16_FP_DATA:
+                CRC(IMB_CRC16_FP_DATA, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC11_FP_HEADER:
+                CRC(IMB_CRC11_FP_HEADER, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC10_IUUP_DATA:
+                CRC(IMB_CRC10_IUUP_DATA, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
+                CRC(IMB_CRC8_WIMAX_OFDMA_HCS, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC7_FP_HEADER:
+                CRC(IMB_CRC7_FP_HEADER, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
+        case IMB_AUTH_CRC6_IUUP_HEADER:
+                CRC(IMB_CRC6_IUUP_HEADER, state, job);
+                job->status |= IMB_STATUS_COMPLETED_AUTH;
+                return job;
                 /**
                  * assume IMB_AUTH_GCM, IMB_AUTH_PON_CRC_BIP,
                  *  IMB_AUTH_SNOW_V_AEAD or IMB_AUTH_NULL
@@ -1220,6 +1272,19 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_CHACHA_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
                 16, /* IMB_AUTH_SNOW_V_AEAD */
+                16, /* IMB_AUTH_AES_GCM_SGL */
+                4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
+                4,  /* IMB_AUTH_CRC32_SCTP */
+                4,  /* IMB_AUTH_CRC32_WIMAX_OFDMA_DATA */
+                4,  /* IMB_AUTH_CRC24_LTE_A */
+                4,  /* IMB_AUTH_CRC24_LTE_B */
+                4,  /* IMB_AUTH_CRC16_X25 */
+                4,  /* IMB_AUTH_CRC16_FP_DATA */
+                4,  /* IMB_AUTH_CRC11_FP_HEADER */
+                4,  /* IMB_AUTH_CRC10_IUUP_DATA */
+                4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
+                4,  /* IMB_AUTH_CRC7_FP_HEADER */
+                4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
         };
         const uint64_t auth_tag_len_ipsec[] = {
                 0,  /* INVALID selection */
@@ -1255,6 +1320,19 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_CHACHA_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
                 16, /* IMB_AUTH_SNOW_V_AEAD */
+                16, /* IMB_AUTH_AES_GCM_SGL */
+                4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
+                4,  /* IMB_AUTH_CRC32_SCTP */
+                4,  /* IMB_AUTH_CRC32_WIMAX_OFDMA_DATA */
+                4,  /* IMB_AUTH_CRC24_LTE_A */
+                4,  /* IMB_AUTH_CRC24_LTE_B */
+                4,  /* IMB_AUTH_CRC16_X25 */
+                4,  /* IMB_AUTH_CRC16_FP_DATA */
+                4,  /* IMB_AUTH_CRC11_FP_HEADER */
+                4,  /* IMB_AUTH_CRC10_IUUP_DATA */
+                4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
+                4,  /* IMB_AUTH_CRC7_FP_HEADER */
+                4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
         };
 
         /* Maximum length of buffer in PON is 2^14 + 8, since maximum
@@ -1992,6 +2070,32 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 }
                 break;
         case IMB_AUTH_NULL:
+                break;
+        case IMB_AUTH_CRC32_ETHERNET_FCS:
+        case IMB_AUTH_CRC32_SCTP:
+        case IMB_AUTH_CRC32_WIMAX_OFDMA_DATA:
+        case IMB_AUTH_CRC24_LTE_A:
+        case IMB_AUTH_CRC24_LTE_B:
+        case IMB_AUTH_CRC16_X25:
+        case IMB_AUTH_CRC16_FP_DATA:
+        case IMB_AUTH_CRC11_FP_HEADER:
+        case IMB_AUTH_CRC10_IUUP_DATA:
+        case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
+        case IMB_AUTH_CRC7_FP_HEADER:
+        case IMB_AUTH_CRC6_IUUP_HEADER:
+                if (job->src == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
+                        return 1;
+                }
+                if (job->auth_tag_output == NULL) {
+                        imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
+                        return 1;
+                }
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
+                        imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
+                        return 1;
+                }
                 break;
         case IMB_AUTH_AES_GMAC:
                 if (job->auth_tag_output_len_in_bytes < UINT64_C(1) ||

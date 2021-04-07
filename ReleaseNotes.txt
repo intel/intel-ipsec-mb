@@ -32,6 +32,7 @@ Library
 - GHASH API change
 - IFMA CPU feature detection
 - SGL support added for AES-GCM through job API
+- Added CRC functions through job API
 
 Test Applications
 - ZUC-EEA3-256 tests added to test and xvalidation applications
@@ -39,6 +40,7 @@ Test Applications
 - IMIX support added to the xvalidation application
 - AEAD Chacha20-Poly1305 tests added
 - SGL tests added for AES-GCM through job API
+- CRC function tests added through job API
 
 Performance Application
 - ZUC-EEA3-256 support added
@@ -47,6 +49,7 @@ Performance Application
 - Created `ipsec_perf_tool.py` to run multiple `ipsec_perf`
   instances at the same time
 - DOCSIS cipher combined with CRC32 treated as AEAD algorithm
+- CRC functions added
 
 v0.55 October 2020
 ========================================================================

@@ -174,6 +174,18 @@ enum test_hash_alg_e {
         TEST_AEAD_POLY1305,
         TEST_ZUC256_EIA3,
         TEST_AUTH_SNOW_V_AEAD,
+        TEST_CRC32_ETHERNET_FCS,
+        TEST_CRC32_SCTP,
+        TEST_CRC32_WIMAX_OFDMA_DATA,
+        TEST_CRC24_LTE_A,
+        TEST_CRC24_LTE_B,
+        TEST_CRC16_X25,
+        TEST_CRC16_FP_DATA,
+        TEST_CRC11_FP_HEADER,
+        TEST_CRC10_IUUP_DATA,
+        TEST_CRC8_WIMAX_OFDMA_HCS,
+        TEST_CRC7_FP_HEADER,
+        TEST_CRC6_IUUP_HEADER,
         TEST_NUM_HASH_TESTS
 };
 
@@ -569,6 +581,78 @@ struct str_value_mapping hash_algo_str_map[] = {
                         .hash_alg = TEST_ZUC256_EIA3,
                 }
         },
+        {
+                .name = "crc32-ethernet-fcs",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC32_ETHERNET_FCS,
+                }
+        },
+        {
+                .name = "crc32-sctp",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC32_SCTP,
+                }
+        },
+        {
+                .name = "crc32-wimax-ofdma-data",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC32_WIMAX_OFDMA_DATA,
+                }
+        },
+        {
+                .name = "crc24-lte-a",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC24_LTE_A,
+                }
+        },
+        {
+                .name = "crc24-lte-b",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC24_LTE_B,
+                }
+        },
+        {
+                .name = "crc16-x25",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC16_X25,
+                }
+        },
+        {
+                .name = "crc16-fp-data",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC16_FP_DATA,
+                }
+        },
+        {
+                .name = "crc11-fp-header",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC11_FP_HEADER,
+                }
+        },
+        {
+                .name = "crc10-iuup-data",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC10_IUUP_DATA,
+                }
+        },
+        {
+                .name = "crc8-wimax-ofdma-hcs",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC8_WIMAX_OFDMA_HCS,
+                }
+        },
+        {
+                .name = "crc7-fp-header",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC7_FP_HEADER,
+                }
+        },
+        {
+                .name = "crc6-iuup-header",
+                .values.job_params = {
+                        .hash_alg = TEST_CRC6_IUUP_HEADER,
+                }
+        },
 };
 
 struct str_value_mapping aead_algo_str_map[] = {
@@ -737,6 +821,18 @@ const uint32_t auth_tag_length_bytes[] = {
                 16, /* AEAD CHACHA20 with SGL support*/
                 4,  /* ZUC-256-EIA3 */
                 16,  /* SNOW-V AEAD */
+                4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
+                4,  /* IMB_AUTH_CRC32_SCTP */
+                4,  /* IMB_AUTH_CRC32_WIMAX_OFDMA_DATA */
+                4,  /* IMB_AUTH_CRC24_LTE_A */
+                4,  /* IMB_AUTH_CRC24_LTE_B */
+                4,  /* IMB_AUTH_CRC16_X25 */
+                4,  /* IMB_AUTH_CRC16_FP_DATA */
+                4,  /* IMB_AUTH_CRC11_FP_HEADER */
+                4,  /* IMB_AUTH_CRC10_IUUP_DATA */
+                4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
+                4,  /* IMB_AUTH_CRC7_FP_HEADER */
+                4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
 };
 uint32_t index_limit;
 uint32_t key_idxs[NUM_OFFSETS];
@@ -1580,6 +1676,42 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 break;
         case TEST_AUTH_SNOW_V_AEAD:
                 job_template.hash_alg = IMB_AUTH_SNOW_V_AEAD;
+                break;
+        case TEST_CRC32_ETHERNET_FCS:
+                job_template.hash_alg = IMB_AUTH_CRC32_ETHERNET_FCS;
+                break;
+        case TEST_CRC32_SCTP:
+                job_template.hash_alg = IMB_AUTH_CRC32_SCTP;
+                break;
+        case TEST_CRC32_WIMAX_OFDMA_DATA:
+                job_template.hash_alg = IMB_AUTH_CRC32_WIMAX_OFDMA_DATA;
+                break;
+        case TEST_CRC24_LTE_A:
+                job_template.hash_alg = IMB_AUTH_CRC24_LTE_A;
+                break;
+        case TEST_CRC24_LTE_B:
+                job_template.hash_alg = IMB_AUTH_CRC24_LTE_B;
+                break;
+        case TEST_CRC16_X25:
+                job_template.hash_alg = IMB_AUTH_CRC16_X25;
+                break;
+        case TEST_CRC16_FP_DATA:
+                job_template.hash_alg = IMB_AUTH_CRC16_FP_DATA;
+                break;
+        case TEST_CRC11_FP_HEADER:
+                job_template.hash_alg = IMB_AUTH_CRC11_FP_HEADER;
+                break;
+        case TEST_CRC10_IUUP_DATA:
+                job_template.hash_alg = IMB_AUTH_CRC10_IUUP_DATA;
+                break;
+        case TEST_CRC8_WIMAX_OFDMA_HCS:
+                job_template.hash_alg = IMB_AUTH_CRC8_WIMAX_OFDMA_HCS;
+                break;
+        case TEST_CRC7_FP_HEADER:
+                job_template.hash_alg = IMB_AUTH_CRC7_FP_HEADER;
+                break;
+        case TEST_CRC6_IUUP_HEADER:
+                job_template.hash_alg = IMB_AUTH_CRC6_IUUP_HEADER;
                 break;
         default:
                 /* HMAC hash alg is SHA1 or MD5 */

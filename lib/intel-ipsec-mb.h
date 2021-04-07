@@ -365,10 +365,22 @@ typedef enum {
         IMB_AUTH_AES_CMAC_256,       /* AES256-CMAC */
         IMB_AUTH_POLY1305,           /* POLY1305 */
         IMB_AUTH_CHACHA20_POLY1305,  /* AEAD POLY1305 */
-        IMB_AUTH_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support*/
+        IMB_AUTH_CHACHA20_POLY1305_SGL, /* AEAD CHACHA20 with SGL support */
         IMB_AUTH_ZUC256_EIA3_BITLEN,    /* 256-EIA3/NIA3 (3GPP) */
-        IMB_AUTH_SNOW_V_AEAD,
-        IMB_AUTH_GCM_SGL,
+        IMB_AUTH_SNOW_V_AEAD,           /* SNOW-V-AEAD */
+        IMB_AUTH_GCM_SGL,               /* AES-GCM with SGL support */
+        IMB_AUTH_CRC32_ETHERNET_FCS,    /* CRC32-ETHERNET-FCS */
+        IMB_AUTH_CRC32_SCTP,            /* CRC32-SCTP */
+        IMB_AUTH_CRC32_WIMAX_OFDMA_DATA,/* CRC32-WIMAX-OFDMA-DATA */
+        IMB_AUTH_CRC24_LTE_A,           /* CRC32-LTE-A */
+        IMB_AUTH_CRC24_LTE_B,           /* CRC32-LTE-B */
+        IMB_AUTH_CRC16_X25,             /* CRC16-X25 */
+        IMB_AUTH_CRC16_FP_DATA,         /* CRC16-FP-DATA */
+        IMB_AUTH_CRC11_FP_HEADER,       /* CRC11-FP-HEADER */
+        IMB_AUTH_CRC10_IUUP_DATA,       /* CRC10-IUUP-DATA */
+        IMB_AUTH_CRC8_WIMAX_OFDMA_HCS,  /* CRC8-WIMAX-OFDMA-HCS */
+        IMB_AUTH_CRC7_FP_HEADER,        /* CRC7-FP-HEADER */
+        IMB_AUTH_CRC6_IUUP_HEADER,      /* CRC6-IUUP-HEADER */
         IMB_AUTH_NUM
 } IMB_HASH_ALG;
 

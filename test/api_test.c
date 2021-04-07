@@ -207,6 +207,18 @@ fill_in_job(struct IMB_JOB *job,
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
                 16, /* IMB_AUTH_SNOW_V_AEAD */
                 16, /* IMB_AUTH_AES_GCM_SGL */
+                4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
+                4,  /* IMB_AUTH_CRC32_SCTP */
+                4,  /* IMB_AUTH_CRC32_WIMAX_OFDMA_DATA */
+                4,  /* IMB_AUTH_CRC24_LTE_A */
+                4,  /* IMB_AUTH_CRC24_LTE_B */
+                4,  /* IMB_AUTH_CRC16_X25 */
+                4,  /* IMB_AUTH_CRC16_FP_DATA */
+                4,  /* IMB_AUTH_CRC11_FP_HEADER */
+                4,  /* IMB_AUTH_CRC10_IUUP_DATA */
+                4,  /* IMB_AUTH_CRC8_WIMAX_OFDMA_HCS */
+                4,  /* IMB_AUTH_CRC7_FP_HEADER */
+                4,  /* IMB_AUTH_CRC6_IUUP_HEADER */
         };
         static DECLARE_ALIGNED(uint8_t dust_bin[2048], 64);
         const uint64_t msg_len_to_cipher = 32;
@@ -340,6 +352,18 @@ fill_in_job(struct IMB_JOB *job,
         case IMB_AUTH_SHA_256:
         case IMB_AUTH_SHA_384:
         case IMB_AUTH_SHA_512:
+        case IMB_AUTH_CRC32_ETHERNET_FCS:
+        case IMB_AUTH_CRC32_SCTP:
+        case IMB_AUTH_CRC32_WIMAX_OFDMA_DATA:
+        case IMB_AUTH_CRC24_LTE_A:
+        case IMB_AUTH_CRC24_LTE_B:
+        case IMB_AUTH_CRC16_X25:
+        case IMB_AUTH_CRC16_FP_DATA:
+        case IMB_AUTH_CRC11_FP_HEADER:
+        case IMB_AUTH_CRC10_IUUP_DATA:
+        case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
+        case IMB_AUTH_CRC7_FP_HEADER:
+        case IMB_AUTH_CRC6_IUUP_HEADER:
         case IMB_AUTH_NULL:
                 break;
         case IMB_AUTH_AES_XCBC:
@@ -671,6 +695,18 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_AES_GMAC_192 ||
                                     hash == IMB_AUTH_AES_GMAC_256 ||
                                     hash == IMB_AUTH_SNOW_V_AEAD ||
+                                    hash == IMB_AUTH_CRC32_ETHERNET_FCS ||
+                                    hash == IMB_AUTH_CRC32_SCTP ||
+                                    hash == IMB_AUTH_CRC32_WIMAX_OFDMA_DATA ||
+                                    hash == IMB_AUTH_CRC24_LTE_A ||
+                                    hash == IMB_AUTH_CRC24_LTE_B ||
+                                    hash == IMB_AUTH_CRC16_X25 ||
+                                    hash == IMB_AUTH_CRC16_FP_DATA ||
+                                    hash == IMB_AUTH_CRC11_FP_HEADER ||
+                                    hash == IMB_AUTH_CRC10_IUUP_DATA ||
+                                    hash == IMB_AUTH_CRC8_WIMAX_OFDMA_HCS ||
+                                    hash == IMB_AUTH_CRC7_FP_HEADER ||
+                                    hash == IMB_AUTH_CRC6_IUUP_HEADER ||
                                     hash == IMB_AUTH_POLY1305)
                                         continue;
 
