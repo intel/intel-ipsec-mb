@@ -3438,7 +3438,9 @@ aes_job_ok(const struct IMB_JOB *job,
            const uint8_t *target,
            const uint8_t *padding,
            const size_t sizeof_padding,
-           const unsigned text_len)
+           const unsigned text_len,
+           const uint8_t *last_cipher_block,
+           const uint8_t *next_iv)
 {
         const int num = (const int)((uint64_t)job->user_data2);
 
@@ -3460,6 +3462,10 @@ aes_job_ok(const struct IMB_JOB *job,
                    target + sizeof_padding + text_len,
                    sizeof_padding)) {
                 printf("%d overwrite tail\n", num);
+                return 0;
+        }
+        if (memcmp(last_cipher_block, next_iv, IMB_AES_BLOCK_SIZE)) {
+                printf("%d preserve IV\n", num);
                 return 0;
         }
         return 1;
@@ -3484,12 +3490,31 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         uint8_t padding[16];
         uint8_t **targets = malloc(num_jobs * sizeof(void *));
         int i, jobs_rx = 0, ret = -1;
+        uint64_t last_block_offset = 0;
+        uint8_t last_cipher_block[IMB_AES_BLOCK_SIZE];
+        uint8_t **next_ivs = malloc(num_jobs * sizeof(uint8_t *));
 
-        if (targets == NULL)
+        if (targets == NULL || next_ivs == NULL)
                 goto end_alloc;
 
         memset(targets, 0, num_jobs * sizeof(void *));
         memset(padding, -1, sizeof(padding));
+        memset(last_cipher_block, 0, sizeof(last_cipher_block));
+        memset(next_ivs, 0, num_jobs * sizeof(uint8_t *));
+
+        /* get offset of last AES block to be processed */
+        if (text_len >= 16)
+                /* last block offset = (number of blocks - 1) * 160 */
+                last_block_offset =
+                        (((text_len + 9 * IMB_AES_BLOCK_SIZE) / 160) - 1) * 160;
+
+        /* store copy of last ciphertext block to validate context */
+        if (dir == IMB_DIR_ENCRYPT)
+                memcpy(last_cipher_block, out_text + last_block_offset,
+                       IMB_AES_BLOCK_SIZE);
+        else
+                memcpy(last_cipher_block, in_text + last_block_offset,
+                       IMB_AES_BLOCK_SIZE);
 
         for (i = 0; i < num_jobs; i++) {
                 targets[i] = malloc(text_len + (sizeof(padding) * 2));
@@ -3507,6 +3532,13 @@ test_aes_many(struct IMB_MGR *mb_mgr,
                         /* copy input text to the allocated buffer */
                         memcpy(targets[i] + sizeof(padding), in_text, text_len);
                 }
+
+                /* allocate buffers for next IVs */
+                next_ivs[i] = malloc(IMB_AES_BLOCK_SIZE);
+                if (next_ivs[i] == NULL)
+                        goto end_alloc;
+
+                memset(next_ivs[i], 0, IMB_AES_BLOCK_SIZE);
         }
 
         /* flush the scheduler */
@@ -3538,12 +3570,18 @@ test_aes_many(struct IMB_MGR *mb_mgr,
 
                 job->hash_alg = IMB_AUTH_NULL;
 
+                job->cipher_fields.CBCS.next_iv = next_ivs[i];
+
                 job = IMB_SUBMIT_JOB(mb_mgr);
                 if (job != NULL) {
                         jobs_rx++;
                         if (!aes_job_ok(job, out_text, job->user_data, padding,
-                                       sizeof(padding), text_len))
+                                        sizeof(padding), text_len,
+                                        (uint8_t *)&last_cipher_block,
+                                        next_ivs[(uint64_t)job->user_data2]))
                                 goto end;
+                        /* reset job next_iv pointer */
+                        job->cipher_fields.CBCS.next_iv = NULL;
                 } else if (dir == IMB_DIR_DECRYPT) {
                         printf("Expected decrypt job, received none!\n");
                         goto end;
@@ -3553,8 +3591,12 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
                 jobs_rx++;
                 if (!aes_job_ok(job, out_text, job->user_data, padding,
-                               sizeof(padding), text_len))
+                                sizeof(padding), text_len,
+                                (uint8_t *)&last_cipher_block,
+                                next_ivs[(uint64_t)job->user_data2]))
                         goto end;
+                /* reset job next_iv pointer */
+                job->cipher_fields.CBCS.next_iv = NULL;
         }
 
         if (jobs_rx != num_jobs) {
@@ -3572,6 +3614,11 @@ end_alloc:
                 for (i = 0; i < num_jobs; i++)
                         free(targets[i]);
                 free(targets);
+        }
+        if (next_ivs != NULL) {
+                for (i = 0; i < num_jobs; i++)
+                        free(next_ivs[i]);
+                free(next_ivs);
         }
 
         return ret;

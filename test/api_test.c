@@ -54,7 +54,8 @@ enum {
       TEST_CIPH_ENC_KEY_NULL,
       TEST_CIPH_DEC_KEY_NULL,
       TEST_CIPH_MSG_LEN_ZERO,
-      TEST_CIPH_MSG_LEN_GT_MAX
+      TEST_CIPH_MSG_LEN_GT_MAX,
+      TEST_CIPH_NEXT_IV_NULL,
 };
 
 /*
@@ -1067,6 +1068,29 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                                 printf(".");
                         }
+
+        /*
+         * OTHER MISC TESTS
+         */
+
+        /* CBCS NULL NEXT IV TEST */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
+                        cipher = IMB_CIPHER_CBCS_1_9;
+
+                        IMB_JOB *job = &template_job;
+
+                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx);
+
+                        job->cipher_fields.CBCS.next_iv = NULL;
+
+                        if (!is_submit_invalid(mb_mgr, job,
+                                               TEST_CIPH_NEXT_IV_NULL,
+                                               IMB_ERR_JOB_NULL_NEXT_IV))
+                                return 1;
+                        printf(".");
+                }
 
         /* clean up */
         while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
