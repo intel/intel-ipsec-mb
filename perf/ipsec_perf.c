@@ -1467,6 +1467,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         uint64_t time = 0;
         uint32_t aux;
         uint8_t gcm_key[32];
+        uint8_t next_iv[IMB_AES_BLOCK_SIZE];
 
         memset(&job_template, 0, sizeof(IMB_JOB));
 
@@ -1666,9 +1667,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.cipher_start_src_offset_in_bits = 0;
                 job_template.key_len_in_bytes = 16;
                 job_template.iv_len_in_bytes = 8;
-        } else if (job_template.cipher_mode == IMB_CIPHER_CBCS_1_9)
+        } else if (job_template.cipher_mode == IMB_CIPHER_CBCS_1_9) {
                 job_template.key_len_in_bytes = 16; /* cbcs-128 support only */
-        else if (job_template.cipher_mode == IMB_CIPHER_ECB)
+                job_template.cipher_fields.CBCS.next_iv = next_iv;
+        } else if (job_template.cipher_mode == IMB_CIPHER_ECB)
                 job_template.iv_len_in_bytes = 0;
         else if (job_template.cipher_mode == IMB_CIPHER_CHACHA20)
                 job_template.iv_len_in_bytes = 12;
