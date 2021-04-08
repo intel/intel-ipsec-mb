@@ -83,6 +83,7 @@ CC ?= gcc
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error, -fcf-protection" are also supported
 CC_HAS_CET = $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l)
+CET_LDFLAGS=-r -z ibt -z shstk
 
 CFLAGS := -DLINUX -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
@@ -93,7 +94,7 @@ CFLAGS := -DLINUX -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
 
 ifeq ($(CC_HAS_CET),1)
-CFLAGS += -fcf-protection
+CFLAGS += -fcf-protection=full
 endif
 
 ASM_INCLUDE_DIRS := .
@@ -179,13 +180,16 @@ LIBNAME = $(LIB).so.$(VERSION)
 LIBPERM = 0755
 LDFLAGS += -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
 ifeq ($(CC_HAS_CET),1)
-LDFLAGS += -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
+LDFLAGS += -fcf-protection=full -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
 endif
 else
 CFLAGS += -fPIE
 LIBNAME = $(LIB).a
 LIBPERM = 0644
 LDFLAGS += -g
+ifeq ($(CC_HAS_CET),1)
+LDFLAGS += -fcf-protection=full
+endif
 endif
 
 # warning messages
@@ -689,6 +693,10 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
+endif
 
 $(OBJ_DIR)/%.o:sse/%.c
 	$(CC) -MMD $(OPT_SSE) -c $(CFLAGS) $< -o $@
@@ -698,6 +706,10 @@ ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
 endif
 
 $(OBJ_DIR)/%.o:avx/%.c
@@ -709,6 +721,10 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
+endif
 
 $(OBJ_DIR)/%.o:avx2/%.c
 	$(CC) -MMD $(OPT_AVX2) -c $(CFLAGS) $< -o $@
@@ -718,6 +734,10 @@ ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
 endif
 
 $(OBJ_DIR)/%.o:avx512/%.c
@@ -729,6 +749,10 @@ ifeq ($(USE_YASM),y)
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
+endif
 
 $(OBJ_DIR)/%.o:no-aesni/%.c
 	$(CC) -MMD $(OPT_NOAESNI) -c $(CFLAGS_NO_SIMD) $< -o $@
@@ -738,6 +762,10 @@ ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
 endif
 
 $(OBJ_DIR):

@@ -44,9 +44,10 @@ CFLAGS = -MMD -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 \
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error, -fcf-protection" are also supported
 CC_HAS_CET = $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l)
+CET_LDFLAGS=-r -z ibt -z shstk
 
 ifeq ($(CC_HAS_CET),1)
-CFLAGS += -fcf-protection
+CFLAGS += -fcf-protection=full
 endif
 
 YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__
@@ -54,7 +55,7 @@ NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
 
 LDFLAGS = -fPIE -z noexecstack -z relro -z now
 ifeq ($(CC_HAS_CET),1)
-LDFLAGS += -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
+LDFLAGS += -fcf-protection=full -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
 endif
 LDLIBS = -lIPSec_MB
 
@@ -98,6 +99,10 @@ ifeq ($(USE_YASM),y)
 	$(YASM) $(YASM_FLAGS) $< -o $@
 else
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
+endif
+ifeq ($(CC_HAS_CET),1)
+	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
+	mv $@.tmp $@
 endif
 
 # targets come here
