@@ -836,7 +836,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
          const uint32_t buf_size, const uint8_t tag_size,
          IMB_CIPHER_DIRECTION cipher_dir,
          struct cipher_auth_keys *keys, uint8_t *cipher_iv,
-         uint8_t *auth_iv, unsigned index)
+         uint8_t *auth_iv, unsigned index, uint8_t *next_iv)
 {
         static const void *ks_ptr[3];
         uint32_t *k1_expanded = keys->k1_expanded;
@@ -1022,6 +1022,7 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->enc_keys = enc_keys;
                 job->dec_keys = dec_keys;
                 job->iv_len_in_bytes = 16;
+                job->cipher_fields.CBCS.next_iv = next_iv;
                 break;
         case IMB_CIPHER_PON_AES_CNTR:
         case IMB_CIPHER_CNTR:
@@ -1639,6 +1640,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         uint8_t *ciph_key = data->ciph_key;
         uint8_t *auth_key = data->auth_key;
         unsigned int num_processed_jobs = 0;
+        uint8_t next_iv[IMB_AES_BLOCK_SIZE];
 
         if (num_jobs == 0)
                 return ret;
@@ -1810,7 +1812,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 memcpy(src_dst_buf[i], test_buf[i], buf_sizes[i]);
                 if (fill_job(job, params, src_dst_buf[i], in_digest[i], aad,
                              buf_sizes[i], tag_size, IMB_DIR_ENCRYPT, enc_keys,
-                             cipher_iv, auth_iv, i) < 0)
+                             cipher_iv, auth_iv, i, next_iv) < 0)
                         goto exit;
 
                 /* Randomize memory for input digest */
@@ -1912,7 +1914,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                  */
                 if (fill_job(job, params, src_dst_buf[i], out_digest[i], aad,
                              buf_sizes[i], tag_size, IMB_DIR_DECRYPT, dec_keys,
-                             cipher_iv, auth_iv, i) < 0)
+                             cipher_iv, auth_iv, i, next_iv) < 0)
                         goto exit;
 
                 /* Clear scratch registers before submitting job to prevent
