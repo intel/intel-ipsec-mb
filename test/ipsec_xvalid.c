@@ -318,7 +318,7 @@ struct str_value_mapping cipher_algo_str_map[] = {
                 }
         },
         {
-                .name = "SNOW_V",
+                .name = "SNOW-V",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_SNOW_V,
                         .key_size = 32
