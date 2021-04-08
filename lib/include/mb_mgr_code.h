@@ -1200,13 +1200,24 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 0,  /* IMB_AUTH_CUSTOM */
                 0,  /* IMB_AUTH_AES_CCM */
                 16, /* IMB_AUTH_AES_CMAC */
+                20, /* IMB_AUTH_SHA_1 */
+                28, /* IMB_AUTH_SHA_224 */
+                32, /* IMB_AUTH_SHA_256 */
+                48, /* IMB_AUTH_SHA_384 */
+                64, /* IMB_AUTH_SHA_512 */
+                4,  /* IMB_AUTH_AES_CMAC 3GPP */
+                8,  /* IMB_AUTH_PON_CRC_BIP */
                 4,  /* IMB_AUTH_ZUC_EIA3_BITLEN */
+                4,  /* IMB_AUTH_DOCSIS_CRC32 */
                 4,  /* IMB_AUTH_SNOW3G_UIA2_BITLEN */
                 4,  /* IMB_AUTH_KASUMI_UIA1 */
                 16, /* IMB_AUTH_AES_GMAC_128 */
                 16, /* IMB_AUTH_AES_GMAC_192 */
                 16, /* IMB_AUTH_AES_GMAC_256 */
+                16, /* IMB_AUTH_AES_CMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
+                16, /* IMB_AUTH_CHACHA_POLY1305 */
+                16, /* IMB_AUTH_CHACHA_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
                 16, /* IMB_AUTH_SNOW_V_AEAD */
         };
@@ -1240,6 +1251,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 16, /* IMB_AUTH_AES_GMAC_256 */
                 16, /* IMB_AUTH_AES_CMAC_256 */
                 16, /* IMB_AUTH_POLY1305 */
+                16, /* IMB_AUTH_CHACHA_POLY1305 */
+                16, /* IMB_AUTH_CHACHA_POLY1305_SGL */
                 4,  /* IMB_AUTH_ZUC256_EIA3_BITLEN */
                 16, /* IMB_AUTH_SNOW_V_AEAD */
         };
@@ -2239,7 +2252,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
@@ -2266,7 +2280,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
@@ -2352,7 +2367,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
@@ -2381,7 +2397,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_KEY);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(4)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
@@ -2403,7 +2420,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(16)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
@@ -2430,7 +2448,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(16)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
@@ -2457,7 +2476,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != UINT64_C(16)) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
@@ -2476,7 +2496,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_NULL_AUTH);
                         return 1;
                 }
-                if (job->auth_tag_output_len_in_bytes != 16) {
+                if (job->auth_tag_output_len_in_bytes !=
+                    auth_tag_len_ipsec[job->hash_alg]) {
                         imb_set_errno(state, IMB_ERR_JOB_AUTH_TAG_LEN);
                         return 1;
                 }
