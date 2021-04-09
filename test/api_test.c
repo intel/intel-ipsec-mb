@@ -1081,7 +1081,8 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
 
                         IMB_JOB *job = &template_job;
 
-                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx);
+                        fill_in_job(job, cipher, dir, hash, order, &chacha_ctx,
+                                    &gcm_ctx);
 
                         job->cipher_fields.CBCS.next_iv = NULL;
 
