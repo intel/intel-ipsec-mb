@@ -25,6 +25,7 @@ Library
 - Poly1305 AVX512 and AVX512-IFMA implementations added
 - Chacha20-Poly1305 AEAD implementations extended to AVX512 and AVX512-IFMA
 - CBCS AVX512 optimizations
+- Extended CBCS to return last cipher block to maintain context between calls
 - AVX/SSE transition fixes
 - Added SGL support for AEAD Chacha20-Poly1305
 - Poly1305 minor optimization in the scalar code
