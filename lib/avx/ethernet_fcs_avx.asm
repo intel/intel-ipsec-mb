@@ -123,7 +123,6 @@ ETHERNET_FCS_FN:
 align 32
 MKGLOBAL(ETHERNET_FCS_FN_LOCAL, function,internal)
 ETHERNET_FCS_FN_LOCAL:
-        endbranch64
         mov             rax, rsp
         sub             rsp, STACK_FRAME_size
         and             rsp, -16

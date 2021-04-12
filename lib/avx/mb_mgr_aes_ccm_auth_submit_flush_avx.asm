@@ -247,7 +247,7 @@ endstruc
         vpinsrb init_block0, [tmp + 7], 8
 
 %%_finish_nonce_move:
-        endbranch64
+
         ;; Bytes 14 & 15 (message length), in Big Endian
         mov     ax, [job + _msg_len_to_hash_in_bytes]
         xchg    al, ah
@@ -354,7 +354,6 @@ APPEND(skip_,I):
 %endif ; end FLUSH
 
 %%_ccm_round:
-        endbranch64
         vpextrw len2, min_len_idx, 0    ; min value
         vpextrw min_idx, min_len_idx, 1 ; min index (0...7)
 
@@ -444,7 +443,6 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 %%_return:
-        endbranch64
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
@@ -476,7 +474,6 @@ APPEND(skip_clear_,I):
         mov     tmp, [min_job + _dst]
 
 %%_set_init_done_1:
-        endbranch64
         mov     [state + _aes_ccm_args_in + min_idx*8], tmp
         mov     word [state + _aes_ccm_init_done + min_idx*2], 1
 
@@ -528,14 +525,12 @@ align 64
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_CCM_AUTH,function,internal)
 SUBMIT_JOB_AES_CCM_AUTH:
-        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX SUBMIT
 
 ; IMB_JOB * flush_job_aes128/256_ccm_auth_avx(MB_MGR_CCM_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)
 FLUSH_JOB_AES_CCM_AUTH:
-        endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX FLUSH
 
 

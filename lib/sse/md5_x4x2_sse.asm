@@ -39,7 +39,7 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 section .data align=64
 default rel
 
@@ -411,7 +411,7 @@ rot44 equ  21
 align 32
 MKGLOBAL(md5_x4x2_sse,function,internal)
 md5_x4x2_sse:
-        endbranch64
+
         sub     rsp, STACK_SIZE
 
         ;; each row of transposed digests is split into 2 parts, the right half stored in A, and left half in A2
@@ -471,7 +471,6 @@ md5_x4x2_sse:
 %endrep
 
 lloop:
-        endbranch64
         ; save old digests
         movdqa  [AA], A
         movdqa  [BB], B

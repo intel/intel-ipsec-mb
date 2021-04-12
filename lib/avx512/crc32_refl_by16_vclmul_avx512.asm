@@ -168,7 +168,6 @@ crc32_refl_by16_vclmul_avx512:
         ;;     zmm0 and zmm4
 
 .fold_128_B_register:
-        endbranch64
         ;; fold the 8x128-bits into 1x128-bits with different constants
 	vmovdqu8	zmm16, [arg4 + crc32_const_fold_7x128b]
 	vmovdqu8	zmm11, [arg4 + crc32_const_fold_3x128b]
@@ -199,7 +198,6 @@ crc32_refl_by16_vclmul_avx512:
         ;; continue folding 16B at a time
 
 .reduction_loop_16B:
-        endbranch64
 	vpclmulqdq	xmm8, xmm7, xmm10, 0x1
 	vpclmulqdq	xmm7, xmm7, xmm10, 0x10
 	vpxor		xmm7, xmm8
@@ -222,7 +220,7 @@ crc32_refl_by16_vclmul_avx512:
 	; the input pointer before the actual point, to receive exactly 16 bytes.
 	; after that the registers need to be adjusted.
 .get_last_two_xmms:
-        endbranch64
+
 	vmovdqa		xmm2, xmm7
 	vmovdqu		xmm1, [msg - 16 + len]
 
@@ -242,7 +240,6 @@ crc32_refl_by16_vclmul_avx512:
         vpternlogq      zmm7, zmm2, zmm8, 0x96
 
 .done_128:
-        endbranch64
 	;; compute crc of a 128-bit value
 	vmovdqa		xmm10, [arg4 + crc32_const_fold_128b_to_64b]
 	vmovdqa		xmm0, xmm7
@@ -261,7 +258,6 @@ crc32_refl_by16_vclmul_avx512:
 
 	;; barrett reduction
 .barrett:
-        endbranch64
 	vpand		xmm7, [rel mask2]
 	vmovdqa		xmm1, xmm7
 	vmovdqa		xmm2, xmm7

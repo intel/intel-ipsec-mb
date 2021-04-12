@@ -32,7 +32,7 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 %macro PXOR2 2
 	movdqu	XTMP, %2
 	pxor	%1, XTMP
@@ -111,7 +111,7 @@ align 32
 
 MKGLOBAL(aes_cbc_enc_192_x8_sse,function,internal)
 aes_cbc_enc_192_x8_sse:
-        endbranch64
+
 	sub	rsp, STACK_size
 	mov	[GPR_SAVE_AREA + 8*0], rbp
 

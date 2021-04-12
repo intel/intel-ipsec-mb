@@ -1157,7 +1157,6 @@ APPEND(%%_num_rounds_is_,I):
 %endrep
 
 %%_skip_reorder:
-        endbranch64
 %endif
     FUNC_RESTORE
 
@@ -1398,7 +1397,6 @@ asm_ZucGenKeystream_16_gfni_avx512:
 
         ;; Perform rounds of 64 bytes, where LFSR reordering is not needed
 %%loop:
-        endbranch64
         cmp     min_length, 64
         jl      %%exit_loop
 
@@ -1480,7 +1478,6 @@ APPEND(%%_num_final_rounds_is_,I):
 %endrep
 
 %%_no_final_rounds:
-        endbranch64
         add             rsp, 32
         ;; update in/out pointers
         add             buf_idx, 3

@@ -274,12 +274,11 @@ endstruc
         jmp             %%encrypt_12_first
 
 %%encrypt_12_start:
-        endbranch64
         cmp             %%LENGTH, 32
         jb              %%encrypt_12_end
 
 %%encrypt_12_first:
-        endbranch64
+
         ;; load and XOR first block lanes with IV / ciphertexxt and round 0 key
         LOAD_STORE_4x1_PRELOAD IN_L0, IN_L1, IN_L2, IN_L3, %%IDX, %%L00_03, LOAD
         vpternlogq      %%L00_03, %%ZIV00_03, [%%KP + %%K00_03_OFFSET], 0x96

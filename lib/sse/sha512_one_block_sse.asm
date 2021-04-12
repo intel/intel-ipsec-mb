@@ -29,9 +29,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
-%use smartalign
-alignmode generic, nojmp
 
 %define	MOVDQ movdqu ;; assume buffers not aligned
 
@@ -328,7 +325,6 @@ section .text
 MKGLOBAL(FUNC,function,internal)
 align 32
 FUNC:
-        endbranch64
 	push	rbx
 %ifndef LINUX
 	push	rsi
@@ -399,8 +395,14 @@ loop1:
 	jne	loop1
 
 	mov	SRND, 2
-
+	jmp loop2a
 loop2:
+	movdqa	X0, X4
+	movdqa	X1, X5
+	movdqa	X2, X6
+	movdqa	X3, X7
+
+loop2a:
 	paddq	X0, [TBL + 0*16]
 	movdqa	[rsp + _XFER], X0
 	DO_ROUND 0
@@ -421,11 +423,6 @@ loop2:
 	add	TBL, 4*16
 	DO_ROUND 0
 	DO_ROUND 1
-
-        movdqa  X0, X4
-        movdqa  X1, X5
-        movdqa  X2, X6
-        movdqa  X3, X7
 
 	sub	SRND, 1
 	jne	loop2

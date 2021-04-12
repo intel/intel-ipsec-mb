@@ -39,7 +39,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/crc32.inc"
-%include "include/cet.inc"
+
 [bits 64]
 default rel
 
@@ -68,7 +68,6 @@ section .text
 align 32
 MKGLOBAL(crc32_by8_avx,function,internal)
 crc32_by8_avx:
-        endbranch64
         ;; check if smaller than 256B
         cmp             arg3, 256
         jl              .less_than_256
@@ -254,7 +253,7 @@ crc32_by8_avx:
         ;; the input pointer before the actual point, to receive exactly 16 bytes.
         ;; After that the registers need to be adjusted.
 .get_last_two_xmms:
-        endbranch64
+
         vmovdqu         xmm1, [arg2 - 16 + arg3]
         vpshufb         xmm1, xmm11
 
@@ -276,7 +275,6 @@ crc32_by8_avx:
         vpxor           xmm7, xmm1
 
 .128_done:
-        endbranch64
         ;; compute crc of a 128-bit value
         vmovdqa         xmm10, [arg4 + crc32_const_fold_128b_to_64b]
 
@@ -293,7 +291,6 @@ crc32_by8_avx:
 
         ;; barrett reduction
 .barrett:
-        endbranch64
         vmovdqa         xmm10, [arg4 + crc32_const_reduce_64b_to_32b]
 
         vpclmulqdq      xmm0, xmm7, xmm10, 0x01

@@ -633,7 +633,6 @@ sha256_x16_avx512:
 
 	align 32
 lloop:
-        endbranch64
 	vmovdqa32	TMP2, [rel PSHUFFLE_BYTE_FLIP_MASK]
 
 	vmovdqa32	TMP3, [TBL]	; First K

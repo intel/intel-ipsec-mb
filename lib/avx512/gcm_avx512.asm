@@ -315,7 +315,6 @@ default rel
         mov     %%T2, %%A_LEN           ; T2 = aadLen
 
 %%_get_AAD_loop128:
-        endbranch64
         cmp     %%T2, 128
         jl      %%_exit_AAD_loop128
 
@@ -412,7 +411,6 @@ default rel
         jl      %%_AAD_reduce
 
 %%_AAD_blocks:
-        endbranch64
         vmovdqu         %%XTMP0, [%%T1]
         vpshufb         %%XTMP0, [rel SHUF_MASK]
 
@@ -508,7 +506,7 @@ default rel
         READ_SMALL_DATA_INPUT   xmm1, r10, %%PLAIN_CYPH_LEN, rax
 
 %%_data_read:                           ;Finished reading in data
-        endbranch64
+
         vmovdqu xmm9, [%%GDATA_CTX + PBlockEncKey]  ;xmm9 = my_ctx_data.partial_block_enc_key
 
         lea     r12, [rel SHIFT_MASK]
@@ -557,7 +555,6 @@ default rel
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
 %endif
 %%_enc_dec_done:
-        endbranch64
         vmovdqu [%%GDATA_CTX + AadHash], %%AAD_HASH
 
 %ifidn  %%ENC_DEC, ENC
@@ -576,7 +573,6 @@ default rel
 %%_partial_fill:
         mov     r13, %%PLAIN_CYPH_LEN
 %%_count_set:
-        endbranch64
         lea             rax, [rel byte_len_to_mask_table]
         kmovw           k1, [rax + r13*2]
         vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{k1}, xmm9
@@ -1434,7 +1430,7 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %endrep
 
 %%_small_initial_compute_hash:
-        endbranch64
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Ghash reduction
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1515,7 +1511,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %endif                          ; %%num_initial_blocks=1
 
 %%_after_reduction:
-        endbranch64
         ;; Final hash is now in T3
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
@@ -2674,14 +2669,12 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_1:
-        endbranch64
         INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, 1, \
                 xmm12, xmm13, %%HASH_OUT, xmm15, xmm11, %%CTR, \
                 xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, \
                 xmm10, xmm0, %%ENC_DEC, %%INSTANCE_TYPE
 %%_small_initial_blocks_encrypted:
-        endbranch64
 
 %endmacro                       ; GCM_ENC_DEC_SMALL
 
@@ -2966,7 +2959,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         GHASH_LAST_8 %%GDATA_KEY, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
 
 %%_ghash_done:
-        endbranch64
         vmovdqu [%%GDATA_CTX + CurCount], xmm9  ; my_ctx_data.current_counter = xmm9
         vmovdqu [%%GDATA_CTX + AadHash], xmm14      ; my_ctx_data.aad hash = xmm14
 
@@ -3062,7 +3054,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu  [r10], xmm9
 
 %%_return_T_done:
-        endbranch64
 
 %ifdef SAFE_DATA
         ;; Clear sensitive data from context structure
@@ -3271,7 +3262,6 @@ iv_len_12_init_IV:
 	GCM_INIT arg1, arg2, arg3, arg5, arg6, r10, r11, r12
 
 skip_iv_len_12_init_IV:
-        endbranch64
 %ifdef SAFE_DATA
         clear_scratch_gps_asm
         clear_scratch_zmms_asm
@@ -3749,7 +3739,6 @@ iv_len_12_enc_IV:
 	GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12
 
 skip_iv_len_12_enc_IV:
-        endbranch64
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
 
         GCM_COMPLETE arg1, arg2, arg10, arg11, single_call
@@ -3840,7 +3829,6 @@ iv_len_12_dec_IV:
         GCM_INIT arg1, arg2, arg6, arg8, arg9, r10, r11, r12
 
 skip_iv_len_12_dec_IV:
-        endbranch64
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
         GCM_COMPLETE arg1, arg2, arg10, arg11, single_call
 
@@ -3935,7 +3923,7 @@ exit_ghash:
 
         ; Finished reading in data
 %%_data_read:
-        endbranch64
+
 	lea	r12, [rel SHIFT_MASK]
         ; Adjust the shuffle mask pointer to be able to shift r13 bytes
         ; (16-r13 is the number of bytes in plaintext mod 16)
@@ -3977,7 +3965,6 @@ exit_ghash:
         add     [%%GDATA_CTX + PBlockLen], %%PLAIN_LEN
 %endif
 %%_ghash_done:
-        endbranch64
 	vmovdqu	[%%GDATA_CTX + AadHash], %%AAD_HASH
 
         cmp     r15, 0
@@ -3991,7 +3978,6 @@ exit_ghash:
 %%_partial_fill:
         mov     r12, %%PLAIN_LEN
 %%offset_set:
-        endbranch64
         mov     %%DATA_OFFSET, r12
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK_GMAC

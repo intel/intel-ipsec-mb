@@ -41,9 +41,6 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
-%use smartalign
-alignmode generic, nojmp
 
 extern K256_4
 
@@ -270,7 +267,6 @@ section .text
 MKGLOBAL(sha_256_mult_avx,function,internal)
 align 16
 sha_256_mult_avx:
-        endbranch64
 	; general registers preserved in outer calling routine
 	; outer calling routine saves all the XMM registers
 	sub	rsp, STACK_size
@@ -330,6 +326,7 @@ lloop:
 
 %assign i (i*4)
 
+	jmp	Lrounds_16_xx
 align 16
 Lrounds_16_xx:
 %rep 16

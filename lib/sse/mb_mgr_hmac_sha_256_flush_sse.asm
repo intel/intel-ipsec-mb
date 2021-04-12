@@ -29,7 +29,7 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/cet.inc"
+
 extern sha_256_mult_sse
 
 section .data
@@ -109,7 +109,7 @@ endstruc
 ; arg 1 : rcx : state
 MKGLOBAL(FUNC,function,internal)
 FUNC:
-        endbranch64
+
 	mov	rax, rsp
 	sub	rsp, STACK_size
 	and	rsp, -16
@@ -133,7 +133,6 @@ FUNC:
 	cmovne	idx, [rel three]
 
 copy_lane_data:
-        endbranch64
 	; copy idx to empty lanes
 	movdqa	xmm0, [state + _lens_sha256]
 	mov	tmp, [state + _args_data_ptr_sha256 + 8*idx]
@@ -301,7 +300,7 @@ copy_full_digest:
 %endif
 
 clear_ret:
-        endbranch64
+
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
 
@@ -346,7 +345,6 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
-        endbranch64
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

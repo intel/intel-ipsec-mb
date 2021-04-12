@@ -32,7 +32,7 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 %define	VMOVDQ vmovdqu ;; assume buffers not aligned
 
 %macro VPXOR2 2
@@ -110,7 +110,7 @@ section .text
 
 MKGLOBAL(aes_cbc_enc_192_x8,function,internal)
 aes_cbc_enc_192_x8:
-        endbranch64
+
 	sub	rsp, STACK_size
 	mov	[GPR_SAVE_AREA + 8*0], rbp
 

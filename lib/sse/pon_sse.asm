@@ -355,7 +355,6 @@ section .text
 %define %%GPT2        %14       ; [clobbered] temporary GP
 
 %%_cipher_last_blocks:
-        endbranch64
         cmp     %%NUM_BYTES, 16
         jb      %%_partial_block_left
 
@@ -735,7 +734,6 @@ section .text
         sub     bytes_to_crc, 16
 
 %%_main_loop:
-        endbranch64
         cmp     bytes_to_crc, 16
         jb      %%_exit_loop
         DO_PON  p_keys, NUM_AES_ROUNDS, xcounter, p_in, p_out, xbip, \
@@ -767,7 +765,6 @@ section .text
 
         ;; Partial bytes left - complete CRC calculation
 %%_crc_two_xmms:
-        endbranch64
         lea             tmp, [rel pshufb_shf_table]
         movdqu          xtmp2, [tmp + bytes_to_crc]
 %ifidn %%DIR, ENC
@@ -792,7 +789,6 @@ section .text
         pxor            xcrc, xtmp1
 
 %%_128_done:
-        endbranch64
         CRC32_REDUCE_128_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
 
 %%_crc_done:
@@ -862,7 +858,6 @@ section .text
 align 32
 MKGLOBAL(ENC_FN_NAME,function,internal)
 ENC_FN_NAME:
-        endbranch64
         AES128_CTR_PON ENC, CTR
         ret
 
@@ -870,7 +865,6 @@ ENC_FN_NAME:
 align 32
 MKGLOBAL(DEC_FN_NAME,function,internal)
 DEC_FN_NAME:
-        endbranch64
         AES128_CTR_PON DEC, CTR
         ret
 
@@ -878,7 +872,6 @@ DEC_FN_NAME:
 align 32
 MKGLOBAL(ENC_NO_CTR_FN_NAME,function,internal)
 ENC_NO_CTR_FN_NAME:
-        endbranch64
         AES128_CTR_PON ENC, NO_CTR
         ret
 
@@ -886,7 +879,6 @@ ENC_NO_CTR_FN_NAME:
 align 32
 MKGLOBAL(DEC_NO_CTR_FN_NAME,function,internal)
 DEC_NO_CTR_FN_NAME:
-        endbranch64
         AES128_CTR_PON DEC, NO_CTR
         ret
 

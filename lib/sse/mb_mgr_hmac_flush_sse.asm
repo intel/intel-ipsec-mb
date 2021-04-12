@@ -29,7 +29,7 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/cet.inc"
+
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
@@ -108,7 +108,7 @@ endstruc
 ; arg 1 : state
 MKGLOBAL(flush_job_hmac_sse,function,internal)
 flush_job_hmac_sse:
-        endbranch64
+
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -131,7 +131,6 @@ flush_job_hmac_sse:
 	cmp	qword [state + _ldata + 3 * _HMAC_SHA1_LANE_DATA_size + _job_in_lane], 0
 	cmovne	idx, [rel three]
 copy_lane_data:
-        endbranch64
 	; copy valid lane (idx) to empty lanes
 	movdqa	xmm0, [state + _lens]
 	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
@@ -291,7 +290,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
-        endbranch64
+
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	rsp, [rsp + _rsp_save]	; original SP

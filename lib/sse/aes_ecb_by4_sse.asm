@@ -44,8 +44,7 @@
 
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
-%use smartalign
+
 %ifndef AES_ECB_ENC_128
 %define AES_ECB_ENC_128 aes_ecb_enc_128_sse
 %define AES_ECB_ENC_192 aes_ecb_enc_192_sse
@@ -94,7 +93,6 @@ section .text
 %define AES      aesdec
 %define AES_LAST aesdeclast
 %endif
-
 	mov	TMP, LEN
 	and	TMP, 3*16
 	jz	%%initial_4
@@ -489,12 +487,10 @@ section .text
 
 	cmp	LEN, 4*16
 	jz	%%done
-	;; fall through to main_loop
+	jmp	%%main_loop
 
-%%main_loop:
-        endbranch64
 	align 16
-%%main_loop_2:
+%%main_loop:
 	; load plain/cipher text
 	movdqu	XDATA0, [IN + IDX + 0*16]
 	movdqu	XDATA1, [IN + IDX + 1*16]
@@ -610,7 +606,7 @@ section .text
 	movdqu	[OUT + IDX + 3*16 - 4*16], XDATA3
 
 	cmp     IDX, LEN
-	jne	%%main_loop_2
+	jne	%%main_loop
 
 %%done:
 
@@ -621,40 +617,41 @@ section .text
 	ret
 
 %endmacro
+
 align 16
 MKGLOBAL(AES_ECB_ENC_128,function,internal)
 AES_ECB_ENC_128:
-        endbranch64
+
         AES_ECB 10, ENC
 
 align 16
 MKGLOBAL(AES_ECB_ENC_192,function,internal)
 AES_ECB_ENC_192:
-        endbranch64
+
         AES_ECB 12, ENC
 
 align 16
 MKGLOBAL(AES_ECB_ENC_256,function,internal)
 AES_ECB_ENC_256:
-        endbranch64
+
         AES_ECB 14, ENC
 
 align 16
 MKGLOBAL(AES_ECB_DEC_128,function,internal)
 AES_ECB_DEC_128:
-        endbranch64
+
         AES_ECB 10, DEC
 
 align 16
 MKGLOBAL(AES_ECB_DEC_192,function,internal)
 AES_ECB_DEC_192:
-        endbranch64
+
         AES_ECB 12, DEC
 
 align 16
 MKGLOBAL(AES_ECB_DEC_256,function,internal)
 AES_ECB_DEC_256:
-        endbranch64
+
         AES_ECB 14, DEC
 
 %ifdef LINUX

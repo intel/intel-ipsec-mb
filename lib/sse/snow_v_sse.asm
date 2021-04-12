@@ -269,7 +269,6 @@ SNOW_V:
 
 snow_v_common_init:
 
-      endbranch64
       ;; Init LSFR
       mov rax, [job + _enc_keys]
       movdqu   LFSR_A_HDQ, [rax]

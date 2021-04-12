@@ -42,11 +42,9 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
-%use smartalign
-alignmode generic, nojmp
 
 section .data
 default rel
@@ -331,7 +329,6 @@ endstruc
 MKGLOBAL(sha512_x2_sse,function,internal)
 align 32
 sha512_x2_sse:
-        endbranch64
 	; general registers preserved in outer calling routine
 	; outer calling routine saves all the XMM registers
 	sub	rsp, STACK_size
@@ -390,6 +387,7 @@ lloop:
 
 %assign i (i*4)
 
+	jmp	Lrounds_16_xx
 align 16
 Lrounds_16_xx:
 %rep 16

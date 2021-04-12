@@ -31,7 +31,7 @@
 %include "include/const.inc"
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 ; routine to do AES256 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
 
@@ -384,7 +384,6 @@ _iv_length_8:
         pinsrb	xcounter, [p_IV + 7], 8
 
 _finish_nonce_move:
-        endbranch64
         ; last byte = 1
         por     xcounter, [rel set_byte15]
 %else ;; CNTR/CNTR_BIT
@@ -414,7 +413,6 @@ _finish_nonce_move:
 %endif
 %endif ;; CNTR/CNTR_BIT/CCM
 %%_bswap_iv:
-        endbranch64
 	pshufb	xcounter, xbyteswap
 
         ;; calculate len
@@ -479,7 +477,6 @@ _finish_nonce_move:
 	add	p_out, 7*16
 	; fall through to chk
 %%_chk:
-        endbranch64
 	and	num_bytes, ~(7*16)
 	jz	%%_do_return2
 
@@ -506,7 +503,6 @@ align 32
         jnz    %%_last
 
 %%_do_return2:
-        endbranch64
 %ifidn %%CNTR_TYPE, CCM
 	mov	rax, job
 	or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER
@@ -599,19 +595,16 @@ align 32
 ; arg 1 : job
 MKGLOBAL(AES_CNTR_CCM_256,function,internal)
 AES_CNTR_CCM_256:
-        endbranch64
         DO_CNTR CCM
 %else
 ;; aes_cntr_256_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bytes, UINT64 iv_len)
 MKGLOBAL(AES_CNTR_256,function,internal)
 AES_CNTR_256:
-        endbranch64
         DO_CNTR CNTR
 
 ;; aes_cntr_bit_256_sse(void *in, void *IV, void *keys, void *out, UINT64 num_bits, UINT64 iv_len)
 MKGLOBAL(AES_CNTR_BIT_256,function,internal)
 AES_CNTR_BIT_256:
-        endbranch64
         DO_CNTR CNTR_BIT
 %endif ;; CNTR_CCM_SSE
 

@@ -340,7 +340,6 @@ section .text
         vpslldq         %%xcrc, 7
 
 %%_do_barret:
-        endbranch64
         CRC32_REDUCE_64_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
         jmp             %%_64_done
 
@@ -349,7 +348,6 @@ section .text
         sub             %%bytes_to_crc, 16
 
 %%_main_loop:
-        endbranch64
         cmp             %%bytes_to_crc, 16
         jb              %%_exit_loop
         CRC_UPDATE16 %%p_in, %%xcrc, %%xcrckey, %%xtmp1, %%xtmp2, next_crc
@@ -361,7 +359,6 @@ section .text
 
         ;; Partial bytes left - complete CRC calculation
 %%_crc_two_xmms:
-        endbranch64
         lea             %%tmp, [rel pshufb_shf_table]
         vmovdqu64       %%xtmp2, [%%tmp + %%bytes_to_crc]
         vmovdqu64       %%xtmp1, [%%p_in - 16 + %%bytes_to_crc]  ; xtmp1 = data for CRC
@@ -377,10 +374,8 @@ section .text
         CRC_CLMUL %%xcrc, %%xcrckey, %%xtmp3, %%xtmp1
 
 %%_128_done:
-        endbranch64
         CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
 %%_64_done:
-        endbranch64
 %endmacro
 
 ;; =====================================================================
@@ -536,7 +531,6 @@ section .text
 %endif  ; no_first
 
 %%_crc_lane_done:
-        endbranch64
 %endmacro       ; CRC32_ROUND
 
 ;; =====================================================================
@@ -737,7 +731,6 @@ section .text
         je              %%_encrypt_the_last_block
 
 %%_main_enc_loop:
-        endbranch64
         ;; if 16 bytes left (for CRC) then
         ;; go to the code variant where CRC last block case is checked
         cmp             %%LEN, 16
@@ -1167,7 +1160,6 @@ section .text
         shr             %%lane, 4
 
 %%_crc_complete:
-        endbranch64
         cmp             %%unused_lanes, 0xf
         je              %%_load_lens
         xor             %%job_rax, %%job_rax    ; return NULL
@@ -1386,7 +1378,7 @@ APPEND(%%_skip_clear_,I):
 %endif  ;; SAFE_DATA
 
 %%_return:
-        endbranch64
+
 %endmacro
 
 ;; ===========================================================================

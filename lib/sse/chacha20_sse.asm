@@ -30,7 +30,7 @@
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
 %include "include/chacha_poly_defines.asm"
-%include "include/cet.inc"
+
 section .data
 default rel
 
@@ -312,7 +312,6 @@ section .text
         simd_store_sse %%DST, %%PT0, %%LEN, %%TMP, %%TMP2
 
 %%end_encrypt:
-        endbranch64
         add     %%SRC, %%LEN
         add     %%DST, %%LEN
 %endmacro
@@ -675,7 +674,7 @@ section .text
 align 32
 MKGLOBAL(submit_job_chacha20_enc_dec_sse,function,internal)
 submit_job_chacha20_enc_dec_sse:
-        endbranch64
+
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -1048,7 +1047,7 @@ between_129_191:
                         xmm0, xmm1, xmm4, xmm3, off, src
 
 no_partial_block:
-        endbranch64
+
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
         ; Clear stack frame
@@ -1073,7 +1072,7 @@ exit:
 align 32
 MKGLOBAL(chacha20_enc_dec_ks_sse,function,internal)
 chacha20_enc_dec_ks_sse:
-        endbranch64
+
 %define blk_cnt r10
 
 %define prev_ks r13
@@ -1354,7 +1353,7 @@ check_1_or_2_blocks_left_ks:
         jmp     no_partial_block_ks
 
 less_than_64_ks:
-        endbranch64
+
         ; Preserve len
         mov     tmp5, len
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm9, xmm10, xmm11, xmm12, \
@@ -1527,7 +1526,7 @@ between_129_191_ks:
 
 
 no_partial_block_ks:
-        endbranch64
+
         mov     [ctx + LastBlkCount], blk_cnt
 
 %ifdef SAFE_DATA
@@ -1561,7 +1560,6 @@ exit_ks:
 align 32
 MKGLOBAL(poly1305_key_gen_sse,function,internal)
 poly1305_key_gen_sse:
-        endbranch64
         ;; prepare chacha state from IV, key
         movdqa  xmm0, [rel constants]
         movdqu  xmm1, [arg1]          ; Load key bytes 0-15
@@ -1589,7 +1587,7 @@ poly1305_key_gen_sse:
 align 32
 MKGLOBAL(submit_job_chacha20_poly_enc_sse,function,internal)
 submit_job_chacha20_poly_enc_sse:
-        endbranch64
+
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -2150,7 +2148,7 @@ between_129_191_poly:
                         xmm0, xmm1, xmm3, xmm4, off, src
 
 no_partial_block_poly:
-        endbranch64
+
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
         ; Clear stack frame
@@ -2176,7 +2174,7 @@ no_partial_block_poly:
 align 32
 MKGLOBAL(submit_job_chacha20_poly_dec_sse,function,internal)
 submit_job_chacha20_poly_dec_sse:
-        endbranch64
+
 %define src     r8
 %define dst     r9
 %define len     r10
@@ -2621,7 +2619,7 @@ between_129_191_dec:
 
 
 no_partial_block_dec:
-        endbranch64
+
 
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
@@ -2645,7 +2643,7 @@ no_partial_block_dec:
 
 MKGLOBAL(gen_keystr_poly_key_sse,function,internal)
 gen_keystr_poly_key_sse:
-        endbranch64
+
 %define keys    arg1
 %define iv      arg2
 %define len     arg3
@@ -2837,7 +2835,7 @@ two_blocks_left_gen:
         movdqu  [ks + 16*7], xmm12
 
 exit_gen:
-        endbranch64
+
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
 %endif

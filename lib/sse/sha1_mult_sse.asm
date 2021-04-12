@@ -297,7 +297,7 @@ align 32
 ; arg 2 : rdx : size (in blocks) ;; assumed to be >= 1
 MKGLOBAL(sha1_mult_sse,function,internal)
 sha1_mult_sse:
-        endbranch64
+
 	sub	rsp, FRAMESZ
 
 	;; Initialize digests

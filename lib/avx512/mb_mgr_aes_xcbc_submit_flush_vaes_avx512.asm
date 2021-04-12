@@ -263,7 +263,6 @@ endstruc
 	vmovdqa	[lane_data + _xcbc_final_block], xmm0
 	sub	len, 16		; take last block off length
 %%_end_fast_copy:
-        endbranch64
         ;; Update lane len
         vmovdqa64 ymm0, [state + _aes_xcbc_lens]
 
@@ -302,7 +301,6 @@ endstruc
 %%_skip_copy %+ i:
         mov     DWORD(tmp2), i ;; store good lane idx
 %%_end_loop %+ i:
-        endbranch64
 %assign i (i - 1)
 %endrep
         kmovw           k6, DWORD(tmp)
@@ -335,7 +333,7 @@ endstruc
 %endif ; SUBMIT_FLUSH
 
 %%_start_loop:
-        endbranch64
+
         ; Find min length for lanes 8-15
         vpextrw         DWORD(len2), xmm2, 0   ; min value
         vpextrw         DWORD(idx), xmm2, 1   ; min index
@@ -455,7 +453,7 @@ endstruc
 %endif
 
 %%_return:
-        endbranch64
+
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

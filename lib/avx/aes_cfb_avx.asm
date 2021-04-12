@@ -191,7 +191,7 @@ align 32
 aes_cfb_256_one_avx:
 aes_cfb_256_one_avx2:
 aes_cfb_256_one_avx512:
-        endbranch64
+
         do_cfb 13
 
         ret

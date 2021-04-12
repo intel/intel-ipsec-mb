@@ -520,7 +520,7 @@ endstruc
 %endif ; end FLUSH
 
 %%_ccm_round:
-        endbranch64
+
         ; Find min length for lanes 8-15
         vpextrw         DWORD(len2), min_len_idx, 0   ; min value
         vpextrw         DWORD(min_idx), min_len_idx, 1   ; min index
@@ -620,7 +620,6 @@ endstruc
 %endif ;; SAFE_DATA
 
 %%_return:
-        endbranch64
 %ifndef SAFE_DATA
         vzeroupper
 %endif
@@ -655,7 +654,6 @@ endstruc
         mov     tmp, [min_job + _dst]
 
 %%_set_init_done_1:
-        endbranch64
         mov     [state + _aes_ccm_args_in + min_idx*8], tmp
         mov     word [state + _aes_ccm_init_done + min_idx*2], 1
 

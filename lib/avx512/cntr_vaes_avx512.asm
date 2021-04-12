@@ -539,7 +539,6 @@ default rel
         ;; zero the length (all encryption is complete)
         xor             %%LENGTH, %%LENGTH
 %%_initial_blocks_done:
-        endbranch64
 
 %endmacro                       ; INITIAL_BLOCKS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1069,7 +1068,6 @@ default rel
         jmp     %%_small_initial_blocks_encrypted
 
 %%_small_initial_num_blocks_is_1:
-        endbranch64
         INITIAL_BLOCKS_PARTIAL  %%KEY, %%CYPH_PLAIN_OUT, \
                 %%PLAIN_CYPH_IN, %%LENGTH, 1, \
                 %%CTR, \
@@ -1078,7 +1076,6 @@ default rel
                 %%IA0, %%IA1, %%MASKREG, %%SHUFREG, %%NROUNDS, \
                 %%CNTR_TYPE, %%RBITS
 %%_small_initial_blocks_encrypted:
-        endbranch64
 
 %endmacro                       ; CNTR_ENC_DEC_SMALL
 
@@ -1460,7 +1457,6 @@ default rel
                 %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
 
 %%_initial_blocks_encrypted:
-        endbranch64
         or              %%LENGTH, %%LENGTH
         je              %%_enc_dec_done
 
@@ -1501,7 +1497,6 @@ default rel
                 %%RBITS
 
 %%_enc_dec_done:
-        endbranch64
 %ifidn %%CNTR_TYPE, CCM
 	mov	rax, %%JOB
 	or	dword [rax + _status], IMB_STATUS_COMPLETED_CIPHER

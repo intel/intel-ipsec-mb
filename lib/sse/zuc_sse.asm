@@ -31,6 +31,7 @@
 %include "include/memcpy.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/cet.inc"
+
 %ifndef ZUC_CIPHER_4
 %define ZUC_CIPHER_4 asm_ZucCipher_4_sse
 %define ZUC128_INIT_4 asm_ZucInitialization_4_sse
@@ -949,7 +950,6 @@ section .text
 
     mov r15, 0
 %%start_loop:
-    endbranch64
     cmp r15, 32
     je  %%exit_loop
     ; Shift LFSR 32-times, update state variables
@@ -974,12 +974,10 @@ section .text
 
 MKGLOBAL(ZUC128_INIT_4,function,internal)
 ZUC128_INIT_4:
-        endbranch64
         ZUC_INIT_4 128
 
 MKGLOBAL(ZUC256_INIT_4,function,internal)
 ZUC256_INIT_4:
-        endbranch64
         ZUC_INIT_4 256
 
 ; This macro reorder the LFSR registers
@@ -1113,7 +1111,7 @@ ZUC256_INIT_4:
 ;;
 MKGLOBAL(ZUC_KEYGEN16B_4,function,internal)
 ZUC_KEYGEN16B_4:
-        endbranch64
+
         KEYGEN_4_SSE 4
 
         ret
@@ -1131,7 +1129,7 @@ ZUC_KEYGEN16B_4:
 ;;
 MKGLOBAL(ZUC_KEYGEN8B_4,function,internal)
 ZUC_KEYGEN8B_4:
-        endbranch64
+
         KEYGEN_4_SSE 2
 
         ret
@@ -1149,7 +1147,7 @@ ZUC_KEYGEN8B_4:
 ;;
 MKGLOBAL(ZUC_KEYGEN4B_4,function,internal)
 ZUC_KEYGEN4B_4:
-        endbranch64
+
         KEYGEN_4_SSE 1
 
         ret
@@ -1285,7 +1283,7 @@ ZUC_KEYGEN4B_4:
 ;;
 MKGLOBAL(ZUC_CIPHER_4,function,internal)
 ZUC_CIPHER_4:
-        endbranch64
+
 %ifdef LINUX
         %define         pState  rdi
         %define         pIn     rsi
@@ -1363,21 +1361,19 @@ ZUC_CIPHER_4:
         ; Load state pointer in RAX
         mov     rax, pState
 
+loop_cipher64:
         cmp     min_length, 64
         jl      exit_loop_cipher64
 
-loop_cipher64:
-        sub     min_length, 4 * 16
 %assign round_off 0
 %rep 4
         CIPHERNx4B_4 4, round_off, buf_idx, 0
 
         add     buf_idx, 16
+        sub     min_length, 16
 %assign round_off (round_off + 4)
 %endrep
-        cmp     min_length, 64
-        jnl     loop_cipher64
-
+        jmp     loop_cipher64
 exit_loop_cipher64:
 
         ; Check if there are more bytes left to encrypt
@@ -1479,7 +1475,6 @@ APPEND(_num_final_rounds_is_,I):
 %endrep
 
 exit_final_rounds:
-        endbranch64
         ;; update in/out pointers
         movq           xmm0, buf_idx
         pshufd         xmm0, xmm0, 0x44
@@ -1531,7 +1526,6 @@ exit_cipher:
 align 16
 MKGLOBAL(ZUC_EIA3REMAINDER,function,internal)
 ZUC_EIA3REMAINDER:
-        endbranch64
 %ifdef LINUX
 	%define		KS	rdi
 	%define		DATA	rsi
@@ -1654,7 +1648,6 @@ Eia3RoundsSSE_dw_end:
 
 ;        ;; process remaining data bytes and bits
 Eia3RoundsSSE_byte_loop:
-        endbranch64
         or      N_BITS, N_BITS
         jz      Eia3RoundsSSE_byte_loop_end
 
@@ -1673,7 +1666,7 @@ Eia3RoundsSSE_byte_partial:
         and     r11, r10
         xor     N_BITS, N_BITS
 Eia3RoundsSSE_byte_read:
-        endbranch64
+
 %assign DATATEST 0x80
 %rep 8
         xor     r10, r10
@@ -1716,7 +1709,7 @@ Eia3RoundsSSE_byte_loop_end:
 align 16
 MKGLOBAL(ZUC_EIA3ROUND16B,function,internal)
 ZUC_EIA3ROUND16B:
-        endbranch64
+
 %ifdef LINUX
 	%define		T	edi
 	%define		KS	rsi

@@ -130,7 +130,6 @@ section .text
 MKGLOBAL(sha256_ni,function,internal)
 align 32
 sha256_ni:
-        endbranch64
 	sub		rsp, frame_size
 
         DBGPRINTL "enter sha256-ni-x2"

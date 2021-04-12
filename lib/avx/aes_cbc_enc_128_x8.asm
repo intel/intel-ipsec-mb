@@ -32,7 +32,7 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 %define	VMOVDQ vmovdqu ;; assume buffers not aligned
 
 %macro VPXOR2 2
@@ -517,7 +517,6 @@ section .text
 
 MKGLOBAL(FUNC,function,internal)
 FUNC:
-        endbranch64
 %ifdef ARG_OUT
         AES_CBC_X8 MODE, OFFSET, ARG_IV, ARG_KEYS, ARG_IN, ARG_OUT
 %else

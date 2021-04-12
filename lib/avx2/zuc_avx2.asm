@@ -1375,7 +1375,6 @@ APPEND(_num_final_rounds_is_,I):
 %endrep
 
 exit_final_rounds:
-        endbranch64
         ;; update in/out pointers
 
         ; Broadcast buf_idx in all qwords of ymm0

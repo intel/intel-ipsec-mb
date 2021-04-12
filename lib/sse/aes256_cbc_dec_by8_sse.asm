@@ -346,13 +346,11 @@ mult_of_8_blks:
 	movdqa	xkey12, [p_keys + 12*16]
 
 main_loop2:
-        endbranch64
-main_loop:
 	; num_bytes is a multiple of 8 and >0
 	do_aes_noload	8
 	add	p_out,	8*16
 	sub	num_bytes, 8*16
-	jne	main_loop
+	jne	main_loop2
 
 do_return2:
 %ifdef SAFE_DATA

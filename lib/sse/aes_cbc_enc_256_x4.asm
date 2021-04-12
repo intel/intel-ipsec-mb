@@ -32,7 +32,7 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 %define	MOVDQ movdqu ;; assume buffers not aligned
 %macro pxor2 2
 	MOVDQ	XTMP, %2
@@ -113,11 +113,9 @@ section .text
 %ifdef CBC_MAC
 MKGLOBAL(aes256_cbc_mac_x4,function,internal)
 aes256_cbc_mac_x4:
-        endbranch64
 %else
 MKGLOBAL(aes_cbc_enc_256_x4,function,internal)
 aes_cbc_enc_256_x4:
-        endbranch64
 %endif
 
 %else ;; NO-AESNI
@@ -125,11 +123,9 @@ aes_cbc_enc_256_x4:
 %ifdef CBC_MAC
 MKGLOBAL(aes256_cbc_mac_x4_no_aesni,function,internal)
 aes256_cbc_mac_x4_no_aesni:
-        endbranch64
 %else
 MKGLOBAL(aes_cbc_enc_256_x4_no_aesni,function,internal)
 aes_cbc_enc_256_x4_no_aesni:
-        endbranch64
 %endif
 %endif ;; AES_CBC_ENC_X4
 

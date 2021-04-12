@@ -32,7 +32,7 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
+
 %define	MOVDQ movdqu ;; assume buffers not aligned
 %macro pxor2 2
 	MOVDQ	XTMP, %2
@@ -112,7 +112,7 @@ section .text
 
 MKGLOBAL(AES_CBC_ENC_X4,function,internal)
 AES_CBC_ENC_X4:
-        endbranch64
+
 	push	rbp
 
 	mov	IDX, 16

@@ -99,7 +99,7 @@ endstruc
 ; arg 2 : job
 MKGLOBAL(SUBMIT_JOB_AES_XCBC,function,internal)
 SUBMIT_JOB_AES_XCBC:
-        endbranch64
+
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -150,7 +150,6 @@ fast_copy:
 	vmovdqa	[lane_data + _xcbc_final_block], xmm0
 	sub	len, 16		; take last block off length
 end_fast_copy:
-        endbranch64
 	vpxor	xmm0, xmm0, xmm0
 	shl	lane, 4	; multiply by 16
 	vmovdqa	[state + _aes_xcbc_args_ICV + lane], xmm0
@@ -163,7 +162,6 @@ end_fast_copy:
 	jne	return_null
 
 start_loop:
-        endbranch64
 	; Find min length
 	vphminposuw	xmm1, xmm0
 	vpextrw	DWORD(len2), xmm1, 0	; min value
@@ -225,7 +223,7 @@ end_loop:
 %endif
 
 return:
-        endbranch64
+
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

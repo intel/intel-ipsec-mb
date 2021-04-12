@@ -330,7 +330,6 @@ section .text
         sub             %%bytes_to_crc, 16
 
 %%_main_loop:
-        endbranch64
         cmp             %%bytes_to_crc, 16
         jb              %%_exit_loop
         CRC_UPDATE16 %%p_in, %%xcrc, %%xcrckey, %%xtmp1, %%xtmp2, next_crc
@@ -342,7 +341,6 @@ section .text
 
         ;; Partial bytes left - complete CRC calculation
 %%_crc_two_xmms:
-        endbranch64
         lea             %%tmp, [rel pshufb_shf_table]
         vmovdqu64       %%xtmp2, [%%tmp + %%bytes_to_crc]
         vmovdqu64       %%xtmp1, [%%p_in - 16 + %%bytes_to_crc]  ; xtmp1 = data for CRC
@@ -358,7 +356,6 @@ section .text
         CRC_CLMUL %%xcrc, %%xcrckey, %%xtmp3, %%xtmp1
 
 %%_128_done:
-        endbranch64
         CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
 %%_64_done:
 %endmacro
@@ -819,7 +816,6 @@ section .text
         vextracti64x2   %%XCRC0, %%ZCRC_IN_OUT3, 3
 
 %%_main_loop:
-        endbranch64
         cmp     %%NUM_BYTES, (16 * 16) + 16
         jb      %%_main_loop_exit
 
@@ -939,7 +935,6 @@ section .text
         vextracti64x2   %%XCRC0, %%ZTMP9, 3
 
 %%_decrypt_done_fold_by8:
-        endbranch64
         ;; Register content at this point:
         ;; ZTMP6 - ZTMP9 => decrypted blocks (16 to 31)
         ;; ZCRC_IN_OUT0 - ZCRC_IN_OUT3 - fold by 16 CRC sums
@@ -1293,7 +1288,6 @@ section .text
         ;;     XIV - IV for decrypt operation
         ;; =====================================================================
 %%_check_partial_block:
-        endbranch64
         or              %%NUM_BYTES, %%NUM_BYTES
         jz              %%_no_partial_bytes
 
@@ -1418,7 +1412,6 @@ section .text
         CRC32_REDUCE_64_TO_32 rax, %%XCRC_IN_OUT, %%XTMP0, %%XTMP1, %%XCRC_TMP
 
 %%_do_return:
-        endbranch64
         ;; result in rax
 
 %endmacro       ;; DOCSIS_DEC_CRC32
@@ -1493,7 +1486,6 @@ section .text
         mov             job, [rsp + _job_save]
 
 %%aes_docsis_dec_crc32_avx512__exit:
-        endbranch64
         mov             tmp1, [job + _auth_tag_output]
 	mov             [tmp1], eax        ; store CRC32 value
 

@@ -315,7 +315,6 @@ section .text
         sub             %%bytes_to_crc, 16
 
 %%_main_loop:
-        endbranch64
         cmp             %%bytes_to_crc, 16
         jb              %%_exit_loop
         CRC_UPDATE16 %%p_in, %%xcrc, %%xcrckey, %%xtmp1, %%xtmp2, next_crc
@@ -327,7 +326,6 @@ section .text
 
         ;; Partial bytes left - complete CRC calculation
 %%_crc_two_xmms:
-        endbranch64
         lea             %%tmp, [rel pshufb_shf_table]
         vmovdqu64       %%xtmp2, [%%tmp + %%bytes_to_crc]
         vmovdqu64       %%xtmp1, [%%p_in - 16 + %%bytes_to_crc]  ; xtmp1 = data for CRC
@@ -343,7 +341,6 @@ section .text
         CRC_CLMUL %%xcrc, %%xcrckey, %%xtmp3, %%xtmp1
 
 %%_128_done:
-        endbranch64
         CRC32_REDUCE_128_TO_32 %%ethernet_fcs, %%xcrc, %%xtmp1, %%xtmp2, %%xcrckey
 %%_64_done:
 %endmacro
@@ -820,7 +817,6 @@ section .text
 %endrep
 
 %%_main_loop:
-        endbranch64
         cmp     %%NUM_BYTES, (8 * 16)
         jb      %%_exit_loop
 
@@ -851,7 +847,6 @@ section .text
         vmovdqa64       %%XCRC0, %%XCRC7
 
 %%_check_partial_block:
-        endbranch64
         or      %%NUM_BYTES, %%NUM_BYTES
         jz      %%_no_partial_bytes
 
@@ -973,11 +968,9 @@ section .text
         vpslldq         %%XCRC_IN_OUT, 7
 
 %%_do_barret:
-        endbranch64
         CRC32_REDUCE_64_TO_32 rax, %%XCRC_IN_OUT, %%XTMP0, %%XTMP1, %%XCRC_TMP
 
 %%_do_return:
-        endbranch64
         ;; result in rax
 
 %endmacro       ;; DOCSIS_DEC_CRC32
@@ -1045,7 +1038,6 @@ section .text
         ETHERNET_FCS_CRC tmp1, tmp2, rax, xmm15, tmp3, xmm0, xmm1, xmm2, xmm3
 
 %%aes_docsis_dec_crc32_avx512__exit:
-        endbranch64
         mov             tmp1, [job + _auth_tag_output]
 	mov             [tmp1], eax        ; store CRC32 value
 

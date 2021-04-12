@@ -102,7 +102,7 @@ endstruc
 ; arg 2 : job
 MKGLOBAL(FLUSH_JOB_AES_XCBC,function,internal)
 FLUSH_JOB_AES_XCBC:
-        endbranch64
+
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -134,7 +134,6 @@ FLUSH_JOB_AES_XCBC:
 	cmovne	idx, [rel three]
 
 copy_lane_data:
-        endbranch64
 	; copy idx to empty lanes
 	mov	tmp1, [state + _aes_xcbc_args_in + idx*8]
 	mov	tmp3, [state + _aes_xcbc_args_keys + idx*8]
@@ -219,7 +218,7 @@ APPEND(skip_clear_,I):
 %endrep
 %endif
 return:
-        endbranch64
+
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

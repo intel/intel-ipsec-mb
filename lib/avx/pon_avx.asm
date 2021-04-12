@@ -285,7 +285,6 @@ section .text
 %%_ctr_overflow:
         vpaddq          %%CTR, %%CTR, [rel ddq_add_1_1]
 %%_ctr_overflow_done:
-        endbranch64
 %endif
 
         ;; CRC calculation
@@ -444,7 +443,6 @@ section .text
 %%_ctr2_overflow:
         vpaddq          %%CTR2, %%CTR1, %%T1
 %%_ctr2_overflow_done:
-        endbranch64
         vpshufb         %%CTR1, %%CTR1, %%T2
 
         ;; CTR3: perform 1 increment on whole 128 bits
@@ -455,7 +453,6 @@ section .text
 %%_ctr3_overflow:
         vpaddq          %%CTR3, %%CTR2, %%T1
 %%_ctr3_overflow_done:
-        endbranch64
         vpshufb         %%CTR2, %%CTR2, %%T2
 
         ;; CTR4: perform 1 increment on whole 128 bits
@@ -466,7 +463,6 @@ section .text
 %%_ctr4_overflow:
         vpaddq          %%CTR4, %%CTR3, %%T1
 %%_ctr4_overflow_done:
-        endbranch64
         vpshufb         %%CTR3, %%CTR3, %%T2
 
         ;; CTR: perform 1 increment on whole 128 bits (for the next iteration)
@@ -477,10 +473,8 @@ section .text
 %%_ctr_overflow:
         vpaddq          %%CTR, %%CTR4, %%T1
 %%_ctr_overflow_done:
-        endbranch64
         vpshufb         %%CTR4, %%CTR4, %%T2
 %%_ctr_update_done:
-        endbranch64
 %endif
 
 %ifidn %%CRC_TYPE, next_crc
@@ -623,7 +617,6 @@ section .text
 
         align 16
 %%_cipher_last_blocks:
-        endbranch64
         cmp     %%NUM_BYTES, 16
         jb      %%_partial_block_left
 
@@ -1062,7 +1055,6 @@ section .text
 
         ;; Partial bytes left - complete CRC calculation
 %%_crc_two_xmms:
-        endbranch64
         lea             tmp, [rel pshufb_shf_table]
         vmovdqu         xtmp2, [tmp + bytes_to_crc]
         ;; @note: in case of in-place operation (default) this load is
@@ -1088,7 +1080,6 @@ section .text
         vpxor           xcrc, xtmp1
 
 %%_128_done:
-        endbranch64
         CRC32_REDUCE_128_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
 
 %%_crc_done:
@@ -1156,7 +1147,6 @@ section .text
 align 64
 MKGLOBAL(submit_job_pon_enc_avx,function,internal)
 submit_job_pon_enc_avx:
-        endbranch64
         AES128_CTR_PON ENC, CTR
         ret
 
@@ -1164,7 +1154,6 @@ submit_job_pon_enc_avx:
 align 64
 MKGLOBAL(submit_job_pon_dec_avx,function,internal)
 submit_job_pon_dec_avx:
-        endbranch64
         AES128_CTR_PON DEC, CTR
         ret
 
@@ -1172,7 +1161,6 @@ submit_job_pon_dec_avx:
 align 64
 MKGLOBAL(submit_job_pon_enc_no_ctr_avx,function,internal)
 submit_job_pon_enc_no_ctr_avx:
-        endbranch64
         AES128_CTR_PON ENC, NO_CTR
         ret
 
@@ -1180,7 +1168,6 @@ submit_job_pon_enc_no_ctr_avx:
 align 64
 MKGLOBAL(submit_job_pon_dec_no_ctr_avx,function,internal)
 submit_job_pon_dec_no_ctr_avx:
-        endbranch64
         AES128_CTR_PON DEC, NO_CTR
         ret
 

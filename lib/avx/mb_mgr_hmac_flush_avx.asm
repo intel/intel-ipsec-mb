@@ -29,7 +29,7 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/cet.inc"
+
 extern sha1_mult_avx
 
 section .data
@@ -106,7 +106,7 @@ endstruc
 ; arg 1 : rcx : state
 MKGLOBAL(flush_job_hmac_avx,function,internal)
 flush_job_hmac_avx:
-        endbranch64
+
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -129,7 +129,6 @@ flush_job_hmac_avx:
 	cmovne	idx, [rel three]
 
 copy_lane_data:
-        endbranch64
 	; copy valid lane (idx) to empty lanes
 	vmovdqa	xmm0, [state + _lens]
 	mov	tmp, [state + _args_data_ptr + PTR_SZ*idx]
@@ -287,7 +286,7 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
-        endbranch64
+
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	rsp, [rsp + _rsp_save]	; original SP

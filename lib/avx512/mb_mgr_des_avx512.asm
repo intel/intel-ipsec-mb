@@ -232,7 +232,6 @@ extern des3_x16_cbc_dec_avx512
 %endif                          ; DOCSIS
         ;; fall through
 %%_des_submit_end:
-        endbranch64
         ;; return a job
         ;; - decrement number of jobs in use
 	sub	qword [STATE + _des_lanes_in_use], 1
@@ -254,7 +253,6 @@ extern des3_x16_cbc_dec_avx512
 %endif
         vzeroupper
 %%_des_submit_return:
-        endbranch64
 %endmacro
 
 ;;; ===========================================================================
@@ -394,7 +392,6 @@ extern des3_x16_cbc_dec_avx512
         xor     rax, rax
         jmp     %%_des_flush_return
 %%_des_flush_end:
-        endbranch64
         ;; return a job
         ;; - decrement number of jobs in use
 	sub	qword [STATE + _des_lanes_in_use], 1
@@ -421,7 +418,6 @@ extern des3_x16_cbc_dec_avx512
         vmovdqa32       [STATE + _des_args_IV + (16*4)]{k6}, ZTMP1
 %endif
 %%_des_flush_return:
-        endbranch64
         vzeroupper
 %endmacro
 

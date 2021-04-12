@@ -258,7 +258,7 @@ endstruc
         pinsrb init_block0, [tmp + 7], 8
 
 %%_finish_nonce_move:
-        endbranch64
+
         ;; Bytes 14 & 15 (message length), in Big Endian
         mov     ax, [job + _msg_len_to_hash_in_bytes]
         xchg    al, ah
@@ -368,7 +368,6 @@ APPEND(skip_,I):
 %endif ; end FLUSH
 
 %%_ccm_round:
-        endbranch64
         pextrw  len2, min_len_idx, 0    ; min value
         pextrw  min_idx, min_len_idx, 1         ; min index (0...3)
 
@@ -463,7 +462,6 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 %%_return:
-        endbranch64
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
@@ -495,7 +493,6 @@ APPEND(skip_clear_,I):
         mov     tmp, [min_job + _dst]
 
 %%_set_init_done_1:
-        endbranch64
         mov     [state + _aes_ccm_args_in + min_idx*8], tmp
         mov     word [state + _aes_ccm_init_done + min_idx*2], 1
 

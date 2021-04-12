@@ -31,7 +31,7 @@
 %include "include/memcpy.asm"
 %include "include/reg_sizes.asm"
 %include "include/const.inc"
-%include "include/cet.inc"
+
 extern md5_x4x2_avx
 
 section .data
@@ -99,7 +99,7 @@ endstruc
 ; arg 2 : rdx : job
 MKGLOBAL(submit_job_hmac_md5_avx,function,internal)
 submit_job_hmac_md5_avx:
-        endbranch64
+
         mov	rax, rsp
         sub	rsp, STACK_size
         and	rsp, -16
@@ -159,7 +159,7 @@ fast_copy:
         vmovdqa	[lane_data + _extra_block + 2*16], xmm2
         vmovdqa	[lane_data + _extra_block + 3*16], xmm3
 end_fast_copy:
-        endbranch64
+
         mov	size_offset, extra_blocks
         shl	size_offset, 6
         sub	size_offset, last_len
@@ -199,7 +199,6 @@ ge64_bytes:
 
         align	16
 start_loop:
-        endbranch64
         ; Find min length
         vmovdqa	xmm0, [state + _lens_md5]
         vphminposuw	xmm1, xmm0
@@ -336,7 +335,7 @@ clear_ret:
 %endif
 
 return:
-        endbranch64
+
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]

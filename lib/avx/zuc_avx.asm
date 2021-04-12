@@ -887,12 +887,10 @@ align 64
 
 MKGLOBAL(asm_ZucInitialization_4_avx,function,internal)
 asm_ZucInitialization_4_avx:
-        endbranch64
         ZUC_INIT_4 128
 
 MKGLOBAL(asm_Zuc256Initialization_4_avx,function,internal)
 asm_Zuc256Initialization_4_avx:
-        endbranch64
         ZUC_INIT_4 256
 
 ; This macro reorder the LFSR registers
@@ -1027,7 +1025,7 @@ asm_Zuc256Initialization_4_avx:
 ;;
 MKGLOBAL(asm_ZucGenKeystream16B_4_avx,function,internal)
 asm_ZucGenKeystream16B_4_avx:
-    endbranch64
+
     KEYGEN_4_AVX 4
 
     ret
@@ -1045,7 +1043,7 @@ asm_ZucGenKeystream16B_4_avx:
 ;;
 MKGLOBAL(asm_ZucGenKeystream8B_4_avx,function,internal)
 asm_ZucGenKeystream8B_4_avx:
-    endbranch64
+
     KEYGEN_4_AVX 2
 
     ret
@@ -1063,7 +1061,7 @@ asm_ZucGenKeystream8B_4_avx:
 ;;
 MKGLOBAL(asm_ZucGenKeystream4B_4_avx,function,internal)
 asm_ZucGenKeystream4B_4_avx:
-    endbranch64
+
     KEYGEN_4_AVX 1
 
     ret
@@ -1200,7 +1198,7 @@ asm_ZucGenKeystream4B_4_avx:
 ;;
 MKGLOBAL(asm_ZucCipher_4_avx,function,internal)
 asm_ZucCipher_4_avx:
-        endbranch64
+
 %ifdef LINUX
         %define         pState  rdi
         %define         pIn     rsi
@@ -1274,7 +1272,6 @@ asm_ZucCipher_4_avx:
         mov     rax, pState
 
 loop_cipher64:
-        endbranch64
         cmp     min_length, 64
         jl      exit_loop_cipher64
 
@@ -1388,7 +1385,6 @@ APPEND(_num_final_rounds_is_,I):
 %endrep
 
 exit_final_rounds:
-        endbranch64
         ;; update in/out pointers
         vmovq           xmm0, buf_idx
         vpshufd         xmm0, xmm0, 0x44
@@ -1436,7 +1432,7 @@ exit_cipher:
 align 64
 MKGLOBAL(asm_Eia3RemainderAVX,function,internal)
 asm_Eia3RemainderAVX:
-        endbranch64
+
 %ifdef LINUX
 	%define		KS	rdi
 	%define		DATA	rsi
@@ -1546,7 +1542,6 @@ Eia3RoundsAVX_dw_end:
 
         ;; process remaining data bytes and bits
 Eia3RoundsAVX_byte_loop:
-        endbranch64
         or      N_BITS, N_BITS
         jz      Eia3RoundsAVX_byte_loop_end
 
@@ -1565,7 +1560,7 @@ Eia3RoundsAVX_byte_partial:
         and     r11, r10
         xor     N_BITS, N_BITS
 Eia3RoundsAVX_byte_read:
-        endbranch64
+
 %assign DATATEST 0x80
 %rep 8
         xor     r10, r10
@@ -1696,7 +1691,7 @@ Eia3RoundsAVX_byte_loop_end:
 align 64
 MKGLOBAL(asm_Eia3Round64BAVX,function,internal)
 asm_Eia3Round64BAVX:
-        endbranch64
+
         FUNC_SAVE
 
         EIA3_ROUND 4
@@ -1727,7 +1722,7 @@ asm_Eia3Round64BAVX:
 align 64
 MKGLOBAL(asm_Eia3Round32BAVX,function,internal)
 asm_Eia3Round32BAVX:
-        endbranch64
+
         FUNC_SAVE
 
         EIA3_ROUND 2
@@ -1758,7 +1753,7 @@ asm_Eia3Round32BAVX:
 align 64
 MKGLOBAL(asm_Eia3Round16BAVX,function,internal)
 asm_Eia3Round16BAVX:
-        endbranch64
+
         FUNC_SAVE
 
         EIA3_ROUND 1

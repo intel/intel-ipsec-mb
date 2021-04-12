@@ -29,7 +29,7 @@
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/reg_sizes.asm"
-%include "include/cet.inc"
+
 extern sha512_x2_sse
 
 section .data
@@ -103,7 +103,7 @@ endstruc
 ; arg 1 : rcx : state
 MKGLOBAL(FUNC,function,internal)
 FUNC:
-        endbranch64
+
 	mov	rax, rsp
 	sub	rsp, STACK_size
 	and	rsp, -16
@@ -121,7 +121,6 @@ FUNC:
 	cmp	qword [state + _ldata_sha512 + 1 * _SHA512_LANE_DATA_size + _job_in_lane_sha512], 0
 	cmovne	idx, [rel one]
 copy_lane_data:
-        endbranch64
 	; copy good lane (idx) to empty lanes
 	movdqa	xmm0, [state + _lens_sha512]
 	mov	tmp, [state + _args_sha512 + _data_ptr_sha512 + PTR_SZ*idx]
@@ -278,7 +277,7 @@ copy_full_digest:
 %endif
 
 clear_ret:
-        endbranch64
+
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
 
@@ -322,7 +321,6 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 return:
-        endbranch64
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	rsp, [rsp + _rsp_save]	; original SP

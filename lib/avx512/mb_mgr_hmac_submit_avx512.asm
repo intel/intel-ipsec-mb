@@ -176,7 +176,6 @@ fast_copy:
 	vmovdqu32	[lane_data + _extra_block], zmm0
 
 end_fast_copy:
-        endbranch64
         mov	size_offset, extra_blocks
         shl	size_offset, 6
         sub	size_offset, last_len
@@ -218,7 +217,6 @@ ge64_bytes:
 
         align	16
 start_loop:
-        endbranch64
         ; Find min length
         vmovdqa	xmm0, [state + _lens]
         vphminposuw	xmm1, xmm0
@@ -384,7 +382,6 @@ clear_ret:
 %endif
 
 return:
-        endbranch64
         vzeroupper
 
         DBGPRINTL "---------- exit sha1 submit -----------"

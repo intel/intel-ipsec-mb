@@ -42,10 +42,6 @@
 %include "include/os.asm"
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
-%use smartalign
-alignmode generic, nojmp
-
 extern K512_2
 
 section .data
@@ -265,7 +261,6 @@ endstruc
 MKGLOBAL(sha512_x2_avx,function,internal)
 align 32
 sha512_x2_avx:
-        endbranch64
 	; general registers preserved in outer calling routine
 	; outer calling routine saves all the XMM registers
 
@@ -324,6 +319,7 @@ lloop:
 
 %assign i (i*4)
 
+	jmp	Lrounds_16_xx
 align 16
 Lrounds_16_xx:
 %rep 16

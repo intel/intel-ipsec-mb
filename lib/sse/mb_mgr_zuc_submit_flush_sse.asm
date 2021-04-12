@@ -360,7 +360,6 @@ section .text
 %endif
 
 %%return_submit_eea3:
-        endbranch64
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
@@ -593,7 +592,6 @@ APPEND3(%%skip_eea3_copy_,I,J):
         CLEAR_ZUC_LANE_STATE state, tmp2, tmp3, xmm0, xmm1
 
 %%skip_flush_clear_state:
-        endbranch64
 %endif
         ; process completed job "idx"
         mov     job_rax, [state + _zuc_job_in_lane + idx*8]
@@ -607,7 +605,7 @@ APPEND3(%%skip_eea3_copy_,I,J):
         SHIFT_GP        1, idx, tmp3, tmp4, left
         or      [state + _zuc_unused_lane_bitmask], BYTE(tmp3)
 %%return_flush_eea3:
-        endbranch64
+
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
@@ -773,7 +771,7 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     [state + _zuc_unused_lanes], unused_lanes
 
 %%return_submit_eia3:
-        endbranch64
+
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]
@@ -931,7 +929,6 @@ APPEND(%%skip_eia3_,I):
         mov     [state + _zuc_unused_lanes], unused_lanes
 
 %%return_flush_eia3:
-        endbranch64
         mov     rbx, [rsp + _gpr_save + 8*0]
         mov     rbp, [rsp + _gpr_save + 8*1]
         mov     r12, [rsp + _gpr_save + 8*2]

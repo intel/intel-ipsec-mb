@@ -43,8 +43,6 @@
 ;
 %include "include/os.asm"
 %include "include/clear_regs.asm"
-%include "include/cet.inc"
-%use smartalign
 
 %ifndef AES_CBC_DEC_128
 %define AES_CBC_DEC_128 aes_cbc_dec_128_sse
@@ -100,7 +98,6 @@ section .text
 
 MKGLOBAL(AES_CBC_DEC_128,function,internal)
 AES_CBC_DEC_128:
-        endbranch64
 %ifndef LINUX
 	mov	LEN, [rsp + 8*5]
 %else
@@ -192,6 +189,8 @@ initial_2:
 	jz	done
 	jmp	main_loop
 
+
+	align 16
 initial_1:
 	; load cipher text
 	movdqu	XDATA0, [IN + 0*OFFSET]
@@ -244,6 +243,7 @@ initial_1:
 	sub	LEN, 1*16
 	jz	done
 	jmp	main_loop
+
 
 initial_3:
 	; load cipher text
@@ -337,6 +337,8 @@ initial_3:
 	jz	done
 	jmp	main_loop
 
+
+	align 16
 initial_4:
 	; load cipher text
 	movdqu	XDATA0, [IN + 0*OFFSET]
@@ -443,12 +445,10 @@ initial_4:
 
 	sub	LEN, 4*16
 	jz	done
-        ; fall through to main_loop
+	jmp	main_loop
 
-main_loop:
-        endbranch64
 	align 16
-main_loop_2:
+main_loop:
 	; load cipher text
 	movdqu	XDATA0, [IN + IDX + 0*OFFSET]
 	movdqu	XDATA1, [IN + IDX + 1*OFFSET]
@@ -541,7 +541,7 @@ main_loop_2:
 	movdqa	XIV, XSAVED3
 
         sub     LEN, 4*16
-	jnz	main_loop_2
+	jnz	main_loop
 
 done:
 %ifdef CBCS

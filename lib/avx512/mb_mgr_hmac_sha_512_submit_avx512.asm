@@ -171,7 +171,7 @@ fast_copy:
 	vmovdqu32	[lane_data + _extra_block_sha512 + 0*64], zmm0
 	vmovdqu32	[lane_data + _extra_block_sha512 + 1*64], zmm1
 end_fast_copy:
-        endbranch64
+
 	mov	size_offset, extra_blocks
 	shl	size_offset, 7
 	sub	size_offset, last_len
@@ -211,7 +211,6 @@ ge128_bytes:
 
 	align	32
 start_loop:
-        endbranch64
 	; Find min length
 	vmovdqa	xmm0, [state + _lens_sha512]
 	vphminposuw	xmm1, xmm0
@@ -367,7 +366,7 @@ copy_full_digest:
 %endif
 
 clear_ret:
-        endbranch64
+
 %ifdef SAFE_DATA
         ;; Clear digest (48B/64B), outer_block (48B/64B) and extra_block (128B) of returned job
 %assign J 0
@@ -397,7 +396,6 @@ clear_ret:
 %endif ;; SAFE_DATA
 
 return:
-        endbranch64
         vzeroupper
 
 	mov	rbx, [rsp + _gpr_save + 8*0]

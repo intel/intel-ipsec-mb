@@ -222,7 +222,6 @@ endstruc
         jz      %%_complete_block
 
 %%_not_complete_block:
-        endbranch64
         ;; M_last = padding(M_n) XOR K2
         lea     tmp, [rel padding_0x80_tab16 + 16]
         sub     tmp, r
@@ -245,7 +244,6 @@ endstruc
         movdqa  [m_last], xmm0
 
 %%_step_5:
-        endbranch64
         ;; Find min length
         movdqa  xmm0, [state + _aes_cmac_lens]
         phminposuw xmm1, xmm0
@@ -302,7 +300,6 @@ APPEND(skip_,I):
 %endif ; end FLUSH
 
 %%_cmac_round:
-        endbranch64
 	pextrw	len2, xmm1, 0	; min value
 	pextrw	idx, xmm1, 1	; min index (0...3)
         or	len2, len2
@@ -364,7 +361,6 @@ APPEND(skip_,I):
         memcpy_sse_16 tmp2, tmp3, tmp4, lane, iv
 
 %%_update_lanes:
-        endbranch64
         ; Update unused lanes
         mov	unused_lanes, [state + _aes_cmac_unused_lanes]
         shl	unused_lanes, 4
@@ -402,7 +398,6 @@ APPEND(skip_clear_,I):
 %endif ;; SAFE_DATA
 
 %%_return:
-        endbranch64
 	mov	rbx, [rsp + _gpr_save + 8*0]
 	mov	rbp, [rsp + _gpr_save + 8*1]
 	mov	r12, [rsp + _gpr_save + 8*2]
@@ -471,7 +466,6 @@ APPEND(skip_clear_,I):
         dec     r
 
 %%_update_mlast_3gpp:
-        endbranch64
         ;; set last byte padding mask
         ;; shift into correct xmm idx
 
