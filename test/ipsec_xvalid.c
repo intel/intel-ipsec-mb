@@ -2313,6 +2313,10 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                              (hash_alg == IMB_AUTH_CHACHA20_POLY1305_SGL))
                                 continue;
 
+                        if ((c_mode == IMB_CIPHER_GCM_SGL) ||
+                            (hash_alg == IMB_AUTH_GCM_SGL))
+                                continue;
+
                         params->hash_alg = hash_alg;
 
                         uint8_t min_sz = key_sizes[c_mode - 1][0];
