@@ -97,6 +97,13 @@ DAFLAGS = $(DAFLAGS) -DSAFE_LOOKUP
 !endif
 
 CC = cl
+
+# check for CET support
+!if ([$(CC) /? 2>&1 | findstr /C:"guard:cf" > nul] == 0)
+DCFLAGS = $(DCFLAGS) /guard:cf
+DLFLAGS = $(DLFLAGS) /CETCOMPAT /GUARD:CF /DYNAMICBASE
+!endif
+
 CFLAGS_ALL = $(EXTRA_CFLAGS) /DNO_COMPAT_IMB_API_053 /I. /Iinclude /Ino-aesni \
 	/nologo /Y- /W3 /WX- /Gm- /fp:precise /EHsc /Z7
 
