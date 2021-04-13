@@ -3488,19 +3488,24 @@ test_aes_many(struct IMB_MGR *mb_mgr,
 {
         struct IMB_JOB *job;
         uint8_t padding[16];
-        uint8_t **targets = malloc(num_jobs * sizeof(void *));
+        uint8_t **targets = NULL;
+        uint8_t **next_ivs = NULL;
         int i, jobs_rx = 0, ret = -1;
         uint64_t last_block_offset = 0;
         uint8_t last_cipher_block[IMB_AES_BLOCK_SIZE];
-        uint8_t **next_ivs = malloc(num_jobs * sizeof(uint8_t *));
 
-        if (targets == NULL || next_ivs == NULL)
+        targets = malloc(num_jobs * sizeof(void *));
+        if (targets == NULL)
                 goto end_alloc;
-
         memset(targets, 0, num_jobs * sizeof(void *));
+
+        next_ivs = malloc(num_jobs * sizeof(uint8_t *));
+        if (next_ivs == NULL)
+                goto end_alloc;
+        memset(next_ivs, 0, num_jobs * sizeof(uint8_t *));
+
         memset(padding, -1, sizeof(padding));
         memset(last_cipher_block, 0, sizeof(last_cipher_block));
-        memset(next_ivs, 0, num_jobs * sizeof(uint8_t *));
 
         /* get offset of last AES block to be processed */
         if (text_len >= 16)
@@ -3612,12 +3617,14 @@ test_aes_many(struct IMB_MGR *mb_mgr,
 end_alloc:
         if (targets != NULL) {
                 for (i = 0; i < num_jobs; i++)
-                        free(targets[i]);
+                        if (targets[i] != NULL)
+                                free(targets[i]);
                 free(targets);
         }
         if (next_ivs != NULL) {
                 for (i = 0; i < num_jobs; i++)
-                        free(next_ivs[i]);
+                        if (next_ivs[i] != NULL)
+                                free(next_ivs[i]);
                 free(next_ivs);
         }
 
