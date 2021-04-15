@@ -279,7 +279,7 @@ crc32_ethernet_fcs_ref_calc(const void *p, uint64_t len)
 static uint32_t
 crc_job(const void *p, const uint64_t len, IMB_HASH_ALG hash_alg)
 {
-        uint32_t auth_tag;
+        uint32_t auth_tag = 0;
 
         IMB_JOB *job;
 
@@ -296,7 +296,7 @@ crc_job(const void *p, const uint64_t len, IMB_HASH_ALG hash_alg)
         job->msg_len_to_hash_in_bytes       = len;
         job->hash_start_src_offset_in_bytes = UINT64_C(0);
         job->auth_tag_output                = (uint8_t *) &auth_tag;
-        job->auth_tag_output_len_in_bytes   = 4;
+        job->auth_tag_output_len_in_bytes   = sizeof(auth_tag);
 
         job = IMB_SUBMIT_JOB(p_mgr);
         while (job) {
