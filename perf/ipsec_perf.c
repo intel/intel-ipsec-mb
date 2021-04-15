@@ -821,6 +821,7 @@ const uint32_t auth_tag_length_bytes[] = {
                 16, /* AEAD CHACHA20 with SGL support*/
                 4,  /* ZUC-256-EIA3 */
                 16,  /* SNOW-V AEAD */
+                16, /* AES-GCM with SGL support */
                 4,  /* IMB_AUTH_CRC32_ETHERNET_FCS */
                 4,  /* IMB_AUTH_CRC32_SCTP */
                 4,  /* IMB_AUTH_CRC32_WIMAX_OFDMA_DATA */
