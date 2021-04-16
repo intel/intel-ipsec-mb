@@ -1461,8 +1461,11 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_KEY_LEN);
                         return 1;
                 }
-                if (job->iv_len_in_bytes != UINT64_C(16) &&
-                    job->iv_len_in_bytes != UINT64_C(12)) {
+                if ((job->cipher_mode == IMB_CIPHER_CNTR &&
+                     job->iv_len_in_bytes != UINT64_C(16) &&
+                     job->iv_len_in_bytes != UINT64_C(12)) ||
+                     (job->cipher_mode == IMB_CIPHER_CNTR_BITLEN &&
+                      job->iv_len_in_bytes != UINT64_C(16))) {
                         imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
                         return 1;
                 }
