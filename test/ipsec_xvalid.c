@@ -1203,6 +1203,19 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 case IMB_AUTH_CHACHA20_POLY1305:
                 case IMB_AUTH_CHACHA20_POLY1305_SGL:
                 case IMB_AUTH_SNOW_V_AEAD:
+                case IMB_AUTH_GCM_SGL:
+                case IMB_AUTH_CRC32_ETHERNET_FCS:
+                case IMB_AUTH_CRC32_SCTP:
+                case IMB_AUTH_CRC32_WIMAX_OFDMA_DATA:
+                case IMB_AUTH_CRC24_LTE_A:
+                case IMB_AUTH_CRC24_LTE_B:
+                case IMB_AUTH_CRC16_X25:
+                case IMB_AUTH_CRC16_FP_DATA:
+                case IMB_AUTH_CRC11_FP_HEADER:
+                case IMB_AUTH_CRC10_IUUP_DATA:
+                case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
+                case IMB_AUTH_CRC7_FP_HEADER:
+                case IMB_AUTH_CRC6_IUUP_HEADER:
                         /* No operation needed */
                         break;
                 case IMB_AUTH_AES_GMAC_128:
