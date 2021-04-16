@@ -160,7 +160,7 @@ FIELD	_cipher_func,			8,	8
 FIELD	_hash_func,			8,	8
 FIELD	_sgl_state,			4,	4	; IMB_SGL_STATE
 UNION	_cipher_fields, _CBCS_spec_fields_size, _CBCS_spec_fields_align, \
-                        _CBCS_spec_fields_size, _CBCS_spec_fields_align,
+                        _CBCS_spec_fields_size, _CBCS_spec_fields_align
                         ;; Duplicate CBCS member as workaround for UNION
                         ;; macro requiring a minimum of 5 arguments
                         ;; This should be replace by the next union
