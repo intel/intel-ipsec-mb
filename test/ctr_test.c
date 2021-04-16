@@ -1232,6 +1232,82 @@ static const uint8_t A6_CTR_BIT[] = { 0 };
 #define A6_CTR_BIT_len 0
 #define P6_CTR_BIT_len 3861
 
+/*
+   Test Vector #7: Encrypting 35 octets + 4 bits using AES-CTR with 192-bit key
+   AES Key          : 02 BF 39 1E E8 EC B1 59 B9 59 61 7B 09 65 27 9B
+                    : F5 9B 60 A7 86 D3 E0 FE
+   AES-CTR IV       : 5C BD 60 27 8D CC 09 12
+   Nonce            : 00 07 BD FD
+   Plaintext        : 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+                    : 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F
+                    : 20 21 22 23
+   Ciphertext       : 96 89 3F C5 5E 5C 72 2F 54 0B 7D D1 DD F7 E7 58
+                    : D2 88 BC 95 C6 91 65 88 45 36 C8 11 66 2F 21 88
+                    : AB EE 09 35
+*/
+static const uint8_t K7_CTR_BIT[] = {
+        0x02, 0xBF, 0x39, 0x1E, 0xE8, 0xEC, 0xB1, 0x59,
+        0xB9, 0x59, 0x61, 0x7B, 0x09, 0x65, 0x27, 0x9B,
+        0xF5, 0x9B, 0x60, 0xA7, 0x86, 0xD3, 0xE0, 0xFE,
+};
+static const uint8_t IV7_CTR_BIT[] = {
+        0x00, 0x07, 0xBD, 0xFD,	/* nonce */
+        0x5C, 0xBD, 0x60, 0x27, 0x8D, 0xCC, 0x09, 0x12,
+        0x00, 0x00, 0x00, 0x01
+};
+static const uint8_t P7_CTR_BIT[] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
+        0x20, 0x21, 0x22, 0x2F /* 0x23 */
+};
+static const uint8_t C7_CTR_BIT[] = {
+        0x96, 0x89, 0x3F, 0xC5, 0x5E, 0x5C, 0x72, 0x2F,
+        0x54, 0x0B, 0x7D, 0xD1, 0xDD, 0xF7, 0xE7, 0x58,
+        0xD2, 0x88, 0xBC, 0x95, 0xC6, 0x91, 0x65, 0x88,
+        0x45, 0x36, 0xC8, 0x11, 0x66, 0x2F, 0x21, 0x88,
+        0xAB, 0xEE, 0x09, 0x3F /* 0x35, */
+};
+static const uint8_t T7_CTR_BIT[] = { 0 };
+static const uint8_t A7_CTR_BIT[] = { 0 };
+#define A7_CTR_BIT_len 0
+#define P7_CTR_BIT_len ((sizeof(P7_CTR_BIT) * 8) - 4)
+
+/*
+   Test Vector #8: Encrypting 15 octets + 4 bits using AES-CTR with 256-bit key
+   AES Key          : 77 6B EF F2 85 1D B0 6F 4C 8A 05 42 C8 69 6F 6C
+                    : 6A 81 AF 1E EC 96 B4 D3 7F C1 D6 89 E6 C1 C1 04
+   AES-CTR IV       : DB 56 72 C9 7A A8 F0 B2
+   Nonce            : 00 00 00 60
+   Plaintext String : 'Single block msg'
+   Plaintext        : 53 69 6E 67 6C 65 20 62 6C 6F 63 6B 20 6D 73 6F
+   Ciphertext       : 14 5A D0 1D BF 82 4E C7 56 08 63 DC 71 E3 E0 CF
+*/
+static const uint8_t K8_CTR_BIT[] = {
+        0x77, 0x6B, 0xEF, 0xF2, 0x85, 0x1D, 0xB0, 0x6F,
+        0x4C, 0x8A, 0x05, 0x42, 0xC8, 0x69, 0x6F, 0x6C,
+        0x6A, 0x81, 0xAF, 0x1E, 0xEC, 0x96, 0xB4, 0xD3,
+        0x7F, 0xC1, 0xD6, 0x89, 0xE6, 0xC1, 0xC1, 0x04,
+};
+static const uint8_t IV8_CTR_BIT[] = {
+        0x00, 0x00, 0x00, 0x60,	/* nonce */
+        0xDB, 0x56, 0x72, 0xC9, 0x7A, 0xA8, 0xF0, 0xB2,
+        0x00, 0x00, 0x00, 0x01
+};
+static const uint8_t P8_CTR_BIT[] = {
+        0x53, 0x69, 0x6E, 0x67, 0x6C, 0x65, 0x20, 0x62,
+        0x6C, 0x6F, 0x63, 0x6B, 0x20, 0x6D, 0x73, 0x6F
+};
+static const uint8_t C8_CTR_BIT[] = {
+        0x14, 0x5A, 0xD0, 0x1D, 0xBF, 0x82, 0x4E, 0xC7,
+        0x56, 0x08, 0x63, 0xDC, 0x71, 0xE3, 0xE0, 0xCF
+};
+static const uint8_t T8_CTR_BIT[] = { 0 };
+static const uint8_t A8_CTR_BIT[] = { 0 };
+#define A8_CTR_BIT_len 0
+#define P8_CTR_BIT_len ((sizeof(P8_CTR_BIT) * 8) - 4)
+
 static const struct gcm_ctr_vector ctr_vectors[] = {
 	/*
          * field order {K, Klen, IV, IVlen, A, Alen, P, Plen, C, T, Tlen};
@@ -1260,7 +1336,9 @@ static const struct gcm_ctr_vector ctr_bit_vectors[] = {
 	bit_vector(3_CTR_BIT),
 	bit_vector(4_CTR_BIT),
 	bit_vector(5_CTR_BIT),
-	bit_vector(6_CTR_BIT)
+	bit_vector(6_CTR_BIT),
+	bit_vector(7_CTR_BIT),
+	bit_vector(8_CTR_BIT)
 };
 
 static int
@@ -1321,11 +1399,18 @@ test_ctr(struct IMB_MGR *mb_mgr,
 
         job = IMB_SUBMIT_JOB(mb_mgr);
         if (!job) {
-                printf("%d Unexpected null return from submit_job\n", __LINE__);
+                const int err = imb_get_errno(mb_mgr);
+
+                printf("%d Unexpected null return from submit_job()\n"
+                       "\t Error code %d, %s\n",
+                       __LINE__, err, imb_get_strerror(err));
                 goto end;
         }
         if (job->status != IMB_STATUS_COMPLETED) {
-                printf("%d Error status:%d", __LINE__, job->status);
+                const int err = imb_get_errno(mb_mgr);
+
+                printf("%d job status: %d, error code %d, %s\n",
+                       __LINE__, job->status, err, imb_get_strerror(err));
                 goto end;
         }
         job = IMB_FLUSH_JOB(mb_mgr);
@@ -1336,7 +1421,7 @@ test_ctr(struct IMB_MGR *mb_mgr,
 
         if (memcmp(out_text, target + 16, text_byte_len)) {
                 printf("mismatched\n");
-                hexdump(stderr, "Target", target, text_byte_len + 32);
+                hexdump(stderr, "Target", target + 16, text_byte_len);
                 hexdump(stderr, "Expected", out_text, text_byte_len);
                 goto end;
         }
@@ -1378,14 +1463,14 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
 #ifdef DEBUG
                 if (alg == IMB_CIPHER_CNTR)
 		        printf("Standard vector %d/%d  Keylen:%d "
-                               "IVlen:%d PTLen:%d ",
+                               "IVlen:%d PTLen:%d\n",
                                vect, vectors_cnt - 1,
                                (int) vectors[vect].Klen,
                                (int) vectors[vect].IVlen,
                                (int) vectors[vect].Plen);
                 else
 		        printf("Bit vector %d/%d  Keylen:%d "
-                               "IVlen:%d PTLen:%d ",
+                               "IVlen:%d PTLen:%d\n",
                                vect, vectors_cnt - 1,
                                (int) vectors[vect].Klen,
                                (int) vectors[vect].IVlen,
@@ -1440,7 +1525,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                         test_suite_update(ctx, 1, 0);
                 }
 
-                if (vectors[vect].IVlen == 12) {
+                if (vectors[vect].IVlen == 12 && alg == IMB_CIPHER_CNTR) {
                         /* IV in the table didn't
                          * include block counter (12 bytes).
                          * Let's encrypt & decrypt the same but
@@ -1451,7 +1536,7 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
                         uint8_t local_iv[16];
 
                         memcpy(local_iv, vectors[vect].IV, orig_iv_len);
-                        /* 32-bit 0x01000000 in LE */
+                        /* 32-bit 0x1 in BE == 0x01000000 in LE */
                         local_iv[12] = 0x00;
                         local_iv[13] = 0x00;
                         local_iv[14] = 0x00;
