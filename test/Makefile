@@ -42,8 +42,10 @@ CFLAGS = -MMD -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
 
-# if "-z ibt" is supported then assume "-z shstk, -z cet-report=error, -fcf-protection" are also supported
-CC_HAS_CET = $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l)
+# if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
+# "-fcf-protection" needs to be checked separately
+CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l), \
+	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
 CET_LDFLAGS=-r -z ibt -z shstk
 
 ifeq ($(CC_HAS_CET),1)
