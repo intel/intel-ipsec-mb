@@ -115,6 +115,13 @@ ddq_add_16:
         dq	0x0000000000000010, 0x0000000000000000
 
 align 64
+ddq_add_high_1:
+        dq	0x0000000000000000, 0x0000000000000001
+        dq	0x0000000000000000, 0x0000000000000001
+        dq	0x0000000000000000, 0x0000000000000001
+        dq	0x0000000000000000, 0x0000000000000001
+
+align 64
 byte_len_to_mask_table:
         dw      0x0000, 0x0001, 0x0003, 0x0007,
         dw      0x000f, 0x001f, 0x003f, 0x007f,
@@ -169,9 +176,17 @@ section .text
 default rel
 
 %ifdef LINUX
-%define arg1	  rdi
+%define arg1    rdi
+%define arg2    rsi
+%define arg3    rdx
+%define arg4    rcx
+%define arg5    r8
 %else
-%define arg1	  rcx
+%define arg1    rcx
+%define arg2    rdx
+%define arg3    r8
+%define arg4    r9
+%define arg5    qword [rsp + 40]
 %endif
 
 %define ZKEY0                 zmm17
@@ -189,6 +204,8 @@ default rel
 %define ZKEY12                zmm29
 %define ZKEY13                zmm30
 %define ZKEY14                zmm31
+
+%define APPEND(a,b) a %+ b
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stack frame definition
@@ -361,6 +378,57 @@ default rel
         %%VPADD         %%ZT3, ZWORD(%%CTR), [rel ddq_add_8_11]
         %%VPADD         %%ZT4, ZWORD(%%CTR), [rel ddq_add_12_15]
 %endif
+
+%ifidn %%CNTR_TYPE, CNTR_PON
+        ; Check if there was overflow
+        vmovq   %%IA0, XWORD(%%CTR)
+
+        add     %%IA0, (%%num_initial_blocks - 1)
+        jnc     %%no_overflow_initial
+
+        ; Check which registers are < 16 (indicating overflow)
+%if %%num_initial_blocks == 2
+        vpcmpuq %%MASKREG, YWORD(%%ZT1), [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  YWORD(%%ZT1){%%MASKREG}, [rel ddq_add_high_1]
+%elif %%num_initial_blocks <= 4
+        vpcmpuq %%MASKREG, %%ZT1, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT1{%%MASKREG}, [rel ddq_add_high_1]
+%elif %%num_initial_blocks <= 8
+        vpcmpuq %%MASKREG, %%ZT1, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT1{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT2, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT2{%%MASKREG}, [rel ddq_add_high_1]
+%elif %%num_initial_blocks <= 12
+        vpcmpuq %%MASKREG, %%ZT1, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT1{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT2, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT2{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT3, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT3{%%MASKREG}, [rel ddq_add_high_1]
+%else
+        vpcmpuq %%MASKREG, %%ZT1, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT1{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT2, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT2{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT3, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT3{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT4, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT4{%%MASKREG}, [rel ddq_add_high_1]
+%endif ;; num_intial_blocks
+
+%%no_overflow_initial:
+%endif ; CNTR_TYPE == CNTR_PON
 %endif
 
         ;; extract new counter value (%%T1)
@@ -491,6 +559,33 @@ default rel
         %%VPADD         %%CTR_9_12, ZWORD(%%CTR), [rel ddq_add_8_11]
         %%VPADD         %%CTR_13_16, ZWORD(%%CTR), [rel ddq_add_12_15]
 %endif
+%ifidn %%CNTR_TYPE, CNTR_PON
+        ; Check if there was overflow
+        vmovq   %%IA0, XWORD(%%CTR)
+
+%if %%num_initial_blocks > 0
+        add     %%IA0, 16
+%else
+        add     %%IA0, 15
+%endif
+        jnc     %%no_overflow
+
+        ; Check which registers are < 16 (indicating overflow)
+        vpcmpuq %%MASKREG, %%CTR_1_4, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%CTR_1_4{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%CTR_5_8, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%CTR_5_8{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%CTR_9_12, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%CTR_9_12{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%CTR_13_16, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%CTR_13_16{%%MASKREG}, [rel ddq_add_high_1]
+
+%%no_overflow:
+%endif ; CNTR_TYPE == CNTR_PON
 
         vpshufb         %%ZT1, %%CTR_1_4, %%SHUFREG
         vpshufb         %%ZT2, %%CTR_5_8, %%SHUFREG
@@ -572,7 +667,7 @@ default rel
 %define %%MASKREG               %17 ; [clobbered] mask register
 %define %%SHUFREG               %18 ; [in] ZMM register with shuffle mask
 %define %%NROUNDS               %19 ; [in] number of rounds; numerical value
-%define %%CNTR_TYPE             %20 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%CNTR_TYPE             %20 ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CNTR_PON)
 %define %%RBITS                 %21 ; [in] Number of remaining bits in last byte
 
 %ifidn %%CNTR_TYPE, CNTR
@@ -632,6 +727,56 @@ default rel
         %%VPADD          %%ZT4, ZWORD(%%CTR), [rel ddq_add_12_15]
 %endif
 
+%ifidn %%CNTR_TYPE, CNTR_PON
+        ; Check if there was overflow
+        vmovq   %%IA0, XWORD(%%CTR)
+
+        add     %%IA0, (%%num_initial_blocks - 1)
+        jnc     %%no_overflow
+
+        ; Check which registers are < 16 (indicating overflow)
+%if %%num_initial_blocks == 2
+        vpcmpuq %%MASKREG, YWORD(%%ZT1), [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  YWORD(%%ZT1){%%MASKREG}, [rel ddq_add_high_1]
+%elif %%num_initial_blocks <= 4
+        vpcmpuq %%MASKREG, %%ZT1, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT1{%%MASKREG}, [rel ddq_add_high_1]
+%elif %%num_initial_blocks <= 8
+        vpcmpuq %%MASKREG, %%ZT1, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT1{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT2, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT2{%%MASKREG}, [rel ddq_add_high_1]
+%elif %%num_initial_blocks <= 12
+        vpcmpuq %%MASKREG, %%ZT1, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT1{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT2, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT2{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT3, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT3{%%MASKREG}, [rel ddq_add_high_1]
+%else
+        vpcmpuq %%MASKREG, %%ZT1, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT1{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT2, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT2{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT3, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT3{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%ZT4, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%ZT4{%%MASKREG}, [rel ddq_add_high_1]
+%endif
+
+%%no_overflow:
+%endif
         ;; shuffle the counters for AES rounds
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%num_initial_blocks, vpshufb, \
                         %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
@@ -740,6 +885,11 @@ default rel
         vmovdqu8        %%ZT8{%%MASKREG}{z}, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + 192]
 %endif
 
+%ifidn %%CNTR_TYPE, CNTR_PON
+        ; Get previous first counter value
+        vmovq   %%IA0, XWORD(%%CTR_1_4)
+%endif
+
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; populate counter blocks
         ;; %%CTR is shuffled outside the scope of this macro
@@ -748,6 +898,28 @@ default rel
         %%VPADD          %%CTR_5_8, %%CTR_5_8, %%ADD8REG
         %%VPADD          %%CTR_9_12, %%CTR_9_12, %%ADD8REG
         %%VPADD          %%CTR_13_16, %%CTR_13_16, %%ADD8REG
+
+%ifidn %%CNTR_TYPE, CNTR_PON
+        ; Check if there was overflow
+        add     %%IA0, (15+16)
+        jnc     %%no_overflow
+
+        ; Check which registers are < 16 (indicating overflow)
+        vpcmpuq %%MASKREG, %%CTR_1_4, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%CTR_1_4{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%CTR_5_8, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%CTR_5_8{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%CTR_9_12, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%CTR_9_12{%%MASKREG}, [rel ddq_add_high_1]
+        vpcmpuq %%MASKREG, %%CTR_13_16, [rel ddq_add_16], 0x1
+        kshiftlq %%MASKREG, %%MASKREG, 1
+        vpaddq  %%CTR_13_16{%%MASKREG}, [rel ddq_add_high_1]
+
+%%no_overflow:
+%endif ; CNTR_TYPE == CNTR_PON
 
         vpshufb         %%ZT1, %%CTR_1_4, %%SHUFREG
         vpshufb         %%ZT2, %%CTR_5_8, %%SHUFREG
@@ -799,20 +971,16 @@ default rel
 ;;; Save register content for the caller
 %macro FUNC_SAVE 1
 %define %%CNTR_TYPE         %1  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
-        mov     rax, rsp
-
         sub     rsp, STACK_FRAME_SIZE
-        and     rsp, ~63
 
         mov     [rsp + 0*8], r12
         mov     [rsp + 1*8], r13
 %ifidn %%CNTR_TYPE, CNTR_BIT
         mov     [rsp + 2*8], r14
 %endif
-        mov     [rsp + 3*8], rax ; stack
 %ifidn __OUTPUT_FORMAT__, win64
-        mov     [rsp + 4*8], rdi
-        mov     [rsp + 5*8], rsi
+        mov     [rsp + 3*8], rdi
+        mov     [rsp + 4*8], rsi
 %endif
 
 %endmacro
@@ -830,15 +998,15 @@ default rel
 %endif ;; SAFE_DATA
 
 %ifidn __OUTPUT_FORMAT__, win64
-        mov     rdi, [rsp + 4*8]
-        mov     rsi, [rsp + 5*8]
+        mov     rdi, [rsp + 3*8]
+        mov     rsi, [rsp + 4*8]
 %endif
         mov     r12, [rsp + 0*8]
         mov     r13, [rsp + 1*8]
 %ifidn %%CNTR_TYPE, CNTR_BIT
         mov     r14, [rsp + 2*8]
 %endif
-        mov     rsp, [rsp + 3*8] ; stack
+        add     rsp, STACK_FRAME_SIZE
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1504,6 +1672,206 @@ default rel
 
 %endmacro                       ; CNTR_ENC_DEC
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; CNTR_PON_ENC_DEC Encodes/Decodes given data, used for PON.
+; Requires the input data be at least 1 byte long.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro  CNTR_PON_ENC_DEC 5
+%define %%PLAIN_CYPH_IN  %1  ; [in] source
+%define %%CYPH_PLAIN_OUT %2  ; [in] destination
+%define %%IV             %3  ; [in] IV
+%define %%KEY            %4  ; [in] Key
+%define %%LEN            %5  ; [in] Length
+
+%define %%DATA_OFFSET           r13
+%define %%RBITS                 r14 ; Not used, but needed to pass it to macros below
+%define %%LENGTH                r14
+
+%define %%IA0                   r10
+%define %%IA1                   r11
+%define %%IA2                   r12
+
+%define %%CTR_BLOCKx            xmm0
+%define %%CTR_BLOCK_1_4         zmm1
+%define %%CTR_BLOCK_5_8         zmm2
+%define %%CTR_BLOCK_9_12        zmm3
+%define %%CTR_BLOCK_13_16       zmm4
+
+%define %%ZTMP0                 zmm5
+%define %%ZTMP1                 zmm6
+%define %%ZTMP2                 zmm7
+%define %%ZTMP3                 zmm8
+%define %%ZTMP4                 zmm9
+%define %%ZTMP5                 zmm10
+%define %%ZTMP6                 zmm11
+%define %%ZTMP7                 zmm12
+%define %%SHUFREG               zmm13
+%define %%ADD16REG              zmm14
+
+%define %%MASKREG               k1
+%define %%NROUNDS               9
+%define %%CNTR_TYPE             CNTR_PON
+
+;;; Macro flow:
+;;; - calculate the number of 16byte blocks in the message
+;;; - process (number of 16byte blocks) mod 16 '%%_initial_num_blocks_is_# .. %%_initial_blocks_encrypted'
+;;; - process 16x16 byte blocks at a time until all are done in %%_encrypt_by_16_new
+
+        mov             %%LENGTH, %%LEN
+        or              %%LENGTH, %%LENGTH
+        je              %%_enc_dec_done
+
+        xor             %%DATA_OFFSET, %%DATA_OFFSET
+
+%assign i 0
+%rep (%%NROUNDS + 2)
+        vbroadcastf64x2 ZKEY %+ i, [%%KEY + 16*i]
+%assign i (i + 1)
+%endrep
+
+        vmovdqu         %%CTR_BLOCKx, [%%IV]
+
+        vmovdqa64       %%SHUFREG, [rel SHUF_MASK]
+        ;; store IV as counter in LE format
+        vpshufb         %%CTR_BLOCKx, XWORD(%%SHUFREG)
+
+        ;; Determine how many blocks to process in INITIAL
+        mov             %%IA1, %%LENGTH
+        shr             %%IA1, 4
+        and             %%IA1, 0xf
+
+        ;; Process one additional block in INITIAL if there is a partial block
+        mov             %%IA0, %%LENGTH
+        and             %%IA0, 0xf
+        add             %%IA0, 0xf
+        shr             %%IA0, 4
+        add             %%IA1, %%IA0
+        ;; %%IA1 can be in the range from 0 to 16
+
+        ;; Less than 256B will be handled by the small message code, which
+        ;; can process up to 16 x blocks (16 bytes each)
+        cmp             %%LENGTH, 256
+        jge             %%_large_message_path
+
+        CNTR_ENC_DEC_SMALL \
+                %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%LENGTH, \
+                %%IA1, %%CTR_BLOCKx, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                %%ZTMP5, %%ZTMP6, %%ZTMP7, \
+                %%IA0, %%IA2, %%MASKREG, %%SHUFREG, %%NROUNDS, \
+                %%CNTR_TYPE, %%RBITS
+
+        jmp     %%_enc_dec_done
+
+%%_large_message_path:
+        ;; Still, don't allow 16 INITIAL blocks since this will
+        ;; can be handled by the x16 partial loop.
+        and     %%IA1, 0xf
+        je      %%_initial_num_blocks_is_0
+
+        cmp     %%IA1, 8
+        je      %%_initial_num_blocks_is_8
+        jl      %%_initial_blocks_is_1_7
+
+        ; Initial blocks 9-15
+        cmp     %%IA1, 12
+        je      %%_initial_num_blocks_is_12
+        jl      %%_initial_blocks_is_9_11
+
+        ; Initial blocks 13-15
+        cmp     %%IA1, 15
+        je      %%_initial_num_blocks_is_15
+        cmp     %%IA1, 14
+        je      %%_initial_num_blocks_is_14
+        cmp     %%IA1, 13
+        je      %%_initial_num_blocks_is_13
+
+%%_initial_blocks_is_9_11:
+        cmp     %%IA1, 11
+        je      %%_initial_num_blocks_is_11
+        cmp     %%IA1, 10
+        je      %%_initial_num_blocks_is_10
+        cmp     %%IA1, 9
+        je      %%_initial_num_blocks_is_9
+
+%%_initial_blocks_is_1_7:
+        cmp     %%IA1, 4
+        je      %%_initial_num_blocks_is_4
+        jl      %%_initial_blocks_is_1_3
+
+        ; Initial blocks 5-7
+        cmp     %%IA1, 7
+        je      %%_initial_num_blocks_is_7
+        cmp     %%IA1, 6
+        je      %%_initial_num_blocks_is_6
+        cmp     %%IA1, 5
+        je      %%_initial_num_blocks_is_5
+
+%%_initial_blocks_is_1_3:
+        cmp     %%IA1, 3
+        je      %%_initial_num_blocks_is_3
+        cmp     %%IA1, 2
+        je      %%_initial_num_blocks_is_2
+
+        jmp     %%_initial_num_blocks_is_1
+
+%assign %%i 0
+%rep 16
+APPEND(%%_initial_num_blocks_is_,%%i):
+        INITIAL_BLOCKS  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%LENGTH, %%DATA_OFFSET, %%i, %%CTR_BLOCKx, \
+                %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, %%CTR_BLOCK_9_12, \
+                %%CTR_BLOCK_13_16, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, \
+                %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%IA0, %%IA1, %%MASKREG, \
+                %%SHUFREG, %%NROUNDS, %%CNTR_TYPE, %%RBITS
+        jmp     %%_initial_blocks_encrypted
+%assign %%i (%%i + 1)
+%endrep
+
+%%_initial_blocks_encrypted:
+        or              %%LENGTH, %%LENGTH
+        je              %%_enc_dec_done
+
+        vmovdqa64       %%ADD16REG, [rel ddq_add_16]
+        ;; Process 15 full blocks plus a partial block
+        cmp             %%LENGTH, 256
+        jl              %%_encrypt_by_16_partial
+
+%%_encrypt_by_16:
+        ENCRYPT_16_PARALLEL  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%DATA_OFFSET, %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, \
+                %%CTR_BLOCK_9_12, %%CTR_BLOCK_13_16, \
+                full, %%IA0, %%IA1, %%LENGTH, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                %%ZTMP5, %%ZTMP6, %%ZTMP7, \
+                %%MASKREG, %%SHUFREG, %%ADD16REG, %%NROUNDS, %%CNTR_TYPE, \
+                %%RBITS
+        add             %%DATA_OFFSET, 256
+        sub             %%LENGTH, 256
+        cmp             %%LENGTH, 256
+        jge             %%_encrypt_by_16
+
+%%_encrypt_by_16_done:
+        ;; Test to see if we need a by 16 with partial block. At this point
+        ;; bytes remaining should be either zero or between 241-255.
+        or              %%LENGTH, %%LENGTH
+        je              %%_enc_dec_done
+
+%%_encrypt_by_16_partial:
+
+        ENCRYPT_16_PARALLEL  %%KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%DATA_OFFSET, %%CTR_BLOCK_1_4, %%CTR_BLOCK_5_8, \
+                %%CTR_BLOCK_9_12, %%CTR_BLOCK_13_16, \
+                partial, %%IA0, %%IA1, %%LENGTH, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
+                %%ZTMP5, %%ZTMP6, %%ZTMP7, \
+                %%MASKREG, %%SHUFREG, %%ADD16REG, %%NROUNDS, %%CNTR_TYPE, \
+                %%RBITS
+
+%%_enc_dec_done:
+%endmacro                       ; CNTR_PON_ENC_DEC
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;IMB_JOB * aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1620,6 +1988,18 @@ aes_cntr_bit_256_submit_vaes_avx512:
         ;; arg2 - [in] NROUNDS
         ;; arg3 - [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
         CNTR_ENC_DEC arg1, 13, CNTR_BIT
+        FUNC_RESTORE CNTR_BIT
+
+        ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;void aes_cntr_pon_128_vaes_avx512 (void *src, void *dst, void *iv, void *keys, uint64_t length)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MKGLOBAL(aes_cntr_pon_128_vaes_avx512,function,internal)
+aes_cntr_pon_128_vaes_avx512:
+        endbranch64
+        FUNC_SAVE CNTR_BIT ; Uses r14, as CNTR_BIT
+        CNTR_PON_ENC_DEC arg1, arg2, arg3, arg4, arg5
         FUNC_RESTORE CNTR_BIT
 
         ret
