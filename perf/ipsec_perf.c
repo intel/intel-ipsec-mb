@@ -1467,6 +1467,12 @@ set_job_fields(IMB_JOB *job, uint8_t *p_buffer, imb_uint128_t *p_keys,
                 job->enc_keys = job->dec_keys =
                         (const uint32_t *) get_key_pointer(index,
                                                            p_keys);
+        /* Force destination buffer to start 8 bytes after source */
+        } else if (job->cipher_mode == IMB_CIPHER_PON_AES_CNTR) {
+                job->dst = get_src_buffer(index, p_buffer) + 8;
+                job->enc_keys = job->dec_keys =
+                        (const uint32_t *) get_key_pointer(index,
+                                                           p_keys);
         } else {
                 job->enc_keys = job->dec_keys =
                         (const uint32_t *) get_key_pointer(index,

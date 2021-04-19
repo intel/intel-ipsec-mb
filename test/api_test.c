@@ -403,6 +403,8 @@ fill_in_job(struct IMB_JOB *job,
         case IMB_AUTH_PON_CRC_BIP:
                 job->msg_len_to_hash_in_bytes = 8;
                 job->auth_tag_output_len_in_bytes = 8;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->cipher_start_src_offset_in_bytes = 8;
                 /* set required cipher mode fields */
                 job->cipher_mode = IMB_CIPHER_PON_AES_CNTR;
                 job->dst = dust_bin + 8;

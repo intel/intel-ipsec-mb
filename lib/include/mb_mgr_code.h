@@ -1781,7 +1781,8 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
 
                 /* source and destination buffer pointers cannot be the same,
                  * as there are always 8 bytes that are not ciphered */
-                if (job->src == job->dst) {
+                if ((job->src + job->cipher_start_src_offset_in_bytes)
+                    != job->dst) {
                         imb_set_errno(state, EINVAL);
                         return 1;
                 }
