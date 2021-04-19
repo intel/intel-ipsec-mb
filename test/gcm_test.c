@@ -1799,13 +1799,13 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 	}
 	/* This is only required once for a given key */
         switch (vector->Klen) {
-        case BITS_128:
+        case IMB_KEY_128_BYTES:
                 IMB_AES128_GCM_PRE(p_gcm_mgr, vector->K, &gdata_key);
                 break;
-        case BITS_192:
+        case IMB_KEY_192_BYTES:
                 IMB_AES192_GCM_PRE(p_gcm_mgr, vector->K, &gdata_key);
                 break;
-        case BITS_256:
+        case IMB_KEY_256_BYTES:
         default:
                 IMB_AES256_GCM_PRE(p_gcm_mgr, vector->K, &gdata_key);
                 break;
@@ -1929,7 +1929,7 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
 		printf(".");
 #endif
                 switch (vectors[vect].Klen) {
-                case BITS_128:
+                case IMB_KEY_128_BYTES:
                         if (test_sgl_api) {
                                 test_gcm_vectors(&vectors[vect],
                                                  sgl_aes_gcm_enc,
@@ -1950,7 +1950,7 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
                                                  ts128);
                         }
                         break;
-                case BITS_192:
+                case IMB_KEY_192_BYTES:
                         if (test_sgl_api) {
                                 test_gcm_vectors(&vectors[vect],
                                                  sgl_aes_gcm_enc,
@@ -1971,7 +1971,7 @@ test_gcm_std_vectors(struct test_suite_context *ts128,
                                                  ts192);
                         }
                         break;
-                case BITS_256:
+                case IMB_KEY_256_BYTES:
                         if (test_sgl_api) {
                                 test_gcm_vectors(&vectors[vect],
                                                  sgl_aes_gcm_enc,
@@ -2097,10 +2097,10 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
         uint8_t T_test[16];
         struct test_suite_context *ts = ts128;
 
-        if (vector->Klen ==  BITS_192)
+        if (vector->Klen ==  IMB_KEY_192_BYTES)
                 ts = ts192;
 
-        if (vector->Klen ==  BITS_256)
+        if (vector->Klen ==  IMB_KEY_256_BYTES)
                 ts = ts256;
 
         memset(&key, 0, sizeof(struct gcm_key_data));
@@ -2109,7 +2109,7 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
                              seg_size, iv, iv_len, T_test, vector->Tlen);
         else {
                 switch (vector->Klen) {
-                case BITS_128:
+                case IMB_KEY_128_BYTES:
                         IMB_AES128_GCM_PRE(p_gcm_mgr, vector->K, &key);
                         IMB_AES128_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);
                         in_ptr = vector->P;
@@ -2131,7 +2131,7 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
                         IMB_AES128_GMAC_FINALIZE(p_gcm_mgr, &key, &ctx, T_test,
                                                  vector->Tlen);
                         break;
-                case BITS_192:
+                case IMB_KEY_192_BYTES:
                         IMB_AES192_GCM_PRE(p_gcm_mgr, vector->K, &key);
                         IMB_AES192_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);
                         in_ptr = vector->P;
@@ -2153,7 +2153,7 @@ test_gmac_vector(const struct gcm_ctr_vector *vector,
                         IMB_AES192_GMAC_FINALIZE(p_gcm_mgr, &key, &ctx, T_test,
                                                  vector->Tlen);
                         break;
-                case BITS_256:
+                case IMB_KEY_256_BYTES:
                 default:
                         IMB_AES256_GCM_PRE(p_gcm_mgr, vector->K, &key);
                         IMB_AES256_GMAC_INIT(p_gcm_mgr, &key, &ctx, iv, iv_len);

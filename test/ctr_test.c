@@ -1480,17 +1480,17 @@ test_ctr_vectors(struct IMB_MGR *mb_mgr,
 #endif
 
                 switch (vectors[vect].Klen) {
-                case BITS_128:
+                case IMB_KEY_128_BYTES:
                         IMB_AES_KEYEXP_128(mb_mgr, vectors[vect].K,
                                            expkey, dust);
                         ctx = ctx128;
                         break;
-                case BITS_192:
+                case IMB_KEY_192_BYTES:
                         IMB_AES_KEYEXP_192(mb_mgr, vectors[vect].K,
                                            expkey, dust);
                         ctx = ctx192;
                         break;
-                case BITS_256:
+                case IMB_KEY_256_BYTES:
                         IMB_AES_KEYEXP_256(mb_mgr, vectors[vect].K,
                                            expkey, dust);
                         ctx = ctx256;

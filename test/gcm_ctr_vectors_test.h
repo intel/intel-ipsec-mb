@@ -39,18 +39,12 @@ enum arch_type {
         ARCH_NUMOF
 };
 
-enum key_size {
-        BITS_128 = 16,
-        BITS_192 = 24,
-        BITS_256 = 32,
-};
-
 #define KBITS(K)    (sizeof(K))
 
 /* struct to hold pointers to the key, plaintext and ciphertext vectors */
 struct gcm_ctr_vector {
 	const uint8_t *K;       /* AES Key */
-	enum key_size Klen;     /* length of key in bits */
+	IMB_KEY_SIZE_BYTES Klen;/* length of key in bits */
 	const uint8_t *IV;      /* initial value used by GCM */
 	uint64_t IVlen;         /* length of IV in bytes */
 	const uint8_t *A;       /* additional authenticated data */
