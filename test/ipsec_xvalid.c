@@ -536,7 +536,7 @@ struct str_value_mapping aead_algo_str_map[] = {
                 }
         },
         {
-                .name = "pon-128-no-ctr",
+                .name = "PON-128-NO-CTR",
                 .values.job_params = {
                         .cipher_mode = IMB_CIPHER_PON_AES_CNTR,
                         .hash_alg = IMB_AUTH_PON_CRC_BIP,
