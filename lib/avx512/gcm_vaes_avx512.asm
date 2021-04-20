@@ -393,6 +393,100 @@ default rel
 
 ;;; ===========================================================================
 ;;; ===========================================================================
+;;; schoolbook multiply of 16 blocks (8 x 16 bytes)
+
+%macro GHASH_16 21
+%define %%TYPE  %1      ; [in] ghash type: start (xor hash), mid, end (same as mid; no reduction), end_reduce (reduction)
+%define %%GH    %2      ; [in/out] ZMM ghash sum: high 128-bits
+%define %%GM    %3      ; [in/out] ZMM ghash sum: middle 128-bits
+%define %%GL    %4      ; [in/out] ZMM ghash sum: low 128-bits
+%define %%INPTR %5      ; [in] data input pointer
+%define %%INOFF %6      ; [in] data input offset
+%define %%INDIS %7      ; [in] data input displacment
+%define %%HKPTR %8      ; [in] hash key pointer
+%define %%HKOFF %9      ; [in] hash key offset
+%define %%HKDIS %10     ; [in] hash key displacment
+%define %%HASH  %11     ; [in/out] ZMM hash value in/out
+%define %%ZTMP0 %12     ; [clobbered] temporary ZMM
+%define %%ZTMP1 %13     ; [clobbered] temporary ZMM
+%define %%ZTMP2 %14     ; [clobbered] temporary ZMM
+%define %%ZTMP3 %15     ; [clobbered] temporary ZMM
+%define %%ZTMP4 %16     ; [clobbered] temporary ZMM
+%define %%ZTMP5 %17     ; [clobbered] temporary ZMM
+%define %%ZTMP6 %18     ; [clobbered] temporary ZMM
+%define %%ZTMP7 %19     ; [clobbered] temporary ZMM
+%define %%ZTMP8 %20     ; [clobbered] temporary ZMM
+%define %%ZTMP9 %21     ; [clobbered] temporary ZMM
+
+        ;; ghash blocks 0-3
+        vmovdqa64       %%ZTMP8, [%%INPTR + %%INOFF + %%INDIS]
+%ifidn %%TYPE, start
+        vpxorq          %%ZTMP8, %%HASH
+%endif
+        vmovdqu64       %%ZTMP9, [%%HKPTR + %%HKOFF + %%HKDIS]
+        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
+        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
+        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
+        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
+        ;; ghash blocks 4-7
+        vmovdqa64       %%ZTMP8, [%%INPTR + %%INOFF + %%INDIS + 64]
+        vmovdqu64       %%ZTMP9, [%%HKPTR + %%HKOFF + %%HKDIS + 64]
+        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
+        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
+        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
+        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
+        ;; update sums
+%ifidn %%TYPE, start
+        vpxorq          %%GM, %%ZTMP2, %%ZTMP6              ; GM = T0M1 + T1M1
+        vpxorq          %%GH, %%ZTMP0, %%ZTMP4              ; GH = T0H + T1H
+        vpxorq          %%GL, %%ZTMP1, %%ZTMP5              ; GL = T0L + T1L
+        vpternlogq      %%GM, %%ZTMP3, %%ZTMP7, 0x96        ; GM = T0M2 + T1M1
+%else ;; mid, end, end_reduce
+        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
+        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
+        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
+        vpternlogq      %%GM, %%ZTMP3, %%ZTMP7, 0x96        ; GM += T0M2 + T1M1
+%endif
+        ;; ghash blocks 8-11
+        vmovdqa64       %%ZTMP8, [%%INPTR + %%INOFF + %%INDIS + 128]
+        vmovdqu64       %%ZTMP9, [%%HKPTR + %%HKOFF + %%HKDIS + 128]
+        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
+        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
+        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
+        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
+        ;; ghash blocks 12-15
+        vmovdqa64       %%ZTMP8, [%%INPTR + %%INOFF + %%INDIS + 192]
+        vmovdqu64       %%ZTMP9, [%%HKPTR + %%HKOFF + %%HKDIS + 192]
+        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
+        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
+        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
+        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
+        ;; update sums
+        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
+        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
+        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
+        vpternlogq      %%GM, %%ZTMP3, %%ZTMP7, 0x96        ; GM += T0M2 + T1M1
+
+%ifidn %%TYPE, end_reduce
+        ;; integrate GM into GH and GL
+        vpsrldq         %%ZTMP0, %%GM, 8
+        vpslldq         %%ZTMP1, %%GM, 8
+        vpxorq          %%GH, %%GH, %%ZTMP0
+        vpxorq          %%GL, %%GL, %%ZTMP1
+
+        ;; add GH and GL 128-bit words horizontally
+        VHPXORI4x128    %%GH, %%ZTMP0
+        VHPXORI4x128    %%GL, %%ZTMP1
+
+        ;; reduction
+        vmovdqa64       XWORD(%%ZTMP2), [rel POLY2]
+        VCLMUL_REDUCE   XWORD(%%HASH), XWORD(%%ZTMP2), \
+                        XWORD(%%GH), XWORD(%%GL), XWORD(%%ZTMP0), XWORD(%%ZTMP1)
+%endif
+%endmacro
+
+;;; ===========================================================================
+;;; ===========================================================================
 ;;; GHASH 1 to 16 blocks of cipher text
 ;;; - performs reduction at the end
 %macro  GHASH_1_TO_16 18-24
@@ -2736,7 +2830,7 @@ default rel
                 final_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
         ;; === xor cipher block 0 with GHASH (ZT4)
-        vmovdqa64        %%AAD_HASHz, %%ZTMP4
+        vmovdqa64       %%AAD_HASHz, %%ZTMP4
 
         add             %%DATA_OFFSET, (big_loop_nblocks * 16)
         sub             %%LENGTH, (big_loop_nblocks * 16)
@@ -2752,60 +2846,16 @@ default rel
         jae             %%_encrypt_16_blocks
 
 %%_encrypt_0_blocks_ghash_32:
-        ;; ==== GHASH - 32 blocks
+        ;; ==== save the last counter block
         vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
 
-%assign hashk      HashKey_32
-%assign cipher_blk (STACK_LOCAL_OFFSET + (0 * 16))
+        ;; ==== GHASH 32 blocks and follow with reduction
+        GHASH_16        start, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, HashKey_32, 0, %%AAD_HASHz, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
+        GHASH_16        end, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_16, 0, no_hash_input, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
-        ;; ghash blocks 0-3
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
-        vpxorq          %%ZTMP8, %%AAD_HASHz
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
-        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
-        ;; ghash blocks 4-7
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
-        ;; update sums
-        vpxorq          %%GH, %%ZTMP0, %%ZTMP4              ; GH = T0H + T1H
-        vpxorq          %%GL, %%ZTMP1, %%ZTMP5              ; GL = T0L + T1L
-        vpxorq          %%GM, %%ZTMP2, %%ZTMP6              ; GM = T0M1 + T1M1
-        vpxorq          %%ZTMP10, %%ZTMP3, %%ZTMP7          ; TM2 = T0M2 + T1M1
-
-%assign hashk      (hashk + (8 * 16))
-%assign cipher_blk (cipher_blk + (8 * 16))
-
-%rep ((32 - 8) / 8)
-        ;; ghash blocks 0-3
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
-        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
-        ;; ghash blocks 4-7
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
-        ;; update sums
-        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
-        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
-        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
-        vpternlogq      %%ZTMP10, %%ZTMP3, %%ZTMP7, 0x96    ; TM2 += T0M2 + T1M1
-%assign hashk      (hashk + (8 * 16))
-%assign cipher_blk (cipher_blk + (8 * 16))
-%endrep
         jmp             %%_integrate_and_reduce
 
         ;; =====================================================
@@ -2851,105 +2901,17 @@ default rel
                 %%GL, %%GH, %%GM, \
                 no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
-        ;; ==== GHASH - 16 blocks with reduction
+        ;; ==== save the last counter block
         vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
 
-%assign hashk      HashKey_16
-%assign cipher_blk (STACK_LOCAL_OFFSET + (32 * 16))
+        ;; ==== GHASH 16 blocks with reduction
+        GHASH_16        end_reduce, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
-        vpxorq          %%ZTMP10, %%ZTMP10, %%ZTMP10
-
-%rep (16 / 8)
-        ;; ghash blocks 0-3
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
-        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
-        ;; ghash blocks 4-7
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
-        ;; update sums
-        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
-        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
-        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
-        vpternlogq      %%ZTMP10, %%ZTMP3, %%ZTMP7, 0x96    ; TM2 += T0M2 + T1M1
-%assign hashk      (hashk + (8 * 16))
-%assign cipher_blk (cipher_blk + (8 * 16))
-%endrep
-
-        ;; integrate TM into TH and TL
-        vpxorq          %%GM, %%GM, %%ZTMP10
-        vpsrldq         %%ZTMP0, %%GM, 8
-        vpslldq         %%ZTMP1, %%GM, 8
-        vpxorq          %%GH, %%GH, %%ZTMP0
-        vpxorq          %%GL, %%GL, %%ZTMP1
-
-        ;; add TH and TL 128-bit words horizontally
-        VHPXORI4x128    %%GH, %%ZTMP0
-        VHPXORI4x128    %%GL, %%ZTMP1
-
-        ;; reduction
-        vmovdqa64       XWORD(%%ZTMP9), [rel POLY2]
-        VCLMUL_REDUCE   XWORD(%%AAD_HASHz), XWORD(%%ZTMP9), XWORD(%%GH), XWORD(%%GL), XWORD(%%ZTMP0), XWORD(%%ZTMP1)
-
-        ;; ==== GHASH - 32 blocks & follow with reduction
-%assign hashk      HashKey_16
-%assign cipher_blk (STACK_LOCAL_OFFSET + (0 * 16))
-
-        ;; ghash blocks 0-3
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
-        vpxorq          %%ZTMP8, %%AAD_HASHz
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
-        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
-        ;; ghash blocks 4-7
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
-        ;; update sums
-        vpxorq          %%GH, %%ZTMP0, %%ZTMP4              ; GH = T0H + T1H
-        vpxorq          %%GL, %%ZTMP1, %%ZTMP5              ; GL = T0L + T1L
-        vpxorq          %%GM, %%ZTMP2, %%ZTMP6              ; GM = T0M1 + T1M1
-        vpxorq          %%ZTMP10, %%ZTMP3, %%ZTMP7          ; TM2 = T0M2 + T1M1
-
-%assign hashk      (hashk + (8 * 16))
-%assign cipher_blk (cipher_blk + (8 * 16))
-
-%rep ((16 - 8) / 8)
-        ;; ghash blocks 0-3
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
-        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
-        ;; ghash blocks 4-7
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
-        ;; update sums
-        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
-        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
-        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
-        vpternlogq      %%ZTMP10, %%ZTMP3, %%ZTMP7, 0x96    ; TM2 += T0M2 + T1M1
-%assign hashk      (hashk + (8 * 16))
-%assign cipher_blk (cipher_blk + (8 * 16))
-%endrep
+        ;; ==== GHASH 16 blocks & follow with reduction
+        GHASH_16        start, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
         sub             %%LENGTH, (32 * 16)
         add             %%DATA_OFFSET, (32 * 16)
@@ -2979,47 +2941,24 @@ default rel
                 %%GL, %%GH, %%GM, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
 
-        ;; ==== GHASH - 2 x 16 blocks with reduction
+        ;; ==== save the last counter block
         vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
 
-%assign hashk      HashKey_32
-%assign cipher_blk (STACK_LOCAL_OFFSET + (16 * 16))
+        ;; ==== GHASH 2 x 16 blocks and follow with reduction
+        GHASH_16        mid, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_32, 0, no_hash_input, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
-        vpxorq          %%ZTMP10, %%ZTMP10, %%ZTMP10
-
-%rep (32 / 8)
-        ;; ghash blocks 0-3
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
-        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
-        ;; ghash blocks 4-7
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
-        ;; update sums
-        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
-        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
-        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
-        vpternlogq      %%ZTMP10, %%ZTMP3, %%ZTMP7, 0x96    ; TM2 += T0M2 + T1M1
-%assign hashk      (hashk + (8 * 16))
-%assign cipher_blk (cipher_blk + (8 * 16))
-%endrep
+        GHASH_16        end, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, no_hash_input, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
         sub             %%LENGTH, (16 * 16)
         add             %%DATA_OFFSET, (16 * 16)
 
-        ;; fall through
+        ;; fall through to reduction part
 
 %%_integrate_and_reduce:
         ;; integrate TM into TH and TL
-        vpxorq          %%GM, %%GM, %%ZTMP10
         vpsrldq         %%ZTMP0, %%GM, 8
         vpslldq         %%ZTMP1, %%GM, 8
         vpxorq          %%GH, %%GH, %%ZTMP0
@@ -3063,60 +3002,16 @@ default rel
 %%_message_below_32_blocks:
         ;; 32 > number of blocks > 16
 
-        ;; ==== GHASH - 1 x 16 blocks with reduction
+        ;; save the last counter block
         vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
 
-%assign hashk      HashKey_16
-%assign cipher_blk (STACK_LOCAL_OFFSET + (0 * 16))
-
-        ;; ghash blocks 0-3
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
-        vpxorq          %%ZTMP8, %%AAD_HASHz
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
-        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
-        ;; ghash blocks 4-7
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
-        ;; update sums
-        vpxorq          %%GH, %%ZTMP0, %%ZTMP4              ; GH = T0H + T1H
-        vpxorq          %%GL, %%ZTMP1, %%ZTMP5              ; GL = T0L + T1L
-        vpxorq          %%GM, %%ZTMP2, %%ZTMP6              ; GM = T0M1 + T1M1
-        vpxorq          %%ZTMP10, %%ZTMP3, %%ZTMP7          ; TM2 = T0M2 + T1M1
-
-%assign hashk      (hashk + (8 * 16))
-%assign cipher_blk (cipher_blk + (8 * 16))
-
-        ;; ghash blocks 0-3
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk]
-        vpclmulqdq      %%ZTMP0, %%ZTMP8, %%ZTMP9, 0x11     ; T0H = a1*b1
-        vpclmulqdq      %%ZTMP1, %%ZTMP8, %%ZTMP9, 0x00     ; T0L = a0*b0
-        vpclmulqdq      %%ZTMP2, %%ZTMP8, %%ZTMP9, 0x01     ; T0M1 = a1*b0
-        vpclmulqdq      %%ZTMP3, %%ZTMP8, %%ZTMP9, 0x10     ; T0M2 = a0*b1
-        ;; ghash blocks 4-7
-        vmovdqa64       %%ZTMP8, [rsp + cipher_blk + 64]
-        vmovdqu64       %%ZTMP9, [%%GDATA_KEY + hashk + 64]
-        vpclmulqdq      %%ZTMP4, %%ZTMP8, %%ZTMP9, 0x11     ; T1H = a1*b1
-        vpclmulqdq      %%ZTMP5, %%ZTMP8, %%ZTMP9, 0x00     ; T1L = a0*b0
-        vpclmulqdq      %%ZTMP6, %%ZTMP8, %%ZTMP9, 0x01     ; T1M1 = a1*b0
-        vpclmulqdq      %%ZTMP7, %%ZTMP8, %%ZTMP9, 0x10     ; T1M2 = a0*b1
-        ;; update sums
-        vpternlogq      %%GH, %%ZTMP0, %%ZTMP4, 0x96        ; GH += T0H + T1H
-        vpternlogq      %%GL, %%ZTMP1, %%ZTMP5, 0x96        ; GL += T0L + T1L
-        vpternlogq      %%GM, %%ZTMP2, %%ZTMP6, 0x96        ; GM += T0M1 + T1M1
-        vpternlogq      %%ZTMP10, %%ZTMP3, %%ZTMP7, 0x96    ; TM2 += T0M2 + T1M1
+        ;; ==== GHASH 16 blocks and follow with reduction
+        GHASH_16        start, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
+                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
         sub             %%LENGTH, (16 * 16)
         add             %%DATA_OFFSET, (16 * 16)
-
         jmp             %%_integrate_and_reduce
 
 %%_ghash_done:
