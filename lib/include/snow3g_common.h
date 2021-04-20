@@ -2549,7 +2549,6 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
         uint8_t *pcBufferOut = pBufferOut + (offsetInBits / 8);
         /* Offset into the first byte (0 - 7 bits) */
         uint32_t remainOffset = offsetInBits % 8;
-        uint32_t byteLength = (cipherLengthInBits + 7) / 8;
         SafeBuf safeInBuf = {0};
         SafeBuf safeOutBuf = {0};
 
@@ -2560,7 +2559,8 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
         KS8bit = KS8 >> remainOffset;
         /* Only one block to encrypt */
         if (cipherLengthInBits < (64 - remainOffset)) {
-                byteLength = (cipherLengthInBits + 7) / 8;
+                const uint32_t byteLength = (cipherLengthInBits + 7) / 8;
+
                 memcpy_keystrm(safeInBuf.b8, pcBufferIn, byteLength);
                 /*
                  * If operation is Out-of-place and there is offset
@@ -2627,7 +2627,9 @@ static inline void f8_snow3g_bit(snow3gKeyState1_t *pCtx,
                         /* loop variant */
                 } else {
                         /* end of the loop, handle the last bytes */
-                        byteLength = (cipherLengthInBits + 7) / 8;
+                        const uint32_t byteLength =
+                                (cipherLengthInBits + 7) / 8;
+
                         memcpy_keystrm(safeInBuf.b8, pcBufferIn,
                                        byteLength);
 

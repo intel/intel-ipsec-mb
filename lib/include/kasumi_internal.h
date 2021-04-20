@@ -870,7 +870,6 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         uint8_t *pcBufferOut = pBufferOut + (offsetInBits / 8);
         /* Offset into the first byte (0 - 7 bits) */
         uint32_t remainOffset = offsetInBits % 8;
-        uint32_t byteLength = (cipherLengthInBits + 7) / 8;
         SafeBuf safeOutBuf = {0};
         SafeBuf safeInBuf = {0};
 
@@ -890,7 +889,8 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         c.b64[0] = b.b64[0] >> remainOffset;
         /* Only one block to encrypt */
         if (cipherLengthInBits < (64 - remainOffset)) {
-                byteLength = (cipherLengthInBits + 7) / 8;
+                const uint32_t byteLength = (cipherLengthInBits + 7) / 8;
+
                 memcpy_keystrm(safeInBuf.b8, pcBufferIn, byteLength);
                 /*
                  * If operation is Out-of-place and there is offset
@@ -966,7 +966,9 @@ kasumi_f8_1_buffer_bit(const kasumi_key_sched_t *pCtx, const uint64_t IV,
                         b.b16[0] ^= (uint16_t)++blkcnt;
                 } else {
                         /* end of the loop, handle the last bytes */
-                        byteLength = (cipherLengthInBits + 7) / 8;
+                        const uint32_t byteLength =
+                                (cipherLengthInBits + 7) / 8;
+
                         memcpy_keystrm(safeInBuf.b8, pcBufferIn,
                                        byteLength);
 
