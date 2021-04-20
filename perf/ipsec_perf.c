@@ -769,7 +769,7 @@ struct str_value_mapping cipher_dir_str_map[] = {
 
 /* This struct stores all information about performed test case */
 struct variant_s {
-        uint32_t arch;
+        enum arch_type_e arch;
         struct params_s params;
         uint64_t *avg_times;
 };
@@ -2093,7 +2093,8 @@ mean_median(uint64_t *array, uint32_t size,
 
 /* Runs test for each buffer size and stores averaged execution time */
 static void
-process_variant(IMB_MGR *mgr, const uint32_t arch, struct params_s *params,
+process_variant(IMB_MGR *mgr, const enum arch_type_e arch,
+                struct params_s *params,
                 struct variant_s *variant_ptr, const uint32_t run,
                 uint8_t *p_buffer, imb_uint128_t *p_keys)
 {
@@ -2267,7 +2268,8 @@ run_tests(void *arg)
         struct thread_info *info = (struct thread_info *)arg;
         IMB_MGR *p_mgr = NULL;
         struct params_s params;
-        uint32_t at_size, run, arch;
+        enum arch_type_e arch;
+        uint32_t at_size, run;
         uint32_t variant;
         uint32_t total_variants = 0;
         struct variant_s *variant_ptr = NULL;
@@ -2322,7 +2324,7 @@ run_tests(void *arg)
         init_mem(&buf, &keys);
 
         /* Calculating number of all variants */
-        for (arch = 0; arch < NUM_ARCHS; arch++) {
+        for (arch = ARCH_SSE; arch < NUM_ARCHS; arch++) {
                 if (archs[arch] == 0)
                         continue;
                 total_variants++;
@@ -2378,22 +2380,21 @@ run_tests(void *arg)
                 params.hash_alg = custom_job_params.hash_alg;
 
                 /* Performing tests for each selected architecture */
-                for (arch = 0; arch < NUM_ARCHS; arch++) {
+                for (arch = ARCH_SSE; arch <= ARCH_AVX512; arch++) {
                         if (archs[arch] == 0)
                                 continue;
 
                         switch (arch) {
-                        case 0:
+                        case ARCH_SSE:
                                 init_mb_mgr_sse(p_mgr);
                                 break;
-                        case 1:
+                        case ARCH_AVX:
                                 init_mb_mgr_avx(p_mgr);
                                 break;
-                        case 2:
+                        case ARCH_AVX2:
                                 init_mb_mgr_avx2(p_mgr);
                                 break;
-                        default:
-                        case 3:
+                        default: /* ARCH_AV512 */
                                 init_mb_mgr_avx512(p_mgr);
                                 break;
                         }
