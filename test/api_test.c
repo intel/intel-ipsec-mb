@@ -585,6 +585,32 @@ is_submit_invalid(struct IMB_MGR *mb_mgr, const struct IMB_JOB *job,
 }
 
 /*
+ * @brief Checks for AEAD algorithms
+ */
+static int
+check_aead(IMB_HASH_ALG hash, IMB_CIPHER_MODE cipher)
+{
+        if (hash == IMB_AUTH_CHACHA20_POLY1305 ||
+            hash == IMB_AUTH_CHACHA20_POLY1305_SGL ||
+            hash == IMB_AUTH_GCM_SGL ||
+            hash == IMB_AUTH_AES_GMAC ||
+            hash == IMB_AUTH_AES_CCM ||
+            hash == IMB_AUTH_SNOW_V_AEAD ||
+            hash == IMB_AUTH_PON_CRC_BIP)
+                return 1;
+
+        if (cipher == IMB_CIPHER_CHACHA20_POLY1305 ||
+            cipher == IMB_CIPHER_CHACHA20_POLY1305_SGL ||
+            cipher == IMB_CIPHER_GCM_SGL ||
+            cipher == IMB_CIPHER_GCM ||
+            cipher == IMB_CIPHER_CCM ||
+            cipher == IMB_CIPHER_SNOW_V_AEAD ||
+            cipher == IMB_CIPHER_PON_AES_CNTR)
+                return 1;
+        return 0;
+}
+
+/*
  * @brief Tests invalid settings for MAC modes
  */
 static int
@@ -617,6 +643,13 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_CUSTOM)
                                         continue;
 
+                                /*
+                                 * Skip hash algorithms belonging to AEAD
+                                 * algorithms, as the test is for authentication
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
+                                        continue;
+
                                 fill_in_job(&template_job, cipher, dir,
                                             hash, order, &chacha_ctx, &gcm_ctx);
                                 template_job.src = NULL;
@@ -638,6 +671,13 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                              hash < IMB_AUTH_NUM; hash++) {
                                 if (hash == IMB_AUTH_NULL ||
                                     hash == IMB_AUTH_CUSTOM)
+                                        continue;
+
+                                /*
+                                 * Skip hash algorithms belonging to AEAD
+                                 * algorithms, as the test is for authentication
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -663,6 +703,13 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                              hash < IMB_AUTH_NUM; hash++) {
                                 if (hash == IMB_AUTH_NULL ||
                                     hash == IMB_AUTH_CUSTOM)
+                                        continue;
+
+                                /*
+                                 * Skip hash algorithms belonging to AEAD
+                                 * algorithms, as the test is for authentication
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -710,30 +757,15 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_POLY1305)
                                         continue;
 
-                                /* skip disallowed combos */
-                                if ((hash == IMB_AUTH_CHACHA20_POLY1305 &&
-                                     cipher != IMB_CIPHER_CHACHA20_POLY1305) ||
-                                    (hash != IMB_AUTH_CHACHA20_POLY1305 &&
-                                     cipher == IMB_CIPHER_CHACHA20_POLY1305))
-                                        continue;
-
-                                if ((hash == IMB_AUTH_CHACHA20_POLY1305_SGL &&
-                                  cipher != IMB_CIPHER_CHACHA20_POLY1305_SGL) ||
-                                  (hash != IMB_AUTH_CHACHA20_POLY1305_SGL &&
-                                  cipher == IMB_CIPHER_CHACHA20_POLY1305_SGL))
-                                        continue;
-
-                                if ((hash == IMB_AUTH_GCM_SGL &&
-                                  cipher != IMB_CIPHER_GCM_SGL) ||
-                                  (hash != IMB_AUTH_GCM_SGL &&
-                                  cipher == IMB_CIPHER_GCM_SGL))
+                                /*
+                                 * Skip hash algorithms belonging to AEAD
+                                 * algorithms, as the test is for authentication
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
                                             hash, order, &chacha_ctx, &gcm_ctx);
-
-                                if (hash == IMB_AUTH_GCM_SGL)
-                                        template_job.sgl_state = IMB_SGL_UPDATE;
 
                                 switch (hash) {
                                 case IMB_AUTH_ZUC_EIA3_BITLEN:
@@ -804,8 +836,13 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                          */
                                         continue;
                                 }
-                                if (hash == IMB_AUTH_GCM_SGL)
-                                        template_job.sgl_state = IMB_SGL_UPDATE;
+
+                                /*
+                                 * Skip hash algorithms belonging to AEAD
+                                 * algorithms, as the test is for authentication
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
+                                        continue;
 
                                 if (!is_submit_invalid(mb_mgr, &template_job,
                                                        TEST_AUTH_MSG_LEN_ZERO,
@@ -855,6 +892,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
+                                /*
+                                 * Skip cipher algorithms belonging to AEAD
+                                 * algorithms, as the test is for cipher
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
+                                        continue;
+
                                 fill_in_job(&template_job, cipher, dir,
                                             hash, order, &chacha_ctx, &gcm_ctx);
                                 template_job.src = NULL;
@@ -875,6 +919,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                              cipher < IMB_CIPHER_NUM; cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
+                                        continue;
+
+                                /*
+                                 * Skip cipher algorithms belonging to AEAD
+                                 * algorithms, as the test is for cipher
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
                                         continue;
 
                                 fill_in_job(&template_job, cipher, dir,
@@ -899,6 +950,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
+                                /*
+                                 * Skip cipher algorithms belonging to AEAD
+                                 * algorithms, as the test is for cipher
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
+                                        continue;
+
                                 fill_in_job(&template_job, cipher, dir,
                                             hash, order, &chacha_ctx, &gcm_ctx);
                                 template_job.iv = NULL;
@@ -919,6 +977,14 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                      cipher++) {
                         fill_in_job(&template_job, cipher, IMB_DIR_ENCRYPT,
                                     hash, order, &chacha_ctx, &gcm_ctx);
+
+                        /*
+                         * Skip cipher algorithms belonging to AEAD
+                         * algorithms, as the test is for cipher
+                         * only algorithms */
+                        if (check_aead(hash, cipher))
+                                continue;
+
                         switch (cipher) {
                         case IMB_CIPHER_NULL:
                         case IMB_CIPHER_CUSTOM:
@@ -942,6 +1008,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
                      cipher++) {
+                        /*
+                         * Skip cipher algorithms belonging to AEAD
+                         * algorithms, as the test is for cipher
+                         * only algorithms */
+                        if (check_aead(hash, cipher))
+                                continue;
+
                         fill_in_job(&template_job, cipher, IMB_DIR_DECRYPT,
                                     hash, order, &chacha_ctx, &gcm_ctx);
                         switch (cipher) {
@@ -1006,6 +1079,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
 
+                                /*
+                                 * Skip cipher algorithms belonging to AEAD
+                                 * algorithms, as the test is for cipher
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
+                                        continue;
+
                                 IMB_JOB *job = &template_job;
 
                                 fill_in_job(job, cipher, dir, hash, order,
@@ -1044,6 +1124,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                              cipher < IMB_CIPHER_NUM; cipher++) {
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
+                                        continue;
+
+                                /*
+                                 * Skip cipher algorithms belonging to AEAD
+                                 * algorithms, as the test is for cipher
+                                 * only algorithms */
+                                if (check_aead(hash, cipher))
                                         continue;
 
                                 IMB_JOB *job = &template_job;
@@ -1114,6 +1201,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
                         cipher = IMB_CIPHER_CBCS_1_9;
+
+                        /*
+                         * Skip cipher algorithms belonging to AEAD
+                         * algorithms, as the test is for cipher
+                         * only algorithms */
+                        if (check_aead(hash, cipher))
+                                continue;
 
                         IMB_JOB *job = &template_job;
 
