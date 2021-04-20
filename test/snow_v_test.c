@@ -903,11 +903,18 @@ static uint32_t compare(const uint8_t *result,
 /* check for buffer under/over-write */
 static uint32_t check_buffer_over_under_write(uint8_t *result,
                         const int pad_pattern,
-                        size_t pad_size,
-                        size_t alloc_size)
+                        const size_t pad_size,
+                        const size_t alloc_size)
 {
         uint8_t *pad_block = malloc(pad_size);
         uint8_t error = 0;
+
+        if (pad_block == NULL) {
+                fprintf(stderr, "Error allocating %lu bytes!\n",
+                        (unsigned long) pad_size);
+                exit(EXIT_FAILURE);
+        }
+
         /* check for buffer under/over-write */
         memset(pad_block, pad_pattern, pad_size);
 
