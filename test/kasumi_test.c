@@ -116,8 +116,6 @@ static int membitcmp(const uint8_t *input, const uint8_t *output,
                         else if (bitresoffset < CHAR_BIT) {
                                 if (res & ~((uint8_t)-1 << bitresoffset))
                                         return index;
-                                else
-                                        res = 0;
                         } else {
                                 srcfl++;
                                 dstfl++;
