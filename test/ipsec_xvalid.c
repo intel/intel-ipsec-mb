@@ -1674,7 +1674,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         const unsigned num_jobs)
 {
         IMB_JOB *job;
-        uint32_t i;
+        uint32_t i, imix_job_idx = 0;
         int ret = -1;
         uint8_t tag_size = auth_tag_length_bytes[params->hash_alg - 1];
         uint64_t xgem_hdr[MAX_NUM_JOBS] = {0};
@@ -1721,6 +1721,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 /* Prepare buffer sizes */
                 if (imix) {
                         uint32_t random_num = rand() % DEFAULT_JOB_SIZE_MAX;
+
+                        imix_job_idx = i;
 
                         /* If random number is 0, change the size to 16 */
                         if (random_num == 0)
@@ -1856,6 +1858,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         }
 
         for (i = 0; i < num_jobs; i++) {
+                imix_job_idx = i;
+
                 job = IMB_GET_NEXT_JOB(enc_mb_mgr);
                 /*
                  * Encrypt + generate digest from encrypted message
@@ -1955,6 +1959,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                         goto exit;
 
         for (i = 0; i < num_jobs; i++) {
+                imix_job_idx = i;
+
                 job = IMB_GET_NEXT_JOB(dec_mb_mgr);
 
                 /* Randomize memory for output digest */
@@ -2033,6 +2039,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 for (i = 0; i < num_jobs; i++) {
                         int goto_exit = 0;
 
+                        imix_job_idx = i;
+
                         if (params->hash_alg != IMB_AUTH_NULL &&
                             memcmp(in_digest[i], out_digest[i],
                                    tag_size_to_check[i]) != 0) {
@@ -2092,11 +2100,11 @@ exit:
                 printf("Decrypting ");
                 print_tested_arch(dec_mb_mgr->features, dec_arch);
                 if (imix) {
-                        printf("Job #%u, buffer size = %u\n", i, buf_sizes[i]);
-                        unsigned int j;
+                        printf("Job #%u, buffer size = %u\n",
+                               imix_job_idx, buf_sizes[imix_job_idx]);
 
-                        for (j = 0; j < num_jobs; j++)
-                                printf("Other sizes = %u\n", buf_sizes[j]);
+                        for (i = 0; i < num_jobs; i++)
+                                printf("Other sizes = %u\n", buf_sizes[i]);
                 } else
                         printf("Buffer size = %u\n", params->buf_size);
                 printf("Key size = %u\n", params->key_size);
