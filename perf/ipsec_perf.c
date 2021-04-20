@@ -858,7 +858,7 @@ uint32_t *job_size_imix_list = NULL;
 uint32_t *cipher_size_list = NULL;
 uint32_t *hash_size_list = NULL;
 uint64_t *xgem_hdr_list = NULL;
-uint32_t imix_list_count = 0;
+uint16_t imix_list_count = 0;
 uint32_t average_job_size = 0;
 
 /* Size of IMIX list (needs to be multiple of 2) */
