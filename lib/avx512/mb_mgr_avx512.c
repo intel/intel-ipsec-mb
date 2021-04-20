@@ -215,10 +215,10 @@ IMB_JOB *snow_v_aead_init_sse(IMB_JOB *job);
 #define AES_ECB_DEC_192       aes_ecb_dec_192_avx
 #define AES_ECB_DEC_256       aes_ecb_dec_256_avx
 
-#define SUBMIT_JOB_PON_ENC        submit_job_pon_enc_avx
-#define SUBMIT_JOB_PON_DEC        submit_job_pon_dec_avx
-#define SUBMIT_JOB_PON_ENC_NO_CTR submit_job_pon_enc_no_ctr_avx
-#define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx
+#define SUBMIT_JOB_PON_ENC        submit_job_pon_enc_avx512
+#define SUBMIT_JOB_PON_DEC        submit_job_pon_dec_avx512
+#define SUBMIT_JOB_PON_ENC_NO_CTR submit_job_pon_enc_no_ctr_avx512
+#define SUBMIT_JOB_PON_DEC_NO_CTR submit_job_pon_dec_no_ctr_avx512
 
 #define SUBMIT_JOB_AES_XCBC   submit_job_aes_xcbc_avx512
 #define FLUSH_JOB_AES_XCBC    flush_job_aes_xcbc_avx512
@@ -654,6 +654,15 @@ static IMB_JOB *(*submit_job_aes_cntr_avx512)
         (IMB_JOB *job) = submit_job_aes_cntr_avx;
 static IMB_JOB *(*submit_job_aes_cntr_bit_avx512)
         (IMB_JOB *job) = submit_job_aes_cntr_bit_avx;
+
+static IMB_JOB *(*submit_job_pon_enc_avx512)
+        (IMB_JOB *job) = submit_job_pon_enc_avx;
+static IMB_JOB *(*submit_job_pon_dec_avx512)
+        (IMB_JOB *job) = submit_job_pon_dec_avx;
+static IMB_JOB *(*submit_job_pon_enc_no_ctr_avx512)
+        (IMB_JOB *job) = submit_job_pon_enc_no_ctr_avx;
+static IMB_JOB *(*submit_job_pon_dec_no_ctr_avx512)
+        (IMB_JOB *job) = submit_job_pon_dec_no_ctr_avx;
 
 static IMB_JOB *
 vaes_submit_cntr_avx512(IMB_JOB *job)
@@ -1772,6 +1781,12 @@ init_mb_mgr_avx512(IMB_MGR *state)
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
                 submit_job_aes_cntr_avx512 = vaes_submit_cntr_avx512;
                 submit_job_aes_cntr_bit_avx512 = vaes_submit_cntr_bit_avx512;
+                submit_job_pon_enc_avx512 = submit_job_pon_enc_vaes_avx512;
+                submit_job_pon_enc_no_ctr_avx512 =
+                                        submit_job_pon_enc_no_ctr_vaes_avx512;
+                submit_job_pon_dec_avx512 = submit_job_pon_dec_vaes_avx512;
+                submit_job_pon_dec_no_ctr_avx512 =
+                                        submit_job_pon_dec_no_ctr_vaes_avx512;
         }
 
         if (state->features & IMB_FEATURE_AVX512_IFMA) {

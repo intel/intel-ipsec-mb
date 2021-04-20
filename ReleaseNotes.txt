@@ -1,6 +1,12 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
+Unreleased
+========================================================================
+
+Library
+- PON algorithm AVX512-VAES implementation added
+
 v1.0 April 2021
 ========================================================================
 

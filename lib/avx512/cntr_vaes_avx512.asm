@@ -970,12 +970,12 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Save register content for the caller
 %macro FUNC_SAVE 1
-%define %%CNTR_TYPE         %1  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%CNTR_TYPE         %1  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CNTR_PON)
         sub     rsp, STACK_FRAME_SIZE
 
         mov     [rsp + 0*8], r12
         mov     [rsp + 1*8], r13
-%ifidn %%CNTR_TYPE, CNTR_BIT
+%ifnidn %%CNTR_TYPE, CNTR
         mov     [rsp + 2*8], r14
 %endif
 %ifidn __OUTPUT_FORMAT__, win64
@@ -989,13 +989,16 @@ default rel
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Restore register content for the caller
 %macro FUNC_RESTORE 1
-%define %%CNTR_TYPE         %1  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT)
+%define %%CNTR_TYPE         %1  ; [in] Type of CNTR operation to do (CNTR/CNTR_BIT/CNTR_PON)
 
+        ;; No need to clear ZMMs for PON, as they will be cleared in caller
+%ifnidn %%CNTR_TYPE, CNTR_PON
 %ifdef SAFE_DATA
 	clear_all_zmms_asm
 %else
         vzeroupper
 %endif ;; SAFE_DATA
+%endif
 
 %ifidn __OUTPUT_FORMAT__, win64
         mov     rdi, [rsp + 3*8]
@@ -1003,7 +1006,7 @@ default rel
 %endif
         mov     r12, [rsp + 0*8]
         mov     r13, [rsp + 1*8]
-%ifidn %%CNTR_TYPE, CNTR_BIT
+%ifnidn %%CNTR_TYPE, CNTR
         mov     r14, [rsp + 2*8]
 %endif
         add     rsp, STACK_FRAME_SIZE
@@ -1998,9 +2001,9 @@ aes_cntr_bit_256_submit_vaes_avx512:
 MKGLOBAL(aes_cntr_pon_128_vaes_avx512,function,internal)
 aes_cntr_pon_128_vaes_avx512:
         endbranch64
-        FUNC_SAVE CNTR_BIT ; Uses r14, as CNTR_BIT
+        FUNC_SAVE CNTR_PON
         CNTR_PON_ENC_DEC arg1, arg2, arg3, arg4, arg5
-        FUNC_RESTORE CNTR_BIT
+        FUNC_RESTORE CNTR_PON
 
         ret
 

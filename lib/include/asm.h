@@ -228,6 +228,9 @@ IMB_JOB *submit_job_pon_dec_sse(IMB_JOB *job);
 IMB_JOB *submit_job_pon_enc_sse_no_aesni(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_sse_no_aesni(IMB_JOB *job);
 
+IMB_JOB *submit_job_pon_enc_vaes_avx512(IMB_JOB *job);
+IMB_JOB *submit_job_pon_dec_vaes_avx512(IMB_JOB *job);
+
 IMB_JOB *submit_job_pon_enc_no_ctr_avx(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_no_ctr_avx(IMB_JOB *job);
 
@@ -236,6 +239,10 @@ IMB_JOB *submit_job_pon_dec_no_ctr_sse(IMB_JOB *job);
 
 IMB_JOB *submit_job_pon_enc_no_ctr_sse_no_aesni(IMB_JOB *job);
 IMB_JOB *submit_job_pon_dec_no_ctr_sse_no_aesni(IMB_JOB *job);
+
+IMB_JOB *submit_job_pon_enc_no_ctr_vaes_avx512(IMB_JOB *job);
+IMB_JOB *submit_job_pon_dec_no_ctr_vaes_avx512(IMB_JOB *job);
+
 #endif /* IMB_ASM_H */
 
 

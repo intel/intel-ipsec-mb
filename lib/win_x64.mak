@@ -145,6 +145,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes128_cntr_by8_sse.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_sse_no_aesni.obj \
 	$(OBJ_DIR)\pon_avx.obj \
+	$(OBJ_DIR)\pon_avx512.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_avx.obj \
 	$(OBJ_DIR)\aes128_cntr_ccm_by8_sse.obj \
 	$(OBJ_DIR)\aes128_cntr_ccm_by8_sse_no_aesni.obj \

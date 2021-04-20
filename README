@@ -93,7 +93,7 @@ Table 1. List of supported cipher algorithms and their implementations.
     | Chacha20 AEAD  | N      | Y      | Y      | Y      | Y      | N      |
     | SNOW-V         | N      | Y      | N      | N      | N      | N      |
     | SNOW-V AEAD    | N      | Y      | N      | N      | N      | N      |
-    | PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | N      |
+    | PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | Y      |
     +----------------------------------------------------------------------+
 
 Notes:
@@ -149,7 +149,7 @@ implementations.
     | SNOW-V AEAD       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
     | GHASH             | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
     | CRC(7)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-    | PON-CRC-BIP(8)    | N      | Y      | Y      | N      | N      | N      |
+    | PON-CRC-BIP(8)    | N      | Y      | Y      | N      | N      | Y      |
     +-------------------------------------------------------------------------+
 
 Notes:
