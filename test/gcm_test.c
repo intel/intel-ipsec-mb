@@ -1321,6 +1321,10 @@ static int check_data(const uint8_t *test, const uint8_t *expected,
 	int mismatch;
 	int is_error = 0;
 
+        if (len != 0 &&
+            (test == NULL || expected == NULL || data_name == NULL))
+                return 1;
+
 	mismatch = memcmp(test, expected, len);
 	if (mismatch) {
                 uint64_t a;
