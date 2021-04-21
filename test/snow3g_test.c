@@ -1601,15 +1601,9 @@ validate_snow3g_f8_8_blocks_multi_key(struct IMB_MGR *mb_mgr,
                                       struct test_suite_context *uea2_ctx,
                                       struct test_suite_context *uia2_ctx)
 {
-        int length, numVectors, i, j, numPackets = 8;
+        int length, numVectors, i, j;
+        const int numPackets = 8;
         size_t size = 0;
-
-        if (numPackets > NUM_SUPPORTED_BUFFERS) {
-                printf("numPackets %d too large !\n", numPackets);
-                printf("Setting to NUM_SUPPORTED_BUFFERS %d\n",
-                       NUM_SUPPORTED_BUFFERS);
-                numPackets = NUM_SUPPORTED_BUFFERS;
-        }
 
         cipher_test_vector_t *testVectors = snow3g_cipher_test_vectors[1];
         /* snow3g f8 test vectors are located at index 1 */
