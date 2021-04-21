@@ -2282,6 +2282,8 @@ run_tests(void *arg)
 
         p_mgr = info->p_mgr;
 
+        memset(&params, 0, sizeof(params));
+
         if (job_size_count == 0)
                 params.num_sizes = ((max_size - min_size) / step_size) + 1;
         else
