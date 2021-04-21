@@ -371,3 +371,38 @@ generate_random_buf(uint8_t *buf, const uint32_t length)
         for (i = 0; i < length; i++)
                 buf[i] = (uint8_t) rand();
 }
+
+/** Compare two buffers at bit-level */
+int membitcmp(const uint8_t *buf1, const uint8_t *buf2,
+              const uint32_t bitlength, const uint32_t bitoffset)
+{
+        uint32_t bitresoffset;
+        uint8_t bitresMask = ~((uint8_t)-1 << (8 - (bitoffset % 8)));
+        uint32_t res = 0;
+        uint32_t bytelengthfl = bitlength / 8;
+        const uint8_t *buf1fl = buf1 + bitoffset / 8;
+        const uint8_t *buf2fl = buf2 + bitoffset / 8;
+        int index = 1;
+
+        if (bitoffset % 8) {
+                if ((*buf1fl ^ *buf2fl) & bitresMask) {
+                        return 1;
+                } else {
+                        buf1fl++;
+                        buf2fl++;
+                }
+        }
+        bitresoffset = (bitlength + bitoffset) % 8;
+        while (bytelengthfl--) {
+                res = *buf1fl++ ^ *buf2fl++;
+                if (res)
+                        break;
+                index++;
+        }
+        if ((bitresoffset) && (0 == bytelengthfl)) {
+                res &= (uint8_t)-1 << (8 - bitresoffset);
+                if (res)
+                        return index;
+        }
+        return 0;
+}

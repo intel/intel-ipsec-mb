@@ -78,10 +78,6 @@ static void
 validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api,
                    struct test_suite_context *uea2_ctx,
                    struct test_suite_context *uia2_ctx);
-static int
-membitcmp(const uint8_t *input, const uint8_t *output,
-          const uint32_t bitlength, const uint32_t offset);
-
 /* snow3g validation function pointer table */
 struct {
         void (*func)(struct IMB_MGR *, uint32_t job_api,
@@ -2337,38 +2333,4 @@ int snow3g_test(struct IMB_MGR *mb_mgr)
         errors += test_suite_end(&uia2_ctx);
 
         return errors;
-}
-
-int membitcmp(const uint8_t *input, const uint8_t *output,
-              const uint32_t bitlength, const uint32_t bitoffset)
-{
-        uint32_t bitresoffset;
-        uint8_t bitresMask = ~((uint8_t)-1 << (8 - (bitoffset % 8)));
-        uint32_t res = 0;
-        uint32_t bytelengthfl = bitlength / 8;
-        const uint8_t *srcfl = input + bitoffset / 8;
-        const uint8_t *dstfl = output + bitoffset / 8;
-        int index = 1;
-
-        if (bitoffset % 8) {
-                if ((*srcfl ^ *dstfl) & bitresMask) {
-                        return 1;
-                } else {
-                        srcfl++;
-                        dstfl++;
-                }
-        }
-        bitresoffset = (bitlength + bitoffset) % 8;
-        while (bytelengthfl--) {
-                res = *srcfl++ ^ *dstfl++;
-                if (res)
-                        break;
-                index++;
-        }
-        if ((bitresoffset) && (0 == bytelengthfl)) {
-                res &= (uint8_t)-1 << (8 - bitresoffset);
-                if (res)
-                        return index;
-        }
-        return res;
 }

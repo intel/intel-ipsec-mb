@@ -54,4 +54,7 @@ int test_suite_end(struct test_suite_context *ctx);
 
 void generate_random_buf(uint8_t *buf, const uint32_t length);
 
+int membitcmp(const uint8_t *input, const uint8_t *output,
+              const uint32_t bitoffset, const uint32_t bitlength);
+
 #endif /* TESTAPP_UTILS_H */

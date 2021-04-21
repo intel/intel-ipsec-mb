@@ -87,58 +87,6 @@ struct kasumi_test_case kasumi_f9_func_tab[] = {
         {validate_kasumi_f9_user, "validate_kasumi_f9_user"}
 };
 
-static int membitcmp(const uint8_t *input, const uint8_t *output,
-                     const uint32_t bitoffset, const uint32_t bitlength)
-{
-        uint32_t bitresoffset;
-        uint8_t bitresMask = (uint8_t)-1 >> (bitoffset % CHAR_BIT);
-        uint32_t res;
-        uint32_t bytelengthfl = bitlength / CHAR_BIT;
-        const uint8_t *srcfl = input + bitoffset / CHAR_BIT;
-        const uint8_t *dstfl = output + bitoffset / CHAR_BIT;
-        int index = 1;
-
-        if (bitoffset % CHAR_BIT) {
-                if ((*srcfl ^ *dstfl) & bitresMask)
-                        return 1;
-                else {
-                        bytelengthfl--;
-                        srcfl++;
-                        dstfl++;
-                }
-        }
-        bitresoffset = (bitlength + bitoffset) % CHAR_BIT;
-        while (bytelengthfl--) {
-                res = *srcfl ^ *dstfl;
-                if (res) {
-                        if (bytelengthfl != 1)
-                                return index;
-                        else if (bitresoffset < CHAR_BIT) {
-                                if (res & ~((uint8_t)-1 << bitresoffset))
-                                        return index;
-                        } else {
-                                srcfl++;
-                                dstfl++;
-                                index++;
-                        }
-                } else {
-                        srcfl++;
-                        dstfl++;
-                        index++;
-                }
-        }
-        if (bitresoffset > CHAR_BIT)
-                res = (*srcfl ^ *dstfl) &
-                      ~((uint8_t)-1 >> (bitresoffset % CHAR_BIT));
-        else if (bitresoffset == CHAR_BIT)
-                res = (*srcfl ^ *dstfl) &
-                      ~((uint8_t)-1 >> (bitoffset % CHAR_BIT));
-        else
-                res = 0;
-
-        return res;
-}
-
 static int
 submit_kasumi_f8_jobs(struct IMB_MGR *mb_mgr, kasumi_key_sched_t **keys,
                       uint64_t **ivs, uint8_t **src, uint8_t **dst,
@@ -481,8 +429,8 @@ static int validate_kasumi_f8_1_bitblock(IMB_MGR *mgr, const unsigned job_api)
                                                    ciphBufAftPad, wrkBufAftPad,
                                                    bit_len, bit_offset);
 
-                if (membitcmp(wrkBufAftPad, plainBufAftPad, 0,
-                              kasumi_bit_vectors[i].LenInBits) != 0) {
+                if (membitcmp(wrkBufAftPad, plainBufAftPad,
+                              kasumi_bit_vectors[i].LenInBits, 0) != 0) {
                         printf("kasumi_f8_1_block(Dec) offset=0 vector:%d\n",
                                i);
                         hexdump(stdout, "Actual:", wrkBufAftPad, byte_len);
@@ -512,7 +460,7 @@ static int validate_kasumi_f8_1_bitblock(IMB_MGR *mgr, const unsigned job_api)
 
                 /* Check the ciphertext in the vector against the
                  * encrypted plaintext */
-                if (membitcmp(wrkBufAftPad, ciphBufAftPad, 4, bit_len) != 0) {
+                if (membitcmp(wrkBufAftPad, ciphBufAftPad, bit_len, 4) != 0) {
                         printf("kasumi_f8_1_block(Enc) offset=4  vector:%d\n",
                                i);
                         hexdump(stdout, "Actual:", wrkBufAftPad, byte_len);
@@ -530,8 +478,8 @@ static int validate_kasumi_f8_1_bitblock(IMB_MGR *mgr, const unsigned job_api)
                                                    ciphBufAftPad, wrkBufAftPad,
                                                    bit_len, bit_offset);
 
-                if (membitcmp(plainBufAftPad, plainBufAftPad, 4,
-                              bit_len) != 0) {
+                if (membitcmp(plainBufAftPad, plainBufAftPad,
+                              bit_len, 4) != 0) {
                         printf("kasumi_f8_1_block(Dec) offset=4 vector:%d\n",
                                i);
                         hexdump(stdout, "Actual:", wrkBufAftPad, byte_len);
@@ -625,8 +573,8 @@ static int validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr,
 
                 /* Check against the ciphertext in the vector against the
                  * encrypted plaintext */
-                ret = membitcmp(wrkbuf, dstBuff, offset,
-                                kasumi_bit_vectors->LenInBits[i]);
+                ret = membitcmp(wrkbuf, dstBuff,
+                                kasumi_bit_vectors->LenInBits[i], offset);
                 if (ret != 0) {
                         printf("kasumi_f8_1_block_linear(Enc)  vector:%d, "
                                "index:%d\n",
@@ -670,8 +618,8 @@ static int validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr,
                         IMB_KASUMI_F8_1_BUFFER_BIT(mgr, pKeySched, IV, dstBuff,
                                                    wrkbuf, bit_len, offset);
 
-                ret = membitcmp(wrkbuf, srcBuff, offset,
-                                kasumi_bit_vectors->LenInBits[i]);
+                ret = membitcmp(wrkbuf, srcBuff,
+                                kasumi_bit_vectors->LenInBits[i], offset);
                 if (ret != 0) {
                         printf("kasumi_f8_1_block_linear(Dec)  "
                                "vector:%d,index:%d\n",
