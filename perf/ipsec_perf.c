@@ -1545,7 +1545,7 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                 if (params->hash_alg == TEST_PON_CRC_BIP) {
                         /* create XGEM header template */
                         const uint64_t pli =
-                                (cipher_size_list[i] << 2) & 0xffff;
+                                (job_size << 2) & 0xffff;
 
                         xgem_hdr_list[i] = ((pli >> 8) & 0xff) |
                                         ((pli & 0xff) << 8);
