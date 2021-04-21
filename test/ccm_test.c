@@ -2238,7 +2238,7 @@ ccm_job_ok(const struct ccm_rfc3610_vector *vec,
 
         if (memcmp(padding, target, sizeof_padding)) {
                 printf("cipher overwrite head\n");
-                hexdump(stderr, "Target", target, sizeof(padding));
+                hexdump(stderr, "Target", target, sizeof_padding);
                 return 0;
         }
 
