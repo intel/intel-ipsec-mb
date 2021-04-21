@@ -385,14 +385,15 @@ validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
                               struct test_suite_context *uea2_ctx,
                               struct test_suite_context *uia2_ctx)
 {
-        int numVectors, i, length;
+        int i, length;
         size_t size = 0;
         cipherbit_test_linear_vector_t *testVectors =
                 &snow3g_f8_linear_bitvectors /*snow3g_cipher_test_vectors[1]*/;
         cipher_test_vector_t *testStandardVectors =
                 snow3g_f8_vectors;  /* scipher_test_vectors[1]; */
         /* snow3g f8 test vectors are located at index 1 */
-        numVectors = MAX_BIT_BUFFERS;  /* numSnow3gCipherTestVectors[3]; */
+        const int numVectors =
+                MAX_BIT_BUFFERS;  /* numSnow3gCipherTestVectors[3]; */
 
         snow3g_key_schedule_t *pKeySched = NULL;
         uint8_t *pKey = NULL;
@@ -412,11 +413,6 @@ validate_snow3g_f8_1_bitblock(struct IMB_MGR *mb_mgr,
 #endif
 
         memset(padding, -1, sizeof(padding));
-
-        if (!numVectors) {
-                printf("No Snow3G test vectors found !\n");
-                goto snow3g_f8_1_buffer_bit_exit;
-        }
 
         pIV = malloc(SNOW3G_IV_LEN_IN_BYTES);
         if (!pIV) {
