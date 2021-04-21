@@ -1375,7 +1375,7 @@ test_ctr(struct IMB_MGR *mb_mgr,
         memset(target, -1, text_byte_len + (sizeof(padding) * 2));
         memset(padding, -1, sizeof(padding));
 
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -1437,7 +1437,7 @@ test_ctr(struct IMB_MGR *mb_mgr,
                 goto end;
         }
         ret = 0;
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
  end:
         if (target != NULL)

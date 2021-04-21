@@ -376,7 +376,7 @@ test_xcbc(struct IMB_MGR *mb_mgr,
 
         IMB_AES_XCBC_KEYEXP(mb_mgr, vec->key, k1_exp, k2, k3);
 
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         /**
@@ -470,7 +470,7 @@ test_xcbc(struct IMB_MGR *mb_mgr,
         ret = 0;
 
  end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {

@@ -42,13 +42,28 @@
  * @param src source buffer pointer
  * @param length length of the buffer to copy in bytes
  */
-static void memory_copy(void *dst, const void *src, size_t length)
+void memory_copy(void *dst, const void *src, size_t length)
 {
         uint8_t *d = (uint8_t *) dst;
         const uint8_t *s = (const uint8_t *) src;
 
         while (length--)
                 *d++ = *s++;
+}
+
+/**
+ * @brief Simplistic memory set (intentionally not using libc)
+ *
+ * @param dst destination buffer pointer
+ * @param val value to set each byte in destination buffer
+ * @param length length of the buffer to copy in bytes
+ */
+void memory_set(void *dst, const int val, size_t length)
+{
+        uint8_t *d = (uint8_t *) dst;
+
+        while (length--)
+                *d++ = val;
 }
 
 /**

@@ -463,7 +463,7 @@ test_sha(struct IMB_MGR *mb_mgr,
         }
 
         /* empty the manager */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {
@@ -522,7 +522,7 @@ test_sha(struct IMB_MGR *mb_mgr,
 
  end:
         /* empty the manager before next tests */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {

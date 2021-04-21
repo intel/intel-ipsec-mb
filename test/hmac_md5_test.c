@@ -424,7 +424,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
         IMB_MD5_ONE_BLOCK(mb_mgr, buf, opad_hash);
 
         /* empty the manager */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {
@@ -483,7 +483,7 @@ test_hmac_md5(struct IMB_MGR *mb_mgr,
 
  end:
         /* empty the manager before next tests */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {

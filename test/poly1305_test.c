@@ -480,7 +480,7 @@ test_poly1305(struct IMB_MGR *mb_mgr,
         }
 
 
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         /**
@@ -528,7 +528,7 @@ test_poly1305(struct IMB_MGR *mb_mgr,
         ret = 0;
 
  end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {

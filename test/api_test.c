@@ -144,7 +144,7 @@ test_job_api(struct IMB_MGR *mb_mgr)
 	printf(".");
 
         /* clean up */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
 	printf("\n");
@@ -621,14 +621,13 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
         const IMB_CIPHER_MODE cipher = IMB_CIPHER_NULL;
         IMB_CHAIN_ORDER order;
         struct IMB_JOB template_job;
-        struct IMB_JOB *job;
         struct chacha20_poly1305_context_data chacha_ctx;
         struct gcm_context_data gcm_ctx;
 
 	printf("Invalid JOB MAC arguments test:\n");
 
         /* prep */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         /*
@@ -852,7 +851,7 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                         }
 
         /* clean up */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         printf("\n");
@@ -870,14 +869,13 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         IMB_CIPHER_MODE cipher;
         IMB_CHAIN_ORDER order;
         struct IMB_JOB template_job;
-        struct IMB_JOB *job;
         struct chacha20_poly1305_context_data chacha_ctx;
         struct gcm_context_data gcm_ctx;
 
 	printf("Invalid JOB CIPHER arguments test:\n");
 
         /* prep */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         /*
@@ -1224,7 +1222,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                 }
 
         /* clean up */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         printf("\n");

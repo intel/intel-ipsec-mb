@@ -278,7 +278,7 @@ test_chained_many(struct IMB_MGR *mb_mgr,
         }
 
         /* flush the scheduler */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {
@@ -360,7 +360,7 @@ test_chained_many(struct IMB_MGR *mb_mgr,
         ret = 0;
 
  end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {

@@ -1321,8 +1321,10 @@ static int check_data(const uint8_t *test, const uint8_t *expected,
 	int mismatch;
 	int is_error = 0;
 
-        if (len != 0 &&
-            (test == NULL || expected == NULL || data_name == NULL))
+        if (len == 0)
+                return is_error;
+
+        if (test == NULL || expected == NULL || data_name == NULL)
                 return 1;
 
 	mismatch = memcmp(test, expected, len);
@@ -1796,11 +1798,15 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 		fprintf(stderr, "Can't allocate tag memory\n");
                 goto test_gcm_vectors_exit;
 	}
+        memset(T_test, 0, vector->Tlen);
+
 	T2_test = malloc(vector->Tlen);
 	if (T2_test == NULL) {
 		fprintf(stderr, "Can't allocate tag(2) memory\n");
                 goto test_gcm_vectors_exit;
 	}
+        memset(T2_test, 0, vector->Tlen);
+
 	/* This is only required once for a given key */
         switch (vector->Klen) {
         case IMB_KEY_128_BYTES:
@@ -1831,7 +1837,7 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
                 test_suite_update(ts, 1, 0);
 
 	/* test of in-place encrypt */
-	memcpy(pt_test, vector->P, vector->Plen);
+        memory_copy(pt_test, vector->P, vector->Plen);
 	is_error = encfn(p_gcm_mgr, &gdata_key, &gdata_ctx, pt_test, pt_test,
                          vector->Plen, iv, iv_len, vector->A, vector->Alen,
                          T_test, vector->Tlen, vector->Klen);
@@ -1841,8 +1847,9 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
                 test_suite_update(ts, 0, 1);
         else
                 test_suite_update(ts, 1, 0);
-	memset(ct_test, 0, vector->Plen);
-	memset(T_test, 0, vector->Tlen);
+
+        memory_set(ct_test, 0, vector->Plen);
+	memory_set(T_test, 0, vector->Tlen);
 
 	/*
          * Decrypt
@@ -1864,7 +1871,7 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
                 test_suite_update(ts, 1, 0);
 
 	/* test in in-place decrypt */
-	memcpy(ct_test, vector->C, vector->Plen);
+        memory_copy(ct_test, vector->C, vector->Plen);
 	is_error = decfn(p_gcm_mgr, &gdata_key, &gdata_ctx, ct_test, ct_test,
                          vector->Plen, iv, iv_len, vector->A, vector->Alen,
                          T_test, vector->Tlen, vector->Klen);
@@ -1880,7 +1887,8 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
 	is_error = encfn(p_gcm_mgr, &gdata_key, &gdata_ctx, ct_test, vector->P,
                          vector->Plen, iv, iv_len, vector->A, vector->Alen,
                          T_test, vector->Tlen, vector->Klen);
-	memset(pt_test, 0, vector->Plen);
+
+        memory_set(pt_test, 0, vector->Plen);
 
 	is_error |= decfn(p_gcm_mgr, &gdata_key, &gdata_ctx, pt_test, ct_test,
                           vector->Plen, iv, iv_len, vector->A, vector->Alen,
@@ -1893,8 +1901,6 @@ test_gcm_vectors(struct gcm_ctr_vector const *vector,
                 test_suite_update(ts, 0, 1);
         else
                 test_suite_update(ts, 1, 0);
-
-	memset(pt_test, 0, vector->Plen);
 
  test_gcm_vectors_exit:
 	if (NULL != ct_test)

@@ -316,7 +316,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
         ks_ptr[2] = ks3;
 
         /* flush the scheduler */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {
@@ -408,7 +408,7 @@ test_des_many(struct IMB_MGR *mb_mgr,
         ret = 0;
 
  end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++)

@@ -367,7 +367,7 @@ test_aead(struct IMB_MGR *mb_mgr,
                 }
         }
 
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         /**
@@ -441,7 +441,7 @@ test_aead(struct IMB_MGR *mb_mgr,
         ret = 0;
 
  end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         if (auths != NULL) {

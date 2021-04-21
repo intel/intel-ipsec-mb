@@ -470,7 +470,7 @@ test_pon(struct IMB_MGR *mb_mgr,
                 memcpy(target + sizeof(padding), out_text, len_to_bip);
         }
 
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -612,7 +612,7 @@ test_pon(struct IMB_MGR *mb_mgr,
         /* all checks passed */
         ret = 0;
 
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
  end:
         if (target != NULL)

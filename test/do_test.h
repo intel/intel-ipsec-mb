@@ -287,7 +287,7 @@ do_test(IMB_MGR *mb_mgr)
                         job = IMB_GET_COMPLETED_JOB(mb_mgr);
         } /* end for size */
 
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL) {
                 do {
                         job = IMB_GET_COMPLETED_JOB(mb_mgr);
                 } while (job);

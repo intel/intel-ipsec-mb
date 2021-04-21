@@ -1889,7 +1889,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         }
 
         /* flush the scheduler */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {
@@ -1954,7 +1954,7 @@ test_aes_many(struct IMB_MGR *mb_mgr,
         ret = 0;
 
  end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL) {
                 err = imb_get_errno(mb_mgr);
                 if (err != 0) {
                         printf("Error: %s!\n", imb_get_strerror(err));
@@ -2179,7 +2179,7 @@ test_docrc_many(struct IMB_MGR *mb_mgr,
         }
 
         /* flush the scheduler */
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         for (i = 0; i < num_jobs; i++) {
@@ -2235,7 +2235,7 @@ test_docrc_many(struct IMB_MGR *mb_mgr,
         ret = 0;
 
  end:
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
  end_alloc:
 

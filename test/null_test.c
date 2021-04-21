@@ -60,7 +60,7 @@ test_null_hash(struct IMB_MGR *mb_mgr,
         memset(padding, -1, sizeof(padding));
 
         IMB_AES_KEYEXP_128(mb_mgr, cipher_key, expkey, dust);
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -111,7 +111,7 @@ test_null_hash(struct IMB_MGR *mb_mgr,
         }
 
         ret = 0;
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 end:
         if (ret == 0)
@@ -140,7 +140,7 @@ test_null_cipher(struct IMB_MGR *mb_mgr,
 
         IMB_AES_KEYEXP_128(mb_mgr, auth_key, expkey, dust);
         IMB_AES_CMAC_SUBKEY_GEN_128(mb_mgr, expkey, skey1, skey2);
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 
         job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -187,7 +187,7 @@ test_null_cipher(struct IMB_MGR *mb_mgr,
         }
 
         ret = 0;
-        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL)
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
 end:
         if (ret == 0)

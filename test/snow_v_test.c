@@ -1100,12 +1100,11 @@ int snow_v_test(IMB_MGR *p_mgr)
         struct test_suite_context ts_snow_v;
         struct test_suite_context ts_snow_v_aead;
         int errors = 0;
-        struct IMB_JOB *job;
         uint64_t i;
 
         /* flush the scheduler */
-        while ((job = IMB_FLUSH_JOB(p_mgr)) != NULL)
-        ;
+        while (IMB_FLUSH_JOB(p_mgr) != NULL)
+                ;
 
         /* Test SNOW-V */
         printf("SNOW-V test vectors\n");

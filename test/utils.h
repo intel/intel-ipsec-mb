@@ -56,5 +56,7 @@ void generate_random_buf(uint8_t *buf, const uint32_t length);
 
 int membitcmp(const uint8_t *input, const uint8_t *output,
               const uint32_t bitoffset, const uint32_t bitlength);
+void memory_copy(void *dst, const void *src, size_t length);
+void memory_set(void *dst, const int val, size_t length);
 
 #endif /* TESTAPP_UTILS_H */
