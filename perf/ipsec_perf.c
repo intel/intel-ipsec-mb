@@ -1866,6 +1866,8 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                                 job->status, errc, imb_get_strerror(errc));
                         return 1;
                 }
+#else
+                (void)job;
 #endif
         }
 
@@ -1875,6 +1877,9 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         else
 #endif
                 time = __rdtscp(&aux) - time;
+
+        if (!num_iter)
+                return time;
 
         return time / num_iter;
 }
@@ -2051,6 +2056,10 @@ do_test_gcm(struct params_s *params,
 
         free(key);
         free(aad);
+
+        if (!num_iter)
+                return time;
+
         return time / num_iter;
 }
 
