@@ -898,11 +898,20 @@ static uint32_t pb_mod = 0;
 static int silent_progress_bar = 0;
 
 /* Return rdtsc to core cycle scale factor */
-static double get_tsc_to_core_scale(void)
+static double get_tsc_to_core_scale(const int turbo)
 {
+        int i, num_loops = 1;
         /* use enough cycles for accurate measurement */
-        const uint64_t expected_cycles = 400000;
-        const uint64_t tsc_cycles = measure_tsc(expected_cycles);
+        const uint64_t expected_cycles = 1000000000;
+        uint64_t tsc_cycles;
+
+        /* if turbo enabled then run longer */
+        /* to allow frequency to stabilize */
+        if (turbo)
+                num_loops = 8;
+
+        for (i = 0; i < num_loops; i++)
+                tsc_cycles = measure_tsc(expected_cycles);
 
         return ((double)tsc_cycles / (double)expected_cycles);
 }
@@ -2503,7 +2512,9 @@ static void usage(void)
                 "--aad-size: size of AAD for AEAD algorithms\n"
                 "--job-iter: number of tests iterations for each job size\n"
                 "--no-progress-bar: Don't display progress bar\n"
-                "--print-info: Display system and algorithm information\n",
+                "--print-info: Display system and algorithm information\n"
+                "--turbo: Run extended RDTSC to core scaling measurement\n"
+                "        (Use when turbo enabled)\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -2908,6 +2919,7 @@ int main(int argc, char *argv[])
         unsigned int cipher_dir_set = 0;
         /* 1 size by default on job sizes list */
         uint32_t num_sizes_list = 1;
+        int turbo_enabled = 0;
 
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
@@ -3062,6 +3074,8 @@ int main(int argc, char *argv[])
                 } else if (strcmp(argv[i], "--print-info") == 0) {
                         print_info();
                         return EXIT_SUCCESS;
+                } else if (strcmp(argv[i], "--turbo") == 0) {
+                        turbo_enabled = 1;
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -3205,7 +3219,7 @@ int main(int argc, char *argv[])
         }
 
         fprintf(stderr, "RDTSC scaling to core cycles: %.3f\n",
-                get_tsc_to_core_scale());
+                get_tsc_to_core_scale(turbo_enabled));
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
 
