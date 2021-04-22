@@ -1,3 +1,5 @@
+[![Coverity Status](https://scan.coverity.com/projects/16449/badge.svg)](https://scan.coverity.com/projects/intel-ipsec-mb)
+
 # Intel(R) Multi-Buffer Crypto for IPsec Library
 
 The library provides software crypto acceleration primarily targeting packet processing
