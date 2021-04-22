@@ -1520,17 +1520,19 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
  * decrypted message can be compared against the test buffer */
 static int
 modify_pon_test_buf(uint8_t *test_buf,
-                    const IMB_JOB *job, const uint32_t buf_size,
+                    const IMB_JOB *job,
+                    const uint32_t pli,
                     const uint64_t xgem_hdr)
 {
         /* Set plaintext CRC in test buffer for PON */
-        uint32_t *buf32 = (uint32_t *) &test_buf[8 + buf_size - 4];
+        uint32_t *buf32 = (uint32_t *) &test_buf[8 + pli - 4];
         uint64_t *buf64 = (uint64_t *) test_buf;
         const uint32_t *tag32 = (uint32_t *) job->auth_tag_output;
         const uint64_t hec_mask = BSWAP64(0xfffffffffffe000);
         const uint64_t xgem_hdr_out = ((const uint64_t *)job->src)[0];
 
-        if (buf_size >= 5)
+        /* Update CRC if PLI > 4 */
+        if (pli > 4)
                 buf32[0] = tag32[1];
 
         /* Check if any bits apart from HEC are modified */
@@ -1693,6 +1695,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         uint8_t *auth_key = data->auth_key;
         unsigned int num_processed_jobs = 0;
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
+        uint16_t pli = 0;
 
         if (num_jobs == 0)
                 return ret;
@@ -1761,7 +1764,8 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
                         /* Buf size is XGEM payload, including CRC,
                          * allocate space for XGEM header and padding */
-                        buf_sizes[i] = buf_sizes[i] + 8;
+                        pli = buf_sizes[i];
+                        buf_sizes[i] += 8;
                         if (buf_sizes[i] % 8)
                                 buf_sizes[i] = (buf_sizes[i] + 8) & 0xfffffff8;
                         /* Only first 4 bytes are checked,
@@ -1787,10 +1791,11 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 /* For PON, construct the XGEM header, setting valid PLI */
                 if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
                         /* create XGEM header template */
-                        const uint64_t pli = ((buf_sizes[i]) << 2) & 0xffff;
+                        const uint16_t shifted_pli = (pli << 2) & 0xffff;
                         uint64_t *p_src = (uint64_t *)test_buf[i];
 
-                        xgem_hdr[i] = ((pli >> 8) & 0xff) | ((pli & 0xff) << 8);
+                        xgem_hdr[i] = ((shifted_pli >> 8) & 0xff) |
+                                       ((shifted_pli & 0xff) << 8);
                         p_src[0] = xgem_hdr[i];
                 }
         }
@@ -1901,7 +1906,7 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
 
                         if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
                                 if (modify_pon_test_buf(test_buf[idx], job,
-                                                        buf_sizes[idx],
+                                                        pli,
                                                         xgem_hdr[idx]) < 0)
                                         goto exit;
                         }
@@ -1932,13 +1937,6 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                                 goto exit;
                         }
                         num_processed_jobs++;
-
-                        if (params->hash_alg == IMB_AUTH_PON_CRC_BIP) {
-                                if (modify_pon_test_buf(test_buf[idx], job,
-                                                        buf_sizes[idx],
-                                                        xgem_hdr[idx]) < 0)
-                                        goto exit;
-                        }
 
                         if (params->hash_alg == IMB_AUTH_DOCSIS_CRC32)
                                 modify_docsis_crc32_test_buf(test_buf[idx], job,
@@ -2066,15 +2064,15 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                         }
 
                         if ((params->hash_alg == IMB_AUTH_PON_CRC_BIP) &&
-                            (buf_sizes[i] > 4)) {
-                                const uint64_t plen = buf_sizes[i] - 4;
+                            (pli > 4)) {
+                                const uint64_t plen = 8 + pli - 4;
 
-                                if (memcmp(src_dst_buf[i] + 8 + plen,
+                                if (memcmp(src_dst_buf[i] + plen,
                                            out_digest[i] + 4, 4) != 0) {
                                         fprintf(stderr, "\nDecrypted CRC and "
                                                 "calculated CRC don't match\n");
                                         hexdump(stdout, "Decrypted CRC",
-                                                src_dst_buf[i] + 8 + plen, 4);
+                                                src_dst_buf[i] + plen, 4);
                                         hexdump(stdout, "Calculated CRC",
                                                 out_digest[i] + 4, 4);
                                         goto_exit = 1;
