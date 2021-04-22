@@ -655,7 +655,6 @@ section .text
 
 ;; =============================================================================
 ;; Barrett reduction from 128-bits to 32-bits modulo Ethernet FCS polynomial
-
 %macro CRC32_REDUCE_128_TO_32 5
 %define %%CRC   %1         ; [out] GP to store 32-bit Ethernet FCS value
 %define %%XCRC  %2         ; [in/clobbered] XMM with CRC
@@ -679,6 +678,33 @@ section .text
         vpxor           %%XCRC, %%XCRC, %%XT1
 
 %%_crc_barrett:
+        ;; Barrett reduction
+        vpand           %%XCRC, [rel mask2]
+        vmovdqa         %%XT1, %%XCRC
+        vmovdqa         %%XT2, %%XCRC
+        vmovdqa         %%XCRCKEY, [rel rk7]
+
+        vpclmulqdq      %%XCRC, %%XCRCKEY, 0x00
+        vpxor           %%XCRC, %%XT2
+        vpand           %%XCRC, [rel mask]
+        vmovdqa         %%XT2, %%XCRC
+        vpclmulqdq      %%XCRC, %%XCRCKEY, 0x10
+        vpxor           %%XCRC, %%XT2
+        vpxor           %%XCRC, %%XT1
+        vpextrd         DWORD(%%CRC), %%XCRC, 2 ; 32-bit CRC value
+        not             DWORD(%%CRC)
+%endmacro
+
+;; =============================================================================
+;; Barrett reduction from 64 bits to 32 bits modulo Ethernet FCS polynomial
+%macro CRC32_REDUCE_64_TO_32 5
+%define %%CRC   %1         ; [out] GP to store 32-bit Ethernet FCS value
+%define %%XCRC  %2         ; [in/clobbered] XMM with CRC
+%define %%XT1   %3         ; [clobbered] temporary xmm register
+%define %%XT2   %4         ; [clobbered] temporary xmm register
+%define %%XT3   %5         ; [clobbered] temporary xmm register
+
+%define %%XCRCKEY %%XT3
         ;; Barrett reduction
         vpand           %%XCRC, [rel mask2]
         vmovdqa         %%XT1, %%XCRC
@@ -960,6 +986,8 @@ section .text
         vmovdqu xtmp1, [p_out]
 %endif
         vpxor   xcrc, xtmp1   ; xor the initial crc value
+        lea     tmp, [rel pshufb_shf_table]
+        vmovdqu xtmp2, [tmp + bytes_to_crc - 16]
         jmp     %%_crc_two_xmms
 
 %%_exact_16_left:
@@ -979,10 +1007,31 @@ section .text
 %endif
         vpxor   xcrc, xtmp1 ; xor the initial crc value
 
+        cmp     bytes_to_crc, 4
+        jl      %%only_less_than_4
+
         lea     tmp, [rel pshufb_shf_table]
         vmovdqu xtmp1, [tmp + bytes_to_crc]
         vpshufb xcrc, xtmp1
         jmp     %%_128_done
+
+%%only_less_than_4:
+        cmp     bytes_to_crc, 3
+        jl      %%only_less_than_3
+        vpslldq xcrc, 5
+        CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
+        jmp     %%_crc_done
+
+%%only_less_than_3:
+        cmp     bytes_to_crc, 2
+        jl      %%only_less_than_2
+        vpslldq xcrc, 6
+        CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
+        jmp     %%_crc_done
+%%only_less_than_2:
+        vpslldq xcrc, 7
+        CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
+        jmp     %%_crc_done
 
 %%_at_least_32_bytes:
         cmp     bytes_to_crc, 64
@@ -1054,12 +1103,12 @@ section .text
 %endif                          ; DECRYPTION
 
         ;; Partial bytes left - complete CRC calculation
-%%_crc_two_xmms:
         lea             tmp, [rel pshufb_shf_table]
         vmovdqu         xtmp2, [tmp + bytes_to_crc]
         ;; @note: in case of in-place operation (default) this load is
         ;; creating store-to-load problem.
         ;; However, there is no easy way to address it at the moment.
+%%_crc_two_xmms:
 %ifidn %%DIR, ENC
         vmovdqu         xtmp1, [p_in - 16 + bytes_to_crc]  ; xtmp1 = data for CRC
 %else

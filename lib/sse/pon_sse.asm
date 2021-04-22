@@ -391,6 +391,34 @@ section .text
 
 %%_bip_done:
 %endmacro                       ; CIPHER_BIP_REST
+
+;; =============================================================================
+;; Barrett reduction from 64 bits to 32 bits modulo Ethernet FCS polynomial
+%macro CRC32_REDUCE_64_TO_32 5
+%define %%CRC   %1         ; [out] GP to store 32-bit Ethernet FCS value
+%define %%XCRC  %2         ; [in/clobbered] XMM with CRC
+%define %%XT1   %3         ; [clobbered] temporary xmm register
+%define %%XT2   %4         ; [clobbered] temporary xmm register
+%define %%XT3   %5         ; [clobbered] temporary xmm register
+
+%define %%XCRCKEY %%XT3
+        ;; Barrett reduction
+        pand            %%XCRC, [rel mask2]
+        movdqa          %%XT1, %%XCRC
+        movdqa          %%XT2, %%XCRC
+        movdqa          %%XCRCKEY, [rel rk7]
+
+        pclmulqdq       %%XCRC, %%XCRCKEY, 0x00
+        pxor            %%XCRC, %%XT2
+        pand            %%XCRC, [rel mask]
+        movdqa          %%XT2, %%XCRC
+        pclmulqdq       %%XCRC, %%XCRCKEY, 0x10
+        pxor            %%XCRC, %%XT2
+        pxor            %%XCRC, %%XT1
+        pextrd          DWORD(%%CRC), %%XCRC, 2 ; 32-bit CRC value
+        not             DWORD(%%CRC)
+%endmacro
+
 ;; =============================================================================
 ;; Barrett reduction from 128-bits to 32-bits modulo Ethernet FCS polynomial
 
@@ -703,6 +731,9 @@ section .text
         movdqu  xtmp1, [p_out]
 %endif
         pxor    xcrc, xtmp1   ; xor the initial crc value
+        ;; Partial bytes left - complete CRC calculation
+        lea     tmp, [rel pshufb_shf_table]
+        movdqu  xtmp2, [tmp + bytes_to_crc - 16]
         jmp     %%_crc_two_xmms
 
 %%_exact_16_left:
@@ -722,10 +753,31 @@ section .text
 %endif
         pxor    xcrc, xtmp1 ; xor the initial CRC value
 
+        cmp     bytes_to_crc, 4
+        jl      %%only_less_than_4
+
         lea     tmp, [rel pshufb_shf_table]
         movdqu  xtmp1, [tmp + bytes_to_crc]
         pshufb  xcrc, xtmp1
         jmp     %%_128_done
+
+%%only_less_than_4:
+        cmp     bytes_to_crc, 3
+        jl      %%only_less_than_3
+        pslldq  xcrc, 5
+        CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
+        jmp     %%_crc_done
+
+%%only_less_than_3:
+        cmp     bytes_to_crc, 2
+        jl      %%only_less_than_2
+        pslldq  xcrc, 6
+        CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
+        jmp     %%_crc_done
+%%only_less_than_2:
+        pslldq  xcrc, 7
+        CRC32_REDUCE_64_TO_32 ethernet_fcs, xcrc, xtmp1, xtmp2, xcrckey
+        jmp     %%_crc_done
 
 %%_at_least_32_bytes:
         DO_PON  p_keys, NUM_AES_ROUNDS, xcounter, p_in, p_out, xbip, \
@@ -764,9 +816,9 @@ section .text
 %endif                          ; DECRYPTION
 
         ;; Partial bytes left - complete CRC calculation
-%%_crc_two_xmms:
         lea             tmp, [rel pshufb_shf_table]
         movdqu          xtmp2, [tmp + bytes_to_crc]
+%%_crc_two_xmms:
 %ifidn %%DIR, ENC
         movdqu          xtmp1, [p_in - 16 + bytes_to_crc]  ; xtmp1 = data for CRC
 %else
