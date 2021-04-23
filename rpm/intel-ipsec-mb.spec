@@ -24,8 +24,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Versions numbers
-%global major        0
-%global minor        55
+%global major        1
+%global minor        0
 %global patch        0
 %global fullversion  %{major}.%{minor}.%{patch}
 
@@ -109,6 +109,9 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %{_libdir}/libIPSec_MB.so
 
 %changelog
+* Fri Apr 23 2021 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 1.0.0-1
+- Update for release package v1.0
+
 * Thu Oct 29 2020 Marcel Cornu <marcel.d.cornu@intel.com> 0.55.0-1
 - Update for release package v0.55
 
