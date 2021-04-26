@@ -1766,8 +1766,10 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                          * allocate space for XGEM header and padding */
                         pli = buf_sizes[i];
                         buf_sizes[i] += 8;
-                        if (buf_sizes[i] % 8)
-                                buf_sizes[i] = (buf_sizes[i] + 8) & 0xfffffff8;
+                        if (buf_sizes[i] < 16)
+                                buf_sizes[i] = 16;
+                        if (buf_sizes[i] % 4)
+                                buf_sizes[i] = (buf_sizes[i] + 3) & 0xfffffffc;
                         /* Only first 4 bytes are checked,
                          * corresponding to BIP */
                         tag_size_to_check[i] = 4;
