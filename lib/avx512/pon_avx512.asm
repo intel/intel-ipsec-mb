@@ -33,7 +33,8 @@
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
 
-extern aes_cntr_pon_128_vaes_avx512
+extern aes_cntr_pon_enc_128_vaes_avx512
+extern aes_cntr_pon_dec_128_vaes_avx512
 extern ethernet_fcs_avx512_local
 
 ;;; This is implementation of algorithms: AES128-CTR + CRC32 + BIP
@@ -112,11 +113,14 @@ section .text
 %define arg3    rdx
 %define arg4    rcx
 %define arg5    r8
+%define arg6    r9
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
+%define arg5    qword [rsp + 32]
+%define arg6    qword [rsp + 40]
 %endif
 
 %define job     arg1
@@ -200,7 +204,7 @@ endstruc
 %macro AES128_CTR_PON_ENC 1
 %define %%CIPH  %1              ; [in] cipher "CTR" or "NO_CTR"
 
-       sub      rsp, STACKFRAME_size
+        sub     rsp, STACKFRAME_size
 
         mov     [rsp + _gpr_save], r12
         mov     [rsp + _gpr_save + 8], r13
@@ -274,29 +278,26 @@ endstruc
         mov     arg5, [job + _msg_len_to_cipher_in_bytes]
 %endif
 
+        mov     arg6, bip
         mov     arg1, src
 
-        ; Encrypt buffer
-        call    aes_cntr_pon_128_vaes_avx512
+        call    aes_cntr_pon_enc_128_vaes_avx512
+
+        mov     bip, arg6
 
 %ifndef LINUX
         add     rsp, 8*6
 %endif
         ; Restore job pointer
         mov     job, [rsp + _job_save]
-%endif ; CIPH = CTR
-
+%else
         ; Calculate BIP (XOR message)
         vmovq   xmm1, bip
 
-%ifidn %%CIPH, CTR
-        mov     tmp_2, [job + _msg_len_to_cipher_in_bytes]
-%else
         ;; Message length to cipher is 0
         ;; - length is obtained from message length to hash (BIP) minus XGEM header size
         mov     tmp_2, [job + _msg_len_to_hash_in_bytes]
         sub     tmp_2, 8
-%endif ; CIPH == CTR
 
 %%start_bip:
         cmp     tmp_2, 64
@@ -325,10 +326,12 @@ endstruc
         vpsrldq xmm0, xmm1, 4
         vpxord  xmm1, xmm0
 
-        vmovd   DWORD(tmp_2), xmm1
+        vmovq   bip, xmm1
+%endif ; CIPH = CTR
 
         mov     tmp_1, [job + _auth_tag_output]
-        mov     [tmp_1], DWORD(tmp_2)
+        mov     [tmp_1], DWORD(bip)
+
         ;; set job status
         or      dword [job + _status], IMB_STATUS_COMPLETED
 
@@ -350,7 +353,7 @@ endstruc
 %macro AES128_CTR_PON_DEC 1
 %define %%CIPH  %1              ; [in] cipher "CTR" or "NO_CTR"
 
-       sub      rsp, STACKFRAME_size
+        sub      rsp, STACKFRAME_size
 
         mov     [rsp + _gpr_save], r12
         mov     [rsp + _gpr_save + 8], r13
@@ -381,17 +384,41 @@ endstruc
         ; Save job pointer
         mov     [rsp + _job_save], job
 
+%ifidn %%CIPH, CTR
+        ;; Decrypt message and calculate BIP in same function
+        mov     arg2, [job + _dst]
+        mov     arg3, [job + _iv]
+        mov     arg4, [job + _enc_keys]
+
+%ifndef LINUX
+        ;; If Windows, reserve memory in stack for parameter transferring
+        sub     rsp, 8*6
+        mov     tmp_1, [job + _msg_len_to_cipher_in_bytes]
+        mov     arg5, tmp_1 ; arg5 in stack, not register
+%else
+        mov     arg5, [job + _msg_len_to_cipher_in_bytes]
+%endif
+
+        mov     arg6, bip
+        mov     arg1, src
+
+        ; Decrypt buffer
+        call    aes_cntr_pon_dec_128_vaes_avx512
+
+        mov     bip, arg6
+
+%ifndef LINUX
+        add     rsp, 8*6
+%endif
+%else ; %%CIPH == CTR
+
         ; Calculate BIP (XOR message)
         vmovq   xmm1, bip
 
-%ifidn %%CIPH, CTR
-        mov     tmp_2, [job + _msg_len_to_cipher_in_bytes]
-%else
         ;; Message length to cipher is 0
         ;; - length is obtained from message length to hash (BIP) minus XGEM header size
         mov     tmp_2, [job + _msg_len_to_hash_in_bytes]
         sub     tmp_2, 8
-%endif ; CIPH == CTR
 
 %%start_bip:
         cmp     tmp_2, 64
@@ -420,29 +447,9 @@ endstruc
         vpsrldq xmm0, xmm1, 4
         vpxord  xmm1, xmm0
 
-        vmovd   DWORD(tmp_2), xmm1
+        vmovd   DWORD(bip), xmm1
 
-        mov     tmp_1, [job + _auth_tag_output]
-        mov     [tmp_1], DWORD(tmp_2)
-
-        mov     arg2, [job + _dst]
-
-%ifidn %%CIPH, CTR
-        mov     arg3, [job + _iv]
-        mov     arg4, [job + _enc_keys]
-
-%ifndef LINUX
-        mov     tmp_1, [job + _msg_len_to_cipher_in_bytes]
-        mov     arg5, tmp_1 ; arg5 in stack, not register
-%else
-        mov     arg5, [job + _msg_len_to_cipher_in_bytes]
-%endif
-
-        mov     arg1, src
-
-        ; Decrypt buffer
-        call    aes_cntr_pon_128_vaes_avx512
-%endif ; CIPH = CTR
+%endif ; CIPH == CTR
 
         cmp     bytes_to_crc, 4
         jle     %%_skip_crc
@@ -469,6 +476,9 @@ endstruc
 %%_skip_crc:
         ; Restore job pointer
         mov    job, [rsp + _job_save]
+
+        mov     tmp_1, [job + _auth_tag_output]
+        mov     [tmp_1], DWORD(bip)
 
         ;; set job status
         or      dword [job + _status], IMB_STATUS_COMPLETED
