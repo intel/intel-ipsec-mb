@@ -522,6 +522,10 @@ static int validate_kasumi_f8_1_bitblock_offset(IMB_MGR *mgr,
         uint8_t *pWrkBuff = wrkbuf;
         uint64_t *pIV = &IV;
 
+        memset(srcBuff, 0, sizeof(srcBuff));
+        memset(dstBuff, 0, sizeof(dstBuff));
+        memset(wrkbuf, 0, sizeof(wrkbuf));
+
         if (!numKasumiTestVectors) {
                 printf("No Kasumi vectors found !\n");
                 return 1;
