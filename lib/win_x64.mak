@@ -266,7 +266,6 @@ lib_objs1 = \
 	$(OBJ_DIR)\poly_fma_avx512.obj \
 	$(OBJ_DIR)\des_x16_avx512.obj \
 	$(OBJ_DIR)\cntr_vaes_avx512.obj \
-	$(OBJ_DIR)\cntr_ccm_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbc_dec_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbc_enc_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbcs_enc_vaes_avx512.obj \

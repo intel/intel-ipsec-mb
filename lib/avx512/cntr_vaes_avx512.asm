@@ -1504,7 +1504,6 @@ default rel
 
 %endmacro                       ; CNTR_ENC_DEC
 
-%ifdef CNTR_CCM_AVX512
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;IMB_JOB * aes_cntr_ccm_128_vaes_avx512(IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1535,7 +1534,6 @@ aes_cntr_ccm_256_vaes_avx512:
 
         ret
 
-%else
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void aes_cntr_128_submit_vaes_avx512 (IMB_JOB *job)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1625,8 +1623,6 @@ aes_cntr_bit_256_submit_vaes_avx512:
         FUNC_RESTORE CNTR_BIT
 
         ret
-
-%endif ;; CNTR_CCM_AVX512
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
