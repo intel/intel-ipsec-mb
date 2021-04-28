@@ -1512,7 +1512,13 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                 else if ((params->cipher_mode == TEST_NULL_CIPHER) ||
                          (params->cipher_mode == TEST_PON_NO_CNTR))
                         cipher_size_list[i] = 0;
-                else
+                else if (params->cipher_mode == TEST_PON_CNTR) {
+                        if (job_size < 8)
+                                cipher_size_list[i] = 8;
+                        else
+                                cipher_size_list[i] =
+                                        (job_size + 3) & 0xfffffffc;
+                } else
                         cipher_size_list[i] = job_size;
 
                 if ((params->hash_alg == TEST_HASH_CCM) ||
@@ -1532,9 +1538,14 @@ set_size_lists(uint32_t *cipher_size_list, uint32_t *hash_size_list,
                          (params->hash_alg == TEST_ZUC256_EIA3) ||
                          (params->hash_alg == TEST_SNOW3G_UIA2))
                         hash_size_list[i] *= 8;
-                else if (params->hash_alg == TEST_PON_CRC_BIP)
-                        hash_size_list[i] = job_size + 8;
-                else if (params->hash_alg == TEST_NULL_HASH)
+                else if (params->hash_alg == TEST_PON_CRC_BIP) {
+                        sha_size_incr = 8;
+                        if (job_size < 8)
+                                hash_size_list[i] = 8;
+                        else
+                                hash_size_list[i] = (job_size + 3) & 0xfffffffc;
+                        hash_size_list[i] += sha_size_incr;
+                } else if (params->hash_alg == TEST_NULL_HASH)
                         hash_size_list[i] = 0;
 
                 if (((params->cipher_mode == TEST_AESDOCSIS) ||
