@@ -126,7 +126,7 @@ section .text
 
 struc STACK
 %ifndef LINUX
-_XMM_SAVE:	reso	7
+_XMM_SAVE:	reso	8
 %endif
 _XFER:		reso	1
 endstruc
