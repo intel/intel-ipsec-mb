@@ -502,6 +502,7 @@ endstruc
 align 64
 MKGLOBAL(submit_job_pon_enc_vaes_avx512,function,internal)
 submit_job_pon_enc_vaes_avx512:
+        endbranch64
         AES128_CTR_PON_ENC CTR
         ret
 
@@ -509,6 +510,7 @@ submit_job_pon_enc_vaes_avx512:
 align 64
 MKGLOBAL(submit_job_pon_dec_vaes_avx512,function,internal)
 submit_job_pon_dec_vaes_avx512:
+        endbranch64
         AES128_CTR_PON_DEC CTR
         ret
 
