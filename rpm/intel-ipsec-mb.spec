@@ -90,7 +90,7 @@ install -d %{buildroot}/%{_mandir}/man7
 install -m 0444 lib/libipsec-mb.7 %{buildroot}/%{_mandir}/man7
 install -m 0444 lib/libipsec-mb-dev.7 %{buildroot}/%{_mandir}/man7
 cd %{buildroot}/%{_libdir}
-ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so.0
+ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so.%{major}
 ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 
 %files
@@ -99,7 +99,7 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %doc README ReleaseNotes.txt
 
 %{_libdir}/libIPSec_MB.so.%{fullversion}
-%{_libdir}/libIPSec_MB.so.0
+%{_libdir}/libIPSec_MB.so.%{major}
 
 %{_mandir}/man7/libipsec-mb.7.gz
 
