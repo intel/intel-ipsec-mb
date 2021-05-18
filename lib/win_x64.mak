@@ -461,7 +461,8 @@ lib_objs2 = \
 	$(OBJ_DIR)\poly1305.obj \
 	$(OBJ_DIR)\chacha20_poly1305.obj \
 	$(OBJ_DIR)\snow_v_sse_noaesni.obj \
-	$(OBJ_DIR)\snow_v_sse.obj
+	$(OBJ_DIR)\snow_v_sse.obj \
+	$(OBJ_DIR)\snow_v_avx.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \

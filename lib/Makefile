@@ -241,6 +241,7 @@ c_lib_objs := \
 	snow3g_iv.o \
 	snow_v_sse.o \
 	snow_v_sse_noaesni.o \
+	snow_v_avx.o \
 	mb_mgr_auto.o \
 	error.o
 #
