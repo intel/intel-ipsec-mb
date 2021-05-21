@@ -281,7 +281,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\mb_mgr_aes256_flush_avx512.obj \
 	$(OBJ_DIR)\const.obj \
 	$(OBJ_DIR)\wireless_common.obj \
-	$(OBJ_DIR)\constant_lookup.obj \
+	$(OBJ_DIR)\constant_lookup_fns.obj \
 	$(OBJ_DIR)\crc32_refl_by8_sse_no_aesni.obj \
 	$(OBJ_DIR)\crc32_refl_by8_sse.obj \
 	$(OBJ_DIR)\crc32_refl_by8_avx.obj \
