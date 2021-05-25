@@ -89,7 +89,7 @@ const struct {
  *
  * @return Size for IMB_MGR (aligned to 64 bytes)
  */
-static size_t imb_get_mb_mgr_size(void)
+size_t imb_get_mb_mgr_size(void)
 {
         size_t ooo_total_size = 0;
         unsigned i;
@@ -160,7 +160,7 @@ static void set_ooo_mgr_road_block(IMB_MGR *mgr)
  *
  * @return Pointer to IMB_MGR structure
  */
-static IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, uint64_t flags)
+IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, uint64_t flags)
 {
         if (mem_ptr == NULL) {
                 imb_set_errno(mem_ptr, ENOMEM);

@@ -541,3 +541,5 @@ EXPORTS
     imb_get_errno				@515
     imb_get_strerror				@516
     init_mb_mgr_auto				@517
+    imb_get_mb_mgr_size                         @518
+    imb_set_pointers_mb_mgr                     @519
