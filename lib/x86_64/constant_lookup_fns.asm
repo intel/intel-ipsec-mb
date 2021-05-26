@@ -27,6 +27,7 @@
 
 %include "include/os.asm"
 %include "include/reg_sizes.asm"
+%include "include/constant_lookup.asm"
 
 section .data
 default rel
@@ -1111,6 +1112,62 @@ lookup_32x8bit_avx2:
 %undef arg_indexes
 %undef arg_return
 %undef arg_table
+
+; void lookup_64x8bit_avx512(const void *indices, void *ret, const void *table)
+; arg 1 : memory with 64 8-bit indices to be looked up
+; arg 2 : memory to write 64 8-bit values from the table
+; arg 3 : pointer to a 256 8-bit element table
+align 32
+MKGLOBAL(lookup_64x8bit_avx512,function,internal)
+lookup_64x8bit_avx512:
+
+%ifndef LINUX
+
+        mov             rax, rsp
+        sub             rsp, (2 * 16)
+        and             rsp, ~31
+        ;; xmm6:xmm7 need to be maintained for Windows
+        vmovdqa         [rsp + 0*16], xmm6
+        vmovdqa         [rsp + 1*16], xmm7
+%endif                          ; !LINUX
+
+        ; Read the indices into zmm0
+        vmovdqu64       zmm0, [arg1]
+        LOOKUP8_64_AVX512 zmm0, zmm0, arg3, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                          zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, zmm24, \
+                          zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31
+
+        ; Write the values to arg2
+        vmovdqu64       [arg2], zmm0
+
+%ifndef LINUX
+        vmovdqa         xmm7,  [rsp + 1*16]
+        vmovdqa         xmm6,  [rsp + 0*16]
+%ifdef SAFE_DATA
+        vpxorq          ymm5, ymm5
+        vmovdqa64       [rsp], ymm5
+%endif
+        mov             rsp, rax
+%endif                          ; !LINUX
+        ret
+
+; void lookup_64x8bit_avx512_vbmi(const void *indices, void *ret, const void *table)
+; arg 1 : memory with 64 8-bit indices to be looked up
+; arg 2 : memory to write 64 8-bit values from the table
+; arg 3 : pointer to a 256 8-bit element table
+align 32
+MKGLOBAL(lookup_64x8bit_avx512_vbmi,function,internal)
+lookup_64x8bit_avx512_vbmi:
+
+        ; Read the indices into zmm0
+        vmovdqu64       zmm0, [arg1]
+        LOOKUP8_64_AVX512_VBMI zmm0, zmm0, arg3, zmm1, zmm2, zmm3, \
+                               zmm4, zmm5, zmm16
+
+        ; Write the values to arg2
+        vmovdqu64       [arg2], zmm0
+
+        ret
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

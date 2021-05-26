@@ -34,6 +34,12 @@ MKGLOBAL(len_shift_tab,data,internal)
 MKGLOBAL(len_mask_tab,data,internal)
 MKGLOBAL(padding_0x80_tab16,data,internal)
 MKGLOBAL(shift_tab_16,data,internal)
+MKGLOBAL(idx_rows_avx512,data,internal)
+MKGLOBAL(all_3fs,data,internal)
+MKGLOBAL(all_c0s,data,internal)
+MKGLOBAL(all_1s,data,internal)
+MKGLOBAL(all_2s,data,internal)
+MKGLOBAL(all_3s,data,internal)
 
 ;;; The following tables are used to insert a word into
 ;;; a SIMD register and must be defined together.
@@ -83,6 +89,40 @@ shift_tab_16:
         db 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
         db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
         db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+
+align 64
+idx_rows_avx512:
+times 16 dd 0x00000000
+times 16 dd 0x10101010
+times 16 dd 0x20202020
+times 16 dd 0x30303030
+times 16 dd 0x40404040
+times 16 dd 0x50505050
+times 16 dd 0x60606060
+times 16 dd 0x70707070
+times 16 dd 0x80808080
+times 16 dd 0x90909090
+times 16 dd 0xa0a0a0a0
+times 16 dd 0xb0b0b0b0
+times 16 dd 0xc0c0c0c0
+times 16 dd 0xd0d0d0d0
+times 16 dd 0xe0e0e0e0
+times 16 dd 0xf0f0f0f0
+
+all_3fs:
+times 64 db 0x3f
+
+all_c0s:
+times 64 db 0xc0
+
+all_1s:
+times 64 db 0x40
+
+all_2s:
+times 64 db 0x80
+
+all_3s:
+times 64 db 0xc0
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

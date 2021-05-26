@@ -215,4 +215,30 @@ IMB_DLL_LOCAL __m256i
 lookup_32x8bit_avx2(const __m256i indexes, const void *table);
 #endif
 
+#ifdef AVX512
+/**
+ * @brief Constant time and parallel AVX512 lookup function on table of
+ *        256 elements of 8-bit values.
+ *
+ * @param[in] indexes   memory with 64 8-bit indexes
+ * @param[out] ret      memory with 64 8-bit indexes
+ * @param[in] table     pointer to 256 element table
+ *
+ */
+IMB_DLL_LOCAL void
+lookup_64x8bit_avx512(const void *indices, void *ret, const void *table);
+
+/**
+ * @brief Constant time and parallel AVX512/VBMI lookup function on table of
+ *        256 elements of 8-bit values.
+ *
+ * @param[in] indexes   memory with 64 8-bit indexes
+ * @param[out] ret      memory with 64 8-bit indexes
+ * @param[in] table     pointer to 256 element table
+ *
+ */
+IMB_DLL_LOCAL void
+lookup_64x8bit_avx512_vbmi(const void *indices, void *ret, const void *table);
+#endif
+
 #endif /* CONSTANT_LOOKUP_H */
