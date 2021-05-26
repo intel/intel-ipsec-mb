@@ -35,6 +35,7 @@
 #include "include/des_utils.h"
 #include "include/clear_regs_mem.h"
 #include "include/constant_lookup.h"
+#include "include/memcpy.h"
 
 __forceinline
 void permute_operation(uint32_t *pa, uint32_t *pb,
@@ -414,48 +415,56 @@ __forceinline
 uint64_t enc_dec_1(const uint64_t data, const uint64_t *ks, const int enc)
 {
         uint32_t l, r;
+        uint64_t k[16];
 
         r = (uint32_t) (data);
         l = (uint32_t) (data >> 32);
+
+        memcpy_fn_sse_128(k, ks);
+
         ip_z(&r, &l);
 
         if (enc) {
-                l ^= fRK(r, ks[0]);
-                r ^= fRK(l, ks[1]);
-                l ^= fRK(r, ks[2]);
-                r ^= fRK(l, ks[3]);
-                l ^= fRK(r, ks[4]);
-                r ^= fRK(l, ks[5]);
-                l ^= fRK(r, ks[6]);
-                r ^= fRK(l, ks[7]);
-                l ^= fRK(r, ks[8]);
-                r ^= fRK(l, ks[9]);
-                l ^= fRK(r, ks[10]);
-                r ^= fRK(l, ks[11]);
-                l ^= fRK(r, ks[12]);
-                r ^= fRK(l, ks[13]);
-                l ^= fRK(r, ks[14]);
-                r ^= fRK(l, ks[15]);
+                l ^= fRK(r, k[0]);
+                r ^= fRK(l, k[1]);
+                l ^= fRK(r, k[2]);
+                r ^= fRK(l, k[3]);
+                l ^= fRK(r, k[4]);
+                r ^= fRK(l, k[5]);
+                l ^= fRK(r, k[6]);
+                r ^= fRK(l, k[7]);
+                l ^= fRK(r, k[8]);
+                r ^= fRK(l, k[9]);
+                l ^= fRK(r, k[10]);
+                r ^= fRK(l, k[11]);
+                l ^= fRK(r, k[12]);
+                r ^= fRK(l, k[13]);
+                l ^= fRK(r, k[14]);
+                r ^= fRK(l, k[15]);
         } else {
-                l ^= fRK(r, ks[15]);     /* l: l0 -> r1/l2 */
-                r ^= fRK(l, ks[14]);     /* r: r0 -> r2 */
-                l ^= fRK(r, ks[13]);
-                r ^= fRK(l, ks[12]);
-                l ^= fRK(r, ks[11]);
-                r ^= fRK(l, ks[10]);
-                l ^= fRK(r, ks[9]);
-                r ^= fRK(l, ks[8]);
-                l ^= fRK(r, ks[7]);
-                r ^= fRK(l, ks[6]);
-                l ^= fRK(r, ks[5]);
-                r ^= fRK(l, ks[4]);
-                l ^= fRK(r, ks[3]);
-                r ^= fRK(l, ks[2]);
-                l ^= fRK(r, ks[1]);
-                r ^= fRK(l, ks[0]);
+                l ^= fRK(r, k[15]);     /* l: l0 -> r1/l2 */
+                r ^= fRK(l, k[14]);     /* r: r0 -> r2 */
+                l ^= fRK(r, k[13]);
+                r ^= fRK(l, k[12]);
+                l ^= fRK(r, k[11]);
+                r ^= fRK(l, k[10]);
+                l ^= fRK(r, k[9]);
+                r ^= fRK(l, k[8]);
+                l ^= fRK(r, k[7]);
+                r ^= fRK(l, k[6]);
+                l ^= fRK(r, k[5]);
+                r ^= fRK(l, k[4]);
+                l ^= fRK(r, k[3]);
+                r ^= fRK(l, k[2]);
+                l ^= fRK(r, k[1]);
+                r ^= fRK(l, k[0]);
         }
 
         fp_z(&r, &l);
+
+#ifdef SAFE_DATA
+        clear_mem(k, sizeof(k));
+#endif
         return ((uint64_t) l) | (((uint64_t) r) << 32);
 }
 

@@ -47,6 +47,27 @@ memcpy_fn_sse_16:
 
         ret
 
+MKGLOBAL(memcpy_fn_sse_128,function,internal)
+memcpy_fn_sse_128:
+        movdqu  xmm0, [arg2]
+        movdqu  xmm1, [arg2 + 16]
+        movdqu  xmm2, [arg2 + 16*2]
+        movdqu  xmm3, [arg2 + 16*3]
+        movdqu  [arg1], xmm0
+        movdqu  [arg1 + 16], xmm1
+        movdqu  [arg1 + 16*2], xmm2
+        movdqu  [arg1 + 16*3], xmm3
+        movdqu  xmm0, [arg2 + 16*4]
+        movdqu  xmm1, [arg2 + 16*5]
+        movdqu  xmm2, [arg2 + 16*6]
+        movdqu  xmm3, [arg2 + 16*7]
+        movdqu  [arg1 + 16*4], xmm0
+        movdqu  [arg1 + 16*5], xmm1
+        movdqu  [arg1 + 16*6], xmm2
+        movdqu  [arg1 + 16*7], xmm3
+
+        ret
+
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif
