@@ -34,3 +34,8 @@
  * @return Number of TSC cycles measured while in fixed cost loop
  */
 uint64_t measure_tsc(const uint64_t cycles);
+
+#ifdef __aarch64__
+uint64_t rdtscp(void);
+uint64_t read_cntfreq(void);
+#endif

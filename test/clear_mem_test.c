@@ -31,7 +31,12 @@
 #include <string.h>
 
 #include "intel-ipsec-mb.h"
+
+#ifdef __aarch64__
+#include "aarch64/clear_regs_mem_aarch64.h"
+#else
 #include "gcm_ctr_vectors_test.h"
+#endif /* __aarch64__ */
 #include "utils.h"
 
 #define MAX_RAND 1024

@@ -643,6 +643,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (hash == IMB_AUTH_NULL ||
                                     hash == IMB_AUTH_CUSTOM)
                                         continue;
+#ifdef __aarch64__
+                                if (hash != IMB_AUTH_SNOW3G_UIA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip hash algorithms belonging to AEAD
@@ -673,6 +677,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (hash == IMB_AUTH_NULL ||
                                     hash == IMB_AUTH_CUSTOM)
                                         continue;
+#ifdef __aarch64__
+                                if (hash != IMB_AUTH_SNOW3G_UIA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip hash algorithms belonging to AEAD
@@ -705,6 +713,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 if (hash == IMB_AUTH_NULL ||
                                     hash == IMB_AUTH_CUSTOM)
                                         continue;
+#ifdef __aarch64__
+                                if (hash != IMB_AUTH_SNOW3G_UIA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip hash algorithms belonging to AEAD
@@ -757,6 +769,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                     hash == IMB_AUTH_CRC6_IUUP_HEADER ||
                                     hash == IMB_AUTH_POLY1305)
                                         continue;
+#ifdef __aarch64__
+                                if (hash != IMB_AUTH_SNOW3G_UIA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip hash algorithms belonging to AEAD
@@ -811,6 +827,10 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                 for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
                         for (hash = IMB_AUTH_HMAC_SHA_1;
                              hash < IMB_AUTH_NUM; hash++) {
+#ifdef __aarch64__
+                                if (hash != IMB_AUTH_SNOW3G_UIA2_BITLEN)
+                                        continue;
+#endif
 
                                 switch (hash) {
                                 /*
@@ -891,6 +911,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
+#ifdef __aarch64__
+                                if (cipher != IMB_CIPHER_SNOW3G_UEA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip cipher algorithms belonging to AEAD
@@ -920,6 +944,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
+#ifdef __aarch64__
+                                if (cipher != IMB_CIPHER_SNOW3G_UEA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip cipher algorithms belonging to AEAD
@@ -949,6 +977,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
+#ifdef __aarch64__
+                                if (cipher != IMB_CIPHER_SNOW3G_UEA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip cipher algorithms belonging to AEAD
@@ -975,6 +1007,12 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
                      cipher++) {
+#ifdef __aarch64__
+                        if ((cipher != IMB_CIPHER_NULL) &&
+                            (cipher != IMB_CIPHER_SNOW3G_UEA2_BITLEN))
+                                continue;
+#endif
+
                         fill_in_job(&template_job, cipher, IMB_DIR_ENCRYPT,
                                     hash, order, &chacha_ctx, &gcm_ctx);
 
@@ -1008,6 +1046,11 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
              order++)
                 for (cipher = IMB_CIPHER_CBC; cipher < IMB_CIPHER_NUM;
                      cipher++) {
+#ifdef __aarch64__
+                        if ((cipher != IMB_CIPHER_NULL) &&
+                            (cipher != IMB_CIPHER_SNOW3G_UEA2_BITLEN))
+                                continue;
+#endif
                         /*
                          * Skip cipher algorithms belonging to AEAD
                          * algorithms, as the test is for cipher
@@ -1078,6 +1121,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
+#ifdef __aarch64__
+                                if (cipher != IMB_CIPHER_SNOW3G_UEA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip cipher algorithms belonging to AEAD
@@ -1125,6 +1172,10 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (cipher == IMB_CIPHER_NULL ||
                                     cipher == IMB_CIPHER_CUSTOM)
                                         continue;
+#ifdef __aarch64__
+                                if (cipher != IMB_CIPHER_SNOW3G_UEA2_BITLEN)
+                                        continue;
+#endif
 
                                 /*
                                  * Skip cipher algorithms belonging to AEAD
@@ -1196,6 +1247,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
          * OTHER MISC TESTS
          */
 
+#ifndef __aarch64__
         /* CBCS NULL NEXT IV TEST */
         for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
              order++)
@@ -1222,6 +1274,7 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 return 1;
                         printf(".");
                 }
+#endif
 
         /* clean up */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)

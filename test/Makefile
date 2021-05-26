@@ -30,6 +30,8 @@ XVALID_APP := ipsec_xvalid_test
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
 
+ARCH = $(shell uname -m)
+
 USE_YASM ?= n
 YASM ?= yasm
 NASM ?= nasm
@@ -46,11 +48,13 @@ CFLAGS = -MMD -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 \
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
 # "-fcf-protection" needs to be checked separately
+ifneq ($(ARCH),aarch64)
 ifeq ($(MINGW),0)
 CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l), \
 	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
 CET_LDFLAGS=-r -z ibt -z shstk
-endif
+endif # MINGW
+endif # AARCH64
 
 ifeq ($(CC_HAS_CET),1)
 CFLAGS += -fcf-protection=full
@@ -93,10 +97,26 @@ ifeq ($(MINGW),0)
 CFLAGS += -O3
 else
 CFLAGS += -O2
-endif
-endif
+endif # MINGW
+endif # DEBUG
 
 # ipsec_MB_testapp modules
+ifeq ($(ARCH),aarch64)
+SOURCES := main.c utils.c api_test.c snow3g_test.c direct_api_test.c clear_mem_test.c
+OBJECTS := $(SOURCES:%.c=%.o)
+
+# ipsec_xvalid_test modules
+XVALID_SOURCES := ipsec_xvalid.c utils.c
+XVALID_ASM := misc_aarch64.S
+XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o) $(XVALID_ASM:%.S=%.o)
+
+# list of present dependency files
+DEP_FILES = $(wildcard ./*.d)
+
+# rule for compiling assembly code with producing dependencies
+%.o:%.S
+	$(CC) -c $(CFLAGS) $< -o $@
+else # AARCH64
 SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	cmac_test.c utils.c hmac_sha1_test.c hmac_sha256_sha512_test.c \
 	hmac_md5_test.c aes_test.c sha_test.c chained_test.c api_test.c pon_test.c \
@@ -123,7 +143,8 @@ endif
 ifeq ($(CC_HAS_CET),1)
 	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
 	mv $@.tmp $@
-endif
+endif # CC_HAS_CET
+endif # AARCH64
 
 # targets come here
 all: $(TEST_APP) $(XVALID_APP)

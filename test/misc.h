@@ -28,6 +28,7 @@
 #ifndef XVALIDAPP_MISC_H
 #define XVALIDAPP_MISC_H
 
+#ifndef __aarch64__
 /* RAX, RBX, RCX, RDX, RDI, RSI, R8-R15 */
 #define GP_MEM_SIZE 14*8
 
@@ -54,5 +55,25 @@ void clr_scratch_xmms_sse(void);
 void clr_scratch_xmms_avx(void);
 void clr_scratch_ymms(void);
 void clr_scratch_zmms(void);
+
+#else /* __aarch64__ */
+
+/* x0-x28 */
+#define GP_MEM_SIZE 29*8
+
+#define SIMD_MEM_SIZE 32*16
+
+/* Memory allocated */
+uint8_t gps[GP_MEM_SIZE];
+uint8_t simd_regs[SIMD_MEM_SIZE];
+
+/* Read the stack pointer */
+void *rdrsp(void);
+
+/* Functions to dump all registers into predefined memory */
+void dump_gps(void);
+void dump_simd_regs(void);
+
+#endif /* __aarch64__ */
 
 #endif /* XVALIDAPP_MISC_H */

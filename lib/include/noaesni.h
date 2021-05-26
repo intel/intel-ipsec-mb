@@ -30,6 +30,14 @@
 #ifndef NOAESNI_H
 #define NOAESNI_H
 
+IMB_DLL_EXPORT void init_mb_mgr_aarch64_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_aarch64_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_aarch64_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *flush_job_aarch64_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT uint32_t queue_size_aarch64_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_completed_job_aarch64_no_aesni(IMB_MGR *state);
+IMB_DLL_EXPORT IMB_JOB *get_next_job_aarch64_no_aesni(IMB_MGR *state);
+
 IMB_DLL_EXPORT void init_mb_mgr_sse_no_aesni(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *submit_job_sse_no_aesni(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *submit_job_nocheck_sse_no_aesni(IMB_MGR *state);

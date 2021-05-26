@@ -29,6 +29,9 @@
 #define _SNOW3G_TABLES_H_
 
 #include <stdint.h>
+#include "intel-ipsec-mb.h"
+
+#ifndef __aarch64__
 #include "constant_lookup.h"
 
 #if defined (AVX) || defined (AVX2)
@@ -36,6 +39,8 @@
 #else /* SSE */
 #define SNOW3G_SAFE_LUT8(table, idx, size) LOOKUP8_SSE(table, idx, size)
 #endif /* AVX || AVX2 */
+
+#endif /* __aarch64__ */
 
 extern const int snow3g_table_A_mul[256];
 extern const int snow3g_table_A_div[256];

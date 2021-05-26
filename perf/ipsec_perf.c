@@ -43,19 +43,21 @@
 #define __forceinline static __forceinline
 #define __func__ __FUNCTION__
 #define strcasecmp _stricmp
-#else
+#else /* _WIN32 */
 #include <stdlib.h>
+#ifndef __aarch64__
 #include <x86intrin.h>
+#endif /* __aarch64__ */
 #define __forceinline static inline __attribute__((always_inline))
 #include <unistd.h>
 #include <pthread.h>
 #if defined (__FreeBSD__)
 #include <sys/cpuset.h>
 typedef cpuset_t cpu_set_t;
-#else
+#else /* __FreeBSD__ */
 #include <sched.h>
-#endif
-#endif
+#endif /* __FreeBSD__ */
+#endif /* _WIN32 */
 
 #include <intel-ipsec-mb.h>
 
@@ -112,6 +114,7 @@ enum arch_type_e {
         ARCH_AVX,
         ARCH_AVX2,
         ARCH_AVX512,
+        ARCH_AARCH64,
         NUM_ARCHS
 };
 
@@ -192,13 +195,13 @@ enum test_hash_alg_e {
 
 /* Struct storing cipher parameters */
 struct params_s {
-        IMB_CIPHER_DIRECTION	cipher_dir;
-        enum test_cipher_mode_e	cipher_mode;
-        enum test_hash_alg_e	hash_alg;
-        uint32_t		aes_key_size;
-        uint32_t		size_aes;
-        uint64_t		aad_size;
-        uint32_t		num_sizes;
+        IMB_CIPHER_DIRECTION    cipher_dir;
+        enum test_cipher_mode_e cipher_mode;
+        enum test_hash_alg_e    hash_alg;
+        uint32_t                aes_key_size;
+        uint32_t                size_aes;
+        uint64_t                aad_size;
+        uint32_t                num_sizes;
         uint32_t                core;
 };
 
@@ -223,7 +226,8 @@ const struct str_value_mapping arch_str_map[] = {
         {.name = "SSE",    .values.arch_type = ARCH_SSE },
         {.name = "AVX",    .values.arch_type = ARCH_AVX },
         {.name = "AVX2",   .values.arch_type = ARCH_AVX2 },
-        {.name = "AVX512", .values.arch_type = ARCH_AVX512 }
+        {.name = "AVX512", .values.arch_type = ARCH_AVX512 },
+        {.name = "AARCH64",.values.arch_type = ARCH_AARCH64 },
 };
 
 const struct str_value_mapping cipher_algo_str_map[] = {
@@ -878,7 +882,7 @@ struct custom_job_params custom_job_params = {
         .cipher_dir   = IMB_DIR_ENCRYPT
 };
 
-uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1}; /* uses all function sets */
+uint8_t archs[NUM_ARCHS] = {1, 1, 1, 1, 1}; /* uses all function sets */
 int use_gcm_job_api = 0;
 int use_unhalted_cycles = 0; /* read unhalted cycles instead of tsc */
 uint64_t rd_cycles_cost = 0; /* cost of reading unhalted cycles */
@@ -1062,8 +1066,8 @@ static int set_affinity(const int cpu)
 
         /* Set affinity of current process to cpu */
 #if defined(__FreeBSD__)
-	ret = cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1,
-				sizeof(cpuset), &cpuset);
+        ret = cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1,
+                                sizeof(cpuset), &cpuset);
 #else
         ret = sched_setaffinity(0, sizeof(cpuset), &cpuset);
 #endif
@@ -1156,6 +1160,16 @@ static int set_avg_unhalted_cycle_cost(const int core, uint64_t *value)
         return 0;
 }
 
+static inline uint64_t perf_rdtscp(void)
+{
+#ifdef __aarch64__
+        return rdtscp();
+#else
+        uint32_t aux;
+        return __rdtscp(&aux);
+#endif
+}
+
 /* Freeing allocated memory */
 static void free_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 {
@@ -1236,7 +1250,7 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
         uint8_t *buf = NULL;
         imb_uint128_t *keys = NULL;
 #ifdef LINUX
-	int ret;
+        int ret;
 #endif
 
         if (p_keys == NULL || p_buffer == NULL) {
@@ -1247,7 +1261,7 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 #ifdef LINUX
         ret = posix_memalign((void **) &buf, alignment, bufs_size);
 
-	if (ret != 0) {
+        if (ret != 0) {
                 fprintf(stderr, "Could not malloc buf\n");
                 exit(EXIT_FAILURE);
         }
@@ -1261,7 +1275,7 @@ static void init_mem(uint8_t **p_buffer, imb_uint128_t **p_keys)
 
 #ifdef LINUX
         ret = posix_memalign((void **) &keys, alignment, keys_size);
-	if (ret != 0) {
+        if (ret != 0) {
                 fprintf(stderr, "Could not allocate memory for keys!\n");
                 free_mem(&buf, &keys);
                 exit(EXIT_FAILURE);
@@ -1586,11 +1600,10 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
         static DECLARE_ALIGNED(imb_uint128_t auth_iv, 16);
         static uint32_t ipad[5], opad[5], digest[3];
         static DECLARE_ALIGNED(uint32_t k1_expanded[11 * 4], 16);
-        static DECLARE_ALIGNED(uint8_t	k2[16], 16);
-        static DECLARE_ALIGNED(uint8_t	k3[16], 16);
+        static DECLARE_ALIGNED(uint8_t k2[16], 16);
+        static DECLARE_ALIGNED(uint8_t k3[16], 16);
         static DECLARE_ALIGNED(struct gcm_key_data gdata_key, 512);
         uint64_t time = 0;
-        uint32_t aux;
         uint8_t gcm_key[32];
         uint8_t next_iv[IMB_AES_BLOCK_SIZE];
 
@@ -1858,7 +1871,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 time = read_cycles(params->core);
         else
 #endif
-                time = __rdtscp(&aux);
+                time = perf_rdtscp();
 
         for (i = 0; i < num_iter; i++) {
                 job = IMB_GET_NEXT_JOB(mb_mgr);
@@ -1904,7 +1917,7 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 time = (read_cycles(params->core) - rd_cycles_cost) - time;
         else
 #endif
-                time = __rdtscp(&aux) - time;
+                time = perf_rdtscp() - time;
 
         if (!num_iter)
                 return time;
@@ -1928,7 +1941,6 @@ do_test_gcm(struct params_s *params,
         uint8_t auth_tag[12];
         DECLARE_ALIGNED(uint8_t iv[16], 16);
         uint64_t time = 0;
-        uint32_t aux;
 
         key = (uint8_t *) malloc(sizeof(uint8_t) * params->aes_key_size);
         if (!key) {
@@ -1964,7 +1976,7 @@ do_test_gcm(struct params_s *params,
                         time = read_cycles(params->core);
                 else
 #endif
-                        time = __rdtscp(&aux);
+                        time = perf_rdtscp();
 
                 if (params->aes_key_size == IMB_KEY_128_BYTES) {
                         for (i = 0; i < num_iter; i++) {
@@ -2018,14 +2030,14 @@ do_test_gcm(struct params_s *params,
                                 rd_cycles_cost) - time;
                 else
 #endif
-                        time = __rdtscp(&aux) - time;
+                        time = perf_rdtscp() - time;
         } else { /*DECRYPT*/
 #ifndef _WIN32
                 if (use_unhalted_cycles)
                         time = read_cycles(params->core);
                 else
 #endif
-                        time = __rdtscp(&aux);
+                        time = perf_rdtscp();
 
                 if (params->aes_key_size == IMB_KEY_128_BYTES) {
                         for (i = 0; i < num_iter; i++) {
@@ -2079,7 +2091,7 @@ do_test_gcm(struct params_s *params,
                                 rd_cycles_cost) - time;
                 else
 #endif
-                        time = __rdtscp(&aux) - time;
+                        time = perf_rdtscp() - time;
         }
 
         free(key);
@@ -2214,8 +2226,8 @@ print_times(struct variant_s *variant_list, struct params_s *params,
         uint32_t sz;
 
         if (plot_output_option == 0) {
-                const char *func_names[4] = {
-                        "SSE", "AVX", "AVX2", "AVX512"
+                const char *func_names[NUM_ARCHS] = {
+                        "SSE", "AVX", "AVX2", "AVX512", "AARCH64"
                 };
                 const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = {
                         "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4",
@@ -2420,11 +2432,12 @@ run_tests(void *arg)
                 params.hash_alg = custom_job_params.hash_alg;
 
                 /* Performing tests for each selected architecture */
-                for (arch = ARCH_SSE; arch <= ARCH_AVX512; arch++) {
+                for (arch = ARCH_SSE; arch < NUM_ARCHS; arch++) {
                         if (archs[arch] == 0)
                                 continue;
 
                         switch (arch) {
+#ifndef __aarch64__
                         case ARCH_SSE:
                                 init_mb_mgr_sse(p_mgr);
                                 break;
@@ -2434,9 +2447,17 @@ run_tests(void *arg)
                         case ARCH_AVX2:
                                 init_mb_mgr_avx2(p_mgr);
                                 break;
-                        default: /* ARCH_AV512 */
+                        case ARCH_AVX512:
                                 init_mb_mgr_avx512(p_mgr);
                                 break;
+#else
+                        case ARCH_AARCH64:
+                                init_mb_mgr_aarch64(p_mgr);
+                                break;
+#endif /* __aarch64__ */
+                        default:
+                                fprintf(stderr, "Invalid architecture: %d\n", arch);
+                                goto exit_failure;
                         }
 
                         process_variant(p_mgr, arch, &params,
@@ -2498,7 +2519,7 @@ static void usage(void)
                 "-h: print this message\n"
                 "-c: Use cold cache, it uses warm as default\n"
                 "-w: Use warm cache\n"
-                "--arch: run only tests on specified architecture (SSE/AVX/AVX2/AVX512)\n"
+                "--arch: run only tests on specified architecture (SSE/AVX/AVX2/AVX512/AARCH64)\n"
                 "--arch-best: detect available architectures and run only on the best one\n"
                 "--cipher-dir: Select cipher direction to run on the custom test  "
                 "(encrypt/decrypt) (default = encrypt)\n"
@@ -2600,6 +2621,7 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
                 IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        const uint64_t detect_aarch64 = IMB_FEATURE_AARCH64 | IMB_FEATURE_AESNI;
         IMB_MGR *p_mgr = NULL;
         enum arch_type_e arch_id;
 
@@ -2628,6 +2650,9 @@ detect_arch(unsigned int arch_support[NUM_ARCHS])
 
         if ((p_mgr->features & detect_sse) != detect_sse)
                 arch_support[ARCH_SSE] = 0;
+
+        if ((p_mgr->features & detect_aarch64) != detect_aarch64)
+                arch_support[ARCH_AARCH64] = 0;
 
         free_mb_mgr(p_mgr);
 
@@ -2830,6 +2855,7 @@ detect_best_arch(uint8_t arch_support[NUM_ARCHS])
                 IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+        const uint64_t detect_aarch64 = IMB_FEATURE_AARCH64 | IMB_FEATURE_AESNI;
         IMB_MGR *p_mgr = NULL;
         uint64_t detected_features = 0;
 
@@ -2867,6 +2893,11 @@ detect_best_arch(uint8_t arch_support[NUM_ARCHS])
 
         if ((detected_features & detect_sse) == detect_sse) {
                 arch_support[ARCH_SSE] = 1;
+                return 0;
+        }
+
+        if ((detected_features & detect_aarch64) == detect_aarch64) {
+                arch_support[ARCH_AARCH64] = 1;
                 return 0;
         }
 
@@ -3151,38 +3182,38 @@ int main(int argc, char *argv[])
                 }
 
                 num_sizes_list = JOB_SIZE_IMIX_LIST;
-		/*
-		 * Calculate accumulated distribution of
-		 * probabilities per job size
-		 */
-		distribution_total[0] = imix_list[0];
-		for (i = 1; i < (int)imix_list_count; i++)
-			distribution_total[i] = imix_list[i] +
-				distribution_total[i-1];
+                /*
+                 * Calculate accumulated distribution of
+                 * probabilities per job size
+                 */
+                distribution_total[0] = imix_list[0];
+                for (i = 1; i < (int)imix_list_count; i++)
+                        distribution_total[i] = imix_list[i] +
+                                distribution_total[i-1];
 
                 /* Use always same seed */
                 srand(0);
-		/* Calculate a random sequence of packet sizes,
+                /* Calculate a random sequence of packet sizes,
                    based on distribution */
-		for (i = 0; i < (int)JOB_SIZE_IMIX_LIST; i++) {
-			uint16_t random_number = rand() %
-				distribution_total[imix_list_count - 1];
+                for (i = 0; i < (int)JOB_SIZE_IMIX_LIST; i++) {
+                        uint16_t random_number = rand() %
+                                distribution_total[imix_list_count - 1];
                         uint16_t j;
 
-			for (j = 0; j < imix_list_count; j++)
-				if (random_number < distribution_total[j])
-					break;
+                        for (j = 0; j < imix_list_count; j++)
+                                if (random_number < distribution_total[j])
+                                        break;
 
-			job_size_imix_list[i] = job_size_list[j];
-		}
+                        job_size_imix_list[i] = job_size_list[j];
+                }
 
-		/* Calculate average buffer size for the IMIX distribution */
-		for (i = 0; i < (int)imix_list_count; i++)
-			average_job_size += job_size_list[i] *
-				imix_list[i];
+                /* Calculate average buffer size for the IMIX distribution */
+                for (i = 0; i < (int)imix_list_count; i++)
+                        average_job_size += job_size_list[i] *
+                                imix_list[i];
 
-		average_job_size /=
-				distribution_total[imix_list_count - 1];
+                average_job_size /=
+                                distribution_total[imix_list_count - 1];
         }
         cipher_size_list = (uint32_t *) malloc(sizeof(uint32_t) *
                                 num_sizes_list);
@@ -3248,6 +3279,9 @@ int main(int argc, char *argv[])
         if (tsc_detect)
                 fprintf(stderr, "TSC scaling to core cycles: %.3f\n",
                         get_tsc_to_core_scale(turbo_enabled));
+#ifdef __aarch64__
+        fprintf(stderr, "CNT frequency: %ld\n", read_cntfreq());
+#endif
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
 
@@ -3257,6 +3291,7 @@ int main(int argc, char *argv[])
         if (custom_job_params.cipher_mode == TEST_CCM)
                 fprintf(stderr, "CCM AAD = %"PRIu64"\n", ccm_aad_size);
 
+#ifndef __aarch64__
         if (archs[ARCH_SSE]) {
                 IMB_MGR *p_mgr = alloc_mb_mgr(flags);
 
@@ -3270,6 +3305,15 @@ int main(int argc, char *argv[])
                         "Using" : "Not using");
                 free_mb_mgr(p_mgr);
         }
+#else
+        IMB_MGR *p_mgr = alloc_mb_mgr(flags);
+
+        if (p_mgr == NULL) {
+                fprintf(stderr, "Error allocating MB_MGR structure!\n");
+                return EXIT_FAILURE;
+        }
+        free_mb_mgr(p_mgr);
+#endif /* __aarch64__ */
 
         memset(t_info, 0, sizeof(t_info));
         init_offsets(cache_type);

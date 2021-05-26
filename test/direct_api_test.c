@@ -33,7 +33,13 @@
 #include <signal.h>
 
 #include <intel-ipsec-mb.h>
+
+#ifdef __aarch64__
+#include "aarch64/clear_regs_mem_aarch64.h"
+#else
 #include "gcm_ctr_vectors_test.h"
+#endif /* __aarch64__ */
+
 #include "utils.h"
 
 #define BUF_SIZE ((uint32_t)sizeof(struct gcm_key_data))
@@ -64,6 +70,7 @@ seg_handler(int signum)
 }
 #endif /* DEBUG */
 
+#ifndef __aarch64__
 /*
  * @brief Performs direct GCM API invalid param tests
  */
@@ -875,6 +882,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
         printf("\n");
         return 0;
 }
+#endif /* __aarch64__ */
 
 /*
  * @brief Performs direct SNOW3G API invalid param tests
@@ -1141,6 +1149,7 @@ direct_api_test(struct IMB_MGR *mb_mgr)
                 goto dir_api_exit;
         }
 
+#ifndef __aarch64__
         errors += test_gcm_api(mb_mgr);
         run++;
 
@@ -1158,6 +1167,7 @@ direct_api_test(struct IMB_MGR *mb_mgr)
 
         errors += test_kasumi_api(mb_mgr);
         run++;
+#endif /* __aarch64__ */
 
         errors += test_snow3g_api(mb_mgr);
         run++;
@@ -1170,5 +1180,5 @@ direct_api_test(struct IMB_MGR *mb_mgr)
 #ifndef DEBUG
         signal(SIGSEGV, handler);
 #endif
-	return errors;
+        return errors;
 }

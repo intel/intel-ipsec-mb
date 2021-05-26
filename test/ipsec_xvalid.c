@@ -47,8 +47,13 @@
 #define __func__ __FUNCTION__
 #define strcasecmp _stricmp
 #else
-#include <x86intrin.h>
 #define BSWAP64 __builtin_bswap64
+#endif
+
+#ifdef __aarch64__
+#include "aarch64/clear_regs_mem_aarch64.h"
+#else
+#include <x86intrin.h>
 #endif
 
 #include <intel-ipsec-mb.h>
@@ -95,10 +100,10 @@ static uint64_t pattern8_plain_text;
 struct params_s {
         IMB_CIPHER_MODE         cipher_mode; /* CBC, CNTR, DES, GCM etc. */
         IMB_HASH_ALG            hash_alg; /* SHA-1 or others... */
-        uint32_t		key_size;
-        uint32_t		buf_size;
-        uint64_t		aad_size;
-        uint32_t		num_sizes;
+        uint32_t                key_size;
+        uint32_t                buf_size;
+        uint64_t                aad_size;
+        uint32_t                num_sizes;
 };
 
 /* Struct storing all expanded keys */
@@ -108,8 +113,8 @@ struct cipher_auth_keys {
         uint8_t ipad[IMB_SHA512_DIGEST_SIZE_IN_BYTES];
         uint8_t opad[IMB_SHA512_DIGEST_SIZE_IN_BYTES];
         DECLARE_ALIGNED(uint32_t k1_expanded[15 * 4], 16);
-        DECLARE_ALIGNED(uint8_t	k2[32], 16);
-        DECLARE_ALIGNED(uint8_t	k3[16], 16);
+        DECLARE_ALIGNED(uint8_t k2[32], 16);
+        DECLARE_ALIGNED(uint8_t k3[16], 16);
         DECLARE_ALIGNED(uint32_t enc_keys[15 * 4], 16);
         DECLARE_ALIGNED(uint32_t dec_keys[15 * 4], 16);
         DECLARE_ALIGNED(struct gcm_key_data gdata_key, 64);
@@ -148,11 +153,12 @@ struct str_value_mapping {
 
 const struct str_value_mapping arch_str_map[] = {
         {.name = "NONE",        .values.arch_type = IMB_ARCH_NONE },
-        {.name = "SSE",         .values.arch_type = IMB_ARCH_SSE },
         {.name = "NO-AESNI",    .values.arch_type = IMB_ARCH_NOAESNI },
+        {.name = "SSE",         .values.arch_type = IMB_ARCH_SSE },
         {.name = "AVX",         .values.arch_type = IMB_ARCH_AVX },
         {.name = "AVX2",        .values.arch_type = IMB_ARCH_AVX2 },
-        {.name = "AVX512",      .values.arch_type = IMB_ARCH_AVX512 }
+        {.name = "AVX512",      .values.arch_type = IMB_ARCH_AVX512 },
+        {.name = "AARCH64",     .values.arch_type = IMB_ARCH_AARCH64 },
 };
 
 struct str_value_mapping cipher_algo_str_map[] = {
@@ -667,8 +673,8 @@ struct custom_job_params custom_job_params = {
 };
 
 /* AESNI_EMU disabled by default */
-uint8_t enc_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1};
-uint8_t dec_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1};
+uint8_t enc_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1, 1};
+uint8_t dec_archs[IMB_ARCH_NUM] = {0, 0, 1, 1, 1, 1, 1};
 
 uint64_t flags = 0; /* flags passed to alloc_mb_mgr() */
 
@@ -1428,6 +1434,7 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
         }
 
         switch (params->cipher_mode) {
+#ifndef __aarch64__
         case IMB_CIPHER_GCM:
                 switch (params->key_size) {
                 case IMB_KEY_128_BYTES:
@@ -1505,6 +1512,11 @@ prepare_keys(IMB_MGR *mb_mgr, struct cipher_auth_keys *keys,
                 memcpy(k2, ciph_key, 16);
                 memcpy(k2 + 16, ciph_key + 16, 16);
                 break;
+#else
+        case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
+                memcpy(k2, ciph_key, 16);
+                break;
+#endif
         case IMB_CIPHER_NULL:
                 /* No operation needed */
                 break;
@@ -1582,8 +1594,9 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
 
         dump_gps();
         switch (arch) {
-        case IMB_ARCH_SSE:
+#ifndef __aarch64__
         case IMB_ARCH_NOAESNI:
+        case IMB_ARCH_SSE:
                 dump_xmms_sse();
                 simd_size = XMM_MEM_SIZE;
                 break;
@@ -1599,6 +1612,13 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
                 dump_zmms();
                 simd_size = ZMM_MEM_SIZE;
                 break;
+#else
+        case IMB_ARCH_NOAESNI:
+        case IMB_ARCH_AARCH64:
+                dump_simd_regs();
+                simd_size = SIMD_MEM_SIZE;
+                break;
+#endif
         default:
                 fprintf(stderr,
                         "Error getting the architecture\n");
@@ -1632,6 +1652,8 @@ perform_safe_checks(IMB_MGR *mgr, const IMB_ARCH arch, const char *dir)
              ooo_ptr++, i++) {
                 void *ooo_mgr_p = *ooo_ptr;
 
+                if (ooo_mgr_p == NULL) continue;
+
                 if (search_patterns(ooo_mgr_p,
                                     get_ooo_mgr_size(ooo_mgr_p, i)) == 0) {
                         fprintf(stderr,
@@ -1648,8 +1670,9 @@ static void
 clear_scratch_simd(const IMB_ARCH arch)
 {
         switch (arch) {
-        case IMB_ARCH_SSE:
+#ifndef __aarch64__
         case IMB_ARCH_NOAESNI:
+        case IMB_ARCH_SSE:
                 clr_scratch_xmms_sse();
                 break;
         case IMB_ARCH_AVX:
@@ -1661,6 +1684,12 @@ clear_scratch_simd(const IMB_ARCH arch)
         case IMB_ARCH_AVX512:
                 clr_scratch_zmms();
                 break;
+#else
+        case IMB_ARCH_NOAESNI:
+        case IMB_ARCH_AARCH64:
+                CLEAR_SCRATCH_SIMD_REGS();
+                break;
+#endif
         default:
                 fprintf(stderr, "Invalid architecture\n");
                 exit(EXIT_FAILURE);
@@ -2248,8 +2277,9 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
         }
 
         switch (enc_arch) {
-        case IMB_ARCH_SSE:
+#ifndef __aarch64__
         case IMB_ARCH_NOAESNI:
+        case IMB_ARCH_SSE:
                 init_mb_mgr_sse(enc_mgr);
                 break;
         case IMB_ARCH_AVX:
@@ -2261,6 +2291,12 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
         case IMB_ARCH_AVX512:
                 init_mb_mgr_avx512(enc_mgr);
                 break;
+#else
+        case IMB_ARCH_NOAESNI:
+        case IMB_ARCH_AARCH64:
+                init_mb_mgr_aarch64(enc_mgr);
+                break;
+#endif
         default:
                 fprintf(stderr, "Invalid architecture\n");
                 exit(EXIT_FAILURE);
@@ -2280,8 +2316,9 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
         }
 
         switch (dec_arch) {
-        case IMB_ARCH_SSE:
+#ifndef __aarch64__
         case IMB_ARCH_NOAESNI:
+        case IMB_ARCH_SSE:
                 init_mb_mgr_sse(dec_mgr);
                 break;
         case IMB_ARCH_AVX:
@@ -2293,6 +2330,12 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
         case IMB_ARCH_AVX512:
                 init_mb_mgr_avx512(dec_mgr);
                 break;
+#else
+        case IMB_ARCH_NOAESNI:
+        case IMB_ARCH_AARCH64:
+                init_mb_mgr_aarch64(dec_mgr);
+                break;
+#endif
         default:
                 fprintf(stderr, "Invalid architecture\n");
                 exit(EXIT_FAILURE);
@@ -2318,7 +2361,11 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                 /* Skip IMB_CIPHER_CUSTOM */
                 if (c_mode == IMB_CIPHER_CUSTOM)
                         continue;
-
+#ifdef __aarch64__
+                if ((c_mode != IMB_CIPHER_NULL) &&
+                    (c_mode != IMB_CIPHER_SNOW3G_UEA2_BITLEN))
+                        continue;
+#endif
                 params->cipher_mode = c_mode;
 
                 for (hash_alg = IMB_AUTH_HMAC_SHA_1;
@@ -2327,7 +2374,11 @@ run_test(const IMB_ARCH enc_arch, const IMB_ARCH dec_arch,
                         /* Skip IMB_AUTH_CUSTOM */
                         if (hash_alg == IMB_AUTH_CUSTOM)
                                 continue;
-
+#ifdef __aarch64__
+                        if ((hash_alg != IMB_AUTH_NULL) &&
+                            (hash_alg != IMB_AUTH_SNOW3G_UIA2_BITLEN))
+                                continue;
+#endif
                         /* Skip not supported combinations */
                         if ((c_mode == IMB_CIPHER_GCM &&
                             hash_alg != IMB_AUTH_AES_GMAC) ||
@@ -2453,18 +2504,29 @@ static void usage(const char *app_name)
                 "where args are zero or more\n"
                 "-h: print this message\n"
                 "-v: verbose, prints extra information\n"
+#ifdef __aarch64__
+                "--enc-arch: encrypting with architecture "
+                "(NO-AESNI/AARCH64)\n"
+                "--dec-arch: decrypting with architecture "
+                "(NO-AESNI/AARCH64)\n"
+#else
                 "--enc-arch: encrypting with architecture "
                 "(NO-AESNI/SSE/AVX/AVX2/AVX512)\n"
                 "--dec-arch: decrypting with architecture "
                 "(NO-AESNI/SSE/AVX/AVX2/AVX512)\n"
+#endif
                 "--cipher-algo: Select cipher algorithm to run on the custom "
                 "test\n"
                 "--hash-algo: Select hash algorithm to run on the custom test\n"
                 "--aead-algo: Select AEAD algorithm to run on the custom test\n"
+#ifdef __aarch64__
+                "--no-aarch64: Don't do AARCH64\n"
+#else
                 "--no-avx512: Don't do AVX512\n"
                 "--no-avx2: Don't do AVX2\n"
                 "--no-avx: Don't do AVX\n"
                 "--no-sse: Don't do SSE\n"
+#endif
                 "--aesni-emu: Do AESNI_EMU (disabled by default)\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"

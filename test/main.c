@@ -62,24 +62,25 @@ extern int chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 extern int null_test(struct IMB_MGR *mb_mgr);
 extern int snow_v_test(struct IMB_MGR *mb_mgr);
 
-
+#ifndef __aarch64__
 #include "do_test.h"
+#endif
 
 static void
 usage(const char *name)
 {
-	fprintf(stderr,
+        fprintf(stderr,
                 "Usage: %s [args], where args are zero or more\n"
                 "--no-aesni-emu: Don't do AESNI emulation\n"
                 "--no-avx512: Don't do AVX512\n"
-		"--no-avx2: Don't do AVX2\n"
-		"--no-avx: Don't do AVX\n"
-		"--no-sse: Don't do SSE\n"
+                "--no-avx2: Don't do AVX2\n"
+                "--no-avx: Don't do AVX\n"
+                "--no-sse: Don't do SSE\n"
                 "--auto-detect: auto detects current architecture "
                 "to run the tests\n  Note: Auto detection "
                 "option now run by default and will be removed in the future\n"
-		"--shani-on: use SHA extensions, default: auto-detect\n"
-		"--shani-off: don't use SHA extensions\n", name);
+                "--shani-on: use SHA extensions, default: auto-detect\n"
+                "--shani-off: don't use SHA extensions\n", name);
 }
 
 static void
@@ -102,6 +103,7 @@ print_hw_features(void)
                 { IMB_FEATURE_GFNI, "GFNI" },
                 { IMB_FEATURE_AVX512_IFMA, "AVX512-IFMA" },
                 { IMB_FEATURE_BMI2, "BMI2" },
+                { IMB_FEATURE_AARCH64, "AARCH64" },
         };
         IMB_MGR *p_mgr = NULL;
         unsigned i;
@@ -145,21 +147,21 @@ main(int argc, char **argv)
         if (detect_arch(arch_support) < 0)
                 return EXIT_FAILURE;
 
-	for (i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-h") == 0) {
-			usage(argv[0]);
-			return EXIT_SUCCESS;
-		} else if (update_flags_and_archs(argv[i],
+        for (i = 1; i < argc; i++) {
+                if (strcmp(argv[i], "-h") == 0) {
+                        usage(argv[0]);
+                        return EXIT_SUCCESS;
+                } else if (update_flags_and_archs(argv[i],
                                                   arch_support,
                                                   &flags))
-			continue;
-		else if (strcmp(argv[i], "--auto-detect") == 0)
+                        continue;
+                else if (strcmp(argv[i], "--auto-detect") == 0)
                         (void) auto_detect; /* legacy option - to be removed */
-		else {
-			usage(argv[0]);
-			return EXIT_FAILURE;
-		}
-	}
+                else {
+                        usage(argv[0]);
+                        return EXIT_FAILURE;
+                }
+        }
 
         /* Go through architectures */
         for (atype = IMB_ARCH_NOAESNI; atype < IMB_ARCH_NUM; atype++) {
@@ -178,8 +180,14 @@ main(int argc, char **argv)
                 }
 
                 switch (atype) {
-                case IMB_ARCH_SSE:
+#ifdef __aarch64__
                 case IMB_ARCH_NOAESNI:
+                case IMB_ARCH_AARCH64:
+                        init_mb_mgr_aarch64(p_mgr);
+                        break;
+#else
+                case IMB_ARCH_NOAESNI:
+                case IMB_ARCH_SSE:
                         init_mb_mgr_sse(p_mgr);
                         break;
                 case IMB_ARCH_AVX:
@@ -191,10 +199,12 @@ main(int argc, char **argv)
                 case IMB_ARCH_AVX512:
                         init_mb_mgr_avx512(p_mgr);
                         break;
+#endif
                 }
 
                 print_tested_arch(p_mgr->features, atype);
 
+#ifndef __aarch64__
                 errors += known_answer_test(p_mgr);
                 errors += do_test(p_mgr);
                 errors += ctr_test(p_mgr);
@@ -207,7 +217,6 @@ main(int argc, char **argv)
                 errors += cmac_test(p_mgr);
                 errors += zuc_test(p_mgr);
                 errors += kasumi_test(p_mgr);
-                errors += snow3g_test(p_mgr);
                 errors += hmac_sha1_test(p_mgr);
                 errors += hmac_sha256_sha512_test(p_mgr);
                 errors += hmac_md5_test(p_mgr);
@@ -219,13 +228,15 @@ main(int argc, char **argv)
                 errors += aes_cbcs_test(p_mgr);
                 errors += chacha_test(p_mgr);
                 errors += poly1305_test(p_mgr);
-                errors += api_test(p_mgr);
-                errors += direct_api_test(p_mgr);
-                errors += clear_mem_test(p_mgr);
                 errors += crc_test(p_mgr);
                 errors += chacha20_poly1305_test(p_mgr);
                 errors += null_test(p_mgr);
                 errors += snow_v_test(p_mgr);
+#endif /* __aarch64__ */
+                errors += snow3g_test(p_mgr);
+                errors += api_test(p_mgr);
+                errors += direct_api_test(p_mgr);
+                errors += clear_mem_test(p_mgr);
 
                 free_mb_mgr(p_mgr);
         }

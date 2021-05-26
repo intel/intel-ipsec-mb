@@ -1,8 +1,8 @@
 # Copyright (c) 2017-2021, Intel Corporation
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -11,7 +11,7 @@
 #     * Neither the name of Intel Corporation nor the names of its contributors
 #       may be used to endorse or promote products derived from this software
 #       without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -26,6 +26,9 @@
 EXE=ipsec_perf
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
+
+ARCH = $(shell uname -m)
+
 NASM ?= nasm
 
 MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l)
@@ -47,11 +50,14 @@ endif
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
 # "-fcf-protection" needs to be checked separately
+ifneq ($(ARCH),aarch64)
 ifeq ($(MINGW),0)
 CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l), \
 	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
 CET_LDFLAGS=-r -z ibt -z shstk
-endif
+endif # MINGW
+endif # AARCH64
+
 ifeq ($(CC_HAS_CET),1)
 CFLAGS += -fcf-protection=full
 endif
@@ -82,12 +88,18 @@ ifeq ($(MINGW),0)
 CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
 else
 CFLAGS += -O2 -fPIE
-endif
-endif
+endif # MINGW
+endif # DEBUG
 
 SOURCES := ipsec_perf.c msr.c
+ifneq ($(ARCH),aarch64)
 ASM_SOURCES := misc.asm
 OBJECTS := $(SOURCES:%.c=%.o) $(ASM_SOURCES:%.asm=%.o)
+else
+ASM_SOURCES := misc_aarch64.S
+CFLAGS += -march=armv8-a
+OBJECTS := $(SOURCES:%.c=%.o) $(ASM_SOURCES:%.S=%.o)
+endif # AARCH64
 
 CHECKPATCH ?= checkpatch.pl
 CPPCHECK ?= cppcheck
@@ -95,12 +107,17 @@ CPPCHECK ?= cppcheck
 .PHONY: all clean style cppcheck
 
 # rule for compiling assembly code with producing dependencies
+ifneq ($(ARCH),aarch64)
 %.o:%.asm
 	$(NASM) -MD $(@:.o=.d) -MT $@ -o $@ $(NASM_FLAGS) $<
 ifeq ($(CC_HAS_CET),1)
 	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
 	mv $@.tmp $@
-endif
+endif # CC_HAS_CET
+else
+%.o:%.S
+	$(CC) -c $(CFLAGS) $< -o $@
+endif # AARCH64
 
 all: $(EXE)
 

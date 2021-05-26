@@ -29,11 +29,14 @@
 #define _WIRELESS_COMMON_H_
 
 #include <string.h>
+
+#ifndef __aarch64__
 #ifdef LINUX
 #include <x86intrin.h>
 #else
 #include <intrin.h>
 #endif
+#endif /* __aarch64__ */
 
 #define NUM_PACKETS_1 1
 #define NUM_PACKETS_2 2
@@ -50,6 +53,7 @@
 #define BSWAP64 _byteswap_uint64
 #endif
 
+#ifndef __aarch64__
 typedef union _m128_u {
         uint8_t byte[16];
         uint16_t word[8];
@@ -64,6 +68,7 @@ typedef union _m64_u {
         uint32_t dword[2];
         uint64_t m;
 } m64_t;
+#endif
 
 static inline uint32_t bswap4(const uint32_t val)
 {
@@ -174,6 +179,7 @@ memcpy_keystrm(uint8_t *pDst, const uint8_t *pSrc, const uint32_t len)
         }
 }
 
+#ifndef __aarch64__
 /**
  ******************************************************************************
  *
@@ -246,4 +252,5 @@ IMB_DLL_LOCAL void asm_XorKeyStream32B_avx2(const void *pIn, void *pOut,
 IMB_DLL_LOCAL void asm_XorKeyStream64B_avx512(const void *pIn, void *pOut,
                                               const void *pKey);
 
+#endif /* __aarch64__ */
 #endif /* _WIRELESS_COMMON_H_ */

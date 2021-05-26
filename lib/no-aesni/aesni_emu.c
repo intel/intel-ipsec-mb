@@ -31,13 +31,22 @@
 
 #include "intel-ipsec-mb.h"
 #include "aesni_emu.h"
-#include "include/constant_lookup.h"
 
+#ifdef __aarch64__
+
+#include "aarch64/constant_lookup_aarch64.h"
+#include <arm_neon.h>
+
+#else
+
+#include "include/constant_lookup.h"
 #ifdef LINUX
 #include <x86intrin.h>
 #else
 #include <intrin.h>
 #endif
+
+#endif /* __aarch64__ */
 
 typedef union {
         uint32_t i;
@@ -137,23 +146,41 @@ static uint32_t rot(const uint32_t x)
 
 static void substitute_bytes(union xmm_reg *dst, const union xmm_reg *src)
 {
+#ifdef __aarch64__
+        uint8x16_t vx = vld1q_u8((uint8_t const *) &src->byte[0]);
+
+        IMB_ASSERT(MAX_BYTES_PER_XMM == 16);
+
+        vx = lookup_16x8bit_neon(vx, aes_sbox);
+        vst1q_u8((uint8_t *) &dst->byte[0], vx);
+#else
         __m128i vx = _mm_loadu_si128((const __m128i *) &src->byte[0]);
 
         IMB_ASSERT(MAX_BYTES_PER_XMM == 16);
 
         vx = lookup_16x8bit_sse(vx, aes_sbox);
         _mm_storeu_si128((__m128i *) &dst->byte[0], vx);
+#endif
 }
 
 static void inverse_substitute_bytes(union xmm_reg *dst,
                                      const union xmm_reg *src)
 {
+#ifdef __aarch64__
+       uint8x16_t vx = vld1q_u8((uint8_t const *) &src->byte[0]);
+
+        IMB_ASSERT(MAX_BYTES_PER_XMM == 16);
+
+        vx = lookup_16x8bit_neon(vx, aes_isbox);
+        vst1q_u8((uint8_t *) &dst->byte[0], vx);
+#else
         __m128i vx = _mm_loadu_si128((const __m128i *) &src->byte[0]);
 
         IMB_ASSERT(MAX_BYTES_PER_XMM == 16);
 
         vx = lookup_16x8bit_sse(vx, aes_isbox);
         _mm_storeu_si128((__m128i *) &dst->byte[0], vx);
+#endif
 }
 
 static uint8_t gfmul(const uint8_t x, const uint8_t y)

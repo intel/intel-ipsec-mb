@@ -24,7 +24,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
 LIB = libIPSec_MB
 SHARED ?= y
 IMB_HDR = intel-ipsec-mb.h
@@ -34,6 +33,8 @@ IMB_VERSION = $(shell grep -e "IMB_VERSION_STR" $(IMB_HDR) | cut -d'"' -f2)
 ifeq ($(IMB_VERSION),)
 $(error "Failed to detect library version!")
 endif
+
+ARCH = $(shell uname -m)
 
 VERSION = $(shell echo $(IMB_VERSION) | cut -d. -f1-3)
 SO_VERSION = $(shell echo $(VERSION) | cut -d. -f1)
@@ -46,6 +47,7 @@ MAN1 = libipsec-mb.7
 MAN2 = libipsec-mb-dev.7
 NOLDCONFIG ?= n
 
+ifneq ($(ARCH),aarch64)
 USE_YASM ?= n
 YASM ?= yasm
 NASM ?= nasm
@@ -66,12 +68,14 @@ NASM_GE_MINOR = $(shell [ $(NASM_MINOR_VER) -ge $(NASM_MINOR_REQ) ] && echo true
 ifneq ($(NASM_GE_MAJOR),true)
 $(warning "NASM version found: $(NASM_VERSION)")
 $(error "Minimum required: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
-endif
+endif # NASM_GE_MAJOR
 ifneq ($(NASM_GE_MINOR),true)
 $(warning "NASM version found: $(NASM_VERSION)")
 $(error "Minimum required: $(NASM_MAJOR_REQ).$(NASM_MINOR_REQ)")
-endif
-endif
+endif # NASM_GE_MINOR
+endif # NASM_VERSION
+
+endif # AARCH64
 
 OBJ_DIR ?= obj
 LIB_DIR ?= .
@@ -85,11 +89,13 @@ MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l)
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
 # "-fcf-protection" needs to be checked separately
+ifneq ($(ARCH),aarch64)
 ifeq ($(MINGW),0)
 CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l), \
 	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
 CET_LDFLAGS=-r -z ibt -z shstk
-endif
+endif # MINGW
+endif # AARCH64
 CFLAGS := -DNO_COMPAT_IMB_API_053 $(EXTRA_CFLAGS) $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
@@ -116,7 +122,7 @@ NASM_FLAGS := -Werror -fwin64 -Xvc -gcv8 -DWIN_ABI $(NASM_INCLUDES)
 else
 YASM_FLAGS := -f x64 -f elf64 -X gnu -g dwarf2 -DLINUX -D__linux__ $(YASM_INCLUDES)
 NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__ $(NASM_INCLUDES)
-endif
+endif # MINGW
 
 DEBUG_OPT ?= -O0
 ifeq ($(DEBUG),y)
@@ -130,8 +136,8 @@ CFLAGS += -fstack-protector -D_FORTIFY_SOURCE=2
 else
 OPT = -O2
 LDFLAGS += -s
-endif
-endif
+endif # MINGW
+endif # DEBUG
 
 ifneq ($(SAFE_DATA),n)
 CFLAGS += -DSAFE_DATA
@@ -156,40 +162,54 @@ CFLAGS_NO_SIMD = $(CFLAGS) -O1
 CFLAGS += $(OPT)
 
 # Set generic architectural optimizations
+ifneq ($(ARCH),aarch64)
 OPT_X86 := -msse4.2
 OPT_SSE := -msse4.2 -maes -mpclmul
 OPT_AVX := -mavx -maes -mpclmul
 OPT_AVX2 := -mavx2 -maes -mpclmul
 OPT_AVX512 := -mavx2 -maes -mpclmul # -mavx512f is not available until gcc 4.9
 OPT_NOAESNI := -msse4.2 -mno-aes -mno-pclmul
+else
+OPT_AARCH64 := -march=armv8-a+crypto+aes
+OPT_NOAESNI := -march=armv8-a
+endif # AARCH64
 
 # Set architectural optimizations for GCC/CC
 ifeq ($(CC),$(filter $(CC),gcc cc))
 GCC_VERSION = $(shell $(CC) -dumpversion | cut -d. -f1)
 GCC_GE_V5 = $(shell [ $(GCC_VERSION) -ge 5 ] && echo true)
 ifeq ($(GCC_GE_V5),true)
+ifeq ($(ARCH),aarch64)
+OPT_AARCH64 := -march=armv8-a+crypto+aes
+OPT_NOAESNI := -march=armv8-a
+else
 OPT_SSE := -march=nehalem -maes -mpclmul
 OPT_AVX := -march=sandybridge -maes -mpclmul
 OPT_AVX2 := -march=haswell -maes -mpclmul
 OPT_AVX512 := -march=broadwell -maes -mpclmul
 OPT_NOAESNI := -march=nehalem -mno-pclmul
-endif
-endif
+endif # AARCH64
+endif # GCC
+endif # CC
 
 # Set architectural optimizations for clang
 ifeq ($(CC),$(filter $(CC),clang))
 CLANG_VERSION = $(shell $(CC) --version | head -n 1 | cut -d ' ' -f 3)
 CLANG_GE_V381 = $(shell test "$(CLANG_VERSION)" \> "3.8.0" && echo true)
 ifeq ($(CLANG_GE_V381),true)
+ifeq ($(ARCH),aarch64)
+OPT_AARCH64 := -march=armv8-a+crypto+aes
+else
 OPT_SSE := -march=nehalem -maes -mpclmul
 OPT_AVX := -march=sandybridge -maes -mpclmul
 OPT_AVX2 := -march=haswell -maes -mpclmul
 OPT_AVX512 := -march=broadwell -maes -mpclmul
-endif
+endif # AARCH64
+endif # CLANG
 # remove CFLAGS that clang warns about
 CFLAGS := $(subst -fno-delete-null-pointer-checks,,$(CFLAGS))
 CFLAGS := $(subst -fno-strict-overflow,,$(CFLAGS))
-endif
+endif # CC
 
 # so or static build
 ifeq ($(SHARED),y)
@@ -199,7 +219,7 @@ LIBNAME = $(LIB).dll
 else
 LIBNAME = $(LIB).so.$(VERSION)
 LDFLAGS += -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
-endif
+endif # MINGW
 LIBPERM = 0755
 ifeq ($(CC_HAS_CET),1)
 LDFLAGS += -fcf-protection=full -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
@@ -212,7 +232,7 @@ LDFLAGS += -g
 ifeq ($(CC_HAS_CET),1)
 LDFLAGS += -fcf-protection=full
 endif
-endif
+endif # shared
 
 # warning messages
 SAFE_PARAM_MSG1="SAFE_PARAM option not set."
@@ -228,6 +248,24 @@ SAFE_LOOKUP_MSG2="Lookups which depend on sensitive information \
 #
 # List of C modules (any origin)
 #
+ifeq ($(ARCH),aarch64)
+c_lib_objs := \
+	mb_mgr_aarch64.o \
+	mb_mgr_auto_aarch64.o \
+	mb_mgr_aarch64_no_aesni.o \
+	alloc_aarch64.o \
+	clear_mem_aarch64.o \
+	cpu_features_aarch64.o \
+	version.o \
+	aesni_emu.o \
+	snow3g_aarch64.o \
+	snow3g_aarch64_no_aesni.o \
+	snow3g_tables.o \
+	snow3g_iv.o \
+	error.o
+asm_generic_lib_objs := \
+	lookup_16x8bit_neon.o
+else
 c_lib_objs := \
 	mb_mgr_avx.o \
 	mb_mgr_avx2.o \
@@ -265,6 +303,7 @@ c_lib_objs := \
 	snow_v_avx.o \
 	mb_mgr_auto.o \
 	error.o
+
 #
 # List of ASM modules (root directory/common)
 #
@@ -284,7 +323,6 @@ asm_generic_lib_objs := \
 	crc32_const.o \
 	poly1305.o \
 	chacha20_poly1305.o
-
 #
 # List of ASM modules (no-aesni directory)
 #
@@ -582,8 +620,8 @@ asm_avx512_lib_objs := \
 	mb_mgr_zuc_submit_flush_avx512.o \
 	mb_mgr_zuc_submit_flush_gfni_avx512.o \
 	chacha20_avx512.o \
-        poly_avx512.o \
-        poly_fma_avx512.o \
+	poly_avx512.o \
+	poly_fma_avx512.o \
 	ethernet_fcs_avx512.o \
 	crc16_x25_avx512.o \
 	crc32_refl_by16_vclmul_avx512.o \
@@ -621,9 +659,15 @@ asm_avx512_gcm_objs := \
 	aes128_gmac_by48_api_vaes_avx512.o aes192_gmac_by48_api_vaes_avx512.o aes256_gmac_by48_api_vaes_avx512.o \
 	aes128_gcm_by8_avx512.o aes192_gcm_by8_avx512.o aes256_gcm_by8_avx512.o
 
+endif # AARCH64
+
 #
 # build object files lists
 #
+ifeq ($(ARCH),aarch64)
+asm_obj_files := $(asm_generic_lib_objs)
+c_obj_files := $(c_lib_objs)
+else
 asm_obj_files := $(asm_generic_lib_objs) \
 	$(asm_noaesni_lib_objs) $(asm_noaesni_gcm_objs) \
 	$(asm_sse_lib_objs) $(asm_sse_gcm_objs) \
@@ -631,6 +675,7 @@ asm_obj_files := $(asm_generic_lib_objs) \
 	$(asm_avx2_lib_objs) $(asm_avx2_gcm_objs) \
 	$(asm_avx512_lib_objs) $(asm_avx512_gcm_objs)
 c_obj_files := $(c_lib_objs) $(c_gcm_objs)
+endif # AARCH64
 
 #
 # aggregate all objects files together and prefix with OBJDIR
@@ -667,7 +712,7 @@ else
 endif
 else
 	$(AR) -qcs $@ $^
-endif
+endif # SHARED
 ifeq ($(SAFE_PARAM), n)
 	@echo "NOTE:" $(SAFE_PARAM_MSG1) $(SAFE_PARAM_MSG2)
 endif
@@ -723,6 +768,16 @@ $(dep_target_files): | $(OBJ_DIR)
 # - dependency file construction is part of the compilation
 #
 
+ifeq ($(ARCH),aarch64)
+$(OBJ_DIR)/%.o:aarch64/%.c
+	$(CC) -MMD $(OPT_AARCH64) -c $(CFLAGS) $< -o $@
+$(OBJ_DIR)/%.o:x86_64/%.c
+	$(CC) -MMD $(OPT_AARCH64) -c $(CFLAGS) $< -o $@
+$(OBJ_DIR)/%.o:aarch64/%.S
+	$(CC) -MMD $(OPT_AARCH64) -c $(CFLAGS) $< -o $@
+$(OBJ_DIR)/%.o:no-aesni/%.c
+	$(CC) -MMD $(OPT_NOAESNI) -c $(CFLAGS) $< -o $@
+else
 $(OBJ_DIR)/%.o:x86_64/%.c
 	$(CC) -MMD $(OPT_X86) -c $(CFLAGS) $< -o $@
 
@@ -805,7 +860,8 @@ endif
 ifeq ($(CC_HAS_CET),1)
 	$(LD) $(CET_LDFLAGS) -o $@.tmp $@
 	mv $@.tmp $@
-endif
+endif # CC_HAS_CET
+endif # AARCH64
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
@@ -859,7 +915,7 @@ help:
 	@echo "SAFE_LOOKUP=y (default)"
 	@echo "          - Lookups depending on sensitive data are constant time"
 
-
+ifneq ($(ARCH), aarch64)
 CHECKPATCH ?= checkpatch.pl
 # checkpatch ignore settings:
 #   SPACING - produces false positives with tyepdefs and *
@@ -889,6 +945,7 @@ CHECKPATCH_FLAGS = --no-tree --no-signoff --emacs --no-color --ignore CODE_INDEN
 SOURCES_DIRS := . sse avx avx2 avx512 include no-aesni
 SOURCES := $(foreach dir,$(SOURCES_DIRS),$(wildcard $(dir)/*.[ch]) $(wildcard $(dir)/*.asm) $(wildcard $(dir)/*.inc))
 SOURCES_STYLE := $(foreach infile,$(SOURCES),$(infile)_style_check)
+endif # AARCH64
 
 .PHONY: style
 style: $(SOURCES_STYLE)

@@ -181,6 +181,8 @@ update_flags_and_archs(const char *arg,
                 arch_support[IMB_ARCH_AVX] = 0;
         else if (strcmp(arg, "--no-sse") == 0)
                 arch_support[IMB_ARCH_SSE] = 0;
+        else if (strcmp(arg, "--no-aarch64") ==0)
+                arch_support[IMB_ARCH_AARCH64] = 0;
         else if (strcmp(arg, "--aesni-emu") == 0)
                 arch_support[IMB_ARCH_NOAESNI] = 1;
         else if (strcmp(arg, "--no-aesni-emu") == 0)
@@ -212,7 +214,14 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
                 IMB_FEATURE_AVX | IMB_FEATURE_CMOV | IMB_FEATURE_AESNI;
         const uint64_t detect_avx2 = IMB_FEATURE_AVX2 | detect_avx;
         const uint64_t detect_avx512 = IMB_FEATURE_AVX512_SKX | detect_avx2;
+
+        const uint64_t detect_aarch64 = IMB_FEATURE_AARCH64 | IMB_FEATURE_AESNI;
+
+#ifndef __aarch64__
         const uint64_t detect_noaesni = IMB_FEATURE_SSE4_2 | IMB_FEATURE_CMOV;
+#else
+        const uint64_t detect_noaesni = IMB_FEATURE_AARCH64 | IMB_FEATURE_ASIMD;
+#endif
 
         IMB_MGR *p_mgr = NULL;
         IMB_ARCH arch_id;
@@ -246,13 +255,17 @@ detect_arch(uint8_t arch_support[IMB_ARCH_NUM])
         if ((p_mgr->features & detect_noaesni) != detect_noaesni)
                 arch_support[IMB_ARCH_NOAESNI] = 0;
 
+        if ((p_mgr->features & detect_aarch64) != detect_aarch64)
+                arch_support[IMB_ARCH_AARCH64] = 0;
+
         free_mb_mgr(p_mgr);
 
         if (arch_support[IMB_ARCH_NOAESNI] == 0 &&
             arch_support[IMB_ARCH_SSE] == 0 &&
             arch_support[IMB_ARCH_AVX] == 0 &&
             arch_support[IMB_ARCH_AVX2] == 0 &&
-            arch_support[IMB_ARCH_AVX512] == 0) {
+            arch_support[IMB_ARCH_AVX512] == 0 &&
+            arch_support[IMB_ARCH_AARCH64] == 0) {
                 fprintf(stderr, "No available architecture detected!\n");
                 return -1;
         }
@@ -270,7 +283,7 @@ void
 print_tested_arch(const uint64_t features, const IMB_ARCH arch)
 {
         static const char *arch_str_tab[IMB_ARCH_NUM] = {
-                "NONE", "NO-AESNI", "SSE", "AVX", "AVX2", "AVX512"
+                "NONE", "NO-AESNI", "SSE", "AVX", "AVX2", "AVX512", "AARCH64"
         };
         const char *feat = "";
 
@@ -278,6 +291,7 @@ print_tested_arch(const uint64_t features, const IMB_ARCH arch)
         case IMB_ARCH_NOAESNI:
         case IMB_ARCH_AVX2:
         case IMB_ARCH_AVX:
+        case IMB_ARCH_AARCH64:
                 break;
         case IMB_ARCH_SSE:
                 if (features & IMB_FEATURE_SHANI) {
