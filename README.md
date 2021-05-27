@@ -83,7 +83,7 @@ Table 1. List of supported cipher algorithms and their implementations.
 | Chacha20 AEAD  | N      | Y      | Y      | Y      | Y      | N      |
 | SNOW-V         | N      | Y      | Y      | N      | N      | N      |
 | SNOW-V AEAD    | N      | Y      | Y      | N      | N      | N      |
-| PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | N      |
+| PON-CRC-BIP    | N      | Y  by8 | Y  by8 | N      | N      | Y      |
 +----------------------------------------------------------------------+
 ```
 Notes:  
@@ -139,7 +139,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | SNOW-V AEAD       | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | GHASH             | N      | Y  by8 | Y  by8 | Y  by8 | Y  by8 | Y by48 |
 | CRC(7)            | N      | Y  by8 | Y  by8 | N      | N      | Y by16 |
-| PON-CRC-BIP(8)    | N      | Y      | Y      | N      | N      | N      |
+| PON-CRC-BIP(8)    | N      | Y      | Y      | N      | N      | Y      |
 +-------------------------------------------------------------------------+
 ```
 Notes:  
@@ -315,7 +315,7 @@ Build with debugging information:
 For more build options and their explanation run:   
 `> make help`
 
-Windows (x64 only)
+Windows MSVS (x64 only)
 ------------------
 
 Required tools:  
@@ -352,6 +352,33 @@ Build with debugging information:
 
 For more build options and their explanation run:   
 `> nmake /f win_x64.mak help`
+
+Windows Mingw-w64 (64-bit only)
+-------------------
+
+Required tools:  
+- GNU mingw32-make.exe  
+- NASM version 2.14 (or newer)  
+- gcc (GCC) 10.3.0 (or newer)
+
+Shared library:  
+`> mingw32-make.exe`
+
+Static library:  
+`> mingw32-make.exe SHARED=n`
+
+Clean the build:  
+`> mingw32-make.exe clean`  
+or  
+`> mingw32-make.exe clean SHARED=n`
+
+Build with debugging information:  
+`> mingw32-make.exe DEBUG=y`
+
+**Note:** Building with debugging information is not advised for production use.
+
+For more build options and their explanation run:   
+`> mingw32-make.exe help`
 
 FreeBSD (64-bit only)
 ---------------------
