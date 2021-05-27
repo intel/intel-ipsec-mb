@@ -39,6 +39,7 @@
 #include <process.h>
 #include <intrin.h>
 #define strdup _strdup
+#undef __forceinline
 #define __forceinline static __forceinline
 #define __func__ __FUNCTION__
 #define strcasecmp _stricmp

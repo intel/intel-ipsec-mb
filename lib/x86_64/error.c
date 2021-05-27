@@ -35,7 +35,7 @@
 #include "intel-ipsec-mb.h"
 #include "error.h"
 
-#ifndef LINUX
+#ifdef _MSC_VER
 #pragma warning(disable : 4996)
 #endif
 

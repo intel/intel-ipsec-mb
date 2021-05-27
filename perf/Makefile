@@ -28,7 +28,9 @@ INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
 NASM ?= nasm
 
-CFLAGS = -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
+MINGW ?= $(shell $(CC) -dM -E - < /dev/null | grep -i mingw | wc -l)
+
+CFLAGS = -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-W -Wall -Wextra -Wmissing-declarations -Wpointer-arith \
 	-Wcast-qual -Wundef -Wwrite-strings  \
 	-Wformat -Wformat-security \
@@ -36,19 +38,27 @@ CFLAGS = -DLINUX -D_GNU_SOURCE -DNO_COMPAT_IMB_API_053 $(INCLUDES) \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-pthread -fno-strict-overflow -fno-delete-null-pointer-checks -fwrapv
 
+ifeq ($(MINGW),0)
+CFLAGS += -DLINUX
 NASM_FLAGS := -Werror -felf64 -Xgnu -gdwarf -DLINUX -D__linux__
+else
+NASM_FLAGS := -Werror -fwin64 -Xvc -gcv8 -DWIN_ABI
+endif
 
 # if "-z ibt" is supported then assume "-z shstk, -z cet-report=error" are also supported
 # "-fcf-protection" needs to be checked separately
+ifeq ($(MINGW),0)
 CC_HAS_CET = $(and $(shell $(CC) --target-help 2> /dev/null | grep -m1 -e "-z ibt" | wc -l), \
 	$(shell $(CC) --help=common 2> /dev/null | grep -m1 -e "-fcf-protection" | wc -l))
 CET_LDFLAGS=-r -z ibt -z shstk
-
+endif
 ifeq ($(CC_HAS_CET),1)
 CFLAGS += -fcf-protection=full
 endif
 
+ifeq ($(MINGW),0)
 LDFLAGS = -fPIE -z noexecstack -z relro -z now -pthread
+endif
 ifeq ($(CC_HAS_CET),1)
 LDFLAGS += -fcf-protection=full -Wl,-z,ibt -Wl,-z,shstk -Wl,-z,cet-report=error
 endif
@@ -68,7 +78,11 @@ ifeq ($(DEBUG),y)
 CFLAGS += -g -DDEBUG $(DEBUG_OPT)
 LDFLAGS += -g
 else
+ifeq ($(MINGW),0)
 CFLAGS += -O3 -fPIE -fstack-protector -D_FORTIFY_SOURCE=2
+else
+CFLAGS += -O2 -fPIE
+endif
 endif
 
 SOURCES := ipsec_perf.c msr.c

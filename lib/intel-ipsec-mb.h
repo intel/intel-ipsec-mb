@@ -62,15 +62,29 @@ typedef struct {
 
 #else
 /* Windows */
+
+#ifdef __MINGW32__
+/* MinGW-w64 */
 #define DECLARE_ALIGNED(decl, alignval) \
+        decl __attribute__((aligned(alignval)))
+#undef __forceinline
+#define __forceinline \
+        static inline __attribute__((always_inline))
+
+#else
+/* MSVS */
+#define DECLARE_ALIGNED(decl, alignval)         \
         __declspec(align(alignval)) decl
 #define __forceinline \
         static __forceinline
 
+#endif /* __MINGW__ */
+
 /* Windows DLL export is done via DEF file */
 #define IMB_DLL_EXPORT
 #define IMB_DLL_LOCAL
-#endif
+
+#endif /* defined __linux__ || defined __FreeBSD__ */
 
 /* Library version */
 #define IMB_VERSION_STR "1.0.0"
