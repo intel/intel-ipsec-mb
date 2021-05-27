@@ -232,8 +232,8 @@ _des_args_LOut	equ	_des_args + _desarg_lout
 
 START_FIELDS	; ZUC_ARGS_X16
 ;;	name		size	align
-FIELD	_zucarg_in,	16*8,	8	; array of 16 pointers to in text
-FIELD	_zucarg_out,	16*8,	8	; array of 16 pointers to out text
+FIELD	_zucarg_in,	16*8,	64	; array of 16 pointers to in text
+FIELD	_zucarg_out,	16*8,	64	; array of 16 pointers to out text
 FIELD	_zucarg_keys,	16*8,	8	; array of 16 pointers to keys
 FIELD	_zucarg_IV,	16*8,	8	; array of 16 pointers to IVs
 FIELD	_zucarg_digest,	16*4,	64	; array of 16 digests

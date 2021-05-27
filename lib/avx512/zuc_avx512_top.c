@@ -273,7 +273,7 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         uint16_t bytes = (uint16_t) find_min_length32(length);
 
         uint32_t numKeyStreamsPerPkt;
-        uint16_t remainBytes[NUM_AVX512_BUFS] = {0};
+        DECLARE_ALIGNED(uint16_t remainBytes[NUM_AVX512_BUFS], 32) = {0};
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX512_BUFS][64], 64);
         /* structure to store the 16 keys */
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
@@ -283,8 +283,8 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
 
-        const uint64_t *pIn64[NUM_AVX512_BUFS]= {NULL};
-        uint64_t *pOut64[NUM_AVX512_BUFS] = {NULL};
+        DECLARE_ALIGNED(const uint64_t *pIn64[NUM_AVX512_BUFS], 64) = {NULL};
+        DECLARE_ALIGNED(uint64_t *pOut64[NUM_AVX512_BUFS], 64) = {NULL};
         uint64_t *pKeyStream64 = NULL;
 
         /*

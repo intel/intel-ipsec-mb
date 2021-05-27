@@ -151,8 +151,8 @@ typedef struct {
 } DES_ARGS_x16;
 
 typedef struct {
-        const uint8_t *in[16];
-        uint8_t *out[16];
+        DECLARE_ALIGNED(const uint8_t *in[16], 64);
+        DECLARE_ALIGNED(uint8_t *out[16], 64);
         const uint8_t *keys[16];
         const uint8_t *iv[16];
         DECLARE_ALIGNED(uint32_t digest[16], 64);

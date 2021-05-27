@@ -193,7 +193,7 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         unsigned int i = 0;
         uint16_t bytes = (uint16_t) find_min_length32(length, &i);
         uint32_t numKeyStreamsPerPkt;
-        uint16_t remainBytes[NUM_AVX2_BUFS] = {0};
+        DECLARE_ALIGNED(uint16_t remainBytes[NUM_AVX2_BUFS], 16) = {0};
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX2_BUFS][KEYSTR_ROUND_LEN], 64);
         /* structure to store the 8 keys */
         DECLARE_ALIGNED(ZucKey8_t keys, 64);
@@ -203,8 +203,8 @@ void _zuc_eea3_8_buffer_avx2(const void * const pKey[NUM_AVX2_BUFS],
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
 
-        const uint64_t *pIn64[NUM_AVX2_BUFS]= {NULL};
-        uint64_t *pOut64[NUM_AVX2_BUFS] = {NULL};
+        DECLARE_ALIGNED(const uint64_t *pIn64[NUM_AVX2_BUFS], 32) = {NULL};
+        DECLARE_ALIGNED(uint64_t *pOut64[NUM_AVX2_BUFS], 32) = {NULL};
         uint64_t *pKeyStream64 = NULL;
 
         /*
