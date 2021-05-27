@@ -140,6 +140,9 @@ known_answer_test(IMB_MGR *mb_mgr)
         /* Expand key */
         IMB_AES_KEYEXP_128(mb_mgr, key128, enc_keys, dec_keys);
 
+	/* flush the scheduler */
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
 
         /* test AES128 Dec */
         job = IMB_GET_NEXT_JOB(mb_mgr);
