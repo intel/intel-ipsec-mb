@@ -540,3 +540,4 @@ EXPORTS
     crc7_fp_header_avx512                       @514
     imb_get_errno				@515
     imb_get_strerror				@516
+    init_mb_mgr_auto				@517
