@@ -503,68 +503,29 @@ static inline void S1_box_2(uint32_t *x1, uint32_t *x2)
  */
 static inline __m128i S1_box_4(const __m128i x)
 {
-#ifdef NO_AESNI
-        union xmm_reg key, v, vt;
-
-        key.qword[0] = key.qword[1] = 0;
-
-        /*
-         * - Broadcast 32-bit word across XMM
-         * - Perform AES operations
-         */
-        _mm_storeu_si128((__m128i *) &vt.qword[0],
-                         _mm_shuffle_epi32(x, 0b00000000));
-        emulate_AESENC(&vt, &key);
-        v.dword[0] = vt.dword[0];
-
-        _mm_storeu_si128((__m128i *) &vt.qword[0],
-                         _mm_shuffle_epi32(x, 0b01010101));
-        emulate_AESENC(&vt, &key);
-        v.dword[1] = vt.dword[0];
-
-        _mm_storeu_si128((__m128i *) &vt.qword[0],
-                         _mm_shuffle_epi32(x, 0b10101010));
-        emulate_AESENC(&vt, &key);
-        v.dword[2] = vt.dword[0];
-
-        _mm_storeu_si128((__m128i *) &vt.qword[0],
-                         _mm_shuffle_epi32(x, 0b11111111));
-        emulate_AESENC(&vt, &key);
-        v.dword[3] = vt.dword[0];
-
-        return _mm_loadu_si128((const __m128i *) &v.qword[0]);
-#else
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
+                                               0x0b0e0104, 0x070a0d00);
+        const __m128i m1 = _mm_shuffle_epi8(x, m_shuf_r);
         const __m128i m_zero = _mm_setzero_si128();
-        __m128i m1, m2, m3, m4;
-
-        m1 = _mm_shuffle_epi32(x, 0b00000000);
-        m2 = _mm_shuffle_epi32(x, 0b01010101);
-        m3 = _mm_shuffle_epi32(x, 0b10101010);
-        m4 = _mm_shuffle_epi32(x, 0b11111111);
-
-        m1 = _mm_aesenc_si128(m1, m_zero);
-        m2 = _mm_aesenc_si128(m2, m_zero);
-        m3 = _mm_aesenc_si128(m3, m_zero);
-        m4 = _mm_aesenc_si128(m4, m_zero);
 
         /*
-         * Put results of AES operations back into
-         * two vectors of 32-bit words
-         *
-         * First step:
-         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
-         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
+         * Previously 32-bit word from one stream was broadcasted
+         * across 128-bit word for AESENC. Then the 1st word was
+         * used as output.
+         * With this method, words from multiple streams are
+         * pre-shuffled and one AESENC can process all four words.
          */
-        m1 = _mm_unpacklo_epi32(m1, m2);
-        m3 = _mm_unpacklo_epi32(m3, m4);
+#ifdef NO_AESNI
+        union xmm_reg key, vt;
 
-        /*
-         * The last step:
-         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
-         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
-         */
-        m1 = _mm_unpacklo_epi64(m1, m3);
-        return m1;
+        _mm_storeu_si128((__m128i *) &key.qword[0], m_zero);
+        _mm_storeu_si128((__m128i *) &vt.qword[0], m1);
+
+        emulate_AESENC(&vt, &key);
+
+        return _mm_loadu_si128((const __m128i *) &vt.qword[0]);
+#else
+        return _mm_aesenc_si128(m1, m_zero);
 #endif
 }
 
@@ -581,49 +542,18 @@ static inline __m256i S1_box_8(const __m256i x)
         const __m128i x1 = _mm256_castsi256_si128(x);
         const __m128i x2 = _mm256_extractf128_si256(x, 1);
         const __m128i m_zero = _mm_setzero_si128();
-        __m128i m1, m2, m3, m4, m5, m6, m7, m8;
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
+                                               0x0b0e0104, 0x070a0d00);
+        __m128i m1, m2;
 
-        m1 = _mm_shuffle_epi32(x1, 0b00000000);
-        m2 = _mm_shuffle_epi32(x1, 0b01010101);
-        m3 = _mm_shuffle_epi32(x1, 0b10101010);
-        m4 = _mm_shuffle_epi32(x1, 0b11111111);
-        m5 = _mm_shuffle_epi32(x2, 0b00000000);
-        m6 = _mm_shuffle_epi32(x2, 0b01010101);
-        m7 = _mm_shuffle_epi32(x2, 0b10101010);
-        m8 = _mm_shuffle_epi32(x2, 0b11111111);
+        m1 = _mm_shuffle_epi8  (x1, m_shuf_r);
+        m2 = _mm_shuffle_epi8  (x2, m_shuf_r);
 
         m1 = _mm_aesenc_si128(m1, m_zero);
         m2 = _mm_aesenc_si128(m2, m_zero);
-        m3 = _mm_aesenc_si128(m3, m_zero);
-        m4 = _mm_aesenc_si128(m4, m_zero);
-        m5 = _mm_aesenc_si128(m5, m_zero);
-        m6 = _mm_aesenc_si128(m6, m_zero);
-        m7 = _mm_aesenc_si128(m7, m_zero);
-        m8 = _mm_aesenc_si128(m8, m_zero);
-
-        /*
-         * Put results of AES operations back into
-         * two vectors of 32-bit words
-         *
-         * First step:
-         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
-         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
-         */
-        m1 = _mm_unpacklo_epi32(m1, m2);
-        m3 = _mm_unpacklo_epi32(m3, m4);
-        m5 = _mm_unpacklo_epi32(m5, m6);
-        m7 = _mm_unpacklo_epi32(m7, m8);
-
-        /*
-         * The last step:
-         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
-         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
-         */
-        m1 = _mm_unpacklo_epi64(m1, m3);
-        m5 = _mm_unpacklo_epi64(m5, m7);
 
         /* return [ 255 - 128 : m5 | 127 - 0 : m1 ] */
-        return _mm256_inserti128_si256(_mm256_castsi128_si256(m1), m5, 1);
+        return _mm256_inserti128_si256(_mm256_castsi128_si256(m1), m2, 1);
 }
 #endif /* AVX2 */
 
@@ -759,96 +689,33 @@ static inline void S2_box_2(uint32_t *x1, uint32_t *x2)
  */
 static inline __m128i S2_box_4(const __m128i x)
 {
+        const __m128i m_zero = _mm_setzero_si128();
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
+                                               0x0b0e0104, 0x070a0d00);
+
         /* Perform invSR(SQ(x)) transform through a lookup table */
         const __m128i new_x = lut16x8b_256(x, snow3g_invSR_SQ);
+        __m128i m1 = _mm_shuffle_epi8  (new_x, m_shuf_r);
 
         /* use AESNI operations for the rest of the S2 box */
 #ifdef NO_AESNI
-        union xmm_reg key, v, f;
+        union xmm_reg key;
         union xmm_reg vt, ft;
 
-        key.qword[0] = key.qword[1] = 0;
+        _mm_storeu_si128((__m128i *) &key.qword[0], m_zero);
 
-        /*
-         * - Broadcast 32-bit word across XMM and
-         *   perform AES operations
-         * - Save result 32-bit words in v and f vectors.
-         *   'f' is used for fix-up of mixed columns only
-         */
-        _mm_storeu_si128((__m128i *) &vt.qword[0],
-                         _mm_shuffle_epi32(new_x, 0b00000000));
-        ft = vt;
+        _mm_storeu_si128((__m128i *) &vt.qword[0], m1);
+        _mm_storeu_si128((__m128i *) &ft.qword[0], m1);
         emulate_AESENC(&vt, &key);
         emulate_AESENCLAST(&ft, &key);
-        v.dword[0] = vt.dword[0];
-        f.dword[0] = ft.dword[0];
 
-        _mm_storeu_si128((__m128i *) &vt.qword[0],
-                         _mm_shuffle_epi32(new_x, 0b01010101));
-        ft = vt;
-        emulate_AESENC(&vt, &key);
-        emulate_AESENCLAST(&ft, &key);
-        v.dword[1] = vt.dword[0];
-        f.dword[1] = ft.dword[0];
-
-        _mm_storeu_si128((__m128i *) &vt.qword[0],
-                         _mm_shuffle_epi32(new_x, 0b10101010));
-        ft = vt;
-        emulate_AESENC(&vt, &key);
-        emulate_AESENCLAST(&ft, &key);
-        v.dword[2] = vt.dword[0];
-        f.dword[2] = ft.dword[0];
-
-        _mm_storeu_si128((__m128i *) &vt.qword[0],
-                         _mm_shuffle_epi32(new_x, 0b11111111));
-        ft = vt;
-        emulate_AESENC(&vt, &key);
-        emulate_AESENCLAST(&ft, &key);
-        v.dword[3] = vt.dword[0];
-        f.dword[3] = ft.dword[0];
-
-        return s2_mixc_fixup_4(_mm_loadu_si128((const __m128i *) &f.qword[0]),
-                               _mm_loadu_si128((const __m128i *) &v.qword[0]));
+        return s2_mixc_fixup_4(_mm_loadu_si128((const __m128i *) &ft.qword[0]),
+                               _mm_loadu_si128((const __m128i *) &vt.qword[0]));
 #else
-        const __m128i m_zero = _mm_setzero_si128();
-        __m128i m1, m2, m3, m4, f1, f2, f3, f4;
+        __m128i f1 = _mm_aesenclast_si128(m1, m_zero);
 
-        m1 = _mm_shuffle_epi32(new_x, 0b00000000);
-        m2 = _mm_shuffle_epi32(new_x, 0b01010101);
-        m3 = _mm_shuffle_epi32(new_x, 0b10101010);
-        m4 = _mm_shuffle_epi32(new_x, 0b11111111);
-
-        f1 = _mm_aesenclast_si128(m1, m_zero);
         m1 = _mm_aesenc_si128(m1, m_zero);
-        f2 = _mm_aesenclast_si128(m2, m_zero);
-        m2 = _mm_aesenc_si128(m2, m_zero);
-        f3 = _mm_aesenclast_si128(m3, m_zero);
-        m3 = _mm_aesenc_si128(m3, m_zero);
-        f4 = _mm_aesenclast_si128(m4, m_zero);
-        m4 = _mm_aesenc_si128(m4, m_zero);
 
-        /*
-         * Put results of AES operations back into
-         * two vectors of 32-bit words
-         *
-         * First step:
-         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
-         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
-         */
-        m1 = _mm_unpacklo_epi32(m1, m2);
-        f1 = _mm_unpacklo_epi32(f1, f2);
-        m3 = _mm_unpacklo_epi32(m3, m4);
-        f3 = _mm_unpacklo_epi32(f3, f4);
-
-        /*
-         * The last step:
-         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
-         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
-         * f1 = [ 0-63 f1 | 0-63 f3 ] =>
-         *      [ 0-31 f1 | 0-31 f2 | 0-31 f3 | 0-31 f4 ]
-         */
-        m1 = _mm_unpacklo_epi64(m1, m3);
-        f1 = _mm_unpacklo_epi64(f1, f3);
         return s2_mixc_fixup_4(f1, m1);
 #endif
 }
@@ -871,79 +738,21 @@ static inline void S2_box_2x4(__m128i *in_out1, __m128i *in_out2)
          */
         const __m128i m_zero = _mm_setzero_si128();
         const __m128i x1 = lut16x8b_256(*in_out1, snow3g_invSR_SQ);
-        __m128i m1, m2, m3, m4, f1, f2, f3, f4;
-        __m128i m5, m6, m7, m8, f5, f6, f7, f8;
-
-        m1 = _mm_shuffle_epi32(x1, 0b00000000);
-        m2 = _mm_shuffle_epi32(x1, 0b01010101);
-        m3 = _mm_shuffle_epi32(x1, 0b10101010);
-        m4 = _mm_shuffle_epi32(x1, 0b11111111);
-
-        /* start shuffling next 128 bits of data */
         const __m128i x2 = lut16x8b_256(*in_out2, snow3g_invSR_SQ);
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
+                                               0x0b0e0104, 0x070a0d00);
+        __m128i m1, m2, f1, f2;
 
-        m5 = _mm_shuffle_epi32(x2, 0b00000000);
-        m6 = _mm_shuffle_epi32(x2, 0b01010101);
-        m7 = _mm_shuffle_epi32(x2, 0b10101010);
-        m8 = _mm_shuffle_epi32(x2, 0b11111111);
+        m1 = _mm_shuffle_epi8(x1, m_shuf_r);
+        m2 = _mm_shuffle_epi8(x2, m_shuf_r);
 
         f1 = _mm_aesenclast_si128(m1, m_zero);
         m1 = _mm_aesenc_si128(m1, m_zero);
         f2 = _mm_aesenclast_si128(m2, m_zero);
         m2 = _mm_aesenc_si128(m2, m_zero);
-        f3 = _mm_aesenclast_si128(m3, m_zero);
-        m3 = _mm_aesenc_si128(m3, m_zero);
-        f4 = _mm_aesenclast_si128(m4, m_zero);
-        m4 = _mm_aesenc_si128(m4, m_zero);
-
-        /*
-         * Put results of AES operations back into
-         * two 128-bit vectors of 32-bit words
-         *
-         * First step:
-         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
-         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
-         */
-        m1 = _mm_unpacklo_epi32(m1, m2);
-        f1 = _mm_unpacklo_epi32(f1, f2);
-        m3 = _mm_unpacklo_epi32(m3, m4);
-        f3 = _mm_unpacklo_epi32(f3, f4);
-
-        /*
-         * The last step:
-         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
-         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
-         * f1 = [ 0-63 f1 | 0-63 f3 ] =>
-         *      [ 0-31 f1 | 0-31 f2 | 0-31 f3 | 0-31 f4 ]
-         */
-        m1 = _mm_unpacklo_epi64(m1, m3);
-        f1 = _mm_unpacklo_epi64(f1, f3);
 
         *in_out1 = s2_mixc_fixup_4(f1, m1);
-
-        /* start encrypting next 128 bits */
-        f5 = _mm_aesenclast_si128(m5, m_zero);
-        m5 = _mm_aesenc_si128(m5, m_zero);
-        f6 = _mm_aesenclast_si128(m6, m_zero);
-        m6 = _mm_aesenc_si128(m6, m_zero);
-        f7 = _mm_aesenclast_si128(m7, m_zero);
-        m7 = _mm_aesenc_si128(m7, m_zero);
-        f8 = _mm_aesenclast_si128(m8, m_zero);
-        m8 = _mm_aesenc_si128(m8, m_zero);
-
-        /*
-         * Same as above put results of AES operations back into
-         * two 128-bit vectors of 32-bit words
-         */
-        m5 = _mm_unpacklo_epi32(m5, m6);
-        f5 = _mm_unpacklo_epi32(f5, f6);
-        m7 = _mm_unpacklo_epi32(m7, m8);
-        f7 = _mm_unpacklo_epi32(f7, f8);
-
-        m5 = _mm_unpacklo_epi64(m5, m7);
-        f5 = _mm_unpacklo_epi64(f5, f7);
-
-        *in_out2 = s2_mixc_fixup_4(f5, m5);
+        *in_out2 = s2_mixc_fixup_4(f2, m2);
 #endif
 }
 
@@ -964,90 +773,24 @@ static inline __m256i S2_box_8(const __m256i x)
         const __m128i m_zero = _mm_setzero_si128();
         const __m128i x1 = (__m128i) _mm256_castsi256_si128(new_x);
         const __m128i x2 = (__m128i) _mm256_extractf128_si256(new_x, 1);
-        __m128i m1, m2, m3, m4, f1, f2, f3, f4;
+        const __m128i m_shuf_r = _mm_set_epi32(0x0306090c, 0x0f020508,
+                                               0x0b0e0104, 0x070a0d00);
+        __m128i m1, m2, f1, f2;
         __m256i m, f;
 
-        m1 = _mm_shuffle_epi32(x1, 0b00000000);
-        m2 = _mm_shuffle_epi32(x1, 0b01010101);
-        m3 = _mm_shuffle_epi32(x1, 0b10101010);
-        m4 = _mm_shuffle_epi32(x1, 0b11111111);
+        m1= _mm_shuffle_epi8  (x1, m_shuf_r);
+        m2= _mm_shuffle_epi8  (x2, m_shuf_r);
 
         f1 = _mm_aesenclast_si128(m1, m_zero);
         m1 = _mm_aesenc_si128(m1, m_zero);
         f2 = _mm_aesenclast_si128(m2, m_zero);
         m2 = _mm_aesenc_si128(m2, m_zero);
-        f3 = _mm_aesenclast_si128(m3, m_zero);
-        m3 = _mm_aesenc_si128(m3, m_zero);
-        f4 = _mm_aesenclast_si128(m4, m_zero);
-        m4 = _mm_aesenc_si128(m4, m_zero);
-
-        /*
-         * Put results of AES operations back into
-         * two vectors of 32-bit words
-         *
-         * First step:
-         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
-         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
-         */
-        m1 = _mm_unpacklo_epi32(m1, m2);
-        f1 = _mm_unpacklo_epi32(f1, f2);
-        m3 = _mm_unpacklo_epi32(m3, m4);
-        f3 = _mm_unpacklo_epi32(f3, f4);
-
-        /*
-         * The last step:
-         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
-         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
-         * f1 = [ 0-63 f1 | 0-63 f3 ] =>
-         *      [ 0-31 f1 | 0-31 f2 | 0-31 f3 | 0-31 f4 ]
-         */
-        m1 = _mm_unpacklo_epi64(m1, m3);
-        f1 = _mm_unpacklo_epi64(f1, f3);
 
         m = _mm256_castsi128_si256(m1);
         f = _mm256_castsi128_si256(f1);
 
-        /* next 128 bits */
-
-        m1 = _mm_shuffle_epi32(x2, 0b00000000);
-        m2 = _mm_shuffle_epi32(x2, 0b01010101);
-        m3 = _mm_shuffle_epi32(x2, 0b10101010);
-        m4 = _mm_shuffle_epi32(x2, 0b11111111);
-
-        f1 = _mm_aesenclast_si128(m1, m_zero);
-        m1 = _mm_aesenc_si128(m1, m_zero);
-        f2 = _mm_aesenclast_si128(m2, m_zero);
-        m2 = _mm_aesenc_si128(m2, m_zero);
-        f3 = _mm_aesenclast_si128(m3, m_zero);
-        m3 = _mm_aesenc_si128(m3, m_zero);
-        f4 = _mm_aesenclast_si128(m4, m_zero);
-        m4 = _mm_aesenc_si128(m4, m_zero);
-
-        /*
-         * Put results of AES operations back into
-         * two vectors of 32-bit words
-         *
-         * First step:
-         * m1 = [ 0-31 m1 | 0-31 m2 | 32-63 m1 | 32-63 m2 ]
-         * m3 = [ 0-31 m3 | 0-31 m4 | 32-63 m3 | 32-63 m4 ]
-         */
-        m1 = _mm_unpacklo_epi32(m1, m2);
-        f1 = _mm_unpacklo_epi32(f1, f2);
-        m3 = _mm_unpacklo_epi32(m3, m4);
-        f3 = _mm_unpacklo_epi32(f3, f4);
-
-        /*
-         * The last step:
-         * m1 = [ 0-63 m1 | 0-63 m3 ] =>
-         *      [ 0-31 m1 | 0-31 m2 | 0-31 m3 | 0-31 m4 ]
-         * f1 = [ 0-63 f1 | 0-63 f3 ] =>
-         *      [ 0-31 f1 | 0-31 f2 | 0-31 f3 | 0-31 f4 ]
-         */
-        m1 = _mm_unpacklo_epi64(m1, m3);
-        f1 = _mm_unpacklo_epi64(f1, f3);
-
-        m = _mm256_inserti128_si256(m, m1, 1);
-        f = _mm256_inserti128_si256(f, f1, 1);
+        m = _mm256_inserti128_si256(m, m2, 1);
+        f = _mm256_inserti128_si256(f, f2, 1);
 
         return s2_mixc_fixup_avx2(f, m);
 }
