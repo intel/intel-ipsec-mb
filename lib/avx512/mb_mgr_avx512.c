@@ -1043,6 +1043,7 @@ init_mb_mgr_avx512(IMB_MGR *state)
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
         MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
+        MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
@@ -1616,6 +1617,16 @@ init_mb_mgr_avx512(IMB_MGR *state)
                        sizeof(aes_ccm_ooo->job_in_lane));
                 aes_ccm_ooo->unused_lanes = 0xFEDCBA9876543210;
                 aes_ccm_ooo->num_lanes_inuse = 0;
+
+                memset(aes256_ccm_ooo->init_done, 0,
+                       sizeof(aes256_ccm_ooo->init_done));
+                memset(aes256_ccm_ooo->lens, 0,
+                       sizeof(aes256_ccm_ooo->lens));
+                memset(aes256_ccm_ooo->job_in_lane, 0,
+                       sizeof(aes256_ccm_ooo->job_in_lane));
+                aes256_ccm_ooo->unused_lanes = 0xFEDCBA9876543210;
+                aes256_ccm_ooo->num_lanes_inuse = 0;
+
         } else {
                 /* init 8 lanes */
                 for (j = 0; j < 8; j++) {
@@ -1628,6 +1639,17 @@ init_mb_mgr_avx512(IMB_MGR *state)
 
                 aes_ccm_ooo->unused_lanes = 0xF76543210;
                 aes_ccm_ooo->num_lanes_inuse = 0;
+
+                for (j = 0; j < 8; j++) {
+                        aes256_ccm_ooo->init_done[j] = 0;
+                        aes256_ccm_ooo->lens[j] = 0;
+                        aes256_ccm_ooo->job_in_lane[j] = NULL;
+                }
+                for (; j < 16; j++)
+                        aes256_ccm_ooo->lens[j] = 0xFFFF;
+
+                aes256_ccm_ooo->unused_lanes = 0xF76543210;
+                aes256_ccm_ooo->num_lanes_inuse = 0;
         }
 
         /* Init AES-CMAC auth out-of-order fields */

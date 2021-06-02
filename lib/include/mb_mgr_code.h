@@ -975,6 +975,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
         MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
+	MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
@@ -1014,7 +1015,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 if (16 == job->key_len_in_bytes) {
                         return SUBMIT_JOB_AES128_CCM_AUTH(aes_ccm_ooo, job);
                 } else { /* assume 32 */
-                        return SUBMIT_JOB_AES256_CCM_AUTH(aes_ccm_ooo, job);
+                        return SUBMIT_JOB_AES256_CCM_AUTH(aes256_ccm_ooo, job);
                 }
         case IMB_AUTH_AES_CMAC:
                 /*
@@ -1167,6 +1168,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_HMAC_MD5_OOO *hmac_md5_ooo = state->hmac_md5_ooo;
         MB_MGR_AES_XCBC_OOO *aes_xcbc_ooo = state->aes_xcbc_ooo;
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
+	MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
@@ -1206,7 +1208,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 if (16 == job->key_len_in_bytes) {
                         return FLUSH_JOB_AES128_CCM_AUTH(aes_ccm_ooo);
                 } else { /* assume 32 */
-                        return FLUSH_JOB_AES256_CCM_AUTH(aes_ccm_ooo);
+                        return FLUSH_JOB_AES256_CCM_AUTH(aes256_ccm_ooo);
                 }
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_BITLEN:
