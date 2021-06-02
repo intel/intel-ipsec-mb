@@ -1045,6 +1045,7 @@ init_mb_mgr_avx512(IMB_MGR *state)
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
         MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
+	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
@@ -1664,6 +1665,14 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 aes_cmac_ooo->unused_lanes = 0xFEDCBA9876543210;
                 aes_cmac_ooo->num_lanes_inuse = 0;
 
+		memset(aes256_cmac_ooo->init_done, 0,
+                       sizeof(aes256_cmac_ooo->init_done));
+                memset(aes256_cmac_ooo->lens, 0,
+                       sizeof(aes256_cmac_ooo->lens));
+                memset(aes256_cmac_ooo->job_in_lane, 0,
+                       sizeof(aes256_cmac_ooo->job_in_lane));
+                aes256_cmac_ooo->unused_lanes = 0xFEDCBA9876543210;
+                aes256_cmac_ooo->num_lanes_inuse = 0;
         } else {
                 /* init 8 lanes */
                 memset(aes_cmac_ooo->init_done, 0,
@@ -1676,6 +1685,17 @@ init_mb_mgr_avx512(IMB_MGR *state)
                        sizeof(aes_cmac_ooo->job_in_lane));
                 aes_cmac_ooo->unused_lanes = 0xF76543210;
                 aes_cmac_ooo->num_lanes_inuse = 0;
+
+		memset(aes256_cmac_ooo->init_done, 0,
+                       sizeof(aes256_cmac_ooo->init_done));
+                memset(aes256_cmac_ooo->lens, 0xFF,
+                       sizeof(aes256_cmac_ooo->lens));
+                memset(&aes256_cmac_ooo->lens[0], 0,
+                       sizeof(aes256_cmac_ooo->lens[0]) * 8);
+                memset(aes256_cmac_ooo->job_in_lane, 0,
+                       sizeof(aes256_cmac_ooo->job_in_lane));
+                aes256_cmac_ooo->unused_lanes = 0xF76543210;
+                aes256_cmac_ooo->num_lanes_inuse = 0;
         }
 
         /* Init AES CBC-S out-of-order fields */

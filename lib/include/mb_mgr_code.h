@@ -977,6 +977,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
 	MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
+	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
 
@@ -1030,7 +1031,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_AES_CMAC_256:
                 job->msg_len_to_hash_in_bits =
                         job->msg_len_to_hash_in_bytes * 8;
-                return SUBMIT_JOB_AES256_CMAC_AUTH(aes_cmac_ooo, job);
+                return SUBMIT_JOB_AES256_CMAC_AUTH(aes256_cmac_ooo, job);
         case IMB_AUTH_SHA_1:
                 IMB_SHA1(state,
                          job->src + job->hash_start_src_offset_in_bytes,
@@ -1170,6 +1171,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
 	MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
+	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
 
@@ -1214,7 +1216,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_AES_CMAC_BITLEN:
                 return FLUSH_JOB_AES128_CMAC_AUTH(aes_cmac_ooo);
         case IMB_AUTH_AES_CMAC_256:
-                return FLUSH_JOB_AES256_CMAC_AUTH(aes_cmac_ooo);
+                return FLUSH_JOB_AES256_CMAC_AUTH(aes256_cmac_ooo);
         case IMB_AUTH_ZUC_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:

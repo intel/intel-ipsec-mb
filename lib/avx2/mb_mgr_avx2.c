@@ -444,6 +444,7 @@ init_mb_mgr_avx2(IMB_MGR *state)
         MB_MGR_CCM_OOO *aes_ccm_ooo = state->aes_ccm_ooo;
         MB_MGR_CCM_OOO *aes256_ccm_ooo = state->aes256_ccm_ooo;
         MB_MGR_CMAC_OOO *aes_cmac_ooo = state->aes_cmac_ooo;
+	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eea3_ooo = state->zuc_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
@@ -799,6 +800,14 @@ init_mb_mgr_avx2(IMB_MGR *state)
         }
         aes_cmac_ooo->unused_lanes = 0xF76543210;
         aes_cmac_ooo->num_lanes_inuse = 0;
+
+	for (j = 0; j < 8; j++) {
+                aes256_cmac_ooo->init_done[j] = 0;
+                aes256_cmac_ooo->lens[j] = 0;
+                aes256_cmac_ooo->job_in_lane[j] = NULL;
+        }
+        aes256_cmac_ooo->unused_lanes = 0xF76543210;
+        aes256_cmac_ooo->num_lanes_inuse = 0;
 
         /* Init AES CBC-S out-of-order fields */
         memset(aes128_cbcs_ooo->lens, 0xFF,
