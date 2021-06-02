@@ -460,17 +460,17 @@ submit_snow_v_aead_job(IMB_MGR *state, IMB_JOB *job)
 
         /* push AAD into GHASH */
         IMB_GHASH(state, &gdata_key, job->u.SNOW_V_AEAD.aad,
-                job->u.SNOW_V_AEAD.aad_len_in_bytes,
-                (void *)auth, sizeof(imb_uint128_t));
+                  job->u.SNOW_V_AEAD.aad_len_in_bytes,
+                  (void *)auth, sizeof(imb_uint128_t));
 
         if (job->cipher_direction == IMB_DIR_ENCRYPT)
                 IMB_GHASH(state, &gdata_key, job->dst,
-                        job->msg_len_to_cipher_in_bytes,
-                        (void *)auth, sizeof(imb_uint128_t));
+                          job->msg_len_to_cipher_in_bytes,
+                          (void *)auth, sizeof(imb_uint128_t));
         else
                 IMB_GHASH(state, &gdata_key, job->src,
-                        job->msg_len_to_cipher_in_bytes,
-                        (void *)auth, sizeof(imb_uint128_t));
+                          job->msg_len_to_cipher_in_bytes,
+                          (void *)auth, sizeof(imb_uint128_t));
 
         IMB_GHASH(state, &gdata_key, (void *)&temp, sizeof(temp),
                   (void *)auth, sizeof(imb_uint128_t));

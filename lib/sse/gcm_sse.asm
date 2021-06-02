@@ -564,10 +564,10 @@ default rel
         movdqa          %%AAD_HASH, %%XTMP1
         pxor            %%AAD_HASH, %%XTMP4                    ; the result is in %%T1
 
+%%_get_small_AAD_block:
         or      %%T2, %%T2
         je      %%_CALC_AAD_done
 
-%%_get_small_AAD_block:
         movdqu          %%XTMP0, [%%GDATA_KEY + HashKey]
         READ_SMALL_DATA_INPUT   %%XTMP1, %%T1, %%T2, %%T3, %%T4, %%T5
         ;byte-reflect the AAD data
