@@ -237,7 +237,7 @@ FIELD	_zucarg_out,	16*8,	64	; array of 16 pointers to out text
 FIELD	_zucarg_keys,	16*8,	8	; array of 16 pointers to keys
 FIELD	_zucarg_IV,	16*8,	8	; array of 16 pointers to IVs
 FIELD	_zucarg_digest,	16*4,	64	; array of 16 digests
-FIELD	_zucarg_prevKS,	16*8,	64	; array of previous last 8-byte keystream of 16 buffers
+FIELD	_zucarg_KS,	16*128,	64	; array of 128-byte keystream of 16 buffers
 END_FIELDS
 %assign _ZUC_ARGS_X16_size	_FIELD_OFFSET
 %assign _ZUC_ARGS_X16_align	_STRUCT_ALIGN
@@ -264,7 +264,7 @@ _zuc_args_out	 equ	_zuc_args + _zucarg_out
 _zuc_args_keys	 equ	_zuc_args + _zucarg_keys
 _zuc_args_IV	 equ	_zuc_args + _zucarg_IV
 _zuc_args_digest equ    _zuc_args + _zucarg_digest
-_zuc_args_prevKS equ    _zuc_args + _zucarg_prevKS
+_zuc_args_KS     equ    _zuc_args + _zucarg_KS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define HMAC Out Of Order Data Structures

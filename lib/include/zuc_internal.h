@@ -660,7 +660,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_avx2(ZucState8_t *pState,
  * @description
  *      Definition of the external function that implements the working
  *      stage of the ZUC algorithm. The function will generate 64 bytes of
- *      keystream for four packets in parallel.
+ *      keystream for 16 packets in parallel.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState16_t
@@ -669,16 +669,57 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream32B_8_avx2(ZucState8_t *pState,
  *                                  that will contain the generated keystream
  *                                  for these 16 packets.
  *
+ * @param[in] key_off               Starting offset for writing KS.
+ *
  * @pre
- *      A successful call to @ref asm_ZucInitialization_4 to initialize the ZUC
- *      state.
+ *      A successful call to @ref asm_ZucInitialization_16_avx512 to initialize
+ *      the ZUC state.
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_avx512(ZucState16_t *pState,
-                                                    uint32_t *pKeyStr[16]);
+                                                    uint32_t *pKeyStr,
+                                                    const unsigned key_off);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_gfni_avx512(ZucState16_t *pState,
-                                                         uint32_t *pKeyStr[16]);
+                                                        uint32_t *pKeyStr,
+                                                        const unsigned key_off);
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate 64 bytes of
+ *      keystream for 16 packets in parallel, except for selected lanes,
+ *      which will have 56 bytes of keystream generated instead.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState16_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to 16 input buffers
+ *                                  that will contain the generated keystream
+ *                                  for these 16 packets.
+ *
+ * @param[in] key_off               Starting offset for writing KS.
+ *
+ * @param[in] lane_mask             Mask containing lanes which will have 64
+ *                                  bytes of KS generated (8 bytes less for
+ *                                  the rest)
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization_16_avx512 to initialize
+ *      the ZUC state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void asm_ZucGenKeystream64B_16_skip8_avx512(ZucState16_t *pState,
+                                                    uint32_t *pKeyStr,
+                                                    const unsigned key_off,
+                                                    const uint16_t lane_mask);
+
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream64B_16_skip8_gfni_avx512(ZucState16_t *pState,
+                                            uint32_t *pKeyStr,
+                                            const unsigned key_off,
+                                            const uint16_t lane_mask);
 /**
  ******************************************************************************
  *
@@ -804,18 +845,20 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream4B_8_avx2(ZucState8_t *pState,
  *                                  that will contain the generated keystream
  *                                  for these 16 packets.
  *
+ * @param[in] key_off               Starting offset for writing KS.
+ *
  * @pre
  *      A successful call to @ref asm_ZucInitialization_16 to initialize the ZUC
  *      state.
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_avx512(ZucState16_t *pState,
-                                                   uint32_t *pKeyStr[16],
-                                                   const uint32_t lane_mask);
+                                                   uint32_t *pKeyStr,
+                                                   const unsigned key_off);
 
 IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
-                                                      uint32_t *pKeyStr[16],
-                                                      const uint32_t lane_mask);
+                                                        uint32_t *pKeyStr,
+                                                        const unsigned key_off);
 
 /**
  ******************************************************************************
@@ -831,6 +874,9 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream8B_16_gfni_avx512(ZucState16_t *pState,
  * @param[in,out] pKeyStr           Pointer to buffer to write consecutively 4
  *                                  bytes of keystream for the 16 input buffers
  *
+ * @param[in] lane_mask             Mask containing lanes which will have 4
+ *                                  bytes of KS generated (no bytes generated
+ *                                  for the rest)
  * @pre
  *      A successful call to @ref asm_ZucInitialization_16 to initialize the ZUC
  *      state.
@@ -859,6 +905,7 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream4B_16_gfni_avx512(ZucState16_t *pState,
  *                                  that will contain the generated keystream
  *                                  for these 16 packets.
  *
+ * @param[in] key_off               Starting offset for writing KS.
  *
  * @param[in] numRounds             Number of 4-byte rounds (1 to 16 rounds)
  *
@@ -867,13 +914,59 @@ IMB_DLL_LOCAL void asm_ZucGenKeystream4B_16_gfni_avx512(ZucState16_t *pState,
  *      state.
  *
  *****************************************************************************/
-IMB_DLL_LOCAL void asm_ZucGenKeystream_16_avx512(ZucState16_t *pState,
-                                                 uint32_t *pKstr[16],
-                                                 const uint64_t numRounds);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_16_avx512(ZucState16_t *pState,
+                              uint32_t *pKstr,
+                              const unsigned key_off,
+                              const uint64_t numRounds);
 
-IMB_DLL_LOCAL void asm_ZucGenKeystream_16_gfni_avx512(ZucState16_t *pState,
-                                                      uint32_t *pKstr[16],
-                                                      const uint64_t numRounds);
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_16_gfni_avx512(ZucState16_t *pState,
+                                   uint32_t *pKstr,
+                                   const unsigned key_off,
+                                   const uint64_t numRounds);
+
+/**
+ ******************************************************************************
+ *
+ * @description
+ *      Definition of the external function that implements the working
+ *      stage of the ZUC algorithm. The function will generate N*4 bytes of
+ *      keystream for sixteen packets in parallel.
+ *
+ * @param[in] pState                Pointer to a ZUC state structure of type
+ *                                  @ref ZucState16_t
+ *
+ * @param[in,out] pKeyStr           Array of pointers to 16 input buffers
+ *                                  that will contain the generated keystream
+ *                                  for these 16 packets.
+ *
+ * @param[in] key_off               Starting offset for writing KS.
+ *
+ * @param[in] lane_mask             Mask containing lanes which will have N*4
+ *                                  bytes of KS generated (8 bytes less for
+ *                                  the rest)
+ *
+ * @param[in] numRounds             Number of 4-byte rounds (1 to 16 rounds)
+ *
+ * @pre
+ *      A successful call to @ref asm_ZucInitialization to initialize the ZUC
+ *      state.
+ *
+ *****************************************************************************/
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_16_skip8_avx512(ZucState16_t *pState,
+                                    uint32_t *pKstr,
+                                    const unsigned key_off,
+                                    const uint16_t lane_mask,
+                                    const uint64_t numRounds);
+
+IMB_DLL_LOCAL void
+asm_ZucGenKeystream_16_skip8_gfni_avx512(ZucState16_t *pState,
+                                         uint32_t *pKstr,
+                                         const unsigned key_off,
+                                         const uint16_t lane_mask,
+                                         const uint64_t numRounds);
 /**
  ******************************************************************************
  *
@@ -1055,12 +1148,12 @@ IMB_DLL_LOCAL uint32_t asm_Eia3Round64BAVX(uint32_t T, const void *ks,
                                            const void *data);
 
 IMB_DLL_LOCAL void asm_Eia3Round64BAVX512_16(uint32_t *T,
-                                             const void * const *ks,
+                                             const uint32_t *ks,
                                              const void **data,
                                              uint16_t *len);
 
 IMB_DLL_LOCAL void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T,
-                                               const void * const *ks,
+                                               const uint32_t *ks,
                                                const void **data,
                                                uint16_t *len);
 
@@ -1115,13 +1208,13 @@ IMB_DLL_LOCAL void asm_Eia3RemainderAVX512(uint32_t *T, const void *ks,
                                            const uint64_t n_bits);
 
 IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX512_16(uint32_t *T,
-                                                  const void * const ks,
+                                                  const uint32_t *ks,
                                                   const void **data,
                                                   uint16_t *lens,
                                                   const uint64_t commonBits);
 
 IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16(uint32_t *T,
-                                                  const void * const ks,
+                                                  const uint32_t *ks,
                                                   const void **data,
                                                   uint16_t *lens,
                                                   const uint64_t commonBits);

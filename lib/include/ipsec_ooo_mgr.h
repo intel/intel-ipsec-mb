@@ -156,7 +156,8 @@ typedef struct {
         const uint8_t *keys[16];
         const uint8_t *iv[16];
         DECLARE_ALIGNED(uint32_t digest[16], 64);
-        DECLARE_ALIGNED(uint64_t prev_ks[16], 64);
+        /* Memory for 128 bytes of KS for 16 buffers */
+        DECLARE_ALIGNED(uint32_t ks[16 * 2 * 16], 64);
 } ZUC_ARGS_x16;
 
 /* AES out-of-order scheduler fields */
