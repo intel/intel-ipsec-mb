@@ -1414,6 +1414,7 @@ pclmulqdq_wrap(const __m128i a, const __m128i b, const uint32_t imm8)
 #endif
 }
 
+#ifdef SSE
 /**
  * @brief GF2 modular reduction 128-bits to 64-bits
  *
@@ -1464,6 +1465,7 @@ static inline uint64_t multiply_and_reduce64(uint64_t a, uint64_t b)
 
         return _mm_cvtsi128_si64(m);
 }
+#endif
 
 #ifdef AVX2
 /**
@@ -3711,8 +3713,6 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 
         snow3gKeyState1_t ctx;
         uint32_t z[5];
-        uint64_t lengthInQwords, E, V, P;
-        uint64_t i, rem_bits;
         const uint64_t *inputBuffer;
 
         inputBuffer = (const uint64_t *)pBufferIn;
@@ -3722,6 +3722,15 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 
         /*Generate 5 key stream words*/
         snow3g_f9_keystream_words(&ctx, &z[0]);
+
+#ifndef SSE
+        /* Final MAC */
+        *(uint32_t *)pDigest =
+                snow3g_f9_1_buffer_internal_avx(&inputBuffer[0],
+                                                z, lengthInBits);
+#else
+        uint64_t lengthInQwords, E, V, P;
+        uint64_t i, rem_bits;
 
         P = ((uint64_t)z[0] << 32) | ((uint64_t)z[1]);
 
@@ -3820,10 +3829,14 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         /* Final MAC */
         *(uint32_t *)pDigest =
                 (uint32_t)BSWAP64(E ^ ((uint64_t)z[4] << 32));
+
 #ifdef SAFE_DATA
         CLEAR_VAR(&E, sizeof(E));
         CLEAR_VAR(&V, sizeof(V));
         CLEAR_VAR(&P, sizeof(P));
+#endif /* SAFE_DATA */
+#endif /* !SSE */
+#ifdef SAFE_DATA
         CLEAR_MEM(&z, sizeof(z));
         CLEAR_MEM(&ctx, sizeof(ctx));
         CLEAR_SCRATCH_GPS();

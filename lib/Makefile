@@ -503,7 +503,8 @@ asm_avx_lib_objs := \
 	crc32_iuup_avx.o \
 	crc32_wimax_avx.o \
 	chacha20_avx.o \
-        memcpy_avx.o
+        memcpy_avx.o \
+	snow3g_uia2_avx.o
 
 #
 # List of ASM modules (avx2 directory)

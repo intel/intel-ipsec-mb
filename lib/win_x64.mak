@@ -251,6 +251,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\snow3g_sse_no_aesni.obj \
 	$(OBJ_DIR)\snow3g_avx.obj \
 	$(OBJ_DIR)\snow3g_avx2.obj \
+	$(OBJ_DIR)\snow3g_uia2_avx.obj \
 	$(OBJ_DIR)\snow3g_tables.obj \
 	$(OBJ_DIR)\snow3g_iv.obj \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
