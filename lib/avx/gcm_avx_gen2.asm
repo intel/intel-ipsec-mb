@@ -2288,7 +2288,7 @@ FN_NAME(enc,_update_):
 
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
-        jz      skip_in_out_check_update_enc
+        jz      exit_update_enc
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
@@ -2297,8 +2297,6 @@ FN_NAME(enc,_update_):
         ;; Check in != NULL (plaintext_len != 0)
         cmp     arg4, 0
         jz      exit_update_enc
-
-skip_in_out_check_update_enc:
 %endif
 	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC
 
@@ -2332,7 +2330,7 @@ FN_NAME(dec,_update_):
 
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
-        jz      skip_in_out_check_update_dec
+        jz      exit_update_dec
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
@@ -2341,8 +2339,6 @@ FN_NAME(dec,_update_):
         ;; Check in != NULL (plaintext_len != 0)
         cmp     arg4, 0
         jz      exit_update_dec
-
-skip_in_out_check_update_dec:
 %endif
 
 	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC
