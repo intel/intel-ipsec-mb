@@ -2338,11 +2338,18 @@ test_sgl(struct IMB_MGR *mb_mgr,
                 test_suite_update(ctx, 1, 0);
         }
 
-        for (i = 0; i < num_segments; i++) {
+        for (i = 0; i < (num_segments + 1); i++) {
+                uint64_t seg_size = 0;
+                uint8_t *seg_ptr = NULL;
+
+                if (i < num_segments) {
+                        seg_size = segment_sizes[i];
+                        seg_ptr = segments[i];
+                }
+
                 if (job_api) {
                         if (aes_gcm_job(mb_mgr, cipher_dir, &key, key_sz,
-                                        segments[i], segments[i],
-                                        segment_sizes[i],
+                                        seg_ptr, seg_ptr, seg_size,
                                         iv, IV_SZ, NULL, 0, NULL, 0,
                                         &gcm_ctx, IMB_CIPHER_GCM_SGL,
                                         IMB_SGL_UPDATE) < 0) {
@@ -2351,19 +2358,13 @@ test_sgl(struct IMB_MGR *mb_mgr,
                         }
                 } else {
                         if (cipher_dir == IMB_DIR_ENCRYPT) {
-                                imb_aes_gcm_enc_update(mb_mgr, &key,
-                                                       &gcm_ctx,
-                                                       segments[i],
-                                                       segments[i],
-                                                       segment_sizes[i],
-                                                       key_sz);
+                                imb_aes_gcm_enc_update(mb_mgr, &key, &gcm_ctx,
+                                                       seg_ptr, seg_ptr,
+                                                       seg_size, key_sz);
                         } else {
-                                imb_aes_gcm_dec_update(mb_mgr, &key,
-                                                       &gcm_ctx,
-                                                       segments[i],
-                                                       segments[i],
-                                                       segment_sizes[i],
-                                                       key_sz);
+                                imb_aes_gcm_dec_update(mb_mgr, &key, &gcm_ctx,
+                                                       seg_ptr, seg_ptr,
+                                                       seg_size, key_sz);
                         }
                 }
         }
