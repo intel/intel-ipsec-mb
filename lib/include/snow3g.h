@@ -147,6 +147,11 @@ snow3g_key_sched_size_sse(void);
 int
 snow3g_init_key_sched_sse(const void *pKey, snow3g_key_schedule_t *pCtx);
 
+uint32_t
+snow3g_f9_1_buffer_internal_sse(const uint64_t *pBufferIn,
+                                const uint32_t KS[5],
+                                const uint64_t lengthInBits);
+
 /*******************************************************************************
  * SSE NO-AESNI
  ******************************************************************************/

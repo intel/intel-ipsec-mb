@@ -1380,93 +1380,6 @@ static inline void ShiftLFSR_4(snow3gKeyState4_t *pCtx)
         pCtx->iLFSR_X = (pCtx->iLFSR_X + 1) & 15;
 }
 
-/**
- * @brief Wrapper around PCLMULQDQ operation for emulation purpose
- *
- * The operation carries modular multiply 64-bits x 64-bits and
- * produces 128-bit output. 'imm8' selects multiply inputs.
- *
- * @param[in] a    128-bit input
- * @param[in] b    128-bit input
- * @param[in] imm8 multiply variant selector
- * @return 128-bit output
- */
-static inline __m128i
-pclmulqdq_wrap(const __m128i a, const __m128i b, const uint32_t imm8)
-{
-#ifdef NO_AESNI
-        union xmm_reg av, bv;
-
-        _mm_storeu_si128((__m128i *) &av.qword[0], a);
-        _mm_storeu_si128((__m128i *) &bv.qword[0], b);
-        emulate_PCLMULQDQ(&av, &bv, imm8);
-
-        return _mm_loadu_si128((const __m128i *) &av.qword[0]);
-#else
-        if (imm8 == 0x00)
-                return _mm_clmulepi64_si128(a, b, 0x00);
-        else if (imm8 == 0x01)
-                return _mm_clmulepi64_si128(a, b, 0x01);
-        else if (imm8 == 0x10)
-                return _mm_clmulepi64_si128(a, b, 0x10);
-        else
-                return _mm_clmulepi64_si128(a, b, 0x11);
-#endif
-}
-
-#ifdef SSE
-/**
- * @brief GF2 modular reduction 128-bits to 64-bits
- *
- * SNOW3GCONSTANT/0x1b reduction polynomial applied.
- *
- * @param[in] m   128-bit input
- * @return 128-bit output (only least significant 64-bits are valid)
- */
-static inline __m128i reduce128_to_64(const __m128i m)
-{
-        static const uint64_t red_poly[2] = { SNOW3GCONSTANT, 0 };
-        const __m128i p = _mm_loadu_si128((const __m128i *)&red_poly[0]);
-        __m128i x, t;
-
-        /* start reduction */
-        x = pclmulqdq_wrap(m, p, 0x01); /* top 64-bits of m x p */
-        t = _mm_xor_si128(m, x);
-
-        /*
-         * repeat multiply and xor in case
-         * 'x' product was bigger than 64 bits
-         */
-        x = pclmulqdq_wrap(x, p, 0x01);
-        t = _mm_xor_si128(t, x);
-
-        return t;
-}
-
-/**
- * @brief GF2 modular multiplication 64-bits x 64-bits with reduction
- *
- * Implements MUL64 function from the standard.
- * SNOW3GCONSTANT/0x1b reduction polynomial applied.
- *
- * @param[in] a   64-bit input
- * @param[in] b   64-bit input
- * @return 64-bit output
- */
-static inline uint64_t multiply_and_reduce64(uint64_t a, uint64_t b)
-{
-        const __m128i av = _mm_cvtsi64_si128(a);
-        const __m128i bv = _mm_cvtsi64_si128(b);
-        __m128i m;
-
-        m = pclmulqdq_wrap(av, bv, 0x00);  /*  m = a x b */
-
-        m = reduce128_to_64(m); /* reduction */
-
-        return _mm_cvtsi128_si64(m);
-}
-#endif
-
 #ifdef AVX2
 /**
  * @brief ClockLFSR sub-function as defined in SNOW3G standard (8 lanes)
@@ -3723,119 +3636,17 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         /*Generate 5 key stream words*/
         snow3g_f9_keystream_words(&ctx, &z[0]);
 
-#ifndef SSE
+#ifdef SSE
+        /* Final MAC */
+        *(uint32_t *)pDigest =
+                snow3g_f9_1_buffer_internal_sse(&inputBuffer[0],
+                                                z, lengthInBits);
+#else
         /* Final MAC */
         *(uint32_t *)pDigest =
                 snow3g_f9_1_buffer_internal_avx(&inputBuffer[0],
                                                 z, lengthInBits);
-#else
-        uint64_t lengthInQwords, E, V, P;
-        uint64_t i, rem_bits;
-
-        P = ((uint64_t)z[0] << 32) | ((uint64_t)z[1]);
-
-        lengthInQwords = lengthInBits / 64;
-
-        E = 0;
-        i = 0;
-
-        if (lengthInQwords > 8) {
-                /* compute P^2, P^3 and P^4 and put into p1p2 & p3p4 */
-                const uint64_t P2 = multiply_and_reduce64(P, P);
-                const uint64_t P3 = multiply_and_reduce64(P2, P);
-                const uint64_t P4 = multiply_and_reduce64(P3, P);
-                const __m128i p1p2 = _mm_set_epi64x(P2, P);
-                const __m128i p3p4 = _mm_set_epi64x(P4, P3);
-                const __m128i bswap2x64 =
-                        _mm_set_epi64x(0x08090a0b0c0d0e0fULL,
-                                       0x0001020304050607ULL);
-                const __m128i clear_hi64 =
-                        _mm_cvtsi64_si128(0xffffffffffffffffULL);
-                const __m128i *m_ptr = (const __m128i *) &inputBuffer[i];
-                __m128i EV = _mm_setzero_si128();
-
-                for (; (i + 3) < lengthInQwords; i+= 4) {
-                        __m128i t1, t2, t3, m1, m2;
-
-                        /* load 2 x 128-bits and byte swap 64-bit words */
-                        m1 = _mm_loadu_si128(m_ptr++);
-                        m2 = _mm_loadu_si128(m_ptr++);
-                        m1 = _mm_shuffle_epi8(m1, bswap2x64);
-                        m2 = _mm_shuffle_epi8(m2, bswap2x64);
-
-                        /* add current EV to the first word of the message */
-                        m1 = _mm_xor_si128(m1, EV);
-
-                        /* t1 = (M0 x P4) + (M1 x P3) + (M2 x P2) + (M3 x P1) */
-                        t1 = pclmulqdq_wrap(m2, p1p2, 0x10);
-                        t2 = pclmulqdq_wrap(m2, p1p2, 0x01);
-                        t1 = _mm_xor_si128(t1, t2);
-                        t2 = pclmulqdq_wrap(m1, p3p4, 0x10);
-                        t3 = pclmulqdq_wrap(m1, p3p4, 0x01);
-                        t2 = _mm_xor_si128(t2, t3);
-                        t1 = _mm_xor_si128(t2, t1);
-
-                        /* reduce 128-bit product */
-                        EV = reduce128_to_64(t1);
-
-                        /* clear top 64-bits for the subsequent add/xor */
-                        EV = _mm_and_si128(EV, clear_hi64);
-                }
-
-                for (; (i + 1) < lengthInQwords; i+= 2) {
-                        __m128i t1, t2, m;
-
-                        /* load 128-bits and byte swap 64-bit words */
-                        m = _mm_loadu_si128(m_ptr++);
-                        m = _mm_shuffle_epi8(m, bswap2x64);
-
-                        /* add current EV to the first word of the message */
-                        m = _mm_xor_si128(m, EV);
-
-                        /* t1 = (M0 x P2) + (M1 x P1) */
-                        t1 = pclmulqdq_wrap(m, p1p2, 0x10);
-                        t2 = pclmulqdq_wrap(m, p1p2, 0x01);
-                        t1 = _mm_xor_si128(t1, t2);
-
-                        /* reduce 128-bit product */
-                        EV = reduce128_to_64(t1);
-
-                        /* clear top 64-bits for the subsequent add/xor */
-                        EV = _mm_and_si128(EV, clear_hi64);
-                }
-                E = _mm_cvtsi128_si64(EV);
-        }
-
-        /* all blocks except the last one */
-        for (; i < lengthInQwords; i++) {
-                V = BSWAP64(inputBuffer[i]);
-                E = multiply_and_reduce64(E ^ V, P);
-        }
-
-        /* last bits of last block if any left */
-        rem_bits = lengthInBits % 64;
-        if (rem_bits) {
-                /* last bytes, do not go past end of buffer */
-                memcpy(&V, &inputBuffer[i], (rem_bits + 7) / 8);
-                V = BSWAP64(V);
-                V &= (((uint64_t)-1) << (64 - rem_bits)); /* mask extra bits */
-                E = multiply_and_reduce64(E ^ V, P);
-        }
-
-        /* Multiply by Q */
-        E = multiply_and_reduce64(E ^ lengthInBits,
-                                  (((uint64_t)z[2] << 32) | ((uint64_t)z[3])));
-
-        /* Final MAC */
-        *(uint32_t *)pDigest =
-                (uint32_t)BSWAP64(E ^ ((uint64_t)z[4] << 32));
-
-#ifdef SAFE_DATA
-        CLEAR_VAR(&E, sizeof(E));
-        CLEAR_VAR(&V, sizeof(V));
-        CLEAR_VAR(&P, sizeof(P));
-#endif /* SAFE_DATA */
-#endif /* !SSE */
+#endif /* SSE */
 #ifdef SAFE_DATA
         CLEAR_MEM(&z, sizeof(z));
         CLEAR_MEM(&ctx, sizeof(ctx));

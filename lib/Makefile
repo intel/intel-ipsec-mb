@@ -431,7 +431,8 @@ asm_sse_lib_objs := \
 	crc32_iuup_sse.o \
 	crc32_wimax_sse.o \
 	chacha20_sse.o \
-        memcpy_sse.o
+        memcpy_sse.o \
+	snow3g_uia2_sse.o
 
 #
 # List of ASM modules (avx directory)
