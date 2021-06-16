@@ -333,7 +333,8 @@ asm_noaesni_lib_objs := \
 	crc32_lte_sse_no_aesni.o \
 	crc32_fp_sse_no_aesni.o \
 	crc32_iuup_sse_no_aesni.o \
-	crc32_wimax_sse_no_aesni.o
+	crc32_wimax_sse_no_aesni.o \
+	snow3g_uia2_sse_no_aesni.o
 
 #
 # List of ASM modules (sse directory)

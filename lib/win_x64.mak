@@ -250,6 +250,7 @@ lib_objs1 = \
 	$(OBJ_DIR)\snow3g_sse.obj \
 	$(OBJ_DIR)\snow3g_sse_no_aesni.obj \
 	$(OBJ_DIR)\snow3g_uia2_sse.obj \
+	$(OBJ_DIR)\snow3g_uia2_sse_no_aesni.obj \
 	$(OBJ_DIR)\snow3g_avx.obj \
 	$(OBJ_DIR)\snow3g_avx2.obj \
 	$(OBJ_DIR)\snow3g_uia2_avx.obj \

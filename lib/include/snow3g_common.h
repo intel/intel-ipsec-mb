@@ -3636,17 +3636,19 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
         /*Generate 5 key stream words*/
         snow3g_f9_keystream_words(&ctx, &z[0]);
 
-#ifdef SSE
         /* Final MAC */
         *(uint32_t *)pDigest =
+
+#ifdef NO_AESNI
+                snow3g_f9_1_buffer_internal_sse_no_aesni(&inputBuffer[0],
+                                                         z, lengthInBits);
+#elif defined(SSE)
                 snow3g_f9_1_buffer_internal_sse(&inputBuffer[0],
                                                 z, lengthInBits);
-#else
-        /* Final MAC */
-        *(uint32_t *)pDigest =
+#else /* AVX / AVX2 / AVX512 */
                 snow3g_f9_1_buffer_internal_avx(&inputBuffer[0],
                                                 z, lengthInBits);
-#endif /* SSE */
+#endif /* NO_AESNI */
 #ifdef SAFE_DATA
         CLEAR_MEM(&z, sizeof(z));
         CLEAR_MEM(&ctx, sizeof(ctx));

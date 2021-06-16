@@ -63,6 +63,10 @@
 %define SNOW3G_CONST    xmm7
 %define P1              xmm8
 
+%ifndef SNOW3G_F9_1_BUFFER_INTERNAL
+%define SNOW3G_F9_1_BUFFER_INTERNAL snow3g_f9_1_buffer_internal_sse
+%endif
+
 section .data
 default rel
 
@@ -173,8 +177,8 @@ section .text
 ;;                                 const uint32_t KS[5],
 ;;                                 const uint64_t lengthInBits);
 align 16
-MKGLOBAL(snow3g_f9_1_buffer_internal_sse,function,internal)
-snow3g_f9_1_buffer_internal_sse:
+MKGLOBAL(SNOW3G_F9_1_BUFFER_INTERNAL,function,internal)
+SNOW3G_F9_1_BUFFER_INTERNAL:
         endbranch64
 
         FUNC_SAVE
