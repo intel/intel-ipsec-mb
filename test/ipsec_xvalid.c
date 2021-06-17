@@ -2212,7 +2212,7 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
         if (imix_enabled) {
                 params->aad_size = min_aad_sz;
 
-                for (i = 1; i < max_num_jobs; i++) {
+                for (i = 2; i <= max_num_jobs; i++) {
                         for (j = 0; j < IMIX_ITER; j++) {
                                 if (do_test(enc_mgr, enc_arch, dec_mgr,
                                             dec_arch, params, variant_data,
