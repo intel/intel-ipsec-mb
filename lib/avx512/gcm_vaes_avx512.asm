@@ -4041,95 +4041,86 @@ default rel
 ; GCM_COMPLETE Finishes Encryption/Decryption of last partial block after GCM_UPDATE finishes.
 ; Input: A gcm_key_data * (GDATA_KEY), gcm_context_data (GDATA_CTX).
 ; Output: Authorization Tag (AUTH_TAG) and Authorization Tag length (AUTH_TAG_LEN)
-; Clobbers rax, r10-r12, and xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
+; Clobbers xmm0-xmm2, xmm5-xmm6, xmm9-xmm11, xmm13-xmm15
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro  GCM_COMPLETE            5
-%define %%GDATA_KEY             %1
-%define %%GDATA_CTX             %2
-%define %%AUTH_TAG              %3
-%define %%AUTH_TAG_LEN          %4
-%define %%INSTANCE_TYPE         %5
-%define %%PLAIN_CYPH_LEN        rax
+%macro  GCM_COMPLETE            9
+%define %%GDATA_KEY             %1      ; [in] GP with pointer to key structure
+%define %%GDATA_CTX             %2      ; [in] GP with pointer to context structure
+%define %%AUTH_TAG              %3      ; [in] pointer to store auth tag into (GP or mem)
+%define %%AUTH_TAG_LEN          %4      ; [in] length in bytes of auth tag (GP or mem)
+%define %%INSTANCE_TYPE         %5      ; [in] instance type "single_call" vs "multi_call"
+%define %%MASKREG               %6      ; [clobbered] temporary K register
+%define %%IA0                   %7      ; [clobbered] temporary GP
+%define %%IA1                   %8      ; [clobbered] temporary GP
+%define %%IA2                   %9      ; [clobbered] temporary GP
 
-        vmovdqu xmm13, [%%GDATA_KEY + HashKey]
+        ;; @note: xmm14 is hardcoded for hash input in singe_call case
+
+        vmovdqu         xmm13, [%%GDATA_KEY + HashKey]
         ;; Start AES as early as possible
-        vmovdqu xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
+        vmovdqu         xmm9, [%%GDATA_CTX + OrigIV]    ; xmm9 = Y0
         ENCRYPT_SINGLE_BLOCK %%GDATA_KEY, xmm9  ; E(K, Y0)
 
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; If the GCM function is called as a single function call rather
         ;; than invoking the individual parts (init, update, finalize) we
         ;; can remove a write to read dependency on AadHash.
-        vmovdqu xmm14, [%%GDATA_CTX + AadHash]
+        vmovdqu         xmm14, [%%GDATA_CTX + AadHash]
 
-        ;; Encrypt the final partial block. If we did this as a single call then
-        ;; the partial block was handled in the main GCM_ENC_DEC macro.
-        mov     r12, [%%GDATA_CTX + PBlockLen]
-        cmp     r12, 0
+        ;; Encrypt of the final partial block was already done in the main GCM_ENC_DEC macro.
+        ;; It may be required to GHASH it now
+        cmp             qword [%%GDATA_CTX + PBlockLen], 0
+        je              %%_partial_done
 
-        je %%_partial_done
-
-        GHASH_MUL xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6 ;GHASH computation for the last <16 Byte block
-        vmovdqu [%%GDATA_CTX + AadHash], xmm14
+        ;; GHASH computation for the last <16 Byte block
+        GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
 
 %%_partial_done:
-
 %endif
+        vmovq           xmm15, [%%GDATA_CTX + InLen]
+        vpinsrq         xmm15, [%%GDATA_CTX + AadLen], 1        ; xmm15 = len(A)||len(C)
+        vpsllq          xmm15, xmm15, 3                         ; convert bytes into bits
 
-        mov     r12, [%%GDATA_CTX + AadLen]     ; r12 = aadLen (number of bytes)
-        mov     %%PLAIN_CYPH_LEN, [%%GDATA_CTX + InLen]
-
-        shl     r12, 3                      ; convert into number of bits
-        vmovq   xmm15, r12                 ; len(A) in xmm15
-
-        shl     %%PLAIN_CYPH_LEN, 3         ; len(C) in bits  (*128)
-        vmovq   xmm1, %%PLAIN_CYPH_LEN
-        vpslldq xmm15, xmm15, 8             ; xmm15 = len(A)|| 0x0000000000000000
-        vpxor   xmm15, xmm15, xmm1          ; xmm15 = len(A)||len(C)
-
-        vpxor   xmm14, xmm15
+        vpxor           xmm14, xmm15
         GHASH_MUL       xmm14, xmm13, xmm0, xmm10, xmm11, xmm5, xmm6
-        vpshufb  xmm14, [rel SHUF_MASK]         ; perform a 16Byte swap
+        vpshufb         xmm14, [rel SHUF_MASK]         ; perform a 16Byte swap
 
-        vpxor   xmm9, xmm9, xmm14
+        vpxor           xmm9, xmm9, xmm14
 
+        ;; xmm9 includes the final TAG
+        mov             %%IA0, %%AUTH_TAG             ; r10 = authTag
+        mov             %%IA1, %%AUTH_TAG_LEN         ; r11 = auth_tag_len
 
-%%_return_T:
-        mov     r10, %%AUTH_TAG             ; r10 = authTag
-        mov     r11, %%AUTH_TAG_LEN         ; r11 = auth_tag_len
+        cmp             %%IA1, 16
+        je              %%_T_16
 
-        cmp     r11, 16
-        je      %%_T_16
+        cmp             %%IA1, 12
+        je              %%_T_12
 
-        cmp     r11, 12
-        je      %%_T_12
+        cmp             %%IA1, 8
+        je              %%_T_8
 
-        cmp     r11, 8
-        je      %%_T_8
-
-        simd_store_avx_15 r10, xmm9, r11, r12, rax
-        jmp     %%_return_T_done
+        lea             %%IA2, [rel byte64_len_to_mask_table]
+        kmovq           %%MASKREG, [%%IA2 + %%IA1*8]
+        vmovdqu8        [%%IA0]{%%MASKREG}, xmm9
+        jmp             %%_return_T_done
 %%_T_8:
-        vmovq    rax, xmm9
-        mov     [r10], rax
-        jmp     %%_return_T_done
+        vmovq           [%%IA0], xmm9
+        jmp             %%_return_T_done
 %%_T_12:
-        vmovq    rax, xmm9
-        mov     [r10], rax
-        vpsrldq xmm9, xmm9, 8
-        vmovd    eax, xmm9
-        mov     [r10 + 8], eax
-        jmp     %%_return_T_done
+        vmovq           [%%IA0], xmm9
+        vpextrd         [%%IA0 + 8], xmm9, 2
+        jmp             %%_return_T_done
 %%_T_16:
-        vmovdqu  [r10], xmm9
+        vmovdqu         [%%IA0], xmm9
 
 %%_return_T_done:
 
 %ifdef SAFE_DATA
         ;; Clear sensitive data from context structure
-        vpxor   xmm0, xmm0
-        vmovdqu [%%GDATA_CTX + AadHash], xmm0
-        vmovdqu [%%GDATA_CTX + PBlockEncKey], xmm0
+        vpxor           xmm0, xmm0
+        vmovdqu         [%%GDATA_CTX + AadHash], xmm0
+        vmovdqu         [%%GDATA_CTX + PBlockEncKey], xmm0
 %endif
 %endmacro ; GCM_COMPLETE
 
@@ -4409,7 +4400,7 @@ FN_NAME(enc,_finalize_):
 %endif
 
         FUNC_SAVE
-        GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call
+        GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r10, r11, r12
 
         FUNC_RESTORE
 
@@ -4450,7 +4441,7 @@ FN_NAME(dec,_finalize_):
 %endif
 
         FUNC_SAVE
-        GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call
+        GCM_COMPLETE    arg1, arg2, arg3, arg4, multi_call, k1, r10, r11, r12
 
         FUNC_RESTORE
 
@@ -4526,7 +4517,7 @@ skip_aad_check_enc:
                 zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
-        GCM_COMPLETE arg1, arg2, arg9, arg10, single_call
+        GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
 
 exit_enc:
         FUNC_RESTORE
@@ -4601,7 +4592,7 @@ skip_aad_check_dec:
                 zmm1, zmm3, zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11, \
                 zmm12, zmm13, zmm15, zmm16, zmm17, zmm18, zmm19, zmm20
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
-        GCM_COMPLETE arg1, arg2, arg9, arg10, single_call
+        GCM_COMPLETE arg1, arg2, arg9, arg10, single_call, k1, r10, r11, r12
 
 exit_dec:
         FUNC_RESTORE
@@ -4693,7 +4684,7 @@ iv_len_12_enc_IV:
 
 skip_iv_len_12_enc_IV:
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, ENC, single_call
-        GCM_COMPLETE arg1, arg2, arg10, arg11, single_call
+        GCM_COMPLETE arg1, arg2, arg10, arg11, single_call, k1, r10, r11, r12
 
 exit_enc_IV:
         FUNC_RESTORE
@@ -4785,7 +4776,7 @@ iv_len_12_dec_IV:
 
 skip_iv_len_12_dec_IV:
         GCM_ENC_DEC  arg1, arg2, arg3, arg4, arg5, DEC, single_call
-        GCM_COMPLETE arg1, arg2, arg10, arg11, single_call
+        GCM_COMPLETE arg1, arg2, arg10, arg11, single_call, k1, r10, r11, r12
 
 exit_dec_IV:
         FUNC_RESTORE
