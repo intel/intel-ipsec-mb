@@ -897,6 +897,7 @@ static uint32_t pb_idx = PB_INIT_IDX;
 static uint32_t pb_mod = 0;
 
 static int silent_progress_bar = 0;
+static int plot_output_option = 0;
 
 /* Return rdtsc to core cycle scale factor */
 static double get_tsc_to_core_scale(const int turbo)
@@ -2207,70 +2208,71 @@ print_times(struct variant_s *variant_list, struct params_s *params,
             const uint32_t total_variants, uint8_t *p_buffer,
             imb_uint128_t *p_keys)
 {
-        uint32_t sizes = params->num_sizes;
+        /* If IMIX is used, only show the average size */
+        const uint32_t sizes = (imix_list_count != 0) ? 1 : params->num_sizes;
         uint32_t col;
         uint32_t sz;
 
-        /* Temporary variables */
-        struct params_s par;
-        uint8_t	c_mode;
-        uint8_t c_dir;
-        uint8_t h_alg;
-        const char *func_names[4] = {
-                "SSE", "AVX", "AVX2", "AVX512"
-        };
-        const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = {
-                "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4", "ECB",
-                "CBCS_1_9", "NULL_CIPHER", "DOCAES", "DOCAES+8", "DOCDES",
-                "DOCDES+4", "GCM", "CCM", "DES", "3DES", "PON", "PON_NO_CTR",
-                "ZUC_EEA3", "SNOW3G_UEA2_BITLEN", "KASUMI_UEA1_BITLEN",
-                "CHACHA20", "CHACHA20_AEAD", "SNOW_V", "SNOW_V_AEAD"
-        };
-        const char *c_dir_names[2] = {
-                "ENCRYPT", "DECRYPT"
-        };
-        const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
-                "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512", "XCBC",
-                "MD5", "CMAC", "CMAC_BITLEN", "CMAC_256", "NULL_HASH",
-                "CRC32", "GCM", "CUSTOM", "CCM", "BIP-CRC32", "ZUC_EIA3_BITLEN",
-                "SNOW3G_UIA2_BITLEN", "KASUMI_UIA1", "GMAC-128",
-                "GMAC-192", "GMAC-256", "POLY1305", "POLY1305_AEAD",
-                "ZUC256_EIA3", "SNOW_V_AEAD"
-        };
-        printf("ARCH");
-        for (col = 0; col < total_variants; col++)
-                printf("\t%s", func_names[variant_list[col].arch]);
-        printf("\n");
-        printf("CIPHER");
-        for (col = 0; col < total_variants; col++) {
-                par = variant_list[col].params;
-                c_mode = par.cipher_mode - TEST_CBC;
-                printf("\t%s", c_mode_names[c_mode]);
+        if (plot_output_option == 0) {
+                const char *func_names[4] = {
+                        "SSE", "AVX", "AVX2", "AVX512"
+                };
+                const char *c_mode_names[TEST_NUM_CIPHER_TESTS - 1] = {
+                        "CBC", "CNTR", "CNTR+8", "CNTR_BITLEN", "CNTR_BITLEN4",
+                        "ECB", "CBCS_1_9", "NULL_CIPHER", "DOCAES", "DOCAES+8",
+                        "DOCDES", "DOCDES+4", "GCM", "CCM", "DES", "3DES",
+                        "PON", "PON_NO_CTR", "ZUC_EEA3", "SNOW3G_UEA2_BITLEN",
+                        "KASUMI_UEA1_BITLEN", "CHACHA20", "CHACHA20_AEAD",
+                        "SNOW_V", "SNOW_V_AEAD"
+                };
+                const char *c_dir_names[2] = {
+                        "ENCRYPT", "DECRYPT"
+                };
+                const char *h_alg_names[TEST_NUM_HASH_TESTS - 1] = {
+                        "SHA1", "SHA_224", "SHA_256", "SHA_384", "SHA_512",
+                        "XCBC", "MD5", "CMAC", "CMAC_BITLEN", "CMAC_256",
+                        "NULL_HASH", "CRC32", "GCM", "CUSTOM", "CCM",
+                        "BIP-CRC32", "ZUC_EIA3_BITLEN", "SNOW3G_UIA2_BITLEN",
+                        "KASUMI_UIA1", "GMAC-128", "GMAC-192", "GMAC-256",
+                        "POLY1305", "POLY1305_AEAD", "ZUC256_EIA3",
+                        "SNOW_V_AEAD"
+                };
+                struct params_s par;
+                uint8_t	c_mode, c_dir, h_alg;
+
+                printf("ARCH");
+                for (col = 0; col < total_variants; col++)
+                        printf("\t%s", func_names[variant_list[col].arch]);
+                printf("\n");
+                printf("CIPHER");
+                for (col = 0; col < total_variants; col++) {
+                        par = variant_list[col].params;
+                        c_mode = par.cipher_mode - TEST_CBC;
+                        printf("\t%s", c_mode_names[c_mode]);
+                }
+                printf("\n");
+                printf("DIR");
+                for (col = 0; col < total_variants; col++) {
+                        par = variant_list[col].params;
+                        c_dir = par.cipher_dir - IMB_DIR_ENCRYPT;
+                        printf("\t%s", c_dir_names[c_dir]);
+                }
+                printf("\n");
+                printf("HASH_ALG");
+                for (col = 0; col < total_variants; col++) {
+                        par = variant_list[col].params;
+                        h_alg = par.hash_alg - TEST_SHA1;
+                        printf("\t%s", h_alg_names[h_alg]);
+                }
+                printf("\n");
+                printf("KEY_SIZE");
+                for (col = 0; col < total_variants; col++) {
+                        par = variant_list[col].params;
+                        printf("\tAES-%u", par.aes_key_size * 8);
+                }
+                printf("\n");
         }
-        printf("\n");
-        printf("DIR");
-        for (col = 0; col < total_variants; col++) {
-                par = variant_list[col].params;
-                c_dir = par.cipher_dir - IMB_DIR_ENCRYPT;
-                printf("\t%s", c_dir_names[c_dir]);
-        }
-        printf("\n");
-        printf("HASH_ALG");
-        for (col = 0; col < total_variants; col++) {
-                par = variant_list[col].params;
-                h_alg = par.hash_alg - TEST_SHA1;
-                printf("\t%s", h_alg_names[h_alg]);
-        }
-        printf("\n");
-        printf("KEY_SIZE");
-        for (col = 0; col < total_variants; col++) {
-                par = variant_list[col].params;
-                printf("\tAES-%u", par.aes_key_size * 8);
-        }
-        printf("\n");
-        /* If IMIX is used, only show the average size */
-        if (imix_list_count != 0)
-                sizes = 1;
+
         for (sz = 0; sz < sizes; sz++) {
                 if (imix_list_count != 0)
                         printf("%d", average_job_size);
@@ -2532,7 +2534,8 @@ static void usage(void)
                 "--no-progress-bar: Don't display progress bar\n"
                 "--print-info: Display system and algorithm information\n"
                 "--turbo: Run extended RDTSC to core scaling measurement\n"
-                "        (Use when turbo enabled)\n",
+                "        (Use when turbo enabled)\n"
+                "--plot: Adjust text output for direct use with plot output\n",
                 MAX_NUM_THREADS + 1);
 }
 
@@ -2965,6 +2968,8 @@ int main(int argc, char *argv[])
                         iter_scale = ITER_SCALE_SHORT;
                 } else if (strcmp(argv[i], "--smoke") == 0) {
                         iter_scale = ITER_SCALE_SMOKE;
+                } else if (strcmp(argv[i], "--plot") == 0) {
+                        plot_output_option = 1;
                 } else if (strcmp(argv[i], "--arch") == 0) {
                         values = check_string_arg(argv[i], argv[i+1],
                                                   arch_str_map,
