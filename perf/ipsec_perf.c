@@ -219,14 +219,14 @@ struct str_value_mapping {
         union params    values;
 };
 
-struct str_value_mapping arch_str_map[] = {
+const struct str_value_mapping arch_str_map[] = {
         {.name = "SSE",    .values.arch_type = ARCH_SSE },
         {.name = "AVX",    .values.arch_type = ARCH_AVX },
         {.name = "AVX2",   .values.arch_type = ARCH_AVX2 },
         {.name = "AVX512", .values.arch_type = ARCH_AVX512 }
 };
 
-struct str_value_mapping cipher_algo_str_map[] = {
+const struct str_value_mapping cipher_algo_str_map[] = {
         {
                 .name = "aes-cbc-128",
                 .values.job_params = {
@@ -467,7 +467,7 @@ struct str_value_mapping cipher_algo_str_map[] = {
         }
 };
 
-struct str_value_mapping hash_algo_str_map[] = {
+const struct str_value_mapping hash_algo_str_map[] = {
         {
                 .name = "sha1-hmac",
                 .values.job_params = {
@@ -656,7 +656,7 @@ struct str_value_mapping hash_algo_str_map[] = {
         },
 };
 
-struct str_value_mapping aead_algo_str_map[] = {
+const struct str_value_mapping aead_algo_str_map[] = {
         {
                 .name = "aes-gcm-128",
                 .values.job_params = {
@@ -763,7 +763,7 @@ struct str_value_mapping aead_algo_str_map[] = {
         },
 };
 
-struct str_value_mapping cipher_dir_str_map[] = {
+const struct str_value_mapping cipher_dir_str_map[] = {
         {.name = "encrypt", .values.job_params.cipher_dir = IMB_DIR_ENCRYPT},
         {.name = "decrypt", .values.job_params.cipher_dir = IMB_DIR_DECRYPT}
 };
