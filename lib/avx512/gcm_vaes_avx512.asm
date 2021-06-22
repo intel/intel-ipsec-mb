@@ -2990,22 +2990,7 @@ default rel
 %define %%INSTANCE_TYPE %30     ; [in] "single_call" or "multi_call"
 %define %%IV_LEN        %31     ; [in] IV length
 
-        vpxor           %%AAD_HASH, %%AAD_HASH
-        CALC_AAD_HASH   %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
-                        %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, \
-                        %%ZT10, %%ZT11, %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
-                        %%GPR1, %%GPR2, %%GPR3, %%MASKREG
-
-        mov             %%GPR1, %%A_LEN
-        vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASH   ; ctx.aad hash = aad_hash
-        mov             [%%GDATA_CTX + AadLen], %%GPR1        ; ctx.aad_length = aad_length
-
-        xor             %%GPR1, %%GPR1
-        mov             [%%GDATA_CTX + InLen], %%GPR1         ; ctx.in_length = 0
-%ifidn %%INSTANCE_TYPE, multi_call
-        mov             [%%GDATA_CTX + PBlockLen], %%GPR1     ; ctx.partial_block_length = 0
-%endif
-
+        ;; prepare IV
 %if %0 == 31 ;; IV is different than 12 bytes
         CALC_J0 %%GDATA_KEY, %%IV, %%IV_LEN, %%CUR_COUNT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, \
@@ -3015,16 +3000,53 @@ default rel
         ;; read 12 IV bytes and pad with 0x00000001
         vmovdqa64       %%CUR_COUNT, [rel ONEf]
         mov             %%GPR2, %%IV
-        mov             %%GPR1, 0x0000_0000_0000_0fff
-        kmovq           %%MASKREG, %%GPR1
+        mov             DWORD(%%GPR1), 0x0000_0fff
+        kmovd           %%MASKREG, DWORD(%%GPR1)
         vmovdqu8        %%CUR_COUNT{%%MASKREG}, [%%GPR2]      ; ctr = IV | 0x1
 %endif
 
-        vmovdqu64       [%%GDATA_CTX + OrigIV], %%CUR_COUNT   ; ctx.orig_IV = iv
+        ;; calculate AAD hash
+        cmp             %%A_LEN, 12
+        jne             %%_aad_is_not_12_bytes
 
-        ;; store IV as counter in LE format
+        ;; load 12 bytes of AAD
+%if %0 == 31 ;; IV is different than 12 bytes
+        mov             DWORD(%%GPR1), 0x0000_0fff
+        kmovd           %%MASKREG, DWORD(%%GPR1)
+%endif
+        mov             %%GPR1, %%A_IN
+        vmovdqu8        XWORD(%%AAD_HASH){%%MASKREG}{z}, [%%GPR1]
+        vmovdqu8        XWORD(%%ZT0), [%%GDATA_KEY + HashKey_1]
+        vpshufb         XWORD(%%AAD_HASH), [rel SHUF_MASK]
+
+        ;; GHASH 12 bytes of AAD
+        GHASH_MUL       XWORD(%%AAD_HASH), XWORD(%%ZT0), \
+                        XWORD(%%ZT1), XWORD(%%ZT2), XWORD(%%ZT3), XWORD(%%ZT4), XWORD(%%ZT5)
+
+        jmp             %%_aad_compute_done
+
+%%_aad_is_not_12_bytes:
+        vpxor           %%AAD_HASH, %%AAD_HASH
+        CALC_AAD_HASH   %%A_IN, %%A_LEN, %%AAD_HASH, %%GDATA_KEY, \
+                        %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%ZT5, %%ZT6, %%ZT7, %%ZT8, %%ZT9, \
+                        %%ZT10, %%ZT11, %%ZT12, %%ZT13,  %%ZT14, %%ZT15, %%ZT16, %%ZT17, \
+                        %%GPR1, %%GPR2, %%GPR3, %%MASKREG
+%%_aad_compute_done:
+
+        ;; set up context fields
+        mov             %%GPR1, %%A_LEN
+        mov             [%%GDATA_CTX + AadLen], %%GPR1        ; ctx.aad_length = aad_length
+        vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASH   ; ctx.aad hash = aad_hash
+
+        xor             %%GPR1, %%GPR1
+        mov             [%%GDATA_CTX + InLen], %%GPR1         ; ctx.in_length = 0
+%ifidn %%INSTANCE_TYPE, multi_call
+        mov             [%%GDATA_CTX + PBlockLen], %%GPR1     ; ctx.partial_block_length = 0
+%endif
+
+        vmovdqu64       [%%GDATA_CTX + OrigIV], %%CUR_COUNT    ; ctx.orig_IV = iv
         vpshufb         %%CUR_COUNT, [rel SHUF_MASK]
-        vmovdqu64       [%%GDATA_CTX + CurCount], %%CUR_COUNT ; ctx.current_counter = iv
+        vmovdqu64       [%%GDATA_CTX + CurCount], %%CUR_COUNT ; ctx.current_counter = iv (LE format)
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4172,7 +4194,9 @@ default rel
         ;; Clear sensitive data from context structure
         vpxor           xmm0, xmm0
         vmovdqu         [%%GDATA_CTX + AadHash], xmm0
+%ifidn %%INSTANCE_TYPE, multi_call
         vmovdqu         [%%GDATA_CTX + PBlockEncKey], xmm0
+%endif
 %endif
 %endmacro ; GCM_COMPLETE
 
