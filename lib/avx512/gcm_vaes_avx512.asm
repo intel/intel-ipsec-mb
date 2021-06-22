@@ -1745,6 +1745,7 @@ default rel
 %assign j (j + 1)
 %endrep
 
+%ifidn %%INSTANCE_TYPE, multi_call
         ;; retrieve the last cipher counter block (partially XOR'ed with text)
         ;; - this is needed for partial block cases
 %if %%NUM_BLOCKS <= 4
@@ -1756,7 +1757,7 @@ default rel
 %else
         vextracti32x4   %%LAST_CIPHER_BLK, %%CTR3, (%%NUM_BLOCKS - 13)
 %endif
-
+%endif
         ;; write cipher/plain text back to output and
         ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%CYPH_PLAIN_OUT, %%DATA_OFFSET, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%MASKREG
@@ -1790,6 +1791,7 @@ default rel
                         %%SHUFMASK, %%SHUFMASK, %%SHUFMASK, %%SHUFMASK
 %endif                          ; Encrypt
 
+%ifidn %%INSTANCE_TYPE, multi_call
         ;; Extract the last block for partials and multi_call cases
 %if %%NUM_BLOCKS <= 4
         vextracti32x4   %%LAST_GHASH_BLK, %%DAT0, %%NUM_BLOCKS - 1
@@ -1799,6 +1801,7 @@ default rel
         vextracti32x4   %%LAST_GHASH_BLK, %%DAT2, %%NUM_BLOCKS - 9
 %else
         vextracti32x4   %%LAST_GHASH_BLK, %%DAT3, %%NUM_BLOCKS - 13
+%endif
 %endif
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL_CIPHER
