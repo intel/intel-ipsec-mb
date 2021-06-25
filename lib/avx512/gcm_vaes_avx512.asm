@@ -853,244 +853,64 @@ default rel
         ;; - perform up multiplications with ghash keys
         ;; - jump to reduction code
 
-%%_AAD_blocks_16:
+%assign I 16
+        ;; generate all 16 cases using preprocessor
+%rep 16
+
+%%_AAD_blocks_ %+ I:
         ; Adjust address to range of byte64_len_to_mask_table
-        sub             %%T3, (64 * 3 * 8)
+%if I > 12
+        kmovq           %%MASKREG, [%%T3 - (64 * 3 * 8)]
+;        sub             %%T3, (64 * 3 * 8)
+%elif I > 8
+        kmovq           %%MASKREG, [%%T3 - (64 * 2 * 8)]
+;        sub             %%T3, (64 * 2 * 8)
+%elif I > 4
+        kmovq           %%MASKREG, [%%T3 - (64 * 1 * 8)]
+;        sub             %%T3, (64 * 1 * 8)
+%else
         kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-        vmovdqu8        %%ZT3, [%%T1 + 64*2]
-        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%T1 + 64*3]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        16, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_15:
-        sub             %%T3, (64 * 3 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-        vmovdqu8        %%ZT3, [%%T1 + 64*2]
-        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%T1 + 64*3]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        15, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_14:
-        sub             %%T3, (64 * 3 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-        vmovdqu8        %%ZT3, [%%T1 + 64*2]
-        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%T1 + 64*3]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        14, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_13:
-        sub             %%T3, (64 * 3 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-        vmovdqu8        %%ZT3, [%%T1 + 64*2]
-        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%T1 + 64*3]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        vpshufb         %%ZT4, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        13, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_12:
-        sub             %%T3, (64 * 2 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%T1 + 64*2]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, no_zmm, \
-                        12, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_11:
-        sub             %%T3, (64 * 2 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%T1 + 64*2]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, no_zmm, \
-                        11, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_10:
-        sub             %%T3, (64 * 2 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%T1 + 64*2]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, no_zmm, \
-                        10, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_9:
-        sub             %%T3, (64 * 2 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%T1 + 64*2]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        vpshufb         %%ZT3, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
-                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, no_zmm, \
-                        9, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_8:
-        sub             %%T3, (64 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2{%%MASKREG}{z}, [%%T1 + 64*1]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
-                        %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, no_zmm, no_zmm, \
-                        8, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_7:
-        sub             %%T3, (64 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        %%ZT2{%%MASKREG}{z}, [%%T1 + 64*1]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         %%ZT2, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
-                        %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, no_zmm, no_zmm, \
-                        7, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_6:
-        sub             %%T3, (64 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        YWORD(%%ZT2){%%MASKREG}{z}, [%%T1 + 64*1]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         YWORD(%%ZT2), YWORD(%%SHFMSK)
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
-                        %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, no_zmm, no_zmm, \
-                        6, single_call
-        jmp             %%_CALC_AAD_done
-
-%%_AAD_blocks_5:
-        sub             %%T3, (64 * 8)
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-        vmovdqu8        XWORD(%%ZT2){%%MASKREG}{z}, [%%T1 + 64*1]
-        vpshufb         %%ZT1, %%SHFMSK
-        vpshufb         XWORD(%%ZT2), XWORD(%%SHFMSK)
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
-                        %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, no_zmm, no_zmm, \
-                        5, single_call
-        jmp             %%_CALC_AAD_done
-
-
-%%_AAD_blocks_4:
-        kmovq           %%MASKREG, [%%T3]
+%endif
+%if I <= 4
         vmovdqu8        %%ZT1{%%MASKREG}{z}, [%%T1 + 64*0]
+%else
+        vmovdqu8        %%ZT1, [%%T1 + 64*0]
+%if I <= 8
+        vmovdqu8        %%ZT2{%%MASKREG}{z}, [%%T1 + 64*1]
+%else
+        vmovdqu8        %%ZT2, [%%T1 + 64*1]
+%if I <= 12
+        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%T1 + 64*2]
+%else
+        vmovdqu8        %%ZT3, [%%T1 + 64*2]
+        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%T1 + 64*3]
+%endif ;; I <= 12
+%endif ;; I <= 8
+%endif ;; I <= 4
+
         vpshufb         %%ZT1, %%SHFMSK
+%if I > 4
+        vpshufb         %%ZT2, %%SHFMSK
+%endif
+%if I > 8
+        vpshufb         %%ZT3, %%SHFMSK
+%endif
+%if I > 12
+        vpshufb         %%ZT4, %%SHFMSK
+%endif
         GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
-                        %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
-                        ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
-                        4, single_call
+                        %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
+                        %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
+                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        I, single_call
+%if I > 1
+        ;; fall through to CALC_AAD_done in 1 block case
         jmp             %%_CALC_AAD_done
+%endif
 
-%%_AAD_blocks_3:
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        %%ZT1{%%MASKREG}{z}, [%%T1 + 64*0]
-        vpshufb         %%ZT1, %%SHFMSK
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
-                        %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
-                        ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
-                        3, single_call
-        jmp             %%_CALC_AAD_done
+%assign I (I - 1)
+%endrep
 
-
-%%_AAD_blocks_2:
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        YWORD(%%ZT1){%%MASKREG}{z}, [%%T1 + 64*0]
-        vpshufb         YWORD(%%ZT1), YWORD(%%SHFMSK)
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
-                        %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
-                        ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
-                        2, single_call
-        jmp             %%_CALC_AAD_done
-
-
-%%_AAD_blocks_1:
-        kmovq           %%MASKREG, [%%T3]
-        vmovdqu8        XWORD(%%ZT1){%%MASKREG}{z}, [%%T1 + 64*0]
-        vpshufb         XWORD(%%ZT1), XWORD(%%SHFMSK)
-        GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
-                        %%ZT0, %%ZT3, %%ZT4, %%ZT5, %%ZT6, \
-                        %%ZT7, %%ZT8, %%ZT9, %%ZT10, \
-                        ZWORD(%%AAD_HASH), %%ZT1, no_zmm, no_zmm, no_zmm, \
-                        1, single_call
 %%_CALC_AAD_done:
         ;; result in AAD_HASH
 
