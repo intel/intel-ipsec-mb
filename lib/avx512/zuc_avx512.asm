@@ -187,6 +187,10 @@ db	0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f,
 db	0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f, 0x0f
 
 align 64
+bit_reverse_table:
+times 8 db      0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
+
+align 64
 data_mask_64bits:
 dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
 dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
@@ -1653,28 +1657,37 @@ asm_Eia3Round64B_16_VPCLMUL:
 %define         KS_ADDR2        r15
 %define         KS_ADDR3        rax
 
-%define         DATA_TRANS0     zmm16
-%define         DATA_TRANS1     zmm17
-%define         DATA_TRANS2     zmm18
-%define         DATA_TRANS3     zmm19
+%define         DATA_TRANS0     zmm19
+%define         DATA_TRANS1     zmm20
+%define         DATA_TRANS2     zmm21
+%define         DATA_TRANS3     zmm22
 
-%define         KS_TRANS0       zmm20
-%define         KS_TRANS1       zmm21
-%define         KS_TRANS2       zmm22
-%define         KS_TRANS3       zmm23
+%define         KS_TRANS0       zmm23
+%define         KS_TRANS1       zmm24
+%define         KS_TRANS2       zmm25
+%define         KS_TRANS3       zmm26
+%define         KS_TRANS4       zmm27
 
 %define         DIGEST_0        zmm28
 %define         DIGEST_1        zmm29
 %define         DIGEST_2        zmm30
 %define         DIGEST_3        zmm31
 
+%define         ZTMP1           zmm0
+%define         ZTMP2           zmm1
+%define         ZTMP3           zmm2
+%define         ZTMP4           zmm3
+%define         ZTMP5           zmm4
+%define         ZTMP6           zmm5
+%define         ZTMP7           zmm6
+%define         ZTMP8           zmm7
+
+%define         YTMP1           YWORD(ZTMP1)
+%define         MASK_64         zmm8
+
         FUNC_SAVE
 
-        vmovdqa64       zmm5,  [rel bit_reverse_table_l]
-        vmovdqa64       zmm6,  [rel bit_reverse_table_h]
-        vmovdqa64       zmm7,  [rel bit_reverse_and_table]
-        vmovdqa64       zmm10, [rel data_mask_64bits]
-
+        vmovdqa64       MASK_64, [rel data_mask_64bits]
 
 %assign IDX 0
 %rep 4
@@ -1687,7 +1700,7 @@ asm_Eia3Round64B_16_VPCLMUL:
 
         TRANSPOSE4_U128 DATA_ADDR0, DATA_ADDR1, DATA_ADDR2, DATA_ADDR3, \
                         DATA_TRANS0, DATA_TRANS1, DATA_TRANS2, DATA_TRANS3, \
-                        zmm24, zmm25, zmm26, zmm27
+                        ZTMP1, ZTMP2, ZTMP3, ZTMP4
 
         lea             KS_ADDR0,   [KS + (IDX*4)*64*2]
         lea             KS_ADDR1,   [KS + (IDX*4 + 1)*64*2]
@@ -1696,69 +1709,56 @@ asm_Eia3Round64B_16_VPCLMUL:
 
         TRANSPOSE4_U128 KS_ADDR0, KS_ADDR1, KS_ADDR2, KS_ADDR3, \
                         KS_TRANS0, KS_TRANS1, KS_TRANS2, KS_TRANS3, \
-                        zmm24, zmm25, zmm26, zmm27
+                        ZTMP1, ZTMP2, ZTMP3, ZTMP4
+
+        ; Bytes 64-79 of all 4 buffers
+        vmovdqu64       KS_TRANS4, [KS_ADDR0 + 64]
+        vinserti32x4    KS_TRANS4, [KS_ADDR1 + 64], 1
+        vinserti32x4    KS_TRANS4, [KS_ADDR2 + 64], 2
+        vinserti32x4    KS_TRANS4, [KS_ADDR3 + 64], 3
 %assign I 0
 %assign J 1
 %rep 4
         ;; Reverse bits of next 16 bytes from all 4 buffers
-        vpandq          zmm1, APPEND(DATA_TRANS,I), zmm7
-
-        vpandnq         zmm2, zmm7, APPEND(DATA_TRANS, I)
-        vpsrld          zmm2, 4
-
-        vpshufb         zmm8, zmm6, zmm1       ; bit reverse low nibbles (use high table)
-        vpshufb         zmm4, zmm5, zmm2       ; bit reverse high nibbles (use low table)
-
-        vporq           zmm8, zmm4
-        ; zmm8 - bit reversed data bytes
+        vgf2p8affineqb  ZTMP1, APPEND(DATA_TRANS,I), [rel bit_reverse_table], 0x00
 
         ;; ZUC authentication part
         ;; - 4x32 data bits
         ;; - set up KS
-        vmovdqa64       zmm11, APPEND(KS_TRANS, I)
-%if I != 3
-        vmovdqa64       zmm12, APPEND(KS_TRANS, J)
-%else
-        ; Bytes 64-79 from the keystreams that were not loaded yet
-        vmovdqu         xmm12, [KS_ADDR0 + 64]
-        vinserti32x4    zmm12, [KS_ADDR1 + 64], 1
-        vinserti32x4    zmm12, [KS_ADDR2 + 64], 2
-        vinserti32x4    zmm12, [KS_ADDR3 + 64], 3
-%endif
-        vpalignr        zmm13, zmm12, zmm11, 8
-        vpshufd         zmm2, zmm11, 0x61
-        vpshufd         zmm3, zmm13, 0x61
+        vpalignr        ZTMP2, APPEND(KS_TRANS, J), APPEND(KS_TRANS, I), 8
+        vpshufd         ZTMP3, APPEND(KS_TRANS, I), 0x61
+        vpshufd         ZTMP4, ZTMP2, 0x61
 
         ;;  - set up DATA
-        vpandq          zmm13, zmm10, zmm8
-        vpshufd         APPEND(DATA_TRANS, I), zmm13, 0xdc
+        vpandq          ZTMP2, ZTMP1, MASK_64
+        vpshufd         APPEND(DATA_TRANS, I), ZTMP2, 0xdc
 
-        vpsrldq         zmm8, 8
-        vpshufd         zmm1, zmm8, 0xdc
+        vpsrldq         ZTMP1, 8
+        vpshufd         ZTMP2, ZTMP1, 0xdc
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
-        vpclmulqdq      zmm13, APPEND(DATA_TRANS, I), zmm2, 0x00
-        vpclmulqdq      zmm14, APPEND(DATA_TRANS, I), zmm2, 0x11
-        vpclmulqdq      zmm15, zmm1, zmm3, 0x00
-        vpclmulqdq      zmm8,  zmm1, zmm3, 0x11
+        vpclmulqdq      ZTMP5, APPEND(DATA_TRANS, I), ZTMP3, 0x00
+        vpclmulqdq      ZTMP6, APPEND(DATA_TRANS, I), ZTMP3, 0x11
+        vpclmulqdq      ZTMP7, ZTMP2, ZTMP4, 0x00
+        vpclmulqdq      ZTMP8, ZTMP2, ZTMP4, 0x11
 
-        vpternlogq      zmm13, zmm14, zmm8, 0x96
-        vpternlogq      APPEND(DIGEST_, IDX), zmm13, zmm15, 0x96
+        vpternlogq      ZTMP5, ZTMP6, ZTMP8, 0x96
+        vpternlogq      APPEND(DIGEST_, IDX), ZTMP5, ZTMP7, 0x96
 
 %assign J (J + 1)
 %assign I (I + 1)
 %endrep
 
         ; Memcpy KS 64-127 bytes to 0-63 bytes
-        vmovdqa64       zmm0, [KS_ADDR0 + 64]
-        vmovdqa64       zmm1, [KS_ADDR1 + 64]
-        vmovdqa64       zmm2, [KS_ADDR2 + 64]
-        vmovdqa64       zmm3, [KS_ADDR3 + 64]
-        vmovdqa64       [KS_ADDR0], zmm0
-        vmovdqa64       [KS_ADDR1], zmm1
-        vmovdqa64       [KS_ADDR2], zmm2
-        vmovdqa64       [KS_ADDR3], zmm3
+        vmovdqa64       ZTMP4, [KS_ADDR0 + 64]
+        vmovdqa64       ZTMP1, [KS_ADDR1 + 64]
+        vmovdqa64       ZTMP2, [KS_ADDR2 + 64]
+        vmovdqa64       ZTMP3, [KS_ADDR3 + 64]
+        vmovdqa64       [KS_ADDR0], ZTMP4
+        vmovdqa64       [KS_ADDR1], ZTMP1
+        vmovdqa64       [KS_ADDR2], ZTMP2
+        vmovdqa64       [KS_ADDR3], ZTMP3
 
 %assign IDX (IDX + 1)
 %endrep
@@ -1769,30 +1769,30 @@ asm_Eia3Round64B_16_VPCLMUL:
         kmovq           k1, r12
         kmovq           k2, r13
 
-        vmovdqu64       zmm4, [T] ; Input tags
-        vmovdqa64       zmm0, [rel shuf_mask_tags]
-        vmovdqa64       zmm1, [rel shuf_mask_tags + 64]
+        vmovdqu64       ZTMP1, [T] ; Input tags
+        vmovdqa64       ZTMP2, [rel shuf_mask_tags]
+        vmovdqa64       ZTMP3, [rel shuf_mask_tags + 64]
         ; Get result tags for 16 buffers in different position in each lane
         ; and blend these tags into an ZMM register.
         ; Then, XOR the results with the previous tags and write out the result.
-        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
-        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
-        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
-        vmovdqu64       [T], zmm4
+        vpermt2d        DIGEST_0{k1}{z}, ZTMP2, DIGEST_1
+        vpermt2d        DIGEST_2{k2}{z}, ZTMP3, DIGEST_3
+        vpternlogq      ZTMP1, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
+        vmovdqu64       [T], ZTMP1
 
         ; Update data pointers
-        vmovdqu64       zmm0, [DATA]
-        vmovdqu64       zmm1, [DATA + 64]
-        vpaddq          zmm0, [rel add_64]
-        vpaddq          zmm1, [rel add_64]
-        vmovdqu64       [DATA], zmm0
-        vmovdqu64       [DATA + 64], zmm1
+        vmovdqu64       ZTMP1, [DATA]
+        vmovdqu64       ZTMP2, [DATA + 64]
+        vpaddq          ZTMP1, [rel add_64]
+        vpaddq          ZTMP2, [rel add_64]
+        vmovdqu64       [DATA], ZTMP1
+        vmovdqu64       [DATA + 64], ZTMP2
 
         ; Update array of lengths (subtract 512 bits from all lengths if valid lane)
-        vmovdqa         ymm2, [LEN]
-        vpcmpw          k1, ymm2, [rel all_ffs], 4
-        vpsubw          ymm2{k1}, [rel all_512w]
-        vmovdqa         [LEN], ymm2
+        vmovdqa         YTMP1, [LEN]
+        vpcmpw          k1, YTMP1, [rel all_ffs], 4
+        vpsubw          YTMP1{k1}, [rel all_512w]
+        vmovdqa         [LEN], YTMP1
 
         FUNC_RESTORE
 
@@ -2295,7 +2295,7 @@ asm_Eia3RemainderAVX512_16:
 ;; extern void asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
 ;;
 ;;  @param [in] T: Array of digests for all 16 buffers
-;;  @param [in] KS : Array of pointers to key stream for all 16 buffers  
+;;  @param [in] KS : Array of pointers to key stream for all 16 buffers
 ;;  @param [in] DATA : Array of pointers to data for all 16 buffers
 ;;  @param [in] N_BITS (number data bits to process)
 ;;
