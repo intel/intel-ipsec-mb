@@ -3657,4 +3657,55 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
 #endif /* SAFE_DATA */
 }
 
+#ifdef AVX512
+/**
+ * @brief Single buffer bit-length F9 function
+ *
+ * Single buffer digest with IV and precomputed key schedule.
+ *
+ * @param[in] pHandle      pointer to precomputed key schedule
+ * @param[in] pIV          pointer to IV
+ * @param[in] pBufferIn    pointer to an input buffer
+ * @param[in] lengthInBits message length in bits
+ * @param[out] pDigest     pointer to store the F9 digest
+ */
+void snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle,
+                                    const void *pIV,
+                                    const void *pBufferIn,
+                                    const uint64_t lengthInBits,
+                                    void *pDigest)
+{
+#ifdef SAFE_PARAM
+        if ((pHandle == NULL) || (pIV == NULL) ||
+            (pBufferIn == NULL) || (pDigest == NULL) ||
+            (lengthInBits == 0) || (lengthInBits > SNOW3G_MAX_BITLEN))
+                return;
+#endif
+#ifdef SAFE_DATA
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+
+        snow3gKeyState1_t ctx;
+        uint32_t z[5];
+
+        /* Initialize the SNOW3G key schedule */
+        snow3gStateInitialize_1(&ctx, pHandle, pIV);
+
+        /*Generate 5 key stream words*/
+        snow3g_f9_keystream_words(&ctx, z);
+
+        /* Final MAC */
+        *(uint32_t *)pDigest =
+                snow3g_f9_1_buffer_internal_vaes_avx512((const uint64_t *)
+                                                        pBufferIn, z,
+                                                        lengthInBits);
+#ifdef SAFE_DATA
+        CLEAR_MEM(z, sizeof(z));
+        CLEAR_MEM(&ctx, sizeof(ctx));
+        CLEAR_SCRATCH_GPS();
+        CLEAR_SCRATCH_SIMD_REGS();
+#endif /* SAFE_DATA */
+}
+#endif /* AVX512 */
+
 #endif /* SNOW3G_COMMON_H */

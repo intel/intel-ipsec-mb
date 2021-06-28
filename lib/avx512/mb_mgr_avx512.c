@@ -454,6 +454,12 @@ extern uint32_t crc6_iuup_header_avx(const void *msg, const uint64_t len);
 extern uint32_t crc32_wimax_ofdma_data_avx(const void *msg, const uint64_t len);
 extern uint32_t crc8_wimax_ofdma_hcs_avx(const void *msg, const uint64_t len);
 
+extern void snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle,
+                                           const void *pIV,
+                                           const void *pBufferIn,
+                                           const uint64_t lengthInBits,
+                                           void *pDigest);
+
 /* ====================================================================== */
 
 #define SUBMIT_JOB_AES128_CBCS_1_9_ENC submit_job_aes128_cbcs_1_9_enc_avx512
@@ -1777,17 +1783,17 @@ init_mb_mgr_avx512(IMB_MGR *state)
         state->kasumi_init_f9_key_sched = kasumi_init_f9_key_sched_avx;
         state->kasumi_key_sched_size = kasumi_key_sched_size_avx;
 
-        state->snow3g_f8_1_buffer_bit = snow3g_f8_1_buffer_bit_avx2;
-        state->snow3g_f8_1_buffer  = snow3g_f8_1_buffer_avx2;
-        state->snow3g_f8_2_buffer  = snow3g_f8_2_buffer_avx2;
-        state->snow3g_f8_4_buffer  = snow3g_f8_4_buffer_avx2;
-        state->snow3g_f8_8_buffer  = snow3g_f8_8_buffer_avx2;
-        state->snow3g_f8_n_buffer  = snow3g_f8_n_buffer_avx2;
-        state->snow3g_f8_8_buffer_multikey = snow3g_f8_8_buffer_multikey_avx2;
-        state->snow3g_f8_n_buffer_multikey = snow3g_f8_n_buffer_multikey_avx2;
-        state->snow3g_f9_1_buffer = snow3g_f9_1_buffer_avx2;
-        state->snow3g_init_key_sched = snow3g_init_key_sched_avx2;
-        state->snow3g_key_sched_size = snow3g_key_sched_size_avx2;
+        state->snow3g_f8_1_buffer_bit = snow3g_f8_1_buffer_bit_avx512;
+        state->snow3g_f8_1_buffer  = snow3g_f8_1_buffer_avx512;
+        state->snow3g_f8_2_buffer  = snow3g_f8_2_buffer_avx512;
+        state->snow3g_f8_4_buffer  = snow3g_f8_4_buffer_avx512;
+        state->snow3g_f8_8_buffer  = snow3g_f8_8_buffer_avx512;
+        state->snow3g_f8_n_buffer  = snow3g_f8_n_buffer_avx512;
+        state->snow3g_f8_8_buffer_multikey = snow3g_f8_8_buffer_multikey_avx512;
+        state->snow3g_f8_n_buffer_multikey = snow3g_f8_n_buffer_multikey_avx512;
+        state->snow3g_f9_1_buffer = snow3g_f9_1_buffer_avx512;
+        state->snow3g_init_key_sched = snow3g_init_key_sched_avx512;
+        state->snow3g_key_sched_size = snow3g_key_sched_size_avx512;
 
         state->hec_32              = hec_32_avx;
         state->hec_64              = hec_64_avx;
@@ -1818,6 +1824,9 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 state->crc6_iuup_header    = crc6_iuup_header_avx512;
                 state->crc32_wimax_ofdma_data = crc32_wimax_ofdma_data_avx512;
                 state->crc8_wimax_ofdma_hcs = crc8_wimax_ofdma_hcs_avx512;
+#ifndef _WIN32
+                state->snow3g_f9_1_buffer = snow3g_f9_1_buffer_vaes_avx512;
+#endif
         }
 
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {

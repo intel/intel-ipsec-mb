@@ -257,6 +257,7 @@ c_lib_objs := \
 	snow3g_sse_no_aesni.o \
 	snow3g_avx.o \
 	snow3g_avx2.o \
+	snow3g_avx512.o \
 	snow3g_tables.o \
 	snow3g_iv.o \
 	snow_v_sse.o \
@@ -588,7 +589,8 @@ asm_avx512_lib_objs := \
 	crc32_lte_avx512.o \
 	crc32_fp_avx512.o \
 	crc32_iuup_avx512.o \
-	crc32_wimax_avx512.o
+	crc32_wimax_avx512.o \
+	snow3g_uia2_by16_vaes_avx512.o
 
 #
 # GCM object file lists
