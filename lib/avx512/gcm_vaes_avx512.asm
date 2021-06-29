@@ -356,165 +356,171 @@ default rel
 ;;; - performs reduction at the end
 ;;; - it doesn't load the data and it assumed it is already loaded and
 ;;;   shuffled
-%macro  GHASH_1_TO_16 18-24
+;;; - single_call scenario only
+%macro  GHASH_1_TO_16 17
 %define %%KP            %1      ; [in] pointer to expanded keys
 %define %%GHASH         %2      ; [out] ghash output
-%define %%T1            %3      ; [clobbered] temporary ZMM
-%define %%T2            %4      ; [clobbered] temporary ZMM
-%define %%T3            %5      ; [clobbered] temporary ZMM
-%define %%T4            %6      ; [clobbered] temporary ZMM
-%define %%T5            %7      ; [clobbered] temporary ZMM
-%define %%T6            %8      ; [clobbered] temporary ZMM
-%define %%T7            %9      ; [clobbered] temporary ZMM
-%define %%T8            %10     ; [clobbered] temporary ZMM
-%define %%T9            %11     ; [clobbered] temporary ZMM
+%define %%T0H           %3      ; [clobbered] temporary ZMM
+%define %%T0L           %4      ; [clobbered] temporary ZMM
+%define %%T0M1          %5      ; [clobbered] temporary ZMM
+%define %%T0M2          %6      ; [clobbered] temporary ZMM
+%define %%T1H           %7      ; [clobbered] temporary ZMM
+%define %%T1L           %8      ; [clobbered] temporary ZMM
+%define %%T1M1          %9      ; [clobbered] temporary ZMM
+%define %%T1M2          %10     ; [clobbered] temporary ZMM
+%define %%HK            %11     ; [clobbered] temporary ZMM
 %define %%AAD_HASH_IN   %12     ; [in] input hash value
 %define %%CIPHER_IN0    %13     ; [in] ZMM with cipher text blocks 0-3
 %define %%CIPHER_IN1    %14     ; [in] ZMM with cipher text blocks 4-7
 %define %%CIPHER_IN2    %15     ; [in] ZMM with cipher text blocks 8-11
 %define %%CIPHER_IN3    %16     ; [in] ZMM with cipher text blocks 12-15
 %define %%NUM_BLOCKS    %17     ; [in] numerical value, number of blocks
-%define %%INSTANCE_TYPE %18     ; [in] multi_call or single_call
-%define %%ROUND         %19     ; [in] Round number (for multi_call): "first", "mid", "last"
-%define %%HKEY_START    %20     ; [in] Hash subkey to start from (for multi_call): 48, 32, 16
-%define %%PREV_H        %21     ; [in/out] In: High result from previous call, Out: High result of this call
-%define %%PREV_L        %22     ; [in/out] In: Low result from previous call, Out: Low result of this call
-%define %%PREV_M1       %23     ; [in/out] In: Medium 1 result from previous call, Out: Medium 1 result of this call
-%define %%PREV_M2       %24     ; [in/out] In: Medium 2 result from previous call, Out: Medium 2 result of this call
 
-%define %%T0H           %%T1
-%define %%T0L           %%T2
-%define %%T0M1          %%T3
-%define %%T0M2          %%T4
-
-%define %%T1H           %%T5
-%define %%T1L           %%T6
-%define %%T1M1          %%T7
-%define %%T1M2          %%T8
-
-%define %%HK            %%T9
-
-%assign reg_idx     0
-%assign blocks_left %%NUM_BLOCKS
-
-%ifidn %%INSTANCE_TYPE, single_call
 %assign hashk           HashKey_ %+ %%NUM_BLOCKS
-%assign first_result 1
-%assign reduce       1
+
         vpxorq          %%CIPHER_IN0, %%CIPHER_IN0, %%AAD_HASH_IN
-%else ; %%INSTANCE_TYPE == multi_call
 
-%assign hashk           HashKey_ %+ %%HKEY_START
-%ifidn %%ROUND, first
-%assign first_result 1
-%assign reduce       0
-        vpxorq          %%CIPHER_IN0, %%CIPHER_IN0, %%AAD_HASH_IN
-%elifidn %%ROUND, mid
-%assign first_result 0
-%assign reduce       0
-        vmovdqa64          %%T0H, %%PREV_H
-        vmovdqa64          %%T0L, %%PREV_L
-        vmovdqa64          %%T0M1, %%PREV_M1
-        vmovdqa64          %%T0M2, %%PREV_M2
-%else ; %%ROUND == last
-%assign first_result 0
-%assign reduce       1
-        vmovdqa64          %%T0H, %%PREV_H
-        vmovdqa64          %%T0L, %%PREV_L
-        vmovdqa64          %%T0M1, %%PREV_M1
-        vmovdqa64          %%T0M2, %%PREV_M2
-%endif ; %%ROUND
+%if %%NUM_BLOCKS == 16
 
-%endif ; %%INSTANCE_TYPE
-
-
-%rep (blocks_left / 4)
-%xdefine %%REG_IN %%CIPHER_IN %+ reg_idx
         vmovdqu64       %%HK, [%%KP + hashk]
-%if first_result == 1
-        vpclmulqdq      %%T0H, %%REG_IN, %%HK, 0x11      ; H = a1*b1
-        vpclmulqdq      %%T0L, %%REG_IN, %%HK, 0x00      ; L = a0*b0
-        vpclmulqdq      %%T0M1, %%REG_IN, %%HK, 0x01     ; M1 = a1*b0
-        vpclmulqdq      %%T0M2, %%REG_IN, %%HK, 0x10     ; TM2 = a0*b1
-%assign first_result 0
-%else
-        vpclmulqdq      %%T1H, %%REG_IN, %%HK, 0x11      ; H = a1*b1
-        vpclmulqdq      %%T1L, %%REG_IN, %%HK, 0x00      ; L = a0*b0
-        vpclmulqdq      %%T1M1, %%REG_IN, %%HK, 0x01     ; M1 = a1*b0
-        vpclmulqdq      %%T1M2, %%REG_IN, %%HK, 0x10     ; M2 = a0*b1
-        vpxorq          %%T0H, %%T0H, %%T1H
-        vpxorq          %%T0L, %%T0L, %%T1L
-        vpxorq          %%T0M1, %%T0M1, %%T1M1
-        vpxorq          %%T0M2, %%T0M2, %%T1M2
+        vpclmulqdq      %%T0H,  %%CIPHER_IN0, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%T0L,  %%CIPHER_IN0, %%HK, 0x00  ; L = a0*b0
+        vpclmulqdq      %%T0M1, %%CIPHER_IN0, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%T0M2, %%CIPHER_IN0, %%HK, 0x10  ; M2 = a0*b1
+        vmovdqu64       %%HK, [%%KP + hashk + (1*64)]
+        vpclmulqdq      %%T1H,  %%CIPHER_IN1, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%T1L,  %%CIPHER_IN1, %%HK, 0x00  ; L = a0*b0
+        vpclmulqdq      %%T1M1, %%CIPHER_IN1, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%T1M2, %%CIPHER_IN1, %%HK, 0x10  ; M2 = a0*b1
+        vmovdqu64       %%HK, [%%KP + hashk + (2*64)]
+        vpclmulqdq      %%CIPHER_IN0,  %%CIPHER_IN2, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%CIPHER_IN1,  %%CIPHER_IN2, %%HK, 0x00  ; L = a0*b0
+        vpternlogq      %%T0H, %%CIPHER_IN0, %%T1H, 0x96
+        vpternlogq      %%T0L, %%CIPHER_IN1, %%T1L, 0x96
+        vpclmulqdq      %%CIPHER_IN0, %%CIPHER_IN2, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%CIPHER_IN1, %%CIPHER_IN2, %%HK, 0x10  ; M2 = a0*b1
+        vpternlogq      %%T0M1, %%CIPHER_IN0, %%T1M1, 0x96
+        vpternlogq      %%T0M2, %%CIPHER_IN1, %%T1M2, 0x96
+        vmovdqu64       %%HK, [%%KP + hashk + (3*64)]
+        vpclmulqdq      %%T1H,  %%CIPHER_IN3, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%T1L,  %%CIPHER_IN3, %%HK, 0x00  ; L = a0*b0
+        vpclmulqdq      %%T1M1, %%CIPHER_IN3, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%T1M2, %%CIPHER_IN3, %%HK, 0x10  ; M2 = a0*b1
+        vpxorq          %%T1H, %%T0H, %%T1H
+        vpxorq          %%T1L, %%T0L, %%T1L
+        vpxorq          %%T1M1, %%T0M1, %%T1M1
+        vpxorq          %%T1M2, %%T0M2, %%T1M2
+
+%elif %%NUM_BLOCKS >= 12
+
+        vmovdqu64       %%HK, [%%KP + hashk]
+        vpclmulqdq      %%T0H,  %%CIPHER_IN0, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%T0L,  %%CIPHER_IN0, %%HK, 0x00  ; L = a0*b0
+        vpclmulqdq      %%T0M1, %%CIPHER_IN0, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%T0M2, %%CIPHER_IN0, %%HK, 0x10  ; M2 = a0*b1
+        vmovdqu64       %%HK, [%%KP + hashk + (1*64)]
+        vpclmulqdq      %%T1H,  %%CIPHER_IN1, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%T1L,  %%CIPHER_IN1, %%HK, 0x00  ; L = a0*b0
+        vpclmulqdq      %%T1M1, %%CIPHER_IN1, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%T1M2, %%CIPHER_IN1, %%HK, 0x10  ; M2 = a0*b1
+        vmovdqu64       %%HK, [%%KP + hashk + (2*64)]
+        vpclmulqdq      %%CIPHER_IN0,  %%CIPHER_IN2, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%CIPHER_IN1,  %%CIPHER_IN2, %%HK, 0x00  ; L = a0*b0
+        vpternlogq      %%T1H, %%CIPHER_IN0, %%T0H, 0x96
+        vpternlogq      %%T1L, %%CIPHER_IN1, %%T0L, 0x96
+        vpclmulqdq      %%CIPHER_IN0, %%CIPHER_IN2, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%CIPHER_IN1, %%CIPHER_IN2, %%HK, 0x10  ; M2 = a0*b1
+        vpternlogq      %%T1M1, %%CIPHER_IN0, %%T0M1, 0x96
+        vpternlogq      %%T1M2, %%CIPHER_IN1, %%T0M2, 0x96
+
+%elif %%NUM_BLOCKS >= 8
+
+        vmovdqu64       %%HK, [%%KP + hashk]
+        vpclmulqdq      %%T0H,  %%CIPHER_IN0, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%T0L,  %%CIPHER_IN0, %%HK, 0x00  ; L = a0*b0
+        vpclmulqdq      %%T0M1, %%CIPHER_IN0, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%T0M2, %%CIPHER_IN0, %%HK, 0x10  ; M2 = a0*b1
+        vmovdqu64       %%HK, [%%KP + hashk + (1*64)]
+        vpclmulqdq      %%T1H,  %%CIPHER_IN1, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%T1L,  %%CIPHER_IN1, %%HK, 0x00  ; L = a0*b0
+        vpclmulqdq      %%T1M1, %%CIPHER_IN1, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%T1M2, %%CIPHER_IN1, %%HK, 0x10  ; M2 = a0*b1
+        vpxorq          %%T1H, %%T0H, %%T1H
+        vpxorq          %%T1L, %%T0L, %%T1L
+        vpxorq          %%T1M1, %%T0M1, %%T1M1
+        vpxorq          %%T1M2, %%T0M2, %%T1M2
+
+%elif %%NUM_BLOCKS >= 4
+
+        vmovdqu64       %%HK, [%%KP + hashk]
+        vpclmulqdq      %%T1H,  %%CIPHER_IN0, %%HK, 0x11  ; H = a1*b1
+        vpclmulqdq      %%T1L,  %%CIPHER_IN0, %%HK, 0x00  ; L = a0*b0
+        vpclmulqdq      %%T1M1, %%CIPHER_IN0, %%HK, 0x01  ; M1 = a1*b0
+        vpclmulqdq      %%T1M2, %%CIPHER_IN0, %%HK, 0x10  ; M2 = a0*b1
+
 %endif
-%undef %%REG_IN
-%assign reg_idx     (reg_idx + 1)
-%assign hashk       (hashk + 64)
-%assign blocks_left (blocks_left - 4)
-%endrep
+
+        ;; T1H/L/M1/M2 - hold current product sums (provided %%NUM_BLOCKS >= 4)
+%assign blocks_left (%%NUM_BLOCKS % 4)
 
 %if blocks_left > 0
 ;; There are 1, 2 or 3 blocks left to process.
 ;; It may also be that they are the only blocks to process.
 
-%xdefine %%REG_IN %%CIPHER_IN %+ reg_idx
+;; Set hash key and register index position for the remining 1 to 3 blocks
+%assign hashk   HashKey_ %+ blocks_left
+%assign reg_idx (%%NUM_BLOCKS / 4)
 
-%if first_result == 1
-;; Case where %%NUM_BLOCKS = 1, 2 or 3
-%xdefine %%OUT_H  %%T0H
-%xdefine %%OUT_L  %%T0L
-%xdefine %%OUT_M1 %%T0M1
-%xdefine %%OUT_M2 %%T0M2
-%else
-%xdefine %%OUT_H  %%T1H
-%xdefine %%OUT_L  %%T1L
-%xdefine %%OUT_M1 %%T1M1
-%xdefine %%OUT_M2 %%T1M2
-%endif
+%xdefine %%REG_IN %%CIPHER_IN %+ reg_idx
 
 %if blocks_left == 1
         vmovdqu64       XWORD(%%HK), [%%KP + hashk]
-        vpclmulqdq      XWORD(%%OUT_H), XWORD(%%REG_IN), XWORD(%%HK), 0x11      ; %%TH = a1*b1
-        vpclmulqdq      XWORD(%%OUT_L), XWORD(%%REG_IN), XWORD(%%HK), 0x00      ; %%TL = a0*b0
-        vpclmulqdq      XWORD(%%OUT_M1), XWORD(%%REG_IN), XWORD(%%HK), 0x01     ; %%TM1 = a1*b0
-        vpclmulqdq      XWORD(%%OUT_M2), XWORD(%%REG_IN), XWORD(%%HK), 0x10     ; %%TM2 = a0*b1
+        vpclmulqdq      XWORD(%%T0M1), XWORD(%%REG_IN), XWORD(%%HK), 0x01     ; M1 = a1*b0
+        vpclmulqdq      XWORD(%%T0M2), XWORD(%%REG_IN), XWORD(%%HK), 0x10     ; M2 = a0*b1
+        vpclmulqdq      XWORD(%%T0H), XWORD(%%REG_IN), XWORD(%%HK), 0x11      ; H = a1*b1
+        vpclmulqdq      XWORD(%%T0L), XWORD(%%REG_IN), XWORD(%%HK), 0x00      ; L = a0*b0
 %elif blocks_left == 2
         vmovdqu64       YWORD(%%HK), [%%KP + hashk]
-        vpclmulqdq      YWORD(%%OUT_H), YWORD(%%REG_IN), YWORD(%%HK), 0x11      ; %%TH = a1*b1
-        vpclmulqdq      YWORD(%%OUT_L), YWORD(%%REG_IN), YWORD(%%HK), 0x00      ; %%TL = a0*b0
-        vpclmulqdq      YWORD(%%OUT_M1), YWORD(%%REG_IN), YWORD(%%HK), 0x01     ; %%TM1 = a1*b0
-        vpclmulqdq      YWORD(%%OUT_M2), YWORD(%%REG_IN), YWORD(%%HK), 0x10     ; %%TM2 = a0*b1
+        vpclmulqdq      YWORD(%%T0M1), YWORD(%%REG_IN), YWORD(%%HK), 0x01     ; M1 = a1*b0
+        vpclmulqdq      YWORD(%%T0M2), YWORD(%%REG_IN), YWORD(%%HK), 0x10     ; M2 = a0*b1
+        vpclmulqdq      YWORD(%%T0H), YWORD(%%REG_IN), YWORD(%%HK), 0x11      ; H = a1*b1
+        vpclmulqdq      YWORD(%%T0L), YWORD(%%REG_IN), YWORD(%%HK), 0x00      ; L = a0*b0
 %else ; blocks_left == 3
         vmovdqu64       YWORD(%%HK), [%%KP + hashk]
         vinserti64x2    %%HK, [%%KP + hashk + 32], 2
-        vpclmulqdq      %%OUT_H, %%REG_IN, %%HK, 0x11      ; %%TH = a1*b1
-        vpclmulqdq      %%OUT_L, %%REG_IN, %%HK, 0x00      ; %%TL = a0*b0
-        vpclmulqdq      %%OUT_M1, %%REG_IN, %%HK, 0x01     ; %%TM1 = a1*b0
-        vpclmulqdq      %%OUT_M2, %%REG_IN, %%HK, 0x10     ; %%TM2 = a0*b1
+        vpclmulqdq      %%T0M1, %%REG_IN, %%HK, 0x01     ; M1 = a1*b0
+        vpclmulqdq      %%T0M2, %%REG_IN, %%HK, 0x10     ; M2 = a0*b1
+        vpclmulqdq      %%T0H, %%REG_IN, %%HK, 0x11      ; H = a1*b1
+        vpclmulqdq      %%T0L, %%REG_IN, %%HK, 0x00      ; L = a0*b0
 %endif ; blocks_left
 
 %undef %%REG_IN
-%undef %%OUT_H
-%undef %%OUT_L
-%undef %%OUT_M1
-%undef %%OUT_M2
 
-%if first_result != 1
-        vpxorq          %%T0H, %%T0H, %%T1H
-        vpxorq          %%T0L, %%T0L, %%T1L
+%if %%NUM_BLOCKS >= 4
+        ;; add ghash product sums from the first 4, 8 or 12 blocks
         vpxorq          %%T0M1, %%T0M1, %%T1M1
         vpxorq          %%T0M2, %%T0M2, %%T1M2
+        vpxorq          %%T0H, %%T0H, %%T1H
+        vpxorq          %%T0L, %%T0L, %%T1L
 %endif
 
-%endif ; blocks_left > 0
-
-%if reduce == 1
         ;; integrate TM into TH and TL
         vpxorq          %%T0M1, %%T0M1, %%T0M2
         vpsrldq         %%T1M1, %%T0M1, 8
         vpslldq         %%T1M2, %%T0M1, 8
         vpxorq          %%T0H, %%T0H, %%T1M1
         vpxorq          %%T0L, %%T0L, %%T1M2
+%else
+        ;; number of blocks is 4, 8, 12 or 16 T1H/L/M1/M2 include product sums not T0H/L/M1/M2
+
+        ;; integrate TM into TH and TL
+        vpxorq          %%T1M1, %%T1M1, %%T1M2
+        vpsrldq         %%T0M1, %%T1M1, 8
+        vpslldq         %%T0M2, %%T1M1, 8
+        vpxorq          %%T0H, %%T1H, %%T0M1
+        vpxorq          %%T0L, %%T1L, %%T0M2
+
+%endif ; blocks_left > 0
 
         ;; add TH and TL 128-bit words horizontally
         VHPXORI4x128    %%T0H, %%T1M1
@@ -524,12 +530,7 @@ default rel
         vmovdqa64       XWORD(%%HK), [rel POLY2]
         VCLMUL_REDUCE   XWORD(%%GHASH), XWORD(%%HK), \
                         XWORD(%%T0H), XWORD(%%T0L), XWORD(%%T0M1), XWORD(%%T0M2)
-%else ;; reduce == 0
-        vmovdqa64       %%PREV_H, %%T0H
-        vmovdqa64       %%PREV_L, %%T0L
-        vmovdqa64       %%PREV_M1, %%T0M1
-        vmovdqa64       %%PREV_M2, %%T0M2
-%endif
+
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -861,7 +862,6 @@ default rel
 
         ;; calculate number of blocks to ghash (including partial bytes)
         add             %%T2, 15
-        and             %%T2, -16       ; 1 to 16 blocks possible here
         shr             %%T2, 4
         cmp             %%T2, 1
         je              %%_AAD_blocks_1
@@ -907,51 +907,29 @@ default rel
 %rep 16
 
 %%_AAD_blocks_ %+ I:
-        ; Adjust address to range of byte64_len_to_mask_table
 %if I > 12
-        kmovq           %%MASKREG, [%%T3 - (64 * 3 * 8)]
-;        sub             %%T3, (64 * 3 * 8)
+        sub             %%T3, 12 * 16 * 8
 %elif I > 8
-        kmovq           %%MASKREG, [%%T3 - (64 * 2 * 8)]
-;        sub             %%T3, (64 * 2 * 8)
+        sub             %%T3, 8 * 16 * 8
 %elif I > 4
-        kmovq           %%MASKREG, [%%T3 - (64 * 1 * 8)]
-;        sub             %%T3, (64 * 1 * 8)
-%else
+        sub             %%T3, 4 * 16 * 8
+%endif
         kmovq           %%MASKREG, [%%T3]
-%endif
-%if I <= 4
-        vmovdqu8        %%ZT1{%%MASKREG}{z}, [%%T1 + 64*0]
-%else
-        vmovdqu8        %%ZT1, [%%T1 + 64*0]
-%if I <= 8
-        vmovdqu8        %%ZT2{%%MASKREG}{z}, [%%T1 + 64*1]
-%else
-        vmovdqu8        %%ZT2, [%%T1 + 64*1]
-%if I <= 12
-        vmovdqu8        %%ZT3{%%MASKREG}{z}, [%%T1 + 64*2]
-%else
-        vmovdqu8        %%ZT3, [%%T1 + 64*2]
-        vmovdqu8        %%ZT4{%%MASKREG}{z}, [%%T1 + 64*3]
-%endif ;; I <= 12
-%endif ;; I <= 8
-%endif ;; I <= 4
 
-        vpshufb         %%ZT1, %%SHFMSK
-%if I > 4
-        vpshufb         %%ZT2, %%SHFMSK
-%endif
-%if I > 8
-        vpshufb         %%ZT3, %%SHFMSK
-%endif
-%if I > 12
-        vpshufb         %%ZT4, %%SHFMSK
-%endif
+        ZMM_LOAD_MASKED_BLOCKS_0_16 \
+                        I, %%T1, 0, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, %%MASKREG
+
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 \
+                        I, vpshufb, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
+                        %%SHFMSK, %%SHFMSK, %%SHFMSK, %%SHFMSK
+
         GHASH_1_TO_16 %%GDATA_KEY, ZWORD(%%AAD_HASH), \
                         %%ZT0, %%ZT5, %%ZT6, %%ZT7, %%ZT8, \
                         %%ZT9, %%ZT10, %%ZT11, %%ZT12, \
-                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
-                        I, single_call
+                        ZWORD(%%AAD_HASH), %%ZT1, %%ZT2, %%ZT3, %%ZT4, I
 %if I > 1
         ;; fall through to CALC_AAD_done in 1 block case
         jmp             %%_CALC_AAD_done
@@ -1282,8 +1260,7 @@ default rel
        GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
-                        %%NUM_BLOCKS, single_call
+                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS
 
 %else
 
@@ -1316,8 +1293,7 @@ default rel
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
-                        %%NUM_BLOCKS, single_call
+                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%NUM_BLOCKS
 
         jmp             %%_small_initial_compute_done
 %endif                          ; %if %%NUM_BLOCKS < 16
@@ -1345,8 +1321,7 @@ default rel
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
                         %%ZT0, %%ZT1, %%ZT2, %%ZT3, %%ZT4, \
                         %%ZT5, %%ZT6, %%ZT7, %%ZT8, ZWORD(%%HASH_IN_OUT), \
-                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
-                        k, single_call
+                        %%DAT0, %%DAT1, %%DAT2, %%DAT3, k
 
         ;; just fall through no jmp needed
 %else
