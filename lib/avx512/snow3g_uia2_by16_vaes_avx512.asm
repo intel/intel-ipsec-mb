@@ -227,8 +227,7 @@ section .text
         vpxorq          %%T2, %%T2, %%T4
 
         ;; combine results into single register
-        vpslldq         %%T2, %%T2, 8
-        vmovdqa64       %%IN0_OUT{INSERT_HIGH64_MASK}, %%T2
+        vpunpcklqdq     %%IN0_OUT, %%IN0_OUT, %%T2
 
 %endmacro
 
@@ -236,40 +235,40 @@ section .text
 ;; Precompute powers of P up to P^4 or P^16
 ;; Results are arranged from highest power to lowest at 128b granularity
 ;; Example:
-;;   For up to P^4, results are returned in a single YMM
+;;   For up to P^4, results are returned in a 2 XMM registers
 ;;   register in the following order:
-;;       OUT0[P3P4, P1P2]
+;;       OUT0[P1P2]
+;;       OUT1[P3P4]
 ;;   For up to P^16, results are returned in 2 ZMM registers
 ;;   in the following order:
 ;;       OUT0[P7P8,     P5P6,   P3P4,  P1P2]
 ;;       OUT1[P15P16, P13P14, P11P12, P9P10]
-%macro  PRECOMPUTE_CONSTANTS 7-9
+%macro  PRECOMPUTE_CONSTANTS 8-9
 %define %%P1            %1  ;; [in] initial P^1 to be multiplied
 %define %%HIGHEST_POWER %2  ;; [in] highest power to calculate (4 or 16)
 %define %%OUT0          %3  ;; [out] ymm/zmm containing results
-%define %%T1      	%4  ;; [clobbered] xmm
-%define %%T2      	%5  ;; [clobbered] xmm
-%define %%T3      	%6  ;; [clobbered] xmm
-%define %%T4      	%7  ;; [clobbered] xmm
-%define %%OUT1 	        %8  ;; [out] ymm/zmm containing results
-%define %%T5      	%9  ;; [clobbered] xmm
+%define %%OUT1          %4  ;; [out] ymm/zmm containing results
+%define %%T1            %5  ;; [clobbered] xmm
+%define %%T2            %6  ;; [clobbered] xmm
+%define %%T3            %7  ;; [clobbered] xmm
+%define %%T4            %8  ;; [clobbered] xmm
+%define %%T5            %9  ;; [clobbered] xmm
 
+%if %0 > 8
 %xdefine %%Y_OUT0 YWORD(%%OUT0)
+%xdefine %%Y_OUT1 YWORD(%%OUT1)
 %xdefine %%YT1 YWORD(%%T1)
 %xdefine %%YT2 YWORD(%%T2)
 %xdefine %%YT3 YWORD(%%T3)
 %xdefine %%YT4 YWORD(%%T4)
+%xdefine %%YT5 YWORD(%%T5)
 
 %xdefine %%Z_OUT0 ZWORD(%%OUT0)
+%xdefine %%Z_OUT1 ZWORD(%%OUT1)
 %xdefine %%ZT1 ZWORD(%%T1)
 %xdefine %%ZT2 ZWORD(%%T2)
 %xdefine %%ZT3 ZWORD(%%T3)
 %xdefine %%ZT4 ZWORD(%%T4)
-
-%if %0 > 7
-%xdefine %%Y_OUT1 YWORD(%%OUT1)
-%xdefine %%Z_OUT1 ZWORD(%%OUT1)
-%xdefine %%YT5 YWORD(%%T5)
 %xdefine %%ZT5 ZWORD(%%T5)
 %endif
 
@@ -282,11 +281,10 @@ section .text
         MUL_AND_REDUCE_64x64_LOW %%T3, %%P1, %%T4       ;; %%T3 = P4
 
 %if %%HIGHEST_POWER <= 4
-        ;; if highest power is 4
-        ;; then arrange powers from highest to lowest and finish
-        vpunpcklqdq     %%T1, %%P1, %%T1                ;; P1P2
-        vpunpcklqdq     %%OUT0, %%T2, %%T3              ;; P3P4
-        vinserti64x2    %%Y_OUT0, %%Y_OUT0, %%T1, 0x1   ;; P3P4P1P2
+        ;; if highest power is 4 then put
+        ;; P1P2 in OUT0 and P3P4 OUT1 and finish
+        vpunpcklqdq     %%OUT0, %%P1, %%T1              ;; P1P2
+        vpunpcklqdq     %%OUT1, %%T2, %%T3              ;; P3P4
 %else
         ;; otherwise arrange powers later
         vpunpcklqdq     %%OUT0, %%P1, %%T1              ;; P1P2
@@ -345,7 +343,7 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
         mov     qword_len, bit_len              ;; lenInBits -> lenInQwords
         shr     qword_len, 6
 
-        cmp     qword_len, 16                   ;; check at least 16 blocks
+        cmp     qword_len, 48                   ;; >=48 blocks go to 16 blocks loop
         jae     init_16_block_loop
 
         cmp     qword_len, 4                    ;; check at least 4 blocks
@@ -355,7 +353,7 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
 
 init_16_block_loop:
         ;; precompute up to P^16
-        PRECOMPUTE_CONSTANTS P1, 16, xmm0, xmm3, xmm4, xmm5, xmm6, xmm1, xmm9
+        PRECOMPUTE_CONSTANTS P1, 16, xmm0, xmm1, xmm3, xmm4, xmm5, xmm6, xmm9
 
 start_16_block_loop:
         vmovdqu64       zmm3, [in_ptr]
@@ -394,30 +392,37 @@ lt_16_blocks:
         jb      single_block_check
 
         ;; at least 4 blocks left
-        ;; shift P1P2, P3P4 to lower half of zmm0 and go to 4 block loop
-        vextracti64x4   ymm0, zmm0, 0x1
+        ;; move P1P2, P3P4 to xmms and go to 4 block loop
+        vextracti64x2   xmm1, zmm0, 0x2
+        vextracti64x2   xmm0, zmm0, 0x3
         jmp             start_4_block_loop
 
 init_4_block_loop:
         ;; precompute up to P^4
-        PRECOMPUTE_CONSTANTS P1, 4, xmm0, xmm3, xmm4, xmm5, xmm6
+        PRECOMPUTE_CONSTANTS P1, 4, xmm0, xmm1, xmm3, xmm4, xmm5, xmm6
 
 start_4_block_loop:
-        vmovdqu         ymm3, [in_ptr]
-        vpshufb         ymm3, ymm3, [rel bswap64]
+        vmovdqu         xmm3, [in_ptr]
+        vmovdqu         xmm4, [in_ptr + 16]
 
-        vpxor           ymm3, ymm3, YWORD(EV)
+        vpshufb         xmm3, xmm3, [rel bswap64]
+        vpshufb         xmm4, xmm4, [rel bswap64]
 
-        vpclmulqdq      ymm6, ymm3, ymm0, 0x10 ;;   p4 -  p1
-        vpclmulqdq      ymm4, ymm3, ymm0, 0x01 ;; x m0 - m3
+        vpxor           xmm3, xmm3, EV
 
-        ;; sum results
-        vpxorq          YWORD(EV), ymm4, ymm6
-        VHPXORI2x128    YWORD(EV), ymm3
+        vpclmulqdq      xmm5, xmm4, xmm0, 0x10
+        vpclmulqdq      xmm6, xmm4, xmm0, 0x01
+
+        vpclmulqdq      xmm10, xmm3, xmm1, 0x10
+        vpclmulqdq      xmm11, xmm3, xmm1, 0x01
+
+        vpxor           xmm5, xmm5, xmm6
+        vpxor           xmm6, xmm10, xmm11
+        vpxor           EV, xmm6, xmm5
 
         REDUCE_TO_64    EV, xmm3
 
-        vmovq XWORD(EV), XWORD(EV)
+        vmovq           EV, EV
 
         add     in_ptr, 4*8
         sub     qword_len, 4
