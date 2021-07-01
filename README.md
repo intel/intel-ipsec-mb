@@ -131,7 +131,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
 | ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
 | ZUC-EIA3-256(6)   | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
-| SNOW3G-UIA2       | N      | Y      | Y      | Y      | N      | N      |
+| SNOW3G-UIA2       | N      | Y by4  | Y by4  | N      | N      | Y by16 |
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | Y      |
 | HEC               | N      | Y      | Y      | N      | N      | N      |
 | POLY1305          | Y      | N      | N      | N      | Y      | Y      |

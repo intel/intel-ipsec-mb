@@ -9,6 +9,7 @@ General
 
 Library
 - PON algorithm AVX512-VAES implementation added
+- SNOW3G-UIA2 AVX512-VPCLMULQDQ implementation added
 
 v1.0 April 2021
 ========================================================================
