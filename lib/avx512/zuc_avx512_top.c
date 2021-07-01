@@ -807,12 +807,10 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                              const unsigned use_gfni,
                              const unsigned key_size)
 {
-        unsigned int i = 0;
         ZucState16_t *state = (ZucState16_t *) ooo->state;
         /* Calculate the minimum input packet size from all packets */
         uint16_t remainCommonBits = find_min_length16(ooo->lens);
         const uint8_t **pIn8 = ooo->args.in;
-        uint32_t remainL;
 
         /* 2 KS words already done */
         uint16_t L = ((remainCommonBits + 31) / 32) + 2;
@@ -828,7 +826,8 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                              (const void **)pIn8, ooo->lens, remainCommonBits,
                              key_size, use_gfni);
 
-                goto exit;
+                ooo->init_not_done = 0;
+                return;
         } else
                 keystr_64B_gen_16_skip8(state, ooo->args.ks,
                                         ooo->init_not_done, 0, use_gfni);
@@ -857,13 +856,7 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
                      (const void **)pIn8, ooo->lens,
                      remainCommonBits, key_size, use_gfni);
 
-exit:
         ooo->init_not_done = 0;
-        remainL = (((remainCommonBits + 31) / 32) + 2);
-        /* Copy last 2 KS words for next call */
-        for (i = 0; i < NUM_AVX512_BUFS; i++)
-                memcpy(&ooo->args.ks[i*16*2],
-                       &ooo->args.ks[i*16*2 + remainL-2], 8);
 }
 
 void

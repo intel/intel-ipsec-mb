@@ -2025,6 +2025,7 @@ Eia3RoundsAVX_end:
 
 %define MIN_LEN         r10
 %define IDX             rax
+%define TMP             rbx
 
         mov     MIN_LEN, arg5
 
@@ -2068,7 +2069,7 @@ Eia3RoundsAVX_end:
 %rep 4
 
         ; Read  length to authenticate for each buffer
-        movzx   MIN_LEN, word [rsp + 2*(I*4 + J)]
+        movzx   TMP, word [rsp + 2*(I*4 + J)]
 
         vpxor   xmm9, xmm9
 
@@ -2078,7 +2079,7 @@ Eia3RoundsAVX_end:
 
 %assign K 0
 %rep 4
-        cmp     MIN_LEN, 128
+        cmp     TMP, 128
         jb      APPEND3(%%Eia3RoundsAVX512_dq_end,I,J)
 
         ;; read 16 bytes and reverse bits
@@ -2129,16 +2130,16 @@ Eia3RoundsAVX_end:
         vpternlogq xmm13, xmm14, xmm8, 0x96
         vpternlogq xmm9, xmm13, xmm15, 0x96
         add     OFFSET, 16
-        sub     MIN_LEN, 128
+        sub     TMP, 128
 %assign K (K + 1)
 %endrep
 APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
 
-        or      MIN_LEN, MIN_LEN
+        or      TMP, TMP
         jz      APPEND3(%%Eia3RoundsAVX_end,I,J)
 
         ; Get number of bytes
-        mov     N_BYTES, MIN_LEN
+        mov     N_BYTES, TMP
         add     N_BYTES, 7
         shr     N_BYTES, 3
 
@@ -2155,7 +2156,7 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
         vmovdqu8 xmm0{k1}{z}, [DATA_ADDR + OFFSET]
         ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     rax, MIN_LEN
+        mov     rax, TMP
         and     rax, 0x7
         shl     rax, 4
         lea     r11, [rel bit_mask_table]
@@ -2212,10 +2213,10 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 %endrep
 
         ;; - update tags
-        mov             rbx, 0x00FF
-        mov             r10, 0xFF00
-        kmovq           k1, rbx
-        kmovq           k2, r10
+        mov             TMP, 0x00FF
+        kmovq           k1, TMP
+        mov             TMP, 0xFF00
+        kmovq           k2, TMP
 
         vmovdqu64       zmm4, [T] ; Input tags
         vmovdqa64       zmm0, [rel shuf_mask_tags]
@@ -2234,47 +2235,47 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
         xor     IDX, IDX
 %%start_loop:
         ; Update data pointer
-        movzx   ebx, word [rsp + IDX*2]
-        shr     ebx, 3 ; length authenticated in bytes
-        add     [DATA + IDX*8], rbx
+        movzx   r11d, word [rsp + IDX*2]
+        shr     r11d, 3 ; length authenticated in bytes
+        add     [DATA + IDX*8], r11
 
         cmp     word [LEN + 2*IDX], 0
         jnz     %%skip_comput
 
         ; Read digest
-        mov     ebx, [T + 4*IDX]
+        mov     r12d, [T + 4*IDX]
 
         mov     r11, IDX
         shl     r11, 7 ; 128
         lea     KS_ADDR, [KS + r11]
 
         ; Read keyStr[MIN_LEN / 32]
-        movzx   MIN_LEN, word [rsp + 2*IDX]
-        mov     r15, MIN_LEN
+        movzx   TMP, word [rsp + 2*IDX]
+        mov     r15, TMP
         shr     r15, 5
         mov     r11, [KS_ADDR +r15*4]
         ; Rotate left by MIN_LEN % 32
         mov     r15, rcx
-        mov     rcx, MIN_LEN
+        mov     rcx, TMP
         and     rcx, 0x1F
         rol     r11, cl
         mov     rcx, r15
         ; XOR with current digest
-        xor     ebx, r11d
+        xor     r12d, r11d
 
 %if %%KEY_SIZE == 128
         ; Read keystr[L - 1] (last dword of keyStr)
-        add     MIN_LEN, (31 + 64)
-        shr     MIN_LEN, 5 ; L
-        dec     MIN_LEN
-        mov     r11d, [KS_ADDR + MIN_LEN * 4]
+        add     TMP, (31 + 64)
+        shr     TMP, 5 ; L
+        dec     TMP
+        mov     r11d, [KS_ADDR + TMP * 4]
         ; XOR with current digest
-        xor     ebx, r11d
+        xor     r12d, r11d
 %endif
 
         ; byte swap and write digest out
-        bswap   ebx
-        mov     [T + 4*IDX], ebx
+        bswap   r12d
+        mov     [T + 4*IDX], r12d
 
 %%skip_comput:
         inc     IDX
@@ -2283,6 +2284,17 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 
         add     rsp, 32
 
+        ; Memcpy last 8 bytes of KS into start
+        add     MIN_LEN, 31
+        shr     MIN_LEN, 5
+        shl     MIN_LEN, 2
+
+%assign i 0
+%rep 16
+        mov     TMP, [KS + 16*8*i + MIN_LEN]
+        mov     [KS + 16*8*i], TMP
+%assign i (i+1)
+%endrep
         vzeroupper
         FUNC_RESTORE
         ret
