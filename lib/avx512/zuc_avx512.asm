@@ -1994,8 +1994,9 @@ Eia3RoundsAVX_end:
 
         ret
 
-%macro REMAINDER_16 1
-%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+%macro REMAINDER_16 2
+%define %%USE_GFNI      %1 ; [in] If 1, then GFNI instructions may be used
+%define %%KEY_SIZE      %2 ; [constant] Key size (128 or 256)
 
 %ifdef LINUX
         %define         T       rdi
@@ -2054,9 +2055,11 @@ Eia3RoundsAVX_end:
 
         xor     OFFSET, OFFSET
 
+%if %%USE_GFNI != 1
         vmovdqa  xmm5, [bit_reverse_table_l]
         vmovdqa  xmm6, [bit_reverse_table_h]
         vmovdqa  xmm7, [bit_reverse_and_table]
+%endif
         vmovdqa  xmm10, [data_mask_64bits]
 
 %assign I 0
@@ -2080,6 +2083,9 @@ Eia3RoundsAVX_end:
 
         ;; read 16 bytes and reverse bits
         vmovdqu xmm0, [DATA_ADDR + OFFSET]
+%if %%USE_GFNI == 1
+        vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
+%else
         vpand   xmm1, xmm0, xmm7
 
         vpandn  xmm2, xmm7, xmm0
@@ -2089,6 +2095,7 @@ Eia3RoundsAVX_end:
         vpshufb xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
 
         vpor    xmm8, xmm4
+%endif
         ; xmm8 - bit reversed data bytes
 
         ;; ZUC authentication part
@@ -2166,6 +2173,9 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         vpandq  xmm0, xmm3
         XVPSRLB xmm0, r11, xmm4, r13
 
+%if %%USE_GFNI == 1
+        vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
+%else
         ; Bit reverse input data
         vpand   xmm1, xmm0, xmm7
 
@@ -2176,6 +2186,7 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
 
         vpor    xmm8, xmm3
+%endif
 
         ;; Set up DATA
         vpand   xmm13, xmm10, xmm8
@@ -2289,7 +2300,7 @@ align 64
 MKGLOBAL(asm_Eia3RemainderAVX512_16,function,internal)
 asm_Eia3RemainderAVX512_16:
         endbranch64
-        REMAINDER_16 128
+        REMAINDER_16 0, 128
 
 ;;
 ;; extern void asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
@@ -2303,7 +2314,47 @@ align 64
 MKGLOBAL(asm_Eia3_256_RemainderAVX512_16,function,internal)
 asm_Eia3_256_RemainderAVX512_16:
         endbranch64
-        REMAINDER_16 256
+        REMAINDER_16 0, 256
+
+;;
+;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;;
+;; WIN64
+;;      RCX - T: Array of digests for all 16 buffers
+;;      RDX - KS : Array of pointers to key stream for all 16 buffers
+;;      R8  - DATA : Array of pointers to data for all 16 buffers
+;;      R9  - N_BITS (number data bits to process)
+;; LIN64
+;;      RDI  - T: Array of digests for all 16 buffers
+;;      RSI  - KS : Array of pointers to key stream for all 16 buffers
+;;      RDX  - DATA : Array of pointers to data for all 16 buffers
+;;      RCX  - N_BITS (number data bits to process)
+;;
+align 64
+MKGLOBAL(asm_Eia3RemainderAVX512_16_VPCLMUL,function,internal)
+asm_Eia3RemainderAVX512_16_VPCLMUL:
+        endbranch64
+        REMAINDER_16 1, 128
+
+;;
+;; extern void asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;;
+;; WIN64
+;;      RCX - T: Array of digests for all 16 buffers
+;;      RDX - KS : Array of pointers to key stream for all 16 buffers
+;;      R8  - DATA : Array of pointers to data for all 16 buffers
+;;      R9  - N_BITS (number data bits to process)
+;; LIN64
+;;      RDI  - T: Array of digests for all 16 buffers
+;;      RSI  - KS : Array of pointers to key stream for all 16 buffers
+;;      RDX  - DATA : Array of pointers to data for all 16 buffers
+;;      RCX  - N_BITS (number data bits to process)
+;;
+align 64
+MKGLOBAL(asm_Eia3_256_RemainderAVX512_16_VPCLMUL,function,internal)
+asm_Eia3_256_RemainderAVX512_16_VPCLMUL:
+        endbranch64
+        REMAINDER_16 1, 256
 
 ;;
 ;;extern void asm_Eia3Round64BAVX512(uint32_t *T, const void *KS, const void *DATA)

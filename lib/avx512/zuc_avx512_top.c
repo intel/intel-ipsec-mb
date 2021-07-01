@@ -215,6 +215,29 @@ round64B_16(uint32_t *T, const uint32_t *ks, const void **data,
                 asm_Eia3Round64BAVX512_16(T, ks, data, lens);
 }
 
+static inline void
+remainder_16(uint32_t *T, const uint32_t *ks, const void **data,
+             uint16_t *lens, const uint64_t commonBits,
+             const unsigned key_size, const unsigned use_gfni)
+{
+        if (key_size == 128) {
+                if (use_gfni)
+                        asm_Eia3RemainderAVX512_16_VPCLMUL(T, ks, data, lens,
+                                                           commonBits);
+                else
+                        asm_Eia3RemainderAVX512_16(T, ks, data, lens,
+                                                   commonBits);
+        } else {
+                if (use_gfni)
+                        asm_Eia3_256_RemainderAVX512_16_VPCLMUL(T, ks, data,
+                                                                lens,
+                                                                commonBits);
+                else
+                        asm_Eia3_256_RemainderAVX512_16(T, ks, data, lens,
+                                                        commonBits);
+        }
+}
+
 static inline
 void _zuc_eea3_1_buffer_avx512(const void *pKey,
                                const void *pIv,
@@ -801,16 +824,10 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
         if (L < 16) {
                 keystr_var_gen_16_skip8(state, ooo->args.ks,
                                         ooo->init_not_done, L, 0, use_gfni);
-                if (key_size == 128)
-                        asm_Eia3RemainderAVX512_16(ooo->args.digest,
-                                                   ooo->args.ks,
-                                                   (const void **)pIn8,
-                                                   ooo->lens, remainCommonBits);
-                else
-                        asm_Eia3_256_RemainderAVX512_16(ooo->args.digest,
-                                                   ooo->args.ks,
-                                                   (const void **)pIn8,
-                                                   ooo->lens, remainCommonBits);
+                remainder_16(ooo->args.digest, ooo->args.ks,
+                             (const void **)pIn8, ooo->lens, remainCommonBits,
+                             key_size, use_gfni);
+
                 goto exit;
         } else
                 keystr_64B_gen_16_skip8(state, ooo->args.ks,
@@ -836,16 +853,9 @@ void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
         if (L)
                 keystr_var_gen_16(state, ooo->args.ks, L, 64, use_gfni);
 
-        if (key_size == 128)
-                asm_Eia3RemainderAVX512_16(ooo->args.digest,
-                                           ooo->args.ks,
-                                           (const void **)pIn8,
-                                           ooo->lens, remainCommonBits);
-        else
-                asm_Eia3_256_RemainderAVX512_16(ooo->args.digest,
-                                                ooo->args.ks,
-                                                (const void **)pIn8,
-                                                ooo->lens, remainCommonBits);
+        remainder_16(ooo->args.digest, ooo->args.ks,
+                     (const void **)pIn8, ooo->lens,
+                     remainCommonBits, key_size, use_gfni);
 
 exit:
         ooo->init_not_done = 0;

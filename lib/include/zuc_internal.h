@@ -1219,6 +1219,18 @@ IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16(uint32_t *T,
                                                   uint16_t *lens,
                                                   const uint64_t commonBits);
 
+IMB_DLL_LOCAL uint32_t asm_Eia3RemainderAVX512_16_VPCLMUL(uint32_t *T,
+                                                  const uint32_t *ks,
+                                                  const void **data,
+                                                  uint16_t *lens,
+                                                  const uint64_t commonBits);
+
+IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T,
+                                                  const uint32_t *ks,
+                                                  const void **data,
+                                                  uint16_t *lens,
+                                                  const uint64_t commonBits);
+
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
                                     const void * const pIv[4],
