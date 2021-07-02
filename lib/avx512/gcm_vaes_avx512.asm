@@ -861,37 +861,30 @@ default rel
         lea             %%T3, [%%T3 + %%T2*8]
 
         ;; calculate number of blocks to ghash (including partial bytes)
-        add             %%T2, 15
-        shr             %%T2, 4
-        cmp             %%T2, 1
-        je              %%_AAD_blocks_1
-        cmp             %%T2, 2
+        add             DWORD(%%T2), 15
+        shr             DWORD(%%T2), 4
+        cmp             DWORD(%%T2), 2
+        jb              %%_AAD_blocks_1
         je              %%_AAD_blocks_2
-        cmp             %%T2, 3
-        je              %%_AAD_blocks_3
-        cmp             %%T2, 4
+        cmp             DWORD(%%T2), 4
+        jb              %%_AAD_blocks_3
         je              %%_AAD_blocks_4
-        cmp             %%T2, 5
-        je              %%_AAD_blocks_5
-        cmp             %%T2, 6
+        cmp             DWORD(%%T2), 6
+        jb              %%_AAD_blocks_5
         je              %%_AAD_blocks_6
-        cmp             %%T2, 7
-        je              %%_AAD_blocks_7
-        cmp             %%T2, 8
+        cmp             DWORD(%%T2), 8
+        jb              %%_AAD_blocks_7
         je              %%_AAD_blocks_8
-        cmp             %%T2, 9
-        je              %%_AAD_blocks_9
-        cmp             %%T2, 10
+        cmp             DWORD(%%T2), 10
+        jb              %%_AAD_blocks_9
         je              %%_AAD_blocks_10
-        cmp             %%T2, 11
-        je              %%_AAD_blocks_11
-        cmp             %%T2, 12
+        cmp             DWORD(%%T2), 12
+        jb              %%_AAD_blocks_11
         je              %%_AAD_blocks_12
-        cmp             %%T2, 13
-        je              %%_AAD_blocks_13
-        cmp             %%T2, 14
+        cmp             DWORD(%%T2), 14
+        jb              %%_AAD_blocks_13
         je              %%_AAD_blocks_14
-        cmp             %%T2, 15
+        cmp             DWORD(%%T2), 15
         je              %%_AAD_blocks_15
         ;; fall through for 16 blocks
 
@@ -1927,9 +1920,9 @@ default rel
 %define %%MASKREG               %45 ; [clobbered] mask register
 %define %%INSTANCE_TYPE         %46 ; [in] multi_call or single_call
 
-        mov     %%IA0, %%LENGTH
-        add     %%IA0, 15
-        shr     %%IA0, 4
+        mov     DWORD(%%IA0), DWORD(%%LENGTH)
+        add     DWORD(%%IA0), 15
+        shr     DWORD(%%IA0), 4
         je      %%_last_num_blocks_is_0
 
         cmp     DWORD(%%IA0), 8
@@ -2675,8 +2668,8 @@ default rel
 %define %%PLAIN_CYPH_LEN    %5  ; [in] buffer length
 %define %%ENC_DEC           %6  ; [in] cipher direction
 %define %%DATA_OFFSET       %7  ; [in] data offset
-%define %%LENGTH            %8  ; [in] data length
-%define %%NUM_BLOCKS        %9  ; [in] number of blocks to process 1 to 16
+%define %%LENGTH            %8  ; [in] GP data length
+%define %%NUM_BLOCKS        %9  ; [in] GP number of blocks to process 1 to 16
 %define %%CTR               %10 ; [in/out] XMM counter block
 %define %%HASH_IN_OUT       %11 ; [in/out] XMM GHASH value
 %define %%INSTANCE_TYPE     %12 ; [in] single or multi call
@@ -2708,48 +2701,43 @@ default rel
 %define %%MASKREG           %38 ; [clobbered] mask register
 %define %%SHUFMASK          %39 ; [in] ZMM with BE/LE shuffle mask
 
-        cmp     %%NUM_BLOCKS, 8
+        cmp     DWORD(%%NUM_BLOCKS), 8
         je      %%_small_initial_num_blocks_is_8
-        jl      %%_small_initial_num_blocks_is_7_1
+        jb      %%_small_initial_num_blocks_is_7_1
 
-
-        cmp     %%NUM_BLOCKS, 12
+        cmp     DWORD(%%NUM_BLOCKS), 12
         je      %%_small_initial_num_blocks_is_12
-        jl      %%_small_initial_num_blocks_is_11_9
+        jb      %%_small_initial_num_blocks_is_11_9
 
         ;; 16, 15, 14 or 13
-        cmp     %%NUM_BLOCKS, 16
-        je      %%_small_initial_num_blocks_is_16
-        cmp     %%NUM_BLOCKS, 15
+        cmp     DWORD(%%NUM_BLOCKS), 15
+        ja      %%_small_initial_num_blocks_is_16
         je      %%_small_initial_num_blocks_is_15
-        cmp     %%NUM_BLOCKS, 14
+        cmp     DWORD(%%NUM_BLOCKS), 14
         je      %%_small_initial_num_blocks_is_14
         jmp     %%_small_initial_num_blocks_is_13
 
 %%_small_initial_num_blocks_is_11_9:
         ;; 11, 10 or 9
-        cmp     %%NUM_BLOCKS, 11
-        je      %%_small_initial_num_blocks_is_11
-        cmp     %%NUM_BLOCKS, 10
+        cmp     DWORD(%%NUM_BLOCKS), 10
+        ja      %%_small_initial_num_blocks_is_11
         je      %%_small_initial_num_blocks_is_10
         jmp     %%_small_initial_num_blocks_is_9
 
 %%_small_initial_num_blocks_is_7_1:
-        cmp     %%NUM_BLOCKS, 4
+        cmp     DWORD(%%NUM_BLOCKS), 4
         je      %%_small_initial_num_blocks_is_4
-        jl      %%_small_initial_num_blocks_is_3_1
+        jb      %%_small_initial_num_blocks_is_3_1
         ;; 7, 6 or 5
-        cmp     %%NUM_BLOCKS, 7
-        je      %%_small_initial_num_blocks_is_7
-        cmp     %%NUM_BLOCKS, 6
+        cmp     DWORD(%%NUM_BLOCKS), 6
+        ja      %%_small_initial_num_blocks_is_7
         je      %%_small_initial_num_blocks_is_6
         jmp     %%_small_initial_num_blocks_is_5
 
 %%_small_initial_num_blocks_is_3_1:
         ;; 3, 2 or 1
-        cmp     %%NUM_BLOCKS, 3
-        je      %%_small_initial_num_blocks_is_3
-        cmp     %%NUM_BLOCKS, 2
+        cmp     DWORD(%%NUM_BLOCKS), 2
+        ja      %%_small_initial_num_blocks_is_3
         je      %%_small_initial_num_blocks_is_2
 
         ;; for %%NUM_BLOCKS == 1, just fall through and no 'jmp' needed
@@ -3205,9 +3193,9 @@ default rel
 %%_message_below_16_blocks:
         ;; Determine how many blocks to process
         ;; - process one additional block if there is a partial block
-        mov             %%IA1, %%LENGTH
-        add             %%IA1, 15
-        shr             %%IA1, 4
+        mov             DWORD(%%IA1), DWORD(%%LENGTH)
+        add             DWORD(%%IA1), 15
+        shr             DWORD(%%IA1), 4
         ;; %%IA1 can be in the range from 0 to 16
 
         GCM_ENC_DEC_SMALL \
