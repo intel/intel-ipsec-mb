@@ -3052,25 +3052,42 @@ default rel
         cmp             %%LENGTH, (16 * 16)
         jae             %%_encrypt_16_blocks
 
+        ;; =====================================================
+        ;; =====================================================
+        ;; ==== GHASH 1 x 16 blocks
+        ;; ==== GHASH 1 x 16 blocks (reduction) & encrypt N blocks
+        ;; ====      then GHASH N blocks
 %%_encrypt_0_blocks_ghash_32:
-        ;; ==== save the last counter block
-        vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
-        vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
-
         ;; ==== GHASH 32 blocks and follow with reduction
         GHASH_16        start, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, HashKey_32, 0, %%AAD_HASHz, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
-        GHASH_16        end, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_16, 0, no_hash_input, \
-                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
-        jmp             %%_integrate_and_reduce
+        ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
+%assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
+
+        GCM_ENC_DEC_LAST \
+                %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_16, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
+                %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
+                %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, continue, %%GL, %%GH, %%GM, \
+                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
+
+        ;; save the last counter block
+        vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+
+        jmp             %%_ghash_done
 
         ;; =====================================================
         ;; =====================================================
-        ;; ==== GHASH & encrypt 1 x 16 blocks (done before)
         ;; ==== GHASH & encrypt 1 x 16 blocks
-        ;; ==== GHASH 16 blocks + reduction
-        ;; ==== GHASH 2 x 16 blocks (32) and follow with reduction
+        ;; ==== GHASH & encrypt 1 x 16 blocks
+        ;; ==== GHASH 1 x 16 blocks (reduction)
+        ;; ==== GHASH 1 x 16 blocks (reduction) & encrypt N blocks
+        ;; ====      then GHASH N blocks
 %%_encrypt_32_blocks:
         ;; ==== AES-CTR + GHASH - 16 blocks, start
 %assign aesout_offset (STACK_LOCAL_OFFSET + (32 * 16))
@@ -3108,27 +3125,38 @@ default rel
                 %%GL, %%GH, %%GM, \
                 no_reduction, %%ENC_DEC, data_in_out_offset, no_ghash_in
 
-        ;; ==== save the last counter block
-        vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
-        vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
-
         ;; ==== GHASH 16 blocks with reduction
         GHASH_16        end_reduce, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
-        ;; ==== GHASH 16 blocks & follow with reduction
-        GHASH_16        start, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, HashKey_16, 0, %%AAD_HASHz, \
-                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
+        ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
+%assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
 
         sub             %%LENGTH, (32 * 16)
         add             %%DATA_OFFSET, (32 * 16)
-        jmp             %%_integrate_and_reduce
+
+        GCM_ENC_DEC_LAST \
+                %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_16, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
+                %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
+                %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
+                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
+
+        ;; save the last counter block
+        vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+
+        jmp             %%_ghash_done
 
         ;; =====================================================
         ;; =====================================================
         ;; ==== GHASH & encrypt 16 blocks (done before)
-        ;; ==== GHASH 2 x 16 blocks (32) + reduction
-        ;; ==== GHASH 1 x 16 blocks (32) and follow with reduction
+        ;; ==== GHASH 1 x 16 blocks
+        ;; ==== GHASH 1 x 16 blocks (reduction) & encrypt N blocks
+        ;; ====      then GHASH N blocks
 %%_encrypt_16_blocks:
         ;; ==== AES-CTR + GHASH - 16 blocks, start
 %assign aesout_offset (STACK_LOCAL_OFFSET + (32 * 16))
@@ -3148,39 +3176,31 @@ default rel
                 %%GL, %%GH, %%GM, \
                 first_time, %%ENC_DEC, data_in_out_offset, %%AAD_HASHz
 
-        ;; ==== save the last counter block
-        vpshufb         %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
-        vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
-
-        ;; ==== GHASH 2 x 16 blocks and follow with reduction
+        ;; ==== GHASH 1 x 16 blocks
         GHASH_16        mid, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (16 * 16), %%GDATA_KEY, HashKey_32, 0, no_hash_input, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
-        GHASH_16        end, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (32 * 16), %%GDATA_KEY, HashKey_16, 0, no_hash_input, \
-                        %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
+        ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
+%assign ghashin_offset (STACK_LOCAL_OFFSET + (32 * 16))
 
         sub             %%LENGTH, (16 * 16)
         add             %%DATA_OFFSET, (16 * 16)
 
-        ;; fall through to reduction part
+        GCM_ENC_DEC_LAST \
+                %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
+                HashKey_16, ghashin_offset, %%SHUF_MASK, \
+                %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
+                %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
+                %%ZTMP21, %%ZTMP22, \
+                %%ADDBE_4x4, %%ADDBE_1234, continue, %%GL, %%GH, %%GM, \
+                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
 
-%%_integrate_and_reduce:
-        ;; integrate TM into TH and TL
-        vpsrldq         %%ZTMP0, %%GM, 8
-        vpslldq         %%ZTMP1, %%GM, 8
-        vpxorq          %%GH, %%GH, %%ZTMP0
-        vpxorq          %%GL, %%GL, %%ZTMP1
+        ;; save the last counter block
+        vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 
-        ;; add TH and TL 128-bit words horizontally
-        VHPXORI4x128    %%GH, %%ZTMP0
-        VHPXORI4x128    %%GL, %%ZTMP1
-
-        ;; reduction
-        vmovdqa64       XWORD(%%ZTMP9), [rel POLY2]
-        VCLMUL_REDUCE   XWORD(%%AAD_HASHz), XWORD(%%ZTMP9), XWORD(%%GH), XWORD(%%GL), XWORD(%%ZTMP0), XWORD(%%ZTMP1)
-
-        or              %%LENGTH, %%LENGTH
-        jz              %%_ghash_done
+        jmp             %%_ghash_done
 
 %%_message_below_16_blocks:
         ;; Determine how many blocks to process
