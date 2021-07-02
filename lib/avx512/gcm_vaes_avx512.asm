@@ -219,8 +219,8 @@ default rel
 ;;; ===========================================================================
 ;;; schoolbook multiply of 16 blocks (8 x 16 bytes)
 ;;; - it is assumed that data read from %%INPTR is already shuffled and
-;;;   %%INPTR addres is 64 byte aligned
-;;; - there is an option to pass ready blocks throug ZMM registers too.
+;;;   %%INPTR address is 64 byte aligned
+;;; - there is an option to pass ready blocks through ZMM registers too.
 ;;;   4 extra parameters need to passed in such case and 21st argument can be empty
 %macro GHASH_16 21-25
 %define %%TYPE  %1      ; [in] ghash type: start (xor hash), mid, end (same as mid; no reduction),
@@ -230,10 +230,10 @@ default rel
 %define %%GL    %4      ; [in/out] ZMM ghash sum: low 128-bits
 %define %%INPTR %5      ; [in] data input pointer
 %define %%INOFF %6      ; [in] data input offset
-%define %%INDIS %7      ; [in] data input displacment
+%define %%INDIS %7      ; [in] data input displacement
 %define %%HKPTR %8      ; [in] hash key pointer
 %define %%HKOFF %9      ; [in] hash key offset
-%define %%HKDIS %10     ; [in] hash key displacment
+%define %%HKDIS %10     ; [in] hash key displacement
 %define %%HASH  %11     ; [in/out] ZMM hash value in/out
 %define %%ZTMP0 %12     ; [clobbered] temporary ZMM
 %define %%ZTMP1 %13     ; [clobbered] temporary ZMM
@@ -467,7 +467,7 @@ default rel
 ;; There are 1, 2 or 3 blocks left to process.
 ;; It may also be that they are the only blocks to process.
 
-;; Set hash key and register index position for the remining 1 to 3 blocks
+;; Set hash key and register index position for the remaining 1 to 3 blocks
 %assign hashk   HashKey_ %+ blocks_left
 %assign reg_idx (%%NUM_BLOCKS / 4)
 
@@ -1459,7 +1459,7 @@ default rel
 %define %%ZT01                  %34 ; [clobbered] temporary ZMM
 %define %%ADDBE_4x4             %35 ; [in] ZMM with 4x128bits 4 in big-endian
 %define %%ADDBE_1234            %36 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
-%define %%GHASH_TYPE            %37 ; [in] "start", "continue"
+%define %%GHASH_TYPE            %37 ; [in] "start", "start_reduce", "mid", "end_reduce"
 %define %%TO_REDUCE_L           %38 ; [in] ZMM for low 4x128-bit GHASH sum
 %define %%TO_REDUCE_H           %39 ; [in] ZMM for hi 4x128-bit GHASH sum
 %define %%TO_REDUCE_M           %40 ; [in] ZMM for medium 4x128-bit GHASH sum
@@ -1483,6 +1483,22 @@ default rel
 %define %%DATA2 %%GH3L
 %define %%DATA3 %%GH3M
 %define %%DATA4 %%GH3T
+
+%assign do_reduction1 0
+%assign is_start1     0
+
+%ifidn %%GHASH_TYPE, start_reduce
+%assign is_start1 1
+%assign do_reduction1 1
+%endif
+
+%ifidn %%GHASH_TYPE, start
+%assign is_start1 1
+%endif
+
+%ifidn %%GHASH_TYPE, end_reduce
+%assign do_reduction1 1
+%endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; - get load/store mask
@@ -1534,7 +1550,7 @@ default rel
         ;; - pre-load constants
         ;; - add current hash into the 1st block
         vbroadcastf64x2 %%AESKEY1, [%%GDATA + (16 * 0)]
-%ifidn %%GHASH_TYPE, start
+%if is_start1 != 0
         vpxorq          %%GHDAT1, %%HASH_IN_OUT, [rsp + %%GHASHIN_BLK_OFFSET + (0*64)]
 %else
         vmovdqa64       %%GHDAT1, [rsp + %%GHASHIN_BLK_OFFSET + (0*64)]
@@ -1673,7 +1689,7 @@ default rel
         ;; =================================================
         ;; gather GHASH in GH1L (low), GH1H (high), GH1M (mid)
         vpternlogq      %%GH1M, %%GH1T, %%GH2T, 0x96 ; TM
-%ifidn %%GHASH_TYPE, start
+%if is_start1 != 0
         vpxorq          %%GH1M, %%GH1M, %%GH2M       ; TM
 %else
         vpternlogq      %%GH1H, %%TO_REDUCE_H, %%GH2H, 0x96
@@ -1692,11 +1708,12 @@ default rel
         ;; =================================================
         ;; prepare mid sum for adding to high & low
         ;; load polynomial constant for reduction
+%if do_reduction1 != 0
         vpsrldq         %%GH2M, %%GH1M, 8
         vpslldq         %%GH1M, %%GH1M, 8
 
         vmovdqa64       XWORD(%%RED_POLY), [rel POLY2]
-
+%endif
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 8
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenc, \
@@ -1707,12 +1724,18 @@ default rel
 
         ;; =================================================
         ;; Add mid product to high and low
-%ifidn %%GHASH_TYPE, start
+%if do_reduction1 != 0
+%if is_start1 != 0
         vpternlogq      %%GH1H, %%GH2H, %%GH2M, 0x96    ; TH = TH1 + TH2 + TM>>64
         vpternlogq      %%GH1L, %%GH2L, %%GH1M, 0x96    ; TL = TL1 + TL2 + TM<<64
 %else
         vpxorq          %%GH1H, %%GH1H, %%GH2M          ; TH = TH1 + TM>>64
         vpxorq          %%GH1L, %%GH1L, %%GH1M          ; TL = TL1 + TM<<64
+%endif
+%else
+        vmovdqa64       %%TO_REDUCE_M, %%GH1M
+        vmovdqa64       %%TO_REDUCE_H, %%GH1H
+        vmovdqa64       %%TO_REDUCE_L, %%GH1L
 %endif
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 9
@@ -1723,18 +1746,21 @@ default rel
 
         ;; =================================================
         ;; horizontal xor of low and high 4x128
+%if do_reduction1 != 0
         VHPXORI4x128    %%GH1H, %%GH2H
         VHPXORI4x128    %%GH1L, %%GH2L
+%endif
 
 %if (NROUNDS >= 11)
         vbroadcastf64x2 %%AESKEY2, [%%GDATA + (16 * 11)]
 %endif
         ;; =================================================
         ;; first phase of reduction
+%if do_reduction1 != 0
         vpclmulqdq      XWORD(%%RED_P1), XWORD(%%RED_POLY), XWORD(%%GH1L), 0x01
         vpslldq         XWORD(%%RED_P1), XWORD(%%RED_P1), 8             ; shift-L 2 DWs
         vpxorq          XWORD(%%RED_P1), XWORD(%%GH1L), XWORD(%%RED_P1) ; first phase of the reduct
-
+%endif
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES rounds up to 11 (AES192) or 13 (AES256)
         ;; AES128 is done
@@ -1767,6 +1793,7 @@ default rel
 
         ;; =================================================
         ;; second phase of the reduction
+%if do_reduction1 != 0
         vpclmulqdq      XWORD(%%RED_T1), XWORD(%%RED_POLY), XWORD(%%RED_P1), 0x00
         vpsrldq         XWORD(%%RED_T1), XWORD(%%RED_T1), 4 ; shift-R 1-DW to obtain 2-DWs shift-R
 
@@ -1774,7 +1801,7 @@ default rel
         vpslldq         XWORD(%%RED_T2), XWORD(%%RED_T2), 4 ; shift-L 1-DW for result without shifts
         ;; GH1H = GH1H + RED_T1 + RED_T2
         vpternlogq      XWORD(%%GH1H), XWORD(%%RED_T2), XWORD(%%RED_T1), 0x96
-
+%endif
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; the last AES round
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vaesenclast, \
@@ -1849,11 +1876,16 @@ default rel
 %endif
 %endif
 
+%if do_reduction1 != 0
+        vmovdqa64       XWORD(%%HASH_IN_OUT), XWORD(%%GH1H)
+%endif
+
+        ;; @todo - add processing of extra GHASH 16 blocks
+
         ;; =================================================
         ;; GHASH last N blocks
         ;; - current hash value in HASH_IN_OUT
         ;; - DATA1-DATA4 include blocks for GHASH
-        vmovdqa64       XWORD(%%HASH_IN_OUT), XWORD(%%GH1H)
 
         INITIAL_BLOCKS_PARTIAL_GHASH \
                         %%GDATA, %%GCTX, %%LENGTH, \
@@ -1906,7 +1938,7 @@ default rel
 %define %%ZT22                  %34 ; [clobbered] temporary ZMM
 %define %%ADDBE_4x4             %35 ; [in] ZMM with 4x128bits 4 in big-endian
 %define %%ADDBE_1234            %36 ; [in] ZMM with 4x128bits 1, 2, 3 and 4 in big-endian
-%define %%GHASH_TYPE            %37 ; [in] "start", "continue"
+%define %%GHASH_TYPE            %37 ; [in] "start", "start_reduce", "mid", "end_reduce"
 %define %%TO_REDUCE_L           %38 ; [in] ZMM for low 4x128-bit GHASH sum
 %define %%TO_REDUCE_H           %39 ; [in] ZMM for hi 4x128-bit GHASH sum
 %define %%TO_REDUCE_M           %40 ; [in] ZMM for medium 4x128-bit GHASH sum
@@ -1985,15 +2017,9 @@ default rel
 %endrep
 
 %%_last_num_blocks_is_0:
-%ifidn %%GHASH_TYPE, start
-        GHASH_16        start_reduce, %%TO_REDUCE_H, %%TO_REDUCE_M, %%TO_REDUCE_L, \
+        GHASH_16        %%GHASH_TYPE, %%TO_REDUCE_H, %%TO_REDUCE_M, %%TO_REDUCE_L, \
                         rsp, %%GHASHIN_BLK_OFFSET, 0, %%GDATA, %%HASHKEY_OFFSET, 0, %%HASH_IN_OUT, \
                         %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, %%ZT08, %%ZT09
-%else
-        GHASH_16        end_reduce, %%TO_REDUCE_H, %%TO_REDUCE_M, %%TO_REDUCE_L, \
-                        rsp, %%GHASHIN_BLK_OFFSET, 0, %%GDATA, %%HASHKEY_OFFSET, 0, %%HASH_IN_OUT, \
-                        %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, %%ZT08, %%ZT09
-%endif
 
 %%_last_blocks_done:
 
@@ -3058,7 +3084,7 @@ default rel
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, continue, %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
@@ -3128,7 +3154,7 @@ default rel
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, start_reduce, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
@@ -3179,7 +3205,7 @@ default rel
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, continue, %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
@@ -3227,7 +3253,7 @@ default rel
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, start_reduce, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
