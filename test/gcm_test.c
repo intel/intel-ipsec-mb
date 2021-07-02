@@ -2346,7 +2346,11 @@ test_sgl(struct IMB_MGR *mb_mgr,
                         seg_size = segment_sizes[i];
                         seg_ptr = segments[i];
                 }
-
+#ifdef DEBUG
+                printf("gcm-sgl: job-api=%c, segment=%u, #segments=%u, "
+                       "size=%u bytes\n", job_api ? 'y' : 'n', i,
+                       num_segments, (unsigned) seg_size);
+#endif /* DEBUG */
                 if (job_api) {
                         if (aes_gcm_job(mb_mgr, cipher_dir, &key, key_sz,
                                         seg_ptr, seg_ptr, seg_size,
