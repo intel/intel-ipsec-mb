@@ -2404,7 +2404,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
                                "in segment number %u "
                                "(segment size = %u)\n",
                                i, seg_sz);
-                        hexdump(stderr, "Linear output",
+                        hexdump(stderr, "Expected output",
                                 in_buffer + i*seg_sz, seg_sz);
                         hexdump(stderr, "SGL output", segments[i],
                                 seg_sz);
@@ -2418,7 +2418,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
                 printf("ciphertext mismatched "
                        "in segment number %u (segment size = %u)\n",
                        i, seg_sz);
-                hexdump(stderr, "Linear output",
+                hexdump(stderr, "Expected output",
                         in_buffer + i*seg_sz, last_seg_sz);
                 hexdump(stderr, "SGL output", segments[i], last_seg_sz);
                 test_suite_update(ctx, 0, 1);
@@ -2426,7 +2426,7 @@ test_sgl(struct IMB_MGR *mb_mgr,
         if (memcmp(sgl_digest, linear_digest, 16) != 0) {
                 printf("hash mismatched (segment size = %u)\n",
                        seg_sz);
-                hexdump(stderr, "Linear digest",
+                hexdump(stderr, "Expected digest",
                         linear_digest, DIGEST_SZ);
                 hexdump(stderr, "SGL digest", sgl_digest, DIGEST_SZ);
                 test_suite_update(ctx, 0, 1);
