@@ -1223,30 +1223,29 @@ default rel
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL_CIPHER
 
-%macro INITIAL_BLOCKS_PARTIAL_GHASH 23
+%macro INITIAL_BLOCKS_PARTIAL_GHASH 22
 %define %%GDATA_KEY             %1  ; [in] key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
 %define %%LENGTH                %3  ; [in/clobbered] length in bytes
-%define %%DATA_OFFSET           %4  ; [in/out] current data offset (updated)
-%define %%NUM_BLOCKS            %5  ; [in] can only be 1, 2, 3, 4, 5, ..., 15 or 16 (not 0)
-%define %%HASH_IN_OUT           %6  ; [in/out] XMM ghash in/out value
-%define %%ENC_DEC               %7  ; [in] cipher direction (ENC/DEC)
-%define %%INSTANCE_TYPE         %8  ; [in] multi_call or single_call
-%define %%DAT0                  %9  ; [in] ZMM with cipher text shuffled for GHASH
-%define %%DAT1                  %10 ; [in] ZMM with cipher text shuffled for GHASH
-%define %%DAT2                  %11 ; [in] ZMM with cipher text shuffled for GHASH
-%define %%DAT3                  %12 ; [in] ZMM with cipher text shuffled for GHASH
-%define %%LAST_CIPHER_BLK       %13 ; [in] XMM with ciphered counter block partially xor'ed with text
-%define %%LAST_GHASH_BLK        %14 ; [in] XMM with last cipher text block shuffled for GHASH
-%define %%ZT0                   %15 ; [clobbered] ZMM temporary
-%define %%ZT1                   %16 ; [clobbered] ZMM temporary
-%define %%ZT2                   %17 ; [clobbered] ZMM temporary
-%define %%ZT3                   %18 ; [clobbered] ZMM temporary
-%define %%ZT4                   %19 ; [clobbered] ZMM temporary
-%define %%ZT5                   %20 ; [clobbered] ZMM temporary
-%define %%ZT6                   %21 ; [clobbered] ZMM temporary
-%define %%ZT7                   %22 ; [clobbered] ZMM temporary
-%define %%ZT8                   %23 ; [clobbered] ZMM temporary
+%define %%NUM_BLOCKS            %4  ; [in] can only be 1, 2, 3, 4, 5, ..., 15 or 16 (not 0)
+%define %%HASH_IN_OUT           %5  ; [in/out] XMM ghash in/out value
+%define %%ENC_DEC               %6  ; [in] cipher direction (ENC/DEC)
+%define %%INSTANCE_TYPE         %7  ; [in] multi_call or single_call
+%define %%DAT0                  %8  ; [in] ZMM with cipher text shuffled for GHASH
+%define %%DAT1                  %9  ; [in] ZMM with cipher text shuffled for GHASH
+%define %%DAT2                  %10 ; [in] ZMM with cipher text shuffled for GHASH
+%define %%DAT3                  %11 ; [in] ZMM with cipher text shuffled for GHASH
+%define %%LAST_CIPHER_BLK       %12 ; [in] XMM with ciphered counter block partially xor'ed with text
+%define %%LAST_GHASH_BLK        %13 ; [in] XMM with last cipher text block shuffled for GHASH
+%define %%ZT0                   %14 ; [clobbered] ZMM temporary
+%define %%ZT1                   %15 ; [clobbered] ZMM temporary
+%define %%ZT2                   %16 ; [clobbered] ZMM temporary
+%define %%ZT3                   %17 ; [clobbered] ZMM temporary
+%define %%ZT4                   %18 ; [clobbered] ZMM temporary
+%define %%ZT5                   %19 ; [clobbered] ZMM temporary
+%define %%ZT6                   %20 ; [clobbered] ZMM temporary
+%define %%ZT7                   %21 ; [clobbered] ZMM temporary
+%define %%ZT8                   %22 ; [clobbered] ZMM temporary
 
 %ifidn %%INSTANCE_TYPE, single_call
 
@@ -1264,7 +1263,6 @@ default rel
         ;; update data offset
 %if %%NUM_BLOCKS > 1
         ;; The final block of data may be <16B
-        add     %%DATA_OFFSET, 16 * (%%NUM_BLOCKS - 1)
         sub     %%LENGTH, 16 * (%%NUM_BLOCKS - 1)
 %endif
 
@@ -1279,8 +1277,7 @@ default rel
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         sub     %%LENGTH, 16
-        add     %%DATA_OFFSET, 16
-        mov     [%%GDATA_CTX + PBlockLen], %%LENGTH
+        mov     qword [%%GDATA_CTX + PBlockLen], 0
 
         ;; Hash all of the data
         GHASH_1_TO_16 %%GDATA_KEY, %%HASH_IN_OUT, \
@@ -1412,7 +1409,7 @@ default rel
                         %%IA0, %%IA1, %%MASKREG, %%SHUFMASK
 
         INITIAL_BLOCKS_PARTIAL_GHASH \
-                        %%GDATA_KEY, %%GDATA_CTX, %%LENGTH, %%DATA_OFFSET, \
+                        %%GDATA_KEY, %%GDATA_CTX, %%LENGTH, \
                         %%NUM_BLOCKS, %%HASH_IN_OUT, %%ENC_DEC, \
                         %%INSTANCE_TYPE, %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
@@ -1859,7 +1856,7 @@ default rel
         vmovdqa64       XWORD(%%HASH_IN_OUT), XWORD(%%GH1H)
 
         INITIAL_BLOCKS_PARTIAL_GHASH \
-                        %%GDATA, %%GCTX, %%LENGTH, %%DATA_OFFSET, \
+                        %%GDATA, %%GCTX, %%LENGTH, \
                         %%NUM_BLOCKS, XWORD(%%HASH_IN_OUT), %%ENC_DEC, \
                         %%INSTANCE_TYPE, %%DATA1, %%DATA2, %%DATA3, %%DATA4, \
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
