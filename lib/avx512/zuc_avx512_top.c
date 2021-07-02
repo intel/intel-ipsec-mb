@@ -166,7 +166,7 @@ keystr_8B_gen_16(ZucState16_t *state, uint32_t *pKeyStr,
 
 static inline void
 keystr_var_gen_16(ZucState16_t *state, uint32_t *pKeyStr,
-                  const uint64_t numRounds, const unsigned key_off,
+                  const uint32_t numRounds, const unsigned key_off,
                   const unsigned use_gfni)
 {
         if (use_gfni)
@@ -179,7 +179,7 @@ keystr_var_gen_16(ZucState16_t *state, uint32_t *pKeyStr,
 
 static inline void
 keystr_var_gen_16_skip8(ZucState16_t *state, uint32_t *pKeyStr,
-                  const uint16_t lane_mask, const uint64_t numRounds,
+                  const uint16_t lane_mask, const uint32_t numRounds,
                   const unsigned key_off, const unsigned use_gfni)
 
 {
@@ -217,7 +217,7 @@ round64B_16(uint32_t *T, const uint32_t *ks, const void **data,
 
 static inline void
 remainder_16(uint32_t *T, const uint32_t *ks, const void **data,
-             uint16_t *lens, const uint64_t commonBits,
+             uint16_t *lens, const uint32_t commonBits,
              const unsigned key_size, const unsigned use_gfni)
 {
         if (key_size == 128) {

@@ -852,14 +852,14 @@ align 64
 	%define		pIv	  rsi
 	%define		pState	  rdx
         %define         lane_mask ecx
-	%define		arg5	  r8 ; Only used in ZUC-256
 %else
 	%define		pKe	  rcx
 	%define		pIv	  rdx
 	%define		pState	  r8
         %define         lane_mask r9d
-	%define		arg5	  [rsp + 40] ; Only used in ZUC-256
 %endif
+%define	tag_sz	  r10d ; Only used in ZUC-256 (caller written in assembly, so using a hardcoded register)
+%define tag_sz_q  r10
 
 %define         %%X0    zmm16
 %define         %%X1    zmm17
@@ -867,12 +867,6 @@ align 64
 %define         %%W     zmm19
 %define         %%R1    zmm20
 %define         %%R2    zmm21
-
-%define tag_sz r10
-
-%if %%KEY_SIZE == 256
-    mov    tag_sz, arg5
-%endif
 
     FUNC_SAVE
 
@@ -884,10 +878,10 @@ align 64
     ; Get pointer to constants (depending on tag size, this will point at
     ; constants for encryption, authentication with 4-byte, 8-byte or 16-byte tags)
     lea    r13, [rel EK256_d64]
-    bsf    DWORD(tag_sz), DWORD(tag_sz)
-    dec    DWORD(tag_sz)
-    shl    DWORD(tag_sz), 6
-    add    r13, tag_sz
+    bsf    tag_sz, tag_sz
+    dec    tag_sz
+    shl    tag_sz, 6
+    add    r13, tag_sz_q
     mov    r11, 0x4000 ; Mask to shift 4 bits only in the 15th dword
     kmovq  k1, r11
     mov    r11, 0x3ff ; Mask to read 10 bytes of IV
@@ -1001,7 +995,7 @@ asm_ZucInitialization_16_gfni_avx512:
 
 ;;
 ;; void asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
-;;                                         ZucState16_t *pState)
+;;                                         ZucState16_t *pState, uint32_t tag_sz)
 ;;
 MKGLOBAL(asm_Zuc256Initialization_16_avx512,function,internal)
 asm_Zuc256Initialization_16_avx512:
@@ -1012,7 +1006,7 @@ asm_Zuc256Initialization_16_avx512:
 
 ;;
 ;; void asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
-;;                                              ZucState16_t *pState)
+;;                                              ZucState16_t *pState, uint32_t tag_sz)
 ;;
 MKGLOBAL(asm_Zuc256Initialization_16_gfni_avx512,function,internal)
 asm_Zuc256Initialization_16_gfni_avx512:
@@ -1225,7 +1219,7 @@ asm_ZucGenKeystream4B_16_gfni_avx512:
     ret
 
 %macro KEYGEN_VAR_16_AVX512 2-3
-%define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds (GP register)
+%define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds (GP dowrd register)
 %define %%USE_GFNI      %2 ; [in] If 1, then GFNI instructions may be used
 %define %%LANE_MASK     %3 ; [in] Lane mask with lanes to generate full keystream (rest 2 words less)
 
@@ -1288,7 +1282,7 @@ APPEND(%%_num_rounds_is_,I):
 ;;
 ;; void asm_ZucGenKeystream_16_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                    const u32 key_off,
-;;                                    const u64 numRounds)
+;;                                    const u32 numRounds)
 ;;
 MKGLOBAL(asm_ZucGenKeystream_16_avx512,function,internal)
 asm_ZucGenKeystream_16_avx512:
@@ -1302,7 +1296,7 @@ asm_ZucGenKeystream_16_avx512:
 ;;
 ;; void asm_ZucGenKeystream_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                         const u32 key_off,
-;;                                         const u64 numRounds)
+;;                                         const u32 numRounds)
 ;;
 MKGLOBAL(asm_ZucGenKeystream_16_gfni_avx512,function,internal)
 asm_ZucGenKeystream_16_gfni_avx512:
@@ -1315,14 +1309,19 @@ asm_ZucGenKeystream_16_gfni_avx512:
 ;; void asm_ZucGenKeystream_16_skip8_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                          const u32 key_off,
 ;;                                          const u16 lane_mask,
-;;                                          u64 numRounds)
+;;                                          u32 numRounds)
 ;;
 MKGLOBAL(asm_ZucGenKeystream_16_skip8_avx512,function,internal)
 asm_ZucGenKeystream_16_skip8_avx512:
+%ifdef LINUX
+        %define	        arg5    r8d
+%else
+        %define         arg5    [rsp + 40]
+%endif
     endbranch64
 
-    mov     r10, arg5
-    KEYGEN_VAR_16_AVX512 r10, 0, arg4
+    mov     r10d, arg5
+    KEYGEN_VAR_16_AVX512 r10d, 0, arg4
 
     ret
 
@@ -1331,14 +1330,19 @@ asm_ZucGenKeystream_16_skip8_avx512:
 ;;                                              u32* pKeyStr[16],
 ;;                                              const u32 key_off,
 ;;                                              const u16 lane_mask,
-;;                                              u64 numRounds)
+;;                                              u32 numRounds)
 ;;
 MKGLOBAL(asm_ZucGenKeystream_16_skip8_gfni_avx512,function,internal)
 asm_ZucGenKeystream_16_skip8_gfni_avx512:
+%ifdef LINUX
+        %define	        arg5    r8d
+%else
+        %define         arg5    [rsp + 40]
+%endif
     endbranch64
 
-    mov     r10, arg5
-    KEYGEN_VAR_16_AVX512 r10, 1, arg4
+    mov     r10d, arg5
+    KEYGEN_VAR_16_AVX512 r10d, 1, arg4
 
     ret
 
@@ -2003,7 +2007,7 @@ Eia3RoundsAVX_end:
         %define	        KS      rsi
         %define	        DATA    rdx
         %define         LEN     rcx
-        %define	        arg5    r8
+        %define	        arg5    r8d
 %else
         %define         T       rcx
         %define	        KS      rdx
@@ -2023,7 +2027,8 @@ Eia3RoundsAVX_end:
 %define N_BYTES         r14
 %define OFFSET          r15
 
-%define MIN_LEN         r10
+%define MIN_LEN         r10d
+%define MIN_LEN_Q       r10
 %define IDX             rax
 %define TMP             rbx
 
@@ -2291,7 +2296,7 @@ APPEND3(%%Eia3RoundsAVX_end,I,J):
 
 %assign i 0
 %rep 16
-        mov     TMP, [KS + 16*8*i + MIN_LEN]
+        mov     TMP, [KS + 16*8*i + MIN_LEN_Q]
         mov     [KS + 16*8*i], TMP
 %assign i (i+1)
 %endrep
