@@ -42,4 +42,4 @@
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_gfni_avx512
 %define ZUC_ROUND64B_16 asm_Eia3Round64B_16_VPCLMUL
 
-%include "avx512/zuc_avx512.asm"
+%include "avx512/zuc_x16_avx512.asm"

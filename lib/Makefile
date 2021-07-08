@@ -555,8 +555,8 @@ asm_avx512_lib_objs := \
 	aes_docsis_enc_avx512.o \
 	aes_docsis_dec_vaes_avx512.o \
 	aes_docsis_enc_vaes_avx512.o \
-	zuc_avx512.o \
-	zuc_vaes_avx512.o \
+	zuc_x16_avx512.o \
+	zuc_x16_vaes_avx512.o \
 	mb_mgr_aes_submit_avx512.o \
 	mb_mgr_aes_flush_avx512.o \
 	mb_mgr_aes192_submit_avx512.o \
