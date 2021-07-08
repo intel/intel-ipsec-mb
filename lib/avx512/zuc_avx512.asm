@@ -35,6 +35,23 @@
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
+%ifndef CIPHER_16
+%define USE_GFNI 0
+%define CIPHER_16 asm_ZucCipher_16_avx512
+%define ZUC128_INIT asm_ZucInitialization_16_avx512
+%define ZUC256_INIT asm_Zuc256Initialization_16_avx512
+%define ZUC128_REMAINDER_16 asm_Eia3RemainderAVX512_16
+%define ZUC256_REMAINDER_16 asm_Eia3_256_RemainderAVX512_16
+%define ZUC_KEYGEN64B_16 asm_ZucGenKeystream64B_16_avx512
+%define ZUC_KEYGEN8B_16 asm_ZucGenKeystream8B_16_avx512
+%define ZUC_KEYGEN4B_16 asm_ZucGenKeystream4B_16_avx512
+%define ZUC_KEYGEN_16 asm_ZucGenKeystream_16_avx512
+%define ZUC_KEYGEN64B_SKIP8_16 asm_ZucGenKeystream64B_16_skip8_avx512
+%define ZUC_KEYGEN8B_SKIP8_16 asm_ZucGenKeystream8B_16_skip8_avx512
+%define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
+%define ZUC_ROUND64B_16 asm_Eia3Round64BAVX512_16
+%endif
+
 section .data
 default rel
 
@@ -494,20 +511,19 @@ align 64
 ;   return
 ;       W value, updates F_R1[] / F_R2[]
 ;
-%macro nonlin_fun16  9-10
+%macro nonlin_fun16  8-9
 %define %%STATE     %1  ; [in] ZUC state
 %define %%LANE_MASK %2  ; [in] Mask register with lanes to update
-%define %%USE_GFNI  %3  ; [in] Use GFNI instructions
-%define %%MODE      %4  ; [in] Mode = init or working
-%define %%X0        %5  ; [out] X0
-%define %%X1        %6  ; [out] X1
-%define %%X2        %7  ; [out] X2
-%define %%R1        %8  ; [out] R1
-%define %%R2        %9  ; [out] R2
-%define %%W         %10 ; [out] ZMM register to contain W for all lanes
+%define %%MODE      %3  ; [in] Mode = init or working
+%define %%X0        %4  ; [out] X0
+%define %%X1        %5  ; [out] X1
+%define %%X2        %6  ; [out] X2
+%define %%R1        %7  ; [out] R1
+%define %%R2        %8  ; [out] R2
+%define %%W         %9  ; [out] ZMM register to contain W for all lanes
 
 %ifidn %%MODE, init
-%if (%0 == 10)
+%if (%0 == 9)
     vpxorq      %%W, %%X0, %%R1
     vpaddd      %%W, %%R2    ; W = (BRC_X0 ^ F_R1) + F_R2
 %endif
@@ -515,7 +531,7 @@ align 64
     vpaddd      zmm1, %%R1, %%X1    ; W1 = F_R1 + BRC_X1
     vpxorq      zmm2, %%R2, %%X2    ; W2 = F_R2 ^ BRC_X2
 %else
-%if (%0 == 10)
+%if (%0 == 9)
     vmovdqa64   %%W, [%%STATE + OFS_X0]
     vpxorq      %%W, [%%STATE + OFS_R1]
     vpaddd      %%W, [%%STATE + OFS_R2]    ; W = (BRC_X0 ^ F_R1) + F_R2
@@ -562,8 +578,8 @@ align 64
     vshufpd     zmm4, zmm2, zmm1, 0xAA ; All S1 input values
 
     ; Compute S0 and S1 values
-    S0_comput_AVX512  zmm3, zmm1, zmm2, %%USE_GFNI
-    S1_comput_AVX512  zmm4, zmm1, zmm2, zmm5, zmm6, %%USE_GFNI
+    S0_comput_AVX512  zmm3, zmm1, zmm2, USE_GFNI
+    S1_comput_AVX512  zmm4, zmm1, zmm2, zmm5, zmm6, USE_GFNI
 
     ; Need to shuffle back zmm1 & zmm2 before storing output
     ; (revert what was done before S0 and S1 computations)
@@ -843,9 +859,8 @@ align 64
         vporq           %%LFSR, [%%CONSTANTS]
 %endmacro
 
-%macro INIT_16_AVX512 2
-%define %%USE_GFNI   %1 ; [in] If 1, then GFNI instructions may be used
-%define %%KEY_SIZE   %2 ; [in] Key size (128 or 256)
+%macro INIT_16_AVX512 1
+%define %%KEY_SIZE   %1 ; [in] Key size (128 or 256)
 
 %ifdef LINUX
 	%define		pKe	  rdi
@@ -889,8 +904,8 @@ align 64
 %endif
 
     ; Set LFSR registers for Packet 1
-    mov     r9, [pKe]   ; Load Key 1 pointer
-    mov     r10, [pIv]  ; Load IV 1 pointer
+    mov    r9, [pKe]   ; Load Key 1 pointer
+    mov    r10, [pIv]  ; Load IV 1 pointer
 
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, zmm0, zmm1
@@ -950,7 +965,7 @@ align 64
 %assign N 0
 %rep 32
     bits_reorg16 rax, N, k2, init, %%X0, %%X1, %%X2
-    nonlin_fun16 rax, k2, %%USE_GFNI, init, %%X0, %%X1, %%X2, %%R1, %%R2, %%W
+    nonlin_fun16 rax, k2, init, %%X0, %%X1, %%X2, %%R1, %%R2, %%W
     vpsrld  %%W,1         ; Shift out LSB of W
 
     lfsr_updt16  rax, N, k2, %%W  ; W used in LFSR update - not set to zero
@@ -959,7 +974,7 @@ align 64
 
     ; And once more, initial round from keygen phase = 33 times
     bits_reorg16 rax, 0, k2, init, %%X0, %%X1, %%X2
-    nonlin_fun16 rax, k2, %%USE_GFNI, init, %%X0, %%X1, %%X2, %%R1, %%R2
+    nonlin_fun16 rax, k2, init, %%X0, %%X1, %%X2, %%R1, %%R2
 
     vpxorq    %%W, %%W
     lfsr_updt16  rax, 0, k2, %%W  ; W used in LFSR update - set to zero
@@ -975,21 +990,10 @@ align 64
 ;; void asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
 ;;                                      ZucState16_t *pState)
 ;;
-MKGLOBAL(asm_ZucInitialization_16_avx512,function,internal)
-asm_ZucInitialization_16_avx512:
+MKGLOBAL(ZUC128_INIT,function,internal)
+ZUC128_INIT:
     endbranch64
-    INIT_16_AVX512 0, 128
-
-    ret
-
-;;
-;; void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
-;;                                           ZucState16_t *pState)
-;;
-MKGLOBAL(asm_ZucInitialization_16_gfni_avx512,function,internal)
-asm_ZucInitialization_16_gfni_avx512:
-    endbranch64
-    INIT_16_AVX512 1, 128
+    INIT_16_AVX512 128
 
     ret
 
@@ -997,21 +1001,10 @@ asm_ZucInitialization_16_gfni_avx512:
 ;; void asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
 ;;                                         ZucState16_t *pState, uint32_t tag_sz)
 ;;
-MKGLOBAL(asm_Zuc256Initialization_16_avx512,function,internal)
-asm_Zuc256Initialization_16_avx512:
+MKGLOBAL(ZUC256_INIT,function,internal)
+ZUC256_INIT:
     endbranch64
-    INIT_16_AVX512 0, 256
-
-    ret
-
-;;
-;; void asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys, ZucIv16_t *pIvs,
-;;                                              ZucState16_t *pState, uint32_t tag_sz)
-;;
-MKGLOBAL(asm_Zuc256Initialization_16_gfni_avx512,function,internal)
-asm_Zuc256Initialization_16_gfni_avx512:
-    endbranch64
-    INIT_16_AVX512 1, 256
+    INIT_16_AVX512 256
 
     ret
 
@@ -1019,11 +1012,10 @@ asm_Zuc256Initialization_16_gfni_avx512:
 ; Generate N*4 bytes of keystream
 ; for 16 buffers (where N is number of rounds)
 ;
-%macro KEYGEN_16_AVX512 3-4
+%macro KEYGEN_16_AVX512 2-3
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
-%define %%USE_GFNI      %2 ; [in] If 1, then GFNI instructions may be used
-%define %%STORE_SINGLE  %3 ; [in] If 1, KS will be stored continuosly in a single buffer
-%define %%LANE_MASK     %4 ; [in] Lane mask with lanes to generate all keystream words
+%define %%STORE_SINGLE  %2 ; [in] If 1, KS will be stored continuosly in a single buffer
+%define %%LANE_MASK     %3 ; [in] Lane mask with lanes to generate all keystream words
 
     %define     pState  arg1
     %define     pKS     arg2
@@ -1039,7 +1031,7 @@ asm_Zuc256Initialization_16_gfni_avx512:
     mov         r10d, 0xAAAAAAAA
     kmovd       k1, r10d
 
-%if (%0 == 4)
+%if (%0 == 3)
     kmovd       k2, DWORD(%%LANE_MASK)
     knotd       k4, k2
     vmovdqu16   ymm0{k4}{z}, [rel all_ffs]
@@ -1059,7 +1051,7 @@ asm_Zuc256Initialization_16_gfni_avx512:
 ; Store all 4 bytes of keystream in a single 64-byte buffer
 %if (%%NUM_ROUNDS == 1)
     bits_reorg16 rax, 1, k2, working, none, none, none, zmm16
-    nonlin_fun16 rax, k2, %%USE_GFNI, working, none, none, none, none, none, zmm0
+    nonlin_fun16 rax, k2, working, none, none, none, none, none, zmm0
     ; OFS_X3 XOR W (zmm0)
     vpxorq      zmm16, zmm0
     vpxorq      zmm0, zmm0
@@ -1071,7 +1063,7 @@ asm_Zuc256Initialization_16_gfni_avx512:
 %assign idx 16
 %rep (%%NUM_ROUNDS-2)
     bits_reorg16 rax, N, k3, working, none, none, none, APPEND(zmm, idx)
-    nonlin_fun16 rax, k3, %%USE_GFNI, working, none, none, none, none, none, zmm0
+    nonlin_fun16 rax, k3, working, none, none, none, none, none, zmm0
     ; OFS_X3 XOR W (zmm0)
     vpxorq      APPEND(zmm, idx), zmm0
     vpxorq      zmm0, zmm0
@@ -1083,7 +1075,7 @@ asm_Zuc256Initialization_16_gfni_avx512:
     ; Generate rest of the KS bytes (last 8 bytes) for selected lanes
 %rep 2
     bits_reorg16 rax, N, k2, working, none, none, none, APPEND(zmm, idx)
-    nonlin_fun16 rax, k2, %%USE_GFNI, working, none, none, none, none, none, zmm0
+    nonlin_fun16 rax, k2, working, none, none, none, none, none, zmm0
     ; OFS_X3 XOR W (zmm0)
     vpxorq      APPEND(zmm, idx), zmm0
     vpxorq      zmm0, zmm0
@@ -1104,7 +1096,7 @@ asm_Zuc256Initialization_16_gfni_avx512:
                     zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
                     zmm8, zmm9, zmm10, zmm11, zmm12, zmm13
 
-%if (%0 == 4)
+%if (%0 == 3)
     store_kstr16 zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, \
                  zmm24, zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31, keyOff, \
                  rsp + LANE_OFFSET, k3, k5, k6, k7
@@ -1115,7 +1107,7 @@ asm_Zuc256Initialization_16_gfni_avx512:
 %endif ;; %%STORE_SINGLE == 1
 
    ; Reorder LFSR registers
-%if (%0 == 4)
+%if (%0 == 3)
     REORDER_LFSR rax, %%NUM_ROUNDS, k2
 %if (%%NUM_ROUNDS >= 2)
     REORDER_LFSR rax, (%%NUM_ROUNDS - 2), k4 ; 2 less rounds for "old" buffers
@@ -1132,10 +1124,10 @@ asm_Zuc256Initialization_16_gfni_avx512:
 ;; void asm_ZucGenKeystream64B_16_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                       const u32 key_off)
 ;;
-MKGLOBAL(asm_ZucGenKeystream64B_16_avx512,function,internal)
-asm_ZucGenKeystream64B_16_avx512:
+MKGLOBAL(ZUC_KEYGEN64B_16,function,internal)
+ZUC_KEYGEN64B_16:
     endbranch64
-    KEYGEN_16_AVX512 16, 0, 0
+    KEYGEN_16_AVX512 16, 0
 
     ret
 
@@ -1144,10 +1136,10 @@ asm_ZucGenKeystream64B_16_avx512:
 ;;                                             const u32 key_off,
 ;;                                             const u16 lane_mask)
 ;;
-MKGLOBAL(asm_ZucGenKeystream64B_16_skip8_avx512,function,internal)
-asm_ZucGenKeystream64B_16_skip8_avx512:
+MKGLOBAL(ZUC_KEYGEN64B_SKIP8_16,function,internal)
+ZUC_KEYGEN64B_SKIP8_16:
     endbranch64
-    KEYGEN_16_AVX512 16, 0, 0, arg4
+    KEYGEN_16_AVX512 16, 0, arg4
 
     ret
 
@@ -1155,10 +1147,10 @@ asm_ZucGenKeystream64B_16_skip8_avx512:
 ;; void asm_ZucGenKeystream8B_16_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                      const u32 key_off)
 ;;
-MKGLOBAL(asm_ZucGenKeystream8B_16_avx512,function,internal)
-asm_ZucGenKeystream8B_16_avx512:
+MKGLOBAL(ZUC_KEYGEN8B_16,function,internal)
+ZUC_KEYGEN8B_16:
     endbranch64
-    KEYGEN_16_AVX512 2, 0, 0
+    KEYGEN_16_AVX512 2, 0
 
     ret
 
@@ -1166,62 +1158,16 @@ asm_ZucGenKeystream8B_16_avx512:
 ;; void asm_ZucGenKeystream4B_16_avx512(state16_t *pSta, u32 pKeyStr[16],
 ;;                                      const u32 lane_mask)
 ;;
-MKGLOBAL(asm_ZucGenKeystream4B_16_avx512,function,internal)
-asm_ZucGenKeystream4B_16_avx512:
+MKGLOBAL(ZUC_KEYGEN4B_16,function,internal)
+ZUC_KEYGEN4B_16:
     endbranch64
-    KEYGEN_16_AVX512 1, 0, 1, arg3
+    KEYGEN_16_AVX512 1, 1, arg3
 
     ret
 
-;;
-;; void asm_ZucGenKeystream64B_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16],
-;;                                            const u32 key_off)
-;;
-MKGLOBAL(asm_ZucGenKeystream64B_16_gfni_avx512,function,internal)
-asm_ZucGenKeystream64B_16_gfni_avx512:
-    endbranch64
-    KEYGEN_16_AVX512 16, 1, 0
-
-    ret
-
-;;
-;; void asm_ZucGenKeystream64B_16_skip8_gfni_avx512(state16_t *pSta, u32* pKeyStr[16],
-;;                                                  const u32 key_off,
-;;                                                  const u16 lane_mask)
-;;
-MKGLOBAL(asm_ZucGenKeystream64B_16_skip8_gfni_avx512,function,internal)
-asm_ZucGenKeystream64B_16_skip8_gfni_avx512:
-    endbranch64
-    KEYGEN_16_AVX512 16, 1, 0, arg4
-
-    ret
-
-;;
-;; void asm_ZucGenKeystream8B_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16],
-;;                                           const u32 key_off)
-;;
-MKGLOBAL(asm_ZucGenKeystream8B_16_gfni_avx512,function,internal)
-asm_ZucGenKeystream8B_16_gfni_avx512:
-    endbranch64
-    KEYGEN_16_AVX512 2, 1, 0
-
-    ret
-
-;;
-;; void asm_ZucGenKeystream4B_16_gfni_avx512(state16_t *pSta, u32 pKeyStr[16],
-;;                                           const u32 lane_mask)
-;;
-MKGLOBAL(asm_ZucGenKeystream4B_16_gfni_avx512,function,internal)
-asm_ZucGenKeystream4B_16_gfni_avx512:
-    endbranch64
-    KEYGEN_16_AVX512 1, 1, 1, arg3
-
-    ret
-
-%macro KEYGEN_VAR_16_AVX512 2-3
+%macro KEYGEN_VAR_16_AVX512 1-2
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds (GP dowrd register)
-%define %%USE_GFNI      %2 ; [in] If 1, then GFNI instructions may be used
-%define %%LANE_MASK     %3 ; [in] Lane mask with lanes to generate full keystream (rest 2 words less)
+%define %%LANE_MASK     %2 ; [in] Lane mask with lanes to generate full keystream (rest 2 words less)
 
     cmp     %%NUM_ROUNDS, 16
     je      %%_num_rounds_is_16
@@ -1266,10 +1212,10 @@ asm_ZucGenKeystream4B_16_gfni_avx512:
 %assign I 1
 %rep 16
 APPEND(%%_num_rounds_is_,I):
-%if (%0 == 3)
-    KEYGEN_16_AVX512 I, %%USE_GFNI, 0, %%LANE_MASK
+%if (%0 == 2)
+    KEYGEN_16_AVX512 I, 0, %%LANE_MASK
 %else
-    KEYGEN_16_AVX512 I, %%USE_GFNI, 0
+    KEYGEN_16_AVX512 I, 0
 %endif
     jmp     %%_done
 
@@ -1284,24 +1230,11 @@ APPEND(%%_num_rounds_is_,I):
 ;;                                    const u32 key_off,
 ;;                                    const u32 numRounds)
 ;;
-MKGLOBAL(asm_ZucGenKeystream_16_avx512,function,internal)
-asm_ZucGenKeystream_16_avx512:
+MKGLOBAL(ZUC_KEYGEN_16,function,internal)
+ZUC_KEYGEN_16:
     endbranch64
 
-    KEYGEN_VAR_16_AVX512 arg4, 0
-
-
-    ret
-
-;;
-;; void asm_ZucGenKeystream_16_gfni_avx512(state16_t *pSta, u32* pKeyStr[16],
-;;                                         const u32 key_off,
-;;                                         const u32 numRounds)
-;;
-MKGLOBAL(asm_ZucGenKeystream_16_gfni_avx512,function,internal)
-asm_ZucGenKeystream_16_gfni_avx512:
-    endbranch64
-    KEYGEN_VAR_16_AVX512 arg4, 1
+    KEYGEN_VAR_16_AVX512 arg4
 
     ret
 
@@ -1311,8 +1244,8 @@ asm_ZucGenKeystream_16_gfni_avx512:
 ;;                                          const u16 lane_mask,
 ;;                                          u32 numRounds)
 ;;
-MKGLOBAL(asm_ZucGenKeystream_16_skip8_avx512,function,internal)
-asm_ZucGenKeystream_16_skip8_avx512:
+MKGLOBAL(ZUC_KEYGEN_SKIP8_16,function,internal)
+ZUC_KEYGEN_SKIP8_16:
 %ifdef LINUX
         %define	        arg5    r8d
 %else
@@ -1321,45 +1254,23 @@ asm_ZucGenKeystream_16_skip8_avx512:
     endbranch64
 
     mov     r10d, arg5
-    KEYGEN_VAR_16_AVX512 r10d, 0, arg4
+    KEYGEN_VAR_16_AVX512 r10d, arg4
 
     ret
 
-;;
-;; void asm_ZucGenKeystream_16_skip_gfni_avx512(state16_t *pSta,
-;;                                              u32* pKeyStr[16],
-;;                                              const u32 key_off,
-;;                                              const u16 lane_mask,
-;;                                              u32 numRounds)
-;;
-MKGLOBAL(asm_ZucGenKeystream_16_skip8_gfni_avx512,function,internal)
-asm_ZucGenKeystream_16_skip8_gfni_avx512:
-%ifdef LINUX
-        %define	        arg5    r8d
-%else
-        %define         arg5    [rsp + 40]
-%endif
-    endbranch64
-
-    mov     r10d, arg5
-    KEYGEN_VAR_16_AVX512 r10d, 1, arg4
-
-    ret
-
-%macro CIPHER64B 6
+%macro CIPHER64B 5
 %define %%NROUNDS    %1
 %define %%BYTE_MASK  %2
 %define %%LANE_MASK  %3
-%define %%USE_GFNI   %4
-%define %%OFFSET     %5
-%define %%LAST_ROUND %6
+%define %%OFFSET     %4
+%define %%LAST_ROUND %5
 
         ; Generate N*4B of keystream in N rounds
 %assign N 1
 %assign idx 16
 %rep %%NROUNDS
         bits_reorg16 rax, N, %%LANE_MASK, working, none, none, none, APPEND(zmm, idx)
-        nonlin_fun16 rax, %%LANE_MASK, %%USE_GFNI, working, none, none, none, none, none, zmm0
+        nonlin_fun16 rax, %%LANE_MASK, working, none, none, none, none, none, zmm0
         ; OFS_X3 XOR W (zmm0)
         vpxorq  APPEND(zmm, idx), zmm0
         vpxorq   zmm0, zmm0
@@ -1433,8 +1344,12 @@ asm_ZucGenKeystream_16_skip8_gfni_avx512:
 
 %endmacro
 
-%macro CIPHER_16_AVX512 1
-%define %%USE_GFNI      %1 ; [in] If 1, then GFNI instructions may be used
+;;
+;; void asm_ZucCipher_16_avx512(state16_t *pSta, u64 *pIn[16],
+;;                              u64 *pOut[16], u16 lengths[16],
+;;                              u64 min_length);
+MKGLOBAL(CIPHER_16,function,internal)
+CIPHER_16:
 
 %ifdef LINUX
         %define         pState  rdi
@@ -1496,88 +1411,88 @@ asm_ZucGenKeystream_16_skip8_gfni_avx512:
         xor     buf_idx, buf_idx
 
         ;; Perform rounds of 64 bytes, where LFSR reordering is not needed
-%%loop:
+loop:
         cmp     min_length, 64
-        jl      %%exit_loop
+        jl      exit_loop
 
         vmovdqa64 zmm12, [rel mask31]
 
-        CIPHER64B 16, k2, k3, %%USE_GFNI, buf_idx, 0
+        CIPHER64B 16, k2, k3, buf_idx, 0
 
         sub     min_length, 64
         add     buf_idx, 64
-        jmp     %%loop
+        jmp     loop
 
-%%exit_loop:
+exit_loop:
 
         mov     r15, min_length
         add     r15, 3
         shr     r15, 2 ;; numbers of rounds left (round up length to nearest multiple of 4B)
-        jz      %%_no_final_rounds
+        jz      _no_final_rounds
 
         vmovdqa64 zmm12, [rel mask31]
 
         cmp     r15, 8
-        je      %%_num_final_rounds_is_8
-        jl      %%_final_rounds_is_1_7
+        je      _num_final_rounds_is_8
+        jl      _final_rounds_is_1_7
 
         ; Final blocks 9-16
         cmp     r15, 12
-        je      %%_num_final_rounds_is_12
-        jl      %%_final_rounds_is_9_11
+        je      _num_final_rounds_is_12
+        jl      _final_rounds_is_9_11
 
         ; Final blocks 13-16
         cmp     r15, 16
-        je      %%_num_final_rounds_is_16
+        je      _num_final_rounds_is_16
         cmp     r15, 15
-        je      %%_num_final_rounds_is_15
+        je      _num_final_rounds_is_15
         cmp     r15, 14
-        je      %%_num_final_rounds_is_14
+        je      _num_final_rounds_is_14
         cmp     r15, 13
-        je      %%_num_final_rounds_is_13
+        je      _num_final_rounds_is_13
 
-%%_final_rounds_is_9_11:
+_final_rounds_is_9_11:
         cmp     r15, 11
-        je      %%_num_final_rounds_is_11
+        je      _num_final_rounds_is_11
         cmp     r15, 10
-        je      %%_num_final_rounds_is_10
+        je      _num_final_rounds_is_10
         cmp     r15, 9
-        je      %%_num_final_rounds_is_9
+        je      _num_final_rounds_is_9
 
-%%_final_rounds_is_1_7:
+_final_rounds_is_1_7:
         cmp     r15, 4
-        je      %%_num_final_rounds_is_4
-        jl      %%_final_rounds_is_1_3
+        je      _num_final_rounds_is_4
+        jl      _final_rounds_is_1_3
 
         ; Final blocks 5-7
         cmp     r15, 7
-        je      %%_num_final_rounds_is_7
+        je      _num_final_rounds_is_7
         cmp     r15, 6
-        je      %%_num_final_rounds_is_6
+        je      _num_final_rounds_is_6
         cmp     r15, 5
-        je      %%_num_final_rounds_is_5
+        je      _num_final_rounds_is_5
 
-%%_final_rounds_is_1_3:
+_final_rounds_is_1_3:
         cmp     r15, 3
-        je      %%_num_final_rounds_is_3
+        je      _num_final_rounds_is_3
         cmp     r15, 2
-        je      %%_num_final_rounds_is_2
+        je      _num_final_rounds_is_2
 
-        jmp     %%_num_final_rounds_is_1
+        jmp     _num_final_rounds_is_1
 
         ; Perform encryption of last bytes (<= 64 bytes) and reorder LFSR registers
         ; if needed (if not all 16 rounds of 4 bytes are done)
 %assign I 1
 %rep 16
-APPEND(%%_num_final_rounds_is_,I):
-        CIPHER64B I, k2, k3, %%USE_GFNI, buf_idx, 1
+APPEND(_num_final_rounds_is_,I):
+        CIPHER64B I, k2, k3, buf_idx, 1
         REORDER_LFSR rax, I, k3
         add     buf_idx, min_length
-        jmp     %%_no_final_rounds
+        jmp     _no_final_rounds
 %assign I (I + 1)
 %endrep
 
-%%_no_final_rounds:
+_no_final_rounds:
         add             rsp, 32
         ;; update in/out pointers
         add             buf_idx, 3
@@ -1594,33 +1509,12 @@ APPEND(%%_num_final_rounds_is_,I):
 
         FUNC_RESTORE
 
-%endmacro
-
-;;
-;; void asm_ZucCipher_16_avx512(state16_t *pSta, u64 *pIn[16],
-;;                              u64 *pOut[16], u16 lengths[16],
-;;                              u64 min_length);
-MKGLOBAL(asm_ZucCipher_16_avx512,function,internal)
-asm_ZucCipher_16_avx512:
-        endbranch64
-        CIPHER_16_AVX512 0
-
         ret
 
-;;
-;; void asm_ZucCipher_16_gfni_avx512(state16_t *pSta, u64 *pIn[16],
-;;                                   u64 *pOut[16], u16 lengths[16],
-;;                                   u64 min_length);
-MKGLOBAL(asm_ZucCipher_16_gfni_avx512,function,internal)
-asm_ZucCipher_16_gfni_avx512:
-        endbranch64
-        CIPHER_16_AVX512 1
-
-        ret
 
 ;;
-;;extern void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T, const void *KS, const void **DATA,
-;;                                        uint16_t *LEN)
+;;extern void asm_Eia3Round64B_16(uint32_t *T, const void *KS,
+;;                                const void **DATA, uint16_t *LEN);
 ;;
 ;; Updates authentication tag T of 16 buffers based on keystream KS and DATA.
 ;; - it processes 64 bytes of DATA
@@ -1637,8 +1531,8 @@ asm_ZucCipher_16_gfni_avx512:
 ;;  @param [in] LEN: Array of lengths for all 16 buffers
 ;;
 align 64
-MKGLOBAL(asm_Eia3Round64B_16_VPCLMUL,function,internal)
-asm_Eia3Round64B_16_VPCLMUL:
+MKGLOBAL(ZUC_ROUND64B_16,function,internal)
+ZUC_ROUND64B_16:
         endbranch64
 %ifdef LINUX
 	%define		T	rdi
@@ -1652,6 +1546,7 @@ asm_Eia3Round64B_16_VPCLMUL:
 	%define		LEN	r9
 %endif
 
+%if USE_GFNI == 1
 %define         DATA_ADDR0      rbx
 %define         DATA_ADDR1      r10
 %define         DATA_ADDR2      r11
@@ -1798,10 +1693,462 @@ asm_Eia3Round64B_16_VPCLMUL:
         vpsubw          YTMP1{k1}, [rel all_512w]
         vmovdqa         [LEN], YTMP1
 
+%else ; USE_GFNI == 1
+
+%define         DIGEST_0        zmm28
+%define         DIGEST_1        zmm29
+%define         DIGEST_2        zmm30
+%define         DIGEST_3        zmm31
+
+%define         DATA_ADDR       r10
+%define         KS_ADDR         r11
+
+        FUNC_SAVE
+
+        vmovdqa  xmm5, [bit_reverse_table_l]
+        vmovdqa  xmm6, [bit_reverse_table_h]
+        vmovdqa  xmm7, [bit_reverse_and_table]
+        vmovdqa  xmm10, [data_mask_64bits]
+
+%assign I 0
+%rep 4
+%assign J 0
+%rep 4
+
+        vpxor   xmm9, xmm9
+        mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
+        lea     KS_ADDR, [KS + (I*4+J)*64*2]
+
+%assign K 0
+%rep 4
+        ;; read 16 bytes and reverse bits
+        vmovdqu  xmm0, [DATA_ADDR + 16*K]
+        vpand    xmm1, xmm0, xmm7
+
+        vpandn   xmm2, xmm7, xmm0
+        vpsrld   xmm2, 4
+
+        vpshufb  xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb  xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor     xmm8, xmm4
+        ; xmm8 - bit reversed data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+%if K != 0
+        vmovdqa  xmm11, xmm12
+        vmovdqu  xmm12, [KS_ADDR + (K*16) + (4*4)]
+%else
+        vmovdqu  xmm11, [KS_ADDR + (K*16) + (0*4)]
+        vmovdqu  xmm12, [KS_ADDR + (K*16) + (4*4)]
+%endif
+        vpalignr xmm13, xmm12, xmm11, 8
+        vpshufd  xmm2, xmm11, 0x61
+        vpshufd  xmm3, xmm13, 0x61
+
+        ;;  - set up DATA
+        vpand    xmm13, xmm10, xmm8
+        vpshufd  xmm0, xmm13, 0xdc
+
+        vpsrldq  xmm8, 8
+        vpshufd  xmm1, xmm8, 0xdc
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm2, 0x00
+        vpclmulqdq xmm14, xmm0, xmm2, 0x11
+        vpclmulqdq xmm15, xmm1, xmm3, 0x00
+        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
+
+        vpternlogq xmm13, xmm14, xmm8, 0x96
+        vpternlogq xmm9, xmm13, xmm15, 0x96
+
+%assign K (K + 1)
+%endrep
+
+        vinserti32x4 APPEND(DIGEST_, I), xmm9, J
+        ; Memcpy KS 64-127 bytes to 0-63 bytes
+        vmovdqa64       zmm0, [KS_ADDR + 64]
+        vmovdqa64       [KS_ADDR], zmm0
+%assign J (J + 1)
+%endrep
+%assign I (I + 1)
+%endrep
+
+        ;; - update tags
+        mov             r12, 0x00FF
+        mov             r13, 0xFF00
+        kmovq           k1, r12
+        kmovq           k2, r13
+
+        vmovdqu64       zmm4, [T] ; Input tags
+        vmovdqa64       zmm0, [rel shuf_mask_tags]
+        vmovdqa64       zmm1, [rel shuf_mask_tags + 64]
+        ; Get result tags for 16 buffers in different position in each lane
+        ; and blend these tags into an ZMM register.
+        ; Then, XOR the results with the previous tags and write out the result.
+        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
+        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
+        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
+        vmovdqu64       [T], zmm4
+
+        ; Update data pointers
+        vmovdqu64       zmm0, [DATA]
+        vmovdqu64       zmm1, [DATA + 64]
+        vpaddq          zmm0, [rel add_64]
+        vpaddq          zmm1, [rel add_64]
+        vmovdqu64       [DATA], zmm0
+        vmovdqu64       [DATA + 64], zmm1
+
+        ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
+        vmovdqa         ymm2, [LEN]
+        vpcmpw          k1, ymm2, [rel all_ffs], 4 ; k1 -> valid lanes
+        vpsubw          ymm2{k1}, [rel all_512w]
+        vmovdqa         [LEN], ymm2
+
+%endif ;; USE_GFNI == 0
         FUNC_RESTORE
 
         ret
 
+%macro REMAINDER_16 1
+%define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
+
+%ifdef LINUX
+        %define         T       rdi
+        %define	        KS      rsi
+        %define	        DATA    rdx
+        %define         LEN     rcx
+        %define	        arg5    r8d
+%else
+        %define         T       rcx
+        %define	        KS      rdx
+        %define	        DATA    r8
+        %define	        LEN     r9
+        %define         arg5    [rsp + 40]
+%endif
+
+%define DIGEST_0        zmm28
+%define DIGEST_1        zmm29
+%define DIGEST_2        zmm30
+%define DIGEST_3        zmm31
+
+%define DATA_ADDR       r12
+%define KS_ADDR         r13
+
+%define N_BYTES         r14
+%define OFFSET          r15
+
+%define MIN_LEN         r10d
+%define MIN_LEN_Q       r10
+%define IDX             rax
+%define TMP             rbx
+
+        mov     MIN_LEN, arg5
+
+        FUNC_SAVE
+
+        vpbroadcastw ymm0, MIN_LEN
+        ; Get mask of non-NULL lanes (lengths not set to UINT16_MAX, indicating that lane is not valid)
+        vmovdqa ymm1, [LEN]
+        vpcmpw k1, ymm1, [rel all_ffs], 4
+
+        ; Round up to nearest multiple of 32 bits
+        vpaddw  ymm0{k1}, [rel all_31w]
+        vpandq  ymm0, [rel all_ffe0w]
+
+        ; Calculate remaining bits to authenticate after function call
+        vpsubw  ymm2{k1}, ymm1, ymm0
+        vpxorq  ymm3, ymm3
+        vpcmpw  k2, ymm2, ymm3, 1 ; Get mask of lengths < 0
+        ; Set to zero the lengths of the lanes which are going to be completed
+        vmovdqu16 ymm2{k2}, ymm3 ; YMM2 contain final lengths
+        vmovdqu16 [LEN]{k1}, ymm2 ; Update in memory the final updated lengths
+
+        ; Calculate number of bits to authenticate (up to 511 bits),
+        ; for each lane, and store it in stack to be used later
+        vpsubw  ymm1{k1}{z}, ymm2 ; Bits to authenticate in all lanes (zero out length of NULL lanes)
+        sub     rsp, 32
+        vmovdqu [rsp], ymm1
+
+        xor     OFFSET, OFFSET
+
+%if USE_GFNI != 1
+        vmovdqa  xmm5, [bit_reverse_table_l]
+        vmovdqa  xmm6, [bit_reverse_table_h]
+        vmovdqa  xmm7, [bit_reverse_and_table]
+%endif
+        vmovdqa  xmm10, [data_mask_64bits]
+
+%assign I 0
+%rep 4
+%assign J 0
+%rep 4
+
+        ; Read  length to authenticate for each buffer
+        movzx   TMP, word [rsp + 2*(I*4 + J)]
+
+        vpxor   xmm9, xmm9
+
+        xor     OFFSET, OFFSET
+        mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
+        lea     KS_ADDR, [KS + (I*4 + J)*64*2]
+
+%assign K 0
+%rep 4
+        cmp     TMP, 128
+        jb      APPEND3(%%Eia3RoundsAVX512_dq_end,I,J)
+
+        ;; read 16 bytes and reverse bits
+        vmovdqu xmm0, [DATA_ADDR + OFFSET]
+%if USE_GFNI == 1
+        vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
+%else
+        vpand   xmm1, xmm0, xmm7
+
+        vpandn  xmm2, xmm7, xmm0
+        vpsrld  xmm2, 4
+
+        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor    xmm8, xmm4
+%endif
+        ; xmm8 - bit reversed data bytes
+
+        ;; ZUC authentication part
+        ;; - 4x32 data bits
+        ;; - set up KS
+%if K != 0
+        vmovdqa  xmm11, xmm12
+        vmovdqu  xmm12, [KS_ADDR + OFFSET + (4*4)]
+%else
+        vmovdqu  xmm11, [KS_ADDR + (0*4)]
+        vmovdqu  xmm12, [KS_ADDR + (4*4)]
+%endif
+        vpalignr xmm13, xmm12, xmm11, 8
+        vpshufd  xmm2, xmm11, 0x61
+        vpshufd  xmm3, xmm13, 0x61
+
+        ;;  - set up DATA
+        vpand    xmm13, xmm10, xmm8
+        vpshufd  xmm0, xmm13, 0xdc
+
+        vpsrldq  xmm8, 8
+        vpshufd  xmm1, xmm8, 0xdc
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm2, 0x00
+        vpclmulqdq xmm14, xmm0, xmm2, 0x11
+        vpclmulqdq xmm15, xmm1, xmm3, 0x00
+        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
+
+        vpternlogq xmm13, xmm14, xmm8, 0x96
+        vpternlogq xmm9, xmm13, xmm15, 0x96
+        add     OFFSET, 16
+        sub     TMP, 128
+%assign K (K + 1)
+%endrep
+APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
+
+        or      TMP, TMP
+        jz      APPEND3(%%Eia3RoundsAVX_end,I,J)
+
+        ; Get number of bytes
+        mov     N_BYTES, TMP
+        add     N_BYTES, 7
+        shr     N_BYTES, 3
+
+        lea     r11, [rel byte64_len_to_mask_table]
+        kmovq   k1, [r11 + N_BYTES*8]
+
+        ;; Set up KS
+        vmovdqu xmm1, [KS_ADDR + OFFSET]
+        vmovdqu xmm2, [KS_ADDR + OFFSET + 16]
+        vpalignr xmm13, xmm2, xmm1, 8
+        vpshufd xmm11, xmm1, 0x61
+        vpshufd xmm12, xmm13, 0x61
+
+        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
+        vmovdqu8 xmm0{k1}{z}, [DATA_ADDR + OFFSET]
+        ; check if there is a partial byte (less than 8 bits in last byte)
+        mov     rax, TMP
+        and     rax, 0x7
+        shl     rax, 4
+        lea     r11, [rel bit_mask_table]
+        add     r11, rax
+
+        ; Get mask to clear last bits
+        vmovdqa xmm3, [r11]
+
+        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
+        ; to apply mask, then restore by shifting right same amount of bytes
+        mov     r11, 16
+        sub     r11, N_BYTES
+        ; r13 = DATA_ADDR can be used at this stage
+        XVPSLLB xmm0, r11, xmm4, r13
+        vpandq  xmm0, xmm3
+        XVPSRLB xmm0, r11, xmm4, r13
+
+%if USE_GFNI == 1
+        vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
+%else
+        ; Bit reverse input data
+        vpand   xmm1, xmm0, xmm7
+
+        vpandn  xmm2, xmm7, xmm0
+        vpsrld  xmm2, 4
+
+        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
+        vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
+
+        vpor    xmm8, xmm3
+%endif
+
+        ;; Set up DATA
+        vpand   xmm13, xmm10, xmm8
+        vpshufd xmm0, xmm13, 0xdc ; D 0-3 || Os || D 4-7 || 0s
+
+        vpsrldq xmm8, 8
+        vpshufd xmm1, xmm8, 0xdc ; D 8-11 || 0s || D 12-15 || 0s
+
+        ;; - clmul
+        ;; - xor the results from 4 32-bit words together
+        vpclmulqdq xmm13, xmm0, xmm11, 0x00
+        vpclmulqdq xmm14, xmm0, xmm11, 0x11
+        vpclmulqdq xmm15, xmm1, xmm12, 0x00
+        vpclmulqdq xmm8, xmm1, xmm12, 0x11
+        vpternlogq xmm9, xmm14, xmm13, 0x96
+        vpternlogq xmm9, xmm15, xmm8, 0x96
+
+APPEND3(%%Eia3RoundsAVX_end,I,J):
+        vinserti32x4 APPEND(DIGEST_, I), xmm9, J
+%assign J (J + 1)
+%endrep
+%assign I (I + 1)
+%endrep
+
+        ;; - update tags
+        mov             TMP, 0x00FF
+        kmovq           k1, TMP
+        mov             TMP, 0xFF00
+        kmovq           k2, TMP
+
+        vmovdqu64       zmm4, [T] ; Input tags
+        vmovdqa64       zmm0, [rel shuf_mask_tags]
+        vmovdqa64       zmm1, [rel shuf_mask_tags + 64]
+        ; Get result tags for 16 buffers in different position in each lane
+        ; and blend these tags into an ZMM register.
+        ; Then, XOR the results with the previous tags and write out the result.
+        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
+        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
+        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
+
+        vmovdqa64       [T], zmm4 ; Store temporary digests
+
+        ; These last steps should be done only for the buffers that
+        ; have no more data to authenticate
+        xor     IDX, IDX
+%%start_loop:
+        ; Update data pointer
+        movzx   r11d, word [rsp + IDX*2]
+        shr     r11d, 3 ; length authenticated in bytes
+        add     [DATA + IDX*8], r11
+
+        cmp     word [LEN + 2*IDX], 0
+        jnz     %%skip_comput
+
+        ; Read digest
+        mov     r12d, [T + 4*IDX]
+
+        mov     r11, IDX
+        shl     r11, 7 ; 128
+        lea     KS_ADDR, [KS + r11]
+
+        ; Read keyStr[MIN_LEN / 32]
+        movzx   TMP, word [rsp + 2*IDX]
+        mov     r15, TMP
+        shr     r15, 5
+        mov     r11, [KS_ADDR +r15*4]
+        ; Rotate left by MIN_LEN % 32
+        mov     r15, rcx
+        mov     rcx, TMP
+        and     rcx, 0x1F
+        rol     r11, cl
+        mov     rcx, r15
+        ; XOR with current digest
+        xor     r12d, r11d
+
+%if %%KEY_SIZE == 128
+        ; Read keystr[L - 1] (last dword of keyStr)
+        add     TMP, (31 + 64)
+        shr     TMP, 5 ; L
+        dec     TMP
+        mov     r11d, [KS_ADDR + TMP * 4]
+        ; XOR with current digest
+        xor     r12d, r11d
+%endif
+
+        ; byte swap and write digest out
+        bswap   r12d
+        mov     [T + 4*IDX], r12d
+
+%%skip_comput:
+        inc     IDX
+        cmp     IDX, 16
+        jne     %%start_loop
+
+        add     rsp, 32
+
+        ; Memcpy last 8 bytes of KS into start
+        add     MIN_LEN, 31
+        shr     MIN_LEN, 5
+        shl     MIN_LEN, 2
+
+%assign i 0
+%rep 16
+        mov     TMP, [KS + 16*8*i + MIN_LEN_Q]
+        mov     [KS + 16*8*i], TMP
+%assign i (i+1)
+%endrep
+        vzeroupper
+        FUNC_RESTORE
+        ret
+%endmacro
+
+;;
+;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;;
+;;  @param [in] T: Array of digests for all 16 buffers
+;;  @param [in] KS : Array of pointers to key stream for all 16 buffers
+;;  @param [in] DATA : Array of pointers to data for all 16 buffers
+;;  @param [in] N_BITS (number data bits to process)
+;;
+align 64
+MKGLOBAL(ZUC128_REMAINDER_16,function,internal)
+ZUC128_REMAINDER_16:
+        endbranch64
+        REMAINDER_16 128
+
+;;
+;; extern void asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
+;;
+;;  @param [in] T: Array of digests for all 16 buffers
+;;  @param [in] KS : Array of pointers to key stream for all 16 buffers
+;;  @param [in] DATA : Array of pointers to data for all 16 buffers
+;;  @param [in] N_BITS (number data bits to process)
+;;
+align 64
+MKGLOBAL(ZUC256_REMAINDER_16,function,internal)
+ZUC256_REMAINDER_16:
+        endbranch64
+        REMAINDER_16 256
+
+; Following functions only need AVX512 instructions (no VAES, GFNI, etc.)
+%if USE_GFNI == 0
 ;;
 ;; extern void asm_Eia3RemainderAVX512(uint32_t *T, const void *ks,
 ;;                                     const void *data, uint64_t n_bits)
@@ -1998,381 +2345,6 @@ Eia3RoundsAVX_end:
 
         ret
 
-%macro REMAINDER_16 2
-%define %%USE_GFNI      %1 ; [in] If 1, then GFNI instructions may be used
-%define %%KEY_SIZE      %2 ; [constant] Key size (128 or 256)
-
-%ifdef LINUX
-        %define         T       rdi
-        %define	        KS      rsi
-        %define	        DATA    rdx
-        %define         LEN     rcx
-        %define	        arg5    r8d
-%else
-        %define         T       rcx
-        %define	        KS      rdx
-        %define	        DATA    r8
-        %define	        LEN     r9
-        %define         arg5    [rsp + 40]
-%endif
-
-%define DIGEST_0        zmm28
-%define DIGEST_1        zmm29
-%define DIGEST_2        zmm30
-%define DIGEST_3        zmm31
-
-%define DATA_ADDR       r12
-%define KS_ADDR         r13
-
-%define N_BYTES         r14
-%define OFFSET          r15
-
-%define MIN_LEN         r10d
-%define MIN_LEN_Q       r10
-%define IDX             rax
-%define TMP             rbx
-
-        mov     MIN_LEN, arg5
-
-        FUNC_SAVE
-
-        vpbroadcastw ymm0, MIN_LEN
-        ; Get mask of non-NULL lanes (lengths not set to UINT16_MAX, indicating that lane is not valid)
-        vmovdqa ymm1, [LEN]
-        vpcmpw k1, ymm1, [rel all_ffs], 4
-
-        ; Round up to nearest multiple of 32 bits
-        vpaddw  ymm0{k1}, [rel all_31w]
-        vpandq  ymm0, [rel all_ffe0w]
-
-        ; Calculate remaining bits to authenticate after function call
-        vpsubw  ymm2{k1}, ymm1, ymm0
-        vpxorq  ymm3, ymm3
-        vpcmpw  k2, ymm2, ymm3, 1 ; Get mask of lengths < 0
-        ; Set to zero the lengths of the lanes which are going to be completed
-        vmovdqu16 ymm2{k2}, ymm3 ; YMM2 contain final lengths
-        vmovdqu16 [LEN]{k1}, ymm2 ; Update in memory the final updated lengths
-
-        ; Calculate number of bits to authenticate (up to 511 bits),
-        ; for each lane, and store it in stack to be used later
-        vpsubw  ymm1{k1}{z}, ymm2 ; Bits to authenticate in all lanes (zero out length of NULL lanes)
-        sub     rsp, 32
-        vmovdqu [rsp], ymm1
-
-        xor     OFFSET, OFFSET
-
-%if %%USE_GFNI != 1
-        vmovdqa  xmm5, [bit_reverse_table_l]
-        vmovdqa  xmm6, [bit_reverse_table_h]
-        vmovdqa  xmm7, [bit_reverse_and_table]
-%endif
-        vmovdqa  xmm10, [data_mask_64bits]
-
-%assign I 0
-%rep 4
-%assign J 0
-%rep 4
-
-        ; Read  length to authenticate for each buffer
-        movzx   TMP, word [rsp + 2*(I*4 + J)]
-
-        vpxor   xmm9, xmm9
-
-        xor     OFFSET, OFFSET
-        mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
-        lea     KS_ADDR, [KS + (I*4 + J)*64*2]
-
-%assign K 0
-%rep 4
-        cmp     TMP, 128
-        jb      APPEND3(%%Eia3RoundsAVX512_dq_end,I,J)
-
-        ;; read 16 bytes and reverse bits
-        vmovdqu xmm0, [DATA_ADDR + OFFSET]
-%if %%USE_GFNI == 1
-        vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
-%else
-        vpand   xmm1, xmm0, xmm7
-
-        vpandn  xmm2, xmm7, xmm0
-        vpsrld  xmm2, 4
-
-        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
-        vpshufb xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
-
-        vpor    xmm8, xmm4
-%endif
-        ; xmm8 - bit reversed data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-%if K != 0
-        vmovdqa  xmm11, xmm12
-        vmovdqu  xmm12, [KS_ADDR + OFFSET + (4*4)]
-%else
-        vmovdqu  xmm11, [KS_ADDR + (0*4)]
-        vmovdqu  xmm12, [KS_ADDR + (4*4)]
-%endif
-        vpalignr xmm13, xmm12, xmm11, 8
-        vpshufd  xmm2, xmm11, 0x61
-        vpshufd  xmm3, xmm13, 0x61
-
-        ;;  - set up DATA
-        vpand    xmm13, xmm10, xmm8
-        vpshufd  xmm0, xmm13, 0xdc
-
-        vpsrldq  xmm8, 8
-        vpshufd  xmm1, xmm8, 0xdc
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq xmm13, xmm0, xmm2, 0x00
-        vpclmulqdq xmm14, xmm0, xmm2, 0x11
-        vpclmulqdq xmm15, xmm1, xmm3, 0x00
-        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
-
-        vpternlogq xmm13, xmm14, xmm8, 0x96
-        vpternlogq xmm9, xmm13, xmm15, 0x96
-        add     OFFSET, 16
-        sub     TMP, 128
-%assign K (K + 1)
-%endrep
-APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
-
-        or      TMP, TMP
-        jz      APPEND3(%%Eia3RoundsAVX_end,I,J)
-
-        ; Get number of bytes
-        mov     N_BYTES, TMP
-        add     N_BYTES, 7
-        shr     N_BYTES, 3
-
-        lea     r11, [rel byte64_len_to_mask_table]
-        kmovq   k1, [r11 + N_BYTES*8]
-
-        ;; Set up KS
-        vmovdqu xmm1, [KS_ADDR + OFFSET]
-        vmovdqu xmm2, [KS_ADDR + OFFSET + 16]
-        vpalignr xmm13, xmm2, xmm1, 8
-        vpshufd xmm11, xmm1, 0x61
-        vpshufd xmm12, xmm13, 0x61
-
-        ;; read up to 16 bytes of data, zero bits not needed if partial byte and bit-reverse
-        vmovdqu8 xmm0{k1}{z}, [DATA_ADDR + OFFSET]
-        ; check if there is a partial byte (less than 8 bits in last byte)
-        mov     rax, TMP
-        and     rax, 0x7
-        shl     rax, 4
-        lea     r11, [rel bit_mask_table]
-        add     r11, rax
-
-        ; Get mask to clear last bits
-        vmovdqa xmm3, [r11]
-
-        ; Shift left 16-N bytes to have the last byte always at the end of the XMM register
-        ; to apply mask, then restore by shifting right same amount of bytes
-        mov     r11, 16
-        sub     r11, N_BYTES
-        ; r13 = DATA_ADDR can be used at this stage
-        XVPSLLB xmm0, r11, xmm4, r13
-        vpandq  xmm0, xmm3
-        XVPSRLB xmm0, r11, xmm4, r13
-
-%if %%USE_GFNI == 1
-        vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
-%else
-        ; Bit reverse input data
-        vpand   xmm1, xmm0, xmm7
-
-        vpandn  xmm2, xmm7, xmm0
-        vpsrld  xmm2, 4
-
-        vpshufb xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
-        vpshufb xmm3, xmm5, xmm2 ; bit reverse high nibbles (use low table)
-
-        vpor    xmm8, xmm3
-%endif
-
-        ;; Set up DATA
-        vpand   xmm13, xmm10, xmm8
-        vpshufd xmm0, xmm13, 0xdc ; D 0-3 || Os || D 4-7 || 0s
-
-        vpsrldq xmm8, 8
-        vpshufd xmm1, xmm8, 0xdc ; D 8-11 || 0s || D 12-15 || 0s
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq xmm13, xmm0, xmm11, 0x00
-        vpclmulqdq xmm14, xmm0, xmm11, 0x11
-        vpclmulqdq xmm15, xmm1, xmm12, 0x00
-        vpclmulqdq xmm8, xmm1, xmm12, 0x11
-        vpternlogq xmm9, xmm14, xmm13, 0x96
-        vpternlogq xmm9, xmm15, xmm8, 0x96
-
-APPEND3(%%Eia3RoundsAVX_end,I,J):
-        vinserti32x4 APPEND(DIGEST_, I), xmm9, J
-%assign J (J + 1)
-%endrep
-%assign I (I + 1)
-%endrep
-
-        ;; - update tags
-        mov             TMP, 0x00FF
-        kmovq           k1, TMP
-        mov             TMP, 0xFF00
-        kmovq           k2, TMP
-
-        vmovdqu64       zmm4, [T] ; Input tags
-        vmovdqa64       zmm0, [rel shuf_mask_tags]
-        vmovdqa64       zmm1, [rel shuf_mask_tags + 64]
-        ; Get result tags for 16 buffers in different position in each lane
-        ; and blend these tags into an ZMM register.
-        ; Then, XOR the results with the previous tags and write out the result.
-        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
-        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
-        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
-
-        vmovdqa64       [T], zmm4 ; Store temporary digests
-
-        ; These last steps should be done only for the buffers that
-        ; have no more data to authenticate
-        xor     IDX, IDX
-%%start_loop:
-        ; Update data pointer
-        movzx   r11d, word [rsp + IDX*2]
-        shr     r11d, 3 ; length authenticated in bytes
-        add     [DATA + IDX*8], r11
-
-        cmp     word [LEN + 2*IDX], 0
-        jnz     %%skip_comput
-
-        ; Read digest
-        mov     r12d, [T + 4*IDX]
-
-        mov     r11, IDX
-        shl     r11, 7 ; 128
-        lea     KS_ADDR, [KS + r11]
-
-        ; Read keyStr[MIN_LEN / 32]
-        movzx   TMP, word [rsp + 2*IDX]
-        mov     r15, TMP
-        shr     r15, 5
-        mov     r11, [KS_ADDR +r15*4]
-        ; Rotate left by MIN_LEN % 32
-        mov     r15, rcx
-        mov     rcx, TMP
-        and     rcx, 0x1F
-        rol     r11, cl
-        mov     rcx, r15
-        ; XOR with current digest
-        xor     r12d, r11d
-
-%if %%KEY_SIZE == 128
-        ; Read keystr[L - 1] (last dword of keyStr)
-        add     TMP, (31 + 64)
-        shr     TMP, 5 ; L
-        dec     TMP
-        mov     r11d, [KS_ADDR + TMP * 4]
-        ; XOR with current digest
-        xor     r12d, r11d
-%endif
-
-        ; byte swap and write digest out
-        bswap   r12d
-        mov     [T + 4*IDX], r12d
-
-%%skip_comput:
-        inc     IDX
-        cmp     IDX, 16
-        jne     %%start_loop
-
-        add     rsp, 32
-
-        ; Memcpy last 8 bytes of KS into start
-        add     MIN_LEN, 31
-        shr     MIN_LEN, 5
-        shl     MIN_LEN, 2
-
-%assign i 0
-%rep 16
-        mov     TMP, [KS + 16*8*i + MIN_LEN_Q]
-        mov     [KS + 16*8*i], TMP
-%assign i (i+1)
-%endrep
-        vzeroupper
-        FUNC_RESTORE
-        ret
-%endmacro
-
-;;
-;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
-;;
-;;  @param [in] T: Array of digests for all 16 buffers
-;;  @param [in] KS : Array of pointers to key stream for all 16 buffers
-;;  @param [in] DATA : Array of pointers to data for all 16 buffers
-;;  @param [in] N_BITS (number data bits to process)
-;;
-align 64
-MKGLOBAL(asm_Eia3RemainderAVX512_16,function,internal)
-asm_Eia3RemainderAVX512_16:
-        endbranch64
-        REMAINDER_16 0, 128
-
-;;
-;; extern void asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
-;;
-;;  @param [in] T: Array of digests for all 16 buffers
-;;  @param [in] KS : Array of pointers to key stream for all 16 buffers
-;;  @param [in] DATA : Array of pointers to data for all 16 buffers
-;;  @param [in] N_BITS (number data bits to process)
-;;
-align 64
-MKGLOBAL(asm_Eia3_256_RemainderAVX512_16,function,internal)
-asm_Eia3_256_RemainderAVX512_16:
-        endbranch64
-        REMAINDER_16 0, 256
-
-;;
-;; extern void asm_Eia3RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
-;;
-;; WIN64
-;;      RCX - T: Array of digests for all 16 buffers
-;;      RDX - KS : Array of pointers to key stream for all 16 buffers
-;;      R8  - DATA : Array of pointers to data for all 16 buffers
-;;      R9  - N_BITS (number data bits to process)
-;; LIN64
-;;      RDI  - T: Array of digests for all 16 buffers
-;;      RSI  - KS : Array of pointers to key stream for all 16 buffers
-;;      RDX  - DATA : Array of pointers to data for all 16 buffers
-;;      RCX  - N_BITS (number data bits to process)
-;;
-align 64
-MKGLOBAL(asm_Eia3RemainderAVX512_16_VPCLMUL,function,internal)
-asm_Eia3RemainderAVX512_16_VPCLMUL:
-        endbranch64
-        REMAINDER_16 1, 128
-
-;;
-;; extern void asm_Eia3_256_RemainderAVX512_16(uint32_t *T, const void **ks, const void **data, uint64_t n_bits)
-;;
-;; WIN64
-;;      RCX - T: Array of digests for all 16 buffers
-;;      RDX - KS : Array of pointers to key stream for all 16 buffers
-;;      R8  - DATA : Array of pointers to data for all 16 buffers
-;;      R9  - N_BITS (number data bits to process)
-;; LIN64
-;;      RDI  - T: Array of digests for all 16 buffers
-;;      RSI  - KS : Array of pointers to key stream for all 16 buffers
-;;      RDX  - DATA : Array of pointers to data for all 16 buffers
-;;      RCX  - N_BITS (number data bits to process)
-;;
-align 64
-MKGLOBAL(asm_Eia3_256_RemainderAVX512_16_VPCLMUL,function,internal)
-asm_Eia3_256_RemainderAVX512_16_VPCLMUL:
-        endbranch64
-        REMAINDER_16 1, 256
-
 ;;
 ;;extern void asm_Eia3Round64BAVX512(uint32_t *T, const void *KS, const void *DATA)
 ;;
@@ -2382,9 +2354,9 @@ asm_Eia3_256_RemainderAVX512_16_VPCLMUL:
 ;; - reads and re-arranges KS
 ;; - employs clmul for the XOR & ROL part
 ;;
-;;  @param [in] T pointer to digest
-;;  @param [in] KS pointer to key stream (2 x 64 bytes)
-;;  @param [in] DATA pointer to data
+;;  @param [in] T (digest pointer)
+;;  @param [in] KS (key stream pointer)
+;;  @param [in] DATA (data pointer)
 ;;
 align 64
 MKGLOBAL(asm_Eia3Round64BAVX512,function,internal)
@@ -2468,157 +2440,7 @@ asm_Eia3Round64BAVX512:
 
         ret
 
-;;
-;;extern void asm_Eia3Round64B_16_VPCLMUL(uint32_t *T, const void *KS, const void **DATA,
-;;                                        uint16_t *LEN)
-;;
-;; Updates authentication tag T of 16 buffers based on keystream KS and DATA.
-;; - it processes 64 bytes of DATA
-;; - reads data in 16 byte chunks and bit reverses them
-;; - reads and re-arranges KS
-;; - employs clmul for the XOR & ROL part
-;; - copies top 64 bytes of KS to bottom (for the next round)
-;; - Updates Data pointers for next rounds
-;; - Updates array of lengths
-;;
-;;  @param [in] T: Array of digests for all 16 buffers
-;;  @param [in] KS: Pointer to 128 bytes of keystream for all 16 buffers (2048 bytes in total)
-;;  @param [in] DATA: Array of pointers to data for all 16 buffers
-;;  @param [in] LEN: Array of lengths for all 16 buffers
-;;
-align 64
-MKGLOBAL(asm_Eia3Round64BAVX512_16,function,internal)
-asm_Eia3Round64BAVX512_16:
-        endbranch64
-%ifdef LINUX
-	%define		T	rdi
-	%define		KS	rsi
-	%define		DATA	rdx
-	%define		LEN	rcx
-%else
-	%define		T	rcx
-	%define		KS	rdx
-	%define		DATA	r8
-	%define		LEN	r9
-%endif
-
-%define         DIGEST_0        zmm28
-%define         DIGEST_1        zmm29
-%define         DIGEST_2        zmm30
-%define         DIGEST_3        zmm31
-
-%define         DATA_ADDR       r10
-%define         KS_ADDR         r11
-
-        FUNC_SAVE
-
-        vmovdqa  xmm5, [bit_reverse_table_l]
-        vmovdqa  xmm6, [bit_reverse_table_h]
-        vmovdqa  xmm7, [bit_reverse_and_table]
-        vmovdqa  xmm10, [data_mask_64bits]
-
-%assign I 0
-%rep 4
-%assign J 0
-%rep 4
-
-        vpxor   xmm9, xmm9
-        mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
-        lea     KS_ADDR, [KS + (I*4+J)*64*2]
-
-%assign K 0
-%rep 4
-        ;; read 16 bytes and reverse bits
-        vmovdqu  xmm0, [DATA_ADDR + 16*K]
-        vpand    xmm1, xmm0, xmm7
-
-        vpandn   xmm2, xmm7, xmm0
-        vpsrld   xmm2, 4
-
-        vpshufb  xmm8, xmm6, xmm1 ; bit reverse low nibbles (use high table)
-        vpshufb  xmm4, xmm5, xmm2 ; bit reverse high nibbles (use low table)
-
-        vpor     xmm8, xmm4
-        ; xmm8 - bit reversed data bytes
-
-        ;; ZUC authentication part
-        ;; - 4x32 data bits
-        ;; - set up KS
-%if K != 0
-        vmovdqa  xmm11, xmm12
-        vmovdqu  xmm12, [KS_ADDR + (K*16) + (4*4)]
-%else
-        vmovdqu  xmm11, [KS_ADDR + (K*16) + (0*4)]
-        vmovdqu  xmm12, [KS_ADDR + (K*16) + (4*4)]
-%endif
-        vpalignr xmm13, xmm12, xmm11, 8
-        vpshufd  xmm2, xmm11, 0x61
-        vpshufd  xmm3, xmm13, 0x61
-
-        ;;  - set up DATA
-        vpand    xmm13, xmm10, xmm8
-        vpshufd  xmm0, xmm13, 0xdc
-
-        vpsrldq  xmm8, 8
-        vpshufd  xmm1, xmm8, 0xdc
-
-        ;; - clmul
-        ;; - xor the results from 4 32-bit words together
-        vpclmulqdq xmm13, xmm0, xmm2, 0x00
-        vpclmulqdq xmm14, xmm0, xmm2, 0x11
-        vpclmulqdq xmm15, xmm1, xmm3, 0x00
-        vpclmulqdq xmm8,  xmm1, xmm3, 0x11
-
-        vpternlogq xmm13, xmm14, xmm8, 0x96
-        vpternlogq xmm9, xmm13, xmm15, 0x96
-
-%assign K (K + 1)
-%endrep
-
-        vinserti32x4 APPEND(DIGEST_, I), xmm9, J
-        ; Memcpy KS 64-127 bytes to 0-63 bytes
-        vmovdqa64       zmm0, [KS_ADDR + 64]
-        vmovdqa64       [KS_ADDR], zmm0
-%assign J (J + 1)
-%endrep
-%assign I (I + 1)
-%endrep
-
-        ;; - update tags
-        mov             r12, 0x00FF
-        mov             r13, 0xFF00
-        kmovq           k1, r12
-        kmovq           k2, r13
-
-        vmovdqu64       zmm4, [T] ; Input tags
-        vmovdqa64       zmm0, [rel shuf_mask_tags]
-        vmovdqa64       zmm1, [rel shuf_mask_tags + 64]
-        ; Get result tags for 16 buffers in different position in each lane
-        ; and blend these tags into an ZMM register.
-        ; Then, XOR the results with the previous tags and write out the result.
-        vpermt2d        DIGEST_0{k1}{z}, zmm0, DIGEST_1
-        vpermt2d        DIGEST_2{k2}{z}, zmm1, DIGEST_3
-        vpternlogq      zmm4, DIGEST_0, DIGEST_2, 0x96 ; A XOR B XOR C
-        vmovdqu64       [T], zmm4
-
-        ; Update data pointers
-        vmovdqu64       zmm0, [DATA]
-        vmovdqu64       zmm1, [DATA + 64]
-        vpaddq          zmm0, [rel add_64]
-        vpaddq          zmm1, [rel add_64]
-        vmovdqu64       [DATA], zmm0
-        vmovdqu64       [DATA + 64], zmm1
-
-        ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
-        vmovdqa         ymm2, [LEN]
-        vpcmpw          k1, ymm2, [rel all_ffs], 4 ; k1 -> valid lanes
-        vpsubw          ymm2{k1}, [rel all_512w]
-        vmovdqa         [LEN], ymm2
-
-        FUNC_RESTORE
-
-        ret
-
+%endif ; USE_GFNI == 0
 
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
