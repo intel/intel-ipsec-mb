@@ -334,8 +334,6 @@ align 64
 %define arg4 r9
 %endif
 
-%define MASK31  zmm12
-
 %define OFS_R1  (16*(4*16))
 %define OFS_R2  (OFS_R1 + (4*16))
 %define OFS_X0  (OFS_R2 + (4*16))
@@ -750,72 +748,78 @@ align 64
 ;
 ;   add_mod31()
 ;       add two 32-bit args and reduce mod (2^31-1)
-;   params
-;       %1  - arg1/res
-;       %2  - arg2
-;   uses
-;       zmm2
-;   return
-;       %1
-%macro  add_mod31   2
-    vpaddd      %1, %2
-    vpsrld      zmm2, %1, 31
-    vpandq      %1, MASK31
-    vpaddd      %1, zmm2
+;
+%macro  add_mod31   4
+%define %%IN_OUT        %1 ; [in/out] ZMM register with first input and output
+%define %%IN2           %2 ; [in] ZMM register with second input
+%define %%ZTMP          %3 ; [clobbered] Temporary ZMM register
+%define %%MASK31        %4 ; [in] ZMM register containing 0x7FFFFFFF's in all dwords
+
+    vpaddd      %%IN_OUT, %%IN2
+    vpsrld      %%ZTMP, %%IN_OUT, 31
+    vpandq      %%IN_OUT, %%MASK31
+    vpaddd      %%IN_OUT, %%ZTMP
 %endmacro
 
 
 ;
 ;   rot_mod31()
 ;       rotate (mult by pow of 2) 32-bit arg and reduce mod (2^31-1)
-;   params
-;       %1  - arg
-;       %2  - # of bits
-;   uses
-;       zmm2
-;   return
-;       %1
-%macro  rot_mod31   2
+;
+%macro  rot_mod31   4
+%define %%IN_OUT        %1 ; [in/out] ZMM register with input and output
+%define %%ZTMP          %2 ; [clobbered] Temporary ZMM register
+%define %%MASK31        %3 ; [in] ZMM register containing 0x7FFFFFFF's in all dwords
+%define %%N_BITS        %4 ; [immediate] Number of bits to rotate for each dword
 
-    vpslld      zmm2, %1, %2
-    vpsrld      %1, %1, (31 - %2)
-    vpternlogq  %1, zmm2, MASK31, 0xA8 ; (A | B) & C
+    vpslld      %%ZTMP, %%IN_OUT, %%N_BITS
+    vpsrld      %%IN_OUT, %%IN_OUT, (31 - %%N_BITS)
+    vpternlogq  %%IN_OUT, %%ZTMP, %%MASK31, 0xA8 ; (A | B) & C
 %endmacro
 
 
 ;
 ;   lfsr_updt16()
 ;
-%macro  lfsr_updt16  4
-%define %%STATE     %1 ; [in] ZUC state
-%define %%ROUND_NUM %2 ; [in] Round number
-%define %%LANE_MASK %3 ; [in] Mask register with lanes to update
-%define %%W         %4 ; [out] ZMM register to contain W for all lanes
-    ;
-    ; zmm1  = LFSR_S0
-    ; zmm4  = LFSR_S4
-    ; zmm10 = LFSR_S10
-    ; zmm13 = LFSR_S13
-    ; zmm15 = LFSR_S15
-    ;
-    vmovdqa64   zmm1,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
-    vmovdqa64   zmm4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*64]
-    vmovdqa64   zmm10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*64]
-    vmovdqa64   zmm13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*64]
-    vmovdqa64   zmm15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
+%macro  lfsr_updt16  13
+%define %%STATE     %1  ; [in] ZUC state
+%define %%ROUND_NUM %2  ; [in] Round number
+%define %%LANE_MASK %3  ; [in] Mask register with lanes to update
+%define %%LFSR_0    %4  ; [clobbered] LFSR_0
+%define %%LFSR_4    %5  ; [clobbered] LFSR_2
+%define %%LFSR_10   %6  ; [clobbered] LFSR_5
+%define %%LFSR_13   %7  ; [clobbered] LFSR_7
+%define %%LFSR_15   %8  ; [clobbered] LFSR_9
+%define %%ZTMP      %9  ; [clobbered] Temporary ZMM register
+%define %%MASK_31   %10 ; [in] Mask_31
+%define %%W         %11 ; [in/clobbered] In init mode, contains W for all 16 lanes
+%define %%KTMP      %12 ; [clobbered] Temporary K mask
+%define %%MODE      %13 ; [constant] "init" / "work" mode
 
-    ; Calculate LFSR feedback
-    add_mod31   %%W, zmm1
-    rot_mod31   zmm1, 8
-    add_mod31   %%W, zmm1
-    rot_mod31   zmm4, 20
-    add_mod31   %%W, zmm4
-    rot_mod31   zmm10, 21
-    add_mod31   %%W, zmm10
-    rot_mod31   zmm13, 17
-    add_mod31   %%W, zmm13
-    rot_mod31   zmm15, 15
-    add_mod31   %%W, zmm15
+    vmovdqa64   %%LFSR_0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   %%LFSR_4,  [%%STATE + (( 4 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   %%LFSR_10, [%%STATE + ((10 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   %%LFSR_13, [%%STATE + ((13 + %%ROUND_NUM) % 16)*64]
+    vmovdqa64   %%LFSR_15, [%%STATE + ((15 + %%ROUND_NUM) % 16)*64]
+
+    ; Calculate LFSR feedback (S_16)
+
+    ; In Init mode, W is added to the S_16 calculation
+%ifidn %%MODE, init
+    add_mod31   %%W, %%LFSR_0, %%ZTMP, %%MASK_31
+%else
+    vmovdqa64   %%W, %%LFSR_0
+%endif
+    rot_mod31   %%LFSR_0, %%ZTMP, %%MASK_31, 8
+    add_mod31   %%W, %%LFSR_0, %%ZTMP, %%MASK_31
+    rot_mod31   %%LFSR_4, %%ZTMP, %%MASK_31, 20
+    add_mod31   %%W, %%LFSR_4, %%ZTMP, %%MASK_31
+    rot_mod31   %%LFSR_10, %%ZTMP, %%MASK_31, 21
+    add_mod31   %%W, %%LFSR_10, %%ZTMP, %%MASK_31
+    rot_mod31   %%LFSR_13, %%ZTMP, %%MASK_31, 17
+    add_mod31   %%W, %%LFSR_13, %%ZTMP, %%MASK_31
+    rot_mod31   %%LFSR_15, %%ZTMP, %%MASK_31, 15
+    add_mod31   %%W, %%LFSR_15, %%ZTMP, %%MASK_31
 
     vmovdqa32   [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]{%%LANE_MASK}, %%W
 
@@ -1000,7 +1004,8 @@ align 64
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, %%W
     vpsrld  %%W,1         ; Shift out LSB of W
 
-    lfsr_updt16  rax, N, k2, %%W  ; W used in LFSR update - not set to zero
+    lfsr_updt16  rax, N, k2, zmm1, zmm4, zmm10, zmm13, zmm15, \
+                 zmm2, zmm12, %%W, k7, init  ; W used in LFSR update
 %assign N N+1
 %endrep
 
@@ -1010,8 +1015,8 @@ align 64
     nonlin_fun16 rax, k2, init, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6
 
-    vpxorq    %%W, %%W
-    lfsr_updt16  rax, 0, k2, %%W  ; W used in LFSR update - set to zero
+    lfsr_updt16  rax, 0, k2, zmm1, zmm4, zmm10, zmm13, zmm15, \
+                 zmm2, zmm12, %%W, k7, work
 
     ; Update R1, R2
     vmovdqa32   [rax + OFS_R1]{k2}, %%R1
@@ -1090,8 +1095,8 @@ ZUC256_INIT:
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm0
     ; OFS_X3 XOR W (zmm0)
     vpxorq      zmm16, zmm0
-    vpxorq      zmm0, zmm0
-    lfsr_updt16  rax, 1, k2, zmm0  ; W (zmm0) used in LFSR update - not set to zero
+    lfsr_updt16  rax, 1, k2, zmm1, zmm4, zmm10, zmm13, zmm15, \
+                 zmm2, zmm12, zmm0, k7, work
 %else ;; %%NUM_ROUNDS != 1
     ; Generate N*4B of keystream in N rounds
     ; Generate first bytes of KS for all lanes
@@ -1104,8 +1109,8 @@ ZUC256_INIT:
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm0
     ; OFS_X3 XOR W (zmm0)
     vpxorq      APPEND(zmm, idx), zmm0
-    vpxorq      zmm0, zmm0
-    lfsr_updt16  rax, N, k3, zmm0  ; W (zmm0) used in LFSR update - not set to zero
+    lfsr_updt16  rax, N, k3, zmm1, zmm4, zmm10, zmm13, zmm15, \
+                 zmm2, zmm12, zmm0, k7, work
 %assign N N+1
 %assign idx (idx + 1)
 %endrep
@@ -1118,8 +1123,8 @@ ZUC256_INIT:
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm0
     ; OFS_X3 XOR W (zmm0)
     vpxorq      APPEND(zmm, idx), zmm0
-    vpxorq      zmm0, zmm0
-    lfsr_updt16  rax, N, k2, zmm0  ; W (zmm0) used in LFSR update - not set to zero
+    lfsr_updt16  rax, N, k2, zmm1, zmm4, zmm10, zmm13, zmm15, \
+                 zmm2, zmm12, zmm0, k7, work
 %assign N N+1
 %assign idx (idx + 1)
 %endrep
@@ -1315,8 +1320,10 @@ ZUC_KEYGEN_SKIP8_16:
                      zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm0
         ; OFS_X3 XOR W (zmm0)
         vpxorq  APPEND(zmm, idx), zmm0
-        vpxorq   zmm0, zmm0
-        lfsr_updt16  rax, N, %%LANE_MASK, zmm0  ; W (zmm0) used in LFSR update - not set to zero
+        ; Shuffle bytes within KS words to XOR with plaintext later
+        vpshufb APPEND(zmm, idx), [rel swap_mask]
+        lfsr_updt16  rax, N, %%LANE_MASK, zmm1, zmm4, zmm10, zmm13, zmm15, \
+                     zmm2, zmm12, zmm0, k7, work
 %assign N (N + 1)
 %assign idx (idx + 1)
 %endrep
