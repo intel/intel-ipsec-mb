@@ -542,7 +542,7 @@ asm_avx512_lib_objs := \
 	sha512_x8_avx512.o \
 	des_x16_avx512.o \
 	cntr_vaes_avx512.o \
-	pon_avx512.o \
+	pon_vaes_avx512.o \
 	aes_cbc_dec_vaes_avx512.o \
 	aes_cbc_enc_vaes_avx512.o \
 	aes_cbcs_enc_vaes_avx512.o \
