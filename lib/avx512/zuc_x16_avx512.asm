@@ -1328,12 +1328,6 @@ ZUC_KEYGEN_SKIP8_16:
 %assign idx (idx + 1)
 %endrep
 
-        ;; Shuffle all 16 keystreams in registers zmm16-31
-%assign i 16
-%rep %%NROUNDS
-        vpshufb zmm %+i, [rel swap_mask]
-%assign i (i+1)
-%endrep
         ; ZMM16-31 contain the keystreams for each round
         ; Perform a 32-bit 16x16 transpose to have the 64 bytes
         ; of each lane in a different register
