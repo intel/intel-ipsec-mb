@@ -102,12 +102,20 @@ section .text
         and     rsp, ~15
 
 %ifidn __OUTPUT_FORMAT__, win64
-        ; xmm6:xmm9 need to be maintained for Windows
+        ; maintain xmms on Windows
         vmovdqa [rsp + 0*16], xmm6
         vmovdqa [rsp + 1*16], xmm7
         vmovdqa [rsp + 2*16], xmm8
         vmovdqa [rsp + 3*16], xmm9
         vmovdqa [rsp + 4*16], xmm10
+        vmovdqa [rsp + 5*16], xmm11
+        vmovdqa [rsp + 6*16], xmm20
+        vmovdqa [rsp + 7*16], xmm21
+        vmovdqa [rsp + 8*16], xmm23
+        vmovdqa [rsp + 9*16], xmm24
+        vmovdqa [rsp + 10*16], xmm25
+        vmovdqa [rsp + 11*16], xmm26
+        vmovdqa [rsp + 12*16], xmm30
         mov     [rsp + GP_OFFSET + 48], rdi
         mov     [rsp + GP_OFFSET + 56], rsi
 %endif
@@ -128,6 +136,15 @@ section .text
         vmovdqa xmm8,  [rsp + 2*16]
         vmovdqa xmm9,  [rsp + 3*16]
         vmovdqa xmm9,  [rsp + 4*16]
+        vmovdqa xmm10,  [rsp + 4*16]
+        vmovdqa xmm11,  [rsp + 5*16]
+        vmovdqa xmm20,  [rsp + 6*16]
+        vmovdqa xmm21,  [rsp + 7*16]
+        vmovdqa xmm23,  [rsp + 8*16]
+        vmovdqa xmm24,  [rsp + 9*16]
+        vmovdqa xmm25,  [rsp + 10*16]
+        vmovdqa xmm26,  [rsp + 11*16]
+        vmovdqa xmm30,  [rsp + 12*16]
         mov     rdi, [rsp + GP_OFFSET + 48]
         mov     rsi, [rsp + GP_OFFSET + 56]
 %endif
@@ -232,20 +249,22 @@ section .text
 %endmacro
 
 
-;; Precompute powers of P up to P^4 or P^16
+;; Precompute powers of P up to P^4 or P^32
 ;; Results are arranged from highest power to lowest at 128b granularity
 ;; Example:
 ;;   For up to P^4, results are returned in a 2 XMM registers
 ;;   register in the following order:
 ;;       OUT0[P1P2]
 ;;       OUT1[P3P4]
-;;   For up to P^16, results are returned in 2 ZMM registers
+;;   For up to P^32, results are returned in 4 ZMM registers
 ;;   in the following order:
-;;       OUT0[P7P8,     P5P6,   P3P4,  P1P2]
-;;       OUT1[P15P16, P13P14, P11P12, P9P10]
-%macro  PRECOMPUTE_CONSTANTS 8-9
+;;       OUT0[P7P8,     P5P6,   P3P4,   P1P2]
+;;       OUT1[P15P16, P13P14, P11P12,  P9P10]
+;;       OUT2[P23P24, P21P22, P19P20, P17P18]
+;;       OUT3[P31P32, P29P30, P27P28, P25P26]
+%macro  PRECOMPUTE_CONSTANTS 8-11
 %define %%P1            %1  ;; [in] initial P^1 to be multiplied
-%define %%HIGHEST_POWER %2  ;; [in] highest power to calculate (4 or 16)
+%define %%HIGHEST_POWER %2  ;; [in] highest power to calculate (4 or 32)
 %define %%OUT0          %3  ;; [out] ymm/zmm containing results
 %define %%OUT1          %4  ;; [out] ymm/zmm containing results
 %define %%T1            %5  ;; [clobbered] xmm
@@ -253,6 +272,8 @@ section .text
 %define %%T3            %7  ;; [clobbered] xmm
 %define %%T4            %8  ;; [clobbered] xmm
 %define %%T5            %9  ;; [clobbered] xmm
+%define %%OUT2          %10 ;; [out] zmm containing results
+%define %%OUT3          %11 ;; [out] zmm containing results
 
 %if %0 > 8
 %xdefine %%Y_OUT0 YWORD(%%OUT0)
@@ -265,6 +286,8 @@ section .text
 
 %xdefine %%Z_OUT0 ZWORD(%%OUT0)
 %xdefine %%Z_OUT1 ZWORD(%%OUT1)
+%xdefine %%Z_OUT2 ZWORD(%%OUT2)
+%xdefine %%Z_OUT3 ZWORD(%%OUT3)
 %xdefine %%ZT1 ZWORD(%%T1)
 %xdefine %%ZT2 ZWORD(%%T2)
 %xdefine %%ZT3 ZWORD(%%T3)
@@ -312,9 +335,31 @@ section .text
         ;;   P9P10P11P12P13P14P15P16
         MUL_AND_REDUCE_64x64 %%Z_OUT1, %%Z_OUT0, %%ZT2, %%ZT3, %%ZT4, %%ZT5, ZWORD(SNOW3G_CONST)
 
+        ;; broadcast P16 across OUT2 and multiply
+        valignq         %%ZT1, %%Z_OUT1, %%Z_OUT1, 7
+        vpbroadcastq    %%Z_OUT2, %%T1
+
+        ;;   P1   P2  P3  P4  P5  P6  P7  P8
+        ;; * P16 P16 P16 P16 P16 P16 P16 P16
+        ;; -------------------------
+        ;;   P17 P18 P19 P20 P21 P22 P23 P24
+        MUL_AND_REDUCE_64x64 %%Z_OUT2, %%Z_OUT0, %%ZT2, %%ZT3, %%ZT4, %%ZT5, ZWORD(SNOW3G_CONST)
+
+        ;; broadcast P24 across OUT3 and multiply
+        valignq         %%ZT1, %%Z_OUT2, %%Z_OUT2, 7
+        vpbroadcastq    %%Z_OUT3, %%T1
+
+        ;;   P1   P2  P3  P4  P5  P6  P7  P8
+        ;; * P24 P24 P24 P24 P24 P24 P24 P24
+        ;; -------------------------
+        ;;   P25 P26 P27 P28 P29 P30 P31 P32
+        MUL_AND_REDUCE_64x64 %%Z_OUT3, %%Z_OUT0, %%ZT2, %%ZT3, %%ZT4, %%ZT5, ZWORD(SNOW3G_CONST)
+
         ;; put the highest powers to the lower lanes
-        vshufi64x2      %%Z_OUT0, %%Z_OUT0, %%Z_OUT0, 00_01_10_11b ;;  P7P8P,   P5P6,   P3P4,  P1P2
+        vshufi64x2      %%Z_OUT0, %%Z_OUT0, %%Z_OUT0, 00_01_10_11b ;;  P7P8P,   P5P6,   P3P4, P1P2
         vshufi64x2      %%Z_OUT1, %%Z_OUT1, %%Z_OUT1, 00_01_10_11b ;; P15P16, P13P14, P11P12, P9P10
+        vshufi64x2      %%Z_OUT2, %%Z_OUT2, %%Z_OUT2, 00_01_10_11b ;; P23P24, P21P22, P19P20, P17P18
+        vshufi64x2      %%Z_OUT3, %%Z_OUT3, %%Z_OUT3, 00_01_10_11b ;; P31P32, P29P30, P27P28, P25P26
 %endif
 %endmacro
 
@@ -344,49 +389,59 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
         shr     qword_len, 6
 
         cmp     qword_len, 48                   ;; >=48 blocks go to 16 blocks loop
-        jae     init_16_block_loop
+        jae     init_32_block_loop
 
         cmp     qword_len, 4                    ;; check at least 4 blocks
         jae     init_4_block_loop
 
         jmp     single_block_check
 
-init_16_block_loop:
-        ;; precompute up to P^16
-        PRECOMPUTE_CONSTANTS P1, 16, xmm0, xmm1, xmm3, xmm4, xmm5, xmm6, xmm9
+init_32_block_loop:
+        ;; precompute up to P^32
+        PRECOMPUTE_CONSTANTS P1, 32, xmm0, xmm1, xmm3, xmm4, xmm5, xmm6, xmm9, xmm20, xmm21
 
-start_16_block_loop:
+start_32_block_loop:
         vmovdqu64       zmm3, [in_ptr]
         vmovdqu64       zmm4, [in_ptr + 64]
+        vmovdqu64       zmm23, [in_ptr + 128]
+        vmovdqu64       zmm24, [in_ptr + 192]
 
         vpshufb         zmm3, zmm3, [rel bswap64]
         vpshufb         zmm4, zmm4, [rel bswap64]
+        vpshufb         zmm23, zmm23, [rel bswap64]
+        vpshufb         zmm24, zmm24, [rel bswap64]
 
         vpxorq          zmm3, zmm3, ZWORD(EV)
 
-        vpclmulqdq      zmm5, zmm4, zmm0, 0x10 ;;   p8 -  p1
-        vpclmulqdq      zmm6, zmm4, zmm0, 0x01 ;; x m8 - m15
+        vpclmulqdq      zmm5, zmm24, zmm0, 0x10 ;;   p8 -  p1
+        vpclmulqdq      zmm6, zmm24, zmm0, 0x01 ;; x m24 - m31
 
-        vpclmulqdq      zmm10, zmm3, zmm1, 0x10 ;;   p16 - p9
-        vpclmulqdq      zmm11, zmm3, zmm1, 0x01 ;; x m0  - m7
+        vpclmulqdq      zmm10, zmm23, zmm1, 0x10 ;;   p16 - p9
+        vpclmulqdq      zmm11, zmm23, zmm1, 0x01 ;; x m16  - m23
+        vpclmulqdq      zmm25, zmm4, zmm20, 0x10 ;;   p24 -  p17
+        vpclmulqdq      zmm26, zmm4, zmm20, 0x01 ;; x m8 - m15
+        vpclmulqdq      zmm30, zmm3, zmm21, 0x10 ;;   p32 - p25
+        vpclmulqdq      zmm31, zmm3, zmm21, 0x01 ;; x m0  - m7
 
         ;; sum results
         vpternlogq      zmm10, zmm5, zmm6, 0x96
+        vpternlogq      zmm11, zmm25, zmm26, 0x96
+        vpternlogq      zmm10, zmm30, zmm31, 0x96
         vpxorq          ZWORD(EV), zmm10, zmm11
         VHPXORI4x128    ZWORD(EV), zmm4
 
         REDUCE_TO_64    EV, xmm3
         vmovq XWORD(EV), XWORD(EV)
 
-        add     in_ptr, 16*8
-        sub     qword_len, 16
-        cmp     qword_len, 16
+        add     in_ptr, 32*8
+        sub     qword_len, 32
+        cmp     qword_len, 32
 
-        ;; less than 16 blocks left
-        jb      lt_16_blocks
-        jmp     start_16_block_loop
+        ;; less than 32 blocks left
+        jb      lt_32_blocks
+        jmp     start_32_block_loop
 
-lt_16_blocks:
+lt_32_blocks:
         ;; check at least 4 blocks left
         cmp     qword_len, 4
         jb      single_block_check

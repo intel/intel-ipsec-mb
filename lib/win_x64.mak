@@ -467,7 +467,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\snow_v_sse.obj \
 	$(OBJ_DIR)\snow_v_avx.obj \
 	$(OBJ_DIR)\snow3g_avx512.obj \
-	$(OBJ_DIR)\snow3g_uia2_by16_vaes_avx512.obj
+	$(OBJ_DIR)\snow3g_uia2_by32_vaes_avx512.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \

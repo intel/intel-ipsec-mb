@@ -590,7 +590,7 @@ asm_avx512_lib_objs := \
 	crc32_fp_avx512.o \
 	crc32_iuup_avx512.o \
 	crc32_wimax_avx512.o \
-	snow3g_uia2_by16_vaes_avx512.o
+	snow3g_uia2_by32_vaes_avx512.o
 
 #
 # GCM object file lists
