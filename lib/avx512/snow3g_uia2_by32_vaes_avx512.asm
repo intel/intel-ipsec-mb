@@ -83,6 +83,17 @@ dq      0x0001020304050607, 0x08090a0b0c0d0e0f
 dq      0x0001020304050607, 0x08090a0b0c0d0e0f
 dq      0x0001020304050607, 0x08090a0b0c0d0e0f
 
+align 64
+mask64:
+dq      0xff, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f
+
+align 64
+swap_qwords:
+dq      0x0f0e0d0c0b0a0908, 0x0706050403020100
+dq      0x0f0e0d0c0b0a0908, 0x0706050403020100
+dq      0x0f0e0d0c0b0a0908, 0x0706050403020100
+dq      0x0f0e0d0c0b0a0908, 0x0706050403020100
+
 section .text
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -93,8 +104,11 @@ section .text
         %define GP_STORAGE      6*8
 %endif
 
-%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE
+%define CONSTANTS_STORAGE       8*32 ;; 32 blocks
+
+%define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE + CONSTANTS_STORAGE
 %define GP_OFFSET XMM_STORAGE
+%define CONSTANTS_OFFSET XMM_STORAGE + GP_STORAGE
 
 %macro FUNC_SAVE 0
         mov     r11, rsp
@@ -360,6 +374,18 @@ section .text
         vshufi64x2      %%Z_OUT1, %%Z_OUT1, %%Z_OUT1, 00_01_10_11b ;; P15P16, P13P14, P11P12, P9P10
         vshufi64x2      %%Z_OUT2, %%Z_OUT2, %%Z_OUT2, 00_01_10_11b ;; P23P24, P21P22, P19P20, P17P18
         vshufi64x2      %%Z_OUT3, %%Z_OUT3, %%Z_OUT3, 00_01_10_11b ;; P31P32, P29P30, P27P28, P25P26
+
+        vpshufb         zmm12, %%Z_OUT0, [rel swap_qwords]
+        vpshufb         zmm13, %%Z_OUT1, [rel swap_qwords]
+        vpshufb         zmm14, %%Z_OUT2, [rel swap_qwords]
+        vpshufb         zmm15, %%Z_OUT3, [rel swap_qwords]
+
+        ;; store constants on stack in sequential order for later reading
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 0*64], zmm15
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 1*64], zmm14
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 2*64], zmm13
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 3*64], zmm12
+
 %endif
 %endmacro
 
@@ -388,7 +414,7 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
         mov     qword_len, bit_len              ;; lenInBits -> lenInQwords
         shr     qword_len, 6
 
-        cmp     qword_len, 48                   ;; >=48 blocks go to 16 blocks loop
+        cmp     qword_len, 32                   ;; >=32 blocks go to 32 blocks loop
         jae     init_32_block_loop
 
         cmp     qword_len, 4                    ;; check at least 4 blocks
@@ -435,6 +461,7 @@ start_32_block_loop:
 
         add     in_ptr, 32*8
         sub     qword_len, 32
+        jz      zero_qwords_rem
         cmp     qword_len, 32
 
         ;; less than 32 blocks left
@@ -442,15 +469,118 @@ start_32_block_loop:
         jmp     start_32_block_loop
 
 lt_32_blocks:
-        ;; check at least 4 blocks left
-        cmp     qword_len, 4
-        jb      single_block_check
+        ;; process between 1 and 31 blocks
+        ;; set mask to read last set of blocks
+        mov     tmp, qword_len
+        and     tmp, 0x7
+        lea     tmp2, [mask64]
+        mov     tmp, [tmp2 + tmp*8]
+        mov     tmp3, 0xff
+        kmovq   k1, tmp3
+        kmovq   k2, tmp
+        xor     tmp3, tmp3
+        kmovq   k3, tmp3
 
-        ;; at least 4 blocks left
-        ;; move P1P2, P3P4 to xmms and go to 4 block loop
-        vextracti64x2   xmm1, zmm0, 0x2
-        vextracti64x2   xmm0, zmm0, 0x3
-        jmp             start_4_block_loop
+        ;; calculate constants table offset
+        mov     tmp4, 32
+        sub     tmp4, qword_len
+
+        cmp     qword_len, 16
+        jbe     le16
+
+        cmp     qword_len, 24
+        jbe     le24
+
+gt24:
+        ;; 25 - 31 blocks
+        vmovdqu64       zmm3{k1}{z}, [in_ptr]
+        vmovdqu64       zmm4{k1}{z}, [in_ptr+64]
+        vmovdqu64       zmm23{k1}{z}, [in_ptr+128]
+        vmovdqu64       zmm24{k2}{z}, [in_ptr+192]
+
+        vmovdqu64       zmm0{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 0*64]
+        vmovdqu64       zmm1{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 1*64]
+        vmovdqu64       zmm20{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 2*64]
+        vmovdqu64       zmm21{k2}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 3*64]
+
+        jmp     done
+
+le24:
+        ;; 17 - 24 blocks
+        vmovdqu64       zmm3{k1}{z}, [in_ptr]
+        vmovdqu64       zmm4{k1}{z}, [in_ptr+64]
+        vmovdqu64       zmm23{k2}{z}, [in_ptr+128]
+        vmovdqu64       zmm24{k3}{z}, [in_ptr+192]
+
+        vmovdqu64       zmm0{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 0*64]
+        vmovdqu64       zmm1{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 1*64]
+        vmovdqu64       zmm20{k2}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 2*64]
+        vpxorq          zmm21, zmm21, zmm21
+
+        jmp     done
+
+le16:
+        cmp     qword_len, 8
+        jbe     le8
+
+gt8:
+        ;; 9 - 16 blocks
+        vmovdqu64       zmm3{k1}{z}, [in_ptr]
+        vmovdqu64       zmm4{k2}{z}, [in_ptr+64]
+        vmovdqu64       zmm23{k3}{z}, [in_ptr+128]
+        vmovdqu64       zmm24{k3}{z}, [in_ptr+192]
+
+        vmovdqu64       zmm0{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 0*64]
+        vmovdqu64       zmm1{k2}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 1*64]
+        vpxorq          zmm20, zmm20, zmm20
+        vpxorq          zmm21, zmm21, zmm21
+
+        jmp    done
+
+le8:
+        ;; 1 - 8 blocks
+        vmovdqu64       zmm3{k2}{z}, [in_ptr]
+        vmovdqu64       zmm4{k3}{z}, [in_ptr+64]
+        vmovdqu64       zmm23{k3}{z}, [in_ptr+128]
+        vmovdqu64       zmm24{k3}{z}, [in_ptr+192]
+
+        vmovdqu64       zmm0{k2}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 0*64]
+        vpxorq          zmm1, zmm1, zmm1
+        vpxorq          zmm20, zmm20, zmm20
+        vpxorq          zmm21, zmm21, zmm21
+
+done:
+        vpshufb         zmm3, zmm3, [rel bswap64]
+        vpshufb         zmm4, zmm4, [rel bswap64]
+        vpshufb         zmm23, zmm23, [rel bswap64]
+        vpshufb         zmm24, zmm24, [rel bswap64]
+
+        vpxorq          zmm3, zmm3, ZWORD(EV)
+
+        vpclmulqdq      zmm5, zmm3, zmm0, 0x00 ;;    p8 -  p1
+        vpclmulqdq      zmm6, zmm3, zmm0, 0x11 ;; x m24 - m31
+
+        vpclmulqdq      zmm10, zmm4, zmm1, 0x00 ;;   p16 - p9
+        vpclmulqdq      zmm11, zmm4, zmm1, 0x11 ;; x m16  - m23
+
+        vpclmulqdq      zmm25, zmm23, zmm20, 0x00 ;;   p24 -  p17
+        vpclmulqdq      zmm26, zmm23, zmm20, 0x11 ;; x m8 - m15
+
+        vpclmulqdq      zmm30, zmm24, zmm21, 0x00 ;;   p32 - p25
+        vpclmulqdq      zmm31, zmm24, zmm21, 0x11 ;; x m0  - m7
+
+        ;; sum results
+        vpternlogq      zmm10, zmm5, zmm6, 0x96
+        vpternlogq      zmm11, zmm25, zmm26, 0x96
+        vpternlogq      zmm10, zmm30, zmm31, 0x96
+        vpxorq          ZWORD(EV), zmm10, zmm11
+        VHPXORI4x128    ZWORD(EV), zmm4
+
+        REDUCE_TO_64    EV, xmm3
+        vmovq XWORD(EV), XWORD(EV)
+
+        jmp     zero_qwords_rem
+
 
 init_4_block_loop:
         ;; precompute up to P^4
@@ -499,6 +629,8 @@ start_single_block_loop:
 single_block_check:
         cmp     qword_len, 0
         jne     start_single_block_loop
+
+zero_qwords_rem:
 
         mov     tmp5, 0x3f      ;; len_in_bits % 64
         and     tmp5, bit_len
