@@ -190,10 +190,12 @@ SNOW3G_F9_1_BUFFER_INTERNAL:
         movq    P1, [KS]
         pshufd  P1, P1, 1110_0001b
 
+        xor     offset, offset
+
         mov     qword_len, bit_len              ;; lenInBits -> lenInQwords
         shr     qword_len, 6
+        je      partial_blk
 
-        xor     offset, offset
         mov     end_offset, qword_len
         and     end_offset, 0xfffffffffffffffc  ;; round down to nearest 4 blocks
 
@@ -259,6 +261,7 @@ single_blk_chk:
         cmp     qword_len, offset
         ja      start_single_blk_loop
 
+partial_blk:
         mov     tmp5, 0x3f      ;; len_in_bits % 64
         and     tmp5, bit_len
         jz      skip_rem_bits

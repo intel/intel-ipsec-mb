@@ -349,7 +349,7 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
         cmp     qword_len, 4                    ;; check at least 4 blocks
         jae     init_4_block_loop
 
-        jmp     start_single_block_loop
+        jmp     single_block_check
 
 init_16_block_loop:
         ;; precompute up to P^16
