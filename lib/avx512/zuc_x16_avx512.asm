@@ -1594,21 +1594,26 @@ ZUC_ROUND64B_16:
 %define         DATA_ADDR1      r10
 %define         DATA_ADDR2      r11
 %define         DATA_ADDR3      r12
-%define         KS_ADDR0        r13
-%define         KS_ADDR1        r14
-%define         KS_ADDR2        r15
-%define         KS_ADDR3        rax
 
 %define         DATA_TRANS0     zmm19
 %define         DATA_TRANS1     zmm20
 %define         DATA_TRANS2     zmm21
 %define         DATA_TRANS3     zmm22
+%define         DATA_TRANS0x    xmm19
+%define         DATA_TRANS1x    xmm20
+%define         DATA_TRANS2x    xmm21
+%define         DATA_TRANS3x    xmm22
 
 %define         KS_TRANS0       zmm23
 %define         KS_TRANS1       zmm24
 %define         KS_TRANS2       zmm25
 %define         KS_TRANS3       zmm26
 %define         KS_TRANS4       zmm27
+%define         KS_TRANS0x      xmm23
+%define         KS_TRANS1x      xmm24
+%define         KS_TRANS2x      xmm25
+%define         KS_TRANS3x      xmm26
+%define         KS_TRANS4x      xmm27
 
 %define         DIGEST_0        zmm28
 %define         DIGEST_1        zmm29
@@ -1640,27 +1645,25 @@ ZUC_ROUND64B_16:
         mov             DATA_ADDR2, [DATA + IDX*32 + 2*8]
         mov             DATA_ADDR3, [DATA + IDX*32 + 3*8]
 
-        TRANSPOSE4_U128 DATA_ADDR0, DATA_ADDR1, DATA_ADDR2, DATA_ADDR3, \
-                        DATA_TRANS0, DATA_TRANS1, DATA_TRANS2, DATA_TRANS3, \
-                        ZTMP1, ZTMP2, ZTMP3, ZTMP4
+        vmovdqu64       XWORD(KS_TRANS0), [KS + (IDX*4)*64*2]
+        vinserti32x4    KS_TRANS0, [KS + (IDX*4 + 1)*64*2], 1
+        vinserti32x4    KS_TRANS0, [KS + (IDX*4 + 2)*64*2], 2
+        vinserti32x4    KS_TRANS0, [KS + (IDX*4 + 3)*64*2], 3
 
-        lea             KS_ADDR0,   [KS + (IDX*4)*64*2]
-        lea             KS_ADDR1,   [KS + (IDX*4 + 1)*64*2]
-        lea             KS_ADDR2,   [KS + (IDX*4 + 2)*64*2]
-        lea             KS_ADDR3,   [KS + (IDX*4 + 3)*64*2]
-
-        TRANSPOSE4_U128 KS_ADDR0, KS_ADDR1, KS_ADDR2, KS_ADDR3, \
-                        KS_TRANS0, KS_TRANS1, KS_TRANS2, KS_TRANS3, \
-                        ZTMP1, ZTMP2, ZTMP3, ZTMP4
-
-        ; Bytes 64-79 of all 4 buffers
-        vmovdqu64       KS_TRANS4, [KS_ADDR0 + 64]
-        vinserti32x4    KS_TRANS4, [KS_ADDR1 + 64], 1
-        vinserti32x4    KS_TRANS4, [KS_ADDR2 + 64], 2
-        vinserti32x4    KS_TRANS4, [KS_ADDR3 + 64], 3
 %assign I 0
 %assign J 1
 %rep 4
+        vmovdqu64       XWORD(APPEND(DATA_TRANS, I)), [DATA_ADDR0 + 16*I]
+        vinserti32x4    APPEND(DATA_TRANS, I), [DATA_ADDR1 + 16*I], 1
+        vinserti32x4    APPEND(DATA_TRANS, I), [DATA_ADDR2 + 16*I], 2
+        vinserti32x4    APPEND(DATA_TRANS, I), [DATA_ADDR3 + 16*I], 3
+
+        vmovdqu64       XWORD(APPEND(KS_TRANS, J)), [KS + (IDX*4)*64*2 + 16*J]
+        vinserti32x4    APPEND(KS_TRANS, J), [KS + (IDX*4 + 1)*64*2 + 16*J], 1
+        vinserti32x4    APPEND(KS_TRANS, J), [KS + (IDX*4 + 2)*64*2 + 16*J], 2
+        vinserti32x4    APPEND(KS_TRANS, J), [KS + (IDX*4 + 3)*64*2 + 16*J], 3
+
+
         ;; Reverse bits of next 16 bytes from all 4 buffers
         vgf2p8affineqb  ZTMP1, APPEND(DATA_TRANS,I), [rel bit_reverse_table], 0x00
 
@@ -1693,14 +1696,14 @@ ZUC_ROUND64B_16:
 %endrep
 
         ; Memcpy KS 64-127 bytes to 0-63 bytes
-        vmovdqa64       ZTMP4, [KS_ADDR0 + 64]
-        vmovdqa64       ZTMP1, [KS_ADDR1 + 64]
-        vmovdqa64       ZTMP2, [KS_ADDR2 + 64]
-        vmovdqa64       ZTMP3, [KS_ADDR3 + 64]
-        vmovdqa64       [KS_ADDR0], ZTMP4
-        vmovdqa64       [KS_ADDR1], ZTMP1
-        vmovdqa64       [KS_ADDR2], ZTMP2
-        vmovdqa64       [KS_ADDR3], ZTMP3
+        vmovdqa64       ZTMP4, [KS + (IDX*4)*64*2 + 64]
+        vmovdqa64       ZTMP1, [KS + (IDX*4 + 1)*64*2 + 64]
+        vmovdqa64       ZTMP2, [KS + (IDX*4 + 2)*64*2 + 64]
+        vmovdqa64       ZTMP3, [KS + (IDX*4 + 3)*64*2 + 64]
+        vmovdqa64       [KS + (IDX*4)*64*2], ZTMP4
+        vmovdqa64       [KS + (IDX*4 + 1)*64*2], ZTMP1
+        vmovdqa64       [KS + (IDX*4 + 2)*64*2], ZTMP2
+        vmovdqa64       [KS + (IDX*4 + 3)*64*2], ZTMP3
 
 %assign IDX (IDX + 1)
 %endrep
