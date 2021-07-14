@@ -1747,7 +1747,6 @@ ZUC_ROUND64B_16:
 %define         DIGEST_3        zmm31
 
 %define         DATA_ADDR       r10
-%define         KS_ADDR         r11
 
         FUNC_SAVE
 
@@ -1763,7 +1762,6 @@ ZUC_ROUND64B_16:
 
         vpxor   xmm9, xmm9
         mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
-        lea     KS_ADDR, [KS + (I*4+J)*64*2]
 
 %assign K 0
 %rep 4
@@ -1785,10 +1783,10 @@ ZUC_ROUND64B_16:
         ;; - set up KS
 %if K != 0
         vmovdqa  xmm11, xmm12
-        vmovdqu  xmm12, [KS_ADDR + (K*16) + (4*4)]
+        vmovdqu  xmm12, [KS + (I*4+J)*64*2 + (K*16) + (4*4)]
 %else
-        vmovdqu  xmm11, [KS_ADDR + (K*16) + (0*4)]
-        vmovdqu  xmm12, [KS_ADDR + (K*16) + (4*4)]
+        vmovdqu  xmm11, [KS + (I*4+J)*64*2 + (K*16) + (0*4)]
+        vmovdqu  xmm12, [KS + (I*4+J)*64*2 + (K*16) + (4*4)]
 %endif
         vpalignr xmm13, xmm12, xmm11, 8
         vpshufd  xmm2, xmm11, 0x61
@@ -1816,8 +1814,8 @@ ZUC_ROUND64B_16:
 
         vinserti32x4 APPEND(DIGEST_, I), xmm9, J
         ; Memcpy KS 64-127 bytes to 0-63 bytes
-        vmovdqa64       zmm0, [KS_ADDR + 64]
-        vmovdqa64       [KS_ADDR], zmm0
+        vmovdqa64       zmm0, [KS + (I*4+J)*64*2 + 64]
+        vmovdqa64       [KS + (I*4+J)*64*2], zmm0
 %assign J (J + 1)
 %endrep
 %assign I (I + 1)
@@ -1940,7 +1938,6 @@ ZUC_ROUND64B_16:
 
         xor     OFFSET, OFFSET
         mov     DATA_ADDR, [DATA + 8*(I*4 + J)]
-        lea     KS_ADDR, [KS + (I*4 + J)*64*2]
 
 %assign K 0
 %rep 4
@@ -1969,10 +1966,10 @@ ZUC_ROUND64B_16:
         ;; - set up KS
 %if K != 0
         vmovdqa  xmm11, xmm12
-        vmovdqu  xmm12, [KS_ADDR + OFFSET + (4*4)]
+        vmovdqu  xmm12, [KS + (I*4 + J)*64*2 + OFFSET + (4*4)]
 %else
-        vmovdqu  xmm11, [KS_ADDR + (0*4)]
-        vmovdqu  xmm12, [KS_ADDR + (4*4)]
+        vmovdqu  xmm11, [KS + (I*4 + J)*64*2 + (0*4)]
+        vmovdqu  xmm12, [KS + (I*4 + J)*64*2 + (4*4)]
 %endif
         vpalignr xmm13, xmm12, xmm11, 8
         vpshufd  xmm2, xmm11, 0x61
@@ -2012,8 +2009,8 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         kmovq   k1, [r11 + N_BYTES*8]
 
         ;; Set up KS
-        vmovdqu xmm1, [KS_ADDR + OFFSET]
-        vmovdqu xmm2, [KS_ADDR + OFFSET + 16]
+        vmovdqu xmm1, [KS + (I*4 + J)*64*2 + OFFSET]
+        vmovdqu xmm2, [KS + (I*4 + J)*64*2 + OFFSET + 16]
         vpalignr xmm13, xmm2, xmm1, 8
         vpshufd xmm11, xmm1, 0x61
         vpshufd xmm12, xmm13, 0x61
