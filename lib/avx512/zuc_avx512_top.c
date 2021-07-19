@@ -646,6 +646,39 @@ void _zuc_eia3_1_buffer_avx512(const void *pKey,
         *pMacI = T;
 }
 
+/*
+ * Returns the offset of where the keystream starts for a specific buffer,
+ * in memory. The keystream for each buffer is scattered in memory,
+ * interleaving chunks of 16 bytes, with 128 bytes of keystream in total for
+ * each buffer.
+ * The memory is laid out in the following way:
+ * [B_0[15:0] B_4[15:0] B_8[15:0] B_12[15:0]
+ *  B_0[31:16] B_4[31:16] B_8[31:16] B_12[31:16]
+ *  B_0[47:32] B_4[47:32] B_8[47:32] B_12[47:32]
+ *  B_0[63:48] B_4[63:48] B_8[63:48] B_12[63:48]
+ *  B_0[79:64] B_4[79:64] B_8[79:64] B_12[79:64]
+ *  B_0[95:80] B_4[95:80] B_8[95:80] B_12[95:80]
+ *  B_0[111:96] B_4[111:96] B_8[111:96] B_12[111:96]
+ *  B_0[127:112] B_4[127:112] B_8[127:112] B_13[127:112]
+ *  B_1[15:0] B_5[15:0] B_9[15:0] B_13[15:0]
+ *  B_1[31:16] B_5[31:16] B_9[31:16] B_13[31:16]
+ *  B_1[47:32] B_5[47:32] B_9[47:32] B_13[47:32]
+ *  B_1[63:48] B_5[63:48] B_9[63:48] B_13[63:48]
+ *  B_1[79:64] B_5[79:64] B_9[79:64] B_13[79:64]
+ *  B_1[95:80] B_5[95:80] B_9[95:80] B_13[95:80]
+ *  B_1[111:96] B_5[111:96] B_9[111:96] B_13[111:96]
+ *  B_1[127:112] B_5[127:112] B_9[127:112] B_13[127:112]
+ * ... ]
+ */
+static inline
+unsigned get_start_key_addr(const unsigned buf_idx)
+{
+        const unsigned idx_l = buf_idx & 0x3;
+        const unsigned idx_h = buf_idx >> 2;
+
+        return idx_l*128 + idx_h*4;
+}
+
 static inline
 void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                                 const void * const pIv[NUM_AVX512_BUFS],
@@ -703,7 +736,16 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
                              numKeyStr*(keyStreamLengthInBits / 32);
                 uint32_t remainBits = lengthInBits[i] -
                                       numKeyStr*keyStreamLengthInBits;
-                uint32_t *keyStr32 = (uint32_t *) &keyStr[i*16*2];
+                uint32_t keyStr32[16*2];
+                unsigned j;
+
+                /*
+                 * Copy 128 bytes of keystream scattered in chunks of 16 bytes
+                 * to be in contiguous memory
+                 */
+                for (j = 0; j < 8; j++)
+                        memcpy(keyStr32 + j*4,
+                               &keyStr[get_start_key_addr(i) + j*16], 16);
 
                 /* If remaining bits are more than 56 bytes, we need to generate
                  * at least 8B more of keystream, so we need to copy
