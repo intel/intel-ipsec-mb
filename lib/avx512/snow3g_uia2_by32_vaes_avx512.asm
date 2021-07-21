@@ -30,6 +30,7 @@
 %include "include/cet.inc"
 %include "include/memcpy.asm"
 %include "include/const.inc"
+%include "include/aes_common.asm"
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
 
@@ -62,6 +63,7 @@
 %define EV                 xmm2
 %define SNOW3G_CONST       xmm7
 %define P1                 xmm8
+%define BSWAP64_MASK       zmm12
 
 %define INSERT_HIGH64_MASK k1
 
@@ -85,7 +87,14 @@ dq      0x0001020304050607, 0x08090a0b0c0d0e0f
 
 align 64
 mask64:
-dq      0xff, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f
+dq      0xffffffffffffffff,
+dq      0xff,
+dq      0xffff,
+dq      0xffffff,
+dq      0xffffffff,
+dq      0xffffffffff,
+dq      0xffffffffffff,
+dq      0xffffffffffffff
 
 align 64
 swap_qwords:
@@ -97,14 +106,14 @@ dq      0x0f0e0d0c0b0a0908, 0x0706050403020100
 section .text
 
 %ifidn __OUTPUT_FORMAT__, win64
-        %define XMM_STORAGE     16*5
+        %define XMM_STORAGE     16*7
         %define GP_STORAGE      8*8
 %else
         %define XMM_STORAGE     0
         %define GP_STORAGE      6*8
 %endif
 
-%define CONSTANTS_STORAGE       8*32 ;; 32 blocks
+%define CONSTANTS_STORAGE       8*32 ;; 32 8 byte blocks
 
 %define VARIABLE_OFFSET XMM_STORAGE + GP_STORAGE + CONSTANTS_STORAGE
 %define GP_OFFSET XMM_STORAGE
@@ -123,13 +132,7 @@ section .text
         vmovdqa [rsp + 3*16], xmm9
         vmovdqa [rsp + 4*16], xmm10
         vmovdqa [rsp + 5*16], xmm11
-        vmovdqa [rsp + 6*16], xmm20
-        vmovdqa [rsp + 7*16], xmm21
-        vmovdqa [rsp + 8*16], xmm23
-        vmovdqa [rsp + 9*16], xmm24
-        vmovdqa [rsp + 10*16], xmm25
-        vmovdqa [rsp + 11*16], xmm26
-        vmovdqa [rsp + 12*16], xmm30
+        vmovdqa [rsp + 6*16], xmm12
         mov     [rsp + GP_OFFSET + 48], rdi
         mov     [rsp + GP_OFFSET + 56], rsi
 %endif
@@ -149,16 +152,9 @@ section .text
         vmovdqa xmm7,  [rsp + 1*16]
         vmovdqa xmm8,  [rsp + 2*16]
         vmovdqa xmm9,  [rsp + 3*16]
-        vmovdqa xmm9,  [rsp + 4*16]
         vmovdqa xmm10,  [rsp + 4*16]
         vmovdqa xmm11,  [rsp + 5*16]
-        vmovdqa xmm20,  [rsp + 6*16]
-        vmovdqa xmm21,  [rsp + 7*16]
-        vmovdqa xmm23,  [rsp + 8*16]
-        vmovdqa xmm24,  [rsp + 9*16]
-        vmovdqa xmm25,  [rsp + 10*16]
-        vmovdqa xmm26,  [rsp + 11*16]
-        vmovdqa xmm30,  [rsp + 12*16]
+        vmovdqa xmm12,  [rsp + 6*16]
         mov     rdi, [rsp + GP_OFFSET + 48]
         mov     rsi, [rsp + GP_OFFSET + 56]
 %endif
@@ -276,6 +272,7 @@ section .text
 ;;       OUT1[P15P16, P13P14, P11P12,  P9P10]
 ;;       OUT2[P23P24, P21P22, P19P20, P17P18]
 ;;       OUT3[P31P32, P29P30, P27P28, P25P26]
+;; Powers are also reorganized and stored on the stack for processing final <32 blocks
 %macro  PRECOMPUTE_CONSTANTS 8-11
 %define %%P1            %1  ;; [in] initial P^1 to be multiplied
 %define %%HIGHEST_POWER %2  ;; [in] highest power to calculate (4 or 32)
@@ -375,18 +372,127 @@ section .text
         vshufi64x2      %%Z_OUT2, %%Z_OUT2, %%Z_OUT2, 00_01_10_11b ;; P23P24, P21P22, P19P20, P17P18
         vshufi64x2      %%Z_OUT3, %%Z_OUT3, %%Z_OUT3, 00_01_10_11b ;; P31P32, P29P30, P27P28, P25P26
 
-        vpshufb         zmm12, %%Z_OUT0, [rel swap_qwords]
-        vpshufb         zmm13, %%Z_OUT1, [rel swap_qwords]
-        vpshufb         zmm14, %%Z_OUT2, [rel swap_qwords]
-        vpshufb         zmm15, %%Z_OUT3, [rel swap_qwords]
+        ;; store powers on stack in sequential order
+        ;; (e.g. P32, P31 ... P2, P1) for processing final blocks
+        vmovdqa64       %%ZT5, [rel swap_qwords]
+        vpshufb         %%ZT1, %%Z_OUT0, %%ZT5
+        vpshufb         %%ZT2, %%Z_OUT1, %%ZT5
+        vpshufb         %%ZT3, %%Z_OUT2, %%ZT5
+        vpshufb         %%ZT4, %%Z_OUT3, %%ZT5
 
-        ;; store constants on stack in sequential order for later reading
-        vmovdqu64       [rsp + CONSTANTS_OFFSET + 0*64], zmm15
-        vmovdqu64       [rsp + CONSTANTS_OFFSET + 1*64], zmm14
-        vmovdqu64       [rsp + CONSTANTS_OFFSET + 2*64], zmm13
-        vmovdqu64       [rsp + CONSTANTS_OFFSET + 3*64], zmm12
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 0*64], %%ZT4
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 1*64], %%ZT3
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 2*64], %%ZT2
+        vmovdqu64       [rsp + CONSTANTS_OFFSET + 3*64], %%ZT1
 
 %endif
+%endmacro
+
+
+;; Process final 1 - 31 blocks
+%macro  PROCESS_FINAL_BLOCKS 21
+%define %%MAX_BLOCKS       %1  ;; [in] max possible number of final blocks
+%define %%IN               %2  ;; [in] gp reg with input pointer
+%define %%NUM_BLOCKS       %3  ;; [in] gp reg with number remaining full blocks
+%define %%MASK             %4  ;; [in] final 1-8 blocks mask
+%define %%CONST_TAB_OFFSET %5  ;; [in] gp reg with constants table offset
+%define %%DATA0            %6  ;; [clobbered] zmm to store message data
+%define %%DATA1            %7  ;; [clobbered] zmm to store message data
+%define %%DATA2            %8  ;; [clobbered] zmm to store message data
+%define %%DATA3            %9  ;; [clobbered] zmm to store message data
+%define %%TMP0             %10 ;; [clobbered] zmm
+%define %%TMP1             %11 ;; [clobbered] zmm
+%define %%TMP2             %12 ;; [clobbered] zmm
+%define %%TMP3             %13 ;; [clobbered] zmm
+%define %%TMP4             %14 ;; [clobbered] zmm
+%define %%TMP5             %15 ;; [clobbered] zmm
+%define %%TMP6             %16 ;; [clobbered] zmm
+%define %%TMP7             %17 ;; [clobbered] zmm
+%define %%TMP8             %18 ;; [clobbered] zmm
+%define %%TMP9             %19 ;; [clobbered] zmm
+%define %%TMP10            %20 ;; [clobbered] zmm
+%define %%TMP11            %21 ;; [clobbered] zmm
+
+%ifidn %%MAX_BLOCKS, 31
+        ;; up to 31 blocks
+        ZMM_LOAD_MASKED_BLOCKS_0_16 16, %%IN, 0, %%DATA0, %%DATA1, %%DATA2, %%DATA3, %%MASK
+        ZMM_LOAD_MASKED_BLOCKS_0_16 16, rsp, %%CONST_TAB_OFFSET*8 + CONSTANTS_OFFSET, \
+                                    %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
+%endif
+
+%ifidn %%MAX_BLOCKS, 24
+        ;; up to 24 blocks
+        ZMM_LOAD_MASKED_BLOCKS_0_16 12, %%IN, 0, %%DATA0, %%DATA1, %%DATA2, %%DATA3, %%MASK
+        ZMM_LOAD_MASKED_BLOCKS_0_16 12, rsp, %%CONST_TAB_OFFSET*8 + CONSTANTS_OFFSET, \
+                                    %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
+        ;; zero unused blocks
+        vpxorq          %%DATA3, %%DATA3, %%DATA3
+        vpxorq          %%TMP3, %%TMP3, %%TMP3
+%endif
+
+%ifidn %%MAX_BLOCKS, 16
+        ;; up to 16 blocks
+        ZMM_LOAD_MASKED_BLOCKS_0_16 8, %%IN, 0, %%DATA0, %%DATA1, %%DATA2, %%DATA3, %%MASK
+        ZMM_LOAD_MASKED_BLOCKS_0_16 8, rsp, %%CONST_TAB_OFFSET*8 + CONSTANTS_OFFSET, \
+                                    %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
+        ;; zero unused blocks
+        vpxorq          %%DATA2, %%DATA2, %%DATA2
+        vpxorq          %%DATA3, %%DATA3, %%DATA3
+        vpxorq          %%TMP2, %%TMP2, %%TMP2
+        vpxorq          %%TMP3, %%TMP3, %%TMP3
+%endif
+
+%ifidn %%MAX_BLOCKS, 8
+        ;; 1 to 8 blocks
+        ZMM_LOAD_MASKED_BLOCKS_0_16 4, %%IN, 0, %%DATA0, %%DATA1, %%DATA2, %%DATA3, %%MASK
+        ZMM_LOAD_MASKED_BLOCKS_0_16 4, rsp, %%CONST_TAB_OFFSET*8 + CONSTANTS_OFFSET, \
+                                    %%TMP0, %%TMP1, %%TMP2, %%TMP3, %%MASK
+        ;; zero unused blocks
+        vpxorq          %%DATA1, %%DATA1, %%DATA1
+        vpxorq          %%DATA2, %%DATA2, %%DATA2
+        vpxorq          %%DATA3, %%DATA3, %%DATA3
+
+        vpxorq          %%TMP1, %%TMP1, %%TMP1
+        vpxorq          %%TMP2, %%TMP2, %%TMP2
+        vpxorq          %%TMP3, %%TMP3, %%TMP3
+%endif
+
+        ;; reverse block byte order
+        vpshufb         %%DATA0, %%DATA0, BSWAP64_MASK
+        vpshufb         %%DATA1, %%DATA1, BSWAP64_MASK
+        vpshufb         %%DATA2, %%DATA2, BSWAP64_MASK
+        vpshufb         %%DATA3, %%DATA3, BSWAP64_MASK
+
+        ;; add EV
+        vpxorq          %%DATA0, %%DATA0, ZWORD(EV)
+
+        ;; perform multiplication
+        vpclmulqdq      %%TMP4, %%DATA0, %%TMP0, 0x00
+        vpclmulqdq      %%TMP5, %%DATA0, %%TMP0, 0x11
+
+        vpclmulqdq      %%TMP6, %%DATA1, %%TMP1, 0x00
+        vpclmulqdq      %%TMP7, %%DATA1, %%TMP1, 0x11
+
+        vpclmulqdq      %%TMP8, %%DATA2, %%TMP2, 0x00
+        vpclmulqdq      %%TMP9, %%DATA2, %%TMP2, 0x11
+
+        vpclmulqdq      %%TMP10, %%DATA3, %%TMP3, 0x00
+        vpclmulqdq      %%TMP11, %%DATA3, %%TMP3, 0x11
+
+        ;; sum results
+        vpternlogq      %%TMP6, %%TMP4, %%TMP5, 0x96
+        vpternlogq      %%TMP7, %%TMP8, %%TMP9, 0x96
+        vpternlogq      %%TMP6, %%TMP10, %%TMP11, 0x96
+        vpxorq          ZWORD(EV), %%TMP6, %%TMP7
+
+        VHPXORI4x128    ZWORD(EV), %%TMP0
+        REDUCE_TO_64    EV, XWORD(%%TMP0)
+        vmovq XWORD(EV), XWORD(EV)
+
+        ;; update input pointer
+        shl     %%NUM_BLOCKS, 3
+        add     %%IN, %%NUM_BLOCKS
+
 %endmacro
 
 
@@ -402,6 +508,7 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
         FUNC_SAVE
 
         vmovdqa64       ZWORD(SNOW3G_CONST), [rel snow3g_constant]
+        vmovdqa64       BSWAP64_MASK, [rel bswap64]
         mov             tmp, 10101010b
         kmovq           INSERT_HIGH64_MASK, tmp
 
@@ -432,20 +539,22 @@ start_32_block_loop:
         vmovdqu64       zmm23, [in_ptr + 128]
         vmovdqu64       zmm24, [in_ptr + 192]
 
-        vpshufb         zmm3, zmm3, [rel bswap64]
-        vpshufb         zmm4, zmm4, [rel bswap64]
-        vpshufb         zmm23, zmm23, [rel bswap64]
-        vpshufb         zmm24, zmm24, [rel bswap64]
+        vpshufb         zmm3, zmm3, BSWAP64_MASK
+        vpshufb         zmm4, zmm4, BSWAP64_MASK
+        vpshufb         zmm23, zmm23, BSWAP64_MASK
+        vpshufb         zmm24, zmm24, BSWAP64_MASK
 
         vpxorq          zmm3, zmm3, ZWORD(EV)
 
-        vpclmulqdq      zmm5, zmm24, zmm0, 0x10 ;;   p8 -  p1
-        vpclmulqdq      zmm6, zmm24, zmm0, 0x01 ;; x m24 - m31
+        vpclmulqdq      zmm5, zmm24, zmm0, 0x10  ;;   p8 -  p1
+        vpclmulqdq      zmm6, zmm24, zmm0, 0x01  ;; x m24 - m31
 
         vpclmulqdq      zmm10, zmm23, zmm1, 0x10 ;;   p16 - p9
         vpclmulqdq      zmm11, zmm23, zmm1, 0x01 ;; x m16  - m23
+
         vpclmulqdq      zmm25, zmm4, zmm20, 0x10 ;;   p24 -  p17
         vpclmulqdq      zmm26, zmm4, zmm20, 0x01 ;; x m8 - m15
+
         vpclmulqdq      zmm30, zmm3, zmm21, 0x10 ;;   p32 - p25
         vpclmulqdq      zmm31, zmm3, zmm21, 0x01 ;; x m0  - m7
 
@@ -461,125 +570,67 @@ start_32_block_loop:
 
         add     in_ptr, 32*8
         sub     qword_len, 32
-        jz      zero_qwords_rem
-        cmp     qword_len, 32
 
-        ;; less than 32 blocks left
-        jb      lt_32_blocks
+        ;; check no more full blocks
+        jz      full_blocks_complete
+
+        ;; check less than 32 blocks left
+        cmp     qword_len, 32
+        jb      lt32_blocks
+
         jmp     start_32_block_loop
 
-lt_32_blocks:
-        ;; process between 1 and 31 blocks
-        ;; set mask to read last set of blocks
+lt32_blocks:
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; Less than 32 blocks remaining
+        ;; Process between 1 and 31 final full blocks
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        ;; set mask to load final 1-8 blocks
         mov     tmp, qword_len
         and     tmp, 0x7
-        lea     tmp2, [mask64]
-        mov     tmp, [tmp2 + tmp*8]
-        mov     tmp3, 0xff
-        kmovq   k1, tmp3
-        kmovq   k2, tmp
-        xor     tmp3, tmp3
-        kmovq   k3, tmp3
+        lea     tmp2, [rel mask64]
+        kmovq   k2, [tmp2 + tmp*8]
 
-        ;; calculate constants table offset
+        ;; calculate offset to load constants from stack
         mov     tmp4, 32
         sub     tmp4, qword_len
 
         cmp     qword_len, 16
-        jbe     le16
+        jbe     le16_blocks
 
         cmp     qword_len, 24
-        jbe     le24
+        jbe     le24_blocks
 
-gt24:
+gt24_blocks:
         ;; 25 - 31 blocks
-        vmovdqu64       zmm3{k1}{z}, [in_ptr]
-        vmovdqu64       zmm4{k1}{z}, [in_ptr+64]
-        vmovdqu64       zmm23{k1}{z}, [in_ptr+128]
-        vmovdqu64       zmm24{k2}{z}, [in_ptr+192]
+        PROCESS_FINAL_BLOCKS 31, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
+                             zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
 
-        vmovdqu64       zmm0{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 0*64]
-        vmovdqu64       zmm1{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 1*64]
-        vmovdqu64       zmm20{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 2*64]
-        vmovdqu64       zmm21{k2}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 3*64]
+        jmp     full_blocks_complete
 
-        jmp     done
-
-le24:
+le24_blocks:
         ;; 17 - 24 blocks
-        vmovdqu64       zmm3{k1}{z}, [in_ptr]
-        vmovdqu64       zmm4{k1}{z}, [in_ptr+64]
-        vmovdqu64       zmm23{k2}{z}, [in_ptr+128]
-        vmovdqu64       zmm24{k3}{z}, [in_ptr+192]
+        PROCESS_FINAL_BLOCKS 24, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
+                             zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
+        jmp     full_blocks_complete
 
-        vmovdqu64       zmm0{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 0*64]
-        vmovdqu64       zmm1{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 1*64]
-        vmovdqu64       zmm20{k2}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 2*64]
-        vpxorq          zmm21, zmm21, zmm21
-
-        jmp     done
-
-le16:
+le16_blocks:
         cmp     qword_len, 8
-        jbe     le8
+        jbe     le8_blocks
 
-gt8:
+gt8_blocks:
         ;; 9 - 16 blocks
-        vmovdqu64       zmm3{k1}{z}, [in_ptr]
-        vmovdqu64       zmm4{k2}{z}, [in_ptr+64]
-        vmovdqu64       zmm23{k3}{z}, [in_ptr+128]
-        vmovdqu64       zmm24{k3}{z}, [in_ptr+192]
+        PROCESS_FINAL_BLOCKS 16, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
+                             zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
+        jmp     full_blocks_complete
 
-        vmovdqu64       zmm0{k1}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 0*64]
-        vmovdqu64       zmm1{k2}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 1*64]
-        vpxorq          zmm20, zmm20, zmm20
-        vpxorq          zmm21, zmm21, zmm21
-
-        jmp    done
-
-le8:
+le8_blocks:
         ;; 1 - 8 blocks
-        vmovdqu64       zmm3{k2}{z}, [in_ptr]
-        vmovdqu64       zmm4{k3}{z}, [in_ptr+64]
-        vmovdqu64       zmm23{k3}{z}, [in_ptr+128]
-        vmovdqu64       zmm24{k3}{z}, [in_ptr+192]
+        PROCESS_FINAL_BLOCKS 8, in_ptr, qword_len, k2, tmp4, zmm3, zmm4, zmm23, zmm24, zmm0, \
+                             zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
 
-        vmovdqu64       zmm0{k2}{z}, [rsp + tmp4*8 + CONSTANTS_OFFSET + 0*64]
-        vpxorq          zmm1, zmm1, zmm1
-        vpxorq          zmm20, zmm20, zmm20
-        vpxorq          zmm21, zmm21, zmm21
-
-done:
-        vpshufb         zmm3, zmm3, [rel bswap64]
-        vpshufb         zmm4, zmm4, [rel bswap64]
-        vpshufb         zmm23, zmm23, [rel bswap64]
-        vpshufb         zmm24, zmm24, [rel bswap64]
-
-        vpxorq          zmm3, zmm3, ZWORD(EV)
-
-        vpclmulqdq      zmm5, zmm3, zmm0, 0x00 ;;    p8 -  p1
-        vpclmulqdq      zmm6, zmm3, zmm0, 0x11 ;; x m24 - m31
-
-        vpclmulqdq      zmm10, zmm4, zmm1, 0x00 ;;   p16 - p9
-        vpclmulqdq      zmm11, zmm4, zmm1, 0x11 ;; x m16  - m23
-
-        vpclmulqdq      zmm25, zmm23, zmm20, 0x00 ;;   p24 -  p17
-        vpclmulqdq      zmm26, zmm23, zmm20, 0x11 ;; x m8 - m15
-
-        vpclmulqdq      zmm30, zmm24, zmm21, 0x00 ;;   p32 - p25
-        vpclmulqdq      zmm31, zmm24, zmm21, 0x11 ;; x m0  - m7
-
-        ;; sum results
-        vpternlogq      zmm10, zmm5, zmm6, 0x96
-        vpternlogq      zmm11, zmm25, zmm26, 0x96
-        vpternlogq      zmm10, zmm30, zmm31, 0x96
-        vpxorq          ZWORD(EV), zmm10, zmm11
-        VHPXORI4x128    ZWORD(EV), zmm4
-
-        REDUCE_TO_64    EV, xmm3
-        vmovq XWORD(EV), XWORD(EV)
-
-        jmp     zero_qwords_rem
+        jmp     full_blocks_complete
 
 
 init_4_block_loop:
@@ -590,8 +641,8 @@ start_4_block_loop:
         vmovdqu         xmm3, [in_ptr]
         vmovdqu         xmm4, [in_ptr + 16]
 
-        vpshufb         xmm3, xmm3, [rel bswap64]
-        vpshufb         xmm4, xmm4, [rel bswap64]
+        vpshufb         xmm3, xmm3, XWORD(BSWAP64_MASK)
+        vpshufb         xmm4, xmm4, XWORD(BSWAP64_MASK)
 
         vpxor           xmm3, xmm3, EV
 
@@ -619,7 +670,7 @@ start_4_block_loop:
 
 start_single_block_loop:
         vmovq   xmm0, [in_ptr]
-        vpshufb xmm0, xmm0, [rel bswap64]
+        vpshufb xmm0, xmm0, XWORD(BSWAP64_MASK)
         vpxor   EV, xmm0
         MUL_AND_REDUCE_64x64_LOW EV, P1, xmm1
 
@@ -630,7 +681,7 @@ single_block_check:
         cmp     qword_len, 0
         jne     start_single_block_loop
 
-zero_qwords_rem:
+full_blocks_complete:
 
         mov     tmp5, 0x3f      ;; len_in_bits % 64
         and     tmp5, bit_len
