@@ -611,7 +611,9 @@ asm_avx2_gcm_objs := \
 	gcm128_avx_gen4.o gcm192_avx_gen4.o gcm256_avx_gen4.o
 
 asm_avx512_gcm_objs := \
-	gcm128_vaes_avx512.o gcm192_vaes_avx512.o gcm256_vaes_avx512.o \
+	gcm128_api_vaes_avx512.o gcm192_api_vaes_avx512.o gcm256_api_vaes_avx512.o \
+	gcm128_sgl_api_vaes_avx512.o gcm192_sgl_api_vaes_avx512.o gcm256_sgl_api_vaes_avx512.o \
+	gcm128_gmac_api_vaes_avx512.o gcm192_gmac_api_vaes_avx512.o gcm256_gmac_api_vaes_avx512.o \
 	gcm128_avx512.o gcm192_avx512.o gcm256_avx512.o
 
 #

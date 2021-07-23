@@ -475,17 +475,23 @@ gcm_objs = \
 	$(OBJ_DIR)\gcm128_avx_gen2.obj \
 	$(OBJ_DIR)\gcm128_avx_gen4.obj \
 	$(OBJ_DIR)\gcm128_avx512.obj \
-	$(OBJ_DIR)\gcm128_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm128_api_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm128_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm128_gmac_api_vaes_avx512.obj \
 	$(OBJ_DIR)\gcm192_sse.obj \
 	$(OBJ_DIR)\gcm192_avx_gen2.obj \
 	$(OBJ_DIR)\gcm192_avx_gen4.obj \
 	$(OBJ_DIR)\gcm192_avx512.obj \
-	$(OBJ_DIR)\gcm192_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm192_api_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm192_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm192_gmac_api_vaes_avx512.obj \
 	$(OBJ_DIR)\gcm256_sse.obj \
 	$(OBJ_DIR)\gcm256_avx_gen2.obj \
 	$(OBJ_DIR)\gcm256_avx_gen4.obj \
 	$(OBJ_DIR)\gcm256_avx512.obj \
-	$(OBJ_DIR)\gcm256_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm256_api_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm256_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\gcm256_gmac_api_vaes_avx512.obj \
 	$(OBJ_DIR)\gcm128_sse_no_aesni.obj \
 	$(OBJ_DIR)\gcm192_sse_no_aesni.obj \
 	$(OBJ_DIR)\gcm256_sse_no_aesni.obj
