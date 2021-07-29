@@ -1518,7 +1518,7 @@
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; prepare counter blocks
 
-        cmp             BYTE(%%CTR_CHECK), (256 - %%NUM_BLOCKS)
+        cmp             DWORD(%%CTR_CHECK), (256 - %%NUM_BLOCKS)
         jae             %%_16_blocks_overflow
 
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpaddd, \
@@ -1810,6 +1810,13 @@
                         %%AESKEY1, %%AESKEY1, %%AESKEY1, %%AESKEY1
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; XOR against plain/cipher text
+        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpxorq, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
+                        %%DATA1, %%DATA2, %%DATA3, %%DATA4
+
+        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; retrieve the last cipher counter block (partially XOR'ed with text)
         ;; - this is needed for partial block cases
 %ifidn %%INSTANCE_TYPE, multi_call
@@ -1825,6 +1832,13 @@
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;; store cipher/plain text
+        ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%CYPH_PLAIN_OUT, %%DATA_OFFSET, \
+                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, %%MASKREG
+
+        ;; =================================================
+        ;; shuffle cipher text blocks for GHASH computation
+%ifidn %%ENC_DEC, ENC
         ;; zero bytes outside the mask before hashing
 %if %%NUM_BLOCKS <= 4
         vmovdqu8        %%B00_03{%%MASKREG}{z}, %%B00_03
@@ -1836,26 +1850,22 @@
         vmovdqu8        %%B12_15{%%MASKREG}{z}, %%B12_15
 %endif
 
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; XOR against plain/cipher text
-        ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpxorq, \
-                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
-                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
-                        %%DATA1, %%DATA2, %%DATA3, %%DATA4
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;; store cipher/plain text
-        ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%CYPH_PLAIN_OUT, %%DATA_OFFSET, \
-                        %%B00_03, %%B04_07, %%B08_11, %%B12_15, %%MASKREG
-
-        ;; =================================================
-        ;; shuffle cipher text blocks for GHASH computation
-%ifidn %%ENC_DEC, ENC
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpshufb, \
                         %%DATA1, %%DATA2, %%DATA3, %%DATA4, \
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, \
                         %%SHFMSK, %%SHFMSK, %%SHFMSK, %%SHFMSK
 %else
+        ;; zero bytes outside the mask before hashing
+%if %%NUM_BLOCKS <= 4
+        vmovdqu8        %%DATA1{%%MASKREG}{z}, %%DATA1
+%elif %%NUM_BLOCKS <= 8
+        vmovdqu8        %%DATA2{%%MASKREG}{z}, %%DATA2
+%elif %%NUM_BLOCKS <= 12
+        vmovdqu8        %%DATA3{%%MASKREG}{z}, %%DATA3
+%else
+        vmovdqu8        %%DATA4{%%MASKREG}{z}, %%DATA4
+%endif
+
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpshufb, \
                         %%DATA1, %%DATA2, %%DATA3, %%DATA4, \
                         %%DATA1, %%DATA2, %%DATA3, %%DATA4, \
@@ -3085,7 +3095,7 @@
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, %%GM, \
-                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
+                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
@@ -3155,7 +3165,7 @@
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, start_reduce, %%GL, %%GH, %%GM, \
-                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
+                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
@@ -3206,7 +3216,7 @@
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, %%GM, \
-                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
+                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
@@ -3254,7 +3264,7 @@
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
                 %%ADDBE_4x4, %%ADDBE_1234, start_reduce, %%GL, %%GH, %%GM, \
-                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA3, %%MASKREG, %%INSTANCE_TYPE
+                %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
