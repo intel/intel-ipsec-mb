@@ -1420,7 +1420,6 @@
 %%_small_initial_compute_done:
         ;; If using init/update/finalize, we need to xor any partial block data
         ;; into the hash.
-        ;; @todo > 0 ?
 %if %%NUM_BLOCKS > 1
         ;; NOTE: for %%NUM_BLOCKS = 0 the xor never takes place
 %if %%NUM_BLOCKS != 16
@@ -2937,12 +2936,13 @@
 %define %%IA3               r15
 %define %%IA4               r11
 %define %%IA5               rax
+%define %%IA6               rbx
 
 %define %%LENGTH            %%IA2
 %define %%CTR_CHECK         %%IA3
 %define %%DATA_OFFSET       %%IA4
 
-%define %%HASHK_PTR         %%IA5
+%define %%HASHK_PTR         %%IA6
 
 %define %%GCM_INIT_CTR_BLOCK    xmm2 ; hardcoded in GCM_INIT for now
 
@@ -3067,7 +3067,7 @@
         vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
 
         cmp             %%LENGTH, (16 * 16)
-        jbe             %%_message_below_16_blocks
+        jbe             %%_message_below_equal_16_blocks
 
         vmovdqa64       %%ADDBE_4x4, [rel ddq_addbe_4444]
 
@@ -3195,22 +3195,33 @@
         ;; ==== GHASH 1 x 16 blocks (reduction) & encrypt N blocks
         ;; ====      then GHASH N blocks
 %%_encrypt_0_blocks_ghash_32:
+        ;; calculate offset to the right hash key
+%ifidn %%INSTANCE_TYPE, multi_call
+        mov             DWORD(%%IA0), DWORD(%%LENGTH)
+%else
+        lea             DWORD(%%IA0), [DWORD(%%LENGTH) + 15]
+%endif
+        and             DWORD(%%IA0), ~15
+        mov             DWORD(%%HASHK_PTR), HashKey_32
+        sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
+
         ;; ==== GHASH 32 blocks and follow with reduction
-        GHASH_16        start, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, HashKey_32, 0, %%AAD_HASHz, \
+        GHASH_16        start, %%GH, %%GM, %%GL, rsp, STACK_LOCAL_OFFSET, (0 * 16), %%GDATA_KEY, %%HASHK_PTR, 0, %%AAD_HASHz, \
                         %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9
 
         ;; ==== GHASH 1 x 16 blocks with reduction + cipher and ghash on the reminder
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
+        add             DWORD(%%HASHK_PTR), (16 * 16)
 
         GCM_ENC_DEC_LAST \
                 %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
-                HashKey_16, ghashin_offset, %%SHUF_MASK, \
+                %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, mid, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
@@ -3272,15 +3283,25 @@
         sub             %%LENGTH, (32 * 16)
         add             %%DATA_OFFSET, (32 * 16)
 
+        ;; calculate offset to the right hash key
+%ifidn %%INSTANCE_TYPE, multi_call
+        mov             DWORD(%%IA0), DWORD(%%LENGTH)
+%else
+        lea             DWORD(%%IA0), [DWORD(%%LENGTH) + 15]
+%endif
+        and             DWORD(%%IA0), ~15
+        mov             DWORD(%%HASHK_PTR), HashKey_16
+        sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
+
         GCM_ENC_DEC_LAST \
                 %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
-                HashKey_16, ghashin_offset, %%SHUF_MASK, \
+                %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, start_reduce, %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
@@ -3339,7 +3360,7 @@
 
         jmp             %%_ghash_done
 
-%%_message_below_16_blocks:
+%%_message_below_equal_16_blocks:
         ;; Determine how many blocks to process
         ;; - process one additional block if there is a partial block
         mov             DWORD(%%IA1), DWORD(%%LENGTH)
@@ -3371,15 +3392,25 @@
 
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
 
+        ;; calculate offset to the right hash key
+%ifidn %%INSTANCE_TYPE, multi_call
+        mov             DWORD(%%IA0), DWORD(%%LENGTH)
+%else
+        lea             DWORD(%%IA0), [DWORD(%%LENGTH) + 15]
+%endif
+        and             DWORD(%%IA0), ~15
+        mov             DWORD(%%HASHK_PTR), HashKey_16
+        sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
+
         GCM_ENC_DEC_LAST \
                 %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
-                HashKey_16, ghashin_offset, %%SHUF_MASK, \
+                %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                 %%ZTMP7, %%ZTMP8, %%ZTMP9, %%ZTMP10, %%ZTMP11, %%ZTMP12, %%ZTMP13, \
                 %%ZTMP14, %%ZTMP15, %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, %%ZTMP20, \
                 %%ZTMP21, %%ZTMP22, \
-                %%ADDBE_4x4, %%ADDBE_1234, start_reduce, %%GL, %%GH, %%GM, \
+                %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
         ;; save the last counter block
