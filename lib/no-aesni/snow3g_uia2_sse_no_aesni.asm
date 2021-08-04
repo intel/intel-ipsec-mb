@@ -28,5 +28,5 @@
 %include "include/aesni_emu.inc"
 %define NO_AESNI
 %define SNOW3G_F9_1_BUFFER_INTERNAL snow3g_f9_1_buffer_internal_sse_no_aesni
-%include "sse/snow3g_uia2_sse.asm"
+%include "sse/snow3g_uia2_by4_sse.asm"
 

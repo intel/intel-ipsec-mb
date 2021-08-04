@@ -144,11 +144,11 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes192_ecb_by4_avx.obj \
 	$(OBJ_DIR)\aes256_ecb_by4_avx.obj \
 	$(OBJ_DIR)\aes_ecb_by4_sse_no_aesni.obj \
-	$(OBJ_DIR)\pon_sse.obj \
+	$(OBJ_DIR)\pon_by8_sse.obj \
 	$(OBJ_DIR)\pon_sse_no_aesni.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_sse.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_sse_no_aesni.obj \
-	$(OBJ_DIR)\pon_avx.obj \
+	$(OBJ_DIR)\pon_by8_avx.obj \
 	$(OBJ_DIR)\pon_vaes_avx512.obj \
 	$(OBJ_DIR)\aes128_cntr_by8_avx.obj \
 	$(OBJ_DIR)\aes128_cntr_ccm_by8_sse.obj \
@@ -203,16 +203,16 @@ lib_objs1 = \
 	$(OBJ_DIR)\aes_keyexp_192.obj \
 	$(OBJ_DIR)\aes_keyexp_256.obj \
 	$(OBJ_DIR)\aes_cmac_subkey_gen.obj \
-	$(OBJ_DIR)\aes_xcbc_mac_128_x4.obj \
+	$(OBJ_DIR)\aes128_xcbc_mac_x4_sse.obj \
 	$(OBJ_DIR)\aes_xcbc_mac_128_x4_no_aesni.obj \
-	$(OBJ_DIR)\aes_xcbc_mac_128_x8.obj \
+	$(OBJ_DIR)\aes128_xcbc_mac_x8_avx.obj \
 	$(OBJ_DIR)\md5_x4x2_avx.obj \
 	$(OBJ_DIR)\md5_x4x2_sse.obj \
 	$(OBJ_DIR)\md5_x8x2_avx2.obj \
 	$(OBJ_DIR)\save_xmms.obj \
 	$(OBJ_DIR)\clear_regs_mem_fns.obj \
-	$(OBJ_DIR)\sha1_mult_avx.obj \
-	$(OBJ_DIR)\sha1_mult_sse.obj \
+	$(OBJ_DIR)\sha1_x4_avx.obj \
+	$(OBJ_DIR)\sha1_x4_sse.obj \
 	$(OBJ_DIR)\sha1_ni_x2_sse.obj \
 	$(OBJ_DIR)\sha1_one_block_avx.obj \
 	$(OBJ_DIR)\sha1_one_block_sse.obj \
@@ -244,21 +244,21 @@ lib_objs1 = \
 	$(OBJ_DIR)\zuc_avx_top.obj \
 	$(OBJ_DIR)\zuc_avx2_top.obj \
 	$(OBJ_DIR)\zuc_avx512_top.obj \
-	$(OBJ_DIR)\zuc_sse.obj \
+	$(OBJ_DIR)\zuc_x4_sse.obj \
 	$(OBJ_DIR)\zuc_sse_gfni.obj \
 	$(OBJ_DIR)\zuc_sse_no_aesni.obj \
-	$(OBJ_DIR)\zuc_avx.obj \
-	$(OBJ_DIR)\zuc_avx2.obj \
+	$(OBJ_DIR)\zuc_x4_avx.obj \
+	$(OBJ_DIR)\zuc_x8_avx2.obj \
 	$(OBJ_DIR)\zuc_x16_avx512.obj \
 	$(OBJ_DIR)\zuc_x16_vaes_avx512.obj \
 	$(OBJ_DIR)\zuc_iv.obj \
 	$(OBJ_DIR)\snow3g_sse.obj \
 	$(OBJ_DIR)\snow3g_sse_no_aesni.obj \
-	$(OBJ_DIR)\snow3g_uia2_sse.obj \
+	$(OBJ_DIR)\snow3g_uia2_by4_sse.obj \
 	$(OBJ_DIR)\snow3g_uia2_sse_no_aesni.obj \
 	$(OBJ_DIR)\snow3g_avx.obj \
 	$(OBJ_DIR)\snow3g_avx2.obj \
-	$(OBJ_DIR)\snow3g_uia2_avx.obj \
+	$(OBJ_DIR)\snow3g_uia2_by4_avx.obj \
 	$(OBJ_DIR)\snow3g_tables.obj \
 	$(OBJ_DIR)\snow3g_iv.obj \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
@@ -274,11 +274,11 @@ lib_objs1 = \
 	$(OBJ_DIR)\poly_avx512.obj \
 	$(OBJ_DIR)\poly_fma_avx512.obj \
 	$(OBJ_DIR)\des_x16_avx512.obj \
-	$(OBJ_DIR)\cntr_vaes_avx512.obj \
-	$(OBJ_DIR)\aes_cbc_dec_vaes_avx512.obj \
+	$(OBJ_DIR)\aes_cntr_by16_vaes_avx512.obj \
+	$(OBJ_DIR)\aes_cbc_dec_by16_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbc_enc_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbcs_enc_vaes_avx512.obj \
-	$(OBJ_DIR)\aes_cbcs_dec_vaes_avx512.obj \
+	$(OBJ_DIR)\aes_cbcs_dec_by16_vaes_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_submit_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_flush_avx512.obj \
 	$(OBJ_DIR)\mb_mgr_aes_cbcs_1_9_submit_avx512.obj \
@@ -324,11 +324,11 @@ lib_objs1 = \
 	$(OBJ_DIR)\crc32_wimax_sse_no_aesni.obj \
 	$(OBJ_DIR)\crc32_wimax_avx.obj \
 	$(OBJ_DIR)\crc32_wimax_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_vaes_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_vaes_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_vaes_avx512.obj \
-	$(OBJ_DIR)\mb_mgr_aes_xcbc_submit_flush_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_cmac_x16_submit_flush_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_cmac_x16_submit_flush_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_ccm_by16_auth_submit_flush_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_ccm_by16_auth_submit_flush_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_xcbc_x16_submit_flush_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_cbcs_1_9_enc_128_x4_no_aesni.obj \
 	$(OBJ_DIR)\aes_cbcs_1_9_enc_128_x4.obj \
 	$(OBJ_DIR)\aes128_cbcs_1_9_dec_by4_sse.obj \
@@ -370,27 +370,27 @@ lib_objs2 = \
 	$(OBJ_DIR)\mb_mgr_aes_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_submit_sse_x8.obj \
 	$(OBJ_DIR)\mb_mgr_aes_submit_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_sse.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_sse.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_cmac_x4_submit_flush_sse.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_cmac_x4_submit_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_sse_x8.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_sse_x8.obj \
 	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes_cmac_submit_flush_avx.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_cmac_submit_flush_avx.obj \
-	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_sse.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_cmac_x8_submit_flush_avx.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_cmac_x8_submit_flush_avx.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_ccm_by8_auth_submit_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_sse_x8.obj \
 	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes_ccm_auth_submit_flush_avx.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_sse.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_ccm_by8_auth_submit_flush_avx.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_ccm_by8_auth_submit_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_sse_x8.obj \
 	$(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes256_ccm_auth_submit_flush_avx.obj \
-	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_avx.obj \
-	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_sse.obj \
+	$(OBJ_DIR)\mb_mgr_aes256_ccm_by8_auth_submit_flush_avx.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_xcbc_x8_flush_avx.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_xcbc_x4_flush_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_flush_sse_no_aesni.obj \
-	$(OBJ_DIR)\mb_mgr_aes_xcbc_submit_avx.obj \
-	$(OBJ_DIR)\mb_mgr_aes_xcbc_submit_sse.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_xcbc_x8_submit_avx.obj \
+	$(OBJ_DIR)\mb_mgr_aes128_xcbc_x4_submit_sse.obj \
 	$(OBJ_DIR)\mb_mgr_aes_xcbc_submit_sse_no_aesni.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_flush_avx.obj \
 	$(OBJ_DIR)\mb_mgr_hmac_flush_avx2.obj \
@@ -476,27 +476,27 @@ lib_objs2 = \
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \
-	$(OBJ_DIR)\gcm128_sse.obj \
-	$(OBJ_DIR)\gcm128_avx_gen2.obj \
-	$(OBJ_DIR)\gcm128_avx_gen4.obj \
-	$(OBJ_DIR)\gcm128_avx512.obj \
-	$(OBJ_DIR)\gcm128_api_vaes_avx512.obj \
-	$(OBJ_DIR)\gcm128_sgl_api_vaes_avx512.obj \
-	$(OBJ_DIR)\gcm128_gmac_api_vaes_avx512.obj \
-	$(OBJ_DIR)\gcm192_sse.obj \
-	$(OBJ_DIR)\gcm192_avx_gen2.obj \
-	$(OBJ_DIR)\gcm192_avx_gen4.obj \
-	$(OBJ_DIR)\gcm192_avx512.obj \
-	$(OBJ_DIR)\gcm192_api_vaes_avx512.obj \
-	$(OBJ_DIR)\gcm192_sgl_api_vaes_avx512.obj \
-	$(OBJ_DIR)\gcm192_gmac_api_vaes_avx512.obj \
-	$(OBJ_DIR)\gcm256_sse.obj \
-	$(OBJ_DIR)\gcm256_avx_gen2.obj \
-	$(OBJ_DIR)\gcm256_avx_gen4.obj \
-	$(OBJ_DIR)\gcm256_avx512.obj \
-	$(OBJ_DIR)\gcm256_api_vaes_avx512.obj \
-	$(OBJ_DIR)\gcm256_sgl_api_vaes_avx512.obj \
-	$(OBJ_DIR)\gcm256_gmac_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes128_gcm_by8_sse.obj \
+	$(OBJ_DIR)\aes128_gcm_by8_avx.obj \
+	$(OBJ_DIR)\aes128_gcm_by8_avx2.obj \
+	$(OBJ_DIR)\aes128_gcm_by8_avx512.obj \
+	$(OBJ_DIR)\aes128_gcm_by48_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes128_gcm_by48_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes128_gmac_by48_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes192_gcm_by8_sse.obj \
+	$(OBJ_DIR)\aes192_gcm_by8_avx.obj \
+	$(OBJ_DIR)\aes192_gcm_by8_avx2.obj \
+	$(OBJ_DIR)\aes192_gcm_by8_avx512.obj \
+	$(OBJ_DIR)\aes192_gcm_by48_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes192_gcm_by48_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes192_gmac_by48_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes256_gcm_by8_sse.obj \
+	$(OBJ_DIR)\aes256_gcm_by8_avx.obj \
+	$(OBJ_DIR)\aes256_gcm_by8_avx2.obj \
+	$(OBJ_DIR)\aes256_gcm_by8_avx512.obj \
+	$(OBJ_DIR)\aes256_gcm_by48_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes256_gcm_by48_sgl_api_vaes_avx512.obj \
+	$(OBJ_DIR)\aes256_gmac_by48_api_vaes_avx512.obj \
 	$(OBJ_DIR)\gcm128_sse_no_aesni.obj \
 	$(OBJ_DIR)\gcm192_sse_no_aesni.obj \
 	$(OBJ_DIR)\gcm256_sse_no_aesni.obj

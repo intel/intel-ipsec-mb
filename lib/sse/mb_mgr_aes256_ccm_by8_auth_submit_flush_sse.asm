@@ -25,8 +25,11 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define AES_CBC_MAC aes256_cbc_mac_x8
-%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes256_cmac_auth_avx
-%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes256_cmac_auth_avx
+%ifndef AES_CBC_MAC
+%define NROUNDS 13
+%define AES_CBC_MAC aes256_cbc_mac_x4
+%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes256_ccm_auth_sse
+%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes256_ccm_auth_sse
+%endif
 
-%include "avx/mb_mgr_aes_cmac_submit_flush_avx.asm"
+%include "sse/mb_mgr_aes128_ccm_by8_auth_submit_flush_sse.asm"

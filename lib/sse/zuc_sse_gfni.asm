@@ -32,4 +32,4 @@
 %define ZUC_KEYGEN16B_4 asm_ZucGenKeystream16B_4_gfni_sse
 %define ZUC_KEYGEN8B_4 asm_ZucGenKeystream8B_4_gfni_sse
 %define ZUC_KEYGEN4B_4 asm_ZucGenKeystream4B_4_gfni_sse
-%include "sse/zuc_sse.asm"
+%include "sse/zuc_x4_sse.asm"

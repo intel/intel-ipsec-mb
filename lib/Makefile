@@ -353,7 +353,7 @@ asm_sse_lib_objs := \
 	aes_cbc_enc_128_x8_sse.o \
 	aes_cbc_enc_192_x8_sse.o \
 	aes_cbc_enc_256_x8_sse.o \
-	pon_sse.o \
+	pon_by8_sse.o \
 	aes128_cntr_by8_sse.o \
 	aes192_cntr_by8_sse.o \
 	aes256_cntr_by8_sse.o \
@@ -367,9 +367,9 @@ asm_sse_lib_objs := \
 	aes256_cbc_mac_x4.o \
 	aes128_cbc_mac_x8_sse.o \
 	aes256_cbc_mac_x8_sse.o \
-	aes_xcbc_mac_128_x4.o \
+	aes128_xcbc_mac_x4_sse.o \
 	md5_x4x2_sse.o \
-	sha1_mult_sse.o \
+	sha1_x4_sse.o \
 	sha1_one_block_sse.o \
 	sha224_one_block_sse.o \
 	sha256_one_block_sse.o \
@@ -379,7 +379,7 @@ asm_sse_lib_objs := \
 	sha_256_mult_sse.o \
 	sha1_ni_x2_sse.o \
 	sha256_ni_x2_sse.o \
-	zuc_sse.o \
+	zuc_x4_sse.o \
 	zuc_sse_gfni.o \
 	mb_mgr_aes_flush_sse.o \
 	mb_mgr_aes_submit_sse.o \
@@ -393,16 +393,16 @@ asm_sse_lib_objs := \
 	mb_mgr_aes192_submit_sse_x8.o \
 	mb_mgr_aes256_flush_sse_x8.o \
 	mb_mgr_aes256_submit_sse_x8.o \
-	mb_mgr_aes_cmac_submit_flush_sse.o \
-	mb_mgr_aes256_cmac_submit_flush_sse.o \
+	mb_mgr_aes128_cmac_x4_submit_flush_sse.o \
+	mb_mgr_aes256_cmac_x4_submit_flush_sse.o \
 	mb_mgr_aes_cmac_submit_flush_sse_x8.o \
 	mb_mgr_aes256_cmac_submit_flush_sse_x8.o \
-	mb_mgr_aes_ccm_auth_submit_flush_sse.o \
+	mb_mgr_aes128_ccm_by8_auth_submit_flush_sse.o \
 	mb_mgr_aes_ccm_auth_submit_flush_sse_x8.o \
-	mb_mgr_aes256_ccm_auth_submit_flush_sse.o \
+	mb_mgr_aes256_ccm_by8_auth_submit_flush_sse.o \
 	mb_mgr_aes256_ccm_auth_submit_flush_sse_x8.o \
-	mb_mgr_aes_xcbc_flush_sse.o \
-	mb_mgr_aes_xcbc_submit_sse.o \
+	mb_mgr_aes128_xcbc_x4_flush_sse.o \
+	mb_mgr_aes128_xcbc_x4_submit_sse.o \
 	mb_mgr_hmac_md5_flush_sse.o \
 	mb_mgr_hmac_md5_submit_sse.o \
 	mb_mgr_hmac_flush_sse.o \
@@ -436,7 +436,7 @@ asm_sse_lib_objs := \
 	crc32_wimax_sse.o \
 	chacha20_sse.o \
         memcpy_sse.o \
-	snow3g_uia2_sse.o
+	snow3g_uia2_by4_sse.o
 
 #
 # List of ASM modules (avx directory)
@@ -448,7 +448,7 @@ asm_avx_lib_objs := \
 	aes128_cbc_dec_by8_avx.o \
 	aes192_cbc_dec_by8_avx.o \
 	aes256_cbc_dec_by8_avx.o \
-	pon_avx.o \
+	pon_by8_avx.o \
 	aes128_cntr_by8_avx.o \
 	aes192_cntr_by8_avx.o \
 	aes256_cntr_by8_avx.o \
@@ -460,9 +460,9 @@ asm_avx_lib_objs := \
 	aes_cfb_avx.o \
 	aes128_cbc_mac_x8.o \
 	aes256_cbc_mac_x8.o \
-	aes_xcbc_mac_128_x8.o \
+	aes128_xcbc_mac_x8_avx.o \
 	md5_x4x2_avx.o \
-	sha1_mult_avx.o \
+	sha1_x4_avx.o \
 	sha1_one_block_avx.o \
 	sha224_one_block_avx.o \
 	sha256_one_block_avx.o \
@@ -470,19 +470,19 @@ asm_avx_lib_objs := \
 	sha384_one_block_avx.o \
 	sha512_one_block_avx.o \
 	sha512_x2_avx.o \
-	zuc_avx.o \
+	zuc_x4_avx.o \
 	mb_mgr_aes_flush_avx.o \
 	mb_mgr_aes_submit_avx.o \
 	mb_mgr_aes192_flush_avx.o \
 	mb_mgr_aes192_submit_avx.o \
 	mb_mgr_aes256_flush_avx.o \
 	mb_mgr_aes256_submit_avx.o \
-	mb_mgr_aes_cmac_submit_flush_avx.o \
-	mb_mgr_aes256_cmac_submit_flush_avx.o \
-	mb_mgr_aes_ccm_auth_submit_flush_avx.o \
-	mb_mgr_aes256_ccm_auth_submit_flush_avx.o \
-	mb_mgr_aes_xcbc_flush_avx.o \
-	mb_mgr_aes_xcbc_submit_avx.o \
+	mb_mgr_aes128_cmac_x8_submit_flush_avx.o \
+	mb_mgr_aes256_cmac_x8_submit_flush_avx.o \
+	mb_mgr_aes128_ccm_by8_auth_submit_flush_avx.o \
+	mb_mgr_aes256_ccm_by8_auth_submit_flush_avx.o \
+	mb_mgr_aes128_xcbc_x8_flush_avx.o \
+	mb_mgr_aes128_xcbc_x8_submit_avx.o \
 	mb_mgr_hmac_md5_flush_avx.o \
 	mb_mgr_hmac_md5_submit_avx.o \
 	mb_mgr_hmac_flush_avx.o \
@@ -511,7 +511,7 @@ asm_avx_lib_objs := \
 	crc32_wimax_avx.o \
 	chacha20_avx.o \
         memcpy_avx.o \
-	snow3g_uia2_avx.o
+	snow3g_uia2_by4_avx.o
 
 #
 # List of ASM modules (avx2 directory)
@@ -521,7 +521,7 @@ asm_avx2_lib_objs := \
 	sha1_x8_avx2.o \
 	sha256_oct_avx2.o \
 	sha512_x4_avx2.o \
-	zuc_avx2.o \
+	zuc_x8_avx2.o \
 	mb_mgr_hmac_md5_flush_avx2.o \
 	mb_mgr_hmac_md5_submit_avx2.o \
 	mb_mgr_hmac_flush_avx2.o \
@@ -545,12 +545,12 @@ asm_avx512_lib_objs := \
 	sha256_x16_avx512.o \
 	sha512_x8_avx512.o \
 	des_x16_avx512.o \
-	cntr_vaes_avx512.o \
+	aes_cntr_by16_vaes_avx512.o \
 	pon_vaes_avx512.o \
-	aes_cbc_dec_vaes_avx512.o \
+	aes_cbc_dec_by16_vaes_avx512.o \
 	aes_cbc_enc_vaes_avx512.o \
 	aes_cbcs_enc_vaes_avx512.o \
-	aes_cbcs_dec_vaes_avx512.o \
+	aes_cbcs_dec_by16_vaes_avx512.o \
 	aes_docsis_dec_avx512.o \
 	aes_docsis_enc_avx512.o \
 	aes_docsis_dec_vaes_avx512.o \
@@ -574,11 +574,11 @@ asm_avx512_lib_objs := \
 	mb_mgr_hmac_sha_512_flush_avx512.o \
 	mb_mgr_hmac_sha_512_submit_avx512.o \
 	mb_mgr_des_avx512.o \
-	mb_mgr_aes_cmac_submit_flush_vaes_avx512.o \
-	mb_mgr_aes256_cmac_submit_flush_vaes_avx512.o \
-	mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.o \
-	mb_mgr_aes256_ccm_auth_submit_flush_vaes_avx512.o \
-	mb_mgr_aes_xcbc_submit_flush_vaes_avx512.o \
+	mb_mgr_aes128_cmac_x16_submit_flush_vaes_avx512.o \
+	mb_mgr_aes256_cmac_x16_submit_flush_vaes_avx512.o \
+	mb_mgr_aes128_ccm_by16_auth_submit_flush_vaes_avx512.o \
+	mb_mgr_aes256_ccm_by16_auth_submit_flush_vaes_avx512.o \
+	mb_mgr_aes128_xcbc_x16_submit_flush_vaes_avx512.o \
 	mb_mgr_zuc_submit_flush_avx512.o \
 	mb_mgr_zuc_submit_flush_gfni_avx512.o \
 	chacha20_avx512.o \
@@ -607,19 +607,19 @@ asm_noaesni_gcm_objs := \
 	gcm128_sse_no_aesni.o gcm192_sse_no_aesni.o gcm256_sse_no_aesni.o
 
 asm_sse_gcm_objs := \
-	gcm128_sse.o gcm192_sse.o gcm256_sse.o
+	aes128_gcm_by8_sse.o aes192_gcm_by8_sse.o aes256_gcm_by8_sse.o
 
 asm_avx_gcm_objs := \
-	gcm128_avx_gen2.o gcm192_avx_gen2.o gcm256_avx_gen2.o
+	aes128_gcm_by8_avx.o aes192_gcm_by8_avx.o aes256_gcm_by8_avx.o
 
 asm_avx2_gcm_objs := \
-	gcm128_avx_gen4.o gcm192_avx_gen4.o gcm256_avx_gen4.o
+	aes128_gcm_by8_avx2.o aes192_gcm_by8_avx2.o aes256_gcm_by8_avx2.o
 
 asm_avx512_gcm_objs := \
-	gcm128_api_vaes_avx512.o gcm192_api_vaes_avx512.o gcm256_api_vaes_avx512.o \
-	gcm128_sgl_api_vaes_avx512.o gcm192_sgl_api_vaes_avx512.o gcm256_sgl_api_vaes_avx512.o \
-	gcm128_gmac_api_vaes_avx512.o gcm192_gmac_api_vaes_avx512.o gcm256_gmac_api_vaes_avx512.o \
-	gcm128_avx512.o gcm192_avx512.o gcm256_avx512.o
+	aes128_gcm_by48_api_vaes_avx512.o aes192_gcm_by48_api_vaes_avx512.o aes256_gcm_by48_api_vaes_avx512.o \
+	aes128_gcm_by48_sgl_api_vaes_avx512.o aes192_gcm_by48_sgl_api_vaes_avx512.o aes256_gcm_by48_sgl_api_vaes_avx512.o \
+	aes128_gmac_by48_api_vaes_avx512.o aes192_gmac_by48_api_vaes_avx512.o aes256_gmac_by48_api_vaes_avx512.o \
+	aes128_gcm_by8_avx512.o aes192_gcm_by8_avx512.o aes256_gcm_by8_avx512.o
 
 #
 # build object files lists

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2021, Intel Corporation
+;; Copyright (c) 2020-2021, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,50 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define CBCS
-%include "avx512/aes_cbc_dec_vaes_avx512.asm"
-%include "include/cet.inc"
-%define len     rax
+%define NUM_LANES 4
+%define AES_CBC_MAC aes256_cbc_mac_x4
+%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes256_cmac_auth_sse
+%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes256_cmac_auth_sse
 
-section .text
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; aes_cbcs_1_9_dec_128_vaes_avx512(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-MKGLOBAL(aes_cbcs_1_9_dec_128_vaes_avx512,function,internal)
-aes_cbcs_1_9_dec_128_vaes_avx512:
-        endbranch64
-%ifndef LINUX
-        mov     len,     [rsp + 8*5]
-%else
-        mov     len, num_bytes
-%endif
-
-        ;; convert CBCS length to standard number of CBC blocks
-        ;; ((num_bytes + 9 blocks) / 160) = num blocks to decrypt
-        mov     tmp2, rdx
-        xor     rdx, rdx        ;; store and zero rdx for div
-        add     len, 9*16
-        mov     tmp, 160
-        div     tmp             ;; divide by 160
-        shl     len, 4    ;; multiply by 16 to get num bytes
-        mov     rdx, tmp2
-
-        AES_CBC_DEC p_in, p_out, p_keys, p_IV, len, 9, tmp
-
-%ifndef LINUX
-        mov     next_iv, [rsp + 8*6]
-%endif
-        ;; store last cipher block as next iv
-        vextracti64x2 [next_iv], zIV, 3
-
-%ifdef SAFE_DATA
-	clear_all_zmms_asm
-%endif ;; SAFE_DATA
-
-        ret
-
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+%include "sse/mb_mgr_aes128_cmac_x4_submit_flush_sse.asm"

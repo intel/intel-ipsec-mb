@@ -27,9 +27,9 @@
 
 %ifndef AES_CBC_MAC
 %define NROUNDS 13
-%define AES_CBC_MAC aes256_cbc_mac_vaes_avx512
-%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes256_ccm_auth_vaes_avx512
-%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes256_ccm_auth_vaes_avx512
+%define AES_CBC_MAC aes256_cbc_mac_x8
+%define SUBMIT_JOB_AES_CCM_AUTH submit_job_aes256_ccm_auth_avx
+%define FLUSH_JOB_AES_CCM_AUTH flush_job_aes256_ccm_auth_avx
 %endif
 
-%include "avx512/mb_mgr_aes_ccm_auth_submit_flush_vaes_avx512.asm"
+%include "avx/mb_mgr_aes128_ccm_by8_auth_submit_flush_avx.asm"

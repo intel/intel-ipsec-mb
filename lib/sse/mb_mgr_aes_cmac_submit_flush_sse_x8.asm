@@ -30,4 +30,4 @@
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes128_cmac_auth_x8_sse
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes128_cmac_auth_x8_sse
 
-%include "sse/mb_mgr_aes_cmac_submit_flush_sse.asm"
+%include "sse/mb_mgr_aes128_cmac_x4_submit_flush_sse.asm"

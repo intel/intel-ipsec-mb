@@ -25,9 +25,8 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%define NUM_LANES 4
-%define AES_CBC_MAC aes256_cbc_mac_x4
-%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes256_cmac_auth_sse
-%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes256_cmac_auth_sse
+%define AES_CBC_MAC aes256_cbc_mac_x8
+%define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes256_cmac_auth_avx
+%define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes256_cmac_auth_avx
 
-%include "sse/mb_mgr_aes_cmac_submit_flush_sse.asm"
+%include "avx/mb_mgr_aes128_cmac_x8_submit_flush_avx.asm"

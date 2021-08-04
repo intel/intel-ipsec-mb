@@ -32,4 +32,4 @@
 %define NUM_KEYS 15
 %endif
 
-%include "avx512/mb_mgr_aes_cmac_submit_flush_vaes_avx512.asm"
+%include "avx512/mb_mgr_aes128_cmac_x16_submit_flush_vaes_avx512.asm"

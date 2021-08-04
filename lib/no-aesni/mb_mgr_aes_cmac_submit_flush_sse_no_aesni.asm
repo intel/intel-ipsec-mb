@@ -28,4 +28,4 @@
 %define AES_CBC_MAC aes128_cbc_mac_x4_no_aesni
 %define SUBMIT_JOB_AES_CMAC_AUTH submit_job_aes128_cmac_auth_sse_no_aesni
 %define FLUSH_JOB_AES_CMAC_AUTH flush_job_aes128_cmac_auth_sse_no_aesni
-%include "sse/mb_mgr_aes_cmac_submit_flush_sse.asm"
+%include "sse/mb_mgr_aes128_cmac_x4_submit_flush_sse.asm"
