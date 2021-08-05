@@ -2941,19 +2941,14 @@
 %define %%LENGTH            %%IA2
 %define %%CTR_CHECK         %%IA3
 %define %%DATA_OFFSET       %%IA4
-
 %define %%HASHK_PTR         %%IA6
 
-%define %%GCM_INIT_CTR_BLOCK    xmm2 ; hardcoded in GCM_INIT for now
+%define %%CTR_BLOCKz            zmm2
+%define %%CTR_BLOCKx            xmm2 ; hardcoded in GCM_INIT
 
-%define %%AES_PARTIAL_BLOCK     xmm8
-%define %%CTR_BLOCK2z           zmm18
-%define %%CTR_BLOCKz            zmm9
-%define %%CTR_BLOCKx            xmm9
 %define %%AAD_HASHz             zmm14
 %define %%AAD_HASHx             xmm14
 
-;;; ZTMP0 - ZTMP12 - used in by8 code, by128/48 code and GCM_ENC_DEC_SMALL
 %define %%ZTMP0                 zmm0
 %define %%ZTMP1                 zmm3
 %define %%ZTMP2                 zmm4
@@ -2968,38 +2963,26 @@
 %define %%ZTMP11                zmm16
 %define %%ZTMP12                zmm17
 
-;;; ZTMP13 - ZTMP22 - used in by128/48 code and GCM_ENC_DEC_SMALL
-;;; - some used by8 code as well through TMPxy names
 %define %%ZTMP13                zmm19
 %define %%ZTMP14                zmm20
 %define %%ZTMP15                zmm21
-%define %%ZTMP16                zmm30   ; can be used in very/big_loop part
-%define %%ZTMP17                zmm31   ; can be used in very/big_loop part
+%define %%ZTMP16                zmm30
+%define %%ZTMP17                zmm31
 %define %%ZTMP18                zmm1
-%define %%ZTMP19                zmm2
+%define %%ZTMP19                zmm18
 %define %%ZTMP20                zmm8
 %define %%ZTMP21                zmm22
 %define %%ZTMP22                zmm23
 
-;;; Free to use: zmm24 - zmm29
-;;; - used by by128/48 and by8
 %define %%GH                    zmm24
 %define %%GL                    zmm25
 %define %%GM                    zmm26
 %define %%SHUF_MASK             zmm29
 %define %%CTR_BLOCK_SAVE        zmm28
 
-;;; - used by by128/48 code only
+;;; Unused in the small packet path
 %define %%ADDBE_4x4             zmm27
 %define %%ADDBE_1234            zmm28       ; conflicts with CTR_BLOCK_SAVE
-
-;; used by8 code only
-%define %%GH4KEY                %%ZTMP17
-%define %%GH8KEY                %%ZTMP16
-%define %%BLK0                  %%ZTMP18
-%define %%BLK1                  %%ZTMP19
-%define %%ADD8BE                zmm27
-%define %%ADD8LE                %%ZTMP13
 
 %define %%MASKREG               k1
 
@@ -3046,9 +3029,8 @@
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%MASKREG
 %endif
 
-        ;;  lift counter block from GCM_INIT to here
 %ifidn %%INSTANCE_TYPE, single_call
-        vmovdqu64       %%CTR_BLOCKx, %%GCM_INIT_CTR_BLOCK
+        ;;  use counter block from GCM_INIT
 %else
         vmovdqu64       %%CTR_BLOCKx, [%%GDATA_CTX + CurCount]
 %endif
