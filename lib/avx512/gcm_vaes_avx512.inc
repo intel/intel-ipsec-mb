@@ -1777,13 +1777,29 @@
         ;; =================================================
         ;; gather GHASH in GH1L (low), GH1H (high), GH1M (mid)
         ;; - add GH2[MTLH] to GH1[MTLH]
-        vpternlogq      %%GH1M, %%GH1T, %%GH2T, 0x96 ; TM
+        vpternlogq      %%GH1M, %%GH1T, %%GH2T, 0x96
+%if do_reduction != 0
+
 %if is_start != 0
-        vpxorq          %%GH1M, %%GH1M, %%GH2M       ; TM
+        vpxorq          %%GH1M, %%GH1M, %%GH2M
 %else
         vpternlogq      %%GH1H, %%TO_REDUCE_H, %%GH2H, 0x96
         vpternlogq      %%GH1L, %%TO_REDUCE_L, %%GH2L, 0x96
         vpternlogq      %%GH1M, %%TO_REDUCE_M, %%GH2M, 0x96
+%endif
+
+%else
+        ;; Update H/M/L hash sums if not carrying reduction
+%if is_start != 0
+        vpxorq          %%TO_REDUCE_H, %%GH1H, %%GH2H
+        vpxorq          %%TO_REDUCE_L, %%GH1L, %%GH2L
+        vpxorq          %%TO_REDUCE_M, %%GH1M, %%GH2M
+%else
+        vpternlogq      %%TO_REDUCE_H, %%GH1H, %%GH2H, 0x96
+        vpternlogq      %%TO_REDUCE_L, %%GH1L, %%GH2L, 0x96
+        vpternlogq      %%TO_REDUCE_M, %%GH1M, %%GH2M, 0x96
+%endif
+
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1814,7 +1830,6 @@
         ;; =================================================
         ;; Add mid product to high and low
 %if do_reduction != 0
-
 %if is_start != 0
         vpternlogq      %%GH1H, %%GH2H, %%GH2M, 0x96    ; TH = TH1 + TH2 + TM>>64
         vpternlogq      %%GH1L, %%GH2L, %%GH1M, 0x96    ; TL = TL1 + TL2 + TM<<64
@@ -1822,18 +1837,6 @@
         vpxorq          %%GH1H, %%GH1H, %%GH2M          ; TH = TH1 + TM>>64
         vpxorq          %%GH1L, %%GH1L, %%GH1M          ; TL = TL1 + TM<<64
 %endif
-
-%else
-
-        vmovdqa64       %%TO_REDUCE_M, %%GH1M
-%if is_start != 0
-        vpxorq          %%TO_REDUCE_H, %%GH1H, %%GH2H
-        vpxorq          %%TO_REDUCE_L, %%GH1L, %%GH2L
-%else
-        vmovdqa64       %%TO_REDUCE_H, %%GH1H
-        vmovdqa64       %%TO_REDUCE_L, %%GH1L
-%endif
-
 %endif
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES round 9
