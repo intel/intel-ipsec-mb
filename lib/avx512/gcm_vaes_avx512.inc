@@ -1128,6 +1128,13 @@
 %define %%MASKREG               %24 ; [clobbered] mask register
 %define %%SHUFMASK              %25 ; [in] ZMM with BE/LE shuffle mask
 
+%if %%NUM_BLOCKS == 1
+        vmovdqa64       XWORD(%%SHUFMASK), [rel SHUF_MASK]
+%elif %%NUM_BLOCKS == 2
+        vmovdqa64       YWORD(%%SHUFMASK), [rel SHUF_MASK]
+%else
+        vmovdqa64       %%SHUFMASK, [rel SHUF_MASK]
+%endif
         ;; prepare AES counter blocks
 %if %%NUM_BLOCKS == 1
         vpaddd          XWORD(%%CTR0), %%CTR, [rel ONE]
@@ -3054,11 +3061,10 @@
         je              %%_enc_dec_done
 %endif                          ; %%INSTANCE_TYPE, multi_call
 
-        vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
-
         cmp             %%LENGTH, (16 * 16)
         jbe             %%_message_below_equal_16_blocks
 
+        vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
         vmovdqa64       %%ADDBE_4x4, [rel ddq_addbe_4444]
 
         ;; overwritten above by CTR_BLOCK_SAVE
