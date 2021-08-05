@@ -1162,6 +1162,7 @@
 
         ;; extract new counter value
         ;; shuffle the counters for AES rounds
+%ifidn %%INSTANCE_TYPE, multi_call
 %if %%NUM_BLOCKS <= 4
         vextracti32x4   %%CTR, %%CTR0, (%%NUM_BLOCKS - 1)
 %elif %%NUM_BLOCKS <= 8
@@ -1170,6 +1171,7 @@
         vextracti32x4   %%CTR, %%CTR2, (%%NUM_BLOCKS - 9)
 %else
         vextracti32x4   %%CTR, %%CTR3, (%%NUM_BLOCKS - 13)
+%endif
 %endif
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 %%NUM_BLOCKS, vpshufb, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, \
@@ -1656,7 +1658,6 @@
         vextracti32x4   XWORD(%%CTR_BE), %%B12_15, (%%NUM_BLOCKS - 13)
 %endif
         vshufi64x2      %%CTR_BE, %%CTR_BE, %%CTR_BE, 0000_0000b
-        add             BYTE(%%CTR_CHECK), %%NUM_BLOCKS
 %endif
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3206,8 +3207,10 @@
                 %%ADDBE_4x4, %%ADDBE_1234, mid, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
+%ifidn %%INSTANCE_TYPE, multi_call
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+%endif
 
         jmp             %%_ghash_done
 
@@ -3286,9 +3289,10 @@
                 %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
+%ifidn %%INSTANCE_TYPE, multi_call
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
-
+%endif
         jmp             %%_ghash_done
 
         ;; =====================================================
@@ -3337,8 +3341,10 @@
                 %%ADDBE_4x4, %%ADDBE_1234, end_reduce, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
+%ifidn %%INSTANCE_TYPE, multi_call
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+%endif
 
         jmp             %%_ghash_done
 
@@ -3362,8 +3368,9 @@
                 %%ZTMP20, %%ZTMP21, %%ZTMP22, \
                 %%IA0, %%IA3, %%MASKREG, %%SHUF_MASK
 
+%ifidn %%INSTANCE_TYPE, multi_call
         vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
-
+%endif
         jmp     %%_ghash_done
 
 %%_message_below_32_blocks:
@@ -3395,12 +3402,16 @@
                 %%ADDBE_4x4, %%ADDBE_1234, start, %%GL, %%GH, %%GM, \
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
+%ifidn %%INSTANCE_TYPE, multi_call
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+%endif
         ;; fall through to exit
 
 %%_ghash_done:
+%ifidn %%INSTANCE_TYPE, multi_call
         vmovdqu64       [%%GDATA_CTX + CurCount], XWORD(%%CTR_BLOCK_SAVE)
+%endif
         vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASHx
 %%_enc_dec_done:
 
