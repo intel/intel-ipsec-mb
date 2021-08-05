@@ -1522,7 +1522,7 @@
 %define %%B04_07                %13 ; [clobbered] temporary ZMM
 %define %%B08_11                %14 ; [clobbered] temporary ZMM
 %define %%B12_15                %15 ; [clobbered] temporary ZMM
-%define %%GH1H                  %16 ; [clobbered] temporary ZMM
+%define %%GH1H_UNUSED           %16 ; [clobbered] temporary ZMM
 %define %%GH1L                  %17 ; [clobbered] temporary ZMM
 %define %%GH1M                  %18 ; [clobbered] temporary ZMM
 %define %%GH1T                  %19 ; [clobbered] temporary ZMM
@@ -1554,6 +1554,8 @@
 %define %%MASKREG               %45 ; [clobbered] mask register
 %define %%NUM_BLOCKS            %46 ; [in] numerical value with number of blocks to be encrypted/ghashed (1 to 16)
 %define %%INSTANCE_TYPE         %47 ; [in] multi_call or single_call
+
+%xdefine %%GH1H %%HASH_IN_OUT   ; this is to avoid additional move in do_reduction case
 
 %define %%LAST_GHASH_BLK  %%GH1L
 %define %%LAST_CIPHER_BLK %%GH1T
@@ -1983,7 +1985,9 @@
 %endif
 
 %if do_reduction != 0
-        vmovdqa64       XWORD(%%HASH_IN_OUT), XWORD(%%GH1H)
+        ;; GH1H holds reduced hash value
+        ;; - normally do "vmovdqa64 XWORD(%%HASH_IN_OUT), XWORD(%%GH1H)"
+        ;; - register rename trick obsoletes the above move
 %endif
 
         ;; =================================================
