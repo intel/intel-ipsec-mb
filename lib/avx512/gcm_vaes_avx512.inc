@@ -969,15 +969,15 @@
 ;;; update calls.
 ;;; Requires the input data be at least 1 byte long.
 ;;; Output:
-;;; A cipher/plain of the first partial block (CYPH_PLAIN_OUT),
+;;; A cipher/plain of the first partial block (CIPH_PLAIN_OUT),
 ;;; AAD_HASH and updated GDATA_CTX
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro PARTIAL_BLOCK 22
 %define %%GDATA_KEY             %1 ; [in] key pointer
 %define %%GDATA_CTX             %2 ; [in] context pointer
-%define %%CYPH_PLAIN_OUT        %3 ; [in] output buffer
-%define %%PLAIN_CYPH_IN         %4 ; [in] input buffer
-%define %%PLAIN_CYPH_LEN        %5 ; [in] buffer length
+%define %%CIPH_PLAIN_OUT        %3 ; [in] output buffer
+%define %%PLAIN_CIPH_IN         %4 ; [in] input buffer
+%define %%PLAIN_CIPH_LEN        %5 ; [in] buffer length
 %define %%DATA_OFFSET           %6 ; [in/out] data offset (gets updated)
 %define %%AAD_HASH              %7 ; [out] updated GHASH value
 %define %%ENC_DEC               %8 ; [in] cipher direction
@@ -1015,7 +1015,7 @@
         or              %%LENGTH, %%LENGTH
         je              %%_partial_block_done           ;Leave Macro if no partial blocks
 
-        READ_SMALL_DATA_INPUT   %%XTMP0, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%IA0, %%MASKREG
+        READ_SMALL_DATA_INPUT   %%XTMP0, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%IA0, %%MASKREG
 
         ;; XTMP1 = my_ctx_data.partial_block_enc_key
         vmovdqu64       %%XTMP1, [%%GDATA_CTX + PBlockEncKey]
@@ -1032,11 +1032,11 @@
         ;;  keep copy of cipher text in %%XTMP4
         vmovdqa64       %%XTMP4, %%XTMP0
 %endif
-        vpxorq          %%XTMP1, %%XTMP0      ; Cyphertext XOR E(K, Yn)
+        vpxorq          %%XTMP1, %%XTMP0      ; Ciphertext XOR E(K, Yn)
 
-        ;; Set %%IA1 to be the amount of data left in CYPH_PLAIN_IN after filling the block
+        ;; Set %%IA1 to be the amount of data left in CIPH_PLAIN_IN after filling the block
         ;; Determine if partial block is not being filled and shift mask accordingly
-        mov             %%IA1, %%PLAIN_CYPH_LEN
+        mov             %%IA1, %%PLAIN_CIPH_LEN
         add             %%IA1, %%LENGTH
         sub             %%IA1, 16
         jge             %%_no_extra_mask
@@ -1073,12 +1073,12 @@
 
 %%_partial_incomplete:
 %ifidn __OUTPUT_FORMAT__, win64
-        mov             %%IA0, %%PLAIN_CYPH_LEN
+        mov             %%IA0, %%PLAIN_CIPH_LEN
         add             [%%GDATA_CTX + PBlockLen], %%IA0
 %else
-        add             [%%GDATA_CTX + PBlockLen], %%PLAIN_CYPH_LEN
+        add             [%%GDATA_CTX + PBlockLen], %%PLAIN_CIPH_LEN
 %endif
-        mov             %%LENGTH, %%PLAIN_CYPH_LEN
+        mov             %%LENGTH, %%PLAIN_CIPH_LEN
 
 %%_enc_dec_done:
         ;; output encrypted Bytes
@@ -1092,7 +1092,7 @@
         vpshufb         %%XTMP1, [rel SHUF_MASK]
         vpshufb         %%XTMP1, %%XTMP3
 %endif
-        vmovdqu8        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET]{%%MASKREG}, %%XTMP1
+        vmovdqu8        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET]{%%MASKREG}, %%XTMP1
         add             %%DATA_OFFSET, %%LENGTH
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK
@@ -1104,8 +1104,8 @@
 %macro INITIAL_BLOCKS_PARTIAL_CIPHER 25
 %define %%GDATA_KEY             %1  ; [in] key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
-%define %%CYPH_PLAIN_OUT        %3  ; [in] text output pointer
-%define %%PLAIN_CYPH_IN         %4  ; [in] text input pointer
+%define %%CIPH_PLAIN_OUT        %3  ; [in] text output pointer
+%define %%PLAIN_CIPH_IN         %4  ; [in] text input pointer
 %define %%LENGTH                %5  ; [in/clobbered] length in bytes
 %define %%DATA_OFFSET           %6  ; [in/out] current data offset (updated)
 %define %%NUM_BLOCKS            %7  ; [in] can only be 1, 2, 3, 4, 5, ..., 15 or 16 (not 0)
@@ -1177,7 +1177,7 @@
                         %%SHUFMASK, %%SHUFMASK, %%SHUFMASK, %%SHUFMASK
 
         ;; load plain/cipher text
-       ZMM_LOAD_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+       ZMM_LOAD_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                         %%DAT0, %%DAT1, %%DAT2, %%DAT3, %%MASKREG
 
         ;; AES rounds and XOR with plain/cipher text
@@ -1205,7 +1205,7 @@
 %endif
 %endif
         ;; write cipher/plain text back to output and
-        ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%CYPH_PLAIN_OUT, %%DATA_OFFSET, \
+        ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%CIPH_PLAIN_OUT, %%DATA_OFFSET, \
                         %%CTR0, %%CTR1, %%CTR2, %%CTR3, %%MASKREG
 
         ;; zero bytes outside the mask before hashing
@@ -1453,8 +1453,8 @@
 %macro INITIAL_BLOCKS_PARTIAL 30
 %define %%GDATA_KEY             %1  ; [in] key pointer
 %define %%GDATA_CTX             %2  ; [in] context pointer
-%define %%CYPH_PLAIN_OUT        %3  ; [in] text output pointer
-%define %%PLAIN_CYPH_IN         %4  ; [in] text input pointer
+%define %%CIPH_PLAIN_OUT        %3  ; [in] text output pointer
+%define %%PLAIN_CIPH_IN         %4  ; [in] text input pointer
 %define %%LENGTH                %5  ; [in/clobbered] length in bytes
 %define %%DATA_OFFSET           %6  ; [in/out] current data offset (updated)
 %define %%NUM_BLOCKS            %7  ; [in] can only be 1, 2, 3, 4, 5, ..., 15 or 16 (not 0)
@@ -1483,7 +1483,7 @@
 %define %%SHUFMASK              %30 ; [in] ZMM with BE/LE shuffle mask
 
         INITIAL_BLOCKS_PARTIAL_CIPHER \
-                        %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                        %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                         %%LENGTH, %%DATA_OFFSET, %%NUM_BLOCKS, %%CTR, \
                         %%ENC_DEC, %%INSTANCE_TYPE, %%DAT0, %%DAT1, %%DAT2, %%DAT3, \
                         XWORD(%%LAST_CIPHER_BLK), XWORD(%%LAST_GHASH_BLK), \
@@ -1507,8 +1507,8 @@
 %macro GHASH_16_ENCRYPT_N_GHASH_N 47
 %define %%GDATA                 %1  ; [in] key pointer
 %define %%GCTX                  %2  ; [in] context pointer
-%define %%CYPH_PLAIN_OUT        %3  ; [in] pointer to output buffer
-%define %%PLAIN_CYPH_IN         %4  ; [in] pointer to input buffer
+%define %%CIPH_PLAIN_OUT        %3  ; [in] pointer to output buffer
+%define %%PLAIN_CIPH_IN         %4  ; [in] pointer to input buffer
 %define %%DATA_OFFSET           %5  ; [in] data offset
 %define %%LENGTH                %6  ; [in] data length
 %define %%CTR_BE                %7  ; [in/out] ZMM counter blocks (last 4) in big-endian
@@ -1745,7 +1745,7 @@
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; load plain/cipher text
-        ZMM_LOAD_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+        ZMM_LOAD_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                         %%DATA1, %%DATA2, %%DATA3, %%DATA4, %%MASKREG
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1928,7 +1928,7 @@
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store cipher/plain text
-        ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%CYPH_PLAIN_OUT, %%DATA_OFFSET, \
+        ZMM_STORE_MASKED_BLOCKS_0_16 %%NUM_BLOCKS, %%CIPH_PLAIN_OUT, %%DATA_OFFSET, \
                         %%B00_03, %%B04_07, %%B08_11, %%B12_15, %%MASKREG
 
         ;; =================================================
@@ -2018,8 +2018,8 @@
 %macro GCM_ENC_DEC_LAST 46
 %define %%GDATA                 %1  ; [in] key pointer
 %define %%GCTX                  %2  ; [in] context pointer
-%define %%CYPH_PLAIN_OUT        %3  ; [in] pointer to output buffer
-%define %%PLAIN_CYPH_IN         %4  ; [in] pointer to input buffer
+%define %%CIPH_PLAIN_OUT        %3  ; [in] pointer to output buffer
+%define %%PLAIN_CIPH_IN         %4  ; [in] pointer to input buffer
 %define %%DATA_OFFSET           %5  ; [in] data offset
 %define %%LENGTH                %6  ; [in/clobbered] data length
 %define %%CTR_BE                %7  ; [in/out] ZMM counter blocks (last 4) in big-endian
@@ -2115,7 +2115,7 @@
 %rep 16
 %%_last_num_blocks_is_ %+ num_blocks :
         GHASH_16_ENCRYPT_N_GHASH_N \
-                %%GDATA, %%GCTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%GDATA, %%GCTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BE, %%CTR_CHECK, \
                 %%HASHKEY_OFFSET, %%GHASHIN_BLK_OFFSET, %%SHFMSK, \
                 %%ZT00, %%ZT01, %%ZT02, %%ZT03, %%ZT04, %%ZT05, %%ZT06, %%ZT07, \
@@ -2159,8 +2159,8 @@
 ;;; - no partial block or multi_call handling here
 %macro  GHASH_16_ENCRYPT_16_PARALLEL 42
 %define %%GDATA                 %1  ; [in] key pointer
-%define %%CYPH_PLAIN_OUT        %2  ; [in] pointer to output buffer
-%define %%PLAIN_CYPH_IN         %3  ; [in] pointer to input buffer
+%define %%CIPH_PLAIN_OUT        %2  ; [in] pointer to output buffer
+%define %%PLAIN_CIPH_IN         %3  ; [in] pointer to input buffer
 %define %%DATA_OFFSET           %4  ; [in] data offset
 %define %%CTR_BE                %5  ; [in/out] ZMM counter blocks (last 4) in big-endian
 %define %%CTR_CHECK             %6  ; [in/out] GP with 8-bit counter for overflow check
@@ -2364,10 +2364,10 @@
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; load plain/cipher text (recycle GH3xx registers)
-        VX512LDR        %%DATA1, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + %%DATA_DISPL + (0 * 64)]
-        VX512LDR        %%DATA2, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + %%DATA_DISPL + (1 * 64)]
-        VX512LDR        %%DATA3, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + %%DATA_DISPL + (2 * 64)]
-        VX512LDR        %%DATA4, [%%PLAIN_CYPH_IN + %%DATA_OFFSET + %%DATA_DISPL + (3 * 64)]
+        VX512LDR        %%DATA1, [%%PLAIN_CIPH_IN + %%DATA_OFFSET + %%DATA_DISPL + (0 * 64)]
+        VX512LDR        %%DATA2, [%%PLAIN_CIPH_IN + %%DATA_OFFSET + %%DATA_DISPL + (1 * 64)]
+        VX512LDR        %%DATA3, [%%PLAIN_CIPH_IN + %%DATA_OFFSET + %%DATA_DISPL + (2 * 64)]
+        VX512LDR        %%DATA4, [%%PLAIN_CIPH_IN + %%DATA_OFFSET + %%DATA_DISPL + (3 * 64)]
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; AES rounds 5
@@ -2525,10 +2525,10 @@
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; store cipher/plain text
-        VX512STR        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (0 * 64)], %%B00_03
-        VX512STR        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (1 * 64)], %%B04_07
-        VX512STR        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (2 * 64)], %%B08_11
-        VX512STR        [%%CYPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (3 * 64)], %%B12_15
+        VX512STR        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (0 * 64)], %%B00_03
+        VX512STR        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (1 * 64)], %%B04_07
+        VX512STR        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (2 * 64)], %%B08_11
+        VX512STR        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET + %%DATA_DISPL + (3 * 64)], %%B12_15
 
         ;; =================================================
         ;; shuffle cipher text blocks for GHASH computation
@@ -2810,9 +2810,9 @@
 %macro  GCM_ENC_DEC_SMALL   39
 %define %%GDATA_KEY         %1  ; [in] key pointer
 %define %%GDATA_CTX         %2  ; [in] context pointer
-%define %%CYPH_PLAIN_OUT    %3  ; [in] output buffer
-%define %%PLAIN_CYPH_IN     %4  ; [in] input buffer
-%define %%PLAIN_CYPH_LEN    %5  ; [in] buffer length
+%define %%CIPH_PLAIN_OUT    %3  ; [in] output buffer
+%define %%PLAIN_CIPH_IN     %4  ; [in] input buffer
+%define %%PLAIN_CIPH_LEN    %5  ; [in] buffer length
 %define %%ENC_DEC           %6  ; [in] cipher direction
 %define %%DATA_OFFSET       %7  ; [in] data offset
 %define %%LENGTH            %8  ; [in] GP data length
@@ -2895,8 +2895,8 @@
 %assign num_blocks 1
 %rep 16
 %%_small_initial_num_blocks_is_ %+ num_blocks :
-        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, \
-                %%PLAIN_CYPH_IN, %%LENGTH, %%DATA_OFFSET, num_blocks, \
+        INITIAL_BLOCKS_PARTIAL  %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, \
+                %%PLAIN_CIPH_IN, %%LENGTH, %%DATA_OFFSET, num_blocks, \
                 %%CTR, %%HASH_IN_OUT, %%ENC_DEC, %%INSTANCE_TYPE, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, \
@@ -2916,17 +2916,17 @@
 ; GCM_ENC_DEC Encodes/Decodes given data. Assumes that the passed gcm_context_data struct
 ; has been initialized by GCM_INIT
 ; Requires the input data be at least 1 byte long because of READ_SMALL_INPUT_DATA.
-; Input: gcm_key_data struct* (GDATA_KEY), gcm_context_data *(GDATA_CTX), input text (PLAIN_CYPH_IN),
-; input text length (PLAIN_CYPH_LEN) and whether encoding or decoding (ENC_DEC).
-; Output: A cypher of the given plain text (CYPH_PLAIN_OUT), and updated GDATA_CTX
+; Input: gcm_key_data struct* (GDATA_KEY), gcm_context_data *(GDATA_CTX), input text (PLAIN_CIPH_IN),
+; input text length (PLAIN_CIPH_LEN) and whether encoding or decoding (ENC_DEC).
+; Output: A cipher of the given plain text (CIPH_PLAIN_OUT), and updated GDATA_CTX
 ; Clobbers rax, r10-r15, and zmm0-zmm31, k1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro  GCM_ENC_DEC         7
 %define %%GDATA_KEY         %1  ; [in] key pointer
 %define %%GDATA_CTX         %2  ; [in] context pointer
-%define %%CYPH_PLAIN_OUT    %3  ; [in] output buffer pointer
-%define %%PLAIN_CYPH_IN     %4  ; [in] input buffer pointer
-%define %%PLAIN_CYPH_LEN    %5  ; [in] buffer length
+%define %%CIPH_PLAIN_OUT    %3  ; [in] output buffer pointer
+%define %%PLAIN_CIPH_IN     %4  ; [in] input buffer pointer
+%define %%PLAIN_CIPH_LEN    %5  ; [in] buffer length
 %define %%ENC_DEC           %6  ; [in] cipher direction
 %define %%INSTANCE_TYPE     %7  ; [in] 'single_call' or 'multi_call' selection
 
@@ -3019,9 +3019,9 @@
 ;;; - process 8 16 byte blocks at a time until all are done in %%_encrypt_by_8_new
 
 %ifidn __OUTPUT_FORMAT__, win64
-        cmp             %%PLAIN_CYPH_LEN, 0
+        cmp             %%PLAIN_CIPH_LEN, 0
 %else
-        or              %%PLAIN_CYPH_LEN, %%PLAIN_CYPH_LEN
+        or              %%PLAIN_CIPH_LEN, %%PLAIN_CIPH_LEN
 %endif
         je              %%_enc_dec_done
 
@@ -3029,10 +3029,10 @@
 
         ;; Update length of data processed
 %ifidn __OUTPUT_FORMAT__, win64
-        mov             %%IA0, %%PLAIN_CYPH_LEN
+        mov             %%IA0, %%PLAIN_CIPH_LEN
         add             [%%GDATA_CTX + InLen], %%IA0
 %else
-        add             [%%GDATA_CTX + InLen], %%PLAIN_CYPH_LEN
+        add             [%%GDATA_CTX + InLen], %%PLAIN_CIPH_LEN
 %endif
         vmovdqu64       %%AAD_HASHx, [%%GDATA_CTX + AadHash]
 
@@ -3040,8 +3040,8 @@
         ;; NOTE: partial block processing makes only sense for multi_call here.
         ;; Used for the update flow - if there was a previous partial
         ;; block fill the remaining bytes here.
-        PARTIAL_BLOCK %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
-                %%PLAIN_CYPH_LEN, %%DATA_OFFSET, %%AAD_HASHx, %%ENC_DEC, \
+        PARTIAL_BLOCK %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
+                %%PLAIN_CIPH_LEN, %%DATA_OFFSET, %%AAD_HASHx, %%ENC_DEC, \
                 %%IA0, %%IA1, %%IA2, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%MASKREG
 %endif
@@ -3054,10 +3054,10 @@
 %endif
 
         ;; Save the amount of data left to process in %%LENGTH
-        mov             %%LENGTH, %%PLAIN_CYPH_LEN
+        mov             %%LENGTH, %%PLAIN_CIPH_LEN
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; NOTE: %%DATA_OFFSET is zero in single_call case.
-        ;;      Consequently PLAIN_CYPH_LEN will never be zero after
+        ;;      Consequently PLAIN_CIPH_LEN will never be zero after
         ;;      %%DATA_OFFSET subtraction below.
         ;; There may be no more data if it was consumed in the partial block.
         sub             %%LENGTH, %%DATA_OFFSET
@@ -3090,7 +3090,7 @@
 %assign aesout_offset (STACK_LOCAL_OFFSET + (0 * 16))
 %assign data_in_out_offset 0
 
-        INITIAL_BLOCKS_16       %%PLAIN_CYPH_IN, %%CYPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
+        INITIAL_BLOCKS_16       %%PLAIN_CIPH_IN, %%CIPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
                                 no_ghash, %%CTR_BLOCKz, %%CTR_CHECK, %%ADDBE_4x4, %%ADDBE_1234, \
                                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, \
@@ -3103,7 +3103,7 @@
 %assign aesout_offset (STACK_LOCAL_OFFSET + (16 * 16))
 %assign data_in_out_offset (16 * 16)
 
-        INITIAL_BLOCKS_16       %%PLAIN_CYPH_IN, %%CYPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
+        INITIAL_BLOCKS_16       %%PLAIN_CIPH_IN, %%CIPH_PLAIN_OUT, %%GDATA_KEY, %%DATA_OFFSET, \
                                 no_ghash, %%CTR_BLOCKz, %%CTR_CHECK, %%ADDBE_4x4, %%ADDBE_1234, \
                                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, \
@@ -3124,7 +3124,7 @@
 %assign data_in_out_offset (0 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
 
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
@@ -3142,7 +3142,7 @@
 %assign data_in_out_offset (16 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
@@ -3160,7 +3160,7 @@
 %assign data_in_out_offset (32 * 16)
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (32 * 16))
 
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_16, aesout_offset, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
@@ -3214,7 +3214,7 @@
         add             DWORD(%%HASHK_PTR), (16 * 16)
 
         GCM_ENC_DEC_LAST \
-                %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
                 %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
@@ -3242,7 +3242,7 @@
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
 %assign data_in_out_offset (0 * 16)
 
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
@@ -3260,7 +3260,7 @@
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (16 * 16))
 %assign data_in_out_offset (16 * 16)
 
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_32, aesout_offset, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
@@ -3294,7 +3294,7 @@
         sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
 
         GCM_ENC_DEC_LAST \
-                %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
                 %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
@@ -3321,7 +3321,7 @@
 %assign ghashin_offset (STACK_LOCAL_OFFSET + (0 * 16))
 %assign data_in_out_offset (0 * 16)
 
-        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, \
+        GHASH_16_ENCRYPT_16_PARALLEL  %%GDATA_KEY, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, %%DATA_OFFSET, \
                 %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_48, aesout_offset, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3, \
@@ -3345,7 +3345,7 @@
         add             %%DATA_OFFSET, (16 * 16)
 
         GCM_ENC_DEC_LAST \
-                %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
                 HashKey_16, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
@@ -3369,8 +3369,8 @@
         ;; %%IA1 can be in the range from 0 to 16
 
         GCM_ENC_DEC_SMALL \
-                %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
-                %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
+                %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
                 %%LENGTH, %%IA1, %%CTR_BLOCKx, %%AAD_HASHx, %%INSTANCE_TYPE, \
                 %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
                 %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
@@ -3403,7 +3403,7 @@
         sub             DWORD(%%HASHK_PTR), DWORD(%%IA0)
 
         GCM_ENC_DEC_LAST \
-                %%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
                 %%DATA_OFFSET, %%LENGTH, %%CTR_BLOCKz, %%CTR_CHECK, \
                 %%HASHK_PTR, ghashin_offset, %%SHUF_MASK, \
                 %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
