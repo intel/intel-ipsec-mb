@@ -2953,7 +2953,10 @@
 %define %%IA5               rax
 %define %%IA6               rbx
 
+%ifidn __OUTPUT_FORMAT__, win64
 %define %%LENGTH            %%IA2
+%endif
+
 %define %%CTR_CHECK         %%IA3
 %define %%DATA_OFFSET       %%IA4
 %define %%HASHK_PTR         %%IA6
@@ -3051,7 +3054,13 @@
 %endif
 
         ;; Save the amount of data left to process in %%LENGTH
+%ifidn __OUTPUT_FORMAT__, win64
         mov             %%LENGTH, %%PLAIN_CIPH_LEN
+%else
+        ;; PLAIN_CIPH_LEN is a register on linux
+%define %%LENGTH %%PLAIN_CIPH_LEN        
+%endif
+
 %ifidn %%INSTANCE_TYPE, multi_call
         ;; NOTE: %%DATA_OFFSET is zero in single_call case.
         ;;      Consequently PLAIN_CIPH_LEN will never be zero after
