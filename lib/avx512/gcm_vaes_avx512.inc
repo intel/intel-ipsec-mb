@@ -3387,31 +3387,6 @@
 
         jmp             %%_ghash_done
 
-%%_message_below_equal_16_blocks:
-        ;; Determine how many blocks to process
-        ;; - process one additional block if there is a partial block
-        mov             DWORD(%%IA1), DWORD(%%LENGTH)
-        add             DWORD(%%IA1), 15
-        shr             DWORD(%%IA1), 4
-        ;; %%IA1 can be in the range from 0 to 16
-
-        GCM_ENC_DEC_SMALL \
-                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
-                %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
-                %%LENGTH, %%IA1, %%CTR_BLOCKx, %%AAD_HASHx, %%INSTANCE_TYPE, \
-                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
-                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
-                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11, \
-                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
-                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
-                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
-                %%IA0, %%IA3, %%MASKREG, %%SHUF_MASK
-
-%ifidn %%INSTANCE_TYPE, multi_call
-        vmovdqa64       XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx
-%endif
-        jmp     %%_ghash_done
-
 %%_message_below_32_blocks:
         ;; 32 > number of blocks > 16
 
@@ -3445,6 +3420,28 @@
         ;; save the last counter block
         vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 %endif
+        jmp             %%_ghash_done
+
+%%_message_below_equal_16_blocks:
+        ;; Determine how many blocks to process
+        ;; - process one additional block if there is a partial block
+        mov             DWORD(%%IA1), DWORD(%%LENGTH)
+        add             DWORD(%%IA1), 15
+        shr             DWORD(%%IA1), 4
+        ;; %%IA1 can be in the range from 0 to 16
+
+        GCM_ENC_DEC_SMALL \
+                %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
+                %%PLAIN_CIPH_LEN, %%ENC_DEC, %%DATA_OFFSET, \
+                %%LENGTH, %%IA1, %%CTR_BLOCKx, %%AAD_HASHx, %%INSTANCE_TYPE, \
+                %%ZTMP0,  %%ZTMP1,  %%ZTMP2,  %%ZTMP3,  \
+                %%ZTMP4,  %%ZTMP5,  %%ZTMP6,  %%ZTMP7,  \
+                %%ZTMP8,  %%ZTMP9,  %%ZTMP10, %%ZTMP11, \
+                %%ZTMP12, %%ZTMP13, %%ZTMP14, %%ZTMP15, \
+                %%ZTMP16, %%ZTMP17, %%ZTMP18, %%ZTMP19, \
+                %%ZTMP20, %%ZTMP21, %%ZTMP22, \
+                %%IA0, %%IA3, %%MASKREG, %%SHUF_MASK
+
         ;; fall through to exit
 
 %%_ghash_done:
