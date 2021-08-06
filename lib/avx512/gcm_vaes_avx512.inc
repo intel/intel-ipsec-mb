@@ -685,30 +685,26 @@
 ;;; Packs xmm register with data when data input is less or equal to 16 bytes
 ;;; Returns 0 if data has length 0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro READ_SMALL_DATA_INPUT    5
+%macro READ_SMALL_DATA_INPUT    6
 %define %%OUTPUT        %1 ; [out] xmm register
 %define %%INPUT         %2 ; [in] buffer pointer to read from
 %define %%LENGTH        %3 ; [in] number of bytes to read
 %define %%TMP1          %4 ; [clobbered]
-%define %%MASK          %5 ; [out] k1 to k7 register to store the partial block mask
+%define %%TMP2          %5 ; [clobbered]
+%define %%MASK          %6 ; [out] k1 to k7 register to store the partial block mask
 
-        cmp             %%LENGTH, 16
-        jge             %%_read_small_data_ge16
+        mov             DWORD(%%TMP2), 16
         lea             %%TMP1, [rel byte_len_to_mask_table]
+        cmp             %%LENGTH, %%TMP2
+        cmovb           %%TMP2, %%LENGTH
 %ifidn __OUTPUT_FORMAT__, win64
-        add             %%TMP1, %%LENGTH
-        add             %%TMP1, %%LENGTH
+        add             %%TMP1, %%TMP2
+        add             %%TMP1, %%TMP2
         kmovw           %%MASK, [%%TMP1]
 %else
-        kmovw           %%MASK, [%%TMP1 + %%LENGTH*2]
+        kmovw           %%MASK, [%%TMP1 + %%TMP2*2]
 %endif
         vmovdqu8        %%OUTPUT{%%MASK}{z}, [%%INPUT]
-        jmp             %%_read_small_data_end
-%%_read_small_data_ge16:
-        VX512LDR        %%OUTPUT, [%%INPUT]
-        mov             %%TMP1, 0xffff
-        kmovq           %%MASK, %%TMP1
-%%_read_small_data_end:
 %endmacro ; READ_SMALL_DATA_INPUT
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1010,13 +1006,14 @@
 %define %%LENGTH        %%DATA_OFFSET
 %define %%IA0           %%GPTMP1
 %define %%IA1           %%GPTMP2
+%define %%IA2           %%GPTMP0
 
         ;; if no partial block present then LENGTH/DATA_OFFSET will be set to zero
         mov             %%LENGTH, [%%GDATA_CTX + PBlockLen]
         or              %%LENGTH, %%LENGTH
         je              %%_partial_block_done           ;Leave Macro if no partial blocks
 
-        READ_SMALL_DATA_INPUT   %%XTMP0, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%IA0, %%MASKREG
+        READ_SMALL_DATA_INPUT   %%XTMP0, %%PLAIN_CIPH_IN, %%PLAIN_CIPH_LEN, %%IA0, %%IA2, %%MASKREG
 
         ;; XTMP1 = my_ctx_data.partial_block_enc_key
         vmovdqu64       %%XTMP1, [%%GDATA_CTX + PBlockEncKey]
@@ -1037,7 +1034,12 @@
 
         ;; Set %%IA1 to be the amount of data left in CIPH_PLAIN_IN after filling the block
         ;; Determine if partial block is not being filled and shift mask accordingly
+%ifidn __OUTPUT_FORMAT__, win64
+        mov             %%IA1, %%PLAIN_CIPH_LEN
+        add             %%IA1, %%LENGTH
+%else
         lea             %%IA1, [%%PLAIN_CIPH_LEN + %%LENGTH]
+%endif
         sub             %%IA1, 16
         jge             %%_no_extra_mask
         sub             %%IA0, %%IA1
@@ -3710,7 +3712,7 @@
         or              %%LENGTH, %%LENGTH
         je              %%_partial_block_done           ;Leave Macro if no partial blocks
 
-        READ_SMALL_DATA_INPUT   %%XTMP4, %%PLAIN_IN, %%PLAIN_LEN, %%IA0, %%MASKREG
+        READ_SMALL_DATA_INPUT   %%XTMP4, %%PLAIN_IN, %%PLAIN_LEN, %%IA0, %%IA1, %%MASKREG
 
         vmovdqu64       %%XTMP2, [%%GDATA_KEY + HashKey]
 
