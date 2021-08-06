@@ -1126,7 +1126,7 @@
 %define %%IA0                   %22 ; [clobbered] GP temporary
 %define %%IA1                   %23 ; [clobbered] GP temporary
 %define %%MASKREG               %24 ; [clobbered] mask register
-%define %%SHUFMASK              %25 ; [in] ZMM with BE/LE shuffle mask
+%define %%SHUFMASK              %25 ; [out] ZMM loaded with BE/LE shuffle mask
 
 %if %%NUM_BLOCKS == 1
         vmovdqa64       XWORD(%%SHUFMASK), [rel SHUF_MASK]
@@ -1489,7 +1489,7 @@
 %define %%IA0                   %27 ; [clobbered] GP temporary
 %define %%IA1                   %28 ; [clobbered] GP temporary
 %define %%MASKREG               %29 ; [clobbered] mask register
-%define %%SHUFMASK              %30 ; [in] ZMM with BE/LE shuffle mask
+%define %%SHUFMASK              %30 ; [clobbered] ZMM for BE/LE shuffle mask
 
         INITIAL_BLOCKS_PARTIAL_CIPHER \
                         %%GDATA_KEY, %%GDATA_CTX, %%CIPH_PLAIN_OUT, %%PLAIN_CIPH_IN, \
@@ -2861,7 +2861,7 @@
 %define %%IA0               %36 ; [clobbered] GP register
 %define %%IA1               %37 ; [clobbered] GP register
 %define %%MASKREG           %38 ; [clobbered] mask register
-%define %%SHUFMASK          %39 ; [in] ZMM with BE/LE shuffle mask
+%define %%SHUFMASK          %39 ; [clobbered] ZMM to be used for BE/LE shuffle mask
 
         cmp     DWORD(%%NUM_BLOCKS), 8
         je      %%_small_initial_num_blocks_is_8
@@ -2956,7 +2956,6 @@
 %ifidn __OUTPUT_FORMAT__, win64
 %define %%LENGTH            %%IA2
 %endif
-
 %define %%CTR_CHECK         %%IA3
 %define %%DATA_OFFSET       %%IA4
 %define %%HASHK_PTR         %%IA6
@@ -2965,7 +2964,7 @@
 %define %%CTR_BLOCKx            xmm2 ; hardcoded in GCM_INIT
 
 %define %%AAD_HASHz             zmm14
-%define %%AAD_HASHx             xmm14
+%define %%AAD_HASHx             xmm14 ; hardcoded in GCM_COMPLETE
 
 %define %%ZTMP0                 zmm0
 %define %%ZTMP1                 zmm3
@@ -3009,15 +3008,34 @@
 %assign big_loop_nblocks        48
 %assign big_loop_depth          32
 
-;;; Macro flow:
-;;; - for message size bigger than very_big_loop_nblocks process data
-;;;   with "very_big_loop" parameters
-;;; - for message size bigger than big_loop_nblocks process data
-;;;   with "big_loop" parameters
-;;; - calculate the number of 16byte blocks in the message
-;;; - process (number of 16byte blocks) mod 8
-;;;   '%%_initial_num_blocks_is_# .. %%_initial_blocks_encrypted'
-;;; - process 8 16 byte blocks at a time until all are done in %%_encrypt_by_8_new
+;;; Macro flow depending on packet size
+;;; - LENGTH <= 16 blocks
+;;;   - cipher followed by hashing (reduction)
+;;; - 16 blocks < LENGTH < 32 blocks
+;;;   - cipher 16 blocks
+;;;   - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
+;;; - 32 blocks < LENGTH < 48 blocks
+;;;   - cipher 2 x 16 blocks
+;;;   - hash 16 blocks
+;;;   - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
+;;; - LENGTH >= 48 blocks
+;;;   - cipher 2 x 16 blocks
+;;;   - while (data_to_cipher >= 48 blocks):
+;;;     - cipher 16 blocks & hash 16 blocks
+;;;     - cipher 16 blocks & hash 16 blocks
+;;;     - cipher 16 blocks & hash 16 blocks (reduction)
+;;;   - if (data_to_cipher >= 32 blocks):
+;;;     - cipher 16 blocks & hash 16 blocks
+;;;     - cipher 16 blocks & hash 16 blocks
+;;;     - hash 16 blocks (reduction)
+;;;     - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
+;;;   - elif (data_to_cipher >= 16 blocks):
+;;;     - cipher 16 blocks & hash 16 blocks
+;;;     - hash 16 blocks
+;;;     - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
+;;;   - else:
+;;;     - hash 16 blocks
+;;;     - cipher N blocks & hash 16 blocks, hash N blocks (reduction)
 
 %ifidn __OUTPUT_FORMAT__, win64
         cmp             %%PLAIN_CIPH_LEN, 0
@@ -3057,8 +3075,7 @@
 %ifidn __OUTPUT_FORMAT__, win64
         mov             %%LENGTH, %%PLAIN_CIPH_LEN
 %else
-        ;; PLAIN_CIPH_LEN is a register on linux
-%define %%LENGTH %%PLAIN_CIPH_LEN        
+%define %%LENGTH %%PLAIN_CIPH_LEN        ;; PLAIN_CIPH_LEN is a register on linux
 %endif
 
 %ifidn %%INSTANCE_TYPE, multi_call
