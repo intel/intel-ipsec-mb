@@ -2995,11 +2995,10 @@
 %define %%GL                    zmm25
 %define %%GM                    zmm26
 %define %%SHUF_MASK             zmm29
-%define %%CTR_BLOCK_SAVE        zmm28
 
 ;;; Unused in the small packet path
 %define %%ADDBE_4x4             zmm27
-%define %%ADDBE_1234            zmm28       ; conflicts with CTR_BLOCK_SAVE
+%define %%ADDBE_1234            zmm28
 
 %define %%MASKREG               k1
 
@@ -3092,9 +3091,7 @@
 
         vmovdqa64       %%SHUF_MASK, [rel SHUF_MASK]
         vmovdqa64       %%ADDBE_4x4, [rel ddq_addbe_4444]
-
-        ;; overwritten above by CTR_BLOCK_SAVE
-        vmovdqa64        %%ADDBE_1234, [rel ddq_addbe_1234]
+        vmovdqa64       %%ADDBE_1234, [rel ddq_addbe_1234]
 
         ;; start the pipeline
         ;; - 32 blocks aes-ctr
@@ -3247,10 +3244,8 @@
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
 %ifidn %%INSTANCE_TYPE, multi_call
-        ;; save the last counter block
-        vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+        vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 %endif
-
         jmp             %%_ghash_done
 
         ;; =====================================================
@@ -3329,8 +3324,7 @@
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
 %ifidn %%INSTANCE_TYPE, multi_call
-        ;; save the last counter block
-        vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+        vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 %endif
         jmp             %%_ghash_done
 
@@ -3381,10 +3375,8 @@
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
 %ifidn %%INSTANCE_TYPE, multi_call
-        ;; save the last counter block
-        vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+        vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 %endif
-
         jmp             %%_ghash_done
 
 %%_message_below_32_blocks:
@@ -3417,8 +3409,7 @@
                 %%ENC_DEC, %%AAD_HASHz, %%IA0, %%IA5, %%MASKREG, %%INSTANCE_TYPE
 
 %ifidn %%INSTANCE_TYPE, multi_call
-        ;; save the last counter block
-        vpshufb         XWORD(%%CTR_BLOCK_SAVE), %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
+        vpshufb         %%CTR_BLOCKx, %%CTR_BLOCKx, XWORD(%%SHUF_MASK)
 %endif
         jmp             %%_ghash_done
 
@@ -3446,7 +3437,8 @@
 
 %%_ghash_done:
 %ifidn %%INSTANCE_TYPE, multi_call
-        vmovdqu64       [%%GDATA_CTX + CurCount], XWORD(%%CTR_BLOCK_SAVE)
+        ;; save the last counter block
+        vmovdqu64       [%%GDATA_CTX + CurCount], %%CTR_BLOCKx
 %endif
         vmovdqu64       [%%GDATA_CTX + AadHash], %%AAD_HASHx
 %%_enc_dec_done:
