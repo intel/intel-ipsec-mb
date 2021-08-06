@@ -45,13 +45,13 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 
+%ifndef AES_ECB_ENC_256
+%ifndef AES_ECB_ENC_192
 %ifndef AES_ECB_ENC_128
 %define AES_ECB_ENC_128 aes_ecb_enc_128_sse
-%define AES_ECB_ENC_192 aes_ecb_enc_192_sse
-%define AES_ECB_ENC_256 aes_ecb_enc_256_sse
 %define AES_ECB_DEC_128 aes_ecb_dec_128_sse
-%define AES_ECB_DEC_192 aes_ecb_dec_192_sse
-%define AES_ECB_DEC_256 aes_ecb_dec_256_sse
+%endif
+%endif
 %endif
 
 %ifdef LINUX
@@ -618,6 +618,10 @@ section .text
 
 %endmacro
 
+;;
+;; AES-ECB 128 functions
+;;
+%ifdef AES_ECB_ENC_128
 align 16
 MKGLOBAL(AES_ECB_ENC_128,function,internal)
 AES_ECB_ENC_128:
@@ -625,22 +629,22 @@ AES_ECB_ENC_128:
         AES_ECB 10, ENC
 
 align 16
-MKGLOBAL(AES_ECB_ENC_192,function,internal)
-AES_ECB_ENC_192:
-
-        AES_ECB 12, ENC
-
-align 16
-MKGLOBAL(AES_ECB_ENC_256,function,internal)
-AES_ECB_ENC_256:
-
-        AES_ECB 14, ENC
-
-align 16
 MKGLOBAL(AES_ECB_DEC_128,function,internal)
 AES_ECB_DEC_128:
 
         AES_ECB 10, DEC
+
+%endif
+
+;;
+;; AES-ECB 192 functions
+;;
+%ifdef AES_ECB_ENC_192
+align 16
+MKGLOBAL(AES_ECB_ENC_192,function,internal)
+AES_ECB_ENC_192:
+
+        AES_ECB 12, ENC
 
 align 16
 MKGLOBAL(AES_ECB_DEC_192,function,internal)
@@ -648,11 +652,25 @@ AES_ECB_DEC_192:
 
         AES_ECB 12, DEC
 
+%endif
+
+;;
+;; AES-ECB 256 functions
+;;
+%ifdef AES_ECB_ENC_256
+align 16
+MKGLOBAL(AES_ECB_ENC_256,function,internal)
+AES_ECB_ENC_256:
+
+        AES_ECB 14, ENC
+
 align 16
 MKGLOBAL(AES_ECB_DEC_256,function,internal)
 AES_ECB_DEC_256:
 
         AES_ECB 14, DEC
+
+%endif
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

@@ -1,5 +1,5 @@
 ;;
-;; Copyright (c) 2019-2021, Intel Corporation
+;; Copyright (c) 2021, Intel Corporation
 ;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions are met:
@@ -25,11 +25,9 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-%include "include/aesni_emu.inc"
-%define AES_ECB_ENC_128 aes_ecb_enc_128_sse_no_aesni
-%define AES_ECB_ENC_192 aes_ecb_enc_192_sse_no_aesni
-%define AES_ECB_ENC_256 aes_ecb_enc_256_sse_no_aesni
-%define AES_ECB_DEC_128 aes_ecb_dec_128_sse_no_aesni
-%define AES_ECB_DEC_192 aes_ecb_dec_192_sse_no_aesni
-%define AES_ECB_DEC_256 aes_ecb_dec_256_sse_no_aesni
+; routine to do AES ECB 192 encrypt/decrypt on 16n bytes doing AES by 4
+
+%define AES_ECB_ENC_192 aes_ecb_enc_192_sse
+%define AES_ECB_DEC_192 aes_ecb_dec_192_sse
+
 %include "sse/aes128_ecb_by4_sse.asm"
