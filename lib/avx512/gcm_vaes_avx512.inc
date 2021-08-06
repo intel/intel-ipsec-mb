@@ -978,7 +978,7 @@
 %define %%CIPH_PLAIN_OUT        %3 ; [in] output buffer
 %define %%PLAIN_CIPH_IN         %4 ; [in] input buffer
 %define %%PLAIN_CIPH_LEN        %5 ; [in] buffer length
-%define %%DATA_OFFSET           %6 ; [in/out] data offset (gets updated)
+%define %%DATA_OFFSET           %6 ; [out] data offset (gets set)
 %define %%AAD_HASH              %7 ; [out] updated GHASH value
 %define %%ENC_DEC               %8 ; [in] cipher direction
 %define %%GPTMP0                %9 ; [clobbered] GP temporary register
@@ -1007,10 +1007,11 @@
 %define %%XTMP8 XWORD(%%ZTMP8)
 %define %%XTMP9 XWORD(%%ZTMP9)
 
-%define %%LENGTH        %%GPTMP0
+%define %%LENGTH        %%DATA_OFFSET
 %define %%IA0           %%GPTMP1
 %define %%IA1           %%GPTMP2
 
+        ;; if no partial block present then LENGTH/DATA_OFFSET will be set to zero
         mov             %%LENGTH, [%%GDATA_CTX + PBlockLen]
         or              %%LENGTH, %%LENGTH
         je              %%_partial_block_done           ;Leave Macro if no partial blocks
@@ -1036,8 +1037,7 @@
 
         ;; Set %%IA1 to be the amount of data left in CIPH_PLAIN_IN after filling the block
         ;; Determine if partial block is not being filled and shift mask accordingly
-        mov             %%IA1, %%PLAIN_CIPH_LEN
-        add             %%IA1, %%LENGTH
+        lea             %%IA1, [%%PLAIN_CIPH_LEN + %%LENGTH]
         sub             %%IA1, 16
         jge             %%_no_extra_mask
         sub             %%IA0, %%IA1
@@ -1065,7 +1065,7 @@
 
         mov             qword [%%GDATA_CTX + PBlockLen], 0
 
-        ;;  Set %%IA1 to be the number of bytes to write out
+        ;;  Set %%LENGTH to be the number of bytes to write out
         mov             %%IA0, %%LENGTH
         mov             %%LENGTH, 16
         sub             %%LENGTH, %%IA0
@@ -1092,8 +1092,7 @@
         vpshufb         %%XTMP1, [rel SHUF_MASK]
         vpshufb         %%XTMP1, %%XTMP3
 %endif
-        vmovdqu8        [%%CIPH_PLAIN_OUT + %%DATA_OFFSET]{%%MASKREG}, %%XTMP1
-        add             %%DATA_OFFSET, %%LENGTH
+        vmovdqu8        [%%CIPH_PLAIN_OUT]{%%MASKREG}, %%XTMP1
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK
 
@@ -3043,8 +3042,6 @@
 %endif
         je              %%_enc_dec_done
 
-        xor             %%DATA_OFFSET, %%DATA_OFFSET
-
         ;; Update length of data processed
 %ifidn __OUTPUT_FORMAT__, win64
         mov             %%IA0, %%PLAIN_CIPH_LEN
@@ -3062,6 +3059,8 @@
                 %%PLAIN_CIPH_LEN, %%DATA_OFFSET, %%AAD_HASHx, %%ENC_DEC, \
                 %%IA0, %%IA1, %%IA2, %%ZTMP0, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, \
                 %%ZTMP5, %%ZTMP6, %%ZTMP7, %%ZTMP8, %%ZTMP9, %%MASKREG
+%else
+        xor             %%DATA_OFFSET, %%DATA_OFFSET
 %endif
 
 %ifidn %%INSTANCE_TYPE, single_call
