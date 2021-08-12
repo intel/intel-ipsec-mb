@@ -153,17 +153,14 @@ class Variant:
         """Run perf app and store output"""
         try:
             self.cmd_output = \
-                subprocess.run(self.cmd.split(), \
+                subprocess.run(self.cmd, \
                                stdout=subprocess.PIPE, \
                                stderr=subprocess.PIPE, \
-                               env=ENVS, check=True).stdout.decode('utf-8')
+                               shell=True, env=ENVS, \
+                               check=True).stdout.decode('utf-8')
             return True
-        except:
-            # on error - re-run and store stderr output
-            self.cmd_output = \
-                subprocess.run(self.cmd.split(), \
-                               stderr=subprocess.PIPE, \
-                               env=ENVS).stderr.decode('utf-8')
+        except subprocess.CalledProcessError as e:
+            self.cmd_output = e.stderr.decode('utf-8')
             return False
 
     def set_core(self, core):
@@ -271,11 +268,17 @@ def get_info():
     hash_algos = None
     aead_algos = None
 
-    cmd = [PERF_APP, '--print-info'.format(type) ]
+    cmd = PERF_APP + ' --print-info'
 
-    output = subprocess.run(cmd, stdout=subprocess.PIPE, \
-                            stderr=subprocess.PIPE, \
-                            env=ENVS, check=True).stdout.decode('utf-8')
+    try:
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, \
+                             stderr=subprocess.STDOUT, \
+                             env=ENVS, shell=True, check=True)
+        output = res.stdout.decode('utf-8')
+    except subprocess.CalledProcessError as e:
+        print("Error (" + str(e.returncode) + ")")
+        print(e.output.decode('utf-8'))
+        sys.exit(1)
 
     lines = output.rstrip().split('\n')
     try:
