@@ -732,25 +732,25 @@ align 64
 %define %%KMASK2      %23 ; [clobbered] Temporary K mask
 
 %if (%0 == 17)
-    vmovdqu64   [pKS + arg3*4], %%DATA64B_L0
-    vmovdqu64   [pKS + arg3*4 + 64], %%DATA64B_L1
-    vmovdqu64   [pKS + arg3*4 + 2*64], %%DATA64B_L2
-    vmovdqu64   [pKS + arg3*4 + 3*64], %%DATA64B_L3
+    vmovdqu64   [pKS + %%KEY_OFF*4], %%DATA64B_L0
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 64], %%DATA64B_L1
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 2*64], %%DATA64B_L2
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 3*64], %%DATA64B_L3
 
-    vmovdqu64   [pKS + arg3*4 + 512], %%DATA64B_L4
-    vmovdqu64   [pKS + arg3*4 + 512 + 64], %%DATA64B_L5
-    vmovdqu64   [pKS + arg3*4 + 512 + 2*64], %%DATA64B_L6
-    vmovdqu64   [pKS + arg3*4 + 512 + 3*64], %%DATA64B_L7
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512], %%DATA64B_L4
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 64], %%DATA64B_L5
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 2*64], %%DATA64B_L6
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 3*64], %%DATA64B_L7
 
-    vmovdqu64   [pKS + arg3*4 + 512*2], %%DATA64B_L8
-    vmovdqu64   [pKS + arg3*4 + 512*2 + 64], %%DATA64B_L9
-    vmovdqu64   [pKS + arg3*4 + 512*2 + 64*2], %%DATA64B_L10
-    vmovdqu64   [pKS + arg3*4 + 512*2 + 64*3], %%DATA64B_L11
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2], %%DATA64B_L8
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64], %%DATA64B_L9
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64*2], %%DATA64B_L10
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64*3], %%DATA64B_L11
 
-    vmovdqu64   [pKS + arg3*4 + 512*3], %%DATA64B_L12
-    vmovdqu64   [pKS + arg3*4 + 512*3 + 64], %%DATA64B_L13
-    vmovdqu64   [pKS + arg3*4 + 512*3 + 64*2], %%DATA64B_L14
-    vmovdqu64   [pKS + arg3*4 + 512*3 + 64*3], %%DATA64B_L15
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3], %%DATA64B_L12
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64], %%DATA64B_L13
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64*2], %%DATA64B_L14
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64*3], %%DATA64B_L15
 %else
     pext        DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_0_4_8_12]
     kmovq       %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
@@ -760,10 +760,10 @@ align 64
     vpalignr    %%DATA64B_L2{%%KMASK1}, %%DATA64B_L2, %%DATA64B_L1, 8
     vpalignr    %%DATA64B_L1{%%KMASK1}, %%DATA64B_L1, %%DATA64B_L0, 8
     vpalignr    %%DATA64B_L0{%%KMASK1}, %%DATA64B_L0, %%DATA64B_L3, 8
-    vmovdqu64   [pKS + arg3*4]{%%KMASK2}, %%DATA64B_L0
-    vmovdqu64   [pKS + arg3*4 + 64], %%DATA64B_L1
-    vmovdqu64   [pKS + arg3*4 + 2*64], %%DATA64B_L2
-    vmovdqu64   [pKS + arg3*4 + 3*64], %%DATA64B_L3
+    vmovdqu64   [pKS + %%KEY_OFF*4]{%%KMASK2}, %%DATA64B_L0
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 64], %%DATA64B_L1
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 2*64], %%DATA64B_L2
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 3*64], %%DATA64B_L3
 
     pext        DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_1_5_9_13]
     kmovq       %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
@@ -772,10 +772,10 @@ align 64
     vpalignr    %%DATA64B_L6{%%KMASK1}, %%DATA64B_L6, %%DATA64B_L5, 8
     vpalignr    %%DATA64B_L5{%%KMASK1}, %%DATA64B_L5, %%DATA64B_L4, 8
     vpalignr    %%DATA64B_L4{%%KMASK1}, %%DATA64B_L4, %%DATA64B_L7, 8
-    vmovdqu64   [pKS + arg3*4 + 512]{%%KMASK2}, %%DATA64B_L4
-    vmovdqu64   [pKS + arg3*4 + 512 + 64], %%DATA64B_L5
-    vmovdqu64   [pKS + arg3*4 + 512 + 64*2], %%DATA64B_L6
-    vmovdqu64   [pKS + arg3*4 + 512 + 64*3], %%DATA64B_L7
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512]{%%KMASK2}, %%DATA64B_L4
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 64], %%DATA64B_L5
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 64*2], %%DATA64B_L6
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 64*3], %%DATA64B_L7
 
     pext        DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_2_6_10_14]
     kmovq       %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
@@ -784,10 +784,10 @@ align 64
     vpalignr    %%DATA64B_L10{%%KMASK1}, %%DATA64B_L10, %%DATA64B_L9, 8
     vpalignr    %%DATA64B_L9{%%KMASK1}, %%DATA64B_L9, %%DATA64B_L8, 8
     vpalignr    %%DATA64B_L8{%%KMASK1}, %%DATA64B_L8, %%DATA64B_L11, 8
-    vmovdqu64   [pKS + arg3*4 + 512*2]{%%KMASK2}, %%DATA64B_L8
-    vmovdqu64   [pKS + arg3*4 + 512*2 + 64], %%DATA64B_L9
-    vmovdqu64   [pKS + arg3*4 + 512*2 + 64*2], %%DATA64B_L10
-    vmovdqu64   [pKS + arg3*4 + 512*2 + 64*3], %%DATA64B_L11
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2]{%%KMASK2}, %%DATA64B_L8
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64], %%DATA64B_L9
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64*2], %%DATA64B_L10
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64*3], %%DATA64B_L11
 
     pext        DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_3_7_11_15]
     kmovq       %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
@@ -796,10 +796,10 @@ align 64
     vpalignr    %%DATA64B_L14{%%KMASK1}, %%DATA64B_L14, %%DATA64B_L13, 8
     vpalignr    %%DATA64B_L13{%%KMASK1}, %%DATA64B_L13, %%DATA64B_L12, 8
     vpalignr    %%DATA64B_L12{%%KMASK1}, %%DATA64B_L12, %%DATA64B_L15, 8
-    vmovdqu64   [pKS + arg3*4 + 512*3]{%%KMASK2}, %%DATA64B_L12
-    vmovdqu64   [pKS + arg3*4 + 512*3 + 64], %%DATA64B_L13
-    vmovdqu64   [pKS + arg3*4 + 512*3 + 64*2], %%DATA64B_L14
-    vmovdqu64   [pKS + arg3*4 + 512*3 + 64*3], %%DATA64B_L15
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3]{%%KMASK2}, %%DATA64B_L12
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64], %%DATA64B_L13
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64*2], %%DATA64B_L14
+    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64*3], %%DATA64B_L15
 %endif
 %endmacro
 
@@ -1109,14 +1109,14 @@ ZUC256_INIT:
 ; Generate N*4 bytes of keystream
 ; for 16 buffers (where N is number of rounds)
 ;
-%macro KEYGEN_16_AVX512 2-3
+%macro KEYGEN_16_AVX512 3-4
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
 %define %%STORE_SINGLE  %2 ; [in] If 1, KS will be stored continuosly in a single buffer
-%define %%LANE_MASK     %3 ; [in] Lane mask with lanes to generate all keystream words
+%define %%KEY_OFF       %3 ; [in] Offset to start writing Keystream
+%define %%LANE_MASK     %4 ; [in] Lane mask with lanes to generate all keystream words
 
     %define     pState  arg1
     %define     pKS     arg2
-    %define     keyOff  arg3
 
 %define         %%X0    zmm10
 %define         %%X1    zmm11
@@ -1135,7 +1135,7 @@ ZUC256_INIT:
     mov         r10d, 0xAAAAAAAA
     kmovd       k1, r10d
 
-%if (%0 == 3)
+%if (%0 == 4)
     kmovd       k2, DWORD(%%LANE_MASK)
     knotd       k4, k2
     mov         r10d, 0x0000FFFF
@@ -1211,20 +1211,20 @@ ZUC256_INIT:
                     zmm0, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
                     zmm8, zmm9
 
-%if (%0 == 3)
+%if (%0 == 4)
     lea         r12, [rel alignr_mask]
     lea         r13, [rel mov_mask]
     store_kstr16 zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
-                 zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, keyOff, \
+                 zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, %%KEY_OFF, \
                  %%LANE_MASK, r12, r13, r10, k3, k5
 %else
     store_kstr16 zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
-                 zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, keyOff
+                 zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, %%KEY_OFF
 %endif
 %endif ;; %%STORE_SINGLE == 1
 
    ; Reorder LFSR registers
-%if (%0 == 3)
+%if (%0 == 4)
     REORDER_LFSR rax, %%NUM_ROUNDS, k2
 %if (%%NUM_ROUNDS >= 2)
     REORDER_LFSR rax, (%%NUM_ROUNDS - 2), k4 ; 2 less rounds for "old" buffers
@@ -1244,7 +1244,7 @@ ZUC256_INIT:
 MKGLOBAL(ZUC_KEYGEN64B_16,function,internal)
 ZUC_KEYGEN64B_16:
     endbranch64
-    KEYGEN_16_AVX512 16, 0
+    KEYGEN_16_AVX512 16, 0, arg3
 
     ret
 
@@ -1256,7 +1256,7 @@ ZUC_KEYGEN64B_16:
 MKGLOBAL(ZUC_KEYGEN64B_SKIP8_16,function,internal)
 ZUC_KEYGEN64B_SKIP8_16:
     endbranch64
-    KEYGEN_16_AVX512 16, 0, arg4
+    KEYGEN_16_AVX512 16, 0, arg3, arg4
 
     ret
 
@@ -1267,7 +1267,7 @@ ZUC_KEYGEN64B_SKIP8_16:
 MKGLOBAL(ZUC_KEYGEN8B_16,function,internal)
 ZUC_KEYGEN8B_16:
     endbranch64
-    KEYGEN_16_AVX512 2, 0
+    KEYGEN_16_AVX512 2, 0, arg3
 
     ret
 
@@ -1278,13 +1278,14 @@ ZUC_KEYGEN8B_16:
 MKGLOBAL(ZUC_KEYGEN4B_16,function,internal)
 ZUC_KEYGEN4B_16:
     endbranch64
-    KEYGEN_16_AVX512 1, 1, arg3
+    KEYGEN_16_AVX512 1, 1, 0, arg3
 
     ret
 
-%macro KEYGEN_VAR_16_AVX512 1-2
+%macro KEYGEN_VAR_16_AVX512 2-3
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds (GP dowrd register)
-%define %%LANE_MASK     %2 ; [in] Lane mask with lanes to generate full keystream (rest 2 words less)
+%define %%KEY_OFF       %2 ; [in] Offset to start writing Keystream
+%define %%LANE_MASK     %3 ; [in] Lane mask with lanes to generate full keystream (rest 2 words less)
 
     cmp     %%NUM_ROUNDS, 16
     je      %%_num_rounds_is_16
@@ -1329,10 +1330,10 @@ ZUC_KEYGEN4B_16:
 %assign I 1
 %rep 16
 APPEND(%%_num_rounds_is_,I):
-%if (%0 == 2)
-    KEYGEN_16_AVX512 I, 0, %%LANE_MASK
+%if (%0 == 3)
+    KEYGEN_16_AVX512 I, 0, %%KEY_OFF, %%LANE_MASK
 %else
-    KEYGEN_16_AVX512 I, 0
+    KEYGEN_16_AVX512 I, 0, %%KEY_OFF
 %endif
     jmp     %%_done
 
@@ -1351,7 +1352,7 @@ MKGLOBAL(ZUC_KEYGEN_16,function,internal)
 ZUC_KEYGEN_16:
     endbranch64
 
-    KEYGEN_VAR_16_AVX512 arg4
+    KEYGEN_VAR_16_AVX512 arg4, arg3
 
     ret
 
@@ -1371,7 +1372,7 @@ ZUC_KEYGEN_SKIP8_16:
     endbranch64
 
     mov     r10d, arg5
-    KEYGEN_VAR_16_AVX512 r10d, arg4
+    KEYGEN_VAR_16_AVX512 r10d, arg3, arg4
 
     ret
 
