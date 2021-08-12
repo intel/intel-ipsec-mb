@@ -53,6 +53,7 @@
 %define ZUC_KEYGEN_16      asm_ZucGenKeystream_16_avx512
 %define ZUC_KEYGEN64B_16   asm_ZucGenKeystream64B_16_avx512
 %define ZUC_ROUND64B       asm_Eia3Round64BAVX512_16
+%define ZUC_EIA3_64B       asm_Eia3_64B_AVX512_16
 %endif
 
 section .data
@@ -84,6 +85,8 @@ extern asm_ZucGenKeystream64B_16_avx512
 extern asm_ZucGenKeystream64B_16_gfni_avx512
 extern asm_Eia3Round64BAVX512_16
 extern asm_Eia3Round64B_16_VPCLMUL
+extern asm_Eia3_64B_AVX512_16
+extern asm_Eia3_64B_AVX512_16_VPCLMUL
 
 %ifdef LINUX
 %define arg1    rdi
@@ -571,7 +574,7 @@ FLUSH_JOB_ZUC256_EEA3:
 %define %%KEY_SIZE      %2 ; [constant] Key size (16 or 32)
 %define %%L             %3 ; [clobbered] Temporary GP register (dword)
 %define %%REMAIN_BITS   %4 ; [clobbered] Temporary GP register (dword)
-%define %%TMP           %5 ; [clobbered] Temporary GP register (dword)
+%define %%TMP           %5 ; [clobbered] Temporary GP register
 
         ; Find minimum length
         vmovdqa xmm0, [%%OOO + _zuc_lens]
@@ -579,9 +582,9 @@ FLUSH_JOB_ZUC256_EEA3:
         vmovdqa xmm1, [%%OOO + _zuc_lens + 16]
         vphminposuw xmm1, xmm1
         vpextrw %%REMAIN_BITS, xmm0, 0
-        vpextrw %%TMP, xmm1, 0
-        cmp     %%TMP, %%REMAIN_BITS
-        cmovbe  %%REMAIN_BITS, %%TMP
+        vpextrw DWORD(%%TMP), xmm1, 0
+        cmp     DWORD(%%TMP), %%REMAIN_BITS
+        cmovbe  %%REMAIN_BITS, DWORD(%%TMP)
 
         ; Get number of KS 32-bit words to generate ([length/32] + 2))
         lea     %%L, [%%REMAIN_BITS + 31 + (2 << 5)]
@@ -653,20 +656,29 @@ FLUSH_JOB_ZUC256_EEA3:
 
 %%_above_eq_16_loop:
 
-        ; Generate next 16 KS words
+        ; Generate next 16 KS words and digest 64 bytes of data
+%ifndef LINUX
+        ;; 40 bytes for 5 parameters
+        sub     rsp, 40
+%endif
         lea     arg1, [%%OOO + _zuc_state]
         lea     arg2, [%%OOO + _zuc_args_KS]
-        mov     arg3, 64 ; offset = 64
-        call    ZUC_KEYGEN64B_16
+        lea     arg3, [%%OOO + _zuc_args_digest]
+        lea     arg4, [%%OOO + _zuc_args_in]
+%ifdef LINUX
+        lea     arg5, [%%OOO + _zuc_lens]
+%else
+        lea     %%TMP, [%%OOO + _zuc_lens]
+        mov     [rsp + 32], %%TMP
+%endif
 
+        call    ZUC_EIA3_64B
+
+%ifndef LINUX
+        ;; 40 bytes for 5 parameters
+        add     rsp, 40
+%endif
         sub     %%L, 16
-
-        ; Digest 64 bytes of data
-        lea     arg1, [%%OOO + _zuc_args_digest]
-        lea     arg2, [%%OOO + _zuc_args_KS]
-        lea     arg3, [%%OOO + _zuc_args_in]
-        lea     arg4, [%%OOO + _zuc_lens]
-        call    ZUC_ROUND64B
 
         sub     %%REMAIN_BITS, 64*8
         jmp     %%_loop
@@ -828,7 +840,7 @@ FLUSH_JOB_ZUC256_EEA3:
 
 %endif ;; %%KEY_SIZE == 128
 
-        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, DWORD(tmp), DWORD(tmp2), DWORD(tmp3)
+        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, DWORD(tmp), DWORD(tmp2), tmp3
 
         mov     state, [rsp + _gpr_save + 8*8]
         mov     job,   [rsp + _gpr_save + 8*9]
@@ -1015,7 +1027,7 @@ FLUSH_JOB_ZUC256_EEA3:
 %endif ;; %%KEY_SIZE == 128
 
 %%skip_init_flush_eia3:
-        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, DWORD(tmp), DWORD(tmp2), DWORD(tmp4)
+        ZUC_EIA3_16_BUFFER r12, %%KEY_SIZE, DWORD(tmp), DWORD(tmp2), tmp4
 
         mov     state, [rsp + _gpr_save + 8*8]
 

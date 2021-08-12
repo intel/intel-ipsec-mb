@@ -36,7 +36,7 @@
 %define APPEND3(a,b,c) a %+ b %+ c
 
 %ifndef CIPHER_16
-%define USE_GFNI 0
+%define USE_GFNI_VAES_VPCLMUL 0
 %define CIPHER_16 asm_ZucCipher_16_avx512
 %define ZUC128_INIT asm_ZucInitialization_16_avx512
 %define ZUC256_INIT asm_Zuc256Initialization_16_avx512
@@ -50,6 +50,7 @@
 %define ZUC_KEYGEN8B_SKIP8_16 asm_ZucGenKeystream8B_16_skip8_avx512
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
 %define ZUC_ROUND64B_16 asm_Eia3Round64BAVX512_16
+%define ZUC_EIA3_64B asm_Eia3_64B_AVX512_16
 %endif
 
 section .data
@@ -366,11 +367,13 @@ align 64
 %define arg2 rsi
 %define arg3 rdx
 %define arg4 rcx
+%define arg5 r8
 %else
 %define arg1 rcx
 %define arg2 rdx
 %define arg3 r8
 %define arg4 r9
+%define arg5 [rsp + 40]
 %endif
 
 %define OFS_R1  (16*(4*16))
@@ -587,7 +590,7 @@ align 64
         vmovdqa64   %%LFSR_0,  [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]
 %endif
 
-%if USE_GFNI == 1
+%if USE_GFNI_VAES_VPCLMUL == 1
         vpsrld  %%LFSR_15, 15
         vpslld  %%LFSR_14, 16
         vpslld  %%LFSR_9, 1
@@ -599,7 +602,7 @@ align 64
         vpslld  %%LFSR_0, 1
         vpshldd %%X3, %%LFSR_2, %%LFSR_0, 16
 %endif
-%else ; USE_GFNI == 1
+%else ; USE_GFNI_VAES_VPCLMUL == 1
     vpxorq      %%ZTMP, %%ZTMP
     vpslld      %%LFSR_15, 1
     vpblendmw   %%ZTMP{%%BLEND_KMASK}, %%LFSR_14, %%ZTMP
@@ -615,7 +618,7 @@ align 64
     vpsrld      %%LFSR_0, 15
     vporq       %%X3, %%LFSR_2, %%LFSR_0 ; Store BRC_X3 in ZMM register
 %endif ; %0 == 17
-%endif ; USE_GFNI == 1
+%endif ; USE_GFNI_VAES_VPCLMUL == 1
 %endmacro
 
 ;
@@ -651,7 +654,7 @@ align 64
     vpaddd      %%W1, %%R1, %%X1    ; W1 = F_R1 + BRC_X1
     vpxorq      %%W2, %%R2, %%X2    ; W2 = F_R2 ^ BRC_X2
 
-%if USE_GFNI == 1
+%if USE_GFNI_VAES_VPCLMUL == 1
     vpshldd     %%ZTMP1, %%W1, %%W2, 16
     vpshldd     %%ZTMP2, %%W2, %%W1, 16
 %else
@@ -691,8 +694,8 @@ align 64
     vshufpd     %%ZTMP4, %%ZTMP2, %%ZTMP1, 0xAA ; All S1 input values
 
     ; Compute S0 and S1 values
-    S0_comput_AVX512  %%ZTMP3, %%ZTMP1, %%ZTMP2, USE_GFNI
-    S1_comput_AVX512  %%ZTMP4, %%ZTMP1, %%ZTMP2, %%ZTMP5, %%ZTMP6, USE_GFNI
+    S0_comput_AVX512  %%ZTMP3, %%ZTMP1, %%ZTMP2, USE_GFNI_VAES_VPCLMUL
+    S1_comput_AVX512  %%ZTMP4, %%ZTMP1, %%ZTMP2, %%ZTMP5, %%ZTMP6, USE_GFNI_VAES_VPCLMUL
 
     ; Need to shuffle back %%ZTMP1 & %%ZTMP2 before storing output
     ; (revert what was done before S0 and S1 computations)
@@ -706,51 +709,52 @@ align 64
 ;
 ;   store_kstr16()
 ;
-%macro  store_kstr16 17-23
-%define %%DATA64B_L0  %1  ; [in] 64 bytes of keystream for lane 0
-%define %%DATA64B_L1  %2  ; [in] 64 bytes of keystream for lane 1
-%define %%DATA64B_L2  %3  ; [in] 64 bytes of keystream for lane 2
-%define %%DATA64B_L3  %4  ; [in] 64 bytes of keystream for lane 3
-%define %%DATA64B_L4  %5  ; [in] 64 bytes of keystream for lane 4
-%define %%DATA64B_L5  %6  ; [in] 64 bytes of keystream for lane 5
-%define %%DATA64B_L6  %7  ; [in] 64 bytes of keystream for lane 6
-%define %%DATA64B_L7  %8  ; [in] 64 bytes of keystream for lane 7
-%define %%DATA64B_L8  %9  ; [in] 64 bytes of keystream for lane 8
-%define %%DATA64B_L9  %10 ; [in] 64 bytes of keystream for lane 9
-%define %%DATA64B_L10 %11 ; [in] 64 bytes of keystream for lane 10
-%define %%DATA64B_L11 %12 ; [in] 64 bytes of keystream for lane 11
-%define %%DATA64B_L12 %13 ; [in] 64 bytes of keystream for lane 12
-%define %%DATA64B_L13 %14 ; [in] 64 bytes of keystream for lane 13
-%define %%DATA64B_L14 %15 ; [in] 64 bytes of keystream for lane 14
-%define %%DATA64B_L15 %16 ; [in] 64 bytes of keystream for lane 15
-%define %%KEY_OFF     %17 ; [in] Offset to start writing Keystream
-%define %%LANE_MASK   %18 ; [in] Lane mask with lanes to generate all keystream words
-%define %%ALIGN_MASK  %19 ; [in] Address with alignr masks
-%define %%MOV_MASK    %20 ; [in] Address with move masks
-%define %%TMP         %21 ; [in] Temporary GP register
-%define %%KMASK1      %22 ; [clobbered] Temporary K mask
-%define %%KMASK2      %23 ; [clobbered] Temporary K mask
+%macro  store_kstr16 18-24
+%define %%KS          %1  ; [in] Pointer to keystream
+%define %%DATA64B_L0  %2  ; [in] 64 bytes of keystream for lane 0
+%define %%DATA64B_L1  %3  ; [in] 64 bytes of keystream for lane 1
+%define %%DATA64B_L2  %4  ; [in] 64 bytes of keystream for lane 2
+%define %%DATA64B_L3  %5  ; [in] 64 bytes of keystream for lane 3
+%define %%DATA64B_L4  %6  ; [in] 64 bytes of keystream for lane 4
+%define %%DATA64B_L5  %7  ; [in] 64 bytes of keystream for lane 5
+%define %%DATA64B_L6  %8  ; [in] 64 bytes of keystream for lane 6
+%define %%DATA64B_L7  %9  ; [in] 64 bytes of keystream for lane 7
+%define %%DATA64B_L8  %10 ; [in] 64 bytes of keystream for lane 8
+%define %%DATA64B_L9  %11 ; [in] 64 bytes of keystream for lane 9
+%define %%DATA64B_L10 %12 ; [in] 64 bytes of keystream for lane 10
+%define %%DATA64B_L11 %13 ; [in] 64 bytes of keystream for lane 11
+%define %%DATA64B_L12 %14 ; [in] 64 bytes of keystream for lane 12
+%define %%DATA64B_L13 %15 ; [in] 64 bytes of keystream for lane 13
+%define %%DATA64B_L14 %16 ; [in] 64 bytes of keystream for lane 14
+%define %%DATA64B_L15 %17 ; [in] 64 bytes of keystream for lane 15
+%define %%KEY_OFF     %18 ; [in] Offset to start writing Keystream
+%define %%LANE_MASK   %19 ; [in] Lane mask with lanes to generate all keystream words
+%define %%ALIGN_MASK  %20 ; [in] Address with alignr masks
+%define %%MOV_MASK    %21 ; [in] Address with move masks
+%define %%TMP         %22 ; [in] Temporary GP register
+%define %%KMASK1      %23 ; [clobbered] Temporary K mask
+%define %%KMASK2      %24 ; [clobbered] Temporary K mask
 
-%if (%0 == 17)
-    vmovdqu64   [pKS + %%KEY_OFF*4], %%DATA64B_L0
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 64], %%DATA64B_L1
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 2*64], %%DATA64B_L2
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 3*64], %%DATA64B_L3
+%if (%0 == 18)
+    vmovdqu64   [%%KS + %%KEY_OFF*4], %%DATA64B_L0
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 64], %%DATA64B_L1
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 2*64], %%DATA64B_L2
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 3*64], %%DATA64B_L3
 
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512], %%DATA64B_L4
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 64], %%DATA64B_L5
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 2*64], %%DATA64B_L6
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 3*64], %%DATA64B_L7
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512], %%DATA64B_L4
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512 + 64], %%DATA64B_L5
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512 + 2*64], %%DATA64B_L6
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512 + 3*64], %%DATA64B_L7
 
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2], %%DATA64B_L8
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64], %%DATA64B_L9
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64*2], %%DATA64B_L10
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64*3], %%DATA64B_L11
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*2], %%DATA64B_L8
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*2 + 64], %%DATA64B_L9
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*2 + 64*2], %%DATA64B_L10
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*2 + 64*3], %%DATA64B_L11
 
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3], %%DATA64B_L12
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64], %%DATA64B_L13
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64*2], %%DATA64B_L14
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64*3], %%DATA64B_L15
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3], %%DATA64B_L12
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3 + 64], %%DATA64B_L13
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3 + 64*2], %%DATA64B_L14
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3 + 64*3], %%DATA64B_L15
 %else
     pext        DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_0_4_8_12]
     kmovq       %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
@@ -760,10 +764,10 @@ align 64
     vpalignr    %%DATA64B_L2{%%KMASK1}, %%DATA64B_L2, %%DATA64B_L1, 8
     vpalignr    %%DATA64B_L1{%%KMASK1}, %%DATA64B_L1, %%DATA64B_L0, 8
     vpalignr    %%DATA64B_L0{%%KMASK1}, %%DATA64B_L0, %%DATA64B_L3, 8
-    vmovdqu64   [pKS + %%KEY_OFF*4]{%%KMASK2}, %%DATA64B_L0
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 64], %%DATA64B_L1
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 2*64], %%DATA64B_L2
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 3*64], %%DATA64B_L3
+    vmovdqu64   [%%KS + %%KEY_OFF*4]{%%KMASK2}, %%DATA64B_L0
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 64], %%DATA64B_L1
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 2*64], %%DATA64B_L2
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 3*64], %%DATA64B_L3
 
     pext        DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_1_5_9_13]
     kmovq       %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
@@ -772,10 +776,10 @@ align 64
     vpalignr    %%DATA64B_L6{%%KMASK1}, %%DATA64B_L6, %%DATA64B_L5, 8
     vpalignr    %%DATA64B_L5{%%KMASK1}, %%DATA64B_L5, %%DATA64B_L4, 8
     vpalignr    %%DATA64B_L4{%%KMASK1}, %%DATA64B_L4, %%DATA64B_L7, 8
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512]{%%KMASK2}, %%DATA64B_L4
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 64], %%DATA64B_L5
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 64*2], %%DATA64B_L6
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512 + 64*3], %%DATA64B_L7
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512]{%%KMASK2}, %%DATA64B_L4
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512 + 64], %%DATA64B_L5
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512 + 64*2], %%DATA64B_L6
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512 + 64*3], %%DATA64B_L7
 
     pext        DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_2_6_10_14]
     kmovq       %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
@@ -784,10 +788,10 @@ align 64
     vpalignr    %%DATA64B_L10{%%KMASK1}, %%DATA64B_L10, %%DATA64B_L9, 8
     vpalignr    %%DATA64B_L9{%%KMASK1}, %%DATA64B_L9, %%DATA64B_L8, 8
     vpalignr    %%DATA64B_L8{%%KMASK1}, %%DATA64B_L8, %%DATA64B_L11, 8
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2]{%%KMASK2}, %%DATA64B_L8
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64], %%DATA64B_L9
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64*2], %%DATA64B_L10
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*2 + 64*3], %%DATA64B_L11
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*2]{%%KMASK2}, %%DATA64B_L8
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*2 + 64], %%DATA64B_L9
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*2 + 64*2], %%DATA64B_L10
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*2 + 64*3], %%DATA64B_L11
 
     pext        DWORD(%%TMP), DWORD(%%LANE_MASK), [rel extr_bits_3_7_11_15]
     kmovq       %%KMASK1, [%%ALIGN_MASK + 8*%%TMP]
@@ -796,10 +800,10 @@ align 64
     vpalignr    %%DATA64B_L14{%%KMASK1}, %%DATA64B_L14, %%DATA64B_L13, 8
     vpalignr    %%DATA64B_L13{%%KMASK1}, %%DATA64B_L13, %%DATA64B_L12, 8
     vpalignr    %%DATA64B_L12{%%KMASK1}, %%DATA64B_L12, %%DATA64B_L15, 8
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3]{%%KMASK2}, %%DATA64B_L12
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64], %%DATA64B_L13
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64*2], %%DATA64B_L14
-    vmovdqu64   [pKS + %%KEY_OFF*4 + 512*3 + 64*3], %%DATA64B_L15
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3]{%%KMASK2}, %%DATA64B_L12
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3 + 64], %%DATA64B_L13
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3 + 64*2], %%DATA64B_L14
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3 + 64*3], %%DATA64B_L15
 %endif
 %endmacro
 
@@ -1127,9 +1131,6 @@ ZUC256_INIT:
 
     FUNC_SAVE
 
-    ; Load state pointer in RAX
-    mov         rax, pState
-
     ; Load read-only registers
     vmovdqa64   zmm0, [rel mask31]
     mov         r10d, 0xAAAAAAAA
@@ -1147,57 +1148,57 @@ ZUC256_INIT:
 %endif
 
     ; Read R1/R2
-    vmovdqa32   %%R1, [rax + OFS_R1]
-    vmovdqa32   %%R2, [rax + OFS_R2]
+    vmovdqa32   %%R1, [pState + OFS_R1]
+    vmovdqa32   %%R2, [pState + OFS_R2]
 ; Store all 4 bytes of keystream in a single 64-byte buffer
 %if (%%NUM_ROUNDS == 1)
-    bits_reorg16 rax, 1, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+    bits_reorg16 pState, 1, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
                  zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, zmm16
-    nonlin_fun16 rax, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
+    nonlin_fun16 pState, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7
     ; OFS_X3 XOR W (zmm7)
     vpxorq      zmm16, zmm7
-    lfsr_updt16  rax, 1, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
+    lfsr_updt16  pState, 1, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
                  zmm6, zmm0, zmm7, k7, work
-    vmovdqa32   [rax + OFS_R1]{k2}, %%R1
-    vmovdqa32   [rax + OFS_R2]{k2}, %%R2
+    vmovdqa32   [pState + OFS_R1]{k2}, %%R1
+    vmovdqa32   [pState + OFS_R2]{k2}, %%R2
 %else ;; %%NUM_ROUNDS != 1
     ; Generate N*4B of keystream in N rounds
     ; Generate first bytes of KS for all lanes
 %assign N 1
 %assign idx 16
 %rep (%%NUM_ROUNDS-2)
-    bits_reorg16 rax, N, k3, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+    bits_reorg16 pState, N, k3, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
                  zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, APPEND(zmm, idx)
-    nonlin_fun16 rax, k3, %%X0, %%X1, %%X2, %%R1, %%R2, \
+    nonlin_fun16 pState, k3, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7
     ; OFS_X3 XOR W (zmm7)
     vpxorq      APPEND(zmm, idx), zmm7
-    lfsr_updt16  rax, N, k3, zmm1, zmm2, zmm3, zmm4, zmm5, \
+    lfsr_updt16  pState, N, k3, zmm1, zmm2, zmm3, zmm4, zmm5, \
                  zmm6, zmm0, zmm7, k7, work
 %assign N N+1
 %assign idx (idx + 1)
 %endrep
 %if (%%NUM_ROUNDS > 2)
-    vmovdqa32   [rax + OFS_R1]{k3}, %%R1
-    vmovdqa32   [rax + OFS_R2]{k3}, %%R2
+    vmovdqa32   [pState + OFS_R1]{k3}, %%R1
+    vmovdqa32   [pState + OFS_R2]{k3}, %%R2
 %endif
 
     ; Generate rest of the KS bytes (last 8 bytes) for selected lanes
 %rep 2
-    bits_reorg16 rax, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+    bits_reorg16 pState, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
                  zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, APPEND(zmm, idx)
-    nonlin_fun16 rax, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
+    nonlin_fun16 pState, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7
     ; OFS_X3 XOR W (zmm7)
     vpxorq      APPEND(zmm, idx), zmm7
-    lfsr_updt16  rax, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
+    lfsr_updt16  pState, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
                  zmm6, zmm0, zmm7, k7, work
 %assign N N+1
 %assign idx (idx + 1)
 %endrep
-    vmovdqa32   [rax + OFS_R1]{k2}, %%R1
-    vmovdqa32   [rax + OFS_R2]{k2}, %%R2
+    vmovdqa32   [pState + OFS_R1]{k2}, %%R1
+    vmovdqa32   [pState + OFS_R2]{k2}, %%R2
 %endif ;; (%%NUM_ROUNDS == 1)
 
 %if (%%STORE_SINGLE == 1)
@@ -1214,26 +1215,327 @@ ZUC256_INIT:
 %if (%0 == 4)
     lea         r12, [rel alignr_mask]
     lea         r13, [rel mov_mask]
-    store_kstr16 zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
+    store_kstr16 pKS, zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
                  zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, %%KEY_OFF, \
                  %%LANE_MASK, r12, r13, r10, k3, k5
 %else
-    store_kstr16 zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
+    store_kstr16 pKS, zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
                  zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, %%KEY_OFF
 %endif
 %endif ;; %%STORE_SINGLE == 1
 
    ; Reorder LFSR registers
 %if (%0 == 4)
-    REORDER_LFSR rax, %%NUM_ROUNDS, k2
+    REORDER_LFSR pState, %%NUM_ROUNDS, k2
 %if (%%NUM_ROUNDS >= 2)
-    REORDER_LFSR rax, (%%NUM_ROUNDS - 2), k4 ; 2 less rounds for "old" buffers
+    REORDER_LFSR pState, (%%NUM_ROUNDS - 2), k4 ; 2 less rounds for "old" buffers
 %endif
 %else
-    REORDER_LFSR rax, %%NUM_ROUNDS, k2
+    REORDER_LFSR pState, %%NUM_ROUNDS, k2
 %endif
 
     FUNC_RESTORE
+
+%endmacro
+
+;;
+;; Reverse bits of each byte of a XMM register
+;;
+%macro REVERSE_BITS 7
+%define %%DATA_IN       %1 ; [in] Input data
+%define %%DATA_OUT      %2 ; [out] Output data
+%define %%TABLE_L       %3 ; [in] Table to shuffle low nibbles
+%define %%TABLE_H       %4 ; [in] Table to shuffle high nibbles
+%define %%REV_AND_TABLE %5 ; [in] Mask to keep low nibble of each byte
+%define %%XTMP1         %6 ; [clobbered] Temporary XMM register
+%define %%XTMP2         %7 ; [clobbered] Temporary XMM register
+
+        vpandq   %%XTMP1, %%DATA_IN, %%REV_AND_TABLE
+
+        vpandnq  %%XTMP2, %%REV_AND_TABLE, %%DATA_IN
+        vpsrld   %%XTMP2, 4
+
+        vpshufb  %%DATA_OUT, %%TABLE_H, %%XTMP1 ; bit reverse low nibbles (use high table)
+        vpshufb  %%XTMP2, %%TABLE_L, %%XTMP2 ; bit reverse high nibbles (use low table)
+
+        vporq    %%DATA_OUT, %%XTMP2
+%endmacro
+
+
+;;
+;; Set up data and KS bytes and use PCLMUL to digest data,
+;; then the result gets XOR'ed with the previous digest.
+;; This macro can be used with XMM (for 1 buffer),
+;; YMM (for 2 buffers) or ZMM registers (for 4 buffers).
+;; To use it with YMM and ZMM registers, VPCMULQDQ must be
+;; supported.
+;;
+%macro DIGEST_DATA 11
+%define %%DATA          %1 ; [in] Input data (16 bytes)
+%define %%KS_L          %2 ; [in] Lower 16 bytes of KS
+%define %%KS_H          %3 ; [in] Higher 16 bytes of KS
+%define %%IN_OUT        %4 ; [in/out] Accumulated digest
+%define %%KMASK         %5 ; [in] Shuffle mask register
+%define %%TMP1          %6 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP2          %7 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP3          %8 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP4          %9 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP5          %10 ; [clobbered] Temporary XMM/YMM/ZMM register
+%define %%TMP6          %11 ; [clobbered] Temporary XMM/YMM/ZMM register
+
+
+        ;; Set up KS
+        ;;
+        ;; KS_L contains bytes 15:0 of KS (for 1, 2 or 4 buffers)
+        ;; KS_H contains bytes 31:16 of KS (for 1, 2 or 4 buffers)
+        ;; TMP1 to contain bytes in the following order [7:4 11:8 3:0 7:4]
+        ;; TMP2 to contain bytes in the following order [15:12 19:16 11:8 15:12]
+        vpalignr        %%TMP1, %%KS_H, %%KS_L, 8
+        vpshufd         %%TMP2, %%KS_L, 0x61
+        vpshufd         %%TMP1, %%TMP1, 0x61
+
+        ;; Set up DATA
+        ;;
+        ;; DATA contains 16 bytes of input data (for 1, 2 or 4 buffers)
+        ;; TMP3 to contain bytes in the following order [4*0's 7:4 4*0's 3:0]
+        ;; TMP3 to contain bytes in the following order [4*0's 15:12 4*0's 11:8]
+        vpshufd         %%TMP3{%%KMASK}{z}, %%DATA, 0x10
+        vpshufd         %%TMP4{%%KMASK}{z}, %%DATA, 0x32
+
+        ;; PCMUL the KS's with the DATA
+        ;; XOR the results from 4 32-bit words together
+        vpclmulqdq      %%TMP5, %%TMP3, %%TMP2, 0x00
+        vpclmulqdq      %%TMP3, %%TMP3, %%TMP2, 0x11
+        vpclmulqdq      %%TMP6, %%TMP4, %%TMP1, 0x00
+        vpclmulqdq      %%TMP4, %%TMP4, %%TMP1, 0x11
+        vpternlogq      %%TMP5, %%TMP3, %%TMP6, 0x96
+        vpternlogq      %%IN_OUT, %%TMP5, %%TMP4, 0x96
+%endmacro
+
+;
+; Generate 64 bytes of keystream
+; for 16 buffers and authenticate 64 bytes of data
+;
+%macro ZUC_EIA3_16_64B_AVX512 5
+%define %%STATE         %1 ; [in] ZUC state
+%define %%KS            %2 ; [in] Pointer to keystream (128x16 bytes)
+%define %%T             %3 ; [in] Pointer to digests
+%define %%DATA          %4 ; [in] Pointer to array of pointers to data buffers
+%define %%LEN           %5 ; [in] Pointer to array of remaining length to digest
+
+%define %%DATA_ADDR0    rbx
+%define %%DATA_ADDR1    r12
+%define %%DATA_ADDR2    r13
+%define %%DATA_ADDR3    r14
+
+%define %%ZKS_L         zmm12
+%define %%ZKS_H         zmm13
+
+%define %%DIGEST_0      zmm28
+%define %%DIGEST_1      zmm29
+%define %%DIGEST_2      zmm30
+%define %%DIGEST_3      zmm31
+
+%define %%ZTMP1         zmm1
+%define %%ZTMP2         zmm2
+%define %%ZTMP3         zmm3
+%define %%ZTMP4         zmm4
+%define %%ZTMP5         zmm5
+%define %%ZTMP6         zmm6
+%define %%ZTMP7         zmm7
+%define %%ZTMP8         zmm8
+%define %%ZTMP9         zmm9
+%define %%ZDATA         zmm15
+
+%define %%XTMP1         xmm1
+%define %%XTMP2         xmm2
+%define %%XTMP3         xmm3
+%define %%XTMP4         xmm4
+%define %%XTMP5         xmm5
+%define %%XTMP6         xmm6
+%define %%KS_L          xmm12
+%define %%KS_H          xmm13
+%define %%XDIGEST       xmm14
+%define %%XDATA         xmm15
+%define %%REV_TABLE_L   xmm16
+%define %%REV_TABLE_H   xmm17
+%define %%REV_AND_TABLE xmm18
+
+; Defines used in KEYGEN
+%define %%MASK31        zmm0
+
+%define %%X0            zmm10
+%define %%X1            zmm11
+%define %%X2            zmm12
+%define %%R1            zmm14
+%define %%R2            zmm15
+
+        ;; Generate 64 bytes of KS
+
+        ; Load read-only registers
+        vmovdqa64   %%MASK31, [rel mask31]
+        mov         r12d, 0xAAAAAAAA
+        kmovd       k1, r12d
+
+        mov         r12d, 0x0000FFFF
+        kmovd       k2, r12d
+
+        ; Read R1/R2
+        vmovdqa32   %%R1, [%%STATE + OFS_R1]
+        vmovdqa32   %%R2, [%%STATE + OFS_R2]
+
+        ;; Generate 64B of keystream in N rounds
+%assign %%N 1
+%assign %%idx 16
+%rep 16
+        bits_reorg16 %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+                     %%ZTMP7, %%ZTMP8, %%ZTMP9, k1, %%X0, %%X1, %%X2, APPEND(zmm, %%idx)
+        nonlin_fun16 %%STATE, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
+                     %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7
+        ; OFS_X3 XOR W (%%ZTMP7)
+        vpxorq  APPEND(zmm, %%idx), %%ZTMP7
+        lfsr_updt16  %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+                      %%ZTMP6, %%MASK31, %%ZTMP7, k7, work
+%assign %%N %%N+1
+%assign %%idx (%%idx + 1)
+%endrep
+        vmovdqa64   [%%STATE + OFS_R1], %%R1
+        vmovdqa64   [%%STATE + OFS_R2], %%R2
+
+        ; ZMM16-31 contain the keystreams for each round
+        ; Perform a 32-bit 16x16 transpose to have up to 64 bytes
+        ; (NUM_ROUNDS * 4B) of each lane in a different register
+        TRANSPOSE16_U32_INTERLEAVED zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, \
+                                    zmm22, zmm23, zmm24, zmm25, zmm26, zmm27, \
+                                    zmm28, zmm29, zmm30, zmm31, zmm0, zmm1, \
+                                    zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+                                    zmm8, zmm9
+
+        store_kstr16 %%KS, zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
+                     zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, 64
+
+        ;; Digest 64 bytes of data
+        mov             r12d, 0x55555555
+        kmovd           k3, r12d
+
+        ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
+        ;; since the keystream is laid out this way, which chunks of
+        ;; 16 bytes interleved. First the 128 bytes for
+        ;; buffers 0,4,8,12 (total of 512 bytes), then the 128 bytes
+        ;; for buffers 1,5,9,13, and so on
+%if USE_GFNI_VAES_VPCLMUL == 0
+        vmovdqa64  %%REV_TABLE_L, [bit_reverse_table_l]
+        vmovdqa64  %%REV_TABLE_H, [bit_reverse_table_h]
+        vmovdqa64  %%REV_AND_TABLE, [bit_reverse_and_table]
+%endif
+
+%assign %%IDX 0
+%rep 4
+        vpxorq     APPEND(%%DIGEST_, %%IDX), APPEND(%%DIGEST_, %%IDX)
+%if USE_GFNI_VAES_VPCLMUL == 1
+        mov             %%DATA_ADDR0, [%%DATA + %%IDX*8 + 0*32]
+        mov             %%DATA_ADDR1, [%%DATA + %%IDX*8 + 1*32]
+        mov             %%DATA_ADDR2, [%%DATA + %%IDX*8 + 2*32]
+        mov             %%DATA_ADDR3, [%%DATA + %%IDX*8 + 3*32]
+
+%assign %%I 0
+%rep 4
+        vmovdqu64       %%XTMP1, [%%DATA_ADDR0 + 16*%%I]
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR1 + 16*%%I], 1
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR2 + 16*%%I], 2
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR3 + 16*%%I], 3
+
+%if %%I == 0
+        vmovdqa64       %%ZKS_L, [%%KS + %%IDX*512]
+%else
+        vmovdqa64       %%ZKS_L, %%ZKS_H
+%endif
+        vmovdqa64       %%ZKS_H, [%%KS + %%IDX*512 + (%%I + 1)*64]
+
+        ;; Reverse bits of next 16 bytes from all 4 buffers
+        vgf2p8affineqb  %%ZDATA, %%ZTMP1, [rel bit_reverse_table], 0x00
+
+
+        DIGEST_DATA %%ZDATA, %%ZKS_L, %%ZKS_H, APPEND(%%DIGEST_, %%IDX), k3, \
+                    %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
+%assign %%I (%%I + 1)
+%endrep
+
+%else ; USE_GFNI_VAES_VPCLMUL == 1
+
+        ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
+        ;; since the keystream is laid out this way, which chunks of
+        ;; 16 bytes interleved. First the 128 bytes for
+        ;; buffers 0,4,8,12 (total of 512 bytes), then the 128 bytes
+        ;; for buffers 1,5,9,13, and so on
+%assign %%J 0
+%rep 4
+        mov     %%DATA_ADDR0, [%%DATA + 8*(%%J*4 + %%IDX)]
+
+%assign %%K 0
+%rep 4
+%if %%K == 0
+        vmovdqa64  %%KS_L, [%%KS + %%IDX*512 + %%J*16]
+%else
+        vmovdqa64  %%KS_L, %%KS_H
+%endif
+        vmovdqa64  %%KS_H, [%%KS + %%IDX*512 + (%%K + 1)*64 + %%J*16]
+
+        ;; read 16 bytes and reverse bits
+        vmovdqu64  %%XTMP1, [%%DATA_ADDR0 + 16*%%K]
+        REVERSE_BITS %%XTMP1, %%XDATA, %%REV_TABLE_L, %%REV_TABLE_H, \
+                     %%REV_AND_TABLE, %%XTMP2, %%XTMP3
+
+        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%XDIGEST, k3, \
+                    %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
+%assign %%K (%%K + 1)
+%endrep
+        vinserti32x4 APPEND(%%DIGEST_, %%IDX), %%XDIGEST, %%J
+%assign %%J (%%J + 1)
+%endrep
+%endif ;; USE_GFNI_VAES_VPCLMUL == 0
+        ; Memcpy KS 64-127 bytes to 0-63 bytes
+        vmovdqa64       %%ZTMP3, [%%KS + %%IDX*512 + 64*4]
+        vmovdqa64       %%ZTMP4, [%%KS + %%IDX*512 + 64*5]
+        vmovdqa64       %%ZTMP5, [%%KS + %%IDX*512 + 64*6]
+        vmovdqa64       %%ZTMP6, [%%KS + %%IDX*512 + 64*7]
+        vmovdqa64       [%%KS + %%IDX*512], %%ZTMP3
+        vmovdqa64       [%%KS + %%IDX*512 + 64], %%ZTMP4
+        vmovdqa64       [%%KS + %%IDX*512 + 64*2], %%ZTMP5
+        vmovdqa64       [%%KS + %%IDX*512 + 64*3], %%ZTMP6
+%assign %%IDX (%%IDX + 1)
+%endrep
+
+        ;; - update tags
+        mov             r12d, 0x3333
+        kmovd           k4, r12d
+        mov             r12d, 0xCCCC
+        kmovd           k5, r12d
+
+        vmovdqu64       %%ZTMP1, [%%T] ; Input tags
+        vmovdqa64       %%ZTMP2, [rel shuf_mask_tags_0_4_8_12]
+        vmovdqa64       %%ZTMP3, [rel shuf_mask_tags_0_4_8_12 + 64]
+        ; Get result tags for 16 buffers in different position in each lane
+        ; and blend these tags into an ZMM register.
+        ; Then, XOR the results with the previous tags and write out the result.
+        vpermt2d        %%DIGEST_0{k4}{z}, %%ZTMP2, %%DIGEST_1
+        vpermt2d        %%DIGEST_2{k5}{z}, %%ZTMP3, %%DIGEST_3
+        vpternlogq      %%ZTMP1, %%DIGEST_0, %%DIGEST_2, 0x96 ; A XOR B XOR C
+        vmovdqu64       [%%T], %%ZTMP1
+
+        ; Update data pointers
+        vmovdqu64       %%ZTMP1, [%%DATA]
+        vmovdqu64       %%ZTMP2, [%%DATA + 64]
+        vpaddq          %%ZTMP1, [rel add_64]
+        vpaddq          %%ZTMP2, [rel add_64]
+        vmovdqu64       [%%DATA], %%ZTMP1
+        vmovdqu64       [%%DATA + 64], %%ZTMP2
+
+        ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
+        vmovdqa64       YWORD(%%ZTMP2), [%%LEN]
+        vpcmpw          k1, YWORD(%%ZTMP2), [rel all_ffs], 4 ; k1 -> valid lanes
+        vpsubw          YWORD(%%ZTMP2){k1}, [rel all_512w]
+        vmovdqa64       [%%LEN], YWORD(%%ZTMP2)
 
 %endmacro
 
@@ -1247,8 +1549,39 @@ ZUC_KEYGEN64B_16:
     KEYGEN_16_AVX512 16, 0, arg3
 
     ret
-
 ;;
+;; void asm_Eia3_64B_AVX512_16(ZucState16_t *pState,
+;;                             uint32_t *pKeyStr,
+;;                             uint32_t *T,
+;;                             const void **data,
+;;                             uint16_t *len);
+MKGLOBAL(ZUC_EIA3_64B,function,internal)
+ZUC_EIA3_64B:
+%define STATE         arg1
+%define KS            arg2
+%define T             arg3
+%define DATA          arg4
+
+%ifdef LINUX
+%define LEN           arg5
+%else
+%define LEN           r10
+%endif
+    endbranch64
+
+%ifndef LINUX
+    mov         LEN, arg5
+%endif
+
+    FUNC_SAVE
+
+    ZUC_EIA3_16_64B_AVX512 STATE, KS, T, DATA, LEN
+
+    FUNC_RESTORE
+
+    ret
+
+;
 ;; void asm_ZucGenKeystream64B_16_skip8_avx512(state16_t *pSta, u32* pKeyStr[16],
 ;;                                             const u32 key_off,
 ;;                                             const u16 lane_mask)
@@ -1687,7 +2020,7 @@ ZUC_ROUND64B_16:
 	%define		LEN	r9
 %endif
 
-%if USE_GFNI == 1
+%if USE_GFNI_VAES_VPCLMUL == 1
 %define         DATA_ADDR0      rbx
 %define         DATA_ADDR1      r10
 %define         DATA_ADDR2      r11
@@ -1831,7 +2164,7 @@ ZUC_ROUND64B_16:
         vpsubw          YTMP1{k1}, [rel all_512w]
         vmovdqa         [LEN], YTMP1
 
-%else ; USE_GFNI == 1
+%else ; USE_GFNI_VAES_VPCLMUL == 1
 
 %define         DIGEST_0        zmm28
 %define         DIGEST_1        zmm29
@@ -1954,7 +2287,7 @@ ZUC_ROUND64B_16:
         vpsubw          ymm2{k1}, [rel all_512w]
         vmovdqa         [LEN], ymm2
 
-%endif ;; USE_GFNI == 0
+%endif ;; USE_GFNI_VAES_VPCLMUL == 0
         FUNC_RESTORE
 
         ret
@@ -2021,7 +2354,7 @@ ZUC_ROUND64B_16:
 
         xor     OFFSET, OFFSET
 
-%if USE_GFNI != 1
+%if USE_GFNI_VAES_VPCLMUL != 1
         vmovdqa  xmm5, [bit_reverse_table_l]
         vmovdqa  xmm6, [bit_reverse_table_h]
         vmovdqa  xmm7, [bit_reverse_and_table]
@@ -2055,7 +2388,7 @@ ZUC_ROUND64B_16:
 
         ;; read 16 bytes and reverse bits
         vmovdqu xmm0, [DATA_ADDR + OFFSET]
-%if USE_GFNI == 1
+%if USE_GFNI_VAES_VPCLMUL == 1
         vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
 %else
         vpand   xmm1, xmm0, xmm7
@@ -2144,7 +2477,7 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         vpandq  xmm0, xmm3
         XVPSRLB xmm0, r11, xmm4, r13
 
-%if USE_GFNI == 1
+%if USE_GFNI_VAES_VPCLMUL == 1
         vgf2p8affineqb  xmm8, xmm0, [rel bit_reverse_table], 0x00
 %else
         ; Bit reverse input data
@@ -2356,7 +2689,7 @@ ZUC256_REMAINDER_16:
         REMAINDER_16 256
 
 ; Following functions only need AVX512 instructions (no VAES, GFNI, etc.)
-%if USE_GFNI == 0
+%if USE_GFNI_VAES_VPCLMUL == 0
 ;;
 ;; extern void asm_Eia3RemainderAVX512(uint32_t *T, const void *ks,
 ;;                                     const void *data, uint64_t n_bits)
@@ -2641,7 +2974,7 @@ asm_Eia3Round64BAVX512:
 
         ret
 
-%endif ; USE_GFNI == 0
+%endif ; USE_GFNI_VAES_VPCLMUL == 0
 
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------

@@ -43,4 +43,5 @@
 %define ZUC_KEYGEN_16      asm_ZucGenKeystream_16_gfni_avx512
 %define ZUC_KEYGEN64B_16   asm_ZucGenKeystream64B_16_gfni_avx512
 %define ZUC_ROUND64B       asm_Eia3Round64B_16_VPCLMUL
+%define ZUC_EIA3_64B       asm_Eia3_64B_AVX512_16_VPCLMUL
 %include "avx512/mb_mgr_zuc_submit_flush_avx512.asm"

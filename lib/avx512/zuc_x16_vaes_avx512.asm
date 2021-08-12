@@ -27,7 +27,7 @@
 ;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%define USE_GFNI 1
+%define USE_GFNI_VAES_VPCLMUL 1
 %define CIPHER_16 asm_ZucCipher_16_gfni_avx512
 %define ZUC128_INIT asm_ZucInitialization_16_gfni_avx512
 %define ZUC256_INIT asm_Zuc256Initialization_16_gfni_avx512
@@ -41,5 +41,5 @@
 %define ZUC_KEYGEN8B_SKIP8_16 asm_ZucGenKeystream8B_16_skip8_gfni_avx512
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_gfni_avx512
 %define ZUC_ROUND64B_16 asm_Eia3Round64B_16_VPCLMUL
-
+%define ZUC_EIA3_64B asm_Eia3_64B_AVX512_16_VPCLMUL
 %include "avx512/zuc_x16_avx512.asm"
