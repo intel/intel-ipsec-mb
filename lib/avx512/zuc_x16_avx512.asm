@@ -208,13 +208,6 @@ bit_reverse_table:
 times 8 db      0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 
 align 64
-data_mask_64bits:
-dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
-dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
-dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
-dd	0xffffffff, 0xffffffff, 0x00000000, 0x00000000
-
-align 64
 shuf_mask_tags_0_1_2_3:
 dd      0x01, 0x05, 0x09, 0x0D, 0x11, 0x15, 0x19, 0x1D, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 dd      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x05, 0x09, 0x0D, 0x11, 0x15, 0x19, 0x1D
@@ -1734,12 +1727,11 @@ ZUC_ROUND64B_16:
 %define         ZTMP8           zmm7
 
 %define         YTMP1           YWORD(ZTMP1)
-%define         MASK_64         zmm8
 
         FUNC_SAVE
 
-        vmovdqa64       MASK_64, [rel data_mask_64bits]
-
+        mov             r12d, 0x55555555
+        kmovd           k1, r12d
         ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
         ;; since the keystream is laid out this way, which chunks of
         ;; 16 bytes interleved. First the 128 bytes for
@@ -1777,11 +1769,8 @@ ZUC_ROUND64B_16:
         vpshufd         ZTMP4, ZTMP2, 0x61
 
         ;;  - set up DATA
-        vpandq          ZTMP2, ZTMP1, MASK_64
-        vpshufd         APPEND(DATA_TRANS, I), ZTMP2, 0xdc
-
-        vpsrldq         ZTMP1, 8
-        vpshufd         ZTMP2, ZTMP1, 0xdc
+        vpshufd         APPEND(DATA_TRANS, I){k1}{z}, ZTMP1, 0x10
+        vpshufd         ZTMP2{k1}{z}, ZTMP1, 0x32
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
@@ -1855,7 +1844,9 @@ ZUC_ROUND64B_16:
         vmovdqa  xmm5, [bit_reverse_table_l]
         vmovdqa  xmm6, [bit_reverse_table_h]
         vmovdqa  xmm7, [bit_reverse_and_table]
-        vmovdqa  xmm10, [data_mask_64bits]
+
+        mov             r12d, 0x55555555
+        kmovd           k1, r12d
 
         ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
         ;; since the keystream is laid out this way, which chunks of
@@ -1900,11 +1891,8 @@ ZUC_ROUND64B_16:
         vpshufd  xmm3, xmm13, 0x61
 
         ;;  - set up DATA
-        vpand    xmm13, xmm10, xmm8
-        vpshufd  xmm0, xmm13, 0xdc
-
-        vpsrldq  xmm8, 8
-        vpshufd  xmm1, xmm8, 0xdc
+        vpshufd xmm0{k1}{z}, xmm8, 0x10
+        vpshufd xmm1{k1}{z}, xmm8, 0x32
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
@@ -2037,7 +2025,9 @@ ZUC_ROUND64B_16:
         vmovdqa  xmm6, [bit_reverse_table_h]
         vmovdqa  xmm7, [bit_reverse_and_table]
 %endif
-        vmovdqa  xmm10, [data_mask_64bits]
+
+        mov             r12d, 0x55555555
+        kmovd           k2, r12d
 
         ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
         ;; since the keystream is laid out this way, which chunks of
@@ -2094,11 +2084,8 @@ ZUC_ROUND64B_16:
         vpshufd  xmm3, xmm13, 0x61
 
         ;;  - set up DATA
-        vpand    xmm13, xmm10, xmm8
-        vpshufd  xmm0, xmm13, 0xdc
-
-        vpsrldq  xmm8, 8
-        vpshufd  xmm1, xmm8, 0xdc
+        vpshufd xmm0{k2}{z}, xmm8, 0x10
+        vpshufd xmm1{k2}{z}, xmm8, 0x32
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
@@ -2171,12 +2158,9 @@ APPEND3(%%Eia3RoundsAVX512_dq_end,I,J):
         vpor    xmm8, xmm3
 %endif
 
-        ;; Set up DATA
-        vpand   xmm13, xmm10, xmm8
-        vpshufd xmm0, xmm13, 0xdc ; D 0-3 || Os || D 4-7 || 0s
-
-        vpsrldq xmm8, 8
-        vpshufd xmm1, xmm8, 0xdc ; D 8-11 || 0s || D 12-15 || 0s
+        ;;  - set up DATA
+        vpshufd xmm0{k2}{z}, xmm8, 0x10 ; D 0-3 || Os || D 4-7 || 0s
+        vpshufd xmm1{k2}{z}, xmm8, 0x32 ; D 8-11 || 0s || D 12-15 || 0s
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
@@ -2407,8 +2391,9 @@ asm_Eia3RemainderAVX512:
         vmovdqa  xmm5, [bit_reverse_table_l]
         vmovdqa  xmm6, [bit_reverse_table_h]
         vmovdqa  xmm7, [bit_reverse_and_table]
-        vmovdqa  xmm10, [data_mask_64bits]
         vpxor    xmm9, xmm9
+        mov      r12d, 0x55555555
+        kmovd    k2, r12d
 
         xor     OFFSET, OFFSET
 %assign I 0
@@ -2444,11 +2429,8 @@ asm_Eia3RemainderAVX512:
         vpshufd  xmm3, xmm13, 0x61
 
         ;;  - set up DATA
-        vpand    xmm13, xmm10, xmm8
-        vpshufd  xmm0, xmm13, 0xdc
-
-        vpsrldq  xmm8, 8
-        vpshufd  xmm1, xmm8, 0xdc
+        vpshufd xmm0{k2}{z}, xmm8, 0x10
+        vpshufd xmm1{k2}{z}, xmm8, 0x32
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
@@ -2516,11 +2498,8 @@ Eia3RoundsAVX512_dq_end:
         vpor    xmm8, xmm3
 
         ;; Set up DATA
-        vpand   xmm13, xmm10, xmm8
-        vpshufd xmm0, xmm13, 0xdc ; D 0-3 || Os || D 4-7 || 0s
-
-        vpsrldq xmm8, 8
-        vpshufd xmm1, xmm8, 0xdc ; D 8-11 || 0s || D 12-15 || 0s
+        vpshufd xmm0{k2}{z}, xmm8, 0x10 ; D 0-3 || Os || D 4-7 || 0s
+        vpshufd xmm1{k2}{z}, xmm8, 0x32 ; D 8-11 || 0s || D 12-15 || 0s
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
@@ -2600,9 +2579,10 @@ asm_Eia3Round64BAVX512:
         vmovdqa  xmm5, [bit_reverse_table_l]
         vmovdqa  xmm6, [bit_reverse_table_h]
         vmovdqa  xmm7, [bit_reverse_and_table]
-        vmovdqa  xmm10, [data_mask_64bits]
         vpxor    xmm9, xmm9
 
+        mov      r12d, 0x55555555
+        kmovd    k1, r12d
 %assign I 0
 %rep 4
         ;; read 16 bytes and reverse bits
@@ -2633,11 +2613,8 @@ asm_Eia3Round64BAVX512:
         vpshufd  xmm3, xmm13, 0x61
 
         ;;  - set up DATA
-        vpand    xmm13, xmm10, xmm8
-        vpshufd  xmm0, xmm13, 0xdc
-
-        vpsrldq  xmm8, 8
-        vpshufd  xmm1, xmm8, 0xdc
+        vpshufd xmm0{k1}{z}, xmm8, 0x10
+        vpshufd xmm1{k1}{z}, xmm8, 0x32
 
         ;; - clmul
         ;; - xor the results from 4 32-bit words together
