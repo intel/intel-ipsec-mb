@@ -97,6 +97,15 @@ END_FIELDS
 %assign _ZUC_EIA3_spec_fields_size	_FIELD_OFFSET
 %assign _ZUC_EIA3_spec_fields_align	_STRUCT_ALIGN
 
+START_FIELDS	; SNOW3G-UIA2 Specific Fields
+;;;	name				size	align
+FIELD	__snow3g_uia2_key,		8,	8	; pointer to key
+FIELD	__snow3g_uia2_iv,		8,	8	; pointer to IV
+END_FIELDS
+
+%assign _SNOW3G_UIA2_spec_fields_size	_FIELD_OFFSET
+%assign _SNOW3G_UIA2_spec_fields_align	_STRUCT_ALIGN
+
 START_FIELDS	; POLY1305 Specific Fields
 ;;;	name				size	align
 FIELD	__poly1305_key,		 	8,	8	; ptr to 32 byte key
@@ -145,6 +154,7 @@ UNION	_u,	_HMAC_spec_fields_size,     _HMAC_spec_fields_align, \
                 _AES_CMAC_spec_fields_size, _AES_CMAC_spec_fields_align, \
                 _GCM_spec_fields_size, _GCM_spec_fields_align, \
                 _ZUC_EIA3_spec_fields_size, _ZUC_EIA3_spec_fields_align, \
+                _SNOW3G_UIA2_spec_fields_size, _SNOW3G_UIA2_spec_fields_align, \
                 _POLY1305_spec_fields_size, _POLY1305_spec_fields_align, \
                 _SNOW_V_AEAD_spec_fields_size, _SNOW_V_AEAD_spec_fields_align
 
@@ -195,6 +205,8 @@ END_FIELDS
 %assign _gcm_aad_len	                _u + __gcm_aad_len
 %assign _zuc_eia3_key                   _u + __zuc_eia3_key
 %assign _zuc_eia3_iv                    _u + __zuc_eia3_iv
+%assign _snow3g_uia2_key                _u + __snow3g_uia2_key
+%assign _snow3g_uia2_iv                 _u + __snow3g_uia2_iv
 %assign _poly1305_key	                _u + __poly1305_key
 %assign	_snow_v_aad			_u + __snow_v_aad
 %assign	_snow_v_aad_len 		_u + __snow_v_aad_len
