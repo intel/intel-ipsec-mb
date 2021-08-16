@@ -170,6 +170,12 @@ IMB_JOB *submit_job_snow3g_uea2_vaes_avx512(MB_MGR_SNOW3G_OOO *state,
 
 IMB_JOB *flush_job_snow3g_uea2_vaes_avx512(MB_MGR_SNOW3G_OOO *state);
 
+IMB_JOB *submit_job_snow3g_uia2_vaes_avx512(MB_MGR_SNOW3G_OOO *state,
+                                            IMB_JOB *job);
+
+IMB_JOB *flush_job_snow3g_uia2_vaes_avx512(MB_MGR_SNOW3G_OOO *state);
+
+
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
 
@@ -327,6 +333,22 @@ IMB_JOB *flush_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 
 /* ====================================================================== */
 
+static IMB_JOB *
+submit_job_snow3g_uia2_1_buffer_avx512(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job)
+{
+        (void) state;
+
+        snow3g_f9_1_buffer_avx512((const snow3g_key_schedule_t *)
+                               job->u.SNOW3G_UIA2._key,
+                               job->u.SNOW3G_UIA2._iv,
+                               job->src + job->hash_start_src_offset_in_bytes,
+                               job->msg_len_to_hash_in_bits,
+                               job->auth_tag_output);
+        job->status |= IMB_STATUS_COMPLETED_AUTH;
+
+        return job;
+}
+
 static IMB_JOB *submit_snow3g_uea2_job_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 {
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
@@ -351,8 +373,17 @@ static IMB_JOB *(*submit_job_snow3g_uea2_avx512)(IMB_MGR *state, IMB_JOB *job) =
 static IMB_JOB *(*flush_job_snow3g_uea2_avx512)(IMB_MGR *state) =
         def_flush_snow3g_uea2_job;
 
+static IMB_JOB *(*submit_job_snow3g_uia2_avx512)
+        (MB_MGR_SNOW3G_OOO *state, IMB_JOB *job) =
+                        submit_job_snow3g_uia2_1_buffer_avx512;
+
+static IMB_JOB *(*flush_job_snow3g_uia2_avx512)
+        (MB_MGR_SNOW3G_OOO *state) = flush_job_snow3g_uia2_vaes_avx512;
+
 #define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_avx512
 #define FLUSH_JOB_SNOW3G_UEA2  flush_job_snow3g_uea2_avx512
+#define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_avx512
+#define FLUSH_JOB_SNOW3G_UIA2  flush_job_snow3g_uia2_avx512
 
 /* ====================================================================== */
 
@@ -1096,6 +1127,7 @@ init_mb_mgr_avx512(IMB_MGR *state)
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
+        MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
         /* reset error status */
         imb_set_errno(state, 0);
 
@@ -1780,6 +1812,28 @@ init_mb_mgr_avx512(IMB_MGR *state)
                         submit_snow3g_uea2_job_vaes_avx512;
                 flush_job_snow3g_uea2_avx512 =
                         flush_snow3g_uea2_job_vaes_avx512;
+
+                memset(&snow3g_uia2_ooo->args, 0,
+                       sizeof(snow3g_uia2_ooo->args));
+                memset(snow3g_uia2_ooo->job_in_lane, 0,
+                       sizeof(snow3g_uia2_ooo->job_in_lane));
+                memset(snow3g_uia2_ooo->ks_ptrs, 0,
+                       sizeof(snow3g_uia2_ooo->ks_ptrs));
+                memset(snow3g_uia2_ooo->ks, 0,
+                       sizeof(snow3g_uia2_ooo->ks));
+                snow3g_uia2_ooo->unused_lanes = 0xFEDCBA9876543210;
+                snow3g_uia2_ooo->num_lanes_inuse = 0;
+                snow3g_uia2_ooo->init_mask = 0;
+                snow3g_uia2_ooo->init_done = 0;
+                memset(snow3g_uia2_ooo->lens_in_dw, 0,
+                       sizeof(snow3g_uia2_ooo->lens_in_dw));
+
+                for (j = 0; j < 16; j++)
+                        snow3g_uia2_ooo->ks_ptrs[j] =
+                                &snow3g_uia2_ooo->ks[j*8];
+
+		submit_job_snow3g_uia2_avx512 =
+                        submit_job_snow3g_uia2_vaes_avx512;
         }
 
         /* Init "in order" components */

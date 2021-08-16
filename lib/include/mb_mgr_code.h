@@ -990,6 +990,9 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
+#ifdef AVX512
+        MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
+#endif
 
 
         switch (job->hash_alg) {
@@ -1078,6 +1081,9 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 return SUBMIT_JOB_ZUC256_EIA3(zuc256_eia3_ooo, job);
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
+#ifdef AVX512
+                return SUBMIT_JOB_SNOW3G_UIA2(snow3g_uia2_ooo, job);
+#else
                 IMB_SNOW3G_F9_1_BUFFER(state, (const snow3g_key_schedule_t *)
                                job->u.SNOW3G_UIA2._key,
                                job->u.SNOW3G_UIA2._iv,
@@ -1085,6 +1091,7 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                                job->msg_len_to_hash_in_bits,
                                job->auth_tag_output);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
+#endif
                 return job;
         case IMB_AUTH_KASUMI_UIA1:
                 IMB_KASUMI_F9_1_BUFFER(state, (const kasumi_key_sched_t *)
@@ -1185,6 +1192,9 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 	MB_MGR_CMAC_OOO *aes256_cmac_ooo = state->aes256_cmac_ooo;
         MB_MGR_ZUC_OOO *zuc_eia3_ooo = state->zuc_eia3_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
+#ifdef AVX512
+        MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
+#endif
 
         switch (job->hash_alg) {
         case IMB_AUTH_HMAC_SHA_1:
@@ -1232,6 +1242,10 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                 return FLUSH_JOB_ZUC_EIA3(zuc_eia3_ooo);
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
                 return FLUSH_JOB_ZUC256_EIA3(zuc256_eia3_ooo);
+#ifdef AVX512
+        case IMB_AUTH_SNOW3G_UIA2_BITLEN:
+                return FLUSH_JOB_SNOW3G_UIA2(snow3g_uia2_ooo);
+#endif
         default: /* assume GCM or IMB_AUTH_NULL */
                 if (!(job->status & IMB_STATUS_COMPLETED_AUTH)) {
                         job->status |= IMB_STATUS_COMPLETED_AUTH;
