@@ -1234,30 +1234,30 @@ IMB_DLL_LOCAL uint32_t asm_Eia3_256_RemainderAVX512_16_VPCLMUL(uint32_t *T,
 /**
  ******************************************************************************
  * @description
- *      Generate 64 bytes of keystream and digest 64 bytes of data.
+ *      Generate N*64 bytes of keystream and digest N*64 bytes of data.
  *
  * @param[in] pState                Pointer to a ZUC state structure of type
  *                                  @ref ZucState16_t
- *
  * @param[in] pKeyStr               Pointer to key stream
- *
  * @param[in] data                  Array of 16 pointers to data for 16 buffers
- *
  * @param[in] len                   Array of lengths for 16 buffers
+ * @param[in] numRounds             Number of 64B rounds to perform
  *
  *****************************************************************************/
 IMB_DLL_LOCAL
-void asm_Eia3_64B_AVX512_16(ZucState16_t *pState,
-                            uint32_t *pKeyStr,
-                            uint32_t *T,
-                            const void **data,
-                            uint16_t *len);
+void asm_Eia3_Nx64B_AVX512_16(ZucState16_t *pState,
+                              uint32_t *pKeyStr,
+                              uint32_t *T,
+                              const void **data,
+                              uint16_t *len,
+                              const uint32_t numRounds);
 IMB_DLL_LOCAL
-void asm_Eia3_64B_AVX512_16_VPCLMUL(ZucState16_t *pState,
-                                    uint32_t *pKeyStr,
-                                    uint32_t *T,
-                                    const void **data,
-                                    uint16_t *len);
+void asm_Eia3_Nx64B_AVX512_16_VPCLMUL(ZucState16_t *pState,
+                                      uint32_t *pKeyStr,
+                                      uint32_t *T,
+                                      const void **data,
+                                      uint16_t *len,
+                                      const uint32_t numRounds);
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
                                     const void * const pIv[4],

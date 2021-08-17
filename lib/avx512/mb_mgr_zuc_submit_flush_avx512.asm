@@ -53,7 +53,7 @@
 %define ZUC_KEYGEN_16      asm_ZucGenKeystream_16_avx512
 %define ZUC_KEYGEN64B_16   asm_ZucGenKeystream64B_16_avx512
 %define ZUC_ROUND64B       asm_Eia3Round64BAVX512_16
-%define ZUC_EIA3_64B       asm_Eia3_64B_AVX512_16
+%define ZUC_EIA3_N64B      asm_Eia3_Nx64B_AVX512_16
 %endif
 
 section .data
@@ -85,8 +85,8 @@ extern asm_ZucGenKeystream64B_16_avx512
 extern asm_ZucGenKeystream64B_16_gfni_avx512
 extern asm_Eia3Round64BAVX512_16
 extern asm_Eia3Round64B_16_VPCLMUL
-extern asm_Eia3_64B_AVX512_16
-extern asm_Eia3_64B_AVX512_16_VPCLMUL
+extern asm_Eia3_Nx64B_AVX512_16
+extern asm_Eia3_Nx64B_AVX512_16_VPCLMUL
 
 %ifdef LINUX
 %define arg1    rdi
@@ -94,12 +94,14 @@ extern asm_Eia3_64B_AVX512_16_VPCLMUL
 %define arg3    rdx
 %define arg4    rcx
 %define arg5    r8
+%define arg6    r9
 %else
 %define arg1    rcx
 %define arg2    rdx
 %define arg3    r8
 %define arg4    r9
 %define arg5    qword [rsp + 32]
+%define arg6    dword [rsp + 40]
 %endif
 
 %define state   arg1
@@ -658,29 +660,37 @@ FLUSH_JOB_ZUC256_EEA3:
 
         ; Generate next 16 KS words and digest 64 bytes of data
 %ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        sub     rsp, 40
+        ;; 48 bytes for 6 parameters
+        sub     rsp, 48
 %endif
+        mov     DWORD(%%TMP), %%L
+        shr     DWORD(%%TMP), 4 ; Number of rounds of 64 bytes
+
+        ;; Calculate number of remaining bits after function call
+        mov     eax, 64*8
+        mul     %%TMP
+        sub     %%REMAIN_BITS, eax
         lea     arg1, [%%OOO + _zuc_state]
         lea     arg2, [%%OOO + _zuc_args_KS]
         lea     arg3, [%%OOO + _zuc_args_digest]
         lea     arg4, [%%OOO + _zuc_args_in]
 %ifdef LINUX
+        mov     arg6, %%TMP
         lea     arg5, [%%OOO + _zuc_lens]
 %else
+        mov     [rsp + 40], %%TMP
         lea     %%TMP, [%%OOO + _zuc_lens]
         mov     [rsp + 32], %%TMP
 %endif
 
-        call    ZUC_EIA3_64B
+        call    ZUC_EIA3_N64B
 
 %ifndef LINUX
-        ;; 40 bytes for 5 parameters
-        add     rsp, 40
+        ;; 48 bytes for 6 parameters
+        add     rsp, 48
 %endif
-        sub     %%L, 16
+        and     %%L, 0xf ; Remaining words of KS left to generate
 
-        sub     %%REMAIN_BITS, 64*8
         jmp     %%_loop
 
 %%_exit_loop:

@@ -50,7 +50,7 @@
 %define ZUC_KEYGEN8B_SKIP8_16 asm_ZucGenKeystream8B_16_skip8_avx512
 %define ZUC_KEYGEN_SKIP8_16 asm_ZucGenKeystream_16_skip8_avx512
 %define ZUC_ROUND64B_16 asm_Eia3Round64BAVX512_16
-%define ZUC_EIA3_64B asm_Eia3_64B_AVX512_16
+%define ZUC_EIA3_N64B asm_Eia3_Nx64B_AVX512_16
 %endif
 
 section .data
@@ -368,12 +368,14 @@ align 64
 %define arg3 rdx
 %define arg4 rcx
 %define arg5 r8
+%define arg6 r9d
 %else
 %define arg1 rcx
 %define arg2 rdx
 %define arg3 r8
 %define arg4 r9
 %define arg5 [rsp + 40]
+%define arg6 [rsp + 48]
 %endif
 
 %define OFS_R1  (16*(4*16))
@@ -392,7 +394,7 @@ align 64
 %define GP_OFFSET XMM_STORAGE
 
 %macro FUNC_SAVE 0
-        mov     r11, rsp
+        mov     rax, rsp
         sub     rsp, VARIABLE_OFFSET
         and     rsp, ~15
 
@@ -416,7 +418,7 @@ align 64
         mov     [rsp + GP_OFFSET + 16], r14
         mov     [rsp + GP_OFFSET + 24], r15
         mov     [rsp + GP_OFFSET + 32], rbx
-        mov     [rsp + GP_OFFSET + 40], r11 ;; rsp pointer
+        mov     [rsp + GP_OFFSET + 40], rax ;; rsp pointer
 %endmacro
 
 
@@ -1316,17 +1318,19 @@ ZUC256_INIT:
 ; Generate 64 bytes of keystream
 ; for 16 buffers and authenticate 64 bytes of data
 ;
-%macro ZUC_EIA3_16_64B_AVX512 5
+%macro ZUC_EIA3_16_64B_AVX512 6
 %define %%STATE         %1 ; [in] ZUC state
 %define %%KS            %2 ; [in] Pointer to keystream (128x16 bytes)
 %define %%T             %3 ; [in] Pointer to digests
 %define %%DATA          %4 ; [in] Pointer to array of pointers to data buffers
 %define %%LEN           %5 ; [in] Pointer to array of remaining length to digest
+%define %%NROUNDS       %6 ; [in/clobbered] Number of rounds of 64 bytes of data to digest
 
 %define %%DATA_ADDR0    rbx
 %define %%DATA_ADDR1    r12
 %define %%DATA_ADDR2    r13
 %define %%DATA_ADDR3    r14
+%define %%OFFSET        r15
 
 %define %%ZKS_L         zmm12
 %define %%ZKS_H         zmm13
@@ -1370,16 +1374,27 @@ ZUC256_INIT:
 %define %%R1            zmm14
 %define %%R2            zmm15
 
+        xor     %%OFFSET, %%OFFSET
+
+        mov     r12d, 0xAAAAAAAA
+        kmovd   k1, r12d
+
+        mov     r12d, 0x0000FFFF
+        kmovd   k2, r12d
+
+        mov     r12d, 0x55555555
+        kmovd   k3, r12d
+
+        mov     r12d, 0x3333
+        kmovd   k4, r12d
+        mov     r12d, 0xCCCC
+        kmovd   k5, r12d
+
+%%_loop:
         ;; Generate 64 bytes of KS
 
         ; Load read-only registers
         vmovdqa64   %%MASK31, [rel mask31]
-        mov         r12d, 0xAAAAAAAA
-        kmovd       k1, r12d
-
-        mov         r12d, 0x0000FFFF
-        kmovd       k2, r12d
-
         ; Read R1/R2
         vmovdqa32   %%R1, [%%STATE + OFS_R1]
         vmovdqa32   %%R2, [%%STATE + OFS_R2]
@@ -1415,8 +1430,6 @@ ZUC256_INIT:
                      zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, 64
 
         ;; Digest 64 bytes of data
-        mov             r12d, 0x55555555
-        kmovd           k3, r12d
 
         ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
         ;; since the keystream is laid out this way, which chunks of
@@ -1440,10 +1453,10 @@ ZUC256_INIT:
 
 %assign %%I 0
 %rep 4
-        vmovdqu64       %%XTMP1, [%%DATA_ADDR0 + 16*%%I]
-        vinserti32x4    %%ZTMP1, [%%DATA_ADDR1 + 16*%%I], 1
-        vinserti32x4    %%ZTMP1, [%%DATA_ADDR2 + 16*%%I], 2
-        vinserti32x4    %%ZTMP1, [%%DATA_ADDR3 + 16*%%I], 3
+        vmovdqu64       %%XTMP1, [%%DATA_ADDR0 + 16*%%I + %%OFFSET]
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR1 + 16*%%I + %%OFFSET], 1
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR2 + 16*%%I + %%OFFSET], 2
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR3 + 16*%%I + %%OFFSET], 3
 
 %if %%I == 0
         vmovdqa64       %%ZKS_L, [%%KS + %%IDX*512]
@@ -1472,6 +1485,7 @@ ZUC256_INIT:
 %rep 4
         mov     %%DATA_ADDR0, [%%DATA + 8*(%%J*4 + %%IDX)]
 
+        vpxorq  %%XDIGEST, %%XDIGEST
 %assign %%K 0
 %rep 4
 %if %%K == 0
@@ -1482,7 +1496,7 @@ ZUC256_INIT:
         vmovdqa64  %%KS_H, [%%KS + %%IDX*512 + (%%K + 1)*64 + %%J*16]
 
         ;; read 16 bytes and reverse bits
-        vmovdqu64  %%XTMP1, [%%DATA_ADDR0 + 16*%%K]
+        vmovdqu64  %%XTMP1, [%%DATA_ADDR0 + 16*%%K + %%OFFSET]
         REVERSE_BITS %%XTMP1, %%XDATA, %%REV_TABLE_L, %%REV_TABLE_H, \
                      %%REV_AND_TABLE, %%XTMP2, %%XTMP3
 
@@ -1506,12 +1520,9 @@ ZUC256_INIT:
 %assign %%IDX (%%IDX + 1)
 %endrep
 
-        ;; - update tags
-        mov             r12d, 0x3333
-        kmovd           k4, r12d
-        mov             r12d, 0xCCCC
-        kmovd           k5, r12d
+        add     %%OFFSET, 64
 
+        ;; - update tags
         vmovdqu64       %%ZTMP1, [%%T] ; Input tags
         vmovdqa64       %%ZTMP2, [rel shuf_mask_tags_0_4_8_12]
         vmovdqa64       %%ZTMP3, [rel shuf_mask_tags_0_4_8_12 + 64]
@@ -1523,18 +1534,24 @@ ZUC256_INIT:
         vpternlogq      %%ZTMP1, %%DIGEST_0, %%DIGEST_2, 0x96 ; A XOR B XOR C
         vmovdqu64       [%%T], %%ZTMP1
 
+        dec     %%NROUNDS
+        jnz     %%_loop
+
         ; Update data pointers
         vmovdqu64       %%ZTMP1, [%%DATA]
         vmovdqu64       %%ZTMP2, [%%DATA + 64]
-        vpaddq          %%ZTMP1, [rel add_64]
-        vpaddq          %%ZTMP2, [rel add_64]
+        vpbroadcastq    %%ZTMP3, %%OFFSET
+        vpaddq          %%ZTMP1, %%ZTMP3
+        vpaddq          %%ZTMP2, %%ZTMP3
         vmovdqu64       [%%DATA], %%ZTMP1
         vmovdqu64       [%%DATA + 64], %%ZTMP2
 
         ; Update array of lengths (if lane is valid, so length < UINT16_MAX)
         vmovdqa64       YWORD(%%ZTMP2), [%%LEN]
         vpcmpw          k1, YWORD(%%ZTMP2), [rel all_ffs], 4 ; k1 -> valid lanes
-        vpsubw          YWORD(%%ZTMP2){k1}, [rel all_512w]
+        shl             %%OFFSET, 3 ; Convert to bits
+        vpbroadcastw    YWORD(%%ZTMP1), DWORD(%%OFFSET)
+        vpsubw          YWORD(%%ZTMP2){k1}, YWORD(%%ZTMP1)
         vmovdqa64       [%%LEN], YWORD(%%ZTMP2)
 
 %endmacro
@@ -1550,13 +1567,13 @@ ZUC_KEYGEN64B_16:
 
     ret
 ;;
-;; void asm_Eia3_64B_AVX512_16(ZucState16_t *pState,
-;;                             uint32_t *pKeyStr,
-;;                             uint32_t *T,
-;;                             const void **data,
-;;                             uint16_t *len);
-MKGLOBAL(ZUC_EIA3_64B,function,internal)
-ZUC_EIA3_64B:
+;; void asm_Eia3_Nx64B_AVX512_16(ZucState16_t *pState,
+;;                               uint32_t *pKeyStr,
+;;                               uint32_t *T,
+;;                               const void **data,
+;;                               uint16_t *len);
+MKGLOBAL(ZUC_EIA3_N64B,function,internal)
+ZUC_EIA3_N64B:
 %define STATE         arg1
 %define KS            arg2
 %define T             arg3
@@ -1564,18 +1581,21 @@ ZUC_EIA3_64B:
 
 %ifdef LINUX
 %define LEN           arg5
+%define NROUNDS       arg6
 %else
 %define LEN           r10
+%define NROUNDS       r11
 %endif
     endbranch64
 
 %ifndef LINUX
     mov         LEN, arg5
+    mov         NROUNDS, arg6
 %endif
 
     FUNC_SAVE
 
-    ZUC_EIA3_16_64B_AVX512 STATE, KS, T, DATA, LEN
+    ZUC_EIA3_16_64B_AVX512 STATE, KS, T, DATA, LEN, NROUNDS
 
     FUNC_RESTORE
 
