@@ -560,6 +560,45 @@ align 64
 %endmacro
 
 ;
+; Perform a partial 4x16 transpose
+; where the output is chunks of 16 bytes from 4 different buffers interleaved
+; in each register (all ZMM registers)
+;
+; Input:
+; a0 a1 a2 a3 a4 a5 a6 a7 .... a15
+; b0 b1 b2 b3 b4 b5 b6 b7 .... b15
+; c0 c1 c2 c3 c4 c5 c6 c7 .... c15
+; d0 d1 d2 d3 d4 d5 d6 d7 .... d15
+;
+; Output:
+; a0 b0 c0 d0 a4 b4 c4 d4 .... d12
+; a1 b1 c1 d1 a5 b5 c5 d5 .... d13
+; a2 b2 c2 d2 a6 b6 c6 d6 .... d14
+; a3 b3 c3 d3 a7 b7 c7 d7 .... d15
+;
+%macro TRANSPOSE4_U32_INTERLEAVED 8
+%define %%IN00  %1 ; [in/out] Bytes 0-3 for all buffers (in) / Bytes 0-15 for buffers 0,4,8,12 (out)
+%define %%IN01  %2 ; [in/out] Bytes 4-7 for all buffers (in) / Bytes 0-15 for buffers 1,5,9,13 (out)
+%define %%IN02  %3 ; [in/out] Bytes 8-11 for all buffers (in) / Bytes 0-15 for buffers 2,6,10,14 (out)
+%define %%IN03  %4 ; [in/out] Bytes 12-15 for all buffers (in) / Bytes 0-15 for buffers 3,7,11,15 (out)
+%define %%T0   %5 ; [clobbered] Temporary ZMM register
+%define %%T1   %6 ; [clobbered] Temporary ZMM register
+%define %%K0   %7 ; [clobbered] Temporary ZMM register
+%define %%K1   %8 ; [clobbered] Temporary ZMM register
+
+        vpunpckldq      %%K0, %%IN00, %%IN01
+        vpunpckhdq      %%K1, %%IN00, %%IN01
+        vpunpckldq      %%T0, %%IN02, %%IN03
+        vpunpckhdq      %%T1, %%IN02, %%IN03
+
+        vpunpcklqdq     %%IN00, %%K0, %%T0
+        vpunpckhqdq     %%IN01, %%K0, %%T0
+        vpunpcklqdq     %%IN02, %%K1, %%T1
+        vpunpckhqdq     %%IN03, %%K1, %%T1
+
+%endmacro
+
+;
 ;   bits_reorg16()
 ;
 %macro  bits_reorg16 16-17
@@ -709,7 +748,12 @@ align 64
 %endmacro
 
 ;
-;   store_kstr16()
+; Function to store 64 bytes of keystream for 16 buffers
+; Note: all the 64*16 bytes are not store contiguously,
+;       the first 256 bytes (containing 64 bytes from 4 buffers)
+;       are stored in the first half of the first 512 bytes,
+;       then there is a gap of 256 bytes and then the next 256 bytes
+;       are written, and so on.
 ;
 %macro  store_kstr16 18-24
 %define %%KS          %1  ; [in] Pointer to keystream
@@ -807,6 +851,26 @@ align 64
     vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3 + 64*2], %%DATA64B_L14
     vmovdqu64   [%%KS + %%KEY_OFF*4 + 512*3 + 64*3], %%DATA64B_L15
 %endif
+%endmacro
+
+;
+; Function to store 64 bytes of keystream for 4 buffers
+; Note: all the 64*4 bytes are not store contiguously.
+;       Each 64 bytes are stored every 512 bytes, being written in
+;       qword index 0, 1, 2 or 3 inside the 512 bytes, depending on the lane.
+%macro  store_kstr4 7
+%define %%KS          %1  ; [in] Pointer to keystream
+%define %%DATA64B_L0  %2  ; [in] 64 bytes of keystream for lane 0
+%define %%DATA64B_L1  %3  ; [in] 64 bytes of keystream for lane 1
+%define %%DATA64B_L2  %4  ; [in] 64 bytes of keystream for lane 2
+%define %%DATA64B_L3  %5  ; [in] 64 bytes of keystream for lane 3
+%define %%KEY_OFF     %6  ; [in] Offset to start writing Keystream
+%define %%LANE_GROUP  %7  ; [immediate] 0, 1, 2 or 3
+
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 64*%%LANE_GROUP], %%DATA64B_L0
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 64*%%LANE_GROUP + 512], %%DATA64B_L1
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 64*%%LANE_GROUP + 512*2], %%DATA64B_L2
+    vmovdqu64   [%%KS + %%KEY_OFF*4 + 64*%%LANE_GROUP + 512*3], %%DATA64B_L3
 %endmacro
 
 ;
@@ -1371,8 +1435,13 @@ ZUC256_INIT:
 %define %%X0            zmm10
 %define %%X1            zmm11
 %define %%X2            zmm12
-%define %%R1            zmm14
-%define %%R2            zmm15
+%define %%R1            zmm22
+%define %%R2            zmm23
+
+%define %%KS_0          zmm24
+%define %%KS_1          zmm25
+%define %%KS_2          zmm26
+%define %%KS_3          zmm27
 
         xor     %%OFFSET, %%OFFSET
 
@@ -1390,44 +1459,35 @@ ZUC256_INIT:
         mov     r12d, 0xCCCC
         kmovd   k5, r12d
 
-%%_loop:
-        ;; Generate 64 bytes of KS
-
         ; Load read-only registers
         vmovdqa64   %%MASK31, [rel mask31]
+
         ; Read R1/R2
         vmovdqa32   %%R1, [%%STATE + OFS_R1]
         vmovdqa32   %%R2, [%%STATE + OFS_R2]
-
+%%_loop:
         ;; Generate 64B of keystream in N rounds
 %assign %%N 1
-%assign %%idx 16
-%rep 16
+%assign %%LANE_GROUP 0
+%rep 4
+%assign %%idx 0
+%rep 4
         bits_reorg16 %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
-                     %%ZTMP7, %%ZTMP8, %%ZTMP9, k1, %%X0, %%X1, %%X2, APPEND(zmm, %%idx)
+                     %%ZTMP7, %%ZTMP8, %%ZTMP9, k1, %%X0, %%X1, %%X2, APPEND(%%KS_, %%idx)
         nonlin_fun16 %%STATE, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
                      %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7
         ; OFS_X3 XOR W (%%ZTMP7)
-        vpxorq  APPEND(zmm, %%idx), %%ZTMP7
+        vpxorq  APPEND(%%KS_, %%idx), %%ZTMP7
         lfsr_updt16  %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                       %%ZTMP6, %%MASK31, %%ZTMP7, k7, work
-%assign %%N %%N+1
 %assign %%idx (%%idx + 1)
+%assign %%N %%N+1
 %endrep
-        vmovdqa64   [%%STATE + OFS_R1], %%R1
-        vmovdqa64   [%%STATE + OFS_R2], %%R2
+        TRANSPOSE4_U32_INTERLEAVED %%KS_0, %%KS_1, %%KS_2, %%KS_3, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
 
-        ; ZMM16-31 contain the keystreams for each round
-        ; Perform a 32-bit 16x16 transpose to have up to 64 bytes
-        ; (NUM_ROUNDS * 4B) of each lane in a different register
-        TRANSPOSE16_U32_INTERLEAVED zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, \
-                                    zmm22, zmm23, zmm24, zmm25, zmm26, zmm27, \
-                                    zmm28, zmm29, zmm30, zmm31, zmm0, zmm1, \
-                                    zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
-                                    zmm8, zmm9
-
-        store_kstr16 %%KS, zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
-                     zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, 64
+        store_kstr4 %%KS, %%KS_0, %%KS_1, %%KS_2, %%KS_3, 64, %%LANE_GROUP
+%assign %%LANE_GROUP (%%LANE_GROUP + 1)
+%endrep
 
         ;; Digest 64 bytes of data
 
@@ -1536,6 +1596,10 @@ ZUC256_INIT:
 
         dec     %%NROUNDS
         jnz     %%_loop
+
+        ; Update R1/R2
+        vmovdqa64   [%%STATE + OFS_R1], %%R1
+        vmovdqa64   [%%STATE + OFS_R2], %%R2
 
         ; Update data pointers
         vmovdqu64       %%ZTMP1, [%%DATA]
