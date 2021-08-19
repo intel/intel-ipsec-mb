@@ -2533,8 +2533,9 @@ static void usage(void)
                 "--job-iter: number of tests iterations for each job size\n"
                 "--no-progress-bar: Don't display progress bar\n"
                 "--print-info: Display system and algorithm information\n"
-                "--turbo: Run extended RDTSC to core scaling measurement\n"
+                "--turbo: Run extended TSC to core scaling measurement\n"
                 "        (Use when turbo enabled)\n"
+                "--no-tsc-detect: don't check TSC to core scaling\n"
                 "--plot: Adjust text output for direct use with plot output\n",
                 MAX_NUM_THREADS + 1);
 }
@@ -2941,6 +2942,7 @@ int main(int argc, char *argv[])
         /* 1 size by default on job sizes list */
         uint32_t num_sizes_list = 1;
         int turbo_enabled = 0;
+        int tsc_detect = 1;
 
 #ifdef _WIN32
         HANDLE threads[MAX_NUM_THREADS];
@@ -3099,6 +3101,8 @@ int main(int argc, char *argv[])
                         return EXIT_SUCCESS;
                 } else if (strcmp(argv[i], "--turbo") == 0) {
                         turbo_enabled = 1;
+                } else if (strcmp(argv[i], "--no-tsc-detect") == 0) {
+                        tsc_detect = 0;
                 } else {
                         usage();
                         return EXIT_FAILURE;
@@ -3241,8 +3245,9 @@ int main(int argc, char *argv[])
                 }
         }
 
-        fprintf(stderr, "RDTSC scaling to core cycles: %.3f\n",
-                get_tsc_to_core_scale(turbo_enabled));
+        if (tsc_detect)
+                fprintf(stderr, "TSC scaling to core cycles: %.3f\n",
+                        get_tsc_to_core_scale(turbo_enabled));
 
         fprintf(stderr, "SHA size incr = %d\n", sha_size_incr);
 
