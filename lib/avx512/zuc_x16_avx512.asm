@@ -358,6 +358,17 @@ db      10111010b, 10111011b, 10111110b, 10111111b
 db      11101010b, 11101011b, 11101110b, 11101111b
 db      11111010b, 11111011b, 11111110b, 11111111b
 
+;; Calculate address for next bytes of keystream (KS)
+;; Memory for KS is laid out in the following way:
+;; - There are 128 bytes of KS for each buffer spread in chunks of 16 bytes,
+;;   interleaving with KS from other 3 buffers, every 512 bytes
+;; - There are 16 bytes of KS every 64 bytes, for every buffer
+
+;; - To access the 512-byte chunk, containing the 128 bytes of KS for the 4 buffers,
+;;   lane4_idx
+;; - To access the next 16 bytes of KS for a buffer, bytes16_idx is used
+;; - To access a 16-byte chunk inside a 64-byte chunk, ks_idx is used
+%define GET_KS(base, lane4_idx, bytes16_idx, ks_idx) (base + lane4_idx * 512 + bytes16_idx * 64 + ks_idx * 16)
 
 section .text
 align 64
@@ -1396,9 +1407,6 @@ ZUC256_INIT:
 %define %%DATA_ADDR3    r14
 %define %%OFFSET        r15
 
-%define %%ZKS_L         zmm12
-%define %%ZKS_H         zmm13
-
 %define %%DIGEST_0      zmm28
 %define %%DIGEST_1      zmm29
 %define %%DIGEST_2      zmm30
@@ -1413,7 +1421,9 @@ ZUC256_INIT:
 %define %%ZTMP7         zmm7
 %define %%ZTMP8         zmm8
 %define %%ZTMP9         zmm9
-%define %%ZDATA         zmm15
+
+%define %%ZKS_L         %%ZTMP9
+%define %%ZKS_H         zmm21
 
 %define %%XTMP1         xmm1
 %define %%XTMP2         xmm2
@@ -1421,10 +1431,15 @@ ZUC256_INIT:
 %define %%XTMP4         xmm4
 %define %%XTMP5         xmm5
 %define %%XTMP6         xmm6
-%define %%KS_L          xmm12
-%define %%KS_H          xmm13
-%define %%XDIGEST       xmm14
-%define %%XDATA         xmm15
+%define %%XTMP7         xmm7
+%define %%XTMP9         xmm9
+%define %%KS_L          %%XTMP9
+%define %%KS_H          xmm21
+%define %%XDIGEST_0     xmm13
+%define %%XDIGEST_1     xmm14
+%define %%XDIGEST_2     xmm19
+%define %%XDIGEST_3     xmm20
+%define %%Z_TEMP_DIGEST zmm15
 %define %%REV_TABLE_L   xmm16
 %define %%REV_TABLE_H   xmm17
 %define %%REV_AND_TABLE xmm18
@@ -1476,11 +1491,26 @@ ZUC256_INIT:
         ; Read R1/R2
         vmovdqa32   %%R1, [%%STATE + OFS_R1]
         vmovdqa32   %%R2, [%%STATE + OFS_R2]
+
+        ;;
+        ;; Generate keystream and digest 64 bytes on each iteration
+        ;;
 %%_loop:
-        ;; Generate 64B of keystream in N rounds
+        ;; Generate 64B of keystream in 16 (4x4) rounds
+        ;; N goes from 1 to 16, within two nested reps of 4 iterations
+        ;; The outer "rep" loop iterates through 4 groups of lanes (4 buffers each),
+        ;; the inner "rep" loop iterates through the data for each group:
+        ;; each iteration digests 16 bytes of data (in case of having VPCLMUL
+        ;; data from the 4 buffers is digested in one go (using ZMM registers), otherwise,
+        ;; data is digested in 4 iterations (using XMM registers)
 %assign %%N 1
 %assign %%LANE_GROUP 0
 %rep 4
+        mov             %%DATA_ADDR0, [%%DATA + %%LANE_GROUP*8 + 0*32]
+        mov             %%DATA_ADDR1, [%%DATA + %%LANE_GROUP*8 + 1*32]
+        mov             %%DATA_ADDR2, [%%DATA + %%LANE_GROUP*8 + 2*32]
+        mov             %%DATA_ADDR3, [%%DATA + %%LANE_GROUP*8 + 3*32]
+
 %assign %%idx 0
 %rep 4
         bits_reorg16 %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
@@ -1491,80 +1521,79 @@ ZUC256_INIT:
         vpxorq  APPEND(%%KS_, %%idx), %%ZTMP7
         lfsr_updt16  %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                       %%ZTMP6, %%MASK31, %%ZTMP7, k7, work
-%assign %%idx (%%idx + 1)
-%assign %%N %%N+1
-%endrep
+
+        ;; Transpose and store KS every 16 bytes
+%if %%idx == 3
         TRANSPOSE4_U32_INTERLEAVED %%KS_0, %%KS_1, %%KS_2, %%KS_3, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
 
         store_kstr4 %%KS, %%KS_0, %%KS_1, %%KS_2, %%KS_3, 64, %%LANE_GROUP
-
-        ;; Digest 64 bytes of data
-
-        ;; Read first buffers 0,4,8,12; then 1,5,9,13, and so on,
-        ;; since the keystream is laid out this way, which chunks of
-        ;; 16 bytes interleved. First the 128 bytes for
-        ;; buffers 0,4,8,12 (total of 512 bytes), then the 128 bytes
-        ;; for buffers 1,5,9,13, and so on
-%if USE_GFNI_VAES_VPCLMUL == 1
-        mov             %%DATA_ADDR0, [%%DATA + %%LANE_GROUP*8 + 0*32]
-        mov             %%DATA_ADDR1, [%%DATA + %%LANE_GROUP*8 + 1*32]
-        mov             %%DATA_ADDR2, [%%DATA + %%LANE_GROUP*8 + 2*32]
-        mov             %%DATA_ADDR3, [%%DATA + %%LANE_GROUP*8 + 3*32]
-
-%assign %%I 0
-%rep 4
-        vmovdqu64       %%XTMP1, [%%DATA_ADDR0 + 16*%%I + %%OFFSET]
-        vinserti32x4    %%ZTMP1, [%%DATA_ADDR1 + 16*%%I + %%OFFSET], 1
-        vinserti32x4    %%ZTMP1, [%%DATA_ADDR2 + 16*%%I + %%OFFSET], 2
-        vinserti32x4    %%ZTMP1, [%%DATA_ADDR3 + 16*%%I + %%OFFSET], 3
-
-%if %%I == 0
-        vmovdqa64       %%ZKS_L, [%%KS + %%LANE_GROUP*512]
-%else
-        vmovdqa64       %%ZKS_L, %%ZKS_H
 %endif
-        vmovdqa64       %%ZKS_H, [%%KS + %%LANE_GROUP*512 + (%%I + 1)*64]
 
-        ;; Reverse bits of next 16 bytes from all 4 buffers
-        vgf2p8affineqb  %%ZDATA, %%ZTMP1, [rel bit_reverse_table], 0x00
+        ;; Digest next 16 bytes of data for 4 buffers
+%if USE_GFNI_VAES_VPCLMUL == 1
+        ;; If VPCMUL is available, read chunks of 16x4 bytes of data
+        ;; and digest them with 24x4 bytes of KS, then XOR their digest
+        ;; with previous digest (with DIGEST_DATA)
 
-        DIGEST_DATA %%ZDATA, %%ZKS_L, %%ZKS_H, APPEND(%%DIGEST_, %%LANE_GROUP), k3, \
+        ; Read 4 blocks of 16 bytes of data and put them in a register
+        vmovdqu64       %%XTMP1, [%%DATA_ADDR0 + 16*%%idx + %%OFFSET]
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR1 + 16*%%idx + %%OFFSET], 1
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR2 + 16*%%idx + %%OFFSET], 2
+        vinserti32x4    %%ZTMP1, [%%DATA_ADDR3 + 16*%%idx + %%OFFSET], 3
+
+        ; Read 8 blocks of 16 bytes of KS
+        vmovdqa64       %%ZKS_L, [GET_KS(%%KS, %%LANE_GROUP, %%idx, 0)]
+        vmovdqa64       %%ZKS_H, [GET_KS(%%KS, %%LANE_GROUP, (%%idx + 1), 0)]
+
+        ; Reverse bits of next 16 bytes from all 4 buffers
+        vgf2p8affineqb  %%ZTMP7, %%ZTMP1, [rel bit_reverse_table], 0x00
+
+        ; Digest 16 bytes of data with 24 bytes of KS, for 4 buffers
+        DIGEST_DATA %%ZTMP7, %%ZKS_L, %%ZKS_H, APPEND(%%DIGEST_, %%LANE_GROUP), k3, \
                     %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6
-%assign %%I (%%I + 1)
-%endrep
+
 %else ; USE_GFNI_VAES_VPCLMUL == 1
+        ;; If VPCMUL is NOT available, read chunks of 16 bytes of data
+        ;; and digest them with 24 bytes of KS, and repeat this for 4 different buffers
+        ;; then insert these digests into a ZMM register and XOR with previous digest
 
 %assign %%J 0
 %rep 4
-        mov     %%DATA_ADDR0, [%%DATA + 8*(%%J*4 + %%LANE_GROUP)]
-
-        vpxorq  %%XDIGEST, %%XDIGEST
-%assign %%K 0
-%rep 4
-%if %%K == 0
-        vmovdqa64  %%KS_L, [%%KS + %%LANE_GROUP*512 + %%J*16]
-%else
-        vmovdqa64  %%KS_L, %%KS_H
+%if %%idx == 0
+        ; Reset temporary digests (for the first 16 bytes)
+        vpxorq  APPEND(%%XDIGEST_, %%J), APPEND(%%XDIGEST_, %%J)
 %endif
-        vmovdqa64  %%KS_H, [%%KS + %%LANE_GROUP*512 + (%%K + 1)*64 + %%J*16]
+        ; Read the next 2 blocks of 16 bytes of KS
+        vmovdqa64  %%KS_L, [GET_KS(%%KS, %%LANE_GROUP, %%idx, %%J)]
+        vmovdqa64  %%KS_H, [GET_KS(%%KS, %%LANE_GROUP, (%%idx + 1), %%J)]
 
         ;; read 16 bytes and reverse bits
-        vmovdqu64  %%XTMP1, [%%DATA_ADDR0 + 16*%%K + %%OFFSET]
-        REVERSE_BITS %%XTMP1, %%XDATA, %%REV_TABLE_L, %%REV_TABLE_H, \
+        vmovdqu64  %%XTMP1, [APPEND(%%DATA_ADDR, %%J) + %%idx*16 + %%OFFSET]
+        REVERSE_BITS %%XTMP1, %%XTMP7, %%REV_TABLE_L, %%REV_TABLE_H, \
                      %%REV_AND_TABLE, %%XTMP2, %%XTMP3
 
-        DIGEST_DATA %%XDATA, %%KS_L, %%KS_H, %%XDIGEST, k3, \
+        ; Digest 16 bytes of data with 24 bytes of KS, for one buffer
+        DIGEST_DATA %%XTMP7, %%KS_L, %%KS_H, APPEND(%%XDIGEST_, %%J), k3, \
                     %%XTMP1, %%XTMP2, %%XTMP3, %%XTMP4, %%XTMP5, %%XTMP6
-%assign %%K (%%K + 1)
-%endrep
-        vinserti32x4 %%ZTMP7, %%XDIGEST, %%J
+
+        ; Once all 64 bytes of data have been digested, insert them in temporary ZMM register
+%if %%idx == 3
+        vinserti32x4 %%Z_TEMP_DIGEST, APPEND(%%XDIGEST_, %%J), %%J
+%endif
 %assign %%J (%%J + 1)
-%endrep
-        vpxorq  APPEND(%%DIGEST_, %%LANE_GROUP), %%ZTMP7
+%endrep ; %rep 4 %%J
+
+        ; XOR with previous digest
+%if %%idx == 3
+        vpxorq  APPEND(%%DIGEST_, %%LANE_GROUP), %%Z_TEMP_DIGEST
+%endif
 %endif ;; USE_GFNI_VAES_VPCLMUL == 0
+%assign %%idx (%%idx + 1)
+%assign %%N %%N+1
+%endrep ; %rep 4 %%idx
 
 %assign %%LANE_GROUP (%%LANE_GROUP + 1)
-%endrep
+%endrep ; %rep 4 %%LANE_GROUP
 
 %assign %%LANE_GROUP 0
 %rep 4
@@ -1578,7 +1607,7 @@ ZUC256_INIT:
         vmovdqa64       [%%KS + %%LANE_GROUP*512 + 64*2], %%ZTMP5
         vmovdqa64       [%%KS + %%LANE_GROUP*512 + 64*3], %%ZTMP6
 %assign %%LANE_GROUP (%%LANE_GROUP + 1)
-%endrep
+%endrep ; %rep 4 %%LANE_GROUP
 
         add     %%OFFSET, 64
 
