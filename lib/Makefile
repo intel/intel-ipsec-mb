@@ -825,6 +825,10 @@ clean:
 	rm -Rf $(dep_target_files)
 	rm -f $(LIB_DIR)/$(LIB).a $(LIB_DIR)/$(LIB).so* $(LIB_DIR)/$(LIB).dll
 
+.PHONY: doxy
+doxy:
+	doxygen api_doxygen.conf
+
 .PHONY: help
 help:
 	@echo "Available build options:"
