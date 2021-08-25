@@ -174,6 +174,12 @@ static uint32_t detect_avx512_ifma(void)
         return (cpuid_7_0.ebx & (1 << 21));
 }
 
+static uint32_t detect_bmi2(void)
+{
+        /* Check presence of BMI2 - bit 8 of EBX */
+        return (cpuid_7_0.ebx & (1 << 8));
+}
+
 uint64_t cpu_feature_detect(void)
 {
         static const struct {
@@ -197,6 +203,7 @@ uint64_t cpu_feature_detect(void)
                 { 7, IMB_FEATURE_VPCLMULQDQ, detect_vpclmulqdq },
                 { 7, IMB_FEATURE_GFNI, detect_gfni },
                 { 7, IMB_FEATURE_AVX512_IFMA, detect_avx512_ifma },
+                { 7, IMB_FEATURE_BMI2, detect_bmi2 },
         };
         struct cpuid_regs r;
         unsigned hi_leaf_number = 0;
