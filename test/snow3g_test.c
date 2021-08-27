@@ -182,36 +182,91 @@ submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
 
 static inline int
 submit_uia2_job(struct IMB_MGR *mb_mgr, uint8_t *key, uint8_t *iv,
-                uint8_t *src, uint8_t *tag, const uint32_t bitlen)
+                uint8_t *src, uint8_t *tag, const uint32_t bitlen,
+                uint8_t *exp_out, const int num_jobs)
 {
+        int i, err, jobs_rx = 0;
         IMB_JOB *job;
 
-        job = IMB_GET_NEXT_JOB(mb_mgr);
-        job->chain_order = IMB_ORDER_CIPHER_HASH;
-        job->cipher_mode = IMB_CIPHER_NULL;
-        job->src = src;
-        job->u.SNOW3G_UIA2._iv = iv;
-        job->u.SNOW3G_UIA2._key = key;
+        /* flush the scheduler */
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
 
-        job->hash_start_src_offset_in_bytes = 0;
-        job->msg_len_to_hash_in_bits = bitlen;
-        job->hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN;
-        job->auth_tag_output = tag;
-        job->auth_tag_output_len_in_bytes = 4;
+        for (i = 0; i < num_jobs; i++) {
+                job = IMB_GET_NEXT_JOB(mb_mgr);
+                job->chain_order = IMB_ORDER_CIPHER_HASH;
+                job->cipher_mode = IMB_CIPHER_NULL;
+                job->src = src;
+                job->u.SNOW3G_UIA2._iv = iv;
+                job->u.SNOW3G_UIA2._key = key;
 
-        job = IMB_SUBMIT_JOB(mb_mgr);
-        if (job != NULL) {
-                if (job->status != IMB_STATUS_COMPLETED) {
-                        printf("%d error status:%d",
-                               __LINE__, job->status);
-                        return -1;
+                job->hash_start_src_offset_in_bytes = 0;
+                job->msg_len_to_hash_in_bits = bitlen;
+                job->hash_alg = IMB_AUTH_SNOW3G_UIA2_BITLEN;
+                job->auth_tag_output = tag;
+                job->auth_tag_output_len_in_bytes = 4;
+
+                job = IMB_SUBMIT_JOB(mb_mgr);
+                if (job != NULL) {
+                        /* got job back */
+                        jobs_rx++;
+                        if (job->status != IMB_STATUS_COMPLETED) {
+                                printf("%d error status:%d",
+                                       __LINE__, job->status);
+                                goto end;
+                        }
+                        /*Compare the digest with the expected in the vectors*/
+                        if (memcmp(job->auth_tag_output,
+                                   exp_out, DIGEST_LEN) != 0) {
+                                printf("IMB_AUTH_SNOW3G_UIA2_BITLEN "
+                                       "job num:%d\n", i);
+                                snow3g_hexdump("Actual:", job->auth_tag_output,
+                                               DIGEST_LEN);
+                                snow3g_hexdump("Expected:", exp_out,
+                                               DIGEST_LEN);
+                                goto end;
+                        }
+                } else {
+                        /* no job returned - check for error */
+                        err = imb_get_errno(mb_mgr);
+                        if (err != 0) {
+                                printf("Error: %s!\n", imb_get_strerror(err));
+                                goto end;
+                        }
                 }
-        } else {
-                printf("Expected returned job, but got nothing\n");
-                return -1;
+        }
+
+        /* flush any outstanding jobs */
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                jobs_rx++;
+
+                err = imb_get_errno(mb_mgr);
+                if (err != 0) {
+                        printf("Error: %s!\n", imb_get_strerror(err));
+                        goto end;
+                }
+
+                if (memcmp(job->auth_tag_output, exp_out, DIGEST_LEN) != 0) {
+                        printf("IMB_AUTH_SNOW3G_UIA2_BITLEN job num:%d\n", i);
+                        snow3g_hexdump("Actual:", job->auth_tag_output,
+                                       DIGEST_LEN);
+                        snow3g_hexdump("Expected:", exp_out, DIGEST_LEN);
+                        goto end;
+                }
+        }
+
+        if (jobs_rx != num_jobs) {
+                printf("Expected %d jobs, received %d\n", num_jobs, jobs_rx);
+                goto end;
         }
 
         return 0;
+
+ end:
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
+        return -1;
 }
 
 static void
@@ -2188,27 +2243,46 @@ validate_snow3g_f9(struct IMB_MGR *mb_mgr, uint32_t job_api,
 
                 /*Only 1 key sched is used*/
                 if (IMB_SNOW3G_INIT_KEY_SCHED(mb_mgr, pKey, pKeySched)) {
-                        printf("kasumi_init_f9_key_sched()error\n");
+                        printf("IMB_SNOW3G_KEY_SCHED_SIZE(mb_mgr): error\n");
                         goto snow3g_f9_1_buffer_exit;
                 }
 
                 /*test the integrity for f9_user with IV*/
-                if (job_api)
-                        submit_uia2_job(mb_mgr, (uint8_t *)pKeySched,
-                                        pIV, srcBuff, digest,
-                                        testVectors[i].lengthInBits);
-                else
+                if (job_api) {
+                        unsigned j;
+                        const unsigned num_jobs_tab[] = {
+                                1, 3, 4, 5, 7, 8, 9, 15, 16, 17
+                        };
+
+                        for (j = 0; j < DIM(num_jobs_tab); j++) {
+                                int ret = submit_uia2_job(mb_mgr,
+                                                    (uint8_t *)pKeySched,
+                                                    pIV, srcBuff, digest,
+                                                    testVectors[i].lengthInBits,
+                                                    testVectors[i].exp_out,
+                                                    num_jobs_tab[j]);
+                                if (ret < 0) {
+                                        printf("IMB_SNOW3G_F9 JOB API "
+                                               "vector num:%d\n", i);
+                                        goto snow3g_f9_1_buffer_exit;
+                                }
+                        }
+                } else {
                         IMB_SNOW3G_F9_1_BUFFER(mb_mgr, pKeySched, pIV, srcBuff,
                                                testVectors[i].lengthInBits,
                                                digest);
 
-                /*Compare the digest with the expected in the vectors*/
-                if (memcmp(digest, testVectors[i].exp_out, DIGEST_LEN) != 0) {
-                        printf("IMB_SNOW3G_F9_1_BUFFER() vector num:%d\n", i);
-                        snow3g_hexdump("Actual:", digest, DIGEST_LEN);
-                        snow3g_hexdump("Expected:", testVectors[i].exp_out,
-                                       DIGEST_LEN);
-                        goto snow3g_f9_1_buffer_exit;
+                        /*Compare the digest with the expected in the vectors*/
+                        if (memcmp(digest, testVectors[i].exp_out,
+                                   DIGEST_LEN) != 0) {
+                                printf("IMB_SNOW3G_F9_1_BUFFER() "
+                                       "vector num:%d\n", i);
+                                snow3g_hexdump("Actual:", digest, DIGEST_LEN);
+                                snow3g_hexdump("Expected:",
+                                               testVectors[i].exp_out,
+                                               DIGEST_LEN);
+                                goto snow3g_f9_1_buffer_exit;
+                        }
                 }
 
         } /* for numVectors */
