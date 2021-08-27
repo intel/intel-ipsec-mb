@@ -610,9 +610,9 @@ align 64
 %endmacro
 
 ;
-;   bits_reorg16()
+; Calculates X0-X3 from LFSR registers
 ;
-%macro  bits_reorg16 16-17
+%macro  BITS_REORG16 16-17
 %define %%STATE         %1  ; [in] ZUC state
 %define %%ROUND_NUM     %2  ; [in] Round number
 %define %%LANE_MASK     %3  ; [in] Mask register with lanes to update
@@ -674,12 +674,9 @@ align 64
 %endmacro
 
 ;
-;   nonlin_fun16()
+; Updates R1-R2, using X0-X3 and generates W (if needed)
 ;
-;   return
-;       W value, updates F_R1[] / F_R2[]
-;
-%macro nonlin_fun16  13-14
+%macro NONLIN_FUN16  13-14
 %define %%STATE     %1  ; [in] ZUC state
 %define %%LANE_MASK %2  ; [in] Mask register with lanes to update
 %define %%X0        %3  ; [in] ZMM register containing X0 of all lanes
@@ -766,7 +763,7 @@ align 64
 ;       then there is a gap of 256 bytes and then the next 256 bytes
 ;       are written, and so on.
 ;
-%macro  store_kstr16 18-24
+%macro  STORE_KSTR16 18-24
 %define %%KS          %1  ; [in] Pointer to keystream
 %define %%DATA64B_L0  %2  ; [in] 64 bytes of keystream for lane 0
 %define %%DATA64B_L1  %3  ; [in] 64 bytes of keystream for lane 1
@@ -869,7 +866,7 @@ align 64
 ; Note: all the 64*4 bytes are not store contiguously.
 ;       Each 64 bytes are stored every 512 bytes, being written in
 ;       qword index 0, 1, 2 or 3 inside the 512 bytes, depending on the lane.
-%macro  store_kstr4 7
+%macro  STORE_KSTR4 7
 %define %%KS          %1  ; [in] Pointer to keystream
 %define %%DATA64B_L0  %2  ; [in] 64 bytes of keystream for lane 0
 %define %%DATA64B_L1  %3  ; [in] 64 bytes of keystream for lane 1
@@ -885,10 +882,9 @@ align 64
 %endmacro
 
 ;
-;   add_mod31()
-;       add two 32-bit args and reduce mod (2^31-1)
+; Add two 32-bit args and reduce mod (2^31-1)
 ;
-%macro  add_mod31   4
+%macro  ADD_MOD31 4
 %define %%IN_OUT        %1 ; [in/out] ZMM register with first input and output
 %define %%IN2           %2 ; [in] ZMM register with second input
 %define %%ZTMP          %3 ; [clobbered] Temporary ZMM register
@@ -902,10 +898,9 @@ align 64
 
 
 ;
-;   rot_mod31()
-;       rotate (mult by pow of 2) 32-bit arg and reduce mod (2^31-1)
+; Rotate (mult by pow of 2) 32-bit arg and reduce mod (2^31-1)
 ;
-%macro  rot_mod31   4
+%macro  ROT_MOD31   4
 %define %%IN_OUT        %1 ; [in/out] ZMM register with input and output
 %define %%ZTMP          %2 ; [clobbered] Temporary ZMM register
 %define %%MASK31        %3 ; [in] ZMM register containing 0x7FFFFFFF's in all dwords
@@ -918,9 +913,13 @@ align 64
 
 
 ;
-;   lfsr_updt16()
+; Update LFSR registers, calculating S_16
 ;
-%macro  lfsr_updt16  13
+; S_16 = [ 2^15*S_15 + 2^17*S_13 + 2^21*S_10 + 2^20*S_4 + (1 + 2^8)*S_0 ] mod (2^31 - 1)
+; If init mode, add W to the calculation above.
+; S_16 -> S_15 for next round
+;
+%macro  LFSR_UPDT16  13
 %define %%STATE     %1  ; [in] ZUC state
 %define %%ROUND_NUM %2  ; [in] Round number
 %define %%LANE_MASK %3  ; [in] Mask register with lanes to update
@@ -945,20 +944,20 @@ align 64
 
     ; In Init mode, W is added to the S_16 calculation
 %ifidn %%MODE, init
-    add_mod31   %%W, %%LFSR_0, %%ZTMP, %%MASK_31
+    ADD_MOD31   %%W, %%LFSR_0, %%ZTMP, %%MASK_31
 %else
     vmovdqa64   %%W, %%LFSR_0
 %endif
-    rot_mod31   %%LFSR_0, %%ZTMP, %%MASK_31, 8
-    add_mod31   %%W, %%LFSR_0, %%ZTMP, %%MASK_31
-    rot_mod31   %%LFSR_4, %%ZTMP, %%MASK_31, 20
-    add_mod31   %%W, %%LFSR_4, %%ZTMP, %%MASK_31
-    rot_mod31   %%LFSR_10, %%ZTMP, %%MASK_31, 21
-    add_mod31   %%W, %%LFSR_10, %%ZTMP, %%MASK_31
-    rot_mod31   %%LFSR_13, %%ZTMP, %%MASK_31, 17
-    add_mod31   %%W, %%LFSR_13, %%ZTMP, %%MASK_31
-    rot_mod31   %%LFSR_15, %%ZTMP, %%MASK_31, 15
-    add_mod31   %%W, %%LFSR_15, %%ZTMP, %%MASK_31
+    ROT_MOD31   %%LFSR_0, %%ZTMP, %%MASK_31, 8
+    ADD_MOD31   %%W, %%LFSR_0, %%ZTMP, %%MASK_31
+    ROT_MOD31   %%LFSR_4, %%ZTMP, %%MASK_31, 20
+    ADD_MOD31   %%W, %%LFSR_4, %%ZTMP, %%MASK_31
+    ROT_MOD31   %%LFSR_10, %%ZTMP, %%MASK_31, 21
+    ADD_MOD31   %%W, %%LFSR_10, %%ZTMP, %%MASK_31
+    ROT_MOD31   %%LFSR_13, %%ZTMP, %%MASK_31, 17
+    ADD_MOD31   %%W, %%LFSR_13, %%ZTMP, %%MASK_31
+    ROT_MOD31   %%LFSR_15, %%ZTMP, %%MASK_31, 15
+    ADD_MOD31   %%W, %%LFSR_15, %%ZTMP, %%MASK_31
 
     vmovdqa32   [%%STATE + (( 0 + %%ROUND_NUM) % 16)*64]{%%LANE_MASK}, %%W
 
@@ -1137,24 +1136,24 @@ align 64
     ; Shift LFSR 32-times, update state variables
 %assign N 0
 %rep 32
-    bits_reorg16 rax, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+    BITS_REORG16 rax, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
                  zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2
-    nonlin_fun16 rax, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
+    NONLIN_FUN16 rax, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, %%W
     vpsrld  %%W,1         ; Shift out LSB of W
 
-    lfsr_updt16  rax, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
+    LFSR_UPDT16  rax, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
                  zmm6, zmm0, %%W, k7, init  ; W used in LFSR update
 %assign N N+1
 %endrep
 
     ; And once more, initial round from keygen phase = 33 times
-    bits_reorg16 rax, 0, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
+    BITS_REORG16 rax, 0, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
                  zmm8, zmm9, k1, %%X0, %%X1, %%X2
-    nonlin_fun16 rax, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
+    NONLIN_FUN16 rax, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6
 
-    lfsr_updt16  rax, 0, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
+    LFSR_UPDT16  rax, 0, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
                  zmm6, zmm0, %%W, k7, work
 
     ; Update R1, R2
@@ -1229,13 +1228,13 @@ ZUC256_INIT:
     vmovdqa32   %%R2, [pState + OFS_R2]
 ; Store all 4 bytes of keystream in a single 64-byte buffer
 %if (%%NUM_ROUNDS == 1)
-    bits_reorg16 pState, 1, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+    BITS_REORG16 pState, 1, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
                  zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, zmm16
-    nonlin_fun16 pState, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
+    NONLIN_FUN16 pState, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7
     ; OFS_X3 XOR W (zmm7)
     vpxorq      zmm16, zmm7
-    lfsr_updt16  pState, 1, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
+    LFSR_UPDT16  pState, 1, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
                  zmm6, zmm0, zmm7, k7, work
     vmovdqa32   [pState + OFS_R1]{k2}, %%R1
     vmovdqa32   [pState + OFS_R2]{k2}, %%R2
@@ -1245,13 +1244,13 @@ ZUC256_INIT:
 %assign N 1
 %assign idx 16
 %rep (%%NUM_ROUNDS-2)
-    bits_reorg16 pState, N, k3, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+    BITS_REORG16 pState, N, k3, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
                  zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, APPEND(zmm, idx)
-    nonlin_fun16 pState, k3, %%X0, %%X1, %%X2, %%R1, %%R2, \
+    NONLIN_FUN16 pState, k3, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7
     ; OFS_X3 XOR W (zmm7)
     vpxorq      APPEND(zmm, idx), zmm7
-    lfsr_updt16  pState, N, k3, zmm1, zmm2, zmm3, zmm4, zmm5, \
+    LFSR_UPDT16  pState, N, k3, zmm1, zmm2, zmm3, zmm4, zmm5, \
                  zmm6, zmm0, zmm7, k7, work
 %assign N N+1
 %assign idx (idx + 1)
@@ -1263,13 +1262,13 @@ ZUC256_INIT:
 
     ; Generate rest of the KS bytes (last 8 bytes) for selected lanes
 %rep 2
-    bits_reorg16 pState, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+    BITS_REORG16 pState, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
                  zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, APPEND(zmm, idx)
-    nonlin_fun16 pState, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
+    NONLIN_FUN16 pState, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
                  zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7
     ; OFS_X3 XOR W (zmm7)
     vpxorq      APPEND(zmm, idx), zmm7
-    lfsr_updt16  pState, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
+    LFSR_UPDT16  pState, N, k2, zmm1, zmm2, zmm3, zmm4, zmm5, \
                  zmm6, zmm0, zmm7, k7, work
 %assign N N+1
 %assign idx (idx + 1)
@@ -1292,11 +1291,11 @@ ZUC256_INIT:
 %if (%0 == 4)
     lea         r12, [rel alignr_mask]
     lea         r13, [rel mov_mask]
-    store_kstr16 pKS, zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
+    STORE_KSTR16 pKS, zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
                  zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, %%KEY_OFF, \
                  %%LANE_MASK, r12, r13, r10, k3, k5
 %else
-    store_kstr16 pKS, zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
+    STORE_KSTR16 pKS, zmm6, zmm4, zmm28, zmm16, zmm7, zmm5, zmm29, zmm17, \
                  zmm2, zmm0, zmm30, zmm18, zmm3, zmm1, zmm31, zmm19, %%KEY_OFF
 %endif
 %endif ;; %%STORE_SINGLE == 1
@@ -1513,20 +1512,20 @@ ZUC256_INIT:
 
 %assign %%idx 0
 %rep 4
-        bits_reorg16 %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
+        BITS_REORG16 %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, \
                      %%ZTMP7, %%ZTMP8, %%ZTMP9, k1, %%X0, %%X1, %%X2, APPEND(%%KS_, %%idx)
-        nonlin_fun16 %%STATE, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
+        NONLIN_FUN16 %%STATE, k2, %%X0, %%X1, %%X2, %%R1, %%R2, \
                      %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, %%ZTMP6, %%ZTMP7
         ; OFS_X3 XOR W (%%ZTMP7)
         vpxorq  APPEND(%%KS_, %%idx), %%ZTMP7
-        lfsr_updt16  %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
+        LFSR_UPDT16  %%STATE, %%N, k2, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4, %%ZTMP5, \
                       %%ZTMP6, %%MASK31, %%ZTMP7, k7, work
 
         ;; Transpose and store KS every 16 bytes
 %if %%idx == 3
         TRANSPOSE4_U32_INTERLEAVED %%KS_0, %%KS_1, %%KS_2, %%KS_3, %%ZTMP1, %%ZTMP2, %%ZTMP3, %%ZTMP4
 
-        store_kstr4 %%KS, %%KS_0, %%KS_1, %%KS_2, %%KS_3, 64, %%LANE_GROUP
+        STORE_KSTR4 %%KS, %%KS_0, %%KS_1, %%KS_2, %%KS_3, 64, %%LANE_GROUP
 %endif
 
         ;; Digest next 16 bytes of data for 4 buffers
@@ -1854,15 +1853,15 @@ ZUC_KEYGEN_SKIP8_16:
 %assign N 1
 %assign idx 16
 %rep %%NROUNDS
-        bits_reorg16 rax, N, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+        BITS_REORG16 rax, N, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
                      zmm7, zmm8, zmm9, k1, %%X0, %%X1, %%X2, APPEND(zmm, idx)
-        nonlin_fun16 rax, %%LANE_MASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
+        NONLIN_FUN16 rax, %%LANE_MASK, %%X0, %%X1, %%X2, %%R1, %%R2, \
                      zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7
         ; OFS_X3 XOR W (zmm7)
         vpxorq      APPEND(zmm, idx), zmm7
         ; Shuffle bytes within KS words to XOR with plaintext later
         vpshufb APPEND(zmm, idx), [rel swap_mask]
-        lfsr_updt16  rax, N, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, \
+        LFSR_UPDT16  rax, N, %%LANE_MASK, zmm1, zmm2, zmm3, zmm4, zmm5, \
                      zmm6, %%MASK_31, zmm7, k7, work
 %assign N (N + 1)
 %assign idx (idx + 1)
