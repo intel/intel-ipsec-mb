@@ -47,28 +47,6 @@
 
 #define NUM_AVX512_BUFS 16
 
-static inline uint16_t
-find_min_length16(const uint16_t length[NUM_AVX512_BUFS])
-{
-        __m128i xmm_lengths;
-
-        /* Calculate the minimum input packet size from packets 0-7 */
-        xmm_lengths = _mm_loadu_si128((const __m128i *)length);
-        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
-
-        const uint16_t min_length1 =
-                        (const uint16_t) _mm_extract_epi16(xmm_lengths, 0);
-
-        /* Calculate the minimum input packet size from packets 8-15 */
-        xmm_lengths = _mm_loadu_si128((const __m128i *)&length[8]);
-        xmm_lengths = _mm_minpos_epu16(xmm_lengths);
-
-        const uint16_t min_length2 =
-                        (const uint16_t) _mm_extract_epi16(xmm_lengths, 0);
-
-        return (min_length1 < min_length2) ? min_length1 : min_length2;
-}
-
 static inline uint32_t
 find_min_length32(const uint32_t length[NUM_AVX512_BUFS])
 {
@@ -842,87 +820,6 @@ void zuc_eia3_1_buffer_avx512(const void *pKey,
 #ifndef LINUX
         RESTORE_XMMS(xmm_save);
 #endif
-}
-
-static inline
-void _zuc_eia3_16_buffer_job(MB_MGR_ZUC_OOO *ooo,
-                             const unsigned use_gfni,
-                             const unsigned key_size)
-{
-        ZucState16_t *state = (ZucState16_t *) ooo->state;
-        /* Calculate the minimum input packet size from all packets */
-        uint16_t remainCommonBits = find_min_length16(ooo->lens);
-        const uint8_t **pIn8 = ooo->args.in;
-
-        /* 2 KS words already done */
-        uint16_t L = ((remainCommonBits + 31) / 32) + 2;
-
-        /* Generate first required bytes. If required KeyStream is less
-         * than 64B, we generate the the keystream and call Remainder
-         * straight away
-         */
-        if (L < 16) {
-                keystr_var_gen_16_skip8(state, ooo->args.ks,
-                                        ooo->init_not_done, L, 0, use_gfni);
-                remainder_16(ooo->args.digest, ooo->args.ks,
-                             (const void **)pIn8, ooo->lens, remainCommonBits,
-                             key_size, use_gfni);
-
-                ooo->init_not_done = 0;
-                return;
-        } else
-                keystr_64B_gen_16_skip8(state, ooo->args.ks,
-                                        ooo->init_not_done, 0, use_gfni);
-        L -= 16;
-
-        while (remainCommonBits >= (64*8)) {
-                if (L < 16) {
-                        keystr_var_gen_16(state, ooo->args.ks, L, 64,
-                                          use_gfni);
-                        L = 0;
-                } else {
-                        keystr_64B_gen_16(state, ooo->args.ks, 64,
-                                          use_gfni);
-                        L -= 16;
-                }
-
-                round64B_16(ooo->args.digest, ooo->args.ks,
-                            (const void **)pIn8, ooo->lens, use_gfni);
-                remainCommonBits -= 64*8;
-        }
-
-        if (L)
-                keystr_var_gen_16(state, ooo->args.ks, L, 64, use_gfni);
-
-        remainder_16(ooo->args.digest, ooo->args.ks,
-                     (const void **)pIn8, ooo->lens,
-                     remainCommonBits, key_size, use_gfni);
-
-        ooo->init_not_done = 0;
-}
-
-void
-zuc_eia3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
-{
-        _zuc_eia3_16_buffer_job(ooo, 0, 128);
-}
-
-void
-zuc_eia3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
-{
-        _zuc_eia3_16_buffer_job(ooo, 1, 128);
-}
-
-void
-zuc256_eia3_16_buffer_job_no_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
-{
-        _zuc_eia3_16_buffer_job(ooo, 0, 256);
-}
-
-void
-zuc256_eia3_16_buffer_job_gfni_avx512(MB_MGR_ZUC_OOO *ooo)
-{
-        _zuc_eia3_16_buffer_job(ooo, 1, 256);
 }
 
 static inline
