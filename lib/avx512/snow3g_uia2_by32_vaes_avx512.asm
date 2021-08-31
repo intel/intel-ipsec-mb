@@ -521,17 +521,14 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
         mov     qword_len, bit_len              ;; lenInBits -> lenInQwords
         shr     qword_len, 6
 
-        cmp     qword_len, 32                   ;; >=32 blocks go to 32 blocks loop
-        jae     init_32_block_loop
+        jz      full_blocks_complete
 
-        cmp     qword_len, 4                    ;; check at least 4 blocks
-        jae     init_4_block_loop
-
-        jmp     single_block_check
-
-init_32_block_loop:
         ;; precompute up to P^32
         PRECOMPUTE_CONSTANTS P1, 32, xmm0, xmm1, xmm3, xmm4, xmm5, xmm6, xmm9, xmm20, xmm21
+
+        cmp     qword_len, 32                   ;; <32 blocks go to final blocks
+        jb      lt32_blocks
+
 
 start_32_block_loop:
         vmovdqu64       zmm3, [in_ptr]
@@ -631,55 +628,6 @@ le8_blocks:
                              zmm1, zmm20, zmm21, zmm5, zmm6, zmm10, zmm11, zmm25, zmm26, zmm30, zmm31
 
         jmp     full_blocks_complete
-
-
-init_4_block_loop:
-        ;; precompute up to P^4
-        PRECOMPUTE_CONSTANTS P1, 4, xmm0, xmm1, xmm3, xmm4, xmm5, xmm6
-
-start_4_block_loop:
-        vmovdqu         xmm3, [in_ptr]
-        vmovdqu         xmm4, [in_ptr + 16]
-
-        vpshufb         xmm3, xmm3, XWORD(BSWAP64_MASK)
-        vpshufb         xmm4, xmm4, XWORD(BSWAP64_MASK)
-
-        vpxor           xmm3, xmm3, EV
-
-        vpclmulqdq      xmm5, xmm4, xmm0, 0x10
-        vpclmulqdq      xmm6, xmm4, xmm0, 0x01
-
-        vpclmulqdq      xmm10, xmm3, xmm1, 0x10
-        vpclmulqdq      xmm11, xmm3, xmm1, 0x01
-
-        vpxor           xmm5, xmm5, xmm6
-        vpxor           xmm6, xmm10, xmm11
-        vpxor           EV, xmm6, xmm5
-
-        REDUCE_TO_64    EV, xmm3
-
-        vmovq           EV, EV
-
-        add     in_ptr, 4*8
-        sub     qword_len, 4
-        cmp     qword_len, 4
-
-        ;; less than 4 blocks left
-        jb      single_block_check
-        jmp     start_4_block_loop
-
-start_single_block_loop:
-        vmovq   xmm0, [in_ptr]
-        vpshufb xmm0, xmm0, XWORD(BSWAP64_MASK)
-        vpxor   EV, xmm0
-        MUL_AND_REDUCE_64x64_LOW EV, P1, xmm1
-
-        add    in_ptr, 1*8
-        dec    qword_len
-
-single_block_check:
-        cmp     qword_len, 0
-        jne     start_single_block_loop
 
 full_blocks_complete:
 
