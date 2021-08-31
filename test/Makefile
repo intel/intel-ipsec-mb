@@ -27,6 +27,7 @@
 
 TEST_APP := ipsec_MB_testapp
 XVALID_APP := ipsec_xvalid_test
+FUZZ_APP := job_api_fuzz_test
 INSTPATH ?= /usr/include/intel-ipsec-mb.h
 LIB_DIR ?= ../lib
 
@@ -84,6 +85,8 @@ CFLAGS +=  -I../lib/include -I../lib
 LDFLAGS += -L$(LIB_DIR)
 endif
 
+FUZZ_CFLAGS = -I../lib -L../lib $(CFLAGS) -g -fsanitize=fuzzer,address,leak
+
 DEBUG_OPT ?= -O0
 ifeq ($(DEBUG),y)
 CFLAGS += $(DEBUG_OPT) -DDEBUG -g
@@ -110,6 +113,9 @@ XVALID_ASM := misc.asm
 XVALID_SOURCES := ipsec_xvalid.c utils.c
 XVALID_OBJECTS := $(XVALID_SOURCES:%.c=%.o) $(XVALID_ASM:%.asm=%.o)
 
+# fuzz modules
+FUZZ_SOURCES := job_api_fuzz_test.c
+
 # list of present dependency files
 DEP_FILES = $(wildcard ./*.d)
 
@@ -126,7 +132,7 @@ ifeq ($(CC_HAS_CET),1)
 endif
 
 # targets come here
-all: $(TEST_APP) $(XVALID_APP)
+all: $(TEST_APP) $(XVALID_APP) $(FUZZ_APP)
 
 $(TEST_APP): $(OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -134,9 +140,17 @@ $(TEST_APP): $(OBJECTS)
 $(XVALID_APP): $(XVALID_OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
+$(FUZZ_APP): $(FUZZ_SOURCES)
+ifneq (, $(shell which clang))
+	clang $(FUZZ_CFLAGS) $^ $(LDLIBS) -o $@
+else
+	echo "Clang is not installed. $(FUZZ_APP) is not built"
+endif
+
+
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) $(TEST_APP) $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS)
+	-rm -f $(OBJECTS) $(TEST_APP) $(DEP_FILES) $(XVALID_OBJECTS) $(XVALID_APP) $(ASM_OBJECTS) $(FUZZ_APP)
 
 # style check section
 CHECKPATCH?=checkpatch.pl
