@@ -1010,6 +1010,39 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         return ret;
 };
 
+static int
+verify_tag_256(void *mac, const struct test256EIA3_vectors_t *vector,
+               const unsigned tag_sz, const uint32_t i, const uint32_t j)
+{
+        const void *ref_mac = NULL;
+        int ret;
+
+        if (tag_sz == 4)
+                ref_mac = &vector->mac4;
+        else /* tag_sz == 8 */
+                ref_mac = &vector->mac8;
+
+        ret = memcmp(mac, ref_mac, tag_sz);
+        if (ret) {
+                printf("Validate ZUC-256 n block test %u, "
+                       "index %u (Int - %u bytes): FAIL\n",
+                       i + 1, j, tag_sz);
+                byte_hexdump("Expected",
+                             (const uint8_t *)ref_mac,
+                             tag_sz);
+                byte_hexdump("Found", mac, tag_sz);
+        }
+#ifdef DEBUG
+        else
+                printf("Validate ZUC-256 n block test %u, "
+                       "index %u (Int - %u bytes): PASS\n",
+                       i + 1, j, tag_sz);
+#endif
+        fflush(stdout);
+
+        return ret;
+}
+
 int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                          uint8_t **pDstData, uint8_t **pKeys, uint8_t **pIV,
                          uint32_t numBuffs)
@@ -1020,8 +1053,9 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         uint32_t bitLength[MAXBUFS];
         const struct test256EIA3_vectors_t *vector;
         unsigned int iv_lens[MAXBUFS];
+        unsigned tag_sz;
 
-        /* TODO: check 8-byte and 16-byte digests */
+        /* TODO: check 16-byte digests */
         for (i = 0; i < NUM_ZUC_256_EIA3_TESTS; i++) {
                 vector = &test256EIA3_vectors[i];
                 for (j = 0; j < numBuffs; j++) {
@@ -1032,31 +1066,19 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                         memcpy(pSrcData[j], vector->message, byteLength);
                         iv_lens[j] = vector->iv_length;
                 }
-                submit_eia3_jobs(mb_mgr, pKeys, pIV,
-                                 pSrcData, pDstData,
-                                 bitLength, numBuffs,
-                                 ZUC256_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN,
-                                 iv_lens);
+                for (tag_sz = 4; tag_sz <= 8; tag_sz *= 2) {
+                        submit_eia3_jobs(mb_mgr, pKeys, pIV,
+                                         pSrcData, pDstData,
+                                         bitLength, numBuffs,
+                                         ZUC256_KEY_LEN_IN_BYTES, tag_sz,
+                                         iv_lens);
 
-                for (j = 0; j < numBuffs; j++) {
-                        retTmp =
-                            memcmp(pDstData[j], &vector->mac4, ZUC_DIGEST_LEN);
-                        if (retTmp) {
-                                printf("Validate ZUC-256 n block test %u, "
-                                       "index %u (Int): FAIL\n", i + 1, j);
-                                byte_hexdump("Expected",
-                                             (const uint8_t *)&vector->mac4,
-                                             ZUC_DIGEST_LEN);
-                                byte_hexdump("Found", pDstData[j],
-                                             ZUC_DIGEST_LEN);
-                                ret = retTmp;
+                        for (j = 0; j < numBuffs; j++) {
+                                retTmp = verify_tag_256(pDstData[j], vector,
+                                                        tag_sz, i, j);
+                                if (retTmp)
+                                        ret = retTmp;
                         }
-#ifdef DEBUG
-                        else
-                                printf("Validate ZUC-256 n block test %u, "
-                                       "index %u (Int): PASS\n", i + 1, j);
-#endif
-                        fflush(stdout);
                 }
         }
 
