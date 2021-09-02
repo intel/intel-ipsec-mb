@@ -51,6 +51,9 @@ uninstall:
 help:
 	$(MAKE) -C lib help
 
+doxy:
+	$(MAKE) -C lib doxy
+
 README: README.md
 	pandoc -f markdown -t plain $< -o $@
 

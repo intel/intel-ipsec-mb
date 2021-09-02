@@ -442,6 +442,8 @@ typedef enum {
 } IMB_SGL_STATE;
 
 /**
+ * Job structure.
+ *
  * For AES, enc_keys and dec_keys are
  * expected to point to expanded keys structure.
  * - AES-CTR, AES-ECB and AES-CCM, only enc_keys is used
@@ -459,152 +461,148 @@ typedef enum {
  */
 
 typedef struct IMB_JOB {
-        const void *enc_keys;  /**< 16-byte aligned pointer. */
-        const void *dec_keys;
-        uint64_t key_len_in_bytes;
-        const uint8_t *src; /**< Input. May be cipher text or plaintext.
+        const void *enc_keys;  /**< Encryption key pointer */
+        const void *dec_keys;  /**< Decryption key pointer */
+        uint64_t key_len_in_bytes; /**< Key length in bytes */
+        const uint8_t *src; /**< Input buffer. May be ciphertext or plaintext.
 			      In-place ciphering allowed. */
-        uint8_t *dst; /**<Output. May be cipher text or plaintext.
+        uint8_t *dst; /**< Output buffer. May be ciphertext or plaintext.
 			In-place ciphering allowed, i.e. dst = src. */
         union {
                 uint64_t cipher_start_src_offset_in_bytes;
+                /**< Offset into input buffer to start ciphering (in bytes) */
                 uint64_t cipher_start_src_offset_in_bits;
+                /**< Offset into input buffer to start ciphering (in bits) */
                 uint64_t cipher_start_offset_in_bits;
-        };
-        /**
-	 * Max len = 65472 bytes.
-         * IPSec case, the maximum cipher
-         * length would be:
-         * 65535 -
-         * 20 (outer IP header) -
-         * 24 (ESP header + IV) -
-         * 12 (supported ICV length)
-	 */
+                /**< Offset into input buffer to start ciphering (in bits) */
+        }; /**< Offset into input buffer to start ciphering */
         union {
                 uint64_t msg_len_to_cipher_in_bytes;
+                /**< Length of message to cipher (in bytes) */
                 uint64_t msg_len_to_cipher_in_bits;
-        };
+                /**< Length of message to cipher (in bits) */
+        }; /**< Length of message to cipher */
         uint64_t hash_start_src_offset_in_bytes;
-        /**
-	 * Max len = 65496 bytes.
-         * (Max cipher len +
-         * 24 bytes ESP header)
-	 */
         union {
                 uint64_t msg_len_to_hash_in_bytes;
+                /**< Length of message to hash (in bytes) */
                 uint64_t msg_len_to_hash_in_bits;
-        };
+                /**< Length of message to hash (in bits) */
+        }; /**< Length of message to hash */
         const uint8_t *iv;	/**< Initialization Vector (IV) */
-        uint64_t iv_len_in_bytes; /**< IV length in bytes. */
-        uint8_t *auth_tag_output; /**< Tag output. This may point to a location
-				    in the src buffer (for in place)*/
-        uint64_t auth_tag_output_len_in_bytes; /**< Authentication (i.e. HMAC)
-						 tag output length in bytes
-						 (may be a truncated value) */
+        uint64_t iv_len_in_bytes; /**< IV length in bytes */
+        uint8_t *auth_tag_output; /**< Authentication tag output */
+        uint64_t auth_tag_output_len_in_bytes; /**< Authentication tag output
+	                                            length in bytes */
 
-        /* Start algorithm-specific fields */
+        /* Start hash algorithm-specific fields */
         union {
                 struct _HMAC_specific_fields {
-                        /**< Hashed result of HMAC key xor'd
-			 * with ipad (0x36). */
                         const uint8_t *_hashed_auth_key_xor_ipad;
                         /**< Hashed result of HMAC key xor'd
-			 * with opad (0x5c). */
+			 * with ipad (0x36). */
                         const uint8_t *_hashed_auth_key_xor_opad;
-                } HMAC;
+                        /**< Hashed result of HMAC key xor'd
+			 * with opad (0x5c). */
+                } HMAC; /**< HMAC specific fields */
                 struct _AES_XCBC_specific_fields {
-                        /**< 16-byte aligned pointers */
                         const uint32_t *_k1_expanded;
+                        /**< k1 expanded key pointer (16-byte aligned) */
                         const uint8_t *_k2;
+                        /**< k2 expanded key pointer (16-byte aligned) */
                         const uint8_t *_k3;
-                } XCBC;
+                        /**< k3 expanded key pointer (16-byte aligned) */
+                } XCBC; /**< AES-XCBC specific fields */
                 struct _AES_CCM_specific_fields {
-                        /**< Additional Authentication Data (AAD) */
                         const void *aad;
+                        /**< Additional Authentication Data (AAD) */
                         uint64_t aad_len_in_bytes; /**< Length of AAD */
-                } CCM;
+                } CCM; /**< AES-CCM specific fields */
                 struct _AES_CMAC_specific_fields {
-                        const void *_key_expanded; /**< 16-byte aligned */
-                        const void *_skey1;
-                        const void *_skey2;
-                } CMAC;
+                        const void *_key_expanded;
+                        /**< Expanded key (16-byte aligned) */
+                        const void *_skey1; /**< S key 1 (16-byte aligned) */
+                        const void *_skey2; /**< S key 2 (16-byte aligned) */
+                } CMAC; /**< AES-CMAC specific fields */
                 struct _AES_GCM_specific_fields {
-                        /**< Additional Authentication Data (AAD) */
                         const void *aad;
+                        /**< Additional Authentication Data (AAD) */
                         uint64_t aad_len_in_bytes;    /**< Length of AAD */
-                        /**< AES-GCM context (for SGL only) */
                         struct gcm_context_data *ctx;
-                } GCM;
+                        /**< AES-GCM context (for SGL only) */
+                } GCM; /**< AES-GCM specific fields */
                 struct _ZUC_EIA3_specific_fields {
-                        /**< 16-byte aligned pointers */
                         const uint8_t *_key;
+                        /**< Authentication key (16-byte aligned) */
                         const uint8_t *_iv;
+                        /**< Authentication 25-byte IV (16-byte aligned) */
                         const uint8_t *_iv23;
-                } ZUC_EIA3;
+                        /**< Authentication 23-byte IV (16-byte aligned) */
+                } ZUC_EIA3; /**< ZUC-EIA3 specific fields */
                 struct _SNOW3G_UIA2_specific_fields {
-                        /**< 16-byte aligned pointers */
                         const void *_key;
+                        /**< Authentication key (16-byte aligned) */
                         const void *_iv;
-                } SNOW3G_UIA2;
+                        /**< Authentication IV (16-byte aligned) */
+                } SNOW3G_UIA2; /**< SNOW3G-UIA2 specific fields */
                 struct _KASUMI_UIA1_specific_fields {
-                        /**< 16-byte aligned pointers */
                         const void *_key;
-                } KASUMI_UIA1;
+                        /**< Authentication key (16-byte aligned) */
+                } KASUMI_UIA1; /**< KASUMI-UIA2 specific fields */
                 struct _AES_GMAC_specific_fields {
                         const struct gcm_key_data *_key;
+                        /**< Authentication key */
                         const void *_iv;
+                        /**< Authentication IV */
                         uint64_t iv_len_in_bytes;
-                } GMAC; /**< Used with AES_GMAC_128/192/256 */
+                        /**< Authentication IV length in bytes */
+                } GMAC; /**< AES-GMAC specific fields */
                 struct _POLY1305_specific_fields {
-                        const void *_key; /**< pointer to 32 byte key */
-                } POLY1305;
+                        const void *_key;
+                        /**< Poly1305 key */
+                } POLY1305; /**< Poly1305 specific fields */
                 struct _CHACHA20_POLY1305_specific_fields {
-                        /**< Additional Authentication Data (AAD) */
                         const void *aad;
-                        uint64_t aad_len_in_bytes;    /**< Length of AAD */
-                        /**< Chacha20-Poly1305 context */
+                        /**< Additional Authentication Data (AAD) */
+                        uint64_t aad_len_in_bytes;
+                        /**< Length of AAD */
                         struct chacha20_poly1305_context_data *ctx;
-                } CHACHA20_POLY1305;
+                        /**< Chacha20-Poly1305 context (for SGL only) */
+                } CHACHA20_POLY1305; /**< Chacha20-Poly1305 specific fields */
                 struct _SNOW_V_AEAD_specific_fields {
                         const void *aad;
+                        /**< Additional Authentication Data (AAD) */
                         uint64_t aad_len_in_bytes;
+                        /**< Length of AAD */
                         void *reserved;
-                } SNOW_V_AEAD;
-        } u;
+                        /**< Reserved bytes */
+                } SNOW_V_AEAD; /**< SNOW-V AEAD specific fields */
+        } u; /**< Hash algorithm-specific fields */
 
-        IMB_STATUS status;
-        IMB_CIPHER_MODE cipher_mode; /**< IMB_CIPHER_CBC, IMB_CIPHER_CNTR,
-				       IMB_CIPHER_GCM, etc. */
-        IMB_CIPHER_DIRECTION cipher_direction;/**< IMB_DIR_ENCRYPT/
-						IMB_DIR_DECRYPT */
-        IMB_HASH_ALG hash_alg; /**< IMB_AUTH_SHA_1 or others... */
-        /**
-	 * IMB_ORDER_CIPHER_HASH or IMB_ORDER_HASH_CIPHER.
-         * For AES-CCM, when encrypting, IMB_ORDER_HASH_CIPHER
-         * must be selected, and when decrypting,
-         * IMB_ORDER_CIPHER_HASH must be selected.
-	 */
+        IMB_STATUS status; /**< Job status */
+        IMB_CIPHER_MODE cipher_mode; /**< Cipher mode */
+        IMB_CIPHER_DIRECTION cipher_direction; /**< Cipher direction */
+        IMB_HASH_ALG hash_alg; /**< Hashing algorithm */
         IMB_CHAIN_ORDER chain_order;
+        /**< Chain order (IMB_ORDER_CIPHER_HASH / IMB_ORDER_HASH_CIPHER).*/
 
-        void *user_data;
-        void *user_data2;
+        void *user_data; /**< Pointer 1 to user data */
+        void *user_data2; /**< Pointer 2 to user data */
 
-        /**
-         * stateless custom cipher and hash
-         *   Return:
-         *     success: 0
-         *     fail:    other
-         */
         int (*cipher_func)(struct IMB_JOB *);
+        /**< Customer cipher function */
         int (*hash_func)(struct IMB_JOB *);
+        /**< Customer hash function */
 
         IMB_SGL_STATE sgl_state;
+        /**< SGL state (IMB_SGL_INIT/IMB_SGL_UPDATE/IMB_SGL_COMPLETE) */
 
         union {
                 struct _CBCS_specific_fields {
                         void *next_iv;
-                } CBCS;
-        } cipher_fields;
+                        /**< Pointer to next IV (last ciphertext block) */
+                } CBCS; /**< CBCS specific fields */
+        } cipher_fields; /**< Cipher algorithm-specific fields */
 } IMB_JOB;
 
 
