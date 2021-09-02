@@ -1246,15 +1246,18 @@ IMB_DLL_EXPORT size_t imb_get_mb_mgr_size(void);
  * init_mb_mgr_XXX() must be called after this function call,
  * whereas XXX is the desired architecture.
  *
- * @param mem_ptr a pointer to allocated memory
+ * @param ptr Pointer to allocated memory
  * @param flags multi-buffer manager flags
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
  *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
  *
+ * @param reset_mgr if 0, IMB_MGR structure is not cleared, else it is.
+ *
  * @return Pointer to IMB_MGR structure
  */
-IMB_DLL_EXPORT IMB_MGR *imb_set_pointers_mb_mgr(void *ptr, uint64_t flags);
+IMB_DLL_EXPORT IMB_MGR *imb_set_pointers_mb_mgr(void *ptr, const uint64_t flags,
+                                                const unsigned reset_mgr);
 
 IMB_DLL_EXPORT void init_mb_mgr_avx(IMB_MGR *state);
 IMB_DLL_EXPORT IMB_JOB *submit_job_avx(IMB_MGR *state);

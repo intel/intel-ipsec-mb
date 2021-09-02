@@ -160,9 +160,12 @@ static void set_ooo_mgr_road_block(IMB_MGR *mgr)
  *                          currently SHANI is only available for SSE
  *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
  *
+ * @param reset_mgr if 0, IMB_MGR structure is not cleared, else it is.
+ *
  * @return Pointer to IMB_MGR structure
  */
-IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, uint64_t flags)
+IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags,
+                                 const unsigned reset_mgr)
 {
         if (mem_ptr == NULL) {
                 imb_set_errno(mem_ptr, ENOMEM);
@@ -176,7 +179,8 @@ IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, uint64_t flags)
         unsigned i;
 
         /* Zero out MB_MGR memory */
-        memset(mem_ptr, 0, mem_size);
+        if (reset_mgr)
+                memset(mem_ptr, 0, mem_size);
 
         imb_set_errno(ptr, 0);
         ptr->flags = flags; /* save the flags for future use in init */
@@ -241,7 +245,7 @@ IMB_MGR *alloc_mb_mgr(uint64_t flags)
         ptr = alloc_aligned_mem(imb_get_mb_mgr_size());
         IMB_ASSERT(ptr != NULL);
         if (ptr != NULL) {
-                imb_set_pointers_mb_mgr(ptr, flags);
+                imb_set_pointers_mb_mgr(ptr, flags, 1);
         } else {
                 imb_set_errno(ptr, ENOMEM);
                 return NULL;
