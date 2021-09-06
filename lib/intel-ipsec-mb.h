@@ -1134,6 +1134,7 @@ typedef struct IMB_MGR {
         void *aes256_ccm_ooo;
         void *aes256_cmac_ooo;
         void *snow3g_uea2_ooo;
+        void *snow3g_uia2_ooo;
 } IMB_MGR;
 
 /**

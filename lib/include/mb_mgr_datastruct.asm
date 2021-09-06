@@ -463,6 +463,8 @@ FIELD	_snow3g_INIT_MASK,      8,                 8
 FIELD	_snow3g_unused_lanes,   8,                 8
 FIELD	_snow3g_lanes_in_use,   8,                 8
 FIELD	_snow3g_init_done,      8,                 8
+FIELD   _snow3g_ks_ptrs,        16*8,              8
+FIELD	_snow3g_ks,	        16*4*8,            32 ; reserve space to store keystream for 16 buffers
 FIELD   _snow3g_road_block,     8,                 8
 END_FIELDS
 %assign _MB_MGR_SNOW3G_OOO_size	    _FIELD_OFFSET
