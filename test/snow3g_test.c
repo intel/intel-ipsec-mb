@@ -160,8 +160,14 @@ submit_uea2_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                                        __LINE__, job->status, i);
                                 return -1;
                         }
-                } else {
-                        printf("Expected returned job, but got nothing\n");
+                }
+        }
+
+        while ((job = IMB_FLUSH_JOB(mb_mgr)) != NULL) {
+                jobs_rx++;
+                if (job->status != IMB_STATUS_COMPLETED) {
+                        printf("%d error status:%d, job %d",
+                               __LINE__, job->status, i);
                         return -1;
                 }
         }

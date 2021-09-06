@@ -28,6 +28,9 @@
 %include "include/datastruct.asm"
 %include "include/constants.asm"
 
+%ifndef MB_MGR_DATASTRUCT_ASM_INCLUDED
+%define MB_MGR_DATASTRUCT_ASM_INCLUDED
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define constants
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -411,3 +414,85 @@ END_FIELDS
 
 _args_digest_md5	equ	_args_md5 + _digest_md5
 _args_data_ptr_md5	equ	_args_md5 + _data_ptr_md5
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Define Snow3G Out of Order Data Structures
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS	; SNOW3G_ARGS
+;;	name		        size	align
+FIELD   __snow3g_arg_in,        16*8,   64  ; array of 16 pointers to in text
+FIELD   __snow3g_arg_out,       16*8,   64  ; array of 16 pointers to out text
+FIELD   __snow3g_arg_keys,      16*8,   64  ; array of 16 pointers to keys
+FIELD   __snow3g_arg_IV,        16*8,   64  ; array of 16 pointers to IVs
+FIELD	__snow3g_arg_LFSR_0,    16*4,   64  ; 16 x 32-bit LFSR 0 register
+FIELD	__snow3g_arg_LFSR_1,    16*4,   64  ; 16 x 32-bit LFSR 1 register
+FIELD	__snow3g_arg_LFSR_2,    16*4,   64  ; 16 x 32-bit LFSR 2 register
+FIELD	__snow3g_arg_LFSR_3,    16*4,   64  ; 16 x 32-bit LFSR 3 register
+FIELD	__snow3g_arg_LFSR_4,    16*4,   64  ; 16 x 32-bit LFSR 4 register
+FIELD	__snow3g_arg_LFSR_5,    16*4,   64  ; 16 x 32-bit LFSR 5 register
+FIELD	__snow3g_arg_LFSR_6,    16*4,   64  ; 16 x 32-bit LFSR 6 register
+FIELD	__snow3g_arg_LFSR_7,    16*4,   64  ; 16 x 32-bit LFSR 7 register
+FIELD	__snow3g_arg_LFSR_8,    16*4,   64  ; 16 x 32-bit LFSR 8 register
+FIELD	__snow3g_arg_LFSR_9,    16*4,   64  ; 16 x 32-bit LFSR 9 register
+FIELD	__snow3g_arg_LFSR_10,   16*4,   64  ; 16 x 32-bit LFSR 10 register
+FIELD	__snow3g_arg_LFSR_11,   16*4,   64  ; 16 x 32-bit LFSR 11 register
+FIELD	__snow3g_arg_LFSR_12,   16*4,   64  ; 16 x 32-bit LFSR 12 register
+FIELD	__snow3g_arg_LFSR_13,   16*4,   64  ; 16 x 32-bit LFSR 13 register
+FIELD	__snow3g_arg_LFSR_14,   16*4,   64  ; 16 x 32-bit LFSR 14 register
+FIELD	__snow3g_arg_LFSR_15,   16*4,   64  ; 16 x 32-bit LFSR 15 register
+FIELD	__snow3g_arg_FSM_1,     16*4,   64  ; 16 x 32-bit FSM 1 register
+FIELD	__snow3g_arg_FSM_2,     16*4,   64  ; 16 x 32-bit FSM 2 register
+FIELD	__snow3g_arg_FSM_3,     16*4,   64  ; 16 x 32-bit FSM 3 register
+FIELD	__snow3g_arg_INITIALIZED,16*8,	64  ; array of 64-bit initialization flags
+FIELD	__snow3g_arg_ORIGINAL_LENGTHS,16*8, 64 ; array of 64-bit original lengths (in bytes)
+END_FIELDS
+%assign _SNOW3G_ARGS_size	_FIELD_OFFSET
+%assign _SNOW3G_ARGS_align	_STRUCT_ALIGN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+START_FIELDS	; MB_MGR_SNOW3G_OOO
+;;	name		        size	           align
+FIELD	_snow3g_args,	        _SNOW3G_ARGS_size, _SNOW3G_ARGS_align
+FIELD	_snow3g_lens_dw,        16*4,              4
+FIELD	_snow3g_job_in_lane,    16*8,              8
+FIELD	_snow3g_bits_fixup,     16*4,              4
+FIELD	_snow3g_INIT_MASK,      8,                 8
+FIELD	_snow3g_unused_lanes,   8,                 8
+FIELD	_snow3g_lanes_in_use,   8,                 8
+FIELD	_snow3g_init_done,      8,                 8
+FIELD   _snow3g_road_block,     8,                 8
+END_FIELDS
+%assign _MB_MGR_SNOW3G_OOO_size	    _FIELD_OFFSET
+%assign _MB_MGR_SNOW3G_OOO_align    _STRUCT_ALIGN
+
+_snow3g_args_in      equ _snow3g_args + __snow3g_arg_in
+_snow3g_args_out     equ _snow3g_args + __snow3g_arg_out
+_snow3g_args_keys    equ _snow3g_args + __snow3g_arg_keys
+_snow3g_args_IV	     equ _snow3g_args + __snow3g_arg_IV
+_snow3g_args_LFSR_0  equ _snow3g_args + __snow3g_arg_LFSR_0
+_snow3g_args_LFSR_1  equ _snow3g_args + __snow3g_arg_LFSR_1
+_snow3g_args_LFSR_2  equ _snow3g_args + __snow3g_arg_LFSR_2
+_snow3g_args_LFSR_3  equ _snow3g_args + __snow3g_arg_LFSR_3
+_snow3g_args_LFSR_4  equ _snow3g_args + __snow3g_arg_LFSR_4
+_snow3g_args_LFSR_5  equ _snow3g_args + __snow3g_arg_LFSR_5
+_snow3g_args_LFSR_6  equ _snow3g_args + __snow3g_arg_LFSR_6
+_snow3g_args_LFSR_7  equ _snow3g_args + __snow3g_arg_LFSR_7
+_snow3g_args_LFSR_8  equ _snow3g_args + __snow3g_arg_LFSR_8
+_snow3g_args_LFSR_9  equ _snow3g_args + __snow3g_arg_LFSR_9
+_snow3g_args_LFSR_10 equ _snow3g_args + __snow3g_arg_LFSR_10
+_snow3g_args_LFSR_11 equ _snow3g_args + __snow3g_arg_LFSR_11
+_snow3g_args_LFSR_12 equ _snow3g_args + __snow3g_arg_LFSR_12
+_snow3g_args_LFSR_13 equ _snow3g_args + __snow3g_arg_LFSR_13
+_snow3g_args_LFSR_14 equ _snow3g_args + __snow3g_arg_LFSR_14
+_snow3g_args_LFSR_15 equ _snow3g_args + __snow3g_arg_LFSR_15
+_snow3g_args_FSM_1   equ _snow3g_args + __snow3g_arg_FSM_1
+_snow3g_args_FSM_2   equ _snow3g_args + __snow3g_arg_FSM_2
+_snow3g_args_FSM_3   equ _snow3g_args + __snow3g_arg_FSM_3
+
+_snow3g_args_INITIALIZED      equ _snow3g_args + __snow3g_arg_INITIALIZED
+_snow3g_args_ORIGINAL_LENGTHS equ _snow3g_args + __snow3g_arg_ORIGINAL_LENGTHS
+
+%endif ;; MB_MGR_DATASTRUCT_ASM_INCLUDED

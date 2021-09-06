@@ -450,6 +450,7 @@ typedef struct IMB_JOB {
         union {
                 uint64_t cipher_start_src_offset_in_bytes;
                 uint64_t cipher_start_src_offset_in_bits;
+                uint64_t cipher_start_offset_in_bits;
         };
         /**
 	 * Max len = 65472 bytes.
@@ -1132,6 +1133,7 @@ typedef struct IMB_MGR {
         void *zuc256_eia3_ooo;
         void *aes256_ccm_ooo;
         void *aes256_cmac_ooo;
+        void *snow3g_uea2_ooo;
 } IMB_MGR;
 
 /**

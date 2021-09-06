@@ -130,10 +130,9 @@ FIELD	_dec_keys,			8,	8	; pointer to dec keys
 FIELD	_key_len_in_bytes,		8,	8
 FIELD	_src,				8,	8	; pointer to src buffer
 FIELD	_dst,				8,	8	; pointer to dst buffer
-FIELD	_cipher_start_src_offset_in_bytes, \
-					8,	8
+FIELD	_cipher_start_src_offset,       8,	8
 FIELD	_msg_len_to_cipher,	        8,	8
-FIELD	_hash_start_src_offset_in_bytes,8,	8
+FIELD	_hash_start_src_offset,         8,	8
 FIELD	_msg_len_to_hash,	        8,	8
 FIELD	_iv,				8,	8	; pointer to IV
 FIELD	_iv_len_in_bytes,		8,	8
@@ -167,13 +166,20 @@ UNION	_cipher_fields, _CBCS_spec_fields_size, _CBCS_spec_fields_align, \
                         ;; member when added in the future
 END_FIELDS
 
-%assign _msg_len_to_cipher_in_bytes _msg_len_to_cipher
-%assign _msg_len_to_cipher_in_bits  _msg_len_to_cipher
-%assign _msg_len_to_hash_in_bytes   _msg_len_to_hash
-%assign _msg_len_to_hash_in_bits    _msg_len_to_hash
-
 %assign _IMB_JOB_size	_FIELD_OFFSET
 %assign _IMB_JOB_align	_STRUCT_ALIGN
+
+%assign _msg_len_to_cipher_in_bytes _msg_len_to_cipher
+%assign _msg_len_to_cipher_in_bits  _msg_len_to_cipher
+
+%assign _msg_len_to_hash_in_bytes _msg_len_to_hash
+%assign _msg_len_to_hash_in_bits  _msg_len_to_hash
+
+%assign _cipher_start_src_offset_in_bytes _cipher_start_src_offset
+%assign _cipher_start_src_offset_in_bits  _cipher_start_src_offset
+%assign _cipher_start_offset_in_bits      _cipher_start_src_offset
+
+%assign _hash_start_src_offset_in_bytes _hash_start_src_offset
 
 %assign _auth_key_xor_ipad              _u + __auth_key_xor_ipad
 %assign _auth_key_xor_opad	        _u + __auth_key_xor_opad
@@ -194,4 +200,3 @@ END_FIELDS
 %assign	_snow_v_aad_len 		_u + __snow_v_aad_len
 %assign	_snow_v_reserved		_u + __snow_v_reserved
 %assign	_cbcs_next_iv 		        _cipher_fields + __cbcs_next_iv
-

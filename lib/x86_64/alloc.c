@@ -82,6 +82,7 @@ const struct {
         OOO_INFO(zuc256_eia3_ooo, MB_MGR_ZUC_OOO),
         OOO_INFO(aes256_ccm_ooo, MB_MGR_CCM_OOO),
 	OOO_INFO(aes256_cmac_ooo, MB_MGR_CMAC_OOO),
+        OOO_INFO(snow3g_uea2_ooo, MB_MGR_SNOW3G_OOO),
 };
 
 /**

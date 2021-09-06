@@ -82,7 +82,7 @@
 /**
  *****************************************************************************
  * @description
- *      Packed structure to store the ZUC state for 16 packets. *
+ *      Packed structure to store the ZUC state for 16 packets.
  *****************************************************************************/
 typedef struct zuc_state_16_s {
     uint32_t lfsrState[16][16];
@@ -159,6 +159,39 @@ typedef struct {
         /* Memory for 128 bytes of KS for 16 buffers */
         DECLARE_ALIGNED(uint32_t ks[16 * 2 * 16], 64);
 } ZUC_ARGS_x16;
+
+/**
+ *****************************************************************************
+ * @description
+ *      Structure to store the Snow3G state for 16 packets.
+ *****************************************************************************/
+typedef struct {
+        void *in[16];
+        void *out[16];
+        void *keys[16];
+        void *iv[16];
+        uint32_t LFSR_0[16];
+        uint32_t LFSR_1[16];
+        uint32_t LFSR_2[16];
+        uint32_t LFSR_3[16];
+        uint32_t LFSR_4[16];
+        uint32_t LFSR_5[16];
+        uint32_t LFSR_6[16];
+        uint32_t LFSR_7[16];
+        uint32_t LFSR_8[16];
+        uint32_t LFSR_9[16];
+        uint32_t LFSR_10[16];
+        uint32_t LFSR_11[16];
+        uint32_t LFSR_12[16];
+        uint32_t LFSR_13[16];
+        uint32_t LFSR_14[16];
+        uint32_t LFSR_15[16];
+        uint32_t FSM_1[16];
+        uint32_t FSM_2[16];
+        uint32_t FSM_3[16];
+        uint64_t INITIALIZED[16];
+        uint64_t ORIGINAL_LENGTHS[16];
+} SNOW3G_ARGS;
 
 /* AES out-of-order scheduler fields */
 typedef struct {
@@ -335,5 +368,18 @@ typedef struct {
         uint32_t num_lanes_inuse;
         uint64_t road_block;
 } MB_MGR_HMAC_MD5_OOO;
+
+/* SNOW3G out-of-order scheduler fields */
+typedef struct {
+        DECLARE_ALIGNED(SNOW3G_ARGS args, 64);
+        uint32_t lens_in_dw[16];
+        IMB_JOB *job_in_lane[16];
+        uint32_t bits_fixup[16];
+        uint64_t init_mask;
+        uint64_t unused_lanes;
+        uint64_t num_lanes_inuse;
+        uint64_t init_done;
+        uint64_t road_block;
+} MB_MGR_SNOW3G_OOO;
 
 #endif /* IMB_IPSEC_MB_INTERNAL_H */

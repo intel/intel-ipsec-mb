@@ -133,16 +133,19 @@ extern all_3s
 
 %endmacro
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parallel lookup 16x8-bits with table to be loaded from memory
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro LOOKUP8_64_AVX512_VBMI 9
-%define %%INDICES       %1
-%define %%RET_VALUES    %2
-%define %%TABLE         %3
-%define %%LOW_BITS      %4
-%define %%HIGH_BITS     %5
-%define %%ZTMP1         %6
-%define %%ZTMP2         %7
-%define %%ZTMP3         %8
-%define %%ZTMP4         %9
+%define %%INDICES       %1      ;; [in] zmm register with 16x8-bit index
+%define %%RET_VALUES    %2      ;; [out] zmm register with 16x8-bit values
+%define %%TABLE         %3      ;; [in] table pointer
+%define %%LOW_BITS      %4	;; [clobbered] temporary zmm register
+%define %%HIGH_BITS     %5	;; [clobbered] temporary zmm register
+%define %%ZTMP1         %6	;; [clobbered] temporary zmm register
+%define %%ZTMP2         %7	;; [clobbered] temporary zmm register
+%define %%ZTMP3         %8	;; [clobbered] temporary zmm register
+%define %%ZTMP4         %9	;; [clobbered] temporary zmm register
 
         vpandq          %%LOW_BITS, %%INDICES, [rel all_3fs] ; 6 LSB on each byte
         vpandq          %%HIGH_BITS, %%INDICES, [rel all_c0s] ; 2 MSB on each byte
@@ -165,4 +168,44 @@ extern all_3s
 
         vpternlogq      %%ZTMP1, %%ZTMP2, %%ZTMP3, 0xFE
         vporq           %%RET_VALUES, %%ZTMP1
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parallel lookup 16x8-bits with table already loaded into registers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES 14
+%define %%INDICES           %1      ;; [in] zmm register with values for lookup
+%define %%RET_VALUES        %2      ;; [out] zmm register filled with looked up values
+%define %%LOW_BITS          %3      ;; [clobbered] temporary zmm register
+%define %%ZTMP1             %4      ;; [clobbered] temporary zmm register
+%define %%ZTMP2             %5      ;; [clobbered] temporary zmm register
+%define %%ZTMP3             %6      ;; [clobbered] temporary zmm register
+%define %%MAP_TAB_0         %7      ;; [in] lookup values for bytes eq 0-3f
+%define %%MAP_TAB_1         %8      ;; [in] lookup values for bytes eq 40-7f
+%define %%MAP_TAB_2         %9      ;; [in] lookup values for bytes eq 80-bf
+%define %%MAP_TAB_3         %10     ;; [in] lookup values for bytes eq c0-ff
+%define %%KR1               %11     ;; [clobbered] temporary k-register
+%define %%KR2               %12     ;; [clobbered] temporary k-register
+%define %%KR3               %13     ;; [clobbered] temporary k-register
+%define %%KR4               %14     ;; [clobbered] temporary k-register
+
+        ;; pick 2 MSB on each byte
+        vpandq          %%ZTMP1, %%INDICES, [rel all_c0s]
+        ;; pick 6 LSB on each byte
+        vpandq          %%LOW_BITS, %%INDICES, [rel all_3fs]
+
+        vpxorq          %%ZTMP2, %%ZTMP2
+        ;; with imm=0 operation is eq
+        vpcmpb          %%KR1, %%ZTMP1, %%ZTMP2, 0
+        vpcmpb          %%KR2, %%ZTMP1, [rel all_1s], 0
+        vpcmpb          %%KR3, %%ZTMP1, [rel all_2s], 0
+        vpcmpb          %%KR4, %%ZTMP1, [rel all_3s], 0
+
+        vpermb          %%RET_VALUES{%%KR1}{z}, %%LOW_BITS, %%MAP_TAB_0
+        vpermb          %%ZTMP1{%%KR2}{z}, %%LOW_BITS, %%MAP_TAB_1
+        vpermb          %%ZTMP2{%%KR3}{z}, %%LOW_BITS, %%MAP_TAB_2
+        vpermb          %%ZTMP3{%%KR4}{z}, %%LOW_BITS, %%MAP_TAB_3
+
+        vpternlogq      %%ZTMP1, %%ZTMP2, %%ZTMP3, 0xFE
+        vpord           %%RET_VALUES, %%RET_VALUES, %%ZTMP1
 %endmacro

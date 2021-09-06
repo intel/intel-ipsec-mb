@@ -258,9 +258,12 @@ lib_objs1 = \
 	$(OBJ_DIR)\snow3g_uia2_sse_no_aesni.obj \
 	$(OBJ_DIR)\snow3g_avx.obj \
 	$(OBJ_DIR)\snow3g_avx2.obj \
+	$(OBJ_DIR)\snow3g_avx512.obj \
 	$(OBJ_DIR)\snow3g_uia2_by4_avx.obj \
 	$(OBJ_DIR)\snow3g_tables.obj \
 	$(OBJ_DIR)\snow3g_iv.obj \
+	$(OBJ_DIR)\snow3g_uia2_by32_vaes_avx512.obj \
+	$(OBJ_DIR)\mb_mgr_snow3g_uea2_submit_flush_vaes_avx512.obj \
 	$(OBJ_DIR)\aes_xcbc_expand_key.obj \
 	$(OBJ_DIR)\md5_one_block.obj \
 	$(OBJ_DIR)\sha_sse.obj \
@@ -470,9 +473,7 @@ lib_objs2 = \
 	$(OBJ_DIR)\chacha20_poly1305.obj \
 	$(OBJ_DIR)\snow_v_sse_noaesni.obj \
 	$(OBJ_DIR)\snow_v_sse.obj \
-	$(OBJ_DIR)\snow_v_avx.obj \
-	$(OBJ_DIR)\snow3g_avx512.obj \
-	$(OBJ_DIR)\snow3g_uia2_by32_vaes_avx512.obj
+	$(OBJ_DIR)\snow_v_avx.obj
 
 gcm_objs = \
 	$(OBJ_DIR)\gcm.obj \
