@@ -26,7 +26,7 @@
 *******************************************************************************/
 
 /*-----------------------------------------------------------------------
-* zuc_avx.c
+* zuc_avx512_top.c
 *-----------------------------------------------------------------------
 * An implementation of ZUC, the core algorithm for the
 * 3GPP Confidentiality and Integrity algorithms.
@@ -119,19 +119,6 @@ keystr_64B_gen_16(ZucState16_t *state, uint32_t *pKeyStr,
 }
 
 static inline void
-keystr_64B_gen_16_skip8(ZucState16_t *state, uint32_t *pKeyStr,
-                  const unsigned key_off,
-                  const uint16_t lane_mask, const unsigned use_gfni)
-{
-        if (use_gfni)
-                asm_ZucGenKeystream64B_16_skip8_gfni_avx512(state, pKeyStr,
-                                                            lane_mask, key_off);
-        else
-                asm_ZucGenKeystream64B_16_skip8_avx512(state, pKeyStr,
-                                                       lane_mask, key_off);
-}
-
-static inline void
 keystr_8B_gen_16(ZucState16_t *state, uint32_t *pKeyStr,
                  const unsigned key_off,
                  const unsigned use_gfni)
@@ -140,34 +127,6 @@ keystr_8B_gen_16(ZucState16_t *state, uint32_t *pKeyStr,
                 asm_ZucGenKeystream8B_16_gfni_avx512(state, pKeyStr, key_off);
         else
                 asm_ZucGenKeystream8B_16_avx512(state, pKeyStr, key_off);
-}
-
-static inline void
-keystr_var_gen_16(ZucState16_t *state, uint32_t *pKeyStr,
-                  const uint32_t numRounds, const unsigned key_off,
-                  const unsigned use_gfni)
-{
-        if (use_gfni)
-                asm_ZucGenKeystream_16_gfni_avx512(state, pKeyStr,
-                                                   key_off, numRounds);
-        else
-                asm_ZucGenKeystream_16_avx512(state, pKeyStr,
-                                              key_off, numRounds);
-}
-
-static inline void
-keystr_var_gen_16_skip8(ZucState16_t *state, uint32_t *pKeyStr,
-                  const uint16_t lane_mask, const uint32_t numRounds,
-                  const unsigned key_off, const unsigned use_gfni)
-
-{
-        if (use_gfni)
-                asm_ZucGenKeystream_16_skip8_gfni_avx512(state, pKeyStr,
-                                                         key_off, lane_mask,
-                                                         numRounds);
-        else
-                asm_ZucGenKeystream_16_skip8_avx512(state, pKeyStr,
-                                              key_off, lane_mask, numRounds);
 }
 
 static inline void
@@ -191,29 +150,6 @@ round64B_16(uint32_t *T, const uint32_t *ks, const void **data,
                 asm_Eia3Round64B_16_VPCLMUL(T, ks, data, lens);
         else
                 asm_Eia3Round64BAVX512_16(T, ks, data, lens);
-}
-
-static inline void
-remainder_16(uint32_t *T, const uint32_t *ks, const void **data,
-             uint16_t *lens, const uint32_t commonBits,
-             const unsigned key_size, const unsigned use_gfni)
-{
-        if (key_size == 128) {
-                if (use_gfni)
-                        asm_Eia3RemainderAVX512_16_VPCLMUL(T, ks, data, lens,
-                                                           commonBits);
-                else
-                        asm_Eia3RemainderAVX512_16(T, ks, data, lens,
-                                                   commonBits);
-        } else {
-                if (use_gfni)
-                        asm_Eia3_256_RemainderAVX512_16_VPCLMUL(T, ks, data,
-                                                                lens,
-                                                                commonBits);
-                else
-                        asm_Eia3_256_RemainderAVX512_16(T, ks, data, lens,
-                                                        commonBits);
-        }
 }
 
 static inline
