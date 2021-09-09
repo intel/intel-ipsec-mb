@@ -866,6 +866,7 @@ uint32_t average_job_size = 0;
 #define JOB_SIZE_IMIX_LIST 1024
 
 uint32_t job_iter = 0;
+uint32_t tag_size = 0;
 uint64_t gcm_aad_size = DEFAULT_GCM_AAD_SIZE;
 uint64_t ccm_aad_size = DEFAULT_CCM_AAD_SIZE;
 uint64_t chacha_poly_aad_size = DEFAULT_CHACHA_POLY_AAD_SIZE;
@@ -1752,8 +1753,11 @@ do_test(IMB_MGR *mb_mgr, struct params_s *params,
                 job_template.hash_alg = (IMB_HASH_ALG) params->hash_alg;
                 break;
         }
-        job_template.auth_tag_output_len_in_bytes =
-                (uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
+        if (tag_size == 0)
+                job_template.auth_tag_output_len_in_bytes =
+                    (uint64_t) auth_tag_length_bytes[job_template.hash_alg - 1];
+        else
+                job_template.auth_tag_output_len_in_bytes = tag_size;
 
         job_template.cipher_direction = params->cipher_dir;
 
@@ -2590,6 +2594,7 @@ static void usage(void)
                 "--turbo: Run extended TSC to core scaling measurement\n"
                 "        (Use when turbo enabled)\n"
                 "--no-tsc-detect: don't check TSC to core scaling\n"
+                "--tag-size: modify tag size\n"
                 "--plot: Adjust text output for direct use with plot output\n",
                 MAX_NUM_THREADS + 1);
 }
@@ -3159,6 +3164,9 @@ int main(int argc, char *argv[])
                         turbo_enabled = 1;
                 } else if (strcmp(argv[i], "--no-tsc-detect") == 0) {
                         tsc_detect = 0;
+                } else if (strcmp(argv[i], "--tag-size") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &tag_size, sizeof(tag_size));
                 } else {
                         usage();
                         return EXIT_FAILURE;
