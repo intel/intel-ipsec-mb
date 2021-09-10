@@ -365,10 +365,9 @@ endstruc
         ;; TEMP_R = S2(FSM[2])
         LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES \
                         %%FSM_X2, %%TEMP_R, %%ZERO, \
-                        %%TEMP_MIX, %%TEMP_NO_MIX, %%TEMP, \
+                        %%TEMP_MIX, %%TEMP_NO_MIX, \
                         %%MAP_TAB_0, %%MAP_TAB_1, \
-                        %%MAP_TAB_2, %%MAP_TAB_3, \
-                        %%KR1, %%KR2, %%KR3, %%KR4
+                        %%MAP_TAB_2, %%MAP_TAB_3, %%KR1
 
         vpxord          %%ZERO, %%ZERO, %%ZERO
         vpshufb         %%TEMP, %%TEMP_R, FIXED_ROTATE_MASK
@@ -396,8 +395,7 @@ endstruc
         vpxord          %%ZERO, %%ZERO, %%ZERO
 
         vpshufb         %%TEMP, %%FSM_X1, FIXED_ROTATE_MASK
-        vaesenc         %%TEMP, %%TEMP, %%ZERO
-        vmovdqa32       %%FSM_X2, %%TEMP
+        vaesenc         %%FSM_X2, %%TEMP, %%ZERO
 
         ;; FSM[1] = R
         vmovdqa32       %%FSM_X1, %%TEMP_R

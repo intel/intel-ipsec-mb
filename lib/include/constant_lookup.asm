@@ -26,11 +26,8 @@
 ;;
 
 extern idx_rows_avx512
-extern all_3fs
-extern all_c0s
-extern all_1s
-extern all_2s
-extern all_3s
+extern all_7fs
+extern all_80s
 
 %macro LOOKUP8_64_AVX512 26
 %define %%INDICES       %1
@@ -134,78 +131,67 @@ extern all_3s
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Parallel lookup 16x8-bits with table to be loaded from memory
+;; Parallel lookup 64x8-bits with table to be loaded from memory
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro LOOKUP8_64_AVX512_VBMI 9
-%define %%INDICES       %1      ;; [in] zmm register with 16x8-bit index
-%define %%RET_VALUES    %2      ;; [out] zmm register with 16x8-bit values
+%macro LOOKUP8_64_AVX512_VBMI 11
+%define %%INDICES       %1      ;; [in] zmm register with 64x8-bit index
+%define %%RET_VALUES    %2      ;; [out] zmm register with 64x8-bit values
 %define %%TABLE         %3      ;; [in] table pointer
-%define %%LOW_BITS      %4	;; [clobbered] temporary zmm register
-%define %%HIGH_BITS     %5	;; [clobbered] temporary zmm register
-%define %%ZTMP1         %6	;; [clobbered] temporary zmm register
-%define %%ZTMP2         %7	;; [clobbered] temporary zmm register
-%define %%ZTMP3         %8	;; [clobbered] temporary zmm register
-%define %%ZTMP4         %9	;; [clobbered] temporary zmm register
+%define %%HIGH_BIT      %4	;; [clobbered] temporary zmm register
+%define %%ZTMP1         %5	;; [clobbered] temporary zmm register
+%define %%ZTMP2         %6	;; [clobbered] temporary zmm register
+%define %%MAP_TAB_0     %7      ;; [clobbered] lookup values for bytes eq 0-3f
+%define %%MAP_TAB_1     %8      ;; [clobbered] lookup values for bytes eq 40-7f
+%define %%MAP_TAB_2     %9      ;; [clobbered] lookup values for bytes eq 80-bf
+%define %%MAP_TAB_3     %10     ;; [clobbered] lookup values for bytes eq c0-ff
+%define %%KR1           %11     ;; [clobbered] temporary k-register
 
-        vpandq          %%LOW_BITS, %%INDICES, [rel all_3fs] ; 6 LSB on each byte
-        vpandq          %%HIGH_BITS, %%INDICES, [rel all_c0s] ; 2 MSB on each byte
+        vmovdqu64       %%MAP_TAB_0, [%%TABLE]
+        vmovdqu64       %%MAP_TAB_1, [%%TABLE + 64]
+        vmovdqu64       %%MAP_TAB_2, [%%TABLE + 64*2]
+        vmovdqu64       %%MAP_TAB_3, [%%TABLE + 64*3]
 
-        vmovdqu64       %%RET_VALUES, [%%TABLE]
-        vmovdqu64       %%ZTMP1, [%%TABLE + 64]
-        vmovdqu64       %%ZTMP2, [%%TABLE + 64*2]
-        vmovdqu64       %%ZTMP3, [%%TABLE + 64*3]
+        vpandq          %%ZTMP1, %%INDICES, [rel all_7fs] ; 7 LSB on each byte
+        vpandq          %%HIGH_BIT, %%INDICES, [rel all_80s] ; 1 MSB on each byte
+        vmovdqa64       %%ZTMP2, %%ZTMP1
 
-        vpxorq          %%ZTMP4, %%ZTMP4
-        vpcmpb          k1, %%HIGH_BITS, %%ZTMP4, 0
-        vpcmpb          k2, %%HIGH_BITS, [rel all_1s], 0
-        vpcmpb          k3, %%HIGH_BITS, [rel all_2s], 0
-        vpcmpb          k4, %%HIGH_BITS, [rel all_3s], 0
+        vpxorq          %%RET_VALUES, %%RET_VALUES
+        vpcmpb          %%KR1, %%HIGH_BIT, %%RET_VALUES, 4
+        ; Permutes the bytes of tables based on bits 0-5 of indices (ZTMP1/2),
+        ; and chooses between table 1 or 2 based on bit 6
+        vpermi2b        %%ZTMP1, %%MAP_TAB_0, %%MAP_TAB_1
+        vpermi2b        %%ZTMP2, %%MAP_TAB_2, %%MAP_TAB_3
+        ; Blends results based on MSB of indices
+        vpblendmb       %%RET_VALUES{%%KR1}, %%ZTMP1, %%ZTMP2
 
-        vpermb          %%RET_VALUES{k1}{z}, %%LOW_BITS, %%RET_VALUES
-        vpermb          %%ZTMP1{k2}{z}, %%LOW_BITS, %%ZTMP1
-        vpermb          %%ZTMP2{k3}{z}, %%LOW_BITS, %%ZTMP2
-        vpermb          %%ZTMP3{k4}{z}, %%LOW_BITS, %%ZTMP3
-
-        vpternlogq      %%ZTMP1, %%ZTMP2, %%ZTMP3, 0xFE
-        vporq           %%RET_VALUES, %%ZTMP1
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Parallel lookup 16x8-bits with table already loaded into registers
+;; Parallel lookup 64x8-bits with table already loaded into registers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES 14
-%define %%INDICES           %1      ;; [in] zmm register with values for lookup
-%define %%RET_VALUES        %2      ;; [out] zmm register filled with looked up values
-%define %%LOW_BITS          %3      ;; [clobbered] temporary zmm register
-%define %%ZTMP1             %4      ;; [clobbered] temporary zmm register
-%define %%ZTMP2             %5      ;; [clobbered] temporary zmm register
-%define %%ZTMP3             %6      ;; [clobbered] temporary zmm register
-%define %%MAP_TAB_0         %7      ;; [in] lookup values for bytes eq 0-3f
-%define %%MAP_TAB_1         %8      ;; [in] lookup values for bytes eq 40-7f
-%define %%MAP_TAB_2         %9      ;; [in] lookup values for bytes eq 80-bf
-%define %%MAP_TAB_3         %10     ;; [in] lookup values for bytes eq c0-ff
-%define %%KR1               %11     ;; [clobbered] temporary k-register
-%define %%KR2               %12     ;; [clobbered] temporary k-register
-%define %%KR3               %13     ;; [clobbered] temporary k-register
-%define %%KR4               %14     ;; [clobbered] temporary k-register
+%macro LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES 10
+%define %%INDICES           %1  ;; [in] zmm register with values for lookup
+%define %%RET_VALUES        %2  ;; [out] zmm register filled with looked up values
+%define %%HIGH_BIT          %3  ;; [clobbered] temporary zmm register
+%define %%ZTMP1             %4  ;; [clobbered] temporary zmm register
+%define %%ZTMP2             %5  ;; [clobbered] temporary zmm register
+%define %%MAP_TAB_0         %6  ;; [in] lookup values for bytes eq 0-3f
+%define %%MAP_TAB_1         %7  ;; [in] lookup values for bytes eq 40-7f
+%define %%MAP_TAB_2         %8  ;; [in] lookup values for bytes eq 80-bf
+%define %%MAP_TAB_3         %9  ;; [in] lookup values for bytes eq c0-ff
+%define %%KR1               %10 ;; [clobbered] temporary k-register
 
-        ;; pick 2 MSB on each byte
-        vpandq          %%ZTMP1, %%INDICES, [rel all_c0s]
-        ;; pick 6 LSB on each byte
-        vpandq          %%LOW_BITS, %%INDICES, [rel all_3fs]
+        vpandq          %%ZTMP1, %%INDICES, [rel all_7fs] ; 7 LSB on each byte
+        vpandq          %%HIGH_BIT, %%INDICES, [rel all_80s] ; 1 MSB on each byte
+        vmovdqa64       %%ZTMP2, %%ZTMP1
 
-        vpxorq          %%ZTMP2, %%ZTMP2
-        ;; with imm=0 operation is eq
-        vpcmpb          %%KR1, %%ZTMP1, %%ZTMP2, 0
-        vpcmpb          %%KR2, %%ZTMP1, [rel all_1s], 0
-        vpcmpb          %%KR3, %%ZTMP1, [rel all_2s], 0
-        vpcmpb          %%KR4, %%ZTMP1, [rel all_3s], 0
+        vpxorq          %%RET_VALUES, %%RET_VALUES
+        vpcmpb          %%KR1, %%HIGH_BIT, %%RET_VALUES, 4
+        ; Permutes the bytes of tables based on bits 0-5 of indices (ZTMP1/2),
+        ; and chooses between table 1 or 2 based on bit 6
+        vpermi2b        %%ZTMP1, %%MAP_TAB_0, %%MAP_TAB_1
+        vpermi2b        %%ZTMP2, %%MAP_TAB_2, %%MAP_TAB_3
+        ; Blends results based on MSB of indices
+        vpblendmb       %%RET_VALUES{%%KR1}, %%ZTMP1, %%ZTMP2
 
-        vpermb          %%RET_VALUES{%%KR1}{z}, %%LOW_BITS, %%MAP_TAB_0
-        vpermb          %%ZTMP1{%%KR2}{z}, %%LOW_BITS, %%MAP_TAB_1
-        vpermb          %%ZTMP2{%%KR3}{z}, %%LOW_BITS, %%MAP_TAB_2
-        vpermb          %%ZTMP3{%%KR4}{z}, %%LOW_BITS, %%MAP_TAB_3
-
-        vpternlogq      %%ZTMP1, %%ZTMP2, %%ZTMP3, 0xFE
-        vpord           %%RET_VALUES, %%RET_VALUES, %%ZTMP1
 %endmacro
