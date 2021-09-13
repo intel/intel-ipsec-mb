@@ -1224,10 +1224,10 @@ IMB_DLL_EXPORT IMB_MGR *alloc_mb_mgr(uint64_t flags);
 /**
  * @brief Frees memory allocated previously by alloc_mb_mgr()
  *
- * @param ptr a pointer to allocated MB_MGR structure
+ * @param [in] ptr Pointer to allocated MB_MGR structure
  *
  */
-IMB_DLL_EXPORT void free_mb_mgr(IMB_MGR *state);
+IMB_DLL_EXPORT void free_mb_mgr(IMB_MGR *ptr);
 
 /**
  * @brief Calculates necessary memory size for IMB_MGR.
@@ -1246,13 +1246,13 @@ IMB_DLL_EXPORT size_t imb_get_mb_mgr_size(void);
  * init_mb_mgr_XXX() must be called after this function call,
  * whereas XXX is the desired architecture.
  *
- * @param ptr Pointer to allocated memory
- * @param flags multi-buffer manager flags
+ * @param [in] ptr a pointer to allocated memory
+ * @param [in] flags multi-buffer manager flags
  *     IMB_FLAG_SHANI_OFF - disable use (and detection) of SHA extensions,
  *                          currently SHANI is only available for SSE
  *     IMB_FLAG_AESNI_OFF - disable use (and detection) of AES extensions.
  *
- * @param reset_mgr if 0, IMB_MGR structure is not cleared, else it is.
+ * @param [in] reset_mgr if 0, IMB_MGR structure is not cleared, else it is.
  *
  * @return Pointer to IMB_MGR structure
  */
@@ -2677,7 +2677,7 @@ aes_gcm_dec_256_finalize_avx_gen4(const struct gcm_key_data *key_data,
  * Precomputation of HashKey<<1 mod poly constants (shifted_hkey_X and
  * shifted_hkey_X_k).
  *
- * @param gdata GCM context data
+ * @param [in] key_data GCM key data
  */
 IMB_DLL_EXPORT void aes_gcm_precomp_128_sse(struct gcm_key_data *key_data);
 IMB_DLL_EXPORT void aes_gcm_precomp_128_avx_gen2(struct gcm_key_data *key_data);
