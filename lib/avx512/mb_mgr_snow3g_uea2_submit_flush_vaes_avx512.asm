@@ -169,8 +169,6 @@ section .text
         ;; WORK2) and they can be processed in parallel by the algorithmic code.
         ;; ---------------------------------------------------------------------
 
-        xor             %%OFFSET, %%OFFSET ; @todo remove
-
 %%_find_min:
         ;; Find minimum length
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
