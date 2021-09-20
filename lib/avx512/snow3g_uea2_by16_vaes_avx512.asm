@@ -675,14 +675,18 @@ endstruc
 
         kmovq           %%KTMP, [%%STATE_PTR + _snow3g_args_INITIALIZED + (%%LANEID * 8)]
         kandq           %%KTMP, %%KMASK_DB, %%KTMP
-        vpshufb         %%TZMM1, LFSR_ %+ %%LANEID, [rel const_byte_shuff_mask]
 %ifnidn %%SRC_PTRS, NULL
+        vpshufb         %%TZMM1, LFSR_ %+ %%LANEID, [rel const_byte_shuff_mask]
         mov             %%TGP0, [%%SRC_PTRS + (%%LANEID * 8)]
         vmovdqu8        %%TZMM2{%%KTMP}{z}, [%%TGP0 + %%OFFSET]
         vpxord          %%TZMM1, %%TZMM1, %%TZMM2
-%endif
         mov             %%TGP0, [%%DST_PTRS + (%%LANEID * 8)]
         vmovdqu8        [%%TGP0 + %%OFFSET]{%%KTMP}, %%TZMM1
+%else
+        mov             %%TGP0, [%%DST_PTRS + (%%LANEID * 8)]
+        vmovdqu8        [%%TGP0 + %%OFFSET]{%%KTMP}, LFSR_ %+ %%LANEID
+%endif
+
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
