@@ -112,7 +112,7 @@ section .text
         mov             %%TGP1, [job + _enc_keys]
         mov             %%TGP2, [job + _iv]
 
-        ;; Initialize ctx
+        ;; Initialize context
         LFSR_FSM_STATE  state, LOAD
         vmovdqa64       TEMP_31, [rel all_fs]
         LFSR_INIT_2     TEMP_31, k1, %%TGP1, %%TGP2, TEMP_30
@@ -128,7 +128,7 @@ section .text
 
         ;; 32 iterations of FSM and LFSR clock are needed
         ;; flag snow3g_arg_INITIALIZED is used to determine if any data should
-        ;; be written to _DST; init with 0 so no writes occur in
+        ;; be written to _DST; initialize with 0 so no writes occur in
         ;; initialization phase
         mov             qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0
 
@@ -152,38 +152,24 @@ section .text
         je              %%return_null_uea2
 %endif
 
+        ;; ---------------------------------------------------------------------
+        ;; All lanes are busy or flush is called - process used lanes until
+        ;; one job is done.
+        ;; ---------------------------------------------------------------------
+        ;; State of the job is identified with:
+        ;;   _snow3g_INIT_MASK - if bit set then init xor
+        ;;   _snow3g_args_INITIALIZED - no output written
+        ;;   _snow3g_args_ORIGINAL_LENGTHS - message lengths to be processed (bytes)
+        ;;
+        ;; START -> INIT1 -> INIT2 -> WORK1 -> COMPLETE <-+
+        ;;                              |                 |
+        ;;                              +-> WORK2 --------+
+        ;;
+        ;; Each of the lanes can be in any of 4 states (INIT1, INIT2, WORK1 or
+        ;; WORK2) and they can be processed in parallel by the algorithmic code.
+        ;; ---------------------------------------------------------------------
 
-%%process_job_uea2:
-
-        ;; all lanes are busy or flush is called - process used lanes until at
-        ;; least one job is done
-
-        ;; ---------------------------------------------------------------------
-        ;; state of the job is defined with
-        ;;      %%STATE_PTR + INITIALIZED (zmm) - no output written
-        ;;      %%STATE_PTR + _snow3g_args_ORIGINAL_LENGTHS (zmm); real lengths to be processed
-        ;;      %%STATE_PTR + _snow3g_INIT_MASK (r64); if bit set do init xor
-        ;; ---------------------------------------------------------------------
-        ;; possible job states:
-        ;;      * job is finished: INITIALIZED == 1 && len == 0
-        ;;        --> return job, change job len to int max
-        ;; ---------------------------------------------------------------------
-        ;;      * job is in 1 phase of initialization (32 iterations total)
-        ;;              INITIALIZED == 0 && len > 0 && INIT_MASK bit == 1
-        ;;      * job is in progress
-        ;;              INITIALIZED == 1 && len > 0
-        ;;      * job is in 2 phase of initialization (1 keystream rejection)
-        ;;              INITIALIZED == 0 && len > 0 (==1) && INIT_MASK bit == 0
-        ;;      --> continue with count equal to min length
-        ;; ---------------------------------------------------------------------
-        ;;      * job finished 1 phase of initialization (32 iterations total)
-        ;;              INITIALIZED == 0 && len == 0 && INIT_MASK bit == 1
-        ;;        --> change len = 1, INIT_MASK bit == 0, find min again
-        ;;      * job finished 2 phase of initialization (1 keystream rejection)
-        ;;              INITIALIZED == 0 && len == 0 && INIT_MASK bit == 0
-        ;;        --> change INITIALIZED = 1, len = real_len,  find min again
-        ;; ---------------------------------------------------------------------
-        xor             %%OFFSET, %%OFFSET
+        xor             %%OFFSET, %%OFFSET ; @todo remove
 
 %%_find_min:
         ;; Find minimum length
@@ -227,6 +213,7 @@ section .text
         ;; save SRC[i] = SRC[i] + %%OFFSET
         ;; for not initialized lanes this will create invalid pointers
         ;; but no loads/stores take place thanks to masking (INITIALIZED field)
+        ;; @todo try using zmm/load/add/store
 %assign i 0
 %rep 16
         add             [state + _snow3g_args_out + i*8], %%OFFSET
@@ -240,16 +227,25 @@ section .text
 %endrep
 
 %%_len_is_0:
-        ;; check if job is finished (INITIALIZED > 0 && len == 0)
+        ;; Four states are possible here:
+        ;;   INIT1) initialization phase is complete
+        ;;   INIT2) 1st key stream word after initialization was discarded
+        ;;   WORK1) message processed for the size aligned to double words
+        ;;   WORK2) message processed for the trailing bytes below one double word
+
+        ;; check if the job is in one of INIT1 or INIT2
         test            qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0xffffffff_ffffffff
         jz              %%_init_phase_in_progress
 
-        ;; check if any not dw aligned bytes are left to process
+        ;; The job is in WORK1 or WORK2 state
+        ;; - This is determined by content of _snow3g_args_ORIGINAL_LENGTHS.
+        ;;   If it is zero then this is WORK2 state and the job processing is complete
+        ;; - Non-zero content with odd bytes requiring processing => WORK1
         mov             %%TGP0, [state + _snow3g_args_ORIGINAL_LENGTHS + %%LANE*8]
         and             %%TGP0, 0x3
         jz              %%process_completed_job_submit_uea2
 
-        ;; outstanding bytes to process but less than 32-bits
+        ;; Outstanding bytes to process (less than 32-bits)
         ;; - depending on number of bytes set flag to 1/3/7
         lea             %%TGP1, [rel index_to_byte_mask]
         mov             DWORD(%%TGP0), [%%TGP1 + %%TGP0*4]
@@ -261,15 +257,18 @@ section .text
         vpbroadcastd    zmm0{k7}, DWORD(%%TGP0)
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
 
+        ;; clear the length so that the job can transition to completion
         mov             qword [state + _snow3g_args_ORIGINAL_LENGTHS + %%LANE*8], 0
         jmp             %%_find_min
 
 %%_init_phase_in_progress:
-        ;; INITIALIZED == 0 && len == 0
+        ;; This is INIT1 or INIT2 state
         bt              word [state + _snow3g_INIT_MASK], WORD(%%LANE)
         jnc             %%_init_done
 
-        ;; job finished 1 phase of initialization (32 iterations total)
+        ;; The lane is INIT1
+        ;; - the job finished first phase of initialization (32 iterations)
+        ;; - it can transition to INIT2 (1 iteration)
         btr             word [state + _snow3g_INIT_MASK], WORD(%%LANE)  ;; INIT_MASK[LANE] = 0
 
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
@@ -279,16 +278,20 @@ section .text
         jmp             %%_find_min
 
 %%_init_done:
-        ;; job finished 2 phase of initialization (1 keystream rejection)
+        ;; The lane is in INIT2 state
+        ;; - just finished 2 phase of initialization (1 iteration)
+        ;; - it can transition to WORK1 state
         mov             qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0xffffffff_ffffffff
 
-        ;; len (dws)= original len (bytes), not 512b aligned bytes are processed later
+        ;; length in double words = original length in bytes / 4
+        ;; - odd bytes are processed later
         mov             %%TGP0, [state + _snow3g_args_ORIGINAL_LENGTHS + %%LANE*8]
         shr             %%TGP0, 2
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
         vpbroadcastd    zmm0{k7}, DWORD(%%TGP0)
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
 
+        ;; set the correct in & out pointers
         mov             %%TGP0, [state + _snow3g_job_in_lane + %%LANE*8]
         mov             %%TGP1, [%%TGP0 + _cipher_start_offset_in_bits]
         shr             %%TGP1, 3               ;; convert from bits to bytes (src & dst)
@@ -303,15 +306,14 @@ section .text
         jmp             %%_find_min
 
 %%process_completed_job_submit_uea2:
-        ;; job done: return job, change job len to int max
+        ;; job done: return job, change job length to UINT32_MAX
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
         mov             DWORD(%%TGP0), 0xffffffff
         vpbroadcastd    zmm0{k7}, DWORD(%%TGP0)
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
 
-        mov             qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0
+        mov             qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0 ; @todo is it required
 
-        ;; process completed job "idx"
         ;; decrement number of jobs in use
         dec             qword [state + _snow3g_lanes_in_use]
 
@@ -330,6 +332,7 @@ section .text
         ;; - FSM
         knotw           k1, k7
 
+        ;; @todo try not loading+storing but doing merging store only
         vmovdqa32       zmm0{k1}{z}, [state + _snow3g_args_LFSR_0]
         vmovdqa32       zmm1{k1}{z}, [state + _snow3g_args_LFSR_1]
         vmovdqa32       zmm2{k1}{z}, [state + _snow3g_args_LFSR_2]
@@ -373,7 +376,7 @@ section .text
         vmovdqa32       [state + _snow3g_args_FSM_2], zmm1
         vmovdqa32       [state + _snow3g_args_FSM_3], zmm2
 
-        ;; clear ekystream stack frame
+        ;; clear key stream stack frame
         vpxorq           zmm0, zmm0, zmm0
         vmovdqa64        [rsp + _keystream + 0 * 64], zmm0
         vmovdqa64        [rsp + _keystream + 1 * 64], zmm0
@@ -401,6 +404,7 @@ section .text
         ret
 
 %%return_null_uea2:
+        ;; @todo simplify flow of the macro? rax used only for return
         xor     job_rax, job_rax
         jmp     %%return_uea2
 %endmacro

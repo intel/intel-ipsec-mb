@@ -46,7 +46,7 @@ const_byte_shuff_mask:
 
 align 64
 const_fixup:
-        ;; MSbits in qw shuffled according to aes mix col matrix mul
+        ;; MS bits in quad word shuffled according to AES mix col matrix mul
         times 8 dq 0x273f372f071f170f
 
 align 64
@@ -55,7 +55,7 @@ const_fixup_mask:
 
 align 64
 const_fixed_rotate_mask:
-        ;; inverse of aesenc shift rows operation
+        ;; inverse of AESENC shift rows operation
         times 4 dq 0x0b0e0104070a0d00, 0x0306090c0f020508
 
 align 64
@@ -327,7 +327,7 @@ endstruc
 %endif
         mov     rbx, [rsp + _gpr_save + 8 * 0]
         mov     rbp, [rsp + _gpr_save + 8 * 1]
-        mov     rcx, [rsp + _gpr_save + 8 * 2] ;; @todo rcx, rdx don't need to be preserved per windows / sysv abi
+        mov     rcx, [rsp + _gpr_save + 8 * 2] ;; @todo rcx, rdx don't need to be preserved per windows / SYSV ABI
         mov     rdx, [rsp + _gpr_save + 8 * 3]
         mov     r12, [rsp + _gpr_save + 8 * 4]
         mov     r13, [rsp + _gpr_save + 8 * 5]
@@ -342,25 +342,25 @@ endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CLOCK FSM
-;; Updates FSM state and returns generated keystream for 16 buffers
-;; The same macro is used for initialization and keygen phase
+;; Updates FSM state and returns generated key stream for 16 buffers
+;; The same macro is used for initialization and working phase
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro FSM_CLOCK 19
-%define %%FSM_X1            %1  ;;[in/out] zmm with 16 FSM 1 values
-%define %%FSM_X2            %2  ;;[in/out] zmm with 16 FSM 2 values
-%define %%FSM_X3            %3  ;;[in/out] zmm with 16 FSM 3 values
-%define %%LFSR_5            %4  ;;[in] zmm with 16 LFSR 5 values
-%define %%LFSR_15           %5  ;;[in] zmm with 16 LFSR 15 values
-%define %%OUT_F             %6  ;; [out] zmm for generated keystreams
+%define %%FSM_X1            %1  ;; [in/out] zmm with 16 FSM 1 values
+%define %%FSM_X2            %2  ;; [in/out] zmm with 16 FSM 2 values
+%define %%FSM_X3            %3  ;; [in/out] zmm with 16 FSM 3 values
+%define %%LFSR_5            %4  ;; [in] zmm with 16 LFSR 5 values
+%define %%LFSR_15           %5  ;; [in] zmm with 16 LFSR 15 values
+%define %%OUT_F             %6  ;; [out] zmm for generated key streams
 %define %%ZERO              %7  ;; [clobbered] temporary zmm register
 %define %%TEMP_R            %8  ;; [clobbered] temporary zmm register
 %define %%TEMP_MIX          %9  ;; [clobbered] temporary zmm register
 %define %%TEMP_NO_MIX       %10 ;; [clobbered] temporary zmm register
 %define %%TEMP              %11 ;; [clobbered] temporary zmm register
-%define %%MAP_TAB_0         %12 ;; [in] lookup values for bytes eq 0-3f
-%define %%MAP_TAB_1         %13 ;; [in] lookup values for bytes eq 40-7f
-%define %%MAP_TAB_2         %14 ;; [in] lookup values for bytes eq 80-bf
-%define %%MAP_TAB_3         %15 ;; [in] lookup values for bytes eq c0-ff
+%define %%MAP_TAB_0         %12 ;; [in] lookup values for indices 0-3f
+%define %%MAP_TAB_1         %13 ;; [in] lookup values for indices 40-7f
+%define %%MAP_TAB_2         %14 ;; [in] lookup values for indices 80-bf
+%define %%MAP_TAB_3         %15 ;; [in] lookup values for indices c0-ff
 %define %%KR1               %16 ;; [clobbered] temporary k-register
 %define %%KR2               %17 ;; [clobbered] temporary k-register
 %define %%KR3               %18 ;; [clobbered] temporary k-register
@@ -408,8 +408,8 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; LFSR INIT
-;; Initialize LFSRs0-15 for single key-iv pair
+;; LFSR INITIALIZATION
+;; Initialize LFSR registers0-15 for single key-iv pair
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro LFSR_INIT_2 5
 %xdefine %%ALL_FS            %1 ;; [in] zmm with all bits set to 1
@@ -470,15 +470,15 @@ endstruc
 %xdefine %%TEMP_MAP     %2  ;; [clobbered] temporary zmm register
 %xdefine %%TEMP1        %3  ;; [clobbered] temporary zmm register
 %xdefine %%TEMP2        %4  ;; [clobbered] temporary zmm register
-%xdefine %%MAP_LO       %5  ;; [in] ptr to low part of transpose map
-%xdefine %%MAP_HI       %6  ;; [in] ptr to hihg part of transpose map
+%xdefine %%MAP_LO       %5  ;; [in] pointer to low part of transpose map
+%xdefine %%MAP_HI       %6  ;; [in] pointer to high part of transpose map
 %xdefine %%KR1          %7  ;; [clobbered] temporary k-register
 %xdefine %%KR2          %8  ;; [clobbered] temporary k-register
 %xdefine %%KR3          %9  ;; [clobbered] temporary k-register
 %xdefine %%KR4          %10 ;; [clobbered] temporary k-register
 %xdefine %%KR5          %11 ;; [clobbered] temporary k-register
 
-        vpandq             %%TEMP1, %%IO_LFSR_X, [rel dw_e0s] ;; 3 MSB on each dw
+        vpandq             %%TEMP1, %%IO_LFSR_X, [rel dw_e0s] ;; 3 MSB on each double word
 
         vpxorq             %%TEMP2, %%TEMP2
         vpcmpeqd           %%KR1, %%TEMP1, %%TEMP2
@@ -517,8 +517,8 @@ endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LFSR_CLOCK
-;; updates LFSRs0-15
-;; The same macro is used for initialization and keygen phase
+;; updates LFSR registers0-15
+;; The same macro is used for initialization and working phase
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro LFSR_CLOCK 10
 %xdefine %%TEMP      %1  ;; [clobbered] temporary zmm register
@@ -633,8 +633,8 @@ endstruc
 ;;       don't really happen (mask) and key stream is simply discarded
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro STORE_KEYSTREAM_ZMM 9
-%xdefine %%SRC_PTRS   %1 ;; [in] addr of array of pointers to 16 src buffs or "NULL"
-%xdefine %%DST_PTRS   %2 ;; [in] addr of array of pointers to 16 dst buffs
+%xdefine %%SRC_PTRS   %1 ;; [in] address of array of pointers to 16 src buffs or "NULL"
+%xdefine %%DST_PTRS   %2 ;; [in] address of array of pointers to 16 dst buffs
 %xdefine %%STATE_PTR  %3 ;; [in] pointer to state structure
 %xdefine %%OFFSET     %4 ;; [in] current offset to src/dst
 %xdefine %%LANEID     %5 ;; [in] imm value used as lane index
@@ -658,8 +658,6 @@ endstruc
 ;; Takes 64 byte of key stream, loads plain text,
 ;; xor's key stream against the plain text, stores the result.
 ;; - here it takes into account partial cases
-;;
-;; @todo writing aligned to DW, loading & reading more than needed
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro STORE_KEYSTREAM_ZMM_LAST 10
 %xdefine %%SRC_PTRS     %1 ;; [in] array of pointers to 16 src buffs or "NULL"
@@ -690,12 +688,12 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Keystreams are kept in stack in following way:
+;; Key streams are kept in stack in following way:
 ;; rsp + _keystream + 64*0  KEYSTREAM 0  : [buff15_0, buff_14_0, ..., buff0_0]
 ;; ...
 ;; rsp + _keystream + 64*14 KEYSTREAM 14 : [buff15_14, buff_14_14, ..., buff0_14]
 ;; rsp + _keystream + 64*15 KEYSTREAM 15 : [buff15_15, buff_14_15, ..., buff0_15]
-;; @note Uses LFSR registers for the transpostion
+;; @note Uses LFSR registers for the transposition
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro TRANSPOSE_FROM_STACK 4
 %xdefine %%TEMP1            %1 ;; [clobbered] temporary zmm register
@@ -731,10 +729,10 @@ endstruc
 ;; - buffers can be in initialization or working mode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro SNOW_3G_KEYSTREAM 14
-%xdefine %%STATE_PTR    %1  ;; [in] FSM_LFSR state struct ptr
-%xdefine %%COUNT        %2  ;; [in/clobbered] nr of dwords to be processed
-%xdefine %%SRC_PTRS     %3  ;; [in] addr of array of pointers to 16 src buff
-%xdefine %%DST_PTRS     %4  ;; [in] addr of array of pointers to 16 dst buff
+%xdefine %%STATE_PTR    %1  ;; [in] FSM_LFSR state structure pointer
+%xdefine %%COUNT        %2  ;; [in/clobbered] number of dwords to be processed
+%xdefine %%SRC_PTRS     %3  ;; [in] address of array of pointers to 16 src buff
+%xdefine %%DST_PTRS     %4  ;; [in] address of array of pointers to 16 dst buff
 %xdefine %%OFFSET       %5  ;; [clobbered] temporary 64bit register
 %xdefine %%TGP0         %6  ;; [clobbered] temporary 64bit register
 %xdefine %%TGP1         %7  ;; [clobbered] temporary 64bit register
@@ -768,18 +766,18 @@ endstruc
                         FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
                         %%KR1, %%KR2, %%KR3, %%KR4
 
-        ;; this xor happens only in keystream gen mode (working mode)
+        ;; this xor happens only in key stream gen mode (working mode)
         knotw           %%KR6, %%KR6    ;; bits are set if lane is initialized
         vpxord          KEYSTREAM{%%KR6}, LFSR_0, KEYSTREAM
 
-        ;; put key stream on the satck frame
+        ;; put key stream on the stack frame
         vmovdqa32       [rsp + %%TGP0], KEYSTREAM
         add             DWORD(%%TGP0), 64
 
         LFSR_CLOCK      TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
                         %%KR1, %%KR2, %%KR3, %%KR4, %%KR5
 
-        ;; this xor happens only in init gen mode (initialization mode)
+        ;; this xor happens only in initialization gen mode (initialization mode)
         knotw           %%KR6, %%KR6    ;; bits are zero if lane is initialized
         vpxord          LFSR_15{%%KR6}, LFSR_15, KEYSTREAM
 
@@ -812,7 +810,7 @@ endstruc
         dec             %%COUNT
         jnz             %%next_keyword
 
-        ;; save LSFR & FSM registers
+        ;; save LFSR & FSM registers
         LFSR_FSM_STATE  %%STATE_PTR, STORE
 
         or              %%TGP0, %%TGP0
@@ -842,8 +840,8 @@ endstruc
 %macro   SNOW3G_AUTH_INIT_5 15
 %xdefine %%STATE        %1  ;; [in] pointer to state
 %xdefine %%KEY          %2  ;; [in] address of array of pointers to 16 keys
-%xdefine %%IV           %3  ;; [in] address of array of pointers to 16 ivs
-%xdefine %%DST_PTR      %4  ;; [in] address of array of pointers to (16buffers * 5DW) out keystreams
+%xdefine %%IV           %3  ;; [in] address of array of pointers to 16 IV's
+%xdefine %%DST_PTR      %4  ;; [in] address of array of pointers to (16buffers * 5DW) out key streams
 %xdefine %%OFFSET       %5  ;; [clobbered] 64b register
 %xdefine %%COUNT        %6  ;; [clobbered] 64b register
 %xdefine %%TGP0         %7  ;; [clobbered] 64b register
@@ -881,7 +879,7 @@ endstruc
         ;; 33 iterations of FSM and LFSR clock are needed
         ;; set flag to not initialized
 
-        ;; 1st phase of initialziation mode - 32 double words
+        ;; 1st phase of initialization mode - 32 double words
         mov             dword [%%STATE + _snow3g_INIT_MASK], 0xffffffff
 
         xor             DWORD(%%COUNT), DWORD(%%COUNT)
