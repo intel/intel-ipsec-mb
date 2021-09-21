@@ -71,10 +71,6 @@ section .data
 default rel
 
 align 64
-index_to_byte_mask:
-        dd 0, 1, 3, 7
-
-align 64
 dd_0_to_15:
         dd 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
 
@@ -243,9 +239,10 @@ section .text
 
         ;; Outstanding bytes to process (less than 32-bits)
         ;; - depending on number of bytes set flag to 1/3/7
-        lea             %%TGP1, [rel index_to_byte_mask]
-        mov             DWORD(%%TGP0), [%%TGP1 + %%TGP0*4]
-        mov             [state + _snow3g_args_INITIALIZED + %%LANE*8], %%TGP0
+        xor             DWORD(%%TGP1), DWORD(%%TGP1)
+        bts             DWORD(%%TGP1), DWORD(%%TGP0)
+        dec             DWORD(%%TGP1)
+        mov             [state + _snow3g_args_INITIALIZED + %%LANE*8], %%TGP1
 
         ;; set length in double words to 1
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
