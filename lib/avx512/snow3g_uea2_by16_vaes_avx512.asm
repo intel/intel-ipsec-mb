@@ -404,6 +404,88 @@ endstruc
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LFSR & FSM INITIALIZATION for a new job
+;; - initialize LFSR & FSM for single key-iv pair
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro LFSR_FSM_INIT_SUBMIT 9
+%define %%STATE         %1 ;; [in] pointer to state structure
+%define %%KPOS          %2 ;; [in] k-register with lane mask
+%define %%KEY           %3 ;; [in] address of key
+%define %%IV            %4 ;; [in] address of iv
+%define %%ZTMP1         %5 ;; [clobbered] temporary zmm register
+%define %%ZTMP2         %6 ;; [clobbered] temporary zmm register
+%define %%ZTMP3         %7 ;; [clobbered] temporary zmm register
+%define %%GP1           %8 ;; [clobbered] temporary GP register
+%define %%GP2           %9 ;; [clobbered] temporary GP register
+
+        ;; LFSR 4, 12, 0 and 8
+        mov             DWORD(%%GP1), [%%KEY]
+        vpbroadcastd    %%ZTMP1, DWORD(%%GP1)
+        not             DWORD(%%GP1)
+        vpbroadcastd    %%ZTMP2, DWORD(%%GP1)
+
+        movbe           DWORD(%%GP2), [%%IV + 8]
+        vpbroadcastd    %%ZTMP3, DWORD(%%GP2)
+
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_4]{%%KPOS}, %%ZTMP1
+        vpxord          %%ZTMP3, %%ZTMP3, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_12]{%%KPOS}, %%ZTMP3
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_0]{%%KPOS}, %%ZTMP2
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_8]{%%KPOS}, %%ZTMP2
+
+        ;; LFSR 5, 13, 1 and 9
+        mov             DWORD(%%GP1), [%%KEY + 4]
+        vpbroadcastd    %%ZTMP1, DWORD(%%GP1)
+        not             DWORD(%%GP1)
+        vpbroadcastd    %%ZTMP2, DWORD(%%GP1)
+
+        movbe           DWORD(%%GP2), [%%IV]
+        vpbroadcastd    %%ZTMP3, DWORD(%%GP2)
+
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_5]{%%KPOS}, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_13]{%%KPOS}, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_1]{%%KPOS}, %%ZTMP2
+        vpxord          %%ZTMP3, %%ZTMP3, %%ZTMP2
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_9]{%%KPOS}, %%ZTMP3
+
+        ;; LFSR 6, 14, 2 and 10
+        mov             DWORD(%%GP1), [%%KEY + 8]
+        vpbroadcastd    %%ZTMP1, DWORD(%%GP1)
+        not             DWORD(%%GP1)
+        vpbroadcastd    %%ZTMP2, DWORD(%%GP1)
+
+        movbe           DWORD(%%GP2), [%%IV + 4]
+        vpbroadcastd    %%ZTMP3, DWORD(%%GP2)
+
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_6]{%%KPOS}, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_14]{%%KPOS}, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_2]{%%KPOS}, %%ZTMP2
+        vpxord          %%ZTMP3, %%ZTMP3, %%ZTMP2
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_10]{%%KPOS}, %%ZTMP3
+
+        ;; LFSR 7, 15, 3 and 11
+        mov             DWORD(%%GP1), [%%KEY + 12]
+        vpbroadcastd    %%ZTMP1, DWORD(%%GP1)
+        not             DWORD(%%GP1)
+        vpbroadcastd    %%ZTMP2, DWORD(%%GP1)
+
+        movbe           DWORD(%%GP2), [%%IV + 12]
+        vpbroadcastd    %%ZTMP3, DWORD(%%GP2)
+
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_7]{%%KPOS}, %%ZTMP1
+        vpxord          %%ZTMP3, %%ZTMP3, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_15]{%%KPOS}, %%ZTMP3
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_3]{%%KPOS}, %%ZTMP2
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_11]{%%KPOS}, %%ZTMP2
+
+        ;; FSM 1, 2 and 3
+        vpxord          %%ZTMP1, %%ZTMP1, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_FSM_1]{%%KPOS}, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_FSM_2]{%%KPOS}, %%ZTMP1
+        vmovdqa32       [%%STATE + _snow3g_args_FSM_3]{%%KPOS}, %%ZTMP1
+%endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LFSR INITIALIZATION
 ;; Initialize LFSR registers0-15 for single key-iv pair
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

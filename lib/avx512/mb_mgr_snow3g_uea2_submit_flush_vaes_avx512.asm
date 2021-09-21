@@ -80,7 +80,7 @@ dd_0_to_15:
 
 section .text
 
-%macro SUBMIT_FLUSH_JOB_SNOW3G_UEA2 10
+%macro SUBMIT_FLUSH_JOB_SNOW3G_UEA2 12
 %define %%SUBMIT_FLUSH    %1  ;; [in] submit/flush selector
 %define %%INIT_FLAG       %2  ;; [clobbered] GP register
 %define %%UNUSED_LANES    %3  ;; [clobbered] GP register
@@ -89,8 +89,10 @@ section .text
 %define %%TGP1            %6  ;; [clobbered] GP register
 %define %%TGP2            %7  ;; [clobbered] GP register
 %define %%TGP3            %8  ;; [clobbered] GP register
-%define %%MIN_COMMON_LEN  %9  ;; [clobbered] GP register
-%define %%OFFSET          %10 ;; [clobbered] GP register
+%define %%TGP4            %9  ;; [clobbered] GP register
+%define %%TGP5            %10 ;; [clobbered] GP register
+%define %%MIN_COMMON_LEN  %11 ;; [clobbered] GP register
+%define %%OFFSET          %12 ;; [clobbered] GP register
 
         xor     job_rax, job_rax        ;; assume NULL return job
 
@@ -109,17 +111,12 @@ section .text
         bts             DWORD(%%TGP0), DWORD(%%LANE)
         kmovd           k1, DWORD(%%TGP0)
 
+        ;; Initialize LFSR and FSM registers
         mov             %%TGP1, [job + _enc_keys]
         mov             %%TGP2, [job + _iv]
 
-        ;; Initialize context
-        LFSR_FSM_STATE  state, LOAD
-        vmovdqa64       TEMP_31, [rel all_fs]
-        LFSR_INIT_2     TEMP_31, k1, %%TGP1, %%TGP2, TEMP_30
-        vpxord          FSM1{k1}, FSM1, FSM1
-        vpxord          FSM2{k1}, FSM2, FSM2
-        vpxord          FSM3{k1}, FSM3, FSM3
-        LFSR_FSM_STATE  state, STORE
+        LFSR_FSM_INIT_SUBMIT state, k1, %%TGP1, %%TGP2, \
+                                TEMP_29, TEMP_30, TEMP_31, %%TGP3, %%TGP4
 
         ;; _INIT_MASK is common mask for clocking loop
         kmovw           k6, [state + _snow3g_INIT_MASK]
@@ -380,7 +377,7 @@ MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2,function,internal)
 SUBMIT_JOB_SNOW3G_UEA2:
         endbranch64
         SNOW3G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9
+        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11
         SNOW3G_FUNC_END
         ret
 
@@ -391,7 +388,7 @@ MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2,function,internal)
 FLUSH_JOB_SNOW3G_UEA2:
         endbranch64
         SNOW3G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9
+        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11
         SNOW3G_FUNC_END
         ret
 
