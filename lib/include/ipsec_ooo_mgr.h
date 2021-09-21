@@ -190,7 +190,7 @@ typedef struct {
         uint32_t FSM_2[16];
         uint32_t FSM_3[16];
         uint64_t INITIALIZED[16];
-        uint64_t ORIGINAL_LENGTHS[16];
+        uint64_t byte_length[16];
 } SNOW3G_ARGS;
 
 /* AES out-of-order scheduler fields */

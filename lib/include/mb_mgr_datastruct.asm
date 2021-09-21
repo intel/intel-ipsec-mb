@@ -446,7 +446,7 @@ FIELD	__snow3g_arg_FSM_1,     16*4,   64  ; 16 x 32-bit FSM 1 register
 FIELD	__snow3g_arg_FSM_2,     16*4,   64  ; 16 x 32-bit FSM 2 register
 FIELD	__snow3g_arg_FSM_3,     16*4,   64  ; 16 x 32-bit FSM 3 register
 FIELD	__snow3g_arg_INITIALIZED,16*8,	64  ; array of 64-bit initialization flags
-FIELD	__snow3g_arg_ORIGINAL_LENGTHS,16*8, 64 ; array of 64-bit original lengths (in bytes)
+FIELD	__snow3g_arg_byte_length,16*8,  64 ; array of 64-bit original lengths (in bytes)
 END_FIELDS
 %assign _SNOW3G_ARGS_size	_FIELD_OFFSET
 %assign _SNOW3G_ARGS_align	_STRUCT_ALIGN
@@ -496,6 +496,6 @@ _snow3g_args_FSM_2   equ _snow3g_args + __snow3g_arg_FSM_2
 _snow3g_args_FSM_3   equ _snow3g_args + __snow3g_arg_FSM_3
 
 _snow3g_args_INITIALIZED      equ _snow3g_args + __snow3g_arg_INITIALIZED
-_snow3g_args_ORIGINAL_LENGTHS equ _snow3g_args + __snow3g_arg_ORIGINAL_LENGTHS
+_snow3g_args_byte_length      equ _snow3g_args + __snow3g_arg_byte_length
 
 %endif ;; MB_MGR_DATASTRUCT_ASM_INCLUDED
