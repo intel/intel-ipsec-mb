@@ -211,18 +211,15 @@ section .text
         ;; save SRC[i] = SRC[i] + %%OFFSET
         ;; for not initialized lanes this will create invalid pointers
         ;; but no loads/stores take place thanks to masking (INITIALIZED field)
-        ;; @todo try using zmm/load/add/store
-%assign i 0
-%rep 16
-        add             [state + _snow3g_args_out + i*8], %%OFFSET
-%assign i (i + 1)
-%endrep
-
-%assign i 0
-%rep 16
-        add             [state + _snow3g_args_in + i*8], %%OFFSET
-%assign i (i + 1)
-%endrep
+        vpbroadcastq    zmm0, %%OFFSET
+        vpaddq          zmm1, zmm0, [state + _snow3g_args_in + 0*8]
+        vpaddq          zmm2, zmm0, [state + _snow3g_args_in + 8*8]
+        vpaddq          zmm3, zmm0, [state + _snow3g_args_out + 0*8]
+        vpaddq          zmm4, zmm0, [state + _snow3g_args_out + 8*8]
+        vmovdqa32       [state + _snow3g_args_in + 0*8], zmm1
+        vmovdqa32       [state + _snow3g_args_in + 8*8], zmm2
+        vmovdqa32       [state + _snow3g_args_out + 0*8], zmm3
+        vmovdqa32       [state + _snow3g_args_out + 8*8], zmm4
 
 %%_len_is_0:
         ;; Four states are possible here:
