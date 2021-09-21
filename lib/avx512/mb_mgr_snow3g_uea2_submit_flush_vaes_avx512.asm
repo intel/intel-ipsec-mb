@@ -328,54 +328,29 @@ section .text
         ;; clear finished job lane, %%LANE is an index of finished job
         ;; - LFSR
         ;; - FSM
-        knotw           k1, k7
+        vpxorq          zmm0, zmm0, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_0]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_1]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_2]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_3]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_4]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_5]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_6]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_7]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_8]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_9]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_10]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_11]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_12]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_13]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_14]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_LFSR_15]{k7}, zmm0
 
-        ;; @todo try not loading+storing but doing merging store only
-        vmovdqa32       zmm0{k1}{z}, [state + _snow3g_args_LFSR_0]
-        vmovdqa32       zmm1{k1}{z}, [state + _snow3g_args_LFSR_1]
-        vmovdqa32       zmm2{k1}{z}, [state + _snow3g_args_LFSR_2]
-        vmovdqa32       zmm3{k1}{z}, [state + _snow3g_args_LFSR_3]
-        vmovdqa32       [state + _snow3g_args_LFSR_0], zmm0
-        vmovdqa32       [state + _snow3g_args_LFSR_1], zmm1
-        vmovdqa32       [state + _snow3g_args_LFSR_2], zmm2
-        vmovdqa32       [state + _snow3g_args_LFSR_3], zmm3
-
-        vmovdqa32       zmm0{k1}{z}, [state + _snow3g_args_LFSR_4]
-        vmovdqa32       zmm1{k1}{z}, [state + _snow3g_args_LFSR_5]
-        vmovdqa32       zmm2{k1}{z}, [state + _snow3g_args_LFSR_6]
-        vmovdqa32       zmm3{k1}{z}, [state + _snow3g_args_LFSR_7]
-        vmovdqa32       [state + _snow3g_args_LFSR_4], zmm0
-        vmovdqa32       [state + _snow3g_args_LFSR_5], zmm1
-        vmovdqa32       [state + _snow3g_args_LFSR_6], zmm2
-        vmovdqa32       [state + _snow3g_args_LFSR_7], zmm3
-
-        vmovdqa32       zmm0{k1}{z}, [state + _snow3g_args_LFSR_8]
-        vmovdqa32       zmm1{k1}{z}, [state + _snow3g_args_LFSR_9]
-        vmovdqa32       zmm2{k1}{z}, [state + _snow3g_args_LFSR_10]
-        vmovdqa32       zmm3{k1}{z}, [state + _snow3g_args_LFSR_11]
-        vmovdqa32       [state + _snow3g_args_LFSR_8], zmm0
-        vmovdqa32       [state + _snow3g_args_LFSR_9], zmm1
-        vmovdqa32       [state + _snow3g_args_LFSR_10], zmm2
-        vmovdqa32       [state + _snow3g_args_LFSR_11], zmm3
-
-        vmovdqa32       zmm0{k1}{z}, [state + _snow3g_args_LFSR_12]
-        vmovdqa32       zmm1{k1}{z}, [state + _snow3g_args_LFSR_13]
-        vmovdqa32       zmm2{k1}{z}, [state + _snow3g_args_LFSR_14]
-        vmovdqa32       zmm3{k1}{z}, [state + _snow3g_args_LFSR_15]
-        vmovdqa32       [state + _snow3g_args_LFSR_12], zmm0
-        vmovdqa32       [state + _snow3g_args_LFSR_13], zmm1
-        vmovdqa32       [state + _snow3g_args_LFSR_14], zmm2
-        vmovdqa32       [state + _snow3g_args_LFSR_15], zmm3
-
-        vmovdqa32       zmm0{k1}{z}, [state + _snow3g_args_FSM_1]
-        vmovdqa32       zmm1{k1}{z}, [state + _snow3g_args_FSM_2]
-        vmovdqa32       zmm2{k1}{z}, [state + _snow3g_args_FSM_3]
-        vmovdqa32       [state + _snow3g_args_FSM_1], zmm0
-        vmovdqa32       [state + _snow3g_args_FSM_2], zmm1
-        vmovdqa32       [state + _snow3g_args_FSM_3], zmm2
+        vmovdqa32       [state + _snow3g_args_FSM_1]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_FSM_2]{k7}, zmm0
+        vmovdqa32       [state + _snow3g_args_FSM_3]{k7}, zmm0
 
         ;; clear key stream stack frame
-        vpxorq           zmm0, zmm0, zmm0
         vmovdqa64        [rsp + _keystream + 0 * 64], zmm0
         vmovdqa64        [rsp + _keystream + 1 * 64], zmm0
         vmovdqa64        [rsp + _keystream + 2 * 64], zmm0
