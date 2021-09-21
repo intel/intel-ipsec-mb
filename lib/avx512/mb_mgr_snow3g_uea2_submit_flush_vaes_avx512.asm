@@ -92,7 +92,7 @@ section .text
 %define %%MIN_COMMON_LEN  %9  ;; [clobbered] GP register
 %define %%OFFSET          %10 ;; [clobbered] GP register
 
-        SNOW3G_FUNC_START
+        xor     job_rax, job_rax        ;; assume NULL return job
 
 %ifidn %%SUBMIT_FLUSH, submit
         ;; unused lanes is a list of all unused lane ids (0-15)
@@ -145,11 +145,11 @@ section .text
         mov             [state + _snow3g_args_ORIGINAL_LENGTHS + %%LANE*8], %%TGP0
 
         cmp             qword [state + _snow3g_lanes_in_use], 16
-        jne             %%return_null_uea2
+        jne             %%return_uea2   ;; RAX is NULL
         ;; if all lanes are busy fall through to %%process_job_uea2
 %else   ;; FLUSH
         cmp             qword [state + _snow3g_lanes_in_use], 0
-        je              %%return_null_uea2
+        je              %%return_uea2   ;; RAX is NULL
 %endif
 
         ;; ---------------------------------------------------------------------
@@ -304,13 +304,13 @@ section .text
         jmp             %%_find_min
 
 %%process_completed_job_submit_uea2:
-        ;; job done: return job, change job length to UINT32_MAX
+        ;; COMPLETE: return job, change job length to UINT32_MAX
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
         mov             DWORD(%%TGP0), 0xffffffff
         vpbroadcastd    zmm0{k7}, DWORD(%%TGP0)
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
 
-        mov             qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0 ; @todo is it required
+        mov             qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0 ;; required in case of flush
 
         ;; decrement number of jobs in use
         dec             qword [state + _snow3g_lanes_in_use]
@@ -373,13 +373,7 @@ section .text
 %endif
 
 %%return_uea2:
-        SNOW3G_FUNC_END
-        ret
 
-%%return_null_uea2:
-        ;; @todo simplify flow of the macro? rax used only for return
-        xor     job_rax, job_rax
-        jmp     %%return_uea2
 %endmacro
 
 ;; JOB* SUBMIT_JOB_SNOW3G_UEA2(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job)
@@ -388,7 +382,10 @@ section .text
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2,function,internal)
 SUBMIT_JOB_SNOW3G_UEA2:
         endbranch64
+        SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9
+        SNOW3G_FUNC_END
+        ret
 
 
 ;; JOB* FLUSH_JOB_SNOW3G_UEA2(MB_MGR_SNOW3G_OOO *state)
@@ -396,7 +393,10 @@ SUBMIT_JOB_SNOW3G_UEA2:
 MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2,function,internal)
 FLUSH_JOB_SNOW3G_UEA2:
         endbranch64
+        SNOW3G_FUNC_START
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9
+        SNOW3G_FUNC_END
+        ret
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
