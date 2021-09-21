@@ -291,7 +291,7 @@ section .text
 
 struc STACK
 _keystream:     resb    (16 * 64)
-_gpr_save:      resq    10
+_gpr_save:      resq    8
 _rsp_save:      resq    1
 endstruc
 
@@ -305,15 +305,13 @@ endstruc
 
         mov     [rsp + _gpr_save + 8 * 0], rbx
         mov     [rsp + _gpr_save + 8 * 1], rbp
-        mov     [rsp + _gpr_save + 8 * 2], rcx
-        mov     [rsp + _gpr_save + 8 * 3], rdx
-        mov     [rsp + _gpr_save + 8 * 4], r12
-        mov     [rsp + _gpr_save + 8 * 5], r13
-        mov     [rsp + _gpr_save + 8 * 6], r14
-        mov     [rsp + _gpr_save + 8 * 7], r15
+        mov     [rsp + _gpr_save + 8 * 2], r12
+        mov     [rsp + _gpr_save + 8 * 3], r13
+        mov     [rsp + _gpr_save + 8 * 4], r14
+        mov     [rsp + _gpr_save + 8 * 5], r15
 %ifndef LINUX
-        mov     [rsp + _gpr_save + 8 * 8], rsi
-        mov     [rsp + _gpr_save + 8 * 9], rdi
+        mov     [rsp + _gpr_save + 8 * 6], rsi
+        mov     [rsp + _gpr_save + 8 * 7], rdi
 %endif
         mov     [rsp + _rsp_save], rax          ;; original SP
 %endmacro
@@ -327,15 +325,13 @@ endstruc
 %endif
         mov     rbx, [rsp + _gpr_save + 8 * 0]
         mov     rbp, [rsp + _gpr_save + 8 * 1]
-        mov     rcx, [rsp + _gpr_save + 8 * 2] ;; @todo rcx, rdx don't need to be preserved per windows / SYSV ABI
-        mov     rdx, [rsp + _gpr_save + 8 * 3]
-        mov     r12, [rsp + _gpr_save + 8 * 4]
-        mov     r13, [rsp + _gpr_save + 8 * 5]
-        mov     r14, [rsp + _gpr_save + 8 * 6]
-        mov     r15, [rsp + _gpr_save + 8 * 7]
+        mov     r12, [rsp + _gpr_save + 8 * 2]
+        mov     r13, [rsp + _gpr_save + 8 * 3]
+        mov     r14, [rsp + _gpr_save + 8 * 4]
+        mov     r15, [rsp + _gpr_save + 8 * 5]
 %ifndef LINUX
-        mov     rsi, [rsp + _gpr_save + 8 * 8]
-        mov     rdi, [rsp + _gpr_save + 8 * 9]
+        mov     rsi, [rsp + _gpr_save + 8 * 6]
+        mov     rdi, [rsp + _gpr_save + 8 * 7]
 %endif
         mov     rsp, [rsp + _rsp_save]  ; original SP
 %endmacro
