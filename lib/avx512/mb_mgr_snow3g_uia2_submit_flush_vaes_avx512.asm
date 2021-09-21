@@ -116,7 +116,7 @@ section .text
 
         ;; Update lane len
         vpbroadcastd    zmm1, DWORD(len)
-        vmovdqa32       [state + _snow3g_lens_dw]{k1}, zmm1
+        vmovdqa32       [state + _snow3g_lens]{k1}, zmm1
 
         cmp     qword [state + _snow3g_lanes_in_use], 16
         jne     %%return_null_uia2
@@ -187,7 +187,7 @@ section .text
 
         mov     arg1, [tmp_state + _snow3g_args_in + idx*8]
         mov     arg2, [tmp_state + _snow3g_ks_ptrs + idx*8]
-        mov     DWORD(arg3), dword [tmp_state + _snow3g_lens_dw + idx*4]
+        mov     DWORD(arg3), dword [tmp_state + _snow3g_lens + idx*4]
 
         call    SNOW3G_F9_1_BUFFER_INT
 

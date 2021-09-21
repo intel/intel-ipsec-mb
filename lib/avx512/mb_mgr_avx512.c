@@ -1805,8 +1805,8 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 snow3g_uea2_ooo->num_lanes_inuse = 0;
                 snow3g_uea2_ooo->init_mask = 0;
                 snow3g_uea2_ooo->init_done = 0;
-                memset(snow3g_uea2_ooo->lens_in_dw, 0xff,
-                       sizeof(snow3g_uea2_ooo->lens_in_dw));
+                memset(snow3g_uea2_ooo->lens, 0xff,
+                       sizeof(snow3g_uea2_ooo->lens));
 
                 submit_job_snow3g_uea2_avx512 =
                         submit_snow3g_uea2_job_vaes_avx512;
@@ -1825,8 +1825,8 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 snow3g_uia2_ooo->num_lanes_inuse = 0;
                 snow3g_uia2_ooo->init_mask = 0;
                 snow3g_uia2_ooo->init_done = 0;
-                memset(snow3g_uia2_ooo->lens_in_dw, 0,
-                       sizeof(snow3g_uia2_ooo->lens_in_dw));
+                memset(snow3g_uia2_ooo->lens, 0,
+                       sizeof(snow3g_uia2_ooo->lens));
 
                 for (j = 0; j < 16; j++)
                         snow3g_uia2_ooo->ks_ptrs[j] =

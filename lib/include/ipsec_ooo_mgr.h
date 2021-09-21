@@ -372,7 +372,7 @@ typedef struct {
 /* SNOW3G out-of-order scheduler fields */
 typedef struct {
         DECLARE_ALIGNED(SNOW3G_ARGS args, 64);
-        uint32_t lens_in_dw[16];
+        uint32_t lens[16];
         IMB_JOB *job_in_lane[16];
         uint32_t bits_fixup[16];
         uint64_t init_mask;

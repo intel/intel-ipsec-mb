@@ -456,7 +456,7 @@ END_FIELDS
 START_FIELDS	; MB_MGR_SNOW3G_OOO
 ;;	name		        size	           align
 FIELD	_snow3g_args,	        _SNOW3G_ARGS_size, _SNOW3G_ARGS_align
-FIELD	_snow3g_lens_dw,        16*4,              4
+FIELD	_snow3g_lens,           16*4,              64 ; 16 x 32-bit vector
 FIELD	_snow3g_job_in_lane,    16*8,              8
 FIELD	_snow3g_bits_fixup,     16*4,              4
 FIELD	_snow3g_INIT_MASK,      8,                 8
@@ -470,6 +470,7 @@ END_FIELDS
 %assign _MB_MGR_SNOW3G_OOO_size	    _FIELD_OFFSET
 %assign _MB_MGR_SNOW3G_OOO_align    _STRUCT_ALIGN
 
+_snow3g_lens_dw      equ _snow3g_lens
 _snow3g_args_in      equ _snow3g_args + __snow3g_arg_in
 _snow3g_args_out     equ _snow3g_args + __snow3g_arg_out
 _snow3g_args_keys    equ _snow3g_args + __snow3g_arg_keys
