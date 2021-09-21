@@ -918,4 +918,19 @@ endstruc
                         %%STATE, %%COUNT, NULL, %%DST_PTR, %%OFFSET, \
                         %%TGP0, %%TGP1, %%TGP2, \
                         %%KR1, %%KR2, %%KR3, %%KR4, %%KR5, %%KR6
+
+        ;; clear LFSR + FSM data
+%ifdef SAFE_DATA
+        vpxorq          TEMP_31, TEMP_31
+%assign i 0
+%rep 16 ;; 16 LFSRs (64 bytes each)
+        vmovdqa32       [%%STATE + _snow3g_args_LFSR_ %+ i], TEMP_31
+%assign i (i + 1)
+%endrep
+        ;; 3 FSMs (64 bytes each)
+        vmovdqa32       [%%STATE + _snow3g_args_FSM_1], TEMP_31
+        vmovdqa32       [%%STATE + _snow3g_args_FSM_2], TEMP_31
+        vmovdqa32       [%%STATE + _snow3g_args_FSM_3], TEMP_31
+%endif
+
 %endmacro

@@ -232,20 +232,6 @@ section .text
                            {state + _snow3g_args_IV}, {state + _snow3g_ks_ptrs}, \
                            rax, idx, tmp, tmp2, tmp3, k1, k2, k3, k4, k5, k6
 
-        ;; clear LFSR + FSM data
-%ifdef SAFE_DATA
-        vpxorq          zmm0, zmm0
-%assign i 0
-%rep 16 ;; 16 LFSRs (64 bytes each)
-        vmovdqa32       [state + _snow3g_args_LFSR_ %+ i], zmm0
-%assign i (i + 1)
-%endrep
-        ;; 3 FSMs (64 bytes each)
-        vmovdqa32       [state + _snow3g_args_FSM_1], zmm0
-        vmovdqa32       [state + _snow3g_args_FSM_2], zmm0
-        vmovdqa32       [state + _snow3g_args_FSM_3], zmm0
-%endif
-
         ;; update init_done for valid initialized lanes
         mov     [state + _snow3g_init_done], WORD(init_lanes)
         bsf     DWORD(idx), DWORD(init_lanes)
