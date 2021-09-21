@@ -193,9 +193,13 @@ section .text
         ;; subtract common minimum length from all lanes lengths
         vmovdqa32       zmm0, [state + _snow3g_lens_dw]
         vpbroadcastd    zmm1, DWORD(%%MIN_COMMON_LEN)
+%ifidn %%SUBMIT_FLUSH, submit
+        vpsubd          zmm0, zmm0, zmm1
+%else ; FLUSH
         vpcmpeqd        k1, zmm0, [rel all_fs]
         knotw           k1, k1
         vpsubd          zmm0{k1}, zmm0, zmm1
+%endif
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
 
         ;; Do cipher / clock operation for all lanes and given common length
@@ -304,7 +308,8 @@ section .text
         vpbroadcastd    zmm0{k7}, DWORD(%%TGP0)
         vmovdqa32       [state + _snow3g_lens_dw], zmm0
 
-        mov             qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0 ;; required in case of flush
+        ;; required in case of flush
+        mov             qword [state + _snow3g_args_INITIALIZED + %%LANE*8], 0
 
         ;; decrement number of jobs in use
         dec             qword [state + _snow3g_lanes_in_use]
