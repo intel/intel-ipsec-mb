@@ -48,6 +48,7 @@ enum {
       TEST_AUTH_TAG_OUTPUT_LEN_ZERO,
       TEST_AUTH_MSG_LEN_ZERO,
       TEST_AUTH_MSG_LEN_GT_MAX,
+      TEST_AUTH_IV_LEN,
       TEST_CIPH_SRC_NULL = 200,
       TEST_CIPH_DST_NULL,
       TEST_CIPH_IV_NULL,
@@ -56,6 +57,7 @@ enum {
       TEST_CIPH_MSG_LEN_ZERO,
       TEST_CIPH_MSG_LEN_GT_MAX,
       TEST_CIPH_NEXT_IV_NULL,
+      TEST_CIPH_IV_LEN,
 };
 
 /*
@@ -248,6 +250,8 @@ fill_in_job(struct IMB_JOB *job,
         case IMB_CIPHER_CBCS_1_9:
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = UINT64_C(16);
+                if (job->cipher_mode == IMB_CIPHER_CBCS_1_9)
+                        job->cipher_fields.CBCS.next_iv = dust_bin;
                 break;
         case IMB_CIPHER_CNTR:
         case IMB_CIPHER_CNTR_BITLEN:
@@ -852,6 +856,44 @@ test_job_invalid_mac_args(struct IMB_MGR *mb_mgr)
                                 printf(".");
                         }
 
+        /*
+         * Invalid auth IV length test
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
+                        for (hash = IMB_AUTH_HMAC_SHA_1;
+                             hash < IMB_AUTH_NUM; hash++) {
+                                IMB_JOB *job = &template_job;
+
+                                fill_in_job(job, cipher, dir,
+                                            hash, order, &chacha_ctx,
+                                            &gcm_ctx);
+                                /*
+                                 * Set invalid IV lengths
+                                 * for relevant algos
+                                 */
+                                switch (hash) {
+                                        /* GMAC IVs must be not be 0 bytes */
+                                case IMB_AUTH_AES_GMAC_128:
+                                case IMB_AUTH_AES_GMAC_192:
+                                case IMB_AUTH_AES_GMAC_256:
+                                        job->u.GMAC.iv_len_in_bytes = 0;
+                                        break;
+                                default:
+                                        /*
+                                         * Skip other algos
+                                         */
+                                        continue;
+                                }
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_AUTH_IV_LEN,
+                                                       IMB_ERR_JOB_IV_LEN))
+                                        return 1;
+                                printf(".");
+                        }
+
+
         /* clean up */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)
                 ;
@@ -1187,6 +1229,71 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
                                 if (!is_submit_invalid(mb_mgr, job,
                                                        TEST_CIPH_MSG_LEN_GT_MAX,
                                                        IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
+                                printf(".");
+                        }
+
+        /*
+         * Invalid cipher IV length test
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
+                        for (cipher = IMB_CIPHER_CBC;
+                             cipher < IMB_CIPHER_NUM; cipher++) {
+                                IMB_JOB *job = &template_job;
+
+                                fill_in_job(job, cipher, dir, hash, order,
+                                            &chacha_ctx, &gcm_ctx);
+                                /*
+                                 * Set invalid IV lengths
+                                 * for relevant algos
+                                 */
+                                switch (cipher) {
+                                        /* IVs must be 16 bytes */
+                                case IMB_CIPHER_CBC:
+                                case IMB_CIPHER_CBCS_1_9:
+                                case IMB_CIPHER_DOCSIS_SEC_BPI:
+                                case IMB_CIPHER_CNTR_BITLEN:
+                                case IMB_CIPHER_PON_AES_CNTR:
+                                case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
+                                case IMB_CIPHER_SNOW_V_AEAD:
+                                case IMB_CIPHER_SNOW_V:
+                                        /* CCM IV must be 13 to 7 bytes */
+                                case IMB_CIPHER_CCM:
+                                        /* ECB IV must be 0 bytes */
+                                case IMB_CIPHER_ECB:
+                                        /* CNTR IV must be 12 or 16 bytes */
+                                case IMB_CIPHER_CNTR:
+                                        /* DES IVs must be 8 bytes */
+                                case IMB_CIPHER_DES:
+                                case IMB_CIPHER_DOCSIS_DES:
+                                case IMB_CIPHER_DES3:
+                                        /* KASUMI IV must be 8 bytes */
+                                case IMB_CIPHER_KASUMI_UEA1_BITLEN:
+                                        /* ZUC IV must be 16 or 25 bytes */
+                                case IMB_CIPHER_ZUC_EEA3:
+                                        /* CHACHA20 IVs must be 12 bytes */
+                                case IMB_CIPHER_CHACHA20:
+                                case IMB_CIPHER_CHACHA20_POLY1305:
+                                case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+                                        job->iv_len_in_bytes = 1;
+                                        break;
+                                        /* GCM IVs must be not be 0 bytes */
+                                case IMB_CIPHER_GCM:
+                                case IMB_CIPHER_GCM_SGL:
+                                        job->iv_len_in_bytes = 0;
+                                        break;
+                                default:
+                                        /*
+                                         * Skip other algos
+                                         */
+                                        continue;
+                                }
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_CIPH_IV_LEN,
+                                                       IMB_ERR_JOB_IV_LEN))
                                         return 1;
 
                                 printf(".");
