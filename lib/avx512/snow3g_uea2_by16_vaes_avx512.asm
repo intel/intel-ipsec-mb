@@ -721,7 +721,7 @@ endstruc
 %xdefine %%TZMM2      %8 ;; [clobbered] temporary zmm register
 %xdefine %%KREG       %9 ;; [clobbered] k register
 
-        kmovq           %%KREG, [%%STATE_PTR + _snow3g_args_INITIALIZED + (%%LANEID * 8)]
+        kmovq           %%KREG, [%%STATE_PTR + _snow3g_args_LD_ST_MASK + (%%LANEID * 8)]
         vpshufb         %%TZMM1, LFSR_ %+ %%LANEID, [rel const_byte_shuff_mask]
 %ifnidn %%SRC_PTRS, NULL
         mov             %%TGP0, [%%SRC_PTRS + (%%LANEID * 8)]
@@ -749,7 +749,7 @@ endstruc
 %xdefine %%KMASK_DB     %9 ;; [in] k register with byte mask limiting input/output
 %xdefine %%KTMP         %10;; [clobbered] temporary k register
 
-        kmovq           %%KTMP, [%%STATE_PTR + _snow3g_args_INITIALIZED + (%%LANEID * 8)]
+        kmovq           %%KTMP, [%%STATE_PTR + _snow3g_args_LD_ST_MASK + (%%LANEID * 8)]
         kandq           %%KTMP, %%KMASK_DB, %%KTMP
 %ifnidn %%SRC_PTRS, NULL
         vpshufb         %%TZMM1, LFSR_ %+ %%LANEID, [rel const_byte_shuff_mask]
@@ -963,7 +963,7 @@ endstruc
         xor             DWORD(%%COUNT), DWORD(%%COUNT)
 %assign i 0
 %rep 16
-        mov             [%%STATE + _snow3g_args_INITIALIZED + i*8], %%COUNT
+        mov             [%%STATE + _snow3g_args_LD_ST_MASK + i*8], %%COUNT
 %assign i (i + 1)
 %endrep
 
@@ -985,7 +985,7 @@ endstruc
         mov             %%COUNT, 0xffffffff_ffffffff
 %assign i 0
 %rep 16
-        mov             [%%STATE + _snow3g_args_INITIALIZED + i*8], %%COUNT
+        mov             [%%STATE + _snow3g_args_LD_ST_MASK + i*8], %%COUNT
 %assign i (i + 1)
 %endrep
         mov             DWORD(%%COUNT), 5
