@@ -1856,6 +1856,26 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                                 return 1;
                         }
                 }
+                if (job->msg_len_to_cipher_in_bytes >= 4) {
+                        const uint64_t xgem_hdr = *(const uint64_t *)
+                                (job->src +
+                                 job->hash_start_src_offset_in_bytes);
+
+                        /* PLI is 14 MS bits of XGEM header */
+                        const uint16_t pli = BSWAP64(xgem_hdr) >> 50;
+
+                        /* CRC only if PLI is more than 4 bytes */
+                        if (pli > 4) {
+                                const uint16_t crc_len = pli - 4;
+
+                                if (crc_len >
+                                    job->msg_len_to_cipher_in_bytes - 4) {
+                                        imb_set_errno(state,
+                                                      IMB_ERR_JOB_PON_PLI);
+                                        return 1;
+                                }
+                        }
+                }
                 break;
         case IMB_CIPHER_ZUC_EEA3:
                 if (job->src == NULL) {

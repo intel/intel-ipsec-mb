@@ -100,6 +100,8 @@ imb_get_strerror(int errnum)
                 return "Null pointer to SGL context";
         case IMB_ERR_JOB_NULL_NEXT_IV:
                 return "Null pointer to next IV";
+        case IMB_ERR_JOB_PON_PLI:
+                return "Invalid PON PLI (CRC length vs cipher length)";
         default:
                 return strerror(errnum);
         }
