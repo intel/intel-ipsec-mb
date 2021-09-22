@@ -435,6 +435,7 @@ test_pon(struct IMB_MGR *mb_mgr,
         uint64_t tag_output = 0;
         uint32_t bip_output = 0;
         uint32_t crc_output = 0;
+        int err = 0;
 
         if (target == NULL) {
 		fprintf(stderr, "Can't allocate buffer memory\n");
@@ -504,6 +505,12 @@ test_pon(struct IMB_MGR *mb_mgr,
         job->auth_tag_output = (void *) &tag_output;
         job->auth_tag_output_len_in_bytes = (uint64_t) sizeof(tag_output);
         job = IMB_SUBMIT_JOB(mb_mgr);
+
+        err = imb_get_errno(mb_mgr);
+        if (err != 0) {
+                printf("Error: %s!\n", imb_get_strerror(err));
+                goto end;
+        }
 
         if (job == NULL) {
                 printf("%d NULL job after submit()", __LINE__);

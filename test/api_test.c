@@ -58,6 +58,7 @@ enum {
       TEST_CIPH_MSG_LEN_GT_MAX,
       TEST_CIPH_NEXT_IV_NULL,
       TEST_CIPH_IV_LEN,
+      TEST_INVALID_PON_PLI = 300,
 };
 
 /*
@@ -228,6 +229,12 @@ fill_in_job(struct IMB_JOB *job,
 
         if (job == NULL)
                 return;
+
+        /*
+         * Some algs use src data for checks e.g. PON PLI check
+         * Fill buffer with invalid data
+         */
+        memset(dust_bin, 0xff, sizeof(dust_bin));
 
         memset(job, 0, sizeof(*job));
         job->chain_order = chain_order;
@@ -1338,6 +1345,61 @@ test_job_invalid_cipher_args(struct IMB_MGR *mb_mgr)
         return 0;
 }
 
+/*
+ * @brief Tests misc invalid settings
+ */
+static int
+test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
+{
+        IMB_HASH_ALG hash;
+        IMB_CIPHER_DIRECTION dir;
+        IMB_CIPHER_MODE cipher = IMB_CIPHER_NULL;
+        IMB_CHAIN_ORDER order;
+        struct IMB_JOB template_job;
+        struct chacha20_poly1305_context_data chacha_ctx;
+        struct gcm_context_data gcm_ctx;
+
+	printf("Invalid MISC JOB arguments test:\n");
+
+        /* prep */
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
+        /*
+         * Invalid PLI for PON
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++) {
+                        cipher = IMB_CIPHER_PON_AES_CNTR;
+                        hash = IMB_AUTH_PON_CRC_BIP;
+
+                        /*
+                         * XGEM header is set to all 1s in fill_in_job()
+                         * This will result in an invalid PLI field
+                         */
+                        fill_in_job(&template_job, cipher, dir,
+                                    hash, order, &chacha_ctx,
+                                    &gcm_ctx);
+
+                        /* Set msg len to ensure PLI error */
+                        template_job.msg_len_to_cipher_in_bytes = 8;
+
+                        if (!is_submit_invalid(mb_mgr, &template_job,
+                                               TEST_INVALID_PON_PLI,
+                                               IMB_ERR_JOB_PON_PLI))
+                                return 1;
+                        printf(".");
+                }
+
+        /* clean up */
+        while (IMB_FLUSH_JOB(mb_mgr) != NULL)
+                ;
+
+        printf("\n");
+        return 0;
+}
+
 int
 api_test(struct IMB_MGR *mb_mgr)
 {
@@ -1353,6 +1415,9 @@ api_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_job_invalid_cipher_args(mb_mgr);
+        run++;
+
+        errors += test_job_invalid_misc_args(mb_mgr);
         run++;
 
         test_suite_update(&ctx, run - errors, errors);
