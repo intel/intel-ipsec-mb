@@ -59,12 +59,18 @@ static void clamp_lengths(struct IMB_JOB *job, const uint64_t buffsize)
 
 static void fill_job_data(struct IMB_JOB *job, void *buff)
 {
-        job->src = (uint8_t *)buff;
-        job->dst = (uint8_t *)buff;
-        job->enc_keys = buff;
-        job->dec_keys = buff;
-        job->iv = (uint8_t *)buff;
-        job->auth_tag_output = (uint8_t *)buff;
+        if (job->src != NULL)
+                job->src = (uint8_t *)buff;
+        if (job->dst != NULL)
+                job->dst = (uint8_t *)buff;
+        if (job->enc_keys != NULL)
+                job->enc_keys = buff;
+        if (job->dec_keys != NULL)
+                job->dec_keys = buff;
+        if (job->iv != NULL)
+                job->iv = (uint8_t *)buff;
+        if (job->auth_tag_output != NULL)
+                job->auth_tag_output = (uint8_t *)buff;
 }
 
 static void fill_additional_cipher_data(struct IMB_JOB *job,
@@ -77,20 +83,24 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
                 job->cipher_func = custom_op;
                 break;
         case IMB_CIPHER_CCM:
-                job->u.CCM.aad = buff;
+                if (job->u.CCM.aad != NULL)
+                        job->u.CCM.aad = buff;
                 if (job->u.CCM.aad_len_in_bytes > buffsize)
                         job->u.CCM.aad_len_in_bytes = buffsize;
                 break;
         case IMB_CIPHER_GCM:
-                job->u.GCM.aad = buff;
+                if (job->u.GCM.aad != NULL)
+                        job->u.GCM.aad = buff;
                 if (job->u.GCM.aad_len_in_bytes > buffsize)
                         job->u.GCM.aad_len_in_bytes = buffsize;
                 if (job->iv_len_in_bytes > buffsize)
                         job->iv_len_in_bytes = buffsize;
                 break;
         case IMB_CIPHER_GCM_SGL:
-                job->u.GCM.aad = buff;
-                job->u.GCM.ctx = buff;
+                if (job->u.GCM.aad != NULL)
+                        job->u.GCM.aad = buff;
+                if (job->u.GCM.ctx != NULL)
+                        job->u.GCM.ctx = buff;
                 if (job->u.GCM.aad_len_in_bytes > buffsize)
                         job->u.GCM.aad_len_in_bytes = buffsize;
                 if (job->iv_len_in_bytes > buffsize)
@@ -98,23 +108,28 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305:
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
-                job->u.CHACHA20_POLY1305.aad = buff;
-                job->u.CHACHA20_POLY1305.ctx = buff;
+                if (job->u.CHACHA20_POLY1305.aad != NULL)
+                        job->u.CHACHA20_POLY1305.aad = buff;
+                if (job->u.CHACHA20_POLY1305.ctx != NULL)
+                        job->u.CHACHA20_POLY1305.ctx = buff;
                 if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
                     buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes =
                                 buffsize;
                 break;
         case IMB_CIPHER_SNOW_V_AEAD:
-                job->u.SNOW_V_AEAD.aad = buff;
-                job->u.SNOW_V_AEAD.reserved = buff;
+                if (job->u.SNOW_V_AEAD.aad != NULL)
+                        job->u.SNOW_V_AEAD.aad = buff;
+                if (job->u.SNOW_V_AEAD.reserved != NULL)
+                        job->u.SNOW_V_AEAD.reserved = buff;
                 if (job->u.SNOW_V_AEAD.aad_len_in_bytes >
                     buffsize)
                         job->u.SNOW_V_AEAD.aad_len_in_bytes =
                                 buffsize;
                 break;
         case IMB_CIPHER_CBCS_1_9:
-                job->cipher_fields.CBCS.next_iv = buff;
+                if (job->cipher_fields.CBCS.next_iv != NULL)
+                        job->cipher_fields.CBCS.next_iv = buff;
                 break;
         default:
                 break;
@@ -136,75 +151,98 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
         case IMB_AUTH_HMAC_SHA_384:
         case IMB_AUTH_HMAC_SHA_512:
         case IMB_AUTH_MD5:
-                job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *)buff;
-                job->u.HMAC._hashed_auth_key_xor_opad = (uint8_t *)buff;
+                if (job->u.HMAC._hashed_auth_key_xor_ipad != NULL)
+                        job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *)buff;
+                if (job->u.HMAC._hashed_auth_key_xor_ipad != NULL)
+                        job->u.HMAC._hashed_auth_key_xor_opad = (uint8_t *)buff;
                 break;
         case IMB_AUTH_AES_XCBC:
-                job->u.XCBC._k1_expanded = (uint32_t *)buff;
-                job->u.XCBC._k2 = (uint8_t *)buff;
-                job->u.XCBC._k3 = (uint8_t *)buff;
+                if (job->u.XCBC._k1_expanded != NULL)
+                        job->u.XCBC._k1_expanded = (uint32_t *)buff;
+                if (job->u.XCBC._k2 != NULL)
+                        job->u.XCBC._k2 = (uint8_t *)buff;
+                if (job->u.XCBC._k3 != NULL)
+                        job->u.XCBC._k3 = (uint8_t *)buff;
                 break;
         case IMB_AUTH_AES_CCM:
-                job->u.CCM.aad = buff;
+                if (job->u.CCM.aad != NULL)
+                        job->u.CCM.aad = buff;
                 if (job->u.CCM.aad_len_in_bytes > buffsize)
                         job->u.CCM.aad_len_in_bytes = buffsize;
                 break;
         case IMB_AUTH_AES_CMAC:
         case IMB_AUTH_AES_CMAC_BITLEN:
         case IMB_AUTH_AES_CMAC_256:
-                job->u.CMAC._key_expanded = buff;
-                job->u.CMAC._skey1 = buff;
-                job->u.CMAC._skey2 = buff;
+                if (job->u.CMAC._key_expanded != NULL)
+                        job->u.CMAC._key_expanded = buff;
+                if (job->u.CMAC._skey1 != NULL)
+                        job->u.CMAC._skey1 = buff;
+                if (job->u.CMAC._skey2 != NULL)
+                        job->u.CMAC._skey2 = buff;
                 break;
         case IMB_AUTH_ZUC_EIA3_BITLEN:
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
-                job->u.ZUC_EIA3._key = (uint8_t *)buff;
-                job->u.ZUC_EIA3._iv = (uint8_t *)buff;
+                if (job->u.ZUC_EIA3._key != NULL)
+                        job->u.ZUC_EIA3._key = (uint8_t *)buff;
+                if (job->u.ZUC_EIA3._iv != NULL)
+                        job->u.ZUC_EIA3._iv = (uint8_t *)buff;
                 break;
         case IMB_AUTH_SNOW3G_UIA2_BITLEN:
-                job->u.SNOW3G_UIA2._key = buff;
-                job->u.SNOW3G_UIA2._iv = buff;
+                if (job->u.SNOW3G_UIA2._key != NULL)
+                        job->u.SNOW3G_UIA2._key = buff;
+                if (job->u.SNOW3G_UIA2._iv != NULL)
+                        job->u.SNOW3G_UIA2._iv = buff;
                 break;
         case IMB_AUTH_KASUMI_UIA1:
-                job->u.KASUMI_UIA1._key = buff;
+                if (job->u.KASUMI_UIA1._key != NULL)
+                        job->u.KASUMI_UIA1._key = buff;
                 break;
         case IMB_AUTH_AES_GMAC:
         case IMB_AUTH_AES_GMAC_128:
         case IMB_AUTH_AES_GMAC_192:
         case IMB_AUTH_AES_GMAC_256:
-                job->u.GMAC._key = buff;
-                job->u.GMAC._iv = buff;
+                if (job->u.GMAC._key != NULL)
+                        job->u.GMAC._key = buff;
+                if (job->u.GMAC._iv != NULL)
+                        job->u.GMAC._iv = buff;
                 if (job->u.GMAC.iv_len_in_bytes > buffsize)
                         job->u.GMAC.iv_len_in_bytes = buffsize;
                 break;
         case IMB_AUTH_POLY1305:
-                job->u.POLY1305._key = buff;
+                if (job->u.POLY1305._key != NULL)
+                        job->u.POLY1305._key = buff;
                 break;
         case IMB_AUTH_CHACHA20_POLY1305:
-                job->u.CHACHA20_POLY1305.aad = buff;
+                if (job->u.CHACHA20_POLY1305.aad != NULL)
+                        job->u.CHACHA20_POLY1305.aad = buff;
                 if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
                     buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes =
                                 buffsize;
                 break;
         case IMB_AUTH_CHACHA20_POLY1305_SGL:
-                job->u.CHACHA20_POLY1305.aad = buff;
-                job->u.CHACHA20_POLY1305.ctx = buff;
+                if (job->u.CHACHA20_POLY1305.aad != NULL)
+                        job->u.CHACHA20_POLY1305.aad = buff;
+                if (job->u.CHACHA20_POLY1305.ctx != NULL)
+                        job->u.CHACHA20_POLY1305.ctx = buff;
                 if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
                     buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes =
                                 buffsize;
                 break;
         case IMB_AUTH_SNOW_V_AEAD:
-                job->u.SNOW_V_AEAD.aad = buff;
+                if (job->u.SNOW_V_AEAD.aad != NULL)
+                        job->u.SNOW_V_AEAD.aad = buff;
                 if (job->u.SNOW_V_AEAD.aad_len_in_bytes >
                     buffsize)
                         job->u.SNOW_V_AEAD.aad_len_in_bytes =
                                 buffsize;
                 break;
         case IMB_AUTH_GCM_SGL:
-                job->u.GCM.aad = buff;
-                job->u.GCM.ctx = buff;
+                if (job->u.GCM.aad != NULL)
+                        job->u.GCM.aad = buff;
+                if (job->u.GCM.ctx != NULL)
+                        job->u.GCM.ctx = buff;
                 if (job->u.GCM.aad_len_in_bytes > buffsize)
                         job->u.GCM.aad_len_in_bytes = buffsize;
                 if (job->iv_len_in_bytes > buffsize)
