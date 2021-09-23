@@ -1030,25 +1030,21 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generate 5 double words of key stream for SNOW3G authentication
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro   SNOW3G_AUTH_INIT_5 15
-%xdefine %%STATE        %1  ;; [in] pointer to state
-%xdefine %%KEY          %2  ;; [in] array of pointers to 16 keys
-%xdefine %%IV           %3  ;; [in] array of pointers to 16 IV's
-%xdefine %%DST_PTR      %4  ;; [in] destination buffer to put 5DW of keystream into (32 bytes per lane)
-%xdefine %%OFFSET       %5  ;; [clobbered] 64b register
-%xdefine %%COUNT        %6  ;; [clobbered] 64b register
-%xdefine %%TGP0         %7  ;; [clobbered] 64b register
-%xdefine %%TGP1         %8  ;; [clobbered] 64b register
-%xdefine %%TGP2         %9  ;; [clobbered] 64b register
-%xdefine %%KR1          %10 ;; [clobbered] temporary k-register
-%xdefine %%KR2          %11 ;; [clobbered] temporary k-register
-%xdefine %%KR3          %12 ;; [clobbered] temporary k-register
-%xdefine %%KR4          %13 ;; [clobbered] temporary k-register
-%xdefine %%KR5          %14 ;; [clobbered] temporary k-register
-%xdefine %%KR6          %15 ;; [clobbered] temporary k-register
+%macro   SNOW3G_AUTH_INIT_5 11
+%xdefine %%KEY          %1  ;; [in] array of pointers to 16 keys
+%xdefine %%IV           %2  ;; [in] array of pointers to 16 IV's
+%xdefine %%DST_PTR      %3  ;; [in] destination buffer to put 5DW of keystream into (32 bytes per lane)
+%xdefine %%COUNT        %4  ;; [clobbered] 64b register
+%xdefine %%TGP0         %5  ;; [clobbered] 64b register
+%xdefine %%KR1          %6  ;; [clobbered] temporary k-register
+%xdefine %%KR2          %7  ;; [clobbered] temporary k-register
+%xdefine %%KR3          %8  ;; [clobbered] temporary k-register
+%xdefine %%KR4          %9  ;; [clobbered] temporary k-register
+%xdefine %%KR5          %10 ;; [clobbered] temporary k-register
+%xdefine %%KR6          %11 ;; [clobbered] temporary k-register
 
         INIT_CONSTANTS
-        LFSR_FSM_INIT_AUTH %%KEY, %%IV, %%TGP1, %%TGP2
+        LFSR_FSM_INIT_AUTH %%KEY, %%IV, %%TGP0, %%COUNT
 
         ;; initialization mode
         ;; 32 + 1 iterations of FSM and LFSR clock

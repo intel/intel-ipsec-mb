@@ -231,9 +231,10 @@ section .text
 
 %%init_lanes_uia2:
 
-        SNOW3G_AUTH_INIT_5 {state}, {state + _snow3g_args_keys}, \
-                           {state + _snow3g_args_IV}, {state + _snow3g_ks}, \
-                           rax, idx, tmp, tmp2, tmp3, k1, k2, k3, k4, k5, k6
+        SNOW3G_AUTH_INIT_5 {state + _snow3g_args_keys}, \
+                           {state + _snow3g_args_IV}, \
+                           {state + _snow3g_ks}, \
+                           tmp, tmp2, k1, k2, k3, k4, k5, k6
 
         ;; update init_done for valid initialized lanes
         mov     [state + _snow3g_init_done], WORD(init_lanes)
