@@ -487,54 +487,169 @@ endstruc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LFSR INITIALIZATION
-;; Initialize LFSR registers0-15 for single key-iv pair
+;; Initialize LFSR and FSM registers for 16 key-iv pairs
+;;
+;; OUTPUT: LFSR_0-LFSR_15 and FSM1-FSM3 registers
+;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro LFSR_INIT_2 5
-%xdefine %%ALL_FS            %1 ;; [in] zmm with all bits set to 1
-%xdefine %%KPOS              %2 ;; [in] k-register with lane mask
-%xdefine %%KEY               %3 ;; [in] address of key
-%xdefine %%IV                %4 ;; [in] address of iv
-%xdefine %%TEMP              %5 ;; [clobbered] temporary zmm register
+%macro LFSR_FSM_INIT_AUTH 4
+%xdefine %%KEY               %1 ;; [in] address of key
+%xdefine %%IV                %2 ;; [in] address of iv
+%xdefine %%GP1               %3 ;; [clobbered] temporary GP register
+%xdefine %%GP2               %4 ;; [clobbered] temporary GP register
 
-        vpbroadcastd    %%TEMP, [%%KEY]
-        vmovdqa32       LFSR_4{%%KPOS}, %%TEMP
-        vmovdqa32       LFSR_12{%%KPOS}, %%TEMP
-        vpxord          LFSR_0{%%KPOS}, %%ALL_FS, %%TEMP
-        vpxord          LFSR_8{%%KPOS}, %%ALL_FS, %%TEMP
+%define %%ZKEY1 LFSR_4
+%define %%ZKEY2 LFSR_5
+%define %%ZKEY3 LFSR_6
+%define %%ZKEY4 LFSR_7
 
-        vpbroadcastd    %%TEMP, [%%KEY + 4]
-        vmovdqa32       LFSR_5{%%KPOS}, %%TEMP
-        vmovdqa32       LFSR_13{%%KPOS}, %%TEMP
-        vpxord          LFSR_1{%%KPOS}, %%ALL_FS, %%TEMP
-        vpxord          LFSR_9{%%KPOS}, %%ALL_FS, %%TEMP
+%define %%ZKEY5 LFSR_8
+%define %%ZKEY6 LFSR_9
+%define %%ZKEY7 LFSR_10
+%define %%ZKEY8 LFSR_11
 
-        vpbroadcastd    %%TEMP, [%%KEY + 8]
-        vmovdqa32       LFSR_6{%%KPOS}, %%TEMP
-        vmovdqa32       LFSR_14{%%KPOS}, %%TEMP
-        vpxord          LFSR_2{%%KPOS}, %%ALL_FS, %%TEMP
-        vpxord          LFSR_10{%%KPOS}, %%ALL_FS, %%TEMP
+%define %%ZIV1 FSM1
+%define %%ZIV2 FSM2
+%define %%ZIV3 FSM3
+%define %%ZIV4 TEMP_27
+%define %%ZIV5 LFSR_12
+%define %%ZIV6 LFSR_13
+%define %%ZIV7 LFSR_14
+%define %%ZIV8 LFSR_15
 
-        vpbroadcastd    %%TEMP, [%%KEY + 12]
-        vmovdqa32       LFSR_7{%%KPOS}, %%TEMP
-        vmovdqa32       LFSR_15{%%KPOS}, %%TEMP
-        vpxord          LFSR_3{%%KPOS}, %%ALL_FS, %%TEMP
-        vpxord          LFSR_11{%%KPOS}, %%ALL_FS, %%TEMP
+%define %%ZTMP1 TEMP_28
+%define %%ZTMP2 TEMP_29
+%define %%ALL_FS TEMP_30
 
-        vpbroadcastd    %%TEMP, [%%IV + 12]
-        vpshufb         %%TEMP, %%TEMP, [rel const_byte_shuff_mask]
-        vpxord          LFSR_15{%%KPOS}, LFSR_15, %%TEMP
+        mov             %%GP1, [%%KEY + 0*8]
+        mov             %%GP2, [%%KEY + 1*8]
+        vmovdqu64       XWORD(%%ZKEY1), [%%GP1]
+        vmovdqu64       XWORD(%%ZKEY2), [%%GP2]
+        mov             %%GP1, [%%IV + 0*8]
+        mov             %%GP2, [%%IV + 1*8]
+        vinserti32x4    YWORD(%%ZKEY1), [%%GP1], 1
+        vinserti32x4    YWORD(%%ZKEY2), [%%GP2], 1
 
-        vpbroadcastd    %%TEMP, [%%IV + 8]
-        vpshufb         %%TEMP, %%TEMP, [rel const_byte_shuff_mask]
-        vpxord          LFSR_12{%%KPOS}, LFSR_12, %%TEMP
+        mov             %%GP1, [%%KEY + 2*8]
+        mov             %%GP2, [%%KEY + 3*8]
+        vmovdqu64       XWORD(%%ZKEY3), [%%GP1]
+        vmovdqu64       XWORD(%%ZKEY4), [%%GP2]
+        mov             %%GP1, [%%IV + 2*8]
+        mov             %%GP2, [%%IV + 3*8]
+        vinserti32x4    YWORD(%%ZKEY3), [%%GP1], 1
+        vinserti32x4    YWORD(%%ZKEY4), [%%GP2], 1
 
-        vpbroadcastd    %%TEMP, [%%IV + 4]
-        vpshufb         %%TEMP, %%TEMP, [rel const_byte_shuff_mask]
-        vpxord          LFSR_10{%%KPOS}, LFSR_10, %%TEMP
+        mov             %%GP1, [%%KEY + 4*8]
+        mov             %%GP2, [%%KEY + 5*8]
+        vmovdqu64       XWORD(%%ZIV1), [%%GP1]
+        vmovdqu64       XWORD(%%ZIV2), [%%GP2]
+        mov             %%GP1, [%%IV + 4*8]
+        mov             %%GP2, [%%IV + 5*8]
+        vinserti32x4    YWORD(%%ZIV1), [%%GP1], 1
+        vinserti32x4    YWORD(%%ZIV2), [%%GP2], 1
 
-        vpbroadcastd    %%TEMP, [%%IV]
-        vpshufb         %%TEMP, %%TEMP, [rel const_byte_shuff_mask]
-        vpxord          LFSR_9{%%KPOS}, LFSR_9, %%TEMP
+        mov             %%GP1, [%%KEY + 6*8]
+        mov             %%GP2, [%%KEY + 7*8]
+        vmovdqu64       XWORD(%%ZIV3), [%%GP1]
+        vmovdqu64       XWORD(%%ZIV4), [%%GP2]
+        mov             %%GP1, [%%IV + 6*8]
+        mov             %%GP2, [%%IV + 7*8]
+        vinserti32x4    YWORD(%%ZIV3), [%%GP1], 1
+        vinserti32x4    YWORD(%%ZIV4), [%%GP2], 1
+
+        TRANSPOSE8_U32_AVX512 YWORD(%%ZKEY1), YWORD(%%ZKEY2), YWORD(%%ZKEY3), YWORD(%%ZKEY4), \
+                        YWORD(%%ZIV1), YWORD(%%ZIV2), YWORD(%%ZIV3), YWORD(%%ZIV4), \
+                        YWORD(%%ZTMP1), YWORD(%%ZTMP2)
+
+        mov             %%GP1, [%%KEY + 8*8]
+        mov             %%GP2, [%%KEY + 9*8]
+        vmovdqu64       XWORD(%%ZKEY5), [%%GP1]
+        vmovdqu64       XWORD(%%ZKEY6), [%%GP2]
+        mov             %%GP1, [%%IV + 8*8]
+        mov             %%GP2, [%%IV + 9*8]
+        vinserti32x4    YWORD(%%ZKEY5), [%%GP1], 1
+        vinserti32x4    YWORD(%%ZKEY6), [%%GP2], 1
+
+        mov             %%GP1, [%%KEY + 10*8]
+        mov             %%GP2, [%%KEY + 11*8]
+        vmovdqu64       XWORD(%%ZKEY7), [%%GP1]
+        vmovdqu64       XWORD(%%ZKEY8), [%%GP2]
+        mov             %%GP1, [%%IV + 10*8]
+        mov             %%GP2, [%%IV + 11*8]
+        vinserti32x4    YWORD(%%ZKEY7), [%%GP1], 1
+        vinserti32x4    YWORD(%%ZKEY8), [%%GP2], 1
+
+        mov             %%GP1, [%%KEY + 12*8]
+        mov             %%GP2, [%%KEY + 13*8]
+        vmovdqu64       XWORD(%%ZIV5), [%%GP1]
+        vmovdqu64       XWORD(%%ZIV6), [%%GP2]
+        mov             %%GP1, [%%IV + 12*8]
+        mov             %%GP2, [%%IV + 13*8]
+        vinserti32x4    YWORD(%%ZIV5), [%%GP1], 1
+        vinserti32x4    YWORD(%%ZIV6), [%%GP2], 1
+
+        mov             %%GP1, [%%KEY + 14*8]
+        mov             %%GP2, [%%KEY + 15*8]
+        vmovdqu64       XWORD(%%ZIV7), [%%GP1]
+        vmovdqu64       XWORD(%%ZIV8), [%%GP2]
+        mov             %%GP1, [%%IV + 14*8]
+        mov             %%GP2, [%%IV + 15*8]
+        vinserti32x4    YWORD(%%ZIV7), [%%GP1], 1
+        vinserti32x4    YWORD(%%ZIV8), [%%GP2], 1
+
+        TRANSPOSE8_U32_AVX512 YWORD(%%ZKEY5), YWORD(%%ZKEY6), YWORD(%%ZKEY7), YWORD(%%ZKEY8), \
+                        YWORD(%%ZIV5), YWORD(%%ZIV6), YWORD(%%ZIV7), YWORD(%%ZIV8), \
+                        YWORD(%%ZTMP1), YWORD(%%ZTMP2)
+
+        vinserti64x4    %%ZKEY1, YWORD(%%ZKEY5), 1
+        vinserti64x4    %%ZKEY2, YWORD(%%ZKEY6), 1
+        vinserti64x4    %%ZKEY3, YWORD(%%ZKEY7), 1
+        vinserti64x4    %%ZKEY4, YWORD(%%ZKEY8), 1
+
+        vinserti64x4    %%ZIV1, YWORD(%%ZIV5), 1
+        vinserti64x4    %%ZIV2, YWORD(%%ZIV6), 1
+        vinserti64x4    %%ZIV3, YWORD(%%ZIV7), 1
+        vinserti64x4    %%ZIV4, YWORD(%%ZIV8), 1
+
+        ;; KEY and IV transposition is finished (ZKEY1-ZKEY4 & ZIV1-ZIV4)
+        ;; - initialize LFSR's
+        vmovdqa64       %%ALL_FS, [rel all_fs]
+
+        ;; vmovdqa64       LFSR_4, %%ZKEY1 - no needed, already secured through mapping
+        vmovdqa64       LFSR_12, %%ZKEY1
+        vpxord          LFSR_0, %%ALL_FS, %%ZKEY1
+        vpxord          LFSR_8, %%ALL_FS, %%ZKEY1
+
+        ;; vmovdqa64       LFSR_5, %%ZKEY2 - no needed, already secured through mapping
+        vmovdqa64       LFSR_13, %%ZKEY2
+        vpxord          LFSR_1, %%ALL_FS, %%ZKEY2
+        vpxord          LFSR_9, %%ALL_FS, %%ZKEY2
+
+        ;; vmovdqa64       LFSR_6, %%ZKEY3 - no needed, already secured through mapping
+        vmovdqa64       LFSR_14, %%ZKEY3
+        vpxord          LFSR_2, %%ALL_FS, %%ZKEY3
+        vpxord          LFSR_10, %%ALL_FS, %%ZKEY3
+
+        ;; vmovdqa64       LFSR_7, %%ZKEY4 - no needed, already secured through mapping
+        vmovdqa64       LFSR_15, %%ZKEY4
+        vpxord          LFSR_3, %%ALL_FS, %%ZKEY4
+        vpxord          LFSR_11, %%ALL_FS, %%ZKEY4
+
+        ;; continue with LFSR init (apply IV)
+        vpshufb         %%ZIV1, %%ZIV1, [rel const_byte_shuff_mask]
+        vpshufb         %%ZIV2, %%ZIV2, [rel const_byte_shuff_mask]
+        vpshufb         %%ZIV3, %%ZIV3, [rel const_byte_shuff_mask]
+        vpshufb         %%ZIV4, %%ZIV4, [rel const_byte_shuff_mask]
+
+        vpxord          LFSR_9, LFSR_9, %%ZIV1
+        vpxord          LFSR_10, LFSR_10, %%ZIV2
+        vpxord          LFSR_12, LFSR_12, %%ZIV3
+        vpxord          LFSR_15, LFSR_15, %%ZIV4
+
+        ;; initialize FSM registers
+        vpxorq          FSM1, FSM1, FSM1
+        vpxorq          FSM2, FSM2, FSM2
+        vpxorq          FSM3, FSM3, FSM3
 %endmacro
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -933,25 +1048,7 @@ endstruc
 %xdefine %%KR6          %15 ;; [clobbered] temporary k-register
 
         INIT_CONSTANTS
-
-        vmovdqa64       TEMP_31, [rel all_fs]
-
-        mov             DWORD(%%COUNT), 1
-        kmovd           %%KR1, DWORD(%%COUNT)
-        ;; @todo this can be changed to read & transpose
-%assign i 0
-%rep 16
-        mov             %%TGP1, [%%KEY + i*8]
-        mov             %%TGP2, [%%IV + i*8]
-        LFSR_INIT_2     TEMP_31, %%KR1, %%TGP1, %%TGP2, TEMP_30
-        kshiftlw        %%KR1, %%KR1, 1
-%assign i (i + 1)
-%endrep
-
-        vpxord          FSM1, FSM1, FSM1
-        vpxord          FSM2, FSM2, FSM2
-        vpxord          FSM3, FSM3, FSM3
-
+        LFSR_FSM_INIT_AUTH %%KEY, %%IV, %%TGP1, %%TGP2
         LFSR_FSM_STATE  %%STATE, STORE
 
         ;; 33 iterations of FSM and LFSR clock are needed
