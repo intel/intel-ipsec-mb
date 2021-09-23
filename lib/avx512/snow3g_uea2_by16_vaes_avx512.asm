@@ -964,7 +964,7 @@ endstruc
         vpxord          KEYSTREAM{%%KR6}, LFSR_0, KEYSTREAM
 
         ;; put key stream on the stack frame
-        vmovdqa32       [rsp + %%TGP0], KEYSTREAM
+        vmovdqa32       [rsp + _keystream + %%TGP0], KEYSTREAM
         add             DWORD(%%TGP0), 64
 
         LFSR_CLOCK      TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
@@ -1049,61 +1049,80 @@ endstruc
 
         INIT_CONSTANTS
         LFSR_FSM_INIT_AUTH %%KEY, %%IV, %%TGP1, %%TGP2
-        LFSR_FSM_STATE  %%STATE, STORE
 
-        ;; 33 iterations of FSM and LFSR clock are needed
-        ;; set flag to not initialized
-
-        ;; 1st phase of initialization mode - 32 double words
-        mov             dword [%%STATE + _snow3g_INIT_MASK], 0xffffffff
-
-        xor             DWORD(%%COUNT), DWORD(%%COUNT)
-%assign i 0
-%rep 16
-        mov             [%%STATE + _snow3g_args_LD_ST_MASK + i*8], %%COUNT
-%assign i (i + 1)
-%endrep
-
+        ;; initialization mode
+        ;; 32 + 1 iterations of FSM and LFSR clock
+        kxorw           %%KR6, %%KR6, %%KR6
+        knotw           %%KR6, %%KR6            ;; 0xffff -> do LFSR_15 xor
         mov             DWORD(%%COUNT), 32
-        SNOW_3G_KEYSTREAM \
-                        %%STATE, %%COUNT, NULL, %%DST_PTR, %%OFFSET, \
-                        %%TGP0, %%TGP1, %%TGP2, \
-                        %%KR1, %%KR2, %%KR3, %%KR4, %%KR5, %%KR6
+%%_auth_keystream_init_mode:
+        FSM_CLOCK       FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
+                        TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
+                        FIXED_MAP_TAB_0, FIXED_MAP_TAB_1, \
+                        FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
+                        %%KR1, %%KR2, %%KR3, %%KR4
 
-        ;; 2nd phase of initialization mode - 1 double word
-        mov             dword [%%STATE + _snow3g_INIT_MASK], 0
+        LFSR_CLOCK      TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
+                        %%KR1, %%KR2, %%KR3, %%KR4, %%KR5
+
+        ;; this xor happens only in initialization mode (init1)
+        vpxord          LFSR_15{%%KR6}, LFSR_15, KEYSTREAM
+
+        dec             DWORD(%%COUNT)
+        jnz             %%_auth_keystream_init_mode
+
+        kortestw        %%KR6, %%KR6
+        jz              %%_auth_keystream_init_mode_exit
+
+        ;; 2nd phase of initialization
         mov             DWORD(%%COUNT), 1
-        SNOW_3G_KEYSTREAM \
-                        %%STATE, %%COUNT, NULL, %%DST_PTR, %%OFFSET, \
-                        %%TGP0, %%TGP1, %%TGP2, \
-                        %%KR1, %%KR2, %%KR3, %%KR4, %%KR5, %%KR6
+        kxorw           %%KR6, %%KR6, %%KR6     ;; no LFSR_15 xor in init2
+        jmp             %%_auth_keystream_init_mode
+
+%%_auth_keystream_init_mode_exit:
 
         ;; working mode - 5 double words
-        mov             %%COUNT, 0xffffffff_ffffffff
+        mov             DWORD(%%COUNT), 5
+        xor             %%TGP0, %%TGP0
+%%_auth_keystream_work_mode:
+        FSM_CLOCK       FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
+                        TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
+                        FIXED_MAP_TAB_0, FIXED_MAP_TAB_1, \
+                        FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
+                        %%KR1, %%KR2, %%KR3, %%KR4
+
+        vpxord          KEYSTREAM, LFSR_0, KEYSTREAM    ;; only in working mode
+
+        ;; put key stream on the stack frame
+        vmovdqa32       [rsp + _keystream + %%TGP0], KEYSTREAM
+        add             DWORD(%%TGP0), 64
+
+        LFSR_CLOCK      TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
+                        %%KR1, %%KR2, %%KR3, %%KR4, %%KR5
+
+        dec             DWORD(%%COUNT)
+        jnz             %%_auth_keystream_work_mode
+
+        ;; transpose the keystream and store in the destination
+        TRANSPOSE_FROM_STACK \
+                        TEMP_27, TEMP_28, TEMP_29, TEMP_30
 %assign i 0
 %rep 16
-        mov             [%%STATE + _snow3g_args_LD_ST_MASK + i*8], %%COUNT
+%xdefine %%KS_ZMM LFSR_ %+ i
+        mov             %%TGP0, [%%DST_PTR + (i * 8)]
+        vmovdqu32       [%%TGP0], YWORD(%%KS_ZMM)
 %assign i (i + 1)
 %endrep
-        mov             DWORD(%%COUNT), 5
 
-        SNOW_3G_KEYSTREAM \
-                        %%STATE, %%COUNT, NULL, %%DST_PTR, %%OFFSET, \
-                        %%TGP0, %%TGP1, %%TGP2, \
-                        %%KR1, %%KR2, %%KR3, %%KR4, %%KR5, %%KR6
-
-        ;; clear LFSR + FSM data
 %ifdef SAFE_DATA
+        ;; clear the keystream
+        ;; - LFSR and FSM registers not stored in the state
         vpxorq          TEMP_31, TEMP_31
-%assign i 0
-%rep 16 ;; 16 LFSRs (64 bytes each)
-        vmovdqa32       [%%STATE + _snow3g_args_LFSR_ %+ i], TEMP_31
-%assign i (i + 1)
-%endrep
-        ;; 3 FSMs (64 bytes each)
-        vmovdqa32       [%%STATE + _snow3g_args_FSM_1], TEMP_31
-        vmovdqa32       [%%STATE + _snow3g_args_FSM_2], TEMP_31
-        vmovdqa32       [%%STATE + _snow3g_args_FSM_3], TEMP_31
+        vmovdqa32       [rsp + _keystream + (0 * 64)], TEMP_31
+        vmovdqa32       [rsp + _keystream + (1 * 64)], TEMP_31
+        vmovdqa32       [rsp + _keystream + (2 * 64)], TEMP_31
+        vmovdqa32       [rsp + _keystream + (3 * 64)], TEMP_31
+        vmovdqa32       [rsp + _keystream + (4 * 64)], TEMP_31
 %endif
 
 %endmacro
