@@ -186,7 +186,8 @@ section .text
         mov     tmp_state, state
 
         mov     arg1, [tmp_state + _snow3g_args_in + idx*8]
-        mov     arg2, [tmp_state + _snow3g_ks_ptrs + idx*8]
+        lea     arg2, [idx*8]
+        lea     arg2, [tmp_state + _snow3g_ks + arg2*4]   ;; arg2*4 = idx*32
         mov     DWORD(arg3), dword [tmp_state + _snow3g_lens + idx*4]
 
         call    SNOW3G_F9_1_BUFFER_INT
@@ -231,7 +232,7 @@ section .text
 %%init_lanes_uia2:
 
         SNOW3G_AUTH_INIT_5 {state}, {state + _snow3g_args_keys}, \
-                           {state + _snow3g_args_IV}, {state + _snow3g_ks_ptrs}, \
+                           {state + _snow3g_args_IV}, {state + _snow3g_ks}, \
                            rax, idx, tmp, tmp2, tmp3, k1, k2, k3, k4, k5, k6
 
         ;; update init_done for valid initialized lanes

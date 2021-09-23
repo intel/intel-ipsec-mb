@@ -379,7 +379,6 @@ typedef struct {
         uint64_t unused_lanes;
         uint64_t num_lanes_inuse;
         uint64_t init_done;
-        uint32_t *ks_ptrs[16]; /* Auth only */
         /* Auth only - reserve 32 bytes to store KS for 16 buffers */
         DECLARE_ALIGNED(uint32_t ks[8 * 16], 32);
         uint64_t road_block;

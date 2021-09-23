@@ -1032,9 +1032,9 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro   SNOW3G_AUTH_INIT_5 15
 %xdefine %%STATE        %1  ;; [in] pointer to state
-%xdefine %%KEY          %2  ;; [in] address of array of pointers to 16 keys
-%xdefine %%IV           %3  ;; [in] address of array of pointers to 16 IV's
-%xdefine %%DST_PTR      %4  ;; [in] address of array of pointers to (16buffers * 5DW) out key streams
+%xdefine %%KEY          %2  ;; [in] array of pointers to 16 keys
+%xdefine %%IV           %3  ;; [in] array of pointers to 16 IV's
+%xdefine %%DST_PTR      %4  ;; [in] destination buffer to put 5DW of keystream into (32 bytes per lane)
 %xdefine %%OFFSET       %5  ;; [clobbered] 64b register
 %xdefine %%COUNT        %6  ;; [clobbered] 64b register
 %xdefine %%TGP0         %7  ;; [clobbered] 64b register
@@ -1109,8 +1109,7 @@ endstruc
 %assign i 0
 %rep 16
 %xdefine %%KS_ZMM LFSR_ %+ i
-        mov             %%TGP0, [%%DST_PTR + (i * 8)]
-        vmovdqu32       [%%TGP0], YWORD(%%KS_ZMM)
+        vmovdqu32       [%%DST_PTR + (i * 32)], YWORD(%%KS_ZMM)
 %assign i (i + 1)
 %endrep
 
