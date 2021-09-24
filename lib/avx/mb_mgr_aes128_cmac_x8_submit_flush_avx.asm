@@ -76,6 +76,13 @@ five:	dq  5
 six:	dq  6
 seven:	dq  7
 
+align 16
+len_shuf_masks:
+        dq 0XFFFFFFFF09080100, 0XFFFFFFFFFFFFFFFF
+        dq 0X09080100FFFFFFFF, 0XFFFFFFFFFFFFFFFF
+        dq 0XFFFFFFFFFFFFFFFF, 0XFFFFFFFF09080100
+        dq 0XFFFFFFFFFFFFFFFF, 0X09080100FFFFFFFF
+
 section .text
 
 %define APPEND(a,b) a %+ b
@@ -312,6 +319,28 @@ APPEND(skip_,I):
 
         ; Finish step 6
         mov     word [state + _aes_cmac_init_done + idx*2], 1
+
+        ; Reset NULL lane lens to UINT16_MAX
+%ifidn %%SUBMIT_FLUSH, FLUSH
+        vpxor           xmm5, xmm5
+
+        vpcmpeqq        xmm1, xmm5, [state + _aes_cmac_job_in_lane + 0]
+        vpshufb         xmm1, xmm1, [rel len_shuf_masks + 0]
+
+        vpcmpeqq        xmm2, xmm5, [state + _aes_cmac_job_in_lane + 16]
+        vpshufb         xmm2, xmm2, [rel len_shuf_masks + 16]
+
+        vpcmpeqq        xmm3, xmm5, [state + _aes_cmac_job_in_lane + 32]
+        vpshufb         xmm3, xmm3, [rel len_shuf_masks + 32]
+
+        vpcmpeqq        xmm4, xmm5, [state + _aes_cmac_job_in_lane + 48]
+        vpshufb         xmm4, xmm4, [rel len_shuf_masks + 48]
+
+        vpor            xmm1, xmm2
+        vpor            xmm1, xmm3
+        vpor            xmm1, xmm4
+        vpor            xmm0, xmm1
+%endif ; %%SUBMIT_FLUSH == FLUSH
 
         XVPINSRW xmm0, xmm1, tmp3, idx, 16, scale_x16
         vmovdqa [state + _aes_cmac_lens], xmm0

@@ -152,7 +152,7 @@ FIELD	_aes_cmac_args,	_AES_ARGS_size, _AES_ARGS_align
 FIELD	_aes_cmac_lens, 16*2,	32
 FIELD	_aes_cmac_init_done,    16*2,	32
 FIELD	_aes_cmac_unused_lanes, 8,      8
-FIELD	_aes_cmac_job_in_lane,  16*8,	8
+FIELD	_aes_cmac_job_in_lane,  16*8,	16
 FIELD   _aes_cmac_num_lanes_inuse, 8,   8
 FIELD   _aes_cmac_scratch,  16*16,   32
 FIELD   _aes_cmac_road_block,   8,      8
