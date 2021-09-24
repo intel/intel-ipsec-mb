@@ -105,8 +105,16 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
                         job->u.GCM.aad_len_in_bytes = buffsize;
                 if (job->iv_len_in_bytes > buffsize)
                         job->iv_len_in_bytes = buffsize;
+                job->u.GCM.ctx->partial_block_length &= 15;
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305:
+                if (job->u.CHACHA20_POLY1305.aad != NULL)
+                        job->u.CHACHA20_POLY1305.aad = buff;
+                if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
+                    buffsize)
+                        job->u.CHACHA20_POLY1305.aad_len_in_bytes =
+                                buffsize;
+                break;
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
                         job->u.CHACHA20_POLY1305.aad = buff;
@@ -116,6 +124,8 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
                     buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes =
                                 buffsize;
+                job->u.CHACHA20_POLY1305.ctx->remain_ks_bytes &= 63;
+                job->u.CHACHA20_POLY1305.ctx->remain_ct_bytes &= 15;
                 break;
         case IMB_CIPHER_SNOW_V_AEAD:
                 if (job->u.SNOW_V_AEAD.aad != NULL)
@@ -229,6 +239,8 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
                     buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes =
                                 buffsize;
+                job->u.CHACHA20_POLY1305.ctx->remain_ks_bytes &= 63;
+                job->u.CHACHA20_POLY1305.ctx->remain_ct_bytes &= 15;
                 break;
         case IMB_AUTH_SNOW_V_AEAD:
                 if (job->u.SNOW_V_AEAD.aad != NULL)
@@ -247,6 +259,7 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
                         job->u.GCM.aad_len_in_bytes = buffsize;
                 if (job->iv_len_in_bytes > buffsize)
                         job->iv_len_in_bytes = buffsize;
+                job->u.GCM.ctx->partial_block_length &= 15;
                 break;
         default:
                 break;
@@ -293,12 +306,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t dataSize)
                 job = IMB_SUBMIT_JOB(p_mgr);
 
                 int err = imb_get_errno(p_mgr);
-
-                /* if error in submission free the buff  */
+                /*
+                 * If error in submission free the buff.
+                 * Else if submission was successful and we
+                 * got a job back, then free buffer associated
+                 * with returned job
+                 */
                 if (err != 0)
                         free(buff);
-                /* if submission was successful and we got a job back then
-                   free buffer associated with returned job */
                 else if (job != NULL)
                         free(job->dst);
         }
