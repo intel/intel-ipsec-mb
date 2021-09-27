@@ -29,33 +29,23 @@ extern idx_rows_avx512
 extern all_7fs
 extern all_80s
 
-%macro LOOKUP8_64_AVX512 26
-%define %%INDICES       %1
-%define %%RET_VALUES    %2
-%define %%TABLE         %3
-%define %%LOW_NIBBLE    %4
-%define %%HIGH_NIBBLE   %5
-%define %%ZTMP1         %6
-%define %%ZTMP2         %7
-%define %%ZTMP3         %8
-%define %%ZTMP4         %9
-%define %%ZTMP5         %10
-%define %%ZTMP6         %11
-%define %%ZTMP7         %12
-%define %%ZTMP8         %13
-%define %%ZTMP9         %14
-%define %%ZTMP10        %15
-%define %%ZTMP11        %16
-%define %%ZTMP12        %17
-%define %%ZTMP13        %18
-%define %%ZTMP14        %19
-%define %%ZTMP15        %20
-%define %%ZTMP16        %21
-%define %%ZTMP17        %22
-%define %%ZTMP18        %23
-%define %%ZTMP19        %24
-%define %%ZTMP20        %25
-%define %%ZTMP21        %26
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parallel lookup 64x8-bits with table to be loaded from memory (AVX-512 only)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro LOOKUP8_64_AVX512 13
+%define %%INDICES       %1  ;; [in] ZMM register with 64x8-bit index
+%define %%RET_VALUES    %2  ;; [out] ZMM register with 64x8-bit values
+%define %%TABLE         %3  ;; [in] Table pointer
+%define %%LOW_NIBBLE    %4  ;; [clobbered] Temporary ZMM register
+%define %%HIGH_NIBBLE   %5  ;; [clobbered] Temporary ZMM register
+%define %%ZTMP1         %6  ;; [clobbered] Temporary ZMM register
+%define %%ZTMP2         %7  ;; [clobbered] Temporary ZMM register
+%define %%ZTMP3         %8  ;; [clobbered] Temporary ZMM register
+%define %%ZTMP4         %9  ;; [clobbered] Temporary ZMM register
+%define %%KR1           %10 ;; [clobbered] Temporary k-register
+%define %%KR2           %11 ;; [clobbered] Temporary k-register
+%define %%KR3           %12 ;; [clobbered] Temporary k-register
+%define %%KR4           %13 ;; [clobbered] Temporary k-register
 
         vmovdqa64       %%ZTMP1, [rel idx_rows_avx512 + (15 * 64)]
         vpsrlq          %%ZTMP2, %%ZTMP1, 4
@@ -63,76 +53,79 @@ extern all_80s
         vpandq          %%HIGH_NIBBLE, %%ZTMP1, %%INDICES ;; top nibble part of the index
         vpandq          %%LOW_NIBBLE, %%ZTMP2, %%INDICES  ;; low nibble part of the index
 
-        vpcmpb          k1,  %%HIGH_NIBBLE, [rel idx_rows_avx512 + (0 * 64)], 0
+        vpcmpb          %%KR1,  %%HIGH_NIBBLE, [rel idx_rows_avx512 + (0 * 64)], 0
         vbroadcastf64x2 %%ZTMP1, [%%TABLE + (0 * 16)]
-        vpcmpb          k2, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (1 * 64)], 0
+        vpcmpb          %%KR2, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (1 * 64)], 0
         vbroadcastf64x2 %%ZTMP2, [%%TABLE + (1 * 16)]
-        vpcmpb          k3, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (2 * 64)], 0
+        vpcmpb          %%KR3, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (2 * 64)], 0
         vbroadcastf64x2 %%ZTMP3, [%%TABLE + (2 * 16)]
-        vpcmpb          k4, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (3 * 64)], 0
+        vpcmpb          %%KR4, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (3 * 64)], 0
         vbroadcastf64x2 %%ZTMP4, [%%TABLE + (3 * 16)]
-        vpcmpb          k5, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (4 * 64)], 0
-        vbroadcastf64x2 %%ZTMP5, [%%TABLE + (4 * 16)]
-        vpcmpb          k6, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (5 * 64)], 0
-        vbroadcastf64x2 %%ZTMP6, [%%TABLE + (5 * 16)]
 
-        vpshufb         %%RET_VALUES{k1}{z},  %%ZTMP1, %%LOW_NIBBLE
-        vpshufb         %%ZTMP7{k2}{z}, %%ZTMP2, %%LOW_NIBBLE
-        vpshufb         %%ZTMP8{k3}{z}, %%ZTMP3, %%LOW_NIBBLE
-        vpshufb         %%ZTMP9{k4}{z}, %%ZTMP4, %%LOW_NIBBLE
-        vpshufb         %%ZTMP10{k5}{z}, %%ZTMP5, %%LOW_NIBBLE
-        vpshufb         %%ZTMP11{k6}{z}, %%ZTMP6, %%LOW_NIBBLE
+        vpshufb         %%RET_VALUES{%%KR1}{z}, %%ZTMP1, %%LOW_NIBBLE
+        vpshufb         %%ZTMP2{%%KR2}{z}, %%ZTMP2, %%LOW_NIBBLE
+        vpshufb         %%ZTMP3{%%KR3}{z}, %%ZTMP3, %%LOW_NIBBLE
+        vpshufb         %%ZTMP4{%%KR4}{z}, %%ZTMP4, %%LOW_NIBBLE
 
-        vpcmpb          k1,  %%HIGH_NIBBLE, [rel idx_rows_avx512 + (6 * 64)], 0
-        vbroadcastf64x2 %%ZTMP1, [%%TABLE + (6 * 16)]
-        vpcmpb          k2, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (7 * 64)], 0
-        vbroadcastf64x2 %%ZTMP2, [%%TABLE + (7 * 16)]
-        vpcmpb          k3, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (8 * 64)], 0
-        vbroadcastf64x2 %%ZTMP3, [%%TABLE + (8 * 16)]
-        vpcmpb          k4, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (9 * 64)], 0
-        vbroadcastf64x2 %%ZTMP4, [%%TABLE + (9 * 16)]
-        vpcmpb          k5, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (10 * 64)], 0
-        vbroadcastf64x2 %%ZTMP5, [%%TABLE + (10 * 16)]
+        vpternlogq      %%RET_VALUES, %%ZTMP2, %%ZTMP3, 0xFE
+        vporq           %%RET_VALUES, %%ZTMP4
 
-        vpshufb         %%ZTMP12{k1}{z}, %%ZTMP1, %%LOW_NIBBLE
-        vpshufb         %%ZTMP13{k2}{z}, %%ZTMP2, %%LOW_NIBBLE
-        vpshufb         %%ZTMP14{k3}{z}, %%ZTMP3, %%LOW_NIBBLE
-        vpshufb         %%ZTMP15{k4}{z}, %%ZTMP4, %%LOW_NIBBLE
-        vpshufb         %%ZTMP16{k5}{z}, %%ZTMP5, %%LOW_NIBBLE
+        vpcmpb          %%KR1,  %%HIGH_NIBBLE, [rel idx_rows_avx512 + (4 * 64)], 0
+        vbroadcastf64x2 %%ZTMP1, [%%TABLE + (4 * 16)]
+        vpcmpb          %%KR2, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (5 * 64)], 0
+        vbroadcastf64x2 %%ZTMP2, [%%TABLE + (5 * 16)]
+        vpcmpb          %%KR3, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (6 * 64)], 0
+        vbroadcastf64x2 %%ZTMP3, [%%TABLE + (6 * 16)]
+        vpcmpb          %%KR4, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (7 * 64)], 0
+        vbroadcastf64x2 %%ZTMP4, [%%TABLE + (7 * 16)]
 
-        vpcmpb          k1,  %%HIGH_NIBBLE, [rel idx_rows_avx512 + (11 * 64)], 0
-        vbroadcastf64x2 zmm3, [%%TABLE + (11 * 16)]
-        vpcmpb          k2, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (12 * 64)], 0
-        vbroadcastf64x2 zmm4, [%%TABLE + (12 * 16)]
-        vpcmpb          k3, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (13 * 64)], 0
-        vbroadcastf64x2 zmm5, [%%TABLE + (13 * 16)]
-        vpcmpb          k4, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (14 * 64)], 0
-        vbroadcastf64x2 zmm6, [%%TABLE + (14 * 16)]
-        vpcmpb          k5, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (15 * 64)], 0
-        vbroadcastf64x2 zmm7, [%%TABLE + (15 * 16)]
+        vpshufb         %%ZTMP1{%%KR1}{z}, %%ZTMP1, %%LOW_NIBBLE
+        vpshufb         %%ZTMP2{%%KR2}{z}, %%ZTMP2, %%LOW_NIBBLE
+        vpshufb         %%ZTMP3{%%KR3}{z}, %%ZTMP3, %%LOW_NIBBLE
+        vpshufb         %%ZTMP4{%%KR4}{z}, %%ZTMP4, %%LOW_NIBBLE
 
-        vpshufb         %%ZTMP17{k1}{z}, %%ZTMP1, %%LOW_NIBBLE
-        vpshufb         %%ZTMP18{k2}{z}, %%ZTMP2, %%LOW_NIBBLE
-        vpshufb         %%ZTMP19{k3}{z}, %%ZTMP3, %%LOW_NIBBLE
-        vpshufb         %%ZTMP20{k4}{z}, %%ZTMP4, %%LOW_NIBBLE
-        vpshufb         %%ZTMP21{k5}{z}, %%ZTMP5, %%LOW_NIBBLE
+        vpternlogq      %%RET_VALUES, %%ZTMP1, %%ZTMP2, 0xFE
+        vpternlogq      %%RET_VALUES, %%ZTMP3, %%ZTMP4, 0xFE
 
-        ; OR all registers
-        vpternlogq      %%RET_VALUES, %%ZTMP7, %%ZTMP8, 0xFE
-        vpternlogq      %%ZTMP9, %%ZTMP10, %%ZTMP11, 0xFE
-        vpternlogq      %%ZTMP12, %%ZTMP13, %%ZTMP14, 0xFE
-        vpternlogq      %%ZTMP15, %%ZTMP16, %%ZTMP17, 0xFE
-        vpternlogq      %%ZTMP18, %%ZTMP19, %%ZTMP20, 0xFE
+        vpcmpb          %%KR1,  %%HIGH_NIBBLE, [rel idx_rows_avx512 + (8 * 64)], 0
+        vbroadcastf64x2 %%ZTMP1, [%%TABLE + (8 * 16)]
+        vpcmpb          %%KR2, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (9 * 64)], 0
+        vbroadcastf64x2 %%ZTMP2, [%%TABLE + (9 * 16)]
+        vpcmpb          %%KR3, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (10 * 64)], 0
+        vbroadcastf64x2 %%ZTMP3, [%%TABLE + (10 * 16)]
+        vpcmpb          %%KR4, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (11 * 64)], 0
+        vbroadcastf64x2 %%ZTMP4, [%%TABLE + (11 * 16)]
 
-        vpternlogq      %%RET_VALUES, %%ZTMP9, %%ZTMP12, 0xFE
-        vpternlogq      %%ZTMP15, %%ZTMP18, %%ZTMP21, 0xFE
-        vporq           %%RET_VALUES, %%ZTMP15
+        vpshufb         %%ZTMP1{%%KR1}{z}, %%ZTMP1, %%LOW_NIBBLE
+        vpshufb         %%ZTMP2{%%KR2}{z}, %%ZTMP2, %%LOW_NIBBLE
+        vpshufb         %%ZTMP3{%%KR3}{z}, %%ZTMP3, %%LOW_NIBBLE
+        vpshufb         %%ZTMP4{%%KR4}{z}, %%ZTMP4, %%LOW_NIBBLE
+
+        vpternlogq      %%RET_VALUES, %%ZTMP1, %%ZTMP2, 0xFE
+        vpternlogq      %%RET_VALUES, %%ZTMP3, %%ZTMP4, 0xFE
+
+        vpcmpb          %%KR1,  %%HIGH_NIBBLE, [rel idx_rows_avx512 + (12 * 64)], 0
+        vbroadcastf64x2 %%ZTMP1, [%%TABLE + (12 * 16)]
+        vpcmpb          %%KR2, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (13 * 64)], 0
+        vbroadcastf64x2 %%ZTMP2, [%%TABLE + (13 * 16)]
+        vpcmpb          %%KR3, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (14 * 64)], 0
+        vbroadcastf64x2 %%ZTMP3, [%%TABLE + (14 * 16)]
+        vpcmpb          %%KR4, %%HIGH_NIBBLE, [rel idx_rows_avx512 + (15 * 64)], 0
+        vbroadcastf64x2 %%ZTMP4, [%%TABLE + (15 * 16)]
+
+        vpshufb         %%ZTMP1{%%KR1}{z}, %%ZTMP1, %%LOW_NIBBLE
+        vpshufb         %%ZTMP2{%%KR2}{z}, %%ZTMP2, %%LOW_NIBBLE
+        vpshufb         %%ZTMP3{%%KR3}{z}, %%ZTMP3, %%LOW_NIBBLE
+        vpshufb         %%ZTMP4{%%KR4}{z}, %%ZTMP4, %%LOW_NIBBLE
+
+        vpternlogq      %%RET_VALUES, %%ZTMP1, %%ZTMP2, 0xFE
+        vpternlogq      %%RET_VALUES, %%ZTMP3, %%ZTMP4, 0xFE
 
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Parallel lookup 64x8-bits with table to be loaded from memory
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parallel lookup 64x8-bits with table to be loaded from memory (AVX512-VBMI)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro LOOKUP8_64_AVX512_VBMI 11
 %define %%INDICES       %1      ;; [in] zmm register with 64x8-bit index
 %define %%RET_VALUES    %2      ;; [out] zmm register with 64x8-bit values
@@ -166,9 +159,9 @@ extern all_80s
 
 %endmacro
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Parallel lookup 64x8-bits with table already loaded into registers
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parallel lookup 64x8-bits with table already loaded into registers (AVX512-VBMI)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 %macro LOOKUP8_64_AVX512_VBMI_4_MAP_TABLES 10
 %define %%INDICES           %1  ;; [in] zmm register with values for lookup
 %define %%RET_VALUES        %2  ;; [out] zmm register filled with looked up values

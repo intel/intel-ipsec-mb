@@ -1133,9 +1133,8 @@ lookup_64x8bit_avx512:
 
         ; Read the indices into zmm0
         vmovdqu64       zmm0, [arg1]
-        LOOKUP8_64_AVX512 zmm0, zmm0, arg3, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, zmm7, \
-                          zmm16, zmm17, zmm18, zmm19, zmm20, zmm21, zmm22, zmm23, zmm24, \
-                          zmm25, zmm26, zmm27, zmm28, zmm29, zmm30, zmm31
+        LOOKUP8_64_AVX512 zmm0, zmm0, arg3, zmm1, zmm2, zmm3, zmm4, zmm5, zmm6, \
+                          k1, k2, k3, k4
 
         ; Write the values to arg2
         vmovdqu64       [arg2], zmm0
