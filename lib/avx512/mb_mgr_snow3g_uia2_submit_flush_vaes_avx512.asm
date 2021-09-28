@@ -98,7 +98,7 @@ section .text
         mov     [state + _snow3g_job_in_lane + lane*8], job
 
         ;; set lane mask
-        bts     WORD(tmp), WORD(lane)
+        bts     DWORD(tmp), DWORD(lane)
         kmovw   k1, DWORD(tmp)
 
         ;; copy input, key and iv pointers to OOO mgr
@@ -126,6 +126,7 @@ section .text
         jz      %%init_all_lanes_uia2
 
         ;; find next initialized job index
+        xor     DWORD(idx), DWORD(idx)
         bsf     WORD(idx), word [state + _snow3g_init_done]
 
 %else ;; FLUSH
@@ -224,7 +225,7 @@ section .text
 %%init_all_lanes_uia2:
         ;; set initialized lanes mask for all 16 lanes
         ;; this is used to update OOO MGR after initialization
-        mov     WORD(init_lanes), 0xffff
+        mov     DWORD(init_lanes), 0xffff
 
 %%init_lanes_uia2:
 
