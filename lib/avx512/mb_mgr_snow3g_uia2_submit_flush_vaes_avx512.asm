@@ -98,6 +98,7 @@ section .text
         mov     [state + _snow3g_job_in_lane + lane*8], job
 
         ;; set lane mask
+        xor     DWORD(tmp), DWORD(tmp)
         bts     DWORD(tmp), DWORD(lane)
         kmovw   k1, DWORD(tmp)
 
