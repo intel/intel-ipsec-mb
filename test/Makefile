@@ -142,7 +142,7 @@ $(XVALID_APP): $(XVALID_OBJECTS)
 
 $(FUZZ_APP): $(FUZZ_SOURCES)
 ifneq (, $(shell which clang))
-	clang $(FUZZ_CFLAGS) $^ $(LDLIBS) -o $@
+	clang $(FUZZ_CFLAGS) $(FUZZ_SOURCES) $(LDLIBS) -o $@
 else
 	echo "Clang is not installed. $(FUZZ_APP) is not built"
 endif
