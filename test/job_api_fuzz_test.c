@@ -99,13 +99,14 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
         case IMB_CIPHER_GCM_SGL:
                 if (job->u.GCM.aad != NULL)
                         job->u.GCM.aad = buff;
-                if (job->u.GCM.ctx != NULL)
+                if (job->u.GCM.ctx != NULL) {
                         job->u.GCM.ctx = buff;
+                        job->u.GCM.ctx->partial_block_length &= 15;
+                }
                 if (job->u.GCM.aad_len_in_bytes > buffsize)
                         job->u.GCM.aad_len_in_bytes = buffsize;
                 if (job->iv_len_in_bytes > buffsize)
                         job->iv_len_in_bytes = buffsize;
-                job->u.GCM.ctx->partial_block_length &= 15;
                 break;
         case IMB_CIPHER_CHACHA20_POLY1305:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
@@ -118,14 +119,15 @@ static void fill_additional_cipher_data(struct IMB_JOB *job,
         case IMB_CIPHER_CHACHA20_POLY1305_SGL:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
                         job->u.CHACHA20_POLY1305.aad = buff;
-                if (job->u.CHACHA20_POLY1305.ctx != NULL)
+                if (job->u.CHACHA20_POLY1305.ctx != NULL) {
                         job->u.CHACHA20_POLY1305.ctx = buff;
+                        job->u.CHACHA20_POLY1305.ctx->remain_ks_bytes &= 63;
+                        job->u.CHACHA20_POLY1305.ctx->remain_ct_bytes &= 15;
+                }
                 if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
                     buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes =
                                 buffsize;
-                job->u.CHACHA20_POLY1305.ctx->remain_ks_bytes &= 63;
-                job->u.CHACHA20_POLY1305.ctx->remain_ct_bytes &= 15;
                 break;
         case IMB_CIPHER_SNOW_V_AEAD:
                 if (job->u.SNOW_V_AEAD.aad != NULL)
@@ -233,15 +235,16 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
         case IMB_AUTH_CHACHA20_POLY1305_SGL:
                 if (job->u.CHACHA20_POLY1305.aad != NULL)
                         job->u.CHACHA20_POLY1305.aad = buff;
-                if (job->u.CHACHA20_POLY1305.ctx != NULL)
+                if (job->u.CHACHA20_POLY1305.ctx != NULL) {
                         job->u.CHACHA20_POLY1305.ctx = buff;
+                        job->u.CHACHA20_POLY1305.ctx->remain_ks_bytes &= 63;
+                        job->u.CHACHA20_POLY1305.ctx->remain_ct_bytes &= 15;
+                }
                 if (job->u.CHACHA20_POLY1305.aad_len_in_bytes >
                     buffsize)
                         job->u.CHACHA20_POLY1305.aad_len_in_bytes =
                                 buffsize;
-                job->u.CHACHA20_POLY1305.ctx->remain_ks_bytes &= 63;
-                job->u.CHACHA20_POLY1305.ctx->remain_ct_bytes &= 15;
-                break;
+                 break;
         case IMB_AUTH_SNOW_V_AEAD:
                 if (job->u.SNOW_V_AEAD.aad != NULL)
                         job->u.SNOW_V_AEAD.aad = buff;
@@ -253,13 +256,14 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
         case IMB_AUTH_GCM_SGL:
                 if (job->u.GCM.aad != NULL)
                         job->u.GCM.aad = buff;
-                if (job->u.GCM.ctx != NULL)
+                if (job->u.GCM.ctx != NULL) {
                         job->u.GCM.ctx = buff;
+                        job->u.GCM.ctx->partial_block_length &= 15;
+                }
                 if (job->u.GCM.aad_len_in_bytes > buffsize)
                         job->u.GCM.aad_len_in_bytes = buffsize;
                 if (job->iv_len_in_bytes > buffsize)
                         job->iv_len_in_bytes = buffsize;
-                job->u.GCM.ctx->partial_block_length &= 15;
                 break;
         default:
                 break;
