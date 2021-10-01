@@ -45,6 +45,17 @@ const_byte_shuff_mask:
         times 4 dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
 align 64
+const_byte_mix_col_rev:
+        dd 0x00030201, 0x04070605
+        dd 0x080b0a09, 0x0c0f0e0d
+        dd 0x00030201, 0x04070605
+        dd 0x080b0a09, 0x0c0f0e0d
+        dd 0x00030201, 0x04070605
+        dd 0x080b0a09, 0x0c0f0e0d
+        dd 0x00030201, 0x04070605
+        dd 0x080b0a09, 0x0c0f0e0d
+
+align 64
 const_fixup:
         ;; MS bits in quad word shuffled according to AES mix col matrix mul
         times 8 dq 0x273f372f071f170f
@@ -261,33 +272,34 @@ section .text
 %xdefine FIXED_ROTATE_MASK      zmm4
 %xdefine FIXED_M_MASK           zmm5
 %xdefine FIXED_PATTERN_SHUF     zmm6
+
 %xdefine FIXED_MAP_TAB_0        zmm7
 %xdefine FIXED_MAP_TAB_1        zmm8
 %xdefine FIXED_MAP_TAB_2        zmm9
 %xdefine FIXED_MAP_TAB_3        zmm10
 
-%xdefine LFSR_0                 zmm11
-%xdefine LFSR_1                 zmm12
-%xdefine LFSR_2                 zmm13
-%xdefine LFSR_3                 zmm14
-%xdefine LFSR_4                 zmm15
-%xdefine LFSR_5                 zmm16
-%xdefine LFSR_6                 zmm17
-%xdefine LFSR_7                 zmm18
-%xdefine LFSR_8                 zmm19
-%xdefine LFSR_9                 zmm20
-%xdefine LFSR_10                zmm21
-%xdefine LFSR_11                zmm22
-%xdefine LFSR_12                zmm23
-%xdefine LFSR_13                zmm24
-%xdefine LFSR_14                zmm25
-%xdefine LFSR_15                zmm26
+%xdefine TEMP_27                zmm11
+%xdefine TEMP_28                zmm12
+%xdefine TEMP_29                zmm13
+%xdefine TEMP_30                zmm14
+%xdefine TEMP_31                zmm15
 
-%xdefine TEMP_27                zmm27
-%xdefine TEMP_28                zmm28
-%xdefine TEMP_29                zmm29
-%xdefine TEMP_30                zmm30
-%xdefine TEMP_31                zmm31
+%xdefine LFSR_0                 zmm16
+%xdefine LFSR_1                 zmm17
+%xdefine LFSR_2                 zmm18
+%xdefine LFSR_3                 zmm19
+%xdefine LFSR_4                 zmm20
+%xdefine LFSR_5                 zmm21
+%xdefine LFSR_6                 zmm22
+%xdefine LFSR_7                 zmm23
+%xdefine LFSR_8                 zmm24
+%xdefine LFSR_9                 zmm25
+%xdefine LFSR_10                zmm26
+%xdefine LFSR_11                zmm27
+%xdefine LFSR_12                zmm28
+%xdefine LFSR_13                zmm29
+%xdefine LFSR_14                zmm30
+%xdefine LFSR_15                zmm31
 
 struc STACK
 _keystream:     resb    (16 * 64)
@@ -401,6 +413,103 @@ endstruc
         vmovdqa32       %%FSM_X1, %%TEMP_R
 %endmacro
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; CLOCK FSM
+;; Updates FSM state and returns generated key stream for 16 buffers
+;; The same macro is used for initialization and working phase
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+%macro FSM_CLOCK_NO_VAES 19
+%define %%FSM_X1            %1  ;; [in/out] zmm with 16 FSM 1 values
+%define %%FSM_X2            %2  ;; [in/out] zmm with 16 FSM 2 values
+%define %%FSM_X3            %3  ;; [in/out] zmm with 16 FSM 3 values
+%define %%LFSR_5            %4  ;; [in] zmm with 16 LFSR 5 values
+%define %%LFSR_15           %5  ;; [in] zmm with 16 LFSR 15 values
+%define %%OUT_F             %6  ;; [out] zmm for generated key streams
+%define %%ZERO              %7  ;; [clobbered] temporary zmm register
+%define %%TEMP_R            %8  ;; [clobbered] temporary zmm register
+%define %%TEMP_MIX          %9  ;; [clobbered] temporary zmm register
+%define %%TEMP_NO_MIX       %10 ;; [clobbered] temporary zmm register
+%define %%TEMP              %11 ;; [clobbered] temporary zmm register
+%define %%TEMP_1            %12 ;; [clobbered] temporary zmm register
+%define %%TEMP_2            %13 ;; [clobbered] temporary zmm register
+%define %%TEMP_3            %14 ;; [clobbered] temporary zmm register
+%define %%TEMP_4            %15 ;; [clobbered] temporary zmm register
+%define %%KR1               %16 ;; [clobbered] temporary k-register
+%define %%KR2               %17 ;; [clobbered] temporary k-register
+%define %%KR3               %18 ;; [clobbered] temporary k-register
+%define %%KR4               %19 ;; [clobbered] temporary k-register
+
+        ;; TEMP_R = S2(FSM[2])
+        LOOKUP8_64_AVX512 %%FSM_X2, %%TEMP_R, {rel const_transf_map}, \
+                %%ZERO, %%TEMP_MIX, %%TEMP_NO_MIX, %%TEMP, \
+                %%TEMP_1,  %%TEMP_2, \
+                %%KR1, %%KR2, %%KR3, %%KR4
+
+        vpshufb         %%TEMP, %%TEMP_R, FIXED_ROTATE_MASK
+
+        ;; u32 r = ( FSM[2] + ( FSM[3] ^ LFSR[5] ) ) & 0xffffffff
+        vpxord          %%TEMP_R, %%FSM_X3, %%LFSR_5
+        vpaddd          %%TEMP_R, %%TEMP_R, %%FSM_X2
+
+        ;; u32 F = ( ( LFSR[15] + FSM[1] ) & 0xffffffff ) ^ FSM[2]
+        vpaddd          %%OUT_F, %%FSM_X1, %%LFSR_15
+        vpxord          %%OUT_F, %%OUT_F, %%FSM_X2
+
+        vpxord          %%ZERO, %%ZERO, %%ZERO
+
+        vaesenc         XWORD(%%TEMP_MIX), XWORD(%%TEMP), XWORD(%%ZERO)
+        vaesenclast     XWORD(%%TEMP_NO_MIX), XWORD(%%TEMP), XWORD(%%ZERO)
+
+        vextracti32x4   XWORD(%%TEMP_3), %%TEMP, 1
+        vaesenc         XWORD(%%TEMP_4), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vaesenclast     XWORD(%%TEMP_3), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vinserti32x4    %%TEMP_MIX, XWORD(%%TEMP_4), 1
+        vinserti32x4    %%TEMP_NO_MIX, XWORD(%%TEMP_3), 1
+
+        vextracti32x4   XWORD(%%TEMP_3), %%TEMP, 2
+        vaesenc         XWORD(%%TEMP_4), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vaesenclast     XWORD(%%TEMP_3), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vinserti32x4    %%TEMP_MIX, XWORD(%%TEMP_4), 2
+        vinserti32x4    %%TEMP_NO_MIX, XWORD(%%TEMP_3), 2
+
+        vextracti32x4   XWORD(%%TEMP_3), %%TEMP, 3
+        vaesenc         XWORD(%%TEMP_4), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vaesenclast     XWORD(%%TEMP_3), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vinserti32x4    %%TEMP_MIX, XWORD(%%TEMP_4), 3
+        vinserti32x4    %%TEMP_NO_MIX, XWORD(%%TEMP_3), 3
+
+        vpcmpgtb        %%KR1, %%ZERO, %%TEMP_NO_MIX
+        vpshufb         %%TEMP_NO_MIX, %%TEMP_NO_MIX, [ rel const_byte_mix_col_rev ]
+        vpcmpgtb        %%KR2, %%ZERO, %%TEMP_NO_MIX
+
+        kxorq           %%KR3, %%KR1, %%KR2
+
+        vmovdqu8        %%ZERO{%%KR3}, FIXED_M_MASK
+
+        vpxord          %%FSM_X3, %%TEMP_MIX, %%ZERO
+
+        ;; FSM[2] = S1(FSM[1])
+        vpxord          %%ZERO, %%ZERO, %%ZERO
+        vpshufb         %%TEMP, %%FSM_X1, FIXED_ROTATE_MASK
+
+        vaesenc         XWORD(%%FSM_X2), XWORD(%%TEMP), XWORD(%%ZERO)
+
+        vextracti32x4   XWORD(%%TEMP_3), %%TEMP, 1
+        vaesenc         XWORD(%%TEMP_4), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vinserti32x4    %%FSM_X2, %%FSM_X2, XWORD(%%TEMP_4), 1
+
+        vextracti32x4   XWORD(%%TEMP_3), %%TEMP, 2
+        vaesenc         XWORD(%%TEMP_4), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vinserti32x4    %%FSM_X2, %%FSM_X2, XWORD(%%TEMP_4), 2
+
+        vextracti32x4   XWORD(%%TEMP_3), %%TEMP, 3
+        vaesenc         XWORD(%%TEMP_4), XWORD(%%TEMP_3), XWORD(%%ZERO)
+        vinserti32x4    %%FSM_X2, %%FSM_X2, XWORD(%%TEMP_4), 3
+
+        ;; FSM[1] = R
+        vmovdqa32       %%FSM_X1, %%TEMP_R
+%endmacro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LFSR & FSM INITIALIZATION for a new job
 ;; - initialize LFSR & FSM for single key-iv pair
@@ -773,11 +882,14 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initializes global registers with constants
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro INIT_CONSTANTS 0
+%macro INIT_CONSTANTS 1
+%xdefine %%GEN  %1 ;; [in] avx512_gen1/avx512_gen2
+%ifidn %%GEN, avx512_gen2
        vmovdqa64        FIXED_MAP_TAB_0, [rel const_transf_map + 64 * 0]
        vmovdqa64        FIXED_MAP_TAB_1, [rel const_transf_map + 64 * 1]
        vmovdqa64        FIXED_MAP_TAB_2, [rel const_transf_map + 64 * 2]
        vmovdqa64        FIXED_MAP_TAB_3, [rel const_transf_map + 64 * 3]
+%endif
        vmovdqa64        FIXED_ROTATE_MASK, [rel const_fixed_rotate_mask]
        vmovdqa64        FIXED_PATTERN_SHUF, [rel const_fixup]
        vmovdqa64        FIXED_M_MASK, [rel const_fixup_mask]
@@ -919,7 +1031,7 @@ endstruc
 ;; - it is multi-buffer implementation (16 buffers)
 ;; - buffers can be in initialization or working mode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro SNOW_3G_KEYSTREAM 14
+%macro SNOW_3G_KEYSTREAM 15
 %xdefine %%STATE_PTR    %1  ;; [in] FSM_LFSR state structure pointer
 %xdefine %%COUNT        %2  ;; [in/clobbered] number of dwords to be processed
 %xdefine %%SRC_PTRS     %3  ;; [in] address of array of pointers to 16 src buff
@@ -934,6 +1046,7 @@ endstruc
 %xdefine %%KR4          %12 ;; [clobbered] temporary k-register
 %xdefine %%KR5          %13 ;; [clobbered] temporary k-register
 %xdefine %%KR6          %14 ;; [clobbered] temporary k-register
+%xdefine %%GEN          %15 ;; [in] avx512_gen1/avx512_gen2
 
         xor             %%OFFSET,  %%OFFSET
 
@@ -943,7 +1056,7 @@ endstruc
 
         kmovw           %%KR6, [%%STATE_PTR + _snow3g_INIT_MASK]
 
-        INIT_CONSTANTS
+        INIT_CONSTANTS  %%GEN
         LFSR_FSM_STATE  %%STATE_PTR, LOAD
 
 
@@ -951,12 +1064,19 @@ endstruc
         xor             %%TGP0, %%TGP0
 
 %%next_keyword:
+%ifidn %%GEN, avx512_gen2
         FSM_CLOCK       FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
                         TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
                         FIXED_MAP_TAB_0, FIXED_MAP_TAB_1, \
                         FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
                         %%KR1, %%KR2, %%KR3, %%KR4
-
+%else
+        FSM_CLOCK_NO_VAES FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
+                        TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
+                        FIXED_MAP_TAB_0, FIXED_MAP_TAB_1, \
+                        FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
+                        %%KR1, %%KR2, %%KR3, %%KR4
+%endif
         ;; this xor happens only in key stream gen mode (working mode)
         knotw           %%KR6, %%KR6    ;; bits are set if lane is initialized
         vpxord          KEYSTREAM{%%KR6}, LFSR_0, KEYSTREAM
@@ -1028,7 +1148,7 @@ endstruc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generate 5 double words of key stream for SNOW3G authentication
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-%macro   SNOW3G_AUTH_INIT_5 11
+%macro   SNOW3G_AUTH_INIT_5 12
 %xdefine %%KEY          %1  ;; [in] array of pointers to 16 keys
 %xdefine %%IV           %2  ;; [in] array of pointers to 16 IV's
 %xdefine %%DST_PTR      %3  ;; [in] destination buffer to put 5DW of keystream into (32 bytes per lane)
@@ -1040,8 +1160,9 @@ endstruc
 %xdefine %%KR4          %9  ;; [clobbered] temporary k-register
 %xdefine %%KR5          %10 ;; [clobbered] temporary k-register
 %xdefine %%KR6          %11 ;; [clobbered] temporary k-register
+%xdefine %%GEN          %12 ;; [in] avx512_gen1/avx512_gen2
 
-        INIT_CONSTANTS
+        INIT_CONSTANTS %%GEN
         LFSR_FSM_INIT_AUTH %%KEY, %%IV, %%TGP0, %%COUNT
 
         ;; initialization mode
@@ -1050,12 +1171,19 @@ endstruc
         knotw           %%KR6, %%KR6            ;; 0xffff -> do LFSR_15 xor
         mov             DWORD(%%COUNT), 32
 %%_auth_keystream_init_mode:
+%ifidn %%GEN, avx512_gen2
         FSM_CLOCK       FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
                         TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
                         FIXED_MAP_TAB_0, FIXED_MAP_TAB_1, \
                         FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
                         %%KR1, %%KR2, %%KR3, %%KR4
-
+%else
+        FSM_CLOCK_NO_VAES FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
+                        TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
+                        FIXED_MAP_TAB_0, FIXED_MAP_TAB_1, \
+                        FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
+                        %%KR1, %%KR2, %%KR3, %%KR4
+%endif
         LFSR_CLOCK      TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
                         %%KR1, %%KR2, %%KR3, %%KR4, %%KR5
 
@@ -1079,12 +1207,19 @@ endstruc
         mov             DWORD(%%COUNT), 5
         xor             %%TGP0, %%TGP0
 %%_auth_keystream_work_mode:
+%ifidn %%GEN, avx512_gen2
         FSM_CLOCK       FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
                         TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
                         FIXED_MAP_TAB_0, FIXED_MAP_TAB_1, \
                         FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
                         %%KR1, %%KR2, %%KR3, %%KR4
-
+%else
+        FSM_CLOCK_NO_VAES FSM1, FSM2, FSM3, LFSR_5, LFSR_15, KEYSTREAM, \
+                        TEMP_27, TEMP_28, TEMP_29, TEMP_30, TEMP_31, \
+                        FIXED_MAP_TAB_0, FIXED_MAP_TAB_1, \
+                        FIXED_MAP_TAB_2, FIXED_MAP_TAB_3, \
+                        %%KR1, %%KR2, %%KR3, %%KR4
+%endif
         vpxord          KEYSTREAM, LFSR_0, KEYSTREAM    ;; only in working mode
 
         ;; put key stream on the stack frame

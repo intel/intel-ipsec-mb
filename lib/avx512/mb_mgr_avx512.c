@@ -170,6 +170,11 @@ IMB_JOB *submit_job_snow3g_uea2_vaes_avx512(MB_MGR_SNOW3G_OOO *state,
 
 IMB_JOB *flush_job_snow3g_uea2_vaes_avx512(MB_MGR_SNOW3G_OOO *state);
 
+IMB_JOB *submit_job_snow3g_uea2_avx512(MB_MGR_SNOW3G_OOO *state,
+                                            IMB_JOB *job);
+
+IMB_JOB *flush_job_snow3g_uea2_avx512(MB_MGR_SNOW3G_OOO *state);
+
 IMB_JOB *submit_job_snow3g_uia2_vaes_avx512(MB_MGR_SNOW3G_OOO *state,
                                             IMB_JOB *job);
 
@@ -367,11 +372,30 @@ static IMB_JOB *flush_snow3g_uea2_job_vaes_avx512(IMB_MGR *state)
         return flush_job_snow3g_uea2_vaes_avx512(snow3g_uea2_ooo);
 }
 
-static IMB_JOB *(*submit_job_snow3g_uea2_avx512)(IMB_MGR *state, IMB_JOB *job) =
-        def_submit_snow3g_uea2_job;
+static IMB_JOB *submit_snow3g_uea2_job_avx512(IMB_MGR *state, IMB_JOB *job)
+{
+        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
 
-static IMB_JOB *(*flush_job_snow3g_uea2_avx512)(IMB_MGR *state) =
-        def_flush_snow3g_uea2_job;
+        if ((job->msg_len_to_cipher_in_bits & 7) ||
+            (job->cipher_start_offset_in_bits & 7))
+                return def_submit_snow3g_uea2_job(state, job);
+
+        return submit_job_snow3g_uea2_avx512(snow3g_uea2_ooo, job);
+}
+
+static IMB_JOB *flush_snow3g_uea2_job_avx512(IMB_MGR *state)
+{
+        MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
+
+        return flush_job_snow3g_uea2_avx512(snow3g_uea2_ooo);
+}
+
+static IMB_JOB *(*submit_job_snow3g_uea2_avx512_ptr)
+        (IMB_MGR *state, IMB_JOB *job) =
+        submit_snow3g_uea2_job_avx512;
+
+static IMB_JOB *(*flush_job_snow3g_uea2_avx512_ptr)(IMB_MGR *state) =
+        flush_snow3g_uea2_job_avx512;
 
 static IMB_JOB *(*submit_job_snow3g_uia2_avx512)
         (MB_MGR_SNOW3G_OOO *state, IMB_JOB *job) =
@@ -380,10 +404,11 @@ static IMB_JOB *(*submit_job_snow3g_uia2_avx512)
 static IMB_JOB *(*flush_job_snow3g_uia2_avx512)
         (MB_MGR_SNOW3G_OOO *state) = flush_job_snow3g_uia2_vaes_avx512;
 
-#define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_avx512
-#define FLUSH_JOB_SNOW3G_UEA2  flush_job_snow3g_uea2_avx512
+#define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_avx512_ptr
+#define FLUSH_JOB_SNOW3G_UEA2  flush_job_snow3g_uea2_avx512_ptr
 #define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_avx512
 #define FLUSH_JOB_SNOW3G_UIA2  flush_job_snow3g_uia2_avx512
+
 
 /* ====================================================================== */
 
@@ -1796,23 +1821,23 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 aes128_cbcs_ooo->num_lanes_inuse = 0;
         }
 
+        /* Init SNOW3G out-of-order fields */
+        memset(&snow3g_uea2_ooo->args, 0,
+                sizeof(snow3g_uea2_ooo->args));
+        memset(snow3g_uea2_ooo->job_in_lane, 0,
+                sizeof(snow3g_uea2_ooo->job_in_lane));
+        snow3g_uea2_ooo->unused_lanes = 0xFEDCBA9876543210;
+        snow3g_uea2_ooo->num_lanes_inuse = 0;
+        snow3g_uea2_ooo->init_mask = 0;
+        snow3g_uea2_ooo->init_done = 0;
+        memset(snow3g_uea2_ooo->lens, 0xff,
+                sizeof(snow3g_uea2_ooo->lens));
+
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
-                memset(&snow3g_uea2_ooo->args, 0,
-                       sizeof(snow3g_uea2_ooo->args));
-                memset(snow3g_uea2_ooo->job_in_lane, 0,
-                       sizeof(snow3g_uea2_ooo->job_in_lane));
-                snow3g_uea2_ooo->unused_lanes = 0xFEDCBA9876543210;
-                snow3g_uea2_ooo->num_lanes_inuse = 0;
-                snow3g_uea2_ooo->init_mask = 0;
-                snow3g_uea2_ooo->init_done = 0;
-                memset(snow3g_uea2_ooo->lens, 0xff,
-                       sizeof(snow3g_uea2_ooo->lens));
-
-                submit_job_snow3g_uea2_avx512 =
+                submit_job_snow3g_uea2_avx512_ptr =
                         submit_snow3g_uea2_job_vaes_avx512;
-                flush_job_snow3g_uea2_avx512 =
+                flush_job_snow3g_uea2_avx512_ptr =
                         flush_snow3g_uea2_job_vaes_avx512;
-
                 memset(&snow3g_uia2_ooo->args, 0,
                        sizeof(snow3g_uia2_ooo->args));
                 memset(snow3g_uia2_ooo->job_in_lane, 0,

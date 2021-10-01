@@ -36,8 +36,10 @@
 %include "avx512/snow3g_uea2_by16_vaes_avx512.asm"
 
 %ifndef SUBMIT_JOB_SNOW3G_UEA2
-%define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_vaes_avx512
-%define FLUSH_JOB_SNOW3G_UEA2 flush_job_snow3g_uea2_vaes_avx512
+%define SUBMIT_JOB_SNOW3G_UEA2_GEN2 submit_job_snow3g_uea2_vaes_avx512
+%define FLUSH_JOB_SNOW3G_UEA2_GEN2 flush_job_snow3g_uea2_vaes_avx512
+%define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_avx512
+%define FLUSH_JOB_SNOW3G_UEA2 flush_job_snow3g_uea2_avx512
 %endif
 
 %ifdef LINUX
@@ -76,7 +78,7 @@ dd_0_to_15:
 
 section .text
 
-%macro SUBMIT_FLUSH_JOB_SNOW3G_UEA2 12
+%macro SUBMIT_FLUSH_JOB_SNOW3G_UEA2 13
 %define %%SUBMIT_FLUSH    %1  ;; [in] submit/flush selector
 %define %%INIT_FLAG       %2  ;; [clobbered] GP register
 %define %%UNUSED_LANES    %3  ;; [clobbered] GP register
@@ -89,6 +91,7 @@ section .text
 %define %%TGP5            %10 ;; [clobbered] GP register
 %define %%MIN_COMMON_LEN  %11 ;; [clobbered] GP register
 %define %%OFFSET          %12 ;; [clobbered] GP register
+%define %%GEN             %13 ;; [in] avx512_gen1/avx512_gen2
 
         xor     job_rax, job_rax        ;; assume NULL return job
 
@@ -202,7 +205,7 @@ section .text
         SNOW_3G_KEYSTREAM state, %%MIN_COMMON_LEN, {state + _snow3g_args_in}, \
                           {state + _snow3g_args_out}, %%OFFSET, \
                           %%TGP0, %%TGP1, %%TGP2, \
-                          k1, k2, k3, k4, k5, k6
+                          k1, k2, k3, k4, k5, k6, %%GEN
 
         ;; save DST[i] = DST[i] + %%OFFSET
         ;; save SRC[i] = SRC[i] + %%OFFSET
@@ -375,25 +378,37 @@ section .text
 ;; JOB* SUBMIT_JOB_SNOW3G_UEA2(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job)
 ;; arg 1 : state
 ;; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2_GEN2,function,internal)
+SUBMIT_JOB_SNOW3G_UEA2_GEN2:
+        endbranch64
+        SNOW3G_FUNC_START
+        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
+        SNOW3G_FUNC_END
+        ret
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UEA2,function,internal)
 SUBMIT_JOB_SNOW3G_UEA2:
         endbranch64
         SNOW3G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11
+        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 submit, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen1
         SNOW3G_FUNC_END
         ret
 
-
 ;; JOB* FLUSH_JOB_SNOW3G_UEA2(MB_MGR_SNOW3G_OOO *state)
 ;; arg 1 : state
+MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2_GEN2,function,internal)
+FLUSH_JOB_SNOW3G_UEA2_GEN2:
+        endbranch64
+        SNOW3G_FUNC_START
+        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen2
+        SNOW3G_FUNC_END
+        ret
 MKGLOBAL(FLUSH_JOB_SNOW3G_UEA2,function,internal)
 FLUSH_JOB_SNOW3G_UEA2:
         endbranch64
         SNOW3G_FUNC_START
-        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11
+        SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen1
         SNOW3G_FUNC_END
         ret
-
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
 %endif
