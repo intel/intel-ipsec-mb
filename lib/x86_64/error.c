@@ -40,11 +40,54 @@
 #endif
 
 IMB_DLL_LOCAL int imb_errno;
+IMB_DLL_LOCAL const int imb_errno_types[] = {
+        IMB_ERR_NULL_MBMGR,
+        IMB_ERR_JOB_NULL_SRC,
+        IMB_ERR_JOB_NULL_DST,
+        IMB_ERR_JOB_NULL_KEY,
+        IMB_ERR_JOB_NULL_IV,
+        IMB_ERR_JOB_NULL_AUTH,
+        IMB_ERR_JOB_NULL_AAD,
+        IMB_ERR_JOB_CIPH_LEN,
+        IMB_ERR_JOB_AUTH_LEN,
+        IMB_ERR_JOB_IV_LEN,
+        IMB_ERR_JOB_KEY_LEN,
+        IMB_ERR_JOB_AUTH_TAG_LEN,
+        IMB_ERR_JOB_AAD_LEN,
+        IMB_ERR_JOB_SRC_OFFSET,
+        IMB_ERR_JOB_CHAIN_ORDER,
+        IMB_ERR_CIPH_MODE,
+        IMB_ERR_HASH_ALGO,
+        IMB_ERR_JOB_NULL_AUTH_KEY,
+        IMB_ERR_JOB_NULL_SGL_CTX,
+        IMB_ERR_JOB_NULL_NEXT_IV,
+        IMB_ERR_JOB_PON_PLI,
+        IMB_ERR_NULL_SRC,
+        IMB_ERR_NULL_DST,
+        IMB_ERR_NULL_KEY,
+        IMB_ERR_NULL_IV,
+        IMB_ERR_NULL_AUTH,
+        IMB_ERR_NULL_AAD,
+        IMB_ERR_CIPH_LEN,
+        IMB_ERR_AUTH_LEN,
+        IMB_ERR_IV_LEN,
+        IMB_ERR_KEY_LEN,
+        IMB_ERR_AUTH_TAG_LEN,
+        IMB_ERR_AAD_LEN,
+        IMB_ERR_SRC_OFFSET,
+        IMB_ERR_NULL_AUTH_KEY,
+        IMB_ERR_NULL_CTX
+};
+
+#ifdef DEBUG
+static_assert((IMB_DIM(imb_errno_types) + 1) == (IMB_ERR_MAX - IMB_ERR_MIN),
+              "imb_errno_types[] mismatch vs enum IMB_ERR");
+#endif
 
 int imb_get_errno(IMB_MGR *mb_mgr)
 {
         /* try get IMB_MGR error status first */
-        if (mb_mgr != NULL)
+        if (mb_mgr != NULL && mb_mgr->imb_errno)
                 return mb_mgr->imb_errno;
 
         /* otherwise return global error status */
@@ -102,6 +145,38 @@ imb_get_strerror(int errnum)
                 return "Null pointer to next IV";
         case IMB_ERR_JOB_PON_PLI:
                 return "Invalid PON PLI (CRC length vs cipher length)";
+        case IMB_ERR_NULL_SRC:
+                return "Null source pointer (direct API)";
+        case IMB_ERR_NULL_DST:
+                return "Null destination pointer (direct API)";
+        case IMB_ERR_NULL_KEY:
+                return "Null key pointer (direct API)";
+        case IMB_ERR_NULL_IV:
+                return "Null Initialization Vector (IV) pointer (direct API)";
+        case IMB_ERR_NULL_AUTH:
+                return "Null authentication tag output pointer (direct API)";
+        case IMB_ERR_NULL_AAD:
+                return "Null Additional Authenticated Data (AAD) "
+                        "pointer (direct API)";
+        case IMB_ERR_CIPH_LEN:
+                return "Invalid cipher message length (direct API)";
+        case IMB_ERR_AUTH_LEN:
+                return "Invalid authentication message length (direct API)";
+        case IMB_ERR_IV_LEN:
+                return "Invalid Initialization Vector (IV) length (direct API)";
+        case IMB_ERR_KEY_LEN:
+                return "Invalid key length (direct API)";
+        case IMB_ERR_AUTH_TAG_LEN:
+                return "Invalid authentication tag length (direct API)";
+        case IMB_ERR_AAD_LEN:
+                return "Invalid Additional Authenticated Data (AAD) "
+                        "length (direct API)";
+        case IMB_ERR_SRC_OFFSET:
+                return "Invalid source offset (direct API)";
+        case IMB_ERR_NULL_AUTH_KEY:
+                return "Null pointer to authentication key (direct API)";
+        case IMB_ERR_NULL_CTX:
+                return "Null pointer to context (direct API)";
         default:
                 return strerror(errnum);
         }
