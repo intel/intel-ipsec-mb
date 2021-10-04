@@ -32,6 +32,8 @@
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_xmms_avx
 #else
 #define AVX512
+/* SNOW3G-UEA2 direct functions use up to AVX2 implementations */
+#define AVX2
 #define CLEAR_SCRATCH_SIMD_REGS clear_scratch_zmms
 #endif
 
