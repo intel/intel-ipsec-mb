@@ -1150,6 +1150,10 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 init_mb_mgr_sse_no_aesni(state);
                 return;
         }
+
+        /* Set architecture for future checks */
+        state->used_arch = (uint32_t) IMB_ARCH_AVX512;
+
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
                 aes_cbc_dec_128_avx512 = aes_cbc_dec_128_vaes_avx512;
                 aes_cbc_dec_192_avx512 = aes_cbc_dec_192_vaes_avx512;

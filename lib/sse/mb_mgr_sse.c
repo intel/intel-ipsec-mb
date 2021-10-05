@@ -691,6 +691,9 @@ init_mb_mgr_sse(IMB_MGR *state)
                 return;
         }
 
+        /* Set architecture for future checks */
+        state->used_arch = (uint32_t) IMB_ARCH_SSE;
+
         if (state->features & IMB_FEATURE_GFNI) {
                 submit_job_zuc_eea3_sse = submit_job_zuc_eea3_gfni_sse;
                 flush_job_zuc_eea3_sse = flush_job_zuc_eea3_gfni_sse;

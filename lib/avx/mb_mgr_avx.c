@@ -522,6 +522,9 @@ init_mb_mgr_avx(IMB_MGR *state)
                 return;
         }
 
+        /* Set architecture for future checks */
+        state->used_arch = (uint32_t) IMB_ARCH_AVX;
+
             /* Init AES out-of-order fields */
         memset(aes128_ooo->lens, 0xFF,
                sizeof(aes128_ooo->lens));

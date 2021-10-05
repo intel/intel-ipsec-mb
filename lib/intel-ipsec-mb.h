@@ -986,7 +986,7 @@ typedef struct IMB_MGR {
         uint64_t features; /**< reflects features of multi-buffer instance */
 
         uint64_t reserved[5]; /**< reserved for the future */
-        uint32_t reserved2[1]; /** reserved for the future */
+        uint32_t used_arch; /**< Architecture being used */
 
 	int imb_errno; /**< per mb_mgr error status */
 

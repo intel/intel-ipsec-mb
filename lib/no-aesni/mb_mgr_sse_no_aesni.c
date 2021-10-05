@@ -512,6 +512,9 @@ init_mb_mgr_sse_no_aesni(IMB_MGR *state)
         /* reset error status */
         imb_set_errno(state, 0);
 
+        /* Set architecture for future checks */
+        state->used_arch = (uint32_t) IMB_ARCH_NOAESNI;
+
         /* Init AES out-of-order fields */
         memset(aes128_ooo->lens, 0xFF,
                sizeof(aes128_ooo->lens));
