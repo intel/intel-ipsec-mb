@@ -640,20 +640,12 @@ static IMB_JOB *
 (*flush_job_zuc256_eia3_sse)
         (MB_MGR_ZUC_OOO *state) = flush_job_zuc256_eia3_no_gfni_sse;
 
-void
-init_mb_mgr_sse(IMB_MGR *state)
+static void
+reset_ooo_mgrs(IMB_MGR *state)
 {
         unsigned int j;
         uint8_t *p;
         size_t size;
-
-#ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return;
-        }
-#endif
-
         MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
@@ -679,31 +671,6 @@ init_mb_mgr_sse(IMB_MGR *state)
         MB_MGR_ZUC_OOO *zuc256_eea3_ooo = state->zuc256_eea3_ooo;
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
         MB_MGR_ZUC_OOO *zuc256_eia3_ooo = state->zuc256_eia3_ooo;
-
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-        state->features = cpu_feature_adjust(state->flags,
-                                             cpu_feature_detect());
-
-        if (!(state->features & IMB_FEATURE_AESNI)) {
-                init_mb_mgr_sse_no_aesni(state);
-                return;
-        }
-
-        /* Set architecture for future checks */
-        state->used_arch = (uint32_t) IMB_ARCH_SSE;
-
-        if (state->features & IMB_FEATURE_GFNI) {
-                submit_job_zuc_eea3_sse = submit_job_zuc_eea3_gfni_sse;
-                flush_job_zuc_eea3_sse = flush_job_zuc_eea3_gfni_sse;
-                submit_job_zuc_eia3_sse = submit_job_zuc_eia3_gfni_sse;
-                flush_job_zuc_eia3_sse = flush_job_zuc_eia3_gfni_sse;
-                submit_job_zuc256_eea3_sse = submit_job_zuc256_eea3_gfni_sse;
-                flush_job_zuc256_eea3_sse = flush_job_zuc256_eea3_gfni_sse;
-                submit_job_zuc256_eia3_sse = submit_job_zuc256_eia3_gfni_sse;
-                flush_job_zuc256_eia3_sse = flush_job_zuc256_eia3_gfni_sse;
-        }
 
         /* Init AES out-of-order fields */
         memset(aes128_ooo->lens, 0xFF, sizeof(aes128_ooo->lens));
@@ -1147,10 +1114,50 @@ init_mb_mgr_sse(IMB_MGR *state)
                sizeof(aes128_cbcs_ooo->job_in_lane));
         aes128_cbcs_ooo->num_lanes_inuse = 0;
         aes128_cbcs_ooo->unused_lanes = 0xF3210;
+}
 
-        /* Init "in order" components */
-        state->next_job = 0;
-        state->earliest_job = -1;
+static void
+init_mb_mgr_sse_internal(IMB_MGR *state, const int reset_mgrs)
+{
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
+#endif
+
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+        state->features = cpu_feature_adjust(state->flags,
+                                             cpu_feature_detect());
+
+        if (!(state->features & IMB_FEATURE_AESNI)) {
+                init_mb_mgr_sse_no_aesni(state);
+                return;
+        }
+
+        /* Set architecture for future checks */
+        state->used_arch = (uint32_t) IMB_ARCH_SSE;
+
+        if (state->features & IMB_FEATURE_GFNI) {
+                submit_job_zuc_eea3_sse = submit_job_zuc_eea3_gfni_sse;
+                flush_job_zuc_eea3_sse = flush_job_zuc_eea3_gfni_sse;
+                submit_job_zuc_eia3_sse = submit_job_zuc_eia3_gfni_sse;
+                flush_job_zuc_eia3_sse = flush_job_zuc_eia3_gfni_sse;
+                submit_job_zuc256_eea3_sse = submit_job_zuc256_eea3_gfni_sse;
+                flush_job_zuc256_eea3_sse = flush_job_zuc256_eea3_gfni_sse;
+                submit_job_zuc256_eia3_sse = submit_job_zuc256_eia3_gfni_sse;
+                flush_job_zuc256_eia3_sse = flush_job_zuc256_eia3_gfni_sse;
+        }
+
+        if (reset_mgrs) {
+                reset_ooo_mgrs(state);
+
+                /* Init "in order" components */
+                state->next_job = 0;
+                state->earliest_job = -1;
+        }
 
         /* set SSE handlers */
         state->get_next_job        = get_next_job_sse;
@@ -1278,6 +1285,12 @@ init_mb_mgr_sse(IMB_MGR *state)
         state->chacha20_poly1305_enc_update = update_enc_chacha20_poly1305_sse;
         state->chacha20_poly1305_dec_update = update_dec_chacha20_poly1305_sse;
         state->chacha20_poly1305_finalize = finalize_chacha20_poly1305_sse;
+}
+
+void
+init_mb_mgr_sse(IMB_MGR *state)
+{
+        init_mb_mgr_sse_internal(state, 1);
 }
 
 #include "mb_mgr_code.h"

@@ -1093,20 +1093,12 @@ static IMB_JOB *
 
 /* ====================================================================== */
 
-void
-init_mb_mgr_avx512(IMB_MGR *state)
+static void
+reset_ooo_mgrs(IMB_MGR *state)
 {
         unsigned int j;
         uint8_t *p;
         size_t size;
-
-#ifdef SAFE_PARAM
-        if (state == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
-                return;
-        }
-#endif
-
         MB_MGR_AES_OOO *aes128_ooo = state->aes128_ooo;
         MB_MGR_AES_OOO *aes192_ooo = state->aes192_ooo;
         MB_MGR_AES_OOO *aes256_ooo = state->aes256_ooo;
@@ -1140,94 +1132,6 @@ init_mb_mgr_avx512(IMB_MGR *state)
         MB_MGR_AES_OOO *aes128_cbcs_ooo = state->aes128_cbcs_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
         MB_MGR_SNOW3G_OOO *snow3g_uia2_ooo = state->snow3g_uia2_ooo;
-        /* reset error status */
-        imb_set_errno(state, 0);
-
-        state->features = cpu_feature_adjust(state->flags,
-                                             cpu_feature_detect());
-
-        if (!(state->features & IMB_FEATURE_AESNI)) {
-                init_mb_mgr_sse_no_aesni(state);
-                return;
-        }
-
-        /* Set architecture for future checks */
-        state->used_arch = (uint32_t) IMB_ARCH_AVX512;
-
-        if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
-                aes_cbc_dec_128_avx512 = aes_cbc_dec_128_vaes_avx512;
-                aes_cbc_dec_192_avx512 = aes_cbc_dec_192_vaes_avx512;
-                aes_cbc_dec_256_avx512 = aes_cbc_dec_256_vaes_avx512;
-                submit_job_aes128_enc_avx512 =
-                        submit_job_aes128_enc_vaes_avx512;
-                flush_job_aes128_enc_avx512 =
-                        flush_job_aes128_enc_vaes_avx512;
-                submit_job_aes192_enc_avx512 =
-                        submit_job_aes192_enc_vaes_avx512;
-                flush_job_aes192_enc_avx512 =
-                        flush_job_aes192_enc_vaes_avx512;
-                submit_job_aes256_enc_avx512 =
-                        submit_job_aes256_enc_vaes_avx512;
-                flush_job_aes256_enc_avx512 =
-                        flush_job_aes256_enc_vaes_avx512;
-                submit_job_aes128_cmac_auth_avx512 =
-                        submit_job_aes128_cmac_auth_vaes_avx512;
-                flush_job_aes128_cmac_auth_avx512 =
-                        flush_job_aes128_cmac_auth_vaes_avx512;
-                submit_job_aes256_cmac_auth_avx512 =
-                        submit_job_aes256_cmac_auth_vaes_avx512;
-                flush_job_aes256_cmac_auth_avx512 =
-                        flush_job_aes256_cmac_auth_vaes_avx512;
-                submit_job_aes128_ccm_auth_avx512 =
-                        submit_job_aes128_ccm_auth_vaes_avx512;
-                flush_job_aes128_ccm_auth_avx512 =
-                        flush_job_aes128_ccm_auth_vaes_avx512;
-                submit_job_aes256_ccm_auth_avx512 =
-                        submit_job_aes256_ccm_auth_vaes_avx512;
-                flush_job_aes256_ccm_auth_avx512 =
-                        flush_job_aes256_ccm_auth_vaes_avx512;
-                aes_cntr_ccm_128_avx512 = aes_cntr_ccm_128_vaes_avx512;
-                aes_cntr_ccm_256_avx512 = aes_cntr_ccm_256_vaes_avx512;
-
-                submit_job_docsis128_sec_crc_enc_fn =
-                        submit_job_aes_docsis128_enc_crc32_vaes_avx512;
-                submit_job_docsis256_sec_crc_enc_fn =
-                        submit_job_aes_docsis256_enc_crc32_vaes_avx512;
-                flush_job_docsis128_sec_crc_enc_fn =
-                        flush_job_aes_docsis128_enc_crc32_vaes_avx512;
-                flush_job_docsis256_sec_crc_enc_fn =
-                        flush_job_aes_docsis256_enc_crc32_vaes_avx512;
-
-                submit_job_docsis128_sec_crc_dec_fn =
-                        submit_job_docsis128_sec_crc_dec_vaes_avx512;
-                submit_job_docsis256_sec_crc_dec_fn =
-                        submit_job_docsis256_sec_crc_dec_vaes_avx512;
-
-                submit_job_aes_xcbc_avx512 = submit_job_aes_xcbc_vaes_avx512;
-                flush_job_aes_xcbc_avx512 = flush_job_aes_xcbc_vaes_avx512;
-
-                submit_job_aes128_cbcs_1_9_enc_avx512 =
-                        submit_job_aes128_cbcs_1_9_enc_vaes_avx512;
-                flush_job_aes128_cbcs_1_9_enc_avx512 =
-                        flush_job_aes128_cbcs_1_9_enc_vaes_avx512;
-                aes_cbcs_1_9_dec_128_avx512 = aes_cbcs_1_9_dec_128_vaes_avx512;
-        }
-
-        if ((state->features & IMB_FEATURE_GFNI) &&
-            (state->features & IMB_FEATURE_VAES)) {
-                submit_job_zuc_eea3_avx512 = submit_job_zuc_eea3_gfni_avx512;
-                flush_job_zuc_eea3_avx512 = flush_job_zuc_eea3_gfni_avx512;
-                submit_job_zuc_eia3_avx512 = submit_job_zuc_eia3_gfni_avx512;
-                flush_job_zuc_eia3_avx512 = flush_job_zuc_eia3_gfni_avx512;
-                submit_job_zuc256_eea3_avx512 =
-                                submit_job_zuc256_eea3_gfni_avx512;
-                flush_job_zuc256_eea3_avx512 =
-                                flush_job_zuc256_eea3_gfni_avx512;
-                submit_job_zuc256_eia3_avx512 =
-                                submit_job_zuc256_eia3_gfni_avx512;
-                flush_job_zuc256_eia3_avx512 =
-                                flush_job_zuc256_eia3_gfni_avx512;
-        }
 
         /* Init AES out-of-order fields */
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
@@ -1835,20 +1739,119 @@ init_mb_mgr_avx512(IMB_MGR *state)
         snow3g_uia2_ooo->init_done = 0;
         memset(snow3g_uia2_ooo->lens, 0,
                 sizeof(snow3g_uia2_ooo->lens));
+}
+
+static void
+init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs)
+{
+#ifdef SAFE_PARAM
+        if (state == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_MBMGR);
+                return;
+        }
+#endif
+
+        /* reset error status */
+        imb_set_errno(state, 0);
+
+        state->features = cpu_feature_adjust(state->flags,
+                                             cpu_feature_detect());
+
+        if (!(state->features & IMB_FEATURE_AESNI)) {
+                init_mb_mgr_sse_no_aesni(state);
+                return;
+        }
+
+        /* Set architecture for future checks */
+        state->used_arch = (uint32_t) IMB_ARCH_AVX512;
+
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
+                aes_cbc_dec_128_avx512 = aes_cbc_dec_128_vaes_avx512;
+                aes_cbc_dec_192_avx512 = aes_cbc_dec_192_vaes_avx512;
+                aes_cbc_dec_256_avx512 = aes_cbc_dec_256_vaes_avx512;
+                submit_job_aes128_enc_avx512 =
+                        submit_job_aes128_enc_vaes_avx512;
+                flush_job_aes128_enc_avx512 =
+                        flush_job_aes128_enc_vaes_avx512;
+                submit_job_aes192_enc_avx512 =
+                        submit_job_aes192_enc_vaes_avx512;
+                flush_job_aes192_enc_avx512 =
+                        flush_job_aes192_enc_vaes_avx512;
+                submit_job_aes256_enc_avx512 =
+                        submit_job_aes256_enc_vaes_avx512;
+                flush_job_aes256_enc_avx512 =
+                        flush_job_aes256_enc_vaes_avx512;
+                submit_job_aes128_cmac_auth_avx512 =
+                        submit_job_aes128_cmac_auth_vaes_avx512;
+                flush_job_aes128_cmac_auth_avx512 =
+                        flush_job_aes128_cmac_auth_vaes_avx512;
+                submit_job_aes256_cmac_auth_avx512 =
+                        submit_job_aes256_cmac_auth_vaes_avx512;
+                flush_job_aes256_cmac_auth_avx512 =
+                        flush_job_aes256_cmac_auth_vaes_avx512;
+                submit_job_aes128_ccm_auth_avx512 =
+                        submit_job_aes128_ccm_auth_vaes_avx512;
+                flush_job_aes128_ccm_auth_avx512 =
+                        flush_job_aes128_ccm_auth_vaes_avx512;
+                submit_job_aes256_ccm_auth_avx512 =
+                        submit_job_aes256_ccm_auth_vaes_avx512;
+                flush_job_aes256_ccm_auth_avx512 =
+                        flush_job_aes256_ccm_auth_vaes_avx512;
+                aes_cntr_ccm_128_avx512 = aes_cntr_ccm_128_vaes_avx512;
+                aes_cntr_ccm_256_avx512 = aes_cntr_ccm_256_vaes_avx512;
+
+                submit_job_docsis128_sec_crc_enc_fn =
+                        submit_job_aes_docsis128_enc_crc32_vaes_avx512;
+                submit_job_docsis256_sec_crc_enc_fn =
+                        submit_job_aes_docsis256_enc_crc32_vaes_avx512;
+                flush_job_docsis128_sec_crc_enc_fn =
+                        flush_job_aes_docsis128_enc_crc32_vaes_avx512;
+                flush_job_docsis256_sec_crc_enc_fn =
+                        flush_job_aes_docsis256_enc_crc32_vaes_avx512;
+
+                submit_job_docsis128_sec_crc_dec_fn =
+                        submit_job_docsis128_sec_crc_dec_vaes_avx512;
+                submit_job_docsis256_sec_crc_dec_fn =
+                        submit_job_docsis256_sec_crc_dec_vaes_avx512;
+
+                submit_job_aes_xcbc_avx512 = submit_job_aes_xcbc_vaes_avx512;
+                flush_job_aes_xcbc_avx512 = flush_job_aes_xcbc_vaes_avx512;
+
+                submit_job_aes128_cbcs_1_9_enc_avx512 =
+                        submit_job_aes128_cbcs_1_9_enc_vaes_avx512;
+                flush_job_aes128_cbcs_1_9_enc_avx512 =
+                        flush_job_aes128_cbcs_1_9_enc_vaes_avx512;
+                aes_cbcs_1_9_dec_128_avx512 = aes_cbcs_1_9_dec_128_vaes_avx512;
+
                 submit_job_snow3g_uea2_avx512_ptr =
                         submit_snow3g_uea2_job_vaes_avx512;
                 flush_job_snow3g_uea2_avx512_ptr =
                         flush_snow3g_uea2_job_vaes_avx512;
-                submit_job_snow3g_uia2_avx512_ptr =
-                        submit_job_snow3g_uia2_vaes_avx512;
-                flush_job_snow3g_uia2_avx512_ptr =
-                        flush_job_snow3g_uia2_vaes_avx512;
         }
 
-        /* Init "in order" components */
-        state->next_job = 0;
-        state->earliest_job = -1;
+        if ((state->features & IMB_FEATURE_GFNI) &&
+            (state->features & IMB_FEATURE_VAES)) {
+                submit_job_zuc_eea3_avx512 = submit_job_zuc_eea3_gfni_avx512;
+                flush_job_zuc_eea3_avx512 = flush_job_zuc_eea3_gfni_avx512;
+                submit_job_zuc_eia3_avx512 = submit_job_zuc_eia3_gfni_avx512;
+                flush_job_zuc_eia3_avx512 = flush_job_zuc_eia3_gfni_avx512;
+                submit_job_zuc256_eea3_avx512 =
+                                submit_job_zuc256_eea3_gfni_avx512;
+                flush_job_zuc256_eea3_avx512 =
+                                flush_job_zuc256_eea3_gfni_avx512;
+                submit_job_zuc256_eia3_avx512 =
+                                submit_job_zuc256_eia3_gfni_avx512;
+                flush_job_zuc256_eia3_avx512 =
+                                flush_job_zuc256_eia3_gfni_avx512;
+        }
+
+        if (reset_mgrs) {
+                reset_ooo_mgrs(state);
+
+                /* Init "in order" components */
+                state->next_job = 0;
+                state->earliest_job = -1;
+        }
 
         /* set handlers */
         state->get_next_job        = get_next_job_avx512;
@@ -1957,6 +1960,10 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 submit_job_pon_dec_avx512 = submit_job_pon_dec_vaes_avx512;
                 submit_job_pon_dec_no_ctr_avx512 =
                                         submit_job_pon_dec_no_ctr_vaes_avx512;
+                submit_job_snow3g_uea2_avx512_ptr =
+                        submit_snow3g_uea2_job_vaes_avx512;
+                flush_job_snow3g_uea2_avx512_ptr =
+                        flush_snow3g_uea2_job_vaes_avx512;
         }
 
         if (state->features & IMB_FEATURE_AVX512_IFMA) {
@@ -2032,6 +2039,11 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 state->gmac128_finalize = imb_aes_gmac_finalize_128_vaes_avx512;
                 state->gmac192_finalize = imb_aes_gmac_finalize_192_vaes_avx512;
                 state->gmac256_finalize = imb_aes_gmac_finalize_256_vaes_avx512;
+
+                submit_job_snow3g_uia2_avx512_ptr =
+                        submit_job_snow3g_uia2_vaes_avx512;
+                flush_job_snow3g_uia2_avx512_ptr =
+                        flush_job_snow3g_uia2_vaes_avx512;
         } else {
                 state->gcm128_enc          = aes_gcm_enc_128_avx512;
                 state->gcm192_enc          = aes_gcm_enc_192_avx512;
@@ -2077,6 +2089,12 @@ init_mb_mgr_avx512(IMB_MGR *state)
                 state->gmac256_finalize    = imb_aes_gmac_finalize_256_avx512;
         }
 
+}
+
+void
+init_mb_mgr_avx512(IMB_MGR *state)
+{
+        init_mb_mgr_avx512_internal(state, 1);
 }
 
 #include "mb_mgr_code.h"
