@@ -861,7 +861,7 @@ reset_ooo_mgrs(IMB_MGR *state)
         aes128_cbcs_ooo->unused_lanes = 0xF3210;
 }
 
-static void
+IMB_DLL_LOCAL void
 init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs)
 {
 #ifdef SAFE_PARAM

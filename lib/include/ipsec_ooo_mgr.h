@@ -384,4 +384,15 @@ typedef struct {
         uint64_t road_block;
 } MB_MGR_SNOW3G_OOO;
 
+IMB_DLL_LOCAL void
+init_mb_mgr_sse_no_aesni_internal(IMB_MGR *state, const int reset_mgrs);
+IMB_DLL_LOCAL void
+init_mb_mgr_sse_internal(IMB_MGR *state, const int reset_mgrs);
+IMB_DLL_LOCAL void
+init_mb_mgr_avx_internal(IMB_MGR *state, const int reset_mgrs);
+IMB_DLL_LOCAL void
+init_mb_mgr_avx2_internal(IMB_MGR *state, const int reset_mgrs);
+IMB_DLL_LOCAL void
+init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs);
+
 #endif /* IMB_IPSEC_MB_INTERNAL_H */

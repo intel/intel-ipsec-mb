@@ -152,7 +152,8 @@ static void set_ooo_mgr_road_block(IMB_MGR *mgr)
  * should be allocated externally.
  *
  * init_mb_mgr_XXX() must be called after this function call,
- * whereas XXX is the desired architecture.
+ * whereas XXX is the desired architecture (including "auto"),
+ * only if it has not been called previously.
  *
  * @param mem_ptr a pointer to allocated memory
  * @param flags multi-buffer manager flags
@@ -178,9 +179,33 @@ IMB_MGR *imb_set_pointers_mb_mgr(void *mem_ptr, const uint64_t flags,
         const size_t mem_size = imb_get_mb_mgr_size();
         unsigned i;
 
-        /* Zero out MB_MGR memory */
-        if (reset_mgr)
+        if (reset_mgr) {
+                /* Zero out MB_MGR memory */
                 memset(mem_ptr, 0, mem_size);
+        } else {
+                IMB_ARCH used_arch = (IMB_ARCH) ptr->used_arch;
+
+                /* Reset function pointers from previously used architecture */
+                switch (used_arch) {
+                case IMB_ARCH_NOAESNI:
+                        init_mb_mgr_sse_no_aesni_internal(ptr, 0);
+                        break;
+                case IMB_ARCH_SSE:
+                        init_mb_mgr_sse_internal(ptr, 0);
+                        break;
+                case IMB_ARCH_AVX:
+                        init_mb_mgr_avx_internal(ptr, 0);
+                        break;
+                case IMB_ARCH_AVX2:
+                        init_mb_mgr_avx2_internal(ptr, 0);
+                        break;
+                case IMB_ARCH_AVX512:
+                        init_mb_mgr_avx512_internal(ptr, 0);
+                        break;
+                default:
+                        break;
+                }
+        }
 
         imb_set_errno(ptr, 0);
         ptr->flags = flags; /* save the flags for future use in init */

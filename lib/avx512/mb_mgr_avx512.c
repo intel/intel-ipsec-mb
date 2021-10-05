@@ -1741,7 +1741,7 @@ reset_ooo_mgrs(IMB_MGR *state)
                 sizeof(snow3g_uia2_ooo->lens));
 }
 
-static void
+IMB_DLL_LOCAL void
 init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs)
 {
 #ifdef SAFE_PARAM
@@ -1758,7 +1758,7 @@ init_mb_mgr_avx512_internal(IMB_MGR *state, const int reset_mgrs)
                                              cpu_feature_detect());
 
         if (!(state->features & IMB_FEATURE_AESNI)) {
-                init_mb_mgr_sse_no_aesni(state);
+                init_mb_mgr_sse_no_aesni_internal(state, reset_mgrs);
                 return;
         }
 
