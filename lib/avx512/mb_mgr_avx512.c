@@ -180,6 +180,10 @@ IMB_JOB *submit_job_snow3g_uia2_vaes_avx512(MB_MGR_SNOW3G_OOO *state,
 
 IMB_JOB *flush_job_snow3g_uia2_vaes_avx512(MB_MGR_SNOW3G_OOO *state);
 
+IMB_JOB *submit_job_snow3g_uia2_avx512(MB_MGR_SNOW3G_OOO *state,
+                                            IMB_JOB *job);
+
+IMB_JOB *flush_job_snow3g_uia2_avx512(MB_MGR_SNOW3G_OOO *state);
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
@@ -336,24 +340,6 @@ IMB_JOB *submit_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state,
 
 IMB_JOB *flush_job_aes256_ccm_auth_vaes_avx512(MB_MGR_CCM_OOO *state);
 
-/* ====================================================================== */
-
-static IMB_JOB *
-submit_job_snow3g_uia2_1_buffer_avx512(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job)
-{
-        (void) state;
-
-        snow3g_f9_1_buffer_avx512((const snow3g_key_schedule_t *)
-                               job->u.SNOW3G_UIA2._key,
-                               job->u.SNOW3G_UIA2._iv,
-                               job->src + job->hash_start_src_offset_in_bytes,
-                               job->msg_len_to_hash_in_bits,
-                               job->auth_tag_output);
-        job->status |= IMB_STATUS_COMPLETED_AUTH;
-
-        return job;
-}
-
 static IMB_JOB *submit_snow3g_uea2_job_vaes_avx512(IMB_MGR *state, IMB_JOB *job)
 {
         MB_MGR_SNOW3G_OOO *snow3g_uea2_ooo = state->snow3g_uea2_ooo;
@@ -397,17 +383,18 @@ static IMB_JOB *(*submit_job_snow3g_uea2_avx512_ptr)
 static IMB_JOB *(*flush_job_snow3g_uea2_avx512_ptr)(IMB_MGR *state) =
         flush_snow3g_uea2_job_avx512;
 
-static IMB_JOB *(*submit_job_snow3g_uia2_avx512)
-        (MB_MGR_SNOW3G_OOO *state, IMB_JOB *job) =
-                        submit_job_snow3g_uia2_1_buffer_avx512;
-
-static IMB_JOB *(*flush_job_snow3g_uia2_avx512)
-        (MB_MGR_SNOW3G_OOO *state) = flush_job_snow3g_uia2_vaes_avx512;
-
 #define SUBMIT_JOB_SNOW3G_UEA2 submit_job_snow3g_uea2_avx512_ptr
 #define FLUSH_JOB_SNOW3G_UEA2  flush_job_snow3g_uea2_avx512_ptr
-#define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_avx512
-#define FLUSH_JOB_SNOW3G_UIA2  flush_job_snow3g_uia2_avx512
+
+static IMB_JOB *(*submit_job_snow3g_uia2_avx512_ptr)
+        (MB_MGR_SNOW3G_OOO *state, IMB_JOB *job) =
+                submit_job_snow3g_uia2_avx512;
+
+static IMB_JOB *(*flush_job_snow3g_uia2_avx512_ptr)
+        (MB_MGR_SNOW3G_OOO *state) = flush_job_snow3g_uia2_avx512;
+
+#define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_avx512_ptr
+#define FLUSH_JOB_SNOW3G_UIA2  flush_job_snow3g_uia2_avx512_ptr
 
 
 /* ====================================================================== */
@@ -1832,27 +1819,27 @@ init_mb_mgr_avx512(IMB_MGR *state)
         snow3g_uea2_ooo->init_done = 0;
         memset(snow3g_uea2_ooo->lens, 0xff,
                 sizeof(snow3g_uea2_ooo->lens));
-
+        memset(&snow3g_uia2_ooo->args, 0,
+                sizeof(snow3g_uia2_ooo->args));
+        memset(snow3g_uia2_ooo->job_in_lane, 0,
+                sizeof(snow3g_uia2_ooo->job_in_lane));
+        memset(snow3g_uia2_ooo->ks, 0,
+                sizeof(snow3g_uia2_ooo->ks));
+        snow3g_uia2_ooo->unused_lanes = 0xFEDCBA9876543210;
+        snow3g_uia2_ooo->num_lanes_inuse = 0;
+        snow3g_uia2_ooo->init_mask = 0;
+        snow3g_uia2_ooo->init_done = 0;
+        memset(snow3g_uia2_ooo->lens, 0,
+                sizeof(snow3g_uia2_ooo->lens));
         if ((state->features & IMB_FEATURE_VAES) == IMB_FEATURE_VAES) {
                 submit_job_snow3g_uea2_avx512_ptr =
                         submit_snow3g_uea2_job_vaes_avx512;
                 flush_job_snow3g_uea2_avx512_ptr =
                         flush_snow3g_uea2_job_vaes_avx512;
-                memset(&snow3g_uia2_ooo->args, 0,
-                       sizeof(snow3g_uia2_ooo->args));
-                memset(snow3g_uia2_ooo->job_in_lane, 0,
-                       sizeof(snow3g_uia2_ooo->job_in_lane));
-                memset(snow3g_uia2_ooo->ks, 0,
-                       sizeof(snow3g_uia2_ooo->ks));
-                snow3g_uia2_ooo->unused_lanes = 0xFEDCBA9876543210;
-                snow3g_uia2_ooo->num_lanes_inuse = 0;
-                snow3g_uia2_ooo->init_mask = 0;
-                snow3g_uia2_ooo->init_done = 0;
-                memset(snow3g_uia2_ooo->lens, 0,
-                       sizeof(snow3g_uia2_ooo->lens));
-
-		submit_job_snow3g_uia2_avx512 =
+                submit_job_snow3g_uia2_avx512_ptr =
                         submit_job_snow3g_uia2_vaes_avx512;
+                flush_job_snow3g_uia2_avx512_ptr =
+                        flush_job_snow3g_uia2_vaes_avx512;
         }
 
         /* Init "in order" components */

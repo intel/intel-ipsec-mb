@@ -35,17 +35,20 @@
 %include "include/clear_regs.asm"
 %include "avx512/snow3g_uea2_by16_vaes_avx512.asm"
 
-
 %ifndef SUBMIT_JOB_SNOW3G_UIA2
-%define SUBMIT_JOB_SNOW3G_UIA2 submit_job_snow3g_uia2_vaes_avx512
-%define FLUSH_JOB_SNOW3G_UIA2 flush_job_snow3g_uia2_vaes_avx512
-%define SNOW3G_F9_1_BUFFER_INT snow3g_f9_1_buffer_internal_vaes_avx512
-%endif
+%define SUBMIT_JOB_SNOW3G_UIA2_GEN2     submit_job_snow3g_uia2_vaes_avx512
+%define FLUSH_JOB_SNOW3G_UIA2_GEN2      flush_job_snow3g_uia2_vaes_avx512
+%define SNOW3G_F9_1_BUFFER_INT_GEN2     snow3g_f9_1_buffer_internal_vaes_avx512
 
+%define SUBMIT_JOB_SNOW3G_UIA2          submit_job_snow3g_uia2_avx512
+%define FLUSH_JOB_SNOW3G_UIA2           flush_job_snow3g_uia2_avx512
+%define SNOW3G_F9_1_BUFFER_INT          snow3g_f9_1_buffer_internal_avx
+%endif
 section .data
 default rel
 
 extern snow3g_f9_1_buffer_internal_vaes_avx512
+extern snow3g_f9_1_buffer_internal_avx
 
 %ifdef LINUX
 %define arg1    rdi
@@ -68,8 +71,9 @@ section .text
 
 %define APPEND(a,b) a %+ b
 
-%macro SUBMIT_FLUSH_JOB_SNOW3G_UIA2 1
+%macro SUBMIT_FLUSH_JOB_SNOW3G_UIA2 2
 %define %%SUBMIT_FLUSH  %1
+%define %%GEN           %2 ;; [in] avx512_gen1/avx512_gen2
 
 ; idx needs to be in rbp
 %define len              rbp
@@ -189,8 +193,11 @@ section .text
         lea     arg2, [idx*8]
         lea     arg2, [tmp_state + _snow3g_ks + arg2*4]   ;; arg2*4 = idx*32
         mov     DWORD(arg3), dword [tmp_state + _snow3g_lens + idx*4]
-
+%ifidn %%GEN, avx512_gen2
+        call    SNOW3G_F9_1_BUFFER_INT_GEN2
+%else
         call    SNOW3G_F9_1_BUFFER_INT
+%endif
 
         ;; restore state
         mov     state, tmp_state
@@ -235,7 +242,7 @@ section .text
                            {state + _snow3g_args_IV}, \
                            {state + _snow3g_ks}, \
                            tmp, tmp2, k1, k2, k3, k4, k5, k6, \
-                           avx512_gen2
+                           %%GEN
 
         ;; update init_done for valid initialized lanes
         mov     [state + _snow3g_init_done], WORD(init_lanes)
@@ -265,19 +272,28 @@ section .text
 ; JOB* SUBMIT_JOB_SNOW3G_UIA2(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
+MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2_GEN2,function,internal)
+SUBMIT_JOB_SNOW3G_UIA2_GEN2:
+        endbranch64
+        SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, avx512_gen2
+
 MKGLOBAL(SUBMIT_JOB_SNOW3G_UIA2,function,internal)
 SUBMIT_JOB_SNOW3G_UIA2:
         endbranch64
-        SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit
+        SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, avx512_gen1
 
 
 ; JOB* FLUSH_JOB_SNOW3G_UIA2(MB_MGR_SNOW3G_OOO *state)
 ; arg 1 : state
+MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2_GEN2,function,internal)
+FLUSH_JOB_SNOW3G_UIA2_GEN2:
+        endbranch64
+        SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, avx512_gen2
+
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2,function,internal)
 FLUSH_JOB_SNOW3G_UIA2:
         endbranch64
-        SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush
-
+        SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, avx512_gen1
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
