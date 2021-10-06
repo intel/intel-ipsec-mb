@@ -2444,16 +2444,16 @@ ZUC_ROUND64B_16:
         vpbroadcastw ymm0, MIN_LEN
         ; Get mask of non-NULL lanes (lengths not set to UINT16_MAX, indicating that lane is not valid)
         vmovdqa ymm1, [LEN]
-        vpcmpw k1, ymm1, [rel all_ffs], 4
+        vpcmpw k1, ymm1, [rel all_ffs], 4 ; NEQ
 
         ; Round up to nearest multiple of 32 bits
         vpaddw  ymm0{k1}, [rel all_31w]
         vpandq  ymm0, [rel all_ffe0w]
 
         ; Calculate remaining bits to authenticate after function call
+        vpcmpuw k2, ymm1, ymm0, 1 ; Get mask of lengths that will be < 0 after subtracting
         vpsubw  ymm2{k1}, ymm1, ymm0
         vpxorq  ymm3, ymm3
-        vpcmpw  k2, ymm2, ymm3, 1 ; Get mask of lengths < 0
         ; Set to zero the lengths of the lanes which are going to be completed
         vmovdqu16 ymm2{k2}, ymm3 ; YMM2 contain final lengths
         vmovdqu16 [LEN]{k1}, ymm2 ; Update in memory the final updated lengths
