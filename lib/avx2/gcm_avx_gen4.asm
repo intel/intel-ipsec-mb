@@ -117,6 +117,7 @@
 %include "include/gcm_keys_avx2_avx512.asm"
 %include "include/memcpy.asm"
 %include "include/cet.inc"
+%include "include/error.inc"
 %ifndef GCM128_MODE
 %ifndef GCM192_MODE
 %ifndef GCM256_MODE
@@ -3182,9 +3183,12 @@ MKGLOBAL(FN_NAME(precomp,_),function,)
 FN_NAME(precomp,_):
         endbranch64
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_precomp
+        jz      error_precomp
 %endif
 
         push    r12
@@ -3244,6 +3248,21 @@ FN_NAME(precomp,_):
 exit_precomp:
 
         ret
+
+%ifdef SAFE_PARAM
+error_precomp:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+
+        jmp exit_precomp
+%endif
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3626,28 +3645,31 @@ FN_NAME(enc,_):
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_enc
+        jz      error_enc
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_enc
+        jz      error_enc
 
         ;; Check IV != NULL
         cmp     arg6, 0
-        jz      exit_enc
+        jz      error_enc
 
         ;; Check auth_tag != NULL
         cmp     arg9, 0
-        jz      exit_enc
+        jz      error_enc
 
         ;; Check auth_tag_len == 0 or > 16
         cmp     arg10, 0
-        jz      exit_enc
+        jz      error_enc
 
         cmp     arg10, 16
-        ja      exit_enc
+        ja      error_enc
 
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
@@ -3655,11 +3677,11 @@ FN_NAME(enc,_):
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
-        jz      exit_enc
+        jz      error_enc
 
         ;; Check in != NULL (plaintext_len != 0)
         cmp     arg4, 0
-        jz      exit_enc
+        jz      error_enc
 
 skip_in_out_check_enc:
         ;; Check if aad_len == 0
@@ -3668,7 +3690,7 @@ skip_in_out_check_enc:
 
         ;; Check aad != NULL (aad_len != 0)
         cmp     arg7, 0
-        jz      exit_enc
+        jz      error_enc
 
 skip_aad_check_enc:
 %endif
@@ -3682,6 +3704,53 @@ exit_enc:
         FUNC_RESTORE
 
         ret
+
+%ifdef SAFE_PARAM
+error_enc:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg6, rax, IMB_ERR_NULL_IV
+
+        ;; Check auth_tag != NULL
+        IMB_ERR_CHECK_NULL arg9, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check auth_tag_len == 0 or > 16
+        IMB_ERR_CHECK_ZERO arg10, rax, IMB_ERR_AUTH_TAG_LEN
+
+        IMB_ERR_CHECK_ABOVE arg10, 16, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_error_enc
+
+        ;; Check out != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
+
+        ;; Check in != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
+
+skip_in_out_check_error_enc:
+        ;; Check if aad_len == 0
+        cmp     arg8, 0
+        jz      skip_aad_check_error_enc
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
+
+skip_aad_check_error_enc:
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_enc
+%endif
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_avx_gen4 / aes_gcm_dec_192_avx_gen4 / aes_gcm_dec_256_avx_gen4
@@ -3702,28 +3771,31 @@ FN_NAME(dec,_):
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_dec
+        jz      error_dec
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_dec
+        jz      error_dec
 
         ;; Check IV != NULL
         cmp     arg6, 0
-        jz      exit_dec
+        jz      error_dec
 
         ;; Check auth_tag != NULL
         cmp     arg9, 0
-        jz      exit_dec
+        jz      error_dec
 
         ;; Check auth_tag_len == 0 or > 16
         cmp     arg10, 0
-        jz      exit_dec
+        jz      error_dec
 
         cmp     arg10, 16
-        ja      exit_dec
+        ja      error_dec
 
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
@@ -3731,11 +3803,11 @@ FN_NAME(dec,_):
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
-        jz      exit_dec
+        jz      error_dec
 
         ;; Check in != NULL (plaintext_len != 0)
         cmp     arg4, 0
-        jz      exit_dec
+        jz      error_dec
 
 skip_in_out_check_dec:
         ;; Check if aad_len == 0
@@ -3744,7 +3816,7 @@ skip_in_out_check_dec:
 
         ;; Check aad != NULL (aad_len != 0)
         cmp     arg7, 0
-        jz      exit_dec
+        jz      error_dec
 
 skip_aad_check_dec:
 %endif
@@ -3758,6 +3830,53 @@ exit_dec:
         FUNC_RESTORE
 
         ret
+
+%ifdef SAFE_PARAM
+error_dec:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg6, rax, IMB_ERR_NULL_IV
+
+        ;; Check auth_tag != NULL
+        IMB_ERR_CHECK_NULL arg9, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check auth_tag_len == 0 or > 16
+        IMB_ERR_CHECK_ZERO arg10, rax, IMB_ERR_AUTH_TAG_LEN
+
+        IMB_ERR_CHECK_ABOVE arg10, 16, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_error_dec
+
+        ;; Check out != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
+
+        ;; Check in != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
+
+skip_in_out_check_error_dec:
+        ;; Check if aad_len == 0
+        cmp     arg8, 0
+        jz      skip_aad_check_error_dec
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg7, rax, IMB_ERR_NULL_AAD
+
+skip_aad_check_error_dec:
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_dec
+%endif
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3781,32 +3900,35 @@ FN_NAME(enc_var_iv,_):
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
         ;; Check IV != NULL
         cmp     arg6, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
         ;; Check IV len != 0
         cmp     arg7, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
         ;; Check auth_tag != NULL
         cmp     arg10, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
         ;; Check auth_tag_len == 0 or > 16
         cmp     arg11, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
         cmp     arg11, 16
-        ja      exit_enc_IV
+        ja      error_enc_IV
 
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
@@ -3814,11 +3936,11 @@ FN_NAME(enc_var_iv,_):
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
         ;; Check in != NULL (plaintext_len != 0)
         cmp     arg4, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
 skip_in_out_check_enc_IV:
         ;; Check if aad_len == 0
@@ -3827,7 +3949,7 @@ skip_in_out_check_enc_IV:
 
         ;; Check aad != NULL (aad_len != 0)
         cmp     arg8, 0
-        jz      exit_enc_IV
+        jz      error_enc_IV
 
 skip_aad_check_enc_IV:
 %endif
@@ -3850,6 +3972,56 @@ exit_enc_IV:
 
 	ret
 
+%ifdef SAFE_PARAM
+error_enc_IV:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg6, rax, IMB_ERR_NULL_IV
+
+        ;; Check IV len != 0
+        IMB_ERR_CHECK_ZERO arg7, rax, IMB_ERR_IV_LEN
+
+        ;; Check auth_tag != NULL
+        IMB_ERR_CHECK_NULL arg10, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check auth_tag_len == 0 or > 16
+        IMB_ERR_CHECK_ZERO arg11, rax, IMB_ERR_AUTH_TAG_LEN
+
+        IMB_ERR_CHECK_ABOVE arg11, 16, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_error_enc_IV
+
+        ;; Check out != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
+
+        ;; Check in != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
+
+skip_in_out_check_error_enc_IV:
+        ;; Check if aad_len == 0
+        cmp     arg9, 0
+        jz      skip_aad_check_error_enc_IV
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg8, rax, IMB_ERR_NULL_AAD
+
+skip_aad_check_error_enc_IV:
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_enc_IV
+%endif
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_var_iv_128_avx_gen4 / aes_gcm_dec_var_iv_192_avx_gen4 /
 ;       aes_gcm_dec_var_iv_256_avx_gen4
@@ -3871,32 +4043,35 @@ FN_NAME(dec_var_iv,_):
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
         ;; Check IV != NULL
         cmp     arg6, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
         ;; Check IV len != 0
         cmp     arg7, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
         ;; Check auth_tag != NULL
         cmp     arg10, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
         ;; Check auth_tag_len == 0 or > 16
         cmp     arg11, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
         cmp     arg11, 16
-        ja      exit_dec_IV
+        ja      error_dec_IV
 
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
@@ -3904,11 +4079,11 @@ FN_NAME(dec_var_iv,_):
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
         ;; Check in != NULL (plaintext_len != 0)
         cmp     arg4, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
 skip_in_out_check_dec_IV:
         ;; Check if aad_len == 0
@@ -3917,7 +4092,7 @@ skip_in_out_check_dec_IV:
 
         ;; Check aad != NULL (aad_len != 0)
         cmp     arg8, 0
-        jz      exit_dec_IV
+        jz      error_dec_IV
 
 skip_aad_check_dec_IV:
 %endif
@@ -3940,6 +4115,56 @@ exit_dec_IV:
 	FUNC_RESTORE
 
 	ret
+
+%ifdef SAFE_PARAM
+error_dec_IV:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg6, rax, IMB_ERR_NULL_IV
+
+        ;; Check IV len != 0
+        IMB_ERR_CHECK_ZERO arg7, rax, IMB_ERR_IV_LEN
+
+        ;; Check auth_tag != NULL
+        IMB_ERR_CHECK_NULL arg10, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check auth_tag_len == 0 or > 16
+        IMB_ERR_CHECK_ZERO arg11, rax, IMB_ERR_AUTH_TAG_LEN
+
+        IMB_ERR_CHECK_ABOVE arg11, 16, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_error_dec_IV
+
+        ;; Check out != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
+
+        ;; Check in != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
+
+skip_in_out_check_error_dec_IV:
+        ;; Check if aad_len == 0
+        cmp     arg9, 0
+        jz      skip_aad_check_error_dec_IV
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg8, rax, IMB_ERR_NULL_AAD
+
+skip_aad_check_error_dec_IV:
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_dec_IV
+%endif
+
 
 %ifdef GCM128_MODE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
