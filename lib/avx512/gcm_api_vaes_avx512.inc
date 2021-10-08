@@ -496,8 +496,8 @@ skip_aad_check_error_enc_IV:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;void   aes_gcm_dec_128_vaes_avx512 / aes_gcm_dec_192_vaes_avx512 /
-;       aes_gcm_dec_256_vaes_avx512
+;void   aes_gcm_dec_var_iv_128_vaes_avx512 / aes_gcm_dec_var_iv_192_vaes_avx512 /
+;       aes_gcm_dec_var_iv_256_vaes_avx512
 ;       (const struct gcm_key_data *key_data,
 ;        struct gcm_context_data *context_data,
 ;        u8        *out,
