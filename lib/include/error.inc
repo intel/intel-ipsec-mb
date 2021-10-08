@@ -91,7 +91,7 @@ SET_ERRNO_TYPES \
 ;; Reset global imb_errno to 0
 %macro IMB_ERR_CHECK_RESET 0
 
-        mov     dword [imb_errno], 0
+        mov     dword [rel imb_errno], 0
 %endmacro
 
 
@@ -100,7 +100,7 @@ SET_ERRNO_TYPES \
 %define %%REG   %1 ;; [clobbered] 64 bit GP reg
 
         xor     %%REG, %%REG
-        mov     [imb_errno], DWORD(%%REG)
+        mov     [rel imb_errno], DWORD(%%REG)
 %endmacro
 
 
@@ -108,7 +108,7 @@ SET_ERRNO_TYPES \
 %macro IMB_ERR_CHECK_END 1
 %define %%ERR   %1 ;; [in] 64 bit GP reg containing error type
 
-        mov     [imb_errno], DWORD(%%ERR)
+        mov     [rel imb_errno], DWORD(%%ERR)
 %endmacro
 
 
