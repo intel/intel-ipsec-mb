@@ -39,6 +39,9 @@
 #endif
 #include "misc.h"
 #include "utils.h"
+#ifdef PIN_BASED_CEC
+#include <pin_based_cec.h>
+#endif
 
 #ifdef _WIN32
 #include <intrin.h>
@@ -1864,6 +1867,30 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                         goto exit;
         }
 
+#ifdef PIN_BASED_CEC
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->enc_keys,
+                               sizeof(enc_keys->enc_keys));
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->dec_keys,
+                               sizeof(enc_keys->dec_keys));
+        PinBasedCEC_MarkSecret((uintptr_t) &enc_keys->gdata_key,
+                               sizeof(enc_keys->gdata_key));
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->k1_expanded,
+                               sizeof(enc_keys->k1_expanded));
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->k2, sizeof(enc_keys->k2));
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->k3, sizeof(enc_keys->k3));
+
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->enc_keys,
+                               sizeof(dec_keys->enc_keys));
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->dec_keys,
+                               sizeof(dec_keys->dec_keys));
+        PinBasedCEC_MarkSecret((uintptr_t) &dec_keys->gdata_key,
+                               sizeof(dec_keys->gdata_key));
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->k1_expanded,
+                               sizeof(dec_keys->k1_expanded));
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->k2, sizeof(dec_keys->k2));
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->k3, sizeof(dec_keys->k3));
+#endif
+
         for (i = 0; i < num_jobs; i++) {
                 imix_job_idx = i;
 
@@ -1949,6 +1976,9 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 }
         }
 
+#ifdef PIN_BASED_CEC
+        PinBasedCEC_ClearSecrets();
+#endif
         num_processed_jobs = 0;
 
         /* Check that the registers, stack and MB_MGR do not contain any
@@ -1957,6 +1987,30 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 if (perform_safe_checks(enc_mb_mgr, enc_arch,
                                         "encrypting") < 0)
                         goto exit;
+
+#ifdef PIN_BASED_CEC
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->enc_keys,
+                               sizeof(enc_keys->enc_keys));
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->dec_keys,
+                               sizeof(enc_keys->dec_keys));
+        PinBasedCEC_MarkSecret((uintptr_t) &enc_keys->gdata_key,
+                               sizeof(enc_keys->gdata_key));
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->k1_expanded,
+                               sizeof(enc_keys->k1_expanded));
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->k2, sizeof(enc_keys->k2));
+        PinBasedCEC_MarkSecret((uintptr_t) enc_keys->k3, sizeof(enc_keys->k3));
+
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->enc_keys,
+                               sizeof(dec_keys->enc_keys));
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->dec_keys,
+                               sizeof(dec_keys->dec_keys));
+        PinBasedCEC_MarkSecret((uintptr_t) &dec_keys->gdata_key,
+                               sizeof(dec_keys->gdata_key));
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->k1_expanded,
+                               sizeof(dec_keys->k1_expanded));
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->k2, sizeof(dec_keys->k2));
+        PinBasedCEC_MarkSecret((uintptr_t) dec_keys->k3, sizeof(dec_keys->k3));
+#endif
 
         for (i = 0; i < num_jobs; i++) {
                 imix_job_idx = i;
@@ -2029,6 +2083,9 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
                 }
         }
 
+#ifdef PIN_BASED_CEC
+        PinBasedCEC_ClearSecrets();
+#endif
         /* Check that the registers, stack and MB_MGR do not contain any
          * sensitive information after job is returned */
         if (safe_check) {
@@ -2122,7 +2179,11 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
                 struct params_s *params, struct data *variant_data,
                 const unsigned int safe_check)
 {
+#ifdef PIN_BASED_CEC
+        const uint32_t sizes = job_sizes[RANGE_MAX];
+#else
         const uint32_t sizes = params->num_sizes;
+#endif
         uint32_t sz;
         uint64_t min_aad_sz = 0;
         uint64_t max_aad_sz, aad_sz;
@@ -2144,8 +2205,12 @@ process_variant(IMB_MGR *enc_mgr, const IMB_ARCH enc_arch,
                 max_aad_sz = 0;
 
         for (sz = 0; sz < sizes; sz++) {
+#ifdef PIN_BASED_CEC
+                const uint32_t buf_size = job_sizes[RANGE_MIN];
+#else
                 const uint32_t buf_size = job_sizes[RANGE_MIN] +
-                                        (sz * job_sizes[RANGE_STEP]);
+                        (sz * job_sizes[RANGE_STEP]);
+#endif
                 for (aad_sz = min_aad_sz; aad_sz <= max_aad_sz; aad_sz++) {
                         params->aad_size = aad_sz;
                         params->buf_size = buf_size;
@@ -2408,12 +2473,20 @@ run_tests(const unsigned int safe_check)
         struct params_s params;
         struct data *variant_data = NULL;
         IMB_ARCH enc_arch, dec_arch;
+#ifdef PIN_BASED_CEC
+        const uint32_t pkt_size = job_sizes[RANGE_MIN];
+        const uint32_t num_iter = job_sizes[RANGE_MAX];
+#else
         const uint32_t min_size = job_sizes[RANGE_MIN];
         const uint32_t max_size = job_sizes[RANGE_MAX];
         const uint32_t step_size = job_sizes[RANGE_STEP];
+#endif
 
+#ifdef PIN_BASED_CEC
+        params.num_sizes = 1;
+#else
         params.num_sizes = ((max_size - min_size) / step_size) + 1;
-
+#endif
         variant_data = malloc(sizeof(struct data));
 
         if (variant_data == NULL) {
@@ -2422,12 +2495,17 @@ run_tests(const unsigned int safe_check)
         }
 
         if (verbose) {
+#ifdef PIN_BASED_CEC
+                printf("Testing buffer size = %u bytes, %u times\n",
+                       pkt_size, num_iter);
+#else
                 if (min_size == max_size)
                         printf("Testing buffer size = %u bytes\n", min_size);
                 else
                         printf("Testing buffer sizes from %u to %u "
                                "in steps of %u bytes\n",
                                min_size, max_size, step_size);
+#endif
         }
         /* Performing tests for each selected architecture */
         for (enc_arch = IMB_ARCH_NOAESNI; enc_arch < IMB_ARCH_NUM;
@@ -2469,10 +2547,15 @@ static void usage(const char *app_name)
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
                 "--job-size: size of the cipher & MAC job in bytes. "
+#ifndef PIN_BASED_CEC
                 "It can be:\n"
                 "            - single value: test single size\n"
                 "            - range: test multiple sizes with following format"
                 " min:step:max (e.g. 16:16:256)\n"
+#else
+                "            - size:1:num_iterations format\n"
+                "              e.g. 64:1:128 => repeat 128 times operation on a 64 byte buffer\n"
+#endif
                 "            (-o still applies for MAC)\n"
                 "--num-jobs: maximum number of number of jobs to submit in one go "
                 "(maximum = %u)\n"
@@ -2610,6 +2693,7 @@ parse_range(const char * const *argv, const int index, const int argc,
         if (token != NULL)
                 goto no_range;
 
+#ifndef PIN_BASED_CEC
         if (range_values[RANGE_MAX] < range_values[RANGE_MIN]) {
                 fprintf(stderr, "Maximum value of range cannot be lower "
                         "than minimum value\n");
@@ -2620,7 +2704,7 @@ parse_range(const char * const *argv, const int index, const int argc,
                 fprintf(stderr, "Step value in range cannot be 0\n");
                 exit(EXIT_FAILURE);
         }
-
+#endif
         goto end_range;
 no_range:
         /* Try parsing as single value */

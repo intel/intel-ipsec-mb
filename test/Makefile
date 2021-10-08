@@ -108,6 +108,10 @@ SOURCES := main.c gcm_test.c ctr_test.c customop_test.c des_test.c ccm_test.c \
 	chacha20_poly1305_test.c null_test.c snow_v_test.c direct_api_param_test.c
 OBJECTS := $(SOURCES:%.c=%.o)
 
+ifneq ($(PIN_CEC_ROOT),)
+CFLAGS += -I$(PIN_CEC_ROOT)/include -DPIN_BASED_CEC
+endif
+
 # ipsec_xvalid_test modules
 XVALID_ASM := misc.asm
 XVALID_SOURCES := ipsec_xvalid.c utils.c
