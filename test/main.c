@@ -61,6 +61,7 @@ extern int poly1305_test(struct IMB_MGR *mb_mgr);
 extern int chacha20_poly1305_test(struct IMB_MGR *mb_mgr);
 extern int null_test(struct IMB_MGR *mb_mgr);
 extern int snow_v_test(struct IMB_MGR *mb_mgr);
+extern int direct_api_param_test(struct IMB_MGR *mb_mgr);
 
 
 #include "do_test.h"
@@ -226,6 +227,7 @@ main(int argc, char **argv)
                 errors += chacha20_poly1305_test(p_mgr);
                 errors += null_test(p_mgr);
                 errors += snow_v_test(p_mgr);
+                errors += direct_api_param_test(p_mgr);
 
                 free_mb_mgr(p_mgr);
         }
