@@ -28,6 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "avx512/gcm_vaes_avx512.inc"
+%include "include/error.inc"
 
 %ifndef GCM_SGL_API_VAES_AVX512_INC
 %define GCM_SGL_API_VAES_AVX512_INC
@@ -49,17 +50,20 @@ FN_NAME(init,_):
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_init
+        jz      error_init
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_init
+        jz      error_init
 
         ;; Check IV != NULL
         cmp     arg3, 0
-        jz      exit_init
+        jz      error_init
 
         ;; Check if aad_len == 0
         cmp     arg5, 0
@@ -67,7 +71,7 @@ FN_NAME(init,_):
 
         ;; Check aad != NULL (aad_len != 0)
         cmp     arg4, 0
-        jz      exit_init
+        jz      error_init
 
 skip_aad_check_init:
 %endif
@@ -79,6 +83,35 @@ exit_init:
 
         FUNC_RESTORE
         ret
+
+%ifdef SAFE_PARAM
+error_init:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_IV
+
+        ;; Check if aad_len == 0
+        cmp     arg5, 0
+        jz      skip_aad_check_error_init
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_AAD
+
+skip_aad_check_error_init:
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_init
+%endif
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_init_var_iv_128_vaes_avx512 / aes_gcm_init_var_iv_192_vaes_avx512 /

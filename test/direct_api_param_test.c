@@ -82,9 +82,10 @@ unexpected_err(IMB_MGR *mgr, const IMB_ERR expected_err, const char *func_desc)
 
 /* GCM Encrypt and Decrypt tests */
 static int
-test_gcm_enc_dec(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out, uint32_t len,
-                 struct gcm_key_data *key, struct gcm_context_data *ctx,
-                 const uint8_t *iv, const uint8_t *aad, uint8_t *tag)
+test_gcm_enc_dec(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                 const uint32_t len, struct gcm_key_data *key,
+                 struct gcm_context_data *ctx, const uint8_t *iv,
+                 const uint8_t *aad, uint8_t *tag)
 {
         uint64_t i;
 
@@ -207,6 +208,57 @@ test_gcm_precomp(struct IMB_MGR *mgr)
         return 0;
 }
 
+/* GCM Init tests */
+static int
+test_gcm_init(struct IMB_MGR *mgr, struct gcm_key_data *key,
+              struct gcm_context_data *ctx, const uint8_t *iv,
+              const uint8_t *aad)
+{
+        uint64_t i, j;
+        const uint64_t aad_len = 28;
+
+        struct gcm_init_fn {
+                aes_gcm_init_t func;
+                const char *func_name;
+        } gcm_init_fn_ptrs[] = {
+             { mgr->gcm128_init, "GCM-128 INIT" },
+             { mgr->gcm192_init, "GCM-192 INIT" },
+             { mgr->gcm256_init, "GCM-256 INIT" },
+        };
+
+        struct gcm_init_args {
+                struct gcm_key_data *key;
+                struct gcm_context_data *ctx;
+                const uint8_t *iv;
+                const uint8_t *aad;
+                const uint64_t aad_len;
+                IMB_ERR exp_err;
+        } gcm_init_args[] = {
+                { NULL, ctx, iv, aad, aad_len, IMB_ERR_NULL_KEY },
+                { key, NULL, iv, aad, aad_len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, aad, aad_len, IMB_ERR_NULL_IV },
+                { key, ctx, iv, NULL, aad_len, IMB_ERR_NULL_AAD },
+                { key, ctx, iv, aad, 0, 0 },
+        };
+
+        /* iterate over function array */
+        for (i = 0; i < DIM(gcm_init_fn_ptrs); i++) {
+
+                /* iterate over argument array */
+                for (j = 0; j < DIM(gcm_init_args); j++) {
+                        const struct gcm_init_args *ap = &gcm_init_args[j];
+
+                        gcm_init_fn_ptrs[i].func(ap->key, ap->ctx, ap->iv,
+                                                 ap->aad, ap->aad_len);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           gcm_init_fn_ptrs[i].func_name))
+                                return 1;
+                }
+                printf(".");
+        }
+        return 0;
+}
+
 /*
  * @brief Performs direct GCM API invalid param tests
  */
@@ -239,6 +291,8 @@ test_gcm_api(struct IMB_MGR *mgr)
                 return 1;
 
         /* GCM Init tests */
+        if (test_gcm_init(mgr, key_data, ctx, iv, aad))
+                return 1;
 
         /* GCM Encrypt update tests */
 
