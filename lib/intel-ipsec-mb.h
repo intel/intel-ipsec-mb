@@ -203,6 +203,7 @@ typedef enum {
         IMB_ERR_NULL_SRC,
         IMB_ERR_NULL_DST,
         IMB_ERR_NULL_KEY,
+        IMB_ERR_NULL_PRE_EXP_KEY,
         IMB_ERR_NULL_IV,
         IMB_ERR_NULL_AUTH,
         IMB_ERR_NULL_AAD,

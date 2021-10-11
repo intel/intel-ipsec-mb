@@ -3079,13 +3079,16 @@ ghash_pre_avx_gen2:
         endbranch64
 ;; Parameter is passed through register
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key != NULL
         cmp     arg1, 0
-        jz      exit_ghash_pre
+        jz      error_ghash_pre
 
         ;; Check key_data != NULL
         cmp     arg2, 0
-        jz      exit_ghash_pre
+        jz      error_ghash_pre
 %endif
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -3130,6 +3133,22 @@ ghash_pre_avx_gen2:
 %endif
 exit_ghash_pre:
         ret
+
+%ifdef SAFE_PARAM
+error_ghash_pre:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_PRE_EXP_KEY
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_KEY
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_ghash_pre
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   ghash_avx_gen2

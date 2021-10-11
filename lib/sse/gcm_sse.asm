@@ -3152,13 +3152,16 @@ ghash_pre_sse_no_aesni:
         endbranch64
 ;; Parameter is passed through register
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key != NULL
         cmp     arg1, 0
-        jz      exit_ghash_pre
+        jz      error_ghash_pre
 
         ;; Check key_data != NULL
         cmp     arg2, 0
-        jz      exit_ghash_pre
+        jz      error_ghash_pre
 %endif
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -3203,6 +3206,22 @@ ghash_pre_sse_no_aesni:
 %endif
 exit_ghash_pre:
         ret
+
+%ifdef SAFE_PARAM
+error_ghash_pre:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_PRE_EXP_KEY
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_KEY
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_ghash_pre
+%endif
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   ghash_sse / ghash_sse_no_aesni

@@ -208,6 +208,60 @@ test_gcm_precomp(struct IMB_MGR *mgr)
         return 0;
 }
 
+/* GHASH key data pre-processing tests */
+static int
+test_gcm_pre(struct IMB_MGR *mgr,
+             struct gcm_key_data *key_data,
+             uint8_t *key)
+{
+        uint64_t i;
+
+        struct gcm_pre_fn {
+                aes_gcm_pre_t func;
+                const char *func_name;
+        } gcm_pre_fn_ptrs[] = {
+             { mgr->gcm128_pre, "GCM-128 PRE" },
+             { mgr->gcm192_pre, "GCM-192 PRE" },
+             { mgr->gcm256_pre, "GCM-256 PRE" },
+             { mgr->ghash_pre,  "GHASH-PRE"   },
+        };
+
+        for (i = 0; i < DIM(gcm_pre_fn_ptrs); i++) {
+
+                memset(key, 0, sizeof(*key_data));
+                memset(key_data, 0, sizeof(*key_data));
+
+                /* NULL key pointer test */
+                gcm_pre_fn_ptrs[i].func(NULL, key_data);
+                if (unexpected_err(mgr, IMB_ERR_NULL_PRE_EXP_KEY,
+                                   gcm_pre_fn_ptrs[i].func_name))
+                        return 1;
+
+                /* NULL key data pointer test */
+                gcm_pre_fn_ptrs[i].func(key, NULL);
+                if (unexpected_err(mgr, IMB_ERR_NULL_KEY,
+                                   gcm_pre_fn_ptrs[i].func_name))
+                        return 1;
+
+                /* Verify no buffers have been modified */
+                if (memcmp(key, key_data, sizeof(*key_data)) != 0) {
+                        printf("%s: %s, invalid param test failed!\n",
+                               __func__, gcm_pre_fn_ptrs[i].func_name);
+                        return 1;
+                }
+
+                /* Pass valid params to reset imb_errno */
+                gcm_pre_fn_ptrs[i].func(key, key_data);
+                if (unexpected_err(mgr, 0,
+                                   gcm_pre_fn_ptrs[i].func_name))
+                        return 1;
+                printf(".");
+        }
+
+        return 0;
+}
+
+
 /* GCM Init tests */
 static int
 test_gcm_init(struct IMB_MGR *mgr, struct gcm_key_data *key,
@@ -288,6 +342,9 @@ test_gcm_api(struct IMB_MGR *mgr)
 
         /* GCM key data pre-processing tests */
         if (test_gcm_precomp(mgr))
+                return 1;
+
+        if (test_gcm_pre(mgr, key_data, zero_buf))
                 return 1;
 
         /* GCM Init tests */

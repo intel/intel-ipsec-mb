@@ -28,6 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %include "avx512/gcm_vaes_avx512.inc"
+%include "include/error.inc"
 
 %ifndef GCM_GMAC_API_VAES_AVX512_INC
 %define GCM_GMAC_API_VAES_AVX512_INC
@@ -45,13 +46,16 @@ ghash_pre_vaes_avx512:
         endbranch64
 ;; Parameter is passed through register
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key != NULL
         cmp     arg1, 0
-        jz      exit_ghash_pre
+        jz      error_ghash_pre
 
         ;; Check key_data != NULL
         cmp     arg2, 0
-        jz      exit_ghash_pre
+        jz      error_ghash_pre
 %endif
 
         FUNC_SAVE
@@ -80,6 +84,23 @@ ghash_pre_vaes_avx512:
 exit_ghash_pre:
 
         ret
+
+%ifdef SAFE_PARAM
+error_ghash_pre:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_PRE_EXP_KEY
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_KEY
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_ghash_pre
+%endif
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   ghash_vaes_avx512
