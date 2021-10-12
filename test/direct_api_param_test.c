@@ -88,11 +88,13 @@ test_gcm_enc_dec(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
                  const uint8_t *aad, uint8_t *tag)
 {
         uint64_t i;
+        const uint64_t aad_len = 28;
+        const uint64_t tag_len = 16;
 
         struct gcm_enc_dec_fn {
                 aes_gcm_enc_dec_t func;
                 const char *func_name;
-        } gcm_enc_dec_fn_ptrs[] = {
+        } fn_ptrs[] = {
              { mgr->gcm128_enc, "GCM-128 ENC" },
              { mgr->gcm192_enc, "GCM-192 ENC" },
              { mgr->gcm256_enc, "GCM-256 ENC" },
@@ -101,82 +103,65 @@ test_gcm_enc_dec(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
              { mgr->gcm256_dec, "GCM-256 DEC" },
         };
 
-        for (i = 0; i < DIM(gcm_enc_dec_fn_ptrs); i++) {
+        struct fn_args {
+                struct gcm_key_data *key;
+                struct gcm_context_data *ctx;
+                uint8_t *out;
+                uint8_t *in;
+                const uint32_t len;
+                const uint8_t *iv;
+                const uint8_t *aad;
+                const uint64_t aad_len;
+                uint8_t *tag;
+                const uint64_t tag_len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, ctx, out, in, len, iv, aad,
+                 aad_len, tag, tag_len, IMB_ERR_NULL_KEY },
+                { key, NULL, out, in, len, iv, aad,
+                 aad_len, tag, tag_len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, in, len, iv, aad,
+                 aad_len, tag, tag_len, IMB_ERR_NULL_DST },
+                { key, ctx, out, NULL, len, iv, aad,
+                 aad_len, tag, tag_len, IMB_ERR_NULL_SRC },
+                { key, ctx, out, in, len, NULL, aad,
+                 aad_len, tag, tag_len, IMB_ERR_NULL_IV },
+                { key, ctx, out, in, len, iv, NULL,
+                 aad_len, tag, tag_len, IMB_ERR_NULL_AAD },
+                { key, ctx, out, in, len, iv, aad,
+                 aad_len, NULL, tag_len, IMB_ERR_NULL_AUTH },
+                { key, ctx, out, in, len, iv, aad,
+                  aad_len, tag, 0, IMB_ERR_AUTH_TAG_LEN },
+                { key, ctx, out, in, len, iv, aad,
+                 aad_len, tag, 17, IMB_ERR_AUTH_TAG_LEN }
+        };
+
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                uint64_t j;
 
                 memset(out, 0, len);
                 memset(in, 0, len);
 
-                /* NULL key pointer test */
-                gcm_enc_dec_fn_ptrs[i].func(NULL, ctx, out, in,
-                                            len, iv, aad, 28, tag, 16);
-                if (unexpected_err(mgr, IMB_ERR_NULL_KEY,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
+                /* Iterate over args */
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
 
-                /* NULL ctx pointer test */
-                gcm_enc_dec_fn_ptrs[i].func(key, NULL, out, in,
-                                            len, iv, aad, 28, tag, 16);
-                if (unexpected_err(mgr, IMB_ERR_NULL_CTX,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
-
-                /* NULL output pointer test */
-                gcm_enc_dec_fn_ptrs[i].func(key, ctx, NULL, in,
-                                            len, iv, aad, 28, tag, 16);
-                if (unexpected_err(mgr, IMB_ERR_NULL_DST,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
-
-                /* NULL input pointer test */
-                gcm_enc_dec_fn_ptrs[i].func(key, ctx, out, NULL,
-                                            len, iv, aad, 28, tag, 16);
-                if (unexpected_err(mgr, IMB_ERR_NULL_SRC,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
-
-                /* NULL IV pointer test */
-                gcm_enc_dec_fn_ptrs[i].func(key, ctx, out, in,
-                                            len, NULL, aad, 28, tag, 16);
-                if (unexpected_err(mgr, IMB_ERR_NULL_IV,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
-
-                /* NULL AAD pointer test */
-                gcm_enc_dec_fn_ptrs[i].func(key, ctx, out, in,
-                                            len, iv, NULL, 28, tag, 16);
-                if (unexpected_err(mgr, IMB_ERR_NULL_AAD,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
-
-                /* NULL auth tag pointer test */
-                gcm_enc_dec_fn_ptrs[i].func(key, ctx, out, in,
-                                            len, iv, aad, 28, NULL, 16);
-                if (unexpected_err(mgr, IMB_ERR_NULL_AUTH,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
-
-                /* Invalid auth tag len test */
-                gcm_enc_dec_fn_ptrs[i].func(key, ctx, out, in,
-                                            len, iv, aad, 28, tag, 0);
-                if (unexpected_err(mgr, IMB_ERR_AUTH_TAG_LEN,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
-
-                /* Invalid auth tag len test */
-                gcm_enc_dec_fn_ptrs[i].func(key, ctx, out, in,
-                                            len, iv, aad, 28, tag, 17);
-                if (unexpected_err(mgr, IMB_ERR_AUTH_TAG_LEN,
-                                   gcm_enc_dec_fn_ptrs[i].func_name))
-                        return 1;
-
+                        fn_ptrs[i].func(ap->key, ap->ctx, ap->out, ap->in,
+                                        ap->len, ap->iv, ap->aad, ap->aad_len,
+                                        ap->tag, ap->tag_len);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].func_name))
+                                return 1;
+                }
+                /* Verify buffers not modified */
                 if (memcmp(out, in, len) != 0) {
                         printf("%s: %s, invalid param test failed!\n",
-                               __func__, gcm_enc_dec_fn_ptrs[i].func_name);
+                               __func__, fn_ptrs[i].func_name);
                         return 1;
                 }
                 printf(".");
         }
-
         return 0;
 }
 
@@ -189,22 +174,21 @@ test_gcm_precomp(struct IMB_MGR *mgr)
         struct gcm_precomp_fn {
                 aes_gcm_precomp_t func;
                 const char *func_name;
-        } gcm_precomp_fn_ptrs[] = {
+        } fn_ptrs[] = {
              { mgr->gcm128_precomp, "GCM-128 PRECOMP" },
              { mgr->gcm192_precomp, "GCM-192 PRECOMP" },
              { mgr->gcm256_precomp, "GCM-256 PRECOMP" },
         };
 
-        for (i = 0; i < DIM(gcm_precomp_fn_ptrs); i++) {
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
 
                 /* NULL key pointer test */
-                gcm_precomp_fn_ptrs[i].func(NULL);
-                if (unexpected_err(mgr, IMB_ERR_NULL_KEY,
-                                   gcm_precomp_fn_ptrs[i].func_name))
+                fn_ptrs[i].func(NULL);
+                if (unexpected_err(mgr, IMB_ERR_NULL_KEY, fn_ptrs[i].func_name))
                         return 1;
                 printf(".");
         }
-
         return 0;
 }
 
@@ -219,45 +203,43 @@ test_gcm_pre(struct IMB_MGR *mgr,
         struct gcm_pre_fn {
                 aes_gcm_pre_t func;
                 const char *func_name;
-        } gcm_pre_fn_ptrs[] = {
+        } fn_ptrs[] = {
              { mgr->gcm128_pre, "GCM-128 PRE" },
              { mgr->gcm192_pre, "GCM-192 PRE" },
              { mgr->gcm256_pre, "GCM-256 PRE" },
              { mgr->ghash_pre,  "GHASH-PRE"   },
         };
 
-        for (i = 0; i < DIM(gcm_pre_fn_ptrs); i++) {
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
 
                 memset(key, 0, sizeof(*key_data));
                 memset(key_data, 0, sizeof(*key_data));
 
                 /* NULL key pointer test */
-                gcm_pre_fn_ptrs[i].func(NULL, key_data);
+                fn_ptrs[i].func(NULL, key_data);
                 if (unexpected_err(mgr, IMB_ERR_NULL_PRE_EXP_KEY,
-                                   gcm_pre_fn_ptrs[i].func_name))
+                                   fn_ptrs[i].func_name))
                         return 1;
 
                 /* NULL key data pointer test */
-                gcm_pre_fn_ptrs[i].func(key, NULL);
-                if (unexpected_err(mgr, IMB_ERR_NULL_KEY,
-                                   gcm_pre_fn_ptrs[i].func_name))
+                fn_ptrs[i].func(key, NULL);
+                if (unexpected_err(mgr, IMB_ERR_NULL_KEY, fn_ptrs[i].func_name))
                         return 1;
 
                 /* Verify no buffers have been modified */
                 if (memcmp(key, key_data, sizeof(*key_data)) != 0) {
                         printf("%s: %s, invalid param test failed!\n",
-                               __func__, gcm_pre_fn_ptrs[i].func_name);
+                               __func__, fn_ptrs[i].func_name);
                         return 1;
                 }
 
                 /* Pass valid params to reset imb_errno */
-                gcm_pre_fn_ptrs[i].func(key, key_data);
-                if (unexpected_err(mgr, 0,
-                                   gcm_pre_fn_ptrs[i].func_name))
+                fn_ptrs[i].func(key, key_data);
+                if (unexpected_err(mgr, 0, fn_ptrs[i].func_name))
                         return 1;
                 printf(".");
         }
-
         return 0;
 }
 
@@ -268,26 +250,26 @@ test_gcm_init(struct IMB_MGR *mgr, struct gcm_key_data *key,
               struct gcm_context_data *ctx, const uint8_t *iv,
               const uint8_t *aad)
 {
-        uint64_t i, j;
+        uint64_t i;
         const uint64_t aad_len = 28;
 
         struct gcm_init_fn {
                 aes_gcm_init_t func;
                 const char *func_name;
-        } gcm_init_fn_ptrs[] = {
+        } fn_ptrs[] = {
              { mgr->gcm128_init, "GCM-128 INIT" },
              { mgr->gcm192_init, "GCM-192 INIT" },
              { mgr->gcm256_init, "GCM-256 INIT" },
         };
 
-        struct gcm_init_args {
+        struct fn_args {
                 struct gcm_key_data *key;
                 struct gcm_context_data *ctx;
                 const uint8_t *iv;
                 const uint8_t *aad;
-                const uint64_t aad_len;
+                uint64_t aad_len;
                 IMB_ERR exp_err;
-        } gcm_init_args[] = {
+        } fn_args[] = {
                 { NULL, ctx, iv, aad, aad_len, IMB_ERR_NULL_KEY },
                 { key, NULL, iv, aad, aad_len, IMB_ERR_NULL_CTX },
                 { key, ctx, NULL, aad, aad_len, IMB_ERR_NULL_IV },
@@ -295,17 +277,18 @@ test_gcm_init(struct IMB_MGR *mgr, struct gcm_key_data *key,
                 { key, ctx, iv, aad, 0, 0 },
         };
 
-        /* iterate over function array */
-        for (i = 0; i < DIM(gcm_init_fn_ptrs); i++) {
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                uint64_t j;
 
-                /* iterate over argument array */
-                for (j = 0; j < DIM(gcm_init_args); j++) {
-                        const struct gcm_init_args *ap = &gcm_init_args[j];
+                /* Iterate over args */
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
 
-                        gcm_init_fn_ptrs[i].func(ap->key, ap->ctx, ap->iv,
-                                                 ap->aad, ap->aad_len);
+                        fn_ptrs[i].func(ap->key, ap->ctx, ap->iv,
+                                        ap->aad, ap->aad_len);
                         if (unexpected_err(mgr, ap->exp_err,
-                                           gcm_init_fn_ptrs[i].func_name))
+                                           fn_ptrs[i].func_name))
                                 return 1;
                 }
                 printf(".");
