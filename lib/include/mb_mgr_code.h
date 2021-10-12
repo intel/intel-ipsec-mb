@@ -1910,10 +1910,17 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
                         return 1;
                 }
-                if (job->iv_len_in_bytes != UINT64_C(16) &&
-                    job->iv_len_in_bytes != UINT64_C(25)) {
-                        imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
-                        return 1;
+                if (job->key_len_in_bytes == UINT64_C(16)) {
+                        if (job->iv_len_in_bytes != UINT64_C(16)) {
+                                imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                                return 1;
+                        }
+                } else {
+                        if (job->iv_len_in_bytes != UINT64_C(23) &&
+                            job->iv_len_in_bytes != UINT64_C(25)) {
+                                imb_set_errno(state, IMB_ERR_JOB_IV_LEN);
+                                return 1;
+                        }
                 }
                 break;
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
@@ -2440,8 +2447,11 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                         return 1;
                 }
                 if (job->u.ZUC_EIA3._iv == NULL) {
-                        imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
-                        return 1;
+                        /* If 25-byte IV is NULL, check 23-byte IV */
+                        if (job->u.ZUC_EIA3._iv23 == NULL) {
+                                imb_set_errno(state, IMB_ERR_JOB_NULL_IV);
+                                return 1;
+                        }
                 }
                 if (job->auth_tag_output_len_in_bytes !=
                     auth_tag_len_ipsec[job->hash_alg]) {

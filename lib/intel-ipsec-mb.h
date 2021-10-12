@@ -539,6 +539,7 @@ typedef struct IMB_JOB {
                         /**< 16-byte aligned pointers */
                         const uint8_t *_key;
                         const uint8_t *_iv;
+                        const uint8_t *_iv23;
                 } ZUC_EIA3;
                 struct _SNOW3G_UIA2_specific_fields {
                         /**< 16-byte aligned pointers */

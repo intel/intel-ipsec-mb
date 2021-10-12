@@ -165,11 +165,36 @@ section .text
         vmovdqu xmm0, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], xmm0
 %else ;; %%KEY_SIZE == 256
+        cmp     qword [job + _iv_len_in_bytes], 25
+        je      %%_iv_size_25
+%%_iv_size_23:
+        ; Read 23 bytes of IV and expand to 25 bytes
+        ; then expand the last 6 bytes to 8 bytes
+
+        ; Read and write first 16 bytes
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+        ; Read and write next byte
+        mov     al, [tmp + 16]
+        mov     [state + _zuc_args_IV + lane + 16], al
+        ; Read next 6 bytes
+        movzx   DWORD(tmp2), word [tmp + 17]
+        mov     DWORD(tmp3), [tmp + 19]
+        shl     tmp2, 32
+        or      tmp2, tmp3
+        ; Expand to 8 bytes and write
+        mov     tmp3, 0x3f3f3f3f3f3f3f3f
+        pdep    tmp2, tmp2, tmp3
+        mov     [state + _zuc_args_IV + lane + 17], tmp2
+
+        jmp     %%_iv_read
+%%_iv_size_25:
         ; Read 25 bytes of IV
         mov     DWORD(tmp2), 0x1ffffff
         kmovd   k1, DWORD(tmp2)
         vmovdqu8 ymm0{k1}, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], ymm0
+%%_iv_read:
 %endif
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -782,11 +807,37 @@ FLUSH_JOB_ZUC256_EEA3:
         vmovdqu xmm0, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], xmm0
 %else ;; %%KEY_SIZE == 256
+        ; Check if ZUC_EIA3._iv is not NULL, meaning a 25-byte IV can be parsed
+        or      tmp, tmp
+        jnz     %%_iv_size_25
+%%_iv_size_23:
+        ; Read 23 bytes of IV and expand to 25 bytes
+        ; then expand the last 6 bytes to 8 bytes
+        mov     tmp, [job + _zuc_eia3_iv23]
+        ; Read and write first 16 bytes
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+        ; Read and write next byte
+        mov     al, [tmp + 16]
+        mov     [state + _zuc_args_IV + lane + 16], al
+        ; Read next 6 bytes
+        movzx   DWORD(tmp2), word [tmp + 17]
+        mov     DWORD(tmp3), [tmp + 19]
+        shl     tmp2, 32
+        or      tmp2, tmp3
+        ; Expand to 8 bytes and write
+        mov     tmp3, 0x3f3f3f3f3f3f3f3f
+        pdep    tmp2, tmp2, tmp3
+        mov     [state + _zuc_args_IV + lane + 17], tmp2
+
+        jmp     %%_iv_read
+%%_iv_size_25:
         ; Read 25 bytes of IV
         mov     DWORD(tmp2), 0x1ffffff
         kmovd   k1, DWORD(tmp2)
         vmovdqu8 ymm0{k1}, [tmp]
         vmovdqa [state + _zuc_args_IV + lane], ymm0
+%%_iv_read:
 %endif
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes

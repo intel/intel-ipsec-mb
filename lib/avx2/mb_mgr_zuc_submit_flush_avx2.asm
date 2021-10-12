@@ -214,15 +214,43 @@ section .text
         and     lane, 0xF ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _iv]
-        ; Read first 16 bytes
-        vmovdqu xmm0, [tmp]
         shl     lane, 5
-        vmovdqu [state + _zuc_args_IV + lane], xmm0
-%if %%KEY_SIZE == 256
-        ; Read next 9 bytes (total of 25 bytes)
+%if %%KEY_SIZE == 128
+        ; Read first 16 bytes of IV
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+%else ;; %%KEY_SIZE == 256
+        cmp     qword [job + _iv_len_in_bytes], 25
+        je      %%_iv_size_25
+%%_iv_size_23:
+        ; Read 23 bytes of IV and expand to 25 bytes
+        ; then expand the last 6 bytes to 8 bytes
+
+        ; Read and write first 16 bytes
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+        ; Read and write next byte
+        mov     al, [tmp + 16]
+        mov     [state + _zuc_args_IV + lane + 16], al
+        ; Read next 6 bytes
+        movzx   DWORD(tmp2), word [tmp + 17]
+        mov     DWORD(tmp3), [tmp + 19]
+        shl     tmp2, 32
+        or      tmp2, tmp3
+        ; Expand to 8 bytes and write
+        mov     tmp3, 0x3f3f3f3f3f3f3f3f
+        pdep    tmp2, tmp2, tmp3
+        mov     [state + _zuc_args_IV + lane + 17], tmp2
+
+        jmp     %%_iv_read
+%%_iv_size_25:
+        ; Read 25 bytes of IV
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
         vmovq   xmm0, [tmp + 16]
         vpinsrb xmm0, [tmp + 24], 8
-        vmovdqu [state + _zuc_args_IV + lane + 16], xmm0
+        vmovdqa [state + _zuc_args_IV + lane + 16], xmm0
+%%_iv_read:
 %endif
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
@@ -737,6 +765,8 @@ FLUSH_JOB_ZUC256_EEA3:
 %define len              rbp
 %define idx              rbp
 %define tmp              rbp
+%define tmp2             r14
+%define tmp3             r15
 
 %define lane             r8
 %define unused_lanes     rbx
@@ -765,15 +795,44 @@ FLUSH_JOB_ZUC256_EEA3:
         and	lane, 0xF           ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
-        ; Read first 16 bytes
-        vmovdqu xmm0, [tmp]
         shl     lane, 5
-        vmovdqu [state + _zuc_args_IV + lane], xmm0
-%if %%KEY_SIZE == 256
-        ; Read next 9 bytes (total of 25 bytes)
+%if %%KEY_SIZE == 128
+        ; Read first 16 bytes of IV
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+%else ;; %%KEY_SIZE == 256
+        ; Check if ZUC_EIA3._iv is not NULL, meaning a 25-byte IV can be parsed
+        or      tmp, tmp
+        jnz     %%_iv_size_25
+%%_iv_size_23:
+        ; Read 23 bytes of IV and expand to 25 bytes
+        ; then expand the last 6 bytes to 8 bytes
+        mov     tmp, [job + _zuc_eia3_iv23]
+        ; Read and write first 16 bytes
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+        ; Read and write next byte
+        mov     al, [tmp + 16]
+        mov     [state + _zuc_args_IV + lane + 16], al
+        ; Read next 6 bytes
+        movzx   DWORD(tmp2), word [tmp + 17]
+        mov     DWORD(tmp3), [tmp + 19]
+        shl     tmp2, 32
+        or      tmp2, tmp3
+        ; Expand to 8 bytes and write
+        mov     tmp3, 0x3f3f3f3f3f3f3f3f
+        pdep    tmp2, tmp2, tmp3
+        mov     [state + _zuc_args_IV + lane + 17], tmp2
+
+        jmp     %%_iv_read
+%%_iv_size_25:
+        ; Read 25 bytes of IV
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
         vmovq   xmm0, [tmp + 16]
         vpinsrb xmm0, [tmp + 24], 8
-        vmovdqu [state + _zuc_args_IV + lane + 16], xmm0
+        vmovdqa [state + _zuc_args_IV + lane + 16], xmm0
+%%_iv_read:
 %endif
         shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
