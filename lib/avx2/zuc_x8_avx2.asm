@@ -793,8 +793,8 @@ align 64
     ; Set 8xLFSR registers for all packets
 %assign idx 0
 %rep 8
-    mov     r9, [pKe+8*idx]  ; Load Key N pointer
-    mov     r10, [pIv+8*idx] ; Load IV N pointer
+    mov     r9, [pKe + 8*idx]  ; Load Key N pointer
+    lea     r10, [pIv + 32*idx] ; Load IV N pointer
     INIT_LFSR_128 r9, r10, ymm13, ymm14, ymm15, APPEND(ymm, idx), ymm12
 %assign idx (idx + 1)
 %endrep
@@ -825,8 +825,8 @@ align 64
 %assign off 0
 %rep 8
     ;; Load key and IV for each packet
-    mov     r12,  [pKe + off]
-    mov     r10, [pIv + off]
+    mov     r12, [pKe + off]
+    lea     r10, [pIv + 4*off] ; Load IV N pointer
 
     ; Initialize S0-15 for each packet
     INIT_LFSR_256 r12, r10, ymm0, ymm1, xmm2, xmm3, r11, r13

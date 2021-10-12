@@ -174,17 +174,6 @@ typedef struct zuc_key_4_s {
 /**
  *****************************************************************************
  * @description
- *      Structure to store pointers to the 4 IV's to be used as input to
- *      @ref asm_ZucInitialization_4 and @ref asm_ZucGenKeystream64B_4
- *****************************************************************************/
-typedef struct zuc_iv_4_s {
-    const uint8_t *pIvs[4];
-    /**< Array of pointers to 128-bit IV's for the 4 packets */
-} ZucIv4_t;
-
-/**
- *****************************************************************************
- * @description
  *      Structure to store pointers to the 8 keys to be used as input to
  *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream64B_8
  *****************************************************************************/
@@ -196,17 +185,6 @@ typedef struct zuc_key_8_s {
 /**
  *****************************************************************************
  * @description
- *      Structure to store pointers to the 8 IV's to be used as input to
- *      @ref asm_ZucInitialization_8 and @ref asm_ZucGenKeystream64B_8
- *****************************************************************************/
-typedef struct zuc_iv_8_s {
-    const uint8_t *pIvs[8];
-    /**< Array of pointers to 128-bit IV's for the 8 packets */
-} ZucIv8_t;
-
-/**
- *****************************************************************************
- * @description
  *      Structure to store pointers to the 16 keys to be used as input to
  *      @ref asm_ZucInitialization_16 and @ref asm_ZucGenKeystream64B_16
  *****************************************************************************/
@@ -214,17 +192,6 @@ typedef struct zuc_key_16_s {
     const uint8_t *pKeys[16];
     /**< Array of pointers to 128-bit keys for the 16 packets */
 } ZucKey16_t;
-
-/**
- *****************************************************************************
- * @description
- *      Structure to store pointers to the 16 IV's to be used as input to
- *      @ref asm_ZucInitialization_16 and @ref asm_ZucGenKeystream64B_16
- *****************************************************************************/
-typedef struct zuc_iv_16_s {
-    const uint8_t *pIvs[16];
-    /**< Array of pointers to 128-bit IV's for the 16 packets */
-} ZucIv16_t;
 
 /**
  ******************************************************************************
@@ -270,9 +237,9 @@ IMB_DLL_LOCAL void asm_ZucInitialization_avx(const void *pKey,
  * @param[in] pKey                  Pointer to an array of 128-bit initial keys
  *                                  that will be used when initializing the ZUC
  *                                  state.
- * @param[in] pIv                   Pointer to an array of 128-bit initial
+ * @param[in] ivs                   Pointer to 4 x 16-byte initialization
  *                                  vectors that will be used when initializing
- *                                  the ZUC state.
+ *                                  the ZUC state
  * @param[in,out] pState            Pointer to a ZUC state structure of type
  *                                  @ref ZucState4_t that will be populated
  *                                  with the initialized ZUC state.
@@ -282,19 +249,19 @@ IMB_DLL_LOCAL void asm_ZucInitialization_avx(const void *pKey,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucInitialization_4_sse(ZucKey4_t *pKeys,
-                                               ZucIv4_t *pIvs,
+                                               const uint8_t *ivs,
                                                ZucState4_t *pState);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_4_sse_no_aesni(ZucKey4_t *pKeys,
-                                                        ZucIv4_t *pIvs,
+                                                        const uint8_t *ivs,
                                                         ZucState4_t *pState);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_4_gfni_sse(ZucKey4_t *pKeys,
-                                                    ZucIv4_t *pIvs,
+                                                    const uint8_t *ivs,
                                                     ZucState4_t *pState);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
-                                               ZucIv4_t *pIvs,
+                                               const uint8_t *ivs,
                                                ZucState4_t *pState);
 
 /**
@@ -307,7 +274,7 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
  * @param[in] pKey                  Pointer to an array of 256-bit initial keys
  *                                  that will be used when initializing the ZUC
  *                                  state.
- * @param[in] pIv                   Pointer to an array of 200-bit initial
+ * @param[in] ivs                   Pointer to 4 x 25-byte initialization
  *                                  vectors that will be used when initializing
  *                                  the ZUC state (first 17 bytes are full
  *                                  bytes, in last 8 bytes, only the lower
@@ -325,22 +292,22 @@ IMB_DLL_LOCAL void asm_ZucInitialization_4_avx(ZucKey4_t *pKeys,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_sse(ZucKey4_t *pKeys,
-                                                  ZucIv4_t *pIvs,
+                                                  const uint8_t *ivs,
                                                   ZucState4_t *pState,
                                                   const unsigned tag_sz);
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_sse_no_aesni(ZucKey4_t *pKeys,
-                                                         ZucIv4_t *pIvs,
+                                                         const uint8_t *ivs,
                                                          ZucState4_t *pState,
                                                          const unsigned tag_sz);
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_gfni_sse(ZucKey4_t *pKeys,
-                                                       ZucIv4_t *pIvs,
+                                                       const uint8_t *ivs,
                                                        ZucState4_t *pState,
                                                        const unsigned tag_sz);
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
-                                                  ZucIv4_t *pIvs,
+                                                  const uint8_t *ivs,
                                                   ZucState4_t *pState,
                                                   const unsigned tag_sz);
 
@@ -355,9 +322,9 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
  * @param[in] pKey                  Pointer to an array of 128-bit initial keys
  *                                  that will be used when initializing the ZUC
  *                                  state.
- * @param[in] pIv                   Pointer to an array of 128-bit initial
+ * @param[in] ivs                   Pointer to 8 x 16-byte initialization
  *                                  vectors that will be used when initializing
- *                                  the ZUC state.
+ *                                  the ZUC state
  * @param[in,out] pState            Pointer to a ZUC state structure of type
  *                                  @ref ZucState8_t that will be populated
  *                                  with the initialized ZUC state.
@@ -367,7 +334,7 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_4_avx(ZucKey4_t *pKeys,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
-                                                ZucIv8_t *pIvs,
+                                                const uint8_t *ivs,
                                                 ZucState8_t *pState);
 
 /**
@@ -380,7 +347,7 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
  * @param[in] pKey                  Pointer to an array of 256-bit initial keys
  *                                  that will be used when initializing the ZUC
  *                                  state.
- * @param[in] pIv                   Pointer to an array of 200-bit initial
+ * @param[in] ivs                   Pointer to 8 x 25-byte initialization
  *                                  vectors that will be used when initializing
  *                                  the ZUC state (first 17 bytes are full
  *                                  bytes, in last 8 bytes, only the lower
@@ -394,7 +361,7 @@ IMB_DLL_LOCAL void asm_ZucInitialization_8_avx2(ZucKey8_t *pKeys,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys,
-                                                   ZucIv8_t *pIvs,
+                                                   const uint8_t *ivs,
                                                    ZucState8_t *pState,
                                                    const unsigned tag_sz);
 
@@ -408,9 +375,9 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys,
  * @param[in] pKey                  Pointer to an array of 128-bit initial keys
  *                                  that will be used when initializing the ZUC
  *                                  state.
- * @param[in] pIv                   Pointer to an array of 128-bit initial
+ * @param[in] ivs                   Pointer to 16 x 16-byte initialization
  *                                  vectors that will be used when initializing
- *                                  the ZUC state.
+ *                                  the ZUC state
  * @param[in,out] pState            Pointer to a ZUC state structure of type
  *                                  @ref ZucState16_t that will be populated
  *                                  with the initialized ZUC state.
@@ -420,12 +387,12 @@ IMB_DLL_LOCAL void asm_Zuc256Initialization_8_avx2(ZucKey8_t *pKeys,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_ZucInitialization_16_avx512(ZucKey16_t *pKeys,
-                                                   ZucIv16_t *pIvs,
+                                                   const uint8_t *ivs,
                                                    ZucState16_t *pState,
                                                    const uint16_t lane_mask);
 
 IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
-                                                      ZucIv16_t *pIvs,
+                                                      const uint8_t *ivs,
                                                       ZucState16_t *pState,
                                                       const uint16_t lane_mask);
 
@@ -439,7 +406,7 @@ IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
  * @param[in] pKey                  Pointer to an array of 256-bit initial keys
  *                                  that will be used when initializing the ZUC
  *                                  state.
- * @param[in] pIv                   Pointer to an array of 200-bit initial
+ * @param[in] ivs                   Pointer to 16 x 25-byte initialization
  *                                  vectors that will be used when initializing
  *                                  the ZUC state (first 17 bytes are full
  *                                  bytes, in last 8 bytes, only the lower
@@ -453,13 +420,13 @@ IMB_DLL_LOCAL void asm_ZucInitialization_16_gfni_avx512(ZucKey16_t *pKeys,
  *
  *****************************************************************************/
 IMB_DLL_LOCAL void asm_Zuc256Initialization_16_avx512(ZucKey16_t *pKeys,
-                                                   ZucIv16_t *pIvs,
+                                                   const uint8_t *ivs,
                                                    ZucState16_t *pState,
                                                    const uint16_t lane_mask,
                                                    const unsigned tag_sz);
 
 IMB_DLL_LOCAL void asm_Zuc256Initialization_16_gfni_avx512(ZucKey16_t *pKeys,
-                                                      ZucIv16_t *pIvs,
+                                                      const uint8_t *ivs,
                                                       ZucState16_t *pState,
                                                       const uint16_t lane_mask,
                                                       const unsigned tag_sz);
@@ -1260,7 +1227,7 @@ void asm_Eia3_Nx64B_AVX512_16_VPCLMUL(ZucState16_t *pState,
                                       const uint32_t numRounds);
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
-                                    const void * const pIv[4],
+                                    const uint8_t *ivs,
                                     const void * const pBufferIn[4],
                                     uint32_t *pMacI[4],
                                     const uint16_t lengthInBits[4],
@@ -1268,7 +1235,7 @@ void zuc_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[4],
-                                       const void * const pIv[4],
+                                       const uint8_t *ivs,
                                        const void * const pBufferIn[4],
                                        uint32_t *pMacI[4],
                                        const uint16_t lengthInBits[4],
@@ -1276,7 +1243,7 @@ void zuc_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
-                                        const void * const pIv[4],
+                                        const uint8_t *ivs,
                                         const void * const pBufferIn[4],
                                         uint32_t *pMacI[4],
                                         const uint16_t lengthInBits[4],
@@ -1284,7 +1251,7 @@ void zuc_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc256_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
-                                       const void * const pIv[4],
+                                       const uint8_t *ivs,
                                        const void * const pBufferIn[4],
                                        uint32_t *pMacI[4],
                                        const uint16_t lengthInBits[4],
@@ -1292,7 +1259,7 @@ void zuc256_eia3_4_buffer_job_gfni_sse(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc256_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[4],
-                                          const void * const pIv[4],
+                                          const uint8_t *ivs,
                                           const void * const pBufferIn[4],
                                           uint32_t *pMacI[4],
                                           const uint16_t lengthInBits[4],
@@ -1300,7 +1267,7 @@ void zuc256_eia3_4_buffer_job_no_gfni_sse(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
-                                           const void * const pIv[4],
+                                           const uint8_t *ivs,
                                            const void * const pBufferIn[4],
                                            uint32_t *pMacI[4],
                                            const uint16_t lengthInBits[4],
@@ -1308,7 +1275,7 @@ void zuc256_eia3_4_buffer_job_sse_no_aesni(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc_eia3_4_buffer_job_avx(const void * const pKey[4],
-                               const void * const pIv[4],
+                               const uint8_t *ivs,
                                const void * const pBufferIn[4],
                                uint32_t *pMacI[4],
                                const uint16_t lengthInBits[4],
@@ -1316,7 +1283,7 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc256_eia3_4_buffer_job_avx(const void * const pKey[4],
-                               const void * const pIv[4],
+                               const uint8_t *ivs,
                                const void * const pBufferIn[4],
                                uint32_t *pMacI[4],
                                const uint16_t lengthInBits[4],
@@ -1324,7 +1291,7 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[4],
 
 IMB_DLL_LOCAL
 void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
-                                const void * const pIv[8],
+                                const uint8_t *ivs,
                                 const void * const pBufferIn[8],
                                 uint32_t *pMacI[8],
                                 const uint16_t lengthInBits[8],
@@ -1332,7 +1299,7 @@ void zuc_eia3_8_buffer_job_avx2(const void * const pKey[8],
 
 IMB_DLL_LOCAL
 void zuc256_eia3_8_buffer_job_avx2(const void * const pKey[8],
-                                   const void * const pIv[8],
+                                   const uint8_t *ivs,
                                    const void * const pBufferIn[8],
                                    uint32_t *pMacI[8],
                                    const uint16_t lengthInBits[8],

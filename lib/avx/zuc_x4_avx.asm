@@ -769,9 +769,9 @@ align 64
 %assign j 8
 %rep 4
     mov     r9,  [pKe + off]
-    mov     r10, [pIv + off]
     vmovdqu APPEND(xmm,i), [r9]
-    vmovdqu APPEND(xmm,j), [r10]
+    ; Read 16 bytes of IV
+    vmovdqa APPEND(xmm,j), [pIv + off*4]
 %assign off (off + 8)
 %assign i (i + 1)
 %assign j (j + 1)
@@ -824,8 +824,8 @@ align 64
 %assign off 0
 %rep 4
     ;; Load key and IV for each packet
-    mov     r12,  [pKe + off]
-    mov     r10, [pIv + off]
+    mov     r12, [pKe + off]
+    lea     r10, [pIv + off*4]
 
     ; Initialize S0-15 for each packet
     INIT_LFSR_256 r12, r10, xmm0, xmm1, xmm2, xmm3, xmm4, r11, r13

@@ -98,7 +98,7 @@ find_min_length32(const uint32_t length[NUM_AVX512_BUFS])
 }
 
 static inline void
-init_16(ZucKey16_t *keys, ZucIv16_t *ivs, ZucState16_t *state,
+init_16(ZucKey16_t *keys, const uint8_t *ivs, ZucState16_t *state,
         const uint16_t lane_mask, const unsigned use_gfni)
 {
         if (use_gfni)
@@ -247,7 +247,7 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         /* structure to store the 16 keys */
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
         /* structure to store the 16 IV's */
-        DECLARE_ALIGNED(ZucIv16_t ivs, 64);
+        DECLARE_ALIGNED(uint8_t ivs[NUM_AVX512_BUFS*32], 16);
         uint32_t numBytesLeftOver = 0;
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
@@ -263,10 +263,10 @@ void _zuc_eea3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 remainBytes[i] = length[i];
                 keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
+                memcpy(ivs + i*32, pIv[i], 16);
         }
 
-        init_16(&keys, &ivs, &state, 0xFFFF, use_gfni);
+        init_16(&keys, ivs, &state, 0xFFFF, use_gfni);
 
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
@@ -610,7 +610,7 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         /* structure to store the 16 keys */
         DECLARE_ALIGNED(ZucKey16_t keys, 64);
         /* structure to store the 16 IV's */
-        DECLARE_ALIGNED(ZucIv16_t ivs, 64);
+        DECLARE_ALIGNED(uint8_t ivs[NUM_AVX512_BUFS*32], 16);
         const uint8_t *pIn8[NUM_AVX512_BUFS] = {NULL};
         uint32_t remainCommonBits = commonBits;
         uint32_t numKeyStr = 0;
@@ -621,11 +621,11 @@ void _zuc_eia3_16_buffer_avx512(const void * const pKey[NUM_AVX512_BUFS],
         for (i = 0; i < NUM_AVX512_BUFS; i++) {
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
                 keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
+                memcpy(ivs + i*32, pIv[i], 16);
                 lens[i] = (uint16_t) lengthInBits[i];
         }
 
-        init_16(&keys, &ivs, &state, 0xFFFF, use_gfni);
+        init_16(&keys, ivs, &state, 0xFFFF, use_gfni);
         /* Generate 64 bytes at a time */
         keystr_64B_gen_16(&state, keyStr, 0, use_gfni);
 

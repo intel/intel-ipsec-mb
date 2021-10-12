@@ -1077,7 +1077,7 @@ align 64
 
     ; Set LFSR registers for Packet 1
     mov    r9, [pKe]   ; Load Key 1 pointer
-    mov    r10, [pIv]  ; Load IV 1 pointer
+    lea    r10, [pIv]  ; Load IV 1 pointer
 
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, zmm0, zmm1
@@ -1089,8 +1089,8 @@ align 64
 %assign reg_lfsr 2
 %assign reg_tmp 3
 %rep 14
-    mov     r9, [pKe+8*idx]  ; Load Key N pointer
-    mov     r10, [pIv+8*idx] ; Load IV N pointer
+    mov     r9, [pKe + 8*idx]  ; Load Key N pointer
+    lea     r10, [pIv + 32*idx] ; Load IV N pointer
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, APPEND(zmm, reg_lfsr), APPEND(zmm, reg_tmp)
 %else
@@ -1102,8 +1102,8 @@ align 64
 %endrep
 
     ; Set LFSR registers for Packet 16
-    mov     r9, [pKe+8*15]      ; Load Key 16 pointer
-    mov     r10, [pIv+8*15]     ; Load IV 16 pointer
+    mov     r9, [pKe + 8*15]      ; Load Key 16 pointer
+    lea     r10, [pIv + 32*15]     ; Load IV 16 pointer
 %if %%KEY_SIZE == 128
     INIT_LFSR_128 r9, r10, zmm30, zmm31
 %else

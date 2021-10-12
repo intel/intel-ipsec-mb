@@ -853,9 +853,9 @@ section .text
 %assign j 8
 %rep 4
     mov     r9,  [pKe + off]
-    mov     r10, [pIv + off]
     movdqu  APPEND(xmm,i), [r9]
-    movdqu  APPEND(xmm,j), [r10]
+    ; Read 16 bytes of IV
+    movdqa  APPEND(xmm,j), [pIv + off*4]
 %assign off (off + 8)
 %assign i (i + 1)
 %assign j (j + 1)
@@ -909,7 +909,7 @@ section .text
 %rep 4
     ;; Load key and IV for each packet
     mov     r9,  [pKe + off]
-    mov     r10, [pIv + off]
+    lea     r10, [pIv + off*4]
 
     ; Initialize S0-15 for each packet
     INIT_LFSR_256 r9, r10, xmm0, xmm1, xmm2, xmm3, xmm4, r11, r13

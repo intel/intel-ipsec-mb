@@ -159,7 +159,19 @@ section .text
         and     lane, 0xF ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _iv]
-        mov     [state + _zuc_args_IV + lane*8], tmp
+        shl     lane, 5
+%if %%KEY_SIZE == 128
+        ; Read first 16 bytes of IV
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+%else ;; %%KEY_SIZE == 256
+        ; Read 25 bytes of IV
+        mov     DWORD(tmp2), 0x1ffffff
+        kmovd   k1, DWORD(tmp2)
+        vmovdqu8 ymm0{k1}, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], ymm0
+%endif
+        shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
         add	qword [state + _zuc_lanes_in_use], 1
 
@@ -407,11 +419,6 @@ section .text
         vpbroadcastq    zmm1, tmp3
         vmovdqu64       [state + _zuc_args_keys + (0*PTR_SZ)]{k1}, zmm1
         vmovdqu64       [state + _zuc_args_keys + (8*PTR_SZ)]{k2}, zmm1
-        ;; - IV pointer
-        mov             tmp3, [state + _zuc_args_IV + idx*8]
-        vpbroadcastq    zmm1, tmp3
-        vmovdqu64       [state + _zuc_args_IV + (0*PTR_SZ)]{k1}, zmm1
-        vmovdqu64       [state + _zuc_args_IV + (8*PTR_SZ)]{k2}, zmm1
 
         cmp     word [r12 + _zuc_init_not_done], 0
         je      %%skip_init_flush
@@ -769,7 +776,19 @@ FLUSH_JOB_ZUC256_EEA3:
         and	lane, 0xF           ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
-        mov     [state + _zuc_args_IV + lane*8], tmp
+        shl     lane, 5
+%if %%KEY_SIZE == 128
+        ; Read first 16 bytes of IV
+        vmovdqu xmm0, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], xmm0
+%else ;; %%KEY_SIZE == 256
+        ; Read 25 bytes of IV
+        mov     DWORD(tmp2), 0x1ffffff
+        kmovd   k1, DWORD(tmp2)
+        vmovdqu8 ymm0{k1}, [tmp]
+        vmovdqa [state + _zuc_args_IV + lane], ymm0
+%endif
+        shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
         add	qword [state + _zuc_lanes_in_use], 1
 
@@ -997,11 +1016,6 @@ FLUSH_JOB_ZUC256_EEA3:
         vpbroadcastq    zmm1, tmp3
         vmovdqu64       [state + _zuc_args_keys + (0*PTR_SZ)]{k1}, zmm1
         vmovdqu64       [state + _zuc_args_keys + (8*PTR_SZ)]{k2}, zmm1
-        ;; - IV pointer
-        mov             tmp3, [state + _zuc_args_IV + idx*8]
-        vpbroadcastq    zmm1, tmp3
-        vmovdqu64       [state + _zuc_args_IV + (0*PTR_SZ)]{k1}, zmm1
-        vmovdqu64       [state + _zuc_args_IV + (8*PTR_SZ)]{k2}, zmm1
 
         ; Move state into r12, as register for state will be used
         ; to pass parameter to next function

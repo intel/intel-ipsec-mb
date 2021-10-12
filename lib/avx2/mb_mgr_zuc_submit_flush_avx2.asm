@@ -214,7 +214,17 @@ section .text
         and     lane, 0xF ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _iv]
-        mov     [state + _zuc_args_IV + lane*8], tmp
+        ; Read first 16 bytes
+        vmovdqu xmm0, [tmp]
+        shl     lane, 5
+        vmovdqu [state + _zuc_args_IV + lane], xmm0
+%if %%KEY_SIZE == 256
+        ; Read next 9 bytes (total of 25 bytes)
+        vmovq   xmm0, [tmp + 16]
+        vpinsrb xmm0, [tmp + 24], 8
+        vmovdqu [state + _zuc_args_IV + lane + 16], xmm0
+%endif
+        shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
 
         mov     [state + _zuc_job_in_lane + lane*8], job
@@ -464,7 +474,6 @@ APPEND(%%skip_copy_ffs_,I):
         mov     tmp1, [state + _zuc_args_in + idx*8]
         mov     tmp2, [state + _zuc_args_out + idx*8]
         mov     tmp3, [state + _zuc_args_keys + idx*8]
-        mov     tmp4, [state + _zuc_args_IV + idx*8]
 
 %assign I 0
 %rep 8
@@ -473,7 +482,6 @@ APPEND(%%skip_copy_ffs_,I):
         mov     [state + _zuc_args_in + I*8], tmp1
         mov     [state + _zuc_args_out + I*8], tmp2
         mov     [state + _zuc_args_keys + I*8], tmp3
-        mov     [state + _zuc_args_IV + I*8], tmp4
 APPEND(%%skip_eea3_,I):
 %assign I (I+1)
 %endrep
@@ -757,7 +765,17 @@ FLUSH_JOB_ZUC256_EEA3:
         and	lane, 0xF           ;; just a nibble
         shr     unused_lanes, 4
         mov     tmp, [job + _zuc_eia3_iv]
-        mov     [state + _zuc_args_IV + lane*8], tmp
+        ; Read first 16 bytes
+        vmovdqu xmm0, [tmp]
+        shl     lane, 5
+        vmovdqu [state + _zuc_args_IV + lane], xmm0
+%if %%KEY_SIZE == 256
+        ; Read next 9 bytes (total of 25 bytes)
+        vmovq   xmm0, [tmp + 16]
+        vpinsrb xmm0, [tmp + 24], 8
+        vmovdqu [state + _zuc_args_IV + lane + 16], xmm0
+%endif
+        shr     lane, 5
         mov     [state + _zuc_unused_lanes], unused_lanes
 
         mov     [state + _zuc_job_in_lane + lane*8], job
@@ -910,7 +928,6 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     tmp1, [state + _zuc_args_in + idx*8]
         mov     tmp2, [state + _zuc_args_out + idx*8]
         mov     tmp3, [state + _zuc_args_keys + idx*8]
-        mov     tmp4, [state + _zuc_args_IV + idx*8]
         mov     WORD(tmp5), [state + _zuc_lens + idx*2]
 
         ; Set valid length in NULL jobs
@@ -937,7 +954,6 @@ FLUSH_JOB_ZUC256_EEA3:
         mov     [state + _zuc_args_in + I*8], tmp1
         mov     [state + _zuc_args_out + I*8], tmp2
         mov     [state + _zuc_args_keys + I*8], tmp3
-        mov     [state + _zuc_args_IV + I*8], tmp4
 APPEND(%%skip_eia3_,I):
 %assign I (I+1)
 %endrep

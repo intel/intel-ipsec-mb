@@ -146,7 +146,7 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
-        DECLARE_ALIGNED(ZucIv4_t ivs, 64);
+        DECLARE_ALIGNED(uint8_t ivs[NUM_AVX_BUFS*32], 16);
         uint32_t numBytesLeftOver = 0;
         const uint8_t *pTempBufInPtr = NULL;
         uint8_t *pTempBufOutPtr = NULL;
@@ -161,10 +161,10 @@ void _zuc_eea3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         for (i = 0; i< NUM_AVX_BUFS; i++) {
                 remainBytes[i] = length[i];
                 keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
+                memcpy(ivs + i*32, pIv[i], 16);
         }
 
-        asm_ZucInitialization_4_avx( &keys,  &ivs, &state);
+        asm_ZucInitialization_4_avx(&keys, ivs, &state);
 
         for (i = 0; i < NUM_AVX_BUFS; i++) {
                 pOut64[i] = (uint64_t *) pBufferOut[i];
@@ -487,7 +487,7 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
         /* structure to store the 4 IV's */
-        DECLARE_ALIGNED(ZucIv4_t ivs, 64);
+        DECLARE_ALIGNED(uint8_t ivs[NUM_AVX_BUFS*32], 16);
         const uint8_t *pIn8[NUM_AVX_BUFS] = {NULL};
         uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
@@ -517,10 +517,10 @@ void _zuc_eia3_4_buffer_avx(const void * const pKey[NUM_AVX_BUFS],
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
                 pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
                 keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
+                memcpy(ivs + i*32, pIv[i], 16);
         }
 
-        asm_ZucInitialization_4_avx( &keys,  &ivs, &state);
+        asm_ZucInitialization_4_avx(&keys, ivs, &state);
 
         /* Generate 16 bytes at a time */
         asm_ZucGenKeystream16B_4_avx(&state, pKeyStrArr);
@@ -661,7 +661,7 @@ void zuc_eia3_1_buffer_avx(const void *pKey,
 }
 
 void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
-                               const void * const pIv[NUM_AVX_BUFS],
+                               const uint8_t *ivs,
                                const void * const pBufferIn[NUM_AVX_BUFS],
                                uint32_t *pMacI[NUM_AVX_BUFS],
                                const uint16_t lengthInBits[NUM_AVX_BUFS],
@@ -673,8 +673,6 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX_BUFS][2*KEYSTR_ROUND_LEN], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
-        /* structure to store the 4 IV's */
-        DECLARE_ALIGNED(ZucIv4_t ivs, 64);
         const uint8_t *pIn8[NUM_AVX_BUFS] = {NULL};
         uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
@@ -704,10 +702,9 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
                 pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
                 keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
         }
 
-        asm_ZucInitialization_4_avx( &keys,  &ivs, &state);
+        asm_ZucInitialization_4_avx(&keys, ivs, &state);
 
         /* Generate 16 bytes at a time */
         asm_ZucGenKeystream16B_4_avx(&state, pKeyStrArr);
@@ -820,7 +817,7 @@ void zuc_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
 }
 
 void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
-                                  const void * const pIv[NUM_AVX_BUFS],
+                                  const uint8_t *ivs,
                                   const void * const pBufferIn[NUM_AVX_BUFS],
                                   uint32_t *pMacI[NUM_AVX_BUFS],
                                   const uint16_t lengthInBits[NUM_AVX_BUFS],
@@ -832,8 +829,6 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
         DECLARE_ALIGNED(uint8_t keyStr[NUM_AVX_BUFS][2*KEYSTR_ROUND_LEN], 64);
         /* structure to store the 4 keys */
         DECLARE_ALIGNED(ZucKey4_t keys, 64);
-        /* structure to store the 4 IV's */
-        DECLARE_ALIGNED(ZucIv4_t ivs, 64);
         const uint8_t *pIn8[NUM_AVX_BUFS] = {NULL};
         uint32_t remainCommonBits;
         uint32_t numKeyStr = 0;
@@ -863,11 +858,10 @@ void zuc256_eia3_4_buffer_job_avx(const void * const pKey[NUM_AVX_BUFS],
                 pIn8[i] = (const uint8_t *) pBufferIn[i];
                 pKeyStrArr[i] = (uint32_t *) &keyStr[i][0];
                 keys.pKeys[i] = pKey[i];
-                ivs.pIvs[i] = pIv[i];
         }
 
         /* TODO: Handle 8 and 16-byte digest cases */
-        asm_Zuc256Initialization_4_avx( &keys,  &ivs, &state, 4);
+        asm_Zuc256Initialization_4_avx(&keys, ivs, &state, 4);
 
         asm_ZucGenKeystream4B_4_avx(&state, pKeyStrArr);
 
