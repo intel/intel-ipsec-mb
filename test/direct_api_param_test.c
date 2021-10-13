@@ -117,7 +117,7 @@ test_gcm_enc_dec(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
                 const IMB_ERR exp_err;
         } fn_args[] = {
                 { NULL, ctx, out, in, len, iv, aad,
-                 aad_len, tag, tag_len, IMB_ERR_NULL_KEY },
+                 aad_len, tag, tag_len, IMB_ERR_NULL_EXP_KEY },
                 { key, NULL, out, in, len, iv, aad,
                  aad_len, tag, tag_len, IMB_ERR_NULL_CTX },
                 { key, ctx, NULL, in, len, iv, aad,
@@ -185,7 +185,8 @@ test_gcm_precomp(struct IMB_MGR *mgr)
 
                 /* NULL key pointer test */
                 fn_ptrs[i].func(NULL);
-                if (unexpected_err(mgr, IMB_ERR_NULL_KEY, fn_ptrs[i].func_name))
+                if (unexpected_err(mgr, IMB_ERR_NULL_EXP_KEY,
+                                   fn_ptrs[i].func_name))
                         return 1;
                 printf(".");
         }
@@ -218,13 +219,14 @@ test_gcm_pre(struct IMB_MGR *mgr,
 
                 /* NULL key pointer test */
                 fn_ptrs[i].func(NULL, key_data);
-                if (unexpected_err(mgr, IMB_ERR_NULL_PRE_EXP_KEY,
+                if (unexpected_err(mgr, IMB_ERR_NULL_KEY,
                                    fn_ptrs[i].func_name))
                         return 1;
 
                 /* NULL key data pointer test */
                 fn_ptrs[i].func(key, NULL);
-                if (unexpected_err(mgr, IMB_ERR_NULL_KEY, fn_ptrs[i].func_name))
+                if (unexpected_err(mgr, IMB_ERR_NULL_EXP_KEY,
+                                   fn_ptrs[i].func_name))
                         return 1;
 
                 /* Verify no buffers have been modified */
@@ -270,7 +272,7 @@ test_gcm_init(struct IMB_MGR *mgr, struct gcm_key_data *key,
                 uint64_t aad_len;
                 IMB_ERR exp_err;
         } fn_args[] = {
-                { NULL, ctx, iv, aad, aad_len, IMB_ERR_NULL_KEY },
+                { NULL, ctx, iv, aad, aad_len, IMB_ERR_NULL_EXP_KEY },
                 { key, NULL, iv, aad, aad_len, IMB_ERR_NULL_CTX },
                 { key, ctx, NULL, aad, aad_len, IMB_ERR_NULL_IV },
                 { key, ctx, iv, NULL, aad_len, IMB_ERR_NULL_AAD },

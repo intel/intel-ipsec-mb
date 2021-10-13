@@ -49,11 +49,11 @@ void aes_gcm_pre_128_sse(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -69,11 +69,11 @@ void aes_gcm_pre_128_sse_no_aesni(const void *key,
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -88,11 +88,11 @@ void aes_gcm_pre_128_avx_gen2(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -107,11 +107,11 @@ void aes_gcm_pre_128_avx_gen4(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -126,11 +126,11 @@ void aes_gcm_pre_128_avx512(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -145,11 +145,11 @@ void aes_gcm_pre_128_vaes_avx512(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -164,11 +164,11 @@ void aes_gcm_pre_192_sse(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -184,11 +184,11 @@ void aes_gcm_pre_192_sse_no_aesni(const void *key,
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -203,11 +203,11 @@ void aes_gcm_pre_192_avx_gen2(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -222,11 +222,11 @@ void aes_gcm_pre_192_avx_gen4(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -241,11 +241,11 @@ void aes_gcm_pre_192_avx512(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -260,11 +260,11 @@ void aes_gcm_pre_192_vaes_avx512(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -279,11 +279,11 @@ void aes_gcm_pre_256_sse(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -299,11 +299,11 @@ void aes_gcm_pre_256_sse_no_aesni(const void *key,
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -318,11 +318,11 @@ void aes_gcm_pre_256_avx_gen2(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -337,11 +337,11 @@ void aes_gcm_pre_256_avx_gen4(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -356,11 +356,11 @@ void aes_gcm_pre_256_avx512(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif
@@ -375,11 +375,11 @@ void aes_gcm_pre_256_vaes_avx512(const void *key, struct gcm_key_data *key_data)
         imb_set_errno(NULL, 0);
 
         if (key == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_PRE_EXP_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
         }
         if (key_data == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
         }
 #endif

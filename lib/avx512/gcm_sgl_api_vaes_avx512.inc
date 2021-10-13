@@ -90,7 +90,7 @@ error_init:
         IMB_ERR_CHECK_START rax
 
         ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
 
         ;; Check context_data != NULL
         IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX

@@ -2197,7 +2197,7 @@ error_precomp:
         IMB_ERR_CHECK_START rax
 
         ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
 
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax
@@ -2278,7 +2278,7 @@ error_init:
         IMB_ERR_CHECK_START rax
 
         ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
 
         ;; Check context_data != NULL
         IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
@@ -2682,7 +2682,7 @@ error_enc:
         IMB_ERR_CHECK_START rax
 
         ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
 
         ;; Check context_data != NULL
         IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
@@ -2809,7 +2809,7 @@ error_dec:
         IMB_ERR_CHECK_START rax
 
         ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
 
         ;; Check context_data != NULL
         IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
@@ -2950,7 +2950,7 @@ error_enc_IV:
         IMB_ERR_CHECK_START rax
 
         ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
 
         ;; Check context_data != NULL
         IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
@@ -3093,7 +3093,7 @@ error_dec_IV:
         IMB_ERR_CHECK_START rax
 
         ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
 
         ;; Check context_data != NULL
         IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
@@ -3213,10 +3213,10 @@ error_ghash_pre:
         IMB_ERR_CHECK_START rax
 
         ;; Check key != NULL
-        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_PRE_EXP_KEY
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_KEY
 
         ;; Check key_data != NULL
-        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_EXP_KEY
 
         ;; Set imb_errno
         IMB_ERR_CHECK_END rax

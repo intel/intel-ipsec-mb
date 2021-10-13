@@ -65,7 +65,7 @@ IMB_DLL_LOCAL const int imb_errno_types[] = {
         IMB_ERR_NULL_SRC,
         IMB_ERR_NULL_DST,
         IMB_ERR_NULL_KEY,
-        IMB_ERR_NULL_PRE_EXP_KEY,
+        IMB_ERR_NULL_EXP_KEY,
         IMB_ERR_NULL_IV,
         IMB_ERR_NULL_AUTH,
         IMB_ERR_NULL_AAD,
@@ -152,8 +152,8 @@ imb_get_strerror(int errnum)
                 return "Null destination pointer (direct API)";
         case IMB_ERR_NULL_KEY:
                 return "Null key pointer (direct API)";
-        case IMB_ERR_NULL_PRE_EXP_KEY:
-                return "Null pre-expanded key pointer (direct API)";
+        case IMB_ERR_NULL_EXP_KEY:
+                return "Null expanded key pointer (direct API)";
         case IMB_ERR_NULL_IV:
                 return "Null Initialization Vector (IV) pointer (direct API)";
         case IMB_ERR_NULL_AUTH:
