@@ -301,6 +301,70 @@ test_gcm_init(struct IMB_MGR *mgr, struct gcm_key_data *key,
         return 0;
 }
 
+/* GCM Encrypt and Decrypt Update tests */
+static int
+test_gcm_enc_dec_update(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                        const uint64_t len, struct gcm_context_data *ctx,
+                        struct gcm_key_data *key)
+{
+        uint64_t i;
+
+        struct gcm_enc_dec_update_fn {
+                aes_gcm_enc_dec_update_t func;
+                const char *func_name;
+        } fn_ptrs[] = {
+             { mgr->gcm128_enc_update, "GCM-128 ENC UPDATE" },
+             { mgr->gcm192_enc_update, "GCM-192 ENC UPDATE" },
+             { mgr->gcm256_enc_update, "GCM-256 ENC UPDATE" },
+             { mgr->gcm128_dec_update, "GCM-128 DEC UPDATE" },
+             { mgr->gcm192_dec_update, "GCM-192 DEC UPDATE" },
+             { mgr->gcm256_dec_update, "GCM-256 DEC UPDATE" },
+        };
+
+        struct fn_args {
+                struct gcm_key_data *key;
+                struct gcm_context_data *ctx;
+                uint8_t *out;
+                uint8_t *in;
+                const uint64_t len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, ctx, out, in, len, IMB_ERR_NULL_EXP_KEY },
+                { key, NULL, out, in, len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, in, len, IMB_ERR_NULL_DST },
+                { key, ctx, out, NULL, len, IMB_ERR_NULL_SRC },
+                { key, ctx, out, in, 0, 0 },
+        };
+
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                uint64_t j;
+
+                memset(out, 0, len);
+                memset(in, 0, len);
+
+                /* Iterate over args */
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
+
+                        fn_ptrs[i].func(ap->key, ap->ctx, ap->out,
+                                        ap->in, ap->len);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].func_name))
+                                return 1;
+                }
+
+                /* Verify buffers not modified */
+                if (memcmp(out, in, len) != 0) {
+                        printf("%s: %s, invalid param test failed!\n",
+                               __func__, fn_ptrs[i].func_name);
+                        return 1;
+                }
+                printf(".");
+        }
+        return 0;
+}
+
 /* GCM Encrypt and Decrypt Finalize tests */
 static int
 test_gcm_enc_dec_finalize(struct IMB_MGR *mgr, struct gcm_key_data *key,
@@ -403,9 +467,11 @@ test_gcm_api(struct IMB_MGR *mgr)
         if (test_gcm_init(mgr, key_data, ctx, iv, aad))
                 return 1;
 
-        /* GCM Encrypt update tests */
+        /* GCM Encrypt and Decrypt update tests */
+        if (test_gcm_enc_dec_update(mgr, zero_buf, out_buf,
+                                    text_len, ctx, key_data))
+                return 1;
 
-        /* GCM Decrypt update tests */
 
         /* GCM Encrypt and Decrypt Finalize tests */
         if (test_gcm_enc_dec_finalize(mgr, key_data, ctx, tag, zero_buf))

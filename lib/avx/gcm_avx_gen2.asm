@@ -2329,20 +2329,23 @@ FN_NAME(enc,_update_):
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_update_enc
+        jz      error_update_enc
 
         ;; Load max len to reg on windows
         INIT_GCM_MAX_LENGTH
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_update_enc
+        jz      error_update_enc
 
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
-        jz      exit_update_enc
+        jz      error_update_enc
 
         ;; Check if msg_len > max_len
         cmp     arg5, GCM_MAX_LENGTH
@@ -2350,11 +2353,11 @@ FN_NAME(enc,_update_):
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
-        jz      exit_update_enc
+        jz      error_update_enc
 
         ;; Check in != NULL (plaintext_len != 0)
         cmp     arg4, 0
-        jz      exit_update_enc
+        jz      error_update_enc
 %endif
 	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, ENC
 
@@ -2362,6 +2365,34 @@ exit_update_enc:
 	FUNC_RESTORE
 
 	ret
+
+%ifdef SAFE_PARAM
+error_update_enc:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_error_update_enc
+
+        ;; Check out != NULL
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
+
+        ;; Check in != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
+
+skip_in_out_check_error_update_enc:
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_update_enc
+%endif
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2378,20 +2409,23 @@ FN_NAME(dec,_update_):
 	FUNC_SAVE
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_update_dec
+        jz      error_update_dec
 
         ;; Load max len to reg on windows
         INIT_GCM_MAX_LENGTH
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_update_dec
+        jz      error_update_dec
 
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
-        jz      exit_update_dec
+        jz      error_update_dec
 
         ;; Check if msg_len > max_len
         cmp     arg5, GCM_MAX_LENGTH
@@ -2399,11 +2433,11 @@ FN_NAME(dec,_update_):
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
-        jz      exit_update_dec
+        jz      error_update_dec
 
         ;; Check in != NULL (plaintext_len != 0)
         cmp     arg4, 0
-        jz      exit_update_dec
+        jz      error_update_dec
 %endif
 
 	GCM_ENC_DEC arg1, arg2, arg3, arg4, arg5, DEC
@@ -2412,6 +2446,33 @@ exit_update_dec:
 	FUNC_RESTORE
 
 	ret
+
+%ifdef SAFE_PARAM
+error_update_dec:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check if plaintext_len == 0
+        cmp     arg5, 0
+        jz      skip_in_out_check_error_update_dec
+
+        ;; Check out != NULL
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
+
+        ;; Check in != NULL (plaintext_len != 0)
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
+
+skip_in_out_check_error_update_dec:
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_update_dec
+%endif
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
