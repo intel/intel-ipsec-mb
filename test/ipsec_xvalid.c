@@ -662,6 +662,9 @@ uint32_t job_sizes[NUM_RANGE] = {DEFAULT_JOB_SIZE_MIN,
 uint32_t max_num_jobs = 16;
 /* IMIX disabled by default */
 unsigned int imix_enabled = 0;
+/* cipher and authentication IV sizes */
+uint32_t cipher_iv_size = 0;
+uint32_t auth_iv_size = 0;
 
 struct custom_job_params custom_job_params = {
         .cipher_mode  = IMB_CIPHER_NULL,
@@ -953,8 +956,19 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 job->u.HMAC._hashed_auth_key_xor_opad =
                         (uint8_t *) opad;
                 break;
-        case IMB_AUTH_ZUC_EIA3_BITLEN:
         case IMB_AUTH_ZUC256_EIA3_BITLEN:
+                job->u.ZUC_EIA3._key  = k2;
+                if (auth_iv_size == 23) {
+                        job->u.ZUC_EIA3._iv23 = auth_iv;
+                        job->u.ZUC_EIA3._iv = NULL;
+                } else {
+                        job->u.ZUC_EIA3._iv  = auth_iv;
+                        job->u.ZUC_EIA3._iv23 = NULL;
+                }
+                job->msg_len_to_hash_in_bits =
+                        (job->msg_len_to_hash_in_bytes * 8);
+                break;
+        case IMB_AUTH_ZUC_EIA3_BITLEN:
                 job->u.ZUC_EIA3._key  = k2;
                 job->u.ZUC_EIA3._iv  = auth_iv;
                 job->msg_len_to_hash_in_bits =
@@ -1098,7 +1112,10 @@ fill_job(IMB_JOB *job, const struct params_s *params,
         case IMB_CIPHER_ZUC_EEA3:
                 job->enc_keys = k2;
                 job->dec_keys = k2;
-                job->iv_len_in_bytes = 16;
+                if (job->key_len_in_bytes == 16)
+                        job->iv_len_in_bytes = 16;
+                else /* 32 */
+                        job->iv_len_in_bytes = 25;
                 break;
         case IMB_CIPHER_SNOW3G_UEA2_BITLEN:
                 job->enc_keys = k2;
@@ -1136,6 +1153,13 @@ fill_job(IMB_JOB *job, const struct params_s *params,
                 printf("Unsupported cipher mode\n");
                 return -1;
         }
+
+        /*
+         * If cipher IV size is set from command line,
+         * overwrite the value here.
+         */
+        if (cipher_iv_size != 0)
+                job->iv_len_in_bytes = cipher_iv_size;
 
         return 0;
 }
@@ -1691,9 +1715,9 @@ do_test(IMB_MGR *enc_mb_mgr, const IMB_ARCH enc_arch,
         uint8_t *auth_iv = data->auth_iv;
         uint8_t *in_digest[MAX_NUM_JOBS];
         uint8_t *out_digest[MAX_NUM_JOBS];
-        uint8_t *test_buf[MAX_NUM_JOBS];
+        uint8_t *test_buf[MAX_NUM_JOBS] = {NULL};
         uint8_t *src_dst_buf[MAX_NUM_JOBS];
-        uint32_t buf_sizes[MAX_NUM_JOBS];
+        uint32_t buf_sizes[MAX_NUM_JOBS] = {0};
         uint8_t *ciph_key = data->ciph_key;
         uint8_t *auth_key = data->auth_key;
         unsigned int num_processed_jobs = 0;
@@ -2546,6 +2570,8 @@ static void usage(const char *app_name)
                 "--aesni-emu: Do AESNI_EMU (disabled by default)\n"
                 "--shani-on: use SHA extensions, default: auto-detect\n"
                 "--shani-off: don't use SHA extensions\n"
+                "--cipher-iv-size: size of cipher IV.\n"
+                "--auth-iv-size: size of authentication IV.\n"
                 "--job-size: size of the cipher & MAC job in bytes. "
 #ifndef PIN_BASED_CEC
                 "It can be:\n"
@@ -2828,6 +2854,24 @@ int main(int argc, char *argv[])
                                        "Invalid job size %u (max %u)\n",
                                        (unsigned) job_sizes[RANGE_MAX],
                                        JOB_SIZE_TOP);
+                                return EXIT_FAILURE;
+                        }
+                } else if (strcmp(argv[i], "--cipher-iv-size") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &cipher_iv_size,
+                                             sizeof(cipher_iv_size));
+                        if (cipher_iv_size > MAX_IV_SIZE) {
+                                fprintf(stderr, "IV size cannot be "
+                                        "higher than %u\n", MAX_IV_SIZE);
+                                return EXIT_FAILURE;
+                        }
+                } else if (strcmp(argv[i], "--auth-iv-size") == 0) {
+                        i = get_next_num_arg((const char * const *)argv, i,
+                                             argc, &auth_iv_size,
+                                             sizeof(auth_iv_size));
+                        if (auth_iv_size > MAX_IV_SIZE) {
+                                fprintf(stderr, "IV size cannot be "
+                                        "higher than %u\n", MAX_IV_SIZE);
                                 return EXIT_FAILURE;
                         }
                 } else if (strcmp(argv[i], "--num-jobs") == 0) {
