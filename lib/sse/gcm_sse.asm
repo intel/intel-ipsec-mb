@@ -2488,24 +2488,27 @@ MKGLOBAL(FN_NAME(enc,_finalize_),function,)
 FN_NAME(enc,_finalize_):
         endbranch64
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_enc_fin
+        jz      error_enc_fin
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_enc_fin
+        jz      error_enc_fin
 
         ;; Check auth_tag != NULL
         cmp     arg3, 0
-        jz      exit_enc_fin
+        jz      error_enc_fin
 
         ;; Check auth_tag_len == 0 or > 16
         cmp     arg4, 0
-        jz      exit_enc_fin
+        jz      error_enc_fin
 
         cmp     arg4, 16
-        ja      exit_enc_fin
+        ja      error_enc_fin
 %endif
 	push r12
 
@@ -2543,6 +2546,30 @@ FN_NAME(enc,_finalize_):
 exit_enc_fin:
         ret
 
+%ifdef SAFE_PARAM
+error_enc_fin:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check auth_tag != NULL
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check auth_tag_len == 0 or > 16
+        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_AUTH_TAG_LEN
+
+        IMB_ERR_CHECK_ABOVE arg4, 16, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_enc_fin
+%endif
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_finalize_sse / aes_gcm_dec_192_finalize_sse / aes_gcm_dec_256_finalize_sse
@@ -2555,24 +2582,27 @@ MKGLOBAL(FN_NAME(dec,_finalize_),function,)
 FN_NAME(dec,_finalize_):
         endbranch64
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_dec_fin
+        jz      error_dec_fin
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_dec_fin
+        jz      error_dec_fin
 
         ;; Check auth_tag != NULL
         cmp     arg3, 0
-        jz      exit_dec_fin
+        jz      error_dec_fin
 
         ;; Check auth_tag_len == 0 or > 16
         cmp     arg4, 0
-        jz      exit_dec_fin
+        jz      error_dec_fin
 
         cmp     arg4, 16
-        ja      exit_dec_fin
+        ja      error_dec_fin
 %endif
 
 	push r12
@@ -2609,6 +2639,30 @@ FN_NAME(dec,_finalize_):
 
 exit_dec_fin:
         ret
+
+%ifdef SAFE_PARAM
+error_dec_fin:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check auth_tag != NULL
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check auth_tag_len == 0 or > 16
+        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_AUTH_TAG_LEN
+
+        IMB_ERR_CHECK_ABOVE arg4, 16, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_dec_fin
+%endif
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
