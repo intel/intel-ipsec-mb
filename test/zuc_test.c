@@ -350,7 +350,7 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                  uint8_t **src, uint8_t **dst, const uint32_t *lens,
                  int dir, const unsigned int num_jobs,
                  const unsigned int key_len,
-                 const unsigned int iv_len)
+                 const unsigned int *iv_lens)
 {
         IMB_JOB *job;
         unsigned int i;
@@ -364,7 +364,7 @@ submit_eea3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **ivs,
                 job->src = src[i];
                 job->dst = dst[i];
                 job->iv = ivs[i];
-                job->iv_len_in_bytes = iv_len;
+                job->iv_len_in_bytes = iv_lens[i];
                 job->enc_keys = keys[i];
                 job->key_len_in_bytes = key_len;
 
@@ -405,7 +405,8 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
                  uint8_t **src, uint8_t **tags, const uint32_t *lens,
                  const unsigned int num_jobs,
                  const unsigned int key_sz,
-                 const unsigned int tag_sz)
+                 const unsigned int tag_sz,
+                 const unsigned int *iv_lens)
 {
         IMB_JOB *job;
         unsigned int i;
@@ -416,7 +417,13 @@ submit_eia3_jobs(struct IMB_MGR *mb_mgr, uint8_t **keys, uint8_t **iv,
                 job->chain_order = IMB_ORDER_CIPHER_HASH;
                 job->cipher_mode = IMB_CIPHER_NULL;
                 job->src = src[i];
-                job->u.ZUC_EIA3._iv = iv[i];
+                if (iv_lens[i] == 23) {
+                        job->u.ZUC_EIA3._iv = NULL;
+                        job->u.ZUC_EIA3._iv23 = iv[i];
+                } else {
+                        job->u.ZUC_EIA3._iv = iv[i];
+                        job->u.ZUC_EIA3._iv23 = NULL;
+                }
                 job->u.ZUC_EIA3._key = keys[i];
 
                 job->hash_start_src_offset_in_bytes = 0;
@@ -518,6 +525,7 @@ validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                 char msg[50];
                 int retTmp;
                 uint32_t byteLength;
+                const unsigned int iv_len = ZUC_IV_LEN_IN_BYTES;
 
                 memcpy(pKeys, testEEA3_vectors[i].CK, ZUC_KEY_LEN_IN_BYTES);
                 zuc_eea3_iv_gen(testEEA3_vectors[i].count,
@@ -531,7 +539,7 @@ validate_zuc_EEA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                                          &pDstData, &byteLength,
                                          IMB_DIR_ENCRYPT, 1,
                                          ZUC_KEY_LEN_IN_BYTES,
-                                         ZUC_IV_LEN_IN_BYTES);
+                                         &iv_len);
                 else
                         IMB_ZUC_EEA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData,
                                               pDstData, byteLength);
@@ -559,6 +567,7 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         uint32_t packetLen[MAXBUFS];
         int ret = 0;
         const struct test128EEA3_vectors_t *vector;
+        unsigned int iv_lens[MAXBUFS];
 
         for (i = 0; i < num_buffers; i++) {
                 vector = &testEEA3_vectors[buf_idx[i]];
@@ -566,6 +575,7 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 memcpy(pKeys[i], vector->CK, ZUC_KEY_LEN_IN_BYTES);
                 zuc_eea3_iv_gen(vector->count, vector->Bearer,
                         vector->Direction, pIV[i]);
+                iv_lens[i] = ZUC_IV_LEN_IN_BYTES;
                 if (dir == IMB_DIR_ENCRYPT)
                         memcpy(pSrcData[i], vector->plaintext, packetLen[i]);
                 else
@@ -575,7 +585,7 @@ submit_and_verify(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         if (job_api)
                 submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData,
                                  pDstData, packetLen, dir, num_buffers,
-                                 ZUC_KEY_LEN_IN_BYTES, ZUC_IV_LEN_IN_BYTES);
+                                 ZUC_KEY_LEN_IN_BYTES, iv_lens);
         else {
                 if (type == TEST_4_BUFFER)
                         IMB_ZUC_EEA3_4_BUFFER(mb_mgr,
@@ -642,21 +652,23 @@ submit_and_verify_zuc256(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         uint32_t packetLen[MAXBUFS];
         int ret = 0;
         const struct test256EEA3_vectors_t *vector;
+        unsigned int iv_lens[MAXBUFS];
 
         for (i = 0; i < num_buffers; i++) {
                 vector = &test256EEA3_vectors[buf_idx[i]];
                 packetLen[i] = (vector->length_in_bits + 7) / 8;
                 memcpy(pKeys[i], vector->CK, ZUC256_KEY_LEN_IN_BYTES);
-                memcpy(pIV[i], vector->IV, ZUC256_IV_LEN_IN_BYTES);
+                memcpy(pIV[i], vector->IV, vector->iv_length);
                 if (dir == IMB_DIR_ENCRYPT)
                         memcpy(pSrcData[i], vector->plaintext, packetLen[i]);
                 else
                         memcpy(pSrcData[i], vector->ciphertext, packetLen[i]);
+                iv_lens[i] = vector->iv_length;
         }
 
         submit_eea3_jobs(mb_mgr, pKeys, pIV, pSrcData,
                          pDstData, packetLen, dir, num_buffers,
-                         ZUC256_KEY_LEN_IN_BYTES, ZUC256_IV_LEN_IN_BYTES);
+                         ZUC256_KEY_LEN_IN_BYTES, iv_lens);
 
         for (i = 0; i < num_buffers; i++) {
                 uint8_t *pDst8 = (uint8_t *)pDstData[i];
@@ -843,6 +855,8 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
         uint32_t bitLength;
 
         for (i = 0; i < NUM_ZUC_EIA3_TESTS; i++) {
+                const unsigned int iv_len = ZUC_IV_LEN_IN_BYTES;
+
                 memcpy(pKeys, testEIA3_vectors[i].CK, ZUC_KEY_LEN_IN_BYTES);
 
                 zuc_eia3_iv_gen(testEIA3_vectors[i].count,
@@ -856,7 +870,7 @@ int validate_zuc_EIA_1_block(struct IMB_MGR *mb_mgr, uint8_t *pSrcData,
                         submit_eia3_jobs(mb_mgr, &pKeys, &pIV,
                                          &pSrcData, &pDstData,
                                          &bitLength, 1, ZUC_KEY_LEN_IN_BYTES,
-                                         ZUC_DIGEST_LEN);
+                                         ZUC_DIGEST_LEN, &iv_len);
                 else
                         IMB_ZUC_EIA3_1_BUFFER(mb_mgr, pKeys, pIV, pSrcData,
                                               bitLength, (uint32_t *)pDstData);
@@ -891,6 +905,7 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         uint32_t byteLength;
         uint32_t bitLength[MAXBUFS];
         struct test128EIA3_vectors_t vector;
+        unsigned int iv_lens[MAXBUFS];
 
         for (i = 0; i < NUM_ZUC_EIA3_TESTS; i++) {
                 vector = testEIA3_vectors[i];
@@ -902,12 +917,14 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                         bitLength[j] = vector.length_in_bits;
                         byteLength = (bitLength[j] + 7) / 8;
                         memcpy(pSrcData[j], vector.message, byteLength);
+                        iv_lens[j] = ZUC_IV_LEN_IN_BYTES;
                 }
                 if (job_api)
                         submit_eia3_jobs(mb_mgr, pKeys, pIV,
                                          pSrcData, pDstData,
                                          bitLength, numBuffs,
-                                         ZUC_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN);
+                                         ZUC_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN,
+                                         iv_lens);
                 else
                         IMB_ZUC_EIA3_N_BUFFER(mb_mgr,
                                               (const void * const *)pKeys,
@@ -950,13 +967,15 @@ int validate_zuc_EIA_n_block(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
                 bitLength[i] = vector.length_in_bits;
                 byteLength = (bitLength[i] + 7) / 8;
                 memcpy(pSrcData[i], vector.message, byteLength);
+                iv_lens[j] = ZUC_IV_LEN_IN_BYTES;
         }
 
         if (job_api)
                 submit_eia3_jobs(mb_mgr, pKeys, pIV,
                                  pSrcData, pDstData,
                                  bitLength, numBuffs,
-                                 ZUC_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN);
+                                 ZUC_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN,
+                                 iv_lens);
         else
                 IMB_ZUC_EIA3_N_BUFFER(mb_mgr,
                                       (const void * const *)pKeys,
@@ -1000,21 +1019,24 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         uint32_t byteLength;
         uint32_t bitLength[MAXBUFS];
         const struct test256EIA3_vectors_t *vector;
+        unsigned int iv_lens[MAXBUFS];
 
         /* TODO: check 8-byte and 16-byte digests */
         for (i = 0; i < NUM_ZUC_256_EIA3_TESTS; i++) {
                 vector = &test256EIA3_vectors[i];
                 for (j = 0; j < numBuffs; j++) {
                         memcpy(pKeys[j], vector->CK, ZUC256_KEY_LEN_IN_BYTES);
-                        memcpy(pIV[j], vector->IV, ZUC256_IV_LEN_IN_BYTES);
+                        memcpy(pIV[j], vector->IV, vector->iv_length);
                         bitLength[j] = vector->length_in_bits;
                         byteLength = (bitLength[j] + 7) / 8;
                         memcpy(pSrcData[j], vector->message, byteLength);
+                        iv_lens[j] = vector->iv_length;
                 }
                 submit_eia3_jobs(mb_mgr, pKeys, pIV,
                                  pSrcData, pDstData,
                                  bitLength, numBuffs,
-                                 ZUC256_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN);
+                                 ZUC256_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN,
+                                 iv_lens);
 
                 for (j = 0; j < numBuffs; j++) {
                         retTmp =
@@ -1043,17 +1065,19 @@ int validate_zuc256_EIA3(struct IMB_MGR *mb_mgr, uint8_t **pSrcData,
         for (i = 0; i < numBuffs; i++) {
                 vector = &test256EIA3_vectors[i % NUM_ZUC_256_EIA3_TESTS];
                 memcpy(pKeys[i], vector->CK, ZUC256_KEY_LEN_IN_BYTES);
-                memcpy(pIV[i], vector->IV, ZUC256_IV_LEN_IN_BYTES);
+                memcpy(pIV[i], vector->IV, vector->iv_length);
 
                 bitLength[i] = vector->length_in_bits;
                 byteLength = (bitLength[i] + 7) / 8;
                 memcpy(pSrcData[i], vector->message, byteLength);
+                iv_lens[i] = vector->iv_length;
         }
 
         submit_eia3_jobs(mb_mgr, pKeys, pIV,
                          pSrcData, pDstData,
                          bitLength, numBuffs,
-                         ZUC256_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN);
+                         ZUC256_KEY_LEN_IN_BYTES, ZUC_DIGEST_LEN,
+                         iv_lens);
 
         for (i = 0; i < numBuffs; i++) {
                 vector = &test256EIA3_vectors[i % NUM_ZUC_256_EIA3_TESTS];
