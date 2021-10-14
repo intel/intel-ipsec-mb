@@ -1261,6 +1261,8 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 /* Job submit & flush functions */
 /* ========================================================================= */
 
+/* GCM NIST standard: len(M) < 2^39 - 256 */
+#define GCM_MAX_LEN  UINT64_C(((1UL << 39) - 256) - 1)
 #define SNOW3G_MAX_BITLEN (UINT32_MAX)
 #define MB_MAX_LEN16 ((1 << 16) - 2)
 
@@ -1554,6 +1556,10 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
                 break;
         case IMB_CIPHER_GCM:
         case IMB_CIPHER_GCM_SGL:
+                if (job->msg_len_to_cipher_in_bytes > GCM_MAX_LEN) {
+                        imb_set_errno(state, IMB_ERR_JOB_CIPH_LEN);
+                        return 1;
+                }
                 if (job->msg_len_to_cipher_in_bytes != 0 && job->src == NULL) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
