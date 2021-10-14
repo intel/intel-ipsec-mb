@@ -2384,7 +2384,7 @@ exit_init_IV:
 ;        struct gcm_context_data *context_data,
 ;        u8      *out,
 ;        const   u8 *in,
-;        u64     plaintext_len);
+;        u64     msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
@@ -2406,7 +2406,7 @@ FN_NAME(enc,_update_):
         cmp     arg2, 0
         jz      error_update_enc
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      error_update_enc
 
@@ -2414,11 +2414,11 @@ FN_NAME(enc,_update_):
         cmp     arg5, GCM_MAX_LENGTH
         ja      error_update_enc
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      error_update_enc
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
         jz      error_update_enc
 %endif
@@ -2466,7 +2466,7 @@ skip_in_out_check_error_update_enc:
 ;        struct gcm_context_data *context_data,
 ;        u8      *out,
 ;        const   u8 *in,
-;        u64     plaintext_len);
+;        u64     msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
@@ -2488,7 +2488,7 @@ FN_NAME(dec,_update_):
         cmp     arg2, 0
         jz      error_update_dec
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      error_update_dec
 
@@ -2496,11 +2496,11 @@ FN_NAME(dec,_update_):
         cmp     arg5, GCM_MAX_LENGTH
         ja      error_update_dec
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      error_update_dec
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
         jz      error_update_dec
 %endif
@@ -2737,7 +2737,7 @@ error_dec_fin:
 ;        struct gcm_context_data *context_data,
 ;        u8      *out,
 ;        const   u8 *in,
-;        u64     plaintext_len,
+;        u64     msg_len,
 ;        u8      *iv,
 ;        const   u8 *aad,
 ;        u64     aad_len,
@@ -2779,7 +2779,7 @@ FN_NAME(enc,_):
         cmp     arg10, 16
         ja      error_enc
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_enc
 
@@ -2787,11 +2787,11 @@ FN_NAME(enc,_):
         cmp     arg5, GCM_MAX_LENGTH
         ja      error_enc
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      error_enc
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
         jz      error_enc
 
@@ -2839,17 +2839,17 @@ error_enc:
 
         IMB_ERR_CHECK_ABOVE arg10, 16, rax, IMB_ERR_AUTH_TAG_LEN
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_error_enc
 
         ;; Check if msg_len > max_len
         IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
 skip_in_out_check_error_enc:
@@ -2873,7 +2873,7 @@ skip_aad_check_error_enc:
 ;        struct gcm_context_data *context_data,
 ;        u8      *out,
 ;        const   u8 *in,
-;        u64     plaintext_len,
+;        u64     msg_len,
 ;        u8      *iv,
 ;        const   u8 *aad,
 ;        u64     aad_len,
@@ -2915,7 +2915,7 @@ FN_NAME(dec,_):
         cmp     arg10, 16
         ja      error_dec
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_dec
 
@@ -2923,11 +2923,11 @@ FN_NAME(dec,_):
         cmp     arg5, GCM_MAX_LENGTH
         ja      error_dec
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      error_dec
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
         jz      error_dec
 
@@ -2976,17 +2976,17 @@ error_dec:
 
         IMB_ERR_CHECK_ABOVE arg10, 16, rax, IMB_ERR_AUTH_TAG_LEN
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_error_dec
 
         ;; Check if msg_len > max_len
         IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
 skip_in_out_check_error_dec:
@@ -3012,7 +3012,7 @@ skip_aad_check_error_dec:
 ;        struct gcm_context_data *context_data,
 ;        u8        *out,
 ;        const u8  *in,
-;        u64       plaintext_len,
+;        u64       msg_len,
 ;        u8        *iv,
 ;        const u64 iv_len,
 ;        const u8  *aad,
@@ -3059,7 +3059,7 @@ FN_NAME(enc_var_iv,_):
         cmp     arg11, 16
         ja      error_enc_IV
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_enc_IV
 
@@ -3067,11 +3067,11 @@ FN_NAME(enc_var_iv,_):
         cmp     arg5, GCM_MAX_LENGTH
         ja      error_enc_IV
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      error_enc_IV
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
         jz      error_enc_IV
 
@@ -3130,17 +3130,17 @@ error_enc_IV:
 
         IMB_ERR_CHECK_ABOVE arg11, 16, rax, IMB_ERR_AUTH_TAG_LEN
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_error_enc_IV
 
         ;; Check if msg_len > max_len
         IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
 skip_in_out_check_error_enc_IV:
@@ -3165,7 +3165,7 @@ skip_aad_check_error_enc_IV:
 ;        struct gcm_context_data *context_data,
 ;        u8        *out,
 ;        const u8  *in,
-;        u64       plaintext_len,
+;        u64       msg_len,
 ;        u8        *iv,
 ;        const u64 iv_len,
 ;        const u8  *aad,
@@ -3212,7 +3212,7 @@ FN_NAME(dec_var_iv,_):
         cmp     arg11, 16
         ja      error_dec_IV
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_dec_IV
 
@@ -3220,11 +3220,11 @@ FN_NAME(dec_var_iv,_):
         cmp     arg5, GCM_MAX_LENGTH
         ja      error_dec_IV
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      error_dec_IV
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
         jz      error_dec_IV
 
@@ -3283,17 +3283,17 @@ error_dec_IV:
 
         IMB_ERR_CHECK_ABOVE arg11, 16, rax, IMB_ERR_AUTH_TAG_LEN
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_error_dec_IV
 
         ;; Check if msg_len > max_len
         IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_SRC
 
 skip_in_out_check_error_dec_IV:
@@ -3556,14 +3556,14 @@ exit_ghash:
 ;        const struct gcm_key_data *key_data,
 ;        struct gcm_context_data *context_data,
 ;        const   u8 *in,
-;        const   u64 plaintext_len);
+;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
 	FUNC_SAVE
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
 	cmp	arg4, 0
 	je	exit_gmac_update
 
@@ -3576,7 +3576,7 @@ GMAC_FN_NAME(update):
         cmp     arg2, 0
         jz      exit_gmac_update
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      exit_gmac_update
 %endif

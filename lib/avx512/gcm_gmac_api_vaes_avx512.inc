@@ -162,14 +162,14 @@ exit_ghash:
 ;        const struct gcm_key_data *key_data,
 ;        struct gcm_context_data *context_data,
 ;        const   u8 *in,
-;        const   u64 plaintext_len);
+;        const   u64 msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(GMAC_FN_NAME(update),function,)
 GMAC_FN_NAME(update):
         endbranch64
 	FUNC_SAVE
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
 	cmp	arg4, 0
 	je	exit_gmac_update
 
@@ -182,7 +182,7 @@ GMAC_FN_NAME(update):
         cmp     arg2, 0
         jz      exit_gmac_update
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      exit_gmac_update
 %endif

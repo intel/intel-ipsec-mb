@@ -186,7 +186,7 @@ exit_init_IV:
 ;        struct gcm_context_data *context_data,
 ;        u8       *out,
 ;        const u8 *in,
-;        u64      plaintext_len);
+;        u64      msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(enc,_update_),function,)
 FN_NAME(enc,_update_):
@@ -205,15 +205,15 @@ FN_NAME(enc,_update_):
         cmp     arg2, 0
         jz      error_update_enc
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      error_update_enc
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      error_update_enc
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
         jz      error_update_enc
 %endif
@@ -258,7 +258,7 @@ skip_in_out_check_error_update_enc:
 ;        struct gcm_context_data *context_data,
 ;        u8       *out,
 ;        const u8 *in,
-;        u64      plaintext_len);
+;        u64      msg_len);
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MKGLOBAL(FN_NAME(dec,_update_),function,)
 FN_NAME(dec,_update_):
@@ -277,15 +277,15 @@ FN_NAME(dec,_update_):
         cmp     arg2, 0
         jz      error_update_dec
 
-        ;; Check if plaintext_len == 0
+        ;; Check if msg_len == 0
         cmp     arg5, 0
         jz      error_update_dec
 
-        ;; Check out != NULL (plaintext_len != 0)
+        ;; Check out != NULL (msg_len != 0)
         cmp     arg3, 0
         jz      error_update_dec
 
-        ;; Check in != NULL (plaintext_len != 0)
+        ;; Check in != NULL (msg_len != 0)
         cmp     arg4, 0
         jz      error_update_dec
 %endif

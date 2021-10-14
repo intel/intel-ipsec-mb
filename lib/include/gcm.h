@@ -38,42 +38,42 @@
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_vaes_avx512(const struct gcm_key_data *key_data,
                             struct gcm_context_data *context_data,
-                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *out, uint8_t const *in, uint64_t msg_len,
                             const uint8_t *iv,
                             uint8_t const *aad, uint64_t aad_len,
                             uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_vaes_avx512(const struct gcm_key_data *key_data,
                             struct gcm_context_data *context_data,
-                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *out, uint8_t const *in, uint64_t msg_len,
                             const uint8_t *iv,
                             uint8_t const *aad, uint64_t aad_len,
                             uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_vaes_avx512(const struct gcm_key_data *key_data,
                             struct gcm_context_data *context_data,
-                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *out, uint8_t const *in, uint64_t msg_len,
                             const uint8_t *iv,
                             uint8_t const *aad, uint64_t aad_len,
                             uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_vaes_avx512(const struct gcm_key_data *key_data,
                             struct gcm_context_data *context_data,
-                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *out, uint8_t const *in, uint64_t msg_len,
                             const uint8_t *iv,
                             uint8_t const *aad, uint64_t aad_len,
                             uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_vaes_avx512(const struct gcm_key_data *key_data,
                             struct gcm_context_data *context_data,
-                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *out, uint8_t const *in, uint64_t msg_len,
                             const uint8_t *iv,
                             uint8_t const *aad, uint64_t aad_len,
                             uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_vaes_avx512(const struct gcm_key_data *key_data,
                             struct gcm_context_data *context_data,
-                            uint8_t *out, uint8_t const *in, uint64_t len,
+                            uint8_t *out, uint8_t const *in, uint64_t msg_len,
                             const uint8_t *iv,
                             uint8_t const *aad, uint64_t aad_len,
                             uint8_t *auth_tag, uint64_t auth_tag_len);
@@ -114,32 +114,32 @@ IMB_DLL_EXPORT void
 aes_gcm_enc_128_update_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   uint64_t len);
+                                   uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_update_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   uint64_t len);
+                                   uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_update_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   uint64_t len);
+                                   uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_update_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   uint64_t len);
+                                   uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_update_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   uint64_t len);
+                                   uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_update_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   uint64_t len);
+                                   uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_finalize_vaes_avx512(const struct gcm_key_data *key_data,
                                      struct gcm_context_data *context_data,
@@ -186,42 +186,42 @@ aes_gcm_pre_256_vaes_avx512(const void *key, struct gcm_key_data *key_data);
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_avx512(const struct gcm_key_data *key_data,
                        struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *out, uint8_t const *in, uint64_t msg_len,
                        const uint8_t *iv,
                        uint8_t const *aad, uint64_t aad_len,
                        uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_avx512(const struct gcm_key_data *key_data,
                        struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *out, uint8_t const *in, uint64_t msg_len,
                        const uint8_t *iv,
                        uint8_t const *aad, uint64_t aad_len,
                        uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_avx512(const struct gcm_key_data *key_data,
                        struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *out, uint8_t const *in, uint64_t msg_len,
                        const uint8_t *iv,
                        uint8_t const *aad, uint64_t aad_len,
                        uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_avx512(const struct gcm_key_data *key_data,
                        struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *out, uint8_t const *in, uint64_t msg_len,
                        const uint8_t *iv,
                        uint8_t const *aad, uint64_t aad_len,
                        uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_avx512(const struct gcm_key_data *key_data,
                        struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *out, uint8_t const *in, uint64_t msg_len,
                        const uint8_t *iv,
                        uint8_t const *aad, uint64_t aad_len,
                        uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_avx512(const struct gcm_key_data *key_data,
                        struct gcm_context_data *context_data,
-                       uint8_t *out, uint8_t const *in, uint64_t len,
+                       uint8_t *out, uint8_t const *in, uint64_t msg_len,
                        const uint8_t *iv,
                        uint8_t const *aad, uint64_t aad_len,
                        uint8_t *auth_tag, uint64_t auth_tag_len);
@@ -261,32 +261,32 @@ IMB_DLL_EXPORT void
 aes_gcm_enc_128_update_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              uint64_t len);
+                              uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_update_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              uint64_t len);
+                              uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_update_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              uint64_t len);
+                              uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_update_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              uint64_t len);
+                              uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_update_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              uint64_t len);
+                              uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_update_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              uint64_t len);
+                              uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_finalize_avx512(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
@@ -333,42 +333,42 @@ aes_gcm_pre_256_avx512(const void *key, struct gcm_key_data *key_data);
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_sse_no_aesni(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *out, uint8_t const *in, uint64_t len,
+                             uint8_t *out, uint8_t const *in, uint64_t msg_len,
                              const uint8_t *iv, uint8_t const *aad,
                              uint64_t aad_len, uint8_t *auth_tag,
                              uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_sse_no_aesni(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *out, uint8_t const *in, uint64_t len,
+                             uint8_t *out, uint8_t const *in, uint64_t msg_len,
                              const uint8_t *iv, uint8_t const *aad,
                              uint64_t aad_len, uint8_t *auth_tag,
                              uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_sse_no_aesni(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *out, uint8_t const *in, uint64_t len,
+                             uint8_t *out, uint8_t const *in, uint64_t msg_len,
                              const uint8_t *iv,
                              uint8_t const *aad, uint64_t aad_len,
                              uint8_t *auth_tag, uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_sse_no_aesni(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *out, uint8_t const *in, uint64_t len,
+                             uint8_t *out, uint8_t const *in, uint64_t msg_len,
                              const uint8_t *iv, uint8_t const *aad,
                              uint64_t aad_len, uint8_t *auth_tag,
                              uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_sse_no_aesni(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *out, uint8_t const *in, uint64_t len,
+                             uint8_t *out, uint8_t const *in, uint64_t msg_len,
                              const uint8_t *iv, uint8_t const *aad,
                              uint64_t aad_len, uint8_t *auth_tag,
                              uint64_t auth_tag_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_sse_no_aesni(const struct gcm_key_data *key_data,
                              struct gcm_context_data *context_data,
-                             uint8_t *out, uint8_t const *in, uint64_t len,
+                             uint8_t *out, uint8_t const *in, uint64_t msg_len,
                              const uint8_t *iv, uint8_t const *aad,
                              uint64_t aad_len, uint8_t *auth_tag,
                              uint64_t auth_tag_len);
@@ -409,32 +409,32 @@ IMB_DLL_EXPORT void
 aes_gcm_enc_128_update_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    uint64_t len);
+                                    uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_192_update_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    uint64_t len);
+                                    uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_256_update_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    uint64_t len);
+                                    uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_128_update_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    uint64_t len);
+                                    uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_192_update_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    uint64_t len);
+                                    uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_dec_256_update_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    uint64_t len);
+                                    uint64_t msg_len);
 IMB_DLL_EXPORT void
 aes_gcm_enc_128_finalize_sse_no_aesni(const struct gcm_key_data *key_data,
                                       struct gcm_context_data *context_data,
@@ -536,7 +536,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_128_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in,
-                           const uint64_t len,
+                           const uint64_t msg_len,
                            const uint8_t *iv, const uint64_t iv_len,
                            const uint8_t *aad, const uint64_t aad_len,
                            uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -544,7 +544,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_192_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in,
-                           const uint64_t len,
+                           const uint64_t msg_len,
                            const uint8_t *iv, const uint64_t iv_len,
                            const uint8_t *aad, const uint64_t aad_len,
                            uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -552,7 +552,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_256_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in,
-                           const uint64_t len,
+                           const uint64_t msg_len,
                            const uint8_t *iv, const uint64_t iv_len,
                            const uint8_t *aad, const uint64_t aad_len,
                            uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -560,7 +560,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_128_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in,
-                           const uint64_t len,
+                           const uint64_t msg_len,
                            const uint8_t *iv, const uint64_t iv_len,
                            const uint8_t *aad, const uint64_t aad_len,
                            uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -568,7 +568,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_192_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in,
-                           const uint64_t len,
+                           const uint64_t msg_len,
                            const uint8_t *iv, const uint64_t iv_len,
                            const uint8_t *aad, const uint64_t aad_len,
                            uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -576,7 +576,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_256_sse(const struct gcm_key_data *key_data,
                            struct gcm_context_data *context_data,
                            uint8_t *out, const uint8_t *in,
-                           const uint64_t len,
+                           const uint64_t msg_len,
                            const uint8_t *iv, const uint64_t iv_len,
                            const uint8_t *aad, const uint64_t aad_len,
                            uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -585,7 +585,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_128_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -593,7 +593,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_192_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -601,7 +601,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_256_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -609,7 +609,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_128_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -617,7 +617,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_192_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -625,7 +625,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_256_avx_gen2(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -634,7 +634,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_128_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -642,7 +642,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_192_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -650,7 +650,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_256_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -658,7 +658,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_128_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -666,7 +666,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_192_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -674,7 +674,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_256_avx_gen4(const struct gcm_key_data *key_data,
                                 struct gcm_context_data *context_data,
                                 uint8_t *out, const uint8_t *in,
-                                const uint64_t len,
+                                const uint64_t msg_len,
                                 const uint8_t *iv, const uint64_t iv_len,
                                 const uint8_t *aad, const uint64_t aad_len,
                                 uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -683,7 +683,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_128_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              const uint64_t len,
+                              const uint64_t msg_len,
                               const uint8_t *iv, const uint64_t iv_len,
                               const uint8_t *aad, const uint64_t aad_len,
                               uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -691,7 +691,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_192_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              const uint64_t len,
+                              const uint64_t msg_len,
                               const uint8_t *iv, const uint64_t iv_len,
                               const uint8_t *aad, const uint64_t aad_len,
                               uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -699,7 +699,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_256_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              const uint64_t len,
+                              const uint64_t msg_len,
                               const uint8_t *iv, const uint64_t iv_len,
                               const uint8_t *aad, const uint64_t aad_len,
                               uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -707,7 +707,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_128_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              const uint64_t len,
+                              const uint64_t msg_len,
                               const uint8_t *iv, const uint64_t iv_len,
                               const uint8_t *aad, const uint64_t aad_len,
                               uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -715,7 +715,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_192_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              const uint64_t len,
+                              const uint64_t msg_len,
                               const uint8_t *iv, const uint64_t iv_len,
                               const uint8_t *aad, const uint64_t aad_len,
                               uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -723,7 +723,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_256_avx512(const struct gcm_key_data *key_data,
                               struct gcm_context_data *context_data,
                               uint8_t *out, const uint8_t *in,
-                              const uint64_t len,
+                              const uint64_t msg_len,
                               const uint8_t *iv, const uint64_t iv_len,
                               const uint8_t *aad, const uint64_t aad_len,
                               uint8_t *auth_tag, const uint64_t auth_tag_len);
@@ -732,7 +732,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_128_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   const uint64_t len,
+                                   const uint64_t msg_len,
                                    const uint8_t *iv, const uint64_t iv_len,
                                    const uint8_t *aad, const uint64_t aad_len,
                                    uint8_t *auth_tag,
@@ -741,7 +741,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_192_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   const uint64_t len,
+                                   const uint64_t msg_len,
                                    const uint8_t *iv, const uint64_t iv_len,
                                    const uint8_t *aad, const uint64_t aad_len,
                                    uint8_t *auth_tag,
@@ -750,7 +750,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_256_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   const uint64_t len,
+                                   const uint64_t msg_len,
                                    const uint8_t *iv, const uint64_t iv_len,
                                    const uint8_t *aad, const uint64_t aad_len,
                                    uint8_t *auth_tag,
@@ -759,7 +759,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_128_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   const uint64_t len,
+                                   const uint64_t msg_len,
                                    const uint8_t *iv, const uint64_t iv_len,
                                    const uint8_t *aad, const uint64_t aad_len,
                                    uint8_t *auth_tag,
@@ -768,7 +768,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_192_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   const uint64_t len,
+                                   const uint64_t msg_len,
                                    const uint8_t *iv, const uint64_t iv_len,
                                    const uint8_t *aad, const uint64_t aad_len,
                                    uint8_t *auth_tag,
@@ -777,7 +777,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_256_vaes_avx512(const struct gcm_key_data *key_data,
                                    struct gcm_context_data *context_data,
                                    uint8_t *out, const uint8_t *in,
-                                   const uint64_t len,
+                                   const uint64_t msg_len,
                                    const uint8_t *iv, const uint64_t iv_len,
                                    const uint8_t *aad, const uint64_t aad_len,
                                    uint8_t *auth_tag,
@@ -787,7 +787,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_128_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    const uint64_t len,
+                                    const uint64_t msg_len,
                                     const uint8_t *iv, const uint64_t iv_len,
                                     const uint8_t *aad, const uint64_t aad_len,
                                     uint8_t *auth_tag,
@@ -796,7 +796,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_192_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    const uint64_t len,
+                                    const uint64_t msg_len,
                                     const uint8_t *iv, const uint64_t iv_len,
                                     const uint8_t *aad, const uint64_t aad_len,
                                     uint8_t *auth_tag,
@@ -805,7 +805,7 @@ IMB_DLL_LOCAL void
 aes_gcm_enc_var_iv_256_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    const uint64_t len,
+                                    const uint64_t msg_len,
                                     const uint8_t *iv, const uint64_t iv_len,
                                     const uint8_t *aad, const uint64_t aad_len,
                                     uint8_t *auth_tag,
@@ -814,7 +814,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_128_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    const uint64_t len,
+                                    const uint64_t msg_len,
                                     const uint8_t *iv, const uint64_t iv_len,
                                     const uint8_t *aad, const uint64_t aad_len,
                                     uint8_t *auth_tag,
@@ -823,7 +823,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_192_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    const uint64_t len,
+                                    const uint64_t msg_len,
                                     const uint8_t *iv, const uint64_t iv_len,
                                     const uint8_t *aad, const uint64_t aad_len,
                                     uint8_t *auth_tag,
@@ -832,7 +832,7 @@ IMB_DLL_LOCAL void
 aes_gcm_dec_var_iv_256_sse_no_aesni(const struct gcm_key_data *key_data,
                                     struct gcm_context_data *context_data,
                                     uint8_t *out, const uint8_t *in,
-                                    const uint64_t len,
+                                    const uint64_t msg_len,
                                     const uint8_t *iv, const uint64_t iv_len,
                                     const uint8_t *aad, const uint64_t aad_len,
                                     uint8_t *auth_tag,
