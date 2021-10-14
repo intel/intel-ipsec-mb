@@ -192,6 +192,23 @@ mask_out_top_block:
         dq      0xffffffffffffffff, 0xffffffffffffffff
         dq      0x0000000000000000, 0x0000000000000000
 
+;; GCM NIST standard: len(M) < 2^39 - 256
+align 8
+gcm_max_len:
+dq      (((1<<39) - 256) - 1)
+
+%ifdef WIN_ABI
+        %xdefine GCM_MAX_LENGTH r10
+%else
+        %xdefine GCM_MAX_LENGTH [rel gcm_max_len]
+%endif
+
+%macro INIT_GCM_MAX_LENGTH 0
+%ifdef WIN_ABI
+       mov     GCM_MAX_LENGTH, qword [rel gcm_max_len]
+%endif
+%endm
+
 section .text
 
 ;;define the fields of gcm_context_data struct

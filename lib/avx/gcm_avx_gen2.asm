@@ -2333,6 +2333,9 @@ FN_NAME(enc,_update_):
         cmp     arg1, 0
         jz      exit_update_enc
 
+        ;; Load max len to reg on windows
+        INIT_GCM_MAX_LENGTH
+
         ;; Check context_data != NULL
         cmp     arg2, 0
         jz      exit_update_enc
@@ -2340,6 +2343,10 @@ FN_NAME(enc,_update_):
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
         jz      exit_update_enc
+
+        ;; Check if msg_len > max_len
+        cmp     arg5, GCM_MAX_LENGTH
+        ja      exit_update_enc
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
@@ -2375,6 +2382,9 @@ FN_NAME(dec,_update_):
         cmp     arg1, 0
         jz      exit_update_dec
 
+        ;; Load max len to reg on windows
+        INIT_GCM_MAX_LENGTH
+
         ;; Check context_data != NULL
         cmp     arg2, 0
         jz      exit_update_dec
@@ -2382,6 +2392,10 @@ FN_NAME(dec,_update_):
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
         jz      exit_update_dec
+
+        ;; Check if msg_len > max_len
+        cmp     arg5, GCM_MAX_LENGTH
+        ja      exit_update_dec
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
@@ -2551,6 +2565,9 @@ FN_NAME(enc,_):
         ;; Reset imb_errno
         IMB_ERR_CHECK_RESET
 
+        ;; Load max len to reg on windows
+        INIT_GCM_MAX_LENGTH
+
         ;; Check key_data != NULL
         cmp     arg1, 0
         jz      error_enc
@@ -2577,6 +2594,10 @@ FN_NAME(enc,_):
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_enc
+
+        ;; Check if msg_len > max_len
+        cmp     arg5, GCM_MAX_LENGTH
+        ja      error_enc
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
@@ -2634,6 +2655,9 @@ error_enc:
         cmp     arg5, 0
         jz      skip_in_out_check_error_enc
 
+        ;; Check if msg_len > max_len
+        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
+
         ;; Check out != NULL (plaintext_len != 0)
         IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
 
@@ -2677,6 +2701,9 @@ FN_NAME(dec,_):
         ;; Reset imb_errno
         IMB_ERR_CHECK_RESET
 
+        ;; Load max len to reg on windows
+        INIT_GCM_MAX_LENGTH
+
         ;; Check key_data != NULL
         cmp     arg1, 0
         jz      error_dec
@@ -2703,6 +2730,10 @@ FN_NAME(dec,_):
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_dec
+
+        ;; Check if msg_len > max_len
+        cmp     arg5, GCM_MAX_LENGTH
+        ja      error_dec
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
@@ -2761,6 +2792,9 @@ error_dec:
         cmp     arg5, 0
         jz      skip_in_out_check_error_dec
 
+        ;; Check if msg_len > max_len
+        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
+
         ;; Check out != NULL (plaintext_len != 0)
         IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
 
@@ -2807,6 +2841,9 @@ FN_NAME(enc_var_iv,_):
         ;; Reset imb_errno
         IMB_ERR_CHECK_RESET
 
+        ;; Load max len to reg on windows
+        INIT_GCM_MAX_LENGTH
+
         ;; Check key_data != NULL
         cmp     arg1, 0
         jz      error_enc_IV
@@ -2837,6 +2874,10 @@ FN_NAME(enc_var_iv,_):
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_enc_IV
+
+        ;; Check if msg_len > max_len
+        cmp     arg5, GCM_MAX_LENGTH
+        ja      error_enc_IV
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
@@ -2905,6 +2946,9 @@ error_enc_IV:
         cmp     arg5, 0
         jz      skip_in_out_check_error_enc_IV
 
+        ;; Check if msg_len > max_len
+        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
+
         ;; Check out != NULL (plaintext_len != 0)
         IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST
 
@@ -2950,6 +2994,9 @@ FN_NAME(dec_var_iv,_):
         ;; Reset imb_errno
         IMB_ERR_CHECK_RESET
 
+        ;; Load max len to reg on windows
+        INIT_GCM_MAX_LENGTH
+
         ;; Check key_data != NULL
         cmp     arg1, 0
         jz      error_dec_IV
@@ -2980,6 +3027,10 @@ FN_NAME(dec_var_iv,_):
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_dec_IV
+
+        ;; Check if msg_len > max_len
+        cmp     arg5, GCM_MAX_LENGTH
+        ja      error_dec_IV
 
         ;; Check out != NULL (plaintext_len != 0)
         cmp     arg3, 0
@@ -3047,6 +3098,9 @@ error_dec_IV:
         ;; Check if plaintext_len == 0
         cmp     arg5, 0
         jz      skip_in_out_check_error_dec_IV
+
+        ;; Check if msg_len > max_len
+        IMB_ERR_CHECK_ABOVE arg5, GCM_MAX_LENGTH, rax, IMB_ERR_CIPH_LEN
 
         ;; Check out != NULL (plaintext_len != 0)
         IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_DST

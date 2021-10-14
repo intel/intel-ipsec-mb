@@ -1262,7 +1262,7 @@ FLUSH_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
 /* ========================================================================= */
 
 /* GCM NIST standard: len(M) < 2^39 - 256 */
-#define GCM_MAX_LEN  UINT64_C(((1UL << 39) - 256) - 1)
+#define GCM_MAX_LEN  UINT64_C(((1ULL << 39) - 256) - 1)
 #define SNOW3G_MAX_BITLEN (UINT32_MAX)
 #define MB_MAX_LEN16 ((1 << 16) - 2)
 
