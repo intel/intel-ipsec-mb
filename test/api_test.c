@@ -273,6 +273,7 @@ fill_in_job(struct IMB_JOB *job,
                 job->iv_len_in_bytes = UINT64_C(16);
                 break;
         case IMB_CIPHER_GCM:
+                job->hash_alg = IMB_AUTH_AES_GMAC;
                 job->key_len_in_bytes = UINT64_C(16);
                 job->iv_len_in_bytes = UINT64_C(12);
                 break;
@@ -1391,6 +1392,52 @@ test_job_invalid_misc_args(struct IMB_MGR *mb_mgr)
                                 return 1;
                         printf(".");
                 }
+
+
+        /*
+         * AEAD MSG_LEN > MAX
+         */
+        for (order = IMB_ORDER_CIPHER_HASH; order <= IMB_ORDER_HASH_CIPHER;
+             order++)
+                for (dir = IMB_DIR_ENCRYPT; dir <= IMB_DIR_DECRYPT; dir++)
+                        for (cipher = IMB_CIPHER_CBC;
+                             cipher < IMB_CIPHER_NUM; cipher++) {
+                                /* reset hash alg */
+                                hash = IMB_AUTH_NULL;
+
+                                /* Skip non AEAD algorithms */
+                                if (!check_aead(hash, cipher))
+                                        continue;
+
+                                IMB_JOB *job = &template_job;
+
+                                fill_in_job(job, cipher, dir, hash, order,
+                                            &chacha_ctx, &gcm_ctx);
+
+                                switch (cipher) {
+                                        /* skip algos with no max limit */
+                                case IMB_CIPHER_PON_AES_CNTR:
+                                case IMB_CIPHER_SNOW_V_AEAD:
+                                case IMB_CIPHER_CHACHA20_POLY1305:
+                                case IMB_CIPHER_CHACHA20_POLY1305_SGL:
+                                case IMB_CIPHER_CCM:
+                                        continue;
+                                case IMB_CIPHER_GCM:
+                                case IMB_CIPHER_GCM_SGL:
+                                        /* must be < ((2^39) - 256)  bytes */
+                                        job->msg_len_to_cipher_in_bytes =
+                                                ((1ULL << 39) - 256);
+                                        break;
+                                default:
+                                        continue;
+                                }
+                                if (!is_submit_invalid(mb_mgr, job,
+                                                       TEST_CIPH_MSG_LEN_GT_MAX,
+                                                       IMB_ERR_JOB_CIPH_LEN))
+                                        return 1;
+
+                                printf(".");
+                        }
 
         /* clean up */
         while (IMB_FLUSH_JOB(mb_mgr) != NULL)

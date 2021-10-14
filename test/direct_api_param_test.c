@@ -83,13 +83,14 @@ unexpected_err(IMB_MGR *mgr, const IMB_ERR expected_err, const char *func_desc)
 /* GCM Encrypt and Decrypt tests */
 static int
 test_gcm_enc_dec(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
-                 const uint32_t len, struct gcm_key_data *key,
+                 const uint64_t len, struct gcm_key_data *key,
                  struct gcm_context_data *ctx, const uint8_t *iv,
                  const uint8_t *aad, uint8_t *tag)
 {
         uint64_t i;
         const uint64_t aad_len = 28;
         const uint64_t tag_len = 16;
+        const uint64_t invalid_msg_len = ((1ULL << 39) - 256);
 
         struct gcm_enc_dec_fn {
                 aes_gcm_enc_dec_t func;
@@ -108,7 +109,7 @@ test_gcm_enc_dec(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
                 struct gcm_context_data *ctx;
                 uint8_t *out;
                 uint8_t *in;
-                const uint32_t len;
+                const uint64_t len;
                 const uint8_t *iv;
                 const uint8_t *aad;
                 const uint64_t aad_len;
@@ -133,7 +134,9 @@ test_gcm_enc_dec(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
                 { key, ctx, out, in, len, iv, aad,
                   aad_len, tag, 0, IMB_ERR_AUTH_TAG_LEN },
                 { key, ctx, out, in, len, iv, aad,
-                 aad_len, tag, 17, IMB_ERR_AUTH_TAG_LEN }
+                  aad_len, tag, 17, IMB_ERR_AUTH_TAG_LEN },
+                { key, ctx, out, in, invalid_msg_len, iv, aad,
+                  aad_len, tag, tag_len, IMB_ERR_CIPH_LEN }
         };
 
         /* Iterate over functions */
@@ -304,7 +307,7 @@ test_gcm_init(struct IMB_MGR *mgr, struct gcm_key_data *key,
 static int
 test_gcm_api(struct IMB_MGR *mgr)
 {
-        const uint32_t text_len = BUF_SIZE;
+        const uint64_t text_len = BUF_SIZE;
         uint8_t out_buf[BUF_SIZE];
         uint8_t zero_buf[BUF_SIZE];
         struct gcm_key_data *key_data = (struct gcm_key_data *)out_buf;
