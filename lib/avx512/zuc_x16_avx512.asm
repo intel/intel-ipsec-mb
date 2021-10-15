@@ -1191,7 +1191,7 @@ ZUC256_INIT:
 ;
 %macro KEYGEN_16_AVX512 3-4
 %define %%NUM_ROUNDS    %1 ; [in] Number of 4-byte rounds
-%define %%STORE_SINGLE  %2 ; [in] If 1, KS will be stored continuosly in a single buffer
+%define %%STORE_SINGLE  %2 ; [in] If 1, KS will be stored continuously in a single buffer
 %define %%KEY_OFF       %3 ; [in] Offset to start writing Keystream
 %define %%LANE_MASK     %4 ; [in] Lane mask with lanes to generate all keystream words
 
