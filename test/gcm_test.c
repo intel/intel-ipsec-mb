@@ -36,6 +36,9 @@
 #include "gcm_ctr_vectors_test.h"
 #include "utils.h"
 
+/* 0 - no extra messages, 1 - additional messages */
+#define VERBOSE 0
+
 #define AAD_SZ 24
 #define IV_SZ 12
 #define DIGEST_SZ 16
@@ -2346,11 +2349,11 @@ test_sgl(struct IMB_MGR *mb_mgr,
                         seg_size = segment_sizes[i];
                         seg_ptr = segments[i];
                 }
-#ifdef DEBUG
+#if VERBOSE != 0
                 printf("gcm-sgl: job-api=%c, segment=%u, #segments=%u, "
                        "size=%u bytes\n", job_api ? 'y' : 'n', i,
                        num_segments, (unsigned) seg_size);
-#endif /* DEBUG */
+#endif
                 if (job_api) {
                         if (aes_gcm_job(mb_mgr, cipher_dir, &key, key_sz,
                                         seg_ptr, seg_ptr, seg_size,
