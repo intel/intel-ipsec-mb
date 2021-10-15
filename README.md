@@ -488,6 +488,11 @@ the library provides the `imb_clear_mem()` API. This API zeros _'size'_ bytes
 of memory pointed to by _'mem'_ followed by the _sfence_ instruction to
 ensure memory is cleared before the function returns.
 
+### Galois Counter Mode (GCM) TAG Size
+The library GCM and GMAC implementation provides flexibility as to tag size selection.
+As explained in [NIST Special Publication 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final) section 5.2.1.2 and Appendix C, using tag sizes shorter than 96 bits can be insecure.
+Please refer to the aforementioned sections to understand the details, trade offs and mitigations of using shorter tag sizes.
+
 7\. Installation
 ================
 

@@ -159,8 +159,8 @@ Notes:
 (4) - used only with AES256-DOCSIS and AES128-DOCSIS ciphers
 (5) - x8 on selected CPU’s supporting GFNI
 (6) - 4 byte tag size is supported only
-(7) - Supported CRC types:
-(8) - x16 for init keystream generation, then by32
+(7) - Supported CRC types: (8) - x16 for init keystream generation, then
+by32
 
 -   CRC32: Ethernet FCS, SCTP, WIMAX OFDMA
 -   CRC24: LTE A, LTE B
@@ -523,6 +523,14 @@ To assist in clearing sensitive application data such as keys, plaintext
 etc. the library provides the imb_clear_mem() API. This API zeros
 _‘size’_ bytes of memory pointed to by _‘mem’_ followed by the _sfence_
 instruction to ensure memory is cleared before the function returns.
+
+Galois Counter Mode (GCM) TAG Size
+
+The library GCM and GMAC implementation provides flexibility as to tag
+size selection. As explained in NIST Special Publication 800-38D section
+5.2.1.2 and Appendix C, using tag sizes shorter than 96 bits can be
+insecure. Please refer to the aforementioned sections to understand the
+details, trade offs and mitigations of using shorter tag sizes.
 
 
 
