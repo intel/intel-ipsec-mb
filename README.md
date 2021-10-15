@@ -131,7 +131,7 @@ Table 2. List of supported integrity algorithms and their implementations.
 | KASUMI-F9         | Y      | N      | N      | N      | N      | N      |
 | ZUC-EIA3          | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
 | ZUC-EIA3-256(6)   | N      | Y  x4  | Y  x4  | Y  x8  | Y  x16 | Y  x16 |
-| SNOW3G-UIA2(8)    | N      | Y by4  | Y by4  | N      | Y by32 | Y by32 |
+| SNOW3G-UIA2(9)    | N      | Y by4  | Y by4  | N      | Y by32 | Y by32 |
 | DOCSIS-CRC32(4)   | N      | Y      | Y      | N      | Y      | Y      |
 | HEC               | N      | Y      | Y      | N      | N      | N      |
 | POLY1305          | Y      | N      | N      | N      | Y      | Y      |
@@ -150,8 +150,6 @@ Notes:
 (5) - x8 on selected CPU's supporting GFNI  
 (6) - 4 byte tag size is supported only  
 (7) - Supported CRC types:
-(8) - x16 for init keystream generation, then by32
-
  - CRC32: Ethernet FCS, SCTP, WIMAX OFDMA  
  - CRC24: LTE A, LTE B  
  - CRC16: X25, FP data  
@@ -161,6 +159,7 @@ Notes:
  - CRC7: FP header  
  - CRC6: IUUP header  
 (8) - used only with PON-AES128-CTR cipher  
+(9) - x16 for init keystream generation, then by32
 
 Legend:  
 ` byY`- single buffer Y blocks at a time  
