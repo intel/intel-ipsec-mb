@@ -194,7 +194,7 @@ snow3g_f9_1_buffer_internal_avx:
         and     end_offset, 0xfffffffffffffffc  ;; round down to nearest 4 blocks
 
         cmp     qword_len, 4                    ;; check at least 4 blocks
-        jbe     start_single_blk_loop
+        jb      start_single_blk_loop
 
         vmovdqa xmm1, P1
         MUL_AND_REDUCE_TO_64 xmm1, P1, xmm4     ;; xmm1 = P2
