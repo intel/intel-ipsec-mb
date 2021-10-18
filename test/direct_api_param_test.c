@@ -484,6 +484,57 @@ test_gcm_enc_dec_finalize(struct IMB_MGR *mgr, struct gcm_key_data *key,
         return 0;
 }
 
+/* GMAC init tests */
+static int
+test_gmac_init(struct IMB_MGR *mgr,
+               struct gcm_key_data *key,
+               struct gcm_context_data *ctx,
+               const uint8_t *iv)
+{
+        uint64_t i;
+        const uint64_t iv_len = 16;
+
+        struct gmac_init_fn {
+                aes_gmac_init_t func;
+                const char *func_name;
+        } fn_ptrs[] = {
+             { mgr->gmac128_init, "GMAC-128 INIT" },
+             { mgr->gmac192_init, "GMAC-192 INIT" },
+             { mgr->gmac256_init, "GMAC-256 INIT" },
+        };
+
+        struct fn_args {
+                struct gcm_key_data *key;
+                struct gcm_context_data *ctx;
+                const uint8_t *iv;
+                uint64_t iv_len;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, ctx, iv, iv_len, IMB_ERR_NULL_EXP_KEY },
+                { key, NULL, iv, iv_len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, iv_len, IMB_ERR_NULL_IV },
+                { key, ctx, iv, 0, IMB_ERR_IV_LEN },
+        };
+
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                uint64_t j;
+
+                /* Iterate over args */
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
+
+                        fn_ptrs[i].func(ap->key, ap->ctx, ap->iv,
+                                        ap->iv_len);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].func_name))
+                                return 1;
+                }
+                printf(".");
+        }
+        return 0;
+}
+
 /* GMAC Update tests */
 static int
 test_gmac_update(struct IMB_MGR *mgr, uint8_t *in,
@@ -644,7 +695,11 @@ test_gcm_api(struct IMB_MGR *mgr)
         if (test_gcm_enc_dec_finalize(mgr, key_data, ctx, tag, zero_buf))
                 return 1;
 
-        /* GMAC update tests */
+        /* GMAC Init tests */
+        if (test_gmac_init(mgr, key_data, ctx, iv))
+                return 1;
+
+	/* GMAC Update tests */
         if (test_gmac_update(mgr, out_buf, text_len, ctx, key_data))
                 return 1;
 
