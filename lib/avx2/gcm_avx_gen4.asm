@@ -4421,25 +4421,28 @@ ghash_avx_gen4:
         FUNC_SAVE
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_ghash
+        jz      error_ghash
 
         ;; Check in != NULL
         cmp     arg2, 0
-        jz      exit_ghash
+        jz      error_ghash
 
         ;; Check in_len != 0
         cmp     arg3, 0
-        jz      exit_ghash
+        jz      error_ghash
 
         ;; Check tag != NULL
         cmp     arg4, 0
-        jz      exit_ghash
+        jz      error_ghash
 
         ;; Check tag_len != 0
         cmp     arg5, 0
-        jz      exit_ghash
+        jz      error_ghash
 %endif
 
         ;; copy tag to xmm0
@@ -4455,9 +4458,35 @@ ghash_avx_gen4:
 
 exit_ghash:
         FUNC_RESTORE
-
         ret
+
+%ifdef SAFE_PARAM
+error_ghash:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check in != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_SRC
+
+        ;; Check in_len != 0
+        IMB_ERR_CHECK_ZERO arg3, rax, IMB_ERR_AUTH_LEN
+
+        ;; Check tag != NULL
+        IMB_ERR_CHECK_NULL arg4, rax, IMB_ERR_NULL_AUTH
+
+        ;; Check tag_len != 0
+        IMB_ERR_CHECK_ZERO arg5, rax, IMB_ERR_AUTH_TAG_LEN
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+
+        jmp     exit_ghash
 %endif
+
+%endif ;; GCM128_MODE
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; PARTIAL_BLOCK_GMAC: Handles the tag partial blocks between update calls.

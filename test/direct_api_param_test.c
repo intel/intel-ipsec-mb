@@ -644,6 +644,52 @@ test_gmac_finalize(struct IMB_MGR *mgr, struct gcm_key_data *key,
         return 0;
 }
 
+/* GHASH tests */
+static int
+test_ghash(struct IMB_MGR *mgr, struct gcm_key_data *key,
+           uint8_t *in, const uint64_t len, uint8_t *tag)
+{
+        uint64_t i;
+        const uint64_t tag_len = 16;
+
+        struct fn_args {
+                struct gcm_key_data *key;
+                uint8_t *in;
+                const uint64_t len;
+                uint8_t *tag;
+                const uint64_t tag_len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, in, len, tag, tag_len, IMB_ERR_NULL_EXP_KEY },
+                { key, NULL, len, tag, tag_len, IMB_ERR_NULL_SRC },
+                { key, in, 0, tag, tag_len, IMB_ERR_AUTH_LEN },
+                { key, in, len, NULL, tag_len, IMB_ERR_NULL_AUTH },
+                { key, in, len, tag, 0, IMB_ERR_AUTH_TAG_LEN },
+        };
+
+        memset(in, 0, tag_len);
+        memset(tag, 0, tag_len);
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->ghash(ap->key, ap->in, ap->len,
+                           ap->tag, ap->tag_len);
+                if (unexpected_err(mgr, ap->exp_err, "GHASH"))
+                        return 1;
+        }
+        /* Verify buffers not modified */
+        if (memcmp(tag, in, tag_len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                       __func__, "GHASH");
+                return 1;
+        }
+        printf(".");
+
+        return 0;
+}
+
 /*
  * @brief Performs direct GCM API invalid param tests
  */
@@ -705,6 +751,10 @@ test_gcm_api(struct IMB_MGR *mgr)
 
         /* GMAC Finalize tests */
         if (test_gmac_finalize(mgr, key_data, ctx, tag, zero_buf))
+                return 1;
+
+        /* GHASH tests */
+        if (test_ghash(mgr, key_data, zero_buf, text_len, out_buf))
                 return 1;
 
         printf("\n");
