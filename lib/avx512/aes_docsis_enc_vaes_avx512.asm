@@ -73,7 +73,7 @@ endstruc
 %define TMP11   r14
 %define TMP12   r15
 
-section .data
+mksection .rodata
 default rel
 
 align  16
@@ -187,7 +187,7 @@ byte_len_to_mask_ref_table:
         dw      0xffff, 0xffff, 0xffff, 0xffff
         dw      0xffff, 0xffff, 0xffff, 0xffff
 
-section .text
+mksection .text
 
 ;; ===================================================================
 ;; ===================================================================
@@ -2064,6 +2064,4 @@ flush_job_aes_docsis256_enc_crc32_vaes_avx512:
         FUNC_EXIT
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

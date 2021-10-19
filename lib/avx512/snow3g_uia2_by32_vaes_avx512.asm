@@ -67,8 +67,7 @@
 
 %define INSERT_HIGH64_MASK k1
 
-
-section .data
+mksection .rodata
 default rel
 
 align 64
@@ -103,7 +102,7 @@ dq      0x0f0e0d0c0b0a0908, 0x0706050403020100
 dq      0x0f0e0d0c0b0a0908, 0x0706050403020100
 dq      0x0f0e0d0c0b0a0908, 0x0706050403020100
 
-section .text
+mksection .text
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*7
@@ -144,7 +143,6 @@ section .text
         mov     [rsp + GP_OFFSET + 40], r11 ;; rsp pointer
 %endmacro
 
-
 %macro FUNC_RESTORE 0
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -166,7 +164,6 @@ section .text
         mov     rsp, [rsp + GP_OFFSET + 40]
 %endmacro
 
-
 ;; Horizontal XOR - 4 x 128bits xored together
 %macro VHPXORI4x128 2
 %define %%REG   %1      ;; [in/out] zmm with 4x128bits to xor; 128bit output
@@ -179,7 +176,6 @@ section .text
 
 %endmacro
 
-
 ;; Horizontal XOR - 2 x 128bits xored together
 %macro VHPXORI2x128 2
 %define %%REG   %1      ; [in/out] YMM/ZMM with 2x128bits to xor; 128bit output
@@ -187,7 +183,6 @@ section .text
         vextracti32x4   XWORD(%%TMP), %%REG, 1
         vpxorq          XWORD(%%REG), XWORD(%%REG), XWORD(%%TMP)
 %endmacro
-
 
 ;; Reduce from 128 bits to 64 bits
 %macro REDUCE_TO_64 2
@@ -201,7 +196,6 @@ section .text
         vpxor           %%IN_OUT, %%IN_OUT, %%XTMP
 
 %endmacro
-
 
 ;; Multiply 64b x 64b and reduce result to 64 bits
 ;; Lower 64-bits of xmms are multiplied
@@ -218,7 +212,6 @@ section .text
         REDUCE_TO_64    %%IN0_OUT, %%XTMP
 %endif
 %endmacro
-
 
 ;; Multiply 64b x 64b blocks and reduce result to 64 bits.
 ;; Lower and higher 64-bits of all 128-bit lanes are multiplied.
@@ -257,7 +250,6 @@ section .text
         vpunpcklqdq     %%IN0_OUT, %%IN0_OUT, %%T2
 
 %endmacro
-
 
 ;; Precompute powers of P up to P^4 or P^32
 ;; Results are arranged from highest power to lowest at 128b granularity
@@ -388,7 +380,6 @@ section .text
 %endif
 %endmacro
 
-
 ;; Process final 1 - 31 blocks
 %macro  PROCESS_FINAL_BLOCKS 21
 %define %%MAX_BLOCKS       %1  ;; [in] max possible number of final blocks
@@ -495,7 +486,6 @@ section .text
 
 %endmacro
 
-
 ;; uint32_t
 ;; snow3g_f9_1_buffer_internal_vaes_avx512(const uint64_t *pBufferIn,
 ;;                                         const uint32_t KS[5],
@@ -528,7 +518,6 @@ snow3g_f9_1_buffer_internal_vaes_avx512:
 
         cmp     qword_len, 32                   ;; <32 blocks go to final blocks
         jb      lt32_blocks
-
 
 start_32_block_loop:
         vmovdqu64       zmm3, [in_ptr]
@@ -682,7 +671,4 @@ skip_rem_bits:
 
         ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

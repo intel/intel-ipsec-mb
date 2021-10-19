@@ -77,7 +77,6 @@
 %define DIGEST_SAVE	   NUM_LANES * DIGEST_SZ
 %define RSP_SAVE           1*8
 
-
 ; Define Stack Layout
 START_FIELDS
 ;;;     name            size            align
@@ -111,7 +110,6 @@ FIELD	_RSP,		8,	        8
 %define TMP4	zmm13
 %define TMP5	zmm14
 %define TMP6	zmm15
-
 
 %define W0	zmm16
 %define W1	zmm17
@@ -229,7 +227,7 @@ FIELD	_RSP,		8,	        8
                                                 ; Wt-7 + sigma_0(Wt-15) +
 %endmacro
 
-section .data
+mksection .rodata
 default rel
 
 align 64
@@ -412,7 +410,7 @@ PSHUFFLE_BYTE_FLIP_MASK:
         ;ddq 0x38393a3b3c3d3e3f3031323334353637
         dq	0x3031323334353637, 0x38393a3b3c3d3e3f
 
-section .text
+mksection .text
 
 ;; void sha512_x8_avx512(void *input_data, UINT64 *digest[NUM_LANES], const int size)
 ;; arg 1 : rcx : pointer to input data
@@ -578,7 +576,6 @@ lastLoop:
 %assign I (I+1)
 %endrep
 
-
 %ifdef SAFE_DATA
         ;; Clear stack frame ((NUM_LANES*8)*64 bytes)
 	clear_all_zmms_asm
@@ -592,6 +589,4 @@ lastLoop:
 ;hash_done:
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

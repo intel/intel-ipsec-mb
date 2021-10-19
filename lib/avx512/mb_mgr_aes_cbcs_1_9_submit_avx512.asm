@@ -36,7 +36,6 @@
 ; void AES_CBCS_ENC_X16(AES_ARGS_x16 *args, UINT64 len_in_bytes);
 extern AES_CBCS_ENC_X16
 
-
 ; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -195,7 +194,7 @@ return_null:
         xor     job_rax, job_rax
         jmp     return
 
-section .data
+mksection .rodata
 default rel
 
 align 64
@@ -216,6 +215,4 @@ index_to_lane16_mask:
         dw      0x0100, 0x0200, 0x0400, 0x0800,
         dw      0x1000, 0x2000, 0x4000, 0x8000,
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

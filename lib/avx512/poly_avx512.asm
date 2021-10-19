@@ -175,7 +175,6 @@ byte64_len_to_mask_table:
 qword_high_bit_mask:
 dw      0, 0x1, 0x5, 0x15, 0x55, 0x57, 0x5f, 0x7f, 0xff
 
-
 %ifdef LINUX
 %define arg1    rdi
 %define arg2    rsi
@@ -222,7 +221,7 @@ _gpr_save:      resq    8  ; Memory to save GP registers
 _rsp_save:      resq    1  ; Memory to save RSP pointer
 endstruc
 
-section .text
+mksection .text
 
 ;; =============================================================================
 ;; =============================================================================
@@ -1238,7 +1237,6 @@ APPEND(%%_shuffle_blocks_, i):
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-
 %%_poly1305_blocks_exit:
 %endmacro
 
@@ -1485,6 +1483,4 @@ poly1305_mac_plain_avx512:
         FUNC_EXIT
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

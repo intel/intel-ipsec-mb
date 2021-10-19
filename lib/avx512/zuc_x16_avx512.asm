@@ -53,7 +53,7 @@
 %define ZUC_EIA3_N64B asm_Eia3_Nx64B_AVX512_16
 %endif
 
-section .data
+mksection .rodata
 default rel
 
 align 64
@@ -65,7 +65,6 @@ align 64
 EK256_d64:
 dd      0x00220000, 0x002F0000, 0x00240000, 0x002A0000, 0x006D0000, 0x00400000, 0x00400000, 0x00400000
 dd      0x00400000, 0x00400000, 0x00400000, 0x00400000, 0x00400000, 0x00520000, 0x00100000, 0x00300000
-
 
 align 64
 EK256_EIA3_4:
@@ -370,7 +369,7 @@ db      11111010b, 11111011b, 11111110b, 11111111b
 ;; - To access a 16-byte chunk inside a 64-byte chunk, ks_idx is used
 %define GET_KS(base, lane4_idx, bytes16_idx, ks_idx) (base + lane4_idx * 512 + bytes16_idx * 64 + ks_idx * 16)
 
-section .text
+mksection .text
 align 64
 
 %ifdef LINUX
@@ -431,7 +430,6 @@ align 64
         mov     [rsp + GP_OFFSET + 32], rbx
         mov     [rsp + GP_OFFSET + 40], rax ;; rsp pointer
 %endmacro
-
 
 %macro FUNC_RESTORE 0
 
@@ -896,7 +894,6 @@ align 64
     vpaddd      %%IN_OUT, %%ZTMP
 %endmacro
 
-
 ;
 ; Rotate (mult by pow of 2) 32-bit arg and reduce mod (2^31-1)
 ;
@@ -910,7 +907,6 @@ align 64
     vpsrld      %%IN_OUT, %%IN_OUT, (31 - %%N_BITS)
     vpternlogq  %%IN_OUT, %%ZTMP, %%MASK31, 0xA8 ; (A | B) & C
 %endmacro
-
 
 ;
 ; Update LFSR registers, calculating S_16
@@ -1337,7 +1333,6 @@ ZUC256_INIT:
         vporq    %%DATA_OUT, %%XTMP2
 %endmacro
 
-
 ;;
 ;; Set up data and KS bytes and use PCLMUL to digest data,
 ;; then the result gets XOR'ed with the previous digest.
@@ -1358,7 +1353,6 @@ ZUC256_INIT:
 %define %%TMP4          %9 ; [clobbered] Temporary XMM/YMM/ZMM register
 %define %%TMP5          %10 ; [clobbered] Temporary XMM/YMM/ZMM register
 %define %%TMP6          %11 ; [clobbered] Temporary XMM/YMM/ZMM register
-
 
         ;; Set up KS
         ;;
@@ -2094,7 +2088,6 @@ _no_final_rounds:
         FUNC_RESTORE
 
         ret
-
 
 ;;
 ;;extern void asm_Eia3Round64B_16(uint32_t *T, const void *KS,
@@ -3091,6 +3084,4 @@ asm_Eia3Round64BAVX512:
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

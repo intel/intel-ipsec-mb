@@ -41,7 +41,7 @@
 %include "include/cet.inc"
 extern sha512_x8_avx512
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -52,7 +52,7 @@ align 16
 byteswap:	;ddq 0x08090a0b0c0d0e0f0001020304050607
 	dq 0x0001020304050607, 0x08090a0b0c0d0e0f
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1	rdi
@@ -69,7 +69,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbp, r13, r14, r16
 %define last_len	rbp
@@ -411,6 +410,4 @@ return:
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -29,11 +29,12 @@
 
 %include "avx512/gcm_vaes_avx512.inc"
 %include "include/error.inc"
+%include "include/os.asm"
 
 %ifndef GCM_SGL_API_VAES_AVX512_INC
 %define GCM_SGL_API_VAES_AVX512_INC
 
-section .text
+mksection .text
 default rel
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -112,7 +113,6 @@ skip_aad_check_error_init:
         jmp     exit_init
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_init_var_iv_128_vaes_avx512 / aes_gcm_init_var_iv_192_vaes_avx512 /
 ;       aes_gcm_init_var_iv_256_vaes_avx512
@@ -177,7 +177,6 @@ skip_iv_len_12_init_IV:
         clear_scratch_zmms_asm
 %endif
 exit_init_IV:
-
 
         FUNC_RESTORE
         ret
@@ -516,9 +515,6 @@ error_dec_fin:
         jmp     exit_dec_fin
 %endif
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 
 %endif ; GCM_SGL_API_VAES_AVX512_INC

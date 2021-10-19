@@ -584,7 +584,6 @@
         vpclmulqdq      %%GH, %%GH, %%HK, 0x10  ; %%GH = a0*b1
         vpxorq          %%GH, %%GH, %%T3
 
-
         vpsrldq         %%T3, %%GH, 8           ; shift-R %%GH 2 DWs
         vpslldq         %%GH, %%GH, 8           ; shift-L %%GH 2 DWs
 
@@ -1291,7 +1290,6 @@
 %define %%GM                    %24 ; [in] ZMM with mid prodcut part
 %define %%GL                    %25 ; [in] ZMM with lo product part
 
-
 %ifidn %%INSTANCE_TYPE, single_call
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;;; SINGLE CALL case
@@ -1447,7 +1445,6 @@
         ;; Final hash is now in HASH_IN_OUT
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL_GHASH
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; INITIAL_BLOCKS_PARTIAL macro with support for a partial final block.
@@ -2088,7 +2085,6 @@
         je      %%_last_num_blocks_is_8
         jb      %%_last_num_blocks_is_7_1
 
-
         cmp     DWORD(%%IA0), 12
         je      %%_last_num_blocks_is_12
         jb      %%_last_num_blocks_is_11_9
@@ -2164,8 +2160,6 @@
 %%_last_blocks_done:
 
 %endmacro
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Main GCM macro stitching cipher with GHASH
@@ -2588,7 +2582,6 @@
 %endrep
                 vaesenclast     %%XMM0, [%%GDATA+16*i]
 %endmacro
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Save register content for the caller
@@ -3662,7 +3655,6 @@
 %endif
 %endif
 %endmacro ; GCM_COMPLETE
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; PARTIAL_BLOCK_GMAC

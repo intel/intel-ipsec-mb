@@ -132,7 +132,6 @@ endstruc
         vzeroupper
 %endmacro
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Transpose macro - executes 4x4 transpose of 4 ZMM registers
 ; in: L0B0-3   out: B0L0-3
@@ -328,7 +327,6 @@ endstruc
 %endrep
 
 %endmacro                       ; AESENC_ROUNDS_x16
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; ENCRYPT_16_PARALLEL - Encode all blocks up to multiple of 4
@@ -808,8 +806,7 @@ endstruc
         vmovdqa64       [%%IV + 16*12], ZIV12_15
 %endmacro
 
-
-section .data
+mksection .rodata
 ;;;;;;;;;;;;;;;;;;
 ; Transpose tables
 ;;;;;;;;;;;;;;;;;;
@@ -823,8 +820,7 @@ align 64
 A2B2A3B3:
         dq     0x4, 0x5, 0xc, 0xd, 0x6, 0x7, 0xe, 0xf
 
-
-section .text
+mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  void aes_cbc_enc_128_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
@@ -916,6 +912,4 @@ aes_xcbc_mac_128_vaes_avx512:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -292,7 +292,7 @@ FIELD	_rsp,		8,	8
 %endif
 %endmacro
 
-        section .data
+        mksection .rodata
 default rel
 align 64
 TABLE:
@@ -563,7 +563,7 @@ PSHUFFLE_BYTE_FLIP_MASK:
 	;ddq 0x0c0d0e0f08090a0b0405060700010203
 	 dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
-section .text
+mksection .text
 
 ;; void sha256_x16_avx512(void **input_data, UINT128 *digest[16], UINT64 size)
 ;; arg 1 : pointer to SHA256 args structure
@@ -757,6 +757,4 @@ lastLoop:
         mov     rsp, [rsp + _rsp]
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -52,14 +52,14 @@
 
 extern sha256_x16_avx512
 
-section .data
+mksection .rodata
 default rel
 
 align 16
 byteswap:
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1	rdi
@@ -443,6 +443,4 @@ return:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

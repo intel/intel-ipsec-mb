@@ -69,14 +69,14 @@
 %define tmp_gp10 r14
 %define tmp_gp11 r15
 
-section .data
+mksection .rodata
 default rel
 
 align 64
 dd_0_to_15:
         dd 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
 
-section .text
+mksection .text
 
 %macro SUBMIT_FLUSH_JOB_SNOW3G_UEA2 13
 %define %%SUBMIT_FLUSH    %1  ;; [in] submit/flush selector
@@ -409,6 +409,4 @@ FLUSH_JOB_SNOW3G_UEA2:
         SUBMIT_FLUSH_JOB_SNOW3G_UEA2 flush, tmp_gp1, tmp_gp2, tmp_gp3, tmp_gp4, tmp_gp5, tmp_gp6, tmp_gp7, tmp_gp8, tmp_gp9, tmp_gp10, tmp_gp11, avx512_gen1
         SNOW3G_FUNC_END
         ret
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

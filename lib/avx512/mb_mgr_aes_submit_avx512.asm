@@ -40,7 +40,7 @@
 ; void AES_CBC_ENC_X16(AES_ARGS_x16 *args, UINT64 len_in_bytes);
 extern AES_CBC_ENC_X16
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1    rdi
@@ -78,7 +78,6 @@ _gpr_save:      resq    8
 _rsp_save:      resq    1
 endstruc
 
-
 %macro INSERT_KEYS 6
 %define %%KP    %1 ; [in] GP reg with pointer to expanded keys
 %define %%LANE  %2 ; [in] GP reg with lane number
@@ -86,7 +85,6 @@ endstruc
 %define %%COL   %4 ; [clobbered] GP reg
 %define %%ZTMP  %5 ; [clobbered] ZMM reg
 %define %%IA0   %6 ; [clobbered] GP reg
-
 
 %assign ROW (16*16)
 
@@ -279,8 +277,6 @@ return_null:
         xor     job_rax, job_rax
         jmp     return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 
 %endif ;; CBCS

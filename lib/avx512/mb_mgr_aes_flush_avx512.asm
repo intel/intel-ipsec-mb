@@ -40,7 +40,7 @@
 ; void AES_CBC_ENC_X16(AES_ARGS *args, UINT64 len_in_bytes);
 extern AES_CBC_ENC_X16
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 
@@ -138,7 +138,6 @@ section .text
 %endrep
 
 %endmacro
-
 
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
@@ -290,8 +289,6 @@ return_null:
         xor     job_rax, job_rax
         jmp     return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 
 %endif ;; CBCS

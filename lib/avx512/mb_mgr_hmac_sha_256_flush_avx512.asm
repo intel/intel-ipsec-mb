@@ -50,7 +50,7 @@
 
 extern sha256_x16_avx512
 
-section .data
+mksection .rodata
 default rel
 align 16
 byteswap:
@@ -91,7 +91,7 @@ lane_13: dq  13
 lane_14: dq  14
 lane_15: dq  15
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1	rdi
@@ -106,7 +106,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbp, r15
 %define idx		rbp
@@ -132,7 +131,6 @@ section .text
 
 %define len_upper	r13
 %define idx_upper	r14
-
 
 ; we clobber rsi, rbp; called routine also clobbers rax, r9 to r15
 struc STACK
@@ -430,6 +428,4 @@ return:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

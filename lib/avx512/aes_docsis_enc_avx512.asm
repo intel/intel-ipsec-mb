@@ -74,7 +74,7 @@ endstruc
 %define TMP11   r14
 %define TMP12   r15
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -152,7 +152,7 @@ byte_len_to_mask_table:
         dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
         dw      0xffff
 
-section .text
+mksection .text
 
 ;; ===================================================================
 ;; ===================================================================
@@ -674,7 +674,6 @@ section .text
 %define %%XDATB5 XWORD(%%ZT13)
 %define %%XDATB6 XWORD(%%ZT14)
 %define %%XDATB7 XWORD(%%ZT15)
-
 
         xor             %%IDX, %%IDX
 
@@ -1318,7 +1317,6 @@ APPEND(%%_skip_,I):
         and             %%GT3, 0xf
         jz              %%_no_partial_block_cipher
 
-
         ;; AES128/256-CFB on the partial block
         mov             %%GT4, [%%STATE + _aes_args_in + %%idx*8]
         mov             %%GT5, [%%STATE + _aes_args_out + %%idx*8]
@@ -1466,6 +1464,4 @@ flush_job_aes_docsis256_enc_crc32_avx512:
         FUNC_EXIT
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

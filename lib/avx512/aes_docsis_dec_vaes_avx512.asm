@@ -71,8 +71,7 @@ endstruc
 %define tmp7	r8
 %define tmp8	r9
 
-
-section .data
+mksection .rodata
 
 ;;; Precomputed constants for CRC32 (Ethernet FCS)
 ;;;   Details of the CRC algorithm and 4 byte buffer of
@@ -134,7 +133,7 @@ byte_len_to_mask_table:
         dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
         dw      0xffff
 
-section .text
+mksection .text
 
 ;; ===================================================================
 ;; ===================================================================
@@ -1062,7 +1061,6 @@ section .text
         ;;   (this may be a partial block - additional checks follow)
         jmp             %%_check_partial_block
 
-
         ;; =====================================================================
         ;; =====================================================================
         ;; Part handling messages from 16 - 32 blocks
@@ -1523,7 +1521,4 @@ aes_docsis256_dec_crc32_vaes_avx512:
 
         ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

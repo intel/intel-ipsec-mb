@@ -95,7 +95,6 @@ endstruc
 %define ZT17            zmm13
 %define ZT18            zmm14
 
-
 %define R0_K0_3         zmm0
 %define R0_K4_7         zmm1
 %define R0_K8_11        zmm2
@@ -116,7 +115,6 @@ endstruc
         add             rsp, STACK_size
         vzeroupper
 %endmacro
-
 
 %macro LOAD_STORE_4x1 10
 %define %%LANE_A        %1  ; [in] lane index to load/store (numerical)
@@ -230,7 +228,6 @@ endstruc
 %endrep
 
 %endmacro                       ; AESENC_ROUNDS_x12
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; ENCRYPT_12_PARALLEL - Encode all blocks up to multiple of 2
@@ -438,9 +435,7 @@ endstruc
         vmovdqa64       [%%IV + 16*8],  ZIV08_11
 %endmacro
 
-
-section .text
-
+mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  void aes_cbcs_1_9_enc_128_vaes_avx512(AES_ARGS *args, uint64_t len_in_bytes);
@@ -458,7 +453,4 @@ aes_cbcs_1_9_enc_128_vaes_avx512:
 
         ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

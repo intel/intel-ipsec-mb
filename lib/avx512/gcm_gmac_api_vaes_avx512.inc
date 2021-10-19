@@ -33,7 +33,7 @@
 %ifndef GCM_GMAC_API_VAES_AVX512_INC
 %define GCM_GMAC_API_VAES_AVX512_INC
 
-section .text
+mksection .text
 default rel
 
 %ifdef GCM128_MODE
@@ -100,7 +100,6 @@ error_ghash_pre:
         IMB_ERR_CHECK_END rax
         jmp     exit_ghash_pre
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   ghash_vaes_avx512
@@ -285,9 +284,6 @@ error_gmac_update:
         jmp     exit_gmac_update
 %endif
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 
 %endif ; GCM_GMAC_API_VAES_AVX512_INC

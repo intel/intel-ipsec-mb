@@ -30,7 +30,7 @@
 %include "include/cet.inc"
 %define len     rax
 
-section .text
+mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; aes_cbcs_1_9_dec_128_vaes_avx512(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
@@ -68,7 +68,4 @@ aes_cbcs_1_9_dec_128_vaes_avx512:
 
         ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -424,12 +424,12 @@ extern des3_x16_cbc_dec_avx512
 ;;; ========================================================
 ;;; DATA
 
-section .data
+mksection .rodata
 default rel
 
 ;;; ========================================================
 ;;; CODE
-section .text
+mksection .text
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : job
@@ -533,6 +533,4 @@ flush_job_3des_cbc_dec_avx512:
         GENERIC_DES_FLUSH 3DES, DEC
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

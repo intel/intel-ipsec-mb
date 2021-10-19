@@ -34,7 +34,7 @@
 %include "include/aes_common.asm"
 %include "include/chacha_poly_defines.asm"
 %include "include/cet.inc"
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -151,7 +151,7 @@ dq      0xffffffffffffffff, 0xffffffffffffffff
 
 %define added_len r12
 
-section .text
+mksection .text
 
 %macro ZMM_OP_X4 9
         ZMM_OPCODE3_DSTR_SRC1R_SRC2R_BLOCKS_0_16 16, %1,%2,%3,%4,%5,%2,%3,%4,%5,%6,%7,%8,%9
@@ -2046,7 +2046,6 @@ chacha20_enc_dec_ks_avx512:
         and     tmp3, 63
         kmovq   k1, [tmp + tmp3*8]
 
-
         ; Read up to 63 bytes of KS and XOR the first bytes of message
         ; with the previous unused bytes of keystream
         vmovdqu8 zmm0{k1}, [src]
@@ -2267,6 +2266,4 @@ no_partial_block_ks:
 exit_ks:
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

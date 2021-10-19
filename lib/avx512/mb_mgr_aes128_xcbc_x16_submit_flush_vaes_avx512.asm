@@ -42,7 +42,7 @@
 
 extern AES_XCBC_X16
 
-section .data
+mksection .rodata
 default rel
 
 align 64
@@ -53,7 +53,7 @@ byte_len_to_mask_table:
         dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
         dw      0xffff
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1	rdi
@@ -508,7 +508,6 @@ endstruc
 
 %endmacro
 
-
 align 64
 ; IMB_JOB * submit_job_aes_xcbc_vaes_avx512(MB_MGR_XCBC_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -525,7 +524,4 @@ FLUSH_JOB_AES_XCBC:
         endbranch64
         GENERIC_SUBMIT_FLUSH_JOB_AES_XCBC_VAES_AVX512 FLUSH
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

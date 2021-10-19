@@ -29,11 +29,12 @@
 
 %include "avx512/gcm_vaes_avx512.inc"
 %include "include/error.inc"
+%include "include/os.asm"
 
 %ifndef GCM_API_VAES_AVX512_INC
 %define GCM_API_VAES_AVX512_INC
 
-section .text
+mksection .text
 default rel
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -77,7 +78,6 @@ FN_NAME(precomp,_):
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vmovdqu  [arg1 + HashKey], xmm6                 ; store HashKey<<1 mod poly
 
-
         PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm7, xmm8
 
         FUNC_RESTORE
@@ -98,7 +98,6 @@ error_precomp:
 
         jmp exit_precomp
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_vaes_avx512 / aes_gcm_enc_192_vaes_avx512 / aes_gcm_enc_256_vaes_avx512
@@ -233,7 +232,6 @@ skip_aad_check_error_enc:
         IMB_ERR_CHECK_END rax
         jmp     exit_enc
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_vaes_avx512 / aes_gcm_dec_192_vaes_avx512 / aes_gcm_dec_256_vaes_avx512
@@ -524,7 +522,6 @@ skip_aad_check_error_enc_IV:
         jmp     exit_enc_IV
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_var_iv_128_vaes_avx512 / aes_gcm_dec_var_iv_192_vaes_avx512 /
 ;       aes_gcm_dec_var_iv_256_vaes_avx512
@@ -679,8 +676,6 @@ skip_aad_check_error_dec_IV:
         jmp     exit_dec_IV
 %endif
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 
 %endif ; GCM_API_VAES_AVX512_INC

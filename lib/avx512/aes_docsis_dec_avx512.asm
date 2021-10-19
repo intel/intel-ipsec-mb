@@ -63,8 +63,7 @@ endstruc
 %define tmp7	r8
 %define tmp8	r9
 
-
-section .data
+mksection .rodata
 default rel
 
 ;;; Precomputed constants for CRC32 (Ethernet FCS)
@@ -119,7 +118,7 @@ byte_len_to_mask_table:
         dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
         dw      0xffff
 
-section .text
+mksection .text
 
 ;; ===================================================================
 ;; ===================================================================
@@ -1075,7 +1074,4 @@ aes_docsis256_dec_crc32_avx512:
 
         ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

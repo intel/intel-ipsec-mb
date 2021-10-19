@@ -149,7 +149,7 @@
 %define GMAC_FN_NAME(x) imb_aes_gmac_ %+ x %+ _256_ %+ avx512
 %endif
 
-section .text
+mksection .text
 default rel
 
 ; need to push 4 registers into stack to maintain
@@ -198,7 +198,6 @@ default rel
         vpclmulqdq      %%GH, %%GH, %%HK, 0x10          ; %%GH = a0*b1
         vpxor           %%GH, %%GH, %%T3
 
-
         vpsrldq         %%T3, %%GH, 8                   ; shift-R %%GH 2 DWs
         vpslldq         %%GH, %%GH, 8                   ; shift-L %%GH 2 DWs
 
@@ -225,7 +224,6 @@ default rel
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vpxor           %%GH, %%GH, %%T1                 ; the result is in %%GH
 %endmacro
-
 
 ; In PRECOMPUTE, the commands filling Hashkey_i_k are not required for avx512
 ; functions, but are kept to allow users to switch cpu architectures between calls
@@ -265,7 +263,6 @@ default rel
         vmovdqu  [%%GDATA + HashKey_8], %%T5
 %endmacro
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; READ_SMALL_DATA_INPUT: Packs xmm register with data when data input is less than 16 bytes.
 ; Returns 0 if data has length 0.
@@ -290,7 +287,6 @@ default rel
 
 %endmacro ; READ_SMALL_DATA_INPUT
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of the data which will not be encrypted.
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
@@ -310,7 +306,6 @@ default rel
 %define %%T1            %11     ; temp reg 1
 %define %%T2            %12
 %define %%T3            %13
-
 
         mov     %%T1, %%A_IN            ; T1 = AAD
         mov     %%T2, %%A_LEN           ; T2 = aadLen
@@ -581,7 +576,6 @@ default rel
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK
 
-
 %macro GHASH_SINGLE_MUL 9
 %define %%GDATA                 %1
 %define %%HASHKEY               %2
@@ -682,7 +676,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %assign j (j+1)
 %endrep
 
-
 vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -691,8 +684,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %endrep
 
 %endif ; %if(%%num_initial_blocks>0)
-
-
 
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -708,7 +699,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vpshufb  reg(i), [rel SHUF_MASK]
 %assign i (i+1)
 %endrep
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1158,7 +1148,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %%_initial_blocks_done:
 
-
 %endmacro
 
 ;;; INITIAL_BLOCKS macro with support for a partial final block.
@@ -1222,7 +1211,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %assign j (j+1)
 %endrep
-
 
 vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %assign i (9-%%num_initial_blocks)
@@ -1332,7 +1320,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         mov      r12, 1
 
         jmp      %%_small_initial_compute_hash
-
 
 %endif                          ; %if %%num_initial_blocks < 8
 
@@ -1516,8 +1503,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
 
-
-
 ; encrypt 8 blocks at a time
 ; ghash the 8 previously encrypted ciphertext blocks
 ; %%GDATA (KEY), %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN are used as pointers only, not modified
@@ -1590,8 +1575,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vmovdqa %%CTR, %%XMM8
 %endif
 
-
-
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
                 vmovdqu %%T1, [%%GDATA + 16*0]
@@ -1615,7 +1598,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vaesenc %%XMM6, %%T1
                 vaesenc %%XMM7, %%T1
                 vaesenc %%XMM8, %%T1
-
 
                 vmovdqu %%T1, [%%GDATA + 16*2]
                 vaesenc %%XMM1, %%T1
@@ -1694,7 +1676,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vaesenc %%XMM6, %%T1
                 vaesenc %%XMM7, %%T1
                 vaesenc %%XMM8, %%T1
-
 
         vmovdqu         %%T1, [rsp + TMP4]
         vmovdqu         %%T5, [%%GDATA + HashKey_5]
@@ -1797,7 +1778,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu         %%T1, [rsp + TMP8]
         vmovdqu         %%T5, [%%GDATA + HashKey]
 
-
         vpclmulqdq      %%T3, %%T1, %%T5, 0x00
         vpxor           %%T7, %%T7, %%T3
 
@@ -1809,7 +1789,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         vpclmulqdq      %%T3, %%T1, %%T5, 0x11
         vpxor           %%T1, %%T4, %%T3
-
 
                 vmovdqu %%T5, [%%GDATA + 16*10]
  %ifndef GCM128_MODE            ; GCM192 or GCM256
@@ -1917,16 +1896,12 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %assign j (j+1)
 %endrep
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
         vpslldq %%T3, %%T6, 8                                   ; shift-L %%T3 2 DWs
         vpsrldq %%T6, %%T6, 8                                   ; shift-R %%T2 2 DWs
         vpxor   %%T7, %%T7, %%T3
         vpxor   %%T1, %%T1, %%T6                                ; accumulate the results in %%T1:%%T7
-
-
 
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;first phase of the reduction
@@ -1953,7 +1928,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         %endif
     %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;second phase of the reduction
         vpclmulqdq      %%T2, %%T3, %%T7, 0x00
@@ -1975,12 +1949,9 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
                 vpshufb %%XMM7, [rel SHUF_MASK]             ; perform a 16Byte swap
         vpshufb %%XMM8, [rel SHUF_MASK]             ; perform a 16Byte swap
 
-
         vpxor   %%XMM1, %%T1
 
-
 %endmacro                       ; GHASH_8_ENCRYPT_8_PARALLEL
-
 
 ; GHASH the last 4 ciphertext blocks.
 %macro  GHASH_LAST_8 16
@@ -2143,9 +2114,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vpxor           %%XMM1, %%XMM1, %%T6
         vpxor           %%T2, %%XMM1, %%T7
 
-
-
-
         vpslldq %%T4, %%T2, 8
         vpsrldq %%T2, %%T2, 8
 
@@ -2162,7 +2130,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vpxor           %%T7, %%T7, %%T2                        ; first phase of the reduction complete
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
         ;second phase of the reduction
         vpclmulqdq      %%T2, %%T3, %%T7, 0x00
         vpsrldq         %%T2, %%T2, 4                           ; shift-R %%T2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
@@ -2174,7 +2141,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vpxor           %%T6, %%T6, %%T4                        ; the result is in %%T6
 %endmacro
-
 
 ; GHASH the last 4 ciphertext blocks.
 %macro  GHASH_LAST_7 15
@@ -2321,9 +2287,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vpxor           %%XMM1, %%XMM1, %%T6
         vpxor           %%T2, %%XMM1, %%T7
 
-
-
-
         vpslldq %%T4, %%T2, 8
         vpsrldq %%T2, %%T2, 8
 
@@ -2340,7 +2303,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vpxor           %%T7, %%T7, %%T2                        ; first phase of the reduction complete
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
         ;second phase of the reduction
         vpclmulqdq      %%T2, %%T3, %%T7, 0x00
         vpsrldq         %%T2, %%T2, 4                           ; shift-R %%T2 1 DW (Shift-R only 1-DW to obtain 2-DWs shift-R)
@@ -2352,8 +2314,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vpxor           %%T6, %%T6, %%T4                        ; the result is in %%T6
 %endmacro
-
-
 
 ;;; Handle encryption of the final partial block
 ;;; IN:
@@ -2404,8 +2364,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %endif
 %endmacro                       ; ENCRYPT_FINAL_PARTIAL_BLOCK
 
-
-
 ; Encryption of a single block
 %macro  ENCRYPT_SINGLE_BLOCK 2
 %define %%GDATA %1
@@ -2419,7 +2377,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %endrep
                 vaesenclast      %%XMM0, [%%GDATA+16*i]
 %endmacro
-
 
 ;; Start of Stack Setup
 
@@ -2449,7 +2406,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu [rsp + LOCAL_STORAGE + 9*16],xmm15
 %endif
 %endmacro
-
 
 %macro FUNC_RESTORE 0
 
@@ -2594,7 +2550,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         je      %%_small_initial_num_blocks_is_2
 
         jmp     %%_small_initial_num_blocks_is_1
-
 
 %%_small_initial_num_blocks_is_8:
         ;; r13   - %%LENGTH
@@ -2838,7 +2793,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %%_initial_num_blocks_is_0:
         INITIAL_BLOCKS  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 0, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
 
-
 %%_initial_blocks_encrypted:
         ;; The entire message was encrypted processed in initial and now need to be hashed
         cmp     r13, 0
@@ -2852,7 +2806,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         cmp     r13, 128
         jl      %%_encrypt_by_8_partial
 
-
 %%_encrypt_by_8_parallel:
         ;; in_order vs. out_order is an optimization to increment the counter without shuffling
         ;; it back into little endian. r15d keeps track of when we need to increent in order so
@@ -2861,12 +2814,9 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         and     r15d, 255
         vpshufb xmm9, [rel SHUF_MASK]
 
-
 %%_encrypt_by_8_new:
         cmp     r15d, 255-8
         jg      %%_encrypt_by_8
-
-
 
         ;; xmm0  - T1
         ;; xmm10 - T2
@@ -2905,7 +2855,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         jge     %%_encrypt_by_8_new
         vpshufb  xmm9, [rel SHUF_MASK]
 
-
 %%_encrypt_by_8_parallel_done:
         ;; Test to see if we need a by 8 with partial block. At this point
         ;; bytes remaining should be either zero or between 113-127.
@@ -2917,10 +2866,8 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ;; is a little faster because it avoids extra shuffles.
         ;; TBD: Might need to account for when we don't have room to increment the counter.
 
-
         ;; Process parallel buffers with a final partial block.
         GHASH_8_ENCRYPT_8_PARALLEL  %%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, in_order, %%ENC_DEC, partial
-
 
         add     %%DATA_OFFSET, 128-16
         sub     r13, 128-16
@@ -2936,7 +2883,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         ENCRYPT_FINAL_PARTIAL_BLOCK xmm8, xmm0, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%ENC_DEC, %%DATA_OFFSET
 
         vpshufb  xmm8, [rel SHUF_MASK]
-
 
 %%_encrypt_done:
 
@@ -2964,7 +2910,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
         vmovdqu [%%GDATA_CTX + AadHash], xmm14      ; my_ctx_data.aad hash = xmm14
 
 %%_enc_dec_done:
-
 
 %endmacro                       ; GCM_ENC_DEC
 
@@ -3024,7 +2969,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 
         vpxor   xmm9, xmm9, xmm14
 
-
 %%_return_T:
         mov     r10, %%AUTH_TAG             ; r10 = authTag
         mov     r11, %%AUTH_TAG_LEN         ; r11 = auth_tag_len
@@ -3064,7 +3008,6 @@ vmovdqu  %%T_key, [%%GDATA_KEY+16*j]
 %endif
 %endmacro ; GCM_COMPLETE
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_precomp_128_avx512 /
 ;       aes_gcm_precomp_192_avx512 /
@@ -3091,8 +3034,6 @@ FN_NAME(precomp,_):
         push    r15
 
         mov     r14, rsp
-
-
 
         sub     rsp, VARIABLE_OFFSET
         and     rsp, ~63                                 ; align rsp to 64 bytes
@@ -3121,7 +3062,6 @@ FN_NAME(precomp,_):
         vpxor    xmm6, xmm6, xmm2                       ; xmm6 holds the HashKey<<1 mod poly
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         vmovdqu  [arg1 + HashKey], xmm6                 ; store HashKey<<1 mod poly
-
 
         PRECOMPUTE arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
@@ -3155,8 +3095,6 @@ error_precomp:
 
         jmp exit_precomp
 %endif
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_init_128_avx512 / aes_gcm_init_192_avx512 / aes_gcm_init_256_avx512
@@ -3250,8 +3188,6 @@ skip_aad_check_error_init:
         IMB_ERR_CHECK_END rax
         jmp     exit_init
 %endif
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_init_var_iv_128_avx512 / aes_gcm_init_var_iv_192_avx512 /
@@ -3363,7 +3299,6 @@ skip_aad_check_error_init_IV:
         jmp     exit_init_IV
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_update_avx512 / aes_gcm_enc_192_update_avx512 /
 ;       aes_gcm_enc_256_update_avx512
@@ -3445,7 +3380,6 @@ skip_in_out_check_error_update_enc:
         IMB_ERR_CHECK_END rax
         jmp     exit_update_enc
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_update_avx512 / aes_gcm_dec_192_update_avx512 /
@@ -3625,7 +3559,6 @@ error_enc_fin:
         jmp     exit_enc_fin
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_finalize_avx512 / aes_gcm_dec_192_finalize_avx512
 ;	aes_gcm_dec_256_finalize_avx512
@@ -3720,7 +3653,6 @@ error_dec_fin:
         IMB_ERR_CHECK_END rax
         jmp     exit_dec_fin
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_avx512 / aes_gcm_enc_192_avx512 / aes_gcm_enc_256_avx512
@@ -3856,7 +3788,6 @@ skip_aad_check_error_enc:
         IMB_ERR_CHECK_END rax
         jmp     exit_enc
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_avx512 / aes_gcm_dec_192_avx512 / aes_gcm_dec_256_avx512
@@ -3994,7 +3925,6 @@ skip_aad_check_error_dec:
         IMB_ERR_CHECK_END rax
         jmp     exit_dec
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_var_iv_128_avx512 / aes_gcm_enc_var_iv_192_avx512 /
@@ -4148,7 +4078,6 @@ skip_aad_check_error_enc_IV:
         jmp     exit_enc_IV
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_var_iv_128_avx512 / aes_gcm_dec_var_iv_192_avx512 /
 ;       aes_gcm_dec_var_iv_256_avx512
@@ -4298,7 +4227,6 @@ skip_aad_check_error_dec_IV:
         IMB_ERR_CHECK_END rax
         jmp     exit_dec_IV
 %endif
-
 
 %ifdef GCM128_MODE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4573,7 +4501,4 @@ error_gmac_update:
         jmp     exit_gmac_update
 %endif
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

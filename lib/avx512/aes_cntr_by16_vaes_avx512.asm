@@ -37,7 +37,7 @@
 %include "include/const.inc"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -172,7 +172,7 @@ initial_12_IV_counter:
 mask_16_bytes:
         dq      0x000000000000ffff
 
-section .text
+mksection .text
 default rel
 
 %ifdef LINUX
@@ -936,8 +936,6 @@ default rel
 
 %endmacro                       ; INITIAL_BLOCKS_PARTIAL
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Main CNTR macro
 ;;; - operates on single stream
@@ -1117,7 +1115,6 @@ default rel
 
 %endmacro
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Restore register content for the caller
 %macro FUNC_RESTORE 1
@@ -1223,7 +1220,6 @@ default rel
         je      %%_small_initial_num_blocks_is_2
 
         jmp     %%_small_initial_num_blocks_is_1
-
 
 %assign %%i 1
 %rep 16
@@ -1730,7 +1726,6 @@ APPEND(%%_small_initial_num_blocks_is_, %%i):
 ;;; - process 16x16 byte blocks at a time until all are done in %%_encrypt_by_16_new
 ;;; - XOR's plaintext or ciphertext (depending on the direction) with 32-bit granularity, for BIP calculation
 
-
         mov             %%LENGTH, arg5
         mov             %%BIP, arg6
 
@@ -2048,6 +2043,4 @@ aes_cntr_pon_dec_128_vaes_avx512:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

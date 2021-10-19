@@ -56,7 +56,7 @@
 %define ZUC_EIA3_N64B      asm_Eia3_Nx64B_AVX512_16
 %endif
 
-section .data
+mksection .rodata
 default rel
 
 index_to_mask:
@@ -118,7 +118,7 @@ endstruc
 %define OFS_R1  (16*(4*16))
 %define OFS_R2  (OFS_R1 + (4*16))
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 
@@ -601,7 +601,6 @@ MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
 FLUSH_JOB_ZUC256_EEA3:
         endbranch64
         FLUSH_JOB_ZUC_EEA3 256
-
 
 %macro ZUC_EIA3_16_BUFFER 5
 %define %%OOO           %1 ; [in] Pointer to ZUC OOO manager
@@ -1206,6 +1205,4 @@ FLUSH_JOB_ZUC256_EIA3:
         endbranch64
         FLUSH_JOB_ZUC_EIA3 256
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

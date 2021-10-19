@@ -45,7 +45,7 @@
 %include "include/reg_sizes.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
-section .data
+mksection .rodata
 default rel
 align 64
 K00_19:	;ddq 0x5A8279995A8279995A8279995A827999
@@ -90,7 +90,7 @@ PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 
@@ -197,7 +197,6 @@ section .text
 	vpxord		%%WT, %%WT, %%WTp13
 	vprold		%%WT, %%WT, 1
 %endmacro
-
 
 ; Note this is reading in two blocks of data from each lane,
 ; in preparation for the upcoming needed transpose to build msg schedule.
@@ -442,6 +441,4 @@ lastLoop:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

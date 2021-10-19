@@ -50,7 +50,7 @@
 
 extern sha1_x16_avx512
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -93,7 +93,7 @@ lane_13: dq  13
 lane_14: dq  14
 lane_15: dq  15
 
-section .text
+mksection .text
 
 %if 1
 %ifdef LINUX
@@ -361,7 +361,4 @@ return:
 	mov	rsp, [rsp + _rsp_save]
 	ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

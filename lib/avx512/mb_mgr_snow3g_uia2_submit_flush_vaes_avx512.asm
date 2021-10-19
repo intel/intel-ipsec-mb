@@ -44,7 +44,7 @@
 %define FLUSH_JOB_SNOW3G_UIA2           flush_job_snow3g_uia2_avx512
 %define SNOW3G_F9_1_BUFFER_INT          snow3g_f9_1_buffer_internal_avx
 %endif
-section .data
+mksection .rodata
 default rel
 
 extern snow3g_f9_1_buffer_internal_vaes_avx512
@@ -67,7 +67,7 @@ extern snow3g_f9_1_buffer_internal_avx
 
 %define job_rax          rax
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 
@@ -184,7 +184,6 @@ section .text
         jmp             %%init_lanes_uia2
 %endif
 
-
 %%process_job_uia2:
         ;; preserve state for function call
         mov     tmp_state, state
@@ -230,7 +229,6 @@ section .text
 
         jmp     %%return_uia2
 
-
 %%init_all_lanes_uia2:
         ;; set initialized lanes mask for all 16 lanes
         ;; this is used to update OOO MGR after initialization
@@ -251,7 +249,6 @@ section .text
         ;; process first job
         jmp     %%process_job_uia2
 
-
 %%return_uia2:
 %ifndef SAFE_DATA
         vzeroupper
@@ -268,7 +265,6 @@ section .text
         jmp     %%return_uia2
 %endmacro
 
-
 ; JOB* SUBMIT_JOB_SNOW3G_UIA2(MB_MGR_SNOW3G_OOO *state, IMB_JOB *job)
 ; arg 1 : state
 ; arg 2 : job
@@ -282,7 +278,6 @@ SUBMIT_JOB_SNOW3G_UIA2:
         endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 submit, avx512_gen1
 
-
 ; JOB* FLUSH_JOB_SNOW3G_UIA2(MB_MGR_SNOW3G_OOO *state)
 ; arg 1 : state
 MKGLOBAL(FLUSH_JOB_SNOW3G_UIA2_GEN2,function,internal)
@@ -295,6 +290,4 @@ FLUSH_JOB_SNOW3G_UIA2:
         endbranch64
         SUBMIT_FLUSH_JOB_SNOW3G_UIA2 flush, avx512_gen1
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

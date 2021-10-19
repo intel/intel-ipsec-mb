@@ -52,7 +52,7 @@ extern ethernet_fcs_avx512_local
 ;;         q     = 0x46b927ec
 ;;         p_res = 0x53900000
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -102,7 +102,7 @@ byte64_len_to_mask_table:
         dq      0x3fffffffffffffff, 0x7fffffffffffffff
         dq      0xffffffffffffffff
 
-section .text
+mksection .text
 
 %define xtmp1   xmm4
 %define xtmp2   xmm5
@@ -139,7 +139,6 @@ struc STACKFRAME
 _gpr_save:      resq    4  ; Memory to save GP registers
 _job_save:      resq    1  ; Memory to save job pointer
 endstruc
-
 
 ;; =============================================================================
 ;; Barrett reduction from 128-bits to 32-bits modulo 0x53900000 polynomial
@@ -530,6 +529,4 @@ submit_job_pon_dec_no_ctr_vaes_avx512:
         AES128_CTR_PON_DEC NO_CTR
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -58,7 +58,7 @@ default rel
 %define msg             arg2
 %define len             arg3
 
-section .text
+mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -267,7 +267,6 @@ crc32_by16_vclmul_avx512:
 	vpclmulqdq	xmm7, xmm10, 0x10
 	vpxor		xmm7, xmm0
 
-
 	;; barrett reduction
 .barrett:
 	vmovdqa		xmm10, [arg4 + crc32_const_reduce_64b_to_32b]
@@ -370,8 +369,7 @@ align 32
 	vpxor	xmm7, xmm0      ; xor the initial crc value
 	jmp	.done_128
 
-
-section .data
+mksection .rodata
 
 align 16
 pshufb_shf_table:
@@ -396,6 +394,4 @@ byte_len_to_mask_table:
         dw      0x0fff, 0x1fff, 0x3fff, 0x7fff,
         dw      0xffff
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

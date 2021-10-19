@@ -2128,11 +2128,10 @@ endstruc
 
 %endmacro
 
-
 ;;; ========================================================
 ;;; DATA
 
-section .data
+mksection .rodata
 default rel
 align 64
 mask_values:
@@ -2354,7 +2353,7 @@ shuffle_reg:
 
 ;;; ========================================================
 ;;; CODE
-section .text
+mksection .text
 
 ;;; arg 1 : pointer to DES OOO structure
 ;;; arg 2 : size in bytes
@@ -2410,6 +2409,4 @@ docsis_des_x16_dec_avx512:
         GENERIC_DES_DEC DOCSIS
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

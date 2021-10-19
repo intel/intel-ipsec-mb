@@ -165,7 +165,7 @@ _gpr_save:      resq    8  ; Memory to save GP registers
 _rsp_save:      resq    1  ; Memory to save RSP
 endstruc
 
-section .text
+mksection .text
 
 ;; =============================================================================
 ;; =============================================================================
@@ -1580,7 +1580,6 @@ APPEND(%%_shuffle_blocks_, i):
         POLY1305_MUL_REDUCE %%A0, %%A1, %%A2, %%R0, %%R1, \
                             %%T0, %%T1, %%T2, %%T3, %%GP_RAX, %%GP_RDX
 
-
 %%_poly1305_blocks_exit:
 %endmacro
 
@@ -1828,6 +1827,4 @@ poly1305_mac_fma_avx512:
         FUNC_EXIT
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

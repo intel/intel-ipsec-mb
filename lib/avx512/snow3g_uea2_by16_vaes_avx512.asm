@@ -29,7 +29,7 @@
 %include "include/imb_job.asm"
 %include "include/constant_lookup.asm"
 
-section .data
+mksection .rodata
 default rel
 
 align 64
@@ -260,7 +260,7 @@ align 64
 all_fs:
         times 16 dq 0xffffffffffffffff
 
-section .text
+mksection .text
 
 %xdefine KEYSTREAM              zmm0
 %xdefine KEYSTREAM_XMM_TEMP     XWORD(KEYSTREAM)
@@ -412,7 +412,6 @@ endstruc
         ;; FSM[1] = R
         vmovdqa32       %%FSM_X1, %%TEMP_R
 %endmacro
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CLOCK FSM
@@ -1058,7 +1057,6 @@ endstruc
 
         INIT_CONSTANTS  %%GEN
         LFSR_FSM_STATE  %%STATE_PTR, LOAD
-
 
         ;; used as offset for storing key stream on the stack frame
         xor             %%TGP0, %%TGP0

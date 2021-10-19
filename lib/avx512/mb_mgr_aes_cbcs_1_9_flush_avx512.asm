@@ -195,7 +195,7 @@ return_null:
         xor     job_rax, job_rax
         jmp     return
 
-section .data
+mksection .rodata
 default rel
 
 align 64
@@ -209,6 +209,4 @@ index_to_lane16:
         dq      0x000000000000000c, 0x000000000000000d
         dq      0x000000000000000e, 0x000000000000000f
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

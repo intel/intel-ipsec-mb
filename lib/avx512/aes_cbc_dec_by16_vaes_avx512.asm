@@ -367,7 +367,6 @@
         je      %%final_num_blocks_is_2
         jmp     %%final_num_blocks_is_1
 
-
 %%final_num_blocks_is_15:
         FINAL_BLOCKS %%PLAIN_OUT, %%CIPH_IN, zIV, 15, zBLK_0_3, zBLK_4_7, \
                      zBLK_8_11, zBLK_12_15, zTMP0, zTMP1, zTMP2, zTMP3, \
@@ -464,7 +463,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-section .text
+mksection .text
 
 %ifndef CBCS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -518,8 +517,6 @@ aes_cbc_dec_256_vaes_avx512:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 
 %endif ;; CBCS
