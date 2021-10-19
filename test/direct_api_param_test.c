@@ -1052,6 +1052,65 @@ test_hec_api(struct IMB_MGR *mgr)
         return 0;
 }
 
+/*
+ * @brief Performs direct CRC API invalid param tests
+ */
+static int
+test_crc_api(struct IMB_MGR *mgr)
+{
+        uint8_t in_buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+        unsigned i, j;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        /* Test CRC API's */
+        struct {
+                crc32_fn_t fn;
+                const char *name;
+        } fn1_ptrs[] = {
+                { mgr->crc32_ethernet_fcs, "CRC32 ETHERNET FCS" },
+                { mgr->crc32_sctp, "CRC32 SCTP" },
+                { mgr->crc32_wimax_ofdma_data, "CRC32 WIMAX OFDMA DATA" },
+                { mgr->crc24_lte_a, "CRC24 LTE A" },
+                { mgr->crc24_lte_b, "CRC24 LTE B" },
+                { mgr->crc16_x25, "CRC16 X25" },
+                { mgr->crc16_fp_data, "CRC16 FP DATA" },
+                { mgr->crc11_fp_header, "CRC11 FP HEADER" },
+                { mgr->crc10_iuup_data, "CRC10 IUUP DATA" },
+                { mgr->crc8_wimax_ofdma_hcs, "CRC8 WIMAX OFDMA HCS" },
+                { mgr->crc7_fp_header, "CRC7 FP HEADER" },
+                { mgr->crc6_iuup_header, "CRC6 IUUP HEADER" },
+        };
+
+        struct {
+                const void *src;
+                const uint64_t len;
+                IMB_ERR exp_err;
+        } fn1_args[] = {
+                { NULL, sizeof(in_buf), IMB_ERR_NULL_SRC },
+                { NULL, 0, 0 },
+                { in_buf, sizeof(in_buf), 0 },
+        };
+
+        for (i = 0; i < DIM(fn1_ptrs); i++) {
+                for (j = 0; j < DIM(fn1_args); j++) {
+                        fn1_ptrs[i].fn(fn1_args[j].src,
+                                       fn1_args[j].len);
+
+                        if (unexpected_err(mgr, fn1_args[j].exp_err,
+                                           fn1_ptrs[i].name))
+                        return 1;
+                }
+        }
+
+        return 0;
+}
+
 int
 direct_api_param_test(struct IMB_MGR *mb_mgr)
 {
@@ -1099,6 +1158,9 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_hec_api(mb_mgr);
+        run++;
+
+        errors += test_crc_api(mb_mgr);
         run++;
 
         test_suite_update(&ts, run - errors, errors);

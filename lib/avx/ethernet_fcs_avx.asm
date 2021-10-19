@@ -30,6 +30,8 @@
 %include "include/crc32_refl_const.inc"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
+%include "include/error.inc"
+
 [bits 64]
 default rel
 
@@ -72,8 +74,19 @@ MKGLOBAL(ETHERNET_FCS_FN, function,)
 ETHERNET_FCS_FN:
         endbranch64
 %ifdef SAFE_PARAM
+
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Check len == 0
+        or              arg2, arg2
+        jz              end_param_check
+
+        ;; Check in == NULL (invalid if len != 0)
         or              arg1, arg1
-        jz              .wrong_param
+        jz              wrong_param
+
+end_param_check:
 %endif
         mov             rax, rsp
         sub             rsp, STACK_FRAME_size
@@ -110,8 +123,23 @@ ETHERNET_FCS_FN:
         clear_scratch_xmms_avx_asm
 %endif
         mov             rsp, [rsp + _rsp_save]
-.wrong_param:
+
         ret
+
+%ifdef SAFE_PARAM
+wrong_param:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check in != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_SRC
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+
+        ret
+%endif
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

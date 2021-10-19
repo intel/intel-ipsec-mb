@@ -30,6 +30,8 @@
 %include "include/crc32_refl_const.inc"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
+%include "include/error.inc"
+
 [bits 64]
 default rel
 
@@ -71,8 +73,19 @@ MKGLOBAL(CRC16_X25_FN, function,)
 CRC16_X25_FN:
         endbranch64
 %ifdef SAFE_PARAM
+
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Check len == 0
+        or              arg2, arg2
+        jz              .end_param_check
+
+        ;; Check in == NULL (invalid if len != 0)
         or              arg1, arg1
         jz              .wrong_param
+
+.end_param_check:
 %endif
 %ifndef LINUX
         mov             rax, rsp
@@ -111,8 +124,21 @@ CRC16_X25_FN:
         movdqa          xmm13, [rsp + _xmm_save + 16*7]
         mov             rsp, [rsp + _rsp_save]
 %endif
-.wrong_param:
         ret
+
+%ifdef SAFE_PARAM
+.wrong_param:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check in != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_SRC
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+
+        ret
+%endif
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

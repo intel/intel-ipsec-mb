@@ -2142,7 +2142,7 @@ is_job_invalid(IMB_MGR *state, const IMB_JOB *job)
         case IMB_AUTH_CRC8_WIMAX_OFDMA_HCS:
         case IMB_AUTH_CRC7_FP_HEADER:
         case IMB_AUTH_CRC6_IUUP_HEADER:
-                if (job->src == NULL) {
+                if (job->src == NULL && job->msg_len_to_hash_in_bytes != 0) {
                         imb_set_errno(state, IMB_ERR_JOB_NULL_SRC);
                         return 1;
                 }
