@@ -301,6 +301,61 @@ test_gcm_init(struct IMB_MGR *mgr, struct gcm_key_data *key,
         return 0;
 }
 
+/* GCM Init variable IV len tests */
+static int
+test_gcm_init_var_iv(struct IMB_MGR *mgr, struct gcm_key_data *key,
+                     struct gcm_context_data *ctx, const uint8_t *iv,
+                     const uint8_t *aad)
+{
+        uint64_t i;
+        const uint64_t aad_len = 28;
+        const uint64_t iv_len = 16;
+
+        struct gcm_init_var_iv_fn {
+                aes_gcm_init_var_iv_t func;
+                const char *func_name;
+        } fn_ptrs[] = {
+             { mgr->gcm128_init_var_iv, "GCM-128 INIT VAR IV" },
+             { mgr->gcm192_init_var_iv, "GCM-192 INIT VAR IV" },
+             { mgr->gcm256_init_var_iv, "GCM-256 INIT VAR IV" },
+        };
+
+        struct fn_args {
+                struct gcm_key_data *key;
+                struct gcm_context_data *ctx;
+                const uint8_t *iv;
+                const uint64_t iv_len;
+                const uint8_t *aad;
+                uint64_t aad_len;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, ctx, iv, iv_len, aad, aad_len, IMB_ERR_NULL_EXP_KEY },
+                { key, NULL, iv, iv_len, aad, aad_len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, iv_len, aad, aad_len, IMB_ERR_NULL_IV },
+                { key, ctx, iv, 0, aad, aad_len, IMB_ERR_IV_LEN },
+                { key, ctx, iv, iv_len, NULL, aad_len, IMB_ERR_NULL_AAD },
+                { key, ctx, iv, iv_len, aad, 0, 0 },
+        };
+
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                uint64_t j;
+
+                /* Iterate over args */
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
+
+                        fn_ptrs[i].func(ap->key, ap->ctx, ap->iv,
+                                        ap->iv_len, ap->aad, ap->aad_len);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].func_name))
+                                return 1;
+                }
+                printf(".");
+        }
+        return 0;
+}
+
 /* GCM Encrypt and Decrypt Update tests */
 static int
 test_gcm_enc_dec_update(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
@@ -574,6 +629,10 @@ test_gcm_api(struct IMB_MGR *mgr)
 
         /* GCM Init tests */
         if (test_gcm_init(mgr, key_data, ctx, iv, aad))
+                return 1;
+
+        /* GCM Init variable IV len tests */
+        if (test_gcm_init_var_iv(mgr, key_data, ctx, iv, aad))
                 return 1;
 
         /* GCM Encrypt and Decrypt update tests */

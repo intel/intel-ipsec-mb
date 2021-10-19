@@ -2326,21 +2326,24 @@ FN_NAME(init_var_iv,_):
 %endif
 
 %ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_init_IV
+        jz      error_init_IV
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_init_IV
+        jz      error_init_IV
 
         ;; Check IV != NULL
         cmp     arg3, 0
-        jz      exit_init_IV
+        jz      error_init_IV
 
         ;; Check iv_len != 0
         cmp     arg4, 0
-        jz      exit_init_IV
+        jz      error_init_IV
 
         ;; Check if aad_len == 0
         cmp     arg6, 0
@@ -2348,7 +2351,7 @@ FN_NAME(init_var_iv,_):
 
         ;; Check aad != NULL (aad_len != 0)
         cmp     arg5, 0
-        jz      exit_init_IV
+        jz      error_init_IV
 
 skip_aad_check_init_IV:
 %endif
@@ -2377,6 +2380,38 @@ exit_init_IV:
 	pop	r13
 	pop	r12
         ret
+
+%ifdef SAFE_PARAM
+error_init_IV:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check IV != NULL
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_IV
+
+        ;; Check iv_len != 0
+        IMB_ERR_CHECK_ZERO arg4, rax, IMB_ERR_IV_LEN
+
+        ;; Check if aad_len == 0
+        cmp     arg6, 0
+        jz      skip_aad_check_error_init_IV
+
+        ;; Check aad != NULL (aad_len != 0)
+        IMB_ERR_CHECK_NULL arg5, rax, IMB_ERR_NULL_AAD
+
+skip_aad_check_error_init_IV:
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_init_IV
+%endif
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_update_sse / aes_gcm_enc_192_update_sse / aes_gcm_enc_256_update_sse
