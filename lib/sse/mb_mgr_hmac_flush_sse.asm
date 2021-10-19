@@ -35,7 +35,7 @@
 
 extern sha1_mult_sse
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -58,7 +58,7 @@ one:	dq  1
 two:	dq  2
 three:	dq  3
 
-section .text
+mksection .text
 
 %if 1
 %ifdef LINUX
@@ -72,7 +72,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbx, rbp, r12-r15
 %define idx             rbp
@@ -297,6 +296,4 @@ return:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

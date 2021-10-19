@@ -38,7 +38,7 @@
 %define arg3    r8
 %endif
 
-section .text
+mksection .text
 
 ; void memcpy_fn_sse_16(void *dst, const void *src, const size_t size)
 MKGLOBAL(memcpy_fn_sse_16,function,internal)
@@ -68,6 +68,4 @@ memcpy_fn_sse_128:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

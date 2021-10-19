@@ -33,7 +33,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
 
-section .data
+mksection .rodata
 default rel
 align 16
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
@@ -47,7 +47,7 @@ K40_59:                  ;ddq 0x8F1BBCDC8F1BBCDC8F1BBCDC8F1BBCDC
 K60_79:                  ;ddq 0xCA62C1D6CA62C1D6CA62C1D6CA62C1D6
 	dq 0xCA62C1D6CA62C1D6, 0xCA62C1D6CA62C1D6
 
-section .text
+mksection .text
 
 ;; code to compute quad SHA1 using SSE
 ;; derived from ...\sha1_multiple\sha1_quad4.asm
@@ -432,6 +432,4 @@ lloop:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

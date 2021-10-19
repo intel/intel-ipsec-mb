@@ -46,7 +46,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
-section .data
+mksection .rodata
 default rel
 align 64
 MKGLOBAL(K512_2,data,internal)
@@ -135,7 +135,7 @@ K512_2:
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq	0x08090a0b0c0d0e0f0001020304050607
 	dq 0x0001020304050607, 0x08090a0b0c0d0e0f
 
-section .text
+mksection .text
 
 %ifdef LINUX ; Linux definitions
  %define arg1    rdi
@@ -179,8 +179,6 @@ section .text
 %define T1  xmm14
 %define TMP xmm15
 
-
-
 %define SZ2	2*SHA512_DIGEST_WORD_SIZE	; Size of one vector register
 %define ROUNDS 80*SZ2
 
@@ -212,7 +210,6 @@ endstruc
 	shufpd	%%t0, %%r1, 11b		; t0 = b1 a1
 %endm
 
-
 %macro ROTATE_ARGS 0
 %xdefine TMP_ h
 %xdefine h g
@@ -242,7 +239,6 @@ endstruc
 %macro PRORQ 2
 	PRORQ	%1, %2, TMP
 %endmacro
-
 
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_00_15 2
@@ -289,7 +285,6 @@ endstruc
 	ROTATE_ARGS
 %endm
 
-
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_16_XX 2
 %define %%T1 %1
@@ -314,8 +309,6 @@ endstruc
 
 	ROUND_00_15 %%T1, %%i
 %endm
-
-
 
 ;; SHA512_ARGS:
 ;;   UINT128 digest[8];  // transposed digests
@@ -384,7 +377,6 @@ lloop:
 	DBGPRINTL "]"
 	add	IDX, 8 * 16 ;; increment by a message block
 
-
 %assign i (i*4)
 
 	jmp	Lrounds_16_xx
@@ -445,6 +437,4 @@ Lrounds_16_xx:
 DBGPRINTL "====================== exit sha512_x2_sse code =====================\n"
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -213,7 +213,6 @@ default rel
         pxor    %%GH, %%T3
         pxor    %%T1, %%T2                              ; <%%T1:%%GH> holds the result of the carry-less multiplication of %%GH by %%HK
 
-
         ;first phase of the reduction
         movdqa  %%T2, %%GH
         movdqa  %%T3, %%GH
@@ -247,9 +246,7 @@ default rel
         pxor    %%GH, %%T2
         pxor    %%GH, %%T1                              ; the result is in %%T1
 
-
 %endmacro
-
 
 %macro PRECOMPUTE 8
 %define	%%GDATA	%1
@@ -261,14 +258,12 @@ default rel
 %define	%%T5	%7
 %define	%%T6	%8
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Haskey_i_k holds XORed values of the low and high parts of the Haskey_i
         movdqa  %%T4, %%HK
         pshufd  %%T1, %%HK, 01001110b
         pxor    %%T1, %%HK
         movdqu  [%%GDATA + HashKey_k], %%T1
-
 
         GHASH_MUL %%T4, %%HK, %%T1, %%T2, %%T3, %%T5, %%T6      ;  %%T4 = HashKey^2<<1 mod poly
         movdqu  [%%GDATA + HashKey_2], %%T4                         ;  [HashKey_2] = HashKey^2<<1 mod poly
@@ -282,7 +277,6 @@ default rel
         pxor    %%T1, %%T4
         movdqu  [%%GDATA + HashKey_3_k], %%T1
 
-
         GHASH_MUL %%T4, %%HK, %%T1, %%T2, %%T3, %%T5, %%T6              ;  %%T4 = HashKey^4<<1 mod poly
         movdqu  [%%GDATA + HashKey_4], %%T4
         pshufd  %%T1, %%T4, 01001110b
@@ -294,7 +288,6 @@ default rel
         pshufd  %%T1, %%T4, 01001110b
         pxor    %%T1, %%T4
         movdqu  [%%GDATA + HashKey_5_k], %%T1
-
 
         GHASH_MUL %%T4, %%HK, %%T1, %%T2, %%T3, %%T5, %%T6              ;  %%T4 = HashKey^6<<1 mod poly
         movdqu  [%%GDATA + HashKey_6], %%T4
@@ -314,9 +307,7 @@ default rel
         pxor    %%T1, %%T4
         movdqu  [%%GDATA + HashKey_8_k], %%T1
 
-
 %endmacro
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; READ_SMALL_DATA_INPUT: Packs xmm register with data when data input is less than 16 bytes.
@@ -337,7 +328,6 @@ default rel
 	mov	%%END_READ_LOCATION, %%INPUT
 	add	%%END_READ_LOCATION, %%LENGTH
 	xor	%%TMP1, %%TMP1
-
 
 	cmp	%%COUNTER, 8
 	jl	%%_byte_loop_2
@@ -368,7 +358,6 @@ default rel
 
 %endmacro ; READ_SMALL_DATA_INPUT
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CALC_AAD_HASH: Calculates the hash of the data which will not be encrypted.
 ; Input: The input data (A_IN), that data's length (A_LEN), and the hash key (HASH_KEY).
@@ -390,7 +379,6 @@ default rel
 %define %%T3            %13
 %define %%T4            %14
 %define %%T5            %15     ; temp reg 5
-
 
         mov     %%T1, %%A_IN            ; T1 = AAD
         mov     %%T2, %%A_LEN           ; T2 = aadLen
@@ -613,7 +601,6 @@ default rel
 
 %%_data_read:				;Finished reading in data
 
-
 	movdqu	xmm9, [%%GDATA_CTX + PBlockEncKey]	;xmm9 = ctx_data.partial_block_enc_key
 
 	lea	r12, [SHIFT_MASK]
@@ -640,7 +627,6 @@ default rel
 	pshufb	xmm3, [SHUF_MASK]
 	pshufb	xmm3, xmm2
 	pxor	%%AAD_HASH, xmm3
-
 
 	cmp	r15,0
 	jl	%%_partial_incomplete_1
@@ -727,7 +713,6 @@ default rel
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK
 
-
 ; if a = number of total plaintext bytes
 ; b = floor(a/16)
 ; %%num_initial_blocks = b mod 8;
@@ -767,7 +752,6 @@ default rel
 	        ; start AES for %%num_initial_blocks blocks
 	        movdqu  %%CTR, [%%GDATA_CTX + CurCount]	; %%CTR = Y0
 
-
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
                 paddd   %%CTR, [ONE]           ; INCR Y0
@@ -795,7 +779,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]
 %assign j (j+1)
 %endrep
 
-
 movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 for GCM192)
 %assign i (9-%%num_initial_blocks)
 %rep %%num_initial_blocks
@@ -815,7 +798,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
                 pshufb  reg(i), [SHUF_MASK]     ; prepare ciphertext for GHASH computations
 %assign i (i+1)
 %endrep
-
 
 %assign i (8-%%num_initial_blocks)
 %assign j (9-%%num_initial_blocks)
@@ -879,7 +861,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
                 pxor    %%XMM7, %%T_key
                 pxor    %%XMM8, %%T_key
 
-
 %assign i 1
 %rep    NROUNDS       						; do early (13) rounds (11 for GCM192)
                 movdqu  %%T_key, [%%GDATA_KEY+16*i]
@@ -893,7 +874,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
                 aesenc  %%XMM8, %%T_key
 %assign i (i+1)
 %endrep
-
 
                 movdqu          %%T_key, [%%GDATA_KEY+16*i]		; do final key round
                 aesenclast      %%XMM1, %%T_key
@@ -977,10 +957,7 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
 %%_initial_blocks_done:
 
-
 %endmacro
-
-
 
 ; encrypt 8 blocks at a time
 ; ghash the 8 previously encrypted ciphertext blocks
@@ -1128,7 +1105,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
                 aesenc  %%XMM7, %%T1
                 aesenc  %%XMM8, %%T1
 
-
                 movdqu  %%T1, [%%GDATA + 16*2]
                 aesenc  %%XMM1, %%T1
                 aesenc  %%XMM2, %%T1
@@ -1210,7 +1186,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         pxor    %%T7, %%T3
         pxor    %%T6, %%T2
 
-
                 movdqu  %%T1, [%%GDATA + 16*6]
                 aesenc  %%XMM1, %%T1
                 aesenc  %%XMM2, %%T1
@@ -1266,7 +1241,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
                 aesenc  %%XMM7, %%T1
                 aesenc  %%XMM8, %%T1
 
-
         ;; %%XMM8, %%T5 hold the values for the two operands which are carry-less multiplied
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Karatsuba Method
@@ -1292,7 +1266,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
                 aesenc  %%XMM6, %%T1
                 aesenc  %%XMM7, %%T1
                 aesenc  %%XMM8, %%T1
-
 
 %ifdef GCM128_MODE
 		movdqu	%%T5, [%%GDATA + 16*10]
@@ -1384,21 +1357,15 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 %assign j (j+1)
 %endrep
 
-
-
-
         pxor    %%T2, %%T6
         pxor    %%T2, %%T4
         pxor    %%T2, %%T7
-
 
         movdqa  %%T3, %%T2
         pslldq  %%T3, 8                                 ; shift-L %%T3 2 DWs
         psrldq  %%T2, 8                                 ; shift-R %%T2 2 DWs
         pxor    %%T7, %%T3
         pxor    %%T4, %%T2                              ; accumulate the results in %%T4:%%T7
-
-
 
         ;first phase of the reduction
         movdqa  %%T2, %%T7
@@ -1442,11 +1409,9 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         pxor    %%T7, %%T2
         pxor    %%T7, %%T4                              ; the result is in %%T4
 
-
         pxor    %%XMM1, %%T7
 
 %endmacro
-
 
 ; GHASH the last 4 ciphertext blocks.
 %macro	GHASH_LAST_8 16
@@ -1481,7 +1446,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         movdqa  %%T7, %%XMM1
         movdqa  %%XMM1, %%T2                            ; result in %%T6, %%T7, %%XMM1
 
-
         ; Karatsuba Method
         movdqa  %%T1, %%XMM2
         pshufd  %%T2, %%XMM2, 01001110b
@@ -1496,7 +1460,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         pxor    %%T6, %%T1
         pxor    %%T7, %%XMM2
         pxor    %%XMM1, %%T2                            ; results accumulated in %%T6, %%T7, %%XMM1
-
 
         ; Karatsuba Method
         movdqa  %%T1, %%XMM3
@@ -1573,7 +1536,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         pxor    %%T7, %%XMM7
         pxor    %%XMM1, %%T2                            ; results accumulated in %%T6, %%T7, %%XMM1
 
-
         ; Karatsuba Method
         movdqa  %%T1, %%XMM8
         pshufd  %%T2, %%XMM8, 01001110b
@@ -1591,13 +1553,11 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         pxor    %%T2, %%T6
         pxor    %%T2, %%T7                              ; middle section of the temp results combined as in Karatsuba algorithm
 
-
         movdqa  %%T4, %%T2
         pslldq  %%T4, 8                                 ; shift-L %%T4 2 DWs
         psrldq  %%T2, 8                                 ; shift-R %%T2 2 DWs
         pxor    %%T7, %%T4
         pxor    %%T6, %%T2                              ; <%%T6:%%T7> holds the result of the accumulated carry-less multiplications
-
 
         ;first phase of the reduction
         movdqa %%T2, %%T7
@@ -1651,7 +1611,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
                 aesenclast      %%ST, %%T1
 %endmacro
 
-
 ;; Start of Stack Setup
 
 %macro FUNC_SAVE 0
@@ -1681,7 +1640,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 %endif
 %endmacro
 
-
 %macro FUNC_RESTORE 0
 
 %ifdef SAFE_DATA
@@ -1708,7 +1666,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         pop     r13
         pop     r12
 %endmacro
-
 
 %macro CALC_J0 15
 %define %%KEY           %1 ;; [in] Pointer to GCM KEY structure
@@ -1790,7 +1747,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 	movdqu	[%%GDATA_CTX + CurCount], xmm2		; ctx_data.current_counter = iv
 %endmacro
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GCM_ENC_DEC Encodes/Decodes given data. Assumes that the passed gcm_context_data
 ; struct has been initialized by GCM_INIT.
@@ -1827,7 +1783,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 %endif
 	movdqu	xmm13, [%%GDATA_KEY + HashKey]                 ; xmm13 = HashKey
 	movdqu	xmm8, [%%GDATA_CTX + AadHash]
-
 
 	PARTIAL_BLOCK %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%PLAIN_CYPH_LEN, %%DATA_OFFSET, xmm8, xmm13, %%ENC_DEC
 
@@ -1876,7 +1831,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         sub     r13, 16*4
         jmp     %%_initial_blocks_encrypted
 
-
 %%_initial_num_blocks_is_3:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 3, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
         sub     r13, 16*3
@@ -1894,7 +1848,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 %%_initial_num_blocks_is_0:
 	INITIAL_BLOCKS	%%GDATA_KEY, %%GDATA_CTX, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, r13, %%DATA_OFFSET, 0, xmm12, xmm13, xmm14, xmm15, xmm11, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm10, xmm0, %%ENC_DEC
 
-
 %%_initial_blocks_encrypted:
         cmp     r13, 0
         je      %%_zero_cipher_left
@@ -1909,8 +1862,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 %%_encrypt_by_8_new:
         cmp     r15d, 255-8
         jg      %%_encrypt_by_8
-
-
 
         add     r15b, 8
 	GHASH_8_ENCRYPT_8_PARALLEL	%%GDATA_KEY, %%CYPH_PLAIN_OUT, %%PLAIN_CYPH_IN, %%DATA_OFFSET, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm9, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8, xmm15, out_order, %%ENC_DEC
@@ -1932,12 +1883,8 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
         pshufb  xmm9, [SHUF_MASK]
 
-
-
-
 %%_eight_cipher_left:
 	GHASH_LAST_8	%%GDATA_KEY, xmm0, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8
-
 
 %%_zero_cipher_left:
 	movdqu	[%%GDATA_CTX + AadHash], xmm14
@@ -2001,7 +1948,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
         pshufb  xmm9, [SHUF_MASK]               ; shuffle xmm9 back to output as ciphertext
         %endif
 
-
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ; output r13 Bytes
         movq    rax, xmm9
@@ -2025,7 +1971,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 %%_multiple_of_16_bytes:
 
 %endmacro
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; GCM_COMPLETE Finishes Encryption/Decryption of last partial block after GCM_UPDATE finishes.
@@ -2074,8 +2019,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
         pxor    xmm9, xmm14
 
-
-
 %%_return_T:
 	mov	r10, %%AUTH_TAG				; r10 = authTag
 	mov	r11, %%AUTH_TAG_LEN			; r11 = auth_tag_len
@@ -2116,7 +2059,6 @@ movdqu  %%T_key, [%%GDATA_KEY+16*j]				; encrypt with last (14th) key round (12 
 
 %endmacro ;GCM_COMPLETE
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void	aes_gcm_precomp_128_sse / aes_gcm_precomp_192_sse / aes_gcm_precomp_256_sse
 ;        (struct gcm_key_data *key_data);
@@ -2139,8 +2081,6 @@ FN_NAME(precomp,_):
         push    r15
 
         mov     r14, rsp
-
-
 
         sub     rsp, VARIABLE_OFFSET
         and     rsp, ~63                                ; align rsp to 64 bytes
@@ -2169,7 +2109,6 @@ FN_NAME(precomp,_):
         pxor    xmm6, xmm2                             ; xmm6 holds the HashKey<<1 mod poly
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         movdqu  [arg1 + HashKey], xmm6                  ; store HashKey<<1 mod poly
-
 
         PRECOMPUTE  arg1, xmm6, xmm0, xmm1, xmm2, xmm3, xmm4, xmm5
 
@@ -2204,7 +2143,6 @@ error_precomp:
 
         jmp exit_precomp
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_init_128_sse / aes_gcm_init_192_sse / aes_gcm_init_256_sse (
@@ -2299,7 +2237,6 @@ skip_aad_check_error_init:
         IMB_ERR_CHECK_END rax
         jmp     exit_init
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_init_var_iv_128_sse / aes_gcm_init_var_iv_192_sse /
@@ -2494,7 +2431,6 @@ skip_in_out_check_error_update_enc:
         jmp     exit_update_enc
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_update_sse / aes_gcm_dec_192_update_sse / aes_gcm_dec_256_update_sse
 ;        const struct gcm_key_data *key_data,
@@ -2576,7 +2512,6 @@ skip_in_out_check_error_update_dec:
         IMB_ERR_CHECK_END rax
         jmp     exit_update_dec
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_finalize_sse / aes_gcm_enc_192_finalize_sse / aes_gcm_enc_256_finalize_sse
@@ -2671,7 +2606,6 @@ error_enc_fin:
         jmp     exit_enc_fin
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_finalize_sse / aes_gcm_dec_192_finalize_sse / aes_gcm_dec_256_finalize_sse
 ;        const struct gcm_key_data *key_data,
@@ -2764,7 +2698,6 @@ error_dec_fin:
         IMB_ERR_CHECK_END rax
         jmp     exit_dec_fin
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_128_sse / aes_gcm_enc_192_sse / aes_gcm_enc_256_sse
@@ -2900,7 +2833,6 @@ skip_aad_check_error_enc:
         IMB_ERR_CHECK_END rax
         jmp     exit_enc
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_128_sse / aes_gcm_dec_192_sse / aes_gcm_dec_256_sse
@@ -3038,7 +2970,6 @@ skip_aad_check_error_dec:
         IMB_ERR_CHECK_END rax
         jmp     exit_dec
 %endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_enc_var_iv_128_sse / aes_gcm_enc_var_iv_192_sse /
@@ -3192,7 +3123,6 @@ skip_aad_check_error_enc_IV:
         jmp     exit_enc_IV
 %endif
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   aes_gcm_dec_var_iv_128_sse / aes_gcm_dec_var_iv_192_sse /
 ;       aes_gcm_dec_var_iv_256_sse
@@ -3344,7 +3274,6 @@ skip_aad_check_error_dec_IV:
         IMB_ERR_CHECK_END rax
         jmp     exit_dec_IV
 %endif
-
 
 %ifdef GCM128_MODE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3613,7 +3542,6 @@ error_ghash:
 %%_partial_block_done:
 %endmacro ; PARTIAL_BLOCK_GMAC
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;void   imb_aes_gmac_update_128_sse / imb_aes_gmac_update_192_sse /
 ;       aes_gmac_update_256_sse
@@ -3712,7 +3640,4 @@ error_gmac_update:
         jmp     exit_gmac_update
 %endif
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -72,7 +72,6 @@ endstruc
 %define INP		arg3
 %define INPb		arg4
 
-
 %define SHA256CONSTANTS	r11
 
 ;; MSG MUST be xmm0 (implicit argument)
@@ -95,7 +94,7 @@ endstruc
 
 %define SHUF_MASK	xmm15
 
-section .data
+mksection .rodata
 default rel
 align 64
 K256:
@@ -126,7 +125,7 @@ PSHUFFLE_BYTE_FLIP_MASK:
 ;; void sha256_ni(SHA256_ARGS *args, UINT32 size_in_blocks)
 ;; arg1 : pointer to args
 ;; arg2 : size (in blocks) ;; assumed to be >= 1
-section .text
+mksection .text
 MKGLOBAL(sha256_ni,function,internal)
 align 32
 sha256_ni:
@@ -610,6 +609,4 @@ done_hash:
 	add		rsp, frame_size
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

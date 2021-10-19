@@ -67,7 +67,7 @@
 %define SNOW3G_F9_1_BUFFER_INTERNAL snow3g_f9_1_buffer_internal_sse
 %endif
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -86,7 +86,7 @@ align 16
 clear_low32:
 dd      0x00000000, 0xffffffff, 0xffffffff, 0xffffffff
 
-section .text
+mksection .text
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*3
@@ -120,7 +120,6 @@ section .text
         mov     [rsp + GP_OFFSET + 40], r11 ;; rsp pointer
 %endmacro
 
-
 %macro FUNC_RESTORE 0
 
 %ifidn __OUTPUT_FORMAT__, win64
@@ -138,7 +137,6 @@ section .text
         mov     rsp, [rsp + GP_OFFSET + 40]
 %endmacro
 
-
 ;; Reduce from 128 bits to 64 bits
 %macro REDUCE_TO_64 2
 %define %%IN_OUT        %1 ;; [in/out]
@@ -153,7 +151,6 @@ section .text
         pxor            %%IN_OUT, %%XTMP
 
 %endmacro
-
 
 ;; Multiply 64b x 64b and reduce result to 64 bits
 ;; Lower 64-bits of xmms are multiplied
@@ -170,7 +167,6 @@ section .text
         REDUCE_TO_64 %%IN0_OUT, %%XTMP
 %endif
 %endmacro
-
 
 ;; uint32_t
 ;; snow3g_f9_1_buffer_internal_sse(const uint64_t *pBufferIn,
@@ -306,7 +302,6 @@ skip_rem_bits:
         mov     DWORD(tmp4), [KS + (4 * 4)]         ;; tmp4 == z[4] << 32
         shl     tmp4, 32
 
-
         MUL_AND_REDUCE_TO_64 EV, xmm1, xmm3
         movq    E, EV
         xor     E, tmp4
@@ -317,7 +312,4 @@ skip_rem_bits:
 
         ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

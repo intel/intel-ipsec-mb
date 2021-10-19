@@ -55,7 +55,6 @@ extern sha256_ni
 %define job	arg2
 %define len2	arg2
 
-
 ; idx needs to be in rbx, rbp, r13-r15
 %define idx		rbp
 
@@ -89,7 +88,7 @@ endstruc
 
 %define APPEND(a,b) a %+ b
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -99,7 +98,7 @@ byteswap:
 
 one:	dq  1
 
-section .text
+mksection .text
 
 %ifdef SHA224
 ;; JOB* flush_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state)
@@ -328,6 +327,4 @@ return:
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

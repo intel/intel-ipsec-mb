@@ -86,7 +86,7 @@
 
 %define IV_TMP		XSAVED3
 
-section .text
+mksection .text
 
 MKGLOBAL(AES_CBC_DEC_256,function,internal)
 AES_CBC_DEC_256:
@@ -181,7 +181,6 @@ initial_2:
 	je	done
 	jmp	main_loop
 
-
 	align 16
 initial_1:
 	; load cipher text
@@ -243,7 +242,6 @@ initial_1:
 	cmp	LEN, 1*16
 	je	done
 	jmp	main_loop
-
 
 initial_3:
 	; load cipher text
@@ -359,7 +357,6 @@ initial_3:
 	cmp	LEN, 3*16
 	je	done
 	jmp	main_loop
-
 
 	align 16
 initial_4:
@@ -632,6 +629,4 @@ done:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

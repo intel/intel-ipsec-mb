@@ -59,7 +59,7 @@ default rel
 %define arg4            r9
 %endif
 
-section .text
+mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -182,7 +182,6 @@ CRC32_FN:
         sub             arg3, 128
         jge             .fold_128_B_loop
 
-
         add             arg2, 128
         ;; At this point, the buffer pointer is pointing at the last
         ;; y bytes of the buffer, where 0 <= y < 128.
@@ -238,7 +237,6 @@ CRC32_FN:
         pclmulqdq       xmm6, xmm10, 0x00
         pxor            xmm7, xmm8
         pxor            xmm7, xmm6
-
 
         ;; Instead of 128, we add 128-16 to the loop counter to save 1
         ;; instruction from the loop below.
@@ -424,7 +422,7 @@ align 32
         psrldq          xmm7, 7
         jmp             .barrett
 
-section .data
+mksection .rodata
 
 align 16
 mask1:
@@ -444,6 +442,4 @@ align 16
 SHUF_MASK:
         dq 0x08090A0B0C0D0E0F, 0x0001020304050607
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

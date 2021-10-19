@@ -109,7 +109,7 @@ endstruc
 %define XKEY6_9		xmm14
 %define XTMP		xmm15
 
-section .text
+mksection .text
 
 align 32
 %ifdef CBC_MAC
@@ -156,7 +156,6 @@ aes_cbc_enc_128_x8_sse:
 	mov		TMP, [ARG + _aesarg_in + 8*7]
 	movdqu		XDATA6, [IN6]		; load first block of plain text
 	movdqu		XDATA7, [TMP]		; load first block of plain text
-
 
 	pxor		XDATA0, [ARG + _aesarg_IV + 16*0]  ; plaintext XOR IV
 	pxor		XDATA1, [ARG + _aesarg_IV + 16*1]  ; plaintext XOR IV
@@ -504,6 +503,4 @@ done:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

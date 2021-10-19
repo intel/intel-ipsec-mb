@@ -39,7 +39,7 @@
 ; void AES_XCBC_X4(AES_XCBC_ARGS_x16 *args, UINT64 len_in_bytes);
 extern AES_XCBC_X4
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -56,7 +56,7 @@ one:	dq  1
 two:	dq  2
 three:	dq  3
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 
@@ -200,7 +200,6 @@ end_loop:
 	movq	[icv], xmm0
 	pextrd	[icv + 8], xmm0, 2
 
-
 %ifdef SAFE_DATA
         pxor    xmm0, xmm0
 
@@ -237,6 +236,4 @@ return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

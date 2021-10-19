@@ -107,7 +107,7 @@
 %define XKEY3_6		xmm14
 %define XKEY3_9		xmm15
 
-section .text
+mksection .text
 
 %ifndef AES_CBC_ENC_X4
 %ifdef CBC_MAC
@@ -265,7 +265,6 @@ main_loop:
 	pxor2		XDATA2, [IN2 + IDX]	; plaintext XOR IV
 	pxor2		XDATA3, [IN3 + IDX]	; plaintext XOR IV
 
-
 	pxor		XDATA0, [KEYS0 + 16*0] 	; 0. ARK
 	pxor		XDATA1, [KEYS1 + 16*0] 	; 0. ARK
 	pxor		XDATA2, [KEYS2 + 16*0] 	; 0. ARK
@@ -389,6 +388,4 @@ done:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

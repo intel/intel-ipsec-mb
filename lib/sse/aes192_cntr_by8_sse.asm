@@ -98,7 +98,6 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 	do_aes %1, %2, 0
 %endmacro
 
-
 ; do_aes num_in_par load_keys
 ; This increments p_in, but not p_out
 %macro do_aes 3
@@ -288,7 +287,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-section .text
+mksection .text
 
 ;; Macro performing AES-CTR.
 ;;
@@ -504,6 +503,4 @@ MKGLOBAL(AES_CNTR_BIT_192,function,internal)
 AES_CNTR_BIT_192:
         DO_CNTR CNTR_BIT
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

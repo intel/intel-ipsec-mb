@@ -81,7 +81,6 @@
 %define KEYS3	rbp
 %define OUT3	r15
 
-
 %define XDATA0		xmm0
 %define XDATA1		xmm1
 %define XDATA2		xmm2
@@ -108,7 +107,7 @@
 %define AES_CBC_ENC_X4 aes_cbc_enc_192_x4
 %endif
 
-section .text
+mksection .text
 
 MKGLOBAL(AES_CBC_ENC_X4,function,internal)
 AES_CBC_ENC_X4:
@@ -237,7 +236,6 @@ main_loop:
 	pxor2		XDATA2, [IN2 + IDX]	; plaintext XOR IV
 	pxor2		XDATA3, [IN3 + IDX]	; plaintext XOR IV
 
-
 	pxor		XDATA0, [KEYS0 + 16*0] 	; 0. ARK
 	pxor		XDATA1, [KEYS1 + 16*0] 	; 0. ARK
 	pxor		XDATA2, [KEYS2 + 16*0] 	; 0. ARK
@@ -303,13 +301,10 @@ main_loop:
 	aesenclast		XDATA2, [KEYS2 + 16*12]	; 12. ENC
 	aesenclast		XDATA3, [KEYS3 + 16*12]	; 12. ENC
 
-
-
 	MOVDQ		[OUT0 + IDX], XDATA0	; write back ciphertext
 	MOVDQ		[OUT1 + IDX], XDATA1	; write back ciphertex
 	MOVDQ		[OUT2 + IDX], XDATA2	; write back ciphertex
 	MOVDQ		[OUT3 + IDX], XDATA3	; write back ciphertex
-
 
 	add	IDX, 16
 	cmp	LEN, IDX
@@ -349,6 +344,4 @@ done:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

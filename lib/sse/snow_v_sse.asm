@@ -45,7 +45,7 @@
 %define SNOW_V_AEAD_INIT snow_v_aead_init_sse
 %endif
 
-section .data
+mksection .rodata
 
 align 16
 alpha:
@@ -84,7 +84,7 @@ dq 0x6d6f6854676E694a
 
 %define job     arg1
 
-section .text
+mksection .text
 
 ;; Registers usage
 ;; xmm0, xmm1, xmm2, xmm3   : temporary space
@@ -155,7 +155,6 @@ section .text
       aesenc %%FSM_R2, %%TEMP1      ;; R2 = AESR(R1) (encryption round key C2 = 0)
 
 %endmacro ;; SNOW_V_FSM_UPDATE
-
 
 ;; =============================================================================
 ;; =============================================================================
@@ -395,6 +394,4 @@ no_partial_block_left:
 
 ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

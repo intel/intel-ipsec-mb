@@ -44,7 +44,6 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 
-
 %ifndef AES_CBC_DEC_192
 %define AES_CBC_DEC_192 aes_cbc_dec_192_sse
 %endif
@@ -86,7 +85,7 @@
 
 %define IV_TMP		XSAVED3
 
-section .text
+mksection .text
 
 MKGLOBAL(AES_CBC_DEC_192,function,internal)
 AES_CBC_DEC_192:
@@ -175,7 +174,6 @@ initial_2:
 	je	done
 	jmp	main_loop
 
-
 	align 16
 initial_1:
 	; load cipher text
@@ -233,7 +231,6 @@ initial_1:
 	cmp	LEN, 1*16
 	je	done
 	jmp	main_loop
-
 
 initial_3:
 	; load cipher text
@@ -328,8 +325,6 @@ initial_3:
 	aesdeclast	XDATA1, XKEY_B
 	aesdeclast	XDATA2, XKEY_B
 
-
-
 	pxor	XDATA0, IV_TMP
 	pxor	XDATA1, XSAVED0
 	pxor	XDATA2, XSAVED1
@@ -341,7 +336,6 @@ initial_3:
 	cmp	LEN, 3*16
 	je	done
 	jmp	main_loop
-
 
 	align 16
 initial_4:
@@ -446,8 +440,6 @@ initial_4:
 	aesdec	XDATA1, XKEY_A
 	aesdec	XDATA2, XKEY_A
 	aesdec	XDATA3, XKEY_A
-
-
 
 	aesdeclast	XDATA0, XKEY_B		; 12. DEC
 	aesdeclast	XDATA1, XKEY_B
@@ -588,6 +580,4 @@ done:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

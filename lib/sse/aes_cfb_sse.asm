@@ -87,7 +87,7 @@
 %define XDATA	xmm0
 %define XIN	xmm1
 
-section .text
+mksection .text
 
 %macro do_cfb 1
 %define %%NROUNDS %1
@@ -210,6 +210,4 @@ AES_CFB_256_ONE:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

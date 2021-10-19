@@ -29,7 +29,6 @@
 ;;; process 4 buffers at a time, single data structure as input
 ;;; Updates In pointer at end
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; struct AES_XCBC_ARGS_x16 {
 ;;     void*    in[16];

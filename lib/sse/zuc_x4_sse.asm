@@ -46,7 +46,7 @@
 
 %define APPEND(a,b) a %+ b
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -135,7 +135,6 @@ swap_mask:
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
-
 align 16
 S1_S0_shuf:
 db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
@@ -200,7 +199,7 @@ _gpr_save:      resq    2 ; Space for GP registers
 _rem_bytes_save resq    1 ; Space for number of remaining bytes
 endstruc
 
-section .text
+mksection .text
 
 %define MASK31  xmm12
 
@@ -209,7 +208,6 @@ section .text
 %define OFS_X0  (OFS_R2 + 16)
 %define OFS_X1  (OFS_X0 + 16)
 %define OFS_X2  (OFS_X1 + 16)
-
 
 %ifidn __OUTPUT_FORMAT__, win64
         %define XMM_STORAGE     16*10
@@ -435,7 +433,6 @@ section .text
 %endif
 %endmacro
 
-
 ;
 ;   nonlin_fun4()
 ;
@@ -513,7 +510,6 @@ section .text
     movdqa      [%%STATE + OFS_R2], xmm2
 %endmacro
 
-
 ;
 ;   store16B_kstr4()
 ;
@@ -560,7 +556,6 @@ section .text
     mov         [rsp + 24], r9
 %endmacro
 
-
 ;
 ;   add_mod31()
 ;       add two 32-bit args and reduce mod (2^31-1)
@@ -578,7 +573,6 @@ section .text
     pand        %1, MASK31
     paddd       %1, xmm2
 %endmacro
-
 
 ;
 ;   rot_mod31()
@@ -599,7 +593,6 @@ section .text
     por         %1, xmm2
     pand        %1, MASK31
 %endmacro
-
 
 ;
 ;   lfsr_updt4()
@@ -1788,10 +1781,7 @@ ZUC_EIA3ROUND16B:
 
         ret
 
-
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

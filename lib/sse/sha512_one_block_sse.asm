@@ -94,7 +94,6 @@
 %define y1 r14
 %define y2 r15
 
-
 struc STACK
 %ifndef LINUX
 _XMM_SAVE:	reso	8
@@ -177,7 +176,6 @@ endstruc
 	add	h, y0		; h = t1 + S0 + MAJ
 		movdqa	X0, XTMP3	; X0 = W[-15]
 		psllq	XTMP3, (64-8)
-
 
 ROTATE_ARGS
 		pxor	XTMP1, XTMP3
@@ -267,7 +265,7 @@ rotate_Xs
 	ROTATE_ARGS
 %endm
 
-section .data
+mksection .rodata
 default rel
 align 64
 K512:
@@ -321,7 +319,7 @@ PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
 ;; void FUNC(void *input_data, UINT64 digest[8])
 ;; arg 1 : pointer to input data
 ;; arg 2 : pointer to digest
-section .text
+mksection .text
 MKGLOBAL(FUNC,function,internal)
 align 32
 FUNC:
@@ -479,7 +477,4 @@ done_hash:
 
 	ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

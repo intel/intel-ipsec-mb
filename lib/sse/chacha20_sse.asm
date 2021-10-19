@@ -31,7 +31,7 @@
 %include "include/clear_regs.asm"
 %include "include/chacha_poly_defines.asm"
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -118,7 +118,7 @@ endstruc
 
 %define APPEND(a,b) a %+ b
 
-section .text
+mksection .text
 
 ;
 ; Encrypts up to 64 bytes of data.
@@ -1375,7 +1375,6 @@ less_than_64_ks:
 
 two_blocks_left_ks:
 
-
         ; Prepare next 2 chacha states from IV, key
         movdqu  xmm1, [keys]          ; Load key bytes 0-15
         movdqu  xmm2, [keys + 16]     ; Load key bytes 16-31
@@ -1523,7 +1522,6 @@ between_129_191_ks:
         movdqa  xmm12, xmm14
 
         jmp     less_than_64_ks
-
 
 no_partial_block_ks:
 
@@ -2013,7 +2011,6 @@ between_64_127_poly:
 
         jmp     no_partial_block_poly
 
-
 more_than_2_blocks_left_poly:
 
         ; Generate 256 bytes of keystream
@@ -2102,7 +2099,6 @@ more_than_2_blocks_left_poly:
                         xmm0, xmm1, xmm2, xmm4, off, src
 
         jmp     no_partial_block_poly
-
 
 gen_poly_key_up_to_four_blocks:
 
@@ -2617,9 +2613,7 @@ between_129_191_dec:
         ENCRYPT_1B_64B  src, dst, len, off, 0, xmm2, xmm6, xmm10, xmm14, \
                         xmm0, xmm1, xmm4, xmm3, off, src
 
-
 no_partial_block_dec:
-
 
 %ifdef SAFE_DATA
         clear_all_xmms_sse_asm
@@ -2841,6 +2835,4 @@ exit_gen:
 %endif
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -48,7 +48,7 @@
 %define ZUC_CIPHER_4      asm_ZucCipher_4_sse
 %endif
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -133,7 +133,7 @@ _null_len_save: resq    1
 _rsp_save:      resq    1
 endstruc
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
@@ -451,7 +451,6 @@ section .text
         jmp     %%return_submit_eea3
 %endmacro
 
-
 %macro FLUSH_JOB_ZUC_EEA3 1
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
 
@@ -724,7 +723,6 @@ MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
 FLUSH_JOB_ZUC256_EEA3:
         endbranch64
         FLUSH_JOB_ZUC_EEA3 256
-
 
 %macro SUBMIT_JOB_ZUC_EIA3 1
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
@@ -1011,7 +1009,6 @@ APPEND(%%skip_eia3_,I):
         call    ZUC256_EIA3_4_BUFFER
 %endif
 
-
 %ifndef LINUX
         add     rsp, 48
 %endif
@@ -1084,6 +1081,4 @@ FLUSH_JOB_ZUC256_EIA3:
         endbranch64
         FLUSH_JOB_ZUC_EIA3 256
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

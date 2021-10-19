@@ -65,7 +65,7 @@ _rsp_save:      resq    1
 _xmm_save:      resq    8 * 2
 endstruc
 
-section .text
+mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -178,6 +178,4 @@ ETHERNET_FCS_FN_LOCAL:
         mov             rsp, [rsp + _rsp_save]
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -60,7 +60,6 @@ extern sha256_ni
 %define job	arg2
 %define len2	arg2
 
-
 ; idx needs to be in rbx, rbp, r13-r15
 %define last_len	rbp
 %define idx		rbp
@@ -93,7 +92,7 @@ _gpr_save:	resq	4	; rbx, rbp, rsi (win), rdi (win)
 _rsp_save:	resq	1
 endstruc
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -101,7 +100,7 @@ byteswap:
 	dq 0x0405060700010203
 	dq 0x0c0d0e0f08090a0b
 
-section .text
+mksection .text
 
 %ifdef SHA224
 ; JOB* submit_job_hmac_sha_224_ni_sse(MB_MGR_HMAC_SHA_256_OOO *state, IMB_JOB *job)
@@ -396,6 +395,4 @@ return:
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

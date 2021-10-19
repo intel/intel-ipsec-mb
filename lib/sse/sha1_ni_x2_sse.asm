@@ -91,7 +91,7 @@ endstruc
 %define SHUF_MASK	xmm14
 %define E_MASK		xmm15
 
-section .data
+mksection .rodata
 default rel
 align 64
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x000102030405060708090a0b0c0d0e0f
@@ -105,7 +105,7 @@ UPPER_WORD_MASK:         ;ddq 0xFFFFFFFF000000000000000000000000
 ;; arg1 : pointer to args
 ;; arg2 : size (in blocks) ;; assumed to be >= 1
 
-section .text
+mksection .text
 MKGLOBAL(sha1_ni,function,internal)
 align 32
 sha1_ni:
@@ -224,7 +224,6 @@ loop0:
 		 sha1rnds4	 ABCDb, E1b, 0
 	 sha1msg1	 MSG2b, MSG3b
 	 pxor		 MSG1b, MSG3b
-
 
 	;; Rounds 16-19
 		sha1nexte	E0, MSG0
@@ -490,6 +489,4 @@ done_hash:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

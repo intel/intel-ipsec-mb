@@ -45,7 +45,7 @@
 ;%define DO_DBGPRINT
 %include "include/dbgprint.asm"
 
-section .data
+mksection .rodata
 default rel
 align 64
 MKGLOBAL(K256_4,data,internal)
@@ -117,7 +117,7 @@ K256_4:
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
-section .text
+mksection .text
 
 %ifdef LINUX ; Linux definitions
  %define arg1 	rdi
@@ -214,8 +214,6 @@ endstruc
 	shufps	%%t0, %%t1, 0x88	; t0 = {d0 c0 b0 a0}
 %endmacro
 
-
-
 %macro ROTATE_ARGS 0
 %xdefine TMP_ h
 %xdefine h g
@@ -288,7 +286,6 @@ endstruc
 	ROTATE_ARGS
 %endm
 
-
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_16_XX 2
 %define %%T1 %1
@@ -313,8 +310,6 @@ endstruc
 
 	ROUND_00_15 %%T1, %%i
 %endm
-
-
 
 ;; SHA256_ARGS:
 ;;   UINT128 digest[8];  // transposed digests
@@ -386,7 +381,6 @@ lloop:
 %endrep
 	add	IDX, 4*4*4
 
-
 %assign i (i*4)
 
 	jmp	Lrounds_16_xx
@@ -453,6 +447,4 @@ Lrounds_16_xx:
 	; outer calling routine restores XMM and other GP registers
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

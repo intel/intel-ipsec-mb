@@ -32,7 +32,7 @@
 
 extern sha512_x2_sse
 
-section .data
+mksection .rodata
 default rel
 align 16
 byteswap:	;ddq 0x08090a0b0c0d0e0f0001020304050607
@@ -44,7 +44,7 @@ len_masks:
 	dq 0x00000000FFFF0000, 0x0000000000000000
 one:	dq  1
 
-section .text
+mksection .text
 
 %ifndef FUNC
 %define FUNC flush_job_hmac_sha_512_sse
@@ -63,7 +63,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbx, rbp, r12-r15
 %define idx		rbp
@@ -326,6 +325,4 @@ return:
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

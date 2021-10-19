@@ -76,7 +76,7 @@ _rsp_save:	resq	1
 endstruc
 
 %if NUM_LANES > 4
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -84,7 +84,7 @@ dupw:
 	dq 0x0100010001000100, 0x0100010001000100
 %endif
 
-section .text
+mksection .text
 
 ; JOB* SUBMIT_JOB_AES_ENC(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -195,6 +195,4 @@ return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

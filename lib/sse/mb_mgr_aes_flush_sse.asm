@@ -44,7 +44,7 @@
 ; void AES_CBC_ENC_X4(AES_ARGS *args, UINT64 len_in_bytes);
 extern AES_CBC_ENC_X4
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -76,7 +76,7 @@ six:	dq  6
 seven:	dq  7
 %endif
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 
@@ -245,6 +245,4 @@ return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

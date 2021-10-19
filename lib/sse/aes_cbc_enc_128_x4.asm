@@ -100,7 +100,7 @@ endstruc
 %define XKEY3_6		xmm14
 %define XKEY3_9		xmm15
 
-section .text
+mksection .text
 
 %macro AES_CBC_X4 5-6
 %define %%MODE          %1
@@ -386,7 +386,4 @@ FUNC:
 %endif
         ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

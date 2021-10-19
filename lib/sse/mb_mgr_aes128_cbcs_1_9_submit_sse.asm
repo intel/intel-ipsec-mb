@@ -76,7 +76,7 @@ _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
 
-section .text
+mksection .text
 
 ; JOB* submit_job_aes128_cbcs_1_9_enc_sse(MB_MGR_AES_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -223,7 +223,5 @@ return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 

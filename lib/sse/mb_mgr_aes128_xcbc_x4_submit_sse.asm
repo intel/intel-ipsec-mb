@@ -40,14 +40,14 @@
 ; void AES_XCBC_X4(AES_XCBC_ARGS_x16 *args, UINT64 len_in_bytes);
 extern AES_XCBC_X4
 
-section .data
+mksection .rodata
 default rel
 
 align 16
 x80:            ;ddq 0x00000000000000000000000000000080
         dq 0x0000000000000080, 0x0000000000000000
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1	rdi
@@ -258,6 +258,4 @@ return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
