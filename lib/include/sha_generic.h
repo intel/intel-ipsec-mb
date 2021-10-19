@@ -35,6 +35,7 @@
 #include "ipsec_ooo_mgr.h"
 #include "constants.h"
 #include "include/clear_regs_mem.h"
+#include "include/error.h"
 
 extern void sha1_block_sse(const void *, void *);
 extern void sha1_block_avx(const void *, void *);
@@ -255,8 +256,15 @@ sha_generic(const void *data, const uint64_t length, void *digest,
             const uint64_t pad_size)
 {
 #ifdef SAFE_PARAM
-        if (data == NULL || digest == NULL)
+        imb_set_errno(NULL, 0);
+        if (data == NULL && length != 0) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
                 return;
+        }
+        if (digest == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
 #endif
 
         uint8_t cb[IMB_SHA_512_BLOCK_SIZE]; /* biggest possible */
@@ -305,8 +313,15 @@ void sha_generic_1block(const void *data, void *digest,
                         const int is_avx, const int sha_type)
 {
 #ifdef SAFE_PARAM
-        if (data == NULL || digest == NULL)
+        imb_set_errno(NULL, 0);
+        if (data == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
                 return;
+        }
+        if (digest == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
 #endif
         sha_generic_init(digest, sha_type);
         sha_generic_one_block(data, digest, is_avx, sha_type);
