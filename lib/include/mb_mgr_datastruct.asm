@@ -175,7 +175,7 @@ FIELD	_aes_ccm_args,	_AES_ARGS_size, _AES_ARGS_align
 FIELD	_aes_ccm_lens, 16*2,	32
 FIELD	_aes_ccm_init_done,    16*2,	32
 FIELD	_aes_ccm_unused_lanes, 8,      8
-FIELD	_aes_ccm_job_in_lane,  16*8,	8
+FIELD	_aes_ccm_job_in_lane,  16*8,	16
 FIELD   _aes_ccm_num_lanes_inuse, 8,   8
 FIELD   _aes_ccm_init_blocks,  16*4*16,   64
 FIELD   _aes_ccm_road_block,   8,      8

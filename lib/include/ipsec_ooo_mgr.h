@@ -251,7 +251,7 @@ typedef struct {
          * byte 4 is set to FF as a flag
          */
         uint64_t unused_lanes;
-        IMB_JOB *job_in_lane[16];
+        DECLARE_ALIGNED(IMB_JOB *job_in_lane[16], 16);
         uint64_t num_lanes_inuse;
         DECLARE_ALIGNED(uint8_t init_blocks[16 * (4 * 16)], 64);
         uint64_t road_block;

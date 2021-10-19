@@ -62,6 +62,13 @@ len_masks:
 	dq 0x0000000000000000, 0xFFFF000000000000
 %endif
 
+align 16
+len_shuf_masks:
+        dq 0XFFFFFFFF09080100, 0XFFFFFFFFFFFFFFFF
+        dq 0X09080100FFFFFFFF, 0XFFFFFFFFFFFFFFFF
+        dq 0XFFFFFFFFFFFFFFFF, 0XFFFFFFFF09080100
+        dq 0XFFFFFFFFFFFFFFFF, 0X09080100FFFFFFFF
+
 %if NUM_LANES > 4
 align 16
 dupw:
@@ -134,6 +141,7 @@ section .text
 %define xtmp1            xmm4
 %define xtmp2            xmm5
 %define xtmp3            xmm6
+%define xtmp4            xmm7
 
 ; STACK_SPACE needs to be an odd multiple of 8
 ; This routine and its callee clobbers all GPRs
@@ -159,6 +167,37 @@ endstruc
 %assign i (i+1)
 %endrep
                 aesenclast     %%XMM0, [%%GDATA+16*i]
+%endmacro
+
+;; Set all NULL job lanes to UINT16_MAX
+%macro SET_NULL_JOB_LENS_TO_MAX 5
+%define %%CCM_LENS      %1 ;; [in/out] xmm containing lane lengths
+%define %%XTMP0         %2 ;; [clobbered] tmp xmm reg
+%define %%XTMP1         %3 ;; [clobbered] tmp xmm reg
+%define %%XTMP2         %4 ;; [clobbered] tmp xmm reg
+%define %%XTMP3         %5 ;; [clobbered] tmp xmm reg
+
+        pxor            %%XTMP0, %%XTMP0
+
+        pcmpeqq         %%XTMP0, [state + _aes_ccm_job_in_lane + 0]
+        pshufb          %%XTMP0, [rel len_shuf_masks + 0]
+
+        pcmpeqq         %%XTMP1, [state + _aes_ccm_job_in_lane + 16]
+        pshufb          %%XTMP1, [rel len_shuf_masks + 16]
+
+        por             %%XTMP0, %%XTMP1
+
+%if NUM_LANES > 4
+        pcmpeqq         %%XTMP2, [state + _aes_ccm_job_in_lane + 32]
+        pshufb          %%XTMP2, [rel len_shuf_masks + 32]
+
+        pcmpeqq         %%XTMP3, [state + _aes_ccm_job_in_lane + 48]
+        pshufb          %%XTMP3, [rel len_shuf_masks + 48]
+
+        por             %%XTMP2, %%XTMP3
+        por             %%XTMP0, %%XTMP2
+%endif
+        por             %%CCM_LENS, %%XTMP0
 %endmacro
 
 ;;; ===========================================================================
@@ -503,6 +542,11 @@ APPEND(skip_clear_,I):
 
         ;; Update lengths to authenticate and find min length
         movdqa  ccm_lens, [state + _aes_ccm_lens]
+
+        ; Reset NULL lane lens to UINT16_MAX
+%ifidn %%SUBMIT_FLUSH, FLUSH
+        SET_NULL_JOB_LENS_TO_MAX ccm_lens, xtmp0, xtmp1, xtmp2, xtmp3
+%endif
         XPINSRW ccm_lens, xtmp0, tmp2, min_idx, tmp, scale_x16
         phminposuw min_len_idx, ccm_lens
         movdqa  [state + _aes_ccm_lens], ccm_lens
@@ -518,6 +562,10 @@ APPEND(skip_clear_,I):
         mov     word [state + _aes_ccm_init_done + min_idx * 2], 2
         ;; Update lengths to authenticate and find min length
         movdqa  ccm_lens, [state + _aes_ccm_lens]
+        ; Reset NULL lane lens to UINT16_MAX
+%ifidn %%SUBMIT_FLUSH, FLUSH
+        SET_NULL_JOB_LENS_TO_MAX ccm_lens, xtmp0, xtmp1, xtmp2, xtmp3
+%endif
         XPINSRW ccm_lens, xtmp0, tmp2, min_idx, 16, scale_x16
         phminposuw min_len_idx, ccm_lens
         movdqa  [state + _aes_ccm_lens], ccm_lens
