@@ -30,6 +30,8 @@
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
+%include "include/error.inc"
+
 ;;; This is implementation of stitched algorithms: AES128-CTR + CRC32 + BIP
 ;;; This combination is required by PON/xPON/gPON standard.
 ;;; Note: BIP is running XOR of double words
@@ -934,25 +936,76 @@ DEC_NO_CTR_FN_NAME:
         AES128_CTR_PON DEC, NO_CTR
         ret
 
+;; uint32_t hec_32_sse(const uint8_t *in)
 align 64
 MKGLOBAL(HEC_32,function,)
 HEC_32:
         endbranch64
+
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Check in != NULL
+        or      arg1, arg1
+        jz      error_hec32
+%endif
+
         mov     eax, [arg1]
         bswap   eax
         HEC_COMPUTE_32 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
         bswap   eax
+
         ret
 
+%ifdef SAFE_PARAM
+error_hec32:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check in != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_SRC
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+
+        ret
+%endif
+
+;; uint32_t hec_64_sse(const uint8_t *in)
 align 64
 MKGLOBAL(HEC_64,function,)
 HEC_64:
         endbranch64
+
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+
+        ;; Check in != NULL
+        or      arg1, arg1
+        jz      error_hec64
+%endif
+
         mov     rax, [arg1]
         bswap   rax
         HEC_COMPUTE_64 rax, tmp_1, xtmp1, xtmp2, xtmp3, xtmp4
         bswap   rax
         ret
+
+%ifdef SAFE_PARAM
+error_hec64:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check in != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_SRC
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+
+        ret
+%endif
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

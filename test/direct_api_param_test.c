@@ -1021,6 +1021,37 @@ test_snow3g_api(struct IMB_MGR *mgr)
         return 0;
 }
 
+/*
+ * @brief Performs direct hec API invalid param tests
+ */
+static int
+test_hec_api(struct IMB_MGR *mgr)
+{
+        uint8_t out_buf[8];
+        uint8_t zero_buf[8];
+        int seg_err; /* segfault flag */
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        memset(out_buf, 0, sizeof(out_buf));
+        memset(zero_buf, 0, sizeof(zero_buf));
+
+        /* Test HEC API's */
+        IMB_HEC_32(mgr, NULL);
+        if (unexpected_err(mgr, IMB_ERR_NULL_SRC, "HEC 32"))
+                return 1;
+
+        IMB_HEC_64(mgr, NULL);
+        if (unexpected_err(mgr, IMB_ERR_NULL_SRC, "HEC 64"))
+                return 1;
+
+        return 0;
+}
+
 int
 direct_api_param_test(struct IMB_MGR *mb_mgr)
 {
@@ -1065,6 +1096,9 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_snow3g_api(mb_mgr);
+        run++;
+
+        errors += test_hec_api(mb_mgr);
         run++;
 
         test_suite_update(&ts, run - errors, errors);
