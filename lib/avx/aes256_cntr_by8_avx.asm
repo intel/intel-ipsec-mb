@@ -316,7 +316,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-section .text
+mksection .text
 ;; Macro performing AES-CTR.
 ;;
 %macro DO_CNTR 1
@@ -602,6 +602,4 @@ aes_cntr_bit_256_avx:
 	DO_CNTR CNTR_BIT
 %endif ;; CNTR_CCM_AVX
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

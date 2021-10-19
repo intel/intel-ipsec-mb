@@ -44,7 +44,7 @@
 extern byteswap_const
 extern ddq_add_1
 
-section .data
+mksection .rodata
 default rel
 
 ;;; Precomputed constants for CRC32 (Ethernet FCS)
@@ -114,7 +114,7 @@ align 16
 mask_out_top_64bits:
         dq 0xffffffff_ffffffff, 0
 
-section .text
+mksection .text
 
 %define NUM_AES_ROUNDS 10
 
@@ -1292,6 +1292,4 @@ error_hec64:
         ret
 %endif
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

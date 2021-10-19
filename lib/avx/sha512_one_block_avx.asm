@@ -107,7 +107,6 @@ _XMM_SAVE:	reso	8
 _XFER:		reso	1
 endstruc
 
-
 ; rotate_Xs
 ; Rotate values of symbols X0...X7
 %macro rotate_Xs 0
@@ -181,7 +180,6 @@ endstruc
 		vpxor	XTMP1, XTMP1, XTMP2		; XTMP1 = W[-15] ror 1 ^ W[-15] ror 8
 	add	h, y0		; h = t1 + S0 + MAJ
 		vpxor	XTMP1, XTMP1, X0		; XTMP1 = s0
-
 
 ROTATE_ARGS
 		;; compute s1
@@ -262,7 +260,7 @@ rotate_Xs
 	ROTATE_ARGS
 %endm
 
-section .data
+mksection .rodata
 default rel
 align 64
 K512:
@@ -311,13 +309,12 @@ align 16
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
 	dq 0x0001020304050607, 0x08090a0b0c0d0e0f
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; void FUNC(void *input_data, UINT64 digest[8])
 ;; arg 1 : pointer to input data
 ;; arg 2 : pointer to digest
-section .text
+mksection .text
 MKGLOBAL(FUNC,function,internal)
 align 32
 FUNC:
@@ -472,7 +469,4 @@ done_hash:
 
 	ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

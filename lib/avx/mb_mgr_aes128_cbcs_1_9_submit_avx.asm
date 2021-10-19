@@ -42,7 +42,7 @@
 ; void aes_cbcs_1_9_enc_128_x8(AES_ARGS *args, UINT64 len_in_bytes);
 extern AES_CBCS_ENC_X8
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1	rdi
@@ -215,6 +215,4 @@ return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

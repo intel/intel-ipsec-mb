@@ -34,7 +34,7 @@
 
 ; routine to do AES128 CNTR enc/decrypt "by8"
 ; XMM registers are clobbered. Saving/restoring must be done at a higher level
-section .data
+mksection .rodata
 default rel
 
 %ifndef CNTR_CCM_AVX
@@ -72,7 +72,7 @@ ddq_add_7:	;DDQ 0x00000000000000000000000000000007
 ddq_add_8:	;DDQ 0x00000000000000000000000000000008
 		DQ 0x0000000000000008, 0x0000000000000000
 
-section .text
+mksection .text
 
 %define CONCAT(a,b) a %+ b
 %define VMOVDQ vmovdqu
@@ -608,6 +608,4 @@ aes_cntr_bit_128_avx:
 	DO_CNTR CNTR_BIT
 %endif ;; CNTR_CCM_AVX
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

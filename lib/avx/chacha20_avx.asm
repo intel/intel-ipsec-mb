@@ -31,7 +31,7 @@
 %include "include/clear_regs.asm"
 %include "include/chacha_poly_defines.asm"
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -108,7 +108,7 @@ endstruc
 
 %define APPEND(a,b) a %+ b
 
-section .text
+mksection .text
 
 %macro ENCRYPT_0B_64B 14-15
 %define %%SRC  %1 ; [in/out] Source pointer
@@ -1464,7 +1464,6 @@ less_than_64_ks:
 
 two_blocks_left_ks:
 
-
         ; Prepare next 2 chacha states from IV, key
         vmovdqu  xmm1, [keys]          ; Load key bytes 0-15
         vmovdqu  xmm2, [keys + 16]     ; Load key bytes 16-31
@@ -1679,7 +1678,6 @@ between_129_191_ks:
 
         jmp     less_than_64_ks
 
-
 no_partial_block_ks:
 
         mov     [ctx + LastBlkCount], blk_cnt
@@ -1737,6 +1735,4 @@ poly1305_key_gen_avx:
 %endif
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

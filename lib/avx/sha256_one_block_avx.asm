@@ -30,7 +30,7 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 
-section .data
+mksection .rodata
 default rel
 align 64
 K256:
@@ -62,7 +62,7 @@ _SHUF_00BA:              ;ddq 0xFFFFFFFFFFFFFFFF0b0a090803020100
 _SHUF_DC00:              ;ddq 0x0b0a090803020100FFFFFFFFFFFFFFFF
 	dq 0xFFFFFFFFFFFFFFFF, 0x0b0a090803020100
 
-section .text
+mksection .text
 
 %define	VMOVDQ vmovdqu ;; assume buffers not aligned
 
@@ -127,7 +127,6 @@ section .text
 %define y0 r13d
 %define y1 r14d
 %define y2 r15d
-
 
 struc STACK
 %ifndef LINUX
@@ -217,7 +216,6 @@ ROTATE_ARGS
 
 	mov	y0, e		; y0 = e
 	mov	y1, a		; y1 = a
-
 
 	MY_ROR	y0, (25-11)	; y0 = e >> (25-11)
 	xor	y0, e		; y0 = e ^ (e >> (25-11))
@@ -406,7 +404,7 @@ rotate_Xs
 ;; void FUNC(void *input_data, UINT32 digest[8], UINT64 num_blks)
 ;; arg 1 : pointer to input data
 ;; arg 2 : pointer to digest
-section .text
+mksection .text
 MKGLOBAL(FUNC,function,internal)
 align 32
 FUNC:
@@ -552,7 +550,4 @@ done_hash:
 
 	ret
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

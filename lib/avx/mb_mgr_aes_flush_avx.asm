@@ -39,7 +39,7 @@
 ; void AES_CBC_ENC_X8(AES_ARGS *args, UINT64 len_in_bytes);
 extern AES_CBC_ENC_X8
 
-section .data
+mksection .rodata
 default rel
 align 16
 len_masks:
@@ -70,7 +70,7 @@ five:	dq  5
 six:	dq  6
 seven:	dq  7
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 
@@ -234,6 +234,4 @@ return_null:
 	xor	job_rax, job_rax
 	jmp	return
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

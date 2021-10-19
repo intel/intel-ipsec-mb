@@ -32,7 +32,7 @@
 
 extern sha_256_mult_avx
 
-section .data
+mksection .rodata
 default rel
 align 16
 byteswap:	;ddq 0x0c0d0e0f08090a0b0405060700010203
@@ -50,7 +50,7 @@ one:	dq  1
 two:	dq  2
 three:	dq  3
 
-section .text
+mksection .text
 
 %ifndef FUNC
 %define FUNC flush_job_hmac_sha_256_avx
@@ -68,7 +68,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbx, rbp, r13-r15
 %define idx             rbp
@@ -351,6 +350,4 @@ return:
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

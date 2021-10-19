@@ -80,7 +80,7 @@
 %define XKEY_A		xmm9
 %define XKEY_B		xmm10
 
-section .text
+mksection .text
 
 %macro AES_ECB 2
 %define %%NROUNDS %1 ; [in] Number of AES rounds, numerical value
@@ -182,7 +182,6 @@ section .text
 	je	%%done
 	jmp	%%main_loop
 
-
 	align 16
 %%initial_1:
 	; load plain/cipher text
@@ -248,7 +247,6 @@ section .text
 	cmp	LEN, 1*16
 	je	%%done
 	jmp	%%main_loop
-
 
 %%initial_3:
 	; load plain/cipher text
@@ -359,7 +357,6 @@ section .text
 	cmp	LEN, 3*16
 	je	%%done
 	jmp	%%main_loop
-
 
 	align 16
 %%initial_4:
@@ -672,6 +669,4 @@ AES_ECB_DEC_256:
 
 %endif
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

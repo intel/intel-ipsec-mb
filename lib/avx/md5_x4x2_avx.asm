@@ -42,13 +42,13 @@
 
 extern MD5_TABLE
 
-section .data
+mksection .rodata
 default rel
 align 64
 ONES:
 	dd	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 
-section .text
+mksection .text
 
 %ifdef LINUX
 ;; Linux Registers
@@ -91,7 +91,6 @@ section .text
 %define B2      xmm7
 %define C2      xmm8
 %define D2      xmm9
-
 
 %define FUN     E
 %define TMP     F
@@ -443,7 +442,6 @@ lloop:
         MD5_STEP1 MAGIC_F, C,D,A,B, C2,D2,A2,B2, FUN,TMP, mem1 +14*16, [TBL+14*16], rot13
         MD5_STEP1 MAGIC_F, B,C,D,A, B2,C2,D2,A2, FUN,TMP, mem1 +15*16, [TBL+15*16], rot14
 
-
         vmovdqu  T2,[inp4+IDX+I*16]
         vmovdqu  T1,[inp5+IDX+I*16]
         vmovdqu  T4,[inp6+IDX+I*16]
@@ -571,7 +569,6 @@ lloop:
         vmovdqa  [mem2+(I*4+2)*16 + 16*16],T2
         vmovdqa  [mem2+(I*4+3)*16 + 16*16],T3
 %assign I (I+1)
-
 
         vpaddd   A,A,[AA]
         vpaddd   B,B,[BB]
@@ -712,6 +709,4 @@ lastblock:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

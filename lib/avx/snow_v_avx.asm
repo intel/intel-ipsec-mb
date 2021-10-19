@@ -45,7 +45,7 @@
 %define SNOW_V_AEAD_INIT snow_v_aead_init_avx
 %endif
 
-section .data
+mksection .rodata
 
 align 16
 alpha:
@@ -84,7 +84,7 @@ dq 0x6d6f6854676E694a
 
 %define job             arg1
 
-section .text
+mksection .text
 
 ;; Registers usage
 ;; xmm0                       : generated keystream
@@ -147,7 +147,6 @@ section .text
 %define %%TEMP1         %5  ;; [clobbered] 128 bit register
 %define %%TEMP2         %6  ;; [clobbered] 128 bit register
 
-
       vpxor       %%TEMP2, %%LFSR_A_LDQ, %%FSM_R3   ;; TEMP2 = R3 XOR LSFR_A [0:7]
       vpaddd      %%TEMP2, %%TEMP2, %%FSM_R2        ;; TEMP2 += R2
 
@@ -158,7 +157,6 @@ section .text
       vpshufb     %%FSM_R1, %%TEMP2, [rel sigma]   ;; R1 = sigma(TEMP2)
 
 %endmacro ;; SNOW_V_FSM_UPDATE
-
 
 ;; =============================================================================
 ;; =============================================================================
@@ -383,6 +381,4 @@ no_partial_block_left:
 
       ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

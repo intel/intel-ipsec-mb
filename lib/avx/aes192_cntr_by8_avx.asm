@@ -215,13 +215,11 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 %assign i (i+1)
 %endrep
 
-
 %assign i 0
 %rep %%by
 	vaesenclast	CONCAT(xdata,i), CONCAT(xdata,i), xkey12	; key 12
 %assign i (i+1)
 %endrep
-
 
 %assign i 0
 %rep (%%by / 2)
@@ -283,7 +281,7 @@ extern ddq_add_5, ddq_add_6, ddq_add_7, ddq_add_8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-section .text
+mksection .text
 ;; Macro performing AES-CTR.
 ;;
 %macro DO_CNTR 1
@@ -506,6 +504,4 @@ aes_cntr_bit_192_avx:
 	DO_CNTR CNTR_BIT
 %endif ;; CNTR_CCM_AVX
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

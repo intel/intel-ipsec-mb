@@ -25,7 +25,6 @@
 ;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;
 
-
 %include "include/os.asm"
 %include "include/imb_job.asm"
 %include "include/mb_mgr_datastruct.asm"
@@ -44,7 +43,7 @@
 
 extern AES_CBC_MAC
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -80,7 +79,7 @@ five:   dq  5
 six:    dq  6
 seven:  dq  7
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 
@@ -564,7 +563,6 @@ APPEND(skip_clear_,I):
         jmp     %%_ccm_round
 %endmacro
 
-
 align 64
 ; IMB_JOB * submit_job_aes128/256_ccm_auth_avx(MB_MGR_CCM_OOO *state, IMB_JOB *job)
 ; arg 1 : state
@@ -579,7 +577,4 @@ MKGLOBAL(FLUSH_JOB_AES_CCM_AUTH,function,internal)
 FLUSH_JOB_AES_CCM_AUTH:
         GENERIC_SUBMIT_FLUSH_JOB_AES_CCM_AUTH_AVX FLUSH
 
-
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

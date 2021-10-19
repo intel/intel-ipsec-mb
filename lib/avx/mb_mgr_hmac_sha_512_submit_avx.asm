@@ -34,13 +34,13 @@
 
 extern sha512_x2_avx
 
-section .data
+mksection .rodata
 default rel
 align 16
 byteswap:	;ddq 0x08090a0b0c0d0e0f0001020304050607
 	dq 0x0001020304050607, 0x08090a0b0c0d0e0f
 
-section .text
+mksection .text
 
 %ifndef FUNC
 %define FUNC submit_job_hmac_sha_512_avx
@@ -63,7 +63,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbx, rbp, r12-r15
 %define last_len	rbp
@@ -411,6 +410,4 @@ return:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

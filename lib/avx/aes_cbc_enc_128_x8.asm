@@ -109,7 +109,7 @@ endstruc
 %define XKEY6_9		xmm14
 %define XTMP		xmm15
 
-section .text
+mksection .text
 
 %macro AES_CBC_X8 5-6
 %define %%MODE          %1
@@ -155,7 +155,6 @@ section .text
 	mov		TMP, [ARG + %%ARG_IN + 8*7]
 	VMOVDQ		XDATA6, [IN6]		; load first block of plain text
 	VMOVDQ		XDATA7, [TMP]		; load first block of plain text
-
 
 	VPXOR2		XDATA0, [ARG + %%ARG_IV + 16*0]  ; plaintext XOR IV
 	VPXOR2		XDATA1, [ARG + %%ARG_IV + 16*1]  ; plaintext XOR IV
@@ -276,7 +275,6 @@ section .text
 %endif
 	vaesenc		XDATA6, XKEY6_9       	; 9. ENC
 	vaesenc		XDATA7, [KEYS7 + 16*9]	; 9. ENC
-
 
 	vaesenclast	XDATA0, [KEYS0 + 16*10]	; 10. ENC
 	vaesenclast	XDATA1, [KEYS1 + 16*10]	; 10. ENC
@@ -414,7 +412,6 @@ section .text
 	vaesenc		XDATA6, XKEY6_9       	; 9. ENC
 	vaesenc		XDATA7, [KEYS7 + 16*9]	; 9. ENC
 
-
 	vaesenclast	XDATA0, [KEYS0 + 16*10]	; 10. ENC
 	vaesenclast	XDATA1, [KEYS1 + 16*10]	; 10. ENC
 	vaesenclast	XDATA2, [KEYS2 + 16*10]	; 10. ENC
@@ -501,7 +498,6 @@ section .text
 
 %endmacro
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; AES-CBC 128 encrypt macro defines
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -524,6 +520,4 @@ FUNC:
 %endif
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

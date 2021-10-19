@@ -34,13 +34,13 @@
 
 extern md5_x4x2_avx
 
-section .data
+mksection .rodata
 default rel
 align 16
 dupw:	;ddq 0x01000100010001000100010001000100
 	dq 0x0100010001000100, 0x0100010001000100
 
-section .text
+mksection .text
 
 %if 1
 %ifdef LINUX
@@ -58,7 +58,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbp
 %define last_len        rbp
@@ -350,6 +349,4 @@ return:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

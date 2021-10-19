@@ -44,7 +44,7 @@
 %include "include/clear_regs.asm"
 extern K512_2
 
-section .data
+mksection .rodata
 default rel
 
 align 32
@@ -56,7 +56,7 @@ PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
 	;ddq 0x18191a1b1c1d1e1f1011121314151617
 	dq 0x1011121314151617, 0x18191a1b1c1d1e1f
 
-section .text
+mksection .text
 
 %ifdef LINUX ; Linux definitions
 %define arg1	rdi
@@ -100,8 +100,6 @@ section .text
 %define T1  xmm14
 %define TMP xmm15
 
-
-
 %define SZ2	2*SHA512_DIGEST_WORD_SIZE	; Size of one vector register
 %define ROUNDS 80*SZ2
 
@@ -131,7 +129,6 @@ endstruc
 	vshufpd	%%t0, %%r0, %%r1, 11b	; t0 = b1 a1
 	vshufpd	%%r0, %%r0, %%r1, 00b	; r0 = b0 a0
 %endm
-
 
 %macro ROTATE_ARGS 0
 %xdefine TMP_ h
@@ -179,8 +176,6 @@ endstruc
 	PRORQ_nd	%1, %3, TMP, %2
 %endmacro
 
-
-
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_00_15 2
 %define %%T1 %1
@@ -220,7 +215,6 @@ endstruc
 
 %endm
 
-
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_16_XX 2
 %define %%T1 %1
@@ -246,8 +240,6 @@ endstruc
 	ROUND_00_15 %%T1, %%i
 
 %endm
-
-
 
 ;; SHA512_ARGS:
 ;;   UINT128 digest[8];	 // transposed digests
@@ -377,6 +369,4 @@ Lrounds_16_xx:
 	; outer calling routine restores XMM and other GP registers
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

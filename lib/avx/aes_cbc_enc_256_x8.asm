@@ -106,7 +106,7 @@ endstruc
 %define XKEY6_9		xmm14
 %define XTMP		xmm15
 
-section .text
+mksection .text
 %ifdef CBC_MAC
 MKGLOBAL(aes256_cbc_mac_x8,function,internal)
 aes256_cbc_mac_x8:
@@ -150,7 +150,6 @@ aes_cbc_enc_256_x8:
 	mov		TMP, [ARG + _aesarg_in + 8*7]
 	VMOVDQ		XDATA6, [IN6]		; load first block of plain text
 	VMOVDQ		XDATA7, [TMP]		; load first block of plain text
-
 
 	VPXOR2		XDATA0, [ARG + _aesarg_IV + 16*0]  ; plaintext XOR IV
 	VPXOR2		XDATA1, [ARG + _aesarg_IV + 16*1]  ; plaintext XOR IV
@@ -270,7 +269,6 @@ aes_cbc_enc_256_x8:
 	vaesenc		XDATA6, XKEY6_9       	; 9. ENC
 	vaesenc		XDATA7, [KEYS7 + 16*9]	; 9. ENC
 
-
 	vaesenc		XDATA0, [KEYS0 + 16*10]	; 10. ENC
 	vaesenc		XDATA1, [KEYS1 + 16*10]	; 10. ENC
 	vaesenc		XDATA2, [KEYS2 + 16*10]	; 10. ENC
@@ -288,7 +286,6 @@ aes_cbc_enc_256_x8:
 	vaesenc		XDATA5, [KEYS5 + 16*11]	; 11. ENC
 	vaesenc		XDATA6, [KEYS6 + 16*11]	; 11. ENC
 	vaesenc		XDATA7, [KEYS7 + 16*11]	; 11. ENC
-
 
 	vaesenc		XDATA0, [KEYS0 + 16*12]	; 12. ENC
 	vaesenc		XDATA1, [KEYS1 + 16*12]	; 12. ENC
@@ -350,7 +347,6 @@ main_loop:
 	mov		TMP, [ARG + _aesarg_in + 8*7]
 	VPXOR2		XDATA6, [IN6 + IDX]	; load next block of plain text
 	VPXOR2		XDATA7, [TMP + IDX]	; load next block of plain text
-
 
 	VPXOR2		XDATA0, [KEYS0 + 16*0]		; 0. ARK
 	VPXOR2		XDATA1, [KEYS1 + 16*0]		; 0. ARK
@@ -443,7 +439,6 @@ main_loop:
 	vaesenc		XDATA6, XKEY6_9       	; 9. ENC
 	vaesenc		XDATA7, [KEYS7 + 16*9]	; 9. ENC
 
-
 	vaesenc		XDATA0, [KEYS0 + 16*10]	; 10. ENC
 	vaesenc		XDATA1, [KEYS1 + 16*10]	; 10. ENC
 	vaesenc		XDATA2, [KEYS2 + 16*10]	; 10. ENC
@@ -488,7 +483,6 @@ main_loop:
 	vaesenclast	XDATA5, [KEYS5 + 16*14]	; 14. ENC
 	vaesenclast	XDATA6, [KEYS6 + 16*14]	; 14. ENC
 	vaesenclast	XDATA7, [KEYS7 + 16*14]	; 14. ENC
-
 
 %ifndef CBC_MAC
 	VMOVDQ		[TMP + IDX], XDATA0		; write back ciphertext
@@ -558,7 +552,6 @@ done:
 %endif
 %endif
 
-
 	add	rsp, STACK_size
 
 %ifdef SAFE_DATA
@@ -567,6 +560,4 @@ done:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

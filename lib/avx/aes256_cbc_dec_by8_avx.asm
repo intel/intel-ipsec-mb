@@ -241,7 +241,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-section .text
+mksection .text
 
 ;; aes_cbc_dec_256_avx(void *in, void *IV, void *keys, void *out, UINT64 num_bytes)
 MKGLOBAL(aes_cbc_dec_256_avx,function,internal)
@@ -339,9 +339,6 @@ do_return2:
 	clear_all_xmms_avx_asm
 %endif ;; SAFE_DATA
 
-
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

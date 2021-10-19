@@ -41,7 +41,7 @@
 %define SUBMIT_JOB_ZUC256_EIA3 submit_job_zuc256_eia3_avx
 %define FLUSH_JOB_ZUC256_EIA3 flush_job_zuc256_eia3_avx
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -126,7 +126,7 @@ _null_len_save: resq    1
 _rsp_save:      resq    1
 endstruc
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
@@ -556,7 +556,6 @@ APPEND(%%skip_eea3_,I):
 %else
         call    asm_Zuc256Initialization_4_avx
 %endif
-
 
 %ifndef LINUX
         add     rsp, 24
@@ -1065,6 +1064,4 @@ MKGLOBAL(FLUSH_JOB_ZUC256_EIA3,function,internal)
 FLUSH_JOB_ZUC256_EIA3:
         FLUSH_JOB_ZUC_EIA3 256
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

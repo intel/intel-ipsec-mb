@@ -33,7 +33,7 @@
 %include "include/cet.inc"
 %define APPEND(a,b) a %+ b
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -122,7 +122,6 @@ swap_mask:
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
-
 align 16
 S1_S0_shuf:
 db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
@@ -187,7 +186,7 @@ _gpr_save:      resq    2 ; Space for GP registers
 _rem_bytes_save resq    1 ; Space for number of remaining bytes
 endstruc
 
-section .text
+mksection .text
 align 64
 
 %define MASK31  xmm12
@@ -280,7 +279,6 @@ align 64
 	vshufps	%%r0, %%t0, %%t1, 0x88	; r0 = {d0 c0 b0 a0}
 %endmacro
 
-
 ;;
 ;;   make_u31()
 ;;
@@ -295,7 +293,6 @@ align 64
     shrd        %%Rt, %%Ek, 15
     shrd        %%Rt, %%Ke, 9
 %endmacro
-
 
 ;
 ;   bits_reorg4()
@@ -373,7 +370,6 @@ align 64
 %endif
 %endmacro
 
-
 ;
 ;   nonlin_fun4()
 ;
@@ -383,7 +379,6 @@ align 64
 %macro nonlin_fun4  1-2
 %define %%STATE     %1  ; [in] ZUC state
 %define %%W         %2  ; [out] XMM register to contain W for all lanes
-
 
 %if (%0 == 2)
     vmovdqa     %%W, [%%STATE + OFS_X0]
@@ -492,7 +487,6 @@ align 64
     mov         [rsp + 24], r9
 %endmacro
 
-
 ;
 ;   add_mod31()
 ;       add two 32-bit args and reduce mod (2^31-1)
@@ -509,7 +503,6 @@ align 64
     vpand       %1, MASK31
     vpaddd      %1, xmm2
 %endmacro
-
 
 ;
 ;   rot_mod31()
@@ -529,7 +522,6 @@ align 64
     vpor        %1, xmm2
     vpand       %1, MASK31
 %endmacro
-
 
 ;
 ;   lfsr_updt4()
@@ -1008,7 +1000,6 @@ asm_Zuc256Initialization_4_avx:
     mov         rsp, r10
 
     FUNC_RESTORE
-
 
 %endmacro
 
@@ -1658,7 +1649,6 @@ Eia3RoundsAVX_byte_loop_end:
         vpxor    xmm9, xmm14
 %endif
 
-
 %assign I (I + 1)
 %endrep
 
@@ -1765,6 +1755,4 @@ asm_Eia3Round16BAVX:
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
