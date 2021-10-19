@@ -363,6 +363,7 @@ test_gcm_enc_dec_update(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
                         struct gcm_key_data *key)
 {
         uint64_t i;
+        const uint64_t invalid_msg_len = ((1ULL << 39) - 256);
 
         struct gcm_enc_dec_update_fn {
                 aes_gcm_enc_dec_update_t func;
@@ -388,6 +389,7 @@ test_gcm_enc_dec_update(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
                 { key, NULL, out, in, len, IMB_ERR_NULL_CTX },
                 { key, ctx, NULL, in, len, IMB_ERR_NULL_DST },
                 { key, ctx, out, NULL, len, IMB_ERR_NULL_SRC },
+                { key, ctx, out, in, invalid_msg_len, IMB_ERR_CIPH_LEN },
                 { key, ctx, out, in, 0, 0 },
         };
 
