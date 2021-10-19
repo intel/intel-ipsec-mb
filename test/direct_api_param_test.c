@@ -429,6 +429,54 @@ test_gcm_enc_dec_finalize(struct IMB_MGR *mgr, struct gcm_key_data *key,
         return 0;
 }
 
+/* GMAC Update tests */
+static int
+test_gmac_update(struct IMB_MGR *mgr, uint8_t *in,
+                 const uint64_t len, struct gcm_context_data *ctx,
+                 struct gcm_key_data *key)
+{
+        uint64_t i;
+
+        struct gmac_update_fn {
+                aes_gmac_update_t func;
+                const char *func_name;
+        } fn_ptrs[] = {
+             { mgr->gmac128_update, "GMAC-128 UPDATE" },
+             { mgr->gmac192_update, "GMAC-192 UPDATE" },
+             { mgr->gmac256_update, "GMAC-256 UPDATE" },
+        };
+
+        struct fn_args {
+                struct gcm_key_data *key;
+                struct gcm_context_data *ctx;
+                uint8_t *in;
+                const uint64_t len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, ctx, in, len, IMB_ERR_NULL_EXP_KEY },
+                { key, NULL, in, len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, len, IMB_ERR_NULL_SRC },
+                { key, ctx, in, 0, 0 },
+        };
+
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                uint64_t j;
+
+                /* Iterate over args */
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
+
+                        fn_ptrs[i].func(ap->key, ap->ctx, ap->in, ap->len);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].func_name))
+                                return 1;
+                }
+                printf(".");
+        }
+        return 0;
+}
+
 /* GMAC Finalize tests */
 static int
 test_gmac_finalize(struct IMB_MGR *mgr, struct gcm_key_data *key,
@@ -533,12 +581,15 @@ test_gcm_api(struct IMB_MGR *mgr)
                                     text_len, ctx, key_data))
                 return 1;
 
-
         /* GCM Encrypt and Decrypt Finalize tests */
         if (test_gcm_enc_dec_finalize(mgr, key_data, ctx, tag, zero_buf))
                 return 1;
 
-       /* GMAC Finalize tests */
+        /* GMAC update tests */
+        if (test_gmac_update(mgr, out_buf, text_len, ctx, key_data))
+                return 1;
+
+        /* GMAC Finalize tests */
         if (test_gmac_finalize(mgr, key_data, ctx, tag, zero_buf))
                 return 1;
 

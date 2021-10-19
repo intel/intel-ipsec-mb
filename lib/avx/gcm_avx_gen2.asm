@@ -3480,6 +3480,10 @@ GMAC_FN_NAME(update):
         endbranch64
 	FUNC_SAVE
 
+%ifdef SAFE_PARAM
+        ;; Reset imb_errno
+        IMB_ERR_CHECK_RESET
+%endif
         ;; Check if msg_len == 0
 	cmp	arg4, 0
 	je	exit_gmac_update
@@ -3487,15 +3491,15 @@ GMAC_FN_NAME(update):
 %ifdef SAFE_PARAM
         ;; Check key_data != NULL
         cmp     arg1, 0
-        jz      exit_gmac_update
+        jz      error_gmac_update
 
         ;; Check context_data != NULL
         cmp     arg2, 0
-        jz      exit_gmac_update
+        jz      error_gmac_update
 
         ;; Check in != NULL (msg_len != 0)
         cmp     arg3, 0
-        jz      exit_gmac_update
+        jz      error_gmac_update
 %endif
 
         ; Increment size of "AAD length" for GMAC
@@ -3541,6 +3545,26 @@ exit_gmac_update:
 	FUNC_RESTORE
 
 	ret
+
+%ifdef SAFE_PARAM
+error_gmac_update:
+        ;; Clear reg and imb_errno
+        IMB_ERR_CHECK_START rax
+
+        ;; Check key_data != NULL
+        IMB_ERR_CHECK_NULL arg1, rax, IMB_ERR_NULL_EXP_KEY
+
+        ;; Check context_data != NULL
+        IMB_ERR_CHECK_NULL arg2, rax, IMB_ERR_NULL_CTX
+
+        ;; Check in != NULL (msg_len != 0)
+        IMB_ERR_CHECK_NULL arg3, rax, IMB_ERR_NULL_SRC
+
+        ;; Set imb_errno
+        IMB_ERR_CHECK_END rax
+        jmp     exit_gmac_update
+%endif
+
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits
