@@ -28,9 +28,10 @@
 %ifndef _TRANSPOSE_AVX512_ASM_
 %define _TRANSPOSE_AVX512_ASM_
 
+%include "include/os.asm"
 %include "include/reg_sizes.asm"
 
-section .data
+mksection .rodata
 default rel
 align 64
 PSHUFFLE_TRANSPOSE_MASK1: 	dq 0x0000000000000000
@@ -51,7 +52,6 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 				dq 0x0000000000000007
 				dq 0x000000000000000E
 				dq 0x000000000000000F
-
 
 ; LOAD FIRST 8 LANES FOR 16x16 32-BIT TRANSPOSE
 ;
@@ -260,7 +260,6 @@ PSHUFFLE_TRANSPOSE_MASK2: 	dq 0x0000000000000002
 ; r13  = {p13 o13 n13 m13   l13 k13 j13 i13   h13 g13 f13 e13   d13 c13 b13 a13}
 ; r14  = {p14 o14 n14 m14   l14 k14 j14 i14   h14 g14 f14 e14   d14 c14 b14 a14}
 ; r15  = {p15 o15 n15 m15   l15 k15 j15 i15   h15 g15 f15 e15   d15 c15 b15 a15}
-
 
 	; process first 4 rows (r0..r3)
 	vshufps	%%t0, %%r0, %%r1, 0x44	; t0 = {j5 j4 i5 i4  j1 j0 i1 i0  b5 b4 a5 a4  b1 b0 a1 a0}

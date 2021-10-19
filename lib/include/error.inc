@@ -28,9 +28,6 @@
 %ifndef ERROR_ASM_INCLUDED
 %define ERROR_ASM_INCLUDED
 
-section .text
-default rel
-
 extern imb_errno
 extern imb_errno_types
 
@@ -46,7 +43,6 @@ extern imb_errno_types
 %endrep
 
 %endmacro
-
 
 SET_ERRNO_TYPES \
     IMB_ERR_NULL_MBMGR,         \
@@ -87,14 +83,11 @@ SET_ERRNO_TYPES \
     IMB_ERR_NULL_AUTH_KEY,      \
     IMB_ERR_NULL_CTX
 
-
-
 ;; Reset global imb_errno to 0
 %macro IMB_ERR_CHECK_RESET 0
 
         mov     dword [rel imb_errno], 0
 %endmacro
-
 
 ;; Set GP reg and global imb_errno to 0
 %macro IMB_ERR_CHECK_START 1
@@ -104,14 +97,12 @@ SET_ERRNO_TYPES \
         mov     [rel imb_errno], DWORD(%%REG)
 %endmacro
 
-
 ;; Set global imb_errno to specified error type
 %macro IMB_ERR_CHECK_END 1
 %define %%ERR   %1 ;; [in] 64 bit GP reg containing error type
 
         mov     [rel imb_errno], DWORD(%%ERR)
 %endmacro
-
 
 ;; Set error type if value is 0
 %macro IMB_ERR_CHECK_ZERO 3
@@ -123,7 +114,6 @@ SET_ERRNO_TYPES \
         cmovz   DWORD(%%REG), %%ERR
 %endmacro
 
-
 ;; Set error type if value is null
 %macro IMB_ERR_CHECK_NULL 3
 %define %%VAL   %1 ;; [in] value to check for null
@@ -132,7 +122,6 @@ SET_ERRNO_TYPES \
 
         IMB_ERR_CHECK_ZERO %%VAL, %%REG, %%ERR
 %endmacro
-
 
 ;; Set error type if value is above compare value
 %macro IMB_ERR_CHECK_ABOVE 4
@@ -145,7 +134,6 @@ SET_ERRNO_TYPES \
         cmova   DWORD(%%REG), %%ERR
 %endmacro
 
-
 ;; Set error type if value is below compare value
 %macro IMB_ERR_CHECK_BELOW 4
 %define %%VAL   %1 ;; [in] value to check
@@ -156,6 +144,5 @@ SET_ERRNO_TYPES \
         cmp     %%VAL, %%CVAL
         cmovb   DWORD(%%REG), %%ERR
 %endmacro
-
 
 %endif ;; ERROR_ASM_INCLUDED

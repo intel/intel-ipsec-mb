@@ -30,8 +30,9 @@
 
 %define NO_AESNI_RENAME
 %include "include/aesni_emu.inc"
+%include "include/os.asm"
 
-section .data
+mksection .rodata
 
 default rel
 align 64

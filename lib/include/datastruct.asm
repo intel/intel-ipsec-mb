@@ -173,8 +173,6 @@ align %%align
 %endif
 %endm
 
-
-
 ; macro RES_B name, size [, align]
 %macro RES_B 2-3 1
 RES_int %1, %2, %3
@@ -209,7 +207,6 @@ RES_int %1, 32*(%2), %3
 %macro RES_Z 2-3 64
 RES_int %1, 64*(%2), %3
 %endm
-
 
 %macro RES_U 5-*
 %if (0 == (%0 & 1))

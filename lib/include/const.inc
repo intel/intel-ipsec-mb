@@ -108,7 +108,6 @@ extern padding_0x80_tab16
 ;;; Call AVX macro
 %define XVPINSRW PINSRW_COMMON avx,
 
-
 ;;; VPINSRW_M256 insert word into 32 byte memory range
 %macro VPINSRW_M256 7
 
@@ -186,7 +185,6 @@ extern padding_0x80_tab16
 
 ;;; Call AVX macro
 %define XVPINSRD PINSRD_COMMON avx,
-
 
 ;;; VPINSRD_M256 insert dword into 32 byte memory range
 %macro VPINSRD_M256 7

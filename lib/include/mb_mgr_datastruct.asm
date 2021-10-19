@@ -368,7 +368,6 @@ END_FIELDS
 %assign _SHA512_ARGS_size	_FIELD_OFFSET
 %assign _SHA512_ARGS_align	_STRUCT_ALIGN
 
-
 ;; ---------------------------------------
 START_FIELDS	; MB_MGR_HMAC_SHA512_OOO
 ;;;	name	         	size             	align
@@ -383,8 +382,6 @@ END_FIELDS
 
 _args_digest_sha512	equ	_args_sha512 + _digest_sha512
 _args_data_ptr_sha512	equ	_args_sha512 + _data_ptr_sha512
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define HMAC MD5 Out Of Order Data Structures
@@ -414,7 +411,6 @@ END_FIELDS
 
 _args_digest_md5	equ	_args_md5 + _digest_md5
 _args_data_ptr_md5	equ	_args_md5 + _data_ptr_md5
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Define Snow3G Out of Order Data Structures

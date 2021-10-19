@@ -32,5 +32,4 @@
 db 0xf3, 0x0f, 0x1e, 0xfa
 %endmacro
 
-
 %endif ; _CET_INC_

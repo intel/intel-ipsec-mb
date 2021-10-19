@@ -129,9 +129,9 @@ extern pDebugBuffer
 	mov	%%reg, [pDebugBuffer]
 
 	mov	byte [%%reg], 0x57
-section .data
+mksection .rodata
 %%lab: db %1, 0
-section .text
+mksection .text
 	mov	qword [%%reg+1], %%lab
 	add	%%reg, 8+1
 %rotate 1
@@ -206,9 +206,9 @@ section .text
 	mov	r15, [pDebugBuffer]
 
 	mov	byte [r15], 0x57
-section .data
+mksection .rodata
 %%lab: db %1, 0
-section .text
+mksection .text
 	mov	qword [r15+1], %%lab
 	add	r15, 8+1
 
@@ -248,17 +248,15 @@ section .text
 %endmacro
 %endif
 
-
-
 %if 0 ; OLD
 %macro DBGPRINTL_ZMM 2-*
 	push	rax
 	mov	rax, [pDebugBuffer]
 
 	mov	byte [rax], 0x57
-section .data
+mksection .rodata
 %%lab: db %1, 0
-section .text
+mksection .text
 	mov	qword [rax+1], %%lab
 	add	rax, 8+1
 %rotate 1
@@ -317,9 +315,9 @@ section .text
 	mov	rax, [pDebugBuffer]
 
 	mov	byte [rax], 0x57
-section .data
+mksection .rodata
 %%lab: db %1, 0
-section .text
+mksection .text
 	mov	qword [rax+1], %%lab
 	add	rax, 8+1
 %rotate 1
@@ -378,9 +376,9 @@ section .text
 	mov	rax, [pDebugBuffer]
 
 	mov	byte [rax], 0x57
-section .data
+mksection .rodata
 %%lab: db %1, 0
-section .text
+mksection .text
 	mov	qword [rax+1], %%lab
 	add	rax, 8+1
 

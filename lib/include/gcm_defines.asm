@@ -34,7 +34,7 @@
 ;       Vinodh Gopal
 ;       James Guilford
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -209,7 +209,7 @@ dq      (((1<<39) - 256) - 1)
 %endif
 %endm
 
-section .text
+mksection .text
 
 ;;define the fields of gcm_context_data struct
 ;; struct gcm_context_data {

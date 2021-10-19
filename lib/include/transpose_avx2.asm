@@ -178,7 +178,6 @@
        vshufps %%r4, %%r4, %%r6, 0xDD  ; r4 = {h7 g7 f7 e7   h3 g3 f3 e3}
        vshufps %%t1, %%r2, %%t1, 0x88  ; t1 = {h4 g4 f4 e4   h0 g0 f0 e0}
 
-
        vperm2f128      %%r6, %%r5, %%r1, 0x13  ; h6...a6
        vperm2f128      %%r2, %%r5, %%r1, 0x02  ; h2...a2
        vperm2f128      %%r5, %%r7, %%r3, 0x13  ; h5...a5
