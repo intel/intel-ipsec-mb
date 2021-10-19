@@ -30,7 +30,7 @@
 [bits 64]
 default rel
 
-section .data
+mksection .rodata
 
 ;; SCTP CRC32 https://www.ietf.org/rfc/rfc3309.txt
 ;; 0x1edc6f41 (Castagnoli93)
@@ -215,6 +215,4 @@ crc32_wimax_ofdma_hcs8_const:
         dq 0x7900000000000000, 0x6200000000000000   ; 128->64 reduction
         dq 0x0000000107156a16, 0x0000000107000000   ; 64->32 reduction
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

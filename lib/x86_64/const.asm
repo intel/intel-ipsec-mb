@@ -27,7 +27,7 @@
 
 %include "include/os.asm"
 
-section .data
+mksection .rodata
 default rel
 
 MKGLOBAL(len_shift_tab,data,internal)
@@ -114,6 +114,4 @@ align 64
 all_80s:
 times 64 db 0x80
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -27,7 +27,7 @@
 
 %include "include/os.asm"
 
-section .data
+mksection .rodata
 default rel
 align 64
 swap_mask:
@@ -40,7 +40,7 @@ db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
-section .text
+mksection .text
 
 ; Function which XOR's 16 bytes of the input buffer with 16 bytes of the
 ; KeyStream, placing the result in the output buffer.
@@ -136,6 +136,4 @@ asm_XorKeyStream64B_avx512:
         vzeroupper
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

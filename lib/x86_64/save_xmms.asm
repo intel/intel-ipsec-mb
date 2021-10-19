@@ -33,7 +33,7 @@
 %define ARG1	rcx
 %endif
 
-section .text
+mksection .text
 ; void save_xmms(UINT128 array[10])
 MKGLOBAL(save_xmms,function,internal)
 save_xmms:
@@ -48,7 +48,6 @@ save_xmms:
 	movdqa	[ARG1 + 8*16], xmm14
 	movdqa	[ARG1 + 9*16], xmm15
 	ret
-
 
 ; void restore_xmms(UINT128 array[10])
 MKGLOBAL(restore_xmms,function,internal)
@@ -80,7 +79,6 @@ restore_xmms:
 
 	ret
 
-
         ; void save_xmms_avx(UINT128 array[10])
 MKGLOBAL(save_xmms_avx,function,internal)
 save_xmms_avx:
@@ -95,7 +93,6 @@ save_xmms_avx:
 	vmovdqa	[ARG1 + 8*16], xmm14
 	vmovdqa	[ARG1 + 9*16], xmm15
 	ret
-
 
 ; void restore_xmms_avx(UINT128 array[10])
 MKGLOBAL(restore_xmms_avx,function,internal)
@@ -127,6 +124,4 @@ restore_xmms_avx:
 %endif
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

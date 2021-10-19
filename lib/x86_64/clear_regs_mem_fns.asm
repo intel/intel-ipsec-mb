@@ -28,7 +28,7 @@
 %include "include/os.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
-section .text
+mksection .text
 ;
 ; This function clears all scratch GP registers
 ;
@@ -150,6 +150,4 @@ imb_clear_mem:
 clr_mem_return:
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

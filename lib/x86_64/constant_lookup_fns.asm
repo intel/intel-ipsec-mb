@@ -29,7 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/constant_lookup.asm"
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -109,7 +109,7 @@ times 8 dd 0xd0d0d0d0
 times 8 dd 0xe0e0e0e0
 times 8 dd 0xf0f0f0f0
 
-section .text
+mksection .text
 
 %ifdef LINUX
         %define arg1    rdi
@@ -445,7 +445,6 @@ loop32_sse:
 exit32_sse:
         ret
 
-
 ; uint32_t lookup_32bit_avx(const void *table, const uint32_t idx, const uint32_t size);
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
@@ -499,7 +498,6 @@ loop32_avx:
 exit32_avx:
         ret
 
-
 ; uint64_t lookup_64bit_sse(const void *table, const uint32_t idx, const uint32_t size);
 ; arg 1 : pointer to table to look up
 ; arg 2 : index to look up
@@ -552,7 +550,6 @@ loop64_sse:
 
 exit64_sse:
         ret
-
 
 ; uint64_t lookup_64bit_avx(const void *table, const uint32_t idx, const uint32_t size);
 ; arg 1 : pointer to table to look up
@@ -1168,6 +1165,4 @@ lookup_64x8bit_avx512_vbmi:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

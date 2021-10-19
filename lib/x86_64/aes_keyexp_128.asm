@@ -62,7 +62,7 @@
 %define EXP_DEC_KEYS	r8
 %endif
 
-section .text
+mksection .text
 
 ; void aes_keyexp_128(UINT128 *key,
 ;                     UINT128 *enc_exp_keys,
@@ -595,6 +595,4 @@ error_keyexp_enc_avx:
         jmp aes_keyexp_128_enc_avx_return
 %endif
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

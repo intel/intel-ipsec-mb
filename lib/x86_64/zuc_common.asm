@@ -29,7 +29,7 @@
 %include "include/reg_sizes.asm"
 %include "include/zuc_sbox.inc"
 
-section .data
+mksection .rodata
 default rel
 EK_d:
 dw	0x44D7, 0x26BC, 0x626B, 0x135E, 0x5789, 0x35E2, 0x7135, 0x09AF,
@@ -43,11 +43,9 @@ align 16
 mask_S1:
 dq      0x00ff00ff00ff00ff
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 
-section .text
+mksection .text
 
 %define OFFSET_FR1      (16*4)
 %define OFFSET_FR2      (17*4)
@@ -186,7 +184,6 @@ section .text
     vpand        xmm0, [rel mask_S1]
     vpand        xmm1, [rel mask_S0]
 
-
     vpxor       xmm0, xmm0, xmm1
     vmovd       r10d, xmm0      ; F_R1
     vpextrd     r11d, xmm0, 1   ; F_R2
@@ -242,11 +239,9 @@ section .text
     sub rbx, 0x7FFFFFFF
     cmovns rax, rbx
 
-
     ; LFSR_S16 = (LFSR_S15++) = eax
     mov         [rsi + (( 0 + %1) % 16)*4], eax
 %endmacro
-
 
 ;
 ;   make_u31()
@@ -262,7 +257,6 @@ section .text
     shrd        %%Rt, %%Ek, 15
     shrd        %%Rt, %%Ke, 9
 %endmacro
-
 
 ;
 ;	key_expand()
@@ -356,7 +350,6 @@ section .text
     mov         rdx, [rbp - 64]   ; load pointer to pState
     lea         rsi, [rdx]
 
-
     BITS_REORG  0
     NONLIN_FUN  0, %%ARCH
     xor         rax, rax
@@ -376,7 +369,6 @@ section .text
     mov         [rsi + (19*4)],r13d  ;BRC_X1
     mov         [rsi + (20*4)],r14d  ;BRC_X2
     mov         [rsi + (21*4)],r15d  ;BRC_X3
-
 
     ; Restore non-volatile registers
     mov rbx, [rbp - 8]
@@ -507,7 +499,6 @@ section .text
 
     mov rsi, [rbp - 72]   ; load pState
 
-
     ; Save ZUC's state variables
     mov         [rsi + OFFSET_FR1], r10d
     mov         [rsi + OFFSET_FR2], r11d
@@ -618,7 +609,6 @@ section .text
 
 %%exit_loop:
     mov rsi, [rbp - 72]   ; load pState
-
 
     ; Save ZUC's state variables
     mov         [rsi + OFFSET_FR1], r10d

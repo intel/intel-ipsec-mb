@@ -30,7 +30,7 @@
 [bits 64]
 default rel
 
-section .data
+mksection .rodata
 
 ;; Ethernet FCS CRC32 0x04c11db7
 ;; http://www.ietf.org/rfc/rfc1952.txt
@@ -67,6 +67,4 @@ crc16_x25_ccitt_const:
 	dq 0x00000000000081bf, 0x0000000000001cbb   ; 128-bits to 64-bits fold
 	dq 0x000000011c581910, 0x0000000000010810   ; 64-bits to 32-bits reduction
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

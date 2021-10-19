@@ -41,9 +41,6 @@
 %define EXP_DEC_KEYS	r8
 %endif
 
-
-
-
 %macro key_expansion_1_192_sse 1
 	;; Assumes the xmm3 includes all zeros at this point.
         pshufd xmm2, xmm2, 11111111b
@@ -106,7 +103,7 @@
 	vmovdqa [EXP_DEC_KEYS + 16 * (12 - %1)], xmm1
 %endmacro
 
-section .text
+mksection .text
 
 ; void aes_keyexp_192(UINT128 *key,
 ;                     UINT128 *enc_exp_keys,
@@ -692,6 +689,4 @@ error_keyexp_enc_avx:
         jmp aes_keyexp_192_enc_avx_return
 %endif
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

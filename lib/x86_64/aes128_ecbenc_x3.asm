@@ -51,7 +51,6 @@
 %define OUT2	rax	;
 %endif
 
-
 %define XDATA0		xmm0
 %define XDATA1		xmm1
 %define XDATA2		xmm2
@@ -59,7 +58,7 @@
 %define XKEYA		xmm3
 %define XKEYB		xmm4
 
-section .text
+mksection .text
 
 MKGLOBAL(aes128_ecbenc_x3_sse,function,internal)
 aes128_ecbenc_x3_sse:
@@ -340,7 +339,5 @@ aes128_ecbenc_x3_avx_return:
 %endif
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
 

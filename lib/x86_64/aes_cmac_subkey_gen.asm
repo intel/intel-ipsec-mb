@@ -73,8 +73,7 @@
 %define XKEY1   xmm1
 %define XKEY2   xmm2
 
-
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -102,7 +101,7 @@ byteswap_const:
         ;DDQ 0x000102030405060708090A0B0C0D0E0F
         dq 0x08090A0B0C0D0E0F, 0x0001020304050607
 
-section .text
+mksection .text
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -423,6 +422,4 @@ aes_cmac_256_subkey_gen_avx512:
         AES_CMAC_SUBKEY_GEN_AVX 13
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

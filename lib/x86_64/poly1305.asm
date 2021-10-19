@@ -83,7 +83,7 @@ struc STACKFRAME
 _gpr_save:      resq    8
 endstruc
 
-section .text
+mksection .text
 
 ;; =============================================================================
 ;; =============================================================================
@@ -585,6 +585,4 @@ poly1305_aead_complete_scalar:
 .poly1305_complete_exit:
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
