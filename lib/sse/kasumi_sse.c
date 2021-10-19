@@ -32,6 +32,7 @@
 #include "include/kasumi_internal.h"
 #include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
+#include "include/error.h"
 
 #define SAVE_XMMS               save_xmms
 #define RESTORE_XMMS            restore_xmms
@@ -48,13 +49,25 @@ kasumi_f8_1_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 #endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pCtx == NULL || pBufferIn == NULL || pBufferOut == NULL)
+        imb_set_errno(NULL, 0);
+        if (pCtx ==  NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
-
+        }
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pBufferOut == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                return;
+        }
         /* Check input data is in range of supported length */
         if (cipherLengthInBytes == 0 ||
-            cipherLengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT))
+            cipherLengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT)) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
+        }
 #endif
         kasumi_f8_1_buffer(pCtx, IV, pBufferIn, pBufferOut,
                            cipherLengthInBytes);
@@ -82,13 +95,25 @@ kasumi_f8_1_buffer_bit_sse(const kasumi_key_sched_t *pCtx,
 #endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pCtx == NULL || pBufferIn == NULL || pBufferOut == NULL)
+        imb_set_errno(NULL, 0);
+        if (pCtx ==  NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
-
+        }
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pBufferOut == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                return;
+        }
         /* Check input data is in range of supported length */
         if (cipherLengthInBits == 0 ||
-            cipherLengthInBits > KASUMI_MAX_LEN)
+            cipherLengthInBits > KASUMI_MAX_LEN) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
+        }
 #endif
         kasumi_f8_1_buffer_bit(pCtx, IV, pBufferIn, pBufferOut,
                                cipherLengthInBits, offsetInBits);
@@ -116,21 +141,31 @@ kasumi_f8_2_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
 #endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pCtx == NULL)
+        imb_set_errno(NULL, 0);
+        if (pCtx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
-
-        if (pBufferIn1 == NULL || pBufferOut1 == NULL)
+        }
+        if (pBufferIn1 == NULL || pBufferIn2 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
                 return;
-
-        if (pBufferIn2 == NULL || pBufferOut2 == NULL)
+        }
+        if (pBufferOut1 == NULL || pBufferOut2 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
                 return;
-
+        }
         /* Check input data is in range of supported length */
-        if (lengthInBytes1 == 0 || lengthInBytes1 > (KASUMI_MAX_LEN / CHAR_BIT))
+        if (lengthInBytes1 == 0 ||
+            lengthInBytes1 > (KASUMI_MAX_LEN / CHAR_BIT)) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
+        }
 
-        if (lengthInBytes2 == 0 || lengthInBytes2 > (KASUMI_MAX_LEN / CHAR_BIT))
+        if (lengthInBytes2 == 0 ||
+            lengthInBytes2 > (KASUMI_MAX_LEN / CHAR_BIT)) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
+        }
 #endif
         kasumi_f8_2_buffer(pCtx, IV1, IV2,
                            pBufferIn1, pBufferOut1, lengthInBytes1,
@@ -160,21 +195,24 @@ kasumi_f8_3_buffer_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV1,
 #endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pCtx == NULL)
+        imb_set_errno(NULL, 0);
+        if (pCtx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
-
-        if (pBufferIn1 == NULL || pBufferOut1 == NULL)
+        }
+        if (pBufferIn1 == NULL || pBufferIn2 == NULL || pBufferIn3 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
                 return;
-
-        if (pBufferIn2 == NULL || pBufferOut2 == NULL)
+        }
+        if (pBufferOut1 == NULL || pBufferOut2 == NULL || pBufferOut3 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
                 return;
-
-        if (pBufferIn3 == NULL || pBufferOut3 == NULL)
-                return;
-
+        }
         /* Check input data is in range of supported length */
-        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT))
+        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT)) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
+        }
 #endif
         kasumi_f8_3_buffer(pCtx, IV1, IV2, IV3,
                            pBufferIn1, pBufferOut1,
@@ -207,24 +245,26 @@ kasumi_f8_4_buffer_sse(const kasumi_key_sched_t *pCtx,
 #endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pCtx == NULL)
+        imb_set_errno(NULL, 0);
+        if (pCtx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
-
-        if (pBufferIn1 == NULL || pBufferOut1 == NULL)
+        }
+        if (pBufferIn1 == NULL || pBufferIn2 == NULL || pBufferIn3 == NULL ||
+            pBufferIn4 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
                 return;
-
-        if (pBufferIn2 == NULL || pBufferOut2 == NULL)
+        }
+        if (pBufferOut1 == NULL || pBufferOut2 == NULL || pBufferOut3 == NULL ||
+            pBufferOut4 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
                 return;
-
-        if (pBufferIn3 == NULL || pBufferOut3 == NULL)
-                return;
-
-        if (pBufferIn4 == NULL || pBufferOut4 == NULL)
-                return;
-
+        }
         /* Check input data is in range of supported length */
-        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT))
+        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT)) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
+        }
 #endif
         kasumi_f8_4_buffer(pCtx, IV1, IV2, IV3, IV4,
                            pBufferIn1, pBufferOut1,
@@ -263,18 +303,45 @@ kasumi_f8_n_buffer_sse(const kasumi_key_sched_t *pKeySchedule,
 
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pKeySchedule == NULL || pDataIn == NULL || pDataOut == NULL ||
-            dataLen == NULL || IV == NULL)
+        imb_set_errno(NULL, 0);
+
+        if (pKeySchedule == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (pDataIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pDataOut == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                return;
+        }
+        if (dataLen == NULL) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
+                return;
+        }
+        if (IV == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
 
         for (i = 0; i < dataCount; i++) {
                 /* Check for NULL pointers */
-                if (pDataIn[i] == NULL || pDataOut[i] == NULL)
+                if (pDataIn[i] == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_SRC);
                         return;
-
+                }
+                if (pDataOut[i] == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                        return;
+                }
                 /* Check input data is in range of supported length */
-                if (dataLen[i] == 0 || dataLen[i] > (KASUMI_MAX_LEN / CHAR_BIT))
+                if (dataLen[i] == 0 ||
+                    dataLen[i] > (KASUMI_MAX_LEN / CHAR_BIT)) {
+                        imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                         return;
+                }
         }
 #endif
 
@@ -315,12 +382,23 @@ kasumi_f9_1_buffer_sse(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
 #endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pCtx == NULL || pBufferIn == NULL || pDigest == NULL)
+        if (pCtx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
-
+        }
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pDigest == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
         /* Check input data is in range of supported length */
-        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT))
+        if (lengthInBytes == 0 || lengthInBytes > (KASUMI_MAX_LEN / CHAR_BIT)) {
+                imb_set_errno(NULL, IMB_ERR_AUTH_LEN);
                 return;
+        }
 #endif
         kasumi_f9_1_buffer(pCtx, pBufferIn, lengthInBytes, pDigest);
 #ifdef SAFE_DATA
@@ -345,12 +423,23 @@ kasumi_f9_1_buffer_user_sse(const kasumi_key_sched_t *pCtx, const uint64_t IV,
 #endif
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pCtx == NULL || pBufferIn == NULL || pDigest == NULL)
+        if (pCtx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
-
+        }
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pDigest == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
         /* Check input data is in range of supported length */
-        if (lengthInBits == 0 || lengthInBits > KASUMI_MAX_LEN)
+        if (lengthInBits == 0 || lengthInBits > KASUMI_MAX_LEN) {
+                imb_set_errno(NULL, IMB_ERR_AUTH_LEN);
                 return;
+        }
 #endif
         kasumi_f9_1_buffer_user(pCtx, IV, pBufferIn, lengthInBits,
                                 pDigest, direction);

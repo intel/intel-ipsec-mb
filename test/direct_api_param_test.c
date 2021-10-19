@@ -1356,18 +1356,315 @@ test_zuc_api(struct IMB_MGR *mgr)
         return 0;
 }
 
+static int
+test_kasumi_api_f8_1_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *ctx,
+                            const uint64_t iv, const void *in, void *out,
+                            const uint32_t len)
+{
+        uint64_t j;
+
+        struct {
+                kasumi_f8_1_buffer_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->f8_1_buffer, "KASUMI F8 1" };
+
+        struct fn_args {
+                const kasumi_key_sched_t *ctx;
+                const uint64_t iv;
+                const void *in;
+                void *out;
+                const uint32_t len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, in, out, len, IMB_ERR_NULL_EXP_KEY },
+                { ctx, iv, NULL, out, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, in, NULL, len, IMB_ERR_NULL_DST },
+                { ctx, iv, in, out, 0, IMB_ERR_CIPH_LEN },
+        };
+
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptrs.fn(ap->ctx, ap->iv, ap->in, ap->out,
+                                ap->len);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+
+        return 0;
+}
+
+static int
+test_kasumi_api_f8_1_buffer_bit(struct IMB_MGR *mgr,
+                                const kasumi_key_sched_t *ctx,
+                                const uint64_t iv, const void *in, void  *out,
+                                const uint32_t len, const uint32_t offset)
+{
+        uint64_t j;
+
+        struct {
+                kasumi_f8_1_buffer_bit_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->f8_1_buffer_bit, "KASUMI F8 1 BIT" };
+
+        struct fn_args {
+                const kasumi_key_sched_t *key_data;
+                const uint64_t iv;
+                const void *in;
+                void *out;
+                const uint32_t len;
+                const uint32_t offset;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, in, out, len, offset, IMB_ERR_NULL_EXP_KEY },
+                { ctx, iv, NULL, out, len, offset, IMB_ERR_NULL_SRC },
+                { ctx, iv, in, NULL, len, offset, IMB_ERR_NULL_DST },
+                { ctx, iv, in, out, 0, offset, IMB_ERR_CIPH_LEN },
+        };
+
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptrs.fn(ap->key_data, ap->iv, ap->in, ap->out,
+                           ap->len, ap->offset);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+        return 0;
+}
+
+static int
+test_kasumi_api_f8_2_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *ctx,
+                            const uint64_t iv, const uint64_t iv2,
+                            const void *in, const void *in2,
+                            void  *out, void  *out2,
+                            const uint32_t len, const uint32_t len2)
+{
+        uint64_t j;
+
+        struct {
+                kasumi_f8_2_buffer_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->f8_2_buffer, "KASUMI F8 2" };
+
+        struct fn_args {
+                const kasumi_key_sched_t *key_data;
+                const uint64_t iv;
+                const uint64_t iv2;
+                const void *in;
+                const void *in2;
+                void *out;
+                void *out2;
+                const uint32_t len;
+                const uint32_t len2;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, iv2, in, in2, out, out2, len, len2,
+                  IMB_ERR_NULL_EXP_KEY },
+                { ctx, iv, iv2, NULL, in2, out, out2, len, len2,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, in, NULL, out, out2, len, len2,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, in, in2, NULL, out2, len, len2,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, in, in2, out, NULL, len, len2,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, in, in2, out, out2, 0, len2,
+                  IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv2, in, in2, out, out2, len, 0,
+                  IMB_ERR_CIPH_LEN },
+        };
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptrs.fn(ap->key_data, ap->iv, ap->iv2, ap->in, ap->out,
+                           ap->len,  ap->in2, ap->out2, ap->len2);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+        return 0;
+}
+
+static int
+test_kasumi_api_f8_3_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *ctx,
+                            const uint64_t iv, const uint64_t iv2,
+                            const uint64_t iv3, const void *in,
+                            const void *in2, const void *in3,
+                            void  *out, void  *out2, void  *out3,
+                            const uint32_t len)
+{
+        uint64_t j;
+
+        struct {
+                kasumi_f8_3_buffer_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->f8_3_buffer, "KASUMI F8 3" };
+
+        struct fn_args {
+                const kasumi_key_sched_t *key_data;
+                const uint64_t iv; const uint64_t iv2; const uint64_t iv3;
+                const void *in; const void *in2; const void *in3;
+                void *out; void *out2; void *out3;
+                const uint32_t len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, iv2, iv3, in, in2, in3,
+                  out, out2, out3, len, IMB_ERR_NULL_EXP_KEY },
+                { ctx, iv, iv2, iv3, NULL, in2, in3,
+                  out, out2, out3, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, iv3, in, NULL, in3,
+                  out, out2, out3, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, iv3, in, in2, NULL,
+                  out, out2, out3, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, iv3, in, in2, in3,
+                  NULL, out2, out3, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, iv3, in, in2, in3,
+                  out, NULL, out3, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, iv3, in, in2, in3,
+                  out, out2, NULL, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, iv3, in, in2, in3,
+                  out, out2, out3, 0, IMB_ERR_CIPH_LEN },
+        };
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptrs.fn(ap->key_data, ap->iv, ap->iv2, ap->iv3,
+                           ap->in, ap->out, ap->in2, ap->out2,
+                           ap->in3, ap->out3, ap->len);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+        return 0;
+}
+
+static int
+test_kasumi_api_f8_4_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *ctx,
+                            const uint64_t iv, const uint64_t iv2,
+                            const uint64_t iv3, const uint64_t iv4,
+                            const void *in, const void *in2,
+                            const void *in3, const void *in4,
+                            void *out, void  *out2, void  *out3,
+                            void *out4, const uint32_t len)
+{
+        uint64_t j;
+
+        struct {
+                kasumi_f8_4_buffer_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->f8_4_buffer, "KASUMI F8 4" };
+
+        struct fn_args {
+                const kasumi_key_sched_t *key_data;
+                const uint64_t iv; const uint64_t iv2; const uint64_t iv3;
+                const uint64_t iv4;
+                const void *in; const void *in2; const void *in3;
+                const void *in4;
+                void *out; void *out2; void *out3; void *out4;
+                const uint32_t len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, iv2, iv3, iv4, in, in2, in3, in4,
+                  out, out2, out3, out4, len, IMB_ERR_NULL_EXP_KEY },
+                { ctx, iv, iv2, iv3, iv4, NULL, in2, in3, in4,
+                  out, out2, out3, out4, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, iv3, iv4, in, NULL, in3, in4,
+                  out, out2, out3, out4, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, iv3, iv4, in, in2, NULL, in4,
+                  out, out2, out3, out4, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, iv3, iv4, in, in2, in3, NULL,
+                  out, out2, out3, out4, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, iv3, iv4, in, in2, in3, in4,
+                  NULL, out2, out3, out4, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, iv3, iv4, in, in2, in3, in4,
+                  out, NULL, out3, out4, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, iv3, iv4, in, in2, in3, in4,
+                  out, out2, NULL, out4, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, iv3, iv4, in, in2, in3, in4,
+                  out, out2, out3, NULL, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, iv3, iv4, in, in2, in3, in4,
+                  out, out2, out3, out4, 0, IMB_ERR_CIPH_LEN },
+        };
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptrs.fn(ap->key_data, ap->iv, ap->iv2,
+                           ap->iv3, ap->iv4, ap->in, ap->out,
+                           ap->in2, ap->out2, ap->in3, ap->out3,
+                           ap->in4, ap->out4, ap->len);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+        return 0;
+}
+
+
+static int
+test_kasumi_api_f8_n_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *ctx,
+                            const uint64_t *iv, const void *in, void **out,
+                            const uint32_t *len, const uint32_t count)
+{
+        uint64_t j;
+
+        struct {
+                kasumi_f8_n_buffer_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->f8_n_buffer, "KASUMI F8 N" };
+
+        struct fn_args {
+                const kasumi_key_sched_t *ctx;
+                const uint64_t *iv;
+                const void *in;
+                void **out;
+                const uint32_t *len;
+                const uint32_t count;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, in, out, len, count, IMB_ERR_NULL_EXP_KEY },
+                { ctx, NULL, in, out, len, count, IMB_ERR_NULL_IV },
+                { ctx, iv, NULL, out, len, count, IMB_ERR_NULL_SRC },
+                { ctx, iv, in, NULL, len, count, IMB_ERR_NULL_DST },
+                { ctx, iv, in, out, 0, count, IMB_ERR_CIPH_LEN },
+        };
+
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptrs.fn(ap->ctx, ap->iv, ap->in, ap->out,
+                           ap->len, ap->count);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+
+        return 0;
+}
+
 /*
  * @brief Performs direct KASUMI API invalid param tests
  */
 static int
 test_kasumi_api(struct IMB_MGR *mgr)
 {
-        const uint32_t text_len = BUF_SIZE;
-        uint8_t out_buf[BUF_SIZE];
-        uint8_t zero_buf[BUF_SIZE];
-        int i, seg_err; /* segfault flag */
-        void *out_bufs[NUM_BUFS];
-        uint32_t lens[NUM_BUFS];
+        uint32_t text_len = 16;
+        uint64_t buf[BUF_SIZE];
+        uint32_t buf2[BUF_SIZE];
+        int seg_err; /* segfault flag */
+        kasumi_key_sched_t ctx;
+        uint64_t iv = text_len; uint64_t iv2 = text_len;
+        uint64_t iv3 = text_len; uint64_t iv4 = text_len;
+        const void *in = buf; const void *in2 = buf;
+        const void *in3 = buf; const void *in4 = buf;
+        void *out = buf; void *out2 = buf;
+        void *out3 = buf; void *out4 = buf;
+        const void *iv_ptr = buf;
+        const uint32_t *lens = buf2;
+        const uint32_t offset = 0;
+        const uint32_t count = 16;
 
         seg_err = setjmp(dir_api_param_env);
         if (seg_err) {
@@ -1375,20 +1672,30 @@ test_kasumi_api(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        for (i = 0; i < NUM_BUFS; i++) {
-                out_bufs[i] = (void *)&out_buf;
-                lens[i] = text_len;
-        }
+        if (test_kasumi_api_f8_1_buffer(mgr, &ctx, iv, in, out, text_len))
+                return 1;
 
-        memset(out_buf, 0, text_len);
-        memset(zero_buf, 0, text_len);
+        if (test_kasumi_api_f8_1_buffer_bit(mgr, &ctx, iv, in, out,
+                                            text_len, offset))
+                return 1;
 
-        /* @todo Add KASUMI API tests */
-        (void)mgr;
-        (void)lens;
-        (void)out_bufs;
+        if (test_kasumi_api_f8_2_buffer(mgr, &ctx, iv, iv2, in, in2, out, out2,
+                                        text_len, text_len))
+                return 1;
 
-        printf("\n");
+        if (test_kasumi_api_f8_3_buffer(mgr, &ctx, iv, iv2, iv3, in, in2,
+                                        in3, out, out2, out3, text_len))
+                return 1;
+
+        if (test_kasumi_api_f8_4_buffer(mgr, &ctx, iv, iv2, iv3, iv4, in, in2,
+                                        in3, in4, out, out2, out3,
+                                        out4, text_len))
+                return 1;
+
+        if (test_kasumi_api_f8_n_buffer(mgr, &ctx, iv_ptr, in, out,
+                                        lens, count))
+                return 1;
+
         return 0;
 }
 

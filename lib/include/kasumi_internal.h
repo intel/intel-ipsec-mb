@@ -42,6 +42,7 @@
 #include "wireless_common.h"
 #include "include/clear_regs_mem.h"
 #include "include/constant_lookup.h"
+#include "error.h"
 
 /*---------------------------------------------------------------------
 * Kasumi Inner S-Boxes
@@ -674,8 +675,15 @@ kasumi_compute_sched(const uint8_t modifier,
 {
 #ifdef SAFE_PARAM
         /* Check for NULL pointers */
-        if (pKey == NULL || pCtx == NULL)
+        imb_set_errno(NULL, 0);
+        if (pKey == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return -1;
+        }
+        if (pCtx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_CTX);
+                return -1;
+        }
 #endif
         uint32_t i = 0;
         const uint8_t *const key = (const uint8_t * const)pKey;
