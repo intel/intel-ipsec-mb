@@ -30,6 +30,7 @@
 %include "include/aesni_emu.inc"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
+%include "include/error.inc"
 %ifdef LINUX
 %define KEY		rdi
 %define EXP_ENC_KEYS	rsi
@@ -119,12 +120,14 @@ MKGLOBAL(aes_keyexp_192_sse,function,)
 aes_keyexp_192_sse:
         endbranch64
 %ifdef SAFE_PARAM
+        IMB_ERR_CHECK_RESET
+
         cmp     KEY, 0
-        jz      aes_keyexp_192_sse_return
+        jz      error_keyexp_sse
         cmp     EXP_ENC_KEYS, 0
-        jz      aes_keyexp_192_sse_return
+        jz      error_keyexp_sse
         cmp     EXP_DEC_KEYS, 0
-        jz      aes_keyexp_192_sse_return
+        jz      error_keyexp_sse
 %endif
 
 %ifndef LINUX
@@ -206,16 +209,29 @@ aes_keyexp_192_sse:
 aes_keyexp_192_sse_return:
 	ret
 
+%ifdef SAFE_PARAM
+error_keyexp_sse:
+        IMB_ERR_CHECK_START rax
+        IMB_ERR_CHECK_NULL KEY, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL EXP_ENC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_NULL EXP_DEC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_END rax
+
+        jmp aes_keyexp_192_sse_return
+%endif
+
 MKGLOBAL(aes_keyexp_192_sse_no_aesni,function,)
 aes_keyexp_192_sse_no_aesni:
         endbranch64
 %ifdef SAFE_PARAM
+        IMB_ERR_CHECK_RESET
+
         cmp     KEY, 0
-        jz      aes_keyexp_192_sse_no_aesni_return
+        jz      error_keyexp_sse_no_aesni
         cmp     EXP_ENC_KEYS, 0
-        jz      aes_keyexp_192_sse_no_aesni_return
+        jz      error_keyexp_sse_no_aesni
         cmp     EXP_DEC_KEYS, 0
-        jz      aes_keyexp_192_sse_no_aesni_return
+        jz      error_keyexp_sse_no_aesni
 %endif
 
 %ifndef LINUX
@@ -297,6 +313,17 @@ aes_keyexp_192_sse_no_aesni:
 aes_keyexp_192_sse_no_aesni_return:
 	ret
 
+%ifdef SAFE_PARAM
+error_keyexp_sse_no_aesni:
+        IMB_ERR_CHECK_START rax
+        IMB_ERR_CHECK_NULL KEY, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL EXP_ENC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_NULL EXP_DEC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_END rax
+
+        jmp aes_keyexp_192_sse_no_aesni_return
+%endif
+
 MKGLOBAL(aes_keyexp_192_avx,function,)
 MKGLOBAL(aes_keyexp_192_avx2,function,)
 MKGLOBAL(aes_keyexp_192_avx512,function,)
@@ -305,12 +332,14 @@ aes_keyexp_192_avx2:
 aes_keyexp_192_avx512:
         endbranch64
 %ifdef SAFE_PARAM
+        IMB_ERR_CHECK_RESET
+
         cmp     KEY, 0
-        jz      aes_keyexp_192_avx_return
+        jz      error_keyexp_avx
         cmp     EXP_ENC_KEYS, 0
-        jz      aes_keyexp_192_avx_return
+        jz      error_keyexp_avx
         cmp     EXP_DEC_KEYS, 0
-        jz      aes_keyexp_192_avx_return
+        jz      error_keyexp_avx
 %endif
 
 %ifndef LINUX
@@ -391,6 +420,17 @@ aes_keyexp_192_avx512:
 aes_keyexp_192_avx_return:
 	ret
 
+%ifdef SAFE_PARAM
+error_keyexp_avx:
+        IMB_ERR_CHECK_START rax
+        IMB_ERR_CHECK_NULL KEY, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL EXP_ENC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_NULL EXP_DEC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_END rax
+
+        jmp aes_keyexp_192_avx_return
+%endif
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -406,10 +446,12 @@ MKGLOBAL(aes_keyexp_192_enc_sse,function,)
 aes_keyexp_192_enc_sse:
         endbranch64
 %ifdef SAFE_PARAM
+        IMB_ERR_CHECK_RESET
+
         cmp     KEY, 0
-        jz      aes_keyexp_192_enc_sse_return
+        jz      error_keyexp_enc_sse
         cmp     EXP_ENC_KEYS, 0
-        jz      aes_keyexp_192_enc_sse_return
+        jz      error_keyexp_enc_sse
 %endif
 
 %ifndef LINUX
@@ -472,14 +514,26 @@ aes_keyexp_192_enc_sse:
 aes_keyexp_192_enc_sse_return:
 	ret
 
+%ifdef SAFE_PARAM
+error_keyexp_enc_sse:
+        IMB_ERR_CHECK_START rax
+        IMB_ERR_CHECK_NULL KEY, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL EXP_ENC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_END rax
+
+        jmp aes_keyexp_192_enc_sse_return
+%endif
+
 MKGLOBAL(aes_keyexp_192_enc_sse_no_aesni,function,)
 aes_keyexp_192_enc_sse_no_aesni:
         endbranch64
 %ifdef SAFE_PARAM
+        IMB_ERR_CHECK_RESET
+
         cmp     KEY, 0
-        jz      aes_keyexp_192_enc_sse_no_aesni_return
+        jz      error_keyexp_enc_sse_no_aesni
         cmp     EXP_ENC_KEYS, 0
-        jz      aes_keyexp_192_enc_sse_no_aesni_return
+        jz      error_keyexp_enc_sse_no_aesni
 %endif
 
 %ifndef LINUX
@@ -542,6 +596,16 @@ aes_keyexp_192_enc_sse_no_aesni:
 aes_keyexp_192_enc_sse_no_aesni_return:
 	ret
 
+%ifdef SAFE_PARAM
+error_keyexp_enc_sse_no_aesni:
+        IMB_ERR_CHECK_START rax
+        IMB_ERR_CHECK_NULL KEY, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL EXP_ENC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_END rax
+
+        jmp aes_keyexp_192_enc_sse_no_aesni_return
+%endif
+
 MKGLOBAL(aes_keyexp_192_enc_avx,function,)
 MKGLOBAL(aes_keyexp_192_enc_avx2,function,)
 MKGLOBAL(aes_keyexp_192_enc_avx512,function,)
@@ -550,10 +614,12 @@ aes_keyexp_192_enc_avx2:
 aes_keyexp_192_enc_avx512:
         endbranch64
 %ifdef SAFE_PARAM
+        IMB_ERR_CHECK_RESET
+
         cmp     KEY, 0
-        jz      aes_keyexp_192_enc_avx_return
+        jz      error_keyexp_enc_avx
         cmp     EXP_ENC_KEYS, 0
-        jz      aes_keyexp_192_enc_avx_return
+        jz      error_keyexp_enc_avx
 %endif
 
 %ifndef LINUX
@@ -615,6 +681,16 @@ aes_keyexp_192_enc_avx512:
 
 aes_keyexp_192_enc_avx_return:
 	ret
+
+%ifdef SAFE_PARAM
+error_keyexp_enc_avx:
+        IMB_ERR_CHECK_START rax
+        IMB_ERR_CHECK_NULL KEY, rax, IMB_ERR_NULL_KEY
+        IMB_ERR_CHECK_NULL EXP_ENC_KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_END rax
+
+        jmp aes_keyexp_192_enc_avx_return
+%endif
 
 %ifdef LINUX
 section .note.GNU-stack noalloc noexec nowrite progbits

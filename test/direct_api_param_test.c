@@ -765,6 +765,53 @@ test_gcm_api(struct IMB_MGR *mgr)
         printf("\n");
         return 0;
 }
+static int
+test_key_exp_gen_api_test(struct IMB_MGR *mgr, const void *key,
+                          void *enc_exp_keys, void *dec_exp_keys)
+{
+        int seg_err; /* segfault flag */
+        unsigned i, j;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        struct {
+                keyexp_t fn;
+                const char *name;
+        } fn_ptrs[] = {
+                { mgr->keyexp_128, "KEYEXP 128" },
+                { mgr->keyexp_192, "KEYEXP 192" },
+                { mgr->keyexp_256, "KEYEXP 256" },
+        };
+
+        struct fn_args {
+                const void *key;
+                void *enc_exp_keys;
+                void *dec_exp_keys;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                       { NULL, enc_exp_keys, dec_exp_keys, IMB_ERR_NULL_KEY },
+                       { key, NULL, dec_exp_keys, IMB_ERR_NULL_EXP_KEY },
+                       { key, enc_exp_keys, NULL, IMB_ERR_NULL_EXP_KEY },
+                       { key, enc_exp_keys, dec_exp_keys, 0 },
+        };
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
+
+                        fn_ptrs[i].fn(ap->key, ap->enc_exp_keys,
+                                      ap->dec_exp_keys);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].name))
+                        return 1;
+                }
+        }
+
+        return 0;
+}
 
 /*
  * @brief Performs direct Key expansion and
@@ -773,10 +820,14 @@ test_gcm_api(struct IMB_MGR *mgr)
 static int
 test_key_exp_gen_api(struct IMB_MGR *mgr)
 {
+
         const uint32_t text_len = BUF_SIZE;
         uint8_t out_buf[BUF_SIZE];
         uint8_t zero_buf[BUF_SIZE];
         int seg_err; /* segfault flag */
+        const void *key = zero_buf;
+        void *enc_exp_keys = zero_buf;
+        void *dec_exp_keys = zero_buf;
 
         seg_err = setjmp(dir_api_param_env);
         if (seg_err) {
@@ -787,10 +838,89 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
         memset(out_buf, 0, text_len);
         memset(zero_buf, 0, text_len);
 
-        /* @todo Add key expansion API tests */
-        (void)mgr;
+        if (test_key_exp_gen_api_test(mgr, key, enc_exp_keys, dec_exp_keys))
+                return 1;
 
-        printf("\n");
+        return 0;
+}
+
+static int
+test_cmac_subkey_gen_api_test(struct IMB_MGR *mgr, const void *key_exp,
+                         void *key1, void *key2)
+{
+
+        const uint32_t text_len = BUF_SIZE;
+        uint8_t out_buf[BUF_SIZE];
+        uint8_t zero_buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+        unsigned i, j;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        memset(out_buf, 0, text_len);
+        memset(zero_buf, 0, text_len);
+
+        struct {
+                cmac_subkey_gen_t fn;
+                const char *name;
+        } fn_ptrs[] = {
+                { mgr->cmac_subkey_gen_128, "CMAC SUBKEY GEN 128" },
+                { mgr->cmac_subkey_gen_256, "CMAC SUBKEY GEN 256" },
+        };
+        struct fn_args {
+                const void *key_exp;
+                void *key1;
+                void *key2;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                       { NULL, key1, key2, IMB_ERR_NULL_EXP_KEY },
+                       { key_exp, NULL, key2, IMB_ERR_NULL_KEY },
+                       { key_exp, key1, NULL, IMB_ERR_NULL_KEY },
+                       { key_exp, key1, key2, 0 },
+        };
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
+
+                        fn_ptrs[i].fn(ap->key_exp, ap->key1,
+                                      ap->key2);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].name))
+                        return 1;
+                }
+        }
+
+        return 0;
+}
+
+static int
+test_cmac_subkey_gen_api(struct IMB_MGR *mgr)
+{
+
+        const uint32_t text_len = BUF_SIZE;
+        uint8_t out_buf[BUF_SIZE];
+        uint8_t zero_buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+        const void *key_exp = zero_buf;
+        void *key1 = zero_buf;
+        void *key2 = zero_buf;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        memset(out_buf, 0, text_len);
+        memset(zero_buf, 0, text_len);
+
+        if (test_cmac_subkey_gen_api_test(mgr, key_exp, key1, key2))
+                return 1;
+
         return 0;
 }
 
@@ -1557,6 +1687,9 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_chacha_poly_api(mb_mgr);
+        run++;
+
+        errors += test_cmac_subkey_gen_api(mb_mgr);
         run++;
 
         test_suite_update(&ts, run - errors, errors);
