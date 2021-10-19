@@ -797,10 +797,10 @@ test_key_exp_gen_api(struct IMB_MGR *mgr)
 static int
 test_hash_api(struct IMB_MGR *mgr)
 {
-        const uint32_t text_len = BUF_SIZE;
         uint8_t out_buf[BUF_SIZE];
         uint8_t zero_buf[BUF_SIZE];
         int seg_err; /* segfault flag */
+        unsigned i, j;
 
         seg_err = setjmp(dir_api_param_env);
         if (seg_err) {
@@ -808,13 +808,81 @@ test_hash_api(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        memset(out_buf, 0, text_len);
-        memset(zero_buf, 0, text_len);
+        memset(out_buf, 0, sizeof(out_buf));
+        memset(zero_buf, 0, sizeof(zero_buf));
 
-        /* @todo Add hash API tests e.g. SHA, MD5 etc. */
-        (void)mgr;
+        /* Test hash one block API's */
 
-        printf("\n");
+        struct {
+                hash_one_block_t fn;
+                const char *name;
+        } fn1_ptrs[] = {
+                { mgr->sha1_one_block, "SHA1 ONE BLOCK" },
+                { mgr->sha224_one_block, "SHA224 ONE BLOCK" },
+                { mgr->sha256_one_block, "SHA256 ONE BLOCK" },
+                { mgr->sha384_one_block, "SHA384 ONE BLOCK" },
+                { mgr->sha512_one_block, "SHA512 ONE BLOCK" },
+                { mgr->md5_one_block, "MD5 ONE BLOCK" },
+        };
+
+        struct {
+                const void *src;
+                void *auth;
+                IMB_ERR exp_err;
+        } fn1_args[] = {
+                { NULL, out_buf, IMB_ERR_NULL_SRC },
+                { zero_buf, NULL, IMB_ERR_NULL_AUTH },
+                { zero_buf, out_buf, 0 },
+        };
+
+        for (i = 0; i < DIM(fn1_ptrs); i++) {
+                for (j = 0; j < DIM(fn1_args); j++) {
+                        fn1_ptrs[i].fn(fn1_args[j].src,
+                                       fn1_args[j].auth);
+
+                        if (unexpected_err(mgr, fn1_args[j].exp_err,
+                                           fn1_ptrs[i].name))
+                        return 1;
+                }
+        }
+
+        /* Test hash API's */
+
+        struct {
+                hash_fn_t fn;
+                const char *name;
+        } fn2_ptrs[] = {
+                { mgr->sha1, "SHA1" },
+                { mgr->sha224, "SHA224" },
+                { mgr->sha256, "SHA256" },
+                { mgr->sha384, "SHA384" },
+                { mgr->sha512, "SHA512" },
+        };
+
+        struct {
+                const void *src;
+                uint64_t length;
+                void *auth;
+                IMB_ERR exp_err;
+        } fn2_args[] = {
+                { NULL, sizeof(zero_buf), out_buf, IMB_ERR_NULL_SRC },
+                { zero_buf, sizeof(zero_buf), NULL, IMB_ERR_NULL_AUTH },
+                { zero_buf, 0, out_buf, 0 },
+                { zero_buf, sizeof(zero_buf), out_buf, 0 },
+        };
+
+        for (i = 0; i < DIM(fn2_ptrs); i++) {
+                for (j = 0; j < DIM(fn2_args); j++) {
+                        fn2_ptrs[i].fn(fn2_args[j].src,
+                                       fn2_args[j].length,
+                                       fn2_args[j].auth);
+
+                        if (unexpected_err(mgr, fn2_args[j].exp_err,
+                                           fn2_ptrs[i].name))
+                        return 1;
+                }
+        }
+
         return 0;
 }
 
