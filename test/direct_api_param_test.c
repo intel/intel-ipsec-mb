@@ -429,6 +429,67 @@ test_gcm_enc_dec_finalize(struct IMB_MGR *mgr, struct gcm_key_data *key,
         return 0;
 }
 
+/* GMAC Finalize tests */
+static int
+test_gmac_finalize(struct IMB_MGR *mgr, struct gcm_key_data *key,
+                   struct gcm_context_data *ctx, uint8_t *tag,
+                   uint8_t *zero_buf)
+{
+        uint64_t i;
+        const uint64_t tag_len = 16;
+
+        struct aes_gmac_finalize_fn {
+                aes_gmac_finalize_t func;
+                const char *func_name;
+        } fn_ptrs[] = {
+             { mgr->gmac128_finalize, "GMAC-128 FINALIZE" },
+             { mgr->gmac192_finalize, "GMAC-192 FINALIZE" },
+             { mgr->gmac256_finalize, "GMAC-256 FINALIZE" },
+        };
+
+        struct fn_args {
+                struct gcm_key_data *key;
+                struct gcm_context_data *ctx;
+                uint8_t *tag;
+                const uint64_t tag_len;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, ctx, tag, tag_len, IMB_ERR_NULL_EXP_KEY },
+                { key, NULL, tag, tag_len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, tag_len, IMB_ERR_NULL_AUTH },
+                { key, ctx, tag, 0, IMB_ERR_AUTH_TAG_LEN },
+                { key, ctx, tag, 17, IMB_ERR_AUTH_TAG_LEN },
+        };
+
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                uint64_t j;
+
+                memset(tag, 0, tag_len);
+                memset(zero_buf, 0, tag_len);
+
+                /* Iterate over args */
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
+
+                        fn_ptrs[i].func(ap->key, ap->ctx, ap->tag, ap->tag_len);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].func_name))
+                        return 1;
+                }
+
+                /* Verify tag buffer not modified */
+                if (memcmp(tag, zero_buf, tag_len) != 0) {
+                        printf("%s: %s, invalid param test failed!\n",
+                               __func__,
+                               fn_ptrs[i].func_name);
+                        return 1;
+                }
+                printf(".");
+        }
+        return 0;
+}
+
 /*
  * @brief Performs direct GCM API invalid param tests
  */
@@ -475,6 +536,10 @@ test_gcm_api(struct IMB_MGR *mgr)
 
         /* GCM Encrypt and Decrypt Finalize tests */
         if (test_gcm_enc_dec_finalize(mgr, key_data, ctx, tag, zero_buf))
+                return 1;
+
+       /* GMAC Finalize tests */
+        if (test_gmac_finalize(mgr, key_data, ctx, tag, zero_buf))
                 return 1;
 
         printf("\n");
