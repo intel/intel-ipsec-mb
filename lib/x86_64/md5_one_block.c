@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include "intel-ipsec-mb.h"
 #include "include/clear_regs_mem.h"
+#include "include/error.h"
 
 #ifdef LINUX
 #define ROTATE(a, n) (((a) << (n)) ^ ((a) >> (32 - (n))))
@@ -81,8 +82,15 @@ md5_one_block_common(const uint8_t *data, uint32_t digest[4],
                      const enum arch_type arch)
 {
 #ifdef SAFE_PARAM
-        if (data == NULL || digest == NULL)
+        imb_set_errno(NULL, 0);
+        if (data == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
                 return;
+        }
+        if (digest == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
 #endif
         uint32_t a, b, c, d;
         uint32_t w[16];
