@@ -41,7 +41,7 @@
 %include "include/transpose_avx2.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
-section .data
+mksection .rodata
 default rel
 align 64
 MD5_TABLE:
@@ -176,7 +176,7 @@ MD5_TABLE:
 ONES:	dd	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 	dd	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 
-section .text
+mksection .text
 
 %ifndef LINUX
    %define arg1 rcx
@@ -247,7 +247,6 @@ section .text
 %define Y_DTMP1	ymm0
 %define Y_DTMP2	ymm1
 
-
 %define RESY	resb 32*
 ;; Assume stack aligned to 32 bytes before call
 ;; Therefore FRAMESIZE mod 32 must be 32-8 = 24
@@ -257,7 +256,6 @@ _DIGEST:	RESY	8	; stores Y_AA-Y_DD, Y_AA2-Y_DD2
 _TMPDIGEST:	RESY	2	; stores Y_AA, Y_BB temporarily
 		resb	24	; align
 endstruc
-
 
 %define	Y_AA	rsp + _DIGEST + 32*0
 %define	Y_BB	rsp + _DIGEST + 32*1
@@ -287,7 +285,6 @@ rot41 equ  6
 rot42 equ  10
 rot43 equ  15
 rot44 equ  21
-
 
 ;;
 ;; Magic functions defined in RFC 1321
@@ -499,7 +496,6 @@ lloop:
 	MD5_STEP MAGIC_F, Y_C,Y_D,Y_A,Y_B, Y_C2,Y_D2,Y_A2,Y_B2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 6*32, [TBL+ 6*32], rot13
 	MD5_STEP MAGIC_F, Y_B,Y_C,Y_D,Y_A, Y_B2,Y_C2,Y_D2,Y_A2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 7*32, [TBL+ 7*32], rot14
 
-
 	;; Fetch Pointers to Data Stream 1 to 8 ??
 	mov	inp0,[state + _data_ptr_md5 + 0*8]
 	mov	inp1,[state + _data_ptr_md5 + 1*8]
@@ -542,7 +538,6 @@ lloop:
 	; Restore Y_A and Y_B
 	vmovdqa  Y_A, [rsp + _TMPDIGEST + 0*32]
 	vmovdqa  Y_B, [rsp + _TMPDIGEST + 1*32]
-
 
 	MD5_STEP MAGIC_G, Y_A,Y_B,Y_C,Y_D, Y_A2,Y_B2,Y_C2,Y_D2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 1*32, [TBL+16*32], rot21
 	MD5_STEP MAGIC_G, Y_D,Y_A,Y_B,Y_C, Y_D2,Y_A2,Y_B2,Y_C2, Y_FUN,Y_TMP, Y_FUN2,Y_TMP2, DPTR1+ 6*32, [TBL+17*32], rot22
@@ -794,7 +789,6 @@ lastblock:
         vmovdqu	[state + 2*MD5_DIGEST_ROW_SIZE  ],Y_C
         vmovdqu	[state + 3*MD5_DIGEST_ROW_SIZE  ],Y_D
 
-
         vmovdqu	[state + 0*MD5_DIGEST_ROW_SIZE  + 32 ],Y_A2   ;; 32 is YMM width
         vmovdqu	[state + 1*MD5_DIGEST_ROW_SIZE  + 32 ],Y_B2
         vmovdqu	[state + 2*MD5_DIGEST_ROW_SIZE  + 32 ],Y_C2
@@ -817,6 +811,4 @@ lastblock:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

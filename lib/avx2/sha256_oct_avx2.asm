@@ -47,7 +47,7 @@
 %include "include/transpose_avx2.asm"
 %include "include/clear_regs.asm"
 
-section .data
+mksection .rodata
 default rel
 align 64
 ;global K256_8
@@ -206,7 +206,7 @@ K256:
 	dd	0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208
 	dd	0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
 
-section .text
+mksection .text
 
 %ifdef LINUX
      %define arg1 	rdi
@@ -307,7 +307,6 @@ endstruc
 
 %define VMOVPS	vmovups
 
-
 %macro ROTATE_ARGS 0
 %xdefine TMP_ h
 %xdefine h g
@@ -391,7 +390,6 @@ endstruc
 	ROTATE_ARGS
 %endm
 
-
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_16_XX 2
 %define %%T1 %1
@@ -417,7 +415,6 @@ endstruc
 	ROUND_00_15 %%T1, %%i
 
 %endm
-
 
 ;; SHA256_ARGS:
 ;;   UINT128 digest[8];  // transposed digests
@@ -585,6 +582,4 @@ Lrounds_16_xx:
 	add rsp, FRAMESZ
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -53,7 +53,6 @@ extern md5_x8x2_avx2
 %define job	arg2
 %define len2	arg2
 
-
 ; idx needs to be in rbp
 %define last_len        rbp
 %define idx             rbp
@@ -91,7 +90,7 @@ _gpr_save:	resq	8
 _rsp_save:	resq	1
 endstruc
 
-section .text
+mksection .text
 
 ; JOB* submit_job_hmac_md5_avx(MB_MGR_HMAC_MD5_OOO *state, IMB_JOB *job)
 ; arg 1 : rcx : state
@@ -370,6 +369,4 @@ return:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

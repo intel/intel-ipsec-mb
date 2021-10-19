@@ -32,7 +32,7 @@
 %include "include/cet.inc"
 extern sha256_oct_avx2
 
-section .data
+mksection .rodata
 default rel
 align 16
 byteswap:	;ddq 0x0c0d0e0f08090a0b0405060700010203
@@ -62,7 +62,7 @@ lane_5: dq  5
 lane_6: dq  6
 lane_7: dq  7
 
-section .text
+mksection .text
 
 %ifndef FUNC
 %define FUNC flush_job_hmac_sha_256_avx2
@@ -82,7 +82,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbp, r15
 %define idx		rbp
@@ -377,6 +376,4 @@ return:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

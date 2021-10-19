@@ -43,7 +43,7 @@
 %define ZUC128_INIT_8        asm_ZucInitialization_8_avx2
 %define ZUC256_INIT_8        asm_Zuc256Initialization_8_avx2
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -113,7 +113,7 @@ _null_len_save: resq    2
 _rsp_save:      resq    1
 endstruc
 
-section .text
+mksection .text
 
 %define APPEND(a,b) a %+ b
 %define APPEND3(a,b,c) a %+ b %+ c
@@ -656,7 +656,6 @@ APPEND3(%%skip_eea3_copy_,I,J):
 %assign I (I+1)
 %endrep
 
-
         ;; If Windows, reserve memory in stack for parameter transferring
 %ifndef LINUX
         ;; 40 bytes for 5 parameters
@@ -756,7 +755,6 @@ MKGLOBAL(FLUSH_JOB_ZUC256_EEA3,function,internal)
 FLUSH_JOB_ZUC256_EEA3:
         endbranch64
         FLUSH_JOB_ZUC_EEA3 256
-
 
 %macro SUBMIT_JOB_ZUC_EIA3 1
 %define %%KEY_SIZE      %1 ; [constant] Key size (128 or 256)
@@ -1118,6 +1116,4 @@ FLUSH_JOB_ZUC256_EIA3:
         endbranch64
         FLUSH_JOB_ZUC_EIA3 256
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

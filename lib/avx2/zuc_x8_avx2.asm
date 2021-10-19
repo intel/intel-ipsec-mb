@@ -34,7 +34,7 @@
 %include "include/cet.inc"
 %define APPEND(a,b) a %+ b
 
-section .data
+mksection .rodata
 default rel
 
 align 32
@@ -104,7 +104,6 @@ db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 db      0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04
 db      0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c
 
-
 align 32
 S1_S0_shuf:
 db      0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F
@@ -171,7 +170,7 @@ align 16
 all_20s:
 dw      0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020, 0x0020
 
-section .text
+mksection .text
 align 64
 
 %define MASK31  ymm12
@@ -220,7 +219,6 @@ align 64
         mov     [rsp + GP_OFFSET + 32], rbx
         mov     [rsp + GP_OFFSET + 40], r11 ;; rsp pointer
 %endmacro
-
 
 %macro FUNC_RESTORE 0
 
@@ -289,7 +287,6 @@ align 64
     shrd        %%Rt, %%Ke, 9
 %endmacro
 
-
 ;
 ;   bits_reorg8()
 ;
@@ -356,7 +353,6 @@ align 64
     vpor        %1, ymm7
 %endif
 %endmacro
-
 
 ;
 ;   nonlin_fun8()
@@ -508,7 +504,6 @@ align 64
 
 %endmacro
 
-
 ;
 ;   add_mod31()
 ;       add two 32-bit args and reduce mod (2^31-1)
@@ -525,7 +520,6 @@ align 64
     vpand       %1, MASK31
     vpaddd      %1, ymm2
 %endmacro
-
 
 ;
 ;   rot_mod31()
@@ -545,7 +539,6 @@ align 64
     vpor        %1, ymm2
     vpand       %1, MASK31
 %endmacro
-
 
 ;
 ;   lfsr_updt8()
@@ -752,7 +745,6 @@ align 64
     vpor           %%XTMP, %%XTMP2
     vinserti128    %%LFSR8_15, %%XTMP, 1
 %endmacro
-
 
 %macro ZUC_INIT_8 1
 %define %%KEY_SIZE %1 ; [constant] Key size (128 or 256)
@@ -1411,6 +1403,4 @@ exit_cipher32:
 ;----------------------------------------------------------------------------------------
 ;----------------------------------------------------------------------------------------
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

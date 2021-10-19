@@ -34,13 +34,13 @@
 %include "include/cet.inc"
 extern sha512_x4_avx2
 
-section .data
+mksection .rodata
 default rel
 align 16
 byteswap:	;ddq 0x08090a0b0c0d0e0f0001020304050607
 	dq 0x0001020304050607, 0x08090a0b0c0d0e0f
 
-section .text
+mksection .text
 
 %ifndef FUNC
 %define FUNC submit_job_hmac_sha_512_avx2
@@ -63,7 +63,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbp, r13, r14, r16
 %define last_len	rbp
@@ -135,7 +134,6 @@ FUNC:
         vmovdqa xmm0, [state + _lens_sha512]
         XVPINSRW xmm0, xmm1, extra_blocks, lane, tmp, scale_x16
         vmovdqa [state + _lens_sha512], xmm0
-
 
 	mov	last_len, len
 	and	last_len, 127
@@ -413,6 +411,4 @@ return:
 	mov	rsp, [rsp + _rsp_save]	; original SP
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

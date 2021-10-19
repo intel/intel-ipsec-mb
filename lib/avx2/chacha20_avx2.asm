@@ -32,7 +32,7 @@
 %include "include/transpose_avx2.asm"
 %include "include/chacha_poly_defines.asm"
 %include "include/cet.inc"
-section .data
+mksection .rodata
 default rel
 
 align 32
@@ -104,7 +104,7 @@ endstruc
 
 %define APPEND(a,b) a %+ b
 
-section .text
+mksection .text
 
 %macro ENCRYPT_0B_64B 10-11
 %define %%SRC  %1 ; [in/out] Source pointer
@@ -747,7 +747,6 @@ more_than_2_blocks_left:
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
                         ymm4, ymm5, ymm6, ymm7, ymm12, ymm13, 4
 
-
         cmp     len, 64*4
         jb      less_than_4_full_blocks
 
@@ -1187,7 +1186,6 @@ more_than_2_blocks_left_ks:
         GENERATE_256_KS ymm0, ymm1, ymm8, ymm9, ymm2, ymm3, ymm10, ymm11, \
                         ymm4, ymm5, ymm6, ymm7, ymm12, ymm13, 4
 
-
         cmp     len, 64*4
         jb      less_than_4_full_blocks_ks
 
@@ -1382,6 +1380,4 @@ exit_ks:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -34,13 +34,13 @@
 %include "include/cet.inc"
 extern sha256_oct_avx2
 
-section .data
+mksection .rodata
 default rel
 align 16
 byteswap:	;ddq 0x0c0d0e0f08090a0b0405060700010203
 	dq 0x0405060700010203, 0x0c0d0e0f08090a0b
 
-section .text
+mksection .text
 
 %ifndef FUNC
 %define FUNC submit_job_hmac_sha_256_avx2
@@ -62,7 +62,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbp, r15
 %define last_len	rbp
@@ -91,7 +90,6 @@ section .text
 %define lane_data	r10
 
 %endif
-
 
 ; we clobber rbx, rsi, rdi, rbp; called routine also clobbers r12, r13, r14
 struc STACK
@@ -425,6 +423,4 @@ return:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

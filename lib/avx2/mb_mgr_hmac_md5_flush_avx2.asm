@@ -34,7 +34,7 @@
 %include "include/dbgprint.asm"
 extern md5_x8x2_avx2
 
-section .data
+mksection .rodata
 default rel
 align 16
 dupw:	;ddq 0x01000100010001000100010001000100
@@ -77,7 +77,7 @@ lane_13:    dq  13
 lane_14:    dq  14
 lane_15:    dq  15
 
-section .text
+mksection .text
 
 %if 1
 %ifdef LINUX
@@ -91,7 +91,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbp
 %define idx             rbp
@@ -160,7 +159,6 @@ flush_job_hmac_md5_avx2:
         cmovne  idx, [rel APPEND(lane_,I)]
 %assign I (I+1)
 %endrep
-
 
 copy_lane_data:
         endbranch64
@@ -361,6 +359,4 @@ return:
 
         ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

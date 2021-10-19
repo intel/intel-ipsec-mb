@@ -32,7 +32,7 @@
 %include "include/cet.inc"
 extern sha512_x4_avx2
 
-section .data
+mksection .rodata
 default rel
 
 align 16
@@ -51,7 +51,7 @@ lane_1: dq  1
 lane_2: dq  2
 lane_3: dq  3
 
-section .text
+mksection .text
 
 %ifndef FUNC
 %define FUNC flush_job_hmac_sha_512_avx2
@@ -70,7 +70,6 @@ section .text
 %define state	arg1
 %define job	arg2
 %define len2	arg2
-
 
 ; idx needs to be in rbp, r15
 %define idx		rbp
@@ -350,6 +349,4 @@ return:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

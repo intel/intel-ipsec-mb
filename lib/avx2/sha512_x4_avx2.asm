@@ -48,7 +48,7 @@
 %include "include/mb_mgr_datastruct.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
-section .data
+mksection .rodata
 default rel
 align 64
 K512_4:
@@ -139,7 +139,7 @@ PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x08090a0b0c0d0e0f0001020304050607
                          ;ddq 0x18191a1b1c1d1e1f1011121314151617
         dq 0x1011121314151617, 0x18191a1b1c1d1e1f
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1 	        rdi
@@ -184,8 +184,6 @@ section .text
 
 %define T1  ymm14
 %define TMP ymm15
-
-
 
 %define SZ4	4*SHA512_DIGEST_WORD_SIZE	; Size of one vector register
 %define ROUNDS 80*SZ4
@@ -248,8 +246,6 @@ endstruc
 	PRORQ_nd	%1, %3, TMP, %2
 %endmacro
 
-
-
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_00_15 2
 %define %%T1 %1
@@ -288,7 +284,6 @@ endstruc
 	ROTATE_ARGS
 %endm
 
-
 ;; arguments passed implicitly in preprocessor symbols i, a...h
 %macro ROUND_16_XX 2
 %define %%T1 %1
@@ -314,7 +309,6 @@ endstruc
 	ROUND_00_15 %%T1, %%i
 
 %endm
-
 
 ;; void sha512_x4_avx2(void *STATE, const int INP_SIZE)
 ;; arg 1 : STATE    : pointer to input data
@@ -450,6 +444,4 @@ Lrounds_16_xx:
 	; outer calling routine restores XMM and other GP registers
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec

@@ -41,7 +41,7 @@
 %include "include/transpose_avx2.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
-section .data
+mksection .rodata
 default rel
 align 32
 PSHUFFLE_BYTE_FLIP_MASK: ;ddq 0x0c0d0e0f08090a0b0405060700010203
@@ -65,7 +65,7 @@ K60_79:                  ;ddq 0xCA62C1D6CA62C1D6CA62C1D6CA62C1D6
 	dq 0xCA62C1D6CA62C1D6, 0xCA62C1D6CA62C1D6
 	dq 0xCA62C1D6CA62C1D6, 0xCA62C1D6CA62C1D6
 
-section .text
+mksection .text
 
 %ifdef LINUX
 %define arg1	rdi
@@ -138,7 +138,6 @@ section .text
 %define W15	ymm14
 %define W16	ymm15
 
-
 ;; Assume stack aligned to 32 bytes before call
 ;; Therefore FRAMESIZE mod 32 must be 32-8 = 24
 %define FRAMESZ	32*16 + 24
@@ -172,8 +171,6 @@ section .text
 	vpxor  %%regF,%%regD,%%regC
 	vpxor  %%regF,%%regF,%%regB
 %endmacro
-
-
 
 ;MAGIC_F2 MACRO regF:REQ,regB:REQ,regC:REQ,regD:REQ,regT:REQ ;; ((B & C) | (B & D) | (C & D))
 %macro MAGIC_F2 5
@@ -279,7 +276,6 @@ section .text
 	vpaddd	%%regE,%%regE,%%regF
 %endmacro
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -358,7 +354,6 @@ lloop:
 	add	IDX, 32
 %assign I (I+1)
 %endrep
-
 
 	; save old digests
 	vmovdqa	AA, A
@@ -463,6 +458,4 @@ lloop:
 
 	ret
 
-%ifdef LINUX
-section .note.GNU-stack noalloc noexec nowrite progbits
-%endif
+mksection stack-noexec
