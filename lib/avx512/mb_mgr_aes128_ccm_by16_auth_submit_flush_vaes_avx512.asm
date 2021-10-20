@@ -404,16 +404,9 @@ endstruc
 
         ;; Update lengths to authenticate and find min length
         vmovdqa ccm_lens, [state + _aes_ccm_lens]
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, lane
-        mov     tmp, 1
-        shl     tmp, cl
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
-        kmovq   k1, tmp
+        xor     DWORD(tmp), DWORD(tmp)
+        bts     DWORD(tmp), DWORD(lane)
+        kmovw   k1, DWORD(tmp)
 
         vpbroadcastw    ytmp0, WORD(auth_len)
         vmovdqu16       ccm_lens{k1}, ytmp0
@@ -657,17 +650,10 @@ endstruc
         je      %%_prepare_partial_block_to_auth
 
         ;; Update lengths to authenticate and find min length
-         vmovdqa ccm_lens, [state + _aes_ccm_lens]
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, min_idx
-        mov     tmp2, 1
-        shl     tmp2, cl
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
-        kmovq   k1, tmp2
+        vmovdqa ccm_lens, [state + _aes_ccm_lens]
+        xor     DWORD(tmp2), DWORD(tmp2)
+        bts     DWORD(tmp2), DWORD(min_idx)
+        kmovw   k1, DWORD(tmp2)
 
         vpbroadcastw    ytmp0, WORD(tmp)
         vmovdqu16       ccm_lens{k1}, ytmp0
@@ -685,16 +671,9 @@ endstruc
         mov     word [state + _aes_ccm_init_done + min_idx * 2], 2
         ;; Update lengths to authenticate and find min length
         vmovdqa ccm_lens, [state + _aes_ccm_lens]
-%ifndef LINUX
-        mov     tmp3, rcx       ; save rcx
-%endif
-        mov     rcx, min_idx
-        mov     tmp2, 1
-        shl     tmp2, cl
-%ifndef LINUX
-        mov     rcx, tmp3       ; restore rcx
-%endif
-        kmovq   k1, tmp2
+        xor     DWORD(tmp2), DWORD(tmp2)
+        bts     DWORD(tmp2), DWORD(min_idx)
+        kmovw   k1, DWORD(tmp2)
 
         mov             tmp2, 16
         vpbroadcastw    ytmp0, WORD(tmp2)
