@@ -47,8 +47,10 @@
 #ifdef NO_AESNI
 #include "include/aesni_emu.h"
 #endif
-
 #include "clear_regs_mem.h"
+#ifdef SAFE_PARAM
+#include "include/error.h"
+#endif
 
 #define CLEAR_MEM clear_mem
 #define CLEAR_VAR clear_var
@@ -137,6 +139,7 @@ length_sub(uint32_t *out_array, const size_t dim_array, const uint32_t subv)
                 out_array[i] -= subv;
 }
 
+#ifdef SAFE_PARAM
 /**
  * @brief Checks vector of length values against 0 and SNOW3G_MAX_BYTELEN values
  * @retval 0 incorrect length value found
@@ -147,15 +150,22 @@ length_check(const uint32_t *out_array, const size_t dim_array)
 {
         size_t i;
 
+        if (out_array == NULL) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
+                return 0;
+        }
+
         for (i = 0; i < dim_array; i++) {
                 if ((out_array[i] == 0) ||
-                    (out_array[i] > SNOW3G_MAX_BYTELEN))
+                    (out_array[i] > SNOW3G_MAX_BYTELEN)) {
+                        imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                         return 0;
+                    }
         }
 
         return 1;
 }
-
+#endif
 /**
  * @brief Copies 4 32-bit length values into an array
  */
@@ -189,40 +199,56 @@ length_copy_8(uint32_t *out_array,
         out_array[6] = length7;
         out_array[7] = length8;
 }
-
+#ifdef SAFE_PARAM
 /**
  * @brief Checks vector of pointers against NULL
  * @retval 0 incorrect pointer found
  * @retval 1 all OK
  */
 static inline int
-ptr_check(void *out_array[], const size_t dim_array)
+ptr_check(void *out_array[], const size_t dim_array, const int errnum)
 {
         size_t i;
 
+        if (out_array == NULL) {
+                imb_set_errno(NULL, errnum);
+                return 0;
+        }
         for (i = 0; i < dim_array; i++)
-                if (out_array[i] == NULL)
+                if (out_array[i] == NULL) {
+                        imb_set_errno(NULL, errnum);
                         return 0;
-
+                }
         return 1;
 }
+#endif
 
+#ifdef SAFE_PARAM
 /**
  * @brief Checks vector of const pointers against NULL
  * @retval 0 incorrect pointer found
  * @retval 1 all OK
  */
 static inline int
-cptr_check(const void * const out_array[], const size_t dim_array)
+cptr_check(const void * const out_array[],
+           const size_t dim_array,
+           const int errnum)
 {
         size_t i;
 
+        if (out_array == NULL) {
+                imb_set_errno(NULL, errnum);
+                return 0;
+        }
         for (i = 0; i < dim_array; i++)
-                if (out_array[i] == NULL)
+                if (out_array[i] == NULL) {
+                        imb_set_errno(NULL, errnum);
                         return 0;
+                }
 
         return 1;
 }
+#endif
 
 /**
  * @brief Copies 4 pointers into an array
@@ -546,8 +572,8 @@ static inline __m256i S1_box_8(const __m256i x)
                                                0x0b0e0104, 0x070a0d00);
         __m128i m1, m2;
 
-        m1 = _mm_shuffle_epi8  (x1, m_shuf_r);
-        m2 = _mm_shuffle_epi8  (x2, m_shuf_r);
+        m1 = _mm_shuffle_epi8(x1, m_shuf_r);
+        m2 = _mm_shuffle_epi8(x2, m_shuf_r);
 
         m1 = _mm_aesenc_si128(m1, m_zero);
         m2 = _mm_aesenc_si128(m2, m_zero);
@@ -695,7 +721,7 @@ static inline __m128i S2_box_4(const __m128i x)
 
         /* Perform invSR(SQ(x)) transform through a lookup table */
         const __m128i new_x = lut16x8b_256(x, snow3g_invSR_SQ);
-        __m128i m1 = _mm_shuffle_epi8  (new_x, m_shuf_r);
+        __m128i m1 = _mm_shuffle_epi8(new_x, m_shuf_r);
 
         /* use AESNI operations for the rest of the S2 box */
 #ifdef NO_AESNI
@@ -778,8 +804,8 @@ static inline __m256i S2_box_8(const __m256i x)
         __m128i m1, m2, f1, f2;
         __m256i m, f;
 
-        m1= _mm_shuffle_epi8  (x1, m_shuf_r);
-        m2= _mm_shuffle_epi8  (x2, m_shuf_r);
+        m1 = _mm_shuffle_epi8(x1, m_shuf_r);
+        m2 = _mm_shuffle_epi8(x2, m_shuf_r);
 
         f1 = _mm_aesenclast_si128(m1, m_zero);
         m1 = _mm_aesenc_si128(m1, m_zero);
@@ -1744,7 +1770,7 @@ static inline void snow3g_keystream_8_32(snow3gKeyState8_t *pCtx,
                         _mm256_permute2x128_si256(blended[i],
                                                   blended[i + 4], 0x20);
                 pKeyStream[i + 4] =
-                        _mm256_permute2x128_si256( blended[i],
+                        _mm256_permute2x128_si256(blended[i],
                                                    blended[i + 4], 0x31);
         }
 }
@@ -2470,7 +2496,17 @@ int SNOW3G_INIT_KEY_SCHED(const void *pKey, snow3g_key_schedule_t *pCtx)
 {
 #ifdef SAFE_PARAM
         if ((pKey == NULL) || (pCtx == NULL))
+        /* reset error status */
+        imb_set_errno(NULL, 0);
+
+        if (pKey == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return -1;
+        }
+        if (pCtx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
+                return -1;
+        }
 #endif
 
         const uint32_t *pKey32 = pKey;
@@ -2501,10 +2537,31 @@ void SNOW3G_F8_1_BUFFER(const snow3g_key_schedule_t *pHandle,
                         const uint32_t lengthInBytes)
 {
 #ifdef SAFE_PARAM
-        if ((pHandle == NULL) || (pIV == NULL) ||
-            (pBufferIn == NULL) || (pBufferOut == NULL) ||
-            (lengthInBytes == 0) || (lengthInBytes > SNOW3G_MAX_BYTELEN))
+
+        /* reset error status */
+        imb_set_errno(NULL, 0);
+
+        if (pHandle == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (pIV == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pBufferOut == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                return;
+        }
+        if ((lengthInBytes == 0) || (lengthInBytes > SNOW3G_MAX_BYTELEN)) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
+                return;
+        }
 #endif
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
@@ -2544,10 +2601,30 @@ void SNOW3G_F8_1_BUFFER_BIT(const snow3g_key_schedule_t *pHandle,
                             const uint32_t offsetInBits)
 {
 #ifdef SAFE_PARAM
-        if ((pHandle == NULL) || (pIV == NULL) ||
-            (pBufferIn == NULL) || (pBufferOut == NULL) ||
-            (lengthInBits == 0))
+        /* reset error status */
+        imb_set_errno(NULL, 0);
+
+        if (pHandle == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (pIV == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pBufferOut == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                return;
+        }
+        if ((lengthInBits == 0) || (lengthInBits > SNOW3G_MAX_BITLEN)) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
+                return;
+        }
 #endif
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
@@ -2598,12 +2675,31 @@ void SNOW3G_F8_2_BUFFER(const snow3g_key_schedule_t *pHandle,
                         const uint32_t lenInBytes2)
 {
 #ifdef SAFE_PARAM
-        if ((pHandle == NULL) || (pIV1 == NULL) || (pIV2 == NULL) ||
-            (pBufIn1 == NULL) || (pBufOut1 == NULL) ||
-            (pBufIn2 == NULL) || (pBufOut2 == NULL) ||
-            (lenInBytes1 == 0) || (lenInBytes1 > SNOW3G_MAX_BYTELEN) ||
-            (lenInBytes2 == 0) || (lenInBytes2 > SNOW3G_MAX_BYTELEN))
+        /* reset error status */
+        imb_set_errno(NULL, 0);
+
+        if (pHandle == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (pIV1 == NULL || pIV2 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+
+        if (pBufIn1 == NULL || pBufIn2 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pBufOut1 == NULL || pBufOut2 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                return;
+        }
+        if ((lenInBytes1 == 0) || (lenInBytes1 > SNOW3G_MAX_BYTELEN) ||
+            (lenInBytes2 == 0) || (lenInBytes2 > SNOW3G_MAX_BYTELEN)) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
+                return;
+        }
 #endif
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
@@ -2688,24 +2784,32 @@ void SNOW3G_F8_4_BUFFER(const snow3g_key_schedule_t *pHandle,
         const uint8_t *pBufferIn[4];
         uint32_t bytes, qwords, i;
 
+        cptr_copy_4((const void **)pBufferIn,
+                    pBufferIn1, pBufferIn2, pBufferIn3, pBufferIn4);
+        ptr_copy_4((void **)pBufferOut, pBufferOut1, pBufferOut2,
+                   pBufferOut3, pBufferOut4);
         length_copy_4(lenInBytes, lengthInBytes1, lengthInBytes2,
                       lengthInBytes3, lengthInBytes4);
 
-        cptr_copy_4((const void **)pBufferIn,
-                    pBufferIn1, pBufferIn2, pBufferIn3, pBufferIn4);
-
-        ptr_copy_4((void **)pBufferOut, pBufferOut1, pBufferOut2,
-                   pBufferOut3, pBufferOut4);
-
 #ifdef SAFE_PARAM
-        if ((pHandle == NULL) ||
-            (pIV1 == NULL) || (pIV2 == NULL) ||
-            (pIV3 == NULL) || (pIV4 == NULL))
-                return;
+        /* reset error status */
+        imb_set_errno(NULL, 0);
 
-        if (!cptr_check((const void * const *)pBufferIn, num_lanes) ||
-            !ptr_check((void **)pBufferOut, num_lanes) ||
-            !length_check(lenInBytes, num_lanes))
+        if (pHandle == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
+                return;
+        }
+        if ((pIV1 == NULL) || pIV2 == NULL ||
+            (pIV3 == NULL) || (pIV4 == NULL)) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+        if (!cptr_check((const void * const *)pBufferIn, num_lanes,
+                        IMB_ERR_NULL_SRC))
+                return;
+        if (!ptr_check((void **)pBufferOut, num_lanes, IMB_ERR_NULL_DST))
+                return;
+        if (!length_check(lenInBytes, num_lanes))
                 return;
 #endif
 
@@ -3080,14 +3184,24 @@ void SNOW3G_F8_8_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pKey[],
         const size_t num_lanes = 8;
 
 #ifdef SAFE_PARAM
-        if ((pKey == NULL) || (IV == NULL) || (BufferIn == NULL) ||
-            (BufferOut == NULL) || (lengthInBytes == NULL))
-                return;
+        /* reset error status */
+        imb_set_errno(NULL, 0);
 
-        if (!ptr_check(BufferOut, num_lanes) || !cptr_check(IV, num_lanes) ||
-            !cptr_check((const void * const *)pKey, num_lanes) ||
-            !cptr_check(BufferIn, num_lanes) ||
-            !length_check(lengthInBytes, num_lanes))
+        if (!cptr_check((const void * const *)pKey,
+                        num_lanes,
+                        IMB_ERR_NULL_EXP_KEY))
+                return;
+        if (!cptr_check((const void * const *)IV,
+                        num_lanes,
+                        IMB_ERR_NULL_IV))
+                return;
+        if (!cptr_check((const void * const *)BufferIn,
+                        num_lanes,
+                        IMB_ERR_NULL_SRC))
+                return;
+        if (!ptr_check((void **)BufferOut, num_lanes, IMB_ERR_NULL_DST))
+                return;
+        if (!length_check(lengthInBytes, num_lanes))
                 return;
 #endif
 
@@ -3212,13 +3326,22 @@ void SNOW3G_F8_8_BUFFER(const snow3g_key_schedule_t *pHandle,
 #ifdef SAFE_PARAM
         const size_t num_lanes = 8;
 
-        if (pHandle == NULL)
-                return;
+        /* reset error status */
+        imb_set_errno(NULL, 0);
 
-        if (!length_check(lengthInBytes, num_lanes) ||
-            !cptr_check((const void * const *)pBufferIn, num_lanes) ||
-            !cptr_check(pIV, num_lanes) ||
-            !ptr_check((void **)pBufferOut, num_lanes))
+        if (pHandle == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
+                return;
+        }
+        if (!cptr_check(pIV, num_lanes, IMB_ERR_NULL_IV))
+                return;
+        if (!cptr_check((const void * const *)pBufferIn,
+                        num_lanes,
+                        IMB_ERR_NULL_SRC))
+                return;
+        if (!ptr_check((void **)pBufferOut, num_lanes, IMB_ERR_NULL_DST))
+                return;
+        if (!length_check(lengthInBytes, num_lanes))
                 return;
 #endif
 
@@ -3274,14 +3397,22 @@ void SNOW3G_F8_N_BUFFER(const snow3g_key_schedule_t *pCtx,
                         const uint32_t packetCount)
 {
 #ifdef SAFE_PARAM
-        if ((pCtx == NULL) || (IV == NULL) || (pBufferIn == NULL) ||
-            (pBufferOut == NULL) || (bufLenInBytes == NULL))
-                return;
+        /* reset error status */
+        imb_set_errno(NULL, 0);
 
-        if (!cptr_check(IV, packetCount) ||
-            !cptr_check(pBufferIn, packetCount) ||
-            !ptr_check(pBufferOut, packetCount) ||
-            !length_check(bufLenInBytes, packetCount))
+        if (pCtx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
+                return;
+        }
+        if (!cptr_check(IV, packetCount, IMB_ERR_NULL_IV))
+                return;
+        if (!cptr_check((const void * const *)pBufferIn,
+                        packetCount,
+                        IMB_ERR_NULL_SRC))
+                return;
+        if (!ptr_check((void **)pBufferOut, packetCount, IMB_ERR_NULL_DST))
+                return;
+        if (!length_check(bufLenInBytes, packetCount))
                 return;
 #endif
 
@@ -3473,18 +3604,21 @@ void SNOW3G_F8_N_BUFFER_MULTIKEY(const snow3g_key_schedule_t * const pCtx[],
                                  const uint32_t packetCount)
 {
 #ifdef SAFE_PARAM
-        uint32_t i;
-
-        if ((pCtx == NULL) || (IV == NULL) || (pBufferIn == NULL) ||
-            (pBufferOut == NULL) || (bufLenInBytes == NULL))
+        /* reset error status */
+        imb_set_errno(NULL, 0);
+        if (!cptr_check((const void * const *)pCtx, packetCount,
+            IMB_ERR_NULL_EXP_KEY))
                 return;
-
-        for (i = 0; i < packetCount; i++)
-                if ((pCtx[i] == NULL) || (IV[i] == NULL) ||
-                    (pBufferIn[i] == NULL) || (pBufferOut[i] == NULL) ||
-                    (bufLenInBytes[i] == 0) ||
-                    (bufLenInBytes[i] > SNOW3G_MAX_BYTELEN))
-                        return;
+        if (!cptr_check(IV, packetCount, IMB_ERR_NULL_IV))
+                return;
+        if (!cptr_check((const void * const *)pBufferIn,
+                        packetCount,
+                        IMB_ERR_NULL_SRC))
+                return;
+        if (!ptr_check((void **)pBufferOut, packetCount, IMB_ERR_NULL_DST))
+                return;
+        if (!length_check(bufLenInBytes, packetCount))
+                return;
 #endif
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
@@ -3615,10 +3749,26 @@ void SNOW3G_F9_1_BUFFER(const snow3g_key_schedule_t *pHandle,
                         void *pDigest)
 {
 #ifdef SAFE_PARAM
-        if ((pHandle == NULL) || (pIV == NULL) ||
-            (pBufferIn == NULL) || (pDigest == NULL) ||
-            (lengthInBits == 0) || (lengthInBits > SNOW3G_MAX_BITLEN))
+        if (pHandle == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (pIV == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pDigest == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
+        if ((lengthInBits == 0) || (lengthInBits > SNOW3G_MAX_BITLEN)) {
+                imb_set_errno(NULL, IMB_ERR_AUTH_LEN);
+                return;
+        }
 #endif
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
@@ -3676,10 +3826,26 @@ void snow3g_f9_1_buffer_vaes_avx512(const snow3g_key_schedule_t *pHandle,
                                     void *pDigest)
 {
 #ifdef SAFE_PARAM
-        if ((pHandle == NULL) || (pIV == NULL) ||
-            (pBufferIn == NULL) || (pDigest == NULL) ||
-            (lengthInBits == 0) || (lengthInBits > SNOW3G_MAX_BITLEN))
+        if (pHandle == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (pIV == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (pDigest == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
+        if ((lengthInBits == 0) || (lengthInBits > SNOW3G_MAX_BITLEN)) {
+                imb_set_errno(NULL, IMB_ERR_AUTH_LEN);
+                return;
+        }
 #endif
 #ifdef SAFE_DATA
         CLEAR_SCRATCH_SIMD_REGS();
