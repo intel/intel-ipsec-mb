@@ -36,6 +36,7 @@
 #include "include/clear_regs_mem.h"
 #include "include/memcpy.h"
 #include "include/chacha20_poly1305.h"
+#include "include/error.h"
 
 __forceinline
 void memcpy_asm(void *dst, const void *src, const size_t size,
@@ -561,6 +562,27 @@ void init_chacha20_poly1305_direct(const void *key,
                                    const uint64_t aad_len, const IMB_ARCH arch,
                                    const unsigned ifma)
 {
+#ifdef SAFE_PARAM
+        /* reset error status */
+        imb_set_errno(NULL, 0);
+
+        if (key == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                return;
+        }
+        if (ctx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_CTX);
+                return;
+        }
+        if (iv == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+        if (aad == NULL && aad_len != 0) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AAD);
+                return;
+        }
+#endif
         ctx->hash[0] = 0;
         ctx->hash[1] = 0;
         ctx->hash[2] = 0;

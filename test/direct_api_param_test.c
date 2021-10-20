@@ -1111,6 +1111,71 @@ test_crc_api(struct IMB_MGR *mgr)
         return 0;
 }
 
+/* CHACHA20-POLY1305 Init tests */
+static int
+test_chacha_poly_init(struct IMB_MGR *mgr,
+                      struct chacha20_poly1305_context_data *ctx,
+                      const void *key, const void *iv,
+                      const uint8_t *aad)
+{
+        unsigned int i;
+        const uint64_t aad_len = 28;
+        const char func_name[] = "CHACHA20-POLY1305 INIT";
+
+        struct fn_args {
+                const void *key;
+                struct chacha20_poly1305_context_data *ctx;
+                const uint8_t *iv;
+                const uint8_t *aad;
+                uint64_t aad_len;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, ctx, iv, aad, aad_len, IMB_ERR_NULL_KEY },
+                { key, NULL, iv, aad, aad_len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, aad, aad_len, IMB_ERR_NULL_IV },
+                { key, ctx, iv, NULL, aad_len, IMB_ERR_NULL_AAD },
+                { key, ctx, iv, aad, 0, 0 },
+        };
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->chacha20_poly1305_init(ap->key, ap->ctx, ap->iv,
+                                            ap->aad, ap->aad_len);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   func_name))
+                        return 1;
+        }
+
+        return 0;
+}
+
+/*
+ * @brief Performs direct CHACHA-POLY API invalid param tests
+ */
+static int
+test_chacha_poly_api(struct IMB_MGR *mgr)
+{
+        const uint8_t key[32];
+        const uint8_t iv[12];
+        const uint8_t aad[20];
+        struct chacha20_poly1305_context_data ctx;
+        int seg_err; /* segfault flag */
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        /* CHACHA20-POLY1305 Init */
+        if (test_chacha_poly_init(mgr, &ctx, key, iv, aad))
+                return 1;
+
+        return 0;
+}
+
 int
 direct_api_param_test(struct IMB_MGR *mb_mgr)
 {
@@ -1161,6 +1226,9 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_crc_api(mb_mgr);
+        run++;
+
+        errors += test_chacha_poly_api(mb_mgr);
         run++;
 
         test_suite_update(&ts, run - errors, errors);
