@@ -40,6 +40,7 @@
 #include "include/save_xmms.h"
 #include "include/clear_regs_mem.h"
 #include "intel-ipsec-mb.h"
+#include "include/error.h"
 
 #define SAVE_XMMS               save_xmms_avx
 #define RESTORE_XMMS            restore_xmms_avx
@@ -282,14 +283,33 @@ void zuc_eea3_1_buffer_avx(const void *pKey,
         SAVE_XMMS(xmm_save);
 #endif
 #ifdef SAFE_PARAM
+        imb_set_errno(NULL, 0);
         /* Check for NULL pointers */
-        if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
-            pBufferOut == NULL)
+        if (pKey == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
+        }
+
+        if (pIv == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+
+        if (pBufferOut == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                return;
+        }
 
         /* Check input data is in range of supported length */
-        if (length < ZUC_MIN_BYTELEN || length > ZUC_MAX_BYTELEN)
+        if (length < ZUC_MIN_BYTELEN || length > ZUC_MAX_BYTELEN) {
+                imb_set_errno(NULL, IMB_ERR_CIPH_LEN);
                 return;
+        }
 #endif
         _zuc_eea3_1_buffer_avx(pKey, pIv, pBufferIn, pBufferOut, length);
 

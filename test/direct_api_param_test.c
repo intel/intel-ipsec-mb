@@ -39,6 +39,9 @@
 #define BUF_SIZE ((uint32_t)sizeof(struct gcm_key_data))
 #define NUM_BUFS 8
 
+#define ZUC_MAX_BITLEN     65504
+#define ZUC_MAX_BYTELEN    (ZUC_MAX_BITLEN / 8)
+
 #ifdef _WIN32
 #define __func__ __FUNCTION__
 #endif
@@ -913,18 +916,55 @@ test_aes_api(struct IMB_MGR *mgr)
         return 0;
 }
 
+/* ZUC-EEA3 1 Buffer tests */
+static int
+test_zuc_eea3_1_buffer(struct IMB_MGR *mgr, const void *key, const void *iv,
+                       const void *in, void *out, const uint32_t len)
+{
+        unsigned int i;
+        const char func_name[] = "ZUC-EEA3 1 BUFFER";
+
+        struct fn_args {
+                const void *key;
+                const void *iv;
+                const void *in;
+                void *out;
+                const uint32_t len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, in, out, len, IMB_ERR_NULL_KEY },
+                { key, NULL, in, out, len, IMB_ERR_NULL_IV },
+                { key, iv, NULL, out, len, IMB_ERR_NULL_SRC },
+                { key, iv, in, NULL, len, IMB_ERR_NULL_DST },
+                { key, iv, in, out, 0, IMB_ERR_CIPH_LEN},
+                { key, iv, in, out, ZUC_MAX_BYTELEN + 1, IMB_ERR_CIPH_LEN},
+                { key, iv, in, out, len, 0},
+        };
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->eea3_1_buffer(ap->key, ap->iv, ap->in, ap->out, ap->len);
+                if (unexpected_err(mgr, ap->exp_err, func_name))
+                        return 1;
+        }
+
+        return 0;
+}
+
 /*
  * @brief Performs direct ZUC API invalid param tests
  */
 static int
 test_zuc_api(struct IMB_MGR *mgr)
 {
-        const uint32_t text_len = BUF_SIZE;
-        uint8_t out_buf[BUF_SIZE];
-        uint8_t zero_buf[BUF_SIZE];
-        int i, seg_err; /* segfault flag */
-        void *out_bufs[NUM_BUFS];
-        uint32_t lens[NUM_BUFS];
+        int seg_err; /* segfault flag */
+        uint8_t in_bufs[NUM_BUFS][BUF_SIZE];
+        uint8_t out_bufs[NUM_BUFS][BUF_SIZE];
+        uint32_t lens[NUM_BUFS] = {BUF_SIZE};
+        const uint8_t key[NUM_BUFS][16];
+        const uint8_t iv[NUM_BUFS][16];
 
         seg_err = setjmp(dir_api_param_env);
         if (seg_err) {
@@ -932,20 +972,10 @@ test_zuc_api(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        for (i = 0; i < NUM_BUFS; i++) {
-                out_bufs[i] = (void *)&out_buf;
-                lens[i] = text_len;
-        }
+        if (test_zuc_eea3_1_buffer(mgr, key[0], iv[0], in_bufs[0],
+                                   out_bufs[0], lens[0]))
+                return 1;
 
-        memset(out_buf, 0, text_len);
-        memset(zero_buf, 0, text_len);
-
-        /* @todo Add ZUC API tests */
-        (void)mgr;
-        (void)lens;
-        (void)out_bufs;
-
-        printf("\n");
         return 0;
 }
 
