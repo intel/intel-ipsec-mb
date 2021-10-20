@@ -1207,6 +1207,41 @@ test_chacha_poly_enc_dec_update(struct IMB_MGR *mgr,
         return 0;
 }
 
+/* CHACHA20-POLY1305 Finalize tests */
+static int
+test_chacha_poly_finalize(struct IMB_MGR *mgr,
+                          struct chacha20_poly1305_context_data *ctx)
+{
+        unsigned int i;
+        uint8_t tag[16];
+        const uint32_t tag_len = 16;
+        const char func_name[] = "CHACHA20-POLY1305 FINALIZE";
+
+        struct fn_args {
+                struct chacha20_poly1305_context_data *ctx;
+                uint8_t *tag;
+                const uint64_t tag_len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, tag, tag_len, IMB_ERR_NULL_CTX },
+                { ctx, NULL, tag_len, IMB_ERR_NULL_AUTH },
+                { ctx, tag, 0, IMB_ERR_AUTH_TAG_LEN },
+                { ctx, tag, 17, IMB_ERR_AUTH_TAG_LEN },
+        };
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->chacha20_poly1305_finalize(ap->ctx,
+                                ap->tag, ap->tag_len);
+                if (unexpected_err(mgr, ap->exp_err, func_name))
+                        return 1;
+        }
+
+        return 0;
+}
+
 /*
  * @brief Performs direct CHACHA-POLY API invalid param tests
  */
@@ -1231,6 +1266,10 @@ test_chacha_poly_api(struct IMB_MGR *mgr)
 
         /* CHACHA20-POLY1305 Encrypt and Decrypt update */
         if (test_chacha_poly_enc_dec_update(mgr, &ctx, key))
+                return 1;
+
+        /* CHACHA20-POLY1305 Finalize */
+        if (test_chacha_poly_finalize(mgr, &ctx))
                 return 1;
 
         return 0;

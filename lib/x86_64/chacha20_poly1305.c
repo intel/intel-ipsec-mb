@@ -857,6 +857,23 @@ finalize_chacha20_poly1305_direct(struct chacha20_poly1305_context_data *ctx,
                                   void *tag, const uint64_t tag_len,
                                   const IMB_ARCH arch, const unsigned ifma)
 {
+#ifdef SAFE_PARAM
+        /* reset error status */
+        imb_set_errno(NULL, 0);
+
+        if (ctx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_CTX);
+                return;
+        }
+        if (tag == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
+        if (tag_len == 0 || tag_len > 16) {
+                imb_set_errno(NULL, IMB_ERR_AUTH_TAG_LEN);
+                return;
+        }
+#endif
         uint64_t last[2];
         uint8_t auth_tag[16];
 
