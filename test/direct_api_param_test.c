@@ -953,6 +953,45 @@ test_zuc_eea3_1_buffer(struct IMB_MGR *mgr, const void *key, const void *iv,
         return 0;
 }
 
+/* ZUC-EEA3 4 Buffer tests */
+static int
+test_zuc_eea3_4_buffer(struct IMB_MGR *mgr, const void **key, const void **iv,
+                       const void **in, void **out,
+                       const uint32_t *lens, const uint32_t *zero_lens,
+                       const uint32_t *oversized_lens)
+{
+        unsigned int i;
+        const char func_name[] = "ZUC-EEA3 4 BUFFER";
+
+        struct fn_args {
+                const void **key;
+                const void **iv;
+                const void *in;
+                void *out;
+                const uint32_t *lens;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                {NULL, iv, in, out, lens, IMB_ERR_NULL_KEY},
+                {key, NULL, in, out, lens, IMB_ERR_NULL_IV},
+                {key, iv, NULL, out, lens, IMB_ERR_NULL_SRC},
+                {key, iv, in, NULL, lens, IMB_ERR_NULL_DST},
+                {key, iv, in, out, zero_lens, IMB_ERR_CIPH_LEN},
+                {key, iv, in, out, oversized_lens, IMB_ERR_CIPH_LEN},
+                {key, iv, in, out, lens, 0},
+        };
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->eea3_4_buffer(ap->key, ap->iv, ap->in, ap->out, ap->lens);
+                if (unexpected_err(mgr, ap->exp_err, func_name))
+                        return 1;
+        }
+
+        return 0;
+}
+
 /*
  * @brief Performs direct ZUC API invalid param tests
  */
@@ -962,10 +1001,26 @@ test_zuc_api(struct IMB_MGR *mgr)
         int seg_err; /* segfault flag */
         uint8_t in_bufs[NUM_BUFS][BUF_SIZE];
         uint8_t out_bufs[NUM_BUFS][BUF_SIZE];
-        uint32_t lens[NUM_BUFS] = {BUF_SIZE};
+        uint32_t lens[NUM_BUFS];
+        uint32_t zero_lens[NUM_BUFS];
+        uint32_t oversized_lens[NUM_BUFS];
         const uint8_t key[NUM_BUFS][16];
         const uint8_t iv[NUM_BUFS][16];
+        const void *key_ptrs[NUM_BUFS];
+        const void *iv_ptrs[NUM_BUFS];
+        const void *in_ptrs[NUM_BUFS];
+        void *out_ptrs[NUM_BUFS];
+        unsigned int i;
 
+        for (i = 0; i < NUM_BUFS; i++) {
+                key_ptrs[i] = key[i];
+                iv_ptrs[i] = iv[i];
+                in_ptrs[i] = in_bufs[i];
+                out_ptrs[i] = out_bufs[i];
+                lens[i] = BUF_SIZE;
+                zero_lens[i] = 0;
+                oversized_lens[i] = ZUC_MAX_BYTELEN + 1;
+        }
         seg_err = setjmp(dir_api_param_env);
         if (seg_err) {
                 printf("%s: segfault occurred!\n", __func__);
@@ -974,6 +1029,11 @@ test_zuc_api(struct IMB_MGR *mgr)
 
         if (test_zuc_eea3_1_buffer(mgr, key[0], iv[0], in_bufs[0],
                                    out_bufs[0], lens[0]))
+                return 1;
+
+        if (test_zuc_eea3_4_buffer(mgr, key_ptrs, iv_ptrs,
+                                   in_ptrs, out_ptrs,
+                                   lens, zero_lens, oversized_lens))
                 return 1;
 
         return 0;
