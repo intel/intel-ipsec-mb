@@ -468,26 +468,16 @@ endstruc
         je      %%_return_null
 
         ; find a lane with a non-null job
-        vpxord          zmm7, zmm7, zmm7
+        vpxorq          zmm7, zmm7, zmm7
         vmovdqu64       zmm1, [state + _aes_ccm_job_in_lane + (0*PTR_SZ)]
         vmovdqu64       zmm2, [state + _aes_ccm_job_in_lane + (8*PTR_SZ)]
-        vpcmpq          k1, zmm1, zmm7, 4 ; NEQ
-        vpcmpq          k2, zmm2, zmm7, 4 ; NEQ
-        kmovw           DWORD(tmp), k1
-        kmovw           DWORD(tmp4), k2
-        mov             DWORD(tmp2), DWORD(tmp4)
-        shl             DWORD(tmp2), 8
-        or              DWORD(tmp2), DWORD(tmp) ; mask of non-null jobs in tmp2
-        not             BYTE(tmp)
-        kmovw           k4, DWORD(tmp)
-        not             BYTE(tmp4)
-        kmovw           k5, DWORD(tmp4)
-        mov             DWORD(tmp), DWORD(tmp2)
-        not             WORD(tmp)
-        kmovw           k6, DWORD(tmp)         ; mask of NULL jobs in k4, k5 and k6
-        mov             DWORD(tmp), DWORD(tmp2)
-        xor             tmp2, tmp2
-        bsf             WORD(tmp2), WORD(tmp)   ; index of the 1st set bit in tmp2
+        vpcmpq          k4, zmm1, zmm7, 0 ; EQ
+        vpcmpq          k5, zmm2, zmm7, 0 ; EQ
+        kshiftlw        k6, k5, 8
+        korw            k6, k6, k4              ; masks of NULL jobs in k4 (8), k5 (8) and k6 (16)
+        knotw           k7, k6                  ; mask of non-NULL jobs
+        kmovw           DWORD(tmp), k7
+        bsf             DWORD(tmp2), DWORD(tmp) ; index of the 1st set bit in tmp
 
         ;; copy good lane data into NULL lanes
         mov             tmp, [state + _aes_ccm_args_in + tmp2*8]
@@ -538,7 +528,11 @@ endstruc
         je              %%_len_is_0
 
         vpbroadcastw    ytmp0, WORD(len2)
+%ifidn %%SUBMIT_FLUSH, SUBMIT
         vpsubw          ccm_lens, ccm_lens, ytmp0
+%else
+        vpsubw          ccm_lens{k7}, ccm_lens, ytmp0
+%endif
         vmovdqa         [state + _aes_cmac_lens], ccm_lens
 
 
