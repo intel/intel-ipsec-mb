@@ -408,8 +408,7 @@ endstruc
         bts     DWORD(tmp), DWORD(lane)
         kmovw   k1, DWORD(tmp)
 
-        vpbroadcastw    ytmp0, WORD(auth_len)
-        vmovdqu16       ccm_lens{k1}, ytmp0
+        vpbroadcastw    ccm_lens{k1}, WORD(auth_len)
         vmovdqa64       [state + _aes_cmac_lens], ccm_lens
 
         vphminposuw min_len_idx, XWORD(ccm_lens)
@@ -480,16 +479,14 @@ endstruc
 
         ;; - set len to UINT16_MAX
         mov             WORD(tmp), 0xffff
-        vpbroadcastw    ytmp0, WORD(tmp)
         vmovdqa64       ccm_lens, [state + _aes_ccm_lens]
-        vmovdqu16       ccm_lens{k6}, ytmp0
+        vpbroadcastw    ccm_lens{k6}, WORD(tmp)
         vmovdqa64       [state + _aes_ccm_lens], ccm_lens
 
         ;; - copy init done
         movzx           tmp,  word [state + _aes_ccm_init_done + tmp2*2]
-        vpbroadcastw    ytmp0, WORD(tmp)
         vmovdqa64       ytmp1, [state + _aes_ccm_init_done]
-        vmovdqu16       ytmp1{k6}, ytmp0
+        vpbroadcastw    ytmp1{k6}, WORD(tmp)
         vmovdqa64       [state + _aes_ccm_init_done], ytmp1
 
         ;; scale up good lane idx before copying IV and keys
@@ -517,8 +514,8 @@ endstruc
         mov             len2, tmp4                    ; min len
 %%_use_min:
         mov             min_job, [state + _aes_ccm_job_in_lane + min_idx*8]
-        cmp             len2, 0
-        je              %%_len_is_0
+        or              len2, len2
+        jz              %%_len_is_0
 
         vpbroadcastw    ytmp0, WORD(len2)
 %ifidn %%SUBMIT_FLUSH, SUBMIT
@@ -655,8 +652,7 @@ endstruc
         bts     DWORD(tmp2), DWORD(min_idx)
         kmovw   k1, DWORD(tmp2)
 
-        vpbroadcastw    ytmp0, WORD(tmp)
-        vmovdqu16       ccm_lens{k1}, ytmp0
+        vpbroadcastw    ccm_lens{k1}, WORD(tmp)
         vmovdqa64       [state + _aes_cmac_lens], ccm_lens
         vphminposuw     min_len_idx, XWORD(ccm_lens)
 
@@ -675,9 +671,8 @@ endstruc
         bts     DWORD(tmp2), DWORD(min_idx)
         kmovw   k1, DWORD(tmp2)
 
-        mov             tmp2, 16
-        vpbroadcastw    ytmp0, WORD(tmp2)
-        vmovdqu16       ccm_lens{k1}, ytmp0
+        mov             DWORD(tmp2), 16
+        vpbroadcastw    ccm_lens{k1}, WORD(tmp2)
         vmovdqa64       [state + _aes_cmac_lens], ccm_lens
         vphminposuw     min_len_idx, XWORD(ccm_lens)
 
