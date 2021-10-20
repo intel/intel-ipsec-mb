@@ -1151,6 +1151,62 @@ test_chacha_poly_init(struct IMB_MGR *mgr,
         return 0;
 }
 
+/* CHACHA20-POLY1305 Enc/dec update tests */
+static int
+test_chacha_poly_enc_dec_update(struct IMB_MGR *mgr,
+                      struct chacha20_poly1305_context_data *ctx,
+                      const void *key)
+{
+        unsigned int i;
+        uint8_t in[BUF_SIZE];
+        uint8_t out[BUF_SIZE];
+        uint32_t len = BUF_SIZE;
+
+        struct chacha_poly_enc_dec_update_fn {
+                chacha_poly_enc_dec_update_t func;
+                const char *func_name;
+        } fn_ptrs[] = {
+             { mgr->chacha20_poly1305_enc_update,
+               "CHACHA20-POLY1305 ENC UPDATE" },
+             { mgr->chacha20_poly1305_dec_update,
+               "CHACHA20-POLY1305 DEC UPDATE" },
+        };
+
+        struct fn_args {
+                const void *key;
+                struct chacha20_poly1305_context_data *ctx;
+                uint8_t *out;
+                uint8_t *in;
+                const uint64_t len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, ctx, out, in, len, IMB_ERR_NULL_KEY },
+                { key, NULL, out, in, len, IMB_ERR_NULL_CTX },
+                { key, ctx, NULL, in, len, IMB_ERR_NULL_DST },
+                { key, ctx, out, NULL, len, IMB_ERR_NULL_SRC },
+                { key, ctx, NULL, NULL, 0, 0 },
+                { key, ctx, out, in, 0, 0 },
+        };
+
+        /* Iterate over functions */
+        for (i = 0; i < DIM(fn_ptrs); i++) {
+                unsigned int j;
+
+                /* Iterate over args */
+                for (j = 0; j < DIM(fn_args); j++) {
+                        const struct fn_args *ap = &fn_args[j];
+
+                        fn_ptrs[i].func(ap->key, ap->ctx, ap->out,
+                                        ap->in, ap->len);
+                        if (unexpected_err(mgr, ap->exp_err,
+                                           fn_ptrs[i].func_name))
+                                return 1;
+                }
+        }
+
+        return 0;
+}
+
 /*
  * @brief Performs direct CHACHA-POLY API invalid param tests
  */
@@ -1171,6 +1227,10 @@ test_chacha_poly_api(struct IMB_MGR *mgr)
 
         /* CHACHA20-POLY1305 Init */
         if (test_chacha_poly_init(mgr, &ctx, key, iv, aad))
+                return 1;
+
+        /* CHACHA20-POLY1305 Encrypt and Decrypt update */
+        if (test_chacha_poly_enc_dec_update(mgr, &ctx, key))
                 return 1;
 
         return 0;

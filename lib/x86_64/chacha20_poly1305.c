@@ -655,6 +655,27 @@ void update_chacha20_poly1305_direct(const void *key,
                                      const IMB_ARCH arch,
                                      const unsigned ifma)
 {
+#ifdef SAFE_PARAM
+        /* reset error status */
+        imb_set_errno(NULL, 0);
+
+        if (key == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                return;
+        }
+        if (ctx == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_CTX);
+                return;
+        }
+        if (src == NULL && len != 0) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+        if (dst == NULL && len != 0) {
+                imb_set_errno(NULL, IMB_ERR_NULL_DST);
+                return;
+        }
+#endif
         uint64_t bytes_to_copy = 0;
         uint64_t remain_bytes_to_fill = (16 - ctx->remain_ct_bytes);
         uint64_t remain_ct_bytes;
