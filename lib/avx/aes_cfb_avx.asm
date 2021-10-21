@@ -29,6 +29,7 @@
 %include "include/memcpy.asm"
 %include "include/clear_regs.asm"
 %include "include/cet.inc"
+%include "include/error.inc"
 ;;; Routines to do 128/256 bit CFB AES encrypt/decrypt operations on one block only.
 ;;; It processes only one buffer at a time.
 ;;; It is designed to manage partial blocks of DOCSIS 3.1 SEC BPI
@@ -91,21 +92,37 @@ section .text
 	mov		LEN, LEN2
 %endif
 %ifdef SAFE_PARAM
+        IMB_ERR_CHECK_RESET
+
         cmp             IV, 0
-        jz              %%exit_cfb
+        jz              %%cfb_error
 
         cmp             KEYS, 0
-        jz              %%exit_cfb
+        jz              %%cfb_error
 
         cmp             LEN, 0
         jz              %%skip_in_out_check
 
         cmp             OUT, 0
-        jz              %%exit_cfb
+        jz              %%cfb_error
 
         cmp             IN, 0
-        jz              %%exit_cfb
+        jz              %%cfb_error
 
+        jmp             %%cfb_no_error
+
+%%cfb_error:
+        IMB_ERR_CHECK_START rax
+        IMB_ERR_CHECK_NULL IV, rax, IMB_ERR_NULL_IV
+        IMB_ERR_CHECK_NULL KEYS, rax, IMB_ERR_NULL_EXP_KEY
+        IMB_ERR_CHECK_ZERO LEN, rax, IMB_ERR_CIPH_LEN
+        IMB_ERR_CHECK_NULL OUT, rax, IMB_ERR_NULL_DST
+        IMB_ERR_CHECK_NULL IN, rax, IMB_ERR_NULL_SRC
+        IMB_ERR_CHECK_END rax
+
+        jmp %%exit_cfb
+
+%%cfb_no_error:
 %%skip_in_out_check:
 %endif
 
