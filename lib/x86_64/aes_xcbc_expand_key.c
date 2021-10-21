@@ -32,6 +32,7 @@
 #include "noaesni.h"
 #include "asm.h"
 #include "include/clear_regs_mem.h"
+#include "include/error.h"
 
 static uint32_t in[4*3] = {
         0x01010101, 0x01010101, 0x01010101, 0x01010101,
@@ -43,9 +44,15 @@ void
 aes_xcbc_expand_key_sse(const void *key, void *k1_exp, void *k2, void *k3)
 {
 #ifdef SAFE_PARAM
-        if ((key == NULL) || (k1_exp == NULL) ||
-            (k2 == NULL) || (k3 == NULL))
+        imb_set_errno(NULL, 0);
+        if (k1_exp == NULL || k2 == NULL || k3 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (key == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                return;
+        }
 #endif
         DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
 
@@ -65,9 +72,15 @@ aes_xcbc_expand_key_sse_no_aesni(const void *key, void *k1_exp,
                                  void *k2, void *k3)
 {
 #ifdef SAFE_PARAM
-        if ((key == NULL) || (k1_exp == NULL) ||
-            (k2 == NULL) || (k3 == NULL))
+        imb_set_errno(NULL, 0);
+        if (k1_exp == NULL || k2 == NULL || k3 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (key == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                return;
+        }
 #endif
         DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
 
@@ -88,9 +101,15 @@ aes_xcbc_expand_key_avx_common(const void *key,
                                void *k1_exp, void *k2, void *k3)
 {
 #ifdef SAFE_PARAM
-        if ((key == NULL) || (k1_exp == NULL) ||
-            (k2 == NULL) || (k3 == NULL))
+        imb_set_errno(NULL, 0);
+        if (k1_exp == NULL || k2 == NULL || k3 == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return;
+        }
+        if (key == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                return;
+        }
 #endif
         DECLARE_ALIGNED(uint32_t keys_exp_enc[11*4], 16);
 
@@ -108,32 +127,17 @@ aes_xcbc_expand_key_avx_common(const void *key,
 void
 aes_xcbc_expand_key_avx(const void *key, void *k1_exp, void *k2, void *k3)
 {
-#ifdef SAFE_PARAM
-        if ((key == NULL) || (k1_exp == NULL) ||
-            (k2 == NULL) || (k3 == NULL))
-                return;
-#endif
         aes_xcbc_expand_key_avx_common(key, k1_exp, k2, k3);
 }
 
 void
 aes_xcbc_expand_key_avx2(const void *key, void *k1_exp, void *k2, void *k3)
 {
-#ifdef SAFE_PARAM
-        if ((key == NULL) || (k1_exp == NULL) ||
-            (k2 == NULL) || (k3 == NULL))
-                return;
-#endif
         aes_xcbc_expand_key_avx_common(key, k1_exp, k2, k3);
 }
 
 void
 aes_xcbc_expand_key_avx512(const void *key, void *k1_exp, void *k2, void *k3)
 {
-#ifdef SAFE_PARAM
-        if ((key == NULL) || (k1_exp == NULL) ||
-            (k2 == NULL) || (k3 == NULL))
-                return;
-#endif
         aes_xcbc_expand_key_avx_common(key, k1_exp, k2, k3);
 }
