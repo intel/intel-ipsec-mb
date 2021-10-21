@@ -1025,16 +1025,12 @@ test_hash_api(struct IMB_MGR *mgr)
         return 0;
 }
 
-/*
- * @brief Performs direct AES API invalid param tests
- */
 static int
-test_aes_api(struct IMB_MGR *mgr)
+test_cfb_one(struct IMB_MGR *mgr, void *out, const void *in, const void *iv,
+             const void *keys, uint64_t len)
 {
-        const uint32_t text_len = BUF_SIZE;
-        uint8_t out_buf[BUF_SIZE];
-        uint8_t zero_buf[BUF_SIZE];
         int seg_err; /* segfault flag */
+        unsigned j;
 
         seg_err = setjmp(dir_api_param_env);
         if (seg_err) {
@@ -1042,13 +1038,59 @@ test_aes_api(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        memset(out_buf, 0, text_len);
-        memset(zero_buf, 0, text_len);
+        struct {
+                aes_cfb_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->aes128_cfb_one, "AES CFB ONE" };
 
-        /* @todo Add AES API tests e.g. CFB */
-        (void)mgr;
+        struct fn_args {
+                void *out;
+                const void *in;
+                const void *iv;
+                const void *keys;
+                uint64_t len;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                       { NULL, in, iv, keys, len, IMB_ERR_NULL_DST },
+                       { out, NULL, iv, keys, len, IMB_ERR_NULL_SRC },
+                       { out, in, NULL, keys, len, IMB_ERR_NULL_IV },
+                       { out, in, iv, NULL, len, IMB_ERR_NULL_EXP_KEY },
+        };
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
 
-        printf("\n");
+                fn_ptrs.fn(ap->out, ap->in, ap->iv,
+                           ap->keys, ap->len);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+        return 0;
+}
+
+/*
+ * @brief Performs direct AES API invalid param tests
+ */
+static int
+test_aes_api(struct IMB_MGR *mgr)
+{
+        uint8_t buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+        const uint8_t *in = buf;
+        uint8_t *out = buf;
+        const uint8_t *iv = buf;
+        uint8_t *keys = buf;
+        uint64_t len = BUF_SIZE;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        if (test_cfb_one(mgr, out, in, iv, keys, len))
+                return 1;
+
         return 0;
 }
 
@@ -2388,6 +2430,129 @@ test_chacha_poly_api(struct IMB_MGR *mgr)
 
         return 0;
 }
+static int
+xcbc_keyexp_test(struct IMB_MGR *mgr, const void *key,
+                          void *k1_exp, void *k2, void *k3)
+{
+        int seg_err; /* segfault flag */
+        unsigned j;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        struct {
+                xcbc_keyexp_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->xcbc_keyexp, "XCBC KEYEXP" };
+
+        struct fn_args {
+                const void *key;
+                void *k1_exp;
+                void *k2;
+                void *k3;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, k1_exp, k2, k3, IMB_ERR_NULL_KEY },
+                { key, NULL, k2, k3, IMB_ERR_NULL_EXP_KEY },
+                { key, k1_exp, NULL, k3, IMB_ERR_NULL_EXP_KEY },
+                { key, k1_exp, k2, NULL, IMB_ERR_NULL_EXP_KEY },
+                { key, k1_exp, k2, k3, 0 },
+        };
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptrs.fn(ap->key, ap->k1_exp,
+                              ap->k2, ap->k3);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+
+        return 0;
+}
+
+static int
+test_xcbc_keyexp_api(struct IMB_MGR *mgr)
+{
+        uint8_t buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+        const void *key = buf;
+        void *k1_exp = buf;
+        void *k2 = buf;
+        void *k3 = buf;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        if (xcbc_keyexp_test(mgr, key, k1_exp, k2, k3))
+                return 1;
+
+        return 0;
+}
+
+static int
+des_keysched_test(struct IMB_MGR *mgr, uint64_t *ks, void *key)
+{
+        int seg_err; /* segfault flag */
+        unsigned j;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        struct {
+                des_keysched_t fn;
+                const char *name;
+        } fn_ptrs = { mgr->des_key_sched, "DES KEYSCHED" };
+
+        struct fn_args {
+                void *key;
+                uint64_t *ks;
+                IMB_ERR exp_err;
+        } fn_args[] = {
+                       { NULL, ks, IMB_ERR_NULL_KEY },
+                       { key, NULL, IMB_ERR_NULL_EXP_KEY },
+                       { key, ks, 0 },
+        };
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptrs.fn(ap->ks, ap->key);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptrs.name))
+                        return 1;
+        }
+
+        return 0;
+}
+
+static int
+test_des_keysched_api(struct IMB_MGR *mgr)
+{
+        uint64_t buf[BUF_SIZE];
+        int seg_err; /* segfault flag */
+        void *key = buf;
+        uint64_t *ks = buf;
+
+        seg_err = setjmp(dir_api_param_env);
+        if (seg_err) {
+                printf("%s: segfault occurred!\n", __func__);
+                return 1;
+        }
+
+        if (des_keysched_test(mgr, ks, key))
+                return 1;
+
+        return 0;
+}
 
 int
 direct_api_param_test(struct IMB_MGR *mb_mgr)
@@ -2445,6 +2610,12 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
         run++;
 
         errors += test_cmac_subkey_gen_api(mb_mgr);
+        run++;
+
+        errors += test_xcbc_keyexp_api(mb_mgr);
+        run++;
+
+        errors += test_des_keysched_api(mb_mgr);
         run++;
 
         test_suite_update(&ts, run - errors, errors);
