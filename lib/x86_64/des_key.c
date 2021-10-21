@@ -32,6 +32,7 @@
 #include "include/des.h"
 #include "include/des_utils.h"
 #include "include/clear_regs_mem.h"
+#include "include/error.h"
 
 /**
  * @brief Rotates 28-bit word
@@ -106,8 +107,17 @@ static const uint8_t shift_tab_fips46_3[16] = {
 int des_key_schedule(uint64_t *ks, const void *key)
 {
 #ifdef SAFE_PARAM
-        if (key == NULL || ks == NULL)
+        imb_set_errno(NULL, 0);
+        if (key == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return -1;
+        }
+        if (ks == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
+                return -1;
+        }
+
+
 #endif
 
         uint64_t c, d;
