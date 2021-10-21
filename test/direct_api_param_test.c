@@ -1647,7 +1647,7 @@ direct_api_param_test(struct IMB_MGR *mb_mgr)
 #endif
 #endif
         printf("Extended Invalid Direct API arguments test:\n");
-        test_suite_start(&ts, "INVALID-DIRECT-API-ARGS");
+        test_suite_start(&ts, "INVALID-ARGS");
 
 #ifndef DEBUG
         handler = signal(SIGSEGV, seg_handler);
