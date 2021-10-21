@@ -1069,6 +1069,46 @@ test_zuc_eia3_1_buffer(struct IMB_MGR *mgr, const void *key, const void *iv,
         return 0;
 }
 
+/* ZUC-EIA3 N Buffer tests */
+static int
+test_zuc_eia3_n_buffer(struct IMB_MGR *mgr, const void **key, const void **iv,
+                       const void **in, uint32_t **tag, const uint32_t *len,
+                       const uint32_t *zero_lens,
+                       const uint32_t *oversized_lens)
+{
+        unsigned int i;
+        const char func_name[] = "ZUC-EIA3 N BUFFER";
+
+        struct fn_args {
+                const void **key;
+                const void **iv;
+                const void **in;
+                const uint32_t *len;
+                uint32_t **tag;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                {NULL, iv, in, len, tag, IMB_ERR_NULL_KEY},
+                {key, NULL, in, len, tag, IMB_ERR_NULL_IV},
+                {key, iv, NULL, len, tag, IMB_ERR_NULL_SRC},
+                {key, iv, in, len, NULL, IMB_ERR_NULL_AUTH},
+                {key, iv, in, zero_lens, tag, IMB_ERR_AUTH_LEN},
+                {key, iv, in, oversized_lens, tag, IMB_ERR_AUTH_LEN},
+                {key, iv, in, len, tag, 0},
+        };
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->eia3_n_buffer(ap->key, ap->iv, ap->in, ap->len, ap->tag,
+                                   NUM_BUFS);
+                if (unexpected_err(mgr, ap->exp_err, func_name))
+                        return 1;
+        }
+
+        return 0;
+}
+
 /*
  * @brief Performs direct ZUC API invalid param tests
  */
@@ -1128,6 +1168,11 @@ test_zuc_api(struct IMB_MGR *mgr)
         }
         if (test_zuc_eia3_1_buffer(mgr, key_ptrs[0], iv_ptrs[0],
                                    in_ptrs[0], tag_ptrs[0], lens[0]))
+                return 1;
+
+        if (test_zuc_eia3_n_buffer(mgr, key_ptrs, iv_ptrs, in_ptrs,
+                                   tag_ptrs, lens,
+                                   zero_lens, oversized_lens))
                 return 1;
 
         return 0;

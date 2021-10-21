@@ -860,20 +860,62 @@ void _zuc_eia3_n_buffer(const void * const pKey[],
         unsigned int packetCount = numBuffers;
 
 #ifdef SAFE_PARAM
-        /* Check for NULL pointers */
-        if (pKey == NULL || pIv == NULL || pBufferIn == NULL ||
-            lengthInBits == NULL || pMacI == NULL)
-                return;
+        imb_set_errno(NULL, 0);
 
+        /* Check for NULL pointers */
+        if (pKey == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
+                return;
+        }
+
+        if (pIv == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+
+        if (pMacI == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
+
+        if (lengthInBits == NULL) {
+                imb_set_errno(NULL, IMB_ERR_AUTH_LEN);
+                return;
+        }
+
+        /* Check for NULL pointers and lengths for each buffer */
         for (i = 0; i < numBuffers; i++) {
-                if (pKey[i] == NULL || pIv[i] == NULL ||
-                    pBufferIn[i] == NULL || pMacI[i] == NULL)
+                if (pKey[i] == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                         return;
+                }
+
+                if (pIv[i] == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                        return;
+                }
+
+                if (pBufferIn[i] == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                        return;
+                }
+
+                if (pMacI[i] == NULL) {
+                        imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                        return;
+                }
 
                 /* Check input data is in range of supported length */
                 if (lengthInBits[i] < ZUC_MIN_BITLEN ||
-                    lengthInBits[i] > ZUC_MAX_BITLEN)
+                    lengthInBits[i] > ZUC_MAX_BITLEN) {
+                        imb_set_errno(NULL, IMB_ERR_AUTH_LEN);
                         return;
+                }
         }
 #endif
         i = 0;
