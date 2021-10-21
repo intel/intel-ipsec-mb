@@ -1032,6 +1032,43 @@ test_zuc_eea3_n_buffer(struct IMB_MGR *mgr, const void **key, const void **iv,
         return 0;
 }
 
+/* ZUC-EIA3 1 Buffer tests */
+static int
+test_zuc_eia3_1_buffer(struct IMB_MGR *mgr, const void *key, const void *iv,
+                       const void *in, uint32_t *tag, const uint32_t len)
+{
+        unsigned int i;
+        const char func_name[] = "ZUC-EIA3 1 BUFFER";
+
+        struct fn_args {
+                const void *key;
+                const void *iv;
+                const void *in;
+                const uint32_t len;
+                uint32_t *tag;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, in, len, tag, IMB_ERR_NULL_KEY },
+                { key, NULL, in, len, tag, IMB_ERR_NULL_IV },
+                { key, iv, NULL, len, tag, IMB_ERR_NULL_SRC },
+                { key, iv, in, len, NULL, IMB_ERR_NULL_AUTH },
+                { key, iv, in, 0, tag, IMB_ERR_AUTH_LEN},
+                { key, iv, in, ZUC_MAX_BITLEN + 1, tag, IMB_ERR_AUTH_LEN},
+                { key, iv, in, len, tag, 0},
+        };
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->eia3_1_buffer(ap->key, ap->iv, ap->in, ap->len, ap->tag);
+                if (unexpected_err(mgr, ap->exp_err, func_name))
+                        return 1;
+        }
+
+        return 0;
+}
+
 /*
  * @brief Performs direct ZUC API invalid param tests
  */
@@ -1041,6 +1078,7 @@ test_zuc_api(struct IMB_MGR *mgr)
         int seg_err; /* segfault flag */
         uint8_t in_bufs[NUM_BUFS][BUF_SIZE];
         uint8_t out_bufs[NUM_BUFS][BUF_SIZE];
+        uint32_t tags[NUM_BUFS];
         uint32_t lens[NUM_BUFS];
         uint32_t zero_lens[NUM_BUFS];
         uint32_t oversized_lens[NUM_BUFS];
@@ -1050,6 +1088,7 @@ test_zuc_api(struct IMB_MGR *mgr)
         const void *iv_ptrs[NUM_BUFS];
         const void *in_ptrs[NUM_BUFS];
         void *out_ptrs[NUM_BUFS];
+        uint32_t *tag_ptrs[NUM_BUFS];
         unsigned int i;
 
         for (i = 0; i < NUM_BUFS; i++) {
@@ -1057,6 +1096,7 @@ test_zuc_api(struct IMB_MGR *mgr)
                 iv_ptrs[i] = iv[i];
                 in_ptrs[i] = in_bufs[i];
                 out_ptrs[i] = out_bufs[i];
+                tag_ptrs[i] = &tags[i];
                 lens[i] = BUF_SIZE;
                 zero_lens[i] = 0;
                 oversized_lens[i] = ZUC_MAX_BYTELEN + 1;
@@ -1079,6 +1119,15 @@ test_zuc_api(struct IMB_MGR *mgr)
         if (test_zuc_eea3_n_buffer(mgr, key_ptrs, iv_ptrs,
                                    in_ptrs, out_ptrs,
                                    lens, zero_lens, oversized_lens))
+                return 1;
+
+        /* Convert byte to bit lengths for ZUC-EIA3 tests*/
+        for (i = 0; i < NUM_BUFS; i++) {
+                oversized_lens[i] *= 8;
+                lens[i] *= 8;
+        }
+        if (test_zuc_eia3_1_buffer(mgr, key_ptrs[0], iv_ptrs[0],
+                                   in_ptrs[0], tag_ptrs[0], lens[0]))
                 return 1;
 
         return 0;

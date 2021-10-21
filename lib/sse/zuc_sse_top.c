@@ -823,13 +823,33 @@ void zuc_eia3_1_buffer_sse(const void *pKey,
         SAVE_XMMS(xmm_save);
 #endif
 #ifdef SAFE_PARAM
+        imb_set_errno(NULL, 0);
         /* Check for NULL pointers */
-        if (pKey == NULL || pIv == NULL || pBufferIn == NULL || pMacI == NULL)
+        if (pKey == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_KEY);
                 return;
+        }
+
+        if (pIv == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_IV);
+                return;
+        }
+
+        if (pBufferIn == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_SRC);
+                return;
+        }
+
+        if (pMacI == NULL) {
+                imb_set_errno(NULL, IMB_ERR_NULL_AUTH);
+                return;
+        }
 
         /* Check input data is in range of supported length */
-        if (lengthInBits < ZUC_MIN_BITLEN || lengthInBits > ZUC_MAX_BITLEN)
+        if (lengthInBits < ZUC_MIN_BITLEN || lengthInBits > ZUC_MAX_BITLEN) {
+                imb_set_errno(NULL, IMB_ERR_AUTH_LEN);
                 return;
+        }
 #endif
 
         _zuc_eia3_1_buffer_sse(pKey, pIv, pBufferIn, lengthInBits, pMacI);
