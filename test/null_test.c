@@ -44,7 +44,7 @@ test_null_hash(struct IMB_MGR *mb_mgr,
                IMB_CIPHER_DIRECTION cipher_dir,
                IMB_CHAIN_ORDER chain_order)
 {
-        DECLARE_ALIGNED(uint8_t cipher_key[16], 16);
+        DECLARE_ALIGNED(uint8_t cipher_key[16], 16) = {0};
         DECLARE_ALIGNED(uint32_t expkey[4*15], 16);
         DECLARE_ALIGNED(uint32_t dust[4*15], 16);
         DECLARE_ALIGNED(uint8_t iv[16], 16);
