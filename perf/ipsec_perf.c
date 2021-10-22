@@ -1944,6 +1944,7 @@ do_test_gcm(struct params_s *params,
                 free_mem(&p_buffer, &p_keys);
                 exit(EXIT_FAILURE);
         }
+        memset(key, 0, params->aes_key_size);
 
         switch (params->aes_key_size) {
         case IMB_KEY_128_BYTES:
