@@ -38,6 +38,12 @@
 
 #define BUF_SIZE ((uint32_t)sizeof(struct gcm_key_data))
 #define NUM_BUFS 8
+#define SNOW3G_TOTAL_BUF_SIZE NUM_BUFS*16
+/* If SNOW3G_N_TEST_COUNT changes tests for snow3g_f8_8_buffer_multikey and
+ * snow3g_f8_n_buffer_multikey need to be separated.
+ */
+#define SNOW3G_N_TEST_COUNT 8
+
 
 #define ZUC_MAX_BITLEN     65504
 #define ZUC_MAX_BYTELEN    (ZUC_MAX_BITLEN / 8)
@@ -1344,18 +1350,754 @@ test_kasumi_api(struct IMB_MGR *mgr)
         return 0;
 }
 
+
+/* SNOW3G bit len Encrypt and Decrypt tests, single buffer */
+static int
+test_snow3g_f8_1_buffer_bit(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                            const uint32_t len,
+                            const snow3g_key_schedule_t *ctx,
+                            const uint8_t *iv, const uint32_t offset)
+{
+        uint64_t j;
+        const uint32_t zero_msg_len = 0;
+
+        struct snow3g_f8_1_buffer_bit_fn {
+                snow3g_f8_1_buffer_bit_t func;
+                const char *func_name;
+        } fn_ptr = { mgr->snow3g_f8_1_buffer_bit,
+                     "SNOW3G-UEA2 bitlen single buffer"
+                   };
+
+        struct fn_args {
+                const snow3g_key_schedule_t *key_data;
+                const uint8_t *iv;
+                uint8_t *in;
+                uint8_t *out;
+                const uint32_t len;
+                const uint32_t offset;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, in, out, len, offset, IMB_ERR_NULL_EXP_KEY },
+                { ctx, NULL, in, out, len, offset, IMB_ERR_NULL_IV },
+                { ctx, iv, NULL, out, len, offset, IMB_ERR_NULL_SRC },
+                { ctx, iv, in, NULL, len, offset, IMB_ERR_NULL_DST },
+                { ctx, iv, in, out, zero_msg_len, offset, IMB_ERR_CIPH_LEN }
+        };
+
+        memset(out, 0, len);
+        memset(in, 0, len);
+
+        /* Iterate over args */
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptr.func(ap->key_data, ap->iv, ap->in, ap->out,
+                            ap->len, ap->offset);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptr.func_name))
+                        return 1;
+        }
+        /* Verify buffers not modified */
+        if (memcmp(out, in, len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                        __func__, fn_ptr.func_name);
+                return 1;
+        }
+        printf(".");
+        return 0;
+}
+
+/* SNOW3G Encrypt and Decrypt tests, single buffer */
+static int
+test_snow3g_f8_1_buffer(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                        const uint32_t len,
+                        const snow3g_key_schedule_t *ctx,
+                        const uint8_t *iv)
+{
+        uint64_t j;
+        const uint32_t zero_msg_len = 0;
+        const uint32_t invalid_msg_len = 1ULL << 30;
+
+        struct snow3g_f8_1_buffer_fn {
+                snow3g_f8_1_buffer_t func;
+                const char *func_name;
+        } fn_ptr = { mgr->snow3g_f8_1_buffer, "SNOW3G-UEA2 single buffer" };
+
+        struct fn_args {
+                const snow3g_key_schedule_t *key_data;
+                const uint8_t *iv;
+                uint8_t *in;
+                uint8_t *out;
+                const uint32_t len;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, in, out, len, IMB_ERR_NULL_EXP_KEY },
+                { ctx, NULL, in, out, len, IMB_ERR_NULL_IV },
+                { ctx, iv, NULL, out, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, in, NULL, len, IMB_ERR_NULL_DST },
+                { ctx, iv, in, out, invalid_msg_len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, in, out, zero_msg_len, IMB_ERR_CIPH_LEN }
+        };
+
+        memset(out, 0, len);
+        memset(in, 0, len);
+
+        /* Iterate over args */
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptr.func(ap->key_data, ap->iv, ap->in, ap->out,
+                            ap->len);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptr.func_name))
+                        return 1;
+        }
+        /* Verify buffers not modified */
+        if (memcmp(out, in, len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                        __func__, fn_ptr.func_name);
+                return 1;
+        }
+        printf(".");
+        return 0;
+}
+
+/* SNOW3G Encrypt and Decrypt tests, 2 buffers */
+static int
+test_snow3g_f8_2_buffer(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                        const uint32_t len,
+                        const snow3g_key_schedule_t *ctx,
+                        const uint8_t *iv)
+{
+        uint8_t *in2 = in + len;
+        uint8_t *out2 = in + len;
+        uint8_t *iv2 = in + len;
+        uint64_t j;
+        const uint32_t zero_msg_len = 0;
+        const uint32_t invalid_msg_len = 1ULL << 30;
+
+        struct snow3g_f8_2_buffer_fn {
+                snow3g_f8_2_buffer_t func;
+                const char *func_name;
+        } fn_ptr = { mgr->snow3g_f8_2_buffer, "SNOW3G-UEA2 2 buffers" };
+
+        struct fn_args {
+                const snow3g_key_schedule_t *key_data;
+                const uint8_t *iv;
+                const uint8_t *iv2;
+                uint8_t *in;
+                uint8_t *out;
+                const uint32_t len;
+                uint8_t *in2;
+                uint8_t *out2;
+                const uint32_t len2;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, iv2, in, out, len, in2, out2, len,
+                  IMB_ERR_NULL_EXP_KEY },
+                { ctx, NULL, iv2, in, out, len, in2, out2, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, NULL, in, out, len, in2, out2, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, iv2, NULL, out, len, in2, out2, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, in, out, len, NULL, out2, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv2, in, NULL, len, in2, out2, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, in, out, len, in2, NULL, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv2, in, out, invalid_msg_len, in2, out2, len,
+                  IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv2, in, out, len, in2, out2, invalid_msg_len,
+                  IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv2, in, out, zero_msg_len, in2, out2, len,
+                  IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv2, in, out, len, in2, out2, zero_msg_len,
+                  IMB_ERR_CIPH_LEN }
+        };
+
+        memset(out, 0, 2*len);
+        memset(in, 0, 2*len);
+
+        /* Iterate over args */
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptr.func(ap->key_data, ap->iv, ap->iv2, ap->in, ap->out,
+                                ap->len, ap->in2, ap->out2, ap->len2);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptr.func_name))
+                        return 1;
+        }
+        /* Verify buffers not modified */
+        if (memcmp(out, in, 2*len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                        __func__, fn_ptr.func_name);
+                return 1;
+        }
+        printf(".");
+        return 0;
+}
+
+/* SNOW3G Encrypt and Decrypt tests, 8 buffers */
+static int
+test_snow3g_f8_8_buffer(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                        const uint32_t len,
+                        const snow3g_key_schedule_t *ctx,
+                        const uint8_t *iv)
+{
+        uint64_t j;
+        const uint32_t invalid_msg_len = 1ULL << 30;
+        uint8_t buffers_num = 8;
+
+        uint8_t *in2 = in + len;
+        uint8_t *out2 = in + len;
+        uint8_t *in3 = in + 2*len;
+        uint8_t *out3 = in + 2*len;
+        uint8_t *in4 = in + 3*len;
+        uint8_t *out4 = in + 3*len;
+        uint8_t *in5 = in + 4*len;
+        uint8_t *out5 = in + 4*len;
+        uint8_t *in6 = in + 5*len;
+        uint8_t *out6 = in + 5*len;
+        uint8_t *in7 = in + 6*len;
+        uint8_t *out7 = in + 6*len;
+        uint8_t *in8 = in + 7*len;
+        uint8_t *out8 = in + 7*len;
+
+        struct snow3g_f8_8_buffer_fn {
+                snow3g_f8_8_buffer_t func;
+                const char *func_name;
+        } fn_ptr = { mgr->snow3g_f8_8_buffer, "SNOW3G-UEA2 8 buffers" };
+
+        struct fn_args {
+                const snow3g_key_schedule_t *key_data;
+                const uint8_t *iv1;
+                const uint8_t *iv2;
+                const uint8_t *iv3;
+                const uint8_t *iv4;
+                const uint8_t *iv5;
+                const uint8_t *iv6;
+                const uint8_t *iv7;
+                const uint8_t *iv8;
+                uint8_t *in1; uint8_t *out1; const uint32_t len1;
+                uint8_t *in2; uint8_t *out2; const uint32_t len2;
+                uint8_t *in3; uint8_t *out3; const uint32_t len3;
+                uint8_t *in4; uint8_t *out4; const uint32_t len4;
+                uint8_t *in5; uint8_t *out5; const uint32_t len5;
+                uint8_t *in6; uint8_t *out6; const uint32_t len6;
+                uint8_t *in7; uint8_t *out7; const uint32_t len7;
+                uint8_t *in8; uint8_t *out8; const uint32_t len8;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_EXP_KEY },
+                { ctx, NULL, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, NULL, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, iv, NULL, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, iv, iv, NULL, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, iv, iv, iv, NULL, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, iv, iv, iv, iv, NULL, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, iv, iv, iv, iv, iv, NULL, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, NULL, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_IV },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, NULL, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  NULL, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, NULL, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, NULL, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, NULL, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, NULL, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, NULL, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, NULL, out8, len,
+                  IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, NULL, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, NULL, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, NULL, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, NULL, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, NULL,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, NULL, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, NULL, len, in8, out8, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, NULL, len,
+                  IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, invalid_msg_len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8, len,
+                  IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, invalid_msg_len, in3, out3, len, in4, out4, len,
+                  in5, out5, len, in6, out6, len, in7, out7, len, in8, out8,
+                  len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, invalid_msg_len, in4, out4, len,
+                  in5, out5, len, in6, out6, len, in7, out7, len, in8, out8,
+                  len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, invalid_msg_len,
+                  in5, out5, len, in6, out6, len, in7, out7, len, in8, out8,
+                  len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  invalid_msg_len, in6, out6, len, in7, out7, len, in8, out8,
+                  len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, invalid_msg_len, in7, out7, len, in8, out8,
+                  len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, invalid_msg_len, in8, out8,
+                  len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, iv, iv, iv, iv, in, out, len,
+                  in2, out2, len, in3, out3, len, in4, out4, len, in5, out5,
+                  len, in6, out6, len, in7, out7, len, in8, out8,
+                  invalid_msg_len, IMB_ERR_CIPH_LEN },
+        };
+
+        memset(out, 0, buffers_num * len);
+        memset(in, 0, buffers_num * len);
+
+        /* Iterate over args */
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptr.func(ap->key_data, ap->iv1, ap->iv2, ap->iv3, ap->iv4,
+                            ap->iv5, ap->iv6, ap->iv7, ap->iv8, ap->in1,
+                            ap->out1, ap->len1, ap->in2, ap->out2, ap->len2,
+                            ap->in3, ap->out3, ap->len3, ap->in4, ap->out4,
+                            ap->len4, ap->in5, ap->out5, ap->len5, ap->in6,
+                            ap->out6, ap->len6, ap->in7, ap->out7, ap->len7,
+                            ap->in8, ap->out8, ap->len8);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptr.func_name))
+                        return 1;
+        }
+
+        /* Verify buffers not modified */
+        if (memcmp(out, in, buffers_num*len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                        __func__, fn_ptr.func_name);
+                return 1;
+        }
+        printf(".");
+        return 0;
+}
+
+/* SNOW3G Encrypt and Decrypt tests, 4 buffers */
+static int
+test_snow3g_f8_4_buffer(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                        const uint32_t len,
+                        const snow3g_key_schedule_t *ctx,
+                        const uint8_t *iv)
+{
+        uint64_t j;
+        const uint32_t invalid_msg_len = 1ULL << 30;
+        uint8_t buffers_num = 4;
+
+        uint8_t *in2 = in + len;
+        uint8_t *out2 = in + len;
+        uint8_t *in3 = in + 2*len;
+        uint8_t *out3 = in + 2*len;
+        uint8_t *in4 = in + 3*len;
+        uint8_t *out4 = in + 3*len;
+
+        struct snow3g_f8_4_buffer_fn {
+                snow3g_f8_4_buffer_t func;
+                const char *func_name;
+        } fn_ptr = { mgr->snow3g_f8_4_buffer, "SNOW3G-UEA2 4 buffers" };
+
+        struct fn_args {
+                const snow3g_key_schedule_t *key_data;
+                const uint8_t *iv1;
+                const uint8_t *iv2;
+                const uint8_t *iv3;
+                const uint8_t *iv4;
+                uint8_t *in1; uint8_t *out1; const uint32_t len1;
+                uint8_t *in2; uint8_t *out2; const uint32_t len2;
+                uint8_t *in3; uint8_t *out3; const uint32_t len3;
+                uint8_t *in4; uint8_t *out4; const uint32_t len4;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, iv, iv, iv, in, out, len, in2, out2, len,
+                  in3, out3, len, in4, out4, len, IMB_ERR_NULL_EXP_KEY },
+                { ctx, NULL, iv, iv, iv, in, out, len, in2, out2, len, in3,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_IV },
+                { ctx, iv, NULL, iv, iv, in, out, len, in2, out2, len, in3,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_IV },
+                { ctx, iv, iv, NULL, iv, in, out, len, in2, out2, len, in3,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_IV },
+                { ctx, iv, iv, iv, NULL, in, out, len, in2, out2, len, in3,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_IV },
+                { ctx, iv, iv, iv, iv, NULL, out, len, in2, out2, len, in3,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, in, out, len, NULL, out2, len, in3,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, in, out, len, in2, out2, len, NULL,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, in, out, len, in2, out2, len, in3,
+                  out3, len, NULL, out4, len, IMB_ERR_NULL_SRC },
+                { ctx, iv, iv, iv, iv, in, NULL, len, in2, out2, len, in3,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, in, out, len, in2, NULL, len, in3,
+                  out3, len, in4, out4, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, in, out, len, in2, out2, len, in3,
+                  NULL, len, in4, out4, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, in, out, len, in2, out2, len, in3,
+                  out3, len, in4, NULL, len, IMB_ERR_NULL_DST },
+                { ctx, iv, iv, iv, iv, in, out, invalid_msg_len, in2, out2,
+                len, in3, out3, len, in4, out4, len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, in, out, len, in2, out2,
+                invalid_msg_len, in3, out3, len, in4, out4, len,
+                IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, in, out, len, in2, out2, len, in3, out3,
+                invalid_msg_len, in4, out4, len, IMB_ERR_CIPH_LEN },
+                { ctx, iv, iv, iv, iv, in, out, len, in2, out2, len, in3, out3,
+                len, in4, out4, invalid_msg_len, IMB_ERR_CIPH_LEN }
+        };
+
+        memset(out, 0, buffers_num * len);
+        memset(in, 0, buffers_num * len);
+
+        /* Iterate over args */
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptr.func(ap->key_data, ap->iv1, ap->iv2, ap->iv3, ap->iv4,
+                            ap->in1, ap->out1, ap->len1, ap->in2, ap->out2,
+                            ap->len2, ap->in3, ap->out3, ap->len3, ap->in4,
+                            ap->out4, ap->len4);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptr.func_name))
+                        return 1;
+        }
+
+        /* Verify buffers not modified */
+        if (memcmp(out, in, buffers_num*len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                        __func__, fn_ptr.func_name);
+                return 1;
+        }
+        printf(".");
+        return 0;
+}
+
+/* SNOW3G Encrypt and Decrypt tests, n buffers */
+static int
+test_snow3g_f8_n_buffer(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                        const uint32_t len,
+                        const snow3g_key_schedule_t *ctx,
+                        const uint8_t *iv)
+{
+        uint64_t j;
+        const uint32_t invalid_msg_len = 1ULL << 30;
+
+        const uint8_t *pIV[SNOW3G_N_TEST_COUNT];
+        uint32_t packetLen[SNOW3G_N_TEST_COUNT];
+        uint8_t *pSrcBuff[SNOW3G_N_TEST_COUNT];
+        uint8_t *pDstBuff[SNOW3G_N_TEST_COUNT];
+        uint32_t badPacketLen[SNOW3G_N_TEST_COUNT];
+
+        for (j = 0; j < SNOW3G_N_TEST_COUNT; j++) {
+                pIV[j] = iv;
+                pSrcBuff[j] = in + len * j;
+                pDstBuff[j] = out + len * j;
+                packetLen[j] = len;
+                badPacketLen[j] = invalid_msg_len;
+        }
+
+        struct snow3g_f8_n_buffer_fn {
+                snow3g_f8_n_buffer_t func;
+                const char *func_name;
+        } fn_ptr = { mgr->snow3g_f8_n_buffer, "SNOW3G-UEA2 n buffers" };
+
+        struct fn_args {
+                const snow3g_key_schedule_t *key_data;
+                const uint8_t **ivs;
+                uint8_t **ins;
+                uint8_t **outs;
+                uint32_t *lens;
+                const uint32_t count;
+                const IMB_ERR exp_err;
+        } fn_args[] = { { NULL, pIV, pSrcBuff, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_EXP_KEY },
+                        { ctx, NULL, pSrcBuff, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_IV },
+                        { NULL, pIV, pSrcBuff, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_EXP_KEY },
+                        { ctx, pIV, NULL, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_SRC },
+                        { ctx, pIV, pSrcBuff, NULL, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_DST },
+                        { ctx, pIV, pSrcBuff, pDstBuff, NULL,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_CIPH_LEN },
+                        { ctx, pIV, pSrcBuff, pDstBuff, badPacketLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_CIPH_LEN } };
+
+        memset(out, 0, SNOW3G_N_TEST_COUNT * len);
+        memset(in, 0, SNOW3G_N_TEST_COUNT * len);
+
+        /* Iterate over args */
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptr.func(ap->key_data, (const void * const *)ap->ivs,
+                (const void * const *)ap->ins, (void **)ap->outs, ap->lens,
+                            ap->count);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptr.func_name))
+                        return 1;
+        }
+
+        /* Verify buffers not modified */
+        if (memcmp(out, in, SNOW3G_N_TEST_COUNT * len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                        __func__, fn_ptr.func_name);
+                return 1;
+        }
+        printf(".");
+        return 0;
+}
+
+
+/* SNOW3G Encrypt and Decrypt tests, n/8 buffers, multikey */
+static int
+test_snow3g_f8_n_buffer_multikey(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                        const uint32_t len,
+                        const snow3g_key_schedule_t *ctx,
+                        const uint8_t *iv)
+{
+        uint64_t j;
+        const uint32_t invalid_msg_len = 1ULL << 30;
+        const snow3g_key_schedule_t *pKeySched[SNOW3G_N_TEST_COUNT];
+        const snow3g_key_schedule_t *pKeySchedInvalid[SNOW3G_N_TEST_COUNT];
+        const uint8_t *pIV[SNOW3G_N_TEST_COUNT];
+        uint32_t packetLen[SNOW3G_N_TEST_COUNT];
+        uint8_t *pSrcBuff[SNOW3G_N_TEST_COUNT];
+        uint8_t *pDstBuff[SNOW3G_N_TEST_COUNT];
+        uint32_t badPacketLen[SNOW3G_N_TEST_COUNT];
+
+        for (j = 0; j < SNOW3G_N_TEST_COUNT; j++) {
+                pIV[j] = iv;
+                pSrcBuff[j] = in + len * j;
+                pDstBuff[j] = out + len * j;
+                packetLen[j] = len;
+                badPacketLen[j] = invalid_msg_len;
+                pKeySched[j] = ctx;
+                pKeySchedInvalid[j] = NULL;
+        }
+
+        struct fn_args {
+                const snow3g_key_schedule_t **key_data;
+                const uint8_t **ivs;
+                uint8_t **ins;
+                uint8_t **outs;
+                uint32_t *lens;
+                const uint32_t count;
+                const IMB_ERR exp_err;
+        } fn_args[] = { { NULL, pIV, pSrcBuff, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_EXP_KEY },
+                        { pKeySchedInvalid, pIV, pSrcBuff, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_EXP_KEY },
+                        { pKeySched, NULL, pSrcBuff, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_IV },
+                        { NULL, pIV, pSrcBuff, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_EXP_KEY },
+                        { pKeySched, pIV, NULL, pDstBuff, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_SRC },
+                        { pKeySched, pIV, pSrcBuff, NULL, packetLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_NULL_DST },
+                        { pKeySched, pIV, pSrcBuff, pDstBuff, NULL,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_CIPH_LEN },
+                        { pKeySched, pIV, pSrcBuff, pDstBuff, badPacketLen,
+                          SNOW3G_N_TEST_COUNT, IMB_ERR_CIPH_LEN } };
+
+        memset(out, 0, SNOW3G_N_TEST_COUNT * len);
+        memset(in, 0, SNOW3G_N_TEST_COUNT * len);
+
+        /* Iterate over args */
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                mgr->snow3g_f8_n_buffer_multikey(ap->key_data,
+                                                 (const void * const *)ap->ivs,
+                                                 (const void * const *)ap->ins,
+                                                 (void **)ap->outs, ap->lens,
+                                                 ap->count);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   "SNOW3G-UEA2 n buffers multikey"))
+                        return 1;
+                mgr->snow3g_f8_8_buffer_multikey(ap->key_data,
+                                                 (const void * const *)ap->ivs,
+                                                 (const void * const *)ap->ins,
+                                                 (void **)ap->outs, ap->lens);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   "SNOW3G-UEA2 8 buffers multikey"))
+                        return 1;
+        }
+
+        /* Verify buffers not modified */
+        if (memcmp(out, in, SNOW3G_N_TEST_COUNT * len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                        __func__, "SNOW3G-UEA2 n buffers multikey");
+                return 1;
+        }
+        printf(".");
+        return 0;
+}
+
+/* SNOW3G Authentication tests, single buffer */
+static int
+test_snow3g_f9_1_buffer(struct IMB_MGR *mgr, uint8_t *in, uint8_t *out,
+                        const uint64_t len,
+                        const snow3g_key_schedule_t *ctx,
+                        const uint8_t *iv)
+{
+        uint64_t j;
+        const uint64_t invalid_msg_len = 1ULL << 32;
+
+        struct snow3g_f9_1_buffer_fn {
+                snow3g_f9_1_buffer_t func;
+                const char *func_name;
+        } fn_ptr = { mgr->snow3g_f9_1_buffer,
+                    "SNOW3G-UIA2 single buffer" };
+
+        struct fn_args {
+                const snow3g_key_schedule_t *key_data;
+                const uint8_t *iv;
+                uint8_t *in;
+                const uint64_t len;
+                uint8_t *out;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                { NULL, iv, in, len, out, IMB_ERR_NULL_EXP_KEY },
+                { ctx, NULL, in, len, out, IMB_ERR_NULL_IV },
+                { ctx, iv, NULL, len, out, IMB_ERR_NULL_SRC },
+                { ctx, iv, in, invalid_msg_len, out,  IMB_ERR_AUTH_LEN },
+                { ctx, iv, in, len, NULL, IMB_ERR_NULL_AUTH }
+        };
+
+        memset(out, 0, len);
+        memset(in, 0, len);
+
+        /* Iterate over args */
+        for (j = 0; j < DIM(fn_args); j++) {
+                const struct fn_args *ap = &fn_args[j];
+
+                fn_ptr.func(ap->key_data, ap->iv, ap->in, ap->len, ap->out);
+                if (unexpected_err(mgr, ap->exp_err,
+                                   fn_ptr.func_name))
+                        return 1;
+        }
+        /* Verify buffers not modified */
+        if (memcmp(out, in, len) != 0) {
+                printf("%s: %s, invalid param test failed!\n",
+                        __func__, fn_ptr.func_name);
+                return 1;
+        }
+        printf(".");
+        return 0;
+}
+
+/* Test SNOW3G Init key */
+static int
+test_snow3g_init_key_sched(struct IMB_MGR *mgr, uint8_t *key)
+{
+        snow3g_key_schedule_t exp_key;
+
+        mgr->snow3g_init_key_sched(NULL, &exp_key);
+        if (unexpected_err(mgr, IMB_ERR_NULL_KEY, "SNOW3G Key init"))
+                return 1;
+
+        mgr->snow3g_init_key_sched(key, NULL);
+        if (unexpected_err(mgr, IMB_ERR_NULL_EXP_KEY, "SNOW3G Key init"))
+                return 1;
+
+        return 0;
+}
 /*
  * @brief Performs direct SNOW3G API invalid param tests
  */
 static int
 test_snow3g_api(struct IMB_MGR *mgr)
 {
-        const uint32_t text_len = BUF_SIZE;
-        uint8_t out_buf[BUF_SIZE];
-        uint8_t zero_buf[BUF_SIZE];
-        int i, seg_err; /* segfault flag */
-        void *out_bufs[NUM_BUFS];
-        uint32_t lens[NUM_BUFS];
+        const uint32_t text_len = 16;
+        uint8_t out_buf[SNOW3G_TOTAL_BUF_SIZE];
+        uint8_t zero_buf[SNOW3G_TOTAL_BUF_SIZE];
+        int seg_err; /* segfault flag */
+        const snow3g_key_schedule_t ctx[NUM_BUFS];
+        const uint8_t iv[SNOW3G_TOTAL_BUF_SIZE];
+        const uint32_t offset = 0;
 
         seg_err = setjmp(dir_api_param_env);
         if (seg_err) {
@@ -1363,20 +2105,33 @@ test_snow3g_api(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        for (i = 0; i < NUM_BUFS; i++) {
-                out_bufs[i] = (void *)&out_buf;
-                lens[i] = text_len;
-        }
-
-        memset(out_buf, 0, text_len);
-        memset(zero_buf, 0, text_len);
-
-        /* @todo Add SNOW3G API tests */
-        (void)mgr;
-        (void)lens;
-        (void)out_bufs;
-
-        printf("\n");
+        /* SNOW3G Encrypt and Decrypt tests */
+        if (test_snow3g_f8_1_buffer_bit(mgr, zero_buf, out_buf, text_len,
+                                        ctx, iv, offset))
+                return 1;
+        if (test_snow3g_f8_1_buffer(mgr, zero_buf, out_buf, text_len,
+                                    ctx, iv))
+                return 1;
+        if (test_snow3g_f8_2_buffer(mgr, zero_buf, out_buf, text_len,
+                                    ctx, iv))
+                return 1;
+        if (test_snow3g_f8_8_buffer(mgr, zero_buf, out_buf, text_len,
+                                    ctx, iv))
+                return 1;
+        if (test_snow3g_f8_4_buffer(mgr, zero_buf, out_buf, text_len,
+                                    ctx, iv))
+                return 1;
+        if (test_snow3g_f9_1_buffer(mgr, zero_buf, out_buf, text_len,
+                                    ctx, iv))
+                return 1;
+        if (test_snow3g_init_key_sched(mgr, zero_buf))
+                return 1;
+        if (test_snow3g_f8_n_buffer(mgr, zero_buf, out_buf, text_len,
+                                    ctx, iv))
+                return 1;
+        if (test_snow3g_f8_n_buffer_multikey(mgr, zero_buf, out_buf, text_len,
+                                    ctx, iv))
+                return 1;
         return 0;
 }
 
