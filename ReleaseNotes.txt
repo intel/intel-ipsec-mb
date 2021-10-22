@@ -1,7 +1,7 @@
 ========================================================================
 Release Notes for Intel(R) Multi-Buffer Crypto for IPsec Library
 
-Unreleased
+v1.1 October 2021
 ========================================================================
 
 General
@@ -9,7 +9,18 @@ General
 
 Library
 - PON algorithm AVX512-VAES implementation added
-- SNOW3G-UIA2 AVX512-VPCLMULQDQ implementation added
+- SNOW3G-UIA2 AVX512 and AVX512-VPCLMULQDQ implementations added
+- SNOW3G-UEA2 AVX512 and AVX512-VAES implementations added
+- SNOW-V AVX implementation added
+- ZUC optimizations for AVX512
+- GCM optimizations for AVX512
+- Poly1305 optimizations for AVX512-VAES
+- Improved error code handling (missing mainly on assembly modules)
+- ZUC-256 23-byte IV support added
+
+Test Applications
+- Error handling tests added (for job and direct API)
+- Fuzz testing added
 
 v1.0 April 2021
 ========================================================================
