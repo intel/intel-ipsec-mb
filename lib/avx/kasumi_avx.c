@@ -382,6 +382,9 @@ kasumi_f9_1_buffer_avx(const kasumi_key_sched_t *pCtx, const void *pBufferIn,
         SAVE_XMMS(xmm_save);
 #endif
 #ifdef SAFE_PARAM
+        /* Reset error */
+        imb_set_errno(NULL, 0);
+
         /* Check for NULL pointers */
         if (pCtx == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
@@ -423,6 +426,9 @@ kasumi_f9_1_buffer_user_avx(const kasumi_key_sched_t *pCtx, const uint64_t IV,
         SAVE_XMMS(xmm_save);
 #endif
 #ifdef SAFE_PARAM
+        /* Reset error */
+        imb_set_errno(NULL, 0);
+
         /* Check for NULL pointers */
         if (pCtx == NULL) {
                 imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);

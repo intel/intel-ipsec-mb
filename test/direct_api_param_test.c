@@ -47,6 +47,8 @@
 
 #define ZUC_MAX_BITLEN     65504
 #define ZUC_MAX_BYTELEN    (ZUC_MAX_BITLEN / 8)
+#define KASUMI_MAX_BITLEN  20000
+#define KASUMI_MAX_BYTELEN  (KASUMI_MAX_BITLEN / 8)
 
 #ifdef _WIN32
 #define __func__ __FUNCTION__
@@ -1488,6 +1490,9 @@ test_kasumi_api_f8_2_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *ctx,
         return 0;
 }
 
+/*
+ * @brief Performs direct KASUMI API invalid param tests
+ */
 static int
 test_kasumi_api_f8_3_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *ctx,
                             const uint64_t iv, const uint64_t iv2,
@@ -1644,6 +1649,81 @@ test_kasumi_api_f8_n_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *ctx,
         return 0;
 }
 
+/* KASUMI-F9 1 Buffer tests */
+static int
+test_kasumi_f9_1_buffer(struct IMB_MGR *mgr, const kasumi_key_sched_t *key,
+                        const void *in, void *tag, const uint32_t len)
+{
+        unsigned int i;
+        const char func_name[] = "KASUMI-F9 1 BUFFER";
+
+        struct fn_args {
+                const kasumi_key_sched_t *key;
+                const void *in;
+                const uint32_t len;
+                void *tag;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                {NULL, in, len, tag, IMB_ERR_NULL_EXP_KEY},
+                {key, NULL, len, tag, IMB_ERR_NULL_SRC },
+                {key, in, len, NULL, IMB_ERR_NULL_AUTH },
+                {key, in, 0, tag, IMB_ERR_AUTH_LEN},
+                {key, in, KASUMI_MAX_BITLEN + 1, tag, IMB_ERR_AUTH_LEN},
+                {key, in, len, tag, 0},
+        };
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->f9_1_buffer(ap->key, ap->in, ap->len, ap->tag);
+                if (unexpected_err(mgr, ap->exp_err, func_name))
+                        return 1;
+        }
+
+        return 0;
+}
+
+/* KASUMI-F9 1 Buffer User tests */
+static int
+test_kasumi_f9_1_buffer_user(struct IMB_MGR *mgr, const kasumi_key_sched_t *key,
+                             const uint64_t iv, const void *in, void *tag,
+                             const uint32_t len)
+{
+        unsigned int i;
+        const char func_name[] = "KASUMI-F9 1 BUFFER USER";
+
+        struct fn_args {
+                const kasumi_key_sched_t *key;
+                const uint64_t iv;
+                const void *in;
+                const uint32_t len;
+                void *tag;
+                const uint32_t dir;
+                const IMB_ERR exp_err;
+        } fn_args[] = {
+                {NULL, iv, in, len, tag, 0, IMB_ERR_NULL_EXP_KEY},
+                {key, iv, NULL, len, tag, 0, IMB_ERR_NULL_SRC },
+                {key, iv, in, len, NULL, 0, IMB_ERR_NULL_AUTH },
+                {key, iv, in, 0, tag, 0, IMB_ERR_AUTH_LEN},
+                {key, iv, in, KASUMI_MAX_BITLEN + 1, tag, 0,
+                 IMB_ERR_AUTH_LEN},
+                {key, iv, in, len, tag, 0, 0},
+        };
+
+        /* Iterate over args */
+        for (i = 0; i < DIM(fn_args); i++) {
+                const struct fn_args *ap = &fn_args[i];
+
+                mgr->f9_1_buffer_user(ap->key, ap->iv, ap->in, ap->len,
+                                      ap->tag, ap->dir);
+                if (unexpected_err(mgr, ap->exp_err, func_name))
+                        return 1;
+        }
+
+        return 0;
+}
+
 /*
  * @brief Performs direct KASUMI API invalid param tests
  */
@@ -1665,6 +1745,7 @@ test_kasumi_api(struct IMB_MGR *mgr)
         const uint32_t *lens = buf2;
         const uint32_t offset = 0;
         const uint32_t count = 16;
+        uint8_t tag[4];
 
         seg_err = setjmp(dir_api_param_env);
         if (seg_err) {
@@ -1694,6 +1775,13 @@ test_kasumi_api(struct IMB_MGR *mgr)
 
         if (test_kasumi_api_f8_n_buffer(mgr, &ctx, iv_ptr, in, out,
                                         lens, count))
+                return 1;
+
+        if (test_kasumi_f9_1_buffer(mgr, &ctx, in, (void *)tag, text_len))
+                return 1;
+
+        if (test_kasumi_f9_1_buffer_user(mgr, &ctx, iv, in, (void *)tag,
+                                         text_len))
                 return 1;
 
         return 0;
