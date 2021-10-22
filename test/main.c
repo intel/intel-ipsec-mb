@@ -45,7 +45,7 @@ extern int aes_test(struct IMB_MGR *mb_mgr);
 extern int ecb_test(struct IMB_MGR *mb_mgr);
 extern int sha_test(struct IMB_MGR *mb_mgr);
 extern int chained_test(struct IMB_MGR *mb_mgr);
-extern int api_test(struct IMB_MGR *mb_mgr);
+extern int api_test(struct IMB_MGR *mb_mgr, uint64_t flags);
 extern int pon_test(struct IMB_MGR *mb_mgr);
 extern int zuc_test(struct IMB_MGR *mb_mgr);
 extern int kasumi_test(struct IMB_MGR *mb_mgr);
@@ -220,7 +220,7 @@ main(int argc, char **argv)
                 errors += aes_cbcs_test(p_mgr);
                 errors += chacha_test(p_mgr);
                 errors += poly1305_test(p_mgr);
-                errors += api_test(p_mgr);
+                errors += api_test(p_mgr, flags);
                 errors += direct_api_test(p_mgr);
                 errors += clear_mem_test(p_mgr);
                 errors += crc_test(p_mgr);

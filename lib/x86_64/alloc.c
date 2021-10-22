@@ -153,7 +153,7 @@ static void set_ooo_mgr_road_block(IMB_MGR *mgr)
  *
  * init_mb_mgr_XXX() must be called after this function call,
  * whereas XXX is the desired architecture (including "auto"),
- * only if it has not been called previously.
+ * only if reset_mgr is set to 0.
  *
  * @param mem_ptr a pointer to allocated memory
  * @param flags multi-buffer manager flags
