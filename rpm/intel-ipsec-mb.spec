@@ -25,7 +25,7 @@
 
 # Versions numbers
 %global major        1
-%global minor        0
+%global minor        1
 %global patch        0
 %global fullversion  %{major}.%{minor}.%{patch}
 
@@ -109,6 +109,9 @@ ln -s libIPSec_MB.so.%{fullversion} libIPSec_MB.so
 %{_libdir}/libIPSec_MB.so
 
 %changelog
+* Fri Oct 22 2021 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 1.1.0-1
+- Update for release package v1.1
+
 * Fri Apr 23 2021 Pablo de Lara Guarch <pablo.de.lara.guarch@intel.com> 1.0.0-1
 - Update for release package v1.0
 
