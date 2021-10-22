@@ -178,26 +178,24 @@ endstruc
 %define %%XTMP3         %5 ;; [clobbered] tmp xmm reg
 
         pxor            %%XTMP0, %%XTMP0
-
+        pxor            %%XTMP1, %%XTMP1
         pcmpeqq         %%XTMP0, [state + _aes_ccm_job_in_lane + 0]
-        pshufb          %%XTMP0, [rel len_shuf_masks + 0]
-
         pcmpeqq         %%XTMP1, [state + _aes_ccm_job_in_lane + 16]
+        pshufb          %%XTMP0, [rel len_shuf_masks + 0]
         pshufb          %%XTMP1, [rel len_shuf_masks + 16]
-
-        por             %%XTMP0, %%XTMP1
+        por             %%CCM_LENS, %%XTMP0
+        por             %%CCM_LENS, %%XTMP1
 
 %if NUM_LANES > 4
+        pxor            %%XTMP2, %%XTMP2
+        pxor            %%XTMP3, %%XTMP3
         pcmpeqq         %%XTMP2, [state + _aes_ccm_job_in_lane + 32]
-        pshufb          %%XTMP2, [rel len_shuf_masks + 32]
-
         pcmpeqq         %%XTMP3, [state + _aes_ccm_job_in_lane + 48]
+        pshufb          %%XTMP2, [rel len_shuf_masks + 32]
         pshufb          %%XTMP3, [rel len_shuf_masks + 48]
-
-        por             %%XTMP2, %%XTMP3
-        por             %%XTMP0, %%XTMP2
+        por             %%CCM_LENS, %%XTMP2
+        por             %%CCM_LENS, %%XTMP3
 %endif
-        por             %%CCM_LENS, %%XTMP0
 %endmacro
 
 ;;; ===========================================================================
