@@ -681,7 +681,7 @@ kasumi_compute_sched(const uint8_t modifier,
                 return -1;
         }
         if (pCtx == NULL) {
-                imb_set_errno(NULL, IMB_ERR_NULL_CTX);
+                imb_set_errno(NULL, IMB_ERR_NULL_EXP_KEY);
                 return -1;
         }
 #endif

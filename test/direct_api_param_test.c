@@ -1724,6 +1724,39 @@ test_kasumi_f9_1_buffer_user(struct IMB_MGR *mgr, const kasumi_key_sched_t *key,
         return 0;
 }
 
+/* Test KASUMI Init key */
+static int
+test_kasumi_init_key_sched(struct IMB_MGR *mgr, const void *key,
+                           kasumi_key_sched_t *f8_key_sched,
+                           kasumi_key_sched_t *f9_key_sched)
+{
+        mgr->kasumi_init_f8_key_sched(NULL, f8_key_sched);
+        if (unexpected_err(mgr, IMB_ERR_NULL_KEY, "KASUMI F8 Key init"))
+                return 1;
+
+        mgr->kasumi_init_f8_key_sched(key, NULL);
+        if (unexpected_err(mgr, IMB_ERR_NULL_EXP_KEY, "KASUMI F8 Key init"))
+                return 1;
+
+        mgr->kasumi_init_f8_key_sched(key, f8_key_sched);
+        if (unexpected_err(mgr, 0, "KASUMI F8 Key init"))
+                return 1;
+
+        mgr->kasumi_init_f9_key_sched(NULL, f9_key_sched);
+        if (unexpected_err(mgr, IMB_ERR_NULL_KEY, "KASUMI F9 Key init"))
+                return 1;
+
+        mgr->kasumi_init_f9_key_sched(key, NULL);
+        if (unexpected_err(mgr, IMB_ERR_NULL_EXP_KEY, "KASUMI F9 Key init"))
+                return 1;
+
+        mgr->kasumi_init_f8_key_sched(key, f9_key_sched);
+        if (unexpected_err(mgr, 0, "KASUMI F9 Key init"))
+                return 1;
+
+        return 0;
+}
+
 /*
  * @brief Performs direct KASUMI API invalid param tests
  */
@@ -1734,7 +1767,9 @@ test_kasumi_api(struct IMB_MGR *mgr)
         uint64_t buf[BUF_SIZE];
         uint32_t buf2[BUF_SIZE];
         int seg_err; /* segfault flag */
-        kasumi_key_sched_t ctx;
+        kasumi_key_sched_t f8_key;
+        kasumi_key_sched_t f9_key;
+        uint8_t key[16];
         uint64_t iv = text_len; uint64_t iv2 = text_len;
         uint64_t iv3 = text_len; uint64_t iv4 = text_len;
         const void *in = buf; const void *in2 = buf;
@@ -1753,34 +1788,37 @@ test_kasumi_api(struct IMB_MGR *mgr)
                 return 1;
         }
 
-        if (test_kasumi_api_f8_1_buffer(mgr, &ctx, iv, in, out, text_len))
+        if (test_kasumi_init_key_sched(mgr, key, &f8_key, &f9_key))
                 return 1;
 
-        if (test_kasumi_api_f8_1_buffer_bit(mgr, &ctx, iv, in, out,
+        if (test_kasumi_api_f8_1_buffer(mgr, &f8_key, iv, in, out, text_len))
+                return 1;
+
+        if (test_kasumi_api_f8_1_buffer_bit(mgr, &f8_key, iv, in, out,
                                             text_len, offset))
                 return 1;
 
-        if (test_kasumi_api_f8_2_buffer(mgr, &ctx, iv, iv2, in, in2, out, out2,
-                                        text_len, text_len))
+        if (test_kasumi_api_f8_2_buffer(mgr, &f8_key, iv, iv2, in, in2, out,
+                                        out2, text_len, text_len))
                 return 1;
 
-        if (test_kasumi_api_f8_3_buffer(mgr, &ctx, iv, iv2, iv3, in, in2,
+        if (test_kasumi_api_f8_3_buffer(mgr, &f8_key, iv, iv2, iv3, in, in2,
                                         in3, out, out2, out3, text_len))
                 return 1;
 
-        if (test_kasumi_api_f8_4_buffer(mgr, &ctx, iv, iv2, iv3, iv4, in, in2,
-                                        in3, in4, out, out2, out3,
+        if (test_kasumi_api_f8_4_buffer(mgr, &f8_key, iv, iv2, iv3, iv4, in,
+                                        in2, in3, in4, out, out2, out3,
                                         out4, text_len))
                 return 1;
 
-        if (test_kasumi_api_f8_n_buffer(mgr, &ctx, iv_ptr, in, out,
+        if (test_kasumi_api_f8_n_buffer(mgr, &f8_key, iv_ptr, in, out,
                                         lens, count))
                 return 1;
 
-        if (test_kasumi_f9_1_buffer(mgr, &ctx, in, (void *)tag, text_len))
+        if (test_kasumi_f9_1_buffer(mgr, &f9_key, in, (void *)tag, text_len))
                 return 1;
 
-        if (test_kasumi_f9_1_buffer_user(mgr, &ctx, iv, in, (void *)tag,
+        if (test_kasumi_f9_1_buffer_user(mgr, &f9_key, iv, in, (void *)tag,
                                          text_len))
                 return 1;
 
