@@ -1091,8 +1091,8 @@ SUBMIT_JOB_HASH(IMB_MGR *state, IMB_JOB *job)
                                job->msg_len_to_hash_in_bits,
                                job->auth_tag_output);
                 job->status |= IMB_STATUS_COMPLETED_AUTH;
-#endif
                 return job;
+#endif
         case IMB_AUTH_KASUMI_UIA1:
                 IMB_KASUMI_F9_1_BUFFER(state, (const kasumi_key_sched_t *)
                                job->u.KASUMI_UIA1._key,
