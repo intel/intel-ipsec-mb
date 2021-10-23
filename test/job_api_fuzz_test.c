@@ -165,7 +165,7 @@ static void fill_additional_hash_data(struct IMB_JOB *job,
         case IMB_AUTH_MD5:
                 if (job->u.HMAC._hashed_auth_key_xor_ipad != NULL)
                         job->u.HMAC._hashed_auth_key_xor_ipad = (uint8_t *)buff;
-                if (job->u.HMAC._hashed_auth_key_xor_ipad != NULL)
+                if (job->u.HMAC._hashed_auth_key_xor_opad != NULL)
                         job->u.HMAC._hashed_auth_key_xor_opad = (uint8_t *)buff;
                 break;
         case IMB_AUTH_AES_XCBC:
