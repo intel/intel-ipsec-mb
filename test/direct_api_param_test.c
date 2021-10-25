@@ -2970,7 +2970,7 @@ des_keysched_test(struct IMB_MGR *mgr, uint64_t *ks, void *key)
 static int
 test_des_keysched_api(struct IMB_MGR *mgr)
 {
-        uint64_t buf[BUF_SIZE];
+        uint64_t buf[BUF_SIZE] = {0};
         int seg_err; /* segfault flag */
         void *key = buf;
         uint64_t *ks = buf;
