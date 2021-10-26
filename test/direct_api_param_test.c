@@ -1315,6 +1315,7 @@ test_zuc_api(struct IMB_MGR *mgr)
                 key_ptrs[i] = key[i];
                 iv_ptrs[i] = iv[i];
                 in_ptrs[i] = in_bufs[i];
+                memset(in_bufs[i], 0, BUF_SIZE);
                 out_ptrs[i] = out_bufs[i];
                 tag_ptrs[i] = &tags[i];
                 lens[i] = BUF_SIZE;
