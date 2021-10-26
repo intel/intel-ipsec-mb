@@ -1485,7 +1485,6 @@ submit_reset_check_job(struct IMB_MGR *mb_mgr, const uint64_t flags,
         fill_in_job(job, cipher, dir,
                     hash, order, &chacha_ctx, &gcm_ctx);
 
-        printf("cipher (bef) = %u\n", cipher);
         next_job = IMB_SUBMIT_JOB(mb_mgr);
 
         if (next_job == NULL) {
