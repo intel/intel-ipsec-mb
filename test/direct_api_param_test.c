@@ -2647,7 +2647,7 @@ test_hec_api(struct IMB_MGR *mgr)
 static int
 test_crc_api(struct IMB_MGR *mgr)
 {
-        uint8_t in_buf[BUF_SIZE];
+        uint8_t in_buf[BUF_SIZE] = { 0 };
         int seg_err; /* segfault flag */
         unsigned i, j;
 
